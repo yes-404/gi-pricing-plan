@@ -2,116 +2,202 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.gi-pricing.dev/regression-run.schema.json",
   "title": "RegressionRun",
-  "description": "The execution record of a Regression Suite run against a Rating Version (03 FR-260, FR-261, §4.9).",
-  "$comment": "Split out of regression-suite.schema.json 2026-09-28 (WK-672 Slice 2, PL-1189), unchanged: the suite became a generated model-schema artifact and is compared; this run definition stays hand-authored until WK-672 Slice 3 builds it (RL-1172 item 3c).",
+  "description": "The execution record of a Regression Suite run against a Rating Version (03 FR-260, FR-261, FR-1221, §4.9). Its generated cases and counterexamples are persisted as one content-addressed blob (cases_blob) and replayed by re-scoring.",
+  "$comment": "Brought to the generated model-schema shape 2026-09-28 (WK-672 Slice 3, PL-1205 Task 2; ADR-704: the model is the source). suite_slug is replaced by suite_ref plus suite_content_hash; generation, cases_blob, and on property_results shrink, counterexample_minimal and error_code are added. Split out of regression-suite.schema.json 2026-09-28 (PL-1189).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "suite_ref",
+    "suite_content_hash",
+    "rating_version_ref",
+    "bundle_hash",
+    "started_at",
+    "finished_at",
+    "overall",
+    "generation",
+    "cases_blob",
+    "golden_results",
+    "property_results"
+  ],
+  "properties": {
+    "suite_ref": {
+      "$ref": "common/artifact-ref.schema.json"
+    },
+    "suite_content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "rating_version_ref": {
+      "$ref": "common/artifact-ref.schema.json"
+    },
+    "bundle_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "job_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "finished_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "overall": {
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    },
+    "generation": {
+      "$ref": "#/$defs/RunGeneration"
+    },
+    "cases_blob": {
+      "$ref": "common/blob-ref.schema.json"
+    },
+    "golden_results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/GoldenQuoteResult"
+      }
+    },
+    "property_results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/PropertyResult"
+      }
+    }
+  },
+  "invariants": [
+    "overall == 'fail' blocks promotion (FR-260)",
+    "a property_results entry has shrink exactly when its status is fail",
+    "counterexample_minimal is true only when shrink is completed"
+  ],
   "$defs": {
-    "RegressionRun": {
+    "RunGeneration": {
       "type": "object",
+      "additionalProperties": false,
       "required": [
-        "suite_slug",
-        "rating_version_ref",
-        "bundle_hash",
-        "started_at",
-        "overall",
-        "golden_results",
-        "property_results"
+        "seed",
+        "cases",
+        "hypothesis_version"
       ],
       "properties": {
-        "suite_slug": {
+        "seed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cases": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "hypothesis_version": {
+          "type": "string"
+        }
+      }
+    },
+    "GoldenQuoteResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "status"
+      ],
+      "properties": {
+        "name": {
           "type": "string"
         },
-        "rating_version_ref": {
-          "$ref": "common/artifact-ref.schema.json"
-        },
-        "bundle_hash": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
-        },
-        "job_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "started_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "finished_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "overall": {
+        "status": {
           "enum": [
             "pass",
             "fail"
           ]
         },
-        "golden_results": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": [
-              "name",
-              "status"
-            ],
-            "properties": {
-              "name": {
-                "type": "string"
-              },
-              "status": {
-                "enum": [
-                  "pass",
-                  "fail"
-                ]
-              },
-              "expected_minor": {
-                "$ref": "common/money.schema.json#/$defs/MoneyMinor"
-              },
-              "actual_minor": {
-                "$ref": "common/money.schema.json#/$defs/MoneyMinor"
-              },
-              "difference_minor": {
-                "type": "integer"
-              }
-            }
-          }
+        "expected_minor": {
+          "$ref": "common/money.schema.json#/$defs/MoneyMinor"
         },
-        "property_results": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": [
-              "name",
-              "status",
-              "cases_run"
-            ],
-            "properties": {
-              "name": {
-                "type": "string"
-              },
-              "status": {
-                "enum": [
-                  "pass",
-                  "fail"
-                ]
-              },
-              "cases_run": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "counterexample": {
-                "type": [
-                  "object",
-                  "null"
-                ],
-                "description": "Shrunk to a minimal case an actuary can read (FR-261)."
-              }
-            }
-          }
+        "actual_minor": {
+          "$ref": "common/money.schema.json#/$defs/MoneyMinor"
+        },
+        "difference_minor": {
+          "type": "integer"
         }
-      },
-      "invariants": [
-        "overall == 'fail' blocks promotion (FR-260)"
-      ]
+      }
+    },
+    "PropertyResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "status",
+        "cases_run"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "cases_run": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "counterexample": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Shrunk toward a minimal case an actuary can read (FR-261); unminimised when counterexample_minimal is false."
+        },
+        "counterexample_minimal": {
+          "type": "boolean",
+          "default": false
+        },
+        "shrink": {
+          "enum": [
+            "completed",
+            "stopped_on_limit",
+            null
+          ]
+        },
+        "error_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "grid": {
+          "enum": [
+            "uniform+sampled",
+            null
+          ],
+          "description": "How a monotone property's grid was built (DP-S3-6): the uniform grid plus seeded samples, the weaker form; an inversion narrower than the spacing may not be detected until Bandings are pinned."
+        },
+        "counterexample_points": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "description": "The two adjacent grid values, in order, at which a monotone counterexample's premium broke the property."
+        }
+      }
     }
   }
 }

@@ -2114,8 +2114,11 @@ def test_a_gbm_declaring_an_interaction_produces_diagnostics_instead_of_an_index
     assert curves["area_x_fuel"].points == ()
     assert curves["area_x_fuel"].omitted is not None
     assert curves["area_x_fuel"].omitted.reason.value == "no_source_column"
-    # Its operands still get real curves, so the skip is the cross and nothing else.
-    assert curves["area"].points
+    # FR-178 supersedes the earlier "operands still get real curves": swept alone, an
+    # operand recombines the pair into cells the fit never saw. It is skipped and recorded.
+    assert curves["area"].points == ()
+    assert curves["area"].omitted is not None
+    assert curves["area"].omitted.reason.value == "operand_of_interaction"
 
 
 @pytest.mark.req("FR-176")
@@ -2178,14 +2181,6 @@ def _sparse_crossable_book(n: int = 6_000, seed: int = 20260822) -> pl.DataFrame
 
 
 @pytest.mark.req("FR-178")
-@pytest.mark.xfail(
-    strict=True,
-    reason="FR-178: an operand is permuted and swept ALONE, which recombines the "
-    "operands into cells the fit never saw, so a sparse cross raises "
-    "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED out of compute_gbm_diagnostics. FR-177 is the "
-    "remedy and WK-690 owns the slice; strict=True so that building it turns this green and "
-    "forces the marker off rather than leaving a stale xfail behind.",
-)
 def test_a_gbm_with_a_sparse_interaction_can_produce_diagnostics() -> None:
     """FR-178, the defect FR-176's skip-and-record interim did not reach.
 
@@ -2220,7 +2215,18 @@ def test_a_gbm_with_a_sparse_interaction_can_produce_diagnostics() -> None:
     # The fit itself is fine — FR-176 made it so, and the cross is the only feature.
     assert list(fit.result.feature_order) == ["area_x_fuel"]
 
-    compute_gbm_diagnostics(
+    diagnostics = compute_gbm_diagnostics(
         fit.result, fit.booster_bytes, spec, factors,
         train=train, holdout=holdout, eval_curve=fit.eval_curve,
     )
+
+    # FR-178: each operand is skipped by both blocks, and the skip is recorded.
+    operand_slugs = {left.slug, right.slug}
+    assert diagnostics.gbm is not None
+    gbm = diagnostics.gbm
+    assert operand_slugs.isdisjoint(p.feature for p in gbm.permutation_importances)
+    by_factor = {d.factor: d for d in gbm.partial_dependence}
+    for slug in operand_slugs:
+        assert by_factor[slug].points == ()
+        assert by_factor[slug].omitted is not None
+        assert by_factor[slug].omitted.reason.value == "operand_of_interaction"

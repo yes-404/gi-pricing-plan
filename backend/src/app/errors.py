@@ -349,9 +349,18 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # `complete`/`mismatch` and this is how it stops rather than doubling the work.
         "TRACE_NOT_PENDING",
         # Golden quotes (WK-672 Slice 1, FR-260). Registered ahead of its raiser: Slice 2
-        # builds the promotion-refusal path that raises it. PROPERTY_ASSERTION_FAILED,
-        # FR-261's code, is registered by Slice 3 together with its raiser.
+        # builds the promotion-refusal path that raises it.
         "GOLDEN_QUOTE_MISMATCH",
+        # Property assertions (WK-672 Slice 3, FR-261). Raised by the `rating.regression`
+        # Job handler, which finishes the Job `failed` with it when a property fails; the
+        # run row still persists.
+        "PROPERTY_ASSERTION_FAILED",
+        # Regression Suite declaration (WK-672 Slice 3, FR-261): a `monotone` property whose
+        # input or range cannot be swept (absent from the algorithm's input contract, not
+        # orderable, no range, empty after the contract's own bounds, or no two-place
+        # decimal value) is refused 422 at declaration, and again by the Job handler, so it
+        # never reaches a running Job as a raw exception.
+        "REGRESSION_PROPERTY_INVALID",
     }
 )
 
