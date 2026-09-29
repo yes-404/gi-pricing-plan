@@ -16,22 +16,20 @@ permission check happens here; the bytes never touch this process.
 
 from __future__ import annotations
 
-from typing import Annotated, Any
-from uuid import UUID
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.authz import requires
 from app.api.deps import Caller
 from app.api.responses import problems
-from app.db.models import BlobRow, DatasetVersionRow, JobRow, ScoringTraceRow
+from app.db.models import BlobRow
 from app.db.session import Database
 from app.errors import PlatformError
-from app.platform.blobs import BlobStore, to_ref
+from app.platform.blobs import BlobStore, blob_not_found, blob_readable_by, to_ref
 from model_schema import Permission as Perm
 
 __all__ = ["router"]
@@ -40,40 +38,6 @@ router = APIRouter(prefix="/blobs", tags=["blobs"])
 
 ReadDatasets = Annotated[Caller, Depends(requires(Perm.DATASET_READ))]
 
-#: Every column through which a **quote-input store** references a blob (NFR-499, RL-917).
-#: A digest named here is never served by `GET /blobs/{sha256}`, whoever owns it otherwise:
-#: its body is read through that store's own workspace-scoped API. WK-672 Slice 3's case
-#: store appends its column here.
-QUOTE_INPUT_BLOB_COLUMNS: tuple[Any, ...] = (ScoringTraceRow.blob_sha256,)
-
-
-async def _readable_by(session: AsyncSession, *, sha256: str, workspace_id: UUID) -> bool:
-    """Whether a caller in `workspace_id` may download blob `sha256` (`07` §5.1, 2026-09-28).
-
-    `blobs` has no workspace column — a blob is content-addressed, and one digest can be
-    owned in two workspaces — so the answer comes from the rows that reference it. Refused
-    first if any quote-input store references it; then readable only if an **owner in the
-    caller's workspace** references it: a dataset version's table (this route's declared
-    purpose) or a job's `JobResult(kind="blob")` (`03` §5.2). Anything else, including a
-    blob nothing references, is refused: the list of owners is an allow-list.
-    """
-    for column in QUOTE_INPUT_BLOB_COLUMNS:
-        if (await session.execute(select(column).where(column == sha256).limit(1))).first():
-            return False
-    owners = (
-        select(DatasetVersionRow.id).where(
-            DatasetVersionRow.workspace_id == workspace_id,
-            DatasetVersionRow.tables.contains([{"blob": {"sha256": sha256}}]),
-        ),
-        select(JobRow.id).where(
-            JobRow.workspace_id == workspace_id,
-            JobRow.result.contains({"kind": "blob", "ref": sha256}),
-        ),
-    )
-    for owner in owners:
-        if (await session.execute(owner.limit(1))).first():
-            return True
-    return False
 WriteDatasets = Annotated[Caller, Depends(requires(Perm.DATASET_WRITE))]
 
 
@@ -117,10 +81,12 @@ async def upload_url(
 ) -> UploadUrlResponse:
     """FR-421.
 
-    The digest is not known until the bytes exist, so the object lands on a staging key and
-    is promoted to its content address on completion. Asking the client for the digest up
-    front would let it choose one, which is the difference between content addressing and
-    client-supplied naming.
+    The digest is not known until the bytes exist, so the object lands on a staging key, not
+    at its content address. Asking the client for the digest up front would let it choose
+    one, which is the difference between content addressing and client-supplied naming.
+    Nothing yet moves a staging object to its content address or creates its `blobs` row
+    (the completion step FR-421 implies is not built), so an upload made through this URL
+    cannot be ingested or downloaded as a blob today.
     """
     presigned = await blob_store.presign_upload(body.media_type, body.parts)
     return UploadUrlResponse(
@@ -157,15 +123,11 @@ async def download(
         row = (
             await session.execute(select(BlobRow).where(BlobRow.sha256 == sha256))
         ).scalar_one_or_none()
-        readable = row is not None and await _readable_by(
+        readable = row is not None and await blob_readable_by(
             session, sha256=sha256, workspace_id=caller.workspace_id
         )
     if not readable:
-        # One answer for "no such blob", "a quote input" and "not yours", so the route never
-        # confirms that a digest exists (`07` §5.1, 2026-09-28).
-        raise PlatformError(
-            "NOT_FOUND", "Blob not found", 404, f"No blob with digest {sha256}."
-        )
+        raise blob_not_found(sha256)
     assert row is not None
 
     url = await blob_store.presign_download(
