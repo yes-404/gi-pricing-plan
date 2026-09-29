@@ -54,6 +54,7 @@ from model_schema import (
     QuoteContext,
     ScoringResult,
 )
+from pricing_core.safe_error import CodedError
 
 SCORE_URL = "/api/v1/score"
 #: The slug/version `_insert_version` creates. Read from that helper rather than chosen:
@@ -404,7 +405,7 @@ def test_each_per_quote_code_maps_to_its_own_problem(
     """
 
     async def _score_one(*_args: Any, **_kwargs: Any) -> ScoringResult:
-        raise ValueError(f"{code}: something specific and prose-like happened")
+        raise CodedError(f"{code}: something specific and prose-like happened")
 
     monkeypatch.setattr(score_module, "score_one", _score_one)
     response = client.post(
@@ -488,7 +489,7 @@ def test_an_unregistered_code_is_not_invented_into_a_problem(
     `pricing-core` happened to put before the first colon."""
 
     async def _score_one(*_args: Any, **_kwargs: Any) -> ScoringResult:
-        raise ValueError("SOMETHING_ELSE: not one of the four")
+        raise CodedError("SOMETHING_ELSE: not one of the four")
 
     monkeypatch.setattr(score_module, "score_one", _score_one)
     response = client.post(
@@ -537,6 +538,28 @@ def compiled_version(
     job = _run_compile_job(client, admin_headers, database, blob_store, row.id)
     assert job.status is JobStatus.SUCCEEDED, job.error
     return row
+
+
+@pytest.mark.req("NFR-499")
+def test_a_plain_value_error_wearing_a_per_quote_code_is_not_mapped(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    served: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The mapping is by class (`CodedError`), never by the shape of the text: a library's
+    `ValueError("INPUT_CONTRACT_VIOLATION: <value>")` is a 500 and its text is not echoed."""
+
+    async def _score_one(*_args: Any, **_kwargs: Any) -> ScoringResult:
+        raise ValueError("INPUT_CONTRACT_VIOLATION: SENTINEL-quote-input-f3")
+
+    monkeypatch.setattr(score_module, "score_one", _score_one)
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
+    )
+
+    assert response.status_code == 500, response.text
+    assert "SENTINEL-quote-input-f3" not in response.text
 
 
 @pytest.mark.req("FR-250")

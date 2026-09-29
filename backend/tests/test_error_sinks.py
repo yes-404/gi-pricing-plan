@@ -24,23 +24,38 @@ from fastapi.testclient import TestClient
 from pydantic import BaseModel, ValidationError
 
 _ROOT = Path(__file__).resolve().parents[2]
-_SCOPE = [
-    "backend/src/app/api/score.py",
-    "backend/src/app/worker/tasks.py",
-    "backend/src/app/worker/scoring_handlers.py",
-    "backend/src/app/worker/trace_handlers.py",
+#: The scope is DERIVED by glob, so a new file is covered by default (maintainer, 2026-09-29,
+#: Q889-a): a list of files omitted four handlers and the guard passed a leak added to one.
+_GLOBS = (
+    "backend/src/app/worker/**/*.py",
+    "backend/src/app/api/**/*.py",
+    "packages/pricing-core/src/pricing_core/**/*.py",
+)
+#: Files outside those directories that a failure's text also passes through.
+_ALSO = (
     "backend/src/app/observability/middleware.py",
     "backend/src/app/platform/outbox.py",
     "backend/src/app/platform/traces.py",
-    "packages/pricing-core/src/pricing_core/rating",
-]
+)
+#: Files the globs match and the census leaves out, each with why. A file not listed here is in.
+#: Empty on purpose: every file under the three directories is counted, and a sink in one that is
+#: not a quote-input path is listed in `_SINKS` with why, so a new one is still seen.
+_EXCLUDED: dict[str, str] = {}
+#: Handlers a list once omitted; the census test asserts each is in the derived set.
+_MUST_BE_IN_SCOPE = (
+    "backend/src/app/worker/rating_handlers.py",
+    "backend/src/app/worker/model_handlers.py",
+    "backend/src/app/worker/data_handlers.py",
+    "backend/src/app/worker/rate_table_handlers.py",
+)
 
 _SENTINEL = "SENTINEL-quote-input-d7e3c518"
 
 #: (file, function, kind) -> (how many, what covers it).
 _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
     ("backend/src/app/api/score.py", "_as_platform_error", "str(exc)"): (
-        1, "the coded message with the value dropped at source: test_quote_input_raise_sites.py "
+        1, "reached only for a `CodedError` (by class, not text shape): the message has its value "
+        "dropped at source: test_quote_input_raise_sites.py "
         "and test_score.py::test_a_422_for_a_bad_input_names_the_field_and_carries_no_value"),
     ("backend/src/app/api/score.py", "_maybe_sample_trace", "exc_info"): (
         1, "test_score.py::test_a_trace_sampling_failure_logs_no_quote_input"),
@@ -55,6 +70,42 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         2, "test_job_error_sanitiser.py (the generic and the named-refusal clause)"),
     ("backend/src/app/worker/tasks.py", "execute_job", "str(exc)"): (
         1, "JobBudgetExceededError's own message: elapsed time and the budget, no input"),
+    ("backend/src/app/api/demo.py", "get_guide", "{exc}"): (
+        1, "the demo guide's own missing-source message: a path, no quote or dataset value"),
+    ("backend/src/app/api/rate_tables.py", "_seed_body", "str(exc)"): (
+        1, "rate-table seed validation echoing the caller's own request to the caller; a rate "
+        "table is not a quote input and the 422 is the request's own body"),
+    ("backend/src/app/worker/data_handlers.py", "_materialise_split", "str(exc)"): (
+        1, "`SplitError`, pricing-core's own message about a split definition; Dataset Version "
+        "path, not a Quote Context"),
+    ("backend/src/app/worker/model_handlers.py", "_compare", "str(exc)"): (
+        1, "`ModellingError`: pricing-core's named modelling refusal; model path, not a quote"),
+    ("backend/src/app/worker/model_handlers.py", "_fit", "str(exc)"): (
+        1, "`EbmFitError`/`GbmFitError`/`GlmFitError`: named fit refusals; model path"),
+    ("backend/src/app/worker/model_handlers.py", "_fit", "{exc}"): (
+        1, "`FactorResolutionError`: names a factor and a dataset version; model path"),
+    ("backend/src/app/worker/model_handlers.py", "_reconcile", "str(exc)"): (
+        2, "`ModellingError`/`PredictionError`: named refusals of a peril reconciliation; model "
+        "path, not a quote"),
+    ("backend/src/app/worker/rating_handlers.py", "_rating_regression", "str(exc)"): (
+        1, "`UnsweepableProperty`, a named refusal whose message names no quote input; every "
+        "other exception propagates to `execute_job`'s one generic clause "
+        "(test_regression_runs.py::test_a_validation_error_inside_a_run_never_puts_a_quote_input_in_the_job_error_or_the_logs)"),
+    ("packages/pricing-core/src/pricing_core/data/validate.py", "_reject_unless_single_select",
+     "{exc}"): (
+        1, "a dataset validation rule's own SQL parse error; Dataset Version path, not a quote"),
+    ("packages/pricing-core/src/pricing_core/data/validate.py", "_run_one", "{exc}"): (
+        1, "a dataset validation rule's failure text; Dataset Version path, not a quote"),
+    ("packages/pricing-core/src/pricing_core/data/validate.py", "_sql", "{exc}"): (
+        1, "a dataset validation rule's DuckDB error; Dataset Version path, not a quote"),
+    ("packages/pricing-core/src/pricing_core/modelling/ebm.py", "fit_ebm", "{exc}"): (
+        1, "`interpret`'s refusal of a fit; model path, not a quote"),
+    ("packages/pricing-core/src/pricing_core/modelling/glm.py", "decode_covariance", "{exc}"): (
+        1, "a stored covariance blob's decode error; model path, not a quote"),
+    ("packages/pricing-core/src/pricing_core/modelling/glm.py", "fit_glm", "{exc}"): (
+        1, "`glum`'s refusal of a fit; model path, not a quote"),
+    ("packages/pricing-core/src/pricing_core/safe_error.py", "safe_error_detail", "str(exc)"): (
+        1, "the allow-list itself: reached only for a `CodedError`, whose text is input-free"),
     ("packages/pricing-core/src/pricing_core/rating/compile.py", "_check_vocabulary", "{exc}"): (
         1, "compile time, artifact-level: no quote is involved"),
     ("packages/pricing-core/src/pricing_core/rating/score.py", "_score_batch_row",
@@ -65,11 +116,9 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
 
 
 def _files() -> list[Path]:
-    files: list[Path] = []
-    for entry in _SCOPE:
-        path = _ROOT / entry
-        files += sorted(path.glob("*.py")) if path.is_dir() else [path]
-    return files
+    derived = {p for pattern in _GLOBS for p in _ROOT.glob(pattern) if "__pycache__" not in p.parts}
+    derived |= {_ROOT / entry for entry in _ALSO}
+    return sorted(p for p in derived if p.relative_to(_ROOT).as_posix() not in _EXCLUDED)
 
 
 def _sinks(source: str, name: str) -> Counter[tuple[str, str, str]]:
@@ -129,6 +178,16 @@ def test_every_failure_sink_on_a_quote_input_path_is_accounted_for() -> None:
         "under app.platform.safe_exception / pricing_core.safe_error, give it a sentinel test, "
         "and list it in _SINKS"
     )
+
+
+@pytest.mark.req("NFR-499")
+def test_the_derived_scope_holds_every_worker_handler() -> None:
+    """The scope is a glob, not a list: the four handlers a list once omitted are in it, and a
+    file added under a globbed directory is in it by default."""
+    in_scope = {p.relative_to(_ROOT).as_posix() for p in _files()}
+    assert set(_MUST_BE_IN_SCOPE) <= in_scope
+    on_disk = {p.name for p in (_ROOT / "backend/src/app/worker").glob("*.py")}
+    assert on_disk <= {Path(f).name for f in in_scope}
 
 
 @pytest.mark.req("NFR-499")

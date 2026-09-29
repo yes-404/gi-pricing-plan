@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import ast
 import copy
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -29,7 +30,11 @@ from pricing_core.safe_error import CodedError
 _SENTINEL = "SENTINEL-quote-input-3c9d0a17"
 _BIG = 987654321
 
-_SRC = Path(__file__).resolve().parents[1] / "src" / "pricing_core" / "rating"
+#: The whole package, by glob: a raise site added in any pricing_core module is counted by
+#: default (maintainer, 2026-09-29, Q889-a). Keys below are paths relative to it.
+_SRC = Path(__file__).resolve().parents[1] / "src" / "pricing_core"
+#: Files under `_SRC` the census leaves out, each with why. Empty: none needs leaving out.
+_EXCLUDED: dict[str, str] = {}
 
 #: The quote-input raise sites, one case each: the site's key, the input that trips it, the
 #: fragments (field, constraint) the message must keep, and the values that must not appear.
@@ -55,30 +60,39 @@ _CASES: dict[str, tuple[dict[str, Any], tuple[str, ...], tuple[str, ...]]] = {
 #: Every other raise site under `pricing_core/rating` (a `_raise_named` call, a `CodedError(`
 #: construction, or a `_model_call_failure(` call), with why it is input-free.
 _INPUT_FREE = {
-    ("score.py", "_check_purpose_mount"): 1,  # `purpose` is a closed set of literals
-    ("score.py", "_check_billing_surface"): 1,  # names the constant billing-surface keys
-    ("score.py", "_check_lookup_misses"): 2,  # step ids only
-    ("score.py", "_reraise_engine_failure"): 1,  # the engine error is reduced to its type name
-    ("score.py", "score_one"): 1,  # a fixed sentence about a missing rating_version_ref
-    ("score.py", "_raise_named"): 1,  # the constructor helper itself (`from None`)
+    ("rating/score.py", "_check_purpose_mount"): 1,  # `purpose` is a closed set of literals
+    ("rating/score.py", "_check_billing_surface"): 1,  # names the constant billing-surface keys
+    ("rating/score.py", "_check_lookup_misses"): 2,  # step ids only
+    ("rating/score.py", "_reraise_engine_failure"): 1,  # engine error is reduced to its type name
+    ("rating/score.py", "score_one"): 1,  # a fixed sentence about a missing rating_version_ref
+    ("rating/score.py", "_raise_named"): 1,  # the constructor helper itself (`from None`)
     # The model-call sentinel re-raised as a coded error: its text is `MODEL_CALL_FAILED: ` plus a
     # static sentence built in `runtime.py`, never a model's or the engine's own error text.
-    ("score.py", "_check_model_call_sentinel"): 1,
-    ("runtime.py", "handler"): 2,  # `_model_call_failure`: step id and the pinned model_type
-    ("compile.py", "compile_bundle"): 5,  # artifact-level (compile time), no quote is involved
-    ("compile.py", "_raise_named"): 1,  # the constructor helper itself (`from None`)
+    ("rating/score.py", "_check_model_call_sentinel"): 1,
+    ("rating/runtime.py", "handler"): 2,  # `_model_call_failure`: step id and the pinned model_type
+    ("rating/compile.py", "compile_bundle"): 5,  # artifact-level (compile time), no quote
+    ("rating/compile.py", "_raise_named"): 1,  # the constructor helper itself (`from None`)
 }
 #: The functions holding the quote-input sites, whose count must equal the cases.
-_INPUT_SITES = {("score.py", "_validate_inputs"), ("score.py", "_row_to_ctx")}
+_INPUT_SITES = {("rating/score.py", "_validate_inputs"), ("rating/score.py", "_row_to_ctx")}
 
 
-_SITE_NAMES = ("_raise_named", "CodedError", "_model_call_failure")
+#: `PlatformError` cannot be raised in this package (import-linter), so a hit is a violation.
+_SITE_NAMES = ("_raise_named", "CodedError", "_model_call_failure", "PlatformError")
+
+
+def _source_files() -> list[Path]:
+    return sorted(
+        p for p in _SRC.rglob("*.py")
+        if "__pycache__" not in p.parts and p.relative_to(_SRC).as_posix() not in _EXCLUDED
+    )
 
 
 def _raise_sites() -> dict[tuple[str, str], int]:
     counts: dict[tuple[str, str], int] = {}
-    for name in ("score.py", "compile.py", "runtime.py"):
-        tree = ast.parse((_SRC / name).read_text(encoding="utf-8"))
+    for path in _source_files():
+        name = path.relative_to(_SRC).as_posix()
+        tree = ast.parse(path.read_text(encoding="utf-8"))
 
         def visit(node: ast.AST, function: str, name: str = name) -> None:
             if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
@@ -114,13 +128,15 @@ def test_every_quote_input_raise_site_has_a_sentinel_case() -> None:
 def _guard_against(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, replace: tuple[str, str]
 ) -> None:
-    """Run the guard against a copy of `score.py` with `replace[0]` swapped for `replace[1]`."""
-    source = (_SRC / "score.py").read_text(encoding="utf-8")
+    """Run the guard against a copy of the package with `replace[0]` swapped for `replace[1]`
+    in `rating/score.py`."""
+    copy_root = tmp_path / "pricing_core"
+    shutil.copytree(_SRC, copy_root, ignore=shutil.ignore_patterns("__pycache__"))
+    target = copy_root / "rating" / "score.py"
+    source = target.read_text(encoding="utf-8")
     assert replace[0] in source
-    (tmp_path / "score.py").write_text(source.replace(*replace, 1), encoding="utf-8")
-    for other in ("compile.py", "runtime.py"):
-        (tmp_path / other).write_text((_SRC / other).read_text(encoding="utf-8"))
-    monkeypatch.setattr(f"{__name__}._SRC", tmp_path)
+    target.write_text(source.replace(*replace, 1), encoding="utf-8")
+    monkeypatch.setattr(f"{__name__}._SRC", copy_root)
 
 
 @pytest.mark.req("NFR-499")
