@@ -3,7 +3,7 @@ id: RL-9201
 family: ruling
 title: WK-673 DP-1 to DP-3 — subset bundles are ephemeral, changes are derived and regrouped, the threshold is policy, and the spec is right about engine arithmetic
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-09-28
+created: 2026-09-29
 owner: decision-maker
 tree: ed123cb0fcf91e44872963bf8a8bad32b87c99bc
 phase: P2
@@ -19,18 +19,18 @@ relates: [RL-881, RL-885, RL-1172]
 
 ## Verified first, at ed123cb0fcf91e44872963bf8a8bad32b87c99bc
 
-**This record decides nothing.** It files decisions the deputy made by delegation from the
-maintainer (28 Sep, extended goal). They are in the deputy's entry on WK-673's DP-1 to DP-3,
-written at 14:05:30 BST and relayed by the lead. The entry is quoted whole under Ruled, in a
-fenced block, and this record names the slice each decision obliges. The entry itself asks
-for this record, to be filed in Slice 1's PR or before it.
+**Decided by the decision-maker, 2026-09-29** — the ruling is `## Ruled`, at the end. Its input is
+the deputy's entry on WK-673's DP-1 to DP-3 (by the maintainer's delegation, 28 Sep, extended goal),
+written at 14:05:30 BST and relayed by the lead, a recommendation under the maintainer's STRUCTURE
+entry (15:26:00, §2); it is quoted whole under Input, fenced. First filed 2026-09-28 as working id
+RL-9201; `created` re-dated at the reframe so the id sequence stays non-decreasing (check 31).
 
 **The plan these rule on** is WK-673's map plan, a draft on PR #844 at
 `af3f0518` (`status: draft`, `tree: 6c6f4532…`). It is not on `main`, so this record names
 it by PR rather than by id: an id that does not resolve fails `audit-docs.py` check 32, and
-this record merges first. The entry under Ruled quotes the id inside its fence, whole.
-Its Decision points table is at `:228-239` there. It states that DP-1, DP-2 and DP-3 are the maintainer's,
-resolved by the deputy, and that DP-4 is slice design, the planner's own and decided in the
+this record merges first. The entry under Input quotes the id inside its fence, whole.
+Its Decision points table is at `:228-239` there. It routes DP-1, DP-2 and DP-3 to the maintainer, for
+the deputy to resolve (ruled here instead, per the STRUCTURE entry's §2), and DP-4 is slice design, the planner's own and decided in the
 plan. **DP-4 is therefore not ruled here.** The plan cites this record once both are minted
 (the lead calls the turns; this record mints first).
 
@@ -56,7 +56,7 @@ read by `TZ=Europe/London date`. **Its id, RL-9201, is a working id.** It is min
 
 All five are as the entry quotes them.
 
-## Ruled
+## Input — the deputy's entry of 2026-09-28 (a recommendation)
 
 The deputy's entry, **whole and verbatim**. It is fenced so that the ids it quotes are read as
 quotation, not as citations; `audit-docs.py` check 32 skips fenced blocks. The deputy accepted
@@ -95,7 +95,7 @@ Given by the maintainer's delegation (28 Sep, extended goal). A decision-maker f
 **The other premises are noted for S1**, which amends them: the contract's `job_id` / `by_ladder_rung` / `errors` missing from §4.6; `attribute`'s §5.2 signature having no baseline; RL-881's stale "06 §4.2 omits rating_version". S6's split (floor wiring after WK-672 S3) is sound slice design. **I accept PL-9101 as WK-673's map plan** once the RL records these DPs and the plan cites it. The acceptance line follows your request.
 ```
 
-What the entry decides, in this record's own words:
+What the entry recommends, in this record's own words:
 
 - **DP-1: (a), with conditions.** Subset bundles are compiled through `compile_bundle` at step
   granularity. They are ephemeral and content-addressed, never a Rating Version, never
@@ -109,7 +109,7 @@ What the entry decides, in this record's own words:
 - **The disagreement (`CLAUDE.md` §0): the spec is right.** The float64 is the binding's return
   type, not the engine's arithmetic. Slice 1 corrects `_round_minor`'s docstring sentence to the
   entry's wording, with no behaviour change.
-- **The Shapley cost: a feasibility rule,** amending item 5 of the deputy's F3 decision, as
+- **The Shapley cost: a feasibility rule,** amending item 5 of the F3 decision, as
   the entry's items 1–5 state it.
 - **The plan's other premises** are noted for Slice 1, which amends them.
 
@@ -126,7 +126,7 @@ The slice numbers are those of WK-673's map plan (PR #844).
     regrouped into at most 6 groups, the server checking the groups partition the diff
     exactly and refusing by name, and both lists on the artifact.
   - The `_round_minor` docstring sentence is corrected, in one commit with any spec text it
-    touches, to the deputy's wording. Behaviour does not change.
+    touches, to the input entry's wording. Behaviour does not change.
   - The noted premises are amended: `job_id`, `by_ladder_rung` and `errors` in `03` §4.6's
     contract, and a baseline in `attribute`'s §5.2 signature.
   - RL-881's stale clause saying `06` §4.2 omits `rating_version` is superseded. `06` §4.2
@@ -139,12 +139,12 @@ The slice numbers are those of WK-673's map plan (PR #844).
   - show the estimated rating count before launch, and never present a sample as exact
     Shapley;
   - propose the dislocation-attribution NFR from the measurement, and bring the figure to
-    the deputy before any fallback if K = 4 does not fit.
+    the decision-maker before any fallback if K = 4 does not fit.
 - **Slice 5 (the approval gate, part one)** cites DP-3. FR-224's threshold is a field on
   the `rating_version` `ApprovalPolicy` entry (`06` §4.2), with no environment-variable
   override, so FR-446's resolution order does not apply to it.
-- **WK-673's map plan (PR #844)** cites this record by its minted id. The deputy accepts it as WK-673's map
-  plan once it does, and the acceptance line follows the lead's request.
+- **WK-673's map plan (PR #844)** cites this record by its minted id. The input entry states the plan's acceptance on
+  that condition; acceptance of a plan is not this record's to give.
 - **Not ruled here:** DP-4 (the planner's slice design, decided in the plan) and the F3
   decision itself. Item 5 is amended above, and the method of record stands.
 
@@ -166,10 +166,10 @@ one negative test for each of the following, each shown red on deliberately brok
 Slice 3's leaf plan names the replay-exactness check: *Violation: a replayed v(S) that
 differs from a true re-rate for some policy, and is not recorded as falling back.*
 
-## Adopted by the decision-maker, 2026-09-29
+## Ruled — by the decision-maker, 2026-09-29
 
-**Why this section exists.** This record files the deputy's delegated decisions of
-2026-09-28 14:05:30 BST. They are technical decision points. The maintainer's entry `2026-09-29 15:26:00 BST · maintainer (acting on the maintainer's behalf) · STRUCTURE: routing per document-ids §1.6 and the charters; today's technical answers re-homed`
+**This is the ruling.** The deputy's entry of 2026-09-28 14:05:30 BST, above, is input.
+Its points are technical decision points. The maintainer's entry `2026-09-29 15:26:00 BST · maintainer (acting on the maintainer's behalf) · STRUCTURE: routing per document-ids §1.6 and the charters; today's technical answers re-homed`
 (§2) re-homes such points to this role, so each is re-verified here at origin/main `ac8ab519`,
 with the mechanism it builds on named by file and line. The body above stays as of `ed123cb0`.
 
