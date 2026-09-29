@@ -1027,6 +1027,32 @@
         "title": "CalibrationBin",
         "type": "object"
       },
+      "CasesLog": {
+        "additionalProperties": false,
+        "description": "A run's reproduction record: every generated case and every counterexample (FR-261).\n\nPersisted as one content-addressed canonical JSON blob (FR-1221) and replayed by\nre-scoring, never regenerated. `counterexamples` is keyed by property name.",
+        "properties": {
+          "cases": {
+            "items": {
+              "$ref": "#/components/schemas/QuoteContext"
+            },
+            "title": "Cases",
+            "type": "array"
+          },
+          "counterexamples": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/QuoteContext"
+            },
+            "title": "Counterexamples",
+            "type": "object"
+          }
+        },
+        "required": [
+          "cases",
+          "counterexamples"
+        ],
+        "title": "CasesLog",
+        "type": "object"
+      },
       "CertificateCheck": {
         "additionalProperties": false,
         "description": "One named check and what it found.\n\n`detail` is prose and is required — FR-148 makes a branch discontinuity a\n*reported finding* rather than an exclusion, and a `warn` with no sentence beside it is\nexactly the finding nobody acts on.",
@@ -4334,6 +4360,14 @@
             "title": "Permutation Importances",
             "type": "array"
           },
+          "permutation_omitted": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PermutationOmission"
+            },
+            "title": "Permutation Omitted",
+            "type": "array"
+          },
           "quantile_crossing": {
             "anyOf": [
               {
@@ -4965,6 +4999,14 @@
               }
             ],
             "title": "Residual Blob"
+          },
+          "type_iii_omitted": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TypeIIIOmission"
+            },
+            "title": "Type Iii Omitted",
+            "type": "array"
           },
           "type_iii_tests": {
             "default": [],
@@ -8810,6 +8852,14 @@
           "seed": {
             "title": "Seed",
             "type": "integer"
+          },
+          "shared_source_columns": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Shared Source Columns",
+            "type": "array"
           }
         },
         "required": [
@@ -8822,6 +8872,34 @@
         ],
         "title": "PermutationImportance",
         "type": "object"
+      },
+      "PermutationOmission": {
+        "additionalProperties": false,
+        "description": "A factor the permutation block did not measure, and why (FR-178).\n\nUntil FR-178's permutation limb this was silent: the block skipped a factor and\nnothing in the output said so, which is the silence `PartialDependenceOmission` was\nadded to end on the other block.",
+        "properties": {
+          "feature": {
+            "title": "Feature",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/PermutationOmissionReason"
+          }
+        },
+        "required": [
+          "feature",
+          "reason"
+        ],
+        "title": "PermutationOmission",
+        "type": "object"
+      },
+      "PermutationOmissionReason": {
+        "description": "Why a factor has no permutation importance (FR-178).",
+        "enum": [
+          "operand_of_interaction",
+          "no_holdout_column"
+        ],
+        "title": "PermutationOmissionReason",
+        "type": "string"
       },
       "PiiClass": {
         "description": "How sensitive a column is (`01` §4.1, FR-12, FR-39).\n\nThe two strongest classes are not a warning label. A `direct_identifier` or\n`special_category` column is **refused for modelling use** — rating on a special\ncategory is unlawful in the UK/EU, and a direct identifier in a model is a\nre-identification risk that no amount of care downstream removes.",
@@ -9294,6 +9372,112 @@
           }
         },
         "title": "Progress",
+        "type": "object"
+      },
+      "PropertyResult": {
+        "additionalProperties": false,
+        "description": "One property's outcome — 03 §4.9's `property_results[]` item.\n\nA failing property records how its shrink ended; a shrink stopped on a limit is\nreported as unminimised, never as a minimal counterexample (RS-1176 condition 5).",
+        "properties": {
+          "cases_run": {
+            "minimum": 0.0,
+            "title": "Cases Run",
+            "type": "integer"
+          },
+          "counterexample": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterexample"
+          },
+          "counterexample_minimal": {
+            "default": false,
+            "title": "Counterexample Minimal",
+            "type": "boolean"
+          },
+          "counterexample_points": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterexample Points"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "grid": {
+            "anyOf": [
+              {
+                "const": "uniform+sampled",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grid"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "shrink": {
+            "anyOf": [
+              {
+                "enum": [
+                  "completed",
+                  "stopped_on_limit"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shrink"
+          },
+          "status": {
+            "enum": [
+              "pass",
+              "fail"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "status",
+          "cases_run"
+        ],
+        "title": "PropertyResult",
         "type": "object"
       },
       "QuantileCrossing": {
@@ -10201,6 +10385,7 @@
         "additionalProperties": false,
         "properties": {
           "cases": {
+            "maximum": 10000.0,
             "minimum": 1.0,
             "title": "Cases",
             "type": "integer"
@@ -10268,6 +10453,93 @@
           "check"
         ],
         "title": "RegressionProperty",
+        "type": "object"
+      },
+      "RegressionRun": {
+        "additionalProperties": false,
+        "description": "The execution record of a Regression Suite run (03 §4.9, FR-260, FR-261).",
+        "properties": {
+          "bundle_hash": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Bundle Hash",
+            "type": "string"
+          },
+          "cases_blob": {
+            "$ref": "#/components/schemas/BlobRef"
+          },
+          "finished_at": {
+            "format": "date-time",
+            "title": "Finished At",
+            "type": "string"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/RunGeneration"
+          },
+          "golden_results": {
+            "items": {
+              "$ref": "#/components/schemas/GoldenQuoteResult"
+            },
+            "title": "Golden Results",
+            "type": "array"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "overall": {
+            "enum": [
+              "pass",
+              "fail"
+            ],
+            "title": "Overall",
+            "type": "string"
+          },
+          "property_results": {
+            "items": {
+              "$ref": "#/components/schemas/PropertyResult"
+            },
+            "title": "Property Results",
+            "type": "array"
+          },
+          "rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "suite_content_hash": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Suite Content Hash",
+            "type": "string"
+          },
+          "suite_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          }
+        },
+        "required": [
+          "suite_ref",
+          "suite_content_hash",
+          "rating_version_ref",
+          "bundle_hash",
+          "started_at",
+          "finished_at",
+          "overall",
+          "generation",
+          "cases_blob",
+          "golden_results",
+          "property_results"
+        ],
+        "title": "RegressionRun",
         "type": "object"
       },
       "RegressionSuite": {
@@ -11013,6 +11285,34 @@
         "title": "RunBacktest",
         "type": "object"
       },
+      "RunGeneration": {
+        "additionalProperties": false,
+        "description": "How a run generated its cases (03 §4.9); the seed serves same-version regeneration.",
+        "properties": {
+          "cases": {
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Cases",
+            "type": "integer"
+          },
+          "hypothesis_version": {
+            "title": "Hypothesis Version",
+            "type": "string"
+          },
+          "seed": {
+            "minimum": 0.0,
+            "title": "Seed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "seed",
+          "cases",
+          "hypothesis_version"
+        ],
+        "title": "RunGeneration",
+        "type": "object"
+      },
       "SamplingSpec": {
         "additionalProperties": false,
         "description": "The grid the checks ran over (§4.7).\n\nPart of the certificate rather than a run parameter thrown away afterwards: §4.7's own\nnote says the convexity share \"is strongly dependent on `y_range`/`f_range`, so the\nshare is only meaningful alongside the sampling block\". A finding without its grid is\na percentage of nothing.",
@@ -11099,6 +11399,28 @@
           "columns"
         ],
         "title": "SchemaCorrection",
+        "type": "object"
+      },
+      "ScoreCompareRequest": {
+        "additionalProperties": false,
+        "description": "`POST /api/v1/score/compare` body (FR-262, `03` §4.10): one quote, two versions.",
+        "properties": {
+          "base": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "comparison": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "context": {
+            "$ref": "#/components/schemas/QuoteContext"
+          }
+        },
+        "required": [
+          "context",
+          "base",
+          "comparison"
+        ],
+        "title": "ScoreCompareRequest",
         "type": "object"
       },
       "SemanticType": {
@@ -12234,6 +12556,33 @@
         ],
         "title": "TweedieProfilePoint",
         "type": "object"
+      },
+      "TypeIIIOmission": {
+        "additionalProperties": false,
+        "description": "A factor the type-III block did not test, and why (FR-178).\n\nUntil FR-178's type-III half this exclusion was stated in a code comment and recorded\nnowhere, so a reviewer reading a GLM's diagnostics could not see that operands had been\nleft out.",
+        "properties": {
+          "factor": {
+            "title": "Factor",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/TypeIIIOmissionReason"
+          }
+        },
+        "required": [
+          "factor",
+          "reason"
+        ],
+        "title": "TypeIIIOmission",
+        "type": "object"
+      },
+      "TypeIIIOmissionReason": {
+        "description": "Why a factor has no type-III test (FR-178).",
+        "enum": [
+          "operand_of_interaction"
+        ],
+        "title": "TypeIIIOmissionReason",
+        "type": "string"
       },
       "TypeIIITest": {
         "additionalProperties": false,
@@ -14843,7 +15192,7 @@
     },
     "/api/v1/blobs/upload-url": {
       "post": {
-        "description": "FR-421.\n\nThe digest is not known until the bytes exist, so the object lands on a staging key and\nis promoted to its content address on completion. Asking the client for the digest up\nfront would let it choose one, which is the difference between content addressing and\nclient-supplied naming.",
+        "description": "FR-421.\n\nThe digest is not known until the bytes exist, so the object lands on a staging key, not\nat its content address. Asking the client for the digest up front would let it choose\none, which is the difference between content addressing and client-supplied naming.\nNothing yet moves a staging object to its content address or creates its `blobs` row\n(the completion step FR-421 implies is not built), so an upload made through this URL\ncannot be ingested or downloaded as a blob today.",
         "operationId": "upload_url_api_v1_blobs_upload_url_post",
         "parameters": [
           {
@@ -25475,6 +25824,362 @@
         ]
       }
     },
+    "/api/v1/rating-versions/{rating_version_id}/regression-runs": {
+      "post": {
+        "description": "**202** with a Job (`03` §5.1, FR-260/261, `PL-1205` Task 5).\n\nThe `rating.regression` Job runs the algorithm's current Regression Suite against this\nversion's compiled bundle and persists a `RegressionRun` with its case log. A failing\nrun ends the Job `failed` (`PROPERTY_ASSERTION_FAILED` or `GOLDEN_QUOTE_MISMATCH`) and\nthe run is still recorded; FR-257 limb (1) reads it at submission.",
+        "operationId": "start_regression_run_api_v1_rating_versions__rating_version_id__regression_runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rating_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rating Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Run the Regression Suite against a rating version",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/rating-versions/{rating_version_id}/regression-runs/{run_id}": {
+      "get": {
+        "description": "The run record. A failing property's `counterexample` is a quote-input fragment, so\nthe read is `rating:read` and workspace-scoped (NFR-499, FR-1221).",
+        "operationId": "get_regression_run_api_v1_rating_versions__rating_version_id__regression_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rating_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rating Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegressionRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Read a regression run",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/rating-versions/{rating_version_id}/regression-runs/{run_id}/cases": {
+      "get": {
+        "description": "The run's generated cases and counterexamples — the only route that reads this blob\n(the generic blob route refuses it, FR-1221).",
+        "operationId": "get_regression_run_cases_api_v1_rating_versions__rating_version_id__regression_runs__run_id__cases_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rating_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rating Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CasesLog"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Read a regression run's case log",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
     "/api/v1/rating-versions/{rating_version_id}/submit": {
       "post": {
         "description": "Move a rating version from draft to review, creating an approval request.\n\nThe version must be in draft status. The change summary describes the\nmodifications in this version.",
@@ -26969,6 +27674,131 @@
           }
         },
         "summary": "Batch re-rate a Dataset Version against one or more Rating Versions",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/v1/score/compare": {
+      "post": {
+        "description": "FR-262: one quote, two versions, two `score_one` calls, one step diff.\n\nNothing is persisted or logged (NFR-499): unlike `/score`, this never calls\n`_maybe_sample_trace`. The two calls run one after the other, never concurrently\n(FD-1199). A per-quote error on either side answers 422 with that code and the failing\nside named in the problem (DP-S4-5).",
+        "operationId": "score_compare_api_v1_score_compare_post",
+        "parameters": [
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScoreCompareRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Score one Quote Context against two Rating Versions, with a step-level diff",
         "tags": [
           "rating"
         ]

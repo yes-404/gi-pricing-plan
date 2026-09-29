@@ -340,6 +340,7 @@
       "additionalProperties": false,
       "properties": {
         "cases": {
+          "maximum": 10000,
           "minimum": 1,
           "title": "Cases",
           "type": "integer"

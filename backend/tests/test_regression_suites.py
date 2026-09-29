@@ -300,3 +300,88 @@ async def test_a_missing_version_reads_as_404(
     )
     assert response.status_code == 404, response.text
 
+
+
+# --- a `monotone` bound is validated at declaration, never inside a Job (PL-1205, DP-S3-5) --
+
+
+def _algorithm(input_field: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "slug": "motor-gb", "version": 1,
+        "input_contract": [{"name": "x", "nullable": False, **input_field}],
+        "outputs": [{"name": "payable_premium_minor", "type": "money_minor", "required": True}],
+        "steps": [
+            {"step_id": "s_in", "type": "input", "label": "In", "input_name": "x",
+             "on_missing": "error", "produces": "x"},
+            {"step_id": "s_expr", "type": "expression", "label": "Apply", "expr": "x * 2",
+             "result_type": "money_minor", "consumes": ["x"], "produces": "payable"},
+            {"step_id": "s_out", "type": "output", "label": "Out",
+             "output_name": "payable_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
+             "consumes": ["payable"]},
+        ],
+        "sub_graphs": [],
+    }
+
+
+@pytest.mark.req("FR-261")
+@pytest.mark.parametrize(("field", "check"), [
+    ({"type": "int"}, {"lower": "5"}),                                    # a lone bound, no range
+    ({"type": "int", "min": 0, "max": 10}, {"lower": "20"}),              # outside the contract
+    ({"type": "int", "min": 5, "max": 9}, {"lower": "3", "upper": "4"}),  # empty
+    ({"type": "decimal", "min": "0.004", "max": "0.006"}, {}),            # no two-place value
+    ({"type": "string"}, {}),                                             # not orderable
+], ids=["lone-bound", "outside-contract", "empty", "no-two-place", "not-orderable"])
+async def test_an_invalid_monotone_bound_is_a_422_at_declaration_and_no_job_exists(
+    client: TestClient, database: Database, workspace_id: UUID, analyst: Principal,
+    field: dict[str, Any], check: dict[str, Any],
+) -> None:
+    from app.db.models import JobRow
+    from app.platform import rating_algorithms as algorithm_service
+
+    await algorithm_service.create_algorithm(
+        database, workspace_id, analyst.id, _algorithm(field)
+    )
+    body = _content(algorithm_slug="motor-gb") | {
+        "change_note": "x",
+        "properties": [{"name": "mono-x", "check": {
+            "kind": "monotone", "input": "x", "direction": "increasing", **check}}],
+    }
+    response = client.post(
+        "/api/v1/regression-suites/motor-gb-core/versions", json=body,
+        headers=_headers(analyst.id, workspace_id),
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "REGRESSION_PROPERTY_INVALID"
+    assert "mono-x" in response.json()["detail"]
+    async with database.session() as session:
+        jobs = select(JobRow).where(JobRow.workspace_id == workspace_id)
+        assert not (await session.execute(jobs)).scalars().all()
+        suites = select(RegressionSuiteRow).where(
+            RegressionSuiteRow.workspace_id == workspace_id
+        )
+        assert not (await session.execute(suites)).scalars().all()
+
+
+@pytest.mark.req("FR-261")
+@pytest.mark.parametrize(
+    "check", [{"lower": "5"}, {"upper": "5"}], ids=["lone-lower", "lone-upper"]
+)
+async def test_a_lone_monotone_bound_is_accepted_when_the_contract_has_the_other_end(
+    client: TestClient, database: Database, workspace_id: UUID, analyst: Principal,
+    check: dict[str, Any],
+) -> None:
+    from app.platform import rating_algorithms as algorithm_service
+
+    await algorithm_service.create_algorithm(
+        database, workspace_id, analyst.id, _algorithm({"type": "int", "min": 0, "max": 10})
+    )
+    body = _content(algorithm_slug="motor-gb") | {
+        "change_note": "x",
+        "properties": [{"name": "mono-x", "check": {
+            "kind": "monotone", "input": "x", "direction": "increasing", **check}}],
+    }
+    response = client.post(
+        "/api/v1/regression-suites/motor-gb-core/versions", json=body,
+        headers=_headers(analyst.id, workspace_id),
+    )
+    assert response.status_code == 201, response.text
