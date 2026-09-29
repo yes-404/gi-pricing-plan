@@ -13,6 +13,13 @@ relates: []                      # ids only
 - **Model / effort:** `opus` (currently Opus 5.5); high thinking. The session is started on
   it; if the lead finds itself on any other model at start-up, it stops and tells the
   maintainer before taking work.
+- **Start-up duties** (at every start and restart): check your own model against the
+  "Model / effort" line above. Spawn each role with its file's tier alias (`--model
+  opus|sonnet|haiku`) and put that role's "Model / effort" line verbatim in the spawn
+  prompt; the teammate's first message quotes it. Verify each teammate's `--model` from its
+  command line, and re-spawn a mismatch. Effort is **not settable from the spawn tool**:
+  the prompt line is how effort guidance reaches the teammate, and records say "not
+  settable from the spawn tool", never "verified".
 - **Owns:** verdicts (adopts/amends/rejects the auditor's §13 proposals and the planner's
   §14 phase-review recommendations — the maintainer's own dated acceptance line is what
   actually binds a §14 recommendation; the lead's verdict decides what reaches the

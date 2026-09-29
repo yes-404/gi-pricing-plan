@@ -88,15 +88,6 @@ Deliberately unfilled. Half of a work breakdown is naming what must **not** be h
 | **Slice design** — which requirement, what the failing test asserts | `test-driven-development` and `python-test`; the `@pytest.mark.req` marker is a traceability claim, not a formality |
 | **Spec and roadmap edits** | `spec-change`, `adr-write`, `git-hygiene`. No agent here holds `Write` on `docs/` |
 
-## Role model tiers
-
-Spawn every role with its file's tier alias (`--model opus|sonnet|haiku`); at every (re)start
-the lead checks its own model and each teammate's `--model` against the "Model / effort"
-lines of `.claude/roles/*.md`. Effort cannot be read from `ps`: every spawn's first message quotes its role
-file's "Model / effort" line and states the effort it is running at, and a mismatch is
-re-spawned. (There is no roles README: `scripts/doc-id.py` globs `.claude/roles/*.md` as
-role charters, so an index file there would be read as one.)
-
 ## Where they fit in a WK-661 slice
 
 The working rhythm is a slice: one requirement (or a small set) from spec to merged PR.
