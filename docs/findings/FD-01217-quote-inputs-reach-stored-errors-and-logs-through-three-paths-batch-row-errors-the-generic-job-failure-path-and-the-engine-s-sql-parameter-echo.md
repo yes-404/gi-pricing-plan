@@ -1,5 +1,5 @@
 ---
-id: FD-9021
+id: FD-1217
 family: finding
 title: Quote inputs reach stored errors and logs through three paths: batch row errors, the generic Job failure path and the engine's SQL parameter echo
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9021 — Quote inputs reach stored errors and logs through three paths: batch row errors, the generic Job failure path and the engine's SQL parameter echo
+# FD-1217 — Quote inputs reach stored errors and logs through three paths: batch row errors, the generic Job failure path and the engine's SQL parameter echo
 
 **Severity: high.** The deputy ranked it high in his entry of 2026-09-28 22:24:08 BST ("Batch-scoring
 stored leak: CONFIRMED in code, ranked HIGH now; the sanitiser must live in pricing-core"). His

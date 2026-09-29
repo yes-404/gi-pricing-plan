@@ -1,5 +1,5 @@
 ---
-id: FD-9024
+id: FD-1220
 family: finding
 title: A coded pricing-core error inside a Job is stored as JOB_HANDLER_FAILED, so a caller cannot branch on its code
 status: active
@@ -7,10 +7,10 @@ created: 2026-09-29
 owner: auditor
 tree: 633c6f34b7e841e09c7f108cd4696658c524fcfc
 corrected_by: []
-relates: [FD-9021, WK-1178]
+relates: [FD-1217, WK-1178]
 ---
 
-# FD-9024 — A coded pricing-core error inside a Job is stored as JOB_HANDLER_FAILED, so a caller cannot branch on its code
+# FD-1220 — A coded pricing-core error inside a Job is stored as JOB_HANDLER_FAILED, so a caller cannot branch on its code
 
 **Severity: low.** The auditor filed this finding on 2026-09-29, on the lead's instruction and the deputy's
 ruling DP-889-CODE (his entry "2026-09-29 00:02:01 BST · deputy · DP-889-CODE: (A); my 00:00:45 premise corrected;

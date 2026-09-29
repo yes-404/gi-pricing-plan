@@ -1,5 +1,5 @@
 ---
-id: FD-9020
+id: FD-1216
 family: finding
 title: Check 32 reads two disclosed specimen rows in open-questions.md as failures as soon as the file cites an unresolved id
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9020 — Check 32 reads two disclosed specimen rows in open-questions.md as failures as soon as the file cites an unresolved id
+# FD-1216 — Check 32 reads two disclosed specimen rows in open-questions.md as failures as soon as the file cites an unresolved id
 
 **Severity: low.** The auditor filed this finding on 2026-09-28, on the lead's instruction. It comes
 from executor-s2's T4b report, relayed in the lead's `to-deputy.md` entry of 21:42:18 BST
@@ -50,7 +50,7 @@ to `open-questions.md:131` (a working-range open-question id that does not resol
 `FAILED (21)`, so the respelling removed exactly those two rows. Commit `98424cc5`'s own message
 reads *"Editing docs/open-questions.md ([its three working-range open-question rows]) made check 32 read line 47's two [padded plan-id] specimen spellings as violations."* Bracketed: the commit names three working ids and one padded id form; they resolve to nothing, so this record does not repeat them, and the brackets mark the substitution.
 
-**A second instance, found while filing this record.** A draft of this batch's `FD-9019` wrote the retired
+**A second instance, found while filing this record.** A draft of this batch's `FD-1215` wrote the retired
 scoped open-question form in its text and in `docs/findings/register.md`. With that one new check-36
 violation in the register, the audit reported `DISCLOSED (839…)` and 17 previously disclosed check-36 rows of
 `register.md` (its own legacy notes paths and scoped ids) as **FAILED**, none of them touched by the edit.

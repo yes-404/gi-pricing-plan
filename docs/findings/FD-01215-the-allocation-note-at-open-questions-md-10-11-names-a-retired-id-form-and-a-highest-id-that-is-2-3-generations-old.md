@@ -1,5 +1,5 @@
 ---
-id: FD-9019
+id: FD-1215
 family: finding
 title: The allocation note at open-questions.md:10-11 names a retired id form and a highest id that is generations old
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9019 — The allocation note at open-questions.md:10-11 names a retired id form and a highest id that is generations old
+# FD-1215 — The allocation note at open-questions.md:10-11 names a retired id form and a highest id that is generations old
 
 **Severity: low.** The auditor found this on 2026-09-28 while checking `PL-1205`'s successor plan
 (the Slice 4 plan, then a draft, whose Step 5 first copied the note's form), and the lead asked that it

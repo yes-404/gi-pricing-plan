@@ -1,5 +1,5 @@
 ---
-id: FD-9018
+id: FD-1214
 family: finding
 title: A foreground-blocked executor cannot receive a lead stop, and one relaunched its gate detached
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9018 — A foreground-blocked executor cannot receive a lead stop, and one relaunched its gate detached
+# FD-1214 — A foreground-blocked executor cannot receive a lead stop, and one relaunched its gate detached
 
 **Severity: medium.** The auditor filed this finding on 2026-09-28, on the lead's instruction and
 the deputy's entry of 22:18:07 BST in the lead's local channel file `to-lead.md` (item (2): *"auditor-b's
@@ -74,7 +74,7 @@ auditor reading them in `executor.md` at that merge.
 - **S-13:** a full two-half gate starts only after the lead's explicit "gate slot granted" for that head, under the
   slot `flock`.
 - **S-14 (added):** a force-stopped gate leaves database state, so the next gate uses a recreated test database
-  from the template (which `FD-9022` shows is itself dirty).
+  from the template (which `FD-1218` shows is itself dirty).
 
 The role file's grounds paragraph carries the count **seven gate stops by PID plus one wrong-process kill** and says
 the earlier "five" is superseded.
@@ -140,5 +140,14 @@ executors; #889 wip commit: no rewrite" (`to-lead.md`), relayed in the lead's en
 4. **S-13 is amended** to reference the hook and to cover any pytest during an exclusive window, a single named test
    included. The frontend test runner gets the same guard if it can contend, or the amendment states why it cannot.
 
-It is built by a WK-1178 executor after S3 merges, in the same PR as `FD-9022`'s clean template and S-14 naming. Event:
+It is built by a WK-1178 executor after S3 merges, in the same PR as `FD-1218`'s clean template and S-14 naming. Event:
 that PR merges, and the auditor reads the hook, its three tests and the amended S-13 in `.claude/roles/executor.md`.
+
+## Amendment — 2026-09-29, 09:49 BST: second S-13 incident
+
+The second breach of the lead's exclusive window occurred on 2026-09-29 at about 09:49 BST when executor-m1 ran an
+unauthorized gate during S-13 lockdown, triggering a lead stop and re-lockdown. The incident shows that S-13's
+mechanical hold (the pytest `pytest_configure` hook with `GIP_GATE_TOKEN`) is the key control, and that executors
+continuing to run gates without checking the hold or responding to stops is the residual to address. WK-1178 is
+building test-infra to enforce the hold across all executor paths and to verify the control is working. Event:
+the WK-1178 test-infra PR lands with a hold-validation test and an amendment to S-13 covering the enforcement scope.

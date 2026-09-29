@@ -1,5 +1,5 @@
 ---
-id: FD-9023
+id: FD-1219
 family: finding
 title: Exception text on the dataset, model and rate-table admin paths can carry dataset levels into stored Job errors
 status: active
@@ -7,10 +7,10 @@ created: 2026-09-28
 owner: auditor
 tree: 633c6f34b7e841e09c7f108cd4696658c524fcfc
 corrected_by: []
-relates: [FD-9021, WK-1178]
+relates: [FD-1217, WK-1178]
 ---
 
-# FD-9023 — Exception text on the dataset, model and rate-table admin paths can carry dataset levels into stored Job errors
+# FD-1219 — Exception text on the dataset, model and rate-table admin paths can carry dataset levels into stored Job errors
 
 **Severity: low.** The auditor filed this finding on 2026-09-28, on the lead's instruction. It comes from
 auditor-a's re-audit of #889 at `60f95f02`, condition 7. It is low because the text is training or reference data,
@@ -69,7 +69,7 @@ failed:
 | process log (the captured log records with tracebacks) | **yes** |
 
 **Disclosure: the database was made from the dirty template.** The per-tree database was created `TEMPLATE gipricing`,
-the template `FD-9022` describes (28 non-empty tables left by an abandoned session of 2026-09-17, at revision
+the template `FD-1218` describes (28 non-empty tables left by an abandoned session of 2026-09-17, at revision
 `d3b955a63d6a`), then migrated with `alembic upgrade head`. The run does not depend on those inherited rows: the test
 used its own fresh workspace (the suite's `workspace_id` fixture), created its own dataset, rules, ingest, derive Jobs
 and model, and the sentinel `zz99sentinel9zz` was invented for this run and appears only in the book the test built.
@@ -92,6 +92,6 @@ error text. This finding does not decide whether one should.
 
 ## Disposition
 
-**Deferred with an owner — WK-1178**, confirmed by the deputy. The fix is the same sanitiser `FD-9021` adds in `pricing-core`,
+**Deferred with an owner — WK-1178**, confirmed by the deputy. The fix is the same sanitiser `FD-1217` adds in `pricing-core`,
 with the level given **by position, not by value** (for example "level 3 of factor `x`"). It is not in #889's scope.
 Event: that sanitiser applied to these paths.

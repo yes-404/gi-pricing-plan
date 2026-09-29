@@ -1,5 +1,5 @@
 ---
-id: FD-9022
+id: FD-1218
 family: finding
 title: The shared test-database template gipricing holds a whole abandoned test session and a stale schema
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9022 — The shared test-database template gipricing holds a whole abandoned test session and a stale schema
+# FD-1218 — The shared test-database template gipricing holds a whole abandoned test session and a stale schema
 
 **Severity: medium.** The auditor filed this finding on 2026-09-28, on the lead's instruction and executor-s1's
 report of about 23:03 BST that the template `gipricing` held five leftover `users` rows. The auditor read the
@@ -72,5 +72,5 @@ The deputy ruled on 2026-09-28 (relayed by the lead), owner **WK-1178**:
 **Deferred with an owner — WK-1178**, by the deputy's ruling. Event: the clean template exists with its check,
 `dev-commands` and S-14 name it, and `gipricing` is renamed after the reference grep.
 
-The amendment PR that names the template in S-14 also carries `FD-9018`'s S-13 extension (a targeted run inside an exclusive
-window), per the deputy's entry of 23:30:16 BST. That extension is tracked in `FD-9018`, not here.
+The amendment PR that names the template in S-14 also carries `FD-1214`'s S-13 extension (a targeted run inside an exclusive
+window), per the deputy's entry of 23:30:16 BST. That extension is tracked in `FD-1214`, not here.
