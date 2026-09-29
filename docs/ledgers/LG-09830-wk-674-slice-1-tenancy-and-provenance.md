@@ -48,6 +48,17 @@ added after `trace_id` in the §4.1 example, and a dated paragraph (WK-674 Slice
 FR-18) added after the `progress_at`/`stalled` note. FR-436 and FR-18 not reworded.
 `python3 scripts/audit-docs.py`: rc 0, "All checks passed."
 
+### Task 2 — model-schema `Job.platform_build` and contracts
+
+- **Premises re-read:** d (`main.py` lifespan hosts FR-273's `assert_integer_minor_round_trip()`; `test_startup_self_check.py:23-45` has the negative test), h (`backend/migrations/env.py:19,31` reads `load_settings()`), i (`tests/test_repository_invariants.py` exists), j (`docs/roadmap.md` `### WK-680`: `phase: P3`, FR-376 in its scope line). All hold.
+- **Red first:** `packages/model-schema/tests/test_jobs.py` (new; `test_job_platform_build_defaults_to_none`, `test_job_platform_build_round_trips`, both `FR-18`). `uv run pytest packages/model-schema/tests/test_jobs.py -q` rc 1, 2 failed: `AttributeError: 'Job' object has no attribute 'platform_build'` and `platform_build  Extra inputs are not permitted [type=extra_forbidden`. That is the predicted cause.
+- **Green:** field added to `class Job` in `packages/model-schema/src/model_schema/jobs.py`, before `progress_at`. Same tests: 2 passed, rc 0.
+- **Contracts:** `uv run python scripts/generate-contracts.py` rc 0 regenerated `docs/contracts/openapi/generated.json` and `docs/contracts/schemas/generated/job.schema.json`; `--check` rc 0.
+- **Contract guard (`backend/tests/test_contracts.py`):** first run failed `test_generated_and_authored_agree_on_field_names[job]` (the generated `Job` had a property the authored `docs/contracts/schemas/job.schema.json` lacked). The authored file is hand-authored, not generated, so `platform_build` was added there by hand, beside `progress_at`. Re-run: 144 passed, 2 skipped, rc 0.
+- `uv run ruff check packages/model-schema` rc 0; `uv run mypy` "Success: no issues found in 207 source files".
+- `python3 scripts/audit-docs.py`: only check 31 (working-id gap 1260 to 9830).
+- Acceptance 2 count on `packages/model-schema/src` (`git grep -n -E 'platform_build *:'`): exactly one line, `jobs.py:231`. The backend/frontend count is checked at Task 3.
+
 ## PRs
 
 None opened yet; the draft PR is opened after Task 1's commit is pushed.
