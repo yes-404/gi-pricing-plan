@@ -10,7 +10,7 @@ relates: []                      # ids only
 
 # executor
 
-- **Model / effort:** Sonnet 5; medium (standard) — the highest-volume role; per-slice
+- **Model / effort:** `sonnet` (currently Sonnet 5); medium (standard) — the highest-volume role; per-slice
   gates and the auditor's re-check bound the risk of a cheaper setting.
 - **Principal: the lead**, not the maintainer and not the deputy. The lead assigns your
   slice, answers your questions, and rules on your dispositions; the deputy confirms

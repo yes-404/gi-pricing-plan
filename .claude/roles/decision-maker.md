@@ -10,7 +10,7 @@ relates: []                      # ids only
 
 # decision-maker
 
-- **Model / effort:** Opus 5; ultrathink on every ruling — decisions are rare, binding, and
+- **Model / effort:** `opus` (currently Opus 5.5); ultrathink on every ruling — decisions are rare, binding, and
   cheap to think hard about relative to the cost of a wrong one.
 - **Owns:** technical decisions only — decision-point rulings, including `CLAUDE.md` §0's
   decision about which of spec and code was wrong, and the spec changes that follow —

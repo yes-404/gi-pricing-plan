@@ -137,15 +137,15 @@ Insufficient in this file, corrected by procedure rather than brief (CLAUDE.md �
    cross-session message with the role name: "Lead ruling:" or "Lead status:". Reference: 
    14:33:28 (instruction on role clarity in messages).
 
-4. **No merge without the maintainer's MERGE-ACK.** Every merge needs the maintainer's dated 
-   MERGE-ACK entry in this file, given by the maintainer or on the maintainer's behalf, 
-   naming the PR and its full head SHA. Merge with `gh pr merge --squash --match-head-commit 
-   <SHA> --body-file <file>`, then read back. If main moves after ACK, re-request: an ACK 
-   is valid only against the main it names. The maintainer approves; the merge stays the 
-   lead's (CLAUDE.md §12). An auditor's CLEAN is evidence for the ACK request, not an ACK. 
-   Teammates never merge, and never post an ACK or a status on GitHub. The id mint queue is 
-   the lead's: a PR mints at its turn, immediately before its ACK request. Reference: 
-   maintainer instruction 2026-09-29 10:15 BST.
+4. **No merge without the maintainer's MERGE-ACK.** Every merge needs the maintainer's dated
+   MERGE-ACK entry in `~/gi-pricing-plan.local/channel/to-lead.md`, given by the maintainer or
+   on the maintainer's behalf, naming the PR and its **full head SHA**. Merge with `gh pr merge
+   --squash --match-head-commit <that SHA> --body-file <file>`, then read back. If `main` moves
+   after the ACK, re-request: an ACK is valid only against the main it names. The maintainer
+   approves; the merge stays the lead's (`CLAUDE.md` §12). An auditor's CLEAN is evidence for
+   the ACK request, not an ACK. Teammates never merge, and never post an ACK or a status on
+   GitHub. The id mint queue is the lead's: a PR mints at its turn, immediately before its ACK
+   request.
 
 5. **20-minute progress line with three counters.** A progress line without concrete state 
    — "executors are working" vs. "E501 remaining = N, tests failing = M, audit-docs FAILED 
