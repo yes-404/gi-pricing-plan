@@ -11,7 +11,7 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-corrects: ~
+corrects: CR-1212
 relates: [RL-871, CR-1212]
 ---
 
@@ -99,6 +99,32 @@ quoted whole:
 
 The entry's reason: "a list can be checked, while "registry-style" is a judgement that drifts.
 The list stays closed until it is amended."
+
+**RL-871 §7's three conditions, adopted as the amendment's form** (*proposed by the lead in
+this draft, 2026-09-29, for the maintainer's confirmation in the MERGE-ACK*). RL-871
+(`docs/rulings/RL-00871-…md` §7) recommends that when the resource budget changes, §8 be
+amended, not excepted, and in resource terms. Two children may build concurrently only when all
+three hold:
+
+- **(i) Two independent executors exist.** Met: each lane is a separately spawned executor, in
+  its own worktree, holding its own gate slot.
+- **(ii) Neither child's in-flight work includes an NFR measurement or a benchmark.** This is
+  item 3 above: a measurement step runs alone.
+- **(iii) Coordination state is published.** Made true by this ruling. Before its full gate,
+  each build slice's gate is announced in the runtime state file's
+  `in_flight_expensive_verifications` (the `watcher-runtime-state` skill; `delivery-process.md`
+  §8's "announce … and check for one already in flight"), and the lead checks it before granting
+  a gate slot.
+
+**RL-871's override trigger, still owed and made an obligation.** RL-871 names "a measurement
+shows this machine carries two concurrent gate runs without contention". The 22:43 BST reading
+above had one gate running, so it is not that measurement. **The first time two build-slice
+gates run concurrently, the lead records** each gate's wall-clock time, the load average and
+`free -h`, and compares each gate against its solo baseline (#925's full Python gate: 22:37:32
+→ 22:56:35 BST, about 19 min, at e937d766). **If either gate takes more than 1.5× its baseline,
+or either gate fails in a way that does not reproduce solo, the lanes step down to one build
+slice at a time**, and the lead reports it to the maintainer. The record goes in the slice's
+`LG-` ledger.
 
 ## Ground
 
