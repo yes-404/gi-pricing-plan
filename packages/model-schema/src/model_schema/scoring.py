@@ -19,9 +19,9 @@ between 2026-08-18 and today.
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from model_schema.money import MoneyMinor
 from model_schema.refs import ArtifactRef
@@ -187,3 +187,71 @@ class ScoringResult(BaseModel):
     decline_reasons: list[str] = Field(default_factory=list)
     trace: Trace | None = None
     timing_ms: dict[str, float] = Field(default_factory=dict)
+
+
+StepChangeKind = Literal["added", "removed", "changed"]
+TraceStepField = Literal["type", "label", "consumed", "produced", "matched", "violation"]
+
+
+class StepChange(BaseModel):
+    """One step that differs between two Traces (FR-262, `03` §4.10). `own_change` is true
+    when the step was added, removed, or changed while consuming identical inputs. False
+    means no own change attributable from the traces, which is not a claim that the step
+    was not edited."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    step_id: str
+    change: StepChangeKind
+    changed_fields: list[TraceStepField] = Field(default_factory=list)
+    own_change: bool = Field(
+        description=(
+            "True for an added or removed step, and for a changed step whose consumed inputs "
+            "are identical on both sides. False means no own change attributable from the "
+            "traces; it is not a claim that the step was not edited (a downstream step can be "
+            "edited and also consume a moved value)."
+        )
+    )
+    base: TraceStep | None = None
+    comparison: TraceStep | None = None
+
+
+class TraceDiff(BaseModel):
+    """The step-level difference of two executed Traces (FR-262, `03` §4.10). Distinct from
+    FR-219's structural `AlgorithmDiff`, which compares two algorithm definitions."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    steps: list[StepChange]
+    unchanged: int = Field(ge=0)
+
+
+class ScoreCompareRequest(BaseModel):
+    """`POST /api/v1/score/compare` body (FR-262, `03` §4.10): one quote, two versions."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    context: QuoteContext
+    base: ArtifactRef
+    comparison: ArtifactRef
+
+    @model_validator(mode="after")
+    def _context_names_no_version(self) -> Self:
+        options = self.context.options
+        if options is not None and options.rating_version_ref is not None:
+            raise ValueError(
+                "context.options.rating_version_ref must be omitted: "
+                "`base` and `comparison` name the two versions"
+            )
+        return self
+
+
+class ScoreComparison(BaseModel):
+    """`POST /api/v1/score/compare` response (FR-262, `03` §4.10): both traced results and
+    the diff of their traces."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    base: ScoringResult
+    comparison: ScoringResult
+    diff: TraceDiff
