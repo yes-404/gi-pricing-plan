@@ -54,7 +54,7 @@ are not scope.
 
 | Plan | Ids its Scope names | The plan's own disposition |
 |---|---|---|
-| `PL-930` (map) | FR-260, FR-261, FR-262, NFR-499 (the Golden-Quote carve-out), FR-248 (a property class) | the Work |
+| `PL-930` (map) | FR-260, FR-261, FR-262 (its Spec line writes the pre-migration forms `FR-RATE-43, 44, 45`), NFR-499 (the Golden-Quote carve-out), FR-248 (a property class) | the Work |
 | `PL-1177` (S1) | FR-260, FR-261, FR-262, FR-257 limb (1); NFR-499 carried to S2 | spec correction |
 | `PL-1189` (S2) | FR-260; FR-261 (stored only); FR-273; FR-257 (not built here); NFR-499; `06` FR-353, FR-364, FR-368 | FR-353 *"#861's, consumed and not changed"*; FR-364 *"unchanged"*; FR-368 built |
 | `PL-1205` (S3) | FR-261; FR-257 limb (1); FR-260 (composed); FR-248; FR-273; NFR-499; `06` FR-364 (*"fed by `evidence.regression_suite_run_id`"*) | built |
@@ -102,7 +102,7 @@ NFR-502.
   FD-1194 hold.
 - **Reconciliation with the roadmap.** The roadmap row names three ids and the charter a
   fourth limb. The other ten are ids the Work composed, consumed or enforced; none is a missing
-  deliverable. The lead's draft at `40af56a9` listed the same 14.
+  deliverable. The lead's local starting draft (`~/gi-pricing-plan.local/drafts/wk672-close/scope-and-evidence.md`, not in the repository, measured at `40af56a9`) listed the same 14; this record re-derived them.
 
 ## Checklist
 
@@ -121,10 +121,10 @@ Run against `.claude/skills/close-workstream/SKILL.md` at `1c8762d9` (latest *Ve
 | §4 NFRs measured | below |
 | §5 not delivered, and the retrofit mapping | below |
 | §5a binding plan-review conditions | below |
-| §5b owed list | below |
+| §5b owed list | below; `python3 scripts/register-lint.py` on this branch: `OK (0 violations)` |
 | §5c workflow citations | below |
 | §6 plan docs | the roadmap edits are the lead's: `### WK-672` `status: closed` once accepted, and FR-1221 in the section |
-| §7 clean-up | `gh pr list --state open` (15 open PRs): none names WK-672 or a `p2-d-s*` branch |
+| §7 clean-up | `gh pr list --state open` (15 open PRs at 15:28 UTC, 2026-09-29): none names WK-672 or a `p2-d-s*` branch |
 | §14 question | plan review 16 is the planner's, conducted and filed as `CR- kind: review` (the maintainer's structure entry of 2026-09-29 15:26:00 BST, §3) |
 | root `README.md` pointers | `README.md:23-24` and `:55` point at `docs/roadmap.md`; they copy no status, so this close changes nothing there |
 | retry counters (RFC-895 artifact B) | **none recorded.** `write_runtime_state.py show` prints no replan or fix counter; the file was last written `2026-09-28T16:26:22Z` and still reads WK-672 slices as "not started" |
@@ -208,8 +208,8 @@ backtick-quoted `XX-YY-n` id followed by a slug, at the start of a table row) ma
   value byte-identical to a snapshot taken at the gate (#897, shown red under a mutation that
   writes `golden_quotes`). Exact.
 - **FR-262.** `backend/tests/test_score_compare.py::test_exactly_one_step_is_the_own_change_at_the_http_layer`
-  asserts `own == ["s_expr"]`. Exact. `packages/pricing-core/tests/test_trace_diff.py`'s three
-  one-step tests ran at `1c8762d9`: `3 passed`, rc 0 (`07-trace-diff-named.log`).
+  asserts `own == ["s_expr"]`. Exact. `packages/pricing-core/tests/test_trace_diff.py`'s two
+  one-step tests and its known-limit test ran at `1c8762d9`: `3 passed`, rc 0 (`07-trace-diff-named.log`).
 - **FR-1221 and NFR-499**, below.
 
 ### FR-1221, read clause by clause (§0a)
@@ -221,7 +221,7 @@ No `req("FR-1221")` exists. Each clause, and the test that asserts it under anot
 | one content-addressed canonical JSON blob, referenced from the run | `model_schema/regression.py:259-268` `cases_log_bytes` (sorted keys, no whitespace) and `cases_log_sha256`; the handler stores `cases_log_bytes(log)` (`worker/rating_handlers.py:194`) | `backend/tests/test_regression_runs.py::test_a_regression_run_is_a_202_job_that_persists_the_run_and_its_case_blob` (`FR-261`, `FR-260`): reads the blob by `row.cases_blob_sha256`, parses it, `assert cases_log_sha256(log) == row.cases_blob_sha256`; `test_the_scalar_blob_digest_equals_the_runs_cases_blob` (`FR-261`, `NFR-499`) |
 | replayed by re-scoring, never regenerated | `pricing_core/rating/replay.py`; `.importlinter` `replay-never-generates` forbids `hypothesis` and `pricing_core.rating.testing`, `allow_indirect_imports = false` | `packages/pricing-core/tests/test_replay.py::test_a_replay_re_scores_the_persisted_cases_and_never_generates` and `test_replay_module_does_not_import_hypothesis_or_testing` (`FR-261`); `tests/test_repository_invariants.py` pins 4 contracts (`FR-9`) |
 | read only with `rating:read` | `api/models.py` `get_regression_run` and `get_regression_run_cases`, `requires(Perm.RATING_READ)` | `test_the_case_blob_and_the_run_row_are_refused_without_rating_read_or_across_workspaces` (`NFR-499`, `FR-261`): 403 on both routes for a member with no role |
-| … in its workspace | `platform/regression_runs.py:51-60` `fetch_run` filters `RegressionRunRow.workspace_id == workspace_id` | **no test fails if that filter is dropped.** The same test's cross-workspace limb uses a principal who is not a member of the other workspace and asserts `status_code in (403, 404)`, so the membership check answers before `fetch_run` runs. `test_the_lookup_is_scoped_to_the_workspace` covers `latest_run`, not `fetch_run`. |
+| … in its workspace | `platform/regression_runs.py:51-60` `fetch_run` filters `RegressionRunRow.workspace_id == workspace_id` | **no test fails if that filter is dropped** (established by reading the tests; not mutation-proven, since the auditor ran no database test). The same test's cross-workspace limb uses a principal who is not a member of the other workspace and asserts `status_code in (403, 404)`, so the membership check answers before `fetch_run` runs. `test_the_lookup_is_scoped_to_the_workspace` covers `latest_run`, not `fetch_run`. |
 | the generic blob route refuses it (the `07:307` obligation) | `platform/blobs.py` `QUOTE_INPUT_BLOB_COLUMNS` holds `RegressionRunRow.cases_blob_sha256` | the same test, limb 2: the digest is made ownable by a Job in the caller's workspace, and `/api/v1/blobs/{digest}` still answers the same 404 and code as a missing blob. `LG-1225` records the mutation: removing the column turns it red |
 | never logged | `worker/rating_handlers.py` sanitiser (#889) | `test_a_failed_run_puts_no_quote_input_in_the_job_error` and `test_a_validation_error_inside_a_run_never_puts_a_quote_input_in_the_job_error_or_the_logs` (`NFR-499`): a sentinel input is absent from the stored error and from the captured logs |
 
@@ -370,16 +370,18 @@ row).
 
 | Finding id | Concerns | Proposed decision | Status |
 |---|---|---|---|
-| F44 | FR-257 limb (1) | limb (1) delivered (#886); limbs (2) WK-673, (3) delivered by WK-671, (4) the optimisation Work: unchanged | open for limbs (2) and (4); nothing owed by WK-672 |
-| FD-1199 | the native abort in the determinism test | not WK-672's: its condition (S2's N=5 run aborting) did not fire (`LG-1204`); every S4 N=5×2 run passed, 20 of 20 | unchanged, the lead's |
-| **FD-1208** | `PL-1205`'s `git log --grep` precondition | **closed**: its own event (b) happened. #868 merged as `5ec47dc4` before S3's Task 5, and S3 ran the check in the subject-plus-symbol form (`LG-1225`, #886). No dated correction to the executed, frozen plan | closed in this PR, row and essay |
-| **FD-1209** | the demo has no real freMTPL2 algorithm (G2) | **keep `deferred with an owner — the lead`**, and restate the event by role: *before `CR-1212` G6's pre-demo plan review*. Its event has **not** happened at `1c8762d9` (the seed's only algorithm is `_demo_algorithm()`, `examples/fremtpl2/model.py:327`; no `WF-699` journey test). "Plan review 16" now names both G6's review and the §14 review at this close; read as the latter, the event falls due at once and cannot be met, because the real algorithm is `WF-699` Phases A to C on the approved models and no WK-672 slice planned it. **Not a WK-672 deliverable; it does not block this close.** If the lead reads it the other way, it blocks plan review 16, not this close | open, row and essay annotated |
-| FD-1194 | the Dependabot hold: *"#852 is held until WK-672 closes"* | **the close releases the hold. #852 no longer exists as a PR to merge:** Dependabot closed it unmerged at `2026-09-28T14:05:08Z` (*"Looks like these dependencies are updatable in another way, so this is no longer needed."*). Its open successor for the frontend group is **#857** (`frontend/package.json`, `frontend/pnpm-lock.yaml`; frontend CI `success` at `7962b866` on 2026-09-28, before S3 and S4 regenerated `docs/contracts/openapi/generated.json`). **Recommendation: re-run #857's CI on current `main`, then merge it.** Merging is the maintainer's, with the user; never the lead's or the auditor's | resolved row, annotated in this PR |
-| FR-1221 (no row) | no `req("FR-1221")`; the workspace limb unproven | see *Verdict* | proposed `fix before close` |
-| S4 audit report (no row) | the independent S4 audit's report is not durable; only its verdict line is, in the squash body of `c9f50232` | **accept**, with a note for later slices: file the audit report, or its findings, where the ledger can cite it | — |
-| **FD-9602** | `WF-699` D4 vs FR-261's grid | **carry forward, unowned**; event: the decision-maker's ruling or `OQ-1224` | filed in this PR |
-| **FD-9603** | `WF-699` E2's route vs FR-257 / FR-260 | **carry forward, unowned**; event: the decision-maker's ruling | filed in this PR |
-| **FD-9604** | the trace omits `input` and `output` steps, FR-258 says every step | **carry forward, unowned**; event: the decision-maker's ruling | filed in this PR |
+| F44 | FR-257 limb (1) | limb (1) delivered (#886); limbs (2) WK-673, (3) delivered by WK-671, (4) the optimisation Work: unchanged *(open for limbs (2) and (4); nothing owed by WK-672)* | `closed-with-findings` |
+| FD-1199 | the native abort in the determinism test | not WK-672's: its condition (S2's N=5 run aborting) did not fire (`LG-1204`); every S4 N=5×2 run passed, 20 of 20 *(unchanged, the lead's)* | `closed-with-findings` |
+| **FD-1208** | `PL-1205`'s `git log --grep` precondition | **closed**: its own event (b) happened. #868 merged as `5ec47dc4` before S3's Task 5, and S3 ran the check in the subject-plus-symbol form (`LG-1225`, #886). No dated correction to the executed, frozen plan *(closed in this PR, row and essay)* | `closed` |
+| **FD-1209** | the demo has no real freMTPL2 algorithm (G2) | **keep `deferred with an owner — the lead`**, and restate the event by role: *before `CR-1212` G6's pre-demo plan review*. Its event has **not** happened at `1c8762d9` (the seed's only algorithm is `_demo_algorithm()`, `examples/fremtpl2/model.py:327`; no `WF-699` journey test). "Plan review 16" now names both G6's review and the §14 review at this close; read as the latter, the event falls due at once and cannot be met, because the real algorithm is `WF-699` Phases A to C on the approved models and no WK-672 slice planned it. **Not a WK-672 deliverable; it does not block this close.** If the lead reads it the other way, it blocks plan review 16, not this close *(open, row and essay annotated)* | `closed-with-findings` |
+| FD-1194 | the Dependabot hold: *"#852 is held until WK-672 closes"* | **the hold is moot.** Dependabot closed #852 unmerged at `2026-09-28T14:05:08Z` (*"Looks like these dependencies are updatable in another way, so this is no longer needed."*). The frontend dependency group now sits in **#857** (open; `frontend/package.json`, `frontend/pnpm-lock.yaml`), whose frontend CI (`success` at `7962b866`, 2026-09-28) predates S3's and S4's regeneration of `docs/contracts/openapi/generated.json`, so its gate should run on a merge with current `main` first. **Merging #857 is the user's, through the maintainer**; never the lead's or the auditor's. Nothing is recommended for #852 *(resolved row; its stale cell gets a dated note in #903 (auditor-a-2), not here)* | `closed` |
+| FR-1221 (no row) | no `req("FR-1221")`; the workspace limb unproven | see *Verdict* *(proposed `fix before close`)* | `closed-with-findings` |
+| S4 audit report (no row) | the independent S4 audit's report is not durable; only its verdict line is, in the squash body of `c9f50232` | **accept**, with a note for later slices: file the audit report, or its findings, where the ledger can cite it | `closed` |
+| **FD-9602** | `WF-699` D4 vs FR-261's grid | **carry forward, unowned**; event: the decision-maker's ruling or `OQ-1224` *(filed in this PR)* | `closed-with-findings` |
+| **FD-9603** | `WF-699` E2's route vs FR-257 / FR-260 | **carry forward, unowned**; event: the decision-maker's ruling *(filed in this PR)* | `closed-with-findings` |
+| **FD-9604** | the trace omits `input` and `output` steps, FR-258 says every step | **carry forward, unowned**; event: the decision-maker's ruling *(filed in this PR)* | `closed-with-findings` |
+
+**Status column.** The vocabulary is `work-item-close.md`'s: `closed` for a finding this close discharges, `closed-with-findings` for one carried past it. **Why FD-9602, FD-9603 and FD-9604 name WK-1178 in the register's Work item column:** WK-672 closes, and none of the three is WK-672's to fix (two are journey-versus-requirement questions, one is WK-671's FR-258); WK-1178 is P2's standing maintenance Work, so `register-owed.py WK-1178` lists them until the decision-maker rules. The routing is proposed; the lead may re-point it.
 
 **FD-1208 and FD-1209: essays and rows.** Written by the auditor as they stand: FD-1208's essay
 gains a *Resolution* section and `status: closed`; FD-1209's gains *Status at the WK-672 Work
@@ -406,7 +408,7 @@ a requirement without evidence; FR-1221 is the only one.
 | NFR-502 | the compare route conforms (grep with a positive control); the measurement is WK-674's | *NFRs, measured* |
 | **FR-1221** | **delivered but untested**, under its own id | see below |
 
-**FR-1221.** Five of its six clauses are asserted, exactly, by tests that carry `FR-261`,
+**FR-1221.** Its five clauses, and the `07:307` blob-route obligation, make the six rows of the clause table. Five of the six rows are asserted, exactly, by tests that carry `FR-261`,
 `FR-260` or `NFR-499` markers (the clause table above). The sixth, the **workspace** limb of
 *"read only with `rating:read` in its workspace"*, is delivered in `fetch_run` and asserted by
 nothing that would fail if the filter were dropped. **Proposed decision: `fix before close`**, a

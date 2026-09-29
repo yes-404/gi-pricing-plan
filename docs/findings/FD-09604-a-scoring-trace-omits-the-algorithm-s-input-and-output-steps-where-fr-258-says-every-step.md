@@ -37,10 +37,10 @@ At `origin/main` `1c8762d9ed235f80e0f2fff80c44003694828e97`.
   nodes, not an algorithm step` → `continue`.
 - The observable effect, at the HTTP layer: the compare fixture's algorithm has four steps,
   `s_in` (`input`), `s_expr`, `s_adj` and `s_out` (`output`)
-  (`backend/tests/test_rating_version_compile.py:61-66` and
+  (`backend/tests/test_rating_version_compile.py:61-68` and
   `backend/tests/test_score_compare.py:105`). `test_identical_refs_give_an_empty_diff` asserts
   `response.json()["diff"] == {"steps": [], "unchanged": 2}`, and for two identical traces `unchanged`
-  is the number of trace steps (`pricing_core/rating/trace_diff.py:47-59`; `PL-1213` acceptance
+  is the number of trace steps (`pricing_core/rating/trace_diff.py:47-76`; `PL-1213` acceptance
   item 3, *"identical traces give `steps == []` and `unchanged == len(steps)`"*), so the trace
   holds two of the four.
 - Not verified here: whether a non-expression step type other than `input` and `output` (a rate
