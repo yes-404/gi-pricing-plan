@@ -152,3 +152,24 @@ after the mint), plus `test_widening_the_scope_roots_reaches_every_non_markdown_
 `pnpm --dir frontend install --frozen-lockfile` rc 0; `generate:api` rc 0 (the generated `schema.d.ts`
 lists `/api/v1/score/compare`); `lint` rc 0; `type-check` rc 0; `test` rc 0 (97 files, 603 tests passed,
 no `Errors` line); `build` rc 0. Logs `/tmp/fe-s4-*.log`.
+
+## Merges of `origin/main` (2026-09-29)
+
+Task 0 Step 3, as instructed. Main was `6a8b8e70` (#886, a squash of `b4aa909d`) and then `f2ef3b9a`
+(#898, the S3 closing record).
+
+1. A plain `git merge 6a8b8e70` conflicted in six files (`docs/INDEX.md`, `docs/open-questions.md`,
+   `03`, `scripts/audit-docs.py`, `scripts/generate-contracts.py`, `tests/test_audit_docs_ids.py`):
+   the merge base was the pre-S3 `ce9303b3`, and main's squash of S3 collides with this branch's
+   un-squashed S3 commits next to the S4 edits. Aborted.
+2. Proof that the trees agree: `git diff --stat b4aa909d 6a8b8e70` printed nothing (both tree
+   `f65bdd60`). `git merge -s ours --no-edit 6a8b8e70` (lead's GO), then
+   `git diff --name-only 6a8b8e70 HEAD` listed exactly the 18 S4 paths.
+3. `git merge --no-edit origin/main` (`f2ef3b9a`), a normal merge: conflicts in `docs/INDEX.md`,
+   `docs/open-questions.md` and `03`. Resolved keeping both sides: main's OQ-1222 to OQ-1224 rows and
+   FR-1221 line, plus this slice's OQ-9401 row and FR-262 clarification; `INDEX.md` regenerated.
+   `git diff --name-only f2ef3b9a HEAD` lists the same 18 S4 paths. The four docs checks:
+   `audit-docs.py` FAILED (2), check 31 only (the working-id gaps 1225→9110, 9110→9401);
+   `doc-id.py check` the same two gaps; `doc-index.py --check` OK; `register-lint.py` 0 violations.
+4. Literals re-read at this tree, no drift: `_required_ref`, `_compiled_for`, `_as_platform_error`,
+   `ScoreExecuteDep`, `score` in `backend/src/app/api/score.py`; `03` §4.10 present once.
