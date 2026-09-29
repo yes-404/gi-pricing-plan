@@ -161,3 +161,7 @@ the WK-1178 PR that builds the hook merges, and the auditor reads the hook, its 
 
 *(Replaces the paragraph "Amendment — 2026-09-29, 09:49 BST: second S-13 incident" that #888 (`bb2aa935`) carried, which
 added a stop, a re-lockdown and "WK-1178 is building test-infra", none of them in the entry.)*
+
+## Third instance — 2026-09-29, from the maintainer's entry of 11:13:36 BST
+
+**2026-09-29:** executor-s3fix started #886's full gate at `3a3e0277` on gate-1 (flock PID 296564, pytest PID 296584, about 10:09 UTC) before the merge-in of main that the lead required, and the lead's STOP (10:11:15 UTC) went unanswered for more than 90 s while the executor was foreground-blocked (both PIDs still live at 10:13:05 UTC). The times and PIDs are the lead's account as relayed to this record's writer, not read from a process table here. The maintainer's entry "2026-09-29 11:13:36 BST · maintainer (acting on the maintainer's behalf) · #886 gate: (A), with one addition" (`to-lead.md`) accepts the running gate at `3a3e0277b97c7dc98b01b04c09d60cfa7c55de71` as #886's full gate and records the incident ("started a gate without its merge-in, and did not answer a STOP while blocked in the foreground").
