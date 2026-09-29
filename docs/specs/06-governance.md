@@ -59,7 +59,7 @@ auditor, or a regulator:
 |---|---|
 | **Principal** | An authenticated identity acting on the platform: a User or a Service Account (a Consumer System calling the scoring API). |
 | **Role** | A named bundle of Permissions. The platform ships the roles of `00` §1.4 and allows custom roles. |
-| **Permission** | An atomic `(action, resource_type)` capability, e.g. ~~`model:approve`~~ `approval:decide` *(amended 2026-09-28, `RL-9204` DP-C)*, `dataset:acknowledge_warning`, ~~`rating_version:deploy_prod`~~ `deployment:promote`. *(Amended 2026-09-28, `RL-1232` DP-6: there is one deploy permission, `deployment:promote`, and no per-environment family. Environments are configurable (`07` FR-428), so a per-environment name would make the permission vocabulary that FR-344's custom roles compose from open-ended.)* |
+| **Permission** | An atomic `(action, resource_type)` capability, e.g. ~~`model:approve`~~ `approval:decide` *(amended 2026-09-28, `RL-1236` DP-C)*, `dataset:acknowledge_warning`, ~~`rating_version:deploy_prod`~~ `deployment:promote`. *(Amended 2026-09-28, `RL-1232` DP-6: there is one deploy permission, `deployment:promote`, and no per-environment family. Environments are configurable (`07` FR-428), so a per-environment name would make the permission vocabulary that FR-344's custom roles compose from open-ended.)* |
 | **Scope** | The subset of artifacts a role assignment applies to: workspace-wide, or restricted to named Datasets, Model Families, or Rating Algorithms (e.g. a motor actuary who cannot approve home pricing). |
 | **Governed Artifact** | Any artifact with an approval-bearing lifecycle: Dataset Version, Validation Rule, Model, Custom Objective, Custom Metric, Peril Structure, ~~Rate Table Version~~, Rating Version, Optimisation Run (when cited as evidence). *(Rate Table Version struck 2026-09-28: it has no approval lifecycle and is governed through the Rating Version that pins it. See `03` FR-1186 and OQ-620.)* |
 | **Evidence Bundle** | The set of artifact references required for that artifact type (§3.3), resolved and pinned at submission time. |
@@ -216,7 +216,7 @@ auditor, or a regulator:
 ```
 
 Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:decide`
-*(amended 2026-09-28, `RL-9204` DP-C: one approval permission)* and
+*(amended 2026-09-28, `RL-1236` DP-C: one approval permission)* and
 ~~`rating_version:deploy_*`~~ `deployment:promote` (R1, FR-347). *(Amended 2026-09-28,
 `RL-1232` DP-6.)*
 
@@ -250,12 +250,13 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 > a permission every fitter holds by default would be the vocabulary-without-a-decision this
 > note was written about.
 
-> **Permission catalogue, amended 2026-09-28 (`RL-9204`).** The permission names this spec
+> **Permission catalogue, amended 2026-09-28 (`RL-1236`).** The permission names this spec
 > uses and the names the code's closed `Permission` enum defines had drifted: 24 on each side,
-> 7 shared. The names below are ruled; names whose verdict changes scope wait on a
-> maintainer decision and are not listed here.
+> 7 shared. The names below are ruled~~; names whose verdict changes scope wait on a
+> maintainer decision and are not listed here~~. *(Corrected 2026-09-29: all four of
+> `RL-1236`'s decision points are decided, and every ruled name is listed.)*
 >
-> **Built and now specified.** Each is checked by the route or service named in `RL-9204`, and
+> **Built and now specified.** Each is checked by the route or service named in `RL-1236`, and
 > is part of the closed vocabulary §3.1 describes:
 >
 > | Permission | Governs |
@@ -277,18 +278,19 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 > **Mapped: the same capability under two names; the code's name survives.**
 > `rating_version:submit` (the Pricing Actuary set above) is `rating:submit`.
 > `custom_objective:submit` was already superseded by `model:submit` (the note above, and
-> FR-367). The deploy permission is ruled separately, in the WK-674 ruling. The spec name is
+> FR-367). The deploy permission is ruled separately, in ~~the WK-674 ruling~~ `RL-1232` DP-6
+> *(2026-09-29)*: it is `deployment:promote`. The spec name is
 > kept in this note as the alias for one release: no code ever carried it, so there is no
 > code alias to keep.
 >
-> **Coarse write rights are the Phase 2 catalogue (decided 2026-09-28, `RL-9204` DP-A):**
+> **Coarse write rights are the Phase 2 catalogue (decided 2026-09-28, `RL-1236` DP-A):**
 > `rating_algorithm:write` and `rate_table:write` are `rating:write`, which also covers creating
 > a Rating Version. `factor:write`, `banding:write` and `grouping:write` are `model:fit`, which
 > also covers fitting. `dataset:create_version` is `dataset:write`, which also covers
 > datasets, blobs, validation rules and ingestion. The per-artifact split in the role example
 > above is carried to WK-676 (Phase 3, scoped assignments).
 >
-> **One approval permission (decided 2026-09-28, `RL-9204` DP-C):** `approval:decide`. Which
+> **One approval permission (decided 2026-09-28, `RL-1236` DP-C):** `approval:decide`. Which
 > roles may approve an artifact type is the `ApprovalPolicy` entry's `approver_roles` (§4.2),
 > and from Phase 3 also the scope of the assignment. There are no per-type `*:approve`
 > permissions.

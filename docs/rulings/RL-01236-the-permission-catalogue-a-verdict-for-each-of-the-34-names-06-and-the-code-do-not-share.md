@@ -1,9 +1,9 @@
 ---
-id: RL-9204
+id: RL-1236
 family: ruling
 title: The permission catalogue — a verdict for each of the 34 names that 06 and the code do not share
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-09-28
+created: 2026-09-29               # drafted 2026-09-28; set to the mint date, as audit-docs check 31 requires
 owner: decision-maker
 tree: 37b2596e4318092178c9b0c9fedb83610ee9fd28
 phase: P2
@@ -14,12 +14,13 @@ corrects: ~
 relates: [WK-674, WK-684, WK-686, WK-687, WK-688, WK-690, WK-676]
 ---
 
-# RL-9204 — The permission catalogue: a verdict for each of the 34 names that 06 and the code do not share
+# RL-1236 — The permission catalogue: a verdict for each of the 34 names that 06 and the code do not share
 
 ## Verified first, at 37b2596e4318092178c9b0c9fedb83610ee9fd28
 
-**The question.** The permission-catalogue finding (PR #855, not yet on `main`, so it is named
-by PR) records a `CLAUDE.md` §0 disagreement at scale. `06-governance.md` names 24 permissions
+**The question.** The permission-catalogue finding (PR #855, not yet on `main` at drafting, so it is
+named by PR; *since merged, noted 2026-09-29: #855 merged on 2026-09-28 as `9f6bfed1`, and the
+finding is FD-1197*) records a `CLAUDE.md` §0 disagreement at scale. `06-governance.md` names 24 permissions
 and the code's `Permission` enum defines 24, and only 7 are shared. The deputy's entry of
 2026-09-28 (14:52:49 BST, item 4) routes it here. It asks for one verdict per unshared name:
 - **map**: the same capability under two names. Pick one; the other is an alias for one
@@ -33,7 +34,13 @@ rules the rest and lists those.
 
 This record was drafted in the decision-maker's worktree, on branch `p2-perm-catalogue-rl`, cut
 from `origin/main` = `37b2596e` with a clean root. Clock at drafting: 2026-09-28 14:57:19 BST,
-read by `TZ=Europe/London date`. **RL-9204 is a working id**, minted at its turn.
+read by `TZ=Europe/London date`. **Its id was a working id**, minted at its turn. *(Minted 2026-09-29: `doc-id.py next --ref
+origin/main` printed 1236 at origin/main `dc8974c4`, and the working id (9204) became RL-1236.
+`created:` moved from the drafting date 2026-09-28 to the mint date, because `audit-docs.py`
+check 31 requires `created` to be non-decreasing with the number, and id 1235 is `created`
+2026-09-29. One occurrence of the working id is left as it is: `PL-1213`:159, inside a fenced
+quotation of the deputy's 2026-09-28 21:08:30 BST entry in a filed plan, which is frozen at
+its date.)*
 
 ### The two lists, and their predicates
 
@@ -54,8 +61,15 @@ The predicates are run at `37b2596e`, from the repository root.
     `approval:decide` (§5.1, `:466`).
 - **Code side**:
   `grep -oE '= "[a-z_]+:[a-z_]+"' packages/model-schema/src/model_schema/permissions.py | tr -d '=" ' | sort -u`
-  gives 24 names. No permission string outside that enum appears in `backend/src`,
-  `packages/*/src` or `frontend/src`.
+  gives 24 names. ~~No permission string outside that enum appears in `backend/src`,
+  `packages/*/src` or `frontend/src`.~~ *(Corrected 2026-09-29, a mechanical fix accepted in the
+  maintainer's entry `2026-09-29 14:15:43 BST · maintainer (acting on the maintainer's behalf) · WK-674 chain: answers to Q856-1/2 and Q848-1/2/3`: false as written. `backend/src/app/api/service_accounts.py:44`
+  holds `ALLOWED_PERMISSIONS = frozenset({"score:execute", "score:batch"})`, at `37b2596e` as at
+  the merged tree, and `:129` refuses any other requested permission. It is a further check site
+  for rows 26 and 27. Both strings are enum names, so the 24 names and the counts below are
+  unchanged. It is the only such literal: `git grep -nE '"[a-z_]+:[a-z_]+"' -- backend/src
+  'packages/*/src' frontend/src`, less `permissions.py`, finds that line alone among permission
+  names.)*
 - **The counts:** 24 in `06`, 24 in code, 7 shared, 41 in the union, and **34 unshared**
   (17 each side). They agree with the finding.
 
@@ -91,8 +105,8 @@ column holds the `06` line, the caller-predicate count and first route hit, or b
 |---|---|---|---|---|
 | 1 | `rating_version:submit` | 06 | **map → `rating:submit`** | `06:199` (§4.1 Pricing Actuary). Its partner is row 21 |
 | 2 | `custom_objective:submit` | 06 | **map → `model:submit`**, already ruled | `06:222-247`: the 2026-08-18 note says it "does **not** return", and submitting stays `model:submit` (FR-367, `:148`) |
-| 3 | `rating_version:deploy_prod` | 06 | **map → `deployment:promote`**, ruled in the WK-674 ruling (PR #848, DP-6) and cited, not re-ruled | `06:62` |
-| 4 | `rating_version:deploy_*` | 06 | **map → `deployment:promote`**, as row 3 | `06:219` |
+| 3 | `rating_version:deploy_prod` | 06 | **map → `deployment:promote`**, ruled in the WK-674 ruling (~~PR #848~~ `RL-1232`, DP-6) and cited, not re-ruled | `06:62` |
+| 4 | `rating_version:deploy_*` | 06 | **map → `deployment:promote`**, as row 3 (`RL-1232` DP-6) | `06:219` |
 | 5 | `custom_objective:author` | 06 | **spec-only → WK-690** (FR-367; its Slice 3 or 5 builds the check) | `06:148`, `:239-242` |
 | 6 | `monitor:write` | 06 | **spec-only → WK-687** | `06:201` |
 | 7 | `alert:acknowledge` | 06 | **spec-only → WK-688** | `06:201` |
@@ -112,7 +126,7 @@ column holds the `06` line, the caller-predicate count and first route hit, or b
 | 21 | `rating:submit` | code | **map survivor** (row 1) | 2 hits: `backend/src/app/api/models.py:1195` (`submit_rating_version`) and `backend/src/app/platform/rating_versions.py:227`. Both are Rating Version submission |
 | 22 | `rating:write` | code | **map survivor** (rows 11–12; DP-A (c)) | 4 hits: `models.py:1162` (`create_rating_version`), `rate_tables.py:45`, `rating_algorithms.py:24`, `platform/rating_versions.py:180` |
 | 23 | `dataset:write` | code | **map survivor** (row 16; DP-A (c)) | 11 hits across datasets (`api/datasets.py:87`), versions (`api/dataset_versions.py:61`), blobs (`api/blobs.py:40`), validation rules (`api/validation.py:59`, `platform/validation_rules.py:203`) and ingestion (`data/ingestion.py:124`) |
-| 24 | `deployment:promote` | code | **map survivor** (rows 3–4) | **0 hits**. The deploy route is not built. WK-674 Slice 2 builds the check (the WK-674 ruling, PR #848) |
+| 24 | `deployment:promote` | code | **map survivor** (rows 3–4) | **0 hits**. The deploy route is not built. WK-674 Slice 2 builds the check (the WK-674 ruling, ~~PR #848~~ `RL-1232`) |
 | 25 | `audit:read` | code | **add to 06** | 1 hit: `backend/src/app/api/audit.py:52` |
 | 26 | `score:execute` | code | **add to 06** | 1 hit: `backend/src/app/api/score.py:110`. `07` §4.3 already names it, at line 261 of `07` |
 | 27 | `score:batch` | code | **add to 06** | 2 hits: `backend/src/app/api/score.py:111`, and a docstring at `:38` |
@@ -151,15 +165,16 @@ DP-B's one to add.*
   FR-367 restates it: submitting either kind of objective "remains `model:submit`". This row
   records the existing ruling and changes nothing.
 - **`rating_version:deploy_prod` and `rating_version:deploy_*` → `deployment:promote`.** Ruled in
-  the WK-674 ruling (PR #848, DP-6), which amends `06:62` and `:219` itself. It is cited here so
+  the WK-674 ruling (~~PR #848~~ `RL-1232`, DP-6), which amends `06:62` and `:219` itself. It is cited here so
   the catalogue has one row per name. It is not re-ruled.
 
 ### The "add to 06" verdicts are not scope changes
 
-Each of the twelve names is **already checked** by the route cited in its row, so each already
+Each of the ~~twelve~~ thirteen *(corrected 2026-09-29: the "add to 06" rows are 13)* names is
+**already checked** by the route cited in its row, so each already
 grants exactly what it will be specified to grant. Writing it into `06` records built behaviour
 and grants nothing new. Row 33's `admin:break_glass` is FR-349's elevation, which `06` specifies
-without naming the permission. This commit adds the twelve to `06` §4.1 as a dated amendment:
+without naming the permission. This commit adds the ~~twelve~~ thirteen to `06` §4.1 as a dated amendment:
 a catalogue table placed after §4.1's existing notes. No new section number is created, since
 §4.1 already exists and already covers `Permission`.
 
@@ -179,7 +194,7 @@ filled in before this record mints.
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
 | DP-A | **Granularity.** `06` names per-artifact write rights (`rating_algorithm:write`, `rate_table:write`, `factor:write`, `banding:write`, `grouping:write`, `dataset:create_version`). The code checks one broader name per family: `rating:write` (algorithms, rate tables and Rating Version creation), `model:fit` (factors, bandings, groupings, and fitting), `dataset:write` (datasets, versions, blobs, validation rules, ingestion). Which is the catalogue? | **(a) The code's coarse names.** Map the six spec names onto `rating:write`, `model:fit` and `dataset:write`, and amend `06`. No code change. It loses the roles `06` could express, e.g. a rate-table maintainer who cannot edit algorithms. **(b) The spec's fine names.** Split the three code names, and the routes check the fine names. It keeps every `06` role expressible, but costs a migration of role grants and new route checks, and it grants per-artifact rights the code never had. **(c) The coarse names now, with the fine split carried to WK-676** (Phase 3, scoped roles), recorded in `06` as the target. | **(c).** The built surface and the tests use the coarse names. No Phase 2 requirement needs a per-artifact write right. The scoped-role Work is where finer grants belong. (a) silently drops what `06` meant to allow. (b) is Phase 3 work built ahead | decision point (scope) | yes: rows 11–16, 22 and 23; WK-673 Slice 4 and WK-674 Slice 2 if they add a write check | **(c)**, decided by the deputy by delegation; the entry is quoted below |
-| DP-B | **`admin:manage_environments`**: defined and granted to Admin, and checked nowhere at `37b2596e` (0 hits). #843's plan (at `1b102201`) uses it in Slices 2, 3 and 6. Keep it, or remove it? (`deployment:promote`, also 0 hits, is ruled by #848's DP-6. `admin:manage_service_accounts` is checked today, row 32. Neither is a DP-B name.) | **(a) Keep it, with the owning Work named: WK-674.** It is added to `06` §4.1 as governing the Environment object (`07` FR-428): create, list and retire. Its first check lands in WK-674 Slice 2. Whether it also guards an Environment's configuration is DP-D. **(b) Remove it** as dead code until a route needs it, and re-add it in Slice 2. | **(a).** FR-428 makes an Environment a first-class, configurable object, and WK-674 Slice 2 builds its management route in this phase. Removing the name and re-adding it within the phase is churn, and would briefly leave that route with no name to check | decision point (scope) | yes: row 34; WK-674 Slice 2 | **(a)**, decided by the deputy by delegation; the entry is quoted below |
+| DP-B | **`admin:manage_environments`**: defined and granted to Admin, and checked nowhere at `37b2596e` (0 hits). #843's plan (at `1b102201`) uses it in Slices 2, 3 and 6. Keep it, or remove it? (`deployment:promote`, also 0 hits, is ruled by ~~#848's~~ `RL-1232` DP-6. `admin:manage_service_accounts` is checked today, row 32. Neither is a DP-B name.) | **(a) Keep it, with the owning Work named: WK-674.** It is added to `06` §4.1 as governing the Environment object (`07` FR-428): create, list and retire. Its first check lands in WK-674 Slice 2. Whether it also guards an Environment's configuration is DP-D. **(b) Remove it** as dead code until a route needs it, and re-add it in Slice 2. | **(a).** FR-428 makes an Environment a first-class, configurable object, and WK-674 Slice 2 builds its management route in this phase. Removing the name and re-adding it within the phase is churn, and would briefly leave that route with no name to check | decision point (scope) | yes: row 34; WK-674 Slice 2 | **(a)**, decided by the deputy by delegation; the entry is quoted below |
 | DP-C | **`model:approve` and "every `*:approve`"** (`06:62`, `:218`) against the code's single `approval:decide`, which covers every artifact type (`approvals.py:63`; `validation.py:65`; `platform/validation_rules.py:403`). | **(a) One `approval:decide`**, with per-type approval governed by the `ApprovalPolicy` entry's `approver_roles` (§4.2) and by scoped assignments. Amend `06:62` and `:218`. **(b) Per-type approve permissions** (`model:approve`, `rating_version:approve`, …), split in code. **(c) (a) now, and per-type approve rights considered with WK-676's scoping.** | **(a).** Who may approve which type is already expressed per artifact type by §4.2's `approver_roles`, and per artifact family by FR-345's scope. A per-type permission would be a third mechanism for one rule. `06` §5.1 (`:466`) already names `approval:decide` for the deciding routes | decision point (scope) | yes: row 17 | **(a)**, decided by the deputy by delegation; the entry is quoted below |
 | DP-D | **Which permission guards an Environment's configuration?** This covers FR-431's environment settings (rate limits, sampling rates, feature flags; `PUT /api/v1/environments/{name}/settings`) and FR-271's shadow configuration, which the deputy's WK-674 DP-2 makes "an environment setting with its own audit event". #843's permission table leaves this to this record. | **(a) `admin:manage_environments`:** one guard for the Environment and everything configured on it. A settings admin cannot loosen `prod`'s limits without environment rights. **(b) `admin:manage_settings`:** FR-431 says environment configuration "is a Setting resolved by the precedence in §3.8", and `admin:manage_settings` already guards the workspace layer (`platform/datasets.py:995`, `platform/reference.py:75`), so every Setting has one guard. `admin:manage_environments` then governs only the Environment object. **(c) Both required.** | **(b).** `07` FR-431 already classifies environment configuration as a Setting, and a Setting has one audited write path. (a) creates a second guard for the same mechanism, split by which layer is written. (c) adds a conjunction no requirement asks for. If the deputy prefers (a) for `prod` safety, the plan's rows for Slices 3 and 6 already use it | decision point (scope) | yes: WK-674 Slices 3 and 6 (not Slice 2) | **(b)**, decided by the deputy by delegation; the entries are quoted below |
 
@@ -197,7 +212,7 @@ blocks). The entry was read on this branch at `3cd243af`, before DP-D existed. D
 decided by the two entries after it.
 
 ```text
-## 2026-09-28 15:01:11 BST · deputy · RL-9204 (#856, the permission catalogue): DP-A, DP-B and DP-C DECIDED, with the approval-separation conditions they depend on
+## 2026-09-28 15:01:11 BST · deputy · RL-1236 (#856, the permission catalogue): DP-A, DP-B and DP-C DECIDED, with the approval-separation conditions they depend on
 
 Given by the maintainer's delegation (28 Sep, extended goal). dm-e quotes this entry, fenced, in #856's follow-up commit before the mint. The pending rows take these verdicts, and any `06` amendment lands in the same commit. Read at `p2-perm-catalogue-rl` `3cd243af`.
 
@@ -213,7 +228,7 @@ Given by the maintainer's delegation (28 Sep, extended goal). dm-e quotes this e
 #### DP-D
 
 ```text
-## 2026-09-28 15:03:38 BST · deputy · RL-9204 (#856, now at `5882e91b`): DP-D DECIDED, (b). DP-A, DP-B and DP-C stand as decided at 15:01:11 (DP-B's owner wording is consistent)
+## 2026-09-28 15:03:38 BST · deputy · RL-1236 (#856, now at `5882e91b`): DP-D DECIDED, (b). DP-A, DP-B and DP-C stand as decided at 15:01:11 (DP-B's owner wording is consistent)
 
 **DP-D (which permission guards an Environment's configuration: FR-431 settings plus FR-271 shadow config): (b) DECIDED, `admin:manage_settings`.** It rests on `07` FR-431 calling it a Setting, and on `admin:manage_settings` already guarding the settings route (`api/settings.py:34`, 7 hits, the lead's verification at `81e061fb`). **The split, stated so the two permissions never overlap:**
 - **`admin:manage_environments`** (DP-B): the Environment **record's lifecycle**: create, rename, retire. That is WK-674 S2.
@@ -233,7 +248,7 @@ My 15:03:38 "FR-270/271's per-environment on/off" meant **the switch only**. The
 - **(ii) The routing on/off switch, the shadow on/off switch and shadow configuration → `admin:manage_settings`**, each change writing an Audit Event (env, key, old, new).
 - **The safeguard on (ii)'s routing switch:** turning date-routing **on** may only select among versions that were **deployed through `deployment:promote`** into that environment. It never makes a version live that was not promoted there. S6 includes a negative test: with routing on, a version present in the environment but not promoted is never selected. **Shadow** results are recorded, never served, so the shadow switch cannot change a live price, and needs no further guard beyond the audit.
 
-dm-e's RL-9204 quotes this entry with the 15:01:11 and 15:03:38 entries. planner-674's S6 rows cite it.
+dm-e's RL-1236 quotes this entry with the 15:01:11 and 15:03:38 entries. planner-674's S6 rows cite it.
 ```
 
 #### DP-A's condition: the fix, decided
@@ -244,7 +259,7 @@ dm-e's RL-9204 quotes this entry with the 15:01:11 and 15:03:38 entries. planner
 Given by the maintainer's delegation. Your finding stands: `approvals.py:260` refuses only the **submitter**, nothing compares `created_by`, and `06` FR-353 says only "submitter". The code matches the spec, and **the spec is too weak for DP-A's coarse write rights**: with `rating:write` covering algorithms, rate tables and Rating Version creation, a person could author a version and, if someone else submits it, approve it. **DP-C met** (`test_approvals.py:346`) is noted.
 
 **(a), in WK-1178 now, as ONE PR (spec, code and test in one commit, CLAUDE.md §2):**
-1. **FR-353 gets a dated amendment:** the approver of an artifact version may be **neither its submitter nor its author**, where the **author is the `created_by` of the artifact version under approval**. The amendment cites DP-A (RL-9204) and this entry.
+1. **FR-353 gets a dated amendment:** the approver of an artifact version may be **neither its submitter nor its author**, where the **author is the `created_by` of the artifact version under approval**. The amendment cites DP-A (RL-1236) and this entry.
 2. **The check:** `approvals.py` refuses an approval decision whose actor equals the version's `created_by`, with a named error code (registered in the error catalogue). It is applied to **every approvable type**, enumerated by command, not by memory.
 3. **The test, red then green:** a user who created the version, and is not the submitter, is refused. The red is quoted against the current `approvals.py`. The existing submitter test stays.
 4. **Scope limit, stated in the amendment:** authors of the **components** a Rating Version pins (a rate table version's or a model version's `created_by`) are **not** covered here. That is the harder maker-checker question, and it goes to **WK-677 (FR-353's owner, P3)** as a named carry, with its register row. It is noted beside OQ-620's decision that Rate Table Versions have no approval lifecycle of their own ([#830's OQ-620 requirement]), because that is the path by which a component author's work reaches approval unchecked.
@@ -263,6 +278,11 @@ is to reverse the substitution in the fence and diff it against the channel entr
 prints nothing.*
 
 ### The conditions, checked at `81e061fb`
+
+*(Noted 2026-09-29: since delivered on main by #861 — `AUTHOR_CANNOT_APPROVE`,
+`platform/approvals.py:351`; 06 FR-353 amended.)* The text below is kept as of `81e061fb`, on
+the maintainer's answer Q856-2 (entry `2026-09-29 14:15:43 BST · maintainer (acting on the maintainer's behalf) · WK-674 chain: answers to Q856-1/2 and Q848-1/2/3`). The approver ≠ author finding is
+FD-1198.
 
 **DP-A's condition: where the approval step separates author from approver.**
 - **The submitter is separated, in code and under test.**
@@ -305,6 +325,37 @@ refused. It is met; no code change is needed.**
 - The check under test is `_check_approver_role` (`platform/approvals.py:435`), called at
   `:275` after `require_permission(... APPROVAL_DECIDE)` at `:269-274`.
 
+## Cites re-read at the merged tree, 2026-09-29
+
+This branch merged `origin/main` at `dc8974c4` (#848's squash). The record's cites stay as of
+their trees, as the maintainer's answer Q856-2 keeps DP-A's condition text: `37b2596e` for the
+lists and the table, `81e061fb` for the conditions. Every `path:line` cite outside the fenced
+entries was re-read at the merged tree by comparing the cited lines' text at the record's tree
+with the merged tree's. The cites not listed below hold at the same line. These moved, with
+the same text:
+
+| Cited (at its tree) | At the merged tree |
+|---|---|
+| `api/datasets.py:86`, `:87` | `:87`, `:88` |
+| `api/models.py:107`, `:108`, `:109` | `:113`, `:114`, `:115` |
+| `api/models.py:280-286`, `:384-390`, `:474-480` | `:286-292`, `:390-396`, `:480-486` |
+| `api/models.py:1112`, `:1162`, `:1195`, `:1222` | `:1118`, `:1168`, `:1201`, `:1239` |
+| `api/blobs.py:40` | `:41` |
+| `api/score.py:110`, `:111` | `:122`, `:123` |
+| `platform/rating_versions.py:180`, `:227` | `:216`, `:273` |
+| `platform/datasets.py:995` | `:997` |
+| `platform/validation_rules.py:403`, `:414` | `:404`, `:415` |
+| `platform/approvals.py:260`, `:269-274`, `:275`, `:435` | `:328`, `:376-381`, `:382`, `:569` |
+| `tests/test_approvals.py:68`, `:86`, `:345`, `:346`, `:383-384` | `:96`, `:116`, `:399`, `:400`, `:439-440` |
+| `tests/test_api_approvals.py:330`, `:353` | `:410`, `:433` |
+| `06:222-247`, `:239-242`, `:466` | `06:224-249`, `:241-244`, `:518` |
+
+`06:62` and `06:218-219` are at the same lines and now carry this record's DP-C amendments and
+`RL-1232` DP-6's, which this branch resolved together at the merge. Where `api/models.py:1112`
+or `:1222` has more than one identical line at the merged tree (`requires(Perm.RATING_READ)`,
+`requires(Perm.RATING_COMPILE)`), the table gives the first one, at the same offset as its
+neighbours. The fenced entries are quotations and are not re-read.
+
 ## What it obliges
 
 - **This record's commits:** the `06` §4.1 dated amendment, which adds the built names, the
@@ -343,7 +394,7 @@ refused. It is met; no code change is needed.**
   decisions require lands in the same commit.
 - **Until then** (the deputy's item 4(b)): any slice that adds or checks a permission states in
   its leaf plan which name it uses and why, citing the permission-catalogue finding.
-- **WK-674:** Slice 2 builds `deployment:promote`'s check (rows 3, 4 and 24, #848's DP-6) and
+- **WK-674:** Slice 2 builds `deployment:promote`'s check (rows 3, 4 and 24, ~~#848's~~ `RL-1232` DP-6) and
   DP-B's Environment route. Slices 3 and 6 guard environment configuration by DP-D's decision.
   Slice 3's key routes use `admin:manage_service_accounts` (row 32).
 - **WK-690:** `custom_objective:author` (row 5). **WK-687, WK-688, WK-684, WK-686:** rows 6–10.
