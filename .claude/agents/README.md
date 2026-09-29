@@ -90,9 +90,9 @@ Deliberately unfilled. Half of a work breakdown is naming what must **not** be h
 
 ## Role model tiers
 
-Spawn every role with its file's tier alias (`--model opus|sonnet|haiku`); a lead verifies its
-teammates' `--model` against the "Model / effort" lines of `.claude/roles/*.md` at every
-(re)start. Effort cannot be read from `ps`: every spawn's first message quotes its role
+Spawn every role with its file's tier alias (`--model opus|sonnet|haiku`); at every (re)start
+the lead checks its own model and each teammate's `--model` against the "Model / effort"
+lines of `.claude/roles/*.md`. Effort cannot be read from `ps`: every spawn's first message quotes its role
 file's "Model / effort" line and states the effort it is running at, and a mismatch is
 re-spawned. (There is no roles README: `scripts/doc-id.py` globs `.claude/roles/*.md` as
 role charters, so an index file there would be read as one.)
