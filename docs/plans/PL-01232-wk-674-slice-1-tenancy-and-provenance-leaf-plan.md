@@ -1,5 +1,5 @@
 ---
-id: PL-9104
+id: PL-1232
 family: plan
 kind: leaf
 title: WK-674 Slice 1 — Tenancy and provenance (FR-436, FR-18): leaf plan
@@ -53,8 +53,10 @@ tenancy and provenance (FR-436, FR-18)"**, whose Sequencing block reads *"Slice 
 provenance ─→ Slice 2 Environment + Deployment record"*. The decision-maker's ruling on
 that map plan (PR #848, branch `p2-wk674-rl` read at
 `9e175017c950d80b857f283e09fbe938be337a27`) lists the same Slice 1 at its `:35`. Both are
-unminted, so they are cited by PR number, not by id, and not in `relates:`; the minting
-PR for this plan replaces those citations with the minted ids.
+unminted, so they are cited by PR number, not by id, and not in `relates:`. They were
+still unminted when this plan minted (2026-09-29), so the PR-number citations stand. Their
+ids go into this plan's text and `relates:` once they mint, while this plan is still
+`draft`.
 
 ## Status
 
@@ -62,8 +64,8 @@ PR for this plan replaces those citations with the minted ids.
 PR #892 carried until this commit (commit
 `0d1c83bf9eaa00a4149c2bcf051d0448672d8c14`), which scoped Slice 2 and Slice 3 work under
 the Slice 1 label and took its slice order from WK-672's map plan (`PL-930`); that file is
-deleted here, and its number is not this plan's. The id above is a **working id**: it is
-minted at this PR's turn in the merge queue, never before.
+deleted here, and its number is not this plan's. **2026-09-29: working id 9104, minted
+1232** at this PR's turn in the merge queue.
 
 **Activation needs, in order:** the map plan (#843) minted and `active`; DP-S1-1, DP-S1-2 and DP-S1-3
 below resolved; the lead's go. **Map-plan deviation, stated rather than folded in:** the
@@ -109,9 +111,9 @@ step predicts**; a failure for any other cause is a plan defect, reported, not w
      saying the marker is missing. (i) The marker table exists and is empty. (ii) The
      database is not migrated to this slice's revision, so the table does not exist; the
      error tells the operator to run `alembic upgrade head`. Case (ii) cannot use the shared
-     test database, which is a shared, already-migrated template (the auditor's 2026-09-28
-     finding on the `gipricing` template records it holding a stale schema; cited by
-     description because it post-dates this branch's base). It needs a
+     test database, which is a shared, already-migrated template (FD-1218,
+     [`../findings/FD-01218-the-shared-test-database-template-gipricing-holds-a-whole-abandoned-test-session-and-a-stale-schema.md`](../findings/FD-01218-the-shared-test-database-template-gipricing-holds-a-whole-abandoned-test-session-and-a-stale-schema.md),
+     records it holding a stale schema). It needs a
      scratch database upgraded only to this revision's `down_revision`: mirror the
      `scratch_database` fixture and `_upgrade(cfg, revision)` helper in
      `backend/tests/test_migration_dataset_owner.py:358-409`, and do not invent new ones. An absent database marker is
