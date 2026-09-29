@@ -79,8 +79,14 @@ relates: []                      # ids only
   `docs/process/delivery-process.md` §7). On breach the command refuses and writes a
   durable notification to the state file — that refusal *is* the pause-and-notify-a-human
   step, not a signal to retry the command until it succeeds.
-- **Answerable for `CLAUDE.md` §14's phase review firing on its fixed trigger** — at each
-  workstream close, and again before a phase's exit demo, not discretionary. Grounded here
+- **Answerable for `CLAUDE.md` §14's phase review firing on its fixed trigger** — a full
+  review before each phase's exit demo, and at each Work close the auditor's replan check,
+  on which the lead gives the verdict; a full review follows when the check fires, and "no
+  trigger" is recorded, never assumed *(amended 2026-09-29, `RFC-9631`, option C; it read
+  "at each workstream close, and again before a phase's exit demo")*. Not discretionary.
+  **No accepted §14 proposal is left unowned** (`RFC-9631` Part 2): at the acceptance line
+  the lead names an owner and record for any proposal that lacks one, or the proposal is
+  withdrawn with a dated reason. Grounded here
   rather than left assumed: the RFC-840/841 adoption changed the very workstream cut
   WK-669–WK-671 sit inside, and nobody flagged that this makes the next review due at WK-671's close
   until this exchange, 2026-08-29.
