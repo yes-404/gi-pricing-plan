@@ -2108,7 +2108,9 @@ def test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_e
     # 63 became 65 (WK-672 Slice 2, PL-1189, 2026-09-28): the generated
     # `regression-suite.schema.json` and the authored `regression-run.schema.json` split
     # out of the Phase-0 bundle — two contract files, registered for F83's reason.
-    assert len(non_markdown) == 65, len(non_markdown)
+    # 65 became 66 (WK-672 Slice 3, PL-1205, 2026-09-28): the generated
+    # `regression-run.schema.json`, the run's contract now compared against the model.
+    assert len(non_markdown) == 66, len(non_markdown)
     assert set(non_markdown) <= rels
 
     # Named individually, so the proof is "one of the 63" and not "63 of something".

@@ -135,7 +135,7 @@ where the project's hard problems live.
 
 | Component | Used in | Depth | Skills to research | Resources |
 |---|---|---|---|---|
-| pytest + hypothesis | all Python; 03 FR-261 | ★★ | Property-based testing of actuarial invariants (monotonicity, additivity, decimal exactness), **building strategies from a declarative input contract**, shrinking counterexamples into something an actuary can read, fixtures for artifact round-trips | [Hypothesis docs](https://hypothesis.readthedocs.io/), [Composite strategies](https://hypothesis.readthedocs.io/en/latest/data.html#composite-strategies) |
+| pytest + hypothesis | all Python; 03 FR-261, §8 (`hypothesis==6.165.7`, a `pricing-core` runtime dependency, RS-1176) | ★★ | Property-based testing of actuarial invariants (monotonicity, additivity, decimal exactness), **building strategies from a declarative input contract**, shrinking counterexamples into something an actuary can read, fixtures for artifact round-trips | [Hypothesis docs](https://hypothesis.readthedocs.io/), [Composite strategies](https://hypothesis.readthedocs.io/en/latest/data.html#composite-strategies) |
 | mypy --strict | `packages/` | ★★ | Strict-mode idioms with Pydantic v2 and Polars, typed protocols for callbacks | [mypy docs](https://mypy.readthedocs.io/) |
 | Ruff | all Python | ★ | Rule selection, line length 100, import sorting, import-linter-style layering (ADR-703) | [Ruff docs](https://docs.astral.sh/ruff/) |
 | Vitest / Vue Testing Library / Playwright ✔ | frontend | ★ | **Skill vendored** (`vue-testing-best-practices`). Remaining: mocking against the *generated* API types so a contract change breaks the test rather than the runtime | [Vitest](https://vitest.dev/), [Playwright](https://playwright.dev/) |

@@ -10,11 +10,11 @@ relates: []                      # ids only
 
 # executor
 
-- **Model / effort:** Sonnet 5; medium (standard) — the highest-volume role; per-slice
+- **Model / effort:** `sonnet` (currently Sonnet 5); medium (standard) — the highest-volume role; per-slice
   gates and the auditor's re-check bound the risk of a cheaper setting.
-- **Principal: the lead**, not the maintainer and not the deputy. The lead assigns your
-  slice, answers your questions, and rules on your dispositions; the deputy confirms
-  rulings; the maintainer accepts Work/Phase/Project closes (below) but does not otherwise
+- **Principal: the lead**, not the maintainer. The lead assigns your
+  slice, answers your questions, and rules on your dispositions; the maintainer
+  (or the session acting on the maintainer's behalf) confirms rulings; the maintainer accepts Work/Phase/Project closes (below) but does not otherwise
   instruct you. This line was missing before now — an omission being closed, not a wrong
   statement being corrected: with nothing naming its principal, this role has attributed its
   instructions to "the maintainer", the most senior party visible in `CLAUDE.md`, and that
