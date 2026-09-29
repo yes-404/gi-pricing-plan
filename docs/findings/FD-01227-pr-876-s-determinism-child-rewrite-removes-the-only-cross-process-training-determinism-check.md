@@ -77,4 +77,4 @@ evidence. **Recommendation:** first restore a small child-side training check as
 the wording question to the maintainer; process-level nondeterminism (thread scheduling, hash randomisation) is exactly what an in-process double fit cannot see,
 and FR-11's sentence "given identical inputs … reproduce identical outputs" does not limit itself to one process.
 
-*(2026-09-29: since raised as OQ-1229.)*
+*(2026-09-29: since raised as OQ-1229, recorded in open-questions.md and 02-modelling §10.)*
