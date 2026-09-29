@@ -558,7 +558,7 @@ opened: 2026-08-14
 target: ~
 gates: ~
 exit criteria: G1–G6 of [`CR-1212`](closures/CR-01212-plan-review-15-p2-exit-criteria-budget-sequencing-and-the-open-finding-set.md), as accepted by the maintainer 2026-09-28, listed below
-works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, WK-693, WK-694, WK-695, WK-696, WK-697, WK-1169, WK-1170, WK-1178, WK-9670
+works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, WK-693, WK-694, WK-695, WK-696, WK-697, WK-1169, WK-1170, WK-1178, WK-1250
 
 **P2's exit criteria** — [`CR-1212`](closures/CR-01212-plan-review-15-p2-exit-criteria-budget-sequencing-and-the-open-finding-set.md) Proposal 1, **accepted by the maintainer 2026-09-28** (the deputy's entry of 19:05:44 BST, quoted whole in that record's "Acceptance"), with its two amendments: G1–G6 are **exit criteria only** — `gates:` holds the three dated freeze gates (`process/document-ids.md` §1.3, §1.10(b)) and, with `target:`, stays `~` until the lead proposes dates after WK-672 closes and the deputy puts them to the maintainer, who accepts them before the first freeze passes (the deputy's entry of 2026-09-28 19:05:44 BST; that clause is that entry's, not CR-1212's text); and G5 is stated by symbol, with no pasted number. The criteria's full predicates, greps and per-id lists are in that record, which is the authority; this list is a pointer to them.
 
@@ -847,10 +847,10 @@ Minted 2026-09-28 on the maintainer's instruction of that day ("yes record and i
 
 **NFR-526, NFR-527 and NFR-536 are measured under WK-1178**, on the exit tree *(added 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 7: "NFR-526, 527 and 536 are measured under WK-1178.")*. They measure paths built today (API metadata p95, Job submission latency and trace propagation), so G4 reads them as measured, not carried.
 
-### WK-9670 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
+### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
-id: WK-9670
+id: WK-1250
 family: work
 title: Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 status: draft
@@ -859,7 +859,7 @@ owner: maintainer
 phase: P2
 ```
 
-Opened `draft` 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 10: "Accepted as amended. #907 is the interim fail-closed fix (HIGH). A **new P2 Work** for FR-217's inlining and FR-218's authoring half is opened `draft` by the lead, its map plan by the planner. WK-669 is not reopened; CR-838 is corrected (16:25:49 item 4)." **Scope** (`CR-1247` Proposal 10, option (a)): FR-217's inlining limb, where `compile_bundle` resolves `SubGraphRef.mount_point` and inlines the pinned sub-graph; and FR-218, where the `purpose` mount is declared on the Rating Version and version-pinned, and the interim guard is replaced by the real check. **Sequenced after WK-674 and before WK-675**, so that WK-675's DAG designer authors a sub-graph against a backend that inlines one. The designer's sub-graph view stays WK-675's. **Predecessors:** FD-1241 (`CR-838` marks FR-217 delivered, but its versioned-artifact, pin and bundle-time inlining limbs are not built); the interim fail-closed fix, #907 (`a78fe98f`, under WK-1178); and FR-218's interim rule, `RL-1242` (#911). **Its map plan is the planner's**, and its activation is the maintainer's, on that map plan. The id is a working id, minted at this PR's merge turn.
+Opened `draft` 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 10: "Accepted as amended. #907 is the interim fail-closed fix (HIGH). A **new P2 Work** for FR-217's inlining and FR-218's authoring half is opened `draft` by the lead, its map plan by the planner. WK-669 is not reopened; CR-838 is corrected (16:25:49 item 4)." **Scope** (`CR-1247` Proposal 10, option (a)): FR-217's inlining limb, where `compile_bundle` resolves `SubGraphRef.mount_point` and inlines the pinned sub-graph; and FR-218, where the `purpose` mount is declared on the Rating Version and version-pinned, and the interim guard is replaced by the real check. **Sequenced after WK-674 and before WK-675**, so that WK-675's DAG designer authors a sub-graph against a backend that inlines one. The designer's sub-graph view stays WK-675's. **Predecessors:** FD-1241 (`CR-838` marks FR-217 delivered, but its versioned-artifact, pin and bundle-time inlining limbs are not built); the interim fail-closed fix, #907 (`a78fe98f`, under WK-1178); and FR-218's interim rule, `RL-1242` (#911). **Its map plan is the planner's**, and its activation is the maintainer's, on that map plan. **Minted 2026-09-29** at #916's merge turn, from `doc-id.py next --ref origin/main` at `a380aa7a` (working id 9670).
 
 **Goal:** DAG designer, rate tables, reference data, real-time + batch scoring, dislocation.
 
@@ -942,7 +942,7 @@ opened: 2026-08-14
 target: ~
 gates: ~
 exit criteria: ~
-works: WK-676, WK-677, WK-678, WK-679, WK-680, WK-681, WK-682, WK-691, WK-9671
+works: WK-676, WK-677, WK-678, WK-679, WK-680, WK-681, WK-682, WK-691, WK-1251
 
 **2026-09-29: requirements carried into Phase 3 without a Work.** CR-1212 P12 records that FR-432, FR-433, FR-434, FR-435 and FR-438 were on no roadmap row. FR-434 and FR-435 went to WK-674 in P2 (CR-1212 P12; placed in PL-1237). The other three are carried to P3, and no P3 Work names them yet:
 
@@ -951,7 +951,7 @@ works: WK-676, WK-677, WK-678, WK-679, WK-680, WK-681, WK-682, WK-691, WK-9671
 
 No Work is created by this note. Creating one is a scope decision, and the maintainer's.
 
-*(Amended 2026-09-29: the scope decision is made. `CR-1247` Proposal 7, accepted in the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 7, creates WK-9671 (production packaging and supply chain, below), which owns FR-432, FR-433 and FR-438. FR-433's event, "the P2 closure record, which names the Work that takes it", will be met when the P2 closure record names WK-9671.)*
+*(Amended 2026-09-29: the scope decision is made. `CR-1247` Proposal 7, accepted in the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 7, creates WK-1251 (production packaging and supply chain, below), which owns FR-432, FR-433 and FR-438. FR-433's event, "the P2 closure record, which names the Work that takes it", will be met when the P2 closure record names WK-1251.)*
 
 ### WK-676 — Full scoped RBAC, custom roles, break-glass
 
@@ -1073,10 +1073,10 @@ phase: P3
 From “Workstreams” (line 474): **Proxy assessment** — an insurer-supplied reference table, association measures (mutual information, exposure-weighted AUC), evidence attached to the approval request | Added 2026-08-15 by OQ-581's decision: `02` FR-91. **Evidence, never a block** — it belongs beside `04` FR-302's outcome disparity report, and both exist to inform a legal judgement the platform must not make
 
 
-### WK-9671 — Production packaging and supply chain
+### WK-1251 — Production packaging and supply chain
 
 ```yaml
-id: WK-9671
+id: WK-1251
 family: work
 title: Production packaging and supply chain
 status: draft
@@ -1085,7 +1085,7 @@ owner: maintainer
 phase: P3
 ```
 
-Opened `draft` 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 7: "Accepted: (a). A new **P3** packaging Work (FR-432, FR-433, FR-438 and the three NFRs), opened `draft` on the roadmap by the lead. NFR-526, 527 and 536 are measured under WK-1178. Nothing is built ahead of P3 (CLAUDE.md §0)." **It owns:** FR-432 (container images), FR-433 (the Helm chart and Kubernetes manifests, in P3 by `RL-1232` DP-1 (b)), FR-438 (signed images and an SBOM), and the three NFRs `CR-1247` Proposal 7 names: NFR-530 (RPO and RTO, with a restore exercised in CI), NFR-533 (which follows FR-438) and NFR-461. NFR-526, NFR-527 and NFR-536 are **not** this Work's; they are measured under WK-1178 in P2. **Nothing is built ahead of P3** (`CLAUDE.md` §0). Its activation is the maintainer's. The id is a working id, minted at this PR's merge turn.
+Opened `draft` 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 7: "Accepted: (a). A new **P3** packaging Work (FR-432, FR-433, FR-438 and the three NFRs), opened `draft` on the roadmap by the lead. NFR-526, 527 and 536 are measured under WK-1178. Nothing is built ahead of P3 (CLAUDE.md §0)." **It owns:** FR-432 (container images), FR-433 (the Helm chart and Kubernetes manifests, in P3 by `RL-1232` DP-1 (b)), FR-438 (signed images and an SBOM), and the three NFRs `CR-1247` Proposal 7 names: NFR-530 (RPO and RTO, with a restore exercised in CI), NFR-533 (which follows FR-438) and NFR-461. NFR-526, NFR-527 and NFR-536 are **not** this Work's; they are measured under WK-1178 in P2. **Nothing is built ahead of P3** (`CLAUDE.md` §0). Its activation is the maintainer's. **Minted 2026-09-29** at #916's merge turn, next after WK-1250 (working id 9671).
 
 
 **Goal:** RBAC, approvals, audit UI, model documentation generation.
