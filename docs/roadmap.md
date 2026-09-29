@@ -555,7 +555,7 @@ surface sits in Phase 1.**
 ## P2 — Rating Engine
 status: active
 opened: 2026-08-14
-target: ~
+target: 2026-11-12
 gates: ~
 exit criteria: G1–G6 of [`CR-1212`](closures/CR-01212-plan-review-15-p2-exit-criteria-budget-sequencing-and-the-open-finding-set.md), as accepted by the maintainer 2026-09-28, listed below
 works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, WK-693, WK-694, WK-695, WK-696, WK-697, WK-1169, WK-1170, WK-1178, WK-1250
@@ -572,6 +572,19 @@ works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, W
 - **G6.** ~~A plan review 16 is filed after G1–G5 and before the demo (`CLAUDE.md` §14).~~
   The pre-exit-demo plan review (CLAUDE.md §14; option C rule 1 once its RFC lands) is filed after G1–G5 are met and before the demo.
   *(Amended 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 8: "Accepted: G6 is restated without the number: 'The pre-exit-demo plan review (CLAUDE.md §14; option C rule 1 once its RFC lands) is filed after G1–G5 are met and before the demo.'" The restated sentence above is the maintainer's wording, verbatim. The old text is kept, struck: "plan review 16" now names `CR-1247`, a review that is not G6, and a reader checking G6 by that number would read it as met.)*
+
+#### P2 freeze dates and target
+
+*(Added 2026-09-29 by the lead, as a milestone-section edit, quoting verbatim the maintainer's entry "2026-09-29 20:45:24 BST · maintainer (acting on the maintainer's behalf) · P2 FREEZE DATES AND TARGET (§5a), accepted by the user". The user (the maintainer), about 20:26 BST: "accept the P2 dates as proposed".)*
+
+*(Weekdays corrected 2026-09-29 by the lead, quoting the maintainer's entry "2026-09-29 21:03:52 BST · maintainer (acting on the maintainer's behalf) · CORRECTION to the 20:45:24 P2 dates: the WEEKDAYS were wrong; the DATES stand (a)": "the DATES stand. … Only the weekday labels change." The 20:45:24 entry read Fri 2026-10-03, Tue 2026-11-04, Wed 2026-11-05 and Wed 2026-11-12; `date -d` gives Sat, Wed, Thu and Thu. The block below carries the corrected weekdays; everything else in it is verbatim.)*
+
+> **P2 freeze dates and target** (accepted 2026-09-29 by the maintainer; sized by the planner's "Inputs to the maintainer's §5a" at main 5638f691: 20 best / 37 likely / 87 worst working days from WK-674 S1 going active, at the measured 2 code slices per day):
+> - **Scope freeze: Sat 2026-10-03.** No new Work enters P2 after this date. WK-1250 is the last addition, and WK-675's map plan is drafted by then.
+> - **Code freeze: Wed 2026-11-04.** G1: the seven P2 Works delivered.
+> - **Docs freeze: Thu 2026-11-05.**
+> - **Target: the P2 exit demo, Thu 2026-11-12** (the likely band plus about 20%).
+> - **Re-baseline after WK-674 Slices 1–2:** re-measure the throughput and restate these dates if the band moves. The dates assume work every day, as practised; on a weekdays-only rhythm they slip about two weeks.
 
 #### Phase 2 status
 
@@ -685,7 +698,115 @@ owner: maintainer
 phase: P2
 ```
 
-From “Workstreams” (line 384): Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires** | FR-267, FR-268, FR-269, FR-270, FR-271, FR-272; `07` FR-428, FR-429, FR-430, FR-431, and added 2026-08-15 by OQ-540's decision: **FR-436** (a deployment refuses to start against another tenant's database) and **FR-18** (a Job records the platform build, because version skew between tenants is now permanent). Any earlier `Job` migration should carry FR-18's column rather than wait for this
+From “Workstreams” (line 384): Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires** | FR-267, FR-268, FR-269, FR-270, FR-271, FR-272; `07` FR-428, FR-429, FR-430, FR-431, and added 2026-08-15 by OQ-540's decision: **FR-436** (a deployment refuses to start against another tenant's database) and **FR-18** (a Job records the platform build, because version skew between tenants is now permanent). Any earlier `Job` migration should carry FR-18's column rather than wait for this *(Corrected 2026-09-29 by the lead, per `PL-1237`'s Scope note, amended by the maintainer's answer Q843-2: "The roadmap WK-674 row edit is the lead's, after the map is accepted." Added: `07` **FR-437** (the reference identity provider, `07:153`), **FR-412**'s memory half (`07:101`) and **FR-415**'s worker service (`07:104`); and `CR-1212`'s **FR-434**, **FR-435**, **NFR-531**, **NFR-534**, **NFR-489**, **NFR-490**, **NFR-502**, **NFR-493**'s linearity limb and **NFR-496**'s prod-sampling limb. **The F1 obligation:** the Work is done only when the switchover meets the F1 acceptance test on the deployment path this Work builds, not on a loopback mirror (`PL-1237` Goal).)*
+
+#### SL-1255 — Slice 1: tenancy and provenance (FR-436, FR-18)
+
+```yaml
+id: SL-1255
+family: slice
+title: Slice 1: tenancy and provenance (FR-436, FR-18)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-09-29
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
+phase: P2
+work: WK-674
+corrected_by: []
+relates: [PL-1237, PL-1239, RL-1253]
+```
+
+A deployment is bound to one tenant and refuses to start when its database, blob or broker marker names another; every Job records the platform build it ran on. `PL-1237` Task 1; leaf plan `PL-1239`, its decision points ruled by `RL-1253`. First in the chain: nothing precedes it.
+
+#### SL-1256 — Slice 2: the Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit and NFR-498 for deploy)
+
+```yaml
+id: SL-1256
+family: slice
+title: Slice 2: the Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit and NFR-498 for deploy)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-09-29
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
+phase: P2
+work: WK-674
+corrected_by: []
+relates: [PL-1237]
+```
+
+The Environment and Deployment records, promotion order and their audit limb for deploy (FR-272, NFR-498), with the carried rulings. `PL-1237` Task 2. Starts after Slice 1 closes; its leaf plan also waits on `OQ-1234` (the maintainer's acceptance line on `PL-1237`).
+
+#### SL-1257 — Slice 3: environment isolation (FR-430, FR-431, register F54 and F48, NFR-496 prod-sampling limb)
+
+```yaml
+id: SL-1257
+family: slice
+title: Slice 3: environment isolation (FR-430, FR-431, register F54 and F48, NFR-496 prod-sampling limb)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-09-29
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
+phase: P2
+work: WK-674
+corrected_by: []
+relates: [PL-1237]
+```
+
+Per-environment keys, rate limits and monitoring configuration, and environment configuration as a Setting. `PL-1237` Task 3. Starts after Slice 2 closes, and is gated by `OQ-1235`.
+
+#### SL-1258 — Slice 4: the deployment path (FR-437, FR-412 memory half, FR-415, FR-434, FR-435, NFR-531, NFR-534, FD-1211)
+
+```yaml
+id: SL-1258
+family: slice
+title: Slice 4: the deployment path (FR-437, FR-412 memory half, FR-415, FR-434, FR-435, NFR-531, NFR-534, FD-1211)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-09-29
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
+phase: P2
+work: WK-674
+corrected_by: []
+relates: [PL-1237]
+```
+
+The compose `api` and `worker` services, the reference identity provider, the memory budget and the explicit migration step: the path Slice 5 measures on. `PL-1237` Task 4. Starts after Slice 3 closes.
+
+#### SL-1259 — Slice 5: atomic switchover, rollback and the measurements (FR-268, FR-269, FR-272 audit and NFR-498 for rollback, NFR-494, NFR-489, NFR-502, NFR-490, NFR-493 linearity limb, NFR-497 mechanism)
+
+```yaml
+id: SL-1259
+family: slice
+title: Slice 5: atomic switchover, rollback and the measurements (FR-268, FR-269, FR-272 audit and NFR-498 for rollback, NFR-494, NFR-489, NFR-502, NFR-490, NFR-493 linearity limb, NFR-497 mechanism)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-09-29
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
+phase: P2
+work: WK-674
+corrected_by: []
+relates: [PL-1237]
+```
+
+Atomic switchover and rollback on the Slice 4 path, with the rollback's audit limb (FR-272, NFR-498), the F1 acceptance test and the measured verdicts. NFR-497's degraded read is kept reachable against the `live` reference; the availability verdict is the lead's at the close. `PL-1237` Task 5. Starts after Slice 4 closes; its measured verdicts wait on a dedicated host (maintainer-owned).
+
+#### SL-1260 — Slice 6: date-based routing and shadow scoring (FR-270, FR-271, FR-272 audit and NFR-498 for routing and shadow)
+
+```yaml
+id: SL-1260
+family: slice
+title: Slice 6: date-based routing and shadow scoring (FR-270, FR-271, FR-272 audit and NFR-498 for routing and shadow)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-09-29
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
+phase: P2
+work: WK-674
+corrected_by: []
+relates: [PL-1237]
+```
+
+Date-based routing and shadow scoring, both built and default off per environment (`RL-1232` Part A, DP-2 (a)), with the audit limb for routing and shadow configuration changes (FR-272, NFR-498). `PL-1237` Task 6. Starts after Slice 5 closes.
 
 
 ### WK-675 — Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views

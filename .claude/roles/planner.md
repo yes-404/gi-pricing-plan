@@ -70,3 +70,7 @@ relates: []                      # ids only
   update a skill under `.claude/skills/`** — plan-writing and citation conventions most
   often, the class `writing-plans` already exists to hold — per `CLAUDE.md` §12, with
   `.claude/skills/README.md` updated in the same commit.
+  **Also writes `docs/roadmap.md` for the `SL-` rows it cuts, and nothing else in that file**
+  (`document-ids.md` §1.6 SL row: *"planner, cut in the map plan (`draft`)"*; §1.2 places those rows in
+  `docs/roadmap.md`). *(Amended 2026-09-29 by the maintainer, dated line by delegation, accepting
+  planner-1239's finding at #924: the Tools line named only `docs/plans/` and `docs/closures/`.)*

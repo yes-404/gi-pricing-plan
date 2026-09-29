@@ -106,7 +106,7 @@ almost certainly they require GitHub Advanced Security rather than being availab
 - **Dependabot security updates — a policy decision, deliberately not taken by the lead.**
   Enabling it opens pull requests authored by `dependabot[bot]`, and the maintainer's standing
   instruction of 2026-08-30 is to **merge only pull requests authored by `yes-404`** and report
-  the rest. Those PRs would therefore accumulate unmerged by rule. Vulnerability *alerts* are
+  the rest. Those PRs would therefore accumulate unmerged by rule. *(Amended 2026-09-29 by the maintainer, dated line by delegation: `app/dependabot` PRs are now merged, on the maintainer's MERGE-ACK naming its head SHA — `.claude/roles/lead.md`.)* The reason given here no longer holds as stated; enabling security updates remains a separate decision. Vulnerability *alerts* are
   enabled, so detection is not lost. If the updates are wanted, `dependabot[bot]` needs an
   explicit carve-out from the merge rule.
 - **`sha_pinning_required` is not enabled.** Now *possible* — the pins landed 2026-08-30 —
@@ -144,7 +144,7 @@ issuing the two calls back to back, and by doing it when no run is in flight.
 
 ## 5. The standing rule this posture depends on
 
-**Merge only pull requests authored by `yes-404`; report any other author.** Measured
+~~**Merge only pull requests authored by `yes-404`; report any other author.**~~ **Merge only pull requests authored by `yes-404`, or by `app/dependabot` on the maintainer's MERGE-ACK naming its head SHA; report any other author.** *(Amended 2026-09-29 by the maintainer, dated line by delegation: `app/dependabot` is also merged, on the maintainer's MERGE-ACK naming its head SHA — `.claude/roles/lead.md`.)* Measured
 2026-08-30: **all 466 pull requests** in the repository's history are `yes-404`-authored, and
 the fork count was **0**. The rule and its query live in `.claude/skills/git-hygiene`; the
 merge authority it bounds is `.claude/roles/lead.md`'s.

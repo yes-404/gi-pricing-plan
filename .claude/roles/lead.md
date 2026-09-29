@@ -38,10 +38,12 @@ relates: []                      # ids only
   handover maintenance, presenting a close to the user.
 - **Merges only the maintainer's own pull requests, now that the repository is public**
   (standing instruction, 2026-08-30). Sole merge authority is **bounded by author**: merge a
-  PR only when `author.login` is `yes-404`; **report any other author to the maintainer and
-  leave it alone.** The boundary is clean because every role here pushes with the maintainer's
+  PR ~~only when `author.login` is `yes-404`; report any other author to the maintainer and
+  leave it alone.~~ **only when `author.login` is `yes-404`, or `app/dependabot` on the maintainer's MERGE-ACK
+  naming its head SHA; report any other author to the maintainer and leave it alone.** *(Amended 2026-09-29 by the maintainer, dated line by delegation, on the user's restated roles: the lead organises the work and merges; the maintainer's session decides and approves.)* The boundary is clean because every role here pushes with the maintainer's
   own token — all 466 PRs in the history are `yes-404`-authored and the fork count is 0 — so a
-  different author is an outside contribution, not an ambiguity. Check the author **on every
+  different author — other than `app/dependabot`, the repository's own dependency bot (amended
+  2026-09-29) — is an outside contribution, not an ambiguity. Check the author **on every
   merge**, not once a session. `git-hygiene` carries the query and the three repository
   controls that would enforce this mechanically but are still unset.
 - **Dispatch a fresh agent per task, not one resumed across a slice** (maintainer
