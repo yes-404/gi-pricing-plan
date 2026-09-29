@@ -100,6 +100,18 @@ quoted whole:
 The entry's reason: "a list can be checked, while "registry-style" is a judgement that drifts.
 The list stays closed until it is amended."
 
+**Registry list, as corrected** by the maintainer's dated line, by delegation
+(`~/gi-pricing-plan.local/channel/to-lead.md`, "2026-09-29 23:20:11 BST — DATED CORRECTION to the 22:57:52 option-(c) registry list (two paths)"), verified at main 25b0ead2. The quote above
+stands as given; these two corrections apply to it:
+1. "`backend/alembic/versions/`" reads **`backend/migrations/versions/`** (`backend/alembic`
+   does not exist). auditor-plans2 found it.
+2. "generated files (`docs/contracts/**` generated outputs, `docs/INDEX.md`)" reads **generated
+   files, exactly: `docs/contracts/openapi/generated.json`, `docs/contracts/schemas/generated/`,
+   `docs/INDEX.md`**. These are `scripts/generate-contracts.py`'s outputs (:32–33) plus the
+   index. The hand-authored contracts (`docs/contracts/openapi/gi-pricing.yaml`,
+   `docs/contracts/schemas/*.json`, `docs/contracts/schemas/common/`) are **not** exempt, and
+   concurrent edits to them serialise.
+
 **RL-871 §7's three conditions, adopted as the amendment's form.** *Confirmed with amendments
 by the maintainer, by delegation: `~/gi-pricing-plan.local/channel/to-lead.md`, "2026-09-29
 23:11:20 BST — CONFIRMATION WITH AMENDMENT: RL-9760 finding 2 (RL-871 §7 conditions and the

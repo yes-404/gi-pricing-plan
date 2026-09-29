@@ -391,11 +391,18 @@
           "registry_exempt_append_only": {
             "backend/src/app/db/models.py": "new_class_appended_no_edit_to_existing_class",
             "backend/src/app/main.py": "router_registration_or_lifespan_hook_added_only",
-            "backend/alembic/versions/": "new_revision_file",
             "generated": [
-              "docs/contracts/** generated outputs",
+              "docs/contracts/openapi/generated.json",
+              "docs/contracts/schemas/generated/",
               "docs/INDEX.md"
-            ]
+            ],
+            "backend/migrations/versions/": "new_revision_file",
+            "not_exempt_hand_authored": [
+              "docs/contracts/openapi/gi-pricing.yaml",
+              "docs/contracts/schemas/*.json",
+              "docs/contracts/schemas/common/"
+            ],
+            "corrected": "2026-09-29, the maintainer's dated correction to the 22:57:52 registry list"
           },
           "second_merge": [
             "merge_main",
