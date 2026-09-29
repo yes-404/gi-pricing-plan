@@ -27,6 +27,21 @@ relates: []                      # ids only
   table does (`RFC-756`). Reads the watcher's published state; never polls agents.
 - **Never:** edits the repo, merges, audits — including `.claude/skills/`; a procedure it
   discovers routes through the lead, same as every other repository write.
+- **Writes (only)** — *added 2026-09-29, closing FD-1238's charter gap; the maintainer's
+  entry "2026-09-29 16:25:49 BST · maintainer (acting on the maintainer's behalf) · BLOCKER
+  DECISIONS by delegation", item 5*. The role's write targets are:
+  - `<handover>/eta.md` (copy-and-write, never a truncating overwrite);
+  - `<handover>/.last_lead_status_ts`, and only when it posts a fresh lead status (the
+    stale-lead nudge section below);
+  - the external channel.
+
+  It **never writes** anything under `~/.claude/`: the memory index or topic files,
+  settings, `projects/` transcripts, or any `CLAUDE.md` or skill there. Nor does it write any
+  governed or repository file, another member's files, or any other handover file. A
+  harness prompt inviting a memory write does not override this line; a lesson worth keeping
+  goes to the lead as a proposed line. *(The marker file is listed because this charter
+  already obliges the reporter to write it. The maintainer's entry named `eta.md` and the
+  external channel only.)*
 
 **Implementation:** `.claude/skills/reporter-cycle` — the three scripts, their env-var
 configuration, the outage flag, and why the nudge is detected there but sent here via

@@ -759,6 +759,37 @@ Conventional Commits (`CLAUDE.md` §10). Because PRs are squash-merged, **the sq
 the permanent record** — write it as the thing a reader finds in `git log` two years later,
 not as a note to the reviewer. State what changed, why, and what it cost.
 
+### Every commit names its role and model: the `Co-Authored-By` trailer
+
+*(Added 2026-09-29. The maintainer confirmed it directly in the lead's session: "Add a
+trailer to every commit from now on: Co-Authored-By: <role> (<model>)
+<noreply@anthropic.com>".)*
+
+Every commit made by a team member ends with a trailer naming **its own** role and model:
+
+```
+Co-Authored-By: <role> (<model>) <noreply@anthropic.com>
+```
+
+For example: `Co-Authored-By: lead (Claude Opus 5.5) <noreply@anthropic.com>`,
+`Co-Authored-By: executor (Claude Sonnet 5.5) <noreply@anthropic.com>`,
+`Co-Authored-By: auditor (Claude Opus 5.5) <noreply@anthropic.com>`.
+
+**Why.** The repository's git `user.name` is shared by every session, so the author field
+cannot tell which role wrote a commit. An audit then has to infer authorship from what the
+commit changes (the records PR #902 audit, note N3). The trailer puts the role in the commit
+itself.
+
+**The model is the session's own, never the one a brief names.** A Sonnet executor told to
+write "Claude Opus 5.5" writes "Claude Sonnet 5.5" instead (executor-s4 on #903's first
+commit). The trailer attributes; it does not flatter.
+
+**It never carries a session link.** The rule above still holds: no
+`claude.ai/code/session_…` anywhere in a message that reaches GitHub.
+
+**Squash merges.** The lead's squash body carries the trailers of the commits it squashes,
+or at least the lead's own. No history is rewritten for commits made before this rule.
+
 ### Building the squash title: the `(#N)` is yours to add
 
 `PUT /repos/{owner}/{repo}/pulls/{n}/merge` uses an explicit `commit_title` **verbatim** and
@@ -937,6 +968,12 @@ delta, not the PR. W6b-13 practiced this by accident: the executor's push `8ef88
 it fixed; a silent amend would have carried the old verdict over the new code.
 
 ## Verified
+
+2026-09-29, against main `49604a31785c8e7709e9b87c3926e27ea1c0f7f2`. **The role
+`Co-Authored-By` trailer was added** under "Commit messages", on the maintainer's confirmation
+in the lead's session. The shared `user.name` was verified with `git config --get user.name`
+from two worktrees, both printing the same value, which is why the author field cannot name a
+role.
 
 2026-09-28, against main `092582a4a011a62400f5ededb14a790f1267639b`. **The `gh issue
 create --label` silent drop was added**, beside the read-back rule, along with the
