@@ -65,7 +65,7 @@ the Slice 1 label and took its slice order from WK-672's map plan (`PL-930`); th
 deleted here, and its number is not this plan's. The id above is a **working id**: it is
 minted at this PR's turn in the merge queue, never before.
 
-**Activation needs, in order:** the map plan (#843) minted and `active`; DP-S1-1 and DP-S1-2
+**Activation needs, in order:** the map plan (#843) minted and `active`; DP-S1-1, DP-S1-2 and DP-S1-3
 below resolved; the lead's go. **Map-plan deviation, stated rather than folded in:** the
 map's Task 1 says the platform-build column is *"set at submission"*; FR-18 says a Job
 records *"the platform version it ran on"*. The spec is the contract, so this plan records
@@ -80,14 +80,19 @@ step predicts**; a failure for any other cause is a plan defect, reported, not w
 
 1. **Spec.** `07` §4.1's `Job` example and prose carry `platform_build` with a dated note
    citing FR-18. `07` FR-436 and `00` FR-18 are **not** reworded (they are already right);
-   if the executor believes either needs a change, it stops and reports. DP-S1-1's and
-   DP-S1-2's outcomes are written where their resolutions say. `python3 scripts/audit-docs.py`
-   exits 0.
+   if the executor believes either needs a change, it stops and reports. The outcomes of
+   DP-S1-1, DP-S1-2 and DP-S1-3 are written where their resolutions say.
+   `python3 scripts/audit-docs.py` exits 0.
 2. **Contract.** `uv run python scripts/generate-contracts.py --check` exits 0 after the
    regeneration, and the regenerated `Job` schema under `docs/contracts/` has a
-   `platform_build` property. `model_schema.jobs.Job` is the only hand-written definition of
-   the field (`git grep -n platform_build -- packages backend/src frontend/src` shows one
-   shape definition, plus the ORM column and its writers).
+   `platform_build` property. The field is declared once as a shape and once as a column,
+   checked by count:
+   - `git grep -n -E 'platform_build *:' -- packages/model-schema/src` prints **exactly one**
+     line, in `packages/model-schema/src/model_schema/jobs.py`;
+   - `git grep -n -E 'platform_build *:' -- backend/src frontend/src` prints **exactly one**
+     line, the `JobRow` column in `backend/src/app/db/models.py`. (`frontend/src/api/generated`
+     is VCS-ignored, so `git grep` does not see it.)
+   Any other count fails this item.
 3. **Marker migration (FR-436, FR-417).** One new Alembic revision creates the marker table
    and writes the configured tenant id. `uv run alembic upgrade head`, `downgrade -1` and
    `upgrade head` again all exit 0 against a scratch database, and
@@ -98,8 +103,17 @@ step predicts**; a failure for any other cause is a plan defect, reported, not w
    `backend/tests/test_tenant_binding.py`, every test marked `@pytest.mark.req("FR-436")`:
    - database marker ≠ configured id → entering `TestClient(create_app(...))` raises, and the
      exception names **both** identifiers and the word `database`;
+   - database marker **absent**: two cases, each refused with an error naming `database` and
+     saying the marker is missing. (i) The marker table exists and is empty. (ii) The
+     database is not migrated to this slice's revision, so the table does not exist; the
+     error tells the operator to run `alembic upgrade head`. An absent database marker is
+     **never** written by the application at startup: only the migration writes it (Task 4);
    - blob-bucket marker ≠ configured id → raises, naming `blob`;
    - broker marker ≠ configured id → raises, naming `broker` (per DP-S1-2's resolution);
+   - **fresh deployment** (no bucket, no blob marker, no broker marker, database migrated):
+     the app starts. After startup the bucket exists and both markers carry the configured id.
+     A second `create_app` on the same stores starts too, and a third with a different
+     configured id refuses, naming `database`;
    - the same database mismatch stops the **worker**: the worker-start hook raises before any
      task is consumed;
    - positive control: matching markers → the app starts.
@@ -107,17 +121,25 @@ step predicts**; a failure for any other cause is a plan defect, reported, not w
    fixture, a connection refusal) has not proved FR-436 and is a plan defect.
 5. **Provenance (FR-18), red first.** In `backend/tests/test_job_platform_build.py`, marked
    `@pytest.mark.req("FR-18")`: a Job moved to `running` by the worker path records the
-   worker's configured build; a Job still `queued` has `platform_build` null; a re-run after
-   an infrastructure retry records the build of the run that produced the result; `GET` on
-   the Job returns the field.
+   worker's configured build; a Job still `queued` has `platform_build` null; `GET` on the
+   Job returns the field. (There is no re-run path to test: at the tree above
+   `VALID_TRANSITIONS[RUNNING]` is `{SUCCEEDED, FAILED, CANCELLED}`
+   (`packages/model-schema/src/model_schema/jobs.py:112-120`), and the worker ignores a
+   redelivered Job that is not `queued` (`backend/src/app/worker/tasks.py:103-108`). A Job
+   reaches `running` once, so it records one build. This slice builds no retry path.)
 6. **Coverage.** `uv run python scripts/req-coverage.py` lists tests against FR-436 and FR-18.
    The **dossier half of FR-18** (`06` FR-376) is recorded in the slice ledger as *deferred
    with an owner — WK-680* (Phase 3; `docs/roadmap.md`'s WK-680 row lists FR-376), not
    claimed.
 7. **The gate.** The full two-half gate (`CLAUDE.md` §11) exits 0 on the committed tree, with
    every command's rc, the `N passed` line and `HEAD` quoted in the ledger.
-8. **Item 11.** The deputy's merge acknowledgement is recorded on the PR before the lead
-   merges, and the slice's clean audit is filed. Per `CLAUDE.md` §13 a Slice closes on a clean
+8. **Item 11.** Before the lead merges, the maintainer's **MERGE-ACK** entry, naming the
+   PR's full head SHA, is recorded in the lead's channel file
+   (`~/gi-pricing-plan.local/channel/to-lead.md`), given by the maintainer or on the
+   maintainer's behalf. That is step 6 of the maintainer's 2026-09-29 10:41:05 BST merge plan
+   there, and `lead.md` rule 4 as amended by PR #893. (At the tree above rule 4 still reads
+   "deputy's ACK"; #893 changes it.) **The ACK is never posted on the PR**: no teammate posts an
+   ACK on GitHub. The slice's clean audit is filed. Per `CLAUDE.md` §13 a Slice closes on a clean
    audit and the lead's merge — no maintainer acceptance line is required for this slice, and
    none is to be waited on.
 
@@ -159,8 +181,8 @@ step predicts**; a failure for any other cause is a plan defect, reported, not w
 
 | # | Premise | Evidence |
 |---|---|---|
-| a | No tenant identifier exists in configuration or schema | `git grep -n -i -E 'tenant_id\|tenant_marker'` over `backend/src packages/*/src` returns no code hit (two comment lines in `backend/src/app/api/deps.py:26-27` explaining ADR-710) |
-| b | No build field exists on the Job | `git grep -n -E 'platform_version\|build_version\|platform_build\|build_sha'` over `backend/src packages/*/src docs/contracts` returns only `build_shap_summary` |
+| a | No tenant identifier exists in configuration or schema | Run on a `git archive` of the tree above: `grep -rn -i -E 'tenant_id\|tenant_marker' backend/src packages/*/src \| wc -l` prints `0`. The wider `grep -rn -i tenant backend/src packages/*/src` prints two lines, `backend/src/app/api/deps.py:26` and `:27`, a comment explaining ADR-710 |
+| b | No build field exists on the Job | Run on the same export: `grep -rn -E 'platform_version\|build_version\|platform_build\|build_sha' backend/src packages/*/src docs/contracts` prints 6 lines, every one `build_shap_summary` (`build_sha` matches it as a substring) |
 | c | `Settings` is frozen, `GIP_`-prefixed, `extra="forbid"`, and has `version: str = "0.1.0"` | `backend/src/app/config.py:84-100` |
 | d | The API lifespan already hosts a startup refusal (FR-273), with a tested negative half | `backend/src/app/main.py:75-94`; `backend/tests/test_startup_self_check.py:23-45` |
 | e | The blob bucket is ensured at startup | `main.py` lifespan calls `blob_store.ensure_bucket()`; `backend/src/app/platform/blobs.py:119` |
@@ -179,8 +201,10 @@ The executor re-reads each at its own tree and stops on any that no longer holds
 |---|---|---|---|---|---|---|
 | DP-S1-1 | What identifies "the platform version it ran on" (FR-18)? `Settings.version` defaults to `"0.1.0"` for every build, so it cannot attribute a figure "to the build that produced it" | (a) Record `Settings.version` as is; (b) add a `build` setting (the full commit SHA, set by the image build in Slice 4), required when `environment` is `dev`, `uat` or `prod` and defaulted to a fixed `local` marker otherwise, and record `"{version}+{build}"`; (c) derive it at runtime from git | **(b).** (a) records the same string for every build, which is the "not a single, knowable thing" FR-18 exists to prevent. (c) fails in an image, which carries no `.git`. (b) makes a missing build a startup error where attribution matters, and costs nothing locally | decision point | yes — Task 3 | |
 | DP-S1-2 | FR-436's "the same check covers object storage and the broker where their configuration is per tenant": what is the marker in each? The spec says nothing more, and FR-422 forbids anything durable living only in Redis | (a) Blob: a marker object in the bucket, written when absent and compared when present. Broker: a marker key, written with set-if-absent and compared when present, so a flushed Redis re-arms rather than fails; (b) blob as (a), broker exempt on the grounds that its configuration is not per tenant; (c) neither — the database check alone | **(a).** The mistake the spec names — a restored backup, a copied `.env` — points a whole configuration at the other tenant, bucket and broker included, and the DB check alone misses a split configuration. (a)'s broker half never makes Redis a source of truth: losing the key loses nothing. (b) needs an argument that the broker's configuration is never per tenant, which `redis_url` being deployment configuration contradicts | decision point | yes — Task 4 | |
+| DP-S1-3 | Three choices inside Task 4 that the spec leaves open: (i) is `tenant_id` required in every environment? (ii) how does the database refuse a second marker row? (iii) what are the blob and broker marker keys? | (i-a) Required in `dev`, `uat` and `prod`, with a fixed default in `local`; (i-b) required everywhere, with tests and the compose `.env` supplying it. (ii-a) A `smallint` primary key with `CHECK (id = 1)`; (ii-b) a boolean primary key with `CHECK (singleton)`; (ii-c) a unique index on a constant expression. (iii-a) Fixed names: blob object `_platform/tenant` holding the id as plain text, Redis key `gip:tenant`; (iii-b) names taken from new settings | **(i-a), (ii-a), (iii-a).** (i-a) matches DP-S1-1's rule: required where a wrong binding matters, and no setup cost locally. (i-b) is stricter but adds a required value to every local and test configuration for no protection there. (ii-a) is the most readable of three equivalent mechanisms, and the database refuses the second row either way. (iii-b) is configuration for a fixed value | decision point | yes — Task 4 | |
 
-Both are the decision-maker's (`delivery-process.md` §3). Tasks 1–2 do not depend on either.
+All three are the decision-maker's (`delivery-process.md` §3). Tasks 1–2 do not depend on
+any of them, except that Task 1's example value waits for DP-S1-1.
 
 ---
 
@@ -199,12 +223,12 @@ Both are the decision-maker's (`delivery-process.md` §3). Tasks 1–2 do not de
 
 **Files:** Modify `docs/specs/07-platform.md` (§4.1 example and the prose after it).
 
-- [ ] Add `"platform_build": "0.1.0+<commit sha>"` to the §4.1 example, placed after
-  `trace_id`, in the form DP-S1-1 resolves.
+- [ ] Add `"platform_build"` to the §4.1 example, placed after `trace_id`. Its example value
+  depends on DP-S1-1: under option (b), `"0.1.0+<commit sha>"`; under (a), `"0.1.0"`. Write
+  the value only after DP-S1-1 is resolved.
 - [ ] Add a dated paragraph after the `progress_at`/`stalled` note: the field, FR-18, that it
-  is set when the Job moves to `running` and is null while `queued`, and that a retry records
-  the build of the run that produced the result.
-- [ ] Write DP-S1-1's and DP-S1-2's resolutions where the ruling that resolves them says
+  is set when the Job moves to `running` and is null while `queued`.
+- [ ] Write the resolutions of DP-S1-1, DP-S1-2 and DP-S1-3 where the ruling that resolves them says
   (spec-change: a design choice is recorded, never silently picked).
 - [ ] `python3 scripts/audit-docs.py`; quote the rc. Commit: `docs(specs): 07 §4.1 Job carries platform_build (FR-18, WK-674 S1)`.
 
@@ -229,7 +253,7 @@ regenerate `docs/contracts/` with `scripts/generate-contracts.py`.
 row-to-shape mapping near `:338`), `backend/src/app/worker/tasks.py` (`:133`); create one
 Alembic revision; test `backend/tests/test_job_platform_build.py`.
 
-- [ ] **Red first:** the four Acceptance 5 tests. Predicted failure: the attribute does not
+- [ ] **Red first:** the three Acceptance 5 tests. Predicted failure: the attribute does not
   exist on the row or the shape.
 - [ ] Add the setting per DP-S1-1, with its requiredness enforced by a validator in
   `Settings` so a missing value is a startup error (FR-447), and a `test_config.py` case for
@@ -242,26 +266,45 @@ Alembic revision; test `backend/tests/test_job_platform_build.py`.
 
 ### Task 4: The tenant binding (FR-436) — after DP-S1-2
 
-**Files:** Modify `backend/src/app/config.py` (a `tenant_id` setting: a constrained slug,
-required when `environment` is `dev`, `uat` or `prod`, because a check whose configured side
-is a default proves nothing there; in `local` a fixed default is acceptable), `backend/src/app/main.py` (lifespan),
+**Files:** Modify `backend/src/app/config.py` (a `tenant_id` setting, required as DP-S1-3 resolves), `backend/src/app/main.py` (lifespan),
 `backend/src/app/platform/blobs.py`, `backend/src/app/worker/celery_app.py`; create
 `backend/src/app/platform/tenancy.py` (the check, one function per store, and a
 `TenantMismatchError` naming store, configured id and found id); the Alembic revision;
 `backend/tests/test_tenant_binding.py`; `backend/tests/conftest.py` if `api_settings` needs
 the new setting.
 
-- [ ] **Red first:** the five Acceptance 4 tests. Each predicts `TenantMismatchError` naming
-  its store; a startup failure of any other type is not the proof.
-- [ ] The revision: create a single-row marker table (a primary key constrained to one
-  value, so a second row is refused by the database), insert the configured `tenant_id`
-  read through `load_settings()` as `env.py` already does, and drop the table on downgrade.
-  A database migrated before this revision gets its marker from this revision, which is the
-  "first migration" FR-436 means for an existing deployment.
-- [ ] The lifespan runs the database, blob and broker checks after
-  `assert_integer_minor_round_trip()` and **before** probes are registered or the bucket is
-  ensured, so a mismatched process never reaches the other tenant's stores beyond reading
-  their marker. The blob and broker markers follow DP-S1-2's resolution.
+- [ ] **Red first:** the Acceptance 4 tests. Each negative test predicts
+  `TenantMismatchError` naming its store; an absent database marker gives the same error
+  with the found id reported as absent. A startup failure of any other type is not the proof.
+- [ ] The revision: create a single-row marker table, with a second row refused by the
+  database by the mechanism DP-S1-3 resolves. Insert the configured `tenant_id`, read through
+  `load_settings()` as `env.py` already does (`backend/migrations/env.py:19,31`). Drop the
+  table on downgrade. A database migrated before this revision gets its marker from this
+  revision, which is the "first migration" FR-436 means for an existing deployment.
+  **This stamp trusts configuration.** When the revision runs against a pre-existing
+  database, it writes whatever `tenant_id` the migrating process was given. If that
+  configuration is the "copied `.env`" FR-436 names, the wrong id is stamped, and the check
+  then protects the wrong binding. This cannot be avoided: before this revision no database
+  records its tenant, so nothing exists to check the configuration against. What the slice
+  does instead: the revision prints the id it stamps, so the operator sees it in the
+  migration output, and the stamp is written once, so any later drift is caught. The same
+  holds for the blob and broker markers written when absent (DP-S1-2 (a)).
+- [ ] The lifespan order, after `assert_integer_minor_round_trip()` and before the probes
+  are registered:
+  1. **Database check**, read-only. A mismatch or an absent marker stops startup. This runs
+     before any write to any store, so a configuration pointing at another tenant's database
+     stops before it touches object storage or the broker.
+  2. **`blob_store.ensure_bucket()`**, moved up from its current place
+     (`backend/src/app/main.py:92`). The bucket must exist before its marker can be read or
+     written: `ensure_bucket` runs `head_bucket` and creates the bucket only when that fails
+     (`backend/src/app/platform/blobs.py:119-128`). For another tenant's existing bucket this
+     is a read.
+  3. **Blob marker**, per DP-S1-2: read it; if absent, write the configured id; if present
+     and different, stop. On a fresh deployment step 2 has just created the bucket, so the
+     marker is absent and gets written.
+  4. **Broker marker**, per DP-S1-2: set-if-absent, then read and compare.
+  5. The existing probe registration, then `yield`.
+  Acceptance 4's fresh-deployment case proves this order.
 - [ ] The worker: a Celery start-up signal handler in `celery_app.py` runs the same checks
   and lets the exception stop the worker. Before relying on a specific signal's
   abort-on-raise behaviour, prove it with a failing test (or `library-spike`) — do not assume
@@ -296,5 +339,6 @@ also waits for the permission-catalogue ruling (#856), per the map plan's Task 2
   column" — none has, premise b.
 - **Literals** in this plan were checked against the tree above (premises); field and
   function names the executor adds are named as proposals, not as existing code.
-- **Open**: DP-S1-1 and DP-S1-2, both the decision-maker's, both blocking only their own
-  task.
+- **Open**: DP-S1-1, DP-S1-2 and DP-S1-3, all the decision-maker's. DP-S1-1 blocks Task 3
+  (and Task 1's example value); DP-S1-2 and DP-S1-3 block Task 4.
+- **No retry path is assumed**: a Job reaches `running` once (Acceptance 5's note).
