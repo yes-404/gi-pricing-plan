@@ -117,7 +117,7 @@ terms. Two children may build concurrently only when all three hold:
   - **The coordinating record** is the lead's slot grant (slice, head SHA, BST time), written
     to `eta.md` "In flight" before each gate.
   - The runtime state file's `in_flight_expensive_verifications` announcement is also made but
-    **not relied on**: #909 (FD-9640, working id) records that writer as stale and wrong. It
+    **not relied on**: #909 (its finding, working id 9640) records that writer as stale and wrong. It
     becomes the record by a dated note when #909's fix lands.
 
 **RL-871's override trigger, made an obligation** (as amended). RL-871 names "a measurement shows
