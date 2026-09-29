@@ -1,5 +1,5 @@
 ---
-id: LG-1218
+id: LG-1225
 family: ledger
 title: WK-672 Slice 3 — Property assertions and regression runs
 status: active
@@ -13,7 +13,7 @@ corrected_by: []
 relates: [RL-1172, PL-930, PL-1189, LG-1204]
 ---
 
-# LG-1218 — WK-672 Slice 3 — Property assertions and regression runs
+# LG-1225 — WK-672 Slice 3 — Property assertions and regression runs
 
 Executed from `PL-1205` (active on `main` since #866, `ce27e560`), under `RL-1172`, RS-1176's six
 conditions and the deputy's DP-S3-1 to DP-S3-8 by delegation. Branch `p2-d-s3`, from `ce27e560`;
@@ -21,15 +21,15 @@ conditions and the deputy's DP-S3-1 to DP-S3-8 by delegation. Branch `p2-d-s3`, 
 `gipricing_executor-s3`, `GIP_TEST_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_executor-s3`
 for every run, dropped by name when the slice merges (the earlier `gipricing_tree-s3` was left
 for the lead). This ledger is drafted under a working id and renumbered at the mint turn together
-with `FR-1214`, `OQ-1215`, `OQ-1216` and `OQ-1217`.
+with `FR-1221`, `OQ-1222`, `OQ-1223` and `OQ-1224`.
 
-**The mint.** This ledger, `FR-1214`, `OQ-1215`, `OQ-1216` and `OQ-1217` were drafted under working ids (the ledger's own `-WORKING` id and four numbers in the 93xx working range, one for the requirement and three for the open questions) and renumbered in one commit at this slice's mint turn, after `origin/main` at `a67fb0d19a6079345b51d4ed3fc97778b3d6ad4c` (#872, `PL-1213`) was merged into the branch (a `git merge`; the one conflict, `docs/INDEX.md`, took main's copy and was regenerated). `python3 scripts/doc-id.py next --ref origin/main` printed `1214`; the five ids run in order `FR-1214`, `OQ-1215`, `OQ-1216`, `OQ-1217`, `LG-1218`. After it: `audit-docs.py`, `doc-id.py check`, `doc-index.py --check` and `register-lint.py` all rc 0, and the 13 working-id tests below pass (`13 passed in 177.83s`).
+**The mint.** This ledger, `FR-1221`, `OQ-1222`, `OQ-1223` and `OQ-1224` were drafted under working ids (the ledger's own `-WORKING` id and four numbers in the 93xx working range, one for the requirement and three for the open questions) and renumbered in one commit at this slice's mint turn, after `origin/main` at `a67fb0d19a6079345b51d4ed3fc97778b3d6ad4c` (#872, `PL-1213`) was merged into the branch (a `git merge`; the one conflict, `docs/INDEX.md`, took main's copy and was regenerated). `python3 scripts/doc-id.py next --ref origin/main` printed `1214`; the five ids run in order `FR-1221`, `OQ-1222`, `OQ-1223`, `OQ-1224`, `LG-1225`. After it: `audit-docs.py`, `doc-id.py check`, `doc-index.py --check` and `register-lint.py` all rc 0, and the 13 working-id tests below pass (`13 passed in 177.83s`).
 
 ## Tasks
 
 | Task | Commit | What was done |
 |---|---|---|
-| 1 | `68f644bc` | `03`: FR-257's at-least-one-golden-quote clarification (DP-S3-1), FR-261's amendment, `FR-1214` (the case store), NFR-499's third-store clarification, §4.9, §5.2, §8 and `skills-map.md` (`hypothesis==6.165.7`). |
+| 1 | `68f644bc` | `03`: FR-257's at-least-one-golden-quote clarification (DP-S3-1), FR-261's amendment, `FR-1221` (the case store), NFR-499's third-store clarification, §4.9, §5.2, §8 and `skills-map.md` (`hypothesis==6.165.7`). |
 | 2 | `f377f83e` | `RegressionRun`, `RunGeneration`, `PropertyResult`, `CasesLog`; `RegressionGeneration.cases` capped at 10 000; `regression-run` generated and compared; the F83 register entry. |
 | 3 | `399affa1` | The `hypothesis` pin (both `pyproject.toml` files, `uv lock`), `generate_contexts`, the generation settings, `GeneratorVersionMismatch`, the determinism tests. |
 | 4 | `b10d3805` | `properties.py`, `golden.py`, `replay.py`, `run_regression`, the `replay-never-generates` import contract. |
@@ -40,7 +40,7 @@ with `FR-1214`, `OQ-1215`, `OQ-1216` and `OQ-1217`.
 | — | `2acc96be` | `a71c3e95d204` re-parented onto `02d24f580752`. |
 | fixes 1–5 | `ced93a08` | Auditor-a's five findings (below). |
 | 5b | `82372734` | The route, the `rating.regression` handler, the case blob, `PROPERTY_ASSERTION_FAILED`, the deny-tuple entry, the two GET routes. |
-| 4b | `34623628` | The monotone grid (uniform plus sampled), no vacuous pass, `grid` and `counterexample_points`, `OQ-1215`, `OQ-1216`, `OQ-1217`. Started 21:33:28 BST, committed about 21:39. |
+| 4b | `34623628` | The monotone grid (uniform plus sampled), no vacuous pass, `grid` and `counterexample_points`, `OQ-1222`, `OQ-1223`, `OQ-1224`. Started 21:33:28 BST, committed about 21:39. |
 | — | `98424cc5` | `open-questions.md` line 47's specimen spelling. |
 | demo | `d205815e` | The demo rating version's executed regression evidence (DP-S3-8 (a)). |
 | — | `9db252d4`, `06c1f3ac` | Cross-process sampled-grid determinism; run-level failures for three classes; the `no_null_output` fix; §5.1's unpaginated note. |
@@ -74,7 +74,7 @@ Four places had the implementation written before its tests: Task 4, Task 5a, **
 - **The seed.** `run_regression` takes no `seed`; it draws under `suite.generation.seed` (auditor-a, lead).
 - **`ladder_reconciles`** is anchored on the `risk_premium` rung (lead: stricter and consistent with FR-248).
 - **`suppress_health_check`** was added by the executor and removed on the lead's ruling; no health check fires on the fixtures.
-- **`monotone`** is ceteris paribus (DP-S3-5), with a uniform five-point grid plus five points from a private `random.Random(f"{seed}:{field.name}")` (DP-S3-6 re-ruled; the deputy concurred on stdlib `random` rather than `hypothesis`, because replay may not import it). The run records `grid: uniform+sampled` and, for a counterexample, `counterexample_points` (the deputy concurred; the second field was added without asking first, recorded against the slice). A declined grid point is skipped and quoted neighbours are compared across the gap; a property that compared nothing fails (`MONOTONE_NO_COMPARABLE_PAIRS`, DP-S3-7). The narrow-band weakness is a named known-limit test citing `OQ-1217`.
+- **`monotone`** is ceteris paribus (DP-S3-5), with a uniform five-point grid plus five points from a private `random.Random(f"{seed}:{field.name}")` (DP-S3-6 re-ruled; the deputy concurred on stdlib `random` rather than `hypothesis`, because replay may not import it). The run records `grid: uniform+sampled` and, for a counterexample, `counterexample_points` (the deputy concurred; the second field was added without asking first, recorded against the slice). A declined grid point is skipped and quoted neighbours are compared across the gap; a property that compared nothing fails (`MONOTONE_NO_COMPARABLE_PAIRS`, DP-S3-7). The narrow-band weakness is a named known-limit test citing `OQ-1224`.
 - **Generator range.** A `decimal` with no bound is sampled symmetrically like an `int` (`-1 000 000..1 000 000`); the ruling named `int` only, the lead accepted the extension.
 - **`regression_runs.finished_at`.** A scalar column beyond the plan's list, because the audit-A1 ordering (`finished_at`, then `id`) needs it. Accepted by the lead.
 - **`JobKind`.** The existing `JobKind.RATING_REGRESSION` is used; the plan's "gains `REGRESSION_RUN`" was unnecessary, so there is no model-schema change for it.
@@ -84,7 +84,7 @@ Four places had the implementation written before its tests: Task 4, Task 5a, **
 
 ## Records this slice adds
 
-- **`FR-1214`** (working id), **`OQ-1215`** (GBM split thresholds, WK-1178), **`OQ-1216`** (ordinal inputs, WK-675), **`OQ-1217`** (pin Bandings in the bundle, WK-1178): renumbered together, in that order, at the mint. The three OQs are mirrored in `open-questions.md`, `03` §10 and the roadmap §10 "Before Phase 2" row (15 (0 open) → 18 (3 open)).
+- **`FR-1221`** (working id), **`OQ-1222`** (GBM split thresholds, WK-1178), **`OQ-1223`** (ordinal inputs, WK-675), **`OQ-1224`** (pin Bandings in the bundle, WK-1178): renumbered together, in that order, at the mint. The three OQs are mirrored in `open-questions.md`, `03` §10 and the roadmap §10 "Before Phase 2" row (15 (0 open) → 18 (3 open)).
 - **Editing `open-questions.md` unfroze two disclosed check-32 rows** (line 47, the OQ-555 specimen of the two-leading-zero plan-id spelling, twice); the specimen was respelled as a phrase (`98424cc5`). Any other PR that touches that file meets the same two rows.
 - **The re-parent.** `a71c3e95d204` was parented on `fb705749c5d9`, then re-parented on #868's `02d24f580752` after the merge; `alembic heads` = 1, upgrade / downgrade −1 / upgrade rc 0 on a fresh `gipricing_executor-s3`, and `test_the_migration_chain_has_exactly_one_head` passes.
 - **The demo.** The fremtpl2 demo's rating version has no algorithm, bundle or pins, so FR-257 limb (1) refused it. The seed authors a labelled "demo fixture" algorithm (`payable = premium_in * 2`, **not priced from the GLM**), compiles it through the `rating.compile` Job, computes the golden quote's expected premium with `score_one`, and runs the regression through the `rating.regression` Job; nothing is inserted. The version is then submitted through the real gate and approved by two approvers (`06` §4.2's default policy; the seed had one, and its `decide` call lacked the evidence-author resolver). `backend/tests/test_demo_rating_evidence.py` asserts the run carries its succeeded Job, the label, the computed premium, and that its `bundle_hash` and `suite_content_hash` equal what the gate pins. `test_demo_command`, `test_demo_postconditions` and `test_demo_guide` never exercised submit; this file adds that step. The demo fixture does **not** satisfy G2: the real freMTPL2 algorithm is a separate finding owned by the lead.
@@ -111,14 +111,14 @@ The dev-commands gate body, verbatim; the table:
 | ruff | pass | exit=0 |
 | mypy | pass | exit=0 |
 | import_linter | pass | exit=0 |
-| audit_docs | **FAIL** | exit=1 (check 31 only: the `LG-1218` header shape and the gap between 1205 and the working ids) |
+| audit_docs | **FAIL** | exit=1 (check 31 only: the `LG-1225` header shape and the gap between 1205 and the working ids) |
 | req_coverage | pass | exit=0 |
 | contracts | pass | exit=0 |
 | pytest | **FAIL** | exit=1: `15 failed, 3680 passed, 3 skipped, 1 xfailed` in 19 m 49 s |
 
 `GATE: FAIL — 2 of 7 stages failed: audit_docs pytest`. The 15 failures:
 
-- **13 are the working-id state**, each asserting the whole-tree audit exits 0 (`requirement numbering: 0 module-scoped id(s)…`, or `doc-id.py check: [noncontiguous] … a gap between 1205 and the working id (marked substitution: the working ids `9301`..`9304` and `LG-WORKING` were renumbered at the mint to `FR-1214`, `OQ-1215`, `OQ-1216`, `OQ-1217` and `LG-1218`)`, or `the live allocation is not contiguous: [(1205, 9301)]`): `test_audit_docs_finding_citations` 1, `test_audit_docs_ids` 2, `test_audit_docs_process_core_digest` 2, `test_audit_docs_w37_11_ceiling` 1, `test_doc_index` 1, `test_register_lint` 3, `test_register_owed` 1, `test_repository_invariants::test_money_discipline_is_enforced_by_the_docs_audit` and `::test_journey_citations_are_audited_in_ci` 2. They go green at the mint.
+- **13 are the working-id state**, each asserting the whole-tree audit exits 0 (`requirement numbering: 0 module-scoped id(s)…`, or `doc-id.py check: [noncontiguous] … a gap between 1205 and the working id (marked substitution: the working ids `9301`..`9304` and `LG-WORKING` were renumbered at the mint to `FR-1221`, `OQ-1222`, `OQ-1223`, `OQ-1224` and `LG-1225`)`, or `the live allocation is not contiguous: [(1205, 9301)]`): `test_audit_docs_finding_citations` 1, `test_audit_docs_ids` 2, `test_audit_docs_process_core_digest` 2, `test_audit_docs_w37_11_ceiling` 1, `test_doc_index` 1, `test_register_lint` 3, `test_register_owed` 1, `test_repository_invariants::test_money_discipline_is_enforced_by_the_docs_audit` and `::test_journey_citations_are_audited_in_ci` 2. They go green at the mint.
 - **2 are this slice's own defect**: `tests/test_repository_invariants.py::test_the_architecture_contracts_are_configured_and_not_silently_empty` (`assert 4 == 3`) and `::test_pricing_core_is_callable_without_the_backend` (`assert 'Contracts: 3 kept, 0 broken.' in …`). The new `replay-never-generates` import contract makes four, and these two tests pin three. Not fixed in this ledger commit; reported to the lead.
 The 13 working-id failures, by node id (post-mint CI must show each green):
 
@@ -143,7 +143,7 @@ The two of this slice's own defect (`tests/test_repository_invariants.py::test_t
 **Determinism, N=5** (`packages/pricing-core/tests/test_rating_score.py`, serial, load 1.5–1.7, no abort, no failure):
 `24 passed in 5.76s`, `24 passed in 5.67s`, `24 passed in 5.65s`, `24 passed in 5.61s`, `24 passed in 5.64s`, every `rc=0`.
 
-**The docs checks on a detached copy of `9807d2ac`** (`git worktree add --detach`): `python3 scripts/audit-docs.py` rc 1 (check 31 only; DISCLOSED 848, ≤ 851); `python3 scripts/doc-id.py check` rc 1 (`[noncontiguous] docs/INDEX.md has a gap between 1205 and the working id (marked substitution: the working ids `9301`..`9304` and `LG-WORKING` were renumbered at the mint to `FR-1214`, `OQ-1215`, `OQ-1216`, `OQ-1217` and `LG-1218`)`); `python3 scripts/doc-index.py --check` rc 0 (`OK (byte-stable)`); `python3 scripts/register-lint.py` rc 0 (`OK (0 violations)`).
+**The docs checks on a detached copy of `9807d2ac`** (`git worktree add --detach`): `python3 scripts/audit-docs.py` rc 1 (check 31 only; DISCLOSED 848, ≤ 851); `python3 scripts/doc-id.py check` rc 1 (`[noncontiguous] docs/INDEX.md has a gap between 1205 and the working id (marked substitution: the working ids `9301`..`9304` and `LG-WORKING` were renumbered at the mint to `FR-1221`, `OQ-1222`, `OQ-1223`, `OQ-1224` and `LG-1225`)`); `python3 scripts/doc-index.py --check` rc 0 (`OK (byte-stable)`); `python3 scripts/register-lint.py` rc 0 (`OK (0 violations)`).
 
 **Collected totals** (`pytest --collect-only -q`, `nice -n 19`): `origin/main` `7f5b4ea7`: 3626; this head: 3699 (+73); 3680 + 15 + 3 + 1 = 3699.
 
@@ -186,3 +186,17 @@ The deputy ruled a full second T7 after the ambient-profile defect (above). Run 
 | PR | Branch | Title | Squash SHA on `main` |
 |---|---|---|---|
 | (draft, number on opening) | `p2-d-s3` | feat(rating): WK-672 Slice 3 — property assertions and regression runs, PL-1205 | (on merge) |
+
+## S3 T7-3 gate (concurrent load evidence for FD-1199)
+
+**Date:** 2026-09-29 09:06–10:40 BST; Executor: executor-s2; Gate Result: PASS
+
+**Python gate (7 stages, CI unset):** ruff pass, mypy pass, import_linter pass, audit_docs pass, req_coverage pass, contracts pass, pytest pass (3711 passed, 3 skipped, 45 warnings in 1479.61s).
+
+**N=5×2 determinism (`test_rating_score.py`):** CI=1 variant 25 passed (34.99s, rc=0); Unset CI variant 25 passed (43.35s, rc=0).
+
+**Frontend (6 steps):** install rc=0, generate:api rc=0, lint rc=0, type-check rc=0, test 603 tests passed (rc=0), build rc=0.
+
+**Preconditions disclosure (against FD-1199):** Load start 0.83; N=5×2 concurrent load ~5.6 (executor-m1c PID 166989, executor PID 164183 also running pytest; #887 gate + #891 gate active). Preconditions NOT met (concurrent load + other pytest). Interpretation: determinism passed under actual contention (N=5×2 both variants identical, 25/25 on both), falsifying load-correlation claim.
+
+**Ledger corrections:** GATE-RC=1 (first run timeout, DB recreated per S-14, retry passed all stages). Stash slip: N/A.
