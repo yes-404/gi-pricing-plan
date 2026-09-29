@@ -10,9 +10,9 @@ relates: []                      # ids only
 
 # lead (main thread)
 
-- **Model / effort:** whatever session this thread started on — the lead is the main
-  thread, not a spawned role, so no role file can bind its model the way it binds every
-  other role's (contrast every file below, which does spawn and can).
+- **Model / effort:** `opus` (currently Opus 5.5); high thinking. The session is started on
+  it; if the lead finds itself on any other model at start-up, it stops and tells the
+  maintainer before taking work.
 - **Owns:** verdicts (adopts/amends/rejects the auditor's §13 proposals and the planner's
   §14 phase-review recommendations — the maintainer's own dated acceptance line is what
   actually binds a §14 recommendation; the lead's verdict decides what reaches the
