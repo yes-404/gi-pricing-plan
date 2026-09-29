@@ -3,7 +3,7 @@ id: RL-9202
 family: ruling
 title: WK-690 DP-1 to DP-5 — diagnostics to maintenance, continuous bases and expression metrics to P3, the flag liftable only, numeric expression factors refused, rating is not a grammar profile
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-09-28
+created: 2026-09-29
 owner: decision-maker
 tree: ed123cb0fcf91e44872963bf8a8bad32b87c99bc
 phase: P2
@@ -19,10 +19,10 @@ relates: [PL-930, PL-1070]
 
 ## Verified first, at ed123cb0fcf91e44872963bf8a8bad32b87c99bc
 
-**This record decides nothing.** It files decisions the deputy made by delegation from the
-maintainer (28 Sep, extended goal), in the deputy's entry on WK-690's DP-1 to DP-5, written
-at 14:06:12 BST and relayed by the lead. The entry is quoted whole under Ruled, in a fenced
-block, and this record names the slice each decision obliges.
+**Decided by the decision-maker, 2026-09-29** — the ruling is `## Ruled`, at the end. Its input is the
+deputy's entry on WK-690's DP-1 to DP-5 (by the maintainer's delegation, 28 Sep, extended goal),
+written at 14:06:12 BST and relayed by the lead, quoted whole under Input, fenced; with the
+maintainer's answers named there, it is a recommendation (STRUCTURE entry, 15:26:00, §2).
 
 **The plan these rule on** is WK-690's map plan, planner-690's local draft at `383ec991`
 (`status: draft`, `tree: 6c6f4532…`). Its PR opens after #830 and #840. Its Decision points
@@ -60,7 +60,7 @@ by `TZ=Europe/London date`. **Its id, RL-9202, is a working id.** It is minted w
 
 All of these are as the entry states them.
 
-## Ruled
+## Input — the deputy's entry of 2026-09-28 (a recommendation)
 
 The deputy's entry, **whole and verbatim**. It is fenced so that the ids it quotes are read as
 quotation, not as citations; `audit-docs.py` check 32 skips fenced blocks.
@@ -90,7 +90,7 @@ Given by the maintainer's delegation (28 Sep, extended goal). A decision-maker f
 **I accept PL-9103 as WK-690's map plan** once it cites the RL and has minted (after #830 and #840). The acceptance line follows your request.
 ```
 
-What the entry decides, in this record's own words:
+What the entry recommends, in this record's own words:
 
 - **DP-1: (b).**
   - FR-176, FR-177 and FR-178 go to the standing maintenance Work (#840). FR-178 is a live
@@ -147,8 +147,8 @@ The slice numbers are those of WK-690's map plan (`383ec991`).
     first, deferred with an owner: the maintainer, with the event being the P2 phase closure
     record, which lists them for P3's first plan.
 - **The plan** states which half of FR-154 is which, cites this record by its minted id, and
-  mints after #830 and #840. The deputy accepts it as WK-690's map plan once it does, and the
-  acceptance line follows the lead's request.
+  mints after #830 and #840. The input entry states the plan's acceptance on that condition;
+  acceptance of a plan is not this record's to give.
 
 ## Acceptance — the violation that must become detectable
 
@@ -167,9 +167,11 @@ negative tests, each shown red on deliberately broken input:
 The FR-244 and §4.6 pairing is prose, and no check holds it. It lands in one commit, so the
 review of that commit is where it is read.
 
-## Adopted by the decision-maker, 2026-09-29
+## Ruled — by the decision-maker, 2026-09-29
 
-**Why this section exists.** The maintainer's entry `2026-09-29 15:26:00 BST · maintainer (acting on the maintainer's behalf) · STRUCTURE: routing per document-ids §1.6 and the charters; today's technical answers re-homed` (§2) makes the maintainer's
+First filed 2026-09-28 as working id RL-9202; `created` re-dated at the reframe so the id sequence stays non-decreasing (check 31).
+
+**This is the ruling.** The deputy's entry of 2026-09-28 14:06:12 BST, above, is input. The maintainer's entry `2026-09-29 15:26:00 BST · maintainer (acting on the maintainer's behalf) · STRUCTURE: routing per document-ids §1.6 and the charters; today's technical answers re-homed` (§2) makes the maintainer's
 answers on this record recommendations, and gives the technical points to this role. The
 answers are `2026-09-29 14:18:24 BST · maintainer (acting on the maintainer's behalf) · Q847-1/2/3 (row 11, WK-690)` and `2026-09-29 14:19:05 BST · maintainer (acting on the maintainer's behalf) · sympy pin: absent, so an OQ in #847's rebase`. This record's text stays as of `ed123cb0`, with the note below
 (Q847-3). Each point below was re-verified at origin/main `ac8ab519`.
