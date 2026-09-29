@@ -73,6 +73,7 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "dataset-lineage": "first written form — 01 §4.9 (W6b-12)",
     "dataset-split": "first written form — the split artifact the spec builder reads",
     "model-comparison": "first written form — 02 §5.2 named the return type",
+    "score-comparison": "first written form — 03 §4.10 (WK-672 Slice 4, FR-262)",
     "objective-usage": "first written form — FR-164 named the query",
     "oidc-auth-config": "first written form — FR-394 names the contents",
     "problem-detail": "first written form — the RFC 9457 problem shape",

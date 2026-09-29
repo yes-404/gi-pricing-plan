@@ -11401,6 +11401,28 @@
         "title": "SchemaCorrection",
         "type": "object"
       },
+      "ScoreCompareRequest": {
+        "additionalProperties": false,
+        "description": "`POST /api/v1/score/compare` body (FR-262, `03` §4.10): one quote, two versions.",
+        "properties": {
+          "base": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "comparison": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "context": {
+            "$ref": "#/components/schemas/QuoteContext"
+          }
+        },
+        "required": [
+          "context",
+          "base",
+          "comparison"
+        ],
+        "title": "ScoreCompareRequest",
+        "type": "object"
+      },
       "SemanticType": {
         "description": "What a column *means*, inferred separately from its dtype (FR-60).\n\nA dtype says `int32`; a semantic type says whether that is a policy id, a vehicle\ngroup, or an age. The distinction decides whether a one-way summary is meaningful —\nbanding a policy id produces a chart with five million bars.",
         "enum": [
@@ -27652,6 +27674,131 @@
           }
         },
         "summary": "Batch re-rate a Dataset Version against one or more Rating Versions",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/v1/score/compare": {
+      "post": {
+        "description": "FR-262: one quote, two versions, two `score_one` calls, one step diff.\n\nNothing is persisted or logged (NFR-499): unlike `/score`, this never calls\n`_maybe_sample_trace`. The two calls run one after the other, never concurrently\n(FD-1199). A per-quote error on either side answers 422 with that code and the failing\nside named in the problem (DP-S4-5).",
+        "operationId": "score_compare_api_v1_score_compare_post",
+        "parameters": [
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScoreCompareRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Score one Quote Context against two Rating Versions, with a step-level diff",
         "tags": [
           "rating"
         ]

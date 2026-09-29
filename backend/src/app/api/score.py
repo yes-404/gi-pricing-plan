@@ -52,6 +52,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.api.authz import requires
 from app.api.deps import Caller, SettingsDep, job_identity
+from app.api.rating_algorithms import RatingReadDep
 from app.api.responses import problems
 from app.config import Settings
 from app.db.models import BlobRow
@@ -64,10 +65,21 @@ from app.platform import settings as settings_service
 from app.platform import traces as traces_service
 from app.platform.blobs import BlobStore, to_ref
 from app.platform.bundle_slot import BundleSlot
-from model_schema import ArtifactRef, Job, JobKind, Permission, QuoteContext, ScoringResult
+from model_schema import (
+    ArtifactRef,
+    Job,
+    JobKind,
+    Permission,
+    QuoteContext,
+    QuoteContextOptions,
+    ScoreCompareRequest,
+    ScoreComparison,
+    ScoringResult,
+)
 from pricing_core.rating.compile import Bundle
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
 from pricing_core.rating.score import score_one
+from pricing_core.rating.trace_diff import diff_traces
 
 _log = get_logger("app.api.score")
 
@@ -301,6 +313,61 @@ async def score(
     await _maybe_sample_trace(database, settings, caller, ctx, result)
 
     return Response(content=result.model_dump_json(), media_type="application/json")
+
+
+def _naming_side(problem: PlatformError, side: str) -> PlatformError:
+    """`problem` with its detail prefixed by the failing side, `base` or `comparison` (DP-S4-5)."""
+    detail = f"{side}: {problem.detail}" if problem.detail else side
+    return PlatformError(problem.code, problem.title, problem.status_code, detail)
+
+
+@router.post(
+    "/score/compare",
+    summary="Score one Quote Context against two Rating Versions, with a step-level diff",
+    status_code=200,
+    responses=problems(401, 403, 404, 409, 422),
+)
+async def score_compare(
+    body: ScoreCompareRequest,
+    caller: RatingReadDep,
+    database: DatabaseDep,
+    blob_store: BlobStoreDep,
+    slot: BundleSlotDep,
+) -> Response:
+    """FR-262: one quote, two versions, two `score_one` calls, one step diff.
+
+    Nothing is persisted or logged (NFR-499): unlike `/score`, this never calls
+    `_maybe_sample_trace`. The two calls run one after the other, never concurrently
+    (FD-1199). A per-quote error on either side answers 422 with that code and the failing
+    side named in the problem (DP-S4-5).
+    """
+    results: list[ScoringResult] = []
+    for side, ref in (("base", body.base), ("comparison", body.comparison)):
+        try:
+            compiled = await _compiled_for(
+                database, blob_store, slot, workspace_id=caller.workspace_id, ref=ref
+            )
+        except PlatformError as exc:
+            raise _naming_side(exc, side) from exc
+        ctx = body.context.model_copy(
+            update={"options": QuoteContextOptions(trace=True, rating_version_ref=ref)}
+        )
+        try:
+            results.append(await score_one(compiled, ctx, trace=True))
+        except ValueError as exc:
+            problem = _as_platform_error(exc)
+            if problem is None:
+                raise
+            raise _naming_side(problem, side) from exc
+    base_result, comparison_result = results
+    if base_result.trace is None or comparison_result.trace is None:
+        raise RuntimeError("score_one(trace=True) returned no trace")
+    comparison = ScoreComparison(
+        base=base_result,
+        comparison=comparison_result,
+        diff=diff_traces(base_result.trace, comparison_result.trace),
+    )
+    return Response(content=comparison.model_dump_json(), media_type="application/json")
 
 
 async def _maybe_sample_trace(
