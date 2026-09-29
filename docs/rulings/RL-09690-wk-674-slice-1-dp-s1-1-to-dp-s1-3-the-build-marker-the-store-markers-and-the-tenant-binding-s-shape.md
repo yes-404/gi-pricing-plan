@@ -61,8 +61,11 @@ Task 4. All three are technical (`delivery-process.md` §3; the maintainer's STR
   and a broker marker is re-written on every restart as a matter of course.
 - **The image:** `git ls-files` finds no `Dockerfile` at this tree. The image and its build
   are Slice 4's (`RL-1232` Part A).
-- **The tests:** ~~9 places in `backend/tests`~~ *(corrected 2026-09-29, auditor-b-2's note N2: the first
-  count ran the predicate over `deploy` and `.github` as well)* **3 places** in `backend/tests` construct settings
+- **The tests:** ~~9 places in `backend/tests`~~ *(corrected 2026-09-29, auditor-b-2's note N2. The first count's command was not the predicate
+  stated here: it added a `|GIP_ENVIRONMENT` alternative, which matched two more lines,
+  `test_demo_command.py:36` and `:44`, so 7 + 2 = 9. `deploy` and `.github` give 0 either way.
+  The cause first given, that the predicate ran over `deploy` and `.github`, was itself wrong,
+  and is corrected here.)* **3 places** in `backend/tests` construct settings
   with `environment` set to `dev`, `uat` or `prod`: `test_config.py:67`, `:73` and `:87`, each a
   `load_settings(environment=Environment.PROD, …)`. They were found with
   `git grep -nE 'environment\s*=\s*("|Environment\.)(dev|uat|prod|DEV|UAT|PROD)' -- backend/tests`,
