@@ -88,6 +88,17 @@ on 2026-09-28.
 - Its acceptance item 5 asserts each new chart "with the column-by-name reader the ruling
   names". The ruling must therefore say whether `cellUnder` stays.
 
+**Scope decided 2026-09-30, the maintainer by delegation** (lead channel
+`to-lead.md`, entry "2026-09-30 00:51:17 BST — SCOPE DECISION: OQ-550 is owned by WK-675").
+- `RL-1184` E10 stands: OQ-550 is WK-675's, and it is decided at WK-675's map plan.
+- WK-690 Slice 5 does not decide or revisit OQ-550. It consumes OQ-550's ruling if it is ruled
+  by then. Otherwise it adds its `ChartFigure` caller under the current API and records that
+  caller in OQ-550's call-site count. The line at working id 9103, `:529-530`, is corrected at
+  #871's next revision.
+- Sequencing item 1 below is therefore **no longer open**. The high pass rules only the
+  technical question: whether vue-tsc infers the row type at a real call site, and (c) versus
+  (b′).
+
 ## Options
 
 | | Option | For | Against |
@@ -117,7 +128,7 @@ common errors (a missing column or a misspelt key) into compile errors, with no 
 risk.
 
 **What the ruling should also settle, whichever option it picks.**
-1. **Sequencing.** WK-690 Slice 5's loss-curve preview adopts the ruled shape. Working id
+1. **Sequencing** *(decided 2026-09-30, see the scope line above; kept as prepared)*. WK-690 Slice 5's loss-curve preview adopts the ruled shape. Working id
    9103, lines 529-530, says that Slice 5's leaf plan "revisits OQ-550". That conflicts with
    `RL-1184` E10, which assigns OQ-550 to WK-675. The ruling should state that the question
    is answered once, here. Otherwise a 14th positional caller can land before WK-675 Slice 1
