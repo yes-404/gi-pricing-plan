@@ -120,3 +120,35 @@ the PR's queue turn.
    over `backend/src packages/pricing-core/src` prints nothing (rc 1: no shape defined outside
    `model-schema`), and over `packages/model-schema/src` prints the four definitions in `scoring.py`
    (scoring.py:196 StepChange, :219 TraceDiff, :229 ScoreCompareRequest, :249 ScoreComparison).
+
+## Gate entries
+
+### Python half at `b9429948` (2026-09-29)
+
+Started 11:19:06Z under `/tmp/slots/gate-*` (`flock`), `CI` unset, `timeout 3300` on the pytest stage.
+Pre-start reading, quoted exactly: `11:18:54 up 2:36, 1 user, load average: 18.06, 12.73, 7.21`, and
+`pgrep -af '[p]ytest'` printed nothing. The load-below-8 precondition had not reached me before the
+start; the first ~30 s overlapped an external load spike (`to-lead.md`, 12:19:51 BST entry). Finished
+before 11:43:52Z (`uptime` then: `load average: 2.71, 3.23, 4.02`). Wrapper log
+`~/.claude/jobs/92b3ca72/tmp/gate-b9429948.log`, stage logs `/tmp/tmp.9m5cbDc6cw`, `FINAL_RC=1`.
+
+| stage | result | detail |
+|---|---|---|
+| ruff | pass | exit=0 |
+| mypy | pass | exit=0 |
+| import_linter | pass | exit=0 |
+| audit_docs | FAIL | exit=1 (check 31 only: gaps 1225→9110 and 9110→9401, the working ids) |
+| req_coverage | pass | exit=0 |
+| contracts | pass | exit=0 |
+| pytest | FAIL | exit=1 (14 failed, 3725 passed, 3 skipped, 24:27) |
+
+The 14 failures: 13 docs-audit tests that run the real tree and fail on the working-id gap (they pass
+after the mint), plus `test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_exempts`
+(`AssertionError: 67`): its pinned count of exempt non-markdown files went 66→67 with
+`score-comparison.schema.json`. Fixed in `73616265` (dated comment, the `regression-run` precedent).
+
+### Frontend half at `73616265` (2026-09-29, from 11:45:05Z, `CI` unset, under a gate slot)
+
+`pnpm --dir frontend install --frozen-lockfile` rc 0; `generate:api` rc 0 (the generated `schema.d.ts`
+lists `/api/v1/score/compare`); `lint` rc 0; `type-check` rc 0; `test` rc 0 (97 files, 603 tests passed,
+no `Errors` line); `build` rc 0. Logs `/tmp/fe-s4-*.log`.
