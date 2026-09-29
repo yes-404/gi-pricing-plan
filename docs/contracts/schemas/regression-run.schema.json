@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.gi-pricing.dev/regression-run.schema.json",
   "title": "RegressionRun",
-  "description": "The execution record of a Regression Suite run against a Rating Version (03 FR-260, FR-261, FR-1214, §4.9). Its generated cases and counterexamples are persisted as one content-addressed blob (cases_blob) and replayed by re-scoring.",
+  "description": "The execution record of a Regression Suite run against a Rating Version (03 FR-260, FR-261, FR-1221, §4.9). Its generated cases and counterexamples are persisted as one content-addressed blob (cases_blob) and replayed by re-scoring.",
   "$comment": "Brought to the generated model-schema shape 2026-09-28 (WK-672 Slice 3, PL-1205 Task 2; ADR-704: the model is the source). suite_slug is replaced by suite_ref plus suite_content_hash; generation, cases_blob, and on property_results shrink, counterexample_minimal and error_code are added. Split out of regression-suite.schema.json 2026-09-28 (PL-1189).",
   "type": "object",
   "additionalProperties": false,

@@ -1029,7 +1029,7 @@
       },
       "CasesLog": {
         "additionalProperties": false,
-        "description": "A run's reproduction record: every generated case and every counterexample (FR-261).\n\nPersisted as one content-addressed canonical JSON blob (FR-1214) and replayed by\nre-scoring, never regenerated. `counterexamples` is keyed by property name.",
+        "description": "A run's reproduction record: every generated case and every counterexample (FR-261).\n\nPersisted as one content-addressed canonical JSON blob (FR-1221) and replayed by\nre-scoring, never regenerated. `counterexamples` is keyed by property name.",
         "properties": {
           "cases": {
             "items": {

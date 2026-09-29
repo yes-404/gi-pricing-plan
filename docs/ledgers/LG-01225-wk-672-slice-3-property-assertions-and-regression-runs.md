@@ -3,7 +3,7 @@ id: LG-1225
 family: ledger
 title: WK-672 Slice 3 — Property assertions and regression runs
 status: active
-created: 2026-09-28
+created: 2026-09-29
 owner: executor
 tree: 06c1f3ac
 phase: P2
