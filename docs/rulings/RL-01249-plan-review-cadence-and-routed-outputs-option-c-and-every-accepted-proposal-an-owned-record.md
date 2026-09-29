@@ -1,5 +1,5 @@
 ---
-id: RL-9632
+id: RL-1249
 family: ruling
 title: Plan-review cadence and routed outputs — option C, and every accepted proposal an owned record (process, on the maintainer's behalf)
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -12,10 +12,10 @@ supersedes: []
 superseded_by: ~
 corrected_by: []
 corrects: ~
-relates: [RFC-9631]
+relates: [RFC-1248]
 ---
 
-# RL-9632 — Plan-review cadence and routed outputs: option C, and every accepted proposal an owned record
+# RL-1249 — Plan-review cadence and routed outputs: option C, and every accepted proposal an owned record
 
 ## Verified first, at 5638f69120e0f4d9c958dc1bf4a07f589b42f080
 
@@ -27,8 +27,9 @@ authored on the maintainer's behalf (§1.6 RL row: 'the maintainer may author on
 process'), citing the RFC."* **This role decides nothing here.** Cadence and review output are
 process questions, not technical decision points.
 
-**RL-9632 is a working id.** It is minted at the merge turn, right after `RFC-9631`, with
-`doc-id.py next --ref origin/main`. It was checked free on all 103 remote branches before use.
+**Minted as `RL-1249`** at #915's merge turn, right after `RFC-1248`, with `doc-id.py next
+--ref origin/main` (working id 9632 before the mint; it was checked free on all 103 remote
+branches before use).
 
 **The authority**, in the maintainer's channel, by full heading:
 - `2026-09-29 16:05:14 BST · maintainer (acting on the maintainer's behalf) · PLAN-REVIEW
@@ -38,11 +39,15 @@ process questions, not technical decision points.
   Part 2 folded in: routed outputs (future-facing)`. It quotes the user: *"fold option 2 into
   the option C RFC; the decision is future facing and target to help track proposal, plz go
   ahead"*.
-- `2026-09-29 18:43:03 BST · maintainer (acting on the maintainer's behalf) · the plan-review
-  cadence OPTIONS A–D and the Part 2 options, recorded for RFC-9631`. It records the options as
-  they were presented to the user, before the user chose.
+- The entry headed as below. It records the options as they were presented to the user,
+  before the user chose. Its heading names the RFC by its working id, 9631, since minted as
+  `RFC-1248`:
 
-**The proposal it rules on** is `RFC-9631` (working id), *"Plan-review cadence: a replan check
+  ```text
+  2026-09-29 18:43:03 BST · maintainer (acting on the maintainer's behalf) · the plan-review cadence OPTIONS A–D and the Part 2 options, recorded for RFC-9631
+  ```
+
+**The proposal it rules on** is `RFC-1248`, *"Plan-review cadence: a replan check
 at each Work close, a full review before each exit demo, and every accepted proposal an owned
 record"*. It was read on branch `wk1178-plan-review-cadence` at `a8bbbf2f`. Its *Proposal*
 section carries Part 1 and Part 2, and they are quoted below exactly as the RFC states them. The
@@ -54,7 +59,7 @@ sites. This record does not restate them.
 **Adopted as the project's plan-review process, from this record's merge onward. It looks
 forward only, and reviews 1–15 are not converted.**
 
-### Part 1 — cadence (option C), as `RFC-9631` states it
+### Part 1 — cadence (option C), as `RFC-1248` states it
 
 1. **A full §14 plan review before each phase's exit demo**, unchanged.
 2. **At a Work close:** the auditor's `CR- kind: work` carries a short **replan check**, the
@@ -68,7 +73,7 @@ forward only, and reviews 1–15 are not converted.**
    dated acceptance line; nothing starts in the next phase while a current-phase finding
    lacks a resolution; every accepted proposal gets an owning row.
 
-### Part 2 — routed outputs (future-facing), as `RFC-9631` states it
+### Part 2 — routed outputs (future-facing), as `RFC-1248` states it
 
 1. **Each accepted proposal becomes an owned record in the family §1.6 gives its kind**,
    created in its proposed or draft state by that family's owner:
@@ -101,7 +106,7 @@ falls with the RFC, and this record neither adds it nor removes it.
 - **This PR** restates Parts 1 and 2 at every site the RFC's *Sites* section lists: the
   `phase-review` and `close-workstream` skills, `docs/process/checklists/work-item-close.md`,
   `document-ids.md` §1.6, and the lead's and planner's charters. The lead's `CLAUDE.md` §14
-  amendment, which the user sees as a diff before merge, cites `RFC-9631` and this record.
+  amendment, which the user sees as a diff before merge, cites `RFC-1248` and this record.
 - **Every Work close from this merge on:** the auditor's `CR- kind: work` carries the replan
   check, and the lead gives its verdict on it.
 - **Every plan review from this merge on:** it is filed as an index of owned records, and it

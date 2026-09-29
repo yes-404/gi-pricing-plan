@@ -13,7 +13,7 @@ honestly against a row that describes the wrong work.
 
 ## When
 
-*(Amended 2026-09-29, `RFC-9631`, option C: the trigger below replaces "at each workstream
+*(Amended 2026-09-29, `RFC-1248`, option C: the trigger below replaces "at each workstream
 close, and again before a phase's exit demo". The old wording is kept here so a reader of an
 older review knows which rule it ran under.)*
 
@@ -135,7 +135,7 @@ Split, merge, add, supersede. Two smells worth naming:
 
 **A review is proposals only, about 150 lines.** Evidence lives in the records it cites
 (`CR- kind: work`, `FD-`, `RS-`, the register), not restated. Reviews 1–15 averaged 302
-lines, and every review from 9 to 15 ran 207 to 935 (`RFC-9631`'s evidence).
+lines, and every review from 9 to 15 ran 207 to 935 (`RFC-1248`'s evidence).
 
 ## The rules that keep a review a review
 
@@ -145,7 +145,7 @@ lines, and every review from 9 to 15 ran 207 to 935 (`RFC-9631`'s evidence).
 - **A later phase's finding is a spec change only.** It does not become work now.
 - **Every question gets a written answer, "no change" included.** A silent question cannot
   be told apart from one nobody asked.
-- **No accepted proposal is unowned** (`RFC-9631` Part 2). At the acceptance line, every
+- **No accepted proposal is unowned** (`RFC-1248` Part 2). At the acceptance line, every
   accepted proposal has a record id and an owner, or the lead names one, or the proposal is
   **withdrawn** with a dated reason.
 
@@ -163,7 +163,7 @@ closed: check the id against `docs/roadmap.md` before acting on it, and say so p
 
 ## Output
 
-*(Amended 2026-09-29, `RFC-9631` Part 2, future-facing: reviews 1–15 are not converted.)*
+*(Amended 2026-09-29, `RFC-1248` Part 2, future-facing: reviews 1–15 are not converted.)*
 
 **The review is a `CR- kind: review` under `docs/closures/`, conducted and filed by the
 planner; the family is the lead's** (`document-ids.md` §1.6). It is a **short index**, with
@@ -199,7 +199,7 @@ against, once one workstream's worth exists.
 
 ## Verified
 
-2026-09-29 — **the trigger, the output and a length cap amended by `RFC-9631`** (option C,
+2026-09-29 — **the trigger, the output and a length cap amended by `RFC-1248`** (option C,
 Part 1 and Part 2), adopted by the maintainer on 2026-09-29 and confirmed by the user. The
 trigger in *When* and the index form in *Output* are new; the five questions, their order
 and the four existing rules are unchanged, with a fifth ("no accepted proposal is unowned")

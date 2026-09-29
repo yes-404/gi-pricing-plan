@@ -9,7 +9,7 @@ description: Audit a workstream (WK-657, WK-658, …) before declaring it closed
 
 **This skill closes a workstream against §13; `CLAUDE.md` §14's plan review is a separate
 question, and this close answers it with a replan check.** *(Amended 2026-09-29,
-`RFC-9631`, option C.)* The `CR- kind: work` carries a **Replan check** section: the five
+`RFC-1248`, option C.)* The `CR- kind: work` carries a **Replan check** section: the five
 questions of [`phase-review`](../phase-review/SKILL.md) *When*, each answered yes or no in
 one line, plus `register-owed.py review`'s owed count. A **full** review runs only if the
 check fires (a phase boundary or Work scope moved, an exit criterion is at risk, a replan was
@@ -700,7 +700,7 @@ mapping.
 artifact it demanded, and where that artifact now is. *None* is a valid answer only after
 looking.
 
-**Replan check (`RFC-9631`):** the five `phase-review` questions, one line each —
+**Replan check (`RFC-1248`):** the five `phase-review` questions, one line each —
 1 completion · 2 omission · 3 skills and research · 4 drift · 5 shape — each **yes** or
 **no** with its reason; `register-owed.py review`'s owed count at this tree; and the result,
 **trigger** (naming which) or **no trigger**. The lead's verdict follows it.
@@ -708,7 +708,7 @@ looking.
 
 ## Verified
 
-2026-09-29 — **the §14 paragraph and the template's Replan check added by `RFC-9631`**
+2026-09-29 — **the §14 paragraph and the template's Replan check added by `RFC-1248`**
 (option C, adopted by the maintainer 2026-09-29, confirmed by the user). A Work close no
 longer makes a full plan review due by itself; it makes a replan check due, in this record.
 Not yet exercised at a real close.

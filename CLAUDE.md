@@ -318,7 +318,7 @@ yes or no with one line); a full review runs only if one of its triggers fires â
 boundary or Work scope moved, an exit criterion at risk, a replan decided, or a finding that
 moves a slice or phase â€” and the lead gives its verdict on the check; "no trigger" is
 recorded, not assumed.**
-**Amended 2026-09-29 by the maintainer (dated line by delegation), on RFC-9631 and RL-9632**:
+**Amended 2026-09-29 by the maintainer (dated line by delegation), on RFC-1248 and RL-1249**:
 the trigger was "at each workstream close, and again before a phase's exit demo". The five
 questions are in the skill; three rules bind outside it:
 

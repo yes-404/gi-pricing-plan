@@ -82,9 +82,9 @@ relates: []                      # ids only
 - **Answerable for `CLAUDE.md` §14's phase review firing on its fixed trigger** — a full
   review before each phase's exit demo, and at each Work close the auditor's replan check,
   on which the lead gives the verdict; a full review follows when the check fires, and "no
-  trigger" is recorded, never assumed *(amended 2026-09-29, `RFC-9631`, option C; it read
+  trigger" is recorded, never assumed *(amended 2026-09-29, `RFC-1248`, option C; it read
   "at each workstream close, and again before a phase's exit demo")*. Not discretionary.
-  **No accepted §14 proposal is left unowned** (`RFC-9631` Part 2): at the acceptance line
+  **No accepted §14 proposal is left unowned** (`RFC-1248` Part 2): at the acceptance line
   the lead names an owner and record for any proposal that lacks one, or the proposal is
   withdrawn with a dated reason. Grounded here
   rather than left assumed: the RFC-840/841 adoption changed the very workstream cut

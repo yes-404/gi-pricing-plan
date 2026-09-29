@@ -1,5 +1,5 @@
 ---
-id: RFC-9631
+id: RFC-1248
 family: proposal
 kind: process
 title: Plan-review cadence — a replan check at each Work close, a full review before each exit demo, and every accepted proposal an owned record
@@ -17,10 +17,10 @@ corrects: ~
 relates: [CR-723, CR-722, CR-755, CR-788, CR-823, CR-824, CR-825, CR-830, CR-925, CR-926, CR-932, CR-1050, CR-1064, CR-1167, CR-1212, CR-1243]
 ---
 
-# RFC-9631 — Plan-review cadence: a replan check at each Work close, a full review before each exit demo, and every accepted proposal an owned record
+# RFC-1248 — Plan-review cadence: a replan check at each Work close, a full review before each exit demo, and every accepted proposal an owned record
 
-**Working id `9631`**; minted at this PR's merge turn with `python3 scripts/doc-id.py next
---ref origin/main`. **Drafted by the planner; owned by the maintainer** (`document-ids.md`
+**Minted as `RFC-1248`** at #915's merge turn, 2026-09-29, with `python3 scripts/doc-id.py
+next --ref origin/main` at `8603796f` (working id 9631 before the mint). **Drafted by the planner; owned by the maintainer** (`document-ids.md`
 §1.6, RFC row). **`status: active`**: the maintainer decided both parts before this draft
 (see *Acceptance*). The decision-maker records the process ruling on it as an `RL-`.
 
@@ -89,8 +89,14 @@ by their `created:` field.
 
 ## Options
 
-The options are as the maintainer recorded them in the entry `2026-09-29 18:43:03 BST · maintainer (acting on the maintainer's behalf) · the plan-review cadence OPTIONS A–D and the Part 2 options, recorded for RFC-9631`. They were presented
-to the user in the maintainer's session on 2026-09-29 at about 16:02 BST, before the user
+The options are as the maintainer recorded them in the entry headed:
+
+```text
+2026-09-29 18:43:03 BST · maintainer (acting on the maintainer's behalf) · the plan-review cadence OPTIONS A–D and the Part 2 options, recorded for RFC-9631
+```
+
+That heading names this record by its working id, 9631, since minted as `RFC-1248`. The
+options were presented to the user in the maintainer's session on 2026-09-29 at about 16:02 BST, before the user
 chose C (about 16:05).
 
 **Part 1: cadence.** The table is quoted from that entry.

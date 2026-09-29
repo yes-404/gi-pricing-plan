@@ -25,7 +25,7 @@ cites the slice id, a workstream record cites the workstream id (for example `WK
 No family outside [`../document-ids.md`](../document-ids.md) §1.2.
 
 **Closing a workstream also answers the `CLAUDE.md` §14 plan review question, with a replan
-check** *(amended 2026-09-29, `RFC-9631`, option C)*. The record carries a **Replan check**
+check** *(amended 2026-09-29, `RFC-1248`, option C)*. The record carries a **Replan check**
 section: the five questions of the
 [`phase-review`](../../../.claude/skills/phase-review/SKILL.md) skill (*When*), each answered
 yes or no in one line, plus `python3 scripts/register-owed.py review`'s owed count. A full
@@ -91,7 +91,7 @@ second hand-kept file.
 
 ### Replan check
 
-*(Added 2026-09-29, `RFC-9631`, option C.)* The `CLAUDE.md` §14 replan check for a
+*(Added 2026-09-29, `RFC-1248`, option C.)* The `CLAUDE.md` §14 replan check for a
 workstream close: the five questions of the
 [`phase-review`](../../../.claude/skills/phase-review/SKILL.md) skill (*When*), each answered
 **yes** or **no** in one line; `python3 scripts/register-owed.py review`'s owed count at this

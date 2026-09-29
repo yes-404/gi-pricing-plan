@@ -37,9 +37,9 @@ relates: []                      # ids only
   separate obligation from the replan-trigger sentence above, on its own fixed schedule
   rather than triggered by a finding: trigger fixed, not discretionary (a full review before
   each phase's exit demo, and after a Work close only when the auditor's replan check fires;
-  amended 2026-09-29, `RFC-9631`, option C); output is a proposal, never a change;
+  amended 2026-09-29, `RFC-1248`, option C); output is a proposal, never a change;
   filed as a `CR- kind: review` under `docs/closures/` that is a short index, proposal →
-  record id → owner → state, about 150 lines (`RFC-9631` Part 2; the old wording, "filed to
+  record id → owner → state, about 150 lines (`RFC-1248` Part 2; the old wording, "filed to
   `docs/closures/INDEX.md#plan-reviewsmd` as a dated `### Plan review N` section", predated
   the RFC-937 migration). This needs
   no new acceptance
