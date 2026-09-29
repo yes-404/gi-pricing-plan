@@ -424,7 +424,8 @@ async def test_a_purpose_needing_a_sub_graph_is_refused_when_none_is_mounted(pur
 
 
 async def _compiled_with_bogus_sub_graph() -> CompiledBundle:
-    """The same bundle, its algorithm naming a sub-graph that does not exist (FD-9030)."""
+    """The same bundle, its algorithm naming a sub-graph that does not exist (the finding
+    "CR-838 marks FR-217 delivered, but its pin and bundle-time inlining are not built")."""
     compiled = await _compiled()
     bogus = SubGraphRef(
         ref=ArtifactRef(type="sub_graph", slug="does-not-exist", version=1),
@@ -437,7 +438,8 @@ async def _compiled_with_bogus_sub_graph() -> CompiledBundle:
 @pytest.mark.req("FR-218")
 @pytest.mark.parametrize("purpose", ["mid_term_adjustment", "cancellation"])
 async def test_a_bogus_sub_graph_ref_does_not_satisfy_the_purpose_guard(purpose: str) -> None:
-    """FD-9030: a non-empty `sub_graphs` is a declared reference, not a mounted sub-graph.
+    """A non-empty `sub_graphs` is a declared reference, not a mounted sub-graph (the finding
+    "CR-838 marks FR-217 delivered, but its pin and bundle-time inlining are not built").
     With `sub_graph:does-not-exist@1` named, these purposes were priced as new business
     (1507); they are refused whatever `sub_graphs` holds, until FR-217's inlining exists."""
     compiled = await _compiled_with_bogus_sub_graph()

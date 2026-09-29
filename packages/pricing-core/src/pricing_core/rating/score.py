@@ -395,14 +395,15 @@ def _check_purpose_mount(algorithm: RatingAlgorithm, ctx: QuoteContext) -> None:
     sub-graph inlining (FR-217) is built.
 
     FR-218 prices these purposes with a separately-versioned pro-rata / refund sub-graph
-    mounted only for them. No slice builds that mounting yet: `SubGraphRef.mount_point`
-    resolution and `compile_bundle`'s own TODO are open, so the engine never evaluates any
-    sub-graph and no rating version can actually mount one. An earlier form of this guard
+    mounted only for them. No slice builds that mounting yet: `compile_bundle` never reads
+    `sub_graphs`, so the engine never evaluates any sub-graph and no rating version can
+    actually mount one. An earlier form of this guard
     refused only when `algorithm.sub_graphs` was empty, calling a non-empty list a
     "conservative, forward-safe approximation". That was false: a non-empty list is only a
     declared reference, not a mounted sub-graph, so an algorithm naming a sub-graph that
     does not exist (or is never inlined) passed the guard and a cancellation or MTA was
-    priced as new business, the silent failure FR-218 names (FD-9030: payable 1507).
+    priced as new business, the silent failure FR-218 names (payable 1507). The finding is
+    "CR-838 marks FR-217 delivered, but its pin and bundle-time inlining are not built".
 
     Refusing every such quote is the only truthful check available today, and it is interim:
     when FR-217's inlining exists, this becomes a check that the mounted sub-graph is the
