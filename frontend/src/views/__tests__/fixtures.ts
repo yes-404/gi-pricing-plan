@@ -351,10 +351,11 @@ export const DIAGNOSTICS: Diagnostics = {
     ],
     permutation_importances: [
       { feature: "vehicle_age", baseline: 0.498, permuted: 0.552, degradation: 0.054,
-        repeats: 5, seed: 20260824 },
+        repeats: 5, seed: 20260824, shared_source_columns: [] },
       { feature: "driver_age", baseline: 0.498, permuted: 0.521, degradation: 0.023,
-        repeats: 5, seed: 20260824 },
+        repeats: 5, seed: 20260824, shared_source_columns: [] },
     ],
+    permutation_omitted: [],
     partial_dependence: [
       {
         factor: "vehicle_age",

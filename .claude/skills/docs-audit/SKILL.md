@@ -474,13 +474,13 @@ use the compact range form `OQ-633, OQ-634, OQ-635, OQ-636, OQ-637`:
 ```bash
 python3 - <<'PY'
 import re, pathlib, collections
-all_oq = set(re.findall(r'\*\*(OQ-[A-Z]+-\d+)\*\*', pathlib.Path('docs/open-questions.md').read_text()))
-gate = pathlib.Path('docs/roadmap.md').read_text().split('## 10. Decision gates')[1].split('## 11.')[0]
+all_oq = set(re.findall(r'\*\*(OQ-\d+)\*\*', pathlib.Path('docs/open-questions.md').read_text(encoding='utf-8')))
+assert all_oq, 'no OQ ids found: the id pattern no longer matches the register'
+gate = pathlib.Path('docs/roadmap.md').read_text(encoding='utf-8').split('## 10. Decision gates')[1].split('## 11.')[0]
 c = collections.Counter()
 for row in [l for l in gate.splitlines() if l.startswith('| ') and 'OQ-' in l]:
-    for m in re.finditer(r'OQ-([A-Z]+)-(\d+)(?:\.\.(\d+))?', row):
-        mod, a, b = m.group(1), int(m.group(2)), m.group(3)
-        for n in range(a, (int(b) if b else a)+1): c[f"OQ-{mod}-{n}"] += 1
+    for m in re.finditer(r'OQ-\d+', row.split('|')[2]):
+        c[m.group(0)] += 1
 print("missing   :", sorted(all_oq - set(c)) or "none")
 print("extra     :", sorted(set(c) - all_oq) or "none")
 print("duplicated:", sorted(k for k,v in c.items() if v>1) or "none")
@@ -499,18 +499,20 @@ import re, pathlib
 gate = pathlib.Path('docs/roadmap.md').read_text(encoding='utf-8').split('## 10. Decision gates')[1].split('## 11.')[0]
 for row in [l for l in gate.splitlines() if l.startswith('| ') and 'OQ-' in l]:
     cells = row.split('|')
-    ids = {}
-    for m in re.finditer(r'(~~)?OQ-([A-Z]+)-(\d+)(?:\.\.(\d+))?(~~)?', cells[2]):
-        a, b = int(m.group(3)), m.group(4)
-        for n in range(a, (int(b) if b else a) + 1):
-            ids[f"OQ-{m.group(2)}-{n}"] = 1 if m.group(1) else 0
+    struck = {i for span in re.findall(r'~~(.*?)~~', cells[2]) for i in re.findall(r'OQ-\d+', span)}
+    ids = {m.group(0): int(m.group(0) in struck) for m in re.finditer(r'OQ-\d+', cells[2])}
     total, decided = len(ids), sum(ids.values())
     print(f"{cells[1].strip()[:40]:42s} actual {total} ({total - decided} open)  stated {cells[3].strip()}")
 PY
 ```
 
-Every `actual` must equal its `stated`. A range written `OQ-633, OQ-634, OQ-635, OQ-636, OQ-637` counts as five, and a range
-struck as a whole counts five decided — which is how the rows are actually written.
+Every `actual` must equal its `stated`. An id counts as decided when it sits inside a `~~…~~`
+span, so a list struck as a whole — `~~OQ-551, OQ-552, OQ-553~~` — counts three decided.
+
+**`missing` is not `none` on `main`, and that is recorded, not a failure.** Eight decided ids —
+OQ-538, OQ-539, OQ-549, OQ-602, OQ-603, OQ-604, OQ-652, OQ-656 — were recorded rather than
+placed (the roadmap's 2026-08-26 note beneath the table). Any id beyond those eight is a real
+omission.
 
 **Never name an `OQ-` id in a gate cell's explanatory italics.** Both snippets above scan the
 *whole* cell, so a note reading *"raised out of the OQ-571 and OQ-572 decisions"* places
@@ -546,6 +548,14 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-09-28 — **both decision-gate snippets rewritten for the post-migration id form (`OQ-<n>`).**
+The old `OQ-[A-Z]+-\d+` pattern matched **0** ids in `docs/open-questions.md` at `df8e5811`, so
+the coverage snippet printed `none` three times on any tree: a silent pass. The coverage snippet
+now asserts that it found ids, and both scan only the id cell. Their output was checked against
+each row's stated count on Track E's tree, which branches from `df8e5811`. All six rows agreed,
+and `missing` listed exactly the eight recorded ids. At `df8e5811` itself, `missing` also listed
+OQ-554, which Track E placed (`RL-1184`).
 
 2026-09-19 (second entry, same day) — **checks 31 and 38 gained a describing clause, and
 the bespoke-audit rule gained a pointer.** W37-7 Tasks 1 (Step 3) and 9, `PL-1070`.

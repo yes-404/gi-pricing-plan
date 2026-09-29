@@ -35,14 +35,15 @@ from app.db.models import (
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals as approval_service
+from app.platform import audit, rbac
 from app.platform import modelling as service
-from app.platform import rbac
 from model_schema import (
     ActorKind,
     ApprovalPolicy,
     ApprovalPolicyEntry,
     DatasetStatus,
     DecisionKind,
+    JobSource,
     ModelStatus,
     Principal,
     ScopeType,
@@ -645,6 +646,17 @@ async def _next_version_of(
         row.diagnostics_id = diagnostics.id
         row.status = ModelStatus.FITTED.value
         await session.flush()
+        # `modelling.reserve`'s creation event, which this direct insert stands in for. Its
+        # actor is the version's author (`06` FR-353 as amended 2026-09-28); without it the
+        # approval of this version fails closed as APPROVAL_AUTHOR_UNRESOLVED.
+        await audit.record(
+            session,
+            workspace_id=workspace_id,
+            actor=Principal(kind=ActorKind.USER, id=new_uuid7(), display="refit@insurer.example"),
+            source=JobSource.API,
+            action="model.reserved",
+            entity_ref=f"model:{row.model_family_slug}@{row.version}",
+        )
         return row.id
 
 

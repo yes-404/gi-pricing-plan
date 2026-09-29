@@ -59,6 +59,14 @@ const blobs = computed(() =>
     state: blob.ref == null ? "not recorded by this fit" : "recorded, not retrievable yet",
   })),
 );
+
+/** Why a factor has no type-III test, in words (FR-178); an unrecognised reason is shown as is. */
+function omissionReason(reason: string): string {
+  if (reason === "operand_of_interaction") {
+    return "it is an operand of an interaction and has no design column of its own, so the interaction is tested instead";
+  }
+  return reason;
+}
 </script>
 
 <template>
@@ -168,6 +176,21 @@ const blobs = computed(() =>
     >
       No type-III tests were recorded for this fit.
     </p>
+
+    <!-- FR-178: a factor left out of the type-III table is named, with why, so a reader can
+         tell an operand from a factor that was never declared. -->
+    <ul
+      v-if="glm.type_iii_omitted.length"
+      aria-label="Type III omissions"
+      class="mt-2 text-sm text-slate-600"
+    >
+      <li
+        v-for="omission in glm.type_iii_omitted"
+        :key="omission.factor"
+      >
+        {{ omission.factor }}: not tested — {{ omissionReason(omission.reason) }}.
+      </li>
+    </ul>
 
     <table
       v-if="vif.length"

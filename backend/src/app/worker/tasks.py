@@ -32,6 +32,7 @@ from app.observability.logging import get_logger
 from app.observability.trace import bind_trace_id, current_trace_id, reset_trace_id
 from app.platform import jobs, outbox
 from app.platform.blobs import BlobStore
+from app.platform.safe_exception import safe_job_error_text, safe_job_exc_info
 from app.worker.celery_app import TASK_RELAY_OUTBOX, TASK_RUN_JOB, build_celery
 from app.worker.handlers import handler_for
 from app.worker.logs import JobLogCapture
@@ -199,8 +200,9 @@ async def execute_job(
             # `PlatformError` is a deterministic refusal, and FR-403 does not retry
             # those. Nothing here infers retryability from `status_code` — a 429 or a 503
             # raised by a handler is still a deterministic refusal of *this* job.
-            _log.exception(
+            _log.error(
                 "job handler failed",
+                exc_info=safe_job_exc_info(exc),
                 extra={"job_id": str(job_id), "code": exc.code},
             )
             await _fail(
@@ -215,19 +217,28 @@ async def execute_job(
             )
             return JobStatus.FAILED
         except Exception as exc:
-            # Reached only by a genuinely unexpected exception now — a handler bug rather
-            # than a refusal the handler named. The message is the exception's, not the
-            # caller's input: FR-403 wants a human message, and R3 keeps secrets out —
-            # a handler that puts a credential in an exception string is a bug in the
-            # handler, and the type name alone would leave an operator with nothing to act
-            # on.
-            _log.exception("job handler failed", extra={"job_id": str(job_id)})
+            # Reached only by a genuinely unexpected exception now: a handler bug rather than
+            # a refusal the handler named. **Its text is not safe as it stands** (NFR-499,
+            # RL-917): a Pydantic `ValidationError` prints the failing input value, a quote
+            # input; a database error echoes the row; a library error repeats the value that
+            # broke it. So the text is an ALLOW-list, not a deny-list: `safe_job_error_text`
+            # keeps only what is ours and input-free (a coded error, a validation error's field
+            # paths and types, a database error's SQLSTATE and constraint) and otherwise the
+            # exception's type name alone (`pricing_core.safe_error`). The same rule shapes the
+            # logged traceback, which keeps its frames, the Job id and the trace id.
+            # `JobLogCapture` stores only the formatted message, so the persisted Job logs never
+            # carried the traceback.
+            _log.error(
+                "job handler failed",
+                exc_info=safe_job_exc_info(exc),
+                extra={"job_id": str(job_id)},
+            )
             await _fail(
                 database,
                 job_id,
                 JobError(
                     code="JOB_HANDLER_FAILED",
-                    message=f"{type(exc).__name__}: {exc}",
+                    message=safe_job_error_text(exc),
                     retryable=False,
                     trace_id=current_trace_id(),
                 ),

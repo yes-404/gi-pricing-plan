@@ -9,25 +9,48 @@ reference (FR-386) and refuse one that does not exist.
 
 from __future__ import annotations
 
+import copy
+import json
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 import pytest
+from backend.tests.test_rating_version_compile import _empty_pins, _minimal_algorithm
 from sqlalchemy import select
 
-from app.db.models import RoleAssignmentRow, RoleRow
+from app.db.models import (
+    ApprovalDecisionRow,
+    ApprovalRequestRow,
+    AuditEventRow,
+    RatingVersionRow,
+    RegressionSuiteRow,
+    RegressionSuiteVersionRow,
+    RoleAssignmentRow,
+    RoleRow,
+)
 from app.db.session import Database
+from app.errors import PlatformError
 from app.platform import approvals as approval_service
+from app.platform import rating_algorithms as algorithm_service
 from app.platform import rating_versions as rating_service
 from app.platform import rbac
+from app.platform import regression_runs as run_service
+from app.platform import regression_suites as suite_service
 from model_schema import (
     ActorKind,
     ArtifactRef,
     DecisionKind,
     Principal,
     RatingVersionStatus,
+    RegressionRun,
+    RegressionSuiteContent,
     ScopeType,
     new_uuid7,
+    suite_content_hash,
 )
+from pricing_core.rating.compile import Bundle
+from pricing_core.rating.runtime import CompiledBundle, load_bundle
 
 
 async def _principal(database: Database, workspace_id: UUID, role: str) -> Principal:
@@ -80,10 +103,13 @@ async def test_create_submit_approve_a_rating_version(
         assert RatingVersionStatus(row.status) is RatingVersionStatus.DRAFT
         assert row.model_ref == str(model_ref)
 
+    gate = await _gate(database, workspace_id)
+    await gate.adopt(rating_id)  # DP-S3-1 forward: a golden quote and a passing run (T6b)
     async with database.unit_of_work() as session:
         _, request = await rating_service.submit_for_review(
             session, workspace_id=workspace_id, actor=actuary,
             rating_version_id=rating_id, change_summary="demo rating version",
+            load_compiled=gate.load,
         )
         request_id = request.id
     async with database.session() as session:
@@ -92,14 +118,27 @@ async def test_create_submit_approve_a_rating_version(
         )
         assert RatingVersionStatus(row.status) is RatingVersionStatus.REVIEW
 
-    async with database.unit_of_work() as session:
-        request = await approval_service.decide(
-            session, workspace_id=workspace_id, request_id=request_id,
-            approver=approver, decision=DecisionKind.APPROVE, comment="approved",
-        )
-        await rating_service.apply_approval_decision(
-            session, workspace_id=workspace_id, actor=approver, request=request
-        )
+    # Two approvers, because `06` §4.2's default policy asks two for a Rating Version. This
+    # test used to approve on one, and passed only because the hook approved on any
+    # decision (the approval status bypass, 2026-09-28).
+    second = await _principal(database, workspace_id, "approver")
+    for who, then in ((approver, RatingVersionStatus.REVIEW), (second, None)):
+        async with database.unit_of_work() as session:
+            request = await approval_service.decide(
+                session,
+                evidence_authors=rating_service.golden_quote_delta_authors,
+                workspace_id=workspace_id, request_id=request_id,
+                approver=who, decision=DecisionKind.APPROVE, comment="approved",
+            )
+            await rating_service.apply_approval_decision(
+                session, workspace_id=workspace_id, actor=who, request=request
+            )
+        if then is not None:
+            async with database.session() as session:
+                row = await rating_service.load_rating_version(
+                    session, workspace_id=workspace_id, rating_version_id=rating_id
+                )
+                assert RatingVersionStatus(row.status) is then  # one approval of two
     async with database.session() as session:
         row = await rating_service.load_rating_version(
             session, workspace_id=workspace_id, rating_version_id=rating_id
@@ -112,10 +151,12 @@ async def test_create_submit_approve_a_rating_version(
 async def test_a_rating_version_reference_resolves_in_the_approvals_fanout(
     database: Database, workspace_id
 ) -> None:
-    """`_resolve_the_artifact` accepts a real rating_version reference (FR-386)."""
+    """`_resolve_the_artifact` accepts a real rating_version reference (FR-386) once it is
+    in review, and refuses it while it is a draft (`06` FR-351, since 2026-09-28)."""
     from app.api.approvals import _resolve_rating_version
 
     analyst = await _principal(database, workspace_id, "analyst")
+    actuary = await _principal(database, workspace_id, "pricing_actuary")
     rating_id = await _draft(
         database, workspace_id, analyst,
         ArtifactRef(type="model", slug="fremtpl2-glm", version=1),
@@ -125,6 +166,19 @@ async def test_a_rating_version_reference_resolves_in_the_approvals_fanout(
             session, workspace_id=workspace_id, rating_version_id=rating_id
         )
         ref = ArtifactRef(type="rating_version", slug=row.slug, version=row.version)
+        with pytest.raises(PlatformError) as refused:
+            await _resolve_rating_version(session, workspace_id=workspace_id, artifact_ref=ref)
+        assert refused.value.code == "APPROVAL_SUBJECT_NOT_IN_REVIEW"
+
+    gate = await _gate(database, workspace_id)
+    await gate.adopt(rating_id)  # DP-S3-1 forward: a golden quote and a passing run (T6b)
+    async with database.unit_of_work() as session:
+        await rating_service.submit_for_review(
+            session, workspace_id=workspace_id, actor=actuary,
+            rating_version_id=rating_id, change_summary="into review",
+            load_compiled=gate.load,
+        )
+    async with database.session() as session:
         assert await _resolve_rating_version(
             session, workspace_id=workspace_id, artifact_ref=ref
         )
@@ -228,8 +282,32 @@ def test_create_rating_version_over_http(
     assert data["dataset_version_id"] == str(dataset_version_id)
 
 
+def _submittable_over_http(
+    database: Database, workspace_id: UUID, principal: Principal, rating_id: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Make a draft made over HTTP submittable (DP-S3-1 forward, T6b): a golden quote, a
+    passing run, a compiled bundle, and the route's bundle loader pointed at it."""
+    import asyncio
+
+    from app.api import score as score_api
+
+    async def prepare() -> _Gate:
+        gate = await _gate(database, workspace_id)
+        await gate.adopt(UUID(rating_id))
+        return gate
+
+    gate = asyncio.get_event_loop().run_until_complete(prepare())
+
+    async def fetch(*_args: Any, ref: ArtifactRef, **_kwargs: Any) -> CompiledBundle:
+        return await gate.load(ref)
+
+    monkeypatch.setattr(score_api, "_fetch_bundle", fetch)
+
+
+
 def test_submit_rating_version_over_http(
-    api_client, workspace_id, principal, grant, database
+    api_client, workspace_id, principal, grant, database, monkeypatch
 ) -> None:
     """POST /api/v1/rating-versions/{id}/submit moves to review over HTTP."""
     import asyncio
@@ -253,6 +331,7 @@ def test_submit_rating_version_over_http(
     create_response = api_client.post("/api/v1/rating-versions", json=create_body, headers=headers)
     assert create_response.status_code == 201, create_response.text
     rating_id = create_response.json()["id"]
+    _submittable_over_http(database, workspace_id, principal, rating_id, monkeypatch)
 
     # Submit for review
     submit_body = {"change_summary": "demo rating version"}
@@ -269,7 +348,7 @@ def test_submit_rating_version_over_http(
 
 @pytest.mark.req("FR-257")
 def test_a_blank_change_summary_cannot_submit_a_rating_version(
-    api_client, workspace_id, principal, grant, database
+    api_client, workspace_id, principal, grant, database, monkeypatch
 ) -> None:
     """FR-257 limb 3 — the change summary, which the requirement delegates to FR-242.
 
@@ -309,6 +388,7 @@ def test_a_blank_change_summary_cannot_submit_a_rating_version(
     )
     assert create_response.status_code == 201, create_response.text
     rating_id = create_response.json()["id"]
+    _submittable_over_http(database, workspace_id, principal, rating_id, monkeypatch)
 
     # `submit_for_review` refuses a non-draft version with 409 *before* reaching the change
     # summary, so the version must be draft for this test to be testing what it says.
@@ -359,3 +439,1166 @@ def test_the_submit_route_documents_the_422_it_returns(app) -> None:
     assert "422" in responses, sorted(responses)
     # Ours, not FastAPI's `HTTPValidationError` — the second shape is the actual defect.
     assert "application/problem+json" in responses["422"]["content"], responses["422"]
+
+
+# -- the decision hook reads the real states (`06` FR-351; the approval status bypass) --
+
+
+async def _two_approvers(database: Database, workspace_id: UUID) -> tuple[Principal, Principal]:
+    """The default policy asks two distinct approvers for a Rating Version (`06` §4.2)."""
+    return (
+        await _principal(database, workspace_id, "approver"),
+        await _principal(database, workspace_id, "approver"),
+    )
+
+
+async def _status_of(database: Database, workspace_id: UUID, rating_id: UUID) -> str:
+    async with database.session() as session:
+        row = await rating_service.load_rating_version(
+            session, workspace_id=workspace_id, rating_version_id=rating_id
+        )
+        return row.status
+
+
+@pytest.mark.req("FR-351")
+async def test_the_hook_refuses_a_rating_version_that_never_entered_review(
+    database: Database, workspace_id
+) -> None:
+    """Negative: a request that reaches the hook for a **draft** version moves nothing.
+
+    The request is made at service level, past the route's own refusal, because the hook is
+    the second guard and has to hold on its own (defence in depth).
+    """
+    analyst = await _principal(database, workspace_id, "analyst")
+    actuary = await _principal(database, workspace_id, "pricing_actuary")
+    first, second = await _two_approvers(database, workspace_id)
+    rating_id = await _draft(
+        database, workspace_id, analyst, ArtifactRef(type="model", slug="m-one", version=1)
+    )
+    async with database.session() as session:
+        row = await rating_service.load_rating_version(
+            session, workspace_id=workspace_id, rating_version_id=rating_id
+        )
+        ref = ArtifactRef(type="rating_version", slug=row.slug, version=row.version)
+    async with database.unit_of_work() as session:
+        request = await approval_service.submit(
+            session, workspace_id=workspace_id, submitter=actuary, artifact_ref=ref,
+            change_summary="never submitted through the module",
+        )
+        request_id = request.id
+    for approver in (first, second):
+        async with database.unit_of_work() as session:
+            request = await approval_service.decide(
+                session,
+                evidence_authors=rating_service.golden_quote_delta_authors,
+                workspace_id=workspace_id, request_id=request_id,
+                approver=approver, decision=DecisionKind.APPROVE,
+            )
+
+    async with database.unit_of_work() as session:
+        request = await approval_service._load(session, workspace_id, request_id)
+        with pytest.raises(PlatformError) as refused:
+            await rating_service.apply_approval_decision(
+                session, workspace_id=workspace_id, actor=second, request=request
+            )
+    assert refused.value.code == "APPROVAL_SUBJECT_NOT_IN_REVIEW"
+    assert refused.value.status_code == 409
+    assert await _status_of(database, workspace_id, rating_id) == "draft"
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.req("FR-354")
+async def test_one_of_two_approvals_leaves_the_rating_version_in_review(
+    database: Database, workspace_id
+) -> None:
+    """The hook moves the version only when the **request** is decided, not on every
+    decision: one approval of two leaves the request, and so the version, in review."""
+    analyst = await _principal(database, workspace_id, "analyst")
+    actuary = await _principal(database, workspace_id, "pricing_actuary")
+    first, _ = await _two_approvers(database, workspace_id)
+    rating_id = await _draft(
+        database, workspace_id, analyst, ArtifactRef(type="model", slug="m-two", version=1)
+    )
+    gate = await _gate(database, workspace_id)
+    await gate.adopt(rating_id)  # DP-S3-1 forward: a golden quote and a passing run (T6b)
+    async with database.unit_of_work() as session:
+        _, request = await rating_service.submit_for_review(
+            session, workspace_id=workspace_id, actor=actuary,
+            rating_version_id=rating_id, change_summary="two approvals needed",
+            load_compiled=gate.load,
+        )
+        request_id = request.id
+    async with database.unit_of_work() as session:
+        request = await approval_service.decide(
+            session,
+            evidence_authors=rating_service.golden_quote_delta_authors,
+            workspace_id=workspace_id, request_id=request_id,
+            approver=first, decision=DecisionKind.APPROVE,
+        )
+        await rating_service.apply_approval_decision(
+            session, workspace_id=workspace_id, actor=first, request=request
+        )
+    assert await _status_of(database, workspace_id, rating_id) == "review"
+
+
+@pytest.mark.req("FR-355")
+async def test_a_rejected_rating_version_returns_to_draft_with_a_true_audit_before(
+    database: Database, workspace_id
+) -> None:
+    """`06` FR-355: a rejection returns the artifact to draft. And the Audit Event's
+    `before` is the row's real state, read from it, never a literal."""
+    analyst = await _principal(database, workspace_id, "analyst")
+    actuary = await _principal(database, workspace_id, "pricing_actuary")
+    first, _ = await _two_approvers(database, workspace_id)
+    rating_id = await _draft(
+        database, workspace_id, analyst, ArtifactRef(type="model", slug="m-three", version=1)
+    )
+    gate = await _gate(database, workspace_id)
+    await gate.adopt(rating_id)  # DP-S3-1 forward: a golden quote and a passing run (T6b)
+    async with database.unit_of_work() as session:
+        row, request = await rating_service.submit_for_review(
+            session, workspace_id=workspace_id, actor=actuary,
+            rating_version_id=rating_id, change_summary="to be rejected",
+            load_compiled=gate.load,
+        )
+        request_id, ref = request.id, f"rating_version:{row.slug}@{row.version}"
+    async with database.unit_of_work() as session:
+        request = await approval_service.decide(
+            session,
+            evidence_authors=rating_service.golden_quote_delta_authors,
+            workspace_id=workspace_id, request_id=request_id,
+            approver=first, decision=DecisionKind.REJECT, comment="Not yet.",
+        )
+        await rating_service.apply_approval_decision(
+            session, workspace_id=workspace_id, actor=first, request=request
+        )
+    assert await _status_of(database, workspace_id, rating_id) == "draft"
+    async with database.session() as session:
+        moves = (
+            await session.execute(
+                select(AuditEventRow.before, AuditEventRow.after).where(
+                    AuditEventRow.workspace_id == workspace_id,
+                    AuditEventRow.entity_ref == ref,
+                    AuditEventRow.action.like("rating_version.%"),
+                    AuditEventRow.action != "rating_version.created",
+                )
+            )
+        ).all()
+    assert [(b["status"], a["status"]) for b, a in moves] == [("review", "draft")]
+
+
+async def _stale_draft_request(database: Database, workspace_id: UUID, slug: str):
+    """A request opened on a version that never left `draft` — what the generic route could
+    make before the approval status bypass was fixed. Made at service level, past the route."""
+    analyst = await _principal(database, workspace_id, "analyst")
+    actuary = await _principal(database, workspace_id, "pricing_actuary")
+    rating_id = await _draft(
+        database, workspace_id, analyst, ArtifactRef(type="model", slug=slug, version=1)
+    )
+    async with database.session() as session:
+        row = await rating_service.load_rating_version(
+            session, workspace_id=workspace_id, rating_version_id=rating_id
+        )
+        ref = ArtifactRef(type="rating_version", slug=row.slug, version=row.version)
+    async with database.unit_of_work() as session:
+        request = await approval_service.submit(
+            session, workspace_id=workspace_id, submitter=actuary, artifact_ref=ref,
+            change_summary="opened before the fix",
+        )
+        return rating_id, request.id, actuary
+
+
+@pytest.mark.req("FR-355")
+@pytest.mark.parametrize("close", ["reject", "withdraw"])
+async def test_a_stale_request_on_a_draft_rating_version_can_still_be_closed(
+    database: Database, workspace_id, close: str
+) -> None:
+    """A pre-fix request on a version still in `draft` must stay closable: rejecting or
+    withdrawing it returns the version to where it already is, so the hook moves nothing
+    rather than refusing — and the version can then be submitted properly."""
+    rating_id, request_id, actuary = await _stale_draft_request(
+        database, workspace_id, f"m-stale-{close}"
+    )
+    approver = await _principal(database, workspace_id, "approver")
+    async with database.unit_of_work() as session:
+        if close == "reject":
+            request = await approval_service.decide(
+                session,
+                evidence_authors=rating_service.golden_quote_delta_authors,
+                workspace_id=workspace_id, request_id=request_id,
+                approver=approver, decision=DecisionKind.REJECT, comment="Stale.",
+            )
+        else:
+            request = await approval_service.withdraw(
+                session, workspace_id=workspace_id, request_id=request_id,
+                actor=approver, reason="Stale.",
+            )
+        await rating_service.apply_approval_decision(
+            session, workspace_id=workspace_id, actor=approver, request=request
+        )
+    assert await _status_of(database, workspace_id, rating_id) == "draft"
+
+    gate = await _gate(database, workspace_id)
+    await gate.adopt(rating_id)  # DP-S3-1 forward: a golden quote and a passing run (T6b)
+    async with database.unit_of_work() as session:
+        row, _ = await rating_service.submit_for_review(
+            session, workspace_id=workspace_id, actor=actuary,
+            rating_version_id=rating_id, change_summary="submitted properly",
+            load_compiled=gate.load,
+        )
+    assert row.status == "review"
+
+
+# ---------------------------------------------------------------------------
+# FR-260: the golden-quote gate at submit, the pin and the delta (PL-1189 Task 5).
+#
+# Fixture: `test_rating_version_compile.py`'s `_minimal_algorithm` (payable premium =
+# `premium_in * 2`), saved as `minimal@1`, and as `minimal@2` with `+ 1` where a test needs
+# a second bundle that prices differently. Versions are compiled in-process with
+# `compile_rating_version`, and `load_compiled` hydrates the returned `Bundle`.
+# ---------------------------------------------------------------------------
+
+_SUITE = "minimal-core"
+_RUN_T0 = datetime(2026, 9, 28, 9, 0, 0, tzinfo=UTC)
+
+
+def _algorithm(version: int, *, plus: int = 0) -> dict[str, Any]:
+    body = copy.deepcopy(_minimal_algorithm())
+    body["version"] = version
+    if plus:
+        body["steps"][1]["expr"] = f"premium_in * 2 + {plus}"
+    return body
+
+
+def _quote(
+    name: str = "base-quote", *, premium_in: int = 100, expected: int = 200,
+    tolerance: int = 0, note: str | None = None, quoted_at: str = "2026-09-28T09:00:00Z",
+) -> dict[str, Any]:
+    return {
+        "name": name,
+        "context": {
+            "purpose": "new_business", "quoted_at": quoted_at,
+            "effective_date": "2026-09-01", "inputs": {"premium_in": premium_in},
+        },
+        "expected": {"payable_premium_minor": expected, "outcome": "quoted"},
+        "tolerance": {"money_minor": tolerance},
+        "note": note,
+    }
+
+
+def _suite(*quotes: dict[str, Any], algorithm_slug: str = "minimal") -> RegressionSuiteContent:
+    return RegressionSuiteContent.model_validate(
+        {
+            "algorithm_slug": algorithm_slug,
+            "golden_quotes": list(quotes),
+            "properties": [],
+            "generation": {"cases": 10, "seed": 1, "strategy": "input_contract_sampling"},
+        }
+    )
+
+
+class _Gate:
+    """One workspace's golden-quote world: principals, algorithms, versions, suites."""
+
+    def __init__(self, database: Database, workspace_id: UUID) -> None:
+        self.database = database
+        self.workspace_id = workspace_id
+        self.bundles: dict[str, Bundle] = {}
+        self.next_version = 1
+
+    async def setup(self) -> _Gate:
+        self.analyst = await _principal(self.database, self.workspace_id, "analyst")
+        self.actuary = await _principal(self.database, self.workspace_id, "pricing_actuary")
+        self.approvers = [
+            await _principal(self.database, self.workspace_id, "approver") for _ in range(2)
+        ]
+        await algorithm_service.create_algorithm(
+            self.database, self.workspace_id, self.analyst.id, _algorithm(1)
+        )
+        await algorithm_service.create_algorithm(
+            self.database, self.workspace_id, self.analyst.id, _algorithm(2, plus=1)
+        )
+        return self
+
+    async def author(self, role: str = "analyst") -> Principal:
+        return await _principal(self.database, self.workspace_id, role)
+
+    async def suite(self, actor: Principal, content: RegressionSuiteContent) -> int:
+        async with self.database.unit_of_work() as session:
+            _, row = await suite_service.create_suite_version(
+                session, workspace_id=self.workspace_id, actor=actor, slug=_SUITE,
+                content=content, change_note="edit",
+            )
+            return row.version
+
+    async def version(
+        self, *, algorithm: str = "rating_algorithm:minimal@1", slug: str = "minimal-rv",
+        compile_it: bool = True,
+    ) -> UUID:
+        number = self.next_version
+        self.next_version += 1
+        async with self.database.unit_of_work() as session:
+            row = RatingVersionRow(
+                workspace_id=self.workspace_id, slug=slug, version=number, status="draft",
+                dataset_version_id=new_uuid7(), model_ref="model:motor-ad-frequency@7",
+                created_by=self.analyst.id, algorithm_ref=algorithm, pins=_empty_pins(),
+            )
+            session.add(row)
+            await session.flush()
+            await audit_record_created(session, self.workspace_id, self.analyst, slug, number)
+            rating_id = row.id
+        if compile_it:
+            async with self.database.unit_of_work() as session:
+                bundle = await rating_service.compile_rating_version(
+                    session, workspace_id=self.workspace_id, rating_version_id=rating_id,
+                    blob_store=None,  # type: ignore[arg-type]
+                )
+            self.bundles[f"rating_version:{slug}@{number}"] = bundle
+        return rating_id
+
+    async def load(self, ref: ArtifactRef) -> CompiledBundle:
+        return load_bundle(self.bundles[str(ref)])
+
+    async def record_run(
+        self, rating_id: UUID, overall: str = "pass", *, minutes: int = 0,
+        suite_hash: str | None = None, bundle_hash: str | None = None,
+    ) -> UUID:
+        """Persist a Regression Run for this version's bundle and its algorithm's current
+        suite (the pair FR-257 limb (1) reads), unless a hash is overridden for a test."""
+        row = await self.row(rating_id)
+        async with self.database.session() as session:
+            found = await suite_service.current_suite_for_algorithm(
+                session, workspace_id=self.workspace_id,
+                algorithm_slug=await self._algorithm_slug(rating_id),
+            )
+        assert found is not None, "record_run needs a suite for the version's algorithm"
+        failing = overall == "fail"
+        run = RegressionRun.model_validate({
+            "suite_ref": f"regression_suite:{found[0].slug}@{found[1].version}",
+            "suite_content_hash": suite_hash or found[1].content_hash,
+            "rating_version_ref": f"rating_version:{row.slug}@{row.version}",
+            "bundle_hash": bundle_hash or row.bundle["content_hash"],  # type: ignore[index]
+            "started_at": (_RUN_T0 + timedelta(minutes=minutes)).isoformat(),
+            "finished_at": (_RUN_T0 + timedelta(minutes=minutes, seconds=3)).isoformat(),
+            "overall": overall,
+            "generation": {"seed": 1, "cases": 10, "hypothesis_version": "6.165.7"},
+            "cases_blob": {"sha256": "c" * 64, "bytes": 2, "media_type": "application/json"},
+            "golden_results": [],
+            "property_results": [
+                {"name": "p", "status": "fail", "cases_run": 10, "counterexample": {"x": 1},
+                 "counterexample_minimal": True, "shrink": "completed",
+                 "error_code": "PROPERTY_ASSERTION_FAILED"}
+                if failing else {"name": "p", "status": "pass", "cases_run": 10}
+            ],
+        })
+        async with self.database.unit_of_work() as session:
+            saved = await run_service.persist_run(
+                session, workspace_id=self.workspace_id, rating_version_id=rating_id,
+                run=run, actor_id=self.analyst.id,
+            )
+            return saved.id
+
+    async def _algorithm_slug(self, rating_id: UUID) -> str:
+        row = await self.row(rating_id)
+        return row.algorithm_ref.split(":")[1].split("@")[0]  # type: ignore[union-attr]
+
+    async def ensure_suite(self, rating_id: UUID) -> None:
+        """Author one golden-quote suite for the version's algorithm if it has none — the
+        shared fixture DP-S3-1 (forward) requires of every version that must reach `review`.
+        The quote is `_quote()`'s, which every fixture algorithm here prices exactly."""
+        algorithm = await self._algorithm_slug(rating_id)
+        async with self.database.session() as session:
+            if await suite_service.current_suite_for_algorithm(
+                session, workspace_id=self.workspace_id, algorithm_slug=algorithm
+            ) is not None:
+                return
+        async with self.database.unit_of_work() as session:
+            await suite_service.create_suite_version(
+                session, workspace_id=self.workspace_id, actor=self.analyst,
+                slug=f"{algorithm}-core", content=_suite(_quote(), algorithm_slug=algorithm),
+                change_note="fixture golden quote",
+            )
+
+    async def adopt(self, rating_id: UUID) -> None:
+        """Make an existing draft (made by `create_rating_version`, with no algorithm and no
+        bundle) submittable: point it at `minimal@1`, compile it, give the algorithm a golden
+        quote and record a passing run. For tests older than DP-S3-1 (T6b)."""
+        async with self.database.unit_of_work() as session:
+            row = await rating_service.load_rating_version(
+                session, workspace_id=self.workspace_id, rating_version_id=rating_id
+            )
+            row.algorithm_ref = "rating_algorithm:minimal@1"
+            row.pins = _empty_pins()
+            key = f"rating_version:{row.slug}@{row.version}"
+        async with self.database.unit_of_work() as session:
+            self.bundles[key] = await rating_service.compile_rating_version(
+                session, workspace_id=self.workspace_id, rating_version_id=rating_id,
+                blob_store=None,  # type: ignore[arg-type]
+            )
+        await self.ensure_suite(rating_id)
+        await self.record_run(rating_id, "pass")
+
+    async def submit(
+        self, rating_id: UUID, loader: Any = None, *, run: str | None = "pass",
+        provision: bool = True,
+    ) -> ApprovalRequestRow:
+        """Submit. By default the version's algorithm is given a golden-quote suite if it has
+        none, and a passing Regression Run is recorded first (FR-257 limb (1), DP-S3-1 forward):
+        every golden-quote test that must reach `review` goes through this one fixture (T6b).
+        `provision=False` authors no suite; `run=None` records no run."""
+        if provision:
+            await self.ensure_suite(rating_id)
+        row = await self.row(rating_id)
+        async with self.database.session() as session:
+            has_suite = await suite_service.current_suite_for_algorithm(
+                session, workspace_id=self.workspace_id,
+                algorithm_slug=await self._algorithm_slug(rating_id),
+            ) is not None
+        if run is not None and has_suite and row.bundle is not None:
+            await self.record_run(rating_id, run)
+        async with self.database.unit_of_work() as session:
+            _, request = await rating_service.submit_for_review(
+                session, workspace_id=self.workspace_id, actor=self.actuary,
+                rating_version_id=rating_id, change_summary="golden",
+                load_compiled=loader or self.load,
+            )
+            return request
+
+    async def approve(self, request_id: UUID, approvers: list[Principal] | None = None) -> None:
+        for who in approvers or self.approvers:
+            async with self.database.unit_of_work() as session:
+                request = await approval_service.decide(
+                    session, workspace_id=self.workspace_id, request_id=request_id,
+                    approver=who, decision=DecisionKind.APPROVE, comment="ok",
+                    evidence_authors=rating_service.golden_quote_delta_authors,
+                )
+                await rating_service.apply_approval_decision(
+                    session, workspace_id=self.workspace_id, actor=who, request=request
+                )
+
+    async def row(self, rating_id: UUID) -> RatingVersionRow:
+        async with self.database.session() as session:
+            return await rating_service.load_rating_version(
+                session, workspace_id=self.workspace_id, rating_version_id=rating_id
+            )
+
+    async def evidence(self, rating_id: UUID) -> dict[str, Any]:
+        return (await self.row(rating_id)).evidence["golden_quotes"]  # type: ignore[index]
+
+
+async def audit_record_created(
+    session: Any, workspace_id: UUID, actor: Principal, slug: str, version: int
+) -> None:
+    """The version's creation event, as `create_rating_version` writes it: #861's author
+    check reads it, and a version without one could never be decided."""
+    from app.platform import audit
+    from model_schema import JobSource
+
+    await audit.record(
+        session, workspace_id=workspace_id, actor=actor, source=JobSource.API,
+        action="rating_version.created", entity_ref=f"rating_version:{slug}@{version}",
+        before={}, after={"status": "draft"},
+    )
+
+
+async def _gate(database: Database, workspace_id: UUID) -> _Gate:
+    return await _Gate(database, workspace_id).setup()
+
+
+async def _requests_for(database: Database, workspace_id: UUID) -> int:
+    async with database.session() as session:
+        return len(
+            (
+                await session.execute(
+                    select(ApprovalRequestRow).where(
+                        ApprovalRequestRow.workspace_id == workspace_id
+                    )
+                )
+            ).scalars().all()
+        )
+
+
+# --- acceptance item 6: the gate --------------------------------------------------------
+
+
+@pytest.mark.req("FR-260")
+async def test_golden_mismatch_refuses_submission_and_leaves_the_version_draft(
+    database: Database, workspace_id
+) -> None:
+    gate = await _gate(database, workspace_id)
+    await gate.suite(gate.analyst, _suite(_quote(expected=201)))
+    rating_id = await gate.version()
+
+    with pytest.raises(PlatformError) as refused:
+        await gate.submit(rating_id)
+    assert refused.value.code == "GOLDEN_QUOTE_MISMATCH"
+    assert refused.value.status_code == 409
+    row = await gate.row(rating_id)
+    assert row.status == "draft"
+    assert (row.evidence or {}).get("golden_quotes") is None
+    assert await _requests_for(database, workspace_id) == 0
+
+
+@pytest.mark.req("FR-260")
+async def test_golden_match_moves_to_review_and_pins_suite_and_bundle(
+    database: Database, workspace_id
+) -> None:
+    gate = await _gate(database, workspace_id)
+    content = _suite(_quote())
+    await gate.suite(gate.analyst, content)
+    rating_id = await gate.version()
+    await gate.submit(rating_id)
+
+    row = await gate.row(rating_id)
+    assert row.status == "review"
+    pinned = row.evidence["golden_quotes"]  # type: ignore[index]
+    assert pinned["status"] == "checked"
+    assert pinned["suite_ref"] == f"regression_suite:{_SUITE}@1"
+    assert pinned["suite_content_hash"] == suite_content_hash(content)
+    compiled = gate.bundles[f"rating_version:minimal-rv@{row.version}"]
+    assert pinned["bundle_hash"] == compiled.content_hash
+    assert pinned["bundle_hash"] == row.bundle["content_hash"]  # type: ignore[index]
+    assert [r["status"] for r in pinned["results"]] == ["pass"]
+
+
+@pytest.mark.req("FR-260")
+async def test_golden_a_loaded_bundle_that_is_not_this_versions_is_refused(
+    database: Database, workspace_id
+) -> None:
+    gate = await _gate(database, workspace_id)
+    await gate.suite(gate.analyst, _suite(_quote()))
+    rating_id = await gate.version()
+    other = await gate.version(algorithm="rating_algorithm:minimal@2", slug="other-rv")
+    other_bundle = gate.bundles[f"rating_version:other-rv@{(await gate.row(other)).version}"]
+
+    async def wrong(_ref: ArtifactRef) -> CompiledBundle:
+        return load_bundle(other_bundle)
+
+    with pytest.raises(PlatformError) as refused:
+        await gate.submit(rating_id, loader=wrong)
+    assert refused.value.code == "BUNDLE_COMPILE_FAILED"
+    assert refused.value.status_code == 409
+    row = await gate.row(rating_id)
+    assert row.status == "draft"
+    assert (row.evidence or {}).get("golden_quotes") is None
+
+
+@pytest.mark.req("FR-260")
+async def test_golden_a_suite_with_no_compiled_bundle_is_refused(
+    database: Database, workspace_id
+) -> None:
+    gate = await _gate(database, workspace_id)
+    await gate.suite(gate.analyst, _suite(_quote()))
+    rating_id = await gate.version(compile_it=False)
+    with pytest.raises(PlatformError) as refused:
+        await gate.submit(rating_id)
+    assert refused.value.code == "BUNDLE_COMPILE_FAILED"
+    assert (await gate.row(rating_id)).status == "draft"
+
+
+@pytest.mark.req("FR-260")
+@pytest.mark.req("FR-257")
+async def test_golden_no_suite_is_refused_as_incomplete_evidence(
+    database: Database, workspace_id
+) -> None:
+    """DP-S3-1 (PL-1205 Task 6), FR-257 limb (1) only: a passing Regression Suite has at
+    least one golden quote. **Changed from S2's expectation**, which was that a version with
+    no suite reached `review` carrying `golden_quotes = {status: not_checked, reason:
+    no_suite_for_algorithm}`; it now raises `EVIDENCE_INCOMPLETE` and nothing is written."""
+    gate = await _gate(database, workspace_id)
+    rating_id = await gate.version()
+    with pytest.raises(PlatformError) as refused:
+        await gate.submit(rating_id, provision=False)
+    assert refused.value.code == "EVIDENCE_INCOMPLETE"
+    assert "at least one golden quote" in (refused.value.detail or "")
+    row = await gate.row(rating_id)
+    assert row.status == "draft"
+    assert (row.evidence or {}).get("golden_quotes") is None
+    assert await _requests_for(database, workspace_id) == 0
+
+
+@pytest.mark.req("FR-257")
+async def test_a_suite_with_no_golden_quote_is_refused(
+    database: Database, workspace_id
+) -> None:
+    """DP-S3-1, limb (1) only: a suite holding properties but zero golden quotes."""
+    gate = await _gate(database, workspace_id)
+    await gate.suite(gate.analyst, _suite())
+    rating_id = await gate.version()
+    with pytest.raises(PlatformError) as refused:
+        await gate.submit(rating_id)
+    assert refused.value.code == "EVIDENCE_INCOMPLETE"
+    assert (await gate.row(rating_id)).status == "draft"
+
+
+@pytest.mark.req("FR-257")
+async def test_no_regression_run_refuses_submission(database: Database, workspace_id) -> None:
+    """Limb (1) only: a passing Regression Suite; limbs (2)-(4) are not tested here."""
+    gate = await _gate(database, workspace_id)
+    await gate.suite(gate.analyst, _suite(_quote()))
+    rating_id = await gate.version()
+    with pytest.raises(PlatformError) as refused:
+        await gate.submit(rating_id, run=None)
+    assert refused.value.code == "EVIDENCE_INCOMPLETE"
+    assert "no Regression Run" in (refused.value.detail or "")
+    assert (await gate.row(rating_id)).status == "draft"
+
+
+@pytest.mark.req("FR-257")
+async def test_a_failing_run_refuses_submission(database: Database, workspace_id) -> None:
+    """Limb (1) only: a passing Regression Suite; limbs (2)-(4) are not tested here."""
+    gate = await _gate(database, workspace_id)
+    await gate.suite(gate.analyst, _suite(_quote()))
+    rating_id = await gate.version()
+    await gate.record_run(rating_id, "fail")
+    with pytest.raises(PlatformError) as refused:
+        await gate.submit(rating_id, run=None)
+    assert refused.value.code == "EVIDENCE_INCOMPLETE"
+    assert "failed" in (refused.value.detail or "")
+
+
+@pytest.mark.req("FR-257")
+async def test_a_run_on_a_stale_bundle_hash_refuses_submission(
+    database: Database, workspace_id
+) -> None:
+    """Limb (1) only: a passing Regression Suite; limbs (2)-(4) are not tested here."""
+    gate = await _gate(database, workspace_id)
+    await gate.suite(gate.analyst, _suite(_quote()))
+    rating_id = await gate.version()
+    await gate.record_run(rating_id, "pass", bundle_hash="sha256:" + "9" * 64)
+    with pytest.raises(PlatformError) as refused:
+        await gate.submit(rating_id, run=None)
+    assert refused.value.code == "EVIDENCE_INCOMPLETE"
+
+
+@pytest.mark.req("FR-257")
+async def test_a_run_on_another_suite_version_refuses_submission(
+    database: Database, workspace_id
+) -> None:
+    """DP-S3-2, limb (1) only: the run's suite hash must equal the suite the gate pins, so
+    a suite edited after the run is not approved on the stale run."""
+    gate = await _gate(database, workspace_id)
+    await gate.suite(gate.analyst, _suite(_quote()))
+    rating_id = await gate.version()
+    await gate.record_run(rating_id, "pass")
+    await gate.suite(gate.analyst, _suite(_quote(note="edited after the run")))
+    with pytest.raises(PlatformError) as refused:
+        await gate.submit(rating_id, run=None)
+    assert refused.value.code == "EVIDENCE_INCOMPLETE"
+
+
+@pytest.mark.req("FR-257")
+async def test_an_earlier_pass_does_not_count_once_a_later_run_failed(
+    database: Database, workspace_id
+) -> None:
+    """Audit A1, limb (1) only: pass, then a later fail on the same pair, is refused; a still
+    later pass is accepted."""
+    gate = await _gate(database, workspace_id)
+    await gate.suite(gate.analyst, _suite(_quote()))
+    rating_id = await gate.version()
+    await gate.record_run(rating_id, "pass", minutes=0)
+    await gate.record_run(rating_id, "fail", minutes=5)
+    with pytest.raises(PlatformError) as refused:
+        await gate.submit(rating_id, run=None)
+    assert refused.value.code == "EVIDENCE_INCOMPLETE"
+    await gate.record_run(rating_id, "pass", minutes=10)
+    await gate.submit(rating_id, run=None)
+    assert (await gate.row(rating_id)).status == "review"
+
+
+@pytest.mark.req("FR-257")
+async def test_a_passing_run_is_recorded_and_golden_evidence_is_untouched(
+    database: Database, workspace_id, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Limb (1) only: a passing Regression Suite; limbs (2)-(4) are not tested here. The run
+    id is the one key written beside `golden_quotes`, which is byte-identical before and
+    after the write (`PL-1205` acceptance item 10): the pinned value is snapshotted as the
+    golden-quote gate returned it, at the last step before `submit` writes `evidence`."""
+    gate = await _gate(database, workspace_id)
+    content = _suite(_quote())
+    await gate.suite(gate.analyst, content)
+    rating_id = await gate.version()
+    run_id = await gate.record_run(rating_id, "pass")
+    real_run_gate = rating_service._regression_run_gate
+    before: list[str] = []
+
+    async def snapshotting(*args: Any, **kwargs: Any) -> UUID:
+        before.append(json.dumps(kwargs["golden_quotes"], sort_keys=True))
+        return await real_run_gate(*args, **kwargs)
+
+    monkeypatch.setattr(rating_service, "_regression_run_gate", snapshotting)
+    await gate.submit(rating_id, run=None)
+    assert len(before) == 1  # the seam was reached, so the snapshot below is not vacuous
+    row = await gate.row(rating_id)
+    assert row.status == "review"
+    evidence = row.evidence or {}
+    assert evidence["regression_suite_run_id"] == str(run_id)
+    assert set(evidence) == {"golden_quotes", "regression_suite_run_id"}
+    pinned = evidence["golden_quotes"]
+    assert json.dumps(pinned, sort_keys=True) == before[0]
+    assert pinned["status"] == "checked"
+    assert pinned["suite_content_hash"] == suite_content_hash(content)
+    assert set(pinned) == {
+        "status", "suite_ref", "suite_content_hash", "bundle_hash", "results", "delta",
+    }
+
+
+# --- acceptance item 7: the pin holds ---------------------------------------------------
+
+
+@pytest.mark.req("FR-260")
+async def test_golden_a_later_suite_version_does_not_change_what_was_pinned(
+    database: Database, workspace_id
+) -> None:
+    gate = await _gate(database, workspace_id)
+    await gate.suite(gate.analyst, _suite(_quote()))
+    rating_id = await gate.version()
+    await gate.submit(rating_id)
+    before = await gate.evidence(rating_id)
+    await gate.suite(gate.analyst, _suite(_quote(tolerance=9)))
+    after = await gate.evidence(rating_id)
+    assert after["suite_content_hash"] == before["suite_content_hash"]
+    assert after["suite_ref"] == f"regression_suite:{_SUITE}@1"
+
+
+# --- acceptance item 8: the delta -------------------------------------------------------
+
+
+async def _approved_baseline(gate: _Gate, content: RegressionSuiteContent) -> UUID:
+    await gate.suite(gate.analyst, content)
+    rv1 = await gate.version()
+    request = await gate.submit(rv1)
+    await gate.approve(request.id)
+    assert (await gate.row(rv1)).status == "approved"
+    return rv1
+
+
+@pytest.mark.req("FR-260")
+async def test_golden_delta_lists_a_changed_expected_value_with_its_author(
+    database: Database, workspace_id
+) -> None:
+    """The deputy's DP-S2-1 condition: B changes an expected value in v2; RV2's delta
+    shows it, with B as the author read from v2's creation event."""
+    gate = await _gate(database, workspace_id)
+    rv1 = await _approved_baseline(gate, _suite(_quote()))
+    b = await gate.author()
+    await gate.suite(b, _suite(_quote(expected=201)))
+    rv2 = await gate.version(algorithm="rating_algorithm:minimal@2")
+    await gate.submit(rv2)
+
+    delta = (await gate.evidence(rv2))["delta"]
+    rv1_row = await gate.row(rv1)
+    assert delta["baseline_rating_version_ref"] == f"rating_version:minimal-rv@{rv1_row.version}"
+    assert delta["baseline_suite_ref"] == f"regression_suite:{_SUITE}@1"
+    (change,) = delta["changes"]
+    assert change["name"] == "base-quote"
+    assert change["change"] == "changed"
+    assert change["changed_fields"] == ["expected"]
+    assert change["before"] == {"payable_premium_minor": 200, "outcome": "quoted"}
+    assert change["after"] == {"payable_premium_minor": 201, "outcome": "quoted"}
+    assert change["steps"] == [
+        {"version": 2, "changed_fields": ["expected"], "author": str(b.id)}
+    ]
+
+
+@pytest.mark.req("FR-260")
+async def test_golden_delta_lists_a_tolerance_only_widening_with_its_author(
+    database: Database, workspace_id
+) -> None:
+    gate = await _gate(database, workspace_id)
+    await _approved_baseline(gate, _suite(_quote()))
+    b = await gate.author()
+    await gate.suite(b, _suite(_quote(tolerance=5)))
+    rv2 = await gate.version()
+    await gate.submit(rv2)
+
+    (change,) = (await gate.evidence(rv2))["delta"]["changes"]
+    assert change["change"] == "changed"
+    assert change["changed_fields"] == ["tolerance"]
+    assert change["before_tolerance"] == {"money_minor": 0}
+    assert change["after_tolerance"] == {"money_minor": 5}
+    assert change["steps"] == [
+        {"version": 2, "changed_fields": ["tolerance"], "author": str(b.id)}
+    ]
+
+
+@pytest.mark.req("FR-260")
+async def test_golden_delta_lists_added_and_removed_quotes(
+    database: Database, workspace_id
+) -> None:
+    gate = await _gate(database, workspace_id)
+    await _approved_baseline(gate, _suite(_quote("old-quote")))
+    await gate.suite(gate.analyst, _suite(_quote("new-quote", premium_in=50, expected=100)))
+    rv2 = await gate.version()
+    await gate.submit(rv2)
+    changes = {c["name"]: c for c in (await gate.evidence(rv2))["delta"]["changes"]}
+    assert changes["new-quote"]["change"] == "added"
+    assert changes["new-quote"]["steps"][0]["changed_fields"] == ["added"]
+    assert changes["old-quote"]["change"] == "removed"
+    assert changes["old-quote"]["steps"][0]["changed_fields"] == ["removed"]
+
+
+@pytest.mark.req("FR-260")
+@pytest.mark.req("NFR-499")
+async def test_golden_delta_records_a_context_change_by_hash_only(
+    database: Database, workspace_id
+) -> None:
+    gate = await _gate(database, workspace_id)
+    await _approved_baseline(gate, _suite(_quote()))
+    await gate.suite(gate.analyst, _suite(_quote(quoted_at="2026-09-29T09:00:00Z")))
+    rv2 = await gate.version()
+    await gate.submit(rv2)
+    (change,) = (await gate.evidence(rv2))["delta"]["changes"]
+    assert change["changed_fields"] == ["context"]
+    assert change["before_context_hash"] != change["after_context_hash"]
+    assert change["before_context_hash"].startswith("sha256:")
+    assert "premium_in" not in repr(await gate.evidence(rv2))
+
+
+@pytest.mark.req("FR-260")
+async def test_golden_delta_with_no_approved_baseline_lists_every_quote_as_added(
+    database: Database, workspace_id
+) -> None:
+    gate = await _gate(database, workspace_id)
+    await gate.suite(gate.analyst, _suite(_quote("a-quote"), _quote("b-quote")))
+    rv = await gate.version()
+    await gate.submit(rv)
+    delta = (await gate.evidence(rv))["delta"]
+    assert delta["baseline_rating_version_ref"] is None
+    assert delta["baseline_suite_ref"] is None
+    assert delta["baseline_suite_content_hash"] is None
+    assert sorted((c["name"], c["change"]) for c in delta["changes"]) == [
+        ("a-quote", "added"), ("b-quote", "added"),
+    ]
+    assert all(c["steps"][0]["author"] == str(gate.analyst.id) for c in delta["changes"])
+
+
+@pytest.mark.req("FR-260")
+async def test_golden_delta_baseline_is_the_later_approved_version(
+    database: Database, workspace_id
+) -> None:
+    """RV_a pins suite v1 and RV_b suite v2; RV_b is approved first, RV_a second. The
+    baseline is RV_a (approved later), not RV_b (the higher version)."""
+    gate = await _gate(database, workspace_id)
+    await gate.suite(gate.analyst, _suite(_quote()))
+    rv_a = await gate.version()
+    req_a = await gate.submit(rv_a)
+    await gate.suite(gate.analyst, _suite(_quote(tolerance=1)))
+    rv_b = await gate.version()
+    req_b = await gate.submit(rv_b)
+    await gate.approve(req_b.id)
+    await gate.approve(req_a.id)
+    await gate.suite(gate.analyst, _suite(_quote(tolerance=2)))
+    rv_c = await gate.version()
+    await gate.submit(rv_c)
+    delta = (await gate.evidence(rv_c))["delta"]
+    assert delta["baseline_rating_version_ref"] == (
+        f"rating_version:minimal-rv@{(await gate.row(rv_a)).version}"
+    )
+    assert delta["baseline_suite_ref"] == f"regression_suite:{_SUITE}@1"
+    (change,) = delta["changes"]
+    assert [s["version"] for s in change["steps"]] == [2, 3]
+
+
+@pytest.mark.req("FR-260")
+async def test_golden_delta_ignores_an_approved_version_of_another_algorithm(
+    database: Database, workspace_id
+) -> None:
+    gate = await _gate(database, workspace_id)
+    other = _algorithm(1)
+    other["slug"] = "other-algo"
+    await algorithm_service.create_algorithm(database, workspace_id, gate.analyst.id, other)
+    rv_other = await gate.version(algorithm="rating_algorithm:other-algo@1", slug="other-rv")
+    await gate.approve((await gate.submit(rv_other)).id)
+    await gate.suite(gate.analyst, _suite(_quote()))
+    rv = await gate.version()
+    await gate.submit(rv)
+    assert (await gate.evidence(rv))["delta"]["baseline_rating_version_ref"] is None
+
+
+@pytest.mark.req("FR-260")
+async def test_golden_delta_a_later_cosmetic_edit_does_not_mask_a_substantive_one(
+    database: Database, workspace_id
+) -> None:
+    """Audit finding F3: X widens a tolerance in v2, Y edits only the note in v3. One step,
+    X's; Y appears nowhere."""
+    gate = await _gate(database, workspace_id)
+    await _approved_baseline(gate, _suite(_quote()))
+    x, y = await gate.author(), await gate.author()
+    await gate.suite(x, _suite(_quote(tolerance=3)))
+    await gate.suite(y, _suite(_quote(tolerance=3, note="typo fixed")))
+    rv2 = await gate.version()
+    await gate.submit(rv2)
+    (change,) = (await gate.evidence(rv2))["delta"]["changes"]
+    assert change["steps"] == [
+        {"version": 2, "changed_fields": ["tolerance"], "author": str(x.id)}
+    ]
+    assert str(y.id) not in repr(await gate.evidence(rv2))
+
+
+@pytest.mark.req("FR-260")
+async def test_golden_delta_two_substantive_edits_give_two_authored_steps(
+    database: Database, workspace_id
+) -> None:
+    gate = await _gate(database, workspace_id)
+    await _approved_baseline(gate, _suite(_quote()))
+    x, y = await gate.author(), await gate.author()
+    await gate.suite(x, _suite(_quote(tolerance=3)))
+    await gate.suite(y, _suite(_quote(expected=202, tolerance=3)))
+    rv2 = await gate.version()
+    await gate.submit(rv2)
+    (change,) = (await gate.evidence(rv2))["delta"]["changes"]
+    assert change["changed_fields"] == ["expected", "tolerance"]
+    assert change["steps"] == [
+        {"version": 2, "changed_fields": ["tolerance"], "author": str(x.id)},
+        {"version": 3, "changed_fields": ["expected"], "author": str(y.id)},
+    ]
+
+
+@pytest.mark.req("FR-260")
+@pytest.mark.req("FR-353")
+async def test_golden_a_suite_version_with_no_creation_event_refuses_submit(
+    database: Database, workspace_id
+) -> None:
+    """The author is read from the creation Audit Event, never `created_by`; a version
+    written without one (here: straight into the table) is refused, fail-closed."""
+    gate = await _gate(database, workspace_id)
+    await gate.suite(gate.analyst, _suite(_quote()))
+    content = _suite(_quote(tolerance=4))
+    async with database.unit_of_work() as session:
+        suite = (
+            await session.execute(
+                select(RegressionSuiteRow).where(RegressionSuiteRow.workspace_id == workspace_id)
+            )
+        ).scalar_one()
+        session.add(
+            RegressionSuiteVersionRow(
+                suite_id=suite.id, version=2,
+                content=content.model_dump(mode="json"),
+                content_hash=suite_content_hash(content), change_note="no event",
+                created_by=gate.analyst.id,
+            )
+        )
+    rv = await gate.version()
+    with pytest.raises(PlatformError) as refused:
+        await gate.submit(rv)
+    assert refused.value.code == "APPROVAL_AUTHOR_UNRESOLVED"
+    assert refused.value.status_code == 403
+    assert (await gate.row(rv)).status == "draft"
+
+
+# --- acceptance item 8a: the gate cannot be skipped, and the delta's author cannot approve
+
+
+@pytest.mark.req("FR-260")
+async def test_golden_bypass_a_draft_cannot_be_put_to_approval_directly(
+    database: Database, workspace_id
+) -> None:
+    """#864's refusal, on a draft whose suite mismatches: the generic route's resolver
+    refuses it (`APPROVAL_SUBJECT_NOT_IN_REVIEW`), so it never reaches `approved` without
+    `evidence.golden_quotes`."""
+    from app.api.approvals import _resolve_rating_version
+
+    gate = await _gate(database, workspace_id)
+    await gate.suite(gate.analyst, _suite(_quote(expected=999)))
+    rv = await gate.version()
+    row = await gate.row(rv)
+    async with database.session() as session:
+        with pytest.raises(PlatformError) as refused:
+            await _resolve_rating_version(
+                session, workspace_id=workspace_id,
+                artifact_ref=ArtifactRef(type="rating_version", slug=row.slug, version=row.version),
+            )
+    assert refused.value.code == "APPROVAL_SUBJECT_NOT_IN_REVIEW"
+    row = await gate.row(rv)
+    assert row.status == "draft"
+    assert (row.evidence or {}).get("golden_quotes") is None
+
+
+async def _decision_rows(database: Database, request_id: UUID) -> int:
+    async with database.session() as session:
+        return len(
+            (
+                await session.execute(
+                    select(ApprovalDecisionRow).where(ApprovalDecisionRow.request_id == request_id)
+                )
+            ).scalars().all()
+        )
+
+
+@pytest.mark.req("FR-260")
+@pytest.mark.req("FR-353")
+async def test_golden_evidence_author_cannot_approve(database: Database, workspace_id) -> None:
+    """DP-S2-6: C authors suite v2's change and holds `approval:decide`; C is neither the
+    submitter nor the version's author, and is still refused, with no decision row."""
+    gate = await _gate(database, workspace_id)
+    await _approved_baseline(gate, _suite(_quote()))
+    c = await gate.author()
+    await _grant_role(database, workspace_id, c, "approver")
+    await gate.suite(c, _suite(_quote(tolerance=2)))
+    rv2 = await gate.version()
+    request = await gate.submit(rv2)
+
+    async with database.unit_of_work() as session:
+        with pytest.raises(PlatformError) as refused:
+            await approval_service.decide(
+                session, workspace_id=workspace_id, request_id=request.id,
+                approver=c, decision=DecisionKind.APPROVE, comment="mine",
+                evidence_authors=rating_service.golden_quote_delta_authors,
+            )
+    assert refused.value.code == "APPROVAL_BY_EVIDENCE_AUTHOR"
+    assert refused.value.status_code == 403
+    assert await _decision_rows(database, request.id) == 0
+
+    # A principal who authored no change in the delta is not refused by this rule.
+    await gate.approve(request.id)
+    assert (await gate.row(rv2)).status == "approved"
+
+
+@pytest.mark.req("FR-260")
+async def test_golden_evidence_author_decide_without_a_resolver_is_a_type_error(
+    database: Database, workspace_id
+) -> None:
+    gate = await _gate(database, workspace_id)
+    rv = await gate.version()
+    request = await gate.submit(rv)
+    async with database.unit_of_work() as session:
+        with pytest.raises(TypeError, match="requires evidence_authors"):
+            await approval_service.decide(
+                session, workspace_id=workspace_id, request_id=request.id,
+                approver=gate.approvers[0], decision=DecisionKind.APPROVE, comment="x",
+            )
+    assert await _decision_rows(database, request.id) == 0
+
+
+@pytest.mark.req("FR-260")
+async def test_golden_evidence_author_set_is_empty_without_golden_quotes(
+    database: Database, workspace_id
+) -> None:
+    """Re-audit N2: a version in review with no `evidence.golden_quotes` at all (one that
+    was in review when the gate shipped) gives an empty author set and is not refused."""
+    gate = await _gate(database, workspace_id)
+    rv = await gate.version()
+    request = await gate.submit(rv)
+    async with database.unit_of_work() as session:
+        row = await rating_service.load_rating_version(
+            session, workspace_id=workspace_id, rating_version_id=rv
+        )
+        row.evidence = None
+        ref = ArtifactRef(type="rating_version", slug=row.slug, version=row.version)
+    async with database.session() as session:
+        assert await rating_service.golden_quote_delta_authors(
+            session, workspace_id=workspace_id, artifact_ref=ref
+        ) == set()
+    await gate.approve(request.id)
+    assert (await gate.row(rv)).status == "approved"
+
+
+async def _grant_role(
+    database: Database, workspace_id: UUID, who: Principal, role: str
+) -> None:
+    async with database.unit_of_work() as session:
+        role_row = (
+            await session.execute(
+                select(RoleRow).where(RoleRow.workspace_id == workspace_id, RoleRow.slug == role)
+            )
+        ).scalar_one()
+        session.add(
+            RoleAssignmentRow(
+                workspace_id=workspace_id, principal_kind="user", principal_id=who.id,
+                role_id=role_row.id, scope_type=ScopeType.WORKSPACE.value,
+            )
+        )
+
+
+# --- route level: the loader refuses rather than degrades, and the approver sees the delta
+
+
+@pytest.fixture
+def golden_client() -> Any:
+    from backend.tests.conftest_db import test_blob_bucket, test_database_url
+    from fastapi.testclient import TestClient
+    from pydantic import SecretStr
+
+    from app.config import Environment, Settings
+    from app.main import create_app
+
+    settings = Settings(
+        environment=Environment.LOCAL, version="test", dev_auth_enabled=True,
+        database_url=SecretStr(test_database_url()), blob_bucket=test_blob_bucket(),
+    )
+    with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+        yield client
+
+
+def _route_headers(who: Principal, workspace_id: UUID) -> dict[str, str]:
+    from app.api.deps import DEV_PRINCIPAL_HEADER
+
+    return {DEV_PRINCIPAL_HEADER: str(who.id), "Workspace-Id": str(workspace_id)}
+
+
+async def _member(database: Database, workspace_id: UUID, who: Principal) -> None:
+    from app.db.models import WorkspaceMemberRow
+    from app.platform import workspaces
+
+    async with database.unit_of_work() as session:
+        await workspaces.ensure_workspace(session, workspace_id=workspace_id)
+        session.add(WorkspaceMemberRow(user_id=who.id, workspace_id=workspace_id))
+
+
+@pytest.mark.req("FR-260")
+async def test_golden_route_refuses_rather_than_scoring_the_slots_last_known_good(
+    database: Database, workspace_id, golden_client: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Audit finding F5: with metadata storage failing, submit refuses. `_compiled_for`
+    would have served the slot's last-known-good bundle; the gate never calls it."""
+    from app.api import score as score_api
+
+    gate = await _gate(database, workspace_id)
+    await _member(database, workspace_id, gate.actuary)
+    await gate.suite(gate.analyst, _suite(_quote()))
+    rv = await gate.version()
+    good = gate.bundles[f"rating_version:minimal-rv@{(await gate.row(rv)).version}"]
+
+    async def metadata_down(*_args: Any, **_kwargs: Any) -> CompiledBundle:
+        from sqlalchemy.exc import OperationalError
+
+        raise OperationalError("SELECT rating_versions", {}, Exception("metadata storage down"))
+
+    async def last_known_good(*_args: Any, **_kwargs: Any) -> CompiledBundle:
+        return load_bundle(good)
+
+    monkeypatch.setattr(score_api, "_fetch_bundle", metadata_down)
+    monkeypatch.setattr(score_api, "_compiled_for", last_known_good)
+    response = golden_client.post(
+        f"/api/v1/rating-versions/{rv}/submit", json={"change_summary": "golden"},
+        headers=_route_headers(gate.actuary, workspace_id),
+    )
+    # Refused (the storage failure surfaces as the platform's 500), never a 200 scored
+    # against the slot's bundle.
+    assert response.status_code == 500, response.text
+    assert response.json()["code"] == "INTERNAL_ERROR"
+    row = await gate.row(rv)
+    assert row.status == "draft"
+    assert (row.evidence or {}).get("golden_quotes") is None
+
+
+@pytest.mark.req("FR-260")
+async def test_golden_delta_is_visible_to_an_approver_through_the_api(
+    database: Database, workspace_id, golden_client: Any
+) -> None:
+    gate = await _gate(database, workspace_id)
+    await _approved_baseline(gate, _suite(_quote()))
+    b = await gate.author()
+    await gate.suite(b, _suite(_quote(tolerance=5)))
+    rv2 = await gate.version()
+    await gate.submit(rv2)
+    approver = gate.approvers[0]
+    await _member(database, workspace_id, approver)
+
+    response = golden_client.get(
+        f"/api/v1/rating-versions/{rv2}", headers=_route_headers(approver, workspace_id)
+    )
+    assert response.status_code == 200, response.text
+    (change,) = response.json()["evidence"]["golden_quotes"]["delta"]["changes"]
+    assert change["steps"][0]["author"] == str(b.id)
