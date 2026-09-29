@@ -951,7 +951,7 @@ works: WK-676, WK-677, WK-678, WK-679, WK-680, WK-681, WK-682, WK-691, WK-9671
 
 No Work is created by this note. Creating one is a scope decision, and the maintainer's.
 
-*(Amended 2026-09-29: the scope decision is made. `CR-1247` Proposal 7, accepted in the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 7, creates WK-9671 (production packaging and supply chain, below), which owns FR-432, FR-433 and FR-438. FR-433's event, "the P2 closure record, which names the Work that takes it", is now met by naming WK-9671.)*
+*(Amended 2026-09-29: the scope decision is made. `CR-1247` Proposal 7, accepted in the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 7, creates WK-9671 (production packaging and supply chain, below), which owns FR-432, FR-433 and FR-438. FR-433's event, "the P2 closure record, which names the Work that takes it", will be met when the P2 closure record names WK-9671.)*
 
 ### WK-676 — Full scoped RBAC, custom roles, break-glass
 
@@ -1085,7 +1085,7 @@ owner: maintainer
 phase: P3
 ```
 
-Opened `draft` 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 7: "Accepted: (a). A new **P3** packaging Work (FR-432, FR-433, FR-438 and the three NFRs), opened `draft` on the roadmap by the lead. NFR-526, 527 and 536 are measured under WK-1178. Nothing is built ahead of P3 (CLAUDE.md §0)." **It owns:** FR-432 (container images), FR-433 (the Helm chart and Kubernetes manifests, in P3 by `RL-1232` DP-1 (b)), FR-438 (signed images and an SBOM), and the three NFRs `CR-1247` Proposal 7 names: NFR-530 (RPO and RTO, with a restore exercised in CI), NFR-533 (which follows FR-438) and NFR-461. NFR-526, NFR-527 and NFR-536 are **not** this Work's; they are measured under WK-1178 in P2. **Nothing is built ahead of P3** (`CLAUDE.md` §0). WK-674's compose path is not a claim on FR-432. Its activation is the maintainer's. The id is a working id, minted at this PR's merge turn.
+Opened `draft` 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 7: "Accepted: (a). A new **P3** packaging Work (FR-432, FR-433, FR-438 and the three NFRs), opened `draft` on the roadmap by the lead. NFR-526, 527 and 536 are measured under WK-1178. Nothing is built ahead of P3 (CLAUDE.md §0)." **It owns:** FR-432 (container images), FR-433 (the Helm chart and Kubernetes manifests, in P3 by `RL-1232` DP-1 (b)), FR-438 (signed images and an SBOM), and the three NFRs `CR-1247` Proposal 7 names: NFR-530 (RPO and RTO, with a restore exercised in CI), NFR-533 (which follows FR-438) and NFR-461. NFR-526, NFR-527 and NFR-536 are **not** this Work's; they are measured under WK-1178 in P2. **Nothing is built ahead of P3** (`CLAUDE.md` §0). Its activation is the maintainer's. The id is a working id, minted at this PR's merge turn.
 
 
 **Goal:** RBAC, approvals, audit UI, model documentation generation.
@@ -1197,9 +1197,9 @@ owner: maintainer
 phase: P4
 ```
 
-From “Workstreams” (line 499): Alerting lifecycle and routing | FR-334, FR-335, FR-336, FR-337, FR-338
+From “Workstreams” (line 499): Alerting lifecycle and routing | FR-334, FR-335, FR-336, FR-337, FR-338, FR-453 (added 2026-09-29, `CR-1247` Proposal 5: both limbs, alert routing and deployment notifications)
 
-**FR-453, both limbs** (`07`: signed webhooks for alert routing and for deployment notifications, with retries, backoff and observable delivery status) *(added 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 5: "Accepted. OQ-1233 → (b): FR-453 (both limbs) is named on WK-688's row, and the OQ moves to Before Phase 4. FR-272's notification limb is deferred to P4.")*. So `03` FR-272's notification limb is delivered here, in P4, through FR-453's deployment-notification limb. WK-674 delivers FR-272's Audit Event limb in P2 (`RL-1232` DP-4).
+**FR-453, both limbs** (`07`: signed webhooks for alert routing and for deployment notifications, with retries, backoff and observable delivery status) *(added 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 5: "Accepted. OQ-1233 → (b): FR-453 (both limbs) is named on WK-688's row, and the OQ moves to Before Phase 4. FR-272's notification limb is deferred to P4. OQ-1234 (before WK-674 Slice 2) and OQ-1235 (before Slice 3) are ruled by the decision-maker.")*. So `03` FR-272's notification limb is delivered here, in P4, through FR-453's deployment-notification limb. WK-674 delivers FR-272's Audit Event limb in P2 (`RL-1232` DP-4).
 
 
 ### WK-689 — Dashboards and monitoring packs
