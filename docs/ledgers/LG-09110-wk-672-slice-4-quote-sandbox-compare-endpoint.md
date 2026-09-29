@@ -173,3 +173,7 @@ Task 0 Step 3, as instructed. Main was `6a8b8e70` (#886, a squash of `b4aa909d`)
    `doc-id.py check` the same two gaps; `doc-index.py --check` OK; `register-lint.py` 0 violations.
 4. Literals re-read at this tree, no drift: `_required_ref`, `_compiled_for`, `_as_platform_error`,
    `ScoreExecuteDep`, `score` in `backend/src/app/api/score.py`; `03` §4.10 present once.
+5. Main moved again (#876, the FD-1199 test fix to `packages/pricing-core/tests/test_rating_score.py`): a
+   plain `git merge a5118a30` was conflict-free (one file, 73 insertions, 13 deletions).
+   `git diff --name-only a5118a30 HEAD` lists the same 18 S4 paths; `audit-docs.py` FAILED (2), check 31
+   only; `doc-index.py --check` OK.
