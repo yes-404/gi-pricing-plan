@@ -59,8 +59,9 @@ from app.api.pagination import (
     encode_cursor,
 )
 from app.api.responses import problems
-from app.db.models import ModelRow, RatingVersionRow
+from app.db.models import BlobRow, ModelRow, RatingVersionRow, RegressionRunRow
 from app.db.session import Database
+from app.errors import PlatformError
 from app.platform import backtests as backtest_service
 from app.platform import comparison as comparison_service
 from app.platform import diagnostics as diagnostics_service
@@ -69,9 +70,10 @@ from app.platform import model_specs as spec_service
 from app.platform import modelling as service
 from app.platform import prediction as prediction_service
 from app.platform import rating_versions as rating_versions_service
+from app.platform import regression_runs as regression_runs_service
 from app.platform import transformations as transform_service
 from app.platform import transparency as transparency_service
-from app.platform.blobs import BlobStore
+from app.platform.blobs import BlobStore, to_ref
 from model_schema import (
     MODEL_SPEC_ADAPTER,
     ArtifactRef,
@@ -79,6 +81,7 @@ from model_schema import (
     Banding,
     BandingEvaluation,
     BandingProposal,
+    CasesLog,
     Diagnostics,
     Factor,
     FactorIntent,
@@ -96,6 +99,7 @@ from model_schema import (
     MonotonicDirection,
     Prediction,
     RatingVersion,
+    RegressionRun,
     SpecValidation,
     TransparencyArtifact,
 )
@@ -1255,3 +1259,88 @@ async def compile_rating_version(
         response.status_code = status.HTTP_202_ACCEPTED
         response.headers["Location"] = f"/api/v1/jobs/{job.id}"
         return job
+
+
+@router.post(
+    "/rating-versions/{rating_version_id}/regression-runs",
+    summary="Run the Regression Suite against a rating version",
+    responses=problems(401, 403, 404, 422),
+)
+async def start_regression_run(
+    rating_version_id: UUID,
+    caller: Annotated[Caller, Depends(requires(Perm.RATING_COMPILE))],
+    database: DatabaseDep,
+    response: Response,
+) -> Job:
+    """**202** with a Job (`03` §5.1, FR-260/261, `PL-1205` Task 5).
+
+    The `rating.regression` Job runs the algorithm's current Regression Suite against this
+    version's compiled bundle and persists a `RegressionRun` with its case log. A failing
+    run ends the Job `failed` (`PROPERTY_ASSERTION_FAILED` or `GOLDEN_QUOTE_MISMATCH`) and
+    the run is still recorded; FR-257 limb (1) reads it at submission.
+    """
+    async with database.unit_of_work() as session:
+        await rating_versions_service.load_rating_version(
+            session, workspace_id=caller.workspace_id, rating_version_id=rating_version_id
+        )
+        job = await job_service.submit(
+            session,
+            JobKind.RATING_REGRESSION,
+            {**job_identity(caller), "rating_version_id": str(rating_version_id)},
+            caller.principal,
+            workspace_id=caller.workspace_id,
+        )
+        response.status_code = status.HTTP_202_ACCEPTED
+        response.headers["Location"] = f"/api/v1/jobs/{job.id}"
+        return job
+
+
+async def _load_run(
+    database: Database, caller: Caller, rating_version_id: UUID, run_id: UUID
+) -> RegressionRunRow:
+    async with database.session() as session:
+        row = await regression_runs_service.fetch_run(
+            session, workspace_id=caller.workspace_id, run_id=run_id
+        )
+    if row is None or row.rating_version_id != rating_version_id:
+        raise PlatformError("NOT_FOUND", "Regression run not found", 404)
+    return row
+
+
+@router.get(
+    "/rating-versions/{rating_version_id}/regression-runs/{run_id}",
+    summary="Read a regression run",
+    responses=problems(401, 403, 404, 422),
+)
+async def get_regression_run(
+    rating_version_id: UUID,
+    run_id: UUID,
+    caller: Annotated[Caller, Depends(requires(Perm.RATING_READ))],
+    database: DatabaseDep,
+) -> RegressionRun:
+    """The run record. A failing property's `counterexample` is a quote-input fragment, so
+    the read is `rating:read` and workspace-scoped (NFR-499, FR-1221)."""
+    row = await _load_run(database, caller, rating_version_id, run_id)
+    return RegressionRun.model_validate(row.run)
+
+
+@router.get(
+    "/rating-versions/{rating_version_id}/regression-runs/{run_id}/cases",
+    summary="Read a regression run's case log",
+    responses=problems(401, 403, 404, 422),
+)
+async def get_regression_run_cases(
+    rating_version_id: UUID,
+    run_id: UUID,
+    caller: Annotated[Caller, Depends(requires(Perm.RATING_READ))],
+    database: DatabaseDep,
+    blob_store: score_api.BlobStoreDep,
+) -> CasesLog:
+    """The run's generated cases and counterexamples — the only route that reads this blob
+    (the generic blob route refuses it, FR-1221)."""
+    row = await _load_run(database, caller, rating_version_id, run_id)
+    async with database.session() as session:
+        blob_row = await session.get(BlobRow, row.cases_blob_sha256)
+    if blob_row is None:
+        raise PlatformError("NOT_FOUND", "Case log not found", 404)
+    return CasesLog.model_validate_json(await blob_store.read(to_ref(blob_row)))

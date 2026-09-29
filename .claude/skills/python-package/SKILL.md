@@ -214,6 +214,14 @@ the spec, and a comment restating the code is noise that rots.
 
 ## Verified
 
+2026-09-28 — WK-672 Slice 3 (`PL-1205`), at tree `3b79ba3a`: `uv run lint-imports` prints
+`Contracts: 4 kept, 0 broken.` The fourth contract, `replay-never-generates`
+(`.importlinter`), forbids `pricing_core.rating.replay` from reaching `hypothesis` or
+`pricing_core.rating.testing`, even indirectly; it was shown `BROKEN` against a deliberate
+`import hypothesis` and against `import testing` and restored. The `3 kept` in the
+2026-08-14 entry below was true on that date and is left as the record of it; the count
+tests in `tests/test_repository_invariants.py` pin four now.
+
 2026-08-19 — WK-661, the GLM approximation as a Model. The `model_copy(update=...)` rule above,
 found while writing `approximation_spec()`: an earlier draft built the surrogate's `GlmSpec`
 by copying the GBM's spec and patching `approximates_model_id` and `response_column` with

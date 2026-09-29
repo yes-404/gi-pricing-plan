@@ -266,3 +266,87 @@ def test_the_evidence_is_either_checked_or_explicitly_not_checked() -> None:
         RatingVersionEvidence.model_validate(
             {"golden_quotes": not_checked | {"message": "0 mismatches"}}
         )
+
+
+# --- WK-672 Slice 3 (PL-1205 Task 2): RegressionRun and the case log ---------------------
+
+def _run(**over: Any) -> dict[str, Any]:
+    base: dict[str, Any] = {
+        "suite_ref": "regression_suite:motor-gb-core@3",
+        "suite_content_hash": "sha256:" + "a" * 64,
+        "rating_version_ref": "rating_version:motor-gb@27",
+        "bundle_hash": "sha256:" + "b" * 64,
+        "job_id": None,
+        "started_at": "2026-09-28T09:00:00Z",
+        "finished_at": "2026-09-28T09:00:04Z",
+        "overall": "fail",
+        "generation": {"seed": 7, "cases": 50, "hypothesis_version": "6.165.7"},
+        "cases_blob": {"sha256": "c" * 64, "bytes": 10, "media_type": "application/json"},
+        "golden_results": [],
+        "property_results": [
+            {"name": "premium_positive", "status": "pass", "cases_run": 50},
+            {"name": "monotone_in_age", "status": "fail", "cases_run": 50,
+             "counterexample": {"driver_age": 25}, "counterexample_minimal": True,
+             "shrink": "completed", "error_code": "PROPERTY_ASSERTION_FAILED"},
+        ],
+    }
+    return base | over
+
+
+@pytest.mark.req("FR-261")
+def test_a_regression_run_round_trips() -> None:
+    from model_schema.regression import RegressionRun
+
+    run = RegressionRun.model_validate(_run())
+    assert RegressionRun.model_validate(run.model_dump(mode="json", by_alias=True)) == run
+    assert run.property_results[1].shrink == "completed"
+
+
+@pytest.mark.req("FR-261")
+def test_a_failing_property_must_say_how_its_shrink_ended() -> None:
+    from model_schema.regression import RegressionRun
+
+    bad = _run(property_results=[{"name": "p", "status": "fail", "cases_run": 5,
+                                  "counterexample": {"x": 1}}])
+    with pytest.raises(ValidationError):
+        RegressionRun.model_validate(bad)
+    passing_with_shrink = _run(property_results=[{"name": "p", "status": "pass",
+                                                  "cases_run": 5, "shrink": "completed"}])
+    with pytest.raises(ValidationError):
+        RegressionRun.model_validate(passing_with_shrink)
+
+
+@pytest.mark.req("FR-261")
+def test_a_stopped_shrink_is_never_minimal() -> None:
+    from model_schema.regression import RegressionRun
+
+    prop = {"name": "p", "status": "fail", "cases_run": 5, "counterexample": {"x": 1},
+            "shrink": "stopped_on_limit", "counterexample_minimal": True}
+    with pytest.raises(ValidationError):
+        RegressionRun.model_validate(_run(property_results=[prop]))
+
+
+@pytest.mark.req("FR-261")
+def test_generation_cases_are_bounded() -> None:
+    from model_schema.regression import RegressionGeneration
+
+    RegressionGeneration.model_validate(
+        {"cases": 10_000, "seed": 1, "strategy": "input_contract_sampling"})
+    with pytest.raises(ValidationError):
+        RegressionGeneration.model_validate(
+            {"cases": 10_001, "seed": 1, "strategy": "input_contract_sampling"})
+
+
+@pytest.mark.req("FR-261")
+def test_the_case_log_hash_is_canonical() -> None:
+    from model_schema.regression import CasesLog, cases_log_sha256
+
+    ctx = {"purpose": "new_business", "quoted_at": "2026-09-28T09:00:00Z",
+           "effective_date": "2026-10-01", "inputs": {"a": 1, "b": 2}}
+    ctx2 = {**ctx, "inputs": {"b": 2, "a": 1}}
+    one = CasesLog.model_validate({"cases": [ctx], "counterexamples": {"p": ctx}})
+    two = CasesLog.model_validate({"cases": [ctx2], "counterexamples": {"p": ctx2}})
+    assert cases_log_sha256(one) == cases_log_sha256(two)
+    other = CasesLog.model_validate({"cases": [], "counterexamples": {}})
+    assert cases_log_sha256(one) != cases_log_sha256(other)
+    assert len(cases_log_sha256(one)) == 64

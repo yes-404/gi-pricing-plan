@@ -31,6 +31,7 @@ from app.platform import approvals, audit, rbac
 from app.platform import objectives as objectives_service
 from app.platform import rate_tables as rate_tables_service
 from app.platform import reference as reference_service
+from app.platform import regression_runs as regression_runs_service
 from app.platform import regression_suites as regression_suites_service
 from app.platform.blobs import BlobStore
 from app.platform.modelling import to_model
@@ -285,8 +286,16 @@ async def submit_for_review(
     golden_quotes = await _golden_quote_gate(
         session, workspace_id=workspace_id, row=row, ref=ref, load_compiled=load_compiled
     )
-    # Written once, here, and never edited after (`03` §4.3's invariant).
-    row.evidence = {**(row.evidence or {}), "golden_quotes": golden_quotes}
+    run_id = await _regression_run_gate(
+        session, workspace_id=workspace_id, row=row, ref=ref, golden_quotes=golden_quotes
+    )
+    # Written once, here, and never edited after (`03` §4.3's invariant). The run id is the
+    # only other key this gate writes; `golden_quotes` is exactly what the gate returned.
+    row.evidence = {
+        **(row.evidence or {}),
+        "golden_quotes": golden_quotes,
+        "regression_suite_run_id": str(run_id),
+    }
     request = await approvals.submit(
         session,
         workspace_id=workspace_id,
@@ -605,6 +614,51 @@ async def _golden_quote_gate(
         results=results,
         delta=delta,
     ).model_dump(mode="json")
+
+
+async def _regression_run_gate(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    row: RatingVersionRow,
+    ref: ArtifactRef,
+    golden_quotes: dict[str, Any],
+) -> UUID:
+    """FR-257 limb (1), a passing Regression Suite (`PL-1205` Task 6): the run id to record.
+
+    DP-S3-1: a passing suite has at least one golden quote, so no suite, or a suite with
+    none, is refused. DP-S3-2 and audit A1: the **latest** run of this Rating Version for
+    exactly this bundle and the suite version the golden-quote gate just pinned must itself
+    be a pass — an earlier pass does not count once a later run on the same pair failed.
+    """
+    if golden_quotes.get("status") != "checked" or not golden_quotes.get("results"):
+        raise _evidence_incomplete(
+            ref, "a Regression Suite with at least one golden quote is required (FR-257)"
+        )
+    bundle_hash = (row.bundle or {}).get("content_hash")
+    suite_hash = golden_quotes["suite_content_hash"]
+    latest = await regression_runs_service.latest_run(
+        session, workspace_id=workspace_id, rating_version_id=row.id,
+        bundle_hash=str(bundle_hash), suite_content_hash=str(suite_hash),
+    )
+    if latest is None:
+        raise _evidence_incomplete(
+            ref,
+            "no Regression Run exists for this version's current bundle and the suite "
+            "version pinned at submission (FR-257)",
+        )
+    if latest.overall != "pass":
+        raise _evidence_incomplete(
+            ref,
+            f"the latest Regression Run ({latest.id}) for this bundle and suite failed (FR-257)",
+        )
+    return latest.id
+
+
+def _evidence_incomplete(ref: ArtifactRef, why: str) -> PlatformError:
+    return PlatformError(
+        "EVIDENCE_INCOMPLETE", "Required evidence is missing", 422, f"{ref}: {why}."
+    )
 
 
 def _not_checked(
