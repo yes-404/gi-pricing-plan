@@ -30,7 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import DatasetRow, ValidationRuleRow, ValidationRuleSetRow
 from app.errors import PlatformError
 from app.observability.logging import get_logger
-from app.platform import audit, rbac
+from app.platform import approvals, audit, rbac
 from model_schema import (
     BUILTIN_RULES,
     ArtifactRef,
@@ -323,7 +323,7 @@ async def resolve_artifact_ref(
         return False
     found = (
         await session.execute(
-            select(ValidationRuleRow.id).where(
+            select(ValidationRuleRow.status).where(
                 ValidationRuleRow.workspace_id == workspace_id,
                 ValidationRuleRow.slug == artifact_ref.slug,
                 ValidationRuleRow.version == artifact_ref.version,
@@ -337,6 +337,7 @@ async def resolve_artifact_ref(
             404,
             f"{artifact_ref} resolves to no validation rule in this workspace.",
         )
+    approvals.require_in_review(artifact_ref, found)
     return True
 
 

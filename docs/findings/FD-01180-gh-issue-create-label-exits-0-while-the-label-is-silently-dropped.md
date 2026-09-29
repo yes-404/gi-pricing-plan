@@ -2,7 +2,7 @@
 id: FD-1180
 family: finding
 title: gh issue create --label exits 0 while the label is silently dropped
-status: active
+status: closed
 created: 2026-09-28
 owner: auditor
 tree: df8e5811a151a99c7317690faf9278a6dc3400be
@@ -69,3 +69,9 @@ That edit should record two rules:
 
 The maintainer's decision to grant issue-write scope to the token discharges the operational
 half, which is labelling and closing #825 and #826. It does not discharge the skill half.
+
+**Resolved 2026-09-28 by #851**, merged as `81e061fb`. `git merge-base --is-ancestor 81e061fb
+origin/main` exits 0. The merge adds the trap to `.claude/skills/git-hygiene/SKILL.md` (from
+`:235`): *"`gh issue create --label <name>` exits 0 while GitHub silently drops the label"*,
+with the reproduction and the read-back check. The deputy's acknowledgement ruled it
+discharged.

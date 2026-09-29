@@ -3,7 +3,7 @@ id: RFC-897
 family: proposal
 kind: process
 title: File taxonomy, reference coding, and custody investigation (rev 2)
-status: draft                  # draft → active → closed | retired | superseded (§1.2a)
+status: closed                 # draft → active → closed | retired | superseded (§1.2a)
 created: 2026-08-30
 owner: maintainer
 supersedes: []

@@ -1,0 +1,340 @@
+{
+  "$defs": {
+    "ArtifactRef": {
+      "description": "Canonical artifact reference {type}:{slug}@{version} (ID-3).",
+      "examples": [
+        "model:motor-ad-frequency@7",
+        "rating_version:motor-gb@27"
+      ],
+      "pattern": "^(banding|custom_metric|custom_objective|dataset|dataset_version|dossier|factor|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}@[1-9][0-9]*$",
+      "title": "ArtifactRef",
+      "type": "string"
+    },
+    "BlobRef": {
+      "description": "A content-addressed object reference (ID-4).",
+      "properties": {
+        "bytes": {
+          "minimum": 0,
+          "title": "Bytes",
+          "type": "integer"
+        },
+        "media_type": {
+          "title": "Media Type",
+          "type": "string"
+        },
+        "part_count": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Part Count"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sha256",
+        "bytes",
+        "media_type"
+      ],
+      "title": "BlobRef",
+      "type": "object"
+    },
+    "GoldenQuoteResult": {
+      "additionalProperties": false,
+      "description": "One golden quote's re-score — 03 §4.9's `golden_results[]` item, field for field.",
+      "properties": {
+        "actual_minor": {
+          "anyOf": [
+            {
+              "description": "Amount in minor units (pence/cents) of the workspace currency.",
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Actual Minor"
+        },
+        "difference_minor": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Difference Minor"
+        },
+        "expected_minor": {
+          "anyOf": [
+            {
+              "description": "Amount in minor units (pence/cents) of the workspace currency.",
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Minor"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "status"
+      ],
+      "title": "GoldenQuoteResult",
+      "type": "object"
+    },
+    "PropertyResult": {
+      "additionalProperties": false,
+      "description": "One property's outcome — 03 §4.9's `property_results[]` item.\n\nA failing property records how its shrink ended; a shrink stopped on a limit is\nreported as unminimised, never as a minimal counterexample (RS-1176 condition 5).",
+      "properties": {
+        "cases_run": {
+          "minimum": 0,
+          "title": "Cases Run",
+          "type": "integer"
+        },
+        "counterexample": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Counterexample"
+        },
+        "counterexample_minimal": {
+          "default": false,
+          "title": "Counterexample Minimal",
+          "type": "boolean"
+        },
+        "counterexample_points": {
+          "anyOf": [
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Counterexample Points"
+        },
+        "error_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Code"
+        },
+        "grid": {
+          "anyOf": [
+            {
+              "const": "uniform+sampled",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Grid"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "shrink": {
+          "anyOf": [
+            {
+              "enum": [
+                "completed",
+                "stopped_on_limit"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shrink"
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "status",
+        "cases_run"
+      ],
+      "title": "PropertyResult",
+      "type": "object"
+    },
+    "RunGeneration": {
+      "additionalProperties": false,
+      "description": "How a run generated its cases (03 §4.9); the seed serves same-version regeneration.",
+      "properties": {
+        "cases": {
+          "maximum": 10000,
+          "minimum": 1,
+          "title": "Cases",
+          "type": "integer"
+        },
+        "hypothesis_version": {
+          "title": "Hypothesis Version",
+          "type": "string"
+        },
+        "seed": {
+          "minimum": 0,
+          "title": "Seed",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seed",
+        "cases",
+        "hypothesis_version"
+      ],
+      "title": "RunGeneration",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The execution record of a Regression Suite run (03 §4.9, FR-260, FR-261).",
+  "properties": {
+    "bundle_hash": {
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "title": "Bundle Hash",
+      "type": "string"
+    },
+    "cases_blob": {
+      "$ref": "#/$defs/BlobRef"
+    },
+    "finished_at": {
+      "format": "date-time",
+      "title": "Finished At",
+      "type": "string"
+    },
+    "generation": {
+      "$ref": "#/$defs/RunGeneration"
+    },
+    "golden_results": {
+      "items": {
+        "$ref": "#/$defs/GoldenQuoteResult"
+      },
+      "title": "Golden Results",
+      "type": "array"
+    },
+    "job_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Job Id"
+    },
+    "overall": {
+      "enum": [
+        "pass",
+        "fail"
+      ],
+      "title": "Overall",
+      "type": "string"
+    },
+    "property_results": {
+      "items": {
+        "$ref": "#/$defs/PropertyResult"
+      },
+      "title": "Property Results",
+      "type": "array"
+    },
+    "rating_version_ref": {
+      "$ref": "#/$defs/ArtifactRef"
+    },
+    "started_at": {
+      "format": "date-time",
+      "title": "Started At",
+      "type": "string"
+    },
+    "suite_content_hash": {
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "title": "Suite Content Hash",
+      "type": "string"
+    },
+    "suite_ref": {
+      "$ref": "#/$defs/ArtifactRef"
+    }
+  },
+  "required": [
+    "suite_ref",
+    "suite_content_hash",
+    "rating_version_ref",
+    "bundle_hash",
+    "started_at",
+    "finished_at",
+    "overall",
+    "generation",
+    "cases_blob",
+    "golden_results",
+    "property_results"
+  ],
+  "title": "RegressionRun",
+  "type": "object"
+}

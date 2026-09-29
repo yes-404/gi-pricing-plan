@@ -51,6 +51,8 @@ COMPARED_SLUGS: Final[tuple[str, ...]] = (
     "objective-certificate",
     "peril-structure",
     "profile",
+    "regression-run",
+    "regression-suite",
     "transparency-artifact",
     "validation-report",
     "validation-rule",
@@ -71,6 +73,7 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "dataset-lineage": "first written form — 01 §4.9 (W6b-12)",
     "dataset-split": "first written form — the split artifact the spec builder reads",
     "model-comparison": "first written form — 02 §5.2 named the return type",
+    "score-comparison": "first written form — 03 §4.10 (WK-672 Slice 4, FR-262)",
     "objective-usage": "first written form — FR-164 named the query",
     "oidc-auth-config": "first written form — FR-394 names the contents",
     "problem-detail": "first written form — the RFC 9457 problem shape",
@@ -86,9 +89,6 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "rate-table": "shipped in model-schema, never compared — register F27",
     "rating-algorithm": "shipped in model-schema, never compared — register F27",
     "rating-version": "shipped in model-schema, never compared — register F27",
-    # Corrected 2026-09-28 (WK-672 Slice 1, RL-1172 item 3c): the label said "04 optimisation";
-    # the shape is 03's and WK-672's. Slices 2-3 move it into model-schema and remove this key.
-    "regression-suite": "authored-only until WK-672 builds it — 03 §4.7 and §4.9",
     # Corrected 2026-08-29 (WK-671 Task 1.4): "later-phase" stopped being true the moment
     # this task defined QuoteContext/ScoringResult/LadderRung/Trace in model-schema —
     # RL-878's addendum
