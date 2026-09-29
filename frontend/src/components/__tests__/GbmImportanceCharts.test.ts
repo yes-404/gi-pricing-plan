@@ -97,4 +97,51 @@ describe("GbmImportanceCharts", () => {
     expect(cells[0]).toHaveTextContent(/decreasing — holds/i);
     expect(cells[0]).not.toHaveTextContent(/violated/i);
   });
+
+  it("names the shared source column behind a joint importance", () => {
+    render(GbmImportanceCharts, {
+      props: {
+        ...props(),
+        permutationImportances: [
+          {
+            feature: "area_x_fuel",
+            baseline: 1,
+            permuted: 1.2,
+            degradation: 0.2,
+            repeats: 1,
+            seed: 0,
+            shared_source_columns: ["area"],
+          },
+        ],
+      },
+    });
+    const list = screen.getByRole("list", { name: /shared source columns/i });
+    expect(list).toHaveTextContent(/area_x_fuel.*area.*joint effect/i);
+  });
+
+  it("shows no shared-column note when nothing is shared", () => {
+    render(GbmImportanceCharts, { props: props() });
+    expect(screen.queryByRole("list", { name: /shared source columns/i })).toBeNull();
+  });
+
+  it("names each factor the permutation block did not measure, in words", () => {
+    render(GbmImportanceCharts, {
+      props: {
+        ...props(),
+        permutationOmitted: [
+          { feature: "area", reason: "operand_of_interaction" },
+          { feature: "driver_age", reason: "no_holdout_column" },
+        ],
+      },
+    });
+    const list = screen.getByRole("list", { name: /permutation omissions/i });
+    expect(list).toHaveTextContent(/area: not measured.*operand of an interaction/i);
+    expect(list).toHaveTextContent(/driver_age: not measured.*no column for it/i);
+    expect(screen.queryByText("operand_of_interaction")).not.toBeInTheDocument();
+  });
+
+  it("shows no omission note when nothing was omitted", () => {
+    render(GbmImportanceCharts, { props: props() });
+    expect(screen.queryByRole("list", { name: /permutation omissions/i })).toBeNull();
+  });
 });

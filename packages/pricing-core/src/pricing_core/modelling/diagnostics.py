@@ -69,7 +69,11 @@ from model_schema import (
     PartialDependencePoint,
     PartitionDiagnostics,
     PermutationImportance,
+    PermutationOmission,
+    PermutationOmissionReason,
     ResidualSummary,
+    TypeIIIOmission,
+    TypeIIIOmissionReason,
     TypeIIITest,
     UniversalDiagnostics,
     Weighting,
@@ -459,7 +463,7 @@ def _type_iii(
     model_offset: np.ndarray | None = None,
     bandings: Mapping[UUID, Banding] | None,
     groupings: Mapping[UUID, Grouping] | None,
-) -> tuple[TypeIIITest, ...]:
+) -> tuple[tuple[TypeIIITest, ...], tuple[TypeIIIOmission, ...]]:
     """Drop each factor, refit, and report the deviance it was worth (FR-172).
 
     A likelihood-ratio test, so the p-value means what a reader assumes: `Δdeviance` on
@@ -476,7 +480,7 @@ def _type_iii(
         # Dropping the only factor leaves an intercept-only model, which is the null
         # deviance already reported. A "test" of it would restate that number as though it
         # were a comparison.
-        return ()
+        return (), ()
 
     y = data[spec.response_column].cast(pl.Float64).to_numpy()
 
@@ -486,8 +490,14 @@ def _type_iii(
     operand_ids = _operand_ids(factors)
 
     tests: list[TypeIIITest] = []
+    omitted: list[TypeIIIOmission] = []
     for factor in factors:
         if factor.id in operand_ids:
+            omitted.append(
+                TypeIIIOmission(
+                    factor=factor.slug, reason=TypeIIIOmissionReason.OPERAND_OF_INTERACTION
+                )
+            )
             continue
         remaining = [f for f in factors if f.id != factor.id]
         reduced_spec = spec.model_copy(update={"factors": tuple(f.id for f in remaining)})
@@ -517,7 +527,7 @@ def _type_iii(
         df = _term_count(factor, factors, data, bandings, groupings)
         p = float(stats.chi2.sf(max(delta, 0.0), df))
         tests.append(TypeIIITest(factor=factor.slug, deviance_delta=delta, df=df, p_value=p))
-    return tuple(tests)
+    return tuple(tests), tuple(omitted)
 
 
 def _operand_ids(factors: Sequence[Factor]) -> set[UUID]:
@@ -533,6 +543,24 @@ def _operand_ids(factors: Sequence[Factor]) -> set[UUID]:
         for factor in factors
         if factor.type is FactorType.INTERACTION
         for operand in factor.operand_factor_ids
+    }
+
+
+def _skipped_ids(factors: Sequence[Factor]) -> set[UUID]:
+    """The factors neither per-factor GBM block measures on their own (FR-178).
+
+    An interaction's operands, **and any other factor that sources an operand's column**:
+    permuting or holding that column alone recombines the cross's operands into cells the
+    fit never saw, whichever factor asked for it, and `predict_gbm` refuses the frame
+    (FR-131). Reporting the result under the other factor's name would attribute the
+    group's effect to one member of it.
+    """
+    operands = _operand_ids(factors)
+    operand_columns = {c for f in factors if f.id in operands for c in f.source_columns}
+    return operands | {
+        f.id
+        for f in factors
+        if f.type is not FactorType.INTERACTION and operand_columns.intersection(f.source_columns)
     }
 
 
@@ -648,10 +676,11 @@ def compute_diagnostics(
     )
 
     tests: tuple[TypeIIITest, ...] = ()
+    tests_omitted: tuple[TypeIIIOmission, ...] = ()
     if type_iii:
         report.check_cancelled()
         report.update(0.70, "diagnostics: type-III tests")
-        tests = _type_iii(
+        tests, tests_omitted = _type_iii(
             train, spec, factors, full_deviance,
             power=power, model_offset=model_offset_train,
             bandings=bandings, groupings=groupings,
@@ -681,6 +710,7 @@ def compute_diagnostics(
             dispersion=dispersion,
             degrees_of_freedom=max(train.height - parameters, 0),
             type_iii_tests=tests,
+            type_iii_omitted=tests_omitted,
         ),
     )
 
@@ -830,6 +860,19 @@ def _importances(result: GbmFitResult, booster: bytes) -> tuple[FeatureImportanc
 DEFAULT_PARTIAL_DEPENDENCE_LEVELS = 20
 
 
+def _shuffled_together(
+    frame: pl.DataFrame, columns: Sequence[str], order: np.ndarray
+) -> pl.DataFrame:
+    """`frame` with every one of `columns` reordered by the **same** `order` (FR-177).
+
+    One shared order permutes the operand *pairs*, which is exactly a permutation of the
+    resolved cross column: the observed cell set is unchanged and nothing the fit never saw
+    is built. Reordering the columns independently would pair each operand with the other's
+    untouched values and manufacture unseen cells (FR-178).
+    """
+    return frame.with_columns([frame[c].gather(order).alias(c) for c in columns])
+
+
 def _permutation_importances(
     result: GbmFitResult,
     booster: bytes,
@@ -841,8 +884,11 @@ def _permutation_importances(
     seed: int,
     bandings: Mapping[UUID, Banding] | None,
     groupings: Mapping[UUID, Grouping] | None,
-) -> tuple[PermutationImportance, ...]:
-    """FR-174's permutation importance, on the **holdout**.
+) -> tuple[tuple[PermutationImportance, ...], tuple[PermutationOmission, ...]]:
+    """FR-174's permutation importance, on the **holdout**, and the factors it skipped.
+
+    Every skip is returned as a `PermutationOmission` (FR-178): the block used to `continue`
+    silently, so a reader could not tell an omitted factor from one never declared.
 
     Split importance says how the trees were built; this says what the model would lose if
     the variable were noise, which is the question an actuary is actually asking. They
@@ -860,8 +906,9 @@ def _permutation_importances(
                               bandings=bandings, groupings=groupings)
     baseline = deviance(y, baseline_mu.to_numpy(), family=family, power=power, weights=weights)
 
-    operand_ids = _operand_ids(factors)
+    skipped_ids = _skipped_ids(factors)
     out: list[PermutationImportance] = []
+    omitted: list[PermutationOmission] = []
     for index, factor in enumerate(factors):
         # FR-176. An `interaction` names no source columns of its own — its
         # columns are its operands' — so indexing here raised `IndexError` for any GBM
@@ -878,20 +925,34 @@ def _permutation_importances(
         # cells the fit never saw, and `predict_gbm` refuses the frame with
         # `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED` -- on a sparse cross, the only kind FR-92
         # expects, that made diagnostics impossible.
-        if factor.id in operand_ids:
+        if factor.id in skipped_ids:
+            omitted.append(
+                PermutationOmission(
+                    feature=factor.slug,
+                    reason=PermutationOmissionReason.OPERAND_OF_INTERACTION,
+                )
+            )
             continue
-        if not factor.source_columns:
-            continue
-        column = factor.source_columns[0]
-        if column not in holdout.columns:
+        # FR-177: a cross is permuted through every operand source column under ONE shared
+        # order, which permutes the operand *pairs* -- exactly a permutation of the
+        # resolved cross column, so no unseen pair is ever built.
+        if factor.type is FactorType.INTERACTION:
+            columns = _operand_columns(factor, factors)
+        else:
+            columns = tuple(factor.source_columns[:1])
+        if not columns or any(c not in holdout.columns for c in columns):
+            omitted.append(
+                PermutationOmission(
+                    feature=factor.slug,
+                    reason=PermutationOmissionReason.NO_HOLDOUT_COLUMN,
+                )
+            )
             continue
         scores: list[float] = []
         for repeat in range(repeats):
             rng = np.random.default_rng(seed + index * 1_000 + repeat)
             order = rng.permutation(holdout.height)
-            shuffled = holdout.with_columns(
-                holdout[column].gather(order).alias(column)
-            )
+            shuffled = _shuffled_together(holdout, columns, order)
             mu = predict_gbm(result, booster, shuffled, factors,
                              bandings=bandings, groupings=groupings)
             scores.append(
@@ -902,9 +963,10 @@ def _permutation_importances(
             PermutationImportance(
                 feature=factor.slug, baseline=baseline, permuted=permuted,
                 degradation=permuted - baseline, repeats=repeats, seed=seed,
+                shared_source_columns=_shared_source_columns(factor, columns, factors),
             )
         )
-    return tuple(out)
+    return tuple(out), tuple(omitted)
 
 
 def _share(weight: float, total_weight: float) -> float:
@@ -1026,6 +1088,69 @@ def _representatives(axis: pl.Series, source: pl.Series) -> dict[str, object]:
     }
 
 
+def _shared_source_columns(
+    factor: Factor, columns: Sequence[str], factors: Sequence[Factor]
+) -> tuple[str, ...]:
+    """The shuffled `columns` that also source another factor (FR-177).
+
+    A shuffle moves a column for every factor drawing on it, so the degradation it produces
+    is the joint effect of all of them. Named, not refused: the common case is a factor on a
+    column of its own and nothing here fires. A cross's own operands are not "another
+    factor" -- moving them is the measurement.
+    """
+    own = {factor.id, *factor.operand_factor_ids}
+    other = {c for f in factors if f.id not in own for c in f.source_columns}
+    return tuple(c for c in columns if c in other)
+
+
+def _operand_columns(cross: Factor, factors: Sequence[Factor]) -> tuple[str, ...]:
+    """Every operand source column of `cross`, in operand order (FR-177): the columns
+    `predict_gbm` re-resolves the cross from, and so the only ones a joint operation can
+    move. A column two operands share is listed once.
+    """
+    by_id = {f.id: f for f in factors}
+    columns: dict[str, None] = {}
+    for operand_id in cross.operand_factor_ids:
+        for column in by_id[operand_id].source_columns:
+            columns[column] = None
+    return tuple(columns)
+
+
+def _cross_axis(
+    data: pl.DataFrame,
+    cross: Factor,
+    factors: Sequence[Factor],
+    *,
+    bandings: Mapping[UUID, Banding] | None,
+    groupings: Mapping[UUID, Grouping] | None,
+) -> pl.Series:
+    """The cross's own levels on `data` -- its observed cells (FR-92), never the operands'
+    Cartesian product (FR-177)."""
+    by_id = {f.id: f for f in factors}
+    needed = [cross, *(by_id[o] for o in cross.operand_factor_ids)]
+    matrix = resolve_factors(data, needed, bandings=bandings, groupings=groupings)
+    return matrix.frame[matrix.terms[cross.slug]]
+
+
+def _cell_representatives(
+    axis: pl.Series, data: pl.DataFrame, columns: Sequence[str]
+) -> dict[str, tuple[object, ...]]:
+    """One real row's values of `columns` per level of `axis`.
+
+    Holding **all** operand columns at one row's values holds the operands together at one
+    observed cell, which `predict_gbm` can encode; holding them independently is what
+    FR-178 measured to be refused.
+    """
+    frame = data.select(columns).with_columns(axis.cast(pl.String).alias("__level"))
+    picked = frame.filter(pl.col("__level").is_not_null()).group_by(
+        "__level", maintain_order=True
+    ).agg([pl.col(c).first() for c in columns])
+    return {
+        str(row["__level"]): tuple(row[c] for c in columns)
+        for row in picked.iter_rows(named=True)
+    }
+
+
 def _sweep(
     result: GbmFitResult,
     booster: bytes,
@@ -1059,12 +1184,23 @@ def _sweep(
     """
     from pricing_core.modelling.gbm import predict_gbm
 
-    column = factor.source_columns[0]
-    source = data[column]
-    # The axis is the factor's, not the raw column's: a banded or grouped factor is swept
-    # over its own levels and labelled with them (FR-175). `None` means the two are
-    # the same column, which is every identity factor.
-    axis = _resolved_axis(data, factor, bandings=bandings, groupings=groupings)
+    is_cross = factor.type is FactorType.INTERACTION
+    if is_cross:
+        # FR-177: the cross has no column, so it is held through its operands' columns
+        # together, and its grid is its own observed cells.
+        columns = _operand_columns(factor, factors)
+        cross_axis = _cross_axis(
+            data, factor, factors, bandings=bandings, groupings=groupings
+        )
+        axis: pl.Series | None = cross_axis
+        source: pl.Series = cross_axis
+    else:
+        columns = (factor.source_columns[0],)
+        source = data[columns[0]]
+        # The axis is the factor's, not the raw column's: a banded or grouped factor is
+        # swept over its own levels and labelled with them (FR-175). `None` means the two
+        # are the same column, which is every identity factor.
+        axis = _resolved_axis(data, factor, bandings=bandings, groupings=groupings)
     series = source if axis is None else axis
     weights = _weights(spec, data)
     total_weight = float(weights.sum())
@@ -1097,7 +1233,11 @@ def _sweep(
                 exposure_share=min(1.0, _share(dropped_weight, total_weight)),
             )
 
-    if axis is not None:
+    held_values: list[tuple[object, ...]]
+    if is_cross:
+        cells = _cell_representatives(series, data, columns)
+        held_values = [cells[label] for label in labels]
+    elif axis is not None:
         representatives = _representatives(axis, source)
         missing = [label for label in labels if label not in representatives]
         if missing:
@@ -1106,11 +1246,18 @@ def _sweep(
                 "frame carries a source value for, so there is nothing to hold the column "
                 "at. A partial-dependence bar must be scored, not imputed (FR-175)."
             )
-        values = [representatives[label] for label in labels]
+        held_values = [(representatives[label],) for label in labels]
+    else:
+        held_values = [(value,) for value in values]
 
     means: list[float] = []
-    for value in values:
-        held = data.with_columns(pl.lit(value).cast(source.dtype).alias(column))
+    for cell in held_values:
+        held = data.with_columns(
+            [
+                pl.lit(value).cast(data[column].dtype).alias(column)
+                for column, value in zip(columns, cell, strict=True)
+            ]
+        )
         mu = predict_gbm(result, booster, held, factors, bandings=bandings, groupings=groupings)
         mean = mu.mean()
         means.append(float(mean) if isinstance(mean, int | float) else 0.0)
@@ -1173,7 +1320,7 @@ def compute_gbm_diagnostics(
 
     report.check_cancelled()
     report.update(0.60, "diagnostics: permutation importance")
-    permutation = _permutation_importances(
+    permutation, permutation_omitted = _permutation_importances(
         result, booster, spec, factors, holdout,
         repeats=permutation_repeats, seed=spec.seed,
         bandings=bandings, groupings=groupings,
@@ -1183,14 +1330,14 @@ def compute_gbm_diagnostics(
     report.update(0.75, "diagnostics: partial dependence")
     dependence: list[PartialDependence] = []
     monotonicity: list[MonotonicityCheck] = []
-    operand_ids = _operand_ids(factors)
+    skipped_ids = _skipped_ids(factors)
     for factor in factors:
-        # FR-178. An operand of a cross is emitted with no points and its reason, for the
-        # same visibility FR-176 wants of the cross: swept alone it recombines the pair
-        # into cells the fit never saw, which `predict_gbm` refuses. Its monotonicity check
-        # is skipped too: an operand is not a booster feature (the feature order is the
-        # cross), so a monotone constraint cannot bind on it.
-        if factor.id in operand_ids:
+        # FR-178 (clarified for FR-177): an operand of a cross, or a factor sourcing an
+        # operand's column, is emitted with no points and its reason, so a reviewer sees every
+        # declared factor. Swept alone it recombines the pair into cells the fit never saw,
+        # which `predict_gbm` refuses. Its monotonicity check is skipped too: an operand is
+        # not a booster feature (the feature order is the cross), so no constraint binds on it.
+        if factor.id in skipped_ids:
             dependence.append(
                 PartialDependence(
                     factor=factor.slug,
@@ -1200,20 +1347,9 @@ def compute_gbm_diagnostics(
                 )
             )
             continue
-        # FR-176. A cross sources no column of its own, so there is nothing to
-        # hold at a value; it used to reach `_sweep` and index off an empty tuple. It
-        # is emitted with no points and a stated reason rather than dropped, so a
-        # reviewer sees every declared factor and sees which ones no curve describes.
-        if not factor.source_columns:
-            dependence.append(
-                PartialDependence(
-                    factor=factor.slug,
-                    omitted=PartialDependenceOmission(
-                        reason=PartialDependenceOmissionReason.NO_SOURCE_COLUMN,
-                    ),
-                )
-            )
-            continue
+        # Every factor reaching `_sweep` sources a column of its own or is a cross, which is
+        # swept through its operands' columns (FR-177): `Factor._columns_match_the_type`
+        # refuses any other factor with no `source_columns`.
         labels, means, shares, omitted = _sweep(
             result, booster, spec, factors, holdout, factor,
             bandings=bandings, groupings=groupings,
@@ -1267,6 +1403,7 @@ def compute_gbm_diagnostics(
             eval_curve=tuple(eval_curve),
             importances=importances,
             permutation_importances=permutation,
+            permutation_omitted=permutation_omitted,
             partial_dependence=tuple(dependence),
             monotonicity=tuple(monotonicity),
             tree_count=tree_count,

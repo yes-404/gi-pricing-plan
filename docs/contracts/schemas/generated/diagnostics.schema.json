@@ -374,6 +374,14 @@
           "title": "Permutation Importances",
           "type": "array"
         },
+        "permutation_omitted": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/PermutationOmission"
+          },
+          "title": "Permutation Omitted",
+          "type": "array"
+        },
         "quantile_crossing": {
           "anyOf": [
             {
@@ -520,6 +528,14 @@
           ],
           "default": null,
           "title": "Residual Blob"
+        },
+        "type_iii_omitted": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/TypeIIIOmission"
+          },
+          "title": "Type Iii Omitted",
+          "type": "array"
         },
         "type_iii_tests": {
           "default": [],
@@ -833,6 +849,14 @@
         "seed": {
           "title": "Seed",
           "type": "integer"
+        },
+        "shared_source_columns": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Shared Source Columns",
+          "type": "array"
         }
       },
       "required": [
@@ -845,6 +869,34 @@
       ],
       "title": "PermutationImportance",
       "type": "object"
+    },
+    "PermutationOmission": {
+      "additionalProperties": false,
+      "description": "A factor the permutation block did not measure, and why (FR-178).\n\nUntil FR-178's permutation limb this was silent: the block skipped a factor and\nnothing in the output said so, which is the silence `PartialDependenceOmission` was\nadded to end on the other block.",
+      "properties": {
+        "feature": {
+          "title": "Feature",
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/$defs/PermutationOmissionReason"
+        }
+      },
+      "required": [
+        "feature",
+        "reason"
+      ],
+      "title": "PermutationOmission",
+      "type": "object"
+    },
+    "PermutationOmissionReason": {
+      "description": "Why a factor has no permutation importance (FR-178).",
+      "enum": [
+        "operand_of_interaction",
+        "no_holdout_column"
+      ],
+      "title": "PermutationOmissionReason",
+      "type": "string"
     },
     "QuantileCrossing": {
       "additionalProperties": false,
@@ -919,6 +971,33 @@
       ],
       "title": "ResidualSummary",
       "type": "object"
+    },
+    "TypeIIIOmission": {
+      "additionalProperties": false,
+      "description": "A factor the type-III block did not test, and why (FR-178).\n\nUntil FR-178's type-III half this exclusion was stated in a code comment and recorded\nnowhere, so a reviewer reading a GLM's diagnostics could not see that operands had been\nleft out.",
+      "properties": {
+        "factor": {
+          "title": "Factor",
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/$defs/TypeIIIOmissionReason"
+        }
+      },
+      "required": [
+        "factor",
+        "reason"
+      ],
+      "title": "TypeIIIOmission",
+      "type": "object"
+    },
+    "TypeIIIOmissionReason": {
+      "description": "Why a factor has no type-III test (FR-178).",
+      "enum": [
+        "operand_of_interaction"
+      ],
+      "title": "TypeIIIOmissionReason",
+      "type": "string"
     },
     "TypeIIITest": {
       "additionalProperties": false,
