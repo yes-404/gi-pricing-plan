@@ -132,7 +132,11 @@ rule to adopt"):
    dated acceptance line; nothing starts in the next phase while a current-phase finding
    lacks a resolution; every accepted proposal gets an owning row.
 
-**One addition, for the rows that wait on a review.** `python3 scripts/register-owed.py
+**One addition, the planner's; not in the maintainer's rule text (the 16:05:14 BST entry).**
+The maintainer has been asked to accept it or strike it. If it is struck, it is removed from
+all three sites that carry it: `phase-review` *When*, `close-workstream`'s §14 paragraph and
+template field, and `work-item-close.md`. If it is accepted, the maintainer's line goes under
+*Acceptance*. **For the rows that wait on a review:** `python3 scripts/register-owed.py
 review` lists the register rows naming the §14 review (`phase-review` skill, "The agenda
 includes every register row that decayed to this review"). With fewer full reviews those
 rows would wait longer unseen. So the replan check records that command's owed count at the
@@ -248,8 +252,11 @@ the lead's §14 edit. The ones left are dated records.
 
 **Amended, but on no grep line** (Part 2's named sites, and new text):
 - `docs/process/document-ids.md:165`, the CR row: review-as-index, the replan check on
-  `work` records, and no unowned;
+  `work` records, and no unowned in its Owner cell. Its **Accepts** cell also changes, from
+  "maintainer accepts a Work or Phase close" to "…, and a review's proposals";
 - the `close-workstream` closure-record template's new **Replan check** field;
+- `docs/process/checklists/work-item-close.md`'s *The record* list: a new `### Replan check`
+  section, between *Findings* and *Sign-off*;
 - `phase-review`'s new *Length* section, its replan-check questions, the fifth rule, and a
   *Verified* entry;
 - `close-workstream`'s *Verified* entry.

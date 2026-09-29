@@ -89,6 +89,15 @@ A carried finding stays a row in the global register ([`../../findings/register.
 a per-phase view of it is generated (`python3 scripts/doc-index.py --phase <p>`), never a
 second hand-kept file.
 
+### Replan check
+
+*(Added 2026-09-29, `RFC-9631`, option C.)* The `CLAUDE.md` §14 replan check for a
+workstream close: the five questions of the
+[`phase-review`](../../../.claude/skills/phase-review/SKILL.md) skill (*When*), each answered
+**yes** or **no** in one line; `python3 scripts/register-owed.py review`'s owed count at this
+tree; and the result, **trigger** (naming which) or **no trigger**. The lead's verdict on it
+follows. A PR or slice record has no replan check.
+
 ### Sign-off
 
 The named owner who accepted the close, and the date.
