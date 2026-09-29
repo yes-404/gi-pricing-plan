@@ -1,5 +1,5 @@
 ---
-id: RL-9650
+id: RL-1242
 family: ruling
 title: FR-218 gains an interim rule — until FR-217's inlining is built, every MTA and cancellation quote is refused
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,13 +15,13 @@ corrects: ~
 relates: [CR-838]
 ---
 
-# RL-9650 — FR-218 gains an interim rule: until FR-217's inlining is built, every MTA and cancellation quote is refused
+# RL-1242 — FR-218 gains an interim rule: until FR-217's inlining is built, every MTA and cancellation quote is refused
 
 ## Verified first, at ac8ab519c8e46141e81cb5ca6f48da9afaa35075
 
-**RL-9650 is a working id.** It is minted at its merge turn with `doc-id.py next --ref
-origin/main`, and the `03` FR-218 amendment's citation is renamed with it. *(2026-09-29: first
-minted as 1239, which PR #892 already held as a plan id in the single global sequence.)*
+Filed under working id 9650 (first taken as 1239, which PR #892 already held as a plan id in the
+single global sequence); minted `RL-1242` at its merge turn, 2026-09-29 (`doc-id.py next --ref
+origin/main` at `40739df0`), and the `03` FR-218 amendment's citation is renamed with it.
 
 **The conflict (`CLAUDE.md` §0).** The implementing change is PR #907, *"fix(rating): FR-218
 refuses every MTA and cancellation quote until sub-graph inlining exists (WK-1178)"*. It is
