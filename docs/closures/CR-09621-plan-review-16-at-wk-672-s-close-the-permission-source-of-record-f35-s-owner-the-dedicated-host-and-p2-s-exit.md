@@ -600,6 +600,14 @@ register, prints **21 owed rows and 5 excluded**. Every row is disposed of below
 the lead's to check.
 
 **Lead verdict (Proposal 9), 2026-09-29:** **ADOPTED, AMENDED on one point.** The lead re-ran `register-owed.py review` on a clean committed tree: 26 bullets, that is 21 owed and 5 excluded, as stated. The 20 superseded-opening rows keep their owners, and the generator defect goes to an auditor `FD-` for WK-1170. F61's acceptance stands, with its event moved to the G6 review. **The amendment:** two of the 5 "excluded, resolved" rows are F58 ("Artifact B has no live writer") and F91 ("the runtime-state writer has not run since 02:03Z"). Artifact B (`~/gi-pricing-plan.local/handover/runtime-state.json`) was last written `2026-09-28T16:26:22Z`, about a day stale at this verdict. So the condition those resolutions closed has recurred. The auditor re-reads F58 and F91 against that mtime, and a regression is a new `FD-` (the watcher's writer), not silence.
+
+**Lead's dated addition to the Proposal 9 verdict, 2026-09-29.** The maintainer's entry "2026-09-29 16:34:39 BST · maintainer (acting on the maintainer's behalf) · FR-217 GUARD FAILS OPEN: the interim fix is dispatched NOW as HIGH; P9 recurrence check" agreed the re-read, and ruled "If the writer has stopped again, it is a recurrence: reopen the rows with a dated note, owner WK-1178". **The owner is therefore WK-1178.** The re-read (auditor-row11, measured 2026-09-29 about 15:38Z) found **both rows a recurrence**:
+- Artifact B's `position` names PL-1189 "not started", while `docs/INDEX.md` at `2c2bbcdf` has PL-1189 and PL-1205 executed.
+- No process or cron runs the writer.
+- The derivation script B cites lived in a job directory deleted on 2026-09-28.
+
+F58 and F91 are reopened with dated notes, owner WK-1178. A new finding holds the evidence: "artifact B is stale and wrong a day after F58 and F91 were recorded resolved", cited by subject until it is minted, on branch `aud-row11-p9-artifact-b`.
+
 **Maintainer acceptance (Proposal 9):** _pending_
 
 ## Proposal 10 — FR-218's authoring half, and FR-217's inlining, which it rests on
