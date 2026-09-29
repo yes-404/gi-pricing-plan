@@ -45,3 +45,24 @@ The code comment at `pricing_core/modelling/diagnostics.py:863` names the same d
 **Deferred with an owner — the lead.** Event: WK-1178's next slice, scheduled **ahead of any
 Dependabot bump** in that Work (the deputy's ruling). Building FR-177 turns the strict `xfail`
 into a failure, which forces the marker off, as the test's own reason says.
+
+## Progress — FR-178 delivered in two parts (2026-09-28)
+
+The deputy's entry of 2026-09-28 22:52:41 BST corrects his 22:14:15 MERGE-ACK of #880, which said #880
+delivered FR-178. FR-178 (`docs/specs/02-modelling.md:273`) requires an interaction's operands to be
+skipped by **both** per-factor GBM diagnostics blocks, **with the skip recorded**. It was delivered in two
+parts:
+
+- **#880 (`9fa2b833`):** the skip, and its record in the partial-dependence block (a new omission reason).
+  At `9fa2b833`, `packages/pricing-core/src/pricing_core/modelling/diagnostics.py:863`–`:880` skips the
+  operands in the permutation block, and its own comment says *"the omission is recorded by the
+  partial-dependence block below (this block omits …)"*. The permutation block records nothing.
+- **#887 (open, branch `p2-mnt-gbm-joint-cross`):** an additive `GbmDiagnostics.permutation_omitted` field
+  with the reasons `operand_of_interaction` and `no_holdout_column`, covering operands, an `area_again`-type
+  factor and the pre-existing silent no-holdout skip, with one red-first test per skip cause.
+
+The deputy decided this in the same entry (option (A), and the (B) and (C) alternatives declined). The
+strict `xfail` passing in #880 did not prove the "both blocks" clause. This finding stays **active** and
+closes when #887 merges. No record before this one calls FR-178 delivered in a register cell or in this file;
+the deputy's ACK entry did, and it is corrected here.
+
