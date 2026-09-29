@@ -64,7 +64,8 @@ These conditions are for the Work as a whole. Each leaf plan states its own cond
 slice. Every command runs in the executor's own worktree, over `origin/main...HEAD`.
 
 1. **FR-217 and FR-218 have verdicts from the limbs this Work adds.** Run `python3
-   scripts/scope-audit.py RATE --sections 3.1 --extra FR-217,FR-218`. Each must be evidenced by
+   scripts/scope-audit.py RATE --sections 3.1 --extra FR-258` (§3.1 already holds FR-217 and
+   FR-218; at `f0c3d197` it prints "in scope: 9", rc 0). FR-217 and FR-218 must be evidenced by
    a test this Work adds, read in the test body. **A pre-existing marker is not delivery**:
    - FR-217's only marker today is a parse of the shape
      (`packages/model-schema/tests/test_rating_algorithm.py:81`);
@@ -113,6 +114,16 @@ slice. Every command runs in the executor's own worktree, over `origin/main...HE
   that true, and a test proves it.
 - **Money** is integer minor units, or `Decimal` in the rating path. The refund and charge maths
   in a sub-graph is rating maths and follows the same rule.
+- **The write path's retrofit-impossible invariants**
+  ([`../process/retrofit-impossible.md`](../process/retrofit-impossible.md)):
+  - every sub-graph create or version write emits its Audit Event **in the caller's
+    transaction** (`:25`; `06` FR-368);
+  - every route checks a permission in the backend on every request (`:31`; `06` FR-343), named
+    from the permission catalogue (`RL-1236`) or added to it by the slice's spec change;
+  - a created version is immutable (`:26`, artifact immutability and versioning).
+
+  Not on that list, but binding the same way: every row is workspace-scoped (`00` FR-16),
+  on the tenancy WK-674's Slice 1 lands first (ADR-710, FR-436). Slice 1's gate proves each.
 - **Do not build ahead of the phase** (`CLAUDE.md` §0). The DAG designer's sub-graph **view** is
   WK-675's (roadmap `:862`). This Work builds the backend a designer authors against, not the view.
 - **One slice at a time** (`delivery-process.md` §8), on the P2 lane **after WK-674 and before
@@ -128,7 +139,17 @@ slice. Every command runs in the executor's own worktree, over `origin/main...HE
 |---|---|---|---|
 | `03` §3.1 | FR-217 | Sub-graphs are versioned artifacts, referenced by the parent, inlined at bundle time. **Limbs:** the stored artifact (1), the pin (2), the inlining (2) | 1, 2 |
 | `03` §3.1 | FR-218 | MTA/cancellation priced by the same algorithm for the risk price, with the policy-administration maths in a sub-graph mounted only for those purposes, declared on the Rating Version and version-pinned; a version mounting none refuses. **This Work's half:** the purpose mount, its pin, and the real check replacing the interim refusal | 3 |
-| `03` §3.1 | FR-258 | The trace returns every step. **This Work's limb only:** inlined steps are traced and attributable | 2 |
+| `03` §3.1 | FR-258 | The trace returns every step. **This Work's limb only:** inlined steps are traced and attributable. Precondition: the decision-maker's `TraceStep` ruling (`CR-1247` Proposal 3), because FD-1246 ("A scoring trace omits the algorithm's input and output steps, where 03 FR-258 says every step"; owner WK-1178) shows `_build_trace` (`score.py:669`) skipping the input/output wire nodes, which DP-3 (a)'s ports would add | 2 |
+
+**Scope, stated so the activation accepts it knowingly.** This Work takes **all three** of
+FR-217's limbs (the stored artifact, the pin, the inlining), which is wider than WK-1250's
+roadmap charter, "FR-217's inlining limb" (`docs/roadmap.md:862`). The reasons:
+- the charter's own words, "inlines the **pinned** sub-graph", need a pin, and a pin needs a
+  stored, versioned artifact to point at;
+- FD-1241's disposition routes all three unbuilt limbs to "the Work that takes FR-218's
+  authoring half", which is this one.
+
+The lead aligns the roadmap's scope line in a later roadmap PR.
 
 ### Carried obligations
 
@@ -142,6 +163,13 @@ slice. Every command runs in the executor's own worktree, over `origin/main...HE
   count at `test_quote_input_raise_sites.py:63`. Slice 3 replaces the body. It keeps the
   refusal for a version that mounts no purpose sub-graph, and updates the raise-site count if it
   changes.
+- **FD-1246** ("A scoring trace omits the algorithm's input and output steps, where 03 FR-258
+  says every step"; the lead's decision: deferred with an owner, WK-1178, after the
+  decision-maker's `TraceStep` ruling, `CR-1247` Proposal 3). `_build_trace`
+  (`packages/pricing-core/src/pricing_core/rating/score.py:669`) skips an entry with no
+  algorithm step: "the synthetic input/output wire nodes, not an algorithm step". DP-3 (a)'s
+  ports make inlined input and output nodes likely. → **Slice 2's trace limb starts only after
+  that ruling**, and follows it.
 - **FD-1241** (severity high; the auditor's). Its three unbuilt limbs are Slices 1 and 2. **The
   finding's closure is the auditor's**, at Slice 2's close for the FR-217 limbs.
 - **`CR-838`'s dated correction** (`docs/closures/CR-00838-…:46`) records "guard delivered;
@@ -174,10 +202,10 @@ planner rules none of them.
 
 | # | Question | Options | Recommendation (the planner's input) | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-1 | Is a sub-graph version a Governed Artifact with its own approval, evidence row (`06` §3.3) and `DEFAULT_POLICY` entry (§4.2)? Or does its change reach approval inside the Rating Version that pins it? | (a) Its own approval: a `06` §3.3 row, a §4.2 `sub_graph` policy, and maturity checked at compile; (b) not governed on its own: like a Rate Table Version (`06:119`, `03` FR-1186, OQ-620), its diff reaches approval inside the Rating Version row's evidence, and its version carries a change note; (c) governed only when it is a purpose (MTA/cancellation) sub-graph | **(b).** A sub-graph is a fragment of an algorithm. It prices nothing until a Rating Version pins it, and that is the act `06` already approves. (a) adds an approval path and a maturity gate for an artifact that is never live on its own. (c) splits one artifact kind by its use | decision point | yes — Slice 1 | *(decision-maker, by `RL-`)* |
-| DP-2 | Where is FR-218's purpose mount declared, given FR-218's "declared on the Rating Version and version-pinned like any other sub-graph"? | (a) On the algorithm: `SubGraphRef` gains an optional `purposes` selector, and the Rating Version's `pins` pin the exact sub-graph version, as it pins rate tables; (b) on the Rating Version: a separate `purpose_mounts` field outside the algorithm; (c) both, with (b) overriding (a) | **(a).** "Like any other sub-graph" puts the reference where the other sub-graph references are (the algorithm), and the pin where every other pin is (the version). The version still declares which sub-graph version prices a cancellation. (b) gives one kind of sub-graph a second declaration site. (c) is two places for one fact | decision point | yes — Slice 3 (its shape is fixed in Slice 2's spec change if (a)) | *(decision-maker, by `RL-`)* |
+| DP-1 | Is a sub-graph version a Governed Artifact with its own approval, evidence row (`06` §3.3) and `DEFAULT_POLICY` entry (§4.2)? Or does its change reach approval inside the Rating Version that pins it? | (a) Its own approval: a `06` §3.3 row, a §4.2 `sub_graph` policy, and maturity checked at compile; (b) not governed on its own: like a Rate Table Version (`06:119`, `03` FR-1186, OQ-620), its diff reaches approval inside the Rating Version row's evidence, and its version carries a change note. **Consequence:** `03` §4.3's invariant says every pin resolves to `approved` or better (FR-20, `03:399-401`), and a `rate_table` pin is exempt today (`_MATURITY_CHECK_EXEMPT`, `compile.py:314`; the `PIN_NOT_APPROVED` refusal at `:469-481`). Under (b) a `sub_graph` pin must be exempted the same way, and the FR-20 invariant in `03:401` must be clarified in the same spec change; (c) governed only when it is a purpose (MTA/cancellation) sub-graph | **(b).** A sub-graph is a fragment of an algorithm. It prices nothing until a Rating Version pins it, and that is the act `06` already approves. (a) adds an approval path and a maturity gate for an artifact that is never live on its own. (c) splits one artifact kind by its use | decision point | yes — Slice 1 | *(decision-maker, by `RL-`)* |
+| DP-2 | Where is FR-218's purpose mount declared, given FR-218's "declared on the Rating Version and version-pinned like any other sub-graph"? | (a) On the algorithm: `SubGraphRef` gains an optional `purposes` selector, and the Rating Version's `pins` pin the exact sub-graph version, as it pins rate tables; (b) on the Rating Version: a separate `purpose_mounts` field outside the algorithm; (c) both, with (b) overriding (a) | **(a).** "Like any other sub-graph" puts the reference where the other sub-graph references are (the algorithm), and the pin where every other pin is (the version). The version still declares which sub-graph version prices a cancellation. (b) gives one kind of sub-graph a second declaration site. (c) is two places for one fact | decision point | yes — Slice 2 (its pin and shape land in Slice 2's spec change) and Slice 3 | *(decision-maker, by `RL-`)* |
 | DP-3 | How does a sub-graph connect at its mount point? | (a) An explicit port contract: a sub-graph declares named inputs and outputs, the mount maps parent values to them, and inlined node ids are namespaced by the mount point; (b) a splice: node ids are copied into the parent graph and wired by name; (c) the sub-graph runs as a separate ZEN evaluation called from a node | **(a).** A declared interface is what lets the compiler refuse a mismatched mount at compile time. Namespaced ids keep FR-258's trace attributable. (b) makes a name clash a silent rewire. (c) is not inlining, which FR-217 names, and puts a second evaluation on the scoring path | decision point | yes — Slice 1 (the contract) and Slice 2 (the inliner) | *(decision-maker, by `RL-`)* |
-| DP-4 | May a sub-graph mount sub-graphs? | (a) No, depth 1, refused at validation; (b) yes, to a fixed depth, with cycle detection; (c) yes, unbounded, with cycle detection | **(a) for this Work.** No P2 requirement or workflow needs nesting, and depth 1 keeps the pin set and the trace flat. If a need appears, it is a spec change | decision point | yes — Slice 2 | *(decision-maker, by `RL-`)* |
+| DP-4 | May a sub-graph mount sub-graphs? | (a) No, depth 1, refused at validation; (b) yes, to a fixed depth, with cycle detection; (c) yes, unbounded, with cycle detection | **(a) for this Work.** No P2 requirement or workflow needs nesting, and depth 1 keeps the pin set and the trace flat. If a need appears, it is a spec change | decision point | yes — Slice 1 (its create-time validation) and Slice 2 | *(decision-maker, by `RL-`)* |
 
 **Slice design, decided here and not a DP.** The three FD-1241 limbs are split so that the
 inliner (Slice 2) has something real to inline and pin. The stored artifact (Slice 1) comes
@@ -201,9 +229,15 @@ on the one before it:
 - **Slice 3 needs Slice 2**, because its check is that the purpose sub-graph is inlined in the
   bundle.
 
-**Sizing.** Three slices, within the 2–4 slices the P2 sizing table assumed for this Work
-(best 1.25 / likely 3 / worst 7.5 working days). With three slices the band is best 1.75 / likely
-2.75 / worst 5.5, at 0.5 / 0.75 / 1.5 days per slice plus the close.
+**Sizing, like for like with the P2 sizing table** (its rates: 0.5 / 0.75 / 1.5 days per slice;
+rulings acceptance 0 / 0.25 / 0.5; the close 0.25 / 0.5 / 1). Three slices give:
+- best 3 × 0.5 + 0 + 0.25 = **1.75**;
+- likely 3 × 0.75 + 0.25 + 0.5 = **3.0**;
+- worst 3 × 1.5 + 0.5 + 1 = **6.0** working days.
+
+That is inside the table's band for this Work (1.25 / 3 / 7.5, assumed at 2–4 slices). *(Corrected
+2026-09-29 on the audit of #918: the first draft read 1.75 / 2.75 / 5.5, which left out the
+rulings overhead.)*
 
 ---
 
@@ -232,12 +266,16 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
     each version immutable once created, and the resolver for `sub_graph:slug@version`.
   - Validation at create time: the fragment validates as JDM, its ports are declared per DP-3,
     and it mounts nothing per DP-4.
-- **Depends on:** nothing in WK-1250. It is blocked on DP-1 and DP-3.
+- **Depends on:** nothing in WK-1250, and on WK-674's Slice 1 tenancy for workspace scoping. It is blocked on DP-1, DP-3 and DP-4.
 - **Gate outline.**
   - Each refusal is tested by its cause: an invalid fragment; an undeclared port; an edit to an
     existing version.
   - A resolver test: `sub_graph:slug@version` resolves to exactly that version, and an unknown
     one is refused.
+  - A 403 test per route: a principal without the route's permission is refused (FR-343).
+  - An audit-event test: a create or version write whose transaction commits with no Audit
+    Event is shown red on deliberately broken input (FR-368).
+  - A workspace-scoping test: a sub-graph in one workspace is not readable from another.
   - `generate-contracts.py --check` passes.
   - The full gate. Item 11.
 
@@ -254,7 +292,7 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
   - `bundle_hash` covers the pinned sub-graph through the pins.
   - The trace carries the inlined steps, attributable to their mount point (FR-258).
   - A version that pins no sub-graph compiles and scores exactly as today.
-- **Depends on:** Slice 1. It is blocked on DP-3 and DP-4.
+- **Depends on:** Slice 1. It is blocked on DP-2, DP-3 and DP-4. Its trace limb also waits on the decision-maker's `TraceStep` ruling (FD-1246).
 - **Gate outline.**
   - Red-first proofs, each by its cause:
     - a bogus reference refused at compile, not at score (FD-1241's end-to-end case);
