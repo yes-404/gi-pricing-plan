@@ -61,11 +61,18 @@ Task 4. All three are technical (`delivery-process.md` §3; the maintainer's STR
   and a broker marker is re-written on every restart as a matter of course.
 - **The image:** `git ls-files` finds no `Dockerfile` at this tree. The image and its build
   are Slice 4's (`RL-1232` Part A).
-- **The tests:** 9 places in `backend/tests` construct settings with `environment` set to
-  `dev`, `uat` or `prod`, found with
-  `git grep -nE 'environment\s*=\s*("|Environment\.)(dev|uat|prod|DEV|UAT|PROD)' -- backend/tests`.
-  Each needs whatever DP-S1-1 and DP-S1-3 make required. That is a fixture cost, and it is
-  not a reason against either option.
+- **The tests:** ~~9 places in `backend/tests`~~ *(corrected 2026-09-29, auditor-b-2's note N2: the first
+  count ran the predicate over `deploy` and `.github` as well)* **3 places** in `backend/tests` construct settings
+  with `environment` set to `dev`, `uat` or `prod`: `test_config.py:67`, `:73` and `:87`, each a
+  `load_settings(environment=Environment.PROD, …)`. They were found with
+  `git grep -nE 'environment\s*=\s*("|Environment\.)(dev|uat|prod|DEV|UAT|PROD)' -- backend/tests`,
+  which gives 7 lines. The 4 further matches are not settings: `test_score.py:1070`,
+  `test_traces.py:395` and `test_traces_api.py:172` are trace-write arguments, and
+  `test_score.py:1139` is a `Caller` field.
+  - `:67` and `:87` assert other refusals, TLS and the OIDC issuer. The executor keeps their
+    order, so each test still fails for its own reason.
+  - `:73` expects startup to succeed, so it must supply both new values.
+  - That is a fixture cost, and it is not a reason against either option.
 
 ## Ruled
 
@@ -118,9 +125,14 @@ which supply it.
 (`--appendonly no`), so the broker check detects a mismatch only while the key exists. After a
 restart, the first process to connect writes its own id. If that process is misconfigured and
 connects first, it arms the key with the wrong id, and the correctly configured process that
-follows stops. That is still a refusal to start, visible and named, so it is detection
-delayed by one process, not a silent pass. The database check runs first and stops a process
-pointed at the wrong database before it reaches the broker at all.
+follows stops. ~~That is still a refusal to start, visible and named, so it is detection
+delayed by one process, not a silent pass.~~ *(Corrected 2026-09-29, auditor-b-2's note N1: that understated
+the limit.)* The misconfigured process starts and serves until the correctly configured process
+reaches the broker. If it never does, the mismatch is not detected. In that case the process
+has the right database and blob marker and is pointed at another tenant's emptied Redis, so it
+writes its own id, starts, and may enqueue or consume on the wrong broker. The database check runs first and stops a process
+pointed at the wrong database before it reaches the broker at all. That covers only the wrong-database case, and not the one
+above.
 
 ### DP-S1-3: requiredness, the single-row mechanism, and the key names: **(i-a) amended, (ii-a), (iii-a)**
 
