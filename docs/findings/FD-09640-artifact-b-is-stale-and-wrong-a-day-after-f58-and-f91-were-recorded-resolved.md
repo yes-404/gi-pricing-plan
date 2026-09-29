@@ -45,8 +45,17 @@ was true of no running process.
    2026-09-28T17:19:12+01:00) and says slice `PL-930 … PL-1189 (leaf, WK-672 via work:, active,
    not started)`. At `2c2bbcdf` (38 commits later, `git rev-list --count 9f6bfed1..origin/main`)
    `docs/INDEX.md` shows PL-1189 `executed`, PL-1205 `executed` and PL-1213 `in progress`.
-   `git diff 9f6bfed1 origin/main -- docs/INDEX.md | grep -E '^[-+]\| (WK|PL)-'` prints those
-   rows (saved beside this file's evidence). The position moved several times and B did not.
+   `git diff 9f6bfed1 origin/main -- docs/INDEX.md | grep -E '^[-+]\| (WK|PL)-'` prints, at 2c2bbcdf:
+
+   ```text
+   -| PL-1189 | plan | leaf | WK-672 Slice 2 — Golden Quotes and promotion re-scoring: leaf plan | active | planner | P2 | not started |
+   +| PL-1189 | plan | leaf | WK-672 Slice 2 — Golden Quotes and promotion re-scoring: leaf plan | active | planner | P2 | executed |
+   +| PL-1205 | plan | leaf | WK-672 Slice 3 — Property assertions and regression runs: leaf plan | active | planner | P2 | executed |
+   +| PL-1213 | plan | leaf | WK-672 Slice 4 — Quote Sandbox compare endpoint (FR-262 backend limb): leaf plan | active | planner | P2 | in progress |
+   +| PL-1237 | plan | map | WK-674 — Deployment, environments, atomic switchover, rollback, shadow and tenancy: map plan | draft | planner | P2 | not started |
+   ```
+
+   The position moved several times and B did not.
 4. **F91's falsifier is met the wrong way**: the position moved while mtime stayed.
 5. **No writer process.** `ps -eo pid,lstart,etime,cmd | grep write_runtime_state` matches
    nothing. `crontab -l`: no crontab. `watcher-runtime-state-cycle.sh` (untracked, in `handover/`)
