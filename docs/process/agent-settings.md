@@ -55,7 +55,9 @@ see the 2026-09-29 amendment below.)*
 file** (lead, planner, decision-maker: `opus`, currently Opus 5.5; auditor, executor:
 `sonnet`, currently Sonnet 5, the auditor on `opus` for a Work, Phase or Project close
 audit and for a plan review; watcher, reporter: `haiku`, currently Haiku 4.5). **The
-Thinking-effort column reads medium, inherited from the lead, for every role**; high only
+Thinking-effort column reads medium for every role other than the lead, inherited from
+the lead's session; the lead's own effort is the maintainer's session setting (medium,
+raised by the maintainer's `/effort high` only for the three named cases)**; high only
 for a decision-maker ruling, a Work/Phase/Project close audit or a plan review, on the
 maintainer's raise; ultrathink is no longer the decision-maker's standing setting. The
 table above is left as adopted; this paragraph is the current value.
