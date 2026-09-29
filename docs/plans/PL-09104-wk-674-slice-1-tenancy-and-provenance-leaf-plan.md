@@ -91,7 +91,9 @@ step predicts**; a failure for any other cause is a plan defect, reported, not w
      line, in `packages/model-schema/src/model_schema/jobs.py`;
    - `git grep -n -E 'platform_build *:' -- backend/src frontend/src` prints **exactly one**
      line, the `JobRow` column in `backend/src/app/db/models.py`. (`frontend/src/api/generated`
-     is VCS-ignored, so `git grep` does not see it.)
+     is VCS-ignored, so `git grep` does not see it.) Task 3 names the parameter that carries the
+     value into `transition` `build`, not `platform_build`, so it does not count here; the
+     row-to-shape mapping passes `platform_build=` with `=`, which the pattern does not match.
    Any other count fails this item.
 3. **Marker migration (FR-436, FR-417).** One new Alembic revision creates the marker table
    and writes the configured tenant id. `uv run alembic upgrade head`, `downgrade -1` and
@@ -106,14 +108,23 @@ step predicts**; a failure for any other cause is a plan defect, reported, not w
    - database marker **absent**: two cases, each refused with an error naming `database` and
      saying the marker is missing. (i) The marker table exists and is empty. (ii) The
      database is not migrated to this slice's revision, so the table does not exist; the
-     error tells the operator to run `alembic upgrade head`. An absent database marker is
+     error tells the operator to run `alembic upgrade head`. Case (ii) cannot use the shared
+     test database, which is a shared, already-migrated template (the auditor's 2026-09-28
+     finding on the `gipricing` template records it holding a stale schema; cited by
+     description because it post-dates this branch's base). It needs a
+     scratch database upgraded only to this revision's `down_revision`: mirror the
+     `scratch_database` fixture and `_upgrade(cfg, revision)` helper in
+     `backend/tests/test_migration_dataset_owner.py:358-409`, and do not invent new ones. An absent database marker is
      **never** written by the application at startup: only the migration writes it (Task 4);
    - blob-bucket marker ≠ configured id → raises, naming `blob`;
    - broker marker ≠ configured id → raises, naming `broker` (per DP-S1-2's resolution);
    - **fresh deployment** (no bucket, no blob marker, no broker marker, database migrated):
      the app starts. After startup the bucket exists and both markers carry the configured id.
      A second `create_app` on the same stores starts too, and a third with a different
-     configured id refuses, naming `database`;
+     configured id refuses, naming `database`. **Predicted red:** before Task 4 the app starts
+     but writes no markers, so the test fails on its assertion that the blob marker holds the
+     configured id after startup. A red from any other cause (the bucket missing, the app
+     failing to start) is a plan defect;
    - the same database mismatch stops the **worker**: the worker-start hook raises before any
      task is consumed;
    - positive control: matching markers → the app starts.
@@ -201,7 +212,7 @@ The executor re-reads each at its own tree and stops on any that no longer holds
 |---|---|---|---|---|---|---|
 | DP-S1-1 | What identifies "the platform version it ran on" (FR-18)? `Settings.version` defaults to `"0.1.0"` for every build, so it cannot attribute a figure "to the build that produced it" | (a) Record `Settings.version` as is; (b) add a `build` setting (the full commit SHA, set by the image build in Slice 4), required when `environment` is `dev`, `uat` or `prod` and defaulted to a fixed `local` marker otherwise, and record `"{version}+{build}"`; (c) derive it at runtime from git | **(b).** (a) records the same string for every build, which is the "not a single, knowable thing" FR-18 exists to prevent. (c) fails in an image, which carries no `.git`. (b) makes a missing build a startup error where attribution matters, and costs nothing locally | decision point | yes — Task 3 | |
 | DP-S1-2 | FR-436's "the same check covers object storage and the broker where their configuration is per tenant": what is the marker in each? The spec says nothing more, and FR-422 forbids anything durable living only in Redis | (a) Blob: a marker object in the bucket, written when absent and compared when present. Broker: a marker key, written with set-if-absent and compared when present, so a flushed Redis re-arms rather than fails; (b) blob as (a), broker exempt on the grounds that its configuration is not per tenant; (c) neither — the database check alone | **(a).** The mistake the spec names — a restored backup, a copied `.env` — points a whole configuration at the other tenant, bucket and broker included, and the DB check alone misses a split configuration. (a)'s broker half never makes Redis a source of truth: losing the key loses nothing. (b) needs an argument that the broker's configuration is never per tenant, which `redis_url` being deployment configuration contradicts | decision point | yes — Task 4 | |
-| DP-S1-3 | Three choices inside Task 4 that the spec leaves open: (i) is `tenant_id` required in every environment? (ii) how does the database refuse a second marker row? (iii) what are the blob and broker marker keys? | (i-a) Required in `dev`, `uat` and `prod`, with a fixed default in `local`; (i-b) required everywhere, with tests and the compose `.env` supplying it. (ii-a) A `smallint` primary key with `CHECK (id = 1)`; (ii-b) a boolean primary key with `CHECK (singleton)`; (ii-c) a unique index on a constant expression. (iii-a) Fixed names: blob object `_platform/tenant` holding the id as plain text, Redis key `gip:tenant`; (iii-b) names taken from new settings | **(i-a), (ii-a), (iii-a).** (i-a) matches DP-S1-1's rule: required where a wrong binding matters, and no setup cost locally. (i-b) is stricter but adds a required value to every local and test configuration for no protection there. (ii-a) is the most readable of three equivalent mechanisms, and the database refuses the second row either way. (iii-b) is configuration for a fixed value | decision point | yes — Task 4 | |
+| DP-S1-3 | Three choices inside Task 4 that the spec leaves open: (i) is `tenant_id` required in every environment? (ii) how does the database refuse a second marker row? (iii) what are the blob and broker marker keys? | (i-a) Required in `dev`, `uat` and `prod`, with a fixed default in `local`; (i-b) required everywhere, with tests and the compose `.env` supplying it. (ii-a) A `smallint` primary key with `CHECK (id = 1)`; (ii-b) a boolean primary key with `CHECK (singleton)`; (ii-c) a unique index on a constant expression. (iii-a) Fixed names: blob object `_platform/tenant` holding the id as plain text, Redis key `gip:tenant`; (iii-b) names taken from new settings | **(i-a), (ii-a), (iii-a).** (i-a): in `dev`, `uat` and `prod` a check whose configured side is a default proves nothing, so the value must be supplied there; in `local` one developer's stack holds one tenant's throwaway data, so a fixed default costs no protection and no setup. (i-b) is stricter but adds a required value to every local and test configuration for no protection there. (ii-a) is the most readable of three equivalent mechanisms, and the database refuses the second row either way. (iii-b) is configuration for a fixed value | decision point | yes — Task 4 | |
 
 All three are the decision-maker's (`delivery-process.md` §3). Tasks 1–2 do not depend on
 any of them, except that Task 1's example value waits for DP-S1-1.
@@ -253,15 +264,18 @@ regenerate `docs/contracts/` with `scripts/generate-contracts.py`.
 row-to-shape mapping near `:338`), `backend/src/app/worker/tasks.py` (`:133`); create one
 Alembic revision; test `backend/tests/test_job_platform_build.py`.
 
+- [ ] **First, the setting** per DP-S1-1, with its requiredness enforced by a validator in
+  `Settings` so a missing value is a startup error (FR-447), and a `test_config.py` case for
+  it, red then green. It comes before the tests below for the same `extra="forbid"` reason
+  as Task 4's first step.
 - [ ] **Red first:** the three Acceptance 5 tests. Predicted failure: the attribute does not
   exist on the row or the shape.
-- [ ] Add the setting per DP-S1-1, with its requiredness enforced by a validator in
-  `Settings` so a missing value is a startup error (FR-447), and a `test_config.py` case for
-  it.
 - [ ] Add the nullable `platform_build` column to `JobRow` and in the revision (the column
   shares the Task 4 revision if both land together; either way the chain keeps one head).
-- [ ] Set it where `transition` moves a Job to `running`, from the value the worker passes
-  (the worker's own `Settings`, not the API's). Map it into the `Job` shape.
+- [ ] Set it where `transition` moves a Job to `running`, from a keyword parameter named
+  `build` that the worker passes (the worker's own `Settings`, not the API's). Name it
+  `build`, not `platform_build`: Acceptance 2 counts `platform_build *:` declarations, and a
+  parameter of that name would be a second one. Map the column into the `Job` shape.
 - [ ] Green; commit.
 
 ### Task 4: The tenant binding (FR-436) — after DP-S1-2
@@ -273,9 +287,16 @@ Alembic revision; test `backend/tests/test_job_platform_build.py`.
 `backend/tests/test_tenant_binding.py`; `backend/tests/conftest.py` if `api_settings` needs
 the new setting.
 
-- [ ] **Red first:** the Acceptance 4 tests. Each negative test predicts
-  `TenantMismatchError` naming its store; an absent database marker gives the same error
-  with the found id reported as absent. A startup failure of any other type is not the proof.
+- [ ] **First, the `tenant_id` setting** (per DP-S1-3), with its `test_config.py` case, red
+  then green. It has to come before the tests below: `Settings` has `extra="forbid"`
+  (`backend/src/app/config.py:91-96`), so a test that passes `tenant_id` before the field
+  exists goes red on validation, which is the wrong cause.
+- [ ] **Red first:** the Acceptance 4 tests. Before the checks exist, each negative test's
+  predicted red is that startup does **not** raise (`pytest.raises` reports it did not);
+  the fresh-deployment test's is the one Acceptance 4 names. Once green, each negative test
+  gets `TenantMismatchError` naming its store; an absent database marker gives the same error
+  with the found id reported as absent. A red or a startup failure of any other kind is not
+  the proof.
 - [ ] The revision: create a single-row marker table, with a second row refused by the
   database by the mechanism DP-S1-3 resolves. Insert the configured `tenant_id`, read through
   `load_settings()` as `env.py` already does (`backend/migrations/env.py:19,31`). Drop the
@@ -297,8 +318,13 @@ the new setting.
   2. **`blob_store.ensure_bucket()`**, moved up from its current place
      (`backend/src/app/main.py:92`). The bucket must exist before its marker can be read or
      written: `ensure_bucket` runs `head_bucket` and creates the bucket only when that fails
-     (`backend/src/app/platform/blobs.py:119-128`). For another tenant's existing bucket this
-     is a read.
+     (`backend/src/app/platform/blobs.py:119-128`). `_ensure` catches **any** `ClientError`
+     from `head_bucket`, including a 403, and then calls `create_bucket`. So when the
+     credentials cannot read a bucket that exists (another tenant's, or a permissions
+     mistake), `create_bucket` raises its own `ClientError` and startup stops with an S3
+     error, not a `TenantMismatchError`. That still refuses to start, which is what FR-436
+     requires, and this slice does not change `ensure_bucket`. For a bucket the credentials
+     *can* read, `head_bucket` succeeds and nothing is written.
   3. **Blob marker**, per DP-S1-2: read it; if absent, write the configured id; if present
      and different, stop. On a fresh deployment step 2 has just created the bucket, so the
      marker is absent and gets written.
