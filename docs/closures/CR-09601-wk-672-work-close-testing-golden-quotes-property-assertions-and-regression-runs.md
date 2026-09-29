@@ -337,6 +337,39 @@ as such.
 Two disagreements, filed as FD-9602 and FD-9603. Neither is a verdict on this close; which side
 moves is `CLAUDE.md` §0's question, for the decision-maker.
 
+### FR-1221 after #910, 2026-09-29
+
+The lead's `fix before close` decision on FR-1221 is **discharged by #910**, merged as the squash
+`33286dab7ad411f74a86ba7299e705c39e18522a` (2026-09-29 17:21:51 BST, parent `ac8ab519`), on the
+maintainer's MERGE-ACK of 17:21:27 BST. `git merge-base --is-ancestor 33286dab origin/main` exits 0.
+It is test-only: `backend/tests/test_regression_runs.py` +40 and
+`packages/pricing-core/tests/test_replay.py` +1.
+
+- **The markers.** Four stacked `@pytest.mark.req("FR-1221")`, on the four tests the *Verdict*
+  section names. `git grep -c '@pytest\.mark\.req("FR-1221")' HEAD -- backend packages tests
+  examples/fremtpl2` at this branch's merge of `33286dab` (`1e8e02bb`): 3 in
+  `test_regression_runs.py` and 1 in `test_replay.py`.
+- **The workspace limb.** A new step 5 in
+  `test_the_case_blob_and_the_run_row_are_refused_without_rating_read_or_across_workspaces`
+  seats a principal with `rating:read` in both workspaces. It asserts 200 from home on the run
+  and on `/cases` (the control), then exactly 404 on both from the other workspace
+  (`:422`, `:423`). Step 4's non-member `in (403, 404)` assert is kept beside it rather than
+  replaced.
+- **The red proof, re-run by the auditor** in a detached worktree at #910's head `9ae9270d`, on
+  its own database created empty and migrated (`910/04-red-proof-plain.log`):
+  - unmutated, 1 passed;
+  - with `RegressionRunRow.workspace_id == workspace_id` removed from `fetch_run`,
+    `test_regression_runs.py:422: AssertionError`, `assert 200 == 404`;
+  - with `:422` bypassed as well, `:423: AssertionError`, `assert 200 == 404` on `/cases`.
+
+  Both files were restored and the worktree was clean. The auditor's #910 audit was CLEAN at
+  `9ae9270d`, adopted by the lead.
+- **The requirements axis at the merged tree.** `uv run python scripts/scope-audit.py RATE
+  --sections 3.8 --extra FR-248,FR-251,FR-273,NFR-499,NFR-502` at `1e8e02bb` (this branch's merge of
+  `33286dab`; `12-scope-rate-3.8-after-910.log`): **RC=0**, `with evidence   : 12  (100%)`,
+  *"every in-scope requirement has test evidence"*. At `1c8762d9` it exited 1 with FR-1221 the
+  only gap.
+
 ## Owed list
 
 **Generated, verbatim** — `python3 scripts/register-owed.py WK-672` at the committed revision
@@ -375,7 +408,7 @@ row).
 | **FD-1208** | `PL-1205`'s `git log --grep` precondition | **closed**: its own event (b) happened. #868 merged as `5ec47dc4` before S3's Task 5, and S3 ran the check in the subject-plus-symbol form (`LG-1225`, #886). No dated correction to the executed, frozen plan *(closed in this PR, row and essay)* | `closed` |
 | **FD-1209** | the demo has no real freMTPL2 algorithm (G2) | **keep `deferred with an owner — the lead`**, and restate the event by role: *before `CR-1212` G6's pre-demo plan review*. Its event has **not** happened at `1c8762d9` (the seed's only algorithm is `_demo_algorithm()`, `examples/fremtpl2/model.py:327`; no `WF-699` journey test). "Plan review 16" now names both G6's review and the §14 review at this close; read as the latter, the event falls due at once and cannot be met, because the real algorithm is `WF-699` Phases A to C on the approved models and no WK-672 slice planned it. **Not a WK-672 deliverable; it does not block this close.** If the lead reads it the other way, it blocks plan review 16, not this close *(open, row and essay annotated)* | `closed-with-findings` |
 | FD-1194 | the Dependabot hold: *"#852 is held until WK-672 closes"* | **the hold is moot.** Dependabot closed #852 unmerged at `2026-09-28T14:05:08Z` (*"Looks like these dependencies are updatable in another way, so this is no longer needed."*). The frontend dependency group now sits in **#857** (open; `frontend/package.json`, `frontend/pnpm-lock.yaml`), whose frontend CI (`success` at `7962b866`, 2026-09-28) predates S3's and S4's regeneration of `docs/contracts/openapi/generated.json`, so its gate should run on a merge with current `main` first. **Merging #857 is the user's, through the maintainer**; never the lead's or the auditor's. Nothing is recommended for #852 *(resolved row; its stale cell gets a dated note in #903 (auditor-a-2), not here)* | `closed` |
-| FR-1221 (no row) | no `req("FR-1221")`; the workspace limb unproven | see *Verdict* *(proposed `fix before close`)* | `closed-with-findings` |
+| FR-1221 (no row) | no `req("FR-1221")`; the workspace limb unproven | see *Verdict* *(proposed `fix before close`; adopted by the lead; discharged 2026-09-29 by #910, `33286dab`)* | `closed` |
 | S4 audit report (no row) | the independent S4 audit's report is not durable; only its verdict line is, in the squash body of `c9f50232` | **accept**, with a note for later slices: file the audit report, or its findings, where the ledger can cite it | `closed` |
 | **FD-9602** | `WF-699` D4 vs FR-261's grid | **carry forward, unowned**; event: the decision-maker's ruling or `OQ-1224` *(filed in this PR)* | `closed-with-findings` |
 | **FD-9603** | `WF-699` E2's route vs FR-257 / FR-260 | **carry forward, unowned**; event: the decision-maker's ruling *(filed in this PR)* | `closed-with-findings` |
@@ -406,7 +439,7 @@ a requirement without evidence; FR-1221 is the only one.
 | FR-251, FR-258, FR-353 | consumed, unchanged; their markers predate WK-672 | FD-9604 is raised on FR-258 and does not change this verdict |
 | NFR-499 | WK-672's limbs delivered and tested; the rate-limit limb is WK-674's | *NFRs, measured* |
 | NFR-502 | the compare route conforms (grep with a positive control); the measurement is WK-674's | *NFRs, measured* |
-| **FR-1221** | **delivered but untested**, under its own id | see below |
+| **FR-1221** | **delivered, tested** *(changed 2026-09-29: the lead's `fix before close` decision is discharged by #910, squash `33286dab`; it read "delivered but untested, under its own id" until then)* | *Evidence*, "FR-1221 after #910"; the proposal below is kept as written |
 
 **FR-1221.** Its five clauses, and the `07:307` blob-route obligation, make the six rows of the clause table. Five of the six rows are asserted, exactly, by tests that carry `FR-261`,
 `FR-260` or `NFR-499` markers (the clause table above). The sixth, the **workspace** limb of
@@ -431,7 +464,7 @@ keeps exiting 1 on FR-1221 until the marker lands.
 **The close, proposed.** WK-672 delivered its four charter items (FR-260, FR-261, FR-262's
 backend limb, FR-257 limb (1)) and every requirement it composed or enforced, each evidenced at
 `1c8762d9`. One requirement, FR-1221, is delivered but untested under its own id, with a
-proposed pre-close fix. No finding owed by WK-672 is left without a proposed resolution. The
+proposed pre-close fix *(discharged 2026-09-29 by #910, `33286dab`; FR-1221 is now delivered, tested)*. No finding owed by WK-672 is left without a proposed resolution. The
 auditor proposes the Work close, subject to the lead's decisions above and the maintainer's
 acceptance.
 
