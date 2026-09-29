@@ -247,6 +247,22 @@ carries a padded id):
 says the default is to **fold** each into the slice whose subject it matches, with a seventh
 slice only for a group that matches none. **Every one folds, so there is no seventh slice.** One line each:
 
+*(Noted 2026-09-29, on the maintainer's entry `2026-09-29 15:26:00 BST · maintainer (acting on
+the maintainer's behalf) · STRUCTURE: routing per document-ids §1.6 and the charters; today's
+technical answers re-homed`.)* Under `document-ids.md` §1.6, placing requirements into slices is
+**the planner's decision**, and Q843-2 is re-homed as a **recommendation**. **The placements
+below, and the other placements this amendment makes, are the planner's decisions, each with
+its reason.** They agree with the recommendation at every point, so there is no departure to
+report:
+- fold every assignment, with no seventh slice;
+- `CR-1212` item 4's environment-scoping spec change and `OQ-1234` go in Slice 2, which
+  creates Environment and Deployment (the spec change lands "with its environment record",
+  and DP-7's predicate reads the skip);
+- `OQ-1235` gates Slice 3, matching its roadmap gate, because Slice 3 is the first slice that
+  resolves per-environment configuration;
+- the dedicated host is a dependency of Slice 5 and of the F1 test. It is owned by the
+  maintainer, because the STRUCTURE entry keeps the host question with the maintainer.
+
 - **FR-434 → Slice 4.** Slice 4 builds the compose `api` service, and "runs without the
   compute workers" is a property of how that service is packaged and started.
 - **NFR-534 → Slice 4.** It is FR-434's measurement, taken on the same stack: `api` up, no
@@ -1022,6 +1038,12 @@ the maintainer's behalf) accepts this plan *(amended 2026-09-29)*, the activatio
      lead's channel file, never on the PR. The Activation and acceptance lines name the
      maintainer, not "the deputy". The roadmap row edit is the lead's (Q843-2), and this plan
      proposes the ids for it.
+   - **Authority, noted later the same day** (the maintainer's 15:26:00 BST STRUCTURE entry):
+     the placements are the planner's decisions, and Q843-2 is a recommendation they agree
+     with at every point. See the note under **Placement of `CR-1212`'s WK-674 assignments**.
+     The DP cells cite `RL-1232` unchanged. The decision-maker's dated re-adoption of the
+     maintainer's technical answers in `RL-1232` belongs to the next records PR, not to this
+     plan.
    - **Consistency checked by grep:** every id in the coverage table appears in its slice's
      Task, and no `Resolved by` cell is empty
      (`grep -E '^\| DP-[0-9]' <this file> | grep -c '| |$'` prints 0).
