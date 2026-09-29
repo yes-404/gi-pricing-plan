@@ -165,3 +165,34 @@ one negative test for each of the following, each shown red on deliberately brok
 
 Slice 3's leaf plan names the replay-exactness check: *Violation: a replayed v(S) that
 differs from a true re-rate for some policy, and is not recorded as falling back.*
+
+## Adopted by the decision-maker, 2026-09-29
+
+**Why this section exists.** This record files the deputy's delegated decisions of
+2026-09-28 14:05:30 BST. They are technical decision points. The maintainer's entry `2026-09-29 15:26:00 BST · maintainer (acting on the maintainer's behalf) · STRUCTURE: routing per document-ids §1.6 and the charters; today's technical answers re-homed`
+(§2) re-homes such points to this role, so each is re-verified here at origin/main `ac8ab519`,
+with the mechanism it builds on named by file and line. The body above stays as of `ed123cb0`.
+
+| Point | Re-verified at `ac8ab519` | Ruling |
+|---|---|---|
+| **DP-1 (a)**: subset bundles compiled through `compile_bundle` at step granularity, ephemeral and content-addressed, never a Rating Version | `compile_bundle` is `packages/pricing-core/src/pricing_core/rating/compile.py:425` (`async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle`). A bundle carries its content hash (`RL-921`, read in `api/score.py`'s docstring at `:168`) | **Adopted as filed.** One wording point for Slice 1's spec text: the entry says "no `VR-` identifier", but `VR-` is `01`'s validation-rule identifier (`01-data-management.md`, `VR-AC…` and similar). The condition means *no Rating Version identity*: never a `rating_version` row, never approvable, deployable or listed. The spec text should say that |
+| **DP-2 (c)**: changes derived from the structural diff, regrouped into at most 6 groups, the server checking the partition | The structural diff exists: `diff_algorithms(old, new) -> AlgorithmDiff` at `packages/model-schema/src/model_schema/rating.py:569` (`AlgorithmDiff` at `:539`). `structural_diff` is the first evidence kind of the `rating_version` floor (`approvals.py:106`) | **Adopted as filed** |
+| **DP-3 (b)**: FR-224's threshold on the `rating_version` `ApprovalPolicy` entry, with no environment-variable override | The entry exists: `06` §4.2's default policy and `packages/model-schema/src/model_schema/approvals.py:322`. **The field does not:** `ApprovalPolicyEntry` (`approvals.py:111-122`) has `artifact_type`, `approvers_required`, `approver_roles`, `environment` and `evidence`, and no threshold. FR-224 (`03:110`) says only *"a workspace-declared premium-deviation threshold"* | **Adopted, with a premise note:** the ruling is about where the threshold lives, and the object it lives on exists. The field is new, a `model-schema` shape change (ADR-704, generated to `docs/contracts/`) that Slice 5 makes with the gate it serves. An approval policy is not a Setting, so FR-446's environment-variable layer (`07:172`) does not reach it. "No override" therefore holds by construction, and Slice 5's negative test proves it |
+| **The §0 disagreement**: the spec is right, and `_round_minor`'s docstring is corrected | `03` §3.11 still reads *"Inside the engine, arithmetic is exact"* (`03:208`) and *"At the Python binding, there is no decimal type at all"* (`03:211`). The docstring still says *"the engine's float64 arithmetic"* (`packages/pricing-core/src/pricing_core/rating/score.py:532`), not yet corrected | **Adopted.** The correction is a code edit, and it is Slice 1's |
+| **The Shapley feasibility rule** (items 1–5) | FR-248 (`03:155`) requires each rung to record its value and operation. NFR-493 (`03:1148`) is the ≥ 1 M risks/hour floor. `score_batch` is `score.py:1004` | **Adopted as filed.** Item 4's "bring the figure to the deputy" now reads: bring it to this role. A changed attribution NFR is a spec change, which this role rules, and the maintainer accepts it if it relaxes a target a Work closes against (`RL-1232`, Q848-3's reading) |
+
+**Spec changes this record obliges, and why none lands in this commit.** Each belongs to a
+slice of WK-673's map plan (PR #844), because each is spec text for a shape or behaviour that
+the same slice builds. `CLAUDE.md` §2 puts spec, code and tests for one change in one commit.
+- DP-1's and DP-2's conditions, and the `03` §4.6 contract fields (`job_id`,
+  `by_ladder_rung`, `errors`) and §5.2's `attribute` baseline, describe the Dislocation Run
+  artifact and its signature. The artifact's shape is generated from `model-schema` into
+  `docs/contracts/`. Writing §4.6 before the shape changes would make the spec and the
+  generated contract disagree, so they are Slice 1's.
+- DP-3's threshold field is Slice 5's, as above.
+- `RL-881`'s stale clause (that `06` §4.2's floor restatement omits `rating_version`; `RL-881`
+  at `:156`) is a ruling record, so it is this role's, not a slice's. It is not superseded
+  yet: `RL-881` reads `superseded_by: ~` and `corrected_by: []`. **Proposed for the lead:**
+  this role files it when #844's Slice 1 lands, citing `RL-885`, or now as its own small
+  record, whichever the lead prefers. It changes no behaviour.
+
