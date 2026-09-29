@@ -214,14 +214,29 @@ maintainer)`, §2, quoting the maintainer: "approve Dependabot plan"):
   user merges on green. #881 is re-gated if #857's merge changes its base.
 - **FD-1194's stale cell** is updated by the auditor in the next records PR.
 
-**What the entry does not dispose of:** #877, #878 and #879, the three major GitHub Actions
-bumps. The maintainer's 16:21:36 entry, item 2, confirms this. They "stay PR16 proposals, and
-the user decides them at PR16 acceptance". This review's recommendation stands: merge them
-one at a time.
+**Resolved in full 2026-09-29 by the maintainer, by the user's delegation** (entry `2026-09-29 16:25:49 BST · maintainer (acting on the maintainer's behalf) · BLOCKER DECISIONS by delegation: #882, the Dependabot merges, the Actions majors, FR-217, FD-1238, and the WK-672/PR16 acceptance`, items 1–3):
+- **#882 is closed** by the maintainer, with a comment citing #903 and the zen-engine
+  upgrade finding.
+- **#857, then #881, merge when both of these hold at the PR's exact head:**
+  - the lead's local full two-half gate is green, with in-log SHA and RC and archived
+    evidence;
+  - GitHub CI is success on every workflow.
+
+  The maintainer merges them one at a time, with `--match-head-commit`. #881 is re-checked
+  against the main that #857 produces.
+  - #857's last CI success was at `2026-09-28T20:48:38Z`. That predates WK-672 S3 and S4's
+    changes to `docs/contracts/openapi/generated.json`, which the WK-672 close record also
+    notes. So the CI condition means a fresh run at a head on current main.
+- **#877, #878 and #879 are removed from this review's proposals.** Each merges only if every
+  CI workflow passes on its own head, one at a time, and the maintainer merges it. If one
+  fails, the maintainer closes it. The lead then adds that action's major version to
+  `dependabot.yml`'s ignore list in a WK-1178 PR, with an `FD-` for a governed upgrade.
+  This review's earlier recommendation, "merge one at a time after reading each release's
+  runner and Node requirement", is superseded by that rule.
 
 **Lead verdict (Proposal 2):** _pending_
-**Maintainer acceptance (Proposal 2):** given for the part the 16:08:24 entry states. The
-part it does not state (#877–#879) is _pending_.
+**Maintainer acceptance (Proposal 2):** given, in the 16:08:24, 16:21:36 and 16:25:49 entries
+above. Nothing in Proposal 2 remains open.
 
 ## Proposal 3 — F35's remedy: its owner, and whether P2 can exit with NFR-490 red
 
@@ -465,8 +480,21 @@ amend or accept:
 - **The auditor**, who reads it against `FD-1238`'s event. That event is the artifact
   merging.
 
+**Partly resolved 2026-09-29 by the maintainer, by the user's delegation** (entry `2026-09-29 16:25:49 BST · maintainer (acting on the maintainer's behalf) · BLOCKER DECISIONS by delegation: #882, the Dependabot merges, the Actions majors, FR-217, FD-1238, and the WK-672/PR16 acceptance`, item 5):
+- **`.claude/roles/reporter.md` is amended** with a dated line: "Writes only
+  `~/gi-pricing-plan.local/handover/eta.md` and the external channel. Never `~/.claude/`
+  (memory, settings, projects) nor any governed file; a note worth keeping is proposed to
+  the lead, not written".
+- The lead drafts it in a WK-1178 PR, the auditor checks it, and the maintainer gives the
+  ACK. FD-1238's decision becomes "fixed by the charter amendment".
+- That is option (a) for the one role the incident involved.
+
+**What stays a proposal:** option (b), the team-wide boundary for the six other roles, whose
+charters still say nothing about `~/.claude/`. The harness offers every session a memory
+directory, not only the reporter's, so the gap `FD-1238` found is not closed for them.
+
 **Lead verdict (Proposal 6):** _pending_
-**Maintainer acceptance (Proposal 6):** _pending_
+**Maintainer acceptance (Proposal 6):** the reporter's line is given (16:25:49 item 5); the team-wide boundary is _pending_.
 
 ## Proposal 7 — FR-432, FR-433 and FR-438: the carried packaging requirements, and the `07` NFRs that go with them
 
@@ -624,13 +652,17 @@ records it as delivered.**
 
   It is being filed after this draft, so this record cites it by its subject, "`CR-838`
   records FR-217 as delivered, but bundle-time inlining is not built", and not by an id.
-- **What goes to the user with this review:**
-  - that `FD-`'s resolution;
-  - **whether to reopen WK-669**, the Work `CR-838` closed. Reopening a closed Work is the
-    maintainer's, and the maintainer does not decide it by delegation (`CLAUDE.md` §12;
-    the same entry).
-- The remedy travels with FR-218's owner, below. Both concern the same mid-term-adjustment
-  sub-graph.
+- **Decided 2026-09-29, WK-669 is not reopened.** This is the entry `2026-09-29 16:25:49 BST ·
+  maintainer (acting on the maintainer's behalf) · BLOCKER DECISIONS by delegation: #882, the
+  Dependabot merges, the Actions majors, FR-217, FD-1238, and the WK-672/PR16 acceptance`,
+  item 4, on the user's delegation. It supersedes the 16:21:36 entry, which had left the
+  reopen question to the user.
+  - The auditor files the `FD-`.
+  - The auditor adds a dated correction note to `CR-838`'s verdict: "guard delivered;
+    `sub_graphs` inlining NOT delivered → FD-<n>". The verdict text itself is not rewritten.
+- **This review routes the remedy**, bundle-time inlining, to the Work that takes FR-218's
+  authoring half. Both concern the same mid-term-adjustment sub-graph. That Work is the
+  subject of the options below, and it must carry both.
 
 **Why the gap is safe today.** The guard fails closed. An MTA or cancellation quote is
 refused, never priced as new business, which is the silent failure FR-218 exists to prevent.
@@ -665,7 +697,7 @@ The maintainer's item 4 (the spec-change rule "a new FR/NFR names its roadmap ro
 is what stops this class recurring.
 
 **Lead verdict (Proposal 10):** _pending_
-**Maintainer acceptance (Proposal 10):** _pending_
+**Maintainer acceptance (Proposal 10):** WK-669 not reopened and `CR-838` corrected, both given (16:25:49 item 4); the owning Work is _pending_.
 
 ## Proposal 11 — NFR-500: the branch it turns on, and its owner
 
@@ -887,15 +919,23 @@ contradicts a verdict there.
 - **Retry counters (RFC-895 artifact B):** read with `write_runtime_state.py show`. There
   are no `project`- or `phase`-layer `replan`/`fix` entries, and so still no pilot data for
   question 5. **No change.**
-- **Proposals resolved by the maintainer while this review was drafting:**
-  - Proposal 2: #882 (#903, all zen-engine majors), #857 and #881; not #877–#879;
+- **Resolved by the maintainer while this review was drafting:**
+  - Proposal 2 in full: #882 closed, #857 then #881 on green gates and CI, #877–#879 on
+    their own CI;
   - Proposal 4: the host fallback.
 
-  Both come from the entries of 2026-09-29 16:08:24 and 16:21:36 BST.
-- **Partly resolved, Proposal 8:** this review is not G6 (16:21:36). The restatement stays a
-  proposal.
-- **Proposals that need the maintainer's dated line:** 1, 2 (#877–#879 only), 3, 5, 6, 7, 8
-  (the restatement), 9, 10, 11 and 12.
+  These come from the entries of 2026-09-29 16:08:24, 16:21:36 and 16:25:49 BST.
+- **Partly resolved:**
+  - Proposal 6: the reporter's charter line (16:25:49 item 5). The team-wide boundary stays a
+    proposal.
+  - Proposal 8: this review is not G6 (16:21:36). The restatement stays a proposal.
+  - Proposal 10: WK-669 is not reopened, and `CR-838` gets a dated correction (16:25:49
+    item 4). The owning Work for FR-217's inlining and FR-218 stays a proposal.
+- **Proposals that need the maintainer's dated line:** 1, 3, 5, 6 (the team-wide boundary),
+  7, 8 (the restatement), 9, 10 (the owning Work), 11 and 12.
+- **Acceptance.** Per 16:25:49 item 6, the maintainer reviews this record once it is filed
+  and gives its acceptance line on the user's delegation, after the maintainer's own evidence
+  check.
 - **Routing, if accepted.** Each proposal, its record and its owner. This is given in the
   form of the maintainer's 16:12:57 entry, Part 2. That entry is future-facing and does not
   bind this review, but the table costs nothing.
@@ -903,15 +943,15 @@ contradicts a verdict there.
   | Proposal | Record | Owner |
   |---|---|---|
   | 1 | `RL-` (or ADR) + `06` amendment; the check | decision-maker; WK-1178 |
-  | 2 | `FD-` (zen-engine upgrade); `dependabot.yml` PR | auditor / lead; WK-1178 |
+  | 2 | resolved: the maintainer merges on the stated conditions; `FD-`s and ignore rules on failure | the maintainer; lead (WK-1178) |
   | 3 | `RL-` (TraceStep contents); `SL-` in WK-1178 | decision-maker; planner |
   | 4 | G4 roadmap row; `PL-1237` amendment | lead; planner (at #892's turn) |
   | 5 | OQ-1233 → WK-688 row and gate move; OQ-1234 and OQ-1235 → `RL-` | lead; decision-maker |
-  | 6 | `delivery-process.md` §3 + core extract + `reporter.md` | the maintainer's; applied by the lead |
+  | 6 | `reporter.md` line (decided); `delivery-process.md` §3 + core extract for the rest (proposed) | lead drafts, auditor checks, the maintainer ACKs |
   | 7 | new P3 `WK-` row; WK-1178 items | lead (the row); the maintainer (`active`) |
   | 8 | G6 restatement (if the user accepts) | lead, quoting the acceptance |
   | 9 | `FD-` against `register-owed.py`; F61's event | auditor; WK-1170 |
-  | 10 | new P2 `WK-` row; `FD-` against `CR-838:39` (ordered 16:21:36); reopening WK-669 | lead / the maintainer; auditor; the user |
+  | 10 | new P2 `WK-` row carrying FR-217 inlining and FR-218; the `FD-` and `CR-838`'s dated correction (decided 16:25:49) | lead / the maintainer; auditor |
   | 11 | `OQ-` then `RL-` + `03` amendment; re-measurement in Proposal 3's slice | decision-maker; WK-1178 |
   | 12 | a `## P2` "Exit demo" row; a §10 gate *Before the P2 exit demo* (FD-1209, the D4 and E2 rulings) | lead |
 
@@ -940,16 +980,16 @@ contradicts a verdict there.
 
 ## Acceptance
 
-**Maintainer acceptance (plan review 16, Proposals 1–12, except the parts of 2, 4 and 8
-already given in the 16:08:24 and 16:21:36 entries):** _pending_ — dated when given.
+**Maintainer acceptance (plan review 16, Proposals 1–12, except the parts of 2, 4, 6, 8 and
+10 already given in the 16:08:24, 16:21:36 and 16:25:49 entries):** _pending_ — dated when given.
 
 ## Sources
 
 - The maintainer's channel entries of 2026-09-29, quoted by heading: 15:26:00 (STRUCTURE),
   15:36:43 (SCOPE: NFR-490 / F35), 14:15:43, 14:17:56 and 14:20:41 (the WK-674 answers),
   16:05:14 (the plan-review cadence), 16:08:24 (the host fallback and Dependabot), 16:12:57
-  (routed outputs), 16:15:10 (the older plan-review items) and 16:21:36 (the answers on G6,
-  FR-217, #903 and #877–#879). The
+  (routed outputs), 16:15:10 (the older plan-review items), 16:21:36 (the answers on G6,
+  FR-217, #903 and #877–#879) and 16:25:49 (the blocker decisions). The
   channel file is local and is not in the repository.
 - `docs/roadmap.md` (`## P2`, §10), `docs/findings/register.md`, `docs/open-questions.md`,
   `docs/specs/03-rating-engine.md`, `06-governance.md` and `07-platform.md`,
