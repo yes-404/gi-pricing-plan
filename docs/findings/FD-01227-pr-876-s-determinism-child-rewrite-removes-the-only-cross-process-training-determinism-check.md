@@ -78,3 +78,5 @@ the wording question to the maintainer; process-level nondeterminism (thread sch
 and FR-11's sentence "given identical inputs … reproduce identical outputs" does not limit itself to one process.
 
 *(2026-09-29: since raised as OQ-1229, recorded in open-questions.md and 02-modelling §10.)*
+
+*(2026-09-29: #876 merged as a5118a30 at 11:47:04Z; its test file is byte-identical to 45c77f4d, the version read here, by `git diff 45c77f4d a5118a30 -- packages/pricing-core/tests/test_rating_score.py`, which is empty.)*
