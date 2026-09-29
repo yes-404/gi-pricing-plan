@@ -437,6 +437,33 @@ acceptance.
 
 ## Sign-off
 
-- **The lead's decisions** on each proposed verdict and each `decision:`: *(to be written by the
-  lead before the merge)*.
+- **The lead's decisions, 2026-09-29** (the lead, on the auditor's proposals at `0648f46c`).
+  The lead re-checked the load-bearing facts before deciding: FD-1208's order (`5ec47dc4` is on
+  `main` and precedes `6a8b8e70`), the cross-workspace assert
+  (`backend/tests/test_regression_runs.py:384` accepts `in (403, 404)` from a non-member, so
+  dropping `fetch_run`'s `workspace_id` filter, `backend/src/app/platform/regression_runs.py:57`,
+  fails nothing), and each Decision cell below.
+  - **Requirement verdicts: ADOPTED as proposed**, every row of *Verdict*, including FR-262's
+    UI limb reassigned to WK-675 and NFR-499's and NFR-502's limbs that are WK-674's.
+  - **FR-1221: ADOPTED, `fix before close`.** The test-only PR in the pattern of #897 (the
+    four stacked `req("FR-1221")` markers, and a principal holding `rating:read` in both
+    workspaces asserting 404 on the run and on `/cases`, shown red with the `workspace_id`
+    filter dropped) merges **before** this record. At that merge the auditor appends its squash
+    SHA and `scope-audit.py`'s rc 0 on FR-1221 to *Evidence*, and the verdict becomes
+    *delivered, tested*. The fallback, `carry forward with an owner — WK-1178`, is not taken.
+  - **FR-1221 in the roadmap: ADOPTED.** The lead adds it to the `### WK-672` section in the
+    same edit that marks the section closed, after the maintainer's acceptance line.
+  - **FD-1208: ADOPTED, closed.** **FD-1209: ADOPTED, AMENDED**: deferred with an owner, the
+    lead, with the event named by its role. **FD-9602, FD-9603: ADOPTED, AMENDED**: deferred
+    with an owner, the decision-maker, not *unowned*. **FD-9604: ADOPTED, AMENDED**: deferred
+    with an owner, WK-1178, after the decision-maker's `TraceStep` ruling. Each amendment is
+    the dated *Lead's decision* in the row's Decision cell. The routing of all three to WK-1178's
+    Work-item column stands.
+  - **FD-1194: ADOPTED**: the hold is moot, and its note is left to #903.
+  - **The S4 audit report: ADOPTED, accepted**, with the rule for later slices: an
+    independent slice audit's report, or its findings, is filed where the ledger can cite it.
+  - **LG-1230's close: ADOPTED.**
+  - **§5a: ACKNOWLEDGED.** The freeze dates and target (`CR-1212` P1 amendment 1) are owed by
+    the lead after this close is accepted, and P2's throttle lifts on that acceptance, not on
+    this merge.
 - **Maintainer acceptance of the Work close:** *(the maintainer's dated line)*.
