@@ -171,6 +171,10 @@ The entry "2026-09-29 11:27:38 BST · maintainer (acting on the maintainer's beh
 spare capacity" (`to-lead.md`) says, read at 10:27 UTC, that one gate (PID 296584, #886) was running. This record states no start
 time, STOP time or duration for the run: none of those is in a record it read.
 
+## Third instance, the executor's account
+
+**As stated by the executor (executor-s3fix's own account, relayed by the lead; not read from a log here):** it launched #886's gate at 10:09:01Z on the lead's first grant, after the prior pytest (PID 224799) had exited at 10:08:29Z, and not from a wait loop; it ran the gate as a background job under `timeout 3600` and polled with `kill -0`, which deviates from S-11; and none of the lead's messages, including the 10:11:15Z STOP, reached it until the gate ended at 10:33:49Z. This is the executor's account of how the run started and of why the STOP went unanswered; no earlier text in this record states a wait loop.
+
 ## #891 closed — 2026-09-29
 
 **#891 closed unmerged, 2026-09-29:** the maintainer's entry "2026-09-29 11:35:28 BST · maintainer (acting on the maintainer's behalf) · #891: CLOSE unmerged; rework as a new WK-1178 PR" (`to-lead.md`) closes #891 and supersedes it with a new WK-1178 PR built to this finding's Disposition. **The fix this Disposition specifies is now owned by that rework PR.** This finding stays open.
