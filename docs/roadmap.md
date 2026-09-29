@@ -916,6 +916,13 @@ gates: ~
 exit criteria: ~
 works: WK-676, WK-677, WK-678, WK-679, WK-680, WK-681, WK-682, WK-691
 
+**2026-09-29: requirements carried into Phase 3 without a Work.** CR-1212 P12 records that FR-432, FR-433, FR-434, FR-435 and FR-438 were on no roadmap row. FR-434 and FR-435 went to WK-674 in P2 (CR-1212 P12; placed in the WK-674 map plan, #843). The other three are carried to P3, and no P3 Work names them yet:
+
+- **FR-433** (the Helm chart and Kubernetes manifests) moves to Phase 3 by `RL-1232` DP-1 (b), and `07` FR-437 and FR-433 carry the dated amendment. It is deferred with an owner, the maintainer. **Event:** the P2 closure record, which names the Work that takes it.
+- **FR-432** and **FR-438** are carried to P3 by CR-1212 P12, which names no owner. They are listed here so the gap is visible. Their owner is a question for plan review 16.
+
+No Work is created by this note. Creating one is a scope decision, and the maintainer's.
+
 ### WK-676 — Full scoped RBAC, custom roles, break-glass
 
 ```yaml
