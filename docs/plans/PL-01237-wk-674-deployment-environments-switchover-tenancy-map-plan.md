@@ -90,7 +90,8 @@ alone.
    The same rule applies. **A pre-existing marker is not delivery.** FR-412's marker covers
    only the wall-clock half (`backend/tests/test_worker.py:288`). FR-430's marker exercises
    the refusal branch only on a hand-crafted key (register row F54). FR-437's marker covers
-   only the local profile (`tests/test_repository_invariants.py:81`). Each of these ids gets
+   only the local profile (`tests/test_repository_invariants.py:83`; *`:81` at `ed123cb0`,
+   corrected 2026-09-29*). Each of these ids gets
    its verdict from the limb this Work adds, read in the test body, not from the marker
    count.
 3. **FR-18 is delivered and tested.** `grep -rn 'req("FR-18")' backend/tests` prints at
@@ -130,6 +131,28 @@ alone.
    host is the maintainer-owned dependency of item 5. Until it exists, DP-3 (b) reads
    "verdict recorded; the re-measurement trigger cannot validly fire without a dedicated host
    (RL-921)", and nothing claims a measured verdict near a bound from the shared VM.
+
+   *(Added 2026-09-29, on auditor-843's LOW items.)* Two verdict forms are fixed here in
+   advance, so that a red or unstable figure is recorded and never argued after it:
+   - **NFR-489's without-GBM limb (register F38).** F38's record is "measured, verdict
+     unstable across runs, not established": two of five runs breached 15 ms, and load
+     widened the spread about fivefold. So this limb's verdict **may be recorded as
+     "measured, unstable"**. That applies when repeated passes on the dedicated host both
+     pass and breach the bound, and it must carry each pass's p99, stdev and the load at its
+     start. "Measured, unstable" is not a pass. It feeds DP-3 as a failure would, and it is
+     named here rather than left under the NFR-489 row, because F38 is a distinct register row
+     (`CR-1212` L80 proposes WK-674 as its owner). The register's owner cell is the auditor's
+     to move.
+   - **NFR-490 measured red.** Its latency limb fails today (+497 % to +723 % across five runs,
+     register F35), and its remedy, shrinking the ~1.1 MB `to_wire(passThrough: True)` payload
+     in `packages/pricing-core/src/pricing_core/rating/runtime.py`, has no Work (`CR-1212` G4
+     table). Slice 5 schedules the **measurement only**. If it is red, the closure record
+     states the measured verdict **FAIL** with the figures. It records the remedy's ownership
+     as an **open scope question for the maintainer**, and WK-674 closes with NFR-490 carried
+     with that question named, never on a silent pass. **Whether WK-674 builds the F35 remedy
+     is not decided by this plan.** It is a scope question the lead has put to the
+     maintainer. If the answer assigns it here, the planner places it in a named slice by a
+     dated amendment while this plan is `draft`, or by a replan once it is `active`.
 7. **The register rows owed to WK-674 are resolved.** `python3 scripts/register-owed.py WK-674`
    prints no row without a resolution. ~~At this tree it lists F41, F43 and F48. F54 is added
    once the register-and-records pass (auditor-b's PR) moves its owner to WK-674, and it must
@@ -167,6 +190,29 @@ alone.
     forward under load with 0 failed requests (NFR-531). A broken-input proof shows each red:
     an `api` that imports the worker stack at start, and a migration run from application
     start.
+
+    *(Added 2026-09-29, on auditor-843's LOW item: how the "previous application version"
+    exists while FR-432's image set is carried to Phase 3.)* The two versions are **two
+    `api` images built locally by compose from two commits**. **N-1** is built from the
+    commit before the slice's migration, and **N** from the slice head. Each is tagged by its
+    commit SHA, and both SHAs are recorded in the evidence. The run:
+    1. Serve N-1 against the old schema.
+    2. Run N's migration as its own step.
+    3. Show N-1 still serves against the migrated schema.
+    4. Roll the `api` replicas from N-1 to N under the Slice 4 harness's load, counting
+       failed requests.
+
+    **The test proves nothing unless N-1 and N differ in schema.** So the migration between
+    them must change a table N-1 reads. The broken-input proof is a planted migration that is
+    **not** forward-compatible (e.g. it drops or renames a column N-1 selects), and it must
+    turn the run red with failed requests.
+
+    **Sufficient, and for what.** This is sufficient evidence for NFR-531 **on the compose
+    deployment path WK-674 ships**: its clause is about the migration discipline and the
+    rolling behaviour, and two real builds from two commits exercise both. It is **not**
+    evidence for FR-432 (published, versioned images: Phase 3), and it makes no claim about a
+    Kubernetes rolling update, which goes with FR-433 in Phase 3. The closure record states
+    both limits beside the verdict.
 
 ## Global Constraints
 
@@ -356,6 +402,12 @@ and the register leave them. Six more obligations now name WK-674:
   lifecycle.
 - **F-W9-1 (NFR-502 and NFR-501).** `CR-1212` G4 (b) moves the owner from "a ruling before
   WK-674" to WK-674. → **Slice 5**, with NFR-489.
+- *Added 2026-09-29 (auditor-843's LOW items).* **Register F38 (NFR-489's without-GBM limb,
+  "verdict unstable across runs").** `CR-1212` L80 proposes WK-674. → **Slice 5**, under the
+  verdict form fixed in Acceptance item 6.
+- *Added 2026-09-29.* **Register F35 (NFR-490's latency limb failing; the remedy has no
+  Work).** → **Slice 5 measures it**, under Acceptance item 6's red-verdict form. Building the
+  remedy is a scope question with the maintainer, and it is not placed.
 
 ### Permission names — each name with its `RL-1236` verdict
 
