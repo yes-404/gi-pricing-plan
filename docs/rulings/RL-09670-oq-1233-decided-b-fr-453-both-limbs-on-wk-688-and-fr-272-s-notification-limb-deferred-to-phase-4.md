@@ -41,7 +41,7 @@ It was checked free on all 104 remote branches before use.
   maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and
   plan review 16 (#905), per proposal`: *"Accepted. OQ-1233 → (b): FR-453 (both limbs) is named
   on WK-688's row, and the OQ moves to Before Phase 4. FR-272's notification limb is deferred to
-  P4."*
+  P4. …"*
 - The roadmap already carries it at `f0c3d197`: FR-453, both limbs, on WK-688's row
   (`docs/roadmap.md:1202`), and `OQ-1233` on the *Before Phase 4* gate (`:1248`), reading
   `14 (1 open)`.
