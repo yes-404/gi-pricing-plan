@@ -313,8 +313,11 @@ phase boundaries, workstream cuts and requirement set still make sense now that 
 work is real. The plan is a working hypothesis, re-tested while the phase is still open.
 *(Raised as [`RFC-711`](docs/rfcs/RFC-00711-plan-review-at-each-phase-boundary.md), 2026-08-15.)*
 **Trigger: a full review before each phase's exit demo — fixed, not "sometime". At a Work
-close, the closure record carries a replan check (the skill's five questions, each yes or
-no); a full review runs only when one fires, and "no trigger" is recorded, not assumed.**
+close, the closure record carries a replan check (the skill's five questions, each answered
+yes or no with one line); a full review runs only if one of its triggers fires — a phase
+boundary or Work scope moved, an exit criterion at risk, a replan decided, or a finding that
+moves a slice or phase — and the lead gives its verdict on the check; "no trigger" is
+recorded, not assumed.**
 **Amended 2026-09-29 by the maintainer (dated line by delegation), on RFC-9631 and RL-9632**:
 the trigger was "at each workstream close, and again before a phase's exit demo". The five
 questions are in the skill; three rules bind outside it:
