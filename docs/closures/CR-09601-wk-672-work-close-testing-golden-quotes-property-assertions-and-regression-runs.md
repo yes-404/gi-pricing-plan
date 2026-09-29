@@ -54,7 +54,7 @@ are not scope.
 
 | Plan | Ids its Scope names | The plan's own disposition |
 |---|---|---|
-| `PL-930` (map) | FR-260, FR-261, FR-262 (its Spec line writes the pre-migration forms `FR-RATE-43, 44, 45`), NFR-499 (the Golden-Quote carve-out), FR-248 (a property class) | the Work |
+| `PL-930` (map) | FR-260, FR-261, FR-262 (its Spec line writes these three in their pre-migration `RATE`-scoped form), NFR-499 (the Golden-Quote carve-out), FR-248 (a property class) | the Work |
 | `PL-1177` (S1) | FR-260, FR-261, FR-262, FR-257 limb (1); NFR-499 carried to S2 | spec correction |
 | `PL-1189` (S2) | FR-260; FR-261 (stored only); FR-273; FR-257 (not built here); NFR-499; `06` FR-353, FR-364, FR-368 | FR-353 *"#861's, consumed and not changed"*; FR-364 *"unchanged"*; FR-368 built |
 | `PL-1205` (S3) | FR-261; FR-257 limb (1); FR-260 (composed); FR-248; FR-273; NFR-499; `06` FR-364 (*"fed by `evidence.regression_suite_run_id`"*) | built |
