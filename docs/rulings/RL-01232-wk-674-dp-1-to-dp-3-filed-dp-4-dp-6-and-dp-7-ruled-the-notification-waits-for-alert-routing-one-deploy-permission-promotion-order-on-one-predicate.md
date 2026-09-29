@@ -1,9 +1,9 @@
 ---
-id: RL-9203
+id: RL-1232
 family: ruling
 title: WK-674 — DP-1 to DP-3 filed from the deputy's decisions; DP-4, DP-6 and DP-7 ruled — the notification waits for alert routing, one deploy permission, and promotion order checked twice on one predicate
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-09-28
+created: 2026-09-29               # drafted 2026-09-28; set to the mint date, as audit-docs check 31 requires
 owner: decision-maker
 tree: ed123cb0fcf91e44872963bf8a8bad32b87c99bc
 phase: P2
@@ -15,7 +15,7 @@ corrects: ~
 relates: [ADR-710, RL-921, CR-927, PL-930]
 ---
 
-# RL-9203 — WK-674: DP-1 to DP-3 filed from the deputy's decisions; DP-4, DP-6 and DP-7 ruled
+# RL-1232 — WK-674: DP-1 to DP-3 filed from the deputy's decisions; DP-4, DP-6 and DP-7 ruled
 
 ## Verified first, at ed123cb0fcf91e44872963bf8a8bad32b87c99bc
 
@@ -45,19 +45,28 @@ and its number is not reused. **Slice design is the planner's and is not ruled h
 
 This record was drafted in the decision-maker's worktree, on branch `p2-wk674-rl`, cut from
 `origin/main` = `ed123cb0` with a clean root. Clock at drafting: 2026-09-28 14:14:30 BST, read
-by `TZ=Europe/London date`. **Its id, RL-9203, is a working id**, minted at its turn with
-`doc-id.py next --ref origin/main`, and renumbered in one commit if it differs.
+by `TZ=Europe/London date`. **Its id was a working id**, minted at its turn with
+`doc-id.py next --ref origin/main`, and renumbered in one commit if it differs. *(Minted 2026-09-29: `doc-id.py next --ref origin/main` printed 1232 at origin/main
+`c9f50232`. The record's working id (9203) became RL-1232, and the two open questions'
+working ids (9301, 9302) became OQ-1233 and OQ-1234, in ascending order. `created:` moved from
+the drafting date 2026-09-28 to the mint date, because `audit-docs.py` check 31 requires
+`created` to be non-decreasing with the number and id 1230 is `created` 2026-09-29.)*
 
 **Re-read at `ed123cb0`, for Part B:**
-- `docs/specs/03-rating-engine.md:198` is FR-272: *"Every deployment, rollback, and routing
+- `docs/specs/03-rating-engine.md:198` *(`:200` at the merged tree, re-read 2026-09-29)* is FR-272: *"Every deployment, rollback, and routing
   change emits an Audit Event and a notification to a configured channel."*
-- The same file's line 900, in its §7, lists `05-monitoring` as consuming *"deployment
+- The same file's line 900 *(`:1103` at the merged tree, re-read 2026-09-29)*, in its §7, lists `05-monitoring` as consuming *"deployment
   events"*.
 - `docs/specs/05-monitoring.md:140` is FR-336: *"Alert routing is configurable per Monitor:
   in-app inbox, email, and webhook (Slack/Teams/PagerDuty-compatible). Routing failures are
   themselves logged and surfaced."* It is Phase 4, and its roadmap row is WK-688.
-- No `07` requirement defines a notification channel. `07`'s own §7 lists "notification
-  channels" among what `05` takes from it, but no FR specifies one (the plan's premise e).
+- ~~No `07` requirement defines a notification channel. `07`'s own §7 lists "notification
+  channels" among what `05` takes from it, but no FR specifies one (the plan's premise e).~~
+  **Superseded 2026-09-29 by the maintainer's entry `2026-09-29 14:15:43 BST · maintainer (acting on the maintainer's behalf) · WK-674 chain: answers to Q856-1/2 and Q848-1/2/3` (Q848-1):** the premise is
+  false. `07` FR-453 (`07-platform.md:184`) reads *"Webhooks (alert routing, deployment
+  notifications) are signed with an HMAC over the payload, delivered with retries and
+  exponential backoff, and their delivery status is observable."* That is the channel. See
+  *Amended 2026-09-29* below.
 - `docs/specs/06-governance.md:62` (the glossary) gives the example
   `rating_version:deploy_prod`. `:219` says Pricing Actuary lacks `rating_version:deploy_*`.
 - `packages/model-schema/src/model_schema/permissions.py:54` defines
@@ -69,10 +78,64 @@ by `TZ=Europe/London date`. **Its id, RL-9203, is a working id**, minted at its 
   configurable."*
 - `07` FR-429 (`:140`) requires promotion order, *"unless the workspace policy explicitly
   permits skipping with a recorded reason"*.
-- `06` §4.2's default policy (`:271-273`) has a `deployment` entry for `"environment":
+- `06` §4.2's default policy (`:271-273`; *`:272-274` at the merged tree, re-read 2026-09-29*) has a `deployment` entry for `"environment":
   "prod"`, whose evidence is `rating_version_approval` and `uat_deployment`.
 - `model_schema/approvals.py:107` puts the same two kinds in `EVIDENCE_FLOOR["deployment"]`.
 - `PROMOTION_ORDER_VIOLATION` is registered (`backend/src/app/errors.py:62`; `07:338`).
+
+## Amended 2026-09-29 — the maintainer's answers to Q848-1, Q848-2 and Q848-3
+
+**Source.** The maintainer's entry headed, verbatim:
+
+> `## 2026-09-29 14:15:43 BST · maintainer (acting on the maintainer's behalf) · WK-674 chain: answers to Q856-1/2 and Q848-1/2/3`
+
+These answers are the maintainer's. This record files them and does not re-decide them. Every
+amendment below is dated 2026-09-29 and struck in place, and no id is renumbered.
+
+**Q848-1 (DP-4).** The premise *"No `07` requirement defines a notification channel"* is
+superseded (struck in place above). DP-4's channel **is `07` FR-453's signed
+deployment-notification webhooks**, and `03` FR-272's amendment now cites FR-453. **Which Work
+owns FR-453's deployment-notification limb is not picked here.** It is filed as **`OQ-1233`**
+(options WK-674, WK-688 or a platform Work, with trade-offs and a recommendation), in
+`docs/open-questions.md` and `07` §10, and placed in `docs/roadmap.md` §10. DP-4's Audit Event
+half stands: WK-674 emits the Audit Event in the change's transaction. The assignment of
+delivery to WK-688 is struck in place, and so is the title's clause *"the notification waits
+for alert routing"*, which the title keeps as drafted. DP-4's *Why* argued that retries and
+failure surfacing are FR-336's alone. FR-453 also requires retries, backoff and observable
+delivery status, so that argument is weaker than it read. It is kept as the record of what was
+believed on 2026-09-28.
+
+**Q848-2 (DP-7).** DP-7 **stands as a requirement-level ruling only.** Premise note, read at
+the merged tree (origin/main `c9f50232` merged in):
+- The Deployment and Environment objects DP-7 names do not exist. The only `Environment` is
+  the runtime-mode enum at `backend/src/app/config.py:31`, and there is no Deployment class
+  (`git grep -nE 'class (Deployment|Environment)\b' -- backend packages`: that one hit).
+- `PROMOTION_ORDER_VIOLATION` is registered (`backend/src/app/errors.py:62`) but raised
+  nowhere (`git grep -n PROMOTION_ORDER_VIOLATION -- backend packages frontend`: only
+  `errors.py:62`).
+- `07` FR-429's *"unless the workspace policy explicitly permits skipping"* has no schema home:
+  `packages/model-schema/src/model_schema/approvals.py` has no skip or promotion field
+  (`grep -niE 'skip|promot'` on that file: 0 hits).
+
+**The skip-permission's home is `OQ-1234`**, owner WK-674 (which creates Deployment and
+Environment), with options (a) a workspace-policy object in `model-schema` (an ADR-704 contract
+change) and (b) approvals configuration, or another, each with trade-offs and a
+recommendation. It is in `docs/open-questions.md` and `07` §10, and placed in
+`docs/roadmap.md` §10. WK-674's map plan (PR #843) places it in a named slice. That is not
+this record's edit.
+
+**Q848-3.** The *What Part A obliges* bullet for Slice 5 is corrected in place: the proposal
+goes to the maintainer (or the session acting on the maintainer's behalf). The fenced entry
+under Part A is a dated quotation and is kept verbatim.
+
+**Cites re-read at the merged tree, 2026-09-29.** This branch merged `origin/main` at
+`c9f50232`. Every line cite in *Re-read at `ed123cb0`* was re-read there. Three moved and are
+annotated in place: `03:198` → `03:200`, `03:900` → `03:1103`, `06:271-273` → `06:272-274`.
+The rest hold: `05:140` (FR-336), `06:62`, `06:219`, `permissions.py:54`, `07:139` (FR-428),
+`07:140` (FR-429), `approvals.py:107`, `errors.py:62` and `07:338`. The *0 hits* for
+`deployment:promote` in `docs/specs` was true at `ed123cb0`. This record's own `06`
+amendments now name it. The plan cites (`:336-360`, `:419-588`) are to branch
+`p2-wk674-map` at `61996320` and were not re-read here.
 
 ## Ruled
 
@@ -116,7 +179,9 @@ Given by the maintainer's delegation (28 Sep, extended goal). dm-e files these i
   one is an environment setting with its own audit event.
 - **Slice 5** records NFR-489's measured verdict as it is. If RL-921 §4's trigger fires, it
   files a proposed NFR-489 amendment as its own spec change, with the measurement. The
-  proposal goes to the deputy by delegation, with RL-921 §4 quoted. WK-674 closes with
+  proposal goes to ~~the deputy by delegation~~ the maintainer (or the session acting on the
+  maintainer's behalf) *(corrected 2026-09-29, Q848-3 of the maintainer's entry `2026-09-29 14:15:43 BST · maintainer (acting on the maintainer's behalf) · WK-674 chain: answers to Q856-1/2 and Q848-1/2/3`;
+  the fenced entry above is a dated quotation and is kept verbatim)*, with RL-921 §4 quoted. WK-674 closes with
   NFR-489 passing, amended by that decision, or carried with a named owner and event. It
   never closes on a silent pass or on a budget it amended itself.
 - **The close:** NFR-497's verdict is the lead's, with the degraded-read evidence quoted
@@ -139,8 +204,10 @@ options:**
 **Ruled: (b), with the durable event narrowed to the Audit Event itself.** WK-674 emits the
 Audit Event in the same transaction as the deployment, rollback or routing change. That event
 is already append-only and hash-chained, and it is the "deployment event" `03` §7 says `05`
-consumes. WK-674 builds no channel, no outbox notification job and no second event store.
-Delivery to a configured channel is `05`'s alert routing, owned by WK-688.
+consumes. WK-674 builds ~~no channel,~~ no outbox notification job and no second event store.
+~~Delivery to a configured channel is `05`'s alert routing, owned by WK-688.~~ *(Struck
+2026-09-29, Q848-1: the channel is `07` FR-453, and which Work delivers it is `OQ-1233`'s.
+See* Amended 2026-09-29 *below.)*
 
 **Why.** The obligations that make a notification trustworthy are retries, routing and
 surfacing a failed delivery. They are FR-336's, in Phase 4. A channel built now, with none of
@@ -158,8 +225,8 @@ arrives.
 - **Slice 2:** emits the Audit Event for every deployment, rollback and routing change, in
   the change's transaction. It proves this on broken input: *Violation: a deployment whose
   transaction commits with no Audit Event.*
-- **WK-688 (Phase 4):** delivers FR-272's notification through FR-336's routing, reading
-  deployment Audit Events.
+- ~~**WK-688 (Phase 4):** delivers FR-272's notification through FR-336's routing, reading
+  deployment Audit Events.~~ *(Struck 2026-09-29, Q848-1: the owner is `OQ-1233`'s.)*
 
 #### DP-6 — the deploy permission's name: ruled (b), without the environment grant
 
@@ -250,7 +317,8 @@ The obligations are stated per slice under each part above. In summary:
 - **Slice 6:** FR-270 and FR-271, default off per environment (DP-2).
 - **The close:** NFR-497's verdict is the lead's, with the degraded-read evidence quoted.
 - **Plan review 15:** FR-433's owner, and the unassigned ids the entry lists.
-- **WK-688 (Phase 4):** FR-272's channel delivery. **WK-676 (Phase 3):** any
+- ~~**WK-688 (Phase 4):** FR-272's channel delivery.~~ *(Struck 2026-09-29, Q848-1: FR-272's
+  channel is `07` FR-453, and its owner is `OQ-1233`'s.)* **WK-676 (Phase 3):** any
   environment-scoped deploy grant.
 - **An auditor:** the other permission-name differences between `06` and the code,
   observed under DP-6 and routed by the lead.

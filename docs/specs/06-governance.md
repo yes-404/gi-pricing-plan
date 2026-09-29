@@ -59,7 +59,7 @@ auditor, or a regulator:
 |---|---|
 | **Principal** | An authenticated identity acting on the platform: a User or a Service Account (a Consumer System calling the scoring API). |
 | **Role** | A named bundle of Permissions. The platform ships the roles of `00` §1.4 and allows custom roles. |
-| **Permission** | An atomic `(action, resource_type)` capability, e.g. `model:approve`, `dataset:acknowledge_warning`, ~~`rating_version:deploy_prod`~~ `deployment:promote`. *(Amended 2026-09-28, `RL-9203` DP-6: there is one deploy permission, `deployment:promote`, and no per-environment family. Environments are configurable (`07` FR-428), so a per-environment name would make the permission vocabulary that FR-344's custom roles compose from open-ended.)* |
+| **Permission** | An atomic `(action, resource_type)` capability, e.g. `model:approve`, `dataset:acknowledge_warning`, ~~`rating_version:deploy_prod`~~ `deployment:promote`. *(Amended 2026-09-28, `RL-1232` DP-6: there is one deploy permission, `deployment:promote`, and no per-environment family. Environments are configurable (`07` FR-428), so a per-environment name would make the permission vocabulary that FR-344's custom roles compose from open-ended.)* |
 | **Scope** | The subset of artifacts a role assignment applies to: workspace-wide, or restricted to named Datasets, Model Families, or Rating Algorithms (e.g. a motor actuary who cannot approve home pricing). |
 | **Governed Artifact** | Any artifact with an approval-bearing lifecycle: Dataset Version, Validation Rule, Model, Custom Objective, Custom Metric, Peril Structure, ~~Rate Table Version~~, Rating Version, Optimisation Run (when cited as evidence). *(Rate Table Version struck 2026-09-28: it has no approval lifecycle and is governed through the Rating Version that pins it. See `03` FR-1186 and OQ-620.)* |
 | **Evidence Bundle** | The set of artifact references required for that artifact type (§3.3), resolved and pinned at submission time. |
@@ -217,7 +217,7 @@ auditor, or a regulator:
 
 Notably absent from Pricing Actuary: every `*:approve` permission and
 ~~`rating_version:deploy_*`~~ `deployment:promote` (R1, FR-347). *(Amended 2026-09-28,
-`RL-9203` DP-6.)*
+`RL-1232` DP-6.)*
 
 > **Superseded 2026-08-18 (WK-661, the custom-objectives slice).** The role above lists
 > `custom_objective:author` and `custom_objective:submit`. **Neither exists**, and the built
