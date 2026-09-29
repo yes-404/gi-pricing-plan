@@ -2473,3 +2473,21 @@ def test_a_joint_shuffle_leaves_the_observed_cell_set_unchanged() -> None:
 
     alone = _shuffled_together(frame, ("area",), order)
     assert set(_cross_cells(alone, factors).to_list()) != before
+
+
+@pytest.mark.req("FR-178")
+def test_old_glm_diagnostics_without_type_iii_omitted_loads_empty() -> None:
+    """FR-178 adds `type_iii_omitted` to GlmDiagnostics with a default of ().
+
+    Old artifacts written before the field existed must load with it set to the default.
+    """
+    from model_schema.diagnostics import GlmDiagnostics
+
+    old_data = {
+        "deviance": 1234.5,
+        "null_deviance": 2000.0,
+        "dispersion": 1.0,
+        "degrees_of_freedom": 100,
+    }
+    glm = GlmDiagnostics(**old_data)
+    assert glm.type_iii_omitted == ()
