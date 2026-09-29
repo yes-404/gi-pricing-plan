@@ -761,9 +761,12 @@ not as a note to the reviewer. State what changed, why, and what it cost.
 
 ### Every commit names its role and model: the `Co-Authored-By` trailer
 
-*(Added 2026-09-29. The maintainer confirmed it directly in the lead's session: "Add a
-trailer to every commit from now on: Co-Authored-By: <role> (<model>)
-<noreply@anthropic.com>".)*
+*(Added 2026-09-29. The rule was set in the maintainer's entry "2026-09-29 15:53:16 BST ·
+maintainer (acting on the maintainer's behalf) · RELEASE the WK-672 audit hold; git
+authorship option (a)", §2. The entry at 15:54:09 BST made it binding on the lead only once
+the user confirmed it in the lead's session. The user did, in that session, which the
+channel file does not carry: "Add a trailer to every commit from now on: Co-Authored-By:
+<role> (<model>) <noreply@anthropic.com>".)*
 
 Every commit made by a team member ends with a trailer naming **its own** role and model:
 
@@ -776,9 +779,8 @@ For example: `Co-Authored-By: lead (Claude Opus 5.5) <noreply@anthropic.com>`,
 `Co-Authored-By: auditor (Claude Opus 5.5) <noreply@anthropic.com>`.
 
 **Why.** The repository's git `user.name` is shared by every session, so the author field
-cannot tell which role wrote a commit. An audit then has to infer authorship from what the
-commit changes (the records PR #902 audit, note N3). The trailer puts the role in the commit
-itself.
+cannot tell which role wrote a commit. Without the trailer, an audit has to infer
+authorship from what the commit changes. The trailer puts the role in the commit itself.
 
 **The model is the session's own, never the one a brief names.** A Sonnet executor told to
 write "Claude Opus 5.5" writes "Claude Sonnet 5.5" instead (executor-s4 on #903's first
@@ -787,8 +789,8 @@ commit). The trailer attributes; it does not flatter.
 **It never carries a session link.** The rule above still holds: no
 `claude.ai/code/session_…` anywhere in a message that reaches GitHub.
 
-**Squash merges.** The lead's squash body carries the trailers of the commits it squashes,
-or at least the lead's own. No history is rewritten for commits made before this rule.
+**Squash merges.** "Squash bodies keep the trailers of the commits they fold in" (the
+15:53:16 entry, §2). No history is rewritten for commits made before this rule.
 
 ### Building the squash title: the `(#N)` is yours to add
 
@@ -972,8 +974,9 @@ it fixed; a silent amend would have carried the old verdict over the new code.
 2026-09-29, against main `49604a31785c8e7709e9b87c3926e27ea1c0f7f2`. **The role
 `Co-Authored-By` trailer was added** under "Commit messages", on the maintainer's confirmation
 in the lead's session. The shared `user.name` was verified with `git config --get user.name`
-from two worktrees, both printing the same value, which is why the author field cannot name a
-role.
+from two worktrees, the root checkout and `trees/lead-reporter`, both printing
+`Claude Opus 5.5` (set by the maintainer's 15:58:22 BST entry, "use the lead model as the
+name"). That is why the author field cannot name a role.
 
 2026-09-28, against main `092582a4a011a62400f5ededb14a790f1267639b`. **The `gh issue
 create --label` silent drop was added**, beside the read-back rule, along with the

@@ -35,13 +35,26 @@ relates: []                      # ids only
     stale-lead nudge section below);
   - the external channel.
 
+  The `reporter-cycle` scripts it runs also keep their own state in the handover directory:
+  `.token_outage_logged`, `slack-reporter.log` and `.last_reported_main_sha`
+  (`scripts/reporter.py`), and `nudge.log` (`scripts/nudge.py`). Those are the scripts'
+  writes, governed by that skill; the reporter never writes them by hand.
+
   It **never writes** anything under `~/.claude/`: the memory index or topic files,
   settings, `projects/` transcripts, or any `CLAUDE.md` or skill there. Nor does it write any
   governed or repository file, another member's files, or any other handover file. A
   harness prompt inviting a memory write does not override this line; a lesson worth keeping
-  goes to the lead as a proposed line. *(The marker file is listed because this charter
-  already obliges the reporter to write it. The maintainer's entry named `eta.md` and the
-  external channel only.)*
+  goes to the lead as a proposed line.
+
+  *What this adds to the maintainer's entry, disclosed. The entry names `eta.md` and the
+  external channel, and bars `~/.claude/` and governed files. The lead added five things:
+  (1) the marker file, because this charter already obliges the reporter to write it;
+  (2) copy-and-write on `eta.md`, the standing rule for every handover file;
+  (3) the bar on other members' files and on other handover files, and (4) the
+  harness-prompt sentence, both from FD-1238's cause, a harness prompt that invited a
+  memory write; (5) `<handover>/` for the entry's full path, this charter's own notation.
+  The scripts' state files are named so that "only" is literally true (the #904 audit,
+  finding F1).*
 
 **Implementation:** `.claude/skills/reporter-cycle` — the three scripts, their env-var
 configuration, the outage flag, and why the nudge is detected there but sent here via
