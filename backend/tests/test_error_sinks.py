@@ -25,20 +25,14 @@ from pydantic import BaseModel, ValidationError
 
 _ROOT = Path(__file__).resolve().parents[2]
 #: The scope is DERIVED by glob, so a new file is covered by default (maintainer, 2026-09-29,
-#: Q889-a): a list of files omitted four handlers and the guard passed a leak added to one.
+#: Q889-a, widened by Q889-c to all of `app`): a list of files omitted four handlers and the
+#: guard passed a leak added to one.
 _GLOBS = (
-    "backend/src/app/worker/**/*.py",
-    "backend/src/app/api/**/*.py",
+    "backend/src/app/**/*.py",
     "packages/pricing-core/src/pricing_core/**/*.py",
 )
-#: Files outside those directories that a failure's text also passes through.
-_ALSO = (
-    "backend/src/app/observability/middleware.py",
-    "backend/src/app/platform/outbox.py",
-    "backend/src/app/platform/traces.py",
-)
 #: Files the globs match and the census leaves out, each with why. A file not listed here is in.
-#: Empty on purpose: every file under the three directories is counted, and a sink in one that is
+#: Empty on purpose: every file under the two globbed trees is counted, and a sink in one that is
 #: not a quote-input path is listed in `_SINKS` with why, so a new one is still seen.
 _EXCLUDED: dict[str, str] = {}
 #: Handlers a list once omitted; the census test asserts each is in the derived set.
@@ -70,6 +64,54 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         2, "test_job_error_sanitiser.py (the generic and the named-refusal clause)"),
     ("backend/src/app/worker/tasks.py", "execute_job", "str(exc)"): (
         1, "JobBudgetExceededError's own message: elapsed time and the budget, no input"),
+    ("backend/src/app/auth/oidc.py", "verify", "{exc}"): (
+        1, "PyJWT's `InvalidTokenError` text for a rejected bearer token; the token is a "
+        "credential, not a quote input"),
+    ("backend/src/app/data/ingestion.py", "correct_schema", "str(exc)"): (
+        1, "`RecipeError`: names a column and a cast; upload path, Dataset Version data, not"
+        " a quote"),
+    ("backend/src/app/data/ingestion.py", "ingest_upload", "str(exc)"): (
+        1, "`ColumnNameCollisionError`: names two column headers; upload path, not a quote"),
+    ("backend/src/app/data/ingestion.py", "ingest_upload", "{exc}"): (
+        1, "`RecipeError`: names a column and a cast; upload path, not a quote"),
+    ("backend/src/app/platform/metrics.py", "_validated", "{exc}"): (
+        1, "a custom metric's own declaration error (RL-917's artifact path); no Quote Context"),
+    ("backend/src/app/platform/modelling.py", "resolve_offset_model", "str(exc)"): (
+        1, "`FactorResolutionError`: names a factor and a dataset version; model path"),
+    ("backend/src/app/platform/objectives.py", "_validated", "{exc}"): (
+        1, "a custom objective's own declaration error; no Quote Context"),
+    ("backend/src/app/platform/prediction.py", "_unscoreable", "str(exc)"): (
+        1, "`ModellingError`/`PredictionError`: named refusal of a model prediction; a "
+        "Fitted Model scored on caller rows, synchronous, returned to the caller who sent"
+        " them and not stored or logged"),
+    ("backend/src/app/platform/prediction.py", "predict_rows", "{exc}"): (
+        1, "polars' text for a ragged body, returned to the caller who sent it in a 422; "
+        "synchronous model-prediction path, not stored or logged, not a Quote Context"),
+    ("backend/src/app/platform/rate_tables.py", "_map_operation_error", "str(exc)"): (
+        2, "a bulk operation's named refusal over a rate table; a rate table is not a quote input"),
+    ("backend/src/app/platform/rate_tables.py", "bulk_operation", "str(exc)"): (
+        1, "a rate-table bulk operation's parameter validation, echoed to the caller who sent it"),
+    ("backend/src/app/platform/rating_algorithms.py", "_parse_algorithm", "str(exc)"): (
+        2, "read only to choose a code by keyword (`cycle`, `unresolved`); the text is not "
+        "stored or returned"),
+    ("backend/src/app/platform/rating_versions.py", "compile_rating_version", "str(exc)"): (
+        1, "compile time: an artifact-level `ValueError` from `compile_bundle`; no quote is "
+        "involved"),
+    ("backend/src/app/platform/regression_suites.py", "_validate_properties", "{exc}"): (
+        1, "VERDICT (Q889-c): cannot carry a quote-input value. `UnsweepableProperty`'s text"
+        " (`properties.py`, five raises) interpolates only `check.input`, "
+        "`field.type.value`, `field.name`, and the `lower`/`upper` bounds, all declared "
+        "by the suite's author or the input contract; the swept values are generated "
+        "later, never in this text. Save-time, at declaration, before any quote-derived "
+        "run"),
+    ("backend/src/app/platform/settings.py", "_parse_env", "{exc}"): (
+        1, "a workspace setting or environment override, an operator value; not a quote input"),
+    ("backend/src/app/platform/settings.py", "coerce", "{exc}"): (
+        1, "a workspace setting's type error; not a quote input"),
+    ("backend/src/app/platform/transformations.py", "_refuse", "str(exc)"): (
+        1, "a dataset transformation's named refusal; Dataset Version path"),
+    ("backend/src/app/platform/validation_rules.py", "create_rule", "str(exc)"): (
+        1, "a validation-rule catalogue lookup miss; Dataset Version path"),
     ("backend/src/app/api/demo.py", "get_guide", "{exc}"): (
         1, "the demo guide's own missing-source message: a path, no quote or dataset value"),
     ("backend/src/app/api/rate_tables.py", "_seed_body", "str(exc)"): (
@@ -117,7 +159,6 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
 
 def _files() -> list[Path]:
     derived = {p for pattern in _GLOBS for p in _ROOT.glob(pattern) if "__pycache__" not in p.parts}
-    derived |= {_ROOT / entry for entry in _ALSO}
     return sorted(p for p in derived if p.relative_to(_ROOT).as_posix() not in _EXCLUDED)
 
 

@@ -1,12 +1,14 @@
 """A coded refusal on a quote-input path names no quote input (NFR-499, RL-917).
 
-`pricing_core`'s raise sites are held by `pricing-core's tests/test_quote_input_raise_sites.py`.
+`pricing_core`'s raise sites are held by
+`packages/pricing-core/tests/test_quote_input_raise_sites.py`.
 This file holds the backend half: every `PlatformError(` / `_raise_named(` / `CodedError(` under
-`backend/src/app/worker/**` and `backend/src/app/api/**` whose code is a quote-input code, or is
+`backend/src/app/**` whose code is a quote-input code, or is
 not a literal (so could be one), is enumerated by AST and pinned to **the expressions it
 interpolates**. A site whose message gains an expression (`f"{stats}"`) fails here until the new
-expression is reviewed as input-free and listed. The file set is derived by glob, so a new handler
-is covered by default (maintainer, 2026-09-29, Q889-a).
+expression is reviewed as input-free and listed. The file set is derived by glob, so a new file is
+covered by default (maintainer, 2026-09-29, Q889-a, widened by Q889-c to all of `app`). The code
+may be positional or the `code=` keyword, and keyword arguments (`detail=`) are read too.
 """
 
 from __future__ import annotations
@@ -17,7 +19,7 @@ from pathlib import Path
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[2]
-_GLOBS = ("backend/src/app/worker/**/*.py", "backend/src/app/api/**/*.py")
+_GLOBS = ("backend/src/app/**/*.py",)
 #: Files the globs match and the census leaves out, each with why. Empty: none needs leaving out.
 _EXCLUDED: dict[str, str] = {}
 _MUST_BE_IN_SCOPE = (
@@ -70,16 +72,20 @@ def _sites(source: str, name: str) -> dict[_Key, set[str]]:
             function = node.name
         if (
             isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
-            and node.func.id in _CALLEES and node.args
+            and node.func.id in _CALLEES
         ):
-            first = node.args[0]
-            if isinstance(first, ast.Constant) and isinstance(first.value, str):
+            keyword_code = next((k.value for k in node.keywords if k.arg == "code"), None)
+            first = node.args[0] if node.args else keyword_code
+            if first is None:
+                code = ""  # not a coded raise: nothing to pin (an exception's own `code` attribute)
+            elif isinstance(first, ast.Constant) and isinstance(first.value, str):
                 code = first.value if first.value in _QUOTE_INPUT_CODES else ""
             else:
                 code = _DYNAMIC
             if code:
                 exprs: set[str] = set()
-                for argument in [*node.args[1:], *(k.value for k in node.keywords)]:
+                rest = node.args[1:] if node.args else []
+                for argument in [*rest, *(k.value for k in node.keywords if k.arg != "code")]:
                     exprs |= _interpolated(argument)
                 found.setdefault((name, function, code), set()).update(exprs)
         for child in ast.iter_child_nodes(node):
@@ -109,6 +115,53 @@ _SITES: dict[_Key, tuple[frozenset[str], str]] = {
     ("backend/src/app/api/score.py", "_naming_side", _DYNAMIC): (
         frozenset({"detail", "problem.status_code", "problem.title"}),
         "re-wraps a `PlatformError` `_as_platform_error` built, prefixing `base` or `comparison`",
+    ),
+    ("backend/src/app/auth/service.py", "_unauthenticated", _DYNAMIC): (
+        frozenset(),
+        "a fixed 401 detail chosen by the caller of the helper; no interpolation",
+    ),
+    ("backend/src/app/platform/jobs.py", "transition", _DYNAMIC): (
+        frozenset({"row.status.value", "to_status.value"}),
+        "two Job status names",
+    ),
+    ("backend/src/app/platform/prediction.py", "_unscoreable", _DYNAMIC): (
+        frozenset({"str(exc)"}),
+        "`ModellingError`/`PredictionError` on the synchronous model-prediction path"
+        " (test_error_sinks.py `_SINKS`)",
+    ),
+    ("backend/src/app/platform/rate_tables.py", "_load_table", "RATE_TABLE_MISS"): (
+        frozenset({"slug"}),
+        "an artifact slug the caller named in the path; a rate-table lookup, not a per-quote miss",
+    ),
+    ("backend/src/app/platform/rate_tables.py", "_load_version", "RATE_TABLE_MISS"): (
+        frozenset({"slug", "version_number"}),
+        "an artifact slug and version number; not a per-quote miss",
+    ),
+    ("backend/src/app/platform/rate_tables.py", "_map_operation_error", _DYNAMIC): (
+        frozenset({"code.replace('_', ' ').title()", "detail"}),
+        "a rate-table bulk operation's own named refusal (test_error_sinks.py `_SINKS`)",
+    ),
+    ("backend/src/app/platform/rate_tables.py", "_resolve_baseline", "RATE_TABLE_MISS"): (
+        frozenset({"version"}),
+        "a baseline version number; not a per-quote miss",
+    ),
+    ("backend/src/app/platform/rate_tables.py", "bulk_operation", "RATE_TABLE_MISS"): (
+        frozenset({"slug"}),
+        "an artifact slug; not a per-quote miss",
+    ),
+    ("backend/src/app/platform/rating_algorithms.py", "_issues_to_error", _DYNAMIC): (
+        frozenset({"issue.code.replace('_', ' ').title()", "issue.message"}),
+        "save-time graph-validation issues about an algorithm's own nodes; no quote is involved",
+    ),
+    ("backend/src/app/platform/rating_versions.py", "compile_rating_version", _DYNAMIC): (
+        frozenset({"code.replace('_', ' ').title()", "detail"}),
+        "compile time: an artifact-level error from `compile_bundle`"
+        " (test_error_sinks.py `_SINKS`)",
+    ),
+    ("backend/src/app/platform/transformations.py", "_refuse", _DYNAMIC): (
+        frozenset({"str(exc)", "title"}),
+        "a dataset transformation's named refusal (test_error_sinks.py `_SINKS`);"
+        " Dataset Version path",
     ),
     ("backend/src/app/worker/model_handlers.py", "_compare", _DYNAMIC): (
         frozenset({"str(exc)"}),
@@ -169,5 +222,10 @@ def test_the_backend_guard_sees_an_injected_leak_and_an_injected_site() -> None:
     }
     dynamic = "def g(exc):\n    raise PlatformError(exc.code, 't', 409, str(exc))\n"
     assert _sites(dynamic, "x.py") == {("x.py", "g", _DYNAMIC): {"str(exc)"}}
+    keyword = (
+        "def k(s):\n"
+        "    raise PlatformError(code='BATCH_ABORTED', title='t', status_code=422, detail=f'{s}')\n"
+    )
+    assert _sites(keyword, "x.py") == {("x.py", "k", "BATCH_ABORTED"): {"s"}}
     other = "def h():\n    raise PlatformError('NOT_FOUND', 't', 404, 'x')\n"
     assert _sites(other, "x.py") == {}
