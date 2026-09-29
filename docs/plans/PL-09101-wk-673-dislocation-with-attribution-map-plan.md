@@ -4,7 +4,7 @@ family: plan
 kind: map
 title: WK-673 — Dislocation with attribution: map plan
 status: draft                   # draft → active → superseded | retired (§1.2a)
-created: 2026-09-28
+created: 2026-09-29
 owner: planner
 tree: 19c395acad594d1b193da197461bec85201d2248
 phase: P2
@@ -18,6 +18,8 @@ relates: [PL-930, PL-1177, RL-880, RL-881, RL-885, RL-1172, RL-1184, RL-1236, RS
 # PL-9101 — WK-673 — Dislocation with attribution: map plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended) or executing-plans to implement each slice's leaf plan task-by-task. This is a **map plan**: it cuts the Work into slices and states each slice's scope, dependencies and gate. Each slice gets its own leaf plan before it starts. Every executor also binds `python-test` (requirement markers, negative tests) and `dev-commands` (the gate and its traps), and reads `docs/plans/README.md`'s unchecked conventions before its first step.
+
+First filed 2026-09-28 as working id PL-9101; `created` re-dated so the id sequence stays non-decreasing (check 31).
 
 > **Revised 2026-09-29 22:56 BST by the planner, while `draft` and before acceptance, on the
 > lead's instruction** (relaying the maintainer's to-lead.md entries of 2026-09-29 22:46:27 and
