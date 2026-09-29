@@ -312,12 +312,18 @@ audited, not only at a close:
 phase boundaries, workstream cuts and requirement set still make sense now that some of the
 work is real. The plan is a working hypothesis, re-tested while the phase is still open.
 *(Raised as [`RFC-711`](docs/rfcs/RFC-00711-plan-review-at-each-phase-boundary.md), 2026-08-15.)*
-**Trigger: at each workstream close, and again before a phase's exit demo** — fixed, not
-"sometime". The five questions are in the skill; three rules bind outside it:
+**Trigger: a full review before each phase's exit demo — fixed, not "sometime". At a Work
+close, the closure record carries a replan check (the skill's five questions, each yes or
+no); a full review runs only when one fires, and "no trigger" is recorded, not assumed.**
+**Amended 2026-09-29 by the maintainer (dated line by delegation), on RFC-9631 and RL-9632**:
+the trigger was "at each workstream close, and again before a phase's exit demo". The five
+questions are in the skill; three rules bind outside it:
 
 - **The output is a proposal, never a change** — recommendation, rationale, and an explicit
   maintainer acceptance line with a date. A review that edits the roadmap on its own
-  authority is re-planning.
+  authority is re-planning. **Every accepted proposal becomes an owned record in the family
+  `document-ids.md` §1.6 gives its kind; "unowned" is not a permitted state, and the review
+  itself is a short index of those records** (same amendment).
 - **A later phase's finding is a spec change only** (§0's table).
 - **Nothing starts in the next phase while an open finding from the current phase lacks a
   resolution.** A finding has a resolution when the close fixes it, carries it forward with
