@@ -166,3 +166,22 @@ negative tests, each shown red on deliberately broken input:
 
 The FR-244 and §4.6 pairing is prose, and no check holds it. It lands in one commit, so the
 review of that commit is where it is read.
+
+## Adopted by the decision-maker, 2026-09-29
+
+**Why this section exists.** The maintainer's entry `2026-09-29 15:26:00 BST · maintainer (acting on the maintainer's behalf) · STRUCTURE: routing per document-ids §1.6 and the charters; today's technical answers re-homed` (§2) makes the maintainer's
+answers on this record recommendations, and gives the technical points to this role. The
+answers are `2026-09-29 14:18:24 BST · maintainer (acting on the maintainer's behalf) · Q847-1/2/3 (row 11, WK-690)` and `2026-09-29 14:19:05 BST · maintainer (acting on the maintainer's behalf) · sympy pin: absent, so an OQ in #847's rebase`. This record's text stays as of `ed123cb0`, with the note below
+(Q847-3). Each point below was re-verified at origin/main `ac8ab519`.
+
+*(Noted 2026-09-29: the FR-178 obligation at :74/:96/:143 is discharged — FD-1195 closed by #900; FR-178 delivered by #880 and #887. #830 and #840 now resolve as WK-1178, RL-1184, OQ-1185.)*
+
+The note's line numbers are this file's lines as filed. It is placed here, at the end, so that
+those lines do not move.
+
+| Point | Re-verified at `ac8ab519` | Ruling |
+|---|---|---|
+| **Q847-1:** DP-1 to DP-5 stand as filed | DP-1: `02` FR-85 (`:86`), FR-86 (`:87`) and FR-210 (`:373`) each carry an "Owner WK-690" clause, and FR-176 to FR-178 are WK-1178's (#880, #887). DP-2: FR-154 (`02:218`). DP-3: the flag is `features.expression_objectives_enabled` (`backend/src/app/platform/settings.py:245`, read at `platform/objectives.py:274`). DP-4: FR-210's text requires a continuous term to be rateable first. DP-5: FR-244 (`03:146`). `OBJECTIVE_GRAMMAR_VIOLATION` is declared in `02` §5.1 (`:2056`) | **Adopted.** Each decision rests on a mechanism or a text that exists at `ac8ab519`. None is re-issued |
+| **Q847-2:** the "Owner WK-690" clauses of FR-85, FR-86 and FR-210 move to Phase 3 (DP-1) | As above | **Adopted, and done in this commit.** Each row gains a dated amendment: the clause is superseded, and the obligation is deferred to Phase 3, spec change first, with the owner (the maintainer) and the event (the P2 phase closure record) that DP-1 names |
+| **Q847-3:** the text stays as of its tree, with the dated note | The note's facts: FD-1195 is `status: closed`, by #900 (`870ce82b`). FR-178 was delivered in two parts, by #880 (`9fa2b833`) and #887 (`95faf68b`), as FR-178's own amendment says. #830 (`3767b3b4`) filed RL-1184 and OQ-1185, and #840 (`2d20ca4b`) minted WK-1178 | **Adopted.** The note is quoted verbatim above this table |
+| **The sympy pin** | `sympy` has 0 hits in `uv.lock` and in all four `pyproject.toml` files. `02:1015` names `"derivation_version": "1.14.0"`, and `02:1069` names `"sympy": "1.13.x"` | **Filed as `OQ-9660`**, open, not a pick. It is mirrored in `02` §10 and `docs/open-questions.md`, and placed at the roadmap §10 gate *Before WK-690 Slice 1*. DP-5's obligation, one exact pin in Slice 1 with both sections citing it, is unchanged. `OQ-9660` asks which version |
