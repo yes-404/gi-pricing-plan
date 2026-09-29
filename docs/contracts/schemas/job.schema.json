@@ -213,6 +213,13 @@
         }
       }
     },
+    "platform_build": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The platform version and build the Job ran on, `{version}+{build}`, recorded when the worker moves it to `running`; null while `queued` (FR-18)."
+    },
     "progress_at": {
       "type": [
         "string",

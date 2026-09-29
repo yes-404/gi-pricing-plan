@@ -115,8 +115,10 @@ def test_flags_are_reported_as_flags(client: TestClient, headers) -> None:
 
 
 @pytest.mark.req("FR-387")
-def test_settings_require_authentication() -> None:
-    settings = Settings(environment=Environment.LOCAL, version="test")
+def test_settings_require_authentication(api_settings: Settings) -> None:
+    # The lifespan now checks the stores' tenant markers (FR-436), so the app needs a real
+    # database and bucket even to prove it refuses an unauthenticated caller.
+    settings = api_settings.model_copy(update={"dev_auth_enabled": False})
     with TestClient(create_app(settings), raise_server_exceptions=False) as client:
         assert client.get("/api/v1/settings").status_code == 401
 
