@@ -4,7 +4,7 @@ family: research
 kind: spike
 title: WK-674 bundle switchover across workers — mixed and dropped responses and switch time (spike F1, partial, written from its salvage)
 status: draft
-created: 2026-09-28
+created: 2026-09-29
 owner: executor
 tree: df8e5811a151a99c7317690faf9278a6dc3400be
 phase: P2
@@ -14,6 +14,8 @@ relates: [FR-268, NFR-494]
 ---
 
 # RS-9802 — WK-674 bundle switchover across workers (spike F1, partial)
+
+First filed 2026-09-28; `created` re-dated so the id sequence stays non-decreasing (check 31).
 
 Spike F1 of Track F was run on 2026-09-28 by the executor `spike-f1`. **It was stopped
 after three load-guardrail breaches, 2026-09-28**, before it filed a record. **This record
