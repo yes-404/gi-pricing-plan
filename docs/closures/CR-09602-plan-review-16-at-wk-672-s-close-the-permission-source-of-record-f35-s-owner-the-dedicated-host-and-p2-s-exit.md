@@ -30,9 +30,12 @@ until the maintainer dates the acceptance line.** The output is proposals, never
 #901. Its close record is being drafted by the auditor on branch `wk672-close`. This review
 is consistent with that record; see *Consistency with the WK-672 close record* below.
 
-**This review is not CR-1212's G6.** G6 reads "A plan review 16 is filed after G1–G5 and
-before the demo". G1–G5 are not met at this tree, so this review cannot discharge G6.
-Proposal 8 asks the maintainer to restate G6 without the number.
+**Whether this review is CR-1212's G6 is contested, and Proposal 8 puts it to the maintainer.**
+- G6 reads "A plan review 16 is filed after G1–G5 and before the demo". G1–G5 are not met at
+  this tree.
+- The maintainer's entry of 2026-09-29 16:05:14 BST says this review "is also P2 exit
+  criterion G6".
+- Both are recorded; neither is chosen here.
 
 **Form.** It follows `CR-1212` (plan review 15): the lead's required inputs as proposals
 first, then the five `phase-review` questions, then Output and Verdict.
@@ -54,8 +57,12 @@ first, then the five `phase-review` questions, then Output and Verdict.
     `p2-wk674-map`. It merged after this review's tree, as `6ae8a99a`.
     `git diff --stat 306e42b9 6ae8a99a -- docs/plans/PL-01237-*` prints nothing, so the file
     read is the file on main. It is `status: draft` there.
-  - The records PR branch `records-2026-09-29` is at `bc55a975`. It carries `FD-9028`
-    (working id) and the lead's P3-carry note (commit `c2db4f72`).
+  - The records PR branch `records-2026-09-29` is at `bc55a975`. It carries two things:
+    - the finding "A team member overwrote the user's auto-memory index, and the restore
+      missed 27 index lines". It has a working id, which its mint at that PR's merge
+      replaces, so this record names it by title. It is called *the memory-overwrite
+      finding* below.
+    - the lead's P3-carry note (commit `c2db4f72`).
 - **GitHub state** was read with `gh pr view` on 2026-09-29 at about 15:00 UTC. It was
   read-only, and nothing was posted.
 - **The channel file.** The maintainer's entries are quoted by heading. The file is
@@ -185,8 +192,23 @@ to merge on #852.
 name
 #857 as #852's successor and cite Dependabot's close.
 
+**Resolved 2026-09-29 by the maintainer** (entry `2026-09-29 16:08:24 BST · maintainer
+(acting on the maintainer's behalf) · HOST FALLBACK accepted; DEPENDABOT plan approved (the
+maintainer)`, §2, quoting the maintainer: "approve Dependabot plan"):
+- **#882 is not merged.** A WK-1178 PR adds an ignore rule to `.github/dependabot.yml` for
+  zen-engine's major version 2, and files an `FD-` for a governed upgrade under WK-1178 (a
+  spike first). Closing #882 is the user's action.
+- **#857, then #881.** The lead runs a full local two-half gate on each PR's head, and the
+  user merges on green. #881 is re-gated if #857's merge changes its base.
+- **FD-1194's stale cell** is updated by the auditor in the next records PR.
+
+**What the entry does not dispose of:** #877, #878 and #879, the three major GitHub Actions
+bumps. It names only zen-engine's ignore rule. This review's recommendation for them (merge
+one at a time) stands as a proposal, open to the lead's verdict.
+
 **Lead verdict (Proposal 2):** _pending_
-**Maintainer acceptance (Proposal 2):** _pending_
+**Maintainer acceptance (Proposal 2):** given for the part the 16:08:24 entry states. The
+part it does not state (#877–#879) is _pending_.
 
 ## Proposal 3 — F35's remedy: its owner, and whether P2 can exit with NFR-490 red
 
@@ -220,7 +242,7 @@ name
   - The decision-maker rules first on what a `TraceStep` records (FR-258; §4.10; `OQ-1231`).
   - The slice is **sequenced before WK-674 Slice 5**, so Slice 5 measures the remedied path
     and NFR-490 can be green on the exit tree.
-  - It carries F37's decision (NFR-500) forward on the new size.
+  - It carries NFR-500's re-measurement (F37; Proposal 11) on the trimmed trace.
   - Cost: one ruling and one slice in P2 under the budget. `score/compare`'s diff
     semantics, merged today, are re-proved.
 - **(b) A new P2 Work for scoring-path performance** (F35, F55, F37 and the NFR-489 remedy).
@@ -292,7 +314,7 @@ Without a host, no run can settle it.
   WK-674 can then close under G1 with those verdicts carried.
 - **(c) Hold P2's exit until a host exists.**
 
-**Recommendation.**
+**Recommendation, as drafted at `42d31bc9`.**
 - Take the question to the user **now**. It is the longest-lead dependency in P2, and its
   answer decides between (a) and (b).
 - If no host is committed by the time **WK-674 Slice 4 closes**, apply (b) by dated line
@@ -300,8 +322,34 @@ Without a host, no run can settle it.
 - This review does not choose the host. That is the user's decision, and the maintainer
   brings it.
 
+**Resolved 2026-09-29 by the maintainer: (b), now.** This is the entry `2026-09-29 16:08:24
+BST · maintainer (acting on the maintainer's behalf) · HOST FALLBACK accepted; DEPENDABOT plan
+approved (the maintainer)`, §1, quoting the maintainer: "accept the fallback for the host". No
+host is committed. The maintainer took (b) at once, not at Slice 4's close as recommended
+above; the recommendation is kept as drafted, beside the decision that replaced it.
+
+**The resolution, recorded here as the entry directs.**
+- **What is carried:**
+  - F1 (`PL-1237` acceptance item 5);
+  - NFR-489 (both limbs, so F38 is included);
+  - NFR-502;
+  - the NFR-493 linearity limb;
+  - NFR-494 (item 6).
+- **Its form.** Each is **measured, diagnostic** on the shared VM, and its verdict is
+  **carried**:
+  - owner: **the maintainer**;
+  - discharge event: **a dedicated host available**.
+
+  No near-bound pass or fail is claimed from the shared VM.
+- **Who writes it:**
+  - G4's roadmap row: the lead, quoting the entry;
+  - `PL-1237`: the planner, at #892's turn, in the commit that sets it `active`.
+- **NFR-490 is unchanged.** It is far from its bound, and the SCOPE decision of 15:36:43
+  stands (Proposal 3).
+- **For G1:** WK-674 can close with these verdicts carried.
+
 **Lead verdict (Proposal 4):** _pending_
-**Maintainer acceptance (Proposal 4):** _pending_
+**Maintainer acceptance (Proposal 4):** given, in the 16:08:24 entry above.
 
 ## Proposal 5 — OQ-1233, OQ-1234 and OQ-1235 against P2's exit
 
@@ -349,9 +397,9 @@ acceptance.
 **Lead verdict (Proposal 5):** _pending_
 **Maintainer acceptance (Proposal 5):** _pending_
 
-## Proposal 6 — FD-9028: the write boundary that no charter states
+## Proposal 6 — the memory-overwrite finding: the write boundary that no charter states
 
-**The finding.** `FD-9028` (working id, branch `records-2026-09-29`) records that on
+**The finding.** The memory-overwrite finding (branch `records-2026-09-29`) records that on
 2026-09-29 the reporter cut the user's auto-memory index, `~/.claude/projects/…/memory/MEMORY.md`,
 from 239 lines to 47. The file was since recovered. The finding's own disposition point 2
 leaves the rule to be written down: "no team member writes under `~/.claude/`".
@@ -376,7 +424,7 @@ it.
 - **(b) One team-wide rule in `delivery-process.md` §3**, with §3's sentence amended to say
   that the write boundary is stated there once. Each charter keeps only its **positive**
   write targets. For example, `reporter.md` gains its one target, per the maintainer's
-  ruling relayed in `FD-9028`: `~/gi-pricing-plan.local/handover/eta.md`.
+  ruling relayed in the memory-overwrite finding: `~/gi-pricing-plan.local/handover/eta.md`.
   - `delivery-process.core.json` is re-derived in the same commit, because it is the
     process's machine-readable extract (`CLAUDE.md` §15).
 - **(c) (b) plus a mechanical guard**, a `PreToolUse` hook that refuses team-member writes
@@ -399,7 +447,7 @@ amend or accept:
 - **The maintainer**, for the amendment: charter and `process/` amendments are the
   maintainer's (STRUCTURE §1). It is applied by the lead, in one commit with the core
   extract.
-- **The auditor**, who reads it against `FD-9028`'s event. That event is the artifact
+- **The auditor**, who reads it against the memory-overwrite finding's event. That event is the artifact
   merging.
 
 **Lead verdict (Proposal 6):** _pending_
@@ -449,10 +497,28 @@ G6 reads: "A plan review 16 is filed after G1–G5 and before the demo" (`CR-121
 at every workstream close, so WK-672's close produced review 16 before G1–G5 were met. More
 Work closes will produce more reviews before the demo.
 
-**Recommendation:** the maintainer restates G6 as *"A plan review is filed after G1–G5 are
-met and before the demo (`CLAUDE.md` §14)"*, with no number. This review records that it does
-not discharge G6. The alternative, keeping the number and treating this review as G6, would
-put the pre-demo review before G1–G5, which is the order G6 exists to fix.
+**The maintainer's entry reads the other way.** `2026-09-29 16:05:14 BST · maintainer (acting
+on the maintainer's behalf) · PLAN-REVIEW CADENCE: option C adopted by the maintainer; RFC + RL
++ amendments in one PR` ends: "Plan review 16 proceeds now under the current rule: it is
+also P2 exit criterion G6." That entry and G6's own text cannot both hold. G6 says "after
+G1–G5", and at this tree G1–G5 are not met. This review does not choose between them. The
+lead reads the proposal below against that entry, and the maintainer decides.
+
+**Options.**
+- **(a) This review is G6.** G6 is amended by a dated line so that it drops "after G1–G5".
+  - The review that follows the finished work is then option C's rule 1, "a full §14 plan
+    review before each phase's exit demo", with no exit criterion of its own.
+  - Cost: the exit criteria no longer require a review of the plan once the work is real.
+    That is the order G6 was written to fix.
+- **(b) G6 is restated without a number:** *"The pre-exit-demo plan review (`CLAUDE.md` §14;
+  option C rule 1 once its RFC lands) is filed after G1–G5 are met and before the demo."*
+  - This review is plan review 16, but it is not the review G6 counts.
+  - Cost: the maintainer's 16:05:14 sentence is amended.
+
+**Recommendation: (b).** Option C keeps a full review before every exit demo anyway (its rule
+1). So (b) costs no extra review: it only fixes which review G6 counts, and it keeps G6's
+ordering, which is G6's point. If the maintainer prefers (a), the dated amendment to G6 is
+the lead's roadmap edit, quoting the maintainer.
 
 **Lead verdict (Proposal 8):** _pending_
 **Maintainer acceptance (Proposal 8):** _pending_
@@ -491,6 +557,141 @@ the lead's to check.
 **Lead verdict (Proposal 9):** _pending_
 **Maintainer acceptance (Proposal 9):** _pending_
 
+## Proposal 10 — FR-218's authoring half, and FR-217's inlining, which it rests on
+
+*(Added 2026-09-29, an input of the maintainer's entry `2026-09-29 16:15:10 BST · maintainer
+(acting on the maintainer's behalf) · OLDER PLAN-REVIEW ITEMS: four worth doing, the rest
+ignored`, item 1.)*
+
+**The facts, re-verified at `1c8762d9`.**
+- **FR-218** (`03:87`) prices a mid-term adjustment or a cancellation through a
+  separately-versioned sub-graph (FR-217), mounted when `purpose ∈ {mid_term_adjustment,
+  cancellation}`, and **declared on the Rating Version and version-pinned**. OQ-617 decided
+  it on 2026-08-18 and marks it **Phase 2**.
+- **Only the guard is built.** `_check_purpose_mount`
+  (`packages/pricing-core/src/pricing_core/rating/score.py:393-413`, from `d6505e94`, #415)
+  refuses an MTA or cancellation quote when `algorithm.sub_graphs` is empty. Its tests are at
+  `test_rating_score.py:414`, `:425` and `:433`.
+- **On the roadmap.** The entry says "git grep docs/roadmap.md: 0". The precise count is
+  different: `git grep -n 'FR-218' origin/main -- docs/roadmap.md` prints **one** line,
+  `:1280`. That line is the 2026-08-18 prose note of OQ-617's decision, not a Work row.
+  **No Work row names FR-218**, so the entry's substance holds.
+  - The reason is migration arithmetic. FR-218's pre-migration id was the 63rd of `03`'s
+    scoped series (`docs/REDIRECTS.csv:1381`), appended on 2026-08-18.
+  - WK-669's row (`docs/roadmap.md:599`) still lists its `03` ids as pre-migration bare
+    ranges, which stop at the 59th. So it never reached the 63rd.
+  - This is the bare-range defect that review 8 Q4 named.
+
+**A second fact this review adds: FR-217's inlining is not built, although a closed Work
+records it as delivered.**
+- FR-217 (`03:86`) says sub-graphs are "versioned artifacts referenced by the parent and
+  **inlined at bundle time**".
+- FR-217's pre-migration id was the 6th of the same series (`docs/REDIRECTS.csv:1375`),
+  inside WK-669's first range.
+- WK-669's close record, `CR-838` (`docs/closures/CR-00838-*`), gives it **delivered** at
+  `:39` ("marker-evidenced").
+- What is built is the reference **shape**: `SubGraphRef` and `RatingAlgorithm.sub_graphs`,
+  in `packages/model-schema/src/model_schema/rating.py:340`, `:350` and `:390`.
+- **The inlining is not built.**
+  - `grep -rn 'sub_graphs\|SubGraphRef\|mount_point' packages/pricing-core/src backend/src`
+    finds only the guard's own lines in `score.py`. Nothing is in `compile.py`, where
+    `compile_bundle` lives.
+  - The guard's docstring says so directly: "sub-graph inlining (`SubGraphRef.mount_point`
+    resolution, `compile_bundle`'s own TODO) is not built by any slice yet".
+- So FR-218 cannot be authored until FR-217's inlining exists.
+- Reopening WK-669's verdict is the maintainer's alone (`CLAUDE.md` §13). **Proposed:** the
+  auditor files an `FD-` against `CR-838`'s FR-217 verdict ("delivered", on a
+  reference-shape marker, for a requirement whose inlining clause is unbuilt). Its remedy
+  travels with FR-218's owner, below.
+
+**Why the gap is safe today.** The guard fails closed. An MTA or cancellation quote is
+refused, never priced as new business, which is the silent failure FR-218 exists to prevent.
+G2's demo is new business (`WF-699`) and needs neither requirement.
+
+**Options.**
+- **(a) A new P2 Work: sub-graph composition and MTA/cancellation pricing.**
+  - Scope: FR-217's inlining limb (`compile_bundle` resolves `SubGraphRef.mount_point` and
+    inlines the pinned sub-graph) and FR-218 (the `purpose` mount declared on the Rating
+    Version and version-pinned, with the guard replaced by the real check).
+  - Sequencing: after WK-674 and before WK-675, so that the DAG designer can author a
+    sub-graph against a backend that inlines one. The designer's sub-graph view stays
+    WK-675's.
+  - Cost: a new G1 row in a budget-throttled phase.
+- **(b) Fold both into WK-675** (the designer). Cost: a frontend Work would carry a compile
+  and scoring change. That is scope crossing kinds, the smell the `phase-review` skill names
+  from WK-664.
+- **(c) Carry both to P3** under a named P3 Work, with the fail-closed guard as the interim.
+  - Needs: a dated maintainer line amending OQ-617's "Phase 2" placement, and a dated note
+    on FR-218.
+  - Cost: P2's DAG designer (WK-675) ships without sub-graph composition, although FR-217
+    is a `03` requirement that WK-669 claimed.
+
+**Recommendation: (a).**
+- OQ-617 placed FR-218 in P2 by decision.
+- FR-217's inlining is P2 scope that a closed P2 Work reported as delivered.
+- WK-675's designer depends on it.
+
+If the maintainer's budget cannot carry a new Work, **(c)** is the honest fallback, by a
+dated line. In either case the roadmap edit naming FR-217 and FR-218 on a row is the lead's.
+The maintainer's item 4 (the spec-change rule "a new FR/NFR names its roadmap row", WK-1178)
+is what stops this class recurring.
+
+**Lead verdict (Proposal 10):** _pending_
+**Maintainer acceptance (Proposal 10):** _pending_
+
+## Proposal 11 — NFR-500: the branch it turns on, and its owner
+
+*(Added 2026-09-29, an input of the same 16:15:10 entry, item 2.)*
+
+**The facts at `1c8762d9`.**
+- `03:1155`, NFR-500: "Trace storage: 1 % sampling of 50 M annual quotes stays under 200
+  GB/year **with the sampled-trace schema**."
+- It is measured **failing**: 516.07 GB/year, about 2.58× (`CR-926` plan review 10, `:51`).
+- `CR-926` (`:72-86`) found that the requirement names **no** schema, and that the result
+  turns on which schema is meant. It left the branch undecided:
+  - trim the schema under F55 and re-measure; or
+  - amend NFR-500 to state the encoding it budgets for.
+- **The register row F37 (L79)** records the size figures:
+  - one persisted 200-step `Trace` is 1,032,135 B uncompressed;
+  - it is 14,523 B under gzip -6, which is 4 % of the budget.
+
+  Its Decision cell reads "Amend NFR-500 to state the storage assumption its budget depends
+  on".
+- **Ownership.** `CR-1212` G4 (c), as accepted, already **owns** NFR-500's spec defect: F37
+  "goes to a WK-1178 spec slice". What is missing is the **decision on the branch**, not an
+  owner. No roadmap row names NFR-500 because WK-1178's row lists items by `FD-` and trigger.
+
+**This is a design choice, so it goes to the decision-maker as an `OQ-`** (STRUCTURE §1). The
+proposed question:
+
+> **What does NFR-500's "sampled-trace schema" name?** (a) The `Trace` contract after F55's
+> trim, measured uncompressed. (b) The persisted encoding, with a named compression, whatever
+> the in-memory shape. (c) Both: the trimmed `Trace`, persisted with a named compression, the
+> budget stated for the persisted bytes.
+
+**Recommended answer for the decision-maker: (a).** The reasons:
+- It lets the budget rest on a shape that `model-schema` defines and a test can measure, not
+  on a storage codec that a later infrastructure choice can change silently.
+- It is also the remedy Proposal 3 (a) builds anyway: one lever, three rows.
+- An extrapolation, not a measurement: F35's minimal per-node entry is about 130 B, against
+  a mean of 5,859 B, over 191 entries. So a trimmed trace would be about 25 kB, and 500,000
+  traces about 12 GB/year.
+- FR-259's 100 % of declines and errors raises the count above 500,000. Even so, that is an
+  order of magnitude under 200 GB.
+- The slice re-measures it, and **this figure is not a verdict**.
+
+**Placement:**
+- the `OQ-` is filed and ruled by the decision-maker **with** Proposal 3's ruling on what a
+  `TraceStep` records;
+- NFR-500 is re-measured **in the same WK-1178 slice**, on the exit tree;
+- its dated `03` amendment, naming the schema by contract path (RFC-777), lands with that
+  ruling.
+
+It is not placed in WK-674: it is a trace-size question, not a deployment one.
+
+**Lead verdict (Proposal 11):** _pending_
+**Maintainer acceptance (Proposal 11):** _pending_
+
 ## 1. Completion — derived, never recalled
 
 - **WK-672**'s four slices have merged:
@@ -514,7 +715,7 @@ the lead's to check.
 
 ## 2. Omission — what would nobody notice was missing?
 
-Five omissions:
+Seven omissions:
 - **The permission vocabulary's second definition** (Proposal 1), and 12 of 16 names in a
   built-in role that `06` shows a reader but that grant nothing.
 - **F35's reach into `score/compare`** (Proposal 3). The traced path is not off-path any
@@ -523,6 +724,10 @@ Five omissions:
   as a dependency but into no exit criterion.
 - **Six NFRs carried with no owner, against G4's own wording** (Proposal 7).
 - **The write boundary** (Proposal 6).
+- **FR-218 on no Work row** (Proposal 10). It fell outside a legacy bare range, and FR-217's
+  inlining is reported delivered but is not built.
+- **NFR-500's undecided branch** (Proposal 11). An owner was named at review 15, but the
+  decision the owner needs was not.
 
 ## 3. Skills and research — the gap analysis
 
@@ -540,7 +745,9 @@ Five omissions:
 - **OQ-1233 and OQ-1234 are on a gate already passed** (*Before Phase 2*, Proposal 5).
 - **`06`'s Pricing Actuary role block** names 12 permissions that the vocabulary does not
   have (Proposal 1).
-- **G6's "plan review 16"** (Proposal 8).
+- **G6's "plan review 16"**, against the maintainer's 16:05:14 sentence (Proposal 8).
+- **`CR-838`'s FR-217 "delivered"** against unbuilt inlining (Proposal 10).
+- **NFR-500 names no schema** (`03:1155`; Proposal 11).
 - **`CR-1212` G4 (d)'s owner-less carries** against G4's text (Proposal 7).
 - **Specs against code**, at the depth this review read: the `RL-1236` amendments are
   present at `06:62`, `:218` and `:279`, and `03` FR-272's amendments agree with `RL-1232`.
@@ -550,7 +757,9 @@ Five omissions:
 ## 5. Shape — is the cut still right?
 
 - **A new P3 Work** for production packaging and supply chain (Proposal 7).
-- **WK-1178 grows** (Proposals 1, 2 and 3). This is the smell the skill names: "a row nothing
+- **A new P2 Work** for sub-graph composition and MTA/cancellation pricing (Proposal 10),
+  placed between WK-674 and WK-675.
+- **WK-1178 grows** (Proposals 1, 2, 3 and 11). This is the smell the skill names: "a row nothing
   can be said to have closed". It is mitigated in two ways. WK-1178 is exempt from G1 by
   design. And each item is its own `SL-` with a leaf plan and a slice audit, so each closes
   on its own record. **Proposed:** the F35/F55 lever is cut as a slice with a leaf plan
@@ -560,9 +769,10 @@ Five omissions:
   before WK-674 Slice 5 (Proposal 3 (a)). `delivery-process.md` §8 stands: one slice at a
   time.
 - **The freeze gates.** `CR-1212`'s acceptance has the lead propose three freeze dates and a
-  target "after WK-672 closes". That trigger fires now. Proposal 4's host answer and
-  Proposal 3's slice both move any date, so the dates are proposed after those two verdicts.
-- **No Work is proposed for a split or a move.**
+  target "after WK-672 closes". That trigger fires now. Proposal 4's host answer is given.
+  Proposal 3's slice and Proposal 10's Work still move any date, so the dates are proposed
+  after those two verdicts.
+- **No existing Work is proposed for a split or a move.**
 
 ## Consistency with the WK-672 close record
 
@@ -573,12 +783,38 @@ _Filled after reading the auditor's draft on `wk672-close`._
 - **Retry counters (RFC-895 artifact B):** read with `write_runtime_state.py show`. There
   are no `project`- or `phase`-layer `replan`/`fix` entries, and so still no pilot data for
   question 5. **No change.**
-- **Proposals that need the maintainer's dated line:** 1 to 9.
+- **Proposals resolved by the maintainer while this review was drafting:**
+  - Proposal 2: #882, #857 and #881; not #877–#879;
+  - Proposal 4: the host fallback.
+
+  Both come from the entry of 2026-09-29 16:08:24 BST, recorded under each proposal.
+- **Proposals that need the maintainer's dated line:** 1, 2 (#877–#879 only), 3, 5, 6, 7, 8,
+  9, 10 and 11.
+- **Routing, if accepted.** Each proposal, its record and its owner. This is given in the
+  form of the maintainer's 16:12:57 entry, Part 2. That entry is future-facing and does not
+  bind this review, but the table costs nothing.
+
+  | Proposal | Record | Owner |
+  |---|---|---|
+  | 1 | `RL-` (or ADR) + `06` amendment; the check | decision-maker; WK-1178 |
+  | 2 | `FD-` (zen-engine upgrade); `dependabot.yml` PR | auditor / lead; WK-1178 |
+  | 3 | `RL-` (TraceStep contents); `SL-` in WK-1178 | decision-maker; planner |
+  | 4 | G4 roadmap row; `PL-1237` amendment | lead; planner (at #892's turn) |
+  | 5 | OQ-1233 → WK-688 row and gate move; OQ-1234 and OQ-1235 → `RL-` | lead; decision-maker |
+  | 6 | `delivery-process.md` §3 + core extract + `reporter.md` | the maintainer's; applied by the lead |
+  | 7 | new P3 `WK-` row; WK-1178 items | lead (the row); the maintainer (`active`) |
+  | 8 | G6 dated restatement | lead, quoting the maintainer |
+  | 9 | `FD-` against `register-owed.py`; F61's event | auditor; WK-1170 |
+  | 10 | new P2 `WK-` row; `FD-` against `CR-838`'s FR-217 verdict | lead / the maintainer; auditor |
+  | 11 | `OQ-` then `RL-` + `03` amendment; re-measurement in Proposal 3's slice | decision-maker; WK-1178 |
+
 - **For the lead's roadmap and register edits, after acceptance:**
   - OQ-1233's and OQ-1234's gate moves;
   - FR-453 named on WK-688's row;
   - the P3 packaging Work row;
-  - G6's restatement;
+  - G6's restatement, or its dated amendment (Proposal 8);
+  - FR-217 and FR-218 on a Work row (Proposal 10);
+  - the host-fallback wording in G4 (Proposal 4);
   - F35's register owner;
   - FD-1194's cell (the auditor's register pass).
 
@@ -586,23 +822,29 @@ _Filled after reading the auditor's draft on `wk672-close`._
 
 - Every input the lead's brief required has a written proposal with options and a
   recommendation: N3 (1), #852 (2), F35 and NFR-490 at exit (3), OQ-1233 to OQ-1235 (5),
-  FD-9028 (6), and FR-432, FR-433 and FR-438 (7). F38 and the dedicated host are Proposal 4.
+  the memory-overwrite finding (6), and FR-432, FR-433 and FR-438 (7). F38 and the dedicated host are Proposal 4.
+- The maintainer's two later inputs have one each: FR-218 (10) and NFR-500 (11).
 - Every register row decayed to this review has a disposition (9).
 - All five questions have a written answer.
 - **Nothing here binds** until the lead's verdicts and the maintainer's dated line below.
 
 ## Acceptance
 
-**Maintainer acceptance (plan review 16, Proposals 1–9):** _pending_ — dated when given.
+**Maintainer acceptance (plan review 16, Proposals 1–11, except the parts of 2 and 4 already
+accepted in the 16:08:24 entry):** _pending_ — dated when given.
 
 ## Sources
 
 - The maintainer's channel entries of 2026-09-29, quoted by heading: 15:26:00 (STRUCTURE),
-  15:36:43 (SCOPE: NFR-490 / F35), 14:15:43, 14:17:56 and 14:20:41 (the WK-674 answers). The
+  15:36:43 (SCOPE: NFR-490 / F35), 14:15:43, 14:17:56 and 14:20:41 (the WK-674 answers),
+  16:05:14 (the plan-review cadence), 16:08:24 (the host fallback and Dependabot), 16:12:57
+  (routed outputs) and 16:15:10 (the older plan-review items). The
   channel file is local and is not in the repository.
 - `docs/roadmap.md` (`## P2`, §10), `docs/findings/register.md`, `docs/open-questions.md`,
   `docs/specs/03-rating-engine.md`, `06-governance.md` and `07-platform.md`,
-  `packages/model-schema/src/model_schema/permissions.py` and `backend/src/app/api/score.py`,
+  `packages/model-schema/src/model_schema/permissions.py` and `rating.py`,
+  `packages/pricing-core/src/pricing_core/rating/score.py` and `compile.py`,
+  `backend/src/app/api/score.py`, `docs/REDIRECTS.csv`, `CR-838` and `CR-926`,
   all at `1c8762d9`.
-- `PL-1237` at #843's head `306e42b9`, and `FD-9028` and `c2db4f72` on `records-2026-09-29`
+- `PL-1237` at #843's head `306e42b9`, and the memory-overwrite finding and `c2db4f72` on `records-2026-09-29`
   at `bc55a975`.
