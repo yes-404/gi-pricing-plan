@@ -50,7 +50,9 @@ relates: [PL-930, PL-1177, RL-880, RL-881, RL-885, RL-1172, RL-1184, RL-1236, RS
 >    nothing can be `live` until WK-674 Slice 2's Deployment exists (premise j). The bare
 >    "WK-674, then WK-673" order is lifted. The files shared with other Works are listed
 >    under Sequencing, and those slices are serialised.
-> 7. **Locators re-read at `19c395ac`**, the header `tree:` moved there, and the acceptance
+> 7. **Locators re-read at `19c395ac`**; main then moved to `97b15726` (#922's P2 dates,
+>    #924's WK-674 SL rows, SL-1255 to SL-1260), which moves only roadmap lines (the WK-673 row cited in Self-review is re-read there) and gives
+>    WK-674 Slice 2 its id, SL-1256, now cited. The header `tree:` is `19c395ac`, and the acceptance
 >    wording aligned with `lead.md` rule 4 (the maintainer's MERGE-ACK).
 
 ## Goal
@@ -310,7 +312,7 @@ locator moved, the `19c395ac` one is given.
 | g | the Job kind exists | `JobKind.DISLOCATION_RUN = "dislocation.run"` at `model_schema/jobs.py:63`, routed to `JobQueue.COMPUTE` at `backend/src/app/platform/jobs.py:79`; no handler | reproduces; Slice 4 registers the handler |
 | h | FR-219's structural diff exists to persist | `diff_algorithms` at `model_schema/rating.py:569`; `RatingVersionEvidence.structural_diff_blob` at `:125` | reproduces; Slice 5 persists it |
 | i | the submission path | `rating_versions.submit_for_review` at `backend/src/app/platform/rating_versions.py:250`, calling `approvals.submit` at `:299` | reproduces; Slices 5 and 6 edit it |
-| j | (new) FR-257 limb (2) needs "the current live version" | `VALID_RATING_VERSION_TRANSITIONS` (`model_schema/rating.py:50-60`) has no transition into `LIVE`. `RL-880` records that FR-238 makes `live` a property of a **Deployment** (FR-267), which with the Environment is WK-674's; `POST /api/v1/score` refuses with `NO_LIVE_RATING_VERSION` (`backend/src/app/api/score.py:144`) | **A real dependency on WK-674 Slice 2** (the Deployment record and live resolution, `PL-1237` Task 2). Slice 5's limb (2) cannot name its baseline without it |
+| j | (new) FR-257 limb (2) needs "the current live version" | `VALID_RATING_VERSION_TRANSITIONS` (`model_schema/rating.py:50-60`) has no transition into `LIVE`. `RL-880` records that FR-238 makes `live` a property of a **Deployment** (FR-267), which with the Environment is WK-674's; `POST /api/v1/score` refuses with `NO_LIVE_RATING_VERSION` (`backend/src/app/api/score.py:144`) | **A real dependency on WK-674 Slice 2**, SL-1256 (the Deployment record and live resolution, `PL-1237` Task 2). Slice 5's limb (2) cannot name its baseline without it |
 | k | (new) FR-231's weights are wired nowhere | `pricing_core/rate_tables/operations.py:336` takes `weights`; `backend/src/app/platform/rate_tables.py:237` `diff(…, portfolio_dataset_version_id=None)` passes none (`:253-254`); the route `rate_table_diff` (`backend/src/app/api/rate_tables.py:314`) has no portfolio parameter, and neither has `03` §5.1's route (`03:748`); the DP3 cache already keys on the portfolio identity (`backend/src/app/platform/diff_cache.py:81-88`); the 202 path runs `JobKind.RATE_TABLE_DIFF` (`backend/src/app/worker/rate_table_handlers.py:65`) | reproduces; Slice 7 wires it, after DP-5 |
 | l | (new) FR-224's threshold has somewhere to live | `ApprovalPolicyEntry` (`approvals.py:111-122`) has `artifact_type`, `approvers_required`, `approver_roles`, `environment`, `evidence`, and no threshold field | the field is new: a `model-schema` shape change Slice 5 makes with the gate (the #845 ruling's premise note) |
 
@@ -400,7 +402,7 @@ slice, artifact or ruling counts. Bare order is lifted.
 | Dependency | Real? | What is needed |
 |---|---|---|
 | "WK-674, then WK-673" (CR-1212 Proposal 2) | **No** for Slices 1–4, 6 and 7 | none of them reads an Environment, a Deployment or a live pointer; `dislocate` and `attribute` take two named versions |
-| Slice 5 on WK-674 | **Yes** | FR-257 limb (2)'s baseline is "the current live version", and nothing can be `live` until WK-674 Slice 2's Deployment record and live resolution land (premise j). Slice 5 starts after WK-674 Slice 2 merges |
+| Slice 5 on WK-674 | **Yes** | FR-257 limb (2)'s baseline is "the current live version", and nothing can be `live` until WK-674 Slice 2's (SL-1256) Deployment record and live resolution land (premise j). Slice 5 starts after SL-1256 merges |
 | Slice 6 on WK-672 Slice 3 | **Met** | #886 merged; WK-672 closed (CR-1243) |
 | Slice 3 on WK-1250 | **No, but contended** | subsets compile through the current `compile_bundle`; WK-1250 changes it (see the file list) |
 | WK-675 Slice 5 on this Work | **Yes** (the other direction) | Slice 7 (F-W10-2) |
@@ -413,7 +415,7 @@ file are serialised: the second one merges `origin/main` before its mint (never 
 
 | File | This Work's slice | Other Work's slice |
 |---|---|---|
-| `packages/model-schema/src/model_schema/approvals.py` | 5 (DP-3's threshold field on `ApprovalPolicyEntry`), 6 (reads the floor) | WK-674 Slice 2 (`deployment` entry in `DEFAULT_POLICY`, `PL-1237` Task 2); WK-1250 if its DP-1 is (a) |
+| `packages/model-schema/src/model_schema/approvals.py` | 5 (DP-3's threshold field on `ApprovalPolicyEntry`), 6 (reads the floor) | WK-674 Slice 2, SL-1256 (`deployment` entry in `DEFAULT_POLICY`, `PL-1237` Task 2); WK-1250 if its DP-1 is (a) |
 | `docs/specs/03-rating-engine.md` | 1 (§3.9 FR-266, §4.6, §4.8, §5.2), 4 (§5.1), 5 (§3.1, §3.8 as needed), 7 (§5.1's diff route) | WK-674 Slices 2 and 6 (new §4 contracts after §4.8, §5.1 routes); WK-1250 (FR-217, FR-218); WK-690 (FR-244); WK-675 (§5.1). Section-scoped; the §4.8 neighbourhood is the likeliest textual conflict with WK-674 Slice 2 |
 | `packages/pricing-core/src/pricing_core/rating/score.py` | 1 (`_round_minor`'s docstring only) | WK-1250; WK-675 Slice 7b |
 | `compile_bundle` (`pricing_core/rating/compile.py`) and `TraceStep` | 3 (calls `compile_bundle`, reads the ladder for replay; no edit planned) | WK-1250 (edits both); WK-675 Slice 7b |
@@ -553,8 +555,8 @@ Depends on: Slice 3. Gate: as Slice 3, plus `generate-contracts.py --check`.
   #845 ruling's negative test (*FR-224's threshold resolved from an environment variable*)
   is this slice's.
 
-Depends on: Slice 4; DP-3 (decided); **WK-674 Slice 2 merged** (premise j). Serialised
-against WK-674 Slice 2 on `approvals.py` and `06` §4.2 in any case. If FD-1245's ruling
+Depends on: Slice 4; DP-3 (decided); **WK-674 Slice 2, SL-1256, merged** (premise j).
+Serialised against SL-1256 on `approvals.py` and `06` §4.2 in any case. If FD-1245's ruling
 moves FR-257's gate, the slice follows it. Gate: as Slice 4, plus the
 refusal tests (acceptance item 7).
 
@@ -617,6 +619,6 @@ Premises a, a′, c′, d′, e and e′ record what moved since `6c6f4532`; j, 
 `RL-1184` (#830), `RS-1201` (#833), `RL-1236` (#856), WK-672 Slice 3 (#886), CR-1212's
 acceptance, the maintainer's 22:46:27 and 22:47:23 entries. Open and cited: the #845
 ruling (read at `335edce8`), FD-1245 (open, may move FR-257's gate). The WK-673 roadmap row
-(`docs/roadmap.md:673`) lists only FR-263 to FR-266; the scope table above is the fuller
+(`docs/roadmap.md:686` at `97b15726`) lists only FR-263 to FR-266; the scope table above is the fuller
 list, and correcting the row is the lead's or decision-maker's, proposed in the report
 that carries this revision.
