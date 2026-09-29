@@ -3,16 +3,17 @@ id: PL-1239
 family: plan
 kind: leaf
 title: WK-674 Slice 1 — Tenancy and provenance (FR-436, FR-18): leaf plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-09-29
 owner: planner
 tree: bb2aa935dbdf207a7073df85f8fde143e1cee77b
 phase: P2
 work: WK-674
+slice: SL-9701
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [ADR-710, PL-1237, RL-1232]
+relates: [ADR-710, PL-1237, RL-1232, RL-1253]
 ---
 
 # WK-674 Slice 1 — Tenancy and provenance (FR-436, FR-18): leaf plan
@@ -68,7 +69,8 @@ hold. Task 0 still has the executor re-derive each premise at its own tree.
 
 ## Status
 
-**Draft**, filed 2026-09-29 against the tree above. It replaces the Slice 1 draft that
+**Active** from 2026-09-29 (see **Activation**, the last paragraph of this section). Filed as a
+**draft** 2026-09-29 against the tree above. It replaces the Slice 1 draft that
 PR #892 carried until this commit (commit
 `0d1c83bf9eaa00a4149c2bcf051d0448672d8c14`), which scoped Slice 2 and Slice 3 work under
 the Slice 1 label and took its slice order from WK-672's map plan (`PL-930`); that file is
@@ -82,12 +84,28 @@ re-minted at its turn, after PR #843. 1239 is `doc-id.py next --ref origin/main`
 
 **Activation needs, in order:** the map plan (~~#843~~ PL-1237) minted and `active`; DP-S1-1, DP-S1-2 and DP-S1-3
 below resolved; the lead's go. *(2026-09-29: PL-1237 is minted, and this PR sets it `active`
-on the maintainer's acceptance line. The DPs remain open.)* **Map-plan deviation, stated rather than folded in:** the
+on the maintainer's acceptance line. The DPs remain open.)* *(RL-1253, 2026-09-29: the DPs
+are resolved. See **Activation** below.)* **Map-plan deviation, stated rather than folded in:** the
 map's Task 1 says the platform-build column is *"set at submission"*; FR-18 says a Job
 records *"the platform version it ran on"*. The spec is the contract, so this plan records
 the build when the worker moves the Job to `running` (Task 3), and names the difference
 here for the lead and the map-plan's reviewer. *(Reconciled 2026-09-29: PL-1237's Task 1 now
 adopts this plan's recording point by a dated amendment, so there is no deviation left.)*
+
+**Activation, 2026-09-29.** All three conditions hold, in order:
+1. **PL-1237** is minted and `active` (its front matter at `0d5b0765f76320518bfe76ddb30e5013525797c0`).
+2. **DP-S1-1, DP-S1-2 and DP-S1-3 are resolved by `RL-1253`** (merged by PR #919 as
+   `0d5b0765`). Each `Resolved by` cell below cites it. The ruling amends two of the
+   recommendations, and this commit applies it at every site it touches, each marked
+   *(RL-1253, 2026-09-29)*.
+3. **The lead's go**, quoted from the lead's dispatch to the planner: *"Lead: go for PL-1239
+   activation, 2026-09-29, after RL-1253 merged at 0d5b0765 (#919)."* Recorded by the planner at 2026-09-29 21:01:03 BST.
+
+This commit sets `status: active` and `slice:` to this slice's `SL-` row, which PL-1237's
+activation step 3 adds under `### WK-674` in the same PR. The plan is frozen from this
+commit: only `status:`, `superseded_by:` and `corrected_by:` change after it
+(`document-ids.md` §1.5). A question found after freeze becomes a sibling `RL-` applied at a
+ledger step, or a replan (§1.7).
 
 ## Acceptance Standard
 
@@ -97,8 +115,13 @@ step predicts**; a failure for any other cause is a plan defect, reported, not w
 
 1. **Spec.** `07` §4.1's `Job` example and prose carry `platform_build` with a dated note
    citing FR-18. `07` FR-436 and `00` FR-18 are **not** reworded (they are already right);
-   if the executor believes either needs a change, it stops and reports. The outcomes of
-   DP-S1-1, DP-S1-2 and DP-S1-3 are written where their resolutions say.
+   if the executor believes either needs a change, it stops and reports. ~~The outcomes of
+   DP-S1-1, DP-S1-2 and DP-S1-3 are written where their resolutions say.~~ *(RL-1253,
+   2026-09-29: the ruling names no spec site for its outcomes, and `07` has no catalogue of
+   `GIP_` settings (`grep -n 'GIP_' docs/specs/07-platform.md` prints nothing at `0d5b0765`).
+   So the outcomes live in `RL-1253` and in the code of Tasks 3 and 4, and the §4.1 example
+   value is DP-S1-1's. If the executor finds a spec site that must name `GIP_BUILD` or
+   `GIP_TENANT_ID`, it stops and reports.)*
    `python3 scripts/audit-docs.py` exits 0.
 2. **Contract.** `uv run python scripts/generate-contracts.py --check` exits 0 after the
    regeneration, and the regenerated `Job` schema under `docs/contracts/` has a
@@ -117,7 +140,9 @@ step predicts**; a failure for any other cause is a plan defect, reported, not w
    `upgrade head` again all exit 0 against a scratch database, and
    `uv run pytest tests/test_repository_invariants.py -q` (FR-417's single-head guard) passes.
    A migration test asserts the table holds exactly one row, carrying the configured id, and
-   that a second insert is refused by a constraint (not by application code).
+   that a second insert is refused by a constraint (not by application code). *(RL-1253,
+   2026-09-29: the constraint is DP-S1-3 (ii-a)'s `smallint` primary key with
+   `CHECK (id = 1)`.)*
 4. **Refusal to start (FR-436), one negative test per store, each red first.** In a new
    `backend/tests/test_tenant_binding.py`, every test marked `@pytest.mark.req("FR-436")`:
    - database marker ≠ configured id → entering `TestClient(create_app(...))` raises, and the
@@ -145,11 +170,22 @@ step predicts**; a failure for any other cause is a plan defect, reported, not w
    - the same database mismatch stops the **worker**: the worker-start hook raises before any
      task is consumed;
    - positive control: matching markers → the app starts.
+   - *(RL-1253, 2026-09-29, its Acceptance section.)* The settings refusals, in
+     `backend/tests/test_config.py`, each red first and each refused by `require_startable()`
+     with `SETTING_INVALID`:
+     - `environment` `dev`, `uat` or `prod` with `GIP_BUILD` unset, set to `local`, or set to
+       a value that is not 40 lowercase hex characters (DP-S1-1, marked `FR-18`);
+     - `environment` `dev`, `uat` or `prod` with `GIP_TENANT_ID` unset, empty, or set to the
+       local default `local` (DP-S1-3 (i-a), marked `FR-436`; the ruling's Acceptance names
+       `prod`, and its (i-a) requires all three);
+     - positive control: `local` with neither set starts, with `build` and `tenant_id` both
+       `local`.
    A test that goes red because the app failed to start for any **other** reason (a missing
    fixture, a connection refusal) has not proved FR-436 and is a plan defect.
 5. **Provenance (FR-18), red first.** In `backend/tests/test_job_platform_build.py`, marked
    `@pytest.mark.req("FR-18")`: a Job moved to `running` by the worker path records the
-   worker's configured build; a Job still `queued` has `platform_build` null; `GET` on the
+   worker's configured build *(RL-1253, 2026-09-29: the value is exactly
+   `"{version}+{build}"` from the worker's settings, for example `0.1.0+local`)*; a Job still `queued` has `platform_build` null; `GET` on the
    Job returns the field. (There is no re-run path to test: at the tree above
    `VALID_TRANSITIONS[RUNNING]` is `{SUCCEEDED, FAILED, CANCELLED}`
    (`packages/model-schema/src/model_schema/jobs.py:112-120`), and the worker ignores a
@@ -230,12 +266,13 @@ The executor re-reads each at its own tree and stops on any that no longer holds
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-S1-1 | What identifies "the platform version it ran on" (FR-18)? `Settings.version` defaults to `"0.1.0"` for every build, so it cannot attribute a figure "to the build that produced it" | (a) Record `Settings.version` as is; (b) add a `build` setting (the full commit SHA, set by the image build in Slice 4), required when `environment` is `dev`, `uat` or `prod` and defaulted to a fixed `local` marker otherwise, and record `"{version}+{build}"`; (c) derive it at runtime from git | **(b).** (a) records the same string for every build, which is the "not a single, knowable thing" FR-18 exists to prevent. (c) fails in an image, which carries no `.git`. (b) makes a missing build a startup error where attribution matters, and costs nothing locally | decision point | yes — Task 3 | |
-| DP-S1-2 | FR-436's "the same check covers object storage and the broker where their configuration is per tenant": what is the marker in each? The spec says nothing more, and FR-422 forbids anything durable living only in Redis | (a) Blob: a marker object in the bucket, written when absent and compared when present. Broker: a marker key, written with set-if-absent and compared when present, so a flushed Redis re-arms rather than fails; (b) blob as (a), broker exempt on the grounds that its configuration is not per tenant; (c) neither — the database check alone | **(a).** The mistake the spec names — a restored backup, a copied `.env` — points a whole configuration at the other tenant, bucket and broker included, and the DB check alone misses a split configuration. (a)'s broker half never makes Redis a source of truth: losing the key loses nothing. (b) needs an argument that the broker's configuration is never per tenant, which `redis_url` being deployment configuration contradicts | decision point | yes — Task 4 | |
-| DP-S1-3 | Three choices inside Task 4 that the spec leaves open: (i) is `tenant_id` required in every environment? (ii) how does the database refuse a second marker row? (iii) what are the blob and broker marker keys? | (i-a) Required in `dev`, `uat` and `prod`, with a fixed default in `local`; (i-b) required everywhere, with tests and the compose `.env` supplying it. (ii-a) A `smallint` primary key with `CHECK (id = 1)`; (ii-b) a boolean primary key with `CHECK (singleton)`; (ii-c) a unique index on a constant expression. (iii-a) Fixed names: blob object `_platform/tenant` holding the id as plain text, Redis key `gip:tenant`; (iii-b) names taken from new settings | **(i-a), (ii-a), (iii-a).** (i-a): in `dev`, `uat` and `prod` a check whose configured side is a default proves nothing, so the value must be supplied there; in `local` one developer's stack holds one tenant's throwaway data, so a fixed default costs no protection and no setup. (i-b) is stricter but adds a required value to every local and test configuration for no protection there. (ii-a) is the most readable of three equivalent mechanisms, and the database refuses the second row either way. (iii-b) is configuration for a fixed value | decision point | yes — Task 4 | |
+| DP-S1-1 | What identifies "the platform version it ran on" (FR-18)? `Settings.version` defaults to `"0.1.0"` for every build, so it cannot attribute a figure "to the build that produced it" | (a) Record `Settings.version` as is; (b) add a `build` setting (the full commit SHA, set by the image build in Slice 4), required when `environment` is `dev`, `uat` or `prod` and defaulted to a fixed `local` marker otherwise, and record `"{version}+{build}"`; (c) derive it at runtime from git | **(b).** (a) records the same string for every build, which is the "not a single, knowable thing" FR-18 exists to prevent. (c) fails in an image, which carries no `.git`. (b) makes a missing build a startup error where attribution matters, and costs nothing locally | decision point | yes — Task 3 | **`RL-1253`: (b), amended.** `GIP_BUILD` is required in `dev`, `uat` and `prod` and must be 40 lowercase hex characters; a missing or malformed value (including `local`) fails `require_startable()`. It defaults to `local` in `local`. The Job records `"{version}+{build}"` *(RL-1253, 2026-09-29)* |
+| DP-S1-2 | FR-436's "the same check covers object storage and the broker where their configuration is per tenant": what is the marker in each? The spec says nothing more, and FR-422 forbids anything durable living only in Redis | (a) Blob: a marker object in the bucket, written when absent and compared when present. Broker: a marker key, written with set-if-absent and compared when present, so a flushed Redis re-arms rather than fails; (b) blob as (a), broker exempt on the grounds that its configuration is not per tenant; (c) neither — the database check alone | **(a).** The mistake the spec names — a restored backup, a copied `.env` — points a whole configuration at the other tenant, bucket and broker included, and the DB check alone misses a split configuration. (a)'s broker half never makes Redis a source of truth: losing the key loses nothing. (b) needs an argument that the broker's configuration is never per tenant, which `redis_url` being deployment configuration contradicts | decision point | yes — Task 4 | **`RL-1253`: (a), as recommended**, in this plan's order. The ruling states the broker marker's known limit after a Redis restart (its DP-S1-2, as corrected by its note N1) *(RL-1253, 2026-09-29)* |
+| DP-S1-3 | Three choices inside Task 4 that the spec leaves open: (i) is `tenant_id` required in every environment? (ii) how does the database refuse a second marker row? (iii) what are the blob and broker marker keys? | (i-a) Required in `dev`, `uat` and `prod`, with a fixed default in `local`; (i-b) required everywhere, with tests and the compose `.env` supplying it. (ii-a) A `smallint` primary key with `CHECK (id = 1)`; (ii-b) a boolean primary key with `CHECK (singleton)`; (ii-c) a unique index on a constant expression. (iii-a) Fixed names: blob object `_platform/tenant` holding the id as plain text, Redis key `gip:tenant`; (iii-b) names taken from new settings | **(i-a), (ii-a), (iii-a).** (i-a): in `dev`, `uat` and `prod` a check whose configured side is a default proves nothing, so the value must be supplied there; in `local` one developer's stack holds one tenant's throwaway data, so a fixed default costs no protection and no setup. (i-b) is stricter but adds a required value to every local and test configuration for no protection there. (ii-a) is the most readable of three equivalent mechanisms, and the database refuses the second row either way. (iii-b) is configuration for a fixed value | decision point | yes — Task 4 | **`RL-1253`: (i-a) amended, (ii-a), (iii-a).** (i-a)'s amendment: in `dev`, `uat` and `prod`, `GIP_TENANT_ID` must be non-empty and must not equal the local default `local`, checked in `require_startable()`. (ii-a): `smallint` primary key, `CHECK (id = 1)`. (iii-a): blob object `_platform/tenant`, Redis key `gip:tenant` *(RL-1253, 2026-09-29)* |
 
 All three are the decision-maker's (`delivery-process.md` §3). Tasks 1–2 do not depend on
-any of them, except that Task 1's example value waits for DP-S1-1.
+any of them, except that Task 1's example value waits for DP-S1-1. *(RL-1253, 2026-09-29:
+all three are resolved, so nothing in this plan waits on them.)*
 
 ---
 
@@ -254,13 +291,17 @@ any of them, except that Task 1's example value waits for DP-S1-1.
 
 **Files:** Modify `docs/specs/07-platform.md` (§4.1 example and the prose after it).
 
-- [ ] Add `"platform_build"` to the §4.1 example, placed after `trace_id`. Its example value
+- [ ] Add `"platform_build"` to the §4.1 example, placed after `trace_id`. ~~Its example value
   depends on DP-S1-1: under option (b), `"0.1.0+<commit sha>"`; under (a), `"0.1.0"`. Write
-  the value only after DP-S1-1 is resolved.
+  the value only after DP-S1-1 is resolved.~~ *(RL-1253, 2026-09-29: DP-S1-1 is (b), amended.)*
+  The example value is `"0.1.0+"` followed by a full 40-character lowercase hex commit SHA,
+  written out in full (a shortened SHA would contradict the format the ruling requires).
 - [ ] Add a dated paragraph after the `progress_at`/`stalled` note: the field, FR-18, that it
   is set when the Job moves to `running` and is null while `queued`.
-- [ ] Write the resolutions of DP-S1-1, DP-S1-2 and DP-S1-3 where the ruling that resolves them says
-  (spec-change: a design choice is recorded, never silently picked).
+- [ ] ~~Write the resolutions of DP-S1-1, DP-S1-2 and DP-S1-3 where the ruling that resolves them says
+  (spec-change: a design choice is recorded, never silently picked).~~ *(RL-1253, 2026-09-29:
+  the ruling is the record and names no spec site, so this step writes nothing; see
+  Acceptance 1.)*
 - [ ] `python3 scripts/audit-docs.py`; quote the rc. Commit: `docs(specs): 07 §4.1 Job carries platform_build (FR-18, WK-674 S1)`.
 
 ### Task 2: `model-schema` — the `Job` field and the contract
@@ -286,14 +327,22 @@ Alembic revision; test `backend/tests/test_job_platform_build.py`.
 
 - [ ] **First, the setting** per DP-S1-1, with its requiredness enforced by a validator in
   `Settings` so a missing value is a startup error (FR-447), and a `test_config.py` case for
-  it, red then green. It comes before the tests below for the same `extra="forbid"` reason
+  it, red then green. *(RL-1253, 2026-09-29: the setting is `build` (`GIP_BUILD`), defaulting
+  to `local`. The check lives in `require_startable()` (`backend/src/app/config.py:191` at
+  `f0c3d197`), beside the existing environment-specific refusals, not in a field validator:
+  in `dev`, `uat` and `prod` a missing value, `local`, or anything that is not 40 lowercase
+  hex characters fails with `SETTING_INVALID` citing FR-18. The cases are Acceptance 4's
+  settings refusals. `test_config.py:73` expects a `prod` start to succeed, so it must now
+  supply valid `build` and `tenant_id` values; `:67` and `:87` keep their own failure causes
+  (RL-1253, "The tests").)* It comes before the tests below for the same `extra="forbid"` reason
   as Task 4's first step.
 - [ ] **Red first:** the three Acceptance 5 tests. Predicted failure: the attribute does not
   exist on the row or the shape.
 - [ ] Add the nullable `platform_build` column to `JobRow` and in the revision (the column
   shares the Task 4 revision if both land together; either way the chain keeps one head).
 - [ ] Set it where `transition` moves a Job to `running`, from a keyword parameter named
-  `build` that the worker passes (the worker's own `Settings`, not the API's). Name it
+  `build` that the worker passes (the worker's own `Settings`, not the API's). *(RL-1253,
+  2026-09-29: the value passed and recorded is `f"{settings.version}+{settings.build}"`.)* Name it
   `build`, not `platform_build`: Acceptance 2 counts `platform_build *:` declarations, and a
   parameter of that name would be a second one. Map the column into the `Job` shape.
 - [ ] Green; commit.
@@ -308,7 +357,9 @@ Alembic revision; test `backend/tests/test_job_platform_build.py`.
 the new setting.
 
 - [ ] **First, the `tenant_id` setting** (per DP-S1-3), with its `test_config.py` case, red
-  then green. It has to come before the tests below: `Settings` has `extra="forbid"`
+  then green. *(RL-1253, 2026-09-29: `tenant_id` (`GIP_TENANT_ID`) defaults to `local` in
+  `local`; in `dev`, `uat` and `prod`, `require_startable()` refuses it unset, empty or equal
+  to `local`, with `SETTING_INVALID` citing FR-436.)* It has to come before the tests below: `Settings` has `extra="forbid"`
   (`backend/src/app/config.py:91-96`), so a test that passes `tenant_id` before the field
   exists goes red on validation, which is the wrong cause.
 - [ ] **Red first:** the Acceptance 4 tests. Before the checks exist, each negative test's
@@ -318,7 +369,8 @@ the new setting.
   with the found id reported as absent. A red or a startup failure of any other kind is not
   the proof.
 - [ ] The revision: create a single-row marker table, with a second row refused by the
-  database by the mechanism DP-S1-3 resolves. Insert the configured `tenant_id`, read through
+  database by the mechanism DP-S1-3 resolves *(RL-1253, 2026-09-29: (ii-a), a `smallint`
+  primary key with `CHECK (id = 1)`, and a tenant id column)*. Insert the configured `tenant_id`, read through
   `load_settings()` as `env.py` already does (`backend/migrations/env.py:19,31`). Drop the
   table on downgrade. A database migrated before this revision gets its marker from this
   revision, which is the "first migration" FR-436 means for an existing deployment.
@@ -345,10 +397,14 @@ the new setting.
      error, not a `TenantMismatchError`. That still refuses to start, which is what FR-436
      requires, and this slice does not change `ensure_bucket`. For a bucket the credentials
      *can* read, `head_bucket` succeeds and nothing is written.
-  3. **Blob marker**, per DP-S1-2: read it; if absent, write the configured id; if present
+  3. **Blob marker**, per DP-S1-2, at the fixed key `_platform/tenant` holding the id as
+     plain text (RL-1253 (iii-a)): read it; if absent, write the configured id; if present
      and different, stop. On a fresh deployment step 2 has just created the bucket, so the
      marker is absent and gets written.
-  4. **Broker marker**, per DP-S1-2: set-if-absent, then read and compare.
+  4. **Broker marker**, per DP-S1-2, at the fixed Redis key `gip:tenant` (RL-1253 (iii-a)):
+     set-if-absent, then read and compare. The ledger records RL-1253's stated limit: after a
+     Redis restart the first process to connect arms the key, so a misconfigured process
+     that connects first is not detected unless a correctly configured one follows.
   5. The existing probe registration, then `yield`.
   Acceptance 4's fresh-deployment case proves this order.
 - [ ] The worker: a Celery start-up signal handler in `celery_app.py` runs the same checks
@@ -385,6 +441,8 @@ also waits for the permission-catalogue ruling (#856), per the map plan's Task 2
   column" — none has, premise b.
 - **Literals** in this plan were checked against the tree above (premises); field and
   function names the executor adds are named as proposals, not as existing code.
-- **Open**: DP-S1-1, DP-S1-2 and DP-S1-3, all the decision-maker's. DP-S1-1 blocks Task 3
-  (and Task 1's example value); DP-S1-2 and DP-S1-3 block Task 4.
+- ~~**Open**: DP-S1-1, DP-S1-2 and DP-S1-3, all the decision-maker's. DP-S1-1 blocks Task 3
+  (and Task 1's example value); DP-S1-2 and DP-S1-3 block Task 4.~~ *(RL-1253, 2026-09-29:
+  none is open. Every blocking row names its resolver, which is the freeze condition of
+  `document-ids.md` §1.7.)*
 - **No retry path is assumed**: a Job reaches `running` once (Acceptance 5's note).

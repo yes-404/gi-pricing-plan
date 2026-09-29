@@ -687,6 +687,114 @@ phase: P2
 
 From “Workstreams” (line 384): Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires** | FR-267, FR-268, FR-269, FR-270, FR-271, FR-272; `07` FR-428, FR-429, FR-430, FR-431, and added 2026-08-15 by OQ-540's decision: **FR-436** (a deployment refuses to start against another tenant's database) and **FR-18** (a Job records the platform build, because version skew between tenants is now permanent). Any earlier `Job` migration should carry FR-18's column rather than wait for this
 
+#### SL-9701 — Slice 1: tenancy and provenance (FR-436, FR-18)
+
+```yaml
+id: SL-9701
+family: slice
+title: Slice 1: tenancy and provenance (FR-436, FR-18)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-09-29
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
+phase: P2
+work: WK-674
+corrected_by: []
+relates: [PL-1237, PL-1239, RL-1253]
+```
+
+A deployment is bound to one tenant and refuses to start when its database, blob or broker marker names another; every Job records the platform build it ran on. `PL-1237` Task 1; leaf plan `PL-1239`, its decision points ruled by `RL-1253`. First in the chain: nothing precedes it.
+
+#### SL-9702 — Slice 2: the Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit, NFR-498)
+
+```yaml
+id: SL-9702
+family: slice
+title: Slice 2: the Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit, NFR-498)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-09-29
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
+phase: P2
+work: WK-674
+corrected_by: []
+relates: [PL-1237]
+```
+
+The Environment and Deployment records, promotion order and their audit limb, with the carried rulings. `PL-1237` Task 2. Starts after Slice 1 closes; its leaf plan also waits on `OQ-1234` (the maintainer's acceptance line on `PL-1237`).
+
+#### SL-9703 — Slice 3: environment isolation (FR-430, FR-431, register F54 and F48, NFR-496 prod-sampling limb)
+
+```yaml
+id: SL-9703
+family: slice
+title: Slice 3: environment isolation (FR-430, FR-431, register F54 and F48, NFR-496 prod-sampling limb)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-09-29
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
+phase: P2
+work: WK-674
+corrected_by: []
+relates: [PL-1237]
+```
+
+Per-environment keys, rate limits and monitoring configuration, and environment configuration as a Setting. `PL-1237` Task 3. Starts after Slice 2 closes, and is gated by `OQ-1235`.
+
+#### SL-9704 — Slice 4: the deployment path (FR-437, FR-412 memory half, FR-415, FR-434, FR-435, NFR-531, NFR-534, FD-1211)
+
+```yaml
+id: SL-9704
+family: slice
+title: Slice 4: the deployment path (FR-437, FR-412 memory half, FR-415, FR-434, FR-435, NFR-531, NFR-534, FD-1211)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-09-29
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
+phase: P2
+work: WK-674
+corrected_by: []
+relates: [PL-1237]
+```
+
+The compose `api` and `worker` services, the reference identity provider, the memory budget and the explicit migration step: the path Slice 5 measures on. `PL-1237` Task 4. Starts after Slice 3 closes.
+
+#### SL-9705 — Slice 5: atomic switchover, rollback and the measurements (FR-268, FR-269, NFR-494, NFR-489, NFR-502, NFR-490, NFR-493 linearity limb)
+
+```yaml
+id: SL-9705
+family: slice
+title: Slice 5: atomic switchover, rollback and the measurements (FR-268, FR-269, NFR-494, NFR-489, NFR-502, NFR-490, NFR-493 linearity limb)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-09-29
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
+phase: P2
+work: WK-674
+corrected_by: []
+relates: [PL-1237]
+```
+
+Atomic switchover and rollback on the Slice 4 path, with the F1 acceptance test and the measured verdicts. `PL-1237` Task 5. Starts after Slice 4 closes; its measured verdicts wait on a dedicated host (maintainer-owned).
+
+#### SL-9706 — Slice 6: date-based routing and shadow scoring (FR-270, FR-271)
+
+```yaml
+id: SL-9706
+family: slice
+title: Slice 6: date-based routing and shadow scoring (FR-270, FR-271)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-09-29
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
+phase: P2
+work: WK-674
+corrected_by: []
+relates: [PL-1237]
+```
+
+Date-based routing and shadow scoring, both built and default off per environment (`RL-1232` Part A, DP-2 (a)). `PL-1237` Task 6. Starts after Slice 5 closes.
+
 
 ### WK-675 — Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views
 
