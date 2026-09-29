@@ -418,13 +418,22 @@
         "amended": "2026-09-29",
         "ruling": "RL-9760",
         "rl871_conditions": {
-          "i_two_independent_executors": true,
+          "i_two_independent_executors": "met",
           "ii_no_measurement_in_flight": true,
-          "iii_gate_announced_in_runtime_state_before_grant": true
+          "iii_coordination": {
+            "enforcing": "gate wrapper flock slots /tmp/slots/gate-1..2",
+            "record": "lead slot grant (slice, head SHA, BST) in eta.md In flight before each gate",
+            "runtime_state_announcement": "made, not relied on until #909's fix lands"
+          }
         },
         "contention_check": {
-          "first_concurrent_gate_pair": "record wall-clock, load, free -h vs solo baseline",
-          "step_down_if": "gate > 1.5x baseline or non-reproducible failure"
+          "pairs_measured": 3,
+          "record": "wall-clock, load, free -h at start and end",
+          "baseline": "max(#925 solo gate ~19 min, next solo run)",
+          "step_down_if": "any gate > 1.5x baseline or non-reproducible failure",
+          "reopen": "maintainer's dated line after re-measure",
+          "met_when": "all three pass; cite the three LG entries",
+          "confirmed": "2026-09-29 23:11:20 BST, the maintainer by delegation"
         }
       }
     },

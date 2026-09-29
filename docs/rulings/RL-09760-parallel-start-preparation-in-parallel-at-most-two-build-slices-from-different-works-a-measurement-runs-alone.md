@@ -100,31 +100,39 @@ quoted whole:
 The entry's reason: "a list can be checked, while "registry-style" is a judgement that drifts.
 The list stays closed until it is amended."
 
-**RL-871 §7's three conditions, adopted as the amendment's form** (*proposed by the lead in
-this draft, 2026-09-29, for the maintainer's confirmation in the MERGE-ACK*). RL-871
-(`docs/rulings/RL-00871-…md` §7) recommends that when the resource budget changes, §8 be
-amended, not excepted, and in resource terms. Two children may build concurrently only when all
-three hold:
+**RL-871 §7's three conditions, adopted as the amendment's form.** *Confirmed with amendments
+by the maintainer, by delegation: `~/gi-pricing-plan.local/channel/to-lead.md`, "2026-09-29
+23:11:20 BST — CONFIRMATION WITH AMENDMENT: RL-9760 finding 2 (RL-871 §7 conditions and the
+override trigger)", checked against RL-871 :153–191.* RL-871 (`docs/rulings/RL-00871-…md` §7)
+recommends that when the resource budget changes, §8 be amended, not excepted, and in resource
+terms. Two children may build concurrently only when all three hold:
 
-- **(i) Two independent executors exist.** Met: each lane is a separately spawned executor, in
-  its own worktree, holding its own gate slot.
-- **(ii) Neither child's in-flight work includes an NFR measurement or a benchmark.** This is
-  item 3 above: a measurement step runs alone.
-- **(iii) Coordination state is published.** Made true by this ruling. Before its full gate,
-  each build slice's gate is announced in the runtime state file's
-  `in_flight_expensive_verifications` (the `watcher-runtime-state` skill; `delivery-process.md`
-  §8's "announce … and check for one already in flight"), and the lead checks it before granting
-  a gate slot.
+- **(i) Two independent executors exist.** Confirmed as met: each lane is a separately spawned
+  executor, in its own worktree, holding its own gate slot.
+- **(ii) Neither child's in-flight work includes an NFR measurement or a benchmark.** Confirmed;
+  this is item 3 above: a measurement step runs alone.
+- **(iii) Coordination state is published.** As amended:
+  - **The enforcing mechanism** is the gate wrapper's flock slots (`/tmp/slots/gate-1..2`),
+    which cap concurrent gates at 2 by construction.
+  - **The coordinating record** is the lead's slot grant (slice, head SHA, BST time), written
+    to `eta.md` "In flight" before each gate.
+  - The runtime state file's `in_flight_expensive_verifications` announcement is also made but
+    **not relied on**: #909 (FD-9640, working id) records that writer as stale and wrong. It
+    becomes the record by a dated note when #909's fix lands.
 
-**RL-871's override trigger, still owed and made an obligation.** RL-871 names "a measurement
-shows this machine carries two concurrent gate runs without contention". The 22:43 BST reading
-above had one gate running, so it is not that measurement. **The first time two build-slice
-gates run concurrently, the lead records** each gate's wall-clock time, the load average and
-`free -h`, and compares each gate against its solo baseline (#925's full Python gate: 22:37:32
-→ 22:56:35 BST, about 19 min, at e937d766). **If either gate takes more than 1.5× its baseline,
-or either gate fails in a way that does not reproduce solo, the lanes step down to one build
-slice at a time**, and the lead reports it to the maintainer. The record goes in the slice's
-`LG-` ledger.
+**RL-871's override trigger, made an obligation** (as amended). RL-871 names "a measurement shows
+this machine carries two concurrent gate runs without contention". The 22:43 BST reading above
+had one gate running, so it is not that measurement.
+- **What is recorded:** for the **first three** concurrent gate pairs, the lead records each
+  gate's wall-clock time, the load average and `free -h`, at start and at end.
+- **The baseline** is the higher of #925's solo full Python gate (about 19 min, 22:37:32 →
+  22:56:35 BST, at e937d766) and the next solo run.
+- **Step-down:** if any gate exceeds 1.5× the baseline, or fails in a way that does not
+  reproduce solo, the lanes step down to one build slice **at once**. The lead tells the
+  maintainer and logs it in the slice's `LG-` ledger. Only the maintainer's dated line
+  re-opens two lanes, after a re-measure.
+- **When all three pairs pass,** RL-871's "without contention" is recorded as **met**, citing
+  the three `LG-` entries.
 
 ## Ground
 
