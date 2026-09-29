@@ -35,6 +35,9 @@ updates:
     # RS-1176 F4 condition 1: hypothesis is held at 6.165.7 (uv.lock) and moves only as a governed change (spike + ruling), never by Dependabot.
     ignore:
       - dependency-name: "hypothesis"
+      # zen-engine is the rating evaluator; a major upgrade is governed (spike first). The FD record for it is added on this branch. Minor and patch bumps still flow.
+      - dependency-name: "zen-engine"
+        update-types: ["version-update:semver-major"]
     groups:
       python:
         patterns: ["*"]
