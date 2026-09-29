@@ -74,3 +74,11 @@ Until the upload completion and its owner table exist, the route is the only enq
 `e1d050f7`), and an invariant test in the P1 PR pins that. When this finding's fix lands, the
 worker's `_ingest` re-checks ownership too, using the owner table, and the worker's comment that
 says the check is absent by design is removed in the same commit.
+
+## Progress — the docstrings (2026-09-28)
+
+#883 (`d068fb00`) corrected the two docstrings this record proposed correcting: `presign_upload` in
+`platform/blobs.py` and `upload_url` in `api/blobs.py` now say the object lands on a staging key and nothing
+yet promotes it, and the `07` §5.1 upload-url row carries a dated amendment. A grep for the old wording
+("promoted to its content address on completion") in `backend` and `docs/contracts` finds nothing at `d068fb00`.
+The completion step is still unbuilt, so this finding stays **active**.
