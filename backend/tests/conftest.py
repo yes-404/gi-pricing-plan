@@ -6,6 +6,8 @@ them for every test module without each one importing them.
 
 from __future__ import annotations
 
+import os
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -14,6 +16,19 @@ from pydantic import SecretStr
 from app.api.health import clear_probes
 from app.config import Environment, Settings
 from app.main import create_app
+
+
+def pytest_configure(config: pytest.Config) -> None:
+	"""Gate pytest execution by token or CI environment.
+
+	Requires GIP_GATE_TOKEN to be set, or CI=1 to be set (CI gate for automated runs).
+	This prevents accidental local test runs that should have been gated.
+	"""
+	if os.environ.get("CI") != "1" and not os.environ.get("GIP_GATE_TOKEN"):
+		raise RuntimeError(
+			"pytest requires GIP_GATE_TOKEN environment variable or CI=1 to be set. "
+			"This prevents uncontrolled test execution. Set GIP_GATE_TOKEN before running pytest."
+		)
 
 
 @pytest.fixture

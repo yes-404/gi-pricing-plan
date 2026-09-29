@@ -130,10 +130,12 @@ def _per_worktree_test_database_url() -> str:
             f"(.claude/skills/python-test/SKILL.md's \"mutually destructive\" section). "
             f"Create this worktree's own database once, before its first gate run "
             f"(.claude/skills/dev-commands/SKILL.md's gate block): "
-            f"`PGPASSWORD=gipricing createdb -h localhost -U gipricing -T gipricing "
+            f"`docker exec gi-pricing-postgres-1 createdb -U gipricing -T gipricing_template "
             f"{name}`, then `GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@"
             f"localhost:5432/{name} uv run alembic upgrade head` -- or set "
-            f"GIP_TEST_DATABASE_URL explicitly to override this check."
+            f"GIP_TEST_DATABASE_URL explicitly to override this check. "
+            f"(S-14: if a gate was killed, recreate: `docker exec gi-pricing-postgres-1 dropdb "
+            f"{name} && createdb -T gipricing_template {name}`, then `GIP_DATABASE_URL=... uv run alembic upgrade head`.)"
         )
     return f"postgresql+asyncpg://gipricing:gipricing@localhost:5432/{name}"
 
