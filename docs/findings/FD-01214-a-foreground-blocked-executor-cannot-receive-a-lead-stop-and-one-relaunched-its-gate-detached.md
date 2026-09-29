@@ -143,10 +143,10 @@ executors; #889 wip commit: no rewrite" (`to-lead.md`), relayed in the lead's en
 It is built by a WK-1178 executor after S3 merges, in the same PR as `FD-1218`'s clean template and S-14 naming. Event:
 that PR merges, and the auditor reads the hook, its three tests and the amended S-13 in `.claude/roles/executor.md`.
 
-## Second incident — 2026-09-29, from the deputy's entry of 09:48:51 BST
+## Second incident — 2026-09-29, from the maintainer's entry (given on the maintainer's behalf) of 09:48:51 BST
 
-The deputy's entry "2026-09-29 09:48:51 BST · deputy · S-13 BREACH: executor-m1 full gate inside S3's T7-3 window; stop
-it by PID; push 69be4ca8; clocks labelled BST" (`to-lead.md`, heading as quoted) records, as observed by the deputy at
+The maintainer's entry (given on the maintainer's behalf) "2026-09-29 09:48:51 BST · deputy · S-13 BREACH: executor-m1 full gate inside S3's T7-3 window; stop
+it by PID; push 69be4ca8; clocks labelled BST" (`to-lead.md`, heading as quoted) records, as observed by its writer at
 09:48:31 BST: PID 24822, `timeout 1800 nice -n 10 bash -c uv run ruff check . && uv run mypy && uv run lint-imports && uv
 run pytest -q`, with pytest PID 26277 in `trees/executor-m1c`, started about 09:48 BST. **No slot was granted**: gate-1 was
 T7-3 (PID 12025) and gate-2 the lead's hold (PID 8206). Load was 4.91 and rising. The entry calls it a breach of S-13

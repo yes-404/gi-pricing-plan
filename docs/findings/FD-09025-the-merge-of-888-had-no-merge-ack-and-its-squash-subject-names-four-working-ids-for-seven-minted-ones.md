@@ -20,7 +20,7 @@ relates: [FD-1214, FD-1215, FD-1216, FD-1217, FD-1218, FD-1219, FD-1220, WK-1178
 
 **What merged, and when.** `git show -s --format=%aI%n%cI bb2aa935` prints `2026-09-29T09:54:59+01:00` on both lines, and
 `--format=%an|%cn` prints `yes 404|GitHub`: PR #888 was squash-merged as `bb2aa935` at 09:54:59 BST by the GitHub web-flow
-committer. The deputy's entry "2026-09-29 09:59:24 BST · deputy · STOP: #888 was MERGED WITHOUT MY ACK; the id collision with
+committer. The maintainer's entry (given on the maintainer's behalf) "2026-09-29 09:59:24 BST · deputy · STOP: #888 was MERGED WITHOUT MY ACK; the id collision with
 S3; no merge without a deputy ACK entry" (`to-lead.md`) records that no MERGE-ACK entry naming the SHA exists, which breaks the
 standing rule that every merge needs one. This record read that entry; it did not search for an ACK itself.
 
@@ -38,7 +38,7 @@ FD-1207 on #873; FD-1195 records FR-178 in two parts (#888)"*. Read against the 
 the old id 9018 finds a commit whose files hold no such id.
 
 **A second defect in the same PR**, corrected by the PR that files this record: `FD-1214` carried a paragraph, "Amendment —
-2026-09-29, 09:49 BST", added inside `841f38a9`, that said more than the deputy's entry of 09:48:51 BST it rests on (a stop, a
+2026-09-29, 09:49 BST", added inside `841f38a9`, that said more than the maintainer's entry (given on the maintainer's behalf) of 09:48:51 BST it rests on (a stop, a
 re-lockdown, "WK-1178 is building test-infra"). It is replaced by a paragraph that states the entry's facts only.
 
 **What the audit found clean at `bb2aa935`:** the rename (no old id remains; `id:`, filename and heading agree on all seven), the
