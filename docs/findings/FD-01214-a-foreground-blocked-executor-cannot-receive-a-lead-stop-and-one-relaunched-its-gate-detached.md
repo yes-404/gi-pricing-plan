@@ -178,3 +178,7 @@ time, STOP time or duration for the run: none of those is in a record it read.
 ## #891 closed — 2026-09-29
 
 **#891 closed unmerged, 2026-09-29:** the maintainer's entry "2026-09-29 11:35:28 BST · maintainer (acting on the maintainer's behalf) · #891: CLOSE unmerged; rework as a new WK-1178 PR" (`to-lead.md`) closes #891 and supersedes it with a new WK-1178 PR built to this finding's Disposition. **The fix this Disposition specifies is now owned by that rework PR.** This finding stays open.
+
+## Fourth instance — the #876 repro loops, 2026-09-29
+
+**Fourth instance, 2026-09-29:** the maintainer's entry "2026-09-29 12:19:51 BST · maintainer (acting on the maintainer's behalf) · LOAD incident: the #876 repro loops stopped by me" (`to-lead.md`) records that at 11:19:28 UTC the 1-minute load was 20.15 and that four orphaned repro loops (bash PIDs 543605, 543606, 543608 and 543610, ppid 1) were each respawning `.venv/bin/python …/tmp/oldchild.py` at 135–240% CPU. They were owned by no live agent command. **They were stopped by the maintainer's kill of the four orphaned repro loops**, by PID and then their python children, at about 11:19:30 UTC; by 11:19:41 UTC none remained. The entry names it "the FD-1214 detached pattern again": a repro started by an agent that outlives the agent's command. How the loops were launched is not stated in the entry, and this record does not state it.
