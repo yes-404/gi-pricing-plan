@@ -305,4 +305,6 @@ The slice's ledger (`LG-`) carries this note to WK-675, the sandbox view's owner
 
 > `StepChange.own_change == false` means **"no own change attributable from the traces"**. **Do not render it as "unchanged" or "not edited".** A downstream step that was itself edited and whose input also moved reads `false` (the known limit `03` §4.10 states and Task 3's known-limit test pins). Whether `own_change` should be derived from step-definition equality instead is the open question of Task 1 Step 5, owned by WK-675, to be decided before its compare view ships.
 
+In this slice, "Task 3's known-limit test" is `packages/pricing-core/tests/test_trace_diff.py::test_a_downstream_steps_own_edit_is_masked_by_its_moved_input_a_known_limit`, and "the open question of Task 1 Step 5" is `OQ-1231` (`docs/open-questions.md` and `03` §10).
+
 **FR-262's typing (`RL-1172` §5, the plan's Hand-off section):** FR-262: backend limb delivered and tested (WK-672); UI limb reassigned to WK-675, not recorded as delivered.
