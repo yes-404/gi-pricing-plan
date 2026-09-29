@@ -1,5 +1,5 @@
 ---
-id: RL-9760
+id: RL-1263
 family: ruling
 title: Parallel start — preparation runs in parallel; at most two build slices from different Works; a measurement runs alone (process, on the maintainer's behalf)
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,9 @@ corrects: CR-1212
 relates: [RL-871, CR-1212]
 ---
 
-# RL-9760 — Parallel start: preparation runs in parallel; at most two build slices from different Works; a measurement runs alone
+# RL-1263 — Parallel start: preparation runs in parallel; at most two build slices from different Works; a measurement runs alone
+
+*Minted from working id 9760 at #928's merge turn, `RL-1263`, 2026-09-30 00:40:47 BST, by `doc-id.py next --ref origin/main` at aa14e90d. Where the maintainer's entry titles quoted below named the working id, the minted id is inserted in square brackets.*
 
 ## Verified first, at 19c395acad594d1b193da197461bec85201d2248
 
@@ -81,7 +83,7 @@ PARALLEL-START BUNDLE (A–D)", D1:
 >   8-core box plus the 2-slot flock gate), not a plan-independence argument.
 
 **What "no shared files" means**, from the maintainer's entry "2026-09-29 22:57:52 BST —
-DECISION: RL-9760's "no shared files" means OPTION (c); lane B opens with WK-690", item 2,
+DECISION: [RL-1263, then working id 9760]'s "no shared files" means OPTION (c); lane B opens with WK-690", item 2,
 quoted whole:
 
 > Two concurrent build slices may not both change the same **existing** function, class, method, spec section, or policy table. Examples: `approvals.py` EVIDENCE_FLOOR/DEFAULT_POLICY; one `03-rating-engine.md` section; `score.py`, `TraceStep`, `compile_bundle`.
@@ -114,7 +116,7 @@ stands as given; these two corrections apply to it:
 
 **RL-871 §7's three conditions, adopted as the amendment's form.** *Confirmed with amendments
 by the maintainer, by delegation: `~/gi-pricing-plan.local/channel/to-lead.md`, "2026-09-29
-23:11:20 BST — CONFIRMATION WITH AMENDMENT: RL-9760 finding 2 (RL-871 §7 conditions and the
+23:11:20 BST — CONFIRMATION WITH AMENDMENT: [RL-1263, then working id 9760] finding 2 (RL-871 §7 conditions and the
 override trigger)", checked against RL-871 :153–191.* RL-871 (`docs/rulings/RL-00871-…md` §7)
 recommends that when the resource budget changes, §8 be amended, not excepted, and in resource
 terms. Two children may build concurrently only when all three hold:

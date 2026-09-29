@@ -51,7 +51,7 @@ Project
 ```
 
 *(Amended 2026-09-29 by the maintainer, dated line by delegation: "one at a time" above is now
-qualified by §8's amendment. Up to 2 build slices, from different Works, may run at once; RL-9760
+qualified by §8's amendment. Up to 2 build slices, from different Works, may run at once; RL-1263
 (working id).)*
 
 One template, applied recursively three times (§5), plus a leaf-level variant at Slice
@@ -96,7 +96,7 @@ declared in the phase's own milestone section and checked by `phase-close.md` (r
 5. **Process children, one at a time** — invoke the next layer's flow for each child,
    strictly sequentially at this level (see §8 for the read-only fan-out carve-out). *(Amended 2026-09-29: "strictly
 sequentially" is qualified by §8's amendment, which allows up to 2 build slices from different
-Works; RL-9760 (working id).)*
+Works; RL-1263.)*
 6. **Audit** — auditor reviews the completed children against this layer's plan: no
    missing requirements, every gate actually achieved, watching specifically for drift at
    this layer's own level (a Phase audit checks work-level drift, not implementation
@@ -172,12 +172,12 @@ was meant (RL-871, `docs/rulings/RL-00871-no-8-stands-unamended-and-unexcepted-a
 *(Amended 2026-09-29 by the maintainer, dated line by delegation: preparation runs in
 parallel; at most 2 build slices from different Works at once, each holding a gate slot, no
 shared files; a measurement step runs alone. CR-1212's "§8 stands" is amended by this
-line.)* The ruling is RL-9760 (working id). It rests on this section's own "revisit only if
+line.)* The ruling is RL-1263. It rests on this section's own "revisit only if
 resource budget materially changes": an 8-core box and the 2-slot gate cap.
 Plan-independence is still not an exception (RL-871). "Preparation" means plans, rulings,
 rebases, mints and audits. It is not a slice and runs alongside. What "no shared files"
 covers (a closed append-only registry list) and RL-871 §7's three conditions are defined in
-RL-9760, not restated here.
+RL-1263, not restated here.
 
 **The interest §8 protects is resource contention, not plan stability.** Two children can be
 perfectly plan-independent and running them concurrently still breaches this rule, so an

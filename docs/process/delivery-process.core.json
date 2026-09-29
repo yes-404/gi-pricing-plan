@@ -3,8 +3,8 @@
     "id": "delivery-process-core",
     "version": "1.0.0",
     "derived_from": "docs/process/delivery-process.md",
-    "derived_from_digest": "sha256:d8e9848186568ba3de8f3081d982f0141280f79b9cc90a32567ad3e483437bae",
-    "verified_against_tree": "97b15726b1dd60ba407c6aba44735ad5cbe207ed",
+    "derived_from_digest": "sha256:0b90853e7528ec29cb745bd73ce18ba3e9268904e22365b39d255566d4d2ab4a",
+    "verified_against_tree": "aa14e90dd77c7461aa35cc6461557b129959463f",
     "authoritative": false,
     "note": "The markdown spec is authoritative. This file is the mechanical extract: state machine, guards, vocabularies, and runtime-state schema for hooks/watcher scripts. Regenerate or diff-check against the md on every spec change (RFC-895 script C4). Each block is the mechanically-checkable subset of the section it cites, not an exhaustive rendering -- a section may state more than its block records, and a block's silence is not the section's silence.",
     "spec_adopted": "2026-08-29"
@@ -222,7 +222,7 @@
           "id": "process_children",
           "action": "invoke_child_flow_per_child",
           "mode": "sequential_except_build_slices_across_works_max_2",
-          "amended": "2026-09-29, RL-9760 (§8)"
+          "amended": "2026-09-29, RL-1263 (§8)"
         },
         {
           "id": "audit",
@@ -423,7 +423,7 @@
           "audits"
         ],
         "amended": "2026-09-29",
-        "ruling": "RL-9760",
+        "ruling": "RL-1263",
         "rl871_conditions": {
           "i_two_independent_executors": "met",
           "ii_no_measurement_in_flight": true,
