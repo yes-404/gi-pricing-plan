@@ -664,9 +664,29 @@ records it as delivered.**
   authoring half. Both concern the same mid-term-adjustment sub-graph. That Work is the
   subject of the options below, and it must carry both.
 
-**Why the gap is safe today.** The guard fails closed. An MTA or cancellation quote is
-refused, never priced as new business, which is the silent failure FR-218 exists to prevent.
-G2's demo is new business (`WF-699`) and needs neither requirement.
+**~~Why the gap is safe today.~~ Why the gap was believed safe.** ~~The guard fails closed. An
+MTA or cancellation quote is refused, never priced as new business, which is the silent
+failure FR-218 exists to prevent.~~ G2's demo is new business (`WF-699`) and needs neither
+requirement.
+
+*(Corrected 2026-09-29, by the planner, on the lead's instruction. The struck sentences were
+false when written.)*
+- **What the finding shows.** The finding "`CR-838` marks FR-217 delivered, but its
+  versioned-artifact pin and bundle-time inlining are not built" (auditor-a-2, branch
+  `fd-fr217-cr838`, not yet minted; cited by subject) demonstrated at `49604a31` that the
+  guard accepts **any non-empty** `sub_graphs`. With a reference to a sub-graph that does not
+  exist, a cancellation and an MTA were quoted as new business. That is the silent failure
+  FR-218 names. It is not a refusal.
+- **What this review read, and what it did not check.** It read the guard's condition,
+  `… and not algorithm.sub_graphs` (`packages/pricing-core/src/pricing_core/rating/score.py:406`),
+  correctly, as refusing only an **empty** list. It then took the docstring's "conservative,
+  forward-safe approximation" as the property, without checking the non-empty case. With
+  inlining unbuilt, nothing resolves a mount, so a non-empty list proves nothing.
+- **What it changes.** Proposal 10's recommendation (a) is unchanged. Fallback (c) loses its
+  interim: without a fixed guard, carrying both requirements to P3 leaves FR-218's failure
+  live. The lead's verdict below adds the interim fix under WK-1178: refuse every MTA and
+  cancellation quote until inlining exists, whatever `sub_graphs` holds, proved with a
+  bogus reference.
 
 **Options.**
 - **(a) A new P2 Work: sub-graph composition and MTA/cancellation pricing.**
@@ -680,7 +700,9 @@ G2's demo is new business (`WF-699`) and needs neither requirement.
 - **(b) Fold both into WK-675** (the designer). Cost: a frontend Work would carry a compile
   and scoring change. That is scope crossing kinds, the smell the `phase-review` skill names
   from WK-664.
-- **(c) Carry both to P3** under a named P3 Work, with the fail-closed guard as the interim.
+- **(c) Carry both to P3** under a named P3 Work, ~~with the fail-closed guard as the interim~~
+  *(corrected 2026-09-29: the guard does not fail closed (see the correction above); the
+  interim is the WK-1178 fix in the lead's verdict)*.
   - Needs: a dated maintainer line amending OQ-617's "Phase 2" placement, and a dated note
     on FR-218.
   - Cost: P2's DAG designer (WK-675) ships without sub-graph composition, although FR-217
