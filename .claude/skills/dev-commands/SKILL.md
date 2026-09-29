@@ -158,7 +158,7 @@ fi
 '
 got=0
 final=1
-for i in 1 2 3; do
+for i in 1 2; do
   flock -n -E 99 /tmp/slots/gate-$i -c "export GIP_GATE_SLOT=/tmp/slots/gate-$i; $gate_body"
   final=$?
   if [ "$final" -ne 99 ]; then got=1; break; fi
@@ -178,9 +178,9 @@ another stage's output, so there is no ordering to preserve — the old `&&` cha
 sequencing them for no reason beyond it being the obvious way to type a list.
 
 **The slot count did not change, and neither did the lock.** There is still one
-`flock` — three non-blocking attempts, then a single blocking wait on slot 1 — and it
+`flock` — two non-blocking attempts, then a single blocking wait on slot 1 — and it
 still wraps the whole body. The parallelism is *inside* the slot, so the box still runs at
-most three gates at once and the thread caps still hold each stage to 4. **Do not give
+most two gates at once and the thread caps still hold each stage to 4. **Do not give
 each stage its own `flock`**: that is seven locks where the budget assumed one, and it
 reinstates exactly the double-lock deadlock `GIP_GATE_SLOT` exists to prevent.
 
@@ -228,7 +228,7 @@ that.
 
 **`GIP_GATE_SLOT` is the announcement, not a second lock.** The repository-root
 `conftest.py` (W37-6) enforces the same budget for a *bare* `uv run pytest -q` — thread
-caps by `os.environ.setdefault` and a `flock` on the identical `/tmp/slots/gate-{1,2,3}`
+caps by `os.environ.setdefault` and a `flock` on the identical `/tmp/slots/gate-{1,2}`
 files this wrapper uses — because the wrapped form above was typed wrong three times in
 one day and a bare invocation should still be safe. `export GIP_GATE_SLOT=/tmp/slots/gate-$i`
 before the `&&`-chain is what stops that conftest hook from taking a *second* lock on a
@@ -311,7 +311,7 @@ under RL-1045 §1), and a moved set exits 3 — neither is 0, so under the old l
 run** hit two busy-looking slots plus the blocking fallback and executed the instrument
 **three times**. The gate wrapper only mistriggers when the gate **fails** (a green gate
 exits 0 and the old `&&` correctly stopped after one pass) — but a failing gate ran **four
-times** (three slots plus the fallback), exactly when someone is iterating on a red gate and
+times** (one run per slot plus the fallback), exactly when someone is iterating on a red gate and
 least wants triple-cost turnaround.
 
 **Correctness was never in question — only timing and scratch cost.** All three (or four)
@@ -1060,7 +1060,8 @@ build log showing no actual build (wrong cwd), one tmpdir ls -i showing identica
 (collision). This section drafted by executor-h; verified by deputy as measured. Reference: 
 to-lead.md entries 10:55:17, 11:02:41, 11:48:50, 14:33:28 (maintainer instruction).
 
-Verified: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
+Verified: 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
+Prior: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
 
 2026-09-06 — the gate body's seven stages now run in parallel inside one slot, each
 capturing its own exit code, ending in a per-stage table and a `GATE:` verdict line. Three
