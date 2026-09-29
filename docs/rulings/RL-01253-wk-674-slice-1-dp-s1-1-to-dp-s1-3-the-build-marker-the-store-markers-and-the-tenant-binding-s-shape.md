@@ -1,5 +1,5 @@
 ---
-id: RL-9690
+id: RL-1253
 family: ruling
 title: WK-674 Slice 1, DP-S1-1 to DP-S1-3 — the build marker, the store markers, and the tenant binding's shape
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [PL-1239, RL-1232]
 ---
 
-# RL-9690 — WK-674 Slice 1, DP-S1-1 to DP-S1-3: the build marker, the store markers, and the tenant binding's shape
+# RL-1253 — WK-674 Slice 1, DP-S1-1 to DP-S1-3: the build marker, the store markers, and the tenant binding's shape
 
 ## Verified first, at f0c3d197f5d89863efc647a2d7c1a6994b74dd63
 
@@ -25,8 +25,9 @@ Task 4. All three are technical (`delivery-process.md` §3; the maintainer's STR
 §1), so this role rules them, and none goes to the maintainer. **The plan is not edited**
 (§1.6, the PL row). The planner applies this record.
 
-**RL-9690 is a working id**, minted at its merge turn with `doc-id.py next --ref origin/main`.
-*(2026-09-29: first filed as 9680, which PR #918 had taken 23 seconds earlier as a plan id; renamed to 9690, free on all 107 remote branches.)*
+Filed under working id 9690 (first filed as 9680, which PR #918 had taken 23 seconds earlier as a
+plan id; 9690 was free on all 107 remote branches); minted `RL-1253` at its merge turn, 2026-09-29
+(`doc-id.py next --ref origin/main` at `90675848`).
 
 **The requirements, read at their rows:**
 - `00` FR-18 (`00-overview.md:222`): *"Every Job records the platform version it ran on … a
