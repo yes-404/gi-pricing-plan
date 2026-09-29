@@ -86,6 +86,11 @@ it can be applied is silent, and it costs a mispricing.
 - **Not decided here:** which Work builds FR-217's inlining. The finding above and the plan
   review that proposes the new Work for FR-217 and FR-218 own that.
 
+*(2026-09-29, at the mint: #907 merged as `a78fe98f`, from head `7fafe7d2`, before this record. The guard
+(`score.py:411-413`) and the five tests read above are unchanged from `748b7680`; only docstrings and
+comments differ, and they no longer cite the working id. The red-run log names `748b7680` and stays as
+written.)*
+
 ## Acceptance — the violation that must become detectable
 
 The violation: **an MTA or cancellation quote priced while no sub-graph can be applied.** The
