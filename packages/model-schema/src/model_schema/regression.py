@@ -24,7 +24,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from model_schema.money import DecimalStr, MoneyMinor
-from model_schema.refs import ArtifactRef, Slug
+from model_schema.refs import ArtifactRef, BlobRef, Slug
 from model_schema.scoring import QuoteContext, ScoringOutcome
 
 _FROZEN = ConfigDict(frozen=True, extra="forbid")
@@ -162,7 +162,8 @@ class RegressionProperty(BaseModel):
 class RegressionGeneration(BaseModel):
     model_config = _FROZEN
 
-    cases: int = Field(ge=1)
+    #: The bound (RS-1176 condition 2): a run persists every generated case (FR-1221).
+    cases: int = Field(ge=1, le=10_000)
     seed: int = Field(ge=0)
     strategy: Literal["input_contract_sampling"]
 
@@ -240,6 +241,95 @@ class GoldenQuoteResult(BaseModel):
     expected_minor: MoneyMinor | None = None
     actual_minor: MoneyMinor | None = None
     difference_minor: int | None = None
+
+
+class CasesLog(BaseModel):
+    """A run's reproduction record: every generated case and every counterexample (FR-261).
+
+    Persisted as one content-addressed canonical JSON blob (FR-1221) and replayed by
+    re-scoring, never regenerated. `counterexamples` is keyed by property name.
+    """
+
+    model_config = _FROZEN
+
+    cases: list[QuoteContext]
+    counterexamples: dict[str, QuoteContext]
+
+
+def cases_log_bytes(log: CasesLog) -> bytes:
+    """The blob's content: canonical JSON, sorted keys, no whitespace (as `suite_content_hash`)."""
+    return json.dumps(
+        log.model_dump(mode="json"), sort_keys=True, separators=(",", ":")
+    ).encode()
+
+
+def cases_log_sha256(log: CasesLog) -> str:
+    """The bare 64-hex digest of `cases_log_bytes` — the `BlobRef.sha256` form."""
+    return hashlib.sha256(cases_log_bytes(log)).hexdigest()
+
+
+class RunGeneration(BaseModel):
+    """How a run generated its cases (03 §4.9); the seed serves same-version regeneration."""
+
+    model_config = _FROZEN
+
+    seed: int = Field(ge=0)
+    cases: int = Field(ge=1, le=10_000)
+    hypothesis_version: str
+
+
+class PropertyResult(BaseModel):
+    """One property's outcome — 03 §4.9's `property_results[]` item.
+
+    A failing property records how its shrink ended; a shrink stopped on a limit is
+    reported as unminimised, never as a minimal counterexample (RS-1176 condition 5).
+    """
+
+    model_config = _FROZEN
+
+    name: str
+    status: Literal["pass", "fail"]
+    cases_run: int = Field(ge=0)
+    counterexample: dict[str, Any] | None = None
+    counterexample_minimal: bool = False
+    shrink: Literal["completed", "stopped_on_limit"] | None = None
+    error_code: str | None = None
+    #: How a `monotone` property's grid was built (DP-S3-6): the uniform grid plus
+    #: seeded samples, the weaker form — an inversion narrower than the spacing may not be
+    #: detected until Bandings are pinned in the bundle. `None` for every other class.
+    grid: Literal["uniform+sampled"] | None = None
+    #: The two adjacent grid values, in order, at which a `monotone` counterexample's premium
+    #: broke the property (`counterexample` is the base context; DP-S3-5).
+    counterexample_points: list[int | str] | None = None
+
+    @model_validator(mode="after")
+    def _shrink_iff_failed(self) -> Self:
+        if (self.status == "fail") != (self.shrink is not None):
+            raise ValueError("`shrink` is recorded exactly when the property failed")
+        if self.status == "pass" and (self.counterexample is not None or self.error_code):
+            raise ValueError("a passing property carries no counterexample or error_code")
+        if self.counterexample_minimal and self.shrink != "completed":
+            raise ValueError("a counterexample is minimal only when its shrink completed")
+        return self
+
+
+class RegressionRun(BaseModel):
+    """The execution record of a Regression Suite run (03 §4.9, FR-260, FR-261)."""
+
+    model_config = _FROZEN
+
+    suite_ref: ArtifactRef
+    suite_content_hash: Sha256Hash
+    rating_version_ref: ArtifactRef
+    bundle_hash: Sha256Hash
+    job_id: UUID | None = None
+    started_at: datetime
+    finished_at: datetime
+    overall: Literal["pass", "fail"]
+    generation: RunGeneration
+    cases_blob: BlobRef
+    golden_results: list[GoldenQuoteResult]
+    property_results: list[PropertyResult]
 
 
 class GoldenQuoteChangeStep(BaseModel):
@@ -327,6 +417,7 @@ GoldenQuoteEvidence = Annotated[
 ]
 
 __all__ = [
+    "CasesLog",
     "GoldenQuote",
     "GoldenQuoteChange",
     "GoldenQuoteChangeStep",
@@ -343,12 +434,17 @@ __all__ = [
     "PremiumBounded",
     "PremiumPositive",
     "PropertyCheck",
+    "PropertyResult",
     "RegressionGeneration",
     "RegressionProperty",
+    "RegressionRun",
     "RegressionSuite",
     "RegressionSuiteContent",
     "RegressionSuiteVersionCreate",
+    "RunGeneration",
     "Sha256Hash",
+    "cases_log_bytes",
+    "cases_log_sha256",
     "context_hash",
     "suite_content_hash",
 ]

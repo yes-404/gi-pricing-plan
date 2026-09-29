@@ -83,12 +83,19 @@ def _empty_pins() -> dict:
 
 
 async def _insert_version(
-    database, workspace_id, created_by, algorithm_ref: str | None, pins: dict
+    database,
+    workspace_id,
+    created_by,
+    algorithm_ref: str | None,
+    pins: dict,
+    *,
+    slug: str = "minimal-rv",
+    version: int = 1,
 ) -> RatingVersionRow:
     row = RatingVersionRow(
         workspace_id=workspace_id,
-        slug="minimal-rv",
-        version=1,
+        slug=slug,
+        version=version,
         status="draft",
         dataset_version_id=uuid4(),
         model_ref="model:motor-ad-frequency@7",

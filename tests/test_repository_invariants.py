@@ -39,7 +39,7 @@ def test_pricing_core_is_callable_without_the_backend() -> None:
 
     result = subprocess.run([binary], capture_output=True, text=True, cwd=ROOT)
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "Contracts: 3 kept, 0 broken." in result.stdout
+    assert "Contracts: 4 kept, 0 broken." in result.stdout
 
 
 @pytest.mark.req("FR-9")
@@ -55,7 +55,9 @@ def test_the_architecture_contracts_are_configured_and_not_silently_empty() -> N
     assert "include_external_packages = True" in config
     for package in ("model_schema", "pricing_core", "app"):
         assert f"\n    {package}\n" in config, package
-    assert config.count("[importlinter:contract:") == 3
+    # four: core-has-no-infrastructure, schema-depends-on-pydantic-only, layering and
+    # `replay-never-generates` (PL-1205 Task 4: replay_cases can never reach the generator)
+    assert config.count("[importlinter:contract:") == 4
 
 
 @pytest.mark.req("NFR-462")
