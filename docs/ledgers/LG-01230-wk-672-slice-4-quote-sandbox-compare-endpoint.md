@@ -2,7 +2,7 @@
 id: LG-1230
 family: ledger
 title: WK-672 Slice 4 — Quote Sandbox compare endpoint (FR-262 backend limb)
-status: active
+status: closed
 created: 2026-09-29
 owner: executor
 tree: b4aa909d43f347091e3ee239fbc72ab4c5ca4491
@@ -308,3 +308,51 @@ The slice's ledger (`LG-`) carries this note to WK-675, the sandbox view's owner
 In this slice, "Task 3's known-limit test" is `packages/pricing-core/tests/test_trace_diff.py::test_a_downstream_steps_own_edit_is_masked_by_its_moved_input_a_known_limit`, and "the open question of Task 1 Step 5" is `OQ-1231` (`docs/open-questions.md` and `03` §10).
 
 **FR-262's typing (`RL-1172` §5, the plan's Hand-off section):** FR-262: backend limb delivered and tested (WK-672); UI limb reassigned to WK-675, not recorded as delivered.
+
+## Slice close — the auditor's record
+
+**Status set `closed` by the auditor on 2026-09-29** (`document-ids.md` §1.6, SL row: *"auditor closes: sets the `LG-` `closed`, verifies acceptance"*), under the closing-record convention of `LG-1204` (#870) and `LG-1225` (#898): a docs-only record that **takes no new id**. It lands in the WK-672 Work close PR, whose record is the `CR-` named in that PR (working id `CR-9601`, minted at the merge turn). Everything below was read at `origin/main` `1c8762d9ed235f80e0f2fff80c44003694828e97` unless a line names another tree. The logs cited are local, under `~/gi-pricing-plan.local/evidence/wk672-close/`, each with `SHA:` as its first line and `RC=` as its last, hashed in that directory's `SHA256SUMS`.
+
+### The work PR, #901
+
+- **Merge.** `gh pr view 901 --json mergedAt,mergeCommit,headRefOid` → merged `2026-09-29T13:06:34Z` (14:06:34 BST) as the squash `c9f50232db1d45f29864949eee7a14a5b9a59086`, head `40af56a9e58676456f54e39537e43894764ac21b`. The squash's parent is `369c5774b9c986afa032b97e542773d2da765481`. `git rev-parse 40af56a9^{tree} c9f50232^{tree}` prints `5e54f82f664071e7daecd3fcb400cbb80e3574c4` twice, so the slice's content is on `main` byte for byte. `git merge-base --is-ancestor c9f50232 1c8762d9` exits 0.
+- **Approval (acceptance item 12).** The maintainer's MERGE-ACK for #901, given on the maintainer's behalf, `2026-09-29 14:05:40 BST`, naming head `40af56a9…` against main `369c5774…` (`to-lead.md`, local, not in the repository). The squash body of `c9f50232` repeats it: *"MERGE-ACK: the maintainer, 2026-09-29, for 40af56a9 against 369c5774."*
+- **The independent slice audit.** The squash body of `c9f50232` records it: *"Independent audit: CLEAN at 40af56a9, after two ledger-text findings were fixed."* **This is the only durable copy of that verdict that this record found.** The audit report itself is not in this ledger, the PR description or the PR comments, and `grep -rl 'CLEAN'` over the local evidence, drafts and scratch directories finds no S4 audit report. The lead adopted the audit as CLEAN before the merge (the squash body). This record does not re-run that audit; it verifies the acceptance items at `main` below.
+- **CI at the head** (`gh run list --branch p2-d-s4`, head `40af56a9`): python `36570304630`, frontend `36570304794`, docs `36570304889` and history-policy `36570304945`, each `success`. The maintainer's ACK quotes the python run: *"3772 passed, 3 skipped … 722.02s"* and *"GATE: pass — 8 of 8 stages passed"*, which meets this ledger's floor of 3775 (3747 + 28).
+
+### Acceptance standard of `PL-1213`, item by item
+
+Every "red first" and mutation claim lives in this ledger's *Tasks*, *Task 3 mutations* and *Plan deviations* sections and was not re-run here. Where a line says "at `1c8762d9`", the check was run there by the auditor (log `06-s4-acceptance-greps.log`, and `07-trace-diff-named.log` for item 2).
+
+| # | Verdict | Evidence |
+|---|---|---|
+| 1 Spec | met | At `1c8762d9`: the heading `### 4.10` (`ScoreComparison`) at `03-rating-engine.md:696`; the §5.1 row for `POST /api/v1/score/compare` names `rating:read`, 401, 403, 404, 409, 422 and `BUNDLE_COMPILE_FAILED`; `def diff_traces(base: Trace, comparison: Trace) -> TraceDiff` in §5.2 (`:902`); FR-262 carries *"(Clarified 2026-09-29, WK-672 Slice 4, `RL-1172` §5.)"* (`:179`); NFR-499's *"FR-262's sandbox is inline"* sentence is present once and unchanged. `audit-docs.py` rc 0 at `1cadf98e` (this ledger's *Final head* (c)). |
+| 2 One-step proof | met | `packages/pricing-core/tests/test_trace_diff.py`: `test_a_change_to_one_steps_own_definition_is_the_one_own_change` asserts `own == ["s_rate"]` and, for every other entry, `"consumed" in change.changed_fields` and `change.base.consumed != change.comparison.consumed`; `test_an_edit_that_feeds_nothing_that_changes_is_the_only_entry`. Run by the auditor at `1c8762d9`, the two plus the known-limit test: `3 passed`, rc 0. The two mutations are in *Task 3 mutations* above. |
+| 3 Diff shape | met | the same file: `test_identical_traces_have_an_empty_diff`, `test_elapsed_time_never_makes_a_step_differ`, `test_an_added_and_a_removed_step_are_reported_with_their_kind`, `test_one_and_one_point_zero_and_true_are_different_values` (parametrized), `test_a_duplicate_step_id_in_one_trace_is_refused`, and the known-limit test `test_a_downstream_steps_own_edit_is_masked_by_its_moved_input_a_known_limit` (`assert own == {"s_rate": True, "s_total": False}`). |
+| 4 One shape, one home | met, with the plan's predicate replaced | At `1c8762d9`: `generate-contracts.py --check` rc 0; `docs/contracts/schemas/generated/score-comparison.schema.json` exists. The plan's own grep is too loose (it prints `ModelComparisonRow` and `ComparisonCandidate`, *Plan deviations* 3). The tightened predicate `grep -rnE 'class (ScoreCompareRequest\|ScoreComparison\|TraceDiff\|StepChange)\b'` prints nothing over `backend/src packages/pricing-core/src` (rc 1) and 4 lines over `packages/model-schema/src`. |
+| 5 The route | met | `backend/tests/test_score_compare.py`: `test_compare_returns_both_traced_results_and_the_step_diff`, `test_a_caller_without_rating_read_is_refused_and_an_anonymous_one_is_401`, `test_a_ref_naming_no_version_is_a_404_naming_the_side` and `test_an_uncompiled_version_is_a_409_naming_the_side` (each parametrized over `base` and `comparison`), `test_a_per_quote_error_on_one_side_is_a_422_naming_that_side`, `test_a_context_carrying_its_own_version_ref_is_a_422`, `test_identical_refs_give_an_empty_diff`. They ran green in CI at `40af56a9` and at `1c8762d9` (python `36584757193`: `3827 passed, 3 skipped`). Red-first was shown by mutation for all but the first test, as *Tasks 4-5* discloses. |
+| 6 One-step proof at HTTP | met | `test_exactly_one_step_is_the_own_change_at_the_http_layer`: `assert own == ["s_expr"]`, the downstream `s_adj` with `"consumed" in … ["changed_fields"]`, `diff["unchanged"] == 0`. The fixture adds the downstream step `s_adj` (*Plan deviations* 2). |
+| 7 NFR-499 | met as the maintainer ruled it (12:14:30 BST) | `test_compare_persists_nothing_even_at_a_trace_sample_rate_of_one` counts `scoring_traces` and `jobs` rows and spies on `_maybe_sample_trace` (`assert sampled == [], "the sandbox route reached FR-259's trace sampling"`); `test_compare_logs_no_input_value`. The row-count check alone was vacuous under the copied-sampler mutation; the spy is what goes red. The caplog test's own red proof is the logging mutation in *Plan deviations* 1. |
+| 8 No outbound validation | met | At `1c8762d9`: `grep -nE '^\s+response_model=\|\) -> (ScoreComparison\|ScoringResult)' backend/src/app/api/score.py` prints nothing, rc 1; the same pattern on a two-line positive control counts 2, rc 0. |
+| 9 Contract | met | At `1c8762d9`: `docs/contracts/openapi/generated.json` lists `POST /api/v1/score/compare` with responses `200, 401, 403, 404, 409, 422`. `generate:api` rc 0 is in *Gate entries* (frontend half at `1509bc0c`) and the frontend CI at `40af56a9` is `success`. |
+| 10 The gate | met | the full two-half gate at `1509bc0c` (7 of 7, `3739 passed, 3 skipped`; frontend 6 of 6); N=5×2 of `test_rating_score.py` at `10893eda` and again at `1cadf98e`, 20 of 20 rc 0; CI at `40af56a9` as above; the four docs checks rc 0 at `1cadf98e`; FR-262 typed as `RL-1172` §5 requires (*Final head* and *Hand-off*). `git diff --stat 1cadf98e 40af56a9` shows this ledger only (the maintainer's ACK). |
+| 11 `own_change: false` in words | met | At `1c8762d9`: `no own change attributable from the traces` counts 1 in `03` and 1 in `model_schema/scoring.py`; `grep -n 'own_change' … scoring.py \| grep -i unchanged` prints nothing (rc 1); `packages/model-schema/tests/test_scoring_compare.py:33` reads `StepChange.model_fields["own_change"].description`; `OQ-1231` is in `docs/open-questions.md` (1) and `03` §10 (2); the hand-off sentence *"Do not render it as \"unchanged\""* is in this ledger once. |
+| 12 Approval and audit | met | the MERGE-ACK and the CLEAN audit verdict above, both before the merge. |
+
+### Post-merge reachability sweep
+
+Predicate, verbatim: `git show c9f50232:docs/ledgers/LG-01230-wk-672-slice-4-quote-sandbox-compare-endpoint.md | grep -oE '\b[0-9a-f]{7,40}\b' | sort -u`. That gives **31** tokens. Each is classified in this order: (1) `git cat-file -t` is not `commit`: NOTCOMMIT; (2) `git merge-base --is-ancestor <t> 1c8762d9` exits 0: MAIN; (3) the same check against the #901 head `40af56a9`, fetched read-only with `git fetch origin pull/901/head`, exits 0: BRANCH; (4) anything else: NEITHER. Log `09-lg1230-reachability.log`.
+
+- **MAIN ×8:** `369c5774` (short and full), `6a8b8e70`, `95faf68b`, `a5118a30`, `ce9303b3`, `d7ed822e…` (full) and `f2ef3b9a`.
+- **BRANCH ×16 tokens (13 commits):** `0bba909a`, `10893eda`, `1509bc0c` (short and full), `1cadf98e` (short and full), `51d8a67e`, `5dd823e9`, `73616265`, `92a281c0`, `9e045cf9`, `b4aa909d` (short and full), `b9429948`, `db1b768f` and `e635c3e3`. They are reachable through `refs/pull/901/head` and are not on `main`, which carries the squash `c9f50232`. `b4aa909d`, S3's pre-squash head, is on `main` only as the squash `6a8b8e70`.
+- **NOTCOMMIT ×7, none of them commit SHAs:** the CI run ids `36568093701`, `36568093720`, `36568093732` and `36568093742`; the job id `92b3ca72`; and the tree `f65bdd60` (short and full).
+- **NEITHER ×0.**
+
+### Owed by this slice, and the verdict on each
+
+Nothing is owed to close the Slice. Recorded so none is silent:
+
+1. **FR-262's UI limb** is WK-675's (`RL-1172` §5); the Work close records FR-262 as *"backend limb delivered and tested (WK-672); UI limb reassigned to WK-675"*.
+2. **`OQ-1231`** (`own_change` from step-definition equality) is open, owner WK-675, to be decided before its compare view ships.
+3. **The comparison "against live" of `WF-701` A5** waits for a Deployment (WK-674); until then A5 names the live version's ref explicitly (`PL-1213` §Scope, *Carried out*).
+4. **The S4 slice audit report is not durable.** Only its verdict line is, in the squash body. The Work close records this; nothing in this slice depends on it.

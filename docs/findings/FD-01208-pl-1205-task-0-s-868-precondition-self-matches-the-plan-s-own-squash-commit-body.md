@@ -2,7 +2,7 @@
 id: FD-1208
 family: finding
 title: PL-1205 Task 0's precondition for PR 868 self-matches the plan's own squash commit body
-status: active
+status: closed
 created: 2026-09-28
 owner: auditor
 tree: ce27e5604c8e932437819dcbc6e4872270cdd4f4
@@ -72,3 +72,13 @@ The same subject-form rule applies to the `PL-1189` check in Task 0.
 **Carry forward, unowned — until the deputy decides** whether `PL-1205` gets a dated correction. Event: the
 deputy's ruling on that correction, or the merge of #868 with Task 5 Step 0 run in the
 subject-plus-symbol form (which discharges the practical risk for Slice 3).
+
+## Resolution
+
+**Discharged by the row's own event (b), recorded 2026-09-29 by the auditor at the WK-672 Work close** (`CR-9601`, a working id minted at that PR's merge turn). Read at `origin/main` `1c8762d9ed235f80e0f2fff80c44003694828e97`:
+
+- **#868 merged before Slice 3's Task 5.** `git log --format='%h %aI %s' origin/main | grep -F '(#868)'` prints `5ec47dc4 2026-09-28T21:21:24+01:00 fix(security): the blob route serves only an owner's workspace, never a quote input (#868)`, and `git merge-base --is-ancestor 5ec47dc4 1c8762d9` exits 0. The symbol the correction names is on `main`: `QUOTE_INPUT_BLOB_COLUMNS` is now declared in `backend/src/app/platform/blobs.py` (3 lines match), not in `api/blobs.py` where this finding looked for it.
+- **Slice 3's precondition was run in the subject-plus-symbol form.** `LG-1225`'s *Plan deviations* section, merged in #886 (squash `6a8b8e70`), reads: *"Task 0's check was made by commit subject (`git log --format=%s origin/main | grep -F '(#868)'`) and by the symbol `QUOTE_INPUT_BLOB_COLUMNS`."*
+- **The plan's check will not run again.** `PL-1205` is executed and its slice is closed (`LG-1225`, `status: closed`), so no dated correction to the frozen plan is needed to remove a live risk. The pattern survives as a lesson for the next plan's author: `git log --grep` searches the whole message, so a precondition on a merged PR matches the subject.
+
+**Status:** `closed`. The register row's `decision:` is the lead's; the auditor proposed the resolution above.
