@@ -1,5 +1,5 @@
 ---
-id: FD-1239
+id: FD-9640
 family: finding
 title: Artifact B is stale and wrong a day after F58 and F91 were recorded resolved
 status: active
@@ -10,12 +10,12 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-1239 — Artifact B is stale and wrong a day after F58 and F91 were recorded resolved
+# FD-9640 — Artifact B is stale and wrong a day after F58 and F91 were recorded resolved
 
 ## Finding
 
 **Proposed by the auditor for the lead's verdict (plan review 16, P9): a recurrence of both F58 and F91.**
-FD-1239 is a working id, minted at the records PR. Read at `origin/main` `2c2bbcdf`, 2026-09-29.
+FD-9640 is a working id, minted at the records PR. Read at `origin/main` `2c2bbcdf`, 2026-09-29.
 
 ## Evidence
 
@@ -79,5 +79,4 @@ Proposed; the verdict is the lead's.
   the repository (not a job dir) and a durable trigger; neither exists. The event that next
   confirms it is a watcher cycle that advances the mtime on two consecutive position moves,
   measured with `stat`, not by the watcher's report.
-- Owner: the lead, as the routing of the watcher's charter; the maintainer if the fix needs a
-  charter amendment.
+- Owner: WK-1178, per the maintainer's entry "2026-09-29 16:34:39 BST · … FR-217 GUARD FAILS OPEN …; P9 recurrence check" (`to-lead.md`): "If the writer has stopped again, it is a recurrence: reopen the rows with a dated note, owner WK-1178." The fix is a durable in-repo derivation tool plus a durable trigger, since the 09-28 `derive.py` died with the deleted job dir.
