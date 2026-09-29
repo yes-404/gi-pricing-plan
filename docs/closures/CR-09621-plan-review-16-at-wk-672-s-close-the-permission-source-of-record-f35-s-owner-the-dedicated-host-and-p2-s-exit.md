@@ -1,5 +1,5 @@
 ---
-id: CR-9602
+id: CR-9621
 family: closure
 kind: review
 title: Plan review 16 — at WK-672's close — the permission source of record, F35's owner, the dedicated host and P2's exit
@@ -16,7 +16,7 @@ relates: [CR-1212, RL-1232, RL-1236, FD-1194, OQ-1233, OQ-1234, OQ-1235]     # i
 ### Plan review 16 — at WK-672's close, 2026-09-29
 
 **Base tree: `1c8762d9ed235f80e0f2fff80c44003694828e97`** (origin/main after #889). **Working
-id `CR-9602`.** It is minted at the merge turn with `python3 scripts/doc-id.py next --ref
+id `CR-9621`.** It is minted at the merge turn with `python3 scripts/doc-id.py next --ref
 origin/main`.
 
 **Who does what.** The planner conducts and files this review (`document-ids.md` §1.6, the
@@ -68,6 +68,10 @@ first, then the five `phase-review` questions, then Output and Verdict.
       missed 27 index lines". It was cited by title before it was minted.
     - the lead's P3-carry note (`docs/roadmap.md`, the note headed "2026-09-29: requirements
       carried into Phase 3 without a Work").
+- **The WK-672 close record** was read on branch `wk672-close` at `f7ca1402`, before this
+  review was filed. It is a `CR- kind: work`, still under a working id, so this record cites
+  it as "the WK-672 close record". The lead substitutes its minted id at this record's merge
+  turn.
 - **GitHub state** was read with `gh pr view` on 2026-09-29 at about 15:00 UTC. It was
   read-only, and nothing was posted.
 - **The channel file.** The maintainer's entries are quoted by heading. The file is
@@ -249,6 +253,8 @@ part it does not state (#877–#879) is _pending_.
 **Options for the owner.**
 - **(a) WK-1178, in P2: one slice for the shared lever (F35 + F55).**
   - The decision-maker rules first on what a `TraceStep` records (FR-258; §4.10; `OQ-1231`).
+    The same ruling covers the WK-672 close record's finding that a trace omits the `input`
+    and `output` steps (see *Consistency with the WK-672 close record*).
   - The slice is **sequenced before WK-674 Slice 5**, so Slice 5 measures the remedied path
     and NFR-490 can be green on the exit tree.
   - It carries NFR-500's re-measurement (F37; Proposal 11) on the trimmed trace.
@@ -714,6 +720,41 @@ It is not placed in WK-674: it is a trace-size question, not a deployment one.
 **Lead verdict (Proposal 11):** _pending_
 **Maintainer acceptance (Proposal 11):** _pending_
 
+## Proposal 12 — who builds G2's demo: the real freMTPL2 rating algorithm
+
+*(Added on reading the WK-672 close record, on `wk672-close` at `f7ca1402`, and
+its FD-1209 row.)*
+
+**The gap.**
+- G2 is "`WF-699` end to end on the freMTPL2 seed, with its deploy step". At `1c8762d9` the
+  seed's only algorithm is `_demo_algorithm()` (`examples/fremtpl2/model.py:327`), and no
+  `WF-699` journey test exists (FD-1209).
+- FD-1209 is `deferred with an owner — the lead`, and its event is the real algorithm
+  existing before G6's review. **An owner is not a Work.** No roadmap row plans:
+  - `WF-699` Phases A to C on the approved models (rate tables seeded from the models, a
+    Rating Algorithm composed over them, a Rating Version compiled with pins);
+  - nor the journey test.
+- Every P2 Work builds a *capability* the demo uses. None builds the demo.
+
+**Options.**
+- **(a) An "Exit demo" row under `## P2`,** in Phase 1b's form (`docs/roadmap.md`, the Phase
+  1b "Exit demo" row). Owner the lead.
+  - Scope: the real freMTPL2 algorithm in the seed, `WF-699` Phases A to E and its deploy step
+    as one scripted journey, and the journey test that cites `WF-699` by id.
+  - Sequenced after WK-673 and WK-674 (it needs dislocation and deployment). It can be cut
+    in parallel with WK-675 where no view is needed, still one slice at a time (§8).
+- **(b) A WK-1178 slice.** Cost: the phase's own acceptance artifact would sit in the
+  maintenance Work that G1 exempts, so the demo's build would escape the Work-close audit.
+- **(c) Fold it into WK-675,** the last feature Work. Cost: a frontend Work would carry the
+  seed's pricing content. That is scope crossing kinds.
+
+**Recommendation: (a).** Phase 1b's exit demo was its own row, and it closed with its own
+record (`CR-822`). Making G2's build a row gives FD-1209's event a Work to discharge it. It
+also gives the two `WF-699` rulings above a concrete consumer.
+
+**Lead verdict (Proposal 12):** _pending_
+**Maintainer acceptance (Proposal 12):** _pending_
+
 ## 1. Completion — derived, never recalled
 
 - **WK-672**'s four slices have merged:
@@ -750,6 +791,7 @@ Seven omissions:
   inlining is reported delivered but is not built.
 - **NFR-500's undecided branch** (Proposal 11). An owner was named at review 15, but the
   decision the owner needs was not.
+- **G2's demo is built by no Work** (Proposal 12; FD-1209, from the WK-672 close record).
 
 ## 3. Skills and research — the gap analysis
 
@@ -799,7 +841,46 @@ Seven omissions:
 
 ## Consistency with the WK-672 close record
 
-_Filled after reading the auditor's draft on `wk672-close`._
+**Read:** the auditor's `CR- kind: work` for WK-672, on branch `wk672-close` at `f7ca1402`. It
+has a working id, so it is cited here by its branch and head. Its tree is the same
+`1c8762d9`. Its three new findings are also working ids, so they are cited by subject:
+- the `WF-699` D4 / FR-261 grid disagreement;
+- the `WF-699` E2 route / FR-257 disagreement;
+- the trace that omits `input` and `output` steps (FR-258).
+
+**Where the two records agree:**
+- **FD-1194 / #852.** Both find #852 closed unmerged at `2026-09-28T14:05:08Z`, with #857 as
+  its successor, and neither lets the lead or the auditor merge it (Proposal 2).
+- **The freeze gates.** Both name the lead's three freeze dates and target, owed after this
+  close (its *Binding plan-review conditions* item 1; this review's question 5).
+- **G6.** Its FD-1209 row restates the event "before plan review 16" as *before `CR-1212`
+  G6's pre-demo plan review*, because "plan review 16" names two things. This review is not
+  G6 (Proposal 8), so the two readings agree.
+- **The measurements on WK-674.** Its NFR-502 and NFR-499 rate-limit limbs go to WK-674.
+  Proposal 4's host fallback governs how NFR-502 is recorded.
+- **FR-262.** Its UI limb is reassigned to WK-675. This review's Proposal 3 fact 2 relies on
+  the backend limb being the traced `score/compare`.
+
+**What its record adds, and where this review takes it:**
+- **FD-1209: the freMTPL2 demo has no real rating algorithm, and so G2 cannot yet run.** The
+  close record keeps it `deferred with an owner — the lead`, and it is "not a WK-672
+  deliverable". But **no Work row builds that algorithm**: `WF-699` Phases A to C on the
+  approved models, and a journey test. This is a G2 risk with an owner and no Work. See
+  **Proposal 12**.
+- **The two `WF-699` disagreements (D4, E2).** G2 *is* `WF-699` end to end. A demo that
+  follows D4 or E2 as written would demonstrate a step the spec does not promise, or a route
+  that refuses a draft. So both decision-maker rulings are needed **before the exit demo**.
+  **Proposed:** the lead places them on a new roadmap §10 gate row, *Before the P2 exit
+  demo*, with FD-1209.
+- **The trace that omits `input` and `output` steps, where FR-258 says "every step".** This is
+  the same question as Proposal 3's ruling: what a `TraceStep` records.
+  **Proposed:** the decision-maker rules on it **in the same `RL-`** as F35/F55's trim and
+  Proposal 11's NFR-500 `OQ-`. One ruling on the trace shape, not three.
+- **FR-1221's workspace limb** is `fix before close` (test-only), with a WK-1178 fallback.
+  That is a Work-close matter and needs nothing from this review.
+
+**No disagreement found.** Nothing in the WK-672 close record contradicts a proposal here, and nothing here
+contradicts a verdict there.
 
 ## Output
 
@@ -813,8 +894,8 @@ _Filled after reading the auditor's draft on `wk672-close`._
   Both come from the entries of 2026-09-29 16:08:24 and 16:21:36 BST.
 - **Partly resolved, Proposal 8:** this review is not G6 (16:21:36). The restatement stays a
   proposal.
-- **Proposals that need the maintainer's dated line:** 1, 2 (#877–#879 only), 3, 5, 6, 7, 8,
-  9, 10 and 11.
+- **Proposals that need the maintainer's dated line:** 1, 2 (#877–#879 only), 3, 5, 6, 7, 8
+  (the restatement), 9, 10, 11 and 12.
 - **Routing, if accepted.** Each proposal, its record and its owner. This is given in the
   form of the maintainer's 16:12:57 entry, Part 2. That entry is future-facing and does not
   bind this review, but the table costs nothing.
@@ -832,6 +913,7 @@ _Filled after reading the auditor's draft on `wk672-close`._
   | 9 | `FD-` against `register-owed.py`; F61's event | auditor; WK-1170 |
   | 10 | new P2 `WK-` row; `FD-` against `CR-838:39` (ordered 16:21:36); reopening WK-669 | lead / the maintainer; auditor; the user |
   | 11 | `OQ-` then `RL-` + `03` amendment; re-measurement in Proposal 3's slice | decision-maker; WK-1178 |
+  | 12 | a `## P2` "Exit demo" row; a §10 gate *Before the P2 exit demo* (FD-1209, the D4 and E2 rulings) | lead |
 
 - **For the lead's roadmap and register edits, after acceptance:**
   - OQ-1233's and OQ-1234's gate moves;
@@ -849,14 +931,17 @@ _Filled after reading the auditor's draft on `wk672-close`._
   recommendation: N3 (1), #852 (2), F35 and NFR-490 at exit (3), OQ-1233 to OQ-1235 (5),
   `FD-1238` (6), and FR-432, FR-433 and FR-438 (7). F38 and the dedicated host are Proposal 4.
 - The maintainer's two later inputs have one each: FR-218 (10) and NFR-500 (11).
+- The WK-672 close record was read before filing, and is reconciled in *Consistency with the
+  WK-672 close record*. It adds Proposal 12, and it adds a trace-shape finding to Proposal 3's
+  ruling.
 - Every register row decayed to this review has a disposition (9).
 - All five questions have a written answer.
 - **Nothing here binds** until the lead's verdicts and the maintainer's dated line below.
 
 ## Acceptance
 
-**Maintainer acceptance (plan review 16, Proposals 1–11, except the parts of 2 and 4 already
-accepted in the 16:08:24 entry):** _pending_ — dated when given.
+**Maintainer acceptance (plan review 16, Proposals 1–12, except the parts of 2, 4 and 8
+already given in the 16:08:24 and 16:21:36 entries):** _pending_ — dated when given.
 
 ## Sources
 
