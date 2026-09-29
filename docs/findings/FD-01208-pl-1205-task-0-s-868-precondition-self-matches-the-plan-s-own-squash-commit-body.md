@@ -75,7 +75,7 @@ subject-plus-symbol form (which discharges the practical risk for Slice 3).
 
 ## Resolution
 
-**Discharged by the row's own event (b), recorded 2026-09-29 by the auditor at the WK-672 Work close** (`CR-9601`, a working id minted at that PR's merge turn). Read at `origin/main` `1c8762d9ed235f80e0f2fff80c44003694828e97`:
+**Discharged by the row's own event (b), recorded 2026-09-29 by the auditor at the WK-672 Work close** (`CR-1243`). Read at `origin/main` `1c8762d9ed235f80e0f2fff80c44003694828e97`:
 
 - **#868 merged before Slice 3's Task 5.** `git log --format='%h %aI %s' origin/main | grep -F '(#868)'` prints `5ec47dc4 2026-09-28T21:21:24+01:00 fix(security): the blob route serves only an owner's workspace, never a quote input (#868)`, and `git merge-base --is-ancestor 5ec47dc4 1c8762d9` exits 0. The symbol the correction names is on `main`: `QUOTE_INPUT_BLOB_COLUMNS` is now declared in `backend/src/app/platform/blobs.py` (3 lines match), not in `api/blobs.py` where this finding looked for it.
 - **Slice 3's precondition was run in the subject-plus-symbol form.** `LG-1225`'s *Plan deviations* section, merged in #886 (squash `6a8b8e70`), reads: *"Task 0's check was made by commit subject (`git log --format=%s origin/main | grep -F '(#868)'`) and by the symbol `QUOTE_INPUT_BLOB_COLUMNS`."*

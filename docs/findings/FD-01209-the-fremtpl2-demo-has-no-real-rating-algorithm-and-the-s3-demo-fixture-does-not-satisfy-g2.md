@@ -63,7 +63,7 @@ deployment is only its last step. The event is the real algorithm existing in th
 
 ## Status at the WK-672 Work close, 2026-09-29
 
-Recorded by the auditor at the WK-672 Work close (`CR-9601`, a working id minted at that PR's merge turn). Read at `origin/main` `1c8762d9ed235f80e0f2fff80c44003694828e97`. **The finding stays `active`.**
+Recorded by the auditor at the WK-672 Work close (`CR-1243`). Read at `origin/main` `1c8762d9ed235f80e0f2fff80c44003694828e97`. **The finding stays `active`.**
 
 - **Slice 3's seed change is now merged** (#886, squash `6a8b8e70`), so the line above that it was "not verified by the auditor" is answered: `examples/fremtpl2/model.py:327` `_demo_algorithm` is *"`payable = premium_in * 2`. **Not priced from the GLM** (DP-S3-8) … the real algorithm around the approved freMTPL2 models is G2's"*; the label `DEMO_FIXTURE = "demo-fixture"` is at `:316`, and the suite's change note reads *"demo fixture: not priced from the GLM"* (`:434`).
 - **The event has not happened.** No real freMTPL2 algorithm is in the seed (the only algorithm the seed creates is `_demo_algorithm()`, `:386-387`), and no test drives `WF-699` end to end: `git ls-files | grep -iE 'wf.?699|test_wf'` prints only `backend/tests/test_wf01_journey.py`, whose docstring opens *"WF-698 — dataset to approved Model"*.

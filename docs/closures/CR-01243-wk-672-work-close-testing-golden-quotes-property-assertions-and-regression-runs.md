@@ -1,5 +1,5 @@
 ---
-id: CR-9601
+id: CR-1243
 family: closure
 kind: work                     # work | phase | review — no other value (§1.2)
 title: WK-672 Work close — testing, golden quotes, property assertions and regression runs
@@ -10,17 +10,17 @@ tree: 1c8762d9ed235f80e0f2fff80c44003694828e97
 phase: P2
 work: WK-672
 corrected_by: []
-relates: [FD-1208, FD-1209, FD-9602, FD-9603, FD-9604]
+relates: [FD-1208, FD-1209, FD-1244, FD-1245, FD-1246]
 ---
 
-# CR-9601 — WK-672 Work close: testing, golden quotes, property assertions and regression runs
+# CR-1243 — WK-672 Work close: testing, golden quotes, property assertions and regression runs
 
 **What this record is.** The auditor's closure record for WK-672, `kind: work`
 (`document-ids.md` §1.6, CR row). **Every verdict and every finding decision in it is a
 proposal.** The lead adopts, amends or rejects each one in writing (`CLAUDE.md` §12, §13), and
-the maintainer accepts the Work close with a dated line under *Sign-off*. `CR-9601` is a
-working id; it is minted at this PR's merge turn with `python3 scripts/doc-id.py next --ref
-origin/main`, as are `FD-9602`, `FD-9603` and `FD-9604`.
+the maintainer accepts the Work close with a dated line under *Sign-off*. `CR-1243`, `FD-1244`,
+`FD-1245` and `FD-1246` were minted at this PR's merge turn with `python3 scripts/doc-id.py
+next --ref origin/main`, from the working numbers 9601 to 9604 they were drafted under.
 
 **The tree.** Everything was measured at `origin/main`
 `1c8762d9ed235f80e0f2fff80c44003694828e97` (#889), fetched 2026-09-29. `main` then moved to
@@ -319,9 +319,9 @@ as such.
 | WF-699 | D1 | FR-260, FR-261 | still says it (`run_regression` composes the golden quotes and the properties) |
 | WF-699 | D2 | FR-260 | still says it |
 | WF-699 | D3 | FR-260 | still says it (`GoldenQuote.note` exists; an update is a new suite version) |
-| WF-699 | **D4** | FR-261 | **disagrees.** FR-261: *"the compiled bundle pins no Banding, so no band edge is in the grid, and an inversion narrower than the spacing … may not be detected until `OQ-1224` lands"*; *"A counterexample is the base context and the two adjacent grid values"*. D4 has the run find a break *"between 63 and 64"*, a band edge. **FD-9602** |
+| WF-699 | **D4** | FR-261 | **disagrees.** FR-261: *"the compiled bundle pins no Banding, so no band edge is in the grid, and an inversion narrower than the spacing … may not be detected until `OQ-1224` lands"*; *"A counterexample is the base context and the two adjacent grid values"*. D4 has the run find a break *"between 63 and 64"*, a band edge. **FD-1244** |
 | WF-699 | D5 | FR-261 | still says it, given D4 |
-| WF-699 | **E2** | FR-257 | **disagrees on the route.** E2: *"`POST /approval-requests`. Evidence completeness is checked at submission"*. FR-257 applies *"at submit"*, FR-260 (1) puts the check at `POST /api/v1/rating-versions/{id}/submit`, and the generic route refuses a draft Rating Version (`APPROVAL_SUBJECT_NOT_IN_REVIEW`). **FD-9603** |
+| WF-699 | **E2** | FR-257 | **disagrees on the route.** E2: *"`POST /approval-requests`. Evidence completeness is checked at submission"*. FR-257 applies *"at submit"*, FR-260 (1) puts the check at `POST /api/v1/rating-versions/{id}/submit`, and the generic route refuses a draft Rating Version (`APPROVAL_SUBJECT_NOT_IN_REVIEW`). **FD-1245** |
 | WF-699 | E8 | FR-353 | still says it |
 | WF-699 | Golden quote mismatch (failure table) | FR-260 | still says it |
 | WF-699 | D — coverage row | FR-257, FR-258, FR-260, FR-261, FR-262 | coverage row; no claim |
@@ -329,12 +329,12 @@ as such.
 | WF-700 | F — coverage row | FR-353, FR-368 | coverage row; no claim |
 | WF-701 | preconditions | FR-257 | still says it |
 | WF-701 | A5 | FR-262 | still says it. FR-262 compares against *"a comparison version"*; "live" is resolved by naming the live version's ref until WK-674 (`PL-1213` *Carried out*) |
-| WF-701 | A6 | FR-258 | still says it (the trace shows the step; see FD-9604 for `input` and `output` steps) |
+| WF-701 | A6 | FR-258 | still says it (the trace shows the step; see FD-1246 for `input` and `output` steps) |
 | WF-701 | H6 | FR-260 | still says it |
 | WF-702 | E6 | FR-368 | still says it |
 | WF-702 | E — coverage row | FR-368 | coverage row; no claim |
 
-Two disagreements, filed as FD-9602 and FD-9603. Neither is a verdict on this close; which side
+Two disagreements, filed as FD-1244 and FD-1245. Neither is a verdict on this close; which side
 moves is `CLAUDE.md` §0's question, for the decision-maker.
 
 ### FR-1221 after #910, 2026-09-29
@@ -394,7 +394,7 @@ Excluded as opening with a resolution marker — verify:
 **Reconciliation.** Every id in the generated block appears in *Findings* with a resolution, and
 of the three excluded rows FD-1194 carries a residual item (the #852 hold), which *Findings*
 resolves. *Findings* adds only FR-1221's marker gap and the S4 audit report's durability, which
-have no register row, and FD-9602, FD-9603 and FD-9604, which this PR files.
+have no register row, and FD-1244, FD-1245 and FD-1246, which this PR files.
 
 ## Findings
 
@@ -410,11 +410,11 @@ row).
 | FD-1194 | the Dependabot hold: *"#852 is held until WK-672 closes"* | **the hold is moot.** Dependabot closed #852 unmerged at `2026-09-28T14:05:08Z` (*"Looks like these dependencies are updatable in another way, so this is no longer needed."*). The frontend dependency group now sits in **#857** (open; `frontend/package.json`, `frontend/pnpm-lock.yaml`), whose frontend CI (`success` at `7962b866`, 2026-09-28) predates S3's and S4's regeneration of `docs/contracts/openapi/generated.json`, so its gate should run on a merge with current `main` first. **Merging #857 is the user's, through the maintainer**; never the lead's or the auditor's. Nothing is recommended for #852 *(resolved row; its stale cell gets a dated note in #903 (auditor-a-2), not here)* | `closed` |
 | FR-1221 (no row) | no `req("FR-1221")`; the workspace limb unproven | see *Verdict* *(proposed `fix before close`; adopted by the lead; discharged 2026-09-29 by #910, `33286dab`)* | `closed` |
 | S4 audit report (no row) | the independent S4 audit's report is not durable; only its verdict line is, in the squash body of `c9f50232` | **accept**, with a note for later slices: file the audit report, or its findings, where the ledger can cite it | `closed` |
-| **FD-9602** | `WF-699` D4 vs FR-261's grid | **carry forward, unowned**; event: the decision-maker's ruling or `OQ-1224` *(filed in this PR)* | `closed-with-findings` |
-| **FD-9603** | `WF-699` E2's route vs FR-257 / FR-260 | **carry forward, unowned**; event: the decision-maker's ruling *(filed in this PR)* | `closed-with-findings` |
-| **FD-9604** | the trace omits `input` and `output` steps, FR-258 says every step | **carry forward, unowned**; event: the decision-maker's ruling *(filed in this PR)* | `closed-with-findings` |
+| **FD-1244** | `WF-699` D4 vs FR-261's grid | **carry forward, unowned**; event: the decision-maker's ruling or `OQ-1224` *(filed in this PR)* | `closed-with-findings` |
+| **FD-1245** | `WF-699` E2's route vs FR-257 / FR-260 | **carry forward, unowned**; event: the decision-maker's ruling *(filed in this PR)* | `closed-with-findings` |
+| **FD-1246** | the trace omits `input` and `output` steps, FR-258 says every step | **carry forward, unowned**; event: the decision-maker's ruling *(filed in this PR)* | `closed-with-findings` |
 
-**Status column.** The vocabulary is `work-item-close.md`'s: `closed` for a finding this close discharges, `closed-with-findings` for one carried past it. **Why FD-9602, FD-9603 and FD-9604 name WK-1178 in the register's Work item column:** WK-672 closes, and none of the three is WK-672's to fix (two are journey-versus-requirement questions, one is WK-671's FR-258); WK-1178 is P2's standing maintenance Work, so `register-owed.py WK-1178` lists them until the decision-maker rules. The routing is proposed; the lead may re-point it.
+**Status column.** The vocabulary is `work-item-close.md`'s: `closed` for a finding this close discharges, `closed-with-findings` for one carried past it. **Why FD-1244, FD-1245 and FD-1246 name WK-1178 in the register's Work item column:** WK-672 closes, and none of the three is WK-672's to fix (two are journey-versus-requirement questions, one is WK-671's FR-258); WK-1178 is P2's standing maintenance Work, so `register-owed.py WK-1178` lists them until the decision-maker rules. The routing is proposed; the lead may re-point it.
 
 **FD-1208 and FD-1209: essays and rows.** Written by the auditor as they stand: FD-1208's essay
 gains a *Resolution* section and `status: closed`; FD-1209's gains *Status at the WK-672 Work
@@ -436,7 +436,7 @@ a requirement without evidence; FR-1221 is the only one.
 | FR-273 | delivered, tested | `test_one_minor_unit_over_a_zero_tolerance_fails` |
 | FR-364 (the `regression_run` clause) | delivered; evidenced under `FR-257` markers | *FR-364's WK-672 clause* above; the rating-version wiring is WK-673's |
 | FR-368 | delivered, tested | `test_every_version_has_one_creation_event_and_no_context_is_logged` |
-| FR-251, FR-258, FR-353 | consumed, unchanged; their markers predate WK-672 | FD-9604 is raised on FR-258 and does not change this verdict |
+| FR-251, FR-258, FR-353 | consumed, unchanged; their markers predate WK-672 | FD-1246 is raised on FR-258 and does not change this verdict |
 | NFR-499 | WK-672's limbs delivered and tested; the rate-limit limb is WK-674's | *NFRs, measured* |
 | NFR-502 | the compare route conforms (grep with a positive control); the measurement is WK-674's | *NFRs, measured* |
 | **FR-1221** | **delivered, tested** *(changed 2026-09-29: the lead's `fix before close` decision is discharged by #910, squash `33286dab`; it read "delivered but untested, under its own id" until then)* | *Evidence*, "FR-1221 after #910"; the proposal below is kept as written |
@@ -487,8 +487,8 @@ acceptance.
   - **FR-1221 in the roadmap: ADOPTED.** The lead adds it to the `### WK-672` section in the
     same edit that marks the section closed, after the maintainer's acceptance line.
   - **FD-1208: ADOPTED, closed.** **FD-1209: ADOPTED, AMENDED**: deferred with an owner, the
-    lead, with the event named by its role. **FD-9602, FD-9603: ADOPTED, AMENDED**: deferred
-    with an owner, the decision-maker, not *unowned*. **FD-9604: ADOPTED, AMENDED**: deferred
+    lead, with the event named by its role. **FD-1244, FD-1245: ADOPTED, AMENDED**: deferred
+    with an owner, the decision-maker, not *unowned*. **FD-1246: ADOPTED, AMENDED**: deferred
     with an owner, WK-1178, after the decision-maker's `TraceStep` ruling. Each amendment is
     the dated *Lead's decision* in the row's Decision cell. The routing of all three to WK-1178's
     Work-item column stands.
@@ -500,4 +500,8 @@ acceptance.
     the lead after this close is accepted, and P2's throttle lifts on that acceptance, not on
     this merge.
 
+```text
 > **Maintainer acceptance:** WK-672 is **closed**, accepted 2026-09-29 by the maintainer's delegation (to-lead.md, this entry). The verdicts are as the lead decided them. FR-1221 is delivered and tested (#910). The deferrals carry named owners: FD-1209 the lead; FD-9602 and FD-9603 the decision-maker; FD-9604 WK-1178. Evidence re-run by the maintainer's session at main 500ff49c: RATE 12/12 and GOV 3/3, rc 0.
+```
+
+In the quote, the working ids 9602, 9603 and 9604 are FD-1244, FD-1245 and FD-1246, minted at this PR's merge turn.

@@ -1,5 +1,5 @@
 ---
-id: FD-9604
+id: FD-1246
 family: finding
 title: A scoring trace omits the algorithm's input and output steps, where 03 FR-258 says every step
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-672, WK-671]
 ---
 
-# FD-9604 — A scoring trace omits the algorithm's input and output steps, where 03 FR-258 says every step
+# FD-1246 — A scoring trace omits the algorithm's input and output steps, where 03 FR-258 says every step
 
 ## Finding
 

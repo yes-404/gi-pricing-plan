@@ -1,5 +1,5 @@
 ---
-id: FD-9603
+id: FD-1245
 family: finding
 title: WF-699 step E2 submits through POST /approval-requests, where FR-257's gate runs at /rating-versions/{id}/submit
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-672, WF-699]
 ---
 
-# FD-9603 — WF-699 step E2 submits through POST /approval-requests, where FR-257's gate runs at /rating-versions/{id}/submit
+# FD-1245 — WF-699 step E2 submits through POST /approval-requests, where FR-257's gate runs at /rating-versions/{id}/submit
 
 ## Finding
 

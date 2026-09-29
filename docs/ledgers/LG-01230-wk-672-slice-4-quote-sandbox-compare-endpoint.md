@@ -311,7 +311,7 @@ In this slice, "Task 3's known-limit test" is `packages/pricing-core/tests/test_
 
 ## Slice close — the auditor's record
 
-**Status set `closed` by the auditor on 2026-09-29** (`document-ids.md` §1.6, SL row: *"auditor closes: sets the `LG-` `closed`, verifies acceptance"*), under the closing-record convention of `LG-1204` (#870) and `LG-1225` (#898): a docs-only record that **takes no new id**. It lands in the WK-672 Work close PR, whose record is the `CR-` named in that PR (working id `CR-9601`, minted at the merge turn). Everything below was read at `origin/main` `1c8762d9ed235f80e0f2fff80c44003694828e97` unless a line names another tree. The logs cited are local, under `~/gi-pricing-plan.local/evidence/wk672-close/`, each with `SHA:` as its first line and `RC=` as its last, hashed in that directory's `SHA256SUMS`.
+**Status set `closed` by the auditor on 2026-09-29** (`document-ids.md` §1.6, SL row: *"auditor closes: sets the `LG-` `closed`, verifies acceptance"*), under the closing-record convention of `LG-1204` (#870) and `LG-1225` (#898): a docs-only record that **takes no new id**. It lands in the WK-672 Work close PR, whose record is `CR-1243`. Everything below was read at `origin/main` `1c8762d9ed235f80e0f2fff80c44003694828e97` unless a line names another tree. The logs cited are local, under `~/gi-pricing-plan.local/evidence/wk672-close/`, each with `SHA:` as its first line and `RC=` as its last, hashed in that directory's `SHA256SUMS`.
 
 ### The work PR, #901
 
