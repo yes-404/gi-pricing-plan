@@ -64,7 +64,9 @@ entry of 2026-09-28 13:51:08). DP-4 and DP-5 are marked with their resolver in t
 turn), the decision-maker's ruling, which adopts the deputy's entry of 2026-09-28 14:06:12
 BST unchanged. #847 is open and unmerged at this tree. Slices 3 and 4 are gated on it: DP-3
 blocks Slice 3 and DP-4 blocks Slice 4, and neither slice's leaf plan is filed before
-`RL-9202` merges under its minted id.)*
+`RL-9202` merges under its minted id.)* *(Revised again 2026-09-29, on the lead's direction
+and `RL-9202` at #847 head 14d2caa0: **Slice 1 is also gated**, on `RL-9202` merged and on
+**OQ-9660** (the exact `sympy` pin) ruled. See Slice 1's Gates.)*
 
 - **No dependency on WK-674** *(revised 2026-09-29 against 19c395ac)*. This plan never names WK-674
   (`grep -c WK-674` over this file prints `0`), and no slice here waits on a WK-674 slice.
@@ -197,6 +199,11 @@ and then evidenced in code (`CLAUDE.md` §13). Every id is listed individually.
 
 ### Held pending DP-1 — not slices of this plan
 
+**Held; `RL-9202` (unmerged) moves them to P3.** *(revised 2026-09-29 against 19c395ac, on `RL-9202` (working id; #847 head 14d2caa0): DP-1 (b) sends FR-85,
+FR-86's field, FR-210 and FR-208's `spline` and `polynomial` arms to Phase 3, spec change
+first, deferred with an owner (the maintainer), the event being the P2 phase closure
+record. `02` still names WK-690 for each at 19c395ac, until #847 merges.)*
+
 `02` names WK-690 as owner of items that are not `expression` objectives. They are listed
 so that nothing is dropped. They are **not** cut into slices here. The plan is valid under
 any answer to DP-1: under DP-1 (a) the planner re-cuts them into later slices through a
@@ -226,6 +233,20 @@ still names WK-690 for each at this tree (FR-85 `:86`, FR-86 `:87`, FR-208 `:371
 | Id | What is open |
 |---|---|
 | FR-154 (the `expression` half) | "Custom eval metrics follow the same lifecycle and grammar as objectives". FR-155 makes Phase 1 templates-only. Expression metrics are named by no roadmap row and no owner clause |
+
+*(revised 2026-09-29 against 19c395ac, on `RL-9202` (working id; #847 head 14d2caa0), DP-2 (b)): which half of FR-154 is which.* FR-154 reads
+"Custom eval metrics (`feval`) follow the same lifecycle and grammar as objectives,
+declared separately so that a metric can be reused across objectives"
+(`02-modelling.md:218`).
+- **The non-expression half** is the template metric: the separately declared, versioned
+  Custom Metric that FR-155 makes "templates-only" in Phase 1 (`02:219`). It stays where it
+  is already delivered. `req("FR-155")` counts 17 markers at 19c395ac
+  (`git grep -c` over `packages/*/tests/*.py` and `backend/tests/*.py`), in five files
+  including `backend/tests/test_custom_metrics_api.py`. WK-690 does not touch it.
+- **The expression half** is "the same … grammar as objectives" applied to a metric: a
+  metric written in §4.6's grammar. It goes to Phase 3, spec change first, with the same
+  owner and event as DP-1 (the maintainer; the P2 phase closure record). No slice here
+  adds a `metric` profile.
 
 ### Premises re-derived at this tree
 
@@ -295,6 +316,10 @@ Found while deriving the scope, not in the brief:
    `"derivation_version": "1.14.0"`, and §4.7's example records `"sympy": "1.13.x"`. Both
    are illustrative. Slice 1's leaf plan pins the locked version, and Slice 2 records it
    on the certificate from `sympy.__version__`, never as a literal.
+   *(revised 2026-09-29 against 19c395ac, on `RL-9202` (working id; #847 head 14d2caa0)): Slice 1 pins **one exact** `sympy` version in `uv.lock` and
+   amends both §4.6 and §4.7, dated, to cite that pin. Which version is **OQ-9660** (open,
+   working id on #847), placed at the roadmap §10 gate *Before WK-690 Slice 1*. Slice 1 is
+   gated on it.)*
 10. **Stale owner text in code.** A comment in `pricing_core/modelling/diagnostics.py`
     (`:1040`) names WK-664 as FR-177's owner, and the spec names WK-1178
     (`02-modelling.md:272`, FD-1195). *(revised 2026-09-29 against 19c395ac: the premise said the spec
@@ -372,8 +397,21 @@ item 4).
 
 **Spec edits in the slice.** DP-5's note in §4.6, and FR-145's function list aligned with
 the table if the leaf plan finds the two differ.
+*(revised 2026-09-29 against 19c395ac, on `RL-9202` (working id; #847 head 14d2caa0)):*
+- **DP-5's addition.** `03` FR-244 (`03-rating-engine.md:146`) is amended, dated, to say
+  the rating grammar is FR-244's own: ZEN's expression language, restricted to FR-244's
+  function list and verified by FR-276. It shares function names with §4.6 where they
+  coincide, but it is not one of §4.6's profiles. §4.6's DP-5 note says the same. Both
+  edits land in **one commit**, so `02` and `03` never disagree. No check holds the
+  pairing: it is prose.
+- **The sympy pin.** §4.6 (`"derivation_version"`) and §4.7 (`library_versions.sympy`)
+  are amended, dated, to cite the exact version pinned in `uv.lock` (OQ-9660's answer).
 
 **Depends on:** #830 merged. **Blocks:** Slices 2 and 4.
+**Gates** *(revised 2026-09-29 against 19c395ac, on `RL-9202` (working id; #847 head 14d2caa0))*: Slice 1's leaf plan is filed only when **both** hold:
+1. `RL-9202` is merged under its minted id (DP-5's addition and the pin obligation are
+   its rulings).
+2. **OQ-9660 is ruled**: the exact `sympy` version to pin.
 
 **Gate outline.** The refusal tests of Acceptance item 5 for the limits and the strict
 profiles, seen failing first. Every existing recipe and check test passes unchanged, which
@@ -390,6 +428,8 @@ re-pointed to run in every profile. Both gate halves pass.
   own expression tree. It does not use `lambdify` (Global Constraints).
 - FR-165 for both kinds: fixed-size arrays; the per-round wall-clock budget (built once,
   for templates and expressions); the existing NaN/inf abort, reused.
+  *(revised 2026-09-29 against 19c395ac, on `RL-9202` (working id; #847 head 14d2caa0)): the ruling leaves the per-round budget to "Slice 2 or 3",
+  with the plan to state which. This plan states **Slice 2**. The cut is unchanged.)*
   *(revised 2026-09-29 against 19c395ac, FD-1219 and `pricing_core/safe_error.py`):* the abort and the
   budget error are `CodedError`s, or are otherwise on `safe_error`'s allow-list. Each
   message names the round and the input by field name, never an input value. At this tree
