@@ -69,7 +69,7 @@ hold. Task 0 still has the executor re-derive each premise at its own tree.
 
 ## Status
 
-**Active** from 2026-09-29 (see **Activation**, the last paragraph of this section). Filed as a
+**Active** from 2026-09-29 (see **Activation**, below in this section). Filed as a
 **draft** 2026-09-29 against the tree above. It replaces the Slice 1 draft that
 PR #892 carried until this commit (commit
 `0d1c83bf9eaa00a4149c2bcf051d0448672d8c14`), which scoped Slice 2 and Slice 3 work under
