@@ -196,3 +196,24 @@ Task 0 Step 3, as instructed. Main was `6a8b8e70` (#886, a squash of `b4aa909d`)
 - (c) The merge of `f2ef3b9a` is **`5dd823e9`** (parents `db1b768f`, `f2ef3b9a`): 3 conflicts,
   `docs/INDEX.md`, `docs/open-questions.md`, `docs/specs/03-rating-engine.md`, each resolved keeping both sides.
 - (d) The merge of `a5118a30` is **`51d8a67e`** (parents `9e045cf9`, `a5118a30`): conflict-free.
+
+### Full two-half gate at `1509bc0c30585ea16b3441667eef137248e2d005` (2026-09-29)
+
+Slot granted by the lead at 11:56Z; started 11:56:01Z, pre-start `11:56:01 up 3:13, 1 user, load average: 1.29,
+1.77, 2.91`, `pgrep -af '[p]ytest'` empty; `CI` unset; the `dev-commands` block under `flock` with
+`timeout 3300` on pytest; finished before 12:20:16Z. Wrapper log
+`~/.claude/jobs/92b3ca72/tmp/gate-1509bc0c.log`, stage logs `/tmp/tmp.yNPsmbCXeF`, `FINAL_RC=0`.
+
+| stage | result | detail |
+|---|---|---|
+| ruff | pass | exit=0 |
+| mypy | pass | exit=0 |
+| import_linter | pass | exit=0 |
+| audit_docs | pass | exit=0 |
+| req_coverage | pass | exit=0 |
+| contracts | pass | exit=0 |
+| pytest | pass | exit=0 |
+
+`GATE: pass — 7 of 7 stages passed`. Pytest summary: `3739 passed, 3 skipped, 46 warnings in 1434.26s (0:23:54)`.
+Frontend half at the same head: `install --frozen-lockfile` rc 0, `generate:api` rc 0, `lint` rc 0, `type-check`
+rc 0, `test` rc 0 (97 files, 603 tests, no `Errors` line), `build` rc 0.
