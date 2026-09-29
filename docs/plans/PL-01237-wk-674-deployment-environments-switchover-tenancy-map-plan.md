@@ -183,8 +183,8 @@ alone.
    linearity limb** and **NFR-494**. Item 5 applies it to the F1 acceptance test. **NFR-490 is
    unaffected**: it is far from its bound, and the SCOPE entry of 15:36:43 BST stands for it.
    Where no dedicated host exists at Slice 5's close, each of those verdicts is recorded as
-   "measured, diagnostic; verdict carried, owner the maintainer, discharge event a dedicated
-   host available".
+   "measured, diagnostic on the shared VM; the verdict is carried, owner the maintainer,
+   discharge event a dedicated host available".
 7. **The register rows owed to WK-674 are resolved.** `python3 scripts/register-owed.py WK-674`
    prints no row without a resolution. ~~At this tree it lists F41, F43 and F48. F54 is added
    once the register-and-records pass (auditor-b's PR) moves its owner to WK-674, and it must
@@ -950,8 +950,8 @@ auditor made to the Slice 1 leaf plan.)*
     · HOST FALLBACK accepted; DEPENDABOT plan approved (the maintainer)`, §1, quoted verbatim
     in Acceptance item 6). No dedicated host is committed. Where none exists at this slice's
     close, **the F1 test, NFR-489, NFR-502, NFR-493's linearity limb and NFR-494** are
-    recorded as "**measured, diagnostic**; verdict **carried**, owner the maintainer,
-    discharge event **a dedicated host available**". **NFR-490 is unchanged** (the SCOPE
+    recorded as "**measured, diagnostic** on the shared VM; the verdict is **carried**, owner
+    the maintainer, discharge event **a dedicated host available**". **NFR-490 is unchanged** (the SCOPE
     entry of 15:36:43 BST).
 - **Depends on:** Slice 4's path and harness, and Slice 2's deploy transaction. *(Added
   2026-09-29.)* Its measured verdicts also depend on the maintainer-owned dedicated host.
