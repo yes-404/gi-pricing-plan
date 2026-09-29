@@ -1,5 +1,5 @@
 ---
-id: LG-9110
+id: LG-1230
 family: ledger
 title: WK-672 Slice 4 — Quote Sandbox compare endpoint (FR-262 backend limb)
 status: active
@@ -13,12 +13,11 @@ corrected_by: []
 relates: [RL-1172, PL-930, PL-1205, LG-1225]
 ---
 
-# LG-9110 — WK-672 Slice 4 — Quote Sandbox compare endpoint (FR-262 backend limb)
+# LG-1230 — WK-672 Slice 4 — Quote Sandbox compare endpoint (FR-262 backend limb)
 
 Executed from `PL-1213` under `RL-1172` §5 and the deputy's DP-S4-1 to DP-S4-5 (entry of
 2026-09-28 21:08:30 BST) and its F5 amendment (21:10:34 BST). Branch `p2-d-s4`, from `b4aa909d`
-(#886's MERGE-ACKed head, S3). `LG-9110` is a **working id** given by the lead; it is minted at
-the PR's queue turn.
+(#886's MERGE-ACKed head, S3). `LG-1230` was drafted under the working number 9110 and renumbered at the mint (see "The mint" below).
 
 ## Task 0 — adjusted by the maintainer's instruction (to-lead.md ~12:01 BST 2026-09-29)
 
@@ -33,13 +32,21 @@ the PR's queue turn.
   `_required_ref`, `:206` `_compiled_for`, `:241` `_as_platform_error`; `03` has no §4.10.
 - Test database `gipricing_executor-s4_18004fad` (created from the template, `alembic upgrade head` rc 0).
 
+**The mint.** This ledger and the open question were drafted under the working numbers 9110 and
+9401 and renumbered in one commit at this slice's mint turn, after `origin/main` at
+`d7ed822ec238a3344a04215240a67bff4994fed9` (#899) was merged into the branch (a `git merge`; the one
+conflict, `docs/INDEX.md`, took main's copy and was regenerated). `python3 scripts/doc-id.py next --ref
+origin/main` printed `1230`; the two ids are `LG-1230` and `OQ-1231`. The historical entries below that
+quote the check-31 gaps `1225→9110` and `9110→9401` are numbers as measured at those heads and are left as
+written.
+
 ## Tasks
 
 | Task | Commit | Red cause | What was done |
 |---|---|---|---|
 | 2 | `92a281c0` | `ImportError: cannot import name 'ScoreCompareRequest'` | `StepChange`, `TraceDiff`, `ScoreCompareRequest`, `ScoreComparison`; `score-comparison` generated; `ONE_SIDED_SLUGS` line in `test_contracts.py` (not in the plan). |
 | 3 | (this commit) | `ModuleNotFoundError: pricing_core.rating.trace_diff` | `diff_traces` and `test_trace_diff.py` (10 passed). |
-| 4, 5, 1 | (this commit) | route test: 404 for the unrouted path | `POST /api/v1/score/compare`; `test_score_compare.py` (13 passed); `03` §4.10, §5.1, §5.2, FR-262, OQ-9401 (working id) in `03` §10 and `open-questions.md`; `score-comparison` added to `audit-docs.py`'s non-markdown stamp-exemption tuple (precedent: `regression-run`); `openapi/generated.json` regenerated; `INDEX.md` regenerated. |
+| 4, 5, 1 | (this commit) | route test: 404 for the unrouted path | `POST /api/v1/score/compare`; `test_score_compare.py` (13 passed); `03` §4.10, §5.1, §5.2, FR-262, OQ-1231 (drafted under the working number 9401) in `03` §10 and `open-questions.md`; `score-comparison` added to `audit-docs.py`'s non-markdown stamp-exemption tuple (precedent: `regression-run`); `openapi/generated.json` regenerated; `INDEX.md` regenerated. |
 
 ### Task 3 mutations (not committed)
 
@@ -167,7 +174,7 @@ Task 0 Step 3, as instructed. Main was `6a8b8e70` (#886, a squash of `b4aa909d`)
    `git diff --name-only 6a8b8e70 HEAD` listed exactly the 18 S4 paths.
 3. `git merge --no-edit origin/main` (`f2ef3b9a`), a normal merge: conflicts in `docs/INDEX.md`,
    `docs/open-questions.md` and `03`. Resolved keeping both sides: main's OQ-1222 to OQ-1224 rows and
-   FR-1221 line, plus this slice's OQ-9401 row and FR-262 clarification; `INDEX.md` regenerated.
+   FR-1221 line, plus this slice's OQ-1231 row and FR-262 clarification; `INDEX.md` regenerated.
    `git diff --name-only f2ef3b9a HEAD` lists the same 18 S4 paths. The four docs checks:
    `audit-docs.py` FAILED (2), check 31 only (the working-id gaps 1225→9110, 9110→9401);
    `doc-id.py check` the same two gaps; `doc-index.py --check` OK; `register-lint.py` 0 violations.

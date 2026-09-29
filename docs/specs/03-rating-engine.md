@@ -730,7 +730,7 @@ evidence reads the run whose `bundle_hash` equals the version's current bundle h
 - **Matching and comparing.** Steps match by `step_id`. `elapsed_us` is recorded and never compared. Values compare as canonical JSON, so `1`, `1.0` and `true` are three different values. `steps` lists base steps in base order, then added steps in comparison order. A duplicate `step_id` in one trace is a `ValueError`.
 - **`own_change`.** True for an added or removed step, and for a changed step whose `consumed` is identical on both sides (the step saw the same inputs and behaved differently). A changed rate table moves every downstream step's `consumed`, so those steps are listed with `own_change: false` and the edited step is the one entry with `own_change: true`.
 - **`own_change: false` means "no own change attributable from the traces".** It never means "unchanged" or "not edited".
-- **Known limit (auditor-b F5).** `own_change` is derived from `consumed`, so a downstream step that is itself edited *and* whose input moved reads `own_change: false`: the diff reports the change but cannot separate the two causes. The one-step acceptance of `RL-1172` §5 holds for a single edit. OQ-9401 (§10) asks whether `own_change` should come from step-definition equality instead.
+- **Known limit (auditor-b F5).** `own_change` is derived from `consumed`, so a downstream step that is itself edited *and* whose input moved reads `own_change: false`: the diff reports the change but cannot separate the two causes. The one-step acceptance of `RL-1172` §5 holds for a single edit. OQ-1231 (§10) asks whether `own_change` should come from step-definition equality instead.
 
 ---
 
@@ -1175,4 +1175,4 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | **OQ-1222** | Can the `monotone` grid take breakpoints from a GBM's split thresholds (XGBoost and LightGBM), per library? Mirrored in `docs/open-questions.md`. Status: **open** (owner WK-1178). |
 | **OQ-1223** | How does an ordinal categorical input take part in a `monotone` property? Mirrored in `docs/open-questions.md`. Status: **open** (owner WK-675). |
 | **OQ-1224** | Should the compiled bundle pin its Bandings, with an explicit input-to-band link, so that band edges become derivable? Mirrored in `docs/open-questions.md`. Status: **open** (owner WK-1178). |
-| **OQ-9401** | Should `StepChange.own_change` be derived from step-definition equality instead of `consumed` equality (§4.10)? Mirrored in `docs/open-questions.md`. Status: **open** (owner WK-675). |
+| **OQ-1231** | Should `StepChange.own_change` be derived from step-definition equality instead of `consumed` equality (§4.10)? Mirrored in `docs/open-questions.md`. Status: **open** (owner WK-675). |
