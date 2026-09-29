@@ -239,3 +239,59 @@ Pre-start `12:22:30 up 3:40, 1 user, load average: 2.23, 2.34, 2.23`, no other p
 | 10 | unset | 0 | `24 passed in 5.60s` |
 
 No abort, all ten rc 0.
+
+## Final head `1cadf98e5c194e9a7e8e7369f5881e9de22b6c6c` (2026-09-29)
+
+The maintainer's ruling: a plain merge of the then-current `origin/main`, the test-count floor, the four
+docs checks, the diff against the gated head, and the N=5×2 redo if `test_rating_score.py` or `pricing-core`
+code differs from the gated head. Draft PR #901 (opened by the lead) at this head.
+
+- **(a) Merge.** `git merge 369c5774b9c986afa032b97e542773d2da765481`, plain: conflict-free (no conflict at
+  all, `INDEX.md` included). Merge commit `1cadf98e` (parents `0bba909a`, `369c5774`).
+- **(b) Test-count floor.** Main's count: 3747 (`95faf68b`'s python CI, 3744 passed + 3 skipped, the lead's read);
+  `git diff --name-only 95faf68b 369c5774 | grep test` is empty, so #897, #900 and #896 added no test file.
+  S4's net added: 28, by `pytest --collect-only -q` on the three new files at the merged head
+  (`test_score_compare.py` 13, `test_scoring_compare.py` 5, `test_trace_diff.py` 10; a new file's tests all
+  count as added); the modified test files (`test_contracts.py`, `test_rating_version_compile.py`,
+  `tests/test_audit_docs_ids.py`) add and remove no `def test_`; cross-check
+  `git diff origin/main...HEAD -U0` gives 23 added and 0 removed `def test_` lines (the parametrized tests
+  expand to 28). Floor: 3747 + 28 = **3775**.
+  **Python CI** (run 36568093701, 12:26:15Z to 12:42:30Z): `3772 passed, 3 skipped, 46 warnings in 876.97s
+  (0:14:36)`, i.e. 3772 + 3 = 3775, equal to the floor. Success. The docs (36568093720), frontend
+  (36568093742) and history-policy (36568093732) runs also concluded success at `1cadf98e`.
+- **(c) Docs checks at `1cadf98e`.** `audit-docs.py` rc 0 ("All checks passed."); `doc-id.py check` rc 0;
+  `doc-index.py --check` rc 0 ("OK (byte-stable)"); `register-lint.py` rc 0 ("OK (0 violations)").
+- **(d) Diff against the gated head.** `git diff --stat 1509bc0c 1cadf98e`: 31 files changed, 1107
+  insertions, 80 deletions. The only file not in main's incoming set (`git diff --name-only a5118a30
+  369c5774`) is this ledger. Against `369c5774`, `git diff --name-only` is the 18 S4 paths.
+- **(e) `pricing-core` diff and the N=5×2 redo.** `git diff 1509bc0c HEAD -- packages/pricing-core/` is not
+  empty: `diagnostics.py` (+233/−51 net), `tests/test_diagnostics.py` (+36) and `tests/test_gbm.py` (+267), all
+  main's incoming modelling work (#887); `test_rating_score.py` is unchanged. The second limb of the rule
+  (`pricing-core` code differs) is met, so the N=5×2 was redone at `1cadf98e`, pre-start
+  `12:26:32 up 3:44, load average: 1.12, 1.76, 2.02`, no other pytest, same wrapper and command as above,
+  logs `/tmp/n5b-s4-*.log`:
+
+| run | `CI` | rc | summary |
+|---|---|---|---|
+| 1 | `CI=1` | 0 | `24 passed in 6.05s` |
+| 2 | `CI=1` | 0 | `24 passed in 6.06s` |
+| 3 | `CI=1` | 0 | `24 passed in 6.02s` |
+| 4 | `CI=1` | 0 | `24 passed in 5.91s` |
+| 5 | `CI=1` | 0 | `24 passed in 6.03s` |
+| 6 | unset | 0 | `24 passed in 6.08s` |
+| 7 | unset | 0 | `24 passed in 5.88s` |
+| 8 | unset | 0 | `24 passed in 5.81s` |
+| 9 | unset | 0 | `24 passed in 5.63s` |
+| 10 | unset | 0 | `24 passed in 5.84s` |
+
+No abort, all ten rc 0.
+
+FR-262's typing at the Work close: backend limb delivered and tested (WK-672); UI limb reassigned to WK-675.
+
+## Hand-off to WK-675
+
+`StepChange.own_change == false` means **"no own change attributable from the traces"**. **Do not render it as
+"unchanged" or "not edited".** A downstream step that was itself edited and whose input also moved reads `false`
+(the known limit `03` §4.10 states and `test_trace_diff.py`'s known-limit test pins). Whether `own_change`
+should be derived from step-definition equality instead is `OQ-1231`, owned by WK-675, to be decided before its
+compare view ships.
