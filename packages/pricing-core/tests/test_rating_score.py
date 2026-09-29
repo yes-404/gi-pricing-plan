@@ -13,6 +13,7 @@ under the rung's own name) — `risk_premium`, `office_premium`, `instalment_loa
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import socket
 import subprocess
@@ -32,7 +33,7 @@ from test_rating_runtime import (
     _train_tiny_booster,
 )
 
-from model_schema.rating import RatingVersion
+from model_schema.rating import RatingVersion, SubGraphRef
 from model_schema.refs import ArtifactRef
 from model_schema.scoring import QuoteContext, QuoteContextOptions
 from pricing_core.rating.compile import ArtifactResolver, ResolvedArtifact, compile_bundle
@@ -420,6 +421,39 @@ async def test_a_purpose_needing_a_sub_graph_is_refused_when_none_is_mounted(pur
     ctx = _ctx(purpose=purpose)
     with pytest.raises(ValueError, match="INPUT_CONTRACT_VIOLATION"):
         await score_one(compiled, ctx)
+
+
+async def _compiled_with_bogus_sub_graph() -> CompiledBundle:
+    """The same bundle, its algorithm naming a sub-graph that does not exist (FD-9030)."""
+    compiled = await _compiled()
+    bogus = SubGraphRef(
+        ref=ArtifactRef(type="sub_graph", slug="does-not-exist", version=1),
+        mount_point="s_nowhere",
+    )
+    algorithm = compiled.algorithm.model_copy(update={"sub_graphs": [bogus]})
+    return dataclasses.replace(compiled, algorithm=algorithm)
+
+
+@pytest.mark.req("FR-218")
+@pytest.mark.parametrize("purpose", ["mid_term_adjustment", "cancellation"])
+async def test_a_bogus_sub_graph_ref_does_not_satisfy_the_purpose_guard(purpose: str) -> None:
+    """FD-9030: a non-empty `sub_graphs` is a declared reference, not a mounted sub-graph.
+    With `sub_graph:does-not-exist@1` named, these purposes were priced as new business
+    (1507); they are refused whatever `sub_graphs` holds, until FR-217's inlining exists."""
+    compiled = await _compiled_with_bogus_sub_graph()
+    with pytest.raises(ValueError, match="INPUT_CONTRACT_VIOLATION") as refused:
+        await score_one(compiled, _ctx(purpose=purpose))
+    assert "interim" in str(refused.value)
+
+
+@pytest.mark.req("FR-218")
+@pytest.mark.parametrize("purpose", ["new_business", "renewal", "what_if"])
+async def test_the_other_purposes_are_unaffected_on_the_same_algorithm(purpose: str) -> None:
+    """Positive control for the test above: the same bogus-ref algorithm still quotes the
+    purposes that need no mounted sub-graph."""
+    compiled = await _compiled_with_bogus_sub_graph()
+    result = await score_one(compiled, _ctx(purpose=purpose))
+    assert result.outcome == "quoted"
 
 
 @pytest.mark.req("FR-218")
