@@ -477,7 +477,7 @@ def blob_probe(store: BlobStore) -> Any:
 #: Every column through which a **quote-input store** references a blob (NFR-499, RL-917).
 #: A digest named here is never served by `GET /blobs/{sha256}` and never ingested, whoever
 #: owns it otherwise: its body is read through that store's own workspace-scoped API. The
-#: regression case store (`regression_runs.cases_blob_sha256`, FR-1214, WK-672 Slice 3) is the
+#: regression case store (`regression_runs.cases_blob_sha256`, FR-1221, WK-672 Slice 3) is the
 #: second entry.
 QUOTE_INPUT_BLOB_COLUMNS: tuple[Any, ...] = (
     ScoringTraceRow.blob_sha256,

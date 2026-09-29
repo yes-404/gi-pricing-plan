@@ -1,4 +1,4 @@
-"""`replay_cases` — re-score a persisted case log, never regenerate it (FR-261, FR-1214).
+"""`replay_cases` — re-score a persisted case log, never regenerate it (FR-261, FR-1221).
 
 RS-1176 condition 4: a Regression Run persists every generated case and every counterexample
 as one content-addressed blob, and a replay re-scores exactly those. This module holds no
