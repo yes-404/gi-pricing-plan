@@ -157,12 +157,17 @@ fi
 [ "$nfail" = "0" ]
 '
 got=0
+final=1
 for i in 1 2 3; do
   flock -n -E 99 /tmp/slots/gate-$i -c "export GIP_GATE_SLOT=/tmp/slots/gate-$i; $gate_body"
-  rc=$?
-  if [ "$rc" -ne 99 ]; then got=1; break; fi
+  final=$?
+  if [ "$final" -ne 99 ]; then got=1; break; fi
 done
-[ "$got" = "0" ] && flock -w 7200 /tmp/slots/gate-1 -c "export GIP_GATE_SLOT=/tmp/slots/gate-1; $gate_body"
+if [ "$got" = "0" ]; then
+  flock -w 7200 -E 98 /tmp/slots/gate-1 -c "export GIP_GATE_SLOT=/tmp/slots/gate-1; $gate_body"
+  final=$?
+fi
+( exit "$final" )
 ```
 
 **The seven stages are independent, so they run at once inside one slot.** All seven are
@@ -182,7 +187,13 @@ reinstates exactly the double-lock deadlock `GIP_GATE_SLOT` exists to prevent.
 **Read the table, not the exit code alone.** The body's last statement is
 `[ "$nfail" = "0" ]`, so a failing gate exits 1 and a passing one 0 — and 1 is
 distinguishable from the wrapper's busy-slot 99, which is what the `-E 99` fix below is
-for. On a failure the body prints the scratch directory holding all seven logs; read the
+for. **The block now ends with the gate's own status** (`( exit "$final" )`: a subshell, so
+it sets `$?` without exiting an interactive shell that pasted it). A slot that ran gives the
+body's rc; the blocking fallback runs only when no slot ran, and a fallback whose `flock -w`
+expires exits **98** (`-E 98`), never 0 and not the body's own 1. **The old tail is a trap:**
+it ended `[ "$got" = "0" ] && flock -w 7200 …`, so when a slot ran (`got=1`) the last command
+was the false test and **a 7-of-7 pass exited 1**. A caller checking `$?` read every
+first-slot pass as a failure, and the stage table was the only truthful result. On a failure the body prints the scratch directory holding all seven logs; read the
 failing stage's log there rather than re-running the gate to see the output.
 
 **`generate-contracts.py` runs with `--check` here, and that is a change.** This block
@@ -261,12 +272,17 @@ Same shape for `migrate --verify`, two slots instead of three:
 ```bash
 verify_body='POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 python3 scripts/doc-id.py migrate --verify <root>'
 got=0
+final=1
 for i in 1 2; do
   flock -n -E 99 /tmp/slots/verify-$i -c "export GIP_VERIFY_SLOT=/tmp/slots/verify-$i; $verify_body"
-  rc=$?
-  if [ "$rc" -ne 99 ]; then got=1; break; fi
+  final=$?
+  if [ "$final" -ne 99 ]; then got=1; break; fi
 done
-[ "$got" = "0" ] && flock -w 7200 /tmp/slots/verify-1 -c "export GIP_VERIFY_SLOT=/tmp/slots/verify-1; $verify_body"
+if [ "$got" = "0" ]; then
+  flock -w 7200 -E 98 /tmp/slots/verify-1 -c "export GIP_VERIFY_SLOT=/tmp/slots/verify-1; $verify_body"
+  final=$?
+fi
+( exit "$final" )
 ```
 
 Same announcement shape as `GIP_GATE_SLOT` above: `scripts/_docverify.py`'s `verify()`
@@ -274,7 +290,8 @@ checks `GIP_VERIFY_SLOT` first and skips its own `/tmp/slots/verify-{1,2}` lock 
 wrapper has already announced one, so a correctly-wrapped `migrate --verify` run never
 double-locks against itself.
 
-**Both slot wrappers above carry `-E 99`, and it is load-bearing, not decoration.** Before
+**Both slot wrappers above carry `-E 99` on the non-blocking attempts and `-E 98` on the
+blocking fallback, and both are load-bearing, not decoration.** Before
 it was added, each loop read `flock -n /tmp/slots/<name>-$i -c "..." && { got=1; break; }`.
 `flock -n`'s exit code, when the lock IS acquired, is the wrapped command's own exit code —
 and `flock`'s exit code when the lock could NOT be acquired is **also 1**, the same value an
@@ -966,6 +983,15 @@ where the tree did not change:
 Verified: 2026-09-17
 
 ## Verified
+
+2026-09-29, against main `633c6f34b7e841e09c7f108cd4696658c524fcfc`. **The gate and verify
+blocks now exit with the gate's own status.** The old tail (`[ "$got" = "0" ] && flock -w 7200
+…`) exited 1 on every pass that ran in a slot. Proved at shell level with trivial bodies on
+private slot files (`/tmp/slots/test-gaterc-*`, never the real slots), each rc quoted for the
+old text and the new text, both blocks:
+`true` 1 → 0; `false` 1 → 1; `exit 7` 1 → 7; all slots busy then released (body `true` or
+`exit 5`) 0 and 5, unchanged; all slots busy and `-w 1` expiring 1 → 98. Sourcing the block
+into a shell leaves that shell alive.
 
 2026-09-28, against main `f91af639`. **The per-worktree database name is now
 `gipricing_<leaf>_<hash of the full path>`** (FD-1196, WK-1178), replacing the leaf-only name;

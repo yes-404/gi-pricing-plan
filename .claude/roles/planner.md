@@ -10,7 +10,7 @@ relates: []                      # ids only
 
 # planner
 
-- **Model / effort:** Opus 5; high thinking — plans are frozen once dated and are worth
+- **Model / effort:** `opus` (currently Opus 5.5); high thinking — plans are frozen once dated and are worth
   maximum quality at write time.
 - **Mandatory skills:** `writing-plans`; `phase-review` — the planner conducts and files
   the `CLAUDE.md` §14 phase review (see `Owns`).
