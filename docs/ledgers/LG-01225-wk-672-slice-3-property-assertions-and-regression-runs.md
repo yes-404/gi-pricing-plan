@@ -2,7 +2,7 @@
 id: LG-1225
 family: ledger
 title: WK-672 Slice 3 — Property assertions and regression runs
-status: active
+status: closed
 created: 2026-09-29
 owner: executor
 tree: 138c272a3741f563b44d809910c5477a57e34a40
@@ -185,7 +185,9 @@ The deputy ruled a full second T7 after the ambient-profile defect (above). Run 
 
 | PR | Branch | Title | Squash SHA on `main` |
 |---|---|---|---|
-| (draft, number on opening) | `p2-d-s3` | feat(rating): WK-672 Slice 3 — property assertions and regression runs, PL-1205 | (on merge) |
+| #886 | `p2-d-s3` | feat(rating): WK-672 Slice 3 — property assertions and regression runs, PL-1205, LG-1225 | `6a8b8e7011e472586be559587561dde0479d491f`, squash, merged 2026-09-29 12:26:53 BST |
+
+*(Corrected 2026-09-29 by the auditor, at slice close: this row read "(draft, number on opening) … (on merge)" and a title without "LG-1225".)*
 
 ## S3 T7-3 gate (concurrent load evidence for FD-1199)
 
@@ -272,3 +274,113 @@ Also cited: the full two-half gate at `3a3e0277b97c7dc98b01b04c09d60cfa7c55de71`
 - **`tests/` at `5132dbb76fa1249032b1db19df7179c3d0fa98b8`:** `uv run pytest -q tests/` rc 0 (`TESTS-RC=0`), `1032 passed, 1 skipped in 389.35s (0:06:29)`, 1033 collected. Comparison basis: `git diff --stat 3a3e0277 5132dbb7 -- tests/ conftest.py` prints nothing (rc 0), so `tests/` and the root `conftest.py` are identical at the gated head and this one.
 
 **Why each N=5 run shows 24 tests (2026-09-29 BST, executor-s3fix, at `1eb6111d489bf041a5d74294004446e9b4e9cbd1`).** `packages/pricing-core/tests/test_rating_score.py` has 21 test functions (`grep -c -E '^(async )?def test_'` prints 21; the bare `^def test_` form finds only one because 20 are `async def`). Two are parametrized: `@pytest.mark.parametrize("purpose", ["mid_term_adjustment", "cancellation"])` at line 415 (2 values) and `@pytest.mark.parametrize("key", ["payment_schedule", "apr", "credit_agreement_term"])` at line 461 (3 values). So 19 unparametrized + 2 + 3 = 24. `uv run pytest --collect-only -q packages/pricing-core/tests/test_rating_score.py | tail -1` prints `24 tests collected in 2.76s`, and `grep -n -E '^(async )?def test_|parametrize'` gives the 21 definitions plus those two decorator lines.
+
+## Slice close — the auditor's record
+
+**Status set `closed` by the auditor on 2026-09-29** (`document-ids.md` §1.6, SL row: *"auditor closes: sets the `LG-` `closed`, verifies acceptance"*), under the closing-record convention that `LG-1204` set for Slice 2 (`f91af639`, #870): one post-merge, docs-only PR by the auditor that **takes no new id** and touches this file, `docs/INDEX.md` and one register row. A Slice closes on a clean audit and the lead's merge, with no maintainer acceptance line (`CLAUDE.md` §13; `PL-1205` acceptance item 14). No `SL-` row exists for this slice (`PL-1205` Goal: "No `SL-` row exists, so there is no `slice:` field"; `grep -n 'SL-' docs/roadmap.md` at `6a8b8e70` finds no slice row for it), so `docs/roadmap.md` has nothing to update at a Slice close; the `WK-672` row belongs to the Work close.
+
+### The work PR, #886
+
+- **Merge.** `gh pr view 886 --json mergedAt,mergeCommit,headRefOid` → merged `2026-09-29T11:26:53Z` (12:26:53 BST) as the squash `6a8b8e7011e472586be559587561dde0479d491f`, head `b4aa909d43f347091e3ee239fbc72ab4c5ca4491`. `git rev-parse b4aa909d^{tree} 6a8b8e70^{tree}` prints `f65bdd608bda3bd5964f47357606406e109c8c0e` twice, so the slice's content is on `main` byte for byte. The squash's parent is `ce9303b3dcf1007c6d97bf8e73e5b3e3f3174d1d`.
+- **Approval (acceptance item 14).** The maintainer's MERGE-ACK for #886, given on the maintainer's behalf, `2026-09-29 11:56:13 BST`, naming head `b4aa909d43f347091e3ee239fbc72ab4c5ca4491` against main `ce9303b3`, conditional on CI success at that SHA (`to-lead.md`, local, not in the repository). The lead adopted the audit as CLEAN before the merge. The maintainer's ACK does not stand in for the auditor's CLEAN, and the reverse holds too.
+- **CI at the head** (`gh run list --branch p2-d-s3`, `b4aa909d`): python `36558277582`, frontend `36558277538`, docs `36558277599` and history-policy `36558277604`. The last three completed `success`. Python needed two attempts, disclosed in the next section.
+
+### Disclosure: python CI attempt 1 failed with FD-1199's signature
+
+`gh api repos/yes-404/gi-pricing-plan/actions/runs/36558277582/attempts/1` reports `run_attempt 1`, `conclusion failure`, `head_sha b4aa909d…`, started `2026-09-29T10:52:45Z`, updated `11:09:28Z`. The failing step is "Gate summary". The job log (`gh run view 36558277582 --attempt 1 --log`, saved with a sha256 under *Evidence* below) reads:
+
+- `E  AssertionError: Fatal Python error: PyGILState_Release: thread state 0x7f8478000f70 must be current when releasing`
+- `E    Python runtime state: finalizing (tstate=0x0000000000ba6748)`
+- `E  assert -6 == 0`, at `packages/pricing-core/tests/test_rating_score.py:576: AssertionError`;
+- `FAILED packages/pricing-core/tests/test_rating_score.py::test_scoring_is_deterministic_across_a_subprocess`;
+- `1 failed, 3710 passed, 3 skipped, 45 warnings in 842.08s (0:14:02)` and `GATE: FAIL — 1 of 8 stages failed: pytest`.
+
+That is `FD-1199`'s signature (child return code −6, `PyGILState_Release`, interpreter finalizing) at the same test, on a head whose child was still the old one that exits normally. Attempt 2 (`run_attempt 2`, started `11:11:13Z`, updated `11:26:26Z`, the same `head_sha`) read `3711 passed, 3 skipped, 45 warnings in 817.51s (0:13:37)` and `GATE: pass — 8 of 8 stages passed`, and the PR merged on it 27 seconds later. No commit separates the attempts; a re-run of the failed job is a re-run of the same head.
+
+**What this record does and does not say about it.**
+- It records that the abort happened once in CI on the slice's head and did not recur in attempt 2, in the T7-3 full gate at `3a3e0277` (7 of 7, 3711 passed) or in the ten `test_rating_score.py` runs at `138c272a` (below).
+- **Acceptance item 13, third bullet, read to the letter:** *"If any run aborts natively (a negative rc, or a `PyGILState` message), the slice does not pass its gate: FD-1199's triage moves ahead of it, and nothing is re-run until green."* The item's own subject is the five-run repeat, and all ten of those runs passed. The abort was in CI's full suite, and CI was re-run. Whether the clause reaches a CI abort is a reading of the plan the auditor does not settle here. The maintainer's conditional MERGE-ACK required CI success at the SHA, and it was met on attempt 2. The clause is recorded as **read by the maintainer's ACK as met, not as satisfied by the letter**, and the lead names any owner it wants for the difference.
+- `FD-1199` stays open. #876 (`45c77f4d`, the child exits with `os._exit(0)` after flushing) masks the abort in the test; the production question stays with `FD-1211`.
+
+### Scope, derived from the plan and the spec — not from recollection
+
+`PL-1205` §Scope lists the requirements below. The counts come from `scripts/scope-audit.py`, run at `6a8b8e7011e472586be559587561dde0479d491f`:
+
+`uv run python scripts/scope-audit.py RATE --sections 3.8 --extra FR-1221,FR-248,FR-273,NFR-499` → rc 1; **in scope 10, with evidence 8 (80%)**; `NO EVIDENCE for 2: FR-262, FR-1221`. `--extra` is written in full ids. `uv run python scripts/scope-audit.py GOV --extra FR-364` → rc 1, in scope 53, evidence 27, `FR-364` not among the 26 without evidence, and `req-coverage.py` at the same tree lists `FR-364  6 test file(s)`. (`GOV`'s section rows are outside this slice and are not judged here.)
+
+| Requirement | Verdict | Evidence at `6a8b8e70` |
+|---|---|---|
+| `FR-261` (`03` §3.8) | delivered, tested | markers across `packages/pricing-core/tests/test_testing.py` (26), `test_testing_determinism.py` (8), `test_replay.py` (5), `packages/model-schema/tests/test_regression.py` (12), `backend/tests/test_regression_runs.py` (7) and `test_regression_suites.py` (2). Items 3 to 9 below name the tests. |
+| `FR-257` limb (1) only | delivered, tested | 9 `req("FR-257")` in `backend/tests/test_rating_versions.py`, 3 in `test_regression_runs.py`, 2 in `test_demo_rating_evidence.py`, 1 in `test_replay.py`. Limbs (2) to (4) are not this slice's: register row `F44`'s dispositions name WK-673 for (2), the optimisation Work for (4), and (3) delivered earlier. **One clause of item 10 is delivered but untested as written**; see *Owed* below. |
+| `FR-260` | composed, tested | `run_regression` calls `evaluate_golden_quotes`; `req("FR-260")` on 22 tests in `test_rating_versions.py`, 6 in `test_testing.py`, 2 in `test_regression_runs.py`. |
+| `FR-248` (the ladder reconciles) | delivered, tested | `packages/pricing-core/tests/test_testing.py`: `test_property_ladder_reconciles` and `test_run_ladder_reconciles_fails_when_the_ladder_has_no_risk_premium_rung`, marker `FR-248`. |
+| `FR-273` (integer minor units) | delivered, tested | one `req("FR-273")` in `test_testing.py`. |
+| `NFR-499` | delivered, tested | `backend/tests/test_regression_runs.py` (4 markers, incl. `:319`, `:388`), `test_regression_suites.py` (2), `test_rating_versions.py` (1). |
+| `06` `FR-364` (the `regression_run` floor is fed) | delivered, evidenced through the feed only | `backend/src/app/platform/rating_versions.py:297` writes `"regression_suite_run_id": str(run_id)` beside `golden_quotes`; `packages/model-schema/src/model_schema/approvals.py:106` and `:258` list `regression_run` in the rating version's floor. The tests that assert the feed (`test_a_passing_run_is_recorded_and_golden_evidence_is_untouched`) carry `FR-257`, not `FR-364`; `FR-364`'s six existing test files predate this slice. |
+| `FR-1221` (the case store) | **delivered but untested under its own id** | `grep -n 'req("FR-1221")'` finds no marker; the id appears in two docstrings of `test_regression_runs.py` and in the code that persists the blob. The behaviour is covered by `FR-261`- and `NFR-499`-marked tests (`test_a_regression_run_is_a_202_job_that_persists_the_run_and_its_case_blob`, `:245`, asserts `cases_log_sha256(log) == row.cases_blob_sha256`; `test_the_case_blob_and_the_run_row_are_refused_without_rating_read_or_across_workspaces`, `:319`). The spec row (`03-rating-engine.md:180`) still says its id "is a working id … renumbered at that request's mint turn"; see *Owed*. |
+| `FR-262` (`POST /api/v1/score/compare`) | **reassigned** | `PL-1205` §Scope "Carried out": Slice 4's (`PL-1213`); `03-rating-engine.md:720` lists the route under FR-262. Not built here. |
+
+### Acceptance standard of `PL-1205`, item by item
+
+Every "red first" claim lives in this ledger's *The reds* section and was not re-run here. Tests are named by function; file and def line are at `6a8b8e70`.
+
+| # | Verdict | Evidence |
+|---|---|---|
+| 1 Spec | met | `03` §8 names `hypothesis==6.165.7` (`:1085`); `FR-261` and `FR-257` carry the dated amendments (`:178`, `:174`); `FR-1221` at `:180`; `replay_cases` in §5.2 (`:858`); NFR-499's third store clarification; `docs/skills-map.md:138` names `hypothesis==6.165.7`. `audit-docs.py` at `6a8b8e70`: rc 0, "All checks passed.", DISCLOSED 848. |
+| 2 Pin | met | `pyproject.toml:19` and `packages/pricing-core/pyproject.toml:13` both `"hypothesis==6.165.7"`; `uv.lock` has one `hypothesis` package; `uv run lint-imports` at `6a8b8e70`: "Contracts: 4 kept, 0 broken." (`replay-never-generates` KEPT). |
+| 3 Settings | met | `test_testing_determinism.py:67 test_the_generation_settings_are_the_declared_ones`: `assert s.database is None` (`:72`), `assert s.report_multiple_bugs is False` (`:74`), and the deadline, `derandomize`, `max_examples` and health-check asserts; `RegressionGeneration.cases` is `Field(ge=1, le=10_000)` (`model_schema/regression.py:166`, `:277`). |
+| 4 Version | met | `test_testing_determinism.py:81 test_a_version_mismatch_is_refused_naming_both_versions` asserts `GeneratorVersionMismatch` and both versions in the message. |
+| 5 Persisted cases | met | `.importlinter` `replay-never-generates`: `type = forbidden`, `source_modules = pricing_core.rating.replay`, `forbidden_modules = hypothesis, pricing_core.rating.testing`, `allow_indirect_imports = false`; `test_replay.py:36 test_a_replay_re_scores_the_persisted_cases_and_never_generates` monkeypatches six names of `testing` to `_boom` and asserts `replayed.overall == "fail"`; `test_regression_runs.py:362` `assert denied.status_code == missing.status_code == 404` (the generic blob route, C1); `:388 test_a_failed_run_puts_no_quote_input_in_the_job_error`, `:393` `assert str(_SECRET) not in text`. |
+| 6 Stopped shrink | met | `test_testing.py:311 test_a_shrink_stopped_on_a_limit_is_reported_unminimised`, `:322` `assert tight.shrink == "stopped_on_limit"`, `:323` `assert tight.counterexample_minimal is False`. |
+| 7 Determinism across processes | met | `test_testing_determinism.py:150 test_the_same_seed_gives_the_same_run_across_fresh_interpreters` (`assert one == two`, and the counterexample and sampled grid are asserted present) and `test_the_comparator_can_fail_without_a_persisted_seed` (`assert _child("none", "1")[0] != _child("none", "1")[0]`). |
+| 8 Five classes | met | `test_testing.py`: `test_property_premium_positive`, `test_property_no_null_output`, `test_property_ladder_reconciles`, `test_property_premium_bounded`, `test_property_monotone_passes_and_fails_along_the_grid`, and `test_property_monotone_naming_an_absent_input_is_refused_before_generation`. |
+| 9 202 Job and row | met | `test_regression_runs.py:245 test_a_regression_run_is_a_202_job_that_persists_the_run_and_its_case_blob`; `:283` `assert job.error["code"] == "PROPERTY_ASSERTION_FAILED"`; `:297` `assert job.error["code"] == "GOLDEN_QUOTE_MISMATCH"`; `:314` `assert refused.status_code == 403` (no `rating:compile`). |
+| 10 FR-257 limb (1) | **met except one clause** | `test_rating_versions.py:1011` `assert refused.value.code == "EVIDENCE_INCOMPLETE"` for no suite and for a suite with no golden quote; `test_no_regression_run_refuses_submission` (`:1034`), a failing run, a stale `bundle_hash`, `test_a_run_on_another_suite_version_refuses_submission` (`:1074`), and `test_an_earlier_pass_does_not_count_once_a_later_run_failed` (`:1090`, audit A1). **The clause "a test asserts `evidence.golden_quotes` is byte-identical before and after that write" is not tested as written:** `test_a_passing_run_is_recorded_and_golden_evidence_is_untouched` (`:1109`) asserts `set(evidence) == {"golden_quotes", "regression_suite_run_id"}` (`:1124`) and the pinned entry's status, `suite_content_hash` and key set, and takes no before/after snapshot. Verdict: **delivered but untested**; the code writes both keys in one assignment (`rating_versions.py:294-298`), so `golden_quotes` is not overwritten by a separate later write, and the plan's clause is met by construction rather than by an assert. |
+| 11 DP-S3-1 | met | the same tests, with `assert "at least one golden quote" in (refused.value.detail or "")`. |
+| 11b Fixtures carry a golden quote | met | `_Gate` in `test_rating_versions.py` authors every suite through `_quote()`; `examples/fremtpl2/model.py` seeds a golden quote (`DEMO_QUOTE_NAME`); `backend/tests/test_demo_rating_evidence.py:102` asserts `evidence["regression_suite_run_id"] == str(run_id)`. |
+| 12 Contract | met | `backend/tests/test_contracts.py:54` lists `"regression-run",` in `COMPARED_SLUGS`; `uv run python scripts/generate-contracts.py --check` at `6a8b8e70`: "30 generated contracts match the models". |
+| 13 Gate | met, with the disclosure above | see *Evidence* below. Ten of ten `test_rating_score.py` runs (five `CI=1`, five unset) passed at `138c272a`, each rc 0 and `24 passed`. |
+| 14 Approval and audit | met | the MERGE-ACK above; the audit passes below. |
+
+### The auditor's passes on #886
+
+- **`3c4e77ee` — NOT CLEAN, three issues:** (1) 11 references to the requirement id as first minted and 1 to the third open-question id as first minted, left in backend/pricing-core docstrings, tests and `docs/contracts/openapi/generated.json`; (2) the T7-3 lines: wrong Date (UTC read as BST), an "N=5×2" that was two single runs of `backend/tests/test_score.py` (25 tests) and not five runs of `test_rating_score.py`, unsourced PIDs and load labels; (3) `tree:` stale. Resolved at `3a3e0277` (sweep), `5132dbb7`, `138c272a` and `b4aa909d` (corrections, N=5×2 at `138c272a`, `tree: 138c272a3741f563b44d809910c5477a57e34a40`).
+- **`5132dbb7` partial re-audit,** then **`138c272a`** delta CLEAN as an attributed account, then **`b4aa909d` — CLEAN for the whole PR**: the six retired-id patterns (fenced below, because a literal retired id is an unresolved reference to the audit) 0 hits each by `git grep -n <pattern> HEAD`, measured at `b4aa909d`; `sha256sum -c SHA256SUMS` 27 OK and the ledger's 27 hashes equal `SHA256SUMS`; ten N=5 logs each `SHA: 138c272a…`, `24 passed`, `RC=0`; the 21→24 count (21 test functions, 19 plain plus 2 and 3 parametrized values); `git diff --stat 3a3e0277 5132dbb7 -- tests/ conftest.py` empty; docs checks rc 0 at `b4aa909d`.
+```text
+FR-121[4] OQ-1215 OQ-1216 OQ-1217 LG-1218 LG-01218
+```
+
+(`FR-121[4]` is the requirement pattern spelt as a bracket expression for `git grep -E`, so this ledger does not itself contain that retired id; it matches exactly the same string.)
+
+- **Two non-blocking notes on that audit, fixed in this record** (the lead's and the maintainer's decision, `to-lead.md` 11:56:13 BST, "no new commit on #886"):
+  1. The box conditions in the N=5×2 paragraph — "load 2.23/2.88/3.35 at 10:48:30 UTC", "no real pytest live" and "#887's gate-2 (PID 353733) had exited" — are **executor testimony**, not a logged reading. The logs carry only their own `uptime` line (for example unset run 1: `load average: 1.97, 2.71, 3.27` at `10:49:13`, and CI=1 run 1: `2.13, 2.85, 3.34` at `10:48:33`), which are under the bar of 6 and are logged.
+  2. The N=5 table above cites `/home/puzhenhao1989/.claude/jobs/92b3ca72/tmp/…` paths. **Those job-local paths are the same files as the copies under `/home/puzhenhao1989/gi-pricing-plan.local/evidence/886/`** (same names, sha256 in `SHA256SUMS`), which are the durable ones.
+
+### Evidence, with sha256
+
+All files are local, not in the repository.
+
+- **Evidence set** `/home/puzhenhao1989/gi-pricing-plan.local/evidence/886/`: 27 files listed with their hashes in the table earlier in this ledger; `sha256sum -c SHA256SUMS` reports 27 `OK`. `SHA256SUMS` itself hashes to `6b284c6f9a39e727900bf7a3d3230636b475e6aa41981b9ced5d0deac72cc4b4`, and `n5.sh` to `896e73dcdc9d5084c3242137274c7b7037f9389799b93c4d3786011bea0b86e0`.
+- **CI logs of run `36558277582`** at `/home/puzhenhao1989/gi-pricing-plan.local/evidence/886-close/`:
+  - `ci-36558277582-attempt1.log` `27ed8a5e4dfedc167923e5ca41898e8a133b7e86939bb949b4e8101818a7ab71`
+  - `ci-36558277582-attempt2.log` `1f9477b758fe92aca730335bd7e3b69b83cd0b0cb3489c0df233cf4c075d68de`
+- **The full two-half gate** at `3a3e0277`: `s3-gate-3a3e0277.log` (`b9e964a1cc42feb65b4a877cd1a27ea7b3cfaa27f81ac465c7146f78d4401431`), CI unset, 7 of 7 Python stages rc 0, `3711 passed, 3 skipped, 45 warnings in 1409.22s`, frontend 6 of 6 rc 0, 603 tests. It ran on the pre-merge tree; `b4aa909d` differs from `3a3e0277` by the merge of main's `.claude/roles` and `.claude/skills` files and by ledger commits (`git diff --stat 3a3e0277 b4aa909d` lists no `backend/`, `packages/`, `frontend/` or `examples/` path: `1c67c0d3` was audited as only main's role and skill files), and CI attempt 2 at `b4aa909d` read the same `3711 passed, 3 skipped`.
+- **`uv run pytest -q tests/` at `5132dbb7`:** `1032 passed, 1 skipped in 389.35s`, `TESTS-RC=0`; comparison basis: the `tests/` and `conftest.py` diff between the gated `3a3e0277` and `5132dbb7` is empty.
+- **Docs checks at this tree.** See the closing PR body for the four commands and their rcs.
+
+### Post-merge reachability sweep
+
+Predicate, verbatim: `git show 6a8b8e70:docs/ledgers/LG-01225-wk-672-slice-3-property-assertions-and-regression-runs.md | grep -oE '\b[0-9a-f]{7,40}\b' | sort -u`. That gives **48** tokens. Each is classified in this order: (1) `git cat-file -t` is not `commit`: NOTCOMMIT; (2) `git merge-base --is-ancestor <t> ce9303b3` exits 0: MAIN; (3) the same check against the #886 head `b4aa909d`, fetched read-only with `git fetch origin pull/886/head`, exits 0: BRANCH; (4) anything else: NEITHER.
+
+- **MAIN ×6, BRANCH ×32, NEITHER ×0.**
+- **NOTCOMMIT ×10, none of them commit SHAs:** the alembic revision ids `02d24f580752`, `a71c3e95d204` and `fb705749c5d9`; the PID `2301135`; the CI run ids `36490250313`, `36492342635`, `36492342658`, `36492342675` and `36492342732`; and the job id `92b3ca72`.
+- The pre-squash branch commits are reachable via `refs/pull/886/head` and are **not on `main`**, which carries the squash `6a8b8e70`. This ledger cites the squash where it cites `main`.
+
+### Owed by this slice, and the verdict on each
+
+Nothing is owed to close the Slice. The following are recorded so none is silent:
+
+1. **Acceptance item 10's byte-identity clause: delivered but untested as written** (above). Owner for the lead to name; the smallest fix is a before/after snapshot assert in `test_a_passing_run_is_recorded_and_golden_evidence_is_untouched`, or a note in `PL-1205`'s successor that the clause is met by construction.
+2. **`FR-1221` has no marker of its own, and its spec row still says its id is a working id** (`03-rating-engine.md:180`: "Its id is a working id, owned by this branch's pull request, and is renumbered at that request's mint turn"). The id was minted at `3a3e0277`. A dated clarification of the row is a spec change (`spec-change` skill), not this PR's. Verdict: **delivered but untested under its own id**, and the stale sentence is **deferred to the lead** to route to the decision-maker.
+3. **`FD-1199` remains open;** the CI attempt-1 abort above is a second occurrence of its signature known to this record (the finding records #830 run `36436160310`; this record searched for no others). Owner is unchanged in the register.
+4. **Register row `F44`, limb (1):** the row's disposition re-pointed limb (1) to this slice. This PR appends the delivered note to that row.
