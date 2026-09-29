@@ -116,7 +116,7 @@ never on a working tree.
 ## Global Constraints
 
 - **Do not build ahead of the phase** (`CLAUDE.md` §0). This Work is P2 governance tooling. It
-  adds no product capability, except as DP-2 rules for FR-240's clauses (4)–(6).
+  adds no product capability. FR-240's clauses (4)–(6) leave it (DP-2 (b)).
 - **A frozen record is corrected only as `document-ids.md` §1.5 and check 34 allow**: `status:`
   forward, `superseded_by:`, an append to `corrected_by:`. A frozen plan's error is corrected by a
   new `RL-` or `RFC-` (F114's own cell).
@@ -161,7 +161,7 @@ row's own cell states it.
 
 | Row | Subject (short) | Instrument | Slice |
 |---|---|---|---|
-| FR-240 (F-W9-3), clauses (4)–(6) only | Constraints satisfiable; no `control`-intent factor in a rateable path; no unapproved custom objective reachable | `pricing-core` rating (see DP-2) | 6, subject to DP-2 |
+| FR-240 (F-W9-3), clauses (4)–(6) only | Constraints satisfiable; no `control`-intent factor in a rateable path; no unapproved custom objective reachable | `pricing-core` rating | **leaves WK-1170** (DP-2 (b)); owned here until the move lands; proposed receiving Work below |
 | F27, clause (c) only | 03 rating shapes against their hand-authored contracts (`FD-934`) | `backend/tests/test_contracts.py` | 6 |
 | F29 | Error codes across the spec/code boundary | `audit-docs.py` check 10 | 6 |
 | F33, the part not moved to WK-1178 | mypy `files` coverage, the gate-coverage remainder | `pyproject.toml` `[tool.mypy]` | 6 |
@@ -217,7 +217,7 @@ row's own cell states it.
 | c | The census tool runs post-migration | `scripts/file-census.py` (268 lines) exists; its only committed output is `docs/research/file-census-5ef559d.csv`, recorded in `RS-952` | reproduces; whether its categories still match §1.2's families is Slice 1's first reading |
 | d | The owed-list generator finds this Work's rows | `python3 scripts/register-owed.py WK-1170` prints *"(none)"*, rc 0. `register-owed.py "create-read-retire audit"` finds them by phrase | **does not reproduce by id** → FD-1165's class; Slice 1's register pass and Slice 4 |
 | e | The migration can run a second time | `migrate` refuses a migrated tree with exit 2 (#821, `47065da5`; `CR-1164` §5, C4) | the harm of FD-1152 is guarded; the defect stands → DP-5 |
-| f | The Work is docs-only | `CR-1212:289` (the maintainer's order, quoted) labels WK-1170 and WK-1169 *"(docs-only)"*. Of the thirty open rows above, twenty-seven name a script, a test or the mypy configuration as their instrument; F92, F114 and FD-1160 are the three that do not | **does not reproduce** → DP-1 |
+| f | The Work is docs-only | `CR-1212:289` (the maintainer's order, quoted) labels WK-1170 and WK-1169 *"(docs-only)"*. Of the thirty open rows above, twenty-seven name a script, a test or the mypy configuration as their instrument; F92, F114 and FD-1160 are the three that do not | **does not reproduce** → DP-1, (a) accepted |
 
 ---
 
@@ -228,13 +228,40 @@ The planner rules none of them. The cells stay empty until the resolver's record
 
 | # | Question | Options | Recommendation (the planner's input) | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-1 | `CR-1212` Proposal 2 labels this Work *"docs-only"*. Most of its carried rows are fixes to scripts and tests. Which scope does the maintainer accept? | (a) The Work takes the code slices (3–6), each holding a gate slot; the label is corrected by the maintainer's line; (b) the Work stays docs-only (Slices 1–2); every tooling row is re-dispositioned to WK-1178 (standing maintenance) with the lead's dated line; (c) split: the audit-docs and register instruments here (3, 4), the migration residue (5) and gate coverage (6) to WK-1178 | **(a).** The register names this Work as the event on every one of these rows, accepted by the maintainer's delegate at `CR-1164`'s D7 line and `CR-1167`'s acceptance. Moving twenty-seven rows again is the decay FD-1166 names. The label was written before any plan counted the rows | scope | yes — Slices 3, 4, 5, 6 | *(the maintainer, dated line)* |
-| DP-2 | FR-240's clauses (4)–(6) are rating-engine validations in `compile_bundle`, not governance instruments. `CR-1167`'s acceptance item 1 gave the whole *"gate-coverage cluster"* to this Work because *"the cluster is about what the instruments cover"*. Where do these three clauses belong? | (a) Here, in Slice 6; (b) to a rating Work: WK-1178, or a Work the maintainer names; F27 (c), F29 and F33 stay here; (c) carried to P3 by a dated line | **(b).** F27 (c), F29 and F33 are instrument gaps, which is this Work's subject. Clauses (4)–(6) are product behaviour in `compile_bundle`, a file the parallel-start ruling's decision (#928, working id 9760) names as shared by WK-1250, WK-673 and WK-675. A governance slice editing it would have to serialise with three rating Works | scope | yes — Slice 6 | *(the maintainer, dated line)* |
-| DP-3 | Every carried row waits on *"the create-read-retire audit's first slice"*. Does that event require every row to be discharged in Slice 1? | (a) Yes: Slice 1 discharges all thirty rows; (b) Slice 1 fires the event by a register pass: each row's cell gains its `SL-` id in this Work, from this plan's Scope table, with the lead's dated line, and closes in that slice; (c) as (b), but the rows keep their text and only the map plan records the slice | **(b).** (a) makes Slice 1 the whole Work. (c) leaves the register naming an event that has fired, which is how rows decayed through reviews 11–14 (FD-1166). (b) also makes `register-owed.py WK-1170` work (Acceptance item 7) | scope | yes — Slice 1 | *(the maintainer, dated line)* |
+| DP-1 | `CR-1212` Proposal 2 labels this Work *"docs-only"*. Most of its carried rows are fixes to scripts and tests. Which scope does the maintainer accept? | (a) The Work takes the code slices (3–6), each holding a gate slot; the label is corrected by the maintainer's line; (b) the Work stays docs-only (Slices 1–2); every tooling row is re-dispositioned to WK-1178 (standing maintenance) with the lead's dated line; (c) split: the audit-docs and register instruments here (3, 4), the migration residue (5) and gate coverage (6) to WK-1178 | **(a).** The register names this Work as the event on every one of these rows, accepted by the maintainer's delegate at `CR-1164`'s D7 line and `CR-1167`'s acceptance. Moving twenty-seven rows again is the decay FD-1166 names. The label was written before any plan counted the rows | scope | yes — Slices 3, 4, 5, 6 | **(a) accepted:** the maintainer, by delegation, 2026-09-29 22:58:26 BST entry (the lead's channel file, "DECISIONS: WK-1170 map plan #930 (PL-9811), DP-1 to DP-3"). `CR-1212:289`'s label gets a dated correction citing that entry; it is not this plan's to write |
+| DP-2 | FR-240's clauses (4)–(6) are rating-engine validations in `compile_bundle`, not governance instruments. `CR-1167`'s acceptance item 1 gave the whole *"gate-coverage cluster"* to this Work because *"the cluster is about what the instruments cover"*. Where do these three clauses belong? | (a) Here, in Slice 6; (b) to a rating Work: WK-1178, or a Work the maintainer names; F27 (c), F29 and F33 stay here; (c) carried to P3 by a dated line | **(b).** F27 (c), F29 and F33 are instrument gaps, which is this Work's subject. Clauses (4)–(6) are product behaviour in `compile_bundle`, a file the parallel-start ruling's decision (#928, working id 9760) names as shared by WK-1250, WK-673 and WK-675. A governance slice editing it would have to serialise with three rating Works | scope | yes — Slice 6 | **(b) accepted:** the maintainer, by delegation, 2026-09-29 22:58:26 BST entry (the lead's channel file, "DECISIONS: WK-1170 map plan #930 (PL-9811), DP-1 to DP-3"). The rows stay WK-1170's until the move lands (never unowned, `CLAUDE.md` §14). The receiving Work is proposed below and confirmed by this plan's ACK |
+| DP-3 | Every carried row waits on *"the create-read-retire audit's first slice"*. Does that event require every row to be discharged in Slice 1? | (a) Yes: Slice 1 discharges all thirty rows; (b) Slice 1 fires the event by a register pass: each row's cell gains its `SL-` id in this Work, from this plan's Scope table, with the lead's dated line, and closes in that slice; (c) as (b), but the rows keep their text and only the map plan records the slice | **(b).** (a) makes Slice 1 the whole Work. (c) leaves the register naming an event that has fired, which is how rows decayed through reviews 11–14 (FD-1166). (b) also makes `register-owed.py WK-1170` work (Acceptance item 7) | scope | yes — Slice 1 | **(b) accepted:** the maintainer, by delegation, 2026-09-29 22:58:26 BST entry (the lead's channel file, "DECISIONS: WK-1170 map plan #930 (PL-9811), DP-1 to DP-3"), with the condition that Slice 1's acceptance includes `register-owed.py` listing the re-pointed rows, the count stated with the command |
 | DP-4 | Where does the "process step per transition" live once Slice 1 finds it? | (a) A new column in `document-ids.md` §1.6 naming each transition's step (a `process/` amendment: `RFC-` + `RL-`); (b) a table generated by `doc-index.py` from a declared data structure, with a drift check; (c) in the owning skill or charter only, with the Slice 1 record as the evidence and check 38 as the enforcement | **(c).** One source per step (RFC-756). §1.6 already names the role per action. What is missing is the step inside the role's skill. (b) adds a second transcription, which is the defect premise (b) found in `_OWNERSHIP_TABLE`. (a) amends a maintainer-owned file for a fact the skills already carry | decision point | yes — Slice 2 | *(decision-maker, by `RL-`; the maintainer's line too if the answer amends `docs/process/`)* |
-| DP-5 | Six rows are defects in `migrate`, a tool that has run once and now refuses a migrated tree (premise e): F78, F94, F96, F107, FD-1149 and FD-1152. Fix them, or accept them with #821's refusal as the control? | (a) Fix all six in Slice 5; (b) accept all six: `decision: accept`, the residual control being #821's exit-2 refusal, with proof 7 cited; (c) fix only what a later tool reuses (FD-1149's sweep, if any non-migrate caller uses it; F78's fixture, since `_discover_roadmap` also serves `doc-index.py`), accept the rest | **(c).** A fix to code that can no longer run buys nothing. A defect in a function another tool still calls is live. Slice 1 reads which functions have a live caller and names them, so this row is answered on evidence | register disposition (`document-ids.md` §1.6, FD row: *"lead sets `decision:`"*) | yes — Slice 5 | *(the lead's dated disposition in the register)* |
+| DP-5 | Six rows are defects in `migrate`, a tool that has run once and now refuses a migrated tree (premise e): F78, F94, F96, F107, FD-1149 and FD-1152. Fix them, or accept them with #821's refusal as the control? | (a) Fix all six in Slice 5; (b) accept all six: `decision: accept`, the residual control being #821's exit-2 refusal, with proof 7 cited; (c) fix only what a later tool reuses (FD-1149's sweep, if any non-migrate caller uses it; F78's fixture, since `_discover_roadmap` also serves `doc-index.py`), accept the rest | **(c).** A fix to code that can no longer run buys nothing. A defect in a function another tool still calls is live. Slice 1 reads which functions have a live caller and names them, so this row is answered on evidence | register disposition (`document-ids.md` §1.6, FD row: *"lead sets `decision:`"*) | yes — Slice 5 | **(c) adopted by the lead**, 2026-09-29 (the lead's message to the planner after the 22:58:26 BST entry, which records DP-5 as the lead's: *"DP-5 (c) and DP-6 are yours: noted"*). The `decision:` cells are written at Slice 1's register pass, on Slice 1's live-caller evidence |
 | DP-6 | The order between WK-1170 and WK-1169, and between this Work and the code lane | (a) WK-1170's Slice 1 first; WK-1169 starts its binding slices after it (the parallel-start ruling's decision, #928, item 5: *"WK-1169 comes after WK-1170"*); (b) both Works' slices in parallel | **(a)**, re-derived as a real dependency: WK-1169 binds each role's transitions into its charter, and Slice 1 of this Work is where those transitions are named. RFC-897 §8 states the reverse (*"4 needs … 3's matrix"*), but the matrix exists, generated (premise b), so that dependency is already met | sequencing | no — applied at dispatch; default (a) | the activation commit cites the parallel-start ruling (#928) by its minted id |
 | DP-7 | F92's 18 non-vendored skill manifests are the same 18 files inside FD-1157's 43 (check 30's skill-manifest failures at `19c395ac`: `python3 scripts/audit-docs.py 2>&1 \| grep '^  - check 30' \| grep -oE '\.claude/skills/[^/]+' \| sort -u` prints 43; the 18 not in `_docid._VENDORED_SKILLS` are F92's residual). FD-1157 is WK-1169's. Which Work stamps them? | (a) WK-1170 Slice 5 stamps the 18; WK-1169 takes the rest of FD-1157; (b) WK-1169 stamps the 18 with the rest of FD-1157, and F92's residual closes on that PR; (c) whichever slice runs first, with the other verifying | **(b).** One slice edits those 18 files once. FD-1157 is the wider row, and its treatment of the 25 vendored manifests needs the same decision (F93, the maintainer's) | scope | yes — Slice 5's F92 limb only | *(the maintainer, dated line; the same line as WK-1169's matching DP)* |
+
+**DP-2's receiving Work, proposed here for the ACK to confirm** (the 22:58:26 BST entry: *"the
+planner proposes it at its next revision, and the plan's ACK confirms it"*). The steer was clause
+(6) to WK-690, and (4) and (5) to whichever of WK-1250 and WK-673 already edits `compile_bundle`'s
+validation. Read at each plan's open-PR head:
+- **WK-1250** (`PL-1254`, on `main`) edits `compile_bundle`'s validation: it resolves and inlines
+  pinned sub-graphs there and adds refusals at compile (its Slice 2), and its DP-1 decides a
+  `sub_graph` pin's maturity exemption beside `_MATURITY_CHECK_EXEMPT` (`compile.py:314`).
+- **WK-673** (its map plan, working id 9101, #844 at `69cba51e`) names `compile_bundle` only as something it calls
+  (its Tech Stack line) to build subset bundles. It adds no compile-time refusal.
+- **WK-690** (its map plan, working id 9103, #871 at `e7509ca6`): `grep -n -i "compile_bundle\|FR-240\|transitiv"`
+  over the plan prints nothing. It certifies and approves an `expression` objective. It does not
+  touch the check that a pinned objective is approved at compile.
+
+**Proposal: clauses (4) and (5) to WK-1250, and clause (6) to WK-690 as steered**, each by the
+maintainer's line on that Work's map plan.
+- **(4) and (5) to WK-1250**, as a scope addition to its Slice 2, which already adds compile-time
+  refusals. WK-673 adds none.
+- **(6) to WK-690**, with two conditions stated so the move does not open a gap. FR-240's register
+  cell, clause (6), says the pin-maturity loop refuses an unapproved *directly pinned* custom
+  objective, *"but not one reached transitively, and it is wholly untested"*. `03` (`:137`) does not
+  name the transitive paths. Two are visible in the P2 plans: a pinned model version whose fit used
+  a custom objective, and a sub-graph that WK-1250 will let an algorithm mount. So:
+  1. WK-690's map plan (#871) has no `compile_bundle` slice today (the grep above), and needs one;
+  2. WK-1250's Slice 2 inlining must not open the sub-graph path unchecked. Either its compile
+     refusal covers an objective reached through an inlined sub-graph, or WK-690's check runs on
+     the inlined bundle.
 
 **Slice design, decided here and not a DP.** The audit (Slice 1) comes first: it is the event
 every carried row waits on, and it names the gaps that Slices 2 and 3 close. The steps (Slice 2)
@@ -286,9 +313,9 @@ The sizing table's band for this Work is **2 / 4.75 / 12.5**, assumed at 3–7 s
 (`~/gi-pricing-plan.local/scratch/planner-wk674-2/p2-sizing.md`, row WK-1170). Six is inside the
 slice range. Best and likely sit above the band's (3.25 against 2, 5.25 against 4.75); worst sits
 below it. The rates were measured on code slices. Slices 1 and 2 are docs-only and hold no gate
-slot, so the lane cost is four slices: 2.25 / 3.75 / 7.5 on the code lane. If DP-2 moves FR-240
-(4)–(6) out and DP-5 accepts the migrate rows, Slice 6 shrinks and Slice 5 halves; the Work does
-not drop below five slices.
+slot, so the lane cost is four slices: 2.25 / 3.75 / 7.5 on the code lane. With FR-240 (4)–(6)
+moved out (DP-2 (b)) and DP-5 (c) accepting the migrate rows with no live caller, Slice 6 and
+Slice 5 are both smaller than first cut; the slice count, and so the band arithmetic, is unchanged.
 
 ---
 
@@ -322,8 +349,11 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
   - **The census run** at the slice's tree with `scripts/file-census.py`. The audit notes where
     its categories differ from §1.2's families. The close-tree run is Acceptance item 4, at the
     last slice.
-  - **The register pass** under DP-3: each row in the Scope table gets its `SL-` id and the lead's
-    dated line. FD-1175 and FD-1181 are verified resolved and left alone.
+  - **The register pass** under DP-3 (b): each row in the Scope table gets its `SL-` id and the
+    lead's dated line. FD-1175 and FD-1181 are verified resolved and left alone. FR-240's row keeps
+    WK-1170 as owner until the DP-2 move lands, then names the receiving Work.
+  - **DP-5 (c)'s dispositions**: the lead writes each `decision:` from the live-caller evidence
+    below.
   - **FD-1160**: the four content-open H rows and the eighteen migration-only rows of RFC-937 §5
     are read to their content, and each gets a verdict.
   - **FD-1163 (a)**: `CR-1065` §8's audit scope against its write set, read and given a verdict.
@@ -331,12 +361,14 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
   - **DP-5's evidence**: for each of F78, F94, F96, F107, FD-1149 and FD-1152, whether the
     function at fault has a live caller outside `migrate`, by `git grep` at the audit's tree.
   - **A charter gap is an `FD-` routed to WK-1169**, never a charter edit here.
-- **Depends on:** nothing in WK-1170. Blocked on DP-3.
+- **Depends on:** nothing in WK-1170. DP-3 is resolved.
 - **Gate outline.**
   - The audit record passes check 37 (its template's sections) and check 30 (its header).
   - Every `FD-` it files has a register row and an essay (`document-ids.md` §1.6, FD row).
-  - The Acceptance item 6 predicate and `register-owed.py WK-1170` are both run at the slice's
-    merge tree, and their outputs agree on the open rows.
+  - **DP-3's condition:** `python3 scripts/register-owed.py WK-1170` at the slice's merge tree
+    lists every re-pointed row. The leaf plan's acceptance states that count, with the command and
+    the tree. At `19c395ac` the same command prints *"(none)"*.
+  - The Acceptance item 6 predicate agrees with that list on the open rows.
   - `audit-docs.py`, `doc-index.py --check` and `doc-id.py check` exit 0 at the merge tree.
   - Item 11.
 
@@ -369,7 +401,7 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
   - FD-1159: the proofs for checks 32, 36 and 38 in item 11's form;
   - FD-1163 (b) check 39's false note, and (c) §1.9's SL- lint: built, or §1.9's sentence
     corrected by `RFC-` + `RL-` (the leaf plan carries that choice as its own DP).
-- **Depends on:** Slice 1. Blocked on DP-1.
+- **Depends on:** Slice 1. DP-1 is resolved.
 - **Gate outline.**
   - Each new or changed check is shown red on a deliberately broken fixture and quiet on a clean
     one, each failure named by its cause.
@@ -389,7 +421,7 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
   - `delivery-process.core.json`'s key split: FD-1154, unless the next `delivery-process.md`
     amendment took it first. That file is `docs/process/`, so the split carries the `RFC-` +
     `RL-` pair.
-- **Depends on:** Slice 1's register pass. Blocked on DP-1.
+- **Depends on:** Slice 1's register pass. DP-1 is resolved.
 - **Gate outline.**
   - Each rule red on a broken register fixture built in `tmp_path`, never in the real
     `docs/findings/` (F89's defect).
@@ -403,10 +435,12 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
     F106 (a ceiling on row (g)'s counts);
   - row (g) at `classified-by-none=207` and C15's 207 entries, taken to a cause-attributed
     reading or a dated acceptance;
-  - `doc-id.py`: F100 (the docstring); F78, F94, F96, F107, FD-1149 and FD-1152 as DP-5 rules;
+  - `doc-id.py`: F100 (the docstring); of F78, F94, F96, F107, FD-1149 and FD-1152, only those
+    Slice 1 found with a live caller outside `migrate` (DP-5 (c)); the rest are accepted in the
+    register;
   - F92: headers on the 18 non-vendored skill manifests, if DP-7 rules (a);
   - FD-1150, only if it recurs.
-- **Depends on:** Slice 1's register pass. Blocked on DP-1 and DP-5.
+- **Depends on:** Slice 1's register pass. DP-1 and DP-5 are resolved.
 - **Gate outline.**
   - Each fix red first on broken input.
   - The verify run (`_docverify.py`) at the merge tree, its verdict counts compared with the
@@ -421,8 +455,9 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
   - F29: check 10 compares error codes in both directions against `backend/src/app/errors.py`,
     allowing the spec-first case the row names;
   - F33's remainder;
-  - FR-240 (4)–(6) only if DP-2 rules (a).
-- **Depends on:** Slice 3 (both edit `audit-docs.py`). Blocked on DP-1 and DP-2.
+  - FR-240 (4)–(6) are not here (DP-2 (b)). The slice's close record confirms their register rows
+    name the receiving Work.
+- **Depends on:** Slice 3 (both edit `audit-docs.py`). DP-1 and DP-2 are resolved.
 - **Gate outline.**
   - Each comparison red on a deliberately diverged shape or code.
   - The close-tree census (Acceptance item 4), if this is the last slice.
@@ -451,8 +486,12 @@ activation commit:
   every `origin/*` branch at `19c395ac` found no document carrying it. The lead mints the real
   id with `python3 scripts/doc-id.py next --ref origin/main` at the merge turn. Until then
   `doc-id.py check` reds this file under check 31, which is expected.
-- **Open:** DP-1, DP-2, DP-3 and DP-7 (the maintainer's), DP-4 (the decision-maker's), DP-5
-  (the lead's). DP-6 is non-blocking, with its default.
+- **Resolved 2026-09-29:** DP-1 (a), DP-2 (b) and DP-3 (b), the maintainer's by delegation at the
+  22:58:26 BST entry; DP-5 (c), the lead's. DP-6 stays non-blocking, with its default.
+- **Open:** DP-4 (the decision-maker's, awaiting its ruling) and DP-7 (the maintainer's), and the
+  ACK's confirmation of DP-2's receiving Work.
+- **Revised 2026-09-29**, while `draft`, to record those resolutions at every site (Scope, the DP
+  table, Sequencing, Tasks, Status). `created:` stays 2026-09-29, the day the plan was drafted.
 
 ## Self-review
 
@@ -461,7 +500,7 @@ activation commit:
    `19c395ac` (32, two already resolved) are each in a Scope table with a slice. FD-1157, F61 and
    F112 are named with the reason each is not here.
 2. **Scope boundaries.** No charter is edited (WK-1169's). No `docs/process/` file is amended
-   without `RFC-` + `RL-`. FR-240 (4)–(6) is held on DP-2.
+   without `RFC-` + `RL-`. FR-240 (4)–(6) leave the Work (DP-2 (b)); a receiving Work is proposed.
 3. **Literals.** Every path, line, id and count in the premises and the Scope tables was read at
    `19c395ac`. Every id resolves in `docs/INDEX.md` at that tree, except the parallel-start
    ruling, which is named by its working id 9760 on open PR #928 with its head.
