@@ -687,6 +687,26 @@ false when written.)*
   live. The lead's verdict below adds the interim fix under WK-1178: refuse every MTA and
   cancellation quote until inlining exists, whatever `sub_graphs` holds, proved with a
   bogus reference.
+- **The end-to-end run (added 2026-09-29).** auditor-a-2 ran it at `2026-09-29T15:37:58Z`, on
+  `origin/main` `49604a31` plus docs-only finding commits. The evidence is local, in
+  `~/gi-pricing-plan.local/evidence/fr217/`, with `fr217-e2e.log` hashed in that directory's
+  `SHA256SUMS`, which `sha256sum -c` reads OK.
+  - `POST /api/v1/rating-algorithms` accepts a version whose `sub_graphs` names a sub-graph
+    that does not exist (201).
+  - Its compile Job succeeds.
+  - `POST /api/v1/score/compare` then prices a `cancellation` and a `mid_term_adjustment`
+    quote at 2000, the same figure as the `new_business` quote.
+  - The version with no `sub_graphs` refuses both, with `INPUT_CONTRACT_VIOLATION`.
+
+  So the failure is reachable through the platform's own routes, not only at the
+  `pricing-core` level.
+- **Decided 2026-09-29 by the maintainer**, in the entry `2026-09-29 16:34:39 BST · maintainer
+  (acting on the maintainer's behalf) · FR-217 GUARD FAILS OPEN: the interim fix is dispatched
+  NOW as HIGH; P9 recurrence check`:
+  - the interim fix is dispatched as **HIGH**, ahead of the docs queue, and does not wait for
+    the end-to-end check;
+  - it is PR #907 (branch `wk1178-fr218-fail-closed`);
+  - the new P2 Work for FR-217 and FR-218 stays as this review proposes.
 
 **Options.**
 - **(a) A new P2 Work: sub-graph composition and MTA/cancellation pricing.**
