@@ -555,7 +555,7 @@ surface sits in Phase 1.**
 ## P2 — Rating Engine
 status: active
 opened: 2026-08-14
-target: ~
+target: 2026-11-12
 gates: ~
 exit criteria: G1–G6 of [`CR-1212`](closures/CR-01212-plan-review-15-p2-exit-criteria-budget-sequencing-and-the-open-finding-set.md), as accepted by the maintainer 2026-09-28, listed below
 works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, WK-693, WK-694, WK-695, WK-696, WK-697, WK-1169, WK-1170, WK-1178, WK-1250
@@ -572,6 +572,19 @@ works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, W
 - **G6.** ~~A plan review 16 is filed after G1–G5 and before the demo (`CLAUDE.md` §14).~~
   The pre-exit-demo plan review (CLAUDE.md §14; option C rule 1 once its RFC lands) is filed after G1–G5 are met and before the demo.
   *(Amended 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 8: "Accepted: G6 is restated without the number: 'The pre-exit-demo plan review (CLAUDE.md §14; option C rule 1 once its RFC lands) is filed after G1–G5 are met and before the demo.'" The restated sentence above is the maintainer's wording, verbatim. The old text is kept, struck: "plan review 16" now names `CR-1247`, a review that is not G6, and a reader checking G6 by that number would read it as met.)*
+
+#### P2 freeze dates and target
+
+*(Added 2026-09-29 by the lead, as a milestone-section edit, quoting verbatim the maintainer's entry "2026-09-29 20:45:24 BST · maintainer (acting on the maintainer's behalf) · P2 FREEZE DATES AND TARGET (§5a), accepted by the user". The user (the maintainer), about 20:26 BST: "accept the P2 dates as proposed".)*
+
+*(Weekdays corrected 2026-09-29 by the lead, quoting the maintainer's entry "2026-09-29 21:03:52 BST · maintainer (acting on the maintainer's behalf) · CORRECTION to the 20:45:24 P2 dates: the WEEKDAYS were wrong; the DATES stand (a)": "the DATES stand. … Only the weekday labels change." The 20:45:24 entry read Fri 2026-10-03, Tue 2026-11-04, Wed 2026-11-05 and Wed 2026-11-12; `date -d` gives Sat, Wed, Thu and Thu. The block below carries the corrected weekdays; everything else in it is verbatim.)*
+
+> **P2 freeze dates and target** (accepted 2026-09-29 by the maintainer; sized by the planner's "Inputs to the maintainer's §5a" at main 5638f691: 20 best / 37 likely / 87 worst working days from WK-674 S1 going active, at the measured 2 code slices per day):
+> - **Scope freeze: Sat 2026-10-03.** No new Work enters P2 after this date. WK-1250 is the last addition, and WK-675's map plan is drafted by then.
+> - **Code freeze: Wed 2026-11-04.** G1: the seven P2 Works delivered.
+> - **Docs freeze: Thu 2026-11-05.**
+> - **Target: the P2 exit demo, Thu 2026-11-12** (the likely band plus about 20%).
+> - **Re-baseline after WK-674 Slices 1–2:** re-measure the throughput and restate these dates if the band moves. The dates assume work every day, as practised; on a weekdays-only rhythm they slip about two weeks.
 
 #### Phase 2 status
 
@@ -685,7 +698,7 @@ owner: maintainer
 phase: P2
 ```
 
-From “Workstreams” (line 384): Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires** | FR-267, FR-268, FR-269, FR-270, FR-271, FR-272; `07` FR-428, FR-429, FR-430, FR-431, and added 2026-08-15 by OQ-540's decision: **FR-436** (a deployment refuses to start against another tenant's database) and **FR-18** (a Job records the platform build, because version skew between tenants is now permanent). Any earlier `Job` migration should carry FR-18's column rather than wait for this
+From “Workstreams” (line 384): Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires** | FR-267, FR-268, FR-269, FR-270, FR-271, FR-272; `07` FR-428, FR-429, FR-430, FR-431, and added 2026-08-15 by OQ-540's decision: **FR-436** (a deployment refuses to start against another tenant's database) and **FR-18** (a Job records the platform build, because version skew between tenants is now permanent). Any earlier `Job` migration should carry FR-18's column rather than wait for this *(Corrected 2026-09-29 by the lead, per `PL-1237`'s Scope note, amended by the maintainer's answer Q843-2: "The roadmap WK-674 row edit is the lead's, after the map is accepted." Added: `07` **FR-437** (the reference identity provider, `07:153`), **FR-412**'s memory half (`07:101`) and **FR-415**'s worker service (`07:104`); and `CR-1212`'s **FR-434**, **FR-435**, **NFR-531**, **NFR-534**, **NFR-489**, **NFR-490**, **NFR-502**, **NFR-493**'s linearity limb and **NFR-496**'s prod-sampling limb. **The F1 obligation:** the Work is done only when the switchover meets the F1 acceptance test on the deployment path this Work builds, not on a loopback mirror (`PL-1237` Goal).)*
 
 
 ### WK-675 — Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views
