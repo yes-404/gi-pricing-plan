@@ -498,7 +498,9 @@ acceptance.
   - **LG-1230's close: ADOPTED.**
   - **§5a: ACKNOWLEDGED.** The freeze dates and target (`CR-1212` P1 amendment 1) are owed by
     the lead after this close is accepted, and P2's throttle lifts on that acceptance, not on
-    this merge.
+    this merge. *(Corrected 2026-09-29, the lead: the maintainer's acceptance entry, to-lead.md
+    "2026-09-29 17:27:28 BST · … · ACCEPTANCES …" §1, rules "P2's throttle lifts on the merge"; and
+    the freeze dates and target are the maintainer's, not the lead's.)*
 
 ```text
 > **Maintainer acceptance:** WK-672 is **closed**, accepted 2026-09-29 by the maintainer's delegation (to-lead.md, this entry). The verdicts are as the lead decided them. FR-1221 is delivered and tested (#910). The deferrals carry named owners: FD-1209 the lead; FD-9602 and FD-9603 the decision-maker; FD-9604 WK-1178. Evidence re-run by the maintainer's session at main 500ff49c: RATE 12/12 and GOV 3/3, rc 0.

@@ -637,13 +637,13 @@ From “Workstreams” (line 376): Scoring: real-time, batch, trace, one shared 
 id: WK-672
 family: work
 title: Testing: golden quotes, property assertions, regression runs
-status: active
+status: closed
 created: 2026-08-14
 owner: maintainer
 phase: P2
 ```
 
-From “Workstreams” (line 377): Testing: golden quotes, property assertions, regression runs | FR-260, FR-261, FR-262
+From “Workstreams” (line 377): Testing: golden quotes, property assertions, regression runs | FR-260, FR-261, FR-262, FR-1221 (added 2026-09-29 at the close: named only by the spec's owner clauses; delivered and tested by #910) — **Closed 2026-09-29 by the maintainer's dated line, by delegation, on [`CR-1243`](closures/CR-01243-wk-672-work-close-testing-golden-quotes-property-assertions-and-regression-runs.md).**
 
 **2026-09-28 — the charter, named against its own ids** (WK-672 Slice 1, `PL-1177`; `RL-1172` items 4 and 5, the latter quoting the deputy's DP1 decision by delegation, option A). **FR-260:** golden quotes, and the promotion re-scoring that refuses on a mismatch beyond the declared tolerance. **FR-261:** property assertions over generated quote contexts, and the regression runs that execute a suite (`POST /api/v1/rating-versions/{id}/regression-runs`, recorded as `03` §4.9 `RegressionRun`). **FR-262: the backend limb only** — `POST /api/v1/score/compare`, one quote scored against two Rating Versions with the step-level diff; the Quote Sandbox view over it is WK-675's, and FR-262 is delivered only when both limbs have landed. **FR-257 limb (1)** — the approval gate's passing-Regression-Suite check — is also this Work's (`RL-1172` item 4). Slices run 1 → 2 → 3 → 4, one at a time.
 
