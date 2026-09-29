@@ -195,3 +195,35 @@ async def test_a_failing_publish_is_recorded_and_retried_not_lost(
             await session.execute(select(OutboxRow).where(OutboxRow.job_id == row.id))
         ).scalar_one()
     assert stored.status is OutboxStatus.PUBLISHED
+
+
+@pytest.mark.req("NFR-499")
+async def test_a_publish_failure_stores_only_the_exception_type(
+    database: Database, workspace_id, principal
+) -> None:
+    """`last_error` is a column an operator reads; a broker error can repeat the payload it
+    failed to publish, which carries the job's parameters (NFR-499, RL-917)."""
+    sentinel = "SENTINEL-quote-input-0e6b52d1"
+
+    class LeakyPublisher:
+        async def publish(self, *, task: str, queue: str, payload: dict[str, Any]) -> None:
+            raise RuntimeError(f"broker refused {payload!r} {sentinel}")
+
+    async with database.unit_of_work() as session:
+        row = _job(workspace_id, principal)
+        session.add(row)
+        await session.flush()
+        await outbox.enqueue(
+            session, job_id=row.id, queue=row.queue, task="app.worker.run_job",
+            payload={"quote": sentinel},
+        )
+
+    await outbox.relay_once(database, LeakyPublisher())
+
+    async with database.session() as session:
+        stored = (
+            await session.execute(select(OutboxRow).where(OutboxRow.job_id == row.id))
+        ).scalar_one()
+    assert stored.last_error == "RuntimeError"
+    assert sentinel not in (stored.last_error or "")
+

@@ -3,7 +3,7 @@ id: RFC-898
 family: proposal
 kind: process
 title: A public repository needs a public face
-status: draft                  # draft → active → closed | retired | superseded (§1.2a)
+status: closed                  # draft → active → closed | retired | superseded (§1.2a)
 created: 2026-08-30
 owner: maintainer
 supersedes: []

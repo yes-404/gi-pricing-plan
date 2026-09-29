@@ -90,7 +90,7 @@ used here unchanged. Additional terms owned by this module:
 | ID | Requirement |
 |---|---|
 | **FR-35** | A **Preparation Recipe** is an ordered list of declarative steps applied during ingestion. Supported step types are exactly: `rename`, `cast`, `parse_date`, `trim_whitespace`, `normalise_case`, `map_values`, `fill_null`, `derive_expression`, `filter_rows`, `deduplicate`, `join_table`, `derive_exposure`, `explode_period`, `attach_claims`, `pseudonymise`. No free-form code. |
-| **FR-36** | `derive_expression` accepts a restricted expression over existing columns (the same restricted expression grammar defined in `02-modelling.md` §4.6 for custom objectives, minus statistical functions). It cannot call out to the network, filesystem, or Python builtins. |
+| **FR-36** | `derive_expression` accepts a restricted expression over existing columns (the same restricted expression grammar defined in `02-modelling.md` §4.6 for custom objectives, minus statistical functions). It cannot call out to the network, filesystem, or Python builtins. **Amended 2026-09-28 by delegation (OQ-1185, `RL-1184` E2):** "minus statistical functions" is now the `recipe` profile in `02-modelling.md` §4.6's profile table, which states this context's bound symbols, operators and functions. Nothing is struck. |
 | **FR-37** | `explode_period` splits a policy record spanning a mid-term change or a period boundary into multiple exposure rows with correctly apportioned exposure, preserving `sum(exposure)` exactly (checked as a post-condition, using `Decimal`). |
 | **FR-38** | `attach_claims` links the claim table to the policy-exposure table on a declared key and validates the linkage: every claim resolves to exactly one exposure row, and the claim's `date_of_loss` falls inside that row's exposure period. Unlinked claims and multi-linked claims are reported as counts and samples, and are individually rule-gated (see VR-ACT-6, VR-ACT-7). |
 | **FR-39** | `pseudonymise` replaces a declared identifier column with a stable HMAC (workspace-scoped key), so the same customer maps to the same token across versions but the token is meaningless outside the workspace. Columns classified `direct_identifier` in the Data Dictionary must be dropped or pseudonymised; otherwise ingestion fails (FR-12). |
@@ -484,7 +484,7 @@ key is one target with several columns.
 | `uniqueness` | — | `columns[]` | Key uniqueness (alias of `unique_key`) |
 | `not_null` | `column` | `key_columns[]` for the offending sample | Completeness |
 | `relationship` | `column` | `left`, `right`, `operator` | Cross-column comparison (`exposure_end > exposure_start`) |
-| `expression` | `column` | `expr` (restricted grammar), `expect` | Row-level boolean predicate |
+| `expression` | `column` | `expr` (restricted grammar: the `check` profile of `02-modelling.md` §4.6, amended 2026-09-28, OQ-1185), `expect` | Row-level boolean predicate |
 | `aggregate` | `column` | `agg` (`sum`/`mean`/`count`/`quantile`/`min`/`max`), `group_by[]`, `quantile`, and a bound: `min`, `max` or `equals` | Group-level assertion |
 | `reference_lookup` | `column` | `reference_table`, `as_at_column` or `as_at` | Referential resolution against the **pinned** reference version |
 | `distribution_compare` | `column` | `metric` (`psi`/`mean_shift`), plus the delegate's params | Stability vs the reference version |
@@ -855,7 +855,7 @@ required this since Phase 0, and the response was the only documented `01` respo
 | `PUT` | `/api/v1/datasets/{slug}/dictionary` | Update the Data Dictionary (audited) |
 | `PATCH` | `/api/v1/datasets/{dataset_id}` | Change the owner — Admin or the current owner, audited as `dataset.owner_changed` (FR-82) |
 | `GET` | `/api/v1/datasets/{slug}/versions` | Version timeline, newest first, cursor-paginated |
-| `POST` | `/api/v1/datasets/{slug}/versions` | **202** Start an Ingestion Run → Job (FR-27) |
+| `POST` | `/api/v1/datasets/{slug}/versions` | **202** Start an Ingestion Run → Job (FR-27). **Amended 2026-09-28 (WK-1178, the deputy's DP-P1 ruling of that day, #869's ingest finding):** the `blob` digest is accepted only if the caller's workspace can read it by the rule `07` §5.1 states for `GET /api/v1/blobs/{sha256}`: an owner in that workspace references it (a Dataset Version's table, or a Job's `JobResult(kind="blob")`), and no quote-input store does. Any other digest, including one that is not in the blob store at all, is refused with the same `404` a missing blob gets, before a Job exists. `blobs` has no workspace column, so a well-formed digest proves nothing about who may read it. |
 | `GET` | `/api/v1/datasets/{slug}/versions/{version}` | Dataset Version detail |
 | `PATCH` | `/api/v1/datasets/{slug}/versions/{version}/schema` | Correct the inferred schema while `draft` (FR-29) |
 | `GET` | `/api/v1/dataset-versions/{id}` | Dataset Version detail **by id** — the resource the nine routes below hang off |

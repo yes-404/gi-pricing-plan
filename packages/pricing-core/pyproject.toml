@@ -6,6 +6,11 @@ requires-python = ">=3.12"
 license = "Apache-2.0"
 dependencies = [
     "model-schema",
+    # RS-1176 condition 1 (WK-672 Slice 3): FR-261's property generation and shrinking
+    # (`rating/testing.py`), pinned exactly because shrink-limit detection reads
+    # `hypothesis.statistics.collector`, which is internal API; the forced-limit test keeps
+    # it honest. A runtime dependency: `run_regression` lives in this package (03 §8).
+    "hypothesis==6.165.7",
     # ADR-707: Polars for dataframes. No web, database or queue client — the
     # import-linter contract enforces that, and `01` §5.2 requires these functions to be
     # callable without the platform.

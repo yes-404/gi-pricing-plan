@@ -1,110 +1,319 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.gi-pricing.dev/regression-suite.schema.json",
-  "title": "RegressionSuite and RegressionRun",
-  "description": "Golden quotes plus generated property assertions, run as a promotion gate (03 FR-260, FR-261, FR-262, §4.7).",
+  "title": "RegressionSuite",
+  "description": "One version of a Regression Suite: golden quotes plus FR-261's five property classes, stored as a structured union (03 FR-260, FR-261, §4.7). Versioned, bound to one Rating Algorithm by algorithm_slug, not approvable; every read is permission-checked because a golden quote's context is a full quote input (NFR-499).",
+  "$comment": "Rewritten 2026-09-28 (WK-672 Slice 2, PL-1189) to the generated model-schema shape (ADR-704: the model is the source). The free-text `assertion` strings and the six-member `kind` enum (with `custom`) are replaced by a union discriminated on `check.kind` (RL-1172 item 3c; the deputy's F4 assertion-language ruling). `expected.outcome` admits ScoringOutcome's three members, and `decline_reasons` is dropped: expected compares the payable premium and the outcome only (RL-931). RegressionRun moved to regression-run.schema.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "algorithm_slug",
+    "golden_quotes",
+    "properties",
+    "generation",
+    "slug",
+    "version",
+    "change_note",
+    "content_hash",
+    "created_at",
+    "created_by"
+  ],
+  "properties": {
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "algorithm_slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$"
+    },
+    "change_note": {
+      "type": "string",
+      "minLength": 1
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "sha256 over the canonical JSON (sorted keys, no whitespace) of algorithm_slug, golden_quotes, properties and generation."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_by": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "golden_quotes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/GoldenQuote"
+      }
+    },
+    "properties": {
+      "type": "array",
+      "description": "Stored here, evaluated over generated contexts by WK-672 Slice 3 (FR-261).",
+      "items": {
+        "$ref": "#/$defs/RegressionProperty"
+      }
+    },
+    "generation": {
+      "$ref": "#/$defs/RegressionGeneration"
+    }
+  },
+  "invariants": [
+    "golden_quotes[].name unique",
+    "properties[].name unique",
+    "expected.payable_premium_minor is set exactly when expected.outcome == 'quoted'"
+  ],
   "$defs": {
-    "RegressionSuite": {
+    "GoldenQuote": {
       "type": "object",
-      "required": ["slug", "golden_quotes", "properties", "generation"],
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "context",
+        "expected"
+      ],
       "properties": {
-        "slug": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}$"},
-        "golden_quotes": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["name", "context", "expected", "tolerance"],
-            "properties": {
-              "name": {"type": "string"},
-              "context": {"$ref": "scoring.schema.json#/$defs/QuoteContext"},
-              "expected": {
-                "type": "object",
-                "required": ["outcome"],
-                "properties": {
-                  "outcome": {"enum": ["quoted", "declined"]},
-                  "payable_premium_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
-                  "decline_reasons": {"type": "array", "items": {"type": "string"}}
-                }
-              },
-              "tolerance": {
-                "type": "object",
-                "properties": {"money_minor": {"type": "integer", "minimum": 0, "default": 0}},
-                "description": "Default exact for money (FR-260)."
-              },
-              "note": {"type": ["string", "null"],
-                "description": "Why an expected value was last changed; a golden quote is only updated deliberately."}
-            }
-          }
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{1,62}$"
         },
-        "properties": {
-          "type": "array",
-          "description": "Evaluated over generated contexts (FR-261).",
-          "items": {
-            "type": "object",
-            "required": ["name", "assertion"],
-            "properties": {
-              "name": {"type": "string"},
-              "assertion": {"type": "string"},
-              "kind": {"enum": ["positivity", "monotonicity", "reconciliation", "bounds", "non_null", "custom"]}
-            }
-          }
+        "context": {
+          "$ref": "scoring.schema.json#/$defs/QuoteContext"
         },
-        "generation": {
-          "type": "object",
-          "required": ["cases", "seed", "strategy"],
-          "properties": {
-            "cases": {"type": "integer", "minimum": 1},
-            "seed": {"type": "integer"},
-            "strategy": {"const": "input_contract_sampling"}
-          }
+        "expected": {
+          "$ref": "#/$defs/GoldenQuoteExpected"
+        },
+        "tolerance": {
+          "$ref": "#/$defs/GoldenQuoteTolerance"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why an expected value was last changed; a golden quote is only updated deliberately."
         }
       }
     },
-    "RegressionRun": {
+    "GoldenQuoteExpected": {
       "type": "object",
-      "required": ["suite_slug", "rating_version_ref", "bundle_hash", "started_at", "overall", "golden_results", "property_results"],
+      "additionalProperties": false,
+      "required": [
+        "payable_premium_minor",
+        "outcome"
+      ],
       "properties": {
-        "suite_slug": {"type": "string"},
-        "rating_version_ref": {"$ref": "common/artifact-ref.schema.json"},
-        "bundle_hash": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
-        "job_id": {"type": "string", "format": "uuid"},
-        "started_at": {"type": "string", "format": "date-time"},
-        "finished_at": {"type": "string", "format": "date-time"},
-        "overall": {"enum": ["pass", "fail"]},
-        "golden_results": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["name", "status"],
-            "properties": {
-              "name": {"type": "string"},
-              "status": {"enum": ["pass", "fail"]},
-              "expected_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
-              "actual_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
-              "difference_minor": {"type": "integer"}
+        "payable_premium_minor": {
+          "anyOf": [
+            {
+              "$ref": "common/money.schema.json#/$defs/MoneyMinor"
+            },
+            {
+              "type": "null"
             }
-          }
+          ]
         },
-        "property_results": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["name", "status", "cases_run"],
-            "properties": {
-              "name": {"type": "string"},
-              "status": {"enum": ["pass", "fail"]},
-              "cases_run": {"type": "integer", "minimum": 0},
-              "counterexample": {
-                "type": ["object", "null"],
-                "description": "Shrunk to a minimal case an actuary can read (FR-261)."
-              }
-            }
-          }
+        "outcome": {
+          "enum": [
+            "quoted",
+            "declined",
+            "error"
+          ]
         }
-      },
-      "invariants": [
-        "overall == 'fail' blocks promotion (FR-260)"
-      ]
+      }
+    },
+    "GoldenQuoteTolerance": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Default exact for money (FR-260).",
+      "properties": {
+        "money_minor": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        }
+      }
+    },
+    "RegressionProperty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "check"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{1,62}$"
+        },
+        "check": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/PremiumPositive"
+            },
+            {
+              "$ref": "#/$defs/MonotoneInInput"
+            },
+            {
+              "$ref": "#/$defs/NoNullOutput"
+            },
+            {
+              "$ref": "#/$defs/LadderReconciles"
+            },
+            {
+              "$ref": "#/$defs/PremiumBounded"
+            }
+          ]
+        }
+      }
+    },
+    "PremiumPositive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "const": "premium_positive"
+        }
+      }
+    },
+    "MonotoneInInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "input",
+        "direction"
+      ],
+      "properties": {
+        "kind": {
+          "const": "monotone"
+        },
+        "input": {
+          "type": "string",
+          "minLength": 1
+        },
+        "direction": {
+          "enum": [
+            "increasing",
+            "decreasing"
+          ]
+        },
+        "strict": {
+          "type": "boolean",
+          "default": false
+        },
+        "lower": {
+          "anyOf": [
+            {
+              "$ref": "common/money.schema.json#/$defs/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "upper": {
+          "anyOf": [
+            {
+              "$ref": "common/money.schema.json#/$defs/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "NoNullOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "const": "no_null_output"
+        }
+      }
+    },
+    "LadderReconciles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "description": "The premium ladder reconciles (FR-248).",
+      "properties": {
+        "kind": {
+          "const": "ladder_reconciles"
+        }
+      }
+    },
+    "PremiumBounded": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "description": "Absolute bounds in minor units; at least one is set.",
+      "properties": {
+        "kind": {
+          "const": "premium_bounded"
+        },
+        "lower_minor": {
+          "anyOf": [
+            {
+              "$ref": "common/money.schema.json#/$defs/MoneyMinor"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "upper_minor": {
+          "anyOf": [
+            {
+              "$ref": "common/money.schema.json#/$defs/MoneyMinor"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "RegressionGeneration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cases",
+        "seed",
+        "strategy"
+      ],
+      "properties": {
+        "cases": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "strategy": {
+          "const": "input_contract_sampling"
+        }
+      }
     }
   }
 }

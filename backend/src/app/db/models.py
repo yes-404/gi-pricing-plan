@@ -2030,6 +2030,107 @@ class RateTableCellRow(Base):
     )
 
 
+class RegressionSuiteRow(Base):
+    """The registry row of one Regression Suite (03 §4.7, FR-260; PL-1189 Task 4).
+
+    One suite per Rating Algorithm per workspace, **enforced by the database**: unique on
+    `(workspace_id, algorithm_slug)` as well as on `(workspace_id, slug)`, so two writers
+    racing to create a suite for one algorithm cannot both succeed — there is no
+    check-then-insert to race (audit finding F6). The versions live in
+    `RegressionSuiteVersionRow`.
+    """
+
+    __tablename__ = "regression_suites"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    algorithm_slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    created_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "slug", name="uq_regression_suites_slug"),
+        UniqueConstraint(
+            "workspace_id", "algorithm_slug", name="uq_regression_suites_algorithm"
+        ),
+    )
+
+
+class RegressionSuiteVersionRow(Base):
+    """One immutable version of a Regression Suite (03 §4.7, FR-260).
+
+    `content` is the validated `RegressionSuiteContent` as JSON — golden-quote contexts
+    included, which is why every read is permission-checked (NFR-499). `content_hash` is
+    `suite_content_hash(content)`, the pin a Rating Version's evidence carries.
+    `created_by` is a copy; the author the approval delta reads is the actor of this
+    version's `regression_suite.created` Audit Event (`06` FR-368).
+    """
+
+    __tablename__ = "regression_suite_versions"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    suite_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("regression_suites.id"), nullable=False
+    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    content: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(71), nullable=False)
+    change_note: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    created_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("suite_id", "version", name="uq_regression_suite_versions_version"),
+    )
+
+
+class RegressionRunRow(Base):
+    """One Regression Run of a Rating Version (03 §4.9, FR-260, FR-261; PL-1205 Task 5).
+
+    `run` is the validated `RegressionRun` as JSON — a failing property's `counterexample`
+    is a quote-input fragment, which is why every read is permission-checked
+    (`rating:read`, NFR-499 as clarified for FR-1221). `bundle_hash`, `suite_content_hash`,
+    `overall` and `finished_at` are copies for querying, written from the same object in
+    one operation by `app.platform.regression_runs.persist_run`, the single writer.
+
+    **`cases_blob_sha256` is the scalar digest of the run's case log**, duplicated out of
+    `run["cases_blob"]` because the generic blob route's deny matches each registered
+    column as a scalar (`select(column).where(column == sha256)`); a digest held only
+    inside the JSONB would leave the case log readable there. The same writer sets both.
+    """
+
+    __tablename__ = "regression_runs"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    rating_version_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("rating_versions.id"), nullable=False
+    )
+    run: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    bundle_hash: Mapped[str] = mapped_column(String(71), nullable=False)
+    suite_content_hash: Mapped[str] = mapped_column(String(71), nullable=False)
+    overall: Mapped[str] = mapped_column(String(8), nullable=False)
+    cases_blob_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    finished_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    created_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+
+    __table_args__ = (
+        Index(
+            "ix_regression_runs_latest",
+            "rating_version_id", "bundle_hash", "suite_content_hash", "finished_at",
+        ),
+        Index("ix_regression_runs_cases_blob_sha256", "cases_blob_sha256"),
+    )
+
+
 class ScoringTraceRow(Base):
     """A sampled scoring trace: a thin queryable row beside its blob body.
 
@@ -2147,4 +2248,8 @@ class ScoringTraceRow(Base):
             "rating_version_ref",
         ),
         Index("ix_scoring_traces_created_at", "created_at"),
+        # `GET /blobs/{sha256}` asks, on every download, whether any trace references the
+        # digest (the quote-input refusal, `07` §5.1 2026-09-28); unindexed, that is a
+        # sequential scan of every trace (#868, the deputy's ruling of 18:55:39 BST).
+        Index("ix_scoring_traces_blob_sha256", "blob_sha256"),
     )

@@ -10,13 +10,21 @@ relates: []                      # ids only
 
 # lead (main thread)
 
-- **Model / effort:** whatever session this thread started on — the lead is the main
-  thread, not a spawned role, so no role file can bind its model the way it binds every
-  other role's (contrast every file below, which does spawn and can).
+- **Model / effort:** `opus` (currently Opus 5.5); medium. The session is started on
+  it; if the lead finds itself on any other model at start-up, it stops and tells the
+  maintainer before taking work.
+- **Start-up duties** (at every start and restart): check your own model against the
+  "Model / effort" line above. Spawn each role with its file's tier alias (`--model
+  opus|sonnet|haiku`) and put that role's "Model / effort" line verbatim in the spawn
+  prompt; the teammate's first message quotes it. Verify each teammate's `--model` from its
+  command line, and re-spawn a mismatch. Effort is inherited from the lead's session, not set per spawn
+  (the spawn tool has no effort parameter). The lead reads its own `$CLAUDE_EFFORT` in its
+  own Bash; each teammate's first message quotes its own `$CLAUDE_EFFORT` read the same
+  way, never a model's self-report; records say what was read and by whom.
 - **Owns:** verdicts (adopts/amends/rejects the auditor's §13 proposals and the planner's
   §14 phase-review recommendations — the maintainer's own dated acceptance line is what
   actually binds a §14 recommendation; the lead's verdict decides what reaches the
-  maintainer, not the last word itself), merges (sole merge authority; verify CI on the
+  maintainer, not the last word itself), merges (sole merge authority, **each on the maintainer's MERGE-ACK; rule 4**; verify CI on the
   exact head — the `gh` token here cannot read Actions, so `gh pr checks` FAILS BUT EXITS
   0, a false green to a cold reader; use `gh pr view --json mergeStateStatus`
   [CLEAN/UNSTABLE] instead, and read per-workflow state via `gh run list` first, since an
@@ -71,8 +79,14 @@ relates: []                      # ids only
   `docs/process/delivery-process.md` §7). On breach the command refuses and writes a
   durable notification to the state file — that refusal *is* the pause-and-notify-a-human
   step, not a signal to retry the command until it succeeds.
-- **Answerable for `CLAUDE.md` §14's phase review firing on its fixed trigger** — at each
-  workstream close, and again before a phase's exit demo, not discretionary. Grounded here
+- **Answerable for `CLAUDE.md` §14's phase review firing on its fixed trigger** — a full
+  review before each phase's exit demo, and at each Work close the auditor's replan check,
+  on which the lead gives the verdict; a full review follows when the check fires, and "no
+  trigger" is recorded, never assumed *(amended 2026-09-29, `RFC-1248`, option C; it read
+  "at each workstream close, and again before a phase's exit demo")*. Not discretionary.
+  **No accepted §14 proposal is left unowned** (`RFC-1248` Part 2): at the acceptance line
+  the lead names an owner and record for any proposal that lacks one, or the proposal is
+  withdrawn with a dated reason. Grounded here
   rather than left assumed: the RFC-840/841 adoption changed the very workstream cut
   WK-669–WK-671 sit inside, and nobody flagged that this makes the next review due at WK-671's close
   until this exchange, 2026-08-29.
@@ -137,11 +151,15 @@ Insufficient in this file, corrected by procedure rather than brief (CLAUDE.md �
    cross-session message with the role name: "Lead ruling:" or "Lead status:". Reference: 
    14:33:28 (instruction on role clarity in messages).
 
-4. **Merge waits for deputy's ACK when one is in place.** A merge announced to one 
-   acknowledging role without the acknowledgement itself is a unilateral action. The rule: 
-   if a deputy or auditor has been charged with decision vetting, obtain their dated ACK 
-   before merge. The merge itself records it. Reference: 14:31:37 (maintainer instruction 
-   on merge-ACK rule).
+4. **No merge without the maintainer's MERGE-ACK.** Every merge needs the maintainer's dated
+   MERGE-ACK entry in `~/gi-pricing-plan.local/channel/to-lead.md`, given by the maintainer or
+   on the maintainer's behalf, naming the PR and its **full head SHA**. Merge with `gh pr merge
+   --squash --match-head-commit <that SHA> --body-file <file>`, then read back. If `main` moves
+   after the ACK, re-request: an ACK is valid only against the main it names. The maintainer
+   approves; the merge stays the lead's (`CLAUDE.md` §12). An auditor's CLEAN is evidence for
+   the ACK request, not an ACK. Teammates never merge, and never post an ACK or a status on
+   GitHub. The id mint queue is the lead's: a PR mints at its turn, immediately before its ACK
+   request.
 
 5. **20-minute progress line with three counters.** A progress line without concrete state 
    — "executors are working" vs. "E501 remaining = N, tests failing = M, audit-docs FAILED 

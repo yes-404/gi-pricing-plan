@@ -45,11 +45,17 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege for the job token: no step in this workflow writes to the repository,
+# so it gets read-only contents. A job that needs more states it at job level
+# (the 2026-09-28 security review's S4; python.yml already scopes its job this way).
+permissions:
+  contents: read
+
 jobs:
   no-session-links:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 

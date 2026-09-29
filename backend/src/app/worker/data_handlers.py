@@ -119,6 +119,12 @@ def _ingest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult
 
     async def work() -> UUID:
         async with progress.database.session() as session:
+            # No ownership check here, by design: `blobs` has no workspace column, and whether
+            # this workspace may read the digest is decided at the only enqueuer, the ingest
+            # route (`api/datasets.py::start_ingestion`, through `blob_readable_by`). That the
+            # route is the only enqueuer under `backend/src` is pinned by
+            # `backend/tests/test_ingest_enqueuers.py`. The worker-side check arrives with the
+            # owner record the upload-completion finding in #869 calls for.
             row = await session.get(BlobRow, parameters["blob"])
             if row is None:
                 raise PlatformError(

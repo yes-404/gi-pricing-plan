@@ -2609,7 +2609,9 @@ _CONTRACTS_RULING: Final = (
     "n-exemption-rather-than-a-sidecar.md §'The decision, and the option not taken')"
 )
 
-#: The 59 `.json` + 1 `.yaml` under `docs/contracts/`. Enumerated as literal paths, not
+#: The 61 `.json` + 1 `.yaml` under `docs/contracts/` (59 until 2026-09-28, when PL-1189
+#: added the generated `regression-suite` and the authored `regression-run` contracts).
+#: Enumerated as literal paths, not
 #: matched by a directory-and-extension rule: a rule would silently absorb every future
 #: file of the same shape, which is precisely the silent growth condition 2 exists to make
 #: impossible. The verbosity is the mechanism. `docs/contracts/README.md` is deliberately
@@ -2653,6 +2655,12 @@ _CONTRACT_ARTIFACT_PATHS: Final = (
     "docs/contracts/schemas/generated/objective-usage.schema.json",
     "docs/contracts/schemas/generated/oidc-auth-config.schema.json",
     "docs/contracts/schemas/generated/peril-structure.schema.json",
+    # 2026-09-28, PL-1189
+    "docs/contracts/schemas/generated/regression-suite.schema.json",
+    # 2026-09-28, PL-1205
+    "docs/contracts/schemas/generated/regression-run.schema.json",
+    # 2026-09-29, PL-1213
+    "docs/contracts/schemas/generated/score-comparison.schema.json",
     "docs/contracts/schemas/generated/problem-detail.schema.json",
     "docs/contracts/schemas/generated/profile.schema.json",
     "docs/contracts/schemas/generated/transparency-artifact.schema.json",
@@ -2671,6 +2679,7 @@ _CONTRACT_ARTIFACT_PATHS: Final = (
     "docs/contracts/schemas/rate-table.schema.json",
     "docs/contracts/schemas/rating-algorithm.schema.json",
     "docs/contracts/schemas/rating-version.schema.json",
+    "docs/contracts/schemas/regression-run.schema.json",  # 2026-09-28, PL-1189
     "docs/contracts/schemas/regression-suite.schema.json",
     "docs/contracts/schemas/scoring.schema.json",
     "docs/contracts/schemas/transparency-artifact.schema.json",

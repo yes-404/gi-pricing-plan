@@ -1,0 +1,175 @@
+---
+id: FD-1203
+family: finding
+title: The blob download route serves trace quote inputs to any dataset-read holder, with no workspace scope
+status: closed
+created: 2026-09-28
+owner: auditor
+tree: e6a9ca71a0bef3da41720d20f3f20db73f6a1d80
+corrected_by: []
+relates: [WK-1178]
+---
+
+# FD-1203 — The blob download route serves trace quote inputs to any dataset-read holder, with no workspace scope
+
+**Severity: high, resting on exposures 2 and 3, not on exposure 1.** The per-exposure
+severities are in the section of that name below. The deputy re-grounded it this way in his entry
+in the lead's local channel file `to-lead.md` stamped 2026-09-28 18:33:19 BST (line 8891).
+
+The auditor filed this finding on 2026-09-28, on the lead's instruction and
+the deputy's ruling in his entry in the lead's local channel file `to-lead.md`, stamped
+2026-09-28 18:24:32 BST (line 8865), item 1.
+
+## Finding
+
+`GET /api/v1/blobs/{sha256}` is gated on the `dataset:read` permission alone, and it looks the
+blob up by digest with no workspace predicate. The blob table has no workspace column. Sampled
+scoring traces, which are NFR-499's quote-input store, are written into that same table. So a
+caller holding `dataset:read`, in **any** workspace, who knows a trace blob's digest, can
+download a trace body. That body carries quote inputs, which the traces API itself serves only
+to `rating:read` holders in the trace's own workspace. The same missing scope applies to every
+other blob.
+
+**There are three exposures.**
+
+1. **Trace bodies, which hold quote inputs,** reach any `dataset:read` holder who has the
+   trace's digest.
+2. **Dataset blobs leak across workspaces.** executor-s1 established this while building the
+   fix, and the lead relayed it. A `dataset:read` holder in workspace A who presents workspace
+   B's dataset digest gets a 307 redirect to B's parquet. That is cross-tenant data, and unlike
+   the trace case, the digest is handed out by the API itself (see below).
+3. **Compiled rating bundles leak across workspaces.** executor-s1's reachability sweep found
+   this, and the lead relayed it. Any Rating Version response carries its compiled bundle's blob
+   digest, so any `dataset:read` holder in any workspace could fetch any workspace's compiled
+   bundle through this route. No download route was ever needed for it, because scoring reads
+   the bundle server-side.
+
+## Evidence
+
+At `origin/main` `e6a9ca71`, each line re-read by the auditor:
+
+- **The route.** `backend/src/app/api/blobs.py:104` `download` takes `caller: ReadDatasets`,
+  defined at `:39` as `Annotated[Caller, Depends(requires(Perm.DATASET_READ))]`. It runs
+  `select(BlobRow).where(BlobRow.sha256 == sha256)` with no other predicate.
+- **The table.** `backend/src/app/db/models.py:274` `class BlobRow`. Its primary key is the digest
+  (`:288`, `sha256: Mapped[str] = mapped_column(String(64), primary_key=True)`). Its columns are
+  `sha256`, `bytes`, `media_type`, `part_count`, `ref_count` and `created_at`; there is **no
+  workspace column**.
+- **Trace bodies are written there.** `backend/src/app/platform/traces.py:122` and `:247` both
+  call `blob_store.put(session, payload, "application/json")`. The digest is stored on the trace
+  row as `blob_sha256` (`:136`, `:263`).
+- **The traces API is scoped and permissioned differently.** `backend/src/app/api/traces.py:83`
+  gates reads on `Permission.RATING_READ`, and its queries are filtered by workspace.
+
+## Reachability of a trace digest
+
+Exploitation needs the digest. **This record does not assert that it is unreachable.** What was
+searched at `e6a9ca71`:
+
+- `grep -nE "blob_sha256|\.sha256|\"sha256\"" backend/src/app` outside the blob route and
+  models finds no API response that carries a trace's `blob_sha256`. `TraceView`
+  (`api/traces.py:100`) returns `id`, `quote_id`, `rating_version_ref`, `bundle_hash`,
+  `sample_reason`, `environment`, `created_at` and the reconstructed `trace` body, but not the
+  digest. A grep of the hand-authored `docs/contracts/openapi/gi-pricing.yaml` for `blob_sha256`
+  finds nothing. The generated contract `docs/contracts/openapi/generated.json` does carry it
+  (`:960`, `:962`), but only on `BundleMetadata`, which is the compiled bundle's digest and
+  exposure 3 below, not a trace's.
+- The digest is therefore reachable through three channels: the `scoring_traces` table and
+  anything that reads it (operators, logs, backups); a caller who can reproduce the exact stored
+  bytes; and any future response that exposes it. A search is not a proof, and the deputy's
+  ruling requires the reachability to be evidenced rather than asserted. Exposure 1's
+  severity is therefore lower, and the finding's high severity rests on exposures 2 and 3.
+- **Digests of other blobs are exposed by design.** For example, `api/rate_tables.py:330` says a
+  diff artifact's `result.ref` *"is its sha256, fetchable from `/blobs/{sha256}`"*. That is why
+  the cross-workspace question for non-trace blobs is live.
+
+## Reachability of a dataset blob digest: exposed by design
+
+Read at `e6a9ca71`:
+
+- **Dataset-version responses.** A Dataset Version carries `tables: tuple[DatasetTable, ...]`
+  (`model_schema/datasets.py:363`), and each `DatasetTable` has
+  `blob: BlobRef | None` (`:256`). `BlobRef.sha256` is the bare-hex content address
+  (`model_schema/refs.py:141`). Any reader of a Dataset Version sees its tables' digests, and
+  with this route, anyone holding `dataset:read` anywhere can use them.
+- **Job results.** `api/rate_tables.py:330` documents a diff Job's `result.ref` as *"its sha256,
+  fetchable from `/blobs/{sha256}`"*. Model and peril artifacts carry `BlobRef`s too
+  (`model_schema/modelling.py:772`, `:1605`, `:1668`; `perils.py:169`).
+- **Trace views.** They return `bundle_hash`. That is the Rating Version's `content_hash`, with a
+  `sha256:` prefix, which `model_schema/rating.py:82–87` distinguishes explicitly from the
+  bundle's blob digest. So it is not a blob address. The lead's relay listed trace views among
+  the exposures; at `e6a9ca71` the auditor finds no blob digest in them. That leaves the trace
+  case at the reachability stated above, and the dataset case exposed by design.
+
+## Reachability of a compiled bundle digest: exposed on every Rating Version
+
+Read at `e6a9ca71`:
+
+- `model_schema/rating.py:78` `class BundleMetadata` declares, at `:113`,
+  `blob_sha256: Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")] | None = None`. Its docstring
+  calls this *"the blob key the serialised bundle was stored under"*.
+- `RatingVersion` (`:132`) carries `bundle: BundleMetadata | None = None` (`:161`), so the
+  digest is in Rating Version responses.
+- In the generated contract, `docs/contracts/openapi/generated.json:958` defines
+  `BundleMetadata`, with `blob_sha256` at `:962`. It is the only schema there carrying that field.
+- **The route is not needed for scoring.** `api/score.py:173` reads `metadata.get("blob_sha256")`
+  from the row, and `:188` loads the `BlobRow` server-side. So refusing the bundle on
+  `/blobs/{sha256}` (a 404, because no allowed owner exists) costs no legitimate use.
+
+**Trace reachability is confirmed low.** executor-s1's independent sweep, relayed by the lead,
+agrees with the one above: no response exposes a trace's `blob_sha256`.
+
+## Do Dataset Version responses carry the table digests? Yes
+
+At `e6a9ca71`, `GET /api/v1/datasets/{slug}/versions/{version}` (`api/datasets.py:639`) and
+`GET /api/v1/dataset-versions/{version_id}` (`:654`) return a `DatasetVersion`. It is built by
+`_version_schema`, which passes `"tables": row.tables,` (`:727`). The response model
+`DatasetVersion` (`model_schema/datasets.py:332`) declares
+`tables: tuple[DatasetTable, ...] = ()` (`:363`), and `DatasetTable` declares
+`blob: BlobRef | None = None` (`:256`). `BlobRef` declares
+`sha256: str = Field(pattern=r"^[a-f0-9]{64}$")` (`model_schema/refs.py:141`). The generated
+contract carries the same chain (`generated.json:2727` `DatasetTable`, with a `blob` property;
+`:873` `BlobRef`). So any reader of a Dataset Version in its own workspace receives the digests,
+and through this route anyone holding `dataset:read` in another workspace could use them.
+
+## Severity per exposure
+
+| Exposure | What leaks | Where the digest is | Severity |
+|---|---|---|---|
+| 1. Trace bodies | Quote inputs (NFR-499) | Not in any API response (two independent sweeps). Only through DB, log or blob-store access, or by reproducing the exact bytes | **Lower**: reachability is low |
+| 2. Dataset parquet, across workspaces | Policy and claims data of another tenant | In every Dataset Version response, `tables[].blob.sha256` (above) | **High** |
+| 3. Compiled rating bundles, across workspaces | Another tenant's rating algorithm and tables | In every Rating Version response, `bundle.blob_sha256` (`model_schema/rating.py:113`) | **High** |
+
+The finding's severity is high **because of exposures 2 and 3**.
+
+**Past reads cannot be ruled out.** There is no download audit on this route, so this record
+does not claim "no evidence of access".
+
+## Disposition
+
+**Fix in progress — owner the lead.** Event: executor-s1's WK-1178 PR (the number follows),
+under the deputy's ruling (a). It is governance/security class, priority 2 in budget mode, and
+it is not a Slice of WK-672. It covers:
+
+- the route refusing any blob referenced by a quote-input store, with 404 rather than 403;
+- **workspace scoping for every other blob**, since the cross-workspace answer is yes: the
+  digest resolves to an owning artifact in the caller's workspace (any owner suffices, because
+  content addressing can give one blob two owners);
+- negative tests through the route, red first against `e6a9ca71`;
+- the `07` §5.1 route row amended in the same commit;
+- a mutation proof.
+
+WK-672 Slice 3's case-store code does not merge before this fix.
+
+## Resolution
+
+**Resolved 2026-09-28 by #868, merge commit `5ec47dc4`** (`fix(security): the blob route serves only an owner's workspace, never a quote input (#868)`, merged 2026-09-28 21:21:24 BST). Read at `5ec47dc4`:
+
+- `backend/src/app/api/blobs.py:47` declares `QUOTE_INPUT_BLOB_COLUMNS = (ScoringTraceRow.blob_sha256,)`. `_readable_by` (`:50`) refuses a digest first if any of those columns references it.
+- Otherwise it allows only an owner **in the caller's workspace**: a `DatasetVersionRow.tables` reference, or a `JobRow.result` of kind blob (`:60`–`:76`). A blob nothing references is refused, so the owner list is an allow-list. A compiled bundle's digest, which no allowed owner references, is therefore refused too.
+- `download` (`:141`) answers `NOT_FOUND` 404 for a missing blob, a quote input and a blob in another workspace alike, so the route never confirms that a digest exists.
+- The `07` §5.1 route row carries the dated amendment. `backend/tests/test_api_blobs.py` is new (293 lines, 10 test functions), and the migration `02d24f580752` adds the `scoring_traces.blob_sha256` index.
+- The deputy's MERGE-ACK of #868 (21:21:10 BST) records the trial merge, CI by SHA, and his read of the code. The mutation evidence is in the PR body, and the auditor did not re-run it.
+
+Past reads are still not ruled out: the fix adds no download audit for reads before it.
+

@@ -67,7 +67,7 @@ compliance is checked externally (below), not self-reported.
 is why.** Once per worktree, before its first gate (its release drops the database):
 
 ```bash
-WT=$(basename "$PWD")
+WT="$(basename "$PWD" | cut -c1-44)_$(pwd -P | tr -d '\n' | sha1sum | cut -c1-8)"
 docker exec gi-pricing-postgres-1 createdb -U gipricing -T gipricing "gipricing_${WT}"
 GIP_DATABASE_URL="postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_${WT}" \
     uv run alembic upgrade head
@@ -85,13 +85,43 @@ on this box are named with underscores rather than the hyphens `basename "$PWD"`
 (`gipricing_w37_6_gate_base` beside `gipricing_wt-d8-fix`), which is the residue of people
 working around this by hand and not agreeing on how.
 
+**The per-worktree name is `gipricing_<leaf>_<hash>`: the leaf directory name plus the first
+8 hex characters of the SHA-1 of the full resolved checkout path.** `WT` above and
+`_worktree_database_name()` in `backend/tests/conftest_db.py` compute the same string, and
+`test_conftest_db.py` asserts two checkouts sharing a leaf get different names and that the
+name fits PostgreSQL's 63-byte identifier limit (the leaf is cut to 44 characters so the
+server never truncates the hash off). This closed FD-1196: until 2026-09-28 the name was
+the leaf alone, so every `<job-dir>/<member>/tree` checkout derived `gipricing_tree`, two
+gates shared one database, and `python-test`'s "mutually destructive" case applied. **Two
+consequences:** a database made under the old leaf-only name is no longer found (create the
+new one with the block above; `dropdb` the old), and moving or renaming a checkout changes
+its database name. An explicit `GIP_TEST_DATABASE_URL` still bypasses the derivation
+(`test_database_url()` reads it first), which remains the way to name a database for a
+branch.
+
+**Reproduction of the pre-fix collision** (2026-09-28, main `ed123cb0`, leaf-only naming). Two throwaway worktrees were added at
+`<job-dir>/r1/tree` and `<job-dir>/r2/tree`. A probe script ran the fixture's own
+`_worktree_database_name` in each: it extracts the function's source from
+`backend/tests/conftest_db.py` with `ast` and sets `__file__` to that file's path. Each
+run was launched with `env -C <checkout> python3 dbname-probe.py`:
+
+```text
+…/hardener/r1/tree/backend/tests/conftest_db.py -> gipricing_tree
+…/hardener/r2/tree/backend/tests/conftest_db.py -> gipricing_tree
+…/hardener/tree/backend/tests/conftest_db.py -> gipricing_tree
+…/hardener/tree2/backend/tests/conftest_db.py -> gipricing_tree2
+```
+
+Three different checkouts gave one name. Only the checkout with a different leaf
+(`tree2`) got its own database. Both throwaway worktrees were removed afterwards.
+
 **THE GATE BODY. This block is the single definition** — `.claude/agents/gate-runner.md`
 points at it rather than restating it, because two copies of a gate body is how they
 diverge. Copy it verbatim.
 
 ```bash
 mkdir -p /tmp/slots
-WT=$(basename "$PWD")
+WT="$(basename "$PWD" | cut -c1-44)_$(pwd -P | tr -d '\n' | sha1sum | cut -c1-8)"
 gate_body='
 set -u
 L=$(mktemp -d)
@@ -127,12 +157,17 @@ fi
 [ "$nfail" = "0" ]
 '
 got=0
+final=1
 for i in 1 2 3; do
   flock -n -E 99 /tmp/slots/gate-$i -c "export GIP_GATE_SLOT=/tmp/slots/gate-$i; $gate_body"
-  rc=$?
-  if [ "$rc" -ne 99 ]; then got=1; break; fi
+  final=$?
+  if [ "$final" -ne 99 ]; then got=1; break; fi
 done
-[ "$got" = "0" ] && flock -w 7200 /tmp/slots/gate-1 -c "export GIP_GATE_SLOT=/tmp/slots/gate-1; $gate_body"
+if [ "$got" = "0" ]; then
+  flock -w 7200 -E 98 /tmp/slots/gate-1 -c "export GIP_GATE_SLOT=/tmp/slots/gate-1; $gate_body"
+  final=$?
+fi
+( exit "$final" )
 ```
 
 **The seven stages are independent, so they run at once inside one slot.** All seven are
@@ -152,7 +187,13 @@ reinstates exactly the double-lock deadlock `GIP_GATE_SLOT` exists to prevent.
 **Read the table, not the exit code alone.** The body's last statement is
 `[ "$nfail" = "0" ]`, so a failing gate exits 1 and a passing one 0 — and 1 is
 distinguishable from the wrapper's busy-slot 99, which is what the `-E 99` fix below is
-for. On a failure the body prints the scratch directory holding all seven logs; read the
+for. **The block now ends with the gate's own status** (`( exit "$final" )`: a subshell, so
+it sets `$?` without exiting an interactive shell that pasted it). A slot that ran gives the
+body's rc; the blocking fallback runs only when no slot ran, and a fallback whose `flock -w`
+expires exits **98** (`-E 98`), never 0 and not the body's own 1. **The old tail is a trap:**
+it ended `[ "$got" = "0" ] && flock -w 7200 …`, so when a slot ran (`got=1`) the last command
+was the false test and **a 7-of-7 pass exited 1**. A caller checking `$?` read every
+first-slot pass as a failure, and the stage table was the only truthful result. On a failure the body prints the scratch directory holding all seven logs; read the
 failing stage's log there rather than re-running the gate to see the output.
 
 **`generate-contracts.py` runs with `--check` here, and that is a change.** This block
@@ -209,7 +250,7 @@ symptom table). Measured 2026-09-04: a capped, correctly-`flock`ed gate still ca
 suite was executing concurrently — confirmed via the decisive diff check
 (`git diff --stat origin/main...HEAD -- '*.py' … backend/ … scripts/`, empty) that the
 failing branch could not have caused it. **This is why the gate block above exports
-`GIP_TEST_DATABASE_URL` pointing at `gipricing_<worktree>`, not the shared `gipricing`
+`GIP_TEST_DATABASE_URL` pointing at `gipricing_<leaf>_<hash>`, not the shared `gipricing`
 DB** — the `gipricing` role is superuser with `rolcreatedb` (confirmed by direct query),
 so per-worktree databases cost nothing to create. **CI is unaffected**: GitHub-hosted
 runners get a fresh Postgres/Redis/MinIO per run
@@ -231,12 +272,17 @@ Same shape for `migrate --verify`, two slots instead of three:
 ```bash
 verify_body='POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 python3 scripts/doc-id.py migrate --verify <root>'
 got=0
+final=1
 for i in 1 2; do
   flock -n -E 99 /tmp/slots/verify-$i -c "export GIP_VERIFY_SLOT=/tmp/slots/verify-$i; $verify_body"
-  rc=$?
-  if [ "$rc" -ne 99 ]; then got=1; break; fi
+  final=$?
+  if [ "$final" -ne 99 ]; then got=1; break; fi
 done
-[ "$got" = "0" ] && flock -w 7200 /tmp/slots/verify-1 -c "export GIP_VERIFY_SLOT=/tmp/slots/verify-1; $verify_body"
+if [ "$got" = "0" ]; then
+  flock -w 7200 -E 98 /tmp/slots/verify-1 -c "export GIP_VERIFY_SLOT=/tmp/slots/verify-1; $verify_body"
+  final=$?
+fi
+( exit "$final" )
 ```
 
 Same announcement shape as `GIP_GATE_SLOT` above: `scripts/_docverify.py`'s `verify()`
@@ -244,7 +290,8 @@ checks `GIP_VERIFY_SLOT` first and skips its own `/tmp/slots/verify-{1,2}` lock 
 wrapper has already announced one, so a correctly-wrapped `migrate --verify` run never
 double-locks against itself.
 
-**Both slot wrappers above carry `-E 99`, and it is load-bearing, not decoration.** Before
+**Both slot wrappers above carry `-E 99` on the non-blocking attempts and `-E 98` on the
+blocking fallback, and both are load-bearing, not decoration.** Before
 it was added, each loop read `flock -n /tmp/slots/<name>-$i -c "..." && { got=1; break; }`.
 `flock -n`'s exit code, when the lock IS acquired, is the wrapped command's own exit code —
 and `flock`'s exit code when the lock could NOT be acquired is **also 1**, the same value an
@@ -437,6 +484,56 @@ hides a missing dependency.
 ```bash
 npm config set prefix ~/.npm-global && npm i -g pnpm    # then put that bin on PATH
 ```
+
+### `pnpm add` leaves an `allowBuilds` prompt that fails every later install
+
+pnpm 11 refuses to run a dependency's build script until someone decides whether to allow
+it. When `pnpm --dir frontend add <pkg>` pulls in a transitive dependency with a build
+script, it does three things:
+
+- it adds the dependency and updates the lockfile;
+- it writes `frontend/pnpm-workspace.yaml` with an **unanswered** placeholder;
+- it prints `ERR_PNPM_IGNORED_BUILDS` and **exits 1**, although the add succeeded.
+
+Here is the placeholder that `@vue-flow/core@1.48.2` produced through `vue-demi@0.14.10`:
+
+```yaml
+allowBuilds:
+  vue-demi: set this to true or false
+```
+
+**While the placeholder stays, every later install fails.**
+
+- `pnpm --dir frontend install --frozen-lockfile` exits 1. That is CI's first frontend step.
+- `pnpm --dir frontend generate:api` exits 1 too, before `openapi-typescript` runs. Its
+  deps-status pre-check runs `pnpm install` and prints:
+
+  ```text
+  [ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: vue-demi@0.14.10
+  Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+  [ERROR] Command failed with exit code 1: pnpm install
+  ```
+
+Nothing was generated, so `src/api/generated/` does not exist. Every later `type-check`
+then reports **phantom type errors in views you did not touch**: 143 at `df8e5811`. It
+reads like a regression in the dependency you just added. It is not one.
+
+**The fix is to answer the placeholder** in `frontend/pnpm-workspace.yaml`, and to commit
+the file with the lockfile in the same PR:
+
+```yaml
+allowBuilds:
+  vue-demi: false
+```
+
+`false` is safe for `vue-demi` because its build script only picks which of its builds to
+use. `scripts/postinstall.js` calls `switchVersion(3)` for any Vue `3.x`. The `lib/`
+shipped in the tarball is already that build: `lib/index.mjs` opens with
+`var isVue3 = true`. Skipping the script leaves the Vue 3 build in place.
+
+**For any other package, read its build script before you answer.** `false` is right
+only when the script does nothing the package needs at runtime. When it compiles a native
+binary, the answer is `true`, and the PR says why.
 
 ### Read each command's own exit code
 
@@ -887,6 +984,49 @@ Verified: 2026-09-17
 
 ## Verified
 
+2026-09-29, against main `633c6f34b7e841e09c7f108cd4696658c524fcfc`. **The gate and verify
+blocks now exit with the gate's own status.** The old tail (`[ "$got" = "0" ] && flock -w 7200
+…`) exited 1 on every pass that ran in a slot. Proved at shell level with trivial bodies on
+private slot files (`/tmp/slots/test-gaterc-*`, never the real slots), each rc quoted for the
+old text and the new text, both blocks:
+`true` 1 → 0; `false` 1 → 1; `exit 7` 1 → 7; all slots busy then released (body `true` or
+`exit 5`) 0 and 5, unchanged; all slots busy and `-w 1` expiring 1 → 98. Sourcing the block
+into a shell leaves that shell alive.
+
+2026-09-28, against main `f91af639`. **The per-worktree database name is now
+`gipricing_<leaf>_<hash of the full path>`** (FD-1196, WK-1178), replacing the leaf-only name;
+the collision remedies were removed as no longer needed. Checked by running
+`_worktree_database_name()` in this checkout and computing the shell `WT` for the same
+`pwd -P`: both gave the same 8-hex suffix.
+
+2026-09-28, against main `ed123cb0fcf91e44872963bf8a8bad32b87c99bc`. **The per-worktree
+database name's leaf-name collision was added**, with its two remedies, next to the
+per-worktree database block. executor-s1 found it: every job-dir checkout named
+`…/<member>/tree` derives `gipricing_tree`. The derivation was read from
+`backend/tests/conftest_db.py:48-55`, and the override order from `test_database_url()`
+(`:132-133`), at that tree. The collision was reproduced there by running the function's
+own source in two throwaway worktrees, `…/r1/tree` and `…/r2/tree`. Both printed
+`gipricing_tree`; the output is quoted in the section. `test_conftest_db.py:48-50` was
+read to confirm that the test asserts only the derivation.
+
+2026-09-28, against main `8a8cded3b92bcbea2b4c7e221daecc3fbfb96981`. **The `pnpm add`
+`allowBuilds` trap was added.** Spike F2 hit it while adding `@vue-flow/core` for WK-675.
+It was then reproduced on a fresh detached worktree at `df8e5811`, with pnpm 11.21.0,
+before this entry was written.
+
+1. `pnpm install --frozen-lockfile` → rc 0.
+2. `pnpm add @vue-flow/core@1.48.2` → rc 1 with `ERR_PNPM_IGNORED_BUILDS`, and the
+   placeholder was written.
+3. `pnpm generate:api` → rc 1 with the three quoted lines.
+4. `pnpm install --frozen-lockfile` → rc 1.
+5. With `vue-demi: false`, both `generate:api` and `install --frozen-lockfile` → rc 0.
+
+The 143 phantom errors were counted with `vue-tsc --build --force 2>&1 | grep -c error` in
+the spike's scratch tree. The `vue-demi` claim was read from the installed package: the
+`postinstall` script and `lib/index.mjs`. The first time, in the spike's own scratch
+tree, `generate:api`'s pre-check passed once the placeholder was restored over an install
+that had already succeeded. That is why the fresh tree is the reproduction of record.
+
 2026-09-19 — **the RFC-937 id instruments section added**: `doc-id.py next/check/widen` and
 `doc-index.py`/`--check`/`--phase`/`--show`, each with its trap, plus the
 exclusion-by-construction paragraph at the `migrate --verify` entry. W37-7 Task 2,
@@ -978,7 +1118,7 @@ per the deputy's ruling (relayed via `to-lead.md`), fixing the shared-DB truncat
 `python-test`'s "mutually destructive" section documents. Confirmed directly before
 writing it: `SELECT rolsuper, rolcreatedb FROM pg_roles WHERE rolname='gipricing'` via
 `asyncpg` returned `(True, True)` — the role is superuser with `rolcreatedb`, so
-`createdb -T gipricing gipricing_<worktree>` costs nothing; only the one shared `gipricing`
+`createdb -T gipricing gipricing_<leaf>_<hash>` costs nothing; only the one shared `gipricing`
 database existed before this change. The DB-exclusive-lock fallback (for a branch whose
 migrations cannot run against a fresh copy) is written but not exercised — no branch has
 needed it yet. Two-worktrees-in-parallel proof delegated to a one-shot agent (see its

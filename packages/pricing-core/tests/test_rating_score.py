@@ -13,6 +13,7 @@ under the rung's own name) — `risk_premium`, `office_premium`, `instalment_loa
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import socket
 import subprocess
@@ -32,7 +33,7 @@ from test_rating_runtime import (
     _train_tiny_booster,
 )
 
-from model_schema.rating import RatingVersion
+from model_schema.rating import RatingVersion, SubGraphRef
 from model_schema.refs import ArtifactRef
 from model_schema.scoring import QuoteContext, QuoteContextOptions
 from pricing_core.rating.compile import ArtifactResolver, ResolvedArtifact, compile_bundle
@@ -422,6 +423,41 @@ async def test_a_purpose_needing_a_sub_graph_is_refused_when_none_is_mounted(pur
         await score_one(compiled, ctx)
 
 
+async def _compiled_with_bogus_sub_graph() -> CompiledBundle:
+    """The same bundle, its algorithm naming a sub-graph that does not exist (the finding
+    "CR-838 marks FR-217 delivered, but its pin and bundle-time inlining are not built")."""
+    compiled = await _compiled()
+    bogus = SubGraphRef(
+        ref=ArtifactRef(type="sub_graph", slug="does-not-exist", version=1),
+        mount_point="s_nowhere",
+    )
+    algorithm = compiled.algorithm.model_copy(update={"sub_graphs": [bogus]})
+    return dataclasses.replace(compiled, algorithm=algorithm)
+
+
+@pytest.mark.req("FR-218")
+@pytest.mark.parametrize("purpose", ["mid_term_adjustment", "cancellation"])
+async def test_a_bogus_sub_graph_ref_does_not_satisfy_the_purpose_guard(purpose: str) -> None:
+    """A non-empty `sub_graphs` is a declared reference, not a mounted sub-graph (the finding
+    "CR-838 marks FR-217 delivered, but its pin and bundle-time inlining are not built").
+    With `sub_graph:does-not-exist@1` named, these purposes were priced as new business
+    (1507); they are refused whatever `sub_graphs` holds, until FR-217's inlining exists."""
+    compiled = await _compiled_with_bogus_sub_graph()
+    with pytest.raises(ValueError, match="INPUT_CONTRACT_VIOLATION") as refused:
+        await score_one(compiled, _ctx(purpose=purpose))
+    assert "interim" in str(refused.value)
+
+
+@pytest.mark.req("FR-218")
+@pytest.mark.parametrize("purpose", ["new_business", "renewal", "what_if"])
+async def test_the_other_purposes_are_unaffected_on_the_same_algorithm(purpose: str) -> None:
+    """Positive control for the test above: the same bogus-ref algorithm still quotes the
+    purposes that need no mounted sub-graph."""
+    compiled = await _compiled_with_bogus_sub_graph()
+    result = await score_one(compiled, _ctx(purpose=purpose))
+    assert result.outcome == "quoted"
+
+
 @pytest.mark.req("FR-218")
 async def test_new_business_is_not_refused_by_the_purpose_guard() -> None:
     """Positive control: the guard fires on the two gated purposes only."""
@@ -557,24 +593,84 @@ async def test_scoring_is_deterministic_in_process() -> None:
     assert first.model_copy(update={"timing_ms": {}}) == second.model_copy(update={"timing_ms": {}})
 
 
+# The child of `test_scoring_is_deterministic_across_a_subprocess`. It reads the fixture's
+# inputs from stdin (the parent builds them; the test module is never imported here), compiles
+# and scores with `pricing_core.rating` alone, prints one JSON line, flushes, and leaves with
+# `os._exit(0)` — no interpreter teardown (FD-1199). Kept as plain source so the child's
+# imports are exactly what is written below.
+_DETERMINISM_CHILD = """
+import asyncio, json, os, sys
+from datetime import date, datetime
+from model_schema.rating import RatingVersion
+from model_schema.refs import ArtifactRef
+from model_schema.scoring import QuoteContext, QuoteContextOptions
+from pricing_core.rating.compile import ResolvedArtifact, compile_bundle
+from pricing_core.rating.runtime import load_bundle
+from pricing_core.rating.score import score_one
+
+spec = json.load(sys.stdin)
+
+
+class Resolver:
+    async def resolve(self, ref):
+        return ResolvedArtifact(status='approved', payload=spec['payloads'][str(ref)])
+
+
+async def main():
+    version = RatingVersion.model_validate(spec['version'])
+    compiled = load_bundle(await compile_bundle(version, Resolver()))
+    ctx = QuoteContext.model_validate({
+        'purpose': 'new_business', 'quoted_at': datetime(2026, 8, 29, 12, 0, 0),
+        'effective_date': date(2026, 9, 1), 'inputs': spec['inputs'],
+        'options': QuoteContextOptions(rating_version_ref=ArtifactRef(
+            type='rating_version', slug='score-fixture', version=1)),
+    })
+    result = await score_one(compiled, ctx)
+    return {'hash': compiled.content_hash,
+            'payable': result.outputs['payable_premium_minor'], 'outcome': result.outcome}
+
+
+out = asyncio.run(main())
+out['modules'] = sorted({name.split('.')[0] for name in sys.modules})
+print(json.dumps(out))
+sys.stdout.flush()
+os._exit(0)
+"""
+
+
 @pytest.mark.req("NFR-495")
 def test_scoring_is_deterministic_across_a_subprocess() -> None:
     """The same bundle recompiled and scored in a fresh interpreter reproduces the same
-    `content_hash` and the same premium — byte-for-byte, across processes (FR-11)."""
-    script = (
-        "import asyncio, json, sys; sys.path.insert(0, 'packages/pricing-core/tests');"
-        "from test_rating_score import _compiled, _ctx;"
-        "from pricing_core.rating.score import score_one;"
-        "compiled = asyncio.run(_compiled());"
-        "result = asyncio.run(score_one(compiled, _ctx()));"
-        "print(json.dumps({'hash': compiled.content_hash, "
-        "'payable': result.outputs['payable_premium_minor'], 'outcome': result.outcome}))"
-    )
+    `content_hash` and the same premium — byte-for-byte, across processes (FR-11).
+
+    **This proves the determinism of the RESULT, not a clean interpreter shutdown.** The
+    child prints its result, flushes, and leaves with `os._exit(0)`, so no finalisation runs.
+    An earlier child that exited normally aborted natively once in CI, at finalisation, with
+    `PyGILState_Release ... must be current` and return code -6 (FD-1199); that abort happens
+    after the result is written, and it says nothing about scoring. A child that fails for
+    any reason, including a non-zero exit, still fails this test.
+
+    The child imports `pricing_core.rating` and `model_schema` only, not this module or
+    pytest: the parent hands it the fixture's artifacts and quote inputs as JSON on stdin.
+    (Scoring an XGBoost booster still loads xgboost's own dependencies in the child.)
+    """
+    resolver = _FakeResolver()
+    inputs = _ctx().inputs
+    payload = json.dumps({
+        "version": _version().model_dump(mode="json"),
+        "payloads": resolver._payloads,
+        "inputs": inputs,
+    })
     proc = subprocess.run(
-        [sys.executable, "-c", script], capture_output=True, text=True, timeout=60
+        [sys.executable, "-c", _DETERMINISM_CHILD],
+        input=payload, capture_output=True, text=True, timeout=60,
     )
     assert proc.returncode == 0, proc.stderr
-    subprocess_result = json.loads(proc.stdout.strip().splitlines()[-1])
+    child = json.loads(proc.stdout.strip().splitlines()[-1])
+    modules = child.pop("modules")
+    assert not {"pytest", "test_rating_score", "test_rating_runtime"} & set(modules), (
+        "the child must not import the test module or pytest"
+    )
 
     async def _in_process() -> dict[str, Any]:
         compiled = await _compiled()
@@ -586,7 +682,7 @@ def test_scoring_is_deterministic_across_a_subprocess() -> None:
         }
 
     in_process_result = asyncio.run(_in_process())
-    assert subprocess_result == in_process_result
+    assert child == in_process_result
 
 
 # ---------------------------------------------------------------------------

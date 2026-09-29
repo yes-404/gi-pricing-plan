@@ -18,6 +18,7 @@ from app.observability.trace import (
     parse_traceparent,
     reset_trace_id,
 )
+from app.platform.safe_exception import safe_job_exc_info
 
 __all__ = ["TraceMiddleware"]
 
@@ -43,14 +44,17 @@ class TraceMiddleware(BaseHTTPMiddleware):
         started = time.perf_counter()
         try:
             response = await call_next(request)
-        except Exception:
+        except Exception as exc:
             # Rendered here rather than re-raised. Starlette installs an app-level
             # `Exception` handler on ServerErrorMiddleware, which is *outside* every user
             # middleware — so it runs after the `finally` below has cleared the context,
             # and returns a problem with no `trace_id`. R4 makes that the one field the
             # response must carry, so the problem is built while the context is still live.
-            _log.exception(
+            # `exc_info` is the sanitised one: an unexpected exception's text can carry the
+            # request's quote input (NFR-499, RL-917); the traceback frames are kept.
+            _log.error(
                 "request failed",
+                exc_info=safe_job_exc_info(exc),
                 extra={
                     "method": request.method,
                     "path": request.url.path,
