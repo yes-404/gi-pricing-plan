@@ -97,6 +97,7 @@ on branch `wk1178-fr218-fail-closed` at `748b7680`:
   `INPUT_CONTRACT_VIOLATION`.
 - `test_the_other_purposes_are_unaffected_on_the_same_algorithm[new_business]`, `[renewal]` and
   `[what_if]`. *Violation: the guard refuses one of these purposes.* It must be unaffected.
-- **Red run, as reported, not re-run here:** with the old condition restored, *"both refusal
-  tests fail with `DID NOT RAISE ValueError` (2 failed, 7 passed)"*. That is PR #907's
-  description, from executor-s2-2's run, and auditor-a-2 reproduced it.
+- **Red run:** with the old condition restored, the two bogus-ref tests fail with
+  `DID NOT RAISE ValueError` (2 failed, 8 passed, 19 deselected, rc=1); the fix passes 10 (rc=0) —
+  auditor-a-2's log `~/gi-pricing-plan.local/evidence/907/revert-proof.log`, SHA
+  748b7680cca06f44fce932c4fafee3fa9c39e8a5, in that directory's `SHA256SUMS`.
