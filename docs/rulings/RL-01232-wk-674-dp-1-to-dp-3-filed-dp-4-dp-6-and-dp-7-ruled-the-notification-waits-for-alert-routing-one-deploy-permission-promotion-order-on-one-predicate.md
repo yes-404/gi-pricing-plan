@@ -392,3 +392,29 @@ negative tests, each shown red on deliberately broken input:
 
 Part A's obligations are proven by the slices the entry names: FR-270 and FR-271 default off
 (Slice 6), and NFR-489's verdict recorded as measured (Slice 5).
+
+## Adopted by the decision-maker, 2026-09-29
+
+**Why this section exists.** The maintainer's entry `2026-09-29 15:26:00 BST · maintainer (acting on the maintainer's behalf) · STRUCTURE: routing per document-ids §1.6 and the charters; today's technical answers re-homed` (§2) re-homes the
+technical points this record files as "the maintainer's answers". Under `document-ids.md` §1.6
+(the FR/NFR/DEP, OQ and RL rows) and the decision-maker charter, a technical decision point is
+this role's to rule. Each point below was re-verified at origin/main `9cd179cb` and is
+**adopted as this record's own ruling**. None is superseded, so no new `RL-` is minted. The
+entries that first gave them stay cited above as their source, now read as recommendations.
+
+| Point | Re-verified at `9cd179cb` | Ruling |
+|---|---|---|
+| **Q848-1** (DP-4): the channel is `07` FR-453. The owner of its deployment-notification limb is `OQ-1233` | `07-platform.md:184` FR-453 names *"deployment notifications"* among its signed webhooks. `03` FR-272's 2026-09-29 amendment cites it. `OQ-1233` is `open` in `docs/open-questions.md` and `07` §10 | **Adopted.** FR-453 is a platform requirement that already names the limb. Building a second channel would duplicate it, and choosing an owner is a scheduling question with real trade-offs. That is why the owner stays an open question, with the recommendation recorded in `OQ-1233` |
+| **Q848-2** (DP-7): stands at requirement level, with the premise note. The skip's home is `OQ-1234` | Commands 1–3 below: the only `Environment` class is `backend/src/app/config.py:31`, and there is no Deployment class. `PROMOTION_ORDER_VIOLATION` appears only at `backend/src/app/errors.py:62`. `approvals.py` has 0 skip or promotion fields. `OQ-1234` is `open` | **Adopted.** A requirement-level ruling on objects that WK-674 has yet to build binds the slice that builds them. It does not claim the objects exist. The skip's schema home is a genuine design choice, so it stays an open question |
+| **Q848-3**: the Slice 5 proposal goes to the maintainer | *What Part A obliges*, Slice 5 bullet, as corrected | **Adopted, with its reading stated.** If RL-921 §4's trigger fires, the proposed NFR-489 amendment is a spec change, which this role writes and rules (§1.6, FR/NFR/DEP row, the writer column). It relaxes a numbered target that WK-674 closes against, so this role reads it as a **scope change**. That takes the maintainer's acceptance (§1.6, the same row's acceptance column: *"maintainer for … a scope change"*). "Goes to the maintainer" is that acceptance step. It is not a transfer of the ruling |
+| **DP-6**, per `CR-1212` item 4 (Q843-1) | `06:62` and `:218-221` carry `deployment:promote`. Command 4 below: 0 check sites (the route is not built). `06` FR-345 (`:81`) still scopes by Datasets, Model Families and Rating Algorithms only | **Adopted.** The name ruling stands. Scoping one permission to named environments is a grant scope, not a new name, so the two rulings are consistent. WK-674 creates the Environment the scope needs, so it owns the `06`/`07` spec change |
+| **QDP-1**: the `07` FR-437 amendment moves FR-433 to Phase 3 | `07-platform.md:153` carries the 2026-09-29 amendment. `deploy/` holds `docker-compose.yml`, `keycloak-local/` and `README.md`, and `git ls-files deploy` has no Helm or Kubernetes file | **Adopted**, and completed in this commit: FR-433 (`07:149`) gains a dated pointer to the move, so its own row says what FR-437 already says |
+| **QDP-2**: per-environment configuration is `OQ-1235` | `07` FR-446 (`:172`) has three layers and no Environment. `SettingDefinition` (`backend/src/app/platform/settings.py:44-52`) has no environment field. `OQ-1235` is `open` | **Adopted.** This record filed it. The recommendation (a) is this role's |
+| **DP-1 (b), DP-2 (a), DP-3 (b)** stand as filed (Q843-3) | DP-1: as QDP-1. DP-2: `03` FR-270 and FR-271 (`03:198-199`) exist, and their per-environment default-off setting waits on `OQ-1235`. DP-3: the RL-921 blob-read removal has landed (`backend/src/app/api/score.py`, the content-hash check before the blob read, docstring at `:168-175`) | **Adopted**, with the two dependencies named: DP-2's per-environment setting resolves only when `OQ-1235` is decided, and DP-3's trigger is below |
+| **QDP-3**: the dedicated host for NFR-489 | No repository record names a dedicated host | **Not this role's.** A host is a resource, not a technical decision point. It is the maintainer's to take to the user (the entry above, §4). DP-3's note (*"verdict recorded; the re-measurement trigger cannot validly fire without a dedicated host (RL-921)"*) stands as recorded, and this role rules nothing on it |
+
+**Commands, run at `9cd179cb` from the repository root:**
+1. `git grep -nE 'class (Deployment|Environment)\b' -- backend packages`
+2. `git grep -n PROMOTION_ORDER_VIOLATION -- backend packages frontend`
+3. `grep -niEc 'skip|promot' packages/model-schema/src/model_schema/approvals.py`
+4. `git grep -nE '(Perm|Permission)\.DEPLOYMENT_PROMOTE\b' -- backend/src`
