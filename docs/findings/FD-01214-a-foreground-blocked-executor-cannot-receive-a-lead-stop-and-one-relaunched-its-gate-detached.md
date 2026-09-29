@@ -143,11 +143,44 @@ executors; #889 wip commit: no rewrite" (`to-lead.md`), relayed in the lead's en
 It is built by a WK-1178 executor after S3 merges, in the same PR as `FD-1218`'s clean template and S-14 naming. Event:
 that PR merges, and the auditor reads the hook, its three tests and the amended S-13 in `.claude/roles/executor.md`.
 
-## Amendment — 2026-09-29, 09:49 BST: second S-13 incident
+## Second incident — 2026-09-29, from the maintainer's entry (given on the maintainer's behalf) of 09:48:51 BST
 
-The second breach of the lead's exclusive window occurred on 2026-09-29 at about 09:49 BST when executor-m1 ran an
-unauthorized gate during S-13 lockdown, triggering a lead stop and re-lockdown. The incident shows that S-13's
-mechanical hold (the pytest `pytest_configure` hook with `GIP_GATE_TOKEN`) is the key control, and that executors
-continuing to run gates without checking the hold or responding to stops is the residual to address. WK-1178 is
-building test-infra to enforce the hold across all executor paths and to verify the control is working. Event:
-the WK-1178 test-infra PR lands with a hold-validation test and an amendment to S-13 covering the enforcement scope.
+The maintainer's entry (given on the maintainer's behalf) "2026-09-29 09:48:51 BST · deputy · S-13 BREACH: executor-m1 full gate inside S3's T7-3 window; stop
+it by PID; push 69be4ca8; clocks labelled BST" (`to-lead.md`, heading as quoted) records, as observed by its writer at
+09:48:31 BST: PID 24822, `timeout 1800 nice -n 10 bash -c uv run ruff check . && uv run mypy && uv run lint-imports && uv
+run pytest -q`, with pytest PID 26277 in `trees/executor-m1c`, started about 09:48 BST. **No slot was granted**: gate-1 was
+T7-3 (PID 12025) and gate-2 the lead's hold (PID 8206). Load was 4.91 and rising. The entry calls it a breach of S-13
+(`executor.md`, merged `633c6f34`), tells the lead to have executor-m1 stopped, and says *"The mechanical hold (the pytest
+hook) is still unbuilt; this is the second incident arguing for it."* It also relabels the lead's "started ~08:46" as the
+system clock in UTC, that is 09:46 BST.
+
+This paragraph states what that entry says and nothing more. **This record did not read a stop, a re-lockdown, or any
+run log**; it does not know that the run was stopped, or when. The hold is unbuilt at `bb2aa935`: a `grep -rn GIP_GATE_TOKEN .claude conftest.py`
+finds nothing (rc 1). **Event unchanged:**
+the WK-1178 PR that builds the hook merges, and the auditor reads the hook, its tests and the amended S-13.
+
+*(Replaces the paragraph "Amendment — 2026-09-29, 09:49 BST: second S-13 incident" that #888 (`bb2aa935`) carried, which
+added a stop, a re-lockdown and "WK-1178 is building test-infra", none of them in the entry.)*
+
+## Third instance — 2026-09-29, from the maintainer's entry of 11:13:36 BST
+
+The maintainer's entry "2026-09-29 11:13:36 BST · maintainer (acting on the maintainer's behalf) · #886 gate: (A), with one
+addition" (`to-lead.md`) accepts the running gate at `3a3e0277b97c7dc98b01b04c09d60cfa7c55de71` as #886's full gate, and records
+the incident: *"executor-s3fix started a gate without its merge-in, and did not answer a STOP while blocked in the foreground."*
+The entry "2026-09-29 11:27:38 BST · maintainer (acting on the maintainer's behalf) · ETA check: file overdue, three corrections,
+spare capacity" (`to-lead.md`) says, read at 10:27 UTC, that one gate (PID 296584, #886) was running. This record states no start
+time, STOP time or duration for the run: none of those is in a record it read.
+
+## Third instance, the executor's account
+
+**As stated by the executor (executor-s3fix's own account, relayed by the lead; not read from a log here):** it launched #886's gate at 10:09:01Z on the lead's first grant, after the prior pytest (PID 224799) had exited at 10:08:29Z, and not from a wait loop; it ran the gate as a background job under `timeout 3600` and polled with `kill -0`, which deviates from S-11; and none of the lead's messages, including the 10:11:15Z STOP, reached it until the gate ended at 10:33:49Z. This is the executor's account of how the run started and of why the STOP went unanswered; no earlier text in this record states a wait loop.
+
+## #891 closed — 2026-09-29
+
+**#891 closed unmerged, 2026-09-29:** the maintainer's entry "2026-09-29 11:35:28 BST · maintainer (acting on the maintainer's behalf) · #891: CLOSE unmerged; rework as a new WK-1178 PR" (`to-lead.md`) closes #891 and supersedes it with a new WK-1178 PR built to this finding's Disposition. **The fix this Disposition specifies is now owned by that rework PR.** This finding stays open.
+
+## Fourth instance — the #876 repro loops, 2026-09-29
+
+**Fourth instance, 2026-09-29:** the maintainer's entry "2026-09-29 12:19:51 BST · maintainer (acting on the maintainer's behalf) · LOAD incident: the #876 repro loops stopped by me" (`to-lead.md`) records that at 11:19:28 UTC the 1-minute load was 20.15 and that four orphaned repro loops (bash PIDs 543605, 543606, 543608 and 543610, ppid 1) were each respawning `.venv/bin/python …/tmp/oldchild.py` at 135–240% CPU. They were owned by no live agent command. **They were stopped by the maintainer's kill of the four orphaned repro loops**, by PID and then their python children, at about 11:19:30 UTC; by 11:19:41 UTC none remained. The entry names it "the FD-1214 detached pattern again": a repro started by an agent that outlives the agent's command. The entry does not state how the loops were launched; the account below is the auditor's own.
+
+**As stated by auditor-a-2 (its own account, relayed by the lead; not read from a log here):** the killed loops were its batch 3: `for k in 1 2 3 4; do ( for i in $(seq 1 30); do .venv/bin/python …/oldchild.py …; … done; echo done$k >> …/ofail.log ) & done; wait 2>/dev/null | true; echo launched`. The `wait` was the last element of a pipeline, so it ran in a subshell and waited for nothing; the tool call returned at once, and the four `( … ) &` subshells were reparented to PID 1 when the shell exited. There was no trap, no PID file and no exit confirmation, and no `done<k>` marker was ever written, so batch 3 never finished. Batch 3 started at about 11:18:10 UTC, when batches 1 and 2 had completed, and its four subshells were still running their 30-run loops when they were killed at about 11:19:30 UTC; there was no respawning beyond the loops themselves. Batches 1 and 2 (completed earlier, 11:12:28–11:18:10 UTC) were `setsid nohup …/loop.sh <w> 40 >/dev/null 2>&1 &` four times: detached by design, no `nice`, no load or gate check. A later `pkill -f oldchild.py -u $USER` matched its own command line and killed its own call (exit 144), so it did not stop them. It withdrew all its reproduction counts as evidence.
