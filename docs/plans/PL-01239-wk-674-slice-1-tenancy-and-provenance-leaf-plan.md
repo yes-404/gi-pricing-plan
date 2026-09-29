@@ -1,5 +1,5 @@
 ---
-id: PL-1232
+id: PL-1239
 family: plan
 kind: leaf
 title: WK-674 Slice 1 — Tenancy and provenance (FR-436, FR-18): leaf plan
@@ -12,7 +12,7 @@ work: WK-674
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [ADR-710]
+relates: [ADR-710, PL-1237, RL-1232]
 ---
 
 # WK-674 Slice 1 — Tenancy and provenance (FR-436, FR-18): leaf plan
@@ -47,16 +47,24 @@ SQLAlchemy 2.x async, Alembic, pytest. No new dependency.
 - [`../adrs/ADR-00710-tenant-isolation-is-a-deployment-boundary.md`](../adrs/ADR-00710-tenant-isolation-is-a-deployment-boundary.md)
   — why the check exists.
 
-**What this plan implements.** WK-674's map plan (PR #843, branch
-`p2-wk674-map` read at `ae0d398bdee49e3272303f2240a7f2694d67eec6`), **Task 1 — "Slice 1:
-tenancy and provenance (FR-436, FR-18)"**, whose Sequencing block reads *"Slice 1 tenancy +
-provenance ─→ Slice 2 Environment + Deployment record"*. The decision-maker's ruling on
-that map plan (PR #848, branch `p2-wk674-rl` read at
-`9e175017c950d80b857f283e09fbe938be337a27`) lists the same Slice 1 at its `:35`. Both are
-unminted, so they are cited by PR number, not by id, and not in `relates:`. They were
-still unminted when this plan minted (2026-09-29), so the PR-number citations stand. Their
-ids go into this plan's text and `relates:` once they mint, while this plan is still
-`draft`.
+**What this plan implements.** WK-674's map plan, **PL-1237** (merged by PR #843; read on
+its branch at `ae0d398bdee49e3272303f2240a7f2694d67eec6`), **Task 1 — "Slice 1: tenancy and
+provenance (FR-436, FR-18)"**, whose Sequencing block reads *"Slice 1 tenancy + provenance
+─→ Slice 2 Environment + Deployment record"*. The decision-maker's ruling on that map plan,
+**RL-1232** (merged by PR #848; read on its branch at
+`9e175017c950d80b857f283e09fbe938be337a27`), lists the same Slice 1 at its `:35`. *(Amended
+2026-09-29 at #892's turn: both have minted, so they are cited by id here and in `relates:`.
+~~Both are unminted, so they are cited by PR number, not by id, and not in `relates:`. They
+were still unminted when this plan minted (2026-09-29), so the PR-number citations stand.
+Their ids go into this plan's text and `relates:` once they mint, while this plan is still
+`draft`.~~)*
+
+*Re-read 2026-09-29 at `49604a31` (main, merged into this branch).* Every code cite in this
+plan was compared line by line between the tree above and `49604a31`. Three moved, with
+their logic unchanged, and are annotated where they sit: `worker/tasks.py:103-108` →
+`:104-109`, `worker/tasks.py:133` → `:134`, and `platform/blobs.py:119-128` → `:125-134`
+(`ensure_bucket` still catches any `ClientError` and then calls `create_bucket`). The rest
+hold. Task 0 still has the executor re-derive each premise at its own tree.
 
 ## Status
 
@@ -64,15 +72,22 @@ ids go into this plan's text and `relates:` once they mint, while this plan is s
 PR #892 carried until this commit (commit
 `0d1c83bf9eaa00a4149c2bcf051d0448672d8c14`), which scoped Slice 2 and Slice 3 work under
 the Slice 1 label and took its slice order from WK-672's map plan (`PL-930`); that file is
-deleted here, and its number is not this plan's. **2026-09-29: working id 9104, minted
-1232** at this PR's turn in the merge queue.
+deleted here, and its number is not this plan's. ~~**2026-09-29: working id 9104, minted
+1232** at this PR's turn in the merge queue.~~ **2026-09-29: working id 9104, first minted
+1232, re-minted 1239.** The first mint was made out of the merge order (the maintainer's
+2026-09-29 10:41:05 BST merge plan, row 9, puts the map plan and its ruling first), and 1232
+was then taken on main by the ruling. The maintainer's ruling (a) held this PR and had it
+re-minted at its turn, after PR #843. 1239 is `doc-id.py next --ref origin/main` at
+`49604a31`.
 
-**Activation needs, in order:** the map plan (#843) minted and `active`; DP-S1-1, DP-S1-2 and DP-S1-3
-below resolved; the lead's go. **Map-plan deviation, stated rather than folded in:** the
+**Activation needs, in order:** the map plan (~~#843~~ PL-1237) minted and `active`; DP-S1-1, DP-S1-2 and DP-S1-3
+below resolved; the lead's go. *(2026-09-29: PL-1237 is minted, and this PR sets it `active`
+on the maintainer's acceptance line. The DPs remain open.)* **Map-plan deviation, stated rather than folded in:** the
 map's Task 1 says the platform-build column is *"set at submission"*; FR-18 says a Job
 records *"the platform version it ran on"*. The spec is the contract, so this plan records
 the build when the worker moves the Job to `running` (Task 3), and names the difference
-here for the lead and the map-plan's reviewer.
+here for the lead and the map-plan's reviewer. *(Reconciled 2026-09-29: PL-1237's Task 1 now
+adopts this plan's recording point by a dated amendment, so there is no deviation left.)*
 
 ## Acceptance Standard
 
@@ -138,7 +153,7 @@ step predicts**; a failure for any other cause is a plan defect, reported, not w
    Job returns the field. (There is no re-run path to test: at the tree above
    `VALID_TRANSITIONS[RUNNING]` is `{SUCCEEDED, FAILED, CANCELLED}`
    (`packages/model-schema/src/model_schema/jobs.py:112-120`), and the worker ignores a
-   redelivered Job that is not `queued` (`backend/src/app/worker/tasks.py:103-108`). A Job
+   redelivered Job that is not `queued` (`backend/src/app/worker/tasks.py:104-109` at `49604a31`; `:103-108` at the tree above). A Job
    reaches `running` once, so it records one build. This slice builds no retry path.)
 6. **Coverage.** `uv run python scripts/req-coverage.py` lists tests against FR-436 and FR-18.
    The **dossier half of FR-18** (`06` FR-376) is recorded in the slice ledger as *deferred
@@ -183,10 +198,13 @@ step predicts**; a failure for any other cause is a plan defect, reported, not w
 **Not in this slice**, each with where it goes:
 - FR-267, FR-428, FR-429, FR-272 (audit limb), NFR-498 → Slice 2. FR-430, FR-431 → Slice 3.
   FR-268 → Slice 5. (Map plan scope table.)
-- `07` FR-437's dated amendment moving FR-433 to Phase 3 (the #848 ruling's DP-1, which allows
+- ~~`07` FR-437's dated amendment moving FR-433 to Phase 3 (the #848 ruling's DP-1, which allows
   "Slice 1 or Slice 4") → **Slice 4**, whose scope is `deploy/`. Planner's slice-design
   choice: this slice changes nothing under `deploy/`, and the amendment belongs with the
-  compose work it describes.
+  compose work it describes.~~ *(Reconciled 2026-09-29: `07` FR-437's dated amendment moving
+  FR-433 to Phase 3 is **already made, in RL-1232's commit** (DP-1 (b), QDP-1), so it is in no
+  slice. PL-1237 records it as done by RL-1232. This slice still changes nothing under
+  `deploy/`.)*
 - Wiring the build identifier into container images → Slice 4 (the images do not exist yet).
   This slice reads it from configuration.
 
@@ -198,9 +216,9 @@ step predicts**; a failure for any other cause is a plan defect, reported, not w
 | b | No build field exists on the Job | Run on the same export: `grep -rn -E 'platform_version\|build_version\|platform_build\|build_sha' backend/src packages/*/src docs/contracts` prints 6 lines, every one `build_shap_summary` (`build_sha` matches it as a substring) |
 | c | `Settings` is frozen, `GIP_`-prefixed, `extra="forbid"`, and has `version: str = "0.1.0"` | `backend/src/app/config.py:84-100` |
 | d | The API lifespan already hosts a startup refusal (FR-273), with a tested negative half | `backend/src/app/main.py:75-94`; `backend/tests/test_startup_self_check.py:23-45` |
-| e | The blob bucket is ensured at startup | `main.py` lifespan calls `blob_store.ensure_bucket()`; `backend/src/app/platform/blobs.py:119` |
+| e | The blob bucket is ensured at startup | `main.py` lifespan calls `blob_store.ensure_bucket()`; `backend/src/app/platform/blobs.py:119` (`:125` at `49604a31`) |
 | f | The worker builds Celery from `Settings` and registers no start-up signal | `backend/src/app/worker/celery_app.py:30-54`; `git grep -n -E 'worker_process_init\|worker_init' backend/src` returns nothing |
-| g | A Job becomes `running` in the worker, through `jobs.transition` | `backend/src/app/worker/tasks.py:133`; `backend/src/app/platform/jobs.py:226-227` sets `started_at` there |
+| g | A Job becomes `running` in the worker, through `jobs.transition` | `backend/src/app/worker/tasks.py:133` (`:134` at `49604a31`); `backend/src/app/platform/jobs.py:226-227` sets `started_at` there |
 | h | Alembic reads its URL from `Settings` | `backend/migrations/env.py:19,31` |
 | i | FR-417's guard is a repository-invariant test | `tests/test_repository_invariants.py` |
 | j | WK-680 (dossier) is Phase 3 and owns FR-376 | `docs/roadmap.md`, `### WK-680` row, `phase: P3` |
@@ -263,7 +281,7 @@ regenerate `docs/contracts/` with `scripts/generate-contracts.py`.
 
 **Files:** Modify `backend/src/app/config.py` (`Settings`), `backend/src/app/db/models.py`
 (`JobRow`, `:90`), `backend/src/app/platform/jobs.py` (`transition`, `:226`, and the
-row-to-shape mapping near `:338`), `backend/src/app/worker/tasks.py` (`:133`); create one
+row-to-shape mapping near `:338`), `backend/src/app/worker/tasks.py` (`:133`; `:134` at `49604a31`); create one
 Alembic revision; test `backend/tests/test_job_platform_build.py`.
 
 - [ ] **First, the setting** per DP-S1-1, with its requiredness enforced by a validator in
@@ -320,7 +338,7 @@ the new setting.
   2. **`blob_store.ensure_bucket()`**, moved up from its current place
      (`backend/src/app/main.py:92`). The bucket must exist before its marker can be read or
      written: `ensure_bucket` runs `head_bucket` and creates the bucket only when that fails
-     (`backend/src/app/platform/blobs.py:119-128`). `_ensure` catches **any** `ClientError`
+     (`backend/src/app/platform/blobs.py:125-134` at `49604a31`; `:119-128` at the tree above). `_ensure` catches **any** `ClientError`
      from `head_bucket`, including a 403, and then calls `create_bucket`. So when the
      credentials cannot read a bucket that exists (another tenant's, or a permissions
      mistake), `create_bucket` raises its own `ClientError` and startup stops with an S3
