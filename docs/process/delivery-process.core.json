@@ -386,7 +386,27 @@
         "max_concurrent": 2,
         "from_different_works": true,
         "each_holds_gate_slot": true,
-        "no_shared_files": true,
+        "no_shared_files": {
+          "forbidden": "both_change_same_existing_function_class_method_spec_section_or_policy_table",
+          "registry_exempt_append_only": {
+            "backend/src/app/db/models.py": "new_class_appended_no_edit_to_existing_class",
+            "backend/src/app/main.py": "router_registration_or_lifespan_hook_added_only",
+            "backend/alembic/versions/": "new_revision_file",
+            "generated": [
+              "docs/contracts/** generated outputs",
+              "docs/INDEX.md"
+            ]
+          },
+          "second_merge": [
+            "merge_main",
+            "repoint_down_revision_exactly_one_head",
+            "regenerate_generated_files",
+            "rerun_full_gate_on_merged_tree"
+          ],
+          "other_shared_path": "serialise_unless_dispatch_record_names_path_and_check",
+          "registry_list": "closed_amend_by_dated_line_only",
+          "ruled": "2026-09-29 22:57:52 BST, the maintainer by delegation (option c)"
+        },
         "measurement_step_runs_alone": true,
         "preparation_is_not_a_slice": [
           "plans",

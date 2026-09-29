@@ -80,6 +80,26 @@ PARALLEL-START BUNDLE (A–D)", D1:
 >   the maintainer's decision on the user's order. What changed is the resource budget (the
 >   8-core box plus the 2-slot flock gate), not a plan-independence argument.
 
+**What "no shared files" means**, from the maintainer's entry "2026-09-29 22:57:52 BST —
+DECISION: RL-9760's "no shared files" means OPTION (c); lane B opens with WK-690", item 2,
+quoted whole:
+
+> Two concurrent build slices may not both change the same **existing** function, class, method, spec section, or policy table. Examples: `approvals.py` EVIDENCE_FLOOR/DEFAULT_POLICY; one `03-rating-engine.md` section; `score.py`, `TraceStep`, `compile_bundle`.
+> **Registry files are exempt, and only these**, each for **append-only** edits:
+> - `backend/src/app/db/models.py`: a new class appended; no edit to an existing class;
+> - `backend/src/app/main.py`: a router registration or lifespan hook added; no other change;
+> - `backend/alembic/versions/`: a new revision file;
+> - generated files (`docs/contracts/**` generated outputs, `docs/INDEX.md`), regenerated and never hand-merged.
+> **At the second merge**, the later slice must:
+> - merge main in;
+> - re-point its Alembic `down_revision` to the new head, so there is **exactly one head**;
+> - regenerate generated files;
+> - **re-run its full gate** on the merged tree.
+> **Any other shared path serialises** unless the lead's dispatch record names the path and the check showing that no existing definition is edited by both. A file joins the registry list only by a dated amendment.
+
+The entry's reason: "a list can be checked, while "registry-style" is a judgement that drifts.
+The list stays closed until it is amended."
+
 ## Ground
 
 **This ruling rests on §8's own clause for revisiting it, not on plan-independence.** §8 cites
