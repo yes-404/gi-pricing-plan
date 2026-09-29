@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import enum
 import os
+import re
 from typing import Annotated, Any, Literal
 
 from pydantic import Field, SecretStr, ValidationError, field_validator
@@ -72,6 +73,9 @@ class SettingResolution[T]:
         return (self.key, self.value, self.source) == (other.key, other.value, other.source)
 
 
+_FULL_SHA = re.compile(r"[0-9a-f]{40}")
+
+
 class ConfigInvalidError(RuntimeError):
     """Configuration is unusable. Raised at startup, never at first use (FR-447).
 
@@ -98,6 +102,10 @@ class Settings(BaseSettings):
     environment: Environment = Environment.LOCAL
     service_name: str = "gi-pricing-api"
     version: str = "0.1.0"
+    # FR-18: the full commit SHA of the image, so a recorded platform version names exactly
+    # one build. `local` is the development marker; `require_startable` refuses it (and any
+    # value that is not a full SHA) in dev, uat and prod (RL-1253, DP-S1-1).
+    build: str = "local"
 
     # Postgres holds all metadata, artifacts, the audit log and job records (FR-416).
     #
@@ -210,6 +218,13 @@ class Settings(BaseSettings):
                 "environment=prod requires an OIDC issuer (FR-387). Without one no "
                 "user can authenticate, and starting anyway would present a service that "
                 "rejects every request as though it were broken."
+            )
+        if self.environment is not Environment.LOCAL and not _FULL_SHA.fullmatch(self.build):
+            raise ConfigInvalidError(
+                f"environment={self.environment.value} requires GIP_BUILD to be the full "
+                "40-character lowercase hex commit SHA of the image (FR-18). Any other "
+                "value, `local` included, would record the same platform version for "
+                "different builds."
             )
 
     @property

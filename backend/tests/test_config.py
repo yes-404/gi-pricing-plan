@@ -13,6 +13,8 @@ from app.config import (
     load_settings,
 )
 
+_SHA = "97b15726b1dd60ba407c6aba44735ad5cbe207ed"
+
 
 @pytest.mark.req("FR-446")
 def test_resolve_reports_default_source() -> None:
@@ -72,6 +74,7 @@ def test_prod_with_tls_and_an_identity_provider_starts() -> None:
     settings = load_settings(
         environment=Environment.PROD,
         tls_terminated=True,
+        build=_SHA,
         oidc_issuer="https://idp.example/realms/gip",
         oidc_audience="gi-pricing-api",
         oidc_jwks_url="https://idp.example/realms/gip/protocol/openid-connect/certs",
@@ -111,3 +114,31 @@ def test_settings_are_frozen() -> None:
     settings = Settings()
     with pytest.raises(ValidationError):
         settings.log_level = "DEBUG"  # type: ignore[misc]
+
+
+@pytest.mark.req("FR-18")
+@pytest.mark.parametrize("environment", [Environment.DEV, Environment.UAT, Environment.PROD])
+@pytest.mark.parametrize(
+    "build",
+    [None, "local", "latest", _SHA.upper(), _SHA[:39], _SHA + "0"],
+    ids=["unset", "local", "word", "uppercase", "short", "long"],
+)
+def test_a_strict_environment_refuses_a_missing_or_malformed_build(
+    environment: Environment, build: str | None
+) -> None:
+    """A recorded build must name exactly one build: `latest` records the same string for
+    every image, which is the failure FR-18 exists to prevent."""
+    extra = {"build": build} if build is not None else {}
+    with pytest.raises(ConfigInvalidError, match="GIP_BUILD") as exc:
+        load_settings(
+            environment=environment,
+            tls_terminated=True,
+            oidc_issuer="https://idp.example/realms/gip",
+            **extra,
+        )
+    assert exc.value.code == "SETTING_INVALID"
+
+
+@pytest.mark.req("FR-18")
+def test_local_starts_with_the_local_build_marker() -> None:
+    assert load_settings(environment=Environment.LOCAL).build == "local"

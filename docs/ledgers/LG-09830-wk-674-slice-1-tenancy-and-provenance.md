@@ -59,6 +59,17 @@ FR-18) added after the `progress_at`/`stalled` note. FR-436 and FR-18 not reword
 - `python3 scripts/audit-docs.py`: only check 31 (working-id gap 1260 to 9830).
 - Acceptance 2 count on `packages/model-schema/src` (`git grep -n -E 'platform_build *:'`): exactly one line, `jobs.py:231`. The backend/frontend count is checked at Task 3.
 
+### Task 3 — the build setting and the Job column (FR-18)
+
+- **Test database:** `gipricing_executor-674s1_78b10d1e`, created with the `dev-commands` `createdb -T` block; `alembic upgrade head` rc 0.
+- **Setting, red first:** `backend/tests/test_config.py` gained `test_a_strict_environment_refuses_a_missing_or_malformed_build` (3 environments x 6 values: unset, `local`, `latest`, uppercase, 39 chars, 41 chars; asserts `GIP_BUILD` in the message and `code == "SETTING_INVALID"`; `FR-18`) and `test_local_starts_with_the_local_build_marker`. `test_prod_with_tls_and_an_identity_provider_starts` now supplies `build`. Run before the field existed: 5 failed, 27 passed, rc 1 (`DID NOT RAISE ConfigInvalidError` for the unset cases, `AttributeError: 'Settings' object has no attribute 'build'`, and the prod start test refused by `extra="forbid"`). After: `Settings.build` (default `local`) and the check in `require_startable()`, placed after the TLS and OIDC refusals so `:67` and `:87` keep their own causes: 32 passed, rc 0.
+- **Provenance, red first:** `backend/tests/test_job_platform_build.py` (new, `FR-18`): `test_a_job_the_worker_runs_records_the_workers_version_and_build`, `test_a_queued_job_has_no_platform_build`, `test_the_job_endpoint_returns_platform_build`. Red: 3 failed, rc 1: `TypeError: execute_job() got an unexpected keyword argument 'settings'` (x2) and `AttributeError: 'JobRow' object has no attribute 'platform_build'`. The `settings` keyword is the executor's seam (see deviation below).
+- **Green:** `JobRow.platform_build` (`String(128)`, nullable); `jobs.transition(..., build=...)` sets it on `running`; row-to-shape mapping passes `platform_build=`; `execute_job(..., *, settings=None)` passes `f"{settings.version}+{settings.build}"` and `create_worker` passes its own settings. `test_job_platform_build.py` + `test_config.py` + `test_worker.py`: 59 passed, rc 0.
+- **Migration:** `backend/migrations/versions/c4d1e8a7b302_jobs_platform_build.py`, down_revision `a71c3e95d204`. `alembic upgrade head`, `downgrade -1`, `upgrade head` all rc 0; `alembic heads` prints one head, `c4d1e8a7b302`.
+- **Acceptance 2:** `git grep -n -E 'platform_build *:' -- backend/src frontend/src` prints exactly one line, `backend/src/app/db/models.py:119`; the model-schema count is still one.
+- **Other:** ruff "All checks passed"; mypy "no issues found in 207 source files"; `backend/tests/test_contracts.py` and `test_api_jobs.py` pass; `tests/test_repository_invariants.py`: the FR-417 single-head guard passes, and two tests (`test_money_discipline_is_enforced_by_the_docs_audit`, `test_journey_citations_are_audited_in_ci`) fail only because `audit-docs.py` exits 1 on check 31 (the working-id gap 1260 to 9830, expected until the mint).
+- **Deviations, named:** (1) the column has its own revision here rather than sharing Task 4's; the plan allows either. (2) `execute_job` gained a keyword-only `settings` (default `load_settings()`), so "the worker's own Settings" is passed explicitly; existing callers are unchanged. `BlobStore(load_settings())` in the same function now uses that same `settings`.
+
 ## PRs
 
 None opened yet; the draft PR is opened after Task 1's commit is pushed.

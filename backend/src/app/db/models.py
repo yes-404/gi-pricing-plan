@@ -114,6 +114,10 @@ class JobRow(Base):
 
     trace_id: Mapped[str | None] = mapped_column(String(32))
 
+    # FR-18: `{version}+{build}` of the worker that ran the Job, written when it moves to
+    # `running`; null while `queued`.
+    platform_build: Mapped[str | None] = mapped_column(String(128))
+
     queued_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
