@@ -58,6 +58,8 @@ in the message pointing at it.
 maintainer and left alone** — not merged, not closed, not reviewed into a state that invites
 merging.
 
+*(Amended 2026-09-29, mirroring `.claude/roles/lead.md`'s dated amendment by the maintainer: `app/dependabot` is also merged, but only on the maintainer's MERGE-ACK naming its head SHA. Every other author is still reported and left alone. The author query below lists Dependabot PRs too; they wait for that ACK, not a report.)*
+
 **Why the boundary is clean here and would not be in most repositories**: every agent on this
 team pushes with the *maintainer's own* token, so a team PR and a maintainer PR are the same
 author by construction. Measured 2026-08-30 rather than assumed — **all 466 PRs in the
