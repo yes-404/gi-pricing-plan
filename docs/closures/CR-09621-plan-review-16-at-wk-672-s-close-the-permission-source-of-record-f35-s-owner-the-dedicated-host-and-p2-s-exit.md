@@ -153,7 +153,7 @@ survive; (a) and (b) both rest on care.
 - Until the check exists, `RL-1236`'s interim rule stands: the table is re-derived at each
   Work close that touches permissions.
 
-**Lead verdict (Proposal 1):** _pending_
+**Lead verdict (Proposal 1), 2026-09-29:** **ADOPTED, (c).** The measurement was re-checked by the lead at `1c8762d9`: the enum has 24 members, and the Pricing Actuary block names 16 permissions, 12 of them not enum members. That is the second definition `CLAUDE.md` §2 forbids, and (c) is the only option with a check the failure cannot survive. The DP-6 finding obligation is recorded as discharged by `RL-1236`, with no `FD-`. The decision-maker writes the `RL-` and the `06` amendment. WK-1178 builds the check before WK-690's `custom_objective:author`.
 **Maintainer acceptance (Proposal 1):** _pending_
 
 ## Proposal 2 — #852 and the Dependabot queue
@@ -234,7 +234,7 @@ maintainer)`, §2, quoting the maintainer: "approve Dependabot plan"):
   This review's earlier recommendation, "merge one at a time after reading each release's
   runner and Node requirement", is superseded by that rule.
 
-**Lead verdict (Proposal 2):** _pending_
+**Lead verdict (Proposal 2), 2026-09-29:** **Resolved by the maintainer's entries of 16:08:24 and 16:25:49; no lead verdict is needed.** The lead recorded the #903 zen-engine rule's scope (all semver-major) as a departure, which the maintainer accepted on the corrected ground (16:21:36).
 **Maintainer acceptance (Proposal 2):** given, in the 16:08:24, 16:21:36 and 16:25:49 entries
 above. Nothing in Proposal 2 remains open.
 
@@ -301,7 +301,7 @@ maintainer's budget cannot carry the slice in P2, (c) with its dated G4 (b) amen
 honest fallback, not a silent red.** Until the verdict, F35's register row reads "carried;
 owner named by plan review 16" (the 15:36:43 entry), and on acceptance it names WK-1178.
 
-**Lead verdict (Proposal 3):** _pending_
+**Lead verdict (Proposal 3), 2026-09-29:** **ADOPTED, (a).** The lead re-checked the load-bearing fact at `1c8762d9`: `score_compare` calls `score_one(…, trace=True)` for both sides (`backend/src/app/api/score.py:358-362`), and `own_change` is derived from `consumed` (`03:731`, with its limit at `:733`). F35's remedy is therefore on a P2 deliverable's path and interacts with §4.10. The owner is WK-1178: one slice sequenced before WK-674 Slice 5, after one decision-maker ruling on `TraceStep` contents (F35, F55, the trace input/output finding and Proposal 11's question). Fallback (c) is only by the maintainer's dated G4 (b) line, never silent. On acceptance, F35's register row names WK-1178.
 **Maintainer acceptance (Proposal 3):** _pending_
 
 ## Proposal 4 — the dedicated host and F38: what P2's exit depends on
@@ -378,7 +378,7 @@ above; the recommendation is kept as drafted, beside the decision that replaced 
   stands (Proposal 3).
 - **For G1:** WK-674 can close with these verdicts carried.
 
-**Lead verdict (Proposal 4):** _pending_
+**Lead verdict (Proposal 4), 2026-09-29:** **Resolved by the maintainer's 16:08:24 entry.** The lead has applied the G4 row wording, quoting it, on #892 (`69da042e`). PL-1237 carries it (`d7fbf4e0`).
 **Maintainer acceptance (Proposal 4):** given, in the 16:08:24 entry above.
 
 ## Proposal 5 — OQ-1233, OQ-1234 and OQ-1235 against P2's exit
@@ -424,7 +424,7 @@ acceptance.
 - OQ-1234 is ruled before WK-674 Slice 2's leaf plan freezes, and OQ-1235 before Slice 3's.
 - The gate row edits are the lead's.
 
-**Lead verdict (Proposal 5):** _pending_
+**Lead verdict (Proposal 5), 2026-09-29:** **ADOPTED.** OQ-1233: (b), FR-453 (both limbs) named on WK-688's row, with the OQ moved to Before Phase 4. This is a scope question, so the recommendation goes to the maintainer; the roadmap edits are the lead's after acceptance. OQ-1234 and OQ-1235 are the decision-maker's to rule by `RL-`, OQ-1234 on a new gate row, Before WK-674 Slice 2. The declined limb of OQ-1233's own option (c) is noted, correctly, as not firing.
 **Maintainer acceptance (Proposal 5):** _pending_
 
 ## Proposal 6 — FD-1238: the write boundary that no charter states
@@ -493,7 +493,7 @@ amend or accept:
 charters still say nothing about `~/.claude/`. The harness offers every session a memory
 directory, not only the reporter's, so the gap `FD-1238` found is not closed for them.
 
-**Lead verdict (Proposal 6):** _pending_
+**Lead verdict (Proposal 6), 2026-09-29:** **ADOPTED, (b), with evidence the review did not have.** A **second** member (auditor-b-2, 2026-09-29 15:28:47–51Z) wrote into the user's project memory, because the rule had reached it only by brief, and it had not reached it at all. The maintainer removed the entry. That is the gap this proposal names, occurring again within two hours. The team-wide boundary in `delivery-process.md` §3 (the proposed text) and the re-derived core extract are the maintainer's to accept. The lead drafts them as a WK-1178 PR after acceptance. #904 already carries the reporter's line, with the marker file listed and disclosed.
 **Maintainer acceptance (Proposal 6):** the reporter's line is given (16:25:49 item 5); the team-wide boundary is _pending_.
 
 ## Proposal 7 — FR-432, FR-433 and FR-438: the carried packaging requirements, and the `07` NFRs that go with them
@@ -532,7 +532,7 @@ directory, not only the reporter's, so the gap `FD-1238` found is not closed for
 - Minting the row and its `WK-` id is the lead's roadmap edit, after acceptance. The row's
   `status: active` is the maintainer's (STRUCTURE §1).
 
-**Lead verdict (Proposal 7):** _pending_
+**Lead verdict (Proposal 7), 2026-09-29:** **ADOPTED, (a).** One new P3 Work, production packaging and supply chain, owns FR-432, FR-433 and FR-438, and NFR-530, NFR-533 and NFR-461. NFR-526, NFR-527 and NFR-536 go to WK-1178 for measurement on the exit tree. Otherwise G4's "carried with an owner" fails for them at exit. The row and its id are the lead's roadmap edit after acceptance; `active` is the maintainer's.
 **Maintainer acceptance (Proposal 7):** _pending_
 
 ## Proposal 8 — this review is not G6; restate G6 without the number
@@ -565,7 +565,7 @@ after G1–G5 are met and before the demo."*
   checks G6 by its number would find this record and read G6 as met.
 - The restatement is the lead's roadmap edit, quoting the acceptance.
 
-**Lead verdict (Proposal 8):** _pending_
+**Lead verdict (Proposal 8), 2026-09-29:** **ADOPTED, for the user to accept.** Restate G6 without the number. "Plan review 16" now names a review that is not G6, and a reader who checks G6 by its number would read it as met. The roadmap edit is the lead's, quoting the acceptance.
 **Maintainer acceptance (Proposal 8):** _pending_
 
 ## Proposal 9 — the register rows that decayed to this review
@@ -599,7 +599,7 @@ register, prints **21 owed rows and 5 excluded**. Every row is disposed of below
 2026-09-28T16:26:22Z`, at tree `9f6bfed1`, about a day behind. Whether a watcher is running is
 the lead's to check.
 
-**Lead verdict (Proposal 9):** _pending_
+**Lead verdict (Proposal 9), 2026-09-29:** **ADOPTED, AMENDED on one point.** The lead re-ran `register-owed.py review` on a clean committed tree: 26 bullets, that is 21 owed and 5 excluded, as stated. The 20 superseded-opening rows keep their owners, and the generator defect goes to an auditor `FD-` for WK-1170. F61's acceptance stands, with its event moved to the G6 review. **The amendment:** two of the 5 "excluded, resolved" rows are F58 ("Artifact B has no live writer") and F91 ("the runtime-state writer has not run since 02:03Z"). Artifact B (`~/gi-pricing-plan.local/handover/runtime-state.json`) was last written `2026-09-28T16:26:22Z`, about a day stale at this verdict. So the condition those resolutions closed has recurred. The auditor re-reads F58 and F91 against that mtime, and a regression is a new `FD-` (the watcher's writer), not silence.
 **Maintainer acceptance (Proposal 9):** _pending_
 
 ## Proposal 10 — FR-218's authoring half, and FR-217's inlining, which it rests on
@@ -696,7 +696,7 @@ dated line. In either case the roadmap edit naming FR-217 and FR-218 on a row is
 The maintainer's item 4 (the spec-change rule "a new FR/NFR names its roadmap row", WK-1178)
 is what stops this class recurring.
 
-**Lead verdict (Proposal 10):** _pending_
+**Lead verdict (Proposal 10), 2026-09-29:** **ADOPTED, (a), AMENDED: the "safe today" premise is FALSE.** auditor-a-2's finding "`CR-838` marks FR-217 delivered, but its versioned-artifact pin and bundle-time inlining are not built" (branch `fd-fr217-cr838`, not yet minted) demonstrated at `49604a31` that `_check_purpose_mount` accepts ANY non-empty `sub_graphs`. With `sub_graphs=[sub_graph:does-not-exist@1 at s_nowhere]`, a cancellation and an MTA were quoted as new business, payable 1507, at the `pricing-core` level. That is FR-218's named silent failure, not a fail-closed refusal. So, in addition to the new P2 Work, the lead adds an **interim fix now, under WK-1178**: the guard refuses every MTA and cancellation quote until inlining exists, whatever `sub_graphs` holds, with a broken-input proof using a bogus ref. Whether the end-to-end path (save, then compile, then score) accepts such a version is being checked. If it does, the finding is HIGH. The new Work's row and sequencing are as recommended.
 **Maintainer acceptance (Proposal 10):** WK-669 not reopened and `CR-838` corrected, both given (16:25:49 item 4); the owning Work is _pending_.
 
 ## Proposal 11 — NFR-500: the branch it turns on, and its owner
@@ -749,7 +749,7 @@ proposed question:
 
 It is not placed in WK-674: it is a trace-size question, not a deployment one.
 
-**Lead verdict (Proposal 11):** _pending_
+**Lead verdict (Proposal 11), 2026-09-29:** **ADOPTED.** NFR-500's branch goes to the decision-maker as an `OQ-`, with the recommended answer (a), the trimmed `Trace` contract measured uncompressed. It is ruled together with Proposal 3's `TraceStep` ruling and re-measured in the same WK-1178 slice. The ~12 GB/yr figure is correctly labelled an extrapolation, not a verdict.
 **Maintainer acceptance (Proposal 11):** _pending_
 
 ## Proposal 12 — who builds G2's demo: the real freMTPL2 rating algorithm
@@ -784,7 +784,7 @@ its FD-1209 row.)*
 record (`CR-822`). Making G2's build a row gives FD-1209's event a Work to discharge it. It
 also gives the two `WF-699` rulings above a concrete consumer.
 
-**Lead verdict (Proposal 12):** _pending_
+**Lead verdict (Proposal 12), 2026-09-29:** **ADOPTED, (a).** An "Exit demo" row under `## P2`, in Phase 1b's form, owned by the lead. It is sequenced after WK-673 and WK-674, and it discharges FD-1209's event. The two `WF-699` rulings (D4 against FR-261, E2 against FR-257) go on a new §10 gate, Before the P2 exit demo, for the decision-maker. The row is the lead's roadmap edit after acceptance.
 **Maintainer acceptance (Proposal 12):** _pending_
 
 ## 1. Completion — derived, never recalled
