@@ -167,11 +167,11 @@ negative tests, each shown red on deliberately broken input:
 The FR-244 and §4.6 pairing is prose, and no check holds it. It lands in one commit, so the
 review of that commit is where it is read.
 
-## Ruled — by the decision-maker, 2026-09-29
+## Ruled
 
 First filed 2026-09-28 as working id RL-9202; `created` re-dated at the reframe so the id sequence stays non-decreasing (check 31).
 
-**This is the ruling.** The deputy's entry of 2026-09-28 14:06:12 BST, above, is input. The maintainer's entry `2026-09-29 15:26:00 BST · maintainer (acting on the maintainer's behalf) · STRUCTURE: routing per document-ids §1.6 and the charters; today's technical answers re-homed` (§2) makes the maintainer's
+**This is the ruling, by the decision-maker, 2026-09-29.** The deputy's entry of 2026-09-28 14:06:12 BST, above, is input. The maintainer's entry `2026-09-29 15:26:00 BST · maintainer (acting on the maintainer's behalf) · STRUCTURE: routing per document-ids §1.6 and the charters; today's technical answers re-homed` (§2) makes the maintainer's
 answers on this record recommendations, and gives the technical points to this role. The
 answers are `2026-09-29 14:18:24 BST · maintainer (acting on the maintainer's behalf) · Q847-1/2/3 (row 11, WK-690)` and `2026-09-29 14:19:05 BST · maintainer (acting on the maintainer's behalf) · sympy pin: absent, so an OQ in #847's rebase`. This record's text stays as of `ed123cb0`, with the note below
 (Q847-3). Each point below was re-verified at origin/main `ac8ab519`.
