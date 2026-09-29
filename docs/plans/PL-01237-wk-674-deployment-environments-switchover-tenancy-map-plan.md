@@ -147,12 +147,21 @@ alone.
      register F35), and its remedy, shrinking the ~1.1 MB `to_wire(passThrough: True)` payload
      in `packages/pricing-core/src/pricing_core/rating/runtime.py`, has no Work (`CR-1212` G4
      table). Slice 5 schedules the **measurement only**. If it is red, the closure record
-     states the measured verdict **FAIL** with the figures. It records the remedy's ownership
+     states the measured verdict **FAIL** with the figures. ~~It records the remedy's ownership
      as an **open scope question for the maintainer**, and WK-674 closes with NFR-490 carried
      with that question named, never on a silent pass. **Whether WK-674 builds the F35 remedy
      is not decided by this plan.** It is a scope question the lead has put to the
      maintainer. If the answer assigns it here, the planner places it in a named slice by a
-     dated amendment while this plan is `draft`, or by a replan once it is `active`.
+     dated amendment while this plan is `draft`, or by a replan once it is `active`.~~
+     *(Amended 2026-09-29: the scope question is decided in the maintainer's entry
+     `2026-09-29 15:36:43 BST · maintainer (acting on the maintainer's behalf) · SCOPE:
+     NFR-490 / F35 in WK-674, option (b)`.)* **Slice 5 measures NFR-490 and, if it is red,
+     records it red with the figure, the tree and the log. WK-674 does not build F35's
+     remedy**, because it is a scoring-path change outside WK-674's deployment scope. F35's
+     remedy is **carried forward, with its owner named at plan review 16**. WK-674 closes with
+     NFR-490 recorded as measured (red if red) and F35 carried under that owner event, never on
+     a silent pass. Whether P2 can exit with NFR-490 red is plan review 16's to state, not this
+     plan's.
 7. **The register rows owed to WK-674 are resolved.** `python3 scripts/register-owed.py WK-674`
    prints no row without a resolution. ~~At this tree it lists F41, F43 and F48. F54 is added
    once the register-and-records pass (auditor-b's PR) moves its owner to WK-674, and it must
@@ -406,8 +415,10 @@ and the register leave them. Six more obligations now name WK-674:
   "verdict unstable across runs").** `CR-1212` L80 proposes WK-674. → **Slice 5**, under the
   verdict form fixed in Acceptance item 6.
 - *Added 2026-09-29.* **Register F35 (NFR-490's latency limb failing; the remedy has no
-  Work).** → **Slice 5 measures it**, under Acceptance item 6's red-verdict form. Building the
-  remedy is a scope question with the maintainer, and it is not placed.
+  Work).** → **Slice 5 measures it**, under Acceptance item 6's red-verdict form. ~~Building the
+  remedy is a scope question with the maintainer, and it is not placed.~~ *(Amended
+  2026-09-29, the maintainer's SCOPE entry of 15:36:43 BST, option (b).)* WK-674 does not build
+  the remedy. It is carried forward, with its owner named at plan review 16.
 
 ### Permission names — each name with its `RL-1236` verdict
 
@@ -897,6 +908,11 @@ auditor made to the Slice 1 leaf plan.)*
     - *added 2026-09-29:* NFR-490 (tracing ≤ 20 %, result unchanged) and NFR-493's
       linearity limb (batch throughput at 1, 2 and 4 workers), on the same host, the same
       way (item 6);
+    - *added 2026-09-29, the maintainer's entry `2026-09-29 15:36:43 BST · maintainer
+      (acting on the maintainer's behalf) · SCOPE: NFR-490 / F35 in WK-674, option (b)`:*
+      **NFR-490 is measured and, if red, recorded red with the figure, the tree and the log.
+      This slice does not build F35's remedy** (the ~1.1 MB `to_wire(passThrough: True)`
+      payload). The remedy is carried forward, with its owner named at plan review 16;
     - DP-3 is applied at the close;
     - NFR-497's degraded read is re-tested against the `live` reference with metadata
       storage stopped, and its availability verdict is left to the lead (**Verdicts the
