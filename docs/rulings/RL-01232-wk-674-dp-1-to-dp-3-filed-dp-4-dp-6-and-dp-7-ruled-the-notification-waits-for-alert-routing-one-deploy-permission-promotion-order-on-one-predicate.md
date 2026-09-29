@@ -50,7 +50,9 @@ by `TZ=Europe/London date`. **Its id was a working id**, minted at its turn with
 `c9f50232`. The record's working id (9203) became RL-1232, and the two open questions'
 working ids (9301, 9302) became OQ-1233 and OQ-1234, in ascending order. `created:` moved from
 the drafting date 2026-09-28 to the mint date, because `audit-docs.py` check 31 requires
-`created` to be non-decreasing with the number and id 1230 is `created` 2026-09-29.)*
+`created` to be non-decreasing with the number and id 1230 is `created` 2026-09-29. OQ-1235 was filed later the same day, on the maintainer's answer QDP-2, and
+minted from `doc-id.py next --ref HEAD` = 1235 at this branch's pushed head `7bcdccc5`,
+because `--ref origin/main` still read 1232 while main held none of this branch's ids.)*
 
 **Re-read at `ed123cb0`, for Part B:**
 - `docs/specs/03-rating-engine.md:198` *(`:200` at the merged tree, re-read 2026-09-29)* is FR-272: *"Every deployment, rollback, and routing
@@ -128,6 +130,29 @@ this record's edit.
 goes to the maintainer (or the session acting on the maintainer's behalf). The fenced entry
 under Part A is a dated quotation and is kept verbatim.
 
+**Two later entries of the same day, also the maintainer's, recorded here.**
+- The entry of 2026-09-29 14:17:56 BST (Q843-1), headed verbatim (fenced, because the heading
+  carries a padded id):
+
+  ```text
+  ## 2026-09-29 14:17:56 BST · maintainer (acting on the maintainer's behalf) · Q843-1/2/3: CR-01212 item 4 stands; DP-6 amended
+  ```
+
+  DP-6 is amended in place. See *DP-6 amended 2026-09-29*.
+- `2026-09-29 14:20:41 BST · maintainer (acting on the maintainer's behalf) · QDP-1/2/3 (WK-674 DP mechanisms)`: DP-1, DP-2 and DP-3 stand as filed.
+  - **QDP-1:** `07` FR-437's dated amendment is in this commit. The Phase 3 roadmap row for
+    FR-433 is the lead's, after merge.
+  - **QDP-2:** how per-environment configuration resolves is filed as **`OQ-1235`**, an
+    open question and not a pick. It is in `07` §10 and `docs/open-questions.md`, and at the
+    roadmap §10 gate *Before WK-674 Slice 3*. Premise, read at `c9f50232`: `07` FR-431
+    (`07-platform.md:142`) makes environment configuration "a Setting resolved by the
+    precedence in §3.8", and FR-446 (`:172`) is *"environment variable → workspace setting →
+    platform default"*, with no Environment level. `SettingDefinition`
+    (`backend/src/app/platform/settings.py:44-52`) has fields `key`, `type`, `default`,
+    `description`, `constraints` and `feature_flag`, and no environment field. DP-2's
+    per-environment default-off setting needs that level.
+  - **QDP-3:** DP-3 (b) gets a dated note under *What Part A obliges* (the Slice 5 bullet).
+
 **Cites re-read at the merged tree, 2026-09-29.** This branch merged `origin/main` at
 `c9f50232`. Every line cite in *Re-read at `ed123cb0`* was re-read there. Three moved and are
 annotated in place: `03:198` → `03:200`, `03:900` → `03:1103`, `06:271-273` → `06:272-274`.
@@ -169,7 +194,8 @@ Given by the maintainer's delegation (28 Sep, extended goal). dm-e files these i
 
 **What Part A obliges, per slice:**
 
-- **Slice 4 (or Slice 1)** carries a dated amendment to `07` FR-437, naming FR-433's move to
+- ~~**Slice 4 (or Slice 1)** carries~~ **This commit carries** *(amended 2026-09-29, QDP-1 of the
+  maintainer's entry `2026-09-29 14:20:41 BST · maintainer (acting on the maintainer's behalf) · QDP-1/2/3 (WK-674 DP mechanisms)`)* a dated amendment to `07` FR-437, naming FR-433's move to
   Phase 3 and the deputy's entry, so the spec and the plan agree. WK-674's `deploy/` work
   stops at compose plus FR-437's reference Keycloak. The F1 acceptance test is measured on
   that compose path.
@@ -184,6 +210,10 @@ Given by the maintainer's delegation (28 Sep, extended goal). dm-e files these i
   the fenced entry above is a dated quotation and is kept verbatim)*, with RL-921 §4 quoted. WK-674 closes with
   NFR-489 passing, amended by that decision, or carried with a named owner and event. It
   never closes on a silent pass or on a budget it amended itself.
+  *(Noted 2026-09-29, QDP-3 of the maintainer's entry `2026-09-29 14:20:41 BST · maintainer (acting on the maintainer's behalf) · QDP-1/2/3 (WK-674 DP mechanisms)`: DP-3 (b) — "verdict
+  recorded; the re-measurement trigger cannot validly fire without a dedicated host
+  (RL-921)". No repo record names a dedicated host, and the host question is with the
+  maintainer.)*
 - **The close:** NFR-497's verdict is the lead's, with the degraded-read evidence quoted
   beside it.
 - **Plan review 15** assigns FR-432, FR-434, FR-435, FR-438, NFR-531, NFR-533 and NFR-534,
@@ -238,7 +268,10 @@ options:**
   grant.
 - (c) Keep both.
 
-**Ruled: (b), the code is right about the name, and there is no environment-scoped grant.**
+**Ruled: (b), the code is right about the name~~, and there is no environment-scoped grant~~.**
+*(Amended 2026-09-29, Q843-1 of the maintainer's entry of 2026-09-29 14:17:56 BST (heading quoted in the fenced block under *Amended 2026-09-29*): "no environment-scoped
+grant" survives only as the Phase 2 state until WK-674's environment slice lands, not as the
+design. The design is `CR-1212` item 4's. See* DP-6 amended 2026-09-29 *below.)*
 One permission, `deployment:promote`, is amended into `06`'s glossary example and §4.1's
 Pricing Actuary sentence, struck in place and dated.
 
@@ -251,17 +284,37 @@ Pricing Actuary sentence, struck in place and dated.
   not carry over. FR-430 scopes Service Account **credentials**, and a Service Account can
   never hold a deployment permission (`06` FR-347). A human grant's scope (§4.1, FR-345) has
   no environment dimension. So "scoped by the environment of the grant" names a mechanism
-  that does not exist, and this ruling does not create one.
+  that does not exist, and this ruling does not create one. *(2026-09-29: still true at
+  `c9f50232`. `CR-1212` item 4 creates it, as a `06`/`07` spec change owned by WK-674.)*
 - What stops an unprepared `prod` deployment today is FR-267's complete-approval rule and
   FR-429's promotion order (DP-7), not a permission name.
 - Restricting which Deployers may deploy to which environment would be a new scope dimension.
-  That is `06` FR-345's scoping, which is Phase 3 (WK-676). It is noted here and not built.
+  ~~That is `06` FR-345's scoping, which is Phase 3 (WK-676). It is noted here and not built.~~
+  *(Struck 2026-09-29, Q843-1: the premise is superseded. The deputy's entry `2026-09-28 14:19:21 BST · deputy · CORRECTION: my 14:18 DP-6 "carried risk" note named FR-345 as the environment-scoped grant mechanism. It is not. No requirement scopes a human deploy grant by environment`
+  withdrew it: FR-345 names no environment, and it is not the mechanism. The owner is WK-674,
+  per `CR-1212` item 4.)*
 
 **Observed, not ruled:** other names in `06` §2 and §4.1 also differ from the code's
 vocabulary. For example, `06` has `model:approve` where the code has `approval:decide`, and
 `rating_version:submit` where the code has `rating:submit`. This record amends only the deploy
 permission, which DP-6 asks about. The rest is for an auditor to file as a finding, and the
 lead is told.
+
+**DP-6 amended 2026-09-29 — the maintainer's answer Q843-1** (entry of 2026-09-29 14:17:56 BST (heading quoted in the fenced block under *Amended 2026-09-29*)):
+- **The premise is superseded.** The routing of environment scoping to FR-345, Phase 3,
+  WK-676 rested on a premise the deputy withdrew in `2026-09-28 14:19:21 BST · deputy · CORRECTION: my 14:18 DP-6 "carried risk" note named FR-345 as the environment-scoped grant mechanism. It is not. No requirement scopes a human deploy grant by environment`. That entry reads, at
+  `ed123cb0`: *"`06` FR-345 reads 'Role assignments are **scoped**: workspace-wide, or
+  limited to named Datasets, Model Families, or Rating Algorithms'. It names no
+  environment."* It also *"supersedes the 'owner WK-676' part"*.
+- **The decision is `CR-1212` item 4's** ("4. The environment-scoping spec gap"; accepted
+  by delegation in the deputy's entry of 2026-09-28 18:13:19 BST): *"a `06`/`07` spec change
+  that scopes `deployment:promote` to named environments, owned by WK-674 and landed with
+  its environment record."* This record does not re-decide it and does not write that spec
+  change. It lands with WK-674's environment record.
+- **"(b) … no environment-scoped grant" is the Phase 2 state only**, until that WK-674 slice
+  lands. The name ruling (one permission, `deployment:promote`, no per-environment family)
+  is unchanged. Scoping one permission to named environments is a grant scope, not a second
+  name.
 
 **What it obliges:**
 - **This commit:** the two `06` amendments.
@@ -309,7 +362,8 @@ approval submission requires the `uat_deployment` evidence kind and refuses with
 The obligations are stated per slice under each part above. In summary:
 - **This commit:** `03` FR-272 (DP-4), `06`'s glossary and §4.1 (DP-6), and `07` FR-429
   (DP-7), each amended and dated.
-- **Slice 1 or Slice 4:** `07` FR-437's dated amendment (DP-1).
+- ~~**Slice 1 or Slice 4:** `07` FR-437's dated amendment (DP-1).~~ *(2026-09-29, QDP-1: it is
+  in this commit. The Phase 3 roadmap row for FR-433 is the lead's, after merge.)*
 - **Slice 2:** the Audit Event in the change's transaction (DP-4); `deployment:promote` on
   the deploy route (DP-6); both promotion-order checks on one shared predicate (DP-7).
 - **Slice 5:** NFR-489's measured verdict, and a proposal only if RL-921 §4's trigger fires
@@ -318,8 +372,10 @@ The obligations are stated per slice under each part above. In summary:
 - **The close:** NFR-497's verdict is the lead's, with the degraded-read evidence quoted.
 - **Plan review 15:** FR-433's owner, and the unassigned ids the entry lists.
 - ~~**WK-688 (Phase 4):** FR-272's channel delivery.~~ *(Struck 2026-09-29, Q848-1: FR-272's
-  channel is `07` FR-453, and its owner is `OQ-1233`'s.)* **WK-676 (Phase 3):** any
-  environment-scoped deploy grant.
+  channel is `07` FR-453, and its owner is `OQ-1233`'s.)* ~~**WK-676 (Phase 3):** any
+  environment-scoped deploy grant.~~ *(Struck 2026-09-29, Q843-1: the environment scoping of
+  `deployment:promote` is `CR-1212` item 4's `06`/`07` spec change, owned by WK-674 and landed
+  with its environment record.)*
 - **An auditor:** the other permission-name differences between `06` and the code,
   observed under DP-6 and routed by the lead.
 
