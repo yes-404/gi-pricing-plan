@@ -267,7 +267,7 @@ tests (`--collect-only` never enters test setup, so the teardown never fires and
 lock). Record in the ledger when this fallback is used; it re-serialises the gates the
 process slots were widened to parallelise, so it is the exception.
 
-Same shape for `migrate --verify`, two slots instead of three:
+Same shape for `migrate --verify`, also two slots:
 
 ```bash
 verify_body='POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 python3 scripts/doc-id.py migrate --verify <root>'
@@ -314,7 +314,7 @@ exits 0 and the old `&&` correctly stopped after one pass) — but a failing gat
 times** (one run per slot plus the fallback), exactly when someone is iterating on a red gate and
 least wants triple-cost turnaround.
 
-**Correctness was never in question — only timing and scratch cost.** All three (or four)
+**Correctness was never in question — only timing and scratch cost.** All the slot passes (or plus the fallback)
 passes agree byte-for-byte; nothing about `migrate --verify`'s or the gate's verdict was
 ever wrong. What the bug corrupted is **any elapsed-time figure taken under the old
 wrapper**: a "how long does a verify take" reading is roughly 3x the instrument's true
@@ -353,8 +353,8 @@ wrapper's own argv) must resolve to a `flock` process, and `/proc/<pid>/environ`
 the six thread-cap variables. A gate whose parent is `uv run pytest -q` directly is a
 violation, full stop — the dispatch brief's prose is not evidence it ran.
 
-**Concurrency budget on a shared box (multiple executors/worktrees at once): 3 gate slots,
-2 verify slots.** Read load as **CPU demand**, not the load-average number alone: 150+
+**Concurrency budget on a shared box (multiple executors/worktrees at once): 2 gate slots,
+2 verify slots.** *(Was 3 gate slots until 2026-09-29, when the box was resized to 8 vCPU.)* Read load as **CPU demand**, not the load-average number alone: 150+
 Python test threads plus Polars/DuckDB's `tokio-rt-worker`/`async-executor-` pools (sized to
 `nproc` by default, hence the cap above) make the load average count runnable/blocked
 threads, which inflates it well past actual CPU-seconds. The honest figure is
