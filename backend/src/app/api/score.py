@@ -65,6 +65,7 @@ from app.platform import settings as settings_service
 from app.platform import traces as traces_service
 from app.platform.blobs import BlobStore, to_ref
 from app.platform.bundle_slot import BundleSlot
+from app.platform.safe_exception import safe_job_exc_info
 from model_schema import (
     ArtifactRef,
     Job,
@@ -80,6 +81,7 @@ from pricing_core.rating.compile import Bundle
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
 from pricing_core.rating.score import score_one
 from pricing_core.rating.trace_diff import diff_traces
+from pricing_core.safe_error import CodedError
 
 _log = get_logger("app.api.score")
 
@@ -253,12 +255,16 @@ async def _compiled_for(
 def _as_platform_error(exc: ValueError) -> PlatformError | None:
     """Map `pricing-core`'s code-named `ValueError` onto its registered code.
 
-    The code is parsed off the front rather than matched against the whole message: the
-    convention is `f"{code}: {message}"` and the message half is prose that will change.
-    Anything whose prefix is not a per-quote code is left alone — returning `None` lets the
-    caller re-raise, so an unrecognised failure surfaces as a 500 instead of being labelled
-    with whichever code happened to be nearest.
+    Only a `CodedError` qualifies (NFR-499): it is the class `pricing-core` raises for its own
+    input-free `f"{code}: {message}"` text, so a library's `ValueError("RATE_TABLE_MISS: <value>")`
+    is never parsed and never echoed into a response. The code is parsed off the front rather than
+    matched against the whole message: the message half is prose that will change. Anything else,
+    or a prefix that is not a per-quote code, is left alone — returning `None` lets the caller
+    re-raise, so an unrecognised failure surfaces as a 500 instead of being labelled with
+    whichever code happened to be nearest.
     """
+    if not isinstance(exc, CodedError):
+        return None
     code, separator, detail = str(exc).partition(": ")
     if not separator or code not in _PER_QUOTE_CODES:
         return None
@@ -429,9 +435,11 @@ async def _maybe_sample_trace(
                 caller.principal,
                 workspace_id=caller.workspace_id,
             )
-    except Exception:
-        _log.exception(
+    except Exception as exc:
+        # Sanitised: the failing insert carries the quote context (NFR-499, RL-917).
+        _log.error(
             "trace sampling failed; the quote was still served",
+            exc_info=safe_job_exc_info(exc),
             extra={"workspace_id": str(caller.workspace_id), "outcome": result.outcome},
         )
 

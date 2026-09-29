@@ -423,8 +423,9 @@ def test_a_validation_error_inside_a_run_never_puts_a_quote_input_in_the_job_err
 ) -> None:
     """Pydantic's `ValidationError` is a `ValueError` and its message carries `input_value`:
     a generated or golden quote input. Only `UnsweepableProperty` is the named refusal; every
-    other exception ends the Job with a generic code and a message that carries no value —
-    in the Job's error AND in the log line and formatted traceback the worker writes."""
+    other exception propagates to `execute_job`'s one generic clause (no second path in the
+    handler) and ends the Job with a message that carries no value — in the Job's error AND in
+    the log line and formatted traceback the worker writes."""
     import logging
 
     from app.worker import rating_handlers
@@ -448,14 +449,15 @@ def test_a_validation_error_inside_a_run_never_puts_a_quote_input_in_the_job_err
     job = w.run()
     assert job.status is JobStatus.FAILED
     assert str(_SECRET) not in repr(job.error)
-    assert job.error["code"] != "REGRESSION_PROPERTY_INVALID"
+    assert job.error["code"] == "JOB_HANDLER_FAILED"  # the runner's one generic clause
+    assert "ValidationError" in job.error["message"]  # the sanitiser keeps the type
 
-    # the log leg: the capture worked (the withheld message IS there) and carries no value
+    # the log leg: the capture worked (the runner's line IS there) and carries no value
     captured = capfd.readouterr()
     formatted = caplog.text + captured.out + captured.err + "".join(
         logging.Formatter().formatException(r.exc_info) for r in caplog.records if r.exc_info
     )
-    assert "details are withheld" in formatted
+    assert "job handler failed" in formatted
     assert str(_SECRET) not in formatted
 
 
