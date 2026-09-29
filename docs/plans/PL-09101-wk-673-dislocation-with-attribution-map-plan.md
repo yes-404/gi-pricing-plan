@@ -49,7 +49,8 @@ First filed 2026-09-28 as working id PL-9101; `created` re-dated so the id seque
 >    FD-1197), and WK-672 Slice 3 merged (#886; WK-672 closed, CR-1243).
 > 6. **Cross-Work dependencies re-derived** under the maintainer's 22:46:27 item 5 (CR-1212's
 >    Work order relaxed to real dependencies). The only real WK-674 dependency is Slice 5's:
->    nothing can be `live` until WK-674 Slice 2's Deployment exists (premise j). The bare
+>    nothing can be `live` until WK-674 Slice 2's Deployment exists (premise j). Slice 6
+>    inherits it through Slice 5. The bare
 >    "WK-674, then WK-673" order is lifted. The files shared with other Works are listed
 >    under Sequencing, and those slices are serialised.
 > 7. **Locators re-read at `19c395ac`**; main then moved to `97b15726` (#922's P2 dates,
@@ -233,9 +234,9 @@ decision-maker before any fallback if K = 4 does not fit. Exact Shapley (K ≤ 6
 largest remainder stand as the method of record.
 
 **DP-1, DP-2 and DP-3 are decided, and the §3.11-vs-docstring disagreement is resolved**,
-by the same 14:05:30 entry, filed by the decision-maker as the #845 ruling ("Ruled — by
-the decision-maker, 2026-09-29", re-verified at `ac8ab519`; read on its branch at
-`335edce8`, not yet merged). See the DP table. The ruling's "What it obliges" section names
+by the same 14:05:30 entry, filed by the decision-maker as the #845 ruling, which adopts the
+recommendations unchanged after re-verifying each point (read on its branch
+`p2-wk673-rl` at `d8101c4c`, not yet merged). See the DP table. The ruling's "What it obliges" section names
 five negative tests, carried as acceptance item 11.
 
 **The FR-266 open question is decided (b)**: OQ-1187, `docs/open-questions.md:131` and the
@@ -403,8 +404,9 @@ slice, artifact or ruling counts. Bare order is lifted.
 
 | Dependency | Real? | What is needed |
 |---|---|---|
-| "WK-674, then WK-673" (CR-1212 Proposal 2) | **No** for Slices 1–4, 6 and 7 | none of them reads an Environment, a Deployment or a live pointer; `dislocate` and `attribute` take two named versions |
+| "WK-674, then WK-673" (CR-1212 Proposal 2) | **No** for Slices 1–4 and 7 | none of them reads an Environment, a Deployment or a live pointer; `dislocate` and `attribute` take two named versions |
 | Slice 5 on WK-674 | **Yes** | FR-257 limb (2)'s baseline is "the current live version", and nothing can be `live` until WK-674 Slice 2's (SL-1256) Deployment record and live resolution land (premise j). Slice 5 starts after SL-1256 merges |
+| Slice 6 on WK-674 | **Yes, transitively** | Slice 6 follows Slice 5, which needs SL-1256; Slice 6 itself reads no WK-674 artifact |
 | Slice 6 on WK-672 Slice 3 | **Met** | #886 merged; WK-672 closed (CR-1243) |
 | Slice 3 on WK-1250 | **No, but contended** | subsets compile through the current `compile_bundle`; WK-1250 changes it (see the file list) |
 | WK-675 Slice 5 on this Work | **Yes** (the other direction) | Slice 7 (F-W10-2) |
@@ -423,6 +425,9 @@ file are serialised: the second one merges `origin/main` before its mint (never 
 | `compile_bundle` (`pricing_core/rating/compile.py`) and `TraceStep` | 3 (calls `compile_bundle`, reads the ladder for replay; no edit planned) | WK-1250 (edits both); WK-675 Slice 7b |
 | `backend/src/app/platform/rating_versions.py` | 5, 6 (`submit_for_review`) | none planned at `19c395ac`; FD-1245's ruling may add one |
 | `docs/specs/06-governance.md` | 5 (FR-364's `structural_diff`, §4.2's threshold field) | WK-674 Slices 2 and 3 (§4.1 rows, §4.2 `deployment` entry) |
+| `packages/model-schema/src/model_schema/jobs.py` | 4 (cites `JobKind.DISLOCATION_RUN`, `:63`; edits only if the handler's payload needs a shape) | WK-674 Slice 1, SL-1255 (edits the Job shape and `JobRow`, `PL-1239`) |
+| `backend/src/app/platform/jobs.py` and the `backend/src/app/worker/` handler registry | 4 (cites the `COMPUTE` route, `platform/jobs.py:79`; registers the `dislocation.run` handler under `worker/`) | WK-674 Slice 1, SL-1255 (edits `platform/jobs.py`, `PL-1239`) |
+| `packages/model-schema/src/model_schema/permissions.py` | 4, 7 (cite existing names; edit only for a new dislocation permission, which is a scope change) | WK-674 Slices 2 and 3 (cite existing names, `PL-1237`'s permission table); WK-690 Slice 3 (edits: adds `custom_objective:author`) |
 | `docs/contracts/` (generated) | 2, 3, 4, 5, 7 | every Work that changes a `model-schema` shape; resolved by regenerating |
 
 ### Slice 1 — Spec: FR-266's amendment, the hard gate as requirements, the contract and the types
@@ -572,7 +577,8 @@ pattern of `modelling.py:1238-1261`, replacing the direct limb checks, limb (1)'
 by name, never passed. Tested with a policy at the floor, a policy above it, and each kind
 missing in turn.
 
-Depends on: Slice 5. WK-672 Slice 3 is merged (#886), so nothing outside the Work.
+Depends on: Slice 5, and so transitively on WK-674 Slice 2 (SL-1256) through it. WK-672
+Slice 3 is merged (#886).
 Gate: as Slice 5.
 
 ### Slice 7 — FR-231's exposure weights through the portfolio frame (F-W10-2)
@@ -620,7 +626,7 @@ Premises a, a′, c′, d′, e and e′ record what moved since `6c6f4532`; j, 
 **4. Rulings between sweep and filing.** Merged since the first draft and cited:
 `RL-1184` (#830), `RS-1201` (#833), `RL-1236` (#856), WK-672 Slice 3 (#886), CR-1212's
 acceptance, the maintainer's 22:46:27 and 22:47:23 entries. Open and cited: the #845
-ruling (read at `335edce8`), FD-1245 (open, may move FR-257's gate). The WK-673 roadmap row
+ruling (read at `d8101c4c`), FD-1245 (open, may move FR-257's gate). The WK-673 roadmap row
 (`docs/roadmap.md:686` at `97b15726`) lists only FR-263 to FR-266; the scope table above is the fuller
 list, and correcting the row is the lead's or decision-maker's, proposed in the report
 that carries this revision.
