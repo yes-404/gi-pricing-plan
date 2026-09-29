@@ -38,7 +38,13 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
-from app.db.models import BlobRow, DatasetVersionRow, JobRow, ScoringTraceRow
+from app.db.models import (
+    BlobRow,
+    DatasetVersionRow,
+    JobRow,
+    RegressionRunRow,
+    ScoringTraceRow,
+)
 from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.platform import audit
@@ -470,9 +476,13 @@ def blob_probe(store: BlobStore) -> Any:
 
 #: Every column through which a **quote-input store** references a blob (NFR-499, RL-917).
 #: A digest named here is never served by `GET /blobs/{sha256}` and never ingested, whoever
-#: owns it otherwise: its body is read through that store's own workspace-scoped API. WK-672
-#: Slice 3's case store appends its column here.
-QUOTE_INPUT_BLOB_COLUMNS: tuple[Any, ...] = (ScoringTraceRow.blob_sha256,)
+#: owns it otherwise: its body is read through that store's own workspace-scoped API. The
+#: regression case store (`regression_runs.cases_blob_sha256`, FR-1221, WK-672 Slice 3) is the
+#: second entry.
+QUOTE_INPUT_BLOB_COLUMNS: tuple[Any, ...] = (
+    ScoringTraceRow.blob_sha256,
+    RegressionRunRow.cases_blob_sha256,
+)
 
 
 def blob_not_found(sha256: str) -> PlatformError:

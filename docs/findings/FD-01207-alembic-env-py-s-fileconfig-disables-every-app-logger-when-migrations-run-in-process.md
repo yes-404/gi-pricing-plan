@@ -2,7 +2,7 @@
 id: FD-1207
 family: finding
 title: Alembic env.py's fileConfig disables every app logger when migrations run in-process
-status: active
+status: closed
 created: 2026-09-28
 owner: auditor
 tree: 109cd065987c399b9cdbecc2fcb6628843dfb79a
@@ -52,3 +52,20 @@ At `origin/main` `109cd065`:
 `fileConfig(config.config_file_name, disable_existing_loggers=False)` in
 `backend/migrations/env.py`. That fixes the cause for every in-process caller, not only the one
 guarded test.
+
+## Resolution
+
+**Resolved 2026-09-28 by #873, merge commit `91d08d8a`** (`fix(migrations): env.py's fileConfig no longer
+disables the app's loggers (WK-1178, #869) (#873)`, merged 2026-09-28 22:20:19 BST). Read at `91d08d8a`:
+
+- `backend/migrations/env.py:28` is `fileConfig(config.config_file_name, disable_existing_loggers=False)`,
+  under a comment saying alembic can run in-process and the default would disable every existing logger.
+- `backend/tests/test_migration_env_logging.py` (one test, marked `NFR-499`) runs `command.current` in a
+  thread against the test database and asserts that the probe logger `app.env_logging_probe` is still
+  enabled, and that no logger under `app` is disabled. A fixture restores every logger's `disabled` flag, so
+  a red run cannot poison other tests. This record read the test's assertions, and did not run it.
+- The change removes #867's test-side guard from `backend/tests/test_regression_suites.py`, the guard this
+  record described as covering one test and not the cause.
+
+Production was never affected: this record's own evidence found no in-process alembic in `backend/src`.
+
