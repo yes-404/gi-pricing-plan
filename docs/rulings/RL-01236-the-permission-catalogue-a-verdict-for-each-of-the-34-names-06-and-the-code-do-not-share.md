@@ -72,6 +72,10 @@ The predicates are run at `37b2596e`, from the repository root.
   names.)*
 - **The counts:** 24 in `06`, 24 in code, 7 shared, 41 in the union, and **34 unshared**
   (17 each side). They agree with the finding.
+  *(Noted 2026-09-29: these counts are as of `37b2596e`. At the merged tree (`dc8974c4`), the
+  same `06` predicate gives 25 names, because `RL-1232` DP-6 (#848) wrote `deployment:promote`
+  into `06:62` and `:218-221`. So 8 are shared, and 33 are unshared. Row 24 still stands:
+  `deployment:promote` has 0 code check sites, because the deploy route is not built.)*
 
 **The caller predicate, for every verdict on a code name:**
 `git grep -n -E "(Perm|Permission)\.<NAME>\b" 37b2596e -- backend/src | grep -v '#'`
@@ -348,7 +352,7 @@ the same text:
 | `platform/approvals.py:260`, `:269-274`, `:275`, `:435` | `:328`, `:376-381`, `:382`, `:569` |
 | `tests/test_approvals.py:68`, `:86`, `:345`, `:346`, `:383-384` | `:96`, `:116`, `:399`, `:400`, `:439-440` |
 | `tests/test_api_approvals.py:330`, `:353` | `:410`, `:433` |
-| `06:222-247`, `:239-242`, `:466` | `06:224-249`, `:241-244`, `:518` |
+| `06:222-247`, `:239-242`, `:466` | `06:224-249`, `:241-244`, ~~`:518`~~ `:520` *(corrected 2026-09-29: `:518` was the merge commit `1df12921`'s line; this record's own two-line `06` §4.1 correction then moved it to `:520`)* |
 
 `06:62` and `06:218-219` are at the same lines and now carry this record's DP-C amendments and
 `RL-1232` DP-6's, which this branch resolved together at the merge. Where `api/models.py:1112`
