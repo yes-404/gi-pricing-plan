@@ -100,7 +100,7 @@ this review: from now on, is `06` or the code the source of record for the catal
 - The code's vocabulary is not in the backend. It is `model_schema.Permission`, a closed
   `StrEnum` in `packages/model-schema/src/model_schema/permissions.py`, with `BUILTIN_ROLES`
   beside it.
-- It is generated into `docs/contracts/openapi/generated.json` (the enum at `:8800-8815`).
+- It is generated into `docs/contracts/openapi/generated.json` (the enum block at `:8798-8823`: `"enum": [` at 8798, 24 members, closing at 8823).
   Its module docstring says the vocabulary lives there "because both sides need it and
   neither may invent it".
 - `06` §2, §4.1 and the Pricing Actuary role block (`06:192-204`) define the vocabulary a
@@ -110,8 +110,11 @@ this review: from now on, is `06` or the code the source of record for the catal
   - The enum has 24 members. The predicate is the regex
     `^\s+[A-Z_]+\s*=\s*"([a-z_]+:[a-z_]+)"` over `permissions.py`, in multiline mode.
   - The Pricing Actuary role block, `06` lines 196–201, names 16 permissions (the regex
-    `"([a-z_]+:[a-z_*]+)"`). **12 of the 16 are not enum members.** Eight are `RL-1236`
-    maps, and four are its spec-only carries.
+    `"([a-z_]+:[a-z_*]+)"`). **12 of the 16 are not enum members.** Seven are `RL-1236`
+    maps: row 1 (`rating_version:submit`) and rows 11–16 (`rating_algorithm:write`,
+    `rate_table:write`, `factor:write`, `banding:write`, `grouping:write`,
+    `dataset:create_version`). Five are its spec-only carries: rows 6–10 (`monitor:write`,
+    `alert:acknowledge`, `alert:resolve`, `optimisation:run`, `optimisation:materialise`).
   - So a reader who copies that built-in role off the page gets a role that grants 4 of its
     16 names.
 
