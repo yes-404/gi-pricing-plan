@@ -391,25 +391,32 @@ def _validate_inputs(algorithm: RatingAlgorithm, inputs: Mapping[str, Any]) -> N
 
 
 def _check_purpose_mount(algorithm: RatingAlgorithm, ctx: QuoteContext) -> None:
-    """FR-218: a `purpose` requiring the MTA/cancellation sub-graph refuses rather than
-    pricing as new business when this Rating Version mounts none.
+    """FR-218: an MTA or cancellation quote is refused, whatever the algorithm mounts, until
+    sub-graph inlining (FR-217) is built.
 
-    `algorithm.sub_graphs` non-empty is a documented, provisional stand-in for "this
-    version mounts the sub-graph *this purpose* needs": sub-graph inlining
-    (`SubGraphRef.mount_point` resolution, `compile_bundle`'s own TODO) is not built by any
-    slice yet, so no rating version can meaningfully mount one today — checking for
-    *any* mounted sub-graph is therefore a conservative, forward-safe approximation: it
-    refuses everything a truthful check would refuse today, and a real future algorithm
-    that does mount its MTA sub-graph will have a non-empty list, satisfying it correctly
-    without this function needing to know the mount point's name.
+    FR-218 prices these purposes with a separately-versioned pro-rata / refund sub-graph
+    mounted only for them. No slice builds that mounting yet: `compile_bundle` never reads
+    `sub_graphs`, so the engine never evaluates any sub-graph and no rating version can
+    actually mount one. An earlier form of this guard
+    refused only when `algorithm.sub_graphs` was empty, calling a non-empty list a
+    "conservative, forward-safe approximation". That was false: a non-empty list is only a
+    declared reference, not a mounted sub-graph, so an algorithm naming a sub-graph that
+    does not exist (or is never inlined) passed the guard and a cancellation or MTA was
+    priced as new business, the silent failure FR-218 names (payable 1507). The finding is
+    "CR-838 marks FR-217 delivered, but its pin and bundle-time inlining are not built".
+
+    Refusing every such quote is the only truthful check available today, and it is interim:
+    when FR-217's inlining exists, this becomes a check that the mounted sub-graph is the
+    one this purpose needs.
     """
-    if ctx.purpose in ("mid_term_adjustment", "cancellation") and not algorithm.sub_graphs:
+    if ctx.purpose in ("mid_term_adjustment", "cancellation"):
         _raise_named(
             "INPUT_CONTRACT_VIOLATION",
-            f"purpose={ctx.purpose!r} requires a mounted sub-graph (FR-218), and this "
-            "rating version's algorithm mounts none — refused rather than priced as new "
-            "business, which FR-218 names as the failure this refusal exists to "
-            "prevent",
+            f"purpose={ctx.purpose!r} requires a mounted sub-graph (FR-218), and sub-graph "
+            "inlining (FR-217) is not built yet, so no rating version can mount one — "
+            "refused rather than priced as new business, which FR-218 names as the "
+            "failure this refusal exists to prevent. This refusal is interim until "
+            "FR-217's inlining is built",
         )
 
 
