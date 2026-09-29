@@ -112,9 +112,10 @@ relates: []                      # ids only
   any commit, merge or rebase after the grant — needs a new grant. The four docs checks and
   a named single test are not the full gate and need no grant.
   - **Amended 2026-09-29 (`FD-1214`, WK-1178): a lead hold overrides that last sentence.**
-    While the lead's hold file `~/gi-pricing-plan.local/gate/HOLD` exists, **any** pytest —
+    While the lead's hold file `~/gi-pricing-plan.local/gate/HOLD` exists, **any executing** pytest —
     a named single test included — is refused by the root `conftest.py`, unless the run
-    carries the token in `GIP_GATE_TOKEN` that only the granted gate is given. A message
+    carries the token in `GIP_GATE_TOKEN` that only the granted gate is given (`--collect-only`
+    runs no test and is not refused). A message
     cannot reach an executor blocked mid-turn; the tool refuses instead, so do not work
     around it: a refusal naming the hold file is a lead stop (S-12). With no hold file,
     nothing changes. The frontend runner (`pnpm --dir frontend test`, vitest) is not

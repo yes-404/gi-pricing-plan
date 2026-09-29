@@ -387,3 +387,37 @@ def test_positive_control_the_token_reaches_a_real_pytest_through_the_wrapper(
     passed = run("tok-123")
     assert passed.returncode == 0, passed.stdout + passed.stderr
     assert "1 passed" in passed.stdout
+
+
+def test_collect_only_is_not_refused_by_a_hold(
+    conftest_module: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _hold(tmp_path, monkeypatch, "tok-123\nlead\n")
+    conftest_module.pytest_configure(_FakeConfig((), collectonly=True))
+
+
+def test_an_unreadable_hold_file_refuses(
+    conftest_module: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Fail closed: a hold that exists but cannot be read is a hold, not an absence."""
+    hold = tmp_path / "HOLD"
+    hold.mkdir()  # exists, but `read_text()` raises IsADirectoryError, an OSError
+    monkeypatch.setenv("GIP_GATE_HOLD_FILE", str(hold))
+    monkeypatch.setenv("GIP_GATE_TOKEN", "anything")
+    with pytest.raises(pytest.exit.Exception) as excinfo:
+        conftest_module.pytest_configure(_FakeConfig(("tests/test_doc_id.py",)))
+    assert excinfo.value.returncode == 4
+
+
+@pytest.mark.parametrize("text", ["\nlead\n", "", "   \nlead\n"])
+def test_a_hold_with_an_empty_token_line_refuses_even_an_empty_token(
+    conftest_module: types.ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    text: str,
+) -> None:
+    _hold(tmp_path, monkeypatch, text)
+    monkeypatch.setenv("GIP_GATE_TOKEN", "")
+    with pytest.raises(pytest.exit.Exception) as excinfo:
+        conftest_module.pytest_configure(_FakeConfig(("tests/test_doc_id.py",)))
+    assert excinfo.value.returncode == 4

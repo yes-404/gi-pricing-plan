@@ -125,9 +125,9 @@ run was launched with `env -C <checkout> python3 dbname-probe.py`:
 Three different checkouts gave one name. Only the checkout with a different leaf
 (`tree2`) got its own database. Both throwaway worktrees were removed afterwards.
 
-**A lead's hold stops every pytest, this gate included, unless it carries the token.** While
+**A lead's hold stops every executing pytest, this gate included, unless it carries the token.** While
 `~/gi-pricing-plan.local/gate/HOLD` exists (override: `GIP_GATE_HOLD_FILE`) the root `conftest.py`
-refuses any executing run, a single named test too; the file's first line is the token, and
+refuses any executing run, a single named test too (`--collect-only` is exempt); the file's first line is the token, and
 the granted gate runs with `GIP_GATE_TOKEN=<that token>` exported **before** the block below,
 which its `flock -c` child inherits. The gate body does not set or clear it. No hold file:
 nothing changes (`FD-1214`, `executor.md` S-13).
@@ -1135,7 +1135,8 @@ per the deputy's ruling (relayed via `to-lead.md`), fixing the shared-DB truncat
 `python-test`'s "mutually destructive" section documents. Confirmed directly before
 writing it: `SELECT rolsuper, rolcreatedb FROM pg_roles WHERE rolname='gipricing'` via
 `asyncpg` returned `(True, True)` — the role is superuser with `rolcreatedb`, so
-`createdb -T gipricing gipricing_<leaf>_<hash>` costs nothing; only the one shared `gipricing`
+`createdb -T gipricing gipricing_<leaf>_<hash>` costs nothing (history: written when only `gipricing`
+existed; the template is now `gipricing_template`, `FD-1218` — do not copy this form); only the one shared `gipricing`
 database existed before this change. The DB-exclusive-lock fallback (for a branch whose
 migrations cannot run against a fresh copy) is written but not exercised — no branch has
 needed it yet. Two-worktrees-in-parallel proof delegated to a one-shot agent (see its
