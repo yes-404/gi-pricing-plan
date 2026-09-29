@@ -3,7 +3,7 @@ id: PL-1237
 family: plan
 kind: map
 title: WK-674 — Deployment, environments, atomic switchover, rollback, shadow and tenancy: map plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-09-29
 owner: planner
 tree: 9cd179cbcc2ab55c6bcf44d956c73c74a24d4144
@@ -121,6 +121,14 @@ alone.
    the maintainer**. No repo record names one at `9cd179cb`. A run on the shared VM may be
    filed as a diagnostic, but it **claims no verdict near a bound**: not the 30 s switch and
    not the zero-drop clause.
+
+   *(Amended 2026-09-29, in the commit that sets this plan `active`: the maintainer's host
+   fallback, entry `2026-09-29 16:08:24 BST · maintainer (acting on the maintainer's behalf) ·
+   HOST FALLBACK accepted; DEPENDABOT plan approved (the maintainer)`, §1, quoted verbatim in
+   item 6, applies to this item.)* If no dedicated host exists at Slice 5's close, the F1
+   acceptance test's verdict is **measured, diagnostic** on the shared VM and **carried**,
+   owner the maintainer, discharge event **a dedicated host available**. No near-bound pass
+   or fail is claimed.
 6. **NFR-489 and NFR-502 each carry a measured verdict.** Both are measured on the
    deployment path, on a dedicated host, in more than one pass (RL-921 §4: "A re-run needs a
    dedicated host, and one pass will not establish a verdict near a bound"). Each result is recorded in WK-674's closure record with the shape measured and
@@ -162,6 +170,21 @@ alone.
      NFR-490 recorded as measured (red if red) and F35 carried under that owner event, never on
      a silent pass. Whether P2 can exit with NFR-490 red is plan review 16's to state, not this
      plan's.
+
+   **Host fallback (amended 2026-09-29, in the commit that sets this plan `active`).** The
+   maintainer's entry `2026-09-29 16:08:24 BST · maintainer (acting on the maintainer's
+   behalf) · HOST FALLBACK accepted; DEPENDABOT plan approved (the maintainer)`, §1, gives
+   this wording for every near-bound measured verdict that needs the host. It is quoted
+   verbatim:
+
+   > "*(Amended 2026-09-29 by the maintainer: no dedicated host is committed. These verdicts are **measured, diagnostic** on the shared VM; the verdict is **carried**, owner the maintainer, discharge event **a dedicated host available**. No near-bound pass or fail is claimed from the shared VM.)*"
+
+   In this item it applies to **NFR-489** (both limbs, F38's included), **NFR-502**, **NFR-493's
+   linearity limb** and **NFR-494**. Item 5 applies it to the F1 acceptance test. **NFR-490 is
+   unaffected**: it is far from its bound, and the SCOPE entry of 15:36:43 BST stands for it.
+   Where no dedicated host exists at Slice 5's close, each of those verdicts is recorded as
+   "measured, diagnostic on the shared VM; the verdict is carried, owner the maintainer,
+   discharge event a dedicated host available".
 7. **The register rows owed to WK-674 are resolved.** `python3 scripts/register-owed.py WK-674`
    prints no row without a resolution. ~~At this tree it lists F41, F43 and F48. F54 is added
    once the register-and-records pass (auditor-b's PR) moves its owner to WK-674, and it must
@@ -922,6 +945,14 @@ auditor made to the Slice 1 leaf plan.)*
     Until it exists, DP-3 (b) reads "verdict recorded; the re-measurement trigger cannot
     validly fire without a dedicated host (RL-921)", and no measurement from the shared VM is
     reported as a verdict near a bound.
+  - *Added 2026-09-29, in the commit that sets this plan `active`: the maintainer's host
+    fallback* (entry `2026-09-29 16:08:24 BST · maintainer (acting on the maintainer's behalf)
+    · HOST FALLBACK accepted; DEPENDABOT plan approved (the maintainer)`, §1, quoted verbatim
+    in Acceptance item 6). No dedicated host is committed. Where none exists at this slice's
+    close, **the F1 test, NFR-489, NFR-502, NFR-493's linearity limb and NFR-494** are
+    recorded as "**measured, diagnostic** on the shared VM; the verdict is **carried**, owner
+    the maintainer, discharge event **a dedicated host available**". **NFR-490 is unchanged** (the SCOPE
+    entry of 15:36:43 BST).
 - **Depends on:** Slice 4's path and harness, and Slice 2's deploy transaction. *(Added
   2026-09-29.)* Its measured verdicts also depend on the maintainer-owned dedicated host.
 - **Gate outline.**
@@ -1008,10 +1039,40 @@ the maintainer's behalf) accepts this plan *(amended 2026-09-29)*, the activatio
 3. Adds the six `SL-` rows under `### WK-674`, with ids the lead issues, each `draft`.
 4. Regenerates `docs/INDEX.md` in the final commit only.
 
+**Maintainer acceptance, quoted verbatim** from the entry headed `2026-09-29 16:04:02 BST ·
+maintainer (acting on the maintainer's behalf) · PL-1237 ACCEPTANCE LINE (the WK-674 map
+plan)` (to-lead.md). The copy of that entry which follows it in the channel file, with its
+timestamp missing, is voided and is not the source:
+
+> **Maintainer acceptance:** accepted 2026-09-29 16:04:02 BST by the maintainer's delegation (to-lead.md). PL-1237 is `active`. Slice 1 may start. Slice 2 waits on OQ-1234 and Slice 3 on OQ-1235 (both resolved by the decision-maker by `RL-`). Slice 5's measured verdicts wait on a dedicated host (maintainer-owned). F35's remedy is carried per SCOPE 2026-09-29 15:36:43.
+
+**Activated 2026-09-29** in PR #892, the Slice 1 leaf plan's PR, which is next in the WK-674
+chain: `status: active` is set in the same commit as this quotation and as the host
+fallback (Acceptance items 5 and 6; Task 5). Step 1's condition holds: every Decision point
+row has its resolver, `RL-1232`. Steps 2 and 3 are the lead's.
+
 ## Status
 
-- **Acceptance line:** _pending — the maintainer's dated line, or one given on the
-  maintainer's behalf_ *(amended 2026-09-29; it was "the deputy's dated line by delegation")*
+- **Acceptance line:** ~~_pending — the maintainer's dated line, or one given on the
+  maintainer's behalf_ *(amended 2026-09-29; it was "the deputy's dated line by delegation")*~~
+  **Given 2026-09-29 16:04:02 BST by the maintainer's delegation**, and quoted verbatim under
+  **Activation**.
+- **Status note, dated 2026-09-29, at activation.** Which slices can start:
+  - **Slice 1 may start.** Its leaf plan is PL-1239 (`draft`, with its own DP-S1-1 to
+    DP-S1-3 open).
+  - **Slice 2 waits on `OQ-1234`** (the home of FR-429's skip permission). The decision-maker
+    resolves it by an `RL-`.
+  - **Slice 3 waits on `OQ-1235`** (per-environment configuration against FR-446's
+    precedence), resolved the same way. That is its roadmap gate "Before WK-674 Slice 3".
+  - **Slice 5's measured verdicts wait on a dedicated host**, owned by the maintainer. Under
+    the host fallback (Acceptance item 6), the near-bound verdicts are recorded as measured,
+    diagnostic and carried if no host exists at its close.
+  - **F35's remedy is carried** per the maintainer's entry `2026-09-29 15:36:43 BST ·
+    maintainer (acting on the maintainer's behalf) · SCOPE: NFR-490 / F35 in WK-674, option
+    (b)`. WK-674 measures NFR-490 and does not build the remedy, whose owner is named at plan
+    review 16.
+  - Slices 4 and 6 follow in sequence, with no gate beyond the slice before (Slice 6 inherits
+    `OQ-1235` through Slice 3).
 - **2026-09-29: working id 9102, minted 1237** at #843's turn in the merge queue, from
   `doc-id.py next --ref origin/main` at `9cd179cb`. `created:` moved from 2026-09-28 to the
   mint date, because `audit-docs.py` check 31 requires `created` to be non-decreasing with

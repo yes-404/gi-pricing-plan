@@ -83,3 +83,16 @@ That the 24,213 bytes are under the harness load limit is the maintainer's state
 3. The load-limit question: the maintainer's trim brought the index to 24,213 bytes (below). Whether that keeps it under the limit as it grows is the maintainer's; it is not this finding's.
 
 Ownership shape: event.
+
+## Second instance — 2026-09-29, 15:28:47Z to 15:28:51Z, a second member wrote into the user's project memory
+
+*(Dated line, 2026-09-29, added by the auditor. Times are from `~/.claude/projects/-home-puzhenhao1989-gi-pricing-plan/26d86cc0-6ba4-4fd6-b3d3-dbec0a17041c.jsonl`, the transcript of the session that sends as `auditor-b-2` (model `claude-sonnet-5-5`; 2282 lines, line numbers 1-based), and from file modification times. Counts and times only; no memory text is copied.)*
+
+- **15:28:41.921Z (line 2196):** the lead's message setting the commit-trailer rule reached that session.
+- **15:28:47.225Z (line 2198):** a `Write` created a new topic file `memory/commit-trailer-names-the-role-and-model.md` (921 characters). The moved copy on disk is 1,036 bytes with modification time 15:28:47.423Z.
+- **15:28:51.293Z (line 2204):** a `Bash` command (347 characters, containing `>>`) appended one index line to `memory/MEMORY.md`; the result at line 2205 shows the line as the file's last entry.
+- **15:28:56Z (line 2210):** the session's own message says it saved the rule "as a memory note in my own memory directory"; the directory is the shared project one.
+
+**Cause, as relayed by the lead:** the no-writes-under-`~/.claude/` rule had not been sent to every member; that was the lead's omission. **The maintainer's action, as relayed by the lead:** the maintainer removed the index line and moved the file out, and the rule was then sent to all members. No channel entry records this instance.
+
+**Measured afterwards:** the topic file is not in the memory directory; `grep -c 'commit-trailer'` on `MEMORY.md` prints `0`; `MEMORY.md` is 24,314 bytes with modification time 15:29:32.187Z; the moved copy is `~/gi-pricing-plan.local/commit-trailer-names-the-role-and-model.removed-from-memory-2026-09-29.md`. This record did not identify who removed the line, or when the rule was sent to each member.
