@@ -59,7 +59,7 @@ auditor, or a regulator:
 |---|---|
 | **Principal** | An authenticated identity acting on the platform: a User or a Service Account (a Consumer System calling the scoring API). |
 | **Role** | A named bundle of Permissions. The platform ships the roles of `00` §1.4 and allows custom roles. |
-| **Permission** | An atomic `(action, resource_type)` capability, e.g. `model:approve`, `dataset:acknowledge_warning`, `rating_version:deploy_prod`. |
+| **Permission** | An atomic `(action, resource_type)` capability, e.g. ~~`model:approve`~~ `approval:decide` *(amended 2026-09-28, `RL-1236` DP-C)*, `dataset:acknowledge_warning`, ~~`rating_version:deploy_prod`~~ `deployment:promote`. *(Amended 2026-09-28, `RL-1232` DP-6: there is one deploy permission, `deployment:promote`, and no per-environment family. Environments are configurable (`07` FR-428), so a per-environment name would make the permission vocabulary that FR-344's custom roles compose from open-ended.)* |
 | **Scope** | The subset of artifacts a role assignment applies to: workspace-wide, or restricted to named Datasets, Model Families, or Rating Algorithms (e.g. a motor actuary who cannot approve home pricing). |
 | **Governed Artifact** | Any artifact with an approval-bearing lifecycle: Dataset Version, Validation Rule, Model, Custom Objective, Custom Metric, Peril Structure, ~~Rate Table Version~~, Rating Version, Optimisation Run (when cited as evidence). *(Rate Table Version struck 2026-09-28: it has no approval lifecycle and is governed through the Rating Version that pins it. See `03` FR-1186 and OQ-620.)* |
 | **Evidence Bundle** | The set of artifact references required for that artifact type (§3.3), resolved and pinned at submission time. |
@@ -91,7 +91,7 @@ auditor, or a regulator:
 |---|---|
 | **FR-351** | The approval lifecycle is uniform across artifact types: `draft → review → (approved \| changes_requested \| rejected)`. Post-approval states (`live`, `superseded`, `retired`) belong to the owning module but are governed by the same audit rules. **Clause added 2026-09-28 (WK-1178), on the deputy's decisions by delegation of that day (the approval status bypass, recorded in #855's approval-bypass finding): only a version in its type's reviewable state can be put to a decision.** The reviewable state is `review` for `model`, `custom_objective`, `custom_metric`, `peril_structure`, `validation_rule` and `rating_version`, and `validated` for `dataset_version`, whose lifecycle has no `review` state. `POST /approval-requests` refuses any other state with `APPROVAL_SUBJECT_NOT_IN_REVIEW` (409), naming it, because a version reaches its reviewable state only through its owning module's own path, where that module's gates run; and the decision hooks refuse it again on the row they hold locked. A hook moves the version only once the request is decided, as FR-355 says: nothing while it is still in review, the approved state on approval, and the returned state on a rejection, a request for changes or a withdrawal; its Audit Event's `before` is the row's real prior state. `peril_structure`, `validation_rule` and `dataset_version` have no decision hook: approving one records the governance decision and does not move the version's row. |
 | **FR-352** | Submission requires: a complete Evidence Bundle (§3.3), a change summary, and a completed checklist for that artifact type. Missing items block submission with a field-level explanation (R4). |
-| **FR-353** | **Separation of duties**: the submitter cannot approve, and where two approvals are required they must be distinct Principals (R1). Enforced in the backend. **Amended 2026-09-28 (WK-1178), on #856's DP-A and the deputy's decisions by delegation of that day, the second refining the first: neither the submitter nor the Author of an artifact version may decide on it — approve, reject or request changes — exactly as R1 bars the submitter.** The **Author** is the actor of the version's **creation Audit Event** (`00` §2.5), one definition for all seven approvable types — `model` (`model.reserved`), `custom_objective`, `custom_metric`, `peril_structure`, `validation_rule`, `dataset_version` and `rating_version` (`<type>.created`). For a `model` the creation event is `model.reserved`, not `model.fitted`: the Author is **whoever reserved the version**, and the fit that follows is not authorship. The audit trail is the governance record of who did what, so it is the one source: four of the seven carry no author column, and where one exists (`created_by` on `rating_version` and `dataset_version`, `authored_by` on `validation_rule`) it is a copy that a test holds equal to the event's actor, never a second source the check reads. The check refuses any decision by the Author with `AUTHOR_CANNOT_APPROVE`, after R1 and before the permission for R1's own reason; and it **fails closed** — a version with no creation Audit Event is refused with `APPROVAL_AUTHOR_UNRESOLVED`, never approved unchecked. A built-in validation rule is seeded `approved` with no creation event and so cannot be put through an approval request, which is correct: it was reviewed in the specification. The reason for the widening: the coarse write rights of #856's DP-A let one person author a version that someone else submits, and the submitter-only rule then let that person approve it. **Scope limit: the Authors of the components a version pins** — a rate table version's or a model version's creator, reaching approval inside a Rating Version — **are not covered here.** That is the harder maker-checker question and is carried to **WK-677**, this requirement's owner, as a named carry with #855's approver ≠ author finding; it sits beside `03` FR-1186, that a Rate Table Version has no approval lifecycle of its own, which is the path by which a component Author's work reaches approval unchecked. *(Added 2026-09-28, `PL-1189`, the deputy's decision on audit finding F4.) For a Rating Version, an approver who authored any golden-quote change listed in the submission's delta (`03` FR-260) is refused with `APPROVAL_BY_EVIDENCE_AUTHOR` (403). This is not the general component-author rule, which WK-677 owns.* |
+| **FR-353** | **Separation of duties**: the submitter cannot approve, and where two approvals are required they must be distinct Principals (R1). Enforced in the backend. **Amended 2026-09-28 (WK-1178), on #856's DP-A and the deputy's decisions by delegation of that day, the second refining the first: neither the submitter nor the Author of an artifact version may decide on it — approve, reject or request changes — exactly as R1 bars the submitter.** The **Author** is the actor of the version's **creation Audit Event** (`00` §2.5), one definition for all seven approvable types — `model` (`model.reserved`), `custom_objective`, `custom_metric`, `peril_structure`, `validation_rule`, `dataset_version` and `rating_version` (`<type>.created`). For a `model` the creation event is `model.reserved`, not `model.fitted`: the Author is **whoever reserved the version**, and the fit that follows is not authorship. The audit trail is the governance record of who did what, so it is the one source: four of the seven carry no author column, and where one exists (`created_by` on `rating_version` and `dataset_version`, `authored_by` on `validation_rule`) it is a copy that a test holds equal to the event's actor, never a second source the check reads. The check refuses any decision by the Author with `AUTHOR_CANNOT_APPROVE`, after R1 and before the permission for R1's own reason; and it **fails closed** — a version with no creation Audit Event is refused with `APPROVAL_AUTHOR_UNRESOLVED`, never approved unchecked. A built-in validation rule is seeded `approved` with no creation event and so cannot be put through an approval request, which is correct: it was reviewed in the specification. The reason for the widening: the coarse write rights of #856's DP-A let one person author a version that someone else submits, and the submitter-only rule then let that person approve it. **Scope limit: the Authors of the components a version pins** — a rate table version's or a model version's creator, reaching approval inside a Rating Version — **are not covered here.** That is the harder maker-checker question and is carried to **WK-677**, this requirement's owner, as a named carry with #855's approver ≠ author finding; it sits beside `03` FR-1186, that a Rate Table Version has no approval lifecycle of its own, which is the path by which a component Author's work reaches approval unchecked. *(Added 2026-09-28, `PL-1189`, the deputy's decision on audit finding F4.) For a Rating Version, an approver who authored any golden-quote change listed in the submission's delta (`03` FR-260) is refused with `APPROVAL_BY_EVIDENCE_AUTHOR` (403). This is not the general component-author rule, which WK-677 owns.* *(Noted 2026-09-29: "#856's DP-A" above is `RL-1236` DP-A, the record #856 minted. Its adoption by the decision-maker is in that record's section of this date.)* |
 | **FR-354** | An **Approval Policy** per workspace defines, per artifact type (and per target environment for Rating Versions): required approver count, permitted approver roles, and required evidence. Defaults are specified in §4.2. |
 | **FR-355** | `changes_requested` returns the artifact to **its pre-submission state** and requires a comment. The request and the subsequent resubmission are both audited, so a reviewer's concerns and their resolution are traceable. *(Amended 2026-08-17, WK-661. This said `draft`, and for a Model that is wrong: `02` uses `draft` for a specification reserved but not yet fitted, and `02` R2 makes a fitted model's coefficients immutable — so a model returned from review cannot un-fit, and `draft` would describe an artifact with numbers as one without. A Model returns to `fitted`; `rejected` and `withdrawn` return it there too. For artifact types whose pre-submission state **is** `draft`, nothing changes. **Extended 2026-08-18, WK-661: a Custom Objective returns to `certified`**, for the same reason and with a sharper edge — a certificate is pinned to the objective version (`02` FR-146), the version did not change when an approver asked for one, and returning it to `draft` would discard evidence that is still valid and make re-certification the price of a comment.)* |
 | **FR-356** | Approvals are **pinned**: the decision records the exact artifact version and evidence artifact ids. If any referenced artifact changes, the approval does not carry over — a new version needs a new approval (FR-4). |
@@ -215,8 +215,10 @@ auditor, or a regulator:
 }
 ```
 
-Notably absent from Pricing Actuary: every `*:approve` permission and
-`rating_version:deploy_*` (R1, FR-347).
+Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:decide`
+*(amended 2026-09-28, `RL-1236` DP-C: one approval permission)* and
+~~`rating_version:deploy_*`~~ `deployment:promote` (R1, FR-347). *(Amended 2026-09-28,
+`RL-1232` DP-6.)*
 
 > **Superseded 2026-08-18 (WK-661, the custom-objectives slice).** The role above lists
 > `custom_objective:author` and `custom_objective:submit`. **Neither exists**, and the built
@@ -247,6 +249,58 @@ Notably absent from Pricing Actuary: every `*:approve` permission and
 > above no longer lists either, which is the point of the decision rather than an omission:
 > a permission every fitter holds by default would be the vocabulary-without-a-decision this
 > note was written about.
+
+> **Permission catalogue, amended 2026-09-28 (`RL-1236`).** The permission names this spec
+> uses and the names the code's closed `Permission` enum defines had drifted: 24 on each side,
+> 7 shared. The names below are ruled~~; names whose verdict changes scope wait on a
+> maintainer decision and are not listed here~~. *(Corrected 2026-09-29: all four of
+> `RL-1236`'s decision points are decided, and every ruled name is listed.)*
+>
+> **Built and now specified.** Each is checked by the route or service named in `RL-1236`, and
+> is part of the closed vocabulary §3.1 describes:
+>
+> | Permission | Governs |
+> |---|---|
+> | `dataset:validate` | Running validation on a Dataset Version |
+> | `rating:read` | Reading Rating Algorithms, Rate Tables, Rating Versions and scoring traces |
+> | `rating:compile` | Compiling a Rating Version to its Bundle |
+> | `audit:read` | Reading the audit log |
+> | `score:execute` | Real-time scoring (a Service Account may hold it, FR-347) |
+> | `score:batch` | Batch scoring (a Service Account may hold it, FR-347) |
+> | `job:read` | Reading Jobs |
+> | `job:cancel` | Cancelling a Job |
+> | `settings:read` | Reading workspace settings |
+> | `admin:manage_settings` | Changing workspace settings and reference data, and every per-environment setting value: `07` FR-431's settings, and FR-270/FR-271's routing and shadow switches and shadow configuration (DP-D). Each change writes an Audit Event naming the environment, the key, the old value and the new value. Nothing it guards can change which Rating Version prices a live quote |
+> | `admin:manage_service_accounts` | Creating, rotating and revoking Service Accounts |
+> | `admin:break_glass` | Break-glass elevation (FR-349) |
+> | `admin:manage_environments` | The Environment record's lifecycle: create, rename, retire (`07` FR-428). Not its settings, which are `admin:manage_settings`. Owned by WK-674 Slice 2, whose route is its first check |
+>
+> **Mapped: the same capability under two names; the code's name survives.**
+> `rating_version:submit` (the Pricing Actuary set above) is `rating:submit`.
+> `custom_objective:submit` was already superseded by `model:submit` (the note above, and
+> FR-367). The deploy permission is ruled separately, in ~~the WK-674 ruling~~ `RL-1232` DP-6
+> *(2026-09-29)*: it is `deployment:promote`. The spec name is
+> kept in this note as the alias for one release: no code ever carried it, so there is no
+> code alias to keep.
+>
+> **Coarse write rights are the Phase 2 catalogue (decided 2026-09-28, `RL-1236` DP-A):**
+> `rating_algorithm:write` and `rate_table:write` are `rating:write`, which also covers creating
+> a Rating Version. `factor:write`, `banding:write` and `grouping:write` are `model:fit`, which
+> also covers fitting. `dataset:create_version` is `dataset:write`, which also covers
+> datasets, blobs, validation rules and ingestion. The per-artifact split in the role example
+> above is carried to WK-676 (Phase 3, scoped assignments).
+>
+> **One approval permission (decided 2026-09-28, `RL-1236` DP-C):** `approval:decide`. Which
+> roles may approve an artifact type is the `ApprovalPolicy` entry's `approver_roles` (§4.2),
+> and from Phase 3 also the scope of the assignment. There are no per-type `*:approve`
+> permissions.
+>
+> **Specified and not yet built, carried to the Work that builds it:**
+> - `custom_objective:author` → WK-690 (FR-367);
+> - `monitor:write` → WK-687;
+> - `alert:acknowledge` and `alert:resolve` → WK-688;
+> - `optimisation:run` → WK-684;
+> - `optimisation:materialise` → WK-686.
 
 ### 4.2 `ApprovalPolicy` (workspace defaults)
 
