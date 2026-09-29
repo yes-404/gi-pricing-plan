@@ -577,11 +577,13 @@ works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, W
 
 *(Added 2026-09-29 by the lead, as a milestone-section edit, quoting verbatim the maintainer's entry "2026-09-29 20:45:24 BST · maintainer (acting on the maintainer's behalf) · P2 FREEZE DATES AND TARGET (§5a), accepted by the user". The user (the maintainer), about 20:26 BST: "accept the P2 dates as proposed".)*
 
+*(Weekdays corrected 2026-09-29 by the lead, quoting the maintainer's entry "2026-09-29 21:03:52 BST · maintainer (acting on the maintainer's behalf) · CORRECTION to the 20:45:24 P2 dates: the WEEKDAYS were wrong; the DATES stand (a)": "the DATES stand. … Only the weekday labels change." The 20:45:24 entry read Fri 2026-10-03, Tue 2026-11-04, Wed 2026-11-05 and Wed 2026-11-12; `date -d` gives Sat, Wed, Thu and Thu. The block below carries the corrected weekdays; everything else in it is verbatim.)*
+
 > **P2 freeze dates and target** (accepted 2026-09-29 by the maintainer; sized by the planner's "Inputs to the maintainer's §5a" at main 5638f691: 20 best / 37 likely / 87 worst working days from WK-674 S1 going active, at the measured 2 code slices per day):
-> - **Scope freeze: Fri 2026-10-03.** No new Work enters P2 after this date. WK-1250 is the last addition, and WK-675's map plan is drafted by then.
-> - **Code freeze: Tue 2026-11-04.** G1: the seven P2 Works delivered.
-> - **Docs freeze: Wed 2026-11-05.**
-> - **Target: the P2 exit demo, Wed 2026-11-12** (the likely band plus about 20%).
+> - **Scope freeze: Sat 2026-10-03.** No new Work enters P2 after this date. WK-1250 is the last addition, and WK-675's map plan is drafted by then.
+> - **Code freeze: Wed 2026-11-04.** G1: the seven P2 Works delivered.
+> - **Docs freeze: Thu 2026-11-05.**
+> - **Target: the P2 exit demo, Thu 2026-11-12** (the likely band plus about 20%).
 > - **Re-baseline after WK-674 Slices 1–2:** re-measure the throughput and restate these dates if the band moves. The dates assume work every day, as practised; on a weekdays-only rhythm they slip about two weeks.
 
 #### Phase 2 status
