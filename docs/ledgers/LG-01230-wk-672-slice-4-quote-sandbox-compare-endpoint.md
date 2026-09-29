@@ -217,3 +217,25 @@ Slot granted by the lead at 11:56Z; started 11:56:01Z, pre-start `11:56:01 up 3:
 `GATE: pass — 7 of 7 stages passed`. Pytest summary: `3739 passed, 3 skipped, 46 warnings in 1434.26s (0:23:54)`.
 Frontend half at the same head: `install --frozen-lockfile` rc 0, `generate:api` rc 0, `lint` rc 0, `type-check`
 rc 0, `test` rc 0 (97 files, 603 tests, no `Errors` line), `build` rc 0.
+
+### N=5×2 of `test_rating_score.py` (2026-09-29, from 12:22:29Z)
+
+Run at `10893eda` (its code is `1509bc0c`'s: `10893eda` changes only this ledger), each run under
+`/tmp/slots/verify-*` (`flock -n -E 99`, then the blocking fallback), sequentially, `timeout 900`, thread caps as
+in the gate, `uv run pytest packages/pricing-core/tests/test_rating_score.py -q -p no:cacheprovider`.
+Pre-start `12:22:30 up 3:40, 1 user, load average: 2.23, 2.34, 2.23`, no other pytest. Logs `/tmp/n5-s4-*.log`.
+
+| run | `CI` | rc | summary |
+|---|---|---|---|
+| 1 | `CI=1` | 0 | `24 passed in 5.73s` |
+| 2 | `CI=1` | 0 | `24 passed in 5.64s` |
+| 3 | `CI=1` | 0 | `24 passed in 5.72s` |
+| 4 | `CI=1` | 0 | `24 passed in 5.70s` |
+| 5 | `CI=1` | 0 | `24 passed in 5.74s` |
+| 6 | unset | 0 | `24 passed in 5.70s` |
+| 7 | unset | 0 | `24 passed in 5.71s` |
+| 8 | unset | 0 | `24 passed in 5.73s` |
+| 9 | unset | 0 | `24 passed in 5.70s` |
+| 10 | unset | 0 | `24 passed in 5.60s` |
+
+No abort, all ten rc 0.
