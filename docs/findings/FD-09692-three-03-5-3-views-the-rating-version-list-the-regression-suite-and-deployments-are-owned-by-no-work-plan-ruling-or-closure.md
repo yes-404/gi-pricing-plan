@@ -43,19 +43,27 @@ the records PR. Read at `origin/main` `f0c3d197`, 2026-09-29.
 4. **`00` §5.6's canonical route table (`00:404` to `:407`) lists four rating views** (designer,
    editor, sandbox, dislocation) and none of the three. FR-25 (a registered route is reachable from
    the entry by following links) therefore has no anchor for them.
-5. **Why it matters now.** `RFC-1248` Part 2 and `CLAUDE.md` §14: an accepted proposal becomes an
-   owned record, and "unowned" is not a permitted state. `WF-699` D1 to D5 and E5, and `WF-701` A5,
-   exercise regression and deployment steps whose UIs these views are.
+5. **The one route that exists is a different path.** `frontend/src/router/index.ts:235` registers
+   `/rating-versions/:id` (`RatingVersionView`, `:238`), the Phase 1b demo detail view. It is not
+   `/rating`, and it is not the list view. It bears on option (a) below and on FR-25: it is the only
+   rating-version entry today.
+6. **Why it matters now.** Each of the three is a row of `03` §5.3 with a route, and FR-25 requires
+   every registered route to be reachable from the entry by links. `WF-699` D1 to D5 (regression
+   runs) and `WF-701` A1, B1, C1 and H3 (deploy, shadow, rollback) exercise the regression and
+   deployment steps whose UIs two of these views are. (`WF-701` A5 is the quote sandbox and
+   `WF-699` E5 the approver's inline review; neither is one of the three.)
 
 ## Disposition
 
-Proposed by the auditor; the verdict is the lead's. Route the owning decision to the
-decision-maker as one `RL-`: (a) fold the three views into WK-675 (a scope change to a `WK-`
-row, which is the maintainer's), (b) a new Work, or (c) declare each view's Contents cell
-declared-prose, or out of Phase 2, with a dated line.
+Proposed by the auditor; the verdict is the lead's. **The lead routes it.** Placement is a scope
+question, and scope is the maintainer's (`document-ids.md` §1.7: a scope question goes to the
+maintainer, as an `RL-` or an `RFC-`): (a) fold the three views into WK-675, which is a scope
+change to a `WK-` row, (b) a new Work, or (c) place them out of Phase 2 with a dated line.
+Declaring a view's Contents cell declared-prose (`00` FR-24) is a spec question, and the
+decision-maker's. This finding decides none of these.
 
 **Event that next confirms or discharges it:** each of `/rating`,
-`/rating/:slug/v/:version/tests` and `/rating/environments` has a named owner in the roadmap or
-in a ruling.
+`/rating/:slug/v/:version/tests` and `/rating/environments` has a named owner in the roadmap or a
+ruling.
 
 Ownership shape: event
