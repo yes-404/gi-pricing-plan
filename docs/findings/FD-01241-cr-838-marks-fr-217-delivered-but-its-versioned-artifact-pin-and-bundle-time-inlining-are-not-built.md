@@ -1,5 +1,5 @@
 ---
-id: FD-9030
+id: FD-1241
 family: finding
 title: CR-838 marks FR-217 delivered, but its versioned-artifact, pin and bundle-time inlining limbs are not built
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-669, FR-217, FR-218]
 ---
 
-# FD-9030 — CR-838 marks FR-217 delivered, but its versioned-artifact, pin and bundle-time inlining limbs are not built
+# FD-1241 — CR-838 marks FR-217 delivered, but its versioned-artifact, pin and bundle-time inlining limbs are not built
 
 ## Finding
 
@@ -18,7 +18,7 @@ relates: [WK-669, FR-217, FR-218]
 
 The gap has one consequence that is live in code: `FR-218`'s fail-closed guard takes "any non-empty `sub_graphs`" as proof that the refund sub-graph is mounted, so a Rating Version that lists a sub-graph reference to something that does not exist passes the guard and prices a cancellation as new business (Evidence, *The consequence*). This record states the verdict gap. It does **not** propose reopening WK-669: the maintainer decided not to (entry "2026-09-29 16:25:49 BST · maintainer (acting on the maintainer's behalf) · BLOCKER DECISIONS by delegation: #882, the Dependabot merges, the Actions majors, FR-217, FD-1238, and the WK-672/PR16 acceptance", §4), and `CR-838` now carries a dated correction note pointing here.
 
-Filed under a **working id** (`FD-9030`); the lead mints it at its merge turn.
+Filed under working id 9030; minted `FD-1241` at its merge turn, 2026-09-29 (`doc-id.py next --ref origin/main` at `500ff49c`).
 
 ## Evidence
 
@@ -128,7 +128,7 @@ The 81 databases, each queried once: `gipricing`, `gipricing_agent-a1ae93f6782ad
 
 ## Disposition
 
-**Proposed by the auditor; the decision is the lead's.** The Work is **not reopened** (the maintainer's entry above, §4). Plan review 16 routes the remedy to the Work that takes `FR-218`'s authoring half, since both are the mid-term-adjustment sub-graph: the planner proposes it, the lead gives the verdict, the maintainer accepts. `CR-838` carries the dated correction "guard delivered; `sub_graphs` inlining NOT delivered → FD-9030" beside its verdict table (its verdict text is not rewritten).
+**Proposed by the auditor; the decision is the lead's.** The Work is **not reopened** (the maintainer's entry above, §4). Plan review 16 routes the remedy to the Work that takes `FR-218`'s authoring half, since both are the mid-term-adjustment sub-graph: the planner proposes it, the lead gives the verdict, the maintainer accepts. `CR-838` carries the dated correction "guard delivered; `sub_graphs` inlining NOT delivered → FD-1241" beside its verdict table (its verdict text is not rewritten).
 
 **not started** for `FR-217`'s versioned-artifact, pin and inlining limbs, **unowned-pending-authorisation**: no Work owns them, and none was ever named. The event that next confirms or discharges the row: plan review 16 gives the requirement a disposition, either an owner and a Work that builds the artifact, the pin and the inlining (which would also let `FR-218`'s guard test a real mount instead of a non-empty list), or a maintainer amendment that narrows `FR-217` to the reference shape. The maintainer's decision already routes it: the Work that takes `FR-218`'s authoring half. **Interim, dispatched 2026-09-29 (the maintainer's 16:34:39 BST entry, cited in *Update*):** the guard refuses every `mid_term_adjustment` and `cancellation` quote until FR-217 inlining exists, whatever `sub_graphs` holds (branch `wk1178-fr218-fail-closed`, executor-s2-2); it merges on the maintainer's ACK. That fix closes the silent-mispricing path; it does not build FR-217. Until then the guard's "any non-empty list" stand-in is the only thing between a cancellation and new-business pricing.
 
