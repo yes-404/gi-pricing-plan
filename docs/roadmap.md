@@ -705,12 +705,12 @@ relates: [PL-1237, PL-1239, RL-1253]
 
 A deployment is bound to one tenant and refuses to start when its database, blob or broker marker names another; every Job records the platform build it ran on. `PL-1237` Task 1; leaf plan `PL-1239`, its decision points ruled by `RL-1253`. First in the chain: nothing precedes it.
 
-#### SL-9702 — Slice 2: the Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit, NFR-498)
+#### SL-9702 — Slice 2: the Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit and NFR-498 for deploy)
 
 ```yaml
 id: SL-9702
 family: slice
-title: Slice 2: the Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit, NFR-498)
+title: Slice 2: the Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit and NFR-498 for deploy)
 status: draft                  # draft → active → closed | retired (§1.2a)
 created: 2026-09-29
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
@@ -721,7 +721,7 @@ corrected_by: []
 relates: [PL-1237]
 ```
 
-The Environment and Deployment records, promotion order and their audit limb, with the carried rulings. `PL-1237` Task 2. Starts after Slice 1 closes; its leaf plan also waits on `OQ-1234` (the maintainer's acceptance line on `PL-1237`).
+The Environment and Deployment records, promotion order and their audit limb for deploy (FR-272, NFR-498), with the carried rulings. `PL-1237` Task 2. Starts after Slice 1 closes; its leaf plan also waits on `OQ-1234` (the maintainer's acceptance line on `PL-1237`).
 
 #### SL-9703 — Slice 3: environment isolation (FR-430, FR-431, register F54 and F48, NFR-496 prod-sampling limb)
 
@@ -759,12 +759,12 @@ relates: [PL-1237]
 
 The compose `api` and `worker` services, the reference identity provider, the memory budget and the explicit migration step: the path Slice 5 measures on. `PL-1237` Task 4. Starts after Slice 3 closes.
 
-#### SL-9705 — Slice 5: atomic switchover, rollback and the measurements (FR-268, FR-269, NFR-494, NFR-489, NFR-502, NFR-490, NFR-493 linearity limb)
+#### SL-9705 — Slice 5: atomic switchover, rollback and the measurements (FR-268, FR-269, FR-272 audit and NFR-498 for rollback, NFR-494, NFR-489, NFR-502, NFR-490, NFR-493 linearity limb, NFR-497 mechanism)
 
 ```yaml
 id: SL-9705
 family: slice
-title: Slice 5: atomic switchover, rollback and the measurements (FR-268, FR-269, NFR-494, NFR-489, NFR-502, NFR-490, NFR-493 linearity limb)
+title: Slice 5: atomic switchover, rollback and the measurements (FR-268, FR-269, FR-272 audit and NFR-498 for rollback, NFR-494, NFR-489, NFR-502, NFR-490, NFR-493 linearity limb, NFR-497 mechanism)
 status: draft                  # draft → active → closed | retired (§1.2a)
 created: 2026-09-29
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
@@ -775,14 +775,14 @@ corrected_by: []
 relates: [PL-1237]
 ```
 
-Atomic switchover and rollback on the Slice 4 path, with the F1 acceptance test and the measured verdicts. `PL-1237` Task 5. Starts after Slice 4 closes; its measured verdicts wait on a dedicated host (maintainer-owned).
+Atomic switchover and rollback on the Slice 4 path, with the rollback's audit limb (FR-272, NFR-498), the F1 acceptance test and the measured verdicts. NFR-497's degraded read is kept reachable against the `live` reference; the availability verdict is the lead's at the close. `PL-1237` Task 5. Starts after Slice 4 closes; its measured verdicts wait on a dedicated host (maintainer-owned).
 
-#### SL-9706 — Slice 6: date-based routing and shadow scoring (FR-270, FR-271)
+#### SL-9706 — Slice 6: date-based routing and shadow scoring (FR-270, FR-271, FR-272 audit and NFR-498 for routing and shadow)
 
 ```yaml
 id: SL-9706
 family: slice
-title: Slice 6: date-based routing and shadow scoring (FR-270, FR-271)
+title: Slice 6: date-based routing and shadow scoring (FR-270, FR-271, FR-272 audit and NFR-498 for routing and shadow)
 status: draft                  # draft → active → closed | retired (§1.2a)
 created: 2026-09-29
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
@@ -793,7 +793,7 @@ corrected_by: []
 relates: [PL-1237]
 ```
 
-Date-based routing and shadow scoring, both built and default off per environment (`RL-1232` Part A, DP-2 (a)). `PL-1237` Task 6. Starts after Slice 5 closes.
+Date-based routing and shadow scoring, both built and default off per environment (`RL-1232` Part A, DP-2 (a)), with the audit limb for routing and shadow configuration changes (FR-272, NFR-498). `PL-1237` Task 6. Starts after Slice 5 closes.
 
 
 ### WK-675 — Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views
