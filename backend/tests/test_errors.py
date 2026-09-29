@@ -7,7 +7,12 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
-from app.errors import PLATFORM_ERROR_CODES, PlatformError, install_error_handlers
+from app.errors import (
+    PLATFORM_ERROR_CODES,
+    RATING_ERROR_CODES,
+    PlatformError,
+    install_error_handlers,
+)
 from app.main import create_app
 from app.observability.middleware import TraceMiddleware
 from app.observability.trace import TRACE_ID_PATTERN
@@ -145,3 +150,15 @@ def test_no_live_rating_version_is_registered_at_409() -> None:
     )
     assert error.code == "NO_LIVE_RATING_VERSION"
     assert error.status_code == 409
+
+
+@pytest.mark.req("FR-260")
+def test_golden_quote_mismatch_is_registered() -> None:
+    """`03` §5.1 declares this code; Slice 2's promotion refusal raises it.
+
+    Asserted by literal name, never by iterating `RATING_ERROR_CODES`: a test that iterates
+    the collection it checks passes for every member by construction.
+    """
+    assert "GOLDEN_QUOTE_MISMATCH" in RATING_ERROR_CODES
+    error = PlatformError("GOLDEN_QUOTE_MISMATCH", "Golden quote mismatch", 409)
+    assert error.code == "GOLDEN_QUOTE_MISMATCH"

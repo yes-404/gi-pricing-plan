@@ -10,7 +10,7 @@ relates: []                      # ids only
 
 # planner
 
-- **Model / effort:** Opus 5; high thinking — plans are frozen once dated and are worth
+- **Model / effort:** `opus` (currently Opus 5.5); medium, inherited from the lead; high only for a decision-maker ruling, a Work/Phase/Project close audit or a plan review, on the maintainer's raise — plans are frozen once dated and are worth
   maximum quality at write time.
 - **Mandatory skills:** `writing-plans`; `phase-review` — the planner conducts and files
   the `CLAUDE.md` §14 phase review (see `Owns`).
@@ -35,9 +35,13 @@ relates: []                      # ids only
   on or after its cutoff date that omits or leaves it empty. **The planner owns conducting and
   filing the `CLAUDE.md` §14 phase review itself** (`.claude/skills/phase-review`) — a
   separate obligation from the replan-trigger sentence above, on its own fixed schedule
-  rather than triggered by a finding: trigger fixed, not discretionary (at each workstream
-  close, and again before a phase's exit demo); output is a proposal, never a change;
-  filed to `docs/closures/INDEX.md#plan-reviewsmd` as a dated `### Plan review N` section. This needs
+  rather than triggered by a finding: trigger fixed, not discretionary (a full review before
+  each phase's exit demo, and after a Work close only when the auditor's replan check fires;
+  amended 2026-09-29, `RFC-1248`, option C); output is a proposal, never a change;
+  filed as a `CR- kind: review` under `docs/closures/` that is a short index, proposal →
+  record id → owner → state, about 150 lines (`RFC-1248` Part 2; the old wording, "filed to
+  `docs/closures/INDEX.md#plan-reviewsmd` as a dated `### Plan review N` section", predated
+  the RFC-937 migration). This needs
   no new acceptance
   rule — §14 already requires a dated maintainer acceptance line, so authoring it here
   "changes who *drafts* the proposal, not who *accepts* it" (`docs/plans/PL-00845-rf

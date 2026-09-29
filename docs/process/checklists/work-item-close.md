@@ -24,12 +24,16 @@ existing id in its title and `relates:` field — a PR record cites `pr-NNN`, a 
 cites the slice id, a workstream record cites the workstream id (for example `WK-661`).
 No family outside [`../document-ids.md`](../document-ids.md) §1.2.
 
-**Closing a workstream also raises the `CLAUDE.md` §14 phase review question** — its
-trigger is fixed, not discretionary: at each workstream close, and again before a phase's
-exit demo. Nothing else in this checklist checks it, and this paragraph is the only place
-that does — confirm with the planner whether a phase review (the
-[`phase-review`](../../../.claude/skills/phase-review/SKILL.md) skill) is now due before
-signing off. A PR or slice close does not raise this question; only a workstream close does.
+**Closing a workstream also answers the `CLAUDE.md` §14 plan review question, with a replan
+check** *(amended 2026-09-29, `RFC-1248`, option C)*. The record carries a **Replan check**
+section: the five questions of the
+[`phase-review`](../../../.claude/skills/phase-review/SKILL.md) skill (*When*), each answered
+yes or no in one line, plus `python3 scripts/register-owed.py review`'s owed count. A full
+plan review runs only if the check fires — a phase boundary or Work scope moved, an exit
+criterion is at risk, a replan was decided, or a finding moves a slice or phase — and always
+before a phase's exit demo. The lead gives its verdict on the check; "no trigger" is
+recorded, never assumed. A PR or slice close does not raise this question; only a
+workstream close does.
 
 **Every close also checks root `README.md`'s pointer freshness.** Does this close change
 what the README's pointers resolve to (roadmap phase, process spec location)? If yes,
@@ -84,6 +88,15 @@ the decision, and states the status.
 A carried finding stays a row in the global register ([`../../findings/register.md`](../../findings/register.md));
 a per-phase view of it is generated (`python3 scripts/doc-index.py --phase <p>`), never a
 second hand-kept file.
+
+### Replan check
+
+*(Added 2026-09-29, `RFC-1248`, option C.)* The `CLAUDE.md` §14 replan check for a
+workstream close: the five questions of the
+[`phase-review`](../../../.claude/skills/phase-review/SKILL.md) skill (*When*), each answered
+**yes** or **no** in one line; `python3 scripts/register-owed.py review`'s owed count at this
+tree; and the result, **trigger** (naming which) or **no trigger**. The lead's verdict on it
+follows. A PR or slice record has no replan check.
 
 ### Sign-off
 

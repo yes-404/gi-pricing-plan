@@ -10,24 +10,42 @@ approver's decision reaches the row through `apply_approval_decision`, the seam
 
 from __future__ import annotations
 
-from typing import Literal, cast
+from collections.abc import Awaitable, Callable
+from typing import Any, Literal, cast
 from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import ApprovalRequestRow, ModelRow, RatingAlgorithmRow, RatingVersionRow
+from app.db.models import (
+    ApprovalRequestRow,
+    AuditEventRow,
+    ModelRow,
+    RatingAlgorithmRow,
+    RatingVersionRow,
+    RegressionSuiteRow,
+    RegressionSuiteVersionRow,
+)
 from app.errors import PlatformError
 from app.platform import approvals, audit, rbac
 from app.platform import objectives as objectives_service
 from app.platform import rate_tables as rate_tables_service
 from app.platform import reference as reference_service
+from app.platform import regression_runs as regression_runs_service
+from app.platform import regression_suites as regression_suites_service
 from app.platform.blobs import BlobStore
 from app.platform.modelling import to_model
 from model_schema import (
+    ApprovalStatus,
     ArtifactRef,
     BundleMetadata,
     GbmFitResult,
+    GoldenQuote,
+    GoldenQuoteChange,
+    GoldenQuoteChangeStep,
+    GoldenQuoteCheck,
+    GoldenQuoteDelta,
+    GoldenQuoteNotChecked,
     JobSource,
     Permission,
     Pins,
@@ -35,8 +53,12 @@ from model_schema import (
     RatingVersion,
     RatingVersionEvidence,
     RatingVersionStatus,
+    RegressionSuiteContent,
+    context_hash,
 )
 from pricing_core.rating.compile import Bundle, ResolvedArtifact, compile_bundle
+from pricing_core.rating.runtime import CompiledBundle
+from pricing_core.rating.testing import evaluate_golden_quotes
 
 #: `reference.rows_as_at`'s default `limit` (200) is a UI page size. A compiled Bundle
 #: must be self-contained (FR-239) and embed a pinned reference table's rows in full —
@@ -44,10 +66,24 @@ from pricing_core.rating.compile import Bundle, ResolvedArtifact, compile_bundle
 #: perform no I/O (Task 1.3/RL-873) — so this resolver asks for effectively all of them.
 _ALL_REFERENCE_ROWS = 10_000_000
 
+#: Loads a compiled bundle for a Rating Version ref. The route supplies one that refuses
+#: rather than degrades when metadata storage is down (audit finding F5), which is why the
+#: loading stays in the API layer and this module only calls it.
+BundleLoader = Callable[[ArtifactRef], Awaitable[CompiledBundle]]
+
+#: The statuses a version has once it has been approved; a baseline is one of these.
+_APPROVED_OR_AFTER = (
+    RatingVersionStatus.APPROVED.value,
+    RatingVersionStatus.LIVE.value,
+    RatingVersionStatus.RETIRED.value,
+)
+
 __all__ = [
+    "BundleLoader",
     "apply_approval_decision",
     "compile_rating_version",
     "create_rating_version",
+    "golden_quote_delta_authors",
     "load_rating_version",
     "submit_for_review",
     "to_schema",
@@ -218,8 +254,18 @@ async def submit_for_review(
     actor: Principal,
     rating_version_id: UUID,
     change_summary: str,
+    load_compiled: BundleLoader | None = None,
 ) -> tuple[RatingVersionRow, ApprovalRequestRow]:
-    """`draft → review`, creating the approval request through governance."""
+    """`draft → review`, creating the approval request through governance.
+
+    Before the request is created, the golden-quote gate runs (`03` FR-260 as amended
+    2026-09-28): every golden quote of the algorithm's Regression Suite is re-scored
+    against this version's compiled bundle, any mismatch refuses the submission, and the
+    suite version checked — with its delta since the previous approved version of the
+    same algorithm — is pinned into `evidence.golden_quotes`. `load_compiled` loads the
+    bundle for a ref; the route supplies one that refuses rather than degrades when
+    metadata storage is down (audit finding F5). It is needed only when a suite exists.
+    """
     await rbac.require_permission(
         session,
         workspace_id=workspace_id,
@@ -236,11 +282,25 @@ async def submit_for_review(
             409,
             f"Rating version {row.slug}@{row.version} is {row.status}, not draft.",
         )
+    ref = ArtifactRef(type="rating_version", slug=row.slug, version=row.version)
+    golden_quotes = await _golden_quote_gate(
+        session, workspace_id=workspace_id, row=row, ref=ref, load_compiled=load_compiled
+    )
+    run_id = await _regression_run_gate(
+        session, workspace_id=workspace_id, row=row, ref=ref, golden_quotes=golden_quotes
+    )
+    # Written once, here, and never edited after (`03` §4.3's invariant). The run id is the
+    # only other key this gate writes; `golden_quotes` is exactly what the gate returned.
+    row.evidence = {
+        **(row.evidence or {}),
+        "golden_quotes": golden_quotes,
+        "regression_suite_run_id": str(run_id),
+    }
     request = await approvals.submit(
         session,
         workspace_id=workspace_id,
         submitter=actor,
-        artifact_ref=ArtifactRef(type="rating_version", slug=row.slug, version=row.version),
+        artifact_ref=ref,
         change_summary=change_summary,
     )
     row.status = RatingVersionStatus.REVIEW.value
@@ -280,7 +340,24 @@ async def apply_approval_decision(
     if row is None:
         return None
 
-    row.status = RatingVersionStatus.APPROVED.value
+    # What the decided request means for the version, as the model's, objective's and
+    # metric's hooks read it. Until 2026-09-28 this hook set `approved` after **every**
+    # decision — a rejection, a request for changes, and the first of the policy's two
+    # approvals alike — and from any status (the approval status bypass).
+    target = _target_status(ApprovalStatus(request.status))
+    if target is None:
+        return row  # still in review: one approval of two moves nothing
+    if target is RatingVersionStatus.DRAFT and row.status == RatingVersionStatus.DRAFT.value:
+        # A request opened on a version that never left `draft` (possible before this fix)
+        # must stay closable: returning the version to where it already is moves nothing,
+        # as the model's hook does when the row is already at its target. Refusing here
+        # would leave the request open for ever and block the version's resubmission.
+        return row
+    # `06` FR-351: only a version in review moves, checked on the row this transaction
+    # holds locked, so the route's refusal is not the only guard.
+    approvals.require_in_review(ref, row.status)
+    before = row.status
+    row.status = target.value
     row.updated_at = func.now()
     await session.flush()
     await audit.record(
@@ -288,12 +365,31 @@ async def apply_approval_decision(
         workspace_id=workspace_id,
         actor=actor,
         source=JobSource.API,
-        action="rating_version.approved",
+        action=f"rating_version.{_ACTION[target]}",
         entity_ref=f"rating_version:{ref.slug}@{ref.version}",
-        before={"status": RatingVersionStatus.REVIEW.value},
-        after={"status": RatingVersionStatus.APPROVED.value},
+        # The row's own prior state, never a literal: this line once recorded `review`
+        # whatever the version had been.
+        before={"status": before},
+        after={"status": target.value},
     )
     return row
+
+
+def _target_status(request_status: ApprovalStatus) -> RatingVersionStatus | None:
+    """`approved` on an approved request; `draft` when the request comes back, as `06`
+    FR-355 says for every artifact without a reason to differ; nothing while it is open."""
+    return {
+        ApprovalStatus.APPROVED: RatingVersionStatus.APPROVED,
+        ApprovalStatus.CHANGES_REQUESTED: RatingVersionStatus.DRAFT,
+        ApprovalStatus.REJECTED: RatingVersionStatus.DRAFT,
+        ApprovalStatus.WITHDRAWN: RatingVersionStatus.DRAFT,
+    }.get(request_status)
+
+
+_ACTION = {
+    RatingVersionStatus.APPROVED: "approved",
+    RatingVersionStatus.DRAFT: "returned_to_draft",
+}
 
 
 async def compile_rating_version(
@@ -445,3 +541,343 @@ async def compile_rating_version(
         "compiled_at": bundle.compiled_at.isoformat(),
     }
     return bundle
+
+
+# ---------------------------------------------------------------------------
+# The golden-quote gate (`03` FR-260 as amended 2026-09-28; PL-1189 Task 5).
+# ---------------------------------------------------------------------------
+
+
+async def _golden_quote_gate(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    row: RatingVersionRow,
+    ref: ArtifactRef,
+    load_compiled: BundleLoader | None,
+) -> dict[str, Any]:
+    """Re-score the algorithm's golden quotes, refuse any mismatch, and return the
+    evidence to pin: `GoldenQuoteCheck`, or the explicit `GoldenQuoteNotChecked`
+    (DP-S2-4's interim rule — never an empty pass that reads as "0 mismatches")."""
+    if row.algorithm_ref is None:
+        return _not_checked("no_algorithm_ref")
+    algorithm_slug = ArtifactRef.model_validate(row.algorithm_ref).slug
+    found = await regression_suites_service.current_suite_for_algorithm(
+        session, workspace_id=workspace_id, algorithm_slug=algorithm_slug
+    )
+    if found is None:
+        return _not_checked("no_suite_for_algorithm")
+    suite, current = found
+
+    if row.bundle is None:
+        raise PlatformError(
+            "BUNDLE_COMPILE_FAILED",
+            "Compile before submitting",
+            409,
+            f"{ref} has no compiled bundle, and algorithm {algorithm_slug!r} has a "
+            "Regression Suite whose golden quotes must be re-scored against it (FR-260).",
+        )
+    if load_compiled is None:
+        raise TypeError("submit_for_review with a Regression Suite requires load_compiled")
+    bundle = await load_compiled(ref)
+    if bundle.content_hash != row.bundle.get("content_hash"):
+        raise PlatformError(
+            "BUNDLE_COMPILE_FAILED",
+            "The loaded bundle is not this version's bundle",
+            409,
+            f"{ref} records bundle {row.bundle.get('content_hash')!r}; the bundle loaded "
+            f"is {bundle.content_hash!r}. Nothing was checked or written.",
+        )
+
+    content = RegressionSuiteContent.model_validate(current.content)
+    results = evaluate_golden_quotes(bundle, content.golden_quotes, rating_version_ref=ref)
+    failed = [result.name for result in results if result.status == "fail"]
+    if failed:
+        raise PlatformError(
+            "GOLDEN_QUOTE_MISMATCH",
+            "Golden quote mismatch",
+            409,
+            f"{ref} does not reproduce golden quote(s) {failed} of "
+            f"{regression_suites_service.entity_ref(suite.slug, current.version)} within "
+            "their declared tolerance (FR-260).",
+        )
+
+    delta = await _golden_quote_delta(
+        session, workspace_id=workspace_id, algorithm_slug=algorithm_slug,
+        suite=suite, current=current, exclude_id=row.id,
+    )
+    return GoldenQuoteCheck(
+        status="checked",
+        suite_ref=ArtifactRef(type="regression_suite", slug=suite.slug, version=current.version),
+        suite_content_hash=current.content_hash,
+        bundle_hash=bundle.content_hash,
+        results=results,
+        delta=delta,
+    ).model_dump(mode="json")
+
+
+async def _regression_run_gate(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    row: RatingVersionRow,
+    ref: ArtifactRef,
+    golden_quotes: dict[str, Any],
+) -> UUID:
+    """FR-257 limb (1), a passing Regression Suite (`PL-1205` Task 6): the run id to record.
+
+    DP-S3-1: a passing suite has at least one golden quote, so no suite, or a suite with
+    none, is refused. DP-S3-2 and audit A1: the **latest** run of this Rating Version for
+    exactly this bundle and the suite version the golden-quote gate just pinned must itself
+    be a pass — an earlier pass does not count once a later run on the same pair failed.
+    """
+    if golden_quotes.get("status") != "checked" or not golden_quotes.get("results"):
+        raise _evidence_incomplete(
+            ref, "a Regression Suite with at least one golden quote is required (FR-257)"
+        )
+    bundle_hash = (row.bundle or {}).get("content_hash")
+    suite_hash = golden_quotes["suite_content_hash"]
+    latest = await regression_runs_service.latest_run(
+        session, workspace_id=workspace_id, rating_version_id=row.id,
+        bundle_hash=str(bundle_hash), suite_content_hash=str(suite_hash),
+    )
+    if latest is None:
+        raise _evidence_incomplete(
+            ref,
+            "no Regression Run exists for this version's current bundle and the suite "
+            "version pinned at submission (FR-257)",
+        )
+    if latest.overall != "pass":
+        raise _evidence_incomplete(
+            ref,
+            f"the latest Regression Run ({latest.id}) for this bundle and suite failed (FR-257)",
+        )
+    return latest.id
+
+
+def _evidence_incomplete(ref: ArtifactRef, why: str) -> PlatformError:
+    return PlatformError(
+        "EVIDENCE_INCOMPLETE", "Required evidence is missing", 422, f"{ref}: {why}."
+    )
+
+
+def _not_checked(
+    reason: Literal["no_algorithm_ref", "no_suite_for_algorithm"],
+) -> dict[str, Any]:
+    return GoldenQuoteNotChecked(
+        status="not_checked",
+        regression_suite="none",
+        message="no golden quotes were checked",
+        reason=reason,
+    ).model_dump(mode="json")
+
+
+async def _baseline(
+    session: AsyncSession, *, workspace_id: UUID, algorithm_slug: str, exclude_id: UUID
+) -> tuple[RatingVersionRow, GoldenQuoteCheck | None] | None:
+    """The most recently approved other version of the algorithm, by the `at` of its
+    `rating_version.approved` Audit Event — the audit trail is the one source — with its
+    pinned golden-quote check, if it was checked."""
+    candidates = [
+        candidate
+        for candidate in (
+            await session.execute(
+                select(RatingVersionRow).where(
+                    RatingVersionRow.workspace_id == workspace_id,
+                    RatingVersionRow.status.in_(_APPROVED_OR_AFTER),
+                    RatingVersionRow.algorithm_ref.is_not(None),
+                    RatingVersionRow.id != exclude_id,
+                )
+            )
+        ).scalars()
+        if ArtifactRef.model_validate(candidate.algorithm_ref).slug == algorithm_slug
+    ]
+    if not candidates:
+        return None
+    by_ref = {f"rating_version:{c.slug}@{c.version}": c for c in candidates}
+    approved_at = {
+        entity_ref: at
+        for entity_ref, at in (
+            await session.execute(
+                select(AuditEventRow.entity_ref, func.max(AuditEventRow.at))
+                .where(
+                    AuditEventRow.workspace_id == workspace_id,
+                    AuditEventRow.action == "rating_version.approved",
+                    AuditEventRow.entity_ref.in_(list(by_ref)),
+                )
+                .group_by(AuditEventRow.entity_ref)
+            )
+        ).all()
+    }
+    if not approved_at:
+        return None
+    latest = max(approved_at, key=lambda entity_ref: approved_at[entity_ref])
+    baseline = by_ref[latest]
+    pinned = (baseline.evidence or {}).get("golden_quotes")
+    check = (
+        GoldenQuoteCheck.model_validate(pinned)
+        if pinned is not None and pinned.get("status") == "checked"
+        else None
+    )
+    return baseline, check
+
+
+def _compared(quote: GoldenQuote) -> dict[str, Any]:
+    """The three fields the delta compares; `note` is deliberately not one of them."""
+    return {
+        "expected": quote.expected,
+        "tolerance": quote.tolerance,
+        "context": context_hash(quote.context),
+    }
+
+
+def _quotes(version: RegressionSuiteVersionRow | None) -> dict[str, GoldenQuote]:
+    if version is None:
+        return {}
+    content = RegressionSuiteContent.model_validate(version.content)
+    return {quote.name: quote for quote in content.golden_quotes}
+
+
+def _step_fields(before: GoldenQuote | None, after: GoldenQuote | None) -> list[str]:
+    if before is None and after is None:
+        return []
+    if before is None:
+        return ["added"]
+    if after is None:
+        return ["removed"]
+    old, new = _compared(before), _compared(after)
+    return [field for field in ("expected", "tolerance", "context") if old[field] != new[field]]
+
+
+async def _author_of_suite_version(
+    session: AsyncSession, *, workspace_id: UUID, suite_slug: str, version: int
+) -> UUID:
+    """The actor of the version's `regression_suite.created` Audit Event (`06` FR-368,
+    #861's definition) — never the row's `created_by`. Missing: refused, fail-closed."""
+    entity_ref = regression_suites_service.entity_ref(suite_slug, version)
+    actor = (
+        await session.execute(
+            select(AuditEventRow.actor).where(
+                AuditEventRow.workspace_id == workspace_id,
+                AuditEventRow.action == regression_suites_service.CREATED_ACTION,
+                AuditEventRow.entity_ref == entity_ref,
+            )
+        )
+    ).scalars().first()
+    if actor is None or actor.get("id") is None:
+        raise PlatformError(
+            "APPROVAL_AUTHOR_UNRESOLVED",
+            "The author of a golden-quote change cannot be established",
+            403,
+            f"{entity_ref} has no creation Audit Event, so who changed its golden quotes "
+            "cannot be shown to the approver. `03` FR-260 and `06` FR-353: refused, never "
+            "submitted unchecked.",
+        )
+    return UUID(str(actor["id"]))
+
+
+async def _golden_quote_delta(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    algorithm_slug: str,
+    suite: RegressionSuiteRow,
+    current: RegressionSuiteVersionRow,
+    exclude_id: UUID,
+) -> GoldenQuoteDelta:
+    """Every golden quote added, removed, or whose expected output, tolerance or context
+    changed since the suite pinned by the previous approved version of the algorithm,
+    each with every substantive step and its author (the deputy's DP-S2-1 condition)."""
+    versions = await regression_suites_service.suite_versions(session, suite=suite)
+    by_number = {version.version: version for version in versions}
+
+    found = await _baseline(
+        session, workspace_id=workspace_id, algorithm_slug=algorithm_slug,
+        exclude_id=exclude_id,
+    )
+    baseline_rv, baseline_check = found if found is not None else (None, None)
+    baseline_version = 0
+    if (
+        baseline_check is not None
+        and baseline_check.suite_ref.slug == suite.slug
+        and baseline_check.suite_ref.version in by_number
+    ):
+        baseline_version = baseline_check.suite_ref.version
+
+    steps: dict[str, list[GoldenQuoteChangeStep]] = {}
+    previous = _quotes(by_number.get(baseline_version))
+    for number in range(baseline_version + 1, current.version + 1):
+        quotes = _quotes(by_number.get(number))
+        touched = {
+            name: fields
+            for name in sorted(set(previous) | set(quotes))
+            if (fields := _step_fields(previous.get(name), quotes.get(name)))
+        }
+        if touched:
+            author = await _author_of_suite_version(
+                session, workspace_id=workspace_id, suite_slug=suite.slug, version=number
+            )
+            for name, fields in touched.items():
+                steps.setdefault(name, []).append(
+                    GoldenQuoteChangeStep.model_validate(
+                        {"version": number, "changed_fields": fields, "author": author}
+                    )
+                )
+        previous = quotes
+
+    before_quotes = _quotes(by_number.get(baseline_version))
+    after_quotes = _quotes(current)
+    changes: list[GoldenQuoteChange] = []
+    for name in sorted(set(before_quotes) | set(after_quotes)):
+        before, after = before_quotes.get(name), after_quotes.get(name)
+        net = _step_fields(before, after)
+        if not net:
+            continue
+        change = "added" if before is None else "removed" if after is None else "changed"
+        changes.append(
+            GoldenQuoteChange.model_validate(
+                {
+                    "name": name,
+                    "change": change,
+                    "changed_fields": net if change == "changed" else [],
+                    "before": before.expected if before else None,
+                    "after": after.expected if after else None,
+                    "before_tolerance": before.tolerance if before else None,
+                    "after_tolerance": after.tolerance if after else None,
+                    "before_context_hash": context_hash(before.context) if before else None,
+                    "after_context_hash": context_hash(after.context) if after else None,
+                    "steps": steps.get(name, []),
+                }
+            )
+        )
+
+    return GoldenQuoteDelta(
+        baseline_rating_version_ref=(
+            ArtifactRef(type="rating_version", slug=baseline_rv.slug, version=baseline_rv.version)
+            if baseline_rv is not None and baseline_check is not None
+            else None
+        ),
+        baseline_suite_ref=baseline_check.suite_ref if baseline_check is not None else None,
+        baseline_suite_content_hash=(
+            baseline_check.suite_content_hash if baseline_check is not None else None
+        ),
+        changes=changes,
+    )
+
+
+async def golden_quote_delta_authors(
+    session: AsyncSession, *, workspace_id: UUID, artifact_ref: ArtifactRef
+) -> set[UUID]:
+    """Every author of every step of every change in the version's golden-quote delta.
+
+    Empty when the version was not checked, and when `evidence.golden_quotes` is absent
+    (a version already in review when the gate shipped was never gated, so there is no
+    suite change to judge). A load failure or an unparsable evidence blob propagates, so
+    a decision is refused rather than made without this check (re-audit N2).
+    """
+    row = await resolve_rating_version_ref(session, workspace_id=workspace_id, ref=artifact_ref)
+    pinned = (row.evidence or {}).get("golden_quotes")
+    if pinned is None or pinned.get("status") != "checked":
+        return set()
+    check = GoldenQuoteCheck.model_validate(pinned)
+    return {step.author for change in check.delta.changes for step in change.steps}

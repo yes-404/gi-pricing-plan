@@ -7,11 +7,15 @@ description: Audit a workstream (WK-657, WK-658, …) before declaring it closed
 
 `CLAUDE.md` §13 is the standard. This is how to satisfy it.
 
-**This skill closes a workstream against §13; it does not by itself raise `CLAUDE.md`
-§14's phase review question.** That trigger is fixed, not discretionary — at each
-workstream close, and again before a phase's exit demo — and satisfying §13 here does
-not satisfy §14. Confirm with the planner whether a phase review (the
-[`phase-review`](../phase-review/SKILL.md) skill) is now due before signing off.
+**This skill closes a workstream against §13; `CLAUDE.md` §14's plan review is a separate
+question, and this close answers it with a replan check.** *(Amended 2026-09-29,
+`RFC-1248`, option C.)* The `CR- kind: work` carries a **Replan check** section: the five
+questions of [`phase-review`](../phase-review/SKILL.md) *When*, each answered yes or no in
+one line, plus `register-owed.py review`'s owed count. A **full** review runs only if the
+check fires (a phase boundary or Work scope moved, an exit criterion is at risk, a replan was
+decided, or a finding moves a slice or phase). The lead gives its verdict on the check, and
+"no trigger" is recorded, never assumed. A full review before a phase's exit demo is
+unchanged and always due. Satisfying §13 here does not satisfy §14.
 
 The failure this guards against is not "we forgot a task". It is a roadmap that reports
 progress the repository does not have — which is worse than no roadmap, because the next
@@ -569,6 +573,29 @@ started` is real and has no row). Reconcile the two in one sentence: every id in
 generated block appears in the Findings section with a resolution, and the Findings section
 adds nothing the block does not carry except findings named as having no register row.
 
+## 5c. Every workflow step that cites this close's requirements still says what it cites
+
+**`00` FR-1188 makes this a step of every close** (OQ-554, decided 2026-09-28 by delegation,
+option (b); `RL-1184` E9). No script does it. `audit-docs.py` check 14 scores whether a
+journey *mentions* a requirement id, and check 21 scores whether a cited endpoint or function
+is *declared*. Neither reads the requirement's text. So a step that cites `FR-171` for double
+lift passes both checks on a tree where FR-171 struck double lift on 2026-08-17.
+
+1. From §0's scope table, take every requirement id in this close's scope.
+2. Find each step that cites one of them, over every journey:
+   `grep -n -E '\b(FR|NFR)-(<id>|<id>|…)\b' docs/workflows/WF-*.md`. The search is
+   a candidate list, not a reading: open each hit and find the step that owns it.
+3. For each step, read the cited requirement **to its end, with every dated amendment**.
+   An amendment can invert the clause before it. Then compare it with what the step
+   claims the requirement does.
+4. In the closure record, write one row per step: the journey, the step, the id, and
+   either *still says it* or the clause that disagrees. Name the tree you read at.
+5. File each disagreement as a finding (`FD-`, with a register row). It is not a verdict on
+   this close. Which of the step and the requirement is wrong is `CLAUDE.md` §0's question.
+
+If no journey cites a requirement in scope, say so in the record, and quote the command and
+the tree. A silent omission cannot be told apart from a step that was skipped.
+
 ## 6. Update the plan docs in the same commit
 
 - `docs/roadmap.md` — status table, closure evidence with dates, the §5 mapping
@@ -672,9 +699,24 @@ mapping.
 **Binding plan-review conditions:** each dated acceptance conditioning this close, the
 artifact it demanded, and where that artifact now is. *None* is a valid answer only after
 looking.
+
+**Replan check (`RFC-1248`):** the five `phase-review` questions, one line each —
+1 completion · 2 omission · 3 skills and research · 4 drift · 5 shape — each **yes** or
+**no** with its reason; `register-owed.py review`'s owed count at this tree; and the result,
+**trigger** (naming which) or **no trigger**. The lead's verdict follows it.
 ```
 
 ## Verified
+
+2026-09-29 — **the §14 paragraph and the template's Replan check added by `RFC-1248`**
+(option C, adopted by the maintainer 2026-09-29, confirmed by the user). A Work close no
+longer makes a full plan review due by itself; it makes a replan check due, in this record.
+Not yet exercised at a real close.
+
+2026-09-28 — **§5c added: every workflow step that cites this close's requirements is read
+against the requirement's current text.** `00` FR-1188 (OQ-554, decided by delegation, option (b);
+`RL-1184` E9), written at `df8e5811`. The FR-171 example is OQ-554's own, from RFC-778 item (f).
+The step has not yet run at a real close, so its first use is the check that it works.
 
 2026-09-19 — **the bespoke-audit rule added, in full, as `RFC-937` §5.4 requires.** W37-7
 Task 9, `PL-1070`. The rule is verbatim from `PL-939:750-751`, expanded with the id forms —

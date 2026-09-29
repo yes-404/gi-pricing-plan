@@ -1,0 +1,459 @@
+{
+  "$defs": {
+    "ArtifactRef": {
+      "description": "Canonical artifact reference {type}:{slug}@{version} (ID-3).",
+      "examples": [
+        "model:motor-ad-frequency@7",
+        "rating_version:motor-gb@27"
+      ],
+      "pattern": "^(banding|custom_metric|custom_objective|dataset|dataset_version|dossier|factor|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}@[1-9][0-9]*$",
+      "title": "ArtifactRef",
+      "type": "string"
+    },
+    "LadderOperation": {
+      "additionalProperties": false,
+      "description": "`LadderRung.operation` (`scoring.schema.json:33-42`).\n\n`factor` is a `Decimal`-exact string (R2 — never a JSON float); `amount_minor` is an\ninteger minor unit (FR-273). `applied` carries the reason codes of every firing\n`constraint` step recorded at this rung — non-empty only on the `constraints` rung, and\nempty rather than absent when nothing fired, matching `03:412`'s worked example.",
+      "properties": {
+        "amount_minor": {
+          "anyOf": [
+            {
+              "description": "Amount in minor units (pence/cents) of the workspace currency.",
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amount Minor"
+        },
+        "applied": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Applied",
+          "type": "array"
+        },
+        "dp": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dp"
+        },
+        "factor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Factor"
+        },
+        "kind": {
+          "enum": [
+            "multiply",
+            "add",
+            "round",
+            "none"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "mode": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mode"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "LadderOperation",
+      "type": "object"
+    },
+    "LadderRung": {
+      "additionalProperties": false,
+      "description": "One rung of the Premium Ladder (FR-247/248, `scoring.schema.json:25-45`).",
+      "properties": {
+        "components": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "description": "Amount in minor units (pence/cents) of the workspace currency.",
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Components"
+        },
+        "operation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LadderOperation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "rung": {
+          "enum": [
+            "risk_premium",
+            "expense_loading",
+            "commission",
+            "profit_loading",
+            "office_premium",
+            "optimisation_adjustment",
+            "constraints",
+            "instalment_loading",
+            "ipt_and_fees",
+            "payable_premium"
+          ],
+          "title": "Rung",
+          "type": "string"
+        },
+        "value_minor": {
+          "description": "Amount in minor units (pence/cents) of the workspace currency.",
+          "title": "Value Minor",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rung",
+        "value_minor"
+      ],
+      "title": "LadderRung",
+      "type": "object"
+    },
+    "ScoringResult": {
+      "additionalProperties": false,
+      "description": "`ScoringResult` (`scoring.schema.json:46-63`, `03` §4.4).\n\nInvariants (`scoring.schema.json:59-62`, enforced by `pricing_core.rating.score`, not\nre-validated here): applying every rung's recorded operation to `risk_premium`\nreproduces `payable_premium` exactly (FR-248); a traced and an untraced call on the\nsame bundle and context return an identical premium (`03` R3).",
+      "properties": {
+        "bundle_hash": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Bundle Hash",
+          "type": "string"
+        },
+        "decline_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Decline Reasons",
+          "type": "array"
+        },
+        "outcome": {
+          "enum": [
+            "quoted",
+            "declined",
+            "error"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "outputs": {
+          "additionalProperties": true,
+          "title": "Outputs",
+          "type": "object"
+        },
+        "premium_ladder": {
+          "items": {
+            "$ref": "#/$defs/LadderRung"
+          },
+          "title": "Premium Ladder",
+          "type": "array"
+        },
+        "rating_version_ref": {
+          "$ref": "#/$defs/ArtifactRef"
+        },
+        "timing_ms": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Timing Ms",
+          "type": "object"
+        },
+        "trace": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Trace"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "outcome",
+        "rating_version_ref",
+        "bundle_hash",
+        "premium_ladder"
+      ],
+      "title": "ScoringResult",
+      "type": "object"
+    },
+    "StepChange": {
+      "additionalProperties": false,
+      "description": "One step that differs between two Traces (FR-262, `03` §4.10). `own_change` is true\nwhen the step was added, removed, or changed while consuming identical inputs. False\nmeans no own change attributable from the traces, which is not a claim that the step\nwas not edited.",
+      "properties": {
+        "base": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TraceStep"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "change": {
+          "enum": [
+            "added",
+            "removed",
+            "changed"
+          ],
+          "title": "Change",
+          "type": "string"
+        },
+        "changed_fields": {
+          "items": {
+            "enum": [
+              "type",
+              "label",
+              "consumed",
+              "produced",
+              "matched",
+              "violation"
+            ],
+            "type": "string"
+          },
+          "title": "Changed Fields",
+          "type": "array"
+        },
+        "comparison": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TraceStep"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "own_change": {
+          "description": "True for an added or removed step, and for a changed step whose consumed inputs are identical on both sides. False means no own change attributable from the traces; it is not a claim that the step was not edited (a downstream step can be edited and also consume a moved value).",
+          "title": "Own Change",
+          "type": "boolean"
+        },
+        "step_id": {
+          "title": "Step Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "step_id",
+        "change",
+        "own_change"
+      ],
+      "title": "StepChange",
+      "type": "object"
+    },
+    "Trace": {
+      "additionalProperties": false,
+      "description": "`Trace` (FR-258, `scoring.schema.json:64-90`). Real-time and batch share the\nidentical structure (`03:172`).",
+      "properties": {
+        "bundle_hash": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Bundle Hash",
+          "type": "string"
+        },
+        "ladder_reconciled": {
+          "title": "Ladder Reconciled",
+          "type": "boolean"
+        },
+        "quote_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quote Id"
+        },
+        "rating_version_ref": {
+          "$ref": "#/$defs/ArtifactRef"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/TraceStep"
+          },
+          "title": "Steps",
+          "type": "array"
+        }
+      },
+      "required": [
+        "rating_version_ref",
+        "bundle_hash",
+        "steps",
+        "ladder_reconciled"
+      ],
+      "title": "Trace",
+      "type": "object"
+    },
+    "TraceDiff": {
+      "additionalProperties": false,
+      "description": "The step-level difference of two executed Traces (FR-262, `03` §4.10). Distinct from\nFR-219's structural `AlgorithmDiff`, which compares two algorithm definitions.",
+      "properties": {
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/StepChange"
+          },
+          "title": "Steps",
+          "type": "array"
+        },
+        "unchanged": {
+          "minimum": 0,
+          "title": "Unchanged",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "steps",
+        "unchanged"
+      ],
+      "title": "TraceDiff",
+      "type": "object"
+    },
+    "TraceStep": {
+      "additionalProperties": false,
+      "description": "One node of a `Trace` (FR-258, `scoring.schema.json:71-86`).\n\n`consumed`/`produced` are the engine's own `trace[node_id].input`/`.output` dicts,\npassed through rather than re-derived — `03` does not specify a narrower shape than\n\"consumed values, produced value\" and the engine's own record already satisfies it.",
+      "properties": {
+        "consumed": {
+          "additionalProperties": true,
+          "title": "Consumed",
+          "type": "object"
+        },
+        "elapsed_us": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Elapsed Us",
+          "type": "integer"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "matched": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Matched"
+        },
+        "produced": {
+          "additionalProperties": true,
+          "title": "Produced",
+          "type": "object"
+        },
+        "step_id": {
+          "title": "Step Id",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "input",
+            "lookup",
+            "table",
+            "expression",
+            "model_call",
+            "constraint",
+            "output"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "violation": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Violation"
+        }
+      },
+      "required": [
+        "step_id",
+        "type"
+      ],
+      "title": "TraceStep",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "`POST /api/v1/score/compare` response (FR-262, `03` §4.10): both traced results and\nthe diff of their traces.",
+  "properties": {
+    "base": {
+      "$ref": "#/$defs/ScoringResult"
+    },
+    "comparison": {
+      "$ref": "#/$defs/ScoringResult"
+    },
+    "diff": {
+      "$ref": "#/$defs/TraceDiff"
+    }
+  },
+  "required": [
+    "base",
+    "comparison",
+    "diff"
+  ],
+  "title": "ScoreComparison",
+  "type": "object"
+}

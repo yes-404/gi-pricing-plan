@@ -22,12 +22,18 @@ of those numbers — `§4`, `§10` and so on — points into the note, not into 
 
 ## 1.1 Four rules
 
-1. **A governed thing's id is `<PREFIX>-<n>`; `n` is an integer from one sequence shared by every family.** `FR-1187` is a requirement, `WK-1201` a work item, `PL-1240` a plan, `RL-1241` the ruling filed after it. No number is used twice. The prefix says what kind of thing; the number says which one, uniquely, project-wide. (Kubernetes: `KEP-1234` is issue #1234 in one global space; Jira: one key sequence per project across every item type.)
-2. **Citations write the integer, never padding:** `PL-1240`, `RL-65`, `RFC-16`, `FR-1187` — as PEP 8, RFC 2094 and KEP 1234 are written. A padded id in prose is a lint error. **No exception**: prose, headings (`# RL-1241 — …`), commit messages, PR titles, branch names, code comments, docstrings, test markers, link text.
+1. **A governed thing's id is `<PREFIX>-<n>`; `n` is an integer from one sequence shared by every family.** `FR-<a>` is a requirement, `WK-<b>` a work item, `PL-<c>` a plan, `RL-<c+1>` the ruling filed after it. No number is used twice. The prefix says what kind of thing; the number says which one, uniquely, project-wide. (Kubernetes: `KEP-<n>` is issue #<n> in one global space; Jira: one key sequence per project across every item type.)
+2. **Citations write the integer, never padding:** `PL-<n>`, `RL-<n>`, `RFC-<n>`, `FR-<n>` — as PEP 8, RFC 2094 and KEP 1234 are written. A padded id in prose is a lint error. **No exception**: prose, headings (`# RL-<n> — …`), commit messages, PR titles, branch names, code comments, docstrings, test markers, link text.
 3. **Filenames pad the integer to the standard's width, currently five:** `PL-<nnnnn>-<slug>.md`. Padding exists so `ls` sorts; it is not identity. The resolver treats `PL-<n>`, `PL-0<n>` and `PL-00<n>` as one id. Widening is a rename of files and a rewrite of link targets — one mechanical PR that touches no citation, number, header or body line (§1.8).
 4. **Two things are outside the standard, on principle:** a **phase**, which is a milestone label (`P2`), cited as a placement (`phase: P2`), never as a document (§1.3); and a **product identifier** — any id that is stored, transmitted or asserted by an API contract (`VR-DST-1`, artifact ids, job kinds) — which is product data governed by `docs/specs/`, and which this standard never touches.
 
 **Amended 2026-09-03 — RL-1046 D6, closing `OQ-555` on RL-1044 §1.7's option (a)** (`docs/rulings/RL-01046-the-alias-class-the-disclosed-rows-and-the-run-s-conditional-window.md`, D6). Rule 3's specimens are written as placeholders — `PL-<nnnnn>-<slug>.md` for the filename, and `PL-<n>` / `PL-0<n>` / `PL-00<n>` for the three spellings the resolver treats as one id — in the shape §1.4's ADR filename example already uses. The rule is unchanged; only its specimens are. A literal specimen is indistinguishable from a citation: once the generated `docs/INDEX.md` exists, `audit-docs.py` check 32 reads each spelling as a citation and reports it dangling or padded, and a specimen whose number is later allocated to a real document resolves instead — a padded id in prose naming a real governed thing, which is what §7(e) forbids. Three placeholder spellings still say what rule 3 exists to say, which the single `PL-<nnnnn>` first proposed could not. No exemption list is added and no check is narrowed, so nothing is keyed on a document's path. Leaving any specimen resolvable is the violation this amendment exists to make detectable.
+
+**Amended 2026-09-28, under WK-1178.** The deputy decided this by the maintainer's delegation, in the instruction dated 2026-09-28 at 15:26:20 BST. **Every example id in this file is now a placeholder** — `FR-<a>`, `WK-<n>`, `SL-<n>`, `WF-<nnnnn>-dataset-to-model.md` and the like — **never an integer from the live sequence.**
+- **Why.** The examples had been written as real-looking integers: 1187, 1188, 1201, 1207, 1215, 1240–1243, 1260 and 1310. The one sequence was about to reach them, so an example would read as a citation of a real Work, plan or ruling. Five others (16, 65, 88, 93 and 164) were already allocated to requirements under another prefix.
+- **What the old examples mean.** Before this amendment, the examples were illustrative integers. A real id minted later with one of those integers is unrelated to them.
+- **Frozen records.** The rulings, RFC-937 and the plans that quote the old examples are not edited: they quote the standard as it then stood.
+- **The guard.** `doc-id.py next` refuses to mint an integer that appears in any `<PREFIX>-<n>` token of this file at the ref it reads, so the pattern cannot recur. A real citation's integer is always below the next one, so only an example can collide.
 
 ## 1.2 Families — rows and documents, one sequence
 
@@ -62,7 +68,7 @@ Five words, with identical meaning in every family; a family uses a subset and n
 
 Transitions run forward only; `closed`, `retired` and `superseded` are terminal. **Mutability is a family property, not a status** (living · frozen · append-only · write-once · generated), stated once in the table above. A plan's *execution* (§1.7) is a separate, computed axis and is never written in `status:`. A finding's register disposition (`fix before close`, `accept`, `carry forward`, `split verdict`, with qualifiers) lives in its own `decision:` field, so `status:` and `decision:` cannot be confused — RFC-896 P4.
 
-A row family's id resolves to a file *and an anchor* (`docs/specs/02-modelling.md#fr-1187`, `docs/roadmap.md#wk-1201`); a document family's id resolves to a file. Roadmap rows are headings, so their anchors exist; requirement rows are bold ids in tables, so `spec-change` emits `<a id="fr-1187"></a>` before each definition and the migration adds one for every existing clause. `INDEX.md` has one row per number for both.
+A row family's id resolves to a file *and an anchor* (`docs/specs/02-modelling.md#fr-<n>`, `docs/roadmap.md#wk-<n>`); a document family's id resolves to a file. Roadmap rows are headings, so their anchors exist; requirement rows are bold ids in tables, so `spec-change` emits `<a id="fr-<n>"></a>` before each definition and the migration adds one for every existing clause. `INDEX.md` has one row per number for both.
 
 ## 1.3 Phase = milestone
 
@@ -74,8 +80,8 @@ status: active            # draft → active → closed
 opened: 2026-09-15
 target: 2026-11-30
 gates: plan freeze 2026-10-15 · code freeze 2026-11-15 · docs freeze 2026-11-25
-exit criteria: WF-1188 delivered end to end; no open FD- against RATE
-works: WK-1201, WK-1207, WK-1215
+exit criteria: WF-<n> delivered end to end; no open FD- against RATE
+works: WK-<a>, WK-<b>, WK-<c>
 ```
 
 Every record that belongs to the phase carries `phase: P2` in its header — that is the whole attachment mechanism. The phase closes with one `CR- kind: phase` whose body is generated from every record carrying `phase: P2` (§1.10). Optionally mirrored as a GitHub Milestone named `P2 — Rating engine live`; the roadmap section is the source of truth, the milestone a view.
@@ -91,15 +97,15 @@ docs/
 ├── roadmap.md             phases (milestone sections), WK- and SL- rows, living
 ├── open-questions.md      OQ- mirror, living
 ├── specs/                 FR-/NFR-/DEP-/OQ- clauses inside 00-overview.md … 07-platform.md
-├── workflows/             WF-01188-dataset-to-model.md
+├── workflows/             WF-<nnnnn>-dataset-to-model.md
 ├── adrs/                  ADR-<nnnnn>-pricing-core-is-dependency-free.md
-├── rfcs/                  RFC-00164-file-taxonomy-and-custody.md
-├── plans/                 PL-01240-batch-frame-contract.md
-├── ledgers/               LG-01243-batch-frame-contract.md
-├── rulings/               RL-01241-batch-frame-payload-inline.md
-├── research/              RS-00088-zen-evaluate-concurrency.md
-├── closures/              CR-01310-p2.md · CR-01260-wk-1201.md
-├── findings/              register.md · FD-00093-rating-shapes.md   (per-phase views are generated, never files)
+├── rfcs/                  RFC-<nnnnn>-file-taxonomy-and-custody.md
+├── plans/                 PL-<nnnnn>-batch-frame-contract.md
+├── ledgers/               LG-<nnnnn>-batch-frame-contract.md
+├── rulings/               RL-<nnnnn>-batch-frame-payload-inline.md
+├── research/              RS-<nnnnn>-zen-evaluate-concurrency.md
+├── closures/              CR-<nnnnn>-p2.md · CR-<nnnnn>-wk-<n>.md
+├── findings/              register.md · FD-<nnnnn>-rating-shapes.md   (per-phase views are generated, never files)
 ├── process/               delivery-process.md · document-ids.md · checklists/ · agent-settings.md
 └── contracts/             generated schemas + hand OpenAPI
 ```
@@ -112,7 +118,7 @@ On every document-family file, every Reference file, and (as a fenced block unde
 
 ```yaml
 ---
-id: PL-1240                  # document and row families; integer form; the filename pads it
+id: PL-<n>                   # document and row families; integer form; the filename pads it
 family: plan
 kind: leaf
 title: Batch frame contract
@@ -120,15 +126,15 @@ status: active               # §1.2a vocabulary
 created: 2026-09-02
 owner: planner               # a filename under .claude/roles/, or `maintainer`
 phase: P2                    # every WK, SL, PL, LG, RL, CR, RS
-work: WK-1201                # every SL, PL, LG, RL, CR, RS
-slice: SL-1242               # PL (leaf), LG, RL where slice-scoped
+work: WK-<n>                 # every SL, PL, LG, RL, CR, RS
+slice: SL-<n>                # PL (leaf), LG, RL where slice-scoped
 tree: 8f5d57d
-plans: [PL-1240]             # LG only — append-only; a ledger is keyed to its slice, and lists every plan it executed
+plans: [PL-<n>]             # LG only — append-only; a ledger is keyed to its slice, and lists every plan it executed
 supersedes: []
 superseded_by: ~             # with `status:` (forward only) and `corrected_by:`, the only fields edited after a file freezes
 corrected_by: []             # append-only; each entry is the RL-/RFC- that corrects this file (the body is never edited)
 corrects: ~                  # on the correcting record: the frozen id it corrects
-relates: [RFC-164, RL-65]    # ids only — never paths
+relates: [RFC-<n>, RL-<n>]    # ids only — never paths
 was: 2026-08-18-profile-contract.md   # migration only
 ---
 ```
@@ -143,7 +149,7 @@ Principles: the role that writes code never amends the document the code is chec
 |---|---|---|---|---|---|
 | **FR NFR DEP** | decision-maker, via `spec-change` | maintainer for a new module or a scope change | planner (plans against), executor (implements) | auditor — `req-coverage`, cited in `CR-` | decision-maker: `superseded` + new id |
 | **OQ** | decision-maker records (anyone raises) | resolved by an `RL-` or `ADR-` | planner — an open OQ blocks the slice that needs it | decision-maker sets `closed` citing the resolver | — |
-| **Phase** `P<n>` | maintainer opens the section; lead maintains it | maintainer closes | everyone | auditor files `CR- kind: phase`; lead runs `phase-review` → `CR- kind: review` | — |
+| **Phase** `P<n>` | maintainer opens the section; lead maintains it | maintainer closes | everyone | auditor files `CR- kind: phase`; planner conducts and files `phase-review` → `CR- kind: review` (a family owned by the lead); the lead gives the verdict on its recommendations; the maintainer accepts *(amended 2026-09-29, `RFC-1248`, on the maintainer's entry of 18:57:24 BST, item 2: it read "lead runs `phase-review`", against the charters)* | — |
 | **WK** | maintainer opens (`draft`); planner writes its map plan; maintainer sets `active` | maintainer accepts the close (`closed`, `CLAUDE.md` §12) | lead runs it | auditor files `CR- kind: work` | maintainer withdraws |
 | **SL** | planner, cut in the map plan (`draft`) | lead dispatches (`active`) | executor executes | auditor closes: sets the `LG-` `closed`, verifies acceptance | planner re-cuts on replan |
 | **WF** | decision-maker, via `spec-change` | maintainer for a new journey | planner (`relates:` the steps a Work delivers); executor delivers and owns `test_wfNN_journey` | auditor in `CR-`; lead reads coverage at phase review | decision-maker |
@@ -156,7 +162,7 @@ Principles: the role that writes code never amends the document the code is chec
 | **RL** | decision-maker; the maintainer may author one on scope or process | — | planner and executor apply it at every site | auditor checks the sites at close | decision-maker: new `RL-` with `supersedes:`; `retired` when overridden with no successor |
 | **RS** `spike`/`measurement` | executor (`library-spike`, measurements) | — | planner cites it | executor sets `active` on filing; `closed` only by citing the `FR-`/`ADR-`/`RFC-` target the decision-maker created | executor or lead: `retired` |
 | **RS** `audit` | auditor — a bespoke audit's method, evidence and verdicts; files every finding as `FD-` | lead gives each `FD-` its disposition | maintainer requests it as an `SL-`; planner freezes scope in a `PL-` | the Work's `CR-` cites the record and every `FD-` it raised | lead: `closed` once every `FD-` is closed |
-| **CR** | auditor (`work`, `phase`); lead (`review`) | maintainer accepts a Work or Phase close | reporter reports it | terminal | — |
+| **CR** | auditor (`work`, `phase`); lead (`review`: the family is the lead's, the planner conducts and files it). A `work` record carries the **replan check**; a `review` record is a **short index** — the previous review's records with their state, proposal → record id → owner → state, the acceptance line — and every accepted proposal is an owned record, never "unowned" *(amended 2026-09-29, `RFC-1248`, Part 1 and Part 2)* | maintainer accepts a Work or Phase close, and a review's proposals | reporter reports it | terminal | — |
 | **FD** | auditor (register row + essay) | lead sets `decision:`; decision-maker when contested | executor discharges it through an `SL-` (under the owning Work, or `WK- maintenance`) that names the `FD-` | auditor sets `closed` in place citing the PR; `retired` for `accept`; unowned rows decay to the phase review | never removed |
 | Reference — `process/` | maintainer; amendments arrive as `RFC-` + `RL-`; rows of the residue record: RL-1145 DP-3 am. 5 | — | everyone | `audit-docs` core-JSON drift | — |
 | Reference — charters | maintainer; "a role file that proves insufficient" → `FD-` → maintainer amends | — | the role at spawn | — | — |
@@ -168,7 +174,7 @@ The reporter and the watcher own no governed document: the reporter reads closur
 
 ## 1.7 Citation and allocation
 
-Prose cites `<PREFIX>-<n>`; a link carries the padded path as its target and the id as its text; the resolver is `\b(FR|NFR|DEP|OQ|WK|SL|WF|ADR|RFC|PL|LG|RL|RS|CR|FD)-0*(\d+)\b` with a check that the prefix matches the family the number belongs to. A phase is cited `P2`, always as a placement. Bare numbers never appear in prose (`#1240` autolinks to PR 1240 on GitHub).
+Prose cites `<PREFIX>-<n>`; a link carries the padded path as its target and the id as its text; the resolver is `\b(FR|NFR|DEP|OQ|WK|SL|WF|ADR|RFC|PL|LG|RL|RS|CR|FD)-0*(\d+)\b` with a check that the prefix matches the family the number belongs to. A phase is cited `P2`, always as a placement. Bare numbers never appear in prose (`#<n>` autolinks to PR <n> on GitHub).
 
 `python3 scripts/doc-id.py next` fetches `origin/main`, reads the maximum across every header, every spec bold-id, every roadmap row and `INDEX.md`, prints max + 1. The number is taken by the commit that adds it; a collision at rebase is fixed by renumbering the unmerged item. `doc-id.py check` fails the gate on any duplicate or header/filename mismatch. Switching to GitHub-issue-number allocation later is a policy change inside `doc-id.py`, not a renumbering.
 
@@ -197,11 +203,11 @@ A map plan rolls up from its slices' leaf plans (all `closed` → `closed`; any 
 | Layer here | GitHub-native object | Convention |
 |---|---|---|
 | Phase `P2` | Milestone | milestone named `P2 — <title>`; optional mirror |
-| `WK-1201` | Issue of type `Feature`/`Epic` | optional mirror, titled `WK-1201: <title>`, its slices as sub-issues |
-| `SL-1242` | Issue of type `Task` / sub-issue | branch `sl-1242-<slug>`; PR title `SL-1242: <title>`; the PR template requires it |
+| `WK-<n>` | Issue of type `Feature`/`Epic` | optional mirror, titled `WK-<n>: <title>`, its slices as sub-issues |
+| `SL-<n>` | Issue of type `Task` / sub-issue | branch `sl-<n>-<slug>`; PR title `SL-<n>: <title>`; the PR template requires it |
 | `PL-` / `RL-` | the issue description / decision comments | in the repository, frozen, cited by id |
 | `LG-` | the PR list under the sub-issue | the ledger records PR numbers |
-| `FD-` | Issue of type `Bug`, label `finding` | optional mirror, titled `FD-93: …` |
+| `FD-` | Issue of type `Bug`, label `finding` | optional mirror, titled `FD-<n>: …` |
 | `CR-` | release notes / retrospective | generated |
 | `RFC-` | RFC / Discussion | in the repository |
 
