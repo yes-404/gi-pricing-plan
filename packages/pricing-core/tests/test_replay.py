@@ -33,6 +33,7 @@ def _boom(*_a: Any, **_k: Any) -> Any:
 
 
 @pytest.mark.req("FR-261")
+@pytest.mark.req("FR-1221")
 def test_a_replay_re_scores_the_persisted_cases_and_never_generates(
     bundle: CompiledBundle, monkeypatch: pytest.MonkeyPatch
 ) -> None:
