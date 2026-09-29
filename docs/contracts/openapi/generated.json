@@ -282,7 +282,7 @@
           "model:motor-ad-frequency@7",
           "rating_version:motor-gb@27"
         ],
-        "pattern": "^(banding|custom_metric|custom_objective|dataset|dataset_version|dossier|factor|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}@[1-9][0-9]*$",
+        "pattern": "^(banding|custom_metric|custom_objective|dataset|dataset_version|dossier|factor|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}@[1-9][0-9]*$",
         "title": "ArtifactRef",
         "type": "string"
       },
@@ -1025,6 +1025,32 @@
           "actual"
         ],
         "title": "CalibrationBin",
+        "type": "object"
+      },
+      "CasesLog": {
+        "additionalProperties": false,
+        "description": "A run's reproduction record: every generated case and every counterexample (FR-261).\n\nPersisted as one content-addressed canonical JSON blob (FR-1221) and replayed by\nre-scoring, never regenerated. `counterexamples` is keyed by property name.",
+        "properties": {
+          "cases": {
+            "items": {
+              "$ref": "#/components/schemas/QuoteContext"
+            },
+            "title": "Cases",
+            "type": "array"
+          },
+          "counterexamples": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/QuoteContext"
+            },
+            "title": "Counterexamples",
+            "type": "object"
+          }
+        },
+        "required": [
+          "cases",
+          "counterexamples"
+        ],
+        "title": "CasesLog",
         "type": "object"
       },
       "CertificateCheck": {
@@ -4334,6 +4360,14 @@
             "title": "Permutation Importances",
             "type": "array"
           },
+          "permutation_omitted": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PermutationOmission"
+            },
+            "title": "Permutation Omitted",
+            "type": "array"
+          },
           "quantile_crossing": {
             "anyOf": [
               {
@@ -4966,6 +5000,14 @@
             ],
             "title": "Residual Blob"
           },
+          "type_iii_omitted": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TypeIIIOmission"
+            },
+            "title": "Type Iii Omitted",
+            "type": "array"
+          },
           "type_iii_tests": {
             "default": [],
             "items": {
@@ -5310,6 +5352,429 @@
           "response_column"
         ],
         "title": "GlmSpec",
+        "type": "object"
+      },
+      "GoldenQuote": {
+        "additionalProperties": false,
+        "description": "A named Quote Context with its expected outputs (03 §2, FR-260).",
+        "properties": {
+          "context": {
+            "$ref": "#/components/schemas/QuoteContext"
+          },
+          "expected": {
+            "$ref": "#/components/schemas/GoldenQuoteExpected"
+          },
+          "name": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "tolerance": {
+            "$ref": "#/components/schemas/GoldenQuoteTolerance",
+            "default": {
+              "money_minor": 0
+            }
+          }
+        },
+        "required": [
+          "name",
+          "context",
+          "expected"
+        ],
+        "title": "GoldenQuote",
+        "type": "object"
+      },
+      "GoldenQuoteChange": {
+        "additionalProperties": false,
+        "description": "A golden quote added, removed or changed since the baseline suite.",
+        "properties": {
+          "after": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GoldenQuoteExpected"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "after_context_hash": {
+            "anyOf": [
+              {
+                "pattern": "^sha256:[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After Context Hash"
+          },
+          "after_tolerance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GoldenQuoteTolerance"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "before": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GoldenQuoteExpected"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "before_context_hash": {
+            "anyOf": [
+              {
+                "pattern": "^sha256:[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before Context Hash"
+          },
+          "before_tolerance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GoldenQuoteTolerance"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "change": {
+            "enum": [
+              "added",
+              "removed",
+              "changed"
+            ],
+            "title": "Change",
+            "type": "string"
+          },
+          "changed_fields": {
+            "items": {
+              "enum": [
+                "expected",
+                "tolerance",
+                "context"
+              ],
+              "type": "string"
+            },
+            "title": "Changed Fields",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/GoldenQuoteChangeStep"
+            },
+            "minItems": 1,
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "change",
+          "steps"
+        ],
+        "title": "GoldenQuoteChange",
+        "type": "object"
+      },
+      "GoldenQuoteChangeStep": {
+        "additionalProperties": false,
+        "description": "One suite version that added, removed or substantively changed a golden quote.\n\n`author` is the actor of that version's `regression_suite.created` Audit Event\n(`06` FR-368) — never the row's `created_by` copy. A version that changed only\n`note` is no step.",
+        "properties": {
+          "author": {
+            "format": "uuid",
+            "title": "Author",
+            "type": "string"
+          },
+          "changed_fields": {
+            "items": {
+              "enum": [
+                "added",
+                "removed",
+                "expected",
+                "tolerance",
+                "context"
+              ],
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Changed Fields",
+            "type": "array"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "changed_fields",
+          "author"
+        ],
+        "title": "GoldenQuoteChangeStep",
+        "type": "object"
+      },
+      "GoldenQuoteCheck": {
+        "additionalProperties": false,
+        "description": "The submit gate's record of a checked suite (FR-260).",
+        "properties": {
+          "bundle_hash": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Bundle Hash",
+            "type": "string"
+          },
+          "delta": {
+            "$ref": "#/components/schemas/GoldenQuoteDelta"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/GoldenQuoteResult"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "status": {
+            "const": "checked",
+            "title": "Status",
+            "type": "string"
+          },
+          "suite_content_hash": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Suite Content Hash",
+            "type": "string"
+          },
+          "suite_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          }
+        },
+        "required": [
+          "status",
+          "suite_ref",
+          "suite_content_hash",
+          "bundle_hash",
+          "results",
+          "delta"
+        ],
+        "title": "GoldenQuoteCheck",
+        "type": "object"
+      },
+      "GoldenQuoteDelta": {
+        "additionalProperties": false,
+        "description": "What changed in the suite since the previous approved Rating Version's pin.",
+        "properties": {
+          "baseline_rating_version_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "baseline_suite_content_hash": {
+            "anyOf": [
+              {
+                "pattern": "^sha256:[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Suite Content Hash"
+          },
+          "baseline_suite_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/GoldenQuoteChange"
+            },
+            "title": "Changes",
+            "type": "array"
+          }
+        },
+        "title": "GoldenQuoteDelta",
+        "type": "object"
+      },
+      "GoldenQuoteExpected": {
+        "additionalProperties": false,
+        "description": "What a golden quote must reproduce: the payable premium and the outcome only.\n\nNever `timing_ms` (RL-931). `payable_premium_minor` is the `payable_premium` ladder\nrung's `value_minor`, and it is null exactly when `outcome` is not `quoted`.",
+        "properties": {
+          "outcome": {
+            "enum": [
+              "quoted",
+              "declined",
+              "error"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "payable_premium_minor": {
+            "anyOf": [
+              {
+                "description": "Amount in minor units (pence/cents) of the workspace currency.",
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payable Premium Minor"
+          }
+        },
+        "required": [
+          "payable_premium_minor",
+          "outcome"
+        ],
+        "title": "GoldenQuoteExpected",
+        "type": "object"
+      },
+      "GoldenQuoteNotChecked": {
+        "additionalProperties": false,
+        "description": "The explicit record that no golden quote was checked (DP-S2-4's interim rule).",
+        "properties": {
+          "message": {
+            "const": "no golden quotes were checked",
+            "title": "Message",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "no_algorithm_ref",
+              "no_suite_for_algorithm"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "regression_suite": {
+            "const": "none",
+            "title": "Regression Suite",
+            "type": "string"
+          },
+          "status": {
+            "const": "not_checked",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "regression_suite",
+          "message",
+          "reason"
+        ],
+        "title": "GoldenQuoteNotChecked",
+        "type": "object"
+      },
+      "GoldenQuoteResult": {
+        "additionalProperties": false,
+        "description": "One golden quote's re-score — 03 §4.9's `golden_results[]` item, field for field.",
+        "properties": {
+          "actual_minor": {
+            "anyOf": [
+              {
+                "description": "Amount in minor units (pence/cents) of the workspace currency.",
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Minor"
+          },
+          "difference_minor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difference Minor"
+          },
+          "expected_minor": {
+            "anyOf": [
+              {
+                "description": "Amount in minor units (pence/cents) of the workspace currency.",
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Minor"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pass",
+              "fail"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "status"
+        ],
+        "title": "GoldenQuoteResult",
+        "type": "object"
+      },
+      "GoldenQuoteTolerance": {
+        "additionalProperties": false,
+        "description": "The declared tolerance, in integer minor units. Default exact (FR-260).",
+        "properties": {
+          "money_minor": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Money Minor",
+            "type": "integer"
+          }
+        },
+        "title": "GoldenQuoteTolerance",
         "type": "object"
       },
       "Grouping": {
@@ -6155,6 +6620,22 @@
         "title": "KeyView",
         "type": "object"
       },
+      "LadderReconciles": {
+        "additionalProperties": false,
+        "description": "The premium ladder reconciles (FR-248).",
+        "properties": {
+          "kind": {
+            "const": "ladder_reconciles",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "LadderReconciles",
+        "type": "object"
+      },
       "LargeLossKind": {
         "description": "FR-189's four treatments.",
         "enum": [
@@ -6998,6 +7479,67 @@
         "title": "ModelStatus",
         "type": "string"
       },
+      "MonotoneInInput": {
+        "additionalProperties": false,
+        "properties": {
+          "direction": {
+            "enum": [
+              "increasing",
+              "decreasing"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "input": {
+            "minLength": 1,
+            "title": "Input",
+            "type": "string"
+          },
+          "kind": {
+            "const": "monotone",
+            "title": "Kind",
+            "type": "string"
+          },
+          "lower": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-10).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lower"
+          },
+          "strict": {
+            "default": false,
+            "title": "Strict",
+            "type": "boolean"
+          },
+          "upper": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-10).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper"
+          }
+        },
+        "required": [
+          "kind",
+          "input",
+          "direction"
+        ],
+        "title": "MonotoneInInput",
+        "type": "object"
+      },
       "MonotonicDirection": {
         "enum": [
           "increasing",
@@ -7036,6 +7578,21 @@
           "holds"
         ],
         "title": "MonotonicityCheck",
+        "type": "object"
+      },
+      "NoNullOutput": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "no_null_output",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "NoNullOutput",
         "type": "object"
       },
       "ObjectiveBackend": {
@@ -7971,7 +8528,8 @@
         "description": "Why a partial-dependence curve does not cover its factor (FR-175).",
         "enum": [
           "level_cap",
-          "no_source_column"
+          "no_source_column",
+          "operand_of_interaction"
         ],
         "title": "PartialDependenceOmissionReason",
         "type": "string"
@@ -8294,6 +8852,14 @@
           "seed": {
             "title": "Seed",
             "type": "integer"
+          },
+          "shared_source_columns": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Shared Source Columns",
+            "type": "array"
           }
         },
         "required": [
@@ -8306,6 +8872,34 @@
         ],
         "title": "PermutationImportance",
         "type": "object"
+      },
+      "PermutationOmission": {
+        "additionalProperties": false,
+        "description": "A factor the permutation block did not measure, and why (FR-178).\n\nUntil FR-178's permutation limb this was silent: the block skipped a factor and\nnothing in the output said so, which is the silence `PartialDependenceOmission` was\nadded to end on the other block.",
+        "properties": {
+          "feature": {
+            "title": "Feature",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/PermutationOmissionReason"
+          }
+        },
+        "required": [
+          "feature",
+          "reason"
+        ],
+        "title": "PermutationOmission",
+        "type": "object"
+      },
+      "PermutationOmissionReason": {
+        "description": "Why a factor has no permutation importance (FR-178).",
+        "enum": [
+          "operand_of_interaction",
+          "no_holdout_column"
+        ],
+        "title": "PermutationOmissionReason",
+        "type": "string"
       },
       "PiiClass": {
         "description": "How sensitive a column is (`01` §4.1, FR-12, FR-39).\n\nThe two strongest classes are not a warning label. A `direct_identifier` or\n`special_category` column is **refused for modelling use** — rating on a special\ncategory is unlawful in the UK/EU, and a direct identifier in a model is a\nre-identification risk that no amount of care downstream removes.",
@@ -8460,6 +9054,61 @@
           "rows"
         ],
         "title": "Prediction",
+        "type": "object"
+      },
+      "PremiumBounded": {
+        "additionalProperties": false,
+        "description": "An absolute bound, in minor units — never relative to another output.",
+        "properties": {
+          "kind": {
+            "const": "premium_bounded",
+            "title": "Kind",
+            "type": "string"
+          },
+          "lower_minor": {
+            "anyOf": [
+              {
+                "description": "Amount in minor units (pence/cents) of the workspace currency.",
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lower Minor"
+          },
+          "upper_minor": {
+            "anyOf": [
+              {
+                "description": "Amount in minor units (pence/cents) of the workspace currency.",
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper Minor"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "PremiumBounded",
+        "type": "object"
+      },
+      "PremiumPositive": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "premium_positive",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "PremiumPositive",
         "type": "object"
       },
       "Principal": {
@@ -8723,6 +9372,112 @@
           }
         },
         "title": "Progress",
+        "type": "object"
+      },
+      "PropertyResult": {
+        "additionalProperties": false,
+        "description": "One property's outcome — 03 §4.9's `property_results[]` item.\n\nA failing property records how its shrink ended; a shrink stopped on a limit is\nreported as unminimised, never as a minimal counterexample (RS-1176 condition 5).",
+        "properties": {
+          "cases_run": {
+            "minimum": 0.0,
+            "title": "Cases Run",
+            "type": "integer"
+          },
+          "counterexample": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterexample"
+          },
+          "counterexample_minimal": {
+            "default": false,
+            "title": "Counterexample Minimal",
+            "type": "boolean"
+          },
+          "counterexample_points": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterexample Points"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "grid": {
+            "anyOf": [
+              {
+                "const": "uniform+sampled",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grid"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "shrink": {
+            "anyOf": [
+              {
+                "enum": [
+                  "completed",
+                  "stopped_on_limit"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shrink"
+          },
+          "status": {
+            "enum": [
+              "pass",
+              "fail"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "status",
+          "cases_run"
+        ],
+        "title": "PropertyResult",
         "type": "object"
       },
       "QuantileCrossing": {
@@ -9095,6 +9850,31 @@
               }
             ],
             "title": "Gipp Check Id"
+          },
+          "golden_quotes": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "checked": "#/components/schemas/GoldenQuoteCheck",
+                    "not_checked": "#/components/schemas/GoldenQuoteNotChecked"
+                  },
+                  "propertyName": "status"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/GoldenQuoteCheck"
+                  },
+                  {
+                    "$ref": "#/components/schemas/GoldenQuoteNotChecked"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Golden Quotes"
           },
           "regression_suite_run_id": {
             "anyOf": [
@@ -9599,6 +10379,281 @@
           "version"
         ],
         "title": "ReferenceTableVersion",
+        "type": "object"
+      },
+      "RegressionGeneration": {
+        "additionalProperties": false,
+        "properties": {
+          "cases": {
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Cases",
+            "type": "integer"
+          },
+          "seed": {
+            "minimum": 0.0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "strategy": {
+            "const": "input_contract_sampling",
+            "title": "Strategy",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cases",
+          "seed",
+          "strategy"
+        ],
+        "title": "RegressionGeneration",
+        "type": "object"
+      },
+      "RegressionProperty": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "discriminator": {
+              "mapping": {
+                "ladder_reconciles": "#/components/schemas/LadderReconciles",
+                "monotone": "#/components/schemas/MonotoneInInput",
+                "no_null_output": "#/components/schemas/NoNullOutput",
+                "premium_bounded": "#/components/schemas/PremiumBounded",
+                "premium_positive": "#/components/schemas/PremiumPositive"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PremiumPositive"
+              },
+              {
+                "$ref": "#/components/schemas/MonotoneInInput"
+              },
+              {
+                "$ref": "#/components/schemas/NoNullOutput"
+              },
+              {
+                "$ref": "#/components/schemas/LadderReconciles"
+              },
+              {
+                "$ref": "#/components/schemas/PremiumBounded"
+              }
+            ],
+            "title": "Check"
+          },
+          "name": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "check"
+        ],
+        "title": "RegressionProperty",
+        "type": "object"
+      },
+      "RegressionRun": {
+        "additionalProperties": false,
+        "description": "The execution record of a Regression Suite run (03 §4.9, FR-260, FR-261).",
+        "properties": {
+          "bundle_hash": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Bundle Hash",
+            "type": "string"
+          },
+          "cases_blob": {
+            "$ref": "#/components/schemas/BlobRef"
+          },
+          "finished_at": {
+            "format": "date-time",
+            "title": "Finished At",
+            "type": "string"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/RunGeneration"
+          },
+          "golden_results": {
+            "items": {
+              "$ref": "#/components/schemas/GoldenQuoteResult"
+            },
+            "title": "Golden Results",
+            "type": "array"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "overall": {
+            "enum": [
+              "pass",
+              "fail"
+            ],
+            "title": "Overall",
+            "type": "string"
+          },
+          "property_results": {
+            "items": {
+              "$ref": "#/components/schemas/PropertyResult"
+            },
+            "title": "Property Results",
+            "type": "array"
+          },
+          "rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "suite_content_hash": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Suite Content Hash",
+            "type": "string"
+          },
+          "suite_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          }
+        },
+        "required": [
+          "suite_ref",
+          "suite_content_hash",
+          "rating_version_ref",
+          "bundle_hash",
+          "started_at",
+          "finished_at",
+          "overall",
+          "generation",
+          "cases_blob",
+          "golden_results",
+          "property_results"
+        ],
+        "title": "RegressionRun",
+        "type": "object"
+      },
+      "RegressionSuite": {
+        "additionalProperties": false,
+        "description": "One version of a Regression Suite (03 §4.7). Versioned, not approvable.",
+        "properties": {
+          "algorithm_slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Algorithm Slug",
+            "type": "string"
+          },
+          "change_note": {
+            "minLength": 1,
+            "title": "Change Note",
+            "type": "string"
+          },
+          "content_hash": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "format": "uuid",
+            "title": "Created By",
+            "type": "string"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/RegressionGeneration"
+          },
+          "golden_quotes": {
+            "items": {
+              "$ref": "#/components/schemas/GoldenQuote"
+            },
+            "title": "Golden Quotes",
+            "type": "array"
+          },
+          "properties": {
+            "items": {
+              "$ref": "#/components/schemas/RegressionProperty"
+            },
+            "title": "Properties",
+            "type": "array"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "algorithm_slug",
+          "golden_quotes",
+          "properties",
+          "generation",
+          "slug",
+          "version",
+          "change_note",
+          "content_hash",
+          "created_at",
+          "created_by"
+        ],
+        "title": "RegressionSuite",
+        "type": "object"
+      },
+      "RegressionSuiteVersionCreate": {
+        "additionalProperties": false,
+        "description": "The request body of `POST /api/v1/regression-suites/{slug}/versions` (03 §5.1).\n\nThe content plus the required change note; the slug comes from the path, and the\nversion, hash, author and time are the server's.",
+        "properties": {
+          "algorithm_slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Algorithm Slug",
+            "type": "string"
+          },
+          "change_note": {
+            "minLength": 1,
+            "title": "Change Note",
+            "type": "string"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/RegressionGeneration"
+          },
+          "golden_quotes": {
+            "items": {
+              "$ref": "#/components/schemas/GoldenQuote"
+            },
+            "title": "Golden Quotes",
+            "type": "array"
+          },
+          "properties": {
+            "items": {
+              "$ref": "#/components/schemas/RegressionProperty"
+            },
+            "title": "Properties",
+            "type": "array"
+          }
+        },
+        "required": [
+          "algorithm_slug",
+          "golden_quotes",
+          "properties",
+          "generation",
+          "change_note"
+        ],
+        "title": "RegressionSuiteVersionCreate",
         "type": "object"
       },
       "RelativityDifference": {
@@ -10230,6 +11285,34 @@
         "title": "RunBacktest",
         "type": "object"
       },
+      "RunGeneration": {
+        "additionalProperties": false,
+        "description": "How a run generated its cases (03 §4.9); the seed serves same-version regeneration.",
+        "properties": {
+          "cases": {
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Cases",
+            "type": "integer"
+          },
+          "hypothesis_version": {
+            "title": "Hypothesis Version",
+            "type": "string"
+          },
+          "seed": {
+            "minimum": 0.0,
+            "title": "Seed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "seed",
+          "cases",
+          "hypothesis_version"
+        ],
+        "title": "RunGeneration",
+        "type": "object"
+      },
       "SamplingSpec": {
         "additionalProperties": false,
         "description": "The grid the checks ran over (§4.7).\n\nPart of the certificate rather than a run parameter thrown away afterwards: §4.7's own\nnote says the convexity share \"is strongly dependent on `y_range`/`f_range`, so the\nshare is only meaningful alongside the sampling block\". A finding without its grid is\na percentage of nothing.",
@@ -10316,6 +11399,28 @@
           "columns"
         ],
         "title": "SchemaCorrection",
+        "type": "object"
+      },
+      "ScoreCompareRequest": {
+        "additionalProperties": false,
+        "description": "`POST /api/v1/score/compare` body (FR-262, `03` §4.10): one quote, two versions.",
+        "properties": {
+          "base": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "comparison": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "context": {
+            "$ref": "#/components/schemas/QuoteContext"
+          }
+        },
+        "required": [
+          "context",
+          "base",
+          "comparison"
+        ],
+        "title": "ScoreCompareRequest",
         "type": "object"
       },
       "SemanticType": {
@@ -11451,6 +12556,33 @@
         ],
         "title": "TweedieProfilePoint",
         "type": "object"
+      },
+      "TypeIIIOmission": {
+        "additionalProperties": false,
+        "description": "A factor the type-III block did not test, and why (FR-178).\n\nUntil FR-178's type-III half this exclusion was stated in a code comment and recorded\nnowhere, so a reviewer reading a GLM's diagnostics could not see that operands had been\nleft out.",
+        "properties": {
+          "factor": {
+            "title": "Factor",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/TypeIIIOmissionReason"
+          }
+        },
+        "required": [
+          "factor",
+          "reason"
+        ],
+        "title": "TypeIIIOmission",
+        "type": "object"
+      },
+      "TypeIIIOmissionReason": {
+        "description": "Why a factor has no type-III test (FR-178).",
+        "enum": [
+          "operand_of_interaction"
+        ],
+        "title": "TypeIIIOmissionReason",
+        "type": "string"
       },
       "TypeIIITest": {
         "additionalProperties": false,
@@ -14060,7 +15192,7 @@
     },
     "/api/v1/blobs/upload-url": {
       "post": {
-        "description": "FR-421.\n\nThe digest is not known until the bytes exist, so the object lands on a staging key and\nis promoted to its content address on completion. Asking the client for the digest up\nfront would let it choose one, which is the difference between content addressing and\nclient-supplied naming.",
+        "description": "FR-421.\n\nThe digest is not known until the bytes exist, so the object lands on a staging key, not\nat its content address. Asking the client for the digest up front would let it choose\none, which is the difference between content addressing and client-supplied naming.\nNothing yet moves a staging object to its content address or creates its `blobs` row\n(the completion step FR-421 implies is not built), so an upload made through this URL\ncannot be ingested or downloaded as a blob today.",
         "operationId": "upload_url_api_v1_blobs_upload_url_post",
         "parameters": [
           {
@@ -24692,6 +25824,362 @@
         ]
       }
     },
+    "/api/v1/rating-versions/{rating_version_id}/regression-runs": {
+      "post": {
+        "description": "**202** with a Job (`03` §5.1, FR-260/261, `PL-1205` Task 5).\n\nThe `rating.regression` Job runs the algorithm's current Regression Suite against this\nversion's compiled bundle and persists a `RegressionRun` with its case log. A failing\nrun ends the Job `failed` (`PROPERTY_ASSERTION_FAILED` or `GOLDEN_QUOTE_MISMATCH`) and\nthe run is still recorded; FR-257 limb (1) reads it at submission.",
+        "operationId": "start_regression_run_api_v1_rating_versions__rating_version_id__regression_runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rating_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rating Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Run the Regression Suite against a rating version",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/rating-versions/{rating_version_id}/regression-runs/{run_id}": {
+      "get": {
+        "description": "The run record. A failing property's `counterexample` is a quote-input fragment, so\nthe read is `rating:read` and workspace-scoped (NFR-499, FR-1221).",
+        "operationId": "get_regression_run_api_v1_rating_versions__rating_version_id__regression_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rating_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rating Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegressionRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Read a regression run",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/rating-versions/{rating_version_id}/regression-runs/{run_id}/cases": {
+      "get": {
+        "description": "The run's generated cases and counterexamples — the only route that reads this blob\n(the generic blob route refuses it, FR-1221).",
+        "operationId": "get_regression_run_cases_api_v1_rating_versions__rating_version_id__regression_runs__run_id__cases_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rating_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rating Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CasesLog"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Read a regression run's case log",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
     "/api/v1/rating-versions/{rating_version_id}/submit": {
       "post": {
         "description": "Move a rating version from draft to review, creating an approval request.\n\nThe version must be in draft status. The change summary describes the\nmodifications in this version.",
@@ -25698,6 +27186,247 @@
         ]
       }
     },
+    "/api/v1/regression-suites/{slug}/versions": {
+      "post": {
+        "description": "**201** with the new version. One suite per Rating Algorithm (409 otherwise), and a\nsuite never changes algorithm across versions (409).",
+        "operationId": "create_regression_suite_version_api_v1_regression_suites__slug__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegressionSuiteVersionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegressionSuite"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Create a new Regression Suite version",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/v1/regression-suites/{slug}@{version}": {
+      "get": {
+        "description": "**200** with the version, golden-quote contexts included (access-controlled).",
+        "operationId": "get_regression_suite_version_api_v1_regression_suites__slug___version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegressionSuite"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Read a Regression Suite version",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
     "/api/v1/score": {
       "post": {
         "description": "Score one quote (FR-250/251).\n\nWK-671 imposes neither of FR-251's restrictions — approved-only versions, and a\nrewritten `what_if` purpose — because both sit inside that requirement's own `prod`\nclause and WK-671 has no environments (RL-880 clause 3). Scoring a `draft` version by\nexplicit reference is the \"what-if and testing\" the requirement permits.\n\nA decline is **not** an error: `build_scoring_result` sets `outcome = \"declined\"` with a\npopulated ladder, and FR-256 makes that a 200.",
@@ -25945,6 +27674,131 @@
           }
         },
         "summary": "Batch re-rate a Dataset Version against one or more Rating Versions",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/v1/score/compare": {
+      "post": {
+        "description": "FR-262: one quote, two versions, two `score_one` calls, one step diff.\n\nNothing is persisted or logged (NFR-499): unlike `/score`, this never calls\n`_maybe_sample_trace`. The two calls run one after the other, never concurrently\n(FD-1199). A per-quote error on either side answers 422 with that code and the failing\nside named in the problem (DP-S4-5).",
+        "operationId": "score_compare_api_v1_score_compare_post",
+        "parameters": [
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScoreCompareRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Score one Quote Context against two Rating Versions, with a step-level diff",
         "tags": [
           "rating"
         ]

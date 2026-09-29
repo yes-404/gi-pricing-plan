@@ -28,6 +28,7 @@ import hashlib
 from collections.abc import AsyncIterator, Iterable
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, Final
+from uuid import UUID
 
 import boto3
 from botocore.client import Config as BotoConfig
@@ -37,7 +38,13 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
-from app.db.models import BlobRow
+from app.db.models import (
+    BlobRow,
+    DatasetVersionRow,
+    JobRow,
+    RegressionRunRow,
+    ScoringTraceRow,
+)
 from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.platform import audit
@@ -47,11 +54,14 @@ if TYPE_CHECKING:  # pragma: no cover
     from mypy_boto3_s3.client import S3Client
 
 __all__ = [
+    "QUOTE_INPUT_BLOB_COLUMNS",
     "BlobStore",
     "GarbageCollectionReport",
     "PresignedUpload",
     "blob_key",
+    "blob_not_found",
     "blob_probe",
+    "blob_readable_by",
     "to_ref",
 ]
 
@@ -231,9 +241,11 @@ class BlobStore:
         """Presigned URLs so large files never transit the API process (FR-421).
 
         The digest is not known until the client has uploaded, so the object lands under a
-        staging key and is promoted to its content address on completion. Presigning
-        `blob/{sha}` directly is impossible without the bytes, and asking the client for
-        the digest first would let it choose one.
+        staging key rather than at `blob/{sha}`: presigning the content address is impossible
+        without the bytes, and asking the client for the digest first would let it choose
+        one. Nothing in this codebase yet moves a staging object to its content address or
+        creates its `blobs` row (the completion step FR-421 implies is not built), so a
+        client upload cannot become an ingestible blob through this path today.
         """
         if parts < 1:
             raise ValueError("parts must be at least 1")
@@ -460,3 +472,49 @@ def blob_probe(store: BlobStore) -> Any:
         return None
 
     return probe
+
+
+#: Every column through which a **quote-input store** references a blob (NFR-499, RL-917).
+#: A digest named here is never served by `GET /blobs/{sha256}` and never ingested, whoever
+#: owns it otherwise: its body is read through that store's own workspace-scoped API. The
+#: regression case store (`regression_runs.cases_blob_sha256`, FR-1221, WK-672 Slice 3) is the
+#: second entry.
+QUOTE_INPUT_BLOB_COLUMNS: tuple[Any, ...] = (
+    ScoringTraceRow.blob_sha256,
+    RegressionRunRow.cases_blob_sha256,
+)
+
+
+def blob_not_found(sha256: str) -> PlatformError:
+    """The one answer for "no such blob", "a quote input" and "not yours", so no route
+    confirms that a digest exists (`07` §5.1, 2026-09-28)."""
+    return PlatformError("NOT_FOUND", "Blob not found", 404, f"No blob with digest {sha256}.")
+
+
+async def blob_readable_by(session: AsyncSession, *, sha256: str, workspace_id: UUID) -> bool:
+    """Whether a caller in `workspace_id` may read blob `sha256`: download it, or ingest it.
+
+    `blobs` has no workspace column — a blob is content-addressed, and one digest can be
+    owned in two workspaces — so the answer comes from the rows that reference it. Refused
+    first if any quote-input store references it; then readable only if an **owner in the
+    caller's workspace** references it: a dataset version's table (this route's declared
+    purpose) or a job's `JobResult(kind="blob")` (`03` §5.2). Anything else, including a
+    blob nothing references, is refused: the list of owners is an allow-list.
+    """
+    for column in QUOTE_INPUT_BLOB_COLUMNS:
+        if (await session.execute(select(column).where(column == sha256).limit(1))).first():
+            return False
+    owners = (
+        select(DatasetVersionRow.id).where(
+            DatasetVersionRow.workspace_id == workspace_id,
+            DatasetVersionRow.tables.contains([{"blob": {"sha256": sha256}}]),
+        ),
+        select(JobRow.id).where(
+            JobRow.workspace_id == workspace_id,
+            JobRow.result.contains({"kind": "blob", "ref": sha256}),
+        ),
+    )
+    for owner in owners:
+        if (await session.execute(owner.limit(1))).first():
+            return True
+    return False

@@ -57,3 +57,12 @@ layers =
     app
     pricing_core
     model_schema
+
+[importlinter:contract:replay-never-generates]
+name = replay_cases re-scores a persisted case log and can never reach the generator (RS-1176 condition 4, PL-1205)
+type = forbidden
+source_modules = pricing_core.rating.replay
+forbidden_modules =
+    hypothesis
+    pricing_core.rating.testing
+allow_indirect_imports = false

@@ -1,0 +1,110 @@
+---
+id: FD-1206
+family: finding
+title: Dataset ingestion reads any client-supplied blob digest
+status: closed
+created: 2026-09-28
+owner: auditor
+tree: 4fb07b6cb17cacb2f6f578f264a36a455143c45f
+corrected_by: []
+relates: [FD-1203, WK-1178]
+---
+
+# FD-1206 — Dataset ingestion reads any client-supplied blob digest
+
+**Severity: medium-high.** The auditor filed this finding on 2026-09-28, on the lead's
+instruction and the deputy's decision on P1 in his entry in the lead's local channel file
+`to-lead.md` stamped 2026-09-28 18:55:39 BST (line 8921). The deputy verified the defect at
+`e6a9ca71`. The auditor re-read it at `origin/main` `4fb07b6c`.
+
+## Finding
+
+Starting an ingestion run names the source file by its blob digest, and the service accepts any
+well-formed digest that exists in the blob store. It does not check that the caller's workspace
+uploaded the blob or owns it. The blob table records no uploader and no workspace. So a caller
+holding `dataset:write` in workspace A who knows a digest of workspace B's data can ingest B's
+data into a Dataset Version in A, and then read it there. Once #868 (the blob-route fix, open at
+this writing) scopes downloads by owning artifact, that Dataset Version would also make A count
+as an owner of B's blob. This is the ingest-side twin of `FD-1203`'s exposure 2.
+
+## Evidence
+
+At `4fb07b6c`:
+
+- **The request accepts any digest.** `backend/src/app/api/datasets.py:149` `class VersionCreate`
+  has `blob: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]` (`:155`). The pattern is its
+  only constraint.
+- **The route passes it through.** `POST /api/v1/datasets/{slug}/versions`, `start_ingestion`
+  (`:520`), takes `caller: WriteDatasets` (`:87`, `requires(Perm.DATASET_WRITE)`). It enqueues
+  the job with `"blob": body.blob` (`:544`) and no ownership check.
+- **The worker checks existence only.** `backend/src/app/worker/data_handlers.py:122` runs
+  `row = await session.get(BlobRow, parameters["blob"])`. The only refusal that follows is
+  `if row is None:` (`:123`–`:129`, a `NOT_FOUND`, *"The uploaded file is not in the blob
+  store"*).
+- **The blob records no owner.** `backend/src/app/db/models.py:274` `class BlobRow` has the columns
+  `sha256` (primary key), `bytes`, `media_type`, `part_count`, `ref_count` and `created_at`. There
+  is no uploader and no workspace.
+- **The upload records none either.** `backend/src/app/api/blobs.py:78` `upload_url` issues a
+  staging key. Its docstring reads *"The digest is not known until the bytes exist, so the object
+  lands on a staging key"*, and the object is promoted to its address on completion (FR-421).
+  The workspace is not captured anywhere along that path. **Correction, 2026-09-28:** no code
+  performs that promotion (`FD-1210`), so the docstring describes a step that does not exist.
+
+## Reachability of the digest
+
+Exploitation needs another workspace's dataset digest. Those digests are in Dataset Version
+responses, `tables[].blob.sha256` (`FD-1203` evidences the chain), but only **inside** the
+owning workspace. A caller in A therefore needs a leak from B, or must be a member of both
+workspaces. This is why the severity is medium-high rather than high. While `FD-1203`'s route
+was unscoped, the same digests could be used to download directly.
+
+## Disposition
+
+**Fix before close — fix in progress, owner the lead.** Event: a WK-1178 PR after #868 (the number
+follows). The deputy decided **DP-P1 (C)** in his entry of 2026-09-28 21:39:48 BST ("DP-P1
+decided: (C); it supersedes my 18:55:39 P1 design conditions 1 and 2 (their premise was
+false)"). That supersedes the 18:55:39 conditions this record first carried, **conditions 1 and
+2**: the owner row written at promotion, and the backfill. Their premise was false, because no
+code promotes a staging object (`FD-1210`). The decision is:
+
+1. Ingest accepts a digest only under the same rule as `GET /blobs/{sha256}`: refused if a
+   quote-input store references it, and otherwise allowed only if an owner **in the caller's
+   workspace** references it. #868's `_readable_by` moves to a shared platform function, so there
+   is one rule and never two copies. The refusal is the uniform 404, and there is no schema
+   change. **The check sits at the ingest route only, by DP-P1-2** (the deputy's entry of
+   2026-09-28 21:51:10 BST), which amends the "route and worker" of the 21:39:48 entry: the
+   worker half is withdrawn for now. The premise is that the route is the only enqueuer of
+   `JobKind.DATASET_INGEST` in `backend/src` (`api/datasets.py:540`, verified by the deputy at
+   `e1d050f7`; the one other caller, `examples/fremtpl2/seed.py:470`, is trusted local code). An
+   invariant test pins that premise: it fails if any other module under `backend/src` enqueues
+   that job kind, with a positive control that catches an injected second enqueuer. The worker's
+   ingest handler carries a comment saying the check is absent by design and where it arrives.
+   The worker-side check arrives with `FD-1210`'s owner table.
+2. **No owner table and no backfill.** Option (A), building the completion step now, is declined
+   for tonight.
+3. Red-first tests through the route: a cross-workspace dataset digest, a trace digest, and a
+   job-result digest from another workspace. The positive control is a re-ingest in the owning
+   workspace, which succeeds.
+
+No legitimate path is lost, because a first ingest from a client upload cannot work today: nothing
+creates its `BlobRow` (`FD-1210`).
+
+## Resolution
+
+**Resolved 2026-09-28 by #883, merge commit `d068fb00`** (`fix(security): dataset ingest reads only a blob the
+caller's workspace owns (WK-1178, #869) (#883)`, merged 2026-09-28 23:27:39 BST), per the deputy's DP-P1 (C) and
+DP-P1-2 rulings. Read at `d068fb00`:
+
+- `api/datasets.py:543` refuses the digest when `blob_readable_by` does not allow it, before a Job is submitted,
+  with `blob_not_found`'s uniform 404. The one rule is `platform/blobs.py:484` (`blob_readable_by`), and the blob
+  route calls it too (`api/blobs.py:126`), so there is no second copy.
+- The check is at the ingest route only. `backend/tests/test_ingest_enqueuers.py` pins that the route is the only
+  enqueuer of the ingest job kind under `backend/src`, and its docstring states the limit that an enqueue reusing an
+  already-allowed reference would not be caught. The worker's `_ingest` carries a comment at
+  `worker/data_handlers.py:122`–`:127` saying the check is absent by design.
+- `backend/tests/test_api_dataset_ingest_owner.py` covers the caller's own dataset blob and job-result blob (positive
+  controls) and three refusals, each the missing-blob 404. This record did not re-run them here; the audit of #883
+  ran 48 tests green and the refusals red with the route check removed.
+
+**Still owed:** the worker-side ownership check, which arrives with `FD-1210`'s owner record, and the upload
+completion step itself.

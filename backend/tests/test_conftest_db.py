@@ -46,8 +46,33 @@ def test_database_url_returns_an_explicit_override_without_checking_anything(
 
 
 def test_worktree_database_name_is_derived_from_this_checkouts_own_directory() -> None:
-    expected = f"gipricing_{pathlib.Path(conftest_db.__file__).resolve().parents[2].name}"
-    assert conftest_db._worktree_database_name() == expected
+    root = pathlib.Path(conftest_db.__file__).resolve().parents[2]
+    assert conftest_db._worktree_database_name().startswith(f"gipricing_{root.name[:44]}_")
+
+
+def test_worktree_database_name_differs_for_two_checkouts_sharing_a_leaf_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FD-1196: `<job>/a/tree` and `<job>/b/tree` used to both derive `gipricing_tree`,
+    so two gates wrote one database. The name must be a function of the full path.
+    """
+    names = set()
+    for root in ("/jobs/a/tree", "/jobs/b/tree"):
+        fake_file = pathlib.PurePosixPath(root) / "backend" / "tests" / "conftest_db.py"
+        monkeypatch.setattr(conftest_db, "__file__", str(fake_file))
+        monkeypatch.setattr(pathlib.Path, "resolve", lambda self: self)
+        names.add(conftest_db._worktree_database_name())
+    assert len(names) == 2
+    assert all(n.startswith("gipricing_tree_") for n in names)
+
+
+def test_worktree_database_name_fits_postgres_identifier_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_file = pathlib.PurePosixPath("/jobs/" + "x" * 200) / "backend" / "tests" / "conftest_db.py"
+    monkeypatch.setattr(conftest_db, "__file__", str(fake_file))
+    monkeypatch.setattr(pathlib.Path, "resolve", lambda self: self)
+    assert len(conftest_db._worktree_database_name().encode()) <= 63
 
 
 def test_database_url_refuses_when_the_per_worktree_database_is_missing(

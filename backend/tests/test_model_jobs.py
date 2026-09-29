@@ -952,7 +952,9 @@ async def test_an_unexpected_exception_still_fails_as_job_handler_failed(
     assert row is not None
     assert row.error is not None
     assert row.error["code"] == "JOB_HANDLER_FAILED"
-    assert row.error["message"] == "RuntimeError: the fit ran off the end of the world"
+    # The type only: an unexpected exception's own text is not stored (NFR-499, RL-917), because
+    # a library error repeats the value that caused it. The coded refusals below keep theirs.
+    assert row.error["message"] == "RuntimeError"
     assert row.error["retryable"] is False
 
 

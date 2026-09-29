@@ -344,7 +344,7 @@ one database. When the first finishes, its teardown truncates every table out fr
 second, mid-run.
 
 **Fixed 2026-09-04 at the dispatch level, not by serialising**: every executor worktree now
-creates and exports its own `gipricing_<worktree>` database
+creates and exports its own `gipricing_<leaf>_<hash>` database
 ([`dev-commands`](../dev-commands/SKILL.md)'s gate block), so concurrent suites truncate
 only their own tables. A DB-exclusive lock (below the per-worktree DSN in that skill) is the
 fallback for a branch whose migrations cannot run against a fresh copy, not the default.
@@ -878,6 +878,7 @@ used through 87fcfb4 (branch history that landed). Verified against the fixture 
 exists at `71f5a22` — `pre_migration_root` in `tests/test_doc_id_migrate.py`.
 
 Verified: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
+Verified: 2026-09-28 against main f91af639 (per-worktree database name now `gipricing_<leaf>_<hash>`, FD-1196; only that line changed).
 
 ## Verified
 
