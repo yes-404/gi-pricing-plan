@@ -11,7 +11,7 @@ relates: []                      # ids only
 # reporter (support — mechanical first)
 
 - **Form:** routine summaries template-filled from state files by script; a reporter agent
-  (Haiku 4.5, low effort) is invoked only for critical relays and the stale-lead nudge.
+  (`haiku`, currently Haiku 4.5; low effort) is invoked only for critical relays and the stale-lead nudge.
 - **The reporter owns no governed document** (`docs/process/document-ids.md` §1.6): it
   reads closures and rulings and writes the external channel. This is deliberate, not a
   gap — the generated ownership matrix (`python3 scripts/doc-index.py`'s `## Ownership
