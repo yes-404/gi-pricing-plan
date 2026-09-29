@@ -28,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import OutboxRow, OutboxStatus
 from app.db.session import Database
 from app.observability.logging import get_logger
+from app.platform.safe_exception import safe_job_error_text
 from model_schema import JobQueue
 
 __all__ = ["Publisher", "enqueue", "publish_directly", "relay_once"]
@@ -117,7 +118,9 @@ async def relay_once(database: Database, publisher: Publisher, *, batch_size: in
                 await publisher.publish(task=row.task, queue=row.queue, payload=row.payload)
             except Exception as exc:
                 row.attempts += 1
-                row.last_error = f"{type(exc).__name__}: {exc}"[:2000]
+                # Stored in a column an operator reads, so it goes through the same rule (NFR-499):
+                # a broker error can repeat the payload it failed to publish.
+                row.last_error = safe_job_error_text(exc)[:2000]
                 _log.warning(
                     "outbox publish failed",
                     extra={

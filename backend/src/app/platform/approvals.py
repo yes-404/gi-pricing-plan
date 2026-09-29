@@ -21,8 +21,9 @@ service could forget:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
-from typing import Any, Protocol
+from typing import Any, Final, Protocol
 from uuid import UUID
 
 from sqlalchemy import select
@@ -33,6 +34,7 @@ from app.db.models import (
     ApprovalDecisionRow,
     ApprovalPolicyRow,
     ApprovalRequestRow,
+    AuditEventRow,
     RoleAssignmentRow,
     RoleRow,
 )
@@ -51,14 +53,58 @@ from model_schema import (
 )
 
 __all__ = [
+    "CREATION_ACTIONS",
     "ArtifactResolver",
+    "EvidenceAuthorResolver",
     "decide",
     "policy_for",
+    "require_in_review",
     "set_policy",
     "submit",
     "to_dict",
     "withdraw",
 ]
+
+
+#: The Audit Event each approvable type's creation path records — whose actor is, by
+#: `06` FR-353 as amended 2026-09-28, the version's **author**. One definition for every
+#: type: `created_by` and `authored_by`, where a row carries one, are copies of the same
+#: fact rather than second sources, and a test holds each equal to this event's actor.
+#: A type absent here has no author the check can find, and fails closed.
+CREATION_ACTIONS: Final[Mapping[str, str]] = {
+    "model": "model.reserved",
+    "custom_objective": "custom_objective.created",
+    "custom_metric": "custom_metric.created",
+    "peril_structure": "peril_structure.created",
+    "validation_rule": "validation_rule.created",
+    "dataset_version": "dataset_version.created",
+    "rating_version": "rating_version.created",
+}
+
+
+def require_in_review(
+    artifact_ref: ArtifactRef | str, status: str, reviewable: str = "review"
+) -> None:
+    """Refuse an approval subject that is not in its type's reviewable state (`06` FR-351).
+
+    `review` for every approvable type but `dataset_version`, whose lifecycle has no
+    review state and whose reviewable state is `validated` (FR-351's 2026-09-28 clause).
+
+    `draft → review → approved`: a version reaches review only through its owning module's
+    own submission, which is where that module's gates run (a model's diagnostics, a peril
+    structure's reconciliation, a rating version's evidence). A decision on a version that
+    never got there would skip every one of them. Called by each type's resolver on the
+    generic route and by the decision hooks, so neither guard is the only one.
+    """
+    if status != reviewable:
+        raise PlatformError(
+            "APPROVAL_SUBJECT_NOT_IN_REVIEW",
+            "Only a version in review can be put to a decision",
+            409,
+            f"{artifact_ref} is {status!r}, not {reviewable!r}. `06` FR-351: a version reaches "
+            "its reviewable state through its owning module's own path, and only then can it "
+            "be decided on.",
+        )
 
 
 class ArtifactResolver(Protocol):
@@ -234,6 +280,20 @@ async def submit(
     return row
 
 
+class EvidenceAuthorResolver(Protocol):
+    """Who authored the evidence an approver of this artifact version is shown (`06`
+    FR-353, `03` FR-260): for a Rating Version, every author in its golden-quote delta.
+
+    Supplied by the caller, as `ArtifactResolver` is, so governance imports nothing from
+    the rating module (DEP-1). It raises rather than returning an empty set on a load or
+    parse failure, so a decision is refused rather than made without the check.
+    """
+
+    async def __call__(
+        self, session: AsyncSession, *, workspace_id: UUID, artifact_ref: ArtifactRef
+    ) -> set[UUID]: ...
+
+
 async def decide(
     session: AsyncSession,
     *,
@@ -242,9 +302,17 @@ async def decide(
     approver: Principal,
     decision: DecisionKind,
     comment: str | None = None,
+    evidence_authors: EvidenceAuthorResolver | None = None,
 ) -> ApprovalRequestRow:
-    """Record a decision, enforcing separation of duties (FR-353, FR-355)."""
+    """Record a decision, enforcing separation of duties (FR-353, FR-355).
+
+    `evidence_authors` is required for a `rating_version` request: a missing resolver is a
+    programming error, raised as `TypeError` before any decision row (re-audit N1) — never
+    an `assert`, which `python -O` strips.
+    """
     row = await _load(session, workspace_id, request_id)
+    if row.artifact_type == "rating_version" and evidence_authors is None:
+        raise TypeError("decide on a rating_version requires evidence_authors")
 
     if row.status != ApprovalStatus.REVIEW.value:
         raise PlatformError(
@@ -265,6 +333,45 @@ async def decide(
             "`06` R1: separation of duties is enforced in the backend and cannot be "
             "configured away.",
         )
+
+    # FR-353 as amended 2026-09-28: nor the author. After R1, which is the more specific
+    # answer for someone who is both, and before the permission for R1's own reason.
+    author = await _author_of(session, workspace_id, row)
+    if author is None:
+        raise PlatformError(
+            "APPROVAL_AUTHOR_UNRESOLVED",
+            "The author of this version cannot be established",
+            403,
+            f"{row.artifact_ref} has no creation Audit Event, so whether the approver is "
+            "its author cannot be checked. `06` FR-353: an approval that cannot be checked "
+            "is refused, never allowed.",
+        )
+    if author == approver.id:
+        raise PlatformError(
+            "AUTHOR_CANNOT_APPROVE",
+            "The author cannot approve",
+            403,
+            "`06` FR-353: the approver may be neither the submitter nor the author of the "
+            "version under approval.",
+        )
+
+    # FR-353, added 2026-09-28 (PL-1189; the deputy's decision on audit finding F4): the
+    # suite delta is the evidence the approver judges, so its author cannot judge it. Not
+    # the general component-author case, which WK-677 owns.
+    if row.artifact_type == "rating_version":
+        assert evidence_authors is not None  # narrowed above; refused before this line
+        authors = await evidence_authors(
+            session, workspace_id=workspace_id,
+            artifact_ref=ArtifactRef.model_validate(row.artifact_ref),
+        )
+        if approver.id in authors:
+            raise PlatformError(
+                "APPROVAL_BY_EVIDENCE_AUTHOR",
+                "An author of a golden-quote change cannot approve",
+                403,
+                f"{row.artifact_ref}'s golden-quote delta lists a change you authored. "
+                "`06` FR-353 and `03` FR-260: the author of the evidence cannot judge it.",
+            )
 
     await rbac.require_permission(
         session,
@@ -396,6 +503,33 @@ async def _load(
             "NOT_FOUND", "Approval request not found", 404, f"No request {request_id}."
         )
     return row
+
+
+async def _author_of(
+    session: AsyncSession, workspace_id: UUID, row: ApprovalRequestRow
+) -> UUID | None:
+    """The actor of the version's creation Audit Event, or `None` when there is none.
+
+    Read from the audit chain rather than from a row, because four of the seven approvable
+    types carry no author column and the chain is the one record every type shares. The
+    earliest matching event wins: a version is created once.
+    """
+    action = CREATION_ACTIONS.get(row.artifact_type)
+    if action is None:
+        return None
+    actor = (
+        await session.execute(
+            select(AuditEventRow.actor)
+            .where(
+                AuditEventRow.workspace_id == workspace_id,
+                AuditEventRow.entity_ref == row.artifact_ref,
+                AuditEventRow.action == action,
+            )
+            .order_by(AuditEventRow.at)
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    return None if actor is None else UUID(actor["id"])
 
 
 async def _count_approvals(session: AsyncSession, request_id: UUID) -> int:

@@ -67,6 +67,9 @@ function explain(omission: NonNullable<PartialDependence["omitted"]>): string {
   if (omission.reason === "no_source_column") {
     return "The factor sources no column of its own — an interaction, whose columns are its operands' — so there is nothing to hold at a value.";
   }
+  if (omission.reason === "operand_of_interaction") {
+    return "The factor is an operand of an interaction and is not swept alone: holding one operand fixed recombines the pair into cells the model never saw, which it refuses. The interaction is the term the model carries.";
+  }
   return omission.reason;
 }
 </script>

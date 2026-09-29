@@ -500,3 +500,39 @@ def test_the_ebm_arm_uses_the_same_partition_as_the_gbm_arm() -> None:
     # Same shape, different models: the two arms' mu's are built by different
     # arithmetic, so the holdout A/E cannot coincide.
     assert ebm_holdout.ae_overall != gbm_holdout.ae_overall
+
+
+@pytest.mark.req("FR-178")
+def test_the_type_iii_block_records_each_operand_it_does_not_test() -> None:
+    """FR-178's second half: the GLM path's type-III block excluded an operand with a code
+    comment and no record, so a reader could not see the exclusion. One omission per
+    operand, and the cross is tested in their place."""
+    frame = _book()
+    area, noise = _factor("area"), _factor("noise")
+    cross = _factor(
+        "area_x_noise", "area", type=FactorType.INTERACTION, source_columns=(),
+        operand_factor_ids=(area.id, noise.id),
+    )
+    factors = [area, noise, cross]
+    fit, spec = _fitted(frame[:4500], factors)
+    result = compute_diagnostics(
+        fit, spec, factors, train=frame[:4500], holdout=frame[4500:]
+    )
+    assert result.glm is not None
+    assert {t.factor for t in result.glm.type_iii_tests} == {"area_x_noise"}
+    assert {(o.factor, o.reason.value) for o in result.glm.type_iii_omitted} == {
+        ("area", "operand_of_interaction"),
+        ("noise", "operand_of_interaction"),
+    }
+
+
+@pytest.mark.req("FR-178")
+def test_a_glm_without_a_cross_records_no_type_iii_omission() -> None:
+    frame = _book()
+    factors = [_factor("area"), _factor("noise")]
+    fit, spec = _fitted(frame[:4500], factors)
+    result = compute_diagnostics(
+        fit, spec, factors, train=frame[:4500], holdout=frame[4500:]
+    )
+    assert result.glm is not None
+    assert result.glm.type_iii_omitted == ()

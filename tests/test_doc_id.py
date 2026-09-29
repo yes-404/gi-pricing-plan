@@ -910,6 +910,83 @@ def test_compute_next_at_ref_raises_a_clear_error_for_an_unresolvable_ref(
         doc_id_cli.compute_next_at_ref("origin/main", repo_root=tiny_repo)
 
 
+# `next` refuses an integer the id standard writes as an example (`document-ids.md`'s
+# 2026-09-28 amendment, WK-1178). Every case goes through the ref path: the standard is
+# committed (or not) on `main`, and `compute_next_at_ref("main")` materialises it.
+
+
+def _commit_id_standard(repo: pathlib.Path, body: str) -> None:
+    _write(repo / "docs" / "process" / "document-ids.md", body)
+    _run_git(["add", "-A"], cwd=repo)
+    _run_git(["commit", "-m", "id standard", "--quiet"], cwd=repo)
+
+
+def test_next_refuses_an_integer_the_committed_id_standard_uses_as_an_example(
+    doc_id_cli: types.ModuleType, tiny_repo: pathlib.Path
+) -> None:
+    # Red: a planted example at exactly the next integer (1001) is refused, padded or not.
+    _commit_id_standard(tiny_repo, "`WK-1001` is a work item; files pad it: WK-01001.\n")
+    with pytest.raises(doc_id_cli.ExampleIdCollisionError, match="1001"):
+        doc_id_cli.compute_next_at_ref("main", repo_root=tiny_repo)
+
+
+def test_next_allows_the_integer_once_the_example_is_a_placeholder(
+    doc_id_cli: types.ModuleType, tiny_repo: pathlib.Path
+) -> None:
+    # Green: the same standard with the example rewritten to a placeholder mints 1001.
+    _commit_id_standard(tiny_repo, "`WK-1001` is a work item.\n")
+    _commit_id_standard(tiny_repo, "`WK-<n>` is a work item.\n")
+    assert doc_id_cli.compute_next_at_ref("main", repo_root=tiny_repo).number == 1001
+
+
+def test_next_allows_a_real_citation_below_the_next_integer(
+    doc_id_cli: types.ModuleType, tiny_repo: pathlib.Path
+) -> None:
+    # A real citation names something already minted, so its integer is below `next`.
+    _commit_id_standard(tiny_repo, "See PL-1000 for the seed plan.\n")
+    assert doc_id_cli.compute_next_at_ref("main", repo_root=tiny_repo).number == 1001
+
+
+def test_next_reads_the_id_standard_at_the_ref_not_the_working_tree(
+    doc_id_cli: types.ModuleType, tiny_repo: pathlib.Path
+) -> None:
+    # An uncommitted example in the checkout does not refuse `main`'s mint...
+    _write(tiny_repo / "docs" / "process" / "document-ids.md", "`WK-1001` example.\n")
+    assert doc_id_cli.compute_next_at_ref("main", repo_root=tiny_repo).number == 1001
+    # ...and a committed one is not excused by a clean working-tree copy.
+    _commit_id_standard(tiny_repo, "`WK-1001` example.\n")
+    _write(tiny_repo / "docs" / "process" / "document-ids.md", "`WK-<n>` example.\n")
+    with pytest.raises(doc_id_cli.ExampleIdCollisionError):
+        doc_id_cli.compute_next_at_ref("main", repo_root=tiny_repo)
+
+
+def test_the_real_id_standard_names_no_integer_at_or_above_next(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    # The standard's own content, not a fixture: every `<PREFIX>-<n>` token in this
+    # checkout's `document-ids.md` must be a real citation, i.e. below the next integer.
+    # A future example written as a live-looking integer fails here, on its own PR,
+    # before the sequence reaches it and it blocks a real mint.
+    root = doc_id_cli.REPO_ROOT
+    integers = doc_id_cli.id_standard_integers(root)
+    assert integers, "the guard read no tokens: the path or the pattern is wrong"
+    next_number = doc_id_cli.compute_next(root)
+    assert {n for n in integers if n >= next_number} == set()
+
+
+def test_next_cli_exits_1_on_an_example_collision(
+    doc_id_cli: types.ModuleType,
+    tiny_repo: pathlib.Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _commit_id_standard(tiny_repo, "`WK-1001` is a work item.\n")
+    exit_code = doc_id_cli.main(["next", "--ref", "main", "--repo-root", str(tiny_repo)])
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert captured.out == ""
+    assert "1001 appears as an id in docs/process/document-ids.md" in captured.err
+
+
 # ---------------------------------------------------------------------------------------
 # `doc-id.py check` — RFC-937 §1.7: "fails the gate on any duplicate or header/filename
 # mismatch"; contiguity is "computed over INDEX.md, never over the working tree" (DP-8).
