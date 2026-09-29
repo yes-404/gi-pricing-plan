@@ -1,5 +1,5 @@
 ---
-id: RL-9670
+id: RL-1252
 family: ruling
 title: OQ-1233 decided (b) — FR-453, both limbs, on WK-688, and FR-272's notification limb deferred to Phase 4 (scope, on the maintainer's behalf)
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [OQ-1233, CR-1247, RL-1232, WK-688]
 ---
 
-# RL-9670 — OQ-1233 decided (b): FR-453, both limbs, on WK-688, and FR-272's notification limb deferred to Phase 4
+# RL-1252 — OQ-1233 decided (b): FR-453, both limbs, on WK-688, and FR-272's notification limb deferred to Phase 4
 
 ## Verified first, at f0c3d197f5d89863efc647a2d7c1a6994b74dd63
 
@@ -29,8 +29,8 @@ question (which Work, which phase), and §1.6's RL row lets the maintainer autho
 or process"*. The decision-maker records it on the maintainer's behalf and decides nothing
 here.
 
-**RL-9670 is a working id**, minted at its merge turn with `doc-id.py next --ref origin/main`.
-It was checked free on all 104 remote branches before use.
+Filed under working id 9670, checked free on all 104 remote branches before use; minted
+`RL-1252` at its merge turn, 2026-09-29 (`doc-id.py next --ref origin/main` at `f0c3d197`).
 
 **What was read:**
 - `CR-1247` (`docs/closures/CR-01247-…md`), Proposal 5 (`:385-429`). It gives the
