@@ -586,6 +586,14 @@ works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, W
 > - **Target: the P2 exit demo, Thu 2026-11-12** (the likely band plus about 20%).
 > - **Re-baseline after WK-674 Slices 1–2:** re-measure the throughput and restate these dates if the band moves. The dates assume work every day, as practised; on a weekdays-only rhythm they slip about two weeks.
 
+*(Added 2026-09-29 by the lead, quoting the user (the maintainer), relayed in the maintainer's
+entries "2026-09-29 22:49:26 BST — THE USER'S STANDING PRIORITY: finish without delay, bounded only
+by resources" and "2026-09-29 22:49:59 BST — DATES NEVER BLOCK A START": "ok plz go ahead, plz mind
+the dates are for reference purpose. we need to complete the works without delay subject to
+resources (server and usage)", and "the dates never block a work can start earlier". The dates above
+are therefore a forecast for reference, not targets. No Work, slice, plan, ruling or merge waits for
+a date. The freeze gates limit only what may **enter** P2, never when a start happens.)*
+
 #### Phase 2 status
 
 *(Added 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 12: "Accepted: (a). An 'Exit demo' row under P2, owned by the lead, discharging FD-1209." The form is Phase 1b's status table.)*
@@ -706,7 +714,7 @@ From “Workstreams” (line 384): Deployment: environments, atomic switchover, 
 id: SL-1255
 family: slice
 title: Slice 1: tenancy and provenance (FR-436, FR-18)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-29
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
