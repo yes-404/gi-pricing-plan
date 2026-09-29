@@ -1,5 +1,5 @@
 ---
-id: CR-9621
+id: CR-1247
 family: closure
 kind: review
 title: Plan review 16 — at WK-672's close — the permission source of record, F35's owner, the dedicated host and P2's exit
@@ -15,9 +15,9 @@ relates: [CR-1212, RL-1232, RL-1236, FD-1194, OQ-1233, OQ-1234, OQ-1235]     # i
 
 ### Plan review 16 — at WK-672's close, 2026-09-29
 
-**Base tree: `1c8762d9ed235f80e0f2fff80c44003694828e97`** (origin/main after #889). **Working
-id `CR-9621`.** It is minted at the merge turn with `python3 scripts/doc-id.py next --ref
-origin/main`.
+**Base tree: `1c8762d9ed235f80e0f2fff80c44003694828e97`** (origin/main after #889). **Minted
+as `CR-1247`** at #905's merge turn, 2026-09-29, with `python3 scripts/doc-id.py next --ref
+origin/main` at `5638f691` (working id 9621 before the mint).
 
 **Who does what.** The planner conducts and files this review (`document-ids.md` §1.6, the
 CR `review` row; the maintainer's STRUCTURE entry of 2026-09-29 15:26:00 BST, §1 and §3). The
@@ -27,8 +27,8 @@ until the maintainer dates the acceptance line.** The output is proposals, never
 
 **Trigger.** `CLAUDE.md` §14, "at each workstream close". The workstream is **WK-672**
 (golden quotes, property assertions, regression runs). Its Slices 3 and 4 merged as #886 and
-#901. Its close record is being drafted by the auditor on branch `wk672-close`. This review
-is consistent with that record; see *Consistency with the WK-672 close record* below.
+#901. Its close record is `CR-1243` (#906, merged as `5638f691`; drafted by the auditor on
+branch `wk672-close`). This review is consistent with that record; see *Consistency with the WK-672 close record* below.
 
 **This review is not `CR-1212`'s G6.**
 - G6 reads "A plan review 16 is filed after G1–G5 and before the demo". G1–G5 are not met,
@@ -68,10 +68,9 @@ first, then the five `phase-review` questions, then Output and Verdict.
       missed 27 index lines". It was cited by title before it was minted.
     - the lead's P3-carry note (`docs/roadmap.md`, the note headed "2026-09-29: requirements
       carried into Phase 3 without a Work").
-- **The WK-672 close record** was read on branch `wk672-close` at `f7ca1402`, before this
-  review was filed. It is a `CR- kind: work`, still under a working id, so this record cites
-  it as "the WK-672 close record". The lead substitutes its minted id at this record's merge
-  turn.
+- **The WK-672 close record, `CR-1243`,** was read on branch `wk672-close` at `f7ca1402`,
+  before this review was filed, when it still had a working id. It merged as #906
+  (`5638f691`), and this record cites it by its minted id.
 - **GitHub state** was read with `gh pr view` on 2026-09-29 at about 15:00 UTC. It was
   read-only, and nothing was posted.
 - **The channel file.** The maintainer's entries are quoted by heading. The file is
@@ -228,7 +227,7 @@ maintainer)`, §2, quoting the maintainer: "approve Dependabot plan"):
   The maintainer merges them one at a time, with `--match-head-commit`. #881 is re-checked
   against the main that #857 produces.
   - #857's last CI success was at `2026-09-28T20:48:38Z`. That predates WK-672 S3 and S4's
-    changes to `docs/contracts/openapi/generated.json`, which the WK-672 close record also
+    changes to `docs/contracts/openapi/generated.json`, which `CR-1243` also
     notes. So the CI condition means a fresh run at a head on current main.
 - **#877, #878 and #879 are removed from this review's proposals.** Each merges only if every
   CI workflow passes on its own head, one at a time, and the maintainer merges it. If one
@@ -270,8 +269,8 @@ maintainer)`, §2, quoting the maintainer: "approve Dependabot plan"):
 **Options for the owner.**
 - **(a) WK-1178, in P2: one slice for the shared lever (F35 + F55).**
   - The decision-maker rules first on what a `TraceStep` records (FR-258; §4.10; `OQ-1231`).
-    The same ruling covers the WK-672 close record's finding that a trace omits the `input`
-    and `output` steps (see *Consistency with the WK-672 close record*).
+    The same ruling covers `FD-1246`, the finding from `CR-1243` that a trace omits the
+    `input` and `output` steps (see *Consistency with the WK-672 close record*).
   - The slice is **sequenced before WK-674 Slice 5**, so Slice 5 measures the remedied path
     and NFR-490 can be green on the exit tree.
   - It carries NFR-500's re-measurement (F37; Proposal 11) on the trimmed trace.
@@ -660,8 +659,8 @@ records it as delivered.**
   - `CR-838:39`;
   - the `compile.py` and docstring evidence, at a named tree.
 
-  It is being filed after this draft, so this record cites it by its subject, "`CR-838`
-  records FR-217 as delivered, but bundle-time inlining is not built", and not by an id.
+  It is **`FD-1241`**, "`CR-838` marks FR-217 delivered, but its versioned-artifact pin and
+  bundle-time inlining are not built" (#908).
 - **Decided 2026-09-29, WK-669 is not reopened.** This is the entry `2026-09-29 16:25:49 BST ·
   maintainer (acting on the maintainer's behalf) · BLOCKER DECISIONS by delegation: #882, the
   Dependabot merges, the Actions majors, FR-217, FD-1238, and the WK-672/PR16 acceptance`,
@@ -681,9 +680,9 @@ requirement.
 
 *(Corrected 2026-09-29, by the planner, on the lead's instruction. The struck sentences were
 false when written.)*
-- **What the finding shows.** The finding "`CR-838` marks FR-217 delivered, but its
-  versioned-artifact pin and bundle-time inlining are not built" (auditor-a-2, branch
-  `fd-fr217-cr838`, not yet minted; cited by subject) demonstrated at `49604a31` that the
+- **What the finding shows.** `FD-1241`, "`CR-838` marks FR-217 delivered, but its
+  versioned-artifact pin and bundle-time inlining are not built" (auditor-a-2, #908),
+  demonstrated at `49604a31` that the
   guard accepts **any non-empty** `sub_graphs`. With a reference to a sub-graph that does not
   exist, a cancellation and an MTA were quoted as new business. That is the silent failure
   FR-218 names. It is not a refusal.
@@ -806,7 +805,7 @@ It is not placed in WK-674: it is a trace-size question, not a deployment one.
 
 ## Proposal 12 — who builds G2's demo: the real freMTPL2 rating algorithm
 
-*(Added on reading the WK-672 close record, on `wk672-close` at `f7ca1402`, and
+*(Added on reading the WK-672 close record, `CR-1243`, on `wk672-close` at `f7ca1402`, and
 its FD-1209 row.)*
 
 **The gap.**
@@ -845,8 +844,8 @@ also gives the two `WF-699` rulings above a concrete consumer.
   - S1: #853, with its ledger `LG-1182` closed by #858;
   - S2: #867, with `LG-1204` closed by #870;
   - S3: #886, with `LG-1225` closed by #898, and #897 for S3's owed item;
-  - S4: #901, whose `LG-1230` the WK-672 close record closes. Its §13 scope
-  audit and verdicts are the auditor's record on `wk672-close`. See *Consistency with the
+  - S4: #901, whose `LG-1230` the WK-672 close record, `CR-1243`, closes. Its §13 scope
+  audit and verdicts are that record's. See *Consistency with the
   WK-672 close record*. **This review does not re-derive them**: the skill says a fresh audit
   that has just covered the ground is cited, not repeated.
 - The `## P2` Works at `1c8762d9`, by the reader `awk 'index($0,"## P2 ")==1{p=1}
@@ -875,7 +874,7 @@ Seven omissions:
   inlining is reported delivered but is not built.
 - **NFR-500's undecided branch** (Proposal 11). An owner was named at review 15, but the
   decision the owner needs was not.
-- **G2's demo is built by no Work** (Proposal 12; FD-1209, from the WK-672 close record).
+- **G2's demo is built by no Work** (Proposal 12; FD-1209, from `CR-1243`).
 
 ## 3. Skills and research — the gap analysis
 
@@ -925,12 +924,12 @@ Seven omissions:
 
 ## Consistency with the WK-672 close record
 
-**Read:** the auditor's `CR- kind: work` for WK-672, on branch `wk672-close` at `f7ca1402`. It
-has a working id, so it is cited here by its branch and head. Its tree is the same
-`1c8762d9`. Its three new findings are also working ids, so they are cited by subject:
-- the `WF-699` D4 / FR-261 grid disagreement;
-- the `WF-699` E2 route / FR-257 disagreement;
-- the trace that omits `input` and `output` steps (FR-258).
+**Read:** the auditor's `CR- kind: work` for WK-672, now **`CR-1243`** (#906, merged as
+`5638f691`). It was read on branch `wk672-close` at `f7ca1402`, when it still had a working
+id. Its tree is the same `1c8762d9`. Its three new findings are now minted:
+- **`FD-1244`**: the `WF-699` D4 / FR-261 grid disagreement;
+- **`FD-1245`**: the `WF-699` E2 route / FR-257 disagreement;
+- **`FD-1246`**: the trace that omits `input` and `output` steps (FR-258).
 
 **Where the two records agree:**
 - **FD-1194 / #852.** Both find #852 closed unmerged at `2026-09-28T14:05:08Z`, with #857 as
@@ -951,19 +950,19 @@ has a working id, so it is cited here by its branch and head. Its tree is the sa
   deliverable". But **no Work row builds that algorithm**: `WF-699` Phases A to C on the
   approved models, and a journey test. This is a G2 risk with an owner and no Work. See
   **Proposal 12**.
-- **The two `WF-699` disagreements (D4, E2).** G2 *is* `WF-699` end to end. A demo that
+- **The two `WF-699` disagreements, `FD-1244` (D4) and `FD-1245` (E2).** G2 *is* `WF-699` end to end. A demo that
   follows D4 or E2 as written would demonstrate a step the spec does not promise, or a route
   that refuses a draft. So both decision-maker rulings are needed **before the exit demo**.
   **Proposed:** the lead places them on a new roadmap §10 gate row, *Before the P2 exit
   demo*, with FD-1209.
-- **The trace that omits `input` and `output` steps, where FR-258 says "every step".** This is
+- **`FD-1246`: the trace that omits `input` and `output` steps, where FR-258 says "every step".** This is
   the same question as Proposal 3's ruling: what a `TraceStep` records.
   **Proposed:** the decision-maker rules on it **in the same `RL-`** as F35/F55's trim and
   Proposal 11's NFR-500 `OQ-`. One ruling on the trace shape, not three.
 - **FR-1221's workspace limb** is `fix before close` (test-only), with a WK-1178 fallback.
   That is a Work-close matter and needs nothing from this review.
 
-**No disagreement found.** Nothing in the WK-672 close record contradicts a proposal here, and nothing here
+**No disagreement found.** Nothing in `CR-1243` contradicts a proposal here, and nothing here
 contradicts a verdict there.
 
 ## Output
@@ -1005,7 +1004,7 @@ contradicts a verdict there.
   | 9 | `FD-` against `register-owed.py`; F61's event | auditor; WK-1170 |
   | 10 | new P2 `WK-` row carrying FR-217 inlining and FR-218; the `FD-` and `CR-838`'s dated correction (decided 16:25:49) | lead / the maintainer; auditor |
   | 11 | `OQ-` then `RL-` + `03` amendment; re-measurement in Proposal 3's slice | decision-maker; WK-1178 |
-  | 12 | a `## P2` "Exit demo" row; a §10 gate *Before the P2 exit demo* (FD-1209, the D4 and E2 rulings) | lead |
+  | 12 | a `## P2` "Exit demo" row; a §10 gate *Before the P2 exit demo* (FD-1209; the `FD-1244` and `FD-1245` rulings) | lead |
 
 - **For the lead's roadmap and register edits, after acceptance:**
   - OQ-1233's and OQ-1234's gate moves;
@@ -1023,7 +1022,7 @@ contradicts a verdict there.
   recommendation: N3 (1), #852 (2), F35 and NFR-490 at exit (3), OQ-1233 to OQ-1235 (5),
   `FD-1238` (6), and FR-432, FR-433 and FR-438 (7). F38 and the dedicated host are Proposal 4.
 - The maintainer's two later inputs have one each: FR-218 (10) and NFR-500 (11).
-- The WK-672 close record was read before filing, and is reconciled in *Consistency with the
+- The WK-672 close record, `CR-1243`, was read before filing, and is reconciled in *Consistency with the
   WK-672 close record*. It adds Proposal 12, and it adds a trace-shape finding to Proposal 3's
   ruling.
 - Every register row decayed to this review has a disposition (9).
