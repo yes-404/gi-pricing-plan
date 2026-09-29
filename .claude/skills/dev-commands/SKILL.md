@@ -68,10 +68,20 @@ is why.** Once per worktree, before its first gate (its release drops the databa
 
 ```bash
 WT="$(basename "$PWD" | cut -c1-44)_$(pwd -P | tr -d '\n' | sha1sum | cut -c1-8)"
-docker exec gi-pricing-postgres-1 createdb -U gipricing -T gipricing "gipricing_${WT}"
+deploy/setup-template-db.sh --check   # the template is empty and at head, or this stops
+docker exec gi-pricing-postgres-1 createdb -U gipricing -T gipricing_template "gipricing_${WT}"
 GIP_DATABASE_URL="postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_${WT}" \
     uv run alembic upgrade head
 ```
+
+**The template is `gipricing_template`, not `gipricing`** (`FD-1218`). `gipricing` is the compose
+and CI database and the dev app's, so it accumulates rows; `-T gipricing` copied a whole
+abandoned test session and a schema behind head into every tree's database. The template is
+made by `deploy/setup-template-db.sh` (drop, `createdb -T template0`, `alembic upgrade head`,
+then the check) and read-only checked by `deploy/setup-template-db.sh --check`: every table
+except `alembic_version` empty, and the revision the single migration head. The script fails on
+a failed `DROP` rather than carrying on. `gipricing` itself is not renamed: the compose file,
+`python.yml` and the skills all name it.
 
 **`createdb` runs inside the container, not on the host — the host form does not work
 here.** This block used to read `PGPASSWORD=gipricing createdb -h localhost -U gipricing
@@ -114,6 +124,13 @@ run was launched with `env -C <checkout> python3 dbname-probe.py`:
 
 Three different checkouts gave one name. Only the checkout with a different leaf
 (`tree2`) got its own database. Both throwaway worktrees were removed afterwards.
+
+**A lead's hold stops every pytest, this gate included, unless it carries the token.** While
+`~/gi-pricing-plan.local/gate/HOLD` exists (override: `GIP_GATE_HOLD_FILE`) the root `conftest.py`
+refuses any executing run, a single named test too; the file's first line is the token, and
+the granted gate runs with `GIP_GATE_TOKEN=<that token>` exported **before** the block below,
+which its `flock -c` child inherits. The gate body does not set or clear it. No hold file:
+nothing changes (`FD-1214`, `executor.md` S-13).
 
 **THE GATE BODY. This block is the single definition** — `.claude/agents/gate-runner.md`
 points at it rather than restating it, because two copies of a gate body is how they

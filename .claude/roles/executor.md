@@ -111,6 +111,16 @@ relates: []                      # ids only
   lead's slot `flock` (`/tmp/slots/gate-*`, `.claude/skills/dev-commands`). A new head —
   any commit, merge or rebase after the grant — needs a new grant. The four docs checks and
   a named single test are not the full gate and need no grant.
+  - **Amended 2026-09-29 (`FD-1214`, WK-1178): a lead hold overrides that last sentence.**
+    While the lead's hold file `~/gi-pricing-plan.local/gate/HOLD` exists, **any** pytest —
+    a named single test included — is refused by the root `conftest.py`, unless the run
+    carries the token in `GIP_GATE_TOKEN` that only the granted gate is given. A message
+    cannot reach an executor blocked mid-turn; the tool refuses instead, so do not work
+    around it: a refusal naming the hold file is a lead stop (S-12). With no hold file,
+    nothing changes. The frontend runner (`pnpm --dir frontend test`, vitest) is not
+    guarded: it opens no database, Redis, MinIO or port and takes no `/tmp/slots` lock
+    (greps quoted in the PR that added this line), so it cannot contend for what a hold
+    protects.
   - **Grounds for S-11 to S-13, 2026-09-28:** **seven gate stops by PID** — #880 (once),
     #883 (three times) and WK-672 Slice 3's T7 (three times) — **plus one wrong-process
     kill** (an executor's permitted targeted test) and one relaunch under `setsid` after
@@ -121,8 +131,9 @@ relates: []                      # ids only
 - **S-14** (ruled 2026-09-28 by the deputy, by delegation): **A force-stopped gate leaves
   database state**, because the run never reaches its teardown. The next gate uses a
   **recreated test database**: `dropdb` the worktree's database and recreate it from the
-  template with the `createdb -T` block of `.claude/skills/dev-commands`, then
-  `alembic upgrade head`, before the re-run. A failure from rows a killed run left behind
+  clean template `gipricing_template` (not `gipricing`, which holds rows — `FD-1218`) with
+  the `createdb -T` block of `.claude/skills/dev-commands`, which first runs
+  `deploy/setup-template-db.sh --check`, then `alembic upgrade head`, before the re-run. A failure from rows a killed run left behind
   (for example a `uq_users_issuer_subject` `IntegrityError` from a fixed-user seed) is not
   a reading of the code under test.
   - **Grounds, 2026-09-28:** #883's gate at `1602cb07` (22:43:25–23:00:27) failed two
@@ -181,3 +192,4 @@ measurement).
 
 Verified: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
 Amended: 2026-09-28 against main 9fa2b833e00281a36109183a12efc9d7152225e9 (S-11 to S-14)
+Amended: 2026-09-29 against main ce9303b3dcf1007c6d97bf8e73e5b3e3f3174d1d (S-13 hold hook, S-14 clean template)

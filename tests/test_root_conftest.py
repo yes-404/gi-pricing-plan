@@ -88,6 +88,8 @@ def _clear_gate_slot_announcement(monkeypatch: pytest.MonkeyPatch) -> None:
     announcement state explicitly.
     """
     monkeypatch.delenv("GIP_GATE_SLOT", raising=False)
+    monkeypatch.delenv("GIP_GATE_TOKEN", raising=False)
+    monkeypatch.delenv("GIP_GATE_HOLD_FILE", raising=False)
 
 
 # ---------------------------------------------------------------------------------------
@@ -126,10 +128,7 @@ def test_bare_with_only_the_quiet_flag_is_bare(conftest_module: types.ModuleType
 
 
 def test_an_explicit_path_is_not_bare(conftest_module: types.ModuleType) -> None:
-    assert (
-        conftest_module._is_bare_full_run(_FakeConfig(("tests/test_doc_id.py",)))
-        is False
-    )
+    assert conftest_module._is_bare_full_run(_FakeConfig(("tests/test_doc_id.py",))) is False
 
 
 def test_a_node_id_is_not_bare(conftest_module: types.ModuleType) -> None:
@@ -142,9 +141,7 @@ def test_a_node_id_is_not_bare(conftest_module: types.ModuleType) -> None:
 
 
 def test_a_keyword_filter_is_not_bare(conftest_module: types.ModuleType) -> None:
-    assert (
-        conftest_module._is_bare_full_run(_FakeConfig(("-k", "pad_width"))) is False
-    )
+    assert conftest_module._is_bare_full_run(_FakeConfig(("-k", "pad_width"))) is False
 
 
 def test_a_marker_filter_is_not_bare(conftest_module: types.ModuleType) -> None:
@@ -166,9 +163,7 @@ def test_collect_only_never_acquires_a_slot(
     conftest_module: types.ModuleType, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     called: list[int] = []
-    monkeypatch.setattr(
-        conftest_module, "_acquire_pytest_gate_slot", lambda: called.append(1)
-    )
+    monkeypatch.setattr(conftest_module, "_acquire_pytest_gate_slot", lambda: called.append(1))
     conftest_module.pytest_configure(_FakeConfig((), collectonly=True))
     assert called == []
 
@@ -177,9 +172,7 @@ def test_a_targeted_run_never_acquires_a_slot(
     conftest_module: types.ModuleType, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     called: list[int] = []
-    monkeypatch.setattr(
-        conftest_module, "_acquire_pytest_gate_slot", lambda: called.append(1)
-    )
+    monkeypatch.setattr(conftest_module, "_acquire_pytest_gate_slot", lambda: called.append(1))
     conftest_module.pytest_configure(_FakeConfig(("tests/test_doc_id.py",)))
     assert called == []
 
@@ -188,9 +181,7 @@ def test_a_bare_run_acquires_exactly_one_slot(
     conftest_module: types.ModuleType, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     called: list[int] = []
-    monkeypatch.setattr(
-        conftest_module, "_acquire_pytest_gate_slot", lambda: called.append(1)
-    )
+    monkeypatch.setattr(conftest_module, "_acquire_pytest_gate_slot", lambda: called.append(1))
     conftest_module.pytest_configure(_FakeConfig(("-q",)))
     assert called == [1]
 
@@ -199,9 +190,7 @@ def test_unconfigure_always_releases_regardless_of_configures_decision(
     conftest_module: types.ModuleType, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     called: list[int] = []
-    monkeypatch.setattr(
-        conftest_module, "_release_pytest_gate_slot", lambda: called.append(1)
-    )
+    monkeypatch.setattr(conftest_module, "_release_pytest_gate_slot", lambda: called.append(1))
     conftest_module.pytest_unconfigure(_FakeConfig(()))
     assert called == [1]
 
@@ -217,9 +206,7 @@ def test_an_announced_slot_is_never_acquired_a_second_time(
     """
     monkeypatch.setenv("GIP_GATE_SLOT", "/tmp/slots/gate-1")
     called: list[int] = []
-    monkeypatch.setattr(
-        conftest_module, "_acquire_pytest_gate_slot", lambda: called.append(1)
-    )
+    monkeypatch.setattr(conftest_module, "_acquire_pytest_gate_slot", lambda: called.append(1))
     conftest_module.pytest_configure(_FakeConfig(("-q",)))
     assert called == []
 
@@ -232,9 +219,7 @@ def test_an_unannounced_bare_run_still_acquires_normally(
     """
     monkeypatch.delenv("GIP_GATE_SLOT", raising=False)
     called: list[int] = []
-    monkeypatch.setattr(
-        conftest_module, "_acquire_pytest_gate_slot", lambda: called.append(1)
-    )
+    monkeypatch.setattr(conftest_module, "_acquire_pytest_gate_slot", lambda: called.append(1))
     conftest_module.pytest_configure(_FakeConfig(("-q",)))
     assert called == [1]
 
@@ -287,9 +272,7 @@ def test_a_full_slot_set_falls_through_to_the_blocking_wait_path(
 
     with contextlib.ExitStack() as stack:
         holders = [
-            stack.enter_context(
-                open(slot_dir / f"{conftest_module._SLOT_PREFIX}{i}", "w")
-            )
+            stack.enter_context(open(slot_dir / f"{conftest_module._SLOT_PREFIX}{i}", "w"))
             for i in (1, 2)
         ]
         for handle in holders:
@@ -309,3 +292,95 @@ def test_a_full_slot_set_falls_through_to_the_blocking_wait_path(
         err = capsys.readouterr().err
         assert "all 2 gate slots are busy" in err
         assert "acquired after waiting" in err
+
+
+# ---------------------------------------------------------------------------------------
+# 3. The lead's hold file (FD-1214) — refuses ANY executing run, a named test included
+# ---------------------------------------------------------------------------------------
+
+
+def _hold(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, text: str) -> Path:
+    hold = tmp_path / "HOLD"
+    hold.write_text(text)
+    monkeypatch.setenv("GIP_GATE_HOLD_FILE", str(hold))
+    return hold
+
+
+def test_a_hold_refuses_a_targeted_run_without_the_token(
+    conftest_module: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    hold = _hold(tmp_path, monkeypatch, "tok-123\nlead, head 5a97edc4\n")
+    with pytest.raises(pytest.exit.Exception) as excinfo:
+        conftest_module.pytest_configure(_FakeConfig(("tests/test_doc_id.py::test_x",)))
+    assert excinfo.value.returncode == 4
+    assert str(hold) in excinfo.value.msg
+    assert "lead, head 5a97edc4" in excinfo.value.msg
+    monkeypatch.setenv("GIP_GATE_TOKEN", "wrong")
+    with pytest.raises(pytest.exit.Exception):
+        conftest_module.pytest_configure(_FakeConfig(()))
+
+
+def test_a_hold_lets_the_run_with_the_matching_token_through(
+    conftest_module: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _hold(tmp_path, monkeypatch, "tok-123\nlead\n")
+    monkeypatch.setenv("GIP_GATE_TOKEN", "tok-123")
+    conftest_module.pytest_configure(_FakeConfig(("tests/test_doc_id.py",)))
+
+
+def test_no_hold_file_changes_nothing(
+    conftest_module: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("GIP_GATE_HOLD_FILE", str(tmp_path / "absent"))
+    conftest_module.pytest_configure(_FakeConfig(("tests/test_doc_id.py",)))
+
+
+def test_the_default_hold_path_resolves_from_the_home_directory(
+    conftest_module: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    assert conftest_module._hold_file() == tmp_path / "gi-pricing-plan.local/gate/HOLD"
+
+
+def test_positive_control_the_token_reaches_a_real_pytest_through_the_wrapper(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """End to end, not through the fake config: a real nested pytest under the repo's
+    root conftest, launched the way the gate wrapper launches it (`flock -c`, whose child
+    inherits the caller's environment). Refused without the token, runs with it — so the
+    hold really stops a run, and the gate's token really is what lets it through.
+    """
+    import shutil
+    import subprocess
+
+    if shutil.which("flock") is None:
+        pytest.skip("flock is not installed")
+    (tmp_path / "conftest.py").write_text(
+        f"exec(compile(open({str(CONFTEST_PATH)!r}).read(), {str(CONFTEST_PATH)!r}, 'exec'))\n"
+    )
+    (tmp_path / "test_ok.py").write_text("def test_ok():\n    pass\n")
+    hold = tmp_path / "HOLD"
+    hold.write_text("tok-123\nlead\n")
+
+    def run(token: str | None) -> subprocess.CompletedProcess[str]:
+        env = {k: v for k, v in os.environ.items() if k not in ("GIP_GATE_TOKEN", "GIP_GATE_SLOT")}
+        env["GIP_GATE_HOLD_FILE"] = str(hold)
+        if token is not None:
+            env["GIP_GATE_TOKEN"] = token
+        cmd = f"{sys.executable} -m pytest -q -p no:cacheprovider test_ok.py"
+        return subprocess.run(
+            ["flock", "-n", "-E", "99", str(tmp_path / "lock"), "-c", cmd],
+            cwd=tmp_path,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+
+    refused = run(None)
+    assert refused.returncode == 4, refused.stdout + refused.stderr
+    assert "held by the lead" in refused.stdout + refused.stderr
+    passed = run("tok-123")
+    assert passed.returncode == 0, passed.stdout + passed.stderr
+    assert "1 passed" in passed.stdout

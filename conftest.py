@@ -4,7 +4,7 @@ directly: a probe placed here fires for every one of `backend/tests`,
 `packages/*/tests`, `tests`, `examples/fremtpl2`; a probe placed in `tests/conftest.py`
 does not, since `tests/` is a sibling of the other roots rather than their parent).
 
-Two things belong here because a bare `uv run pytest -q` — not only the wrapped gate
+Three things belong here because a bare `uv run pytest -q` — not only the wrapped gate
 command `.claude/skills/dev-commands/SKILL.md` documents — must be budgeted, after that
 wrapper form was typed wrong three times in one day (W37-6 channel):
 
@@ -15,6 +15,9 @@ wrapper form was typed wrong three times in one day (W37-6 channel):
    keeps "uncapped and unslotted" during iteration), never for `--collect-only`
    (`.claude/skills/python-test/SKILL.md`: "`--collect-only` needs no window"), and never
    a *second* time when the wrapper already holds one (below).
+3. A lead's hold on every executing pytest run, targeted ones included (`FD-1214`): a
+   message cannot reach an executor blocked in a foreground call, so the hold is a file
+   the tool itself refuses on (section 3 below).
 
 **One shared lock namespace with the wrapper, announced rather than duplicated.** This
 hook locks the identical `/tmp/slots/gate-{1,2,3}` files the wrapped gate command in
@@ -141,9 +144,53 @@ def _release_pytest_gate_slot() -> None:
         _held_slot_file = None
 
 
+# --- 3. The lead's hold file ----------------------------------------------------------
+
+#: Overrides the default hold path — the tests point it at a tmp file, and it is the
+#: only way to name another location, since the default is per-machine.
+_HOLD_FILE_VAR = "GIP_GATE_HOLD_FILE"
+#: The token the granted gate carries; the hold file's first line is the token it must match.
+_TOKEN_VAR = "GIP_GATE_TOKEN"
+
+
+def _hold_file() -> Path:
+    override = os.environ.get(_HOLD_FILE_VAR)
+    if override:
+        return Path(override)
+    return Path.home() / "gi-pricing-plan.local" / "gate" / "HOLD"
+
+
+def _refuse_while_held() -> None:
+    """Refuse any executing run while the hold file exists, unless the token matches.
+
+    The file's first line is the token; the rest names the holder and head, and is quoted
+    back in the refusal. A file that exists but cannot be read still refuses (fail closed).
+    No file means nothing here fires — CI and plain runs are untouched.
+    """
+    path = _hold_file()
+    if not path.exists():
+        return
+    try:
+        text = path.read_text()
+    except OSError:
+        text = ""
+    token, _, holder = text.partition("\n")
+    token = token.strip()
+    if token and os.environ.get(_TOKEN_VAR) == token:
+        return
+    pytest.exit(
+        f"pytest is held by the lead: {path} exists"
+        + (f" — {holder.strip()}" if holder.strip() else "")
+        + f". Only the granted gate carries {_TOKEN_VAR}; wait for the hold to end "
+        "(executor.md S-13).",
+        returncode=4,
+    )
+
+
 def pytest_configure(config: pytest.Config) -> None:
     if config.getoption("collectonly"):
         return
+    _refuse_while_held()
     if os.environ.get(_ANNOUNCEMENT_VAR):
         # The wrapper already holds a slot on this process's behalf -- trust it rather
         # than acquiring a second one, which would deadlock (module docstring).

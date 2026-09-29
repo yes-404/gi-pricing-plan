@@ -74,3 +74,58 @@ The deputy ruled on 2026-09-28 (relayed by the lead), owner **WK-1178**:
 
 The amendment PR that names the template in S-14 also carries `FD-1214`'s S-13 extension (a targeted run inside an exclusive
 window), per the deputy's entry of 23:30:16 BST. That extension is tracked in `FD-1214`, not here.
+
+## Progress — 2026-09-29: the template and its check are built; the rename is not done
+
+The fix PR for this finding (WK-1178, with `FD-1214`'s hold hook) adds `deploy/setup-template-db.sh`
+(creates `gipricing_template` at head and empty; `--check` reads it back) and points the
+`dev-commands` `createdb -T` block, `conftest_db.py`'s refusal message and S-14 at it. **Step 3 is
+not done, and the finding stays open on it:** its own condition, "once a grep shows nothing
+references it", is not met. Run at `ce9303b3dcf1007c6d97bf8e73e5b3e3f3174d1d` (all tracked files, minus
+`docs/findings`, `docs/plans`, `docs/closures`), the command
+
+```text
+git grep -n -E '(/gipricing($|[^_[:alnum:]-])|POSTGRES_DB: gipricing|datname=.gipricing.|-d gipricing|-T gipricing($|[^_]))' ce9303b3dcf1007c6d97bf8e73e5b3e3f3174d1d -- . ':!docs/findings' ':!docs/plans' ':!docs/closures'
+```
+
+printed these 32 lines (the `ce9303b3…:` prefix and text past column 150 are cut):
+
+```text
+.claude/skills/dev-commands/SKILL.md:71:docker exec gi-pricing-postgres-1 createdb -U gipricing -T gipricing "gipricing_${WT}"
+.claude/skills/dev-commands/SKILL.md:72:GIP_DATABASE_URL="postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_${WT}" \
+.claude/skills/dev-commands/SKILL.md:129:export GIP_TEST_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_'"$WT"'
+.claude/skills/dev-commands/SKILL.md:888:GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing \
+.claude/skills/dev-commands/SKILL.md:894:while `deploy/docker-compose.yml` provisions `gipricing:gipricing@…/gipricing`, and Alembic
+.claude/skills/dev-commands/SKILL.md:1121:`createdb -T gipricing gipricing_<leaf>_<hash>` costs nothing; only the one shared `gipricing`
+.claude/skills/fastapi-service/SKILL.md:268:provisions **`gipricing:gipricing@…/gipricing`**. Alembic reads `Settings`, so it inherits
+.claude/skills/fastapi-service/SKILL.md:272:GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing \
+.claude/skills/python-test/SKILL.md:265:export GIP_TEST_DATABASE_URL="postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing"
+.claude/skills/python-test/SKILL.md:277:export GIP_DATABASE_URL="postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing"
+.claude/skills/python-test/SKILL.md:415:      WHERE datname='gipricing' AND pid <> pg_backend_pid();"
+.claude/skills/python-test/SKILL.md:418:export GIP_DATABASE_URL="postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing"
+.claude/skills/python-test/SKILL.md:425:docker exec gi-pricing-postgres-1 psql -U gipricing -d gipricing -tAc \
+.github/workflows/python.yml:118:          POSTGRES_DB: gipricing
+.github/workflows/python.yml:296:          GIP_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
+.github/workflows/python.yml:304:          GIP_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
+.github/workflows/python.yml:305:          GIP_TEST_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
+backend/tests/conftest_db.py:46:DEFAULT_TEST_DSN = "postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing"
+backend/tests/conftest_db.py:133:            f"`PGPASSWORD=gipricing createdb -h localhost -U gipricing -T gipricing "
+backend/tests/conftest_db.py:134:            f"{name}`, then `GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@"
+backend/tests/conftest_db.py:138:    return f"postgresql+asyncpg://gipricing:gipricing@localhost:5432/{name}"
+backend/tests/test_conftest_db.py:100:    assert url == f"postgresql+asyncpg://gipricing:gipricing@localhost:5432/{name}"
+deploy/docker-compose.yml:15:      POSTGRES_DB: gipricing
+docs/ledgers/LG-01148-w37-11-prove-it-the-instrument-pr.md:329:with `docker exec gi-pricing-postgres-1 createdb -U gipricing -T gipricing gipricing_co
+docs/ledgers/LG-01148-w37-11-prove-it-the-instrument-pr.md:331:`GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_cod
+scripts/bench-compiled-for.py:34:    GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing \\
+scripts/bench-compiled-for.py:68:    "postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing",
+scripts/bench-rating.py:911:            "postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing",
+scripts/bench-score-batch.py:26:    GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing \
+scripts/bench-score-batch.py:63:    "postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing",
+scripts/demo.py:192:            "postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing",
+scripts/revalidate-artifacts.py:36:DEFAULT_DSN = "postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing"
+```
+
+`deploy/docker-compose.yml:15` and `.github/workflows/python.yml:118` provision it as the database,
+and four scripts default to it. The lead ruled on 2026-09-29 (reported to the maintainer) that it
+is not renamed: it stays the compose and CI database and stops being the template source.
+Dropping and recreating the dirty `gipricing` is not in that PR.

@@ -85,8 +85,12 @@ def _worktree_database_exists(name: str) -> bool:
     async def _check() -> bool:
         try:
             conn = await asyncpg.connect(
-                host="localhost", port=5432, user="gipricing", password="gipricing",
-                database="postgres", timeout=5,
+                host="localhost",
+                port=5432,
+                user="gipricing",
+                password="gipricing",
+                database="postgres",
+                timeout=5,
             )
         except OSError:
             return True
@@ -127,13 +131,15 @@ def _per_worktree_test_database_url() -> str:
             f"{name!r} does not exist yet. Refused rather than silently falling back to "
             f"the shared 'gipricing' database: a concurrent worktree's own "
             f"session-scoped teardown truncates that database out from under this run "
-            f"(.claude/skills/python-test/SKILL.md's \"mutually destructive\" section). "
+            f'(.claude/skills/python-test/SKILL.md\'s "mutually destructive" section). '
             f"Create this worktree's own database once, before its first gate run "
             f"(.claude/skills/dev-commands/SKILL.md's gate block): "
-            f"`PGPASSWORD=gipricing createdb -h localhost -U gipricing -T gipricing "
-            f"{name}`, then `GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@"
-            f"localhost:5432/{name} uv run alembic upgrade head` -- or set "
-            f"GIP_TEST_DATABASE_URL explicitly to override this check."
+            f"`deploy/setup-template-db.sh --check` (the clean `gipricing_template` must "
+            f"exist, empty and at head; `deploy/setup-template-db.sh` makes it), then "
+            f"`docker exec gi-pricing-postgres-1 createdb -U gipricing -T "
+            f"gipricing_template {name}`, then `GIP_DATABASE_URL=postgresql+asyncpg://"
+            f"gipricing:gipricing@localhost:5432/{name} uv run alembic upgrade head` -- or "
+            f"set GIP_TEST_DATABASE_URL explicitly to override this check."
         )
     return f"postgresql+asyncpg://gipricing:gipricing@localhost:5432/{name}"
 
@@ -190,9 +196,7 @@ async def database() -> AsyncIterator[Database]:
         pytest.skip(f"PostgreSQL not reachable at {test_database_url()}: {type(exc).__name__}")
 
     async with db.session() as session:
-        applied = (
-            await session.execute(text("SELECT count(*) FROM alembic_version"))
-        ).scalar_one()
+        applied = (await session.execute(text("SELECT count(*) FROM alembic_version"))).scalar_one()
     if not applied:
         pytest.skip("database has no migrations applied; run `uv run alembic upgrade head`")
 
@@ -278,9 +282,7 @@ async def grant(database: Database, workspace_id: UUID, principal: Principal):
                 )
             ).scalar_one_or_none()
             if existing is None:
-                session.add(
-                    WorkspaceMemberRow(user_id=member, workspace_id=workspace_id)
-                )
+                session.add(WorkspaceMemberRow(user_id=member, workspace_id=workspace_id))
 
     return _grant
 
@@ -313,9 +315,7 @@ async def membership(database: Database, workspace_id: UUID, principal: Principa
                 )
             ).scalar_one_or_none()
             if existing is None:
-                session.add(
-                    WorkspaceMemberRow(user_id=member, workspace_id=workspace_id)
-                )
+                session.add(WorkspaceMemberRow(user_id=member, workspace_id=workspace_id))
 
     return _membership
 
@@ -411,4 +411,3 @@ def _empty_the_database_after_the_session() -> Iterator[None]:
             "rows remain. `.claude/skills/python-test` carries the manual reset.",
             stacklevel=1,
         )
-
