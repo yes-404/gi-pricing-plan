@@ -31,6 +31,7 @@ from app.main import create_app
 from app.platform import settings as settings_service
 from app.worker.rating_handlers import register_rating_handlers
 from model_schema import JobStatus
+from pricing_core.safe_error import CodedError
 
 COMPARE_URL = "/api/v1/score/compare"
 BASE_REF = "rating_version:minimal-rv@1"
@@ -257,7 +258,7 @@ def test_a_per_quote_error_on_one_side_is_a_422_naming_that_side(
     async def _score_one(*args: Any, **kwargs: Any) -> Any:
         calls.append(1)
         if len(calls) - 1 == failing_call:
-            raise ValueError("RATE_TABLE_MISS: no row for the key")
+            raise CodedError("RATE_TABLE_MISS: no row for the key")
         return await real(*args, **kwargs)
 
     monkeypatch.setattr(score_module, "score_one", _score_one)
@@ -266,6 +267,33 @@ def test_a_per_quote_error_on_one_side_is_a_422_naming_that_side(
     assert response.status_code == 422, response.text
     assert response.json()["code"] == "RATE_TABLE_MISS"
     assert response.json()["detail"] == f"{side}: no row for the key"
+
+
+@pytest.mark.req("NFR-499")
+@pytest.mark.parametrize("failing_call", [0, 1])
+def test_a_library_value_error_wearing_a_code_prefix_is_never_a_422_on_compare(
+    client: TestClient,
+    reader_headers: dict[str, str],
+    two_versions: None,
+    monkeypatch: pytest.MonkeyPatch,
+    failing_call: int,
+) -> None:
+    """`_as_platform_error` decides by class, not by the shape of the text: a plain `ValueError`
+    whose text starts with a per-quote code (a library echoing a value) is a 500 with no text."""
+    real = score_module.score_one
+    calls: list[int] = []
+
+    async def _score_one(*args: Any, **kwargs: Any) -> Any:
+        calls.append(1)
+        if len(calls) - 1 == failing_call:
+            raise ValueError("RATE_TABLE_MISS: SENTINEL-quote-input-f3")
+        return await real(*args, **kwargs)
+
+    monkeypatch.setattr(score_module, "score_one", _score_one)
+    response = client.post(COMPARE_URL, json=_body(), headers=reader_headers)
+
+    assert response.status_code == 500, response.text
+    assert "SENTINEL-quote-input-f3" not in response.text
 
 
 @pytest.mark.req("FR-262")

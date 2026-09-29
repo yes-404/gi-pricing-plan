@@ -34,6 +34,7 @@ from model_schema.rating import (
     check_model_reference_mode,
 )
 from model_schema.refs import ArtifactRef
+from pricing_core.safe_error import CodedError
 
 _NON_DETERMINISTIC: tuple[str, ...] = ("now(", "random(", "rand(", "today(", "clock(")
 #: FR-246: a quote timestamp is an input; `now()` does not exist.
@@ -418,7 +419,7 @@ def bundle_hash(graph: JdmGraph, pins: Pins) -> str:
 
 
 def _raise_named(code: str, message: str) -> NoReturn:
-    raise ValueError(f"{code}: {message}")
+    raise CodedError(f"{code}: {message}") from None
 
 
 async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle:

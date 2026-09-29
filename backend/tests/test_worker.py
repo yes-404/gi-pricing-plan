@@ -191,7 +191,8 @@ async def test_a_failing_handler_records_a_typed_error(
     async with database.session() as session:
         row = await session.get(JobRow, job.id)
     assert row.error["code"] == "JOB_HANDLER_FAILED"
-    assert "no exposure column" in row.error["message"]
+    # The type only (NFR-499): an unexpected exception's own text is never stored.
+    assert row.error["message"] == "ValueError"
     assert row.error["retryable"] is False
     assert row.finished_at is not None
 
