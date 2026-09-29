@@ -111,6 +111,25 @@ a skip permission, given `CR-1212` item 4's environment-scoping of `deployment:p
 in the same slice; (4) the spec amendments (`06` §4.2, `07` FR-429) that would be this
 ruling's disposition.
 
+## Interaction to read at the ruling pass
+
+*Added 2026-09-30 at the lead's request.* **Option (b) and the unmodelled `06` §4.2 keys touch
+the same shape.** Option (b) adds a skip-permission field to `ApprovalPolicy`'s
+environment-specific `deployment` entry (`ApprovalPolicyEntry`,
+`packages/model-schema/src/model_schema/approvals.py:111-122`). `06` §4.2
+(`06-governance.md:305-331`) already declares keys the model does not carry: the top-level
+`expedited` block (FR-385, which carries `requires_reason`), `separation_of_duties`, and the
+per-entry `escalation`. Both models use `extra="forbid"`. So:
+- any new field that (b) adds must be written into §4.2's document in the same change, or
+  §4.2 and the model diverge further;
+- the ruling pass decides whether the skip belongs on the entry or as a top-level block beside
+  `expedited`, which is the nearest precedent for a policy-level exception with a reason;
+- if FR-385 is built first, or later, it changes the same model. The ruling should name the
+  order, or say that the two are independent.
+
+Observed, not ruled. The lead has routed the unmodelled-keys gap to an auditor as a candidate
+finding.
+
 ## Ruled
 
 **Nothing.** This heading is present because check 37 requires it of the ruling family. It
