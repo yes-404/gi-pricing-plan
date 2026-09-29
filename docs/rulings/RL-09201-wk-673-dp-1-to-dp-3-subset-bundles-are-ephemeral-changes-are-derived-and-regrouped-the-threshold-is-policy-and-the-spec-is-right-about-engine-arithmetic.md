@@ -168,7 +168,8 @@ differs from a true re-rate for some policy, and is not recorded as falling back
 
 ## Ruled
 
-**This is the ruling, by the decision-maker, 2026-09-29.** The deputy's entry of 2026-09-28 14:05:30 BST, above, is input.
+**This is the ruling, by the decision-maker, 2026-09-29.** The decision-maker adopted the maintainer-session's recommendations (the deputy's entry, under Input) **unchanged**, on 2026-09-29. The notes in the table (DP-1's wording point, DP-3's premise note, item 4's routing to this role) clarify wording or routing and change no decision.
+The deputy's entry of 2026-09-28 14:05:30 BST, above, is input.
 Its points are technical decision points. The maintainer's entry `2026-09-29 15:26:00 BST · maintainer (acting on the maintainer's behalf) · STRUCTURE: routing per document-ids §1.6 and the charters; today's technical answers re-homed`
 (§2) re-homes such points to this role, so each is re-verified here at origin/main `ac8ab519`,
 with the mechanism it builds on named by file and line. The body above stays as of `ed123cb0`.
