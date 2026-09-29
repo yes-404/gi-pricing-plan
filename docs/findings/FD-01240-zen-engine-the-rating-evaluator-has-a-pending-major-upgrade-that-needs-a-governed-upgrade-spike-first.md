@@ -1,5 +1,5 @@
 ---
-id: FD-9029
+id: FD-1240
 family: finding
 title: zen-engine (the rating evaluator) has a pending major upgrade (0.53.0 to 2.0.2, Dependabot #882) that needs a governed upgrade, spike first
 status: active
@@ -10,13 +10,13 @@ corrected_by: []
 relates: [WK-1178, ADR-706]
 ---
 
-# FD-9029 — zen-engine (the rating evaluator) has a pending major upgrade (0.53.0 to 2.0.2, Dependabot #882) that needs a governed upgrade, spike first
+# FD-1240 — zen-engine (the rating evaluator) has a pending major upgrade (0.53.0 to 2.0.2, Dependabot #882) that needs a governed upgrade, spike first
 
 ## Finding
 
 **Severity: medium.** `zen-engine` is the engine that executes every Rating Version (`ADR-706`). The repository pins it exactly at `0.53.0`, and everything it verified about the engine was verified against that version. Dependabot opened PR #882 to move the pin to `2.0.2`, which crosses the whole 1.x line (PyPI lists only `1.0.0b9` to `1.0.0b13`, then `2.0.0`). A blind merge would change the evaluator behind every quote without a spike, a ruling or an audit of the assumptions the code and specs make about it. The decision, given by the user through the maintainer and relayed by the lead, is **not to merge #882, to ignore major bumps in `.github/dependabot.yml` (this branch), and to upgrade under WK-1178 with a spike first.** This record fixes the facts the spike starts from. It does **not** say the upgrade is unsafe or safe: whether any API we call changed is **unverified**.
 
-Filed under a **working id** (`FD-9029`); the lead mints it at its merge turn.
+Filed under working id 9029; minted `FD-1240` at its merge turn, 2026-09-29 (`doc-id.py next --ref origin/main` at `ac8ab519`).
 
 ## Evidence
 
