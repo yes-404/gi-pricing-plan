@@ -14,6 +14,7 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
+from backend.tests.blob_fixtures import dataset_blob, digest
 from fastapi.testclient import TestClient
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
@@ -187,8 +188,8 @@ def test_replacing_the_dictionary_is_audited_with_before_and_after(
 
 
 @pytest.mark.req("FR-27")
-def test_starting_an_ingestion_returns_202_and_a_job(
-    client: TestClient, analyst: dict[str, str]
+async def test_starting_an_ingestion_returns_202_and_a_job(
+    client: TestClient, analyst: dict[str, str], database: Database, workspace_id
 ) -> None:
     """`00` §5.1 R1: a long operation returns 202 with the Job and a `Location`.
 
@@ -197,9 +198,11 @@ def test_starting_an_ingestion_returns_202_and_a_job(
     """
     slug = _slug()
     client.post("/api/v1/datasets", json={"slug": slug}, headers=analyst)
+    sha256 = digest()
+    await dataset_blob(database, workspace_id, sha256)
     response = client.post(
         f"/api/v1/datasets/{slug}/versions",
-        json={"blob": "a" * 64, "filename": "exposure.csv", "recipe": []},
+        json={"blob": sha256, "filename": "exposure.csv", "recipe": []},
         headers=analyst,
     )
     assert response.status_code == 202, response.text
@@ -521,8 +524,8 @@ def test_the_sql_check_is_refused_while_its_workspace_flag_is_off(
 
 
 @pytest.mark.req("FR-404")
-def test_a_repeated_submission_with_one_idempotency_key_starts_one_job(
-    client: TestClient, analyst: dict[str, str]
+async def test_a_repeated_submission_with_one_idempotency_key_starts_one_job(
+    client: TestClient, analyst: dict[str, str], database: Database, workspace_id
 ) -> None:
     """`00` §5.4: every POST that creates a Job or artifact accepts `Idempotency-Key`, and
     a repeat returns the original result.
@@ -533,7 +536,9 @@ def test_a_repeated_submission_with_one_idempotency_key_starts_one_job(
     """
     slug = _slug()
     client.post("/api/v1/datasets", json={"slug": slug}, headers=analyst)
-    body = {"blob": "b" * 64, "filename": "exposure.csv", "recipe": []}
+    sha256 = digest()
+    await dataset_blob(database, workspace_id, sha256)
+    body = {"blob": sha256, "filename": "exposure.csv", "recipe": []}
     key = {"Idempotency-Key": f"retry-{new_uuid7()}"}
 
     first = client.post(f"/api/v1/datasets/{slug}/versions", json=body,

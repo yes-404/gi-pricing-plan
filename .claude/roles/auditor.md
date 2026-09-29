@@ -10,7 +10,7 @@ relates: []                      # ids only
 
 # auditor
 
-- **Model / effort:** Sonnet 5; high thinking — evidence gathering and comparison need
+- **Model / effort:** `sonnet` (currently Sonnet 5); medium, inherited from the lead; high only for a decision-maker ruling, a Work/Phase/Project close audit or a plan review, on the maintainer's raise; `opus` (currently Opus 5.5) for a Work, Phase or Project close audit and for a plan review — evidence gathering and comparison need
   care even though volume is moderate.
 - **Mandatory skills:** `requesting-code-review`; **`git-hygiene`** for every correction PR
   this role opens — this role's own practice: **verify a `gh` write against the artifact it

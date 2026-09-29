@@ -49,8 +49,12 @@ __all__ = [
     "PartialDependencePoint",
     "PartitionDiagnostics",
     "PermutationImportance",
+    "PermutationOmission",
+    "PermutationOmissionReason",
     "QuantileCrossing",
     "ResidualSummary",
+    "TypeIIIOmission",
+    "TypeIIIOmissionReason",
     "TypeIIITest",
     "UniversalDiagnostics",
     "Weighting",
@@ -212,6 +216,29 @@ class TypeIIITest(BaseModel):
     p_value: float = Field(ge=0.0, le=1.0)
 
 
+class TypeIIIOmissionReason(enum.StrEnum):
+    """Why a factor has no type-III test (FR-178)."""
+
+    #: The factor is an operand of an `interaction`. It contributes no design column of its
+    #: own (FR-92), so dropping it would leave the cross unresolvable and "keeping" it changes
+    #: nothing; the interaction itself is tested instead.
+    OPERAND_OF_INTERACTION = "operand_of_interaction"
+
+
+class TypeIIIOmission(BaseModel):
+    """A factor the type-III block did not test, and why (FR-178).
+
+    Until FR-178's type-III half this exclusion was stated in a code comment and recorded
+    nowhere, so a reviewer reading a GLM's diagnostics could not see that operands had been
+    left out.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    factor: str
+    reason: TypeIIIOmissionReason
+
+
 class GlmDiagnostics(BaseModel):
     """GLM-specific evidence (FR-172)."""
 
@@ -228,6 +255,9 @@ class GlmDiagnostics(BaseModel):
     dispersion: float
     degrees_of_freedom: int = Field(ge=0)
     type_iii_tests: tuple[TypeIIITest, ...] = ()
+    #: FR-178. Factors the type-III block did not test, each with its reason. Empty on every
+    #: artifact written before this field existed.
+    type_iii_omitted: tuple[TypeIIIOmission, ...] = ()
     #: Terms dropped as collinear. Named rather than counted: "2 terms aliased" tells a
     #: reader something is wrong and not which factor to fix.
     aliasing: tuple[str, ...] = ()
@@ -320,6 +350,36 @@ class PermutationImportance(BaseModel):
     degradation: float
     repeats: int = Field(ge=1)
     seed: int
+    #: FR-177. The shuffled source columns that **also** source some other factor, so the
+    #: shuffle moved that factor's input too and the degradation is not this feature's alone.
+    #: Empty is the ordinary case, and the only one before FR-177, so an artifact written
+    #: earlier loads unchanged.
+    shared_source_columns: tuple[str, ...] = ()
+
+
+class PermutationOmissionReason(enum.StrEnum):
+    """Why a factor has no permutation importance (FR-178)."""
+
+    #: The factor is, or sources a column that is, an operand of an `interaction`: shuffling
+    #: it alone recombines the cross's operands into cells the fit never saw, which
+    #: `predict_gbm` refuses (FR-131). The cross is shuffled jointly instead (FR-177).
+    OPERAND_OF_INTERACTION = "operand_of_interaction"
+    #: The holdout frame has no column for the factor, so there is nothing to shuffle.
+    NO_HOLDOUT_COLUMN = "no_holdout_column"
+
+
+class PermutationOmission(BaseModel):
+    """A factor the permutation block did not measure, and why (FR-178).
+
+    Until FR-178's permutation limb this was silent: the block skipped a factor and
+    nothing in the output said so, which is the silence `PartialDependenceOmission` was
+    added to end on the other block.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    feature: str
+    reason: PermutationOmissionReason
 
 
 class PartialDependencePoint(BaseModel):
@@ -338,14 +398,22 @@ class PartialDependenceOmissionReason(enum.StrEnum):
     #: has to be *scored*, and a synthetic level the model never saw is refused at encoding
     #: (FR-131). So they are named as missing rather than summarised.
     LEVEL_CAP = "level_cap"
-    #: The factor sources no column of its own, so there is nothing to hold at a value —
-    #: an `interaction`, whose columns are its operands' (FR-176). **Interim, and
-    #: now with a decided replacement rather than an open question**: FR-177 holds a
-    #: cross's operands *together* at one observed cell, which is the only way to reach a
-    #: term `predict_gbm` re-derives from raw columns. Until WK-690 builds it, this reason is
-    #: also the marker for a gap that FR-178 shows is wider than a missing curve —
-    #: on a sparse cross the operands' own curves do not merely mislead, they raise.
+    #: **Reserved: no producer emits this.** It meant "the factor sources no column of its
+    #: own, so there is nothing to hold at a value". The only factor with no source column
+    #: is an `interaction` (`Factor._columns_match_the_type` refuses every other), and since
+    #: FR-177 a cross is swept through its operands' columns, so nothing reaches this reason.
+    #: It stays in the contract because diagnostics artifacts written before FR-177 carry it
+    #: for every cross, and a persisted value must keep validating (DP-FR177-1).
     NO_SOURCE_COLUMN = "no_source_column"
+    #: The factor is an operand of an `interaction`, and is skipped (FR-178). It **does**
+    #: have a column, which is why `no_source_column` would be false of it: the reason it
+    #: is not swept is that holding it alone recombines the operands into cells the fit
+    #: never saw, and on a sparse cross `predict_gbm` refuses the frame (FR-131). The
+    #: cross is what the model has a term for; an operand is not one (FR-92).
+    #: **Amended 2026-09-28 (FR-177, DP-FR177-S3): the factor is, or sources a column that is,
+    #: an operand of an interaction.** A plain factor on an operand's column is varied through
+    #: that same column, so it recombines the operands the same way.
+    OPERAND_OF_INTERACTION = "operand_of_interaction"
 
 
 class PartialDependenceOmission(BaseModel):
@@ -433,6 +501,9 @@ class GbmDiagnostics(BaseModel):
     eval_curve: tuple[GbmEvalPoint, ...] = ()
     importances: tuple[FeatureImportance, ...] = ()
     permutation_importances: tuple[PermutationImportance, ...] = ()
+    #: FR-178. Factors the permutation block skipped, each with its reason. Empty on every
+    #: artifact written before this field existed.
+    permutation_omitted: tuple[PermutationOmission, ...] = ()
     partial_dependence: tuple[PartialDependence, ...] = ()
     monotonicity: tuple[MonotonicityCheck, ...] = ()
     tree_count: int = Field(ge=0)

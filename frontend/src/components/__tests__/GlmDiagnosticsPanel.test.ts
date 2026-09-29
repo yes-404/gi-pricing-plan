@@ -16,6 +16,7 @@ const GLM: GlmDiagnostics = {
     { factor: "vehicle_age", deviance_delta: 812.4, df: 3, p_value: 0.0 },
     { factor: "region", deviance_delta: 4.1, df: 2, p_value: 0.128 },
   ],
+  type_iii_omitted: [],
   aliasing: ["region_north:vehicle_age_0_3"],
   vif: { vehicle_age: 1.2, region: 8.7 },
   residual_blob: null,
@@ -96,5 +97,24 @@ describe("GlmDiagnosticsPanel", () => {
     render(GlmDiagnosticsPanel, { props: { glm: { ...GLM, vif: {} } } });
     expect(screen.queryByRole("table", { name: /variance inflation/i })).not.toBeInTheDocument();
     expect(screen.getByText(/no variance inflation factors were recorded/i)).toBeInTheDocument();
+  });
+
+  it("names an operand left out of the type-III table, in words", () => {
+    render(GlmDiagnosticsPanel, {
+      props: {
+        glm: {
+          ...GLM,
+          type_iii_omitted: [{ factor: "area", reason: "operand_of_interaction" }],
+        },
+      },
+    });
+    const list = screen.getByRole("list", { name: /type iii omissions/i });
+    expect(list).toHaveTextContent(/area: not tested.*operand of an interaction/i);
+    expect(screen.queryByText("operand_of_interaction")).not.toBeInTheDocument();
+  });
+
+  it("shows no omission list when nothing was left out", () => {
+    render(GlmDiagnosticsPanel, { props: { glm: GLM } });
+    expect(screen.queryByRole("list", { name: /type iii omissions/i })).toBeNull();
   });
 });

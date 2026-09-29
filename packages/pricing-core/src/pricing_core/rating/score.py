@@ -215,6 +215,7 @@ from model_schema.scoring import (
 from pricing_core.money import ROUNDING_MODES, RoundingMode, apply_factor, reconcile_ladder
 from pricing_core.progress import ProgressCallback
 from pricing_core.rating.runtime import MODEL_CALL_ERROR_KEY, CompiledBundle
+from pricing_core.safe_error import CodedError, safe_error_detail
 
 __all__ = ["build_scoring_result", "score_batch", "score_one"]
 
@@ -307,10 +308,11 @@ _SCORING_RESULT_BATCH_EXCLUDED_FIELDS = frozenset({"trace", "timing_ms"})
 
 def _raise_named(code: str, message: str) -> NoReturn:
     """`pricing-core`'s established convention (`compile.py`'s `_raise_named`): a
-    code-named bare `ValueError`, never `PlatformError` — `pricing-core` cannot import
+    code-named `CodedError` (a `ValueError`), never `PlatformError` — `pricing-core` cannot import
     `app` (`.importlinter`'s `core-has-no-infrastructure`). RL-877: the mapping to a
     `PlatformError` at the backend boundary is Slice 2's."""
-    raise ValueError(f"{code}: {message}")
+    # `from None`: the exception being handled, if any, is not carried as this one's context.
+    raise CodedError(f"{code}: {message}") from None
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -357,7 +359,7 @@ def _validate_inputs(algorithm: RatingAlgorithm, inputs: Mapping[str, Any]) -> N
             if field.pattern is not None and re.fullmatch(field.pattern, value) is None:
                 _raise_named(
                     "INPUT_CONTRACT_VIOLATION",
-                    f"input {field.name!r}={value!r} does not match {field.pattern!r}",
+                    f"input {field.name!r} does not match {field.pattern!r}",
                 )
         elif field.type == RatingInputType.DATE and not isinstance(value, str):
             _raise_named(
@@ -370,7 +372,7 @@ def _validate_inputs(algorithm: RatingAlgorithm, inputs: Mapping[str, Any]) -> N
         ):
             _raise_named(
                 "INPUT_CONTRACT_VIOLATION",
-                f"input {field.name!r}={value!r} is not in {field.domain!r}",
+                f"input {field.name!r} is not in {field.domain!r}",
             )
 
         if field.type in (RatingInputType.INT, RatingInputType.DECIMAL) and not isinstance(
@@ -379,35 +381,42 @@ def _validate_inputs(algorithm: RatingAlgorithm, inputs: Mapping[str, Any]) -> N
             if field.min is not None and _as_decimal(value) < _as_decimal(field.min):
                 _raise_named(
                     "INPUT_CONTRACT_VIOLATION",
-                    f"input {field.name!r}={value!r} is below the declared minimum {field.min!r}",
+                    f"input {field.name!r} is below the declared minimum {field.min!r}",
                 )
             if field.max is not None and _as_decimal(value) > _as_decimal(field.max):
                 _raise_named(
                     "INPUT_CONTRACT_VIOLATION",
-                    f"input {field.name!r}={value!r} is above the declared maximum {field.max!r}",
+                    f"input {field.name!r} is above the declared maximum {field.max!r}",
                 )
 
 
 def _check_purpose_mount(algorithm: RatingAlgorithm, ctx: QuoteContext) -> None:
-    """FR-218: a `purpose` requiring the MTA/cancellation sub-graph refuses rather than
-    pricing as new business when this Rating Version mounts none.
+    """FR-218: an MTA or cancellation quote is refused, whatever the algorithm mounts, until
+    sub-graph inlining (FR-217) is built.
 
-    `algorithm.sub_graphs` non-empty is a documented, provisional stand-in for "this
-    version mounts the sub-graph *this purpose* needs": sub-graph inlining
-    (`SubGraphRef.mount_point` resolution, `compile_bundle`'s own TODO) is not built by any
-    slice yet, so no rating version can meaningfully mount one today — checking for
-    *any* mounted sub-graph is therefore a conservative, forward-safe approximation: it
-    refuses everything a truthful check would refuse today, and a real future algorithm
-    that does mount its MTA sub-graph will have a non-empty list, satisfying it correctly
-    without this function needing to know the mount point's name.
+    FR-218 prices these purposes with a separately-versioned pro-rata / refund sub-graph
+    mounted only for them. No slice builds that mounting yet: `compile_bundle` never reads
+    `sub_graphs`, so the engine never evaluates any sub-graph and no rating version can
+    actually mount one. An earlier form of this guard
+    refused only when `algorithm.sub_graphs` was empty, calling a non-empty list a
+    "conservative, forward-safe approximation". That was false: a non-empty list is only a
+    declared reference, not a mounted sub-graph, so an algorithm naming a sub-graph that
+    does not exist (or is never inlined) passed the guard and a cancellation or MTA was
+    priced as new business, the silent failure FR-218 names (payable 1507). The finding is
+    "CR-838 marks FR-217 delivered, but its pin and bundle-time inlining are not built".
+
+    Refusing every such quote is the only truthful check available today, and it is interim:
+    when FR-217's inlining exists, this becomes a check that the mounted sub-graph is the
+    one this purpose needs.
     """
-    if ctx.purpose in ("mid_term_adjustment", "cancellation") and not algorithm.sub_graphs:
+    if ctx.purpose in ("mid_term_adjustment", "cancellation"):
         _raise_named(
             "INPUT_CONTRACT_VIOLATION",
-            f"purpose={ctx.purpose!r} requires a mounted sub-graph (FR-218), and this "
-            "rating version's algorithm mounts none — refused rather than priced as new "
-            "business, which FR-218 names as the failure this refusal exists to "
-            "prevent",
+            f"purpose={ctx.purpose!r} requires a mounted sub-graph (FR-218), and sub-graph "
+            "inlining (FR-217) is not built yet, so no rating version can mount one — "
+            "refused rather than priced as new business, which FR-218 names as the "
+            "failure this refusal exists to prevent. This refusal is interim until "
+            "FR-217's inlining is built",
         )
 
 
@@ -431,7 +440,7 @@ def _check_model_call_sentinel(result: Mapping[str, Any]) -> None:
     """The other half of `runtime._model_call_failure`'s design: raise the *real* captured
     message, never the engine's own generic wrapper."""
     if MODEL_CALL_ERROR_KEY in result:
-        raise ValueError(str(result[MODEL_CALL_ERROR_KEY]))
+        raise CodedError(str(result[MODEL_CALL_ERROR_KEY]))
 
 
 def _check_lookup_misses(algorithm: RatingAlgorithm, result: Mapping[str, Any]) -> None:
@@ -484,7 +493,7 @@ def _reraise_engine_failure(algorithm: RatingAlgorithm, exc: RuntimeError) -> No
             code,
             "the engine failed evaluating a downstream step, most likely because an "
             f"on_miss='error' step found no matching row and a later expression "
-            f"referenced its output (FR-255); original engine error: {exc}",
+            f"referenced its output (FR-255); the engine error was a {type(exc).__name__}",
         )
     raise exc
 
@@ -881,14 +890,16 @@ def _outputs_json(algorithm: RatingAlgorithm, outputs: Mapping[str, Any]) -> str
 def _batch_error_code(exc: Exception) -> tuple[str, str]:
     """Parse the `_raise_named` convention (`f"{code}: {message}"`) back into its parts, so
     an `"error"` output row carries the same typed code FR-255 names — `test_worker.py`
-    and `runtime.py`'s `MODEL_CALL_FAILED` sentinel both already follow it. An exception
-    that does not (should not occur for anything this catches, but a fallback is cheap and
-    honest) is reported under its own class name rather than mis-parsed."""
-    message = str(exc)
-    code, sep, rest = message.partition(": ")
+    and `runtime.py`'s `MODEL_CALL_FAILED` sentinel both already follow it. Anything that is
+    not a coded error is reported under its own class name, with only what `safe_error_detail`
+    allows: never `str(exc)` as it stands, because this message is written into the output row
+    and the Job result's `error_samples` (NFR-499, RL-917), and a library error's text repeats
+    the value that caused it."""
+    detail = safe_error_detail(exc)
+    code, sep, rest = detail.partition(": ")
     if sep and code.replace("_", "").isalnum() and code == code.upper():
         return code, rest
-    return type(exc).__name__, message
+    return type(exc).__name__, detail or type(exc).__name__
 
 
 def _row_to_ctx(row: Mapping[str, Any]) -> QuoteContext:
@@ -898,7 +909,11 @@ def _row_to_ctx(row: Mapping[str, Any]) -> QuoteContext:
     RL-890 — so `_build_trace` is never reached); it is derived from `effective_date` at
     midnight only because `QuoteContext` requires *some* value, never because batch scoring
     means anything by it."""
-    effective_date = date.fromisoformat(row["effective_date"])
+    try:
+        effective_date = date.fromisoformat(row["effective_date"])
+    except ValueError:
+        # `fromisoformat`'s own message repeats the rejected value (NFR-499), so it is dropped.
+        _raise_named("INPUT_CONTRACT_VIOLATION", "effective_date is not an ISO-8601 date")
     inputs = {k: v for k, v in row.items() if k not in _BATCH_RESERVED_COLUMNS}
     rating_version_ref = ArtifactRef.model_validate(row["rating_version_ref"])
     return QuoteContext(
@@ -948,7 +963,10 @@ def _score_batch_row(bundle: CompiledBundle, row: Mapping[str, Any]) -> dict[str
     charged with the requirement id. `NotImplementedError` (a `RuntimeError` subclass) is
     deliberately let through: it marks a genuinely undesigned case `score_one` does not
     catch either, not a per-quote data error."""
-    quote_id = row.get("quote_id")
+    # Stringified: the output column is `String`, and a struct- or list-valued `quote_id` made
+    # the frame build raise a `ComputeError` that echoes the value (NFR-499).
+    raw_quote_id = row.get("quote_id")
+    quote_id = None if raw_quote_id is None else str(raw_quote_id)
     rating_version_ref_str = row.get("rating_version_ref")
     algorithm = bundle.algorithm
     try:

@@ -16,7 +16,7 @@ members = ["packages/*", "backend"]
 [dependency-groups]
 dev = [
     "pytest>=8",
-    "hypothesis>=6",
+    "hypothesis==6.165.7",
     "mypy>=1.11",
     "ruff>=0.6",
     "import-linter>=2.1",

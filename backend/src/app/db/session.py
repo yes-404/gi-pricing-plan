@@ -40,6 +40,9 @@ class Database:
         self._engine: AsyncEngine = create_async_engine(
             settings.database_url.get_secret_value(),
             pool_pre_ping=True,
+            # A `DBAPIError`'s text otherwise ends with `[parameters: (...)]`, the bound values,
+            # which for a quote-input write are quote inputs (NFR-499, RL-917).
+            hide_parameters=True,
             # A connection that died while idle — a database restart, a network blip —
             # otherwise fails the *next* request rather than being replaced silently.
             future=True,
