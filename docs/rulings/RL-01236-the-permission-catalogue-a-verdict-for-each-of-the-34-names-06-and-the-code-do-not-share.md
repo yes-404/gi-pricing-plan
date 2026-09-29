@@ -423,7 +423,9 @@ entry of 2026-09-29 14:15:43 BST, and the mechanical fixes that entry accepted).
 decision points DP-A to DP-D were decided on 2026-09-28 by the deputy, on the maintainer's
 delegation. They are technical in the same way, so they are re-verified and adopted here too.
 Every point was re-verified at origin/main `9cd179cb` and is **adopted as this record's own
-ruling**. None is superseded, so no new `RL-` is minted.
+ruling**. None is superseded, so no new `RL-` is minted. **One adoption narrows its source:** the
+deputy decided DP-D (b) unconditionally, and it is adopted here on a condition tied to `OQ-1235`
+(the DP-D row). *(Disclosed 2026-09-29, on auditor-856's note N-1.)*
 
 | Point | Re-verified at `9cd179cb` | Ruling |
 |---|---|---|
@@ -433,4 +435,4 @@ ruling**. None is superseded, so no new `RL-` is minted.
 | **DP-A (c)**: the code's coarse write names are the Phase 2 catalogue, and the fine split goes to WK-676 | The alias-aware caller predicate over `backend/src` gives `RATING_WRITE` 6, `MODEL_FIT` 20 and `DATASET_WRITE` 11 hits. Its condition (author ≠ approver) is met by #861, as Q856-2 records | **Adopted.** Coarse rights are safe only because approval separates the author from the approver, and that separation now exists in code and under test |
 | **DP-B (a)**: keep `admin:manage_environments`, owned by WK-674 Slice 2 | 0 check sites. The Environment record does not exist yet (`RL-1232`, Q848-2) | **Adopted** |
 | **DP-C (a)**: one `approval:decide`, with per-type approval by `approver_roles` | 5 check sites. `test_a_role_the_policy_does_not_name_cannot_approve` is at `backend/tests/test_approvals.py:400` | **Adopted** |
-| **DP-D (b)**: `admin:manage_settings` guards every per-environment setting value | 7 check sites. **Its premise is open:** it guards per-environment configuration as a Setting, and whether such configuration is a Setting is `OQ-1235` | **Adopted, conditionally.** The guard follows the value. If `OQ-1235` is decided (a), a Setting with an Environment layer, DP-D holds as ruled. If it is decided (b) or (c), DP-D is re-ruled at that decision. The ruling that closes `OQ-1235` says which |
+| **DP-D (b)**: `admin:manage_settings` guards every per-environment setting value | 7 check sites. **Its premise rests on `OQ-1235`:** `07` FR-431 already says environment configuration "is a Setting resolved by the precedence in §3.8", and DP-D guards it as a Setting. `OQ-1235` asks *how* that configuration resolves, and only its option (b), configuration stored on the Environment record outside the Settings resolver, would make it not a Setting | **Adopted, conditionally: a narrowing of the deputy's unconditional decision.** The guard follows the value. If `OQ-1235` is decided (a), an Environment layer in FR-446, or (c), a workspace setting keyed by environment, the configuration is a Setting and DP-D holds as ruled. If it is decided (b), DP-D is re-ruled at that decision. The ruling that closes `OQ-1235` says which. *(Tightened 2026-09-29, on auditor-856's note N-1: the first wording said "whether such configuration is a Setting is `OQ-1235`", which was wider than that question, and named (c) as a re-ruling case.)* |
