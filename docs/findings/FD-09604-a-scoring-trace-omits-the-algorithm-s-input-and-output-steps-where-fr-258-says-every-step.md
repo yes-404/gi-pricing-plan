@@ -55,3 +55,5 @@ At `origin/main` `1c8762d9ed235f80e0f2fff80c44003694828e97`.
 clarification that `input` and `output` steps are not traced, or whether the trace must carry
 them (`CLAUDE.md` §0). Event: the decision-maker's ruling. If unowned at the next `CLAUDE.md`
 §14 review, the row decays to that review.
+
+**Lead's decision, 2026-09-29:** deferred with an owner — WK-1178. Event: the decision-maker's `TraceStep` ruling (plan review 16's Proposal 3: one ruling on F35, F55 and this finding), then the WK-1178 trace slice sequenced before WK-674 Slice 5, which fixes whichever side the ruling moves. This matches the register row.

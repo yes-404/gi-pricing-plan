@@ -56,3 +56,5 @@ could describe what the `uniform+sampled` grid does report, or keep its example 
 `OQ-1224` as the condition under which it holds. Event: the decision-maker's ruling, or
 `OQ-1224` landing, whichever comes first. If unowned at the next `CLAUDE.md` §14 review, the
 row decays to that review.
+
+**Lead's decision, 2026-09-29:** deferred with an owner — the decision-maker. Event: the decision-maker's ruling, or `OQ-1224` landing, whichever comes first, and no later than the gate before the P2 exit demo (plan review 16's Proposal 12 puts the two `WF-699` rulings on it). This matches the register row.

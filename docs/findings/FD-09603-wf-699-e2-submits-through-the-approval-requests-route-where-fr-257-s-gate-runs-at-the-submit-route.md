@@ -54,3 +54,5 @@ At `origin/main` `1c8762d9ed235f80e0f2fff80c44003694828e97`.
 `POST /rating-versions/{id}/submit` (the route the requirement and the code use) or whether the
 requirement moves (`CLAUDE.md` §0). Event: the decision-maker's ruling. If unowned at the next
 `CLAUDE.md` §14 review, the row decays to that review.
+
+**Lead's decision, 2026-09-29:** deferred with an owner — the decision-maker. Event: the decision-maker's ruling, no later than the gate before the P2 exit demo (plan review 16's Proposal 12). This matches the register row.
