@@ -47,7 +47,20 @@ before.
 **`ultracode` is `ultrathink`, resolved** (rulings record Part B2): the decision-maker's
 effort setting is maximum extended thinking, never the multi-agent `Workflow`-orchestration
 keyword — the source note already used the correct word ("ultrathink"); this line records
-the resolution rather than changing anything.
+the resolution rather than changing anything. *(The "always" is superseded for effort:
+see the 2026-09-29 amendment below.)*
+
+**Amended 2026-09-29** (maintainer, `~/gi-pricing-plan.local/channel/to-lead.md` entries of
+10:55:45, 11:40:05 and 11:41:21 BST): **the Model column is the tier alias in each role
+file** (lead, planner, decision-maker: `opus`, currently Opus 5.5; auditor, executor:
+`sonnet`, currently Sonnet 5, the auditor on `opus` for a Work, Phase or Project close
+audit and for a plan review; watcher, reporter: `haiku`, currently Haiku 4.5). **The
+Thinking-effort column reads medium for every role other than the lead, inherited from
+the lead's session; the lead's own effort is the maintainer's session setting (medium,
+raised by the maintainer's `/effort high` only for the three named cases)**; high only
+for a decision-maker ruling, a Work/Phase/Project close audit or a plan review, on the
+maintainer's raise; ultrathink is no longer the decision-maker's standing setting. The
+table above is left as adopted; this paragraph is the current value.
 
 **Skill binding:** the Superpowers-derived skills are vendored as project skills in
 `.claude/skills/` — agents and plan headers invoke them by their registered names; no

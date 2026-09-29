@@ -16,7 +16,7 @@ relates: []                      # ids only
   Ownership matrix` section in `docs/INDEX.md`) shows this row **empty by declaration**,
   not blank by omission.
 - **Form:** a script (no LLM in steady state) plus event hooks; a watcher agent (`haiku`, currently
-  Haiku 4.5; low effort) spawns only when an anomaly needs judgment or a written signal.
+  Haiku 4.5; medium, inherited from the lead) spawns only when an anomaly needs judgment or a written signal.
 - **Owns (script):**
   - Balance thresholds and re-arming on confirmed recovery (endpoint:
     https://api.deepseek.com/user/balance; token location
