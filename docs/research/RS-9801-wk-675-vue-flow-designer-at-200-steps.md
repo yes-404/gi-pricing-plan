@@ -3,7 +3,7 @@ id: RS-9801
 family: research
 kind: spike
 title: Can Vue Flow carry WK-675's designer at 200 steps — pan/zoom fps, live connection checks, keyboard focus and delete, and the bundle cost?
-status: draft
+status: active
 created: 2026-09-29
 owner: executor
 tree: 85e33e75e2312ef08d12408adb5df4a33d793a8c
@@ -395,7 +395,8 @@ These are WK-675 prerequisites and follow-ups. The deputy's conditions 1–4 tak
 - `a3862e01cbcaa1ba85ffc386bf95c965cc60ca3c` holds the code and the first logs. The lead
   pushed it.
 - `a6f41714948dea13b97299ce292f08322a147bdb` is its child and adds the final gated logs
-  and the per-process cwd and CPU quotes (`pw/results/final/`). It is the local ref's
-  current value, which the lead is asked to push.
+  and the per-process cwd and CPU quotes (`pw/results/final/`). It is the ref's current
+  value, and it is on origin (`git ls-remote origin refs/salvage/2026-09-28/spike-f2`
+  prints it, 2026-09-29).
 
 Both are based on `df8e5811`.
