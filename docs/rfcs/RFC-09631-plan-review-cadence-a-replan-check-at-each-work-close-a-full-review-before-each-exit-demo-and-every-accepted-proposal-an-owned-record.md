@@ -132,11 +132,8 @@ rule to adopt"):
    dated acceptance line; nothing starts in the next phase while a current-phase finding
    lacks a resolution; every accepted proposal gets an owning row.
 
-**One addition, the planner's; not in the maintainer's rule text (the 16:05:14 BST entry).**
-The maintainer has been asked to accept it or strike it. If it is struck, it is removed from
-all three sites that carry it: `phase-review` *When*, `close-workstream`'s §14 paragraph and
-template field, and `work-item-close.md`. If it is accepted, the maintainer's line goes under
-*Acceptance*. **For the rows that wait on a review:** `python3 scripts/register-owed.py
+**One addition, the planner's, accepted by the maintainer (see *Acceptance*).** It is not in
+the maintainer's rule text of the 16:05:14 BST entry. **For the rows that wait on a review:** `python3 scripts/register-owed.py
 review` lists the register rows naming the §14 review (`phase-review` skill, "The agenda
 includes every register row that decayed to this review"). With fewer full reviews those
 rows would wait longer unseen. So the replan check records that command's owed count at the
@@ -335,7 +332,7 @@ the lead's §14 edit. The ones left are dated records.
 | `docs/process/delivery-process.md:281` | 1 | unaffected | §12 is a pointer to the skills, and :349/:374 are dated history; the trigger is not stated here, so no second copy is added (RFC-756) |
 | `docs/process/delivery-process.md:349` | 2 | unaffected | §12 is a pointer to the skills, and :349/:374 are dated history; the trigger is not stated here, so no second copy is added (RFC-756) |
 | `docs/process/delivery-process.md:374` | 2 | unaffected | §12 is a pointer to the skills, and :349/:374 are dated history; the trigger is not stated here, so no second copy is added (RFC-756) |
-| `docs/process/document-ids.md:152` | 1 | **amended** | Phase row: "lead runs `phase-review`" aligned to the planner (flagged for the maintainer) |
+| `docs/process/document-ids.md:152` | 1 | **amended** | Phase row: "lead runs `phase-review`" aligned to the charters. The planner conducts and files the review (a family owned by the lead), the lead gives the verdict, and the maintainer accepts. The maintainer decided this in the entry `2026-09-29 18:57:24 BST · maintainer (acting on the maintainer's behalf) · #915 (the cadence RFC): the register-owed evidence line ACCEPTED; the §1.6 Phase-row alignment folded in` |
 | `docs/process/document-ids.md:155` | 2 | unaffected | a row naming the review as an actor or event, not the trigger |
 | `docs/process/document-ids.md:166` | 2 | unaffected | a row naming the review as an actor or event, not the trigger |
 | `docs/process/document-ids.md:251` | 2 | unaffected | a row naming the review as an actor or event, not the trigger |
@@ -408,3 +405,6 @@ when that PR merges and the first Work close after it carries a replan check.**
     16:28:03 BST**. It is a bound, not a point time: the lead's transcript copy was
     compacted. The message cites the maintainer's 16:25:49 BST entry, and the lead's commit
     `5f27c02f` (15:28:03Z) already quotes its trailer instruction.
+- **The planner's addition** (the replan check's owed count, *Proposal*, Part 1), accepted
+  in the entry `2026-09-29 18:57:24 BST · maintainer (acting on the maintainer's behalf) · #915 (the cadence RFC): the register-owed evidence line ACCEPTED; the §1.6 Phase-row alignment folded in`, item 1, verbatim:
+  > "Accepted 2026-09-29 by the maintainer's delegation: each Work-close replan check also records `register-owed.py review`'s owed count, as evidence and not a trigger, so decayed or unowned rows stay visible between full reviews."
