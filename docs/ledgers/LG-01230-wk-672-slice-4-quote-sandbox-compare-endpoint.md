@@ -68,7 +68,7 @@ written.
 
 | PR | Branch | Title | Squash SHA on `main` |
 |---|---|---|---|
-| (draft, number on opening) | `p2-d-s4` | feat(rating): WK-672 Slice 4 — Quote Sandbox compare endpoint, PL-1213 | (on merge) |
+| #901 (draft) | `p2-d-s4` | feat(rating): WK-672 Slice 4 — Quote Sandbox compare endpoint, PL-1213 | (on merge) |
 
 ### Tasks 4-5: findings against the plan
 
@@ -93,7 +93,7 @@ written.
   (`ModelComparisonRow`, `ComparisonCandidate`); none is a compare shape. The predicate is too loose.
 - Docs checks: `audit-docs.py` FAILED (2): check 31 gaps 1225→9110 and 9110→9401, the working-id gap only.
 
-### Plan deviations, dated 2026-09-29 (accepted by the lead; the maintainer's item-7 ruling in `to-lead.md`)
+### Plan deviations, dated 2026-09-29 (accepted by the lead; the maintainer's item-7 ruling is `to-lead.md` "2026-09-29 12:14:30 BST · maintainer (acting on the maintainer's behalf) · S4 PL-1213 item 7: deviation accepted, with a substitute proof for the caplog test")
 
 1. **NFR-499 (plan item 7).** `rating:read` cannot be a Service Account scope (FR-389:
    *"['rating:read'] is not in ['score:batch', 'score:execute']. FR-389 scopes service accounts to the
@@ -240,6 +240,17 @@ Pre-start `12:22:30 up 3:40, 1 user, load average: 2.23, 2.34, 2.23`, no other p
 
 No abort, all ten rc 0.
 
+## Evidence location and disclosure (2026-09-29)
+
+The gate, frontend and N=5×2 logs are copied, unedited, to `~/gi-pricing-plan.local/evidence/s4/`, with
+`SHA256SUMS` (62 files) and a `README.md` stating which head each set ran at, who started it and when.
+That directory is local and not in the repository. **The logs carry no in-log commit SHA and no `rc` line:**
+the head each ran at is established by the commit timeline and that README, and each run's rc is the
+executor's report (the two python-half gates also have their `.rc` files and a `FINAL_RC` line in
+`wrapper.log`). The frontend logs there are the run at `1509bc0c`; the earlier run at `73616265` used the same
+log names and was overwritten. The `n5.sh` copied there is the second run's version, whose only difference
+from the first is the log path prefix (`n5b-s4-` for `n5-s4-`).
+
 ## Final head `1cadf98e5c194e9a7e8e7369f5881e9de22b6c6c` (2026-09-29)
 
 The maintainer's ruling: a plain merge of the then-current `origin/main`, the test-count floor, the four
@@ -257,7 +268,7 @@ code differs from the gated head. Draft PR #901 (opened by the lead) at this hea
   `git diff origin/main...HEAD -U0` gives 23 added and 0 removed `def test_` lines (the parametrized tests
   expand to 28). Floor: 3747 + 28 = **3775**.
   **Python CI** (run 36568093701, 12:26:15Z to 12:42:30Z): `3772 passed, 3 skipped, 46 warnings in 876.97s
-  (0:14:36)`, i.e. 3772 + 3 = 3775, equal to the floor. Success. The docs (36568093720), frontend
+  (0:14:36)` and `GATE: pass — 8 of 8 stages passed` (the run's own gate summary), i.e. 3772 + 3 = 3775, equal to the floor. Success. The docs (36568093720), frontend
   (36568093742) and history-policy (36568093732) runs also concluded success at `1cadf98e`.
 - **(c) Docs checks at `1cadf98e`.** `audit-docs.py` rc 0 ("All checks passed."); `doc-id.py check` rc 0;
   `doc-index.py --check` rc 0 ("OK (byte-stable)"); `register-lint.py` rc 0 ("OK (0 violations)").
@@ -290,8 +301,8 @@ FR-262's typing at the Work close: backend limb delivered and tested (WK-672); U
 
 ## Hand-off to WK-675
 
-`StepChange.own_change == false` means **"no own change attributable from the traces"**. **Do not render it as
-"unchanged" or "not edited".** A downstream step that was itself edited and whose input also moved reads `false`
-(the known limit `03` §4.10 states and `test_trace_diff.py`'s known-limit test pins). Whether `own_change`
-should be derived from step-definition equality instead is `OQ-1231`, owned by WK-675, to be decided before its
-compare view ships.
+The slice's ledger (`LG-`) carries this note to WK-675, the sandbox view's owner, and the PR description repeats it:
+
+> `StepChange.own_change == false` means **"no own change attributable from the traces"**. **Do not render it as "unchanged" or "not edited".** A downstream step that was itself edited and whose input also moved reads `false` (the known limit `03` §4.10 states and Task 3's known-limit test pins). Whether `own_change` should be derived from step-definition equality instead is the open question of Task 1 Step 5, owned by WK-675, to be decided before its compare view ships.
+
+**FR-262's typing (`RL-1172` §5, the plan's Hand-off section):** FR-262: backend limb delivered and tested (WK-672); UI limb reassigned to WK-675, not recorded as delivered.
