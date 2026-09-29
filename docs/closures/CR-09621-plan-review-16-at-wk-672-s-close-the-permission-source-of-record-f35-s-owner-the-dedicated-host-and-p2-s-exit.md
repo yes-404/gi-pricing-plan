@@ -606,10 +606,10 @@ the lead's to check.
 
 **Lead's dated addition to the Proposal 9 verdict, 2026-09-29.** The maintainer's entry "2026-09-29 16:34:39 BST · maintainer (acting on the maintainer's behalf) · FR-217 GUARD FAILS OPEN: the interim fix is dispatched NOW as HIGH; P9 recurrence check" agreed the re-read, and ruled "If the writer has stopped again, it is a recurrence: reopen the rows with a dated note, owner WK-1178". **The owner is therefore WK-1178.** The re-read (auditor-row11, measured 2026-09-29 about 15:38Z) found **both rows a recurrence**:
 - Artifact B's `position` names PL-1189 "not started", while `docs/INDEX.md` at `2c2bbcdf` has PL-1189 and PL-1205 executed.
-- No scheduled or scripted writer runs: there is no crontab, no timer, and no process running `write_runtime_state.py`. The live watcher agent does not write B.
+- No scheduled or scripted writer runs: there is no crontab, no timer, and no process running `write_runtime_state.py`. The live watcher agent does not write B. This is the plan-review audit's read-only check at about 15:48Z (`crontab -l`, `systemctl list-timers`, `ps`).
 - The derivation script B cites (`read_from`, under `~/.claude/jobs/66723b39/`) no longer exists, and neither does that job directory.
 
-F58 and F91 are reopened with dated notes, owner WK-1178. A new finding holds the evidence: "artifact B is stale and wrong a day after F58 and F91 were recorded resolved", cited by subject until it is minted, on branch `aud-row11-p9-artifact-b`.
+F58 and F91 are reopened, with dated notes and owner WK-1178, by PR #909 (draft) when it merges. A new finding holds the evidence: "artifact B is stale and wrong a day after F58 and F91 were recorded resolved", cited by subject until it is minted, on branch `aud-row11-p9-artifact-b`.
 
 **Maintainer acceptance (Proposal 9):** _pending_
 
