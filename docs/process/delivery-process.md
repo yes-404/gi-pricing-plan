@@ -162,6 +162,14 @@ proposal reproduced *inside* the note, **not** RFC-840's own §7, which is a dif
 subject; the bare "RFC-840 §7" resolved only for a reader who already knew which numbering
 was meant (RL-871, `docs/rulings/RL-00871-no-8-stands-unamended-and-unexcepted-and-the-test-the-question-proposed-is-the-wrong-one.md`).
 
+*(Amended 2026-09-29 by the maintainer, dated line by delegation: preparation runs in
+parallel; at most 2 build slices from different Works at once, each holding a gate slot, no
+shared files; a measurement step runs alone. CR-1212's "§8 stands" is amended by this
+line.)* The ruling is RL-9760 (working id). It rests on this section's own "revisit only if
+resource budget materially changes": an 8-core box and the 2-slot gate cap.
+Plan-independence is still not an exception (RL-871). "Preparation" means plans, rulings,
+rebases, mints and audits. It is not a slice and runs alongside.
+
 **The interest §8 protects is resource contention, not plan stability.** Two children can be
 perfectly plan-independent and running them concurrently still breaches this rule, so an
 exception argued on plan-independence argues past it (RL-871 refused exactly that
