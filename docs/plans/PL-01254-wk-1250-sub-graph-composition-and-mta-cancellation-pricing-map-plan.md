@@ -1,5 +1,5 @@
 ---
-id: PL-9680
+id: PL-1254
 family: plan
 kind: map
 title: WK-1250 — Sub-graph composition and MTA/cancellation pricing (FR-217's inlining and pin, FR-218's authoring half): map plan
@@ -354,7 +354,7 @@ WK-1250 on that map plan"), the activation commit:
 
 - **Acceptance line:** _pending — the maintainer's dated line, or one given on the maintainer's
   behalf_.
-- **Working id** 9680, minted at this plan's merge turn.
+- **Minted as `PL-1254`** at #918's merge turn, 2026-09-29, with `python3 scripts/doc-id.py next --ref origin/main` at `0d5b0765` (working id 9680 before the mint).
 - **Open:** DP-1 to DP-4, all the decision-maker's.
 
 ## Self-review
