@@ -1,5 +1,5 @@
 ---
-id: FD-9026
+id: FD-1227
 family: finding
 title: PR #876's determinism-child rewrite removes the only cross-process training-determinism check
 status: active
@@ -10,11 +10,11 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9026 — PR #876's determinism-child rewrite removes the only cross-process training-determinism check
+# FD-1227 — PR #876's determinism-child rewrite removes the only cross-process training-determinism check
 
 ## Finding
 
-**Severity: low.** Filed under a **working id** (`FD-9026`); the lead mints it at its turn in the queue. A coverage loss with no
+**Severity: low.** A coverage loss with no
 current requirement breach: `NFR-481` and `FR-11` (quoted below) do not say "across processes". It does not block #876.
 
 At `ce9303b3`, `test_scoring_is_deterministic_across_a_subprocess` trains a booster in a second interpreter. PR #876 (open, head

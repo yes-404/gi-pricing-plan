@@ -1,5 +1,5 @@
 ---
-id: FD-9027
+id: FD-1228
 family: finding
 title: test_ebm.py's reproducibility test is marked FR-140, a transparency requirement, so FR-11 gets no EBM determinism evidence
 status: active
@@ -10,11 +10,11 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9027 — test_ebm.py's reproducibility test is marked FR-140, a transparency requirement, so FR-11 gets no EBM determinism evidence
+# FD-1228 — test_ebm.py's reproducibility test is marked FR-140, a transparency requirement, so FR-11 gets no EBM determinism evidence
 
 ## Finding
 
-**Severity: low.** Filed under a **working id** (`FD-9027`); the lead mints it at its turn in the queue. `test_the_fit_is_reproducible_under_the_spec_seed`
+**Severity: low.** `test_the_fit_is_reproducible_under_the_spec_seed`
 (`packages/pricing-core/tests/test_ebm.py:427-428`, read at `6a8b8e70`) carries `@pytest.mark.req("FR-140")`, but `FR-140` is an EBM
 **transparency** requirement and says nothing about reproducibility. Two effects, both named in the Evidence: the marker credits `FR-140` with evidence
 it does not give, and the EBM's fit determinism is credited to no determinism requirement.

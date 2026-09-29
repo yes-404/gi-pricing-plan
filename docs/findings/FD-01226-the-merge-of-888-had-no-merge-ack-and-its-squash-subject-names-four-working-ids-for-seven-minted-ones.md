@@ -1,5 +1,5 @@
 ---
-id: FD-9025
+id: FD-1226
 family: finding
 title: The merge of #888 had no MERGE-ACK, and its squash subject names four working ids for seven minted ones
 status: active
@@ -10,11 +10,11 @@ corrected_by: []
 relates: [FD-1214, FD-1215, FD-1216, FD-1217, FD-1218, FD-1219, FD-1220, WK-1178]
 ---
 
-# FD-9025 — The merge of #888 had no MERGE-ACK, and its squash subject names four working ids for seven minted ones
+# FD-1226 — The merge of #888 had no MERGE-ACK, and its squash subject names four working ids for seven minted ones
 
 ## Finding
 
-**Severity: medium.** Filed under a **working id** (`FD-9025`); the lead mints it at its turn in the queue.
+**Severity: medium.**
 
 ## Evidence
 
