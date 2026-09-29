@@ -10,6 +10,7 @@ reference (FR-386) and refuse one that does not exist.
 from __future__ import annotations
 
 import copy
+import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -1107,22 +1108,34 @@ async def test_an_earlier_pass_does_not_count_once_a_later_run_failed(
 
 @pytest.mark.req("FR-257")
 async def test_a_passing_run_is_recorded_and_golden_evidence_is_untouched(
-    database: Database, workspace_id
+    database: Database, workspace_id, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Limb (1) only: a passing Regression Suite; limbs (2)-(4) are not tested here. The run
-    id is the one key written beside `golden_quotes`, which is unchanged."""
+    id is the one key written beside `golden_quotes`, which is byte-identical before and
+    after the write (`PL-1205` acceptance item 10): the pinned value is snapshotted as the
+    golden-quote gate returned it, at the last step before `submit` writes `evidence`."""
     gate = await _gate(database, workspace_id)
     content = _suite(_quote())
     await gate.suite(gate.analyst, content)
     rating_id = await gate.version()
     run_id = await gate.record_run(rating_id, "pass")
+    real_run_gate = rating_service._regression_run_gate
+    before: list[str] = []
+
+    async def snapshotting(*args: Any, **kwargs: Any) -> UUID:
+        before.append(json.dumps(kwargs["golden_quotes"], sort_keys=True))
+        return await real_run_gate(*args, **kwargs)
+
+    monkeypatch.setattr(rating_service, "_regression_run_gate", snapshotting)
     await gate.submit(rating_id, run=None)
+    assert len(before) == 1  # the seam was reached, so the snapshot below is not vacuous
     row = await gate.row(rating_id)
     assert row.status == "review"
     evidence = row.evidence or {}
     assert evidence["regression_suite_run_id"] == str(run_id)
     assert set(evidence) == {"golden_quotes", "regression_suite_run_id"}
     pinned = evidence["golden_quotes"]
+    assert json.dumps(pinned, sort_keys=True) == before[0]
     assert pinned["status"] == "checked"
     assert pinned["suite_content_hash"] == suite_content_hash(content)
     assert set(pinned) == {
