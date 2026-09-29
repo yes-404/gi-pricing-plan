@@ -75,6 +75,7 @@ def test_prod_with_tls_and_an_identity_provider_starts() -> None:
         environment=Environment.PROD,
         tls_terminated=True,
         build=_SHA,
+        tenant_id="acme-motor",
         oidc_issuer="https://idp.example/realms/gip",
         oidc_audience="gi-pricing-api",
         oidc_jwks_url="https://idp.example/realms/gip/protocol/openid-connect/certs",
@@ -133,6 +134,7 @@ def test_a_strict_environment_refuses_a_missing_or_malformed_build(
         load_settings(
             environment=environment,
             tls_terminated=True,
+            tenant_id="acme-motor",
             oidc_issuer="https://idp.example/realms/gip",
             **extra,
         )
@@ -142,3 +144,28 @@ def test_a_strict_environment_refuses_a_missing_or_malformed_build(
 @pytest.mark.req("FR-18")
 def test_local_starts_with_the_local_build_marker() -> None:
     assert load_settings(environment=Environment.LOCAL).build == "local"
+
+
+@pytest.mark.req("FR-436")
+@pytest.mark.parametrize("environment", [Environment.DEV, Environment.UAT, Environment.PROD])
+@pytest.mark.parametrize("tenant_id", [None, "", "local"], ids=["unset", "empty", "local"])
+def test_a_strict_environment_refuses_a_missing_or_default_tenant_id(
+    environment: Environment, tenant_id: str | None
+) -> None:
+    """A check whose configured side is the local default proves nothing: `local` supplied
+    in prod would pass as "configured" while carrying no tenant (RL-1253, DP-S1-3)."""
+    extra = {"tenant_id": tenant_id} if tenant_id is not None else {}
+    with pytest.raises(ConfigInvalidError, match="GIP_TENANT_ID") as exc:
+        load_settings(
+            environment=environment,
+            tls_terminated=True,
+            build=_SHA,
+            oidc_issuer="https://idp.example/realms/gip",
+            **extra,
+        )
+    assert exc.value.code == "SETTING_INVALID"
+
+
+@pytest.mark.req("FR-436")
+def test_local_starts_with_the_local_tenant_id() -> None:
+    assert load_settings(environment=Environment.LOCAL).tenant_id == "local"

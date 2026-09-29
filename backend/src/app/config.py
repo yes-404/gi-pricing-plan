@@ -106,6 +106,11 @@ class Settings(BaseSettings):
     # one build. `local` is the development marker; `require_startable` refuses it (and any
     # value that is not a full SHA) in dev, uat and prod (RL-1253, DP-S1-1).
     build: str = "local"
+    # FR-436 / ADR-710: the one tenant this deployment serves. The database, the blob bucket
+    # and the broker each carry a marker that must equal it, or the process refuses to
+    # start. `local` is the development default; `require_startable` refuses it (and an
+    # empty value) in dev, uat and prod (RL-1253, DP-S1-3).
+    tenant_id: str = "local"
 
     # Postgres holds all metadata, artifacts, the audit log and job records (FR-416).
     #
@@ -225,6 +230,12 @@ class Settings(BaseSettings):
                 "40-character lowercase hex commit SHA of the image (FR-18). Any other "
                 "value, `local` included, would record the same platform version for "
                 "different builds."
+            )
+        if self.environment is not Environment.LOCAL and self.tenant_id in {"", "local"}:
+            raise ConfigInvalidError(
+                f"environment={self.environment.value} requires GIP_TENANT_ID to name the "
+                "tenant this deployment serves (FR-436). Empty, or the local default "
+                "`local`, would bind the deployment's stores to no tenant at all."
             )
 
     @property
