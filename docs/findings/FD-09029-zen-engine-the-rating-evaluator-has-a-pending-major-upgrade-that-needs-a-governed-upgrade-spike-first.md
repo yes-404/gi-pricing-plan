@@ -48,7 +48,9 @@ Nothing outside `pricing_core/rating/` imports it. Test files under `packages/pr
 
 **The ignore rule as written.** The branch adds `update-types: ["version-update:semver-major"]` for `zen-engine` (`.github/dependabot.yml`, three added lines), so it ignores every major bump, not only 2.x. Minor and patch updates are still proposed. Because the pin is exact, what Dependabot proposes next from `0.53.0` (for example a 0.54 or 0.55 minor) is **unverified**; how Dependabot classifies a `0.x` minor step is not something I checked.
 
-*(Dated note, 2026-09-29, the lead's decision, relayed to this record: the rule stays `semver-major` for **all** majors, which departs from the maintainer's entry's wording "an ignore rule for zen-engine's major version 2". The reason given: from an exact `0.53.0` pin a 1.x release is as much a major bump as 2.x, so ignoring only 2 would let 1.x through ungoverned. The lead names the departure in the ACK request.)*
+*(Dated note, 2026-09-29, the lead's decision, relayed to this record: the rule stays `semver-major` for **all** majors, which departs from the maintainer's entry's wording "an ignore rule for zen-engine's major version 2". The reason given: ~~from an exact `0.53.0` pin a 1.x release is as much a major bump as 2.x, so ignoring only 2 would let 1.x through ungoverned~~ (superseded below). The lead names the departure in the ACK request.)*
+
+*(Dated amendment, 2026-09-29, the lead's correction, relayed to this record, of the note above: **the struck reason rests on a case that does not exist.** PyPI lists no stable 1.x release of `zen-engine`, only the betas `1.0.0b9`, `1.0.0b11`, `1.0.0b12` and `1.0.0b13`, none yanked, and the latest is `2.1.0` (`https://pypi.org/pypi/zen-engine/json`, read 2026-09-29 by this auditor after the correction). The rule, `semver-major` for all majors, stands on a different reason: any future major, for example 3.0, needs the same governed spike, and a rule that ignored only major 2 would let 3.0 through ungoverned. Everything else in the note above is unchanged.)*
 
 ## Disposition
 
