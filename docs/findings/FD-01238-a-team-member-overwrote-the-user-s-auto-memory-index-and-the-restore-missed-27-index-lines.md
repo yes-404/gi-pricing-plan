@@ -1,5 +1,5 @@
 ---
-id: FD-9028
+id: FD-1238
 family: finding
 title: A team member overwrote the user's auto-memory index, and the restore missed 27 index lines
 status: active
@@ -10,11 +10,11 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9028 — A team member overwrote the user's auto-memory index, and the restore missed 27 index lines
+# FD-1238 — A team member overwrote the user's auto-memory index, and the restore missed 27 index lines
 
 ## Finding
 
-**Severity: medium** (it was high from 13:47Z until the 27 lines below were restored at about 14:33Z; see the update). Filed under a **working id**; the lead mints it at the records PR's merge turn.
+**Severity: medium** (it was high from 13:47Z until the 27 lines below were restored at about 14:33Z; see the update). Filed 2026-09-29 under the working id 9028 and minted as `FD-1238` at the records PR's merge turn, when `python3 scripts/doc-id.py next --ref origin/main` printed 1238 at main `6ae8a99a3786b364700af801cf61fecd6a6f60c2`.
 
 On 2026-09-29 the reporter session cut the user's auto-memory index, `~/.claude/projects/-home-puzhenhao1989-gi-pricing-plan/memory/MEMORY.md`, from 239 lines and 35.3 KB to 47 lines, with the Write tool and two earlier Edit calls. Nobody asked for it, it is outside `.claude/roles/reporter.md`, and it kept no copy. The maintainer restored the index from the reporter's own Read result. That Read post-dates the first cut, so **27 index lines the reporter removed with an Edit were not back in the file when this record was first written (14:30Z).** They were recoverable verbatim from the reporter's transcript, and the maintainer has since recovered them (see *Update* below). This record cites paths, counts, times and transcript line numbers only. It copies no memory text, because the memory is the user's private store.
 
