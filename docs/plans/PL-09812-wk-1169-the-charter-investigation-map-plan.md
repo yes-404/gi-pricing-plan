@@ -152,18 +152,18 @@ Read at `19c395ac` with the item 6 predicate.
 | Row | Subject (short) | Where it lands | Slice |
 |---|---|---|---|
 | F28, residuals P5, P7 and P1b only | P5: no document owns the stand-down procedure (`FD-894:648`); P7: the writer's half, *"do not move a branch someone is reading"* (`:650`); P1b: its working-note half (`:644`). `CR-1167` asks this Work to verify P7 and P1b first | a charter or skill, per Slice 1 | 1 (verify), 2 (write) |
-| F31 | `watcher.md:26-28` claims a roster derivation; `:32` marks it UNIMPLEMENTED | `watcher.md`, or code (DP-5) | 2, or 3 under DP-5 (a) |
-| F73 | `nudge.py`'s three-signal conjunction cannot tell a long wait from a dead lead | `.claude/skills/reporter-cycle/scripts/nudge.py` (DP-5) | 3 under DP-5 (a); otherwise the lead's dated acceptance in Slice 2 |
+| F31 | `watcher.md:26-28` claims a roster derivation; `:32` marks it UNIMPLEMENTED | `watcher.md`: the live-roster claim struck (DP-5 (b)) | 2 |
+| F73 | `nudge.py`'s three-signal conjunction cannot tell a long wait from a dead lead | the roster claim struck (DP-5 (b)); the limit accepted by the lead's dated line | 2 |
 | F74 | `reporter.md`'s "Mechanism: Lead freshness nudge" (`:104-107`) still describes one signal | `reporter.md` | 2 |
 | F75 | The end-turn rule is in one charter of seven (`executor.md:69`) | the other five spawned charters | 2 |
 | F97 | The `lead.md` clause landed (W37-8); the row's broken-input test is unmet | a test, or the lead's acceptance (Slice 3's leaf plan) | 3 |
 | FD-1151 | `watcher.md:64-67`'s "Re-derives, does not compare" names no input | `watcher.md` | 2 |
 | FD-1153 | `auditor.md:46` names an essay path the `FD-` template contradicts; `docs/findings/README.md` says the same | `auditor.md`, `docs/findings/README.md` | 2 |
-| FD-1156 | The `RL-` family has no creating skill | `.claude/skills/README.md` or a new skill (DP-7) | 2 |
-| FD-1157 | 70 files fail check 30: 43 skill manifests, 27 docs files | headers; the 18 non-vendored manifests per DP-8 | 4 |
+| FD-1156 | The `RL-` family has no creating skill | a `Creates` row in `.claude/skills/README.md` naming `decision-maker.md` (DP-7 (b)) | 2 |
+| FD-1157 | 70 files fail check 30: 43 skill manifests, 27 docs files | headers; the 18 non-vendored manifests here (DP-8 (b)); the 25 vendored disclosed until F93 | 4 |
 | FD-1161 | Nothing checks a plan's Roles table against §1.6 | a check | 1 (reading), 3 (the check) |
 | FD-1162 | The reporter's cycle heading time is composed before the write | `reporter.md` or the `reporter-cycle` skill | 2 |
-| FD-1191 | A stopped agent's work is stranded; recovered only by manual salvage | a dispatch convention (RFC-928 option D, `RFC-928:218-222`), per DP-6 | 2 |
+| FD-1191 | A stopped agent's work is stranded; recovered only by manual salvage | RFC-928 option D only (`RFC-928:218-222`), per DP-6 (a): `lead.md` and the dispatching skill's local rule, at the location DP-6 fixes | 2 |
 | FD-1192 | `CR-926` Proposal 3.5 (a delegated evidence request names the direct command; the dispatcher runs it) was accepted and never landed | `lead.md` or `dispatching-parallel-agents`' local rule | 2 |
 
 **Rows near this Work that are not here, and why.**
@@ -184,8 +184,8 @@ Read at `19c395ac` with the item 6 predicate.
 | b | Charters cite §1.6 | `grep -c '1\.6'` per charter: auditor 3, decision-maker 7, executor 6, lead 3, planner 3, reporter 1, watcher 1 | citations exist; whether each grant matches §1.6 is Slice 1's reading |
 | c | Directories declare their owners | no `docs/*/README.md` carries `Permitted owners:` (Acceptance item 5); check 35's reader exists (`_PERMITTED_OWNERS_RE`, `scripts/audit-docs.py:2433`) | **does not reproduce** → Slice 2 |
 | d | The owed-list generator finds this Work's rows | `python3 scripts/register-owed.py WK-1169` prints the rows whose cells name `WK-1169` (FD-1191 and FD-1192), not the twelve that name the Work by phrase | partial → Slice 1's register pass; the generator's defect is FD-1165, WK-1170's |
-| e | The Work is docs-only | `CR-1212:289` labels WK-1170 and WK-1169 *"(docs-only)"*. Acceptance items 3 and 4 need a check and a change to `doc-index.py`; F73 names `nudge.py` | **does not reproduce for Slice 3** → DP-1 |
-| f | The skill-manifest headers are one set | check 30's skill-manifest failures, `python3 scripts/audit-docs.py 2>&1 \| grep '^  - check 30' \| grep -oE '\.claude/skills/[^/]+' \| sort -u`, print 43; 25 are in `_docid._VENDORED_SKILLS`, 18 are not, and the 18 are F92's residual | overlap with WK-1170 → DP-8 |
+| e | The Work is docs-only | `CR-1212:289` labels WK-1170 and WK-1169 *"(docs-only)"*. Acceptance items 3 and 4 need a check and a change to `doc-index.py`; F73 names `nudge.py` | **does not reproduce for Slice 3** → DP-1, (a) accepted |
+| f | The skill-manifest headers are one set | check 30's skill-manifest failures, `python3 scripts/audit-docs.py 2>&1 \| grep '^  - check 30' \| grep -oE '\.claude/skills/[^/]+' \| sort -u`, print 43; 25 are in `_docid._VENDORED_SKILLS`, 18 are not, and the 18 are F92's residual | overlap with WK-1170 → DP-8, (b) accepted: stamped here |
 
 ---
 
@@ -196,15 +196,15 @@ The planner rules none of them. The cells stay empty until the resolver's record
 
 | # | Question | Options | Recommendation (the planner's input) | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-1 | `CR-1212` Proposal 2 labels this Work *"docs-only"*. Slice 3 is code. Which scope does the maintainer accept? | (a) The Work takes Slice 3, holding one gate slot; (b) docs-only: the check and the matrix derivation go to WK-1178 with the lead's dated line; (c) as (b), and the binding is declared without a check | **(a).** FD-1161's title is *"nothing checks a Roles table against `document-ids.md` §1.6"*. A binding with no check is the state the Work exists to end. It is one small code slice | scope | yes — Slice 3 | *(the maintainer, dated line; the same line as `PL-9811`'s DP-1)* |
+| DP-1 | `CR-1212` Proposal 2 labels this Work *"docs-only"*. Slice 3 is code. Which scope does the maintainer accept? | (a) The Work takes Slice 3, holding one gate slot; (b) docs-only: the check and the matrix derivation go to WK-1178 with the lead's dated line; (c) as (b), and the binding is declared without a check | **(a).** FD-1161's title is *"nothing checks a Roles table against `document-ids.md` §1.6"*. A binding with no check is the state the Work exists to end. It is one small code slice | scope | yes — Slice 3 | **(a) accepted:** the maintainer, by delegation, 2026-09-29, entry 'DECISIONS: WK-1169 map plan #931' (the lead's channel file, 23:05:29 BST). `CR-1212`'s "docs-only" label is corrected by the same dated note as `PL-9811`'s DP-1; it is not this plan's to write |
 | DP-2 | What form does "§1.6 made binding in each charter" take? | (a) Each charter restates its §1.6 rows, and a check compares the two; (b) each charter points at §1.6 (*"the families §1.6 gives this role"*) with no restatement, and the generated matrix is the per-role view; (c) (b), plus a check that no charter grants an action §1.6 does not give that role, and the matrix derived from §1.6 itself | **(c).** (a) writes seven copies of one table (RFC-756). (b) binds by reference, but nothing catches a charter or a plan's Roles table granting more (FD-1161's case). (c) keeps one source and checks the direction that has failed | decision point | yes — Slices 2 and 3 | *(decision-maker, by `RL-`)* |
 | DP-3 | What does each directory's `Permitted owners:` line say? | (a) The roles in §1.6's "Owner — creates & amends" cell for the family that directory holds, verbatim; (b) (a) plus every role in the "Accepts / decides" cell; (c) generated into each README by `doc-index.py` from §1.6 | **(a).** Check 35 tests `owner:`, which is the creator (`document-ids.md` §1.5). Acceptors never write `owner:`. (c) makes ten READMEs generated files, which §1.2's Reference row does not allow for a README | decision point | yes — Slice 2 | *(decision-maker, by `RL-`)* |
-| DP-4 | Charter amendments are the maintainer's. What line authorises Slice 2's? | (a) Item 11's MERGE-ACK, naming each charter the PR amends; (b) a separate dated line per charter, before the PR opens; (c) an `RL-` authored by the maintainer | **(a).** One line, on the exact head, naming each file. (b) authorises text not yet written. (c) adds a record for what a MERGE-ACK already records | scope | yes — Slice 2 | *(the maintainer, dated line)* |
-| DP-5 | F31 and F73 need a live roster, which does not exist (`watcher.md:32`). Build it, or stop claiming it? | (a) Build the roster derivation in the watcher's tooling, and add it to `nudge.py` as the fourth signal; (b) strike the roster claim from `watcher.md` and `reporter.md`, and accept F73's limit with a dated line; (c) (b) now, and (a) as a WK-1178 item | **(b).** The runtime state writer the roster would sit on is itself reopened by FD-9640 (#909, owner WK-1178). A fourth signal built on it inherits that defect. (b) makes the charters true now | scope | yes — Slice 2's F31 and F74 limbs; Slice 3's F73 limb | *(the maintainer, dated line)* |
-| DP-6 | FD-1191's remedy is RFC-928 option D (durable output for delegated work). RFC-928 is `draft`. May a charter rule adopt one option of a draft RFC? | (a) The maintainer accepts RFC-928 option D in part, by a dated line; Slice 2 writes it into `lead.md` and the dispatching skill, with an agreed location; (b) wait for RFC-928 as a whole; FD-1191 stays deferred; (c) accept FD-1191 as disclosed | **(a).** Five salvages in one day (the row's own count) is a recurring cost. Option D is the only one the RFC says touches direction B. The location is the one choice left, and it is small | scope | yes — Slice 2's FD-1191 limb only | *(the maintainer, dated line on RFC-928)* |
-| DP-7 | FD-1156: an `RL-` creating skill, or a declared `Creates` row naming the charter? The row says *"Fix is the owner's choice"* | (a) A new `.claude/skills/ruling-write` skill; (b) a `Creates` row in `.claude/skills/README.md` naming `.claude/roles/decision-maker.md` as the `RL-` creating instrument | **(b).** RFC-937 §7 (j)'s Ruling row was already discharged in substance with the charter as the instrument (option (b)). A skill that restates the charter is a second copy | register disposition (the row's owner, the lead) | yes — Slice 2's FD-1156 limb only | *(the lead's dated disposition in the register)* |
-| DP-8 | Which Work stamps F92's 18 non-vendored skill manifests, which are inside FD-1157's 43? And the 25 vendored ones? | (a) WK-1170 stamps the 18; (b) this Work's Slice 4 stamps the 18, and F92's residual closes on that PR; the 25 vendored stay disclosed until F93's dated RFC-937 amendment (owner the maintainer) rules their header; (c) whichever slice runs first | **(b).** One slice edits the 18 files once. The vendored manifests cannot be stamped under `CLAUDE.md` §12 until F93 says how | scope | yes — Slice 4 | *(the maintainer, dated line; the same line as `PL-9811`'s DP-7)* |
-| DP-9 | The order against WK-1170 | (a) Slice 1 starts after WK-1170's Slice 1 record exists; Slices 2–4 follow this Work's own order; (b) independent | **(a)**, re-derived as a real dependency: Slice 1's "verifies and closes" and "supersedes / retires" columns are the transitions WK-1170's Slice 1 names. #928's decision, item 5, states the same order. Slice 4 depends on nothing in WK-1170 except DP-8 | sequencing | no — applied at dispatch; default (a) | the activation commit cites the parallel-start ruling (#928) by its minted id |
+| DP-4 | Charter amendments are the maintainer's. What line authorises Slice 2's? | (a) Item 11's MERGE-ACK, naming each charter the PR amends; (b) a separate dated line per charter, before the PR opens; (c) an `RL-` authored by the maintainer | **(a).** One line, on the exact head, naming each file. (b) authorises text not yet written. (c) adds a record for what a MERGE-ACK already records | scope | yes — Slice 2 | **(a) accepted:** the maintainer, by delegation, 2026-09-29, entry 'DECISIONS: WK-1169 map plan #931' (the lead's channel file, 23:05:29 BST). A charter edit is authorised only by a MERGE-ACK naming each charter file the PR amends; an ACK that does not name one does not authorise that edit, and the lead re-requests it |
+| DP-5 | F31 and F73 need a live roster, which does not exist (`watcher.md:32`). Build it, or stop claiming it? | (a) Build the roster derivation in the watcher's tooling, and add it to `nudge.py` as the fourth signal; (b) strike the roster claim from `watcher.md` and `reporter.md`, and accept F73's limit with a dated line; (c) (b) now, and (a) as a WK-1178 item | **(b).** The runtime state writer the roster would sit on is itself reopened by FD-9640 (#909, owner WK-1178). A fourth signal built on it inherits that defect. (b) makes the charters true now | scope | yes — Slice 2's F31 and F74 limbs; Slice 3's F73 limb | **(b) accepted:** the maintainer, by delegation, 2026-09-29, entry 'DECISIONS: WK-1169 map plan #931' (the lead's channel file, 23:05:29 BST). Strike the live-roster claim for F31 and F73; the roster is not built. #909 (FD-9640) owns the runtime-state writer |
+| DP-6 | FD-1191's remedy is RFC-928 option D (durable output for delegated work). RFC-928 is `draft`. May a charter rule adopt one option of a draft RFC? | (a) The maintainer accepts RFC-928 option D in part, by a dated line; Slice 2 writes it into `lead.md` and the dispatching skill, with an agreed location; (b) wait for RFC-928 as a whole; FD-1191 stays deferred; (c) accept FD-1191 as disclosed | **(a).** Five salvages in one day (the row's own count) is a recurring cost. Option D is the only one the RFC says touches direction B. The location is the one choice left, and it is small | scope | yes — Slice 2's FD-1191 limb only | **(a), in part, accepted:** the maintainer, by delegation, 2026-09-29, entry 'DECISIONS: WK-1169 map plan #931' (the lead's channel file, 23:05:29 BST). **Option D only**: a delegated result is written to a durable file, or committed on the delegate's branch, never returned only through the report channel. Options A, B, C and E stay open, and RFC-928 stays `draft`. **Location (binding):** the delegate's branch when it has one; otherwise `~/gi-pricing-plan.local/delegated/<dispatcher>/<yyyy-mm-dd>-<task>.md`; never a job dir or `/tmp` |
+| DP-7 | FD-1156: an `RL-` creating skill, or a declared `Creates` row naming the charter? The row says *"Fix is the owner's choice"* | (a) A new `.claude/skills/ruling-write` skill; (b) a `Creates` row in `.claude/skills/README.md` naming `.claude/roles/decision-maker.md` as the `RL-` creating instrument | **(b).** RFC-937 §7 (j)'s Ruling row was already discharged in substance with the charter as the instrument (option (b)). A skill that restates the charter is a second copy | register disposition (the row's owner, the lead) | yes — Slice 2's FD-1156 limb only | **(b), the lead's** (the 23:05:29 BST entry: *"DP-7 (b) and DP-9 (a) are yours: noted"*; the lead's message to the planner, 2026-09-29). The register disposition is written at Slice 1's register pass |
+| DP-8 | Which Work stamps F92's 18 non-vendored skill manifests, which are inside FD-1157's 43? And the 25 vendored ones? | (a) WK-1170 stamps the 18; (b) this Work's Slice 4 stamps the 18, and F92's residual closes on that PR; the 25 vendored stay disclosed until F93's dated RFC-937 amendment (owner the maintainer) rules their header; (c) whichever slice runs first | **(b).** One slice edits the 18 files once. The vendored manifests cannot be stamped under `CLAUDE.md` §12 until F93 says how | scope | yes — Slice 4 | **(b) accepted:** the maintainer, by delegation, 2026-09-29, entry 'DECISIONS: WK-1169 map plan #931' (the lead's channel file, 23:05:29 BST), the same line as WK-1170's map plan's DP-7 (#930, working id 9811). Slice 4 stamps the 18 once and F92's residual closes on that PR. The 25 vendored manifests stay disclosed until F93, which is the maintainer's own RFC-937 amendment and is not ruled by this line. Slice 4 is serialised against WK-1170's Slice 2 |
+| DP-9 | The order against WK-1170 | (a) Slice 1 starts after WK-1170's Slice 1 record exists; Slices 2–4 follow this Work's own order; (b) independent | **(a)**, re-derived as a real dependency: Slice 1's "verifies and closes" and "supersedes / retires" columns are the transitions WK-1170's Slice 1 names. #928's decision, item 5, states the same order. Slice 4 depends on nothing in WK-1170 except DP-8 | sequencing | no — applied at dispatch; default (a) | **(a), the lead's** (the 23:05:29 BST entry, *"noted"*); the activation commit cites the parallel-start ruling (#928) by its minted id |
 
 **Slice design, decided here and not a DP.** The map (Slice 1) comes first because every charter
 edit needs to know what the charter is missing. The charters are amended once, in one slice
@@ -225,12 +225,11 @@ WK-1170 Slice 1 ─→ Slice 1  the ownership map (docs) ─→ Slice 2  the cha
 ```
 
 - **Slice 1 needs WK-1170's Slice 1 record** (DP-9). It is blocked on nothing else.
-- **Slice 2 needs Slice 1**, and is blocked on DP-2, DP-3 and DP-4 (and DP-5, DP-6, DP-7 for
-  their limbs).
-- **Slice 3 needs Slice 2**, and is blocked on DP-1 and DP-2.
-- **Slice 4 needs DP-8.** It must not run beside WK-1170's Slice 2 (shared skill manifests).
+- **Slice 2 needs Slice 1**, and is blocked on DP-2 and DP-3.
+- **Slice 3 needs Slice 2**, and is blocked on DP-2.
+- **Slice 4** (DP-8 resolved) is serialised against WK-1170's Slice 2 (shared skill manifests).
 - **Docs and code.** Slices 1, 2 and 4 are docs-only and hold no gate slot. Slice 3 holds one.
-- **Recommended order:** 1 → 2 → 3, with 4 in any gap after DP-8.
+- **Recommended order:** 1 → 2 → 3, with 4 in any gap that WK-1170's Slice 2 is not using.
 
 **Sizing, like for like with the P2 sizing table** (its rates: 0.5 / 0.75 / 1.5 days per slice;
 rulings acceptance 0 / 0.25 / 0.5, since this plan is now drafted; the close 0.25 / 0.5 / 1).
@@ -289,24 +288,26 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
   - **The binding**, in DP-2's form, for all seven charters. The reporter's and the watcher's
     charters keep their declared empty rows.
   - **The charter rows:** F74 and FD-1162 (`reporter.md`, or the `reporter-cycle` skill for
-    FD-1162); F31 and FD-1151 (`watcher.md`, F31 per DP-5); F75 (the five spawned charters
+    FD-1162); F31 and FD-1151 (`watcher.md`; F31's live-roster claim struck, DP-5 (b)); F75 (the five spawned charters
     without the end-turn rule); FD-1153 (`auditor.md`, and `docs/findings/README.md`'s naming
-    paragraph); FD-1192 and FD-1191 (`lead.md` and the dispatching skill, FD-1191 per DP-6); F28's
+    paragraph); FD-1192 and FD-1191 (`lead.md` and `dispatching-parallel-agents`' local rule; FD-1191 is RFC-928 option D at DP-6's location, and RFC-928 gains the dated note *"option D adopted 2026-09-29 via PL-9812 DP-6; A, B, C and E remain open"*); F28's
     P5, P7 and P1b where Slice 1 placed them; `CR-1164`'s `executor.md` rider.
-  - **FD-1156** per DP-7, in `.claude/skills/README.md` (or the new skill).
+  - **FD-1156** per DP-7 (b): a `Creates` row in `.claude/skills/README.md` naming
+    `.claude/roles/decision-maker.md`.
   - **The directory owners**: the `Permitted owners:` line in each of the ten `docs/*/README.md`
     files, per DP-3.
-  - **F73**, if DP-5 rules (b): the lead's dated acceptance in the register.
+  - **F73** (DP-5 (b)): the roster claim struck from `reporter.md`, and the lead's dated
+    acceptance of the limit in the register.
   - Any §1.6 defect Slice 1 found is not fixed here. It goes to the maintainer as an `RFC-` +
     `RL-` proposal.
-- **Depends on:** Slice 1. Blocked on DP-2, DP-3 and DP-4; its F31, FD-1191 and FD-1156 limbs
-  also on DP-5, DP-6 and DP-7.
+- **Depends on:** Slice 1. Blocked on DP-2 and DP-3; DP-4, DP-5, DP-6 and DP-7 are resolved.
 - **Gate outline.**
   - For each audit-record row that named a gap, the row is re-read at the slice's tree and now
     cites a charter line.
   - Check 35 is run at the merge tree, and a deliberately wrong `owner:` on a scratch copy of a
     real record in one directory is shown red by the second clause (Acceptance item 5).
-  - The MERGE-ACK names each charter amended (DP-4).
+  - The MERGE-ACK names each charter file the PR amends (DP-4 (a)). An ACK that omits one does
+    not authorise that edit; the lead re-requests it.
   - `audit-docs.py`, `doc-index.py --check` and `doc-id.py check` exit 0. Item 11.
 
 ### Task 3 — Slice 3: the checks (code)
@@ -318,8 +319,8 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
     (Acceptance item 4).
   - F97: the broken-input test the row names, if the `lead.md` clause is backed by a script;
     otherwise the leaf plan puts the residual to the lead as a dated acceptance.
-  - F73's fourth signal in `nudge.py`, only if DP-5 rules (a).
-- **Depends on:** Slice 2. Blocked on DP-1 and DP-2.
+  - No `nudge.py` change: DP-5 (b) struck the roster claim.
+- **Depends on:** Slice 2. Blocked on DP-2; DP-1 is resolved.
 - **Gate outline.**
   - Each check red on a deliberately broken charter or Roles-table fixture built in `tmp_path`,
     each failure named by its cause, and quiet on the real tree.
@@ -331,12 +332,13 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
 - **Scope:** FD-1157's population re-derived at the slice's tree with the premise (f) command and
   `grep -c '^  - check 30'`:
   - headers on the 27 docs files;
-  - headers on the 18 non-vendored skill manifests, if DP-8 rules (b), closing F92's residual;
-  - the 25 vendored manifests left disclosed until F93's line, and named as such.
+  - headers on the 18 non-vendored skill manifests (DP-8 (b)), closing F92's residual on this PR;
+  - the 25 vendored manifests left disclosed until F93, the maintainer's own RFC-937 amendment,
+    and named as such.
 
   If check 30 has no template a skill manifest can match, the leaf plan says so before its first
   step, and the slice becomes code (the template registry), taking a gate slot.
-- **Depends on:** DP-8. Never beside WK-1170's Slice 2.
+- **Depends on:** nothing; DP-8 is resolved. Serialised against WK-1170's Slice 2.
 - **Gate outline.**
   - `grep -c '^  - check 30'` at the merge tree, against its reading at the slice's base, with
     the difference accounted for file by file.
@@ -365,8 +367,12 @@ activation commit:
   id with `python3 scripts/doc-id.py next --ref origin/main` at the merge turn. Until then
   `doc-id.py check` reds this file under check 31, which is expected. `PL-9811` (WK-1170's map
   plan, draft PR #930) is cited by its working id for the same reason.
-- **Open:** DP-1, DP-4, DP-5, DP-6 and DP-8 (the maintainer's), DP-2 and DP-3 (the
-  decision-maker's), DP-7 (the lead's). DP-9 is non-blocking, with its default.
+- **Resolved 2026-09-29:** DP-1 (a), DP-4 (a), DP-5 (b), DP-6 (a) in part (option D only) and
+  DP-8 (b), the maintainer's by delegation at the 23:05:29 BST entry; DP-7 (b) and DP-9 (a), the
+  lead's.
+- **Open:** DP-2 and DP-3 (the decision-maker's, awaiting its ruling).
+- **Revised 2026-09-29**, while `draft`, to record those resolutions at every site (Scope, the DP
+  table, Sequencing, Tasks, Status). `created:` stays 2026-09-29, the day the plan was drafted.
 
 ## Self-review
 
