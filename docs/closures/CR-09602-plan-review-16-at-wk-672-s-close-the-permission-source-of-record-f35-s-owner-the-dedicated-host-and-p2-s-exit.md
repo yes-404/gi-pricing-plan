@@ -57,6 +57,9 @@ first, then the five `phase-review` questions, then Output and Verdict.
     `p2-wk674-map`. It merged after this review's tree, as `6ae8a99a`.
     `git diff --stat 306e42b9 6ae8a99a -- docs/plans/PL-01237-*` prints nothing, so the file
     read is the file on main. It is `status: draft` there.
+  - The branch is rebased onto `6ae8a99a`, so that `PL-1237` resolves. The only commit
+    between `1c8762d9` and `6ae8a99a` is #843 itself, so the tree read is otherwise
+    unchanged.
   - The records PR branch `records-2026-09-29` is at `bc55a975`. It carries two things:
     - the finding "A team member overwrote the user's auto-memory index, and the restore
       missed 27 index lines". It has a working id, which its mint at that PR's merge
