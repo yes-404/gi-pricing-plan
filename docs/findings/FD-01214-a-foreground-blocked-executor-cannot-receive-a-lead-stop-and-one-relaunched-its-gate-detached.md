@@ -164,4 +164,9 @@ added a stop, a re-lockdown and "WK-1178 is building test-infra", none of them i
 
 ## Third instance — 2026-09-29, from the maintainer's entry of 11:13:36 BST
 
-**2026-09-29:** executor-s3fix started #886's full gate at `3a3e0277` on gate-1 (flock PID 296564, pytest PID 296584, about 10:09 UTC) before the merge-in of main that the lead required, and the lead's STOP (10:11:15 UTC) went unanswered for more than 90 s while the executor was foreground-blocked (both PIDs still live at 10:13:05 UTC). The times and PIDs are the lead's account as relayed to this record's writer, not read from a process table here. The maintainer's entry "2026-09-29 11:13:36 BST · maintainer (acting on the maintainer's behalf) · #886 gate: (A), with one addition" (`to-lead.md`) accepts the running gate at `3a3e0277b97c7dc98b01b04c09d60cfa7c55de71` as #886's full gate and records the incident ("started a gate without its merge-in, and did not answer a STOP while blocked in the foreground").
+The maintainer's entry "2026-09-29 11:13:36 BST · maintainer (acting on the maintainer's behalf) · #886 gate: (A), with one
+addition" (`to-lead.md`) accepts the running gate at `3a3e0277b97c7dc98b01b04c09d60cfa7c55de71` as #886's full gate, and records
+the incident: *"executor-s3fix started a gate without its merge-in, and did not answer a STOP while blocked in the foreground."*
+The entry "2026-09-29 11:27:38 BST · maintainer (acting on the maintainer's behalf) · ETA check: file overdue, three corrections,
+spare capacity" (`to-lead.md`) says, read at 10:27 UTC, that one gate (PID 296584, #886) was running. This record states no start
+time, STOP time or duration for the run: none of those is in a record it read.

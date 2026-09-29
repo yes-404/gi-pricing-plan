@@ -24,7 +24,7 @@ committer. The maintainer's entry (given on the maintainer's behalf) "2026-09-29
 S3; no merge without a deputy ACK entry" (`to-lead.md`) records that no MERGE-ACK entry naming the SHA exists, which breaks the
 standing rule that every merge needs one. This record read that entry; it did not search for an ACK itself.
 
-**The squash subject cannot be changed and is wrong.** It reads: *"docs(findings): FD-[9018] to FD-[9021] (working ids); close
+**The squash subject cannot be changed and is wrong.** It reads (`git show -s --format=%s bb2aa935`; **the square brackets are inserted here** so this record does not cite the two working ids as live ids under checks 31 and 32, and the real subject has none): *"docs(findings): FD-[9018] to FD-[9021] (working ids); close
 FD-1207 on #873; FD-1195 records FR-178 in two parts (#888)"*. Read against the change set
 (`git diff --stat 633c6f34 bb2aa935`, 13 files), it is wrong twice:
 
