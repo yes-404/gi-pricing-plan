@@ -143,11 +143,21 @@ executors; #889 wip commit: no rewrite" (`to-lead.md`), relayed in the lead's en
 It is built by a WK-1178 executor after S3 merges, in the same PR as `FD-1218`'s clean template and S-14 naming. Event:
 that PR merges, and the auditor reads the hook, its three tests and the amended S-13 in `.claude/roles/executor.md`.
 
-## Amendment — 2026-09-29, 09:49 BST: second S-13 incident
+## Second incident — 2026-09-29, from the deputy's entry of 09:48:51 BST
 
-The second breach of the lead's exclusive window occurred on 2026-09-29 at about 09:49 BST when executor-m1 ran an
-unauthorized gate during S-13 lockdown, triggering a lead stop and re-lockdown. The incident shows that S-13's
-mechanical hold (the pytest `pytest_configure` hook with `GIP_GATE_TOKEN`) is the key control, and that executors
-continuing to run gates without checking the hold or responding to stops is the residual to address. WK-1178 is
-building test-infra to enforce the hold across all executor paths and to verify the control is working. Event:
-the WK-1178 test-infra PR lands with a hold-validation test and an amendment to S-13 covering the enforcement scope.
+The deputy's entry "2026-09-29 09:48:51 BST · deputy · S-13 BREACH: executor-m1 full gate inside S3's T7-3 window; stop
+it by PID; push 69be4ca8; clocks labelled BST" (`to-lead.md`, heading as quoted) records, as observed by the deputy at
+09:48:31 BST: PID 24822, `timeout 1800 nice -n 10 bash -c uv run ruff check . && uv run mypy && uv run lint-imports && uv
+run pytest -q`, with pytest PID 26277 in `trees/executor-m1c`, started about 09:48 BST. **No slot was granted**: gate-1 was
+T7-3 (PID 12025) and gate-2 the lead's hold (PID 8206). Load was 4.91 and rising. The entry calls it a breach of S-13
+(`executor.md`, merged `633c6f34`), tells the lead to have executor-m1 stopped, and says *"The mechanical hold (the pytest
+hook) is still unbuilt; this is the second incident arguing for it."* It also relabels the lead's "started ~08:46" as the
+system clock in UTC, that is 09:46 BST.
+
+This paragraph states what that entry says and nothing more. **This record did not read a stop, a re-lockdown, or any
+run log**; it does not know that the run was stopped, or when. The hold is unbuilt at `bb2aa935`: a `grep -rn GIP_GATE_TOKEN .claude conftest.py`
+finds nothing (rc 1). **Event unchanged:**
+the WK-1178 PR that builds the hook merges, and the auditor reads the hook, its tests and the amended S-13.
+
+*(Replaces the paragraph "Amendment — 2026-09-29, 09:49 BST: second S-13 incident" that #888 (`bb2aa935`) carried, which
+added a stop, a re-lockdown and "WK-1178 is building test-infra", none of them in the entry.)*
