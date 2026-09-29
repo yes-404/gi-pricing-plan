@@ -2,7 +2,7 @@
 id: FD-1206
 family: finding
 title: Dataset ingestion reads any client-supplied blob digest
-status: active
+status: closed
 created: 2026-09-28
 owner: auditor
 tree: 4fb07b6cb17cacb2f6f578f264a36a455143c45f
@@ -88,3 +88,23 @@ code promotes a staging object (`FD-1210`). The decision is:
 
 No legitimate path is lost, because a first ingest from a client upload cannot work today: nothing
 creates its `BlobRow` (`FD-1210`).
+
+## Resolution
+
+**Resolved 2026-09-28 by #883, merge commit `d068fb00`** (`fix(security): dataset ingest reads only a blob the
+caller's workspace owns (WK-1178, #869) (#883)`, merged 2026-09-28 23:27:39 BST), per the deputy's DP-P1 (C) and
+DP-P1-2 rulings. Read at `d068fb00`:
+
+- `api/datasets.py:543` refuses the digest when `blob_readable_by` does not allow it, before a Job is submitted,
+  with `blob_not_found`'s uniform 404. The one rule is `platform/blobs.py:484` (`blob_readable_by`), and the blob
+  route calls it too (`api/blobs.py:126`), so there is no second copy.
+- The check is at the ingest route only. `backend/tests/test_ingest_enqueuers.py` pins that the route is the only
+  enqueuer of the ingest job kind under `backend/src`, and its docstring states the limit that an enqueue reusing an
+  already-allowed reference would not be caught. The worker's `_ingest` carries a comment at
+  `worker/data_handlers.py:122`–`:127` saying the check is absent by design.
+- `backend/tests/test_api_dataset_ingest_owner.py` covers the caller's own dataset blob and job-result blob (positive
+  controls) and three refusals, each the missing-blob 404. This record did not re-run them here; the audit of #883
+  ran 48 tests green and the refusals red with the route check removed.
+
+**Still owed:** the worker-side ownership check, which arrives with `FD-1210`'s owner record, and the upload
+completion step itself.
