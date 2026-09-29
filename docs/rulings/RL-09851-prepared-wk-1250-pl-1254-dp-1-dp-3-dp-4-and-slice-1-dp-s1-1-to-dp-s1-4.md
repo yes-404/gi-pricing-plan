@@ -106,6 +106,32 @@ Also, the FR-20 invariant clarification should cover all three exemptions (`rate
 `rating_algorithm` and `sub_graph`), not only the new one. That fixes an existing
 disagreement as well as preventing a new one.
 
+**Interaction with `ApprovalPolicy`, added 2026-09-30 at the lead's request.** Verified at
+`aa14e90d`.
+- **The model is closed.** `ApprovalPolicy` and `ApprovalPolicyEntry` are
+  `extra="forbid"` (`packages/model-schema/src/model_schema/approvals.py:111-128`).
+- **Three `06` §4.2 keys are not modelled.**
+  - `expedited` (`06:329`, FR-385 at `06:181`) and `escalation` (`06:314`) are absent.
+    `git grep -n expedited -- packages backend` finds nothing, so FR-385 is unbuilt.
+  - `separation_of_duties` is modelled only as the flat `submitter_may_approve` field
+    (`approvals.py:134-145`).
+- **The evidence floor.** `EVIDENCE_FLOOR`'s `rating_version` entry is `("structural_diff",
+  "regression_run", "dislocation_run")` (`approvals.py:101-108`).
+- **What each option touches.**
+  - **DP-1 (a)** would add a `sub_graph` entry to `DEFAULT_POLICY` and possibly to
+    `EVIDENCE_FLOOR`, both in `approvals.py`.
+  - **DP-1 (b)'s "sub-graph diffs" evidence** touches the same file, if it becomes its own
+    evidence key rather than part of `structural_diff`.
+  - **OQ-1234's prepared option (b)** (#935, working id 9901, at `aa38bd4f`) adds a
+    skip-permission field to the environment-qualified `deployment` entry of
+    `ApprovalPolicyEntry`.
+- **The consequence.** Whichever of these rulings lands, it changes a closed model that
+  already omits three keys that §4.2 publishes. The high pass should rule them against one
+  another, not separately.
+- **The provisional preference.** Under (b), fold sub-graph diffs into `structural_diff`
+  (FR-219 widened). That adds no new key to `approvals.py`, and leaves `ApprovalPolicy`'s
+  shape to OQ-1234 and FR-385.
+
 ## DP-3: how does a sub-graph connect at its mount point?
 
 | | Option | For | Against |
