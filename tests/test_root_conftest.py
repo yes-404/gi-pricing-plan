@@ -82,14 +82,16 @@ def conftest_module() -> types.ModuleType:
 
 
 @pytest.fixture(autouse=True)
-def _clear_gate_slot_announcement(monkeypatch: pytest.MonkeyPatch) -> None:
+def _clear_gate_slot_announcement(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """`GIP_GATE_SLOT` must not leak in from the real session running this suite (this
     session's own gate, if wrapped, would have it set) — every test below decides its own
     announcement state explicitly.
     """
     monkeypatch.delenv("GIP_GATE_SLOT", raising=False)
     monkeypatch.delenv("GIP_GATE_TOKEN", raising=False)
-    monkeypatch.delenv("GIP_GATE_HOLD_FILE", raising=False)
+    # Never the real `~/gi-pricing-plan.local/gate/HOLD`: a live hold must not fail this
+    # suite, and nothing here may create that file. Each hold test writes its own.
+    monkeypatch.setenv("GIP_GATE_HOLD_FILE", str(tmp_path / "no-hold"))
 
 
 # ---------------------------------------------------------------------------------------
@@ -338,6 +340,7 @@ def test_no_hold_file_changes_nothing(
 def test_the_default_hold_path_resolves_from_the_home_directory(
     conftest_module: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    monkeypatch.delenv("GIP_GATE_HOLD_FILE")
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     assert conftest_module._hold_file() == tmp_path / "gi-pricing-plan.local/gate/HOLD"
 
