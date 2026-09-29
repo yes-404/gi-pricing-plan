@@ -1,5 +1,5 @@
 ---
-id: RL-1239
+id: RL-9650
 family: ruling
 title: FR-218's "mounts" means inlined at bundle time; until FR-217's inlining is built, every MTA and cancellation quote is refused
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,9 +15,13 @@ corrects: ~
 relates: [CR-838]
 ---
 
-# RL-1239 — FR-218's "mounts" means inlined at bundle time; until FR-217's inlining is built, every MTA and cancellation quote is refused
+# RL-9650 — FR-218's "mounts" means inlined at bundle time; until FR-217's inlining is built, every MTA and cancellation quote is refused
 
 ## Verified first, at 2c2bbcdf3c91267f7d2b42159b1420e12ce1c634
+
+**RL-9650 is a working id**, minted at its merge turn with `doc-id.py next --ref origin/main`;
+the `03` FR-218 note's citation is renamed with it. *(2026-09-29: first minted as 1239, which
+PR #892 already holds as a plan id in the single global sequence.)*
 
 **The conflict (`CLAUDE.md` §0).** PR #907, *"fix(rating): FR-218 refuses every MTA and
 cancellation quote until sub-graph inlining exists (WK-1178)"*, makes the purpose guard refuse
