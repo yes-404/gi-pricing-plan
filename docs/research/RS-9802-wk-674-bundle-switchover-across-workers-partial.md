@@ -3,7 +3,7 @@ id: RS-9802
 family: research
 kind: spike
 title: WK-674 bundle switchover across workers — mixed and dropped responses and switch time (spike F1, partial, written from its salvage)
-status: draft
+status: active
 created: 2026-09-29
 owner: executor
 tree: df8e5811a151a99c7317690faf9278a6dc3400be
