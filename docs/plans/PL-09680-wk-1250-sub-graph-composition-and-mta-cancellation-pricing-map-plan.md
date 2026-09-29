@@ -122,8 +122,13 @@ slice. Every command runs in the executor's own worktree, over `origin/main...HE
     from the permission catalogue (`RL-1236`) or added to it by the slice's spec change;
   - a created version is immutable (`:26`, artifact immutability and versioning).
 
-  Not on that list, but binding the same way: every row is workspace-scoped (`00` FR-16),
-  on the tenancy WK-674's Slice 1 lands first (ADR-710, FR-436). Slice 1's gate proves each.
+  Not on that list, but binding the same way: every row carries a `workspace_id` (`00` FR-16),
+  and reads are scoped to the caller's workspace as RBAC scope (`06` FR-345: role assignments
+  are "workspace-wide, or limited to named Datasets, Model Families, or Rating Algorithms"),
+  which exists today. A workspace is not a tenant and not an isolation boundary (`00` FR-16),
+  so nothing here depends on WK-674's tenancy. Slice 1's gate proves each.
+  *(Corrected 2026-09-29 on the #918 re-check, N1: the first wording tied workspace scoping to
+  WK-674 Slice 1's tenant marker, which is a different thing.)*
 - **Do not build ahead of the phase** (`CLAUDE.md` §0). The DAG designer's sub-graph **view** is
   WK-675's (roadmap `:862`). This Work builds the backend a designer authors against, not the view.
 - **One slice at a time** (`delivery-process.md` §8), on the P2 lane **after WK-674 and before
@@ -266,7 +271,7 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
     each version immutable once created, and the resolver for `sub_graph:slug@version`.
   - Validation at create time: the fragment validates as JDM, its ports are declared per DP-3,
     and it mounts nothing per DP-4.
-- **Depends on:** nothing in WK-1250, and on WK-674's Slice 1 tenancy for workspace scoping. It is blocked on DP-1, DP-3 and DP-4.
+- **Depends on:** nothing in WK-1250. It is blocked on DP-1, DP-3 and DP-4. *(The WK-674 tenancy dependency is dropped, 2026-09-29, N1: workspace scoping is RBAC scope, not tenancy.)*
 - **Gate outline.**
   - Each refusal is tested by its cause: an invalid fragment; an undeclared port; an edit to an
     existing version.
@@ -275,7 +280,8 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
   - A 403 test per route: a principal without the route's permission is refused (FR-343).
   - An audit-event test: a create or version write whose transaction commits with no Audit
     Event is shown red on deliberately broken input (FR-368).
-  - A workspace-scoping test: a sub-graph in one workspace is not readable from another.
+  - An RBAC-scope test (`06` FR-345): a principal whose role assignment covers another
+    workspace only cannot read or write a sub-graph in this one.
   - `generate-contracts.py --check` passes.
   - The full gate. Item 11.
 
