@@ -171,7 +171,7 @@ review of that commit is where it is read.
 
 First filed 2026-09-28 as working id RL-9202; `created` re-dated at the reframe so the id sequence stays non-decreasing (check 31).
 
-**This is the ruling, by the decision-maker, 2026-09-29.** The decision-maker adopted the maintainer-session's recommendations (the deputy's entry, under Input, and the maintainer's 14:18:24 and 14:19:05 answers) **unchanged**, on 2026-09-29. The table's notes (DP-1 reaching FR-208's clause on auditor-row11's re-check, the sympy pin filed as `OQ-9660` as the 14:19:05 answer directs) apply those recommendations and change no decision.
+The decision-maker adopted the maintainer session's recommendations unchanged, on 2026-09-29; each point below was re-verified before adoption. The recommendations are the deputy's entry, under Input, and the maintainer's 14:18:24 and 14:19:05 answers. The table's notes (DP-1 reaching FR-208's clause on auditor-row11's re-check, the sympy pin filed as `OQ-9660` as the 14:19:05 answer directs) apply those recommendations and change no decision.
 The deputy's entry of 2026-09-28 14:06:12 BST, above, is input. The maintainer's entry `2026-09-29 15:26:00 BST · maintainer (acting on the maintainer's behalf) · STRUCTURE: routing per document-ids §1.6 and the charters; today's technical answers re-homed` (§2) makes the maintainer's
 answers on this record recommendations, and gives the technical points to this role. The
 answers are `2026-09-29 14:18:24 BST · maintainer (acting on the maintainer's behalf) · Q847-1/2/3 (row 11, WK-690)` and `2026-09-29 14:19:05 BST · maintainer (acting on the maintainer's behalf) · sympy pin: absent, so an OQ in #847's rebase`. This record's text stays as of `ed123cb0`, with the note below
