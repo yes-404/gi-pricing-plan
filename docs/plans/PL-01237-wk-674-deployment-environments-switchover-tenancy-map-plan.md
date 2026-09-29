@@ -1,10 +1,10 @@
 ---
-id: PL-9102
+id: PL-1237
 family: plan
 kind: map
 title: WK-674 — Deployment, environments, atomic switchover, rollback, shadow and tenancy: map plan
 status: draft                   # draft → active → superseded | retired (§1.2a)
-created: 2026-09-28
+created: 2026-09-29
 owner: planner
 tree: 9cd179cbcc2ab55c6bcf44d956c73c74a24d4144
 phase: P2
@@ -928,6 +928,12 @@ the maintainer's behalf) accepts this plan *(amended 2026-09-29)*, the activatio
 
 - **Acceptance line:** _pending — the maintainer's dated line, or one given on the
   maintainer's behalf_ *(amended 2026-09-29; it was "the deputy's dated line by delegation")*
+- **2026-09-29: working id 9102, minted 1237** at #843's turn in the merge queue, from
+  `doc-id.py next --ref origin/main` at `9cd179cb`. `created:` moved from 2026-09-28 to the
+  mint date, because `audit-docs.py` check 31 requires `created` to be non-decreasing with
+  the number. The only surviving mention of the working id is inside `RL-1232`'s fenced,
+  verbatim quotation of the deputy's 2026-09-28 14:08:59 entry, which is a dated record and
+  is not rewritten.
 
 ## Self-review
 
