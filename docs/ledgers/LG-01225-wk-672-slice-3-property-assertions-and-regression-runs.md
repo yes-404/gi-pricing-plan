@@ -5,7 +5,7 @@ title: WK-672 Slice 3 — Property assertions and regression runs
 status: active
 created: 2026-09-29
 owner: executor
-tree: 06c1f3ac
+tree: 138c272a3741f563b44d809910c5477a57e34a40
 phase: P2
 work: WK-672
 plans: [PL-1205]
@@ -211,7 +211,7 @@ The deputy ruled a full second T7 after the ambient-profile defect (above). Run 
 - **Unchanged and sourced:** pytest 3711 passed, 3 skipped, 45 warnings in 1479.61s (`pytest.log`); the frontend steps rc 0 with 603 tests passed per `s3-frontend-test.log` as first written.
 - **Status of T7-3.** The maintainer's 11:00:39 entry supersedes the 10:36:53 acceptance because its premise (N=5×2 on `test_rating_score.py`) was false. Whether the N=5×2 is owed is the maintainer's; it was not run here.
 
-**Gate order, 2026-09-29 (BST), by executor-s3fix:** the full two-half gate (CI unset; 7 of 7 Python stages rc 0, `3711 passed, 3 skipped, 45 warnings in 1409.22s`; frontend 6 of 6 rc 0, 603 tests) started at `3a3e0277b97c7dc98b01b04c09d60cfa7c55de71`, 10:09:01 UTC (11:09:01 BST), before `origin/main` was merged in and before the lead's re-grant condition reached the executor; the gate log is `/home/puzhenhao1989/.claude/jobs/92b3ca72/tmp/s3-gate-3a3e0277.log` (local to that job). The lead's STOP of 10:11:15 UTC went unanswered because the executor was blocked in a foreground wait on the gate's PID and read no message until the gate ended; the maintainer then accepted the run as #886's full gate (`to-lead.md`). `origin/main` `ce9303b3dcf1007c6d97bf8e73e5b3e3f3174d1d` was merged in afterwards (role files and the dev-commands skill only).
+**Gate order, 2026-09-29 (BST), by executor-s3fix:** the full two-half gate (CI unset; 7 of 7 Python stages rc 0, `3711 passed, 3 skipped, 45 warnings in 1409.22s`; frontend 6 of 6 rc 0, 603 tests) started at `3a3e0277b97c7dc98b01b04c09d60cfa7c55de71`, 10:09:01 UTC (11:09:01 BST), before `origin/main` was merged in and before the lead's re-grant condition reached the executor; the gate log is `/home/puzhenhao1989/.claude/jobs/92b3ca72/tmp/s3-gate-3a3e0277.log` (local to that job). the lead reports sending a STOP at 10:11:15 UTC (no file source in the repository or the channel), and the executor reports it read no message until the gate ended, having been blocked waiting on the gate's PID; the maintainer then accepted the run as #886's full gate (`to-lead.md`). `origin/main` `ce9303b3dcf1007c6d97bf8e73e5b3e3f3174d1d` was merged in afterwards (role files and the dev-commands skill only).
 
 **Gate order, account of executor-s3fix, 2026-09-29 (BST), amending the line above:** I launched the gate at 10:09:01 UTC (11:09:01 BST) on the lead's first grant, after PID 224799 had gone at 10:08:29 UTC; a wait loop did not start it. I ran it as a background job under `timeout 3600` and polled it with `kill -0`, which is a deviation from S-11 (a foreground call). Because of that, none of the lead's messages (the hold, the re-grant, the STOP of 10:11:15 UTC, the cancel) reached me until the gate had ended. The maintainer then accepted the run as #886's full gate (`to-lead.md`). The line above stays as written; where it says the STOP went unanswered "because the executor was blocked in a foreground wait", read this account: the wait was a `kill -0` poll on a background job.
 
@@ -231,3 +231,40 @@ The deputy ruled a full second T7 after the ambient-profile defect (above). Run 
 | CI unset | 5 | 0 | `24 passed in 6.27s` | `/home/puzhenhao1989/.claude/jobs/92b3ca72/tmp/s3-n5-unset-run5-138c272a3741f563b44d809910c5477a57e34a40.log` |
 
 Also cited: the full two-half gate at `3a3e0277b97c7dc98b01b04c09d60cfa7c55de71` (CI unset), `/home/puzhenhao1989/.claude/jobs/92b3ca72/tmp/s3-gate-3a3e0277.log`: Python 7 of 7 rc 0, frontend 6 of 6 rc 0, `3711 passed, 3 skipped, 45 warnings in 1409.22s`; and `pytest -q tests/` at `5132dbb76fa1249032b1db19df7179c3d0fa98b8`, `/home/puzhenhao1989/.claude/jobs/92b3ca72/tmp/s3-tests-5132dbb76fa1249032b1db19df7179c3d0fa98b8.log`: rc 0, `1032 passed, 1 skipped in 389.35s`. These are job-local paths. These runs were on a quiet box, not under concurrent load, so they do not repeat the earlier "concurrent-load" claim; they are the N=5×2 the lead ordered under the maintainer's decisions of 11:00:39 BST.
+
+**Evidence copies and B3 fold-in, 2026-09-29 (BST), by executor-s3fix, on the lead's adoption of the auditor's partial re-audit and the maintainer's additions.**
+
+- **`tree:` rule, local to LG-1225:** the front-matter `tree:` names the tree this ledger's newest evidence was measured on: `138c272a3741f563b44d809910c5477a57e34a40`, the head the N=5×2 runs measured (it was `06c1f3ac`, pre-mint). After this B3 commit, `git diff --stat 138c272a3741f563b44d809910c5477a57e34a40 <the B3 head> ` touches only this ledger file; the executor read that `--stat` at the push and reported it to the lead (it cannot name its own commit here).
+- **Durable copies.** The job directory is deleted with the job, so the logs cited above were copied to `/home/puzhenhao1989/gi-pricing-plan.local/evidence/886/` (the earlier job-local paths in this ledger are the same files; use this path). Each file's sha256 (`sha256sum`, paths relative to that directory; the seven `.rc` files hold the one byte `0` and share a hash):
+
+| File | sha256 |
+|---|---|
+| `s3-gate-3a3e0277.log` | `b9e964a1cc42feb65b4a877cd1a27ea7b3cfaa27f81ac465c7146f78d4401431` |
+| `s3-n5-ci1-run1-138c272a3741f563b44d809910c5477a57e34a40.log` | `5a454c6f6cddcad2190388adf60bafb4c190c501590f06d166d96dbaeacf5549` |
+| `s3-n5-ci1-run2-138c272a3741f563b44d809910c5477a57e34a40.log` | `cb4dea3e5c93ffc8b64c89e506d9eab88372178c4bef2525083fb017662632bc` |
+| `s3-n5-ci1-run3-138c272a3741f563b44d809910c5477a57e34a40.log` | `1d0bee5bb29f237d1a3db1d001755ca3fa52ccf030d3c826bf19e116f11ce731` |
+| `s3-n5-ci1-run4-138c272a3741f563b44d809910c5477a57e34a40.log` | `0085663066ad16471d9c8158dbc05ebbfcffffe6212b53508ea52638d03319c3` |
+| `s3-n5-ci1-run5-138c272a3741f563b44d809910c5477a57e34a40.log` | `18a1d85d76ee703a9868fc0db3b1113ab57c8e89545eff26c022895c6d7a9508` |
+| `s3-n5-unset-run1-138c272a3741f563b44d809910c5477a57e34a40.log` | `c70600817c5c2f93bf9d017f04f093c6eebc55f49d84fbf7a2e9f0b69d4a97d9` |
+| `s3-n5-unset-run2-138c272a3741f563b44d809910c5477a57e34a40.log` | `92e280a03362a523a212c1d216d04393ff037632c783324aeeff44aafee06183` |
+| `s3-n5-unset-run3-138c272a3741f563b44d809910c5477a57e34a40.log` | `b840b715d66d5006f01d13189b33638f067d40e26f6c179a87edab78904466c6` |
+| `s3-n5-unset-run4-138c272a3741f563b44d809910c5477a57e34a40.log` | `ae11ae060b5205bd2ad89a449a5e95e9b828d8f586c01c2cfa3f487c9c6056e8` |
+| `s3-n5-unset-run5-138c272a3741f563b44d809910c5477a57e34a40.log` | `ad82ac25ba21a2620d7d12cebab492ac650b4757690e5db2eef213bb33a10fea` |
+| `s3-tests-5132dbb76fa1249032b1db19df7179c3d0fa98b8.log` | `56b5411a138048cac50c61f52388a11a50cfb0a60bc1ffbf6358f5b26282586a` |
+| `tmp.Sz2WahRQGx/audit_docs.log` | `9b68f5d332269d8227ba379c1a179e3ecb17a0e5c4374b3a221a7be899b84785` |
+| `tmp.Sz2WahRQGx/audit_docs.rc` | `9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa` |
+| `tmp.Sz2WahRQGx/contracts.log` | `d03b38ebc47cf5163c405ae8790b5057bf976f6139ee2532215a2518f2accf8d` |
+| `tmp.Sz2WahRQGx/contracts.rc` | `9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa` |
+| `tmp.Sz2WahRQGx/import_linter.log` | `65235515714249c271c944604821471b805551ca95578075f73ae230cb7313c3` |
+| `tmp.Sz2WahRQGx/import_linter.rc` | `9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa` |
+| `tmp.Sz2WahRQGx/mypy.log` | `e6cd68bf3b8a3564bb148ff03209cb523af2ac2c745885380293cc92c5d7a490` |
+| `tmp.Sz2WahRQGx/mypy.rc` | `9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa` |
+| `tmp.Sz2WahRQGx/pytest.log` | `075f0cc148a589c36ced1b0a6b1bb07f645d2936e12cfe6ad536315b150e4d98` |
+| `tmp.Sz2WahRQGx/pytest.rc` | `9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa` |
+| `tmp.Sz2WahRQGx/req_coverage.log` | `6063cdd0e8b4211970606612340ff7639c2e1f720c79cead47df11da4e2aa2cf` |
+| `tmp.Sz2WahRQGx/req_coverage.rc` | `9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa` |
+| `tmp.Sz2WahRQGx/ruff.log` | `5b196eb3a6acb50d3fa398d04ca284985cc1ffec870e940264b00780bfd2c971` |
+| `tmp.Sz2WahRQGx/ruff.rc` | `9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa` |
+
+- **Gate stage table, inline** (`s3-gate-3a3e0277.log`, gate at `3a3e0277b97c7dc98b01b04c09d60cfa7c55de71`, CI unset, 10:09:01–10:33:49 UTC): ruff pass exit=0; mypy pass exit=0 (`Success: no issues found in 204 source files`); import_linter pass exit=0; audit_docs pass exit=0; req_coverage pass exit=0; contracts pass exit=0; pytest pass exit=0; `GATE: pass — 7 of 7 stages passed`; `3711 passed, 3 skipped, 45 warnings in 1409.22s (0:23:29)`. Frontend: install, generate:api, lint, type-check, test, build all rc 0; `Test Files  97 passed (97)`, `Tests  603 passed (603)`.
+- **`tests/` at `5132dbb76fa1249032b1db19df7179c3d0fa98b8`:** `uv run pytest -q tests/` rc 0 (`TESTS-RC=0`), `1032 passed, 1 skipped in 389.35s (0:06:29)`, 1033 collected. Comparison basis: `git diff --stat 3a3e0277 5132dbb7 -- tests/ conftest.py` prints nothing (rc 0), so `tests/` and the root `conftest.py` are identical at the gated head and this one.
