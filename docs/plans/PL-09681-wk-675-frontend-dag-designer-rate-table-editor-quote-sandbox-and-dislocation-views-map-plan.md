@@ -125,10 +125,10 @@ cross-cutting FR-25 and NFR-463.
 
 | View (route, `03` §5.3) | FRs it serves | Backend it consumes, and its state at `f0c3d197` |
 |---|---|---|
-| **DAG designer** (`/rating/:slug/v/:version/design`, `03:1045`) | FR-212, FR-213, FR-215, FR-219, FR-223, FR-227; FR-217 and FR-218 (the mount, with WK-1250); the FR-24 exception | Save `POST /api/v1/rating-algorithms` (`rating_algorithms.py:29`) and diff (`:54`) exist (WK-669, closed). **Loading an algorithm has no route** (DP-4). Sub-graph mounting waits on **WK-1250** (`draft`) |
-| **Rate table editor** (`/rating/:slug/v/:version/tables/:tableSlug`, `03:1046`) | FR-228, FR-229, FR-230, FR-231, FR-233, FR-234, FR-235, FR-1186 | Diff, bulk, import, export and seed exist (WK-670, closed). **The manual-edit route `POST /api/v1/rate-tables/{slug}/versions` (`03:745`) is absent, and its owner is this Work** (F-W10-3). **Reading cells has no route** (DP-4). The exposure-weight column waits on F-W10-2 |
+| **DAG designer** (`/rating/:slug/v/:version/design`, `03:1045`) | FR-212, FR-213, FR-214, FR-215, FR-219, FR-220, FR-221, FR-222, FR-223, FR-225, FR-226, FR-227, FR-244, FR-246; FR-217 and FR-218 (the mount, with WK-1250); the FR-24 exception. `WF-699` B2–B5 and B8 exercise the step types | Save `POST /api/v1/rating-algorithms` (`rating_algorithms.py:29`) and diff (`:54`) exist (WK-669, closed). **Loading an algorithm has no route** (DP-4). Sub-graph mounting waits on **WK-1250** (`draft`) |
+| **Rate table editor** (`/rating/:slug/v/:version/tables/:tableSlug`, `03:1046`) | FR-228, FR-229, FR-230, FR-231, FR-232, FR-233, FR-234, FR-235, FR-1186 | Diff, bulk, import, export and seed exist (WK-670, closed). **The manual-edit route `POST /api/v1/rate-tables/{slug}/versions` (`03:745`) is absent, and its owner is this Work** (F-W10-3). **Reading cells has no route** (DP-4). The exposure-weight column waits on F-W10-2 |
 | **Quote sandbox** (`/rating/:slug/v/:version/sandbox`, `03:1047`) | FR-213, FR-247, FR-248, FR-258, **FR-262's view limb** | `POST /api/v1/score` (`score.py:277`, WK-671) and `POST /api/v1/score/compare` (`score.py:331`, WK-672) exist. OQ-1231 decides whether the compare route changes |
-| **Dislocation** (`/rating/:slug/v/:version/dislocation`, `03:1049`) | FR-263, FR-264, FR-265, FR-266 | **Absent.** WK-673 builds `POST` and `GET /api/v1/dislocation-runs` and registers `DislocationRun` for generation (`PL-9101` Slice 4, PR #844 `p2-wk673-map` at `59d11c49`, open) |
+| **Dislocation** (`/rating/:slug/v/:version/dislocation`, `03:1049`) | FR-263, FR-264, FR-265, FR-266 | **Absent.** WK-673 builds `POST` and `GET /api/v1/dislocation-runs` and registers `DislocationRun` for generation (Slice 4 of #844, WK-673's map plan, working id 9101, `p2-wk673-map` at `59d11c49`, open) |
 
 **FR-262** is WK-675's by `RL-1172` item 5 and `CR-1243` (the WK-672 close): the backend limb
 is delivered; the view limb is this Work's, and FR-262 is delivered only when both have landed.
@@ -145,8 +145,11 @@ because that would be scope the roadmap does not give this Work:
   `/admin/environments` view (`07:386`).
 
 The predicate: `grep -rn -E 'rating/environments|/rating\`|Rating version list|Regression suite view|/v/:version/tests|Deployments view|admin/environments' docs --include=*.md`
-hits only `03:1044`, `:1048`, `:1050` and `07:386`. **Raised as a finding** for the auditor
-to file, with the owning decision routed by the lead (`RFC-1248` Part 2: nothing unowned).
+prints five lines, `03:1044`, `:1048`, `:1050`, `07:386` and `docs/findings/register.md:61`. The
+last is a false positive: it matches "/rating\`" inside "`pricing_core/rating\``". WK-674's map
+plan (`PL-1237` Task 2, `:774`) adds only the **backend** `GET` for deployment history, not the
+view. **Raised as a finding**, which auditor-row8 files (working id 9692), with the owning
+decision routed by the lead (`RFC-1248` Part 2: nothing unowned).
 
 **A consequence for FR-25:** with no rating version list, a designer or sandbox route needs
 another path from the entry. Until one is owned, each view's slice links to its route from the
@@ -158,14 +161,14 @@ which is reachable today. DP-5 decides how a slug-and-version route and that UUI
 Each is the decision-maker's to rule, as an `RL-` (`document-ids.md` §1.6). The options and
 recommendations are the planner's proposal, not a ruling.
 
-| # | Question | Options | Recommendation | Blocks |
-|---|---|---|---|---|
-| **DP-1 = OQ-550** | How does `ChartFigure` relate a row's values to its columns? (`00:552`; re-opened 2026-09-28 as **WK-675's entry decision, due at this map plan**, `RL-1184` E10) | (a) positional rows with the two W6b-9 checks; (b) rows keyed by column name, checked by the type system; (c) a column descriptor, rows staying domain objects | **(b).** It makes misalignment a compile error at the one moment the cost is lowest: 13 call sites today (`git grep -n '<ChartFigure' -- 'frontend/src/*.vue'`), and this Work adds at least four charts. (c) also removes the transcription step, but it makes `ChartFigure` generic, which is the largest change, for a smaller further gain | **Slice 1** (the migration) and every chart slice after it (S6's waterfall, S8's dislocation charts) |
-| **DP-2 = OQ-1231** | Is `StepChange.own_change` derived from the traces (a) or from step-definition equality by `step_id` across the two compiled algorithms (b)? (gated *Before WK-675's map plan* on #917, `wk1178-oq-1231-1233` at `84e29182`) | as the OQ states them | the OQ's own recommendation is (b); the decision-maker rules it | **this plan's freeze**, since (b) adds a backend slice to the route WK-672 delivered (`score.py:331`, `diff_traces`). The compare slice is sized both ways below |
-| **DP-3 = OQ-1223** | How does an ordinal categorical input take part in a `monotone` property? | as the OQ states them | the OQ's own recommendation is (a), "when the rate-table editor introduces the order" | **Slice 5** (the editor's order) |
-| **DP-4** | The views need read routes **declared nowhere and built nowhere**: an algorithm by `{slug}@{version}` (the designer's load), and a rate table's cells and a version's table list (the editor). Who adds them? | (a) **this Work**: each route is spec-changed first by the decision-maker and built in the slice whose view consumes it, as F-W10-3 already makes this Work own `POST /rate-tables/{slug}/versions`; (b) a WK-1178 backend slice before WK-675; (c) leave the views to compose reads from existing routes | **(a).** The consuming view is the only place the route's shape is known; F-W10-3 is the precedent; (c) is impossible for the designer, since no route returns an algorithm's graph | **Slices 2 and 4** |
-| **DP-5** | §5.3 routes address a version as `:slug/v/:version`, but the backend reads a Rating Version only by UUID (`GET /rating-versions/{id}`, `models.py:1139`), a Phase 1b route in no §5.1 | (a) add `{slug}@{version}` read routes, the form `03` §5.1 already uses for algorithms and tables; (b) change the §5.3 and `00` §5.6 routes to `/rating-versions/:id/...` | **(a).** It matches every other versioned route in `03` §5.1 and keeps `00` §5.6's four canonical routes unchanged | **Slice 2** (the first routed view) |
-| **DP-6** | The designer's **on-node live validation** is an FR-24 exception, binding until discharged at this view's slice plan (`00:228`). What discharges it, and how does the view validate before save? | (a) raise it as a numbered `03` FR, served by a **validate-only route** that runs the server's own checks (spec change: the FR plus the route); (b) raise the FR, and re-implement the cycle, reference and type checks in the frontend; (c) declare the cell exhaustive and validate on save only | **(a).** (b) defines the validation rules twice, the divergence `CLAUDE.md` §2 forbids; (c) fails the *Interaction requirement* that an invalid graph be "visibly invalid before save" | **Slice 3** |
+| # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
+|---|---|---|---|---|---|---|
+| **DP-1 = OQ-550** | How does `ChartFigure` relate a row's values to its columns? (`00:552`; re-opened 2026-09-28 as **WK-675's entry decision, due at this map plan**, `RL-1184` E10) | (a) positional rows with the two W6b-9 checks; (b) rows keyed by column name, checked by the type system; (c) a column descriptor, rows staying domain objects | **(b).** It makes misalignment a compile error at the one moment the cost is lowest: 13 call sites today (`git grep -n '<ChartFigure' -- 'frontend/src/*.vue'`), and this Work adds at least four charts. (c) also removes the transcription step, but it makes `ChartFigure` generic, which is the largest change, for a smaller further gain | decision point | **yes**: the plan's freeze, and **Slice 1** (the migration) and every chart slice after it (S6's waterfall, S8's dislocation charts) | decision-maker, by `RL-` |
+| **DP-2 = OQ-1231** | Is `StepChange.own_change` derived from the traces (a) or from step-definition equality by `step_id` across the two compiled algorithms (b)? (gated *Before WK-675's map plan* on #917, `wk1178-oq-1231-1233` at `a95622cc`, open) | as the OQ states them | the OQ's own recommendation is (b); the decision-maker rules it | decision point | **yes**: **this plan's freeze**, since (b) adds a backend slice to the route WK-672 delivered (`score.py:331`, `diff_traces`). The compare slice is sized both ways below | decision-maker, by `RL-` (working id 9691, in progress) |
+| **DP-3 = OQ-1223** | How does an ordinal categorical input take part in a `monotone` property? | as the OQ states them | the OQ's own recommendation is (a), "when the rate-table editor introduces the order" | decision point | **yes**: **Slice 5** (the editor's order) | decision-maker, by `RL-` |
+| **DP-4** | The views need read routes **declared nowhere and built nowhere**: an algorithm by `{slug}@{version}` (the designer's load), and a rate table's cells and a version's table list (the editor). Who adds them? | (a) **this Work**: each route is spec-changed first by the decision-maker and built in the slice whose view consumes it, as F-W10-3 already makes this Work own `POST /rate-tables/{slug}/versions`; (b) a WK-1178 backend slice before WK-675; (c) leave the views to compose reads from existing routes | **(a).** The consuming view is the only place the route's shape is known; F-W10-3 is the precedent; (c) is impossible for the designer, since no route returns an algorithm's graph | scope | **yes**: **Slices 2 and 4** | decision-maker, by `RL-` |
+| **DP-5** | §5.3 routes address a version as `:slug/v/:version`, but the backend reads a Rating Version only by UUID (`GET /rating-versions/{id}`, `models.py:1139`), a Phase 1b route in no §5.1 | (a) add `{slug}@{version}` read routes, the form `03` §5.1 already uses for algorithms and tables; (b) change the §5.3 and `00` §5.6 routes to `/rating-versions/:id/...` | **(a).** It matches every other versioned route in `03` §5.1 and keeps `00` §5.6's four canonical routes unchanged | decision point | **yes**: **Slice 2** (the first routed view) | decision-maker, by `RL-` |
+| **DP-6** | The designer's **on-node live validation** is an FR-24 exception, binding until discharged at this view's slice plan (`00:228`). What discharges it, and how does the view validate before save? | (a) raise it as a numbered `03` FR, served by a **validate-only route** that runs the server's own checks (spec change: the FR plus the route); (b) raise the FR, and re-implement the cycle, reference and type checks in the frontend; (c) declare the cell exhaustive and validate on save only | **(a).** (b) defines the validation rules twice, the divergence `CLAUDE.md` §2 forbids; (c) fails the *Interaction requirement* that an invalid graph be "visibly invalid before save" | decision point | **yes**: **Slice 3** | decision-maker, by `RL-` |
 
 **The freeze.** This plan stays `draft` until DP-1 and DP-2 are ruled. DP-1 decides Slice 1's
 content; DP-2 decides whether the compare view is one slice or two. DP-3 to DP-6 each block
@@ -203,11 +206,11 @@ edited"** (Slice 7).
 - **F39** (L81): "diagnose what opens the socket", owner "the frontend workstream"; `CR-1212`
   gave it to WK-675 → **Slice 1**. *Same register-pass note.*
 - **F-W10-2** (L64): the exposure weights the diff route does not pass. `CR-1212` gave it to
-  **WK-673**, but WK-673's draft map plan (`PL-9101`, #844 at `59d11c49`) does not carry it
-  (`git show origin/p2-wk673-map:docs/plans/PL-09101-*.md | grep -c F-W10-2` prints 0). The
-  editor's exposure-weight column (Slice 5) depends on it. **Raised to the lead**: either
-  WK-673's plan takes it, or Slice 5 ships the column as "weights unavailable" with the row
-  carried.
+  **WK-673**, and the maintainer accepted that, but WK-673's draft map plan (#844, working id
+  9101, at `59d11c49`) did not carry it: `grep -c F-W10-2` over that plan file prints 0.
+  **Decided by the lead, 2026-09-29 19:04Z:** WK-673's plan takes F-W10-2 at its rework. The
+  editor's exposure-weight column (Slice 5) **depends on that WK-673 slice** and ships with
+  the weights, not as "weights unavailable".
 
 ## Tasks
 
@@ -219,10 +222,10 @@ FR-25 and NFR-463 obligations.
 | Slice | Content | Depends on | Size band (days: likely / worst) |
 |---|---|---|---|
 | **S1 — Chart foundation** | Apply DP-1's ruling to `ChartFigure` and migrate its 13 call sites; F39's socket diagnosis | DP-1 | 1 / 2 |
-| **S2 — Designer I: canvas, inspector, load, save** | F2 conditions 1–5; `RatingAlgorithm` and the load route (DP-4, DP-5) generated; the Vue Flow canvas with typed nodes (FR-212, FR-215), the node inspector (FR-213, FR-215), the keyboard node navigator, save through `POST /rating-algorithms`; FR-25 link from `RatingVersionView` | DP-4, DP-5 | 1 / 2 |
-| **S3 — Designer II: live validation and diff** | DP-6's discharge: the numbered FR and the validate route; errors on the node before save (FR-212, FR-223, FR-227); the structural diff overlay (FR-219) | S2, DP-6 | 1 / 2 |
-| **S4 — Editor I: grid and manual edit** | `@tanstack/vue-table` (new dependency); the cell and table-list read routes (DP-4); the typed grid (FR-228); the manual-edit route (F-W10-3; FR-229's required change note, FR-231's confirmation diff, FR-234's validation errors shown on the cell); no approval state on a Rate Table Version (FR-1186); inline decimal editing (FR-10, FR-21) | DP-4 | 1 / 2 |
-| **S5 — Editor II: diff shading, bulk, import, export** | Diff-vs-previous and diff-vs-seed shading (FR-230, FR-231); the exposure-weight column (F-W10-2's state); bulk-operation dialog (FR-233); CSV import confirmation and export (FR-235); DP-3's order; F-W10-1 | S4, DP-3 | 1 / 2 |
+| **S2 — Designer I: canvas, inspector, load, save** | F2 conditions 1–5; `RatingAlgorithm` and the load route (DP-4, DP-5) generated; the Vue Flow canvas with typed nodes (FR-212, FR-215), the node inspector per step type (FR-213 inputs, FR-214 outputs, FR-215, FR-220 `table`'s pinned table and banding reference, FR-221 `lookup`'s as-at date source, FR-222 `model_call`'s mode, FR-225 `constraint`'s `reason_code`, FR-226 `output`'s explicit rounding), the keyboard node navigator, save through `POST /rating-algorithms`; FR-25 link from `RatingVersionView` | DP-4, DP-5 | 1 / 2 |
+| **S3 — Designer II: live validation and diff** | DP-6's discharge: the numbered FR and the validate route; errors on the node before save (FR-212, FR-223, FR-227), including `expression` steps, whose grammar (FR-244) and closed inputs (FR-246) the validate route checks; the structural diff overlay (FR-219) | S2, DP-6 | 1 / 2 |
+| **S4 — Editor I: grid and manual edit** | `@tanstack/vue-table` (new dependency); the cell and table-list read routes (DP-4); the typed grid (FR-228), paged through the cell read route for either storage, and above FR-232's threshold (default 250 000 cells, `storage: parquet`) the grid still pages with no Job, and the slice states that bound under test (FR-232); the manual-edit route (F-W10-3; FR-229's required change note, FR-231's confirmation diff, FR-234's validation errors shown on the cell); no approval state on a Rate Table Version (FR-1186); inline decimal editing (FR-10, FR-21) | DP-4 | 1 / 2 |
+| **S5 — Editor II: diff shading, bulk, import, export** | Diff-vs-previous and diff-vs-seed shading (FR-230, FR-231), handling the diff route's **202 with a Job** when either version is `storage: parquet` (FR-232, `03:748`): the view polls the Job and renders the same artifact; the exposure-weight column (F-W10-2); bulk-operation dialog (FR-233); CSV import confirmation and export (FR-235); DP-3's order; F-W10-1 | S4, DP-3; **WK-673's F-W10-2 slice** (#844, at its rework) | 1 / 2 |
 | **S6 — Sandbox: form, waterfall, trace** | The quote form from the input contract (FR-213); the ladder waterfall (FR-247, FR-248) as a chart with its table; the trace timeline (FR-258); the waterfall **one click from any traced quote** (`03:1054-1055`, FR-25) | S1 | 1 / 2 |
 | **S7 — Sandbox compare** | FR-262's view limb over `POST /score/compare`; the `own_change` rendering rule | S6; **DP-2** | (a) 1 / 2 · (b) see S7b |
 | *S7b — Compare backend* | **Only if DP-2 rules (b):** `own_change` from step-definition equality across the two compiled algorithms, in `diff_traces` and the route, with the generated contract and a negative test on a masked edit; before S7 | DP-2 = (b) | 1 / 2 |
@@ -241,6 +244,10 @@ days.
 | (a), the trace rule stays | 9 | 6.75 | 9 | 18 |
 | (b), definition equality | 10 (with S7b) | 7.5 | 10 | 20 |
 
+**S2 and S4 carry more than a typical slice:** S2 holds spike F2's five conditions as well as
+the canvas, and S4 a new dependency as well as two backend routes. Their leaf plans confirm the
+cut or split them, and the band moves with any split.
+
 ## Sequencing
 
 - **The Work's place in P2** is `CR-1212` Proposal 2's accepted order: WK-674, then WK-673,
@@ -258,8 +265,15 @@ The maintainer then activates WK-675 on it.
 
 ## Self-review
 
-- **Spec coverage:** every FR in *Scope* is placed in a slice. FR-232 (cell storage) and
-  FR-236 (rateable or diagnostic) have no view limb and are not in scope. The three unowned views are
+- **Spec coverage, by enumeration, not by the scope list itself.** `03` §3's FRs FR-212 to
+  FR-248, FR-258, FR-262 to FR-266 and FR-1186 were each read against the four views.
+  - **Placed:** each id in *Scope*, in the slice its row names. FR-214, FR-220, FR-221,
+    FR-222, FR-225 and FR-226 are placed in S2's inspector, FR-244 and FR-246 in S3, and
+    FR-232 in S4 and S5.
+  - **No view limb in these four views, so not in scope:** FR-216 (evaluation order),
+    FR-224 (an approval gate), FR-236 (rateable or diagnostic), FR-237 to FR-243 (the Rating
+    Version, its lifecycle and the bundle: backend, or the unowned version-list view),
+    FR-245 (`Decimal` arithmetic in the engine; the views follow FR-10 and FR-21). The three unowned views are
   raised, not folded in. FR-24's exception is placed (S3, DP-6), and so is the *Interaction
   requirement*'s one-click waterfall (S6).
 - **Placeholders:** none. Every open choice is a numbered decision point with options and a
@@ -267,4 +281,4 @@ The maintainer then activates WK-675 on it.
 - **Literals** were read at `f0c3d197`: the routes (`03:743-768`), the router
   (`router/index.ts:235`), the dependencies (`package.json:20,24`), and the generated
   components (`RatingAlgorithm` absent). Open PRs that rule on this subject were read at their
-  heads: #917 `84e29182`, #844 `59d11c49`, #845 `f0573718` and #834 `45e818b7`.
+  heads: #917 `a95622cc`, #844 `59d11c49`, #845 `f0573718` and #834 `45e818b7`.
