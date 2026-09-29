@@ -177,3 +177,15 @@ Task 0 Step 3, as instructed. Main was `6a8b8e70` (#886, a squash of `b4aa909d`)
    plain `git merge a5118a30` was conflict-free (one file, 73 insertions, 13 deletions).
    `git diff --name-only a5118a30 HEAD` lists the same 18 S4 paths; `audit-docs.py` FAILED (2), check 31
    only; `doc-index.py --check` OK.
+
+### Merge evidence, quoted as the lead asked (2026-09-29)
+
+- (a) `git rev-parse b4aa909d^{tree} 6a8b8e70^{tree}` printed `f65bdd608bda3bd5964f47357606406e109c8c0e` for both.
+- (b) The `-s ours` merge is **`db1b768f`** (`Merge commit '6a8b8e70…' into p2-d-s4`, parents `e635c3e3`
+  and `6a8b8e70`). Its first parent was `e635c3e3`, the S4 head when I ran it, not `73616265`
+  (`e635c3e3` is the docs-only ledger commit after `73616265`). `git diff e635c3e3 db1b768f` prints
+  nothing (0 bytes). `git diff 73616265 db1b768f` is not empty for that reason alone: it prints the
+  32 lines `e635c3e3` added to this ledger (1 file changed).
+- (c) The merge of `f2ef3b9a` is **`5dd823e9`** (parents `db1b768f`, `f2ef3b9a`): 3 conflicts,
+  `docs/INDEX.md`, `docs/open-questions.md`, `docs/specs/03-rating-engine.md`, each resolved keeping both sides.
+- (d) The merge of `a5118a30` is **`51d8a67e`** (parents `9e045cf9`, `a5118a30`): conflict-free.
