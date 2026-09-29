@@ -52,16 +52,32 @@ It was checked free on all 108 remote branches.
   - So a step's definition names the exact versioned artifact it reads, and a changed rate
     table is a changed `rate_table_ref` on the step that reads it. No step relies on a pin
     held elsewhere.
-- `RatingStepBase` (`rating.py:257-265`) carries `step_id`, `label`, `note` and `consumes`.
-  `note` is documentation.
+- `RatingStepBase` (`rating.py:257-266`) carries `step_id`, `label`, `note`, `consumes` and
+  `produces`. `note` is documentation.
+- **A per-step definition comparison already exists.** `diff_algorithms(old, new) -> AlgorithmDiff`
+  (`rating.py:569`, FR-219) matches steps by `step_id` and reports each changed field of a
+  step's `model_dump()` as an `AlgorithmStepChange` in `changed_steps` (`AlgorithmDiff`, `:539`).
+  It counts `note`. WK-673's ruling (PR #845, DP-2) already builds on it. `trace_diff.py:27` has its own `_canonical`,
+  which compares trace values.
 
 ## Ruled
 
 **(b), with its comparison stated exactly.** For a step present on both sides and changed in
 the traces, `own_change` is **true exactly when its definition differs between the two
-compiled algorithms**. Steps are matched by `step_id`, and definitions are compared as
-canonical JSON of the step, **excluding `note`**. An added or removed step stays
-`own_change: true`. Everything else in §4.10 is unchanged: which steps are listed, and
+compiled algorithms**, as **FR-219's `diff_algorithms` reports it**. `own_change` is true when
+`diff_algorithms(base_algorithm, comparison_algorithm).changed_steps` holds an entry for this
+`step_id` whose `field` is not `note`. **`note` is excluded at this call site.** `diff_algorithms`
+itself is unchanged and keeps counting `note`, because FR-219's structural diff is what an
+approver reads, and a documentation edit belongs there. `label` stays compared: a label edit is
+listed by the traces today and still reads true. An added or removed step stays
+`own_change: true`.
+
+**Why reuse, not a second comparison.** One definition of "this step's definition changed"
+already exists and is already relied on. A second one, canonical JSON inside `diff_traces`,
+would let the structural diff an approver reads and the Quote Sandbox's `own_change` disagree
+about the same edit, which is the kind of drift a governed tool cannot show. Both compare
+typed, validated step models, so `model_dump()` equality does not raise the `1` / `1.0` /
+`true` ambiguity that `_canonical` guards against in trace values. Everything else in §4.10 is unchanged: which steps are listed, and
 `changed_fields`, still come from the traces.
 
 **Why (b).**
@@ -111,6 +127,10 @@ carries the checks, each shown red on deliberately broken input:
   `own_change: false`.* This is F5's masked edit, and it must read true.
 - *Violation: a downstream step with an unchanged definition, whose input moved, reads
   `own_change: true`.*
-- *Violation: a step whose only edit is its `note` reads `own_change: true`.*
+- *Violation: a step whose only edit is its `note` reads `own_change: true`.* The step is listed
+  only when its trace differs, so the fixture must also move this step's input. The step is then
+  listed through `consumed`, and it must read false.
+- *Violation: `own_change` and `diff_algorithms` disagree about whether a step's definition
+  changed, other than for `note`.*
 - *Violation: a changed `rate_table_ref` on one table step fails to give exactly one entry
   with `own_change: true`.* This is `RL-1172` §5's one-step acceptance, which must still hold.
