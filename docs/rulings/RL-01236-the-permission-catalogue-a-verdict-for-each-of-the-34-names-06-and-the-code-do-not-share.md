@@ -414,3 +414,23 @@ proves nothing red itself. The check it asks for is a two-list comparison: the t
 above, and a `comm -3` of their outputs against this table's rows. It is proposed to plan
 review 15 as a docs check. Until one exists, the table is re-derived at each Work close that
 touches permissions.
+
+## Adopted by the decision-maker, 2026-09-29
+
+**Why this section exists.** The maintainer's entry `2026-09-29 15:26:00 BST · maintainer (acting on the maintainer's behalf) · STRUCTURE: routing per document-ids §1.6 and the charters; today's technical answers re-homed` (§2) re-homes the
+technical points this record files as "the maintainer's answers" (Q856-1 and Q856-2 of the
+entry of 2026-09-29 14:15:43 BST, and the mechanical fixes that entry accepted). The four
+decision points DP-A to DP-D were decided on 2026-09-28 by the deputy, on the maintainer's
+delegation. They are technical in the same way, so they are re-verified and adopted here too.
+Every point was re-verified at origin/main `9cd179cb` and is **adopted as this record's own
+ruling**. None is superseded, so no new `RL-` is minted.
+
+| Point | Re-verified at `9cd179cb` | Ruling |
+|---|---|---|
+| **Q856-1**: `06:62` and `:218-221` take `RL-1232`'s text plus this record's DP-C additions, and the deploy rows cite `RL-1232` | Both lines carry both amendments, and rows 3, 4 and 24 cite `RL-1232` | **Adopted.** The two amendments strike different names, so both apply |
+| **Q856-2**: DP-A's condition text stays as of `81e061fb`, with the note that #861 delivered it | `backend/src/app/platform/approvals.py:351` registers `AUTHOR_CANNOT_APPROVE`. `backend/tests/test_api_approvals.py:830` asserts it. `06` FR-353 (`:94`) carries the 2026-09-28 amendment | **Adopted.** A condition checked at one tree and met at a later one is recorded as both, not rewritten |
+| **The mechanical fixes** (thirteen, `service_accounts.py:44`, #855's merge, the §4.1 note, and the `:520` re-cite) | `backend/src/app/api/service_accounts.py:44` is `ALLOWED_PERMISSIONS`. The §4.1 table lists 13 names. #855 is `9f6bfed1` | **Adopted** |
+| **DP-A (c)**: the code's coarse write names are the Phase 2 catalogue, and the fine split goes to WK-676 | The alias-aware caller predicate over `backend/src` gives `RATING_WRITE` 6, `MODEL_FIT` 20 and `DATASET_WRITE` 11 hits. Its condition (author ≠ approver) is met by #861, as Q856-2 records | **Adopted.** Coarse rights are safe only because approval separates the author from the approver, and that separation now exists in code and under test |
+| **DP-B (a)**: keep `admin:manage_environments`, owned by WK-674 Slice 2 | 0 check sites. The Environment record does not exist yet (`RL-1232`, Q848-2) | **Adopted** |
+| **DP-C (a)**: one `approval:decide`, with per-type approval by `approver_roles` | 5 check sites. `test_a_role_the_policy_does_not_name_cannot_approve` is at `backend/tests/test_approvals.py:400` | **Adopted** |
+| **DP-D (b)**: `admin:manage_settings` guards every per-environment setting value | 7 check sites. **Its premise is open:** it guards per-environment configuration as a Setting, and whether such configuration is a Setting is `OQ-1235` | **Adopted, conditionally.** The guard follows the value. If `OQ-1235` is decided (a), a Setting with an Environment layer, DP-D holds as ruled. If it is decided (b) or (c), DP-D is re-ruled at that decision. The ruling that closes `OQ-1235` says which |
