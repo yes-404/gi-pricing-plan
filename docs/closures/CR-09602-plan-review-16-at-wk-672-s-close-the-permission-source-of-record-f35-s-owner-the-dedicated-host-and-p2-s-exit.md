@@ -30,12 +30,13 @@ until the maintainer dates the acceptance line.** The output is proposals, never
 #901. Its close record is being drafted by the auditor on branch `wk672-close`. This review
 is consistent with that record; see *Consistency with the WK-672 close record* below.
 
-**Whether this review is CR-1212's G6 is contested, and Proposal 8 puts it to the maintainer.**
-- G6 reads "A plan review 16 is filed after G1–G5 and before the demo". G1–G5 are not met at
-  this tree.
-- The maintainer's entry of 2026-09-29 16:05:14 BST says this review "is also P2 exit
-  criterion G6".
-- Both are recorded; neither is chosen here.
+**This review is not `CR-1212`'s G6.**
+- G6 reads "A plan review 16 is filed after G1–G5 and before the demo". G1–G5 are not met,
+  so the pre-exit-demo review G6 names is **still owed**.
+- The maintainer's entry of 2026-09-29 16:05:14 BST said that this review "is also P2 exit
+  criterion G6". The maintainer withdrew that at 16:21:36 BST, in the entry headed "answers
+  to the lead's corrections 1–3 and the planner's (a) and (b)", item (b).
+- See Proposal 8.
 
 **Form.** It follows `CR-1212` (plan review 15): the lead's required inputs as proposals
 first, then the five `phase-review` questions, then Output and Verdict.
@@ -60,12 +61,13 @@ first, then the five `phase-review` questions, then Output and Verdict.
   - The branch is rebased onto `6ae8a99a`, so that `PL-1237` resolves. The only commit
     between `1c8762d9` and `6ae8a99a` is #843 itself, so the tree read is otherwise
     unchanged.
-  - The records PR branch `records-2026-09-29` is at `bc55a975`. It carries two things:
-    - the finding "A team member overwrote the user's auto-memory index, and the restore
-      missed 27 index lines". It has a working id, which its mint at that PR's merge
-      replaces, so this record names it by title. It is called *the memory-overwrite
-      finding* below.
-    - the lead's P3-carry note (commit `c2db4f72`).
+  - The records PR, read first at branch `records-2026-09-29` `bc55a975`, merged as #902
+    (`49604a31`). This branch merged it in (`git merge origin/main`). #902 carries two things
+    this review cites:
+    - **`FD-1238`**, "A team member overwrote the user's auto-memory index, and the restore
+      missed 27 index lines". It was cited by title before it was minted.
+    - the lead's P3-carry note (`docs/roadmap.md`, the note headed "2026-09-29: requirements
+      carried into Phase 3 without a Work").
 - **GitHub state** was read with `gh pr view` on 2026-09-29 at about 15:00 UTC. It was
   read-only, and nothing was posted.
 - **The channel file.** The maintainer's entries are quoted by heading. The file is
@@ -198,16 +200,20 @@ name
 **Resolved 2026-09-29 by the maintainer** (entry `2026-09-29 16:08:24 BST · maintainer
 (acting on the maintainer's behalf) · HOST FALLBACK accepted; DEPENDABOT plan approved (the
 maintainer)`, §2, quoting the maintainer: "approve Dependabot plan"):
-- **#882 is not merged.** A WK-1178 PR adds an ignore rule to `.github/dependabot.yml` for
-  zen-engine's major version 2, and files an `FD-` for a governed upgrade under WK-1178 (a
-  spike first). Closing #882 is the user's action.
+- **#882 is not merged.** A WK-1178 PR (#903) adds an ignore rule to `.github/dependabot.yml`
+  for **every semver-major bump of zen-engine**, and files an `FD-` for a governed upgrade
+  under WK-1178, with a spike first. Closing #882 is the user's action.
+  - The first entry named "major version 2" only. The maintainer's 16:21:36 entry, item 1,
+    widened it on this ground: "Any future major (for example 3.0) needs the same governed
+    spike, and a 'major 2 only' rule would let it through".
 - **#857, then #881.** The lead runs a full local two-half gate on each PR's head, and the
   user merges on green. #881 is re-gated if #857's merge changes its base.
 - **FD-1194's stale cell** is updated by the auditor in the next records PR.
 
 **What the entry does not dispose of:** #877, #878 and #879, the three major GitHub Actions
-bumps. It names only zen-engine's ignore rule. This review's recommendation for them (merge
-one at a time) stands as a proposal, open to the lead's verdict.
+bumps. The maintainer's 16:21:36 entry, item 2, confirms this. They "stay PR16 proposals, and
+the user decides them at PR16 acceptance". This review's recommendation stands: merge them
+one at a time.
 
 **Lead verdict (Proposal 2):** _pending_
 **Maintainer acceptance (Proposal 2):** given for the part the 16:08:24 entry states. The
@@ -400,9 +406,9 @@ acceptance.
 **Lead verdict (Proposal 5):** _pending_
 **Maintainer acceptance (Proposal 5):** _pending_
 
-## Proposal 6 — the memory-overwrite finding: the write boundary that no charter states
+## Proposal 6 — FD-1238: the write boundary that no charter states
 
-**The finding.** The memory-overwrite finding (branch `records-2026-09-29`) records that on
+**The finding.** `FD-1238` records that on
 2026-09-29 the reporter cut the user's auto-memory index, `~/.claude/projects/…/memory/MEMORY.md`,
 from 239 lines to 47. The file was since recovered. The finding's own disposition point 2
 leaves the rule to be written down: "no team member writes under `~/.claude/`".
@@ -427,7 +433,7 @@ it.
 - **(b) One team-wide rule in `delivery-process.md` §3**, with §3's sentence amended to say
   that the write boundary is stated there once. Each charter keeps only its **positive**
   write targets. For example, `reporter.md` gains its one target, per the maintainer's
-  ruling relayed in the memory-overwrite finding: `~/gi-pricing-plan.local/handover/eta.md`.
+  ruling relayed in `FD-1238`: `~/gi-pricing-plan.local/handover/eta.md`.
   - `delivery-process.core.json` is re-derived in the same commit, because it is the
     process's machine-readable extract (`CLAUDE.md` §15).
 - **(c) (b) plus a mechanical guard**, a `PreToolUse` hook that refuses team-member writes
@@ -450,7 +456,7 @@ amend or accept:
 - **The maintainer**, for the amendment: charter and `process/` amendments are the
   maintainer's (STRUCTURE §1). It is applied by the lead, in one commit with the core
   extract.
-- **The auditor**, who reads it against the memory-overwrite finding's event. That event is the artifact
+- **The auditor**, who reads it against `FD-1238`'s event. That event is the artifact
   merging.
 
 **Lead verdict (Proposal 6):** _pending_
@@ -465,8 +471,10 @@ amend or accept:
 - **FR-432** (container images) and **FR-438** (signed images and an SBOM) are carried to P3
   by `CR-1212` P12, with **no owner**. The lead's note on the records branch (`c2db4f72`) says
   so and leaves their owner to this review.
-- At `1c8762d9`, `grep -n 'FR-43[238]\b' docs/roadmap.md` prints nothing, and **no P3 Work
-  row names any of the three.** P3's Works (WK-676 to WK-682, WK-691) are governance Works.
+- At `1c8762d9`, `grep -n 'FR-43[238]\b' docs/roadmap.md` printed nothing. #902
+  (`49604a31`) has since added a prose note that lists them and says: "No Work is created by
+  this note. Creating one is a scope decision, and the maintainer's." **No P3 Work row names
+  any of the three.** P3's Works (WK-676 to WK-682, WK-691) are governance Works.
 - **A second gap of the same kind.** `CR-1212` G4 (d) carried NFR-526, NFR-527, NFR-530,
   NFR-533, NFR-536 and `00` NFR-461 to P3 "by a dated line", with **no owner**. But G4 itself
   reads "measured on the exit tree, **or carried with an owner**". As things stand, those six
@@ -493,35 +501,35 @@ amend or accept:
 **Lead verdict (Proposal 7):** _pending_
 **Maintainer acceptance (Proposal 7):** _pending_
 
-## Proposal 8 — G6 names "plan review 16"; restate it without the number
+## Proposal 8 — this review is not G6; restate G6 without the number
 
 G6 reads: "A plan review 16 is filed after G1–G5 and before the demo" (`CR-1212` Proposal 1;
 `docs/roadmap.md` `## P2`, the G6 bullet). **The number was a forecast.** §14's trigger fires
 at every workstream close, so WK-672's close produced review 16 before G1–G5 were met. More
-Work closes will produce more reviews before the demo.
+Work closes may produce more reviews before the demo.
 
-**The maintainer's entry reads the other way.** `2026-09-29 16:05:14 BST · maintainer (acting
-on the maintainer's behalf) · PLAN-REVIEW CADENCE: option C adopted by the maintainer; RFC + RL
-+ amendments in one PR` ends: "Plan review 16 proceeds now under the current rule: it is
-also P2 exit criterion G6." That entry and G6's own text cannot both hold. G6 says "after
-G1–G5", and at this tree G1–G5 are not met. This review does not choose between them. The
-lead reads the proposal below against that entry, and the maintainer decides.
+**Resolved 2026-09-29 by the maintainer: this review is not G6.**
+- The draft at `34c79f64` recorded a conflict. The maintainer's entry of 16:05:14 BST ended
+  "it is also P2 exit criterion G6", against G6's "after G1–G5".
+- It offered two options:
+  - (a) this review is G6, and G6 drops "after G1–G5";
+  - (b) G6 is restated to count the pre-exit-demo review.
 
-**Options.**
-- **(a) This review is G6.** G6 is amended by a dated line so that it drops "after G1–G5".
-  - The review that follows the finished work is then option C's rule 1, "a full §14 plan
-    review before each phase's exit demo", with no exit criterion of its own.
-  - Cost: the exit criteria no longer require a review of the plan once the work is real.
-    That is the order G6 was written to fix.
-- **(b) G6 is restated without a number:** *"The pre-exit-demo plan review (`CLAUDE.md` §14;
-  option C rule 1 once its RFC lands) is filed after G1–G5 are met and before the demo."*
-  - This review is plan review 16, but it is not the review G6 counts.
-  - Cost: the maintainer's 16:05:14 sentence is amended.
+  It recommended (b).
+- The maintainer answered at 16:21:36 BST ("answers to the lead's corrections 1–3 and the
+  planner's (a) and (b)", item (b)): "my 16:05:14 statement 'PR16 is also P2 exit criterion
+  G6' was WRONG … G6 stays as written: the review before the P2 exit demo, still owed later,
+  and still required under Option C's Part 1".
+- **So option (a) is withdrawn, and G6 is owed.**
 
-**Recommendation: (b).** Option C keeps a full review before every exit demo anyway (its rule
-1). So (b) costs no extra review: it only fixes which review G6 counts, and it keeps G6's
-ordering, which is G6's point. If the maintainer prefers (a), the dated amendment to G6 is
-the lead's roadmap edit, quoting the maintainer.
+**What remains a proposal, for the user:** restate G6 without the number, as *"The
+pre-exit-demo plan review (`CLAUDE.md` §14; option C rule 1 once its RFC lands) is filed
+after G1–G5 are met and before the demo."*
+- The maintainer said that no restatement is needed on the maintainer's account, and left
+  this proposal for the user to accept or decline.
+- **The case for it:** "plan review 16" now names a review that is not G6. A reader who
+  checks G6 by its number would find this record and read G6 as met.
+- The restatement is the lead's roadmap edit, quoting the acceptance.
 
 **Lead verdict (Proposal 8):** _pending_
 **Maintainer acceptance (Proposal 8):** _pending_
@@ -602,10 +610,21 @@ records it as delivered.**
   - The guard's docstring says so directly: "sub-graph inlining (`SubGraphRef.mount_point`
     resolution, `compile_bundle`'s own TODO) is not built by any slice yet".
 - So FR-218 cannot be authored until FR-217's inlining exists.
-- Reopening WK-669's verdict is the maintainer's alone (`CLAUDE.md` §13). **Proposed:** the
-  auditor files an `FD-` against `CR-838`'s FR-217 verdict ("delivered", on a
-  reference-shape marker, for a requirement whose inlining clause is unbuilt). Its remedy
-  travels with FR-218's owner, below.
+- **An `FD-` against `CR-838:39`, ordered by the maintainer.** The entry of 2026-09-29
+  16:21:36 BST, item (a), orders the auditor to file it, quoting:
+  - FR-217's clause;
+  - `CR-838:39`;
+  - the `compile.py` and docstring evidence, at a named tree.
+
+  It is being filed after this draft, so this record cites it by its subject, "`CR-838`
+  records FR-217 as delivered, but bundle-time inlining is not built", and not by an id.
+- **What goes to the user with this review:**
+  - that `FD-`'s resolution;
+  - **whether to reopen WK-669**, the Work `CR-838` closed. Reopening a closed Work is the
+    maintainer's, and the maintainer does not decide it by delegation (`CLAUDE.md` §12;
+    the same entry).
+- The remedy travels with FR-218's owner, below. Both concern the same mid-term-adjustment
+  sub-graph.
 
 **Why the gap is safe today.** The guard fails closed. An MTA or cancellation quote is
 refused, never priced as new business, which is the silent failure FR-218 exists to prevent.
@@ -748,7 +767,8 @@ Seven omissions:
 - **OQ-1233 and OQ-1234 are on a gate already passed** (*Before Phase 2*, Proposal 5).
 - **`06`'s Pricing Actuary role block** names 12 permissions that the vocabulary does not
   have (Proposal 1).
-- **G6's "plan review 16"**, against the maintainer's 16:05:14 sentence (Proposal 8).
+- **G6's "plan review 16"** names a review that is not G6. The maintainer's 16:05:14
+  sentence saying otherwise was withdrawn at 16:21:36 (Proposal 8).
 - **`CR-838`'s FR-217 "delivered"** against unbuilt inlining (Proposal 10).
 - **NFR-500 names no schema** (`03:1155`; Proposal 11).
 - **`CR-1212` G4 (d)'s owner-less carries** against G4's text (Proposal 7).
@@ -787,10 +807,12 @@ _Filled after reading the auditor's draft on `wk672-close`._
   are no `project`- or `phase`-layer `replan`/`fix` entries, and so still no pilot data for
   question 5. **No change.**
 - **Proposals resolved by the maintainer while this review was drafting:**
-  - Proposal 2: #882, #857 and #881; not #877–#879;
+  - Proposal 2: #882 (#903, all zen-engine majors), #857 and #881; not #877–#879;
   - Proposal 4: the host fallback.
 
-  Both come from the entry of 2026-09-29 16:08:24 BST, recorded under each proposal.
+  Both come from the entries of 2026-09-29 16:08:24 and 16:21:36 BST.
+- **Partly resolved, Proposal 8:** this review is not G6 (16:21:36). The restatement stays a
+  proposal.
 - **Proposals that need the maintainer's dated line:** 1, 2 (#877–#879 only), 3, 5, 6, 7, 8,
   9, 10 and 11.
 - **Routing, if accepted.** Each proposal, its record and its owner. This is given in the
@@ -806,16 +828,16 @@ _Filled after reading the auditor's draft on `wk672-close`._
   | 5 | OQ-1233 → WK-688 row and gate move; OQ-1234 and OQ-1235 → `RL-` | lead; decision-maker |
   | 6 | `delivery-process.md` §3 + core extract + `reporter.md` | the maintainer's; applied by the lead |
   | 7 | new P3 `WK-` row; WK-1178 items | lead (the row); the maintainer (`active`) |
-  | 8 | G6 dated restatement | lead, quoting the maintainer |
+  | 8 | G6 restatement (if the user accepts) | lead, quoting the acceptance |
   | 9 | `FD-` against `register-owed.py`; F61's event | auditor; WK-1170 |
-  | 10 | new P2 `WK-` row; `FD-` against `CR-838`'s FR-217 verdict | lead / the maintainer; auditor |
+  | 10 | new P2 `WK-` row; `FD-` against `CR-838:39` (ordered 16:21:36); reopening WK-669 | lead / the maintainer; auditor; the user |
   | 11 | `OQ-` then `RL-` + `03` amendment; re-measurement in Proposal 3's slice | decision-maker; WK-1178 |
 
 - **For the lead's roadmap and register edits, after acceptance:**
   - OQ-1233's and OQ-1234's gate moves;
   - FR-453 named on WK-688's row;
   - the P3 packaging Work row;
-  - G6's restatement, or its dated amendment (Proposal 8);
+  - G6's restatement without the number, if the user accepts it (Proposal 8);
   - FR-217 and FR-218 on a Work row (Proposal 10);
   - the host-fallback wording in G4 (Proposal 4);
   - F35's register owner;
@@ -825,7 +847,7 @@ _Filled after reading the auditor's draft on `wk672-close`._
 
 - Every input the lead's brief required has a written proposal with options and a
   recommendation: N3 (1), #852 (2), F35 and NFR-490 at exit (3), OQ-1233 to OQ-1235 (5),
-  the memory-overwrite finding (6), and FR-432, FR-433 and FR-438 (7). F38 and the dedicated host are Proposal 4.
+  `FD-1238` (6), and FR-432, FR-433 and FR-438 (7). F38 and the dedicated host are Proposal 4.
 - The maintainer's two later inputs have one each: FR-218 (10) and NFR-500 (11).
 - Every register row decayed to this review has a disposition (9).
 - All five questions have a written answer.
@@ -841,7 +863,8 @@ accepted in the 16:08:24 entry):** _pending_ — dated when given.
 - The maintainer's channel entries of 2026-09-29, quoted by heading: 15:26:00 (STRUCTURE),
   15:36:43 (SCOPE: NFR-490 / F35), 14:15:43, 14:17:56 and 14:20:41 (the WK-674 answers),
   16:05:14 (the plan-review cadence), 16:08:24 (the host fallback and Dependabot), 16:12:57
-  (routed outputs) and 16:15:10 (the older plan-review items). The
+  (routed outputs), 16:15:10 (the older plan-review items) and 16:21:36 (the answers on G6,
+  FR-217, #903 and #877–#879). The
   channel file is local and is not in the repository.
 - `docs/roadmap.md` (`## P2`, §10), `docs/findings/register.md`, `docs/open-questions.md`,
   `docs/specs/03-rating-engine.md`, `06-governance.md` and `07-platform.md`,
@@ -849,5 +872,5 @@ accepted in the 16:08:24 entry):** _pending_ — dated when given.
   `packages/pricing-core/src/pricing_core/rating/score.py` and `compile.py`,
   `backend/src/app/api/score.py`, `docs/REDIRECTS.csv`, `CR-838` and `CR-926`,
   all at `1c8762d9`.
-- `PL-1237` at #843's head `306e42b9`, and the memory-overwrite finding and `c2db4f72` on `records-2026-09-29`
+- `PL-1237` at #843's head `306e42b9`, and `FD-1238` and `c2db4f72` on `records-2026-09-29`
   at `bc55a975`.
