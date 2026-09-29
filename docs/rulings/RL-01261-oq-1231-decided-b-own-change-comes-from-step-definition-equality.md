@@ -1,5 +1,5 @@
 ---
-id: RL-9691
+id: RL-1261
 family: ruling
 title: OQ-1231 decided (b) — `StepChange.own_change` comes from step-definition equality, not from `consumed`
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [OQ-1231, RL-1172]
 ---
 
-# RL-9691 — OQ-1231 decided (b): `StepChange.own_change` comes from step-definition equality
+# RL-1261 — OQ-1231 decided (b): `StepChange.own_change` comes from step-definition equality
 
 ## Verified first, at f0c3d197f5d89863efc647a2d7c1a6994b74dd63
 
@@ -24,8 +24,8 @@ derived from step-definition equality instead of `consumed` equality? It is gate
 WK-675's map plan*, and it is a technical decision point, so this role rules it
 (STRUCTURE §1). This record is filed on top of the branch that places that gate.
 
-**RL-9691 is a working id**, minted at its merge turn with `doc-id.py next --ref origin/main`.
-It was checked free on all 108 remote branches.
+Filed under working id 9691 (checked free on all 108 remote branches); minted from working id
+9691 at #927's merge turn, `RL-1261`, 2026-09-29 23:13:41 BST, by `doc-id.py next --ref origin/main` at `97b15726`.
 
 **The rule today and its limit** (`03` §4.10, `03-rating-engine.md:731-733`):
 - `own_change` is true for an added or removed step, and for a changed step whose `consumed`
