@@ -68,8 +68,12 @@ blocks Slice 3 and DP-4 blocks Slice 4, and neither slice's leaf plan is filed b
 and `RL-9202` at #847 head 14d2caa0: **Slice 1 is also gated**, on `RL-9202` merged and on
 **OQ-9660** (the exact `sympy` pin) ruled. See Slice 1's Gates.)*
 
-- **No dependency on WK-674** *(revised 2026-09-29 against 19c395ac)*. This plan never names WK-674
-  (`grep -c WK-674` over this file prints `0`), and no slice here waits on a WK-674 slice.
+- **No dependency on WK-674** *(revised 2026-09-29 against 19c395ac)*. No slice here waits on a
+  WK-674 slice, and no WK-674 output is an input to any slice. Before this revision the plan
+  did not name WK-674 at all: `git show 97986b7a:docs/plans/PL-09103-wk-690-expression-custom-objectives-map-plan.md | grep -c WK-674`
+  prints `0`. The names below were added for the serialisation list only. *(Corrected
+  2026-09-29 on auditor-plans' finding F1 at 18f85019: the text said that this file never
+  names WK-674, with a count of `0`. At 18f85019 this bullet itself named WK-674.)*
   The files that WK-690 slices and WK-674 slices both write, for the lead's serialisation:
   - `packages/model-schema/src/model_schema/permissions.py` and `06` §4.1 (`Role`,
     `RoleAssignment`, `Permission`): WK-690 Slice 3 (`custom_objective:author`) against
@@ -77,6 +81,12 @@ and `RL-9202` at #847 head 14d2caa0: **Slice 1 is also gated**, on `RL-9202` mer
     `RL-1236` rows 26 and 32).
   - The generated `docs/contracts/`: WK-690 Slice 3 (`CustomObjective`) against every
     WK-674 slice that regenerates it (Slice 1's `Job`, `PL-1239`).
+  - `docs/skills-map.md`: WK-690 Slice 1 **edits** it (the `sympy` row, Acceptance item 3).
+    WK-674 may edit it: `PL-1237`:49 says a leaf plan that needs a new dependency updates it.
+  - `docs/specs/07-platform.md`: WK-690 only **cites** it (FR-448, FR-449 and FR-450). No
+    slice here edits it. WK-674 Slice 1 edits it (§4.1 `Job`, `PL-1239` Task 1). The order
+    matters only if a WK-690 leaf plan finds that `07` must change.
+  *(Added 2026-09-29 on auditor-plans' list-gap finding at 18f85019.)*
 
 - Acceptance and Work activation: _pending — the deputy's dated line by delegation_
 
