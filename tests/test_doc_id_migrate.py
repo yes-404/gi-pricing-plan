@@ -619,10 +619,10 @@ def test_lockfiles_survive_migration_byte_identical(
 ) -> None:
     """A hash inside a lockfile can coincidentally contain a substring that reads like a
     corrupted legacy-id fragment — `frontend/pnpm-lock.yaml`'s own
-    `.../W5Er5X2X990.../` hash (`'@rolldown/binding-linux-ppc64-gnu'`'s `integrity` field)
-    is the case an earlier token-boundary defect (row (b), fixed in `a2c0afa`) used to
-    corrupt. That specific defect no longer matches this hash (a correctly-`\b`-bounded
-    token needs a following `-<digits>`, which `W5Er...` does not have), so this proof
+    `.../W5Er5X2X990.../` hash (`'@rolldown/binding-linux-ppc64-gnu'`'s `integrity` field,
+    at the time of writing) is the case an earlier token-boundary defect (row (b), fixed in
+    `a2c0afa`) used to corrupt. That specific defect no longer matches such a hash (a
+    correctly-`\b`-bounded token needs a following `-<digits>`), so this proof
     manufactures a real, currently-live risk instead of a historical near-miss: this
     fixture corpus's own note is legitimately re-cited from `NT-0001` to `RFC-1` by every
     real `migrate()` run (confirmed directly — `result.assigned` always contains
@@ -631,27 +631,23 @@ def test_lockfiles_survive_migration_byte_identical(
     the exclusion, provably rewrites (checked below by running this exact scenario
     against `a2c0afa` — pre-fix — where `uv.lock` came back reading `RFC-1`).
     """
-    frontend_lock_real = (ROOT / "frontend" / "pnpm-lock.yaml").read_bytes()
-    assert b"W5Er" in frontend_lock_real, (
-        "the real file no longer carries the hash this proof exercises — re-derive the "
-        "content from origin/main's current frontend/pnpm-lock.yaml rather than loosening "
-        "this assertion"
-    )
-    uv_lock_text = (
-        "version = 1\n"
-        "# a coincidental mention of NT-0001 in a generated comment, never a citation\n"
-    )
-    frontend_lock_text = (
-        frontend_lock_real.decode("utf-8")
-        + "# a second coincidental mention of NT-0001, alongside the real W5Er hash above\n"
-    )
-    root_pnpm_lock_text = "lockfileVersion: '9.0'\n\npackages: {}\n# NT-0001\n"
+    # The real lockfiles' own bytes, whatever they are today: nothing here pins a hash or a
+    # substring, so a lockfile bump cannot break this proof. What it proves is that the
+    # migration leaves every lockfile byte-identical, and the appended coincidental
+    # `NT-0001` is what a sweep that did not exclude them would provably rewrite.
+    coincidence = b"# a coincidental mention of NT-0001 in a generated comment, never a citation\n"
+    lockfiles: dict[str, bytes] = {
+        "uv.lock": (ROOT / "uv.lock").read_bytes() + coincidence,
+        "frontend/pnpm-lock.yaml": (ROOT / "frontend" / "pnpm-lock.yaml").read_bytes()
+        + coincidence,
+        "pnpm-lock.yaml": b"lockfileVersion: '9.0'\n\npackages: {}\n# NT-0001\n",
+    }
 
     root = _git_tracked_copy(FIXTURE_CORPUS, tmp_path / "root")
-    (root / "uv.lock").write_text(uv_lock_text, encoding="utf-8")
     (root / "frontend").mkdir(parents=True, exist_ok=True)
-    (root / "frontend" / "pnpm-lock.yaml").write_text(frontend_lock_text, encoding="utf-8")
-    (root / "pnpm-lock.yaml").write_text(root_pnpm_lock_text, encoding="utf-8")
+    for name, content in lockfiles.items():
+        (root / name).write_bytes(content)
+    before = {name: hashlib.sha256(content).hexdigest() for name, content in lockfiles.items()}
     _run_git(["add", "-A"], cwd=root)
     _run_git(
         ["-c", "user.email=test@example.com", "-c", "user.name=Test",
@@ -665,12 +661,10 @@ def test_lockfiles_survive_migration_byte_identical(
         "fixture assumption: this corpus's note must still be re-cited NT-0001 -> RFC-1, "
         "or this proof no longer exercises a real rewrite and tests nothing"
     )
-    assert (root / "uv.lock").read_text(encoding="utf-8") == uv_lock_text
-    assert (
-        (root / "frontend" / "pnpm-lock.yaml").read_text(encoding="utf-8")
-        == frontend_lock_text
-    )
-    assert (root / "pnpm-lock.yaml").read_text(encoding="utf-8") == root_pnpm_lock_text
+    for name, content in lockfiles.items():
+        after = (root / name).read_bytes()
+        assert after == content, f"{name} was changed by the migration"
+        assert hashlib.sha256(after).hexdigest() == before[name], name
 
 
 def test_file_census_moves_to_research_byte_identical(
