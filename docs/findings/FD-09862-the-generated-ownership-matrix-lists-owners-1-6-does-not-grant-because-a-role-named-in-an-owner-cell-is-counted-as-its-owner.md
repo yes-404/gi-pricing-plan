@@ -66,7 +66,9 @@ empty in both.
 each directory's *Permitted owners* line and check 35, so no second transcription exists to
 drift. This record adds the evidence and the three wrong rows to that fix's acceptance. The
 proof on delivery is on this input: the regenerated matrix must show the WK owner as the
-maintainer, RFC as the maintainer and skills without the lead as owner, and a deliberately
-wrong owner cell must fail a check rather than reach `INDEX.md` with `doc-index.py --check` green.
+maintainer, RFC as the maintainer and skills without the lead as owner; **the five permitted
+roles as the owners of skills** (§1.6 `:169`); and **the executor as owner of only
+`gi-pricing.yaml`** under `contracts/` (§1.6 `:171`). A deliberately wrong owner cell must fail a
+check rather than reach `INDEX.md` with `doc-index.py --check` green.
 
 *Drafted under working id 9862.*
