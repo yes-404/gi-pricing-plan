@@ -14,8 +14,8 @@ relates: [WK-1178, FR-10, FR-451]
 
 ## Finding
 
-**Severity (proposed): medium.** The maintainer sets it after the count; the reasons are under *Severity*. **Proposed
-by the auditor; the disposition is the lead's.** FD-9968 is a working id, minted at the records PR.
+**Severity: MEDIUM**, ruled by the maintainer (see *Severity*). **Proposed by the auditor; the disposition is the
+lead's.** FD-9968 is a working id, minted at the records PR.
 
 `model_schema.money.DecimalStr` (`packages/model-schema/src/model_schema/money.py:85-91`) and `Relativity`
 (`:94-99`) serialise with `PlainSerializer(str, …)`, and `str()` of a `Decimal` uses exponent form outside
@@ -65,7 +65,7 @@ Run at `origin/main` `32f3fa92afad81d1be611b21ae16ff35211eded8`, 2026-09-30, by 
    and arithmetic results: Decimal(100).normalize() -> 1E+2 | dumps: {"a":"1E+2","r":"1"}
 ```
 
-**2. The uses.** `DecimalStr` is the type of **13 fields in 8 models** (`git grep -n -E ":\s*(tuple\[|list\[)?(DecimalStr|Relativity)"
+**2. The uses.** `DecimalStr` is the type of **13 fields in 11 models** (`git grep -n -E ":\s*(tuple\[|list\[)?(DecimalStr|Relativity)"
 -- packages/model-schema/src`, minus `money.py`): `DoubleLiftBin.exposure_years` (`comparison.py:136`),
 `VersionTotals.exposure_years` (`datasets.py:281`), `AeCell.exposure_years` (`diagnostics.py:93`),
 `LiftBin.exposure_years` (`:114`), `BandingMinimums.min_exposure_per_band` (`modelling.py:334`),
@@ -134,11 +134,60 @@ plain-decimal strings under a `DecimalStr` field name), finds **34** in tracked 
 exponent strings in 3 files (including the positive-exponent `1E+1`), and **2** keyed to a field name; the plain
 `0.0000001` and `10` are not counted. The scratch directory was removed.
 
+*The population predicate, `decexp2.py`, verbatim:*
+
+```python
+"""Population: quoted plain-decimal strings under a DecimalStr field name, in the tracked blobs of a git ref."""
+import collections, os, re, subprocess, sys
+ref = sys.argv[1] if len(sys.argv) > 1 else "HEAD"
+FIELDS = ("exposure_years", "min_exposure_per_band", "restoration_loading", "loading_factor", "tolerance", "exposure", "lower", "upper")
+ANY = re.compile(r"""(?:"|')(%s)(?:"|')\s*:\s*\[?\s*(?:"|')(-?\d+(?:\.\d+)?)(?:"|')""" % "|".join(FIELDS))
+files = [f.decode() for f in subprocess.run(["git", "ls-tree", "-r", "-z", "--name-only", ref], capture_output=True).stdout.split(b"\0") if f]
+pop = collections.Counter(); where = collections.Counter()
+for f in files:
+    try:
+        t = subprocess.run(["git", "show", f"{ref}:{f}"], capture_output=True).stdout.decode("utf-8")
+    except UnicodeDecodeError:
+        continue
+    for k, v in ANY.findall(t):
+        pop[k] += 1; where[(f.split("/")[0], os.path.splitext(f)[1])] += 1
+print("ref", ref, "| quoted plain-decimal values under a DecimalStr field name:", sum(pop.values()), dict(pop))
+print("by (top dir, ext):", dict(where))
+```
+
+*The positive-control script, `decexp_ctl.py`, verbatim:*
+
+```python
+import subprocess, sys, os, tempfile, shutil, re
+# 1. the file predicate on a planted scratch repo
+d = tempfile.mkdtemp(prefix="dctl-")
+try:
+    subprocess.run(["git", "init", "-q", d], check=True)
+    open(d + "/a.json", "w").write('{"lower": "1E-7", "upper": "0.5"}\n')
+    open(d + "/b.json", "w").write('{"exposure_years": "1.2E-28"}\n')
+    open(d + "/c.json", "w").write('{"lower": "0.0000001", "upper": "10", "x": "1E+1"}\n')
+    subprocess.run(["git", "-C", d, "add", "."], check=True)
+    subprocess.run(["git", "-C", d, "-c", "user.email=a@b.c", "-c", "user.name=x", "commit", "-qm", "c"], check=True)
+    r = subprocess.run([sys.executable, "/tmp/scan/decexp.py"], cwd=d, capture_output=True, text=True)
+    print(r.stdout.strip())
+finally:
+    shutil.rmtree(d)
+# 2. the PG predicate on a TEMP table
+PAT = r'"+-?[0-9]+(\.[0-9]+)?[eE][+-]?[0-9]+"+'
+sql = f"""
+create temp table dctl (id int, body jsonb);
+insert into dctl values (1, '{{"lower": "1E-7"}}'), (2, '{{"lower": "0.0000001"}}'), (3, '{{"exposure_years": "1.2E-28", "u": "10"}}');
+select count(*) from dctl r where r::text ~ '{PAT}';
+"""
+r = subprocess.run(["docker", "exec", "gi-pricing-postgres-1", "psql", "-U", "gipricing", "-d", "postgres", "-At", "-c", sql], capture_output=True, text=True)
+print("PG predicate on TEMP table (2 planted exponent rows of 3):", r.stdout.strip().split("\n")[-1])
+```
+
 **5. Stored values (not asked for by the maintainer's count; measured for the severity).** The maintainer asked for committed artifacts only; a
 read-only scan of the reachable PostgreSQL databases gives the stored side. *Predicate* (`decexp_pg.py`): per
 table, `select count(*) … where r::text ~ '"+-?[0-9]+(\.[0-9]+)?[eE][+-]?[0-9]+"+'`, i.e. a quoted exponent-form
 decimal, with one or two quote characters because a `jsonb` column renders its quotes doubled inside a record's text
-(the lesson of FD-9949's positive control), in `BEGIN TRANSACTION READ ONLY` with `PGOPTIONS='-c
+(the lesson of FD 9949's positive control, working id 9949), in `BEGIN TRANSACTION READ ONLY` with `PGOPTIONS='-c
 default_transaction_read_only=on'`. *Corpus:* **81 databases, 3841 tables**. *Result:* **0 rows**. *Positive
 control:* a `TEMP` table with `{"lower": "1E-7"}`, `{"lower": "0.0000001"}` and `{"exposure_years": "1.2E-28", "u":
 "10"}`: the predicate counts **2** (the two exponent rows; the plain one is not counted). *Population for the hashed
@@ -162,16 +211,28 @@ repository; item (3) quoted verbatim):
 >   I set severity after the count.
 
 
-**Proposed: medium.** For: it is a contract defect on a type used across eight models, the type accepts inputs whose
-serialisation fails its own published pattern, and it makes one governed hash (`suite_content_hash`) depend on
-spelling; the fix changes bytes and so needs a migration. Against, and why it is not high: **0 committed artifacts
-hold an exponent-form value**, no price depends on it, the failure modes are loud (a schema-validation error, or a
-hash mismatch), and the only hashed field pair is a regression suite's property bound. The maintainer decides;
-low is defensible if the stored count is also 0 and nothing is hashed in production.
+The maintainer's ruling, in `~/gi-pricing-plan.local/channel/to-lead.md`, "2026-09-30 17:15:31 BST — RL 9963 delta
+noted; FD 9968 (#1004 at e084655f69d50b988fa263cf9af7d0fcf8ad4a41) severity MEDIUM" (quoted verbatim):
+
+> - **FD 9968: MEDIUM**, over LOW. Two properties justify it, not the count:
+>   1. DecimalStr's serialiser emits strings its **own published JSON Schema pattern rejects** ("1E-7", "1.2E-28", "1E+2"): the contract contradicts itself, across 13 fields in 8 models;
+>   2. a governed hash (`suite_content_hash`, regression.py:219, unversioned) depends on spelling, so equal values hash differently. That is a reproducibility defect in the audit trail, the property the platform promises (CLAUDE.md §1).
+>   **The zero count sets the fix, not the severity:** with 0 committed and 0 stored instances, fix it NOW without a hash-version bump. **The fix commit re-measures the count** (tracked blobs, the PostgreSQL DBs, **and MinIO**, which the FD did not measure) and records 0 as the reason no migration is needed. If any instance appears at fix time, it bumps the `suite_content_hash` version.
+>   - Owner **WK-1178** (§1.9 hotfix routing; WK-657 and WK-692 are closed), accepted. The fix follows spec and contract first: DecimalStr's serialisation is a model-schema contract change, so regenerate with contract-guard green.
+
+**Corrected by** the entry "2026-09-30 17:20:19 BST — CORRECTION to my FD 9968 severity entry: "13 fields in 8 models" → "13
+fields in **11** models"": the 13 fields are in **11 distinct models** (`DoubleLiftBin`, `VersionTotals`, `AeCell`,
+`LiftBin`, `BandingMinimums`, `LargeLossTreatment` (two fields), `Reconciliation`, `Histogram`, `LevelCount`, `OneWayRow`,
+`MonotoneInInput` (two fields)), as evidence 2 lists them. The entry says the severity (medium) and both reasons are
+unchanged ("The reach is wider, not narrower"), and adds: "**Add to the fix commit's re-measure:** audit-event writers
+were spot-checked, not swept. The fix sweeps every DecimalStr write path it touches, or states which paths it measured."
+This record's earlier proposal was medium too, for the same two properties plus the count; the maintainer's reasons
+above replace it, and the eight-model figure it used is withdrawn.
 
 ## Disposition
 
-**Proposed by the auditor; the verdict is the lead's.**
+**Proposed by the auditor; the verdict is the lead's.** The maintainer's decisions (the 17:15:31 and 17:20:19 BST entries, quoted
+under *Severity*) are recorded below.
 
 - **Fix direction.** Serialise positionally, as RL 9963 already rules for the ladder's own decimals
   (`PositionalDecimalStr`: the same float refusal and the same JSON Schema, and a serialiser that renders
@@ -180,12 +241,22 @@ low is defensible if the stored count is also 0 and nothing is hashed in product
   is the count that decides it), and (b) **whether to also normalise trailing zeros** so equal values have one
   spelling (`66000.440` and `66000.44`), which the positional form alone does not do. Normalising and rendering
   positionally together makes the serialised form a function of the value.
-- **Hash migration or version bump for already-hashed artifacts.** `suite_content_hash` has no version today.
-  `spec_hash` does (`SPEC_HASH_VERSION`, `v11:` prefix and the same number inside the payload, precedent: a
-  digest of an older version is "stale and findable with `LIKE 'v10:%'`"). Changing the serialisation changes
-  `suite_content_hash` for any suite whose `lower` or `upper` is not already in normal positional form, so the fix
-  either carries a `suite_content_hash` version in the payload and prefix (the `spec_hash` precedent), or proves by a
-  read-only count that no stored suite is affected and records that. Evidence 5 is that count for the reachable stores.
+- **Hash handling: fix now, with no version bump, unless the re-measure finds an instance (the maintainer's decision).**
+  `suite_content_hash` has no version today; `spec_hash` does (`SPEC_HASH_VERSION`, `v11:` prefix and the same number
+  inside the payload; the precedent is that a digest of an older version is "stale and findable with `LIKE 'v10:%'`").
+  Because 0 committed and 0 stored instances were measured (evidence 4 and 5), the fix goes in **now without a hash-version
+  bump**. **The fix commit re-measures the count** over the tracked blobs, the PostgreSQL databases **and MinIO** (which
+  this record did not measure), and **records 0 as the reason no migration is needed**. If any instance appears at fix
+  time, that commit bumps the `suite_content_hash` version (the `spec_hash` precedent) instead.
+- **A `model-schema` contract change: contract first.** `DecimalStr`'s serialisation is a contract change, so the
+  contract is regenerated (`docs/contracts/`, the generator's `--check` green) and the contract guard
+  (`backend/tests/test_contracts.py`, the `contract-guard` skill) is green before the code lands; the spec comes first
+  (`CLAUDE.md` §0).
+- **The write-path sweep (the 17:20:19 BST entry).** The fix commit **sweeps every `DecimalStr` write path it touches, or
+  states which paths it measured**: the serialiser is reached wherever a model holding one of the 13 fields is dumped
+  (the persisted `jsonb` rows, blob payloads, API responses, the `suite_content_hash` payload), and audit-event writers
+  were spot-checked, not swept. This finding measured the tracked blobs and the PostgreSQL databases (evidence 4 and 5)
+  and did not sweep the individual writers; that sweep is the fix commit's.
 - **Owner: WK-1178**, the standing maintenance Work (`docs/roadmap.md`, the WK-1178 row: "work that belongs to no other
   Work"; `docs/process/document-ids.md` §1.9 routes hotfixes there). No Work in the roadmap owns `model-schema` as a
   component: the rows that name it are `WK-657` (repo foundations, closed) and `WK-692` (Phase 1b's non-browser
@@ -198,7 +269,8 @@ low is defensible if the stored count is also 0 and nothing is hashed in product
   `suite_content_hash`; a generated-contract validation of a model dump for a small value passes.
 
 **Event that next confirms or discharges it:** the WK-1178 slice merges with a positional (and, if decided, normalised)
-serialiser, the contract regenerated, and the `suite_content_hash` handling (version bump or a recorded zero count).
+serialiser, the contract regenerated, and the `suite_content_hash` handling (a recorded zero count from the re-measure over tracked blobs, PostgreSQL and MinIO,
+or a version bump if an instance appears) and the write-path sweep.
 
 ## Decision
 
