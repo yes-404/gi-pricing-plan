@@ -27,7 +27,9 @@ from typing import Final
 import polars as pl
 
 __all__ = [
+    "DEFAULT_LIMITS",
     "ExpressionError",
+    "ExpressionLimits",
     "ExpressionSize",
     "GrammarProfile",
     "compile_expression",
@@ -116,6 +118,17 @@ class ExpressionSize:
     nodes: int
     depth: int
     all_nodes: int
+
+
+@dataclass(frozen=True, slots=True)
+class ExpressionLimits:
+    """02 §4.6's node-count and depth limits (FR-145), configurable, defaulting to the spec's."""
+
+    max_nodes: int = 200
+    max_depth: int = 20
+
+
+DEFAULT_LIMITS: Final = ExpressionLimits()
 
 
 def measure_expression(expression: str) -> ExpressionSize:
@@ -256,8 +269,28 @@ def _check_symbols(tree: ast.AST, symbols: frozenset[str]) -> None:
             )
 
 
+def _check_limits(root: ast.expr, limits: ExpressionLimits) -> None:
+    size, deepest = _measure(root)
+    if size.nodes > limits.max_nodes:
+        raise ExpressionError(
+            f"the expression has {size.nodes} nodes; the limit is {limits.max_nodes} "
+            "(02 §4.6, FR-145)",
+            node=root,
+        )
+    if size.depth > limits.max_depth:
+        raise ExpressionError(
+            f"the expression reaches depth {size.depth}; the limit is {limits.max_depth} "
+            "(02 §4.6, FR-145)",
+            node=deepest,
+        )
+
+
 def parse_expression(
-    expression: str, profile: GrammarProfile, *, symbols: frozenset[str] | None = None
+    expression: str,
+    profile: GrammarProfile,
+    *,
+    symbols: frozenset[str] | None = None,
+    limits: ExpressionLimits = DEFAULT_LIMITS,
 ) -> ast.Expression:
     """Parse and validate `expression` in `profile`: the one allow-list walk (02 §4.6)."""
     if profile in _STRICT and symbols is None:
@@ -267,14 +300,18 @@ def parse_expression(
     _check_structure(tree.body, profile)
     if symbols is not None:
         _check_symbols(tree, symbols)
+    _check_limits(tree.body, limits)
     return tree
 
 
 def referenced_columns(
-    expression: str, *, profile: GrammarProfile = GrammarProfile.RECIPE
+    expression: str,
+    *,
+    profile: GrammarProfile = GrammarProfile.RECIPE,
+    limits: ExpressionLimits = DEFAULT_LIMITS,
 ) -> frozenset[str]:
     """Column names an expression reads, for lineage and for pre-flight checks."""
-    tree = parse_expression(expression, profile)
+    tree = parse_expression(expression, profile, limits=limits)
     functions = _functions(profile)
     return frozenset(
         node.id
@@ -288,6 +325,7 @@ def compile_expression(
     *,
     profile: GrammarProfile = GrammarProfile.RECIPE,
     symbols: frozenset[str] | None = None,
+    limits: ExpressionLimits = DEFAULT_LIMITS,
 ) -> pl.Expr:
     """Translate a restricted expression into a Polars expression.
 
@@ -299,7 +337,8 @@ def compile_expression(
             "the objective profile translates to SymPy: use "
             "pricing_core.data.expression_sympy.to_sympy"
         )
-    return _translate(parse_expression(expression, profile, symbols=symbols).body)
+    tree = parse_expression(expression, profile, symbols=symbols, limits=limits)
+    return _translate(tree.body)
 
 
 def _translate(node: ast.AST) -> pl.Expr:

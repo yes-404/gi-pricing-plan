@@ -146,6 +146,20 @@ including `test_prepare.py` and `test_expression_nfrs.py` unmodified (Acceptance
 rc 0, `mypy` no issues in 209 files, `lint-imports` 4 kept 0 broken. Spec notes (RL-1265 DP-5,
 RL-1292 arity) added to 02 §4.6.
 
+### Task 4 — the limits, enforced in all four profiles (RL-1291)
+
+Precondition: Task 2's commit `4b5bc5e1` is an ancestor of HEAD (Acceptance 4).
+
+Red 1: `ImportError: cannot import name 'ExpressionLimits'`. Red 2, with `ExpressionLimits`
+and a stub check that measured but did not enforce: **9 failed, 10 passed** — every refusal
+case `DID NOT RAISE ExpressionError` (201 nodes ×4 profiles, depth 21 ×4, configurable limits),
+and the accept cases (200 nodes, depth 20, ×4 profiles) passed as the positive control.
+Green after enforcement: `uv run pytest packages/pricing-core/tests -q` **1072 passed** (rc 0);
+ruff rc 0; mypy no issues in 209 files; lint-imports 4 kept, 0 broken. Spec delivery note added to 02 §4.6.
+
+Timing note: uptime load at Task 3–4 start was about 14.6 (lead's ruling on timed gates: applies
+to full gates; the full gate has not been run yet).
+
 ## PRs
 
 Draft PR opened on the slice branch; number recorded here when opened.

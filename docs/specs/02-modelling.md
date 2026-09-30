@@ -1007,6 +1007,12 @@ Rules enforced by the parser (FR-145):
 > `%`, ternaries and boolean operators. In all four profiles it enforces the node-count
 > and depth limits. The fix is WK-690's first slice (FR-144's 2026-09-28 amendment).
 
+> *(Delivered 2026-09-30, WK-690 Slice 1: the parser implements the profile table. The
+> three 2026-08-22 divergences are closed. Both limits are enforced in all four profiles,
+> counted over `ast.expr` nodes (DP-S1-1, RL-1291). The
+> function sets are the table's. Comparisons in `objective` and `factor` exist only as
+> `where()`'s condition.)*
+
 
 Example `expression` objective — under-pricing penalised twice as hard, on a log link:
 

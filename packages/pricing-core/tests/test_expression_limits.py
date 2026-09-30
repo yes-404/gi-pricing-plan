@@ -10,7 +10,14 @@ from __future__ import annotations
 
 import pytest
 
-from pricing_core.data.expressions import ExpressionSize, measure_expression
+from pricing_core.data.expressions import (
+    ExpressionError,
+    ExpressionLimits,
+    ExpressionSize,
+    GrammarProfile,
+    measure_expression,
+    parse_expression,
+)
 
 
 def _min_of(n: int) -> str:
@@ -38,3 +45,41 @@ def _nested_abs(n: int) -> str:
 )
 def test_the_counter_measures_expr_nodes_and_depth(expression: str, size: ExpressionSize) -> None:
     assert measure_expression(expression) == size
+
+
+SYMBOLS = frozenset({"x"})
+ALL_PROFILES = list(GrammarProfile)
+
+
+def _parse(expression: str, profile: GrammarProfile, **kwargs: object) -> None:
+    parse_expression(expression, profile, symbols=SYMBOLS, **kwargs)  # type: ignore[arg-type]
+
+
+@pytest.mark.req("FR-145")
+@pytest.mark.parametrize("profile", ALL_PROFILES)
+def test_200_nodes_and_depth_20_are_accepted(profile: GrammarProfile) -> None:
+    _parse(_min_of(198), profile)       # 200 nodes (premise h)
+    _parse(_nested_abs(19), profile)    # depth 20
+
+
+@pytest.mark.req("FR-145")
+@pytest.mark.parametrize("profile", ALL_PROFILES)
+def test_201_nodes_are_refused(profile: GrammarProfile) -> None:
+    with pytest.raises(ExpressionError, match="201 nodes; the limit is 200"):
+        _parse(_min_of(199), profile)
+
+
+@pytest.mark.req("FR-145")
+@pytest.mark.parametrize("profile", ALL_PROFILES)
+def test_depth_21_is_refused_at_the_deepest_node(profile: GrammarProfile) -> None:
+    with pytest.raises(ExpressionError, match="depth 21; the limit is 20") as excinfo:
+        _parse(_nested_abs(20), profile)
+    assert excinfo.value.col_offset is not None  # NFR-483: positioned, not whole-string
+
+
+@pytest.mark.req("FR-145")
+def test_the_limits_are_configurable() -> None:
+    small = ExpressionLimits(max_nodes=3, max_depth=2)
+    _parse("x + x", GrammarProfile.RECIPE, limits=small)  # 3 nodes, depth 2
+    with pytest.raises(ExpressionError, match="5 nodes; the limit is 3"):
+        _parse("x + x + x", GrammarProfile.RECIPE, limits=small)
