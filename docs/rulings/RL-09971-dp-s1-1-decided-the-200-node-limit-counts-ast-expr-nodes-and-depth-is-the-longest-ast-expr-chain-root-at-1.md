@@ -31,9 +31,9 @@ under the chosen count, and at 201 rejected".
 
 ## Verified first, at 095dd400918348b32ee6eab1db7915faaa9dfe35
 
-- **The decision point** is DP-S1-1 of SL-1271's leaf plan: working id PL-9960, PR #954,
-  branch `p2-wk690-s1-leaf`, read at `4d2e78e8`,
-  `docs/plans/PL-09960-wk-690-slice-1-parser-profiles-limits-and-the-sympy-pin-leaf-plan.md:275`.
+- **The decision point** is DP-S1-1 of SL-1271's leaf plan (#954, working id 9960), branch
+  `p2-wk690-s1-leaf`, read at `4d2e78e8` and re-checked at `6853c1b3`: its decision-point
+  table, row at `:275`.
   Its question is: "What does §4.6's 'AST node count ≤ 200; nesting depth ≤ 20' count?"
   - (a) is `ast.expr` nodes only, with depth as the longest chain of nested `ast.expr`
     nodes, the root at 1.
@@ -123,7 +123,7 @@ route or error code), and no existing behaviour.
 
 ## What it obliges
 
-- **WK-690 Slice 1 (PL-9960 Task 2 and Task 4):**
+- **WK-690 Slice 1 (SL-1271's leaf plan, #954: Task 2, and Task 4 Steps 1, 3 and 4):**
   - implements the count and depth as ruled;
   - cites this record in the `02` §4.6 note that the leaf plan places ("counted over
     `ast.expr` nodes (DP-S1-1 …)");
