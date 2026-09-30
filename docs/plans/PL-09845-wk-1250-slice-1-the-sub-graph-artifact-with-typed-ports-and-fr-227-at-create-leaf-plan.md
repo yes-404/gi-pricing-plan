@@ -41,11 +41,16 @@ DP-1, DP-3 and DP-4. Its rulings change this slice's acceptance and write set:
 
 A plan is frozen by family (`document-ids.md` :49, :69; check 34; `CLAUDE.md` §2), and a
 material acceptance or write-set change is carried by a superseding plan, not a delta. The
-maintainer's entries in `to-lead.md`, the lead's local channel file, are:
+maintainer's entries are cited by their headers in `~/gi-pricing-plan.local/channel/to-lead.md`.
+That file is the lead's local channel file. It is outside the repository and is not a governed
+record. Its headers give provenance only, and this plan states each rule's operative content
+itself. The entries:
 - "2026-09-30 14:44:36 BST — DECISION: RL-1309's plan follow-ons are NOT in-place edits (plans
   are frozen as a family); use dispatch-record deltas";
-- "2026-09-30 14:46:03 BST — confirmed: WK-1250 S1 gets a NEW leaf plan superseding PL-1278". The Work's scope is unchanged: FR-217's
-artifact limb is still the only requirement this slice delivers.
+- "2026-09-30 14:46:03 BST — confirmed: WK-1250 S1 gets a NEW leaf plan superseding PL-1278".
+
+The Work's scope is unchanged: FR-217's artifact limb is still the only requirement this slice
+delivers.
 
 **Architecture.** The closest precedent is the Rating Algorithm: one row per version, its
 validated content stored as JSONB (`RatingAlgorithmRow`, `backend/src/app/db/models.py:1926-1954`),
@@ -113,9 +118,9 @@ the activation practice from now on", item (3). Filed 2026-09-30 against the tre
 
 ### Dependencies
 
-- **`compile.py` has one writer at a time, in the maintainer's order** (to-lead.md
+- **`compile.py` has one writer at a time, in the maintainer's order** (`~/gi-pricing-plan.local/channel/to-lead.md`,
   "2026-09-30 10:53:10 BST — DECISION: condition/clamp FD (B) — HIGH on independent
-  reproduction; owner and order; two small items", in the lead's local channel file): the
+  reproduction; owner and order; two small items"): the
   WK-1178 fix slice (PL-1299) → the #967 code slice (plan working id 9833) → **this slice** →
   Slice 2. This slice's `compile.py` region (Task 4) is edited after both WK-1178 slices merge.
 - **The #967 structure this slice builds on.** After the #967 code slice:
@@ -155,14 +160,24 @@ re-runs its full gate. Each row below was read at the tree above.
 | `backend/src/app/db/models.py` | appends `SubGraphVersionRow` at the end of the file | WK-674 S2, WK-673 S4 (new rows); WK-674 S2a (existing classes' metadata, PL-1303) | **Exempt** for this slice's append |
 | `backend/src/app/main.py` | one router import beside `:34`, one `include_router` in `:136-147` | WK-673 S4 | **Exempt** |
 | the generated contracts; `docs/INDEX.md` | regenerated | any slice that adds a shape, route or record | **Exempt**, never hand-merged |
-| `docs/specs/03-rating-engine.md` §5.1 | four rows appended to the REST table | WK-674 S2 (a deployment-history `GET`), WK-673 S4 and S7, and #977's column slice | **A shared section.** RL-1263:100 decides it at dispatch, on the actual diffs |
-| `docs/specs/03-rating-engine.md` §4 | a new subsection | WK-674 S2 and S6 (new subsections) | **A shared section.** The second to merge takes the next free number and never reuses one (`CLAUDE.md` §5) |
+| `docs/specs/03-rating-engine.md` §5.1 | four rows appended to the REST table | WK-674 S2 (a deployment-history `GET`, `PL-1237:773-774`), WK-674 S6 (a routing route, `PL-1237:977-978`), WK-673 S4 and S7 (`PL-1267:527`, `:589`), and #977's column slice | **Serialises** (RL-1263:100-104): an existing spec section that is not on the registry list. The one exception is a dispatch record that names the path together with the check that no existing definition is edited by both |
+| `docs/specs/03-rating-engine.md` §4 | a new subsection | WK-674 S2 and S6 (new subsections, `PL-1237:772`, `:977`) | **Serialises** (RL-1263:100-104), for the same reason. The slice that merges second numbers its subsection after the first's, and never reuses a number (`CLAUDE.md` §5) |
+| `backend/src/app/platform/rating_algorithms.py` | `_parse_algorithm` (`:25-52`) edited: its mapping is extracted into a public function that it calls, with identical behaviour (Task 5, B1) | any slice editing `_parse_algorithm` or the rating-algorithm save path | **An existing-definition edit, not on the registry list.** It serialises unless the dispatch record names it |
 | `docs/specs/03-rating-engine.md` §2 | one glossary row | none found | Not shared |
 | `docs/specs/00-overview.md` §2 | one glossary row | WK-673 S1, if it adds a term (`PL-1267:469`) | Shared only if WK-673 S1 adds a term |
 | `docs/specs/06-governance.md` §4.1 | the `rating:read` row and the "Coarse write rights" note widened (Task 1) | WK-690 S3 (its `custom_objective:author` row, `PL-1268:491-493`) | **A shared section.** Decided at dispatch on the diffs |
 | `scripts/generate-contracts.py` | one entry in the slug → symbol map (`:39-101`) | any slice registering a generated shape | **Not on the registry list.** It serialises unless the dispatch record names the path |
 | `packages/model-schema/src/model_schema/__init__.py` | exports added | any slice exporting a shape | **Not on the registry list**, as above |
 | `packages/model-schema/src/model_schema/rating.py` | only if a graph helper must be promoted (Task 2) | WK-673 (`PL-1267:316-318`) | Shared only if Task 2 promotes a helper |
+
+**The existing definitions this slice edits** (W3 of the plan audit), in full:
+- `compile.py`'s `_producer_types` and `_check_result_types`, whose signatures are kept (Task 4);
+- `rating_algorithms.py`'s `_parse_algorithm`, whose behaviour is kept (Task 5);
+- `03` §2, §4 and §5.1; `00` §2; `06` §4.1's `rating:read` row and "Coarse write rights" note;
+- `scripts/generate-contracts.py`'s map, and `model_schema/__init__.py`'s exports (appends to
+  existing definitions).
+
+Everything else this slice writes is a new file, or an append to a registry file.
 
 **Not in this slice's set:** `compile_bundle`, `score.py`, `TraceStep`, `runtime.py`, any
 `approvals.py`, `errors.py`, `conftest*.py`, and any `pyproject.toml` or `uv.lock`.
@@ -190,8 +205,8 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
      `version`, `inputs`, `outputs`, `steps` and `change_note`, and no `sub_graphs`.
    - `outputs`' items take their schema from `AlgorithmOutput`'s, and `inputs`' items carry
      `name` and `type` (DP-3 item 1).
-   - `git grep -n -E '^class (SubGraph|SubGraphBody|SubGraphInputPort)\(' -- packages backend/src`
-     prints **exactly three** lines, all in `packages/model-schema/src/model_schema/sub_graphs.py`.
+   - `git grep -n -E '^class (SubGraph|SubGraphBody|SubGraphCreate|SubGraphInputPort)\(' -- packages backend/src`
+     prints **exactly four** lines, all in `packages/model-schema/src/model_schema/sub_graphs.py`.
      Any other count fails.
 3. **Migration (FR-417).**
    - One new Alembic revision creates the table.
@@ -203,14 +218,29 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
 4. **Create-time refusals (FR-217, FR-212, FR-227), red first, one test per cause**, in
    `packages/model-schema/tests/test_sub_graph.py` (shape), the new tests in
    `packages/pricing-core/tests/test_rating_compile.py` (the type check) and
-   `backend/tests/test_sub_graphs_api.py` (the route). Each case, with its route code (RL-1309
-   DP-S1-3):
+   `backend/tests/test_sub_graphs_api.py` (the route). **Every test carries
+   `@pytest.mark.req("FR-217")`, and the type-check tests also carry `@pytest.mark.req("FR-227")`.**
+   Each case, with its route code (RL-1309 DP-S1-3):
    - a step consumes a name that is neither a declared input port nor produced by a step:
      `RATING_GRAPH_UNRESOLVED_REF`, naming it;
-   - a declared output port that no step produces: `RATING_GRAPH_UNRESOLVED_REF`, naming it;
+   - a declared output port that no step produces: `RATING_GRAPH_UNRESOLVED_REF`, naming it.
+     The shape's message for this case says "undefined value", so the shared mapper (Task 5)
+     returns this code (see Task 2);
    - **an output port whose declared type is incompatible with its producing step's result
      type: `RATING_TYPE_MISMATCH`** (FR-227, `03:113`; RL-1309 *Acceptance*, Slice 1). The
-     compatibility rule is `compile.py`'s `_compatible` (`:106-111`), called as it stands;
+     case uses an **`expression` step** with `result_type: "string"` producing an output port
+     declared `money_minor`. `compile.py`'s `_compatible` (`:106-111`), called as it stands,
+     refuses that pair. **Scope (W1 of the plan audit):** FR-227 at create covers only
+     producers whose type is known at save, which are an `expression` step's `result_type` and
+     an input port's declared type (the rule of `_producer_types`, `compile.py:84-103`). An
+     output port produced by a `table`, `lookup` or `model_call` step is not type-checked at
+     create, exactly as for an algorithm today. Its type is known only against the pinned
+     artifact, at compile;
+   - a step that is neither reachable from an input port nor contributing to an output port
+     (FR-212's orphan rule, restated for ports): `VALIDATION_FAILED`;
+   - a step that produces an input port's name without consuming it: `VALIDATION_FAILED`.
+     The input port is that name's first producer, so this is FR-212's "produced by exactly one"
+     rule. A step that consumes the port name and re-produces it (the clamp chain) is accepted;
    - a cycle: `RATING_GRAPH_CYCLIC`;
    - two steps with the same `step_id`: `VALIDATION_FAILED`;
    - a body carrying `sub_graphs`: `VALIDATION_FAILED` (DP-4). The shape test also asserts the
@@ -224,8 +254,10 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
    - `POST /api/v1/sub-graphs` on a slug that exists returns **409** `VALIDATION_FAILED`, and
      the stored content is byte-identical afterwards;
    - `POST /api/v1/sub-graphs/{slug}/versions` on an unknown slug returns **`NOT_FOUND`**;
-   - the server assigns versions as the current maximum plus one. A lost race is a 409 (the form
-     of `objectives.py:229-236`);
+   - the server assigns versions as the current maximum plus one. **A lost race is a 409**, in
+     the form of `objectives.py:229-236`. It is tested by inserting a row carrying the version the
+     service is about to write, between its read of the maximum and its flush (a test double on
+     the read), so the unique constraint fires and the service maps the `IntegrityError` to 409;
    - the authorisation sweep (`backend/tests/test_api_authorisation_sweep.py`) lists no `PUT`,
      `PATCH` or `DELETE` on `/sub-graphs`.
 6. **The refactor preserves the algorithm path.** `validate_algorithm`'s existing tests in
@@ -260,7 +292,7 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
     `N passed` line and `HEAD`, and compares `N passed` with `origin/main`'s.
     `backend/tests/test_demo_guide.py` passes with the new §5.1 rows present in the generated
     contract.
-13. **Item 11.** Before the lead merges, the maintainer's **MERGE-ACK** naming the PR's full head
+13. **MERGE-ACK.** Before the lead merges, the maintainer's **MERGE-ACK** naming the PR's full head
     SHA is recorded in the lead's local channel file `~/gi-pricing-plan.local/channel/to-lead.md`,
     as `.claude/roles/lead.md:156-157` (rule 4) names. It is never posted on the PR. The slice's
     clean audit is filed. A Slice closes on a clean audit and the lead's merge (`CLAUDE.md` §13).
@@ -268,13 +300,21 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
 ## Global Constraints
 
 - **Spec first** (`CLAUDE.md` §0): Task 1 lands before any code.
-- **No hand-written shape that `model-schema` owns** (`CLAUDE.md` §2). `SubGraph`,
-  `SubGraphBody` and `SubGraphInputPort` are declared once, in `model-schema`. Output ports
+- **No hand-written shape that `model-schema` owns** (`CLAUDE.md` §2). `SubGraphInputPort`,
+  `SubGraphBody`, `SubGraphCreate` and `SubGraph` are declared once, in `model-schema`. Output ports
   reuse `AlgorithmOutput`, and there is **no second result-type vocabulary** (RL-1309 DP-3
   item 1).
 - **`pricing-core` changes only in `compile.py`'s two type-check functions, one new public entry
   point, and new tests** (RL-1309 DP-S1-4 item 3). `compile_bundle`, the other checks and
   `_compatible` are untouched. `.importlinter` keeps `pricing-core` standalone.
+- **One mapping from a shape refusal to its code, never a copy** (B1 of the plan audit). The
+  routes take the raw JSON body (`dict[str, Any]`), as `POST /rating-algorithms` does
+  (`backend/src/app/api/rating_algorithms.py:35`). The service parses it through a mapper
+  extracted from `_parse_algorithm` (`backend/src/app/platform/rating_algorithms.py:25-52`),
+  which both artifacts then call. The reason: a typed FastAPI body would be refused by
+  FastAPI's request validation (`backend/src/app/errors.py:438-465`) as `VALIDATION_FAILED`
+  before the service runs. The codes RL-1309 DP-S1-3 names, `RATING_GRAPH_CYCLIC` and
+  `RATING_GRAPH_UNRESOLVED_REF`, could then never be returned (Task 5).
 - **Every write emits its Audit Event in the caller's transaction** (`06` FR-368;
   `backend/src/app/platform/audit.py:52-75`).
 - **RBAC in the backend on every request** (`06` FR-343): `rating:write` and `rating:read`
@@ -318,7 +358,7 @@ scripts/generate-contracts.py backend/migrations/versions` prints nothing for th
 
 | # | Premise | Evidence |
 |---|---|---|
-| a | No sub-graph table, route or service exists | `git grep -n -i 'sub_graph\|subgraph' -- backend/src packages/*/src` prints 8 lines, none under `backend/src`: `model_schema/__init__.py:282,669`, `model_schema/rating.py:340,343,390`, `model_schema/refs.py:25`, and `pricing_core/rating/score.py:399,401` |
+| a | No sub-graph table, route or service exists | `git grep -n -i 'sub_graph\|subgraph' -- backend/src packages` prints 8 lines under `src/`, none under `backend/src`: `model_schema/__init__.py:282,669`, `model_schema/rating.py:340,343,390`, `model_schema/refs.py:25`, and `pricing_core/rating/score.py:399,401` |
 | b | `SubGraphRef` is `ref: ArtifactRef` plus `mount_point: str`, frozen and `extra="forbid"` | `packages/model-schema/src/model_schema/rating.py:340-351`, `:390` |
 | c | `"sub_graph"` is a legal `ArtifactRef` type | `packages/model-schema/src/model_schema/refs.py:25` |
 | d | `AlgorithmOutput` is `name`, `type: RatingResultType` and `required`, and `RatingResultType` is `Annotated[str, AfterValidator(_reject_float_type)]` | `rating.py:235`, `:238-244`. So output ports reuse it, and input ports use `RatingResultType` (RL-1309 DP-3 item 1) |
@@ -366,6 +406,8 @@ Every decision point that bears on this slice is ruled; none is open. The rows b
 - [ ] `gh pr list --state open`, and read anything that rules on FR-217, FR-227, sub-graphs, the
   permission catalogue, `03` §4–§5.1 or `compile.py` ([`README.md`](README.md) convention 4).
   Name the SHA read. Re-point #969 (plan working id 9833) to its id if it has minted.
+- [ ] Confirm the resolutions of map DP-1, DP-3, DP-4 and DP-S1-1 to DP-S1-4 **by record id**
+  (RL-1309) in the ledger, and stop if any differs from **Decision points**.
 - [ ] Confirm the dispatch record's RL-1263 write-set check, and its gate-slot rule.
 - [ ] **At the second merge**, if the other lane's slice merges first: merge `origin/main` in,
   re-point `down_revision` to one head, regenerate `docs/contracts/` and `docs/INDEX.md` (never
@@ -425,7 +467,7 @@ and the "Coarse write rights" note).
 - [ ] `python3 scripts/audit-docs.py`, quoting the rc. Commit:
   `docs(specs): 03 SubGraph with typed ports and §5.1 routes, 00 §2 Sub-graph, 06 §4.1 catalogue text (FR-217, WK-1250 S1)`.
 
-### Task 2: `model-schema` — `SubGraph`, `SubGraphBody`, `SubGraphInputPort` and the contract
+### Task 2: `model-schema` — `SubGraphInputPort`, `SubGraphBody`, `SubGraphCreate`, `SubGraph` and the contract
 
 **Files:** Create `packages/model-schema/src/model_schema/sub_graphs.py` and
 `packages/model-schema/tests/test_sub_graph.py`. Modify `packages/model-schema/src/model_schema/__init__.py`
@@ -437,16 +479,31 @@ and the "Coarse write rights" note).
   - `SubGraphInputPort`: `name: str` and `type: RatingResultType`;
   - `SubGraphBody`: `inputs: list[SubGraphInputPort]`, `outputs: list[AlgorithmOutput]`,
     `steps: list[RatingStep]` and `change_note: str` (non-empty);
-  - `SubGraph(SubGraphBody)`, which adds `slug: Slug` and `version: int`.
+  - `SubGraphCreate(SubGraphBody)`, which adds `slug: Slug`. It is the request body of
+    `POST /api/v1/sub-graphs`, whose path carries no slug (B2 of the plan audit).
+    `POST /api/v1/sub-graphs/{slug}/versions` takes `SubGraphBody`, with the slug from its path;
+  - `SubGraph(SubGraphCreate)`, which adds `version: int`. It is the stored and returned shape.
 
-  All three are `frozen=True, extra="forbid"`.
+  All four are `frozen=True, extra="forbid"`, and the fragment's invariants are validated once,
+  on `SubGraphBody`.
 
 - [ ] **Red first:** acceptance 4's shape-level cases, plus one positive test that the Task 1
   example parses. **Predicted red:** `ImportError` on `model_schema.sub_graphs` for every test.
 - [ ] Implement.
-  - The invariant check reuses `_produced_by` and `_consumed_by` (premise e). Declared input
-    ports count as produced names, and declared output ports must each be produced by exactly
-    one step.
+  - The invariant check reuses `_produced_by` and `_consumed_by` (premise e). The rules, each
+    worded so that the shared mapper (Task 5) returns the code acceptance 4 names:
+    - **An input port is a producer** of its name. A step that consumes a name produced by no
+      step and no input port is refused with a message containing "consumes undefined value", in
+      `_graph_invariants`' own wording, so it maps to `RATING_GRAPH_UNRESOLVED_REF`.
+    - **Each output port must be produced by a step.** One that is not is refused with the
+      message "output port {name!r} is an undefined value: no step produces it (FR-212)". It
+      contains "undefined value" on purpose, so it maps to `RATING_GRAPH_UNRESOLVED_REF`.
+    - **Re-producing an input port's name** follows `_graph_invariants`' chain rule, with the
+      port as the first producer. A step that produces the name without consuming it is refused
+      ("do not form a single re-production chain"), which maps to `VALIDATION_FAILED`.
+    - **FR-212's orphan rule, restated for ports:** a step that is not reachable from any input
+      port and contributes to no output port is refused, which maps to `VALIDATION_FAILED`.
+    - A cycle's message contains "cycle", which maps to `RATING_GRAPH_CYCLIC`.
   - The cycle check reuses `_graph_invariants`' method. If a helper must be promoted into a
     module function, promote it and keep `RatingAlgorithm`'s behaviour identical:
     `packages/model-schema/tests/test_rating_algorithm.py` passes unchanged.
@@ -478,15 +535,25 @@ end of the file** and no existing class edited. Create one Alembic revision and
 ### Task 4: `pricing-core` — the FR-227 refactor and the fragment entry point (RL-1309 DP-S1-4)
 
 **Files:** Modify `packages/pricing-core/src/pricing_core/rating/compile.py`, limited to
-`_producer_types`, `_check_result_types` and one new public function. Add new tests only to
+`_producer_types`, `_check_result_types` and the new public functions named below. Add new tests only to
 `packages/pricing-core/tests/test_rating_compile.py`.
 
 **Interfaces:**
-- Produces: a public
-  `check_fragment_output_types(steps: list[RatingStep], input_ports: Mapping[str, str], output_ports: list[AlgorithmOutput]) -> list[ValidationIssue]`
-  in `compile.py`, added to `__all__`. The name is a proposal: it must **not** begin `_check_`,
-  so that the #967 closure test does not require it in a registry. The ledger records the name
-  used. Task 5's create path calls it.
+- Produces, in `compile.py` (B3 of the plan audit):
+  - **`producer_types(steps: Sequence[RatingStep], typed_names: Mapping[str, str]) -> dict[str, str]`**,
+    the shared core of `_producer_types`;
+  - **`output_type_issues(producer_types: Mapping[str, str], outputs: Sequence[tuple[str, str, str]]) -> list[ValidationIssue]`**,
+    the shared core of `_check_result_types`. Each tuple is (the output's name, its declared
+    type, the name that feeds it);
+  - **`fragment_output_type_issues(steps: Sequence[RatingStep], input_ports: Sequence[SubGraphInputPort], output_ports: Sequence[AlgorithmOutput]) -> list[ValidationIssue]`**,
+    the fragment entry point, which Task 5's create path calls.
+
+  All three are public and added to `__all__`, and none begins `_check_`. The #967 slice's
+  closure test (its acceptance 3c (ii)) reds any module-level `_check_*` function missing from
+  its registries. `ALGORITHM_CHECKS` is typed `Callable[[RatingAlgorithm], list[ValidationIssue]]`.
+  So **`_check_result_types(algo: RatingAlgorithm)` keeps its signature** as a thin wrapper over
+  `output_type_issues`, and stays registered. **`_producer_types(algo)`** stays as a thin wrapper
+  over `producer_types`. The names are proposals, and the ledger records the names used.
 
 - [ ] **Red first:** acceptance 4's `RATING_TYPE_MISMATCH` case against the new entry point.
   **Predicted red:** `ImportError`, because the function does not exist.
@@ -499,10 +566,12 @@ end of the file** and no existing class edited. Create one Alembic revision and
   - The algorithm path calls the new forms with the algorithm's own inputs and outputs, so its
     behaviour is unchanged. `_check_result_types` stays registered where the #967 slice put it.
   - `_compatible` (`:106-111`) is called as it is.
-- [ ] Add `check_fragment_output_types`. It maps each output port to its producing step's type
-  and applies `_compatible`, issuing `RATING_TYPE_MISMATCH` with the port name.
-- [ ] Green. Run acceptance 6: the existing tests pass unmodified, and the #967 closure tests
-  pass. Commit: `refactor(rating): FR-227's result-type check over steps and declared outputs, and a fragment entry point (WK-1250 S1)`.
+- [ ] Add `fragment_output_type_issues`. It builds `producer_types` from the steps plus the
+  input ports' declared types, and applies `output_type_issues` to the output ports, issuing
+  `RATING_TYPE_MISMATCH` with the port name.
+- [ ] Green. Run acceptance 6: the existing tests pass unmodified. **Run the #967 slice's closure
+  test 3c**, which must pass with `_check_result_types` still registered and no new `_check_*`
+  function. Commit: `refactor(rating): FR-227's result-type check over steps and declared outputs, and a fragment entry point (WK-1250 S1)`.
 
 ### Task 5: The service and the resolver
 
@@ -510,13 +579,26 @@ end of the file** and no existing class edited. Create one Alembic revision and
 `backend/tests/test_sub_graphs_service.py`.
 
 **Interfaces:**
-- Consumes: `SubGraph`, `SubGraphBody` and `SubGraphInputPort` (Task 2); `SubGraphVersionRow`
-  (Task 3); `check_fragment_output_types` (Task 4); `audit.record` (`audit.py:52`).
+- Consumes: `SubGraphInputPort`, `SubGraphBody`, `SubGraphCreate` and `SubGraph` (Task 2);
+  `SubGraphVersionRow` (Task 3); `fragment_output_type_issues` (Task 4); `audit.record`
+  (`audit.py:52`).
+- Modifies: `backend/src/app/platform/rating_algorithms.py`. `_parse_algorithm`'s
+  `ValidationError` → `PlatformError` mapping (`:34-52`: "cycle" → `RATING_GRAPH_CYCLIC`,
+  "undefined value" → `RATING_GRAPH_UNRESOLVED_REF`, otherwise `VALIDATION_FAILED`) is
+  extracted, unchanged, into a public `graph_validation_error(exc: ValidationError, title: str) -> PlatformError`.
+  `_parse_algorithm` calls it, and the sub-graph service calls the same function. This is one
+  mapping, never a second copy (B1). `_issues_to_error(algorithm)` (`:58-69`) is split the same way. Its tail, which maps the first
+  `ValidationIssue` of a list to a `PlatformError`, becomes a public
+  `raise_first_issue(issues: list[ValidationIssue]) -> None`. `_issues_to_error` calls
+  `raise_first_issue(validate_algorithm(algorithm))`, and the sub-graph service calls it for the
+  `RATING_TYPE_MISMATCH` refusal.
 - Produces:
-  - `create_sub_graph(database, workspace_id, actor, slug, body) -> SubGraph`: version 1, with a
-    409 if the slug exists;
-  - `create_version(database, workspace_id, actor, slug, body) -> SubGraph`: the maximum plus
-    one, with `NOT_FOUND` for an unknown slug;
+  - `create_sub_graph(database, workspace_id, actor, content: dict[str, Any]) -> SubGraph`:
+    parses `content` as `SubGraphCreate` through `graph_validation_error`, and writes version 1,
+    with a 409 if the slug exists;
+  - `create_version(database, workspace_id, actor, slug, content: dict[str, Any]) -> SubGraph`:
+    parses `content` as `SubGraphBody` the same way, and writes the maximum plus one, with
+    `NOT_FOUND` for an unknown slug;
   - `get_version(database, workspace_id, slug, version) -> SubGraph`;
   - `list_versions(database, workspace_id, slug, cursor, limit)`, using `app.api.pagination`'s
     page type;
@@ -529,7 +611,10 @@ end of the file** and no existing class edited. Create one Alembic revision and
 - [ ] Implement, mirroring `objectives.py:225-250`: flush, catch `IntegrityError` as 409, then
   `audit.record(..., action="sub_graph.created", entity_ref=f"sub_graph:{slug}@{version}")`,
   inside `database.unit_of_work()`.
-  - Before writing, call `check_fragment_output_types` and refuse on its first issue.
+  - Before writing, call `fragment_output_type_issues` and refuse on its first issue, through
+    `raise_first_issue`.
+  - `backend/tests/test_rating_algorithms.py`'s existing refusal tests pass unmodified after the
+    extraction, which proves the rating-algorithm path's behaviour is kept.
   - The `after` payload carries `change_note`, `inputs` and `outputs`.
 - [ ] Acceptance 7's broken-input proof: remove the `audit.record` call locally, run the test,
   quote the red, and restore the call. The broken state is never committed.
@@ -547,7 +632,10 @@ Modify `backend/src/app/main.py`: an import beside `:34`, and an `include_router
   A first.
 - [ ] Implement in `rating_algorithms.py`'s form: `requires(Permission.RATING_WRITE)` for the two
   creates, `requires(Permission.RATING_READ)` for the two reads, and `problems(...)` for the
-  documented codes. The body is `SubGraphBody`, typed.
+  documented codes. **The body is `dict[str, Any]`**, as `POST /rating-algorithms` takes it
+  (`api/rating_algorithms.py:35`), so that the service's mapper, not FastAPI's request
+  validation, chooses the code (B1). The request shapes still reach the published contract
+  through `generate-contracts.py`'s registry (Task 2).
 - [ ] Regenerate the contracts, confirm `--check` exits 0, and run the authorisation sweep and
   `backend/tests/test_demo_guide.py`.
 - [ ] Green, and commit.
@@ -562,8 +650,10 @@ Modify `backend/src/app/main.py`: an import beside `:34`, and an `include_router
   - RL-1309 as the ruling;
   - the name of Task 4's entry point;
   - FR-217's partial verdict (acceptance 11);
+  - the names of `graph_validation_error` and `raise_first_issue`, if they differ from the
+    proposals;
   - any re-pointed `down_revision`.
-- [ ] Item 11 (acceptance 13).
+- [ ] The MERGE-ACK (acceptance 13).
 
 ## Hand-off
 
@@ -573,7 +663,14 @@ it: the inlined algorithm goes through the algorithm path (RL-1309 DP-S1-4 item 
 leaf plan carries these:
 - RL-1309's DP-1 items 3 and 5;
 - DP-1 item 6's G1, G2 and G4. G1 is narrowed to `SubGraphRef` against `Pins.sub_graphs`, and
-  reuses PL-1299's `check_step_refs_pinned` (FD-1297) over the inlined algorithm;
+  reuses PL-1299's `check_step_refs_pinned` (FD-1297) over the inlined algorithm.
+  - **G1's objective clause** stays Slice 2's: an unapproved custom objective reached through an
+    inlined `model_call` is refused at compile. This is the maintainer's entry in
+    `~/gi-pricing-plan.local/channel/to-lead.md`, "2026-09-30 10:06:52 BST — DECISION (maintainer by delegation): owner of #938 G1's objective clause; …",
+    as RL-1309's G1 records it.
+  - **The "built once" rule** (RL-1309, G1): whichever Work lands the transitive model →
+    objective compile check first builds it, and the other calls it and never copies it. The
+    builder records its symbol and file in its slice ledger;
 - DP-3 items 3–5;
 - DP-S1-4 item 6, the four checks on the inlined algorithm, where a fragment with a
   non-deterministic expression is refused at compile, red first;
@@ -582,8 +679,8 @@ leaf plan carries these:
   the re-point case;
 - the gate on the diff limb. **Slice 2 does not dispatch until an in-repo record carries the
   limb verbatim, citing RL-1309**: WK-673's Slice 5 leaf plan, or a WK-673 slice ledger's Task
-  0, whichever lands first. A local file does not satisfy it. This is the maintainer's entry
-  "2026-09-30 14:47:19 BST — RL-1309:309-311's gate: NO, a local delta file doesn't satisfy it;
+  0, whichever lands first. A local file does not satisfy it. This is the maintainer's entry in
+  `~/gi-pricing-plan.local/channel/to-lead.md`, "2026-09-30 14:47:19 BST — RL-1309:309-311's gate: NO, a local delta file doesn't satisfy it;
   an IN-REPO carrier is needed".
 
 ## Self-review
@@ -609,5 +706,5 @@ leaf plan carries these:
 - **Literals** were read at the tree above (premises). The names the executor adds are
   proposals, named once each: `SubGraph`, `SubGraphBody`, `SubGraphInputPort`,
   `SubGraphVersionRow`, `sub_graph_versions`, `sub_graph.created`,
-  `check_fragment_output_types` and the service functions.
+  `fragment_output_type_issues` and the service functions.
 - **Open:** nothing is open for the decision-maker. RL-1309, #969 and this plan are unminted.
