@@ -261,7 +261,13 @@ cause, and the guard is restored; the ledger quotes both runs.
 9. **Coverage.** `uv run python scripts/req-coverage.py` lists tests against FR-267, FR-428,
    FR-429, FR-272, NFR-498, FR-347 and FR-357. FR-272's notification limb is recorded as
    *deferred with an owner — WK-688* (`RL-1252`), not claimed.
-10. **The gate.** The full two-half gate (`CLAUDE.md` §11) exits 0 on the committed tree,
+10. **The gate.** Every full `pytest`, full gate or multi-database sweep, by the executor or
+    the auditor, runs inside a gate slot — `flock -w 1800 -E 99 /tmp/slots/gate-1 <cmd>` or
+    `gate-2`, **with no `--`** — and `uptime` is reported with each slot grant (the
+    maintainer's entry headed
+    `2026-09-30 11:42:08 BST — two decisions: the escaped-pipe checker blindness → a LOW FD; box load → heavy audit runs take a gate slot`).
+    Single-file test runs and the docs checks are exempt. This is also a dispatch condition.
+    The full two-half gate (`CLAUDE.md` §11) exits 0 on the committed tree,
     with every command's rc, the `N passed` line and `HEAD` quoted in the ledger, against
     main's `N passed`.
 11. **Item 11** (`PL-1237` Tasks preamble): before the lead merges, the maintainer's
@@ -324,9 +330,15 @@ cause, and the guard is restored; the ledger quotes both runs.
     builds it. Each item red first:
     - **population and declaration:** every approval-capable table declares its `status`
       vocabulary as column metadata (`info={"status_vocabulary": <StrEnum>}`), and the
-      population is every mapped class whose declared vocabulary has an `APPROVED` member. A
-      test asserts the declaration for **every table an `apply_approval_decision` that
-      `_carry_to_the_artifact` drives writes, plus `approval_requests`**; this slice declares
+      population is every mapped class whose declared vocabulary has an `APPROVED` member.
+      **The set that must declare is derived independently of the modules** (auditor-close1255
+      M1 on `80afeb40`, which the decision-maker is carrying into #971): every mapped class
+      whose `status` column has a CHECK constraint naming `'approved'`, **or** a
+      `default=`/`server_default=` of `"approved"`, **or** that an `apply_approval_decision`
+      driven by `_carry_to_the_artifact` writes, plus `approval_requests` — 8 tables, as
+      auditor-close1255 counted them at `9f63d0fe`, **`peril_structures` included**; the
+      executor re-derives the count at its tree and quotes it. A declaration test asserts each; this
+      slice declares
       a `StrEnum` of `validation_rules.py:65`'s constants for `validation_rules` and
       `validation_rule_sets`, and the Deployment Request table's own. `scoring_traces`,
       `ingestion_runs`, `reference_table_versions`, `jobs` and `dataset_versions` need **no**
@@ -368,9 +380,19 @@ cause, and the guard is restored; the ledger quotes both runs.
       lists 17, an upper bound (some only read or compare): `test_api_blobs.py`, `test_api_rate_tables.py`, `test_api_validation_rules.py`, `test_approvals.py`, `test_custom_metrics.py`, `test_custom_objectives.py`, `test_data_jobs.py`, `test_lineage.py`, `test_model_lifecycle.py`, `test_model_nfrs.py`, `test_paired_quantile_models.py`, `test_rate_tables_service.py`, `test_rating_version_compile.py`, `test_rating_versions.py`, `test_reference_pin.py`, `test_validation_reports.py`, `test_wf01_journey.py`, all under `backend/tests/`.
       Each is moved onto the decision path, or onto one helper that enters
       `approval_decision()` and is defined under `backend/tests/` only;
-    - **zero writers** (`peril_structures` today) gets a note, not a guard failure;
+    - **every population table is guarded, whether or not anything approves it** (M1):
+      `peril_structures` has no `approved` writer today, and the guard still covers it. Red
+      first: a direct `approved` write on `peril_structures`, outside the context, is
+      refused. A zero-writer table is reported as a note beside that pass, never exempted
+      from the guard;
     - **positive control:** the sanctioned decide-and-carry path approves a request and its
-      artifact, green.
+      artifact, green. **The context spans the write and its flush** (M2): `decide` assigns
+      the status at `backend/src/app/platform/approvals.py:416` and flushes at `:419`, so
+      `approval_decision()` is entered before `:416` and exited after `:419`, and in
+      `_carry_to_the_artifact` it wraps the owning module's write and the flush that writes
+      it. The control asserts both rows reach `approved` in the database, not only in the
+      session. Red on broken input: with the context exited before the flush, the guard
+      refuses the sanctioned write.
 
 ## Global Constraints
 
@@ -584,6 +606,8 @@ them to "Slice 2", its "Not ruled here"):
 - [ ] Record whether #942 has merged (`grep -c 'Check owner' docs/specs/06-governance.md` at
   `origin/main`), which fixes Acceptance 8's branch **for now**; re-check at Tasks 4 and 5.
 - [ ] Re-derive premises a–r; record the tree and each result in the ledger.
+- [ ] Note the gate-slot rule of Acceptance 10 (the 11:42:08 entry) for every full run
+  this slice makes.
 - [ ] Run the **Write set** check against every build slice in flight (`gh pr list --state
   open`, and the lead's `eta.md` "In flight"), and read anything that rules on FR-267,
   FR-428, FR-429, the approval policy, `ScopeType` or `score.py`. Name the SHA read.
@@ -800,7 +824,8 @@ files of Acceptance 13.
 - [ ] The two static tests (context entry sites; Core and `text()` writers).
 - [ ] The exemption literal, per table, citing the validation-rule finding.
 - [ ] Move each fixture file onto the decision path or the tests-only helper; the full
-  backend suite is green, with the `N passed` compared to main's.
+  backend suite is green **inside a gate slot** (Acceptance 10), with the `N passed`
+  compared to main's.
 - [ ] Positive control; commit.
 
 ### Task 4: Environments — the entity and its routes (FR-428)
@@ -956,7 +981,8 @@ modify `backend/src/app/main.py` (one registration), `backend/src/app/errors.py`
 ### Task 7: The gate and the ledger
 
 - [ ] `tests/test_repository_invariants.py`, the migration round trip, then the full two-half
-  gate on the committed tree. Quote every rc, the `N passed` line and `HEAD` against main's
+  gate on the committed tree, **inside a gate slot** (`flock -w 1800 -E 99 /tmp/slots/gate-1
+  <cmd>` or `gate-2`, no `--`; Acceptance 10), with `uptime` recorded at the grant. Quote every rc, the `N passed` line and `HEAD` against main's
   `N passed` (a total that did not move means the new tests were never collected).
 - [ ] The ledger records: the tree; premises a–r; the red-first and broken-input quotes; DP
   resolutions with their record ids; Acceptance 8's branch and the SHA it read; the Write set
@@ -998,6 +1024,10 @@ Task 6's per-request resolution with the switch, and reuses Task 5's route shape
 - **#971 at `80afeb40` (A.4 as a runtime guard; still under audit)**: Acceptance 13, Task 3A,
   Write set. The AST attribution, the value widening and the per-site rows of earlier
   revisions are removed. auditor-plans' V1 dissolves under it, and V3 is this re-citation.
+  Written to hold under auditor-close1255's M1 (the module-independent required set, with
+  `peril_structures` guarded) and M2 (the context spans the write and its flush), which the
+  decision-maker is carrying into #971's next head; this plan cites that head when it lands.
+- **The gate-slot rule** (the 11:42:08 entry): Acceptance 10, Task 0, Task 3A, Task 7.
 - **auditor-plans N1–N3** (its audit of `a79fc6b4`): N1 and N2 Task 4 and Acceptance 4, with
   the Task 3 constraint; N3 Task 4 and Acceptance 4. Its G1 is Acceptance 13's declared
   vocabulary, now #971 A.4 at `80afeb40`: declared on the approval-capable tables only, which
