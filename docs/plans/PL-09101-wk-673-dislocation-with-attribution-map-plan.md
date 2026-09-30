@@ -12,7 +12,7 @@ work: WK-673
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-930, PL-1177, RL-880, RL-881, RL-885, RL-1172, RL-1184, RL-1236, RS-1201, CR-1212]
+relates: [PL-930, PL-1177, RL-880, RL-881, RL-885, RL-1172, RL-1184, RL-1236, RL-1263, RL-1264, RS-1201, CR-1212]
 ---
 
 # PL-9101 — WK-673 — Dislocation with attribution: map plan
@@ -33,9 +33,8 @@ First filed 2026-09-28 as working id PL-9101; `created` re-dated so the id seque
 >    Slices 1–6 keep the numbers other records already cite ("WK-675 S8 needs WK-673 S4").
 >    It is sequenced straight after Slice 2. New DP-5 covers its one open design choice.
 > 2. **DP-1, DP-2 and DP-3 are resolved.** The deputy's entry of 2026-09-28 14:05:30 BST
->    (quoted in `RS-1201`:263-292) is filed as the #845 ruling (the decision-maker's, working
->    id; **at the mint turn, each "the #845 ruling" here becomes its minted id, and that id
->    goes into `relates:`**). Its DP-1 conditions, DP-3's no-override rule and its five
+>    (quoted in `RS-1201`:263-292) is filed as `RL-1264` (the decision-maker's; merged from
+>    #845 as `843c3495`, 2026-09-30). Its DP-1 conditions, DP-3's no-override rule and its five
 >    named negative tests are carried into Slices 1, 3 and 5.
 > 3. **The Shapley cost rule is replaced** by the 14:05:30 feasibility rule: measure first,
 >    ladder replay as the primary route proven against re-rates, the estimated count shown
@@ -123,7 +122,7 @@ process-cwd rule), against the range `origin/main...HEAD`, never a tip SHA alone
    and of ladder replay and of the 2^K re-rates for K = 3, 4, 5 and 6, with the 1-minute
    load at each run (< 12), the tree and the command. Replay is proven equal to a true
    re-rate for every policy at K ≤ 3 and on a declared sample at K = 4–6, by a named test
-   that is shown red on a deliberately wrong replay (the #845 ruling's *"a replayed v(S)
+   that is shown red on a deliberately wrong replay (`RL-1264`'s *"a replayed v(S)
    that differs from a true re-rate for some policy, and is not recorded as falling
    back"*). The proposed dislocation-attribution NFR goes to the decision-maker before
    Slice 3's PR is ready.
@@ -147,7 +146,7 @@ process-cwd rule), against the range `origin/main...HEAD`, never a tip SHA alone
    the `FAILED (n)` line or "All checks passed.", and the `DISCLOSED (…)` line quoted.
 10. **The Work closes by `close-workstream`**, and its close is accepted by the maintainer
     with a dated line (or on the maintainer's behalf, while that delegation lasts).
-11. **The #845 ruling's negative tests exist and were shown red.** Slice 1's leaf plan names
+11. **`RL-1264`'s negative tests exist and were shown red.** Slice 1's leaf plan names
     one test for each of: a subset bundle persisted as a Rating Version or visible in a
     version list; a subset that fails to compile and is skipped instead of failing the run
     by name; a regrouping that leaves a derived change out or puts one in two groups and is
@@ -175,8 +174,9 @@ process-cwd rule), against the range `origin/main...HEAD`, never a tip SHA alone
 - **Requirement ids are cited individually**, never as a numeric range
   (`.claude/roles/planner.md`).
 - **One slice at a time within the Work** (`delivery-process.md` §8). The maintainer's
-  2026-09-29 22:46:27 BST entry runs Works in parallel lanes through a dated §8 amendment
-  the lead files; it does not run two slices of one Work at once.
+  2026-09-29 22:46:27 BST entry runs Works in parallel lanes through the dated §8 amendment
+  filed as `RL-1263` ("up to 2 build slices, from different Works, may run at once"); it
+  does not run two slices of one Work at once.
 - **Permissions come from `RL-1236`'s catalogue** (`06-governance.md:253-300` at
   `19c395ac`; #855's finding is FD-1197, `docs/findings/register.md:184`). A slice that adds
   or checks a permission names the catalogue row it uses and cites FD-1197, and says whether
@@ -234,9 +234,8 @@ decision-maker before any fallback if K = 4 does not fit. Exact Shapley (K ≤ 6
 largest remainder stand as the method of record.
 
 **DP-1, DP-2 and DP-3 are decided, and the §3.11-vs-docstring disagreement is resolved**,
-by the same 14:05:30 entry, filed by the decision-maker as the #845 ruling, which adopts the
-recommendations unchanged after re-verifying each point (read on its branch
-`p2-wk673-rl` at `d8101c4c`, not yet merged). See the DP table. The ruling's "What it obliges" section names
+by the same 14:05:30 entry, filed by the decision-maker as `RL-1264`, which adopts the
+recommendations unchanged after re-verifying each point (merged from #845 as `843c3495`). See the DP table. The ruling's "What it obliges" section names
 five negative tests, carried as acceptance item 11.
 
 **The FR-266 open question is decided (b)**: OQ-1187, `docs/open-questions.md:131` and the
@@ -264,8 +263,8 @@ the old owner; the auditor corrects it (not this plan's file). WK-675 Slice 5 de
 then WK-675". This plan's cross-Work dependencies are re-derived under it in Sequencing.
 
 **Preconditions:** #830 is merged (`RL-1184`), so Slice 1's OQ row and FR-364 amendment are
-on main. **The #845 ruling must merge before Slice 1's leaf plan is filed**, because Slice 1
-cites it for DP-1 and DP-2.
+on main. `RL-1264` is merged, so Slice 1's other precondition, the ruling it cites for
+DP-1 and DP-2, is met.
 
 ## Scope
 
@@ -303,21 +302,21 @@ locator moved, the `19c395ac` one is given.
 | # | The premise | At `19c395ac` | Status |
 |---|---|---|---|
 | a | "Decimal through the engine" makes the reconciliation exact | `03` §3.11 says the engine's arithmetic is exact inside and the Python binding returns `float`; FR-273 therefore carries money across as integer minor units. `_round_minor(raw: float, mode)` at `packages/pricing-core/src/pricing_core/rating/score.py:535` converts each engine result with `Decimal(repr(raw))` and quantizes to an integer. | **Does not hold**, and the deputy's 13:57:02 correction now says so: exact reconciliation is on the rounded integer minor units. Slice 1's amendment cites it. |
-| a′ | where the float enters | `_round_minor`'s docstring (`score.py:539`) still speaks of "the engine's float64 arithmetic"; `03` §3.11 says the engine is exact and the float is the binding's. | **Resolved: the spec is right** (14:05:30 entry; the #845 ruling). Slice 1 corrects the docstring sentence to *"the binding's float64 return values (the engine's own arithmetic is exact, `03` §3.11)"*, no behaviour change. |
+| a′ | where the float enters | `_round_minor`'s docstring (`score.py:539`) still speaks of "the engine's float64 arithmetic"; `03` §3.11 says the engine is exact and the float is the binding's. | **Resolved: the spec is right** (14:05:30 entry; `RL-1264`). Slice 1 corrects the docstring sentence to *"the binding's float64 return values (the engine's own arithmetic is exact, `03` §3.11)"*, no behaviour change. |
 | b | `dislocation-run.schema.json` is hand-written and drift-exempt | `backend/tests/test_contracts.py:84`, `"dislocation-run": "later-phase — 03 rating"`, inside `ONE_SIDED_SLUGS` (`:69`) | reproduces; Slice 1 corrects the label, as `PL-1177` Task 4 did for `regression-suite` |
 | c | the contract has no Shapley, isolated, residual or minor-unit attribution fields | `attribution[]` holds `change`, `mean_change_pct`, `cumulative_change_pct` (numbers); no isolated, Shapley or residual field; no minor-unit figure per change | reproduces |
 | c′ | the contract and `03` §4.6 disagree | the contract has `job_id`, `by_ladder_rung[]` and `errors[]`; §4.6's example shows none of them | reproduces; noted by the 14:05:30 entry for Slice 1 |
 | d | `DislocationSpec`, `BundleDelta`, `Attribution` do not exist | no definition under `packages/` or `backend/src`; `dislocate` and `attribute` are unbuilt (`03` §4.8) | reproduces |
 | d′ | `attribute`'s published signature cannot be implemented | `attribute(changes: Sequence[BundleDelta], portfolio: pl.LazyFrame) -> list[Attribution]` (`03:883`) takes no baseline | reproduces; noted by the 14:05:30 entry; Slice 1 amends §5.2 |
 | e | RL-881: `EVIDENCE_FLOOR["rating_version"]` names three kinds nothing can verify | `packages/model-schema/src/model_schema/approvals.py:106`; `DEFAULT_POLICY`'s entry at `:255-258`; `effective_evidence(` has three callers in `backend/src` (`modelling.py:1246`, `objectives.py:845`, `metrics.py:797`), none for `rating_version` | **reproduces**. `regression_run` is now verified by a direct check, `_regression_run_gate` (`rating_versions.py:619`, called at `:289`; WK-672 Slice 3, #886), not through the floor |
-| e′ | RL-881: `06` §4.2's restatement of the floor omits `rating_version` | `06-governance.md:349` names `regression_run` and `dislocation_run` for `rating_version` | **no longer holds**. The stale clause in `RL-881` is the decision-maker's to supersede (the #845 ruling proposes it to the lead) |
+| e′ | RL-881: `06` §4.2's restatement of the floor omits `rating_version` | `06-governance.md:349` names `regression_run` and `dislocation_run` for `rating_version` | **no longer holds**. The stale clause in `RL-881` is the decision-maker's to supersede (`RL-1264` proposes it to the lead) |
 | f | WK-671's batch scoring is reusable unchanged | `score_batch` at `score.py:1011`; row-by-row, not vectorised (its docstring) | reproduces |
 | g | the Job kind exists | `JobKind.DISLOCATION_RUN = "dislocation.run"` at `model_schema/jobs.py:63`, routed to `JobQueue.COMPUTE` at `backend/src/app/platform/jobs.py:79`; no handler | reproduces; Slice 4 registers the handler |
 | h | FR-219's structural diff exists to persist | `diff_algorithms` at `model_schema/rating.py:569`; `RatingVersionEvidence.structural_diff_blob` at `:125` | reproduces; Slice 5 persists it |
 | i | the submission path | `rating_versions.submit_for_review` at `backend/src/app/platform/rating_versions.py:250`, calling `approvals.submit` at `:299` | reproduces; Slices 5 and 6 edit it |
 | j | (new) FR-257 limb (2) needs "the current live version" | `VALID_RATING_VERSION_TRANSITIONS` (`model_schema/rating.py:50-60`) has no transition into `LIVE`. `RL-880` records that FR-238 makes `live` a property of a **Deployment** (FR-267), which with the Environment is WK-674's; `POST /api/v1/score` refuses with `NO_LIVE_RATING_VERSION` (`backend/src/app/api/score.py:144`) | **A real dependency on WK-674 Slice 2**, SL-1256 (the Deployment record and live resolution, `PL-1237` Task 2). Slice 5's limb (2) cannot name its baseline without it |
 | k | (new) FR-231's weights are wired nowhere | `pricing_core/rate_tables/operations.py:336` takes `weights`; `backend/src/app/platform/rate_tables.py:237` `diff(…, portfolio_dataset_version_id=None)` passes none (`:253-254`); the route `rate_table_diff` (`backend/src/app/api/rate_tables.py:314`) has no portfolio parameter, and neither has `03` §5.1's route (`03:748`); the DP3 cache already keys on the portfolio identity (`backend/src/app/platform/diff_cache.py:81-88`); the 202 path runs `JobKind.RATE_TABLE_DIFF` (`backend/src/app/worker/rate_table_handlers.py:65`) | reproduces; Slice 7 wires it, after DP-5 |
-| l | (new) FR-224's threshold has somewhere to live | `ApprovalPolicyEntry` (`approvals.py:111-122`) has `artifact_type`, `approvers_required`, `approver_roles`, `environment`, `evidence`, and no threshold field | the field is new: a `model-schema` shape change Slice 5 makes with the gate (the #845 ruling's premise note) |
+| l | (new) FR-224's threshold has somewhere to live | `ApprovalPolicyEntry` (`approvals.py:111-122`) has `artifact_type`, `approvers_required`, `approver_roles`, `environment`, `evidence`, and no threshold field | the field is new: a `model-schema` shape change Slice 5 makes with the gate (`RL-1264`'s premise note) |
 
 ### Risks
 
@@ -348,16 +347,16 @@ locator moved, the `19c395ac` one is given.
 
 Kind, blocking status and resolver per `document-ids.md` §1.7. DP-1, DP-2 and DP-3 were
 decided by the deputy under the maintainer's delegation (2026-09-28 14:05:30 BST) and are
-filed as the #845 ruling, which the decision-maker rules as technical decision points under
+filed as `RL-1264`, which the decision-maker rules as technical decision points under
 the maintainer's 2026-09-29 15:26:00 BST re-homing. DP-4 is slice design, the planner's own
 (`.claude/roles/planner.md`), decided here. DP-5, added by this revision, is technical and
 the decision-maker's; it is open.
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-1 | How are the 2^K subset bundles built? | (a) At the **artifact level**: each subset is a synthetic Rating Version holding the baseline's pins with the subset's changes substituted, the algorithm composed step by step, then compiled by `compile_bundle` and hydrated by `load_bundle` — a real, hash-identified bundle rated by ZEN. (b) At the **JDM graph level**: patch the baseline's `to_jdm` graph with each change's node edits and hash it with `bundle_hash`. (c) **Whole-pin swaps only**: a change is a pin (model, rate table, reference table, algorithm version); edits inside one algorithm version count as one change. | **(a)**, at step granularity from `diff_algorithms` plus the pin diff. Every subset goes through the same compile and validation path a real version does, so a subset the engine cannot rate is refused by `validate_algorithm` rather than priced. (b) bypasses compile-time validation (FR-274, FR-275, FR-276). (c) cannot isolate the `min_premium` change `03` §4.6's own example attributes, which is the interaction case the F3 decision turned on. | decision point | yes — Slice 1 | **(a), with conditions** — the #845 ruling. Subset bundles are ephemeral and content-addressed, never a Rating Version (no `rating_version` row; never approvable, deployable or listed), cached per run by content hash and discarded with the run's scratch; a subset that fails to compile fails the run with the subset named; the artifact records the bundles compiled and their hashes |
-| DP-2 | Where does a "declared change" come from? | (a) **Derived**: every differing pin and every changed step is one change. (b) **Declared**: the analyst lists the changes in `DislocationSpec`. (c) **Derived default, analyst regroups**: the server proposes the derived list; the analyst may merge entries into ≤ 6 named groups; the server checks the groups partition the full diff exactly. | **(c).** (a) alone exceeds K = 6 on any real rate change and gives the analyst no way to apply the above-six rule. (b) alone lets a change be left out, and then the parts cannot sum to the whole. (c) keeps both: the derivation guarantees coverage and the partition check guarantees each difference is counted exactly once. | decision point | yes — Slice 1 | **(c)** — the #845 ruling. The server checks the groups partition the derived list exactly and refuses by name otherwise; both lists are on the artifact |
-| DP-3 | Where does FR-224's threshold live? FR-224 leaves it to "the Phase 2 slice that builds this": a maximum absolute percentage deviation at a declared portfolio quantile, recorded on the approval. | (a) A **workspace setting** (`07` FR-446, FR-448; the `workspace_settings` table). (b) A field on the `rating_version` **`ApprovalPolicy` entry** (`06` §4.2), so it can vary by `risk_tier` (`06` FR-365). (c) Declared **on the Dislocation Run's spec** by the submitter. | **(b).** An approval threshold is governance: a policy entry is audited when edited and sits under FR-364's floor rule. (a) resolves environment variable before workspace setting (FR-446), so a deployment variable could loosen an approval gate. (c) lets the submitter set their own bar. | decision point | yes — Slice 5 only | **(b), with no environment-variable override** — the #845 ruling. The field does not exist yet on `ApprovalPolicyEntry` (premise l); Slice 5 adds it and keeps it out of FR-446's Settings path |
+| DP-1 | How are the 2^K subset bundles built? | (a) At the **artifact level**: each subset is a synthetic Rating Version holding the baseline's pins with the subset's changes substituted, the algorithm composed step by step, then compiled by `compile_bundle` and hydrated by `load_bundle` — a real, hash-identified bundle rated by ZEN. (b) At the **JDM graph level**: patch the baseline's `to_jdm` graph with each change's node edits and hash it with `bundle_hash`. (c) **Whole-pin swaps only**: a change is a pin (model, rate table, reference table, algorithm version); edits inside one algorithm version count as one change. | **(a)**, at step granularity from `diff_algorithms` plus the pin diff. Every subset goes through the same compile and validation path a real version does, so a subset the engine cannot rate is refused by `validate_algorithm` rather than priced. (b) bypasses compile-time validation (FR-274, FR-275, FR-276). (c) cannot isolate the `min_premium` change `03` §4.6's own example attributes, which is the interaction case the F3 decision turned on. | decision point | yes — Slice 1 | **(a), with conditions** — `RL-1264`. Subset bundles are ephemeral and content-addressed, never a Rating Version (no `rating_version` row; never approvable, deployable or listed), cached per run by content hash and discarded with the run's scratch; a subset that fails to compile fails the run with the subset named; the artifact records the bundles compiled and their hashes |
+| DP-2 | Where does a "declared change" come from? | (a) **Derived**: every differing pin and every changed step is one change. (b) **Declared**: the analyst lists the changes in `DislocationSpec`. (c) **Derived default, analyst regroups**: the server proposes the derived list; the analyst may merge entries into ≤ 6 named groups; the server checks the groups partition the full diff exactly. | **(c).** (a) alone exceeds K = 6 on any real rate change and gives the analyst no way to apply the above-six rule. (b) alone lets a change be left out, and then the parts cannot sum to the whole. (c) keeps both: the derivation guarantees coverage and the partition check guarantees each difference is counted exactly once. | decision point | yes — Slice 1 | **(c)** — `RL-1264`. The server checks the groups partition the derived list exactly and refuses by name otherwise; both lists are on the artifact |
+| DP-3 | Where does FR-224's threshold live? FR-224 leaves it to "the Phase 2 slice that builds this": a maximum absolute percentage deviation at a declared portfolio quantile, recorded on the approval. | (a) A **workspace setting** (`07` FR-446, FR-448; the `workspace_settings` table). (b) A field on the `rating_version` **`ApprovalPolicy` entry** (`06` §4.2), so it can vary by `risk_tier` (`06` FR-365). (c) Declared **on the Dislocation Run's spec** by the submitter. | **(b).** An approval threshold is governance: a policy entry is audited when edited and sits under FR-364's floor rule. (a) resolves environment variable before workspace setting (FR-446), so a deployment variable could loosen an approval gate. (c) lets the submitter set their own bar. | decision point | yes — Slice 5 only | **(b), with no environment-variable override** — `RL-1264`. The field does not exist yet on `ApprovalPolicyEntry` (premise l); Slice 5 adds it and keeps it out of FR-446's Settings path |
 | DP-4 | Does Slice 5 wait on WK-672, or is `structural_diff` split out early? | (a) **Hold** the whole gate until WK-672 Slice 3 merges. (b) **Split**: Slice 5 builds `structural_diff`, FR-257 limb (2) and FR-224 as direct checks now; Slice 6 wires the `effective_evidence("rating_version")` floor union after WK-672 Slice 3. | **(b), decided.** See Rationale below. The deputy called the split "sound slice design" (14:05:30). WK-672 Slice 3 has since merged (#886), so the wait is satisfied; the split still keeps each slice small. | scope | no | PL-9101 (planner, slice design) |
 | DP-5 | How does FR-231's diff get "the exposure weight behind each cell (from the portfolio dataset)"? Two parts: which portfolio, and how a portfolio row maps to a cell | (a) **A `portfolio` query parameter** naming a portfolio Dataset Version on `GET /api/v1/rate-tables/{slug}@{version}/diff`; a row maps to the cell whose key columns (`RateTable.keys`) equal the row's same-named columns; weight = Σ exposure per cell; a key column absent from the frame is refused by name. (b) **Through a Rating Algorithm Version**: the caller names an algorithm version as well, and the row's key values are those the algorithm's `lookup` step bindings feed the table, so derived keys (bands) are honoured. (c) **A workspace default portfolio**, with (a)'s join. | **(a) first, (b) where a key is derived.** (a) matches the cache key that already carries the portfolio identity (premise k) and needs no algorithm context, which a table edit often has not got. It cannot weight a table whose keys are derived by an earlier step (a banded age), and it says so by refusing. (b) handles that case but makes a table diff depend on an algorithm. (c) hides which portfolio weighted the figures, which an actuary must be able to cite. | decision point | yes — Slice 7 only | open (decision-maker) |
 
@@ -396,7 +395,7 @@ One slice at a time. Slice 7 runs straight after Slice 2, because it needs only 
 portfolio frame reader and WK-675 Slice 5 waits on it. Its number is appended so the
 numbers other records cite stay fixed.
 
-**Dependencies inside WK-673 and on decisions.** Slice 1 waits on the #845 ruling's merge.
+**Dependencies inside WK-673 and on decisions.** Slice 1's ruling (`RL-1264`) is merged.
 Slice 7 waits on DP-5. Slice 5 cites DP-3 (decided).
 
 **Cross-Work dependencies, re-derived under the maintainer's 22:46:27 item 5.** Only a named
@@ -425,8 +424,8 @@ file are serialised: the second one merges `origin/main` before its mint (never 
 | `compile_bundle` (`pricing_core/rating/compile.py`) and `TraceStep` | 3 (calls `compile_bundle`, reads the ladder for replay; no edit planned) | WK-1250 (edits both); WK-675 Slice 7b |
 | `backend/src/app/platform/rating_versions.py` | 5, 6 (`submit_for_review`) | none planned at `19c395ac`; FD-1245's ruling may add one |
 | `docs/specs/06-governance.md` | 5 (FR-364's `structural_diff`, §4.2's threshold field) | WK-674 Slices 2 and 3 (§4.1 rows, §4.2 `deployment` entry) |
-| `packages/model-schema/src/model_schema/jobs.py` | 4 (cites `JobKind.DISLOCATION_RUN`, `:63`; edits only if the handler's payload needs a shape) | WK-674 Slice 1, SL-1255 (edits the Job shape and `JobRow`, `PL-1239`) |
-| `backend/src/app/platform/jobs.py` and the `backend/src/app/worker/` handler registry | 4 (cites the `COMPUTE` route, `platform/jobs.py:79`; registers the `dislocation.run` handler under `worker/`) | WK-674 Slice 1, SL-1255 (edits `platform/jobs.py`, `PL-1239`) |
+| `packages/model-schema/src/model_schema/jobs.py` | 4 (cites `JobKind.DISLOCATION_RUN`, `:63`; edits only if the handler's payload needs a shape) | WK-674 Slice 1, SL-1255 (edits the Job shape and `JobRow`, `PL-1239`; merged as #933, so Slice 4 builds on it) |
+| `backend/src/app/platform/jobs.py` and the `backend/src/app/worker/` handler registry | 4 (cites the `COMPUTE` route, `platform/jobs.py:79`; registers the `dislocation.run` handler under `worker/`) | WK-674 Slice 1, SL-1255 (edits `platform/jobs.py`, `PL-1239`; merged as #933) |
 | `packages/model-schema/src/model_schema/permissions.py` | 4, 7 (cite existing names; edit only for a new dislocation permission, which is a scope change) | WK-674 Slices 2 and 3 (cite existing names, `PL-1237`'s permission table); WK-690 Slice 3 (edits: adds `custom_objective:author`) |
 | `docs/contracts/` (generated) | 2, 3, 4, 5, 7 | every Work that changes a `model-schema` shape; resolved by regenerating |
 
@@ -453,13 +452,13 @@ file are serialised: the second one merges `origin/main` before its mint (never 
   applies, and the declared groups.
 - **`03` §4.8** gains the portfolio frame's schema, including the exposure column Slice 7
   weights by, and whether rows with an MTA or cancellation `purpose` are admitted (Risks).
-- **DP-1's conditions and DP-2's partition rule as spec text** (the #845 ruling's "What it
+- **DP-1's conditions and DP-2's partition rule as spec text** (`RL-1264`'s "What it
   obliges"): the ephemeral, content-addressed subset bundle with no Rating Version identity
   (never a `rating_version` row, never approvable, deployable or listed); a compile failure
   that names the subset; the compiled count and hashes on the artifact; changes derived
   from the structural diff, regrouped into at most 6 groups, the partition checked and
   refused by name; both lists on the artifact. **Where these describe the artifact's
-  shape, §4.6 and the `model-schema` shape change together** (the #845 ruling: writing
+  shape, §4.6 and the `model-schema` shape change together** (`RL-1264`: writing
   §4.6 ahead of the shape would make spec and generated contract disagree), so the shape
   parts land in the slice that first returns the type (Tasks, "Deviation"), in one commit
   with their §4.6 text.
@@ -472,10 +471,10 @@ file are serialised: the second one merges `origin/main` before its mint (never 
   `ONE_SIDED_SLUGS` until Slice 4.
 - **`_round_minor`'s docstring sentence corrected** (premise a′) to the 14:05:30 wording, no
   behaviour change, in one commit with any spec text it touches.
-- **The leaf plan names the #845 ruling's three Slice-1 negative tests** (acceptance item
+- **The leaf plan names `RL-1264`'s three Slice-1 negative tests** (acceptance item
   11) and the slice that builds each.
 
-Depends on: the #845 ruling merged (#830 is). Not on WK-674. Gate: the full two-half gate, the four
+Depends on: `RL-1264` and `RL-1184`, both merged. Not on WK-674. Gate: the full two-half gate, the four
 docs checks on a detached copy, the ACK/audit item (acceptance item 8).
 
 ### Slice 2 — The Dislocation Run on ZEN, in integer minor units
@@ -558,8 +557,8 @@ Depends on: Slice 3. Gate: as Slice 3, plus `generate-contracts.py --check`.
   `exact`), refused above the threshold DP-3 places, naming the quantile and the observed
   deviation. FR-136's fidelity statement runs first as the cheap pre-check. **The threshold
   is a new field on `ApprovalPolicyEntry`** (premise l), a `model-schema` change generated
-  to `docs/contracts/`, with its `06` §4.2 text, and **never read from Settings**: the
-  #845 ruling's negative test (*FR-224's threshold resolved from an environment variable*)
+  to `docs/contracts/`, with its `06` §4.2 text, and **never read from Settings**: `RL-1264`'s
+  negative test (*FR-224's threshold resolved from an environment variable*)
   is this slice's.
 
 Depends on: Slice 4; DP-3 (decided); **WK-674 Slice 2, SL-1256, merged** (premise j).
@@ -612,21 +611,20 @@ FR-224 → Slice 5. FR-257 limb (2) → Slice 5. `06` FR-364 → Slices 5, 6. FR
 limb (F-W10-2) → Slice 7. §4.6, §4.8's portfolio frame, the §5.1 routes, `dislocate`,
 `attribute` and the three missing types → Slices 1–4. The deputy's six F3 items, as
 corrected at 13:57:02 and amended at 14:05:30 → Slice 1 (items 1–4 as spec), Slice 3
-(items 1–3 and 5–6 as code and measurement). The #845 ruling's five negative tests →
+(items 1–3 and 5–6 as code and measurement). `RL-1264`'s five negative tests →
 Slices 1, 3 and 5 (acceptance item 11).
 
 **2. Placeholder scan.** This is a map plan: each slice is a scope statement, not a task
 list, and each leaf plan carries its own steps. No new requirement id is written here;
-Slice 1's ids come from the lead. "The #845 ruling" is a deliberate stand-in for an id
-not yet minted, replaced at the mint turn (revision note, item 2).
+Slice 1's ids come from the lead.
 
 **3. Consistency.** Every locator was re-read at `19c395ac`, the tree in the header.
 Premises a, a′, c′, d′, e and e′ record what moved since `6c6f4532`; j, k and l are new.
 
 **4. Rulings between sweep and filing.** Merged since the first draft and cited:
 `RL-1184` (#830), `RS-1201` (#833), `RL-1236` (#856), WK-672 Slice 3 (#886), CR-1212's
-acceptance, the maintainer's 22:46:27 and 22:47:23 entries. Open and cited: the #845
-ruling (read at `d8101c4c`), FD-1245 (open, may move FR-257's gate). The WK-673 roadmap row
+acceptance, the maintainer's 22:46:27 and 22:47:23 entries, `RL-1263` (the §8 amendment), `RL-1264`
+(#845, `843c3495`). Open and cited: FD-1245 (open, may move FR-257's gate). The WK-673 roadmap row
 (`docs/roadmap.md:686` at `97b15726`) lists only FR-263 to FR-266; the scope table above is the fuller
 list, and correcting the row is the lead's or decision-maker's, proposed in the report
 that carries this revision.
