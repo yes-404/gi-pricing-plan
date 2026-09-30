@@ -1,5 +1,5 @@
 ---
-id: RL-9961
+id: RL-1328
 family: ruling
 title: WK-690 Slice 2's DP-S2-1 to DP-S2-6 decided — primitive inputs, derived text rewritten into the grammar, a 30 s round budget, a value-free NaN abort, a numeric division rule, and NFR-476 at a declared shape
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,15 +15,16 @@ corrects: ~
 relates: [PL-1268, SL-1272, RL-1289, RL-1291, RL-1293, FD-1219, WF-702]
 ---
 
-# RL-9961 — WK-690 Slice 2's DP-S2-1 to DP-S2-6 decided
+# RL-1328 — WK-690 Slice 2's DP-S2-1 to DP-S2-6 decided
 
 ## How this was ruled
 
 - **Effort and routing.** Ruled at effort `medium`, on the lead's routing of 2026-09-30. The
   session's `$CLAUDE_EFFORT` read `medium`.
-- **Working id 9961.** Assigned by the lead. It is minted at the merge turn.
-- **The decision points.** They are those of WK-690 Slice 2's leaf plan (SL-1272, PL working
-  id 9946), read **only** at the planner's local commit
+- **Minted 2026-09-30 as RL-1328** (hand-assigned by the lead in batch 8 with `PL-1327`, under the
+  maintainer's option (B)); it was filed under working id 9961.
+- **The decision points.** They are those of WK-690 Slice 2's leaf plan, `PL-1327` (SL-1272;
+  filed under PL working id 9946), read **only** at the planner's local commit
   `7cd40ad72b31eeb3160e6d27a33024be5da6d97d` (worktree `planner-690-s2`, not pushed), via
   `git -C <path> show 7cd40ad7:<plan>`. Its DP table is at `:332-338`.
   - auditor-plans2 found the plan CLEAN at `7cd40ad7`, on condition that #969's plan (PL working id 9833) mints in
