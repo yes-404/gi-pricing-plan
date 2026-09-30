@@ -28,8 +28,10 @@ substrings (`:35-47`):
 
 `str(exc)` is not only the validator's message. It carries pydantic's `input_value=` echo of
 the value that failed, and, for an unknown field, the client's own value. So any refusal whose
-echo contains either phrase is reported with the wrong code, and a real `RATING_GRAPH_UNRESOLVED_REF`
-is reported as `RATING_GRAPH_CYCLIC` if the body also echoes "cycle".
+echo contains either phrase is reported with the wrong code. The validator's own message also
+interpolates the client's names (`consumes undefined value 'recycle_rate'`), so a **real**
+unresolved reference whose consumed name contains "cycle" (`recycle_rate`, `motorcycle_age`) is
+reported as `RATING_GRAPH_CYCLIC` with no unusual body at all.
 
 This is a wrong **client-visible code** on a request that is refused anyway (422). It stores
 nothing and prices nothing. Nothing in this repository branches on the code today: the frontend
@@ -58,6 +60,8 @@ run("5 extra field colour='undefined value'", {**v, "colour": "undefined value"}
 u = copy.deepcopy(v); u["steps"][6]["consumes"] = ["risk_premium_minor", "nope"]
 run("6 real unresolved ref (control)", u)
 run("7 real unresolved ref + extra colour='cycle'", {**u, "colour": "cycle"})
+r = copy.deepcopy(v); r["steps"][6]["consumes"] = ["risk_premium_minor", "expense_factor", "recycle_rate"]
+run("8 real unresolved ref, consumed name 'recycle_rate' (no extra field)", r)
 ```
 
 Output:
@@ -70,10 +74,15 @@ Output:
 5 extra field colour='undefined value': code='RATING_GRAPH_UNRESOLVED_REF'
 6 real unresolved ref (control): code='RATING_GRAPH_UNRESOLVED_REF'
 7 real unresolved ref + extra colour='cycle': code='RATING_GRAPH_CYCLIC'
+8 real unresolved ref, consumed name 'recycle_rate' (no extra field): code='RATING_GRAPH_CYCLIC'
 ```
 
-Case 2 is the correct answer for 3, 4 and 5 (an unknown field is `VALIDATION_FAILED`), and case 6
-is the correct answer for 7. Cases 3, 4, 5 and 7 are wrong. The script calls `_parse_algorithm`
+Case 2 is the correct answer for 3, 4, 5 and 7 (an unknown field is `VALIDATION_FAILED`). In case
+7 the only pydantic error is `extra_forbidden`, so the graph validator never runs (an
+after-validator is skipped when a field-level error exists), and "undefined value" is not in
+`str(exc)`; the body's own unresolved reference is not what is reported. Case 6 is the control for
+8. Cases 3, 4, 5, 7 and 8 are wrong. Case 8 is the realistic one: the trigger is a consumed name,
+not an unusual field. The script calls `_parse_algorithm`
 directly, so the route's own path, which passes the request body to the same function unchanged
 (`create_algorithm`, `:83`), is not separately exercised here.
 
@@ -81,9 +90,9 @@ Other reads, at the same tree:
 
 - `git grep -n '"cycle" in\|"undefined value" in' -- backend/src packages` prints only
   `rating_algorithms.py:36` and `:43`. It is the one place this matching happens.
-- The two source messages are `RatingAlgorithm._graph_invariants`' own text: "the rating DAG
-  contains a cycle (FR-212)" and "step … consumes undefined value … (FR-212)"
-  (`packages/model-schema/src/model_schema/rating.py:419` and `:439`). The matching therefore
+- The two source messages are `RatingAlgorithm._graph_invariants`' own text: "step … consumes
+  undefined value … (FR-212)" (`packages/model-schema/src/model_schema/rating.py:419`) and "the
+  rating DAG contains a cycle (FR-212)" (`:439`). The matching therefore
   couples an API code to the wording of a validator message.
 - **The existing tests do not prove the mapping's second and third branches.**
   `backend/tests/test_rating_algorithms.py` has one refusal test that reaches the mapper,
@@ -124,10 +133,17 @@ proof of the fix. Cases 3, 4, 5 and 7 above are the false positives known at thi
 tests for the two unproven branches (`RATING_GRAPH_UNRESOLVED_REF` and the `VALIDATION_FAILED`
 fallback) are green on the current code, and rows 2 and 6 stay green.
 
+The route's code table (acceptance 4a of WK-1250 Slice 1's leaf plan) is then asserted against the
+typed signal, as the same entry says.
+
 **Event.** WK-1250 Slice 1 merges with the typed signal as its last task and the strict xfails
 flipped. Ownership shape: event.
 
 **Severity reasoning.** Low, not medium: no data is stored or priced wrongly, the request is
-refused either way (it fails closed); the wrong code needs an unusual body (an unknown field, or
-an echoed value, containing those words); and no consumer branches on the code yet. It would
+refused either way (it fails closed); no consumer branches on the code yet. **A realistic trigger exists**, so this is not a rare
+input: a real unresolved reference whose consumed name contains "cycle" (case 8, `recycle_rate`;
+"motorcycle" is a plausible variable name on a motor platform) is reported as
+`RATING_GRAPH_CYCLIC`. Labels do not trigger it (a label such as "Motorcycle rider age" maps
+correctly, per auditor-933); consumed names and unknown-field names or values do. Case 8 also
+supports the fix: key on the error's type, never on its message. It would
 rise to medium if the designer (WK-675) or an API client maps these codes to user-facing text.
