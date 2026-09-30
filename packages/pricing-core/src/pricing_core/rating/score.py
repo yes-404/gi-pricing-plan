@@ -519,7 +519,7 @@ def _reraise_engine_failure(algorithm: RatingAlgorithm, exc: RuntimeError) -> No
         code = "RATING_EVALUATION_FAILED"
     _raise_named(
         code,
-        f"the engine failed evaluating step {node!r} (FR-255); "
+        f"the engine failed evaluating step {step.step_id if step else None!r} (FR-255); "
         + (
             "an on_miss='error' step it consumes most likely found no matching row"
             if code != "RATING_EVALUATION_FAILED"

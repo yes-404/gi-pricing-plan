@@ -841,3 +841,19 @@ def test_an_engine_failure_with_no_table_or_lookup_to_blame_is_coded() -> None:
     algorithm = RatingAlgorithm.model_validate(_with_step("s_expense", on_miss="default"))
     with pytest.raises(ValueError, match=r"^RATING_EVALUATION_FAILED:"):
         _reraise_engine_failure(algorithm, RuntimeError("boom"))
+
+
+@pytest.mark.req("NFR-499")
+def test_an_engine_error_text_never_reaches_the_raised_message() -> None:
+    """The sentinel for `_failing_node`'s read of the engine error (`test_error_sinks.py`): the
+    engine's text can carry anything, and only a matched step's own id may be named."""
+    from model_schema.rating import RatingAlgorithm
+    from pricing_core.rating.score import _reraise_engine_failure
+
+    sentinel = "SENTINEL-quote-input-d7e3c518"
+    algorithm = RatingAlgorithm.model_validate(_algorithm_payload())
+    for nodeid in ("s_decl_cap", sentinel):
+        engine_error = f'{{"type":"NodeError","source":"{sentinel}","nodeId":"{nodeid}"}}'
+        with pytest.raises(ValueError, match=r"^RATING_EVALUATION_FAILED:") as raised:
+            _reraise_engine_failure(algorithm, RuntimeError(engine_error))
+        assert sentinel not in str(raised.value)
