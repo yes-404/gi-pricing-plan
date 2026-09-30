@@ -243,9 +243,21 @@ case says otherwise.
 3b. **Closure 1 — a new authored field cannot escape the enumerator.** A schema walk over the
     `RatingStep` union's members (`model_schema.rating`) lists every field whose annotation
     carries `str` (`str`, `str | None`, `list[str]`, `str | list[str]`, `dict[str, str]`,
-    `dict[str, str] | None`). `Literal[...]` fields are closed sets and are excluded. Every
-    listed `(model, field)` must be in **exactly one** of `EXPRESSION_FIELDS` or
-    `NON_EXPRESSION_FIELDS`, and every registry entry must name a real field (no stale entries).
+    `dict[str, str] | None`). **It unwraps `Annotated[str, …]`** to its base type, so
+    `RatingResultType` (`rating.py:235`) counts as `str`. `Literal[...]` fields are closed sets
+    and are excluded. **Each field is resolved to the class that defines it**, the first class in
+    the model's MRO whose own `__annotations__` declares it. So the five base fields (`step_id`,
+    `label`, `note`, `consumes`, `produces`) are one entry each, under `RatingStepBase`, not
+    seven entries each. Every listed `(defining class, field)` must be in **exactly one** of
+    `EXPRESSION_FIELDS` or `NON_EXPRESSION_FIELDS`, and every registry entry must name a real
+    field (no stale entries).
+    **`RatingExpressionStep.result_type` (`rating.py:294`, typed `RatingResultType`) is a
+    non-expression field.** It names the step's declared result type (FR-227). The result-type
+    check reads it through `compile.py:102` (`types[name] = step.result_type`), and the engine
+    never evaluates it. auditor-933 ran this walk's rule
+    over the real `RatingStep` union at `1cbcf474`: 46 (model, field) rows, all classified except
+    this one. So 3b would have gone red on day one without it. *(Added 2026-09-30 on
+    auditor-933's G1.)*
     **`RatingLookupStep.as_at` (`rating.py:279`) is out of the enumerator**, in
     `NON_EXPRESSION_FIELDS`, per DP-G5 (i) as recommended. The reasons: nothing in
     `pricing_core/rating` evaluates it (`runtime.py:26-35`: the window is "translated as an exact
@@ -431,7 +443,7 @@ case says otherwise.
 | j | The existing check tests use `codes(algorithm)` over `valid_algorithm()` | `packages/pricing-core/tests/test_rating_compile.py:15`, `:109-159` |
 | k | `_INPUT_FREE` counts `("rating/score.py", "_reraise_engine_failure"): 1` | `packages/pricing-core/tests/test_quote_input_raise_sites.py:66` |
 | l | FR-244 at `03:146` still reads "the same restricted grammar as `02` §4.6" | `03:146` |
-| m | **The step models' string-bearing fields.** Expression fields: `RatingExpressionStep.expr`; `RatingConstraintStep.condition`; every value of `RatingConstraintStep.clamp_bounds` (`dict[str, str] \| None`, of which the runtime reads `min` and `max`); `RatingTableStep.key_expr[i]`; `RatingLookupStep.key_expr[i]`. Non-expression fields: `step_id`, `label`, `note`, `consumes` and `produces` (on the base); `RatingInputStep.input_name`; `RatingLookupStep.as_at` (DP-G5); `RatingModelCallStep.feature_map` (graph name to feature slug); `RatingConstraintStep.reason_code`; `RatingOutputStep.output_name`. `Literal` fields and `ArtifactRef` fields are not strings | `packages/model-schema/src/model_schema/rating.py:257-326`; the runtime reads `expr` (`runtime.py:160`), `key_expr` (`:205`, `:236`), `condition` (`:292`) and `clamp_bounds` (`:303-314`); `as_at` is read by nothing in `pricing_core/rating` (`runtime.py:26-35`: the window is "translated as an exact key match only") |
+| m | **The step models' string-bearing fields.** Expression fields: `RatingExpressionStep.expr`; `RatingConstraintStep.condition`; every value of `RatingConstraintStep.clamp_bounds` (`dict[str, str] \| None`, of which the runtime reads `min` and `max`); `RatingTableStep.key_expr[i]`; `RatingLookupStep.key_expr[i]`. Non-expression fields: `step_id`, `label`, `note`, `consumes` and `produces` (on the base); `RatingInputStep.input_name`; `RatingLookupStep.as_at` (DP-G5); `RatingModelCallStep.feature_map` (graph name to feature slug); `RatingConstraintStep.reason_code`; `RatingOutputStep.output_name`; `RatingExpressionStep.result_type` (`RatingResultType`, an `Annotated[str, AfterValidator(…)]`, `rating.py:235`, `:294`). `Literal` fields and `ArtifactRef` fields are not strings | `packages/model-schema/src/model_schema/rating.py:257-326`; the runtime reads `expr` (`runtime.py:160`), `key_expr` (`:205`, `:236`), `condition` (`:292`) and `clamp_bounds` (`:303-314`); `as_at` is read by nothing in `pricing_core/rating` (`runtime.py:26-35`: the window is "translated as an exact key match only") |
 | n | `validate_algorithm` calls five checks in order; `_check_result_types` is the one that does not read expression strings | `compile.py:261-275`, `:114-140` |
 | o | #968's committed-exposure list: 4 strings with `/`, all `expr`; 0 in a condition or bound | #968 at `02f3f588`, *Exposure* |
 
