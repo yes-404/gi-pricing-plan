@@ -208,7 +208,7 @@ auditor, or a regulator:
 }
 ```
 
-*(Amended 2026-09-30, `RL-9856` (working id) item D4, on `CR-1247` Proposal 1 (c): the
+*(Amended 2026-09-30, `RL-1305` item D4, on `CR-1247` Proposal 1 (c): the
 example's permission list is replaced by a reference.)* A built-in role's permission set is
 **`BUILTIN_ROLES`** in `packages/model-schema/src/model_schema/permissions.py`, the one
 definition of the names and of the built-in role sets (ADR-704). This page states what each
@@ -258,10 +258,10 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 > `RL-1236`'s decision points are decided, and every ruled name is listed.)*
 >
 > **Built and now specified.** Each is checked by the route or service named in `RL-1236`, and
-> is part of the closed vocabulary §3.1 describes. *(Amended 2026-09-30, `RL-9856` (working id)
+> is part of the closed vocabulary §3.1 describes. *(Amended 2026-09-30, `RL-1305`
 > item D4.)* **This table has exactly one row per member of `model_schema.Permission`.** The
 > names are the enum's, and this table states their meaning. A gate check holds the two equal
-> in both directions (`RL-9856` (working id) D1 and D2). A new permission lands in one commit: its row
+> in both directions (`RL-1305` D1 and D2). A new permission lands in one commit: its row
 > here, its enum member, and its check (FR-367). **Check owner** names the Work that builds a
 > member's first check, and is empty once a check exists. The eleven members this table
 > lacked until 2026-09-30 are added, each with its governing text and that text's source:
@@ -290,7 +290,7 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 > | `admin:manage_roles` | Changing permissions, roles and role assignments (FR-348), and the workspace Approval Policy (`PUT /approval-policy` requires it, as this spec's route permission table states) |  |
 > | `admin:manage_settings` | Changing workspace settings and reference data, and every per-environment setting value: `07` FR-431's settings, and FR-270/FR-271's routing and shadow switches and shadow configuration (DP-D). Each change writes an Audit Event naming the environment, the key, the old value and the new value. Nothing it guards can change which Rating Version prices a live quote |  |
 > | `admin:manage_service_accounts` | Creating, rotating and revoking Service Accounts |  |
-> | `admin:break_glass` | Break-glass elevation (FR-349). Checked in the service layer, not by a route (`RL-9856` (working id) D1) |  |
+> | `admin:break_glass` | Break-glass elevation (FR-349). Checked in the service layer, not by a route (`RL-1305` D1) |  |
 > | `admin:manage_environments` | The Environment record's lifecycle: create, rename, retire (`07` FR-428). Not its settings, which are `admin:manage_settings`. Its route, WK-674 Slice 2's, is its first check | WK-674 |
 >
 > **Mapped: the same capability under two names; the code's name survives.**
@@ -308,8 +308,7 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 > datasets, blobs, validation rules and ingestion. The per-artifact split in the role example
 > above is carried to WK-676 (Phase 3, scoped assignments).
 >
-> **Names used before, and the enum name each maps to** *(added 2026-09-30, `RL-9856` (working
-> id) item D4: the aliases of the notes above, as a table the gate check reads)*:
+> **Names used before, and the enum name each maps to** *(added 2026-09-30, `RL-1305` item D4: the aliases of the notes above, as a table the gate check reads)*:
 >
 > | Name used before | Enum name |
 > |---|---|
@@ -329,7 +328,7 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 >
 > **Specified and not yet built, carried to the Work that builds it.** A name here is **not**
 > an enum member. Its row moves to the table above in the commit that adds the member and its
-> check *(table form 2026-09-30, `RL-9856` (working id) item D4)*:
+> check *(table form 2026-09-30, `RL-1305` item D4)*:
 >
 > | Permission | Owner Work |
 > |---|---|

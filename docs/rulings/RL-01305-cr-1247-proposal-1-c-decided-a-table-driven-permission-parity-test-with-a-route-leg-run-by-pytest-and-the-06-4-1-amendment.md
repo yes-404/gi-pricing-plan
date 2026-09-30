@@ -1,5 +1,5 @@
 ---
-id: RL-9856
+id: RL-1305
 family: ruling
 title: CR-1247 Proposal 1 (c) decided — a table-driven permission-parity test with a route leg, run by pytest, and the 06 §4.1 amendment
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [CR-1247, RL-1236, PL-1268, PL-1279, PL-1237, ADR-704, FR-367]
 ---
 
-# RL-9856 — CR-1247 Proposal 1 (c) decided — a table-driven permission-parity test with a route leg, run by pytest, and the 06 §4.1 amendment
+# RL-1305 — CR-1247 Proposal 1 (c) decided — a table-driven permission-parity test with a route leg, run by pytest, and the 06 §4.1 amendment
 
 ## How this was ruled
 
@@ -27,7 +27,8 @@ own `echo "CLAUDE_EFFORT=$CLAUDE_EFFORT"` printed `CLAUDE_EFFORT=high`.
 The record was prepared at effort `medium` (PR #942, head `2f26abb1`, "PREPARED, NOT
 RULED"). Its evidence, options and prepared recommendations are kept below as prepared.
 **The decisions are in "Ruled"**, and **the `06` §4.1 amendment (D4) is in this commit.** It
-keeps the working id 9856; the id is minted at the lead's merge turn.
+was minted 2026-09-30 as RL-1305 (assigned in the lead's batch plan, batch 2, under the
+maintainer's option (B)); it was filed under working id 9856.
 
 *Re-verified 2026-09-30 at `48792023`:* `git diff --stat dee49f78 48792023 --
 packages/model-schema/src/model_schema/permissions.py docs/specs/06-governance.md
