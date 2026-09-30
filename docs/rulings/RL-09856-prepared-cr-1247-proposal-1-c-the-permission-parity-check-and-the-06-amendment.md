@@ -26,6 +26,17 @@ relates: [CR-1247, RL-1236, PL-1268, ADR-704, FR-367]
 >
 > It is never marked ready or minted before the effort-high pass.
 
+*Refreshed 2026-09-30 at origin/main `0bc69b5b`: the deciding evidence is unchanged.*
+- `permissions.py`, `06`, `backend/src`, `.github/workflows` and ADR-704 are unchanged since
+  `dee49f78` (`git diff --stat` is empty).
+- So these still hold: 24 enum members; 13 §4.1 rows, with the same 11 members missing;
+  0 caller-predicate sites for `deployment:promote` and `admin:manage_environments`; and
+  `docs.yml` not triggering on `packages/**`.
+- CR-1247 and RL-1236 are unchanged.
+- PL-1268 changed (37 insertions, 8 deletions), but its Slice 3 still requires the parity
+  check and its RL first. It is now cited by heading.
+- The working id 9970 is now cited as PL-1279.
+
 ## What is already decided, and so is not prepared here
 
 **`CR-1247` Proposal 1** (`docs/closures/CR-01247-…-p2-s-exit.md:81-159`) was decided as (c):
@@ -42,8 +53,9 @@ relates: [CR-1247, RL-1236, PL-1268, ADR-704, FR-367]
 - **The decision-maker** writes the `RL-` and the `06` amendment, which replaces the role
   block's names with a reference to `BUILTIN_ROLES`.
 - **WK-1178** builds the check before the first slice that adds a name: WK-690's
-  `custom_objective:author` (`RL-1236` row 5; PL-1268 Slice 3 "Depends on", `:498-499` and
-  `:574-575`).
+  `custom_objective:author` (`RL-1236` row 5; PL-1268 §Tasks, "Slice 3 — The `expression`
+  kind through the platform, behind the flag", its "Depends on", and §Activation's Slice 3
+  line).
 - Until then, `RL-1236`'s interim rule stands (`RL-1236` Acceptance, `:409-417`).
 
 This record prepares only what (c) leaves open: **what the check asserts, where it runs, the
@@ -125,12 +137,12 @@ Each count below gives its predicate.
 
 **Open item under D1 for the ruling: a ninth violation class, `STALE_OWNER`** *(added
 2026-09-30, at the lead's request; not ruled).*
-- **The proposal.** WK-1178's leaf plan proposes it in §Tasks, Task 1 ("The pure
+- **The proposal.** WK-1178's leaf plan, **PL-1279**, proposes it in §Tasks, Task 1 ("The pure
   comparison, and each violation class proved red"): "Built name has a check site and still
   carries an owner: clear it in the same commit". Task 1 also holds its synthetic red proof.
-  - The plan is working id 9970, #944, `origin/wk1178-parity-leaf`, first read at `e56809ed`
-    and re-read at `42b9774d`. It is the one plan file that branch adds, with the slug
-    `wk-1178-the-permission-parity-check-leaf-plan`.
+  - The plan is PL-1279 (#944; read before minting on `origin/wk1178-parity-leaf` at
+    `e56809ed` and `42b9774d`, and re-read on main at `0bc69b5b` on 2026-09-30, where it is
+    still `draft` and its DP-1 to DP-3 await this record's D1, D2 and D4).
   - *(Citations changed 2026-09-30 from line numbers to section headings, at the lead's
     request, because the line numbers moved between those two heads.)*
 - **It is not among this record's four acceptance fixtures.** Those cover a missing Built row,
@@ -153,9 +165,9 @@ Each count below gives its predicate.
 - The ruling should also tell WK-674 S2's leaf plan about it, so the requirement is not first
   discovered as a red gate.
 - Under D1 (B), the fallback, the class is dormant on the live tree because `checked` is the
-  whole enum (working id 9970, §Scope, "The slice under 9856 D1 (C), and under its fallback
+  whole enum (PL-1279, §Scope, "The slice under 9856 D1 (C), and under its fallback
   (B)"). It is therefore free to keep either way.
-- The leaf plan's E5 (9970 §Scope, "Today's mismatches", E5) also records a third unchecked
+- The leaf plan's E5 (PL-1279 §Scope, "Today's mismatches", E5) also records a third unchecked
   member "if only `requires()` routes count". ~~That is the `service_accounts.py` literal
   `RL-1236` corrected.~~
   - *Corrected 2026-09-30, after the lead relayed planner-parity's objection. I re-verified all
@@ -224,7 +236,7 @@ In one commit, with the check, or in the commit before it:
 
 *Context, not a decision (added 2026-09-30):* PL-1268's acceptance places the `06` §4.1 row for
 `custom_objective:author` in WK-690 Slice 3's own commit
-(`docs/plans/PL-01268-wk-690-expression-custom-objectives-map-plan.md:484-486`: "the `06` §4.1
+(PL-1268 §Tasks, "Slice 3 — The `expression` kind through the platform, behind the flag": "the `06` §4.1
 row for `custom_objective:author`, the enum member … and the route check land in **one
 commit**"). That is consistent with item 2's "moves to Built in Slice 3's commit".
 
