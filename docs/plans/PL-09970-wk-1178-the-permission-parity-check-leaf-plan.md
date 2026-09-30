@@ -229,7 +229,7 @@ same tree:
 |---|---|---|---|---|---|---|
 | DP-1 | **What the check asserts.** | (A) `CR-1247`'s wording, with exclusions found by position in prose (E3's I1 reading). (B) Table-driven: §4.1 carries Built, Specified-not-built and Aliases tables, each machine-read, and any other `06` token outside struck text is a violation. (C) (B), plus a route leg: every Built name has a check site in `backend/src` or an owner cell (E5) | **(C)**, agreeing with 9856's provisional answer. Only (C) makes FR-367's "the enum member and its check land together" a gate rather than a review item, and E5 shows its route leg is red today only on two members that already have an owner. **The ruling decides it**, and Tasks 1–4 are written to (C). A proposal for the ruling, not part of 9856's four fixtures: a ninth class, stale-owner, for a Built row with both a check site and an owner. Under it, WK-674 Slice 2 clears the owner cells of `deployment:promote` and `admin:manage_environments` in the commit that adds their checks. It is conditional on the ruling adopting it (Task 0 Step 1) | decision point (scope) | yes: Tasks 1–3 | working id 9856 (#942), its D1 |
 | DP-2 | **Where the check lives.** | (L1) A numbered `scripts/audit-docs.py` check. It regex-reads `permissions.py` and runs under `docs.yml`. (L2) A root `tests/` pytest module that imports the enum and runs under `python.yml`. (L3) Both: the `audit-docs` check for the `06`-internal legs, and the pytest for every leg touching code. (L4) L1, with `packages/model-schema/src/model_schema/permissions.py` and `backend/src/**` added to `docs.yml`'s paths | **L2.** It is the only placement where a change on any side triggers the run (E6). L1 does not run on a `packages/**`-only commit, which is the very drift the check exists for. L4 keeps a hand-widened path filter that drifts. L3 runs the same comparison twice, and one copy can go stale. L1, L3 and L4 also edit `scripts/audit-docs.py`, which WK-1170 Slices 3 and 6 edit (the WK-1170 map plan on open PR #930, working id 9811, `:271-296`). That is a shared file under `RL-1263` (c), so they serialise, and the next free check number becomes a merge race. L2 edits no shared file | decision point (placement) | yes: every task's **Files** | working id 9856 (#942), its D2 |
-| DP-3 | **Who writes the `06` §4.1 amendment, and when** (the 11 rows of E4, the Specified and Aliases tables, and the role block replaced by a reference to `BUILTIN_ROLES`)? | (a) The decision-maker, in the ruling's PR or one before it. This slice then only reads `06`. (b) This slice, in its first commit, from the ruling's text. (c) The ruling's PR carries the tables, and this slice carries only the role-block replacement | **(a).** `CR-1247` `:149-151` names the decision-maker as owner of the `06` amendment. Under (a) this slice edits no spec section, so it shares nothing with WK-674 Slices 2/3 or WK-690 Slice 3 (all of which touch `06` §4.1). Under (b) it takes `06` §4.1 and serialises with all three | decision point (ownership, sequencing) | yes: Task 2's live test is red until it lands (E4) | working id 9856 (#942), its D4, and the lead's dispatch |
+| DP-3 | **Who writes the `06` §4.1 amendment, and when** (the 11 rows of E4, the Specified and Aliases tables, and the role block replaced by a reference to `BUILTIN_ROLES`)? | (a) The decision-maker, in the ruling's PR or one before it. This slice then only reads `06`. (b) This slice, in its first commit, from the ruling's text. (c) The ruling's PR carries the tables, and this slice carries only the role-block replacement | **(a)**, this plan's recommendation. `CR-1247` `:149-151` names the decision-maker as owner of only one part: the `06` amendment that replaces the role block with a reference to `BUILTIN_ROLES`. The 11 rows reach the decision-maker only through 9856's unruled D4 item 1. Under (a) this slice edits no spec section, so it shares nothing with WK-674 Slices 2/3 or WK-690 Slice 3 (all of which touch `06` §4.1). Under (b) it takes `06` §4.1 and serialises with all three | decision point (ownership, sequencing) | yes: Task 2's live test is red until it lands (E4) | working id 9856 (#942), its D4, and the lead's dispatch |
 
 `CR-1247` `:150` also leaves **RL or ADR** open (working id 9856, D3). It does not block this plan unless
 the answer is an ADR: an ADR goes `draft → active` only on the maintainer's acceptance, and
@@ -241,7 +241,7 @@ Task 0 then waits for that acceptance too.
 |---|---|---|
 | Violation classes live on the real tree | nine, or eight if the ruling omits stale-owner | seven, or six without stale-owner. `NO_CHECK_NO_OWNER` and `STALE_OWNER` keep their synthetic red proofs but are dormant on the live tree, because `checked` is the whole enum |
 | Task 3 (source scan, alias guard) | built | dropped. Task 2 passes `frozenset(p.value for p in Permission)` as `checked` |
-| `06` §4.1 Built table | needs a `Check owner` column: `WK-674` on `deployment:promote` and `admin:manage_environments` (E5) | two columns, name and governs. `_owner` is not read |
+| `06` §4.1 Built table | needs a `Check owner` column: `WK-674` on `deployment:promote` and `admin:manage_environments` (E5) | two columns, name and governs. Task 1 reads the owner column only when it is present (`len(r) > 2`), so a two-column table gives every Built name owner `None`. `STALE_OWNER`, if adopted, cannot fire, and `NO_CHECK_NO_OWNER` cannot fire because `checked` is the whole enum. `BUILT_HEADER` takes the two-column header at Task 0 Step 2, which is a header-literal change only |
 | Tests collected (Acceptance item 1) | 13, or 12 without stale-owner | 12, or 11 without stale-owner |
 | Where FR-367's "the member and its check land together" is enforced | this gate (the route leg) | each slice's own negative test (`PL-1268` Acceptance item 8), not this gate |
 | Binds WK-674 S2 | only if the ruling adopts stale-owner: it then clears two owner cells in the commit that adds its checks | no |
@@ -260,9 +260,14 @@ by their position in prose, and Task 1's parser has no such mode.
   below).
 - **In both cases** the rows cannot land with the check alone. The live test is red until all
   24 members have a Built row, and a red test does not merge.
-- DP-3 (a) also keeps the governing text for the 11 names with the record that rules on it.
-  `CR-1247` `:149-151` names the decision-maker as owner of the `06` amendment. A slice that
-  writes meaning into `06` §4.1 would be deciding that meaning.
+- **This plan's recommendation**, not an existing assignment: DP-3 (a) keeps the governing
+  text for the 11 names with the record that rules on it. A slice that writes meaning into
+  `06` §4.1 would be deciding that meaning.
+  - `CR-1247` `:149-151` names the decision-maker as owner of the role-block replacement
+    only (`BUILTIN_ROLES`).
+  - The 11 rows are proposed for the decision-maker by 9856's D4 item 1, which is not ruled.
+  - *(Reworded 2026-09-30 on auditor-plans2's citation finding. The first wording cited
+    `CR-1247` as if it assigned the whole amendment.)*
 
 ### File contention (for the lead's serialisation under `RL-1263` option (c))
 
@@ -328,8 +333,10 @@ run (a gate slot under `RL-1263`). It takes no NFR measurement, so it need not r
   The counts are then 8 classes, and 12 tests under (C) (Acceptance items 1 and 2).
 - [ ] **Step 2:** Confirm the `06` amendment has merged (DP-3 (a)). Copy the exact header rows
   of §4.1's Built, Specified and Aliases tables into Task 1's `BUILT_HEADER`, `SPECIFIED_HEADER`
-  and `ALIAS_HEADER`. These are the only literals the amendment is allowed to change. Anything
-  else, such as a different table set, is a replan.
+  and `ALIAS_HEADER`. These are the only literals the amendment is allowed to change. The Built
+  table may have two columns under D1 (B) or three under (C). The code reads the owner column
+  only if it is present, so either shape is a header-literal change. Anything else, such as a
+  different table set or a different column order, is a replan.
 - [ ] **Step 3:** Re-run E1, E4 (table reading, against the new Built table) and E5 at the new
   tree. Record each count with its tree in the ledger. E4 must print nothing. E5's zero-site
   members must equal the Built rows that carry an owner.
@@ -440,7 +447,9 @@ class Catalogue:
 
 def extract_catalogue(spec_text: str) -> Catalogue:
     section = _section_4_1(spec_text)
-    built = {_name(r[0]): _owner(r[2]) for r in _table(section, BUILT_HEADER)}
+    # The owner column is optional: under 9856 D1 (B) the Built table has two columns.
+    rows = _table(section, BUILT_HEADER)
+    built = {_name(r[0]): _owner(r[2]) if len(r) > 2 else None for r in rows}
     specified = {_name(r[0]): _owner(r[1]) or "" for r in _table(section, SPECIFIED_HEADER)}
     aliases = {_name(r[0]): _name(r[1]) for r in _table(section, ALIAS_HEADER)}
     tables = [set(built), set(specified), set(aliases)]
@@ -792,5 +801,11 @@ git commit -m "test(governance): python.yml must trigger the parity check on eve
    - The first run also exposed one defect in the sample, fixed before filing: an alias
      target that is not a member was reported both as an alias violation and as a stray
      token.
+
+   - Re-run 2026-09-30 after auditor-plans2's F4. The results were unchanged: ruff rc 0,
+     mypy clean, 12 passed and 1 failed (the live test).
+   - A (B)-shape probe fed `parity_violations` a two-column Built table, with that header,
+     `checked` equal to the enum, and every member in a row. It returned `[]` and raised no
+     `IndexError`.
 
    The scratch file was deleted, and this PR adds no test.
