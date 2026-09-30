@@ -15,6 +15,7 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
+from backend.tests.approved_rows import add_approved
 from sqlalchemy import select
 
 from app.db.models import (
@@ -148,9 +149,9 @@ async def _seed_dataset_and_rules(
             approved_by=new_uuid7(),
             dry_run_report_id=new_uuid7(),
         )
-        session.add(rule)
-        await session.flush()
-        session.add(
+        await add_approved(session, rule)
+        await add_approved(
+            session,
             ValidationRuleSetRow(
                 workspace_id=workspace_id,
                 dataset_id=dataset_id,
@@ -158,7 +159,7 @@ async def _seed_dataset_and_rules(
                 version=1,
                 body={"rule_ids": [str(rule.id)]},
                 status="approved",
-            )
+            ),
         )
     return dataset_id
 

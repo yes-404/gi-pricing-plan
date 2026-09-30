@@ -496,27 +496,28 @@ async def _carry_to_the_artifact(
     in code — a Peril Structure and a Rating Version each gain one with the slice that
     builds them, and until then their requests decide without an artifact to move.
     """
-    await modelling_service.apply_approval_decision(
-        session,
-        workspace_id=caller.workspace_id,
-        actor=caller.principal,
-        request=request,
-    )
-    await objectives_service.apply_approval_decision(
-        session,
-        workspace_id=caller.workspace_id,
-        actor=caller.principal,
-        request=request,
-    )
-    await metrics_service.apply_approval_decision(
-        session,
-        workspace_id=caller.workspace_id,
-        actor=caller.principal,
-        request=request,
-    )
-    await rating_versions_service.apply_approval_decision(
-        session,
-        workspace_id=caller.workspace_id,
-        actor=caller.principal,
-        request=request,
-    )
+    async with service.approval_decision(session):
+        await modelling_service.apply_approval_decision(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            request=request,
+        )
+        await objectives_service.apply_approval_decision(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            request=request,
+        )
+        await metrics_service.apply_approval_decision(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            request=request,
+        )
+        await rating_versions_service.apply_approval_decision(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            request=request,
+        )

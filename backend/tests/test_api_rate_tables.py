@@ -18,6 +18,7 @@ import io
 from uuid import UUID, uuid4
 
 import pytest
+from backend.tests.approved_rows import add_approved
 from backend.tests.test_api_datasets import _headers
 from fastapi.testclient import TestClient
 from openpyxl import load_workbook
@@ -92,7 +93,11 @@ def _insert_rows(rows: list[object]) -> None:
 
     async def _insert(database: Database) -> None:
         async with database.unit_of_work() as session:
-            session.add_all(rows)
+            for row in rows:
+                if getattr(row, "status", None) == "approved":
+                    await add_approved(session, row)
+                else:
+                    session.add(row)
             await session.flush()
 
     loop = asyncio.new_event_loop()

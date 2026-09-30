@@ -29,7 +29,10 @@ from model_schema.rating import (
     RatingAlgorithm,
     RatingExpressionStep,
     RatingInputStep,
+    RatingLookupStep,
+    RatingModelCallStep,
     RatingOutputStep,
+    RatingTableStep,
     RatingVersion,
     check_model_reference_mode,
 )
@@ -422,6 +425,37 @@ def _raise_named(code: str, message: str) -> NoReturn:
     raise CodedError(f"{code}: {message}") from None
 
 
+def check_step_refs_pinned(algorithm: RatingAlgorithm, pins: Pins) -> None:
+    """Refuse a step ref the pins do not carry at that exact version (FR-237).
+
+    A `table` step's ref must be in `pins.rate_tables`, a `lookup` step's in
+    `pins.reference_tables`, and a `model_call` step's `model_ref` or `peril_structure_ref`
+    in `pins.models`. The first mismatch in step order raises `RATING_VERSION_UNPINNED`,
+    naming the step and the ref. A pin no step names is allowed (FD-1297, DP-F3 (a)).
+    """
+    for step in algorithm.steps:
+        if isinstance(step, RatingTableStep):
+            ref, pinned = step.rate_table_ref, pins.rate_tables
+        elif isinstance(step, RatingLookupStep):
+            ref, pinned = step.reference_table_ref, pins.reference_tables
+        elif isinstance(step, RatingModelCallStep):
+            model_ref = step.model_ref or step.peril_structure_ref
+            assert model_ref is not None  # exactly one is set (FR-222)
+            ref, pinned = model_ref, pins.models
+        else:
+            continue
+        if ref in pinned:
+            continue
+        other = next((p for p in pinned if (p.type, p.slug) == (ref.type, ref.slug)), None)
+        _raise_named(
+            "RATING_VERSION_UNPINNED",
+            f"step {step.step_id!r} names {ref}, which the rating version's pins do not "
+            "carry at that exact version"
+            + (f" (pinned at {other} instead)" if other is not None else "")
+            + " (FR-237)",
+        )
+
+
 async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle:
     """Compile a pinned `RatingVersion` to a self-contained Bundle (FR-239/240).
 
@@ -429,6 +463,8 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
     and boundary guards (re-checked via `validate_algorithm`), the pins resolve to
     `approved` or better (FR-20), every `model_call` mode equals the version's
     `model_reference_mode` (FR-223), and no pinned custom objective is unapproved.
+    Every `table`, `lookup` and `model_call` step's ref is pinned at its exact version
+    (FR-237, `check_step_refs_pinned`).
     Raises `ValueError` named with the first failure's code.
     """
     if version.algorithm_ref is None:
@@ -462,6 +498,7 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
     if issues:
         _raise_named(issues[0].code, issues[0].message)
     check_model_reference_mode(version, algorithm)
+    check_step_refs_pinned(algorithm, version.pins)
 
     payloads: dict[str, Any] = {str(version.algorithm_ref): resolved_algorithm.payload}
     all_refs: list[ArtifactRef] = [
@@ -500,6 +537,7 @@ __all__ = [
     "ValidationIssue",
     "assert_integer_minor_round_trip",
     "bundle_hash",
+    "check_step_refs_pinned",
     "compile_bundle",
     "to_jdm",
     "validate_algorithm",

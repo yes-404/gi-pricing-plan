@@ -1,5 +1,5 @@
 ---
-id: PL-9845
+id: PL-1325
 family: plan
 kind: leaf
 title: WK-1250 Slice 1 — The sub-graph as a stored, versioned artifact, with typed ports and FR-227 at create (FR-217's artifact limb): leaf plan
