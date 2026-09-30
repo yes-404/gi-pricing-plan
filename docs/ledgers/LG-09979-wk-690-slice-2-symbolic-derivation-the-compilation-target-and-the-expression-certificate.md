@@ -166,6 +166,36 @@ template tests otherwise pass unmodified. The spec (`02` §5.1, FR-165) is amend
   (`packages/pricing-core/src`, `packages/model-schema/src`)**, `PYTHONPATH` first, with `71b67220`'s copy of `test_objectives.py`;
   the same script on this branch's Task 4 commit gave a byte-identical file (`diff` empty).
 
+### Task 6 — NFR-476's expression limb (head `152469c5`, `scripts/bench-model.py --only expression`)
+
+**Solo window** granted by the lead 2026-09-30 23:19:50 BST (dispatch record, Delta 1). Start 23:21:35 BST: `uptime` load 3.01, 2.06, 1.91; `free -h`
+31Gi total, 24Gi used, 342Mi free, 7.7Gi buff/cache, **6.5Gi available** (sibling agent sessions; 23Gi available at the end); `flock -n` on
+`/tmp/slots/gate-1` and `gate-2`: both free; no pytest or bench process. The lead's grant recorded load 0.76, so the box was **not as idle as at the grant**
+(load 3 to 4 throughout, from sibling agent processes, not slots). Each run took `gate-1` under `flock -n`, with `POLARS_MAX_THREADS`,
+`RAYON_NUM_THREADS`, `TOKIO_WORKER_THREADS`, `OMP_NUM_THREADS`, `OPENBLAS_NUM_THREADS`, `MKL_NUM_THREADS` = 4 and `LOKY_MAX_CPU_COUNT=4`. End 23:25:42 BST:
+load 4.07, 2.97, 2.31; `free -h` 7.9Gi used, 18Gi free, 23Gi available; both slots free. Shape: 1,000,000 rows x 60 factors x 100 trees (RL-1328 DP-S2-6 (a)),
+one float32 `DMatrix`, both arms `xgb.train` with `max_depth` 6, `eta` 0.1, `hist`; builtin `count:poisson` (`base_score` 1) against
+`make_xgb_objective` of `compile_expression_objective("w * (exp(f) - y * f)")`. Peak RSS 2,026 MB.
+
+| run | pair | builtin s | expression s | ratio | load start → end |
+|---|---|---|---|---|---|
+| 1 | 1 | 10.31 | 12.02 | 1.166 | 3.14 → 3.14 |
+| 1 | 2 | 9.18 | 12.28 | 1.338 | 3.14 → 3.04 |
+| 1 | 3 | 9.11 | 11.59 | 1.273 | 3.04 → 2.93 |
+| 2 | 1 | 8.93 | 11.38 | 1.274 | 2.51 → 2.93 |
+| 2 | 2 | 8.87 | 11.12 | 1.254 | 2.93 → 3.39 |
+| 2 | 3 | 9.00 | 11.30 | 1.255 | 3.39 → 3.10 |
+| 2 | 4 | 8.89 | 11.13 | 1.253 | 3.10 → 3.27 |
+| 2 | 5 | 9.30 | 11.30 | 1.215 | 3.27 → 4.02 |
+| 2 | 6 | 9.09 | 11.73 | 1.290 | 4.02 → 4.01 |
+| 2 | 7 | 9.13 | 11.54 | 1.265 | 4.01 → 4.07 |
+
+Run 1 (N=3): median **1.273**, spread [1.166, 1.338]. Run 2 (N=7): median **1.255**, spread [1.215, 1.290]. Raw output: the executor's scratch, not committed.
+
+**Verdict (DP-S2-6 (a)): measured, near bound, no verdict.** Both medians are within ±5 percentage points of 1.25, so the near-bound condition applies
+(`RL-921` §4, CR-1247 Proposal 4). The limb is neither met nor missed at this shape on this shared VM. The full shape (5 M x 60 x 500, N >= 3) goes to the dedicated host:
+the run is WK-690's and the host is the maintainer's, who has not named one.
+
 ## Deviations from PL-1327, each named
 
 1. **The NFR-483 test** cannot replace `builtins.compile` outright: `ast.parse`, which `parse_expression` calls, goes through
@@ -187,6 +217,9 @@ template tests otherwise pass unmodified. The spec (`02` §5.1, FR-165) is amend
    text holds almost no `/`. A divisor is the right operand of `/` (not a bare constant) or the base of a negative-constant `**`.
    The plan's sign-change control did not isolate the clause (see Task 5's table), so a separate test uses a denominator that
    jumps from −1 to 1.
+8. **Package suites ran unslotted** (the lead's question): `pytest packages/pricing-core` (1293 passed, before the certificate code was added),
+   `pytest packages/pricing-core packages/model-schema` and `backend/tests/test_contracts.py` ran directly, not under the dev-commands slot wrapper. Only named
+   files are exempt; these were directory suites. No measurement was taken from them. The gate of record runs slotted (Task 7).
 7. **Task 6's arms** are two `xgb.train` calls over one `DMatrix`, builtin `count:poisson` against `make_xgb_objective` of the
    compiled expression, because `fit_gbm` takes a `CustomObjective` artifact, which has no expression fields until Slice 3.
 
