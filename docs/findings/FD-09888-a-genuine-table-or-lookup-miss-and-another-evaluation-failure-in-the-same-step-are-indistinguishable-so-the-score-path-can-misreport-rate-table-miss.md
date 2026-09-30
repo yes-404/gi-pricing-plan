@@ -18,9 +18,13 @@ relates: [WK-1178]
 (`packages/pricing-core/src/pricing_core/rating/score.py:469-498`) cannot tell **why**. The engine
 reports a genuine `on_miss='error'` table or lookup miss and any other failure in the same step
 (for example a null division) as the **same** `NodeError` shape, so the function infers the cause.
-It infers a table or lookup miss whenever the algorithm has *any* `on_miss='error'` table or lookup
-step, and raises `RATE_TABLE_MISS` (or `REFERENCE_LOOKUP_MISS`). A failure that is not a miss is
-therefore **reported as one**. The docstring says so itself (`:469-483`): *"it is honest about
+**This record is the residual only.** #968 (FD working id 9885) and #970 (RL working id 9982) are
+fixing the broader case, in which the function names a table or lookup miss for a failure at a
+step that consumes no such output whenever the algorithm has any `on_miss='error'` step: after
+#970's DP-G4 fix the every-step scan (`:484-497`) is removed. What remains is the case where the
+failing step **itself directly consumes an `on_miss='error'` output**: a genuine miss and another
+evaluation failure in that step are indistinguishable, and the failure is **reported as a miss**
+(`RATE_TABLE_MISS` or `REFERENCE_LOOKUP_MISS`). The docstring says so itself (`:469-483`): *"it is honest about
 being an inference: a correctness gap for a later slice to close by making the wire translation
 itself fail gracefully"*.
 
@@ -36,7 +40,7 @@ score fixture (`packages/pricing-core/tests/test_rating_score.py`: `_algorithm_p
 
 | Case | Engine failure seen by `_reraise_engine_failure` | Raised by `score_one` |
 |---|---|---|
-| 1. Genuine table miss: `channel` `unseeded` (accepted by the input contract, no row in the rate table) | `RuntimeError :: {"type":"NodeError","source":"Failed to evaluate expression: \"risk_premium_minor * expense_factor\"","nodeId":"s_office"}` | `CodedError :: RATE_TABLE_MISS: the engine failed evaluating a downstream step, most likely because an on_miss='error' step found no matching row …` |
+| 1. Genuine table miss: `channel` `unseeded`, which the fixture refuses with `INPUT_CONTRACT_VIOLATION` as it stands; **this measurement widened the channel enum's domain** (as `test_a_rate_table_miss_is_refused_with_the_right_code` does) so the value reaches the table, which has no row for it | `RuntimeError :: {"type":"NodeError","source":"Failed to evaluate expression: \"risk_premium_minor * expense_factor\"","nodeId":"s_office"}` | `CodedError :: RATE_TABLE_MISS: the engine failed evaluating a downstream step, most likely because an on_miss='error' step found no matching row …` |
 | 2. Null division in the **same step** `s_office`: expr `expense_factor != 0 ? risk_premium_minor * expense_factor * (1 / (driver_age - driver_age)) : 0` | `RuntimeError :: {"type":"NodeError","source":"Failed to evaluate expression: \"expense_factor != 0 ? risk_premium_minor * expense_factor * (1 / (driver_age - driver_age)) : 0\"","nodeId":"s_office"}` | the same `RATE_TABLE_MISS` |
 
 A third case, measured first, shows the broader form: with expr
