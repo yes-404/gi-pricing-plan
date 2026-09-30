@@ -1012,6 +1012,11 @@ Rules enforced by the parser (FR-145):
 > counted over `ast.expr` nodes (DP-S1-1, RL-1291). The
 > function sets are the table's. Comparisons in `objective` and `factor` exist only as
 > `where()`'s condition.)*
+>
+> *(Amended 2026-09-30, RL-1293 (DP-S1-3): the `objective` profile's bound
+> symbols and declared parameters are real-valued, and the derivation treats them so.
+> `abs` therefore differentiates to `sign`, and the `derived` text a reviewer approves is
+> the real-variable form.)*
 
 
 Example `expression` objective — under-pricing penalised twice as hard, on a log link:

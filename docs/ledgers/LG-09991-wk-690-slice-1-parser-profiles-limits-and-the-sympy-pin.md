@@ -160,6 +160,27 @@ ruff rc 0; mypy no issues in 209 files; lint-imports 4 kept, 0 broken. Spec deli
 Timing note: uptime load at Task 3–4 start was about 14.6 (lead's ruling on timed gates: applies
 to full gates; the full gate has not been run yet).
 
+### Task 5 — the objective profile, translated to SymPy (RL-1293)
+
+Step 1 spike (locked sympy): `1.14.0 1/(x + 1)`. Red: `ModuleNotFoundError: No module named
+'pricing_core.data.expression_sympy'`. Green: 18 passed; the `never_reaches` raiser test alone in
+a fresh process: 1 passed. ruff rc 0; mypy no issues in 210 files (the plan's `Callable` annotation on
+`_BINARY` was needed, no `type: ignore`); lint-imports 4 kept, 0 broken; only `expression_sympy.py` imports sympy.
+
+**Mutation control for RL-1293** (symbols built without `real=True`): 9 of 18 fail, including
+`test_every_objective_symbol_is_real` and `test_the_spec_example_gradient_and_hessian_are_reproduced`.
+
+**Defect in the plan's test, found by that run and fixed here.** `test_the_abs_derivative_is_the_real_one`
+did NOT fail under the mutation: the test module's `f` is real, so differentiating a loss built from
+plain symbols with respect to it gives 0, and `not derivative.has(re, im, Derivative)` holds vacuously.
+I added `assert derivative == w * sympy.sign(f - y)`; under the same mutation it now fails
+(`assert 0 == (w * sign(f - y))`). The plan's file is frozen; this is a deviation from its test text.
+
+**Slot rule (maintainer, 11:43 BST, relayed by the lead).** The Task 3 (1059 passed) and Task 4
+(1072 passed) `pytest packages/pricing-core/tests` runs, and the Task 2 corpus capture run, were
+unslotted and uncapped (144% CPU plus loky workers, per the lead's reading of load at 10:43Z). Every
+later suite-level run is slotted with `LOKY_MAX_CPU_COUNT=4 OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2`.
+
 ## PRs
 
 Draft PR opened on the slice branch; number recorded here when opened.
