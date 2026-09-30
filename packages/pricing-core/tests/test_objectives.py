@@ -908,6 +908,26 @@ def test_expression_certificate_records_the_patched_sympy_version_derivation_ver
     assert result.library_versions["sympy"] == "9.9.9"
 
 
+@pytest.mark.req("FR-146")
+@pytest.mark.req("FR-165")
+def test_expression_certificate_division_by_the_even_order_zero_of_rl_1328() -> None:
+    """RL-1328's acceptance for DP-S2-5: a denominator `(exp(f) - y) ** 2` does not pass
+    `finiteness` on the default grid."""
+    result = _certify_expression("w / (exp(f) - y) ** 2")
+    assert _status(result, "finiteness") is CheckStatus.FAILED
+
+
+@pytest.mark.req("FR-144")
+def test_the_expression_path_takes_the_model_schema_domain_and_strategy_types() -> None:
+    """DP-S2-1 (c): primitives, with the existing types and never a hand-written copy."""
+    import inspect
+
+    for function in (compile_expression_objective, certify_expression_objective):
+        hints = inspect.signature(function).parameters
+        assert "YDomain" in str(hints["y_domain"].annotation)
+        assert "HessianStrategy" in str(hints["hessian_strategy"].annotation)
+
+
 _BEFORE = json.loads(
     (Path(__file__).parent / "data" / "template_certificates_before_wk690s2.json").read_text(
         encoding="utf-8"
