@@ -184,8 +184,8 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
             decision per approver (`DUPLICATE_APPROVER` `:407`,
             `uq_approval_decisions_one_each`) and the quorum count (`:540-554`). A trigger
             that also counted `approval_decisions` against `approvers_required` would make a
-            forged request need forged decision rows too. That was considered and is not
-            required by this ruling.
+            forged request need forged decision rows too. That was considered, and it is
+            not required (the maintainer's 12:06:53 BST entry, sub-item 4).
           - **How the trigger derives the ref: one function, with per-table trigger
             arguments.** The stored ref is `str(ArtifactRef)`, `{type}:{slug}@{version}`
             (`refs.py:75`; `approvals.submit` stores it at `approvals.py:247`). Each of the
@@ -246,9 +246,11 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
           of work, was allowed (W1). So `approval_decision()` flushes the session and then,
           in a `finally`, executes `SET LOCAL app.approval_decision = 'off'`. With that
           reset the same write was refused (W2). The flush comes before the reset, so the
-          block's own pending write meets the trigger while the flag is on. A write left
-          unflushed at exit is flushed later under `'off'`, and is refused: it fails
-          closed.
+          block's own pending write meets the trigger while the flag is on. An **ORM**
+          write left unflushed at exit (an attribute change still pending in the session)
+          is flushed later under `'off'`, and is refused: it fails closed. A Core or raw
+          `text()` statement executes immediately inside the block, so it is never
+          buffered, and this case does not arise for it.
         - **The sanctioned decision path** enters the context in exactly two places:
           - `platform/approvals.decide`, from its assignment at `:416` through its flush at
             `:419`;
@@ -288,6 +290,10 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
           - what the flag still opens is `approval_requests`' own transition, and the two
             validation tables while they hold an allowance.
 
+          **Accepted as a residual by the maintainer**, in the entry "12:06:53 BST — #971
+          evidence-based trigger: the named residual is ACCEPTED". Arbitrary SQL on the
+          application's connection already means full control of the data, so no
+          trigger-side count of `approval_decisions` is required.
           Forging an approved artifact on the 5 tables therefore takes a forged request:
           the flag, then an approved `approval_requests` row naming the artifact, then the
           write. On the validation tables it takes the flag alone. The static literal scan
@@ -318,9 +324,19 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
      6. **Test fixtures.** 17 backend test files match
         `git grep -l -E 'status\s*=\s*"approved"|Status\.APPROVED|status=APPROVED' 9f63d0fe --
         backend/tests`. That is an upper bound on the direct approved writes, since some
-        matches only compare. **Declared Slice 2a work:** each goes through the decision path,
-        or through a helper that enters `approval_decision()` and is defined under
-        `backend/tests/` only. The static checks exempt `backend/tests/` and nothing else.
+        matches only compare. **Declared Slice 2a work:** each goes through the real
+        submit, decide and carry path, or through a helper defined under `backend/tests/`
+        only.
+        - **On the 5 evidence-only tables, the helper writes the evidence as well** (F-1 of
+          auditor-close1255's audit of `3de69560`). Entering `approval_decision()` is not
+          enough, because the flag does not satisfy those tables. Inside the context, the
+          helper writes an `approval_requests` row with `status = 'approved'`, the row's
+          `workspace_id` and its `artifact_ref`, which is `str(ArtifactRef(...))` for the
+          artifact. It then writes the artifact.
+        - **On the two validation tables**, entering the context is enough while their
+          allowance stands.
+
+        The static checks exempt `backend/tests/` and nothing else.
      7. **Red first, against a database migrated to head:**
         - **each of the five bypass forms** of item 2 is refused on a population table:
           Core `update()` on the `Table`, raw `text()`, `bulk_update_mappings`, a non-literal
@@ -346,6 +362,11 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
             cases fails;
         - **after the block:** an approved write made after `approval_decision()` exits,
           in the same unit of work, is refused. Without the exit reset, this case fails;
+        - **unflushed at exit:** inside the block, an ORM attribute change sets
+          `status = 'approved'` with no flush. The block's own flush is suppressed for
+          this plant, and the change is flushed after exit. That flush is refused. The
+          plant is an attribute change, never a Core or `text()` statement, which would
+          execute at once (auditor-close1255's F5);
         - **no leak:** the next transaction on the same pooled connection reads the flag
           as not `'on'`;
         - **positive controls:** the decide-and-carry path approves a request and its
