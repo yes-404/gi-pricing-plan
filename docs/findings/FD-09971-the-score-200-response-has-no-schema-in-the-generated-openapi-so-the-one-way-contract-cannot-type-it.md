@@ -48,8 +48,10 @@ exits 0 there ("31 generated contracts match the models"), so the committed
 **Predicate.** For each path, each HTTP method, each response whose status key starts with `2`,
 each media type under its `content`: the schema is `{}` (an empty mapping; an absent `schema`
 key counts as empty). A 2xx response with **no** `content` at all (a 204) is reported apart and
-not counted. The whole script, saved as `sweep_untyped_2xx.py` (sha256 prefix
-`91af891759604c27` on the version quoted here):
+not counted. The whole script is the fenced block below. **Bytes hashed:** exactly the text
+between the opening and closing fences, 1440 bytes including its final newline; sha256 prefix
+`a7bc917367fb3b3d`. (A copy saved to a file with a leading docstring hashes differently and
+produces the same output; the hash is of this block.)
 
 ```python
 import json, sys
@@ -116,6 +118,31 @@ other four return a **stream or a file**, so there is no JSON shape to type:
 `:235-236`). Those four carry the same `{}` and are listed for completeness. **They are a
 different case** (the OpenAPI names `application/json` for a body that is not JSON), and whether
 they are a defect is the maintainer's. This record's claim is the first two.
+
+**The sweep counts `{}` only.** A second predicate, run over the same document, finds the same defect class in a weaker
+form: a 2xx JSON response whose schema is `"type": "object"` with **no `properties`** and none of `$ref`, `allOf`, `anyOf`
+or `oneOf` (the generated client gets `{ [key: string]: unknown }`). **12 of the 137 2xx responses match**, all with
+`additionalProperties: true`:
+
+```text
+GET  /api/v1/approval-requests/{request_id} 200
+GET  /api/v1/dataset-versions/{version_id}/rejected 200
+GET  /api/v1/rating-algorithms/{slug}@{version}/diff 200
+POST /api/v1/approval-requests 201
+POST /api/v1/approval-requests/{request_id}/decide 200
+POST /api/v1/approval-requests/{request_id}/withdraw 200
+POST /api/v1/rate-tables/{slug}/seed-from-model 201
+POST /api/v1/rate-tables/{slug}@{version}/bulk-operation 201
+POST /api/v1/rate-tables/{slug}@{version}/import 200
+POST /api/v1/rating-algorithms 201
+POST /api/v1/sources/{source_id}/preview 200
+POST /api/v1/validation-reports/{report_id}/results/{rule_id}/acknowledge 201
+```
+
+Measured in the generated client after `pnpm --dir frontend generate:api`: `create_rating_algorithm_api_v1_rating_algorithms_post`
+201 is `"application/json": { [key: string]: unknown; }`. These are **outside the maintainer's `{}` guard** (condition 3
+below) and outside this record's claim, which is `/score` and `/score/compare`. They are stated so that the `{}` guard is
+not read as the whole gap: whether they are the same defect, and whether the guard widens to them, is the maintainer's.
 
 **Controls**, run against the same document with the predicate above:
 
@@ -242,7 +269,7 @@ shape today (measured, above), and the fix is a small change to two route declar
 **The conditions, as the maintainer states them** (entry above), with what each needs:
 
 1. **Timing, which is the point of the severity.** The fix lands **before WK-675 dispatches any slice that consumes `/score`
-   or `/score/compare`.** Carrier WK-1178. The dependency is recorded in `PL-1286`'s (WK-675's map plan) next dispatch record
+   or `/score/compare`.** Carrier WK-1178. The dependency **is to be recorded** in `PL-1286`'s (WK-675's map plan) next dispatch record, which does not exist yet
    (that plan is frozen, so the record is a dispatch record, not an edit), and the lead holds that WK-675 dispatch on it.
 2. **The fix direction, as measured above.** `responses={200: {"model": ScoringResult}}` on `/score` and
    `responses={200: {"model": ScoreComparison}}` on `/score/compare`, keeping the raw `Response` and the absence of
@@ -250,7 +277,7 @@ shape today (measured, above), and the fix is a small change to two route declar
    (`FR-451`). **Evidence required: `NFR-502` is re-read after the change, not assumed unchanged.** Its own figure is the
    one to re-check: the amended text cites p99 0.070 ms, 0.14 % of the 50 ms budget, from
    `docs/research/w8-spike-resolution.md`. The slice measures again with the route as changed and quotes the result.
-3. **A regression guard in the same fix.** A contract check that **fails when a JSON 2xx response is `{}`**, **proven red on
+3. **A regression guard in the same fix.** A contract check that **fails when a JSON 2xx response is `{}`** (as ordered, it counts `{}` only; the 12 open-object responses in Evidence §1 are outside it), **proven red on
    the broken input first** (`CLAUDE.md` §13), with the four stream and file routes **excluded by an explicit, cited list**.
    The sweep script in Evidence §1 is the predicate; the excluded list, with the lines that make each a non-JSON body:
    - `GET /api/v1/audit/export`: `StreamingResponse`, `application/x-ndjson` or `text/csv`
@@ -262,11 +289,18 @@ shape today (measured, above), and the fix is a small change to two route declar
    **Proof, red first:** the sweep returns 6 today, and the guard fails on the two JSON routes before the fix and passes after;
    with the list, the residue is exactly the four excluded routes.
 4. **A separate LOW sub-item in the same finding: document the four stream and file routes' media types** rather than
-   leaving `{}`. Same carrier, and **it does not block WK-675.** The maintainer's entry names "text/event-stream,
-   application/octet-stream, text/csv". **What the code declares is different for two of them, so the slice documents the
-   declared types**: `application/x-ndjson` and `text/csv` for the audit export (the route offers both), and the
-   `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` type for the xlsx export, not `application/octet-stream`.
-   If the maintainer wants `application/octet-stream`, that changes the routes, not only their documentation.
+   leaving `{}`. Same carrier, and **it does not block WK-675.** The maintainer's entry "2026-09-30 17:18:21 BST — FD 9971
+   media types: the author's reading is CONFIRMED" says the media types in his 17:13:45 entry were illustrative, that the
+   sub-item **documents what each route's code already declares** and changes no route's behaviour, and that if a route
+   declares nothing the FD notes it rather than choosing a type. What the code declares, each set on the response the route
+   returns (none is set at the route decorator, which is why the OpenAPI shows `application/json`):
+   - `GET /api/v1/audit/export`: `application/x-ndjson` (`backend/src/app/api/audit.py:280`) or `text/csv` (`:308`);
+   - `GET /api/v1/jobs/{job_id}/events`: `text/event-stream` (`backend/src/app/api/jobs.py:310`);
+   - `GET /api/v1/rate-tables/{slug}@{version}/export/csv`: `text/csv` (`backend/src/app/api/rate_tables.py:213`);
+   - `GET /api/v1/rate-tables/{slug}@{version}/export/xlsx`:
+     `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` (`backend/src/app/api/rate_tables.py:235-236`).
+
+   **None of the four declares nothing**, so the slice picks no type. It documents these.
 
 **Event.** The WK-1178 slice merges the two response declarations, the regenerated contracts and the guard, with `NFR-502`
 re-measured, before WK-675 dispatches a slice that consumes either route; the LOW sub-item follows in the same slice or a
