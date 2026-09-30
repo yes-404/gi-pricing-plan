@@ -14,8 +14,7 @@ relates: [WK-671, WK-672, WK-675, WK-1178, FR-250, FR-262, FR-451, NFR-502]
 
 ## Finding
 
-**Severity proposed: medium. The maintainer sets it (his order of about 17:10 BST, 2026-09-30,
-`~/gi-pricing-plan.local/channel/to-lead.md`, a local channel file, outside the repository).**
+**Severity: medium.** Proposed by the auditor, and **accepted MEDIUM, 2026-09-30, by the maintainer (by delegation)** in `~/gi-pricing-plan.local/channel/to-lead.md`, a local channel file outside the repository, entry "2026-09-30 17:13:45 BST — FD 9969 severity LOW CONFIRMED; FD 9971 (/score untyped) MEDIUM accepted, with timing and a regression guard" (its FD 9971 clauses are quoted in the Disposition below).
 Filed 2026-09-30 under working id 9971, minted at its merge turn.
 
 `CLAUDE.md` §2 says one contract joins backend and frontend and that it flows one way:
@@ -228,29 +227,49 @@ The generated client for the same routes, measured after `pnpm --dir frontend ge
 
 ## Disposition
 
-**Proposed by the auditor; the maintainer sets severity, and the decision is the lead's
-register row.** Proposed: **medium**, owner **WK-1178**, **carry forward with an owner**.
+**Accepted MEDIUM, 2026-09-30, by the maintainer (by delegation),** in the entry "2026-09-30 17:13:45 BST — FD 9969 severity
+LOW CONFIRMED; FD 9971 (/score untyped) MEDIUM accepted, with timing and a regression guard" (`to-lead.md`, a local channel
+file outside the repository, so it is cited by its header and its operative content is stated here). **Carrier: WK-1178.**
+**carry forward with an owner.** The decision on the register row is the lead's.
 
-**Severity reasoning.** Not low: the gap is in the contract for the endpoint that returns the
-premium, the mechanism `CLAUDE.md` §2 calls a mispricing guard, and the consumer that will
-trip over it is already scheduled (WK-675). Not high: nothing is wrong at runtime, the frontend
-holds no hand-written shape today (measured, above), and the fix is a small documentation
-change to two routes. It would rise if a hand-written `/score` type were found in a consumer
-or a copy elsewhere.
+**The maintainer's reason, and the auditor's.** The entry: "A missing contract for the premium endpoint, with WK-675 about
+to consume it, is exactly the gap the one-way contract (CLAUDE.md §2) exists to prevent." The auditor's proposed reasoning,
+kept: not low, because the gap is in the contract for the endpoint that returns the premium and the consumer that will trip
+over it is already scheduled (WK-675); not high, because nothing is wrong at runtime, the frontend holds no hand-written
+shape today (measured, above), and the fix is a small change to two route declarations. It would rise if a hand-written
+`/score` type were found in a consumer or a copy elsewhere.
 
-**Fix direction, with the evidence above.** Declare the shape on the two routes without
-validating it: `responses={200: {"model": ScoringResult}}` on `/score` and
-`responses={200: {"model": ScoreComparison}}` on `/score/compare`, keeping the raw `Response`
-and the absence of `response_model` (`NFR-502`). Regenerate the contracts (`FR-451`), so
-`generated.json` carries the `$ref`s and the generated client types both bodies. **Proof, red
-first:** the sweep above returns 6 today and 4 after (the four stream and file routes remain
-unless the maintainer widens the scope), and `ScoringResult` appears in the generated client.
-The generated schema is the **model-schema shape**, so the open `outputs` object stays as the
-shape defines it. Whether a stream route should document its real media type is a separate
-decision (§1 above).
+**The conditions, as the maintainer states them** (entry above), with what each needs:
 
-**Event.** The maintainer's severity and owner decision, then the WK-1178 slice that merges the
-two route declarations and the regenerated contracts, with a test that no 2xx JSON body of a
-route that returns a model-schema shape is `{}`. Ownership shape: event.
+1. **Timing, which is the point of the severity.** The fix lands **before WK-675 dispatches any slice that consumes `/score`
+   or `/score/compare`.** Carrier WK-1178. The dependency is recorded in `PL-1286`'s (WK-675's map plan) next dispatch record
+   (that plan is frozen, so the record is a dispatch record, not an edit), and the lead holds that WK-675 dispatch on it.
+2. **The fix direction, as measured above.** `responses={200: {"model": ScoringResult}}` on `/score` and
+   `responses={200: {"model": ScoreComparison}}` on `/score/compare`, keeping the raw `Response` and the absence of
+   `response_model`, so the `$ref` is documented and **no outbound validation runs** (`NFR-502`). Regenerate the contracts
+   (`FR-451`). **Evidence required: `NFR-502` is re-read after the change, not assumed unchanged.** Its own figure is the
+   one to re-check: the amended text cites p99 0.070 ms, 0.14 % of the 50 ms budget, from
+   `docs/research/w8-spike-resolution.md`. The slice measures again with the route as changed and quotes the result.
+3. **A regression guard in the same fix.** A contract check that **fails when a JSON 2xx response is `{}`**, **proven red on
+   the broken input first** (`CLAUDE.md` §13), with the four stream and file routes **excluded by an explicit, cited list**.
+   The sweep script in Evidence §1 is the predicate; the excluded list, with the lines that make each a non-JSON body:
+   - `GET /api/v1/audit/export`: `StreamingResponse`, `application/x-ndjson` or `text/csv`
+     (`backend/src/app/api/audit.py:278-281`, `:306-309`);
+   - `GET /api/v1/jobs/{job_id}/events`: `text/event-stream` (`backend/src/app/api/jobs.py:308-310`);
+   - `GET /api/v1/rate-tables/{slug}@{version}/export/csv`: `text/csv` (`backend/src/app/api/rate_tables.py:213`);
+   - `GET /api/v1/rate-tables/{slug}@{version}/export/xlsx`: the `spreadsheetml` type
+     (`backend/src/app/api/rate_tables.py:235-236`).
+   **Proof, red first:** the sweep returns 6 today, and the guard fails on the two JSON routes before the fix and passes after;
+   with the list, the residue is exactly the four excluded routes.
+4. **A separate LOW sub-item in the same finding: document the four stream and file routes' media types** rather than
+   leaving `{}`. Same carrier, and **it does not block WK-675.** The maintainer's entry names "text/event-stream,
+   application/octet-stream, text/csv". **What the code declares is different for two of them, so the slice documents the
+   declared types**: `application/x-ndjson` and `text/csv` for the audit export (the route offers both), and the
+   `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` type for the xlsx export, not `application/octet-stream`.
+   If the maintainer wants `application/octet-stream`, that changes the routes, not only their documentation.
+
+**Event.** The WK-1178 slice merges the two response declarations, the regenerated contracts and the guard, with `NFR-502`
+re-measured, before WK-675 dispatches a slice that consumes either route; the LOW sub-item follows in the same slice or a
+later one, and does not gate WK-675. Ownership shape: event.
 
 *Disclosure: this record was filed under working id 9971 and is minted at its merge turn. The number 9971 was earlier the working id of a ruling that has since been minted under its own id; this record is unrelated to it.*
