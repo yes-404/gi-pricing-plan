@@ -68,7 +68,9 @@ record's own measurement.
 
 **Deferred with an owner: WK-674 Slice 3.** Event that discharges it: Slice 3's merge.
 Raised by the high-effort decision-maker in #939 (working id 9903) and confirmed by auditor-rl.
-The maintainer's decision: the finding is **medium**.
+The maintainer's decision (`~/gi-pricing-plan.local/channel/to-lead.md`, "2026-09-30 10:33:34
+BST — DECISION: FR-447 startup validation is an FD, MEDIUM, owner WK-674 Slice 3; #964 and #939
+noted"): the finding is **medium**.
 
 Slice 3's **red-first acceptance** (each written to fail on `origin/main` first):
 
