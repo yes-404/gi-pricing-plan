@@ -30,7 +30,7 @@ that the `02` §4.6 derivation requires".
 
 ## Verified first, at 095dd400918348b32ee6eab1db7915faaa9dfe35
 
-- **The decision point.** DP-S1-3 of PL-9960 (PR #954, read at `4d2e78e8`, `:277`) asks:
+- **The decision point.** DP-S1-3 of SL-1271's leaf plan (#954, working id 9960; read at `4d2e78e8` and re-checked at `6853c1b3`, `:277`) asks:
   "What SymPy assumptions do the objective symbols (`y`, `f`, `w`, parameters) carry?"
   - (a) `real=True`;
   - (b) none.
@@ -110,7 +110,7 @@ beyond what this DP asked, and the domain bounds are the certificate's to check 
 
 ## What it obliges
 
-- **WK-690 Slice 1 (PL-9960, the SymPy translator task):**
+- **WK-690 Slice 1 (SL-1271's leaf plan, #954: Task 5 Step 4):**
   - builds every objective symbol with `real=True`;
   - carries the test below;
   - states the assumption in the `02` §4.6 amendment it already makes (the leaf plan's
