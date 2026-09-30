@@ -192,6 +192,35 @@ writes the minted record's "amended FR-244 text" there before S1 closes, or the 
 by name to #967's slice. `??`, `_GUARD_MARKERS`, `_check_vocabulary` and `compile.py` are untouched
 (`git diff origin/main --stat -- packages/pricing-core/src/pricing_core/rating` is empty).
 
+### Task 7 — the gate (head `2bce55466d70`)
+
+Lead's grant: gate-1 for `2bce5546`, 2026-09-30. Both halves in one `flock -w 1800 -E 99
+/tmp/slots/gate-1` hold; caps `LOKY_MAX_CPU_COUNT=4 OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2`
+(+ Polars/Rayon/Tokio 4). Python stages ran in parallel, then the frontend stages in sequence.
+
+**Timing.** Start 10:48:07Z, load 3.70 / 5.94 / 8.19. End 11:17:29Z, load 7.76 / 5.62 / 6.85.
+Wall clock 29m22s (pytest 1646.81s = 27m26s). Slot files present: `gate-1`, `gate-2`, `verify-1`;
+I did not identify a holder of gate-2 (the lead reported both slots free at 10:47:49Z). No WK-674 gate
+overlapped, so the RL-1263 three-pair measurement did not fire. Task 0's baseline (1949.11s) had no
+load record; this run is 0.84x of it.
+
+| stage | rc |
+|---|---|
+| ruff, mypy, lint-imports, req-coverage, generate-contracts --check | 0 |
+| frontend: install, generate:api, lint, type-check, test, build | 0 |
+| audit-docs | **1** (check 31 only: `gap in the full allocation between 1295 and 9991`) |
+| pytest | **1**: 13 failed, 4024 passed, 3 skipped (main: 3881 passed, 3 skipped) |
+
+**All 13 pytest failures come from the one working id.** Each is a test that runs the docs audit
+or `doc-id check` on the real tree, and each shows `[noncontiguous] … gap between 1295 and 9991`
+(check 31) or the audit output that carries it; the two tests that name the gap directly are
+`test_doc_id_check_exits_0_on_the_real_tree` and `test_an_index_skipping_a_reserved_block_breaks_contiguity`
+(`the live allocation is not contiguous: [(1295, 9991)]`). This is the memory-recorded
+"a working-id draft reds check 31 until minted", rc 1 expected. Removing the cause is the mint
+turn, which is the lead's: on minting, the ledger takes the next free id and the gap closes. These 13
+were not shown to pass on this tree. The 4024 passed includes +143 over main's 3881: the new
+tests were collected (Acceptance 10).
+
 ## PRs
 
 Draft PR opened on the slice branch; number recorded here when opened.
