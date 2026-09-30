@@ -65,8 +65,11 @@ level?
   in FR-446 (an OS variable) and in FR-428/FR-431 (the Environment object) name different
   things.
 - `set_workspace_setting` (`settings.py:388-416`) validates by `definition.coerce` before it
-  writes (FR-447), and leaves the audit event to its caller, which holds the actor and the
-  before-value.
+  writes, and leaves the audit event to its caller, which holds the actor and the
+  before-value. Its docstring cites FR-447 for that write-time check. FR-447 (`07:173`) is
+  **startup** validation ("typed and validated at startup"), so that docstring citation is
+  loose. Correcting it is a Slice 3 fix, not this record's. *(This record cited FR-447 for
+  write-time validation until auditor-rl's F2.)*
 
 **What needs the answer** (`PL-1237` Slice 3, `:840-856`): FR-431's environment settings,
 guarded by `admin:manage_settings` (`RL-1236` DP-D), each change audited with the
@@ -126,6 +129,13 @@ declare they may vary per environment.
      time. (d) is excluded by FR-430.
 2. **Names** (the prepared item (2)). The new `SettingSource` member is
    **`ENVIRONMENT_SETTING = "environment_setting"`**, ordered between `ENV` and `WORKSPACE`.
+   It is a member of **`model_schema`'s** `SettingSource`
+   (`packages/model-schema/src/model_schema/settings.py:27-32`). The backend has a
+   **different** enum with the same name, `backend/src/app/config.py:41-46`, whose member
+   `ENVIRONMENT = "environment"` names a startup-configuration layer and is used by
+   `backend/tests/test_config.py`. The two are distinct, and Slice 3 must not conflate them,
+   neither by importing the wrong one nor by reusing `"environment"` for the new layer.
+   *(Added on auditor-rl's F1.)*
    `ENV = "env"` keeps its published value and means *process environment variable*. Renaming
    it would break the contract for no behavioural gain. FR-446's text names the first layer
    "process environment variable" and the new one "Environment setting", with a capital E
@@ -158,7 +168,10 @@ declare they may vary per environment.
 
    **Ruled: option (i), in its stronger form.**
    - **At startup, refused.** A `GIP_SETTING_<KEY>` present for an Environment-only key stops
-     the process from starting, with a message naming the key and this rule. FR-447 is the
+     the process from starting, with a message naming the key and this rule. **This is a new
+     startup check.** Nothing reads `GIP_SETTING_*` at startup today (the table above), so
+     Slice 3 adds it, in `load_settings` (`config.py:270-291`) or in `create_app`'s lifespan
+     (`main.py:77-89`). FR-447 is the
      form: "an invalid setting prevents startup with a clear message rather than failing at
      first use". Refusing is chosen over ignoring, because an ignored override lets an operator
      believe a value is in force that is not.
@@ -187,7 +200,8 @@ declare they may vary per environment.
    - **Inspection.** FR-446's effective-value-and-source inspection takes an optional
      Environment and reports every candidate, the Environment setting included.
    - **Writes.** An Environment setting is written through a path that mirrors
-     `set_workspace_setting`. It validates with `coerce` before it writes (FR-447), refuses a
+     `set_workspace_setting`. It validates with `coerce` before it writes (the registry's typed
+     validation, as for a workspace setting; not FR-447, which is startup), refuses a
      key whose scope does not permit the Environment level, and is guarded by
      `admin:manage_settings` (`RL-1236` DP-D).
    - **Audit.** The caller's Audit Event names the environment, the key, and the old and new
