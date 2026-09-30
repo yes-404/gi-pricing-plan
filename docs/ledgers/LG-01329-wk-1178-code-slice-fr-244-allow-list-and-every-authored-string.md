@@ -183,7 +183,7 @@ tests/test_repository_invariants.py::test_journey_citations_are_audited_in_ci
   The gate was then re-run on the same head, at the lead's instruction, and is green.
 - **Frontend half** at `a6a37847`: `install --frozen-lockfile` and `generate:api` rc 0, `lint` rc 0, `type-check` rc 0, `test` 609 passed (609),
   `build` rc 0.
-- **RL-1263 contention: these runs are NOT counted as pairs** (the maintainer's ruling, `to-lead.md`, about 18:0x to 18:1x BST).
+- **RL-1263 contention: these runs are NOT counted as pairs** (the maintainer's ruling, `~/gi-pricing-plan.local/channel/to-lead.md`, outside the repository, the entry headed "2026-09-30 18:03:42 BST — RL-1263 pairs: no partial acceptance; the SAME test applies to pair 1").
   `free -h` was not recorded at the start or the end of any run (the dispatch conditions omitted it), and the other slot holders
   were not identified as gates. Only `6bcf73e5` with S2a's `5c7ae3b2` was a genuinely concurrent gate pair, and it lacks `free -h` too. The counted pairs stand at
   **0 of 3**. For the record only, pytest times against the solo 1469.58s were 1694.62s, 1623.42s, 1706.92s and, for the green run, 1408.03s.
