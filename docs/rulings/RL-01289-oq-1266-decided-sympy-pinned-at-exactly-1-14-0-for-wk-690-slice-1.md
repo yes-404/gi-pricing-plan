@@ -1,5 +1,5 @@
 ---
-id: RL-9902
+id: RL-1289
 family: ruling
 title: OQ-1266 decided — sympy pinned at exactly 1.14.0 for WK-690 Slice 1
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [OQ-1266, RL-1265, PL-1268]
 ---
 
-# RL-9902 — OQ-1266 decided: `sympy` is pinned at exactly `1.14.0` for WK-690 Slice 1
+# RL-1289 — OQ-1266 decided: `sympy` is pinned at exactly `1.14.0` for WK-690 Slice 1
 
 ## How this was ruled
 
@@ -28,7 +28,7 @@ ruling on the maintainer's raise; this pass is the maintainer's stated exception
 is recorded as such. The record was prepared earlier at medium effort (PR #937, head
 `06bfea84`, "PREPARED, NOT RULED"); this pass re-verified its evidence and rules it.
 
-**Working id 9902.** The id is minted at the merge turn, which the lead schedules.
+**Minted 2026-09-30 as RL-1289** (`doc-id.py next --ref origin/main` = 1289 at `0bc69b5b`); it was prepared and ruled under working id 9902.
 
 ## Verified first, at 0bc69b5b2c3c16ec8391387cdfab19734ff85d2b
 
