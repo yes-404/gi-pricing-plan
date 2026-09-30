@@ -420,25 +420,35 @@ contract is regenerated.
   audit, W2*). `_build_outputs` keeps reusing the rung's `value_minor` (`score.py:641`), so
   outputs and ladder never disagree. Every declared non-payable rung output (for example
   `office_premium_minor`, served by `/score`) becomes that rung's engine value rounded once.
-  **On most quotes that is a different number from today's**: about 59 % of quotes, by up
-  to about 10⁻⁴ of the value — 1–2p at 1e3, and up to 9997 minor units at 1e7 in seed
-  20260930 (the magnitude table in the results). In the 61234.5 case it is 67358, not
+  **On most quotes that is a different number from today's**: 57–64 % of quotes across the
+  four seeded sweeps, by up to about 10⁻⁴ of the value — 1–2p at 1e3, and up to 12521 minor
+  units at 1e7, the maximum over all four sweeps (per seed at 1e7: 9997, 12521, 11724 and
+  7820; the magnitude table in the results). In the 61234.5 case it is 67358, not
   today's 67357. It is a correction: today's number is FD 9949's drift.
-- **The maintainer's acceptance of that change**, quoted verbatim from the dated
-  CORRECTION in `to-lead.md`, which supersedes the maintainer's earlier W2 line (that line
-  said "1–2p on ~59% of quotes"; the measurement above contradicted it, and the correction
-  replaced it):
+- **The maintainer's acceptance of that change.** It was given three times on 2026-09-30,
+  each line superseding the one before. The first said "1–2p on ~59% of quotes", and the
+  measurement above contradicted it. The second, a dated CORRECTION in `to-lead.md`, is kept
+  as it was quoted here:
 
-  > "2026-09-30 — the maintainer (by delegation) accepts RL 9963's change to declared non-payable rung outputs (the error today is about 1e-4 relative, from 4-dp factor quantisation; measured maximum 9997 minor units at the 1e7 scale; ~59% of quotes affected, per dm-eh-s3's sweep at fa9a73c2, seed 20260930) as a correction of FD 9949's drift, on conditions 1–3 of the W2 entry. Payable prices are accepted as changing only at near-ties, by at most 1 minor unit, as condition 3's count in RL 9963 must show; any payable change beyond that voids this acceptance."
+  > ~~"2026-09-30 — the maintainer (by delegation) accepts RL 9963's change to declared non-payable rung outputs (the error today is about 1e-4 relative, from 4-dp factor quantisation; measured maximum 9997 minor units at the 1e7 scale; ~59% of quotes affected, per dm-eh-s3's sweep at fa9a73c2, seed 20260930) as a correction of FD 9949's drift, on conditions 1–3 of the W2 entry. Payable prices are accepted as changing only at near-ties, by at most 1 minor unit, as condition 3's count in RL 9963 must show; any payable change beyond that voids this acceptance."~~
+  >
+  > *Superseded 2026-09-30 by the line below. The maintainer widened it because a bound must
+  > be the maximum over all the measurements, and 9997 is one seed's.*
+
+  The line in force, quoted verbatim, as relayed by the lead:
+
+  > "2026-09-30 — the maintainer (by delegation) accepts RL 9963's change to declared non-payable rung outputs (the error today is about 1e-4 relative, from 4-dp factor quantisation; measured maximum 12521 minor units at the 1e7 scale; 57–64% of quotes affected, across dm-eh-s3's 4 seeded sweeps at fa9a73c2) as a correction of FD 9949's drift, on conditions 1–3 of the W2 entry. Payable prices are accepted as changing only at near-ties, by at most 1 minor unit (measured: 0 flips in 42,000 quotes); any payable change beyond that voids this acceptance."
 
   The three conditions, as relayed by the lead, and where each is met:
-  1. *A dated `03` note stating the change, its cause and its magnitude* — this commit adds
-     it to §4.4, with the per-decade maxima and the histogram.
+  1. *A dated `03` note stating the change, its cause and its magnitude* — this record's
+     commits add it to §4.4, with the maximum over all four sweeps, the per-seed maxima,
+     and the per-decade maxima and histogram of seed 20260930.
   2. *A CHANGELOG or release-note line in the S3 slice* — no CHANGELOG exists at `fa9a73c2`
      (`git ls-files | grep -i -E "changelog|release-notes"` prints nothing). **Ruled: S3
      carries the release-note line in its squash-commit body and in its ledger** (the
-     squash body is the permanent record, `git-hygiene`). Whether to start a CHANGELOG file
-     is the lead's call, not this ruling's.
+     squash body is the permanent record, `git-hygiene`), with the `03` §4.4 note. The
+     maintainer accepted this (relayed by the lead, 2026-09-30); a CHANGELOG file goes on
+     the WK-1178 backlog.
   3. *The count of payables that move at near-ties, and by how much* — **0 of 42 000**
      sweep quotes across four runs at `fa9a73c2`, maximum delta 0; a flip can move a
      payable by exactly 1 minor unit (the results, "Payable near-tie flips").
