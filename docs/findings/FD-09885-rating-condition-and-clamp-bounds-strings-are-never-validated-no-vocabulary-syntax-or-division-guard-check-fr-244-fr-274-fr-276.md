@@ -14,14 +14,21 @@ relates: [WK-1178]
 
 ## Finding
 
-**Severity: HIGH (effective on independent reproduction).** The maintainer's decision
-(`~/gi-pricing-plan.local/channel/to-lead.md`, "2026-09-30 10:53:10 BST — DECISION:
-condition/clamp FD (B) — HIGH on independent reproduction; owner and order; two small items"):
-HIGH, effective when auditor-docs's independent reproduction of the score-level case below
-confirms it; otherwise it stays medium and returns to the maintainer. The FD was first filed at
-medium (provisional) on the entry "2026-09-30 10:50:57 BST — #967 CLEAN on content: noted; B
-confirmed → file the FD now". The trigger was met by a
-silent wrong accept (D2 below) and a silently lost clamp (E4 below).
+**Severity: HIGH, in force.** The maintainer decided HIGH, effective on independent
+reproduction (`~/gi-pricing-plan.local/channel/to-lead.md`, "2026-09-30 10:53:10 BST — DECISION:
+condition/clamp FD (B) — HIGH on independent reproduction; owner and order; two small items"),
+and accepted it in force once auditor-docs reproduced it ("2026-09-30 10:57:06 BST — #968 HIGH
+in force: accepted; committed `/` strings; #935 minted as RL-1296"). The FD was first filed at
+medium (provisional) on "2026-09-30 10:50:57 BST — #967 CLEAN on content: noted; B confirmed →
+file the FD now". The trigger was met by a silent wrong accept (D2 below) and a silently lost
+clamp (E4 below).
+
+**Independent reproduction: auditor-docs's, attributed and not re-run by this record's author**,
+at `9f63d0fe`, on the `test_rating_score.py` fixture with its own inputs and thresholds. A
+decline condition `((loss_num / exposure_den) ?? 0) <= 3` with loss 90 is **declined**
+(`['SANITY_CAP']`) at den 10 and **quoted at den 0** (payable 1507). A clamp max
+`((bound_num / bound_den) ?? 5000000)` with num 600 gives payable 210 at den 3 and **no clamp at
+den 0** (payable 1507). The unmasked forms raise `RATE_TABLE_MISS`, and compile is silent.
 
 `validate_algorithm` checks only `RatingExpressionStep.expr`. A constraint step's `condition`
 and its `clamp_bounds` strings, which the engine evaluates the same way, are never read by the
@@ -70,12 +77,25 @@ this tree (confirmed by `pricing_core.__file__`). Issue codes returned:
 The two controls show the same harness flags the same defects in an `expr`, so the empty
 results on `condition` and `clamp_bounds` are not a harness that cannot fail.
 
-**Cause, by code reading.** `_check_division_guards` (`compile.py:166-193`) and
-`_check_vocabulary` (`:233-257`) each loop over `algo.steps`, skip every step that is not a
-`RatingExpressionStep` (`if not isinstance(step, RatingExpressionStep): continue`) and read only
-`step.expr`. `_check_scale_cap` (`:196-`) has the same shape, and the `now()` row above is the
-determinism check (`_check_determinism`, `:142-163`) missing a `condition` for the same reason. Nothing reads
-`condition`, `clamp_bounds` or `key_expr`. This record did not measure `key_expr`.
+**Cause, by code reading: a class of four checks.** Each of four checks in
+`packages/pricing-core/src/pricing_core/rating/compile.py` picks its own fields, and each picks
+only `RatingExpressionStep.expr`:
+
+| Check | Lines | Skips non-expression steps at |
+|---|---|---|
+| `_check_determinism` (`now()`, FR-216) | `:142-163` | `:146` |
+| `_check_division_guards` (FR-274) | `:166-193` | `:176` |
+| `_check_scale_cap` (FR-275) | `:196-230` | `:200` |
+| `_check_vocabulary` (FR-276) | `:233-258` | `:242` |
+
+Each loops over `algo.steps` with `if not isinstance(step, RatingExpressionStep): continue` and
+reads `step.expr`. Nothing reads `condition`, `clamp_bounds` or `key_expr`; this record did not
+measure `key_expr`. The table above shows all four failing: `now()` (determinism), a 31-decimal
+literal (scale cap), an unguarded division (division guard), and broken syntax, `sum`, `[0]` and
+`%` (vocabulary). Because each check chooses its own fields, a fifth field or a fifth check would
+repeat the gap. `CLAUDE.md` §13's "prefer a check the failure cannot survive" applies, per the
+maintainer's entry "2026-09-30 10:55:40 BST — time-citation correction acknowledged; #968
+widened, so fix the CLASS structurally".
 
 **Engine constructs outside FR-244** (reported by auditor-rl, **not measured by this record's
 author**): `sum`, `%`, `^`, `in`, `len`, `date`, `a[0]`, `{a: 1}` and `a.b` are all compiled by
@@ -87,15 +107,44 @@ The sweep, at `48792023`, **covered `condition` and `clamp_bounds` specifically*
 `tests`, `frontend` and `03`'s example, 68 occurrences and 37 distinct strings. It found no `??`,
 `%`, `^`, `in`, `!` or string or date operation, and the only functions were the two
 deliberate negative-test ones (`now()`, `foo()`). **It did find `/`** among the committed
-strings' operators, without saying in which string kind, so this record cannot say "no division"
-of the committed strings; the maintainer's entry (10:53:10 BST, above) states *"0 stored or
-committed conditions or bounds use `??` or division"*, and that statement is the maintainer's,
-not this record's measurement. What the sweep shows of the stored data: the sweep's read-only
+strings' operators, without saying in which string kind; this record's own listing under
+**Exposure** below resolves that. The maintainer's entry (10:53:10 BST, above) states *"0 stored
+or committed conditions or bounds use `??` or division"*. What the sweep shows of the stored
+data: the sweep's read-only
 Postgres pass (one database with rows: 25 algorithms, 29 versions; strings
 `premium_in * 2`, `risk_premium_minor * expense_factor`, `office_premium_minor >= 100` and bare
 `key_expr`s) and MinIO pass (compiled bundles; `* + ( )` only) show no division and no `??`.
-Not checked by the sweep: Redis, other hosts and parquet dataset contents. This record's author
-did no sweep of their own.
+Not checked by the sweep: Redis, other hosts and parquet dataset contents.
+
+**Exposure.** *Stored exposure is 0* (the sweep's Postgres and MinIO passes above, reported).
+**Committed exposure** is this record's own listing, at `origin/main` `9f63d0fe`, of every
+committed rating string that contains `/`, by field. Command: `python3` over `git ls-files
+examples backend packages scripts tests frontend docs` (excluding `docs/rfcs`, `plans`,
+`closures`, `rulings`, `findings`, `research`, `ledgers` and `INDEX.md`), extracting every
+`condition`, `expr` and `key_expr` string and every `clamp_bounds` dict string on one line by the
+regex `["']?\b(condition|expr|key_expr)\b["']?\]?\s*[:=]\s*"<string>"` (and the same for
+`clamp_bounds\b["']?\]?\s*[:=]\s*{...}`), keeping those with `/`. Result: **4 strings, all in
+the `expr` field, none in `condition`, `clamp_bounds` or `key_expr`.**
+
+| File:line | Field | String | Guarded? |
+|---|---|---|---|
+| `backend/tests/test_rating_algorithms.py:112` | `expr` | `risk_premium_minor / expense_factor` | unguarded (asserts the 422 refusal) |
+| `packages/pricing-core/tests/test_rating_compile.py:125` | `expr` | `risk_premium_minor / expense_factor` | unguarded (`test_an_unguarded_division_is_refused`) |
+| `packages/pricing-core/tests/test_rating_compile.py:136` | `expr` | `expense_factor != 0 ? risk_premium_minor / expense_factor : 0` | guarded (`test_a_guarded_division_is_accepted`) |
+| `packages/pricing-core/tests/test_rating_compile_bundle.py:248` | `expr` | `risk_premium_minor / expense_factor` | unguarded (asserts the compile-time refusal) |
+
+So **no committed condition or clamp-bound string contains a division, guarded or not**, and
+there is no exposed committed example. The three unguarded `expr` strings are deliberate
+negative tests, and the checks refuse them today. **Limits:** the extractor reads one line per
+string, so a string split across lines, built by a helper, or given positionally is not seen; an
+independent line-scoped `git grep -A4` over `clamp_bounds`, `"condition"`, `condition=`,
+`"key_expr"` and `key_expr=` in `examples`, `backend`, `packages`, `scripts`, `tests`,
+`frontend`, `docs/specs`, `docs/workflows` and `docs/contracts`, filtered to ` / `, returned
+nothing. This is a listing at one tree, not a proof for later commits. It agrees with the
+maintainer's *"0 stored or committed conditions or bounds use `??` or division"* (10:53:10 BST).
+The maintainer asked for this list on "2026-09-30 10:57:06 BST" (above); with no unguarded
+committed condition or bound, there is **no committed example to add as an acceptance case**,
+and the #967 slice's acceptance uses the planted cases in the matrix test below.
 
 ## Score-level case — reported by auditor-rl, not re-run by this record's author
 
@@ -130,8 +179,9 @@ counting as a guard, is what would refuse D2 and E3/E4 at save.
 
 **Owner: the #967 WK-1178 code slice** (RL working id 9904, cited as prose), **kept separate from
 the #963 fix slice**, on the maintainer's decision of 10:53:10 BST above. **Order:** the fix slice, then the #967 code
-slice, then WK-1250 S1, serialised on `compile.py`. The slice widens both checks to `condition`,
-`clamp_bounds` and `key_expr`. Event that discharges it: that slice's merge.
+slice, then WK-1250 S1, serialised on `compile.py`. The slice widens **all four checks** to
+`condition`, `clamp_bounds` and `key_expr`, structurally (below). Event that discharges it: that
+slice's merge.
 
 **Red-first acceptance**, each written to fail on `origin/main` first:
 
@@ -142,7 +192,19 @@ slice, then WK-1250 S1, serialised on `compile.py`. The slice widens both checks
   guarded at save makes it unreachable; any residual runtime evaluation failure in a condition or
   bound raises its own evaluation code, never RATE_TABLE_MISS"*, red first.
 
-The severity is HIGH on auditor-docs's independent reproduction; this record is amended with
-the result when the lead relays it.
+**The structural fix**, in the slice's acceptance ("2026-09-30 10:55:40 BST — time-citation
+correction acknowledged; #968 widened, so fix the CLASS structurally"), each red first:
+
+- **one enumerator of every authored expression field** (`expr`, `condition`, `clamp_bounds`
+  min and max, `key_expr` and any other), iterated by **every** expression check, so no check
+  picks its own fields;
+- **a matrix test** that plants each check's violation (`now()`, an over-scale literal, an
+  unguarded division, an off-vocabulary construct or broken syntax) in each field, and fails
+  where any cell is not refused;
+- **closure tests**: a new expression field that is not in the enumerator, and a new check that
+  does not iterate the enumerator, each fail a test.
+
+No committed condition or bound needs to be rewritten or shown refused (Exposure above); the
+matrix test's planted cases are the acceptance cases. The severity is HIGH, in force.
 
 *Drafted under working id 9885.*
