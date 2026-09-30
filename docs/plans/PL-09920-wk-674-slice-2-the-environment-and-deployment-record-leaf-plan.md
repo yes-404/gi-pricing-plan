@@ -80,7 +80,22 @@ already exists (**SL-1256**), so this PR cuts no `SL-` row.
    relay before this plan was pushed; this revision aligns the plan to it at every site class,
    each marked *(#971)*. A later revision applies #971's A.6 at head
    `324ea1659ca1542db4b1e362dc3864da6a476bbb` and #974.)*
-3. **The lead's go.**
+3. **Slice 2a closed** (the approval guard, #984): this slice follows it in the same lane,
+   never concurrently.
+4. **The lead's go.**
+
+**The split, as a dated delta to the map plan** *(2026-09-30)*. The maintainer's entry headed
+`2026-09-30 11:48:28 BST — DECISION + ACCEPTANCE (maintainer by delegation): WK-674 S2 split, option (b), S2a = the approval guard`
+accepts it, in the line the entry gives for the map plan, verbatim:
+
+> 2026-09-30 — the maintainer (by delegation) accepts the split of WK-674 Slice 2 into S2a (the approval guard, first) and S2 (deployment), per #973's self-review option (b).
+
+`PL-1237` is `active` and frozen (`document-ids.md` §1.5; `scripts/audit-docs.py` check 34
+refuses any other change), so the delta is recorded here and in Slice 2a's leaf plan, as
+`PL-1239` recorded its map-plan deviation; `PL-1237` is not edited. **Moved out of this
+plan:** Task 3A and the guard half of Acceptance 13 (to Slice 2a). **Kept:** everything else,
+including Task 0A and the deployment-request plant (Acceptance 13 as re-cut). Sites that
+named Task 3A are marked where they stand.
 
 **Dispatch needs** (the lead's, not activation conditions — listed so the dispatch record
 can cite them):
@@ -272,7 +287,12 @@ cause, and the guard is restored; the ledger quotes both runs.
     `gate-2`, **with no `--`** — and `uptime` is reported with each slot grant (the
     maintainer's entry headed
     `2026-09-30 11:42:08 BST — two decisions: the escaped-pipe checker blindness → a LOW FD; box load → heavy audit runs take a gate slot`).
-    Single-file test runs and the docs checks are exempt. This is also a dispatch condition.
+    **Tightened** by the entry headed
+    `2026-09-30 11:43:28 BST — the slot rule, tightened: suite-level runs count`: any run of a
+    whole test directory or package suite (pytest over a directory, `-k` over a suite) also
+    takes a slot, and slotted runs set `LOKY_MAX_CPU_COUNT=4 OMP_NUM_THREADS=2
+    OPENBLAS_NUM_THREADS=2`. Only named single test files or node ids, and the docs checks,
+    are exempt. This is also a dispatch condition.
     The full two-half gate (`CLAUDE.md` §11) exits 0 on the committed tree,
     with every command's rc, the `N passed` line and `HEAD` quoted in the ledger, against
     main's `N passed`.
@@ -327,114 +347,16 @@ cause, and the guard is restored; the ledger quotes both runs.
       permission, by a named allow-list entry, or is in `OPEN_BY_DESIGN` /
       `NO_PERMISSION_REQUIRED` (`:28`, `:43`), and the three sets plus the guarded set
       partition the operation count exactly.
-13. **Only the decision path writes `approved`: a runtime guard on every approval-capable
-    table** — #971 A.4 as restated a third time at head
-    `80afeb40d680f5671b9c4697e7c7e9e8c1af7ff0` (**still under audit at this revision**),
-    superseding the static AST-attribution versions at `fa49e06c`, `324ea165` and
-    `327e1179`, on the maintainer's entry "11:32:49 BST", item 2, and the entry headed
-    `2026-09-30 11:21:51 BST — status 11:25 noted; three rulings` for the population. Task 3A
-    builds it. Each item red first:
-    - **the test database really carries the guard** (the maintainer's entry headed
-      `2026-09-30 11:45:55 BST`, item 2 — CRITICAL; applies if #971's next head makes the
-      trigger the primary guard): a `refused` test run against a database without the
-      trigger passes vacuously. So, before any red-first plant, a session-scoped check
-      asserts from `pg_trigger` that the trigger exists and is enabled on **every** guarded
-      table (derived as below), and **fails** — never skips — if any is missing. Today the
-      test database is built by migrations, not `create_all`: the `database` fixture skips
-      unless `alembic_version` holds a row (`backend/tests/conftest_db.py:192-197`), and no
-      `create_all` appears under `backend/tests/`. That is not enough on its own, because a
-      shared database left at an older revision lacks the new trigger (FD-1218 records the
-      shared template holding a stale schema). The check therefore also asserts the
-      database's `alembic_version` equals the repository head. The trigger DDL lives only in
-      its migration; no fixture installs a copy. The teardown's
-      `session_replication_role = replica` (`conftest_db.py:340-360`) suspends user triggers
-      for its own transaction only, and a test asserts the trigger is in force again after
-      `empty_the_database()`;
-    - **population and declaration:** every approval-capable table declares its `status`
-      vocabulary as column metadata (`info={"status_vocabulary": <StrEnum>}`), and the
-      population is every mapped class whose declared vocabulary has an `APPROVED` member.
-      **The set that must declare is derived independently of the modules** (auditor-close1255
-      M1 on `80afeb40`, which the decision-maker is carrying into #971): every mapped class
-      whose `status` column has a CHECK constraint naming `'approved'`, **or** a
-      `default=`/`server_default=` of `"approved"`, **or** that an `apply_approval_decision`
-      driven by `_carry_to_the_artifact` writes, plus `approval_requests` — 8 tables, as
-      auditor-close1255 counted them at `9f63d0fe`, **`peril_structures` included**; the
-      executor re-derives the count at its tree and quotes it. A declaration test asserts each; this
-      slice declares
-      a `StrEnum` of `validation_rules.py:65`'s constants for `validation_rules` and
-      `validation_rule_sets`, and the Deployment Request table's own. `scoring_traces`,
-      `ingestion_runs`, `reference_table_versions`, `jobs` and `dataset_versions` need **no**
-      declaration and the guard does not touch them (so auditor-plans' V1 dissolves). Red
-      first: a population table planted without a declaration fails the declaration test;
-    - **the guard:** a `before_flush` listener over `session.new` and `session.dirty` refuses,
-      on a population class, an **insert** whose `status` is the `APPROVED` value — explicit,
-      or unset with a column `default=`/`server_default=` of that value (`models.py:1195`) —
-      and an **update** whose attribute history shows `status` changed to it, unless the
-      decision-path `ContextVar` is set. A `do_orm_execute` listener refuses an ORM-enabled
-      `update()`/`insert()` on a population table setting that value outside the context.
-      The refusal is a named error raised before the flush writes. Red first, **for every
-      population table** (derived, never listed): a direct `approved` write outside the
-      context, on insert and on update, is refused — with the listener removed each succeeds
-      and the test fails; the deployment-request plant is refused; an insert relying on a
-      `default="approved"` is refused; an ORM bulk `update()` setting `approved` is refused;
-    - **the context:** one context manager, `approval_decision()`, in
-      `backend/src/app/platform/approvals.py`, sets the `ContextVar`, entered in exactly two
-      places — around `decide`'s own status write (`:416`) and in `_carry_to_the_artifact`
-      (`backend/src/app/api/approvals.py:488`) around the owning module's
-      `apply_approval_decision`. A static test fails any other entry in `backend/src`
-      (`backend/tests/` is exempt, and nothing else). Red first: a third site fails it.
-      **Context hygiene** (auditor-plans): `approval_decision()` resets the `ContextVar` with
-      its token in a `finally`, so an exception inside the block leaves no "in decision"
-      state behind. A task spawned inside the block (`asyncio.create_task`, `asyncio.gather`,
-      a thread-pool call) **copies** the context, so it would carry "in decision" for its
-      whole lifetime, past the block's exit. So nothing is spawned inside the block: the
-      static test that checks the entry sites also fails any `create_task`, `gather` or
-      `run_in_executor` call lexically inside an `approval_decision()` block, red first on a
-      planted one. Under the trigger steer (the
-      maintainer's 11:44:15 entry, pending #971's next head), the flag is `SET LOCAL
-      app.approval_decision = 'on'`, which is **transaction-scoped** and ends at commit or
-      rollback, so no copy outlives its transaction;
-    - **what the guard cannot see:** a static test fails any Core `update(X)`/`insert(X)`
-      over a population class, and any `text()` naming a population table's `status`,
-      outside the two sanctioned non-population sites (`platform/blobs.py:455`,
-      `worker/progress.py:200`). **Outside any ORM guard:** every session not built by
-      `Database._sessionmaker` (`backend/src/app/db/session.py:50`) — **scripts** (for
-      example `examples/fremtpl2/seed.py` and anything under `scripts/` that opens its own
-      engine) and Alembic data migrations. Each is a review item for the slice's auditor. A
-      database trigger, if #971's next head adopts the 11:44:15 steer, covers both;
-    - **exemption, per table, temporary** (dated 2026-09-30, pinned as a literal,
-      shrink-only), citing the validation-rule finding (HIGH, the maintainer's entry headed
-      `2026-09-30 11:23:26 BST — DECISION: validation-rule approval bypass: HIGH (not CRITICAL); owner and order; two follow-ons`;
-      cited as prose until it mints): **`validation_rules`** (`approve_rule`,
-      `validation_rules.py:395`/`:423`; `seed_builtin_rules`, `:89`/`:154`; the demo seed's
-      direct row, `examples/fremtpl2/seed.py:441`) and **`validation_rule_sets`**
-      (`replace_rule_set`, `:538`/`:643`, and the column default `models.py:1195`). The
-      WK-1178 fix slice removes them red first and is serialised after this slice.
-      `deployment_requests` has no exemption. **Accepted trade-off** (auditor-plans A13-6): the
-      exemption is per **table**, so a new, second writer of `approved` on `validation_rules`
-      or `validation_rule_sets` passes silently until the fix slice removes the entries. It
-      is accepted because the guard is per table by design (#971 A.4 item 5) and the fix
-      slice is serialised directly after this one; the ledger records it as a known gap with
-      that owner;
-    - **fixtures, declared work:** the test files that write `approved` rows directly
-      refuse under the guard. At the tree above
-      `git grep -l -E 'status\s*=\s*"approved"|Status\.APPROVED|status=APPROVED' -- backend/tests`
-      lists 17, an upper bound (some only read or compare): `test_api_blobs.py`, `test_api_rate_tables.py`, `test_api_validation_rules.py`, `test_approvals.py`, `test_custom_metrics.py`, `test_custom_objectives.py`, `test_data_jobs.py`, `test_lineage.py`, `test_model_lifecycle.py`, `test_model_nfrs.py`, `test_paired_quantile_models.py`, `test_rate_tables_service.py`, `test_rating_version_compile.py`, `test_rating_versions.py`, `test_reference_pin.py`, `test_validation_reports.py`, `test_wf01_journey.py`, all under `backend/tests/`.
-      Each is moved onto the decision path, or onto one helper that enters
-      `approval_decision()` and is defined under `backend/tests/` only;
-    - **every population table is guarded, whether or not anything approves it** (M1):
-      `peril_structures` has no `approved` writer today, and the guard still covers it. Red
-      first: a direct `approved` write on `peril_structures`, outside the context, is
-      refused. A zero-writer table is reported as a note beside that pass, never exempted
-      from the guard;
-    - **positive control:** the sanctioned decide-and-carry path approves a request and its
-      artifact, green. **The context spans the write and its flush** (M2): `decide` assigns
-      the status at `backend/src/app/platform/approvals.py:416` and flushes at `:419`, so
-      `approval_decision()` is entered before `:416` and exited after `:419`, and in
-      `_carry_to_the_artifact` it wraps the owning module's write and the flush that writes
-      it. The control asserts both rows reach `approved` in the database, not only in the
-      session. Red on broken input: with the context exited before the flush, the guard
-      refuses the sanctioned write.
+13. **`deployment_requests` joins the guarded set** — the approval guard itself is **Slice
+    2a's** (#984, working id 9923; the split below). This slice's migration adds
+    `deployment_requests` to Slice 2a's trigger in the revision that creates the table, and
+    declares its `status_vocabulary`. Each red first: Slice 2a's `pg_trigger` presence check
+    now names `deployment_requests` too, and fails with this revision's trigger clause
+    removed; **the deployment-request plant** — a direct `approved` write on
+    `deployment_requests` outside the decision path, by ORM, Core and raw SQL — is refused;
+    **positive control:** a deployment request approved through `decide` and the new
+    deployment branch of `_carry_to_the_artifact` reaches `approved`, read back in the
+    database. `deployment_requests` takes no allowance.
 
 ## Global Constraints
 
@@ -563,12 +485,8 @@ named with the slices that may also touch it.
 | `backend/migrations/versions/` | one new revision | WK-1250 S1, WK-690 S1 (none planned) | exempt; re-point `down_revision` at the second merge |
 | `backend/src/app/api/score.py` (`_required_ref`, `_fetch_bundle`), `backend/src/app/platform/traces.py` | default-live resolution; the trace's Deployment reference | WK-1250, WK-673, WK-675 S7b (RL-1263 item 4 names `score.py`) | **serialises** with any in-flight slice editing `score.py` |
 | `backend/src/app/api/service_accounts.py` (`:63`, `:180`, `:246`) | the Environment-slug check at creation and rotation (#971 A.6) | WK-674 S3 (per-environment keys, register F54: the same lines) | an edit to existing functions: serialises with any in-flight slice editing them; S3 follows this slice anyway |
-| `backend/src/app/db/models.py`, the approval-capable classes' `status` columns | `info={"status_vocabulary": …}` (#971 A.4 at `80afeb40`) — **an edit to existing classes** | any slice editing one of those classes | not registry-exempt (only appended classes are); serialises unless the dispatch record shows no other in-flight slice edits those columns |
-| new: `backend/src/app/db/approval_guard.py`; `backend/src/app/db/session.py` (listener registration, `:50`) | the runtime guard | none found | the new module is not shared; `session.py` is an edit to an existing function — serialises unless the dispatch record shows no other in-flight slice edits it |
-| `backend/tests/` — the 17 fixture files of Acceptance 13, and a tests-only helper | moved onto the decision path | any slice editing those test files | test files; serialises only where another in-flight slice edits the same test |
-| `examples/fremtpl2/seed.py` (`:441`) | covered by the `validation_rules` exemption; changed only if the guard's registration reaches it | the validation-rule fix slice (after this one) | not shared in flight |
-| `backend/src/app/platform/validation_rules.py` (`:65`) | a `StrEnum` of the validation vocabulary (#971 A.4 at `80afeb40`) | the validation-rule WK-1178 fix slice (serialised after this slice, the 11:23:26 entry) | serialised by that order |
-| `backend/src/app/platform/approvals.py` (`set_policy`, `:137-190`; `decide`, `:416`) | the existence check of #971 A.6; `approval_decision()` and its entry in `decide` (#971 A.4) | any slice editing `set_policy` | an edit to an existing function: serialises unless the dispatch record shows no other in-flight slice edits it |
+| `backend/src/app/platform/approvals.py` (`set_policy`, `:137-190`) | the existence check of #971 A.6 (the guard's `decide` change is Slice 2a's) | any slice editing `set_policy` | an edit to an existing function: serialises unless the dispatch record shows no other in-flight slice edits it |
+| Slice 2a's shared paths (`approvals.py` in `platform/` and `api/`, `models.py`, the migrations registry) | this slice follows Slice 2a in lane A | Slice 2a (#984), the validation-rule fix slice | **strictly after Slice 2a**; against the fix slice, not concurrently (both edit `_carry_to_the_artifact`), in the order the lead sets — #984 recommends S2a → the fix → S2 |
 | `backend/src/app/api/approvals.py` (`Withdraw`, `withdraw_request`) | server-derived liveness | none found | not shared |
 | `backend/tests/test_api_authorisation_sweep.py` (and any sibling Acceptance 12 (f) finds) | Task 0A: flattening, the count equality, the spec pin, the valid-body sweep, the named allow-list | none found | test-only; **no RL-1263 overlap with WK-690 S1 and no third slot** (the 11:01:50 entry) |
 | the five modules' §5.1 REST tables (`01`, `02`, `03`, `06`, `07`) | **nothing in this slice**: Task 0A (c) moved out (the 11:17:35 entry); #977 (a) puts the column in a WK-1178 slice. **If that slice lands first**, this slice fills the column for its own new rows (`03` and `07` §5.1) | WK-1250 S1 (`03` §5.1 rows), WK-1178 fix slice (`03:771-786`), any slice appending §5.1 rows | **serialises** with each: a new column edits every existing row of the table |
@@ -838,6 +756,10 @@ def promotion_order_refusal(
   `evidence` JSONB written once — #971 A.4 permits a database trigger to refuse an update;
   if the executor adds one, its test is red first too); `scoring_traces.deployment_id` nullable FK. Downgrade drops
   all three in reverse.
+- [ ] **`deployment_requests` joins Slice 2a's guard (Acceptance 13)**, in this same
+  revision: the trigger on the new table, and its `status_vocabulary` declaration. Red first:
+  Slice 2a's `pg_trigger` presence check fails naming `deployment_requests` until the clause
+  is in.
 - [ ] **The credential pre-check (V2)**, first in the revision's `upgrade()`: select unrevoked
   `api_keys` whose `environment`, and non-archived `service_accounts` whose `environments`,
   name anything
@@ -846,29 +768,13 @@ def promotion_order_refusal(
 - [ ] Round trip (`upgrade`, `downgrade -1`, `upgrade`) and `tests/test_repository_invariants.py`;
   quote each rc. Commit.
 
-### Task 3A: The approval guard (#971 A.4 at `80afeb40`, Acceptance 13)
+### Task 3A: moved to Slice 2a
 
-**Files:** Create `backend/src/app/db/approval_guard.py` (the `before_flush` and
-`do_orm_execute` listeners and the named error); modify `backend/src/app/db/session.py`
-(register the listeners on the sessionmaker, `:50`), `backend/src/app/platform/approvals.py`
-(`approval_decision()`; entered in `decide` at `:416`), `backend/src/app/api/approvals.py`
-(entered in `_carry_to_the_artifact`, `:488`), `backend/src/app/db/models.py` (the
-`status_vocabulary` declarations on the approval-capable tables only),
-`backend/src/app/platform/validation_rules.py` (the `StrEnum` beside `:65`),
-`examples/fremtpl2/seed.py` (only as the exemption requires); tests
-`backend/tests/test_approval_guard.py`, a helper under `backend/tests/`, and the 17 fixture
-files of Acceptance 13.
-
-- [ ] **Red first, the declaration test**, then the declarations: the approval-capable
-  tables, the validation `StrEnum`, and (in Task 3's model) the Deployment Request's.
-- [ ] **Red first, the guard's cases** of Acceptance 13, over every population table derived
-  at test time; then the listeners, the context manager and its two entries.
-- [ ] The two static tests (context entry sites; Core and `text()` writers).
-- [ ] The exemption literal, per table, citing the validation-rule finding.
-- [ ] Move each fixture file onto the decision path or the tests-only helper; the full
-  backend suite is green **inside a gate slot** (Acceptance 10), with the `N passed`
-  compared to main's.
-- [ ] Positive control; commit.
+*(2026-09-30, the split below.)* The approval guard — the trigger, its test-database check,
+the declarations on the existing approval tables, the named seed writers, the validation
+allowance and the 17 fixture moves — is Slice 2a's (#984, working id 9923). This slice
+starts after Slice 2a closes. What stays here is Acceptance 13: `deployment_requests` added
+to the guarded set, in Task 3's migration and Task 5's tests.
 
 ### Task 4: Environments — the entity and its routes (FR-428)
 
@@ -980,8 +886,8 @@ modify `backend/src/app/main.py` (one registration), `backend/src/app/errors.py`
 - [ ] **Acceptance 8, this permission:** re-check `origin/main` for #942; branch A empties the
   `deployment:promote` `Check owner` cell **in this commit**; branch B notes it.
 - [ ] The red-on-broken-input runs: G3 type check, blanket-skip validator, audit call, the
-  handler's `resource=` argument (#971 B.5), the floor-item check (#971 A.4), and the planted
-  second writer of `approved` (Acceptance 13).
+  handler's `resource=` argument (#971 B.5), the floor-item check (#971 A.4), and the
+  deployment-request plant (Acceptance 13), each against Slice 2a's trigger.
 - [ ] Green; commit.
 
 ### Task 6: Default-live scoring, the trace link, and server-derived liveness (RL-880, RL-888, RL-916, FR-357)
@@ -1039,8 +945,10 @@ Task 6's per-request resolution with the switch, and reuses Task 5's route shape
 
 ## Self-review
 
-- **Slice size — an assessment, not a re-cut** (auditor-plans' note on `39d94efe`, for the
-  lead to put to the maintainer). Task 3A (the approval guard, its session registration or
+- **Slice size — ACCEPTED as option (b)** by the maintainer's entry headed
+  `2026-09-30 11:48:28 BST — DECISION + ACCEPTANCE (maintainer by delegation): WK-674 S2 split, option (b), S2a = the approval guard`;
+  applied by the dated delta in **Status**, with Slice 2a filed as #984 (working ids SL 9922,
+  PL 9923). The assessment as filed follows (auditor-plans' note on `39d94efe`). Task 3A (the approval guard, its session registration or
   trigger migration, the vocabulary declarations, 17 fixture files and the demo seed) is
   cross-cutting: it touches every approval-capable table and most of the backend test suite,
   and is independent of Environments and Deployments except that `deployment_requests` joins
@@ -1126,13 +1034,15 @@ Task 6's per-request resolution with the switch, and reuses Task 5's route shape
   vocabulary step, Write set~~ — superseded by the `80afeb40` guard, below); A.6's credentials (Task 4, Acceptance 4, Write set); the
   deployment-wide confirmation (Decided in this plan); DP-S2-5 closed; DP-S2-4 ruled (a) by
   #977 (DP table, Acceptance 12 (c), Write set).
-- **#971 at `80afeb40` (A.4 as a runtime guard; still under audit)**: Acceptance 13, Task 3A,
-  Write set. The AST attribution, the value widening and the per-site rows of earlier
+- **#971 at `80afeb40` (A.4 as a runtime guard; still under audit)**: ~~Acceptance 13, Task 3A,
+  Write set~~ — moved to Slice 2a (#984) by the split; this plan keeps only Acceptance 13's
+  `deployment_requests` item. The AST attribution, the value widening and the per-site rows of earlier
   revisions are removed. auditor-plans' V1 dissolves under it, and V3 is this re-citation.
   Written to hold under auditor-close1255's M1 (the module-independent required set, with
   `peril_structures` guarded) and M2 (the context spans the write and its flush), which the
   decision-maker is carrying into #971's next head; this plan cites that head when it lands.
-- **The gate-slot rule** (the 11:42:08 entry): Acceptance 10, Task 0, Task 3A, Task 7.
+- **The gate-slot rule** (the 11:42:08 entry, tightened at 11:43:28): Acceptance 10, Task 0,
+  Task 7 (Task 3A's site moved to Slice 2a).
 - **auditor-plans N1–N3** (its audit of `a79fc6b4`): N1 and N2 Task 4 and Acceptance 4, with
   the Task 3 constraint; N3 Task 4 and Acceptance 4. Its G1 is Acceptance 13's declared
   vocabulary, now #971 A.4 at `80afeb40`: declared on the approval-capable tables only, which
