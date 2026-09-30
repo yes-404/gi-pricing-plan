@@ -117,6 +117,23 @@ def test_an_unguarded_division_is_refused_at_save_time(
     assert response.json()["code"] == "EXPRESSION_UNGUARDED_DIVISION"
 
 
+@pytest.mark.req("FR-274")
+def test_a_masked_division_in_a_condition_is_refused_at_save_time(
+    api_client, workspace_id, principal, grant
+) -> None:
+    """FD-1317 D2: a `??` "guard" on a constraint's condition (WK-1178 code slice)."""
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    body = valid_algorithm()
+    for step in body["steps"]:
+        if step["step_id"] == "s_minprem":
+            step["condition"] = "((office_premium_minor / expense_factor) ?? 0) >= 100"
+    response = api_client.post(
+        "/api/v1/rating-algorithms", json=body, headers=_headers(principal, workspace_id)
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "EXPRESSION_UNGUARDED_DIVISION"
+
+
 @pytest.mark.req("FR-219")
 def test_the_diff_route_names_the_changes(
     api_client, workspace_id, principal, grant
