@@ -1,5 +1,5 @@
 ---
-id: FD-9970
+id: FD-9971
 family: finding
 title: The /api/v1/score 200 response has no schema in the generated OpenAPI, so the one-way contract cannot type it
 status: active
@@ -10,13 +10,13 @@ corrected_by: []
 relates: [WK-671, WK-672, WK-675, WK-1178, FR-250, FR-262, FR-451, NFR-502]
 ---
 
-# FD-9970 — The `/api/v1/score` 200 response has no schema in the generated OpenAPI
+# FD-9971 — The `/api/v1/score` 200 response has no schema in the generated OpenAPI
 
 ## Finding
 
 **Severity proposed: medium. The maintainer sets it (his order of about 17:10 BST, 2026-09-30,
 `~/gi-pricing-plan.local/channel/to-lead.md`, a local channel file, outside the repository).**
-Filed 2026-09-30 under working id 9970, minted at its merge turn.
+Filed 2026-09-30 under working id 9971, minted at its merge turn.
 
 `CLAUDE.md` §2 says one contract joins backend and frontend and that it flows one way:
 `model-schema` generates `docs/contracts/`, which generates `frontend/src/api/generated`, and
@@ -253,6 +253,4 @@ decision (§1 above).
 two route declarations and the regenerated contracts, with a test that no 2xx JSON body of a
 route that returns a model-schema shape is `{}`. Ownership shape: event.
 
-*Disclosure: this record was filed under working id 9970 and is minted at its merge turn. The
-number 9970 was earlier the working id of a plan that has since been minted under its own id;
-this record is unrelated to it.*
+*Disclosure: this record was filed under working id 9971 and is minted at its merge turn. It was first pushed under working id 9970, which collided with an open question's working id in a sibling draft PR; the lead reassigned it to 9971 before any review. The number 9971 was earlier the working id of a ruling that has since been minted under its own id; this record is unrelated to it.*
