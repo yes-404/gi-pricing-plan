@@ -32,16 +32,19 @@ relates: [PL-1254, FR-217, FR-20, FR-1186]
 
 **Trees.**
 - Specs and code: `origin/main` at `aa14e90dd77c7461aa35cc6461557b129959463f`.
-- Slice 1 leaf plan (working id 9820, PR #929): `origin/wk1250-s1-leaf` at
-  `a706430671bef6592930110e1a392dab4b8f7646`, file
-  the one plan file that branch adds under `docs/plans/` (slug `wk-1250-slice-1-the-sub-graph-artifact-leaf-plan`).
+- Slice 1 leaf plan: **PL-1278** (PR #929; first read on `origin/wk1250-s1-leaf` at
+  `a706430671bef6592930110e1a392dab4b8f7646`, before it minted).
+- *Refreshed 2026-09-30 at origin/main `0bc69b5b`.* The leaf plan is cited as PL-1278 by
+  section heading. `compile.py`, `rating.py`, `approvals.py`, `06`, the rating and
+  regression-suite routes, and `03` above `:1180` are unchanged between `aa14e90d` and
+  `0bc69b5b` (`git diff --stat`), so every file:line below still holds.
 
 **Where the questions are.**
 - The map plan is `docs/plans/PL-01254-wk-1250-sub-graph-composition-and-mta-cancellation-pricing-map-plan.md`.
   Its rows are DP-1 at `:210`, DP-2 at `:211`, DP-3 at `:212` and DP-4 at `:213`.
-- The leaf plan's rows are DP-S1-1 to DP-S1-4 at `:334-337`.
-- The leaf plan is written on the map's recommendations DP-1 (b), DP-3 (a) and DP-4 (a)
-  (`:326-331`), and names every step that changes if a ruling differs.
+- PL-1278's rows are DP-S1-1 to DP-S1-4, under §Scope, "Decision points".
+- The leaf plan is written on the map's recommendations DP-1 (b), DP-3 (a) and DP-4 (a) (the
+  same subsection's preamble), and names every step that changes if a ruling differs.
 - Every row is kind "decision point", and every "Resolved by" cell is empty.
 
 **Premises verified at `aa14e90d`.**
@@ -69,10 +72,13 @@ relates: [PL-1254, FR-217, FR-20, FR-1186]
 - A lost race maps to `VALIDATION_FAILED` 409 (`:69`, the `IntegrityError` mapping at
   `:11-12`), and the create is audited (`:140`).
 
-**Stale in the leaf plan.** It read its tree at `25b0ead2`, before #933. Its `models.py`
+~~**Stale in the leaf plan.** It read its tree at `25b0ead2`, before #933. Its `models.py`
 lines are 6 lower than at `aa14e90d` (for example `RatingAlgorithmRow` is now `:1926`), and
 the migration head is now `d7e2a9b5c418`, not `a71c3e95d204`. The plan's re-point procedure
-covers the second point, but both premises are stale as written.
+covers the second point, but both premises are stale as written.~~
+*No longer holds (2026-09-30, at `0bc69b5b`).* PL-1278 was re-derived before it minted. Its
+§Status and §Scope, "Premises re-derived at the tree above", now give `RatingAlgorithmRow` at
+`models.py:1926-1954` and the migration head as `d7e2a9b5c418` (premise i), which match main.
 
 ## DP-1: is a sub-graph version a Governed Artifact?
 
@@ -122,7 +128,7 @@ disagreement as well as preventing a new one.
     `EVIDENCE_FLOOR`, both in `approvals.py`.
   - **DP-1 (b)'s "sub-graph diffs" evidence** touches the same file, if it becomes its own
     evidence key rather than part of `structural_diff`.
-  - **OQ-1234's prepared option (b)** (#935, working id 9901, at `aa38bd4f`) adds a
+  - **OQ-1234's prepared option (b)** (#935, working id 9901, at `aa38bd4f`; unchanged in substance at `4fc680ed`, 2026-09-30) adds a
     skip-permission field to the environment-qualified `deployment` entry of
     `ApprovalPolicyEntry`.
 - **The consequence.** Whichever of these rulings lands, it changes a closed model that
@@ -237,8 +243,8 @@ DP-2 blocks only Slices 2 and 3, and it shares no evidence with the rows above b
   §4 before Slice 1 builds the shape.
 - **DP-S1-1:** the catalogue text edits at `06:265` and `06:287-288`.
 - **DP-S1-2:** `03` §5.1 route rows in the Regression Suite form.
-- **The leaf plan (working id 9820):** re-read at the ruling tree, because its `models.py`
-  lines and migration head are stale.
+- **The leaf plan (PL-1278):** re-read at the ruling tree. Its premises were current at
+  `0bc69b5b`.
 
 ## Acceptance — the violation that must become detectable
 
