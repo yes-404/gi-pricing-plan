@@ -2,7 +2,7 @@
 id: LG-1308
 family: ledger
 title: WK-1178 fix slice (SL-1300) — compile_bundle refuses a step ref not pinned at its exact version (FR-237)
-status: active
+status: closed
 created: 2026-09-30
 owner: executor
 tree: f965b4174d4d2d8676deccfec3c691f3dacb6305

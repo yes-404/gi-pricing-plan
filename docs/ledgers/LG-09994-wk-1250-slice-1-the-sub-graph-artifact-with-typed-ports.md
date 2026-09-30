@@ -200,6 +200,18 @@ the class from `exc.errors()` (cycle, then unresolved, then fall-through) and ne
 3. **`backend/tests/test_contracts.py`** (Task 2) gains three `ONE_SIDED_SLUGS` entries
    (`sub-graph`, `sub-graph-create`, `sub-graph-body`, "first written form — 03 §4.11"), append-only.
    The plan's write set omits this file; `test_every_one_sided_slug_is_declared` goes red without it.
+4. **`scripts/audit-docs.py`** gains three entries in its F83 exemption register (the three generated
+   `sub-graph*.schema.json` files, dated comment, the `score-comparison` precedent). Checks 30 and 35 fail
+   without them. The plan's write set omits the file; append-only.
+5. **`docs/contracts/openapi/generated.json`** regenerates with a large diff (7319 added, 6002 removed
+   lines by `git diff --numstat origin/main...HEAD`): FastAPI re-hoists shared component schemas once the
+   new response models reference the step union. It is generated, never hand-edited, and `--check` exits 0.
+6. **Decimal guard (condition 5), grep over the added lines**,
+   `git diff origin/main...HEAD -U0 | grep -E '^\+' | grep -n -E 'type.*decimal'`: three hits, none a
+   committed algorithm, seed or example declaring a `decimal` output: two lines of this ledger that state
+   the guard, and one test (`test_a_compatible_fragment_output_port_raises_no_issue`) whose expression
+   step has `result_type="decimal"` against a `money_minor` port — a test fixture, which the
+   maintainer's 22:43:26 BST entry excludes ("no committed algorithm outside tests").
 
 ## PRs
 
