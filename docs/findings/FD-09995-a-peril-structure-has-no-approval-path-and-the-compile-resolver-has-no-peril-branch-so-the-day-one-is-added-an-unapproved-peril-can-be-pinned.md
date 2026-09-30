@@ -23,16 +23,19 @@ nothing prices wrongly. **A latent dependency, not a live defect.** Two facts ho
    `api/approvals.py`'s `_carry_to_the_artifact` has no perils call. Yet **Peril Structure is a Governed Artifact**
    (`06-governance.md:64`).
 2. **The compile resolver has no peril branch.** `_Resolver.resolve` in `backend/src/app/platform/rating_versions.py`
-   (~`:418-500`) handles rating_algorithm, model, rate_table, reference_table and custom_objective and then raises
-   `NOT_FOUND` "has no backend table yet (Phase 2); a compile cannot embed it." So a rating version pinning
+   (`:417`) handles rating_algorithm, model, rate_table, reference_table and custom_objective and then raises
+   `NOT_FOUND` (`:521-525`) "has no backend table yet (Phase 2); a compile cannot embed it." **That message is stale:** the table exists
+   (`PerilStructureRow`, `backend/src/app/db/models.py:1577`); it should be corrected when the branch lands. So a rating version pinning
    `peril_structure:<slug>@<n>` in `pins.models` (`03:355`) cannot compile, whatever the row's status.
 
-The two facts cancel today. **The NOT_FOUND raise is the only thing keeping an unapproved peril structure out of a
-priced bundle.** When the resolver gains a `peril_structure` branch, `compile_bundle`'s maturity loop
-(`pricing_core/rating/compile.py:453-480`; `_MATURITY_CHECK_EXEMPT = {"rate_table", "rating_algorithm"}` at `:314`)
-requires `approved`, `live` or `retired` (`:287`) for a peril pin. With no writer of `approved`, no peril could then
-be pinned at all, and the next step would be someone writing `approved` by hand or adding an approval path that
-bypasses the workflow (the FD-1200 and validation-rule class). **Proposed by the auditor; the disposition is the
+The two facts cancel today, but the guard is thin. **Today the missing resolver branch keeps every peril pin out of a compiled
+bundle.** When the resolver gains a `peril_structure` branch, `compile_bundle`'s maturity loop
+(`pricing_core/rating/compile.py:466-480`; `_MATURITY_CHECK_EXEMPT = {"rate_table", "rating_algorithm"}` at `:314`) requires
+`approved`, `live` or `retired` (`:287`) for a peril pin. With a planted resolver branch, `review` and `reconciled` rows then
+fail `PIN_NOT_APPROVED` at that loop, and **only a forced `approved` row compiles** (auditor-close1255's live check of the
+planted branch, which took the `approved` row from `NOT_FOUND` to success). So `NOT_FOUND` is not the only guard: the hazard is
+the resolver branch **plus** an `approved` written by hand or by a path outside the workflow, and with no approval path the only
+way to `approved` is such a write (the FD-1200 and validation-rule class). **Proposed by the auditor; the disposition is the
 lead's.**
 
 ## Evidence
@@ -79,13 +82,20 @@ branch'"). The auditor checked `docs/roadmap.md` at `65b33479` (`grep -n -i peri
 as Phase 2"); no P2 Work row names a peril resolver or a peril approval path, so the owner is WK-1178, which confirms the maintainer's fallback. The lead, having checked the P2 roadmap, confirms that no
 P2 Work schedules the peril resolver; if a later Work does, ownership moves to it.
 
-**Acceptance is a tripwire test, red first on broken input** (from the entry): a test that **fails if `_Resolver`
-resolves `peril_structure` while there is no peril approval path**, meaning no peril branch in
-`_carry_to_the_artifact` and no decision-path writer of `approved` in `platform/perils.py`. It must be shown to fail
-on deliberately broken input: plant a `peril_structure` branch in `_Resolver.resolve` with no approval path, and the
-test goes red. A check the failure cannot survive, not a promise. The test's form is the implementer's (a source or AST
-check over `rating_versions.py`, `approvals.py` and `perils.py`); it names this record so a later reader can find why
-it exists.
+**Acceptance is a tripwire test, red first on broken input.** The maintainer's entry of 2026-09-30 11:25:33 BST words it: a
+tripwire test "that fails if `_Resolver` resolves peril_structure while `_carry_to_the_artifact` has no peril branch (or
+perils.py has no approved writer on the decision path)". **The condition is a disjunction: the test fails when either half
+is missing**, so a half-built state (a `_carry_to_the_artifact` peril branch and no writer of `approved`, or the reverse)
+does not pass. *(The lead's brief to the auditor said "and"; the entry says "or", and the entry governs. Corrected on
+auditor-close1255's audit of #980.)*
+
+**The test is behavioural, not a source or AST scan** (a dispatch dictionary or an indirect call bypasses a scan): insert a
+`PerilStructureRow` in each status (`review`, `reconciled`, `approved`), pin it in a rating version's `pins.models`, and assert
+that compile stays refused for every one while no approval path exists. Red first: plant a `peril_structure` branch in
+`_Resolver.resolve` with no approval path; auditor-close1255 verified that the `approved` row then goes from `NOT_FOUND` to a
+successful compile, so the test goes red. It is the same family as #971's A.4 point: the set of tables with an approval-status
+enum and their writers is derived, and `peril_structures` currently has zero writers of `approved`. The test names this
+record so a later reader can find why it exists.
 
 **Event that next confirms or discharges it:** WK-1178's tripwire test merges, red first. It is discharged in full when
 a peril approval path and the resolver branch land together and the tripwire is replaced by a positive test that an
