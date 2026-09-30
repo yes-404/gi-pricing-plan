@@ -1,5 +1,5 @@
 ---
-id: FD-1348
+id: FD-1349
 family: finding
 title: The contract guard does not compare the objective-certificate check-name enum against the code's check vocabulary
 status: active
@@ -10,9 +10,9 @@ corrected_by: []
 relates: [WK-690]
 ---
 
-# FD-1348 — The contract guard does not compare the objective-certificate check-name enum
+# FD-1349 — The contract guard does not compare the objective-certificate check-name enum
 
-**Minted 2026-10-01 as FD-1348** (`python3 scripts/doc-id.py next --ref f689c7828cb05eb2298f3fec505a4638c4437a11` printed `1346`, and the lead allocated `1348` in mint batch 13, after RL-1346 and RL-1347). It was filed under working id 9803. Source: executor-690s2 found it in WK-690 Slice 2
+**Minted 2026-10-01 as FD-1349** (`python3 scripts/doc-id.py next --ref f689c7828cb05eb2298f3fec505a4638c4437a11` printed 1346, and the lead allocated 1349 in mint batch 13b, after 13a's RL-1346, PL-1348 and RL-1347). It was filed under working id 9803. Source: executor-690s2 found it in WK-690 Slice 2
 (ledger LG working id 9979, Task 5, draft PR #1025, branch `sl-1272-symbolic-derivation`); auditor-690s2 proposed it;
 this record is the auditor's.
 
