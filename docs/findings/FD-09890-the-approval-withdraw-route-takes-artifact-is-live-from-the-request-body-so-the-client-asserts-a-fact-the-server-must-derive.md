@@ -153,7 +153,33 @@ each with file:line:
 | `modelling.py:355, 508`, `custom_metrics.py:91`, `custom_objectives.py:98`, `peril_structures.py:80`, `service_accounts.py:61`, `datasets.py:128`, `models.py:207, 274`, `validation.py:85`, `datasets.py:104`, `reference_tables.py:65`, `refs.py:71-72` `slug`, `version` | **client-chosen names and references by design** (the artifact's own name, or the ref it pins) |
 | `custom_metrics.py:92`, `custom_objectives.py:99`, `datasets.py:105`, `perils.py:151` `kind` | **client-chosen type by design** |
 | `datasets.py:147` `OwnerUpdate.owner_id` | **has an effect, gated**: the client names the new owner, and `set_owner` applies FR-82's rule (Admin or the current owner; `api/datasets.py:459-` docstring) |
-| `service_accounts.py:64` `CreateServiceAccount.permissions` | **client-chosen, gated, and no escalation is possible**: `ALLOWED_PERMISSIONS` is a fixed frozenset, `{"score:execute", "score:batch"}` (`api/service_accounts.py:44`), and `_check_permissions` (`:128-137`) refuses anything outside it with 422 before the row is written (FR-389 scopes service accounts to the scoring set). So a creator cannot grant beyond the scoring set, whatever its own permissions. **This is not privilege escalation** (the maintainer's rule of `to-lead.md` "2026-09-30 11:21:51 BST — status 11:25 noted; three rulings"; code reading by auditor-924d) |
+| `service_accounts.py:64` `CreateServiceAccount.permissions` | **client-chosen, gated; no escalation for the built-in roles; a LOW residual for a custom role** (analysis below the table) |
+
+**`CreateServiceAccount.permissions`, analysed** (the maintainer's entry `to-lead.md`
+"2026-09-30 11:25:33 BST — #976's service-account item: LOW (recorded); perils: LOW FD with a
+named owner and a tripwire"; each premise read on code):
+
+- **Creation requires `ADMIN_MANAGE_SERVICE_ACCOUNTS`** (`api/service_accounts.py:40`;
+  `model_schema/permissions.py:70`).
+- **Grants are capped** at `ALLOWED_PERMISSIONS`, the fixed frozenset `{"score:execute",
+  "score:batch"}` (`:44`); `_check_permissions` (`:128-137`) refuses anything else with 422 before
+  the row is written.
+- **No built-in role holds either scoring permission.** `SCORE_EXECUTE` and `SCORE_BATCH`
+  (`permissions.py:58-59`) appear in no `BUILTIN_ROLES` entry (`:124-149`) and not in
+  `READ_PERMISSIONS` (`:79-87`): scoring is service-account-only by design (FR-389, `07:73`;
+  FR-347, `06:83`).
+- **The built-in `admin` role holds `ADMIN_MANAGE_ROLES`** (`:144`) beside
+  `ADMIN_MANAGE_SERVICE_ACCOUNTS` (`:147`), so it already controls who holds what: **no real
+  escalation for the built-in roles.**
+- **Measured by auditor-924d** at `65b33479` with the built-in admin role: a service account
+  requesting `score:execute` gives **201**, `score:batch` gives **201** (Admin holds neither),
+  `audit:read` gives **422** (Admin holds it) and `approval:decide` gives **422**. **Admin can
+  mint a scoring credential it cannot use itself**: by design under FR-389 and `06` FR-347, and
+  capped by `ALLOWED_PERMISSIONS`. Not re-run by this record's author.
+- **Residual, LOW, recorded here, owner WK-1178:** a **custom role** holding
+  `admin:manage_service_accounts` but not `admin:manage_roles` could mint a scoring service
+  account, a power it lacks itself. Narrow, no governance effect, and it needs a deliberate
+  custom role. It is recorded, and it is not stated as "not escalation".
 
 **By eye, from the full field list of the 39 models** (not matched by the pattern):
 
