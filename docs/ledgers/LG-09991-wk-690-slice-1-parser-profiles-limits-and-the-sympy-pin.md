@@ -181,6 +181,17 @@ I added `assert derivative == w * sympy.sign(f - y)`; under the same mutation it
 unslotted and uncapped (144% CPU plus loky workers, per the lead's reading of load at 10:43Z). Every
 later suite-level run is slotted with `LOKY_MAX_CPU_COUNT=4 OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2`.
 
+### Task 6 — RL-1265 DP-5: 03 FR-244 and the matching 02 §4.6 note
+
+Dispatch condition 4 applied. **Held:** the sentence "the rating grammar is ZEN's expression
+language, restricted to the function list above". The rest of Step 1 is written, with two
+consequences I chose and report: (1) the plan's clause "'The same restricted grammar as `02` §4.6'
+is superseded by this sentence" would point at the held sentence, so it reads "by this amendment";
+(2) the amendment says in the row that one sentence is held for #967. When #967 mints, the executor
+writes the minted record's "amended FR-244 text" there before S1 closes, or the sentence is carried
+by name to #967's slice. `??`, `_GUARD_MARKERS`, `_check_vocabulary` and `compile.py` are untouched
+(`git diff origin/main --stat -- packages/pricing-core/src/pricing_core/rating` is empty).
+
 ## PRs
 
 Draft PR opened on the slice branch; number recorded here when opened.

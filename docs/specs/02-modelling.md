@@ -940,6 +940,10 @@ validation checks (`01` §4.5). One grammar, one parser, one security review.
 > *(Amended 2026-09-30, `RL-1265` DP-5: `filter_rows` (`01` FR-35) parses in the `recipe`
 > profile. It is a data-preparation step, and it already used `recipe`'s operator set.)*
 >
+> *(Amended 2026-09-30, `RL-1265` DP-5: rating `expression` steps are not a profile of
+> this parser. They are ZEN expressions under `03` FR-244 and FR-276, and `03` FR-244 now
+> says so.)*
+>
 > *(Amended 2026-09-30, RL-1292 (DP-S1-2): the arity of every function, in every
 > profile. `abs`, `round`, `floor`, `ceil`, `log`, `exp`, `sqrt`, `log1p` and `expm1` take
 > exactly one argument. `clip` and `where` take exactly three. `min`, `max` and `coalesce`
