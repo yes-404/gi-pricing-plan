@@ -1156,6 +1156,8 @@ dislocation, and serves a live quote inside the latency budget.
 
 Set `active` 2026-09-30 on the maintainer's entry "2026-09-30 22:33:30 BST — DECISIONS on your 23:05 (WK-1250 S1 blocked; lane re-order; ci-1018)", Decision 1, quoted verbatim: *"2026-09-30 — the maintainer (by delegation) accepts PL-1254 (the WK-1250 map, three slices) as the plan for WK-1250. Resolvers: DP-1, DP-3 and DP-4 by RL-1309. **DP-2 is open** (blocking Slices 2 and 3). Per PL-1254's Activation step 1 the plan stays `draft` until DP-2 has a resolver. WK-1250 is set `active`, and its three `SL-` rows are cut `draft`."* The form follows WK-675 (an active Work with a draft map, `PL-1286`). DP-2's ruling is in preparation; when it mints, `PL-1254` goes `active` (a status flip) and then `PL-1325`.
 
+*Dated 2026-09-30, on the maintainer's entry "2026-09-30 22:33:30 BST", Decision 2: `PL-1254` goes `active` (a status flip), because every blocking decision point now has a resolver. DP-1, DP-3 and DP-4 are resolved by `RL-1309`. DP-2 is resolved by `RL-1344`, minted in mint batch 12 (#1022, 36b2a121). The frozen plan's resolver column is not edited; this line records the resolvers (`PL-1254` Activation step 1). `PL-1325` goes `active` in the same PR, because its prerequisite 2 ("PL-1254 `active`, and WK-1250's `SL-` rows cut") holds at merge.*
+
 #### SL-1339 — Slice 1: the sub-graph as a stored, versioned artifact (FR-217's artifact limb)
 
 ```yaml
