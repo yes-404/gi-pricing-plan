@@ -124,11 +124,11 @@ verbatim, plus (i) is then the fallback.
 
 | Claim | Verdict | How it was verified |
 |---|---|---|
-| **A.** §1.6's prose can be parsed into owners by role name | **false at this tree** | `ownership_matrix()` (`scripts/doc-index.py:958-969`) counts a role as an owner of a family whenever `role in owner_text`, over `_OWNERSHIP_TABLE` (`:924-947`), a prose transcription of §1.6's Owner column. The generated matrix (`docs/INDEX.md:1445-1456`) therefore lists the **planner** as an owner of `work (WK)`, from "planner writes its map plan". It lists the **lead** as an owner of `proposal (RFC)`, from "lead assesses", and of `reference: skills`, from "lead approves". §1.6 (`document-ids.md:153`, `:157`, `:169`) makes none of those roles an owner. Any check built on name-matching §1.6's cells inherits this over-inclusion. |
+| **A.** §1.6's prose can be parsed into owners by role name | **false at this tree** | `ownership_matrix()` (`scripts/doc-index.py:958-969`) counts a role as an owner of a family whenever `role in owner_text`, over `_OWNERSHIP_TABLE` (`:924-947`), a prose transcription of §1.6's Owner column. The generated matrix (`docs/INDEX.md:1445-1456` at `eeda8f4b`) therefore lists the **planner** as an owner of `work (WK)`, from "planner writes its map plan". It lists the **lead** as an owner of `proposal (RFC)`, from "lead assesses", and of `reference: skills`, from "lead approves". §1.6 (`document-ids.md:153`, `:157`, `:169`) makes none of those roles an owner. Any check built on name-matching §1.6's cells inherits this over-inclusion. |
 | **B.** Check 35's second clause reaches each directory's own README and INDEX | **present** | `check_owner` (`scripts/audit-docs.py:2920`), read in full. For every document in `_id_scope_documents()`, it reads `path.parent / "README.md"`'s list and fails an owner not in it (`:2956-2963`). It does not exclude the README itself. Loading the module and listing its scope at `eeda8f4b` (the loader is in "Reproducing B and C" below) gives 13 in-scope READMEs, every one `owner: lead`, and `INDEX.md` files in `docs/rulings`, `docs/plans` and `docs/closures`, also `owner: lead`. §1.6 has no row for either kind of navigation file. |
 | **C.** Existing records whose owner is outside their family's Owner cell | **six, listed** | The same scope listing, per directory. **Five findings owned by `lead`**, against §1.6's FD owner, the auditor (`document-ids.md:166`): `FD-1067`, `FD-1068`, `FD-1069`, `FD-1074` (all `created: 2026-09-18`) and `FD-1079` (`2026-09-19`). **One closure of `kind: work` owned by `lead`**, `CR-1063` (`2026-09-17`), against §1.6's CR row, where `work` is the auditor's (`:165`). Every other in-scope record's owner is in its family's Owner cell. |
 | The parser check 35 uses | **present** | `readme_owner_allowlist` (`audit-docs.py:2497-2508`) splits the one `Permitted owners:` line on commas. A prose cell would not parse. |
-| A charter check | **absent** | `scripts/audit-docs.py` has checks numbered up to 39 (`document-ids.md:220-236`). None of them reads `.claude/roles/`. |
+| A check that reads charter **content** | **absent** | `scripts/audit-docs.py`'s checks, numbered up to 39 (`document-ids.md:220-236`), do touch the charters: check 35 builds `_VALID_OWNERS` by globbing `.claude/roles/*.md` for their **filenames** (`audit-docs.py:2431-2432`), and check 30 checks each charter's **header** (`document-ids.md:226`). None of them reads what a charter's body grants. *(Corrected after auditor-docs' audit of `561e329d`. This row said "none of them reads `.claude/roles/`", which is false.)* |
 | `delivery-process.core.json`'s `roles` | **present, per action** | `docs/process/delivery-process.core.json:38` onward: seven roles, each with `authority` naming process **actions** (for example `lead`: `plan_gate_decision`, `lead_verdict_action`, `merge`), not families. |
 
 **Reproducing B and C.** Run from a checkout of `eeda8f4b`. `scripts/audit-docs.py` is loaded
@@ -164,16 +164,32 @@ It needs no `docs/process/` amendment. If the maintainer later wants the roles w
 
 1. **The form.** Each of the seven charters replaces its restatement of §1.6 rows (for example
    `decision-maker.md:19-34`, "Concretely, per `document-ids.md` §1.6: …") with one fixed
-   pointer line naming §1.6 as the authority for the families it writes. It keeps everything
+   pointer line naming §1.6 as the authority for the families it writes. **The line, exactly,
+   as its own paragraph:**
+
+   > `**Document families.** This role writes only the families that docs/process/document-ids.md §1.6 gives it; this file restates none of them.`
+
+   (The text between the backticks is the whole line, with the markdown bold as shown.) It
+   is the same in all seven charters, and it is what DP-2.4's check reads. The charter keeps everything
    §1.6 does not say: tools, "never" rules, effort. The reporter's and the watcher's charters
    keep their declared empty rows. Each charter edit is a maintainer MERGE-ACK naming the file
    (PL-1277 DP-4 (a)).
-2. **Why not (c).** (c) needs a machine-readable **grant** on both sides. A charter has no
-   grant syntax. §1.6's cells cannot be parsed by name (item A), and they carry five actions,
-   of which only the Owner column has any transcription. The failing case (c) is meant to
-   catch, FD-1161's, is a **plan's Roles table** granting tasks. A task's family is readable
-   only from its prose file line, so no check can read it reliably. (c) would build a
-   parser over prose to catch a case it cannot read.
+2. **Why not (c).** Once the exact owner table exists, §1.6's **Owner** side is
+   machine-readable. The objection that "§1.6's cells cannot be parsed" no longer stands
+   against (c) *(re-argued after auditor-docs' audit of `561e329d`)*. What remains is the
+   **charter** side. (c) needs a machine-readable grant in each charter, and none exists.
+   - **The only candidate is the prepared record's fixed `Writes:` line**, naming the
+     families. It was not adopted, for three reasons:
+     - it is a copy of the role's §1.6 rows in seven files, the restatement (b) exists to
+       remove (RFC-756);
+     - nothing consumes it. The README line of DP-3 is check 35's runtime input, whereas a
+       charter `Writes:` line would be read only to be compared with its own source, which
+       proves the copy and not the binding;
+     - it would not catch the failure (c) is aimed at. An over-grant is written in a
+       charter's **prose** (a "never" rule loosened, a duty added), not in a line that
+       declares itself a grant. A `Writes:` check passes a charter whose prose grants more.
+   - **FD-1161's own case is a plan's Roles table** granting tasks. A task's family is
+     readable only from its prose file line, so neither (c) nor a `Writes:` line reads it.
 3. **What catches FD-1161's harm instead** (a record written by a role §1.6 does not
    permit):
    - **At the record, mechanically:** check 35's second clause, made non-vacuous by DP-3,
@@ -184,10 +200,20 @@ It needs no `docs/process/` amendment. If the maintainer later wants the roles w
      *"check the Roles table against §1.6 before activation"*. It does. WK-1169 Slice 2 adds
      that line to `planner.md`, under maintainer MERGE-ACK. This is a charter content item
      already in WK-1169's scope.
-4. **The binding check.** Slice 3 adds a check that each of the seven charters carries the
-   fixed pointer line. It is cheap, mechanical, and shown red on a charter fixture without it.
-   A charter that grants more in prose is caught by reading: the `close-workstream` sweep of
-   `RL-9853` item 3 reads any charter the Work changed against §1.6.
+4. **The binding check, and the over-grant sweep.**
+   - **Mechanical:** Slice 3 adds a check that each of the seven charters carries DP-2.1's
+     line exactly once, shown red on a charter fixture without it.
+   - **By reading — a new `close-workstream` step, which WK-1169 Slice 2 writes:** at every
+     Work close, for each file under `.claude/roles/` changed in the Work's range
+     (`git diff --name-only <base>...<head> -- .claude/roles`), the auditor reads every
+     changed line that has the role write, create, amend, decide or close something. Each is
+     compared with that role's row of the exact owner table (`ownership_matrix()`) and with
+     §1.6's other four columns. A grant §1.6 does not give that role is filed as an `FD-`.
+   - The sweep is reading-based and is stated as such. **A mechanical check is not viable**,
+     for the reason in item 2: an over-grant is prose, with no syntax a check could read.
+     *(Corrected after auditor-docs' audit of `561e329d`. This item said that `RL-9853` item
+     3's sweep reads charters. It does not: that sweep is per §1.2 transition, and a charter
+     is not a §1.2 family.)*
 5. **The per-role view** is `ownership_matrix()` over the exact table. The over-inclusions of
    item A disappear, and Slice 3's drift check is its proof.
 6. **`delivery-process.core.json`'s `roles.authority`** is per process action, not per
@@ -196,7 +222,7 @@ It needs no `docs/process/` amendment. If the maintainer later wants the roles w
    needs check 35 to read a record's `kind:` against the exact table's per-kind rows. If
    wanted, it is proposed as an `FD-` against check 35.
 
-### DP-3 — the line is hand-written role names, equal by check to the exact table; navigation files are outside the second clause; six named records are exempt
+### DP-3 — the line is hand-written role names, equal by check to the exact table; navigation files are outside the second clause; five named records are exempt
 
 1. **What the line says.** Each of the ten `docs/*/README.md` files carries `Permitted
    owners:` followed by the **role names** (comma-separated, as check 35 parses them) in the
@@ -229,21 +255,29 @@ It needs no `docs/process/` amendment. If the maintainer later wants the roles w
    family. Check 35's second clause stops applying the family list to them. They remain
    subject to the first clause (a valid role or `maintainer`). Without this, every README
    fails the line it carries (item B).
-4. **The six records of item C are exempt by name, not by date.** A closed, named exemption
-   in check 35 lists exactly `FD-1067`, `FD-1068`, `FD-1069`, `FD-1074`, `FD-1079` and
-   `CR-1063`, with a comment citing this record. Its test proves two things:
-   - every entry exists and would fail the second clause without the exemption;
-   - the list only shrinks.
+4. **Five records are exempt, by name, not by date.** A closed, named exemption in check 35
+   lists exactly `FD-1067`, `FD-1068`, `FD-1069`, `FD-1074` and `FD-1079`, with a comment
+   citing this record. **`CR-1063` is not on it.** It passes the family-level line, since the
+   lead is a closures owner, so it needs no exemption, and a list entry that changes nothing
+   could not be tested. *(Corrected after auditor-docs' audit of `561e329d`, which also
+   computed independently that exactly these five, and no other record, fail the ruled lines
+   without an exemption.)* The exemption's test has two limbs:
+   - **per entry:** each of the five exists, and fails the second clause when the exemption
+     is removed;
+   - **pinned:** the test holds the five ids as a literal, and fails on any exemption entry
+     not in that literal. The list can therefore only shrink. A new lead-owned finding that
+     would also fail passes limb 1, but it fails limb 2 unless the literal, and so this
+     ruling, is changed.
 
    A `created:` cutoff (the prepared option (i)) is rejected. It exempts any record whose
    author writes an earlier date, and `created:` is author-written. Adding each owner to the
-   list (option (ii)) widens §1.6 by the back door. `CR-1063` passes the family-level line
-   (the lead is a closures owner); it is listed so that item 7's kind-level check, if built,
-   starts from a named set.
-5. **The six are also filed.** WK-1169 Slice 1's audit record files them as **one `FD-`**,
-   which its scope already covers ("every role charged with something its charter does not
-   name"). The disposition proposed is `accept`, citing this exemption, because `owner:` is
-   immutable on these records (check 34).
+   list (option (ii)) widens §1.6 by the back door.
+5. **All six of item C are filed.** WK-1169 Slice 1's audit record files them as **one
+   `FD-`**, which its scope already covers ("every role charged with something its charter
+   does not name"). The five findings are recorded as exempt by item 4. `CR-1063` is recorded
+   as the one known kind-level case, the starting set for item 7's check if one is built.
+   The disposition proposed is `accept`, because `owner:` is immutable on these records
+   (check 34).
 6. **Ordering — no line before its exemptions.** Check 35 enforces a line the moment it
    exists. So **no `Permitted owners:` line lands before item 3's scoping and item 4's
    exemption are in check 35.** Those are code, and PL-1277 has Slice 2 docs-only with Slice 3
@@ -261,7 +295,8 @@ It needs no `docs/process/` amendment. If the maintainer later wants the roles w
 - **WK-1169 Slice 1:** the one `FD-` of DP-3.5. The transcription check by hand, already in
   its scope, records item A's over-inclusions.
 - **WK-1169 Slice 2:** DP-2.1's pointer line in each charter (maintainer MERGE-ACK per file),
-  DP-2.3's `planner.md` line, and the ten README lines, subject to DP-3.6.
+  DP-2.3's `planner.md` line, DP-2.4's over-grant sweep step in `close-workstream`, and the
+  ten README lines, subject to DP-3.6.
 - **WK-1169 Slice 3:** the exact owner table and its drift check, `ownership_matrix()` over it,
   DP-2.4's pointer check, DP-3.2's equality check, DP-3.3's navigation-file scoping, and
   DP-3.4's named exemption.
@@ -278,6 +313,13 @@ Each is shown failing on deliberately broken input (`CLAUDE.md` §13):
 - A record created after this ruling, in any of the ten directories, whose `owner:` is outside
   its directory's line fails check 35. A scratch copy of a real record with a wrong owner is
   shown red. A README or `INDEX.md` with `owner: lead` passes.
-- Removing one name from the named exemption makes that record fail. Adding a name that would
-  pass without it fails the exemption's own test.
-- A charter fixture without the fixed pointer line fails the pointer check.
+- For each of the five: removing its name from the exemption makes that record fail the second
+  clause.
+- Adding any name not in the test's pinned literal fails the exemption's test. A planted new
+  lead-owned finding shows this: it would fail without an exemption, so limb 1 alone would
+  pass it.
+- A charter fixture without DP-2.1's line, or with it twice, fails the pointer check.
+- The over-grant sweep (by reading, WK-1169 Slice 2): a scratch copy of a charter with a
+  **planted over-grant** is put through the sweep's procedure, and the sweep reports it. The
+  planted line is, for example, "the executor writes the Work's closure record". The result
+  is recorded in the slice's evidence.
