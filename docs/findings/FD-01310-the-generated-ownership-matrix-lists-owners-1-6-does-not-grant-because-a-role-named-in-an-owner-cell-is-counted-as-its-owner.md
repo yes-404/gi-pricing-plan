@@ -1,5 +1,5 @@
 ---
-id: FD-9862
+id: FD-1310
 family: finding
 title: The generated ownership matrix lists owners §1.6 does not grant, because a role named in an owner cell is counted as its owner
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1169]
 ---
 
-# FD-9862 — The generated ownership matrix lists owners §1.6 does not grant, because a role named in an owner cell is counted as its owner
+# FD-1310 — The generated ownership matrix lists owners §1.6 does not grant, because a role named in an owner cell is counted as its owner
 
 ## Finding
 
@@ -71,4 +71,4 @@ roles as the owners of skills** (§1.6 `:169`); and **the executor as owner of o
 `gi-pricing.yaml`** under `contracts/` (§1.6 `:171`). A deliberately wrong owner cell must fail a
 check rather than reach `INDEX.md` with `doc-index.py --check` green.
 
-*Drafted under working id 9862.*
+*Disclosure: this record was drafted under working id 9862 and minted as FD-1310; the working id survives only in this line and in PR #962's history.*
