@@ -1,5 +1,5 @@
 ---
-id: RL-9971
+id: RL-1291
 family: ruling
 title: DP-S1-1 decided — the 200-node limit counts ast.expr nodes, and depth is the longest ast.expr chain, root at 1
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [PL-1268, RL-1184, RL-1289]
 ---
 
-# RL-9971 — DP-S1-1 decided: the 200-node limit counts `ast.expr` nodes
+# RL-1291 — DP-S1-1 decided: the 200-node limit counts `ast.expr` nodes
 
 ## How this was ruled
 
@@ -27,7 +27,7 @@ meets under *Proof*, is that "each RL must carry an **executable proof** … pro
 the rejected behaviour and green on the chosen one", including "a boundary case at 200
 under the chosen count, and at 201 rejected".
 
-**Working id 9971.** The id is minted at the merge turn, which the lead schedules.
+**Minted 2026-09-30 as RL-1291** (`doc-id.py next --ref origin/main` = 1291 at `095dd400`); it was prepared and ruled under working id 9971.
 
 ## Verified first, at 095dd400918348b32ee6eab1db7915faaa9dfe35
 
