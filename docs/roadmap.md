@@ -1057,6 +1057,8 @@ Minted 2026-09-28 by `CR-1167` Proposal 5.1 (plan review 14, accepted by delegat
 
 **2026-09-28:** also carries RFC-897 §6 (Stage 4, the create-read-retire verdicts, including the unreferenced-plans decomposition), transferred at WK-695's close (`CR-1183`), 2026-09-28.
 
+**2026-09-30:** also owns FD-1280's draft-RL guard and FD-1282's frozen-file enforcement, 2026-09-30, the maintainer's entry 06:00:41. *(Amended 2026-09-30 by the lead, on the maintainer's entries "2026-09-30 06:00:41 BST — MERGE-ACK #947 (FD-1280..1282, the F-W10-2 owner); DECISIONS on FD-1280 and FD-1282" and "2026-09-30 06:19:28 BST — MERGE-ACK #921 (FD-1283); WK-1170 confirmed as owner of the FD-1280/1282 checks", which gives this line's wording. PL-1276 takes them into its scope at activation.)*
+
 ### WK-1178 — P2 standing maintenance: hotfixes, dependency bumps and security findings
 
 ```yaml
@@ -1170,7 +1172,7 @@ opened: 2026-08-14
 target: ~
 gates: ~
 exit criteria: ~
-works: WK-676, WK-677, WK-678, WK-679, WK-680, WK-681, WK-682, WK-691, WK-1251
+works: WK-676, WK-677, WK-678, WK-679, WK-680, WK-681, WK-682, WK-691, WK-1251, WK-1288
 
 **2026-09-29: requirements carried into Phase 3 without a Work.** CR-1212 P12 records that FR-432, FR-433, FR-434, FR-435 and FR-438 were on no roadmap row. FR-434 and FR-435 went to WK-674 in P2 (CR-1212 P12; placed in PL-1237). The other three are carried to P3, and no P3 Work names them yet:
 
@@ -1194,6 +1196,8 @@ phase: P3
 ```
 
 From “Workstreams” (line 467): Full scoped RBAC, custom roles, break-glass | `06` FR-342, FR-343, FR-344, FR-345, FR-346, FR-347, FR-348, FR-349
+
+**2026-09-30:** also owns `07` §5.3's Service accounts view (`/admin/service-accounts`), placed here in P3 by FD-1284 option D and the maintainer's entry "2026-09-30 05:35:06 BST — SCOPE DECISION: #949 [FD-1284, cited by its working id in the entry], the `07` §5.3 platform views, option D (split by view)" ("Service accounts to **WK-676**"). **A spec change comes first:** `07` §5.1 declares create, rotate and revoke for service accounts but no list `GET` route, and the view needs one. This is placement, not a cut, and nothing is built ahead of P3 (`CLAUDE.md` §0). (Amended 2026-09-30 by the lead, on FD-1284 and the maintainer's entry 05:35:06.)
 
 
 ### WK-677 — Approval policies, escalation, evidence enforcement, attestations
@@ -1314,6 +1318,26 @@ phase: P3
 ```
 
 Opened `draft` 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 7: "Accepted: (a). A new **P3** packaging Work (FR-432, FR-433, FR-438 and the three NFRs), opened `draft` on the roadmap by the lead. NFR-526, 527 and 536 are measured under WK-1178. Nothing is built ahead of P3 (CLAUDE.md §0)." **It owns:** FR-432 (container images), FR-433 (the Helm chart and Kubernetes manifests, in P3 by `RL-1232` DP-1 (b)), FR-438 (signed images and an SBOM), and the three NFRs `CR-1247` Proposal 7 names: NFR-530 (RPO and RTO, with a restore exercised in CI), NFR-533 (which follows FR-438) and NFR-461. NFR-526, NFR-527 and NFR-536 are **not** this Work's; they are measured under WK-1178 in P2. **Nothing is built ahead of P3** (`CLAUDE.md` §0). Its activation is the maintainer's. **Minted 2026-09-29** at #916's merge turn, next after WK-1250 (working id 9671).
+
+### WK-1288 — Platform administration views: Settings and System status
+
+```yaml
+id: WK-1288
+family: work
+title: Platform administration views: Settings and System status
+status: draft
+created: 2026-09-30
+owner: maintainer
+phase: P3
+```
+
+Opened `draft` 2026-09-30 on the maintainer's entry "2026-09-30 07:07:58 BST — SCOPE DECISION: the P3 home for Settings and System status = a NEW P3 Work (option (a))", which completes the entry "2026-09-30 05:35:06 BST — SCOPE DECISION: #949 [FD-1284, cited by its working id in the entry], the `07` §5.3 platform views, option D (split by view)" (FD-1284 option D). **It owns, with each spec change listed first:**
+
+- **`07` §5.3 System status (`/admin/status`).** **Spec changes first:** `07` declares no route that serves the view, and the cache hit rate it shows is not emitted. Then the backend route, then the view.
+- **`07` §5.3 Settings (`/admin/settings`).** No spec change is named: the backend is built (`backend/src/app/api/settings.py`, `GET` at :58 and `PUT` at :72). The view only.
+- **`07` FR-446** (settings precedence, the effective value and its source inspectable by an Admin), and **FR-443** and **FR-444** (metrics and health, which the System status view surfaces).
+
+It is a P3 roadmap row only: **nothing is built ahead of P3** (`CLAUDE.md` §0), and it is **not a P2 scope addition**. Its map plan comes in P3; its activation is the maintainer's. (Amended 2026-09-30 by the lead, on the maintainer's entries 07:07:58 and 05:35:06. Minted as WK-1288 at #952's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `df0d4635` printing 1288 (working id 9985 before the mint).)
 
 
 **Goal:** RBAC, approvals, audit UI, model documentation generation.
@@ -1473,10 +1497,13 @@ you never block on a decision you have not reached.
 | **Before WK-674 Slice 3** — *added 2026-09-29* | **OQ-1235** *raised open 2026-09-29 on the maintainer's answer QDP-2 to `RL-1232`: how per-environment configuration resolves when `07` FR-446's precedence has no Environment level (owner WK-674)* | 1 (1 open) |
 | **Before WK-690 Slice 1** — *added 2026-09-29* | **OQ-1266** *raised open 2026-09-29 in `RL-1265`: which exact `sympy` version Slice 1 pins (owner WK-690)* | 1 (1 open) |
 | **Before WK-675's map plan** — *added 2026-09-29 (the decision-maker's gate on `OQ-1231`, at the maintainer's instruction of 2026-09-29 19:49:56 BST)* | ~~OQ-1231~~ ✔ *decided 2026-09-29 by `RL-1261`, option (b); raised open 2026-09-29: whether `StepChange.own_change` is derived from step-definition equality instead of `consumed` equality (owner WK-675). Gated before the map plan, not the compare-view slice, because answer (b) adds backend scope to `POST /api/v1/score/compare` and `diff_traces` and so changes WK-675's slice cuts* | 1 (0 open) — *recounted 2026-09-29 (`RL-1261`): decided. Before that:* 1 (1 open) |
+| **Before WK-675 S12** — *added 2026-09-30* | **OQ-1285** *raised open 2026-09-30 in PL-1286 (#920): /rating/environments vs /admin/environments (owner WK-675, for the decision-maker)* | 1 (1 open) |
 | **Before the P2 exit demo** — *added 2026-09-29* | FD-1244 *(`WF-699` D4 against FR-261)*, FD-1245 *(`WF-699` E2 against FR-257)*: two findings for the decision-maker to rule, placed by `CR-1247` Proposal 12 | 2 (2 open) |
 | **Before Phase 3** — *re-opened 2026-08-29* | ~~OQ-633, OQ-634, OQ-635, OQ-636, OQ-637, OQ-638~~ ✔ *2026-08-18*, ~~OQ-540~~ ✔ *decided 2026-08-15 — ADR-710, and it changes what WK-674 builds in Phase 2 rather than waiting for Phase 3*, ~~OQ-581~~ ✔ *evidence in Phase 3 (WK-691), never a block*, ~~OQ-620~~ ✔ *(raised 2026-08-29 from WK-671 Task 1.2; decided 2026-09-28 by delegation, option (b), into `03` FR-1186. It keeps this row for its revisit: whether a Rate Table Version is pinned by more than one Rating Version)*, **OQ-1229** *(raised 2026-09-29 from FD-1227, owner WK-1178: whether NFR-481's fitting determinism must hold across processes or only within one)* | 10 (1 open) |
 | **Before Phase 4** | ~~OQ-621, OQ-622, OQ-623, OQ-624, OQ-625~~ ✔, ~~OQ-626~~ ✔ *resolved 2026-08-14*, ~~OQ-627, OQ-628, OQ-629, OQ-630, OQ-631~~ ✔, ~~OQ-560~~ ✔ *decided 2026-08-14 — out of scope*, ~~OQ-647~~ ✔ *raised and decided 2026-08-23 out of the scheduling decision: an idempotency key naming a Job that already failed. FR-404's 24-hour window is withdrawn, keys are permanent, and a terminally failed Job releases its key so the period can be attempted again (`07` FR-414). Decided at this gate rather than deferred to it because WK-687 would otherwise build FR-413 against an unanswered question; the code delta stays WK-687's*, ~~OQ-1233~~ ✔ *moved here 2026-09-29 (`CR-1247` Proposal 5): the owner of `07` FR-453's deployment-notification limb, accepted by the maintainer as WK-688 (P4); decided 2026-09-29 by `RL-1252`, which closes it. It keeps this row, because WK-688 delivers it here* | 14 (0 open) — *recounted 2026-09-29 (`RL-1252`): OQ-1233 decided. Before that:* 14 (1 open) — *recounted 2026-09-29 (`CR-1247` Proposal 5): one id moved here. Before that:* 13 (0 open) |
 | **Deferred / any time** | ~~OQ-542~~ ✔, ~~OQ-545~~ ✔ *both decided 2026-08-14*, ~~OQ-559~~ ✔, ~~OQ-561~~ ✔, ~~OQ-564~~ ✔ *all decided 2026-08-14*, ~~OQ-574~~ ✔, ~~OQ-578~~ ✔ *amended 2026-08-23 — the decision stands, its two-number evidence clause is withdrawn*, ~~OQ-580~~ ✔ *all decided 2026-08-15*, ~~OQ-601~~ ✔ *raised and decided 2026-08-23 out of that amendment: what evidence stands beside an interaction candidate, once a per-pair exposure share is shown to be `1.0` by construction — its **holdout strength ratio**, the ranker's own statistic recomputed on the holdout partition and published against the in-sample value (`02` FR-168). Deferred no longer as a question; the panel that displays it is still unscheduled*, ~~OQ-585~~ ✔ *2026-08-18 — reopened by its own trigger, the first consumer of an aggregate interval*, ~~OQ-566~~ ✔ *2026-08-19 — a deferral with a trigger (FR-67), raised in WK-661 and never placed here until decided*, ~~OQ-618~~ ✔ *raised 2026-08-19 in the FR-137 slice and placed 2026-08-21*, ~~OQ-641~~ ✔, ~~OQ-643~~ ✔, ~~OQ-645~~ ✔ *all decided 2026-08-23 on the maintainer's instruction to resolve them: no Dagster (FR-413), no workspace quota (FR-415), and a local-only identity provider behind an opt-in profile (FR-398, FR-437). The middle one is a **rejection**, not the deferral its recommendation asked for — that deferral's trigger had been dead since ADR-710*, ~~OQ-646~~ ✔ *decided 2026-08-22 and left unstruck here for a day*, ~~OQ-569~~ ✔ *raised 2026-08-24 in WK-664 — whether a Column Profile's `pii_class` of `NONE` records "classified as not personal" or "never classified", and the same silence on `semantic_type`. Placed here because no phase blocks on it: the default is already live on every ingestion path and the frontend already renders it, so the answer changes what a displayed value **means**, not whether a slice can start. It is on this table on the day it was raised — six questions before it, each reached a decision before reaching a gate row, and the rows above record that as the defect it was*, ~~OQ-654~~ ✔ *raised 2026-08-24 in WK-664 — what `req-coverage.py` should do about three inflation modes that turned out not to be the three that were reported. Here rather than at a phase gate because it bears on every workstream close rather than on any one boundary: its live mode is clause-conflation, which no cheap instrument change reaches, so its legitimate discharge is a standing reporting rule plus a named §13 verdict on each conflated clause* ~~OQ-613~~ ✔ *raised 2026-08-26 out of the FR-141 ruling of that day — a surrogate's source is pinned by UUID while its slug-derived address resolves to the family's latest version; placed here because nothing blocks on it (the pin is exact; rendering and derived addresses are what is at stake)*, **OQ-550** *(re-opened 2026-09-28: its trigger fired, and it is now a WK-675 entry decision, due at WK-675's map plan)*, ~~OQ-551, OQ-552, OQ-553~~ ✔, ~~OQ-567, OQ-568~~ ✔, ~~OQ-570~~ ✔, ~~OQ-609~~ ✔, ~~OQ-649, OQ-650~~ ✔, ~~OQ-651, OQ-653~~ ✔, ~~OQ-655~~ ✔ *all placed 2026-08-26*, ~~OQ-555~~ ✔ *(raised 2026-09-03, RL-1044 §1.7; decided 2026-09-03, RL-1046 D6)*, ~~OQ-1146~~ ✔ *(raised 2026-09-27, RL-1145; decided 2026-09-27, RL-1145 DP-2)*, ~~OQ-554~~ ✔ *(raised 2026-08-27; placed and decided 2026-09-28 by delegation: a review step at each close, FR-1188)* | 35 (1 open) |
+
+**2026-09-30 — a gate row Before WK-675 S12 added, and OQ-1285 placed on it.** *Raised open in `PL-1286` (#920), WK-675's map plan, and mirrored in `docs/open-questions.md` and `03` §10. The maintainer's acceptance of `PL-1286` (entry "2026-09-30 07:03:45 BST — MERGE-ACK #920 and ACCEPTANCE of PL-1286 (WK-675 map plan), with OQ-1285") reads "DP-7 = OQ-1285 (`/rating/environments` against `/admin/environments`), owned by WK-675 for the DM, which gates S12's leaf". The question is the decision-maker's to rule; this row only places it. The count is recounted from the row's ids: 1 (1 open). (Amended 2026-09-30 by the lead, on the maintainer's entry 07:03:45 and PL-1286.)*
 
 **2026-09-29 — a gate row Before WK-690 Slice 1 added, and OQ-1266 placed on it.** *Raised by the decision-maker in `RL-1265`, on the maintainer's recommendation of 2026-09-29 14:19:05 BST. Slice 1 adds `sympy` at one exact pin, so the version must be settled before that slice starts. The count is recounted from the row's ids: 1 (1 open).*
 
