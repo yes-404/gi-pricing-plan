@@ -402,12 +402,12 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
       | 5 | `CR-823` | `:162` | 2026-08-27 |
       | 6 | `CR-824` | `:43` | 2026-08-27 |
       | 7 | `CR-825` | `:103`, `:169`, `:196` | 2026-08-29 |
-      | 8 | `CR-830` | `:57`, `:102`, `:150` | 2026-08-29 |
+      | 8 | `CR-830` | `:57`, `:102`, `:150`, `:232`, `:266` | 2026-08-29 |
       | 9 | `CR-925` | `:859` | 2026-09-01 |
       | 10 | `CR-926` | `:314` | 2026-09-01 |
       | 11 | `CR-932` | `:288` | 2026-09-01 |
       | 12 | `CR-1050` | `:284` | 2026-09-26 17:06:12 BST — dated as **superseded by `CR-1064`**, not accepted on its own; its proposals enter the sweep only as `CR-1064` re-derives them |
-      | 13 | `CR-1064` | `:25-27` | 2026-09-26 17:06:12 BST |
+      | 13 | `CR-1064` | `:632-634` | 2026-09-26 17:06:12 BST |
       | 14 | `CR-1167` | `:199-202` | 2026-09-27 16:18:24 BST |
       | 15 | `CR-1212` | `:89`, `:152`, `:275`, and its foot | 2026-09-28 19:05:44 BST (Proposals 3–12 by the 18:13:19 BST entry) |
       | 16 | `CR-1247` | `:159` and each proposal's line | 2026-09-29 17:27:28 BST |
@@ -438,8 +438,9 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
         1. `git grep -n -E 'CR-<n>\b'`;
         2. `git grep -n -i -E '(plan )?review <N>\b'`, where `<N>` is the review's number;
         3. each of the record's pre-migration ids and paths in `docs/REDIRECTS.csv` (the
-           `old_id` and `old_path` columns of the rows whose `new_id` is `CR-<n>`; for all sixteen
-           the old path is the one pre-migration plan-reviews file, which held every review).
+           `old_id` and `old_path` columns of the rows whose `new_id` is `CR-<n>`). For reviews 1 to 12 the old path is the one pre-migration
+           plan-reviews file. Reviews 13 to 16 (`CR-1064`, `CR-1167`, `CR-1212`, `CR-1247`) have
+           no pre-migration id, so pass 3 finds nothing for them.
       - A grep hit is a candidate only: each is read to the clause that carries the proposal
         before it counts. **"Unowned" is concluded only after all three passes** find no owning
         record.
