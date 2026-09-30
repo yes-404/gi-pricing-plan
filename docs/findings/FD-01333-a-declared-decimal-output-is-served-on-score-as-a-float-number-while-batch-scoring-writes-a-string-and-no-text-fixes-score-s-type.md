@@ -252,7 +252,7 @@ both against this field.
   units"; a value "returning to Python for further arithmetic is an integer minor unit or a string"). A float `decimal`
   output is a value returning to Python, but the requirement's words are "money" and "for further arithmetic", and it
   does not say what a *served* output's JSON type is. Whether a `decimal` output is money is exactly what `RL-1329`
-  reads one way ("not money") and FR-227 leaves open ("A monetary result must be `decimal` or `money_minor`").
+  as drafted (at `a8fef919`) read one way ("not money"; as minted it leaves the question to OQ-1334) and FR-227 leaves open ("A monetary result must be `decimal` or `money_minor`").
 - **The output-type text (`:624`)** fixes `decimal` → JSON string, and scopes itself to "this path": the batch column
   `outputs_json` (FR-253). For `/score`, `03` says only "returning the ladder, outputs" (FR-250) and shows no `decimal`
   output (`:245-249`, `:445`). The contracts leave the value type open (`{"type": "object"}`), and the OpenAPI operation has no
@@ -294,8 +294,8 @@ merges. The choice is the maintainer's: it changes a served JSON type.
 
 **Event that next confirms or discharges it:** OQ-1334 is ruled (by an `RL-`, or an ADR if it must be decided now), which
 assigns the owner; it is discharged when that ruling is implemented, contract first, with a red-first case for a declared
-`decimal` output through `score_one`/`/score`. **Interaction to record now:** `RL-1329` excludes `decimal` outputs on the
-ground that they are "not money"; OQ-1334 should decide whether a `decimal` output may carry money (FR-227), since that
+`decimal` output through `score_one`/`/score`. **Interaction to record now:** `RL-1329` as drafted (at `a8fef919`) excluded `decimal` outputs on the
+ground that they were "not money"; as minted it puts them out of S3 scope pending OQ-1334 and does not pre-decide it. OQ-1334 should decide whether a `decimal` output may carry money (FR-227), since that
 decides whether `CLAUDE.md` §7 binds it.
 
 Ownership shape: event
