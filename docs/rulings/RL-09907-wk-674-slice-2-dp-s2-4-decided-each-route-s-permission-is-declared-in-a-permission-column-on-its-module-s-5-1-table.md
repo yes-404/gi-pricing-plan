@@ -104,12 +104,25 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
      the route's code, **and** from `06` §4.1's `Governs` text for that permission. Where the
      two disagree, the disagreement is filed as a finding before the row is written, never
      settled by copying the code.
-   - **Serialisation (`RL-1263`):** the slice edits `01`, `02`, `03`, `06` and `07` §5.1. It
-     does not run concurrently with a slice that appends rows to any of them: WK-1250 Slice
-     1 (`03` §5.1), the WK-1178 fix slice, and WK-674 Slice 2 (`03` and `07` §5.1). **S2's
-     new routes are declared by whichever of S2 and this slice lands second**, as the
+   - **Serialisation (`RL-1263`), stated in full on the maintainer's entry "11:28:39 BST —
+     #977 (DP-S2-4 → a) and the #971 delta: accepted in substance, pending audits".** The
+     slice edits **every existing row** of `01`, `02`, `03`, `06` and `07` §5.1. So it
+     serialises against **every slice holding any of those sections open**, and at this tree
+     those are four:
+     - **WK-674 Slice 2** (`03` and `07` §5.1);
+     - **the WK-1178 fix slice**;
+     - **the #969 slice** (the `??`/FR-244 ruling's WK-1178 code slice);
+     - **WK-1250 Slice 1** (`03` §5.1).
+
+     **It is dispatched in the first gap** in which none of the four is in flight.
+   - **S2's new routes are declared by whichever of S2 and this slice lands second**, as the
      11:17:35 BST entry says. If this slice lands second, it fills S2's rows. If S2 lands
      second, S2 writes its rows with the column, and its sweep pins them.
+5. **Every row, now and later, carries a cell.** The slice declares every §5.1 row at its
+   tree. Its test then **fails on any §5.1 row, built or unbuilt, whose `Permission` cell is
+   missing or empty**, so a later slice that appends a row cannot omit it. Check 22's
+   cell-count rule also fails a row with too few cells, but only under `docs.yml`. The test
+   runs under `python.yml` on every side (#942's D2).
 
 ## What it obliges
 
@@ -126,6 +139,8 @@ Each is shown failing on deliberately broken input (`CLAUDE.md` §13), in the WK
   `Permission.AUDIT_READ` to `Permission.JOB_READ` (`api/audit.py:52`). The pin fails,
   naming the audit routes.
 - A live route with no §5.1 row, or with an empty `Permission` cell, fails.
+- **Any §5.1 row with a missing or empty `Permission` cell fails, built or unbuilt**, shown on a
+  planted appended row with no cell (item 5).
 - A handler-checked route (the deploy route of #971 B.2) whose handler's `permission=`
   differs from its row fails, although it carries no `PERMISSION_ATTRIBUTE`.
 - A cell naming a permission in neither of `06` §4.1's Built and Specified tables fails.
