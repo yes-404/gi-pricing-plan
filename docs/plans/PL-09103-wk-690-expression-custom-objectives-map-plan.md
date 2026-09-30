@@ -12,7 +12,7 @@ work: WK-690
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [RL-1184, PL-930, PL-1070]
+relates: [RL-1184, RL-1265, PL-930, PL-1070]
 ---
 
 # PL-9103 — WK-690, `expression` custom objectives: Map Plan
@@ -60,13 +60,14 @@ minted ids.
 `p2-e-spec`). It stays `draft` until the deputy's acceptance line below is dated. DP-1,
 DP-2 and DP-3 are the maintainer's, resolved by the deputy by delegation (the deputy's
 entry of 2026-09-28 13:51:08). DP-4 and DP-5 are marked with their resolver in the table.
-*(revised 2026-09-29 against 19c395ac: the resolver of DP-1 to DP-5 is `RL-9202` (working id; minted at #847's
-turn), the decision-maker's ruling, which adopts the deputy's entry of 2026-09-28 14:06:12
-BST unchanged. #847 is open and unmerged at this tree. Slices 3 and 4 are gated on it: DP-3
-blocks Slice 3 and DP-4 blocks Slice 4, and neither slice's leaf plan is filed before
-`RL-9202` merges under its minted id.)* *(Revised again 2026-09-29, on the lead's direction
-and `RL-9202` at #847 head 14d2caa0: **Slice 1 is also gated**, on `RL-9202` merged and on
-**OQ-9660** (the exact `sympy` pin) ruled. See Slice 1's Gates.)*
+*(revised 2026-09-29 against 19c395ac: the resolver of DP-1 to DP-5 is `RL-1265`, the
+decision-maker's ruling, which adopts the deputy's entry of 2026-09-28 14:06:12 BST
+unchanged. DP-3 blocks Slice 3 and DP-4 blocks Slice 4.)* *(Revised again 2026-09-29, on the
+lead's direction and the ruling at #847 head 14d2caa0: **Slice 1 is also gated**, on
+**OQ-1266** (the exact `sympy` pin) ruled. See Slice 1's Gates.)*
+*(Updated 2026-09-30: #847 merged at main `a6146ec4`, so `RL-1265` is on main and its
+gate is met for Slices 1, 3 and 4. **OQ-1266 is still open**, so Slice 1 is still gated on
+its ruling.)*
 
 - **No dependency on WK-674** *(revised 2026-09-29 against 19c395ac)*. No slice here waits on a
   WK-674 slice, and no WK-674 output is an input to any slice. Before this revision the plan
@@ -209,10 +210,12 @@ and then evidenced in code (`CLAUDE.md` §13). Every id is listed individually.
 
 ### Held pending DP-1 — not slices of this plan
 
-**Held; `RL-9202` (unmerged) moves them to P3.** *(revised 2026-09-29 against 19c395ac, on `RL-9202` (working id; #847 head 14d2caa0): DP-1 (b) sends FR-85,
+**Held; `RL-1265` moves them to P3.** *(revised 2026-09-29 against 19c395ac, on `RL-1265` (#847 head 14d2caa0): DP-1 (b) sends FR-85,
 FR-86's field, FR-210 and FR-208's `spline` and `polynomial` arms to Phase 3, spec change
 first, deferred with an owner (the maintainer), the event being the P2 phase closure
-record. `02` still names WK-690 for each at 19c395ac, until #847 merges.)*
+record. At 19c395ac `02` still named WK-690 for each.)* *(Updated 2026-09-30: #847 merged at
+`a6146ec4`, and the FR-85, FR-86, FR-208 and FR-210 rows of `02` now carry `RL-1265`'s
+dated amendments.)*
 
 `02` names WK-690 as owner of items that are not `expression` objectives. They are listed
 so that nothing is dropped. They are **not** cut into slices here. The plan is valid under
@@ -235,7 +238,7 @@ FD-1195 moved FR-176, FR-177 and FR-178 to WK-1178". FR-178 was delivered by #88
 (`9fa2b833`) and #887, and FR-177 by #887 (`95faf68b`). What WK-690 still holds under DP-1
 is FR-85, FR-86's field, and FR-210 with FR-208's `spline` and `polynomial` arms. `02`
 still names WK-690 for each at this tree (FR-85 `:86`, FR-86 `:87`, FR-208 `:371`, FR-210
-`:373`). `RL-9202` (unmerged) moves them to Phase 3. The recount with the same predicate at
+`:373`). `RL-1265` (merged 2026-09-30, `a6146ec4`) moves them to Phase 3. The recount with the same predicate at
 19c395ac prints FR-85 `1`, FR-86 `1`, FR-210 `0`: the FR-85 cell is unchanged.)*
 
 ### Held pending DP-2
@@ -244,7 +247,7 @@ still names WK-690 for each at this tree (FR-85 `:86`, FR-86 `:87`, FR-208 `:371
 |---|---|
 | FR-154 (the `expression` half) | "Custom eval metrics follow the same lifecycle and grammar as objectives". FR-155 makes Phase 1 templates-only. Expression metrics are named by no roadmap row and no owner clause |
 
-*(revised 2026-09-29 against 19c395ac, on `RL-9202` (working id; #847 head 14d2caa0), DP-2 (b)): which half of FR-154 is which.* FR-154 reads
+*(revised 2026-09-29 against 19c395ac, on `RL-1265` (#847 head 14d2caa0), DP-2 (b)): which half of FR-154 is which.* FR-154 reads
 "Custom eval metrics (`feval`) follow the same lifecycle and grammar as objectives,
 declared separately so that a metric can be reused across objectives"
 (`02-modelling.md:218`).
@@ -326,9 +329,9 @@ Found while deriving the scope, not in the brief:
    `"derivation_version": "1.14.0"`, and §4.7's example records `"sympy": "1.13.x"`. Both
    are illustrative. Slice 1's leaf plan pins the locked version, and Slice 2 records it
    on the certificate from `sympy.__version__`, never as a literal.
-   *(revised 2026-09-29 against 19c395ac, on `RL-9202` (working id; #847 head 14d2caa0)): Slice 1 pins **one exact** `sympy` version in `uv.lock` and
-   amends both §4.6 and §4.7, dated, to cite that pin. Which version is **OQ-9660** (open,
-   working id on #847), placed at the roadmap §10 gate *Before WK-690 Slice 1*. Slice 1 is
+   *(revised 2026-09-29 against 19c395ac, on `RL-1265` (#847 head 14d2caa0)): Slice 1 pins **one exact** `sympy` version in `uv.lock` and
+   amends both §4.6 and §4.7, dated, to cite that pin. Which version is **OQ-1266** (open;
+   raised by `RL-1265`), placed at the roadmap §10 gate *Before WK-690 Slice 1*. Slice 1 is
    gated on it.)*
 10. **Stale owner text in code.** A comment in `pricing_core/modelling/diagnostics.py`
     (`:1040`) names WK-664 as FR-177's owner, and the spec names WK-1178
@@ -347,16 +350,16 @@ it and the default applied until then.
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-1 | Where do the non-expression items that `02` makes WK-690's go: FR-85, FR-86 (with its Model Spec field), and FR-210 with FR-208's `spline` and `polynomial` arms? *(revised 2026-09-29 against 19c395ac: FR-176, FR-177 and FR-178 are removed from the question. FD-1195 moved them to WK-1178 (`02:271`–`:273`), and #880 and #887 delivered FR-177 and FR-178. The options and the recommendation below are kept as written; their FR-176 to FR-178 limb is discharged.)* | **(a)** Keep them in WK-690, cut by a replan into slices after Slice 5. **(b)** Split by kind. FR-176, FR-177 and FR-178 go to WK-1178, the P2 standing maintenance Work (#840, which is unmerged). FR-85 and FR-86's field, and FR-210 with its two arms, go to a Phase 3 roadmap row as spec-change-first work with a named owner. **(c)** Move all of them to the roadmap's Deferred list with a named owner. | **(b).** FR-178 is a live defect: a GBM with a sparse cross cannot produce diagnostics. A defect needs an owner that can fix it this phase, and it has nothing to do with expressions. The maintenance Work exists for this kind of work. FR-86's field has no FR, and FR-210 is a capability with a stated precondition. Neither is a defect. `CLAUDE.md` §0 makes both spec work before code, and nothing in Phase 2 asks for them. (a) makes the Work's close wait on unrelated diagnostics. (c) leaves a live defect in Deferred. | scope | no. Slices 1 to 5 do not depend on it. It must be resolved before the Work closes, because a close cannot leave an owned id without a verdict | `RL-9202` (working id; minted at #847's turn) |
-| DP-2 | Is the `expression` half of FR-154 (expression Custom Metrics) WK-690's? | **(a)** Yes, as a sixth slice after Slice 3. It needs a fifth, `metric`, profile in §4.6 (spec change first). **(b)** No. It goes to Phase 3 with a named owner, and the profile row is written when it is scheduled. **(c)** Yes, but held until the Work's other slices close. | **(b).** No finding and no user journey asks for expression metrics. A fifth profile widens Slice 1's security review for an unrequested capability. Metrics are never differentiated, so they reuse none of Slice 2. | scope | no. It must be resolved before the Work closes | `RL-9202` (working id; minted at #847's turn) |
-| DP-3 | Does WK-690 make the flag **liftable** (the gate reads the setting, the default stays off), or does it **lift** it (the default becomes on)? | **(a)** Liftable only. After Slice 3 the kind works in any workspace whose Admin turns the flag on, and the default stays `False`. **(b)** Lifted. The default becomes `True` at the Work's close. **(c)** Liftable, and lifted in `dev` environments only. | **(a).** `07` FR-449 says flags "default to the safe value". The roadmap title's "lifting" is satisfied when the flag becomes something that can be lifted: today it gates nothing, because the refusal is unconditional. An insurer then chooses to enable a risk-bearing capability, which is the purpose of the flag. `06` FR-366's precondition is met by FR-367, so (a) has no open governance question behind it. | decision point | yes, for Slice 3 | `RL-9202` (working id; minted at #847's turn) |
-| DP-4 | Does FR-210's gate ("a continuous Factor must be rateable and reviewable before any continuous basis type is scheduled") bind an `expression` Factor whose result is numeric? | **(a)** Yes. Slice 4 waits for FR-210 to be delivered. **(b)** Partly. Slice 4 ships `expression` Factors whose result is categorical, or numeric and banded through a stored banding (`02` FR-97), so every such Factor has FR-113's relativity table. A bare numeric result is refused by name until FR-210 is delivered. **(c)** No. FR-210 names `spline` and `polynomial`, and an expression over a numeric column is the `identity` case FR-210 already records as live. | **(b).** FR-210's argument is that a Factor an actuary can fit and cannot price must not ship. (c) would ship more of the gap FR-210 records. (a) holds FR-95 behind a capability that DP-1 may move to Phase 3. (b) ships what can be priced today and refuses the rest by name, which is FR-208's own pattern. | decision point | yes, for Slice 4 | `RL-9202` (working id; minted at #847's turn) |
-| DP-5 | The profile table names four contexts, but the parser has a fifth caller and the spec claims a sixth context. Where do `filter_rows` (`01` FR-35; `pricing_core/data/prepare.py`) and rating `expression` steps (`03` FR-244) sit? | **(a)** `filter_rows` uses the `recipe` profile. §4.6 gains a dated note that rating steps are evaluated by the ZEN engine under `03` FR-244 and FR-276 and are not a profile of this parser. **(b)** As (a), and `03` FR-244 is also amended to stop saying "the same restricted grammar". **(c)** Add `filter` and `rating` profiles. | **(a),** with Slice 1's spec commit. `filter_rows` already parses today with the `recipe` operator set, so (a) keeps its behaviour exactly. A `rating` profile would describe a parser that rating does not use. Amending `03` (b) is a WK-671 and WK-673 matter, not WK-690's. | fact | no. Slice 1's leaf plan applies (a) as the default and records it. The deputy may amend it before Slice 1 merges | `RL-9202` (working id; minted at #847's turn) |
+| DP-1 | Where do the non-expression items that `02` makes WK-690's go: FR-85, FR-86 (with its Model Spec field), and FR-210 with FR-208's `spline` and `polynomial` arms? *(revised 2026-09-29 against 19c395ac: FR-176, FR-177 and FR-178 are removed from the question. FD-1195 moved them to WK-1178 (`02:271`–`:273`), and #880 and #887 delivered FR-177 and FR-178. The options and the recommendation below are kept as written; their FR-176 to FR-178 limb is discharged.)* | **(a)** Keep them in WK-690, cut by a replan into slices after Slice 5. **(b)** Split by kind. FR-176, FR-177 and FR-178 go to WK-1178, the P2 standing maintenance Work (#840, which is unmerged). FR-85 and FR-86's field, and FR-210 with its two arms, go to a Phase 3 roadmap row as spec-change-first work with a named owner. **(c)** Move all of them to the roadmap's Deferred list with a named owner. | **(b).** FR-178 is a live defect: a GBM with a sparse cross cannot produce diagnostics. A defect needs an owner that can fix it this phase, and it has nothing to do with expressions. The maintenance Work exists for this kind of work. FR-86's field has no FR, and FR-210 is a capability with a stated precondition. Neither is a defect. `CLAUDE.md` §0 makes both spec work before code, and nothing in Phase 2 asks for them. (a) makes the Work's close wait on unrelated diagnostics. (c) leaves a live defect in Deferred. | scope | no. Slices 1 to 5 do not depend on it. It must be resolved before the Work closes, because a close cannot leave an owned id without a verdict | `RL-1265` |
+| DP-2 | Is the `expression` half of FR-154 (expression Custom Metrics) WK-690's? | **(a)** Yes, as a sixth slice after Slice 3. It needs a fifth, `metric`, profile in §4.6 (spec change first). **(b)** No. It goes to Phase 3 with a named owner, and the profile row is written when it is scheduled. **(c)** Yes, but held until the Work's other slices close. | **(b).** No finding and no user journey asks for expression metrics. A fifth profile widens Slice 1's security review for an unrequested capability. Metrics are never differentiated, so they reuse none of Slice 2. | scope | no. It must be resolved before the Work closes | `RL-1265` |
+| DP-3 | Does WK-690 make the flag **liftable** (the gate reads the setting, the default stays off), or does it **lift** it (the default becomes on)? | **(a)** Liftable only. After Slice 3 the kind works in any workspace whose Admin turns the flag on, and the default stays `False`. **(b)** Lifted. The default becomes `True` at the Work's close. **(c)** Liftable, and lifted in `dev` environments only. | **(a).** `07` FR-449 says flags "default to the safe value". The roadmap title's "lifting" is satisfied when the flag becomes something that can be lifted: today it gates nothing, because the refusal is unconditional. An insurer then chooses to enable a risk-bearing capability, which is the purpose of the flag. `06` FR-366's precondition is met by FR-367, so (a) has no open governance question behind it. | decision point | yes, for Slice 3 | `RL-1265` |
+| DP-4 | Does FR-210's gate ("a continuous Factor must be rateable and reviewable before any continuous basis type is scheduled") bind an `expression` Factor whose result is numeric? | **(a)** Yes. Slice 4 waits for FR-210 to be delivered. **(b)** Partly. Slice 4 ships `expression` Factors whose result is categorical, or numeric and banded through a stored banding (`02` FR-97), so every such Factor has FR-113's relativity table. A bare numeric result is refused by name until FR-210 is delivered. **(c)** No. FR-210 names `spline` and `polynomial`, and an expression over a numeric column is the `identity` case FR-210 already records as live. | **(b).** FR-210's argument is that a Factor an actuary can fit and cannot price must not ship. (c) would ship more of the gap FR-210 records. (a) holds FR-95 behind a capability that DP-1 may move to Phase 3. (b) ships what can be priced today and refuses the rest by name, which is FR-208's own pattern. | decision point | yes, for Slice 4 | `RL-1265` |
+| DP-5 | The profile table names four contexts, but the parser has a fifth caller and the spec claims a sixth context. Where do `filter_rows` (`01` FR-35; `pricing_core/data/prepare.py`) and rating `expression` steps (`03` FR-244) sit? | **(a)** `filter_rows` uses the `recipe` profile. §4.6 gains a dated note that rating steps are evaluated by the ZEN engine under `03` FR-244 and FR-276 and are not a profile of this parser. **(b)** As (a), and `03` FR-244 is also amended to stop saying "the same restricted grammar". **(c)** Add `filter` and `rating` profiles. | **(a),** with Slice 1's spec commit. `filter_rows` already parses today with the `recipe` operator set, so (a) keeps its behaviour exactly. A `rating` profile would describe a parser that rating does not use. Amending `03` (b) is a WK-671 and WK-673 matter, not WK-690's. | fact | no. Slice 1's leaf plan applies (a) as the default and records it. The deputy may amend it before Slice 1 merges | `RL-1265` |
 
 *(revised 2026-09-29 against 19c395ac: the Resolved by cells were empty, though Status recorded DP-1 to
-DP-3 as resolved. Each now names `RL-9202`, the decision-maker's ruling on #847, which rules
-all five. Slices 3 and 4 are gated on it: their leaf plans are not filed until `RL-9202`
-merges under its minted id, and the cells then cite that id.)*
+DP-3 as resolved. Each now names `RL-1265`, the decision-maker's ruling on #847, which rules
+all five. Slices 3 and 4 are gated on it.)* *(Updated 2026-09-30: #847 merged at
+`a6146ec4`, so that gate is met.)*
 
 ## Tasks
 
@@ -407,7 +410,7 @@ item 4).
 
 **Spec edits in the slice.** DP-5's note in §4.6, and FR-145's function list aligned with
 the table if the leaf plan finds the two differ.
-*(revised 2026-09-29 against 19c395ac, on `RL-9202` (working id; #847 head 14d2caa0)):*
+*(revised 2026-09-29 against 19c395ac, on `RL-1265` (#847 head 14d2caa0)):*
 - **DP-5's addition.** `03` FR-244 (`03-rating-engine.md:146`) is amended, dated, to say
   the rating grammar is FR-244's own: ZEN's expression language, restricted to FR-244's
   function list and verified by FR-276. It shares function names with §4.6 where they
@@ -415,13 +418,13 @@ the table if the leaf plan finds the two differ.
   edits land in **one commit**, so `02` and `03` never disagree. No check holds the
   pairing: it is prose.
 - **The sympy pin.** §4.6 (`"derivation_version"`) and §4.7 (`library_versions.sympy`)
-  are amended, dated, to cite the exact version pinned in `uv.lock` (OQ-9660's answer).
+  are amended, dated, to cite the exact version pinned in `uv.lock` (OQ-1266's answer).
 
 **Depends on:** #830 merged. **Blocks:** Slices 2 and 4.
-**Gates** *(revised 2026-09-29 against 19c395ac, on `RL-9202` (working id; #847 head 14d2caa0))*: Slice 1's leaf plan is filed only when **both** hold:
-1. `RL-9202` is merged under its minted id (DP-5's addition and the pin obligation are
-   its rulings).
-2. **OQ-9660 is ruled**: the exact `sympy` version to pin.
+**Gates** *(revised 2026-09-29 against 19c395ac, on `RL-1265` (#847 head 14d2caa0))*: Slice 1's leaf plan is filed only when **both** hold:
+1. `RL-1265` is merged (DP-5's addition and the pin obligation are its rulings). **Met
+   2026-09-30** (#847, `a6146ec4`).
+2. **OQ-1266 is ruled**: the exact `sympy` version to pin. Open at `a6146ec4`.
 
 **Gate outline.** The refusal tests of Acceptance item 5 for the limits and the strict
 profiles, seen failing first. Every existing recipe and check test passes unchanged, which
@@ -438,7 +441,7 @@ re-pointed to run in every profile. Both gate halves pass.
   own expression tree. It does not use `lambdify` (Global Constraints).
 - FR-165 for both kinds: fixed-size arrays; the per-round wall-clock budget (built once,
   for templates and expressions); the existing NaN/inf abort, reused.
-  *(revised 2026-09-29 against 19c395ac, on `RL-9202` (working id; #847 head 14d2caa0)): the ruling leaves the per-round budget to "Slice 2 or 3",
+  *(revised 2026-09-29 against 19c395ac, on `RL-1265` (#847 head 14d2caa0)): the ruling leaves the per-round budget to "Slice 2 or 3",
   with the plan to state which. This plan states **Slice 2**. The cut is unchanged.)*
   *(revised 2026-09-29 against 19c395ac, FD-1219 and `pricing_core/safe_error.py`):* the abort and the
   budget error are `CodedError`s, or are otherwise on `safe_error`'s allow-list. Each
@@ -489,7 +492,7 @@ differentiation before its first task.
   states which, with its reason, and raises a decision point if the GLM arm's custom
   objective turns out to be a separate capability.
 
-**Depends on:** Slice 2; DP-3 (`RL-9202`, merged under its minted id); and **WK-1178's
+**Depends on:** Slice 2; DP-3 (`RL-1265`, merged 2026-09-30); and **WK-1178's
 permission-parity check and its `RL-`**, both merged before the commit that adds
 `custom_objective:author`. *(revised 2026-09-29 against 19c395ac, `CR-1247` Proposal 1 (c): "WK-1178 builds
 the check, before the first slice that adds a new name. On the current plans that is
@@ -509,7 +512,7 @@ the declared dataset columns only (FR-95). The refusal is removed for `expressio
 `spline`, `polynomial` and `offset` stay refused as they are. The result-type rule is
 DP-4's answer. The spec edit for that rule lands in the same commit.
 
-**Depends on:** Slice 1 and DP-4 (`RL-9202`, merged under its minted id; revised 2026-09-29 against 19c395ac). **Blocks:** nothing in this plan.
+**Depends on:** Slice 1 and DP-4 (`RL-1265`, merged 2026-09-30; revised 2026-09-29 against 19c395ac). **Blocks:** nothing in this plan.
 
 **Gate outline.** An `expression` Factor fits in a GLM and in a GBM and yields a
 relativity table (FR-113). An expression that names an undeclared column is refused at
@@ -527,7 +530,12 @@ B4.6 (Acceptance item 7). The flag's default is unchanged (DP-3).
 
 *(revised 2026-09-29 against 19c395ac, advisory):* the loss-curve preview is a new `ChartFigure` caller.
 A new caller is the trigger of **OQ-550**, which was re-opened 2026-09-28 (`RL-1184` E10;
-`docs/open-questions.md:41`). Slice 5's leaf plan revisits OQ-550 before it adds the chart.
+`docs/open-questions.md:41`). ~~Slice 5's leaf plan revisits OQ-550 before it adds the chart.~~
+WK-690 S5 consumes OQ-550's ruling if it is ruled by then. Otherwise it adds its
+`ChartFigure` caller under the current API, and records that caller in OQ-550's call-site
+count for WK-675's decision. *(Corrected 2026-09-30 on the maintainer's scope decision, by
+delegation, "SCOPE DECISION: OQ-550 is owned by WK-675 (RL-1184 E10 stands)": OQ-550 is
+WK-675's and is decided at WK-675's map plan. WK-690 does not decide or revisit it.)*
 
 **Depends on:** Slice 3. **Blocks:** the Work's close.
 
