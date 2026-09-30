@@ -33,7 +33,10 @@ the node set, the function set, the bound symbols and the arity rules. The limit
 same for every profile. Two translators sit on the one validated tree: the existing Polars
 translator (`recipe`, `check`, `factor`), and a new SymPy translator in its own module for
 `objective`. The Polars path therefore never imports `sympy`. Existing callers keep their
-behaviour: `recipe` and `check` only add.
+behaviour: `recipe` and `check` only add, in the sense working id 9972 gives it: every
+existing recipe and check test passes unmodified. A legacy function given extra
+arguments, which computed a number different from the one written, is now refused.
+*(Revised 2026-09-30 on the decision-maker's ruling working id 9972, #957, unminted.)*
 
 **Tech Stack:** Python 3.12 `ast`, Polars 1.44.2 (`uv.lock:1633`), SymPy 1.14.0 (new; its
 only runtime dependency is `mpmath`), pytest. No pandas.
@@ -79,7 +82,9 @@ that bind it:
 the real id is minted at this PR's merge turn. DP-S1-1 to DP-S1-3 below are decision
 points for the decision-maker, one `RL-` each, ruled at medium effort, each with an
 executable red/green proof. Each is resolved before this plan's activation, and applied at
-the task its row names (`document-ids.md` §1.7). *(Revised 2026-09-30 on the maintainer's pre-decision, relayed by the lead: the decision-maker rules each at medium effort, one `RL-` each, each with an executable red/green proof.)* *(Revised 2026-09-30 on auditor-plans2's audit of #954 at 3e4402cd, finding F1.)*
+the task its row names (`document-ids.md` §1.7). **All three are now ruled**, each by its
+own record, in audit and unminted: DP-S1-1 by working id 9971 (#956), DP-S1-2 by working
+id 9972 (#957), DP-S1-3 by working id 9973 (#958). *(Revised 2026-09-30 on the decision-maker's rulings working ids 9971, 9972 and 9973, #956 to #958, unminted.)* *(Revised 2026-09-30 on the maintainer's pre-decision, relayed by the lead: the decision-maker rules each at medium effort, one `RL-` each, each with an executable red/green proof.)* *(Revised 2026-09-30 on auditor-plans2's audit of #954 at 3e4402cd, finding F1.)*
 
 **Gates, both verified at `fb90d381`:**
 1. `RL-1265` is on main (`docs/rulings/RL-01265-…md`, merged by #847 at `a6146ec4`).
@@ -120,9 +125,10 @@ Against the other lane:
   independent of machine load. So on this plan's reading it is not a "measurement step" in
   the sense of `RL-1263` item 3. That reading is the lead's to confirm at dispatch.
 
-- Acceptance and activation: _pending — the decision-maker's three `RL-` records for DP-S1-1
-  to DP-S1-3 (each blocking activation), then the maintainer's acceptance. By
-  `document-ids.md` §1.7, `active` is permitted once every blocking row has a resolver id._
+- Acceptance and activation: _pending — working ids 9971, 9972 and 9973 merged and minted
+  (each blocking activation; this plan then cites their minted ids), then the
+  maintainer's acceptance. By `document-ids.md` §1.7, `active` is permitted once every
+  blocking row has a resolver id._
 
 ## Acceptance Standard
 
@@ -154,7 +160,10 @@ A fresh reviewer checks each item by the command given, on the slice's final tre
    of these red, then green:
    - in `objective` and `factor`: bare comparison, `%`, ternary and boolean operator;
    - node count 201 and depth 21, in all four profiles;
-   - an unknown function, and an unknown symbol in a strict profile.
+   - an unknown function, and an unknown symbol in a strict profile;
+   - a legacy single-argument function given two arguments (`abs(a, b)`, `round(x, 2)`,
+     `log(x, 10)`, and each of the seven), in every profile that admits the function.
+     *(Revised 2026-09-30 on the decision-maker's ruling working id 9972, #957, unminted.)*
    Each has a positive control, as in Tasks 3 and 4: the same string accepted where the
    rule does not bind.
 6. **`recipe` and `check` only add.** Every test that exists at `fb90d381` in
@@ -198,8 +207,13 @@ A fresh reviewer checks each item by the command given, on the slice's final tre
   context (`02` §4.6 as amended by `RL-1184` E2). No second parser.
 - The limits are node count ≤ 200 and depth ≤ 20, configurable (FR-145, §4.6), in all
   four profiles.
-- `recipe` and `check` only add: every expression accepted at `fb90d381` is still accepted
-  and gives the same result (`PL-1268` Slice 1, Gate outline).
+- `recipe` and `check` only add, as `PL-1268` Slice 1's Gate outline defines it: every
+  existing recipe and check test passes unmodified. ~~Every expression accepted at
+  `fb90d381` is still accepted and gives the same result.~~ That stronger wording was this
+  plan's own, and it is false under working id 9972. An expression relying on the silent
+  drop of extra arguments (premise c) is now refused. Working id 9972 records that no
+  expression in the repository relies on it, and that such an expression was already
+  computing a different number from the one written. *(Revised 2026-09-30 on the decision-maker's ruling working id 9972, #957, unminted.)*
 - The sympy version recorded anywhere comes from the pin: `==1.14.0` in
   `packages/pricing-core/pyproject.toml`, and cited from `uv.lock` in the spec (`RL-1289`).
 - Requirement ids are permanent. Spec edits go through `.claude/skills/spec-change`, dated,
@@ -236,9 +250,12 @@ b. **The `expression` check has no test.** `test_builtin_rule_checks.py:38` asse
    `git grep -n 'CHECKS\["expression"\]' -- packages` prints nothing. This is a missing
    neighbour ([`README.md`](README.md)), so Task 3 adds the first test that runs the check.
 
-c. **Legacy functions ignore extra arguments.** `_call` reads `args[0]` for `abs`, `round`,
-   `floor`, `ceil`, `log`, `exp` and `sqrt` (`expressions.py`, `_call`), so `abs(a, b)` is
-   `abs(a)`. This is DP-S1-2.
+c. **Legacy functions ignore extra arguments, and working id 9972 ends it.** `_call` reads
+   `args[0]` for `abs`, `round`, `floor`, `ceil`, `log`, `exp` and `sqrt` (`expressions.py`,
+   `_call`), so `abs(a, b)` is `abs(a)`. The ruling's proof shows `round(x, 2)` rounding to
+   0 decimals, and `log(x, 10)` giving the natural log. The seven now take exactly one
+   argument in every profile. `min`, `max` and `coalesce` keep "at least one". Honouring
+   `round(x, n)` or `log(x, base)` is not ruled, and would be a later pure addition. *(Revised 2026-09-30 on the decision-maker's ruling working id 9972, #957, unminted.)*
 
 d. **Chained comparisons are refused already**, at translation (`_translate`'s
    `ast.Compare()` case), with "chained comparisons are not permitted; use `and`".
@@ -272,9 +289,9 @@ i. **`Profile` is taken.** `pricing_core.data.profile` imports `Profile` (the da
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-S1-1 | What does §4.6's "AST node count ≤ 200; nesting depth ≤ 20" count? | **(a)** `ast.expr` nodes only (the sub-expressions an author wrote: names, literals, calls, operations), with depth as the longest chain of nested `ast.expr` nodes, the root at 1. **(b)** Every node `ast.walk` yields, including operator tokens and `Load` contexts, with depth over the same. | **(a).** It is what an author can count. Under (b), `a + b` is 6 nodes, and 200 means about 100 written terms, a limit the spec did not state. ~~Task 2 measures both, so the ruling can be made from data.~~ Premise h's spike figures, measured at `fb90d381`, inform the ruling. Task 2 re-measures the corpus under both predicates after it. *(Revised 2026-09-30 on auditor-plans2's audit at c76faa22, finding F8: the ruling now comes before activation, so before Task 2 runs.)* | decision point: it interprets what §4.6's limit means, and a measurement informs it but cannot settle it | **yes, for activation.** Resolving step: the plan's activation. Applied at Task 4 (Steps 1, 3 and 4); Task 4 Step 1 names the constants that change under (b). Task 2 measures both predicates either way | decision-maker, its own `RL-` at medium, with an executable red/green proof (pending; working id to follow) |
-| DP-S1-2 | Do the legacy single-argument functions (`abs round floor ceil log exp sqrt`) keep ignoring extra arguments in `recipe` and `check` (premise c)? | **(a)** Keep them, because `recipe` and `check` only add. Exact arity binds the four new functions in every profile, and every function in `objective` and `factor`. **(b)** Enforce exact arity everywhere. | **(a)**, with the silent drop reported to the auditor as a finding candidate. (b) could refuse an expression that works today, which the only-add rule forbids. | decision point: a behaviour choice for existing callers | **yes, for activation.** Resolving step: the plan's activation. Applied at Task 3 Step 3 (where arity is implemented) | decision-maker, its own `RL-` at medium, with an executable red/green proof (pending; working id to follow) |
-| DP-S1-3 | What SymPy assumptions do the objective symbols (`y`, `f`, `w`, parameters) carry? | **(a)** `real=True`. **(b)** None. | **(a).** §4.6's domains are real (`y_domain`, raw score `f`, weight `w`). Without the assumption, `Abs` differentiates to the complex form in premise g, and that would become the canonical text Slice 2 records. | decision point: it fixes the canonical derived text a reviewer approves | **yes, for activation.** Resolving step: the plan's activation. Applied at Task 5 Step 4 (where the symbols are created). Slice 2 inherits it | decision-maker, its own `RL-` at medium, with an executable red/green proof (pending; working id to follow) |
+| DP-S1-1 | What does §4.6's "AST node count ≤ 200; nesting depth ≤ 20" count? | **(a)** `ast.expr` nodes only (the sub-expressions an author wrote: names, literals, calls, operations), with depth as the longest chain of nested `ast.expr` nodes, the root at 1. **(b)** Every node `ast.walk` yields, including operator tokens and `Load` contexts, with depth over the same. | **(a).** It is what an author can count. Under (b), `a + b` is 6 nodes, and 200 means about 100 written terms, a limit the spec did not state. ~~Task 2 measures both, so the ruling can be made from data.~~ Premise h's spike figures, measured at `fb90d381`, inform the ruling. Task 2 re-measures the corpus under both predicates after it. *(Revised 2026-09-30 on auditor-plans2's audit at c76faa22, finding F8: the ruling now comes before activation, so before Task 2 runs.)* | decision point: it interprets what §4.6's limit means, and a measurement informs it but cannot settle it | **yes, for activation.** Resolving step: the plan's activation. Applied at Task 4 (Steps 1, 3 and 4); Task 4 Step 1 names the constants that change under (b). Task 2 measures both predicates either way | **working id 9971** (#956, decision-maker, medium, red/green proof): **(a)**, `ast.expr` nodes, depth the longest `ast.expr` chain with the root at 1, refused above 200 nodes or 20 deep in all four profiles. *(Revised 2026-09-30 on the decision-maker's ruling working id 9971, #956, unminted.)* |
+| DP-S1-2 | Do the legacy single-argument functions (`abs round floor ceil log exp sqrt`) keep ignoring extra arguments in `recipe` and `check` (premise c)? | **(a)** Keep them, because `recipe` and `check` only add. Exact arity binds the four new functions in every profile, and every function in `objective` and `factor`. **(b)** Enforce exact arity everywhere. | **(a)**, with the silent drop reported to the auditor as a finding candidate. (b) could refuse an expression that works today, which the only-add rule forbids. | decision point: a behaviour choice for existing callers | **yes, for activation.** Resolving step: the plan's activation. Applied at Task 3 Step 3 (where arity is implemented) | **working id 9972** (#957, decision-maker, medium, red/green proof): **(b), against this plan's recommendation.** Exact arity: the seven legacy functions take exactly one argument in every profile, and any other count is an `ExpressionError` with a position. `min`, `max` and `coalesce` stay at least one. The finding candidate this row proposed is discharged by the ruling. *(Revised 2026-09-30 on the decision-maker's ruling working id 9972, #957, unminted.)* |
+| DP-S1-3 | What SymPy assumptions do the objective symbols (`y`, `f`, `w`, parameters) carry? | **(a)** `real=True`. **(b)** None. | **(a).** §4.6's domains are real (`y_domain`, raw score `f`, weight `w`). Without the assumption, `Abs` differentiates to the complex form in premise g, and that would become the canonical text Slice 2 records. | decision point: it fixes the canonical derived text a reviewer approves | **yes, for activation.** Resolving step: the plan's activation. Applied at Task 5 Step 4 (where the symbols are created). Slice 2 inherits it | **working id 9973** (#958, decision-maker, medium, red/green proof): **(a)**, `real=True` for `y`, `f`, `w` and every parameter. *(Revised 2026-09-30 on the decision-maker's ruling working id 9973, #958, unminted.)* |
 
 *(Revised 2026-09-30 on auditor-plans2's audit of #954 at 3e4402cd, finding F1.)* The three rows were filed as kind *fact*. They are decisions: an interpretation of the spec, a behaviour choice and a canonical-form choice. So their resolver is the decision-maker (`document-ids.md` §1.7). *(Revised 2026-09-30 on the maintainer's pre-decision, relayed by the lead: the decision-maker rules each at medium effort, one `RL-` each, each with an executable red/green proof.)* Each row is ruled before activation and applied at its named task. The recommendations are unchanged. The executor cites each `RL-` id at its task and in the ledger.
 
@@ -469,8 +486,8 @@ git commit -m "build(pricing-core): pin sympy==1.14.0 and cite the lock in 02 §
 ```python
 """FR-145 and 02 §4.6: node count ≤ 200 and depth ≤ 20, in all four profiles.
 
-The counts are over `ast.expr` nodes, with the root at depth 1. That is DP-S1-1's default
-(a), which DP-S1-1's `RL-` rules before activation. `all_nodes` is option (b), measured beside
+The counts are over `ast.expr` nodes, with the root at depth 1. That is DP-S1-1's
+(a), ruled by working id 9971. `all_nodes` is option (b), measured beside
 it so the corpus table shows both predicates (F8). The
 figures below are premise h's, from the spike at fb90d381.
 """
@@ -521,7 +538,7 @@ def test_the_counter_measures_expr_nodes_and_depth(expression: str, size: Expres
 class ExpressionSize:
     """An expression's size under 02 §4.6's limits (FR-145).
 
-    `nodes` and `depth` count `ast.expr` nodes only, the root at depth 1 (DP-S1-1 (a)).
+    `nodes` and `depth` count `ast.expr` nodes only, the root at depth 1 (DP-S1-1 (a), working id 9971).
     `all_nodes` counts every node `ast.walk` yields (option (b)). It is carried so that the
     corpus measurement records both predicates, and nothing enforces it.
     """
@@ -752,6 +769,55 @@ def test_the_objective_profile_does_not_compile_to_polars() -> None:
         compile_expression("y", profile=GrammarProfile.OBJECTIVE, symbols=OBJECTIVE_SYMBOLS)
 
 
+# -- exact arity, in every profile (working id 9972, DP-S1-2 (b)) --------------------------
+
+LEGACY = ["abs", "round", "floor", "ceil", "log", "exp", "sqrt"]
+STRICT_LEGACY = ["abs", "log", "exp", "sqrt"]  # the four the strict profiles admit
+LENIENT = [GrammarProfile.RECIPE, GrammarProfile.CHECK]
+EVERY = [(p, None) for p in LENIENT] + STRICT
+
+
+def _admitted(profile: GrammarProfile) -> list[str]:
+    return LEGACY if profile in LENIENT else STRICT_LEGACY
+
+
+@pytest.mark.req("FR-36")
+@pytest.mark.req("FR-145")
+@pytest.mark.parametrize(("profile", "symbols"), EVERY)
+def test_a_legacy_function_given_two_arguments_is_refused(
+    profile: GrammarProfile, symbols: frozenset[str] | None
+) -> None:
+    """Red first: at fb90d381 every one of these compiles and silently drops the second
+    argument (premise c). Working id 9972 makes each an ExpressionError with a position."""
+    for name in _admitted(profile):
+        with pytest.raises(ExpressionError, match=rf"{name}\(\) takes exactly 1 argument") as e:
+            parse_expression(f"{name}(y, f)", profile, symbols=symbols)
+        assert (e.value.lineno, e.value.col_offset) == (1, 0)
+
+
+@pytest.mark.req("FR-36")
+@pytest.mark.parametrize("expression", ["abs(y, f)", "round(y, 2)", "log(y, 10)"])
+def test_the_ruling_s_named_cases_are_refused_in_recipe(expression: str) -> None:
+    """The three expressions working id 9972's proof names. At fb90d381, `round(y, 2)`
+    rounds to 0 decimals and `log(y, 10)` is the natural log."""
+    with pytest.raises(ExpressionError, match="takes exactly 1 argument"):
+        compile_expression(expression)
+
+
+@pytest.mark.req("FR-36")
+@pytest.mark.parametrize(("profile", "symbols"), EVERY)
+def test_a_legacy_function_with_one_argument_is_still_accepted(
+    profile: GrammarProfile, symbols: frozenset[str] | None
+) -> None:
+    """The positive control: the refusal is of the extra argument, not of the function.
+    `min`, `max` and `coalesce` keep "at least one", so several arguments stay valid."""
+    for name in _admitted(profile):
+        parse_expression(f"{name}(y)", profile, symbols=symbols)
+    parse_expression("min(y, f, w) + max(y, f)", profile, symbols=symbols)
+    if profile in LENIENT:
+        parse_expression("coalesce(y, f, w)", profile, symbols=symbols)
+
+
 # -- the call sites pass their profiles (Acceptance 7) --------------------------------------
 
 
@@ -907,10 +973,13 @@ _FUNCTIONS: Final[Mapping[GrammarProfile, frozenset[str]]] = {
     GrammarProfile.RECIPE: _STRICT_FUNCTIONS | {"ceil", "coalesce", "floor", "round"},
     GrammarProfile.CHECK: _STRICT_FUNCTIONS | {"ceil", "coalesce", "floor", "round"},
 }
-#: Exact arity. The four new functions everywhere. In the strict profiles, every
-#: single-argument function too (DP-S1-2 (a): recipe and check keep today's lenience).
-_ARITY: Final = {"where": 3, "clip": 3, "log1p": 1, "expm1": 1}
-_STRICT_ARITY: Final = {**_ARITY, "log": 1, "exp": 1, "sqrt": 1, "abs": 1}
+#: Exact arity, in every profile (working id 9972, DP-S1-2 (b)). The seven legacy
+#: single-argument functions no longer drop extra arguments silently. `min`, `max` and
+#: `coalesce` are absent: they keep "at least one", which `_call`'s empty-args refusal holds.
+_ARITY: Final = {
+    "where": 3, "clip": 3, "log1p": 1, "expm1": 1,
+    "abs": 1, "round": 1, "floor": 1, "ceil": 1, "log": 1, "exp": 1, "sqrt": 1,
+}
 ```
 
   - `_check(tree, profile)` keeps its breadth-first walk and its messages. It takes the node
@@ -918,8 +987,11 @@ _STRICT_ARITY: Final = {**_ARITY, "log": 1, "exp": 1, "sqrt": 1, "abs": 1}
     `f"{type(child).__name__} is not permitted in the {profile} profile (02 §4.6)"`. The
     phrases `"is not an allowed function"`, `"only plain function calls are permitted"` and
     `"keyword arguments are not permitted"` stay verbatim, because the unmodified tests
-    match on them. Add the arity check, positioned at the call:
-    `f"{name}() takes exactly {n} argument(s)"`.
+    match on them. Add the arity check against `_ARITY`, in every profile, positioned at
+    the call: `f"{name}() takes exactly {n} argument(s), got {len(child.args)}"`. The
+    message names the function and the count, as working id 9972 requires. The check
+    runs after the function-set check, so in `objective` a `round(x, 2)` is refused as "not
+    an allowed function" first. *(Revised 2026-09-30 on the decision-maker's ruling working id 9972, #957, unminted.)*
   - Add `_check_structure(node: ast.expr, profile, *, where_condition: bool = False)`. It
     recurses over `ast.expr` children, and it raises in these cases:
     - a `Compare` with more than one operator: `"chained comparisons are not permitted; use
@@ -963,6 +1035,17 @@ _STRICT_ARITY: Final = {**_ARITY, "log": 1, "exp": 1, "sqrt": 1, "abs": 1}
 
   > *(Amended 2026-09-30, `RL-1265` DP-5: `filter_rows` (`01` FR-35) parses in the `recipe`
   > profile. It is a data-preparation step, and it already used `recipe`'s operator set.)*
+
+  Directly after it, add the arity statement that working id 9972 requires (cite its minted
+  id if it has minted by this commit). *(Revised 2026-09-30 on the decision-maker's ruling working id 9972, #957, unminted.)*
+
+  > *(Amended 2026-09-30, working id 9972 (DP-S1-2): the arity of every function, in every
+  > profile. `abs`, `round`, `floor`, `ceil`, `log`, `exp`, `sqrt`, `log1p` and `expm1` take
+  > exactly one argument. `clip` and `where` take exactly three. `min`, `max` and `coalesce`
+  > take one or more. Any other count is refused with a position-accurate error naming the
+  > function and the count. An extra argument was silently dropped before this date, so
+  > `round(x, 2)` rounded to 0 decimals and `log(x, 10)` was the natural log. Both are now
+  > refused. Honouring a second argument is not specified.)*
 
 - [ ] **Step 5: Green.** Run `uv run pytest packages/pricing-core/tests -q`: everything
   passes, including the two unmodified files of Acceptance 6. Run `uv run mypy` and
@@ -1029,7 +1112,8 @@ def test_the_limits_are_configurable() -> None:
         _parse("x + x + x", GrammarProfile.RECIPE, limits=small)
 ```
 
-  Under DP-S1-1 (b), the figures that change are premise h's third column. The fixtures
+  Working id 9971 ruled (a), so these fixtures stand. *(Revised 2026-09-30 on the decision-maker's ruling working id 9971, #956, unminted.)* ~~Under DP-S1-1 (b), the
+  figures that change are premise h's third column.~~ The fixtures
   would then be `_min_of(98)` and `_min_of(99)` (about 200 `ast.walk` nodes), and a depth
   fixture recomputed with `measure_expression(...).all_nodes`. Update both in this step if
   the ruling says (b).
@@ -1051,13 +1135,12 @@ def test_the_limits_are_configurable() -> None:
 
   > *(Delivered 2026-09-30, WK-690 Slice 1: the parser implements the profile table. The
   > three 2026-08-22 divergences are closed. Both limits are enforced in all four profiles,
-  > counted over `ast.expr` nodes (DP-S1-1; see the slice's leaf plan and ruling). The
+  > counted over `ast.expr` nodes (DP-S1-1, working id 9971). The
   > function sets are the table's. Comparisons in `objective` and `factor` exist only as
   > `where()`'s condition.)*
 
-  DP-S1-1's `RL-` is ruled before this plan's activation. Cite that `RL-` id in
-  place of "see the slice's leaf plan and ruling". If the ruling chose (b), the note says
-  "counted over every `ast` node" instead.
+  Working id 9971 ruled (a), so the note says `ast.expr` nodes. Cite its minted `RL-` id if
+  it has minted by this commit. *(Revised 2026-09-30 on the decision-maker's ruling working id 9971, #956, unminted.)*
 - [ ] **Step 5: Green.** Run `uv run pytest packages/pricing-core/tests -q`, with Acceptance
   6's two files unmodified, and run `uv run mypy`. Quote each.
 - [ ] **Step 6: Commit:** `feat(pricing-core): enforce the expression node and depth limits
@@ -1068,6 +1151,7 @@ def test_the_limits_are_configurable() -> None:
 **Files:**
 - Create: `packages/pricing-core/src/pricing_core/data/expression_sympy.py`
 - Create: `packages/pricing-core/tests/test_expression_sympy.py`
+- Modify: `docs/specs/02-modelling.md` §4.6 (the `real=True` statement; working id 9973)
 
 **Interfaces:**
 - Consumes: `parse_expression`, `GrammarProfile`, `ExpressionLimits`, `DEFAULT_LIMITS` and
@@ -1136,6 +1220,43 @@ def test_each_function_maps_to_its_sympy_form(source: str, expected: sympy.Expr)
 def test_the_strict_refusals_hold_on_the_sympy_path() -> None:
     with pytest.raises(ExpressionError, match="comparison"):
         to_sympy("y > f")
+
+
+@pytest.mark.req("FR-144")
+def test_every_objective_symbol_is_real() -> None:
+    """Working id 9973 (DP-S1-3 (a)): y, f, w and every parameter are real."""
+    loss = to_sympy("w_under * abs(y - f) + w", parameters=("w_under",))
+    assert loss.free_symbols and all(s.is_real is True for s in loss.free_symbols)
+
+
+@pytest.mark.req("FR-144")
+def test_the_abs_derivative_is_the_real_one() -> None:
+    """Working id 9973: with real symbols, d|f|/df has no re, im or unevaluated Derivative.
+    Red first: build the symbols without `real=True` and this fails (premise g's complex
+    form). The ledger quotes that red."""
+    derivative = sympy.diff(to_sympy("w * abs(y - f)"), f)
+    assert not derivative.has(sympy.re, sympy.im, sympy.Derivative)
+
+
+@pytest.mark.req("FR-144")
+def test_the_spec_example_gradient_and_hessian_are_reproduced() -> None:
+    """Working id 9973's third violation. §4.6's printed gradient and hessian are
+    algebraically what SymPy derives from this translation. It is compared as expressions,
+    not text: Slice 2 owns the canonical text. Spiked on sympy 1.14.0: both differences
+    simplify to 0 after `piecewise_fold`."""
+    loss = to_sympy(
+        "w * where(exp(f) < y, w_under, w_over) * (y - exp(f)) ** 2",
+        parameters=("w_under", "w_over"),
+    )
+    e = sympy.exp(f)
+    gradient = sympy.Piecewise(
+        (2 * w * w_under * (e - y) * e, y > e), (2 * w * w_over * (e - y) * e, True)
+    )
+    hessian = sympy.Piecewise(
+        (2 * w * w_under * (2 * e - y) * e, y > e), (2 * w * w_over * (2 * e - y) * e, True)
+    )
+    assert sympy.simplify(sympy.piecewise_fold(sympy.diff(loss, f) - gradient)) == 0
+    assert sympy.simplify(sympy.piecewise_fold(sympy.diff(loss, f, 2) - hessian)) == 0
 
 
 def test_a_parameter_cannot_shadow_a_bound_symbol() -> None:
@@ -1215,7 +1336,7 @@ def test_the_sympy_path_refuses_every_route_to_eval(expression: str) -> None:
 
 Translation, not evaluation: the tree is `parse_expression`'s validated `ast`, and each node
 becomes the SymPy object it names. No string reaches `sympify`, `parse_expr`, `lambdify` or
-`eval` (NFR-483; 02 §8). The symbols are real (DP-S1-3), so `Abs` differentiates to
+`eval` (NFR-483; 02 §8). The symbols are real (DP-S1-3, working id 9973), so `Abs` differentiates to
 `sign`, and the canonical text Slice 2 records is the real-variable one.
 
 A separate module so that the Polars path (`recipe`, `check`) never imports sympy.
@@ -1331,6 +1452,14 @@ def _call(
   If `mypy --strict` rejects the lambdas' implicit `Any`, give `_BINARY` the annotation
   `Mapping[type[ast.operator], Callable[[sympy.Expr, sympy.Expr], sympy.Expr]]`. Do not add
   `type: ignore`.
+- [ ] **Step 4b: The §4.6 statement** (`spec-change`; this commit). *(Revised 2026-09-30 on the decision-maker's ruling working id 9973, #958, unminted.)* In `02` §4.6,
+  after Task 4's delivery note, add (citing the minted id if it has minted by this commit):
+
+  > *(Amended 2026-09-30, working id 9973 (DP-S1-3): the `objective` profile's bound
+  > symbols and declared parameters are real-valued, and the derivation treats them so.
+  > `abs` therefore differentiates to `sign`, and the `derived` text a reviewer approves is
+  > the real-variable form.)*
+
 - [ ] **Step 5: Green.** Run `uv run pytest packages/pricing-core/tests/test_expression_sympy.py
   -q`, then the raiser test alone in a fresh process: `uv run pytest
   packages/pricing-core/tests/test_expression_sympy.py -k never_reaches -q`.
@@ -1380,7 +1509,8 @@ def _call(
   - the tree, premises a–i, and every red-then-green quote;
   - Task 2's table;
   - the three `RL-` records that resolved DP-S1-1 to DP-S1-3, and the task at which each was applied;
-  - DP-S1-2's silent-argument finding candidate, for the auditor.
+  - ~~DP-S1-2's silent-argument finding candidate, for the auditor.~~ Discharged by working
+    id 9972, which refuses the silent drop. *(Revised 2026-09-30 on the decision-maker's ruling working id 9972, #957, unminted.)*
 - [ ] Open the PR against `main`, noting the lead's file-contention dispatch record
   (Status). Report the head SHA.
 
@@ -1418,7 +1548,8 @@ Slice 4 (`SL-1274`) consumes `GrammarProfile.FACTOR` with real column symbols.
    `ExpressionSize(nodes, depth, all_nodes)`, `_measure -> (ExpressionSize, ast.expr)`,
    `ExpressionLimits(max_nodes, max_depth)`, `DEFAULT_LIMITS`, `OBJECTIVE_SYMBOLS` and
    `to_sympy(expression, *, parameters, limits)`.
-5. **Only-add.** The lenient node set is exactly `fb90d381`'s `_ALLOWED_NODES`. Legacy
-   arity is unchanged (DP-S1-2). The two existing test files stay unmodified (Acceptance
-   6). The limits are the one deliberate subtraction, and Task 2's measurement is what
-   licenses it.
+5. **Only-add.** The lenient node set is exactly `fb90d381`'s `_ALLOWED_NODES`. The two
+   existing test files stay unmodified (Acceptance 6). There are two deliberate
+   subtractions. The limits are licensed by Task 2's measurement. Exact arity for the
+   seven legacy functions is licensed by working id 9972, which records that no
+   repository expression relies on the dropped argument. *(Revised 2026-09-30 on the decision-maker's ruling working id 9972, #957, unminted.)*
