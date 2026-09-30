@@ -171,8 +171,8 @@ nothing that exists, except the two deliberate negative-test functions.
    to `condition`, clamp bounds and `key_expr`. Today none of those is compiled at save (the
    table above), so an authored `??`, or a function, in a condition would be met only at
    scoring. **FR-274's division-guard check is widened the same way.** `_check_division_guards`
-   (`compile.py:166-192`) also reads only `expr`, and its test is a substring match against
-   `_GUARD_MARKERS` (`:180-181`). Verified by reading it: `a / b ?? 0` and
+   (`compile.py:166-193`) also reads only `expr`, and its test is a substring match against
+   `_GUARD_MARKERS` (`:179-181`). Verified by reading it: `a / b ?? 0` and
    `a / b != null ? a / b : 0` carry no marker and are refused today, and
    `x != 0 ? y / x : 0` passes on `"!= 0"`.
 
