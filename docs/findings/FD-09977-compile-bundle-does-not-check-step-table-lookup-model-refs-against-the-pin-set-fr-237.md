@@ -204,14 +204,26 @@ unpinned; wrong version on the table; model unpinned only) that exits 0.
   `scripts/bench-rating.py`'s pins match its step refs (read, not run).
 - **PostgreSQL:** 22 rating versions with pins, 0 unpinned (agrees with the filer's read above).
 - **MinIO:** 5 buckets; 6519 bundle JSONs (`gip-bench-compiled-for` 2, `gip-bench-score-batch` 2,
-  `gip-test-blobs` 6515), **0** with a graph step ref outside its pins or `resolved_payloads`; **3986
-  algorithm-shaped blobs in `gip-test-blobs` carry no pins and are unchecked.** (This is a different question
-  from the filer's text scan in the parser finding; the two share no result.)
+  `gip-test-blobs` 6515), **0** with a graph step ref outside its pins or `resolved_payloads`; **the 3986 blobs that first looked
+  "algorithm-shaped" are score traces, not algorithms** (classified by auditor-922, read-only, reported, not re-run by the
+  filer): class A, 2279 blobs with keys `bundle_hash, ladder_reconciled, quote_id, rating_version_ref, steps`, steps of type
+  `constraint` and `lookup`, `quote_id` "quote-batch"; class B, 1707 blobs with the same keys, steps of type `lookup` only,
+  `quote_id` "quote-realtime"; 2279 + 1707 = **3986**. Neither class has a `rate_table_ref`, `reference_table_ref`,
+  `model_ref`, `peril_structure_ref`, `pins`, `graph`, `resolved_payloads` or `algorithm_ref` key; each step records
+  consumed, produced and matched values, and the `bundle_hash` values are synthetic (ending in zeros). They cannot be
+  compiled into a bundle or priced, so **they cannot be an affected artifact**. Cross-check: canonical-JSON matching against
+  bundle-embedded algorithms and the pinned `rating_algorithms` of the 73 databases gave 0 of 3986 matches. The earlier
+  "algorithm-shaped" label came from a predicate that was too loose (a `steps` list holding a table, lookup or
+  `model_call` step). (This is a different question from the filer's text scan in the parser finding; the two share no result.)
+- **MinIO, whole bucket now** (auditor-922, later run): `gip-test-blobs` holds 14 602 objects = 2069 non-JSON + 6540
+  bundles + 3986 traces + 2007 other JSON; the growth over the earlier 14 577 is auditor-922's own backend test runs. Of the
+  6540 bundles, the 6519 checked earlier had 0 step refs outside their pins; **the 21 new ones were not re-checked**, and the
+  **2007 other-JSON and 2069 non-JSON objects were not classified or scanned** (this is stated, not counted as zero).
 
 Tally: `pricing-core` 76 compile calls, backend 70, PostgreSQL 22 rating versions (491 versions, 73 databases in the
-filer's read), MinIO 6519 bundles: **0 unpinned in every one.** One gap remains stated, not counted as zero: the **3986
-algorithm-shaped blobs in `gip-test-blobs` that carry no pins** cannot be checked on their own. Owner of any further
-amendment: the auditor.
+filer's read), MinIO 6519 bundles: **0 unpinned in every one.** The 3986 blobs are traces (0 affected, by class). Gaps stated, not
+counted as zero: 21 newer bundles, and the 2007 other-JSON and 2069 non-JSON objects in `gip-test-blobs`. Owner of any
+further amendment: the auditor.
 
 ## Severity
 
