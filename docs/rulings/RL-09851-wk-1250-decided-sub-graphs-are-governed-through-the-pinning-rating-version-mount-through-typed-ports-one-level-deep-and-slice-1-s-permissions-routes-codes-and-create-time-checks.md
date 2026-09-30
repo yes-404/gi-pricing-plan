@@ -242,83 +242,174 @@ DP-2 blocks only Slices 2 and 3, and it shares no evidence with the rows above b
 
 ## Ruled
 
-Citations in this section were read at `7c354305`.
+Citations in this section were read at `7c354305`. **Every "built", "exists", "absent" or
+"unbuilt" claim below rests on a reading of the module that owns the concept.** The
+"Presence and absence, as verified" table records each one: the symbol and file:line for a
+presence, and for an absence the command run and the owning module read. *(Amended after
+`auditor-plans`' audit of `8bad4f3d`. That head called the structural diff "unbuilt" on the
+strength of a grep for names the code does not use. It is built. See DP-1 item 3.)*
+
+### Presence and absence, as verified
+
+| Claim | Verdict | How it was verified at `7c354305` |
+|---|---|---|
+| FR-219's structural diff | **built** | `AlgorithmDiff` (`packages/model-schema/src/model_schema/rating.py:539`) and `diff_algorithms(old, new)` (`:569`), read in full. It diffs two **algorithm** versions: steps added, removed and changed field by field, table and lookup references re-pointed, and the input contract and outputs. It is served by `diff_between` (`backend/src/app/platform/rating_algorithms.py:135-141`). It has no sub-graph limb: it never reads `sub_graphs`. |
+| The persisted `structural_diff` evidence | **unbuilt** | `RatingVersionEvidence.structural_diff_blob` (`rating.py:125`) is `str \| None = None`. The owning module, `backend/src/app/platform/rating_versions.py`, was read at its evidence write in `submit_for_review` (`:250-300`). It writes only `golden_quotes` and `regression_suite_run_id` (`:294-298`). `git grep -n 'structural_diff_blob' 7c354305 -- backend/src 'packages/*/src'` prints only `rating.py:125`. Its owner is WK-673 (`RL-1184` E4; `RL-1290`). |
+| A sub-graph pin on a Rating Version | **absent** | `Pins` (`rating.py:63-77`), read: `rate_tables`, `models`, `reference_tables`, `custom_objectives`, and nothing else. PL-1254 Task 2 adds `Pins.sub_graphs`. |
+| `SubGraphRef`'s fields | **present** | `rating.py:340-350`: `ref: ArtifactRef` and `mount_point: str`, and nothing else. |
+| `compile_bundle` reading sub-graphs | **absent** | `compile_bundle` (`packages/pricing-core/src/pricing_core/rating/compile.py:425-492`), read in full: `all_refs` (`:467-472`) is the four `Pins` lists, and the maturity loop is `:473-481`. `git grep -n 'sub_graphs' 7c354305 -- packages/pricing-core/src/pricing_core/rating/compile.py` → rc 1. |
+| `compile_bundle` checking that each step's own reference is pinned | **absent** | The same reading. It refuses a version with no `algorithm_ref` or no `pins` (`RATING_VERSION_UNPINNED`, `:434-443`), and resolves **only the pins**. It never compares a `table`, `lookup` or `model_call` step's reference with them. At scoring, `runtime.py`'s `_decision_table_node` reads `payloads.get(ref)` for a `table` step (`packages/pricing-core/src/pricing_core/rating/runtime.py:190-230`). This is an observation about algorithms, reported to the lead as a candidate finding and not ruled here. For fragments it is ruled: DP-1 item 6 (i). |
+| A route or code path that changes a Rating Version's pins | **absent** | The owning API module, `backend/src/app/api/models.py`, read at its rating-version routes (`:1113` GET list, `:1139` GET one, `:1161` POST create, `:1189` POST submit, `:1233` POST compile, and `:1265`-`:1328` regression runs). There is no PUT or PATCH. `git grep -n 'rating-versions' 7c354305 -- backend/src/app/api` finds no other router. The owning service, `backend/src/app/platform/rating_versions.py`, was read: `create_rating_version` (`:202`) builds the row with no `pins` (`:226-234`), and the file's only `pins` code is the read at `:113`. `git grep -n -E '\bpins\b' 7c354305 -- backend/src` finds no other writer of the `RatingVersionRow.pins` column (`models.py:1912`). |
+| A deploy route | **absent** | `git ls-tree --name-only 7c354305 backend/src/app/api/` lists no deployments module, and `git grep -n -i deploy 7c354305 -- backend/src/app/api` finds no route. `backend/src/app/api/score.py:133-139` says "`live` is a property of a Deployment (FR-238), which is WK-674's". PL-1237 Task 2 (`docs/plans/PL-01237-…md:768-790`) builds `POST /api/v1/environments/{env}/deployments`. |
+| A spec constraint on sub-graph nesting | **absent** | The spec suite owns it. `git grep -n -i -E 'sub-graph\|sub_graph\|subgraph' 7c354305 -- docs/specs` gives six hits, all in `03` (`:63`, `:86`, `:87`, `:276`, `:1046`, `:1171`). Each was read: the Quote Context term, FR-217, FR-218, the §4.1 example, the DAG designer view, and `OQ-617`. None of them constrains nesting. |
+| `06` FR-385's `expedited` in the approval policy | **absent** | The owning module, `packages/model-schema/src/model_schema/approvals.py`, was read at `ApprovalPolicy` (`:125`). Its fields (`:128-135`) are `policies` and `submitter_may_approve`, and it is `extra="forbid"`. `git grep -n -i expedited 7c354305 -- packages backend/src` → rc 1. |
+| `sub_graph` is a valid reference type | **present** | `ARTIFACT_TYPES` (`packages/model-schema/src/model_schema/refs.py:20-28`) includes `"sub_graph"`. |
+| A live-code test that the exemption is read | **present, for `rating_algorithm`** | `test_a_rating_algorithm_pin_compiles_regardless_of_status` (`packages/pricing-core/tests/test_rating_compile_bundle.py:193`) and `test_the_algorithm_maturity_check_would_be_caught_if_removed` (`:213`). The status-column tripwires are `test_rate_table_version_row_has_no_status_column` and `test_rating_algorithm_row_has_no_status_column` (`backend/tests/test_rating_version_compile.py:247`, `:269`). |
+| The interim purpose guard | **present** | `_check_purpose_mount`, `packages/pricing-core/src/pricing_core/rating/score.py:393-405`. Its docstring says `compile_bundle` never reads `sub_graphs`. Not `backend/src/app/api/score.py`, which is a different module. |
+| The maturity exemption | **present** | `_MATURITY_CHECK_EXEMPT = frozenset({"rate_table", "rating_algorithm"})`, `compile.py:314`, applied at `:453` and `:475`. |
+| `requires()` admits only workspace-wide grants | **present** | `requires` (`backend/src/app/api/authz.py:54-76`) calls `rbac.require_permission` with no `resource`. `_covers` (`backend/src/app/platform/rbac.py:205-217`) returns `False` for a scoped assignment when `resource is None`. |
+| A `parent_id` on the rating artifacts | **absent** | `git show 7c354305:backend/src/app/db/models.py \| grep -n parent_id` → one hit, `:824`. That is outside `RatingAlgorithmRow` (`:1926`) and `RateTableVersionRow` (`:1984`). |
+| The Regression Suite registry is unique per algorithm | **present** | `RegressionSuiteRow.__table_args__` (`models.py:2060-2065`): `UniqueConstraint("workspace_id", "algorithm_slug", name="uq_regression_suites_algorithm")`. |
 
 ### DP-1 — option (b): a sub-graph version is not a Governed Artifact; its change is approved inside the pinning Rating Version
 
 1. **No approval of its own.** A Sub-graph Version has no status and no approval lifecycle,
-   as a Rate Table Version (`03` FR-1186) and a Rating Algorithm (`RL-859`) have none. It is
-   not added to `06` §2's Governed Artifact list (`06-governance.md:64`), gets no `06` §3.3
-   row and no §4.2 `DEFAULT_POLICY` entry. Each version is immutable once created and carries
-   a required change note, as FR-229 requires of a Rate Table Version (`03:120`).
-2. **The mechanism — what makes (b) route through approval, not around it.** The change
-   reaches approval through the Rating Version that pins it (PL-1254 Task 2 adds the pin,
-   `Pins.sub_graphs`). That Rating Version's approval sees it three ways, all of which exist
-   or are owned today:
-   - **The structural diff.** `03` FR-219 (`03:88`) is widened: the structural diff between
-     two Rating Versions also lists **each sub-graph pin added, removed or re-pointed**, and
-     for a re-point it carries **the structural diff between the two sub-graph versions**
-     (steps added, removed or changed inside the fragment). It is part of the existing
-     `structural_diff` evidence kind, so no new evidence key is added to
-     `EVIDENCE_FLOOR` (`approvals.py:106`) or to `06` §4.2. `06` §3.3's Rating Version row
-     (`06:120`) names it in its "Structural diff" item.
-   - **The regression suite and the dislocation run** (`03` FR-257, `03:174`). Both are run
-     per Rating Version, so every Rating Version that adopts a changed sub-graph shows the
-     change's effect on its own golden quotes and its own portfolio.
-3. **Who builds the diff.** The structural diff is unbuilt, and it is **WK-673's**: `RL-1184`
-   E4 names WK-673 as `structural_diff`'s owner, and `RL-1290` restates it at this tree
-   (`rating.py:125` holds only an optional `structural_diff_blob`, and `git grep -n -i
-   'def structural\|StructuralDiff' -- packages backend/src` prints nothing). So:
-   **whichever of WK-673's structural diff and WK-1250 Slice 2's sub-graph pin lands second
-   carries the sub-graph limb.** If Slice 2 lands second, it extends the diff. If WK-673 lands
-   second, its diff covers `Pins.sub_graphs`. Neither may close while the other has landed and
-   the limb is missing. FR-219's widening is written into `03` in Slice 2's spec change, with
-   the pin it describes.
+   just as a Rate Table Version (`03` FR-1186) and a Rating Algorithm (`RL-859`) have none.
+   It is not added to `06` §2's Governed Artifact list (`06-governance.md:64`). It gets no
+   `06` §3.3 row and no §4.2 `DEFAULT_POLICY` entry. Each version is immutable once created
+   and carries a required change note, as FR-229 requires of a Rate Table Version (`03:120`).
+2. **The mechanism, which routes the change through approval rather than around it.** The
+   change reaches approval through the Rating Version that pins it (PL-1254 Task 2 adds the
+   pin). That Rating Version's approval sees the change in three ways:
+   - **The structural diff.** FR-219 (`03:88`) is widened: the diff also lists **each
+     sub-graph mount or pin added, removed or re-pointed**, and for a re-point it carries
+     **the step-level diff between the two sub-graph versions**. It stays inside the existing
+     `structural_diff` evidence kind, so no new key is added to `EVIDENCE_FLOOR`
+     (`approvals.py:106`) or `06` §4.2.
+   - **The regression suite.** It is run per Rating Version (`03` FR-257, `03:174`).
+   - **The dislocation run.** It is also run per Rating Version (`03` FR-257). So every Rating
+     Version that adopts a changed sub-graph shows the change's effect on its own golden
+     quotes and its own portfolio.
+3. **Who builds which half.** The table above splits the diff into a built computation and an
+   unbuilt persistence:
+   - **Computing the sub-graph limb is WK-1250 Slice 2's.** Widening `AlgorithmDiff` and
+     `diff_algorithms` (`model-schema`) to cover sub-graph mounts and pins, with the inner
+     step diff, lands **with the pin, in Slice 2**. Slice 2 does this whatever WK-673's state
+     is, because it creates the thing to be diffed.
+   - **Persisting the diff as evidence is WK-673's.** WK-673 writes the `structural_diff`
+     evidence blob at submission and registers its verifier (`RL-1184` E4). Its obligation is
+     to persist the **whole** diff the computation returns, never a hand-picked subset of its
+     fields. Then the sub-graph limb reaches the approver without WK-673 naming it.
+   - **"Whichever lands second" on this split.** If Slice 2 lands first, WK-673 persists a
+     diff that already carries the limb, and WK-673's persistence test includes a sub-graph
+     re-point. If WK-673 lands first, Slice 2's widening flows into the persisted blob, and
+     Slice 2's test asserts the limb **in the persisted evidence**, not only in the function's
+     return value.
+   - **The maintainer's condition.** Before Slice 2 is dispatched, both WK-673's plan and
+     PL-1254 Task 2 carry this limb. The first is the lead's to route, the second the
+     planner's.
 4. **FR-1186's revisit trigger is met by design, and (b) still holds.** A sub-graph exists to
-   be shared (FR-217's `ncd-ladder`), which is FR-1186's revisit condition ("pinned by more
-   than one Rating Version in practice"). The answer is that sharing multiplies reviews and
-   loses none. Each adopting Rating Version is approved against its own predecessor, with
-   the re-point in its diff and its own regression and dislocation evidence. A sub-graph
-   version that no approved Rating Version pins prices nothing.
-5. **FR-20 and the maturity gate.** `03` §4.3's invariant "every pin resolves to an
-   artifact whose status is `approved` or better (FR-20)" (`03:399-401`) already disagrees
-   with the two exemptions in force (`_MATURITY_CHECK_EXEMPT = frozenset({"rate_table",
-   "rating_algorithm"})`, `compile.py:314`). Slice 2's spec change restates it by class, not by
-   list: *every pin to an artifact that has an approval lifecycle resolves to `approved` or
-   better (FR-20); a pin to an artifact that has none (Rate Table Version, Rating Algorithm,
-   Sub-graph Version) is governed by the pinning Rating Version's own approval.* In the same
-   slice, `sub_graph` joins `_MATURITY_CHECK_EXEMPT`, with a comment citing this record and a
-   tripwire test in the form of `test_rate_table_version_row_has_no_status_column`: it fails
-   the day a `status` column is added to the sub-graph table, and names this record.
+   be shared (FR-217's `ncd-ladder`). That is FR-1186's revisit condition: "pinned by more
+   than one Rating Version in practice". But sharing multiplies reviews and loses none. Each
+   adopting Rating Version is approved against its own predecessor, with the re-point in its
+   diff and its own regression and dislocation evidence. A sub-graph version that no approved
+   Rating Version pins prices nothing (item 6).
+5. **FR-20 and the maturity gate.** `03` §4.3's invariant "every pin resolves to an artifact
+   whose status is `approved` or better (FR-20)" (`03:399-401`) already disagrees with the two
+   exemptions in force (`compile.py:314`). **A future spec change, in Slice 2**, restates it by
+   class, not by list: *every pin to an artifact that has an approval lifecycle resolves to
+   `approved` or better (FR-20); a pin to an artifact that has none (Rate Table Version,
+   Rating Algorithm, Sub-graph Version) is governed by the pinning Rating Version's own
+   approval.* In the same slice, `sub_graph` joins `_MATURITY_CHECK_EXEMPT` with a comment
+   citing this record. **That alone does nothing** unless the maturity loop reads sub-graph
+   pins, so Slice 2 also adds `Pins.sub_graphs` to `all_refs` (`compile.py:467-472`). See
+   guard (iv).
+6. **The approval guards that make (b) safe. Each is built and proved red on broken input**
+   (the maintainer's G1 to G4, accepted as required). Each names **one** owner.
+   - **(i) G1 — a sub-graph reaches scoring only through the Rating Version's pins.**
+     *Owner: WK-1250 Slice 2.* `compile_bundle` refuses a `SubGraphRef` whose version is not
+     in the Rating Version's `Pins.sub_graphs`, and never inlines it. Every artifact
+     reference inside an inlined fragment — `table`, `lookup` and `model_call` — resolves
+     **only against the pinning Rating Version's pins**. A fragment reference not among them
+     is refused at compile. It is never left for scoring to meet as a missing payload.
+     - This reference check runs over the whole inlined algorithm. So it also covers the
+       algorithm's own steps, which today are not checked at compile (the table above). If
+       the lead routes that algorithm-level gap elsewhere, Slice 2 still covers the
+       fragment's steps.
+     - Because a fragment's `model_call` can reach a model only through a pin, FR-240's "no
+       unapproved custom objective transitively reachable" sees every objective a fragment
+       can reach. That check's owner is the rating Work that PL-1276 DP-2 (b) moves FR-240
+       clauses (4) to (6) to (`PL-1276:166`, `:234`: "WK-1178, or a Work the maintainer
+       names"). This record does not move it.
+     - *Stated, not widened:* `POST /api/v1/score/compare` may name any compiled version,
+       `draft` included (`03:760`). That is the existing rule for every pin, it prices nothing
+       live, and this ruling does not change it.
+   - **(ii) G2 — a change of pin is a new Rating Version that needs its own approval.**
+     *Owner: WK-1250 Slice 2*, the slice that first gives `Pins` a sub-graph list. Pins are
+     fixed once a Rating Version leaves `draft` (`00` FR-4; `03` FR-237), and an approval is
+     pinned to the exact version (`06` FR-356). **Today this is vacuous.** No route or code
+     path writes a Rating Version's pins at all (the table above). Slice 2 proves the guard
+     over every pin write path at its own tree: a change to the pins of a non-`draft` Rating
+     Version is refused, and a re-point is only possible as a new version, whose own
+     submission carries the diff.
+   - **(iii) G3 — a sub-graph is never deployed without an approved Rating Version.**
+     *Owner: WK-674 Slice 2*, one owner, for three reasons:
+     - it builds the only deploy route, `POST /api/v1/environments/{env}/deployments`, which
+       "applies the `prod` approval (FR-267)" (`PL-1237` Task 2, `:768-790`);
+     - FR-267 (`03:195`) gives the structure: "A **Deployment** binds an `approved` Rating
+       Version to an Environment";
+     - `sub_graph` is already a valid reference type (`refs.py:20-28`), so the negative test
+       needs nothing from WK-1250 and is provable at WK-674 Slice 2's own tree, whichever Work
+       lands first.
+
+     The test: a deploy request naming a `sub_graph` reference, or any reference that is not
+     a `rating_version`, is refused. **Unprovable today:** there is no deploy route in
+     `backend/src` (the table above).
+   - **(iv) G4 — the exemption is read, and a status column trips it.** *Owner: WK-1250
+     Slice 2.*
+     - (a) `Pins.sub_graphs` joins `all_refs` (`compile.py:467-472`), so the maturity loop
+       actually resolves sub-graph pins.
+     - (b) A live-code test shows the exemption is read, in the form of
+       `test_the_algorithm_maturity_check_would_be_caught_if_removed`
+       (`packages/pricing-core/tests/test_rating_compile_bundle.py:213`). With `sub_graph`
+       removed from `_MATURITY_CHECK_EXEMPT`, a sub-graph pin is refused.
+     - (c) A tripwire in the form of `test_rate_table_version_row_has_no_status_column`
+       (`backend/tests/test_rating_version_compile.py:247`) fails the day a `status` column
+       is added to the sub-graph table, and names this record.
 
 ### DP-3 — option (a): an explicit, typed port contract, with the fragment's own names namespaced
 
-1. **The sub-graph declares its ports.** Its input ports each have a `name` and a declared
-   type. Its output ports reuse `AlgorithmOutput` (`rating.py`: `name`, `type:
-   RatingResultType`, `required`), so the float refusal and FR-227's result-type
-   vocabulary are the ones algorithms already use. Slice 1 may not define a second
-   result-type vocabulary. An input port's type uses the same `RatingResultType`, because
-   the value that feeds it is a parent step's result.
+1. **The sub-graph declares its ports.**
+   - **Output ports** reuse `AlgorithmOutput` (`rating.py`: `name`, `type: RatingResultType`,
+     `required`), so the float refusal and FR-227's result-type vocabulary are the ones
+     algorithms already use.
+   - **Input ports** have a `name` and a `RatingResultType`, because the value that feeds one
+     is a parent step's result.
+   - Slice 1 may not define a second result-type vocabulary.
 2. **`mount_point` is the mount's own identifier, not a parent step.** It is unique among the
    parent's `step_id`s and its other mounts. It namespaces the inlined steps and attributes
-   them in the trace (FR-258). The `03:276` example, which names `"s_ncd"` and no step called
-   that, is consistent with this reading. The example's value is left as it is.
+   them in the trace (FR-258). The `03:276` example names `"s_ncd"` with no step called that,
+   which fits this reading, and it is left as it is.
 3. **The mount maps names explicitly.** The parent's mount maps each input port to a parent
    value, and each output port to the parent name it produces. On inlining, **every name
    internal to the fragment is namespaced by the mount point**. Only the mapped port names
    meet the parent's namespace, so a fragment's intermediate name can never silently rewire a
    parent value (option (b)'s failure).
 4. **The parent's save-time invariants see the mount.** `03` §4.1's invariants
-   (`03:280-282`, FR-212) treat a mount as a node: its mapped outputs are *produced* by it,
-   its mapped inputs are *consumed* by it, and acyclicity and "produced by exactly one
-   upstream step" count it. Without this, a parent that consumes a value only its mount
-   produces is refused as unresolved.
-5. **Where each half lands.** The sub-graph's ports are part of Slice 1's shape. The mount's
-   port map on `SubGraphRef` (`rating.py:340-350`, today `ref` and `mount_point` only) and
-   item 4's invariants land in Slice 2, with the pin and the inliner, because until then
-   nothing mounts and `score.py`'s purpose guard refuses sub-graph use
-   (`score.py:393-405`). Checking a mount's port map against the pinned version's declared
-   ports is a compile-time check, in Slice 2.
+   (`03:280-282`, FR-212) treat a mount as a node:
+   - its mapped outputs are *produced* by it;
+   - its mapped inputs are *consumed* by it;
+   - acyclicity and "produced by exactly one upstream step" count it.
+
+   Without this, a parent that consumes a value only its mount produces is refused as
+   unresolved.
+5. **Where each half lands.** The sub-graph's ports are part of Slice 1's shape. Two things
+   land in Slice 2, with the pin and the inliner: the mount's port map on `SubGraphRef`
+   (today `ref` and `mount_point` only, per the table above), and item 4's invariants. Until
+   then nothing mounts: `compile_bundle` never reads `sub_graphs`, and
+   `packages/pricing-core/src/pricing_core/rating/score.py`'s `_check_purpose_mount`
+   (`:393-405`) is the interim guard. Checking a mount's port map against the pinned
+   version's declared ports is a compile-time check, in Slice 2.
 
 ### DP-4 — option (a): depth 1
 
@@ -330,127 +421,202 @@ workflow in `00`, `03`, `06` or `07` needs it (prepared evidence, "Nesting").
 
 ### DP-S1-1 — option (a): `rating:write` and `rating:read`, workspace-wide
 
-1. The two write routes require `rating:write`, and the two read routes `rating:read`, through
+1. The two write routes require `rating:write` and the two read routes `rating:read`, through
    `requires()`. No new permission and no new scope type. This is the precedent of `03`
    §5.1's Regression Suite rows (`03:756-757`).
 2. **The scoped-principal consequence is accepted.** `requires()` admits only a
-   workspace-wide assignment, so a principal scoped to a named Rating Algorithm (`06`
-   FR-345) can neither read nor author a sub-graph through these routes. That is correct for
-   authoring: a sub-graph may be mounted by any algorithm in the workspace, so authoring one
-   is a workspace-wide act. For reading, compile and score resolve a pinned sub-graph through
-   the artifact resolver, not these routes, so a scoped principal's compile is not blocked.
-   A designer view that shows a scoped author a mounted fragment (WK-675) is a later spec
-   change if it is needed.
-3. **The catalogue text is widened, not renamed** (`RL-1236` governs the names). In Slice 1's
-   spec change, the `rating:read` row (`06:265`, "Reading Rating Algorithms, Rate Tables,
-   Rating Versions and scoring traces") and the `rating:write` note (`06:287-288`) name
-   sub-graphs. Neither names regression suites today either, so the same edit adds them.
+   workspace-wide assignment (the table above). So a principal scoped to a named Rating
+   Algorithm (`06` FR-345) can neither read nor author a sub-graph through these routes.
+   - *Authoring:* that is correct. Any algorithm in the workspace may mount a sub-graph, so
+     authoring one is a workspace-wide act.
+   - *Reading:* compile and score resolve a pinned sub-graph through the artifact resolver,
+     not these routes, so a scoped principal's compile is not blocked.
+   - A designer view that shows a scoped author a mounted fragment (WK-675) is a later spec
+     change, if one is needed.
+3. **The catalogue text will be widened, not renamed** (`RL-1236` governs the names). **This is
+   a future spec change, made in Slice 1's spec change, and not made by this record.** The
+   `rating:read` row (`06:265`, "Reading Rating Algorithms, Rate Tables, Rating Versions and
+   scoring traces") and the `rating:write` note (`06:287-288`) will name sub-graphs.
+   Neither names regression suites at `7c354305` either, so the same edit adds them.
 
 ### DP-S1-2 — option (a), as the planner recommends: one table, server numbering, two create routes
 
 **This departs from the prepared recommendation**, which preferred the Regression Suite's
 single create route.
-1. **Storage.** One table, `sub_graph_versions`: one row per version, content as JSONB, and
-   unique on `(workspace_id, slug, version)`. There is no registry table, because a sub-graph
-   has no container-level state.
-2. **Numbering.** The server numbers each version as the current maximum plus one. The unique
-   constraint turns a race into `VALIDATION_FAILED` 409, in the form of
-   `objectives.py:229-236` and `regression_suites.py`'s `_next_version`. Versions are
-   gap-free and never reused (`00` ID-2).
+1. **Storage.** One table, `sub_graph_versions`, with one row per version and the content as
+   JSONB. It is unique on `(workspace_id, slug, version)`. There is no registry table, because
+   a sub-graph has no container-level state.
+2. **Numbering.** The server assigns the current maximum plus one. The unique constraint turns
+   a race into `VALIDATION_FAILED` 409, in the form of `objectives.py:229-236` and
+   `regression_suites.py`'s `_next_version`. The numbers are gap-free and never reused (`00`
+   ID-2).
 3. **Routes**, all within `00` §5.1's one-level nesting rule:
-   `POST /api/v1/sub-graphs` creates version 1 of a new slug and returns 409 if the slug
-   exists; `POST /api/v1/sub-graphs/{slug}/versions` creates the next version and returns
-   `NOT_FOUND` if the slug does not exist; `GET /api/v1/sub-graphs/{slug}@{version}`; and
-   `GET /api/v1/sub-graphs/{slug}/versions`, cursor-paginated.
+   - `POST /api/v1/sub-graphs` creates version 1 of a new slug, and returns 409 if the slug
+     exists.
+   - `POST /api/v1/sub-graphs/{slug}/versions` creates the next version, and returns
+     `NOT_FOUND` for an unknown slug.
+   - `GET /api/v1/sub-graphs/{slug}@{version}` reads one version.
+   - `GET /api/v1/sub-graphs/{slug}/versions` lists them, cursor-paginated.
 4. **Why two create routes.** A sub-graph slug is a free name in the workspace. With a single
-   create route, an author who creates `ncd-ladder`, unaware that one exists, silently
-   publishes version 5 of someone else's fragment, and every Rating Version that later
-   re-points to "the latest" inherits it. Two routes make the intent explicit: *new* is
-   refused on a clash, and *revise* is refused on an unknown slug. The Regression Suite does
-   not have this problem, because its registry is unique per algorithm
-   (`regression_suites.py:8-12`), so its one route cannot collide by name.
-5. **`00` FR-4's `parent_id`.** No column. The predecessor of `@n` is `@n-1` under ID-2's
-   per-slug numbering, as it is for Rating Algorithm and Rate Table Version rows, which carry
-   none either (PL-1278 DP-S1-2's note). This record does not widen that existing gap and
-   does not rule on it.
+   create route, an author who creates `ncd-ladder` without knowing one exists silently
+   publishes version 5 of someone else's fragment. Two routes make the intent explicit: *new*
+   is refused on a clash, and *revise* is refused on an unknown slug. The Regression Suite
+   does not have this problem: its registry is unique per algorithm (the table above), so its
+   one route cannot collide by name.
+5. **`00` FR-4's `parent_id`.** No column is added. The predecessor of `@n` is `@n-1` under
+   ID-2's per-slug numbering, as for Rating Algorithm and Rate Table Version rows, which carry
+   none either (the table above). This record does not widen that gap and does not rule on
+   it.
 
 ### DP-S1-3 — option (a): reuse `03` §5.1's codes
 
-A cycle is `RATING_GRAPH_CYCLIC`. A consumed name that nothing produces, or an unproduced
-output port, is `RATING_GRAPH_UNRESOLVED_REF`. **An output port whose producing step's type is
-incompatible is `RATING_TYPE_MISMATCH`** (added by DP-S1-4 below; `03` §5.1 already owns it,
-`03:772`). Any other shape refusal is `VALIDATION_FAILED`: a duplicate `step_id`, a
-`sub_graphs` field (DP-4), an `input` or `output` step, or an empty change note. An unknown
-`slug@version` is `NOT_FOUND`, a lost numbering race is 409 `VALIDATION_FAILED`, and a
-create on an existing slug is 409 `VALIDATION_FAILED`. No new codes: the `instance` path
-already names the artifact.
+| Refusal | Code |
+|---|---|
+| A cycle | `RATING_GRAPH_CYCLIC` |
+| A consumed name nothing produces, or an unproduced output port | `RATING_GRAPH_UNRESOLVED_REF` |
+| An output port whose producing step's type is incompatible (DP-S1-4) | `RATING_TYPE_MISMATCH`, which `03` §5.1 already owns (`03:772`) |
+| Any other shape refusal: a duplicate `step_id`, a `sub_graphs` field (DP-4), an `input` or `output` step, or an empty change note | `VALIDATION_FAILED` |
+| An unknown `slug@version` | `NOT_FOUND` |
+| A lost numbering race, or a create on an existing slug | 409 `VALIDATION_FAILED` |
 
-### DP-S1-4 — option (a), with FR-227's result-type check at create
+No new codes are added, because the `instance` path already names the artifact.
 
-**This departs from the prepared recommendation and the planner's (a) in one check.** Both
-tested (a) against FR-212's clauses only. **FR-227 (`03:113`) also binds at save:** "Every
-step declares its result type, and type compatibility is checked **at save time**." A
-sub-graph's steps are steps. Deferring its type check to compile would breach FR-227 for
-every fragment, so:
-1. **At create, in Slice 1:** the shape invariants (FR-212: cycles, orphaned steps,
-   undefined references, inside the fragment and against its ports), **and FR-227's
-   result-type compatibility**. Each output port's declared type is checked against its
-   producing step's result type. This is the check `_check_result_types`
-   (`compile.py:114-139`) already makes against an algorithm's declared outputs. It is
-   context-free and needs no parent. Slice 1 reuses that logic through a fragment entry point
-   in `pricing-core`, never a copy (`CLAUDE.md` §2's rule against defining a thing twice
-   applies to checks as much as to shapes). This brings `pricing-core` into Slice 1, which the
-   planner preferred to avoid. FR-227 decides it.
-2. **At compile, on the inlined algorithm, in Slice 2:** the other four checks —
-   determinism (FR-216, which names no moment), division guards (FR-274), scale cap (FR-275)
-   and vocabulary (FR-276). Each of the last three names bundle compilation itself (FR-240,
-   `03:137`). A fragment with a non-deterministic expression is therefore saved and refused
-   when any algorithm that mounts it is compiled, and Slice 2's gate proves that refusal
-   red-first.
-3. **This is not a breach of "rejected at save time".** FR-212's save-time clauses and
-   FR-227's are enforced at create. The four deferred checks are compile-time by their own
-   requirements.
+### DP-S1-4 — option (a), with FR-227's result-type check at create, through a refactor that lands in Slice 1
+
+**This departs from the prepared recommendation and from the planner's (a) in one check.**
+Both tested (a) against FR-212's clauses only. **FR-227 (`03:113`) also binds at save**:
+"Every step declares its result type, and type compatibility is checked **at save time**." A
+sub-graph's steps are steps. Deferring their type check to compile would breach FR-227 for
+every fragment.
+
+1. **The check cannot be reused as it stands.** `_check_result_types`
+   (`compile.py:114-139`) takes a `RatingAlgorithm`. It walks its `RatingOutputStep`s against
+   `algo.outputs`, and gets producer types from `_producer_types` (`compile.py:84-103`),
+   which types `RatingInputStep`s from `algo.input_contract` and `RatingExpressionStep`s from
+   `result_type`. A fragment has neither input nor output steps (DP-S1-3 refuses both); it
+   has ports. *(Corrected after the audit. `8bad4f3d` called the check "context-free", with
+   "no parent" needed, and reusable as it stood.)*
+2. **The refactor, which lands in Slice 1.** Slice 1 separates both functions' logic from
+   their `RatingAlgorithm` input:
+   - `_producer_types` becomes a function over the steps plus a mapping of already-typed names
+     (the algorithm's input contract, or the fragment's input ports).
+   - `_check_result_types` becomes a function over those producer types plus the declared
+     outputs (the algorithm's `outputs`, reached through its output steps, or the fragment's
+     output ports).
+   - The algorithm path calls the new functions with the algorithm's own inputs and outputs,
+     so its behaviour is unchanged. `validate_algorithm`'s tests in
+     `packages/pricing-core/tests/test_rating_compile.py` pass unmodified.
+   - One new public entry point checks a fragment's output ports, and Slice 1's create path
+     calls it.
+   - `_compatible` (`compile.py:106-111`) is called as it is.
+   - Slice 2's inliner builds on this refactor and does not undo it. The inlined algorithm
+     goes through the algorithm path.
+3. **The ruled `pricing-core` write set for Slice 1** (for `RL-1263`'s comparison with WK-690
+   Slice 1):
+   - `packages/pricing-core/src/pricing_core/rating/compile.py`, limited to
+     `_producer_types`, `_check_result_types` and one new public fragment entry point.
+     `compile_bundle` and the other four checks are untouched.
+   - `packages/pricing-core/tests/test_rating_compile.py`, for new tests only.
+
+   No other `pricing-core` file is in the set. `PL-1268` (WK-690) names no `compile.py`
+   (`git show 7c354305:docs/plans/PL-01268-…md | grep -c compile.py` prints `0`). Its
+   `pricing-core` files are under `data/`, `modelling/`, `rating/runtime.py` and
+   `safe_error.py`, so the two write sets do not meet on this evidence.
+4. **Why this is not option (c).** Option (c) wraps the fragment in a synthetic
+   `RatingAlgorithm`. It invents an input contract and output steps the fragment does not have,
+   and then runs all five checks against that fiction. The refactor invents nothing. It runs
+   **one** check, FR-227's, over the fragment's **own declared ports**. The prepared record's
+   objection to (c), "result-type checks would pass or fail on fiction", therefore does not
+   apply.
+5. **Why this beats (a) alone.** (a) alone saves every fragment without FR-227's check, which
+   breaches a numbered requirement that binds at save. The cost of meeting it is a bounded,
+   behaviour-preserving refactor of two private functions in a file Slice 2 edits later.
+   Slice 2 edits another region of that file, `compile_bundle`, and does so after Slice 1
+   closes, since it depends on Slice 1. The two slices are never in the file at once.
+6. **At compile, on the inlined algorithm, in Slice 2**, the other four checks run:
+   - **determinism** (FR-216, which names no moment);
+   - **division guards** — FR-274: "bundle compilation (FR-240) rejects an unguarded one";
+   - **scale cap** — FR-275: "Bundle compilation checks that no rate table value, constant,
+     or intermediate requires a decimal scale beyond `rust_decimal`'s limit";
+   - **vocabulary** — FR-276: "Bundle compilation resolves every function name against the
+     engine's real vocabulary".
+
+   So a fragment with a non-deterministic expression is saved, and is refused when any
+   algorithm that mounts it is compiled. Slice 2's gate proves that refusal red-first.
+7. **This is not a breach of "rejected at save time".** FR-212's save-time clauses and
+   FR-227's are both enforced at create. The four deferred checks are compile-time checks by
+   their own requirements, or by none.
 
 ## What it obliges
 
-- **This commit:** this record only. No spec text changes here, because PL-1254 and PL-1278
-  schedule each spec change in the slice that builds it ("The spec change first" in each
-  Task), and a spec describing a pin, a route or a port before its slice would state
-  something false at its own tree.
-- **PL-1254 and PL-1278 (the planner's files, not edited here):** the "Resolved by" cells of
-  DP-1, DP-3, DP-4 and DP-S1-1 to DP-S1-4 cite this record once it is minted. Two changes
-  against the plans as written: **DP-S1-4's FR-227 check at create**, which brings
-  `pricing-core` into Slice 1 (PL-1278 §Scope, `:183` and `:273`, say it gains no code), and
-  **DP-1's structural-diff limb**, which PL-1254 Task 2 does not list.
-- **WK-1250 Slice 1 (PL-1278):** in its spec change, `03` §2's term, §4's data contract
-  (DP-3 items 1-2 ports, DP-4, the change note), §5.1's four routes (DP-S1-2, with DP-S1-1's
-  permissions and DP-S1-3's codes), and `06`'s catalogue text (DP-S1-1 item 3). Its code
-  holds the create-time checks of DP-S1-4 item 1.
-- **WK-1250 Slice 2 (PL-1254 Task 2):** `03` §4.3's FR-20 restatement and `sub_graph` in
-  `_MATURITY_CHECK_EXEMPT` with its tripwire (DP-1 item 5); FR-219's widening and its limb of
-  the diff, if WK-673's diff has landed (DP-1 item 3); DP-3 items 3-5; and DP-S1-4 item 2.
-- **WK-673:** if its structural diff lands after Slice 2's pin, it covers `Pins.sub_graphs`
-  (DP-1 item 3). The lead carries this to WK-673's plan.
+- **This commit:** this record only. There is no spec text here. PL-1254 and PL-1278 schedule
+  each spec change in the slice that builds it ("The spec change first" in each Task), and a
+  spec that described a pin, a route or a port before its slice would state something false
+  at its own tree.
+- **PL-1254 and PL-1278 (the planner's files, not edited here):**
+  - the "Resolved by" cells of DP-1, DP-3, DP-4 and DP-S1-1 to DP-S1-4 cite this record once
+    it is minted;
+  - PL-1278 carries **DP-S1-4's refactor and the Slice 1 `pricing-core` write set**. Today
+    PL-1278 says `pricing-core` gains no code (§Scope, `:183` and `:273`);
+  - PL-1254 Task 2 carries **DP-1 item 3's diff limb** and **DP-1 item 6's guards (i), (ii)
+    and (iv)**, before Slice 2 is dispatched.
+- **WK-673's plan (the lead routes it):** DP-1 item 3's persistence clause, before WK-1250
+  Slice 2 is dispatched.
+- **WK-674 Slice 2 (`PL-1237` Task 2; the lead routes it to the planner):** DP-1 item 6
+  (iii), G3. The deploy route refuses a `sub_graph` reference, proved red.
+- **The lead:** the algorithm-level observation in the table above (compile does not check a
+  step's reference against the pins) is offered as a candidate finding. It is not ruled
+  here.
+- **WK-1250 Slice 1 (PL-1278):**
+  - its spec change: `03` §2's term; §4's data contract (DP-3 items 1-2, DP-4, the change
+    note); §5.1's four routes (DP-S1-2, with DP-S1-1's permissions and DP-S1-3's codes); and
+    `06`'s catalogue text (DP-S1-1 item 3);
+  - its code: the DP-S1-4 refactor and the create-time checks.
+- **WK-1250 Slice 2 (PL-1254 Task 2):**
+  - DP-1 item 5: the FR-20 restatement and the exemption;
+  - DP-1 item 3: `diff_algorithms` widened;
+  - DP-1 item 6: guards (i) G1, (ii) G2 and (iv) G4;
+  - DP-3 items 3 to 5;
+  - DP-S1-4 item 6.
 
 ## Acceptance — the violation that must become detectable
 
-Each is shown failing on deliberately broken input (`CLAUDE.md` §13), in the slice named.
-- *Slice 1:* a fragment whose output port's declared type is incompatible with its
-  producing step's result type is refused at create with `RATING_TYPE_MISMATCH` (FR-227).
-- *Slice 1:* a fragment carrying `sub_graphs` is refused at create with `VALIDATION_FAILED`
-  (DP-4).
-- *Slice 1:* `POST /api/v1/sub-graphs` on an existing slug is refused with 409, and
+Each check is shown failing on deliberately broken input (`CLAUDE.md` §13), in the slice
+named.
+
+**Slice 1:**
+- A fragment whose output port's declared type is incompatible with its producing step's
+  result type is refused at create with `RATING_TYPE_MISMATCH` (FR-227). The existing
+  `validate_algorithm` tests pass unmodified after the refactor.
+- A fragment carrying `sub_graphs` is refused at create with `VALIDATION_FAILED` (DP-4).
+- `POST /api/v1/sub-graphs` on an existing slug is refused with 409, and
   `POST /api/v1/sub-graphs/{slug}/versions` on an unknown slug with `NOT_FOUND` (DP-S1-2).
-- *Slice 2:* a parent that consumes a port output its mount does not map is refused at save
-  with `RATING_GRAPH_UNRESOLVED_REF`, and one that consumes a mapped output is accepted
-  (DP-3 item 4).
-- *Slice 2:* a fragment's internal name equal to a parent name does not rewire the parent
-  after inlining. A test with a deliberate clash shows the parent value unchanged (DP-3
+
+**Slice 2:**
+- A parent that consumes a port output its mount does not map is refused at save with
+  `RATING_GRAPH_UNRESOLVED_REF`, and one that consumes a mapped output is accepted (DP-3
+  item 4).
+- A fragment's internal name equal to a parent name does not rewire the parent after
+  inlining. A test with a deliberate clash shows the parent value unchanged (DP-3 item 3).
+- A fragment with a non-deterministic expression, saved at create, is refused when a
+  mounting algorithm is compiled (DP-S1-4 item 6).
+- `diff_algorithms` over two algorithms that differ only in a sub-graph mount or pin names
+  the re-point and the inner step changes. With the limb removed, the test fails (DP-1
   item 3).
-- *Slice 2:* a fragment with a non-deterministic expression, saved at create, is refused
-  when a mounting algorithm is compiled (DP-S1-4 item 2).
-- *Whichever of Slice 2 and WK-673 lands second:* two Rating Versions that differ only in a
-  sub-graph pin produce a structural diff that names the re-point and the inner step
-  changes. With the limb removed, the test fails (DP-1 item 3).
-- *Slice 2:* the tripwire fails when a `status` column is added to the sub-graph table
-  (DP-1 item 5).
+- G1: a `SubGraphRef` whose version is not in `Pins.sub_graphs` is refused at compile, and the
+  bundle contains none of its steps. A fragment whose `table`, `lookup` or `model_call`
+  reference is not among the Rating Version's pins is refused at compile.
+- G2: a change to the pins of a non-`draft` Rating Version is refused, through every pin write
+  path at Slice 2's tree.
+- G4 (a) and (b): with `sub_graph` removed from `_MATURITY_CHECK_EXEMPT`, an unapproved-status
+  sub-graph pin is refused. This proves the loop reads `Pins.sub_graphs`.
+- G4 (c): the tripwire fails when a `status` column is added to the sub-graph table.
+
+**Whichever of Slice 2 and WK-673 lands second:**
+- The **persisted** `structural_diff` evidence of a Rating Version whose only change is a
+  sub-graph re-point carries the limb (DP-1 item 3).
+
+**WK-674 Slice 2:**
+- G3: a deploy request naming a `sub_graph` reference, or any reference that is not a
+  `rating_version`, is refused. This is unprovable before that slice, because no deploy route
+  exists.
