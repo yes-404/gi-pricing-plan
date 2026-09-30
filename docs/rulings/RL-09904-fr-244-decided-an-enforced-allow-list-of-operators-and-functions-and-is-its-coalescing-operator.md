@@ -148,17 +148,35 @@ nothing that exists, except the two deliberate negative-test functions.
    - **Operators:** `+`, `-` (binary and unary), `*`, `/`, parentheses; `==`, `!=`, `<`,
      `<=`, `>`, `>=`; `and`, `or`, `not`; the ternary `c ? a : b`; and **`??`** (item 2).
    - **Functions:**
-     - `round(x)` and `round(x, dp)`, with `dp` an integer literal. The engine rounds **half
-       away from zero**, and the amendment says so, because the output step's
-       `half_even` is a different rule; **Half away from zero is accepted as P2's in-expression rounding**
-       (the maintainer, `to-lead.md` entry "2026-09-30 10:46:20 BST — #967 … decisions on A
-       (rounding) and B"; first cited here as "about 11:28 BST", a relayed estimate). FR-244's dropped `mode` intent is an
-       open question, OQ working id 9905, raised by this record and mirrored in `03` §10 and
-       the register (owner WK-1178). Whether the engine rounds through binary float is
-       auditor-rl's probe, and a separate finding if it does;
      - `min([…])` and `max([…])`, **array forms only**. An array literal is permitted only as
        their argument;
-     - `abs(x)`, `floor(x)`, `ceil(x)`.
+     - `abs(x)`.
+   - **No rounding function in P2: `round`, `floor` and `ceil` are not on the list**
+     *(ruled on auditor-rl's note 4, after the maintainer's 10:46:20 BST entry accepted the
+     engine's half-away-from-zero `round` as P2's in-expression rounding; this changes that
+     point, for the reason below, and the maintainer may overrule it)*:
+     - FR-226 (`03:112`) says `output` steps declare rounding explicitly, and "Rounding is
+       never implicit and never happens twice". NFR-496 (`03:1152`) says "no rounding is
+       applied more than once". FR-248 (`03:155`) requires the ladder to reconcile to the
+       penny from each rung's **recorded operation**. An authored `round`, `floor` or `ceil`
+       on a money path is a second rounding before the output step's own, and it is recorded
+       on no rung, so the ladder cannot reconcile it.
+     - The maintainer's steer (the entry after 10:53:10 BST, relayed) is to allow `round` only
+       on dimensionless factors and refuse it on money minor-unit operands. **A save-time
+       check cannot know that today.** FR-213's input types (`rating.py:194-202`: `int`,
+       `decimal`, `string`, `date`, `bool`, `enum`) have no money type, and an operand is an
+       arbitrary sub-expression, so deciding "money or not" needs type inference over ZEN
+       expressions, which nothing in the codebase does.
+     - **The interim rule is therefore that no rounding function is offered in an expression.**
+       Rounding happens only where FR-226 declares it, on the output step. This costs nothing
+       today: no committed, stored or bundled algorithm uses `round`, `floor` or `ceil` (the
+       sweep; auditor-rl's database spot-check also found 0 `round(`). It is reversible by a
+       spec change.
+     - **The question — whether rounding is offered inside an algorithm, where, with what
+       mode, and how it is recorded so the ladder reconciles and nothing rounds twice — is
+       OQ working id 9905**, broadened for this. The dimensionless-factor rule is one of its
+       options. The engine's `round` is half away from zero, which records what that option
+       would use.
    - **Struck from FR-244's intent list, each with its replacement:**
      - `coalesce(a, b)` → `a ?? b`;
      - `clip(x, lo, hi)` → `min([max([x, lo]), hi])`;
@@ -166,11 +184,13 @@ nothing that exists, except the two deliberate negative-test functions.
        (FR-228);
      - `date_diff_years(a, b)` → a declared input, since a quote timestamp is already an input
        (FR-246);
-     - `round(x, mode, dp)` → `round(x, dp)`, with the mode stated;
+     - `round(x, mode, dp)` → the output step's declared rounding (FR-226); intermediate
+       rounding is OQ working id 9905;
      - the two-argument `min` and `max` → the array forms.
 
      None of the struck forms exists in the engine (the probe above).
-   - **Not on the list** (a spec change can add any of these when a need appears): `%`, `^`,
+   - **Not on the list** (a spec change can add any of these when a need appears): `round`,
+     `floor`, `ceil` (above), `%`, `^`,
      `!` as authored text, `in` and `not in`, `sum`, string concatenation beyond comparison,
      `len`, `date`, indexing, member access, and object literals. The platform's own generated
      `!(…)` and clamp ternaries (`runtime.py:292`, `:310-313`) are outside the check, which
@@ -215,14 +235,16 @@ WK-690 Slice 1's Task 6 appends this to FR-244's cell, **in place of** the held 
 > returns its right operand when its left is null. It is the coalescing form the function
 > list above names `coalesce(a, b)`, and it is never a division guard (FR-274).
 > **Literals:** numbers, `true`, `false`, `null` and single-quoted strings. **Functions:**
-> `round(x)` and `round(x, dp)` (the engine rounds half away from zero), `min([…])`,
-> `max([…])`, `abs`, `floor`, `ceil`. The list above states intent that the engine does not
-> meet. `coalesce(a, b)` is written `a ?? b`, `clip(x, lo, hi)` is
-> `min([max([x, lo]), hi])`, `band` is a `table` step with a banded key (FR-228), and
+> `min([…])`, `max([…])` and `abs`. **No rounding function** (`round`, `floor`, `ceil`): money
+> is rounded only by an `output` step's declared rounding (FR-226), never twice (NFR-496).
+> Whether rounding is offered anywhere else is an open question (`03` §10, working id 9905).
+> The list above states intent that the engine does not meet. `coalesce(a, b)` is written
+> `a ?? b`, `clip(x, lo, hi)` is `min([max([x, lo]), hi])`, `round(x, mode, dp)` is the
+> output step's rounding, `band` is a `table` step with a banded key (FR-228), and
 > `date_diff_years` is an input (FR-246). The allow-list binds every authored rating string
 > (`expr`, `condition`, clamp bounds, `key_expr`), and anything outside it is refused at
 > save with `EXPRESSION_INVALID_VOCABULARY`. **Numbers at the engine boundary:** inside ZEN,
-> arithmetic and `round` are exact decimal (`round(2.675, 2)` is `2.68`, and `0.1 + 0.2 == 0.3`).
+> arithmetic is exact decimal (`0.1 + 0.2 == 0.3`).
 > Callers pass money as integer minor units (FR-273). The binding refuses a `Decimal` input,
 > and takes a `str` input as a string, never a number. Outputs return as floats and are taken
 > through `_round_minor` (`Decimal(repr(x))`, quantized with the output step's declared mode).
@@ -272,7 +294,9 @@ Each is shown failing on deliberately broken input (`CLAUDE.md` §13), in the WK
 - **Refused at save with `EXPRESSION_INVALID_VOCABULARY`:** an `expr` using `%`, `in`, `a[0]`,
   `a.b`, `len('x')` or `sum([a, b])`, each case by its cause. With the allow-list check
   removed, each saves, and the test fails.
-- **Accepted:** `a ?? 0`, `x != 0 ? y / x : 0`, `round(p, 2)`, `min([max([x, 0]), 1])` and
+- **Refused at save** with `EXPRESSION_INVALID_VOCABULARY`: `round(p, 2)`, `floor(x)` and
+  `ceil(x)`. The interim rule on rounding must be shown red, like any other refusal.
+- **Accepted:** `a ?? 0`, `x != 0 ? y / x : 0`, `min([max([x, 0]), 1])` and
   `abs(x)`.
 - **A `condition` with a function outside the list is refused at save.** Today it saves.
 - **A `condition` or clamp bound that divides without a guard is refused** with
