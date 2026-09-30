@@ -12,7 +12,7 @@ supersedes: []
 superseded_by: ~
 corrected_by: []
 corrects: ~
-relates: []
+relates: [OQ-1266, RL-1265, PL-1268]
 ---
 
 # RL-9902 — PREPARED, NOT RULED: the exact `sympy` pin for WK-690 Slice 1
@@ -30,23 +30,24 @@ it**. The ruling is the later pass at effort `high`.
 `active → superseded | retired`; `scripts/audit-docs.py` check 33). It is kept on purpose so
 the gate refuses this file as a ruling; the ruling pass sets `active` and mints the id.
 
-**Ids cited in prose, not as tokens.** The open question is working id 9660, the ruling that
-filed it is working id 9202 (PR #847, branch `p2-wk690-rl`, head
-`14d2caa09fece19840944bc7e1046562f176c5d5`), and the map plan is working id 9103 (PR #871,
-branch `p2-wk690-map`, head `69be18ae577a4e6bd666a8dfca03bf28f8ee8e30`). None is minted at
-`origin/main`, and a token for an unminted id fails check 32; the ruling pass converts them to
-tokens once they mint. Working id 9902 (this record) was checked free on `origin/main` and every
-`origin/*` branch.
+**Ids.** When this record was drafted, the open question, the ruling that filed it and the
+map plan were unminted (working ids 9660, 9202, 9103), so it cited them in prose. All three
+have since minted, and this refresh cites them by real id: `OQ-1266`, `RL-1265`, `PL-1268`.
+Working id 9902 (this record) was checked free on `origin/main` and every `origin/*` branch.
+
+*Refreshed 2026-09-30 onto main `0bc69b5b2c3c16ec8391387cdfab19734ff85d2b`. Each deciding-evidence
+claim below was re-checked there. `uv.lock` and every `pyproject.toml` still hold no
+`sympy`/`mpmath` (rc 1). `02:1015`/`:1069` still carry `1.14.0`/`1.13.x`. PyPI's latest is
+still `1.14.0`. The spike is not re-run: the wheels and the spec example are unchanged.*
 
 ## Verified first
 
-**The question** (working id 9660; `docs/open-questions.md:119` and `02` §10 `:3247` on
-branch `p2-wk690-rl`): which exact `sympy` version does WK-690 Slice 1 pin?
+**The question** (`OQ-1266`; `docs/open-questions.md:119` and `02` §10 `02-modelling.md:3247`): which exact `sympy` version does WK-690 Slice 1 pin?
 
 **What the pin must satisfy.**
-- #847's ruling's DP-5 obligation (its "The sympy pin" row): Slice 1 pins **one exact** version
+- `RL-1265`'s DP-5 obligation (its "The sympy pin" row): Slice 1 pins **one exact** version
   and amends `02` §4.6 and §4.7, dated, to cite it.
-- #871's map plan, item 9 and Slice 1's Gates: Slice 1's leaf plan is filed only when the question
+- `PL-1268`, item 9 and Slice 1's Gates: Slice 1's leaf plan is filed only when the question
   "is ruled: the exact `sympy` version to pin"; Slice 2 records the version on the
   certificate from `sympy.__version__`, never as a literal.
 - `02` at `origin/main` `aa14e90d`: §4.6's example records `"derivation_version": "1.14.0"`
@@ -84,8 +85,8 @@ strict-profile refusal cases Slice 1 builds.
 |---|---|---|---|
 | (a) | **Pin `1.14.0`**; §4.7's `1.13.x` corrected to agree | The newest release on PyPI at the time of the query; the version the 2026-08-14 certification spike verified (track-a F2) and that §4.6 already names; today's spike reproduces §4.6's derivatives on it | A literal in the spec can drift from the lock again, as the two literals already have |
 | (b) | **Pin `1.13.3`** (the last `1.13.x`); §4.6 corrected to agree | Matches §4.7's range | An older, superseded line; nothing in the tree says why §4.7 named it; the derivation evidence on record is for 1.14.0 |
-| (c) | **Choose at Slice 1 by spike; spec cites `uv.lock`, not a literal** (the question's own recommendation) | The spec cannot disagree with the pin again | Defers the choice past the gate: #871's map plan's Slice 1 gate asks for "the exact `sympy` version to pin", which (c) alone does not give |
-| (a)+(c) | **Pin `1.14.0` now, and word the §4.6/§4.7 amendments to cite `uv.lock`** (certificate reads `sympy.__version__`, per #871's map plan item 9) | Satisfies the gate with an exact version **and** removes the drift that caused the question | None found at medium; the ruling pass should confirm the amendment wording is Slice 1's, per #847's ruling, DP-5 |
+| (c) | **Choose at Slice 1 by spike; spec cites `uv.lock`, not a literal** (the question's own recommendation) | The spec cannot disagree with the pin again | Defers the choice past the gate: `PL-1268`'s Slice 1 gate asks for "the exact `sympy` version to pin", which (c) alone does not give |
+| (a)+(c) | **Pin `1.14.0` now, and word the §4.6/§4.7 amendments to cite `uv.lock`** (certificate reads `sympy.__version__`, per `PL-1268` item 9) | Satisfies the gate with an exact version **and** removes the drift that caused the question | None found at medium; the ruling pass should confirm the amendment wording is Slice 1's, per `RL-1265` DP-5 |
 
 ## Provisional recommendation — (a)+(c), not ruled
 
