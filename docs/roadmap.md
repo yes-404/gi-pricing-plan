@@ -899,7 +899,7 @@ Minted as `SL-1271` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-
 id: SL-1272
 family: slice
 title: Slice 2: symbolic derivation, the compilation target and the expression certificate (FR-144, FR-146, FR-147, FR-148, FR-149, FR-165, NFR-476, NFR-483, `02` §4.7 expression half)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: dee49f781fd23f9df2e72161885c77fa17a6f1ab
