@@ -569,9 +569,12 @@ contract is regenerated.
   contract-guard run and `generate-contracts --check` stay in the write set (B2), and they
   must stay green. Typing the `/score` response, which OpenAPI leaves as `{}`, would be a
   separate contract question. It is not ruled here, and it is listed under Observed.
-  **Declared outputs of type `decimal` are out of this ruling.** They are not money, and
-  serving them as exact strings would change their JSON type on `/score` from number to
-  string. No acceptance covers that visible change. `score_batch` already emits them as
+  **Declared outputs of type `decimal` are out of S3 scope pending OQ 9970** (raised by the
+  finding filed under working id 9969: should `/score` serve declared `decimal` outputs as
+  strings, and may a `decimal` output carry money, which FR-227 allows?). This ruling does
+  not pre-decide that question (*amended 2026-09-30, on the maintainer's entry of 17:08:59
+  BST; this sentence first said they "are not money"*). Serving them as exact strings would
+  change their JSON type on `/score` from number to string. No acceptance covers that visible change. `score_batch` already emits them as
   strings (`_coerce_output_value`, `score.py:834`). The recommended owner is WK-1178,
   alongside the `DecimalStr` finding; the lead routes it (see Observed).
 - **`outputs`, and the rung values it serves: they change on most quotes** (*restated on
