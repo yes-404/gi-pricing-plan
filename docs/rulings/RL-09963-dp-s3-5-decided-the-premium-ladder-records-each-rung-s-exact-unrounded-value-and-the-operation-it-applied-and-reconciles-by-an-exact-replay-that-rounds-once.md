@@ -77,7 +77,7 @@ It is not committed. The interpreter is the root checkout's `.venv` (`zen-engine
 `packages/model-schema/src`. `python -c 'import pricing_core.rating.score as s; print(s.__file__)'`
 under the same environment printed this worktree's `score.py`, which proves which builder the
 script imports. It is reproduced in full in the appendix, sha256
-`05b927376b7c93fb1c2e60430c14d8506f82e899799f28820c6490d5319cc96b` (*re-run on audit, 2026-09-30, with the clamp case and the magnitude counter added; every earlier figure reproduced unchanged*).
+`361793508c7cb351f66e5cbdde3dd616cab36e3cd997786aa792955c2197c512` (*re-run on audit, 2026-09-30, twice: first with the clamp case and the magnitude counter added (`05b92737…`), then with the relative-error counters added for S4; every earlier figure reproduced unchanged each time*).
 
 **Steps.**
 1. `git worktree add <path> fa9a73c2` (any checkout of this tree).
@@ -216,6 +216,16 @@ above, at tree `fa9a73c2`:
 | `200 7` | 1 / 9 / 82 / 1050 / 12521 | 2958 · 837 · 1837 · 7152 |
 | `500 1257` | 1 / 11 / 101 / 1089 / 11724 | 7423 · 2015 · 4475 · 19005 |
 | `300 42 mixed` | 1 / 9 / 59 / 428 / 7820 | 3287 · 1409 · 4158 · 14300 |
+
+**Relative to the value** (added on the second re-audit, S4), the script prints two
+maxima over the same non-payable rungs. With the one rounding unit included,
+`diff / value`, the largest are 6.696 × 10⁻⁴, 7.683 × 10⁻⁴, 9.906 × 10⁻⁴ and
+8.309 × 10⁻⁴ — each a 1-minor-unit difference on a value near 1e3, so that ratio measures
+the rounding unit, not the drift. With the rounding unit taken out, `(diff − 1) / value`,
+the largest are **4.453 × 10⁻⁵** (seed 20260930), **4.854 × 10⁻⁵** (seed 7), **4.445 × 10⁻⁵**
+(seed 1257) and **4.607 × 10⁻⁵** (seed 42, mixed). The maximum over the four runs is
+**4.854 × 10⁻⁵**. Acceptance 8's stop bound uses this figure rounded up (5 × 10⁻⁵), plus one
+minor unit.
 
 The cause is today's 4-dp factor quantisation (`score.py:610`). Each factor can be off by up
 to 5 × 10⁻⁵, so a rung is off by up to about 10⁻⁴ of its value. "1–2p" holds only at
@@ -363,6 +373,12 @@ For each rung present in `_RUNG_ORDER` (the fixed order is unchanged):
      disposition and the operation from the comparison, and R0 fails (§5). The authored
      condition and bounds then contradict each other, and the platform cannot say which
      one priced the quote. What a failure does is DP-S3-1's.
+     **This can fail every binding quote of a valid version** (*stated on audit, S5*). `03`
+     lets `condition` and `clamp_bounds` be authored separately (§3.2, the `constraint`
+     row), and whether they agree depends on values, so no save-time or compile-time check
+     can see it. S3's false-positive control therefore counts the quotes on which a clamp's
+     comparison and disposition disagree, over every fixture and committed suite. A count
+     above 0 stops the slice for the lead.
      These are generated strings, so RL-1312's authored-string check does not read them
      (RL-1312 item 1: generated ZEN is "outside the check, which reads authored strings
      before they are wired").
@@ -374,24 +390,58 @@ For each rung present in `_RUNG_ORDER` (the fixed order is unchanged):
      final value equals), `bound_unrounded_minor` (that bound's exact value) and `applied`
      (every binding clamp's reason code, in step order). If two clamps bind on the same
      name, the operation names the last one, which set the value.
-   - **A clamp that the ladder cannot place is refused at compile time** (*ruled on audit,
-     W-c*). A clamp step whose produced name is the source of a rung other than the last
-     rung present before `constraints` (an earlier rung, whose later rungs before
-     `constraints` consume the clamped value, or a rung after `constraints`) cannot be
-     stated at the `constraints` position without breaking the chain. The same applies to
-     a clamp whose produced name is a rung's source but differs from its consumed name.
-     Both are decidable from the algorithm alone. **`compile_bundle` refuses such an
-     algorithm with the registered code `BUNDLE_COMPILE_FAILED`** (`backend/src/app/errors.py:299`;
-     the compile route maps it to 422, `rating_versions.py:528-537`). The message names
-     the step and the rung, and carries no quote input. FR-240 gains a dated clause for
-     this in this record's commit. Refusing at compile is better than the alternative,
-     which is to refuse every quote on which the clamp binds, for a version already
-     approved. **A bundle compiled before S3** skips the check, so at runtime R0 still
-     fails such a ladder, and DP-S3-1 decides what that does. S3 reports how many
-     committed fixture algorithms and stored bundles the new check refuses. A count above 0
-     stops the slice for the lead. FR-247 puts `constraints` after
-     `optimisation_adjustment`, so an algorithm that clamps earlier has a ladder the
-     platform cannot state truthfully.
+   - **A clamp that the ladder cannot place is refused when the algorithm is saved and when
+     a bundle is compiled** (*ruled on audit, W-c; placed in the check registry on the
+     second re-audit, S1*). A clamp step whose produced name is the source of a rung other
+     than the last rung present before `constraints` (an earlier rung, whose later rungs
+     before `constraints` consume the clamped value, or a rung after `constraints`) cannot
+     be stated at the `constraints` position without breaking the chain. The same applies
+     to a clamp whose produced name is a rung's source but differs from its consumed name.
+     Both are decidable from the algorithm alone.
+     - **Where the check lives: option (b), a registered algorithm check.** It is a new
+       `_check_clamp_placement(algo) -> list[ValidationIssue]` in `compile.py`, appended to
+       the `ALGORITHM_CHECKS` registry that the in-flight #967 code slice creates (PL-1314,
+       "Produces, in `compile.py`": `ALGORITHM_CHECKS: tuple[Callable[[RatingAlgorithm],
+       list[ValidationIssue]], ...]`). `validate_algorithm` runs every registered check at
+       save (`backend/src/app/platform/rating_algorithms.py:58-69`) and at compile
+       (`compile_bundle`, `compile.py:497-499` at `origin/main` `32f3fa92`). So the refusal
+       comes at save, which is earlier and better than at compile. It edits no existing
+       definition: it appends one function and one registry entry. Option (a), an edit
+       inside `compile_bundle`, is rejected: it collides with #967's condition 3 and with
+       WK-1250 S2.
+     - **The code: a new `LADDER_CLAMP_UNPLACEABLE` (422)**, registered in `03` §5.1 by this
+       commit and in `backend/src/app/errors.py` by S3. `BUNDLE_COMPILE_FAILED`, which the
+       previous commit named, is a compile code and would mislabel a refusal at save. The
+       `ValidationIssue` names the step and the rung, and carries no quote input. The check
+       adds no `_raise_named` site: `compile_bundle` raises the first issue through its
+       existing site (`compile.py:498-499`). If S3 adds a new `_raise_named` site anyway,
+       it lists it in `_INPUT_FREE` in `test_quote_input_raise_sites.py`, as #988 did.
+     - **The ordering condition.** S3's `compile.py` edit starts only after #967's code
+       slice has merged, because the registry does not exist on `main` until then. The
+       dispatch record names this path, and records RL-1263's no-shared-definition check
+       against WK-1250 S1 (Task 4: `_producer_types`, `_check_result_types`) and WK-1250 S2
+       (`compile_bundle`). The one line S3 shares with them is its entry in the
+       `ALGORITHM_CHECKS` tuple, so S3 serialises with any slice that edits that tuple.
+     - **The rung mapping moves to a lower module** (*S2*). The mapping from rungs to their
+       sources — `_RUNG_ORDER`, `_output_steps_by_name` and the `<rung>_minor` naming — is
+       private to `score.py`. `compile.py` cannot import it, because `score` imports
+       `runtime` (`score.py:217`), which imports `compile` (`runtime.py:50`). S3 moves it to
+       a new `pricing_core/rating/ladder.py` that imports only `model_schema`, and both
+       `score.py` and `compile.py` import it from there. **That is an edit of existing
+       definitions in `score.py`**, inside S3's own write set.
+     - **Reach and consequence** (*S3*).
+       - An algorithm with such a clamp can no longer be saved. A Rating Version pinning one
+         can no longer be compiled, so it must be re-published on a corrected algorithm as
+         a new version.
+       - Live scoring reads the stored bundle and does not recompile (`backend/src/app/api/score.py`).
+         So a bundle compiled before S3 keeps scoring. On a quote where its clamp binds, R0
+         fails at runtime, and DP-S3-1 decides what that does.
+       - S3 counts how many committed fixture algorithms and stored bundles in the stores
+         this repository reaches the check refuses. A count above 0 stops the slice for the
+         lead. **The count covers this repository's fixtures and reachable stores only, not
+         any deployment's data.**
+     FR-247 puts `constraints` after `optimisation_adjustment`, so an algorithm that clamps
+     earlier has a ladder the platform cannot state truthfully.
    - A `decline` or `error` constraint changes no value, as today.
 6. **What the ladder never does.** It never records a jump it cannot explain as `round`. If
    the payable source differs from the previous rung's value, the builder still records
@@ -463,12 +513,26 @@ contract is regenerated.
   - **unclamped:** the served output equals its ladder rung's `value_minor` exactly (the
     same exact value, rounded once, with the same rounding), so the 10⁻⁴ correction below
     still reaches it;
-  - **clamped:** the served output equals the bound exactly: the `constraints` rung's
-    `value_minor`, which is `bound_unrounded_minor` rounded once. On FD 9967's quote,
-    `office_premium_minor` serves **5000**, as today, and not the rung's pre-clamp 1436.
+  - **clamped:** the served output equals the bound rounded once with the output step's
+    `RoundSpec`, which is the `constraints` rung's `value_minor`. When the bound is a whole
+    number of minor units, that is the bound exactly (*sharpened on audit, S6*). On FD
+    9967's quote, `office_premium_minor` serves **5000**, as today, and not the rung's
+    pre-clamp 1436.
 
   The payable output is unchanged by this: it equals the `payable_premium` rung. The
   maintainer's acceptance below is **not** widened to cover a pre-clamp served value.
+- **Declared money outputs that are not rungs** (*brought into scope on audit, S6*). Today
+  `_build_outputs` serves a declared output that is not a rung straight from
+  `result[source]`, which is the float (`score.py:643-645`). **Ruled: every declared output
+  of type `money_minor` is served as the engine's exact `string()` value of its output
+  step's source, rounded once with that step's `RoundSpec`, as an integer.** This is FR-273
+  and `CLAUDE.md` §7, and it is part of the finding under working id 9949 that S3 owns.
+  The same terminal read supplies it.
+  **Declared outputs of type `decimal` are out of this ruling.** They are not money, and
+  serving them as exact strings would change their JSON type on `/score` from number to
+  string. No acceptance covers that visible change. `score_batch` already emits them as
+  strings (`_coerce_output_value`, `score.py:834`). The recommended owner is WK-1178,
+  alongside the `DecimalStr` finding; the lead routes it (see Observed).
 - **`outputs`, and the rung values it serves: they change on most quotes** (*restated on
   audit, W2*). Outside the clamped case, every declared non-payable rung output (for example
   `office_premium_minor`, served by `/score`) becomes that rung's engine value rounded once.
@@ -627,10 +691,20 @@ S3 carries each item red first, shown failing on `origin/main`.
    `round` branch (`:224-225`) assigns instead of replaying, which is why it passed over
    the drift.
 8. **The false-positive control** (the S3 plan's Acceptance 10, N2 (c)) runs under this
-   predicate, and adds: no committed golden quote's payable changes; and, on those golden
-   quotes, **no declared output moves by more than the accepted correction**, about 10⁻⁴ of
-   its value (the maintainer's C2 entry, condition 3). Either stops the slice, and the
-   stop is reported to the lead.
+   predicate, and adds three counts, each of which stops the slice if it is above 0:
+   - golden quotes whose payable changes;
+   - golden quotes with a declared output `o` for which `|new(o) − base(o)| >
+     REL_BOUND × |new(o)| + 1` minor unit, where `REL_BOUND` is **5 × 10⁻⁵** (the
+     measured maximum relative error over the four sweeps, 4.854 × 10⁻⁵, results part 6, rounded up;
+     *made explicit on audit, S4*). The measured figure is for the sweep's factors, which
+     lie in [0.8, 1.4]. The drift on a rung is up to 5 × 10⁻⁵ of the **previous** rung, so a
+     golden algorithm whose factor lies below 0.8 can exceed the bound truthfully. Such a
+     stop is reported with the rung and its factor, and the lead routes it; the bound is
+     not widened in the slice. The `+ 1` covers the one rounding. **The baseline
+     `base(o)` is `origin/main`'s builder run on the same golden contexts at S3's base
+     tree**, because a golden quote's `expected` stores only the payable and the outcome
+     (§4.7);
+   - quotes on which a clamp's comparison and disposition disagree (S5).
 9. The ledger records `scripts/bench-rating.py` before and after (one extra generated node
    with one `string()` per rung). No budget is changed here.
 10. **A binding clamp (FD 9967), red first.** On the finding's reproduction (the score
@@ -647,12 +721,13 @@ S3 carries each item red first, shown failing on `origin/main`.
     fixes the misattribution (*named on audit, W-d*). **The disposition disagreeing with the
     comparison** (a clamp that binds while its condition holds, and a violated condition on
     which no side binds) fails R0 (W-a).
-    **The compile-time refusal (W-c), red first:** an algorithm whose clamp produces the
+    **The placement refusal (W-c, S1), red first:** an algorithm whose clamp produces the
     source of `office_premium` while an `optimisation_adjustment` rung follows it, one whose
     clamp produces the `instalment_loading` source, and one whose clamp produces a name
-    other than the one it consumes, are each refused by `compile_bundle` with
-    `BUNDLE_COMPILE_FAILED`. Today all three compile. The score fixture (a clamp on the
-    source of the last rung before `constraints`) still compiles.
+    other than the one it consumes, are each refused with `LADDER_CLAMP_UNPLACEABLE`, both
+    when saved and by `compile_bundle`. Today all three save and compile. The score fixture
+    (a clamp on the source of the last rung before `constraints`) still saves and compiles.
+    `_check_clamp_placement` is in `ALGORITHM_CHECKS`, so #967's closure test (ii) passes.
 11. **An engine-precision guard (W3).** A test pins what the 10⁻²⁶ tolerance rests on: on
     `zen-engine` 0.53.0, the chain in part 1 returns an eighth product of 29 significant
     digits, `2095.3120014523377649903134154`, which differs from the exact 30-digit product,
@@ -670,7 +745,8 @@ S3 carries each item red first, shown failing on `origin/main`.
     first case is green today and must stay green. **It is red first against a planted
     mutation:** a `_build_outputs` that serves the rung's `value_minor`, which gives 1436.
     A test also asserts that the served value is built from the exact string read, not from
-    the float.
+    the float. **A declared non-rung `money_minor` output (S6)** is served as an integer
+    from the exact string; red first, because today it is the float from `result`.
 
 ## What it obliges
 
@@ -680,7 +756,10 @@ WK-674 Slice 3 (the leaf plan filed under working id 9947), in Task 6:
 - `PositionalDecimalStr` in `model_schema/money.py` (§3);
 - `_build_outputs` serving declared outputs from their own source, exact and rounded once
   (§4, C2);
-- the compile-time placement check in `compile_bundle` (§2 step 5, W-c);
+- `_check_clamp_placement` in `ALGORITHM_CHECKS`, after #967's code slice has merged, and
+  the rung mapping moved to `pricing_core/rating/ladder.py` (§2 step 5, W-c, S1, S2);
+- `LADDER_CLAMP_UNPLACEABLE` in `backend/src/app/errors.py`;
+- declared `money_minor` outputs from the exact string (§4, S6);
 - the contract (§3): `model_schema.scoring`, the hand-authored `scoring.schema.json` and the
   regenerated contract, in one commit with **§4.4's example replaced**, as the dated note
   added there by this commit says;
@@ -697,7 +776,9 @@ WK-674 Slice 3 (the leaf plan filed under working id 9947), in Task 6:
 `packages/model-schema/src/model_schema/money.py` (the new type); `docs/contracts/`
 regenerated, with `scripts/generate-contracts.py --check` green; the contract guard,
 `backend/tests/test_contracts.py`; `packages/pricing-core/src/pricing_core/rating/compile.py`
-(the placement check); and `docs/specs/03-rating-engine.md` §4.4 (the example
+(one appended function and one `ALGORITHM_CHECKS` entry, after #967 merges); the new
+`packages/pricing-core/src/pricing_core/rating/ladder.py`; `backend/src/app/errors.py` (the
+new code); and `docs/specs/03-rating-engine.md` §4.4 (the example
 replacement). These edit existing files, so each serialises with any in-flight slice
 editing the same file, by the plan's own rule for its rows.
 
@@ -727,8 +808,9 @@ the table above, and the slice's ledger quotes it in Task 0.
 The plan's Acceptance 1 dated clauses on FR-248 and NFR-496 ("never sampled") still land
 in S3's Task 1, beside this commit's clause.
 
-**This record's commits edit `03` in three places:** FR-240 gains a dated clause (`03:137`)
-for the compile-time refusal of a clamp the ladder cannot place (W-c). FR-248 gains the dated clause (`03:155`), which
+**This record's commits edit `03` in four places:** FR-240 gains a dated clause (`03:137`)
+for the refusal, at save and at compile, of a clamp the ladder cannot place (W-c, S1).
+§5.1's list of owned codes gains `LADDER_CLAMP_UNPLACEABLE`. FR-248 gains the dated clause (`03:155`), which
 now also records the clamp and says "exactly where the engine did not round, and to the
 engine's precision where it did" (W4). §4.4 gains a dated note: the example does not
 reconcile (24_150 × 1.15 = 27_772.5, not 27_780); the new kinds and fields; and W2's
@@ -761,13 +843,17 @@ stand unchanged: true operands, and one rounding on the replay path.
   ruling does not change them (§3 says why). Whether any stored value is affected, and the
   fix, are a separate question for the lead.
 - *(Removed on audit: the clamp-attribution item is now ruled, §1 and §2 step 5.)*
+- **Declared `decimal` outputs reach `/score` as floats** (*added on audit, S6*).
+  `_build_outputs` serves them from `result[source]`, and `score_one` does not convert them,
+  while `score_batch` serialises them as strings. This ruling brings only `money_minor`
+  outputs into S3 (§4). The recommended owner is WK-1178; the lead routes it.
 - **This ruling interacts with OQ-1316.** If OQ-1316 is decided (a) (an intermediate
   rounding recorded as its own rung), R0's "`round` only on the last rung" must be amended
   by that ruling.
 
 ## Appendix — the evidence script, verbatim
 
-`dp_s3_5_evidence.py`, sha256 `05b927376b7c93fb1c2e60430c14d8506f82e899799f28820c6490d5319cc96b`:
+`dp_s3_5_evidence.py`, sha256 `361793508c7cb351f66e5cbdde3dd616cab36e3cd997786aa792955c2197c512`:
 
 ```python
 """DP-S3-5 evidence (RL-9963). Scratch only, never committed.
@@ -792,6 +878,8 @@ from pricing_core.money import apply_factor
 
 ENGINE = zen.ZenEngine()
 DIFF_MAX, DIFF_HIST = {}, {}
+REL_MAX = [(Decimal(0), 0, '', '')]
+REL1_MAX = [(Decimal(0), 0, '', '')]
 
 
 # ---- a real ZEN graph: a chain of expression nodes, then one node that reads every value as
@@ -1145,6 +1233,12 @@ def main(n_per_cell, seed):
                 for r in v1:
                     if r.rung in present and r.rung != "payable_premium":
                         diff = abs(r.value_minor - rnd(values[present[r.rung]]))
+                        rel = Decimal(diff) / abs(values[present[r.rung]])
+                        if rel > REL_MAX[0][0]:
+                            REL_MAX[0] = (rel, diff, format(values[present[r.rung]], "f"), r.rung)
+                        rel1 = Decimal(max(diff - 1, 0)) / abs(values[present[r.rung]])
+                        if rel1 > REL1_MAX[0][0]:
+                            REL1_MAX[0] = (rel1, diff, format(values[present[r.rung]], "f"), r.rung)
                         if diff:
                             key = f"1e{decade}"
                             DIFF_MAX[key] = max(DIFF_MAX.get(key, 0), diff)
@@ -1169,6 +1263,10 @@ def main(n_per_cell, seed):
     print("  totals:", totals)
     print("  today's non-payable rung value minus its engine value rounded once, |diff| by decade (max):", DIFF_MAX)
     print("  rungs by |diff| in minor units (10 = 10 or more):", dict(sorted(DIFF_HIST.items())))
+    rel, diff, value, rung = REL_MAX[0]
+    print(f"  largest |diff| / engine value over non-payable rungs: {rel:.3E} ({diff} minor units on {rung} = {value})")
+    rel, diff, value, rung = REL1_MAX[0]
+    print(f"  largest (|diff| - 1) / engine value over non-payable rungs: {rel:.3E} ({diff} minor units on {rung} = {value})")
 
 
 if __name__ == "__main__":
