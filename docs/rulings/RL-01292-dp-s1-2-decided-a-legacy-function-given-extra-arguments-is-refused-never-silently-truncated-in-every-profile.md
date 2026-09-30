@@ -1,5 +1,5 @@
 ---
-id: RL-9972
+id: RL-1292
 family: ruling
 title: DP-S1-2 decided — a legacy function given extra arguments is refused, never silently truncated, in every profile
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [PL-1268, RL-1184]
 ---
 
-# RL-9972 — DP-S1-2 decided: extra arguments to a legacy function are refused
+# RL-1292 — DP-S1-2 decided: extra arguments to a legacy function are refused
 
 ## How this was ruled
 
@@ -28,7 +28,7 @@ or accepted as ruled. **Silently ignoring an argument an analyst wrote is the
 mispricing-shaped outcome**". It also says that a choice to keep ignoring must be
 justified against the transparency default (`CLAUDE.md` §1).
 
-**Working id 9972.** The id is minted at the merge turn, which the lead schedules.
+**Minted 2026-09-30 as RL-1292** (`doc-id.py next --ref origin/main` = 1292 at `7040cf1e`); it was prepared and ruled under working id 9972.
 
 ## Verified first, at 095dd400918348b32ee6eab1db7915faaa9dfe35
 
