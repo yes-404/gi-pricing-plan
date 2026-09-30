@@ -131,7 +131,11 @@ nothing that exists, except the two deliberate negative-test functions.
    - **Functions:**
      - `round(x)` and `round(x, dp)`, with `dp` an integer literal. The engine rounds **half
        away from zero**, and the amendment says so, because the output step's
-       `half_even` is a different rule;
+       `half_even` is a different rule; **Half away from zero is accepted as P2's in-expression rounding**
+       (the maintainer, `to-lead.md` about 11:28 BST). FR-244's dropped `mode` intent is an
+       open question, OQ working id 9905, raised by this record and mirrored in `03` §10 and
+       the register (owner WK-1178). Whether the engine rounds through binary float is
+       auditor-rl's probe, and a separate finding if it does;
      - `min([…])` and `max([…])`, **array forms only**. An array literal is permitted only as
        their argument;
      - `abs(x)`, `floor(x)`, `ceil(x)`.
@@ -219,12 +223,15 @@ WK-690 Slice 1's Task 6 appends this to FR-244's cell, **in place of** the held 
 
 ## What it obliges
 
-- **This commit:** this record only. No spec text changes here, because the FR-244 text is
+- **This commit:** this record, and the new open question (OQ working id 9905) in `03` §10 and
+  `docs/open-questions.md`. No FR-244 text changes here, because the FR-244 text is
   the Slice 1 leaf plan's Task 6, in its own commit with the `02` §4.6 note.
 - **WK-690 Slice 1 (its leaf plan's Task 6):** the amended text above, in place of the held sentence.
 - **WK-1178, a new slice after the fix slice:** items 1 to 3, with the acceptance below.
 - **The lead:** routes the slice, and tells the WK-690 Slice 1 executor that Task 6's
   sentence is released in this wording.
+- **The lead (the roadmap is the lead's file):** places OQ working id 9905 on `docs/roadmap.md`
+  §10's decision-gate table, at *Deferred / any time*, as `spec-change` requires of a new `OQ-`.
 
 ## Acceptance — the violation that must become detectable
 
