@@ -453,6 +453,41 @@ def test_an_approver_approves(
     assert body["decisions"][0]["comment"] == "Diagnostics clean."
 
 
+@pytest.mark.req("FR-351")
+def test_a_decision_without_the_decision_flag_is_refused_by_the_database(
+    client: TestClient, submitter_headers, approver_headers, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """**Broken input** for the positive control above: with `approval_decision()` made a
+    no-op, the same approval reaches the database without the flag and `approval_guard()`
+    refuses it, named, rather than the request becoming `approved`."""
+    from contextlib import asynccontextmanager
+
+    from app.platform import approvals as approvals_service
+
+    @asynccontextmanager
+    async def no_flag(session):  # type: ignore[no-untyped-def]
+        yield
+
+    created = client.post(
+        "/api/v1/approval-requests",
+        json={"artifact_ref": MODEL, "change_summary": "Refit."},
+        headers=submitter_headers,
+    ).json()
+    monkeypatch.setattr(approvals_service, "approval_decision", no_flag)
+
+    response = client.post(
+        f"/api/v1/approval-requests/{created['id']}/decide",
+        json={"decision": "approve"},
+        headers=approver_headers,
+    )
+    assert response.status_code == 403
+    assert response.json()["code"] == "APPROVAL_OUTSIDE_DECISION_PATH"
+    monkeypatch.undo()
+    url = f"/api/v1/approval-requests/{created['id']}"
+    still = client.get(url, headers=approver_headers).json()
+    assert still["status"] == "review"
+
+
 @pytest.mark.req("FR-343")
 async def test_deciding_requires_the_permission(
     client: TestClient, submitter_headers, workspace_id, membership

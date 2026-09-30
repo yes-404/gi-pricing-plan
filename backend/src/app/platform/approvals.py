@@ -21,12 +21,14 @@ service could forget:
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import sys
+from collections.abc import AsyncIterator, Mapping
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Any, Final, Protocol
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -56,6 +58,7 @@ __all__ = [
     "CREATION_ACTIONS",
     "ArtifactResolver",
     "EvidenceAuthorResolver",
+    "approval_decision",
     "decide",
     "policy_for",
     "require_in_review",
@@ -64,6 +67,36 @@ __all__ = [
     "to_dict",
     "withdraw",
 ]
+
+
+@asynccontextmanager
+async def approval_decision(session: AsyncSession) -> AsyncIterator[None]:
+    """The decision flag: `SET LOCAL app.approval_decision = 'on'` around a write of `approved`.
+
+    `approval_guard()` (migration `a9f3c6d21b87`) refuses an `approved` row that has no
+    decided request for its ref; on `approval_requests` itself, and on the validation tables
+    while they hold an allowance, it accepts this flag instead (RL-1301 A.4.3).
+
+    **`SET LOCAL` lasts to the end of the transaction, not of this block**, so the block
+    flushes and then resets the flag to `'off'` in a `finally`. The flush comes first so the
+    block's own pending write meets the trigger while the flag is on; an ORM write left
+    unflushed at exit is flushed later under `'off'` and refused, which fails closed. The
+    reset runs even when the body raises. If the transaction is already dead the flag died
+    with it, and the original error is the one to surface.
+
+    Entered at exactly two sanctioned sites — `decide` and `api.approvals._carry_to_the_artifact`
+    — and the named allowance sites; `test_approval_guard_static.py` holds that list.
+    """
+    await session.execute(text("SET LOCAL app.approval_decision = 'on'"))
+    try:
+        yield
+        await session.flush()
+    finally:
+        try:
+            await session.execute(text("SET LOCAL app.approval_decision = 'off'"))
+        except Exception:
+            if sys.exc_info()[0] is None:
+                raise
 
 
 #: The Audit Event each approvable type's creation path records — whose actor is, by
@@ -413,10 +446,11 @@ async def decide(
     approvals = await _count_approvals(session, row.id)
     new_status = _resolve_status(decision, approvals, row.approvers_required)
     _require_transition(ApprovalStatus(row.status), new_status)
-    row.status = new_status.value
-    if new_status is not ApprovalStatus.REVIEW:
-        row.decided_at = datetime.now(UTC)
-    await session.flush()
+    async with approval_decision(session):
+        row.status = new_status.value
+        if new_status is not ApprovalStatus.REVIEW:
+            row.decided_at = datetime.now(UTC)
+        await session.flush()
 
     await audit.record(
         session,

@@ -130,39 +130,43 @@ async def seed_builtin_rules(
         ).all()
     }
     created: list[ValidationRuleRow] = []
-    for catalogue_id, rule in BUILTIN_RULES.items():
-        if catalogue_id in existing:
-            continue
-        row = ValidationRuleRow(
-            workspace_id=workspace_id,
-            slug=rule.slug,
-            version=1,
-            layer=rule.layer.value,
-            check=rule.check,
-            severity=rule.severity.value,
-            body={
-                "target": {},
-                # FR-56: the catalogue carries a built-in's default thresholds, so the
-                # seeded row publishes them rather than leaving every threshold a literal in
-                # `pricing-core` that no caller can read. Copied, not aliased — the catalogue
-                # is a process-wide constant and this dict is about to be handed to the ORM.
-                "params": dict(rule.params),
-                "scope": {},
-                "tolerance": {},
-                "message": rule.summary,
-                "rationale": (
-                    f"Built-in rule {catalogue_id} from `01` §4.4's catalogue, reviewed "
-                    "there rather than in this workspace."
-                ),
-            },
-            status=APPROVED,
-            authored_by=authored_by,
-            builtin=True,
-            catalogue_id=catalogue_id,
-        )
-        session.add(row)
-        created.append(row)
-    await session.flush()
+    # ALLOWANCE (PL-1303 Acceptance 7, RL-1301 A.4.5): a legitimate seed writer. The shipped
+    # catalogue arrives `approved` with no request to cite, so it enters the decision flag
+    # around its own write; `approval_guard()` still refuses every other writer here.
+    async with approvals.approval_decision(session):
+        for catalogue_id, rule in BUILTIN_RULES.items():
+            if catalogue_id in existing:
+                continue
+            row = ValidationRuleRow(
+                workspace_id=workspace_id,
+                slug=rule.slug,
+                version=1,
+                layer=rule.layer.value,
+                check=rule.check,
+                severity=rule.severity.value,
+                body={
+                    "target": {},
+                    # FR-56: the catalogue carries a built-in's default thresholds, so the
+                    # seeded row publishes them rather than leaving every threshold a literal in
+                    # `pricing-core` that no caller can read. Copied, not aliased — the catalogue
+                    # is a process-wide constant and this dict is about to be handed to the ORM.
+                    "params": dict(rule.params),
+                    "scope": {},
+                    "tolerance": {},
+                    "message": rule.summary,
+                    "rationale": (
+                        f"Built-in rule {catalogue_id} from `01` §4.4's catalogue, reviewed "
+                        "there rather than in this workspace."
+                    ),
+                },
+                status=APPROVED,
+                authored_by=authored_by,
+                builtin=True,
+                catalogue_id=catalogue_id,
+            )
+            session.add(row)
+            created.append(row)
+        await session.flush()
     return created
 
 
@@ -424,9 +428,12 @@ async def approve_rule(
             "review.",
         )
 
-    row.status = APPROVED
-    row.approved_by = actor.id
-    await session.flush()
+    # ALLOWANCE (PL-1303 Acceptance 7): temporary, removed by the validation-rule fix slice
+    # (WK-1178), which routes rule approval through `submit`/`decide`.
+    async with approvals.approval_decision(session):
+        row.status = APPROVED
+        row.approved_by = actor.id
+        await session.flush()
     await audit.record(
         session,
         workspace_id=workspace_id,
@@ -646,8 +653,11 @@ async def replace_rule_set(
         reference_dataset_version_id=reference_dataset_version_id,
         status=APPROVED,
     )
-    session.add(row)
-    await session.flush()
+    # ALLOWANCE (PL-1303 Acceptance 7): temporary, pending the WK-1178 triage of whether a
+    # rule set is ungoverned (`06:64`); the table default is also `approved` (`models.py`).
+    async with approvals.approval_decision(session):
+        session.add(row)
+        await session.flush()
 
     # `01` §4.1's `validation_rule_set_id`, which nothing set: the row carried
     # `dataset_id` and the dataset never pointed back, so §5.3's "rule set link" had
