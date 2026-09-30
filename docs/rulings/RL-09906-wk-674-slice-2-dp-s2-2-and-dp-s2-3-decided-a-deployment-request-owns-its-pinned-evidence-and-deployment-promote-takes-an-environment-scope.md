@@ -98,53 +98,66 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
      (record_certificate conditionals): steer WIDEN, not baseline" decide the population and
      the widening. auditor-close1255 implemented the earlier text and ran it at
      `9f63d0fe`, finding 5 red sites outside the baseline: `datasets.py:581`,
-     `jobs.py:226`, `traces.py:252`, `metrics.py:459` and `objectives.py:532`. Each is
-     closed below.)*
-     1. **The population is derived from approval-status enums.** Every mapped class under
-        `app.db.models.Base` with a `status` column **declares that column's vocabulary**:
-        the `StrEnum` its values come from, as column metadata (for example
-        `info={"status_vocabulary": RatingVersionStatus}`). A status column with no declared
-        vocabulary fails the check, so no table escapes by omission. **The population is
-        every class whose declared vocabulary has an `APPROVED` member.** At `9f63d0fe`,
-        the enums with one are `ApprovalStatus` (`model_schema/approvals.py:41`),
-        `MetricStatus` (`metrics.py:48`), `ModelStatus` (`modelling.py:1975`),
-        `ObjectiveStatus` (`objectives.py:137`), `PerilStructureStatus` (`perils.py:94`) and
-        `RatingVersionStatus` (`rating.py:31`).
-        - The validation tables hold their vocabulary as string constants
-          (`platform/validation_rules.py:65`, `DRAFT, REVIEW, APPROVED = "draft", "review",
-          "approved"`), not an enum. So Slice 2 declares a `StrEnum` of those same values
-          for `validation_rules` and `validation_rule_sets`, which brings both into the
-          population.
-        - `jobs` (`JobStatus`), `dataset_versions` (`DatasetStatus`) and `scoring_traces`
-          have no `APPROVED` member, so the writes at `jobs.py:226`, `datasets.py:581` and
-          `traces.py:252` fall outside the population by construction.
-        - The Deployment Request table declares its vocabulary and joins by having
-          `APPROVED`.
-     2. **Attribution: every write is tied to its table, or it fails.** A status write
-        found by the AST walk over `backend/src` is attributed to a mapped class by:
-        - a constructor `XRow(..., status=…)`;
-        - a `<name>.status = …` where `<name>` is annotated with a mapped class, or was
-          bound in the same function from `session.get(XRow, …)` or a `select(XRow)`
-          result.
-
-        A write attributable to no class **fails closed**, and the author adds the
-        annotation. A column `default=` or `server_default=` of `"approved"` is a write
-        on its own class, for example `models.py:1195`.
-     3. **Which writes can produce `approved`.** Each write's possible values are evaluated
-        statically:
+     `jobs.py:226`, `traces.py:252`, `metrics.py:459` and `objectives.py:532`. All five
+     close under sub-item 1's value analysis, as corrected at the next head.)*
+     1. **Values first: which writes can produce `approved`.** *(Reordered on auditor-close1255's
+        audit of `327e1179`, which implemented the previous text and ran it. Attribution
+        was too narrow: 16 of 23 `<name>.status =` sites failed closed, the sanctioned
+        `platform/approvals.py:416` among them. And 3 of the 5 red sites did **not** close,
+        contrary to what that text claimed.)* Every status write found by the AST walk over
+        `backend/src` (an assignment `<name>.status = …`, a constructor's `status=…`, a
+        column `default=`/`server_default=`) has its possible values evaluated statically:
         - a string literal;
         - an enum member, or its `.value`;
         - a module-level name bound to a literal (as `validation_rules.py:65` binds
           `APPROVED`);
         - a conditional, which is the union of its branches;
-        - a name annotated with an enum type, which is all that enum's members;
+        - a name annotated with an enum type, or bound from a call whose return annotation
+          is an enum type, which is all that enum's members (as `new_status =
+          _resolve_status(…)`, returning `ApprovalStatus`, at `platform/approvals.py:414`);
         - a lookup in a module-level dict literal, which is its values.
 
-        **A write is ignored if and only if every value it can produce is a non-approved
-        member of its table's vocabulary.** This covers `record_certificate`'s
-        `(X.DRAFT if failed else X.CERTIFIED).value` at `metrics.py:459` and
-        `objectives.py:532` (the WIDEN steer, rather than baseline entries). Any other
-        write is "possibly approved", an unknown value included, which fails closed.
+        **A write whose every possible value is known and is not `"approved"` is ignored, on
+        any table, and needs no attribution.** A write with an unknown value, or one that
+        can produce `"approved"`, is **possibly approved**.
+        - At `9f63d0fe`, value analysis alone clears `jobs.py:226`, `traces.py:252`,
+          `datasets.py:581` (`to_status: DatasetStatus`), `metrics.py:459` and `:526`,
+          `objectives.py:532` and `:600`, `modelling.py:1418` (`SUPERSEDED`),
+          `outbox.py:133` (`PUBLISHED`), `perils.py:256` and `:338`, and
+          `platform/approvals.py:475` (`WITHDRAWN`).
+        - So **no annotation work falls on Slice 2** in those modules.
+     2. **Attribution, for possibly-approved writes only: tied to a table, or it fails.**
+        A possibly-approved write is attributed to a mapped class by:
+        - a constructor `XRow(..., status=…)`;
+        - a `<name>.status = …` where `<name>` is annotated with a mapped class, or is
+          bound in the same function from `session.get(XRow, …)`, a `select(XRow)` result,
+          or a call to a function whose return annotation is a mapped class (as `row =
+          await _load(…)`, whose return is `ApprovalRequestRow`, `platform/approvals.py:497-499`,
+          before `row.status = new_status.value` at `:416`).
+
+        A column `default=`/`server_default=` is attributed to its own class. A
+        possibly-approved write that attributes to no class **fails closed**.
+     3. **The population, and where vocabularies must be declared.** The population is every
+        mapped class whose `status` column's **declared vocabulary**, the `StrEnum` given as
+        column metadata (for example `info={"status_vocabulary": RatingVersionStatus}`), has
+        an `APPROVED` member (the maintainer's 11:21:51 BST entry).
+        - At `9f63d0fe`, the enums with one are `ApprovalStatus` (`model_schema/approvals.py:41`),
+          `MetricStatus` (`metrics.py:48`), `ModelStatus` (`modelling.py:1975`),
+          `ObjectiveStatus` (`objectives.py:137`), `PerilStructureStatus` (`perils.py:94`)
+          and `RatingVersionStatus` (`rating.py:31`).
+        - **Slice 2 declares the vocabulary of every approval-capable table**: the classes
+          these six enums govern; `validation_rules` and `validation_rule_sets`, through a
+          `StrEnum` of their string constants (`validation_rules.py:65`), since they have no
+          enum; and the Deployment Request table.
+        - **A possibly-approved write attributed to a class outside the population fails**,
+          whether that class has an undeclared vocabulary or one without `APPROVED`. So no
+          table escapes by omitting a declaration.
+        - **A declaration is not required of a table that no write could set to
+          `approved`.** `scoring_traces` (`models.py:2207`), `ingestion_runs` (`:866`),
+          `reference_table_versions` (string constants at `platform/reference.py:57`),
+          `jobs` and `dataset_versions` need none. *(Scoped on auditor-close1255's F-A. The
+          previous text demanded a vocabulary of every status column, and wrongly spoke of
+          `scoring_traces`' enum, which does not exist.)*
      4. **The rule:** on a population table, every possibly-approved write sits in that
         table's `apply_approval_decision` reached from `_carry_to_the_artifact`
         (`api/approvals.py:488`, carrying at `:499-517`). For `approval_requests`, it sits
@@ -155,7 +168,10 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
           `(X.APPROVED if ok else X.DRAFT).value`, which is caught;
         - a planted unattributable status write;
         - a planted `default="approved"`;
-        - a status column planted with no declared vocabulary.
+        - a possibly-approved write planted on a table with no declared vocabulary;
+        - the live tree's sanctioned `decide` write (`platform/approvals.py:416`), shown to
+          attribute through `_load`'s return annotation and to pass. It is a positive
+          control, so the check is not green by failing to see it.
 
         Each fails the check.
      6. **Zero writers passes, and is reported as a note.** "At most one path writes
