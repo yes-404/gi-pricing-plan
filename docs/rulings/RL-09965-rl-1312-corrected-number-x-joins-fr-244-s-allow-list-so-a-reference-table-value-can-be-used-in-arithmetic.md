@@ -70,11 +70,27 @@ A failure is **loud**: a raise at evaluation, never a silent `null` or `0`.
 1. **`number(x)` is on FR-244's allow-list, with exactly one argument.** It is added to
    `RL-1312`'s function list. Everything else in `RL-1312` stands.
 2. **Its semantics, as the amended FR-244 states them:**
-   - `number(x)` converts a numeric string to an exact decimal inside the engine. This
-     follows `RL-1312`'s boundary rule: "exact decimal inside ZEN", with outputs taken through
-     `_round_minor`. So it never introduces a float on the rating path (`CLAUDE.md` §7).
+   - **What it accepts:** a numeric string, including whitespace-padded (`" 1.5 "`) and
+     exponent (`"1e3"`) forms; a number, which it returns unchanged; and a boolean, as the
+     engine converts it (`true` → `1`, `false` → `0`). The result is an exact decimal
+     **inside the engine** (`RL-1312`'s boundary rule, "exact decimal inside ZEN"). ZEN
+     returns a Python float **at the boundary**, and `RL-1312`'s boundary rule already covers
+     that: outputs are taken through `_round_minor` (`Decimal(repr(x))`, quantized with the
+     output step's declared mode). `number()` adds no float step of its own (`CLAUDE.md` §7)
+     *(F2 of auditor-933's audit at `c96cf32e`: this said "never introduces a float on the
+     rating path", which overstated the boundary)*.
    - It exists for `lookup` outputs, which are always strings.
-   - A value that is not a number, including the empty string and null, **fails the quote**.
+   - **What fails the quote** with `RATING_EVALUATION_FAILED`: any other string (`"abc"`,
+     `""`, `"1,07"`), and null. These are the probe's rows. *(F1: this said "a value that is
+     not a number … fails", which overclaimed. The engine accepts booleans, numbers and
+     padded or exponent strings.)*
+   - **Booleans are accepted, and documented, not refused.** `number(b)` for a boolean `b`
+     equals `b ? 1 : 0`, which `RL-1312`'s allow-list already admits, so it opens no new
+     capability and hides no value. Refusing a boolean argument at save would need type
+     inference over ZEN expressions, which `RL-1312` found the codebase does not have
+     (FR-213's input types are known, but an argument is an arbitrary sub-expression). At
+     evaluation the engine offers no hook to refuse it. A reviewer reads `number(flag)` as
+     0 or 1, and the FR-244 text says so.
 3. **The error is `RATING_EVALUATION_FAILED`, `RL-1313`'s code, not a new one.**
    - A `number()` failure is exactly "the engine failed evaluating an authored rating string",
      which is that code's meaning.
@@ -90,11 +106,13 @@ A failure is **loud**: a raise at evaluation, never a silent `null` or `0`.
    > **Functions:** `min([…])`, `max([…])` and `abs`.
 
    with
-   > **Functions:** `min([…])`, `max([…])`, `abs` and `number(x)`. `number(x)` converts a
-   > numeric string to an exact decimal inside the engine; it exists because a `lookup`
-   > step's output is always a string. A value that is not a number, including an empty
-   > string or null, fails the quote with `RATING_EVALUATION_FAILED`. Write
-   > `number(v ?? '1.0')` to default a missing value (`RL-9965`, correcting `RL-1312`).
+   > **Functions:** `min([…])`, `max([…])`, `abs` and `number(x)`. `number(x)` exists because
+   > a `lookup` step's output is always a string. It converts a numeric string (surrounding
+   > spaces and exponent form such as `1e3` are accepted) to an exact decimal inside the
+   > engine, returns a number unchanged, and converts a boolean to `1` or `0`. Any other
+   > string (for example `abc`, an empty string, or `1,07`) and null fail the quote with
+   > `RATING_EVALUATION_FAILED`. Write `number(v ?? '1.0')` to default a missing value
+   > (`RL-9965`, correcting `RL-1312`).
 
    The rest of `RL-1312`'s sentence is unchanged.
 5. **Why not the alternatives now.**
@@ -132,7 +150,7 @@ Each is red first in the slice.
 - *Violation: `number(x, y)`, or `number` with no argument, is accepted.*
 - *Violation: a lookup output used through `number()` in arithmetic does not price as the
   exact-decimal product.* For example, `base_minor * number(veh_loading ?? "1.0")`.
-- *Violation: a non-numeric lookup value ("abc", "") under `number()` produces a price, or
+- *Violation: a non-numeric lookup value ("abc", "", "1,07") or null under `number()` produces a price, or
   escapes `score_one` as a bare `RuntimeError`, rather than a coded refusal.*
 - *Violation: the tokenizer's function list differs from FR-244's text* (`RL-1313`'s equality
   test, with `number` included).
