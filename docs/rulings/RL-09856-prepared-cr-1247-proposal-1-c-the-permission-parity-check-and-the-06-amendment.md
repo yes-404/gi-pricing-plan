@@ -123,6 +123,38 @@ Each count below gives its predicate.
   acceptance item 8 already does for `custom_objective:author`), if the high pass judges the
   regex route leg too fragile.
 
+**Open item under D1 for the ruling: a ninth violation class, `STALE_OWNER`** *(added
+2026-09-30, at the lead's request; not ruled).*
+- **The proposal.** WK-1178's leaf plan (working id 9970, #944, `origin/wk1178-parity-leaf` at
+  `e56809ed`, the one plan file that branch adds, slug
+  `wk-1178-the-permission-parity-check-leaf-plan`) proposes it at `:371`: "Built name has a
+  check site and still carries an owner: clear it in the same commit". It has a synthetic
+  red proof at `:555`.
+- **It is not among this record's four acceptance fixtures.** Those cover a missing Built row,
+  a Built row with no member, a Specified name that is a member, and a Built name with no check
+  site and no owner. `STALE_OWNER` is the converse of the fourth.
+- **What adopting it means.** WK-674 Slice 2 must clear the owner cells on `deployment:promote`
+  and `admin:manage_environments` **in the commit that adds their check sites**. Their rows are
+  in the permission table of PL-1237 (`docs/plans/PL-01237-wk-674-deployment-environments-switchover-tenancy-map-plan.md:481-484`),
+  where Slice 2 builds both checks. If Slice 2's commit does not also touch `06` §4.1, the gate
+  goes red on it.
+
+| | Option | For | Against |
+|---|---|---|---|
+| (adopt) | `STALE_OWNER` is a fifth fixture and a live violation class | An owner cell cannot outlive the work it names. Without it, a cleared gap still reads as open in `06`, which is RFC-756's stale-status failure in a new place. It completes the route leg in both directions. | It couples a code slice (WK-674 S2) to a `06` edit in the same commit. That is the one-commit rule (c) already imposes for a *new* name, now applied to closing an existing gap. |
+| (omit) | Only `NO_CHECK_NO_OWNER`; a stale owner cell is tidied at the next Work close | Looser coupling for WK-674 S2 | The owner cell becomes a claim nothing re-checks, the kind of cell the route leg exists to keep honest |
+
+**Provisional: adopt.**
+- It is the same one-commit discipline (c) already requires. The cost falls on one known
+  commit: WK-674 S2's, whose plan already names both check sites.
+- The ruling should also tell WK-674 S2's leaf plan about it, so the requirement is not first
+  discovered as a red gate.
+- Under D1 (B), the fallback, the class is dormant on the live tree because `checked` is the
+  whole enum (working id 9970, `:232`). It is therefore free to keep either way.
+- The leaf plan's E5 (`:174`) also records a third unchecked member "if only `requires()`
+  routes count". That is the `service_accounts.py` literal `RL-1236` corrected. The ruling
+  should say whether a non-`requires()` check site counts.
+
 ## D2: where the check runs
 
 | | Option | For | Against |
@@ -170,6 +202,12 @@ In one commit, with the check, or in the commit before it:
      construction.
    - The 12 non-member names leave the page.
 5. **FR-367** (`06:148`) is unchanged. It already requires the one-commit landing.
+
+*Context, not a decision (added 2026-09-30):* PL-1268's acceptance places the `06` §4.1 row for
+`custom_objective:author` in WK-690 Slice 3's own commit
+(`docs/plans/PL-01268-wk-690-expression-custom-objectives-map-plan.md:484-486`: "the `06` §4.1
+row for `custom_objective:author`, the enum member … and the route check land in **one
+commit**"). That is consistent with item 2's "moves to Built in Slice 3's commit".
 
 ## Ruled
 
