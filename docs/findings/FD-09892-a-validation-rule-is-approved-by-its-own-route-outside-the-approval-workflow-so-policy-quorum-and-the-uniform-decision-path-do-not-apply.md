@@ -96,10 +96,30 @@ dry-run result *"is attached to the approval request"*. So `06:114`'s "successfu
 outcome)**, not that the data passed: that rule worked and caught bad rows. It is **not** a gap
 in this FD and has **no** red-first acceptance item.
 
-**Not measured, stated as such:** (a) whether a rule whose dry-run outcome is **`error`** can be
-submitted and approved (open item 1 below); (b) the **FR-363 evidence floor** (`06:109`,
-"enforced at submission") on the generic path: the submit body has no evidence field, so what
-enforces it there was not tested.
+**The `06:114` gap, measured: a rule whose dry-run outcome is `error` is submitted and approved.**
+Measured by auditor-922 (attributed; reproduction by auditor-924d pending; not re-run by this
+record's author) on a per-worktree database at `9f63d0fe`, alembic head. Method: a real
+`DATASET_VALIDATE` job with `dry_run_rule_id` on an ingested dataset version, then
+`submit_for_review` and `approve_rule` by a second approver, **through the service functions the
+routes call, not HTTP**. Three variants, each with the same result:
+
+| Variant | Job | `dry_run_report_id` | Report and rule outcome | Submit | Approve |
+|---|---|---|---|---|---|
+| missing column (`range` on `no_such_column`) | succeeded | attached | `error`, rule `['error']` | `review` | **`approved`** |
+| unknown check (`no_such_check`) | succeeded | attached | `error`, rule `['error']` | `review` | **`approved`** (`create_rule` did not refuse it) |
+| missing table (`no_such_table`) | succeeded | attached | `error`, rule `['error']` | `review` | **`approved`** |
+
+**Cause:** `attach_dry_run` (`data_handlers.py:292-296`) attaches the report whatever its outcome;
+`submit_for_review` (`validation_rules.py:371`) and the DB check
+`approved_rule_dry_run_and_separate_approver` test only that `dry_run_report_id` is non-null. **A
+rule that never executed reaches `approved`**, against `01` §4.5 step 2 ("must execute
+successfully") and `01:470-473`, where the mandatory dry-run is what stops an `error` outcome
+reaching approval. This is the `06:114` gap, and it is in this FD's acceptance. Not tested: a
+dry-run against a version with zero rows. **HIGH stands either way** (the quorum bypass).
+
+**Not measured, stated as such:** the **FR-363 evidence floor** (`06:109`, "enforced at
+submission") on the generic path: the submit body has no evidence field, so what enforces it
+there was not tested.
 
 **Cause, by code reading.** `approve_rule` (`validation_rules.py:395-431`) loads the rule, checks
 `approval:decide` (`:400-405`), `row.status != REVIEW` (`:406`, `RULE_NOT_APPROVED`) and
@@ -142,19 +162,18 @@ Event that discharges it: that slice's merge.
 - red-first cases: **with a quorum of 2, one approval leaves the rule in `review`** (case 4
   becomes a refusal); the direct route is gone or refused; **the generic decide carries** to the
   rule (case 5 now moves it to `approved`);
+- **a rule whose dry-run outcome is `error` is refused at submit** (and at approve): the three
+  variants above (missing column, unknown check, missing table) each become a refusal, red
+  first; a `fail` outcome stays accepted (the measured non-defect);
 - the creation sites stay as triaged above (the built-in exemption is named, not silent);
 - **remove S2's temporary A.4 exemption**, red first: the *one named, dated, temporary
   exemption* for `validation_rules` in #971's (RL working id 9906) model-derived one-writer
   check over every approval-status table, which cites this FD by working id and is shrink-only.
 
-**Open items** (the maintainer's 11:23:26 entry names both):
+**Follow-ons** (the maintainer's 11:23:26 entry names both):
 
-1. **Can a rule whose dry-run outcome is `error` be submitted and approved?** (Per the
-   maintainer's 11:27:20 correction above: an `error` outcome, for example an unknown `check` or
-   a target column absent from the dataset version, is what `01:470-473` says the dry-run must
-   stop.) auditor-922 is measuring it and auditor-924d reproduces it; **not measured in this
-   record**. **If it can, that is the `06:114` gap: it goes in this FD with a red-first
-   acceptance item.** HIGH stands either way (the quorum bypass).
+1. **The `error`-outcome dry-run**: measured above, and in the acceptance; auditor-924d's
+   reproduction is pending.
 2. **Data check: approved rules with no approved approval request.** **The fix's obligation, per
    the maintainer's 11:27:20 entry:** there is no production, so the fix slice **resets
    non-built-in approved rules that have no approved approval request to `review`** in the
@@ -214,9 +233,18 @@ and 20,245 rules in all. The 9 databases holding approved non-built-in rules: `g
 `gipricing_w37-6-run2-gate-1789676768` 15, `gipricing_w37-6-run2-gate-1789690960` 10,
 `gipricing_wt-ci-structure` 205, `gipricing_wt-d9d13-redo` 101 and `gipricing_wt-paths-d9-d13`
 183. **All are scratch or test databases, including the `gipricing` template's 10, which every
-scratch database inherits.** The two counts differ (739 of 739 over 74 databases, then 749 of 749
-over 76) because the set of databases is moving (this one includes `gipricing_aud976b`, a scratch
-database created between the two runs) and the database-selection predicates differ. **Provenance
+scratch database inherits.** **Reconciling the two counts: they are two different populations
+measured at two different times, not a count that fell.**
+
+| | This record's author | auditor-922 |
+|---|---|---|
+| Database list predicate | `datname like 'gipricing%' and not datistemplate` | `not datistemplate and datallowconn` |
+| Databases | 77 (74 with the table, 3 without or errored) | 80 (76 with the table, 4 without) |
+| Approved non-built-in rules, none with an approved request | 739 of 739, in 8 databases | 749 of 749, in 9 databases |
+| Row predicate | the script above | the SQL above, verbatim |
+| When | 2026-09-30, before 11:30 BST (the run was not timestamped) | 2026-09-30, later; its list includes `gipricing_aud976b` (10 rules), created during an audit |
+
+The 10 extra rules are `gipricing_aud976b`'s. **Provenance
 was not checked:** whether any row came from a real approval route or a test or seed insert.
 749 of 749 is what the bypass predicts, since the direct route never writes an `approval_request`.
 
