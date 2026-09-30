@@ -336,11 +336,15 @@ strength of a grep for names the code does not use. It is built. See DP-1 item 3
        algorithm's own steps, which today are not checked at compile (the table above). If
        the lead routes that algorithm-level gap elsewhere, Slice 2 still covers the
        fragment's steps.
-     - Because a fragment's `model_call` can reach a model only through a pin, FR-240's "no
-       unapproved custom objective transitively reachable" sees every objective a fragment
-       can reach. That check's owner is the rating Work that PL-1276 DP-2 (b) moves FR-240
-       clauses (4) to (6) to (`PL-1276:166`, `:234`: "WK-1178, or a Work the maintainer
-       names"). This record does not move it.
+     - **The objective clause is WK-1250 Slice 2's.** A custom objective reached through an
+       inlined sub-graph is refused at compile unless it is approved. This is the
+       maintainer's decision by delegation, `to-lead.md` entry "2026-09-30 10:06:52 BST —
+       DECISION (maintainer by delegation): owner of #938 G1's objective clause". It chooses
+       the **first limb** of `PL-1276` DP-2's condition 2 (`PL-1276:260-268`): WK-1250's
+       inlining "must not open the sub-graph path unchecked", so its own compile refusal
+       covers an objective reached through an inlined sub-graph. The owner of the path owns
+       its guard. **WK-690 keeps FR-240 clause (6)** for the other transitive path, a pinned
+       model version whose fit used a custom objective, as `PL-1276` proposes.
      - *Stated, not widened:* `POST /api/v1/score/compare` may name any compiled version,
        `draft` included (`03:760`). That is the existing rule for every pin, it prices nothing
        live, and this ruling does not change it.
@@ -606,6 +610,10 @@ named.
 - G1: a `SubGraphRef` whose version is not in `Pins.sub_graphs` is refused at compile, and the
   bundle contains none of its steps. A fragment whose `table`, `lookup` or `model_call`
   reference is not among the Rating Version's pins is refused at compile.
+- G1, the objective clause (the maintainer's 10:06:52 BST decision; `PL-1276:260-268`, the
+  first limb): the test plants an **unapproved custom objective inside a pinned sub-graph**,
+  reached through that fragment's `model_call`. It shows compile refusing it, red first.
+  With the refusal removed, the planted objective compiles, and the test fails.
 - G2: a change to the pins of a non-`draft` Rating Version is refused, through every pin write
   path at Slice 2's tree.
 - G4 (a) and (b): with `sub_graph` removed from `_MATURITY_CHECK_EXEMPT`, an unapproved-status
