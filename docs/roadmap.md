@@ -879,7 +879,7 @@ From “Workstreams” (line 386): **`expression` custom objectives** — SymPy 
 id: SL-1271
 family: slice
 title: Slice 1: the parser brought to §4.6's four profiles, with its limits and the sympy pin (FR-144, FR-145, FR-36, NFR-483, `01` §4.5 `expression` check, `02` §4.6)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: dee49f781fd23f9df2e72161885c77fa17a6f1ab
@@ -891,6 +891,7 @@ relates: [PL-1268]
 
 `pricing_core.data.expressions` gains the `objective`, `factor`, `recipe` and `check` profiles, `where()`, and the node and depth limits, measured on the corpus before they are enforced. `sympy` is added at one exact pin with its `docs/skills-map.md` row. `03` FR-244 and the matching `02` §4.6 note land in one commit (`RL-1265` DP-5). `PL-1268` Slice 1. First in the chain: nothing precedes it. **Gate:** its leaf plan waits on **OQ-1266** (the exact `sympy` pin) being ruled. *(Title completed 2026-09-30 on auditor-plans' F1 for #943: it now lists every id that `PL-1268`'s Core scope table assigns to this slice.)*
 Minted as `SL-1271` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `08bd1c5a` (working id 9950 before the mint).
+**Closed 2026-09-30** at #981's merge, `bd67fb5127e0ed57e6c5f4d360bdc4c1ce5ff3bc`, on a CLEAN slice audit (auditor-924d at `df66226c`) and the lead's merge (CLAUDE.md §13); its ledger is `LG-1304`. It was dispatched on 2026-09-30 by the lead from `PL-1295` on lane B. The `draft → active` flip was **not recorded at dispatch**. It is noted here rather than back-dated, and the row goes straight from `draft` to `closed`.
 
 #### SL-1272 — Slice 2: symbolic derivation, the compilation target and the expression certificate (FR-144, FR-146, FR-147, FR-148, FR-149, FR-165, NFR-476, NFR-483, `02` §4.7 expression half)
 
