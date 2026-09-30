@@ -62,13 +62,24 @@ that bind it:
 - `RL-1289` fixes the pin at `sympy==1.14.0`. Its form is a `pyproject.toml` `==` pin, the
   same as `hypothesis`. `02` §4.6, §4.7 and §8 and `skills-map.md` cite the lock **in the
   same commit as the pin**.
+- **How this plan reads `RL-1289`'s "in one commit with the code".** The code is the pin:
+  `packages/pricing-core/pyproject.toml` and `uv.lock`. Task 1 is that one commit, and it
+  carries the pin, the four spec and `skills-map.md` citations, and the pin's own test
+  (`tests/test_sympy_pin.py`). The parser and the SymPy translator follow in later commits
+  (Tasks 3 to 5). The ruling's reason (ruling 4 and "No `FR-` is appended") is that the
+  spec must not cite a pin the lock does not yet hold, and one commit holding both pin and
+  citations meets that reason. The `sympy.*` mypy override in Task 1 is **this plan's
+  addition**, not a ruling's. It uses the form of the `sklearn.*` and `interpret.*`
+  entries at `pyproject.toml:149-158`, because `mypy --strict` cannot pass without it
+  (premise e). *(Revised 2026-09-30 on auditor-plans2's audit of #954 at 3e4402cd, finding F4.)*
 
 ## Status
 
 **Draft**, filed 2026-09-30 against `fb90d381` (origin/main). The working id is 9960, and
-the real id is minted at this PR's merge turn. This plan stays `draft` while DP-S1-1 to
-DP-S1-3 below are open. None of them blocks the start: each has a default that the
-executor applies and that the decision-maker may amend before the slice merges.
+the real id is minted at this PR's merge turn. DP-S1-1 to DP-S1-3 below are decision
+points for the decision-maker, one `RL-` for the three. None blocks the start. Each names
+the step it must be resolved before, and the default the executor applies until then
+(`document-ids.md` §1.7). *(Revised 2026-09-30 on auditor-plans2's audit of #954 at 3e4402cd, finding F1.)*
 
 **Gates, both verified at `fb90d381`:**
 1. `RL-1265` is on main (`docs/rulings/RL-01265-…md`, merged by #847 at `a6146ec4`).
@@ -109,8 +120,9 @@ Against the other lane:
   independent of machine load. So on this plan's reading it is not a "measurement step" in
   the sense of `RL-1263` item 3. That reading is the lead's to confirm at dispatch.
 
-- Acceptance and activation: _pending — the lead's go, after DP-S1-1 to DP-S1-3 carry a
-  resolver or the lead accepts their defaults_
+- Acceptance and activation: _pending — the maintainer's acceptance. By `document-ids.md`
+  §1.7, `active` is permitted once every blocking row has a resolver id and every
+  non-blocking row names a step. All three rows are non-blocking and name their step._
 
 ## Acceptance Standard
 
@@ -129,7 +141,9 @@ A fresh reviewer checks each item by the command given, on the slice's final tre
    | grep -n -E '1\.1[0-9]\.[0-9x]'` prints exactly these hits, and a reviewer checks each:
    - §4.6's example line `"derivation_version": "1.14.0"`;
    - §4.7's example line `"library_versions": {"sympy": "1.14.0", …}`;
-   - lines inside the two dated `RL-1289` notes that follow those examples.
+   - lines inside the dated `RL-1289` note after §4.6's example, which names `==1.14.0` and
+     "The example's `1.14.0` is that pin". The §4.7 note carries no version literal, so
+     it produces no hit. *(Revised 2026-09-30 on auditor-plans2's audit of #954 at 3e4402cd, finding F5.)*
    Any other hit is a violation. `02:2842`'s SymPy row names the pin together with
    `uv.lock` and `RL-1289`.
 4. **The corpus was measured before the limits were enforced** (`PL-1268` Acceptance 4).
@@ -154,7 +168,9 @@ A fresh reviewer checks each item by the command given, on the slice's final tre
 8. **The objective profile reaches SymPy through the platform's own tree, never `eval`.**
    `uv run pytest packages/pricing-core/tests/test_expression_sympy.py -q` passes, including
    the test with `eval`, `exec` and `sympy.parsing.sympy_parser.parse_expr` all replaced by
-   functions that raise.
+   functions that raise, together with its positive control (`sympify` trips the raiser).
+   `uv run pytest packages/pricing-core/tests/test_expression_hostile_inputs.py -q` passes:
+   NFR-483's hostile set is refused, with a position, in all four profiles. *(Revised 2026-09-30 on auditor-plans2's audit of #954 at 3e4402cd, finding F2 and F3.)*
 9. **`pricing-core` stays standalone.** `uv run lint-imports` passes, and
    `git grep -n -E '^\s*(import|from) sympy' -- packages/pricing-core/src` names only
    `expression_sympy.py`. No new code imports pandas:
@@ -203,9 +219,10 @@ A fresh reviewer checks each item by the command given, on the slice's final tre
 
 ### Premises re-derived at `fb90d381`
 
-a. **The parser has four call sites.** They are `prepare.py:167` (`derive_expression`),
-   `prepare.py:170` (`filter_rows`), `validate.py:1899` (the `expression` check, imported
-   lazily at `:1892`) and two test files. Measured with
+a. **The parser has three source call sites**, plus two test files. The sites are
+   `prepare.py:167` (`derive_expression`), `prepare.py:170` (`filter_rows`) and
+   `validate.py:1899` (the `expression` check, imported lazily at `:1892`). The test files
+   are `test_prepare.py` and `test_expression_nfrs.py`. *(Revised 2026-09-30 on auditor-plans2's audit of #954 at 3e4402cd, finding F6.)* Measured with
    `git grep -n -E "compile_expression|referenced_columns" -- packages backend examples`.
    The backend imports the parser nowhere. The `"type": "expression"` rating steps go to
    ZEN (`rating/compile.py:245`), not to this parser.
@@ -251,9 +268,15 @@ i. **`Profile` is taken.** `pricing_core.data.profile` imports `Profile` (the da
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-S1-1 | What does §4.6's "AST node count ≤ 200; nesting depth ≤ 20" count? | **(a)** `ast.expr` nodes only (the sub-expressions an author wrote: names, literals, calls, operations), with depth as the longest chain of nested `ast.expr` nodes, the root at 1. **(b)** Every node `ast.walk` yields, including operator tokens and `Load` contexts, with depth over the same. | **(a).** It is what an author can count. Under (b), `a + b` is 6 nodes, and 200 means about 100 written terms, a limit the spec did not state. Task 2 measures both, so the ruling can be made from data. | fact | no. Default (a) is applied. Tasks 2 and 4 name the constants that change under (b) | |
-| DP-S1-2 | Do the legacy single-argument functions (`abs round floor ceil log exp sqrt`) keep ignoring extra arguments in `recipe` and `check` (premise c)? | **(a)** Keep them, because `recipe` and `check` only add. Exact arity binds the four new functions in every profile, and every function in `objective` and `factor`. **(b)** Enforce exact arity everywhere. | **(a)**, with the silent drop reported to the auditor as a finding candidate. (b) could refuse an expression that works today, which the only-add rule forbids. | fact | no. Default (a) | |
-| DP-S1-3 | What SymPy assumptions do the objective symbols (`y`, `f`, `w`, parameters) carry? | **(a)** `real=True`. **(b)** None. | **(a).** §4.6's domains are real (`y_domain`, raw score `f`, weight `w`). Without the assumption, `Abs` differentiates to the complex form in premise g, and that would become the canonical text Slice 2 records. | fact | no. Default (a). Slice 2 inherits it | |
+| DP-S1-1 | What does §4.6's "AST node count ≤ 200; nesting depth ≤ 20" count? | **(a)** `ast.expr` nodes only (the sub-expressions an author wrote: names, literals, calls, operations), with depth as the longest chain of nested `ast.expr` nodes, the root at 1. **(b)** Every node `ast.walk` yields, including operator tokens and `Load` contexts, with depth over the same. | **(a).** It is what an author can count. Under (b), `a + b` is 6 nodes, and 200 means about 100 written terms, a limit the spec did not state. Task 2 measures both, so the ruling can be made from data. | decision point: it interprets what §4.6's limit means, and a measurement informs it but cannot settle it | no. **Resolving step: before Task 4 Step 3** (the enforcing commit). Default (a) applies to Tasks 2 and 3. Task 4 Step 1 names the constants that change under (b) | decision-maker, one `RL-` for DP-S1-1 to DP-S1-3 (pending) |
+| DP-S1-2 | Do the legacy single-argument functions (`abs round floor ceil log exp sqrt`) keep ignoring extra arguments in `recipe` and `check` (premise c)? | **(a)** Keep them, because `recipe` and `check` only add. Exact arity binds the four new functions in every profile, and every function in `objective` and `factor`. **(b)** Enforce exact arity everywhere. | **(a)**, with the silent drop reported to the auditor as a finding candidate. (b) could refuse an expression that works today, which the only-add rule forbids. | decision point: a behaviour choice for existing callers | no. **Resolving step: before Task 3 Step 3** (where arity is implemented). Default (a) | decision-maker, the same `RL-` (pending) |
+| DP-S1-3 | What SymPy assumptions do the objective symbols (`y`, `f`, `w`, parameters) carry? | **(a)** `real=True`. **(b)** None. | **(a).** §4.6's domains are real (`y_domain`, raw score `f`, weight `w`). Without the assumption, `Abs` differentiates to the complex form in premise g, and that would become the canonical text Slice 2 records. | decision point: it fixes the canonical derived text a reviewer approves | no. **Resolving step: before Task 5 Step 4** (where the symbols are created). Default (a). Slice 2 inherits it | decision-maker, the same `RL-` (pending) |
+
+*(Revised 2026-09-30 on auditor-plans2's audit of #954 at 3e4402cd, finding F1.)* The three rows were filed as kind *fact*. They are decisions: an
+interpretation of the spec, a behaviour choice and a canonical-form choice. So their
+resolver is the decision-maker (`document-ids.md` §1.7), and each names the step it must
+precede. The recommendations are unchanged. When the `RL-` lands, the executor cites its id
+at the named step and in the ledger.
 
 ## Tasks
 
@@ -587,6 +610,8 @@ def pytest_sessionfinish(session, exitstatus):
 - Modify: `packages/pricing-core/src/pricing_core/data/prepare.py:167` and `:170`
 - Modify: `packages/pricing-core/src/pricing_core/data/validate.py:1899`
 - Create: `packages/pricing-core/tests/test_expression_profiles.py`
+- Create: `packages/pricing-core/tests/test_expression_hostile_inputs.py` (NFR-483 in every
+  profile; *(Revised 2026-09-30 on auditor-plans2's audit of #954 at 3e4402cd, finding F2.)*)
 - Modify: `docs/specs/02-modelling.md` §4.6 (`RL-1265` DP-5's `filter_rows` note)
 
 **Interfaces:**
@@ -771,6 +796,70 @@ def test_call_site_expression_check_passes_check(monkeypatch: pytest.MonkeyPatch
     assert seen == [GrammarProfile.CHECK]
     assert outcome.violating_rows == 1  # y = 0.5 is the one row the predicate rejects
 ```
+
+- [ ] **Step 1b: NFR-483's hostile set, in every profile.** *(Revised 2026-09-30 on auditor-plans2's audit of #954 at 3e4402cd, finding F2.)*
+  `PL-1268` Slice 1 and this plan's Scope both claim NFR-483 "in every profile".
+  `test_expression_nfrs.py` runs its hostile strings through `recipe` only, and Acceptance
+  6 keeps that file unmodified, so the claim needs its own file. Create
+  `packages/pricing-core/tests/test_expression_hostile_inputs.py`:
+
+```python
+"""NFR-483 in every profile of 02 §4.6: each route to eval is refused by this parser.
+
+The strings are `test_expression_nfrs.py`'s hostile set and `test_prepare.py`'s, joined.
+That file runs them through `recipe` only, and it stays unmodified (only-add). Each is
+valid Python, so an `ExpressionError` with a position proves that this grammar refused
+it, and not CPython's parser.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from pricing_core.data.expressions import ExpressionError, GrammarProfile, parse_expression
+
+HOSTILE = [
+    "eval('1')",
+    "exec('x = 1')",
+    "__import__('os').system('ls')",
+    "compile('1', '<s>', 'eval')",
+    "globals()",
+    "open('/etc/passwd').read()",
+    "premium.__class__",
+    "premium.__class__.__mro__",
+    "(lambda: 1)()",
+    "(lambda: eval('1'))()",
+    "[x for x in premium]",
+    "[eval(x) for x in premium]",
+    "premium[0]",
+    "f'{premium}'",
+]
+
+
+@pytest.mark.req("NFR-483")
+@pytest.mark.parametrize("profile", list(GrammarProfile))
+@pytest.mark.parametrize("expression", HOSTILE)
+def test_every_profile_refuses_every_route_to_eval(
+    profile: GrammarProfile, expression: str
+) -> None:
+    with pytest.raises(ExpressionError) as excinfo:
+        parse_expression(expression, profile, symbols=frozenset({"premium", "x"}))
+    assert excinfo.value.lineno == 1  # refused with a position, by this grammar
+
+
+@pytest.mark.req("NFR-483")
+@pytest.mark.parametrize("profile", list(GrammarProfile))
+def test_the_same_parser_accepts_a_legitimate_expression(profile: GrammarProfile) -> None:
+    """The positive control: every profile's refusals above are refusals of the input,
+    not of everything."""
+    parse_expression("abs(premium - x) / 2", profile, symbols=frozenset({"premium", "x"}))
+```
+
+  Its red is an `ImportError` naming `GrammarProfile`, until Step 3 exists. Then the
+  refusal cases pass and the control passes, in all four profiles. Before Step 3, compare
+  `HOSTILE` with the parametrize lists at `test_expression_nfrs.py:82-89` and
+  `test_prepare.py:78-85`, and confirm it is their union with no string dropped.
+  Task 5 adds the same set through `to_sympy`.
 
   **Before running it, check each literal against the shipped source** ([`README.md`](README.md)
   convention 1). `apply_recipe(tables, recipe)` is `prepare.py:89`, and its step shape is
@@ -965,8 +1054,9 @@ def test_the_limits_are_configurable() -> None:
   > function sets are the table's. Comparisons in `objective` and `factor` exist only as
   > `where()`'s condition.)*
 
-  If DP-S1-1 is ruled before this commit, cite the ruling's id in place of "see the slice's
-  leaf plan and ruling".
+  DP-S1-1's `RL-` is resolved before this task (its resolving step). Cite that `RL-` id in
+  place of "see the slice's leaf plan and ruling". If the ruling chose (b), the note says
+  "counted over every `ast` node" instead.
 - [ ] **Step 5: Green.** Run `uv run pytest packages/pricing-core/tests -q`, with Acceptance
   6's two files unmodified, and run `uv run mypy`. Quote each.
 - [ ] **Step 6: Commit:** `feat(pricing-core): enforce the expression node and depth limits
@@ -1070,7 +1160,30 @@ def test_the_translation_never_reaches_eval_or_a_string_parser(
         "w * where(exp(f) < y, w_under, w_over) * (y - exp(f)) ** 2",
         parameters=("w_under", "w_over"),
     )
+    # The positive control (F3; CLAUDE.md §13): the raisers are live. A string route
+    # through SymPy's own parser trips them. So the translation above passing means it
+    # took no such route, not that the patch missed.
+    with pytest.raises(AssertionError, match="NFR-483"):
+        sympy.sympify("y + 1")
+    with pytest.raises(AssertionError, match="NFR-483"):
+        sympy_parser.parse_expr("y + 1")
+
+
+@pytest.mark.req("NFR-483")
+@pytest.mark.parametrize(
+    "expression",
+    ["eval('1')", "__import__('os').system('ls')", "y.__class__", "(lambda: 1)()", "y[0]"],
+)
+def test_the_sympy_path_refuses_every_route_to_eval(expression: str) -> None:
+    """NFR-483 on the objective path itself (F2): `to_sympy` goes through the one parser."""
+    with pytest.raises(ExpressionError) as excinfo:
+        to_sympy(expression)
+    assert excinfo.value.lineno == 1
 ```
+
+  *(Revised 2026-09-30 on auditor-plans2's audit of #954 at 3e4402cd, finding F3.)* The spike behind the control, run with sympy 1.14.0: with
+  `sympy_parser.parse_expr` replaced by a raiser, `sympy.sympify("y + 1")` raised it; with
+  `builtins.eval` replaced, it raised again. Either patch alone trips the control.
 
 - [ ] **Step 3: Run and see it fail.** The expected red is an `ImportError` naming
   `pricing_core.data.expression_sympy`. Quote it.
@@ -1242,7 +1355,7 @@ def _call(
 - [ ] The ledger records:
   - the tree, premises a–i, and every red-then-green quote;
   - Task 2's table;
-  - how DP-S1-1 to DP-S1-3 were resolved, or that their defaults were applied;
+  - the `RL-` that resolved DP-S1-1 to DP-S1-3, and the step at which each was applied;
   - DP-S1-2's silent-argument finding candidate, for the auditor.
 - [ ] Open the PR against `main`, noting the lead's file-contention dispatch record
   (Status). Report the head SHA.
