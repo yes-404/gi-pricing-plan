@@ -216,9 +216,34 @@ Lead's grant: dispatch record Delta 2 (2026-09-30 23:27:25 BST). This checkout i
     `test_audit_docs_process_core_digest.py` (2), `test_audit_docs_w37_11_ceiling.py` (1), `test_register_lint.py` (3), `test_register_owed.py` (1), `test_repository_invariants.py` (2).
     No test outside the docs-audit family failed. **This is not a green gate**; it goes green when the lead mints the ids, and the gate is re-read then.
 - **Collected tests (Acceptance 12):** `pytest --collect-only -q` on a detached worktree of main `71b67220` (own `uv sync --all-packages`): **4370**; on this head: **4420**; +50 (11 in `test_expression_objective.py`, 36 in `pricing-core` `test_objectives.py`
-  (including 12 template-unchanged cases), 3 in `model-schema`). Main's slotted `passed` total was not measured: no slotted main run was made; LG-1332 records 4367 passed at its own tree.
+  (including 12 template-unchanged cases), 3 in `model-schema`). Main's slotted `passed` total is in F1 below: 4367 passed, 3 skipped.
 - **Frontend half** on the same tree, inside `gate-1` (start 23:52:36, end 23:53:47): `pnpm install --frozen-lockfile` rc 0, `generate:api` rc 0, `lint` rc 0, `type-check` rc 0, `test` rc 0 (97 files, **609 passed**), `build` rc 0.
 - **Docs checks on a clean detached checkout of the pushed commit:** not yet run (nothing is pushed).
+
+### Slice-audit findings, 2026-10-01 (auditor-690s2, NOT CLEAN at `ee5de443`; dispatch record Delta 4)
+
+**F3 — mutation controls for Acceptance 2, 5 and 8** (run 2026-10-01 after 00:10 BST on this worktree at `ee5de443`; each edit reverted, `git status --porcelain` empty afterwards; nothing committed but this ledger):
+
+| acceptance | test files and selector | baseline | mutation | result, and the failing assert |
+|---|---|---|---|---|
+| 2, derivation version | `test_expression_objective.py`, `test_objectives.py`, `-k derivation_version` | 2 passed | `derive` records `"1.14.0"` and the certificate's `library_versions.sympy` is `"1.14.0"`, each a literal | **2 failed**: `assert ('sympy', '1.14.0') == ('sympy', '9.9.9')` and `assert '1.14.0' == '9.9.9'`; cause, the recorded version no longer follows the patched `sympy.__version__` |
+| 5, non-finite | `test_objectives.py`, `-k nonfinite` | 2 passed | `_finite_or_abort` returns before raising | **2 failed** (xgboost, lightgbm): `NonFiniteDerivativeError` not raised for `w * exp(exp(f))` at `f = 10` |
+| 8, division | `test_objectives.py`, `-k division`| 4 passed | `_denominator_findings` returns `[]` | **3 failed**: `assert <CheckStatus.PASS> is <CheckStatus.FAILED>` on `finiteness`, for `/ f`, `(exp(f) - y) ** 2` and the jump-sign denominator; cause, no denominator is examined |
+| 8, positive control | same | 4 passed | `_denominator_findings` flags every denominator | **2 failed**: `assert <CheckStatus.FAILED> is <CheckStatus.PASS>` for `/ (1 + f ** 2)`, and `'changes sign' in 'the denominator … flagged'`; cause, the bounded denominator no longer certifies, so the control is live |
+
+**F4 — correction, dated 2026-10-01.** Three statements in Task 7 are corrected to say exactly what ran.
+- **ruff:** the gate ran the wrapper's `uv run ruff check .` with `.ruff_cache` **deleted beforehand**. It did **not** run `ruff check --no-cache`: deleting the cache stands in for the flag, and the run had no cache to read. (`ruff check --no-cache .` was run separately on the code commits up to `b3e4634c`, not on `152469c5`.)
+- **mypy:** `.mypy_cache` was deleted beforehand, so the wrapper's `uv run mypy` ran on a fresh cache, not with `--no-incremental`.
+- **the wrapper text:** extracted by line range from `.claude/skills/dev-commands/SKILL.md` **lines 123 to 170** (the code fence's body; the record's "122-171" includes the fence lines), byte-for-byte by `sed -n 123,170p`, with only the start and end fields of condition 4 added around it.
+- **"clean checkout":** the gate ran in the executor's own worktree at `125a403b`, with `git status --porcelain` empty, not a separate checkout.
+
+**F1 — main's slotted baseline (Acceptance 12), 2026-10-01.** A detached worktree of the merge base `71b672205f7212008d0ff00b5cbc4810b56f12e6`, `git status --porcelain` empty (0 lines),
+`uv sync --all-packages`, its own test DB (`gipricing_exec-690s2-main_1ea753b4`, from the template, `alembic upgrade head`), the dev-commands wrapper (`SKILL.md:123-170`, verbatim) with
+`LOKY_MAX_CPU_COUNT=4`, in the foreground under `timeout 4500`; `.ruff_cache` and `.mypy_cache` deleted first. Lead's grant: dispatch record Delta 4, 2026-10-01 00:09:49 BST.
+- **Start** 00:10:11 BST: load 3.21, 2.54, 2.83; `free -h` 31Gi total, 10Gi used, 14Gi free, 7.9Gi buff/cache, 20Gi available; `flock -n`: gate-1 free, gate-2 free (no other holder).
+- **End** 00:34:49 BST: load 2.92, 3.61, 3.66; `free -h` 12Gi used, 14Gi free, 5.6Gi buff/cache, 18Gi available; gate-1 and gate-2 free. Wall 1478 s.
+- **Result: GATE pass, 7 of 7 stages. pytest: 4367 passed, 3 skipped in 1460.51 s (0:24:20)**, 4370 collected (matching the collect-only count in Task 7). Load was 3 to 3.7 from sibling processes, so the time is not a solo baseline.
+- **Against the branch head's gate** (`125a403b`): 4404 passed + 13 failed (all check 31, the unminted ids) = 4417 run, +50 over main's 4367 passed, as the 50 added tests predict; skipped 3 in both.
 
 ## Deviations from PL-1327, each named
 
