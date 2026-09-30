@@ -148,11 +148,9 @@ with no definition beside them).
 version, without a new code. `PIN_NOT_APPROVED` (`errors.py:304`) is the wrong code: it means a pin exists
 but its artifact is not approved. **No new code is needed;** if the maintainer wants the wrong-version case
 named apart (for example `PIN_VERSION_MISMATCH`), that is a new code and a `03` §5.1 owned-code row, and it
-is the maintainer's call. **Audit item for the fix slice (the maintainer's 10:15:43 BST note):** reusing this code is
-acceptable only if its catalogue meaning covers "a step ref not pinned at its exact version". The catalogue gives the
-name no meaning, and the only place one exists is `compile.py:434-443` (a version with no `algorithm_ref` or no `pins`); so
-the slice should add a one-line meaning to the `03` §5.1 block in the same commit (spec first, `CLAUDE.md` §0). The score-time `KeyError` (defect 3) disappears once compile refuses the version,
-because a bundle cannot exist with a step ref outside its payloads.
+is the maintainer's call. **The maintainer's condition (about 10:24 BST): reusing this code is allowed only if its spec catalogue meaning covers "a step ref not pinned at its exact version"; otherwise the slice amends the catalogue row, spec first, in the same commit.** Which case applies: **an amendment is needed.** The catalogue is `03` §5.1's paragraph headed "**Error codes owned by this module:**" (`03:772-776`); it is a bare list of names. Verbatim, the row for this code is only
+`` `RATING_VERSION_UNPINNED`, `INPUT_CONTRACT_VIOLATION`, `` inside that list, with no definition. Nothing else in the specification defines it (`git grep -n "RATING_VERSION_UNPINNED" -- docs` finds the list entry and `CR-837`'s line "added to the §5.1 error codes"); the only written condition that raises it is in the code, `compile.py:434-443` (a version with no `algorithm_ref` or no `pins`). So the catalogue **does not cover the step case as written** — it covers nothing as written. Its name and FR-237's "Nothing is unpinned" (`03:134`) make it a natural home, but that is inference, not text. The fix slice therefore adds a one-line meaning to that paragraph in the same commit, spec first: for example "`RATING_VERSION_UNPINNED`: a Rating Version lacks its algorithm or pins, or a step's table, lookup or model ref is not in its pins at the exact version (FR-237)". The runtime `KeyError`s at `runtime.py:463` and `:533` become coded in the same slice. The score-time `KeyError` (defect 3) becomes unreachable through a compiled bundle once compile
+refuses the version (a bundle cannot then exist with a step ref outside its payloads), and stays coded as a backstop.
 
 ### 5. Read-only data check (the filer's own)
 
@@ -206,7 +204,7 @@ than restated as a ruling:
 - **Owner: a dedicated WK-1178 fix slice**, replacing WK-1250 Slice 2 (the maintainer's first decision
   of 10:10:11 BST named Slice 2; the high severity moved it).
 - **Scope:** `compile_bundle` refuses any table, lookup or `model_call` ref not pinned at the **exact
-  version**, with a `CodedError` (`RATING_VERSION_UNPINNED`, evidence item 4). The model-path `KeyError`
+  version**, with a `CodedError` (`RATING_VERSION_UNPINNED`, evidence item 4), **with the code's catalogue meaning amended in the same commit (spec first)**. The model-path `KeyError`
   becomes coded by the same refusal.
 - **Acceptance:** red first, per kind (table, lookup, model_call), **both unpinned and wrong-version**,
   **including the null-tolerant case that priced 1370, written with `coalesce(` as well as with `??`**.
