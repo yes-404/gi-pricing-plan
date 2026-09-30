@@ -25,9 +25,9 @@ day.
 
 - **Instance 1: 9991, 2026-09-30 about 11:30 BST.** A finding drafted under working id 9991 (the perils finding, now
   under 9995) collided with a ledger that already held it: the commit is `939799b3`, dated 2026-09-30 11:31:20 BST
-  (10:31:20Z), subject "docs(findings): FD-9995 (working id) — renumbered from 9991, which executor-690s1's ledger holds;
-  owner basis confirmed". The other holder, `LG-9991` (WK-690 Slice 1's
-  ledger, executor-690s1), is on the executor's branch: `git log --all --grep='LG-9991'` finds its commits, and the earliest
+  (10:31:20Z), subject "docs(findings): the perils finding (working id 9995) — renumbered from 9991, which executor-690s1's ledger holds;
+  owner basis confirmed". The other holder, the ledger numbered 9991 (WK-690 Slice 1's
+  ledger, executor-690s1), is on the executor's branch: `git log --all --grep='the ledger numbered 9991'` finds its commits, and the earliest
   whose subject names the id is dated 2026-09-30 11:37 BST, **after** the collision was caught, so the reservation had no
   pushed trace that the free-check could have read when the finding took the number; it existed on the executor's branch
   and in a brief.
@@ -39,6 +39,13 @@ day.
   table: "9971 | FD | auditor-933 | /score 200 response untyped", and the row "9970 | OQ | auditor-close1255 (via FD 9969) …
   self-picked ~17:05 (collision instance 2)"). The rule that authors do not pick did not yet exist; it was made after this
   (below).
+- **Instance 3, a near-collision: 9970 again, 2026-09-30 about 17:12 BST.** auditor-933 filed the `/score` finding under
+  working id 9970 (commit `cfe3359d`, 2026-09-30T16:12:07Z = 17:12 BST, branch `fd-9970-score-200-untyped`, subject "docs(findings):
+  the working-id-9970 finding — the /score 200 response has no schema in the generated OpenAPI (working id)"), because the lead's correction to
+  9971 was a chat message that crossed with its work; the finding is being re-numbered to 9971 (the lead's report, not yet
+  seen on a pushed ref). Its free-check looked only for its own family's file, so it could not see the open question already
+  pushed under 9970 in the same number space. **Two more causes** follow from it: a **correction travels by chat**, and a
+  free-check matches **one family** only.
 
 ## Evidence
 
@@ -67,11 +74,11 @@ pushed `origin` refs and `eta.md`. It cannot see: (a) a commit on a local branch
 worktree that is not committed; (c) a reservation that lives in a brief or another role's ledger only (instance 1).
 
 **3. The blind spots, measured** (scratch worktree from `origin/main` `8d5c67a56c27a9dcbba8d4e4ad28a1895e1dd862`, removed
-afterwards; the plant `FD-9990` was a scratch string never pushed and never used as an id). Predicate, verbatim, a
+afterwards; the plant an FD numbered 9990 was a scratch string never pushed and never used as an id). Predicate, verbatim, a
 family-prefixed token: `(^|[^0-9A-Za-z.])(FD|OQ|RL|PL|SL|LG|CR|WK|RFC|ADR|NT|RS|F)-0*9990([^0-9]|$)`, `git grep -c -E … <ref> --
 docs`, summed per ref set.
 
-| Check | Over | Planted `FD-9990` on an unpushed local commit | An uncommitted `OQ-9990` edit in a worktree |
+| Check | Over | Planted an FD numbered 9990 on an unpushed local commit | An uncommitted an OQ numbered 9990 edit in a worktree |
 |---|---|---|---|
 | A: the lead's free-check | the 66 `origin` refs | **0 hits, reads free** | not seen |
 | B: A plus every local branch | `refs/heads` | **1 hit, reads taken** | not seen |
@@ -99,6 +106,17 @@ A free-check must be prefixed by an id family.
   allocation script and any role's picker **refuse an id already in the ledger or on any origin ref or PR title**. Two additions
   from the measurements above, for the WK-1178 item to weigh: the refusal check should also read local refs and worktrees
   (evidence 3), and it must use a family-prefixed pattern (evidence 4).
+- **Carrying slice: the slice with working id 9836** (roadmap, draft, PR #982, head `7b43d278`, a WK-1178 backlog item with no leaf plan yet). It
+  proposes the ledger and an allocator in `scripts/doc-id.py` that refuses an id held in the ledger, on any `origin` ref or in
+  an open PR title. **Coverage of the three causes, read from its text:** (1) *two allocators*: covered in aim ("working ids
+  are picked by hand", make an invisible reservation impossible) but only if every picker goes through the script; the slice
+  does not say that hand-picking is retired. (2) *a free-check blind to unpushed work*: **gap**: it names `origin` refs and PR
+  titles only, which is instance 2's blind spot (evidence 3 checks A and B), so local refs and worktree files must be added.
+  (3) *a single-family pattern, and corrections by chat*: **gap**: the slice names no matching pattern (evidence 4 needs the
+  family-prefixed one, across all families), and says nothing of a re-assignment: it must be an appended ledger row that
+  supersedes the earlier holder, not a chat message (instance 3). It also leaves open whether the ledger is in the repository
+  or local; only a local ledger can see an unpushed reservation (instance 1), and only a repository one can be read by CI.
+  The slice's remark "not an FD unless it recurs" is discharged: it has now recurred.
 - **Acceptance, red first, on broken input** (so the fix is not a green stamp): with an id present only in the ledger, only on an
   unpushed local commit, and only in an uncommitted worktree edit, the picker refuses each in turn; with the ledger check removed,
   each is accepted and the test fails; a bare number such as `0.99972` does not refuse an id.
