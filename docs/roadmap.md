@@ -1077,12 +1077,12 @@ Minted 2026-09-28 on the maintainer's instruction of that day ("yes record and i
 
 **NFR-526, NFR-527 and NFR-536 are measured under WK-1178**, on the exit tree *(added 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 7: "NFR-526, 527 and 536 are measured under WK-1178.")*. They measure paths built today (API metadata p95, Job submission latency and trace propagation), so G4 reads them as measured, not carried.
 
-#### SL-9832 — WK-1178 slice: FR-244's enforced allow-list and FR-274's guard over every authored rating string
+#### SL-1315 — WK-1178 slice — FR-244's enforced allow-list and FR-274's guard over every authored rating string
 
 ```yaml
-id: SL-9832
+id: SL-1315
 family: slice
-title: "WK-1178 slice: FR-244's enforced allow-list and FR-274's guard over every authored rating string"
+title: WK-1178 slice — FR-244's enforced allow-list and FR-274's guard over every authored rating string
 status: draft                  # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
@@ -1090,10 +1090,10 @@ tree: 9f63d0feee524815e7e0c68c99a53ac3f80e6c37
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [PL-9833]
+relates: [PL-1314, RL-1312, RL-1313]
 ```
 
-The code that the FR-244 ruling filed as #967 (RL working id 9904) assigns to WK-1178. FR-244's operator and function allow-list is enforced at save over every authored string: `expr`, `condition`, clamp bounds and `key_expr`. FR-276's compile, FR-274's division guard, and the determinism and scale checks are widened to the same strings, and `??` is never a guard. A residual evaluation failure at scoring gets its own code, not `RATE_TABLE_MISS`. It discharges the finding filed as #968 (FD working id 9885). Leaf plan `PL-9833` (working id). **Order:** after the fix slice (#963) and before WK-1250 Slice 1, serialised on `compile.py` under `RL-1263`. **Gate:** its DP-G1 to DP-G4. DP-G1 is where FR-244's amended text lands: WK-690 Slice 1, Task 6.
+The code that the FR-244 ruling, RL-1312, assigns to WK-1178. FR-244's operator and function allow-list is enforced at save over every authored string: `expr`, `condition`, clamp bounds and `key_expr`. FR-276's compile, FR-274's division guard, and the determinism and scale checks are widened to the same strings, and `??` is never a guard. A residual evaluation failure at scoring gets its own code, not `RATE_TABLE_MISS`. It discharges the finding filed as #968 (FD working id 9885). Leaf plan `PL-1314`. *(Minted 2026-09-30 as SL-1315, by hand in the lead's batch-4 mint turn. It was filed under working id 9832.)* **Order:** after the fix slice (PL-1299) and before WK-1250 Slice 1, serialised on `compile.py` under `RL-1263`. **Gate:** its DP-G1, DP-G3, DP-G4 and DP-G5, ruled by RL-1313. DP-G1 is where FR-244's amended text lands: WK-690 Slice 1, Task 6.
 
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
