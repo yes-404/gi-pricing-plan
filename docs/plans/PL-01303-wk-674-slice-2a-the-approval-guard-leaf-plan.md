@@ -47,7 +47,7 @@ dependency: no `uv.lock` or `pyproject.toml` change.
   uniform lifecycle), **FR-354** (`06:95`, the approver count a direct write bypasses),
   **FR-356** (`06:97`, pinned approvals); `06:22` ("approved" means the same thing for every
   governed artifact).
-- **The ruling this slice executes: `RL-1301`** (RL-1301, working id 9906), item A.4, sub-items
+- **The ruling this slice executes: `RL-1301`** (working id 9906), item A.4, sub-items
   **1–8 and 10**, in its **evidence-based** trigger form, which adopts the maintainer's
   11:55:31 BST steer and carries T2 and T3. It was read at head
   `3de69560643b2abc8d20afc923416a4ef66104a1`, found **clean** by auditor-close1255 at
@@ -80,7 +80,7 @@ in Slice 2's leaf plan (#973, working id 9920) by its own dated delta. `PL-1237`
 edited.
 
 **Activation needs, in order:**
-1. **`RL-1301` (RL-1301) audit-clean and minted** — done: clean at `897859eb`, minted in mint
+1. **`RL-1301` (#971) audit-clean and minted** — done: clean at `897859eb`, minted in mint
    train 1. It carries T2, T3 and the evidence-based condition (the maintainer's steer headed
    `2026-09-30 11:55:31 BST — #971 trigger at ed879f7b: T1–T3 agreed; the forgeable-flag residual gets a steer toward an evidence-based condition`,
    adopted).
@@ -397,7 +397,7 @@ The executor re-reads each at its own tree and stops on any that no longer holds
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| — | None of this plan's own. The guard's design is RL-1301's (A.4), which carries T2, T3 and the evidence-based condition at the cited head, still under audit (**Status**, activation need 1) | — | — | — | — | — |
+| — | None of this plan's own. The guard's design is RL-1301's (A.4), which carries T2, T3 and the evidence-based condition, minted as RL-1301 (CLEAN) (**Status**, activation need 1) | — | — | — | — | — |
 
 The order against the validation-rule fix slice is decided by the maintainer's 11:56:33 BST
 entry (**Serialisation**).
@@ -488,7 +488,7 @@ Slice 2 starts after the fix closes.
   Task 4); 6 (Acceptance 8, Task 4); 7 (Acceptance 3); 8 (Acceptance 3); 10 (Acceptance 6,
   Task 2).
 - **auditor-close1255 on `ed879f7b`:** T2 (Acceptance 4, Task 3), T3 (Acceptance 6, Task 2),
-  the advisory residual (Acceptance 11). **`RL-1301` (RL-1301; read at `3de69560`, clean at `897859eb`)** (evidence-based): Acceptance 2's per-table requirement and ref pin, 3's evidence cases, 4's
+  the advisory residual (Acceptance 11). **`RL-1301` (#971; read at `3de69560`, clean at `897859eb`)** (evidence-based): Acceptance 2's per-table requirement and ref pin, 3's evidence cases, 4's
   flush-then-reset and no-leak case, 5's narrowed scan, 9 adopted, 11's residual.
 - **auditor-plans' seven trigger items:** the revision count and downgrade with `pg_trigger`
   per table (Acceptance 10); `SET LOCAL` replacing the ContextVar as the guarantee
@@ -506,4 +506,4 @@ Slice 2 starts after the fix closes.
   order in the positive control (Acceptance 4); the forged-flag plant (Acceptance 3).
 - **The order** is the maintainer's decision of 11:56:33 BST, stated in Serialisation and
   Hand-off.
-- **Open:** no decision point of this plan's own. Activation waits on RL-1301.
+- **Open:** no decision point of this plan's own. RL-1301 is minted (CLEAN); activation waits on this plan's PR (#984) merging and the plan being activated, and on the lead's go.
