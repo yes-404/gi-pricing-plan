@@ -1,5 +1,5 @@
 ---
-id: RL-9983
+id: RL-1346
 family: ruling
 title: PL-1342 DP-S3-1 decided — a ladder that does not reconcile refuses the quote with LADDER_RECONCILIATION_FAILED on every scoring path, and the refusal is logged and counted
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,12 +15,12 @@ corrects: ~
 relates: [PL-1342, SL-1257, RL-1329, RL-1343, FD-1336, FD-1330, FR-248, FR-254, FR-255, FR-259, FR-261, NFR-495, NFR-496, NFR-497, NFR-499]
 ---
 
-# RL-9983 — PL-1342 DP-S3-1 decided: a ladder that does not reconcile refuses the quote with `LADDER_RECONCILIATION_FAILED` on every scoring path, and the refusal is logged and counted
+# RL-1346 — PL-1342 DP-S3-1 decided: a ladder that does not reconcile refuses the quote with `LADDER_RECONCILIATION_FAILED` on every scoring path, and the refusal is logged and counted
 
 ## How this was ruled
 
 **Ruled at effort `high`**, by the decision-maker session `dm-s3dp`, which also ruled DP-S3-2
-(the ruling filed under working id 9984, draft PR #1024). Its first command, `echo "CLAUDE_EFFORT=$CLAUDE_EFFORT"`, printed
+(`RL-1347`). Its first command, `echo "CLAUDE_EFFORT=$CLAUDE_EFFORT"`, printed
 `CLAUDE_EFFORT=high`. The lead spawned it on the maintainer's spawn order (`to-lead.md`, a
 local channel file outside the repository, the entry "2026-09-30 22:31:50 BST", as the lead's
 brief relays it; this session did not read that entry). PL-1342's row asks for "the
@@ -28,7 +28,7 @@ decision-maker at medium effort". The charter's Model / effort line
 (`.claude/roles/decision-maker.md:13`) allows high "for a decision-maker ruling … on the
 maintainer's raise". The lead has flagged the difference to the maintainer.
 
-**Working id 9983**, hand-assigned by the lead, who is the only allocator (`FD-1338`). Not minted.
+**Minted 2026-10-01 as RL-1346** (`python3 scripts/doc-id.py next --ref f689c7828cb05eb2298f3fec505a4638c4437a11` printed `1346`, as the lead reported it; this session does not run `next`, and the lead allocated it in mint batch 13). It was filed under working id 9983, hand-assigned by the lead, who is the only allocator (`FD-1338`).
 
 **The question, as filed.** `PL-1342:405`, DP-S3-1, *"What does a failed ladder reconciliation do
 at scoring?"*, blocking Task 6. The options are (a) refuse the quote with
@@ -235,7 +235,7 @@ WK-674 Slice 3, Task 6 (`PL-1342:458-469`), with `RL-1329`:
 - `backend/src/app/api/score.py`: the explicit 500 mapping on `/score` and `/score/compare`, the
   `ERROR` log line on `/score` only, 500 in both routes' OpenAPI `responses`, and the contract regenerated.
 - `backend/src/app/observability/metrics.py`: the counter. **This file is not in `PL-1342`'s
-  write set or in the dispatch record's.** The DP-S3-2 ruling (working id 9984) also adds it, for Task 5. The lead adds it for
+  write set or in the dispatch record's.** `RL-1347` (DP-S3-2) also adds it, for Task 5. The lead adds it for
   Task 6 too, with the RL-1263 check.
 - The census: the new raise site is added to
   `packages/pricing-core/tests/test_quote_input_raise_sites.py`, with a sentinel case driven
