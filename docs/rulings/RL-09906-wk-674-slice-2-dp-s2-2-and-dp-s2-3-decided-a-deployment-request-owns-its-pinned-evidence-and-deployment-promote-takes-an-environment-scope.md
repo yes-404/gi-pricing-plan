@@ -37,10 +37,10 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
 | Claim | Verdict | How it was verified |
 |---|---|---|
 | `deployment` as a reference type | **absent** | `ARTIFACT_TYPES` (`packages/model-schema/src/model_schema/refs.py:20-29`), read. It has no `"deployment"`. `ArtifactRef`'s validator refuses a type outside it (`:88-90`, `if match["type"] not in ARTIFACT_TYPES: raise`). `REF_PATTERN` is built from it (`:51-53`). **No `ArtifactRef` can name a deployment.** |
-| The policy is keyed `deployment` | **present** | `EVIDENCE_FLOOR["deployment"] = ("rating_version_approval", "uat_deployment")` (`packages/model-schema/src/model_schema/approvals.py:107`). `approvals.submit` looks up `policy.entry_for(artifact_ref.type, environment)` (`backend/src/app/platform/approvals.py:225`). A `deployment` entry can therefore never be reached by a request whose ref must be one of `ARTIFACT_TYPES`. |
+| The policy is keyed `deployment` | **present** | `EVIDENCE_FLOOR["deployment"] = ("rating_version_approval", "uat_deployment")` (`packages/model-schema/src/model_schema/approvals.py:107`). `approvals.submit` looks up `policy.entry_for(artifact_ref.type, environment)` (`backend/src/app/platform/approvals.py:226`). A `deployment` entry can therefore never be reached by a request whose ref must be one of `ARTIFACT_TYPES`. |
 | An evidence column on the approval request | **absent** | `ApprovalRequestRow` (`backend/src/app/db/models.py:611-640`), read. Its columns are `id`, `workspace_id`, `artifact_ref`, `artifact_type`, `environment`, `submitted_by`, `submitted_at`, `change_summary`, `status`, `approvers_required`, `withdrawn_reason` and `decided_at`. None holds evidence. |
 | Where evidence lives today | **present, on the owning module's row** | `rating_versions.submit_for_review` writes `row.evidence` on the Rating Version's own row, then calls `approvals.submit` (`backend/src/app/platform/rating_versions.py:294-300`). Generic `approvals.submit` (`platform/approvals.py:192-282`) checks the policy entry and the reference, and nothing else. |
-| The single decision path | **present** | `api/approvals.py`'s decide and withdraw routes call `_carry_to_the_artifact` (`:260`, `:293`, defined `:488`). It drives each owning module's `apply_approval_decision`, for example `rating_versions.py:312`, whose mapping writes `APPROVED` at `:382`. The status itself comes from `_resolve_status` (`platform/approvals.py:547-554`). |
+| The single decision path | **present** | `api/approvals.py`'s decide and withdraw routes call `_carry_to_the_artifact` (`:260`, `:293`, defined `:488`). It drives each owning module's `apply_approval_decision`, for example `rating_versions.py:312`, which writes the row's status at `:360` (`row.status = target.value`) from the mapping whose `APPROVED` entry is `:382`. The status itself comes from `_resolve_status` (`platform/approvals.py:547-554`). |
 | Scope types | **present: four, no environment** | `ScopeType` (`packages/model-schema/src/model_schema/permissions.py:91-102`): `workspace`, `dataset`, `model_family`, `rating_algorithm`. `_covers` (`backend/src/app/platform/rbac.py:205-217`) lets a workspace-wide assignment cover everything. With no `resource`, it admits **only** a workspace-wide assignment. |
 | CR-1212 item 4 | **present** | `docs/closures/CR-01212-…md:342-345`: "a `06`/`07` spec change that scopes `deployment:promote` to named environments, owned by WK-674 and landed with its environment record". `RL-1232` DP-6, as amended 2026-09-29 (`docs/rulings/RL-01232-…md:303-322`), leaves the mechanism to that item. |
 | FR-345 | **present** | `06-governance.md:81`: "Role assignments are **scoped**: workspace-wide, or limited to named Datasets, Model Families, or Rating Algorithms". It names no Environment. |
@@ -110,30 +110,88 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
      - **Red first:** a planted second writer of `approved` on the deployment-request table
        fails the check. So does a planted non-literal status write on any table, and a
        planted `default="approved"`.
+     - **What the population is at `9f63d0fe`, and two traps.** auditor-close1255 measured 8
+       tables whose status can hold `approved`: `approval_requests`, `models`,
+       `custom_objectives`, `custom_metrics`, `rating_versions`, `peril_structures`,
+       `validation_rules` and `validation_rule_sets`.
+       - A derivation from CHECK constraints finds only 5. Three carry `approved` only
+         through a Python enum or a column default. That is why the population is every
+         mapped class with a `status` column, not the CHECK constraints.
+       - **A column `default=` or `server_default=` of `"approved"` is a write** (for
+         example `models.py:1195`), and so is a constructor that relies on it.
+     - **Zero writers passes this check, and the check does not claim more.** "At most one
+       path writes `approved`" is satisfied by a table that nothing approves.
+       `peril_structures` is one today: auditor-close1255 found `approved` in its enum and
+       CHECK but no writer. Only `review` (`perils.py:338`) and `reconciled` (`:256`) are
+       written, and `_carry_to_the_artifact` drives no perils module. The check reports
+       each zero-writer table as a note, so the vacuity is visible. **Whether peril
+       structures' `approved` state is unreachable, and whether it should be, is not this
+       record's question.** It is offered to the lead to route.
      - **It does not hold today, and the check says so honestly.** At `9f63d0fe`, two
-       existing writers sit outside that path:
-       1. **validation rules** are approved through their own route,
-          `api/validation.py:359` → `validation_rules.approve_rule`
-          (`platform/validation_rules.py:395`), which writes `row.status = APPROVED` at
-          `:423`. `_carry_to_the_artifact` carries modelling, objectives, metrics and rating
-          versions only (`api/approvals.py:499-517`);
-       2. **validation rule sets** are approved by construction: the column's
-          `default="approved"` (`models.py:1195`), taken by `ValidationRuleSetRow(...)`
-          without a `status` (`validation_rules.py:621`). A rule set is not in `06` §2's
-          Governed Artifact list (`06-governance.md:64`).
+       tables have writers of `approved` outside that path:
+       1. **`validation_rules`**:
+          - `approve_rule` (`platform/validation_rules.py:395`), reached by its own route
+            (`api/validation.py:359`), writes `row.status = APPROVED` at `:423`;
+          - `seed_builtin_rules` constructs each built-in rule with `status=APPROVED`
+            (`:154`).
 
-       The check lands with a **pinned baseline** of exactly these two, as a literal in the
-       test, citing this record. Any writer not in the literal fails, and the baseline can
-       only shrink, as `#940`'s exemption rule does. **Whether either is a defect is not ruled
-       here.** Both are offered to the lead as candidate findings of the FD-1200 class: a
-       second decision path for a Governed Artifact, and an `approved` status set with no
-       approval. The Deployment Request table has no baseline entry.
+          `_carry_to_the_artifact` carries modelling, objectives, metrics and rating
+          versions only (`api/approvals.py:499-517`).
+       2. **`validation_rule_sets`**: `replace_rule_set` constructs each row with
+          `status=APPROVED` (`:643`, in the constructor begun at `:621`), and the column's
+          own default is `"approved"` (`models.py:1195`).
+
+       **The maintainer ruled the first a DEFECT** (the entry "2026-09-30 11:14:48 BST —
+       DECISION: validation-rule approval outside the workflow is a DEFECT (b); …"). `06:64`
+       lists Validation Rule as a Governed Artifact, `06:22` says `approved` means the same
+       for every governed artifact, and `06:114` gives its dry-run evidence floor. A finding
+       is being filed under that entry: auditor-922 measures and auditor-928 files. Its
+       owner is a WK-1178 fix slice. Its id is cited here in prose until minted.
+
+       The check therefore lands with **two named, dated, temporary baseline entries**, one
+       per table, each citing that finding, pinned as a literal in the test, and shrink-only:
+       - **`validation_rules`**, temporary, 2026-09-30. **The fix slice removes it, red
+         first**: with the entry gone and the fix not yet in, the check fails on `:423`.
+       - **`validation_rule_sets`**, temporary, 2026-09-30, **pending that finding's
+         triage** of `replace_rule_set`. The maintainer asked whether user input can create
+         an `approved` row with no review. If the triage finds rule sets are legitimately
+         not governed (they are absent from `06` §2's list at `06:64`), this entry becomes
+         a **permanent** exemption carrying that spec citation. If it finds a hole, the fix
+         removes the entry, red first, as for rules.
+
+       The Deployment Request table has no entry.
 5. **The deploy route executes only an approved request.** For a target whose deployments are
    approval-gated, `POST /api/v1/environments/{env}/deployments` names an **approved**
    Deployment Request and re-evaluates FR-429's one predicate from the request's **pinned**
    evidence. It never re-reads a changeable source. A target with no `deployment` policy
    entry needs no request. For it, the predicate reads the predecessor's successful
    Deployment directly, and no skip is possible (the OQ-1234 ruling, item 1).
+
+6. **A3 — the approval policy must not resolve through a renamable name** (auditor-close1255's
+   advisory, ruled on the maintainer's 11:14:48 BST steer).
+   - **The hazard:** `ApprovalPolicyEntry.environment` is a string
+     (`packages/model-schema/src/model_schema/approvals.py:119-121`), `entry_for` matches on
+     it, and `ApprovalRequestRow.environment` is `String(32)` (`models.py:627`). `06` §4.1
+     gives `admin:manage_environments` the Environment's "create, rename, retire". A rename
+     would make the `prod` entry resolve to nothing, and under item 5 a target with no
+     `deployment` entry needs no request. **A rename would ungate `prod` silently.**
+   - **Ruled: policy resolution keys on an identity that a rename cannot change.** Every
+     Environment has an **immutable `slug`** (`00` ID-1) and a mutable display `name`. The
+     approval policy's `environment`, `ApprovalRequestRow.environment`, the deploy route's
+     `{env}` and every Environment reference name the **slug**. `07` FR-428's rename changes
+     the `name` only. **A change of slug is refused**, because it would change which policy
+     entry resolves. This is the maintainer's steer, keying by identity and refusing a
+     resolution-changing rename, met by one mechanism. The slug is also what the item 1
+     reference and the OQ-1234 ruling's "environment-qualified" entry mean.
+   - **The policy may not name an Environment that does not exist.** `set_policy` refuses an
+     entry whose `environment` is not the slug of one of the workspace's Environments.
+     Otherwise a typo (`prd`) would ungate the real target as silently as a rename. Retiring
+     an Environment that a policy entry names is not ruled here, and the leaf plan says what
+     it does.
+   - **Red first:** rename `prod`'s display name, and a deploy to it still requires its
+     approved Deployment Request. A request to change `prod`'s slug is refused. A policy
+     naming `prd` is refused by `set_policy`. With resolution keyed on the display name,
+     the first test fails.
 
 ### B. DP-S2-3 — option (a): `ScopeType.ENVIRONMENT`, checked with the Environment as the resource
 
@@ -217,4 +275,6 @@ grant names.** In WK-674 Slice 2, each is shown failing on deliberately broken i
 - item A.5: a deploy to an approval-gated target naming no approved Deployment Request is
   refused. A request whose pinned predecessor item no longer satisfies FR-429's predicate is
   refused at the route;
+- item A.6's three cases: a display rename keeps `prod` gated; a slug change is refused; a
+  policy naming a non-existent environment is refused;
 - item B.5's four cases.
