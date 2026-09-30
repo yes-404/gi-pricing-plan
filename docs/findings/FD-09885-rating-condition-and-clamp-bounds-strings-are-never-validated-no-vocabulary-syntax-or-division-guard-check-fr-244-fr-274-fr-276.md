@@ -14,10 +14,10 @@ relates: [WK-1178]
 
 ## Finding
 
-**Severity: medium (provisional); the high trigger is met** (a silent wrong accept, D2 below,
-and a silently lost clamp, E4 below). **High takes effect on independent reproduction**
-(auditor-docs is running it). The trigger was: a decline condition that should decline lets the
-quote through, or a clamp bound that silently does not apply.
+**Severity: HIGH (effective on independent reproduction).** The maintainer's decision: HIGH,
+effective on auditor-docs's independent reproduction of the score-level case below; if it does
+not reproduce, the severity is medium and returns to the maintainer. The trigger was met by a
+silent wrong accept (D2 below) and a silently lost clamp (E4 below).
 
 `validate_algorithm` checks only `RatingExpressionStep.expr`. A constraint step's `condition`
 and its `clamp_bounds` strings, which the engine evaluates the same way, are never read by the
@@ -74,10 +74,18 @@ determinism check (`_check_determinism`, `:142-163`) missing a `condition` for t
 author**): `sum`, `%`, `^`, `in`, `len`, `date`, `a[0]`, `{a: 1}` and `a.b` are all compiled by
 the engine. `sum`, `[0]` and `%` are also in the table above.
 
-**Data.** **No sweep for off-list constructs in stored conditions has been done by this
-record's author.** #967's delegated sweep (RL working id 9904) reported 0 `??` and only
-arithmetic, comparisons, and/or, ternary and `true` in the 37 git-tree rating strings; that is
-cited as *reported by #967's sweep*, and it covers git-tree strings, not stored rating versions.
+**Data — reported by #967's sweep (RL working id 9904), not run by this record's author.**
+The sweep, at `48792023`, **covered `condition` and `clamp_bounds` specifically**, with `expr` and
+`key_expr`: every rating string extracted from `examples`, `backend`, `packages`, `scripts`,
+`tests`, `frontend` and `03`'s example, 68 occurrences and 37 distinct strings. It found no `??`,
+`%`, `^`, `in`, `!` or string or date operation, and the only functions were the two
+deliberate negative-test ones (`now()`, `foo()`). **It did find `/`** among the committed
+strings' operators, so "no division" is true only of the stored data: the sweep's read-only
+Postgres pass (one database with rows: 25 algorithms, 29 versions; strings
+`premium_in * 2`, `risk_premium_minor * expense_factor`, `office_premium_minor >= 100` and bare
+`key_expr`s) and MinIO pass (compiled bundles; `* + ( )` only) show no division and no `??`.
+Not checked by the sweep: Redis, other hosts and parquet dataset contents. This record's author
+did no sweep of their own.
 
 ## Score-level case — reported by auditor-rl, not re-run by this record's author
 
@@ -110,15 +118,20 @@ counting as a guard, is what would refuse D2 and E3/E4 at save.
 
 ## Disposition
 
-**Deferred with an owner: the WK-1178 code slice that #967 (RL working id 9904) specifies**,
-which widens both checks to `condition`, `clamp_bounds` and `key_expr` after the fix slice
-planned for about 16:00. **The owner and the order are pending the maintainer's re-decision**,
-since the high trigger is met. Event that discharges it: that slice's merge.
+**Owner: the #967 WK-1178 code slice** (RL working id 9904, cited as prose), **kept separate from
+the #963 fix slice**, on the maintainer's decision. **Order:** the fix slice, then the #967 code
+slice, then WK-1250 S1, serialised on `compile.py`. The slice widens both checks to `condition`,
+`clamp_bounds` and `key_expr`. Event that discharges it: that slice's merge.
 
-**Red-first acceptance**, each written to fail on `origin/main` first: **D2's condition and E4's
-clamp bound are refused at save**, and every non-baseline, non-control row of the table above
-returns an issue. The score-level rows must not reach `score_one` as a compiled bundle. The
-severity becomes **high** on auditor-docs's independent reproduction, and this record is amended
-then.
+**Red-first acceptance**, each written to fail on `origin/main` first:
+
+- **D2's condition and E3/E4's clamp bounds are refused at save**, and every non-baseline,
+  non-control row of the evidence table returns an issue;
+- **`??` is never a division guard**: a masked division does not satisfy the guard check;
+- **the misleading `RATE_TABLE_MISS`**: residual evaluation failures (a zero or null division in
+  a condition or bound that reaches the engine) get their **own evaluation code**, red first.
+
+The severity is HIGH on auditor-docs's independent reproduction; this record is amended with
+the result when the lead relays it.
 
 *Drafted under working id 9885.*
