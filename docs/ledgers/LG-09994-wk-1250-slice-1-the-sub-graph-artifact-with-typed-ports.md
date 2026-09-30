@@ -127,6 +127,18 @@ Task 7. `--check`: 34 generated contracts match. `sub-graph.schema.json` propert
 `inputs`, `outputs`, `slug`, `steps`, `version`. `test_contracts.py` passes (144 passed, 2 skipped).
 `mypy` (repo config): no issues in 214 files. `ruff check --no-cache .`: clean.
 
+### Task 3 — table and migration
+
+Red: `backend/tests/test_migration_sub_graphs.py` failed at collection, `ImportError` on
+`SubGraphVersionRow` (the plan predicted `UndefinedTable`; the import fails before any query). Green:
+2 passed. Revision `2f598e89d12c`, `down_revision = a9f3c6d21b87`; `alembic heads` prints one head.
+`upgrade head`, `downgrade -1`, `upgrade head` each ran on the per-worktree DB (the log lines show the
+three steps; the shell rc was a pipe's, so the lines are the evidence). `tests/test_repository_invariants.py`:
+11 passed, 2 failed (`test_money_discipline_is_enforced_by_the_docs_audit`,
+`test_journey_citations_are_audited_in_ci`): both assert `audit-docs.py` exits 0, and it exits 1 on
+check 31 alone (working ids 9994 unminted), the expected red of a working-id draft. Re-run at Task 8.
+The `SubGraphVersionRow` model is appended at the end of `models.py`.
+
 ## Deviations from PL-1325, each named
 
 1. **Decimal example** (Task 1): the §4.11 example declares the output port type `relativity`, not
