@@ -1,5 +1,5 @@
 ---
-id: RL-9984
+id: RL-1347
 family: ruling
 title: PL-1342 DP-S3-2 decided — the scoring rate limit is a shared fixed one-second counter per Environment and Principal, limited by the account's own rate or an Environment default, and it fails open
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [PL-1342, SL-1257, FR-452, FR-430, FR-431, FR-446, NFR-499, NFR-497, NFR-489, RL-1184, RL-1311, ADR-710]
 ---
 
-# RL-9984 — PL-1342 DP-S3-2 decided: the scoring rate limit is a shared fixed one-second counter per Environment and Principal, limited by the account's own rate or an Environment default, and it fails open
+# RL-1347 — PL-1342 DP-S3-2 decided: the scoring rate limit is a shared fixed one-second counter per Environment and Principal, limited by the account's own rate or an Environment default, and it fails open
 
 ## How this was ruled
 
@@ -27,7 +27,7 @@ PL-1342's row asks for "the decision-maker at medium effort". The charter's Mode
 (`.claude/roles/decision-maker.md:13`) allows high "for a decision-maker ruling … on the
 maintainer's raise". The lead has flagged the difference to the maintainer.
 
-**Working id 9984**, hand-assigned by the lead, who is the only allocator (`FD-1338`). Not minted.
+**Minted 2026-10-01 as RL-1347** (`python3 scripts/doc-id.py next --ref f689c7828cb05eb2298f3fec505a4638c4437a11` printed `1346`, as the lead reported it; this session does not run `next`. The lead allocated 1346 to `RL-1346`, the DP-S3-1 ruling, and 1347 to this record, in mint batch 13). It was filed under working id 9984, hand-assigned by the lead, who is the only allocator (`FD-1338`).
 
 **The question, as filed.** `PL-1342:406`, DP-S3-2, *"The rate-limit counter's key and limit"*,
 blocking Task 5. The row names three options, recommends (b), and asks for two more rulings:
