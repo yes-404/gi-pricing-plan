@@ -164,6 +164,18 @@ holds the body (`inputs`, `outputs`, `steps`, `change_note`), the slug and versi
 unknown slug is a 404 `NOT_FOUND` (the plan is silent). `resolve_ref` refuses a ref of another type with 422
 `VALIDATION_FAILED`, the others with 404 `NOT_FOUND`. ruff, mypy, lint-imports clean.
 
+### Task 6 — the routes
+
+Red: first run `assert (404, 'NOT_FOUND') == (422, 'RATING_GRAPH_CYCLIC')` (no route mounted, as
+predicted). Green: `test_sub_graphs_api.py` 28 passed, 1 xfailed (`cycle_note`, strict, Task 7 turns it
+green); with `test_api_authorisation_sweep.py`, `test_demo_guide.py` and `test_contracts.py`: 189 passed,
+2 skipped, 1 xfailed. The four routes return typed 2xx schemas in `docs/contracts/openapi/generated.json`
+(`SubGraph`, `Page_SubGraph_`), none an open object; `--check` exits 0 after regeneration. Two test
+adaptations, both because the TestClient runs the app on another event loop: the lost-race double adds
+the rival row inside the service's own session (so the unique constraint fires at its flush); the
+"no PUT/PATCH/DELETE" check reads `app.openapi()` paths. A scoped-to-one-algorithm principal (assignment
+`scope_type=rating_algorithm`) is 403 on all four routes, as is a role-less member.
+
 ## Deviations from PL-1325, each named
 
 1. **Decimal example** (Task 1): the §4.11 example declares the output port type `relativity`, not
