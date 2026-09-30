@@ -214,7 +214,7 @@ It needs no `docs/process/` amendment. If the maintainer later wants the roles w
        first sweep is a baseline: it reads every current `.claude/roles/*.md` in full**, not a
        diff from this record's tree. That covers edits made before the step existed, such as
        #926's to `planner.md` and `lead.md`. Any over-grant it finds is filed as an `FD-`.
-       Later sweeps are incremental, as above. *(The maintainer, `to-lead.md` about 10:58 BST.)*
+       Later sweeps are incremental, as above. *(The maintainer, `to-lead.md` entry "2026-09-30 10:35:36 BST — DECISION: #940's first charter sweep is a full baseline"; first cited here as "about 10:58 BST", a relayed estimate.)*
      - **What is read:** every changed line that has the role write, create, amend, decide or
        close something.
      - **Against what:** **§1.6's cells, read directly, until WK-1169 Slice 3's exact owner
