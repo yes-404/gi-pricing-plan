@@ -1,5 +1,5 @@
 ---
-id: PL-9681
+id: PL-1286
 family: plan
 kind: map
 title: WK-675 — Frontend: DAG designer, rate table editor, quote sandbox and dislocation views: map plan
@@ -12,18 +12,19 @@ work: WK-675
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [RL-1172, RL-1184, RL-1261, RL-1263, CR-1212, CR-1243, CR-1247, PL-1213, PL-1237, PL-1254, PL-1267, RS-1269, OQ-550, OQ-1223, OQ-1231]
+relates: [RL-1172, RL-1184, RL-1261, RL-1263, FD-1283, FD-1284, OQ-1285, CR-1212, CR-1243, CR-1247, PL-1213, PL-1237, PL-1254, PL-1267, RS-1269, OQ-550, OQ-1223, OQ-1231]
 ---
 
 # WK-675 — Frontend: DAG designer, rate table editor, quote sandbox and dislocation views: map plan
 
 First filed 2026-09-29 as working id 9681; `created` re-dated so the id sequence stays non-decreasing (check 31).
+Minted as `PL-1286` at #920's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `6943e664` printing 1285; the open question this PR raises took 1285, because doc-id orders the family `OQ` before `PL` on the same `created` date (working id 9681 before the mint).
 
 > **For agentic workers:** this is a **map plan**. It cuts WK-675 into slices and fixes their
 > scope, order, dependencies and gates. It carries no code steps. Each slice gets its own leaf
 > plan (`kind: leaf`) before it starts, and the executor works from the leaf plan with
-> `subagent-driven-development` or `executing-plans`. **Working id `9681`**; minted at this
-> PR's merge turn with `python3 scripts/doc-id.py next --ref origin/main`.
+> `subagent-driven-development` or `executing-plans`. **Minted as `PL-1286`**
+> at this PR's merge turn (working id 9681).
 > **`status: draft` while DP-1 (OQ-550, the decision-maker's) or any other open DP has no
 > resolver** (see *Decision points*).
 >
@@ -37,7 +38,7 @@ First filed 2026-09-29 as working id 9681; `created` re-dated so the id sequence
 >    merged. Every `03` and `07` line locator is re-read.
 > 2. **DP-2 is ruled** by `RL-1261` (b), so S7b is required and the Work is 10 slices.
 > 3. **Three slices are added (S10–S12)** for the three unowned `03` §5.3 views, by the
->    maintainer's scope decision on #921's finding (2026-09-30 05:28:45 BST) and its dated
+>    maintainer's scope decision on `FD-1283` (2026-09-30 05:28:45 BST) and its dated
 >    count correction (05:29:29 BST). The Work is 13 slices, 9.75 / 13 / 26 days.
 > 4. **Sequencing is re-derived** under `RL-1263`: real cross-Work dependencies only, and
 >    the (c) contention table against `PL-1237`, `PL-1254`, `PL-1267`, `PL-1268` and
@@ -48,8 +49,8 @@ First filed 2026-09-29 as working id 9681; `created` re-dated so the id sequence
 >    that point (before item 6; superseded by item 6's sizing).
 > 6. **S13 (Jobs) and S14 (Job detail)** are added by the maintainer's #949 decision (option D,
 >    2026-09-30 05:35:06 BST): 15 slices, 11.25 / 15 / 30 days. Settings and System status are
->    placed in P3, with a recommended owner. DP-7, the `/admin/environments` OQ (working id
->    9871), is raised for the decision-maker. **Sizing now: 15 slices base (11.25 / 15 / 30
+>    placed in P3, with a recommended owner. DP-7, `OQ-1285` (working id 9871 before the
+>    mint), is raised for the decision-maker. **Sizing now: 15 slices base (11.25 / 15 / 30
 >    days), up to 17 if S2 and S4 both split under (a′).**
 
 ## Goal
@@ -57,9 +58,9 @@ First filed 2026-09-29 as working id 9681; `created` re-dated so the id sequence
 Build the four rating-engine views WK-675's roadmap row names: the **DAG designer**, the
 **rate table editor**, the **quote sandbox with its ladder waterfall and compare**, and the
 **dislocation views** (`03` §5.3); and, by the maintainer's scope decision of 2026-09-30
-05:28:45 BST on #921's finding (option A), the other three §5.3 views: the **Rating version
+05:28:45 BST on `FD-1283` (option A), the other three §5.3 views: the **Rating version
 list**, the **Regression suite** view and the **Deployments** view; and, by the maintainer's
-scope decision of 2026-09-30 05:35:06 BST on #949's finding (option D), `07` §5.3's **Jobs**
+scope decision of 2026-09-30 05:35:06 BST on `FD-1284` (option D), `07` §5.3's **Jobs**
 and **Job detail** views. Each is built on routes that a backend Work has delivered
 or delivers, and none hand-writes a shape (`CLAUDE.md` §2, §3). The Work is done when every
 id in **Scope** has a verdict and every *Acceptance Standard* item below holds.
@@ -186,19 +187,18 @@ The predicate: `grep -rn -E 'rating/environments|/rating\`|Rating version list|R
 (the exclude leaves out this plan, which quotes the pattern) prints five lines at `880feb49`, `03:1045`, `:1049`, `:1051`, `07:392` and `docs/findings/register.md:61`. The
 last is a false positive: it matches "/rating\`" inside "`pricing_core/rating\``". WK-674's map
 plan (`PL-1237` Task 2, `:774`) adds only the **backend** `GET` for deployment history, not the
-view. It was raised as #921's finding (working id 9692, auditor-docs; minted before this plan).
+view. It was raised as `FD-1283` (#921, auditor-docs).
 **The maintainer's scope decision, by delegation, 2026-09-30 05:28:45 BST** ("SCOPE DECISION:
-#921 [the finding], the three unowned `03` §5.3 rating views go to WK-675 (option A)",
-to-lead.md; the finding's id is written as its working id until it mints):
+#921 [FD-1283], the three unowned `03` §5.3 rating views go to WK-675 (option A)",
+to-lead.md):
 all three are **WK-675's**, as three new slices, **S10**, **S11** and **S12** (appended, so the
 slice numbers other records cite stay fixed). The Version-list slice's first task is the `03`
 §5.1 list-`GET` spec change, a new FR plus the §5.1 row, in the same commit as its code.
 
 ### `07` §5.3's platform views: Jobs and Job detail here, the other three placed in P3
 
-#949's finding (working id 9693) traced `07` §5.3's platform views, which no Work owned. **The
-maintainer's scope decision, by delegation, 2026-09-30 05:35:06 BST** (to-lead.md, "2026-09-30 05:35:06 BST — SCOPE DECISION: #949 [the finding], the `07` §5.3 platform views, option D (split by view)"; the
-finding's id is written as its working id until it mints), option D, splits them by view:
+`FD-1284` (#949) traced `07` §5.3's platform views, which no Work owned. **The
+maintainer's scope decision, by delegation, 2026-09-30 05:35:06 BST** (to-lead.md, "2026-09-30 05:35:06 BST — SCOPE DECISION: #949 [FD-1284], the `07` §5.3 platform views, option D (split by view)"), option D, splits them by view:
 
 - **Jobs** (`/jobs`, `07:390`) and **Job detail** (`/jobs/:id`, `07:391`) are **WK-675's**, as
   **S13** and **S14** (appended). No spec change is needed: every route is declared
@@ -223,7 +223,7 @@ finding's id is written as its working id until it mints), option D, splits them
   WK-1178 in P2. Creating a Work is the maintainer's scope decision, and the roadmap line is the
   lead's.
 - **`/admin/environments` beside `/rating/environments`** is not decided there. It is filed as
-  **DP-7, the `/admin/environments` OQ (working id 9871)**, owned by WK-675, for the decision-maker.
+  **DP-7 = `OQ-1285`**, owned by WK-675, for the decision-maker.
 
 **A consequence for FR-25:** until S10's rating version list lands, a designer or sandbox route
 needs another path from the entry. Until then, each view's slice links to its route from the
@@ -243,7 +243,7 @@ recommendations are the planner's proposal, not a ruling.
 | **DP-4** | The views need read routes **declared nowhere and built nowhere**: an algorithm by `{slug}@{version}` (the designer's load), and a rate table's cells and a version's table list (the editor). Who adds them? | (a) **this Work**: each route is spec-changed first by the decision-maker and built in the slice whose view consumes it, as F-W10-3 already makes this Work own `POST /rate-tables/{slug}/versions`; (b) a WK-1178 backend slice before WK-675; (c) leave the views to compose reads from existing routes | **(a).** The consuming view is the only place the route's shape is known; F-W10-3 is the precedent; (c) is impossible for the designer, since no route returns an algorithm's graph | scope | ruled | **(a), by the maintainer's scope decision, by delegation** (to-lead.md, "2026-09-30 05:34:33 BST — SCOPE DECISION: #920 DP-4, option (a); the S12 order corrected; the S11 run-list route covered"). Each missing read route gets a spec change first (a new FR plus its `03` §5.1 row) and is built in the WK-675 slice that consumes it: the algorithm-by-`{slug}@{version}` load in **S2**, the rate-table cells and a version's table list in **S4**. **(a′) is pre-authorised as a fallback:** if S2's or S4's leaf plan must split, the split, or one read-routes slice before S2, needs no further scope call; the planner records it at that leaf plan's ACK |
 | **DP-5** | §5.3 routes address a version as `:slug/v/:version`, but the backend reads a Rating Version only by UUID (`GET /rating-versions/{id}`, `models.py:1139`), a Phase 1b route in no §5.1 | (a) add `{slug}@{version}` read routes, the form `03` §5.1 already uses for algorithms and tables; (b) change the §5.3 and `00` §5.6 routes to `/rating-versions/:id/...` | **(a).** It matches every other versioned route in `03` §5.1 and keeps `00` §5.6's four canonical routes unchanged | decision point | no — resolved before Slice 2's leaf plan goes `active`. Until then, views are linked from `/rating-versions/:id` | decision-maker, by `RL-` |
 | **DP-6** | The designer's **on-node live validation** is an FR-24 exception, binding until discharged at this view's slice plan (`00:228`). What discharges it, and how does the view validate before save? | (a) raise it as a numbered `03` FR, served by a **validate-only route** that runs the server's own checks (spec change: the FR plus the route); (b) raise the FR, and re-implement the cycle, reference and type checks in the frontend; (c) declare the cell exhaustive and validate on save only | **(a).** (b) defines the validation rules twice, the divergence `CLAUDE.md` §2 forbids; (c) fails the *Interaction requirement* that an invalid graph be "visibly invalid before save" | decision point | no — resolved before Slice 3's leaf plan goes `active`. Until then, the FR-24 exception stays binding and undischarged | decision-maker, by `RL-` |
-| **DP-7 = the `/admin/environments` OQ (working id 9871)** | Is `03` §5.3's Deployments view (`/rating/environments`, `03:1051`) a duplicate of `07` §5.3's Environments view (`/admin/environments`, `07:392`)? Both name the live deployments and the shadow configuration, and `00` §5.6 lists only `/admin/*` for environments (`00:413`) | (a) one view at the canonical `/admin/environments`; (b) two views split by concern: deployment actions under `/rating`, environment administration under `/admin`, with a `00` §5.6 row added; (c) both as written | **(a)**, as `docs/open-questions.md` records it: it agrees with `00` §5.6 as written, and shadow configuration is an administration setting (`PL-1237` Task 6). (c) defines one control twice | decision point | no — resolved before S12's leaf plan goes `active` | decision-maker, by `RL-` (raised on the maintainer's #949 decision) |
+| **DP-7 = OQ-1285** | Is `03` §5.3's Deployments view (`/rating/environments`, `03:1051`) a duplicate of `07` §5.3's Environments view (`/admin/environments`, `07:392`)? Both name the live deployments and the shadow configuration, and `00` §5.6 lists only `/admin/*` for environments (`00:413`) | (a) one view at the canonical `/admin/environments`; (b) two views split by concern: deployment actions under `/rating`, environment administration under `/admin`, with a `00` §5.6 row added; (c) both as written | **(a)**, as `docs/open-questions.md` records it: it agrees with `00` §5.6 as written, and shadow configuration is an administration setting (`PL-1237` Task 6). (c) defines one control twice | decision point | no — resolved before S12's leaf plan goes `active` | decision-maker, by `RL-` (raised on the maintainer's #949 decision) |
 
 **The freeze.** DP-2 is ruled (`RL-1261`) and DP-4 is ruled (a) (the maintainer, 2026-09-30
 05:34:33 BST). **DP-1 is open, and it is the decision-maker's**: OQ-550, prepared in #936
@@ -310,11 +310,11 @@ FR-25 and NFR-463 obligations.
 | **S7b — Compare backend** | **`RL-1261` (DP-2 = (b)):** `diff_traces` takes both algorithms and derives `own_change` from step-definition equality by `step_id`, agreeing with `diff_algorithms` except for `note`; the route passes each side's `CompiledBundle.algorithm`; `StepChange`'s docstring and field description (`packages/model-schema/src/model_schema/scoring.py:196-214`) and the generated contract change with it; `RL-1261`'s five negative tests, each shown red on broken input; before S7 | `RL-1261` | 1 / 2 |
 | **S8 — Dislocation views** | The change histogram (FR-263), segment grid (FR-264), attribution waterfall (FR-266), largest movers with drill-down to individual quotes (FR-263; the §5.3 cell says "traces", and FR-263's word governs), the run cited as a persisted artifact by its id (FR-265), each chart with its table | **`PL-1267` Slice 4** (WK-673's routes and generated `DislocationRun`); S1 | 1 / 2 |
 | **S9 — Designer III: sub-graph mounting** | Mounting a pinned sub-graph in the designer (FR-217, FR-218's authoring view) | **WK-1250** (`PL-1254`; inlining and the mount declaration); S3 | 1 / 2 |
-| **S10 — Rating version list** (`/rating`, `03:1045`; #921's finding, option A) | **First task, spec first (`CLAUDE.md` §0):** a new `03` FR and the §5.1 row for a `GET` list route over Rating Versions, in the same commit as its code. Then the view: versions by status, **live-in-environment badges**, effective dates (`03:1045`); each row links to the version's `:slug/v/:version` routes, which **removes the interim FR-25 path** through `RatingVersionView` | S6 (order); DP-5 (the rows' route form); **WK-674 Slice 2, SL-1256** (a live badge needs the Deployment record: nothing is `live` without it, `PL-1267` premise j) | 1 / 2 |
-| **S11 — Regression suite view** (`/rating/:slug/v/:version/tests`, `03:1049`; #921's finding, option A) | Golden quotes with pass/fail and actual-vs-expected, property assertion results with counterexamples (FR-260, FR-261, FR-1221), over WK-672's routes (`03:756-763`). **Both run reads need a `run_id`, and no route lists a version's runs**: the leaf plan establishes whether the version's evidence gives the run id; **if not, the run-list read route is added under DP-4 (a), spec first (a new FR plus its §5.1 row), in S11**, with no new scope call (the maintainer's 05:34:33 entry) | S10 (order); DP-5 | 1 / 2 |
-| **S12 — Deployments view** (`/rating/environments`, `03:1051`; #921's finding, option A) | Per-environment live version, deployment history, rollback control, shadow configuration (`03:1051`; FR-267, FR-269, FR-271). The overlap with `07`'s `/admin/environments` (`07:392`) is resolved in its leaf plan | **WK-674's last slice, SL-1260**, and so SL-1256 (history `GET`, live version) and SL-1259 (rollback, FR-269) before it; shadow configuration is FR-271, SL-1260. **The full view; no partial Deployments view ships** (the maintainer's dated correction to the 05:28:45 order, in the 05:34:33 entry); S11 (order) | 1 / 2 |
-| **S13 — Jobs** (`/jobs`, `07:390`; #949's finding, option D) | The filterable list with kind, status, progress bars, submitter and duration, live over the SSE stream (`GET /api/v1/jobs` and `/jobs/{id}/events`, `07:301, 305`); FR-25 link from the entry; **removes the `reachability.test.ts` exception** for `/models/:slug/backtests/:backtestId` (reachable through a Job's result link) and **corrects its FR-24 comment** (`:33`). New functions in `frontend/src/api/jobs.ts`; no backend change | S4 (order: before S5, the first slice that renders a Job) | 1 / 2 |
-| **S14 — Job detail** (`/jobs/:id`, `07:391`; #949's finding, option D) | Parameters, progress stages, logs with `trace_id` (FR-402's UI limb, `07:91`; `GET /jobs/{id}/logs`), the result link, the cancel action (FR-401, `POST /jobs/{id}/cancel`), error detail. The logs render nothing FR-402 excludes (no secrets, no full quote inputs) | S13 | 1 / 2 |
+| **S10 — Rating version list** (`/rating`, `03:1045`; `FD-1283`, option A) | **First task, spec first (`CLAUDE.md` §0):** a new `03` FR and the §5.1 row for a `GET` list route over Rating Versions, in the same commit as its code. Then the view: versions by status, **live-in-environment badges**, effective dates (`03:1045`); each row links to the version's `:slug/v/:version` routes, which **removes the interim FR-25 path** through `RatingVersionView` | S6 (order); DP-5 (the rows' route form); **WK-674 Slice 2, SL-1256** (a live badge needs the Deployment record: nothing is `live` without it, `PL-1267` premise j) | 1 / 2 |
+| **S11 — Regression suite view** (`/rating/:slug/v/:version/tests`, `03:1049`; `FD-1283`, option A) | Golden quotes with pass/fail and actual-vs-expected, property assertion results with counterexamples (FR-260, FR-261, FR-1221), over WK-672's routes (`03:756-763`). **Both run reads need a `run_id`, and no route lists a version's runs**: the leaf plan establishes whether the version's evidence gives the run id; **if not, the run-list read route is added under DP-4 (a), spec first (a new FR plus its §5.1 row), in S11**, with no new scope call (the maintainer's 05:34:33 entry) | S10 (order); DP-5 | 1 / 2 |
+| **S12 — Deployments view** (`/rating/environments`, `03:1051`; `FD-1283`, option A) | Per-environment live version, deployment history, rollback control, shadow configuration (`03:1051`; FR-267, FR-269, FR-271). The overlap with `07`'s `/admin/environments` (`07:392`) is resolved in its leaf plan | **WK-674's last slice, SL-1260**, and so SL-1256 (history `GET`, live version) and SL-1259 (rollback, FR-269) before it; shadow configuration is FR-271, SL-1260. **The full view; no partial Deployments view ships** (the maintainer's dated correction to the 05:28:45 order, in the 05:34:33 entry); S11 (order) | 1 / 2 |
+| **S13 — Jobs** (`/jobs`, `07:390`; `FD-1284`, option D) | The filterable list with kind, status, progress bars, submitter and duration, live over the SSE stream (`GET /api/v1/jobs` and `/jobs/{id}/events`, `07:301, 305`); FR-25 link from the entry; **removes the `reachability.test.ts` exception** for `/models/:slug/backtests/:backtestId` (reachable through a Job's result link) and **corrects its FR-24 comment** (`:33`). New functions in `frontend/src/api/jobs.ts`; no backend change | S4 (order: before S5, the first slice that renders a Job) | 1 / 2 |
+| **S14 — Job detail** (`/jobs/:id`, `07:391`; `FD-1284`, option D) | Parameters, progress stages, logs with `trace_id` (FR-402's UI limb, `07:91`; `GET /jobs/{id}/logs`), the result link, the cancel action (FR-401, `POST /jobs/{id}/cancel`), error detail. The logs render nothing FR-402 excludes (no secrets, no full quote inputs) | S13 | 1 / 2 |
 
 **The band, re-derived from this cut.** The frontend bands are 0.75 / 1 / 2 days per slice
 (best / likely / worst), from the §5a sizing at
