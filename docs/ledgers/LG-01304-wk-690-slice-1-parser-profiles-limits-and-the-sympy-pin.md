@@ -1,5 +1,5 @@
 ---
-id: LG-9991
+id: LG-1304
 family: ledger
 title: WK-690 Slice 1 — the parser brought to §4.6's four profiles, with its limits and the sympy pin
 status: active
@@ -13,11 +13,16 @@ corrected_by: []
 relates: [RL-1289, RL-1291, RL-1292, RL-1293, FD-1294]
 ---
 
-# LG-9991 — WK-690 Slice 1 (SL-1271)
+# LG-1304 — WK-690 Slice 1 (SL-1271)
 
 Executed from `PL-1295`. Branch `sl-1271-arity-refusal`, from `origin/main`
 `9f63d0feee524815e7e0c68c99a53ac3f80e6c37`. Working id 9991, confirmed free by the lead
 2026-09-30 10:54 BST; minted at the merge turn.
+
+**The mint.** Minted 2026-09-30 as LG-1304 (assigned in the lead's mint train, stacked on #984's
+SL-1302/PL-1303; `doc-id.py next --ref origin/main` = 1298 at `c39d14b4`); it was filed under working id 9991.
+The entries below that quote check 31's gap `1295 to 9991`, and the sentences naming working id 9991, are
+numbers as measured at the heads they name and are left as written.
 
 ## Tasks
 
@@ -199,8 +204,7 @@ Lead's grant: gate-1 for `2bce5546`, 2026-09-30. Both halves in one `flock -w 18
 (+ Polars/Rayon/Tokio 4). Python stages ran in parallel, then the frontend stages in sequence.
 
 **Timing.** Start 10:48:07Z, load 3.70 / 5.94 / 8.19. End 11:17:29Z, load 7.76 / 5.62 / 6.85.
-Wall clock 29m22s (pytest 1646.81s = 27m26s). Slot files present: `gate-1`, `gate-2`, `verify-1`;
-I did not identify a holder of gate-2 (the lead reported both slots free at 10:47:49Z). No WK-674 gate
+Wall clock 29m22s (pytest 1646.81s = 27m26s). Slot files present: `gate-1`, `gate-2`, `verify-1` (files existing; see the mint-turn correction: not a hold). No WK-674 gate
 overlapped, so the RL-1263 three-pair measurement did not fire. Task 0's baseline (1949.11s) had no
 load record; this run is 0.84x of it.
 
@@ -228,8 +232,7 @@ tests were collected (Acceptance 10).
 
 ## Closing pass — for the slice audit
 
-**Gate-2 holder.** At both ends of the Task 7 gate, `/tmp/slots/gate-2` existed and its holder was not
-identified by me. The lead reports it will look into it. Nothing here depends on it.
+**Gate-2.** At both ends of the Task 7 gate, the file `/tmp/slots/gate-2` existed. Superseded: see the mint-turn correction below; a file existing is not a hold.
 
 **The three rulings that resolved DP-S1-1 to DP-S1-3, and where each was applied.**
 - RL-1291 (#956, DP-S1-1 (a): `ast.expr` nodes, depth the longest `ast.expr` chain, root at 1): Task 2 (the counter)
@@ -270,6 +273,22 @@ ZEN's expression language, restricted to the function list above" (PL-1295 Task 
 minted when this slice closed. FR-244's row says so in place. If #967 mints before the merge turn, the lead tells the
 executor and the minted record's "amended FR-244 text" is written there. `??`, `_GUARD_MARKERS`, `_check_vocabulary`
 and `compile.py` were not touched.
+
+## Mint-turn closing items
+
+- **Slice audit CLEAN at `df66226c`** (auditor-924d), no fixes required, all four deviations accepted; the
+  `real=True` mutation re-run by the auditor: 10 of 18 fail. The auditor's four LOW notes are the lead's to
+  name; I was given three of their subjects (below) and not the notes' text, so this line names those three and
+  does not invent a fourth.
+- **Acceptance 5, the auditor's mutation reds** (each refusal seen failing): with `_check` disabled, **70
+  failures**, including `%`, ternary, boolean operator, `not`, unary plus and `floor` in `objective` and `factor`;
+  with the symbol check disabled, **3**.
+- **Gate-2 correction.** The earlier line that `/tmp/slots/gate-2` was "held by an unidentified holder at both
+  ends" is withdrawn: what I saw was the lock *file* existing, which is not a hold. `flock -n <file> -c true`
+  failing is the test for "held", and I did not run it. Both slots were free at 11:24Z (lead).
+- **FR-144's marker** covers the 2026-09-28 amendment clause only (already recorded in the closing pass).
+- **Stack.** Train 1's 5th car, stacked on #984 (`6a2f9779`); `docs/INDEX.md` conflicted and was
+  regenerated with `doc-index.py`, not hand-merged.
 
 ## PRs
 
