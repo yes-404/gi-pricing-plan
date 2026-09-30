@@ -210,8 +210,11 @@ It needs no `docs/process/` amendment. If the maintainer later wants the roles w
        *(Added on auditor-docs' F-6.)*
      - **Over what:** each file under `.claude/roles/` changed **since the last sweep**. Each
        sweep records its end commit in the closure record that carries it, and the next sweep
-       starts there: `git diff --name-only <last-swept>..<head> -- .claude/roles`. The first
-       sweep starts at this record's tree.
+       starts there: `git diff --name-only <last-swept>..<head> -- .claude/roles`. **The
+       first sweep is a baseline: it reads every current `.claude/roles/*.md` in full**, not a
+       diff from this record's tree. That covers edits made before the step existed, such as
+       #926's to `planner.md` and `lead.md`. Any over-grant it finds is filed as an `FD-`.
+       Later sweeps are incremental, as above. *(The maintainer, `to-lead.md` about 10:58 BST.)*
      - **What is read:** every changed line that has the role write, create, amend, decide or
        close something.
      - **Against what:** **§1.6's cells, read directly, until WK-1169 Slice 3's exact owner
