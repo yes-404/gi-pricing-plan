@@ -1,5 +1,5 @@
 ---
-id: LG-9942
+id: LG-1324
 family: ledger
 title: WK-674 Slice 2a — The approval guard (only the decision path writes approved), enforced by the database
 status: active
@@ -14,12 +14,14 @@ corrected_by: []
 relates: [RL-1301, RL-1263, FD-1218]
 ---
 
-# LG-9942 — WK-674 Slice 2a (SL-1302)
+# LG-1324 — WK-674 Slice 2a (SL-1302)
 
 Executed from `PL-1303` under `RL-1301`. Branch `sl-1302-approval-guard`, from `origin/main`
 `22fe674b4a590c47095c6ba608fe974264581139` (#984's squash), rebased onto later `origin/main`
 as main moved; each rebase re-ran the targeted tests named below. Working id 9942, confirmed
-free by the lead and reserved in eta.md; minted at the merge turn. Commits are named by subject,
+free by the lead and reserved in eta.md.
+
+**The mint.** Minted 2026-09-30 as LG-1324 (assigned by the lead after mint batch 6, #999; `doc-id.py next` = 1324 at `32f3fa92`); it was filed under working id 9942. The entries below that quote check 31's gap `… to 9942` and the sentences naming working id 9942 are numbers as measured at the heads they name and are left as written. Commits are named by subject,
 never by SHA, because a rebase voids a SHA a ledger cites.
 
 ## Tasks
