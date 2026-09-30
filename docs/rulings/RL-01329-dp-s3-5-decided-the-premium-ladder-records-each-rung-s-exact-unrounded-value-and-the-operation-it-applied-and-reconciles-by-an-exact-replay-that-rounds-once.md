@@ -764,10 +764,8 @@ S3 carries each item red first, shown failing on `origin/main`.
      *(Amended 2026-09-30, at the mint, on the maintainer's entry headed "2026-09-30
      17:14:16 BST — RL 9963: the independent re-run MEETS my condition; the bound's
      constant term AMENDED; ACK at the mint", which supersedes the constant "+ 1" and the
-     "≤ 1" of the add and round rungs.)* **"validated on half_even only; directed modes
-     covered by derivation, not measurement"**: the sweeps declare `half_even` on every
-     rung. **"if S3's goldens have a directed-mode rung, S3's first run records its
-     tightness"**, as the first measurement of the directed case.
+     "≤ 1" of the add and round rungs.)* **"validated on half_even only; directed modes are covered by derivation, not measurement"**: the sweeps declare `half_even` on every rung. The entry also rules:
+     **"If S3's golden set contains a directed-mode rung, S3's first run records its tightness as the first measurement."**
      - **Derived from FD 9949's cause, not fitted** (`score.py:609-611`). Today's rung is
        `apply_factor(base_{i−1}, q_i)`, where `q_i` is `raw_i / base_{i−1}` cut to 4 dp,
        so `|q_i − raw_i / base_{i−1}| ≤ 5 × 10⁻⁵`, and `|base_{i−1} · q_i − raw_i| ≤
