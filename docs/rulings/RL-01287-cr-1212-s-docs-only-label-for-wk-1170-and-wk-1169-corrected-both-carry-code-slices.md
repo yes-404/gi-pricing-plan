@@ -1,5 +1,5 @@
 ---
-id: RL-9857
+id: RL-1287
 family: ruling
 title: CR-1212's "docs-only" label for WK-1170 and WK-1169 is corrected — both Works carry code slices (the maintainer's DP-1 decisions, recorded)
 status: active                 # accepted by the maintainer 2026-09-30 05:50:03 BST (see Accepted); active → superseded | retired (§1.2a)
@@ -15,7 +15,9 @@ corrects: CR-1212
 relates: [CR-1212, PL-1276, PL-1277, RL-1263, WK-1169]
 ---
 
-# RL-9857 (working id) — CR-1212's "docs-only" label for WK-1170 and WK-1169 is corrected
+# RL-1287 — CR-1212's "docs-only" label for WK-1170 and WK-1169 is corrected
+
+*Minted from working id 9857 at #948's merge turn, `RL-1287`, 2026-09-30 07:04:54 BST, by `doc-id.py next --ref origin/main` at b7dbf778. Where the maintainer's acceptance entry quoted below named the working id, in its title and its acceptance line, the minted id is inserted in square brackets; the rest is verbatim.*
 
 > **This record makes no new decision.** It records two scope decisions the maintainer already
 > made by delegation. It exists because `CR-1212` is write-once and cannot be edited in place.
@@ -78,10 +80,10 @@ This section records decisions already made. It rules nothing new.
 ## Accepted
 
 **The maintainer's acceptance, by delegation, quoted whole** from the entry "2026-09-30
-05:50:03 BST — ACCEPTANCE of #948 (RL-9857, the correcting RL for CR-1212's "docs-only"
+05:50:03 BST — ACCEPTANCE of #948 ([RL-1287], the correcting RL for CR-1212's "docs-only"
 labels)" in `~/gi-pricing-plan.local/channel/to-lead.md`:
 
-> **RL-9857 accepted** by the maintainer, 2026-09-30 (dated line by delegation). **What was read at 9e570bd7:**
+> **[RL-1287] accepted** by the maintainer, 2026-09-30 (dated line by delegation). **What was read at 9e570bd7:**
 > - **It records, and rules nothing new:** WK-1170's code slices S3–S6 (PL-1276 DP-1 (a), 2026-09-29 22:58:26) and WK-1169's code slice S3 in `audit-docs.py` (PL-1277 DP-1 (a), 23:05:29).
 > - **Effect:** CR-1212:289's "(docs-only)" no longer holds for either Work. CR-1212's text is unchanged.
 > - **Its only edit to CR-1212** is `corrected_by: [RL-1263]` → `[RL-1263, <minted id>]`, as check 34 permits.
@@ -96,7 +98,7 @@ correcting RL is the right instrument, and this record supersedes that instructi
 
 - **`CR-1212`'s front matter** gains this record in `corrected_by:`. It is appended beside
   `RL-1263`, in this record's own PR, as the only edit to `CR-1212`, which check 34 permits.
-- **At the mint turn,** the working id is replaced by the minted id in both files.
+- **At the mint turn,** the working id was replaced by the minted id in both files (done; see the line under the title).
 - **A reader of `CR-1212` Proposal 2** follows `corrected_by:` to here before treating either
   Work as docs-only.
 
