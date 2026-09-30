@@ -1,5 +1,5 @@
 ---
-id: PL-1349
+id: PL-1348
 family: plan
 kind: leaf
 title: WK-674 Slice 3L — The premium ladder, exact unrounded rungs, true operations, one rounding (FR-247, FR-248, NFR-496, FD-1336, FD-1330; RL-1329 in full): leaf plan
@@ -16,7 +16,7 @@ corrected_by: []
 relates: [PL-1342, RL-1329, RL-1346, RL-1343, FD-1336, FD-1330, OQ-1316, RL-1263, PL-1325, PL-1327]
 ---
 
-# PL-1349 — WK-674 Slice 3L — The premium ladder: exact unrounded rungs, true operations, one rounding: leaf plan
+# PL-1348 — WK-674 Slice 3L — The premium ladder: exact unrounded rungs, true operations, one rounding: leaf plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended) or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. The executor also binds `spec-change` (Task 1), `contract-schema` and `contract-guard` (Task 2), `python-package` and `python-test` (every task), `fastapi-service` (Task 4), `test-driven-development` (every red-first step) and `dev-commands` (the gate and the gate slot), and reads [`README.md`](README.md)'s five unchecked conventions before its first step. The executor is spawned from `.claude/roles/executor.md`, whose Model / effort line it quotes verbatim.
 
@@ -51,7 +51,7 @@ salvage branch** from the halted WK-674 S3 dispatch; Task 0 says how it is taken
   note), §5.1 (the owned-code list), §10 (`OQ-1316`, `03:1194`), **NFR-496** (`03:1165`). Line
   numbers are at the tree above.
 - The rulings this slice executes: **`RL-1329`** (DP-S3-5), **in full**, and the DP-S3-1 ruling
-  **`RL-1346`** (minted in mint batch 13 from working id 9983, PR #1026, whose text this plan
+  **`RL-1346`** (minted in mint batch 13a from working id 9983, PR #1026, whose text this plan
   was written from at `2b98b5aacb4ce37cc98deb7fe2d53fd7ff799008`; its presence on `main` is an
   activation need). **`RL-1343`** (OQ-1334) binds what this slice must **not** change.
 - The findings it discharges: **`FD-1336`** (all three limbs and F4, with the NFR-496
@@ -69,9 +69,10 @@ delta D2 (DP-S3-6).
 Filed 2026-10-01 against the tree above, under **working id 9993**, reserved by the lead (the
 only allocator, `FD-1338`). The id is minted at this PR's merge turn.
 
-**Minted 2026-10-01 as PL-1349** (`python3 scripts/doc-id.py next --ref f689c7828cb05eb2298f3fec505a4638c4437a11`
-printed `1346`, as the lead ran it, and the lead allocated `1349` in mint batch 13, after `RL-1346`
-(working id 9983), `RL-1347` (working id 9984) and `FD-1348`). It was filed under working id 9993,
+**Minted 2026-10-01 as PL-1348** (`python3 scripts/doc-id.py next --ref f689c7828cb05eb2298f3fec505a4638c4437a11`
+printed `1346`, as the lead ran it, and the lead allocated `1348` in mint batch 13a, which the
+maintainer split so that its three ids are contiguous: `RL-1346` (working id 9983), `RL-1347`
+(working id 9984) and this plan). It was filed under working id 9993,
 and this body keeps that id where it describes the filing. The two in-batch rulings are re-pointed
 to their minted ids.
 
@@ -102,14 +103,14 @@ recorded.
    git grep -l -E '^slice: SL-1345$' "$M" -- docs/plans/
    ```
    Expected: exactly one path, and `basename <that path> | cut -c4-8` prints a number below
-   `09000`: `01349` for this plan once minted. The working-id file printed `09993`: that, or no
+   `09000`: `01348` for this plan once minted. The working-id file printed `09993`: that, or no
    path, is **unmet**.
 3. **DP-S3-1 is ruled and minted as `RL-1346`** (filed under working id 9983, PR #1026):
    ```bash
    git grep -l -E '^title: .*DP-S3-1 decided' "$M" -- docs/rulings/
    ```
    Expected: exactly one path, and `basename <that path> | cut -c4-8` prints a number below
-   `09000`: `01346` when mint batch 13 is on `main`. A file printing `09983` is the working-id
+   `09000`: `01346` when mint batch 13a is on `main`. A file printing `09983` is the working-id
    draft, not a mint: **unmet**. Then the dispatch record diffs the minted ruling against the
    text this plan was written from, and quotes the diff:
    ```bash
@@ -496,8 +497,8 @@ them;** any the ladder slice depends on must be minted before its activation."
 
 | DP | Question (source) | Half | Why | State |
 |---|---|---|---|---|
-| DP-S3-1 | What does a failed ladder reconciliation do at scoring? (`PL-1342:405`) | **This slice** | It decides the failure of `RL-1329`'s predicate, which only this slice builds; `RL-1329` defers to it three times ("What a failure does is DP-S3-1's", `:378`, `:452`, `:699`) | Ruled (a), refuse: `RL-1346` (from working id 9983, PR #1026, read at `2b98b5aa`), minted in batch 13. Activation need 3 checks it on `main` |
-| DP-S3-2 | The rate-limit counter's key and limit (`PL-1342:406`) | **`SL-1257`** (environment half) | It governs NFR-499's per-client rate limit and FR-430's per-Environment limits; nothing in this slice reads it. Its ruling's write-set additions (`auth/service.py`, `api/deps.py`, the `metrics.py` rate-limit counter, the `main.py` lifespan Redis client; the S3 dispatch record's Deltas 2 and 3) are the environment half's | Ruled: `RL-1347` (from working id 9984, PR #1024), minted in batch 13. Not this slice's activation need |
+| DP-S3-1 | What does a failed ladder reconciliation do at scoring? (`PL-1342:405`) | **This slice** | It decides the failure of `RL-1329`'s predicate, which only this slice builds; `RL-1329` defers to it three times ("What a failure does is DP-S3-1's", `:378`, `:452`, `:699`) | Ruled (a), refuse: `RL-1346` (from working id 9983, PR #1026, read at `2b98b5aa`), minted in batch 13a. Activation need 3 checks it on `main` |
+| DP-S3-2 | The rate-limit counter's key and limit (`PL-1342:406`) | **`SL-1257`** (environment half) | It governs NFR-499's per-client rate limit and FR-430's per-Environment limits; nothing in this slice reads it. Its ruling's write-set additions (`auth/service.py`, `api/deps.py`, the `metrics.py` rate-limit counter, the `main.py` lifespan Redis client; the S3 dispatch record's Deltas 2 and 3) are the environment half's | Ruled: `RL-1347` (from working id 9984, PR #1024), minted in batch 13a. Not this slice's activation need |
 | DP-S3-3 | FR-430's monitoring configuration (`PL-1342:407`) | `SL-1257` | The monitoring limb is the environment half's | Resolved (a), by the maintainer as scope |
 | DP-S3-5 | How does the ladder record each rung? (D1's row) | This slice | The builder | Resolved: `RL-1329` |
 | DP-S3-6 | The stop bound on a rung that is `none` in the baseline (D1's row) | This slice | Acceptance 3 (a) | Resolved: delta D2, the maintainer's entry "2026-09-30 22:45:30 BST" |
