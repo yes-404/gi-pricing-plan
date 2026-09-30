@@ -112,12 +112,29 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
           `validation_rule_sets`, through a `StrEnum` of their string constants
           (`validation_rules.py:65`), since they have no enum. And it declares the Deployment
           Request table's.
-        - **F-A resolves this way:** a declaration is required only of approval-capable
-          tables, and a test asserts it. Every table whose module has an
-          `apply_approval_decision` that `_carry_to_the_artifact` drives, and
-          `approval_requests`, must declare one with `APPROVED`. `scoring_traces`,
-          `ingestion_runs`, `reference_table_versions`, `jobs` and `dataset_versions` need
-          none, and the guard does not touch them.
+        - **Every mapped `status` column declares itself, and none escapes by omission**
+          (fail-closed; corrected on auditor-close1255's M1). In its own column metadata, each
+          column carries **either** its vocabulary `StrEnum` **or** an explicit non-approval
+          marker (for example `info={"approval_capable": False}`). A status column with
+          neither fails. The non-approval marker fits `jobs`, `scoring_traces`,
+          `ingestion_runs`, `reference_table_versions` (string constants,
+          `platform/reference.py:57`), `dataset_versions` and `outbox`.
+        - **Independent cross-checks refuse a wrong marker.** A column may **not** carry the
+          non-approval marker, and must declare an enum with `APPROVED`, if any one of these
+          holds, each derived from the models and code, never from a list:
+          - its CHECK constraint names `'approved'`;
+          - its `default=` or `server_default=` is `"approved"`;
+          - its table is written by an `apply_approval_decision` that
+            `_carry_to_the_artifact` drives, or it is `approval_requests`.
+        - At `9f63d0fe`, auditor-close1255 measured that union at 8 tables: `custom_metrics`,
+          `custom_objectives`, `models`, `peril_structures`, `validation_rules`,
+          `rating_versions`, `approval_requests` and `validation_rule_sets`. **So
+          `peril_structures` is guarded**, because its CHECK allows `approved`. That is the
+          hazard of the perils finding. A future table that declares nothing fails, and one
+          that declares the marker wrongly fails a cross-check.
+          *(This supersedes the previous head's scoping, which required declarations only of
+          tables with an `apply_approval_decision` module and so left `peril_structures`
+          silently unguarded.)*
      2. **The guard.** A `before_flush` listener on the ORM `Session` inspects every object in
         `session.new` and `session.dirty` whose class is in the population:
         - **an insert** is refused if its `status` is the `APPROVED` member's value. That
@@ -131,17 +148,23 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
         on a population table whose values set `status` to that value outside the context.
         The refusal is a named error raised before the flush writes, so the transaction rolls
         back.
-     3. **The decision-path context.** One context manager, `approval_decision()`, in
-        `platform/approvals.py`, sets a `ContextVar`. It is entered in exactly two places:
-        - `platform/approvals.decide`, around its own write of the request's status at
-          `:416`;
-        - `api/approvals._carry_to_the_artifact` (`:488`), around the owning module's
-          `apply_approval_decision`, which the decide route runs in the same unit of work
-          right after `decide` (`api/approvals.py:250-260`).
+     3. **The decision-path context, spanning the write and its flush.** One context manager,
+        `approval_decision()`, in `platform/approvals.py`, sets a `ContextVar`. **It stays
+        entered until the flush that writes the status has run**, because `before_flush`
+        fires at flush time: a context that exited after the assignment would refuse the
+        sanctioned write. *(Corrected on auditor-close1255's M2.)* It is entered in exactly
+        two places:
+        - **`platform/approvals.decide`**, from the status assignment at `:416` through
+          `await session.flush()` at `:419`;
+        - **`api/approvals._carry_to_the_artifact`** (`:488`), around the owning module's
+          `apply_approval_decision`, including that module's own flush. It is called by the
+          **decide** route (`api/approvals.py:260`, in the same unit of work as `decide`,
+          `:250-260`) **and** by the **withdraw** route (`:293`).
 
-        A static test asserts that `approval_decision()` is entered nowhere else in
-        `backend/src`. This check is by name, which is reliable where the old attribution
-        was not.
+        So "the decision path" means **decide and withdraw's carry**, not decide alone.
+        Withdraw never produces `approved`, so entering the context there is harmless, and
+        it is stated rather than hidden. A static test asserts that `approval_decision()` is
+        entered nowhere else in `backend/src`. The check is by name.
      4. **What the guard cannot see, and what covers it.**
         - Core `connection.execute` and raw `text()` SQL bypass the ORM events. At
           `9f63d0fe`, no Core or bulk statement targets a population table: the only two,
@@ -150,8 +173,12 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
           `text()` naming a population table's `status`, outside the two sanctioned sites.
         - **A database trigger is not required now.** It becomes the escalation if a Core
           writer to a population table is ever needed.
-        - Alembic data migrations run outside the application session and are not covered.
-          A migration that writes `approved` rows is a review item for the slice's auditor.
+        - **Alembic data migrations run outside the application session, so the guard does not
+          cover them. They are an explicit review item, not a note.** At every slice's close,
+          the auditor runs `git diff --name-only <base>..<head> -- backend/migrations/versions`
+          and reads each new migration for any `op.execute`, `op.bulk_insert` or SQL that
+          writes `approved` into a population table's `status`. Each such write is a finding
+          unless the closure record justifies it.
      5. **The exemption: temporary, per table, citing the finding filed under the
         maintainer's 11:14:48 BST DEFECT entry** (in prose until minted). The guard is
         per table, so the exemption is too:
@@ -184,9 +211,10 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
         - a population table without a declared vocabulary fails the declaration test;
         - **positive control:** the sanctioned decide-and-carry path approves a request and
           its artifact.
-     8. **Zero writers.** A population table nothing approves, `peril_structures` today,
-        needs no guard and gets a note. Its reachability is the lead's to route (the
-        tripwire of the perils finding covers it, per the lead).
+     8. **Zero writers.** `peril_structures` has no sanctioned writer of `approved` today, so
+        the guard never allows one there, and any attempt outside the context is refused. It
+        is guarded, and the note says so. Whether its `approved` state should be reachable
+        is the perils finding's question, routed by the lead.
 5. **The deploy route executes only an approved request.** For a target whose deployments are
    approval-gated, `POST /api/v1/environments/{env}/deployments` names an **approved**
    Deployment Request and re-evaluates FR-429's one predicate from the request's **pinned**
