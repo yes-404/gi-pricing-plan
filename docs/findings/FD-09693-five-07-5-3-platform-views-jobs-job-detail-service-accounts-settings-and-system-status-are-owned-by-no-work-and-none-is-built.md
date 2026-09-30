@@ -103,7 +103,7 @@ Work beside WK-675 serialises on it (an inference: the registry list does not na
 
 | Option | What it does | Cost / risk |
 |---|---|---|
-| **A. Fold all five into WK-675** | One frontend Work, one router owner | WK-675 is a `03` Work; with `FD-9692`'s three slices it is 12 slices, 9 / 12 / 24 days. Five more views on the `07` platform is a different subject and roughly doubles the increment, and it needs its own spec changes (the service-account list `GET`, a status route) |
+| **A. Fold all five into WK-675** | One frontend Work, one router owner | WK-675 is a `03` Work; with `FD-9692`'s three slices it is 13 slices, about 9.75 / 13 / 26 days (the maintainer's dated correction of 2026-09-30, `PL-9681` having 10 with `RL-1261`'s S7b). Five more views on the `07` platform is a different subject and roughly doubles the increment, and it needs its own spec changes (the service-account list `GET`, a status route) |
 | **B. New P2 Work, "Platform operator views"** | Owns all five in P2 | Must be opened before the Sat 2026-10-03 freeze; serialises against WK-675 on the router; adds a Work to G1 ("every P2 Work is resolved") |
 | **C. New P3 Work, or fold into P3 rows** | Service accounts beside WK-676 (RBAC, FR-347); Settings and System status beside WK-1251 or a P3 platform Work; Jobs likewise | Nothing built ahead of the phase (`CLAUDE.md` §0); but leaves FR-402's UI limb and the reachability exception open through P2 |
 | **D. Split by view** | **Jobs and Job detail into P2** (folded into WK-675, or a small new Work before the freeze); **Service accounts, Settings and System status into P3** | Two placements to record; the P2 part is small (backend built, no spec change) |
@@ -132,8 +132,8 @@ Work beside WK-675 serialises on it (an inference: the registry list does not na
   no spec change is needed, FR-402 and FR-401 bind them, the reachability exception lifts when they
   land, and the exit demo's regression run is a 30 to 60 minute compute step (`WF-699` §6 Timing,
   "D — Regression + dislocation") a browser user needs progress on. Two slices at the plan's
-  0.75 / 1 / 2 day band add 1.5 / 2 / 4 days, so WK-675 becomes 14 slices, 10.5 / 14 / 28 days
-  (12 slices + 2; the plan's arithmetic, not a re-estimate).
+  0.75 / 1 / 2 day band add 1.5 / 2 / 4 days, so WK-675 becomes 15 slices, 11.25 / 15 / 30 days
+  (13 slices + 2; the plan's arithmetic, not a re-estimate).
 - **Service accounts, Settings and System status in P3**, placed by a dated roadmap line naming
   WK-676 for service accounts and a P3 platform Work (or WK-1251) for the other two. Rationale: two
   of the three need a spec change first, none has a numbered UI requirement, and Phase 3 is
