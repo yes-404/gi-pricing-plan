@@ -348,7 +348,9 @@ cause, and the guard is restored; the ledger quotes both runs.
       `NO_PERMISSION_REQUIRED` (`:28`, `:43`), and the three sets plus the guarded set
       partition the operation count exactly.
 13. **`deployment_requests` joins the guarded set** — the approval guard itself is **Slice
-    2a's** (#984, working id 9923; the split below). This slice's migration adds
+    2a's** (#984, working id 9923; the split below), and this item is #971 A.4 sub-item 9's
+    Slice 2 half, read at head `58ee5ea0c4a73e69a838fe17ebb4b802eb194ec4` (still under audit):
+    the creating migration installs the same trigger function on the new table. This slice's migration adds
     `deployment_requests` to Slice 2a's trigger in the revision that creates the table, and
     declares its `status_vocabulary`. Each red first: Slice 2a's `pg_trigger` presence check
     now names `deployment_requests` too, and fails with this revision's trigger clause
