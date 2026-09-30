@@ -91,6 +91,7 @@ exemptions are at `RL-1263:104-116`. This slice changes:
 | `docs/specs/03-rating-engine.md` §5.1 | one dated line after the "Error codes owned by this module" paragraph (`:772-776`) | **Yes**: §5.1 |
 | `packages/pricing-core/tests/test_rating_pin_membership.py` | new | no |
 | `backend/tests/test_rating_version_compile.py` | one test appended | no |
+| `packages/pricing-core/tests/test_quote_input_raise_sites.py` | `_INPUT_FREE` (`:62-75`) gains `("rating/compile.py", "check_step_refs_pinned"): 1` and `("rating/runtime.py", "_load_boosters"): 1`; `("rating/runtime.py", "handler")` changes from 2 to 3 only if the `:463` limb stays (F1, pending) | **Yes**: the `_INPUT_FREE` table |
 | `docs/INDEX.md` | regenerated | exempt |
 
 - **`backend/src/app/errors.py` is not changed.** `RATING_VERSION_UNPINNED` is already
@@ -184,7 +185,10 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
    bypasses `compile_bundle`, as a pre-fix stored bundle would.
    - **A GBM model** (`_load_boosters`, `:533`). `load_bundle` raises `CodedError`
      `RATING_VERSION_UNPINNED: …`. Predicted red: `KeyError 'model:motor-freq@1'`.
-   - **A GLM model** (the handler, `:463`). Under DP-F2 (a) or (b), `score_one` raises
+   - **A GLM model** (the handler, `:463`). **Held for the decision-maker's amendment of DP-F2
+     (auditor-933's F1):** through `load_bundle` this site is unreachable, because `_load_boosters`
+     (`:533`) indexes every `model_call` payload first. This bullet is dropped, or rewritten to use a
+     hand-built `CompiledBundle`, as the ruling says. Under DP-F2 (a) or (b), `score_one` raises
      `CodedError` `MODEL_CALL_FAILED: …`, naming the ref as unpinned. Under DP-F2 (c),
      `load_bundle` refuses first, with `RATING_VERSION_UNPINNED`. Predicted red under (a) or (b):
      `RuntimeError` `NodeError`, the zen binding's wrapping of the handler's `KeyError`
@@ -202,6 +206,24 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
    `test_an_unpinned_version_is_refused_over_http` (`:181-195`) and do not invent new helpers.
 7. **Every existing fixture still compiles** (premise q predicts no correction), or is corrected by pinning its ref. The fixture is
    corrected, never the check. Each correction is listed in the ledger with its file:line.
+   **One guard test changes by design, and it is not a fixture.** NFR-499's raise-site guard,
+   `packages/pricing-core/tests/test_quote_input_raise_sites.py::test_every_quote_input_raise_site_has_a_sentinel_case`,
+   counts every `_raise_named`, `CodedError(` and `_model_call_failure(` call per function under
+   `pricing_core/rating` (`:84-110`). It asserts that the count equals `_INPUT_FREE` (`:62-75`),
+   and that listed sites are input-free. Each new site in this slice is artifact-level: it names a
+   step id and a ref string, never a quote value. So each one is listed in `_INPUT_FREE`, **in the
+   same commit as the site**, with a one-line reason:
+   - `("rating/compile.py", "check_step_refs_pinned"): 1` (Task 2). Write the function with **one**
+     `_raise_named` call. If it has two, the count is 2 and the comment says why;
+   - `("rating/runtime.py", "_load_boosters"): 1` (Task 3);
+   - `("rating/runtime.py", "handler"): 3`, up from 2, **only if** the decision-maker keeps the
+     `:463` limb (F1, below).
+
+   `("rating/compile.py", "compile_bundle")` stays 5: the new call is to
+   `check_step_refs_pinned`, not to a site name, and so is DP-F2 (c)'s call in `load_bundle`.
+   Predicted red at Task 2 before the entry is added: the guard's "a `_raise_named` site is not
+   accounted for" assert. auditor-933's scratch patch gave "1 failed, 201 passed". *(Added
+   2026-09-30 on auditor-933's F2 against #963.)*
 8. **The `??` operator is untouched.** `git diff origin/main...HEAD --
    packages/pricing-core/src/pricing_core/rating/compile.py` shows no change to
    `_GUARD_MARKERS` (`:41`), `_check_vocabulary` (`:233`) or any expression handling. `??` is a
@@ -268,7 +290,7 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
 | n | `RATING_VERSION_UNPINNED` and `MODEL_CALL_FAILED` are registered | `backend/src/app/errors.py:298`, `:325` |
 | o | The platform test that asserts the compile Job's code | `backend/tests/test_rating_version_compile.py:181-195` |
 | p | `03` §5.1's catalogue is a bare list, and the code has no meaning in the spec | `03:772-776`; `git grep -n RATING_VERSION_UNPINNED -- docs/specs` prints only `03:774` |
-| q | **No existing fixture is refused by the new check.** Every fixture that compiles pins each step ref at its exact version. The backend and example fixtures have no `table`, `lookup` or `model_call` step at all. No test passes a hand-built `Bundle` to `load_bundle` | A read-only sweep at the tree above, by a subagent; the planner took its conclusion, not its dumps. Two examples: `test_rating_compile_bundle.py:45-55` against `:77-88`, and `test_rating_score.py:46-70` against `:116-133`. `test_testing.py`'s `_VariantResolver` pins a model no step names, a superset that DP-F3 (a) keeps legal. The pattern: `grep -rn "compile_bundle\|load_bundle\|compile_rating_version" --include=*.py .`, then each fixture's `"type": "(table\|lookup\|model_call)"` steps compared with its `pins` |
+| q | **No existing fixture is refused by the new check. One guard test changes by design:** NFR-499's raise-site count (acceptance 7), which is not a fixture *(corrected 2026-09-30 on auditor-933's F2 against #963; the sweep below covered fixtures only)*. Every fixture that compiles pins each step ref at its exact version. The backend and example fixtures have no `table`, `lookup` or `model_call` step at all. No test passes a hand-built `Bundle` to `load_bundle` | A read-only sweep at the tree above, by a subagent; the planner took its conclusion, not its dumps. Two examples: `test_rating_compile_bundle.py:45-55` against `:77-88`, and `test_rating_score.py:46-70` against `:116-133`. `test_testing.py`'s `_VariantResolver` pins a model no step names, a superset that DP-F3 (a) keeps legal. The pattern: `grep -rn "compile_bundle\|load_bundle\|compile_rating_version" --include=*.py .`, then each fixture's `"type": "(table\|lookup\|model_call)"` steps compared with its `pins` |
 
 The executor re-reads each at its own tree and stops on any that no longer holds
 ([`README.md`](README.md) convention 4).
@@ -364,18 +386,29 @@ the order and the acceptance (#961, *Disposition*). None of that is reopened her
 - [ ] Call it in `compile_bundle` immediately after `check_model_reference_mode(version,
   algorithm)` (`:464`), before `payloads` is built. Add it to `__all__`. Update
   `compile_bundle`'s docstring clause list.
+- [ ] In `packages/pricing-core/tests/test_quote_input_raise_sites.py`, add
+  `("rating/compile.py", "check_step_refs_pinned"): 1` to `_INPUT_FREE` with the comment
+  `# step id and ref string (artifact-level, compile time), no quote` (acceptance 7). Run the
+  guard: red before the entry, green after.
 - [ ] Acceptance 2, 3 and 4 green. Acceptance 8's diff check. Commit, spec and code together:
   `fix(rating): compile_bundle refuses a step ref not pinned at its exact version (FR-237, WK-1178)`.
 
 ### Task 3: The coded backstops at load and score
 
-**Files:** Modify `packages/pricing-core/src/pricing_core/rating/runtime.py`.
+**Files:** Modify `packages/pricing-core/src/pricing_core/rating/runtime.py`,
+`packages/pricing-core/tests/test_quote_input_raise_sites.py` (`_INPUT_FREE`).
 
 - [ ] `_load_boosters` (`:531-533`): when `ref_str not in payloads`, raise through `CodedError`
   with `RATING_VERSION_UNPINNED: model_call step <id> names <ref>, which the bundle does not carry
-  (FR-237)`. Import `CodedError` from `pricing_core.safe_error`, as `compile.py:37` does.
-- [ ] The handler (`:462-463`): when `ref_str not in payloads`, `return _model_call_failure(step,
-  …)` with the same text. Do not raise: premise h.
+  (FR-237)`. Import `CodedError` from `pricing_core.safe_error`, as `compile.py:37` does. Add
+  `("rating/runtime.py", "_load_boosters"): 1` to `_INPUT_FREE` in the same commit (acceptance 7).
+- [ ] **Held for the decision-maker (F1).** The handler (`:462-463`): when `ref_str not in
+  payloads`, `return _model_call_failure(step, …)` with the same text. Do not raise: premise h.
+  Update `("rating/runtime.py", "handler")` from 2 to 3. auditor-933's F1 found this site
+  unreachable through `load_bundle`: `_load_boosters` indexes every `model_call` payload first
+  (`runtime.py:533`, called at `:579`). The decision-maker is amending DP-F2 either to drop this
+  limb or to keep it with a hand-built `CompiledBundle` test. This step and acceptance 5's GLM
+  bullet follow that ruling.
 - [ ] DP-F2 (c) only: in `load_bundle`, before `_load_boosters` (`:579`), call
   `check_step_refs_pinned(algorithm, bundle.pins)`.
 - [ ] Acceptance 5 green. Commit: `fix(rating): code the model path's missing-payload failures (FR-237, WK-1178)`.
