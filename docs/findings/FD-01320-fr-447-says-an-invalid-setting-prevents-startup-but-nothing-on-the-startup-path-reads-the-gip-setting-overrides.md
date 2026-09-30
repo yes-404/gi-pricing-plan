@@ -1,5 +1,5 @@
 ---
-id: FD-9881
+id: FD-1320
 family: finding
 title: FR-447 says an invalid setting prevents startup, but nothing on the startup path reads the GIP_SETTING_ overrides
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-674]
 ---
 
-# FD-9881 — FR-447 says an invalid setting prevents startup, but nothing on the startup path reads the GIP_SETTING_ overrides
+# FD-1320 — FR-447 says an invalid setting prevents startup, but nothing on the startup path reads the GIP_SETTING_ overrides
 
 ## Finding
 
@@ -84,4 +84,4 @@ Slice 3's **red-first acceptance** (each written to fail on `origin/main` first)
 #939's rule 3a startup refusal must be a **new** check: none exists to extend, and
 `require_startable` and the lifespan's two checks do not touch overrides.
 
-*Drafted under working id 9881.*
+*Disclosure: this record was drafted under working id 9881 and minted as FD-1320; the working id survives only in this line and in PR #965's history.*
