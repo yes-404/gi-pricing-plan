@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from uuid import UUID, uuid4
 
 import pytest
+from backend.tests.approved_rows import mark_approved
 from backend.tests.test_custom_objectives import _certified
 from backend.tests.test_model_jobs import (
     _actuary,
@@ -47,7 +48,6 @@ from model_schema import (
     JobKind,
     JobStatus,
     ModelStatus,
-    ObjectiveStatus,
     ObjectiveTemplate,
     Principal,
     ResponseKind,
@@ -101,7 +101,7 @@ async def _approved_quantile(
         stored = await session.get(CustomObjectiveRow, row.id)
         assert stored is not None
         assert stored.certificate_id is not None, "the CHECK needs a real certificate"
-        stored.status = ObjectiveStatus.APPROVED.value
+        await mark_approved(session, stored)
     return f"custom_objective:{row.slug}@{row.version}"
 
 
@@ -619,7 +619,10 @@ async def _set_status(database: Database, model_id: UUID, status: ModelStatus) -
     async with database.unit_of_work() as session:
         row = await session.get(ModelRow, model_id)
         assert row is not None
-        row.status = status.value
+        if status is ModelStatus.APPROVED:
+            await mark_approved(session, row)
+        else:
+            row.status = status.value
 
 
 async def _predict(database: Database, blob_store: BlobStore, workspace_id, central, model_id):
