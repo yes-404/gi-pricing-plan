@@ -73,9 +73,10 @@ block. Running `frozen_diff_is_permitted` on the two parsed headers and bodies r
 A merge-base comparison on those PRs would have seen a new file for `PL-1303` and `PL-1295`, and
 a real body change only for `PL-1299`.
 
-**4. The practice is not a one-off.** Predicate: for every `docs/plans/PL-*.md` at the tree, walk the
-first-parent commits after the W37-6 migration `71f5a220` (2026-09-17, an ancestor of `origin/main`),
-and count the plans whose text after the first `\n---\n` differs between consecutive commits.
+**4. The practice is not a one-off.** Corpus: every `docs/plans/PL-*.md` at the tree. Predicate: for each, walk the
+first-parent commits on `main` after the W37-6 migration `71f5a220` (2026-09-17, an ancestor of `origin/main`),
+and count the plans whose body, defined as the text after the first `\n---\n`, differs between
+consecutive commits.
 
 ```python
 # run in a worktree at e9263283; base = the migration commit
@@ -132,9 +133,15 @@ against `origin/main`, and is shown red on each of:
 - a body sentence edited in an `active` plan (the `PL-1295` control above);
 - a body word edited in a closure (the `CR-1212` control);
 - a **`draft`** plan on main, body-edited (`document-ids.md` :69 says mutability is a family property,
-  not a status, so the check must not use `status` as its gate; :158 says a plan freezes "on activation",
-  which (a) must reconcile);
+  not a status, so the check must not use `status` as its gate);
 - a blanked `corrected_by:` back-link (FD-1282's amendment).
+
+**(a) names `document-ids.md`'s two statements and resolves them toward :69.** :69 says "Mutability is a
+family property, not a status", so a plan is frozen by family from the day it is on main. :158 says a plan is
+`draft` "while decision points are open" and `active` "on freeze", which reads as if freezing happens at
+activation and a draft may still be edited. The maintainer's direction (activation is the `status:` flip only,
+no prose added to a plan on main) resolves it toward :69. **:158's "active on freeze" wording is therefore part
+of WK-1170's reconcile step (a)**, to be amended with the rule, not left to disagree with it.
 
 It must stay green on a status flip alone, and on a file that is new in the PR. **Ordering matters:** if
 (b) lands before (a), the comparison, correct as written, refuses the routine plan activation block.
