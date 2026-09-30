@@ -734,7 +734,7 @@ A deployment is bound to one tenant and refuses to start when its database, blob
 id: SL-1302
 family: slice
 title: Slice 2a: the approval guard (only the decision path writes approved; FR-351)
-status: active                 # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: daa7f5f8d6f0ff80dee7dfccf8ca18309d626816
@@ -745,6 +745,8 @@ relates: [PL-1237, PL-1303]
 ```
 
 A database trigger, primary, on every approval-capable table refuses `approved` outside the approval decision path; the test database is shown to carry it. Cut 2026-09-30 from Slice 2 by the maintainer's acceptance of the split (to-lead.md, `2026-09-30 11:48:28 BST`; "S2a (the approval guard, first) and S2 (deployment), per #973's self-review option (b)"). Leaf plan `PL-1303` (minted 2026-09-30 with this row in the lead's mint train; filed under working ids 9923 and 9922); the guard is `RL-1301`'s (#971) evidence-based trigger: an artifact row reaches `approved` only with a matching approved approval request, the validation tables accept evidence or the decision flag while their allowance lasts, and `approval_requests` takes the flag behind `decide`'s guards. Starts after Slice 1 closes (it has); **Slice 2 follows it**, in the same lane, never concurrently.
+
+**Closed 2026-09-30** at #997's merge, `8d5c67a56c27a9dcbba8d4e4ad28a1895e1dd862`, on a CLEAN slice audit (auditor-close1255 at `4a2423f2`, per the lead handover `lead-handover-2026-09-30.md`) and the lead's merge (CLAUDE.md §13); the maintainer's MERGE-ACK ("2026-09-30 16:58:01 BST — MERGE-ACK #997") and read-back ("2026-09-30 16:58:35 BST — #997 read-back verified") confirm it. Its ledger is `LG-1324`. The row read `active` after the merge and was flipped here, a forward status, by the auditor at `origin/main` 248dbf11.
 
 #### SL-1256 — Slice 2: the Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit and NFR-498 for deploy)
 
