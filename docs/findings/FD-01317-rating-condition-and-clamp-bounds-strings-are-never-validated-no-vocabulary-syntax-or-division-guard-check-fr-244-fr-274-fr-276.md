@@ -1,5 +1,5 @@
 ---
-id: FD-9885
+id: FD-1317
 family: finding
 title: Rating condition and clamp_bounds strings are never validated — no vocabulary, syntax or division-guard check (FR-244, FR-274, FR-276)
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9885 — Rating condition and clamp_bounds strings are never validated — no vocabulary, syntax or division-guard check (FR-244, FR-274, FR-276)
+# FD-1317 — Rating condition and clamp_bounds strings are never validated — no vocabulary, syntax or division-guard check (FR-244, FR-274, FR-276)
 
 ## Finding
 
@@ -269,4 +269,4 @@ already covered by three deliberate negative tests:
 `packages/pricing-core/tests/test_rating_compile.py:136` the guarded positive control. The new
 cells are `condition`, `clamp_bounds` and `key_expr`. The severity is HIGH, in force.
 
-*Drafted under working id 9885.*
+*Drafted under working id 9885 and minted as FD-1317; the working id survives only in this line and in PR #968's history.*
