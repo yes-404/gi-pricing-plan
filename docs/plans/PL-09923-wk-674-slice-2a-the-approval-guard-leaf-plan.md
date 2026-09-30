@@ -13,7 +13,7 @@ slice: SL-9922
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1237, RL-1263, FD-1218]
+relates: [PL-1237, RL-1263, RL-1301, FD-1218]
 ---
 
 # WK-674 Slice 2a — The approval guard: leaf plan
@@ -47,11 +47,12 @@ dependency: no `uv.lock` or `pyproject.toml` change.
   uniform lifecycle), **FR-354** (`06:95`, the approver count a direct write bypasses),
   **FR-356** (`06:97`, pinned approvals); `06:22` ("approved" means the same thing for every
   governed artifact).
-- **The ruling this slice executes: #971** (working id 9906), item A.4, sub-items **1–8 and
-  10**, read at head `3de69560643b2abc8d20afc923416a4ef66104a1` (the **evidence-based** trigger form, which adopts the
-  maintainer's 11:55:31 BST steer and carries T2 and T3). **It is still under audit by
-  auditor-close1255**; cited by PR number until it mints. Its sub-item 9 sets this
-  slice's scope and order.
+- **The ruling this slice executes: `RL-1301`** (RL-1301, working id 9906), item A.4, sub-items
+  **1–8 and 10**, in its **evidence-based** trigger form, which adopts the maintainer's
+  11:55:31 BST steer and carries T2 and T3. It was read at head
+  `3de69560643b2abc8d20afc923416a4ef66104a1`, found **clean** by auditor-close1255 at
+  `897859eb`, and minted as `RL-1301` in mint train 1. Its sub-item 9 sets this slice's scope
+  and order. *(Revised at the mint turn, 2026-09-30: cited by its minted id.)*
 
 **What this plan implements.** WK-674's map plan **PL-1237**, Task 2, as **split** by the
 maintainer (below): the approval-guard half of Slice 2, landing **before** Slice 2. The
@@ -78,11 +79,10 @@ in Slice 2's leaf plan (#973, working id 9920) by its own dated delta. `PL-1237`
 edited.
 
 **Activation needs, in order:**
-1. **#971 audit-clean and minted.** At `3de69560643b2abc8d20afc923416a4ef66104a1` it carries T2, T3 and the evidence-based
-   condition (the maintainer's steer headed
+1. **`RL-1301` (RL-1301) audit-clean and minted** — done: clean at `897859eb`, minted in mint
+   train 1. It carries T2, T3 and the evidence-based condition (the maintainer's steer headed
    `2026-09-30 11:55:31 BST — #971 trigger at ed879f7b: T1–T3 agreed; the forgeable-flag residual gets a steer toward an evidence-based condition`,
-   adopted). If the audit changes it, this plan is aligned to the minted text by a dated
-   delta.
+   adopted).
 2. **The lead's go.**
 
 ## Acceptance Standard
@@ -93,7 +93,7 @@ step predicts**; a failure for any other cause is a plan defect. "Red on broken 
 the guard is green, then deliberately disabled, the test shown red with the predicted cause,
 and the guard restored.
 
-1. **Every `status` column declares itself; the guarded set is derived** (#971 A.4 sub-item
+1. **Every `status` column declares itself; the guarded set is derived** (RL-1301 A.4 sub-item
    1, on the maintainer's entry headed
    `2026-09-30 11:21:51 BST — status 11:25 noted; three rulings`). Each mapped `status`
    column under `app.db.models.Base` carries, in its column metadata, **either** its
@@ -178,9 +178,15 @@ and the guard restored.
      `SET LOCAL` lasts to the end of the transaction). The flush before the reset lets the
      block's own pending write meet the trigger while the flag is on; a write left unflushed
      is flushed later under `'off'` and refused, which fails closed — **red first with an ORM
-     attribute change** (auditor-close1255 F-2): inside the block, set an artifact row's
-     `status` to `approved` on the ORM object without flushing, patch the exit flush out,
-     leave the block, then flush — the trigger refuses it. A raw statement cannot stand in
+     attribute change** (auditor-close1255 F-2): on a **flag-satisfiable table**
+     (`approval_requests`, `validation_rules` or `validation_rule_sets`), inside the block,
+     set a row's `status` to `approved` on the ORM object without flushing, patch the exit
+     flush out, leave the block, **assert `current_setting('app.approval_decision', true)`
+     reads `'off'`**, then flush — the trigger refuses it. With the reset removed, the same
+     flush succeeds, so the case fails without the reset. (On an evidence-only table the
+     write would be refused for missing evidence whether or not the flag was reset, so it
+     would not isolate the reset; if the case is run there, a matching approved request is
+     written first.) A raw statement cannot stand in
      for this case, because it is not buffered. Red first: an
      `approved` write **after** the block, in the same unit of work, is refused (without the
      reset, this case fails). **No leak:** the next transaction on the same pooled
@@ -213,7 +219,7 @@ and the guard restored.
    lexically inside an `approval_decision()` block (auditor-plans' context hygiene).
 6. **The test database carries the trigger, and the suite proves it** (sub-item 10, the
    maintainer's CRITICAL pre-check in the entry headed `2026-09-30 11:45:55 BST`).
-   - **T3** (being added to #971): the `pg_trigger` presence test **connects to
+   - **T3** (being added to RL-1301): the `pg_trigger` presence test **connects to
      `test_database_url()` directly**, not through the `database` fixture, which **skips**
      on an unreachable database (`backend/tests/conftest_db.py:190`) or an unmigrated one
      (`:192-198`). It **fails, never skips**, when any table in item 1's set lacks the
@@ -254,7 +260,9 @@ and the guard restored.
    alone fails on the 5 evidence tables):
    for a row on an evidence-only table it inserts a matching `approved` `approval_requests`
    row (same workspace, `artifact_ref` = `str(ArtifactRef)` of the row) inside
-   `approval_decision()`, and only then the artifact row; for a validation table or
+   `approval_decision()`, **flushes it explicitly** (as `decide` does at
+   `backend/src/app/platform/approvals.py:419`), and only then writes the artifact row — never
+   relying on the ORM's table-sort order to write `approval_requests` first; for a validation table or
    `approval_requests` the flag suffices. The files:
    `test_api_blobs.py`, `test_api_rate_tables.py`, `test_api_validation_rules.py`,
    `test_approvals.py`, `test_custom_metrics.py`, `test_custom_objectives.py`,
@@ -262,7 +270,7 @@ and the guard restored.
    `test_paired_quantile_models.py`, `test_rate_tables_service.py`,
    `test_rating_version_compile.py`, `test_rating_versions.py`, `test_reference_pin.py`,
    `test_validation_reports.py`, `test_wf01_journey.py`.
-9. **Evidence-based authorisation — adopted** (#971 at `3de69560643b2abc8d20afc923416a4ef66104a1`, on the maintainer's steer headed
+9. **Evidence-based authorisation — adopted** (RL-1301 at `3de69560643b2abc8d20afc923416a4ef66104a1`, on the maintainer's steer headed
    `2026-09-30 11:55:31 BST — #971 trigger at ed879f7b: T1–T3 agreed; the forgeable-flag residual gets a steer toward an evidence-based condition`).
    Carried by items 2 and 3. Forging an approved artifact on the 5 evidence-only tables now
    takes a forged, decided `approval_requests` row.
@@ -335,7 +343,7 @@ and the guard restored.
 | `06` §3.2 | FR-356 | Unchanged; the guard does not alter pinning (item 9, if adopted, reads it) |
 
 **Not in this slice:** the Deployment Request table, its trigger and its plant (Slice 2,
-#971 sub-item 9); removing the temporary allowance (the WK-1178 fix slice); a new route of
+RL-1301 sub-item 9); removing the temporary allowance (the WK-1178 fix slice); a new route of
 any kind; Task 0A's authorisation sweep (Slice 2's first task, by the maintainer's 11:01:50
 BST entry).
 
@@ -355,7 +363,7 @@ BST entry).
 | #977's §5.1 Permission column slice (WK-1178) | nothing: this slice touches no spec table | — | may run concurrently in the other lane (different Works, no shared file) |
 
 **The validation-rule fix slice (WK-1178, HIGH) and its order — settled here.**
-- **It needs this slice** (#971 sub-item 9: its allowance removal is red first only once the
+- **It needs this slice** (RL-1301 sub-item 9: its allowance removal is red first only once the
   trigger exists).
 - **It does not need Slice 2's content.** It adds a validation branch to
   `_carry_to_the_artifact` and routes rule approval through `submit`/`decide`; Slice 2 adds a
@@ -388,7 +396,7 @@ The executor re-reads each at its own tree and stops on any that no longer holds
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| — | None of this plan's own. The guard's design is #971's (A.4), which carries T2, T3 and the evidence-based condition at the cited head, still under audit (**Status**, activation need 1) | — | — | — | — | — |
+| — | None of this plan's own. The guard's design is RL-1301's (A.4), which carries T2, T3 and the evidence-based condition at the cited head, still under audit (**Status**, activation need 1) | — | — | — | — | — |
 
 The order against the validation-rule fix slice is decided by the maintainer's 11:56:33 BST
 entry (**Serialisation**).
@@ -401,7 +409,7 @@ entry (**Serialisation**).
 
 - [ ] `pwd` is the executor's worktree; `git branch --show-current` is the slice branch;
   `uv sync --all-packages`.
-- [ ] Confirm #971 is merged and minted; **stop if not**. If its minted text differs from
+- [ ] Confirm RL-1301 is merged and minted; **stop if not**. If its minted text differs from
   the head this plan cites, align this plan to it by a dated delta before the first code
   step.
 - [ ] Re-derive premises a–h and item 1's set; quote both.
@@ -460,7 +468,7 @@ trigger's SQLSTATE; `backend/tests/test_approval_guard.py`; `backend/tests/conft
 
 - [ ] The full two-half gate in a gate slot; quote every rc, `N passed`, `HEAD`, `uptime`.
 - [ ] The ledger (`LG-`, working id): the tree, the premises, the derived set, every red
-  quote, the #971 alignments, the stated limits, the decided order.
+  quote, the RL-1301 alignments, the stated limits, the decided order.
 - [ ] Item 13, with the accepted residual restated in the ledger (the 12:06:53 BST entry).
 
 ## Hand-off
@@ -472,15 +480,14 @@ Slice 2 starts after the fix closes.
 
 ## Self-review
 
-- **Scope against #971 sub-item 9:** sub-items 1–8 and 10 over the 8 existing tables are
+- **Scope against RL-1301 sub-item 9:** sub-items 1–8 and 10 over the 8 existing tables are
   here; the `deployment_requests` extension is Slice 2's.
 - **Each ruling applied where it operates:** sub-item 1 (Acceptance 1, Task 1); 2
   (Acceptance 2, Task 2); 3 (Acceptance 4, Task 3); 4 (Acceptance 5, 11); 5 (Acceptance 7,
   Task 4); 6 (Acceptance 8, Task 4); 7 (Acceptance 3); 8 (Acceptance 3); 10 (Acceptance 6,
   Task 2).
 - **auditor-close1255 on `ed879f7b`:** T2 (Acceptance 4, Task 3), T3 (Acceptance 6, Task 2),
-  the advisory residual (Acceptance 11). **#971 at `3de69560643b2abc8d20afc923416a4ef66104a1`** (evidence-based, still under
-  audit): Acceptance 2's per-table requirement and ref pin, 3's evidence cases, 4's
+  the advisory residual (Acceptance 11). **`RL-1301` (RL-1301; read at `3de69560`, clean at `897859eb`)** (evidence-based): Acceptance 2's per-table requirement and ref pin, 3's evidence cases, 4's
   flush-then-reset and no-leak case, 5's narrowed scan, 9 adopted, 11's residual.
 - **auditor-plans' seven trigger items:** the revision count and downgrade with `pg_trigger`
   per table (Acceptance 10); `SET LOCAL` replacing the ContextVar as the guarantee
@@ -491,11 +498,11 @@ Slice 2 starts after the fix closes.
   (Acceptance 11). Also M1's caveat as the fourth cross-check (Acceptance 1).
 - **Maintainer entries applied:** 11:21:51 (1), 11:23:26 (7, Serialisation), 11:42:08 and
   11:43:28 (12), 11:44:15 (Architecture, 2–5), 11:45:55 (6), 11:48:28 (Status, Global
-  Constraints), 11:55:31 (2, 3, 9, adopted in #971).
+  Constraints), 11:55:31 (2, 3, 9, adopted in RL-1301).
 - **auditor-plans on `adb4ace8`:** V1, the fourth leg reworded with the CHECK-reading rule
   (Acceptance 1); head and head−1 as an acceptance line (Acceptance 10); the order's cost
   stated (Serialisation); the fixture helper creating evidence (Acceptance 8); the flush
   order in the positive control (Acceptance 4); the forged-flag plant (Acceptance 3).
 - **The order** is the maintainer's decision of 11:56:33 BST, stated in Serialisation and
   Hand-off.
-- **Open:** no decision point of this plan's own. Activation waits on #971.
+- **Open:** no decision point of this plan's own. Activation waits on RL-1301.

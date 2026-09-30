@@ -744,7 +744,7 @@ corrected_by: []
 relates: [PL-1237, PL-9923]
 ```
 
-A database trigger, primary, on every approval-capable table refuses `approved` outside the approval decision path; the test database is shown to carry it. Cut 2026-09-30 from Slice 2 by the maintainer's acceptance of the split (to-lead.md, `2026-09-30 11:48:28 BST`; "S2a (the approval guard, first) and S2 (deployment), per #973's self-review option (b)"). Leaf plan `PL-9923`; its trigger form follows #971's next head. Starts after Slice 1 closes (it has); **Slice 2 follows it**, in the same lane, never concurrently.
+A database trigger, primary, on every approval-capable table refuses `approved` outside the approval decision path; the test database is shown to carry it. Cut 2026-09-30 from Slice 2 by the maintainer's acceptance of the split (to-lead.md, `2026-09-30 11:48:28 BST`; "S2a (the approval guard, first) and S2 (deployment), per #973's self-review option (b)"). Leaf plan `PL-9923`; the guard is `RL-1301`'s (#971) evidence-based trigger: an artifact row reaches `approved` only with a matching approved approval request, the validation tables accept evidence or the decision flag while their allowance lasts, and `approval_requests` takes the flag behind `decide`'s guards. Starts after Slice 1 closes (it has); **Slice 2 follows it**, in the same lane, never concurrently.
 
 #### SL-1256 — Slice 2: the Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit and NFR-498 for deploy)
 
