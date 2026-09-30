@@ -1,5 +1,5 @@
 ---
-id: RL-9841
+id: RL-1290
 family: ruling
 title: RL-881 corrected — its findings 1 and 3 are stale; 06 §4.2 restates all six floor keys, structural_diff is WK-673's, GOLDEN_QUOTE_MISMATCH is registered and raised
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: RL-881
 relates: [RL-881, RL-885, RL-1184, RL-1263, RL-1264, PL-1267]
 ---
 
-# RL-9841 — RL-881 corrected: its findings 1 and 3 are stale
+# RL-1290 — RL-881 corrected: its findings 1 and 3 are stale
 
 ## How this was ruled
 
@@ -29,7 +29,7 @@ stated exception, and is recorded as such. The record was prepared earlier at me
 (PR #946, head `efa232bf`, "PREPARED, NOT RULED"); this pass re-verified each fact and rules
 it.
 
-**Working id 9841.** The id is minted at the merge turn, which the lead schedules.
+**Minted 2026-09-30 as RL-1290** (`doc-id.py next --ref origin/main` = 1290 at `fb90d381`); it was prepared and ruled under working id 9841.
 
 ## Verified first, at 0bc69b5b2c3c16ec8391387cdfab19734ff85d2b
 
@@ -106,12 +106,21 @@ follows.
 
 ## What it obliges
 
-- **This commit:** RL-881's header gains `corrected_by: [RL-9841]`, the one header edit
+- **This commit:** RL-881's header gains `corrected_by: [RL-1290]`, the one header edit
   §1.5 permits on a frozen record. Nothing else in RL-881 changes.
 - **Nobody else.** No slice, spec or roadmap edit follows.
 
 ## Acceptance — the violation that must become detectable
 
 RL-881's `corrected_by:` names this record and this record's `corrects:` names RL-881.
-`scripts/audit-docs.py` check 34 cross-checks the pair, so removing either side fails the
-audit. A reader of RL-881's findings reaches this correction through RL-881's header.
+A reader of RL-881's findings reaches this correction through RL-881's header.
+
+**What the gate holds, shown on broken input at this record's mint tree** (merge of
+`fb90d381`), each edit reverted afterwards:
+- Remove this record's `corrects: RL-881` → `scripts/audit-docs.py` rc 1, *"check 34: …
+  <RL-881's file>: corrected_by entry RL-1290 does not `corrects:` back to RL-881"*.
+- Remove RL-881's `corrected_by: [RL-1290]` → rc 0: **not detected on this branch.** Check
+  34's pair test runs only from each `corrected_by:` entry (`audit-docs.py:2412`), so a
+  missing back-link is invisible to it. Once merged, its frozen-header rule
+  (`audit-docs.py:2160`, "`corrected_by:` may gain entries, never lose … existing ones")
+  is what refuses the removal; that was read in the source, not shown on broken input.
