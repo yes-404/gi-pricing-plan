@@ -63,7 +63,7 @@ Deployments (`/rating/environments`, `03:1051`, which overlaps `07:392`'s `/admi
    - **`PL-1268`** (WK-690) — owns `02`'s Custom objective library authoring view only.
    - **`PL-1278`** (WK-1250 Slice 1) — a backend artifact plan; no view.
    - **`PL-1237`** (WK-674) — unchanged: the backend `GET` for deployment history only (item 3).
-   - **#920** (WK-675's map plan, PL-1286, still `draft` and the PR still open, branch
+   - **#920** (WK-675's map plan, PL-1286, still `draft` (merged by #920, 2026-09-30), branch
      `wk675-map-plan`) — its "Not WK-675's" section (lines 137 to 154 of the plan) **declines**
      the three views, and its Scope list marks FR-237 to FR-243, FR-260/261/1221 and FR-267 to
      FR-272 "unowned" (lines 284 to 291). It routes the owning decision to the lead and cites this
@@ -183,6 +183,6 @@ channel entries, not merged records; the ruling record is the mint turn's.
   `RL-1263` the extra three likely days are absorbed, and one frontend Work keeps one router owner.
 - **Adjacent, not decided here:** `07` §5.3's other views have their own finding.
 
-*(Amended 2026-09-30: citations of the WK-675 map plan re-pointed to PL-1286 after #920 merged; no other change. The mint disclosure above is kept.)*
+*(Amended 2026-09-30: citations of the WK-675 map plan re-pointed to PL-1286 after #920 merged, and "the PR still open" (evidence item 7) corrected to "merged by #920"; no other change. The mint disclosure above is kept.)*
 
 Ownership shape: event
