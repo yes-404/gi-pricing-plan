@@ -1,5 +1,5 @@
 ---
-id: RL-9973
+id: RL-1293
 family: ruling
 title: DP-S1-3 decided — the objective's SymPy symbols are declared real=True
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [PL-1268, RL-1289]
 ---
 
-# RL-9973 — DP-S1-3 decided: the objective's SymPy symbols are `real=True`
+# RL-1293 — DP-S1-3 decided: the objective's SymPy symbols are `real=True`
 
 ## How this was ruled
 
@@ -26,7 +26,7 @@ condition"). It applies the 08:00 CHECKPOINT DECISION's basis. For this DP, the 
 reads: "`Abs` differentiated with and without `real=True`, showing the real-valued form
 that the `02` §4.6 derivation requires".
 
-**Working id 9973.** The id is minted at the merge turn, which the lead schedules.
+**Minted 2026-09-30 as RL-1293** (`doc-id.py next --ref origin/main` = 1293 at `7c354305`); it was prepared and ruled under working id 9973.
 
 ## Verified first, at 095dd400918348b32ee6eab1db7915faaa9dfe35
 
