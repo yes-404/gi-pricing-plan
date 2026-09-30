@@ -10,9 +10,9 @@ import re
 from pathlib import Path
 
 import pytest
-from pricing_core.rating.vocabulary import check_allow_list
 
 from pricing_core.rating import vocabulary
+from pricing_core.rating.vocabulary import check_allow_list
 
 _SPEC = Path(__file__).resolve().parents[3] / "docs" / "specs" / "03-rating-engine.md"
 
@@ -116,6 +116,8 @@ def _spec_lists(cell: str) -> tuple[set[str], set[str], set[str]]:
     for span in _spans(_clause(cell, "**Operators:**", "**Literals:**")):
         if span == "c ? a : b":
             operators |= {"?", ":"}
+        elif "(" in span:  # prose naming the struck `coalesce(a, b)`, not an operator
+            continue
         else:
             operators |= {token for token in span.split() if not token.isalpha() or token in
                           {"and", "or", "not"}}
