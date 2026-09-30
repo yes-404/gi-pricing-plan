@@ -57,10 +57,16 @@ from model_schema import (
     SamplingSpec,
     YDomain,
 )
-from pricing_core.modelling.errors import NonFiniteDerivativeError, ObjectiveError
+from pricing_core.modelling.errors import (
+    NonFiniteDerivativeError,
+    ObjectiveError,
+    RoundBudgetExceededError,
+)
 from pricing_core.progress import NullProgress, ProgressCallback
 
 __all__ = [
+    "DEFAULT_ROUND_BUDGET_S",
+    "ExpressionKernels",
     "ObjectiveFns",
     "certify_objective",
     "compile_objective",
@@ -81,6 +87,10 @@ _Mask = npt.NDArray[np.bool_]
 #: *larger* step is strictly better — it moves the comparison away from the cancellation
 #: floor without paying for it in truncation.
 _STEP: Final = 1e-4
+
+#: DP-S2-3: the most wall-clock one boosting round's objective evaluation may take. A runaway
+#: guard for an author's objective (NFR-483), not the performance target, which is NFR-476's.
+DEFAULT_ROUND_BUDGET_S: Final = 30.0
 
 #: Where a Richardson-extrapolated central difference lands on a smooth loss. Anything
 #: above this and below `_TOLERANCE_WARN` is a finding rather than a failure: a genuinely
@@ -560,6 +570,20 @@ _TEMPLATES: Final[dict[ObjectiveTemplate, _Template]] = {
 
 
 @dataclass(frozen=True)
+class ExpressionKernels:
+    """An `expression` objective's compiled kernels: `(y, f, w) -> array`, weight included.
+
+    The loss text carries its own `w` (§4.6's example is `w * …`), so unlike a template's
+    function a kernel's value is already weighted.
+    """
+
+    loss: Callable[[_Arr, _Arr, _Arr], _Arr]
+    grad: Callable[[_Arr, _Arr, _Arr], _Arr]
+    hess: Callable[[_Arr, _Arr, _Arr], _Arr]
+    inverse_link: Literal["exp", "logistic"]
+
+
+@dataclass(frozen=True)
 class ObjectiveFns:
     """A compiled Custom Objective: `.loss`, `.grad`, `.hess` over `(y, f, w)`.
 
@@ -571,12 +595,26 @@ class ObjectiveFns:
     """
 
     ref: str
-    template: ObjectiveTemplate
+    #: The template, or `None` for an `expression` objective, which carries `_expression`.
+    template: ObjectiveTemplate | None
     params: Mapping[str, float]
     hessian_strategy: HessianStrategy
     hessian_min: float
     y_domain: YDomain
-    _template: _Template
+    _template: _Template | None
+    _expression: ExpressionKernels | None = None
+
+    @property
+    def _tpl(self) -> _Template:
+        """The template's functions, for the paths that are template-only."""
+        if self._template is None:
+            raise ObjectiveError(
+                "OBJECTIVE_KIND_NOT_ENABLED",
+                f"objective {self.ref} is an expression objective; this path is "
+                "template-only.",
+                terms=[self.ref],
+            )
+        return self._template
 
     @property
     def inverse_link(self) -> Literal["exp", "logistic"]:
@@ -587,16 +625,24 @@ class ObjectiveFns:
         anything. `fit_gbm` copies it onto `GbmFitResult` so `predict_gbm` does not need
         the objective artifact to score.
         """
-        return self._template.inverse_link
+        if self._expression is not None:
+            return self._expression.inverse_link
+        return self._tpl.inverse_link
 
     def loss(self, y: _Arr, f: _Arr, w: _Arr) -> _Arr:
-        return w * self._template.loss(y, f, self.params)
+        if self._expression is not None:
+            return self._expression.loss(y, f, w)
+        return w * self._tpl.loss(y, f, self.params)
 
     def grad(self, y: _Arr, f: _Arr, w: _Arr) -> _Arr:
-        return w * self._template.grad(y, f, self.params)
+        if self._expression is not None:
+            return self._expression.grad(y, f, w)
+        return w * self._tpl.grad(y, f, self.params)
 
     def hess(self, y: _Arr, f: _Arr, w: _Arr) -> _Arr:
-        return w * self._template.hess(y, f, self.params)
+        if self._expression is not None:
+            return self._expression.hess(y, f, w)
+        return w * self._tpl.hess(y, f, self.params)
 
     def stabilise(self, y: _Arr, f: _Arr, w: _Arr) -> _Arr:
         """The hessian the booster is given — FR-152's declared strategy, applied.
@@ -607,8 +653,9 @@ class ObjectiveFns:
         at the call site without each backend re-implementing it.
         """
         if self.hessian_strategy is HessianStrategy.GAUSS_NEWTON:
-            gn = self._template.gauss_newton
+            gn = self._tpl.gauss_newton
             if gn is None:
+                assert self.template is not None  # a template has the `_tpl` above
                 raise ObjectiveError(
                     "OBJECTIVE_HESSIAN_STRATEGY_UNSUPPORTED",
                     f"objective {self.ref} declares hessian_strategy=gauss_newton, and "
@@ -698,29 +745,75 @@ def template_loss(template: ObjectiveTemplate) -> _Fn:
 def _finite_or_abort(
     fns: ObjectiveFns, g: _Arr, h: _Arr, y: _Arr, f: _Arr, round_index: int
 ) -> None:
-    """FR-165: abort naming the round and the offending input range."""
+    """FR-165: abort naming the round and the fields, never the values (DP-S2-4 (b)).
+
+    The text is kept by a job record, so it carries no `y` or `f`; the ranges that locate the
+    failure are attributes of the error.
+    """
     bad = ~(np.isfinite(g) & np.isfinite(h))
     if not bad.any():
         return
     y_bad, f_bad = y[bad], f[bad]
+    rows = int(bad.sum())
     raise NonFiniteDerivativeError(
         f"objective {fns.ref} produced a non-finite gradient or hessian on "
-        f"{int(bad.sum())} of {bad.size} rows at boosting round {round_index}. The "
-        f"offending inputs span y ∈ [{y_bad.min():.6g}, {y_bad.max():.6g}], "
-        f"f ∈ [{f_bad.min():.6g}, {f_bad.max():.6g}].",
+        f"{rows} of {bad.size} rows at boosting round {round_index}. The rows are "
+        "located by the fields y and f.",
         round_index=round_index,
+        rows=rows,
+        y_range=(float(y_bad.min()), float(y_bad.max())),
+        f_range=(float(f_bad.min()), float(f_bad.max())),
         terms=[fns.ref],
     )
 
 
-def make_xgb_objective(fns: ObjectiveFns) -> Callable[[_Arr, Any], tuple[_Arr, _Arr]]:
+def _evaluate_round(
+    fns: ObjectiveFns,
+    y: _Arr,
+    f: _Arr,
+    w: _Arr,
+    *,
+    round_index: int,
+    round_budget_s: float,
+) -> tuple[_Arr, _Arr]:
+    """One boosting round's gradient and stabilised hessian, within its budget (FR-165).
+
+    Both adapters pass through here, so the budget binds a template and an `expression`
+    objective alike. It times the objective's own evaluation (DP-S2-3 (a)) and is checked
+    after the call: a runaway kernel is bounded by its array length, not interrupted.
+    """
+    started = time.perf_counter()
+    g, h = fns.grad(y, f, w), fns.stabilise(y, f, w)
+    elapsed = time.perf_counter() - started
+    if elapsed > round_budget_s:
+        raise RoundBudgetExceededError(
+            f"objective {fns.ref} took {elapsed:.3g} s at boosting round {round_index}, "
+            f"over the per-round budget of {round_budget_s:.3g} s.",
+            round_index=round_index,
+            elapsed_s=elapsed,
+            budget_s=round_budget_s,
+        )
+    _finite_or_abort(fns, g, h, y, f, round_index)
+    return g, h
+
+
+def _positive_budget(round_budget_s: float) -> float:
+    if not round_budget_s > 0.0:
+        raise ValueError(f"round_budget_s must be positive, got {round_budget_s!r}")
+    return round_budget_s
+
+
+def make_xgb_objective(
+    fns: ObjectiveFns, *, round_budget_s: float = DEFAULT_ROUND_BUDGET_S
+) -> Callable[[_Arr, Any], tuple[_Arr, _Arr]]:
     """The `obj=` callable for `xgboost.train` (§5.2's sketch, FR-165).
 
     `base_margin` is not a parameter, unlike the sketch: XGBoost has already added it into
     `preds` by the time the objective is called, so accepting one would invite a caller to
     add it a second time — which under a log link doubles the exposure and looks like a
-    plausible fit.
+    plausible fit. `round_budget_s` is the per-round wall-clock budget (DP-S2-3).
     """
+    budget = _positive_budget(round_budget_s)
     counter = {"round": 0}
 
     def objective(preds: _Arr, dtrain: Any) -> tuple[_Arr, _Arr]:
@@ -728,15 +821,18 @@ def make_xgb_objective(fns: ObjectiveFns) -> Callable[[_Arr, Any], tuple[_Arr, _
         weight = np.asarray(dtrain.get_weight(), dtype=np.float64)
         w = weight if weight.size == y.size else np.ones_like(y)
         f = np.asarray(preds, dtype=np.float64)
-        g, h = fns.grad(y, f, w), fns.stabilise(y, f, w)
-        _finite_or_abort(fns, g, h, y, f, counter["round"])
+        g, h = _evaluate_round(
+            fns, y, f, w, round_index=counter["round"], round_budget_s=budget
+        )
         counter["round"] += 1
         return g, h
 
     return objective
 
 
-def make_lgb_objective(fns: ObjectiveFns) -> Callable[[_Arr, Any], tuple[_Arr, _Arr]]:
+def make_lgb_objective(
+    fns: ObjectiveFns, *, round_budget_s: float = DEFAULT_ROUND_BUDGET_S
+) -> Callable[[_Arr, Any], tuple[_Arr, _Arr]]:
     """The callable LightGBM's `params["objective"]` accepts.
 
     **`(preds, dataset)`, not §5.2's three-argument `(y_true, y_pred, weight)`** — that
@@ -758,14 +854,16 @@ def make_lgb_objective(fns: ObjectiveFns) -> Callable[[_Arr, Any], tuple[_Arr, _
     asymmetry is a *scoring*-time one only.
     """
     counter = {"round": 0}
+    budget = _positive_budget(round_budget_s)
 
     def objective(preds: _Arr, dataset: Any) -> tuple[_Arr, _Arr]:
         y = np.asarray(dataset.get_label(), dtype=np.float64)
         f = np.asarray(preds, dtype=np.float64)
         weight = dataset.get_weight()
         w = np.ones_like(y) if weight is None else np.asarray(weight, dtype=np.float64)
-        g, h = fns.grad(y, f, w), fns.stabilise(y, f, w)
-        _finite_or_abort(fns, g, h, y, f, counter["round"])
+        g, h = _evaluate_round(
+            fns, y, f, w, round_index=counter["round"], round_budget_s=budget
+        )
         counter["round"] += 1
         return g, h
 
@@ -906,7 +1004,7 @@ def _status_for(error: float) -> CheckStatus:
 
 def _branch_mask(fns: ObjectiveFns, y: _Arr, f: _Arr) -> tuple[_Mask, int]:
     """FR-147: drop the points a central difference would straddle a kink at."""
-    boundaries = fns._template.f_boundaries
+    boundaries = fns._tpl.f_boundaries
     if boundaries is None:
         return np.ones_like(f, dtype=bool), 0
     keep = np.ones_like(f, dtype=bool)
@@ -934,7 +1032,7 @@ def _derivative_checks(
 
     # FR-147 asks for the excluded count, and a count reported only when it is
     # non-zero is a count the reader cannot distinguish from an unreported one.
-    branch = fns._template.branch_description
+    branch = fns._tpl.branch_description
     where = (
         f", {excluded:,} of {y.size:,} excluded within h of {branch}"
         if branch is not None
@@ -1021,7 +1119,7 @@ def _branch_check(fns: ObjectiveFns, y: _Arr, f: _Arr, w: _Arr) -> CertificateCh
     latter invalidates a central difference, but an approver reading "smooth" about
     `spliced_severity` would be reading the opposite of what the loss does at the splice.
     """
-    description = fns._template.branch_description
+    description = fns._tpl.branch_description
     if description is None:
         return CertificateCheck(
             name="branch_discontinuity",
@@ -1030,7 +1128,7 @@ def _branch_check(fns: ObjectiveFns, y: _Arr, f: _Arr, w: _Arr) -> CertificateCh
             "continuous over the whole sampled domain",
         )
     _, excluded = _branch_mask(fns, y, f)
-    if fns._template.f_boundaries is not None:
+    if fns._tpl.f_boundaries is not None:
         return CertificateCheck(
             name="branch_discontinuity",
             status=CheckStatus.WARN,
@@ -1041,7 +1139,7 @@ def _branch_check(fns: ObjectiveFns, y: _Arr, f: _Arr, w: _Arr) -> CertificateCh
                 f"discontinuous hessian affects boosting stability"
             ),
         )
-    anchors = fns._template.y_anchors
+    anchors = fns._tpl.y_anchors
     edge = anchors(fns.params)[0] if anchors is not None else 0.0
     above = float((y > edge).mean())
     return CertificateCheck(

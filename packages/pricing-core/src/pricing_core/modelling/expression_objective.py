@@ -14,25 +14,30 @@ from __future__ import annotations
 import ast
 from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass
-from typing import Any, Final
+from typing import Any, Final, Literal
 
 import numpy as np
 import sympy
 from numpy.typing import NDArray
 from sympy.codegen.cfunctions import expm1, log1p
 
+from model_schema import HessianStrategy, YDomain
 from pricing_core.data.expression_sympy import OBJECTIVE_SYMBOLS, to_sympy
 from pricing_core.data.expressions import (
+    DEFAULT_LIMITS,
     ExpressionError,
     ExpressionLimits,
     GrammarProfile,
     parse_expression,
 )
+from pricing_core.modelling.errors import ObjectiveError
+from pricing_core.modelling.objectives import ExpressionKernels, ObjectiveFns
 
 __all__ = [
     "DERIVED_LIMITS",
     "Derived",
     "Kernel",
+    "compile_expression_objective",
     "compile_kernel",
     "derive",
     "to_grammar",
@@ -261,3 +266,47 @@ def _reduce(op: Callable[[Any, Any], Any], arguments: list[Any]) -> Any:
     for argument in arguments[1:]:
         result = op(result, argument)
     return result
+
+
+def compile_expression_objective(
+    *,
+    ref: str,
+    loss: str,
+    parameters: Mapping[str, float],
+    y_domain: YDomain,
+    hessian_strategy: HessianStrategy,
+    hessian_min: float,
+    inverse_link: Literal["exp", "logistic"] = "exp",
+    derived: Derived | None = None,
+) -> ObjectiveFns:
+    """An `expression` objective as the same `ObjectiveFns` a template compiles to (FR-144).
+
+    The arguments are the artifact's fields as primitives (DP-S2-1 (c)); the domain and the
+    strategy are `model-schema`'s own types. `inverse_link` is an argument until the
+    artifact's applicability supplies it. The gradient and hessian are `derived`'s, or are
+    derived here from `loss`.
+    """
+    if hessian_strategy is HessianStrategy.GAUSS_NEWTON:
+        raise ObjectiveError(
+            "OBJECTIVE_HESSIAN_STRATEGY_UNSUPPORTED",
+            f"objective {ref} declares hessian_strategy=gauss_newton, and an expression "
+            "objective has no Gauss-Newton hessian to drop a term from. Use clip_to_min "
+            "or abs.",
+            terms=[ref],
+        )
+    texts = derived if derived is not None else derive(loss, parameters=parameters.keys())
+    return ObjectiveFns(
+        ref=ref,
+        template=None,
+        params=dict(parameters),
+        hessian_strategy=hessian_strategy,
+        hessian_min=hessian_min,
+        y_domain=y_domain,
+        _template=None,
+        _expression=ExpressionKernels(
+            loss=compile_kernel(loss, parameters=parameters, limits=DEFAULT_LIMITS),
+            grad=compile_kernel(texts.gradient, parameters=parameters),
+            hess=compile_kernel(texts.hessian, parameters=parameters),
+            inverse_link=inverse_link,
+        ),
+    )

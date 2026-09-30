@@ -17,6 +17,7 @@ checks warning.
 
 from __future__ import annotations
 
+import time
 from dataclasses import replace
 from typing import Any
 from uuid import uuid4
@@ -35,6 +36,7 @@ from model_schema import (
     ObjectiveTemplate,
     ResponseKind,
     SamplingSpec,
+    YDomain,
 )
 from pricing_core.modelling import (
     ObjectiveFns,
@@ -43,8 +45,18 @@ from pricing_core.modelling import (
     make_lgb_objective,
     make_xgb_objective,
 )
-from pricing_core.modelling.errors import NonFiniteDerivativeError, ObjectiveError
-from pricing_core.modelling.objectives import _TEMPLATES, _finite_or_abort
+from pricing_core.modelling.errors import (
+    NonFiniteDerivativeError,
+    ObjectiveError,
+    RoundBudgetExceededError,
+)
+from pricing_core.modelling.expression_objective import compile_expression_objective
+from pricing_core.modelling.objectives import (
+    _TEMPLATES,
+    DEFAULT_ROUND_BUDGET_S,
+    _finite_or_abort,
+)
+from pricing_core.safe_error import CodedError, safe_error_detail
 
 T = ObjectiveTemplate
 
@@ -594,3 +606,145 @@ def test_compiled_functions_are_linear_in_the_case_weight() -> None:
         assert np.allclose(fns.loss(y, f, w), w * fns.loss(y, f, ones))
         assert np.allclose(fns.grad(y, f, w), w * fns.grad(y, f, ones))
         assert np.allclose(fns.hess(y, f, w), w * fns.hess(y, f, ones))
+
+
+# --- expression objectives, the per-round budget and the non-finite abort (WK-690 S2) -----
+
+_ADAPTERS = [make_xgb_objective, make_lgb_objective]
+_EXPRESSION_LOSS = "w * (exp(f) - y * f)"
+
+
+def _expression_fns(loss: str = _EXPRESSION_LOSS) -> ObjectiveFns:
+    return compile_expression_objective(
+        ref="custom_objective:test-expression@1",
+        loss=loss,
+        parameters={},
+        y_domain=YDomain(min_inclusive=0.0),
+        hessian_strategy=HessianStrategy.CLIP_TO_MIN,
+        hessian_min=1e-6,
+    )
+
+
+def _slowed(fns: ObjectiveFns, seconds: float) -> ObjectiveFns:
+    """`fns` with a `grad` that sleeps: the template's, or the expression's kernel."""
+    if fns.template is not None:
+
+        class _Slow(ObjectiveFns):
+            def grad(self, y: Any, f: Any, w: Any) -> Any:
+                time.sleep(seconds)
+                return super().grad(y, f, w)
+
+        return _Slow(**{k: getattr(fns, k) for k in fns.__dataclass_fields__})
+    kernels = fns._expression
+    assert kernels is not None
+    inner = kernels.grad
+
+    def slow(y: Any, f: Any, w: Any) -> Any:
+        time.sleep(seconds)
+        return inner(y, f, w)
+
+    return replace(fns, _expression=replace(kernels, grad=slow))
+
+
+_ROUND_INPUTS = (np.array([0.0, 1.0, 3.0, 2.0]), np.array([0.1, 0.2, 0.3, 0.4]))
+
+
+@pytest.mark.req("FR-165")
+@pytest.mark.req("NFR-483")
+@pytest.mark.parametrize("adapter", _ADAPTERS, ids=["xgboost", "lightgbm"])
+@pytest.mark.parametrize("kind", ["template", "expression"])
+def test_round_budget_aborts_a_slow_objective_naming_the_round(
+    adapter: Any, kind: str
+) -> None:
+    """The budget binds both kinds at the one place both pass through (DP-S2-3 (a))."""
+    fns = compile_objective(_objective(T.POISSON)) if kind == "template" else _expression_fns()
+    y, f = _ROUND_INPUTS
+    objective = adapter(_slowed(fns, 0.05), round_budget_s=0.01)
+
+    with pytest.raises(RoundBudgetExceededError) as raised:
+        objective(f, _DMatrix(y, np.ones_like(y)))
+
+    assert raised.value.round_index == 0
+    assert raised.value.code == "OBJECTIVE_ROUND_BUDGET_EXCEEDED"
+    assert "round 0" in str(raised.value)
+    assert isinstance(raised.value, CodedError)
+
+
+@pytest.mark.req("FR-165")
+@pytest.mark.req("NFR-483")
+@pytest.mark.parametrize("adapter", _ADAPTERS, ids=["xgboost", "lightgbm"])
+@pytest.mark.parametrize("kind", ["template", "expression"])
+def test_round_budget_positive_control(adapter: Any, kind: str) -> None:
+    """The same slowed objective inside its budget completes: the abort above is the budget's."""
+    fns = compile_objective(_objective(T.POISSON)) if kind == "template" else _expression_fns()
+    y, f = _ROUND_INPUTS
+    grad, hess = adapter(_slowed(fns, 0.05), round_budget_s=5.0)(f, _DMatrix(y, np.ones_like(y)))
+    assert grad.shape == y.shape
+    assert hess.shape == y.shape
+
+
+@pytest.mark.req("FR-165")
+@pytest.mark.parametrize("adapter", _ADAPTERS, ids=["xgboost", "lightgbm"])
+def test_the_default_round_budget_is_the_rulings(adapter: Any) -> None:
+    assert DEFAULT_ROUND_BUDGET_S == 30.0
+    y, f = _ROUND_INPUTS
+    grad, _ = adapter(_expression_fns())(f, _DMatrix(y, np.ones_like(y)))
+    assert np.all(np.isfinite(grad))
+
+
+@pytest.mark.req("FR-165")
+@pytest.mark.parametrize("adapter", _ADAPTERS, ids=["xgboost", "lightgbm"])
+def test_nonfinite_aborts_an_expression_naming_the_round_and_no_value(adapter: Any) -> None:
+    """DP-S2-4 (b): `exp(exp(10))` overflows. The text names the round, the row count and the
+    fields, and carries no input value; the ranges are structured attributes."""
+    fns = _expression_fns("w * exp(exp(f))")
+    y = np.array([7.25, 7.75])
+    f = np.array([10.0, 0.0])
+
+    with pytest.raises(NonFiniteDerivativeError) as raised:
+        adapter(fns)(f, _DMatrix(y, np.ones_like(y)))
+
+    error = raised.value
+    assert error.round_index == 0
+    assert error.rows == 1
+    assert error.f_range == (10.0, 10.0)
+    assert error.y_range == (7.25, 7.25)
+    text = str(error)
+    assert "round 0" in text
+    assert "1 of 2 rows" in text
+    assert "y" in text
+    assert "f" in text
+    for value in ("7.25", "7.75", "10"):
+        assert value not in text
+    assert isinstance(error, CodedError)
+    assert error.code == "OBJECTIVE_NONFINITE_DERIVATIVE"
+    assert safe_error_detail(error) == text  # what a job record would keep
+
+
+@pytest.mark.req("FR-165")
+def test_an_expression_objective_refuses_gauss_newton() -> None:
+    """FR-152: a Gauss-Newton hessian exists only for a least-squares template."""
+    with pytest.raises(ObjectiveError) as raised:
+        compile_expression_objective(
+            ref="custom_objective:test-expression@1",
+            loss=_EXPRESSION_LOSS,
+            parameters={},
+            y_domain=YDomain(min_inclusive=0.0),
+            hessian_strategy=HessianStrategy.GAUSS_NEWTON,
+            hessian_min=1e-6,
+        )
+    assert raised.value.code == "OBJECTIVE_HESSIAN_STRATEGY_UNSUPPORTED"
+
+
+@pytest.mark.req("FR-144")
+def test_an_expression_objective_matches_the_builtin_it_equals() -> None:
+    """`w * (exp(f) - y * f)` is Poisson's deviance up to a constant in `f`: the compiled
+    expression and the builtin give the same gradient and hessian."""
+    y = np.array([0.0, 1.0, 3.0, 2.0])
+    f = np.array([-0.5, 0.0, 0.5, 1.0])
+    w = np.array([0.5, 1.0, 2.0, 1.5])
+    builtin = compile_objective(_objective(T.POISSON))
+    expression = _expression_fns()
+    assert np.allclose(expression.grad(y, f, w), builtin.grad(y, f, w))
+    assert np.allclose(expression.stabilise(y, f, w), builtin.stabilise(y, f, w))
+    assert expression.inverse_link == "exp"
