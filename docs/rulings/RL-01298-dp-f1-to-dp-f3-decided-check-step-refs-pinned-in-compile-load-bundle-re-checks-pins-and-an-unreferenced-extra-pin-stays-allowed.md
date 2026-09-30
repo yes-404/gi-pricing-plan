@@ -209,6 +209,19 @@ the decision-maker at effort high. This record says nothing about `_GUARD_MARKER
     or `resolved_payloads`.
   - One gap is stated, not counted as zero: 3986 algorithm-shaped blobs in `gip-test-blobs`
     carry no pins, so they cannot be checked on their own.
+    *Corrected 2026-09-30 before merge, on the maintainer's entry "2026-09-30 12:18:52 BST —
+    DECISION: RL-1298:210 stale "3986 algorithm-shaped blobs" → (a) fix pre-merge":*
+    `FD-1297` as minted (*Evidence* 5, its file's lines `:207-217` on `main` at `4009de14`) reclassifies those 3986 blobs:
+    "**the 3986 blobs that first looked "algorithm-shaped" are score traces, not
+    algorithms**".
+    - They carry no ref, pins or graph key: "Neither class has a `rate_table_ref`,
+      `reference_table_ref`, `model_ref`, `peril_structure_ref`, `pins`, `graph`,
+      `resolved_payloads` or `algorithm_ref` key".
+    - Matching them against stored algorithms "gave 0 of 3986 matches".
+    - The earlier label was "**an instrument error**".
+    - Its tally (`:255-257`) reads: "No gap remains in the MinIO sweep".
+    DP-F2's ruled (c) is unchanged. It rests on the remaining reason: a pre-fix or hand-built
+    bundle is refused at load (the proof above).
 
   Refusing such a bundle is the intended outcome, because otherwise it would misprice.
 
