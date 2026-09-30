@@ -228,16 +228,45 @@ and the guard restored.
       **recorded operations** — each `LadderRung`'s `operation`
       (`LadderOperation`: `kind`, `factor`, `amount_minor`, `mode`, `dp`;
       `packages/model-schema/src/model_schema/scoring.py:108-135`) — and the **real** risk
-      premium, the algorithm's own risk-premium output, never the first rung. It applies every
-      operation from the risk premium, with `pricing_core.money`'s own `apply_factor`/addition,
-      and requires the payable premium to the penny. Every caller changes with it:
+      premium, the algorithm's own risk-premium output, never the first rung. **Its inputs and
+      comparison, exactly** (auditor-close1255 N2, against `_build_ladder`,
+      `packages/pricing-core/src/pricing_core/rating/score.py:551-624`):
+      - **the risk premium's source and check.** The first rung carries **no** recorded
+        operation (`operation = None`); its value is `_round_minor(raw, mode)` of the value the
+        algorithm's `risk_premium_minor` output step consumes (for example `1304.8` → `1305`).
+        So the check takes that **unrounded** output value and the step's declared rounding
+        mode, rounds it once with that mode, and requires the first rung's `value_minor` to
+        equal the result;
+      - **the four operation kinds** (`LadderOperationKind`,
+        `packages/model-schema/src/model_schema/scoring.py:63`), each replayed from the
+        previous rung's replayed value: `multiply` → `apply_factor(prev, Decimal(factor), mode)`
+        (`pricing_core/money.py:33`), whose `mode` takes the short names of `RoundingMode`
+        (`money.py:20`: `half_even`, `half_up`, `ceiling`, `floor`, `down`), the same strings
+        the operation records; `add` → `prev + amount_minor`; `round` at `dp = 0` → `prev`
+        unchanged (a whole number of minor units is its own rounding); `none` → `prev`
+        unchanged (the `constraints` rung, whose `applied` codes explain nothing numeric);
+      - **the comparison:** every replayed value equals that rung's recorded `value_minor`,
+        and the last equals `payable_premium` — to the penny, integers throughout.
+    - **False-positive control, required** (N2 (c)): **every existing scoring fixture and every
+      committed regression suite still reconciles under the real check.** Run over the
+      fixtures that `score_one` tests use, and over the golden quotes of each committed
+      `RegressionSuite` (FR-261's property). A fixture that fails is either a real defect,
+      reported as a finding, or a check defect; it is never "fixed" by editing the fixture.
+      auditor-close1255 prototyped the replay on one fixture and reproduced
+      `1305 → 1436 → 1436 → 1507 → 1507`. Every caller changes with it:
       `pricing_core/rating/score.py:738`, the FR-261 "ladder reconciles" property
       (`pricing_core/rating/properties.py:41` import, `:303` call), the export
       (`pricing_core/__init__.py:31`), and `score.py:99-105`'s docstring, which calls the
       check "shallow — first-rung and int-ness only".
     - **Red first, through the call site** (the maintainer, relayed by the lead): `score_one`
-      on a one-penny-off ladder produces `ladder_reconciled` **False** (or DP-S3-1's refusal).
-      Predicted red at the tree above: it is True. A unit test of `reconcile_ladder` on the same
+      **with `trace=True`** on a one-penny-off ladder produces `ladder_reconciled` **False** (or
+      DP-S3-1's refusal). Predicted red at the tree above: it is True. (`ladder_reconciled` lives
+      only on `Trace`, `packages/model-schema/src/model_schema/scoring.py:168`, which is built
+      only when a trace is requested, `score.py:741-745`; auditor-close1255 N3.) **An untraced
+      failure** — `trace=False`, or a trace not persisted — surfaces by DP-S3-1's ruling: under
+      (a) the refusal is the signal; under (b) the logged event (rung names and minor-unit
+      difference, no quote input) is enough, and a test asserts it is emitted with
+      `trace=False`. A unit test of `reconcile_ladder` on the same
       ladder sits beside it, but the call-site case is the proof.
     - **Red first, the property:** the FR-261 property over a planted off-by-one ladder fails
       (predicted red at the tree above: it passes, via the same vacuous check).
@@ -251,7 +280,11 @@ and the guard restored.
     - **The trace flag records which check produced it — no back-fill of "verified".** Stored
       traces are write-once (`UPDATE` is revoked on `scoring_traces`), so a flag already stored
       cannot be corrected. `Trace` gains **`ladder_check_version`**
-      (`packages/model-schema/src/model_schema/scoring.py`, beside `ladder_reconciled`):
+      (`packages/model-schema/src/model_schema/scoring.py`, beside `ladder_reconciled`), **and
+      the hand-authored contract `docs/contracts/schemas/scoring.schema.json` gains it by hand,
+      beside `ladder_reconciled`** (`:66` in `required`, `:88` its property), since that file is
+      hand-authored and the contract guard compares the two — as `Job.platform_build` needed in
+      Slice 1 (`LG-1262` Task 2); auditor-close1255 N1:
       absent or `1` means "first rung and int-ness only, before this slice — **not** a
       reconciliation"; `2` means FR-248's full check. A dated `03` §4.5 note says so. **Why a
       field and not a note alone:** deployments upgrade at different times, so a reader cannot
@@ -357,7 +390,7 @@ checked at dispatch only against the lane-B slice then in flight.
 | `backend/src/app/api/score.py` / the scoring path | the rate-limit dependency; the trace-sampling call site (`:399-400`) passing the Environment | S2 (default-live, trace link), WK-1250, WK-673, WK-675 S7b (RL-1263 item 4 names `score.py`) | serialises with any in-flight slice editing it |
 | `docs/specs/03-rating-engine.md` §3.6 (FR-248, `:155`), §9 (NFR-496, `:1157`) | dated clauses (Acceptance 1) | WK-690 S1 (§3.5, FR-244), WK-1250 S1 (§4, §5.1), WK-1178 fix slice (§5.1 catalogue) | section-disjoint rows; checked at dispatch against the actual diffs (the 10:24:00 BST rule) |
 | `packages/pricing-core/src/pricing_core/money.py` (`reconcile_ladder`, `:55-70`), `…/rating/score.py` (`:99-105` docstring, `:736-745`), `…/rating/properties.py` (`:41`, `:303`), `…/__init__.py` (`:31`) | the new signature and every caller | WK-690 S1 edits `pricing_core/data/*` only (not these files) | edits to existing functions; serialise only with a slice editing these files |
-| `packages/model-schema/src/model_schema/scoring.py` (`Trace`, `ladder_reconciled` `:168`) and the regenerated contract | `ladder_check_version` | any in-flight slice editing `model_schema/rating.py`, `model_schema/scoring.py` or the trace shape (WK-1250 S1 and S2's trace work) | an edit to an existing class: **serialises** with those |
+| `packages/model-schema/src/model_schema/scoring.py` (`Trace`, `ladder_reconciled` `:168`), the regenerated contract, and the **hand-authored** `docs/contracts/schemas/scoring.schema.json` (`:66`, `:88`) | `ladder_check_version` | any in-flight slice editing `model_schema/rating.py`, `model_schema/scoring.py` or the trace shape (WK-1250 S1 and S2's trace work) | an edit to an existing class: **serialises** with those |
 | `backend/tests/test_worker_raise_sites.py` (`:36-39`), `packages/pricing-core/tests/test_quote_input_raise_sites.py` | the census of the new raise site | none found | not shared |
 | `backend/src/app/db/models.py` | `EnvironmentSettingRow` appended | S2a (status metadata), S2 (appends) — earlier | append: registry-exempt |
 | `backend/migrations/versions/` | one revision | S2a, S2, WK-1250 S1 | append: exempt; re-point `down_revision` |
@@ -367,7 +400,7 @@ checked at dispatch only against the lane-B slice then in flight.
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-S3-1 | **What does a failed ladder reconciliation do at scoring?** FR-248 says it is "asserted at scoring time in `dev`/`uat` and sampled in `prod`"; `LADDER_RECONCILIATION_FAILED` is registered (`errors.py:326`) and raised nowhere; the spec does not say whether an asserted failure refuses the quote | (a) Refuse the quote with `LADDER_RECONCILIATION_FAILED` (500, a platform fault), and record it; (b) serve the quote, record the failure on the trace and in the log, and alert; (c) refuse outside `prod`, record-and-serve in `prod` | **(a).** A ladder that does not reconcile is a premium the platform cannot explain (NFR-496: "no rounding is applied more than once … to the penny"); serving it is the silent mispricing `CLAUDE.md` §2 warns of. (c) would make `prod` the one place a wrong premium is returned | decision point | yes — Task 6 | *open* — for the decision-maker at medium effort (rating correctness, not governance evidence) |
+| DP-S3-1 | **What does a failed ladder reconciliation do at scoring?** The check runs on every scored quote in every Environment (FR-248 and NFR-496 as this slice's dated clauses amend them, on the maintainer's decision `2026-09-30 15:17:54 BST — audit round-up: decisions`); `LADDER_RECONCILIATION_FAILED` is registered (`errors.py:326`) and raised nowhere; the spec does not say whether a failed check refuses the quote | (a) Refuse the quote with `LADDER_RECONCILIATION_FAILED` (500, a platform fault), and record it; (b) serve the quote, record the failure on the trace (when there is one) and in the log, and alert; ~~(c) refuse outside `prod`, record-and-serve in `prod`~~ *(withdrawn 2026-09-30: it reintroduces the `prod` special case the maintainer's decision removed; auditor-close1255 N4)* | **(a).** A ladder that does not reconcile is a premium the platform cannot explain (NFR-496: "no rounding is applied more than once … to the penny"); serving it is the silent mispricing `CLAUDE.md` §2 warns of, and a refusal is also the one signal that surfaces an untraced failure without a log search | decision point | yes — Task 6 | *open* — for the decision-maker at medium effort (rating correctness, not governance evidence) |
 | DP-S3-2 | **The rate-limit counter's key and limit.** NFR-499 asks "per-client rate limits"; FR-430 asks "independent … rate limits" per Environment; F48 fixes the mechanism (a shared Redis counter, per tenant); `rate_limit_rps` is optional on an account (`service_accounts.py:65`) | (a) One counter per (Environment, Service Account), limit the account's `rate_limit_rps`; an account without one is unlimited; (b) as (a), with an Environment setting `scoring.default_client_rate_limit_rps` (workspace or Environment scope) as the limit for accounts without their own; (c) a per-Environment aggregate cap as well as the per-client counter | **(b).** Keying by Environment makes the limits independent per Environment (FR-430); the per-account value is NFR-499's per-client limit; and the Environment default closes the "no limit at all" case for accounts created without one, while staying a Setting (FR-431). (c) is a capacity control no requirement asks for. **Also to rule: the window and the Redis-outage behaviour** (auditor-close1255 L3). Window: a fixed one-second window (`INCR` + `EXPIRE`) is the simplest shared counter; a sliding window is fairer at the boundary and costs a sorted set per key. Outage: **fail open** (serve, log and count each unlimited request) keeps scoring available when the cache is down (`03` NFR-497's availability target), at the cost of no limit during the outage; **fail closed** (refuse with 503) keeps the limit and turns a cache outage into a pricing outage. Planner's input: fixed window, fail open with the event logged and counted — a rate limit protects capacity, and an outage of the limiter should not take pricing down with it | decision point | yes — Task 5 | *open* — for the decision-maker at medium effort |
 | DP-S3-3 | **What is FR-430's "monitoring configuration" in Phase 2?** No monitoring-configuration key exists (premise h), and the monitors are WK-687's (Phase 4); `PL-1237` Task 3 limits this slice to "the per-environment *configuration* only" | (a) The per-Environment trace sampling rate, `rating.trace_sample_rate` (`settings.py:196`, the input `05` monitors read), declared workspace-or-Environment, plus the scope mechanism for WK-687 to declare its own keys; (b) new monitoring keys now; (c) the mechanism only, with no key declared | **(a).** It is the one monitoring input configured today, it is named by FR-431 ("sampling rates"), and it gives the limb's test a real key. (b) builds ahead of Phase 4 (`CLAUDE.md` §9); (c) leaves the limb with nothing to prove | scope | yes — Task 4 | **Resolved (a), ruled by the maintainer as scope** (`2026-09-30 15:13:26 BST — DECISIONS: the reconcile_ladder FD (MEDIUM, WK-674 S3); DP-S3-3 → (a), ruled by me as scope`): `rating.trace_sample_rate`, workspace-or-Environment, plus the mechanism; anything wider is `05`'s, spec only (`CLAUDE.md` §0). No decision-maker ruling is needed |
 
@@ -425,7 +458,10 @@ checked at dispatch only against the lane-B slice then in flight.
 - [ ] Red first: Acceptance 10's off-by-one ladder through `score_one` (the flag is True
   today), the FR-261 property, and the census of the raise site.
 - [ ] `reconcile_ladder`'s new signature and every caller; the real risk premium;
-  `ladder_check_version` on `Trace` and the regenerated contract; the check on every quote,
+  `ladder_check_version` on `Trace`, the regenerated contract, and the hand edit of
+  `docs/contracts/schemas/scoring.schema.json` (`:66`, `:88`) with the contract guard quoted;
+  the dated `03` §4.5 note; the false-positive control over every fixture and committed
+  regression suite; the check on every quote,
   whatever the trace-sampling rate (red first with the rate at `0`); the dated FR-248 and
   NFR-496 clauses were made in Task 1; the docstrings; the failure as DP-S3-1 rules; green;
   commit.
@@ -471,4 +507,9 @@ Environment-only on this slice's scope machinery, and inherits Acceptance 6's re
 - **The maintainer's 15:13:26 BST entry:** DP-S3-3 resolved (a); the finding filed as
   working id 9949, cited in prose (premise g, Acceptance 10); and, relayed by the lead, the
   call-site red case and `ladder_check_version` with its reason (Acceptance 10).
+- **auditor-close1255's re-audit of `0149e3f2..27ab8c00`** (M1–M4 and L1–L4 closed; N1–N4
+  adopted by the lead): N1 (the hand-authored `scoring.schema.json`, Acceptance 10, Task 6,
+  Write set), N2 (the check's inputs and comparison, the four kinds and the mode names, and the
+  false-positive control, Acceptance 10, Task 6), N3 (`trace=True` for the call-site case, and
+  an untraced failure's signal), N4 (DP-S3-1's premise refreshed, option (c) withdrawn).
 - **Open:** DP-S3-1 and DP-S3-2, each for the decision-maker at medium effort.
