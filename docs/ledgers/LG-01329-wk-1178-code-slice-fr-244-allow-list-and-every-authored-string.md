@@ -158,7 +158,7 @@ The gates used the dev-commands slot wrapper verbatim with `LOKY_MAX_CPU_COUNT=4
 | `6bcf73e5` | 15:00:54-15:29:27 | 1713s | 1694.62s | 1 failed, 4197 passed (the sink guard); evidence only | 4.67/4.51/4.70 - 3.33/4.50/5.92 |
 | `57d62711` | 15:34:07-16:01:27 | 1640s | 1623.42s | 12 failed, 4203 passed; evidence only | 2.03/3.12/4.96 - 8.29/5.04/4.62 |
 | `a6a37847` (first) | 16:03:19-16:32:05 | 1726s | 1706.92s | 17 failed, 65 errors, 4285 passed; evidence only | 3.78/4.65/4.54 - 10.89/9.68/9.86 |
-| `a6a37847` | 16:34:51-16:58:36 | 1425s | 1408.03s | **7 of 7 stages pass, 4367 passed, 3 skipped** | 8.64/9.50/9.79 - 2.19/2.63/4.68 |
+| `a6a37847` | 16:34:51-16:58:36 | 1425s | 1408.03s | ~~**7 of 7 stages pass, 4367 passed, 3 skipped**~~ STRUCK 2026-09-30 18:35 BST, see the correction below: the ruff stage did not lint the tree; pytest 4367 passed, 3 skipped stands | 8.64/9.50/9.79 - 2.19/2.63/4.68 |
 
 - **`57d62711`: the 12 failures** are all `audit-docs`-based tests that failed on check 31, the gap
   between 1317 and 1322 (the `RL-1322` citation was not on `main` yet). No changed code is involved:
@@ -180,7 +180,19 @@ tests/test_repository_invariants.py::test_journey_citations_are_audited_in_ci
   (`test_approval_guard_trigger.py`, `_allowance.py`, `_decision.py`, `test_api_approvals.py`), with
   `function approval_guard() does not exist`: this worktree's test database predated S2a's migration `a9f3c6d2`. It was
   repaired with `alembic upgrade head`; the four files then passed singly (215 passed, run outside the wrapper, 93s).
-  The gate was then re-run on the same head, at the lead's instruction, and is green.
+  The gate was then re-run on the same head, at the lead's instruction. ~~and is green~~ (struck, see the correction below).
+- **CORRECTION, 2026-09-30 18:35 BST (struck: "gated green at `a6a37847`").** CI's python job failed on #1012 at
+  `6a1b9e33` (run 36749658441) with `I001` in `packages/pricing-core/tests/test_rating_authored_fields.py:12`, which also reproduces on a clean detached
+  checkout of `a6a37847`. The 7 of 7 result above is therefore struck: its ruff stage passed without linting that file. **Mechanism.**
+  *Which tree the gate ran on:* this worktree's working tree at `a6a37847`, which was clean: `git status --porcelain` and `git diff HEAD --stat` print nothing
+  at `6a1b9e33`, the file's working copy equals the committed one, there are no untracked or uncommitted changes to it, and the stash holds only other
+  sessions' old entries. *How it differed from a clean checkout:* the VCS-ignored `.ruff_cache`. I had run `ruff check --fix` on the file before
+  `pricing_core/rating/authored.py` and `vocabulary.py` existed, so ruff's isort step classified `pricing_core.rating.authored` as third-party and sorted the
+  imports that way; I committed that order. Once the modules existed, ruff kept returning the cached clean result for the unchanged file (its cache is keyed on the file and
+  the settings, not on the modules it can resolve), and the gate's `uv run ruff check .` read the same cache. A clean checkout has no cache and lints cold.
+  `ruff check --no-cache .` in this worktree reproduces the one error, and reports no other file. The pytest, mypy, import_linter, audit_docs,
+  req_coverage, contracts and frontend results above are unaffected. The fix is `2d4223ec` (import order only); a fresh full gate on a clean checkout of the
+  fixed head replaces this run as the slice's gate.
 - **Frontend half** at `a6a37847`: `install --frozen-lockfile` and `generate:api` rc 0, `lint` rc 0, `type-check` rc 0, `test` 609 passed (609),
   `build` rc 0.
 - **RL-1263 contention: these runs are NOT counted as pairs** (the maintainer's ruling, `~/gi-pricing-plan.local/channel/to-lead.md`, outside the repository, the entry headed "2026-09-30 18:03:42 BST — RL-1263 pairs: no partial acceptance; the SAME test applies to pair 1").
