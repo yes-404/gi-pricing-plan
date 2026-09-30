@@ -1,5 +1,5 @@
 ---
-id: PL-9947
+id: PL-1342
 family: plan
 kind: leaf
 title: WK-674 Slice 3 — Environment isolation (FR-430, FR-431, register F54 and F48, NFR-496 prod-sampling limb): leaf plan
@@ -12,11 +12,11 @@ work: WK-674
 slice: SL-1257
 supersedes: []
 superseded_by: ~
-corrected_by: []
+corrected_by: [RL-1329]
 relates: [PL-1237, PL-1306, PL-1303, RL-1184, RL-1301, RL-1232, RL-1236, RL-1263, RL-1311]
 ---
 
-# WK-674 Slice 3 — Environment isolation: leaf plan
+# PL-1342 — WK-674 Slice 3 — Environment isolation: leaf plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended) or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. The executor also binds `spec-change` (Task 1), `contract-schema` and `contract-guard` (Task 2), `python-package` and `python-test` (every task), `fastapi-service` (Tasks 3–6) and `dev-commands` (the migration, the gate and the gate slot), and reads [`README.md`](README.md)'s five unchecked conventions before its first step.
 
@@ -64,6 +64,8 @@ this slice keys everything on.
 
 Filed 2026-09-30 against the tree above, under **working id 9947** (checked free by the
 lead and recorded in `eta.md`'s "Working ids held"). The id is minted at this PR's merge turn.
+
+**Minted 2026-09-30 as PL-1342** (`python3 scripts/doc-id.py next --ref 71b672205f7212008d0ff00b5cbc4810b56f12e6` printed `1342`, and the lead allocated it in mint batch 12). It was filed under working id 9947, and this body keeps that id as written. Its last audit, auditor-close1255's delta audit of `27ab8c00..06e3e896`, was NOT CLEAN on finding **N5**: the ladder replay in Acceptance 10 (the four operation kinds and the comparison) and Task 6. **N5 is superseded by `RL-1329`** (`corrected_by: [RL-1329]`), and the replay text here is not operative. The operative text is in WK-674 S3's dispatch record and its ledger's Task 0.
 
 **Activation needs, in order** (activation is the `status:` flip only; the facts of each need
 met live in the dispatch record, quoted in the slice ledger's Task 0 — the maintainer's entry
