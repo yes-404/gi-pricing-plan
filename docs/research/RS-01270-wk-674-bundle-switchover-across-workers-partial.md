@@ -1,5 +1,5 @@
 ---
-id: RS-9802
+id: RS-1270
 family: research
 kind: spike
 title: WK-674 bundle switchover across workers — mixed and dropped responses and switch time (spike F1, partial, written from its salvage)
@@ -13,9 +13,11 @@ corrected_by: []
 relates: [FR-268, NFR-494]
 ---
 
-# RS-9802 — WK-674 bundle switchover across workers (spike F1, partial)
+# RS-1270 — WK-674 bundle switchover across workers (spike F1, partial)
 
 First filed 2026-09-28; `created` re-dated so the id sequence stays non-decreasing (check 31).
+
+Minted as RS-1270 on 2026-09-30; it was filed under working id 9802.
 
 Spike F1 of Track F was run on 2026-09-28 by the executor `spike-f1`. **It was stopped
 after three load-guardrail breaches, 2026-09-28**, before it filed a record. **This record
