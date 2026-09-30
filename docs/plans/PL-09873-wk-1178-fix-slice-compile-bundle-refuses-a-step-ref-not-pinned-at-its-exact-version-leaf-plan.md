@@ -48,7 +48,9 @@ No new dependency.
 **What this plan implements.** The finding filed as #961 (working id 9977; read at its head
 `ee33fb99152134a7a46b9e8caa12757a2748c444`), titled "compile_bundle does not check step table,
 lookup and model refs against the pin set (FR-237)", severity high. Its *Disposition* gives the
-maintainer's scope, acceptance and order, and this plan carries them without change. The
+maintainer's scope, acceptance and order, and this plan carries them. The one change is the
+maintainer's own dated correction of about 10:25 BST, relayed by the lead: `coalesce(` is not
+an acceptance case (acceptance 4). The
 relation to the WK-1250 rulings is #938 (working id 9851; read at its head
 `2538ca69f0ae73cb326c5cdfb57557cee97f2769`), DP-1 item 6, **G1**. Neither record is minted, so
 both are cited by PR and working id. They are re-pointed to their ids when they mint; #961 mints
@@ -102,8 +104,12 @@ neither `compile.py`, `runtime.py` nor `errors.py`. **No shared existing definit
 shared file is `03`, in different sections (§3.5 against §5.1).**
 
 **Against WK-674 Slice 2** (PL-1237 Task 2; no leaf plan is open): it adds a deployment-history
-`GET` row to `03` §5.1 (`PL-1237:773-774`). **§5.1 is shared, so the two serialise** unless the
-lead's dispatch record names it. It edits no file under `pricing_core/rating/`.
+`GET` row to `03` §5.1 (`PL-1237:773-774`). **`03` §5.1 is a shared path.** Whether the two slices
+may run at once is decided at dispatch on the actual diffs, under `RL-1263:100`. This slice amends
+the error-code catalogue; WK-674 Slice 2 appends a route row. Those are not the same definition
+unless the diffs show otherwise. It edits no file under `pricing_core/rating/`. *(Revised
+2026-09-30 on the lead's relay of the maintainer's dated correction of about 10:25 BST: the first
+text said the two serialise.)*
 
 ### Dependencies
 
@@ -138,7 +144,7 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
    `compile_bundle` compiles today (#961, *Evidence* 1). A red from any other cause, such as a
    fixture `KeyError` or a validation error, is a plan defect.
 3. **The consumer cases that priced wrong are refused at compile, red first.** Each case is the
-   exact algorithm of #961's tables, written with `??` **and again** with `coalesce(`:
+   exact algorithm of #961's tables, written with `??`:
    - auditor-922's lookup case (#961 Table 2, row "(a) coalesce, lookup UNPINNED", priced
      **1370**);
    - its wrong-version row (step `@1`, pin `@2` only, priced **1370** against a right answer of
@@ -153,14 +159,22 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
    - auditor-922's control (step and pins at `@1`) prices **1507**;
    - its wrong-version control (step `@2`, pin `@2`) prices **2740**;
    - auditor-933's controls price **130000** (`@1`/`@1`) and **180000** (`@2`/`@2`);
-   - each control holds with `??` and with `coalesce(`;
    - #961 Table 1's "both table v1 and v2 pinned" row still compiles and prices **1507**
      (DP-F3 (a)).
 
-   **If `coalesce(` does not compile or does not price under ZEN**, the `coalesce(` control goes
-   red before any change. The executor then stops and reports: #961 states, and does not show,
-   that `coalesce(` reproduces the case.
+   **`coalesce(` is not an acceptance case** *(revised 2026-09-30, on the lead's relay of the
+   maintainer's dated correction of about 10:25 BST; #961 is being corrected to match)*.
+   `_check_vocabulary` (`compile.py:233-258`) already refuses it at compile with
+   `EXPRESSION_INVALID_VOCABULARY`. The planner checked this at the tree above:
+   `zen.compile_expression('a * number(coalesce(x, "1.0"))')` raised
+   `{"type":"parserError","source":"Incomplete parser output"}`, and the same expression written
+   with `??` compiled. So a `coalesce(` consumer never reaches scoring, and this slice adds no
+   test for it.
 5. **The model path is coded at score** (the `KeyError` at `runtime.py:463` and `:533`), red first.
+   Any coded outcome meets the requirement: the lead's relay of the maintainer's correction of
+   about 10:25 BST says so, and names `MODEL_CALL_FAILED` through the `_model_call_failure`
+   sentinel as acceptable. The unpinned case is refused at compile anyway, so these sites are
+   backstops. The mechanism is DP-F2's.
    Both tests use a hand-built `Bundle` whose `resolved_payloads` lack the step's model ref. It
    bypasses `compile_bundle`, as a pre-fix stored bundle would.
    - **A GBM model** (`_load_boosters`, `:533`). `load_bundle` raises `CodedError`
@@ -203,7 +217,7 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
 - **Exact string equality on `type:slug@version`.** No "latest", no range, no slug-only match.
 - **A refusal's message is input-free** (`safe_error.py:64-70`). It names the step id and the ref
   string, which are artifact identifiers, never a quote value.
-- **Do not change `??`, `coalesce(`, `_GUARD_MARKERS` or `_check_vocabulary`** (acceptance 8).
+- **Do not change `??`, FR-244, `_GUARD_MARKERS` or `_check_vocabulary`** (acceptance 8). `??` is the decision-maker's pending §0 ruling.
 - **Money** stays integer minor units. The controls assert exact integers.
 
 ## Scope
@@ -290,20 +304,18 @@ the order and the acceptance (#961, *Disposition*). None of that is reopened her
 - [ ] **Lookup variants.** Replace `s_expense` with a `lookup` step on
   `reference_table:expense@1`, with rows `direct → "1.1"` and `broker → "1.25"`, and `@2` at
   `direct → "2.0"`. Use `on_miss="default"` and `s_office`'s expression
-  `risk_premium_minor * number(expense_factor ?? "1.0")`. The `coalesce(` twin is
-  `risk_premium_minor * number(coalesce(expense_factor, "1.0"))`. The payload shape is premise m.
+  `risk_premium_minor * number(expense_factor ?? "1.0")`. The payload shape is premise m.
   These literals are #961 Table 2's. Re-verify them against its text before use.
 - [ ] **auditor-933's variants.** A minimal algorithm:
   - an input `base_minor` (int), given 100000;
   - a `lookup` producing `veh_loading` from `reference_table:veh@1` (`"1.30"`; `@2` `"1.80"`);
   - a `table` producing `veh_factor` from `rate_table:veh@1` (1.30; `@2` 1.80);
-  - expressions `base_minor * number(veh_loading ?? "1.0")` and `base_minor * (veh_factor ?? 1.0)`,
-    each with a `coalesce(` twin;
+  - expressions `base_minor * number(veh_loading ?? "1.0")` and `base_minor * (veh_factor ?? 1.0)`;
   - an `output` step.
 
   Build it from the score fixture's step shapes. Do not invent a new field.
 - [ ] Controls first (acceptance 4). They must be **green before any change**: 1507, 2740, 130000,
-  180000, with both `??` and `coalesce(`. If one is not, stop (acceptance 4's last paragraph).
+  180000. If one is not, stop and report.
 - [ ] The refusal tests (acceptance 2, 3) and the model-path tests (acceptance 5). Run them and
   quote the reds with their causes.
 - [ ] The scratch pre-fix prices of acceptance 3, quoted in the ledger, never committed.
@@ -391,7 +403,7 @@ PL-1254 and PL-1278 cite this slice's merged symbol once it exists.
   - the catalogue meaning, spec first, in the same commit → Task 2, acceptance 1;
   - the model-path `KeyError` coded → Task 3, acceptance 5;
   - red first per kind, unpinned and wrong-version → acceptance 2;
-  - the `??` and `coalesce(` cases (1370 and 100000) → acceptance 3;
+  - the `??` cases (1370 and 100000) → acceptance 3; `coalesce(` is not a case (acceptance 4's dated note);
   - controls 1507, 2740, 130000 and 180000 → acceptance 4;
   - the order and the slot → Status;
   - `??` untouched → acceptance 8;
