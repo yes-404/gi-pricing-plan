@@ -1,0 +1,111 @@
+---
+id: LG-9994
+family: ledger
+title: WK-1250 Slice 1 — the sub-graph artifact with typed ports and FR-227 at create
+status: active
+created: 2026-10-01
+owner: executor
+tree: f689c7828cb05eb2298f3fec505a4638c4437a11
+phase: P2
+work: WK-1250
+slice: SL-1339
+plans: [PL-1325]
+corrected_by: []
+relates: [RL-1309, RL-1263, FD-1326]
+---
+
+# LG-9994 — WK-1250 Slice 1 (SL-1339)
+
+Executed from `PL-1325`. Branch `sl-1339-sub-graph-artifact`, from `origin/main`
+`f689c7828cb05eb2298f3fec505a4638c4437a11` (#1027). Working id 9994, reserved by the lead
+2026-10-01 00:01 BST; minted at the merge turn.
+
+## Tasks
+
+### Task 0 — preconditions
+
+Executor check: `CLAUDE_EFFORT=medium`. `executor.md:13` reads: "`sonnet` (currently Sonnet 5); medium,
+inherited from the lead — the highest-volume role; per-slice gates and the auditor's re-check bound the
+risk of a cheaper setting."
+
+**Dispatch record, FINAL, quoted verbatim**
+(`gi-pricing-plan.local/handover/DISPATCH-WK-1250-S1-2026-10-01.md`; each line prefixed `> `):
+
+> # Dispatch record — WK-1250 Slice 1 (SL-1339), from PL-1325 — FINAL
+>
+> **Status: DISPATCHED 2026-10-01 00:24:19 BST** (lane B GO by the lead). Drafted 00:01:16 BST. The maintainer's GO check PASSED (their entry "2026-10-01 00:03:18 BST — WK-1250 S1 dispatch DRAFT: GO check PASSED, conditional on #1027's merge"). #1027 merged on their MERGE-ACK as `f689c7828cb05eb2298f3fec505a4638c4437a11`. The executor's ledger Task 0 quotes the FINAL record verbatim. Plans are frozen by family: nothing in PL-1325 is edited, and activation facts live here.
+>
+> **The order:** the maintainer's entry "2026-09-30 23:57:25 BST — DECISION on the S3 halt: (A) carve the ladder half into its own slice; lane B takes WK-1250 S1 now", item 3. **This supersedes "WK-1250 S1 after S3"**: WK-1250 S1 goes FIRST on compile.py.
+>
+> ## Plan and slice status on main (the gate check, done FIRST this time)
+> - **PL-1325:** `status: active` on main since #1023 (248dbf11), read by the lead with `grep -m1 '^status:'`.
+> - **SL-1339:** `status: active` on main at f689c782, re-read by the lead with `git show origin/main:docs/roadmap.md | grep -A8 '^#### SL-1339' | grep '^status:'` at 2026-10-01 00:24:19 BST.
+>
+> ## Activation needs, quoted verbatim from PL-1325 ("Activation needs, in order"), each shown met
+> 1. "RL-1309 on `main`. It rules every decision point this slice depends on." **Met:** RL-1309 is on main (mint batch 3, e3600789).
+> 2. "PL-1254 `active`, and WK-1250's `SL-` rows cut." **Met:** PL-1254 active (#1023, 248dbf11); SL-1339..1341 cut (#1019, 71b67220).
+> 3. "The WK-1178 fix slice (PL-1299) and the #967 code slice (#969, plan working id 9833) merged." **Met:** the fix slice #988 (SL-1300, 2118679b) and the #967 slice #1012 (SL-1315, 3a5f7cd5); PL-1299 reads `status: active`. All three SHAs were verified by the lead against `git log origin/main`. *Discrepancy, not blocking:* SL-1315's roadmap row still reads `status: active` (roadmap :1124), although #1012 merged. Need 3 asks only for "merged", which holds. The row's close goes in the next roadmap PR.
+> 4. "A free RL-1263 gate slot, and the lead's dispatch record carrying the write-set check." **Met:** this record, condition 2. **Lane B grant: 2026-10-01 00:24:19 BST**, at main f689c782. The gate slot is granted per run. Lane A: WK-690 S2 is running a slotted baseline for its audit fix (F1), so one slot is in use at the grant.
+>
+> ## Decision points: every one has a resolver
+> PL-1325 §Decision points: "Every decision point that bears on this slice is ruled; none is open." Map DP-1, DP-3 and DP-4 by **RL-1309**; DP-S1-1..DP-S1-4 as ruled in PL-1325 with RL-1309. PL-1254 DP-2 (**RL-1344**) blocks Slices 2 and 3 only, not this slice. **No task is held.**
+>
+> ## Conditions
+> 1. **Write set:** PL-1325 §"File contention under RL-1263's option (c)" (`PL-1325:141-188`), verbatim, including its "Not in this slice's set" list: `compile_bundle`, `score.py`, `TraceStep`, `runtime.py`, any `approvals.py`, `errors.py`, `conftest*.py`, and any `pyproject.toml` or `uv.lock`.
+> 2. **RL-1263 write-set check against lane A (WK-690 S2, PL-1327:90-127; built, in slice audit):**
+>    - **`packages/model-schema/src/model_schema/__init__.py`:** both slices append exports. They may overlap only on the rule that **no existing line is edited by both**; the second to merge merges main in and re-runs its full gate (the maintainer's entry 22:33:30 BST, Decision 4).
+>    - **`scripts/generate-contracts.py`:** this slice adds one slug → symbol map entry. WK-690 S2's write set does not list it (PL-1327:95-107). Task 0 checks WK-690 S2's actual diff (`gh pr diff` on its PR). If both touch it, append-only and second-to-merge re-gates.
+>    - **Generated contracts and INDEX:** registry-exempt; the later slice regenerates.
+>    - **Otherwise disjoint:** WK-690 S2 writes `modelling/`, `model_schema/objectives.py`, `02` and `bench-model.py`; this slice writes `rating/compile.py`, `model_schema/rating.py`, `graph_errors.py`, `rating_algorithms.py`, the new table and migration, `03`/`00`/`06`.
+> 3. **compile.py order:** WK-1250 S1 first. The **ladder slice (SL-1345)** follows. It may overlap only if both are append-only on `ALGORITHM_CHECKS`; otherwise they serialise (the 23:57:25 entry, item 3). This slice refactors `_producer_types` and `_check_result_types` (existing definitions), so it is **not** append-only, and **SL-1345 does not build compile.py while this slice is open**.
+> 4. **Holds (FD-1336, FD-1335):** not applicable. This slice reads no ladder rung values, and consumes neither `/score` nor any of FD-1335's open-object routes. It adds its own sub-graph routes, and their 2xx responses must be typed (no `{}` schema, per FD-1335's guard intent). Task 0 confirms.
+> 5. **Decimal-output guard** (the maintainer's entry 22:43:26 BST): this slice commits no algorithm, seed or example declaring a `decimal` output. The ledger states it, with a grep.
+> 6. **Gate evidence, for EVERY suite-level run (package and directory suites included, never unslotted):**
+>    - a clean checkout of the named SHA, with `git status --porcelain` empty;
+>    - `ruff check --no-cache`, and mypy on a fresh cache or with `--no-incremental`;
+>    - the dev-commands slot wrapper verbatim (`.claude/skills/dev-commands/SKILL.md:122-171`), plus `LOKY_MAX_CPU_COUNT=4`, in the foreground with a timeout (executor.md S-11);
+>    - `uptime` AND `free -h` at start and end;
+>    - the other holder named as gate or not-gate via `flock -n`;
+>    - wall and pytest time against the 1469.6s baseline.
+>    **The wrapper exits 0 even when stages fail** (WK-690 S2's finding): read the stage table, never the exit code. A concurrent pair with lane A is an RL-1263 candidate; a missing field disqualifies it.
+> 7. **After merging a main that adds a migration:** run `alembic upgrade head` on the per-worktree test DB first. This slice adds a migration: `down_revision` = the head at dispatch; the second to merge re-points.
+> 8. **Red first:** every acceptance item. FD-1326 (was working id 9948) is fixed as Task 7, the last code task.
+> 9. **Gate:** the full two-half gate before pushing. Docs checks run on a clean detached checkout.
+> 10. **Ledger:** LG working id **9994**, reserved by the lead at 00:01 BST 1 Oct and checked free. The lead is the ONLY allocator (FD-1338). Task 0 quotes this FINAL record.
+> 11. **Frozen records:** nothing in `docs/plans/` is edited, and no frozen record body.
+> 12. **Executor:** a fresh `executor-1250s1`, spawned from `.claude/roles/executor.md` with its Model / effort line verbatim (sonnet, medium), in a new worktree from origin/main after #1027. It never `cd`s, not even `cd /tmp`.
+
+**Premises a–n re-derived at `f689c782`**
+
+| # | Result |
+|---|---|
+| a | Holds. `git grep -n -i 'sub_graph\|subgraph' -- backend/src ':(glob)packages/*/src/**'` prints 8 lines, none under `backend/src` (`model_schema/__init__.py:282,669`, `rating.py:340,343,390`, `refs.py:25`, `score.py:399,401`) |
+| b, c | Hold (`rating.py:340`, `:390`; `refs.py:25`) |
+| d | Holds. `RatingResultType` `rating.py:235`, `AlgorithmOutput` `:238` |
+| e | Holds. `_produced_by` `:357`, `_consumed_by` `:365`; `_graph_invariants` `:393`; raises at `:407` (FR-214), `:419` (undefined value), `:439` (cycle) |
+| i | **Moved.** The single head is now `a9f3c6d21b87` (49 revisions, scan of `revision` / `down_revision`), no longer `d7e2a9b5c418`. `down_revision` = `a9f3c6d21b87` |
+| m | Mapped to post-#967 names. `_producer_types` `compile.py:90`, `_compatible` `:112`, `_check_result_types` `:120`, registered in `ALGORITHM_CHECKS` `:247-248`. Names unchanged, line numbers shifted |
+| f, g, h, j, k, l, n | To be re-read at the task that uses each (Tasks 1, 3, 5, 6) and recorded there |
+
+**Open PRs read** (`gh pr list --state open`, 2026-10-01, base `f689c782`): none rules on FR-217, FR-227,
+sub-graphs or `compile.py`. #1025 (WK-690 S2, `gh pr diff 1025 --name-only`): touches
+`model_schema/__init__.py` but **not** `scripts/generate-contracts.py`; its `docs/contracts` change is the
+hand-authored `objective-certificate.schema.json`, not `generated/`. Overlap: `__init__.py` only,
+append-only on both sides; second to merge merges main in and re-gates.
+
+**Holds (condition 4):** N/A. This slice reads no ladder rung, and consumes neither `/score` nor an
+open-object route of FD-1335; its own routes get typed 2xx responses.
+
+**Decimal-output guard (condition 5).** This slice commits no algorithm, seed or example declaring a
+`decimal` output. **Deviation from the plan's literal text:** Task 1's example (`PL-1325`) declares the
+output port `ncd_factor` as `"type": "decimal"`. The dispatch record's condition 5 binds and the plan is
+frozen, so the spec example declares `"type": "relativity"` instead. Guard grep, at the slice's final
+tree: `git grep -n -E '"type": *"decimal"' origin/main...HEAD` over the added lines (recorded at Task 8).
+
+**Typed-signal spike** (`library-spike`), `/tmp/ex1250s1/spike.py`: a `ValueError` subclass raised in a
+`model_validator(mode="after")`, on a model and on its subclass.
+Output: `B 2.13.5 value_error G True` and `S 2.13.5 value_error G True` — `errors()[0]["type"] ==
+"value_error"`, and `ctx["error"]` is the instance. Holds at pydantic 2.13.5.
+
+**Decision points** confirmed by record id (RL-1309): map DP-1 (b), DP-3 (a), DP-4 (a); DP-S1-1..4 (a) as
+in PL-1325 *Decision points*. No difference found.
