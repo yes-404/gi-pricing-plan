@@ -1,5 +1,5 @@
 ---
-id: RL-9976
+id: RL-1344
 family: ruling
 title: PL-1254 DP-2 decided — FR-218's purpose mount is a sub-graph mount on the algorithm with a purposes selector, pinned by the Rating Version like any other
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,13 +15,13 @@ corrects: ~
 relates: [PL-1254, RL-1309, RL-1242, FR-212, FR-217, FR-218, FR-219, FR-239, FR-294, OQ-617]
 ---
 
-# RL-9976 — PL-1254 DP-2 decided: FR-218's purpose mount is a sub-graph mount on the algorithm with a `purposes` selector, pinned by the Rating Version like any other
+# RL-1344 — PL-1254 DP-2 decided: FR-218's purpose mount is a sub-graph mount on the algorithm with a `purposes` selector, pinned by the Rating Version like any other
 
 ## How this was ruled
 
 **Ruled at effort `high`**, by the decision-maker session `dm-oq1334`. Its first command,
 `echo "CLAUDE_EFFORT=$CLAUDE_EFFORT"`, printed `CLAUDE_EFFORT=high`. This is the session's
-second ruling. The first was `OQ-1334`, under working id 9974. The maintainer ordered it in
+second ruling. The first was `OQ-1334`, ruled as `RL-1343` (working id 9974). The maintainer ordered it in
 `to-lead.md` (a local channel file outside the repository), in the entry headed "2026-09-30
 22:33:30 BST — DECISIONS on your 23:05 (WK-1250 S1 blocked; lane re-order; ci-1018)",
 Decision 2, which this session read itself: "**DP-2 is ruled now.** Add DP-2 to the
@@ -29,8 +29,10 @@ high-effort decision-maker session I asked you to schedule for OQ-1334: two ruli
 DP-2's RL mints, PL-1254 goes `active` (a status flip), and WK-1250 S1 can dispatch." The
 lead's brief addendum, headed "2026-09-30 22:37:11 BST", assigned the working id.
 
-**Filed under working id 9976**, which the lead hand-assigned. The lead is the only allocator
-(FD-1338).
+**Minted 2026-09-30 as RL-1344** (`python3 scripts/doc-id.py next --ref 71b672205f7212008d0ff00b5cbc4810b56f12e6`
+printed `1342`. The WK-674 Slice 3 leaf plan, filed as PL 9947, takes it as PL-1342, OQ-1334's
+ruling takes RL-1343, and the lead allocated 1344 to this record in the mint GO.) It was filed
+under working id 9976, hand-assigned by the lead, who is the only allocator (FD-1338).
 
 **The decision point**, verbatim from `PL-1254`'s decision-point table
 (`docs/plans/PL-01254-wk-1250-sub-graph-composition-and-mta-cancellation-pricing-map-plan.md:211`):
