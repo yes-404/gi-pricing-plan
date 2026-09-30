@@ -7,7 +7,7 @@ created: 2026-08-29
 owner: decision-maker
 supersedes: []
 superseded_by: ~
-corrected_by: [RL-9841]      # prepared, not ruled (working id; draft PR) — minted at the ruling pass
+corrected_by: [RL-9841]      # working id — minted at the merge turn
 corrects: ~                     # only if this ruling itself corrects a frozen record
 relates: []                     # ids only — the decision point, plan or finding this rules on
 was: docs/plans/2026-08-29-w11-slice2-rulings.md
