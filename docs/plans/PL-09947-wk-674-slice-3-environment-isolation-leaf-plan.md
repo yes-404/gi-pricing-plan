@@ -13,7 +13,7 @@ slice: SL-1257
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1237, PL-1306, PL-1303, RL-1184, RL-1232, RL-1236, RL-1263, RL-1311]
+relates: [PL-1237, PL-1306, PL-1303, RL-1184, RL-1301, RL-1232, RL-1236, RL-1263, RL-1311]
 ---
 
 # WK-674 Slice 3 — Environment isolation: leaf plan
@@ -25,18 +25,20 @@ relates: [PL-1237, PL-1306, PL-1303, RL-1184, RL-1232, RL-1236, RL-1263, RL-1311
 Make each Environment **its own**: a Service Account holds one key per granted Environment,
 a value set for one Environment changes no other, a client's request rate is bounded by a
 counter every replica shares, a settings override that cannot be honoured stops the process
-at startup, and the Premium Ladder is actually proved to reconcile — on every quote outside
-`prod`, and on a configured sample in `prod`.
+at startup, and the Premium Ladder is actually proved to reconcile — on every scored quote,
+in every Environment.
 
 **Architecture.** The Settings resolver gains an **Environment setting** layer, between the
 process override and the workspace setting, for keys that declare they may vary per
 Environment (`RL-1311`). Its rows are keyed by the Environment's identity (WK-674 Slice 2's
 `EnvironmentRow`), written through an audited, `admin:manage_settings`-guarded route. Key
-issuance mints one key per granted Environment. A fixed-window Redis counter, keyed by
-Environment and Service Account, bounds each client. A new startup check reads every
+issuance mints one key per granted Environment. A Redis counter shared by every replica
+bounds each client; its key, its window and what it does when Redis is unavailable are
+DP-S3-2's. A new startup check reads every
 `GIP_SETTING_*` override before the app serves. `reconcile_ladder` is made to apply every
-recorded operation, and scoring asserts it at a per-Environment sampling rate that is itself
-an Environment setting.
+recorded operation, and scoring asserts it on **every** quote in every Environment, never
+sampled; `rating.trace_sample_rate` governs trace persistence only (the maintainer's
+decision, `2026-09-30 15:17:54 BST — audit round-up: decisions`).
 
 **Tech Stack:** Pydantic v2, FastAPI, SQLAlchemy 2.x async, Alembic, Redis (the existing
 broker/cache instance, per tenant, ADR-710), pytest. No new dependency: no `uv.lock` or
@@ -49,7 +51,7 @@ broker/cache instance, per tenant, ADR-710), pytest. No new dependency: no `uv.l
   (`07:304-311`); §5.2 (`07:382-383`). Line numbers are at the tree above; WK-674 Slice 2 edits
   `07` §4.2 and §5.1 before this slice runs, so the executor re-reads them.
 - [`../specs/03-rating-engine.md`](../specs/03-rating-engine.md) — **FR-248** (`03:155`), **NFR-496**
-  (`03:1157`, the prod-sampling limb), **NFR-499** (`03:1160`, the per-client rate-limit limb).
+  (`03:1157`, the prod-sampling limb, decoupled by the maintainer's decision below), **NFR-499** (`03:1160`, the per-client rate-limit limb).
 - The ruling this slice executes: **`RL-1311`** (OQ-1235 decided; #939, minted in mint batch 3,
   #992). **At the tree above it is not yet on `main`**; it resolves when batch 3 merges.
 
@@ -73,7 +75,7 @@ item (3)):
    (#978) → S2 → S3** (the maintainer's entry headed
    `2026-09-30 11:56:33 BST — DECISIONS: slice order after the split; FR-384 confirmed; FR-383 and FR-385 owners`
    for the first three; this slice follows S2 by `PL-1237`'s Sequencing).
-3. **DP-S3-1, DP-S3-2 and DP-S3-3 below resolved.**
+3. **DP-S3-1 and DP-S3-2 below resolved** (DP-S3-3 is resolved).
 4. **The lead's go.**
 
 ## Acceptance Standard
@@ -100,7 +102,14 @@ and the guard restored.
      were example names, and the registry's names (`rating.trace_sample_rate`,
      `backend/src/app/platform/settings.py:196`) are the contract.
    FR-446 already carries `RL-1311`'s dated clause (that ruling's commit); the executor
-   verifies it and does not reword it. FR-430, FR-431, FR-447, FR-248, NFR-496 and NFR-499 are
+   verifies it and does not reword it. **FR-248 (`03:155`) and NFR-496 (`03:1157`) each gain a
+   dated clause**, citing the maintainer's entry headed
+   `2026-09-30 15:17:54 BST — audit round-up: decisions`:
+   the reconciliation runs on every scored quote in every Environment and is never sampled,
+   superseding their "sampled in `prod`"; the trace-sampling rate governs trace persistence
+   only. NFR-499 (`03:1160`) is not touched: its "sampled traces" are trace persistence, not
+   the reconciliation. `PL-1237`'s own "sampled in `prod`" wording is frozen (`document-ids.md`
+   §1.5) and is superseded by this plan's delta, not edited. FR-430, FR-431 and FR-447 are
    **not** reworded; if one needs it, the executor stops and reports.
 2. **Contract.** `SettingSource.ENVIRONMENT_SETTING = "environment_setting"` is added to
    **`model_schema`'s** enum (`packages/model-schema/src/model_schema/settings.py:27-32`),
@@ -138,13 +147,17 @@ and the guard restored.
    first, in `backend/tests/test_settings_environment.py`:
    - `SettingDefinition` gains a scope — workspace only (the default), workspace or
      Environment, Environment only — and **each key this slice makes per-Environment declares
-     it** (DP-S3-2 and DP-S3-3 name them; `rating.trace_sample_rate` and the new
-     ladder-sampling key at least);
+     it** (DP-S3-2 and DP-S3-3 name them; `rating.trace_sample_rate` at least);
    - a key set for `uat` changes the effective value in `uat` only; its resolution reports
      `environment_setting` as the source, and `prod` still reports `workspace` or `default`;
    - for a workspace-or-Environment key, a process override (`GIP_SETTING_<KEY>`) wins over an
      Environment setting in every Environment the process serves;
    - a workspace-only key written for an Environment is refused with `SETTING_INVALID`;
+   - **an Environment-only key written at workspace level is refused with `SETTING_INVALID`**
+     (`RL-1311` item 3; auditor-close1255 M4 (i));
+   - **an Environment-setting write validates with the key's `coerce`** before it writes
+     (`RL-1311` item 5): an ill-typed value and an out-of-range value are each refused with
+     `SETTING_INVALID`, and nothing is written (M4 (ii));
    - with no Environment in the request, the Environment layer is skipped;
    - inspection with an Environment reports every candidate, the Environment setting included;
    - the write route is guarded by `admin:manage_settings` (`RL-1236` DP-D): a caller without
@@ -182,37 +195,89 @@ and the guard restored.
    test proves nothing here** (F48: an in-process limiter "is not a limit"), so the test
    asserts the two instances share the count. Red on broken input: with the counter made
    per-process, the pair admits twice the limit. The counter's key and fallback are DP-S3-2's.
-9. **FR-430's monitoring-configuration limb**, per DP-S3-3: setting the limb's key in `uat`
-   leaves `prod`'s resolved value unchanged. Red on broken input: with the key's scope forced
-   to workspace-only and the value written at workspace level, `prod` changes too.
-10. **NFR-496's prod-sampling limb, on a reconciliation that actually reconciles (FR-248).**
-    - **Premise** (at the tree above): `reconcile_ladder`
-      (`packages/pricing-core/src/pricing_core/money.py:55-70`) checks only that the first
-      rung equals `risk_premium_minor` and that every value is an `int`; its caller,
-      `packages/pricing-core/src/pricing_core/rating/score.py:738`, runs it on every quote,
-      and its result reaches only the trace (`:741-745`); `LADDER_RECONCILIATION_FAILED`
-      (`errors.py:326`) is raised nowhere. So an off-by-one-penny ladder passes today.
-    - **Red first:** a ladder whose last rung is off by one penny is **passed** by today's
-      `reconcile_ladder` (the predicted red); then `reconcile_ladder` applies every recorded
-      operation from `risk_premium_minor` and requires `payable_premium` to the penny, as
-      FR-248 says, and the same ladder is refused.
-    - **Sampling:** the assertion runs at a per-Environment rate, a new workspace-or-
-      Environment key (name proposed: `rating.ladder_reconciliation_sample_rate`, default
-      `1.0`, so every quote is checked until an Environment setting lowers it). In `uat`, an
-      off-by-one-penny ladder is caught **on the first quote**; in `prod` with the rate set
-      to `0.1`, the assertion runs on a seeded sample. The sampling decision is taken in the
-      backend and passed into `pricing-core`, which stays free of settings and FastAPI
-      (`CLAUDE.md` §2).
+9. **FR-430's monitoring-configuration limb** — **DP-S3-3 ruled (a) by the maintainer, as
+   scope** (`2026-09-30 15:13:26 BST — DECISIONS: the reconcile_ladder FD (MEDIUM, WK-674 S3); DP-S3-3 → (a), ruled by me as scope`): in Phase 2 the limb is the existing `rating.trace_sample_rate`
+   (`backend/src/app/platform/settings.py:196`), declared workspace-or-Environment, plus the
+   scope mechanism; anything wider is `05`'s, spec only (`CLAUDE.md` §0). Each red first:
+   - setting the key in `uat` leaves `prod`'s resolved value unchanged. Red on broken input:
+     with the key's scope forced to workspace-only and the value written at workspace level,
+     `prod` changes too;
+   - **the call site uses the request's Environment** (auditor-close1255 M3): at the tree
+     above, trace sampling resolves the rate with the workspace only
+     (`backend/src/app/api/score.py:399-400`, `settings_service.resolve(session, settings,
+     caller.workspace_id, "rating.trace_sample_rate")`), and `resolve`
+     (`backend/src/app/platform/settings.py:292`) takes no Environment. Both change: `resolve`
+     gains the Environment argument of Acceptance 5, and the call site passes the caller's
+     Environment. Behavioural case: with `uat`'s rate set to `1.0` and the workspace rate
+     `0.0`, a scored quote in `uat` is sampled — predicted red at the tree above: it is not,
+     because the workspace rate is read.
+10. **NFR-496, on a reconciliation that actually reconciles, on every quote (FR-248).**
+    - **Premise, corrected** (at the tree above; filed as a finding, working id 9949, "vacuous",
+      **MEDIUM**, owner WK-674 Slice 3, by the maintainer's entry headed
+      `2026-09-30 15:13:26 BST — DECISIONS: the reconcile_ladder FD (MEDIUM, WK-674 S3); DP-S3-3 → (a), ruled by me as scope`):
+      `packages/pricing-core/src/pricing_core/rating/score.py:737` sets
+      `risk_premium_minor = ladder_steps[0][1]` and `:738` passes it to `reconcile_ladder`,
+      whose first-rung check (`packages/pricing-core/src/pricing_core/money.py:55-70`) then
+      compares that value **with itself**; the rest of the check is int-ness. So
+      `ladder_reconciled` is True on every trace whose rungs are integers (it reaches only the
+      trace, `:741-745`, `Trace.ladder_reconciled`,
+      `packages/model-schema/src/model_schema/scoring.py:168`), and
+      `LADDER_RECONCILIATION_FAILED` (`backend/src/app/errors.py:326`) is raised nowhere. An
+      off-by-one-penny ladder passes today.
+    - **The signature changes** (auditor-close1255 M1). `reconcile_ladder` receives the
+      **recorded operations** — each `LadderRung`'s `operation`
+      (`LadderOperation`: `kind`, `factor`, `amount_minor`, `mode`, `dp`;
+      `packages/model-schema/src/model_schema/scoring.py:108-135`) — and the **real** risk
+      premium, the algorithm's own risk-premium output, never the first rung. It applies every
+      operation from the risk premium, with `pricing_core.money`'s own `apply_factor`/addition,
+      and requires the payable premium to the penny. Every caller changes with it:
+      `pricing_core/rating/score.py:738`, the FR-261 "ladder reconciles" property
+      (`pricing_core/rating/properties.py:41` import, `:303` call), the export
+      (`pricing_core/__init__.py:31`), and `score.py:99-105`'s docstring, which calls the
+      check "shallow — first-rung and int-ness only".
+    - **Red first, through the call site** (the maintainer, relayed by the lead): `score_one`
+      on a one-penny-off ladder produces `ladder_reconciled` **False** (or DP-S3-1's refusal).
+      Predicted red at the tree above: it is True. A unit test of `reconcile_ladder` on the same
+      ladder sits beside it, but the call-site case is the proof.
+    - **Red first, the property:** the FR-261 property over a planted off-by-one ladder fails
+      (predicted red at the tree above: it passes, via the same vacuous check).
+    - **Red first, the raise site's message** (NFR-499, `RL-917`): if DP-S3-1 rules a refusal,
+      `LADDER_RECONCILIATION_FAILED` is raised at a **new** site, and its message and detail
+      carry **no quote input** — only the rung names and the minor-unit difference. The two
+      census tests list it among the input-free codes:
+      `backend/tests/test_worker_raise_sites.py` (`_QUOTE_INPUT_CODES`, `:36-39`) and
+      `packages/pricing-core/tests/test_quote_input_raise_sites.py`. Red first: a message that
+      carries an input value fails the census.
+    - **The trace flag records which check produced it — no back-fill of "verified".** Stored
+      traces are write-once (`UPDATE` is revoked on `scoring_traces`), so a flag already stored
+      cannot be corrected. `Trace` gains **`ladder_check_version`**
+      (`packages/model-schema/src/model_schema/scoring.py`, beside `ladder_reconciled`):
+      absent or `1` means "first rung and int-ness only, before this slice — **not** a
+      reconciliation"; `2` means FR-248's full check. A dated `03` §4.5 note says so. **Why a
+      field and not a note alone:** deployments upgrade at different times, so a reader cannot
+      tell from a trace's date which check produced its flag; the field says so on the record
+      itself. (Accepted as the plan's choice by the lead, the maintainer's "the plan says
+      which".) Red first: a new trace carries `ladder_check_version = 2`.
+    - **Never sampled** (auditor-close1255 M2, **decided by the maintainer**,
+      `2026-09-30 15:17:54 BST — audit round-up: decisions`):
+      the fixed `reconcile_ladder` runs on **every** scored quote in **every** Environment —
+      it is integer arithmetic over a handful of rungs — and `rating.trace_sample_rate` governs
+      only whether a trace is persisted. So no Environment, however named, can switch the
+      FR-248/NFR-496 check off, "`prod`" needs no definition, and no sampling key is added.
+      **Red first:** with `rating.trace_sample_rate` set to `0`, `score_one` on a one-penny-off
+      ladder still yields not-reconciled (or DP-S3-1's refusal). Predicted red at the tree
+      above: it yields `ladder_reconciled = True`. The docstrings that say otherwise are
+      corrected in the same commit: `pricing_core/money.py:63` ("asserted continuously in
+      non-prod and sampled in prod") and `pricing_core/rating/score.py:99-105`.
     - **What a failure does** is DP-S3-1's.
 11. **The gate, in a gate slot.** Every run of a whole test directory or package suite, the
-    gate, or a multi-database sweep — by the executor or the auditor — runs inside a gate slot,
-    `flock -w 1800 -E 99 /tmp/slots/gate-1 <cmd>` or `gate-2`, **with no `--`**, with
-    `LOKY_MAX_CPU_COUNT=4 OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2` set and `uptime` reported
-    at each grant; only named single test files or node ids are exempt (the maintainer's
-    entries headed
-    `2026-09-30 11:42:08 BST — two decisions: the escaped-pipe checker blindness → a LOW FD; box load → heavy audit runs take a gate slot`
-    and `2026-09-30 11:43:28 BST — the slot rule, tightened: suite-level runs count`). The
-    full two-half gate (`CLAUDE.md` §11) exits 0, with every rc, the `N passed` line and
+    gate, or a multi-database sweep — by the executor or the auditor — uses **the dev-commands
+    slot wrapper verbatim** (`.claude/skills/dev-commands/SKILL.md:122-171`, which exports
+    `GIP_GATE_SLOT`), **plus `LOKY_MAX_CPU_COUNT=4`**, and reports `uptime` at each grant; only
+    named single test files or node ids are exempt (the maintainer's entry headed
+    `2026-09-30 13:24:18 BST — DATED CORRECTION to my slot-rule entries (11:42:08 and 11:43:28): use the dev-commands wrapper verbatim`,
+    which supersedes the `flock -w 1800 -E 99 …` form of the 11:42:08 and 11:43:28 entries).
+    The full two-half gate (`CLAUDE.md` §11) exits 0, with every rc, the `N passed` line and
     `HEAD` quoted against main's.
 12. **Item 11** (`PL-1237` Tasks preamble): the maintainer's MERGE-ACK, naming the PR's full
     head SHA, recorded in the lead's channel file, never posted on the PR; and the slice's
@@ -239,8 +304,8 @@ and the guard restored.
 | `07` §3.5 | FR-431 | Whole: Environment configuration as a Setting, resolved by §3.8's precedence, audited on change |
 | `07` §3.8 | FR-446 | The Environment-setting layer and the scope rule, as `RL-1311` amended it |
 | `07` §3.8 | FR-447 | The override half: FD 9881's startup validation (Acceptance 7) |
-| `03` §3.6 | FR-248 | The reconciliation made real, and asserted per the sampling rate |
-| `03` §9 | NFR-496 | The prod-sampling limb (`CR-1212` G4 (a)) |
+| `03` §3.6 | FR-248 | The reconciliation made real, on every scored quote; a dated clause for "never sampled" |
+| `03` §9 | NFR-496 | The prod-sampling limb (`CR-1212` G4 (a)), decoupled: every quote, every Environment (the 15:17:54 BST decision); a dated clause |
 | `03` §9 | NFR-499 | The per-client rate-limit limb (register F48) |
 
 **Carried obligations placed here:** register F54 (Acceptance 4); register F48 (Acceptance 8);
@@ -263,8 +328,8 @@ tree above, and FR-430 does not require one).
 | d | Two different `SettingSource` enums exist | model-schema's (c) and `backend/src/app/config.py:41-46` (`ENVIRONMENT = "environment"`) | must not be conflated (`RL-1311` item 2) |
 | e | Nothing validates overrides at startup | `Settings.setting_overrides` (`config.py:242-249`) is read only by `platform/settings.py:332` (`_env_candidate`); `load_settings` validates `Settings` fields and `require_startable()` only | reproduces FD 9881 |
 | f | No rate limiter exists | `git grep -n -E 'rate_limit_rps\|RATE_LIMITED' -- backend packages` at the tree above: the migration `6db3b9464e98_…py:46`, `service_accounts.py:65`, `:90`, `:113`, `:175`, `db/models.py:400`, `errors.py:58`, and three `test_model_jobs.py` lines where 429 is an upstream provider's | reproduces F48 |
-| g | The ladder check is shallow and never fails anything | `pricing_core/money.py:55-70`; `pricing_core/rating/score.py:738`, `:741-745`; `LADDER_RECONCILIATION_FAILED` raised nowhere | **a defect this slice closes** (Acceptance 10) |
-| h | No monitoring-configuration key exists | `git grep -n -i monitor -- backend/src/app` at the tree above: 8 hits, none a setting; `REGISTRY` (`settings.py:112-257`) has 16 keys, none for monitoring | the base for DP-S3-3 |
+| g | The ladder check is **vacuous** and never fails anything | `pricing_core/rating/score.py:737` passes the first rung as the risk premium, so `money.py:55-70`'s first-rung check compares a value with itself; `:738`, `:741-745`; `LADDER_RECONCILIATION_FAILED` raised nowhere. Filed as a finding, working id 9949 (MEDIUM, owner this slice) | **a defect this slice closes** (Acceptance 10) |
+| h | No monitoring-configuration key exists | `git grep -n -i monitor -- backend/src/app \| wc -l` at the tree above prints `9`, none a setting (corrected from 8 on auditor-close1255 L4); `REGISTRY` (`settings.py:112-257`) has 16 keys, none for monitoring | the base for DP-S3-3 |
 | i | The only Environment-level setting route is specified, not built | `07:307`; `git grep -n -E '/environments' -- backend/src` prints nothing at the tree above | Slice 2 builds `/environments`; this slice builds its settings route |
 | j | The Alembic head | `d7e2a9b5c418` (Slice 1) at the tree above; Slice 2a and Slice 2 each append one revision first | re-derive at the executor's tree |
 
@@ -283,14 +348,17 @@ checked at dispatch only against the lane-B slice then in flight.
 | `uv.lock`, any `pyproject.toml` | nothing | WK-690 S1 | not shared |
 | `docs/specs/07-platform.md` §4.2, §4.3, §4.4, §5.1, §5.2 | spec change (Acceptance 1) | S2 (§4.2 note, §5.1 rows) — earlier in lane A | sequential; re-read after S2 |
 | `packages/model-schema/src/model_schema/settings.py` | `ENVIRONMENT_SETTING`; the key-set shape | none found | an edit to an existing enum: serialises with any in-flight slice editing it |
-| `backend/src/app/platform/settings.py` | the scope, the resolver's Environment argument, the Environment write path | none found | serialises with any in-flight slice editing it |
+| `backend/src/app/platform/settings.py` | the scope, `resolve`'s Environment argument (`:292`), the Environment write path | none found | serialises with any in-flight slice editing it |
 | `backend/src/app/api/settings.py` | inspection with an Environment | none found | as above |
 | `backend/src/app/config.py` (`load_settings`) or `backend/src/app/main.py` lifespan | FD 9881's startup check | S1 (done), S2a/S2 (none planned) | `main.py` is registry-exempt only for an added hook |
-| `backend/src/app/api/service_accounts.py` (`:58-66`, `:140-316`) | one key per Environment | **S2** (#971 A.6's Environment-slug check at `:63`, `:180`, `:246`) | sequential; this slice edits S2's version of the same lines |
+| `backend/src/app/api/service_accounts.py` (`:58-66`, `:140-316`) | one key per Environment | **S2** (`RL-1301` A.6's Environment-slug check at `:63`, `:180`, `:246`) | sequential; this slice edits S2's version of the same lines |
 | `backend/src/app/auth/service.py` | none planned (the refusal branch is only reached by tests) | — | — |
 | new: an Environment-settings router, a rate-limit module, their tests | created | — | not shared |
-| `backend/src/app/api/score.py` / the scoring path | the rate-limit dependency; the sampling decision passed down | S2 (default-live, trace link), WK-1250, WK-673, WK-675 S7b (RL-1263 item 4 names `score.py`) | serialises with any in-flight slice editing it |
-| `packages/pricing-core/src/pricing_core/money.py`, `…/rating/score.py` (`:738`) | the real reconciliation; the sampled call | WK-690 S1 edits `pricing_core/data/*` only (not these files) | an edit to existing functions; serialises only with a slice editing these two files |
+| `backend/src/app/api/score.py` / the scoring path | the rate-limit dependency; the trace-sampling call site (`:399-400`) passing the Environment | S2 (default-live, trace link), WK-1250, WK-673, WK-675 S7b (RL-1263 item 4 names `score.py`) | serialises with any in-flight slice editing it |
+| `docs/specs/03-rating-engine.md` §3.6 (FR-248, `:155`), §9 (NFR-496, `:1157`) | dated clauses (Acceptance 1) | WK-690 S1 (§3.5, FR-244), WK-1250 S1 (§4, §5.1), WK-1178 fix slice (§5.1 catalogue) | section-disjoint rows; checked at dispatch against the actual diffs (the 10:24:00 BST rule) |
+| `packages/pricing-core/src/pricing_core/money.py` (`reconcile_ladder`, `:55-70`), `…/rating/score.py` (`:99-105` docstring, `:736-745`), `…/rating/properties.py` (`:41`, `:303`), `…/__init__.py` (`:31`) | the new signature and every caller | WK-690 S1 edits `pricing_core/data/*` only (not these files) | edits to existing functions; serialise only with a slice editing these files |
+| `packages/model-schema/src/model_schema/scoring.py` (`Trace`, `ladder_reconciled` `:168`) and the regenerated contract | `ladder_check_version` | any in-flight slice editing `model_schema/rating.py`, `model_schema/scoring.py` or the trace shape (WK-1250 S1 and S2's trace work) | an edit to an existing class: **serialises** with those |
+| `backend/tests/test_worker_raise_sites.py` (`:36-39`), `packages/pricing-core/tests/test_quote_input_raise_sites.py` | the census of the new raise site | none found | not shared |
 | `backend/src/app/db/models.py` | `EnvironmentSettingRow` appended | S2a (status metadata), S2 (appends) — earlier | append: registry-exempt |
 | `backend/migrations/versions/` | one revision | S2a, S2, WK-1250 S1 | append: exempt; re-point `down_revision` |
 | `docs/contracts/` generated outputs, `docs/INDEX.md` | regenerated | — | exempt |
@@ -300,8 +368,8 @@ checked at dispatch only against the lane-B slice then in flight.
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
 | DP-S3-1 | **What does a failed ladder reconciliation do at scoring?** FR-248 says it is "asserted at scoring time in `dev`/`uat` and sampled in `prod`"; `LADDER_RECONCILIATION_FAILED` is registered (`errors.py:326`) and raised nowhere; the spec does not say whether an asserted failure refuses the quote | (a) Refuse the quote with `LADDER_RECONCILIATION_FAILED` (500, a platform fault), and record it; (b) serve the quote, record the failure on the trace and in the log, and alert; (c) refuse outside `prod`, record-and-serve in `prod` | **(a).** A ladder that does not reconcile is a premium the platform cannot explain (NFR-496: "no rounding is applied more than once … to the penny"); serving it is the silent mispricing `CLAUDE.md` §2 warns of. (c) would make `prod` the one place a wrong premium is returned | decision point | yes — Task 6 | *open* — for the decision-maker at medium effort (rating correctness, not governance evidence) |
-| DP-S3-2 | **The rate-limit counter's key and limit.** NFR-499 asks "per-client rate limits"; FR-430 asks "independent … rate limits" per Environment; F48 fixes the mechanism (a shared Redis counter, per tenant); `rate_limit_rps` is optional on an account (`service_accounts.py:65`) | (a) One counter per (Environment, Service Account), limit the account's `rate_limit_rps`; an account without one is unlimited; (b) as (a), with an Environment setting `scoring.default_client_rate_limit_rps` (workspace or Environment scope) as the limit for accounts without their own; (c) a per-Environment aggregate cap as well as the per-client counter | **(b).** Keying by Environment makes the limits independent per Environment (FR-430); the per-account value is NFR-499's per-client limit; and the Environment default closes the "no limit at all" case for accounts created without one, while staying a Setting (FR-431). (c) is a capacity control no requirement asks for | decision point | yes — Task 5 | *open* — for the decision-maker at medium effort |
-| DP-S3-3 | **What is FR-430's "monitoring configuration" in Phase 2?** No monitoring-configuration key exists (premise h), and the monitors are WK-687's (Phase 4); `PL-1237` Task 3 limits this slice to "the per-environment *configuration* only" | (a) The per-Environment trace sampling rate, `rating.trace_sample_rate` (`settings.py:196`, the input `05` monitors read), declared workspace-or-Environment, plus the scope mechanism for WK-687 to declare its own keys; (b) new monitoring keys now; (c) the mechanism only, with no key declared | **(a).** It is the one monitoring input configured today, it is named by FR-431 ("sampling rates"), and it gives the limb's test a real key. (b) builds ahead of Phase 4 (`CLAUDE.md` §9); (c) leaves the limb with nothing to prove | scope | yes — Task 4 | *open* — for the lead to route |
+| DP-S3-2 | **The rate-limit counter's key and limit.** NFR-499 asks "per-client rate limits"; FR-430 asks "independent … rate limits" per Environment; F48 fixes the mechanism (a shared Redis counter, per tenant); `rate_limit_rps` is optional on an account (`service_accounts.py:65`) | (a) One counter per (Environment, Service Account), limit the account's `rate_limit_rps`; an account without one is unlimited; (b) as (a), with an Environment setting `scoring.default_client_rate_limit_rps` (workspace or Environment scope) as the limit for accounts without their own; (c) a per-Environment aggregate cap as well as the per-client counter | **(b).** Keying by Environment makes the limits independent per Environment (FR-430); the per-account value is NFR-499's per-client limit; and the Environment default closes the "no limit at all" case for accounts created without one, while staying a Setting (FR-431). (c) is a capacity control no requirement asks for. **Also to rule: the window and the Redis-outage behaviour** (auditor-close1255 L3). Window: a fixed one-second window (`INCR` + `EXPIRE`) is the simplest shared counter; a sliding window is fairer at the boundary and costs a sorted set per key. Outage: **fail open** (serve, log and count each unlimited request) keeps scoring available when the cache is down (`03` NFR-497's availability target), at the cost of no limit during the outage; **fail closed** (refuse with 503) keeps the limit and turns a cache outage into a pricing outage. Planner's input: fixed window, fail open with the event logged and counted — a rate limit protects capacity, and an outage of the limiter should not take pricing down with it | decision point | yes — Task 5 | *open* — for the decision-maker at medium effort |
+| DP-S3-3 | **What is FR-430's "monitoring configuration" in Phase 2?** No monitoring-configuration key exists (premise h), and the monitors are WK-687's (Phase 4); `PL-1237` Task 3 limits this slice to "the per-environment *configuration* only" | (a) The per-Environment trace sampling rate, `rating.trace_sample_rate` (`settings.py:196`, the input `05` monitors read), declared workspace-or-Environment, plus the scope mechanism for WK-687 to declare its own keys; (b) new monitoring keys now; (c) the mechanism only, with no key declared | **(a).** It is the one monitoring input configured today, it is named by FR-431 ("sampling rates"), and it gives the limb's test a real key. (b) builds ahead of Phase 4 (`CLAUDE.md` §9); (c) leaves the limb with nothing to prove | scope | yes — Task 4 | **Resolved (a), ruled by the maintainer as scope** (`2026-09-30 15:13:26 BST — DECISIONS: the reconcile_ladder FD (MEDIUM, WK-674 S3); DP-S3-3 → (a), ruled by me as scope`): `rating.trace_sample_rate`, workspace-or-Environment, plus the mechanism; anything wider is `05`'s, spec only (`CLAUDE.md` §0). No decision-maker ruling is needed |
 
 ---
 
@@ -312,7 +380,7 @@ checked at dispatch only against the lane-B slice then in flight.
 - [ ] `pwd` is the executor's worktree; `git branch --show-current` is the slice branch;
   `uv sync --all-packages`.
 - [ ] Confirm `RL-1311` is on `main`, Slices 2a, the validation-rule fix and 2 are closed, and
-  DP-S3-1 to DP-S3-3 have resolvers; **stop if not**.
+  DP-S3-1 and DP-S3-2 have resolvers; **stop if not**.
 - [ ] Re-derive premises a–j at the executor's tree (after S2); quote each.
 - [ ] `gh pr list --state open`; read anything ruling on settings, keys, rate limits or the
   ladder; name the SHA read. Run the write-set check against the lane-B slice in flight.
@@ -338,8 +406,9 @@ checked at dispatch only against the lane-B slice then in flight.
 
 ### Task 4: The Environment-setting layer (FR-431, FR-446, `RL-1311`)
 
-- [ ] Red first: Acceptance 5's cases and Acceptance 6's resolve-time skip; Acceptance 9's
-  monitoring-limb case (per DP-S3-3).
+- [ ] Red first: Acceptance 5's cases (including M4's two) and Acceptance 6's resolve-time
+  skip; Acceptance 9's monitoring-limb cases, including the call site passing the Environment
+  (`backend/src/app/api/score.py:399-400`).
 - [ ] The scope on `SettingDefinition`; the resolver's Environment argument (the request's
   Environment; none skips the layer); inspection; the audited write route
   (`PUT`/`GET /api/v1/environments/{slug}/settings`, `admin:manage_settings`).
@@ -351,16 +420,20 @@ checked at dispatch only against the lane-B slice then in flight.
 - [ ] Create, rotate and revoke per Environment; the shared counter and its dependency on the
   scoring routes (per DP-S3-2); green; commit.
 
-### Task 6: The ladder reconciliation and its sampling (FR-248, NFR-496)
+### Task 6: The ladder reconciliation, on every quote (FR-248, NFR-496)
 
-- [ ] Red first: Acceptance 10's off-by-one ladder, passed by today's check.
-- [ ] `reconcile_ladder` applies every operation; the sampling rate key; the backend's
-  sampling decision passed into scoring; the failure as DP-S3-1 rules; green; commit.
+- [ ] Red first: Acceptance 10's off-by-one ladder through `score_one` (the flag is True
+  today), the FR-261 property, and the census of the raise site.
+- [ ] `reconcile_ladder`'s new signature and every caller; the real risk premium;
+  `ladder_check_version` on `Trace` and the regenerated contract; the check on every quote,
+  whatever the trace-sampling rate (red first with the rate at `0`); the dated FR-248 and
+  NFR-496 clauses were made in Task 1; the docstrings; the failure as DP-S3-1 rules; green;
+  commit.
 
 ### Task 7: The gate and the ledger
 
-- [ ] The full two-half gate in a gate slot (Acceptance 11); quote every rc, `N passed`,
-  `HEAD`, `uptime`.
+- [ ] The full two-half gate through the dev-commands slot wrapper with
+  `LOKY_MAX_CPU_COUNT=4` (Acceptance 11); quote every rc, `N passed`, `HEAD`, `uptime`.
 - [ ] The ledger: the tree, the premises, every red quote, the DP resolutions, FD 9881
   discharged at merge.
 - [ ] Item 12.
@@ -375,17 +448,27 @@ Environment-only on this slice's scope machinery, and inherits Acceptance 6's re
 - **Scope against the map:** `PL-1237` Task 3's items — the §4.3 spec change first, one key
   per Environment, the refused `dev` key, environment configuration as a Setting guarded by
   `admin:manage_settings` with a full Audit Event, NFR-499's shared Redis counter, the
-  monitoring-configuration limb, NFR-496's prod-sampling limb — are Acceptance 1, 4, 5, 8, 9
-  and 10. Its gate items — the two-replica test, the old one-key behaviour failing, the `uat`
-  monitoring value leaving `prod` unchanged, the off-by-one ladder caught in `uat` on the
-  first quote — are Acceptance 8, 4, 9 and 10.
+  monitoring-configuration limb, NFR-496's prod-sampling limb (decoupled to every quote by the
+  maintainer's 15:17:54 BST decision) — are Acceptance 1, 4, 5, 8, 9 and 10. Its gate items —
+  the two-replica test, the old one-key behaviour failing, the `uat` monitoring value leaving
+  `prod` unchanged, the off-by-one ladder caught on the first quote — are Acceptance 8, 4, 9
+  and 10.
 - **`RL-1311` applied where it operates:** items 1 and 5 (Acceptance 5, Task 4), 2 (Acceptance
   2, Task 2), 3 (Acceptance 5), 3a (Acceptance 6, Task 3); its Acceptance bullets for Slice 3
   are Acceptance 5 and 6.
 - **FD 9881** quoted verbatim (Acceptance 7) and placed in Task 3.
 - **One premise found that changes the map's NFR-496 limb:** the reconciliation it asks to
-  sample is shallow at the tree above (premise g), so the map's own broken-input case (an
+  sample is vacuous at the tree above (premise g), so the map's own broken-input case (an
   off-by-one-penny ladder) would pass. Acceptance 10 makes the check real first; DP-S3-1 asks
   what a failure does.
 - **Counts** carry their tree and predicate (premises f and h).
-- **Open:** DP-S3-1, DP-S3-2 (decision-maker, medium), DP-S3-3 (the lead routes it).
+- **auditor-close1255's audit of `0149e3f2`** (NOT CLEAN, adopted by the lead): M1 (the
+  signature change and every caller, Acceptance 10, Write set), M2 (**decided by the maintainer at 15:17:54 BST: decoupled, every quote, no DP-S3-4**;
+  Acceptance 1's dated clauses, Acceptance 10's rate-`0` case), M3 (the call site and `resolve`'s signature, Acceptance 9, Write set),
+  M4 (Acceptance 5's two cases), L1 (Acceptance 11's wrapper), L2 (`RL-1301` cited and in
+  `relates:`), L3 (DP-S3-2's window and outage; the Architecture no longer fixes a window),
+  L4 (premise h's count).
+- **The maintainer's 15:13:26 BST entry:** DP-S3-3 resolved (a); the finding filed as
+  working id 9949, cited in prose (premise g, Acceptance 10); and, relayed by the lead, the
+  call-site red case and `ladder_check_version` with its reason (Acceptance 10).
+- **Open:** DP-S3-1 and DP-S3-2, each for the decision-maker at medium effort.
