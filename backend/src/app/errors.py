@@ -16,8 +16,10 @@ from typing import Final
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import DBAPIError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.observability.logging import get_logger
 from app.observability.trace import current_trace_id
 from model_schema import FieldError, ProblemDetail
 
@@ -32,6 +34,12 @@ __all__ = [
     "problem_response",
     "unexpected_problem",
 ]
+
+#: The SQLSTATE `approval_guard()` raises. The migration `a9f3c6d21b87_approval_guard.py`
+#: holds the same literal, and a test pins the two.
+APPROVAL_GUARD_SQLSTATE: Final = "GP001"
+
+_log = get_logger("app.errors")
 
 PROBLEM_MEDIA_TYPE: Final = "application/problem+json"
 _DOC_BASE: Final = "https://docs.gi-pricing.dev/errors/"
@@ -278,6 +286,9 @@ GOVERNANCE_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # owed: a platform deployable before every kind has an implementation says
         # the capability is absent rather than accepting work it cannot move.
         "ARTIFACT_TYPE_NOT_RESOLVABLE",
+        # FR-351, added 2026-09-30 (WK-674 Slice 2a, PL-1303): the database refused a write
+        # of `approved` that did not come through the decision path (`approval_guard`).
+        "APPROVAL_OUTSIDE_DECISION_PATH",
     }
 )
 
@@ -497,6 +508,36 @@ async def _handle_http_exception(
     return problem_response(problem)
 
 
+async def _handle_database_error(request: Request, exc: DBAPIError) -> JSONResponse:
+    """Name the one database refusal that has a code; leave every other to the backstop.
+
+    **500, not 403 or 409.** `approval_guard()` is a backstop: every path that legitimately
+    writes `approved` enters the decision flag, so no client request can reach this refusal
+    and a client is not the party at fault. Reaching it means our own code wrote `approved`
+    outside the decision path, which is a defect, and a 403 would disguise it as a
+    permission problem. The code is kept so the defect is named, and it is logged at ERROR
+    with the table and ref from the trigger's DETAIL. The response text is fixed: the
+    driver's message can carry bound values.
+    """
+    if getattr(exc.orig, "sqlstate", None) != APPROVAL_GUARD_SQLSTATE:
+        raise exc
+    detail = getattr(exc.orig, "detail", None) or getattr(
+        getattr(exc.orig, "__cause__", None), "detail", None
+    )
+    _log.error(
+        "approval_guard refused a write of approved outside the decision path",
+        extra={"guard_detail": detail, "path": request.url.path},
+    )
+    problem = PlatformError(
+        "APPROVAL_OUTSIDE_DECISION_PATH",
+        "Approval was written outside the decision path",
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+        "The platform wrote an approved state outside the approval decision path (06 FR-351). "
+        "This is a defect, not a permission problem. Quote the trace id when reporting it.",
+    ).to_problem(instance=request.url.path)
+    return problem_response(problem)
+
+
 def unexpected_problem(instance: str | None = None) -> ProblemDetail:
     """The problem returned for an unhandled exception.
 
@@ -530,4 +571,5 @@ def install_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(PlatformError, _handle_platform_error)  # type: ignore[arg-type]
     app.add_exception_handler(RequestValidationError, _handle_validation_error)  # type: ignore[arg-type]
     app.add_exception_handler(StarletteHTTPException, _handle_http_exception)  # type: ignore[arg-type]
+    app.add_exception_handler(DBAPIError, _handle_database_error)  # type: ignore[arg-type]
     app.add_exception_handler(Exception, _handle_unexpected)
