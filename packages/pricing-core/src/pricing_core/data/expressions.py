@@ -17,11 +17,18 @@ from __future__ import annotations
 import ast
 from collections import deque
 from collections.abc import Iterator
+from dataclasses import dataclass
 from typing import Final
 
 import polars as pl
 
-__all__ = ["ExpressionError", "compile_expression", "referenced_columns"]
+__all__ = [
+    "ExpressionError",
+    "ExpressionSize",
+    "compile_expression",
+    "measure_expression",
+    "referenced_columns",
+]
 
 #: Node types the grammar admits. Everything else — attribute access, subscripts, lambdas,
 #: comprehensions, f-strings, walrus — is refused, because each is a route to something
@@ -83,6 +90,43 @@ class ExpressionError(ValueError):
         self.lineno: int | None = getattr(node, "lineno", None)
         self.col_offset: int | None = getattr(node, "col_offset", None)
         self.end_col_offset: int | None = getattr(node, "end_col_offset", None)
+
+
+@dataclass(frozen=True, slots=True)
+class ExpressionSize:
+    """An expression's size under 02 §4.6's limits (FR-145).
+
+    `nodes` and `depth` count `ast.expr` nodes only, the root at depth 1 (DP-S1-1 (a), RL-1291).
+    `all_nodes` counts every node `ast.walk` yields (option (b)). It is carried so that the
+    corpus measurement records both predicates, and nothing enforces it.
+    """
+
+    nodes: int
+    depth: int
+    all_nodes: int
+
+
+def measure_expression(expression: str) -> ExpressionSize:
+    """The size of `expression`, parsed but not checked against any profile."""
+    return _measure(ast.parse(expression, mode="eval").body)[0]
+
+
+def _measure(root: ast.expr) -> tuple[ExpressionSize, ast.expr]:
+    """Count iteratively, so a deep tree cannot exhaust Python's own stack here."""
+    nodes, depth, deepest = 0, 0, root
+    stack: list[tuple[ast.expr, int]] = [(root, 1)]
+    while stack:
+        node, level = stack.pop()
+        nodes += 1
+        if level > depth:
+            depth, deepest = level, node
+        stack.extend(
+            (child, level + 1)
+            for child in ast.iter_child_nodes(node)
+            if isinstance(child, ast.expr)
+        )
+    all_nodes = sum(1 for _ in ast.walk(root))
+    return ExpressionSize(nodes=nodes, depth=depth, all_nodes=all_nodes), deepest
 
 
 def _walk_positioned(node: ast.AST) -> Iterator[tuple[ast.AST, ast.AST | None]]:

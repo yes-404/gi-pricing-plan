@@ -80,6 +80,45 @@ The three broken-lock cases passed, as the plan expects. Green after the pin: `5
 `sympy` only. Acceptance 3's grep on §4.6–§4.7 hits the example line, the RL-1289 note and
 the §4.7 example, as listed there. `python3 scripts/audit-docs.py`: All checks passed.
 
+### Task 2 — the node and depth counter, and the corpus measurement
+
+Step 2 red: `ImportError: cannot import name 'ExpressionSize'`. Step 4 green: 6 passed.
+`ExpressionSize`, `measure_expression`, `_measure` are added; nothing enforces them yet.
+
+**Corpus measurement** (Step 5). Instruments: runtime capture (`/tmp/capture_expressions.py`,
+the plan's plugin) over `uv run pytest packages/pricing-core/tests examples/fremtpl2`
+(31 distinct strings reach the parser), and the static sweep
+`git grep -n -E '"(expression|expr)": *"' -- backend/tests examples '*.json'`
+(one `derive`/`filter`/`check` hit, `backend/tests/test_data_jobs.py:389`; the other five
+hits are ZEN rating steps, dropped per premise a). Classification of the 31 is mine.
+
+Corpus, **8 distinct expressions from 2 files** (`packages/pricing-core/tests/test_prepare.py`,
+`test_expression_nfrs.py`, plus `backend/tests/test_data_jobs.py` for the static hit
+`exposure_years > 0`, already among the 8). Max nodes 11, max depth 4. None exceeds 200 / 20.
+
+| expression | nodes | depth | all_nodes | source |
+|---|---|---|---|---|
+| `premium / exposure` | 3 | 2 | 6 | test_prepare.py |
+| `premium / exposure_years` | 3 | 2 | 6 | test_prepare.py |
+| `exposure_years > 0` | 3 | 2 | 5 | test_prepare.py, backend test_data_jobs.py |
+| `exposure_years > 0.3` | 3 | 2 | 5 | test_prepare.py |
+| `exposure_years > 0.75` | 3 | 2 | 5 | test_prepare.py |
+| `premium if exposure > 0.75 else 0` | 6 | 3 | 9 | test_prepare.py |
+| `round(premium / exposure) + abs(adjustment)` | 9 | 4 | 16 | test_prepare.py |
+| `round(premium / exposure) + abs(premium - 100)` | 11 | 4 | 19 | test_expression_nfrs.py |
+
+**Refusal fixtures, not corpus** (15): `(lambda: 1)()`, `(lambda: eval('1'))()`,
+`[eval(x) for x in premium]`, `[x for x in premium]`, `__import__('os').system('ls')`,
+`compile('1', '<s>', 'eval')`, `eval('1')`, `exec('x = 1')`, `f'{premium}'`, `globals()`,
+`mean(premium)`, `open('/etc/passwd').read()`, `premium.__class__`, `premium.__class__.__mro__`,
+`premium[0]`, `premium[0] + 1`, `exposure + premium // 2`. (17 counted; the 31 also
+holds 6 strings that are this task's own new test fixtures — `a + b`, the two nested `abs`, the two
+`min(x, …)` and §4.6's example loss — captured because the counter parses through the same module.
+31 = 8 + 17 + 6.)
+
+Both predicates are within limits for every corpus expression, so no deputy decision is needed
+(Acceptance 4: the Task 2 commit precedes Task 4's).
+
 ## PRs
 
 Draft PR opened on the slice branch; number recorded here when opened.
