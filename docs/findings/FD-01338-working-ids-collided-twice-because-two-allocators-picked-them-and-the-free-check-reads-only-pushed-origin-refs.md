@@ -1,5 +1,5 @@
 ---
-id: FD-9972
+id: FD-1338
 family: finding
 title: Working ids collided twice because two allocators picked them and the free-check reads only pushed origin refs
 status: active
@@ -10,10 +10,11 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9972 — Working ids collided twice: two allocators, and a free-check blind to unpushed work
+# FD-1338 — Working ids collided twice: two allocators, and a free-check blind to unpushed work
 
-**Working id 9972**, reserved to the auditor by the lead (the lead's reservation table, `eta.md`), filed as a working id and
-minted at the records PR. It is cited by number, not as a token, until then.
+**Filed under working id 9972; minted as FD-1338.** The working ids this record narrates are historical and stay as
+written: 9970 was the open question now minted as OQ-1334, 9971 the finding now minted as FD-1335, and 9969 the finding now
+minted as FD-1333. The slice with working id 9836 stays cited by number, as it is not minted.
 
 ## Finding
 
