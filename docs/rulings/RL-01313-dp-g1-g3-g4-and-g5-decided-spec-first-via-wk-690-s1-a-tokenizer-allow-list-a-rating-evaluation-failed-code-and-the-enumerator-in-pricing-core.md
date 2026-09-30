@@ -1,5 +1,5 @@
 ---
-id: RL-9982
+id: RL-1313
 family: ruling
 title: DP-G1, G3, G4 and G5 decided — spec first via WK-690 S1, a tokenizer allow-list, a RATING_EVALUATION_FAILED code, and the enumerator in pricing-core
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [RL-1263, RL-1265]
 ---
 
-# RL-9982 — DP-G1, G3, G4 and G5 decided: (a), (a), (a)+(i), (a)+(i)
+# RL-1313 — DP-G1, G3, G4 and G5 decided: (a), (a), (a)+(i), (a)+(i)
 
 ## How this was ruled
 
@@ -30,13 +30,14 @@ relates: [RL-1263, RL-1265]
   - "2026-09-30 10:57:06 BST — #968 HIGH in force";
   - "2026-09-30 11:05:21 BST — DECISION: I accept #967's departure; it supersedes the rounding
     part of my 10:46:20 (A)": `round`, `floor` and `ceil` are not on P2's allow-list.
-- **Working id 9982.** It was checked free on every `origin/*` branch, in every open PR's
-  title and body, and in the channel files. It is minted at the merge turn.
-- **Sources.** The decision points belong to the WK-1178 leaf plan #969 (working id 9833). I
+- **Minted 2026-09-30 as RL-1313** (hand-assigned in the lead's batch plan, batch 4, under the
+  maintainer's option (B)); it was filed under working id 9982.
+- **Sources.** The decision points belong to the WK-1178 leaf plan `PL-1314` (#969, working id 9833). I
   first read it at `dee9ff9d` (`:307-310`), and this record rules its DP table at head
   `1cbcf474` (`:387-391`). There, DP-G2 is withdrawn and DP-G5 is added. They implement the
-  ruling #967 (RL working id 9904, first read at `1efa639d`, then at `6eb68d77`) and discharge the finding #968 (FD working id 9885, HIGH, head `fede7e5d`).
-  None of the three is minted, so each is cited in prose.
+  ruling `RL-1312` (#967, working id 9904, first read at `1efa639d`, then at `6eb68d77`) and discharge the finding #968 (FD working id 9885, HIGH, head `fede7e5d`).
+  `PL-1314` and `RL-1312` mint in the same batch as this record. #968 is not yet minted, so it
+  is cited in prose.
 
 ## Verified first, at 9f63d0feee524815e7e0c68c99a53ac3f80e6c37
 
