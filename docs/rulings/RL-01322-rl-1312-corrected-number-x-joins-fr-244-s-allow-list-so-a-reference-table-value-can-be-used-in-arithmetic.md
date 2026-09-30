@@ -1,5 +1,5 @@
 ---
-id: RL-9965
+id: RL-1322
 family: ruling
 title: RL-1312 corrected — number(x) joins FR-244's allow-list, so a reference-table value can be used in arithmetic
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -12,10 +12,10 @@ supersedes: []
 superseded_by: ~
 corrected_by: []
 corrects: RL-1312
-relates: [RL-1312, RL-1313, OQ-9964, FR-244, FR-227, FR-69]
+relates: [RL-1312, RL-1313, OQ-1321, FR-244, FR-227, FR-69]
 ---
 
-# RL-9965 — RL-1312 corrected: `number(x)` joins FR-244's allow-list
+# RL-1322 — RL-1312 corrected: `number(x)` joins FR-244's allow-list
 
 ## How this was ruled
 
@@ -29,11 +29,11 @@ relates: [RL-1312, RL-1313, OQ-9964, FR-244, FR-227, FR-69]
   - "**later:** typing lookup outputs … is OQ 9964's residual".
 - **What this record decides.** The requirement is the maintainer's. **The mechanism, and the
   exact grammar text, are this record's.**
-- **Working id 9965.** Assigned by the lead, and minted at the merge turn. At the mint,
-  `RL-1312`'s header gains `corrected_by:` with this record's minted id, which is the append
-  check 34 allows.
-- **The open question.** This record also **raises `OQ-9964`** (working id, assigned by the
-  lead), narrowed to the steer's residual, typed lookup outputs. Its two mirror rows are this
+- **Minted 2026-09-30 as RL-1322** (hand-assigned in the lead's batch plan, batch 6, under the
+  maintainer's option (B)); it was filed under working id 9965. In the same commit,
+  `RL-1312`'s header gains `corrected_by: [RL-1322]`, which is the append check 34 allows.
+- **The open question.** This record also **raises `OQ-1321`** (minted with this record; filed under working id
+  9964), narrowed to the steer's residual, typed lookup outputs. Its two mirror rows are this
   record's disposition. A spec edit is never made without a ruling record naming it
   (`.claude/roles/decision-maker.md`, *Tools*).
 
@@ -47,7 +47,7 @@ relates: [RL-1312, RL-1313, OQ-9964, FR-244, FR-227, FR-69]
 | Why `RL-1312` missed it | `RL-1312`, "The sweep" (at `48792023`) | present | It found no function in any committed or stored expression. `number(` arrived later, in `packages/pricing-core/tests/test_rating_pin_membership.py:38` and `:232`, from `2118679b` (#988, `git log -S'number(expense_factor'`) |
 | The executor's interim | SL-1315's head `6bcf73e5` (not pushed; in the shared object store) | present | `test_rating_pin_membership.py`, 9+/5−: the `number(` expressions were rewritten as tier comparisons |
 | The evaluation-failure code | `RL-1313` DP-G4 | present, not yet built | `RATING_EVALUATION_FAILED`, which the same code slice (SL-1315) adds spec first to `03` §5.1 and to `RATING_ERROR_CODES` |
-| FR-227 on lookups | `03` FR-227; `packages/model-schema/src/model_schema/rating.py:275-288` | **absent** | "Every step declares its result type", but neither `RatingLookupStep` (`:275-280`) nor `RatingTableStep` (`:283-288`) has a `result_type`; only `RatingExpressionStep` does (`:294`). Reference-table payload columns are declared by name only (`01` FR-69; `model_schema/reference.py:43`, `:79`). This is `OQ-9964` |
+| FR-227 on lookups | `03` FR-227; `packages/model-schema/src/model_schema/rating.py:275-288` | **absent** | "Every step declares its result type", but neither `RatingLookupStep` (`:275-280`) nor `RatingTableStep` (`:283-288`) has a `result_type`; only `RatingExpressionStep` does (`:294`). Reference-table payload columns are declared by name only (`01` FR-69; `model_schema/reference.py:43`, `:79`). This is `OQ-1321` |
 
 **Probe of the locked engine.** Scratch `probe_number.py` (sha256 prefix `d016a20ed0771296`),
 using `zen-engine==0.53.0`, the `uv.lock:2786-2787` pin, installed in a scratch venv and run
@@ -107,7 +107,7 @@ A failure is **loud**: a raise at evaluation, never a silent `null` or `0`.
      applies here too. A `number()` failure in a step that *directly* consumes an
      `on_miss="error"` lookup output is reported as `REFERENCE_LOOKUP_MISS`. The quote still
      refuses, so this is a misdiagnosis, never a price. Moving the failure to compile time is
-     `OQ-9964`'s option (b).
+     `OQ-1321`'s option (b).
 4. **The exact FR-244 text.** In `RL-1312`'s amended FR-244 sentence, the one the code slice
    writes, replace
    > **Functions:** `min([…])`, `max([…])` and `abs`.
@@ -119,15 +119,15 @@ A failure is **loud**: a raise at evaluation, never a silent `null` or `0`.
    > engine, returns a number unchanged, and converts a boolean to `1` or `0`. Any other
    > string (for example `abc`, an empty string, or `1,07`) and null fail the quote with
    > `RATING_EVALUATION_FAILED`. Write `number(v ?? '1.0')` to default a missing value
-   > (`RL-9965`, correcting `RL-1312`).
+   > (`RL-1322`, correcting `RL-1312`).
 
    The rest of `RL-1312`'s sentence is unchanged.
 5. **Why not the alternatives now.**
    - Typed lookup outputs is the cleaner design, but it needs a `model-schema` field, contract
      regeneration and a runtime branch. That is not P2 scope, per the maintainer's steer,
-     and it is `OQ-9964` (below).
+     and it is `OQ-1321` (below).
    - Compare-only would regress a working capability, which the maintainer has ruled out.
-6. **`OQ-9964` is raised as the residual:** whether a lookup's output should be typed from its
+6. **`OQ-1321` is raised as the residual:** whether a lookup's output should be typed from its
    reference table's declared column type. The options are (a) typed outputs, (b) a
    compile-time payload check, and (c) `number()` only. The recommendation is (a), post-P2,
    with (c) meanwhile. The owner is WK-1178. It is mirrored in `docs/open-questions.md` (RATE)
@@ -140,7 +140,7 @@ A failure is **loud**: a raise at evaluation, never a silent `null` or `0`.
 
 ## What it obliges
 
-- **This commit:** this record and `OQ-9964`'s two mirror rows.
+- **This commit:** this record and `OQ-1321`'s two mirror rows.
 - **The mint turn:** `RL-1312`'s header gains `corrected_by: [<this record's minted id>]`.
 - **The WK-1178 code slice (SL-1315, executor-1178fix), before its slice audit:**
   - `number` joins the tokenizer's function data, with exactly one argument;
@@ -148,7 +148,7 @@ A failure is **loud**: a raise at evaluation, never a silent `null` or `0`.
   - `RATING_EVALUATION_FAILED` lands in the same slice;
   - the `number(expense_factor ?? "1.0")`-style tests are **kept or restored as real
     arithmetic cases**, not only as tier comparisons (the maintainer's 16:01:23 entry).
-- **The lead:** places `OQ-9964` on a gate row. Roadmap §10 is the lead's file.
+- **The lead:** places `OQ-1321` on a gate row. Roadmap §10 is the lead's file.
 
 ## Acceptance — the violation that must become detectable
 
