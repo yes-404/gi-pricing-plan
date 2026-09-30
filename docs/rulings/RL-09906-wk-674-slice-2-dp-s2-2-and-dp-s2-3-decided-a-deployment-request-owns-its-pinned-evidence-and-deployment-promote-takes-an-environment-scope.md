@@ -217,6 +217,21 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
      (`backend/src/app/api/deps.py:26-27`). *(Worded on the leaf plan's rev 4 question. This
      item first said "the workspace's Environments", which was loose wording and not a
      design difference.)*
+   - **A credential names only existing Environments.** A Service Account's `environments`
+     is a free `list[str]` (`backend/src/app/api/service_accounts.py:63`), and a key is minted
+     from `environments[0]` (`:180` at creation, `:246` at rotation). Nothing checks either
+     against an Environment, because at this tree there are none to check against. Once
+     Slice 2 creates Environment records, the rule is:
+     - each name in `environments` must be an existing Environment's slug at creation and at
+       rotation, or the request is refused with `VALIDATION_FAILED` 422 naming it;
+     - retiring an Environment that an unrevoked Service Account key names is refused with
+       409, like one a policy entry names, until the key is revoked or its environments are
+       narrowed.
+
+     **Carried by Slice 2**, which creates the Environment records and their retire route.
+     `Caller.environment` then always names a real, unrenamable Environment. **Red first:**
+     issuing a key for `prd` is refused, and retiring `uat` while a live key names it is
+     refused.
    - **Two leaf-plan choices, both consistent with this ruling** (rev 4, `4bde1cfb`):
      - the Deployment Request's slug is its target Environment's immutable slug
        (`deployment:prod@3`). That meets item A.1's constraint, because that slug cannot
@@ -313,5 +328,6 @@ grant names.** In WK-674 Slice 2, each is shown failing on deliberately broken i
   refused. A request whose pinned predecessor item no longer satisfies FR-429's predicate is
   refused at the route;
 - item A.6's three cases: a display rename keeps `prod` gated; a slug change is refused; a
-  policy naming a non-existent environment is refused;
+  policy naming a non-existent environment is refused; a Service Account key for `prd` is
+  refused; retiring an Environment a live key names is refused;
 - item B.5's four cases.
