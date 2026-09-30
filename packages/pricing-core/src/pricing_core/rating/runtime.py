@@ -47,7 +47,8 @@ import zen
 from model_schema.modelling import GbmFitResult
 from model_schema.rating import RatingAlgorithm, RatingModelCallStep
 from pricing_core.modelling.gbm import load_gbm_booster, predict_gbm
-from pricing_core.rating.compile import Bundle, JdmGraph
+from pricing_core.rating.compile import Bundle, JdmGraph, check_step_refs_pinned
+from pricing_core.safe_error import CodedError
 
 __all__ = ["MODEL_CALL_ERROR_KEY", "CompiledBundle", "load_bundle", "to_wire"]
 
@@ -530,6 +531,11 @@ def _load_boosters(
         ref_str = str(ref)
         if ref_str in boosters:
             continue
+        if ref_str not in payloads:
+            raise CodedError(
+                f"RATING_VERSION_UNPINNED: model_call step {step.step_id!r} names {ref_str}, "
+                "which the bundle does not carry (FR-237)"
+            )
         fit_result = payloads[ref_str].get("fit_result", {})
         model_type = fit_result.get("model_type")
         if model_type in ("xgboost", "lightgbm"):
@@ -574,8 +580,12 @@ def load_bundle(bundle: Bundle) -> CompiledBundle:
     Performs no I/O: every pinned artifact's content already travels *inside* `bundle`
     (RL-873) — `resolved_payloads`, never a blob reference — so nothing here reaches a
     database, a blob store, or the network (NFR-491).
+
+    Refuses with `RATING_VERSION_UNPINNED` a bundle whose step ref is not pinned at its exact
+    version, so a bundle compiled before that check existed cannot price silently (FR-237).
     """
     algorithm = RatingAlgorithm.model_validate(bundle.resolved_payloads[bundle.algorithm_ref])
+    check_step_refs_pinned(algorithm, bundle.pins)
     boosters = _load_boosters(algorithm, bundle.resolved_payloads)
     handler = _model_call_handler(algorithm, bundle.resolved_payloads, boosters)
     wire = to_wire(bundle.graph, bundle.resolved_payloads)
