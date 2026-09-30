@@ -3,7 +3,7 @@ id: FD-9692
 family: finding
 title: Three 03 §5.3 views (the rating version list, the regression suite and Deployments) are owned by no Work, plan, ruling or closure
 status: active
-created: 2026-09-29
+created: 2026-09-30
 owner: auditor
 tree: 880feb499eddb9e854c525770e95fb19373a2311
 corrected_by: []
@@ -11,6 +11,8 @@ relates: [WK-675, WK-674, WK-673, WK-1250, RL-1263]
 ---
 
 # FD-9692 — Three 03 §5.3 views have no owner
+
+*First filed 2026-09-29 as a working-id draft on #921; `created:` is the date the id is to be minted against (2026-09-30), so that `created` is non-decreasing with the number (check 31).*
 
 ## Finding
 
@@ -62,7 +64,7 @@ the records PR. First read at `origin/main` `f0c3d197`, 2026-09-29; **re-verifie
    - **`PL-1268`** (WK-690) — owns `02`'s Custom objective library authoring view only.
    - **`PL-1278`** (WK-1250 Slice 1) — a backend artifact plan; no view.
    - **`PL-1237`** (WK-674) — unchanged: the backend `GET` for deployment history only (item 3).
-   - **#920** (WK-675's map plan, `PL-9681`, still `draft` and the PR still open, branch
+   - **#920** (WK-675's map plan, the #920 plan (working id 9681), still `draft` and the PR still open, branch
      `wk675-map-plan`) — its "Not WK-675's" section (lines 137 to 154 of the plan) **declines**
      the three views, and its Scope list marks FR-237 to FR-243, FR-260/261/1221 and FR-267 to
      FR-272 "unowned" (lines 284 to 291). It routes the owning decision to the lead and cites this
@@ -77,7 +79,7 @@ the records PR. First read at `origin/main` `f0c3d197`, 2026-09-29; **re-verifie
 8. **What each view needs from the backend, read at `880feb49`.** These decide the weighing.
    - **Rating version list:** `03` §5.1 has `POST /rating-versions` and `POST …/{id}/compile`
      (`03:753`, `:754`) and **no `GET` list route**; the by-id read is a Phase 1b route in no §5.1
-     row (`PL-9681` DP-5). The view has **no backend** today, and the spec does not declare one.
+     row (the #920 plan (working id 9681) DP-5). The view has **no backend** today, and the spec does not declare one.
    - **Regression suite:** the backend exists, `GET /rating-versions/{id}/regression-runs/{run_id}`
      and `…/cases` (`03:762`, `:763`) and `GET /regression-suites/{slug}@{version}` (`03:757`),
      built by WK-672. The view has its backend; only the frontend limb is unowned.
@@ -99,7 +101,7 @@ Sat 2026-10-03 (`docs/roadmap.md`, the P2 freeze block). Candidates, per view:
 
 | Candidate | Spec fit (`03` §5.3, Contents cell) | File contention (`RL-1263` option (c)) | Scope freeze |
 |---|---|---|---|
-| **A. Fold into WK-675** (a `WK-` row scope change) | Best for all three: it is `03` §5.3's frontend Work, and its routes share the `/rating` tree, the router and the generated client with the four views | WK-675 is one slice at a time (`delivery-process.md` §8) and its frontend slices are serial with each other, so no contention inside it. Its view slices are expected to add routes to `frontend/src/router/index.ts` (an inference from `PL-9681`, not stated there), a shared path outside the registry list, so it would serialise against any other frontend Work | Adds no new Work, so the freeze is met; but adds slices to a Work already at 9 slices, 9 / 18 days likely / worst (`PL-9681`) |
+| **A. Fold into WK-675** (a `WK-` row scope change) | Best for all three: it is `03` §5.3's frontend Work, and its routes share the `/rating` tree, the router and the generated client with the four views | WK-675 is one slice at a time (`delivery-process.md` §8) and its frontend slices are serial with each other, so no contention inside it. Its view slices are expected to add routes to `frontend/src/router/index.ts` (an inference from the #920 plan (working id 9681), not stated there), a shared path outside the registry list, so it would serialise against any other frontend Work | Adds no new Work, so the freeze is met; but adds slices to a Work already at 9 slices, 9 / 18 days likely / worst (the #920 plan (working id 9681)) |
 | **B. New Work** (P2) | Same fit as A for the views, and cleaner ownership | A second frontend Work editing `router/index.ts` serialises against WK-675, and cannot start until a gate slot is free (`RL-1263`) | **A new Work after Sat 2026-10-03 is refused by the freeze**; before it, a new `WK-` row and map plan are needed, with CR-1212's ordering left unchanged |
 | **C. WK-673 (dislocation)** | Poor: `PL-1267` says it ships no frontend | n/a | n/a |
 | **D. WK-674 (deployment)** | Fair for Deployments only: the same Work builds its history `GET`; `PL-1237` does not build a view | Its slices are backend-heavy, and it edits `main.py` (a registry file, exempt) and the `Environment` contract | Adds frontend to a backend Work already carrying the F1 obligation and NFR limbs |
@@ -110,7 +112,7 @@ Sat 2026-10-03 (`docs/roadmap.md`, the P2 freeze block). Candidates, per view:
 1. **Rating version list (`/rating`).** Candidates: A, B, E. It needs a **new backend list route**
    that `03` §5.1 does not declare (item 8), so placing it anywhere is a spec change first
    (`CLAUDE.md` §0). It is also the entry point for FR-25: without it the designer, editor and
-   sandbox have no path from the entry (`PL-9681`, "A consequence for FR-25").
+   sandbox have no path from the entry (the #920 plan (working id 9681), "A consequence for FR-25").
 2. **Regression suite (`/rating/:slug/v/:version/tests`).** Candidates: A, B, E. Backend is built,
    so this is the cheapest of the three: one page over three existing `GET`s (item 8).
 3. **Deployments (`/rating/environments`, with `07:392`'s `/admin/environments`).** Candidates: A, B,
@@ -119,7 +121,7 @@ Sat 2026-10-03 (`docs/roadmap.md`, the P2 freeze block). Candidates, per view:
 
 **Recommendation (the auditor's, not a decision).**
 - **Rating version list and Regression suite: option A (WK-675)**, as two further slices after S6
-  and before S8/S9 in `PL-9681`'s order, so no slice waits on another Work. Rationale: they share
+  and before S8/S9 in the #920 plan's (working id 9681) order, so no slice waits on another Work. Rationale: they share
   the `/rating/:slug` route tree, the generated client and the router; a second frontend Work would
   serialise against WK-675 on `router/index.ts` under `RL-1263`, buying no parallelism; and the
   list view is the FR-25 entry the other four need. **Precondition:** a spec change first, for the
@@ -130,7 +132,7 @@ Sat 2026-10-03 (`docs/roadmap.md`, the P2 freeze block). Candidates, per view:
   needs, so E carries the highest risk of the three. Splitting it out is the cost-saving lever, not
   the other two.
 - **The budget consequence is the maintainer's to see:** three added slices at the frontend band of
-  0.75 / 1 / 2 days (`PL-9681`) move WK-675 from 9 slices, 6.75 / 9 / 18 days to 12 slices,
+  0.75 / 1 / 2 days (the #920 plan (working id 9681)) move WK-675 from 9 slices, 6.75 / 9 / 18 days to 12 slices,
   9 / 12 / 24 days, before any leaf-plan split of S2 or S4. That arithmetic is the plan's own band
   applied to three slices, not a re-estimate.
 - **Not recommended:** B, because the freeze leaves no room to cut a new Work's map plan and
@@ -153,7 +155,7 @@ ruling.
 
 **The maintainer ruled, by delegation: option A for all three views.** Recorded from
 `~/gi-pricing-plan.local/channel/to-lead.md`, the entry "2026-09-30 05:28:45 BST — SCOPE DECISION:
-#921 FD-9692, the three unowned `03` §5.3 rating views go to WK-675 (option A)", which rests on this
+#921 …, the three unowned `03` §5.3 rating views go to WK-675 (option A)", which rests on this
 essay's Options at `b6f8161d`, re-verified at `880feb49`, **as corrected by** the entry "2026-09-30
 05:29:29 BST — DATED CORRECTION to "SCOPE DECISION: #921" (05:28:45): the slice count only". Both are
 channel entries, not merged records; the ruling record is the mint turn's.
@@ -161,16 +163,21 @@ channel entries, not merged records; the ruling record is the mint turn's.
 - **Owner: WK-675**, with the three views as three new slices. The finding's confirming event
   (each route has a named owner) is met once WK-675's plan (#920) carries them.
 - **Order inside WK-675:** the Rating version list, then the Regression suite, after S6 and before
-  S8/S9; the Deployments view last, after WK-674's deployment-history `GET` has landed. The planner
-  re-derives the order at #920's revision (that is `PL-9681`'s DP-4's interaction).
+  S8/S9; the Deployments view last, after WK-674's deployment-history `GET` has landed.
+  **Corrected 2026-09-30 by the maintainer** (`~/gi-pricing-plan.local/channel/to-lead.md`, the entry
+  "2026-09-30 05:34:33 BST — SCOPE DECISION: #920 DP-4, option (a); the S12 order corrected; the S11
+  run-list route covered"): S12 (Deployments) waits on **SL-1260**, WK-674's last slice (FR-269 rollback
+  via SL-1259, FR-271 shadow via SL-1260), not on the history `GET` alone, because `03:1051` requires the
+  rollback control and the shadow configuration. **The full view ships, not a partial one.** The planner
+  re-derives the order at #920's revision (that is the #920 plan's (working id 9681) DP-4's interaction).
 - **Spec first (`CLAUDE.md` §0):** `03` §5.1 has no `GET` list route for rating versions (item 8).
   The Version-list slice's first task is that spec change, a new FR and the §5.1 row, in the same
   commit as its code. It is not built ahead of its spec.
 - **Budget:** #920 absorbs the three slices at its revision, **from 10 to 13 slices**, about 9.75 / 13 / 26
   days at the plan's per-slice band (exact figure per the planner's re-derivation on #920). The
   maintainer's first entry said 9 to 12 and 9 / 12 / 24; his **dated correction** supersedes the count
-  only, because `PL-9681` already has 10 slices with `RL-1261`'s S7b. The Options above quoted 9 slices
-  because they read `PL-9681`'s row (a) (DP-2 as it then stood); `RL-1261` has since ruled (b).
+  only, because the #920 plan (working id 9681) already has 10 slices with `RL-1261`'s S7b. The Options above quoted 9 slices
+  because they read the #920 plan's (working id 9681) row (a) (DP-2 as it then stood); `RL-1261` has since ruled (b).
 - **Why A, and not E for Deployments** (the entry's reason, summarised): the three are specified P2
   views, so dropping one is a scope cut and the standing instruction is to complete works, not trim
   them; G2's deploy step is a scripted journey, so E was possible but not needed; with two lanes under
