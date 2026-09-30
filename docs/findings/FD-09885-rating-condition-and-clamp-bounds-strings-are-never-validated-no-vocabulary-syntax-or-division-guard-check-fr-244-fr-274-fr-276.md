@@ -18,7 +18,8 @@ relates: [WK-1178]
 reproduction (`~/gi-pricing-plan.local/channel/to-lead.md`, "2026-09-30 10:53:10 BST — DECISION:
 condition/clamp FD (B) — HIGH on independent reproduction; owner and order; two small items"),
 and accepted it in force once auditor-docs reproduced it ("2026-09-30 10:57:06 BST — #968 HIGH
-in force: accepted; committed `/` strings; #935 minted as RL-1296"). The FD was first filed at
+in force: accepted; committed `/` strings; …", the header's tail elided because it names an
+unrelated mint). The FD was first filed at
 medium (provisional) on "2026-09-30 10:50:57 BST — #967 CLEAN on content: noted; B confirmed →
 file the FD now". The trigger was met by a silent wrong accept (D2 below) and a silently lost
 clamp (E4 below).
