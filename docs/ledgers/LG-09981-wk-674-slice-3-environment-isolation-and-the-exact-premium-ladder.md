@@ -396,6 +396,33 @@ Premise check at `36b2a121` (executor-674s3):
 - `gh pr list --state open`: no open PR touches `packages/`, `backend/`, `docs/specs/03-*` or
   `docs/open-questions.md` (the docs-only PRs #1023, #987, #986 touch plans, roadmap, findings).
 
+### Task 6 (ladder) — progress and a stop (executor-674s3, 2026-09-30 evening)
+
+Commits on `sl-1257-ladder-exact` (base `36b2a121`): the contract (`PositionalDecimalStr`,
+`LadderRung.unrounded_minor`/`rounding`, `divide`/`clamp` kinds and operands, all optional;
+`03` §4.4 example replaced by one that reconciles: 24_150 x 1.15 = 27_772.5 ... payable
+36_108); the builder (`rating/ladder.py` with the moved rung mapping, `recover_operation`,
+`ladder_violations`/`reconcile_ladder` R0-R4; `runtime.py` generated `string()` reads and the
+clamp's `__before`/`__min`/`__max`; `score.py` builder and `_build_outputs`); and the tests
+(`test_rating_ladder_exact.py`, `test_rating_ladder_sweep.py` with the frozen baseline in
+`baseline_ladder.py`, `test_scoring_ladder.py`).
+
+**Disclosure (condition 8):** one unslotted `pytest packages/pricing-core -x` run (55 s,
+967 passed, stopped at the one expected failure, the old re-derivation test); the orphaned
+joblib workers were stopped by PID after `readlink /proc/<pid>/cwd` named this worktree. It
+is not gate evidence.
+
+**STOP (RL-1329 §2, "a count above 0 stops the slice for the lead").**
+`_check_clamp_placement` (appended to `ALGORITHM_CHECKS`; code `LADDER_CLAMP_UNPLACEABLE`
+appended to `RATING_ERROR_CODES`) refuses **2 committed fixture algorithms**, both the same
+shape: `packages/pricing-core/tests/test_rating_compile.py::_algorithm` (9 tests fail on it)
+and `backend/tests/test_rating_algorithms.py::_algorithm`. Their only output step is
+`payable_premium_minor`, which consumes the clamped name `office_premium_minor`: a rung after
+`constraints` reading a clamped name (no rung sits before `constraints`). Seeds, examples
+and stored bundles refused: 0 (`git grep` for `clamp_bounds` finds only tests, specs and
+source). Recommendation: edit both fixtures (test-only, not a golden suite): add an
+expression step so the payable reads a downstream name. Not done; waiting for the lead.
+
 ## PRs
 
 (none yet; the lead opens or approves the PR at the gate.)
