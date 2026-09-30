@@ -211,7 +211,7 @@ WK-690 Slice 2, per the plan's tasks:
 - **Task 6:** DP-S2-6.
 
 **Slice 3:**
-- the backend registration of `OBJECTIVE_ROUND_BUDGET_EXCEEDED`;
+- the backend registration of `OBJECTIVE_ROUND_BUDGET_EXCEEDED` **and of `OBJECTIVE_NONFINITE_DERIVATIVE`**, in the backend's objective codes. The fit-site mapping raises `PlatformError("OBJECTIVE_NONFINITE_DERIVATIVE", …)`, and `PlatformError.__init__` refuses any code not in `_KNOWN_CODES` (`backend/src/app/errors.py:402`). `git grep NONFINITE origin/main -- backend/src/app/errors.py` finds nothing *(added 2026-09-30 on auditor-plans2's F4)*;
 - **DP-S2-4's persistence path.** `PlatformError`'s `job_detail` keyword, the worker clause
   that sets `JobError.detail` from it, and the fit-site mapping of `NonFiniteDerivativeError`.
   Red first: a NaN-producing objective's failed fit job carries `round_index`, `rows`,
