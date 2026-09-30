@@ -32,7 +32,7 @@ from typing import Any, Final
 
 import polars as pl
 
-from pricing_core.data.expressions import compile_expression
+from pricing_core.data.expressions import GrammarProfile, compile_expression
 from pricing_core.progress import ProgressCallback
 
 __all__ = [
@@ -164,10 +164,14 @@ def _apply_step(kind: str, frame: pl.DataFrame, step: Mapping[str, Any]) -> pl.D
             )
         case "derive_expression":
             return frame.with_columns(
-                compile_expression(params["expression"]).alias(params["column"])
+                compile_expression(params["expression"], profile=GrammarProfile.RECIPE).alias(
+                    params["column"]
+                )
             )
         case "filter_rows":
-            return frame.filter(compile_expression(params["expression"]))
+            return frame.filter(
+                compile_expression(params["expression"], profile=GrammarProfile.RECIPE)
+            )
         case "deduplicate":
             return frame.unique(subset=params.get("columns"), keep="first", maintain_order=True)
         case "pseudonymise":
