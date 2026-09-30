@@ -158,10 +158,54 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
           `approval_requests` as the eighth, because its `status` takes `approved` from
           `decide` at `:416`.) **`deployment_requests`** gets the same trigger in the Slice 2
           migration that creates it (sub-item 9).
-        - **What it refuses:** it raises when `NEW.status = 'approved'` (on update, only
-          when `OLD.status IS DISTINCT FROM NEW.status`) and
-          `current_setting('app.approval_decision', true) IS DISTINCT FROM 'on'`. Its
-          SQLSTATE maps to one named refusal in the platform's error translation.
+        - **What it refuses: an `approved` row without its evidence** (the maintainer's
+          entry "11:55:31 BST — #971 trigger at ed879f7b: T1–T3 agreed; the forgeable-flag
+          residual gets a steer toward an evidence-based condition", adopted). It checks
+          whenever `NEW.status = 'approved'` on an INSERT, or on an UPDATE that changes
+          `status` or any column the artifact ref is built from. What it then requires
+          depends on the table:
+          - **On the 7 artifact tables, evidence.** An `approval_requests` row must exist
+            with `workspace_id = NEW.workspace_id`, `status = 'approved'` and `artifact_ref`
+            equal to this row's ref. That row may be committed, or written earlier in the
+            same transaction, as `decide` writes it at `:416` and flushes it at `:419`
+            before the carry. The flag alone never satisfies this. On the 5 tables with no
+            allowance (`models`, `custom_metrics`, `custom_objectives`, `peril_structures`,
+            `rating_versions`), the auditor's forgery,
+            `set_config('app.approval_decision', 'on', true)` followed by an approved write,
+            is refused. Forging now needs a forged, decided request.
+          - **On `validation_rules` and `validation_rule_sets`, evidence or the flag.** Every
+            allowance site of sub-item 5 writes one of these two tables, and no other. The
+            flag is accepted only on the tables whose trigger names it (next bullet), so the
+            allowance is confined to those two tables. When the last allowance site on a
+            table goes, a migration removes the table's flag argument. That is shrink-only.
+          - **On `approval_requests` itself, the flag.** Its transition to `approved` keeps
+            the flag, behind `decide`'s existing guards: separation of duties
+            (`SUBMITTER_CANNOT_APPROVE` `:330`, `AUTHOR_CANNOT_APPROVE` `:351`), the one
+            decision per approver (`DUPLICATE_APPROVER` `:407`,
+            `uq_approval_decisions_one_each`) and the quorum count (`:540-554`). A trigger
+            that also counted `approval_decisions` against `approvers_required` would make a
+            forged request need forged decision rows too. That was considered and is not
+            required by this ruling.
+          - **How the trigger derives the ref: one function, with per-table trigger
+            arguments.** The stored ref is `str(ArtifactRef)`, `{type}:{slug}@{version}`
+            (`refs.py:75`; `approvals.submit` stores it at `approvals.py:247`). Each of the
+            7 tables has `workspace_id` and `version`. The slug column is `slug`, except on
+            `models`, where it is `model_family_slug` (`modelling.py:1152-1154`). Each
+            `CREATE TRIGGER` passes `(artifact type, slug column[, 'flag'])` as `TG_ARGV`,
+            and the function builds
+            `TG_ARGV[0] || ':' || (to_jsonb(NEW) ->> TG_ARGV[1]) || '@' || NEW.version`.
+            The trigger's `UPDATE OF` list is `status, workspace_id, <slug column>,
+            version`, so re-pointing an approved row at another ref is re-checked.
+            - Rejected: a generated `artifact_ref` column on each table, which is 7 schema
+              changes and 7 copies of the format;
+            - rejected: 7 per-table functions, which are 7 copies of one rule.
+          - **The ref format now has a second writer, in SQL.** `CLAUDE.md` §2's rule on
+            shapes defined twice applies, so a test pins the two together. For each of the 7
+            tables, it inserts a row and asserts that the trigger's composed ref equals
+            `str(ArtifactRef(type=…, slug=…, version=…))` for that row. It is red first on a
+            planted `'/'` separator.
+
+          Its SQLSTATE maps to one named refusal in the platform's error translation.
           - **`OF status` narrows only the UPDATE event.** Every INSERT fires the trigger,
             so an insert that relies on a column default is caught.
           - **The comparison is `IS DISTINCT FROM 'on'`, never `= ''` or `IS NULL`.** Once a
@@ -195,6 +239,16 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
           clean exit". So a transaction-local setting covers `decide`, the carry and both
           flushes in the decide route (`api/approvals.py:250-260`), which closes M2. It
           cannot leak to another transaction on a pooled connection.
+        - **The block resets the flag on exit** (corrected on auditor-close1255's W1 and
+          W2). `SET LOCAL` lasts until the end of the **transaction**, not the end of the
+          block, and leaving the `ContextVar` does not undo it. The auditor showed that
+          without a reset, an unrelated approved write **after** the block, in the same unit
+          of work, was allowed (W1). So `approval_decision()` flushes the session and then,
+          in a `finally`, executes `SET LOCAL app.approval_decision = 'off'`. With that
+          reset the same write was refused (W2). The flush comes before the reset, so the
+          block's own pending write meets the trigger while the flag is on. A write left
+          unflushed at exit is flushed later under `'off'`, and is refused: it fails
+          closed.
         - **The sanctioned decision path** enters the context in exactly two places:
           - `platform/approvals.decide`, from its assignment at `:416` through its flush at
             `:419`;
@@ -204,8 +258,11 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
         - **Two static checks, by name:**
           - `approval_decision()` is entered nowhere in `backend/src` or `examples/` except
             those two places and the named allowance of item 5;
-          - the literal `app.approval_decision` appears nowhere else in `backend/src`,
-            `backend/migrations` or `examples/`.
+          - the literal `app.approval_decision` appears only in the decision module
+            (`platform/approvals.py`, which defines `approval_decision()`) and in the
+            guard's migration. It appears nowhere else in `backend/src`,
+            `backend/migrations` or `examples/`. The allowance sites of sub-item 5 enter the
+            context manager and never name the flag.
      4. **What covers what, and the one residual.**
         - A test queries `pg_trigger` and fails if any table in item 1's derived set lacks
           the guard trigger. A new approval table cannot ship unguarded.
@@ -222,6 +279,25 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
           (`test_audit.py:168`, `:194`; `test_api_audit.py:153`). **A third static check:**
           no SQL string in `backend/src` or `examples/` sets it. The one mention in
           `backend/src` at this tree, `platform/objectives.py:108`, is docstring prose.
+        - **The residual: the flag is not a capability** (auditor-close1255's advisory).
+          Any code on the application's connection can run
+          `SELECT set_config('app.approval_decision', 'on', true)`. The auditor ran that
+          and then an approved write, and the write succeeded against the flag-only
+          trigger. Under the evidence condition of sub-item 2:
+          - on the 5 evidence-only tables that forgery is refused;
+          - what the flag still opens is `approval_requests`' own transition, and the two
+            validation tables while they hold an allowance.
+
+          Forging an approved artifact on the 5 tables therefore takes a forged request:
+          the flag, then an approved `approval_requests` row naming the artifact, then the
+          write. On the validation tables it takes the flag alone. The static literal scan
+          is the guard on the flag, and a literal assembled at run time (concatenated, or
+          built in an f-string) evades it. That is named here, beside the superuser and
+          `session_replication_role` residuals, not hidden. The
+          scan does catch a session-level `SET` (without `LOCAL`, or `set_config(…, false)`),
+          which would leak across the pool. The one permitted site uses the
+          transaction-local form, and a red-first case shows that the next transaction on
+          the same pooled connection does not read `'on'`.
      5. **The allowance: named call sites that may set the flag outside the decision path,
         pinned as a literal and shrink-only.** Every table keeps its trigger. The allowance
         is by **site**, not by table, so a new writer on a validation table is still refused.
@@ -259,11 +335,26 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
         - a population table with no trigger fails the `pg_trigger` test;
         - a third `approval_decision()` site, or a stray `app.approval_decision` literal,
           fails its static check;
+        - **evidence:**
+          - on each of the 5 evidence-only tables, `set_config('app.approval_decision',
+            'on', true)` followed by an approved write is refused;
+          - so is an approved write whose only approved request names another version of
+            the same slug, another workspace's ref, or a request still in `review`;
+          - re-pointing an approved row's `version` to a ref with no approved request is
+            refused;
+          - with the evidence condition replaced by the flag check, the first of these
+            cases fails;
+        - **after the block:** an approved write made after `approval_decision()` exits,
+          in the same unit of work, is refused. Without the exit reset, this case fails;
+        - **no leak:** the next transaction on the same pooled connection reads the flag
+          as not `'on'`;
         - **positive controls:** the decide-and-carry path approves a request and its
           artifact; each allowance site writes successfully; and removing an allowance entry
           makes its site's write refused.
      8. **Zero writers.** `peril_structures` has no sanctioned writer of `approved` today, and
-        its trigger refuses any attempt outside the decision path.
+        its trigger refuses any attempt outside the decision path. Whether its `approved`
+        state should be reachable at all is the perils finding's question, routed by the
+        lead.
      9. **Sequencing: the guard is WK-674 Slice 2a, which lands before Slice 2** (the
         maintainer accepted the split in the 11:48:28 BST entry, after the lean in the
         11:45:55 BST entry).
@@ -275,8 +366,9 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
         - **The WK-1178 validation fix slice depends on Slice 2a.** That slice removes the
           temporary allowance entries of sub-item 5, and a removal is only red first once
           the trigger exists to refuse the write.
-        - **Slice 2 carries the `deployment_requests` extension.** Its creating migration installs the same
-          trigger function on the new table. The vocabulary of its `status` column joins
+        - **Slice 2 carries the `deployment_requests` extension.** Its creating migration
+          installs the same trigger function on the new table, as an evidence-only table
+          with the arguments `('deployment', <its slug column>)` and no flag argument. The vocabulary of its `status` column joins
           item 1's derivation, so the `pg_trigger` test of sub-item 4 fails until the
           trigger is present. The deploy-side plant joins sub-item 7.
         - Slice 2a's leaf plan and its place in the dispatch order are the planner's to
@@ -301,7 +393,11 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
         - **The rule:**
           - the `pg_trigger` test of sub-item 4 runs against `test_database_url()`, the
             database the suite runs on. It **fails, never skips**, when any table in item
-            1's derived set lacks the guard trigger. At Slice 2a that set is the 8 existing
+            1's derived set lacks the guard trigger. **It does not use the `database`
+            fixture**, which skips on an unreachable database (`conftest_db.py:190`) and on
+            an unmigrated one (`:192-197`). It opens its own connection to
+            `test_database_url()` and asserts, so an unreachable or unmigrated database
+            fails it (corrected on auditor-close1255's T3). At Slice 2a that set is the 8 existing
             tables, and at Slice 2 it adds `deployment_requests`;
           - sub-item 7's red-first plants run on that same database;
           - the fixtures stay on `alembic upgrade head`. A fixture that ever builds a
@@ -312,9 +408,7 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
             guard's, the `pg_trigger` test fails.
         - A head check in the `database` fixture (comparing `alembic_version` to the script
           head) is a sound addition for Slice 2a. It is not required, because the
-          `pg_trigger` test already fails on exactly that database. It
-        is guarded, and the note says so. Whether its `approved` state should be reachable
-        is the perils finding's question, routed by the lead.
+          `pg_trigger` test already fails on exactly that database.
 5. **The deploy route executes only an approved request.** For a target whose deployments are
    approval-gated, `POST /api/v1/environments/{env}/deployments` names an **approved**
    Deployment Request and re-evaluates FR-429's one predicate from the request's **pinned**
