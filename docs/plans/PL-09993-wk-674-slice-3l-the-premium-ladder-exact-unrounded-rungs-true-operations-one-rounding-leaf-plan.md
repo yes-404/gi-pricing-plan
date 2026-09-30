@@ -51,7 +51,7 @@ salvage branch** from the halted WK-674 S3 dispatch; Task 0 says how it is taken
   note), §5.1 (the owned-code list), §10 (`OQ-1316`, `03:1194`), **NFR-496** (`03:1165`). Line
   numbers are at the tree above.
 - The rulings this slice executes: **`RL-1329`** (DP-S3-5), **in full**, and the DP-S3-1 ruling
-  (working id 9983, draft PR #1026, read at its head `4e9aecee74ebc53229dbbaa06ff4ec7af76ce832`;
+  (working id 9983, draft PR #1026, read at its head `2b98b5aacb4ce37cc98deb7fe2d53fd7ff799008`;
   **not on `main`**, so it is cited by working id and PR until it mints, and its minting is an
   activation need). **`RL-1343`** (OQ-1334) binds what this slice must **not** change.
 - The findings it discharges: **`FD-1336`** (all three limbs and F4, with the NFR-496
@@ -105,8 +105,10 @@ recorded.
    `09000`. The draft's file prints `09983`, a working id, not a mint: **unmet**. Then the dispatch record diffs the minted ruling against the
    text this plan was written from, and quotes the diff:
    ```bash
-   git diff 4e9aecee74ebc53229dbbaa06ff4ec7af76ce832:docs/rulings/RL-09983-dp-s3-1-decided-a-ladder-that-does-not-reconcile-refuses-the-quote-on-every-scoring-path-and-is-logged-and-counted.md "$M":<the path the command above printed>
+   git diff 2b98b5aacb4ce37cc98deb7fe2d53fd7ff799008:docs/rulings/RL-09983-dp-s3-1-decided-a-ladder-that-does-not-reconcile-refuses-the-quote-on-every-scoring-path-and-is-logged-and-counted.md "$M":<the path the command above printed>
    ```
+   `git grep` prints each path as `<sha>:<path>`: strip everything up to and including the first
+   `:` of the printed path before passing it to `git diff`.
    **Where the minted ruling and Task 4 differ, the minted ruling wins**, and the dispatch record
    names each difference (the rule `RL-1329` set for D1, applied again).
 4. **The records this slice builds from are on `main`:**
@@ -120,7 +122,7 @@ recorded.
 6. **The status flip has merged, and the lead has given the go.** The flip (this plan and
    `SL-1345` to `active`) is its own PR, after needs 1–5 are pasted:
    ```bash
-   P=$(git grep -l -E '^slice: SL-1345$' "$M" -- docs/plans/); git show "$M":"$P" | grep -m1 '^status:'
+   P=$(git grep -l -E '^slice: SL-1345$' "$M" -- docs/plans/ | sed 's/^[^:]*://'); git show "$M":"$P" | grep -m1 '^status:'
    git show "$M":docs/roadmap.md | awk '/^#### SL-1345 /{f=1} f && /^status:/{print; exit}'
    ```
    Expected: both lines begin `status: active`. Then the lead's go, dated, in the dispatch record,
@@ -180,7 +182,8 @@ test files alone applied to the base, the failure quoted (Task 0 says how).
    > *(Cross-reference added 2026-09-30, on the maintainer's instruction: if this question is decided (a), rounding recorded as its own rung, `RL-1329`'s R0 ("`round` appears only on the last rung") must be amended by that ruling; `RL-1329` says so itself.)*
 
    (Planner-9947's D1 carried a different wording for the same note. The FINAL dispatch record,
-   which the maintainer checked, is later and names its text, so it is the one used.) Commands:
+   which the maintainer checked, is later, and its condition 1 carries the text, so it is the one
+   used.) Commands:
    `python3 scripts/audit-docs.py` exits 0 apart from check 31's expected working-id gap on any
    commit that carries one; and
    `grep -c -F "<the note above, verbatim>" docs/open-questions.md docs/specs/03-rating-engine.md`
@@ -316,7 +319,7 @@ test files alone applied to the base, the failure quoted (Task 0 says how).
      not-reconciled (or DP-S3-1's refusal)"; the docstrings that say otherwise are corrected in the
      same commit (`pricing_core/money.py:63`, "asserted continuously in non-prod and sampled in
      prod", and `pricing_core/rating/score.py:62-103`).
-5. **What a failure does: the DP-S3-1 ruling** (working id 9983, read at `4e9aecee`; the minted
+5. **What a failure does: the DP-S3-1 ruling** (working id 9983, read at `2b98b5aa`; the minted
    text wins, activation need 3). Its Acceptance 1–9, each red first on the slice's base before
    the refusal is added, on ladders built by this slice's builder, "planted" meaning a test-only
    mutation of the builder's output recorded in the ledger with its red run:
@@ -326,8 +329,9 @@ test files alone applied to the base, the failure quoted (Task 0 says how).
       quote) is refused through `score_one`;
    3. `POST /api/v1/score` answers 500 with an RFC 9457 body whose `code` is
       `LADDER_RECONCILIATION_FAILED`; the body and the log line carry no sentinel planted in a quote
-      input; no `scoring_traces` row is written; `gip_ladder_reconciliation_failed_total` rises by 1
-      for that Environment;
+      input; this case's `scoring_traces` behaviour is unchanged from `36b2a121` and is not asserted
+      (FR-259's error floor on `/score` is an open question, RL 9983 "Observed, not ruled");
+      `gip_ladder_reconciliation_failed_total` rises by 1 for that Environment;
    4. with `rating.trace_sample_rate` set to 0, case 3 is refused the same way;
    5. `POST /api/v1/score/compare`, the failing version on either side, answers 500 naming that side;
    6. `score_batch` over case 1's quote and a good quote writes one `"error"` row with that
@@ -374,7 +378,8 @@ test files alone applied to the base, the failure quoted (Task 0 says how).
      (`test_rating_compile.py`).
    - **The recount is recorded with its command**: every committed algorithm with a clamp,
      enumerated by
-     `git grep -l -E "on_violation[\"']?[:=] *[\"']clamp[\"']" -- ':!docs/**'`, each hit classified
+     `git grep -l -E "on_violation[\"']?[:=] *[\"']clamp[\"']" -- ':!docs/**'` and
+     `git grep -l -i -E 'clamp_bounds|"clamp"' -- ':!docs/**'`, each hit of either classified
      (test fixture, seed, example, script), each non-test algorithm run through
      `validate_algorithm`; and every row of the `rating_algorithms` table
      (`backend/src/app/db/models.py:1999`, its `content` column) in each database the executor's
@@ -483,7 +488,7 @@ them;** any the ladder slice depends on must be minted before its activation."
 
 | DP | Question (source) | Half | Why | State |
 |---|---|---|---|---|
-| DP-S3-1 | What does a failed ladder reconciliation do at scoring? (`PL-1342:405`) | **This slice** | It decides the failure of `RL-1329`'s predicate, which only this slice builds; `RL-1329` defers to it three times ("What a failure does is DP-S3-1's", `:378`, `:452`, `:699`) | Ruled (a), refuse: working id 9983, PR #1026, head `4e9aecee`. **Not minted.** Activation need 3 |
+| DP-S3-1 | What does a failed ladder reconciliation do at scoring? (`PL-1342:405`) | **This slice** | It decides the failure of `RL-1329`'s predicate, which only this slice builds; `RL-1329` defers to it three times ("What a failure does is DP-S3-1's", `:378`, `:452`, `:699`) | Ruled (a), refuse: working id 9983, PR #1026, head `2b98b5aa`. **Not minted.** Activation need 3 |
 | DP-S3-2 | The rate-limit counter's key and limit (`PL-1342:406`) | **`SL-1257`** (environment half) | It governs NFR-499's per-client rate limit and FR-430's per-Environment limits; nothing in this slice reads it. Its ruling's write-set additions (`auth/service.py`, `api/deps.py`, the `metrics.py` rate-limit counter, the `main.py` lifespan Redis client; the S3 dispatch record's Deltas 2 and 3) are the environment half's | Ruled: working id 9984, PR #1024. Not this slice's activation need |
 | DP-S3-3 | FR-430's monitoring configuration (`PL-1342:407`) | `SL-1257` | The monitoring limb is the environment half's | Resolved (a), by the maintainer as scope |
 | DP-S3-5 | How does the ladder record each rung? (D1's row) | This slice | The builder | Resolved: `RL-1329` |
@@ -565,6 +570,10 @@ it edits `03` §2, a new §4 subsection and §5.1; and its set excludes "`compil
   entry land in those rulings' own commits).
 - `model_schema/__init__.py`, as above.
 
+**`SL-1340` (WK-1250 Slice 2, draft) also edits `compile.py`**; its dispatch record re-checks
+`compile.py` and `ALGORITHM_CHECKS` against this slice (the WK-674 S3 dispatch record, condition 3,
+names WK-1250 Slice 1 and Slice 2 as editing `compile.py`).
+
 **Against the environment half (`SL-1257`)**: not concurrent (it waits on WK-674 Slice 2). Its
 later dispatch record re-checks `backend/src/app/api/score.py` and `observability/metrics.py`,
 which both halves edit (the DP-S3-1 ruling here; the DP-S3-2 ruling there).
@@ -610,7 +619,11 @@ which both halves edit (the DP-S3-1 ruling here; the DP-S3-2 ruling there).
   git diff <the slice base> HEAD -- $S | git patch-id --stable
   ```
   Equal ids mean the taken work is the salvage work. Unequal ids are expected only where a
-  conflict was resolved; the ledger names each file that differs and why. Then regenerate the
+  conflict was resolved; the ledger names each file that differs and why. **When `ceb23a00` is
+  held** (the `compile.py` order), take the first three commits, and derive `S` and the first
+  `git diff` to `14a1701a` (`git diff --name-only 36b2a121 14a1701a`, the same exclusions, and
+  `git diff 36b2a121 14a1701a -- $S`), excluding the `ceb23a00` hunk. Verify again at Task 5,
+  with `S` running through `ceb23a00`. Then regenerate the
   generated contracts and `docs/INDEX.md` (`generate-contracts.py`, `doc-index.py`), never
   hand-merged.
 - [ ] **Show each salvage test red on the base** (the Acceptance Standard's rule for taken tests):
@@ -708,7 +721,8 @@ property tests they mirror (mirror the neighbouring test; do not reinvent the mo
 `merge-base --is-ancestor` exit code, or the dispatch record's append-only finding, before the first
 step.
 
-- [ ] Take `ceb23a00` (Task 0's procedure) onto the current branch, after merging `main` in if
+- [ ] Take `ceb23a00` (Task 0's procedure, including its patch-id check with `S` running through
+  `ceb23a00`) onto the current branch, after merging `main` in if
   WK-1250 Slice 1 has landed. Re-read `compile.py`'s `ALGORITHM_CHECKS` and import block at that
   tree.
 - [ ] Red first: the three `RL-1329` algorithms saved and compiled on the base (they are accepted);
@@ -773,5 +787,5 @@ step.
   in the Spec list, Acceptance 7 and 9, and the Hand-off; the maintainer's item 5 in Acceptance 6,
   Global Constraints and Task 5; the `compile.py` order in Build-start, the write set and Task 5.
 - **Frozen records:** `PL-1342`, `RL-1329`, `FD-1336`, `FD-1330`, `RL-1343` are quoted, not edited.
-  The DP-S3-1 ruling is a draft at `4e9aecee`; its minted text governs.
+  The DP-S3-1 ruling is a draft at `2b98b5aa`; its minted text governs.
 - **Open:** none of this plan's own. The DP-S3-1 ruling's mint is activation need 3.
