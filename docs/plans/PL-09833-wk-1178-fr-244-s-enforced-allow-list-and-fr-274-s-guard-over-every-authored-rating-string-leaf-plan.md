@@ -67,12 +67,12 @@ pytest. No new dependency.
 - §5.1's error-code paragraph (`03:772-782`) — the new code, DP-G4.
 
 **What this plan implements.** The ruling on FR-244 is #967 (RL working id 9904, "RULED, NOT
-MINTED"; read at head `fb4833a90edcd501e1f10ae03bf2205d29933f90`). This plan covers its
+MINTED"; first read at `fb4833a9`, re-read at its head `6eb68d776aa7ef974fc234be56bbcd0b8a192908`, which every quote below is checked against). This plan covers its
 *Ruled* items 1 to 3, its *Which slice carries it* ("The code: one WK-1178 slice, after the
 ~16:00 fix slice") and its *Acceptance* section.
 
 It also discharges the finding in #968 (FD working id 9885, HIGH in force). It was first read at
-`46b4d445`, and re-read at its live head `fede7e5d72f4cfa3cedc4830103fc047622b484d`, which every
+`46b4d445` and then `fede7e5d`, and re-read at its live head `02f3f5888b83f92ef8bb813947a55e0b393a5365`, which every
 quote below is checked against. It is titled "Rating condition and clamp_bounds strings
 are never validated — no vocabulary, syntax or division-guard check (FR-244, FR-274, FR-276)".
 That finding's *Disposition* names this slice as owner: "Owner: the #967 WK-1178 code slice (RL
@@ -92,6 +92,12 @@ local channel file, outside the repository:
   with `/` becomes an acceptance case (acceptance 10).
 - "2026-09-30 10:58:13 BST — DATED CORRECTION to my 10:53:10 entry …": stored exposure is 0, and
   committed exposure is #968's list.
+- "2026-09-30 11:05:21 BST — DECISION: I accept #967's departure; it supersedes the rounding part
+  of my 10:46:20 (A)": **`round`, `floor` and `ceil` are not on P2's allow-list**. Money is
+  rounded only at the output step (FR-226, NFR-496, FR-248). The engine's facts are documented
+  in FR-244's text, not checked here: its own `round` is half away from zero, and at the float
+  boundary a `Decimal` input is refused while a `str` input is accepted as a ZEN string, not a
+  number. OQ working id 9905 is broadened, and stays out of scope.
 
 ## Status
 
@@ -176,9 +182,13 @@ case says otherwise.
    `@pytest.mark.req("FR-244")`. Each refused string gives `EXPRESSION_INVALID_VOCABULARY`
    naming the step id, the field and the construct. Each is shown red (it saves) before the
    check exists:
-   - an `expr` using, in turn: `%`, `in`, `a[0]`, `a.b`, `len('x')`, `sum([a, b])`.
-2. **The allow-list accepts** (#967): `a ?? 0`, `x != 0 ? y / x : 0`, `round(p, 2)`,
-   `min([max([x, 0]), 1])` and `abs(x)`, each in an `expr` **and** in a `condition`.
+   - an `expr` using, in turn: `%`, `in`, `a[0]`, `a.b`, `len('x')`, `sum([a, b])`;
+   - **no rounding function** (#967 at `6eb68d77`, *Acceptance*: "The interim rule on rounding
+     must be shown red, like any other refusal"; the maintainer's 11:05:21 BST entry): an `expr`
+     using `round(p, 2)`, then `floor(x)`, then `ceil(x)`. Each is refused, red first. **Predicted
+     red:** it saves today, because the engine compiles all three.
+2. **The allow-list accepts** (#967): `a ?? 0`, `x != 0 ? y / x : 0`, `min([max([x, 0]), 1])`
+   and `abs(x)`, each in an `expr` **and** in a `condition`.
 3. **Every authored field is covered, red first** (#967 item 3; #968's table). On the
    fixture `valid_algorithm()` (`packages/pricing-core/tests/test_rating_compile.py:15`),
    mutating the constraint step `s_minprem` or its bounds as #968 does, each row below returns
@@ -229,6 +239,14 @@ case says otherwise.
     `dict[str, str] | None`). `Literal[...]` fields are closed sets and are excluded. Every
     listed `(model, field)` must be in **exactly one** of `EXPRESSION_FIELDS` or
     `NON_EXPRESSION_FIELDS`, and every registry entry must name a real field (no stale entries).
+    **`RatingLookupStep.as_at` (`rating.py:279`) is out of the enumerator**, in
+    `NON_EXPRESSION_FIELDS`, per DP-G5 (i) as recommended. The reasons: nothing in
+    `pricing_core/rating` evaluates it (`runtime.py:26-35`: the window is "translated as an exact
+    key match only"), and its committed values are input names, not expressions:
+    `"effective_date"` (`packages/pricing-core/tests/test_rating_compile.py:37`) and `"postcode"`
+    (`test_rating_runtime.py:445`, `test_rating_score.py:372`). Its registry comment says that it
+    moves to `EXPRESSION_FIELDS` when the runtime evaluates it. If DP-G5 rules (ii), the walk
+    still forces a classification, and the matrix gains its column.
     **Broken-input proof:** the walk, run over a test-local subclass that adds `formula: str`,
     reports `formula` as unclassified, and the test fails. The ledger quotes that red.
 3c. **Closure 2 — a new check cannot bypass the enumerator.** Two assertions over
@@ -240,6 +258,10 @@ case says otherwise.
       explicit `ALGORITHM_CHECKS` tuple (`_check_result_types`, `compile.py:114`, which reads
       output steps, not expression strings), and `validate_algorithm` calls exactly those.
 
+    **Predicted red at the tree above:** (i) and (ii) both report the four loops that read step
+    text themselves. Each skips non-expression steps at `compile.py:146`, `:176`, `:200` and
+    `:242`, and reads `.expr` at `:148`, `:178`, `:202` and `:245`. The prose rule in Global
+    Constraints ("One enumerator, one check registry") is enforced by this test, not by review.
     **Broken-input proof for each:** the predicate, run over a source string that adds
     `_check_x(algo)` reading `step.expr`, reports both the direct read and the unregistered check.
     The ledger quotes both reds. `to_jdm` and `runtime.py`, which read these fields to **wire**
@@ -287,20 +309,32 @@ case says otherwise.
    ledger records which case held.
 10. **Stored and committed strings.**
     - **Committed exposure** (the maintainer's 10:57:06 BST entry: each unguarded committed
-      condition or bound with `/` becomes an acceptance case). #968 at `fede7e5d` (*Exposure*)
-      lists every committed rating string containing `/`, at `9f63d0fe`. The result: "4
-      strings, all in the `expr` field, none in `condition`, `clamp_bounds` or `key_expr`".
-      Three are deliberate negative tests, already refused, and one is guarded. So **no
-      committed condition or bound becomes an acceptance case**, and the planted cells of 3a
-      stand for them, as #968 concludes. **Task 0 re-reads #968's list at the executor's tree.**
-      Any unguarded condition or bound it now lists becomes a case here, rewritten with a guard
-      or shown refused at save, red first. #968's own limits are carried: one line per string,
-      and not a proof for later commits.
-    - **Stored and committed strings pass the allow-list** (#967, *Acceptance*: "Stored data").
-      A test runs `check_allow_list` over every authored string in the committed fixtures,
-      examples and bench scripts, and each one passes. #967's sweep reported 37 distinct
-      strings. The ledger quotes the test's count and pattern at the executor's tree, and
-      reports any difference from 37, not explains it away.
+      condition or bound with `/` becomes an acceptance case). #968 at `02f3f588` (*Exposure*)
+      lists every committed rating string containing `/`, at `9f63d0fe`: "4 strings, all in the
+      `expr` field", so **0 unguarded condition or clamp-bound strings**. Of the 4, three are
+      deliberate negative tests (`backend/tests/test_rating_algorithms.py:112`,
+      `packages/pricing-core/tests/test_rating_compile.py:125` and
+      `packages/pricing-core/tests/test_rating_compile_bundle.py:248`) and one is guarded
+      (`test_rating_compile.py:136`). So no committed condition or bound becomes an acceptance
+      case, and the planted cells of 3a stand for them. **Task 0 re-reads #968's list at the
+      executor's tree.** Any unguarded condition or bound it now lists becomes a case here,
+      rewritten with a guard or shown refused at save, red first. #968's limits are carried: one
+      line per string, and not a proof for later commits.
+    - **The committed rating strings, checked both ways** (#967, *Acceptance*: "Stored data"). A
+      test extracts every authored rating string from the committed fixtures, examples and bench
+      scripts, and runs **the allow-list and the division guard** over each one:
+      - every string that a committed test **expects to be accepted** passes both;
+      - every **deliberate negative fixture stays refused**, under the code its own test asserts:
+        the three unguarded divisions above; `test_rating_compile.py:116`'s `now()`; and the
+        vocabulary test's foreign function (`test_rating_compile.py:152-159`).
+
+      #967's sweep reported 37 distinct strings. The ledger quotes the test's count and pattern
+      at the executor's tree, and reports any difference from 37, not explains it away.
+    - **Out of scope:** data-preparation `expression` strings (for example
+      `packages/pricing-core/tests/test_prepare.py` and `scripts/bench-data.py`). They are
+      parsed by `pricing_core.data.expressions` under `02` §4.6, not by the rating engine (#967:
+      the rating grammar "is not one of §4.6's profiles"). The extractor keys on the rating
+      step models' fields, and the ledger names the pattern.
 11. **`??` semantics and OQ working id 9905 are untouched.** No change to how `??` evaluates, and
     none to `round`. `git diff origin/main...HEAD -- packages/pricing-core/src/pricing_core/rating/runtime.py`
     is empty.
@@ -349,7 +383,9 @@ case says otherwise.
 
 **Not in this slice:**
 - FR-244's text → WK-690 Slice 1, Task 6 (#967), unless DP-G1 rules (b).
-- OQ working id 9905 (the rounding mode) → open, owner WK-1178, **not** this slice.
+- OQ working id 9905, broadened to "is rounding offered anywhere but an output step" (the
+  maintainer's 11:05:21 BST entry) → open, owner WK-1178, **not** this slice. This slice only
+  refuses `round`, `floor` and `ceil` at save, as the allow-list requires.
 - Any change to `??` → none.
 - The fix slice's pin-membership check → #963.
 
@@ -371,7 +407,7 @@ case says otherwise.
 | l | FR-244 at `03:146` still reads "the same restricted grammar as `02` §4.6" | `03:146` |
 | m | **The step models' string-bearing fields.** Expression fields: `RatingExpressionStep.expr`; `RatingConstraintStep.condition`; every value of `RatingConstraintStep.clamp_bounds` (`dict[str, str] \| None`, of which the runtime reads `min` and `max`); `RatingTableStep.key_expr[i]`; `RatingLookupStep.key_expr[i]`. Non-expression fields: `step_id`, `label`, `note`, `consumes` and `produces` (on the base); `RatingInputStep.input_name`; `RatingLookupStep.as_at` (DP-G5); `RatingModelCallStep.feature_map` (graph name to feature slug); `RatingConstraintStep.reason_code`; `RatingOutputStep.output_name`. `Literal` fields and `ArtifactRef` fields are not strings | `packages/model-schema/src/model_schema/rating.py:257-326`; the runtime reads `expr` (`runtime.py:160`), `key_expr` (`:205`, `:236`), `condition` (`:292`) and `clamp_bounds` (`:303-314`); `as_at` is read by nothing in `pricing_core/rating` (`runtime.py:26-35`: the window is "translated as an exact key match only") |
 | n | `validate_algorithm` calls five checks in order; `_check_result_types` is the one that does not read expression strings | `compile.py:261-275`, `:114-140` |
-| o | #968's committed-exposure list: 4 strings with `/`, all `expr` | #968 at `fede7e5d`, *Exposure* |
+| o | #968's committed-exposure list: 4 strings with `/`, all `expr`; 0 in a condition or bound | #968 at `02f3f588`, *Exposure* |
 
 The executor re-reads each at its own tree, including after the fix slice merges, and stops on
 any that no longer holds ([`README.md`](README.md) convention 4).
@@ -475,8 +511,9 @@ FR-244's row `:146` only under DP-G1 (b)).
 - [ ] **Red first:** acceptance 1, 2 and 3's vocabulary rows (already red in 3a's allow-list
   column). Quote them.
 - [ ] `vocabulary.py`: the ruled lists as tuples (#967 item 1): operators, literals, and the
-  functions `round` (1 or 2 arguments, the second an integer literal), `min` and `max` (a
-  single array-literal argument), `abs`, `floor` and `ceil`. Implement the tokenizer.
+  functions `min` and `max` (a single array-literal argument) and `abs`. **`round`, `floor`
+  and `ceil` are not on it** (#967 at `6eb68d77`; the maintainer's 11:05:21 BST entry), so a
+  call to any of them is refused like any other off-list function. Implement the tokenizer.
   Unit-test it against every ruled construct and every "Not on the list" construct
   (#967 item 1).
 - [ ] Register the allow-list in `STRING_CHECKS`, ahead of the engine compile, as
@@ -534,6 +571,7 @@ WK-1250 Slice 1 is dispatched after this slice merges (the maintainer's order).
   - item 1, the allow-list, every authored string, the generated strings outside it →
     acceptance 1–3, Task 2, Global Constraints;
   - item 2, `??` documented, never a guard, dead markers removed → acceptance 5, Task 3;
+  - no rounding function (the maintainer's 11:05:21 BST acceptance) → acceptance 1, Task 3;
   - item 3, the compile and the guard widened → acceptance 3, Tasks 2–3;
   - *Acceptance* → acceptance 1, 2, 3, 5 and 10;
   - *Which slice carries it* → Status, and DP-G1.
@@ -546,6 +584,7 @@ WK-1250 Slice 1 is dispatched after this slice merges (the maintainer's order).
   - D2 and E4 refused at save → acceptance 4;
   - every table row returns an issue → acceptance 3 and 3a;
   - committed exposure → acceptance 10, from #968's list;
+  - F1–F3 of auditor-933's audit at `dee9ff9d` → acceptance 3a–3c (matrix, closures), 3b (`as_at`), 10 (exposure, negative fixtures, data-prep strings out);
   - the misleading `RATE_TABLE_MISS` → acceptance 6 and 7, DP-G4;
   - `key_expr` unmeasured → acceptance 3's added row.
 - **The lead's scope list:** 1 → Tasks 2–3; 2 → Task 3; 3 → acceptance 3 and 4; 4 → DP-G4,
