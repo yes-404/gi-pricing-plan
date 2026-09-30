@@ -12,6 +12,7 @@ import sys
 from datetime import date
 
 import pytest
+from backend.tests.approved_rows import add_approved
 from backend.tests.test_api_datasets import _headers
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -373,7 +374,8 @@ async def test_the_models_arm_lists_every_model_on_the_version(
     actor = await _with_role(database, workspace_id, "analyst")
     _, version_id = await _version(database, workspace_id, actor)
     async with database.unit_of_work() as session:
-        session.add(
+        await add_approved(
+            session,
             ModelRow(
                 workspace_id=workspace_id,
                 model_family_slug="motor-freq-2026",
@@ -383,7 +385,7 @@ async def test_the_models_arm_lists_every_model_on_the_version(
                 spec_hash=f"v1:sha256:{'0' * 64}",
                 fit_result={"fitted": True},
                 diagnostics_id=new_uuid7(),
-            )
+            ),
         )
         session.add(
             ModelRow(

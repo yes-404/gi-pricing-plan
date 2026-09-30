@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest
+from backend.tests.approved_rows import add_approved
 from sqlalchemy import select
 
 from app.db.models import AuditEventRow, RoleAssignmentRow, RoleRow, ValidationReportRow
@@ -485,8 +486,7 @@ async def test_replacing_a_rule_set_points_the_dataset_at_it(
             status="approved", authored_by=actor.id, approved_by=new_uuid7(),
             dry_run_report_id=new_uuid7(),
         )
-        session.add(rule)
-        await session.flush()
+        await add_approved(session, rule)
         rule_id = rule.id
 
     async with database.session() as session:
