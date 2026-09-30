@@ -14,10 +14,12 @@ relates: [WK-674, SL-1256, FR-343, FR-396, FR-397]
 
 ## Finding
 
-**Severity: medium**, on the maintainer's entry of 2026-09-30 11:08:22 BST, "A1 = MEDIUM, conditional on the
-behavioural switch_workspace confirmation" (`~/gi-pricing-plan.local/channel/to-lead.md`). It rises to HIGH
-(and the lead decides HIGH against CRITICAL) if a non-member `POST /me/workspace` with a valid body is *not*
-refused with `WORKSPACE_SCOPE_DENIED`; that confirmation is running and is **not yet in this record**. On
+**Severity: medium, final.** The maintainer's entry of 2026-09-30 11:08:22 BST, "A1 = MEDIUM, conditional on the
+behavioural switch_workspace confirmation", made it conditional (HIGH or CRITICAL if a non-member `POST /me/workspace`
+were not refused with `WORKSPACE_SCOPE_DENIED`), and the entry of 2026-09-30 11:09:37 BST, "A1 MEDIUM confirmed
+behaviourally; the condition is met" (`~/gi-pricing-plan.local/channel/to-lead.md`), closed the condition: the
+non-member is refused switch, read and write, so the severity stays medium. The confirmation is auditor-close1255's, not
+the author's (below). On
 `origin/main` `9f63d0feee524815e7e0c68c99a53ac3f80e6c37`, **FR-343** (`docs/specs/06-governance.md:79`:
 "Permissions are checked in the backend on every request against `(principal, permission, resource, scope)`")
 has a test that appears to check it and does not.
@@ -40,6 +42,17 @@ has a test that appears to check it and does not.
 blind test, no hole found behind it. **Proposed by the auditor; the verdict is the lead's.**
 
 ## Evidence
+
+### The behavioural condition, confirmed (auditor-close1255, not reproduced by the author)
+
+Source: auditor-close1255, relayed by the lead: a scratch test on a per-worktree database at `9f63d0fe`. A non-member P (an analyst in
+workspace A only) against workspace B: `POST /api/v1/me/workspace` {B} gave **403 `WORKSPACE_SCOPE_DENIED`**, with and
+without the `Workspace-Id` header; `GET /datasets` and `GET /rating-versions` with `Workspace-Id: B` gave **403**;
+`POST /datasets` with the header B gave **403**; **B's audit chain was unchanged**. The existing
+`backend/tests/test_workspace_switch.py:187` (`test_a_switch_to_a_non_membership_is_denied`) already asserts the
+non-member refusal. Route accounting 123 + 5 + 7 + 2 = 137 (below). The only `/me/workspace` gap is in the sweep: it is
+not in the sweep's allow-list, so the static test would need to be told it is guarded by membership.
+
 
 Source: auditor-close1255's per-worktree run at `9f63d0fe` (as relayed by the lead), **reproduced by the
 auditor in a detached worktree at the same tree** (`uv sync --all-packages`, `alembic upgrade head` on a
@@ -253,17 +266,16 @@ WK-690 Slice 1. Its acceptance, as decided:
 - account for all 137 routes; triage `POST /validation-rules` and `POST /me/workspace` and record each
   service-layer guard in a **named allow-list with file:line**, so the static sweep knows them rather than
   skipping silently;
-- make the no-roles behavioural sweep send a valid body per route and assert **401 or 403 specifically**, never
-  any refusal status (a 422 is not a refusal), red first on `/me/workspace`;
+- make the no-roles behavioural sweep send a **valid body per route** and assert **401 or 403 specifically**, never
+  any refusal status (a 422 is not a refusal), red first on `/me/workspace`, which passes today on a 422;
 - remove `requires()` from one real guarded route and show the test red (M1 is the shape);
 - fix the sibling tests that iterate `app.routes` the same way in the same task.
 
 The maintainer's entry of 11:08:22 BST also rules that **no permission is needed on `/me/workspace`**: membership
 (FR-396, FR-397) is the right control for choosing among one's own workspaces, and no spec change follows from it.
 
-**Event that next confirms or discharges it:** (a) the behavioural confirmation that a non-member
-`POST /me/workspace` with a valid body and a foreign `workspace_id` returns `WORKSPACE_SCOPE_DENIED` (until then
-the MEDIUM is conditional); (b) WK-674 Slice 2's first task merges with the acceptance above.
+**Event that next confirms or discharges it:** WK-674 Slice 2's first task merges with the acceptance above (the
+behavioural condition is already met; see the evidence section).
 
 Ownership shape: event
 
