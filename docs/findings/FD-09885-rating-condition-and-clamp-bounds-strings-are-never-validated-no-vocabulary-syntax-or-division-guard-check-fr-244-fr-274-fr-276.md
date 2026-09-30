@@ -14,9 +14,10 @@ relates: [WK-1178]
 
 ## Finding
 
-**Severity: medium, provisional.** It **rises to high** if the score-level case (auditor-rl is
-building it) shows a silent wrong accept, decline or clamp: a decline condition that should
-decline lets the quote through, or a clamp bound that silently does not apply.
+**Severity: medium (provisional); the high trigger is met** (a silent wrong accept, D2 below,
+and a silently lost clamp, E4 below). **High takes effect on independent reproduction**
+(auditor-docs is running it). The trigger was: a decline condition that should decline lets the
+quote through, or a clamp bound that silently does not apply.
 
 `validate_algorithm` checks only `RatingExpressionStep.expr`. A constraint step's `condition`
 and its `clamp_bounds` strings, which the engine evaluates the same way, are never read by the
@@ -78,13 +79,46 @@ record's author.** #967's delegated sweep (RL working id 9904) reported 0 `??` a
 arithmetic, comparisons, and/or, ternary and `true` in the 37 git-tree rating strings; that is
 cited as *reported by #967's sweep*, and it covers git-tree strings, not stored rating versions.
 
+## Score-level case — reported by auditor-rl, not re-run by this record's author
+
+`score_one` on the fixture of `packages/pricing-core/tests/test_rating_score.py`, at `48792023`.
+Baseline: office premium 1436, payable 1507. Every variant below **compiled OK**. In the decline
+variants `s_decl_cap` has `on_violation=decline` and the input `sanity_floor_minor` is the divisor.
+
+| Variant | Text | Result |
+|---|---|---|
+| A1 decline | `office_premium_minor / sanity_floor_minor <= 2`, floor 1 | declined `['SANITY_CAP']` |
+| A2, A3 decline | same, floor 0 or null | raises `CodedError` **`RATE_TABLE_MISS`** (fail-closed, misleading code) |
+| D1 decline | `((office_premium_minor / sanity_floor_minor) ?? 0) <= 2`, floor 1 | declined |
+| **D2 decline** | same as D1, **floor 0** | **QUOTED**, `decline_reasons []`, office 1436, payable 1507 |
+| C2 clamp | `clamp_bounds` max `1` | office 1 |
+| C1 clamp | max `sanity_cap_minor / sanity_floor_minor`, floor 0 | raises `RATE_TABLE_MISS` |
+| E1, E2 clamp | max `(cap / floor) ?? 1000`; floor 1, then floor 0 | floor 1: no clamp (1436); floor 0: clamps to 1000 (payable 1050) |
+| E3 clamp | max `(cap / floor) ?? 999999999999`, cap 1000, floor 1 | office 1000 (the cap applies) |
+| **E4 clamp** | same as E3, **floor 0** | **cap silently lost**, office 1436, unclamped |
+
+E3 and E4's outcome was also affected by the fixture's separate `SANITY_CAP`; read the office
+premium. **D2 is a silent wrong accept** (a decline that should fire lets the quote through) and
+**E4 a silently lost clamp**: that is the high trigger. A2, A3 and C1 fail closed but under a
+**misleading code**: a zero or null division in a condition or a clamp bound surfaces as
+`RATE_TABLE_MISS`, which names a rate-table problem that did not happen. That is part of this
+finding.
+
+**How #967 relates.** #967's documentation of `??` (RL working id 9904) makes the masked form
+legal. Its item 3, widening the guard check to `condition` and `clamp_bounds`, with `??` never
+counting as a guard, is what would refuse D2 and E3/E4 at save.
+
 ## Disposition
 
 **Deferred with an owner: the WK-1178 code slice that #967 (RL working id 9904) specifies**,
 which widens both checks to `condition`, `clamp_bounds` and `key_expr` after the fix slice
-planned for about 16:00. Event that discharges it: that slice's merge, proven on this table's
-inputs: each row above except the baseline and the controls must return an issue. The severity
-review is due when auditor-rl's score-level case lands: a silent wrong accept, decline or clamp
-makes this **high** and this record is amended.
+planned for about 16:00. **The owner and the order are pending the maintainer's re-decision**,
+since the high trigger is met. Event that discharges it: that slice's merge.
+
+**Red-first acceptance**, each written to fail on `origin/main` first: **D2's condition and E4's
+clamp bound are refused at save**, and every non-baseline, non-control row of the table above
+returns an issue. The score-level rows must not reach `score_one` as a compiled bundle. The
+severity becomes **high** on auditor-docs's independent reproduction, and this record is amended
+then.
 
 *Drafted under working id 9885.*
