@@ -347,18 +347,29 @@ cause, and the guard is restored; the ledger quotes both runs.
       permission, by a named allow-list entry, or is in `OPEN_BY_DESIGN` /
       `NO_PERMISSION_REQUIRED` (`:28`, `:43`), and the three sets plus the guarded set
       partition the operation count exactly.
-13. **`deployment_requests` joins the guarded set** — the approval guard itself is **Slice
-    2a's** (#984, working id 9923; the split below), and this item is #971 A.4 sub-item 9's
-    Slice 2 half, read at head `58ee5ea0c4a73e69a838fe17ebb4b802eb194ec4` (still under audit):
-    the creating migration installs the same trigger function on the new table. This slice's migration adds
-    `deployment_requests` to Slice 2a's trigger in the revision that creates the table, and
-    declares its `status_vocabulary`. Each red first: Slice 2a's `pg_trigger` presence check
-    now names `deployment_requests` too, and fails with this revision's trigger clause
-    removed; **the deployment-request plant** — a direct `approved` write on
-    `deployment_requests` outside the decision path, by ORM, Core and raw SQL — is refused;
-    **positive control:** a deployment request approved through `decide` and the new
-    deployment branch of `_carry_to_the_artifact` reaches `approved`, read back in the
-    database. `deployment_requests` takes no allowance.
+13. **`deployment_requests` joins the guarded set, evidence-only** — the approval guard
+    itself is **Slice 2a's** (#984, working id 9923; the split below). This item is #971 A.4
+    sub-item 9's Slice 2 half, read at head `3de69560643b2abc8d20afc923416a4ef66104a1` (the
+    evidence-based trigger; still under audit by auditor-close1255): the creating migration
+    installs Slice 2a's trigger function on the new table with the arguments
+    `('deployment', <its slug column>)` and **no `'flag'` argument**, so the decision flag
+    never satisfies it, and declares the table's `status_vocabulary`. The composed ref is
+    `deployment:<environment slug>@<n>`, the reference form of **Decided in this plan**.
+    Each red first:
+    - Slice 2a's `pg_trigger` presence test (it connects to `test_database_url()` directly)
+      names `deployment_requests` too, and fails with this revision's trigger removed;
+    - **the deployment-request plant:** a direct `approved` write on `deployment_requests`
+      with no matching approved `approval_requests` row, by ORM, Core and raw SQL, is
+      refused; and so is the **forgery**, `set_config('app.approval_decision', 'on', true)`
+      followed by that write;
+    - an approved write whose only approved request names **another version** of the same
+      slug (another request into the same Environment), another workspace's ref, or a
+      request still in `review`, is refused;
+    - **the ref pin:** Slice 2a's pin test gains `deployment_requests`: the trigger's
+      composed ref equals `str(ArtifactRef(type="deployment", slug=…, version=…))`;
+    - **positive control:** a deployment request approved through `decide` and the new
+      deployment branch of `_carry_to_the_artifact` reaches `approved`, read back in the
+      database. `deployment_requests` takes no allowance.
 
 ## Global Constraints
 
@@ -758,8 +769,9 @@ def promotion_order_refusal(
   `evidence` JSONB written once — #971 A.4 permits a database trigger to refuse an update;
   if the executor adds one, its test is red first too); `scoring_traces.deployment_id` nullable FK. Downgrade drops
   all three in reverse.
-- [ ] **`deployment_requests` joins Slice 2a's guard (Acceptance 13)**, in this same
-  revision: the trigger on the new table, and its `status_vocabulary` declaration. Red first:
+- [ ] **`deployment_requests` joins Slice 2a's guard, evidence-only (Acceptance 13)**, in
+  this same revision: the trigger on the new table with arguments `('deployment', <slug
+  column>)` and no `'flag'`, and its `status_vocabulary` declaration. Red first:
   Slice 2a's `pg_trigger` presence check fails naming `deployment_requests` until the clause
   is in.
 - [ ] **The credential pre-check (V2)**, first in the revision's `upgrade()`: select unrevoked
