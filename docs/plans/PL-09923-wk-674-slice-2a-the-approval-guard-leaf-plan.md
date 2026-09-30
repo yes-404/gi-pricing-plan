@@ -107,10 +107,19 @@ and the guard restored.
    `APPROVED`, if its CHECK names `'approved'`, or its `default=`/`server_default=` is
    `"approved"`, or its table is written by an `apply_approval_decision` that
    `_carry_to_the_artifact` drives, or it is `approval_requests`. **A fourth cross-check**
-   (auditor-plans' caveat on M1: `rating_versions` enters only through the third): a column
-   whose type or CHECK *admits* `'approved'` (an `Enum` type with that member, or any CHECK
-   predicate the value satisfies), evaluated over every mapped class with a `status`
-   column, may not carry the marker either. At `9f63d0fe` auditor-close1255 measured the
+   (auditor-plans' caveat on M1: `rating_versions` enters only through the third), evaluated
+   over every mapped class with a `status` column: the column may not carry the marker if it
+   is **`Enum`-typed with an `APPROVED` member**, **or** has a CHECK constraint that
+   **enumerates the status vocabulary** — `status IN (…)` or `status = ANY (ARRAY[…])` —
+   **including `'approved'`**. *(Reworded on auditor-plans' V1: "any CHECK the value
+   satisfies" was ill-defined, since `dataset_versions`' CHECK
+   `status <> 'validated' OR validation_report_id IS NOT NULL` is satisfied by `'approved'`
+   without naming it.)* **How a CHECK is read:** from the constraint's SQL text
+   (`pg_get_constraintdef` on the migrated database, or the model's `CheckConstraint` text),
+   a CHECK counts only if it constrains the `status` column by an `IN` list or `= ANY`
+   array literal, and `'approved'` is one of its members; an implication, inequality or
+   other predicate does not count. No table has an `Enum`-typed `status` with `APPROVED`
+   today; the leg exists for the future. The derived set stays at 8. At `9f63d0fe` auditor-close1255 measured the
    set at 8 tables — `custom_metrics`, `custom_objectives`, `models`, `peril_structures`,
    `validation_rules`, `rating_versions`, `approval_requests`, `validation_rule_sets`; the
    executor re-derives it and quotes it. Red first: a planted status column with neither
@@ -177,7 +186,10 @@ and the guard restored.
      both. `Database.unit_of_work` (`backend/src/app/db/session.py:69`) is one transaction
      for the decide route (`backend/src/app/api/approvals.py:250-260`), so the carry
      (`:488`) and its flush are inside it too. The control approves a request and its
-     artifact and reads both back as `approved` from a new session. Red on broken input:
+     artifact and reads both back as `approved` from a new session. It also asserts **the
+     flush order**: the `approval_requests` row reaches the database (the flush at `:419`)
+     **before** the carry writes the artifact, since the evidence-only trigger reads that row;
+     with the artifact write moved ahead of the flush, the control is refused. Red on broken input:
      with the block closed before `:419`, the trigger refuses the sanctioned write.
    - The sanctioned sites are exactly two: `decide` (`:416`–`:419`) and
      `_carry_to_the_artifact` (`:488`), which the decide route (`:260`) and the withdraw route
@@ -234,7 +246,11 @@ and the guard restored.
 8. **Fixtures** (sub-item 6). The 17 backend test files matching
    `git grep -l -E 'status\s*=\s*"approved"|Status\.APPROVED|status=APPROVED' -- backend/tests`
    at the tree above (an upper bound; some only compare) move onto the decision path, or onto
-   one helper under `backend/tests/` that enters `approval_decision()`:
+   one helper under `backend/tests/`. **The helper creates the evidence, not just the flag:**
+   for a row on an evidence-only table it inserts a matching `approved` `approval_requests`
+   row (same workspace, `artifact_ref` = `str(ArtifactRef)` of the row) inside
+   `approval_decision()`, and only then the artifact row; for a validation table or
+   `approval_requests` the flag suffices. The files:
    `test_api_blobs.py`, `test_api_rate_tables.py`, `test_api_validation_rules.py`,
    `test_approvals.py`, `test_custom_metrics.py`, `test_custom_objectives.py`,
    `test_data_jobs.py`, `test_lineage.py`, `test_model_lifecycle.py`, `test_model_nfrs.py`,
@@ -248,8 +264,10 @@ and the guard restored.
 10. **The migration (FR-417).** One revision; `down_revision` is the head at the executor's
     tree (re-pointed at merge, RL-1263). `upgrade`, `downgrade -1`, `upgrade` exit 0, and
     after `downgrade -1` `pg_trigger` shows the trigger and function gone from **every**
-    table of item 1's set. `uv run pytest tests/test_repository_invariants.py -q` passes. A
-    migration test runs at head and at head−1.
+    table of item 1's set. `uv run pytest tests/test_repository_invariants.py -q` passes.
+    - **Migration tests at head and at head−1**, each red first: at head−1 (the revision
+      before the guard's) a guarded write that head refuses succeeds, and the `pg_trigger`
+      test fails; at head both hold. Each test names the revision it upgraded to.
 11. **Stated limits, not hidden** (sub-item 4):
     - a database superuser, or a role able to drop the trigger, can bypass it; so can
       `session_replication_role = replica`, which needs superuser (used on purpose by the
@@ -333,11 +351,12 @@ BST entry).
   deployment branch and a `set_policy` check. Neither reads the other.
 - **But it may not overlap Slice 2**: both edit `_carry_to_the_artifact` and
   `platform/approvals.py`, so they run one after the other.
-- **Which comes first is the lead's to set.** The maintainer's 11:23:26 entry, written before
-  the split, puts the fix **after S2**; under that order the fix **waits for S2 as well as
-  this slice**. This plan's recommendation is **S2a → the fix → S2**: the fix is HIGH, small
-  and blocked only on this slice, and waiting behind Slice 2's much larger build leaves the
-  bypass open hours longer. Either order is safe; they differ only in when the bypass closes.
+- **The order is decided: S2a → the validation-rule fix slice → S2** — the maintainer's entry
+  headed
+  `2026-09-30 11:56:33 BST — DECISIONS: slice order after the split; FR-384 confirmed; FR-383 and FR-385 owners`,
+  which supersedes the "serialised after S2" clause of the 11:23:26 entry (written before the
+  split). The fix is the owner of the finding filed as #978 (working id 9892). **Cost, stated:**
+  Slice 2 starts later by the fix slice's full duration, since the two may not overlap.
 
 ### Premises re-derived at the tree above
 
@@ -360,8 +379,8 @@ The executor re-reads each at its own tree and stops on any that no longer holds
 |---|---|---|---|---|---|---|
 | — | None of this plan's own. The guard's design is #971's (A.4), which carries T2, T3 and the evidence-based condition at the cited head, still under audit (**Status**, activation need 1) | — | — | — | — | — |
 
-The order against the validation-rule fix slice is a recommendation for the lead
-(**Serialisation**), not a decision point.
+The order against the validation-rule fix slice is decided by the maintainer's 11:56:33 BST
+entry (**Serialisation**).
 
 ---
 
@@ -430,15 +449,15 @@ trigger's SQLSTATE; `backend/tests/test_approval_guard.py`; `backend/tests/conft
 
 - [ ] The full two-half gate in a gate slot; quote every rc, `N passed`, `HEAD`, `uptime`.
 - [ ] The ledger (`LG-`, working id): the tree, the premises, the derived set, every red
-  quote, the pending-#971 alignments, the stated limits, the order recommendation.
+  quote, the #971 alignments, the stated limits, the decided order.
 - [ ] Item 13.
 
 ## Hand-off
 
 WK-674 Slice 2 (#973, working id 9920) follows in lane A: its creating migration installs
 the same trigger function on `deployment_requests`, its vocabulary joins item 1's set, and
-its plant joins item 3. The validation-rule fix slice runs after this slice, before or after
-Slice 2 as the lead sets.
+its plant joins item 3. The validation-rule fix slice runs between them (the 11:56:33 BST entry), so
+Slice 2 starts after the fix closes.
 
 ## Self-review
 
@@ -462,4 +481,10 @@ Slice 2 as the lead sets.
 - **Maintainer entries applied:** 11:21:51 (1), 11:23:26 (7, Serialisation), 11:42:08 and
   11:43:28 (12), 11:44:15 (Architecture, 2–5), 11:45:55 (6), 11:48:28 (Status, Global
   Constraints), 11:55:31 (2, 3, 9, adopted in #971).
+- **auditor-plans on `adb4ace8`:** V1, the fourth leg reworded with the CHECK-reading rule
+  (Acceptance 1); head and head−1 as an acceptance line (Acceptance 10); the order's cost
+  stated (Serialisation); the fixture helper creating evidence (Acceptance 8); the flush
+  order in the positive control (Acceptance 4); the forged-flag plant (Acceptance 3).
+- **The order** is the maintainer's decision of 11:56:33 BST, stated in Serialisation and
+  Hand-off.
 - **Open:** no decision point of this plan's own. Activation waits on #971.
