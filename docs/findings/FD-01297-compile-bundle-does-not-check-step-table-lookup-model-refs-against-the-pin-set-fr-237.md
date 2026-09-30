@@ -154,7 +154,7 @@ with no definition beside them).
 version, without a new code. `PIN_NOT_APPROVED` (`errors.py:304`) is the wrong code: it means a pin exists
 but its artifact is not approved. **No new code is needed;** if the maintainer wants the wrong-version case
 named apart (for example `PIN_VERSION_MISMATCH`), that is a new code and a `03` §5.1 owned-code row, and it
-is the maintainer's call. **The maintainer's condition (about 10:24 BST): reusing this code is allowed only if its spec catalogue meaning covers "a step ref not pinned at its exact version"; otherwise the slice amends the catalogue row, spec first, in the same commit.** Which case applies: **an amendment is needed.** The catalogue is `03` §5.1's paragraph headed "**Error codes owned by this module:**" (`03:772-776`); it is a bare list of names. Verbatim, the row for this code is only
+is the maintainer's call. **The maintainer's condition (the "Fix-slice audit item" under the `2026-09-30 10:15:43 BST` header in `to-lead.md`): reusing this code is allowed only if its spec catalogue meaning covers "a step ref not pinned at its exact version"; otherwise the slice amends the catalogue row, spec first, in the same commit.** Which case applies: **an amendment is needed.** The catalogue is `03` §5.1's paragraph headed "**Error codes owned by this module:**" (`03:772-776`); it is a bare list of names. Verbatim, the row for this code is only
 `` `RATING_VERSION_UNPINNED`, `INPUT_CONTRACT_VIOLATION`, `` inside that list, with no definition. Nothing else in the specification defines it (`git grep -n "RATING_VERSION_UNPINNED" -- docs` finds the list entry and `CR-837`'s line "added to the §5.1 error codes"); the only written condition that raises it is in the code, `compile.py:434-443` (a version with no `algorithm_ref` or no `pins`). So the catalogue **does not cover the step case as written** — it covers nothing as written. Its name and FR-237's "Nothing is unpinned" (`03:134`) make it a natural home, but that is inference, not text. The fix slice therefore adds a one-line meaning to that paragraph in the same commit, spec first: for example "`RATING_VERSION_UNPINNED`: a Rating Version lacks its algorithm or pins, or a step's table, lookup or model ref is not in its pins at the exact version (FR-237)". The runtime `KeyError`s at `runtime.py:463` and `:533` become coded in the same slice. The score-time `KeyError` (defect 3) becomes unreachable through a compiled bundle once compile
 refuses the version (a bundle cannot then exist with a step ref outside its payloads), and stays coded as a backstop.
 
@@ -301,8 +301,8 @@ than restated as a ruling:
   auditor-924d, and re-run by the filer at the ZEN level), so **only `??` prices**. FR-244 lists a form the engine does not
   parse: a separate §0 matter, not this fix's. `_check_vocabulary` (`compile.py:233`) accepts only what ZEN compiles, which
   is why `coalesce(` is refused and `??` is accepted. The maintainer's 10:15:07 BST entry sends the `??` question to the DM
-  as a §0 code/spec disagreement and notes that the class is wider than `??`; that entry's reading of `coalesce(` is being
-  corrected. WK-690 Slice 1 must not change `??` semantics while that is open. The finding does not depend on the ruling,
+  as a §0 code/spec disagreement and notes that the class is wider than `??`; that entry's reading of `coalesce(` is corrected
+  by the maintainer's `2026-09-30 10:24:00 BST` entry ("DATED CORRECTION to my 10:15:07 entry"). WK-690 Slice 1 must not change `??` semantics while that is open. The finding does not depend on the ruling,
   because the fix refuses an unpinned or wrong-version ref at compile whatever the consumer, `??` or any other form. FR-244
   listing `coalesce(a, b)` while the engine cannot parse it is the second §0 direction the DM may take (a spec correction,
   or a grammar change), and is not this fix's.
