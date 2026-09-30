@@ -1,5 +1,5 @@
 ---
-id: FD-9975
+id: FD-1294
 family: finding
 title: The expression parser silently drops extra arguments to abs, round, floor, ceil, log, exp and sqrt
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-690, SL-1271, FD-1241, FR-36]
 ---
 
-# FD-9975 — The expression parser silently drops extra arguments to seven functions
+# FD-1294 — The expression parser silently drops extra arguments to seven functions
 
 ## Finding
 
@@ -21,10 +21,10 @@ after the first without a message. `round` hard-codes `digits = 0` (`:235`). The
 (`:118-132`) test only the function *name* and that no keyword argument is used, never the argument
 count. So an analyst who writes `round(x, 2)` gets 0 decimals, `log(x, 10)` gets the natural log, and
 `abs(a, b)` becomes `abs(a)`, with no error, no warning and no trace. **Proposed by the auditor; the
-disposition is the lead's.** FD-9975 is a working id, minted at the records PR.
+disposition is the lead's.** Minted 2026-09-30 as FD-1294 (`doc-id.py next --ref origin/main` = 1294 at `eeda8f4b`); it was filed under working id 9975.
 
 It has the same shape as FR-218 (`FD-1241`): a silent wrong result in a pricing path, not a crash.
-It is found in the DM's proof for DP-S1-2 (PR #957, working id 9972, branch `dm-rl-9972-dp-s1-2`, head
+It is found in the DM's proof for DP-S1-2 (PR #957, now RL-1292, branch `dm-rl-9972-dp-s1-2`, head
 `b58e5d7f070995e91ac9538a4daf4c396431e461`), which rules exact arity for WK-690 Slice 1 (SL-1271); the
 maintainer's entry of 2026-09-30 08:59:39 BST (`~/gi-pricing-plan.local/channel/to-lead.md`) ordered this
 finding and the data check below.
@@ -33,7 +33,7 @@ finding and the data check below.
 2026-09-30 09:10:46 BST, "DATA CHECK 0 ACCEPTED" (`~/gi-pricing-plan.local/channel/to-lead.md`), holds that a
 defect that is **latent, with zero occurrences in every reachable store, confined to dataset preparation,
 with scoring unaffected**, reads as high rather than critical. It would be critical if a stored expression
-used the forms or a rating price read them; neither is true. The entry also accepts the data check below
+used the forms or a rating price read them; neither is true (the auditor's inference, not the entry's). The entry also accepts the data check below
 as proven and rules out an off-box check: there is no production deployment yet (WK-674 builds one), this
 box holds the only PostgreSQL, MinIO and Redis, and CI databases are built from the repository fixtures,
 which were scanned.)*
