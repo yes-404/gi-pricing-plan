@@ -212,17 +212,30 @@ unpinned; wrong version on the table; model unpinned only) that exits 0.
   `model_ref`, `peril_structure_ref`, `pins`, `graph`, `resolved_payloads` or `algorithm_ref` key; each step records
   consumed, produced and matched values, and the `bundle_hash` values are synthetic (ending in zeros). They cannot be
   compiled into a bundle or priced, so **they cannot be an affected artifact**. Cross-check: canonical-JSON matching against
-  bundle-embedded algorithms and the pinned `rating_algorithms` of the 73 databases gave 0 of 3986 matches. The earlier
-  "algorithm-shaped" label came from a predicate that was too loose (a `steps` list holding a table, lookup or
-  `model_call` step). (This is a different question from the filer's text scan in the parser finding; the two share no result.)
-- **MinIO, whole bucket now** (auditor-922, later run): `gip-test-blobs` holds 14 602 objects = 2069 non-JSON + 6540
-  bundles + 3986 traces + 2007 other JSON; the growth over the earlier 14 577 is auditor-922's own backend test runs. Of the
-  6540 bundles, the 6519 checked earlier had 0 step refs outside their pins; **the 21 new ones were not re-checked**, and the
-  **2007 other-JSON and 2069 non-JSON objects were not classified or scanned** (this is stated, not counted as zero).
+  bundle-embedded algorithms and the pinned `rating_algorithms` of the 73 databases gave 0 of 3986 matches. **Disclosure, an instrument error:** the
+  earlier "algorithm-shaped" label, and the "3986 pinless blobs" gap it created, came from a predicate that was too loose
+  (a dict with a `steps` list holding a table, lookup or `model_call` step), which matched per-quote score-trace records; the
+  classification above corrects it. (This is a different question from the filer's text scan in the parser finding; the two share no result.)
+- **MinIO, `gip-test-blobs`, complete partition** (auditor-922, read-only boto3 pass at 2026-09-30 09:41 UTC, reported, not
+  re-run by the filer): 14 602 objects = 2069 non-JSON + 6540 bundles + 3986 traces + 2007 other JSON. The growth over the
+  earlier 14 577 is 21 bundles whose `LastModified` clusters at 09:21-09:22 and 09:32 UTC on 2026-09-30, consistent with
+  auditor-922's two backend test runs that morning (their start times were not recorded, so "probably", not proven).
+  1. **Bundles, 6540 of 6540 checked** (a JSON dict with `resolved_payloads` and `graph`): every `rate_table_ref`,
+     `reference_table_ref`, `model_ref` and `peril_structure_ref` in `graph` compared with `pins` and `resolved_payloads`;
+     **0** outside them, the 21 newer ones included.
+  2. **Traces, 3986** (above): cannot be compiled or priced.
+  3. **Other JSON, 2007, all checked:** none is a bundle or a step list with table, lookup or `model_call` steps, and 0 carry
+     any `*_ref`, `pins`, `graph`, `algorithm_ref` or `resolved_payloads` key. Shapes: 1341 `dataset_version_id, results`;
+     618 `matrix, terms`; 35 trace-shaped with no table, lookup or `model_call` step; 9 `learner, version`; 3
+     `cases, counterexamples`. They cannot hold the defect.
+  4. **Non-JSON, 2069:** bundles and algorithms are JSON, so these are neither; each was also grepped for the bytes
+     `rate_table_ref`, `reference_table_ref`, `model_ref`, `peril_structure_ref`, `algorithm_ref` and `resolved_payloads`:
+     0 contain any. Their leading magics look like text or CSV-style content; no individual file was opened.
 
 Tally: `pricing-core` 76 compile calls, backend 70, PostgreSQL 22 rating versions (491 versions, 73 databases in the
-filer's read), MinIO 6519 bundles: **0 unpinned in every one.** The 3986 blobs are traces (0 affected, by class). Gaps stated, not
-counted as zero: 21 newer bundles, and the 2007 other-JSON and 2069 non-JSON objects in `gip-test-blobs`. Owner of any
+filer's read), MinIO 6540 of 6540 bundles: **0 unpinned in every one**, and the other 8062 objects of `gip-test-blobs` (3986 traces, 2007 other
+JSON, 2069 non-JSON) classified as unable to hold the defect. No gap remains in the MinIO sweep. Limits kept: the backend sweep
+covered the 8 test files named above, not the whole backend suite, and counts only tests that reach `compile_bundle`. Owner of any
 further amendment: the auditor.
 
 ## Severity
