@@ -70,7 +70,7 @@ held it, and the code.
    `PL-1276` (WK-1170) and `PL-1277` (WK-1169) were read for the five routes and for `service
    account`, `system status`, `settings view` and `job detail`. Only `PL-1237` mentions a Service
    Account, and only as backend permissions and the F54 key-issuance fix (`PL-1237` lines 406,
-   484 to 486, 526). the #920 plan (working id 9681) (WK-675's map plan, PR #920, on `origin/wk675-map-plan`, still
+   484 to 486, 526). PL-1286 (WK-675's map plan, PR #920, on `origin/wk675-map-plan`, still
    `draft`) mentions none of the five; it names only the three `03` views of FD-1283.
 6. **Closed Works.** `CR-819` (WK-664's close) lists FR-399 to FR-405 as "The Job model with
    progress and cancellation … jobs API + worker paths" (`CR-819:126`), which is the backend
@@ -102,7 +102,7 @@ Work beside WK-675 serialises on it (an inference: the registry list does not na
 
 | Option | What it does | Cost / risk |
 |---|---|---|
-| **A. Fold all five into WK-675** | One frontend Work, one router owner | WK-675 is a `03` Work; with FD-1283's three slices it is 13 slices, about 9.75 / 13 / 26 days (the maintainer's dated correction of 2026-09-30, the #920 plan (working id 9681) having 10 with `RL-1261`'s S7b). Five more views on the `07` platform is a different subject and roughly doubles the increment, and it needs its own spec changes (the service-account list `GET`, a status route) |
+| **A. Fold all five into WK-675** | One frontend Work, one router owner | WK-675 is a `03` Work; with FD-1283's three slices it is 13 slices, about 9.75 / 13 / 26 days (the maintainer's dated correction of 2026-09-30, PL-1286 having 10 with `RL-1261`'s S7b). Five more views on the `07` platform is a different subject and roughly doubles the increment, and it needs its own spec changes (the service-account list `GET`, a status route) |
 | **B. New P2 Work, "Platform operator views"** | Owns all five in P2 | Must be opened before the Sat 2026-10-03 freeze; serialises against WK-675 on the router; adds a Work to G1 ("every P2 Work is resolved") |
 | **C. New P3 Work, or fold into P3 rows** | Service accounts beside WK-676 (RBAC, FR-347); Settings and System status beside WK-1251 or a P3 platform Work; Jobs likewise | Nothing built ahead of the phase (`CLAUDE.md` §0); but leaves FR-402's UI limb and the reachability exception open through P2 |
 | **D. Split by view** | **Jobs and Job detail into P2** (folded into WK-675, or a small new Work before the freeze); **Service accounts, Settings and System status into P3** | Two placements to record; the P2 part is small (backend built, no spec change) |
@@ -177,5 +177,7 @@ trace at `6987bf9d`. It is a channel entry, not a merged record; the ruling reco
 - **`/admin/environments` beside `/rating/environments` is not decided here.** It is a spec
   duplication question, not a scope one. The planner files it as an OQ owned by WK-675, for the
   decision-maker, at #920's revision; it is not to be settled silently in a plan.
+
+*(Amended 2026-09-30: citations of the WK-675 map plan re-pointed to PL-1286 after #920 merged; no other change. The mint disclosure above is kept.)*
 
 Ownership shape: event
