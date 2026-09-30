@@ -1,5 +1,5 @@
 ---
-id: RS-9801
+id: RS-1269
 family: research
 kind: spike
 title: Can Vue Flow carry WK-675's designer at 200 steps — pan/zoom fps, live connection checks, keyboard focus and delete, and the bundle cost?
@@ -13,9 +13,11 @@ corrected_by: []
 relates: [FR-212, FR-240]
 ---
 
-# RS-9801 — Vue Flow for the WK-675 DAG designer at 200 steps (spike F2)
+# RS-1269 — Vue Flow for the WK-675 DAG designer at 200 steps (spike F2)
 
 First filed 2026-09-28; `created` re-dated so the id sequence stays non-decreasing (check 31).
+
+Minted as RS-1269 on 2026-09-30; it was filed under the working id RS-9801 (earlier RS-WORKING).
 
 Spike F2 of Track F, run 2026-09-28 by the executor `spike-f2`. The timebox started at
 11:36:37 BST. The last measurement ended at 12:19:59 BST. **The verdict in this record
