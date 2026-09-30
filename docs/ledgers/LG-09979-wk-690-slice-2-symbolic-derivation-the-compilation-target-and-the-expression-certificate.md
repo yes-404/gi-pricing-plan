@@ -216,7 +216,8 @@ Lead's grant: dispatch record Delta 2 (2026-09-30 23:27:25 BST). This checkout i
     `test_audit_docs_process_core_digest.py` (2), `test_audit_docs_w37_11_ceiling.py` (1), `test_register_lint.py` (3), `test_register_owed.py` (1), `test_repository_invariants.py` (2).
     No test outside the docs-audit family failed. **This is not a green gate**; it goes green when the lead mints the ids, and the gate is re-read then.
 - **Collected tests (Acceptance 12):** `pytest --collect-only -q` on a detached worktree of main `71b67220` (own `uv sync --all-packages`): **4370**; on this head: **4420**; +50 (11 in `test_expression_objective.py`, 36 in `pricing-core` `test_objectives.py`
-  (including 12 template-unchanged cases), 3 in `model-schema`). Main's slotted `passed` total is in F1 below: 4367 passed, 3 skipped.
+  (including 12 template-unchanged cases), 3 in `model-schema`). Main's slotted `passed` total was not measured: no slotted main run was made; LG-1332 records 4367 passed at its own tree.
+  *(Corrected 2026-10-01: superseded by the F1 entry below — a slotted main run was made at 71b67220, 4367 passed, 3 skipped.)*
 - **Frontend half** on the same tree, inside `gate-1` (start 23:52:36, end 23:53:47): `pnpm install --frozen-lockfile` rc 0, `generate:api` rc 0, `lint` rc 0, `type-check` rc 0, `test` rc 0 (97 files, **609 passed**), `build` rc 0.
 - **Docs checks on a clean detached checkout of the pushed commit:** not yet run (nothing is pushed).
 
@@ -230,6 +231,8 @@ Lead's grant: dispatch record Delta 2 (2026-09-30 23:27:25 BST). This checkout i
 | 5, non-finite | `test_objectives.py`, `-k nonfinite` | 2 passed | `_finite_or_abort` returns before raising | **2 failed** (xgboost, lightgbm): `NonFiniteDerivativeError` not raised for `w * exp(exp(f))` at `f = 10` |
 | 8, division | `test_objectives.py`, `-k division`| 4 passed | `_denominator_findings` returns `[]` | **3 failed**: `assert <CheckStatus.PASS> is <CheckStatus.FAILED>` on `finiteness`, for `/ f`, `(exp(f) - y) ** 2` and the jump-sign denominator; cause, no denominator is examined |
 | 8, positive control | same | 4 passed | `_denominator_findings` flags every denominator | **2 failed**: `assert <CheckStatus.FAILED> is <CheckStatus.PASS>` for `/ (1 + f ** 2)`, and `'changes sign' in 'the denominator … flagged'`; cause, the bounded denominator no longer certifies, so the control is live |
+
+*(Corrected 2026-10-01, delta-audit F6: the Acceptance 8 row above records "3 failed" for the `_denominator_findings` → `return []` mutation; that count was wrong, read from output I had truncated. Re-run with `uv run pytest packages/pricing-core/tests/test_objectives.py -q -p no:cacheprovider -k division` after replacing the function's guard and body with `return []`: **4 failed, 84 deselected** — `…division_by_a_denominator_that_reaches_zero_fails`, `…division_catches_an_even_order_zero`, `…division_catches_a_sign_change_with_no_zero_on_the_grid` and `…division_by_the_even_order_zero_of_rl_1328`, each `assert <CheckStatus.PASS> is <CheckStatus.FAILED>` on `finiteness`. Reverted; `git status --porcelain` empty.)*
 
 **F4 — correction, dated 2026-10-01.** Three statements in Task 7 are corrected to say exactly what ran.
 - **ruff:** the gate ran the wrapper's `uv run ruff check .` with `.ruff_cache` **deleted beforehand**. It did **not** run `ruff check --no-cache`: deleting the cache stands in for the flag, and the run had no cache to read. (`ruff check --no-cache .` was run separately on the code commits up to `b3e4634c`, not on `152469c5`.)
