@@ -1,5 +1,5 @@
 ---
-id: FD-9991
+id: FD-9995
 family: finding
 title: A peril structure has no approval path and the compile resolver has no peril branch, so the day one is added an unapproved peril can be pinned
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178, FR-237, FR-351, FR-386]
 ---
 
-# FD-9991 — A peril structure has no approval path and the compile resolver has no peril branch
+# FD-9995 — A peril structure has no approval path and the compile resolver has no peril branch
 
 ## Finding
 
@@ -76,8 +76,8 @@ returned a peril would be refused with `PIN_NOT_APPROVED` unless its status was 
 2026-09-30 11:25:33 BST ("If no P2 Work schedules it, the owner is WK-1178, with the trigger 'before any resolver
 branch'"). The auditor checked `docs/roadmap.md` at `65b33479` (`grep -n -i peril docs/roadmap.md` finds lines `350`,
 `410`, `412`, `496`, all Phase 1b closure text, and `:496` "Bandings, Peril Structure and reconciliation are recorded
-as Phase 2"); no P2 Work row names a peril resolver or a peril approval path, so the owner is WK-1178. Whether the
-planner names a Work is the lead's to confirm; if one does, ownership moves to it.
+as Phase 2"); no P2 Work row names a peril resolver or a peril approval path, so the owner is WK-1178, which confirms the maintainer's fallback. The lead, having checked the P2 roadmap, confirms that no
+P2 Work schedules the peril resolver; if a later Work does, ownership moves to it.
 
 **Acceptance is a tripwire test, red first on broken input** (from the entry): a test that **fails if `_Resolver`
 resolves `peril_structure` while there is no peril approval path**, meaning no peril branch in
@@ -98,4 +98,4 @@ Ownership shape: event
 Not yet decided. The proposal above is the auditor's; the lead adopts, amends or rejects it. The maintainer's entry of
 11:25:33 BST has already agreed a LOW FD, the owner rule and the tripwire acceptance.
 
-*Disclosure: drafted under working id 9991; minted at the merge, when the id is re-read against `origin/main`.*
+*Disclosure: drafted under working id 9995; minted at the merge, when the id is re-read against `origin/main`.*
