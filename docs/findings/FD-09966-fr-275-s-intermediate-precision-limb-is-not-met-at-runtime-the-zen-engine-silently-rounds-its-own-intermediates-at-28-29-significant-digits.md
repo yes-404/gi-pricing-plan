@@ -79,6 +79,10 @@ record did not trace how much of the rounding survives in the engine's numeric r
 through the binding in `score.py`. RL working id 9963's sweeps (42 000 quotes per run) are the
 evidence for the size of the effect on ladders.
 
+The lead relays that an independent run by another auditor saw the engine's raw numeric result
+cross the Python binding as a float64 (`1.8518…e+19`). If so, float conversion dominates at
+ladder level, and that is the finding under working id 9949, limb 3 (FR-273), not this one.
+
 ## Disposition
 
 **Deferred with an owner: WK-1178.** Event that discharges it: FR-275's text corrected by a
@@ -90,11 +94,16 @@ headed *"2026-09-30 16:16:06 BST — DP-S3-5 ruled (RL 9963, local 48621365): ac
 substance pending auditor-plans; routing of the 4 observed items"*, item (2)): a new finding,
 LOW, owner WK-1178.
 
-**Direction, from the same entry.** The likely resolution is **the spec overclaiming the
-engine**. This is a `CLAUDE.md` §0 disagreement, where the spec is the side to correct: state the
-engine's real intermediate precision, and cite RL working id 9963's tolerance, a **1e-26
-relative per-rung tolerance** with an exact chained replay, unless the decision-maker finds a
-cheap code guard.
+**Direction, quoted from item (2) of the same entry, verbatim:** *"The likely resolution is
+**the spec overclaiming the engine**, so correct FR-275's text to state the engine's real
+intermediate precision (a §0 disagreement; the spec is the side to fix, unless the DM finds a
+cheap code guard), citing RL 9963's tolerance."*
+
+**The tolerance is from a different bullet of the entry.** The entry's first bullet accepts RL
+working id 9963 in substance, and names its "three engine-forced departures: string() reads, a
+1e-26 relative per-rung tolerance with an exact chained replay, the `divide` op". The
+**1e-26 relative per-rung tolerance** is that departure, and is what item (2) means by "RL
+9963's tolerance". Item (2) itself does not state the number.
 
 **What a correct FR-275 says, for the amendment's author to decide.**
 - The compile-time limbs stay: no rate table value, constant, literal or bound beyond scale 28,
