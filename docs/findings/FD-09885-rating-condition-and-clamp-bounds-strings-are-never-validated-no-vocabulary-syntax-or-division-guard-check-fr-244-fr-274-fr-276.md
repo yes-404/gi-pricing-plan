@@ -254,6 +254,12 @@ correction acknowledged; #968 widened, so fix the CLASS structurally"), each red
   does not iterate the enumerator, each fail a test.
 
 No committed condition or bound needs to be rewritten or shown refused (Exposure above); the
-matrix test's planted cases are the acceptance cases. The severity is HIGH, in force.
+matrix test's planted cases are the acceptance cases. The matrix test's `expr` division cell is
+already covered by three deliberate negative tests:
+`backend/tests/test_rating_algorithms.py:112`,
+`packages/pricing-core/tests/test_rating_compile.py:125` and
+`packages/pricing-core/tests/test_rating_compile_bundle.py:248`, with
+`packages/pricing-core/tests/test_rating_compile.py:136` the guarded positive control. The new
+cells are `condition`, `clamp_bounds` and `key_expr`. The severity is HIGH, in force.
 
 *Drafted under working id 9885.*
