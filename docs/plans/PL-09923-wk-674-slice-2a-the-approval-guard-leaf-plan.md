@@ -302,7 +302,13 @@ and the guard restored.
     `HEAD` quoted against main's.
 13. **Item 11** (`PL-1237` Tasks preamble): the maintainer's MERGE-ACK, naming the PR's full
     head SHA, recorded in the lead's channel file, never posted on the PR; and the slice's
-    clean audit filed.
+    clean audit filed. **The slice's close restates the accepted residual**, citing the
+    maintainer's entry headed
+    `2026-09-30 12:06:53 BST — #971 evidence-based trigger: the named residual is ACCEPTED`:
+    arbitrary SQL on the application's connection can set the flag, insert an approved
+    request and write, and this is accepted beside the superuser and
+    `session_replication_role` residuals, with no trigger-side count of `approval_decisions`
+    required (Acceptance 11). The ledger and the slice's audit record both carry that line.
 
 ## Global Constraints
 
@@ -455,7 +461,7 @@ trigger's SQLSTATE; `backend/tests/test_approval_guard.py`; `backend/tests/conft
 - [ ] The full two-half gate in a gate slot; quote every rc, `N passed`, `HEAD`, `uptime`.
 - [ ] The ledger (`LG-`, working id): the tree, the premises, the derived set, every red
   quote, the #971 alignments, the stated limits, the decided order.
-- [ ] Item 13.
+- [ ] Item 13, with the accepted residual restated in the ledger (the 12:06:53 BST entry).
 
 ## Hand-off
 
