@@ -112,10 +112,10 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
           `MetricStatus` (`metrics.py:48`), `ModelStatus` (`modelling.py:1975`),
           `ObjectiveStatus` (`objectives.py:137`), `PerilStructureStatus` (`perils.py:94`)
           and `RatingVersionStatus` (`rating.py:31`), and the tables they govern.
-        - Slice 2 also declares the vocabulary of `validation_rules` and
+        - Slice 2a also declares the vocabulary of `validation_rules` and
           `validation_rule_sets`, through a `StrEnum` of their string constants
-          (`validation_rules.py:65`), since they have no enum. And it declares the Deployment
-          Request table's.
+          (`validation_rules.py:65`), since they have no enum. Slice 2 declares the
+          Deployment Request table's.
         - **Every mapped `status` column declares itself, and none escapes by omission**
           (fail-closed; corrected on auditor-close1255's M1). In its own column metadata, each
           column carries **either** its vocabulary `StrEnum` **or** an explicit non-approval
@@ -160,9 +160,21 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
           migration that creates it (sub-item 9).
         - **What it refuses:** it raises when `NEW.status = 'approved'` (on update, only
           when `OLD.status IS DISTINCT FROM NEW.status`) and
-          `current_setting('app.approval_decision', true)` is not `'on'`. Its SQLSTATE maps
-          to one named refusal in the platform's error translation.
-        - **It is an Alembic migration in Slice 2.** The migrations directory is a registry,
+          `current_setting('app.approval_decision', true) IS DISTINCT FROM 'on'`. Its
+          SQLSTATE maps to one named refusal in the platform's error translation.
+          - **`OF status` narrows only the UPDATE event.** Every INSERT fires the trigger,
+            so an insert that relies on a column default is caught.
+          - **The comparison is `IS DISTINCT FROM 'on'`, never `= ''` or `IS NULL`.** Once a
+            session has set the flag, it reads `''`, not NULL, after the transaction ends.
+          - **Verified** on PostgreSQL 16.15 (the compose server), with this function on a
+            scratch temp table, `status text DEFAULT 'approved'`:
+            - an insert relying on the default, without the flag, was refused;
+            - an update of another column was allowed;
+            - `SET status = lower('APPROVED')` was refused;
+            - with `set_config('app.approval_decision', 'on', true)` the default insert was
+              allowed;
+            - after the transaction's rollback, the setting read `''`.
+        - **It is an Alembic migration in Slice 2a.** The migrations directory is a registry,
           append-only. There is a precedent: `61981ea8f274_custom_metrics.py` already
           installs PL/pgSQL triggers (`:63`, `:177`).
         - **How defaults reach it (verified):** SQLAlchemy writes a Python-side `default=`
@@ -230,7 +242,7 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
      6. **Test fixtures.** 17 backend test files match
         `git grep -l -E 'status\s*=\s*"approved"|Status\.APPROVED|status=APPROVED' 9f63d0fe --
         backend/tests`. That is an upper bound on the direct approved writes, since some
-        matches only compare. **Declared Slice 2 work:** each goes through the decision path,
+        matches only compare. **Declared Slice 2a work:** each goes through the decision path,
         or through a helper that enters `approval_decision()` and is defined under
         `backend/tests/` only. The static checks exempt `backend/tests/` and nothing else.
      7. **Red first, against a database migrated to head:**
