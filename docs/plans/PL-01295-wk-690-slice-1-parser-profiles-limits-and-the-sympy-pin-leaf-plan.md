@@ -3,7 +3,7 @@ id: PL-1295
 family: plan
 kind: leaf
 title: WK-690 Slice 1 — the parser brought to §4.6's four profiles, with its limits and the sympy pin: leaf plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-09-30
 owner: planner
 tree: fb90d381fae0f7cf8a92b09b56bb002dc6958e80
@@ -127,10 +127,12 @@ Against the other lane:
   silently drops extra arguments to the seven legacy functions (premise c), and that finding
   records it. It resolves at this slice's merge, and Acceptance 12 is its proof through all
   three reachable callers. *(Revised 2026-09-30 on the maintainer's ruling "DATA CHECK 0 ACCEPTED" (to-lead.md), relayed by the lead: DP-S1-2's defect is FD-1294, #959, severity HIGH, live on main; this slice is its fix.)*
-- Activation: _pending. The plan goes `active` once RL-1291, RL-1292 and RL-1293 are
-  merged and minted, because each blocking row then has its resolver id (`document-ids.md`
-  §1.7), and it then cites their minted ids. Its merge carries the maintainer's MERGE-ACK.
-  A leaf plan takes no acceptance line._ *(Revised 2026-09-30 on auditor-plans2's audit at
+- **Activation: the condition is met, and the plan is `active` from this commit.** Every
+  blocking row has its resolver id (`document-ids.md` §1.7): RL-1291 (DP-S1-1, merged
+  09:23 BST, #956, `7040cf1e`), RL-1292 (DP-S1-2, merged 09:43 BST, #957, `7c354305`) and
+  RL-1293 (DP-S1-3, merged 10:04 BST, #958, `eeda8f4b`), all on 2026-09-30. The merge
+  carries the maintainer's MERGE-ACK. A leaf plan takes no acceptance line. ~~_pending. The
+  plan goes `active` once RL-1291, RL-1292 and RL-1293 are merged and minted …_~~ *(Revised 2026-09-30 on auditor-plans2's audit at
   dc49b9d9, finding F9, and the maintainer's ruling that a leaf plan takes no acceptance line,
   the same ruling as #929 / `PL-1278`. It read "…then the maintainer's acceptance".)*
 
