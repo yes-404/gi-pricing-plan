@@ -219,6 +219,25 @@ all rc=2
 
 **Run B**, `GoodCaller.vue` and `GenericFigure.vue` only: no output, **rc 0**.
 
+**Runs C and D — the gate's own mode.** `pnpm --dir frontend type-check` is
+`vue-tsc --build --force` (`frontend/package.json:14`), and the frontend workflow runs it
+(`.github/workflows/frontend.yml:105-108`). That step is `continue-on-error`, and the job's verdict is its `Gate summary` step (`:126`), which reads the step's `outcome` (`S_type_check`, `:130`), so a type error fails the job. So the same six components were also checked in
+build mode. In a second empty directory: the same `src/` and the same installed
+`node_modules`; `git show 7040cf1e:frontend/tsconfig.app.json > tsconfig.app.json`,
+**verbatim** (`cmp` against `git show` is silent); and a root `tsconfig.json` that only
+references it:
+
+```json
+{
+  "files": [],
+  "references": [{ "path": "./tsconfig.app.json" }]
+}
+```
+
+`./node_modules/.bin/vue-tsc --build --force`, 2026-09-30 08:48:54 UTC. **Run C**, all six
+components: the same four errors as run A, byte for byte, and **rc 1**. **Run D**, with the
+four broken callers moved out: no output, **rc 0**.
+
 So at a real call site vue-tsc infers `T` from `rows`, and types each inline accessor's
 parameter as `T`, not `any`: `NoAnyLeak` fails because `r.band` is inferred as `string`. It
 refuses a misspelt field, a value that is not a cell, and columns written for another row
@@ -262,12 +281,20 @@ The last "Against" clause of (c) is **discharged by the spike above**.
 4. **The two W6b-9 checks — each kept or retired, with its reason** (`CLAUDE.md` §13):
    - **The dev-only arity guard retires, by construction.** Every row renders exactly one
      cell per column, so the class it caught (a row of the wrong length) can no longer be
-     written. Its replacement check is the type-check failure above, which is stronger: it
-     runs in CI and in the production build's `vue-tsc --build`.
+     written. Its replacement check is the type-check failure above, which is stronger:
+     it runs in the gate. `pnpm --dir frontend type-check` is `vue-tsc --build --force`, which
+     the frontend workflow runs, and runs C and D show that mode refusing the broken callers
+     and passing the correct one. The dev guard ran only in development.
    - **`cellUnder` stays.** It still reads hand-written tables (for example
      `DatasetListView`), and it is **the column-by-name reader** `PL-1286` acceptance item 5
      names: each new chart's table is asserted under test by reading cells under their
-     `label`.
+     `label`. **S1 updates its text**, because three statements in
+     `frontend/src/test-tables.ts` go stale once the guard retires and S1 renders
+     `<th scope="row">`: the thrown message's clause "…the arity failure ChartFigure's own
+     guard should have caught first" (`:44-46`); the docstring's DOM-order explanation that
+     "a `ChartFigure` row is all `<td>`" (`:18-21`); and the module docstring's description of
+     `columns` and `rows` as "two independent props with no relation enforced between them"
+     (`:10-13`). Its lookup by DOM order within the row stays correct for both shapes.
 5. **Slice 1's scope, beyond the API** (`PL-1286` S1). The same slice (i) keys each `<th>`
    and `<td>` by the descriptor's `key` and refuses a duplicated `key` within one figure; (ii)
    renders the first column's cells as `<th scope="row">`, so each row is named for assistive
@@ -295,7 +322,8 @@ chart, so NFR-463 carries a dated clause naming it.
 - **The roadmap (the lead's file, not edited here):** the *Deferred / any time* row strikes
   `OQ-550` as decided by this record. A decided question keeps its row.
 - **`PL-1286` (the planner's file, not edited here):** DP-1 has its resolver.
-- **WK-675 Slice 1 (`PL-1286` S1):** items 1, 3, 4 and 5 above, with all 13 call sites
+- **WK-675 Slice 1 (`PL-1286` S1):** items 1, 3, 4 (including `cellUnder`'s stale text) and
+  5 above, with all 13 call sites
   migrated.
 
 ## Acceptance — the violation that must become detectable
