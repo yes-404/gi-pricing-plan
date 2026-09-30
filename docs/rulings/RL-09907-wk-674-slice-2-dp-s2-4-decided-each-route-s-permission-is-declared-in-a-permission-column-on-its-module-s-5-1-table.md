@@ -39,7 +39,7 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
 | A per-route permission column in the module specs | **absent** | Each module spec's `### 5.1` table header, read. `01-data-management.md:847`, `02-modelling.md:1759`, `03-rating-engine.md:742`, `06-governance.md:494` and `07-platform.md:299` are each `\| Method \| Path \| Purpose \|`. The five tables hold 39, 44, 26, 23 and 20 method rows: 152 in all (the rows beginning `` \| `GET` `` and so on, inside `### 5.1`). |
 | A permission in the published contract | **absent** | `git show 65b33479:docs/contracts/openapi/generated.json \| grep -c x-permission` prints `0`. |
 | A route-to-permission declaration anywhere | **present, once: 6 rows covering 7 operations** (decide and withdraw share a row, `06:514`) | `06` §5.1 carries a blockquoted `\| Route \| Requires \|` table for its approval routes, "stated 2026-08-15 after an independent audit" (`06-governance.md`, the note after the approval-request rows). Its cells are a permission name or `authenticated`. It is the precedent for (a)'s cell vocabulary. |
-| Existing `§5.1` parsers | **present, two, reading only the first two cells** | `audit-docs.py:297` `_ENDPOINT_ROW` and `scope-audit.py:68` `_ENDPOINT` each match `^\|\s*method\s*\|([^\|]+)\|` and ignore the rest of the row. A fourth column breaks neither. Check 22 (`audit-docs.py`, "Every markdown table row has its own header's cell count") requires that the header and every row gain the column in the same commit. |
+| Existing `§5.1` parsers | **present, three, reading only the first two cells** *(corrected: this row said "two" and cited `:297`)* | `audit-docs.py:299` `_ENDPOINT_ROW`, `scope-audit.py:68` `_ENDPOINT` and the backend's own copy, `backend/src/app/demo/guide.py:64` `_SPEC_ENDPOINT`, each match `^\|\s*method\s*\|([^\|]+)\|` and ignore the rest of the row. A fourth column breaks neither. Check 22 (`audit-docs.py`, "Every markdown table row has its own header's cell count") requires that the header and every row gain the column in the same commit. |
 | How a route states its permission in code | **present, in two forms** | A `requires(<member>)` dependency tags itself with `PERMISSION_ATTRIBUTE` (`backend/src/app/api/authz.py:41`, `:76`). A handler may also call `rbac.require_permission(…, permission=…, resource=…)` itself, which the deploy route must do under #971's item B.2 (an Environment resource). So a pin read from `PERMISSION_ATTRIBUTE` alone would miss a handler-checked route. |
 
 ## Ruled
@@ -67,8 +67,8 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
 
    Three of them carry different permissions per method. Each becomes two rows with one
    method and its own `Permission` cell, and there is **no per-method cell syntax**. The
-   tables go from **152 to 157 rows**. The first two cells keep their shape, so both parsers
-   read the split rows unchanged. *(This supersedes this record's previous head, which kept
+   tables go from **152 to 157 rows**. The first two cells keep their shape, so the shared
+   row reader of item 3 reads the split rows unchanged. *(This supersedes this record's previous head, which kept
    152 rows with a per-method cell.)*
 
    An empty cell fails. `06`'s blockquoted `| Route | Requires |` table is folded into
@@ -106,35 +106,79 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
    - a built row, whose route exists, that the live app does not check as declared.
 
    Unbuilt rows are declarations only, and the pin reads them when their route appears. The
-   parser **reuses** the `_ENDPOINT_ROW`/`_ENDPOINT` row shape, never a third reading of
-   these tables.
+   pin reads the rows through the shared `table_rows` module of the next bullet, and never
+   through a reading of its own.
    - **Paths are compared as `audit-docs.py`'s `_path_segments` compares them:** the
      `/api/v1` prefix and any query string are dropped, and every `{placeholder}` collapses
      to one segment. So `01` §5.1's `/api/v1/dataset-versions/{id}/lineage?direction=up|down`
      (`01` §5.1, the lineage row) matches the live `/api/v1/dataset-versions/{version_id}/lineage`.
-   - **The shared row parser learns the escaped pipe: one change to both parsers, never a
-     third, and the cells are not rewritten.** *(Added on auditor-926-927's audit of
-     `b0f4e06b`, which found the pin could not read the lineage row.)*
-     - `_ENDPOINT_ROW` (`audit-docs.py:297`) and `_ENDPOINT` (`scope-audit.py:68`) capture
-       the path cell with `([^|]+)`. An escaped `\|` inside a cell therefore ends the
-       capture. At `daa7f5f8`, three path cells carry one: `01:873`
+   - **One shared row parser, `packages/model-schema/src/model_schema/table_rows.py`,
+     stdlib-only. It replaces every markdown-table row split in the repository, and it reads
+     the escaped pipe.** *(Restated on the maintainer's entry "11:49:44 BST — DECISION: the
+     shared row parser is route (a), a stdlib-only module file; this amends my 11:46:58
+     'model-schema helper'". It supersedes this bullet's earlier rule of "one regex change
+     to both parsers, never a third". That rule missed the backend's copy, and it left the
+     row splits outside §5.1 in place. The finding is #983, working id 9894, MEDIUM, owned by
+     this slice, cited in prose until minted.)*
+     - **The defect (measured).** Every copy captures the path cell with `([^|]+)`, so an
+       escaped `\|` ends the capture. At `daa7f5f8`, three path cells carry one: `01:873`
        (`…/lineage?direction=up\|down`), `06:539` (`…?format=html\|pdf\|bundle`) and
-       `06:543` (`…/dependencies?direction=up\|down`). Both scripts are blind to all three
-       today; the auditor measured `declared_endpoints("DATA")` at 39 of 40.
-     - Two more rows carry one in the Purpose cell (`01:866`, `02:1784`). A naive split
-       there would also misplace the new `Permission` cell.
-     - **Rewriting the cells is rejected.** `\|` is the markdown-correct way to write a
-       pipe inside a cell, it occurs in five rows, and a later row would bring it back.
-     - **The rule:** both regexes take the cell pattern `((?:\\\||[^|])+)` (an escaped pipe
-       or any non-pipe), changed identically in the same commit. Tested at this ruling: it
-       reads the `01:873` row's path whole, closing backtick included. Where the slice
-       needs every cell of a row (for the fourth), it splits on **unescaped** pipes only.
-     - **The parser blindness is a LOW finding owned by this slice** (the maintainer's entry
-       "2026-09-30 11:42:08 BST"). auditor-928 files it, and it is cited here in prose until
-       filed. Its acceptance is one shared parser, red first on `01:873`, with
-       `declared_endpoints("DATA")` going from 39 to 40.
-     - **The pin defines no third reading.** It imports the row-reading function of one of
-       the two scripts, extended to return all cells, and uses nothing else.
+       `06:543` (`…/dependencies?direction=up\|down`). Measured at `d15d4c8f` by loading
+       `scripts/scope-audit.py` by path: `declared_endpoints("DATA")` is 39 and
+       `declared_endpoints("GOV")` is 23. With the path cell `((?:\\\||[^|])+)` substituted,
+       they are 40 and 25. Two more rows carry an escaped pipe in the Purpose cell
+       (`01:866`, `02:1784`), where a naive split would misplace the new `Permission` cell.
+     - **Rewriting the cells is rejected.** `\|` is the markdown-correct way to write a pipe
+       inside a cell, it occurs in five rows, and a later row would bring it back.
+     - **Why a module file, and why stdlib-only.** `docs.yml` runs the scripts under bare
+       `setup-python` (`python3 scripts/audit-docs.py` at `docs.yml:68`, `doc-id.py check`
+       at `:76`, `doc-index.py --check` at `:80`), with no packages and no pydantic. So:
+       - **the scripts load `table_rows.py` by path** with `importlib.util`, as
+         `audit-docs.py` already loads `register-lint.py` (`_load_register_lint`, `:261`).
+         The path resolves from the loading script's own `__file__`, never from the working
+         directory. A script loaded inside a `doc-id.py migrate --verify` snapshot then
+         reads that snapshot's `table_rows.py`, not the live tree's. It writes no bytecode
+         into the snapshot, as `audit-docs.py`'s `_load_module` (`:1232`) already
+         ensures by setting `sys.dont_write_bytecode` around the load (`:1252-1257`);
+       - **the backend imports it normally** (`from model_schema.table_rows import …`),
+         which the `.importlinter` layering already allows;
+       - **`docs.yml` is unchanged.** Route (b), installing `model-schema` in `docs.yml`, is
+         rejected by the same entry.
+     - **What it owns:** the row split, on unescaped pipes only, with `\|` kept inside its
+       cell. `register-lint.py`'s `_split_row` (`:165`) is the model and becomes a caller.
+       It also owns the §5.1 endpoint-row reading (the method cell and the path cell) built
+       on that split. Callers keep their own meaning for each cell. What the module owns is
+       only how a row becomes cells.
+     - **Every row split migrates, and "never a fourth" means the row-split logic.** At
+       `d15d4c8f`, over `*.py`, the population is:
+       - the three §5.1 endpoint regexes: `audit-docs.py:299`, `scope-audit.py:68` and
+         `backend/src/app/demo/guide.py:64`;
+       - the naive `strip("|").split("|")` splits: `audit-docs.py:353`, `:394`, `:578` and
+         `:4118`; `doc-index.py:1061`; `_docid.py:1611`; `guide.py:87`; `register-lint.py:169`
+         (`_split_row` itself); and `tests/test_findings_ids.py:157`;
+       - the unescaped-pipe splits and counts: `tests/test_audit_docs_ids.py:2413` and
+         `:2462`; `doc-index.py:477` (`_UNESCAPED_PIPE`, used at `:557`);
+         `register-lint.py:126` (used at `:309`); and `audit-docs.py:636` (check 22's cell
+         count);
+       - `doc-id.py:3202`, which already calls `register_lint._split_row` and so follows it.
+
+       These are the lines printed by `git grep -n -F '[^|]+' -- '*.py'`,
+       `git grep -n -F '.split("|")' -- '*.py'`, `git grep -n -F '(?<!\\)\|' -- '*.py'` and
+       `git grep -n -F '_split_row' -- '*.py'`, minus the vendored
+       `.claude/skills/ui-ux-pro-max/` hits. Those split CSV alias fields, not markdown
+       rows, and vendored files stay as upstream wrote them (`CLAUDE.md` §12).
+       `audit-docs.py:642` is check 22's lint for a raw pipe inside a code span. It is a
+       lint, not a split, and it stays. Each migrated site is read at the slice. A site the
+       slice finds is not a markdown-row split is named in its record, not silently left.
+     - **`doc-index.py --phase P2` is carried by this slice.** Its register split at
+       `doc-index.py:1061` raises on the register rows that carry `\|` (#983 reports `:197`
+       and `:213`). It is one of the population above, fixed by the same splitter, and so
+       fixed before the P2 exit review. The default `--check` does not call it.
+     - **A static test pins the population at zero.** The four `git grep` predicates above
+       print nothing outside `table_rows.py`, the vendored exclusion, `audit-docs.py`'s
+       check 22 lint and the test's own file, which holds the predicates as data and is
+       excluded by name. Red first: a planted `line.split("|")` in a scratch script fails
+       it.
    - **Two live routes have no row. The spec is behind the code (`CLAUDE.md` §0), and the
      slice adds both rows spec-first** (the 11:37:11 BST entry, item 2). They are
      `GET /api/v1/rating-versions` and `GET /api/v1/rating-versions/{rating_version_id}`
@@ -195,7 +239,8 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
 
 ## What it obliges
 
-- **This commit:** this record only.
+- **This commit:** this record only. The finding #983 (working id 9894) is carried by the
+  WK-1178 slice of item 4, including `doc-index.py --phase P2`.
 - **The leaf plan (PL working id 9920, the planner's file, not edited here):** DP-S2-4's
   "Resolved by" cell cites this record once it is minted. Task 0A step (c) is carried by the
   WK-1178 slice of item 4, and not by Slice 2.
@@ -215,10 +260,23 @@ Each is shown failing on deliberately broken input (`CLAUDE.md` §13), in the WK
 - A cell naming a permission in neither of `06` §4.1's Built and Specified tables fails.
 - After the split, `PUT /settings` declared `settings:read` fails, and so does any split row
   whose permission differs from its method's check.
-- **Escaped pipes are read:** the `01:873` lineage row is read with its full path, so
-  `declared_endpoints("DATA")` counts 40, and the `06:539` and `06:543` rows are read whole.
-  A row whose Purpose cell holds `\|` (`01:866`) still yields its correct `Permission`
-  cell. With the old `([^|]+)` restored, the lineage case fails.
+- **Escaped pipes are read, through one shared parser** (item 3's `table_rows` bullet):
+  - `declared_endpoints("DATA")` counts 40 and `declared_endpoints("GOV")` counts 25, up
+    from 39 and 23. The `01:873`, `06:539` and `06:543` rows are read with their full
+    paths;
+  - a planted row with `\|` in its path cell is read identically by all three consumers:
+    `audit-docs.py`, `scope-audit.py` and `backend/src/app/demo/guide.py`;
+  - a row whose Purpose cell holds `\|` (`01:866`) still yields its correct `Permission`
+    cell;
+  - with the old `([^|]+)` restored, the DATA and GOV counts fall back and the case fails;
+  - `doc-index.py --phase P2` completes on the live register;
+  - a test fails if `table_rows.py` imports any module outside `sys.stdlib_module_names`.
+    Red first: a planted `import pydantic`;
+  - `audit-docs.py` is proven to run under a bare Python, with no project packages
+    installed. For example, `python3 -I -S scripts/audit-docs.py` exits as it does under
+    the venv. At `d15d4c8f` it does: system Python 3.13.5 under `-I -S` gave rc 1, with
+    only check 31's working-id gap;
+  - the static population test of item 3 fails on a planted `line.split("|")`.
 - A live route with no row fails. The two rating-version reads pass through their
   "records an existing route" rows.
 - A route declared `authenticated` that in fact demands a permission, or the reverse, fails.
