@@ -1,5 +1,5 @@
 ---
-id: FD-9693
+id: FD-1284
 family: finding
 title: Five 07 §5.3 platform views (Jobs, Job detail, Service accounts, Settings, System status) are owned by no Work, and none is built
 status: active
@@ -7,10 +7,10 @@ created: 2026-09-30
 owner: auditor
 tree: 880feb499eddb9e854c525770e95fb19373a2311
 corrected_by: []
-relates: [WK-658, WK-664, WK-674, WK-675, WK-676, WK-1251]
+relates: [WK-658, WK-664, WK-674, WK-675, WK-676, WK-1251, FD-1283]
 ---
 
-# FD-9693 — Five `07` §5.3 platform views have no owner and no code
+# FD-1284 — Five `07` §5.3 platform views have no owner and no code
 
 ## Finding
 
@@ -19,11 +19,10 @@ Jobs `/jobs`, Job detail `/jobs/:id`, Environments `/admin/environments`, Servic
 `/admin/service-accounts`, Settings `/admin/settings` and System status `/admin/status`.
 **Five of them, all but Environments, are owned by no Work, plan, ruling or closure, and none has
 a route or a view in the frontend.** (Environments overlaps `03`'s Deployments view, which
-#921 (working id 9692) places in WK-675 on the maintainer's 2026-09-30 decision; whether `07`'s
+FD-1283 places in WK-675 on the maintainer's 2026-09-30 decision; whether `07`'s
 `/admin/environments` route is a second screen or the same one is a question that decision did
 not answer, and this finding does not answer it either.) **Proposed by the auditor; the
-disposition is the lead's, and placement is the maintainer's.** FD-9693 is a working id, minted
-at the records PR. Read at `origin/main` `880feb49`, 2026-09-30.
+disposition is the lead's, and placement is the maintainer's.** FD-1284 was filed as working id 9693 and minted at #949's mint turn (2026-09-30). Read at `origin/main` `880feb49`, 2026-09-30.
 
 **Which of the five carry a numbered requirement** matters, because `00` FR-24 makes a §5.3
 Contents cell prose that binds nothing. Only **FR-402** (`07:91`, "Job logs … viewable in the UI
@@ -72,7 +71,7 @@ held it, and the code.
    account`, `system status`, `settings view` and `job detail`. Only `PL-1237` mentions a Service
    Account, and only as backend permissions and the F54 key-issuance fix (`PL-1237` lines 406,
    484 to 486, 526). the #920 plan (working id 9681) (WK-675's map plan, PR #920, on `origin/wk675-map-plan`, still
-   `draft`) mentions none of the five; it names only the three `03` views of #921 (working id 9692).
+   `draft`) mentions none of the five; it names only the three `03` views of FD-1283.
 6. **Closed Works.** `CR-819` (WK-664's close) lists FR-399 to FR-405 as "The Job model with
    progress and cancellation … jobs API + worker paths" (`CR-819:126`), which is the backend
    limb; no closure record claims a jobs, service-account, settings or status **view**. WK-658
@@ -103,7 +102,7 @@ Work beside WK-675 serialises on it (an inference: the registry list does not na
 
 | Option | What it does | Cost / risk |
 |---|---|---|
-| **A. Fold all five into WK-675** | One frontend Work, one router owner | WK-675 is a `03` Work; with #921 (working id 9692)'s three slices it is 13 slices, about 9.75 / 13 / 26 days (the maintainer's dated correction of 2026-09-30, the #920 plan (working id 9681) having 10 with `RL-1261`'s S7b). Five more views on the `07` platform is a different subject and roughly doubles the increment, and it needs its own spec changes (the service-account list `GET`, a status route) |
+| **A. Fold all five into WK-675** | One frontend Work, one router owner | WK-675 is a `03` Work; with FD-1283's three slices it is 13 slices, about 9.75 / 13 / 26 days (the maintainer's dated correction of 2026-09-30, the #920 plan (working id 9681) having 10 with `RL-1261`'s S7b). Five more views on the `07` platform is a different subject and roughly doubles the increment, and it needs its own spec changes (the service-account list `GET`, a status route) |
 | **B. New P2 Work, "Platform operator views"** | Owns all five in P2 | Must be opened before the Sat 2026-10-03 freeze; serialises against WK-675 on the router; adds a Work to G1 ("every P2 Work is resolved") |
 | **C. New P3 Work, or fold into P3 rows** | Service accounts beside WK-676 (RBAC, FR-347); Settings and System status beside WK-1251 or a P3 platform Work; Jobs likewise | Nothing built ahead of the phase (`CLAUDE.md` §0); but leaves FR-402's UI limb and the reachability exception open through P2 |
 | **D. Split by view** | **Jobs and Job detail into P2** (folded into WK-675, or a small new Work before the freeze); **Service accounts, Settings and System status into P3** | Two placements to record; the P2 part is small (backend built, no spec change) |
@@ -122,7 +121,7 @@ Work beside WK-675 serialises on it (an inference: the registry list does not na
 4. **System status.** Needs a **spec change first** (no route; two of its inputs, cache hit rate and
    part of the metrics families, are not emitted). Candidates: C (WK-1251's observability limb or a
    P3 platform Work), E.
-5. **Environments (`07:392`).** Not in this finding; decided with #921 (working id 9692) only for
+5. **Environments (`07:392`).** Not in this finding; decided with FD-1283 only for
    `/rating/environments`. **A question for the maintainer, not answered here:** does
    `/admin/environments` remain a second route?
 
@@ -159,7 +158,7 @@ placement, not before.
 
 **The maintainer ruled, by delegation: option D (split by view).** Recorded from
 `~/gi-pricing-plan.local/channel/to-lead.md`, the entry "2026-09-30 05:35:06 BST — SCOPE DECISION:
-#949 FD-9693, the `07` §5.3 platform views, option D (split by view)", made on this essay's ownership
+#949 …, the `07` §5.3 platform views, option D (split by view)", made on this essay's ownership
 trace at `6987bf9d`. It is a channel entry, not a merged record; the ruling record is the mint turn's.
 
 - **Jobs and Job detail: P2, two WK-675 slices.** Owner **WK-675**. FR-402's UI limb and FR-401
