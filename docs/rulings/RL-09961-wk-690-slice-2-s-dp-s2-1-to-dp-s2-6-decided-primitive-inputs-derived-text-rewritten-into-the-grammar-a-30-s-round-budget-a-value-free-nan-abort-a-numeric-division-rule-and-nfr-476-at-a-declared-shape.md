@@ -54,12 +54,19 @@ relates: [PL-1268, SL-1272, RL-1289, RL-1291, RL-1293, FD-1219, WF-702]
 | No per-round budget, no budget code | `objectives.py:1248`, `:1280`; `02` §5.1 | **absent** | Only the smoke fit's elapsed detail exists |
 | The builtin benchmark only | `scripts/bench-model.py:93`, `:246` | present | `"NFR-476 gbm fit, 500 trees"` on `count:poisson`. No expression limb |
 | The dedicated host | `docs/closures/CR-01247-…md:308-335` (Proposal 4) | **absent** | It is maintainer-owned, and "No repository record names a host". A shared-VM run "claims no verdict near a bound" (`RL-921` §4) |
-| SymPy 1.14.0's derivative heads | spike, below | present | `min`, `max` and `clip` hessians carry `Heaviside` and `DiracDelta`; `d²\|x\|/dx²` = `2*DiracDelta(x)`; `Heaviside(0)` = `1/2` |
+| SymPy 1.14.0's derivative heads | spike, below | present | Every `min`, `max` and `clip` hessian carries `DiracDelta`. `Heaviside` appears too whenever the argument is nonlinear in `f` (for example `exp(f)`), and always for `clip`. `min(f, y)` and `max(f, y)` carry `DiracDelta` only. `d²\|x\|/dx²` = `2*DiracDelta(x)`; `Heaviside(0)` = `1/2` *(corrected 2026-09-30 on auditor-plans2's F3; see the spike)* |
 
-**Spike** (scratch `vocab.py`, sympy 1.14.0 in the scratch venv of `RL-1289`, `real=True`
-symbols as `RL-1293` rules). It printed:
-`min hess heads: ['DiracDelta', 'Heaviside']`, `max …` the same, `clip …` the same,
-`Heaviside(0) = 1/2` and `d2|x|: 2*DiracDelta(x)`.
+**Spike** (scratch `vocab.py`, then `vocab3.py`, sha256 prefix `46de41d2cdcf4fe5`;
+sympy 1.14.0 in the scratch venv of `RL-1289`; `real=True` symbols as `RL-1293` rules).
+- `vocab.py` printed `min hess heads: ['DiracDelta', 'Heaviside']`, with `max …` and
+  `clip …` the same, `Heaviside(0) = 1/2` and `d2|x|: 2*DiracDelta(x)`.
+- Its arguments held `exp(f)`. The first form of this record generalised from that, and
+  auditor-plans2's F3 found `['DiracDelta']` only for `min` and `max`.
+- **Both are right, and the argument decides.** `vocab3.py` printed:
+  - `min(f,y)` hess `['DiracDelta']` (`-w*DiracDelta(f - y)`), and `max(f,y)` the same;
+  - `min(exp f,y)` and `max(exp f,y)` hess `['DiracDelta', 'Heaviside']`;
+  - `clip(f,a,b)` and `clip(exp f,a,b)` hess `['DiracDelta', 'Heaviside']`.
+- The rewrites in DP-S2-2 cover every head in every form, so the ruling is unchanged.
 
 ## Ruled
 
@@ -123,9 +130,26 @@ passes the artifact's fields.
 - The numeric ranges are structured attributes on the exception: `round_index`, `rows`,
   `y_range` and `f_range`.
 - **The condition that makes (b) meet FD-1219:**
-  - The ranges reach **only** the stored job record's structured `detail`, when Slice 3 wires
-    the fit-site mapping to `PlatformError(code, …, detail=value-free text)` with the ranges
-    in `JobError.detail`.
+  - The ranges reach **only** the stored job record's structured `detail`. **That mechanism
+    does not exist yet, and Slice 3 builds it** *(corrected 2026-09-30 on auditor-plans2's
+    F1)*. At `11c76b6c`:
+    - `PlatformError` (`backend/src/app/errors.py:393-412`) carries `code`, `title`,
+      `status_code`, a **text** `detail` and `errors`. It has no structured extras.
+    - The worker's `PlatformError` clause (`backend/src/app/worker/tasks.py:222-232`) sets
+      `JobError.message = exc.detail or exc.title`, and never `JobError.detail`.
+    - `JobError.detail` is already a contract field, `dict[str, Any]`
+      (`packages/model-schema/src/model_schema/jobs.py:181`).
+    - The precedent for filling it is the same file's `JobBudgetExceededError` clause
+      (`:184-194`), which sets `detail={"wall_clock_s": …, "elapsed_s": …}`.
+  - **Ruled: extend, rather than fall back to persisting no ranges.** The fallback would leave
+    C5's "naming … the offending input range" unmet in the only record an author can read
+    after the fit. The extension changes no contract, because `JobError.detail` already
+    exists.
+    - `PlatformError` gains an optional keyword-only `job_detail: Mapping[str, Any]`.
+    - The worker's `PlatformError` clause passes it through as `JobError.detail`.
+    - The fit site maps `NonFiniteDerivativeError` to
+      `PlatformError(code, "…could not be fitted", 409, <the value-free text>,
+      job_detail={"round_index": …, "rows": …, "y_range": […], "f_range": […]})`.
   - They never reach `JobError.message`, a log call's text, or log `extra`. Those are
     FD-1219's two sinks (the stored message and the process log).
 - **Latent, not live.** Today the error is reduced to its type before it is stored (the table
@@ -179,12 +203,21 @@ first, inside this slice's own scope. Nothing else changes FR text or a contract
 WK-690 Slice 2, per the plan's tasks:
 - **Tasks 2 to 5:** DP-S2-1.
 - **Task 2 (printer) and Task 3 (limits):** DP-S2-2.
+- **Task 5 (the certificate):** DP-S2-2's condition. `branch_discontinuity` names every
+  dropped `DiracDelta`'s location, as a found boundary *(routed here 2026-09-30 on
+  auditor-plans2's F2)*.
 - **Task 4:** DP-S2-3 and DP-S2-4, with the `02` §5.1 declaration.
 - **Task 5:** DP-S2-5.
 - **Task 6:** DP-S2-6.
 
-**Slice 3:** the backend registration of `OBJECTIVE_ROUND_BUDGET_EXCEEDED`, and the fit-site
-mapping that puts DP-S2-4's ranges into `JobError.detail`.
+**Slice 3:**
+- the backend registration of `OBJECTIVE_ROUND_BUDGET_EXCEEDED`;
+- **DP-S2-4's persistence path.** `PlatformError`'s `job_detail` keyword, the worker clause
+  that sets `JobError.detail` from it, and the fit-site mapping of `NonFiniteDerivativeError`.
+  Red first: a NaN-producing objective's failed fit job carries `round_index`, `rows`,
+  `y_range` and `f_range` in `JobError.detail`. No planted `y` or `f` value appears in
+  `JobError.message` or in any log record the worker emits for that job, captured by
+  `caplog` over the job run.
 
 This record edits no spec, plan or roadmap text.
 
