@@ -1,5 +1,5 @@
 ---
-id: FD-9910
+id: FD-1280
 family: finding
 title: A prepared ruling has no permitted status, so every prepared RL PR fails check 33
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9910 — A prepared ruling has no permitted status, so every prepared RL PR fails check 33
+# FD-1280 — A prepared ruling has no permitted status, so every prepared RL PR fails check 33
 
 ## Finding
 
@@ -32,7 +32,7 @@ fetched `refs/pull/<n>/head`, then `python3 scripts/audit-docs.py`, rc quoted).
 - `docs/process/document-ids.md:38-57`, §1.2, Ruling row: *"Status subset (§1.2a)"* cell
   reads `active → superseded | retired`. The Plan, ADR, Workflow, Research and Work rows carry
   `draft`; the Ruling, Ledger and Closure rows do not.
-- `scripts/audit-docs.py:2017` `_STATUS_SUBSET`, read at `:2099-2100`: a header whose status
+- `scripts/audit-docs.py:2017` `_STATUS_SUBSET` (the `RL` entry is at `:2029`), read at `:2099-2100`: a header whose status
   is outside the family's subset is a failure.
 - All eight prepared-ruling PR heads exit **rc=1**, and the FAILED block of each holds exactly
   two lines, the check 31 working-id gap (expected under `CLAUDE.md`'s working-id convention) and
@@ -74,3 +74,5 @@ ruling on which option, then the `document-ids.md` amendment and a template line
 that review.
 
 *Square brackets in `RL-[99nn]` are inserted so this record does not cite the prepared rulings' working ids as live ids under checks 31 and 32; the real ids carry none.*
+
+*Disclosure: this record was drafted under working id 9910 and minted as FD-1280; the working id survives only in this line and in PR #947's history.*

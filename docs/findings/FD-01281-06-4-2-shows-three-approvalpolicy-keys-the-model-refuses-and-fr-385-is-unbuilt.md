@@ -1,5 +1,5 @@
 ---
-id: FD-9911
+id: FD-1281
 family: finding
 title: 06 §4.2 shows three ApprovalPolicy keys the model refuses, and FR-385 is unbuilt
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-677, WK-674]
 ---
 
-# FD-9911 — 06 §4.2 shows three ApprovalPolicy keys the model refuses, and FR-385 is unbuilt
+# FD-1281 — 06 §4.2 shows three ApprovalPolicy keys the model refuses, and FR-385 is unbuilt
 
 ## Finding
 
@@ -45,8 +45,9 @@ At `origin/main` `880feb499eddb9e854c525770e95fb19373a2311`.
   `ApprovalRequest` (`approvals.py:275`) has no `expedited` field. The hand-authored
   `docs/contracts/schemas/approval-request.schema.json:20-24` does carry `expedited` and
   `expedited_reason` (line 102's invariant *"expedited == true requires expedited_reason"*);
-  I did not check whether the drift guard compares that file against the model, so the two
-  are not claimed to disagree beyond the missing field.
+  `backend/tests/test_contracts.py:83` lists `approval-request` in `ONE_SIDED_SLUGS` (`:69`) as
+  *"later-phase — 06 governance"*, an authored-only slug with no generated side, so the drift
+  guard does not compare that file against the model and nothing holds the two together.
 - Not verified: whether `escalation.when` (an expression) is a wanted feature at all. It is in
   the spec example and nowhere else in the spec text I read.
 
@@ -67,3 +68,5 @@ the OQ-1234 ruling, then the Work that builds FR-385 or amends §4.2. If unowned
 `CLAUDE.md` §14 review, the row decays to that review.
 
 *Square brackets in `RL-[99nn]` are inserted so this record does not cite the prepared rulings' working ids as live ids under checks 31 and 32; the real ids carry none.*
+
+*Disclosure: this record was drafted under working id 9911 and minted as FD-1281; the working id survives only in this line and in PR #947's history.*

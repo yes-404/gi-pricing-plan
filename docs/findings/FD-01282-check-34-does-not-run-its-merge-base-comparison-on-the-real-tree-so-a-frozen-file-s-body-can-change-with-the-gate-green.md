@@ -1,5 +1,5 @@
 ---
-id: FD-9912
+id: FD-1282
 family: finding
 title: Check 34 does not run its merge-base comparison on the real tree, so a frozen file's body can change with the gate green
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9912 — Check 34 does not run its merge-base comparison on the real tree, so a frozen file's body can change with the gate green
+# FD-1282 — Check 34 does not run its merge-base comparison on the real tree, so a frozen file's body can change with the gate green
 
 ## Finding
 
@@ -79,3 +79,5 @@ printed nothing afterwards).
 Whichever lands must be proven on the input above: append a line to a frozen closure and
 watch the gate exit 1. Event that discharges it: the maintainer's ruling on (a), then the fix.
 If unowned at the next `CLAUDE.md` §14 review, the row decays to that review.
+
+*Disclosure: this record was drafted under working id 9912 and minted as FD-1282; the working id survives only in this line and in PR #947's history.*
