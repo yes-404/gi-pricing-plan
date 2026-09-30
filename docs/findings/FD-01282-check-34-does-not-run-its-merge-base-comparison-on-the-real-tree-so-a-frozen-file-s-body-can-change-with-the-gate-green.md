@@ -81,3 +81,30 @@ watch the gate exit 1. Event that discharges it: the maintainer's ruling on (a),
 If unowned at the next `CLAUDE.md` §14 review, the row decays to that review.
 
 *Disclosure: this record was drafted under working id 9912 and minted as FD-1282; the working id survives only in this line and in PR #947's history.*
+
+## Amendment, 2026-09-30: a second gap of the same class — check 34 does not detect a removed `corrected_by` back-link
+
+Appended, not rewritten; nothing above changes. Found by the decision-maker on PR #946 (RL-1290) and
+reproduced by the auditor; folded in by the maintainer's ruling (`to-lead.md` "2026-09-30 08:50:02 BST — MERGE-ACK #953 and #946 (RL-1290); the `corrected_by` removal gap is folded into FD-1282", a local channel file) as the same defect class,
+write-once and append-only rules that are read but not run. Owner stays WK-1170.
+
+**Gap.** `check_freeze`'s pair test walks only `corrected_by` entries (`scripts/audit-docs.py:2412`,
+`for entry in header.corrected_by:`), asking whether each target's `corrects:` points back. A record
+whose `corrected_by` was blanked has no entry to walk.
+
+**Broken-input evidence**, scratch worktree at `origin/main` `095dd400918348b32ee6eab1db7915faaa9dfe35`, reverted (`git status --short` printed 0 lines):
+
+| Probe (one line edited) | `audit-docs.py` rc | Result |
+|---|---|---|
+| none (baseline) | 0 | |
+| `RL-881`'s `corrected_by: [RL-1290]` → `[]` | **0** | check 34 line unchanged, `478 frozen-family file(s) in scope`: **not detected** |
+| `RL-1290`'s `corrects: RL-881` → `~` | 1 | `check 34: … RL-881 …: corrected_by entry RL-1290 does not corrects: back to RL-881`: detected |
+
+**The append-only rule would refuse it, but only on constructed input.** With `frozen_diff_is_permitted`
+(`audit-docs.py:2142`, the `corrected_by:` clause) loaded from that tree and given `RL-881`'s parsed
+header and a copy with `corrected_by=()`, it returned `(False, 'corrected_by: entries were removed or reordered, not just appended')`;
+with one entry appended it returned `(True, '')`. Nothing calls it on the real tree (this finding's main gap), so the
+removal reaches no gate today.
+
+**Consequence for option (b).** The enforcement that calls `frozen_diff_is_permitted` against `origin/main` must be
+proven red on a blanked `corrected_by` back-link as well as on a body edit to a closure.
