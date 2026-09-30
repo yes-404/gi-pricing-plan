@@ -45,7 +45,7 @@ this point turns on, each read in its owning module.
 | A persisted real-time trace always has an environment | `score.py:407-418` | present | With no `caller.environment`, it raises rather than write (RL-916 part 3) |
 | The trace row cannot be updated by the application | `backend/migrations/versions/835988d1de4c_scoring_traces_row_plus_blob_body.py:78` | present | `REVOKE UPDATE ON scoring_traces FROM {APP_ROLE}` |
 | The explicit ref is the only scoring path today (plan's (j)) | `score.py:128-151` (`_required_ref`) | present | No ref gives 409 `NO_LIVE_RATING_VERSION` (RL-880) |
-| Governance evidence does not read traces | `docs/specs/06-governance.md` (grep `trace`); `git grep -n scoring_traces 9f63d0fe -- backend/src` | **absent** | `06`'s only trace mentions are `rating:read` (`:265`), an audit `trace_id` (`:479`) and prose (`:47`). `scoring_traces` is written by `platform/traces.py` (`write_pending_trace`, and `complete_pending_trace` at `:198-272`) and read by `api/traces.py` (`GET /traces`), `worker/trace_handlers.py:53` (the off-path completion) and the blob GC's column list (`platform/blobs.py:497`). None of these is governance *(reader list corrected 2026-09-30 on auditor-close1255's F3; the conclusion stands)* |
+| Governance evidence does not read traces | `docs/specs/06-governance.md` (grep `trace`); `git grep -n scoring_traces 9f63d0fe -- backend/src` | **absent** | `06`'s only trace mentions are `rating:read` (`:265`), an audit `trace_id` (`:479`) and prose (`:47`). `scoring_traces` is written by `platform/traces.py` (`write_pending_trace`; `complete_pending_trace` at `:198-272`; and `write_trace` at `:103-136`, which has no caller in `backend/src` (`git grep -n "write_trace("` finds only its definition), and under this ruling writes null) and read by `api/traces.py` (`GET /traces`), `worker/trace_handlers.py:53` (the off-path completion) and the blob GC's column list (`platform/blobs.py:497`). None of these is governance *(reader list corrected 2026-09-30 on auditor-close1255's F3; the conclusion stands)* |
 | `uat_deployment` is a Deployment fact | `07-platform.md:140` (FR-429); `approvals.py:107`; #971 item 2 | present | "a prior successful deployment to `uat`". #971 pins it on the deployment request as "the id of the successful predecessor Deployment … or a skip record". It is never a trace |
 | Traces feed monitoring | `03` FR-259 (`03:176`); `05-monitoring.md:376`; `00:263` | present | Sampled production traces go to `05`'s aggregates, keyed through the Deployment |
 
@@ -80,6 +80,9 @@ it is null. A default-live quote (no ref) always carries the Deployment that ser
     way. A test compares `ScoringTraceRow`'s mapped columns with the fields
     `complete_pending_trace` carries across, and fails on any column neither carried nor
     named as a completion field (`status`, `pending_quote_context`, `blob_sha256`).
+    **The carried fields are derived from `complete_pending_trace`'s `ScoringTraceRow(...)`
+    constructor keywords by an AST walk of its source, not from a hand-written list**, which
+    would be a second list to maintain *(added 2026-09-30, auditor-close1255's delta nit 2)*.
 - **The comparison is exact.** The environment's live Deployment's Rating Version, pinned
   through its approved deployment request (#971 item 1), must equal the explicit ref as an
   `ArtifactRef`: type, slug and version. A different version of the same slug gives null.
@@ -108,9 +111,19 @@ it is null. A default-live quote (no ref) always carries the Deployment that ser
 - **Rename.** The lookup is by name today: `Caller.environment` is a plain `str`
   (`backend/src/app/api/deps.py:69`), and `scoring_traces.environment` is `String(32)`
   (`models.py:2199`). #971 (at `324ea165`, item A.6) rules that every Environment has an
-  **immutable `slug`** (`00` ID-1), and that a rename (`07` FR-428) changes only its display
-  `name`. So the live lookup resolves the caller's environment **by that slug**, and a rename
-  cannot change which Deployment a quote links to. The trace keeps the string it already
+  **immutable `slug`**, and that a rename (`07` FR-428) changes only its display `name`. That
+  is #971's own decision, not `00` ID-1, which states only that a slug is unique within its
+  parent scope (`00:279`). The maintainer agreed the same recast of A.6 at 11:22:45 BST.
+  So the live lookup resolves the caller's environment **by the A.6 slug, which A.6 requires
+  credential environments to carry**. A rename then cannot change which Deployment a quote
+  links to.
+  - **The condition.** Today `Caller.environment` comes from the credential as a free string:
+    `ServiceAccountCreate.environments: list[str]`
+    (`backend/src/app/api/service_accounts.py:63`) and `generate_key(body.environments[0])`
+    (`:180`). The slug claim therefore holds only once #971's A.6 validates credential
+    environments as Environment slugs. If A.6 does not, this lookup resolves by name, and a
+    renamed environment's credentials link to no Deployment (null). That fails safe, never
+    to the wrong Deployment *(added 2026-09-30, auditor-close1255's delta nit 3)*. The trace keeps the string it already
   keeps. *(Corrected 2026-09-30 on auditor-close1255's F2: this read "by identity" before,
   which the code does not have.)*
 - None of #971's options changes (a).
@@ -125,8 +138,9 @@ it is null. A default-live quote (no ref) always carries the Deployment that ser
 ## What it obliges
 
 - **WK-674 Slice 2, Task 6.** Write `deployment_id` as ruled, resolved with the bundle, and carry it through `complete_pending_trace` (`platform/traces.py`, already in Task 6's file list), with the structural column guard.
-- **Acceptance 7.** Its default-live case (#973 at `22cb24b3`, `:174`: "A sampled trace of a
-  default-live score carries the serving Deployment's id") is kept, and is listed in the
+- **Acceptance 7.** Its default-live case (#973 at `4bde1cfb`, `:206-208`: "a default-live
+  score's sampled trace carries the serving Deployment's id"; the same case was at `:174` at
+  `22cb24b3`) is kept, and is listed in the
   Acceptance section below *(added 2026-09-30 on auditor-close1255's F4)*. Its explicit-ref
   case carries these tests, each red first:
   - an explicit ref equal to the environment's live Rating Version → the live Deployment's id;
