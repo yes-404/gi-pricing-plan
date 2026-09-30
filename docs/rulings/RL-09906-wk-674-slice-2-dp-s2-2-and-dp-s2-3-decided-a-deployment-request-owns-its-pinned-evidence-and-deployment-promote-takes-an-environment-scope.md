@@ -91,111 +91,102 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
      the module's functions is refused, and a test proves it. A migration adds no
      `ON UPDATE` path, and if the leaf plan chooses a database trigger, its test is also red
      first.
-   - **Only the single decision path writes `approved`: on every approval-capable table,
-     derived, attributed exactly, and failing closed.** *(Restated 2026-09-30, and superseding
-     the versions at `fa49e06c` and `324ea165`. The maintainer's entries "11:21:51 BST — …
-     three rulings" (derive from approval-status enums) and "11:22:45 BST — A.4 residual
-     (record_certificate conditionals): steer WIDEN, not baseline" decide the population and
-     the widening. auditor-close1255 implemented the earlier text and ran it at
-     `9f63d0fe`, finding 5 red sites outside the baseline: `datasets.py:581`,
-     `jobs.py:226`, `traces.py:252`, `metrics.py:459` and `objectives.py:532`. All five
-     close under sub-item 1's value analysis, as corrected at the next head.)*
-     1. **Values first: which writes can produce `approved`.** *(Reordered on auditor-close1255's
-        audit of `327e1179`, which implemented the previous text and ran it. Attribution
-        was too narrow: 16 of 23 `<name>.status =` sites failed closed, the sanctioned
-        `platform/approvals.py:416` among them. And 3 of the 5 red sites did **not** close,
-        contrary to what that text claimed.)* Every status write found by the AST walk over
-        `backend/src` (an assignment `<name>.status = …`, a constructor's `status=…`, a
-        column `default=`/`server_default=`) has its possible values evaluated statically:
-        - a string literal;
-        - an enum member, or its `.value`;
-        - a module-level name bound to a literal (as `validation_rules.py:65` binds
-          `APPROVED`);
-        - a conditional, which is the union of its branches;
-        - a name annotated with an enum type, or bound from a call whose return annotation
-          is an enum type, which is all that enum's members (as `new_status =
-          _resolve_status(…)`, returning `ApprovalStatus`, at `platform/approvals.py:414`);
-        - a lookup in a module-level dict literal, which is its values.
-
-        **A write whose every possible value is known and is not `"approved"` is ignored, on
-        any table, and needs no attribution.** A write with an unknown value, or one that
-        can produce `"approved"`, is **possibly approved**.
-        - At `9f63d0fe`, value analysis alone clears `jobs.py:226`, `traces.py:252`,
-          `datasets.py:581` (`to_status: DatasetStatus`), `metrics.py:459` and `:526`,
-          `objectives.py:532` and `:600`, `modelling.py:1418` (`SUPERSEDED`),
-          `outbox.py:133` (`PUBLISHED`), `perils.py:256` and `:338`, and
-          `platform/approvals.py:475` (`WITHDRAWN`).
-        - So **no annotation work falls on Slice 2** in those modules.
-     2. **Attribution, for possibly-approved writes only: tied to a table, or it fails.**
-        A possibly-approved write is attributed to a mapped class by:
-        - a constructor `XRow(..., status=…)`;
-        - a `<name>.status = …` where `<name>` is annotated with a mapped class, or is
-          bound in the same function from `session.get(XRow, …)`, a `select(XRow)` result,
-          or a call to a function whose return annotation is a mapped class (as `row =
-          await _load(…)`, whose return is `ApprovalRequestRow`, `platform/approvals.py:497-499`,
-          before `row.status = new_status.value` at `:416`).
-
-        A column `default=`/`server_default=` is attributed to its own class. A
-        possibly-approved write that attributes to no class **fails closed**.
-     3. **The population, and where vocabularies must be declared.** The population is every
-        mapped class whose `status` column's **declared vocabulary**, the `StrEnum` given as
-        column metadata (for example `info={"status_vocabulary": RatingVersionStatus}`), has
-        an `APPROVED` member (the maintainer's 11:21:51 BST entry).
-        - At `9f63d0fe`, the enums with one are `ApprovalStatus` (`model_schema/approvals.py:41`),
+   - **Only the single decision path writes `approved`: a runtime guard on every
+     approval-capable table.** *(Restated a third time, and superseding the static
+     AST-attribution versions at `fa49e06c`, `324ea165` and `327e1179`, on the maintainer's
+     entry "11:32:49 BST — three rulings: …; #971 A.4 method; …", item 2. auditor-close1255
+     implemented the static version and ran it. Attribution failed closed on 16 of 23
+     assignments, including the sanctioned `platform/approvals.py:416`. A runtime guard
+     removes the attribution problem, because the ORM knows each row's class and its actual
+     value.)*
+     1. **The population is derived from approval-status enums** (the 11:21:51 BST entry).
+        - Every approval-capable table declares its status column's vocabulary, the
+          `StrEnum` its values come from, as column metadata (for example
+          `info={"status_vocabulary": RatingVersionStatus}`).
+        - The population is every mapped class whose declared vocabulary has an `APPROVED`
+          member. At `9f63d0fe`: `ApprovalStatus` (`model_schema/approvals.py:41`),
           `MetricStatus` (`metrics.py:48`), `ModelStatus` (`modelling.py:1975`),
           `ObjectiveStatus` (`objectives.py:137`), `PerilStructureStatus` (`perils.py:94`)
-          and `RatingVersionStatus` (`rating.py:31`).
-        - **Slice 2 declares the vocabulary of every approval-capable table**: the classes
-          these six enums govern; `validation_rules` and `validation_rule_sets`, through a
-          `StrEnum` of their string constants (`validation_rules.py:65`), since they have no
-          enum; and the Deployment Request table.
-        - **A possibly-approved write attributed to a class outside the population fails**,
-          whether that class has an undeclared vocabulary or one without `APPROVED`. So no
-          table escapes by omitting a declaration.
-        - **A declaration is not required of a table that no write could set to
-          `approved`.** `scoring_traces` (`models.py:2207`), `ingestion_runs` (`:866`),
-          `reference_table_versions` (string constants at `platform/reference.py:57`),
-          `jobs` and `dataset_versions` need none. *(Scoped on auditor-close1255's F-A. The
-          previous text demanded a vocabulary of every status column, and wrongly spoke of
-          `scoring_traces`' enum, which does not exist.)*
-     4. **The rule:** on a population table, every possibly-approved write sits in that
-        table's `apply_approval_decision` reached from `_carry_to_the_artifact`
-        (`api/approvals.py:488`, carrying at `:499-517`). For `approval_requests`, it sits
-        in `platform/approvals.py`'s decision path (`_resolve_status`, `:547-554`).
-     5. **Red first:**
-        - a planted second writer of `approved` on the deployment-request table;
-        - a planted conditional with an `APPROVED` branch, for example
-          `(X.APPROVED if ok else X.DRAFT).value`, which is caught;
-        - a planted unattributable status write;
-        - a planted `default="approved"`;
-        - a possibly-approved write planted on a table with no declared vocabulary;
-        - the live tree's sanctioned `decide` write (`platform/approvals.py:416`), shown to
-          attribute through `_load`'s return annotation and to pass. It is a positive
-          control, so the check is not green by failing to see it.
+          and `RatingVersionStatus` (`rating.py:31`), and the tables they govern.
+        - Slice 2 also declares the vocabulary of `validation_rules` and
+          `validation_rule_sets`, through a `StrEnum` of their string constants
+          (`validation_rules.py:65`), since they have no enum. And it declares the Deployment
+          Request table's.
+        - **F-A resolves this way:** a declaration is required only of approval-capable
+          tables, and a test asserts it. Every table whose module has an
+          `apply_approval_decision` that `_carry_to_the_artifact` drives, and
+          `approval_requests`, must declare one with `APPROVED`. `scoring_traces`,
+          `ingestion_runs`, `reference_table_versions`, `jobs` and `dataset_versions` need
+          none, and the guard does not touch them.
+     2. **The guard.** A `before_flush` listener on the ORM `Session` inspects every object in
+        `session.new` and `session.dirty` whose class is in the population:
+        - **an insert** is refused if its `status` is the `APPROVED` member's value. That
+          covers an explicit constructor value, and an unset `status` whose column
+          `default=` or `server_default=` is that value (`models.py:1195` is one);
+        - **an update** is refused if its attribute history shows `status` changed to that
+          value;
+        - either is allowed **only while the decision-path context variable is set**.
 
-        Each fails the check.
-     6. **Zero writers passes, and is reported as a note.** "At most one path writes
-        `approved`" is satisfied by a table nothing approves. `peril_structures` is one:
-        auditor-close1255 found only `review` (`perils.py:338`) and `reconciled`
-        (`:256`) written. Whether its `approved` state is reachable is not ruled here, and
-        is offered to the lead.
-     7. **The baseline: exactly the three validation writers, named, dated 2026-09-30,
-        temporary and shrink-only**, pinned as a literal citing the finding filed under the
-        maintainer's 11:14:48 BST DEFECT entry (in prose until minted). Any
-        possibly-approved writer not in the literal fails:
-        - `approve_rule` (`platform/validation_rules.py:395`), writing at `:423`, reached
-          by `api/validation.py:359`;
-        - `seed_builtin_rules` (`:89`), constructing at `:132` with `status=APPROVED` at
-          `:154`;
-        - `replace_rule_set` (`:538`), constructing `ValidationRuleSetRow` at `:621` with
-          `status=APPROVED` at `:643`. The column default `models.py:1195` on the same
-          class belongs to this entry.
+        A `do_orm_execute` listener refuses an ORM-enabled `update()`/`insert()` statement
+        on a population table whose values set `status` to that value outside the context.
+        The refusal is a named error raised before the flush writes, so the transaction rolls
+        back.
+     3. **The decision-path context.** One context manager, `approval_decision()`, in
+        `platform/approvals.py`, sets a `ContextVar`. It is entered in exactly two places:
+        - `platform/approvals.decide`, around its own write of the request's status at
+          `:416`;
+        - `api/approvals._carry_to_the_artifact` (`:488`), around the owning module's
+          `apply_approval_decision`, which the decide route runs in the same unit of work
+          right after `decide` (`api/approvals.py:250-260`).
 
-        **The WK-1178 fix slice removes each entry red first.** `replace_rule_set`'s entry
-        waits on that finding's triage. If the triage finds rule sets legitimately
-        ungoverned (they are absent from `06:64`), it becomes a permanent exemption carrying
-        that spec citation, and otherwise it is removed like the others. The Deployment
-        Request table has no entry.
+        A static test asserts that `approval_decision()` is entered nowhere else in
+        `backend/src`. This check is by name, which is reliable where the old attribution
+        was not.
+     4. **What the guard cannot see, and what covers it.**
+        - Core `connection.execute` and raw `text()` SQL bypass the ORM events. At
+          `9f63d0fe`, no Core or bulk statement targets a population table: the only two,
+          `platform/blobs.py:455` and `worker/progress.py:200`, update `BlobRow` and `JobRow`.
+          A static test fails any `update(X)`/`insert(X)` over a population class, and any
+          `text()` naming a population table's `status`, outside the two sanctioned sites.
+        - **A database trigger is not required now.** It becomes the escalation if a Core
+          writer to a population table is ever needed.
+        - Alembic data migrations run outside the application session and are not covered.
+          A migration that writes `approved` rows is a review item for the slice's auditor.
+     5. **The exemption: temporary, per table, citing the finding filed under the
+        maintainer's 11:14:48 BST DEFECT entry** (in prose until minted). The guard is
+        per table, so the exemption is too:
+        - **`validation_rules`**, whose writers are `approve_rule` (`:395`, writing at
+          `:423`), `seed_builtin_rules` (`:89`, with `status=APPROVED` at `:154`), and the
+          demo seed's direct row (`examples/fremtpl2/seed.py:441`);
+        - **`validation_rule_sets`**, whose writer is `replace_rule_set` (`:538`,
+          `status=APPROVED` at `:643`), plus its column default (`models.py:1195`).
+
+        Both entries are dated 2026-09-30, pinned as a literal, and shrink-only. **The
+        WK-1178 fix slice removes them red first.** The rule-set entry waits on the
+        finding's triage, and becomes a permanent exemption with its spec citation only if
+        rule sets are legitimately ungoverned (`06:64`).
+     6. **Test fixtures.** 17 backend test files match
+        `git grep -l -E 'status\s*=\s*"approved"|Status\.APPROVED|status=APPROVED' 9f63d0fe --
+        backend/tests`. That is an upper bound on the files that write `approved` rows
+        directly, since some matches only read or compare. Under the guard they refuse. **Declared Slice 2
+        work:** each goes through the decision path, or through a helper that enters
+        `approval_decision()` and is defined under `backend/tests/` only. The static test of
+        item 3 exempts `backend/tests/` and nothing else.
+     7. **Red first:**
+        - for **every** population table, derived as in item 1: a direct write of `approved`
+          outside the context, on insert and on update, is refused. With the listener
+          removed, each write succeeds and the test fails;
+        - the deployment-request plant is refused;
+        - an insert relying on a `default="approved"` is refused;
+        - an ORM bulk `update()` setting `approved` is refused;
+        - `approval_decision()` entered at a third site in `backend/src` fails the static
+          test;
+        - a population table without a declared vocabulary fails the declaration test;
+        - **positive control:** the sanctioned decide-and-carry path approves a request and
+          its artifact.
+     8. **Zero writers.** A population table nothing approves, `peril_structures` today,
+        needs no guard and gets a note. Its reachability is the lead's to route (the
+        tripwire of the perils finding covers it, per the lead).
 5. **The deploy route executes only an approved request.** For a target whose deployments are
    approval-gated, `POST /api/v1/environments/{env}/deployments` names an **approved**
    Deployment Request and re-evaluates FR-429's one predicate from the request's **pinned**
@@ -338,8 +329,8 @@ submission, a second writer of `approved`, or a Deployer acting outside the Envi
 grant names.** In WK-674 Slice 2, each is shown failing on deliberately broken input
 (`CLAUDE.md` §13):
 - item A.4's cases: approval without pinned evidence; an evidence update after submission;
-  and the one-writer check of item A.4, red on each plant of its sub-item 5, and green on the
-  live tree only through its pinned three-writer baseline;
+  and item A.4's runtime guard, red on each case of its sub-item 7, and green on the live
+  tree only through its two temporary table exemptions;
 - item A.5: a deploy to an approval-gated target naming no approved Deployment Request is
   refused. A request whose pinned predecessor item no longer satisfies FR-429's predicate is
   refused at the route;
