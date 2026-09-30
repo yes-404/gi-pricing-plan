@@ -3,14 +3,14 @@ id: PL-1278
 family: plan
 kind: leaf
 title: WK-1250 Slice 1 — The sub-graph as a stored, versioned artifact (FR-217's artifact limb): leaf plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: superseded   # draft → active → superseded | retired (§1.2a)
 created: 2026-09-30
 owner: planner
 tree: 4f5da86413d96862331723249db0f7b0bc98ebc4
 phase: P2
 work: WK-1250
 supersedes: []
-superseded_by: ~
+superseded_by: PL-1325
 corrected_by: []
 relates: [PL-1254, FD-1241, RL-1242, PL-1239, RL-1263, PL-1237, PL-1267, PL-1268]
 ---
