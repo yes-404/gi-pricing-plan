@@ -1,5 +1,5 @@
 ---
-id: RL-9963
+id: RL-1329
 family: ruling
 title: DP-S3-5 decided — the premium ladder records each rung's exact unrounded value and the operation it applied, and reconciles by an exact replay that rounds once
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [PL-1237, RL-1312, RL-862, FR-226, FR-240, FR-247, FR-248, FR-261, FR-273, FR-275, NFR-496, OQ-1316]
 ---
 
-# RL-9963 — DP-S3-5 decided: the ladder carries each rung's exact unrounded value and the operation it applied, and reconciles by an exact replay that rounds once
+# RL-1329 — DP-S3-5 decided: the ladder carries each rung's exact unrounded value and the operation it applied, and reconciles by an exact replay that rounds once
 
 ## How this was ruled
 
@@ -24,7 +24,7 @@ decision in `to-lead.md`, in the entry headed "2026-09-30 15:33:22 BST — DECIS
 ladder builder's drift): fold into FD 9949 → HIGH; the builder design is a DP for a fresh
 high-effort DM". This session's first command printed `CLAUDE_EFFORT=high`.
 
-**Filed under working id 9963** (hand-assigned by the lead). It is not minted.
+**Minted 2026-09-30 as RL-1329** (`python3 scripts/doc-id.py next --ref 3229ac6d54952b302c5fb0fa615b4e7b3d52a4df` printed `1329`, and the lead allocated it in mint batch 9). It was filed under working id 9963, hand-assigned by the lead. Quotations of the maintainer's entries keep "RL 9963" as written, and so does the appendix script's docstring, whose bytes are hashed.
 
 **Sources.**
 - The decision point is DP-S3-5 of the WK-674 Slice 3 (SL-1257) leaf plan, working id 9947,
@@ -499,9 +499,13 @@ contract is regenerated.
   - **Ruled: `PositionalDecimalStr` in `model_schema/money.py`**, beside `DecimalStr`, with
     the same float refusal and the same JSON Schema, and a serialiser that renders
     `format(value, "f")`. The five ladder fields above use it.
-  - **Not `DecimalStr` itself.** `DecimalStr` has 23 uses in `model_schema` outside
-    `money.py` (`git grep -n "DecimalStr\b" -- packages/model-schema/src | grep -v money.py`
-    at `fa9a73c2`), some of them in content-hashed artifacts. Changing its serialiser
+  - **Not `DecimalStr` itself.** `DecimalStr` types 13 fields in 11 models (the finding
+    under working id 9968; re-counted here at `fa9a73c2` by walking every class body in
+    `packages/model-schema/src/model_schema/*.py` except `money.py` for an annotated field
+    whose annotation names `DecimalStr`), some of them in content-hashed artifacts. *(Corrected
+    2026-09-30, at the mint: this said "23 uses". That was the number of lines that
+    `git grep -n "DecimalStr\b" -- packages/model-schema/src | grep -v money.py` printed
+    at `fa9a73c2`, imports and `__all__` entries included, not a count of typed fields.)* Changing its serialiser
     would change stored bytes and hashes beyond this slice. That is recorded as an
     observation for the lead below.
   - **This is a `model-schema` contract change.** S3's write set therefore carries
@@ -568,15 +572,16 @@ contract is regenerated.
   every contract types it as an untyped object. **So S3 edits no contract for R2.** Its
   contract-guard run and `generate-contracts --check` stay in the write set (B2), and they
   must stay green. Typing the `/score` response, which OpenAPI leaves as `{}`, would be a
-  separate contract question. It is not ruled here, and it is listed under Observed.
+  separate contract question. It is not ruled here; it is listed under Observed and filed
+  as the finding under working id 9971.
   **Declared outputs of type `decimal` are out of S3 scope pending OQ 9970** (raised by the
   finding filed under working id 9969: should `/score` serve declared `decimal` outputs as
   strings, and may a `decimal` output carry money, which FR-227 allows?). This ruling does
   not pre-decide that question (*amended 2026-09-30, on the maintainer's entry of 17:08:59
   BST; this sentence first said they "are not money"*). Serving them as exact strings would
   change their JSON type on `/score` from number to string. No acceptance covers that visible change. `score_batch` already emits them as
-  strings (`_coerce_output_value`, `score.py:834`). The recommended owner is WK-1178,
-  alongside the `DecimalStr` finding; the lead routes it (see Observed).
+  strings (`_coerce_output_value`, `score.py:834`). Owner to be set by OQ 9970's ruling
+  (see Observed).
 - **`outputs`, and the rung values it serves: they change on most quotes** (*restated on
   audit, W2*). Outside the clamped case, every declared non-payable rung output (for example
   `office_premium_minor`, served by `/score`) becomes that rung's engine value rounded once.
@@ -743,16 +748,32 @@ S3 carries each item red first, shown failing on `origin/main`.
      the flat 5 × 10⁻⁵ bound, the maintainer's sum over the quote's factors, and the
      own-term form*). For rung `i` of a golden quote, `new_i` is the ruled value and
      `base_i` the baseline value. The slice stops if:
-     - on a `multiply` rung: **`|base_i − new_i| > 5 × 10⁻⁵ · |base_{i−1}| + 1`** minor
-       unit, where `base_{i−1}` is the previous rung in the baseline ladder;
-     - on an `add` or a `round` rung, and on the first rung: `|base_i − new_i| > 1`;
+     - on a `multiply` rung: **`|base_i − new_i| > 5 × 10⁻⁵ · |base_{i−1}| + (e_apply +
+       e_ruled)`** minor units, where `base_{i−1}` is the previous rung in the baseline
+       ladder;
+     - on an `add` or a `round` rung, and on the first rung: `|base_i − new_i| > e_apply +
+       e_ruled`, where on the first rung `e_apply` is the error of today's single rounding;
      - on a `constraints` rung where a clamp binds: `new_i` is not exactly the bound.
-     **The comparison is evaluated in integers and `Decimal`, never in float.**
+
+     `e` is a rounding's largest error: **0.5 for a `half_*` mode, and 1 for `ceiling`,
+     `floor` and `down`**. `e_apply` is that of the rounding today's builder applied (the
+     step's mode passed to `apply_factor`, or to `_round_minor`), and `e_ruled` is that of
+     the rung's declared `RoundSpec`. So the constant is 1 for half and half, 1.5 for a
+     half and a directed mode, and 2 for two directed modes. **The comparison is evaluated
+     in integers and `Decimal`, never in float.**
+     *(Amended 2026-09-30, at the mint, on the maintainer's entry headed "2026-09-30
+     17:14:16 BST — RL 9963: the independent re-run MEETS my condition; the bound's
+     constant term AMENDED; ACK at the mint", which supersedes the constant "+ 1" and the
+     "≤ 1" of the add and round rungs.)* **"validated on half_even only; directed modes
+     covered by derivation, not measurement"**: the sweeps declare `half_even` on every
+     rung. **"if S3's goldens have a directed-mode rung, S3's first run records its
+     tightness"**, as the first measurement of the directed case.
      - **Derived from FD 9949's cause, not fitted** (`score.py:609-611`). Today's rung is
        `apply_factor(base_{i−1}, q_i)`, where `q_i` is `raw_i / base_{i−1}` cut to 4 dp,
        so `|q_i − raw_i / base_{i−1}| ≤ 5 × 10⁻⁵`, and `|base_{i−1} · q_i − raw_i| ≤
        5 × 10⁻⁵ · |base_{i−1}|`. `apply_factor`'s rounding and the ruled value's rounding
-       add at most 0.5 each. The drift does not accumulate, because each rung's factor is
+       add at most `e_apply` and `e_ruled`: 0.5 each in a `half_*` mode, up to 1 each in a
+       directed mode (*corrected at the mint: this sentence said "at most 0.5 each"*). The drift does not accumulate, because each rung's factor is
        re-derived from its own raw value.
      - **Validated on the four-sweep corpus** at tree `fa9a73c2`: seeds 20260930, 7, 1257
        and 42 (mixed). The runs were `python work_v8.py 200 20260930 x`, `… 200 7 x`,
@@ -920,16 +941,17 @@ stand unchanged: true operands, and one rounding on the replay path.
   audit, B2). Both serialise with `str()` (`model_schema/money.py:85-100`), so
   `Decimal("0.0000001")` becomes `"1E-7"`, which their own JSON Schema pattern refuses. This
   ruling does not change them (§3 says why). Whether any stored value is affected, and the
-  fix, are a separate question for the lead.
+  fix, are filed as the finding under working id 9968: MEDIUM, owner WK-1178.
 - *(Removed on audit: the clamp-attribution item is now ruled, §1 and §2 step 5.)*
 - **The `/score` response is untyped in the generated OpenAPI** (`docs/contracts/openapi/generated.json`,
   `paths["/api/v1/score"].post.responses["200"]`, `"schema": {}`), and so is `/score/compare`'s.
   A client generated from it gets no `ScoringResult` type (*found on the third re-audit,
-  R2*).
+  R2*). Filed as the finding under working id 9971.
 - **Declared `decimal` outputs reach `/score` as floats** (*added on audit, S6*).
   `_build_outputs` serves them from `result[source]`, and `score_one` does not convert them,
   while `score_batch` serialises them as strings. This ruling brings only `money_minor`
-  outputs into S3 (§4). The recommended owner is WK-1178; the lead routes it.
+  outputs into S3 (§4). The question is OQ 9970, raised by the finding under working id
+  9969. Owner to be set by OQ 9970's ruling.
 - **This ruling interacts with OQ-1316.** If OQ-1316 is decided (a) (an intermediate
   rounding recorded as its own rung), R0's "`round` only on the last rung" must be amended
   by that ruling.
