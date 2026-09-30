@@ -153,7 +153,7 @@ each with file:line:
 | `modelling.py:355, 508`, `custom_metrics.py:91`, `custom_objectives.py:98`, `peril_structures.py:80`, `service_accounts.py:61`, `datasets.py:128`, `models.py:207, 274`, `validation.py:85`, `datasets.py:104`, `reference_tables.py:65`, `refs.py:71-72` `slug`, `version` | **client-chosen names and references by design** (the artifact's own name, or the ref it pins) |
 | `custom_metrics.py:92`, `custom_objectives.py:99`, `datasets.py:105`, `perils.py:151` `kind` | **client-chosen type by design** |
 | `datasets.py:147` `OwnerUpdate.owner_id` | **has an effect, gated**: the client names the new owner, and `set_owner` applies FR-82's rule (Admin or the current owner; `api/datasets.py:459-` docstring) |
-| `service_accounts.py:64` `CreateServiceAccount.permissions` | **has an effect, gated**: an Admin chooses the permission names; `_check_permissions` validates the names. Whether an Admin may grant more than they hold was not tested here |
+| `service_accounts.py:64` `CreateServiceAccount.permissions` | **client-chosen, gated, and no escalation is possible**: `ALLOWED_PERMISSIONS` is a fixed frozenset, `{"score:execute", "score:batch"}` (`api/service_accounts.py:44`), and `_check_permissions` (`:128-137`) refuses anything outside it with 422 before the row is written (FR-389 scopes service accounts to the scoring set). So a creator cannot grant beyond the scoring set, whatever its own permissions. **This is not privilege escalation** (the maintainer's rule of `to-lead.md` "2026-09-30 11:21:51 BST — status 11:25 noted; three rulings"; code reading by auditor-924d) |
 
 **By eye, from the full field list of the 39 models** (not matched by the pattern):
 
