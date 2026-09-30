@@ -480,7 +480,7 @@ def test_a_decision_without_the_decision_flag_is_refused_by_the_database(
         json={"decision": "approve"},
         headers=approver_headers,
     )
-    assert response.status_code == 403
+    assert response.status_code == 500
     assert response.json()["code"] == "APPROVAL_OUTSIDE_DECISION_PATH"
     monkeypatch.undo()
     url = f"/api/v1/approval-requests/{created['id']}"

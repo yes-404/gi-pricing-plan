@@ -19,6 +19,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.exc import DBAPIError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.observability.logging import get_logger
 from app.observability.trace import current_trace_id
 from model_schema import FieldError, ProblemDetail
 
@@ -37,6 +38,8 @@ __all__ = [
 #: The SQLSTATE `approval_guard()` raises. The migration `a9f3c6d21b87_approval_guard.py`
 #: holds the same literal, and a test pins the two.
 APPROVAL_GUARD_SQLSTATE: Final = "GP001"
+
+_log = get_logger("app.errors")
 
 PROBLEM_MEDIA_TYPE: Final = "application/problem+json"
 _DOC_BASE: Final = "https://docs.gi-pricing.dev/errors/"
@@ -506,17 +509,29 @@ async def _handle_http_exception(
 async def _handle_database_error(request: Request, exc: DBAPIError) -> JSONResponse:
     """Name the one database refusal that has a code; leave every other to the backstop.
 
-    `approval_guard()` refusing an `approved` write means code wrote it outside the decision
-    path: a defect, not a client mistake, but one the caller is told by name rather than as
-    `INTERNAL_ERROR`. The message is fixed: the driver's text can carry bound values.
+    **500, not 403 or 409.** `approval_guard()` is a backstop: every path that legitimately
+    writes `approved` enters the decision flag, so no client request can reach this refusal
+    and a client is not the party at fault. Reaching it means our own code wrote `approved`
+    outside the decision path, which is a defect, and a 403 would disguise it as a
+    permission problem. The code is kept so the defect is named, and it is logged at ERROR
+    with the table and ref from the trigger's DETAIL. The response text is fixed: the
+    driver's message can carry bound values.
     """
     if getattr(exc.orig, "sqlstate", None) != APPROVAL_GUARD_SQLSTATE:
         raise exc
+    detail = getattr(exc.orig, "detail", None) or getattr(
+        getattr(exc.orig, "__cause__", None), "detail", None
+    )
+    _log.error(
+        "approval_guard refused a write of approved outside the decision path",
+        extra={"guard_detail": detail, "path": request.url.path},
+    )
     problem = PlatformError(
         "APPROVAL_OUTSIDE_DECISION_PATH",
         "Approval was written outside the decision path",
-        status.HTTP_403_FORBIDDEN,
-        "Only the approval decision path may write the approved state (06 FR-351).",
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+        "The platform wrote an approved state outside the approval decision path (06 FR-351). "
+        "This is a defect, not a permission problem. Quote the trace id when reporting it.",
     ).to_problem(instance=request.url.path)
     return problem_response(problem)
 

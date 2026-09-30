@@ -810,7 +810,7 @@ def test_the_errors_module_and_the_migration_name_the_same_sqlstate() -> None:
 
 @pytest.mark.req("FR-351")
 async def test_the_guards_refusal_is_one_named_problem_and_other_database_errors_are_not_renamed(
-    direct_engine: Any,
+    direct_engine: Any, caplog: pytest.LogCaptureFixture
 ) -> None:
     import httpx
     from fastapi import FastAPI
@@ -843,7 +843,11 @@ async def test_the_guards_refusal_is_one_named_problem_and_other_database_errors
         named = await client.post("/approved")
         other = await client.post("/not-null")
 
-    assert named.status_code == 403
+    assert named.status_code == 500
     assert named.json()["code"] == "APPROVAL_OUTSIDE_DECISION_PATH"
     assert other.status_code == 500
     assert other.json()["code"] == "INTERNAL_ERROR"
+    # The guard's refusal is an ERROR log naming the table (and ref) from the trigger's DETAIL.
+    logged = [r for r in caplog.records if r.levelname == "ERROR" and hasattr(r, "guard_detail")]
+    assert len(logged) == 1
+    assert "table=approval_requests" in logged[0].guard_detail

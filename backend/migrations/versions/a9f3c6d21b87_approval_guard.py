@@ -78,6 +78,7 @@ BEGIN
   RAISE EXCEPTION
     'only the approval decision path may write approved (06 FR-351): % on % rejected', TG_OP, TG_TABLE_NAME
     USING ERRCODE = '{SQLSTATE}',
+          DETAIL = 'table=' || TG_TABLE_NAME || ' ref=' || COALESCE(ref, to_jsonb(NEW) ->> 'id'),
           HINT = 'Approve through POST /api/v1/approvals/{{id}}/decide. An approved row needs a decided '
                  'approval request for its ref, or (approval_requests, and the validation tables '
                  'while they hold an allowance) the decision flag set by approval_decision().';
