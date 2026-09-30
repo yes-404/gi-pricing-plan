@@ -212,7 +212,11 @@ Each hit, and whether the escaped pipe affects it today:
 
 **Limits:** the sweep finds the two textual forms above. A parser that splits with a different
 idiom (`re.split`, `csv`) or a regex that names the pipe by another spelling is not seen. It is a
-listing at one tree.
+listing at one tree. **The row-split population is wider than this sweep's textual forms**:
+#977's own finding, reported by the lead and **not re-run by this record's author**, counts about
+**18 sites** that split a table row, **all of which migrate** to the shared parser (this record's
+sweep found the endpoint regexes, the naive splitters and the two lookbehind splits, which are the
+subset it could see with two predicates).
 
 ## Closure-evidence sweep
 
@@ -325,6 +329,8 @@ BST — DECISION: the shared row parser is route (a), a stdlib-only module file;
 findings/register.md: parsed 183 of 185 data row(s)` (evidence 3), because `register.md:197` and
 `:213` hold an escaped pipe. It is loud, but **a P2 phase check that cannot run is a gap before
 the P2 exit review**: its fix, making the phase report run, **red first on `:197` and `:213`,
-lands before the P2 exit review**.
+lands before the P2 exit review**. **It is carried by #977's slice** (the lead's message of
+2026-09-30, after the 11:52:53 entry), the same slice as the shared parser, so the raise goes away
+with the migration of `doc-index.py:1061` and is proven by the red-first case above.
 
 *Drafted under working id 9894.*
