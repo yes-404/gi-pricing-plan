@@ -1,5 +1,5 @@
 ---
-id: RL-9852
+id: RL-1307
 family: ruling
 title: OQ-550 decided — ChartFigure takes column descriptors that read each cell from the caller's own row
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [OQ-550, RL-1184, NFR-463, PL-1286, PL-1268, PL-803]
 ---
 
-# RL-9852 — OQ-550 decided: `ChartFigure` takes column descriptors that read each cell from the caller's own row
+# RL-1307 — OQ-550 decided: `ChartFigure` takes column descriptors that read each cell from the caller's own row
 
 ## How this was ruled
 
@@ -28,7 +28,8 @@ The record was prepared at effort `medium` (PR #936, head `5aef0637`, "PREPARED,
 RULED"). The preparation named one fact as deciding and not in evidence: whether vue-tsc
 infers the row type of a generic `ChartFigure` at a real call site and reports a wrong
 accessor. This pass established it by a spike on the locked toolchain (below), and rules.
-It keeps the working id 9852; the id is minted at the lead's merge turn.
+It was minted 2026-09-30 as RL-1307 (assigned in the lead's batch plan, batch 2, under the
+maintainer's option (B)); it was filed under working id 9852.
 
 **Scope, as decided before this pass** (the maintainer by delegation, `to-lead.md` entry
 "2026-09-30 00:51:17 BST — SCOPE DECISION: OQ-550 is owned by WK-675"): `RL-1184` E10
