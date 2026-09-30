@@ -132,14 +132,14 @@ Why:
 - (b) would put a coded rating refusal into the shared-shape package, which raises only bare
   `ValueError`s there. `compile_bundle` would then have to re-code it.
 
-**DP-F2 — (c).** Both runtime sites become coded backstops, as in (a):
+**DP-F2 — (c), with the handler limb dropped** *(amended 2026-09-30, before merge, on
+auditor-933's F1 against #963; see "Amendment" below)*.
+- `load_bundle` calls `check_step_refs_pinned(algorithm, bundle.pins)` first, before
+  `_load_boosters` (`:579`).
 - `_load_boosters` (`runtime.py:533`) raises `CodedError` `RATING_VERSION_UNPINNED` naming
-  the ref.
-- The handler (`runtime.py:463`) returns `_model_call_failure(step, …)`. It never raises
-  (`:85-91`), so `score_one` raises `MODEL_CALL_FAILED` (`score.py:443`).
-
-**And** `load_bundle` calls `check_step_refs_pinned(algorithm, bundle.pins)` first, before
-`_load_boosters` (`:579`).
+  the ref, when a pinned model ref has no payload.
+- **The handler (`runtime.py:463`) is not edited and gets no test.** It is unreachable (see
+  "Amendment" below).
 
 Why (c):
 - (a) and (b) code only the model path. They leave a bundle compiled before this fix able
@@ -150,9 +150,35 @@ Why (c):
 - `Bundle.pins` is always present.
 - The maintainer pre-accepted it as within scope (10:28:11).
 
-(b)'s extra text inside the sentinel is not ruled. The handler's message names the ref as
-unpinned in any case, and under (c) the handler site is unreachable for a bundle that
-loaded.
+(b)'s extra text inside the sentinel is not ruled: it only changes the handler, which the
+amendment below finds unreachable.
+
+**Amendment — the `:463` limb (2026-09-30, before merge).** auditor-933's #963 audit (F1)
+reported that the handler site is unreachable. I verified it at `48792023`
+(`git diff --quiet 48792023 origin/main -- packages` → rc 0 at 10:35 BST):
+- `_load_boosters` runs `fit_result = payloads[ref_str].get("fit_result", {})` (`:533`)
+  for **every** `model_call` step, before it looks at the model type (`:534-535`).
+  `load_bundle` calls it (`:579`) before it builds the handler (`:580`).
+- `CompiledBundle(` is constructed only in `load_bundle` (`runtime.py:587`), by
+  `git grep -n "CompiledBundle(" 48792023 -- packages backend/src`, excluding `tests/`.
+  `_model_call_handler(` is called only at `:580` outside tests.
+- Probe, scratch file `probe_463.py`, run at 10:35:00 BST. It takes a `compile_bundle` of the
+  score fixture, deletes every `model:*` key from `resolved_payloads`, and calls
+  `load_bundle`. Its output:
+  - `glm KeyError 'model:motor-freq-glm@1' at runtime.py:533 in _load_boosters`
+  - `gbm KeyError 'model:motor-freq@1' at runtime.py:533 in _load_boosters`
+
+  So a GLM model's missing payload never reaches the handler either.
+
+**Ruled on the limb: (i), drop the `:463` edit and its test.** Four reasons:
+- The only code path to the handler is through `load_bundle`. That path refuses first,
+  twice: at the new pin check, and at `:533` for a pinned ref with no payload.
+- A test for `:463` would have to hand-build a `CompiledBundle` that no production code can
+  build. It would prove a branch no quote can take.
+- Option (ii), defence in depth, was weighed. Its only benefit is if a future change made
+  `_load_boosters` skip non-GBM models. That change would itself move the `:533` guard, and
+  it is the change's own reviewer's to see.
+- The maintainer's condition ("any coded outcome") is met at `:533` and by the load check.
 
 **DP-F3 — (a).** A pin that no step references is **not** refused by this slice.
 
@@ -176,15 +202,21 @@ the decision-maker at effort high. This record says nothing about `_GUARD_MARKER
 - `03` §5.1's meaning line for `RATING_VERSION_UNPINNED` is the plan's Task 2, already inside
   the maintainer's decided scope (#961, *Disposition*).
 - One effect is disclosed: under (c), a stored bundle with an unpinned or wrong-version step
-  ref stops loading. #961 reports none in PostgreSQL, and its MinIO artifact sweep is still
-  pending. Refusing such a bundle is the intended outcome, because otherwise it would
-  misprice.
+  ref stops loading. #961 (at `f78d4340`, *Sweeps*, auditor-922 at `eeda8f4b`) reports the
+  sweep's result:
+  - PostgreSQL: 0 such bundles.
+  - MinIO: 6519 bundle JSONs across its buckets, 0 with a graph step ref outside their pins
+    or `resolved_payloads`.
+  - One gap is stated, not counted as zero: 3986 algorithm-shaped blobs in `gip-test-blobs`
+    carry no pins, so they cannot be checked on their own.
+
+  Refusing such a bundle is the intended outcome, because otherwise it would misprice.
 
 ## What it obliges
 
 The WK-1178 fix slice (#963's plan):
 - **Task 2:** DP-F1 as ruled.
-- **Task 3:** DP-F2 (c), including the `load_bundle` call.
+- **Task 3:** DP-F2 (c) as amended: the `load_bundle` call and the `:533` code; the `:463` handler step and its test are dropped.
 - **Acceptance 4:** DP-F3 (a)'s control row.
 
 The ledger records the resolutions by this record's id (Task 0). This commit edits no spec,
@@ -198,7 +230,8 @@ In the slice's own suite, each item is shown red first.
   and it must raise `RATING_VERSION_UNPINNED`.
 - *Violation: the same, with the step ref pinned at another version* (step `@1`, pin `@2`).
 - *Violation: `compile_bundle` accepts either case.*
-- *Violation: `_load_boosters` or the handler raises a bare `KeyError` for a missing
-  payload.* The fixture is a hand-built `Bundle` whose pins include the ref and whose
-  payloads lack it, so it passes the `load_bundle` check and reaches the backstop.
+- *Violation: `_load_boosters` raises a bare `KeyError` for a missing payload,* for a GBM
+  and for a GLM model. The fixture is a hand-built `Bundle` whose pins include the ref and
+  whose payloads lack it, so it passes the `load_bundle` check and reaches `:533`. No test
+  targets the handler (`:463`): the amendment above finds it unreachable.
 - *Violation: a bundle with an extra, unreferenced pin is refused* (DP-F3 (a)'s control).
