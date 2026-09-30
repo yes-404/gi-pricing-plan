@@ -107,11 +107,11 @@ Corpus, **8 distinct expressions from 2 files** (`packages/pricing-core/tests/te
 | `round(premium / exposure) + abs(adjustment)` | 9 | 4 | 16 | test_prepare.py |
 | `round(premium / exposure) + abs(premium - 100)` | 11 | 4 | 19 | test_expression_nfrs.py |
 
-**Refusal fixtures, not corpus** (15): `(lambda: 1)()`, `(lambda: eval('1'))()`,
+**Refusal fixtures, not corpus** (17): `(lambda: 1)()`, `(lambda: eval('1'))()`,
 `[eval(x) for x in premium]`, `[x for x in premium]`, `__import__('os').system('ls')`,
 `compile('1', '<s>', 'eval')`, `eval('1')`, `exec('x = 1')`, `f'{premium}'`, `globals()`,
 `mean(premium)`, `open('/etc/passwd').read()`, `premium.__class__`, `premium.__class__.__mro__`,
-`premium[0]`, `premium[0] + 1`, `exposure + premium // 2`. (17 counted; the 31 also
+`premium[0]`, `premium[0] + 1`, `exposure + premium // 2`. The 31 also
 holds 6 strings that are this task's own new test fixtures — `a + b`, the two nested `abs`, the two
 `min(x, …)` and §4.6's example loss — captured because the counter parses through the same module.
 31 = 8 + 17 + 6.)
