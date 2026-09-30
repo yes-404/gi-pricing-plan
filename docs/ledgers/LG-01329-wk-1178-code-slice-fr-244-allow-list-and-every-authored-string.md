@@ -193,6 +193,14 @@ tests/test_repository_invariants.py::test_journey_citations_are_audited_in_ci
   `ruff check --no-cache .` in this worktree reproduces the one error, and reports no other file. The pytest, mypy, import_linter, audit_docs,
   req_coverage, contracts and frontend results above are unaffected. The fix is `2d4223ec` (import order only); a fresh full gate on a clean checkout of the
   fixed head replaces this run as the slice's gate.
+- **The proof pair (the maintainer's condition on accepting the cache mechanism).** *At the time, in this worktree at `6a1b9e33`, before any fix*, my diagnosis ran the two commands in
+  sequence on the file, and the outputs were: `uv run ruff check packages/pricing-core/tests/test_rating_authored_fields.py` printed `All checks passed!`
+  (the cached run), and `uv run --frozen ruff check --no-cache .` printed `I001 Import block is un-sorted or un-formatted` for
+  `packages/pricing-core/tests/test_rating_authored_fields.py:12:1` and `Found 1 error.`. **Re-running the pair now does not reproduce the cached-clean half:** at 2026-09-30 18:02 UTC, on
+  `git checkout --detach 6a1b9e33` in this worktree (`git status --porcelain` empty), `uv run ruff check .` (cached) printed `Found 1 error.` with the same I001 diff, rc 1, and
+  `uv run ruff check --no-cache .` printed the same, rc 1. The cache directory had been rebuilt by the runs made since (its timestamps show writes at 16:02 UTC and 18:02 UTC), so the stale entry
+  no longer exists. I do not infer the earlier state from this re-run; the first pair above is the observation made at the time. The branch was restored to
+  `sl-1315-fr244-allowlist` afterwards.
 - **GATE OF RECORD: a clean checkout of `2d4223ec42265f95c5a33d11e58fe2f6e006687e`** (the maintainer's rule; S-13 granted 2026-09-30 18:35:42 BST). `git worktree add --detach`
   into a fresh directory (no `.ruff_cache`, `.mypy_cache` or `.pytest_cache`), `uv sync --all-packages`, `pnpm --dir frontend install --frozen-lockfile`, a per-worktree test
   database created from the template, `alembic upgrade head`, and `alembic current` printing `a9f3c6d21b87 (head)`, which equals `alembic heads`. Recorded at the start
