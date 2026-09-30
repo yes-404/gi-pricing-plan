@@ -1,5 +1,5 @@
 ---
-id: PL-9873
+id: PL-1299
 family: plan
 kind: leaf
 title: WK-1178 fix slice — compile_bundle refuses a step ref not pinned at its exact version (FR-237): leaf plan
@@ -12,7 +12,7 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [SL-9872, PL-1278, PL-1254, RL-1263, FD-1241]
+relates: [SL-1300, PL-1278, PL-1254, RL-1263, FD-1241, FD-1297, RL-1298]
 ---
 
 # WK-1178 fix slice — `compile_bundle` refuses a step ref not pinned at its exact version (FR-237): leaf plan
@@ -45,37 +45,37 @@ No new dependency.
   `RATING_VERSION_UNPINNED` with no meaning (Task 2 adds one).
 - `03` §4.3's example (`03:355`): a peril structure is pinned under `pins.models`.
 
-**What this plan implements.** The finding filed as #961 (working id 9977; read at its head
-`f78d4340451a4684dd58970ad51ce48c122f5222`, which carries the maintainer's dated correction;
-first read at `ee33fb99`), titled "compile_bundle does not check step table,
+**What this plan implements.** The finding **FD-1297**, filed as #961 under working id 9977. It
+was read at #961's head `f78d4340451a4684dd58970ad51ce48c122f5222`, which carries the maintainer's
+dated correction, after a first read at `ee33fb99`. At this mint, every quote below was
+re-verified in the minted `docs/findings/FD-01297-…md` at `4009de14`. It is titled "compile_bundle does not check step table,
 lookup and model refs against the pin set (FR-237)", severity high. Its *Disposition* gives the
-maintainer's scope, acceptance and order, and this plan carries them as #961 states them at
+maintainer's scope, acceptance and order, and this plan carries them as FD-1297 states them at
 `f78d4340`: the null-tolerant case is "written with the `??` consumer", and `coalesce(` "is not an
-acceptance case" (#961, *Disposition*). The
+acceptance case" (FD-1297, *Disposition*). The
 relation to the WK-1250 rulings is #938 (working id 9851; read at its head
-`2538ca69f0ae73cb326c5cdfb57557cee97f2769`), DP-1 item 6, **G1**. Neither record is minted, so
-both are cited by PR and working id. They are re-pointed to their ids when they mint; #961 mints
-fifth in the queue.
+`2538ca69f0ae73cb326c5cdfb57557cee97f2769`), DP-1 item 6, **G1**. #938 is not minted, so it is cited by PR and working id, and Task 0 re-points it when it mints.
 
 ## Status
 
-**Draft**, filed 2026-09-30 against the tree above under working id 9873. Its slice row is
-**SL-9872** (working id), added under `### WK-1178` in `docs/roadmap.md` in this PR. Both take
-their real ids at their merge turn. Neither working id appeared among the 9860–9899 hits found
+**Draft.** Minted 2026-09-30 as PL-1299. The id was assigned in the lead's mint train, stacked on
+#964's RL-1298: `doc-id.py next --ref origin/main` printed 1298 at `4009de14`. It was filed under
+working id 9873. Its slice row is **SL-1300**, minted the same way and filed under working id 9872,
+under `### WK-1178` in `docs/roadmap.md`. At filing, neither working id appeared among the 9860–9899 hits found
 by `git grep -h -o -E '\b98[6-9][0-9]\b' -- docs .claude` and a `docs` filename match over every
 `origin/*` branch and the head of every open PR (35 refs). Only 9864, 9871 and 9885 are in use.
 
 **Activation needs:**
-1. The decision-maker's rulings on DP-F1, DP-F2 and DP-F3 below. **Ruled** in #964 (working id 9978, at `d1e1f539`, unminted): (a), (c) with the `:463` limb dropped, and (a).
-2. #961 minted, and this plan's two citations of it re-pointed.
+1. The decision-maker's rulings on DP-F1, DP-F2 and DP-F3 below. **Ruled** in RL-1298: (a), (c) with the `:463` limb dropped, and (a).
+2. ~~FD-1297 minted, and this plan's citations of it re-pointed.~~ Done: FD-1297, re-pointed at this mint.
 3. A free RL-1263 gate slot. Per the lead's dispatch that is the next free slot, about 16:00
-   BST on 2026-09-30. It must not pre-empt WK-674 Slice 2 or WK-690 Slice 1 (#961,
+   BST on 2026-09-30. It must not pre-empt WK-674 Slice 2 or WK-690 Slice 1 (FD-1297,
    *Disposition*: "It does not pre-empt WK-674 Slice 2 or WK-690 Slice 1: there is no
    production, and 0 stored rating versions are affected so far").
 4. The lead's dispatch record, carrying the RL-1263 write-set check (**Write set**, below).
 
 **Order.** This slice **merges before WK-1250 Slice 1 is dispatched**, because `compile.py` has a
-single writer (#961, *Disposition*). WK-1250 Slice 2 then builds G1 on top of the function this
+single writer (FD-1297, *Disposition*). WK-1250 Slice 2 then builds G1 on top of the function this
 slice adds.
 
 ### Write set, for the RL-1263 check
@@ -87,11 +87,11 @@ exemptions are at `RL-1263:104-116`. This slice changes:
 | Path | What changes | Existing definition edited |
 |---|---|---|
 | `packages/pricing-core/src/pricing_core/rating/compile.py` | a new function `check_step_refs_pinned`; one call inside `compile_bundle`; `__all__` gains the name | **Yes**: `compile_bundle` (`:425-492`) and `__all__` |
-| `packages/pricing-core/src/pricing_core/rating/runtime.py` | `_load_boosters` (`:510-540`) becomes coded at `:533`, and `load_bundle` (`:565-579`) gains one call (DP-F2 (c), #964). The handler (`:457-463`) is **not** edited | **Yes**: those two functions |
+| `packages/pricing-core/src/pricing_core/rating/runtime.py` | `_load_boosters` (`:510-540`) becomes coded at `:533`, and `load_bundle` (`:565-579`) gains one call (DP-F2 (c), RL-1298). The handler (`:457-463`) is **not** edited | **Yes**: those two functions |
 | `docs/specs/03-rating-engine.md` §5.1 | one dated line after the "Error codes owned by this module" paragraph (`:772-776`) | **Yes**: §5.1 |
 | `packages/pricing-core/tests/test_rating_pin_membership.py` | new | no |
 | `backend/tests/test_rating_version_compile.py` | one test appended | no |
-| `packages/pricing-core/tests/test_quote_input_raise_sites.py` | `_INPUT_FREE` (`:62-75`) gains `("rating/compile.py", "check_step_refs_pinned"): 1` and `("rating/runtime.py", "_load_boosters"): 1`; `("rating/runtime.py", "handler")` stays at 2: the `:463` limb is dropped (#964, DP-F2 as amended) | **Yes**: the `_INPUT_FREE` table |
+| `packages/pricing-core/tests/test_quote_input_raise_sites.py` | `_INPUT_FREE` (`:62-75`) gains `("rating/compile.py", "check_step_refs_pinned"): 1` and `("rating/runtime.py", "_load_boosters"): 1`; `("rating/runtime.py", "handler")` stays at 2: the `:463` limb is dropped (RL-1298, DP-F2 as amended) | **Yes**: the `_INPUT_FREE` table |
 | `docs/INDEX.md` | regenerated | exempt |
 
 - **`backend/src/app/errors.py` is not changed.** `RATING_VERSION_UNPINNED` is already
@@ -116,7 +116,7 @@ text said the two serialise.)*
 ### Dependencies
 
 - **Code: none unmerged.** Everything this slice reads is on `origin/main` at the tree above.
-- **Records:** #961 and #938 are unminted and not needed to build. Only the citations wait.
+- **Records:** FD-1297 and RL-1298 are minted. #938 is unminted and not needed to build; only its citation waits.
 
 ## Acceptance Standard
 
@@ -124,7 +124,7 @@ Every command runs in the executor's worktree, over `origin/main...HEAD`. "Red f
 failing run is quoted in the ledger, with its failing assert line **and the cause the step
 predicts**. A failure for any other cause is a plan defect, reported and not worked around.
 
-1. **Spec, in the same commit as the refusal, written first** (#961, *Disposition*). `03` §5.1
+1. **Spec, in the same commit as the refusal, written first** (FD-1297, *Disposition*). `03` §5.1
    gains one dated line giving `RATING_VERSION_UNPINNED` a meaning that covers "a step ref not
    pinned at its exact version" (Task 2 has the text). `03` FR-237 is **not** reworded.
    `python3 scripts/audit-docs.py` exits 0 at the committed tree (a working-id gap in check 31 is
@@ -143,18 +143,18 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
      pins peril structures there).
 
    **Predicted red** for each: `pytest.raises` reports `DID NOT RAISE`, because
-   `compile_bundle` compiles today (#961, *Evidence* 1). A red from any other cause, such as a
+   `compile_bundle` compiles today (FD-1297, *Evidence* 1). A red from any other cause, such as a
    fixture `KeyError` or a validation error, is a plan defect.
 3. **The consumer cases that priced wrong are refused at compile, red first.** Each case is the
-   exact algorithm of #961's tables, written with `??`:
-   - auditor-922's lookup case (#961 Table 2, row "(a) `??`, lookup UNPINNED", priced
+   exact algorithm of FD-1297's tables, written with `??`:
+   - auditor-922's lookup case (FD-1297 Table 2, row "(a) `??`, lookup UNPINNED", priced
      **1370**);
    - its wrong-version row (step `@1`, pin `@2` only, priced **1370** against a right answer of
      2740);
-   - auditor-922's table case (#961, "Table step through a tolerant consumer": `on_miss="default"`,
+   - auditor-922's table case (FD-1297, "Table step through a tolerant consumer": `on_miss="default"`,
      `s_office` = `risk_premium_minor * (expense_factor ?? 1.0)`, rate table unpinned, priced
      **1370** against 1507 pinned);
-   - auditor-933's lookup and table cases (#961 Table 3, rows (b) and (c), priced **100000**).
+   - auditor-933's lookup and table cases (FD-1297 Table 3, rows (b) and (c), priced **100000**).
 
    Each is refused with `RATING_VERSION_UNPINNED`. The ledger also quotes the **pre-fix** price
    of each case, from a scratch run at the pre-change tree that is never committed. That
@@ -164,14 +164,14 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
    - auditor-922's control (step and pins at `@1`) prices **1507**;
    - its wrong-version control (step `@2`, pin `@2`) prices **2740**;
    - auditor-933's controls price **130000** (`@1`/`@1`) and **180000** (`@2`/`@2`);
-   - #961 Table 1's "both table v1 and v2 pinned" row still compiles and prices **1507**
+   - FD-1297 Table 1's "both table v1 and v2 pinned" row still compiles and prices **1507**
      (DP-F3 (a)).
 
    **Every refused case and every control uses the `??` consumer only.** **`coalesce(` is refused
    at compile at this tree**, so it is not an acceptance case *(revised 2026-09-30, on the
-   maintainer's dated correction relayed by the lead, now in #961 at `f78d4340`)*.
+   maintainer's dated correction relayed by the lead, now in FD-1297 at `f78d4340`)*.
    `_check_vocabulary` (`compile.py:233-258`) refuses it with `EXPRESSION_INVALID_VOCABULARY`.
-   #961 reports it found by auditor-924d and re-run by the filer. The planner re-ran it as well:
+   FD-1297 reports it found by auditor-924d and re-run by the filer. The planner re-ran it as well:
    `zen.compile_expression('a * number(coalesce(x, "1.0"))')` raised
    `{"type":"parserError","source":"Incomplete parser output"}`, and the same expression written
    with `??` compiled. **`coalesce(` is outside this slice,** pending the decision-maker's ruling on
@@ -184,15 +184,14 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
    `load_bundle`'s DP-F2 (c) check and reaches `:533`. `load_bundle` then raises `CodedError`
    `RATING_VERSION_UNPINNED: …`, naming the step and the ref. **Predicted red** for both:
    `KeyError 'model:motor-freq@1'`, or `'model:motor-freq-glm@1'` for the GLM model.
-   - **The handler (`runtime.py:463`) is not edited and gets no test.** #964 (working id 9978, at
-     `d1e1f539`), DP-F2 as amended, option (i): the handler is unreachable, because `_load_boosters`
+   - **The handler (`runtime.py:463`) is not edited and gets no test.** RL-1298, DP-F2 as amended, option (i): the handler is unreachable, because `_load_boosters`
      raises first for both GLM and GBM. No production code builds a `CompiledBundle` except
      `load_bundle`.
-   - #961 at `f78d4340` says any coded outcome meets the requirement ("Any coded outcome, such as
+   - FD-1297 at `f78d4340` says any coded outcome meets the requirement ("Any coded outcome, such as
      `MODEL_CALL_FAILED` through the sentinel, meets the requirement"), and `:533`'s
-     `RATING_VERSION_UNPINNED` is one. *(Revised 2026-09-30 on auditor-933's F1 and #964's
+     `RATING_VERSION_UNPINNED` is one. *(Revised 2026-09-30 on auditor-933's F1 and RL-1298's
      amendment: the first text had a GLM case at the handler, `:463`.)*
-5a. **A pre-fix bundle is refused at load, red first** (DP-F2 (c), ruled by #964). The route is a
+5a. **A pre-fix bundle is refused at load, red first** (DP-F2 (c), ruled by RL-1298). The route is a
     **hand-built pre-fix `Bundle`**. `Bundle` is a public frozen Pydantic model with
     `algorithm_ref`, `graph`, `resolved_payloads`, `pins`, `content_hash` and `compiled_at`
     (`compile.py:484-491`). Build it as follows:
@@ -229,7 +228,7 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
    - `("rating/compile.py", "check_step_refs_pinned"): 1` (Task 2). Write the function with **one**
      `_raise_named` call. If it has two, the count is 2 and the comment says why;
    - `("rating/runtime.py", "_load_boosters"): 1` (Task 3);
-   - `("rating/runtime.py", "handler")` stays at 2. The `:463` limb is dropped (#964, DP-F2 as
+   - `("rating/runtime.py", "handler")` stays at 2. The `:463` limb is dropped (RL-1298, DP-F2 as
      amended).
 
    `("rating/compile.py", "compile_bundle")` stays 5: the new call is to
@@ -240,7 +239,7 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
 8. **The `??` operator is untouched.** `git diff origin/main...HEAD --
    packages/pricing-core/src/pricing_core/rating/compile.py` shows no change to
    `_GUARD_MARKERS` (`:41`), `_check_vocabulary` (`:233`) or any expression handling. `??` is a
-   separate §0 question with the decision-maker (#961, *Related, not part of this fix*).
+   separate §0 question with the decision-maker (FD-1297, *Related, not part of this fix*).
 9. **The reusable function is recorded.** The slice ledger records `check_step_refs_pinned`'s
    symbol, file and signature at the merged tree, for WK-1250 Slice 2's G1. #938, DP-1 item 6:
    "The builder records the function's symbol and file in its slice ledger".
@@ -278,7 +277,7 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
 **Not in this slice:**
 - `SubGraphRef` against `Pins.sub_graphs`, and fragment refs → **WK-1250 Slice 2**, G1, reusing
   this function.
-- Whether `??` belongs in the grammar → **the decision-maker**, §0 (#961).
+- Whether `??` belongs in the grammar → **the decision-maker**, §0 (FD-1297).
 - An **unreferenced** extra pin (DP-F3) → not refused here.
 - `custom_objectives` pins are reached through a model, not named by a step. They are not
   compared, and FR-240 clause (6) stays WK-690's (#938).
@@ -297,7 +296,7 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
 | h | An exception raised inside a zen custom handler surfaces as a generic `RuntimeError` `NodeError`; a handler reports failure through `_model_call_failure`'s sentinel, which `score_one` raises as `CodedError` | `runtime.py:81-121` (the finding at `:85-91`, the sentinel at `:120`); `score.py:443` |
 | i | `runtime.py` imports from `compile.py`, not the reverse | `runtime.py:50`: `from pricing_core.rating.compile import Bundle, JdmGraph`; `compile.py` imports no `runtime` |
 | j | `Bundle` carries `pins` | `compile.py:484-491` (`Bundle(..., pins=pins, ...)`) |
-| k | The score fixture is #961's base: `rate_table:motor-expense@1` and `model:motor-freq@1`, pinned at `@1` | `packages/pricing-core/tests/test_rating_score.py:46-140` (`_algorithm_payload`, `_FakeResolver`, `_version`, `_compiled`) |
+| k | The score fixture is FD-1297's base: `rate_table:motor-expense@1` and `model:motor-freq@1`, pinned at `@1` | `packages/pricing-core/tests/test_rating_score.py:46-140` (`_algorithm_payload`, `_FakeResolver`, `_version`, `_compiled`) |
 | l | Cross-module test helper imports are the local precedent | `packages/pricing-core/tests/test_safe_error.py:28` (`from test_rating_score import _compiled`) |
 | m | A reference-table payload is `{"rows": [{"key", "payload", "effective_from", "effective_to"}]}` | `packages/pricing-core/tests/test_rating_runtime.py:458-466` |
 | n | `RATING_VERSION_UNPINNED` and `MODEL_CALL_FAILED` are registered | `backend/src/app/errors.py:298`, `:325` |
@@ -312,13 +311,13 @@ The executor re-reads each at its own tree and stops on any that no longer holds
 
 Each is the decision-maker's (`delivery-process.md` §3). The planner rules none of them. The
 maintainer has already decided the code (`RATING_VERSION_UNPINNED`), the severity, the owner,
-the order and the acceptance (#961, *Disposition*). None of that is reopened here.
+the order and the acceptance (FD-1297, *Disposition*). None of that is reopened here.
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-F1 | Where does the comparison live, under what name? | (a) `pricing_core.rating.compile.check_step_refs_pinned(algorithm: RatingAlgorithm, pins: Pins) -> None`, raising `CodedError` `RATING_VERSION_UNPINNED` on the first mismatch in step order, exported in `__all__`; (b) `model_schema.rating`, beside `check_model_reference_mode` (`:171`), raising a bare `ValueError` that `compile_bundle` would have to re-code; (c) inline in `compile_bundle`, no separate function | **(a).** The code is a `pricing-core` error (premise c), and `runtime.py` can import it (premise i) for DP-F2 (c). G1 needs a named function to call, which rules out (c). (b) puts a coded rating refusal in the shared-shape package, and `model_schema/__init__.py` is a file every slice exporting a shape touches | decision point | yes — Task 2 | #964 (working id 9978), at `d1e1f539`: **(a)** |
-| DP-F2 | How far does the backstop go at load and score, for a bundle not produced by the fixed `compile_bundle` (for example one compiled and stored before this fix)? | (a) The minimum: `_load_boosters` (`:533`) raises `CodedError` `RATING_VERSION_UNPINNED` naming the ref, and the handler (`:463`) returns `_model_call_failure(step, …)`, so `score_one` raises `MODEL_CALL_FAILED`. A raise cannot be used there (premise h). `table` and `lookup` stay as today at score: a missing payload still builds an empty decision table (#961, *Evidence* 1); (b) as (a), with the handler's text starting `RATING_VERSION_UNPINNED` inside the sentinel so the reader sees the cause; (c) as (a), and `load_bundle` calls `check_step_refs_pinned(algorithm, bundle.pins)` first (premise j), so a stored bundle with an unpinned or wrong-version step of **any** kind is refused before it can score | **(c).** (a) and (b) code the model path, but leave a pre-fix stored bundle able to price a `table` or `lookup` step silently at a wrong premium, which is the finding's defect. #961 at `f78d4340` (*Evidence* 5) reports 0 affected in PostgreSQL and in 6519 MinIO bundles, but it leaves 3986 algorithm-shaped blobs in `gip-test-blobs`, which carry no pins, unchecked. (c) costs one call on a path with no I/O, reuses DP-F1's function, and closes the class at load. The two runtime sites stay coded as unreachable backstops. The maintainer has pre-accepted (c) as within scope if it is ruled (the lead's relay); the ruling is still the decision-maker's. Under (c), acceptance 5a applies | decision point | yes — Task 3 | #964 (working id 9978), at `d1e1f539`: **(c), with the handler (`:463`) limb dropped**, option (i) of its amendment. The handler clauses of options (a) and (b) above stand as a record of the options only; none is built |
-| DP-F3 | Is a pin that no step references refused? #961 Table 1: "Both table v1 and v2 pinned … the v1 pin is used; the extra v2 pin is ignored" | (a) No. This slice refuses only a step ref not pinned at its exact version, and an extra pin stays allowed; (b) yes: refuse any `rate_tables`, `models` or `reference_tables` pin that no step names | **(a).** FR-237 says every reference is pinned, not that every pin is referenced. #961's scope is refs not pinned. Under (b), `custom_objectives` pins, which no step names (they are reached through a model), would need an exemption, and a rule would be written without a spec line. A second rule is a spec change first | decision point | yes — Task 2's acceptance 4 row | #964 (working id 9978), at `d1e1f539`: **(a)** |
+| DP-F1 | Where does the comparison live, under what name? | (a) `pricing_core.rating.compile.check_step_refs_pinned(algorithm: RatingAlgorithm, pins: Pins) -> None`, raising `CodedError` `RATING_VERSION_UNPINNED` on the first mismatch in step order, exported in `__all__`; (b) `model_schema.rating`, beside `check_model_reference_mode` (`:171`), raising a bare `ValueError` that `compile_bundle` would have to re-code; (c) inline in `compile_bundle`, no separate function | **(a).** The code is a `pricing-core` error (premise c), and `runtime.py` can import it (premise i) for DP-F2 (c). G1 needs a named function to call, which rules out (c). (b) puts a coded rating refusal in the shared-shape package, and `model_schema/__init__.py` is a file every slice exporting a shape touches | decision point | yes — Task 2 | RL-1298: **(a)** |
+| DP-F2 | How far does the backstop go at load and score, for a bundle not produced by the fixed `compile_bundle` (for example one compiled and stored before this fix)? | (a) The minimum: `_load_boosters` (`:533`) raises `CodedError` `RATING_VERSION_UNPINNED` naming the ref, and the handler (`:463`) returns `_model_call_failure(step, …)`, so `score_one` raises `MODEL_CALL_FAILED`. A raise cannot be used there (premise h). `table` and `lookup` stay as today at score: a missing payload still builds an empty decision table (FD-1297, *Evidence* 1); (b) as (a), with the handler's text starting `RATING_VERSION_UNPINNED` inside the sentinel so the reader sees the cause; (c) as (a), and `load_bundle` calls `check_step_refs_pinned(algorithm, bundle.pins)` first (premise j), so a stored bundle with an unpinned or wrong-version step of **any** kind is refused before it can score | **(c).** (a) and (b) code the model path, but leave a pre-fix stored bundle able to price a `table` or `lookup` step silently at a wrong premium, which is the finding's defect. FD-1297 at `f78d4340` (*Evidence* 5) reports 0 affected in PostgreSQL and in 6519 MinIO bundles, but it leaves 3986 algorithm-shaped blobs in `gip-test-blobs`, which carry no pins, unchecked. *(Corrected 2026-09-30 at this mint: FD-1297 as minted, *Evidence* 5, reclassifies those 3986 blobs as score traces, not algorithms. They carry no step ref, pins or graph, cannot be compiled or priced, and matched 0 of 3986 against stored algorithms; the earlier label was "an instrument error". So stored and MinIO exposure are both 0. The ruling, (c), stands on the remaining reason: a bundle stored before this fix, or built outside `compile_bundle`, is still refused at load.)* (c) costs one call on a path with no I/O, reuses DP-F1's function, and closes the class at load. The two runtime sites stay coded as unreachable backstops. The maintainer has pre-accepted (c) as within scope if it is ruled (the lead's relay); the ruling is still the decision-maker's. Under (c), acceptance 5a applies | decision point | yes — Task 3 | RL-1298: **(c), with the handler (`:463`) limb dropped**, option (i) of its amendment. The handler clauses of options (a) and (b) above stand as a record of the options only; none is built |
+| DP-F3 | Is a pin that no step references refused? FD-1297 Table 1: "Both table v1 and v2 pinned … the v1 pin is used; the extra v2 pin is ignored" | (a) No. This slice refuses only a step ref not pinned at its exact version, and an extra pin stays allowed; (b) yes: refuse any `rate_tables`, `models` or `reference_tables` pin that no step names | **(a).** FR-237 says every reference is pinned, not that every pin is referenced. FD-1297's scope is refs not pinned. Under (b), `custom_objectives` pins, which no step names (they are reached through a model), would need an exemption, and a rule would be written without a spec line. A second rule is a spec change first | decision point | yes — Task 2's acceptance 4 row | RL-1298: **(a)** |
 
 ---
 
@@ -331,7 +330,7 @@ the order and the acceptance (#961, *Disposition*). None of that is reopened her
 - [ ] Re-derive premises a–p; record the tree and each result in the ledger.
 - [ ] `gh pr list --state open`, and read anything that rules on FR-237, `compile.py`,
   `runtime.py`, `03` §5.1 or `??` ([`README.md`](README.md) convention 4). Name the SHA read.
-  **Confirm #961, #938 and #964 are minted** and re-point this plan's citations if the lead asks.
+  **Confirm #938 is minted** (FD-1297 and RL-1298 already are) and re-point this plan's citations if the lead asks.
 - [ ] Confirm DP-F1 to DP-F3's resolutions, by record id, in the ledger.
 - [ ] Confirm the RL-1263 slot and the dispatch record's write-set check.
 
@@ -342,7 +341,7 @@ the order and the acceptance (#961, *Disposition*). None of that is reopened her
 **Interfaces:**
 - Consumes: from `test_rating_score` — `_algorithm_payload`, `_FakeResolver`, `_version`, `_ctx`
   (premises k, l); `compile_bundle`, `load_bundle`, `score_one`, `CodedError`.
-- Produces: the tests of acceptance 2–5 and 5a (DP-F2 (c), ruled by #964). They go red now and green after Tasks 2–3.
+- Produces: the tests of acceptance 2–5 and 5a (DP-F2 (c), ruled by RL-1298). They go red now and green after Tasks 2–3.
 
 - [ ] Build each variant by **copying and editing** the fixture's dicts: a step's ref, and the
   version's `pins`. Do not mutate the shared helpers. For `@2` artifacts, add payloads to a local
@@ -353,9 +352,9 @@ the order and the acceptance (#961, *Disposition*). None of that is reopened her
   `direct → "2.0"`. Use `on_miss="default"` and `s_office`'s expression
   `risk_premium_minor * number(expense_factor ?? "1.0")`. The payload shape is premise m.
 - [ ] **Table variant.** Keep `s_expense` as the fixture's `table` step, with `on_miss="default"`,
-  and set `s_office`'s expression to `risk_premium_minor * (expense_factor ?? 1.0)` (#961 at
+  and set `s_office`'s expression to `risk_premium_minor * (expense_factor ?? 1.0)` (FD-1297 at
   `f78d4340`, "Table step through a tolerant consumer").
-  These literals are #961 Table 2's. Re-verify them against its text before use.
+  These literals are FD-1297 Table 2's. Re-verify them against its text before use.
 - [ ] **auditor-933's variants.** A minimal algorithm:
   - an input `base_minor` (int), given 100000;
   - a `lookup` producing `veh_loading` from `reference_table:veh@1` (`"1.30"`; `@2` `"1.80"`);
@@ -383,12 +382,12 @@ the order and the acceptance (#961, *Disposition*). None of that is reopened her
 
 - [ ] **Spec first.** Add one dated line after the catalogue paragraph:
 
-  > *`RATING_VERSION_UNPINNED` (meaning added 2026-09-30, on the finding filed as #961, FR-237):
+  > *`RATING_VERSION_UNPINNED` (meaning added 2026-09-30, on FD-1297, FR-237):
   > the Rating Version cannot be compiled because it has no `algorithm_ref`, has no `pins`, or
   > has a `table`, `lookup` or `model_call` step whose ref is not in the matching pin list
   > (`rate_tables`, `reference_tables`, `models`) at that exact version.*
 
-  Replace "#961" with the finding's id if it is minted by then. `python3 scripts/audit-docs.py`.
+  FD-1297 is minted, so the line cites it by id. `python3 scripts/audit-docs.py`.
 - [ ] The function, below `_raise_named` (`:421`). It iterates `algorithm.steps` in order. For
   each `RatingTableStep`, `RatingLookupStep` and `RatingModelCallStep` it takes the ref and the pin
   list of its kind: `pins.rate_tables`, `pins.reference_tables`, or `pins.models` for either model
@@ -416,8 +415,8 @@ the order and the acceptance (#961, *Disposition*). None of that is reopened her
   (FR-237)`. Import `CodedError` from `pricing_core.safe_error`, as `compile.py:37` does. Add
   `("rating/runtime.py", "_load_boosters"): 1` to `_INPUT_FREE` in the same commit (acceptance 7).
 - [ ] In `load_bundle`, before `_load_boosters` (`:579`), call
-  `check_step_refs_pinned(algorithm, bundle.pins)` (DP-F2 (c), #964).
-- [ ] **The handler (`:462-463`) is not touched** (#964, DP-F2 as amended, option (i)).
+  `check_step_refs_pinned(algorithm, bundle.pins)` (DP-F2 (c), RL-1298).
+- [ ] **The handler (`:462-463`) is not touched** (RL-1298, DP-F2 as amended, option (i)).
   `("rating/runtime.py", "handler")` stays at 2.
 - [ ] Acceptance 5 and 5a green. Commit: `fix(rating): load_bundle re-checks step pins and codes the missing model payload (FR-237, WK-1178)`.
 
@@ -460,7 +459,7 @@ PL-1254 and PL-1278 cite this slice's merged symbol once it exists.
   - the model-path `KeyError` coded → Task 3, acceptance 5;
   - red first per kind, unpinned and wrong-version → acceptance 2;
   - the `??` cases (1370 and 100000) → acceptance 3; `coalesce(` is refused at compile and outside this slice (acceptance 4);
-  - DP-F2 (c), ruled by #964 with the `:463` limb dropped → acceptance 5 (`:533`) and 5a (route 1);
+  - DP-F2 (c), ruled by RL-1298 with the `:463` limb dropped → acceptance 5 (`:533`) and 5a (route 1);
   - controls 1507, 2740, 130000 and 180000 → acceptance 4;
   - the order and the slot → Status;
   - `??` untouched → acceptance 8;
@@ -471,4 +470,4 @@ PL-1254 and PL-1278 cite this slice's merged symbol once it exists.
   refused (premise b); "the input contract" is not a pin list and is out of this check.
 - **Literals** were read at the tree above (premises). `check_step_refs_pinned` and the new test
   file are proposals, named once each and used consistently in Tasks 1–5.
-- **Ruled:** DP-F1 to DP-F3, by #964 (working id 9978), unminted. **Unminted:** #961, #938 and #964; Task 0 re-points them when they mint.
+- **Ruled:** DP-F1 to DP-F3, by RL-1298. **Unminted:** #938; Task 0 re-points it when it mints.
