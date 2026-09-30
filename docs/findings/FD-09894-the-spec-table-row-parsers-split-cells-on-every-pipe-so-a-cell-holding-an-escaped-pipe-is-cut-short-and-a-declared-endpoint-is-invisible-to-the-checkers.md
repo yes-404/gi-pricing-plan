@@ -36,9 +36,17 @@ found by auditor-926-927 in #977's audit; this record reproduces it independentl
 
 **The maintainer's decision** (`~/gi-pricing-plan.local/channel/to-lead.md`, "2026-09-30 11:42:08
 BST — two decisions: the escaped-pipe checker blindness → a LOW FD; box load → heavy audit runs
-take a gate slot"): a LOW FD, owner #977's WK-1178 slice, silence being the reason to record it
-(`CLAUDE.md` §13, a check that has never printed a failure). The fix is one shared parser, or
-pipe-free cells, never a third parser.
+take a gate slot"): ~~a LOW FD~~, owner #977's WK-1178 slice, silence being the reason to record it
+(`CLAUDE.md` §13, a check that has never printed a failure). ~~The fix is one shared parser, or
+pipe-free cells, never a third parser.~~
+
+**Superseded, dated 2026-09-30** (struck above, not deleted): the severity by "2026-09-30 11:46:58
+BST — #983 (escaped-pipe FD) raised to MEDIUM; the closure-evidence check", so this FD is
+**MEDIUM**, not LOW; and the fix statement by "2026-09-30 11:49:44 BST — DECISION: the shared row
+parser is route (a), a stdlib-only module file; this amends my 11:46:58 "model-schema
+helper"", so the fix is **a stdlib-only `table_rows.py`, loaded by path by the scripts and imported
+by the backend** (see Disposition), not "one shared parser, or pipe-free cells". Owner and the
+§13 reason stand.
 
 ## Evidence
 
