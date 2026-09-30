@@ -149,36 +149,72 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
        It also owns the §5.1 endpoint-row reading (the method cell and the path cell) built
        on that split. Callers keep their own meaning for each cell. What the module owns is
        only how a row becomes cells.
-     - **Every row split migrates, and "never a fourth" means the row-split logic.** At
-       `d15d4c8f`, over `*.py`, the population is:
-       - the three §5.1 endpoint regexes: `audit-docs.py:299`, `scope-audit.py:68` and
-         `backend/src/app/demo/guide.py:64`;
-       - the naive `strip("|").split("|")` splits: `audit-docs.py:353`, `:394`, `:578` and
-         `:4118`; `doc-index.py:1061`; `_docid.py:1611`; `guide.py:87`; `register-lint.py:169`
-         (`_split_row` itself); and `tests/test_findings_ids.py:157`;
-       - the unescaped-pipe splits and counts: `tests/test_audit_docs_ids.py:2413` and
-         `:2462`; `doc-index.py:477` (`_UNESCAPED_PIPE`, used at `:557`);
-         `register-lint.py:126` (used at `:309`); and `audit-docs.py:636` (check 22's cell
-         count);
-       - `doc-id.py:3202`, which already calls `register_lint._split_row` and so follows it.
+     - **Every row split migrates, and "never a fourth" means the row-split logic.**
+       *(Widened on auditor-926-927's audit of `142c4594`. The previous head's four
+       fixed-string predicates missed the first-cell splits `doc-id.py:2921` and
+       `tests/test_doc_id_migrate.py:4951`, and any `partition`, `rsplit`, single-quoted or
+       `[^|]*` form.)* The population is defined by four regexes, which are also the pin's.
+       Each is matched against every tracked `*.py`, with the vendored
+       `.claude/skills/ui-ux-pro-max/` excluded. Those files split CSV alias fields, not
+       markdown rows, and vendored files stay as upstream wrote them (`CLAUDE.md` §12).
+       - **P1, a string-method split on a pipe:** the ERE
+         `(split|rsplit|partition|rpartition)\(\s*[rb]?['"]\\?\|['"]`. At `d15d4c8f` it
+         has 11 hits:
+         - `audit-docs.py:353`, `:394`, `:578` and `:4118`;
+         - `doc-index.py:1061`;
+         - `_docid.py:1611`;
+         - `doc-id.py:2921` (with its `.strip("|")` at `:2920`);
+         - `register-lint.py:169`;
+         - `backend/src/app/demo/guide.py:87`;
+         - `tests/test_findings_ids.py:157`;
+         - `tests/test_doc_id_migrate.py:4951`.
+       - **P2, a negated pipe class, `[^|` in any form:** the ERE `\[\^\|`. It has 6 hits:
+         - the three §5.1 endpoint regexes, `audit-docs.py:299`, `scope-audit.py:68` and
+           `guide.py:64`;
+         - the first-cell id matchers `doc-index.py:461` (`_BOLD_ID_ROW`) and
+           `scripts/graphify-docs-extract.py:41` (`OQ_DEF`);
+         - the comment at `doc-index.py:458`.
+       - **P3, the unescaped-pipe lookbehind:** the fixed string `(?<!\\)\|`. It has 6 hits:
+         - `audit-docs.py:636` (check 22's cell count) and `:642`;
+         - `doc-index.py:477` (`_UNESCAPED_PIPE`, used at `:557`);
+         - `register-lint.py:126` (used at `:309`);
+         - `tests/test_audit_docs_ids.py:2413` and `:2462`.
+       - **P4, the retired name:** the ERE `\b_split_row\b`. `register-lint.py`'s
+         `_split_row` (`:165`, called at `:242` and `:267`) is **deleted**, not kept as a
+         wrapper. Its callers, and `doc-id.py:3202` with its docstring at `:3185-3189`, call
+         `table_rows` directly, so this predicate reaches zero.
 
-       These are the lines printed by `git grep -n -F '[^|]+' -- '*.py'`,
-       `git grep -n -F '.split("|")' -- '*.py'`, `git grep -n -F '(?<!\\)\|' -- '*.py'` and
-       `git grep -n -F '_split_row' -- '*.py'`, minus the vendored
-       `.claude/skills/ui-ux-pro-max/` hits. Those split CSV alias fields, not markdown
-       rows, and vendored files stay as upstream wrote them (`CLAUDE.md` §12).
-       `audit-docs.py:642` is check 22's lint for a raw pipe inside a code span. It is a
-       lint, not a split, and it stays. Each migrated site is read at the slice. A site the
-       slice finds is not a markdown-row split is named in its record, not silently left.
+       Every hit migrates to `table_rows`, except the pin's exemptions below. The hit lists
+       above were reproduced at this ruling by compiling each pattern with Python's `re`
+       (P3 escaped with `re.escape`) and matching it line by line over
+       `git ls-files '*.py'`, minus the vendored directory. That form is used because P1
+       contains both quote characters, which a shell-quoted `git grep` would mangle. Each
+       migrated
+       site is read at the slice, and a site the slice finds is not a markdown-row split is
+       named in its record, not silently left. **Outside the predicates, and staying:**
+       `audit-docs.py:508` and `:3965` match two-cell `| **key** | value |` rows anchored at
+       both ends, so a `\|` in the value cell is read as part of the value. They are not
+       splits.
      - **`doc-index.py --phase P2` is carried by this slice.** Its register split at
        `doc-index.py:1061` raises on the register rows that carry `\|` (#983 reports `:197`
        and `:213`). It is one of the population above, fixed by the same splitter, and so
        fixed before the P2 exit review. The default `--check` does not call it.
-     - **A static test pins the population at zero.** The four `git grep` predicates above
-       print nothing outside `table_rows.py`, the vendored exclusion, `audit-docs.py`'s
-       check 22 lint and the test's own file, which holds the predicates as data and is
-       excluded by name. Red first: a planted `line.split("|")` in a scratch script fails
-       it.
+     - **A static test pins the population at zero.** P1 to P4 match nowhere outside
+       three exemptions, and **no exemption is a whole file except the owner and the pin**:
+       - `table_rows.py`, the owner;
+       - the pin's own test file, which holds the four predicates as data;
+       - one line-level exemption, keyed by `(path, enclosing function, the exact source
+         text of the string literal)`, never by line number: `audit-docs.py`'s
+         `check_table_rows` (`:604`), the literal at `:642`. That is check 22's lint for a
+         raw pipe inside a code span. It is a lint, not a split. Its neighbour at `:636`,
+         check 22's cell count, **migrates**, so every other split in `audit-docs.py` is
+         still caught.
+
+       The pin tokenizes each file and ignores `COMMENT` tokens, so `doc-index.py:458` is
+       not a hit. A docstring hit is migrated or reworded.
+       - **Red first:** a planted `line.split('|')`, a planted `line.partition("|")`, a
+         planted `[^|]*` regex and a planted `def _split_row` each fail it;
+       - so does a second `(?<!\\)\|` literal added inside `check_table_rows`.
    - **Two live routes have no row. The spec is behind the code (`CLAUDE.md` §0), and the
      slice adds both rows spec-first** (the 11:37:11 BST entry, item 2). They are
      `GET /api/v1/rating-versions` and `GET /api/v1/rating-versions/{rating_version_id}`
@@ -217,8 +253,23 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
        view slices' backend additions**, and **the fix for finding 1297** (not on `main` at this tree), which edits the code
        catalogue inside `03` §5.1 (`03:772-776`).
 
+     **Its code write-set joins the serialisation** (auditor-926-927's audit of
+     `142c4594`). Besides the five §5.1 tables, the slice edits:
+     - `scripts/audit-docs.py`, `scope-audit.py`, `doc-index.py`, `doc-id.py`, `_docid.py`,
+       `register-lint.py` and `graphify-docs-extract.py`;
+     - `backend/src/app/demo/guide.py`;
+     - the new `packages/model-schema/src/model_schema/table_rows.py`;
+     - `tests/test_audit_docs_ids.py`, `tests/test_findings_ids.py` and
+       `tests/test_doc_id_migrate.py`;
+     - its own new test files.
+
+     A slice holding any of those files open is serialised against it like a §5.1 holder.
+     The list is re-derived from P1 to P4 and checked again at dispatch, because the
+     population can grow before then.
+
      **The rule, not only the list:** the slice serialises against **every** slice holding
-     any of the five §5.1 sections open **at its dispatch**. The lead's dispatch record
+     any of the five §5.1 sections, **or any file of its code write-set**, open **at its
+     dispatch**. The lead's dispatch record
      (`RL-1263`) names them then. It is dispatched in the first gap in which none is in
      flight, and otherwise it yields.
    - **S2's new routes are declared by whichever of S2 and this slice lands second**, as the
@@ -276,7 +327,8 @@ Each is shown failing on deliberately broken input (`CLAUDE.md` §13), in the WK
     installed. For example, `python3 -I -S scripts/audit-docs.py` exits as it does under
     the venv. At `d15d4c8f` it does: system Python 3.13.5 under `-I -S` gave rc 1, with
     only check 31's working-id gap;
-  - the static population test of item 3 fails on a planted `line.split("|")`.
+  - the static population test of item 3 fails on each of its planted forms, and
+    `git grep -n -F '_split_row' -- '*.py'` prints nothing.
 - A live route with no row fails. The two rating-version reads pass through their
   "records an existing route" rows.
 - A route declared `authenticated` that in fact demands a permission, or the reverse, fails.
