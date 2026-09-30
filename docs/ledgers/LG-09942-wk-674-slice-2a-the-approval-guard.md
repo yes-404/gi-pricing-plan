@@ -34,7 +34,7 @@ after the lead's GO; the file name keeps "DRAFT", its title now reads "FINAL"):
 >
 > **Status: DISPATCHED 2026-09-30 13:27:28 BST; this is the actual lane A slot-grant time that PL-1303's Activation defers to** (GO by the lead) at main `22fe674b4a590c47095c6ba608fe974264581139` (#984's squash: RL-1301, SL-1302 and PL-1303 minted; PL-1303 active). On the maintainer's MERGE-ACK #984 and "2026-09-30 13:10:33 BST — DECISION: accept PL-1303's in-batch activation (ii)…", whose condition is that **the ledger's Task 0 quotes this record verbatim, including this grant time**. Was: DRAFT. Finalised by the lead when #984 merges and activates, with the minted ids and line numbers re-checked at that tree. Every condition below cites a maintainer entry in `~/gi-pricing-plan.local/channel/to-lead.md` (2026-09-30) by its header.
 >
-> - **Plan:** #984 (PL 9923 + SL 9922), CLEAN at `a6371792` (auditor-plans); four mint-turn nits land before activation (F-2 on a flag-satisfiable table; SL-9922 body; #971 re-cited by minted id; fixture helper flushes the request before the artifact).
+> - **Plan:** #984 (PL 9923 + SL 9922), CLEAN at `a6371792` (auditor-plans); four mint-turn nits land before activation (F-2 on a flag-satisfiable table; SL-1302 (then working id 9922) body; #971 re-cited by minted id; fixture helper flushes the request before the artifact).
 > - **Ruling:** #971 (RL 9906), CLEAN at `897859eb`; minted before #984 ("12:10:38 BST — DECISION: the mint queue re-ordered so lane A starts S2a").
 > - **Split:** "11:48:28 BST — DECISION + ACCEPTANCE (maintainer by delegation): WK-674 S2 split, option (b), S2a = the approval guard".
 > - **Lane:** A, under RL-1263. Order "11:56:33 BST — DECISIONS: slice order after the split…": **S2a → the validation-rule fix slice (#978) → S2**, strictly sequential.
@@ -58,6 +58,8 @@ after the lead's GO; the file name keeps "DRAFT", its title now reads "FINAL"):
 > 7. **Gate:** the full two-half gate before pushing (CLAUDE.md §11). Docs checks run on a clean detached checkout of the pushed commit.
 > 8. **Ledger:** an `LG-` record under a free working id, checked against eta.md's "Working ids held" table and the open PRs; minted at the merge turn.
 > 9. **Helpers shared with the fix slice** (the maintainer's "12:36:02 BST — the fix slice's dispatch record: the new-file deviation accepted, plus one condition"): the fix slice's new `backend/tests/test_rating_pin_membership_api.py` imports `_handlers` (autouse), `_headers`, `_insert_version`, `_empty_pins`, `_run_compile_job` (and likely `_minimal_algorithm`) from `backend/tests/test_rating_version_compile.py`, which this slice's Acceptance 8 edits. If this diff changes any of them (name, signature or behaviour), say so in the ledger; the second of the two to merge rebases and re-runs its full gate before its ACK.
+
+**Quoted verbatim except one token:** in the record's "Plan" item, the slice's working id written as SL, a hyphen and 9922 (in the phrase "… 9922 body") is rendered `SL-1302 (then working id 9922)`, for check 32 (the maintainer's ruling (a), 2026-09-30, at the mint turn, no exemption).
 
 **Environment.** `pwd` was the executor's worktree
 (`.claude/worktrees/exec-674s2a`), the branch `sl-1302-approval-guard`;
@@ -140,6 +142,8 @@ on `approval_requests`. The flag compares `IS DISTINCT FROM 'on'`. `GUARDED_TABL
 `create_trigger_sql()` live in the migration module; the shadow-table tests import them from it,
 and no fixture copies the DDL.
 
+*(Corrected 2026-09-30 at the mint turn, on the slice audit's L1: the two sentences below that said 403, here and in Task 3, described the first version of the mapping; the code and tests at the audited head return 500, as the next section explains.)*
+
 **Tests** (`backend/tests/test_approval_guard_trigger.py`, 102 at first green and 105 now; the five
 `test_approval_guard*.py` files together run 148 passed):
 - **T3** — `test_every_guarded_table_carries_the_trigger_on_the_test_database` connects to
@@ -172,7 +176,7 @@ and no fixture copies the DDL.
 - **Teardown** — after `empty_the_database()` the trigger is present and refuses in the next
   transaction.
 - **The SQLSTATE** — `app.errors.APPROVAL_GUARD_SQLSTATE` equals the migration's; an `httpx` client
-  over an app with `install_error_handlers` gets a 403 problem with code
+  over an app with `install_error_handlers` gets a **500** problem with code
   `APPROVAL_OUTSIDE_DECISION_PATH` for the guard's refusal and a 500 `INTERNAL_ERROR` for another
   database error (the handler re-raises any SQLSTATE but `GP001`).
 
@@ -226,7 +230,7 @@ connection the next transaction does not read `'on'`, and a session-level `SET` 
 (so the check has something to catch); the reset runs when the body raises; a database error in
 the body surfaces as itself. `test_api_approvals.py` gains
 `test_a_decision_without_the_decision_flag_is_refused_by_the_database`: with `approval_decision()`
-a no-op the decide route returns the 403 `APPROVAL_OUTSIDE_DECISION_PATH` and the request stays in
+a no-op the decide route returns the **500** `APPROVAL_OUTSIDE_DECISION_PATH` and the request stays in
 `review`; the existing `test_an_approver_approves` and its FR-355 sibling are the positive controls
 (an approved request and its artifact, read back `approved`). **The flush-order control** the plan
 names ("the `approval_requests` row reaches the database before the carry writes the artifact") is
@@ -324,7 +328,7 @@ Runs so far, each with its own queue wait and wall time:
 |---|---|---|---|---|---|
 | Baseline attempt 2 (wrapper) | `22fe674b` | about 14 min | 1551.30 s | 3.36 → 2.14 | the fix slice's gate for about 4 minutes (the lead's figure) |
 | Suite only, this slice | the four code commits then | none | 1553.31 s | 4.35 → 4.04 | none in the other slot |
-| Full gate, this slice | `5c7ae3b2` | none | 1679.53 s (gate wall 28 min 17 s) | 2.45 → 5.14 | another gate on `gate-2` from 15:00:54 to the end |
+| Full gate, this slice (a **confounded candidate pair**: seven stages at once, not pytest alone) | `5c7ae3b2` | none | 1679.53 s (gate wall 28 min 17 s) | 2.45 → 5.14 | another gate on `gate-2` from 15:00:54 to the end |
 
 **The ledger lands after the gate.** The gated head holds no ledger: a record under working id 9942
 reds check 31 (`gap … between 1311 and 9942`) and so two `tests/test_repository_invariants.py` tests
@@ -350,6 +354,37 @@ check 31 (`gap in the full allocation between 1311 and 9942`), which fails two t
 (`test_money_discipline_is_enforced_by_the_docs_audit`, `test_journey_citations_are_audited_in_ci`).
 The code head was therefore gated without this file, and the ledger commit lands on top of it
 afterwards, where those two tests fail by design until the merge-turn mint.
+
+## Slice audit: CLEAN, with five LOW findings (added 2026-09-30, at the mint turn)
+
+auditor-close1255 found the slice clean at `4a2423f2c636fe3efab5af59d5f25e1dc755a5db`: the mutations
+re-run (trigger dropped: 3 red; flag reset skipped: 4 red; T3 fails and never skips), the migration
+read whole and round-tripping, GP001 mapped to 500, and the Task 0 quote byte-identical to the dispatch
+record. The findings are quoted below **as the lead relayed them** (the audit record's own wording is
+the auditor's; this ledger holds the lead's verdicts). The lead's verdicts:
+
+- **L1 — fixed in this ledger.** "The ledger says 403 at Task 2's SQLSTATE bullet and Task 3's decide
+  route; the code and tests say 500." Corrected above with a dated line.
+- **L5 — fixed in this ledger.** "The ledger's PRs section still says 'number recorded here when it
+  exists'." Filled in with #997.
+- **L2 — known LOW deviation, carried to #978.** "The trigger's HINT names
+  `/api/v1/approvals/{id}/decide`; the real route is `/api/v1/approval-requests/{id}/decide`." File:
+  the `HINT` text in `backend/migrations/versions/a9f3c6d21b87_approval_guard.py`
+  (`APPROVAL_GUARD_FUNCTION`).
+- **L3 — known LOW deviation, carried to #978.** "A dead `sys.exc_info()` branch in
+  `approval_decision()`'s `finally`: a reset failure is always swallowed." File:
+  `backend/src/app/platform/approvals.py`, the `finally` of `approval_decision()`.
+- **L4 — a DEVIATION from RL-1301 A.4.2** (the maintainer's condition on accepting these verdicts,
+  by delegation, 2026-09-30), not only a LOW: "The trigger fires on the column LIST, with no
+  `OLD IS DISTINCT FROM NEW` guard." The trigger fires on the listed columns, with no
+  `OLD IS DISTINCT FROM NEW` guard, which is wider than A.4.2's "an UPDATE that changes". It is wider,
+  not narrower: every change the ruling names is checked, and an UPDATE that names a listed column
+  without changing it is checked too. File: the `CREATE TRIGGER … UPDATE OF` clause built by
+  `create_trigger_sql()` in `backend/migrations/versions/a9f3c6d21b87_approval_guard.py`. **Carried to
+  #978, which either narrows it to the ruled scope or obtains a dated ruling amending A.4.2.**
+
+L2 to L4 sit in code that was gated at `5c7ae3b2`; fixing them here would cost a full gate, and #978
+is the next slice to edit `approvals.py`.
 
 ## Stated limits, unchanged from PL-1303 Acceptance 11 and RL-1301 A.4.4
 
@@ -397,5 +432,4 @@ the first real overlap of this slice's full gate with the fix slice's remains to
 
 ## PRs
 
-The slice's pull request is opened by the lead's instruction after the full gate and push; its
-number is recorded here when it exists.
+**#997** (draft), opened 2026-09-30 on the slice branch after the full gate; audited clean (see below).
