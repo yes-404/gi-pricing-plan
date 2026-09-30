@@ -90,8 +90,44 @@ renamed or unpublished lineage route would go undetected, and that #977's planne
 reuses the same row shape, would report the live route as rowless unless the shared regex or the
 row is fixed (auditor-926-927, who supplied the row count and this consequence; the first version
 of this record said the route was unbuilt, and that was wrong). For GOV the script prints
-`declared : 23`, `published : 13  (57%)`; the two hidden rows (`:539`, `:543`) would make the
-declared count 25. Whether those two routes are published was not checked here.
+`declared : 23`, `published : 13  (57%)`. **The two hidden rows (`:539`, `:543`) are
+unpublished, so GOV's real coverage is 13 of 25 (52%), not the printed 13 of 23 (57%).**
+Measured two ways at `daa7f5f8`: (a) `grep -n '"/api/v1/dossiers\|"/api/v1/artifacts'
+docs/contracts/openapi/generated.json` returns **no line**, while
+`"/api/v1/dataset-versions/{version_id}/lineage"` is at `:17717`; (b) `scope-audit.py`'s own
+`implemented_endpoints()`, run on the two declared sets (the script under the next item), gives
+`GOV declared as printed: 23 published: 13`, `GOV declared with the two rows visible: 25
+published: 13`, hidden GOV pairs `('GET', '/api/v1/artifacts/{}/dependencies')` and `('GET',
+'/api/v1/dossiers/{})` **published: [False, False]**, and hidden DATA pair `('GET',
+'/api/v1/dataset-versions/{}/lineage')` **published: [True]** (so DATA is 40 of 40).
+
+```python
+import importlib.util
+import pathlib
+import sys
+
+spec = importlib.util.spec_from_file_location("sa", "scripts/scope-audit.py")
+sa = importlib.util.module_from_spec(spec)
+sys.modules["sa"] = sa
+spec.loader.exec_module(sa)
+impl = sa.implemented_endpoints()
+orig = pathlib.Path.read_text
+def respelled(self, *a, **k):
+    t = orig(self, *a, **k)
+    return t.replace("\\|", "-or-") if self.name.startswith(("01-data", "06-gov")) else t
+gov_now = sa.declared_endpoints("GOV")
+pathlib.Path.read_text = respelled
+gov_true = sa.declared_endpoints("GOV")
+data_true = sa.declared_endpoints("DATA")
+pathlib.Path.read_text = orig
+print("GOV declared as printed:", len(gov_now), "published:", len(gov_now & impl))
+print("GOV declared with the two rows visible:", len(gov_true), "published:", len(gov_true & impl))
+hidden = sorted(gov_true - gov_now)
+print("hidden GOV pairs:", hidden)
+print("hidden GOV pairs published:", [h in impl for h in hidden])
+dh = sorted(data_true - sa.declared_endpoints("DATA"))
+print("hidden DATA pairs:", dh, "published:", [h in impl for h in dh])
+```
 
 **3. A second, loud consequence in another tool.** `scripts/doc-index.py:1061`, the register
 reader, splits every row on every pipe and drops any row that does not give exactly five cells
@@ -156,6 +192,12 @@ Each hit, and whether the escaped pipe affects it today:
 - **`scripts/register-lint.py:165-170` `_split_row`: correct.** It swaps the escaped pipe for a
   placeholder before splitting and restores it after. It is the working model of the fix, and the
   reason the register itself is read correctly by `register-lint` and wrongly by `doc-index`.
+- **Idioms that already handle the escaped pipe correctly:** `tests/test_audit_docs_ids.py:2413`
+  and `:2462` (`re.split(r"(?<!\\)\|", line)`, a lookbehind split, the second form of the fix
+  besides `_split_row`'s placeholder swap). `scripts/doc-id.py:2921` and
+  `tests/test_doc_id_migrate.py:4951` split only the first cell (`.split("|", 1)[0]`), so they
+  are unaffected. "Never a fourth" refers to the **row-splitting logic**, not to these being
+  counted as parsers to keep.
 - **Regexes with `[^|]*` that do not read the cell after it**: `scripts/doc-index.py:458-461`
   and `scripts/graphify-docs-extract.py:41` skip the rest of the id cell and take the remainder as
   text: **not affected**.
@@ -197,6 +239,24 @@ see them, so every figure below excludes them by construction. Built status is r
 **No slice ledger cites a DATA or GOV endpoint figure**: the second predicate finds only
 catalogue and RATE lines in the ledgers (`LG-730:527`, `LG-1225:314`).
 
+**GOV focus (the maintainer's and the lead's ask):** for each record that cites a GOV endpoint
+figure, were FR-379's route (06:539) and FR-384's route (06:543) in its scope, built, or recorded
+as deferred?
+
+- `CR-722` `:36` (plan review 2, Phase 1a exit): GOV **11 / 20**. Not in scope: the review says
+  the phase covers `DATA` and the `PLAT` and `GOV` **foundations** "which is what Phase 1a's rows
+  claim and no more" (`:39-41`). Neither route is built; the cited passage does not name them.
+- `CR-823` `:31` (plan review 5, WK-664 close): GOV **13 / 23** (really 13 of 25). **Recorded as
+  deferred, by direct comparison:** `:120-123` says "**GOV 06 §5.1, FR-344 class:** attestations,
+  dossiers, change control, audit/anchor. Declared with no route, all Phase 3 by the roadmap. This
+  is spec-ahead-of-phase, not drift. No change." Dossiers (FR-379) and change control (FR-383 to
+  FR-385, which includes FR-384 blast radius) are both named there. The same record names the
+  parser blind spot at `:67-72` (item (c)) and counts "10 published versus 12 found by direct
+  comparison" for GOV, so **the review knew of the two rows**.
+- No closed **Work** record cites a GOV endpoint figure at all (the sweep finds only these two
+  reviews). WK-664, whose close CR-823 reviewed, is the frontend of Phase 1b, and neither route
+  is in its scope.
+
 **Are the unbuilt hidden routes in any closed Work's scope?** **No.** The dossier route
 (06:539) belongs to **WK-680** (P3, `active`, "Dossier generation, commentary blocks, PDF,
 point-in-time regeneration", FR-376 to FR-381). The dependencies route (06:543, FR-384, blast
@@ -218,16 +278,27 @@ escaped pipe sits in one of their path cells.
 dm-effort-high carries it in #977 (the 11:46:58 entry). Event that discharges it: that slice's
 merge, except the secondary instance below.
 
-**Acceptance, red first:**
+**Acceptance, red first** (route decided by the maintainer, `to-lead.md` "2026-09-30 11:49:44
+BST — DECISION: the shared row parser is route (a), a stdlib-only module file; this amends my
+11:46:58 "model-schema helper""):
 
-- **one shared table-row parser, a `model-schema` helper modelled on `register-lint.py`'s
-  `_split_row`** (`:165-170`, already correct), importable by the backend and by the scripts,
-  **replacing all three copies** (`scripts/audit-docs.py:299`, `scripts/scope-audit.py:68`,
-  `backend/src/app/demo/guide.py:64`), never a fourth; the register reader
-  (`doc-index.py:1061`) and the other cell splitters read it too (or pipe-free cells in the three
-  §5.1 rows, if the DM so rules within #977);
-- **01:873: `declared_endpoints("DATA")` goes from 39 pairs to 40**, and GOV **23 to 25**, as
-  red-first cases; the demo guide's declared count rises by the same three.
+- **a stdlib-only `packages/model-schema/src/model_schema/table_rows.py`**, the one source of the
+  row-splitting logic, modelled on `register-lint.py`'s `_split_row` (`:165-170`). **The scripts
+  load it by path via `importlib`; the backend (`guide.py`) imports it normally; `docs.yml` is
+  unchanged.** Route (b), installing pydantic in the docs gate, is rejected (an infrastructure
+  change for no gain);
+- **a test fails if `table_rows.py` imports anything outside the stdlib**: an AST walk of its
+  imports against `sys.stdlib_module_names`, **red first on a planted `import pydantic`**, so a
+  later edit cannot silently break the docs gate. The docs gate itself is proven by running
+  `audit-docs.py` under a bare `python3` with no project packages;
+- **every idiom migrates to it**: audit-docs `_ENDPOINT_ROW` (`:299`), scope-audit `_ENDPOINT`
+  (`:68`), `backend/src/app/demo/guide.py:64`, and `tests/test_audit_docs_ids.py:2413` and `:2462`
+  (the lookbehind splits), as do the register reader (`doc-index.py:1061`) and the other cell
+  splitters that read a table. **"Never a fourth" means the row-splitting logic**, not a count of
+  regexes;
+- **red first:** `declared_endpoints("DATA")` **39 to 40**, GOV **23 to 25** (and GOV published
+  stays 13, so 13 of 25), the demo guide's declared count up by the same three, and **the
+  `doc-index.py --phase P2` raise** (evidence 3).
 
 **Secondary instance, in this same FD: `doc-index.py --phase P2` raises** `ValueError:
 findings/register.md: parsed 183 of 185 data row(s)` (evidence 3), because `register.md:197` and
