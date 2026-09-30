@@ -299,6 +299,8 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "BUNDLE_COMPILE_FAILED",
         # Rate tables (W10-2), enumerated in 03 §5.1.
         "RATE_TABLE_MISS",
+        # Scoring: an engine failure that is not a table or lookup miss (RL-1313 DP-G4, FR-255).
+        "RATING_EVALUATION_FAILED",
         "RATE_TABLE_INCOMPLETE",
         "RATE_TABLE_KEY_DUPLICATE",
         "PIN_NOT_APPROVED",

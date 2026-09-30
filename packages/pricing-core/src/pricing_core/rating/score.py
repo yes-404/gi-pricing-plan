@@ -466,36 +466,67 @@ def _check_lookup_misses(algorithm: RatingAlgorithm, result: Mapping[str, Any]) 
                     )
 
 
+def _failing_node(exc: RuntimeError) -> str | None:
+    """The `nodeId` the engine's JSON error carries (the failing step's id), if it has one."""
+    try:
+        detail = json.loads(str(exc))
+    except ValueError:
+        return None
+    node = detail.get("nodeId") if isinstance(detail, dict) else None
+    return node if isinstance(node, str) else None
+
+
 def _reraise_engine_failure(algorithm: RatingAlgorithm, exc: RuntimeError) -> NoReturn:
     """A finding, not merely a fallback: a `table`/`lookup` miss whose `produces` name is
-    then referenced by a downstream `expression` step crashes `async_evaluate()` itself
-    (the engine's own "undefined variable" `NodeError`) **before any `result` is
-    returned**, so `_check_lookup_misses`'s ordinary post-evaluation presence check never
-    gets to run — verified live, reproduced by this module's own test suite. `model_call`
-    failures no longer reach here at all (they are sentinelled — see the module
-    docstring), so by the time this is called the cause is, with high confidence, exactly
-    this: an unguarded on_miss='error' table/lookup step. This is reported as the
-    corresponding typed code with the original engine error preserved in the message
-    (rather than a bare re-raise of an untyped `RuntimeError`, which would violate
-    FR-255's "typed" requirement), and it is honest about being an inference: a
-    correctness gap for a later slice to close by making the wire translation itself
-    fail gracefully, not by parsing engine error strings more cleverly.
+    then referenced by a downstream step crashes `async_evaluate()` itself (the engine's
+    own "undefined variable" `NodeError`) **before any `result` is returned**, so
+    `_check_lookup_misses`'s ordinary post-evaluation presence check never gets to run —
+    verified live, reproduced by this module's own test suite. `model_call` failures no
+    longer reach here at all (they are sentinelled — see the module docstring).
+
+    **Which code (RL-1313 DP-G4).** The engine's error is JSON and its `nodeId` is the
+    failing step's id, for an expression, a condition and a clamp bound alike. A miss code is
+    reported only when that step *directly consumes* the output of an `on_miss="error"`
+    `table` (`RATE_TABLE_MISS`) or `lookup` (`REFERENCE_LOOKUP_MISS`) step. Any other
+    engine failure — including one whose `nodeId` is missing or unparseable, and the former
+    bare re-raise — is `RATING_EVALUATION_FAILED`, so no untyped `RuntimeError` escapes
+    (FR-255).
+
+    **The stated limit, pinned by `test_the_stated_residual_still_reports_the_miss_code`.**
+    A failing step that itself directly consumes such an output, and fails for another reason,
+    still reports the miss code: the engine's error has the same shape in both cases. That is
+    a wrong diagnosis on a refused quote, never a silent price. Closing it needs the
+    wire-level change that would make the translation itself fail gracefully, which is outside
+    this function.
     """
-    has_table_miss = any(
-        isinstance(s, RatingTableStep) and s.on_miss == "error" for s in algorithm.steps
-    )
-    has_lookup_miss = any(
-        isinstance(s, RatingLookupStep) and s.on_miss == "error" for s in algorithm.steps
-    )
-    if has_table_miss or has_lookup_miss:
-        code = "RATE_TABLE_MISS" if has_table_miss else "REFERENCE_LOOKUP_MISS"
-        _raise_named(
-            code,
-            "the engine failed evaluating a downstream step, most likely because an "
-            f"on_miss='error' step found no matching row and a later expression "
-            f"referenced its output (FR-255); the engine error was a {type(exc).__name__}",
+    node = _failing_node(exc)
+    step = next((s for s in algorithm.steps if s.step_id == node), None)
+    consumed = set(_as_list(step.consumes)) if step is not None else set()
+
+    tables = [s for s in algorithm.steps if isinstance(s, RatingTableStep) and s.on_miss == "error"]
+    lookups = [
+        s for s in algorithm.steps if isinstance(s, RatingLookupStep) and s.on_miss == "error"
+    ]
+
+    def consumes_output_of(steps: Sequence[RatingTableStep | RatingLookupStep]) -> bool:
+        return any(consumed & set(_as_list(s.produces)) for s in steps)
+
+    if consumes_output_of(tables):
+        code = "RATE_TABLE_MISS"
+    elif consumes_output_of(lookups):
+        code = "REFERENCE_LOOKUP_MISS"
+    else:
+        code = "RATING_EVALUATION_FAILED"
+    _raise_named(
+        code,
+        f"the engine failed evaluating step {node!r} (FR-255); "
+        + (
+            "an on_miss='error' step it consumes most likely found no matching row"
+            if code != "RATING_EVALUATION_FAILED"
+            else "the failure is not a table or lookup miss"
         )
-    raise exc
+        + f"; the engine error was a {type(exc).__name__}",
+    )
 
 
 def _apply_constraints(
