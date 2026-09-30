@@ -1,5 +1,5 @@
 ---
-id: RL-9202
+id: RL-1265
 family: ruling
 title: WK-690 DP-1 to DP-5 — diagnostics to maintenance, continuous bases and expression metrics to P3, the flag liftable only, numeric expression factors refused, rating is not a grammar profile
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [PL-930, PL-1070]
 ---
 
-# RL-9202 — WK-690 DP-1 to DP-5: diagnostics to maintenance, continuous bases and expression metrics to P3, the flag liftable only, numeric expression factors refused, rating is not a grammar profile
+# RL-1265 — WK-690 DP-1 to DP-5: diagnostics to maintenance, continuous bases and expression metrics to P3, the flag liftable only, numeric expression factors refused, rating is not a grammar profile
 
 ## Verified first, at ed123cb0fcf91e44872963bf8a8bad32b87c99bc
 
@@ -42,8 +42,8 @@ rather than hold the push until #830 merges. The fenced entry quotes its ids who
 
 This record was drafted in the decision-maker's worktree, on branch `p2-wk690-rl`, cut from
 `origin/main` = `ed123cb0` with a clean root. Clock at drafting: 2026-09-28 14:10:47 BST, read
-by `TZ=Europe/London date`. **Its id, RL-9202, is a working id.** It is minted with
-`doc-id.py next --ref origin/main` at its turn, and renumbered in one commit if it differs.
+by `TZ=Europe/London date`. Filed under working id 9202; minted from working id 9202 at #847's merge turn,
+`RL-1265` (2026-09-30 01:51:46 BST, `doc-id.py next --ref origin/main` at `843c3495`), and working id 9660 as `OQ-1266`.
 
 **Re-read at `ed123cb0`, the text the entry quotes:**
 - `docs/specs/02-modelling.md:273` is FR-178. It reads *"a GBM declaring a \*sparse\* cross
@@ -169,9 +169,9 @@ review of that commit is where it is read.
 
 ## Ruled
 
-First filed 2026-09-28 as working id RL-9202; `created` re-dated at the reframe so the id sequence stays non-decreasing (check 31).
+First filed 2026-09-28 as working id 9202; `created` re-dated at the reframe so the id sequence stays non-decreasing (check 31).
 
-The decision-maker adopted the maintainer session's recommendations unchanged, on 2026-09-29; each point below was re-verified before adoption. The recommendations are the deputy's entry, under Input, and the maintainer's 14:18:24 and 14:19:05 answers. The table's notes (DP-1 reaching FR-208's clause on auditor-row11's re-check, the sympy pin filed as `OQ-9660` as the 14:19:05 answer directs) apply those recommendations and change no decision.
+The decision-maker adopted the maintainer session's recommendations unchanged, on 2026-09-29; each point below was re-verified before adoption. The recommendations are the deputy's entry, under Input, and the maintainer's 14:18:24 and 14:19:05 answers. The table's notes (DP-1 reaching FR-208's clause on auditor-row11's re-check, the sympy pin filed as `OQ-1266` as the 14:19:05 answer directs) apply those recommendations and change no decision.
 The deputy's entry of 2026-09-28 14:06:12 BST, above, is input. The maintainer's entry `2026-09-29 15:26:00 BST · maintainer (acting on the maintainer's behalf) · STRUCTURE: routing per document-ids §1.6 and the charters; today's technical answers re-homed` (§2) makes the maintainer's
 answers on this record recommendations, and gives the technical points to this role. The
 answers are `2026-09-29 14:18:24 BST · maintainer (acting on the maintainer's behalf) · Q847-1/2/3 (row 11, WK-690)` and `2026-09-29 14:19:05 BST · maintainer (acting on the maintainer's behalf) · sympy pin: absent, so an OQ in #847's rebase`. This record's text stays as of `ed123cb0`, with the note below
@@ -187,4 +187,4 @@ those lines do not move.
 | **Q847-1:** DP-1 to DP-5 stand as filed | DP-1: `02` FR-85 (`:86`), FR-86 (`:87`) and FR-210 (`:373`) each carry an "Owner WK-690" clause, and FR-176 to FR-178 are WK-1178's (#880, #887). DP-2: FR-154 (`02:218`). DP-3: the flag is `features.expression_objectives_enabled` (`backend/src/app/platform/settings.py:245`, read at `platform/objectives.py:274`). DP-4: FR-210's text requires a continuous term to be rateable first. DP-5: FR-244 (`03:146`). `OBJECTIVE_GRAMMAR_VIOLATION` is declared in `02` §5.1 (`:2056`) | **Adopted.** Each decision rests on a mechanism or a text that exists at `ac8ab519`. None is re-issued |
 | **Q847-2:** the "Owner WK-690" clauses of FR-85, FR-86 and FR-210 move to Phase 3 (DP-1) | As above | **Adopted, and done in this commit.** Each row gains a dated amendment: the clause is superseded, and the obligation is deferred to Phase 3, spec change first, with the owner (the maintainer) and the event (the P2 phase closure record) that DP-1 names *(2026-09-29, on auditor-row11's re-check: DP-1 reaches a fourth clause. `02` FR-208 (`:371`) says `spline` and `polynomial` are "gated on FR-210 and owned by WK-690". DP-1 moves FR-210 to Phase 3, and those two arms wait on FR-210, so leaving FR-208's clause would make the spec contradict itself. FR-208 gains the same dated amendment. The arms stay refused.)* |
 | **Q847-3:** the text stays as of its tree, with the dated note | The note's facts: FD-1195 is `status: closed`, by #900 (`870ce82b`). FR-178 was delivered in two parts, by #880 (`9fa2b833`) and #887 (`95faf68b`), as FR-178's own amendment says. #830 (`3767b3b4`) filed RL-1184 and OQ-1185, and #840 (`2d20ca4b`) minted WK-1178 | **Adopted.** The note is quoted verbatim above this table |
-| **The sympy pin** | `sympy` has 0 hits in `uv.lock` and in all four `pyproject.toml` files. `02:1015` names `"derivation_version": "1.14.0"`, and `02:1069` names `"sympy": "1.13.x"` | **Filed as `OQ-9660`**, open, not a pick. It is mirrored in `02` §10 and `docs/open-questions.md`, and placed at the roadmap §10 gate *Before WK-690 Slice 1*. DP-5's obligation, one exact pin in Slice 1 with both sections citing it, is unchanged. `OQ-9660` asks which version |
+| **The sympy pin** | `sympy` has 0 hits in `uv.lock` and in all four `pyproject.toml` files. `02:1015` names `"derivation_version": "1.14.0"`, and `02:1069` names `"sympy": "1.13.x"` | **Filed as `OQ-1266`**, open, not a pick. It is mirrored in `02` §10 and `docs/open-questions.md`, and placed at the roadmap §10 gate *Before WK-690 Slice 1*. DP-5's obligation, one exact pin in Slice 1 with both sections citing it, is unchanged. `OQ-1266` asks which version |
