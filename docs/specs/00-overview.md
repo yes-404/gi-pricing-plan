@@ -160,6 +160,7 @@ term must be added here before it is used in any other document.**
 |---|---|
 | **Rating Algorithm** | The declarative DAG of calculation steps that turns a quote's raw inputs into a final premium. |
 | **Rating Step** | A node in the DAG. **Exactly seven types exist**: `input`, `lookup`, `expression`, `table`, `model_call`, `constraint`, `output`. |
+| **Sub-graph** | A reusable, versioned fragment of a Rating Algorithm (`03` FR-217), with declared, typed input and output ports, mounted by a parent algorithm and inlined into the parent's Bundle. It holds no premium on its own. |
 | **Rate Table** | A versioned, typed table of rating factors/loadings keyed by one or more Factors. The unit an actuary edits when making a rate change. |
 | **Rating Version** | An **immutable deployable bundle**: rating algorithm + all rate tables + referenced model artifacts + reference table pins. Lifecycle `draft → review → approved → live → retired`. |
 | **Deployment** | The binding of a Rating Version to an Environment at a point in time. Recorded, reversible, audited. |

@@ -109,3 +109,22 @@ Output: `B 2.13.5 value_error G True` and `S 2.13.5 value_error G True` — `err
 
 **Decision points** confirmed by record id (RL-1309): map DP-1 (b), DP-3 (a), DP-4 (a); DP-S1-1..4 (a) as
 in PL-1325 *Decision points*. No difference found.
+
+### Task 1 — spec (`03` §4.11 and §5.1, `00` §2.3, `06` §4.1)
+
+`03` gains §4.11 `SubGraph` (shape, typed ports, invariants, example) and four §5.1 rows. `00` §2.3 gains
+**Sub-graph**. `06` §4.1's `rating:read` row and the "Coarse write rights" note name Sub-graphs and
+Regression Suites. Nothing else goes to `06`.
+
+## Deviations from PL-1325, each named
+
+1. **Decimal example** (Task 1): the §4.11 example declares the output port type `relativity`, not
+   `decimal`. Grounds: dispatch condition 5 and the maintainer's 2026-09-30 22:43:26 BST entry. The lead
+   agreed.
+2. **No `03` §2 glossary row** (Task 1): `scripts/audit-docs.py` check 13 fails a `03` §2 row for a term
+   `00` §2 already defines ("reference it, do not redefine"). The plan's restating row is therefore
+   omitted; `03` §4.11 points at `00` §2.3 instead.
+
+## PRs
+
+None yet.
