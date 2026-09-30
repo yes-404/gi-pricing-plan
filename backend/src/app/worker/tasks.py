@@ -78,13 +78,21 @@ class CeleryPublisher:
 
 
 async def execute_job(
-    database: Database, job_id: UUID, blob_store: BlobStore | None = None
+    database: Database,
+    job_id: UUID,
+    blob_store: BlobStore | None = None,
+    *,
+    settings: Settings | None = None,
 ) -> JobStatus:
     """Run one Job to a terminal state. Returns the status it reached.
 
     Separated from the Celery task so the whole lifecycle is testable without a broker —
     the task is a five-line adapter and this is where the behaviour lives.
+
+    `settings` is the worker's own; its version and build are what a Job records it ran on
+    (FR-18).
     """
+    settings = settings or load_settings()
     async with database.session() as session:
         row = await session.get(JobRow, job_id)
 
@@ -131,7 +139,13 @@ async def execute_job(
         return JobStatus.FAILED
 
     async with database.unit_of_work() as session:
-        await jobs.transition(session, job_id, JobStatus.RUNNING, actor=SYSTEM)
+        await jobs.transition(
+            session,
+            job_id,
+            JobStatus.RUNNING,
+            actor=SYSTEM,
+            build=f"{settings.version}+{settings.build}",
+        )
 
     budget = (row.resource_budget or {}).get("wall_clock_s")
     progress = JobProgress(
@@ -141,7 +155,7 @@ async def execute_job(
         wall_clock_s=budget,
         # Built here, once, when the caller did not supply one. A handler building its own
         # picks up ambient settings and reads a different bucket than the one written to.
-        blob_store=blob_store or BlobStore(load_settings()),
+        blob_store=blob_store or BlobStore(settings),
     )
     # **`job_id` is injected by the runner, not carried in the payload.** Three handlers
     # already read `parameters.get("job_id")` to stamp the artifact they produce with the Job
@@ -289,7 +303,7 @@ def create_worker(settings: Settings | None = None) -> Celery:
 
             async def _run() -> str:
                 try:
-                    status = await execute_job(database, UUID(job_id))
+                    status = await execute_job(database, UUID(job_id), settings=settings)
                 finally:
                     await database.dispose()
                 return status.value

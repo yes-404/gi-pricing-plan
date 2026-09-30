@@ -205,6 +205,7 @@ The substrate every other module stands on:
   "result": {"kind": "artifact", "ref": "model:motor-ad-frequency@7"},
   "error": null,
   "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "platform_build": "0.1.0+97b15726b1dd60ba407c6aba44735ad5cbe207ed",
   "progress_at": "2026-08-14T09:03:11Z",
   "stalled": false,
   "queued_at": "2026-08-14T09:00:00Z",
@@ -221,6 +222,11 @@ Job with no progress for the configured window to be *treated as stalled and fla
 report — not `started_at`, which cannot answer "is it still saying anything" for a Job that
 has legitimately run for an hour. `stalled` is derived from it on read rather than stored,
 because a stored flag needs a sweeper to clear it and would be wrong between sweeps.
+
+`platform_build` was added in WK-674 Slice 1 (2026-09-29) for `00` FR-18: every Job records
+the platform version it ran on, so that a figure reproduced later is attributable to the
+build that produced it. It is set when the worker moves the Job to `running`, as the
+worker's version and build joined by `+`, and it is null while the Job is `queued`.
 
 Failure shape:
 

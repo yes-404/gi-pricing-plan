@@ -96,14 +96,15 @@ async def _submit(database: Database, workspace_id, principal, **kw):
 
 
 @pytest.mark.req("FR-387")
-def test_routes_refuse_when_no_identity_provider_is_configured() -> None:
+def test_routes_refuse_when_no_identity_provider_is_configured(api_settings: Settings) -> None:
     """Negative, and the important one: the default build must fail closed.
 
     OIDC is not implemented yet. If these routes answered without it, every job in every
     workspace would be readable and cancellable by anyone who could reach the port.
     """
-    settings = Settings(environment=Environment.LOCAL, version="test")
-    assert settings.dev_auth_enabled is False
+    # The lifespan now checks the stores' tenant markers (FR-436), so the app needs a real
+    # database and bucket even to prove it refuses an unauthenticated caller.
+    settings = api_settings.model_copy(update={"dev_auth_enabled": False})
     with TestClient(create_app(settings), raise_server_exceptions=False) as client:
         for method, path in [
             ("get", "/api/v1/jobs"),
