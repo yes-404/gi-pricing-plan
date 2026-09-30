@@ -129,7 +129,7 @@ has DP-5 at `:362`. It asks how FR-231's diff gets "the exposure weight behind e
 | The DP3 cache key carries the portfolio's identity | **present** | `DiffCache.key` (`backend/src/app/platform/diff_cache.py:77-88`) returns `rate_table:diff:{current_hash}:{baseline_hash}:{portfolio}`, where `portfolio` is `str(portfolio_dataset_version_id)`, or `"none"` when absent. PL-1267 Slice 7's claim (`:593-594`) is true. |
 | The cache is read before any portfolio check could run | **present, today vacuously** | In `diff` (`rate_tables.py:237`), the table and both versions are loaded under the caller's workspace (`:267-282`), and then the cache is read (`:285-292`), before any use of `portfolio_dataset_version_id`, which nothing checks today. |
 | How a route loads a Dataset Version by id, scoped to the workspace | **present** | `load_version` (`backend/src/app/platform/datasets.py:763-781`) raises one `NOT_FOUND` 404, "Dataset version not found", with detail "No version {version_id}.", both when the row is missing and when `row.workspace_id != workspace_id` (`:778-781`). The response does not distinguish "not found" from "not yours". It takes a row lock (`with_for_update=True`, `:777`). |
-| The permission to read a Dataset Version | **present** | `api/dataset_versions.py:60`: `ReadDatasets = Annotated[Caller, Depends(requires(Perm.DATASET_READ))]`, on its read routes. `requires()` admits only a workspace-wide grant (`rbac._covers`, `backend/src/app/platform/rbac.py:205-217`). The diff route itself has only `RatingReadDep` (`api/rate_tables.py:45`, `:317`). |
+| The permission to read a Dataset Version | **present** | `api/dataset_versions.py:60`: `ReadDatasets = Annotated[Caller, Depends(requires(Perm.DATASET_READ))]`, on its read routes. `requires()` admits only a workspace-wide grant (`rbac._covers`, `backend/src/app/platform/rbac.py:205-217`). The diff route itself has only `RatingReadDep` (`api/rate_tables.py:46`, `:317`). |
 | The status gate for using a Dataset Version | **present** | `fittable_or_refuse` (`datasets.py:743-760`) accepts only `validated` and refuses every other status with `DATASET_NOT_VALIDATED` 409 ("There is no override"). `DATASET_NOT_VALIDATED` is owned by `01` (`01-data-management.md:929`), and `02` re-raises it (`02-modelling.md:2045`). |
 | The diff depends on the definition's key and value **names** | **present** | `_compute_diff` indexes both sides by `[key.name for key in keys]` and `value.name` (`operations.py:346-348`), and `diff` passes the **current** version's `table.keys` and `table.value` (`rate_tables.py:294`, `:296`). Neither name is in the key, which is cell hashes plus the portfolio. |
 | A Banding's approval lifecycle | **absent** | `Banding` (`packages/model-schema/src/model_schema/modelling.py:339`), read: its fields (`:354-380`) include no `status`. `06` §2's Governed Artifact list (`06-governance.md:64`) does not name it. |
@@ -194,11 +194,16 @@ has DP-5 at `:362`. It asks how FR-231's diff gets "the exposure weight behind e
 6. **No portfolio** → the diff answers unweighted and says so (PL-1267 Slice 7, `:596-597`).
 8. **The portfolio's scope, permission and status** *(added on the maintainer's review of
    `6f74255f`)*. In this order, **before the cache is read**:
-   - **Permission, independent of the portfolio.** The caller must hold `dataset:read`
-     (`Perm.DATASET_READ`, workspace-wide, as the dataset-version read routes require) as well
-     as the route's `rating:read`. It is checked without loading the Dataset Version, so a
-     caller without it gets the same 403 for any id, existing or not, and learns nothing
-     about the portfolio.
+   - **Permission, only when `portfolio` is given, and independent of the portfolio.** The
+     route's dependency stays `rating:read` alone, so an **unweighted** diff (no `portfolio`)
+     is still open to a rating-only reader, as it is today. When `portfolio` is given, the
+     handler also requires `dataset:read` (`Perm.DATASET_READ`, workspace-wide, as the
+     dataset-version read routes require), **before the cache read**. It is checked without
+     loading the Dataset Version, so a caller without it gets the same 403 for any id,
+     existing or not, and learns nothing about the portfolio. *(Scoped on auditor-plans' N2,
+     made a must by the maintainer. As first written, "as well as `rating:read`" read as a
+     blanket route dependency, which would have closed unweighted diffs to rating-only
+     readers.)*
    - **Scope, not revealing existence.** The portfolio is loaded with `load_version`'s
      predicate and its single response: `NOT_FOUND` 404 "Dataset version not found" when the
      row is missing **or belongs to another workspace**, the same body either way. Tenancy
@@ -266,8 +271,11 @@ the table's own key declaration.** Each case is shown failing on deliberately br
 - **Cross-workspace, on a warm cache, red-first:** the foreign portfolio's entry is first
   placed in the cache by its owner. The caller naming it is still refused, which proves the
   checks run before the cache. With the checks moved after the cache read, the test fails.
-- **No permission:** a caller with `rating:read` and no `dataset:read` gets 403 for an
-  existing portfolio id and for a nonexistent one alike.
+- **No permission, red-first:** a caller with `rating:read` and no `dataset:read` **succeeds**
+  on an unweighted diff (no `portfolio`). The same caller **with a `portfolio`** gets 403, the
+  same for an existing portfolio id and a nonexistent one, and not revealing. With
+  `dataset:read` made a route-wide dependency, the unweighted case fails. With the handler
+  check removed, the weighted case is served, and the test fails.
 - **Status:** a `draft` portfolio and an `archived` one are each refused with
   `DATASET_NOT_VALIDATED` 409. A `validated` one is accepted.
 - **Workspace in the key, red-first:** the same table content and portfolio id, requested in
