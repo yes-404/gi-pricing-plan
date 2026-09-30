@@ -162,22 +162,21 @@ re-runs its full gate. Each row below was read at the tree above.
 | the generated contracts; `docs/INDEX.md` | regenerated | any slice that adds a shape, route or record | **Exempt**, never hand-merged |
 | `docs/specs/03-rating-engine.md` §5.1 | four rows appended to the REST table | WK-674 S2 (a deployment-history `GET`, `PL-1237:773-774`), WK-674 S6 (a routing route, `PL-1237:977-978`), WK-673 S4 and S7 (`PL-1267:527`, `:589`), and #977's column slice | **Serialises** (RL-1263:100-104): an existing spec section that is not on the registry list. The one exception is a dispatch record that names the path together with the check that no existing definition is edited by both |
 | `docs/specs/03-rating-engine.md` §4 | a new subsection | WK-674 S2 and S6 (new subsections, `PL-1237:772`, `:977`) | **Serialises** (RL-1263:100-104), for the same reason. The slice that merges second numbers its subsection after the first's, and never reuses a number (`CLAUDE.md` §5) |
-| `packages/model-schema/src/model_schema/graph_errors.py` | new: `GraphCycleError`, `GraphUnresolvedRefError` (Tasks 2 and 7) | none | Not shared |
-| `packages/model-schema/src/model_schema/rating.py` `_graph_invariants` | two raises changed to the new classes, with messages unchanged (Task 7) | WK-673 edits other definitions in `rating.py` (`PL-1267:316-318`) | **An existing-definition edit.** It serialises unless the dispatch record names the path with the check that no definition is edited by both |
-| `backend/tests/test_rating_algorithms.py` | three characterisation tests appended, one of them `xfail(strict=True)` until Task 7 (N1; Task 5) | any slice adding tests there | Appended tests only; no existing test is edited |
+| `packages/model-schema/src/model_schema/graph_errors.py` | new: `GraphCycleError`, `GraphUnresolvedRefError` (Task 2) | none | Not shared |
+| `packages/model-schema/src/model_schema/rating.py` | `_graph_invariants`: the undefined-value raise (`:418-421`) and the cycle raise (`:439`) changed to the new classes, with messages unchanged (Task 7). Also a graph helper, only if Task 2 must promote one | WK-673 edits other definitions in `rating.py` (`PL-1267:316-318`) | **An existing-definition edit.** It serialises unless the dispatch record names the path with the check that no definition is edited by both |
+| `backend/tests/test_rating_algorithms.py` | four characterisation tests appended, one of them `xfail(strict=True)` until Task 7 (N1 and M1; Task 5) | any slice adding tests there | Appended tests only; no existing test is edited |
 | `backend/src/app/platform/rating_algorithms.py` | `_parse_algorithm` (`:25-52`) edited: its mapping is extracted into a public function that it calls, with identical behaviour (Task 5, B1) | any slice editing `_parse_algorithm` or the rating-algorithm save path | **An existing-definition edit, not on the registry list.** It serialises unless the dispatch record names it |
 | `docs/specs/03-rating-engine.md` §2 | one glossary row | none found | Not shared |
 | `docs/specs/00-overview.md` §2 | one glossary row | WK-673 S1, if it adds a term (`PL-1267:469`) | Shared only if WK-673 S1 adds a term |
 | `docs/specs/06-governance.md` §4.1 | the `rating:read` row and the "Coarse write rights" note widened (Task 1) | WK-690 S3 (its `custom_objective:author` row, `PL-1268:491-493`) | **A shared section.** Decided at dispatch on the diffs |
 | `scripts/generate-contracts.py` | one entry in the slug → symbol map (`:39-101`) | any slice registering a generated shape | **Not on the registry list.** It serialises unless the dispatch record names the path |
 | `packages/model-schema/src/model_schema/__init__.py` | exports added | any slice exporting a shape | **Not on the registry list**, as above |
-| `packages/model-schema/src/model_schema/rating.py` | only if a graph helper must be promoted (Task 2) | WK-673 (`PL-1267:316-318`) | Shared only if Task 2 promotes a helper |
 
 **The existing definitions this slice edits** (W3 of the plan audit), in full:
 - `compile.py`'s `_producer_types` and `_check_result_types`, whose signatures are kept (Task 4);
 - `rating_algorithms.py`'s `_parse_algorithm`, whose behaviour is kept (Task 5), and the
   extracted `graph_validation_error`, switched to the typed signal (Task 7);
-- `model_schema/rating.py`'s `_graph_invariants`, two raises only (Task 7);
+- `model_schema/rating.py`'s `_graph_invariants`, the raises at `:418-421` and `:439` only (Task 7);
 - `03` §2, §4 and §5.1; `00` §2; `06` §4.1's `rating:read` row and "Coarse write rights" note;
 - `scripts/generate-contracts.py`'s map, and `model_schema/__init__.py`'s exports (appends to
   existing definitions).
@@ -243,8 +242,10 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
      case uses an **`expression` step** with `result_type: "string"` producing an output port
      declared `money_minor`. `compile.py`'s `_compatible` (`:106-111`), called as it stands,
      refuses that pair. The `pricing-core` test also asserts the issue's **`step_id`** (the
-     producing step) and **`field == "outputs"`** (N3 of the re-audit), and the algorithm-path
-     test asserts the output step's `step_id`, so "behaviour unchanged" is proven.
+     producing step) and **`field == "outputs"`** (N3 of the re-audit). A **new** algorithm-path
+     test, `test_an_algorithm_type_mismatch_reports_the_output_step`, asserts the output step's
+     `step_id` and `field == "outputs"`. It is new because acceptance 6 forbids changed lines in
+     existing tests. Together they prove "behaviour unchanged".
      **Scope (W1 of the plan audit):** FR-227 at create covers only
      producers whose type is known at save, which are an `expression` step's `result_type` and
      an input port's declared type (the rule of `_producer_types`, `compile.py:84-103`). An
@@ -276,11 +277,11 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
 
     | Refusal | Client sees | Owning catalogue | How the parse path produces it | Test |
     |---|---|---|---|---|
-    | A cycle among the fragment's steps | 422 `RATING_GRAPH_CYCLIC` | `03` §5.1 | `SubGraphBody`'s validator raises `GraphCycleError`, a `ValueError` subclass (Task 2). After Task 7, `graph_validation_error` reads it from `exc.errors()`: an error whose `type` is `"value_error"` and whose `ctx["error"]` is a `GraphCycleError` | `test_a_cyclic_fragment_is_refused_rating_graph_cyclic` |
-    | A step consumes a name no step and no input port produces | 422 `RATING_GRAPH_UNRESOLVED_REF` | `03` §5.1 | the validator raises `GraphUnresolvedRefError`, read the same way | `test_an_unresolved_consume_is_refused_rating_graph_unresolved_ref` |
-    | An output port no step produces | 422 `RATING_GRAPH_UNRESOLVED_REF` | `03` §5.1 | the validator raises `GraphUnresolvedRefError`. The class, not the message, makes it this code | `test_an_unproduced_output_port_is_refused_rating_graph_unresolved_ref` |
+    | A cycle among the fragment's steps | 422 `RATING_GRAPH_CYCLIC` | `03` §5.1 | `SubGraphBody`'s validator raises `GraphCycleError`, a `ValueError` subclass, whose message contains "cycle" (Task 2). Through Task 6, the extracted mapper's substring match on "cycle" returns the code. From Task 7, `graph_validation_error` reads the class from `exc.errors()`: an error whose `type` is `"value_error"` and whose `ctx["error"]` is a `GraphCycleError` | `test_a_cyclic_fragment_is_refused_rating_graph_cyclic` |
+    | A step consumes a name no step and no input port produces | 422 `RATING_GRAPH_UNRESOLVED_REF` | `03` §5.1 | the validator raises `GraphUnresolvedRefError`, whose message contains "consumes undefined value". The substring carries it through Task 6, and the class from Task 7 | `test_an_unresolved_consume_is_refused_rating_graph_unresolved_ref` |
+    | An output port no step produces | 422 `RATING_GRAPH_UNRESOLVED_REF` | `03` §5.1 | the validator raises `GraphUnresolvedRefError`, whose message contains "undefined value" (Task 2). Through Task 6 that substring gives the code; from Task 7 the class alone does | `test_an_unproduced_output_port_is_refused_rating_graph_unresolved_ref` |
     | An output port's declared type incompatible with its expression producer's `result_type` | 422 `RATING_TYPE_MISMATCH` | `03` §5.1 | the parse succeeds; `fragment_output_type_issues` (Task 4) returns the issue, and `raise_first_issue` raises it with the issue's own code | `test_an_output_port_type_mismatch_is_refused_rating_type_mismatch` |
-    | Any other shape refusal: a duplicate `step_id`, a broken re-production chain, an orphan step, a `sub_graphs` field, an `input` or `output` step, an empty `change_note`, or a JSON object missing a required field | 422 `VALIDATION_FAILED` | generic | the mapper's fall-through, when neither "cycle" nor "undefined value" is in the message | `test_a_shape_refusal_is_validation_failed` (parametrised, one case per cause) |
+    | Any other shape refusal: a duplicate `step_id`, a broken re-production chain, an orphan step, a `sub_graphs` field, an `input` or `output` step, an empty `change_note`, or a JSON object missing a required field | 422 `VALIDATION_FAILED` | generic | the mapper's fall-through: through Task 6, when neither "cycle" nor "undefined value" is in the message; from Task 7, when no error carries a graph-error class | `test_a_shape_refusal_is_validation_failed` (parametrised, one case per cause) |
     | A body that is not a JSON object (for example an array or a string) | 422 `VALIDATION_FAILED` | generic | FastAPI refuses it against the `dict[str, Any]` annotation before the handler runs. `errors.py`'s request-validation handler (`:438-465`) returns `VALIDATION_FAILED` | `test_a_non_object_body_is_validation_failed` |
     | `POST /api/v1/sub-graphs` on an existing slug, or a lost numbering race | 409 `VALIDATION_FAILED` | generic | the service's pre-check, or the unique constraint's `IntegrityError`, raises `PlatformError("VALIDATION_FAILED", …, 409, …)` (the form of `objectives.py:229-236`) | `test_create_on_an_existing_slug_is_409`, `test_a_lost_numbering_race_is_409` |
     | `POST /api/v1/sub-graphs/{slug}/versions` on an unknown slug; `GET` of an unknown version | 404 `NOT_FOUND` | generic | the service raises `PlatformError("NOT_FOUND", …, 404, …)` | `test_versions_on_an_unknown_slug_is_not_found`, `test_get_of_an_unknown_version_is_not_found` |
@@ -288,22 +289,41 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
     **The typed signal** (FD working id 9948, fixed by Task 7). The two graph-error classes
     live in a new `packages/model-schema/src/model_schema/graph_errors.py`: `GraphCycleError`
     and `GraphUnresolvedRefError`, both `ValueError` subclasses.
-    - `SubGraphBody`'s validator raises them from Task 2. `RatingAlgorithm._graph_invariants`
-      raises them from Task 7, at its "undefined value" raise (`rating.py:406`) and its cycle
-      raise (`:439`), with the messages unchanged.
-    - The mapper reads the class from `exc.errors()`; it never reads `str(exc)`.
-    - The tests assert the HTTP status and the `code`. The model-schema tests assert the class
+    - **Task 2 creates the module**, and `SubGraphBody`'s validator raises both classes. Its
+      messages keep "cycle" and "undefined value", and Task 2's shape tests assert the class
       (`isinstance(err["ctx"]["error"], GraphCycleError)`), never the message text.
-    - The unproduced-port case is told apart from any other refusal by its class, so its message
-      needs no particular wording.
-    - **Before Task 7**, the extracted mapper still matches substrings, unchanged. The Task 2
-      messages still contain "cycle" and "undefined value", so every row of this table holds
-      at every task boundary.
+    - **Task 7 edits only two things.** First, `RatingAlgorithm._graph_invariants`' two raises:
+      the undefined-value raise (`rating.py:418-421`, message at `:419`) and the cycle raise
+      (`:439`), with messages unchanged. Second, the mapper's body, which from then on reads
+      the class from `exc.errors()` and never reads `str(exc)`.
+    - **Through Task 6**, the extracted mapper still matches substrings, unchanged. The
+      messages carry the codes on both paths. So every row of this table holds at every task
+      boundary, first by the substring, then by the class.
+    - **The FR-214 raise stays a plain `ValueError`** (`rating.py:406-408`, "declared output …
+      has no output step"). It maps to `VALIDATION_FAILED` before and after Task 7, and a
+      characterisation test pins that (Task 5).
+    - **The asymmetry is deliberate.** A fragment's unproduced output port maps to
+      `RATING_GRAPH_UNRESOLVED_REF`, while an algorithm's FR-214 maps to `VALIDATION_FAILED`.
+      - In an algorithm, FR-214 is a wiring rule about **output steps**: a declared output
+        lacks the step that emits it. The value reference itself is checked separately, when
+        that output step consumes a name. An undefined name there is already
+        `RATING_GRAPH_UNRESOLVED_REF`, at `:418-421`.
+      - A fragment has no output steps; its ports replace them (acceptance 4). So an output
+        port *is* the reference to a named value, and a port whose name no step produces is
+        the same defect as a consume of an undefined value. RL-1309 DP-S1-3 names that code.
+      - The fragment rule is therefore the analogue of `:418-421`, not of FR-214. Changing
+        FR-214's code would change an existing algorithm response, which this slice does not
+        do.
 
     **Precedence, stated so a body with two defects has one answer.** The shape refusals come
     first: a body that fails parsing never reaches the type check. Within the mapper, a
     `GraphCycleError` wins over a `GraphUnresolvedRefError`, which wins over the fall-through.
-    That is the order `_parse_algorithm` uses today, so it is unchanged. A test posts a body that has a cycle and a type mismatch together, and
+    That is the order `_parse_algorithm` uses today, so it is unchanged. **That order is not
+    observable between two graph errors.** A `model_validator` stops at its first raise, so
+    pydantic reports one `ValueError` from it. Which graph error a body with two defects
+    reports is decided by the order of the checks inside the validator, not by the mapper. The
+    mapper's order matters only if one `ValidationError` carries errors from different
+    validators. A test posts a body that has a cycle and a type mismatch together, and
     asserts `RATING_GRAPH_CYCLIC`.
 5. **The two create routes and immutability** (`00` FR-4; RL-1309 DP-S1-2), red first:
    - `POST /api/v1/sub-graphs` on a slug that exists returns **409** `VALIDATION_FAILED`, and
@@ -475,6 +495,13 @@ Every decision point that bears on this slice is ruled; none is open. The rows b
 - [ ] Confirm the resolutions of map DP-1, DP-3, DP-4 and DP-S1-1 to DP-S1-4 **by record id**
   (RL-1309) in the ledger, and stop if any differs from **Decision points**.
 - [ ] Confirm the dispatch record's RL-1263 write-set check, and its gate-slot rule.
+- [ ] **Spike the typed signal; do not assume it** (`library-spike`). At this tree's pydantic
+  version, assert that a `ValueError` subclass raised inside a `model_validator(mode="after")`
+  surfaces in `ValidationError.errors()` as `type == "value_error"`, with the instance at
+  `ctx["error"]`, on the model and on a subclass model. Quote the script and its output in the
+  ledger. auditor-plans observed this at pydantic 2.13.5; the executor re-proves it at the
+  dispatch tree. If it does not hold, stop and report: the alternative, a `PydanticCustomError`
+  with its own `type`, changes Tasks 2 and 7.
 - [ ] **At the second merge**, if the other lane's slice merges first: merge `origin/main` in,
   re-point `down_revision` to one head, regenerate `docs/contracts/` and `docs/INDEX.md` (never
   hand-merged), and re-run Task 8's full gate.
@@ -535,7 +562,9 @@ and the "Coarse write rights" note).
 
 ### Task 2: `model-schema` — `SubGraphInputPort`, `SubGraphBody`, `SubGraphCreate`, `SubGraph` and the contract
 
-**Files:** Create `packages/model-schema/src/model_schema/sub_graphs.py` and
+**Files:** Create `packages/model-schema/src/model_schema/sub_graphs.py`,
+`packages/model-schema/src/model_schema/graph_errors.py` (`GraphCycleError` and
+`GraphUnresolvedRefError`, both `ValueError` subclasses with no body beyond a docstring) and
 `packages/model-schema/tests/test_sub_graph.py`. Modify `packages/model-schema/src/model_schema/__init__.py`
 (the exports, beside `SubGraphRef` at `:282` and `:669`) and `scripts/generate-contracts.py`
 (register `"sub-graph": "SubGraph"`, `"sub-graph-create": "SubGraphCreate"` and
@@ -560,17 +589,24 @@ and the "Coarse write rights" note).
   - The invariant check reuses `_produced_by` and `_consumed_by` (premise e). The rules, each
     worded so that the shared mapper (Task 5) returns the code acceptance 4 names:
     - **An input port is a producer** of its name. A step that consumes a name produced by no
-      step and no input port is refused with a message containing "consumes undefined value", in
-      `_graph_invariants`' own wording, so it maps to `RATING_GRAPH_UNRESOLVED_REF`.
-    - **Each output port must be produced by a step.** One that is not is refused with the
-      message "output port {name!r} is an undefined value: no step produces it (FR-212)". It
-      contains "undefined value" on purpose, so it maps to `RATING_GRAPH_UNRESOLVED_REF`.
+      step and no input port is refused by raising `GraphUnresolvedRefError`, with a message
+      containing "consumes undefined value" in `_graph_invariants`' own wording. It maps to
+      `RATING_GRAPH_UNRESOLVED_REF`.
+    - **Each output port must be produced by a step.** One that is not is refused by raising
+      `GraphUnresolvedRefError("output port {name!r} is an undefined value: no step produces it (FR-212)")`.
+      It maps to `RATING_GRAPH_UNRESOLVED_REF`. The message keeps "undefined value" because
+      the substring mapper carries it through Task 6.
     - **Re-producing an input port's name** follows `_graph_invariants`' chain rule, with the
       port as the first producer. A step that produces the name without consuming it is refused
       ("do not form a single re-production chain"), which maps to `VALIDATION_FAILED`.
     - **FR-212's orphan rule, restated for ports:** a step that is not reachable from any input
       port and contributes to no output port is refused, which maps to `VALIDATION_FAILED`.
-    - A cycle's message contains "cycle", which maps to `RATING_GRAPH_CYCLIC`.
+    - A cycle raises `GraphCycleError`, with a message containing "cycle", which maps to
+      `RATING_GRAPH_CYCLIC`.
+    - Every other refusal raises a plain `ValueError`, which maps to `VALIDATION_FAILED`.
+  - The shape tests assert the class of each graph refusal
+    (`isinstance(err["ctx"]["error"], GraphUnresolvedRefError)`), and a plain `ValueError` for
+    the others, never the message text.
   - The cycle check reuses `_graph_invariants`' method. If a helper must be promoted into a
     module function, promote it and keep `RatingAlgorithm`'s behaviour identical:
     `packages/model-schema/tests/test_rating_algorithm.py` passes unchanged.
@@ -642,6 +678,13 @@ end of the file** and no existing class edited. Create one Alembic revision and
 - [ ] Add `fragment_output_type_issues`. It builds `producer_types` from the steps plus the
   input ports' declared types, and applies `output_type_issues` to the output ports, issuing
   `RATING_TYPE_MISMATCH` with the port name.
+  - **The producing step's id.** In the same pass over `steps`, the function builds a
+    `name → step_id` map. It uses the same last-in-list-order-wins rule as `producer_types`,
+    so the id reported is that of the step whose type was compared.
+  - A port fed directly by an input port has no producing step. Its tuple carries `None`, as
+    the `str | None` slot allows.
+  - The `pricing-core` test asserts the id on a two-step fragment, so the wrong step would
+    fail it.
 - [ ] Green. Run acceptance 6: the existing tests pass unmodified. **Run the #967 slice's closure
   test 3c**, which must pass with `_check_result_types` still registered and no new `_check_*`
   function. Commit: `refactor(rating): FR-227's result-type check over steps and declared outputs, and a fragment entry point (WK-1250 S1)`.
@@ -698,7 +741,7 @@ end of the file** and no existing class edited. Create one Alembic revision and
     `raise_first_issue`.
   - **Characterisation first, then the extraction** (N1 of the re-audit). Today
     `backend/tests/test_rating_algorithms.py` covers only the cyclic branch (`:86`) and the
-    unguarded-division issue path (`:105`). So, **before** extracting, add two tests to that
+    unguarded-division issue path (`:105`). So, **before** extracting, add four tests to that
     file (new tests only; it joins the write set):
     - `test_an_undefined_value_is_refused_with_rating_graph_unresolved_ref`: 422, `code`
       `RATING_GRAPH_UNRESOLVED_REF`, and the title and detail above;
@@ -709,11 +752,14 @@ end of the file** and no existing class edited. Create one Alembic revision and
       `@pytest.mark.xfail(strict=True, reason="FD working id 9948: str(exc) substring match mis-maps to RATING_GRAPH_CYCLIC")`,
       so it does **not** pin the bug as behaviour. A sub-graph twin in
       `backend/tests/test_sub_graphs_api.py` carries the same mark. Task 7 turns both green and
-      removes both marks.
+      removes both marks;
+    - `test_a_declared_output_without_an_output_step_is_validation_failed`: the FR-214 raise
+      (`rating.py:406-408`); 422, `code` `VALIDATION_FAILED` (M1 of the re-audit). It stays
+      green through Task 7, which leaves that raise a plain `ValueError`.
 
-    Each asserts the status, `code`, `title` and `detail` exactly. The first two are **green
-    before** the extraction and **green after**, as are the two existing tests. The third is
-    `XFAIL` before and after. That proves every branch of
+    Each asserts the status, `code`, `title` and `detail` exactly. The first, second and fourth
+    are **green before** the extraction and **green after**, as are the two existing tests. The
+    third is `XFAIL` before and after. That proves every branch of
     the mapping keeps its behaviour. The ledger quotes both runs.
   - The `after` payload carries `change_note`, `inputs` and `outputs`.
 - [ ] Acceptance 7's broken-input proof: remove the `audit.record` call locally, run the test,
@@ -743,21 +789,20 @@ Modify `backend/src/app/main.py`: an import beside `:34`, and an `include_router
 
 ### Task 7: The typed-signal fix (FD working id 9948) — the last code task
 
-**Files:** Create `packages/model-schema/src/model_schema/graph_errors.py`. Modify
-`packages/model-schema/src/model_schema/rating.py`, only the two raises in `_graph_invariants`
-(`:406` and `:439`), which raise the new classes with unchanged messages.
-`packages/model-schema/src/model_schema/sub_graphs.py` already raises them from Task 2. Modify
-`backend/src/app/platform/rating_algorithms.py`, only `graph_validation_error`'s body. In the
-tests, remove the two `xfail` marks from Task 5.
+**Files:**
+- Modify `packages/model-schema/src/model_schema/rating.py`, only two raises in
+  `_graph_invariants`. The undefined-value raise (`:418-421`) raises `GraphUnresolvedRefError`,
+  and the cycle raise (`:439`) raises `GraphCycleError`, both with unchanged messages. The
+  FR-214 raise (`:406-408`) is not touched.
+- Modify `backend/src/app/platform/rating_algorithms.py`, only `graph_validation_error`'s body.
+- In the tests, remove the two `xfail` marks from Task 5, and add the model-schema class test
+  below.
+- `graph_errors.py` and `sub_graphs.py` exist from Task 2 and are not edited here. The signal
+  was proven in Task 0.
 
 - [ ] **Red first:** the two `xfail(strict=True)` cases report `XFAIL`. **Remove the marks
   first**, and they go red: `RATING_GRAPH_CYCLIC` where `VALIDATION_FAILED` is expected. That
   red is the proof.
-- [ ] **Spike the signal first; do not assume it** (`library-spike`). Assert, at this tree's
-  pydantic version, that a `ValueError` subclass raised inside a `model_validator` surfaces in
-  `ValidationError.errors()` as `type == "value_error"`, with the instance at `ctx["error"]`. If
-  it does not, stop and report: the alternative, a `PydanticCustomError` with its own `type`,
-  changes the design.
 - [ ] Rewrite `graph_validation_error` to walk `exc.errors()`. A `GraphCycleError` maps to
   `RATING_GRAPH_CYCLIC`, then a `GraphUnresolvedRefError` to `RATING_GRAPH_UNRESOLVED_REF`, and
   anything else to `VALIDATION_FAILED`. Titles and details are as Task 5 fixed them. It never
@@ -765,9 +810,11 @@ tests, remove the two `xfail` marks from Task 5.
 - [ ] Green:
   - the two formerly-xfail cases;
   - every acceptance 4a row;
-  - `test_rating_algorithms.py`'s four characterisation and existing tests;
+  - `test_rating_algorithms.py`'s four characterisation tests (the FR-214 case still
+    `VALIDATION_FAILED`) and its two existing tests;
   - `packages/model-schema/tests/test_rating_algorithm.py`, unchanged;
-  - a model-schema test asserting each raise's class.
+  - a new model-schema test asserting the class of the `:418-421` and `:439` raises, and that
+    the FR-214 raise is not a graph-error class.
 - [ ] Commit: `fix(rating): map graph refusals on a typed signal, not str(exc) (FD working id 9948, WK-1250 S1)`.
 
 ### Task 8: The gate and the ledger
