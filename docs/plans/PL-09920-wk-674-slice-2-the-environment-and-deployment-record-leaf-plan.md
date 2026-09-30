@@ -80,8 +80,13 @@ already exists (**SL-1256**), so this PR cuts no `SL-` row.
    relay before this plan was pushed; this revision aligns the plan to it at every site class,
    each marked *(#971)*. A later revision applies #971's A.6 at head
    `324ea1659ca1542db4b1e362dc3864da6a476bbb` and #974.)*
-3. **Slice 2a closed** (the approval guard, #984): this slice follows it in the same lane,
-   never concurrently.
+3. **Slice 2a closed** (the approval guard, #984), **and then the validation-rule fix slice
+   closed** (the owner of the finding filed as #978): the order is **S2a → the fix → S2**,
+   decided by the maintainer's entry headed
+   `2026-09-30 11:56:33 BST — DECISIONS: slice order after the split; FR-384 confirmed; FR-383 and FR-385 owners`,
+   which supersedes the 11:23:26 entry's "after S2". This slice follows both in the same
+   lane, never concurrently. **Cost, stated:** this slice starts later by the fix slice's
+   duration.
 4. **The lead's go.**
 
 **The split, as a dated delta to the map plan** *(2026-09-30)*. The maintainer's entry headed
@@ -499,7 +504,7 @@ named with the slices that may also touch it.
 | `backend/src/app/api/score.py` (`_required_ref`, `_fetch_bundle`), `backend/src/app/platform/traces.py` | default-live resolution; the trace's Deployment reference | WK-1250, WK-673, WK-675 S7b (RL-1263 item 4 names `score.py`) | **serialises** with any in-flight slice editing `score.py` |
 | `backend/src/app/api/service_accounts.py` (`:63`, `:180`, `:246`) | the Environment-slug check at creation and rotation (#971 A.6) | WK-674 S3 (per-environment keys, register F54: the same lines) | an edit to existing functions: serialises with any in-flight slice editing them; S3 follows this slice anyway |
 | `backend/src/app/platform/approvals.py` (`set_policy`, `:137-190`) | the existence check of #971 A.6 (the guard's `decide` change is Slice 2a's) | any slice editing `set_policy` | an edit to an existing function: serialises unless the dispatch record shows no other in-flight slice edits it |
-| Slice 2a's shared paths (`approvals.py` in `platform/` and `api/`, `models.py`, the migrations registry) | this slice follows Slice 2a in lane A | Slice 2a (#984), the validation-rule fix slice | **strictly after Slice 2a**; against the fix slice, not concurrently (both edit `_carry_to_the_artifact`), in the order the lead sets — #984 recommends S2a → the fix → S2 |
+| Slice 2a's shared paths (`approvals.py` in `platform/` and `api/`, `models.py`, the migrations registry) | this slice follows Slice 2a in lane A | Slice 2a (#984), the validation-rule fix slice | **strictly after Slice 2a**; against the fix slice, not concurrently (both edit `_carry_to_the_artifact`), in the decided order **S2a → the fix → S2** (the 11:56:33 BST entry), so this slice starts after the fix closes |
 | `backend/src/app/api/approvals.py` (`Withdraw`, `withdraw_request`) | server-derived liveness | none found | not shared |
 | `backend/tests/test_api_authorisation_sweep.py` (and any sibling Acceptance 12 (f) finds) | Task 0A: flattening, the count equality, the spec pin, the valid-body sweep, the named allow-list | none found | test-only; **no RL-1263 overlap with WK-690 S1 and no third slot** (the 11:01:50 entry) |
 | the five modules' §5.1 REST tables (`01`, `02`, `03`, `06`, `07`) | **nothing in this slice**: Task 0A (c) moved out (the 11:17:35 entry); #977 (a) puts the column in a WK-1178 slice. **If that slice lands first**, this slice fills the column for its own new rows (`03` and `07` §5.1) | WK-1250 S1 (`03` §5.1 rows), WK-1178 fix slice (`03:771-786`), any slice appending §5.1 rows | **serialises** with each: a new column edits every existing row of the table |
@@ -1008,7 +1013,8 @@ Task 6's per-request resolution with the switch, and reuses Task 5's route shape
         context there, S2 adds the deployment branch, and the validation-rule fix adds the
         validation branch — **three slices on one function, strictly in sequence**: S2a,
         then S2 and the fix in the order the lead sets (the 11:23:26 entry puts the fix after
-        S2);
+        S2) *(2026-09-30: decided as S2a → the fix → S2 by the 11:56:33 BST entry; see
+        **Status**)*;
       - `backend/src/app/platform/approvals.py`: S2a (`approval_decision()`, `decide`), S2
         (`set_policy`'s Environment check), the fix (routing rule approval through
         `submit`/`decide`) — the same sequence;
