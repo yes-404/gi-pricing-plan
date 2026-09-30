@@ -40,7 +40,19 @@ from sqlalchemy.dialects.postgresql import UUID as PgUUID  # noqa: N811
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
-from model_schema import JobKind, JobQueue, JobSource, JobStatus, new_uuid7
+from model_schema import (
+    ApprovalStatus,
+    JobKind,
+    JobQueue,
+    JobSource,
+    JobStatus,
+    MetricStatus,
+    ModelStatus,
+    ObjectiveStatus,
+    PerilStructureStatus,
+    RatingVersionStatus,
+    new_uuid7,
+)
 
 __all__ = [
     "AcknowledgementRow",
@@ -69,8 +81,10 @@ __all__ = [
     "SubjectPurgeRow",
     "TenantMarkerRow",
     "UserRow",
+    "ValidationRuleStatus",
     "WorkspaceMemberRow",
     "WorkspaceSettingRow",
+    "approval_guarded_tables",
 ]
 
 
@@ -89,6 +103,20 @@ def _pg_enum(python_enum: type[enum.Enum], name: str, *, create: bool = True) ->
     )
 
 
+class ValidationRuleStatus(enum.StrEnum):
+    """The vocabulary of `validation_rules` and `validation_rule_sets` (`01` §4.5).
+
+    They carried string constants, not an enum, so the approval guard (RL-1301 A.4.1) had
+    no vocabulary to read. It lives here, beside the columns that declare it, because
+    `platform/validation_rules.py` imports this module and cannot be imported back;
+    that module's `DRAFT`/`REVIEW`/`APPROVED` are these members' values.
+    """
+
+    DRAFT = "draft"
+    REVIEW = "review"
+    APPROVED = "approved"
+
+
 class JobRow(Base):
     """A Job (`07` §4.1). The lifecycle itself is enforced in the service layer."""
 
@@ -101,7 +129,10 @@ class JobRow(Base):
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
 
     kind: Mapped[JobKind] = mapped_column(_pg_enum(JobKind, "job_kind"), nullable=False)
-    status: Mapped[JobStatus] = mapped_column(_pg_enum(JobStatus, "job_status"), nullable=False)
+    status: Mapped[JobStatus] = mapped_column(
+        _pg_enum(JobStatus, "job_status"), nullable=False,
+        info={"approval_capable": False},
+    )
     queue: Mapped[JobQueue] = mapped_column(_pg_enum(JobQueue, "job_queue"), nullable=False)
     source: Mapped[JobSource] = mapped_column(_pg_enum(JobSource, "job_source"), nullable=False)
 
@@ -251,7 +282,8 @@ class OutboxRow(Base):
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
     status: Mapped[OutboxStatus] = mapped_column(
-        _pg_enum(OutboxStatus, "outbox_status"), nullable=False, default=OutboxStatus.PENDING
+        _pg_enum(OutboxStatus, "outbox_status"), nullable=False, default=OutboxStatus.PENDING,
+        info={"approval_capable": False},
     )
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_error: Mapped[str | None] = mapped_column(Text)
@@ -632,7 +664,10 @@ class ApprovalRequestRow(Base):
     )
     change_summary: Mapped[str] = mapped_column(Text, nullable=False)
 
-    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False,
+        info={"status_vocabulary": ApprovalStatus},
+    )
     approvers_required: Mapped[int] = mapped_column(Integer, nullable=False)
 
     withdrawn_reason: Mapped[str | None] = mapped_column(Text)
@@ -785,7 +820,10 @@ class DatasetVersionRow(Base):
     dataset_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False,
+        info={"approval_capable": False},
+    )
     kind: Mapped[str] = mapped_column(String(32), nullable=False, default="ingested")
 
     tables: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
@@ -863,7 +901,10 @@ class IngestionRunRow(Base):
     dataset_version_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
     source_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
 
-    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False,
+        info={"approval_capable": False},
+    )
     idempotency_key: Mapped[str | None] = mapped_column(String(255))
 
     # FR-33: the same key with a *changed* source is a different ingestion, so the
@@ -938,7 +979,10 @@ class ReferenceTableVersionRow(Base):
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     reference_table_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False)
-    status: Mapped[str] = mapped_column(String(32), nullable=False, default="draft")
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="draft",
+        info={"approval_capable": False},
+    )
     source_note: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -1117,7 +1161,10 @@ class ValidationRuleRow(Base):
     severity: Mapped[str] = mapped_column(String(16), nullable=False)
     body: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
 
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft",
+        info={"status_vocabulary": ValidationRuleStatus},
+    )
     authored_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     approved_by: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
     dry_run_report_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
@@ -1192,7 +1239,10 @@ class ValidationRuleSetRow(Base):
 
     body: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     reference_dataset_version_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="approved")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="approved",
+        info={"status_vocabulary": ValidationRuleStatus},
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -1358,7 +1408,10 @@ class ModelRow(Base):
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     model_family_slug: Mapped[str] = mapped_column(String(64), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft",
+        info={"status_vocabulary": ModelStatus},
+    )
 
     dataset_version_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     spec: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
@@ -1578,7 +1631,10 @@ class PerilStructureRow(Base):
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     slug: Mapped[str] = mapped_column(String(64), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft",
+        info={"status_vocabulary": PerilStructureStatus},
+    )
 
     #: The `PerilComponent` list and the `ExcludedPeril` list, whole. Same reasoning as
     #: `models.spec`: the platform reads them back through the contract type, and a
@@ -1645,7 +1701,10 @@ class CustomObjectiveRow(Base):
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     slug: Mapped[str] = mapped_column(String(64), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft",
+        info={"status_vocabulary": ObjectiveStatus},
+    )
 
     #: `template` for the whole of Phase 1 (FR-150). Stored rather than assumed,
     #: because Phase 2's `expression` rows will live in this table beside these and a
@@ -1767,7 +1826,10 @@ class CustomMetricRow(Base):
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     slug: Mapped[str] = mapped_column(String(64), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft",
+        info={"status_vocabulary": MetricStatus},
+    )
 
     #: `template` for the whole of Phase 1, mirroring `CustomObjectiveRow.kind` (FR-155
     #: reuses FR-150's rule). Stored rather than assumed for the same reason: a Phase 2
@@ -1895,7 +1957,10 @@ class RatingVersionRow(Base):
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     slug: Mapped[str] = mapped_column(String(64), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False)
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft",
+        info={"status_vocabulary": RatingVersionStatus},
+    )
     dataset_version_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     #: The pinned approved Model, as the canonical `model:{slug}@{version}` string (ID-3).
     model_ref: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -2204,7 +2269,10 @@ class ScoringTraceRow(Base):
     #: `mismatch` (the re-score ran but did not reproduce the served result, or the
     #: pinned bundle no longer resolves). A row `write_trace` writes directly is always
     #: `complete`. Task 4B.
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="complete")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="complete",
+        info={"approval_capable": False},
+    )
     #: The `QuoteContext` the off-path Job re-scores from, as JSON — the access-controlled
     #: carrier RL-862 §8.4 requires in place of `JobRow.parameters`. `None` once a row
     #: is `complete`/`mismatch` and no longer needed (or for a `write_trace`-direct row,
@@ -2275,3 +2343,18 @@ class TenantMarkerRow(Base):
     tenant_id: Mapped[str] = mapped_column(Text, nullable=False)
 
     __table_args__ = (CheckConstraint("id = 1", name="single_row"),)
+
+
+def approval_guarded_tables() -> set[str]:
+    """Every table whose `status` column declares a vocabulary with an `APPROVED` member.
+
+    The approval guard's population (RL-1301 A.4.1): derived from the column metadata,
+    never listed, so a table that adds approval without declaring it cannot be missed.
+    `test_approval_guard.py` holds the declarations to account.
+    """
+    return {
+        table.name
+        for table in Base.metadata.tables.values()
+        if "status" in table.c
+        and hasattr(table.c["status"].info.get("status_vocabulary"), "APPROVED")
+    }
