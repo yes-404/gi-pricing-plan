@@ -734,7 +734,7 @@ A deployment is bound to one tenant and refuses to start when its database, blob
 id: SL-1302
 family: slice
 title: Slice 2a: the approval guard (only the decision path writes approved; FR-351)
-status: active                 # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: daa7f5f8d6f0ff80dee7dfccf8ca18309d626816
@@ -745,6 +745,8 @@ relates: [PL-1237, PL-1303]
 ```
 
 A database trigger, primary, on every approval-capable table refuses `approved` outside the approval decision path; the test database is shown to carry it. Cut 2026-09-30 from Slice 2 by the maintainer's acceptance of the split (to-lead.md, `2026-09-30 11:48:28 BST`; "S2a (the approval guard, first) and S2 (deployment), per #973's self-review option (b)"). Leaf plan `PL-1303` (minted 2026-09-30 with this row in the lead's mint train; filed under working ids 9923 and 9922); the guard is `RL-1301`'s (#971) evidence-based trigger: an artifact row reaches `approved` only with a matching approved approval request, the validation tables accept evidence or the decision flag while their allowance lasts, and `approval_requests` takes the flag behind `decide`'s guards. Starts after Slice 1 closes (it has); **Slice 2 follows it**, in the same lane, never concurrently.
+
+**Closed 2026-09-30** at #997's merge, `8d5c67a56c27a9dcbba8d4e4ad28a1895e1dd862`, on a CLEAN slice audit (auditor-close1255 at `4a2423f2`, per the lead handover `lead-handover-2026-09-30.md`) and the lead's merge (CLAUDE.md §13); the maintainer's MERGE-ACK ("2026-09-30 16:58:01 BST — MERGE-ACK #997") and read-back ("2026-09-30 16:58:35 BST — #997 read-back verified") confirm it. Its ledger is `LG-1324`. The row read `active` after the merge and was flipped here, a forward status, by the auditor at `origin/main` 248dbf11.
 
 #### SL-1256 — Slice 2: the Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit and NFR-498 for deploy)
 
@@ -1141,7 +1143,7 @@ relates: [PL-1299, FD-1297, RL-1298]
 id: SL-1315
 family: slice
 title: WK-1178 slice — FR-244's enforced allow-list and FR-274's guard over every authored rating string
-status: active                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 9f63d0feee524815e7e0c68c99a53ac3f80e6c37
@@ -1152,6 +1154,8 @@ relates: [PL-1314, RL-1312, RL-1313]
 ```
 
 The code that the FR-244 ruling, RL-1312, assigns to WK-1178. FR-244's operator and function allow-list is enforced at save over every authored string: `expr`, `condition`, clamp bounds and `key_expr`. FR-276's compile, FR-274's division guard, and the determinism and scale checks are widened to the same strings, and `??` is never a guard. A residual evaluation failure at scoring gets its own code, not `RATE_TABLE_MISS`. It discharges the finding filed as #968 (FD working id 9885). Leaf plan `PL-1314`. *(Minted 2026-09-30 as SL-1315, by hand in the lead's batch-4 mint turn. It was filed under working id 9832.)* **Order:** after the fix slice (PL-1299) and before WK-1250 Slice 1, serialised on `compile.py` under `RL-1263`. **Gate:** its DP-G1, DP-G3, DP-G4 and DP-G5, ruled by RL-1313. DP-G1 is where FR-244's amended text lands: WK-690 Slice 1, Task 6.
+
+**Closed 2026-09-30** at #1012's merge, `3a5f7cd5ba869eddf913761dba29d636e66afe94`, on a CLEAN slice audit (auditor at `3fa635eb60c18e05103205696cfd504ad69ba5ca`, recorded in the maintainer's channel entry "2026-09-30 18:07:45 BST") and the lead's merge (CLAUDE.md §13); the maintainer's MERGE-ACK and read-back ("2026-09-30 19:28:53 BST — #1012 read-back verified; SL-1315 closed") confirm it. Its ledger is `LG-1332`. The row read `active` after the merge and was flipped here, a forward status, by the auditor at `origin/main` 248dbf11.
 
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half

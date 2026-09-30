@@ -2,7 +2,7 @@
 id: LG-1304
 family: ledger
 title: WK-690 Slice 1 — the parser brought to §4.6's four profiles, with its limits and the sympy pin
-status: active
+status: closed
 created: 2026-09-30
 owner: executor
 tree: 9f63d0feee524815e7e0c68c99a53ac3f80e6c37
