@@ -728,6 +728,24 @@ relates: [PL-1237, PL-1239, RL-1253]
 
 A deployment is bound to one tenant and refuses to start when its database, blob or broker marker names another; every Job records the platform build it ran on. `PL-1237` Task 1; leaf plan `PL-1239`, its decision points ruled by `RL-1253`. First in the chain: nothing precedes it. *(Closed 2026-09-30 by the auditor: `#933` merged as `aa14e90dd77c7461aa35cc6461557b129959463f` on the maintainer's MERGE-ACK; auditor-933's slice audit: the full audit at `7a63809d` was NOT CLEAN, solely on F1 (the check-31 id gap 1260→1262, a merge-order finding that cleared when #927 merged), closed at `a8d2dfd9`; CLEAN at the deltas `a8d2dfd9` and `7f4468a5`; acceptance verified on `origin/main` at that SHA; `LG-1262` set `closed`. The FR-18 dossier half (`06` FR-376) is carried to WK-680, not delivered here.)*
 
+#### SL-9922 — Slice 2a: the approval guard (only the decision path writes approved; FR-351)
+
+```yaml
+id: SL-9922
+family: slice
+title: Slice 2a: the approval guard (only the decision path writes approved; FR-351)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-09-30
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: daa7f5f8d6f0ff80dee7dfccf8ca18309d626816
+phase: P2
+work: WK-674
+corrected_by: []
+relates: [PL-1237, PL-9923]
+```
+
+A database trigger, primary, on every approval-capable table refuses `approved` outside the approval decision path; the test database is shown to carry it. Cut 2026-09-30 from Slice 2 by the maintainer's acceptance of the split (to-lead.md, `2026-09-30 11:48:28 BST`; "S2a (the approval guard, first) and S2 (deployment), per #973's self-review option (b)"). Leaf plan `PL-9923`; its trigger form follows #971's next head. Starts after Slice 1 closes (it has); **Slice 2 follows it**, in the same lane, never concurrently.
+
 #### SL-1256 — Slice 2: the Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit and NFR-498 for deploy)
 
 ```yaml
