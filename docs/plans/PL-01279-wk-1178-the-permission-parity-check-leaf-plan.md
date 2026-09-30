@@ -1,21 +1,25 @@
 ---
-id: PL-9970
+id: PL-1279
 family: plan
 kind: leaf
 title: WK-1178 — The permission-parity check (CR-1247 Proposal 1 (c)): leaf plan
 status: draft                   # draft → active → superseded | retired (§1.2a)
 created: 2026-09-30
 owner: planner
-tree: dee49f781fd23f9df2e72161885c77fa17a6f1ab
+tree: a09101e28530f0f2dc18c02a70c9fed6f320a9e8
 phase: P2
 work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [CR-1247, RL-1236, RL-1263, PL-1268, PL-1237, ADR-704]
+relates: [CR-1247, RL-1236, RL-1263, PL-1268, PL-1237, PL-1276, PL-1277, PL-1278, ADR-704]
 ---
 
-# PL-9970 (working id) — WK-1178: the permission-parity check, leaf plan
+# PL-1279 — WK-1178: the permission-parity check, leaf plan
+
+Minted as `PL-1279` on 2026-09-30. `python3 scripts/doc-id.py next --ref origin/main` printed
+1279 at origin/main `a09101e2`. First filed 2026-09-30 as draft PR #944 under working id 9970;
+`created:` stays 2026-09-30, the first filing date and the mint date alike.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
 > or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`)
@@ -45,7 +49,7 @@ changes.
 Proposal 1 (c) (`:130-159`);
 `docs/rulings/RL-01236-the-permission-catalogue-a-verdict-for-each-of-the-34-names-06-and-the-code-do-not-share.md`
 §"Acceptance — the violation that must become detectable" (`:409-415`); and the P1 (c) ruling
-prepared on PR #942 (working id 9856, **not ruled**). It was read at head `4daa57cb` and again at `cf466f08`. That ruling decides
+prepared on PR #942 (working id 9856, **not ruled**). It was read at heads `4daa57cb` and `cf466f08`, and re-read for the mint at its current head `5c2e55e6`. That ruling decides
 DP-1 to DP-3 below.
 
 ## Status
@@ -133,6 +137,19 @@ mapping, and none of them is about which names exist.
 
 ### Today's mismatches — the check's first findings, measured at `dee49f78`
 
+**Re-measured at `a09101e2` for the mint (2026-09-30): no count changes.**
+- `git diff --quiet dee49f78 a09101e2 -- packages docs/specs backend .github` exits 0, so none
+  of E1–E6's inputs moved.
+- Every predicate below was re-run at `a09101e2` and printed the same figures:
+  - E1 24; E2 41, with 17 non-members and 0 members missing;
+  - E3 7; E4 13 table rows, with 11 members missing;
+  - E5 2 zero-site members, 3 route-only; E5 `requires(` 54 lines, 52 call sites, 50
+    `require`/`has_permission` lines;
+  - E6 `python.yml` lists `packages/**`, `backend/**` and `docs/**` under both triggers;
+    `docs.yml` lists no `packages/**`.
+- #933 (`SL-1255`) and the merges since changed none of `permissions.py`, `06` §4.1 or the
+  check sites.
+
 Every count names its corpus and its predicate. Each was run from the repository root of a
 checkout at `dee49f781fd23f9df2e72161885c77fa17a6f1ab`.
 
@@ -150,7 +167,7 @@ gives 41. This is `RL-1236`'s `06`-side predicate. `comm -23` against E1 gives t
 `rating_version:deploy_prod` and `rating_version:submit`. `comm -13` is empty.
 
 **E3. `06` → enum, after `CR-1247`'s exclusions: 7 today, and 0 once the role block goes.**
-The exclusions are read as follows: drop `~~…~~` spans; drop the `>`-quoted lines of §4.1
+The exclusions are read as follows: drop struck spans (text between a pair of `~~`); drop the `>`-quoted lines of §4.1
 (`:188-304`, the superseded note and the alias notes); drop `RL-1236` rows 5–10. Then:
 - With the Pricing Actuary JSON role block (`06:190-205`) still present, 7 tokens remain:
   `banding:write`, `dataset:create_version`, `factor:write`, `grouping:write`,
@@ -187,15 +204,15 @@ The exclusions are read as follows: drop `~~…~~` spans; drop the `>`-quoted li
     only in the service layer: `await require_permission(` at
     `backend/src/app/platform/rbac.py:420`, with `permission=Permission.ADMIN_BREAK_GLASS` at
     `:424` (FR-349).
-  - **Open in 9856:** at `cf466f08`, 9856 §D1, open item STALE_OWNER, asks the ruling to say
+  - **Open in 9856:** at `5c2e55e6`, 9856 §D1, open item STALE_OWNER, still asks the ruling to say
     whether a non-`requires()` check site counts.
     - This plan's Task 3 counts it: the source scan finds `Permission.ADMIN_BREAK_GLASS` at
       `:424`. So the live route leg has 2 zero-site members, not 3.
     - If the ruling says only `requires()` counts, Task 3's scan is narrowed to
       `backend/src/app/api` and `admin:break_glass` needs an owner cell. That is a replan.
-    - That open item attributes the third member to "the `service_accounts.py`
-      literal `RL-1236` corrected". The member is `admin:break_glass`, and it is referenced as
-      shown above. The literal at `backend/src/app/api/service_accounts.py:44` names only
+    - At `cf466f08` that open item attributed the third member to "the `service_accounts.py`
+      literal `RL-1236` corrected". At `5c2e55e6` the attribution is struck, and the member is
+      named as `admin:break_glass`, as above. The literal at `backend/src/app/api/service_accounts.py:44` names only
       `score:execute` and `score:batch`, which have `requires()` sites at
       `backend/src/app/api/score.py:124-125`.
 - **So a route leg built by introspecting routes misses service-level checks.**
@@ -204,7 +221,7 @@ The exclusions are read as follows: drop `~~…~~` spans; drop the `>`-quoted li
     service-level call lines, 3 of them inside `rbac.py`.
   - Task 3 therefore scans source, not routes.
 - **Other literals.** `git grep -n 'requires(' -- backend/src/app/api | wc -l` prints **54**.
-  - 52 of those lines are call sites, `requires(Perm.…)` or `requires(Permission.…)`
+  - 52 of those lines are call sites, `requires(Perm.<NAME>)` or `requires(Permission.<NAME>)`
     (`git grep -n -E 'requires\((Perm|Permission)\.' -- backend/src/app/api | wc -l`).
   - The other 2 lines are not checks: a comment at `authz.py:33` and the definition
     `def requires(` at `authz.py:54`.
@@ -228,8 +245,9 @@ The exclusions are read as follows: drop `~~…~~` spans; drop the `>`-quoted li
 ### Decision points
 
 **The gating ruling is working id 9856**: the decision-maker's P1 (c) record, prepared on #942
-and **not ruled**. It was read at `4daa57cb`, and again at `cf466f08`.
-- At `cf466f08`, 9856 §D1 carries an **open item STALE_OWNER**: this plan's ninth class,
+and **not ruled**. It was read at `4daa57cb` and `cf466f08`, and re-read at its current head
+`5c2e55e6` for the mint.
+- At `5c2e55e6`, as at `cf466f08`, 9856 §D1 carries an **open item STALE_OWNER**: this plan's ninth class,
   provisional answer adopt.
 - The same open item asks whether a check site that is not a `requires()` route counts.
   This plan's E5 and Task 3 already answer that in substance. The route leg scans source, not
@@ -250,7 +268,7 @@ same tree:
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
 | DP-1 | **What the check asserts.** | (A) `CR-1247`'s wording, with exclusions found by position in prose (E3's I1 reading). (B) Table-driven: §4.1 carries Built, Specified-not-built and Aliases tables, each machine-read, and any other `06` token outside struck text is a violation. (C) (B), plus a route leg: every Built name has a check site in `backend/src` or an owner cell (E5) | **(C)**, agreeing with 9856's provisional answer. Only (C) makes FR-367's "the enum member and its check land together" a gate rather than a review item, and E5 shows its route leg is red today only on two members that already have an owner. **The ruling decides it**, and Tasks 1–4 are written to (C). A proposal for the ruling, not part of 9856's four fixtures, and carried as 9856 §D1, open item STALE_OWNER (at `cf466f08`), provisional **adopt**: a ninth class, stale-owner, for a Built row with both a check site and an owner. Under it, WK-674 Slice 2 clears the owner cells of `deployment:promote` and `admin:manage_environments` in the commit that adds their checks. It is conditional on the ruling adopting it (Task 0 Step 1) | decision point (scope) | yes: Tasks 1–3 | working id 9856 (#942), §D1 |
-| DP-2 | **Where the check lives.** | (L1) A numbered `scripts/audit-docs.py` check. It regex-reads `permissions.py` and runs under `docs.yml`. (L2) A root `tests/` pytest module that imports the enum and runs under `python.yml`. (L3) Both: the `audit-docs` check for the `06`-internal legs, and the pytest for every leg touching code. (L4) L1, with `packages/model-schema/src/model_schema/permissions.py` and `backend/src/**` added to `docs.yml`'s paths | **L2.** It is the only placement where a change on any side triggers the run (E6). L1 does not run on a `packages/**`-only commit, which is the very drift the check exists for. L4 keeps a hand-widened path filter that drifts. L3 runs the same comparison twice, and one copy can go stale. L1, L3 and L4 also edit `scripts/audit-docs.py`, which WK-1170 Slices 3 and 6 edit (the WK-1170 map plan on open PR #930, working id 9811, `:271-296`). That is a shared file under `RL-1263` (c), so they serialise, and the next free check number becomes a merge race. L2 edits no shared file | decision point (placement) | yes: every task's **Files** | working id 9856 (#942), §D2 |
+| DP-2 | **Where the check lives.** | (L1) A numbered `scripts/audit-docs.py` check. It regex-reads `permissions.py` and runs under `docs.yml`. (L2) A root `tests/` pytest module that imports the enum and runs under `python.yml`. (L3) Both: the `audit-docs` check for the `06`-internal legs, and the pytest for every leg touching code. (L4) L1, with `packages/model-schema/src/model_schema/permissions.py` and `backend/src/**` added to `docs.yml`'s paths | **L2.** It is the only placement where a change on any side triggers the run (E6). L1 does not run on a `packages/**`-only commit, which is the very drift the check exists for. L4 keeps a hand-widened path filter that drifts. L3 runs the same comparison twice, and one copy can go stale. L1, L3 and L4 also edit `scripts/audit-docs.py`, which WK-1170 Slices 3 and 6 edit (`PL-1276` §Decision points, the paragraph "Slice design, decided here and not a DP", and §Sequencing, "Slice 6 needs Slice 3"). WK-1169 Slice 3 also adds a numbered `audit-docs.py` check and is serialised against `PL-1276` Slices 3, 4 and 6 (`PL-1277` §Tasks, "Task 3 — Slice 3: the checks (code)"). That is a shared file under `RL-1263` (c), so they serialise, and the next free check number becomes a merge race. L2 edits no shared file | decision point (placement) | yes: every task's **Files** | working id 9856 (#942), §D2 |
 | DP-3 | **Who writes the `06` §4.1 amendment, and when** (the 11 rows of E4, the Specified and Aliases tables, and the role block replaced by a reference to `BUILTIN_ROLES`)? | (a) The decision-maker, in the ruling's PR or one before it. This slice then only reads `06`. (b) This slice, in its first commit, from the ruling's text. (c) The ruling's PR carries the tables, and this slice carries only the role-block replacement | **(a)**, this plan's recommendation. `CR-1247` `:149-151` names the decision-maker as owner of only one part: the `06` amendment that replaces the role block with a reference to `BUILTIN_ROLES`. The 11 rows reach the decision-maker only through 9856 §D4, item 1 (unruled). Under (a) this slice edits no spec section, so it shares nothing with WK-674 Slices 2/3 or WK-690 Slice 3 (all of which touch `06` §4.1). Under (b) it takes `06` §4.1 and serialises with all three | decision point (ownership, sequencing) | yes: Task 2's live test is red until it lands (E4) | working id 9856 (#942), §D4, and the lead's dispatch |
 
 `CR-1247` `:150` also leaves **RL or ADR** open (9856 §D3). It does not block this plan unless
@@ -298,7 +316,8 @@ by their position in prose, and Task 1's parser has no such mode.
 | `tests/test_permission_parity.py` (new) | creates | none | none |
 | `docs/specs/06-governance.md` §4.1 | reads only under DP-3 (a); edits under (b) | the decision-maker's amendment (DP-3); **WK-674 Slice 2** (`admin:manage_environments` and `deployment:promote` get their first check sites, `PL-1237` `:481-484`); **WK-674 Slice 3** (`admin:manage_service_accounts`, `score:execute` and `admin:manage_settings` rows, `PL-1237` `:485-487`); **WK-690 Slice 3** (`custom_objective:author`, `PL-1268` `:82-85`, `:479-486`) | Under (a): no file overlap, but an **order**. Once this lands, each of those three slices must satisfy it: WK-690 S3 moves the name from Specified to Built in the same commit as the enum member and route, and WK-674 S2 clears two owner cells. Under (b): serialise with all three |
 | `packages/model-schema/src/model_schema/permissions.py` | reads (imports) | **WK-690 Slice 3** adds `CUSTOM_OBJECTIVE_AUTHOR`. WK-674 S2/S3 add no member (`PL-1237` table: every name they use is at `permissions.py:53-70`) | none. WK-690 S3 must come after this slice (`PL-1268` Slice 3, Depends on) |
-| `scripts/audit-docs.py` | not touched under L2 | **WK-1170 Slices 3 and 6** (the WK-1170 map plan, PR #930, `:271-296`) | Under L1, L3 or L4: serialise with both, and re-take the next free check number at merge |
+| `scripts/audit-docs.py` | not touched under L2 | **WK-1170 Slices 3 and 6** (`PL-1276` §Decision points, "Slice design"; §Tasks, Tasks 3 and 6: Slice 3 adds new numbered checks), and **WK-1169 Slice 3** (`PL-1277` §Tasks, Task 3: a new numbered check) | Under L1, L3 or L4: serialise with all three, and re-take the next free check number at merge |
+| `backend/src/app/api/` (new routes) | reads (the source scan) | **WK-1250 Slice 1** (`PL-1278` §Decision points, DP-S1-1): four sub-graph routes checking the existing `rating:write` and `rating:read`. Its `06` edit lands where its DP-1 ruling says, likely §3.3, not §4.1 (`PL-1278` §File contention under RL-1263's option (c)) | none. It adds check sites for names that already have them, so the parity check reads it unchanged, and it takes no `06` §4.1 row |
 | `.github/workflows/docs.yml` | not touched under L2 | none planned | Under L4: a path-filter edit |
 | `docs/INDEX.md` | regenerated if this PR adds a governed record | every PR | registry file: regenerate, never hand-merge |
 
@@ -323,13 +342,13 @@ tree: <mint tree>
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [CR-1247, RL-1236, PL-<this plan's minted id>, RL-<the P1 (c) ruling>]
+relates: [CR-1247, RL-1236, PL-1279, RL-<the P1 (c) ruling, once minted>]
 ```
 
 A pytest invariant fails the gate when `06` §4.1's permission tables and `model_schema.Permission`
 disagree, or when a Built name has neither a check site nor an owner. It must merge before
 WK-690 Slice 3's commit that adds `custom_objective:author` (`PL-1268` Slice 3, Depends on).
-Leaf plan `PL-<id>`; decision points ruled by `RL-<id>`. It retires `RL-1236`'s interim
+Leaf plan `PL-1279`; decision points ruled by `RL-<id>`. It retires `RL-1236`'s interim
 re-derive-at-each-close rule when it merges.
 ````
 
@@ -346,7 +365,7 @@ run (a gate slot under `RL-1263`). It takes no NFR measurement, so it need not r
 - [ ] **Step 1:** Confirm the P1 (c) ruling has merged: `git grep -l "CR-1247" origin/main -- docs/rulings`
   names a record besides `RL-1252`. Read its D1, D2 and D3 answers. If D1 is not (C) or D2 is
   not L2, **stop**: the plan is revised before `active`. **Stale-owner:** if the ruling does
-  not adopt it (it is not among 9856's four acceptance fixtures, 9856 §Acceptance; it is 9856 §D1's open item STALE_OWNER, provisional adopt, at `cf466f08`), remove all of
+  not adopt it (it is not among 9856's four acceptance fixtures, 9856 §Acceptance; it is 9856 §D1's open item STALE_OWNER, provisional adopt, at `cf466f08` and `5c2e55e6`), remove all of
   the following in the first commit:
   - `STALE_OWNER`;
   - its branch in `parity_violations`;
