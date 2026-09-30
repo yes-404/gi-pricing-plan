@@ -77,13 +77,47 @@ the lockfile, not on that one.
 
 ## The spike — the deciding fact
 
-Scratch directory outside the repository (not committed):
-`/tmp/claude-1000/-home-puzhenhao1989-gi-pricing-plan/3a4f8a8b-…/scratchpad/spike550`.
-`package.json` and `pnpm-lock.yaml` were taken from `origin/main` by `git show`, and
-`pnpm install --frozen-lockfile --ignore-scripts` installed `vue-tsc 3.3.11`, `vue 3.5.43`,
-`typescript 5.9.3`. The `tsconfig.json` carries `frontend/tsconfig.app.json`'s compiler
-options (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, …) minus the
-build-mode keys. The component under test:
+**How to reproduce it.** The spike ran in a scratch directory outside the repository. That
+directory is ephemeral and is not committed; **this section's text is what reproduces it**,
+and nothing here depends on the directory existing.
+
+1. In an empty directory, write the seven files below verbatim.
+2. `git show 7040cf1e:frontend/package.json > package.json` and
+   `git show 7040cf1e:frontend/pnpm-lock.yaml > pnpm-lock.yaml`. Neither file, nor
+   `frontend/tsconfig.app.json`, changed between `7040cf1e` and `7c354305`
+   (`git diff --quiet 7040cf1e 7c354305 -- frontend/tsconfig.app.json frontend/package.json
+   frontend/pnpm-lock.yaml`, rc 0).
+3. `pnpm install --frozen-lockfile --ignore-scripts` (pnpm 11.21.0). It installed
+   `vue-tsc 3.3.11`, `vue 3.5.43`, `typescript 5.9.3`, read back from each package's
+   `package.json`.
+4. `./node_modules/.bin/vue-tsc -p tsconfig.json --noEmit` over all six components (run A).
+5. Move `BadAccessor.vue`, `BadCellType.vue`, `Mismatch.vue` and `NoAnyLeak.vue` out of
+   `src/`, and run the same command again (run B, the positive control).
+
+**`tsconfig.json` — its derivation.** The `compilerOptions` are
+`frontend/tsconfig.app.json`'s at `7040cf1e`, key for key and value for value, except that
+`composite` and `tsBuildInfoFile` are dropped (they exist for `vue-tsc --build`'s project
+references, which a single `-p` run does not use). `include` is narrowed to `.ts` and `.vue`
+under `src/`. The file, verbatim:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022", "module": "ESNext", "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"], "jsx": "preserve", "types": ["vite/client"],
+    "strict": true, "noUncheckedIndexedAccess": true, "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true, "exactOptionalPropertyTypes": true,
+    "verbatimModuleSyntax": true, "isolatedModules": true, "skipLibCheck": true, "noEmit": true,
+    "baseUrl": ".", "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["src/**/*.ts", "src/**/*.vue"]
+}
+```
+
+**The component under test**, a generic stub of the ruled API. It is not `ChartFigure.vue`
+itself; it carries only what the API needs for the type-check.
+
+`src/components/GenericFigure.vue`:
 
 ```vue
 <script setup lang="ts" generic="T">
@@ -91,11 +125,88 @@ export type Cell = string | number | null;
 export interface Column<R> { key: string; label: string; value: (row: R) => Cell }
 defineProps<{ title: string; columns: readonly Column<T>[]; rows: readonly T[] }>();
 </script>
+<template>
+  <table><caption>{{ title }}</caption>
+    <thead><tr><th v-for="c in columns" :key="c.key" scope="col">{{ c.label }}</th></tr></thead>
+    <tbody><tr v-for="(r, i) in rows" :key="i"><td v-for="c in columns" :key="c.key">{{ c.value(r) }}</td></tr></tbody>
+  </table>
+</template>
 ```
 
-Callers: one correct (`GoodCaller.vue`, inline column literals with untyped `(r) => r.band`),
-and four deliberately broken. `./node_modules/.bin/vue-tsc -p tsconfig.json --noEmit`,
-2026-09-30 08:43:30 UTC, verbatim:
+**The callers.** One correct and four deliberately broken, each named for what it breaks.
+
+`src/components/GoodCaller.vue`:
+
+```vue
+<script setup lang="ts">
+import GenericFigure from "./GenericFigure.vue";
+interface Band { band: string; exposure: number; premium_minor: number }
+const rows: Band[] = [{ band: "A", exposure: 1.5, premium_minor: 12000 }];
+</script>
+<template>
+  <GenericFigure title="t" :rows="rows"
+    :columns="[{ key: 'band', label: 'Band', value: (r) => r.band },
+               { key: 'exp', label: 'Exposure', value: (r) => r.exposure }]" />
+</template>
+```
+
+`src/components/BadAccessor.vue`:
+
+```vue
+<script setup lang="ts">
+import GenericFigure from "./GenericFigure.vue";
+interface Band { band: string; exposure: number }
+const rows: Band[] = [{ band: "A", exposure: 1.5 }];
+</script>
+<template>
+  <GenericFigure title="t" :rows="rows"
+    :columns="[{ key: 'band', label: 'Band', value: (r) => r.bnad }]" />
+</template>
+```
+
+`src/components/BadCellType.vue`:
+
+```vue
+<script setup lang="ts">
+import GenericFigure from "./GenericFigure.vue";
+interface Band { band: string; tags: string[] }
+const rows: Band[] = [{ band: "A", tags: [] }];
+</script>
+<template>
+  <GenericFigure title="t" :rows="rows"
+    :columns="[{ key: 'tags', label: 'Tags', value: (r) => r.tags }]" />
+</template>
+```
+
+`src/components/Mismatch.vue`:
+
+```vue
+<script setup lang="ts">
+import GenericFigure, { type Column } from "./GenericFigure.vue";
+interface Band { band: string }
+interface Other { level: number }
+const rows: Band[] = [{ band: "A" }];
+const columns: Column<Other>[] = [{ key: "l", label: "L", value: (o) => o.level }];
+</script>
+<template><GenericFigure title="t" :rows="rows" :columns="columns" /></template>
+```
+
+`src/components/NoAnyLeak.vue`:
+
+```vue
+<script setup lang="ts">
+import GenericFigure from "./GenericFigure.vue";
+interface Band { band: string }
+const rows: Band[] = [{ band: "A" }];
+// r must be inferred as Band, not any: r.band is a string, so assigning it to a number must fail
+</script>
+<template>
+  <GenericFigure title="t" :rows="rows"
+    :columns="[{ key: 'x', label: 'X', value: (r) => { const n: number = r.band; return n } }]" />
+</template>
+```
+
+**Run A**, 2026-09-30 08:47:28 UTC, verbatim (the `all rc` line is the shell's `$?`):
 
 ```text
 src/components/BadAccessor.vue(8,62): error TS2339: Property 'bnad' does not exist on type 'Band'.
@@ -106,10 +217,14 @@ src/components/NoAnyLeak.vue(9,62): error TS2322: Type 'string' is not assignabl
 all rc=2
 ```
 
-With the four broken callers moved out, the same command on `GoodCaller.vue` alone: **rc 0**.
-So at a real call site vue-tsc infers `T` from `rows`, types each inline accessor's
-parameter as `T` (not `any`: `NoAnyLeak` fails on the inferred type), refuses a misspelt
-field, refuses a value that is not a cell, and refuses columns written for another row type.
+**Run B**, `GoodCaller.vue` and `GenericFigure.vue` only: no output, **rc 0**.
+
+So at a real call site vue-tsc infers `T` from `rows`, and types each inline accessor's
+parameter as `T`, not `any`: `NoAnyLeak` fails because `r.band` is inferred as `string`. It
+refuses a misspelt field, a value that is not a cell, and columns written for another row
+type, and it accepts the correct caller. An earlier run of the same files at 08:43:30 UTC gave
+the same output; `NoAnyLeak.vue`'s comment was reworded between the two runs, and its code was
+not changed.
 
 ## Options
 
