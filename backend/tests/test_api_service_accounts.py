@@ -248,8 +248,10 @@ async def test_another_workspaces_account_is_404_not_403(
 
 
 @pytest.mark.req("FR-387")
-def test_service_account_routes_require_authentication() -> None:
-    settings = Settings(environment=Environment.LOCAL, version="test")
+def test_service_account_routes_require_authentication(api_settings: Settings) -> None:
+    # The lifespan now checks the stores' tenant markers (FR-436), so the app needs a real
+    # database and bucket even to prove it refuses an unauthenticated caller.
+    settings = api_settings.model_copy(update={"dev_auth_enabled": False})
     with TestClient(create_app(settings), raise_server_exceptions=False) as client:
         response = client.post("/api/v1/service-accounts", json={})
         assert response.status_code == 401
