@@ -3,7 +3,7 @@ id: PL-1299
 family: plan
 kind: leaf
 title: WK-1178 fix slice — compile_bundle refuses a step ref not pinned at its exact version (FR-237): leaf plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-09-30
 owner: planner
 tree: eeda8f4ba20d247ac18d6a35d7f81589c8527ed2
@@ -58,7 +58,7 @@ relation to the WK-1250 rulings is #938 (working id 9851; read at its head
 
 ## Status
 
-**Draft.** Minted 2026-09-30 as PL-1299. The id was assigned in the lead's mint train, stacked on
+**Active** (see **Activation**, below). Minted 2026-09-30 as PL-1299. The id was assigned in the lead's mint train, stacked on
 #964's RL-1298: `doc-id.py next --ref origin/main` printed 1298 at `4009de14`. It was filed under
 working id 9873. Its slice row is **SL-1300**, minted the same way and filed under working id 9872,
 under `### WK-1178` in `docs/roadmap.md`. At filing, neither working id appeared among the 9860–9899 hits found
@@ -73,6 +73,20 @@ by `git grep -h -o -E '\b98[6-9][0-9]\b' -- docs .claude` and a `docs` filename 
    *Disposition*: "It does not pre-empt WK-674 Slice 2 or WK-690 Slice 1: there is no
    production, and 0 stored rating versions are affected so far").
 4. The lead's dispatch record, carrying the RL-1263 write-set check (**Write set**, below).
+
+**Activation.** Activated 2026-09-30. Each item of **Activation needs** above is met:
+1. DP-F1 to DP-F3 are ruled by RL-1298, the plan's ruling.
+2. FD-1297, the finding this slice delivers, is minted.
+3. The lane B gate slot was granted at 2026-09-30 13:04 BST by the lead, after #963's merge, under
+   the maintainer's entry headed "2026-09-30 12:33:27 BST — DECISIONS: WK-690 S1 as Train 1's 5th
+   car; dispatch the fix slice on lane B at #963's merge (not ~16:00)". That entry replaces
+   item 3's "about 16:00".
+4. The dispatch record is `handover/DISPATCH-WK-1178-FIX-DRAFT-2026-09-30.md`, the lead's local
+   handover file outside the repository, finalised at GO.
+
+The activation rides in the #971 + #984 batch, as the maintainer's entry headed "2026-09-30
+13:03:46 BST — MERGE-ACK #963 (PL-1299 + SL-1300, draft leaf plan); its activation rides in the
+#971+#984 batch" directs. Nothing else in this plan changes at activation.
 
 **Order.** This slice **merges before WK-1250 Slice 1 is dispatched**, because `compile.py` has a
 single writer (FD-1297, *Disposition*). WK-1250 Slice 2 then builds G1 on top of the function this
