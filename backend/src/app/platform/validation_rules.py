@@ -27,7 +27,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import DatasetRow, ValidationRuleRow, ValidationRuleSetRow
+from app.db.models import DatasetRow, ValidationRuleRow, ValidationRuleSetRow, ValidationRuleStatus
 from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.platform import approvals, audit, rbac
@@ -62,7 +62,11 @@ __all__ = [
 
 _log = get_logger("app.validation_rules")
 
-DRAFT, REVIEW, APPROVED = "draft", "review", "approved"
+DRAFT, REVIEW, APPROVED = (
+    ValidationRuleStatus.DRAFT.value,
+    ValidationRuleStatus.REVIEW.value,
+    ValidationRuleStatus.APPROVED.value,
+)
 
 #: `01` §4.5: the `sql` check is authored by an Admin only and gated by a workspace flag.
 #: Named here rather than inline so the two places that care — authoring and rule-set
