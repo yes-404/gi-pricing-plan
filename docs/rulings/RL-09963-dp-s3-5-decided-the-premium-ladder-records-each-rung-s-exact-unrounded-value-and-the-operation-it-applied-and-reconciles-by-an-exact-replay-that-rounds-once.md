@@ -74,15 +74,20 @@ fa9a73c2` over `score.py`, `money.py`, `runtime.py`, `model_schema/scoring.py`,
 `/tmp/claude-1000/-home-puzhenhao1989-gi-pricing-plan/4596a3be-8b6e-4963-aa87-087f2df4e2bb/scratchpad/`.
 It is not committed. The interpreter is the root checkout's `.venv` (`zen-engine 0.53.0`,
 `numpy 2.5.2`), with `PYTHONPATH` set to this worktree's `packages/pricing-core/src` and
-`packages/model-schema/src`. The script prints `score.py`'s path to prove which builder it
-imported. It is reproduced in full in the appendix, sha256
-`02e8cdf280fdf6dea4e2f1d88eeefe5f971b39499bd455f7ef75271b644aa1d1`.
+`packages/model-schema/src`. `python -c 'import pricing_core.rating.score as s; print(s.__file__)'`
+under the same environment printed this worktree's `score.py`, which proves which builder the
+script imports. It is reproduced in full in the appendix, sha256
+`05b927376b7c93fb1c2e60430c14d8506f82e899799f28820c6490d5319cc96b` (*re-run on audit, 2026-09-30, with the clamp case and the magnitude counter added; every earlier figure reproduced unchanged*).
 
 **Steps.**
 1. `git worktree add <path> fa9a73c2` (any checkout of this tree).
 2. `export PYTHONPATH=<path>/packages/pricing-core/src:<path>/packages/model-schema/src`
-3. `python dp_s3_5_evidence.py 200 20260930`, then `200 7`, `500 1257`, and
-   `300 42 mixed` (the fourth puts rungs that apply more than one operation into the sweep).
+3. The four runs, verbatim: `python dp_s3_5_evidence.py 200 20260930 x`, `… 200 7 x`,
+   `… 500 1257 x` and `… 300 42 mixed x`. The third argument `mixed` puts rungs that apply
+   more than one operation into the sweep. In that run, the trailing `x` turns on the
+   `MISS` lines, which name any rung whose recorded operation differs from the applied one;
+   none printed. In the other three runs the `x` has no effect (`len(sys.argv) > 4` is
+   false).
 
 **What it builds.** A real ZEN decision: one expression node per rung, and one final node
 that reads every value with the engine's `string()`. It then runs:
@@ -90,7 +95,9 @@ that reads every value with the engine's `string()`. It then runs:
 - `replay_today` — the S3 plan's Acceptance 10 replay (`multiply` → `apply_factor`, `add` → `+`,
   `round`/`none` → unchanged);
 - `build_ruled` and `reconciles` — a prototype of this ruling's builder and predicate;
-- `plants` — deliberately broken ladders that the predicate must refuse.
+- `plants` — deliberately broken ladders that the predicate must refuse;
+- `clamp_case` — FD 9967's clamped ladder, built with the clamp node's generated
+  `__before` and `__bound` reads (part 5).
 
 ### Results
 
@@ -114,6 +121,26 @@ that reads every value with the engine's `string()`. It then runs:
   **1234**. The exact value rounded once gives **1235**. For `1235.49999999999999987645`,
   the float path gives 1236 and the exact path 1235. The sweeps below found no such case in
   realistic data (`payable_differs: 0`), but the mechanism is real.
+
+**1a. `DecimalStr` serialises exponent form** (added on audit, B2). Run at `fa9a73c2` with
+the same interpreter and `PYTHONPATH`:
+
+```text
+$ python -c "
+from pydantic import BaseModel
+from model_schema.money import DecimalStr, Relativity
+class M(BaseModel):
+    a: DecimalStr
+    r: Relativity
+for s in ('0.0000001','0.00000000000000000000000000012','10','1E+1','66000.440'):
+    m=M(a=s, r=s); print(repr(s), '->', m.model_dump_json())
+"
+'0.0000001' -> {"a":"1E-7","r":"1E-7"}
+'0.00000000000000000000000000012' -> {"a":"1.2E-28","r":"1.2E-28"}
+'10' -> {"a":"10","r":"10"}
+'1E+1' -> {"a":"1E+1","r":"1E+1"}
+'66000.440' -> {"a":"66000.440","r":"66000.440"}
+```
 
 **2. The auditor's case on today's builder** (raw 60000.4 → 66000.44 → 69402.0), reproduced:
 `risk 60000 · expense 66000 (×1.1000) · office 66000 · constraints 66000 · instalment 69399
@@ -146,7 +173,23 @@ that. This is why the predicate below checks every rung.
 **70725 ≠ 70726**. The ruled ladder is `61234 · 67358 (×1.1) · 67358 · 70726 (×1.05) ·
 70726`, and it reconciles. At 123456.7, today's replay gives 142593 ≠ 142592.
 
-**5. The scale sweep.** Premiums in every decade from 1e3 to 1e7 minor units, drawn as
+**5. A binding clamp** (added on audit, C1; FD 9967's reproduction shape). Risk 1305.4,
+office = risk × 1.1, a minimum-premium clamp at 5000 on office, instalment = office × 1.05:
+
+| Rung | Today | Ruled |
+|---|---|---|
+| risk_premium | 1305 | 1305 (1305.4) |
+| office_premium | **5000, ×3.8314** | 1436 (1435.94), ×1.1 |
+| constraints | 5000, `none` | 5000, **`clamp` min 5000**, `MIN_PREMIUM_APPLIED` |
+| instalment_loading | 5250, ×1.0500 | 5250 (5250.00), ×1.05 |
+| payable_premium | 5250 | 5250, round |
+
+The clamp's generated node returned `__before` = 1435.94 and the clamped value 5000 under
+the same name. The ruled ladder reconciles. With the minimum at 1000 (not binding), the
+`constraints` rung is `none` and the ladder reconciles. Two planted defects fail: the bound
++ 0.001, and the clamp recorded as `none`.
+
+**6. The scale sweep.** Premiums in every decade from 1e3 to 1e7 minor units, drawn as
 `float32` values like a real model's output. Every optional-rung count from 0 to 6. One
 random rung subset per (decade, count) cell. Table factors of 4 dp in [0.8, 1.4]; one
 gross-up rung (÷(1 − 0.125)); one IPT rung (×1.12 + 250).
@@ -160,6 +203,33 @@ gross-up rung (÷(1 − 0.125)); one IPT rung (×1.12 + 250).
 
 Where a cell shows 0 for today's replay, the last loading is the `add` rung, which absorbs
 the drift. The misstated-rung column shows that the drift is still there.
+
+**How large today's misstatement is** (added on audit, W2). The predicate, verbatim from the
+script: for every rung of today's ladder that is present and is not `payable_premium`,
+`abs(r.value_minor - rnd(values[present[r.rung]]))`, where `values` is the engine's exact
+`string()` value and `rnd` rounds half-even to 0 dp. Counted over the corpus of each run
+above, at tree `fa9a73c2`:
+
+| Run | Max by decade: 1e3 / 1e4 / 1e5 / 1e6 / 1e7 | Rungs off by 1 · 2 · 3–9 · ≥10 minor units |
+|---|---|---|
+| `200 20260930` | 1 / 8 / 101 / 951 / **9997** | 2052 · 682 · 1848 · 9012 |
+| `200 7` | 1 / 9 / 82 / 1050 / 12521 | 2958 · 837 · 1837 · 7152 |
+| `500 1257` | 1 / 11 / 101 / 1089 / 11724 | 7423 · 2015 · 4475 · 19005 |
+| `300 42 mixed` | 1 / 9 / 59 / 428 / 7820 | 3287 · 1409 · 4158 · 14300 |
+
+The cause is today's 4-dp factor quantisation (`score.py:610`). Each factor can be off by up
+to 5 × 10⁻⁵, so a rung is off by up to about 10⁻⁴ of its value. "1–2p" holds only at
+fixture scale (about 1e3). The quotes affected are the misstated-rung column of the sweep
+table: 4142 of 7000 (59 %) in seed 20260930, and 57–64 % across the four runs.
+
+**Payable near-tie flips** (condition 3 of the maintainer's W2 entry). The predicate,
+verbatim: `v1[-1].value_minor != payable`, today's payable rung (the float path) against
+the engine's exact payable value rounded once. The counts are **0 of 7000** (seed 20260930),
+**0 of 7000** (seed 7), **0 of 17 500** (seed 1257) and **0 of 10 500** (seed 42, mixed) — 0
+of 42 000 in all, at tree `fa9a73c2`. So the maximum payable delta observed is **0**. A flip
+can only move a payable by exactly 1 minor unit, because both paths round the same value
+to 0 dp and differ only in which side of a half the float lands. The two constructed cases
+in part 1 show that it can happen (1234 → 1235, 1236 → 1235).
 
 **Two design defects the sweep found in my own first prototype, both fixed before this
 ruling.** They are recorded so that S3 does not repeat them.
@@ -210,13 +280,24 @@ or amount". And it would make the reconciliation pass by construction, which is 
    So an exact equality between a replayed product and the engine's value would fail on
    realistic quotes that have a float model output at the base and several rungs above it.
    **Ruled: each operation must reproduce its own rung's unrounded value within 10⁻²⁶ of it,
-   relative.** One engine rounding is about 10⁻²⁸ relative, so this has a 10× margin, and at
-   1e7 minor units the tolerance is about 10⁻¹⁹ minor units. **The chained replay to the
+   relative.** One engine rounding is about 10⁻²⁸ relative, so this has a 100× margin.
+   auditor-plans measured the worst case over this ruling's sweep corpus at 2.7 × 10⁻²⁹,
+   about 370× inside it (*corrected on audit: this line first said 10×*). At 1e7 minor
+   units the tolerance is about 10⁻¹⁹ minor units. **The chained replay to the
    payable is exact at the penny**, which is FR-248's own statement.
 3. **"The true factor" includes the true divisor.** A commission gross-up, ÷(1 − c), has no
    finite decimal factor. Recorded as a truncated factor, its replay fails at ties (the
    first defect above). **Ruled: a `divide` operation**, so the ladder shows ÷0.875, which is
    what the rate manual says.
+
+**A binding clamp is a `clamp` operation on the `constraints` rung** (*added on audit,
+finding C1, 2026-09-30; the maintainer confirmed that C1 is ruled in this record*). Today
+a clamp's effect is carried by the rung it overwrites, and the `constraints` rung says only
+`none` (the finding filed under working id 9967). An `add` of the exact difference would
+replay correctly, but it states an addition, and a minimum premium is not an addition. So
+the ladder records what the clamp did: it set the value to a named bound. The rung before
+`constraints` carries the value before the clamp, read from the engine by the clamp's own
+generated node (part 5). The details are in §2, §3 and §5.
 
 **Not an ADR.** The decision is one module's contract. `03` owns it through FR-248, and
 `model-schema`, `pricing-core` and the backend trace summary only carry it. It is
@@ -229,15 +310,16 @@ For each rung present in `_RUNG_ORDER` (the fixed order is unchanged):
 1. **The value.** `unrounded_minor` is the engine's exact decimal for the name the rung's
    output step consumes, read through `string()` (`to_wire` adds that read as generated ZEN).
    The float in `result` is never used for ladder or payable arithmetic. The `constraints`
-   rung carries the previous rung's `unrounded_minor` and `rounding` forward, as today.
+   rung carries the previous rung's `rounding` forward. Its `unrounded_minor` is the previous
+   rung's value, or, when a clamp binds, the engine's value after the clamp (step 5).
 2. **The displayed value.** `value_minor` is `unrounded_minor` rounded once, with the rung's
    own output step's `RoundSpec`, which is recorded as `rounding`. It is never computed from
    another rung's `value_minor`. So displayed values do not multiply into each other: 60000
    ×1.1 is shown as 66000, because the unrounded value is 66000.44. The unrounded column is
    the one that replays.
 3. **The operation.** The first rung has none (`null`). The `payable_premium` rung, when it
-   is not first, has `round` with its declared `mode` and `dp`. `constraints` has `none`
-   with `applied`, as today. `ipt_and_fees`, or any rung whose previous value is 0, has
+   is not first, has `round` with its declared `mode` and `dp`. `constraints` has `clamp`
+   when a clamp binds (step 5), and otherwise `none`, with `applied` in both cases. `ipt_and_fees`, or any rung whose previous value is 0, has
    `add`. Every other rung, and a checkpoint rung whose value changed (today's "degrades to
    `multiply`" convention, `score.py:89-96`), gets the operation it applied, recovered from
    the two unrounded values in this order:
@@ -253,7 +335,31 @@ For each rung present in `_RUNG_ORDER` (the fixed order is unchanged):
 
    An unchanged non-multiply rung (the `office_premium` checkpoint) is `none`. An unchanged
    multiply rung is ×1.
-4. **What the ladder never does.** It never records a jump it cannot explain as `round`. If
+5. **A binding clamp.** A clamp is a `constraint` step with `on_violation: "clamp"`. It
+   overwrites the name it produces in place (`runtime.py:275-279`, `_constraint_node`).
+   - **The read.** `_constraint_node` adds generated expressions to the clamp's own node,
+     ahead of the clamp expression: `<step_id>__before` = `string(<consumed name>)`, the
+     exact value before the clamp, and one `string()` of each bound expression. Part 5
+     shows that the engine returns both, and returns the clamped value under the name.
+     These are generated strings, so RL-1312's authored-string check does not read them
+     (RL-1312 item 1: generated ZEN is "outside the check, which reads authored strings
+     before they are wired").
+   - **Where it goes.** When a clamp binds on the source name of **the last rung present
+     before `constraints`**, that rung's `unrounded_minor` is the value before the first
+     binding clamp on that name, and its operation is recovered against it (step 3). The
+     `constraints` rung's `unrounded_minor` is the engine's value after the clamp.
+   - **The operation.** `kind: "clamp"`, with `bound` (`"min"` or `"max"`: the side the
+     final value equals), `bound_unrounded_minor` (that bound's exact value) and `applied`
+     (every binding clamp's reason code, in step order). If two clamps bind on the same
+     name, the operation names the last one, which set the value.
+   - **A clamp that the ladder cannot place.** A clamp that binds on any other name — the
+     source of an earlier rung, which later rungs before `constraints` then consume — cannot
+     be stated at the `constraints` position without breaking the chain. The builder records
+     the engine's values as they are, and R0 fails the ladder (§5). FR-247 puts
+     `constraints` after `optimisation_adjustment`, so an algorithm that clamps earlier has
+     a ladder the platform cannot state truthfully.
+   - A `decline` or `error` constraint changes no value, as today.
+6. **What the ladder never does.** It never records a jump it cannot explain as `round`. If
    the payable source differs from the previous rung's value, the builder still records
    the true `unrounded_minor`, and the predicate fails. It never recovers a factor from
    rounded values, and it never quantises an operand to a fixed number of places.
@@ -266,39 +372,80 @@ contract is regenerated.
 
 | Shape | Field | Change | Type and representation |
 |---|---|---|---|
-| `LadderRung` | `unrounded_minor` | **added** | an exact decimal string in minor units: `DecimalStr` (`model_schema/money.py:85`), JSON `common/money.schema.json#/$defs/Decimal` |
+| `LadderRung` | `unrounded_minor` | **added** | exact decimal, minor units: `PositionalDecimalStr` (below); JSON `common/money.schema.json#/$defs/Decimal` |
 | `LadderRung` | `rounding` | **added** | `{mode, dp}`, JSON `common/money.schema.json#/$defs/Rounding`; the rung's declared rounding |
 | `LadderRung` | `value_minor` | meaning restated | `MoneyMinor`: `unrounded_minor` rounded once with `rounding` |
-| `LadderOperation.kind` | `divide` | **added** to the enum | `multiply`, `divide`, `add`, `round`, `none` |
-| `LadderOperation` | `divisor` | **added** | a decimal string, like `factor` |
-| `LadderOperation` | `amount_unrounded_minor` | **added** | an exact decimal string in minor units: the `add` operand |
-| `LadderOperation` | `factor` | meaning restated | the factor the rung applied, in full; never quantised to 4 dp |
+| `LadderOperation.kind` | `divide`, `clamp` | **added** to the enum | `multiply`, `divide`, `add`, `clamp`, `round`, `none` |
+| `LadderOperation` | `factor` | type and meaning changed | `PositionalDecimalStr` (was `str`); the factor the rung applied, in full; never quantised to 4 dp |
+| `LadderOperation` | `divisor` | **added** | `PositionalDecimalStr`; the `divide` operand |
+| `LadderOperation` | `amount_unrounded_minor` | **added** | `PositionalDecimalStr`, minor units; the `add` operand |
+| `LadderOperation` | `bound` | **added** | `"min"` or `"max"`; on `clamp` only |
+| `LadderOperation` | `bound_unrounded_minor` | **added** | `PositionalDecimalStr`, minor units; the bound the clamp set; on `clamp` only |
+| `LadderOperation` | `applied` | meaning widened | reason codes of the binding clamps, on `constraints`, with `clamp` or `none` |
 | `LadderOperation` | `amount_minor` | **legacy** | kept only so that stored pre-ruling ladders validate; the builder no longer emits it |
 | `LadderOperation` | `mode`, `dp` | narrowed | emitted only on `round` |
 | `ScoringResult` invariant | `scoring.schema.json:60` | reworded | to FR-248 as amended |
 
 - **The new fields are optional in both schemas**, not in `required`. Stored ladders are
   write-once and lack them, and `extra="forbid"` models would otherwise refuse to read them.
-  **The builder emits every new field on every rung it builds**, and S3 tests that.
-- **Never a float and never exponent notation.** Every decimal string is positional, and
-  matches `^-?[0-9]+(\.[0-9]+)?$`. `DecimalStr` serialises with `str(Decimal)`, which gives
-  `1E+1` for a normalised 10 and `1E-7` for a small amount. **S3 renders each value with
-  `format(value, "f")` before it becomes a field**, and a test covers a factor of 10 and an
-  amount below 10⁻⁶.
+  **The builder emits every new field that applies to each rung it builds**, and S3 tests
+  that.
+- **The decimal type: a new `PositionalDecimalStr`, not a change to `DecimalStr`** (*ruled
+  on audit, finding B2; this record first said that S3 would render each value with
+  `format(value, "f")` before it became a field, and that does not work*). `DecimalStr`
+  (`model_schema/money.py:85-91`) re-parses the value and re-serialises it with `str()`.
+  So whatever the builder renders, `"0.0000001"` serialises as `"1E-7"` and
+  `"0.00000000000000000000000000012"` as `"1.2E-28"` (verified at `fa9a73c2`, part 1a).
+  Both break the type's own JSON Schema pattern `^-?[0-9]+(\.[0-9]+)?$`. The fix belongs in
+  the type:
+  - **Ruled: `PositionalDecimalStr` in `model_schema/money.py`**, beside `DecimalStr`, with
+    the same float refusal and the same JSON Schema, and a serialiser that renders
+    `format(value, "f")`. The five ladder fields above use it.
+  - **Not `DecimalStr` itself.** `DecimalStr` has 23 uses in `model_schema` outside
+    `money.py` (`git grep -n "DecimalStr\b" -- packages/model-schema/src | grep -v money.py`
+    at `fa9a73c2`), some of them in content-hashed artifacts. Changing its serialiser
+    would change stored bytes and hashes beyond this slice. That is recorded as an
+    observation for the lead below.
+  - **This is a `model-schema` contract change.** S3's write set therefore carries
+    `model_schema/money.py`, the regenerated `docs/contracts/` (the generator's `--check`
+    green) and the contract guard (`backend/tests/test_contracts.py`, the `contract-guard`
+    skill), quoted in the ledger.
 - `Trace.ladder_check_version` (the S3 plan's Acceptance 10) value `2` means **this ruling's
   predicate over this ruling's shape**. S3 ships both together, so a version-2 trace never
   carries a pre-ruling ladder.
 
 ### 4. `outputs`, displayed values, stored ladders, golden quotes and Regression Suites
 
-- **`outputs`.** `_build_outputs` keeps reusing the rung's `value_minor` (`score.py:641`),
-  so outputs and ladder never disagree. A declared rung output such as
-  `office_premium_minor` becomes that rung's engine value rounded once: 67358, not
-  today's 67357, in the 61234.5 case. That is FR-226's declared rounding applied to the
-  real value, and it is a correction. It needs no governance beyond this ruling.
+- **`outputs`, and the rung values it serves: they change on most quotes** (*restated on
+  audit, W2*). `_build_outputs` keeps reusing the rung's `value_minor` (`score.py:641`), so
+  outputs and ladder never disagree. Every declared non-payable rung output (for example
+  `office_premium_minor`, served by `/score`) becomes that rung's engine value rounded once.
+  **On most quotes that is a different number from today's**: about 59 % of quotes, by up
+  to about 10⁻⁴ of the value — 1–2p at 1e3, and up to 9997 minor units at 1e7 in seed
+  20260930 (the magnitude table in the results). In the 61234.5 case it is 67358, not
+  today's 67357. It is a correction: today's number is FD 9949's drift.
+- **The maintainer's acceptance of that change**, quoted verbatim from the dated
+  CORRECTION in `to-lead.md`, which supersedes the maintainer's earlier W2 line (that line
+  said "1–2p on ~59% of quotes"; the measurement above contradicted it, and the correction
+  replaced it):
+
+  > "2026-09-30 — the maintainer (by delegation) accepts RL 9963's change to declared non-payable rung outputs (the error today is about 1e-4 relative, from 4-dp factor quantisation; measured maximum 9997 minor units at the 1e7 scale; ~59% of quotes affected, per dm-eh-s3's sweep at fa9a73c2, seed 20260930) as a correction of FD 9949's drift, on conditions 1–3 of the W2 entry. Payable prices are accepted as changing only at near-ties, by at most 1 minor unit, as condition 3's count in RL 9963 must show; any payable change beyond that voids this acceptance."
+
+  The three conditions, as relayed by the lead, and where each is met:
+  1. *A dated `03` note stating the change, its cause and its magnitude* — this commit adds
+     it to §4.4, with the per-decade maxima and the histogram.
+  2. *A CHANGELOG or release-note line in the S3 slice* — no CHANGELOG exists at `fa9a73c2`
+     (`git ls-files | grep -i -E "changelog|release-notes"` prints nothing). **Ruled: S3
+     carries the release-note line in its squash-commit body and in its ledger** (the
+     squash body is the permanent record, `git-hygiene`). Whether to start a CHANGELOG file
+     is the lead's call, not this ruling's.
+  3. *The count of payables that move at near-ties, and by how much* — **0 of 42 000**
+     sweep quotes across four runs at `fa9a73c2`, maximum delta 0; a flip can move a
+     payable by exactly 1 minor unit (the results, "Payable near-tie flips").
 - **The price.** `payable_premium` becomes the engine's exact value rounded once. It
-  differs from today's float path only at a near-tie within float resolution (part 1). Over
-  42 000 sweep quotes it differed 0 times.
+  differs from today's float path only at a near-tie within float resolution (part 1), by
+  exactly 1 minor unit; the sweeps found no such quote. **Any golden re-baseline is dated
+  and needs the maintainer's ACK** (the maintainer's W2 decision).
 - **Stored served ladders and traces are not re-baselined.** They are write-once (`UPDATE`
   is revoked on `scoring_traces` by migration `835988d1de4c`, `backend/src/app/platform/traces.py:208`), and they keep their old shape. The absence of
   `unrounded_minor`, and a `ladder_check_version` that is absent or 1, identify them. **One
@@ -325,16 +472,26 @@ FD 9949's limb 1. The Python signature is S3's to choose.
 
 **The ladder reconciles when all of these hold.**
 - **R0 Shape.** The ladder is empty, or its last rung is `payable_premium`. The first rung
-  has no operation, and every later rung has one. `round` appears only on the last rung.
+  has no operation, and every later rung has one. `round` appears only on the last rung, and
+  `clamp` only on `constraints`. No clamp binds on a name other than the source of the last
+  rung before `constraints` (§2 step 5).
 - **R1 Sources.** For every rung except `constraints`: `unrounded_minor == E(rung)` exactly,
-  and `rounding == D(rung)`. `constraints` equals the previous rung in both.
+  and `rounding == D(rung)`. When a clamp binds on a rung's source, `E(rung)` is the value
+  before the clamp (the generated `__before` read), and `E(constraints)` is the engine's
+  value after it; `constraints` must then equal `E(constraints)`. With no binding clamp,
+  `constraints` equals the previous rung. Its `rounding` always equals the previous
+  rung's.
 - **R2 Display.** Every `value_minor == round(unrounded_minor, rounding)`.
 - **R3 Each operation explains its rung.** Applying the operation to the previous rung's
   `unrounded_minor`, in exact decimal arithmetic, agrees with this rung's `unrounded_minor`
   within 10⁻²⁶ of it, relative. `none` and `round` require equality with the previous
-  rung's value.
+  rung's value. `clamp` requires the rung's value to equal `bound_unrounded_minor` exactly,
+  the bound to equal the engine's value of that bound expression, and the previous rung's
+  value to lie strictly on the far side of it (below a `min`, above a `max`), because the
+  clamp binds only then.
 - **R4 The replay (FR-248).** Start from the first rung's `unrounded_minor`, and apply every
-  recorded operation in order with no rounding. Then apply the `payable_premium` rung's
+  recorded operation in order with no rounding (a `clamp` sets the running value to its
+  bound). Then apply the `payable_premium` rung's
   `round`, the only rounding. The result equals that rung's `value_minor` **and** the priced
   payable, to the penny.
 
@@ -391,9 +548,13 @@ S3 carries each item red first, shown failing on `origin/main`.
 4. **The binding:** the near-tie case from part 1 prices 1235, not 1234. A rung value is
    never read from the float; a test fails if `_build_ladder` receives only floats.
 5. **The contract:** every rung of a new result carries `unrounded_minor` and `rounding`;
-   the positional-string cases in §3 hold; a new `ScoringResult` validates against the
-   hand-authored and the generated schema; a stored pre-ruling ladder still validates; and
-   the contract guard is green.
+   a new `ScoringResult` validates against the hand-authored and the generated schema; a
+   stored pre-ruling ladder still validates; and the contract guard is green.
+   **`PositionalDecimalStr`, red first:** a model holding `Decimal("0.0000001")`,
+   `Decimal("1.2E-28")` and `Decimal("1E+1")` in a ladder field serialises them as
+   `"0.0000001"`, `"0.00000000000000000000000000012"` and `"10"`. Today's `DecimalStr`
+   gives `"1E-7"`, `"1.2E-28"` and `"1E+1"` (part 1a), so the test is red until the type
+   exists.
 6. **The shapes in §5:** a first rung that is not `risk_premium`; a payable-only ladder; a
    ladder with rungs but no payable rung.
 7. **The re-derivation test** (`test_rating_score.py:191-231`) is replaced by R4. Its
@@ -403,11 +564,31 @@ S3 carries each item red first, shown failing on `origin/main`.
    predicate, and adds: no committed golden quote's payable changes.
 9. The ledger records `scripts/bench-rating.py` before and after (one extra generated node
    with one `string()` per rung). No budget is changed here.
+10. **A binding clamp (FD 9967), red first.** On the finding's reproduction (the score
+    fixture with `min_premium_minor` 5000): `office_premium` stays **1436** with factor
+    ×1.1; `constraints` is **5000** with `kind: "clamp"`, `bound: "min"`,
+    `bound_unrounded_minor: "5000"` and `MIN_PREMIUM_APPLIED` in `applied`; instalment and
+    payable stay 5250; the ladder reconciles. Today, `office_premium` is 5000 and
+    `constraints` is `none` (part 5). The unclamped case is unchanged. **Planted:** the
+    bound + 0.001, and the clamp recorded as `none`, each fail the predicate. **A clamp the
+    ladder cannot place** (on the source of an earlier rung that a later pre-`constraints`
+    rung consumes) fails R0. A `max` clamp is covered as well as a `min`, since the finding
+    did not measure one.
+11. **An engine-precision guard (W3).** A test pins what the 10⁻²⁶ tolerance rests on: on
+    `zen-engine` 0.53.0, the chain in part 1 returns an eighth product of 29 significant
+    digits that differs from the exact 30-digit product (`2095.3120014523377649903134154`).
+    If an engine upgrade changes the engine's precision, the test fails, and the tolerance
+    is re-ruled before the upgrade lands. The test sits beside FR-273's startup self-check
+    (`assert_integer_minor_round_trip`, `03` §5.2).
+12. **The release-note line** (W2, condition 2) is in S3's squash-commit body and ledger,
+    and it states the change to declared non-payable rung outputs and its measured size.
 
 ## What it obliges
 
 WK-674 Slice 3 (the leaf plan filed under working id 9947), in Task 6:
-- the builder (§2) and `to_wire`'s generated `string()` read (`runtime.py`);
+- the builder (§2) and `to_wire`'s generated `string()` read, and `_constraint_node`'s
+  generated `__before` and bound reads (`runtime.py`);
+- `PositionalDecimalStr` in `model_schema/money.py` (§3);
 - the contract (§3): `model_schema.scoring`, the hand-authored `scoring.schema.json` and the
   regenerated contract, in one commit with **§4.4's example replaced**, as the dated note
   added there by this commit says;
@@ -419,20 +600,53 @@ WK-674 Slice 3 (the leaf plan filed under working id 9947), in Task 6:
   `model_schema/scoring.py`'s `LadderOperation` and module docstrings;
 - the Acceptance section above.
 
-**This record supersedes the S3 plan's Acceptance 10 replay rule** ("`multiply` →
-`apply_factor(prev, Decimal(factor), mode)` … `round` at `dp = 0` → `prev` unchanged"). That
-rule rounds at every rung. Everything else in Acceptance 10 stands: the call-site red case,
-the property red case, `ladder_check_version`, "never sampled", and the raise-site census.
+**S3's write set gains** (beyond the plan's rows at `:391-393`):
+`packages/pricing-core/src/pricing_core/rating/runtime.py` (`to_wire`, `_constraint_node`);
+`packages/model-schema/src/model_schema/money.py` (the new type); `docs/contracts/`
+regenerated, with `scripts/generate-contracts.py --check` green; the contract guard,
+`backend/tests/test_contracts.py`; and `docs/specs/03-rating-engine.md` §4.4 (the example
+replacement). These edit existing files, so each serialises with any in-flight slice
+editing the same file, by the plan's own rule for its rows.
+
+**What this record supersedes in the S3 plan** (*rewritten on audit, finding B1: this
+paragraph first said that only the replay rule was superseded, and that was false*). The
+plan is read at `06e3e896` on branch `wk674-s3-leaf-plan`. Each item below is replaced by
+the section of this record named beside it:
+
+| Plan item (quoted) | Replaced by |
+|---|---|
+| Acceptance 10, "The signature changes": "`reconcile_ladder` receives the **recorded operations** … and the **real** risk premium, the algorithm's own risk-premium output, never the first rung" | §5 *Inputs*: the ladder, plus `E(rung)` and `D(rung)` for every rung, read from the result and the algorithm; the anchor is the first rung present, whatever its name |
+| Acceptance 10, "the risk premium's source and check": "the check takes that **unrounded** output value and the step's declared rounding mode, rounds it once, and requires the first rung's `value_minor` to equal the result" | §5 R1 and R2: the first rung's `unrounded_minor` equals `E(rung)` exactly, and its `value_minor` equals that value rounded once |
+| Acceptance 10, "the four operation kinds … `multiply` → `apply_factor(prev, Decimal(factor), mode)` … `add` → `prev + amount_minor`; `round` at `dp = 0` → `prev` unchanged …; `none` → `prev` unchanged (the `constraints` rung, whose `applied` codes explain nothing numeric)" | §3 and §5 R3–R4: six kinds (`multiply`, `divide`, `add`, `clamp`, `round`, `none`), replayed on unrounded values in exact decimal arithmetic; `add` uses `amount_unrounded_minor`; `constraints` is `clamp` when a clamp binds |
+| Acceptance 10, "the comparison: every replayed value equals that rung's recorded `value_minor`, and the last equals `payable_premium` — to the penny, integers throughout" | §5 R2–R4: displays equal their own value rounded once; each operation agrees within 10⁻²⁶ relative; the chained replay rounds once and equals the payable to the penny |
+| Acceptance 10, "Never sampled": the rationale "it is integer arithmetic over a handful of rungs" | The conclusion stands (every quote, every Environment). The rationale becomes: exact decimal arithmetic, in a context of at least 100 digits, over a handful of rungs |
+| Global Constraints: "the reconciliation compares integers" | It compares integers at the payable and the displays (R2, R4), and exact decimals on the chain (R1, R3) |
+
+**Everything else in Acceptance 10 stands:** the corrected premise; the false-positive
+control (extended by Acceptance 8 above); the call-site red case with `trace=True` and the
+untraced failure's signal; the property red case; the raise-site census (the message
+carries rung names and the difference, which is now a decimal string in minor units); and
+`ladder_check_version`.
+
+**The delta travels in S3's dispatch record.** A plan is frozen by family, a draft
+included (`document-ids.md` §1.5), so the lead's dispatch record for WK-674 Slice 3 carries
+the table above, and the slice's ledger quotes it in Task 0.
 The plan's Acceptance 1 dated clauses on FR-248 and NFR-496 ("never sampled") still land
 in S3's Task 1, beside this commit's clause.
 
-**This commit edits `03` in two places:** FR-248 gains the dated clause above (`03:155`),
-and §4.4 gains a dated note that the example does not reconcile (24_150 × 1.15 =
-27_772.5, not 27_780) and will be replaced by S3. No other spec, no plan, no roadmap and
-no contract is edited here.
+**This commit edits `03` in two places:** FR-248 gains the dated clause (`03:155`), which
+now also records the clamp and says "exactly where the engine did not round, and to the
+engine's precision where it did" (W4). §4.4 gains a dated note: the example does not
+reconcile (24_150 × 1.15 = 27_772.5, not 27_780); the new kinds and fields; and W2's
+condition 1, the change to declared rung outputs with its cause, maxima and histogram.
+S3 replaces the example. The generated reads in `runtime.py` need no spec change: `03`
+§5.2 declares `to_wire`'s signature (`:874-875`) and says nothing of its generated
+expressions, and neither signature changes. No other spec, no plan, no roadmap and no
+contract is edited here.
 
 **Departures from the maintainer's steer:** three, as ruled in §1: the string read, the
-engine-precision tolerance on each rung's own check, and `divide`. Two limbs of the steer
+engine-precision tolerance on each rung's own check, and `divide`. The `clamp` kind (C1) is
+an addition the steer did not address, not a departure from it. Two limbs of the steer
 stand unchanged: true operands, and one rounding on the replay path.
 
 ## Observed, not ruled (for the lead)
@@ -446,20 +660,19 @@ stand unchanged: true operands, and one rounding on the replay path.
   "rather than allowing a silent loss of precision deep in a ladder", but compilation
   cannot see runtime values. The effect is about 10⁻²⁸ relative, and this ruling tolerates
   it. The requirement's wording is a separate question.
-- **A clamp's effect is shown on the `office_premium` rung, not on `constraints`.** The
-  clamp overwrites `office_premium_minor` in place (`runtime.py`'s constraint node), so the
-  builder sees only the clamped value. `test_rating_score.py:262-276` shows the clamp at
-  `office_premium` (999_999) and only its reason code on `constraints`. Under this ruling,
-  that rung records the exact effective operation. That is true, but it is attributed to
-  the wrong rung. Fixing it needs the pre-clamp value from the engine, which is outside
-  DP-S3-5.
+- **The shared `DecimalStr` and `Relativity` types can emit exponent form** (found on
+  audit, B2). Both serialise with `str()` (`model_schema/money.py:85-100`), so
+  `Decimal("0.0000001")` becomes `"1E-7"`, which their own JSON Schema pattern refuses. This
+  ruling does not change them (§3 says why). Whether any stored value is affected, and the
+  fix, are a separate question for the lead.
+- *(Removed on audit: the clamp-attribution item is now ruled, §1 and §2 step 5.)*
 - **This ruling interacts with OQ-1316.** If OQ-1316 is decided (a) (an intermediate
   rounding recorded as its own rung), R0's "`round` only on the last rung" must be amended
   by that ruling.
 
 ## Appendix — the evidence script, verbatim
 
-`dp_s3_5_evidence.py`, sha256 `02e8cdf280fdf6dea4e2f1d88eeefe5f971b39499bd455f7ef75271b644aa1d1`:
+`dp_s3_5_evidence.py`, sha256 `05b927376b7c93fb1c2e60430c14d8506f82e899799f28820c6490d5319cc96b`:
 
 ```python
 """DP-S3-5 evidence (RL-9963). Scratch only, never committed.
@@ -483,6 +696,7 @@ from model_schema.rating import RatingOutputStep
 from pricing_core.money import apply_factor
 
 ENGINE = zen.ZenEngine()
+DIFF_MAX, DIFF_HIST = {}, {}
 
 
 # ---- a real ZEN graph: a chain of expression nodes, then one node that reads every value as
@@ -494,14 +708,16 @@ def _node(nid, exprs):
 
 
 def evaluate(steps, inputs):
-    """steps: [(key, expr)] evaluated in order. Returns the result, with `<key>__exact`."""
+    """steps: [(key, expr)], or [[(key, expr), ...]] for one node with several expressions,
+    evaluated in order. Returns the result, with `<key>__exact` for every key."""
     nodes = [{"id": "in", "type": "inputNode", "name": "in", "position": {"x": 0, "y": 0}}]
     edges, prev = [], "in"
-    for i, (key, expr) in enumerate(steps):
-        nodes.append(_node(f"n{i}", [(key, expr)]))
+    steps = [s if isinstance(s, list) else [s] for s in steps]
+    for i, exprs in enumerate(steps):
+        nodes.append(_node(f"n{i}", exprs))
         edges.append({"id": f"e{i}", "sourceId": prev, "targetId": f"n{i}", "type": "edge"})
         prev = f"n{i}"
-    keys = sorted({k for k, _ in steps} | set(inputs))
+    keys = sorted({k for exprs in steps for k, _ in exprs} | set(inputs))
     nodes.append(_node("exact", [(f"{k}__exact", f"string({k})") for k in keys]))
     nodes.append({"id": "out", "type": "outputNode", "name": "out", "position": {"x": 0, "y": 0}})
     edges += [{"id": "ex", "sourceId": prev, "targetId": "exact", "type": "edge"},
@@ -601,17 +817,26 @@ def exact(op, a, b):
         return {"+": a + b, "-": a - b, "*": a * b}[op]
 
 
-def build_ruled(present, values):
-    """present: rung -> source key; values: key -> the engine's exact Decimal."""
+def build_ruled(present, values, clamp=None):
+    """present: rung -> source key; values: key -> the engine's exact Decimal. clamp: a binding
+    clamp on the source of the last rung before `constraints`: {key, before, side, bound, code}."""
     ladder, prev = [], None
     for rung in ORDER:
         if rung == "constraints":
-            if prev is not None:
+            if prev is not None and clamp:
+                u = values[clamp["key"]]  # the engine's post-clamp value
+                op = {"kind": "clamp", "bound": clamp["side"], "bound_value": format(clamp["bound"], "f"),
+                      "applied": [clamp["code"]]}
+                ladder.append({"rung": rung, "u": u, "value_minor": rnd(u), "op": op})
+                prev = u
+            elif prev is not None:
                 ladder.append({"rung": rung, "u": prev, "value_minor": rnd(prev), "op": {"kind": "none"}})
             continue
         if rung not in present:
             continue
         u = values[present[rung]]
+        if clamp and present[rung] == clamp["key"] and ORDER.index(rung) < ORDER.index("constraints"):
+            u = clamp["before"]  # the pre-clamp value, read by the generated clamp node
         if prev is None:
             op = None
         elif rung == "payable_premium":
@@ -634,7 +859,7 @@ def reconciles(ladder, anchors, payable_minor):
         return False
     v = ladder[0]["u"]
     for i, r in enumerate(ladder):
-        if r["rung"] != "constraints" and r["u"] != anchors[r["rung"]]:
+        if (r["rung"] != "constraints" or "constraints" in anchors) and r["u"] != anchors[r["rung"]]:
             return False                                       # R1 sources
         if r["value_minor"] != rnd(r["u"]):
             return False                                       # R2 display, rounded once
@@ -652,6 +877,13 @@ def reconciles(ladder, anchors, payable_minor):
             local, v = _div(prev["u"], Decimal(op["divisor"])), _div(v, Decimal(op["divisor"]))
         elif op["kind"] == "add":
             local, v = exact("+", prev["u"], Decimal(op["amount"])), exact("+", v, Decimal(op["amount"]))
+        elif op["kind"] == "clamp":
+            bound = Decimal(op["bound_value"])
+            if not (prev["u"] < bound if op["bound"] == "min" else prev["u"] > bound):
+                return False                                   # R3 the clamp bound
+            if r["u"] != bound:
+                return False                                   # R3 the rung is the bound
+            local, v = bound, bound                            # R4 the replay takes the bound
         else:
             local = prev["u"]
         if not agrees(local, r["u"]):
@@ -706,6 +938,36 @@ def ladder_case(risk, loadings, print_it=False):
     return v1, v2, anchors, payable, present, values
 
 
+def clamp_case(risk, min_p, plant=None):
+    """FD 9967's shape: office = risk * 1.1, a min-premium clamp on office, instalment = office * 1.05.
+    The generated clamp node also reads the exact pre-clamp value and the bound (`__before`, `__bound`)."""
+    steps = [("k_office", "k_risk * 1.1"),
+             [("s_clamp__before", "string(k_office)"), ("s_clamp__violated", "!(k_office >= min_p)"),
+              ("k_office", "(k_office < (min_p) ? (min_p) : k_office)"), ("s_clamp__bound", "string(min_p)")],
+             ("k_inst", "k_office * 1.05")]
+    result = evaluate(steps, {"k_risk": risk, "min_p": min_p})
+    present = {"risk_premium": "k_risk", "office_premium": "k_office", "instalment_loading": "k_inst",
+               "payable_premium": "k_inst"}
+    values = {k: Decimal(result[f"{k}__exact"]) for k in set(present.values())}
+    fired = result["s_clamp__violated"]
+    clamp = {"key": "k_office", "before": Decimal(result["s_clamp__before"]), "side": "min",
+             "bound": Decimal(result["s_clamp__bound"]), "code": "MIN_PREMIUM_APPLIED"} if fired else None
+    v1 = today(present, result)
+    v2 = build_ruled(present, values, clamp)
+    anchors = {r: values[k] for r, k in present.items()}
+    if clamp:
+        anchors["office_premium"], anchors["constraints"] = clamp["before"], values["k_office"]
+    if plant == "bound+0.001":
+        v2[2]["op"]["bound_value"] = str(Decimal(v2[2]["op"]["bound_value"]) + Decimal("0.001"))
+    if plant == "clamp-as-none":
+        v2[2]["op"] = {"kind": "none"}
+    payable = rnd(values["k_inst"])
+    print(f"  risk={risk} min={min_p} fired={fired} plant={plant}")
+    print("   today:", [(r.rung, r.value_minor, r.operation and (r.operation.kind, r.operation.factor or r.operation.applied)) for r in v1])
+    print("   ruled:", [(r["rung"], r["value_minor"], format(r["u"], "f"), r["op"] and {k: v for k, v in r["op"].items() if v}) for r in v2])
+    print("   ruled reconciles:", reconciles(v2, anchors, payable))
+
+
 def part_engine_boundary():
     print("== 1. the binding: float vs string, and the engine's own precision")
     r = 1304.837261934
@@ -745,7 +1007,12 @@ def main(n_per_cell, seed):
     for risk in (61234.5, 123456.7):
         print(" risk", risk)
         ladder_case(risk, [("office_premium", "{p} * 1.1"), ("instalment_loading", "{p} * 1.05")], True)
-    print(f"== 5. scale sweep: {n_per_cell} quotes per (decade, optional-rung count), seed {seed}, argv {sys.argv[3:]}")
+    print("== 5. a binding clamp (FD 9967), the pre-clamp read, and two planted clamp defects")
+    clamp_case(1305.4, 5000)
+    clamp_case(1305.4, 1000)
+    clamp_case(1305.4, 5000, plant="bound+0.001")
+    clamp_case(1305.4, 5000, plant="clamp-as-none")
+    print(f"== 6. scale sweep: {n_per_cell} quotes per (decade, optional-rung count), seed {seed}, argv {sys.argv[3:]}")
     rng = random.Random(seed)
     optional = [("expense_loading", "mul"), ("commission", "gross"), ("profit_loading", "mul"),
                 ("optimisation_adjustment", "mul"), ("instalment_loading", "mul"), ("ipt_and_fees", "ipt")]
@@ -780,6 +1047,13 @@ def main(n_per_cell, seed):
                     totals["today_replay_fails"] += 1; cell_today += 1
                 if any(r.value_minor != rnd(values[present[r.rung]]) for r in v1 if r.rung in present):
                     totals["today_rung_misstated"] += 1
+                for r in v1:
+                    if r.rung in present and r.rung != "payable_premium":
+                        diff = abs(r.value_minor - rnd(values[present[r.rung]]))
+                        if diff:
+                            key = f"1e{decade}"
+                            DIFF_MAX[key] = max(DIFF_MAX.get(key, 0), diff)
+                            DIFF_HIST[min(diff, 10)] = DIFF_HIST.get(min(diff, 10), 0) + 1
                 if any(r.rung in applied and applied[r.rung][0] == "multiply" and Decimal(r.operation.factor) != Decimal(applied[r.rung][1]) for r in v1):
                     totals["today_factor_wrong"] += 1
                 if not reconciles(v2, anchors, payable):
@@ -798,6 +1072,8 @@ def main(n_per_cell, seed):
             names = ",".join(r.split("_")[0] for r, _ in chosen) or "-"
             print(f"  1e{decade}   {count}     {names:<48} {cell_today:<18} {cell_ruled}")
     print("  totals:", totals)
+    print("  today's non-payable rung value minus its engine value rounded once, |diff| by decade (max):", DIFF_MAX)
+    print("  rungs by |diff| in minor units (10 = 10 or more):", dict(sorted(DIFF_HIST.items())))
 
 
 if __name__ == "__main__":
