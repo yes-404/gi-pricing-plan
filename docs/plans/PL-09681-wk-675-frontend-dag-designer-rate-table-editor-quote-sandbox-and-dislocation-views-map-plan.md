@@ -202,7 +202,7 @@ finding's id is written as its working id until it mints), option D, splits them
 
 - **Jobs** (`/jobs`, `07:390`) and **Job detail** (`/jobs/:id`, `07:391`) are **WK-675's**, as
   **S13** and **S14** (appended). No spec change is needed: every route is declared
-  (`07:301-305`) and built (`backend/src/app/api/jobs.py:105-254`). They are bound by FR-402's UI
+  (`07:301-305`) and built (`backend/src/app/api/jobs.py:105-317`, through the `/{job_id}/events` handler). They are bound by FR-402's UI
   limb ("viewable in the UI with the `trace_id`", `07:91`) and FR-401 (cancellation, `07:90`).
   S13 closes `reachability.test.ts`'s waiting exception and corrects its comment
   (`frontend/src/router/__tests__/reachability.test.ts:33` cites FR-24 for "the jobs view is a
@@ -210,15 +210,17 @@ finding's id is written as its working id until it mints), option D, splits them
 - **Service accounts** (`07:393`) goes to **WK-676** in P3, by a dated roadmap line (the lead's).
 - **Settings** (`07:394`) and **System status** (`07:395`) go to P3, to "a P3 platform Work, or
   WK-1251"; the planner names which. **Recommendation: a new P3 platform-administration Work,
-  not WK-1251.** WK-1251 is *Production packaging and supply chain*: FR-432 (container images),
-  FR-433 (the Helm chart), FR-438 (signed images with an SBOM) and three NFRs (`roadmap.md`,
-  `### WK-1251`). Those are build- and deploy-time. The two views are runtime administration:
+  not WK-1251.** WK-1251 is *Production packaging and supply chain*: it owns FR-432 (container
+  images), FR-433 (the Helm chart), FR-438 (signed images with an SBOM), NFR-530, NFR-533 and
+  NFR-461 (`roadmap.md`, `### WK-1251`). Those are build- and deploy-time. The two views are runtime administration:
   Settings reads FR-446's effective value and its source, and System status reads FR-443's
   metrics and FR-444's health endpoints. Each needs a spec change first (no status route; no
   cache hit rate emitted). Folding them into WK-1251 would give a packaging Work a UI and two
   spec changes it does not otherwise need. WK-1251 is the fallback if the maintainer prefers no
-  new Work: it carries NFR-527 ("queue depth and wait time are observable"), which System status
-  displays. Creating a Work is the maintainer's scope decision, and the roadmap line is the
+  new Work, only because it is P3's one platform-shaped Work; the others are governance.
+  NFR-527 ("queue depth and wait time are observable"), which System status would display, is
+  not WK-1251's: the same roadmap section says NFR-526, NFR-527 and NFR-536 are measured under
+  WK-1178 in P2. Creating a Work is the maintainer's scope decision, and the roadmap line is the
   lead's.
 - **`/admin/environments` beside `/rating/environments`** is not decided there. It is filed as
   **DP-7, the `/admin/environments` OQ (working id 9871)**, owned by WK-675, for the decision-maker.
