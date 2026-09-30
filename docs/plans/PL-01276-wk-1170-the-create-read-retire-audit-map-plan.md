@@ -119,8 +119,12 @@ never on a working tree.
 
 - **Do not build ahead of the phase** (`CLAUDE.md` §0). This Work is P2 governance tooling. It
   adds no product capability. FR-240's clauses (4)–(6) leave it (DP-2 (b)).
-- **A frozen record is corrected only as `document-ids.md` §1.5 and check 34 allow**: `status:`
-  forward, `superseded_by:`, an append to `corrected_by:`. A frozen plan's error is corrected by a
+- **A frozen record is corrected only as `document-ids.md` §1.5 allows** (its header comments):
+  `status:` forward, `superseded_by:`, an append to `corrected_by:`. *(Corrected 2026-09-30,
+  auditor-924d's audit of #986: this line said "§1.5 and check 34 allow". Check 34 is the freeze
+  check `document-ids.md` §1.11 names, but its own docstring (`scripts/audit-docs.py`,
+  `check_freeze`) says the merge-base comparison "finds nothing to run against on the real tree
+  today"; only its `corrected_by:` cross-check is live.)* A frozen plan's error is corrected by a
   new `RL-` or `RFC-` (F114's own cell).
 - **`docs/process/` is the maintainer's** (§1.6's `process/` row: *"amendments arrive as `RFC-` +
   `RL-`"*). A slice that amends `delivery-process.md` or `document-ids.md` carries that pair.
@@ -413,16 +417,32 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
     - **An accepted proposal** is a proposal, recommendation or lettered item in one of those
       records that a dated maintainer acceptance line accepts, in whole or as amended. The line
       may be in the record itself, or in a later record that accepts it (as `CR-823`'s table row 2.2
-      asks of review 4's). A line that accepts "the review" accepts every proposal in it. A proposal
+      asks of review 4's). A line that accepts "the review" accepts every proposal in it. **Where
+      records conflict, the later dated acceptance line wins** *(2026-09-30, auditor-924d's audit of #986)*: `CR-823` (2026-08-27)
+      says review 4 was never accepted, and `CR-788:104` records *"accepted as proposed,
+      2026-08-29"*, so review 4's proposals are accepted. A proposal
       that no dated line accepts is **not** in the sweep. It is listed apart, as never accepted,
       and given no owner here.
     - **An owned record** is a governed record at the sweep's tree that (i) names the proposal,
-      by its `CR-` id and its proposal number or item letter, and (ii) carries an owner: an
+      by its record and its proposal label, and (ii) carries an owner: an
       `owner:` field, a register row with an owner and an event, or a `WK-`/`SL-` row. A landed
       change that enacts the proposal and cites it (a commit, by full SHA) counts as *resolved in
-      fact*, not unowned. Candidates are found with `git grep -n -E 'CR-<n>\b'` over `docs/` and
-      `.claude/`, one pass per record. A grep hit is a candidate only: each is read to the clause
-      that carries the proposal before it counts.
+      fact*, not unowned. *(2026-09-30, auditor-924d's audit of #986)*
+      - **A proposal's label.** A proposal can carry two labels in one record: `CR-823` numbers
+        one proposal **2.3** in its table and letters it **(c)** in its text. A candidate matches
+        on **either** label. The sweep records both against the one proposal and counts it once.
+      - **The candidate search** is three passes over `docs/` and `.claude/` for each record,
+        because older owning records do not cite the `CR-` id. For example, `CR-788`'s Q4
+        (`scope-audit.py --params`) is carried in `PL-786`, `PL-810` and `PL-811` as "P6" under
+        "Review 4" (the latter two mark it unowned), and none of the three cites `CR-788`:
+        1. `git grep -n -E 'CR-<n>\b'`;
+        2. `git grep -n -i -E '(plan )?review <N>\b'`, where `<N>` is the review's number;
+        3. each of the record's pre-migration ids and paths in `docs/REDIRECTS.csv` (the
+           `old_id` and `old_path` columns of the rows whose `new_id` is `CR-<n>`; for all sixteen
+           the old path is the one pre-migration plan-reviews file, which held every review).
+      - A grep hit is a candidate only: each is read to the clause that carries the proposal
+        before it counts. **"Unowned" is concluded only after all three passes** find no owning
+        record.
     - **The output** is one row per accepted proposal in the audit record: owned (the record's
       id), resolved in fact (the SHA), or **unowned**. Each unowned one becomes an `FD-` with
       the lead's owner and event, per §14's rule that "unowned" is not a permitted state.
@@ -557,7 +577,10 @@ activation commit:
 - **Resolved 2026-09-29, later:** DP-7 (b), the maintainer's by delegation at the 23:05:29 BST
   entry.
 - **Delta, 2026-09-30:** the unowned-proposal sweep added to Slice 1's inputs (the Scope table's
-  last row; Task 1), on the maintainer's decision, by delegation, in the lead's channel file entry *"2026-09-30 11:52:53 BST — #983's closure sweep: accepted (no §13 verdict owed); DECISIONS on the recurrence and FR-384"*, item 1. No new record, so no id is taken. The slice count and the
+  last row; Task 1), on the maintainer's decision, by delegation, in the lead's channel file entry *"2026-09-30 11:52:53 BST — #983's closure sweep: accepted (no §13 verdict owed); DECISIONS on the recurrence and FR-384"*, item 1. PL-1276 is `draft`, so the delta is written in place and dated: a plan stays `draft`
+  while a decision point is open (`document-ids.md` §1.6, the PL map/leaf row), and freeze is
+  mechanical, reached only when every blocking row has a resolver (§1.7). DP-4 is still open. No
+  new record, so no id is taken. The slice count and the
   sizing are unchanged: the sweep is text-only and adds no gate slot.
 - **Open:** DP-4 (the decision-maker's, awaiting its ruling), and the ACK's confirmation of DP-2's
   receiving Work.
