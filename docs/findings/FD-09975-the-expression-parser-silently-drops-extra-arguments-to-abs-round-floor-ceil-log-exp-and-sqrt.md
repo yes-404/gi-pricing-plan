@@ -14,7 +14,7 @@ relates: [WK-690, SL-1271, FD-1241, FR-36]
 
 ## Finding
 
-**Candidate severity: critical.** On `origin/main` `095dd400918348b32ee6eab1db7915faaa9dfe35`,
+**Severity: high** (filed as a critical candidate; set to high on 2026-09-30, see the dated line below). On `origin/main` `095dd400918348b32ee6eab1db7915faaa9dfe35`,
 `pricing_core.data.expressions._call` (`packages/pricing-core/src/pricing_core/data/expressions.py:228-253`)
 returns `args[0].<fn>()` for each of `abs round floor ceil log exp sqrt` and discards every argument
 after the first without a message. `round` hard-codes `digits = 0` (`:235`). The caller-side checks
@@ -28,6 +28,15 @@ It is found in the DM's proof for DP-S1-2 (PR #957, working id 9972, branch `dm-
 `b58e5d7f070995e91ac9538a4daf4c396431e461`), which rules exact arity for WK-690 Slice 1 (SL-1271); the
 maintainer's entry of 2026-09-30 08:59:39 BST (`~/gi-pricing-plan.local/channel/to-lead.md`) ordered this
 finding and the data check below.
+
+*(Severity set 2026-09-30 by the auditor, with the lead's verdict that agrees: the maintainer's entry of
+2026-09-30 09:10:46 BST, "DATA CHECK 0 ACCEPTED" (`~/gi-pricing-plan.local/channel/to-lead.md`), holds that a
+defect that is **latent, with zero occurrences in every reachable store, confined to dataset preparation,
+with scoring unaffected**, reads as high rather than critical. It would be critical if a stored expression
+used the forms or a rating price read them; neither is true. The entry also accepts the data check below
+as proven and rules out an off-box check: there is no production deployment yet (WK-674 builds one), this
+box holds the only PostgreSQL, MinIO and Redis, and CI databases are built from the repository fixtures,
+which were scanned.)*
 
 ## Evidence
 
@@ -156,11 +165,16 @@ Slice 1 merges; with a count above 0 the maintainer decides remediation first. T
 - **Until Slice 1 merges** the defect stays live for any new recipe or rule a user writes, so Slice 1 is
   now also a correctness fix and belongs at the front of its lane.
 
-**Event that next confirms or discharges it:** WK-690 Slice 1 (SL-1271) merges with the exact-arity rule,
-and a test that `round(x, 2)`, `log(x, 10)` and `abs(a, b)` are refused stays green on `main`.
+**Event that next confirms or discharges it:** WK-690 Slice 1 (SL-1271) merges with the exact-arity rule
+of #957 (DP-S1-2), **and its acceptance proves the refusal through each of the three reachable callers**,
+not only the parser: a `derive_expression` step, a `filter_rows` step and an `expression` validation check,
+each refused on `round(x, 2)` (red before the rule, green after). The finding resolves at Slice 1's merge.
+Until then no action is needed: the window is small, this is a single-VM dev box, and there are 0 current uses.
 
 ## Decision
 
-Not yet decided. The proposal above is the auditor's; the lead adopts, amends or rejects it.
+Not yet decided. The proposal above is the auditor's; the lead adopts, amends or rejects it. The
+maintainer's entry of 2026-09-30 09:10:46 BST has already accepted the count of 0 and named the fix
+(#957's exact-arity rule in WK-690 Slice 1) and the resolving event above.
 
 Ownership shape: event
