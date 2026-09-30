@@ -131,7 +131,13 @@ cause, and the guard is restored; the ledger quotes both runs.
    unrevoked API key's `environment` (`backend/src/app/db/models.py:430`; `revoked_at`
    `:436`) or any non-archived Service Account's `environments` list (`:398`; `archived_at`
    `:405`) names an environment other than `dev`, `uat` or
-   `prod`. It stops before any change, with an error naming each key id or account id and
+   `prod`. **An expired but unrevoked key does not block it** (auditor-plans, on V2): such a
+   key is refused at authentication (`backend/src/app/auth/service.py:205`, `expires_at`
+   `models.py:435`), so it can never produce a `Caller.environment`, and nothing makes it
+   valid again — rotation mints from the account's `environments` list
+   (`backend/src/app/api/service_accounts.py:246`), never from the old key, and only
+   shortens the old key's expiry (`:243-244`). The account's list is checked on its own, so
+   a stray name there still blocks. It stops before any change, with an error naming each key id or account id and
    the name it carries, and telling the operator to revoke the key, or narrow or archive the account, first (see
    **Decided in this plan** for why). Tested on rows inserted before the upgrade: a key
    naming `staging` makes `upgrade head` fail and leaves the database at the previous
@@ -360,11 +366,26 @@ cause, and the guard is restored; the ledger quotes both runs.
       places — around `decide`'s own status write (`:416`) and in `_carry_to_the_artifact`
       (`backend/src/app/api/approvals.py:488`) around the owning module's
       `apply_approval_decision`. A static test fails any other entry in `backend/src`
-      (`backend/tests/` is exempt, and nothing else). Red first: a third site fails it;
+      (`backend/tests/` is exempt, and nothing else). Red first: a third site fails it.
+      **Context hygiene** (auditor-plans): `approval_decision()` resets the `ContextVar` with
+      its token in a `finally`, so an exception inside the block leaves no "in decision"
+      state behind. A task spawned inside the block (`asyncio.create_task`, `asyncio.gather`,
+      a thread-pool call) **copies** the context, so it would carry "in decision" for its
+      whole lifetime, past the block's exit. So nothing is spawned inside the block: the
+      static test that checks the entry sites also fails any `create_task`, `gather` or
+      `run_in_executor` call lexically inside an `approval_decision()` block, red first on a
+      planted one. Under the trigger steer (the
+      maintainer's 11:44:15 entry, pending #971's next head), the flag is `SET LOCAL
+      app.approval_decision = 'on'`, which is **transaction-scoped** and ends at commit or
+      rollback, so no copy outlives its transaction;
     - **what the guard cannot see:** a static test fails any Core `update(X)`/`insert(X)`
       over a population class, and any `text()` naming a population table's `status`,
       outside the two sanctioned non-population sites (`platform/blobs.py:455`,
-      `worker/progress.py:200`). Alembic data migrations are a review item for the auditor;
+      `worker/progress.py:200`). **Outside any ORM guard:** every session not built by
+      `Database._sessionmaker` (`backend/src/app/db/session.py:50`) — **scripts** (for
+      example `examples/fremtpl2/seed.py` and anything under `scripts/` that opens its own
+      engine) and Alembic data migrations. Each is a review item for the slice's auditor. A
+      database trigger, if #971's next head adopts the 11:44:15 steer, covers both;
     - **exemption, per table, temporary** (dated 2026-09-30, pinned as a literal,
       shrink-only), citing the validation-rule finding (HIGH, the maintainer's entry headed
       `2026-09-30 11:23:26 BST — DECISION: validation-rule approval bypass: HIGH (not CRITICAL); owner and order; two follow-ons`;
@@ -373,7 +394,12 @@ cause, and the guard is restored; the ledger quotes both runs.
       direct row, `examples/fremtpl2/seed.py:441`) and **`validation_rule_sets`**
       (`replace_rule_set`, `:538`/`:643`, and the column default `models.py:1195`). The
       WK-1178 fix slice removes them red first and is serialised after this slice.
-      `deployment_requests` has no exemption;
+      `deployment_requests` has no exemption. **Accepted trade-off** (auditor-plans A13-6): the
+      exemption is per **table**, so a new, second writer of `approved` on `validation_rules`
+      or `validation_rule_sets` passes silently until the fix slice removes the entries. It
+      is accepted because the guard is per table by design (#971 A.4 item 5) and the fix
+      slice is serialised directly after this one; the ledger records it as a known gap with
+      that owner;
     - **fixtures, declared work:** the test files that write `approved` rows directly
       refuse under the guard. At the tree above
       `git grep -l -E 'status\s*=\s*"approved"|Status\.APPROVED|status=APPROVED' -- backend/tests`
@@ -996,6 +1022,33 @@ reads this slice's `EnvironmentRow` for per-environment keys and settings. Slice
 Task 6's per-request resolution with the switch, and reuses Task 5's route shape for rollback.
 
 ## Self-review
+
+- **Slice size — an assessment, not a re-cut** (auditor-plans' note on `39d94efe`, for the
+  lead to put to the maintainer). Task 3A (the approval guard, its session registration or
+  trigger migration, the vocabulary declarations, 17 fixture files and the demo seed) is
+  cross-cutting: it touches every approval-capable table and most of the backend test suite,
+  and is independent of Environments and Deployments except that `deployment_requests` joins
+  its population. With it, this slice is well beyond `PL-1237`'s slice band. Options:
+  - **(a) Keep it in S2.** One slice, one audit; the deployment-request plant is proved
+    where the table is born. Cost: the largest diff of the Work, and the widest serialisation
+    footprint (the 17 test files and `session.py` against every in-flight slice), for the
+    whole of S2's build.
+  - **(b) Split out S2a, the approval guard, landing before S2** (Task 3A plus the
+    validation `StrEnum` and the exemption; the deployment-request plant stays S2's,
+    proved when S2 declares that table's vocabulary). S2a is independent of #971's
+    deployment items and can build while S2's remaining questions settle; S2 shrinks to the
+    Environment and Deployment record. Cost: one more slice row, leaf plan and audit, and
+    S2's Acceptance 13 reduces to "`deployment_requests` joins the population and is
+    refused", red first.
+  - **(c) Split S2a as the guard plus Task 0A** (the authorisation sweep). Both are
+    cross-cutting test-and-guard work with no new route, and both must precede S2's routes.
+    Cost: as (b), and it moves the maintainer's "S2's first task" (the 11:01:50 entry) into a
+    different slice, which the maintainer would have to accept.
+  - **Recommendation: (b).** It separates the one piece of S2 that is not about Environments
+    and Deployments, keeps Task 0A where the maintainer placed it, and shortens S2's
+    serialisation window. A split is a replan: the lead decides it, and if chosen the planner
+    cuts the new `SL-` row (`draft`) and files S2a's leaf plan, with this plan re-cut by a
+    dated delta.
 
 - **Scope against the map plan and the spec.** FR-267, FR-428, FR-429, FR-272 (deploy audit
   limb), NFR-498 (deploy limb), FR-347 (negative test), FR-357 (the state it needs) are each
