@@ -259,7 +259,7 @@ commit**"). That is consistent with item 2's "moves to Built in Slice 3's commit
 | `06` §4.1's rows | **13, and 11 members without one** | `06-governance.md:188-303`, read in full. The predicate of evidence 2 reproduces 13 rows, all of them members. The 11 members without a row are `admin:manage_roles`, `approval:decide`, `dataset:acknowledge_warning`, `dataset:read`, `dataset:write`, `deployment:promote`, `model:fit`, `model:read`, `model:submit`, `rating:submit` and `rating:write`. |
 | Non-member tokens in `06`, outside struck text | **14** | This is PL-1279 Task 1's own predicate (`_TOKEN` less `_NOT_A_PERMISSION`, over `06` with `~~…~~` removed): `alert:acknowledge`, `alert:resolve`, `banding:write`, `custom_objective:author`, `custom_objective:submit`, `dataset:create_version`, `factor:write`, `grouping:write`, `monitor:write`, `optimisation:materialise`, `optimisation:run`, `rate_table:write`, `rating_algorithm:write` and `rating_version:submit`. Evidence 3's "17" used `RL-1236`'s whole-`06` predicate, which also counts struck text. |
 | Check sites | **2 members have none; 1 is checked only in the service layer** | Per member, the lines of `git grep -n -E "(Perm\|Permission)\.<NAME>\b" 48792023 -- backend/src` that are not comments, split into `requires(` sites and `permission=` sites. `deployment:promote` and `admin:manage_environments` have neither. `admin:break_glass` has one `permission=` site, `backend/src/app/platform/rbac.py:424`, inside `await require_permission(` (`:420`), and no `requires(` site. Every other member has a `requires(` site. |
-| A live enumeration of route permissions | **present** | `requires()` tags each dependency with `PERMISSION_ATTRIBUTE` (`backend/src/app/api/authz.py:41`, `:76`). `backend/tests/test_api_authorisation_sweep.py:186-197` already reads it off the app's routes. |
+| A live enumeration of route permissions | **present, but not as the sweep test iterates** | `requires()` tags each dependency with `PERMISSION_ATTRIBUTE` (`backend/src/app/api/authz.py:41`, `:76`). `backend/tests/test_api_authorisation_sweep.py:184-199` reads it, but only off the top level of `api_client.app.routes`, filtered to `APIRoute`. auditor-close1255 measured that, on `fastapi` 0.141.1 (`uv.lock:530-531`), this yields only 2 routes, both open. The 137 real routes sit under each included router's own routes. *(Corrected after that audit: this row said the test "already" reads the app's routes.)* |
 | The CI triggers | **present** | `python.yml`'s `paths` include `packages/**`, `backend/**`, `docs/**` and `tests/**` (`:6-34`). `pyproject.toml`'s `testpaths` include `tests` (`:161-169`). `docs.yml`'s `paths` exclude `packages/**` and `backend/**` (`:14-17`). |
 | PL-1279's parser | **present** | `PL-1279` (on `main`, `status: draft`) §Tasks, Task 1: the headers `\| Permission \| Governs \| Check owner \|`, `\| Permission \| Owner Work \|` and `\| Name used before \| Enum name \|`; the whole-`06` stray scan; and Task 3's check-site scan, which counts **any** `Perm.X` or `Permission.X` reference in `backend/src`. |
 
@@ -279,8 +279,12 @@ commit**"). That is consistent with item 2's "moves to Built in Slice 3's commit
    **check site**, or else its `Check owner` cell names the Work that builds it. **A check
    site is a check, not a reference:**
    - a route dependency built by `requires(<member>)`, read off the live app's routes
-     through `PERMISSION_ATTRIBUTE`, as `test_api_authorisation_sweep.py:186-197` already
-     does; or
+     through `PERMISSION_ATTRIBUTE`, **with the included routers flattened**. Iterating
+     `app.routes` at the top level, as `test_api_authorisation_sweep.py:184-199` does, sees
+     almost none of them (the table above), and a leg built that way would pass by seeing
+     nothing. The leg proves its own reach: the set of paths it walks must cover every path
+     in the app's OpenAPI schema (`app.openapi()["paths"]`), so a walk that sees too few
+     routes fails; or
    - the `permission=` argument of a `require_permission(` call in `backend/src`, found by an
      AST walk that resolves the enum's name through the module's imports.
 
@@ -336,7 +340,8 @@ recommends:
    - The 11 missing rows are added, each with its governing text and that text's source in
      `06`: §2's Permission term, §3.3, FR-348, FR-366 and FR-367, `RL-1232` DP-6, and the
      `RL-1236` notes.
-   - `dataset:read` had no `06` text at all. Its row says so, and states what its read routes
+   - No `06` text described `dataset:read`: it was named only in the role example's list, which
+     this commit replaces. Its row says so, and states what its read routes
      check.
    - **Check owner:** `WK-674` on `deployment:promote` and `admin:manage_environments`. It
      is empty elsewhere, including on `admin:break_glass` (D1 item 3).
@@ -396,6 +401,8 @@ live tree passes:
 - a member checked only by a service-layer `require_permission(..., permission=…)` counts as
   checked;
 - a stray non-member token in `06` outside struck text, and outside the tables.
+- a route walk that does not flatten included routers fails the leg's own reach assertion
+  (its walked paths do not cover `app.openapi()["paths"]`).
 
 A commit touching only `packages/model-schema/src/model_schema/permissions.py` triggers
 `python.yml`, and so the test. This is shown by the workflow's `paths` (the table above) and

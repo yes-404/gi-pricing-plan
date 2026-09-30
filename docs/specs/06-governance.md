@@ -261,14 +261,14 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 > is part of the closed vocabulary §3.1 describes. *(Amended 2026-09-30, `RL-9856` (working id)
 > item D4.)* **This table has exactly one row per member of `model_schema.Permission`.** The
 > names are the enum's, and this table states their meaning. A gate check holds the two equal
-> in both directions (`RL-9856` D1 and D2). A new permission lands in one commit: its row
+> in both directions (`RL-9856` (working id) D1 and D2). A new permission lands in one commit: its row
 > here, its enum member, and its check (FR-367). **Check owner** names the Work that builds a
 > member's first check, and is empty once a check exists. The eleven members this table
 > lacked until 2026-09-30 are added, each with its governing text and that text's source:
 >
 > | Permission | Governs | Check owner |
 > |---|---|---|
-> | `dataset:read` | Reading Datasets, Dataset Versions and their validation reports and profiles (the dataset read routes; before 2026-09-30 no `06` text named it) |  |
+> | `dataset:read` | Reading Datasets, Dataset Versions and their validation reports and profiles (the dataset read routes; before 2026-09-30 no `06` text described it, and it was named only in the role example's list, now replaced) |  |
 > | `dataset:write` | Creating Datasets and Dataset Versions, and writing blobs, validation rules and ingestion (`RL-1236` DP-A, which folds `dataset:create_version` into it) |  |
 > | `dataset:validate` | Running validation on a Dataset Version |  |
 > | `dataset:acknowledge_warning` | Acknowledging a validation `warn` with a justification (§3.3's Dataset Version row, `01` FR-46; §2's Permission term) |  |
@@ -287,10 +287,10 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 > | `job:read` | Reading Jobs |  |
 > | `job:cancel` | Cancelling a Job |  |
 > | `settings:read` | Reading workspace settings |  |
-> | `admin:manage_roles` | Changing permissions, roles and role assignments (FR-348), and the workspace Approval Policy, "a permission change written in another table" |  |
+> | `admin:manage_roles` | Changing permissions, roles and role assignments (FR-348), and the workspace Approval Policy (`PUT /approval-policy` requires it, as this spec's route permission table states) |  |
 > | `admin:manage_settings` | Changing workspace settings and reference data, and every per-environment setting value: `07` FR-431's settings, and FR-270/FR-271's routing and shadow switches and shadow configuration (DP-D). Each change writes an Audit Event naming the environment, the key, the old value and the new value. Nothing it guards can change which Rating Version prices a live quote |  |
 > | `admin:manage_service_accounts` | Creating, rotating and revoking Service Accounts |  |
-> | `admin:break_glass` | Break-glass elevation (FR-349). Checked in the service layer, not by a route (`RL-9856` D1) |  |
+> | `admin:break_glass` | Break-glass elevation (FR-349). Checked in the service layer, not by a route (`RL-9856` (working id) D1) |  |
 > | `admin:manage_environments` | The Environment record's lifecycle: create, rename, retire (`07` FR-428). Not its settings, which are `admin:manage_settings`. Its route, WK-674 Slice 2's, is its first check | WK-674 |
 >
 > **Mapped: the same capability under two names; the code's name survives.**
