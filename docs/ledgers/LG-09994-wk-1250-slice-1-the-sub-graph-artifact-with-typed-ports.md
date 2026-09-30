@@ -139,6 +139,17 @@ three steps; the shell rc was a pipe's, so the lines are the evidence). `tests/t
 check 31 alone (working ids 9994 unminted), the expected red of a working-id draft. Re-run at Task 8.
 The `SubGraphVersionRow` model is appended at the end of `models.py`.
 
+### Task 4 — `pricing-core`: FR-227 refactor and the fragment entry point
+
+Red: four new fragment tests failed `ImportError: cannot import name 'fragment_output_type_issues'`
+(as predicted); the new algorithm-path test `test_an_algorithm_type_mismatch_reports_the_output_step` was
+green before the refactor (it pins "behaviour unchanged"). Names used: `producer_types(steps, typed_names)`,
+`output_type_issues(types, outputs)`, `fragment_output_type_issues(steps, input_ports, output_ports)`, all
+public and in `__all__`; `_producer_types(algo)` and `_check_result_types(algo)` kept as thin wrappers, the
+latter still registered in `ALGORITHM_CHECKS`. Green: `test_rating_compile.py` and
+`test_rating_authored_fields.py` (the #967 closure tests) 79 passed; `git diff --numstat` of the tests dir
+shows additions only (0 removed). `lint-imports`: 4 kept, 0 broken; ruff, mypy clean.
+
 ## Deviations from PL-1325, each named
 
 1. **Decimal example** (Task 1): the §4.11 example declares the output port type `relativity`, not

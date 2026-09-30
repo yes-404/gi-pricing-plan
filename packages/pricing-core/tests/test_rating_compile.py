@@ -270,3 +270,89 @@ def test_the_guard_markers_hold_no_dead_or_masking_entry() -> None:
 
     for dead in ("?:", "coalesce(", "??", "!= null"):
         assert dead not in _GUARD_MARKERS
+
+
+# --- WK-1250 Slice 1: FR-227 over steps and declared outputs, and the fragment entry point ---
+
+
+@pytest.mark.req("FR-227")
+def test_an_algorithm_type_mismatch_reports_the_output_step() -> None:
+    """The refactor keeps the algorithm path's issue: the output step's id, `outputs`."""
+    data = valid_algorithm()
+    data["input_contract"].append({"name": "customer_name", "type": "string", "nullable": False})
+    data["outputs"].append({"name": "name_out", "type": "money_minor", "required": False})
+    data["steps"].append({
+        "step_id": "s_in_name", "type": "input", "label": "Name",
+        "input_name": "customer_name", "on_missing": "error", "produces": "customer_name",
+    })
+    data["steps"].append({
+        "step_id": "s_name_out", "type": "output", "label": "Name out",
+        "output_name": "name_out", "rounding": {"mode": "half_even", "dp": 0},
+        "consumes": "customer_name",
+    })
+    issues = _issues(RatingAlgorithm.model_validate(data), "RATING_TYPE_MISMATCH")
+    assert [(i.step_id, i.field) for i in issues] == [("s_name_out", "outputs")]
+
+
+def _fragment(output_type: str, result_type: str = "string") -> dict:
+    return {
+        "inputs": [{"name": "ncd_years", "type": "int"}],
+        "outputs": [{"name": "ncd_factor", "type": output_type, "required": True}],
+        "steps": [
+            {"step_id": "s_first", "type": "expression", "label": "first", "expr": "ncd_years",
+             "result_type": "int", "consumes": "ncd_years", "produces": "mid"},
+            {"step_id": "s_last", "type": "expression", "label": "last", "expr": "mid",
+             "result_type": result_type, "consumes": "mid", "produces": "ncd_factor"},
+        ],
+        "change_note": "n",
+    }
+
+
+def _fragment_issues(payload: dict) -> list:
+    from model_schema.sub_graphs import SubGraphBody
+    from pricing_core.rating.compile import fragment_output_type_issues
+
+    body = SubGraphBody.model_validate(payload)
+    return fragment_output_type_issues(body.steps, body.inputs, body.outputs)
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-227")
+def test_a_fragment_output_port_type_mismatch_names_the_producing_step() -> None:
+    issues = _fragment_issues(_fragment("money_minor"))
+    assert [(i.code, i.step_id, i.field) for i in issues] == [
+        ("RATING_TYPE_MISMATCH", "s_last", "outputs")
+    ]
+    assert "'ncd_factor'" in issues[0].message
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-227")
+def test_a_compatible_fragment_output_port_raises_no_issue() -> None:
+    assert _fragment_issues(_fragment("string")) == []
+    assert _fragment_issues(_fragment("money_minor", result_type="decimal")) == []
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-227")
+def test_an_input_port_type_is_a_known_producer_type() -> None:
+    payload = _fragment("money_minor")
+    payload["inputs"] = [{"name": "ncd_factor", "type": "string"}]
+    payload["steps"] = [
+        {"step_id": "s_clamp", "type": "constraint", "label": "cap", "condition": "ncd_factor > 0",
+         "on_violation": "clamp", "clamp_bounds": {"min": "0"}, "reason_code": "R",
+         "consumes": "ncd_factor", "produces": "ncd_factor"}
+    ]
+    issues = _fragment_issues(payload)
+    assert [(i.code, i.step_id) for i in issues] == [("RATING_TYPE_MISMATCH", "s_clamp")]
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-227")
+def test_a_table_produced_output_port_is_not_checked_at_create() -> None:
+    payload = _fragment("money_minor")
+    payload["steps"] = [
+        {"step_id": "s_tab", "type": "table", "label": "t", "rate_table_ref": "rate_table:ncd@2",
+         "key_expr": ["ncd_years"], "consumes": "ncd_years", "produces": "ncd_factor"}
+    ]
+    assert _fragment_issues(payload) == []
