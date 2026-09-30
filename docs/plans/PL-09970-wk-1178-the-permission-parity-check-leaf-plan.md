@@ -204,15 +204,55 @@ The exclusions are read as follows: drop `~~…~~` spans; drop the `>`-quoted li
 
 ### Decision points
 
+**The gating ruling is working id 9856**: the decision-maker's P1 (c) record, prepared on #942
+at head `4daa57cb` and **not ruled**. Its D1, D2 and D4 are this plan's DP-1, DP-2 and DP-3.
+This plan does not restate 9856's analysis. Its option letters (A), (B) and (C) and its
+D2 (i)–(iii) are used by reference. E1–E6 above are this plan's own re-measurement at the
+same tree:
+- They agree with 9856's evidence items 1, 2, 5 and 6.
+- They add two things. One is E5's route-only count of 3, which shows why the route leg must
+  scan source rather than routes. The other is E3's split of the 17 non-member tokens by the
+  exclusion that removes each one.
+
+
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-1 | **What the check asserts.** | (A) `CR-1247`'s wording, with exclusions found by position in prose (E3's I1 reading). (B) Table-driven: §4.1 carries Built, Specified-not-built and Aliases tables, each machine-read, and any other `06` token outside struck text is a violation. (C) (B), plus a route leg: every Built name has a check site in `backend/src` or an owner cell (E5) | Not this plan's. Tasks 1–4 are written to #942's provisional (C). Note for the ruling: under (C), a Built row that has **both** a check site and an owner is stale. Task 1 makes that a ninth class, so WK-674 Slice 2 must clear the owner cells of `deployment:promote` and `admin:manage_environments` in the commit that adds their checks | decision point (scope) | yes: Tasks 1–3 | the P1 (c) ruling (#942 D1) |
-| DP-2 | **Where the check lives.** | (L1) A numbered `scripts/audit-docs.py` check. It regex-reads `permissions.py` and runs under `docs.yml`. (L2) A root `tests/` pytest module that imports the enum and runs under `python.yml`. (L3) Both: the `audit-docs` check for the `06`-internal legs, and the pytest for every leg touching code. (L4) L1, with `packages/model-schema/src/model_schema/permissions.py` and `backend/src/**` added to `docs.yml`'s paths | **L2.** It is the only placement where a change on any side triggers the run (E6). L1 does not run on a `packages/**`-only commit, which is the very drift the check exists for. L4 keeps a hand-widened path filter that drifts. L3 runs the same comparison twice, and one copy can go stale. L1, L3 and L4 also edit `scripts/audit-docs.py`, which WK-1170 Slices 3 and 6 edit (the WK-1170 map plan on open PR #930, working id 9811, `:271-296`). That is a shared file under `RL-1263` (c), so they serialise, and the next free check number becomes a merge race. L2 edits no shared file | decision point (placement) | yes: every task's **Files** | the P1 (c) ruling (#942 D2) |
-| DP-3 | **Who writes the `06` §4.1 amendment, and when** (the 11 rows of E4, the Specified and Aliases tables, and the role block replaced by a reference to `BUILTIN_ROLES`)? | (a) The decision-maker, in the ruling's PR or one before it. This slice then only reads `06`. (b) This slice, in its first commit, from the ruling's text. (c) The ruling's PR carries the tables, and this slice carries only the role-block replacement | **(a).** `CR-1247` `:149-151` names the decision-maker as owner of the `06` amendment. Under (a) this slice edits no spec section, so it shares nothing with WK-674 Slices 2/3 or WK-690 Slice 3 (all of which touch `06` §4.1). Under (b) it takes `06` §4.1 and serialises with all three | decision point (ownership, sequencing) | yes: Task 2's live test is red until it lands (E4) | the P1 (c) ruling and the lead's dispatch |
+| DP-1 | **What the check asserts.** | (A) `CR-1247`'s wording, with exclusions found by position in prose (E3's I1 reading). (B) Table-driven: §4.1 carries Built, Specified-not-built and Aliases tables, each machine-read, and any other `06` token outside struck text is a violation. (C) (B), plus a route leg: every Built name has a check site in `backend/src` or an owner cell (E5) | Not this plan's. Tasks 1–4 are written to #942's provisional (C). Note for the ruling: under (C), a Built row that has **both** a check site and an owner is stale. Task 1 makes that a ninth class, so WK-674 Slice 2 must clear the owner cells of `deployment:promote` and `admin:manage_environments` in the commit that adds their checks | decision point (scope) | yes: Tasks 1–3 | working id 9856 (#942), its D1 |
+| DP-2 | **Where the check lives.** | (L1) A numbered `scripts/audit-docs.py` check. It regex-reads `permissions.py` and runs under `docs.yml`. (L2) A root `tests/` pytest module that imports the enum and runs under `python.yml`. (L3) Both: the `audit-docs` check for the `06`-internal legs, and the pytest for every leg touching code. (L4) L1, with `packages/model-schema/src/model_schema/permissions.py` and `backend/src/**` added to `docs.yml`'s paths | **L2.** It is the only placement where a change on any side triggers the run (E6). L1 does not run on a `packages/**`-only commit, which is the very drift the check exists for. L4 keeps a hand-widened path filter that drifts. L3 runs the same comparison twice, and one copy can go stale. L1, L3 and L4 also edit `scripts/audit-docs.py`, which WK-1170 Slices 3 and 6 edit (the WK-1170 map plan on open PR #930, working id 9811, `:271-296`). That is a shared file under `RL-1263` (c), so they serialise, and the next free check number becomes a merge race. L2 edits no shared file | decision point (placement) | yes: every task's **Files** | working id 9856 (#942), its D2 |
+| DP-3 | **Who writes the `06` §4.1 amendment, and when** (the 11 rows of E4, the Specified and Aliases tables, and the role block replaced by a reference to `BUILTIN_ROLES`)? | (a) The decision-maker, in the ruling's PR or one before it. This slice then only reads `06`. (b) This slice, in its first commit, from the ruling's text. (c) The ruling's PR carries the tables, and this slice carries only the role-block replacement | **(a).** `CR-1247` `:149-151` names the decision-maker as owner of the `06` amendment. Under (a) this slice edits no spec section, so it shares nothing with WK-674 Slices 2/3 or WK-690 Slice 3 (all of which touch `06` §4.1). Under (b) it takes `06` §4.1 and serialises with all three | decision point (ownership, sequencing) | yes: Task 2's live test is red until it lands (E4) | working id 9856 (#942), its D4, and the lead's dispatch |
 
-`CR-1247` `:150` also leaves **RL or ADR** open (#942 D3). It does not block this plan unless
+`CR-1247` `:150` also leaves **RL or ADR** open (working id 9856, D3). It does not block this plan unless
 the answer is an ADR: an ADR goes `draft → active` only on the maintainer's acceptance, and
 Task 0 then waits for that acceptance too.
+
+### The slice under 9856 D1 (C), and under its fallback (B)
+
+| | Under D1 (C), 9856's provisional | Under D1 (B), 9856's named fallback |
+|---|---|---|
+| Violation classes live on the real tree | all nine | seven. `NO_CHECK_NO_OWNER` and `STALE_OWNER` keep their synthetic red proofs but are dormant on the live tree, because `checked` is the whole enum |
+| Task 3 (source scan, alias guard) | built | dropped. Task 2 passes `frozenset(p.value for p in Permission)` as `checked` |
+| `06` §4.1 Built table | needs a `Check owner` column: `WK-674` on `deployment:promote` and `admin:manage_environments` (E5) | two columns, name and governs. `_owner` is not read |
+| Tests collected (Acceptance item 1) | 13 | 12 |
+| Where FR-367's "the member and its check land together" is enforced | this gate (the route leg) | each slice's own negative test (`PL-1268` Acceptance item 8), not this gate |
+| Binds WK-674 S2 | yes: it clears two owner cells in the commit that adds its checks | no |
+| Size | about 250 lines | about 190 lines |
+
+Any other D1 answer, including (A), is a replan before `active`. (A) identifies its exclusions
+by their position in prose, and Task 1's parser has no such mode.
+
+### Where the 11 missing rows land (E4)
+
+- **Under DP-3 (a), which is recommended:** in the `06` amendment that 9856 carries (its D4
+  item 1), merged before this slice is dispatched. The slice reads `06` and edits no spec
+  section.
+- **Under DP-3 (b):** as this slice's first commit, written from 9856's D4 text. The slice
+  then takes `06` §4.1 and serialises with WK-674 S2/S3 and WK-690 S3 (the contention table
+  below).
+- **In both cases** the rows cannot land with the check alone. The live test is red until all
+  24 members have a Built row, and a red test does not merge.
+- DP-3 (a) also keeps the governing text for the 11 names with the record that rules on it.
+  `CR-1247` `:149-151` names the decision-maker as owner of the `06` amendment. A slice that
+  writes meaning into `06` §4.1 would be deciding that meaning.
 
 ### File contention (for the lead's serialisation under `RL-1263` option (c))
 
