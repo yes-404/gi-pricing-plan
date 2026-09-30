@@ -162,6 +162,7 @@ re-runs its full gate. Each row below was read at the tree above.
 | the generated contracts; `docs/INDEX.md` | regenerated | any slice that adds a shape, route or record | **Exempt**, never hand-merged |
 | `docs/specs/03-rating-engine.md` §5.1 | four rows appended to the REST table | WK-674 S2 (a deployment-history `GET`, `PL-1237:773-774`), WK-674 S6 (a routing route, `PL-1237:977-978`), WK-673 S4 and S7 (`PL-1267:527`, `:589`), and #977's column slice | **Serialises** (RL-1263:100-104): an existing spec section that is not on the registry list. The one exception is a dispatch record that names the path together with the check that no existing definition is edited by both |
 | `docs/specs/03-rating-engine.md` §4 | a new subsection | WK-674 S2 and S6 (new subsections, `PL-1237:772`, `:977`) | **Serialises** (RL-1263:100-104), for the same reason. The slice that merges second numbers its subsection after the first's, and never reuses a number (`CLAUDE.md` §5) |
+| `backend/tests/test_rating_algorithms.py` | two characterisation tests appended (N1; Task 5) | any slice adding tests there | Appended tests only; no existing test is edited |
 | `backend/src/app/platform/rating_algorithms.py` | `_parse_algorithm` (`:25-52`) edited: its mapping is extracted into a public function that it calls, with identical behaviour (Task 5, B1) | any slice editing `_parse_algorithm` or the rating-algorithm save path | **An existing-definition edit, not on the registry list.** It serialises unless the dispatch record names it |
 | `docs/specs/03-rating-engine.md` §2 | one glossary row | none found | Not shared |
 | `docs/specs/00-overview.md` §2 | one glossary row | WK-673 S1, if it adds a term (`PL-1267:469`) | Shared only if WK-673 S1 adds a term |
@@ -203,6 +204,13 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
    - `uv run python scripts/generate-contracts.py --check` exits 0.
    - `docs/contracts/schemas/generated/sub-graph.schema.json` has the properties `slug`,
      `version`, `inputs`, `outputs`, `steps` and `change_note`, and no `sub_graphs`.
+   - **The request shapes are published too** (N5 of the re-audit):
+     `docs/contracts/schemas/generated/sub-graph-create.schema.json` (`SubGraphCreate`) and
+     `sub-graph-body.schema.json` (`SubGraphBody`) exist. The routes take a `dict` body (B1), so
+     OpenAPI shows the request bodies as open objects, as it does for `POST /rating-algorithms`.
+     The reason for publishing them anyway: WK-675's designer is the first client that authors a
+     sub-graph, and `CLAUDE.md` §2 forbids it to hand-write the request type. A schema it can
+     generate from is the only way it gets one.
    - `outputs`' items take their schema from `AlgorithmOutput`'s, and `inputs`' items carry
      `name` and `type` (DP-3 item 1).
    - `git grep -n -E '^class (SubGraph|SubGraphBody|SubGraphCreate|SubGraphInputPort)\(' -- packages backend/src`
@@ -340,6 +348,13 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
   FastAPI's request validation (`backend/src/app/errors.py:438-465`) as `VALIDATION_FAILED`
   before the service runs. The codes RL-1309 DP-S1-3 names, `RATING_GRAPH_CYCLIC` and
   `RATING_GRAPH_UNRESOLVED_REF`, could then never be returned (Task 5).
+- **Known limitation of that mapping, kept unchanged in this slice** (N2 of the re-audit). The
+  mapper matches substrings of `str(exc)`, and pydantic's message echoes the offending
+  `input_value`. So a refusal whose echoed input contains "cycle" maps to `RATING_GRAPH_CYCLIC`,
+  whatever its cause: for example an unknown field named `cycle_note`. auditor-plans
+  reproduced this on `main` for rating algorithms. This slice extracts the mapping unchanged
+  and does not fix it; the defect is filed separately as a finding. The new output-port message
+  (Task 2) contains "undefined value" **on purpose**, so that it hits this same match.
 - **Every write emits its Audit Event in the caller's transaction** (`06` FR-368;
   `backend/src/app/platform/audit.py:52-75`).
 - **RBAC in the backend on every request** (`06` FR-343): `rating:write` and `rating:read`
@@ -383,7 +398,7 @@ scripts/generate-contracts.py backend/migrations/versions` prints nothing for th
 
 | # | Premise | Evidence |
 |---|---|---|
-| a | No sub-graph table, route or service exists | `git grep -n -i 'sub_graph\|subgraph' -- backend/src packages` prints 8 lines under `src/`, none under `backend/src`: `model_schema/__init__.py:282,669`, `model_schema/rating.py:340,343,390`, `model_schema/refs.py:25`, and `pricing_core/rating/score.py:399,401` |
+| a | No sub-graph table, route or service exists | `git grep -n -i 'sub_graph\|subgraph' -- backend/src ':(glob)packages/*/src/**'` prints 8 lines, none under `backend/src`: `model_schema/__init__.py:282,669`, `model_schema/rating.py:340,343,390`, `model_schema/refs.py:25`, and `pricing_core/rating/score.py:399,401` |
 | b | `SubGraphRef` is `ref: ArtifactRef` plus `mount_point: str`, frozen and `extra="forbid"` | `packages/model-schema/src/model_schema/rating.py:340-351`, `:390` |
 | c | `"sub_graph"` is a legal `ArtifactRef` type | `packages/model-schema/src/model_schema/refs.py:25` |
 | d | `AlgorithmOutput` is `name`, `type: RatingResultType` and `required`, and `RatingResultType` is `Annotated[str, AfterValidator(_reject_float_type)]` | `rating.py:235`, `:238-244`. So output ports reuse it, and input ports use `RatingResultType` (RL-1309 DP-3 item 1) |
@@ -497,7 +512,8 @@ and the "Coarse write rights" note).
 **Files:** Create `packages/model-schema/src/model_schema/sub_graphs.py` and
 `packages/model-schema/tests/test_sub_graph.py`. Modify `packages/model-schema/src/model_schema/__init__.py`
 (the exports, beside `SubGraphRef` at `:282` and `:669`) and `scripts/generate-contracts.py`
-(register `"sub-graph": "SubGraph"` at `:39-101`). Regenerate `docs/contracts/`.
+(register `"sub-graph": "SubGraph"`, `"sub-graph-create": "SubGraphCreate"` and
+`"sub-graph-body": "SubGraphBody"` at `:39-101`; acceptance 2). Regenerate `docs/contracts/`.
 
 **Interfaces:**
 - Produces:
@@ -567,9 +583,15 @@ end of the file** and no existing class edited. Create one Alembic revision and
 - Produces, in `compile.py` (B3 of the plan audit):
   - **`producer_types(steps: Sequence[RatingStep], typed_names: Mapping[str, str]) -> dict[str, str]`**,
     the shared core of `_producer_types`;
-  - **`output_type_issues(producer_types: Mapping[str, str], outputs: Sequence[tuple[str, str, str]]) -> list[ValidationIssue]`**,
-    the shared core of `_check_result_types`. Each tuple is (the output's name, its declared
-    type, the name that feeds it);
+  - **`output_type_issues(producer_types: Mapping[str, str], outputs: Sequence[tuple[str | None, str, str, str]]) -> list[ValidationIssue]`**,
+    the shared core of `_check_result_types`. Each tuple is (the step id to report, the output's
+    name, its declared type, the name that feeds it), and each issue carries that step id and
+    `field="outputs"`, as today's issue does (`compile.py:129-137`) (N3 of the re-audit).
+    - The wrapper `_check_result_types(algo)` builds the tuples from `algo`'s output steps, and
+      **keeps both of today's skips**: an output step whose name is not declared, and one that
+      consumes nothing (`declared is None or not consumed`, `:124`). It passes the output
+      step's `step_id`.
+    - For a fragment, the step id is the producing step's id;
   - **`fragment_output_type_issues(steps: Sequence[RatingStep], input_ports: Sequence[SubGraphInputPort], output_ports: Sequence[AlgorithmOutput]) -> list[ValidationIssue]`**,
     the fragment entry point, which Task 5's create path calls.
 
@@ -610,11 +632,21 @@ end of the file** and no existing class edited. Create one Alembic revision and
 - Modifies: `backend/src/app/platform/rating_algorithms.py`. `_parse_algorithm`'s
   `ValidationError` → `PlatformError` mapping (`:34-52`: "cycle" → `RATING_GRAPH_CYCLIC`,
   "undefined value" → `RATING_GRAPH_UNRESOLVED_REF`, otherwise `VALIDATION_FAILED`) is
-  extracted, unchanged, into a public `graph_validation_error(exc: ValidationError, title: str) -> PlatformError`.
-  `_parse_algorithm` calls it, and the sub-graph service calls the same function. This is one
-  mapping, never a second copy (B1). `_issues_to_error(algorithm)` (`:58-69`) is split the same way. Its tail, which maps the first
+  extracted into a public `graph_validation_error(exc: ValidationError, *, artifact: str) -> PlatformError`.
+  `_parse_algorithm` calls it with `artifact="rating algorithm"`, and the sub-graph service with
+  `artifact="sub-graph"`. This is one mapping, never a second copy (B1).
+  - **What `artifact` parameterises** (N1 of the re-audit): only two strings. The fall-through
+    title, "Rating algorithm is invalid" (`:52`), becomes f"{artifact.capitalize()} is invalid",
+    and the cyclic detail, "A rating algorithm is a directed acyclic graph (FR-212)." (`:41`),
+    becomes f"A {artifact} is a directed acyclic graph (FR-212).". Every other string is fixed,
+    and so is the match order: the cyclic title "Rating graph is cyclic", the undefined-value
+    title "Rating graph references an undefined value", and its detail "Every consumed value is
+    produced by a step (FR-212).". With `artifact="rating algorithm"`, every string is
+    byte-identical to today's. `_issues_to_error(algorithm)` (`:58-69`) is split the same way. Its tail, which maps the first
   `ValidationIssue` of a list to a `PlatformError`, becomes a public
-  `raise_first_issue(issues: list[ValidationIssue]) -> None`. `_issues_to_error` calls
+  `raise_first_issue(issues: list[ValidationIssue]) -> None`. It raises for the first issue,
+  and **on an empty list it returns without raising** (N4 of the re-audit), as `_issues_to_error`
+  does today when `validate_algorithm` returns nothing (`:61-62`). `_issues_to_error` calls
   `raise_first_issue(validate_algorithm(algorithm))`, and the sub-graph service calls it for the
   `RATING_TYPE_MISMATCH` refusal.
 - Produces:
@@ -638,8 +670,18 @@ end of the file** and no existing class edited. Create one Alembic revision and
   inside `database.unit_of_work()`.
   - Before writing, call `fragment_output_type_issues` and refuse on its first issue, through
     `raise_first_issue`.
-  - `backend/tests/test_rating_algorithms.py`'s existing refusal tests pass unmodified after the
-    extraction, which proves the rating-algorithm path's behaviour is kept.
+  - **Characterisation first, then the extraction** (N1 of the re-audit). Today
+    `backend/tests/test_rating_algorithms.py` covers only the cyclic branch (`:86`) and the
+    unguarded-division issue path (`:105`). So, **before** extracting, add two tests to that
+    file (new tests only; it joins the write set):
+    - `test_an_undefined_value_is_refused_with_rating_graph_unresolved_ref`: 422, `code`
+      `RATING_GRAPH_UNRESOLVED_REF`, and the title and detail above;
+    - `test_another_shape_refusal_is_validation_failed`: for example a duplicate `step_id`; 422,
+      `code` `VALIDATION_FAILED`, title "Rating algorithm is invalid".
+
+    Each asserts the status, `code`, `title` and `detail` exactly. Both are **green before** the
+    extraction and **green after**, as are the two existing tests. That proves every branch of
+    the mapping keeps its behaviour. The ledger quotes both runs.
   - The `after` payload carries `change_note`, `inputs` and `outputs`.
 - [ ] Acceptance 7's broken-input proof: remove the `audit.record` call locally, run the test,
   quote the red, and restore the call. The broken state is never committed.
@@ -659,8 +701,9 @@ Modify `backend/src/app/main.py`: an import beside `:34`, and an `include_router
   creates, `requires(Permission.RATING_READ)` for the two reads, and `problems(...)` for the
   documented codes. **The body is `dict[str, Any]`**, as `POST /rating-algorithms` takes it
   (`api/rating_algorithms.py:35`), so that the service's mapper, not FastAPI's request
-  validation, chooses the code (B1). The request shapes still reach the published contract
-  through `generate-contracts.py`'s registry (Task 2).
+  validation, chooses the code (B1). OpenAPI therefore shows the two request bodies as open
+  objects, as it does for `POST /rating-algorithms`. The request shapes are published as JSON
+  Schemas through `generate-contracts.py`'s registry instead (acceptance 2, N5).
 - [ ] Regenerate the contracts, confirm `--check` exits 0, and run the authorisation sweep and
   `backend/tests/test_demo_guide.py`.
 - [ ] Green, and commit.
