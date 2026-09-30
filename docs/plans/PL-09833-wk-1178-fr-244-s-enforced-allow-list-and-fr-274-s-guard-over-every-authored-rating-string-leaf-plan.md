@@ -67,8 +67,8 @@ code slice that #967 (RL working id 9904) specifies". Neither record is minted, 
 by PR and working id, and Task 0 re-points both at mint.
 
 The maintainer's ordering is the lead's relay of the entry "DECISION on B" in `to-lead.md`,
-the lead's local channel file, outside the repository. It runs: the fix slice (#963,
-`SL-9872`/`PL-9873`, working ids) → **this slice** → WK-1250 Slice 1, all serialised on
+the lead's local channel file, outside the repository. It runs: the fix slice (#963, whose plan and slice
+row carry working ids 9873 and 9872) → **this slice** → WK-1250 Slice 1, all serialised on
 `compile.py` under `RL-1263`.
 
 ## Status
@@ -90,11 +90,11 @@ use.
 ### Dependencies
 
 - **On the fix slice (#963):** it edits `compile_bundle` and adds `check_step_refs_pinned`
-  (PL-9873, Task 2). This slice edits `_check_determinism`, `_check_division_guards`,
+  (#963's plan (working id 9873), Task 2). This slice edits `_check_determinism`, `_check_division_guards`,
   `_check_scale_cap`, `_check_vocabulary` and `_GUARD_MARKERS`. Those are different
   definitions in the same file, but the maintainer's order serialises them. The later slice
   merges `main` and re-runs its gate. #963 also adds `_INPUT_FREE` entries in
-  `test_quote_input_raise_sites.py` (PL-9873, acceptance 7), which this slice may touch too
+  `test_quote_input_raise_sites.py` (#963's plan (working id 9873), acceptance 7), which this slice may touch too
   (Task 4).
 - **On WK-690 Slice 1 (PL-1295, dispatched now):** its Task 6 writes `03` FR-244's cell
   (`PL-1295:1530-1554`, "Modify: `docs/specs/03-rating-engine.md:146` (the FR-244 row; §3.5)").
@@ -123,7 +123,7 @@ section, or policy table" (`RL-1263:89`).
 | `backend/tests/test_rating_algorithms.py` | one save-route test appended (acceptance 8) | no |
 | `docs/INDEX.md` | regenerated | exempt |
 
-**Against the fix slice (#963, PL-9873):** its write set is `compile.py` (`compile_bundle`,
+**Against the fix slice (#963, plan working id 9873):** its write set is `compile.py` (`compile_bundle`,
 `__all__`, the new `check_step_refs_pinned`), `runtime.py` (`_load_boosters`, `load_bundle`),
 `03` §5.1's catalogue line, `test_quote_input_raise_sites.py`'s `_INPUT_FREE`, and tests.
 This slice shares `compile.py` (different functions) and `03` §5.1 (both add to the catalogue
@@ -203,7 +203,7 @@ case says otherwise.
 6. **A residual evaluation failure has its own code, red first** (DP-G4). The score fixture's
    A2/A3 and C1 rows (#968) are a decline condition or clamp bound dividing by a zero or null
    input. They are built by bypassing the save-time check, since after this slice they cannot
-   be saved. Build a `Bundle` by hand, the route PL-9873's acceptance 5a names: `to_jdm`,
+   be saved. Build a `Bundle` by hand, the route #963's plan (working id 9873), acceptance 5a, names: `to_jdm`,
    `bundle_hash`, `load_bundle`, `score_one`. Each now raises `CodedError` with the new code,
    not `RATE_TABLE_MISS`. **Predicted red:** `RATE_TABLE_MISS` (`score.py:491`).
 7. **A genuine miss keeps its code.** An `on_miss="error"` table step with no matching row,
@@ -219,7 +219,7 @@ case says otherwise.
    computed code. So `test_quote_input_raise_sites.py::test_every_quote_input_raise_site_has_a_sentinel_case`
    passes with `_INPUT_FREE` unchanged. **If the implementation adds any `_raise_named`,
    `CodedError(` or `_model_call_failure(` call** under `pricing_core/rating`, the same commit
-   adds its `_INPUT_FREE` entry with the reason (PL-9873, acceptance 7, for the form). The
+   adds its `_INPUT_FREE` entry with the reason (#963's plan (working id 9873), acceptance 7, for the form). The
    ledger records which case held.
 10. **Stored and committed strings pass** (#967, *Acceptance*: "Stored data"). A test runs the
     allow-list over every authored string in the committed fixtures, examples and bench
@@ -283,7 +283,7 @@ case says otherwise.
 | a | The four checks read only `RatingExpressionStep.expr` | `compile.py:142-163`, `:166-193`, `:196-230`, `:233-257`: each has `if not isinstance(step, RatingExpressionStep): continue` (#968, *Cause*) |
 | b | `_GUARD_MARKERS` is `("!= 0", "> 0", "== 0", "< 0", "?:", "coalesce(", "if(", "guard")`, matched as substrings | `compile.py:41`, `:179-181` |
 | c | `_check_vocabulary` is `zen.compile_expression` per `expr`, giving `EXPRESSION_INVALID_VOCABULARY` | `compile.py:233-257` |
-| d | `coalesce(` does not compile; `??` compiles | the planner's run at `eeda8f4b`, recorded in PL-9873 acceptance 4: `zen.compile_expression('a * number(coalesce(x, "1.0"))')` raised `{"type":"parserError","source":"Incomplete parser output"}`, and the `??` form compiled |
+| d | `coalesce(` does not compile; `??` compiles | the planner's run at `eeda8f4b`, recorded in #963's plan (working id 9873) acceptance 4: `zen.compile_expression('a * number(coalesce(x, "1.0"))')` raised `{"type":"parserError","source":"Incomplete parser output"}`, and the `??` form compiled |
 | e | A constraint's `condition` is a `str`, and `clamp_bounds` is `dict[str, str] \| None` | `packages/model-schema/src/model_schema/rating.py:314-320` |
 | f | `table` and `lookup` steps carry `key_expr: list[str]` | `rating.py:275-288` |
 | g | The runtime wraps `condition` as `!(…)` and builds clamp ternaries from the bounds | `runtime.py:292`, `:310-313` |
@@ -391,7 +391,7 @@ create `packages/pricing-core/tests/test_rating_authored_strings.py`; append to
 (`_reraise_engine_failure`); `backend/src/app/errors.py` (`RATING_ERROR_CODES`); append to
 `packages/pricing-core/tests/test_rating_score.py`.
 
-- [ ] **Red first:** acceptance 6, on hand-built bundles (the route PL-9873's acceptance 5a
+- [ ] **Red first:** acceptance 6, on hand-built bundles (the route #963's plan (working id 9873), acceptance 5a,
   names). Predicted red: `RATE_TABLE_MISS`.
 - [ ] Per DP-G4, choose the code inside the existing single `_raise_named` call. Parse the
   engine error's `nodeId` from its JSON; do not match free text. Add the code to
