@@ -1,7 +1,7 @@
 ---
 id: RL-9982
 family: ruling
-title: DP-G1 to DP-G4 decided — spec first via WK-690 S1, all four checks widened, a tokenizer allow-list, and a RATING_EVALUATION_FAILED code
+title: DP-G1, G3, G4 and G5 decided — spec first via WK-690 S1, a tokenizer allow-list, a RATING_EVALUATION_FAILED code, and the enumerator in pricing-core
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
 created: 2026-09-30
 owner: decision-maker
@@ -15,7 +15,7 @@ corrects: ~
 relates: [RL-1263, RL-1265]
 ---
 
-# RL-9982 — DP-G1 to DP-G4 decided: (a), (a), (a), (a)+(i)
+# RL-9982 — DP-G1, G3, G4 and G5 decided: (a), (a), (a)+(i), (a)+(i)
 
 ## How this was ruled
 
@@ -27,12 +27,15 @@ relates: [RL-1263, RL-1265]
   - "2026-09-30 10:53:10 BST — DECISION: condition/clamp FD (B) — HIGH on independent
     reproduction; owner and order";
   - "2026-09-30 10:55:40 BST — … #968 widened, so fix the CLASS structurally";
-  - "2026-09-30 10:57:06 BST — #968 HIGH in force".
+  - "2026-09-30 10:57:06 BST — #968 HIGH in force";
+  - "2026-09-30 11:05:21 BST — DECISION: I accept #967's departure; it supersedes the rounding
+    part of my 10:46:20 (A)": `round`, `floor` and `ceil` are not on P2's allow-list.
 - **Working id 9982.** It was checked free on every `origin/*` branch, in every open PR's
   title and body, and in the channel files. It is minted at the merge turn.
-- **Sources.** The decision points belong to the WK-1178 leaf plan #969 (working id 9833, head
-  `dee9ff9d`, `:307-310`). They implement the ruling #967 (RL working id 9904, head
-  `1efa639d`) and discharge the finding #968 (FD working id 9885, HIGH, head `fede7e5d`).
+- **Sources.** The decision points belong to the WK-1178 leaf plan #969 (working id 9833). I
+  first read it at `dee9ff9d` (`:307-310`), and this record rules its DP table at head
+  `1cbcf474` (`:387-391`). There, DP-G2 is withdrawn and DP-G5 is added. They implement the
+  ruling #967 (RL working id 9904, first read at `1efa639d`, then at `6eb68d77`) and discharge the finding #968 (FD working id 9885, HIGH, head `fede7e5d`).
   None of the three is minted, so each is cited in prose.
 
 ## Verified first, at 9f63d0feee524815e7e0c68c99a53ac3f80e6c37
@@ -82,7 +85,7 @@ are in the same directory.
 | MISS (genuine) | `CodedError RATE_TABLE_MISS: …` | `{"type":"NodeError","source":"Failed to evaluate expression: \"risk_premium_minor * expense_factor\"","nodeId":"s_office"}` |
 
 What this shows:
-1. **`nodeId` is the step id itself** (`s_office`, `s_decl_cap`, `s_clamp`), for an
+1. **`nodeId` is the step id itself**. auditor-933 got the same for an unguarded decline condition, independently (`"nodeId":"s_decl_cap"`, relayed by the lead). The clamp bound, which the relay calls untested, is covered here (`s_clamp`) (`s_office`, `s_decl_cap`, `s_clamp`), for an
    expression step, a condition and a clamp bound alike. It is not the entry ids `<step>_v`
    or `<step>_c`, so **no suffix mapping is needed**. The executor still re-proves this on
    its red run.
@@ -107,7 +110,9 @@ What this shows:
     sentence "is carried to the ruling's implementing slice by name" if Slice 1 closes first.
 - **(c) is refused.** Code ahead of its spec is what `CLAUDE.md` §0 forbids.
 
-**DP-G2 — (a), confirmed.** The maintainer decided this class structurally at 10:55:40:
+**DP-G2 — withdrawn from the plan at `1cbcf474`, and not ruled here.** The maintainer
+decided it at 10:55:40, as option (a). The plan keeps the row so that its id is not reused.
+The decision is recorded here only because DP-G5 builds on it:
 "**one enumerator** of every authored expression field … which **every** expression check
 iterates; a **matrix test** … **Adding a new expression field without the enumerator, or a
 new check that bypasses it, must fail a test.**"
@@ -123,7 +128,10 @@ new check that bypasses it, must fail a test.**"
 - (b) is excluded by #967 ("`pricing_core.data.expressions` never parses it").
 - (c) cannot tell `a.b` from `1.5`, or `min([…])`'s bracket from indexing.
 - The tokenizer's lists must equal #967's amended FR-244 text item for item. The slice
-  carries a test comparing them, so the code's list is checkable against the spec's.
+  carries a test comparing them, so the code's list is checkable against the spec's. At #967's
+  head `6eb68d77` (`:150-172`, `:237-238`), and by the maintainer's 11:05:21 entry, the
+  functions are `min([…])`, `max([…])` and `abs`. **`round`, `floor` and `ceil` are off the
+  list** and are refused at save.
 
 **DP-G4 — (a)+(i), with a stated limit.**
 - **The code:** a new `RATING_EVALUATION_FAILED`.
@@ -156,8 +164,27 @@ new check that bypasses it, must fail a test.**"
     already names ("making the wire translation itself fail gracefully"). That is outside this
     slice. The lead routes it to the maintainer if the residual is not accepted.
 
+**DP-G5 — (a) and (i).**
+- **Placement (a).** The enumerator and its two field registries (expression fields and
+  non-expression string fields) live in a new `pricing_core/rating/authored.py`, next to the
+  checks that iterate it.
+  - (b) would put check policy into the shape package, and it would edit
+    `model_schema/__init__.py` (712 lines at `9f63d0fe`), a file every shape slice touches.
+  - The closure test walks the step schemas, so a new field is caught wherever it is added. It
+    does not need the registry to sit beside the model.
+- **`as_at` (i): a non-expression field.** It is `RatingLookupStep.as_at: str`
+  (`packages/model-schema/src/model_schema/rating.py:279`).
+  - `git grep -n as_at 9f63d0fe -- packages/pricing-core/src/pricing_core/rating` finds it
+    only in `runtime.py`'s module docstring (`:26-35`): the effective-dating window is "an
+    exact key match only", and no code evaluates it.
+  - Checking it as an expression would refuse or accept a string that no engine reads.
+  - Its registry entry carries the stated trigger: it moves to the expression fields when the
+    window is wired to the engine.
+  - The closure test still forces every string field into one registry or the other, so
+    `as_at` cannot drift out of both.
+
 **Departures from the recommendations.**
-- DP-G1 (a), DP-G2 (a) and DP-G3 (a) are **as recommended**.
+- DP-G1 (a), DP-G3 (a) and DP-G5 (a)+(i) are **as recommended**. DP-G2 is withdrawn.
 - DP-G4 (a)+(i) is as recommended, **with one addition**: the stated limit above narrows
   #968's "never `RATE_TABLE_MISS`" line to the steps (i) can separate. This is reported for
   the maintainer.
@@ -176,7 +203,7 @@ and are not reopened here.
 
 The WK-1178 code slice (#969's plan):
 - **Dispatch:** gated by DP-G1.
-- **Tasks 2 and 3:** DP-G3 and DP-G2 as ruled. The enumerator, the matrix test and the closure
+- **Tasks 2 and 3:** DP-G3 and DP-G5 as ruled, and the maintainer's DP-G2 decision. The enumerator, the matrix test and the closure
   tests follow the maintainer's 10:55:40 wording.
 - **Tasks 1 and 4:** DP-G4 as ruled, with the stated limit recorded in
   `_reraise_engine_failure`'s docstring. A test pins the limit's behaviour, so any change to it
