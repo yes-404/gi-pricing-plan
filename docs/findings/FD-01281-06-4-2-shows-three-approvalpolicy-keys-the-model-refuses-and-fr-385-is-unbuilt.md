@@ -70,15 +70,3 @@ the OQ-1234 ruling, then the Work that builds FR-385 or amends §4.2. If unowned
 *Square brackets in `RL-[99nn]` are inserted so this record does not cite the prepared rulings' working ids as live ids under checks 31 and 32; the real ids carry none.*
 
 *Disclosure: this record was drafted under working id 9911 and minted as FD-1281; the working id survives only in this line and in PR #947's history.*
-
-## Amendment, 2026-09-30: owner confirmed WK-677 (FR-385)
-
-Appended, not rewritten; nothing above changes. The maintainer's entry `to-lead.md`
-"2026-09-30 11:56:33 BST — DECISIONS: slice order after the split; FR-384 confirmed; FR-383 and
-FR-385 owners" makes **WK-677** (approval policies) the owner of FR-385, and the entry "2026-09-30
-11:58:07 BST — FD-1281 disposition: yes, add a dated line" asks for this line. **The Disposition
-above ("Carry forward, unowned") is superseded**: *unowned* is not a permitted state (`CLAUDE.md`
-§14, the 2026-09-29 amendment, RFC-1248 and RL-1249). **Owner confirmed WK-677 (FR-385), maintainer
-entry 2026-09-30 11:56:33 BST.** The register row carries the same line, with the earlier text
-struck, not deleted. The event is unchanged: the OQ-1234 ruling, then the Work that builds FR-385
-or amends §4.2.
