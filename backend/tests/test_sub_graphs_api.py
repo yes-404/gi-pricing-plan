@@ -142,10 +142,6 @@ def test_a_shape_refusal_is_validation_failed(
     assert (response.status_code, response.json()["code"]) == (422, "VALIDATION_FAILED"), cause
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FD working id 9948: str(exc) substring match mis-maps to RATING_GRAPH_CYCLIC",
-)
 def test_an_unknown_field_named_cycle_note_is_validation_failed(
     api_client: TestClient, headers
 ) -> None:

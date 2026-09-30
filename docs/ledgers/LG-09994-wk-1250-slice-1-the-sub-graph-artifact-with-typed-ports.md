@@ -176,6 +176,18 @@ the rival row inside the service's own session (so the unique constraint fires a
 "no PUT/PATCH/DELETE" check reads `app.openapi()` paths. A scoped-to-one-algorithm principal (assignment
 `scope_type=rating_algorithm`) is 403 on all four routes, as is a role-less member.
 
+### Task 7 — the typed-signal fix (FD-1326, was working id 9948)
+
+Red: with the two `xfail(strict=True)` marks removed, both `…cycle_note_is_validation_failed` cases failed
+`assert 'RATING_GRAPH_CYCLIC' == 'VALIDATION_FAILED'` (the wrong code the substring match returns); the new
+`packages/model-schema/tests/test_graph_errors.py` failed 2 of 3 (`assert False` on the class check; the
+FR-214 case was green, as it stays a plain `ValueError`). Fix: `rating.py` raises `GraphUnresolvedRefError`
+and `GraphCycleError` at the two sites, messages unchanged, FR-214 untouched; `graph_validation_error` reads
+the class from `exc.errors()` (cycle, then unresolved, then fall-through) and never `str(exc)`. Green:
+78 passed across `test_graph_errors.py`, `test_rating_algorithm.py`, `test_sub_graph.py`,
+`test_rating_algorithms.py` (six tests, the four characterisation cases and the two existing),
+`test_sub_graphs_api.py` and `test_sub_graphs_service.py`. No other caller matches the message text.
+
 ## Deviations from PL-1325, each named
 
 1. **Decimal example** (Task 1): the §4.11 example declares the output port type `relativity`, not

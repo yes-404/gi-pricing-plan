@@ -16,6 +16,7 @@ from sqlalchemy import select
 from app.db.models import RatingAlgorithmRow
 from app.db.session import Database
 from app.errors import PlatformError
+from model_schema import GraphCycleError, GraphUnresolvedRefError
 from model_schema.rating import RatingAlgorithm, diff_algorithms
 from pricing_core.rating.compile import ValidationIssue, validate_algorithm
 
@@ -31,20 +32,25 @@ __all__ = [
 def graph_validation_error(exc: ValidationError, *, artifact: str) -> PlatformError:
     """Map a shape refusal to its named code, rather than Pydantic's generic 422.
 
-    The shapes enforce the graph invariants (FR-212) in their own validators; a cyclic
-    graph or an unresolved reference is refused with the code the spec's §5.1 names.
+    The shapes enforce the graph invariants (FR-212) in their own validators and raise a
+    typed signal (`GraphCycleError`, `GraphUnresolvedRefError`); the code is chosen by that
+    class, in `exc.errors()`, and never by the message text, which echoes the input.
     `artifact` names the thing in the two strings that say what it is ("rating algorithm",
     "sub-graph"); every other string is fixed. One mapping for both artifacts, never a copy.
     """
-    text = str(exc).lower()
-    if "cycle" in text:
+    raised = [
+        error["ctx"]["error"]
+        for error in exc.errors()
+        if error["type"] == "value_error" and "error" in error.get("ctx", {})
+    ]
+    if any(isinstance(error, GraphCycleError) for error in raised):
         return PlatformError(
             "RATING_GRAPH_CYCLIC",
             "Rating graph is cyclic",
             422,
             f"A {artifact} is a directed acyclic graph (FR-212).",
         )
-    if "undefined value" in text:
+    if any(isinstance(error, GraphUnresolvedRefError) for error in raised):
         return PlatformError(
             "RATING_GRAPH_UNRESOLVED_REF",
             "Rating graph references an undefined value",

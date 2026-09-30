@@ -207,10 +207,6 @@ def test_another_shape_refusal_is_validation_failed(
 
 
 @pytest.mark.req("FR-212")
-@pytest.mark.xfail(
-    strict=True,
-    reason="FD working id 9948: str(exc) substring match mis-maps to RATING_GRAPH_CYCLIC",
-)
 def test_an_unknown_field_named_cycle_note_is_validation_failed(
     api_client, workspace_id, principal, grant
 ) -> None:
