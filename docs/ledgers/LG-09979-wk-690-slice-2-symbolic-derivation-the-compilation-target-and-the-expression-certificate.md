@@ -170,7 +170,7 @@ template tests otherwise pass unmodified. The spec (`02` §5.1, FR-165) is amend
 
 **Solo window** granted by the lead 2026-09-30 23:19:50 BST (dispatch record, Delta 1). Start 23:21:35 BST: `uptime` load 3.01, 2.06, 1.91; `free -h`
 31Gi total, 24Gi used, 342Mi free, 7.7Gi buff/cache, **6.5Gi available** (sibling agent sessions; 23Gi available at the end); `flock -n` on
-`/tmp/slots/gate-1` and `gate-2`: both free; no pytest or bench process. The lead's grant recorded load 0.76, so the box was **not as idle as at the grant**
+`/tmp/slots/gate-1` and `gate-2`: both free (none held, so no other holder) **before the first run and after the last**; no pytest or bench process. **During each run my own process held `gate-1`** (`flock -n -E 99` around the bench), so DP-S2-6's "each run takes a gate slot" was met. The lead's grant recorded load 0.76, so the box was **not as idle as at the grant**
 (load 3 to 4 throughout, from sibling agent processes, not slots). Each run took `gate-1` under `flock -n`, with `POLARS_MAX_THREADS`,
 `RAYON_NUM_THREADS`, `TOKIO_WORKER_THREADS`, `OMP_NUM_THREADS`, `OPENBLAS_NUM_THREADS`, `MKL_NUM_THREADS` = 4 and `LOKY_MAX_CPU_COUNT=4`. End 23:25:42 BST:
 load 4.07, 2.97, 2.31; `free -h` 7.9Gi used, 18Gi free, 23Gi available; both slots free. Shape: 1,000,000 rows x 60 factors x 100 trees (RL-1328 DP-S2-6 (a)),
@@ -195,6 +195,30 @@ Run 1 (N=3): median **1.273**, spread [1.166, 1.338]. Run 2 (N=7): median **1.25
 **Verdict (DP-S2-6 (a)): measured, near bound, no verdict.** Both medians are within ±5 percentage points of 1.25, so the near-bound condition applies
 (`RL-921` §4, CR-1247 Proposal 4). The limb is neither met nor missed at this shape on this shared VM. The full shape (5 M x 60 x 500, N >= 3) goes to the dedicated host:
 the run is WK-690's and the host is the maintainer's, who has not named one.
+
+### Task 7 — the gate, at head `125a403b1456678ebf923b0db1aafbfe5e378a87`
+
+Lead's grant: dispatch record Delta 2 (2026-09-30 23:27:25 BST). This checkout is the worktree itself, `git status --porcelain` empty (0 lines) at the start;
+`.ruff_cache` and `.mypy_cache` deleted before the run (both fresh), so the wrapper's `ruff check .` and `mypy` ran uncached. The slot wrapper is
+`.claude/skills/dev-commands/SKILL.md:123-170` **verbatim**, extracted by line range into a script, with `LOKY_MAX_CPU_COUNT=4`, in the foreground under `timeout 4500`
+(the harness backgrounded it at 600 s; I waited on its output and did not relaunch). Test DB `gipricing_exec-690s2_3b894c43`, created from the template, `alembic upgrade head` run.
+
+- **Start** 2026-09-30 23:27:55 BST: load 0.73, 2.08, 2.07; `free -h` 31Gi total, 7.7Gi used, 18Gi free, 6.9Gi buff/cache, 23Gi available; `flock -n`: gate-1 free, gate-2 free (so no other holder).
+- **End** 23:51:31 BST: load 4.56, 4.19, 3.42; `free -h` 8.7Gi used, 17Gi free, 22Gi available; gate-1 and gate-2 free.
+- **Overlap, named:** per the lead (Delta 3), executor-674s3 ran an **unslotted pricing-core suite (~55 s)** during this gate, and sibling agent processes kept the load at 3 to 4.5 at the end.
+  The pass/fail reading stands; **the wall and pytest times are confounded and this run is not usable as an RL-1263 pair.**
+- **Wall 1416 s; pytest 1401.41 s** (0:23:21), against the solo baseline 1469.58 s (step-down line about 2204 s): 0.95x, so no step-down.
+- **Result: GATE FAIL, 5 of 7 stages pass** (ruff, mypy, import_linter, req_coverage and `generate-contracts.py --check`: exit 0). **The wrapper script itself exited 0** (its last command is a subshell exit),
+  so the exit code of the script says nothing and the stage table is the reading.
+  - `audit_docs` exit 1: one failure, **check 31, "gap in the full allocation between 1341 and 9979"**: the two working ids (LG 9979, RS 9980) are unminted by design, until the merge turn.
+  - `pytest` exit 1: **4404 passed, 13 failed, 3 skipped.** All 13 failures are that same gap, reached through tests that run the whole-tree docs audit or `doc-id.py check`: `test_audit_docs_ids.py`
+    (2), `test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity` ("the live allocation is not contiguous: [(1341, 9979)]"), `test_audit_docs_finding_citations.py` (1),
+    `test_audit_docs_process_core_digest.py` (2), `test_audit_docs_w37_11_ceiling.py` (1), `test_register_lint.py` (3), `test_register_owed.py` (1), `test_repository_invariants.py` (2).
+    No test outside the docs-audit family failed. **This is not a green gate**; it goes green when the lead mints the ids, and the gate is re-read then.
+- **Collected tests (Acceptance 12):** `pytest --collect-only -q` on a detached worktree of main `71b67220` (own `uv sync --all-packages`): **4370**; on this head: **4420**; +50 (11 in `test_expression_objective.py`, 36 in `pricing-core` `test_objectives.py`
+  (including 12 template-unchanged cases), 3 in `model-schema`). Main's slotted `passed` total was not measured: no slotted main run was made; LG-1332 records 4367 passed at its own tree.
+- **Frontend half** on the same tree, inside `gate-1` (start 23:52:36, end 23:53:47): `pnpm install --frozen-lockfile` rc 0, `generate:api` rc 0, `lint` rc 0, `type-check` rc 0, `test` rc 0 (97 files, **609 passed**), `build` rc 0.
+- **Docs checks on a clean detached checkout of the pushed commit:** not yet run (nothing is pushed).
 
 ## Deviations from PL-1327, each named
 
