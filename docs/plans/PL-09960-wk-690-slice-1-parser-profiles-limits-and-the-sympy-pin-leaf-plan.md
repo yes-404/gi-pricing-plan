@@ -272,7 +272,7 @@ i. **`Profile` is taken.** `pricing_core.data.profile` imports `Profile` (the da
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-S1-1 | What does §4.6's "AST node count ≤ 200; nesting depth ≤ 20" count? | **(a)** `ast.expr` nodes only (the sub-expressions an author wrote: names, literals, calls, operations), with depth as the longest chain of nested `ast.expr` nodes, the root at 1. **(b)** Every node `ast.walk` yields, including operator tokens and `Load` contexts, with depth over the same. | **(a).** It is what an author can count. Under (b), `a + b` is 6 nodes, and 200 means about 100 written terms, a limit the spec did not state. Task 2 measures both, so the ruling can be made from data. | decision point: it interprets what §4.6's limit means, and a measurement informs it but cannot settle it | **yes, for activation.** Resolving step: the plan's activation. Applied at Task 4 (Steps 1, 3 and 4); Task 4 Step 1 names the constants that change under (b). Task 2 measures both predicates either way | decision-maker, its own `RL-` at medium, with an executable red/green proof (pending; working id to follow) |
+| DP-S1-1 | What does §4.6's "AST node count ≤ 200; nesting depth ≤ 20" count? | **(a)** `ast.expr` nodes only (the sub-expressions an author wrote: names, literals, calls, operations), with depth as the longest chain of nested `ast.expr` nodes, the root at 1. **(b)** Every node `ast.walk` yields, including operator tokens and `Load` contexts, with depth over the same. | **(a).** It is what an author can count. Under (b), `a + b` is 6 nodes, and 200 means about 100 written terms, a limit the spec did not state. ~~Task 2 measures both, so the ruling can be made from data.~~ Premise h's spike figures, measured at `fb90d381`, inform the ruling. Task 2 re-measures the corpus under both predicates after it. *(Revised 2026-09-30 on auditor-plans2's audit at c76faa22, finding F8: the ruling now comes before activation, so before Task 2 runs.)* | decision point: it interprets what §4.6's limit means, and a measurement informs it but cannot settle it | **yes, for activation.** Resolving step: the plan's activation. Applied at Task 4 (Steps 1, 3 and 4); Task 4 Step 1 names the constants that change under (b). Task 2 measures both predicates either way | decision-maker, its own `RL-` at medium, with an executable red/green proof (pending; working id to follow) |
 | DP-S1-2 | Do the legacy single-argument functions (`abs round floor ceil log exp sqrt`) keep ignoring extra arguments in `recipe` and `check` (premise c)? | **(a)** Keep them, because `recipe` and `check` only add. Exact arity binds the four new functions in every profile, and every function in `objective` and `factor`. **(b)** Enforce exact arity everywhere. | **(a)**, with the silent drop reported to the auditor as a finding candidate. (b) could refuse an expression that works today, which the only-add rule forbids. | decision point: a behaviour choice for existing callers | **yes, for activation.** Resolving step: the plan's activation. Applied at Task 3 Step 3 (where arity is implemented) | decision-maker, its own `RL-` at medium, with an executable red/green proof (pending; working id to follow) |
 | DP-S1-3 | What SymPy assumptions do the objective symbols (`y`, `f`, `w`, parameters) carry? | **(a)** `real=True`. **(b)** None. | **(a).** §4.6's domains are real (`y_domain`, raw score `f`, weight `w`). Without the assumption, `Abs` differentiates to the complex form in premise g, and that would become the canonical text Slice 2 records. | decision point: it fixes the canonical derived text a reviewer approves | **yes, for activation.** Resolving step: the plan's activation. Applied at Task 5 Step 4 (where the symbols are created). Slice 2 inherits it | decision-maker, its own `RL-` at medium, with an executable red/green proof (pending; working id to follow) |
 
@@ -470,7 +470,8 @@ git commit -m "build(pricing-core): pin sympy==1.14.0 and cite the lock in 02 §
 """FR-145 and 02 §4.6: node count ≤ 200 and depth ≤ 20, in all four profiles.
 
 The counts are over `ast.expr` nodes, with the root at depth 1. That is DP-S1-1's default
-(a). `all_nodes` is option (b), measured beside it so the ruling can be made from data. The
+(a), which DP-S1-1's `RL-` rules before activation. `all_nodes` is option (b), measured beside
+it so the corpus table shows both predicates (F8). The
 figures below are premise h's, from the spike at fb90d381.
 """
 
@@ -522,7 +523,7 @@ class ExpressionSize:
 
     `nodes` and `depth` count `ast.expr` nodes only, the root at depth 1 (DP-S1-1 (a)).
     `all_nodes` counts every node `ast.walk` yields (option (b)). It is carried so that the
-    measurement behind the ruling is on record, and nothing enforces it.
+    corpus measurement records both predicates, and nothing enforces it.
     """
 
     nodes: int
