@@ -17,6 +17,7 @@ from uuid import uuid4
 
 import polars as pl
 import pytest
+from backend.tests.approved_rows import add_approved
 from backend.tests.test_api_rate_tables import (
     _LEVELS,
     _fit_result,
@@ -57,7 +58,8 @@ async def _seed_approved_model(
     from uuid import uuid4
 
     async with database.unit_of_work() as session:
-        session.add(
+        await add_approved(
+            session,
             ModelRow(
                 workspace_id=workspace_id,
                 model_family_slug=family,
@@ -68,9 +70,8 @@ async def _seed_approved_model(
                 spec_hash=f"v3:sha256:{uuid4().hex}{uuid4().hex}",
                 fit_result=_fit_result(relativities),
                 diagnostics_id=uuid4(),
-            )
+            ),
         )
-        await session.flush()
 
 
 async def _seed(

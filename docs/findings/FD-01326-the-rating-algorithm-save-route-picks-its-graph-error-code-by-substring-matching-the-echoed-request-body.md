@@ -1,5 +1,5 @@
 ---
-id: FD-9948
+id: FD-1326
 family: finding
 title: The rating algorithm save route picks its graph error code by substring-matching the echoed request body
 status: active
@@ -10,12 +10,13 @@ corrected_by: []
 relates: [WK-1250, FR-212, FD-1297]
 ---
 
-# FD-9948 — The rating algorithm save route picks its graph error code by substring-matching the echoed request body
+# FD-1326 — The rating algorithm save route picks its graph error code by substring-matching the echoed request body
 
 ## Finding
 
 **Severity: low.** Proposed by the auditor; the disposition is the lead's. Filed 2026-09-30
-under working id 9948, and minted at its merge turn.
+under working id 9948, and minted as FD-1326 at its merge turn (`python3 scripts/doc-id.py next
+--ref origin/main` printed 1325 for the plan minted beside it, so 1326 is this record's).
 
 `_parse_algorithm` (`backend/src/app/platform/rating_algorithms.py:25-52` at `origin/main`
 `11c76b6c83647c512796fedb9c0143927dcd78cb`) decides which code a refused `RatingAlgorithm`
@@ -128,7 +129,7 @@ then reads each error's `type`, which no client value can reach.
 
 **The guard, per the same entry.** The characterisation tests written first for the mapper
 "**must not pin the bug.**" The `cycle_note` case, and any other substring false positive found,
-is a **`strict=True` xfail citing FD 9948**, which the typed-signal task flips to a pass as the
+is a **`strict=True` xfail citing FD-1326 (working id 9948)**, which the typed-signal task flips to a pass as the
 proof of the fix. Cases 3, 4, 5 and 7 above are the false positives known at this tree. The
 tests for the two unproven branches (`RATING_GRAPH_UNRESOLVED_REF` and the `VALIDATION_FAILED`
 fallback) are green on the current code, and rows 2 and 6 stay green.
