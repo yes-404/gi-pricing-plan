@@ -334,6 +334,22 @@ cause, and the guard is restored; the ledger quotes both runs.
     `327e1179`, on the maintainer's entry "11:32:49 BST", item 2, and the entry headed
     `2026-09-30 11:21:51 BST — status 11:25 noted; three rulings` for the population. Task 3A
     builds it. Each item red first:
+    - **the test database really carries the guard** (the maintainer's entry headed
+      `2026-09-30 11:45:55 BST`, item 2 — CRITICAL; applies if #971's next head makes the
+      trigger the primary guard): a `refused` test run against a database without the
+      trigger passes vacuously. So, before any red-first plant, a session-scoped check
+      asserts from `pg_trigger` that the trigger exists and is enabled on **every** guarded
+      table (derived as below), and **fails** — never skips — if any is missing. Today the
+      test database is built by migrations, not `create_all`: the `database` fixture skips
+      unless `alembic_version` holds a row (`backend/tests/conftest_db.py:192-197`), and no
+      `create_all` appears under `backend/tests/`. That is not enough on its own, because a
+      shared database left at an older revision lacks the new trigger (FD-1218 records the
+      shared template holding a stale schema). The check therefore also asserts the
+      database's `alembic_version` equals the repository head. The trigger DDL lives only in
+      its migration; no fixture installs a copy. The teardown's
+      `session_replication_role = replica` (`conftest_db.py:340-360`) suspends user triggers
+      for its own transaction only, and a test asserts the trigger is in force again after
+      `empty_the_database()`;
     - **population and declaration:** every approval-capable table declares its `status`
       vocabulary as column metadata (`info={"status_vocabulary": <StrEnum>}`), and the
       population is every mapped class whose declared vocabulary has an `APPROVED` member.
@@ -1046,7 +1062,43 @@ Task 6's per-request resolution with the switch, and reuses Task 5's route shape
     different slice, which the maintainer would have to accept.
   - **Recommendation: (b).** It separates the one piece of S2 that is not about Environments
     and Deployments, keeps Task 0A where the maintainer placed it, and shortens S2's
-    serialisation window. A split is a replan: the lead decides it, and if chosen the planner
+    serialisation window. The maintainer leans yes (the entry headed
+    `2026-09-30 11:45:55 BST`, item 1): the guard hardens the 7 existing approval tables, and
+    the validation-rule fix depends on it, so it lands first and S2 then adds
+    `deployment_requests` to the guarded set.
+    - **Owner: WK-674 S2a**, not WK-1178. Under RL-1263 two build slices may run together
+      only from different Works, so a WK-1178 owner would queue the guard behind, or ahead
+      of, WK-1178's own two slices (#977's §5.1 Permission column and the validation-rule
+      fix), which then run one at a time. As WK-674 S2a, the guard and #977's column slice
+      are in different Works and share no file (the guard touches no spec table; the column
+      slice touches only `docs/specs/*` §5.1), so they may hold the two slots together once
+      a slot is free.
+    - **Slots:** S2a takes lane A, the slot S2 would have taken. WK-690 S1 holds lane B and
+      touches `packages/pricing-core`, `02`, `03` FR-244, the pyprojects and `uv.lock`; S2a
+      touches none of those, so the two may overlap. The first overlap triggers the
+      three-pair contention measurement (the 10:05:40 entry), and every full run takes a
+      gate slot (the 11:42:08 entry). S2 follows S2a in lane A.
+    - **Serialisation, path by path:**
+      - `backend/src/app/db/session.py` (listener registration): S2a only;
+      - `backend/src/app/db/models.py` (the `status_vocabulary` declarations on existing
+        classes): S2a; S2 then only appends classes, which is registry-exempt;
+      - `backend/src/app/api/approvals.py` (`_carry_to_the_artifact`): S2a enters the
+        context there, S2 adds the deployment branch, and the validation-rule fix adds the
+        validation branch — **three slices on one function, strictly in sequence**: S2a,
+        then S2 and the fix in the order the lead sets (the 11:23:26 entry puts the fix after
+        S2);
+      - `backend/src/app/platform/approvals.py`: S2a (`approval_decision()`, `decide`), S2
+        (`set_policy`'s Environment check), the fix (routing rule approval through
+        `submit`/`decide`) — the same sequence;
+      - the 17 fixture files: S2a only. Any in-flight slice editing one of them serialises
+        with S2a; S2's own tests are new files, apart from `test_api_approvals.py`, which is
+        not among the 17;
+      - `backend/migrations/versions/`: S2a's trigger revision and S2's revision are both
+        appends. The later one re-points `down_revision` at its merge, and **S2's revision
+        extends the trigger to `deployment_requests`** in the same migration that creates
+        the table;
+      - #977's column slice: no overlap with S2a; it serialises with S2, and S2's new routes
+        are declared by whichever lands second. A split is a replan: the lead decides it, and if chosen the planner
     cuts the new `SL-` row (`draft`) and files S2a's leaf plan, with this plan re-cut by a
     dated delta.
 
