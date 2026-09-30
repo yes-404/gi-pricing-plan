@@ -23,7 +23,7 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from model_schema.money import MoneyMinor
+from model_schema.money import MoneyMinor, PositionalDecimalStr
 from model_schema.refs import ArtifactRef
 
 __all__ = [
@@ -59,8 +59,12 @@ LadderRungName = Literal[
     "payable_premium",
 ]
 
-#: `LadderRung.operation.kind` (`scoring.schema.json:36`).
-LadderOperationKind = Literal["multiply", "add", "round", "none"]
+#: `LadderRung.operation.kind` (`scoring.schema.json`). `divide` and `clamp` were added by
+#: `RL-1329` §3: a gross-up is recorded as its true divisor, and a binding clamp as what it did.
+LadderOperationKind = Literal["multiply", "divide", "add", "clamp", "round", "none"]
+
+#: `LadderRung.rounding.mode`, the modes `RoundSpec` declares (`common/money.schema.json`).
+LadderRoundingMode = Literal["half_even", "half_up", "ceiling", "floor", "down"]
 
 #: `ScoringResult.outcome` (`scoring.schema.json:50`). `error` is not produced by
 #: `score_one` today — a per-quote refusal is a raised, code-named `ValueError` (RL-877),
@@ -105,32 +109,57 @@ class QuoteContext(BaseModel):
     options: QuoteContextOptions | None = None
 
 
-class LadderOperation(BaseModel):
-    """`LadderRung.operation` (`scoring.schema.json:33-42`).
+class LadderRounding(BaseModel):
+    """A rung's declared rounding (`common/money.schema.json#/$defs/Rounding`, `RL-1329` §3)."""
 
-    `factor` is a `Decimal`-exact string (R2 — never a JSON float); `amount_minor` is an
-    integer minor unit (FR-273). `applied` carries the reason codes of every firing
-    `constraint` step recorded at this rung — non-empty only on the `constraints` rung, and
-    empty rather than absent when nothing fired, matching `03:412`'s worked example.
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    mode: LadderRoundingMode
+    dp: int = Field(ge=0)
+
+
+class LadderOperation(BaseModel):
+    """`LadderRung.operation` (`scoring.schema.json`, FR-248 as amended by `RL-1329`).
+
+    The operation a rung applied to the previous rung's **unrounded** value. Operands are
+    exact and never quantised: `factor` (`multiply`), `divisor` (`divide`),
+    `amount_unrounded_minor` (`add`), and `bound` with `bound_unrounded_minor` (`clamp`,
+    on the `constraints` rung only). `mode` and `dp` are emitted only on `round`.
+    `applied` carries the reason codes of the binding clamps on the `constraints` rung
+    (`clamp` or `none`), empty rather than absent when nothing fired. `amount_minor` is
+    **legacy**: kept so a stored pre-ruling ladder still validates; the builder no longer
+    emits it. Every field added by `RL-1329` is optional, because stored ladders are
+    write-once and lack them.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     kind: LadderOperationKind
-    factor: str | None = None
+    factor: PositionalDecimalStr | None = None
+    divisor: PositionalDecimalStr | None = None
     amount_minor: MoneyMinor | None = None
+    amount_unrounded_minor: PositionalDecimalStr | None = None
+    bound: Literal["min", "max"] | None = None
+    bound_unrounded_minor: PositionalDecimalStr | None = None
     mode: str | None = None
     dp: int | None = None
     applied: list[str] = Field(default_factory=list)
 
 
 class LadderRung(BaseModel):
-    """One rung of the Premium Ladder (FR-247/248, `scoring.schema.json:25-45`)."""
+    """One rung of the Premium Ladder (FR-247/248, `scoring.schema.json`).
+
+    `unrounded_minor` is the engine's exact value for the rung; `value_minor` is that value
+    rounded once with `rounding` (`RL-1329` §2). Displayed values do not multiply into each
+    other; the unrounded column is the one that replays (FR-248).
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     rung: LadderRungName
     value_minor: MoneyMinor
+    unrounded_minor: PositionalDecimalStr | None = None
+    rounding: LadderRounding | None = None
     operation: LadderOperation | None = None
     components: dict[str, MoneyMinor] | None = None
 

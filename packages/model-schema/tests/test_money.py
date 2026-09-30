@@ -124,3 +124,38 @@ def test_relativity_refuses_a_float_too():
     """
     with pytest.raises(ValidationError, match="float"):
         Premium(payable_minor=1, factor=1.04)
+
+
+# --- PositionalDecimalStr (RL-1329 §3, B2): the ladder's exact-decimal type -------------
+
+
+def test_positional_decimal_str_never_serialises_in_scientific_notation():
+    """`DecimalStr` gives `1E-7`, `1.2E-28` and `1E+1`, which break its own pattern."""
+    from model_schema.money import PositionalDecimalStr
+
+    class Holder(BaseModel):
+        small: PositionalDecimalStr
+        tiny: PositionalDecimalStr
+        tens: PositionalDecimalStr
+
+    held = Holder(
+        small=Decimal("0.0000001"), tiny=Decimal("1.2E-28"), tens=Decimal("1E+1")
+    )
+    assert held.model_dump(mode="json") == {
+        "small": "0.0000001",
+        "tiny": "0.00000000000000000000000000012",
+        "tens": "10",
+    }
+
+
+def test_positional_decimal_str_refuses_a_float_and_keeps_the_string_schema():
+    from model_schema.money import PositionalDecimalStr
+
+    class Holder(BaseModel):
+        value: PositionalDecimalStr
+
+    with pytest.raises(ValidationError):
+        Holder(value=0.1)
+    prop = Holder.model_json_schema()["properties"]["value"]
+    assert prop["type"] == "string"
+    assert prop["pattern"] == r"^-?[0-9]+(\.[0-9]+)?$"
