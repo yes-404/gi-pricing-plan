@@ -330,6 +330,19 @@
       "title": "Parameters",
       "type": "object"
     },
+    "platform_build": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The platform version and build the Job ran on, `{version}+{build}`, recorded when the worker moves it to `running`; null while `queued` (FR-18).",
+      "title": "Platform Build"
+    },
     "progress": {
       "anyOf": [
         {

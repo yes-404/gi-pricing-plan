@@ -11,10 +11,14 @@ worker is actually being started.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import timedelta
 
-from app.config import load_settings
+from app.config import Settings, load_settings
+from app.db.session import Database
 from app.observability.logging import configure_logging
+from app.platform.blobs import BlobStore
+from app.platform.tenancy import require_tenant_binding
 from app.worker.celery_app import TASK_RELAY_OUTBOX
 from app.worker.tasks import create_worker
 
@@ -22,6 +26,22 @@ __all__ = ["app"]
 
 _settings = load_settings()
 configure_logging(_settings.log_level)
+
+
+async def _require_tenant_binding(settings: Settings) -> None:
+    database = Database(settings)
+    try:
+        await require_tenant_binding(settings, database, BlobStore(settings))
+    finally:
+        await database.dispose()
+
+
+# FR-436: a worker bound to another tenant's stores must not consume a single task. This
+# is a plain call at import, not a Celery signal handler: `Signal.send` catches what a
+# receiver raises, so a handler that raised would let the worker carry on (proved in
+# `backend/tests/test_tenant_binding.py`). An exception here stops `celery -A` before the
+# worker exists.
+asyncio.run(_require_tenant_binding(_settings))
 
 app = create_worker(_settings)
 
