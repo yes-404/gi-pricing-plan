@@ -224,8 +224,9 @@ tests cover the new raise site (below).
 - **No alert routing is built.** The counter is what an operator's alert rule reads. Routing
   belongs to WK-688 in Phase 4 (`07` FR-453), and building it now would build ahead of the phase
   (`CLAUDE.md` §9).
-- **No error trace is written by this ruling.** At `36b2a121`, a refusal on `/score` is raised
-  before `_maybe_sample_trace` runs. This ruling does not change that (see "Observed, not ruled").
+- **Error traces: unchanged, and not ruled here.** This ruling leaves `/score`'s `scoring_traces`
+  behaviour as it is at `36b2a121` (FR-259's error floor on `/score` is an open question; see
+  "Observed, not ruled").
 
 ## What it obliges
 
@@ -258,7 +259,8 @@ in the ledger with its red run.
    on a binding quote (`RL-1329` S5) is refused through `score_one`. Red first: it is served.
 3. **Through the route.** `POST /api/v1/score` on case 1's quote answers 500 with an RFC 9457 body
    whose `code` is `LADDER_RECONCILIATION_FAILED`. The body and the log line do not contain a
-   sentinel planted in a quote input. No `scoring_traces` row is written.
+   sentinel planted in a quote input. This case's `scoring_traces` behaviour is unchanged from
+   `36b2a121` and is not asserted here (FR-259's error floor on `/score` is an open question).
    `gip_ladder_reconciliation_failed_total` rises by 1 for that Environment. Red first: 200.
 4. **Never sampled.** With `rating.trace_sample_rate` set to 0, case 3 is refused the same way.
 5. **Compare.** `POST /api/v1/score/compare`, with the failing version on either side, answers 500
@@ -280,7 +282,8 @@ in the ledger with its red run.
 - **`03` FR-248** gains a dated clause: a quote whose ladder does not reconcile is refused with
   `LADDER_RECONCILIATION_FAILED` on every path, and the refusal is logged and counted.
 - **`03` §5.1**, the owned-code list: `LADDER_RECONCILIATION_FAILED` gains its status and meaning
-  (500; 500 naming the side on `/score/compare`; an error row in batch; input-free).
+  (500; 500 naming the side on `/score/compare`; an error row in batch; input-free). Its route
+  table's `/score/compare` row gains the same 500 (added on audit, M2).
 - **Not edited here:** NFR-496 and FR-259. `PL-1342` Task 1 gives FR-248 and NFR-496 their
   "never sampled" clauses on the slice branch. This commit's FR-248 clause is on the same table row,
   so whichever lands second keeps both clauses when it merges (a one-row textual conflict).
