@@ -121,6 +121,7 @@ disagreement as well as preventing a new one.
     `git grep -n expedited -- packages backend` finds nothing, so FR-385 is unbuilt.
   - `separation_of_duties` is modelled only as the flat `submitter_may_approve` field
     (`approvals.py:134-145`).
+  - *(2026-09-30)* This gap has since been filed as FD-1281 (merged by #947, 2026-09-30).
 - **The evidence floor.** `EVIDENCE_FLOOR`'s `rating_version` entry is `("structural_diff",
   "regression_run", "dislocation_run")` (`approvals.py:101-108`).
 - **What each option touches.**
