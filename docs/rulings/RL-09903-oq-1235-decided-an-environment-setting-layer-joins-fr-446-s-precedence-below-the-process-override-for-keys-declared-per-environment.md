@@ -104,9 +104,13 @@ As prepared, unchanged:
 | | Option | For | Against |
 |---|---|---|---|
 | (a) | **Add an Environment layer to FR-446's precedence**: environment variable → **Environment setting** → workspace setting → platform default; `SettingDefinition` gains a scope saying which keys may vary per environment | Makes FR-446 agree with FR-431, which already calls this "a Setting"; one resolver, one audit path (`set_workspace_setting`'s pattern), one inspectable effective-value-and-source (FR-446's second sentence) for both levels; the scope stops a workspace-only key (e.g. `workspace.currency`) being set per environment; the operator's process override stays on top as an emergency lever | Amends FR-446; a `SettingSource` value is added (contract change, regenerated contract); the resolver needs the request's environment; a naming hazard — `SettingSource.ENV` already means *environment variable*, so the new layer must be named unambiguously |
-| (b) | **Configuration on the Environment record**, outside the Settings resolver | Sits with FR-428's object; no resolver change | Contradicts FR-431 ("a Setting … §3.8"), so FR-431 is amended too; a second configuration mechanism whose type checking (FR-447), inspectability (FR-446) and audit-on-change (FR-431) are rebuilt |
-| (c) | **One workspace setting per key holding a map keyed by environment name** | No precedence change | No per-environment type or constraint (`SettingDefinition.coerce` checks one scalar); a deleted environment leaves a stale key; the source of an effective value is not inspectable per environment; FR-447's reject-at-write cannot see an unknown environment name |
+| (b) | **Configuration on the Environment record**, outside the Settings resolver | Sits with FR-428's object; no resolver change | Contradicts FR-431 ("a Setting … §3.8"), so FR-431 is amended too; a second configuration mechanism whose typed validation (the registry's typed validation), inspectability (FR-446) and audit-on-change (FR-431) are rebuilt |
+| (c) | **One workspace setting per key holding a map keyed by environment name** | No precedence change | No per-environment type or constraint (`SettingDefinition.coerce` checks one scalar); a deleted environment leaves a stale key; the source of an effective value is not inspectable per environment; the registry's typed validation at write cannot see an unknown environment name |
 | (d) | **Environment variables only** — one deployment per Environment, configured through `GIP_SETTING_*` | No change at all | Excluded by the evidence: one process serves several environments (FR-430; `PL-1237:838`), so a process-wide variable cannot differ per environment; and a value set by a deploy is not "audited on change" (FR-431) |
+
+*Two cells of the table above, options (b) and (c), were corrected on auditor-924d's finding, which
+completed F2: they had cited FR-447 for write-time validation, and FR-447 is startup validation
+(`07:173`). Nothing else in the table changed.*
 
 ## Ruled
 
