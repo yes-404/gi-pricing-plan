@@ -1,5 +1,5 @@
 ---
-id: LG-9941
+id: LG-1308
 family: ledger
 title: WK-1178 fix slice (SL-1300) — compile_bundle refuses a step ref not pinned at its exact version (FR-237)
 status: active
@@ -13,12 +13,13 @@ corrected_by: []
 relates: [FD-1297, RL-1298, RL-1263]
 ---
 
-# LG-9941 — WK-1178 fix slice (SL-1300): step-ref pin membership (FR-237)
+# LG-1308 — WK-1178 fix slice (SL-1300): step-ref pin membership (FR-237)
 
 Executed from `PL-1299` (SL-1300) under `RL-1298`, on lane B (`RL-1263`). Branch
 `sl-1300-pin-membership`, from `origin/main` `22fe674b4a590c47095c6ba608fe974264581139`
-(`git rev-parse origin/main` at the rebase). Working id 9941, given by the lead; minted at the
-merge turn.
+(`git rev-parse origin/main` at the rebase). Drafted under working id 9941 (given by the lead) and minted `LG-1308` at its merge turn,
+after #981 (LG-1304) and batch 2 (RL-1305, PL-1306, RL-1307). Numbers in the entries below are
+as measured at the heads they name.
 
 ## Task 0 — preconditions
 
@@ -118,9 +119,9 @@ Head `f965b417`. The dev-commands slot wrapper (`SKILL.md` lines 123-170, verbat
 `LOKY_MAX_CPU_COUNT=4` exported. Started 12:36:34 UTC, ended 13:01:22 UTC, **wall 1488s**.
 Uptime at the start: load 4.32/5.09/3.73. At the end: load 5.55/6.02/4.72. At 12:36:31 gate-1
 was busy and gate-2 free; at the end gate-1 was still busy and gate-2 free, so this run held
-gate-2 and the other holder was on gate-1 (lane A, WK-674 S2a, by the lead's account; I did
+gate-2 and the other holder was on gate-1 (corrected at the mint: most likely #981's gate, executor-690s1, from 12:36 to 12:57 UTC, not lane A; I did
 not read its process). pytest: **3909 passed, 3 skipped, 0 failed**, 1471.00s (the baseline was
-3881 passed, +28 = the 26 new pricing-core cases and 2 new backend cases). This is the RL-1263
+3881 passed, +28 = the 26 new pricing-core cases and 2 new backend cases). This is RL-1263 contention pair 1 of 3, the
 overlap figure against the solo 1497s wall (pytest 1469.58s): 1488s wall (pytest 1471.00s) is
 no slower.
 
@@ -140,6 +141,15 @@ Frontend half at the same head: `pnpm --dir frontend install --frozen-lockfile` 
 
 ## Deviations
 
+- **The 8a commit.** `f965b417` added the 8a test rather than only a comment. The lead accepted it
+  as within 8a's scope. The gate ran on that head before the lead's S-13 grant, which named a
+  comment-only head.
+- **RL-1263 result.** Contention **pair 1 of 3** (RL-1263 :140-149 requires the first three
+  concurrent pairs): pytest 1471.0s overlapped against 1469.6s solo, about 1.00x, under 1.5x, so it
+  passes. The maintainer's dated correction withdrew an earlier "two slots confirmed"; two slots
+  continue provisionally until pairs 2 and 3 are measured. (Audit note W1: this is one pair, not
+  the three.)
+- **Clocks.** Every time in this ledger is UTC. The dispatch record's 13:02:07 is BST.
 - **An unslotted run.** At about 12:31 UTC I ran `uv run pytest -q packages/pricing-core`
   (965 passed, 96s) without the slot wrapper. Load was 8.93/5.78/3.80 at 12:35:08. Disclosed to
   the lead; no other harm found.
