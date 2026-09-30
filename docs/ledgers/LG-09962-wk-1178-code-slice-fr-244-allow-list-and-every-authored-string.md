@@ -183,11 +183,30 @@ tests/test_repository_invariants.py::test_journey_citations_are_audited_in_ci
   The gate was then re-run on the same head, at the lead's instruction, and is green.
 - **Frontend half** at `a6a37847`: `install --frozen-lockfile` and `generate:api` rc 0, `lint` rc 0, `type-check` rc 0, `test` 609 passed (609),
   `build` rc 0.
-- **RL-1263 pair 2 (measured, a confounded candidate).** The S2a ledger records an unidentified gate holder at 15:00:54 UTC, and the `6bcf73e5` run
-  took a slot then. The runs above overlapped other heavy gates (load up to 10.89). The ratios to the solo 1469.58s are 1.15, 1.10, 1.16 and, for the green run, 0.96 (it ended with the box quiet),
-  so no run reached 1.5x. I did not identify the other holders.
-- **A deviation.** The run at `57d62711` and the wrapper runs used `git checkout --detach` in this worktree. One directory
-  suite (the four files above) ran outside the wrapper.
+- **RL-1263 contention: these runs are NOT counted as pairs** (the maintainer's ruling, `to-lead.md`, about 18:0x to 18:1x BST).
+  `free -h` was not recorded at the start or the end of any run (the dispatch conditions omitted it), and the other slot holders
+  were not identified as gates. Only `6bcf73e5` with S2a's `5c7ae3b2` was a genuinely concurrent gate pair, and it lacks `free -h` too. The counted pairs stand at
+  **0 of 3**. For the record only, pytest times against the solo 1469.58s were 1694.62s, 1623.42s, 1706.92s and, for the green run, 1408.03s.
+- **Deviations.**
+  - The `57d62711` gate used `git checkout --detach` in this worktree. One directory suite (the four approval-guard files,
+    215 passed) ran outside the wrapper after the DB repair.
+  - **The `alembic current` pre-check** the lead requested before the re-run was not run. The passing approval-guard tests in the green gate at
+    `a6a37847` stand in for it: they fail with `approval_guard() does not exist` without migration `a9f3c6d2`.
+  - **LOW: `__all__`.** `compile.py`'s `__all__` gains `ALGORITHM_CHECKS` and `STRING_CHECKS`. PL-1314's `compile.py` row does not list
+    `__all__` (it was the fix slice's, #988, merged), so there is no conflict with another slice.
+  - **Clocks.** Every time in this ledger is UTC unless it says BST.
+
+## Write-set account
+
+PL-1314's write-set table, plus the lead's dispatch deltas, is this slice's scope. Three test files sit outside the table and are tests
+only, disjoint from lane A (S2a: models, approvals, migrations, fixtures, `06`):
+
+- `packages/pricing-core/tests/test_rating_pin_membership.py`: the #988 lookup tests, restated and then restored to real arithmetic
+  (`number(expense_factor ?? '1.0')`) when RL-1322 added `number(x)`. Prices are unchanged.
+- `packages/pricing-core/tests/test_rating_committed_strings.py`: acceptance 10's sweep of the committed rating strings.
+- `packages/pricing-core/tests/test_rating_number.py`: RL-1322's clause tests for `number(x)`.
+
+The one other addition is `backend/tests/test_error_sinks.py` (a single `_SINKS` entry, Delta 1). `runtime.py` is untouched.
 
 ## PRs
 
