@@ -162,9 +162,18 @@ cause, and the guard is restored; the ledger quotes both runs.
      `EVIDENCE_INCOMPLETE`, **and** a decision on such a row is refused; with the check
      removed, the fixture is approved and the test fails. An attempted update of a submitted
      request's evidence or pins through the module's functions is refused;
-   - **(#971 audit advisory A2, red first)** a generic `POST /api/v1/approval-requests`
-     naming a deployment request that is not in `review`, or whose `evidence` lacks a floor
-     item, is refused; naming one that is in `review` with both items is accepted;
+   - **(#971 audit advisory A2; auditor-plans F3, red first)** a generic
+     `POST /api/v1/approval-requests` naming `deployment:…` is refused when no row exists,
+     when the row is not in `review`, and when a fixture has stripped a floor item from its
+     `evidence`; so no approvable deployment request exists without pinned evidence (Task 5
+     step 6 gives the reason);
+   - **(auditor-plans F4, red first)** a decision on a deployment request that is not in
+     `review` is refused by `require_in_review` in the deployment module's
+     `apply_approval_decision`, not only by the route;
+   - **(auditor-plans F5, red first)** two concurrent deploys naming one approved Deployment
+     Request produce **exactly one** Deployment row and one `deployment.created` event; the
+     other is refused with 409 `DEPLOY_REQUIRES_APPROVAL`. Red on broken input: with the
+     `WHERE status = 'approved'` condition removed, two Deployments are written;
    - **(A3; #971 A.6, each red first)** changing `prod`'s display `name` leaves it gated: a
      deploy to it still requires its approved Deployment Request (with resolution keyed on
      the display name, this test fails); a request to change `prod`'s **slug** is refused
@@ -264,10 +273,13 @@ cause, and the guard is restored; the ledger quotes both runs.
       by the test to still contain its `require_permission(` (or membership refusal) at the
       named site, so the list cannot rot silently: `POST /api/v1/validation-rules`
       (`backend/src/app/platform/validation_rules.py:192` and `:199`); `POST /api/v1/me/workspace`
-      (`backend/src/app/api/me.py:215`, the membership check of `00` FR-396 and FR-397, its
-      refusals `WORKSPACE_SCOPE_DENIED` at `:241`, `:251`, `:260`; **no permission needed**,
-      per the 11:08:22 entry); and, once Task 5 adds it, the deploy route (#971 B.2: its
-      `deployment:promote` check is in the handler, with the Environment as the resource);
+      (`backend/src/app/api/me.py:241`, `:251` and `:260`, the `WORKSPACE_SCOPE_DENIED`
+      refusals of the membership check of `00` FR-396 and FR-397 — the refusal lines, not the
+      decorator at `:215`; **no permission needed**, per the 11:08:22 entry); and, as Task 5
+      adds each, **both new handler-guarded routes** — `POST /api/v1/environments/{env}/deployments`
+      and `POST /api/v1/environments/{env}/deployment-requests` — each at the line of its
+      handler's `require_permission(` (#971 B.2: `deployment:promote` with the Environment as
+      the resource, so neither carries `PERMISSION_ATTRIBUTE`; #971 audit advisory A4);
     - **(f) siblings:** every other test iterating `app.routes` the same way is fixed in the
       same task. At the tree above `git grep -n 'app.routes' -- backend/tests` names only
       `test_api_authorisation_sweep.py:189`; the executor re-runs it and fixes each hit;
@@ -379,7 +391,7 @@ FR-384 read what this slice writes, and are not built. The Environment's `settin
 (`07:245-259`, the `settings` key) → Slice 3, gated by `OQ-1235`; this slice's `Environment`
 shape omits it, with a dated `07` §4.2 note saying so (Task 1).
 
-**One map-plan deviation, stated rather than folded in.** `PL-1237` Task 2 says the slice
+**One map-plan deviation, dated 2026-09-30, stated rather than folded in.** `PL-1237` Task 2 says the slice
 "declares the `Environment` data contract alongside" the new `03` Deployment contract. At the
 tree above `07` §4.2 **already declares `Environment`** (`07:245-259`). Declaring it a
 second time in `03` would be a shape defined twice (`CLAUDE.md` §2), so this slice declares
@@ -467,8 +479,9 @@ them to "Slice 2", its "Not ruled here"):
 - **The skip record's shape**: `PromotionSkip(skipped_environment: str, reason: str)`, frozen,
   `extra="forbid"`, `reason` refused when empty after `strip()`. It is pinned on the
   Deployment Request row (#971 A.2, and #971 C's amendment of the OQ-1234 ruling's item 3).
-- **Environment scope**: an Environment is a **deployment-wide** (tenant) object, not a
-  workspace one. `07` §4.2 has no workspace field (`07:245-259`), API keys carry environment
+- **Environment scope** *(confirmation pending: the lead has asked the decision-maker at
+  high effort to confirm it against #971 A.6's "the workspace's Environments")*: an
+  Environment is a **deployment-wide** (tenant) object, not a workspace one. `07` §4.2 has no workspace field (`07:245-259`), API keys carry environment
   names with no workspace (`models.py:430`), and ADR-710 makes the deployment the tenant
   boundary. A Deployment row carries the `workspace_id` of its Rating Version, so "live in
   environment E" is read per workspace.
@@ -547,13 +560,20 @@ HANDLER_GUARDED: Final[dict[tuple[str, str], tuple[str, int]]]
   longer holds `require_permission(` (or, for `me.py`, the `WORKSPACE_SCOPE_DENIED` refusal).
   The static sweep treats an allow-listed route as guarded; nothing else is skipped.
 - [ ] **Red first, (d):** the no-roles behavioural sweep builds a **valid** body for each
-  operation from its request schema in `app.openapi()` (required properties only: enums →
-  the first member, `pattern` → a value matching it taken from the schema's `examples` when
-  present, strings → a `minLength`-long filler, numbers → `minimum` or 1, `$ref` resolved),
-  and asserts 401 or 403 exactly. An operation whose schema the builder cannot satisfy is
+  operation from its schema in `app.openapi()`, and fills **every required path and query
+  parameter** from that parameter's own schema (not `_concrete`'s blanket UUID, `:78-90`,
+  which a slug-typed parameter would refuse with 422). The builder covers, for required
+  properties only: `$ref` resolved; enums → the first member; **`format`** → `uuid` a fresh
+  UUID7, `date` `2026-01-01`, `date-time` `2026-01-01T00:00:00Z`; **`anyOf`/`oneOf`** → the
+  first branch it can satisfy; **`allOf`** → the branches merged; `pattern` → a value from
+  the schema's `examples` when present; strings → a `minLength`-long filler; numbers →
+  `minimum` or 1. (auditor-plans counted, at the tree above, 38 `format: uuid` nodes, 116
+  `anyOf`/`oneOf`/`allOf` nodes and 59 UUID path parameters; without these the unsatisfiable
+  list would hold most routes.) The sweep asserts 401 or 403 exactly. An operation whose schema the builder cannot satisfy is
   named in a constant with its reason, and that constant's size is asserted, so it cannot
-  grow silently. Red first: `POST /api/v1/me/workspace` with a valid body for a workspace the
-  caller is not a member of — the current sweep passes it only on 422.
+  grow silently. Red first: `POST /api/v1/me/workspace` with a valid body — its
+  `workspace_id` is `format: uuid`, filled with a workspace the caller is not a member of —
+  where the current sweep passes it only on 422.
 - [ ] **(f), (g):** fix each sibling; assert the partition of Acceptance 12 (g).
 - [ ] Green; quote the iterated count and the OpenAPI count in the ledger. Commit:
   `test(api): the authorisation sweep flattens included routers and pins every route (A1, WK-674 S2)`.
@@ -651,8 +671,13 @@ def promotion_order_refusal(
   uses: the route, the request's submission, and the route's re-evaluation from pinned
   evidence, #971 A.5): satisfied when the target has no
   predecessor, or the predecessor is deployed; otherwise satisfied only when `skip` names
-  the predecessor, `skip.reason.strip()` is non-empty, and `entry` is not `None` and lists
-  the predecessor in `skippable_predecessors`. Every other case returns a reason naming the
+  the predecessor, `skip.reason.strip()` is non-empty, and `entry` is not `None`, **names the
+  target (`entry.environment == target`)**, and lists the predecessor in
+  `skippable_predecessors`. The target check is hardening (auditor-plans F8): the fallback's
+  no-skip then rests on the predicate as well as on the validator, so an unqualified entry
+  that somehow carried the field still grants nothing. Red first: an unqualified entry
+  constructed with `model_construct` (bypassing the validator) and carrying the field grants
+  no skip. Every other case returns a reason naming the
   target and the predecessor. Add `PromotionSkip` and the function to `approvals.py`.
 - [ ] `Environment`, `Deployment` and `DeploymentRequest` shapes in `deployments.py`,
   matching Task 1's contract and `07` §4.2 (without `settings`). `ScopeType.ENVIRONMENT`
@@ -732,7 +757,10 @@ modify `backend/src/app/main.py` (one registration), `backend/src/app/errors.py`
      `rating_versions.submit_for_review` does (`backend/src/app/platform/rating_versions.py:293-305`).
      `backend/src/app/platform/approvals.py` imports nothing from the rating or deployment
      modules (Acceptance 5).
-  5. `apply_approval_decision` in the deployment module moves the row to `approved` (or back),
+  5. `apply_approval_decision` in the deployment module loads the row **locked**
+     (`with_for_update()`, as `rating_versions.py:337` does), calls
+     `approvals.require_in_review(ref, row.status)` on it (`backend/src/app/platform/approvals.py:85`),
+     as `rating_versions.py:357` does, and only then moves the row to `approved` (or back),
      called from a **new deployment branch of `_carry_to_the_artifact`**
      (`backend/src/app/api/approvals.py:488`, beside the four at `:499-517`; #971 audit
      advisory A5) — the **only** writer of `approved` (Acceptance 13). It refuses a row whose
@@ -743,7 +771,14 @@ modify `backend/src/app/main.py` (one registration), `backend/src/app/errors.py`
      (`backend/src/app/api/approvals.py:425-484`) fails closed today with
      `ARTIFACT_TYPE_NOT_RESOLVABLE`; it gains a deployment branch that accepts **only** a
      Deployment Request row in `review` whose `evidence` holds both floor items, and refuses
-     every other deployment reference.
+     every other deployment reference (auditor-plans F3). **Why this cannot create an
+     approvable request without pinned evidence (the FD-1200 class):** a Deployment Request
+     row exists only through the owning module's submission (step 4), which writes the
+     evidence and the approval request in one transaction; the generic route cannot create a
+     row, and a row it could name in `review` already holds its open request, so a second
+     one is refused by `uq_approval_requests_open_artifact` (`backend/src/app/db/models.py:645`).
+     Red first (Acceptance 4): the generic route naming a reference with no row, a row not in
+     `review`, and a row stripped of a floor item by a fixture, each refused.
 - [ ] `POST /api/v1/environments/{env}/deployments`, body `{rating_version_ref, reason,
   deployment_request_ref?}` (`extra="forbid"`):
   1. **G3 first**: parse the ref; refuse any type other than `rating_version` with 422
@@ -758,8 +793,11 @@ modify `backend/src/app/main.py` (one registration), `backend/src/app/errors.py`
      Environment's identity, else 409 `DEPLOY_REQUIRES_APPROVAL`; re-evaluate
      `promotion_order_refusal` from the request's **pinned** evidence, never a re-read source;
      a reason → 409 `PROMOTION_ORDER_VIOLATION`. **The skip, if any, is the one pinned on the
-     approved request; the deploy body takes no `skip`** (#971 A.5). Mark the request
-     `executed`.
+     approved request; the deploy body takes no `skip`** (#971 A.5). **Mark the request
+     `executed` exactly once** (auditor-plans F5): a conditional `UPDATE deployment_requests
+     SET status = 'executed' WHERE id = :id AND status = 'approved' RETURNING id` in the
+     deploy's transaction; no row returned → 409 `DEPLOY_REQUIRES_APPROVAL` ("the request is
+     not approved, or has been executed"), and no Deployment is written.
      **Ungated target:** no request; the predicate reads the predecessor's successful
      Deployment directly, and no skip is possible (#971 A.5); a reason → 409
      `PROMOTION_ORDER_VIOLATION`.
@@ -845,6 +883,10 @@ Task 6's per-request resolution with the switch, and reuses Task 5's route shape
   5. #960 before dispatch — Status.
   6. A1, the authorisation sweep, first — Task 0A, Write set, Acceptance 12; and the
      single writer of `approved` over every approvable table — Acceptance 13, Task 5.
+- **auditor-plans' audit of `fdde72a2`, F1–F9**, each closed at its sites: F1 by #971 A.6
+  (Task 4, Acceptance 4); F2 Acceptance 13; F3 Task 5 step 6 and Acceptance 4; F4 Task 5
+  step 5 and Acceptance 4; F5 Task 5 deploy step 4 and Acceptance 4; F6 Task 0A (d); F7
+  Acceptance 12 (e); F8 the predicate (Task 2); F9 the dated deviation paragraph and `RL-1296`.
 - **Each ruling applied where it operates.** RL-1296 items 1 (Task 2 validator), 3
   (`PromotionSkip`, pinned on the Deployment Request as #971 C amends it), 4 (the predicate's place, Acceptance 5), 5 (one commit, Task 2),
   6 (no new permission: `set_policy` stays the grant path, nothing added); its Acceptance
