@@ -94,12 +94,12 @@ quoted, no decline reasons, no warning):
 |---|---|---|---|---|
 | Control: numeric lookup pinned | `risk_premium_minor * number(expense_factor)` | expense@1 | OK | **1507** (ladder 1305, 1436, 1436, 1507, 1507) |
 | Same, lookup unpinned | same | none | OK | `RuntimeError NodeError` on `s_office`, no price |
-| (a) coalesce, pinned | `risk_premium_minor * number(expense_factor ?? "1.0")` | expense@1 | OK | 1507 |
-| **(a) coalesce, lookup UNPINNED** | same | none | OK | **quoted 1370** (ladder 1305, 1305, 1305, 1370, 1370): **−137 minor, −9.1%, silent** |
-| **(a) coalesce, WRONG VERSION: step @1, pin @2 only** | same | expense@2 | OK | **1370**; the correct v2 price (factor 2.0) is **2740** |
+| (a) `??`, pinned | `risk_premium_minor * number(expense_factor ?? "1.0")` | expense@1 | OK | 1507 |
+| **(a) `??`, lookup UNPINNED** | same | none | OK | **quoted 1370** (ladder 1305, 1305, 1305, 1370, 1370): **−137 minor, −9.1%, silent** |
+| **(a) `??`, WRONG VERSION: step @1, pin @2 only** | same | expense@2 | OK | **1370**; the correct v2 price (factor 2.0) is **2740** |
 | Wrong-version control: step @2, pin @2 | `number(x)` | expense@2 | OK | 2740 (ladder 1305, 2610, 2610, 2740, 2740) |
-| Wrong version, no coalesce: step @1, pin @2 | `number(x)` | expense@2 | OK | `RuntimeError` on `s_office`, no price |
-| Wrong version, no coalesce: step @2, pin @1 | `number(x)` | expense@1 | OK | `RuntimeError` on `s_office`, no price |
+| Wrong version, no `??`: step @1, pin @2 | `number(x)` | expense@2 | OK | `RuntimeError` on `s_office`, no price |
+| Wrong version, no `??`: step @2, pin @1 | `number(x)` | expense@1 | OK | `RuntimeError` on `s_office`, no price |
 
 **Table step through a tolerant consumer (auditor-922, additions of the same day).** Table step,
 `on_miss="default"`, `s_office` = `risk_premium_minor * (expense_factor ?? 1.0)`, rate table **unpinned**:
@@ -109,10 +109,10 @@ step raises `CodedError RATE_TABLE_MISS`; without `??` it raises `RuntimeError N
 
 **Other consumers of the missing value:**
 - **(b) constraint step.** `clamp_bounds.min = number(expense_factor ?? "0") * 1000`: pinned 1507;
-  unpinned with the coalesce in `s_office` gives 1370. The constraint tolerates the missing value; it is
+  unpinned with the `??` in `s_office` gives 1370. The constraint tolerates the missing value; it is
   not an independent mechanism.
 - **(b2) decline condition** `office_premium_minor <= sanity_cap_minor and expense_factor != "0"`:
-  pinned 1507; unpinned with the coalesce gives **1370, quoted, no decline**, because `null != "0"` is true.
+  pinned 1507; unpinned with the `??` gives **1370, quoted, no decline**, because `null != "0"` is true.
 - **(c) sub-graph port.** Not evaluable today (`score.py:399-401`: the engine never evaluates `sub_graphs`).
 - **Wire level.** An unpinned lookup with `on_miss="default"` gives a decision table with **0 rules** and
   an output with **no key at all**, with no error; pinned gives 1 rule and `{'area_code': 'LDN'}`.
@@ -142,7 +142,7 @@ Its own algorithm: `base_minor` 100000, a G7 factor (v1 1.30, v2 1.80); the look
 - **`03`'s own worked example (`03:258-272`) has this shape:** a `table` step (`s_expense`,
   `rate_table:motor-expense@3`, `on_miss: "default"`) whose output `expense_factor` is consumed in
   `s_office`'s expression. The example's expression multiplies `expense_factor` directly, which fails
-  loudly (Table 2, "no coalesce"); with a null-tolerant consumer it prices, as above.
+  loudly (Table 2, "no `??`"); with a null-tolerant consumer it prices, as above.
 
 ### 4. The coded error the fix uses
 
@@ -236,7 +236,7 @@ than restated as a ruling:
   version**, with a `CodedError` (`RATING_VERSION_UNPINNED`, evidence item 4), **with the code's catalogue meaning amended in the same commit (spec first)**. The model-path `KeyError`
   becomes coded by the same refusal.
 - **Acceptance:** red first, per kind (table, lookup, model_call), **both unpinned and wrong-version**,
-  **including the null-tolerant case that priced 1370, written with `coalesce(` as well as with `??`**.
+  **including the null-tolerant case that priced 1370, written through the `??` consumer** (the only null-tolerant form this engine compiles; see below).
   The controls stay green at **1507** and **2740**.
 - **Order:** it merges before the WK-1250 Slice 1 dispatch (`compile.py` has a single writer), in the next
   free RL-1263 slot. It does not pre-empt WK-674 Slice 2 or WK-690 Slice 1: there is no production, and 0
@@ -248,17 +248,23 @@ than restated as a ruling:
   this finding and G1; the WK-1250 Slice 2 dispatch record lists this finding among its acceptance sources.
 
 ### Related, not part of this fix
-- **`??` is a separate §0 question.** `03` specifies `coalesce(a, b)` (FR-244, `03:146`), not `??`, and
-  `_check_vocabulary` (`compile.py:233`) accepts whatever ZEN compiles. Whether `??` belongs in the grammar
-  is for the decision-maker to rule (the maintainer's 10:15:07 BST entry sends it to the DM as a §0 code/spec
-  disagreement; it notes the class is wider than `??`, since `_check_vocabulary` enforces FR-244's allow-list for
-  no operator, and that the guard-marker tuple at `compile.py:41` lists `coalesce(` but not `??`). WK-690 Slice 1
-  must not change `??` semantics while that is open. This finding does not depend on it, because `coalesce(`
-  reproduces the same behaviour class and the acceptance above covers both.
+- **`??` is a separate §0 question, and `coalesce(` does not parse.** `03` specifies `coalesce(a, b)` (FR-244, `03:146`), not
+  `??`. At this tree **`coalesce(` is refused at compile** (`EXPRESSION_INVALID_VOCABULARY`; ZEN answers
+  `RuntimeError {"type":"parserError","source":"Incomplete parser output"}` for `coalesce(a, 1.0)`, and evaluates `a ?? 1.0`; found by
+  auditor-924d, and re-run by the filer at the ZEN level), so **only `??` prices**. FR-244 lists a form the engine does not
+  parse: a separate §0 matter, not this fix's. `_check_vocabulary` (`compile.py:233`) accepts only what ZEN compiles, which
+  is why `coalesce(` is refused and `??` is accepted. The maintainer's 10:15:07 BST entry sends the `??` question to the DM
+  as a §0 code/spec disagreement and notes that the class is wider than `??`; that entry's reading of `coalesce(` is being
+  corrected. WK-690 Slice 1 must not change `??` semantics while that is open. The finding does not depend on the ruling:
+  the missing pin check is the same whichever spelling the DM keeps.
+- **The model-call `KeyError` and the sentinel path.** The handler at `runtime.py:463` runs inside ZEN, which swallows a
+  handler's exception (`runtime.py:85-91`, `_model_call_failure`'s docstring: the raised type, message and code are
+  discarded and surface as the generic `NodeError`). So "coded" for the model path means the `MODEL_CALL_FAILED` sentinel
+  path, not a raised `CodedError`. The leaf plan decides it as a decision point (planner-1250's read).
 
 **Event that next confirms or discharges it:** the WK-1178 fix slice merges with the exact-version
 pin-membership refusal for table, lookup and `model_call` refs and its red-first tests (unpinned and
-wrong-version, per kind, `??` and `coalesce(` cases), the 1507 and 2740 controls stay green, and a step ref
+wrong-version, per kind, through the `??` consumer), the 1507 and 2740 controls stay green, and a step ref
 pinned at another version is refused with `RATING_VERSION_UNPINNED`.
 
 ## Decision
