@@ -343,6 +343,8 @@ def principal() -> Principal:
 #: failures that leaves a guard off. That is the property that makes suspending them here
 #: defensible; a per-table `ALTER ... DISABLE TRIGGER` would depend on reaching its own
 #: re-enable. It needs superuser, which the compose and CI `gipricing` role has.
+#: `tenant_marker` is kept with `alembic_version`: it is the deployment's identity, written by
+#: a migration and never by a test, and every app startup refuses without it (FR-436).
 _EMPTY_THE_DATABASE = """
 DO $$
 DECLARE stmt text;
@@ -353,7 +355,7 @@ BEGIN
        || ' RESTART IDENTITY CASCADE'
     INTO stmt
     FROM pg_tables
-   WHERE schemaname = 'public' AND tablename <> 'alembic_version';
+   WHERE schemaname = 'public' AND tablename NOT IN ('alembic_version', 'tenant_marker');
   EXECUTE stmt;
 END $$;
 """
