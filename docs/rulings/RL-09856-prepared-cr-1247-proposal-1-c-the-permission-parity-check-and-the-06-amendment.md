@@ -125,11 +125,14 @@ Each count below gives its predicate.
 
 **Open item under D1 for the ruling: a ninth violation class, `STALE_OWNER`** *(added
 2026-09-30, at the lead's request; not ruled).*
-- **The proposal.** WK-1178's leaf plan (working id 9970, #944, `origin/wk1178-parity-leaf` at
-  `e56809ed`, the one plan file that branch adds, slug
-  `wk-1178-the-permission-parity-check-leaf-plan`) proposes it at `:371`: "Built name has a
-  check site and still carries an owner: clear it in the same commit". It has a synthetic
-  red proof at `:555`.
+- **The proposal.** WK-1178's leaf plan proposes it in §Tasks, Task 1 ("The pure
+  comparison, and each violation class proved red"): "Built name has a check site and still
+  carries an owner: clear it in the same commit". Task 1 also holds its synthetic red proof.
+  - The plan is working id 9970, #944, `origin/wk1178-parity-leaf`, first read at `e56809ed`
+    and re-read at `42b9774d`. It is the one plan file that branch adds, with the slug
+    `wk-1178-the-permission-parity-check-leaf-plan`.
+  - *(Citations changed 2026-09-30 from line numbers to section headings, at the lead's
+    request, because the line numbers moved between those two heads.)*
 - **It is not among this record's four acceptance fixtures.** Those cover a missing Built row,
   a Built row with no member, a Specified name that is a member, and a Built name with no check
   site and no owner. `STALE_OWNER` is the converse of the fourth.
@@ -150,10 +153,26 @@ Each count below gives its predicate.
 - The ruling should also tell WK-674 S2's leaf plan about it, so the requirement is not first
   discovered as a red gate.
 - Under D1 (B), the fallback, the class is dormant on the live tree because `checked` is the
-  whole enum (working id 9970, `:232`). It is therefore free to keep either way.
-- The leaf plan's E5 (`:174`) also records a third unchecked member "if only `requires()`
-  routes count". That is the `service_accounts.py` literal `RL-1236` corrected. The ruling
-  should say whether a non-`requires()` check site counts.
+  whole enum (working id 9970, §Scope, "The slice under 9856 D1 (C), and under its fallback
+  (B)"). It is therefore free to keep either way.
+- The leaf plan's E5 (9970 §Scope, "Today's mismatches", E5) also records a third unchecked
+  member "if only `requires()` routes count". ~~That is the `service_accounts.py` literal
+  `RL-1236` corrected.~~
+  - *Corrected 2026-09-30, after the lead relayed planner-parity's objection. I re-verified all
+    three points myself at origin/main `2f24fcba`. The earlier sentence was wrong.*
+  - The third member is **`admin:break_glass`**. It has no `requires()` route. It is checked
+    only in the service layer, by `await require_permission(` at
+    `backend/src/app/platform/rbac.py:420`, with `permission=Permission.ADMIN_BREAK_GLASS` at
+    `:424`.
+  - The `service_accounts.py:44` literal is
+    `ALLOWED_PERMISSIONS = frozenset({"score:execute", "score:batch"})`. Both of those names
+    have `requires()` sites: `backend/src/app/api/score.py:124` (`SCORE_EXECUTE`) and `:125`
+    (`SCORE_BATCH`). So the literal leaves no member unchecked.
+  - The ruling should say whether a service-layer `require_permission(` site counts as a check
+    site. If it does not, `admin:break_glass` needs an owner cell.
+  - This record's evidence item 5 ("2 enum members have 0 check sites") used `RL-1236`'s
+    `Perm`/`Permission` caller predicate. That predicate matches `rbac.py:424`, so the item
+    stands as measured. The difference between 2 and 3 is exactly this counting question.
 
 ## D2: where the check runs
 
