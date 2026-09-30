@@ -73,20 +73,20 @@ held it, and the code.
    Account, and only as backend permissions and the F54 key-issuance fix (`PL-1237` lines 406,
    484 to 486, 526). `PL-9681` (WK-675's map plan, PR #920, on `origin/wk675-map-plan`, still
    `draft`) mentions none of the five; it names only the three `03` views of `FD-9692`.
-6. **Closed Works.** `CR-00819` (WK-664's close) lists FR-399 to FR-405 as "The Job model with
-   progress and cancellation … jobs API + worker paths" (`CR-00819:126`), which is the backend
+6. **Closed Works.** `CR-819` (WK-664's close) lists FR-399 to FR-405 as "The Job model with
+   progress and cancellation … jobs API + worker paths" (`CR-819:126`), which is the backend
    limb; no closure record claims a jobs, service-account, settings or status **view**. WK-658
    ("platform core", closed) is a backend Work; its row is `docs/roadmap.md:217`. WK-663 and WK-664
    closed with `01` §5.3's seven views and `02`'s views.
-7. **The one place the gap was noticed, and it mis-cites.** `PL-00809` (WK-664's reachability
+7. **The one place the gap was noticed, and it mis-cites.** `PL-809` (WK-664's reachability
    slice) records "FR-24: the jobs view belongs to no Phase 1b slice. No slice builds one"
-   (`PL-00809:37`), and the reachability test says "The jobs view is a later phase (FR-24). The
+   (`PL-809:37`), and the reachability test says "The jobs view is a later phase (FR-24). The
    exception lifts when that UI lands" (`frontend/src/router/__tests__/reachability.test.ts:32` to
    `:34`). FR-24 is the Contents-cell rule (`00:228`), which says nothing about a phase; **"a later
    phase" names no phase and no Work.** The exception it refers to is
    `/models/:slug/backtests/:backtestId`, whose only path from the entry is a Job result, so an
    unowned view holds a documented exception open indefinitely.
-8. **The demo entrance reports these as unbuilt** (`CR-00718:62` describes the derived guide
+8. **The demo entrance reports these as unbuilt** (`CR-718:62` describes the derived guide
    naming declared views not built). That makes the gap visible, not owned.
 9. **`retrofit-impossible.md:28`** lists FR-402 inside "The Job model with progress and
    cancellation", a Phase 1a foundation. What landed is the log capture; the UI half of FR-402 did
