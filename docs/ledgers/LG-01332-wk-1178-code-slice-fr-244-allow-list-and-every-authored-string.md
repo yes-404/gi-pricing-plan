@@ -183,23 +183,25 @@ tests/test_repository_invariants.py::test_journey_citations_are_audited_in_ci
   The gate was then re-run on the same head, at the lead's instruction. ~~and is green~~ (struck, see the correction below).
 - **CORRECTION, 2026-09-30 18:35 BST (struck: "gated green at `a6a37847`").** CI's python job failed on #1012 at
   `6a1b9e33` (run 36749658441) with `I001` in `packages/pricing-core/tests/test_rating_authored_fields.py:12`, which also reproduces on a clean detached
-  checkout of `a6a37847`. The 7 of 7 result above is therefore struck: its ruff stage passed without linting that file. **Mechanism.**
+  checkout of `a6a37847`. The 7 of 7 result above is therefore struck: its ruff stage passed without linting that file. **Probable mechanism: a stale `.ruff_cache` entry** (evidence and its strength below).
   *Which tree the gate ran on:* this worktree's working tree at `a6a37847`, which was clean: `git status --porcelain` and `git diff HEAD --stat` print nothing
   at `6a1b9e33`, the file's working copy equals the committed one, there are no untracked or uncommitted changes to it, and the stash holds only other
-  sessions' old entries. *How it differed from a clean checkout:* the VCS-ignored `.ruff_cache`. I had run `ruff check --fix` on the file before
+  sessions' old entries. *How it differed from a clean checkout:* the VCS-ignored `.ruff_cache` (probably; see the evidence). I had run `ruff check --fix` on the file before
   `pricing_core/rating/authored.py` and `vocabulary.py` existed, so ruff's isort step classified `pricing_core.rating.authored` as third-party and sorted the
-  imports that way; I committed that order. Once the modules existed, ruff kept returning the cached clean result for the unchanged file (its cache is keyed on the file and
-  the settings, not on the modules it can resolve), and the gate's `uv run ruff check .` read the same cache. A clean checkout has no cache and lints cold.
-  `ruff check --no-cache .` in this worktree reproduces the one error, and reports no other file. The pytest, mypy, import_linter, audit_docs,
+  imports that way; I committed that order. Once the modules existed, ruff probably kept returning the cached clean result for the unchanged file (my understanding is that its cache is keyed on the file and
+  the settings, not on the modules it can resolve), and the gate's `uv run ruff check .` would have read the same cache. A clean checkout has no cache and lints cold.
+  `ruff check --no-cache .` in this worktree reproduces the one error, and reports no other file.
+  The wording the maintainer ruled for this record (`to-lead.md`, the entry headed "2026-09-30 19:04:38 BST — #1012 proof pair: record it at its real strength; the controlled reproduction goes with the fix, not the merge"): "**Probable mechanism: a stale `.ruff_cache` entry.** Evidence: (a) `ruff check --no-cache .` at 6a1b9e33 reproduces the I001; (b) a file-level cached run at the same commit and worktree printed 'All checks passed!' in the executor's diagnosis session (recorded from session output, not captured verbatim; not the identical command); (c) the identical-command cached/no-cache pair could not be re-run, because the cache was rebuilt at 16:02 and 18:02 UTC, and today's runs both print the I001 (verbatim below). The mechanism is consistent with (a) and (b) but is not demonstrated on this worktree." The mechanism is not established here. The controlled reproduction belongs to the WK-1178 PR that adds `--no-cache` to the gate line. #1012's merge rests on the clean-checkout gate of record, not on the mechanism.
+   The pytest, mypy, import_linter, audit_docs,
   req_coverage, contracts and frontend results above are unaffected. The fix is `2d4223ec` (import order only); a fresh full gate on a clean checkout of the
   fixed head replaces this run as the slice's gate.
-- **The proof pair (the maintainer's condition on accepting the cache mechanism).** *At the time, in this worktree at `6a1b9e33`, before any fix*, my diagnosis ran the two commands in
+- **The proof pair (the maintainer's condition on recording the mechanism, at its real strength).** *At the time, in this worktree at `6a1b9e33`, before any fix*, my diagnosis ran the two commands in
   sequence on the file, and the outputs were: `uv run ruff check packages/pricing-core/tests/test_rating_authored_fields.py` printed `All checks passed!`
   (the cached run), and `uv run --frozen ruff check --no-cache .` printed `I001 Import block is un-sorted or un-formatted` for
   `packages/pricing-core/tests/test_rating_authored_fields.py:12:1` and `Found 1 error.`. **Re-running the pair now does not reproduce the cached-clean half:** at 2026-09-30 18:02 UTC, on
   `git checkout --detach 6a1b9e33` in this worktree (`git status --porcelain` empty), `uv run ruff check .` (cached) printed `Found 1 error.` with the same I001 diff, rc 1, and
   `uv run ruff check --no-cache .` printed the same, rc 1. The cache directory had been rebuilt by the runs made since (its timestamps show writes at 16:02 UTC and 18:02 UTC), so the stale entry
-  no longer exists. I do not infer the earlier state from this re-run; the first pair above is the observation made at the time. The branch was restored to
+  can no longer be shown. I do not infer the earlier state from this re-run; the first pair above is the observation made at the time. The branch was restored to
   `sl-1315-fr244-allowlist` afterwards.
 
   *Verbatim outputs of the re-run*, at `git checkout --detach 6a1b9e33` in this worktree (`git rev-parse HEAD` = `6a1b9e334034d8a5d860dc091bdb1ef6b30d5c5f`,
@@ -282,7 +284,7 @@ Found 1 error.
   **4367 passed, 3 skipped**, 1392.73s. Frontend half on the same tree: `generate:api` rc 0, `lint` rc 0, `type-check` rc 0, `test` 609 passed (609), `build` rc 0.
   This run replaces the struck `a6a37847` run as the slice's gate.
 - **Trap, for the dev-commands backlog.** `ruff` caches a clean result for an unchanged file without recording which modules could be resolved when it was linted.
-  After a `ruff check --fix` run before the imported modules exist, the cached result hides an isort misclassification. Run `ruff check --no-cache` (or remove `.ruff_cache`) before a gate,
+  After a `ruff check --fix` run before the imported modules exist, the cached result probably hides an isort misclassification (probable, not demonstrated here). Run `ruff check --no-cache` (or remove `.ruff_cache`) before a gate,
   and take the gate of record on a clean checkout.
 - **Frontend half** at `a6a37847`: `install --frozen-lockfile` and `generate:api` rc 0, `lint` rc 0, `type-check` rc 0, `test` 609 passed (609),
   `build` rc 0.
