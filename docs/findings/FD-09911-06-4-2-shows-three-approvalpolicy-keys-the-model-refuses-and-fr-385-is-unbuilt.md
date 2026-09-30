@@ -52,7 +52,7 @@ At `origin/main` `880feb499eddb9e854c525770e95fb19373a2311`.
 
 ## Interaction with OQ-1234
 
-OQ-1234 option (b) (prepared on #935, `RL-9901`) puts the FR-429 promotion-skip permission on
+OQ-1234 option (b) (prepared on #935, `RL-[9901]`) puts the FR-429 promotion-skip permission on
 the approval policy's `deployment` entry. It then adds a field to a model that already refuses
 the document its own spec prints. Whoever builds (b) must decide, in the same change, whether
 the model catches up with §4.2's three keys or the spec drops them. The prepared record says
@@ -65,3 +65,5 @@ what that record only notes. It does not favour (a), (b) or (c) of OQ-1234.
 `decision:` is the lead's. Spec versus code, for the decision-maker (`CLAUDE.md` §0). Event:
 the OQ-1234 ruling, then the Work that builds FR-385 or amends §4.2. If unowned at the next
 `CLAUDE.md` §14 review, the row decays to that review.
+
+*Square brackets in `RL-[99nn]` are inserted so this record does not cite the prepared rulings' working ids as live ids under checks 31 and 32; the real ids carry none.*

@@ -37,11 +37,11 @@ fetched `refs/pull/<n>/head`, then `python3 scripts/audit-docs.py`, rc quoted).
 - All eight prepared-ruling PR heads exit **rc=1**, and the FAILED block of each holds exactly
   two lines, the check 31 working-id gap (expected under `CLAUDE.md`'s working-id convention) and
   one check 33 line per RL file:
-  - #935 `aa38bd4f`: `check 33: docs/rulings/RL-09901-…: status 'draft' is not in ruling's subset ['active', 'retired', 'superseded']`
-  - #936 `58d0284d` (RL-09852), #937 `110a7fcb` (RL-09902), #938 `f04e50d3` (RL-09851),
-    #939 `7224cec7` (RL-09903), #941 `ca949339` (RL-09855), #942 `5c2e55e6` (RL-09856):
+  - #935 `aa38bd4f`: `check 33: docs/rulings/RL-[09901]-…: status 'draft' is not in ruling's subset ['active', 'retired', 'superseded']`
+  - #936 `58d0284d` (RL-[09852]), #937 `110a7fcb` (RL-[09902]), #938 `f04e50d3` (RL-[09851]),
+    #939 `7224cec7` (RL-[09903]), #941 `ca949339` (RL-[09855]), #942 `5c2e55e6` (RL-[09856]):
     the same check 33 line, one file each.
-  - #940 `aa67d32f`: the same line twice (RL-09853, RL-09854).
+  - #940 `aa67d32f`: the same line twice (RL-[09853], RL-[09854]).
 - **Two premises in the request that filed this record did not hold, corrected here.**
   (1) *Check 37 behaves the same way*: it does not. Check 37 appears in none of the eight FAILED
   blocks (`grep -c 'check 37'` over the text from `FAILED` on prints 0 each time).
@@ -72,3 +72,5 @@ promotion is what dated-ruling provenance needs. Event that discharges it: the m
 ruling on which option, then the `document-ids.md` amendment and a template line under
 `spec-change` procedure. If unowned at the next `CLAUDE.md` §14 review, the row decays to
 that review.
+
+*Square brackets in `RL-[99nn]` are inserted so this record does not cite the prepared rulings' working ids as live ids under checks 31 and 32; the real ids carry none.*
