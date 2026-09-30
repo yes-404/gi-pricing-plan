@@ -1,5 +1,5 @@
 ---
-id: FD-9977
+id: FD-1297
 family: finding
 title: compile_bundle does not check step table, lookup and model refs against the pin set (FR-237)
 status: active
@@ -10,12 +10,12 @@ corrected_by: []
 relates: [WK-1250, WK-1178, FR-237, FD-1241]
 ---
 
-# FD-9977 — `compile_bundle` does not check step table, lookup and model refs against the pin set
+# FD-1297 — `compile_bundle` does not check step table, lookup and model refs against the pin set
 
 ## Finding
 
 **Severity: high**, in force on the maintainer's decision (see *Severity*). **Proposed by the auditor;
-the disposition is the lead's.** FD-9977 is a working id, minted at the records PR.
+the disposition is the lead's.** Minted 2026-09-30 as FD-1297 (`doc-id.py next --ref origin/main` = 1297 at `65b33479`); it was filed under working id 9977.
 
 FR-237 (`03-rating-engine.md:134`) says a Rating Version pins "an exact Rate Table Version per
 referenced table, an exact Model/Peril Structure version per `model_call`, an exact Reference Table
@@ -279,8 +279,9 @@ than restated as a ruling:
 - **Owner: a dedicated WK-1178 fix slice**, replacing WK-1250 Slice 2 (the maintainer's first decision
   of 10:10:11 BST named Slice 2; the high severity moved it).
 - **Scope:** `compile_bundle` refuses any table, lookup or `model_call` ref not pinned at the **exact
-  version**, with a `CodedError` (`RATING_VERSION_UNPINNED`, evidence item 4), **with the code's catalogue meaning amended in the same commit (spec first)**. The model-path `KeyError`
-  becomes coded by the same refusal.
+  version**, with a `CodedError` (`RATING_VERSION_UNPINNED`, evidence item 4), **with the code's catalogue meaning amended in the same commit (spec first)**. The model-path `KeyError`: the compile refusal removes the path to it (a
+  bundle cannot then exist with a step ref outside its payloads), and the loader's raise at `runtime.py:533` is coded in the same slice; the
+  handler's `:463` case runs inside ZEN, where a coded outcome means the `MODEL_CALL_FAILED` sentinel path, which the leaf plan decides.
 - **Acceptance:** red first, per kind (table, lookup, model_call), **both unpinned and wrong-version**,
   **including the null-tolerant case that priced 1370, written with the `??` consumer**; `coalesce(` is refused at compile at this tree (`EXPRESSION_INVALID_VOCABULARY`), so it is not an acceptance case (see below).
   The controls stay green at **1507** and **2740**.
