@@ -46,11 +46,12 @@ No new dependency.
 - `03` §4.3's example (`03:355`): a peril structure is pinned under `pins.models`.
 
 **What this plan implements.** The finding filed as #961 (working id 9977; read at its head
-`ee33fb99152134a7a46b9e8caa12757a2748c444`), titled "compile_bundle does not check step table,
+`f78d4340451a4684dd58970ad51ce48c122f5222`, which carries the maintainer's dated correction;
+first read at `ee33fb99`), titled "compile_bundle does not check step table,
 lookup and model refs against the pin set (FR-237)", severity high. Its *Disposition* gives the
-maintainer's scope, acceptance and order, and this plan carries them. The one change is the
-maintainer's own dated correction of about 10:25 BST, relayed by the lead: `coalesce(` is not
-an acceptance case (acceptance 4). The
+maintainer's scope, acceptance and order, and this plan carries them as #961 states them at
+`f78d4340`: the null-tolerant case is "written with the `??` consumer", and `coalesce(` "is not an
+acceptance case" (#961, *Disposition*). The
 relation to the WK-1250 rulings is #938 (working id 9851; read at its head
 `2538ca69f0ae73cb326c5cdfb57557cee97f2769`), DP-1 item 6, **G1**. Neither record is minted, so
 both are cited by PR and working id. They are re-pointed to their ids when they mint; #961 mints
@@ -145,10 +146,13 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
    fixture `KeyError` or a validation error, is a plan defect.
 3. **The consumer cases that priced wrong are refused at compile, red first.** Each case is the
    exact algorithm of #961's tables, written with `??`:
-   - auditor-922's lookup case (#961 Table 2, row "(a) coalesce, lookup UNPINNED", priced
+   - auditor-922's lookup case (#961 Table 2, row "(a) `??`, lookup UNPINNED", priced
      **1370**);
    - its wrong-version row (step `@1`, pin `@2` only, priced **1370** against a right answer of
      2740);
+   - auditor-922's table case (#961, "Table step through a tolerant consumer": `on_miss="default"`,
+     `s_office` = `risk_premium_minor * (expense_factor ?? 1.0)`, rate table unpinned, priced
+     **1370** against 1507 pinned);
    - auditor-933's lookup and table cases (#961 Table 3, rows (b) and (c), priced **100000**).
 
    Each is refused with `RATING_VERSION_UNPINNED`. The ledger also quotes the **pre-fix** price
@@ -162,18 +166,19 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
    - #961 Table 1's "both table v1 and v2 pinned" row still compiles and prices **1507**
      (DP-F3 (a)).
 
-   **`coalesce(` is not an acceptance case** *(revised 2026-09-30, on the lead's relay of the
-   maintainer's dated correction of about 10:25 BST; #961 is being corrected to match)*.
-   `_check_vocabulary` (`compile.py:233-258`) already refuses it at compile with
-   `EXPRESSION_INVALID_VOCABULARY`. The planner checked this at the tree above:
+   **Every refused case and every control uses the `??` consumer only.** **`coalesce(` is refused
+   at compile at this tree**, so it is not an acceptance case *(revised 2026-09-30, on the
+   maintainer's dated correction relayed by the lead, now in #961 at `f78d4340`)*.
+   `_check_vocabulary` (`compile.py:233-258`) refuses it with `EXPRESSION_INVALID_VOCABULARY`.
+   #961 reports it found by auditor-924d and re-run by the filer. The planner re-ran it as well:
    `zen.compile_expression('a * number(coalesce(x, "1.0"))')` raised
    `{"type":"parserError","source":"Incomplete parser output"}`, and the same expression written
-   with `??` compiled. So a `coalesce(` consumer never reaches scoring, and this slice adds no
-   test for it.
+   with `??` compiled. **`coalesce(` is outside this slice,** pending the decision-maker's ruling on
+   `??` and FR-244.
 5. **The model path is coded at score** (the `KeyError` at `runtime.py:463` and `:533`), red first.
-   Any coded outcome meets the requirement: the lead's relay of the maintainer's correction of
-   about 10:25 BST says so, and names `MODEL_CALL_FAILED` through the `_model_call_failure`
-   sentinel as acceptable. The unpinned case is refused at compile anyway, so these sites are
+   Any coded outcome meets the requirement. #961 at `f78d4340` says so ("Any coded outcome, such as
+   `MODEL_CALL_FAILED` through the sentinel, meets the requirement"), and names the sentinel path
+   as what "coded" means for the handler. The unpinned case is refused at compile anyway, so these sites are
    backstops. The mechanism is DP-F2's.
    Both tests use a hand-built `Bundle` whose `resolved_payloads` lack the step's model ref. It
    bypasses `compile_bundle`, as a pre-fix stored bundle would.
@@ -184,6 +189,13 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
      `load_bundle` refuses first, with `RATING_VERSION_UNPINNED`. Predicted red under (a) or (b):
      `RuntimeError` `NodeError`, the zen binding's wrapping of the handler's `KeyError`
      (`runtime.py:85-91`). Under (c) it is `load_bundle` returning.
+5a. **Under DP-F2 (c) only: a pre-fix bundle is refused at load, red first.** A `Bundle` built
+    as a pre-fix `compile_bundle` would have built it passes to `load_bundle`. It carries an unpinned
+    `lookup` ref, and in a second case a wrong-version `table` ref (step `@1`, pin `@2`), each with
+    the `??` consumer and each with its payloads present only for what the pins name. `load_bundle`
+    raises `CodedError` `RATING_VERSION_UNPINNED`. **Predicted red:** `load_bundle` returns, and
+    scoring the bundle prices 1370. The ledger quotes that price. *(Added 2026-09-30 on the lead's
+    relay of the maintainer's pre-acceptance of DP-F2 (c).)*
 6. **Through the platform** (`backend/tests/test_rating_version_compile.py`), red first. A
    version whose algorithm's `table` step names a rate table the pins do not carry fails its
    compile Job with `job_row.error["code"] == "RATING_VERSION_UNPINNED"`. Mirror
@@ -270,7 +282,7 @@ the order and the acceptance (#961, *Disposition*). None of that is reopened her
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
 | DP-F1 | Where does the comparison live, under what name? | (a) `pricing_core.rating.compile.check_step_refs_pinned(algorithm: RatingAlgorithm, pins: Pins) -> None`, raising `CodedError` `RATING_VERSION_UNPINNED` on the first mismatch in step order, exported in `__all__`; (b) `model_schema.rating`, beside `check_model_reference_mode` (`:171`), raising a bare `ValueError` that `compile_bundle` would have to re-code; (c) inline in `compile_bundle`, no separate function | **(a).** The code is a `pricing-core` error (premise c), and `runtime.py` can import it (premise i) for DP-F2 (c). G1 needs a named function to call, which rules out (c). (b) puts a coded rating refusal in the shared-shape package, and `model_schema/__init__.py` is a file every slice exporting a shape touches | decision point | yes — Task 2 | |
-| DP-F2 | How far does the backstop go at load and score, for a bundle not produced by the fixed `compile_bundle` (for example one compiled and stored before this fix)? | (a) The minimum: `_load_boosters` (`:533`) raises `CodedError` `RATING_VERSION_UNPINNED` naming the ref, and the handler (`:463`) returns `_model_call_failure(step, …)`, so `score_one` raises `MODEL_CALL_FAILED`. A raise cannot be used there (premise h). `table` and `lookup` stay as today at score: a missing payload still builds an empty decision table (#961, *Evidence* 1); (b) as (a), with the handler's text starting `RATING_VERSION_UNPINNED` inside the sentinel so the reader sees the cause; (c) as (a), and `load_bundle` calls `check_step_refs_pinned(algorithm, bundle.pins)` first (premise j), so a stored bundle with an unpinned or wrong-version step of **any** kind is refused before it can score | **(c).** (a) and (b) code the model path, but leave a pre-fix stored bundle able to price a `table` or `lookup` step silently at a wrong premium, which is the finding's defect. #961 reports 0 affected in PostgreSQL, and the MinIO artifact sweep is still pending (*Evidence* 5). (c) costs one call on a path with no I/O, reuses DP-F1's function, and closes the class at load. The two runtime sites stay coded as unreachable backstops. It widens the lead's scope by that one call, so it is the decision-maker's to take | decision point | yes — Task 3 | |
+| DP-F2 | How far does the backstop go at load and score, for a bundle not produced by the fixed `compile_bundle` (for example one compiled and stored before this fix)? | (a) The minimum: `_load_boosters` (`:533`) raises `CodedError` `RATING_VERSION_UNPINNED` naming the ref, and the handler (`:463`) returns `_model_call_failure(step, …)`, so `score_one` raises `MODEL_CALL_FAILED`. A raise cannot be used there (premise h). `table` and `lookup` stay as today at score: a missing payload still builds an empty decision table (#961, *Evidence* 1); (b) as (a), with the handler's text starting `RATING_VERSION_UNPINNED` inside the sentinel so the reader sees the cause; (c) as (a), and `load_bundle` calls `check_step_refs_pinned(algorithm, bundle.pins)` first (premise j), so a stored bundle with an unpinned or wrong-version step of **any** kind is refused before it can score | **(c).** (a) and (b) code the model path, but leave a pre-fix stored bundle able to price a `table` or `lookup` step silently at a wrong premium, which is the finding's defect. #961 at `f78d4340` (*Evidence* 5) reports 0 affected in PostgreSQL and in 6519 MinIO bundles, but it leaves 3986 algorithm-shaped blobs in `gip-test-blobs`, which carry no pins, unchecked. (c) costs one call on a path with no I/O, reuses DP-F1's function, and closes the class at load. The two runtime sites stay coded as unreachable backstops. The maintainer has pre-accepted (c) as within scope if it is ruled (the lead's relay); the ruling is still the decision-maker's. Under (c), acceptance 5a applies | decision point | yes — Task 3 | |
 | DP-F3 | Is a pin that no step references refused? #961 Table 1: "Both table v1 and v2 pinned … the v1 pin is used; the extra v2 pin is ignored" | (a) No. This slice refuses only a step ref not pinned at its exact version, and an extra pin stays allowed; (b) yes: refuse any `rate_tables`, `models` or `reference_tables` pin that no step names | **(a).** FR-237 says every reference is pinned, not that every pin is referenced. #961's scope is refs not pinned. Under (b), `custom_objectives` pins, which no step names (they are reached through a model), would need an exemption, and a rule would be written without a spec line. A second rule is a spec change first | decision point | yes — Task 2's acceptance 4 row | |
 
 ---
@@ -295,7 +307,7 @@ the order and the acceptance (#961, *Disposition*). None of that is reopened her
 **Interfaces:**
 - Consumes: from `test_rating_score` — `_algorithm_payload`, `_FakeResolver`, `_version`, `_ctx`
   (premises k, l); `compile_bundle`, `load_bundle`, `score_one`, `CodedError`.
-- Produces: the tests of acceptance 2–5. They go red now and green after Tasks 2–3.
+- Produces: the tests of acceptance 2–5, and 5a under DP-F2 (c). They go red now and green after Tasks 2–3.
 
 - [ ] Build each variant by **copying and editing** the fixture's dicts: a step's ref, and the
   version's `pins`. Do not mutate the shared helpers. For `@2` artifacts, add payloads to a local
@@ -305,6 +317,9 @@ the order and the acceptance (#961, *Disposition*). None of that is reopened her
   `reference_table:expense@1`, with rows `direct → "1.1"` and `broker → "1.25"`, and `@2` at
   `direct → "2.0"`. Use `on_miss="default"` and `s_office`'s expression
   `risk_premium_minor * number(expense_factor ?? "1.0")`. The payload shape is premise m.
+- [ ] **Table variant.** Keep `s_expense` as the fixture's `table` step, with `on_miss="default"`,
+  and set `s_office`'s expression to `risk_premium_minor * (expense_factor ?? 1.0)` (#961 at
+  `f78d4340`, "Table step through a tolerant consumer").
   These literals are #961 Table 2's. Re-verify them against its text before use.
 - [ ] **auditor-933's variants.** A minimal algorithm:
   - an input `base_minor` (int), given 100000;
@@ -403,7 +418,8 @@ PL-1254 and PL-1278 cite this slice's merged symbol once it exists.
   - the catalogue meaning, spec first, in the same commit → Task 2, acceptance 1;
   - the model-path `KeyError` coded → Task 3, acceptance 5;
   - red first per kind, unpinned and wrong-version → acceptance 2;
-  - the `??` cases (1370 and 100000) → acceptance 3; `coalesce(` is not a case (acceptance 4's dated note);
+  - the `??` cases (1370 and 100000) → acceptance 3; `coalesce(` is refused at compile and outside this slice (acceptance 4);
+  - DP-F2 (c), pre-accepted by the maintainer if ruled → acceptance 5a;
   - controls 1507, 2740, 130000 and 180000 → acceptance 4;
   - the order and the slot → Status;
   - `??` untouched → acceptance 8;
