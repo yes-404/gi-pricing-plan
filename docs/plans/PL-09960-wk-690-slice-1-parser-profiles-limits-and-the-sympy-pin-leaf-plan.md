@@ -169,6 +169,10 @@ A fresh reviewer checks each item by the command given, on the slice's final tre
    `uv run pytest packages/pricing-core/tests/test_expression_sympy.py -q` passes, including
    the test with `eval`, `exec` and `sympy.parsing.sympy_parser.parse_expr` all replaced by
    functions that raise, together with its positive control (`sympify` trips the raiser).
+   The raiser test also passes alone: `uv run pytest
+   packages/pricing-core/tests/test_expression_sympy.py -k never_reaches -q` in a fresh
+   process, with its unpatched warm-up (*F7, revised 2026-09-30 on auditor-plans2's delta
+   audit at 1296d9dc*).
    `uv run pytest packages/pricing-core/tests/test_expression_hostile_inputs.py -q` passes:
    NFR-483's hostile set is refused, with a position, in all four profiles. *(Revised 2026-09-30 on auditor-plans2's audit of #954 at 3e4402cd, finding F2 and F3.)*
 9. **`pricing-core` stays standalone.** `uv run lint-imports` passes, and
@@ -1084,6 +1088,7 @@ def test_the_limits_are_configurable() -> None:
 from __future__ import annotations
 
 import builtins
+import sys
 
 import pytest
 import sympy
@@ -1142,20 +1147,31 @@ def test_the_translation_never_reaches_eval_or_a_string_parser(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The tree is built node by node. With every string-to-code route replaced by a raiser,
-    the spec example still translates."""
+    the spec example still translates.
+
+    **The warm-up is required, and the test must pass in isolation** (F7). Python's import
+    machinery calls the builtin `exec`, and SymPy imports modules lazily on first use: in a
+    fresh process the spec example imports modules such as `sympy.sets.setexpr` on its first
+    call. Patching `exec` before that call makes the import itself trip the raiser, and the
+    test would then pass only when an earlier test had warmed the imports. So the same
+    translation runs once unpatched, and the patched run must import nothing new and give
+    the same result. Checked with `uv run pytest <this file> -k never_reaches` in a fresh
+    process (Step 5).
+    """
+    source = "w * where(exp(f) < y, w_under, w_over) * (y - exp(f)) ** 2"
+    warm = to_sympy(source, parameters=("w_under", "w_over"))  # imports SymPy's lazy modules
 
     def refuse(*args: object, **kwargs: object) -> object:
         raise AssertionError("user text reached eval/exec/parse_expr (NFR-483)")
 
     import sympy.parsing.sympy_parser as sympy_parser
 
+    loaded = set(sys.modules)
     monkeypatch.setattr(builtins, "eval", refuse)
     monkeypatch.setattr(builtins, "exec", refuse)
     monkeypatch.setattr(sympy_parser, "parse_expr", refuse)
-    to_sympy(
-        "w * where(exp(f) < y, w_under, w_over) * (y - exp(f)) ** 2",
-        parameters=("w_under", "w_over"),
-    )
+    assert to_sympy(source, parameters=("w_under", "w_over")) == warm
+    assert set(sys.modules) == loaded  # nothing imported under the patch
     # The positive control (F3; CLAUDE.md §13): the raisers are live. A string route
     # through SymPy's own parser trips them. So the translation above passing means it
     # took no such route, not that the patch missed.
@@ -1180,6 +1196,14 @@ def test_the_sympy_path_refuses_every_route_to_eval(expression: str) -> None:
   *(Revised 2026-09-30 on auditor-plans2's audit of #954 at 3e4402cd, finding F3.)* The spike behind the control, run with sympy 1.14.0: with
   `sympy_parser.parse_expr` replaced by a raiser, `sympy.sympify("y + 1")` raised it; with
   `builtins.eval` replaced, it raised again. Either patch alone trips the control.
+  *(Revised 2026-09-30 on auditor-plans2's delta audit at 1296d9dc, finding F7.)* The test
+  keeps the `exec` patch and warms first. The spike ran sympy 1.14.0 in two fresh processes,
+  building §4.6's example as `to_sympy` would: `real` symbols, `exp`, `Lt`, `Piecewise`,
+  `Integer`. Without a warm-up, the patched build raised the NFR-483 raiser from inside
+  SymPy's own imports. With one unpatched build first, the patched build succeeded,
+  imported 0 new modules, and both controls (`sympify` and `parse_expr`) still tripped.
+  `test_the_sympy_path_refuses_every_route_to_eval` patches nothing, so it needs no
+  warm-up.
 
 - [ ] **Step 3: Run and see it fail.** The expected red is an `ImportError` naming
   `pricing_core.data.expression_sympy`. Quote it.
@@ -1307,7 +1331,10 @@ def _call(
   `Mapping[type[ast.operator], Callable[[sympy.Expr, sympy.Expr], sympy.Expr]]`. Do not add
   `type: ignore`.
 - [ ] **Step 5: Green.** Run `uv run pytest packages/pricing-core/tests/test_expression_sympy.py
-  -q`, `uv run mypy` and `uv run lint-imports`. Run Acceptance 9's `git grep`: only
+  -q`, then the raiser test alone in a fresh process: `uv run pytest
+  packages/pricing-core/tests/test_expression_sympy.py -k never_reaches -q`.
+  It must pass on its own, not only after other tests have warmed SymPy's imports (F7). Also
+  run `uv run mypy` and `uv run lint-imports`. Run Acceptance 9's `git grep`: only
   `expression_sympy.py` imports sympy. Quote each.
 - [ ] **Step 6: Commit:** `feat(pricing-core): translate the objective profile to SymPy,
   where() as Piecewise (FR-144, WK-690 S1)`.
