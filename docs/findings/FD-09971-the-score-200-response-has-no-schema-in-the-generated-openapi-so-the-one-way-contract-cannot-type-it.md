@@ -253,4 +253,4 @@ decision (§1 above).
 two route declarations and the regenerated contracts, with a test that no 2xx JSON body of a
 route that returns a model-schema shape is `{}`. Ownership shape: event.
 
-*Disclosure: this record was filed under working id 9971 and is minted at its merge turn. It was first pushed under working id 9970, which collided with an open question's working id in a sibling draft PR; the lead reassigned it to 9971 before any review. The number 9971 was earlier the working id of a ruling that has since been minted under its own id; this record is unrelated to it.*
+*Disclosure: this record was filed under working id 9971 and is minted at its merge turn. The number 9971 was earlier the working id of a ruling that has since been minted under its own id; this record is unrelated to it.*
