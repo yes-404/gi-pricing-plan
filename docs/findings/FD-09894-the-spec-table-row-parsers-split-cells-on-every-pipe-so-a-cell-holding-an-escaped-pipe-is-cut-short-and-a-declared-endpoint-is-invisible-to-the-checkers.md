@@ -185,27 +185,27 @@ see them, so every figure below excludes them by construction. Built status is r
 
 | Record, line | Created | Figure cited | Hidden routes it would cover | Built? |
 |---|---|---|---|---|
-| `CR-00721` `:47` (WK-660 close) | 2026-08-15 | DATA `--endpoints` **28 / 28 (100 %)** | 01:873 lineage | **yes** (the first commit naming lineage in `api/dataset_versions.py` is `989308b3`, 2026-08-15, "close the Data Workbench"; in `generated.json:17717`) |
-| `CR-00719` `:54` (WK-663 close) | 2026-08-15 | DATA `28 / 28` then **33 / 33** | lineage | yes |
-| `CR-00723` `:25` (plan review 1) | 2026-08-15 | **33/33** endpoints | lineage | yes |
-| `CR-00722` `:34` (plan review 2) | 2026-08-15 | DATA **34 / 34** | lineage | yes |
-| `CR-00722` `:36` (plan review 2) | 2026-08-15 | GOV **11 / 20** | 06:539 dossiers, 06:543 dependencies | **no** (neither is in `generated.json`; no router; `gi-pricing.yaml:439` declares `/dossiers` as a hand-authored stub) |
-| `CR-00819` `:106` (WK-664 close) | 2026-08-27 | DATA **28/28 → 39/39** | lineage | yes |
-| `CR-00823` `:31` (plan review 5) | 2026-08-27 | DATA **39/39**, GOV **13/23** | lineage; dossiers, dependencies | lineage yes; the other two **no** |
-| `CR-00718` `:56-63` (demo entrance) | 2026-08-15 | the demo guide's **63 of 148** endpoints published (`guide.py`'s copy of the regex) | all three | lineage yes; the other two no |
+| `CR-721` `:47` (WK-660 close) | 2026-08-15 | DATA `--endpoints` **28 / 28 (100 %)** | 01:873 lineage | **yes** (the first commit naming lineage in `api/dataset_versions.py` is `989308b3`, 2026-08-15, "close the Data Workbench"; in `generated.json:17717`) |
+| `CR-719` `:54` (WK-663 close) | 2026-08-15 | DATA `28 / 28` then **33 / 33** | lineage | yes |
+| `CR-723` `:25` (plan review 1) | 2026-08-15 | **33/33** endpoints | lineage | yes |
+| `CR-722` `:34` (plan review 2) | 2026-08-15 | DATA **34 / 34** | lineage | yes |
+| `CR-722` `:36` (plan review 2) | 2026-08-15 | GOV **11 / 20** | 06:539 dossiers, 06:543 dependencies | **no** (neither is in `generated.json`; no router; `gi-pricing.yaml:439` declares `/dossiers` as a hand-authored stub) |
+| `CR-819` `:106` (WK-664 close) | 2026-08-27 | DATA **28/28 → 39/39** | lineage | yes |
+| `CR-823` `:31` (plan review 5) | 2026-08-27 | DATA **39/39**, GOV **13/23** | lineage; dossiers, dependencies | lineage yes; the other two **no** |
+| `CR-718` `:56-63` (demo entrance) | 2026-08-15 | the demo guide's **63 of 148** endpoints published (`guide.py`'s copy of the regex) | all three | lineage yes; the other two no |
 
 **No slice ledger cites a DATA or GOV endpoint figure**: the second predicate finds only
-catalogue and RATE lines in the ledgers (`LG-00730:527`, `LG-01225:314`).
+catalogue and RATE lines in the ledgers (`LG-730:527`, `LG-1225:314`).
 
 **Are the unbuilt hidden routes in any closed Work's scope?** **No.** The dossier route
 (06:539) belongs to **WK-680** (P3, `active`, "Dossier generation, commentary blocks, PDF,
 point-in-time regeneration", FR-376 to FR-381). The dependencies route (06:543, FR-384, blast
 radius) is **held by no roadmap row at this tree** (already recorded at
-`PL-01237` `:525`; `RS-00708` `:303` puts FR-383 to FR-385 in Phase 3, not started). **So no
+`PL-1237` `:525`; `RS-708` `:303` puts FR-383 to FR-385 in Phase 3, not started). **So no
 closed Work's scope hid an unbuilt route**, and none comes to the maintainer under §13's four
 verdicts from this sweep. The one route the false figures did hide from a closed Work's scope,
-lineage, is built. What the sweep does show: the two GOV figures (`CR-00722:36`, `CR-00823:31`)
-were understated by two declared routes, and `CR-00823:67-72` had already named the cause ("fix
+lineage, is built. What the sweep does show: the two GOV figures (`CR-722:36`, `CR-823:31`)
+were understated by two declared routes, and `CR-823:67-72` had already named the cause ("fix
 the parser or record the limitation in the close-workstream skill before the WK-664 close counts
 GOV endpoints"); **`.claude/skills/close-workstream/SKILL.md` and
 `.claude/skills/docs-audit/SKILL.md` record no such limitation** (searched for `pipe` and
