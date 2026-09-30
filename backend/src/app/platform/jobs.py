@@ -203,6 +203,7 @@ async def transition(
     progress: Progress | None = None,
     result: JobResult | None = None,
     error: JobError | None = None,
+    build: str | None = None,
 ) -> Job:
     """Move a Job along its lifecycle, refusing transitions FR-399 does not allow.
 
@@ -225,6 +226,8 @@ async def transition(
     row.status = to_status
     if to_status is JobStatus.RUNNING:
         row.started_at = datetime.now(UTC)
+        # FR-18: the worker that starts the Job says which build it is (`{version}+{build}`).
+        row.platform_build = build
     if to_status in TERMINAL_STATUSES:
         row.finished_at = datetime.now(UTC)
         if row.started_at is not None:
@@ -329,6 +332,7 @@ def to_schema(row: JobRow, *, stall_seconds: int | None = None) -> Job:
         result=JobResult.model_validate(row.result) if row.result else None,
         error=JobError.model_validate(row.error) if row.error else None,
         trace_id=row.trace_id,
+        platform_build=row.platform_build,
         progress_at=row.progress_at,
         stalled=(
             is_stalled(row, stall_seconds=stall_seconds) if stall_seconds is not None
