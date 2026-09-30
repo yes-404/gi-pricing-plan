@@ -546,6 +546,39 @@ WK-675's and is decided at WK-675's map plan. WK-690 does not decide or revisit 
 `type-check` run under `env -C`. A rendering test fails if `certified_with_findings` is
 styled as a failure. The Route B file passes.
 
+## Activation
+
+*(Added 2026-09-30 at the mint turn, on the lead's direction; the form is `PL-1237`'s
+Activation section, as `PL-1267` used it.)* **The SL rows are not cut in this plan's filing
+PR.** When the maintainer (or the session acting on the maintainer's behalf) accepts this
+plan, the activation commit:
+
+1. Sets `status: active` in the front matter, only if every blocking Decision point row has
+   a resolver id (`document-ids.md` §1.7). At the mint turn every row has one: DP-1 to DP-5
+   are resolved by `RL-1265` (merged 2026-09-30, `a6146ec4`). No row is open.
+2. Leaves the `From "Workstreams"` line under `### WK-690` in `docs/roadmap.md` to **the
+   lead**, as `PL-1237` did for WK-674. This plan proposes two corrections. First, the
+   heading's "lifting `expression_objectives_enabled`" becomes "making
+   `expression_objectives_enabled` liftable", because DP-3 (a) keeps the default off. Second,
+   the row records that FR-85, FR-86's field, FR-210 with FR-208's `spline` and `polynomial`
+   arms, and FR-154's expression half left WK-690 for Phase 3 (`RL-1265`). This plan does not
+   write the row.
+3. Adds the five `SL-` rows under `### WK-690`, one per slice (Slices 1 to 5), each `draft`,
+   with ids the lead issues. The planner writes them (`.claude/roles/planner.md`: the
+   planner cuts the `SL-` rows in the map plan).
+4. Regenerates `docs/INDEX.md` in the final commit only.
+
+**Blockers still open at the mint turn** (origin/main `dd25db94`). None of them blocks
+activation. Each blocks a slice's leaf plan:
+- **Slice 1:** **OQ-1266**, the exact `sympy` pin (open; see Slice 1's Gates).
+- **Slice 3:** **WK-1178's permission-parity check and its `RL-`**, both merged before the
+  commit that adds `custom_objective:author` (`CR-1247` Proposal 1 (c); Slice 3's Depends
+  on). Neither exists at `dd25db94`.
+- **Slice 4:** no blocker of its own. DP-4 is resolved by `RL-1265`. Slice 4 waits only on
+  Slice 1 and on the one-slice-at-a-time rule. The permission-parity check does not bind it,
+  because Slice 4 adds no permission.
+- **Slices 2 and 5:** nothing beyond the slice before each.
+
 ## Self-review
 
 1. **Spec coverage.** Every row of "Core scope" names a slice. FR-142, FR-143, FR-151,
