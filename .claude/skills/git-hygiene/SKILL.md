@@ -54,16 +54,21 @@ in the message pointing at it.
 > *"keep an eye on PR not created by maintainer, as the project is public now, plz keep merge
 > PR only from the maintainer and report the others"*
 
-**Merge a PR only when `author.login` is `yes-404`. Any other author is reported to the
+~~**Merge a PR only when `author.login` is `yes-404`. Any other author is reported to the
+maintainer and left alone**~~ **Merge a PR only when `author.login` is `yes-404`, or
+`app/dependabot` on the maintainer's MERGE-ACK naming its head SHA. Any other author is reported to the
 maintainer and left alone** — not merged, not closed, not reviewed into a state that invites
 merging.
+
+*(Amended 2026-09-29, mirroring `.claude/roles/lead.md`'s dated amendment by the maintainer: `app/dependabot` is also merged, but only on the maintainer's MERGE-ACK naming its head SHA. Every other author is still reported and left alone. The author query below lists Dependabot PRs too; they wait for that ACK, not a report.)*
 
 **Why the boundary is clean here and would not be in most repositories**: every agent on this
 team pushes with the *maintainer's own* token, so a team PR and a maintainer PR are the same
 author by construction. Measured 2026-08-30 rather than assumed — **all 466 PRs in the
 repository's history are authored by `yes-404`, with no exceptions**, and the fork count is
 **0**. So a non-`yes-404` author is not an edge case to adjudicate; it is, today, definitionally
-an outside contribution.
+an outside contribution — apart from `app/dependabot`, the repository's own dependency bot, which
+the 2026-09-29 amendment admits on the maintainer's MERGE-ACK.
 
 ```bash
 gh pr list --state open --json number,author,title --jq '.[] | select(.author.login != "yes-404")'

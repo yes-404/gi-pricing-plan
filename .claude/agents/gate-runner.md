@@ -71,7 +71,7 @@ already carries, and you must not strip, any of:
 - the per-worktree `GIP_TEST_DATABASE_URL`, without which a concurrent executor's suite
   truncates the database out from under yours mid-run and it presents as a flaky
   regression in code your branch never touched;
-- the single `flock` — three non-blocking attempts with `-E 99`, then one blocking wait.
+- the single `flock` — two non-blocking attempts with `-E 99`, then one blocking wait.
   `-E 99` is load-bearing: `flock -n`'s busy-lock code is otherwise `1`, the same value a
   failing command returns, and the loop then re-runs the whole gate on every slot.
 

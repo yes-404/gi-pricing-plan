@@ -213,7 +213,7 @@ def test_an_announced_slot_is_never_acquired_a_second_time(
     block, set right after its own `flock` succeeds) must make this hook a no-op even for
     a bare-shaped run — the fix for the deputy's finding against an earlier, separate-
     namespace design: it let three wrapped gates and three unwrapped ones run at once,
-    six total, defeating the three-slot budget both were meant to share.
+    six total, defeating the slot budget both were meant to share.
     """
     monkeypatch.setenv("GIP_GATE_SLOT", "/tmp/slots/gate-1")
     called: list[int] = []
@@ -309,3 +309,17 @@ def test_a_full_slot_set_falls_through_to_the_blocking_wait_path(
         err = capsys.readouterr().err
         assert "all 2 gate slots are busy" in err
         assert "acquired after waiting" in err
+
+
+def test_slot_count_matches_the_dev_commands_gate_wrapper(
+    conftest_module: types.ModuleType,
+) -> None:
+    """`_SLOT_COUNT` is the wrapper's slot loop (`for i in 1 2 …` over `gate-$i` in
+    `.claude/skills/dev-commands/SKILL.md`) and both must name the same budget: the
+    shared `/tmp/slots/gate-*` namespace only enforces one number if both sides agree."""
+    import re
+
+    skill = (ROOT / ".claude/skills/dev-commands/SKILL.md").read_text(encoding="utf-8")
+    loops = re.findall(r"for i in ([0-9 ]+); do\n\s+flock -n -E 99 /tmp/slots/gate-\$i", skill)
+    assert len(loops) == 1, loops
+    assert conftest_module._SLOT_COUNT == len(loops[0].split()) == 2
