@@ -1,5 +1,5 @@
 ---
-id: RL-9903
+id: RL-1311
 family: ruling
 title: OQ-1235 decided — an Environment-setting layer joins FR-446's precedence below the process override, for keys declared per-environment
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [OQ-1235, OQ-1234, RL-1232, RL-1236, PL-1237, CR-1247]
 ---
 
-# RL-9903 — OQ-1235 decided: an Environment-setting layer joins FR-446's precedence below the process override, for keys declared per-environment
+# RL-1311 — OQ-1235 decided: an Environment-setting layer joins FR-446's precedence below the process override, for keys declared per-environment
 
 ## How this was ruled
 
@@ -27,8 +27,9 @@ own `echo "CLAUDE_EFFORT=$CLAUDE_EFFORT"` printed `CLAUDE_EFFORT=high`.
 The record was prepared at effort `medium` (PR #939, head `1b23ac5d`, "PREPARED, NOT
 RULED"), under the maintainer's decision of 2026-09-30 00:42:01 BST. This pass re-verified
 its evidence at the tree below, decided the four items it left open, and found one it did
-not name: RL-1232 DP-2's flags must not be enabled at workspace level (item 3). It keeps the
-working id 9903; the id is minted at the lead's merge turn.
+not name: RL-1232 DP-2's flags must not be enabled at workspace level (item 3). It was minted
+2026-09-30 as RL-1311 (hand-assigned in the lead's batch plan, batch 3, under the maintainer's
+option (B) and 12:22:19 BST entry); it was filed under working id 9903.
 
 ## Verified first, at 7c354305247236be1a3a50150c9c17b0134c4c5e
 
