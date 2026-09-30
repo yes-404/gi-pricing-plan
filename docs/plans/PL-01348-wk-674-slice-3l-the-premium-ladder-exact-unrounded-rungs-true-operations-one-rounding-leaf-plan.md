@@ -71,7 +71,7 @@ only allocator, `FD-1338`). The id is minted at this PR's merge turn.
 
 **Minted 2026-10-01 as PL-1348** (`python3 scripts/doc-id.py next --ref f689c7828cb05eb2298f3fec505a4638c4437a11`
 printed `1346`, as the lead ran it, and the lead allocated `1348` in mint batch 13a, after `RL-1346`
-(working id 9983) and before `RL-1347` (working id 9984)). It was filed under working id 9993,
+(working id 9983) and `RL-1347` (working id 9984)). It was filed under working id 9993,
 and this body keeps that id where it describes the filing. The two in-batch rulings are re-pointed
 to their minted ids.
 
