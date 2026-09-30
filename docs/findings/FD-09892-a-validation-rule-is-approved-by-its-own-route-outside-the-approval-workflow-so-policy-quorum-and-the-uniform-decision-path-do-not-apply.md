@@ -164,7 +164,14 @@ Event that discharges it: that slice's merge.
   rule (case 5 now moves it to `approved`);
 - **a rule whose dry-run outcome is `error` is refused at submit** (and at approve): the three
   variants above (missing column, unknown check, missing table) each become a refusal, red
-  first; a `fail` outcome stays accepted (the measured non-defect);
+  first; a `fail` outcome stays accepted (the measured non-defect). **The layers:** the refusal
+  is at the **service layer, at submit** (`submit_for_review`, `validation_rules.py:371`) **and at
+  approve** (`approve_rule`), each reading the attached report's outcome; and it is the
+  **evidence floor** once approval goes through `approvals.submit` (`06:114`, the policy's
+  `dry_run_result` evidence means a run that executed). A **DB CHECK** cannot express it today,
+  because the constraint sees only `dry_run_report_id` (non-null) and the outcome lives in the
+  report, not the rule row; adding one needs the outcome stored on the row, a design choice left
+  to the fix slice, not decided here. Cites `01:470-473` and `01:520-521`;
 - the creation sites stay as triaged above (the built-in exemption is named, not silent);
 - **remove S2's temporary A.4 exemption**, red first: the *one named, dated, temporary
   exemption* for `validation_rules` in #971's (RL working id 9906) model-derived one-writer
