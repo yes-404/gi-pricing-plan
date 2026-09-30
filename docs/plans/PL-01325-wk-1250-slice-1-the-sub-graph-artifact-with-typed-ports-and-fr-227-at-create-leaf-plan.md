@@ -3,7 +3,7 @@ id: PL-1325
 family: plan
 kind: leaf
 title: WK-1250 Slice 1 — The sub-graph as a stored, versioned artifact, with typed ports and FR-227 at create (FR-217's artifact limb): leaf plan
-status: active                  # draft → active → superseded | retired (§1.2a)
+status: draft                   # draft → active → superseded | retired (§1.2a)
 created: 2026-09-30
 owner: planner
 tree: e9263283177e5e1c1205ba48d0e41c2a1483f83c
