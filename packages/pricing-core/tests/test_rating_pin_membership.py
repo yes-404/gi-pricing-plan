@@ -35,7 +35,9 @@ from pricing_core.safe_error import CodedError
 # ---------------------------------------------------------------------------
 
 _TOLERANT_TABLE_EXPR = "risk_premium_minor * (expense_factor ?? 1.0)"
-_TOLERANT_LOOKUP_EXPR = 'risk_premium_minor * number(expense_factor ?? "1.0")'
+#: A lookup's output is always a string, so arithmetic on it goes through `number()`
+#: (FR-244 as corrected by RL-1322).
+_TOLERANT_LOOKUP_EXPR = "risk_premium_minor * number(expense_factor ?? '1.0')"
 
 
 def _step(algo: dict[str, Any], step_id: str) -> dict[str, Any]:
@@ -229,7 +231,7 @@ def _veh_algo(kind: str, ref: str) -> dict[str, Any]:
         step = {"step_id": "s_veh", "type": "lookup", "label": "Vehicle loading",
                 "reference_table_ref": ref, "key_expr": ["veh"], "as_at": "veh",
                 "on_miss": "default", "consumes": ["veh"], "produces": "veh_loading"}
-        expr = 'base_minor * number(veh_loading ?? "1.0")'
+        expr = "base_minor * number(veh_loading ?? '1.0')"
         produced = "veh_loading"
     else:
         step = {"step_id": "s_veh", "type": "table", "label": "Vehicle factor",

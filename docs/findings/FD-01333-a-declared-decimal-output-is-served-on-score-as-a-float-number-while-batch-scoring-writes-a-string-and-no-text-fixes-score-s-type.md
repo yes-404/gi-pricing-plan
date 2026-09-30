@@ -1,5 +1,5 @@
 ---
-id: FD-9969
+id: FD-1333
 family: finding
 title: A declared decimal output is served on /score as a float JSON number, while batch scoring writes it as a string, and no text or contract fixes /score's type
 status: active
@@ -10,10 +10,9 @@ corrected_by: []
 relates: [WK-1178, WK-674, FR-273, FR-227, FR-250, FR-248]
 ---
 
-# FD-9969 — A declared `decimal` output is served on `/score` as a float, and no text fixes its JSON type
+# FD-1333 — A declared `decimal` output is served on `/score` as a float, and no text fixes its JSON type
 
-**Working id 9969.** Filed as a working id and minted at the records PR; it is cited by number, not as a
-token, until then, and by the open question **OQ-9970** it raises (below).
+**Filed under working id 9969; minted as FD-1333.** The open question it raises was filed under working id 9970 and is minted as **OQ-1334** (below). The ruling it cites was filed as working id 9963 and is minted as RL-1329.
 
 ## Finding
 
@@ -40,7 +39,7 @@ on main 32f3fa92afad81d1be611b21ae16ff35211eded8", its bullet "S6 routing", quot
 > when the OQ is ruled. The FD quotes the 03 text it relied on.
 
 Applied below (evidence 6): **`03` does not decide the `/score` type, and the contract does not fix it, so this record
-raises OQ-9970**; it does not assign an owner. The two texts that could have decided it, FR-273 and the batch
+raises OQ-1334**; it does not assign an owner. The two texts that could have decided it, FR-273 and the batch
 column's `:624`, are set out with their scope so the maintainer can see the reading.
 
 **Why it matters, and why only low.** A `decimal` output can carry money (FR-227: "A monetary result must be `decimal`
@@ -101,7 +100,7 @@ raw value. `score_one` does not convert it. `/score` returns `result.model_dump_
 (`:834`), whose known types are `money_minor`, `decimal`, `bool`, `string`, `date` (`_KNOWN_OUTPUT_TYPES`, `:831`),
 converting a `decimal` by `Decimal(repr(value))` and writing `str(...)`. **That string is the float's shortest repr,
 not the engine's exact value**, so the batch string is a different type but not more exact (evidence 4). The decision
-`RL 9963` (local branch `dm-eh-s3`, head `a8fef919`, not on `main`; "Declared money outputs that are not rungs", and its
+`RL-1329` (minted from working id 9963; the text quoted here is as read on the local branch `dm-eh-s3` at head `a8fef919`, before the ruling reached `main` and was amended; "Declared money outputs that are not rungs", and its
 *Observed* list) brings `money_minor` non-rung outputs into WK-674 Slice 3 (served as an exact integer) and rules
 `decimal` outputs out: "They are not money, and serving them as exact strings would change their JSON type on `/score`
 from number to string. No acceptance covers that visible change." It recommends WK-1178 and the lead routes it. Note
@@ -135,7 +134,7 @@ so the wire form above is the HTTP body's `outputs` object. Not run through HTTP
 fixture, and driving the route needs a stored Rating Version with its bundle; the code between the two is one line.
 
 ```python
-"""FD-9969 reproduction: a declared non-rung `decimal` output on the real /score path (score_one) and on the batch path's serialiser.
+"""FD-1333 reproduction: a declared non-rung `decimal` output on the real /score path (score_one) and on the batch path's serialiser.
 Run from the repo root:  PYTHONPATH=packages/pricing-core/src:packages/model-schema/src:packages/pricing-core/tests uv run --no-sync python decimal_output_repro.py"""
 import asyncio, json, sys
 from decimal import Decimal
@@ -196,7 +195,7 @@ committed files only; algorithms stored in a database or blob store are **not** 
 authored by a user and none is committed. (No multi-database sweep was run for this filing.)
 
 ```python
-r"""FD-9969: committed algorithms and fixtures that DECLARE an output of type `decimal`.
+r"""FD-1333: committed algorithms and fixtures that DECLARE an output of type `decimal`.
 Corpus: every tracked file at the tree (git ls-files). Predicate, verbatim (revised after the positive control found
 the first form missed `payload["outputs"].append({...})`):
   (P1) a .py file containing ANY dict literal shaped like an output declaration: keys "name", "type" and "required"
@@ -252,7 +251,7 @@ both against this field.
 - **FR-273 (`:222`)** governs *money* crossing the engine boundary ("Money crosses the engine boundary only as integer minor
   units"; a value "returning to Python for further arithmetic is an integer minor unit or a string"). A float `decimal`
   output is a value returning to Python, but the requirement's words are "money" and "for further arithmetic", and it
-  does not say what a *served* output's JSON type is. Whether a `decimal` output is money is exactly what `RL 9963`
+  does not say what a *served* output's JSON type is. Whether a `decimal` output is money is exactly what `RL-1329`
   reads one way ("not money") and FR-227 leaves open ("A monetary result must be `decimal` or `money_minor`").
 - **The output-type text (`:624`)** fixes `decimal` → JSON string, and scopes itself to "this path": the batch column
   `outputs_json` (FR-253). For `/score`, `03` says only "returning the ladder, outputs" (FR-250) and shows no `decimal`
@@ -260,7 +259,7 @@ both against this field.
   response schema (evidence 2).
 
 **`03` is silent on `/score`'s `decimal` output type, and the contract does not fix it, so the OQ branch applies** and this
-record raises **OQ-9970**. **The other reading,** stated so the maintainer can flip the branch: if FR-273's "or a string"
+record raises **OQ-1334**. **The other reading,** stated so the maintainer can flip the branch: if FR-273's "or a string"
 is read as governing every fractional value the engine returns, or `:624`'s rule as binding the one field
 `ScoringResult.outputs` on every path (both paths serialise that field, and RL-923's reason, "an exact `Decimal` and a lossy
 `float` cannot be confused", is not batch-specific), then the type is already decided and this is a defect, owner WK-1178,
@@ -269,16 +268,16 @@ contract first. The recommendation below, (a), is the same in both readings.
 ## Disposition
 
 **Proposed by the auditor; the verdict is the lead's.** The owner is **not** assigned here: on the maintainer's rule it
-is set when OQ-9970 is ruled. `carry forward, unowned` until then; the event that assigns it is **OQ-9970's ruling**.
+is set when OQ-1334 is ruled. `carry forward, unowned` until then; the event that assigns it is **OQ-1334's ruling**.
 
-**OQ-9970** (mirrored in `docs/open-questions.md` and `03` §10; its options, with the recommendation):
+**OQ-1334** (mirrored in `docs/open-questions.md` and `03` §10; its options, with the recommendation):
 
 - **(a) `/score` serves a declared `decimal` output as a JSON string**, as the batch column already does (`03:624`), with the
   contract first: type `ScoringResult.outputs` values in `scoring.schema.json` (and give the `/score` operation a response
   schema in OpenAPI), then change `_build_outputs`. It follows R2, FR-273 and `CLAUDE.md` §7 and makes both paths agree.
   It is a **breaking change** for a client that reads a `decimal` output as a number; no committed algorithm declares one
   (evidence 5), so no in-repo consumer changes. For exactness (not only the type), the string must be the engine's
-  exact `string()` value, the terminal read `RL 9963` uses for `money_minor`; `Decimal(repr(float))` is the interim and is
+  exact `string()` value, the terminal read `RL-1329` uses for `money_minor`; `Decimal(repr(float))` is the interim and is
   not exact (evidence 4c).
 - **(b) Keep JSON numbers on `/score`,** document the loss, and state in `03` that the two paths differ. It leaves the float
   carrying a value that FR-227 allows to be money, against `CLAUDE.md` §7.
@@ -289,14 +288,14 @@ is set when OQ-9970 is ruled. `carry forward, unowned` until then; the event tha
   until a need is scoped. No committed algorithm uses it (evidence 5), so nothing breaks, and the type question is not
   opened. It is the cheapest interim guard if (a) cannot land first.
 
-**Recommendation: (a), contract first, in WK-1178,** sharing the exact `string()` read with `RL 9963`'s builder rewrite so
+**Recommendation: (a), contract first, in WK-1178,** sharing the exact `string()` read with `RL-1329`'s builder rewrite so
 that one read supplies rungs, money outputs and decimal outputs; (d) is the interim if (a) is not ready when Slice 3
 merges. The choice is the maintainer's: it changes a served JSON type.
 
-**Event that next confirms or discharges it:** OQ-9970 is ruled (by an `RL-`, or an ADR if it must be decided now), which
+**Event that next confirms or discharges it:** OQ-1334 is ruled (by an `RL-`, or an ADR if it must be decided now), which
 assigns the owner; it is discharged when that ruling is implemented, contract first, with a red-first case for a declared
-`decimal` output through `score_one`/`/score`. **Interaction to record now:** `RL 9963` excludes `decimal` outputs on the
-ground that they are "not money"; OQ-9970 should decide whether a `decimal` output may carry money (FR-227), since that
+`decimal` output through `score_one`/`/score`. **Interaction to record now:** `RL-1329` excludes `decimal` outputs on the
+ground that they are "not money"; OQ-1334 should decide whether a `decimal` output may carry money (FR-227), since that
 decides whether `CLAUDE.md` §7 binds it.
 
 Ownership shape: event
