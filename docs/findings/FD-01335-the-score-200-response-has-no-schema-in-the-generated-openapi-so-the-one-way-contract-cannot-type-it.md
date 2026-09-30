@@ -313,7 +313,8 @@ each needs. **The fix is split so the WK-675 hold stays narrow.**
    Each form is shown red on broken input before the guard is written, and the two `{}` `/score` responses are form 1's red on
    the real document. **New instances fail from day one.** Its exclusion list has two parts:
    - **permanent, cited: the four stream and file routes** (the list below, with the lines that make each a non-JSON body);
-   - **temporary, each marked "pending FD-1335 part B": the 12 open-object routes** listed in Evidence §1.
+   - **temporary, each carrying the exclusion marker `pending FD-1335 part B`** (the maintainer's entry wrote it as "pending FD 9971 part B";
+     it carries the minted id): **the 12 open-object routes** listed in Evidence §1.
 
    The four permanent exclusions, by method and path:
    - `GET /api/v1/audit/export`: `StreamingResponse`, `application/x-ndjson` or `text/csv` (`backend/src/app/api/audit.py:278-281`,
