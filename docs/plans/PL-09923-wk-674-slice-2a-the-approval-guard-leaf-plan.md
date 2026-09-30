@@ -177,7 +177,11 @@ and the guard restored.
      `SET LOCAL app.approval_decision = 'off'` — **T2** (auditor-close1255's W1 and W2:
      `SET LOCAL` lasts to the end of the transaction). The flush before the reset lets the
      block's own pending write meet the trigger while the flag is on; a write left unflushed
-     is flushed later under `'off'` and refused, which fails closed. Red first: an
+     is flushed later under `'off'` and refused, which fails closed — **red first with an ORM
+     attribute change** (auditor-close1255 F-2): inside the block, set an artifact row's
+     `status` to `approved` on the ORM object without flushing, patch the exit flush out,
+     leave the block, then flush — the trigger refuses it. A raw statement cannot stand in
+     for this case, because it is not buffered. Red first: an
      `approved` write **after** the block, in the same unit of work, is refused (without the
      reset, this case fails). **No leak:** the next transaction on the same pooled
      connection reads the flag as not `'on'`, red first against a session-level `SET`.
@@ -246,7 +250,8 @@ and the guard restored.
 8. **Fixtures** (sub-item 6). The 17 backend test files matching
    `git grep -l -E 'status\s*=\s*"approved"|Status\.APPROVED|status=APPROVED' -- backend/tests`
    at the tree above (an upper bound; some only compare) move onto the decision path, or onto
-   one helper under `backend/tests/`. **The helper creates the evidence, not just the flag:**
+   one helper under `backend/tests/`. **The helper creates the evidence, not just the flag** (auditor-close1255 F-1: the flag
+   alone fails on the 5 evidence tables):
    for a row on an evidence-only table it inserts a matching `approved` `approval_requests`
    row (same workspace, `artifact_ref` = `str(ArtifactRef)` of the row) inside
    `approval_decision()`, and only then the artifact row; for a validation table or
