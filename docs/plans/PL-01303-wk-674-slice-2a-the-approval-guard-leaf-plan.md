@@ -3,7 +3,7 @@ id: PL-1303
 family: plan
 kind: leaf
 title: WK-674 Slice 2a — The approval guard (only the decision path writes approved): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-09-30
 owner: planner
 tree: daa7f5f8d6f0ff80dee7dfccf8ca18309d626816
@@ -60,7 +60,7 @@ slice row is **SL-1302**, cut in this PR under `### WK-674` in `docs/roadmap.md`
 
 ## Status
 
-**Draft**, filed 2026-09-30 against the tree above. **Minted 2026-09-30 as PL-1303, with its
+**Active** (see **Activation**, below). Filed 2026-09-30 against the tree above. **Minted 2026-09-30 as PL-1303, with its
 slice row as SL-1302**, assigned in the lead's mint train, stacked on #971's `RL-1301`;
 `doc-id.py next --ref origin/main` printed 1298 at `c39d14b4` (the train holds 1298–1301 for
 the PRs ahead of this one); filed under working ids 9923 (the plan) and 9922 (the row).
@@ -85,6 +85,23 @@ edited.
    `2026-09-30 11:55:31 BST — #971 trigger at ed879f7b: T1–T3 agreed; the forgeable-flag residual gets a steer toward an evidence-based condition`,
    adopted).
 2. **The lead's go.**
+
+**Activation.** Activated 2026-09-30. Each item of **Activation needs** above is met:
+1. `RL-1301`, the plan's ruling, is minted and audit-clean: auditor-close1255 found it clean at
+   `897859eb`, and it is minted as `RL-1301` in this batch (#971 + #984), whose merge puts it on
+   `main` with this plan.
+2. The lead's go, quoted from the lead's instruction to the planner: *"S2a also dispatches at
+   this batch's merge, so PL-1303 should go active in the same batch."* It rests on the
+   maintainer's entries headed
+   `2026-09-30 11:48:28 BST — DECISION + ACCEPTANCE (maintainer by delegation): WK-674 S2 split, option (b), S2a = the approval guard`
+   and "2026-09-30 12:10:38 BST — DECISION: the mint queue re-ordered so lane A starts S2a…",
+   and on the **lane A slot grant** by the lead at this batch's push (the planner's clock
+   read 2026-09-30 13:07:52 BST when this paragraph was written; the lead confirms the grant time at the
+   merge). The dispatch record is `handover/DISPATCH-WK-674-S2a-DRAFT-2026-09-30.md`, the
+   lead's local handover file outside the repository, finalised at GO.
+
+The activation rides in the #971 + #984 batch, with its slice row `SL-1302` set `active` by the
+lead's dispatch edit in the same commit. Nothing else in this plan changes at activation.
 
 ## Acceptance Standard
 
@@ -506,4 +523,4 @@ Slice 2 starts after the fix closes.
   order in the positive control (Acceptance 4); the forged-flag plant (Acceptance 3).
 - **The order** is the maintainer's decision of 11:56:33 BST, stated in Serialisation and
   Hand-off.
-- **Open:** no decision point of this plan's own. RL-1301 is minted (CLEAN); activation waits on this plan's PR (#984) merging and the plan being activated, and on the lead's go.
+- **Open:** no decision point of this plan's own. Activated in the #971 + #984 batch (see **Activation**).
