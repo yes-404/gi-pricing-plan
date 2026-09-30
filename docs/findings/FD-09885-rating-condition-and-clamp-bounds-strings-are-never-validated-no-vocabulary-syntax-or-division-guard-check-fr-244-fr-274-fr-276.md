@@ -111,8 +111,8 @@ deliberate negative-test ones (`now()`, `foo()`). **It did find `/`** among the 
 strings' operators, without saying in which string kind; this record's own listing under
 **Exposure** below resolves that. The maintainer's dated correction (`to-lead.md`, "2026-09-30
 10:58:13 BST — DATED CORRECTION to my 10:53:10 entry (condition/clamp FD, "Exposure" bullet)")
-supersedes the 10:53:10 claim that 0 stored or committed conditions or bounds use `??` or
-division: **stored exposure = 0; committed exposure was UNKNOWN until this record's list.** What
+supersedes the "Exposure" bullet of the 10:53:10 entry:
+**stored exposure = 0; committed exposure was UNKNOWN until this record's list.** What
 the sweep shows of the stored data: the sweep's read-only
 Postgres pass (one database with rows: 25 algorithms, 29 versions; strings
 `premium_in * 2`, `risk_premium_minor * expense_factor`, `office_premium_minor >= 100` and bare
@@ -121,13 +121,57 @@ Not checked by the sweep: Redis, other hosts and parquet dataset contents.
 
 **Exposure.** *Stored exposure is 0* (the sweep's Postgres and MinIO passes above, reported).
 **Committed exposure** is this record's own listing, at `origin/main` `9f63d0fe`, of every
-committed rating string that contains `/`, by field. Command: `python3` over `git ls-files
-examples backend packages scripts tests frontend docs` (excluding `docs/rfcs`, `plans`,
-`closures`, `rulings`, `findings`, `research`, `ledgers` and `INDEX.md`), extracting every
-`condition`, `expr` and `key_expr` string and every `clamp_bounds` dict string on one line by the
-regex `["']?\b(condition|expr|key_expr)\b["']?\]?\s*[:=]\s*"<string>"` (and the same for
-`clamp_bounds\b["']?\]?\s*[:=]\s*{...}`), keeping those with `/`. Result: **4 strings, all in
-the `expr` field, none in `condition`, `clamp_bounds` or `key_expr`.**
+committed rating string that contains `/`, by field. **The predicate, runnable** (run from the
+repository root at `9f63d0fe`, with `python3 script.py`; it prints one `path:line [field] string`
+row per hit and a count):
+
+```python
+import re
+import subprocess
+
+files = subprocess.run(
+    ["git", "ls-files", "examples", "backend", "packages", "scripts", "tests", "frontend", "docs"],
+    capture_output=True, text=True, check=True,
+).stdout.split("\n")
+skip = ("docs/rfcs/", "docs/plans/", "docs/closures/", "docs/rulings/", "docs/findings/",
+        "docs/research/", "docs/ledgers/", "node_modules/", "docs/INDEX.md")
+exts = (".py", ".json", ".yaml", ".yml", ".ts", ".vue", ".md", ".csv", ".toml")
+key_re = re.compile(r"""["']?\b(condition|expr|key_expr)\b["']?\]?\s*[:=]\s*(?:"((?:[^"\\\n]|\\.)*)"|'((?:[^'\\\n]|\\.)*)')""")
+clamp_re = re.compile(r"""clamp_bounds\b["']?\]?\s*[:=]\s*\{([^}\n]*)\}""")
+str_re = re.compile(r""""((?:[^"\\\n]|\\.)*)"|'((?:[^'\\\n]|\\.)*)'""")
+rows = []
+for f in files:
+    if not f or f.startswith(skip) or not f.endswith(exts):
+        continue
+    try:
+        lines = open(f, encoding="utf-8").read().split("\n")
+    except (OSError, UnicodeDecodeError):
+        continue
+    for n, line in enumerate(lines, 1):
+        for m in key_re.finditer(line):
+            s = m.group(2) if m.group(2) is not None else m.group(3)
+            if "/" in s:
+                rows.append((f, n, m.group(1), s))
+        for m in clamp_re.finditer(line):
+            for sm in str_re.finditer(m.group(1)):
+                s = sm.group(1) if sm.group(1) is not None else sm.group(2)
+                if "/" in s:
+                    rows.append((f, n, "clamp_bounds", s))
+for r in rows:
+    print(f"{r[0]}:{r[1]} [{r[2]}] {r[3]}")
+print(len(rows), "hits")
+```
+
+Result: **4 strings, all in the `expr` field, none in `condition`, `clamp_bounds` or `key_expr`**
+(the last printed line is `4 hits`).
+
+**What this extractor misses**, by construction: it reads **one line at a time** and needs a
+quoted string right after the field name and `:` or `=`. So it does not see **(a) a split
+string** (a string broken across lines or implicitly concatenated), **(b) a helper-built string**
+(an f-string, a `+` join, a factory or fixture function that assembles the text, or any string
+held in a variable and assigned to the field later), **(c) a positional string** (a step built as
+`Step("id", "cond ...")` with no field name), or **(d) a multi-line dict or JSON value** whose
+string starts on the line after the key. It also skips the record directories named in `skip`.
 
 | File:line | Field | String | Guarded? |
 |---|---|---|---|
@@ -138,9 +182,11 @@ the `expr` field, none in `condition`, `clamp_bounds` or `key_expr`.**
 
 So **no committed condition or clamp-bound string contains a division, guarded or not**, and
 there is no exposed committed example. The three unguarded `expr` strings are deliberate
-negative tests, and the checks refuse them today. **Limits:** the extractor reads one line per
-string, so a string split across lines, built by a helper, or given positionally is not seen; an
-independent line-scoped `git grep -A4` over `clamp_bounds`, `"condition"`, `condition=`,
+negative tests, and the checks refuse them today. **Corroboration, attributed and not re-run by
+this record's author:** auditor-plans's independent multi-line scan (368 token sites, 260
+characters read after each) found **no** committed `condition`, clamp bound or `key_expr` string
+with `/`, which covers the split and multi-line forms the extractor above cannot. **Limits:** see
+the list above; a further independent line-scoped `git grep -A4` over `clamp_bounds`, `"condition"`, `condition=`,
 `"key_expr"` and `key_expr=` in `examples`, `backend`, `packages`, `scripts`, `tests`,
 `frontend`, `docs/specs`, `docs/workflows` and `docs/contracts`, filtered to ` / `, returned
 nothing. This is a listing at one tree, not a proof for later commits. The maintainer asked for
