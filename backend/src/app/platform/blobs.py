@@ -321,9 +321,13 @@ class BlobStore:
         entry needs to distinguish "not done yet" from every other failure, and a missing
         key is the expected, common case on every chunk this run has not reached before.
         """
+        return await self.read_object(f"scratch/{key}")
+
+    async def read_object(self, key: str) -> bytes | None:
+        """The object at exactly `key`, or `None` if it does not exist."""
         try:
             response = await asyncio.to_thread(
-                self._client.get_object, Bucket=self._bucket, Key=f"scratch/{key}"
+                self._client.get_object, Bucket=self._bucket, Key=key
             )
         except ClientError as exc:
             code = exc.response.get("Error", {}).get("Code")
@@ -332,6 +336,16 @@ class BlobStore:
             raise
         body: bytes = await asyncio.to_thread(response["Body"].read)
         return body
+
+    async def write_object(self, key: str, content: bytes) -> None:
+        """Write the object at exactly `key`, with no accounting row (see `write_scratch`)."""
+        await asyncio.to_thread(
+            self._client.put_object,
+            Bucket=self._bucket,
+            Key=key,
+            Body=content,
+            ContentType="application/octet-stream",
+        )
 
     async def delete_scratch(self, key: str) -> None:
         """Remove one scratch object. A missing key is not an error — deleting an already-
