@@ -19,19 +19,19 @@ import typing
 from pathlib import Path
 from typing import Annotated, Any, Literal, get_args, get_origin
 
-import pricing_core.rating.authored as authored_module
-import pricing_core.rating.vocabulary as vocabulary_module
 import pytest
+from test_rating_compile import valid_algorithm
+
+import pricing_core.rating.authored as authored_module
+import pricing_core.rating.compile as compile_module
+import pricing_core.rating.vocabulary as vocabulary_module
+from model_schema import rating as rating_schema
+from model_schema.rating import RatingAlgorithm, RatingExpressionStep, RatingStep
 from pricing_core.rating.authored import (
     EXPRESSION_FIELDS,
     NON_EXPRESSION_FIELDS,
     authored_expression_fields,
 )
-from test_rating_compile import valid_algorithm
-
-import pricing_core.rating.compile as compile_module
-from model_schema import rating as rating_schema
-from model_schema.rating import RatingAlgorithm, RatingExpressionStep, RatingStep
 from pricing_core.rating.compile import (
     ALGORITHM_CHECKS,
     STRING_CHECKS,
