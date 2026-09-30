@@ -286,9 +286,12 @@ cause, and the guard is restored; the ledger quotes both runs.
       by the test to still contain its `require_permission(` (or membership refusal) at the
       named site, so the list cannot rot silently: `POST /api/v1/validation-rules`
       (`backend/src/app/platform/validation_rules.py:192` and `:199`); `POST /api/v1/me/workspace`
-      (`backend/src/app/api/me.py:241`, `:251` and `:260`, the `WORKSPACE_SCOPE_DENIED`
-      refusals of the membership check of `00` FR-396 and FR-397 — the refusal lines, not the
-      decorator at `:215`; **no permission needed**, per the 11:08:22 entry); and, as Task 5
+      (`backend/src/app/api/me.py`, three `WORKSPACE_SCOPE_DENIED` refusals, each cited at
+      its code line: `:241`, the malformed `Workspace-Id` header (`UUID(workspace_id)` at
+      `:238`, raised at `:240-241`); `:251`, the membership check of the workspace entered
+      (`if` at `:249`); `:260`, the membership check of the workspace left (`if` at `:258`) —
+      the last two being `00` FR-396 and FR-397's membership check; not the decorator at
+      `:215`; **no permission needed**, per the 11:08:22 entry); and, as Task 5
       adds each, **both new handler-guarded routes** — `POST /api/v1/environments/{env}/deployments`
       and `POST /api/v1/environments/{env}/deployment-requests` — each at the line of its
       handler's `require_permission(` (#971 B.2: `deployment:promote` with the Environment as
