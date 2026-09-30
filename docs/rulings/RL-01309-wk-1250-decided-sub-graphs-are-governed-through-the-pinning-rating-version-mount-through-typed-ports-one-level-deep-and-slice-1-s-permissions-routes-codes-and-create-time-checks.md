@@ -1,5 +1,5 @@
 ---
-id: RL-9851
+id: RL-1309
 family: ruling
 title: WK-1250 decided — sub-graphs are governed through the pinning Rating Version, mount through typed ports one level deep, and Slice 1's permissions, routes, codes and create-time checks
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [PL-1254, PL-1278, FR-217, FR-20, FR-1186, FR-227, RL-1184, RL-1290]
 ---
 
-# RL-9851 — WK-1250 decided: PL-1254 DP-1, DP-3, DP-4 and PL-1278 DP-S1-1 to DP-S1-4
+# RL-1309 — WK-1250 decided: PL-1254 DP-1, DP-3, DP-4 and PL-1278 DP-S1-1 to DP-S1-4
 
 ## How this was ruled
 
@@ -27,8 +27,9 @@ own `echo "CLAUDE_EFFORT=$CLAUDE_EFFORT"` printed `CLAUDE_EFFORT=high`.
 The record was prepared at effort `medium` (PR #938, head `f09be926`, "PREPARED, NOT
 RULED"). Its evidence and its prepared recommendations are kept below, unchanged except where
 marked, because they record what was believed before this pass. **The decisions are in
-"Ruled".** Where a ruling departs from a prepared recommendation, it says so and why. It keeps
-the working id 9851; the id is minted at the lead's merge turn.
+"Ruled".** Where a ruling departs from a prepared recommendation, it says so and why. It was
+minted 2026-09-30 as RL-1309 (hand-assigned in the lead's batch plan, batch 3, under the
+maintainer's option (B) and 12:22:19 BST entry); it was filed under working id 9851.
 
 **Not to be confused with `RL-1291`.** `RL-1291` (#956) decided a *different* "DP-S1-1": WK-690
 Slice 1's (`PL-1268`), `work: WK-690`. The DP-S1-1 to DP-S1-4 here are WK-1250 Slice 1's, in
