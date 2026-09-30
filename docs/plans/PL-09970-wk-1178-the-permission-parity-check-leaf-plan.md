@@ -66,15 +66,20 @@ Each item is checkable by a command run from the repository root on the merge tr
 
 1. `uv run pytest -q tests/test_permission_parity.py` exits 0. It collects 13 tests: Task 1's
    clean control and nine broken-input cases, Task 2's live test, Task 3's alias guard and
-   Task 4's trigger test. Under DP-1 (B) it collects 12, with no alias guard.
-2. **Each violation class is proved red on a broken input.** There are nine classes. Every
+   Task 4's trigger test.
+   - That count assumes the ruling adopts the stale-owner class. If 9856 omits it, it is 12.
+   - Under DP-1 (B) there is no alias guard. The count is then 12 with stale-owner, or 11
+     without it.
+2. **Each violation class is proved red on a broken input.** There are nine classes, or eight
+   if the ruling does not adopt stale-owner (Task 0 Step 1). Every
    `test_broken_*` case asserts two things:
    - `parity_violations` returns exactly the messages the case names;
    - each message begins with its class's own prefix constant (Task 1).
 
    A case that returns the right count with another class's prefix fails. Seven cases name
-   one class and two cases name two (Task 1, Step 1). The no-check and stale-owner classes are
-   the route leg's and fire on the live tree only under DP-1 (C).
+   one class and two cases name two (Task 1, Step 1). Without stale-owner, six cases name one
+   class. The no-check and stale-owner classes are the route leg's and fire on the live tree
+   only under DP-1 (C).
 3. **The live tree is clean.** `test_live_tree_has_no_parity_violations` passes against the
    real `06` and the real `model_schema.Permission`. This happens only after the `06`
    amendment (DP-3) has merged.
@@ -185,8 +190,13 @@ The exclusions are read as follows: drop `~~…~~` spans; drop the `>`-quoted li
     One is `requires()` itself (`backend/src/app/api/authz.py:63`); the other 49 are
     service-level call lines, 3 of them inside `rbac.py`.
   - Task 3 therefore scans source, not routes.
-- **Other literals.** `requires(` appears 53 times under `backend/src/app/api`. 52 are
-  `requires(Perm.…)`/`requires(Permission.…)`, and the 53rd is a comment at `authz.py:33`.
+- **Other literals.** `git grep -n 'requires(' -- backend/src/app/api | wc -l` prints **54**.
+  - 52 of those lines are call sites, `requires(Perm.…)` or `requires(Permission.…)`
+    (`git grep -n -E 'requires\((Perm|Permission)\.' -- backend/src/app/api | wc -l`).
+  - The other 2 lines are not checks: a comment at `authz.py:33` and the definition
+    `def requires(` at `authz.py:54`.
+  - *(Corrected 2026-09-30 on auditor-plans2's F1: this bullet first said "53", a total that
+    had silently excluded the definition line.)*
   - `requires` takes a `Permission` (`authz.py:54`), so mypy already stops a route from
     naming a non-member.
   - The only permission-string literal outside the enum is
@@ -217,7 +227,7 @@ same tree:
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-1 | **What the check asserts.** | (A) `CR-1247`'s wording, with exclusions found by position in prose (E3's I1 reading). (B) Table-driven: §4.1 carries Built, Specified-not-built and Aliases tables, each machine-read, and any other `06` token outside struck text is a violation. (C) (B), plus a route leg: every Built name has a check site in `backend/src` or an owner cell (E5) | Not this plan's. Tasks 1–4 are written to #942's provisional (C). Note for the ruling: under (C), a Built row that has **both** a check site and an owner is stale. Task 1 makes that a ninth class, so WK-674 Slice 2 must clear the owner cells of `deployment:promote` and `admin:manage_environments` in the commit that adds their checks | decision point (scope) | yes: Tasks 1–3 | working id 9856 (#942), its D1 |
+| DP-1 | **What the check asserts.** | (A) `CR-1247`'s wording, with exclusions found by position in prose (E3's I1 reading). (B) Table-driven: §4.1 carries Built, Specified-not-built and Aliases tables, each machine-read, and any other `06` token outside struck text is a violation. (C) (B), plus a route leg: every Built name has a check site in `backend/src` or an owner cell (E5) | **(C)**, agreeing with 9856's provisional answer. Only (C) makes FR-367's "the enum member and its check land together" a gate rather than a review item, and E5 shows its route leg is red today only on two members that already have an owner. **The ruling decides it**, and Tasks 1–4 are written to (C). A proposal for the ruling, not part of 9856's four fixtures: a ninth class, stale-owner, for a Built row with both a check site and an owner. Under it, WK-674 Slice 2 clears the owner cells of `deployment:promote` and `admin:manage_environments` in the commit that adds their checks. It is conditional on the ruling adopting it (Task 0 Step 1) | decision point (scope) | yes: Tasks 1–3 | working id 9856 (#942), its D1 |
 | DP-2 | **Where the check lives.** | (L1) A numbered `scripts/audit-docs.py` check. It regex-reads `permissions.py` and runs under `docs.yml`. (L2) A root `tests/` pytest module that imports the enum and runs under `python.yml`. (L3) Both: the `audit-docs` check for the `06`-internal legs, and the pytest for every leg touching code. (L4) L1, with `packages/model-schema/src/model_schema/permissions.py` and `backend/src/**` added to `docs.yml`'s paths | **L2.** It is the only placement where a change on any side triggers the run (E6). L1 does not run on a `packages/**`-only commit, which is the very drift the check exists for. L4 keeps a hand-widened path filter that drifts. L3 runs the same comparison twice, and one copy can go stale. L1, L3 and L4 also edit `scripts/audit-docs.py`, which WK-1170 Slices 3 and 6 edit (the WK-1170 map plan on open PR #930, working id 9811, `:271-296`). That is a shared file under `RL-1263` (c), so they serialise, and the next free check number becomes a merge race. L2 edits no shared file | decision point (placement) | yes: every task's **Files** | working id 9856 (#942), its D2 |
 | DP-3 | **Who writes the `06` §4.1 amendment, and when** (the 11 rows of E4, the Specified and Aliases tables, and the role block replaced by a reference to `BUILTIN_ROLES`)? | (a) The decision-maker, in the ruling's PR or one before it. This slice then only reads `06`. (b) This slice, in its first commit, from the ruling's text. (c) The ruling's PR carries the tables, and this slice carries only the role-block replacement | **(a).** `CR-1247` `:149-151` names the decision-maker as owner of the `06` amendment. Under (a) this slice edits no spec section, so it shares nothing with WK-674 Slices 2/3 or WK-690 Slice 3 (all of which touch `06` §4.1). Under (b) it takes `06` §4.1 and serialises with all three | decision point (ownership, sequencing) | yes: Task 2's live test is red until it lands (E4) | working id 9856 (#942), its D4, and the lead's dispatch |
 
@@ -229,12 +239,12 @@ Task 0 then waits for that acceptance too.
 
 | | Under D1 (C), 9856's provisional | Under D1 (B), 9856's named fallback |
 |---|---|---|
-| Violation classes live on the real tree | all nine | seven. `NO_CHECK_NO_OWNER` and `STALE_OWNER` keep their synthetic red proofs but are dormant on the live tree, because `checked` is the whole enum |
+| Violation classes live on the real tree | nine, or eight if the ruling omits stale-owner | seven, or six without stale-owner. `NO_CHECK_NO_OWNER` and `STALE_OWNER` keep their synthetic red proofs but are dormant on the live tree, because `checked` is the whole enum |
 | Task 3 (source scan, alias guard) | built | dropped. Task 2 passes `frozenset(p.value for p in Permission)` as `checked` |
 | `06` §4.1 Built table | needs a `Check owner` column: `WK-674` on `deployment:promote` and `admin:manage_environments` (E5) | two columns, name and governs. `_owner` is not read |
-| Tests collected (Acceptance item 1) | 13 | 12 |
+| Tests collected (Acceptance item 1) | 13, or 12 without stale-owner | 12, or 11 without stale-owner |
 | Where FR-367's "the member and its check land together" is enforced | this gate (the route leg) | each slice's own negative test (`PL-1268` Acceptance item 8), not this gate |
-| Binds WK-674 S2 | yes: it clears two owner cells in the commit that adds its checks | no |
+| Binds WK-674 S2 | only if the ruling adopts stale-owner: it then clears two owner cells in the commit that adds its checks | no |
 | Size | about 250 lines | about 190 lines |
 
 Any other D1 answer, including (A), is a replan before `active`. (A) identifies its exclusions
@@ -267,8 +277,8 @@ by their position in prose, and Task 1's parser has no such mode.
 
 **Behavioural dependency, not file contention:** WK-674 Slice 2 checks `deployment:promote`
 (`PL-1237` table, Slice 2 rows). If it merges **before** this slice, the owner cells DP-3
-writes must already reflect its check sites. Otherwise Task 3's stale-owner class goes red on
-the first run. Task 0 re-measures E5 for exactly this.
+writes must already reflect its check sites. Otherwise Task 3's stale-owner class, if the ruling
+adopts it, goes red on the first run. Task 0 re-measures E5 for exactly this.
 
 ### Proposed SL row (the lead mints it; not added here)
 
@@ -308,7 +318,14 @@ run (a gate slot under `RL-1263`). It takes no NFR measurement, so it need not r
 
 - [ ] **Step 1:** Confirm the P1 (c) ruling has merged: `git grep -l "CR-1247" origin/main -- docs/rulings`
   names a record besides `RL-1252`. Read its D1, D2 and D3 answers. If D1 is not (C) or D2 is
-  not L2, **stop**: the plan is revised before `active`.
+  not L2, **stop**: the plan is revised before `active`. **Stale-owner:** if the ruling does
+  not adopt it (it is not among 9856's four acceptance fixtures at `4daa57cb`), remove all of
+  the following in the first commit:
+  - `STALE_OWNER`;
+  - its branch in `parity_violations`;
+  - `test_broken_stale_owner_after_the_check_lands`.
+
+  The counts are then 8 classes, and 12 tests under (C) (Acceptance items 1 and 2).
 - [ ] **Step 2:** Confirm the `06` amendment has merged (DP-3 (a)). Copy the exact header rows
   of §4.1's Built, Specified and Aliases tables into Task 1's `BUILT_HEADER`, `SPECIFIED_HEADER`
   and `ALIAS_HEADER`. These are the only literals the amendment is allowed to change. Anything
