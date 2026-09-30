@@ -734,7 +734,7 @@ A deployment is bound to one tenant and refuses to start when its database, blob
 id: SL-1302
 family: slice
 title: Slice 2a: the approval guard (only the decision path writes approved; FR-351)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: daa7f5f8d6f0ff80dee7dfccf8ca18309d626816
@@ -1101,7 +1101,7 @@ Minted 2026-09-28 on the maintainer's instruction of that day ("yes record and i
 id: SL-1300
 family: slice
 title: WK-1178 fix slice — compile_bundle refuses a step ref not pinned at its exact version (FR-237)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: eeda8f4ba20d247ac18d6a35d7f81589c8527ed2
