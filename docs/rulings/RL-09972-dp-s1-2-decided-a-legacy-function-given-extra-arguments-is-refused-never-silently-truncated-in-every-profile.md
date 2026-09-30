@@ -32,7 +32,7 @@ justified against the transparency default (`CLAUDE.md` §1).
 
 ## Verified first, at 095dd400918348b32ee6eab1db7915faaa9dfe35
 
-- **The decision point** is DP-S1-2 of PL-9960 (PR #954, read at `4d2e78e8`, `:276`). Its
+- **The decision point** is DP-S1-2 of SL-1271's leaf plan (#954, working id 9960; read at `4d2e78e8` and re-checked at `6853c1b3`, `:276`). Its
   question: "Do the legacy single-argument functions (`abs round floor ceil log exp sqrt`)
   keep ignoring extra arguments in `recipe` and `check`?"
   - (a) keeps them, "because `recipe` and `check` only add".
@@ -58,7 +58,7 @@ justified against the transparency default (`CLAUDE.md` §1).
   `git grep -n -P '["'"'"'][^"'"'"'\n]*\b(abs|round|floor|ceil|log|exp|sqrt)\([^()"'"'"']*,[^"'"'"']*["'"'"']' origin/main -- packages/pricing-core/tests backend/tests examples frontend/src '*.json'`,
   run at `fb90d381`. It printed nothing (the expression-bearing files are unchanged at
   `095dd400`).
-- **No catalogue rule uses the `expression` check** (PL-9960 premise b).
+- **No catalogue rule uses the `expression` check** (SL-1271's leaf plan, premise b).
 
 ## Proof — executable, red on (a), green on the ruling
 
@@ -155,11 +155,11 @@ compile today.
 
 ## What it obliges
 
-- **WK-690 Slice 1 (PL-9960 Task 3 Step 3, where arity is implemented):**
+- **WK-690 Slice 1 (SL-1271's leaf plan, Task 3 Step 3, where arity is implemented):**
   - implements the rule;
   - states the arity of every function in `02` §4.6, dated, citing this record;
   - carries the tests below, each shown red first.
-- **The planner (PL-9960, #954), not this commit.** Premise c, the DP-S1-2 row, and the
+- **The planner (SL-1271's leaf plan, #954, working id 9960), not this commit.** Premise c, the DP-S1-2 row, and the
   acceptance line "every expression accepted at `fb90d381` is still accepted" should say
   that an expression relying on the silent drop is refused by this ruling. The leaf plan's
   "finding candidate" for the auditor is discharged by this record.
