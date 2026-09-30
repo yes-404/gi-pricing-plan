@@ -277,9 +277,20 @@ and `compile.py` were not touched.
 ## Mint-turn closing items
 
 - **Slice audit CLEAN at `df66226c`** (auditor-924d), no fixes required, all four deviations accepted; the
-  `real=True` mutation re-run by the auditor: 10 of 18 fail. The auditor's four LOW notes are the lead's to
-  name; I was given three of their subjects (below) and not the notes' text, so this line names those three and
-  does not invent a fourth.
+  `real=True` mutation re-run by the auditor: 10 of 18 fail. The auditor's four LOW notes, as relayed by the lead:
+  1. *Acceptance 5 per-class reds.* This ledger quotes no per-class red for `%`, ternary or boolean operator, or an
+     unknown function or symbol in the strict profiles. The auditor's mutation runs supply them: with `_check`
+     disabled, 70 fail, including `y % 2` (Mod), `y if f > 0 else w` (IfExp), `y > 0 and f > 0` (BoolOp), `not y`,
+     `+y` and `floor(y)`, each in `objective` and `factor`; with the symbol check disabled, 3 fail.
+  2. *req-coverage.* FR-144 has 7 test files, FR-145 9 and NFR-483 9; FR-144's marker covers only its 2026-09-28
+     amendment clause, so its count is not whole coverage (`CLAUDE.md` §13). The auditor did not confirm FR-36
+     and FR-50. Confirmed by the executor at the minted head, `uv run python scripts/req-coverage.py`: FR-36 **13**
+     test files, FR-50 **8**, and FR-144 7, FR-145 9, NFR-483 9 as the auditor read.
+  3. *Merge.* At `df66226c`, `git merge-tree` against origin/main hit an INDEX-only content conflict, the append
+     overlap that the mint resolves. Resolved at the mint: `docs/INDEX.md` was regenerated.
+  4. *Docs checks after the id is taken.* The ledger's earlier proof was on a scratch rename; at the mint the
+     checks were re-run on a clean detached checkout of the pushed `6011f31c`: audit-docs, `doc-index --check`
+     and `doc-id check` rc 0, merge-tree against origin/main `c39d14b4` rc 0.
 - **Acceptance 5, the auditor's mutation reds** (each refusal seen failing): with `_check` disabled, **70
   failures**, including `%`, ternary, boolean operator, `not`, unary plus and `floor` in `objective` and `factor`;
   with the symbol check disabled, **3**.
