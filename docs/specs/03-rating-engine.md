@@ -805,6 +805,11 @@ that completion is attempted against a row that is not `pending` — already com
 never a pending row — so a re-delivered Job stops rather than re-running the re-score and
 orphaning a blob. `app.platform.traces.complete_pending_trace` is the only raiser)*.
 
+> **`RATING_VERSION_UNPINNED` (meaning added 2026-09-30, on FD-1297, FR-237).** The Rating
+> Version cannot be compiled, or a compiled bundle cannot be loaded: it has no `algorithm_ref`,
+> has no `pins`, or has a `table`, `lookup` or `model_call` step whose ref is not in the
+> matching pin list (`rate_tables`, `reference_tables`, `models`) at that exact version.
+
 > **RATE_TABLE_PARQUET_UNBUILT (2026-08-28, W10-2).** A diff touching a `parquet`-stored
 > version is refused with **501** until W10-3 delivers the 202-with-Job form. No version
 > can yet be written as parquet — seeding always writes `rows` — so the branch is declared
