@@ -52,9 +52,20 @@ from the **raw output** (`_round_minor(raw, mode)`), labelled `round`. The recor
 not replay to the recorded payable premium. At raw `60000.4 → 66000.44 → 69402.0` the ladder is 60000,
 66000, 66000, 69399 (×1.0515), 69402 (round), and **replaying the recorded operations gives 69399, not
 the recorded payable 69402** (evidence 6). At fixture scale (~1300 minor units) the difference rounds away,
-which is why the tests never saw it. The **price is right**; the governed transparency artifact misstates how
-it was reached, at every quote large enough for a 4 dp factor to move a whole minor unit. FR-248 (`03:155`)
-and `NFR-496` (`03:1157`) say "to the penny" and "in 100 % of scored quotes".
+which is why the tests never saw it. **The payable premium is right** (`payable_premium_minor` is the engine's own
+value rounded once; 0 payable flips in RL 9963's 42 000-quote sweeps). **What is misstated is not only the trace: it
+is the served non-payable outputs.** `_build_outputs` (`score.py:626-644`, the assignment at `:641`) sets every
+declared output named like a rung, `<rung>_minor`, from `by_rung`, the ladder's own drifted value, so a caller
+receives the drift in `ScoringResult.outputs`, and the same values reach the batch `outputs_json` column and the
+persisted `served_summary` (evidence 9). **Affected outputs, when an algorithm declares them:**
+`expense_loading_minor`, `commission_minor`, `profit_loading_minor`, `optimisation_adjustment_minor`,
+`office_premium_minor`, `constraints_minor` (which carries the previous rung's value), `instalment_loading_minor` and
+`ipt_and_fees_minor`. **Not affected:** `payable_premium_minor` and `risk_premium_minor` (the first rung is the engine
+value rounded once). Every algorithm in the repository (`examples/fremtpl2/model.py:336`, the three bench
+algorithms in `scripts/`, `03`'s worked example) declares only `payable_premium_minor`, so no repository algorithm
+serves a drifted output today; the exposure is any algorithm that declares a rung-named output, and an API consumer
+of it receives the wrong number. FR-248 (`03:155`) and `NFR-496` (`03:1157`) say "to the penny" and "in 100 % of
+scored quotes".
 
 **Limb 3 — the builder does arithmetic on float money (FR-273, `CLAUDE.md` §7).** `03` FR-273 (`03:222`):
 "Money crosses the engine boundary only as integer minor units. … any value returning to Python for further
@@ -165,11 +176,42 @@ The `payable_premium` step consumes `instalment_loading_minor`, so the payable r
 | 1 000 000 | 739 / 2000 (37.0 %) | 2 |
 | 10 000 000 | 784 / 2000 (39.2 %) | 2 |
 
-The sweep is over a synthetic raw chain with a realistic 5 % loading, **not over stored quotes**; it shows the
-drift is not a corner case at realistic scale, and that at ~1e3 it is already present in one quote in
-thirty-seven. It does not measure how often real algorithms hit it. Finding: auditor-close1255's scratch run of
-`_build_ladder` at `11c76b6c` (as relayed by the lead) is the first observation of the 69399 / 69402 case; the
-filer reproduced it and swept it.
+**That sweep is a best case, not a bound.** Both factors (1.10 and 1.05) are exactly representable in 4 dp, so the
+recorded factors are exact and the only drift is the last hop's (the `round` rung against the running value). It
+must not be read as "the error is 1 or 2 minor units". *Predicate for both tables:* \|strict replay of the recorded
+operations − recorded payable\|, last hop only, a `round` at `dp=0` being the identity. *Corpus of the first table:*
+2000 random quotes per magnitude on the synthetic chain above (this record's own, seed 20260930).
+
+**The same predicate over RL 9963's corpus (real factor types).** RL 9963's evidence script `dp_s3_5_evidence.py`
+(sha256 `05b927376b7c93fb1c2e60430c14d8506f82e899799f28820c6490d5319cc96b`, the verbatim appendix of that ruling) was
+run unchanged apart from one added tally (`dp_s3_5_lasthop.py`, sha256
+`b80025bcc6ac42397ebabaea6eef799a3df36da71b0b64e0055c8f318e984f03`; the diff is four added lines that record, per
+decade, the number of quotes, how many do not replay, and the largest \|replay − payable\|). Command:
+`python dp_s3_5_lasthop.py 200 7 x`, run by the filer under `uv run --no-sync` at tree `11c76b6c` (`score.py` and
+`money.py` are unchanged at current `origin/main` `8d5c67a56c27a9dcbba8d4e4ad28a1895e1dd862`, evidence 8). *Corpus:*
+200 quotes per (decade, optional-rung-count) cell, seed 7, 7 cells per decade, so **1400 quotes per decade, 7000 in
+all**; the risk premium is uniform within each decade (1e3 to 1e7 minor units); loadings are real 4 dp table factors
+in [0.8, 1.4], a gross-up ÷(1 − 0.125), and an IPT step ×1.12 + 250, with 0 to 6 optional rungs. Result (16:15 to
+16:32 BST, under gate slot `gate-1`, `uptime` load 19.93 at the start and 10.35 at the end):
+
+| Magnitude (minor units) | Ladders that do not replay | Largest \|replay − payable\| |
+|---|---|---|
+| 1e3 | 56 / 1400 (4.0 %) | 1 |
+| 1e4 | 180 / 1400 (12.9 %) | 5 |
+| 1e5 | 289 / 1400 (20.6 %) | 79 |
+| 1e6 | 580 / 1400 (41.4 %) | 705 |
+| 1e7 | 446 / 1400 (31.9 %) | 8883 |
+
+These figures are the same as auditor-close1255's independent run of the same script and predicate (as relayed by the
+lead). The script's own per-rung measure (today's non-payable rung value minus the engine value rounded once, the
+largest by decade) gives **1 / 9 / 82 / 1050 / 12521** minor units at 1e3 to 1e7 in this run, and RL 9963 reports the
+same 12 521 over its four seeded sweeps at `fa9a73c2`; the script also counts 1551 of 7000 ladders that do not
+replay, 3980 of 7000 whose recorded rung differs from the engine value rounded once, 1452 whose recorded factor is
+not the applied one, and **0** payable prices that differ. **So with real factor types the error reaches thousands
+of minor units at 1e7 (8883 at the last hop, 12 521 on a single rung), not 1 to 2**; the 1 to 2 holds only on exact
+factors. Neither table is over stored quotes (evidence 7: none exist); they show how far the drift goes, not how often
+real algorithms hit it. Finding: auditor-close1255's scratch run of `_build_ladder` at `11c76b6c` (as relayed by the
+lead) is the first observation of the 69399 / 69402 case; the filer reproduced it and swept it.
 
 **7. The data read.** *Question:* what stored records carry `ladder_reconciled`, and what stored premium
 ladders exist that could be replayed? `scoring_traces` stores a blob reference (`blob_sha256`) plus
@@ -213,9 +255,9 @@ other work on the box, not this scan's.
 
 **8. Reproduction, limb 3 (a float operand in the builder's arithmetic).** Scratch script `ladder_float.py`, kept
 with the evidence, under `uv run --no-sync python` at tree `11c76b6c`; `score.py` and `money.py` are
-**unchanged at current `origin/main` `25ca36df89b0ac6e97a14cb08ca2b07f54fef085`**
+**unchanged at current `origin/main` `8d5c67a56c27a9dcbba8d4e4ad28a1895e1dd862`, and at `32f3fa92`**
 (`git diff --stat 11c76b6c origin/main -- packages/pricing-core/src/pricing_core/rating/score.py
-packages/pricing-core/src/pricing_core/money.py` prints nothing), and the lines below are `score.py:592` and
+packages/pricing-core/src/pricing_core/money.py` prints nothing, re-run against `8d5c67a5` and `32f3fa92`), and the lines below are `score.py:592` and
 `:609-611` in that file. The script wraps `_build_ladder` to record what `score_one` hands it, then scores three
 fixture quotes. Output, verbatim (the floats' exact binary values added by `Decimal(x)`):
 
@@ -246,6 +288,66 @@ the arithmetic consumes is a float's shortest-repr decimal, not the amount. It r
 `repr` inverts the conversion; that is a property of `float`, not a money invariant, and it does not survive the
 amounts a 4 dp factor and a realistic scale produce (limb 2 is that scale).
 
+**9. The served outputs, and the in-repo consumers of a served non-payable rung output.** *(Added on the maintainer's
+16:40:42 BST entry, "FD 9949 (#995) severity after F3: HIGH STANDS, with the scope widened", requirement 3.)*
+*Served outputs, reproduced* (`served_demo.py`, `uv run --no-sync python` at `11c76b6c`): the real `_build_ladder` and
+`_build_outputs` on the maintainer's chain (raw 60000.4 → 66000.44 → 69402.0), with three rung-named money outputs
+declared in a scratch copy of the fixture algorithm (which declares only `payable_premium_minor`). Output, verbatim:
+
+```text
+declared outputs (fixture + three rung-named ones added in this scratch copy): ['payable_premium_minor', 'risk_premium_minor', 'office_premium_minor', 'instalment_loading_minor']
+engine value rounded once   : {'risk_premium_minor': 60000, 'office_premium_minor': 66000, 'instalment_loading_minor': 69402, 'payable_premium_minor': 69402}
+served ScoringResult.outputs: {'payable_premium_minor': 69402, 'risk_premium_minor': 60000, 'office_premium_minor': 66000, 'instalment_loading_minor': 69399}
+   instalment_loading_minor     served 69399 vs engine-rounded-once 69402  -> MISSTATED by -3
+   payable_premium_minor        served 69402 vs engine-rounded-once 69402  -> equal
+```
+
+*Where the served values go:* the score API response (`ScoringResult.outputs` and `premium_ladder`); the batch output
+columns `premium_ladder_json` and `outputs_json` (`score.py:998-999`); and the persisted `served_summary`
+(`backend/src/app/platform/traces.py:64`, `:145-148`, "the served answer").
+
+*Enumeration of in-repo consumers that derive money from a served non-payable rung output* (`enum_consumers.py
+origin/main`, tree `origin/main` `8d5c67a56c27a9dcbba8d4e4ad28a1895e1dd862`; scripts kept with the evidence). Three
+predicates, verbatim:
+
+```text
+E1  git grep -n -E 'office_premium_minor|expense_loading_minor|commission_minor|profit_loading_minor|optimisation_adjustment_minor|instalment_loading_minor|ipt_and_fees_minor|constraints_minor' origin/main -- packages backend/src frontend/src scripts examples ':!*/tests/*' ':!frontend/src/api/generated' ':!*__tests__*'
+E2  git grep -n -E '\.outputs\b|\["outputs"\]|premium_ladder' origin/main -- packages backend/src frontend/src scripts examples ':!*/tests/*' ':!frontend/src/api/generated' ':!*__tests__*'
+E3  git grep -l -i 'dislocation' (and 'impact') origin/main -- packages/pricing-core/src backend/src frontend/src
+```
+
+| Predicate | Result | Positive control |
+|---|---|---|
+| E1, a non-test source that names a rung-named output | **1** hit, a comment (`score.py:74`) | the same pattern over `packages/pricing-core/tests`, `backend/tests` and `tests` finds **39** hits in 7 files |
+| E2, a non-test reader of a served result's `outputs` or `premium_ladder` | **27** lines, classified below | finds the known reader `golden.py:37` and the known writer `premium_ladder=ladder` (`score.py:752`) |
+| E3, dislocation or impact code | `dislocation`: 2 files, `impact`: **0** files | n/a |
+
+The 27 E2 lines are: the serialisers and sinks (`score.py:280`, `:297`, `:752`, `:876-880`, `:986-999`, and the
+comments and column names at `traces.py:64`, `:145`, `:148`, `db/models.py:2281`), the schema and compile code that read
+the *declaration* `algo.outputs` (`model_schema/rating.py:404`, `:616`, `compile.py:121`, `:386`, `replay.py:76`,
+`testing.py:264`, `score.py:635`, `:880`), the shape (`model_schema/scoring.py:185`), and **four readers of the served
+values**: `golden.py:37` and `properties.py:89` read **only the `payable_premium` rung** (a golden quote expects only
+`payable_premium_minor` and the outcome, `regression.py:46-56`); `properties.py:295-296` (`NoNullOutput`) reads only
+whether an output is non-null; and `properties.py:300` (`LadderReconciles`) reads **every** rung value, but only to
+check the chain (limb 1's second call site), not to derive a price. E3: `dislocation` appears in
+`backend/src/app/api/approvals.py:14` (a comment) and `backend/src/app/platform/jobs.py:79` (`JobKind.DISLOCATION_RUN`
+routed to the compute queue), so **dislocation (WK-673) has no implementation to read an output**; `impact` has no
+hit; the frontend (`frontend/src`, generated client excluded) has no reader.
+
+**Result: no in-repo consumer derives money from a served non-payable rung output.** The severity question the
+maintainer reserved therefore does not reopen on a found consumer; the misstated values reach callers, the batch output
+files and the persisted summary, and stop there. **Limits, stated:** the predicates are textual; a reader that
+addresses an output by a computed key, one in a future slice (WK-673's dislocation, WK-675's sandbox and ladder views,
+which will read the ladder), or any consumer outside this repository is not enumerated, and the FD asks that those
+slices read the corrected values.
+
+**F5, which counts were re-run by the audit and which were not.** *Re-run by auditor-close1255* (at `ec0c4fb1`,
+as relayed by the lead): the limb 1 reproductions and the limb 2 reproduction and sweep (its own run of the same
+predicate over RL 9963's corpus, identical to the table above). *Audited later at `a6bf11bf`:* limb 3 (the 16:16:06
+quote verbatim; lines `:592`, `:609-611` at `32f3fa92`; the floats). *Not re-run by an auditor:* the data-read counts
+(evidence 7: PostgreSQL 80 and 81 databases, MinIO 15 327 and 15 428 objects, the 11 synthetic stored ladders), which are
+the filer's alone and stated with their predicates and positive controls.
+
 *Limits.* The MinIO counts are at one tree of the store (test runs add objects). Other environments, any dev or
 uat stack elsewhere and CI databases are out of scope, as in FD-1294's and FD-1297's checks. Batch score outputs
 (parquet) were not decoded; regression-run results were searched as text only.
@@ -263,6 +365,11 @@ substance pending auditor-plans; routing of the 4 observed items" (quoted; the s
 acceptance in substance, and the other three routed items are separate records):
 
 > **(1) FR-273, fractional money as float feeding arithmetic** (score.py:592, :609-611): **FD 9949 limb 3, HIGH stands.** It also breaches **CLAUDE.md §7** ("Money is integer pence/cents, or Decimal in the rating path, never float"). Cite §7 explicitly. S3 fixes it with the builder rewrite; its acceptance includes a no-float-in-money-arithmetic test on the builder's path.
+
+The entry "2026-09-30 16:40:42 BST — FD 9949 (#995) severity after F3: HIGH STANDS, with the scope widened" (quoted in part):
+
+> **F3 verified by me:** `packages/pricing-core/src/pricing_core/rating/score.py:639-642` (`_build_outputs`): `rung_name in by_rung → outputs[declared.name] = by_rung[rung_name]`. Served non-payable outputs carry the drift today, not only the trace.
+> **Severity: HIGH, not raised to CRITICAL.** The payable is right and there is no production tenant. The comparison is FD-1297, a payable mispricing, which is HIGH. A misstated served intermediate is not worse than that. It stays HIGH, not lower, because API consumers receive the wrong number.
 
 This **supersedes** the same file's earlier severity, **medium**, set by the entry "2026-09-30 15:13:26 BST —
 DECISIONS: the reconcile_ladder FD (MEDIUM, WK-674 S3); DP-S3-3 → (a), ruled by me as scope" ("a missing
@@ -303,11 +410,23 @@ restated as rulings:
   whose ladder must replay to the payable premium exactly, red before the fix), plus a **scale sweep of about
   1e3 to 1e7 minor units** in S3's acceptance. Evidence item 6's sweep is the shape of the control, not a
   substitute for it.
+- **Served outputs (the 16:40:42 BST entry, requirements 1 and 4):** the acceptance covers the served
+  `ScoringResult.outputs`, not only the trace and the ladder: after the fix, every declared rung-named output equals the
+  engine value rounded once, red first on a scratch algorithm that declares `instalment_loading_minor` (evidence 9's
+  case: 69399 today, 69402 after). Owner **WK-674 Slice 3**.
+- **F4, an owned item: the NFR-496 test's `round` re-derivation.** `test_rating_score.py:224-225` (`elif op.kind ==
+  "round": value = rung.value_minor`) accepts any payable premium, against its own docstring (`:191-195`) that
+  calls the manual half "strictly stronger than `reconcile_ladder`". **Owner WK-674 Slice 3, in the same task that
+  rewrites the reconciliation:** the re-derivation treats `round` at `dp=0` as the identity (or its replacement, RL
+  9963's exact chained replay) and is red before the fix at a realistic scale, so the test can no longer pass on a
+  payable that the recorded operations do not produce.
 - **Limb 3, FR-273 and `CLAUDE.md` §7 (the 16:16:06 BST entry, item (1)):** **HIGH stands**; **owner WK-674 Slice 3,
-  which fixes it with the builder rewrite** (one fix for limbs 2 and 3, RL 9963's route). **Acceptance: a
-  no-float-in-money-arithmetic test on the builder's path** (red first on a planted `float` operand in a money
-  computation of `_build_ladder`, green on the rewrite: no `float`, and no `Decimal` built from a float, reaches
-  the rung arithmetic).
+  which fixes it with the builder rewrite** (one fix for limbs 2 and 3, RL 9963's route). **Acceptance: one input-level test, RL 9963's** (working id 9963, item 4 of its acceptance
+  list, quoted: "A rung value is never read from the float; a test fails if `_build_ladder` receives only floats").
+  The builder refuses a float money operand with a named error, and the test plants one and expects the refusal, red
+  first; this is the same test, not a second one beside it. **Caveats the plan records:** a test that shadows `float`
+  catches only builtin `float(...)` calls, and `score.py:663` uses `float` legitimately for a non-money value (the
+  elapsed-time parse), so the test is scoped to the builder path (`_build_ladder`), not to the module.
 - **`LADDER_RECONCILIATION_FAILED`:** whether a failed reconciliation is refused (raising the registered code) or
   only recorded is the plan's decision point; this finding does not decide it. The stored flag must never read
   `true` for a ladder that has not been checked.
