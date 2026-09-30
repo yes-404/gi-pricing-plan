@@ -254,12 +254,12 @@ strength of a grep for names the code does not use. It is built. See DP-1 item 3
 | Claim | Verdict | How it was verified at `7c354305` |
 |---|---|---|
 | FR-219's structural diff | **built** | `AlgorithmDiff` (`packages/model-schema/src/model_schema/rating.py:539`) and `diff_algorithms(old, new)` (`:569`), read in full. It diffs two **algorithm** versions: steps added, removed and changed field by field, table and lookup references re-pointed, and the input contract and outputs. It is served by `diff_between` (`backend/src/app/platform/rating_algorithms.py:135-141`). It has no sub-graph limb: it never reads `sub_graphs`. |
-| The persisted `structural_diff` evidence | **unbuilt** | `RatingVersionEvidence.structural_diff_blob` (`rating.py:125`) is `str \| None = None`. The owning module, `backend/src/app/platform/rating_versions.py`, was read at its evidence write in `submit_for_review` (`:250-300`). It writes only `golden_quotes` and `regression_suite_run_id` (`:294-298`). `git grep -n 'structural_diff_blob' 7c354305 -- backend/src 'packages/*/src'` prints only `rating.py:125`. Its owner is WK-673 (`RL-1184` E4; `RL-1290`). |
+| The persisted `structural_diff` evidence | **unbuilt** | `RatingVersionEvidence.structural_diff_blob` (`rating.py:125`) is `str \| None = None`. The owning module, `backend/src/app/platform/rating_versions.py`, was read at its evidence write in `submit_for_review` (`:250-300`). It writes only `golden_quotes` and `regression_suite_run_id` (`:294-298`). `git grep -n 'structural_diff_blob' 7c354305 -- backend/src packages` prints one line, `packages/model-schema/src/model_schema/rating.py:125`. *(Corrected. The first form, with the pathspec `'packages/*/src'`, prints nothing at all, because a wildcard pathspec is not a directory prefix. It was quoted as printing `:125`, which it does not.)* Its owner is WK-673 (`RL-1184` E4; `RL-1290`). |
 | A sub-graph pin on a Rating Version | **absent** | `Pins` (`rating.py:63-77`), read: `rate_tables`, `models`, `reference_tables`, `custom_objectives`, and nothing else. PL-1254 Task 2 adds `Pins.sub_graphs`. |
 | `SubGraphRef`'s fields | **present** | `rating.py:340-350`: `ref: ArtifactRef` and `mount_point: str`, and nothing else. |
 | `compile_bundle` reading sub-graphs | **absent** | `compile_bundle` (`packages/pricing-core/src/pricing_core/rating/compile.py:425-492`), read in full: `all_refs` (`:467-472`) is the four `Pins` lists, and the maturity loop is `:473-481`. `git grep -n 'sub_graphs' 7c354305 -- packages/pricing-core/src/pricing_core/rating/compile.py` → rc 1. |
 | `compile_bundle` checking that each step's own reference is pinned | **absent** | The same reading. It refuses a version with no `algorithm_ref` or no `pins` (`RATING_VERSION_UNPINNED`, `:434-443`), and resolves **only the pins**. It never compares a `table`, `lookup` or `model_call` step's reference with them. At scoring, `runtime.py`'s `_decision_table_node` reads `payloads.get(ref)` for a `table` step (`packages/pricing-core/src/pricing_core/rating/runtime.py:190-230`). This is an observation about algorithms, reported to the lead as a candidate finding and not ruled here. For fragments it is ruled: DP-1 item 6 (i). |
-| A route or code path that changes a Rating Version's pins | **absent** | The owning API module, `backend/src/app/api/models.py`, read at its rating-version routes (`:1113` GET list, `:1139` GET one, `:1161` POST create, `:1189` POST submit, `:1233` POST compile, and `:1265`-`:1328` regression runs). There is no PUT or PATCH. `git grep -n 'rating-versions' 7c354305 -- backend/src/app/api` finds no other router. The owning service, `backend/src/app/platform/rating_versions.py`, was read: `create_rating_version` (`:202`) builds the row with no `pins` (`:226-234`), and the file's only `pins` code is the read at `:113`. `git grep -n -E '\bpins\b' 7c354305 -- backend/src` finds no other writer of the `RatingVersionRow.pins` column (`models.py:1912`). |
+| A route or code path **in `backend/src`** that changes a Rating Version's pins | **absent** | The owning API module, `backend/src/app/api/models.py`, read at its rating-version routes (`:1113` GET list, `:1139` GET one, `:1161` POST create, `:1189` POST submit, `:1233` POST compile, and `:1265`-`:1328` regression runs). There is no PUT or PATCH. `git grep -n 'rating-versions' 7c354305 -- backend/src/app/api` finds no other router. The owning service, `backend/src/app/platform/rating_versions.py`, was read: `create_rating_version` (`:202`) builds the row with no `pins` (`:226-234`), and the file's only `pins` code is the read at `:113`. `git grep -n -E '\bpins\b' 7c354305 -- backend/src` finds no other writer of the `RatingVersionRow.pins` column (`models.py:1912`). *Outside `backend/src`*, three benchmark scripts build `draft` rows with `pins=` directly: `scripts/bench-compiled-for.py:102-106`, `scripts/bench-rating.py:623-632` and `scripts/bench-score-batch.py:102-106` (`git grep -n 'RatingVersionRow(\|pins=' 7c354305 -- scripts`). They are measurement fixtures, not platform write paths. |
 | A deploy route | **absent** | `git ls-tree --name-only 7c354305 backend/src/app/api/` lists no deployments module, and `git grep -n -i deploy 7c354305 -- backend/src/app/api` finds no route. `backend/src/app/api/score.py:133-139` says "`live` is a property of a Deployment (FR-238), which is WK-674's". PL-1237 Task 2 (`docs/plans/PL-01237-…md:768-790`) builds `POST /api/v1/environments/{env}/deployments`. |
 | A spec constraint on sub-graph nesting | **absent** | The spec suite owns it. `git grep -n -i -E 'sub-graph\|sub_graph\|subgraph' 7c354305 -- docs/specs` gives six hits, all in `03` (`:63`, `:86`, `:87`, `:276`, `:1046`, `:1171`). Each was read: the Quote Context term, FR-217, FR-218, the §4.1 example, the DAG designer view, and `OQ-617`. None of them constrains nesting. |
 | `06` FR-385's `expedited` in the approval policy | **absent** | The owning module, `packages/model-schema/src/model_schema/approvals.py`, was read at `ApprovalPolicy` (`:125`). Its fields (`:128-135`) are `policies` and `submitter_may_approve`, and it is `extra="forbid"`. `git grep -n -i expedited 7c354305 -- packages backend/src` → rc 1. |
@@ -345,6 +345,23 @@ strength of a grep for names the code does not use. It is built. See DP-1 item 3
        covers an objective reached through an inlined sub-graph. The owner of the path owns
        its guard. **WK-690 keeps FR-240 clause (6)** for the other transitive path, a pinned
        model version whose fit used a custom objective, as `PL-1276` proposes.
+     - **The ordering, and one implementation.** Once a fragment is inlined, its `model_call`
+       is an ordinary `model_call`. So the fragment case is FR-240 (6)'s transitive
+       model → objective path, reached through a sub-graph, and Slice 2's red-first test
+       passes only if that compile check exists.
+       - **Whichever Work lands the transitive model → objective compile check first builds
+         it.** The other Work proves its own case against it, and Slice 2 proves the
+         fragment case.
+       - **One implementation, never a copy.** The second Work calls the first Work's
+         function and adds only its own case.
+       - **WK-690 stays the spec owner of the check**, whichever Work builds it, per the
+         maintainer's 10:06:52 BST entry.
+       - **The builder records the function's symbol and file in its slice ledger.**
+       - **Expected first: WK-1250 Slice 2.** At `eeda8f4b`, `PL-1268` (WK-690) schedules
+         no `compile_bundle` or FR-240 work: `git show eeda8f4b:docs/plans/PL-01268-…md |
+         grep -n 'compile_bundle\|FR-240'` prints nothing. `PL-1276`'s condition 1
+         (`PL-1276:265`) records that it "needs one". WK-1250 Slice 2 is the only slice
+         in the plans that changes `compile_bundle` on this path.
      - *Stated, not widened:* `POST /api/v1/score/compare` may name any compiled version,
        `draft` included (`03:760`). That is the existing rule for every pin, it prices nothing
        live, and this ruling does not change it.
@@ -352,7 +369,8 @@ strength of a grep for names the code does not use. It is built. See DP-1 item 3
      *Owner: WK-1250 Slice 2*, the slice that first gives `Pins` a sub-graph list. Pins are
      fixed once a Rating Version leaves `draft` (`00` FR-4; `03` FR-237), and an approval is
      pinned to the exact version (`06` FR-356). **Today this is vacuous.** No route or code
-     path writes a Rating Version's pins at all (the table above). Slice 2 proves the guard
+     path in `backend/src` writes a Rating Version's pins at all. Only three benchmark
+     scripts build `draft` rows with pins directly (the table above). Slice 2 proves the guard
      over every pin write path at its own tree: a change to the pins of a non-`draft` Rating
      Version is refused, and a re-point is only possible as a new version, whose own
      submission carries the diff.
@@ -523,9 +541,18 @@ every fragment.
    - `packages/pricing-core/tests/test_rating_compile.py`, for new tests only.
 
    No other `pricing-core` file is in the set. `PL-1268` (WK-690) names no `compile.py`
-   (`git show 7c354305:docs/plans/PL-01268-…md | grep -c compile.py` prints `0`). Its
-   `pricing-core` files are under `data/`, `modelling/`, `rating/runtime.py` and
-   `safe_error.py`, so the two write sets do not meet on this evidence.
+   (`git show 7c354305:docs/plans/PL-01268-…md | grep -c compile.py` prints `0`).
+   - **Its Slice 1** (`PL-1268:393-442`) edits `pricing_core.data.expressions`, the callers
+     that pass it a profile (`derive_expression` and `filter_rows` in `data/prepare.py`, and
+     the `expression` validation check in `data/validate.py`), and `pricing-core`'s
+     `pyproject.toml` and `uv.lock` for `sympy`, plus its tests.
+   - **`rating/runtime.py`** appears in PL-1268 only as a premise (`:308`), not as a file a
+     slice edits. *(Corrected. The earlier list named it, and `modelling/` and
+     `safe_error.py`, as WK-690's pricing-core files.)*
+   - **`compile.py:245`** calls `zen.compile_expression`, the ZEN engine's function, not
+     `pricing_core.data.expressions.compile_expression`. It shares the name only.
+
+   So the two write sets do not meet on this evidence.
 4. **Why this is not option (c).** Option (c) wraps the fragment in a synthetic
    `RatingAlgorithm`. It invents an input contract and output steps the fragment does not have,
    and then runs all five checks against that fiction. The refactor invents nothing. It runs
