@@ -55,7 +55,7 @@ masked. This ruling does not depend on it and does not block it.
 | The division-guard markers | **present** | `_GUARD_MARKERS` (`compile.py:41`) is `("!= 0", "> 0", "== 0", "< 0", "?:", "coalesce(", "if(", "guard")`. It has no `??`. |
 | The platform's own generated ZEN | **present** | `runtime.py:292` wraps every constraint condition as `!(condition)`. `:310-313` turn clamp bounds into ternaries. `:219` passes each `key_expr` as a decision-table input `field`. These are generated strings, not authored ones. |
 | RL-1265 DP-5 | **present** | `docs/rulings/RL-01265-…md:110-116`. WK-690 Slice 1 amends FR-244 to say that the rating grammar is FR-244's own: "ZEN's expression language, restricted to FR-244's function list and verified by FR-276". |
-| The held sentence | **present, on its branch** | `PL-1295` (`origin/p2-wk690-s1-leaf` @ `57a4833e`, `docs/plans/PL-01295-…md:1536-1544`), Task 6, Step 1: "the rating grammar is FR-244's own: ZEN's expression language, restricted to the function list above and verified against the engine by FR-276. …" The lead holds it until this ruling. |
+| The held sentence | **present, on its branch** | WK-690 Slice 1's leaf plan, not yet on `main` and so cited by branch: `origin/p2-wk690-s1-leaf` @ `57a4833e`, its file under `docs/plans/` whose name starts `wk-690-slice-1-parser-profiles`, lines 1536-1544, Task 6, Step 1: "the rating grammar is FR-244's own: ZEN's expression language, restricted to the function list above and verified against the engine by FR-276. …" The lead holds it until this ruling. |
 
 ### The engine, probed
 
@@ -176,10 +176,10 @@ nothing that exists, except the two deliberate negative-test functions.
    `a / b != null ? a / b : 0` carry no marker and are refused today, and
    `x != 0 ? y / x : 0` passes on `"!= 0"`.
 
-### The amended FR-244 text — PL-1295 Task 6's held sentence
+### The amended FR-244 text — the Slice 1 leaf plan's Task 6 held sentence
 
 WK-690 Slice 1's Task 6 appends this to FR-244's cell, **in place of** the held sentence
-(`PL-1295:1538-1543`). The `02` §4.6 note of Task 6, Step 2 is unchanged. Nothing is struck:
+(the leaf plan's lines 1538-1543 at `57a4833e`). The `02` §4.6 note of Task 6, Step 2 is unchanged. Nothing is struck:
 
 > **Amended 2026-09-30, `RL-1265` DP-5 and `RL-9904`:** the rating grammar is FR-244's own:
 > ZEN's expression language, **restricted to an enforced allow-list of operators and
@@ -220,8 +220,8 @@ WK-690 Slice 1's Task 6 appends this to FR-244's cell, **in place of** the held 
 ## What it obliges
 
 - **This commit:** this record only. No spec text changes here, because the FR-244 text is
-  PL-1295 Task 6's, in its own commit with the `02` §4.6 note.
-- **WK-690 Slice 1 (PL-1295 Task 6):** the amended text above, in place of the held sentence.
+  the Slice 1 leaf plan's Task 6, in its own commit with the `02` §4.6 note.
+- **WK-690 Slice 1 (its leaf plan's Task 6):** the amended text above, in place of the held sentence.
 - **WK-1178, a new slice after the fix slice:** items 1 to 3, with the acceptance below.
 - **The lead:** routes the slice, and tells the WK-690 Slice 1 executor that Task 6's
   sentence is released in this wording.
