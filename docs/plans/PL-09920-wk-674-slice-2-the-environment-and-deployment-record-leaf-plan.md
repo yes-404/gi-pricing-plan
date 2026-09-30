@@ -124,7 +124,19 @@ cause, and the guard is restored; the ledger quotes both runs.
    2, 3 and `requires_prior_environment` null, `dev`, `uat`; **pre-existing `scoring_traces`
    rows keep their `environment` string and get a null Deployment reference** (there was no
    Deployment to serve them; see DP-S2-1's premise), tested on rows inserted before the
-   upgrade (`PL-1237` Task 2 gate: "tested on existing rows").
+   upgrade (`PL-1237` Task 2 gate: "tested on existing rows"). A `scoring_traces.environment`
+   value outside the seeds (for example `staging`) is kept unchanged, with a null Deployment
+   reference: the column stays a string and is never a foreign key, so it cannot dangle.
+   **Existing credentials (auditor-plans V2):** the upgrade **refuses to run** while any
+   unrevoked API key's `environment` (`backend/src/app/db/models.py:430`; `revoked_at`
+   `:436`) or any non-archived Service Account's `environments` list (`:398`; `archived_at`
+   `:405`) names an environment other than `dev`, `uat` or
+   `prod`. It stops before any change, with an error naming each key id or account id and
+   the name it carries, and telling the operator to revoke the key, or narrow or archive the account, first (see
+   **Decided in this plan** for why). Tested on rows inserted before the upgrade: a key
+   naming `staging` makes `upgrade head` fail and leaves the database at the previous
+   revision; after the key is revoked, the upgrade succeeds; a key naming `uat` does not
+   block it.
 4. **The refusals, each by its cause, each red first or red on broken input.** In
    `backend/tests/test_deployments.py` and `backend/tests/test_environments.py`, each test
    marked with its requirement:
@@ -531,6 +543,16 @@ them to "Slice 2", its "Not ruled here"):
   form now meets the same constraint.)* ID-2's "monotone per parent" reads as per
   Environment. The Environment is pinned on the row by its id as well, and the Rating Version
   is pinned on the row, not in the slug.
+- **Existing credentials naming an environment that is not seeded** (auditor-plans V2): the
+  migration **refuses to upgrade** and names them. It is not allowed to guess. Seeding an
+  Environment for each stray name would create Environments with no promotion order and no
+  policy entry, so each would be an ungated target the operator never chose. Leaving the key
+  and refusing only at rotation would break #971 A.6's "`Caller.environment` then always
+  names a real, unrenamable Environment" for every request until the rotation. Refusing the
+  upgrade is loud, changes nothing, and leaves the choice (revoke, narrow, or create the
+  Environment through the route afterwards) to the operator. There is no production
+  deployment yet, so the cost is at most a revocation on a development database. Historical
+  trace strings are left as they are (Acceptance 3), since nothing resolves them.
 - **Retiring an Environment that a policy entry names** (#971 A.6 leaves it to this plan):
   **refused**, with 409 naming the entry, until `set_policy` removes it. Otherwise the policy
   would hold an entry for an Environment that no longer resolves, which is the silent
@@ -746,6 +768,11 @@ def promotion_order_refusal(
   `StrEnum` for the validation vocabulary beside `validation_rules.py:65`'s constants, used by
   `validation_rules` and `validation_rule_sets`. Acceptance 13's test lands in Task 5 with the
   Deployment Request's writer, and its "no declared vocabulary" plant is red first here.
+- [ ] **The credential pre-check (V2)**, first in the revision's `upgrade()`: select unrevoked
+  `api_keys` whose `environment`, and non-archived `service_accounts` whose `environments`,
+  name anything
+  outside `dev`/`uat`/`prod`; if any, raise with their ids and names before any DDL. Red first:
+  Acceptance 3's `staging` key.
 - [ ] Round trip (`upgrade`, `downgrade -1`, `upgrade`) and `tests/test_repository_invariants.py`;
   quote each rc. Commit.
 
