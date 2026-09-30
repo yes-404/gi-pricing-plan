@@ -20,7 +20,7 @@ relates: [RL-1263]
 ## How this was ruled
 
 **Ruled at effort `medium`**, under the maintainer's decision by delegation of 2026-09-30
-10:28:11 BST (`to-lead.md`, entry headed "DECISION: PL-9873 DP routing; DP-F2 (c) scope
+10:28:11 BST (`to-lead.md`, entry headed "DECISION: [the #963 plan's] DP routing; DP-F2 (c) scope
 pre-accepted"). That entry reads: "DP-F1..F3 go to the medium-effort DM. They are narrow and
 code-local, inside a fix whose shape is already decided". It also reads: "DP-F2 (c) is
 pre-accepted as within the fix's scope, if the DM rules it … Its acceptance adds a red-first
@@ -166,7 +166,7 @@ Why:
 **Departure from the recommendations: none.** The plan recommends (a), (c) and (a), and this
 record rules the same.
 
-**Not touched here.** The `??` operator and `03` FR-244 are a separate §0 question held for
+**Not touched here.** The `??` operator and `03` FR-244 are a separate `CLAUDE.md` §0 question held for
 the decision-maker at effort high. This record says nothing about `_GUARD_MARKERS`,
 `_check_vocabulary` or any expression handling.
 
