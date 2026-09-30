@@ -1,5 +1,5 @@
 ---
-id: PL-9103
+id: PL-1268
 family: plan
 kind: map
 title: WK-690 — `expression` custom objectives: Map Plan
@@ -15,10 +15,11 @@ corrected_by: []
 relates: [RL-1184, RL-1265, PL-930, PL-1070]
 ---
 
-# PL-9103 — WK-690, `expression` custom objectives: Map Plan
+# PL-1268 — WK-690, `expression` custom objectives: Map Plan
 
-First filed 2026-09-28 as working id PL-9103; `created` re-dated so the id sequence stays
+First filed 2026-09-28 as working id 9103; `created` re-dated so the id sequence stays
 non-decreasing (check 31).
+Minted as `PL-1268` at #871's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `dd25db94` (working id 9103 before the mint).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended) or executing-plans to implement each slice's leaf plan task-by-task. This map plan has no executable tasks of its own; each slice gets a leaf plan. Every leaf plan's executor also binds `python-package`, `python-test` (requirement markers, negative tests), `dev-commands` (the two-half gate and its traps) and, for Slice 2, `library-spike`; Slice 5 binds `vue-frontend` and `vue-best-practices`.
 
