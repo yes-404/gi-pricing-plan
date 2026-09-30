@@ -423,6 +423,18 @@ and stored bundles refused: 0 (`git grep` for `clamp_bounds` finds only tests, s
 source). Recommendation: edit both fixtures (test-only, not a golden suite): add an
 expression step so the payable reads a downstream name. Not done; waiting for the lead.
 
+### HALT (2026-09-30, the lead)
+
+The lead halted all S3 work: `PL-1342` and `SL-1257` are still draft, and activation needs 2
+(WK-674 Slice 2 closed) and 3 (DP-S3-1 and DP-S3-2 resolved) are unmet; S3 was dispatched in
+error. Facts recorded before the halt: DP-S3-1 and DP-S3-2 had no ruling on `main`
+(`PL-1342:405-406`); `main` has no `EnvironmentRow`/`environments` table, so Tasks 1-4 had no
+premise. **Deviation (condition 8):** one unslotted package-suite run, disclosed above, recorded
+by the lead as Delta 3. The placement-refusal stop (2 fixtures) was open at the halt.
+Uncommitted work (placement check, `LADDER_CLAMP_UNPLACEABLE`, placement tests, with 9
+`test_rating_compile.py` tests red on the refused fixture) was committed as WIP and pushed as
+salvage, with no PR.
+
 ## PRs
 
 (none yet; the lead opens or approves the PR at the gate.)

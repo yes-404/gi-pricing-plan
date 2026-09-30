@@ -599,3 +599,77 @@ def test_the_engines_precision_is_what_the_tolerance_rests_on() -> None:
     assert result["k7s"] == "2095.3120014523377649903134154"
     assert format(exact, "f").rstrip("0") == "2095.31200145233776499031341545"
     assert Decimal(result["k7s"]) != exact
+
+
+# ---------------------------------------------------------------------------
+# RL-1329 Acceptance 10 (W-c, S1): a clamp the ladder cannot place is refused.
+# ---------------------------------------------------------------------------
+
+
+def _clamped_chain(*, clamp_on: str, produces: str | None = None) -> dict[str, Any]:
+    """risk -> office_premium -> optimisation_adjustment -> instalment_loading, with a
+    min-premium clamp consuming `clamp_on` and producing `produces` (default: the same)."""
+    payload = _chain_algorithm(
+        factors=[
+            ("office_premium", "{prev} * 1.1", "half_even"),
+            ("optimisation_adjustment", "{prev} * 0.96", "half_even"),
+            ("instalment_loading", "{prev} * 1.05", "half_even"),
+        ]
+    )
+    clamp = {
+        "step_id": "s_clamp", "type": "constraint", "label": "Min premium",
+        "condition": f"{clamp_on} >= 100", "on_violation": "clamp",
+        "clamp_bounds": {"min": "100"}, "reason_code": "MIN_APPLIED",
+        "consumes": [clamp_on], "produces": [produces or clamp_on],
+    }
+    index = next(i for i, s in enumerate(payload["steps"]) if s["step_id"] == f"s_{clamp_on.removesuffix('_minor')}")
+    payload["steps"].insert(index + 1, clamp)
+    return payload
+
+
+@pytest.mark.req("FR-240")
+@pytest.mark.parametrize(
+    ("clamp_on", "produces"),
+    [
+        ("office_premium_minor", None),      # an earlier rung, with rungs after it
+        ("instalment_loading_minor", None),  # a rung after `constraints`
+    ],
+)
+async def test_an_unplaceable_clamp_is_refused_at_save_and_at_compile(
+    clamp_on: str, produces: str | None
+) -> None:
+    from model_schema.rating import RatingAlgorithm
+    from pricing_core.rating.compile import validate_algorithm
+
+    payload = _clamped_chain(clamp_on=clamp_on, produces=produces)
+    issues = validate_algorithm(RatingAlgorithm.model_validate(payload))
+    assert [i.code for i in issues if i.code == "LADDER_CLAMP_UNPLACEABLE"], issues
+    with pytest.raises(ValueError, match="LADDER_CLAMP_UNPLACEABLE"):
+        await _compile_payload(payload)
+
+
+@pytest.mark.req("FR-240")
+async def test_a_clamp_producing_a_different_name_from_the_one_it_consumes_is_refused() -> None:
+    from model_schema.rating import RatingAlgorithm
+    from pricing_core.rating.compile import validate_algorithm
+
+    payload = _clamped_chain(clamp_on="instalment_loading_minor", produces="clamped_value")
+    # a last-rung clamp that renames: the payable now reads the renamed value
+    payload["steps"][-1] = {**payload["steps"][-1], "consumes": ["clamped_value"]}
+    payload["steps"].insert(-1, _out("s_out_clamped", "instalment_loading_minor", "clamped_value"))
+    del payload["steps"][[s["step_id"] for s in payload["steps"]].index("s_out_instalment_loading")]
+    issues = validate_algorithm(RatingAlgorithm.model_validate(payload))
+    assert any(i.code == "LADDER_CLAMP_UNPLACEABLE" for i in issues), issues
+
+
+@pytest.mark.req("FR-240")
+async def test_the_score_fixture_clamp_still_saves_and_compiles() -> None:
+    from model_schema.rating import RatingAlgorithm
+    from pricing_core.rating.compile import validate_algorithm
+
+    payload = _algorithm_payload()
+    assert not [
+        i for i in validate_algorithm(RatingAlgorithm.model_validate(payload))
+        if i.code == "LADDER_CLAMP_UNPLACEABLE"
+    ]
+    await _compile_payload(payload)
