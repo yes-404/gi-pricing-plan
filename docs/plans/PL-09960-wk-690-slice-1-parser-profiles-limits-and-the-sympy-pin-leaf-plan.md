@@ -125,10 +125,12 @@ Against the other lane:
   independent of machine load. So on this plan's reading it is not a "measurement step" in
   the sense of `RL-1263` item 3. That reading is the lead's to confirm at dispatch.
 
-- Acceptance and activation: _pending — working ids 9971, 9972 and 9973 merged and minted
-  (each blocking activation; this plan then cites their minted ids), then the
-  maintainer's acceptance. By `document-ids.md` §1.7, `active` is permitted once every
-  blocking row has a resolver id._
+- Activation: _pending. The plan goes `active` once working ids 9971, 9972 and 9973 are
+  merged and minted, because each blocking row then has its resolver id (`document-ids.md`
+  §1.7), and it then cites their minted ids. Its merge carries the maintainer's MERGE-ACK.
+  A leaf plan takes no acceptance line._ *(Revised 2026-09-30 on auditor-plans2's audit at
+  dc49b9d9, finding F9, and the maintainer's ruling that a leaf plan takes no acceptance line,
+  the same ruling as #929 / `PL-1278`. It read "…then the maintainer's acceptance".)*
 
 ## Acceptance Standard
 
