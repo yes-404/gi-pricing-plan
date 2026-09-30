@@ -645,7 +645,7 @@ end of the file** and no existing class edited. Create one Alembic revision and
 - Produces, in `compile.py` (B3 of the plan audit):
   - **`producer_types(steps: Sequence[RatingStep], typed_names: Mapping[str, str]) -> dict[str, str]`**,
     the shared core of `_producer_types`;
-  - **`output_type_issues(producer_types: Mapping[str, str], outputs: Sequence[tuple[str | None, str, str, str]]) -> list[ValidationIssue]`**,
+  - **`output_type_issues(producer_types: Mapping[str, str], outputs: Sequence[tuple[str, str, str, str]]) -> list[ValidationIssue]`**,
     the shared core of `_check_result_types`. Each tuple is (the step id to report, the output's
     name, its declared type, the name that feeds it), and each issue carries that step id and
     `field="outputs"`, as today's issue does (`compile.py:129-137`) (N3 of the re-audit).
@@ -681,8 +681,10 @@ end of the file** and no existing class edited. Create one Alembic revision and
   - **The producing step's id.** In the same pass over `steps`, the function builds a
     `name → step_id` map. It uses the same last-in-list-order-wins rule as `producer_types`,
     so the id reported is that of the step whose type was compared.
-  - A port fed directly by an input port has no producing step. Its tuple carries `None`, as
-    the `str | None` slot allows.
+  - Every tuple carries a step id, so the id slot is `str`. An output port whose name only an
+    input port produces is refused earlier, by Task 2's rule that each output port is produced
+    by a step: `GraphUnresolvedRefError`, so 422 `RATING_GRAPH_UNRESOLVED_REF` (4a's
+    unproduced-port row). No `None` path reaches this function (X1 and X2 of the re-audit).
   - The `pricing-core` test asserts the id on a two-step fragment, so the wrong step would
     fail it.
 - [ ] Green. Run acceptance 6: the existing tests pass unmodified. **Run the #967 slice's closure
