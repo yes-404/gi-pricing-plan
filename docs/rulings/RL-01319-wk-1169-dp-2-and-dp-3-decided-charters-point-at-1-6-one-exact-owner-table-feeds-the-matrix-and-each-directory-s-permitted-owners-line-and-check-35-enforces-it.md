@@ -1,5 +1,5 @@
 ---
-id: RL-9854
+id: RL-1319
 family: ruling
 title: WK-1169 DP-2 and DP-3 decided — charters point at §1.6, one exact owner table feeds the matrix and each directory's Permitted owners line, and check 35 enforces it
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [PL-1277, PL-1276, WK-1170, FD-1161]
 ---
 
-# RL-9854 — WK-1169 DP-2 and DP-3 decided — charters point at §1.6, one exact owner table feeds the matrix and each directory's Permitted owners line, and check 35 enforces it
+# RL-1319 — WK-1169 DP-2 and DP-3 decided — charters point at §1.6, one exact owner table feeds the matrix and each directory's Permitted owners line, and check 35 enforces it
 
 ## How this was ruled
 
@@ -29,7 +29,8 @@ RULED"). Its evidence and prepared recommendations are kept below as they were p
 **The decisions are in "Ruled"**, and both depart from the prepared recommendations, for
 reasons found at this pass: §1.6's prose cannot be parsed into owners (item A below), and
 check 35 applies a directory's list to that directory's own README and INDEX (item B). It
-keeps the working id 9854; the id is minted at the lead's merge turn.
+was minted 2026-09-30 as RL-1319 (hand-assigned in the lead's batch plan, batch 5, under the
+maintainer's option (B)); it was filed under working id 9854.
 
 ## Evidence
 
@@ -226,7 +227,7 @@ It needs no `docs/process/` amendment. If the maintainer later wants the roles w
      - **Outcome:** a grant §1.6 does not give that role is filed as an `FD-`.
    - The sweep is reading-based and is stated as such. **A mechanical check is not viable**,
      for the reason in item 2: an over-grant is prose, with no syntax a check could read.
-     *(Corrected after auditor-docs' audit of `561e329d`. This item said that `RL-9853` item
+     *(Corrected after auditor-docs' audit of `561e329d`. This item said that `RL-1318` item
      3's sweep reads charters. It does not: that sweep is per §1.2 transition, and a charter
      is not a §1.2 family.)*
 5. **The per-role view** is `ownership_matrix()` over the exact table. The over-inclusions of

@@ -1,5 +1,5 @@
 ---
-id: RL-9853
+id: RL-1318
 family: ruling
 title: WK-1170 DP-4 decided — a missing process step is written in its owning skill, and a Work-close sweep step enforces it
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [PL-1276, PL-1277, WK-1169]
 ---
 
-# RL-9853 — WK-1170 DP-4 decided — a missing process step is written in its owning skill, and a Work-close sweep step enforces it
+# RL-1318 — WK-1170 DP-4 decided — a missing process step is written in its owning skill, and a Work-close sweep step enforces it
 
 ## How this was ruled
 
@@ -26,7 +26,8 @@ own `echo "CLAUDE_EFFORT=$CLAUDE_EFFORT"` printed `CLAUDE_EFFORT=high`.
 
 The record was prepared at effort `medium` (PR #940, head `8bfd305a`, "PREPARED, NOT
 RULED"). Its evidence is kept below as it was prepared, and **the decision is in "Ruled"**.
-It keeps the working id 9853; the id is minted at the lead's merge turn.
+It was minted 2026-09-30 as RL-1318 (hand-assigned in the lead's batch plan, batch 5, under the
+maintainer's option (B)); it was filed under working id 9853.
 
 ## Evidence
 
@@ -94,7 +95,7 @@ transition' live once Slice 1 finds it?"* It is blocking for Slice 2 (§Tasks, "
 - **Enforcement.** Check 38 cannot be it, so the ruling must choose:
   1. **A named check**, specified in the Slice 2 leaf plan. For example: every §1.6 transition
      cell names a role whose charter or skill carries a step for it. This needs §1.6's cells
-     parsed, which is the same dependency as WK-1169 DP-2 (c) (working id 9854).
+     parsed, which is the same dependency as WK-1169 DP-2 (c) (`RL-1319`).
   2. **An explicit statement** that enforcement is by audit at each Work close. This is the
      cheaper choice, and it is honest.
 
@@ -114,7 +115,7 @@ transition' live once Slice 1 finds it?"* It is blocking for Slice 2 (§Tasks, "
 | The one-source convention | **present** | `docs/process/delivery-process.md:31` ("Tool scope lives once, in each role's own file") and `:257-260` ("Not restated here; one source, not two."). |
 | Who may amend a skill | **present** | `document-ids.md:169`: "the five roles already permitted; lead approves". |
 | Who owns `process/` | **present** | `document-ids.md:167`: "maintainer; amendments arrive as `RFC-` + `RL-`". |
-| A machine-readable role per §1.6 action | **absent** | §1.6 (`document-ids.md:144-173`) is a prose table. The one structured transcription, `_OWNERSHIP_TABLE` (`scripts/doc-index.py:924-947`), covers the Owner column only. `ownership_matrix()` (`:958-969`) assigns a role to a family whenever the role's name appears in the cell text. At `eeda8f4b` that already lists the planner as an owner of `work (WK)` and the lead as an owner of `proposal (RFC)` (`docs/INDEX.md:1451`, `:1454` at `eeda8f4b`). So a mechanical per-transition check has no reliable input today (`RL-9854`, working id, rules on this). |
+| A machine-readable role per §1.6 action | **absent** | §1.6 (`document-ids.md:144-173`) is a prose table. The one structured transcription, `_OWNERSHIP_TABLE` (`scripts/doc-index.py:924-947`), covers the Owner column only. `ownership_matrix()` (`:958-969`) assigns a role to a family whenever the role's name appears in the cell text. At `eeda8f4b` that already lists the planner as an owner of `work (WK)` and the lead as an owner of `proposal (RFC)` (`docs/INDEX.md:1451`, `:1454` at `eeda8f4b`). So a mechanical per-transition check has no reliable input today (`RL-1319` rules on this). |
 
 ### DP-4 — option (c′): the step lives in its owning skill; enforcement is a named Work-close sweep step, not check 38
 
@@ -137,7 +138,7 @@ transition' live once Slice 1 finds it?"* It is blocking for Slice 2 (§Tasks, "
    `close-workstream`, as one of the steps it writes, so the sweep exists from the Work that
    found the gaps onward.
 4. **No mechanical check is ruled.** A check that "every transition has a step" needs a
-   machine-readable role per §1.6 action, and there is none (the table above). If `RL-9854`'s
+   machine-readable role per §1.6 action, and there is none (the table above). If `RL-1319`'s
    exact owner table is later extended to all five actions, a mechanical check can be
    proposed then, as a new `OQ-` or `FD-`. This record creates no obligation for it.
 
