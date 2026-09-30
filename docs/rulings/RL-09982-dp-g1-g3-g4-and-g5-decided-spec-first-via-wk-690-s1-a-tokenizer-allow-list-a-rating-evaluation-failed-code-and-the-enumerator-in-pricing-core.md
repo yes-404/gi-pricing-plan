@@ -106,8 +106,13 @@ What this shows:
   `main`, the lead may take (b). This slice then carries #967's FR-244 sentence, spec first,
   and a dated dispatch-record delta re-scopes Slice 1's Task 6 to the `02` §4.6 note only.
   - The fallback is valid only before Slice 1's executor reaches Task 6.
-  - It follows the maintainer's 10:27:10 entry, which already provides that the held
-    sentence "is carried to the ruling's implementing slice by name" if Slice 1 closes first.
+  - **(b)'s authority is the lead's dated dispatch-record delta, not the maintainer's
+    10:27:10 entry directly.** That entry provides only for Slice 1 reaching its close first
+    (the held sentence "is carried to the ruling's implementing slice by name"). The (b) case
+    here is this slice being dispatched before Slice 1's executor reaches Task 6. That is
+    reasoned from 10:27:10, not provided by it, and it takes effect only through the lead's
+    delta. The maintainer accepted G1 in that form at 11:07:11 ("G1 (a), with the (b)
+    fallback only before S1 reaches Task 6 via a dated dispatch delta").
 - **(c) is refused.** Code ahead of its spec is what `CLAUDE.md` §0 forbids.
 
 **DP-G2 — withdrawn from the plan at `1cbcf474`, and not ruled here.** The maintainer
@@ -145,7 +150,7 @@ new check that bypasses it, must fail a test.**"
   `nodeId`. It reports `RATE_TABLE_MISS` or `REFERENCE_LOOKUP_MISS` only when that step
   directly consumes the output of an `on_miss="error"` `table` or `lookup` step. Otherwise it
   reports `RATING_EVALUATION_FAILED`.
-  - The bare `raise exc` fallthrough at `score.py:497` also becomes `RATING_EVALUATION_FAILED`,
+  - The bare `raise exc` fallthrough at `score.py:498` also becomes `RATING_EVALUATION_FAILED`,
     as FR-255 wants typed errors.
   - A `nodeId` that is missing or not parseable also takes the new code.
   - `test_quote_input_raise_sites.py:66`'s census is updated to match.
@@ -162,7 +167,11 @@ new check that bypasses it, must fail a test.**"
     consume `office_premium_minor`, not a table's output.
   - Closing the residual needs the wire-level change that `score.py:469-483`'s docstring
     already names ("making the wire translation itself fail gracefully"). That is outside this
-    slice. The lead routes it to the maintainer if the residual is not accepted.
+    slice.
+  - **Accepted by the maintainer** at "2026-09-30 11:07:11 BST — DECISION: #970 DP-G4
+    residual → (a), recorded as a LOW FD; #970 G1–G3 accepted". It is fail-closed either way,
+    and every #968 reproduction row is covered. #968's line is narrowed by a dated note, and
+    the residual is recorded as a LOW finding (owner WK-1178), filed by auditor-928.
 
 **DP-G5 — (a) and (i).**
 - **Placement (a).** The enumerator and its two field registries (expression fields and
@@ -177,6 +186,9 @@ new check that bypasses it, must fail a test.**"
   - `git grep -n as_at 9f63d0fe -- packages/pricing-core/src/pricing_core/rating` finds it
     only in `runtime.py`'s module docstring (`:26-35`): the effective-dating window is "an
     exact key match only", and no code evaluates it.
+  - Its committed values are column names such as `"effective_date"` and `"postcode"`
+    (`packages/pricing-core/tests/test_rating_compile.py:37` and
+    `test_rating_runtime.py:445`), not expressions.
   - Checking it as an expression would refuse or accept a string that no engine reads.
   - Its registry entry carries the stated trigger: it moves to the expression fields when the
     window is wired to the engine.
