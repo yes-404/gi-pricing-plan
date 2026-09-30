@@ -77,9 +77,27 @@ reaches `approved` today, so the workflow bypass is total.
 (`api/approvals.py`, about `:488-525`) has **no validation-rule branch** (case 5). Its four
 siblings, `model`, `custom_objective`, `custom_metric` and `rating_version`, each have one.
 
-**Not measured, stated as such:** (a) whether `approve_rule` accepts a rule whose dry-run report
-records a **failure**: `06:114` says the evidence is a *successful* dry-run, and `attach_dry_run`
-attaches whatever the outcome (open item 1 below); (b) the **FR-363 evidence floor** (`06:109`,
+**A measured non-defect: a rule whose dry-run outcome is `fail` is approvable.** auditor-922
+ingested a dirty dataset version (one negative `exposure_years`), created a draft `range` rule
+(`min_exclusive: 0`, severity `fail`) and ran the real `DATASET_VALIDATE` job with
+`dry_run_rule_id` (the job `succeeded`). `dry_run_report_id` was set, the report's overall outcome
+was `fail`, and the rule's own outcome `['fail']`; `submit_for_review` then gave `review`, and a
+second approver's `approve_rule` gave `approved`, the failing report still attached (the worker
+attaches the report whatever the outcome, `data_handlers.py:292-296`; `validation_rules.py:371`
+and the DB check `approved_rule_dry_run_and_separate_approver` test only non-null).
+**Measured through the service functions the routes call, not through HTTP.** **This is not a
+defect**, per the maintainer's correction (`to-lead.md` "2026-09-30 11:27:20 BST — correction to
+the failed-dry-run follow-on: the spec means EXECUTED successfully; measure the `error` outcome
+instead"): `01` §4.5 step 2 (`01-data-management.md:520-521`) requires the rule to **execute**
+successfully against at least one existing Dataset Version, and `01:470-473` says an unknown
+`check` produces an `error` outcome that FR-48 refuses to count as a pass, and *"the
+mandatory dry-run (step 2 below) is what stops it reaching approval"*; step 2 also says the
+dry-run result *"is attached to the approval request"*. So `06:114`'s "successful dry-run result" means the run **executed (no `error`
+outcome)**, not that the data passed: that rule worked and caught bad rows. It is **not** a gap
+in this FD and has **no** red-first acceptance item.
+
+**Not measured, stated as such:** (a) whether a rule whose dry-run outcome is **`error`** can be
+submitted and approved (open item 1 below); (b) the **FR-363 evidence floor** (`06:109`,
 "enforced at submission") on the generic path: the submit body has no evidence field, so what
 enforces it there was not tested.
 
@@ -131,11 +149,18 @@ Event that discharges it: that slice's merge.
 
 **Open items** (the maintainer's 11:23:26 entry names both):
 
-1. **Does approve accept a failed dry-run?** `06:114` says the evidence is a *successful*
-   dry-run. auditor-922 is measuring it; **not measured in this record**. If it does, it goes in
-   this FD and the fix's acceptance.
-2. **Data check: approved rules with no approved approval request.** Measured by this record's
-   author, read-only (`BEGIN READ ONLY ... ROLLBACK`), over every database on the local
+1. **Can a rule whose dry-run outcome is `error` be submitted and approved?** (Per the
+   maintainer's 11:27:20 correction above: an `error` outcome, for example an unknown `check` or
+   a target column absent from the dataset version, is what `01:470-473` says the dry-run must
+   stop.) auditor-922 is measuring it and auditor-924d reproduces it; **not measured in this
+   record**. **If it can, that is the `06:114` gap: it goes in this FD with a red-first
+   acceptance item.** HIGH stands either way (the quorum bypass).
+2. **Data check: approved rules with no approved approval request.** **The fix's obligation, per
+   the maintainer's 11:27:20 entry:** there is no production, so the fix slice **resets
+   non-built-in approved rules that have no approved approval request to `review`** in the
+   template and the fixtures, rather than grandfathering them, **and records the count**.
+   Built-ins (`01` FR-68) are untouched. The measurements follow. First, this record's author's
+   own, read-only (`BEGIN READ ONLY ... ROLLBACK`), over every database on the local
    Postgres whose name starts `gipricing` and is not a template (77 databases: 74 have a
    `validation_rules` table, 3 have none or errored). Per database, `validation_rules` rows with
    `status='approved'`, split by `builtin`, and the non-built-in ones with **no** `approval_requests`
@@ -146,8 +171,7 @@ Event that discharges it: that slice's merge.
    approval request** (every one), plus 18,962 built-in approved rows (exempt by `01` FR-68).
    These are development and test databases (fixture and test-run residue: `gipricing` itself,
    worktree databases), not production data, and there is no production. Any such row **stays
-   approved after the fix**, so **the fix slice decides between re-review and grandfathering, and
-   records which**. This record does not decide it.
+   approved after the fix unless reset**, hence the obligation above.
 
 The runnable predicate for open item 2 (`bash script.sh`, with the `gi-pricing-postgres-1`
 container up):
@@ -174,5 +198,26 @@ Its last line printed `TOTAL builtin_approved=18962 user_approved=739
 user_approved_with_no_approved_request=739`. **Limits:** a database whose query errored counts in
 `without_table_or_error`, so the 3 are not separated into "no table" and "error"; the databases
 are a moving set (worktree databases come and go), so this is a count at one moment.
+
+**auditor-922's later count (attributed, not re-run by this record's author)**, over a different
+database set: `select datname from pg_database where not datistemplate and datallowconn` gave
+**80 databases, 76 with `validation_rules`, 4 without**, with this predicate, verbatim:
+
+```sql
+select count(*) filter (where status='approved' and builtin is not true), count(*) filter (where status='approved' and builtin is not true and not exists (select 1 from approval_requests a where a.workspace_id=r.workspace_id and a.artifact_ref='validation_rule:'||r.slug||'@'||r.version and a.status='approved')), count(*) filter (where status='approved' and builtin is true), count(*) from validation_rules r
+```
+
+Totals over the 76: **749 approved non-built-in rules, all 749 with no approved
+`approval_request`** (0 with one), **19,494 approved built-ins** (`01` FR-68, counted separately)
+and 20,245 rules in all. The 9 databases holding approved non-built-in rules: `gipricing` 10,
+`gipricing_aud976b` 10, `gipricing_exec-690s1_9bcacb9a` 205, `gipricing_tree-s3` 10,
+`gipricing_w37-6-run2-gate-1789676768` 15, `gipricing_w37-6-run2-gate-1789690960` 10,
+`gipricing_wt-ci-structure` 205, `gipricing_wt-d9d13-redo` 101 and `gipricing_wt-paths-d9-d13`
+183. **All are scratch or test databases, including the `gipricing` template's 10, which every
+scratch database inherits.** The two counts differ (739 of 739 over 74 databases, then 749 of 749
+over 76) because the set of databases is moving (this one includes `gipricing_aud976b`, a scratch
+database created between the two runs) and the database-selection predicates differ. **Provenance
+was not checked:** whether any row came from a real approval route or a test or seed insert.
+749 of 749 is what the bypass predicts, since the direct route never writes an `approval_request`.
 
 *Drafted under working id 9892.*
