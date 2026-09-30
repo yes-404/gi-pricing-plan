@@ -101,8 +101,8 @@ local channel file, outside the repository:
 - "2026-09-30 11:07:11 BST — DECISION: #970 DP-G4 residual → (a), recorded as a LOW FD; #970
   G1–G3 accepted". The maintainer accepted the rulings on this plan's decision points: #970
   (RL working id 9982, read at `39dce368ef582b067a9be931ee2bd63ca2c6dd03`, unminted). The G4
-  residual is recorded as a LOW finding, owner WK-1178, which auditor-928 is filing; it has no
-  PR at this revision.
+  residual is recorded as the LOW finding #972 (FD working id 9888, owner WK-1178, read at head
+  `607485218ccde45f892e7d68f3723cce34614f2b`, unminted).
 
 ## Status
 
@@ -326,7 +326,7 @@ case says otherwise.
      code. The engine error has the same shape in both cases (#970, *Probe*, rows EXPR and MISS).
      It is a wrong diagnosis on a refused quote, never a silent price. Its fix, the wire-level
      change `score.py:469-483`'s docstring names, is outside this slice. It is recorded as the
-     LOW finding that auditor-928 is filing (owner WK-1178), cited here as prose until it has a PR.
+     LOW finding #972 (FD working id 9888, owner WK-1178), cited as prose until it mints.
 
    **Predicted red:** `RATE_TABLE_MISS` (`score.py:491`), and a bare `RuntimeError` for the
    fallthrough case.
@@ -477,7 +477,7 @@ of the vocabulary and guard checks. None of that is reopened.
   *Exposure* list at its live head (acceptance 10).
 - [ ] `gh pr list --state open`, and read anything that rules on FR-244, FR-274, FR-276,
   FR-255, `compile.py`'s checks, `??` or OQ working id 9905 ([`README.md`](README.md)
-  convention 4). Name the SHA read. **Re-point #967, #968, #970 and the LOW finding to their ids if minted.**
+  convention 4). Name the SHA read. **Re-point #967, #968, #970 and #972 (FD working id 9888) to their ids if minted.**
 - [ ] Confirm DP-G1, DP-G3, DP-G4 and DP-G5's resolutions, by record id, in the ledger. **Under DP-G1 (a),
   confirm FR-244's amended text is on `main`** (`03:146` carries "restricted to an enforced
   allow-list of operators and functions"). If it is not, stop and report.
