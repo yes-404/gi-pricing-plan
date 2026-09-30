@@ -112,6 +112,29 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
      `/api/v1` prefix and any query string are dropped, and every `{placeholder}` collapses
      to one segment. So `01` §5.1's `/api/v1/dataset-versions/{id}/lineage?direction=up|down`
      (`01` §5.1, the lineage row) matches the live `/api/v1/dataset-versions/{version_id}/lineage`.
+   - **The shared row parser learns the escaped pipe: one change to both parsers, never a
+     third, and the cells are not rewritten.** *(Added on auditor-926-927's audit of
+     `b0f4e06b`, which found the pin could not read the lineage row.)*
+     - `_ENDPOINT_ROW` (`audit-docs.py:297`) and `_ENDPOINT` (`scope-audit.py:68`) capture
+       the path cell with `([^|]+)`. An escaped `\|` inside a cell therefore ends the
+       capture. At `daa7f5f8`, three path cells carry one: `01:873`
+       (`…/lineage?direction=up\|down`), `06:539` (`…?format=html\|pdf\|bundle`) and
+       `06:543` (`…/dependencies?direction=up\|down`). Both scripts are blind to all three
+       today; the auditor measured `declared_endpoints("DATA")` at 39 of 40.
+     - Two more rows carry one in the Purpose cell (`01:866`, `02:1784`). A naive split
+       there would also misplace the new `Permission` cell.
+     - **Rewriting the cells is rejected.** `\|` is the markdown-correct way to write a
+       pipe inside a cell, it occurs in five rows, and a later row would bring it back.
+     - **The rule:** both regexes take the cell pattern `((?:\\\||[^|])+)` (an escaped pipe
+       or any non-pipe), changed identically in the same commit. Tested at this ruling: it
+       reads the `01:873` row's path whole, closing backtick included. Where the slice
+       needs every cell of a row (for the fourth), it splits on **unescaped** pipes only.
+     - **The parser blindness is a LOW finding owned by this slice** (the maintainer's entry
+       "2026-09-30 11:42:08 BST"). auditor-928 files it, and it is cited here in prose until
+       filed. Its acceptance is one shared parser, red first on `01:873`, with
+       `declared_endpoints("DATA")` going from 39 to 40.
+     - **The pin defines no third reading.** It imports the row-reading function of one of
+       the two scripts, extended to return all cells, and uses nothing else.
    - **Two live routes have no row. The spec is behind the code (`CLAUDE.md` §0), and the
      slice adds both rows spec-first** (the 11:37:11 BST entry, item 2). They are
      `GET /api/v1/rating-versions` and `GET /api/v1/rating-versions/{rating_version_id}`
@@ -192,6 +215,10 @@ Each is shown failing on deliberately broken input (`CLAUDE.md` §13), in the WK
 - A cell naming a permission in neither of `06` §4.1's Built and Specified tables fails.
 - After the split, `PUT /settings` declared `settings:read` fails, and so does any split row
   whose permission differs from its method's check.
+- **Escaped pipes are read:** the `01:873` lineage row is read with its full path, so
+  `declared_endpoints("DATA")` counts 40, and the `06:539` and `06:543` rows are read whole.
+  A row whose Purpose cell holds `\|` (`01:866`) still yields its correct `Permission`
+  cell. With the old `([^|]+)` restored, the lineage case fails.
 - A live route with no row fails. The two rating-version reads pass through their
   "records an existing route" rows.
 - A route declared `authenticated` that in fact demands a permission, or the reverse, fails.
