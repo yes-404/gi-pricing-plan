@@ -1,7 +1,7 @@
 ---
 id: FD-9949
 family: finding
-title: reconcile_ladder is vacuous at its call site, so every trace's ladder_reconciled true asserts a reconciliation that was never performed, and the vacuity hid a 4 dp drift that breaks FR-248 at realistic scale
+title: reconcile_ladder is vacuous at its call site, so every trace's ladder_reconciled true asserts a reconciliation that was never performed; the vacuity hid a 4 dp drift that breaks FR-248 at realistic scale, and the ladder builder feeds float money into its arithmetic (FR-273)
 status: active
 created: 2026-09-30
 owner: auditor
@@ -10,13 +10,14 @@ corrected_by: []
 relates: [WK-674, SL-1257, FR-248, NFR-496, FR-261]
 ---
 
-# FD-9949 — `reconcile_ladder` is vacuous, and it hid the premium ladder's 4 dp drift
+# FD-9949 — `reconcile_ladder` is vacuous, it hid the premium ladder's 4 dp drift, and the builder does float money arithmetic
 
 ## Finding
 
 **Severity: HIGH**, on the maintainer's entry of 2026-09-30 15:33:22 BST (see *Severity*). **Proposed by
-the auditor; the disposition is the lead's.** FD-9949 is a working id, minted at the records PR. **Two
-limbs, one root: the vacuous check hid the builder's drift.**
+the auditor; the disposition is the lead's.** FD-9949 is a working id, minted at the records PR. **Three
+limbs: the vacuous check (limb 1) hid the builder's drift (limb 2); limb 3, float money in the builder's arithmetic, is
+the same builder, and the same fix.**
 
 **Limb 1 — the check is vacuous.** `reconcile_ladder(risk_premium_minor, steps)`
 (`packages/pricing-core/src/pricing_core/money.py:55`) says in its docstring that the ladder reconciles
@@ -54,6 +55,18 @@ the recorded payable 69402** (evidence 6). At fixture scale (~1300 minor units) 
 which is why the tests never saw it. The **price is right**; the governed transparency artifact misstates how
 it was reached, at every quote large enough for a 4 dp factor to move a whole minor unit. FR-248 (`03:155`)
 and `NFR-496` (`03:1157`) say "to the penny" and "in 100 % of scored quotes".
+
+**Limb 3 — the builder does arithmetic on float money (FR-273, `CLAUDE.md` §7).** `03` FR-273 (`03:222`):
+"Money crosses the engine boundary only as integer minor units. … any value returning to Python for further
+arithmetic is an integer minor unit or a string." `CLAUDE.md` §7: "Money is integer pence/cents, or Decimal in
+the rating path — never float." But `_build_ladder` reads the engine's **fractional** money as a Python `float`
+and computes with it: `score.py:592` `raw = float(result[source_key])`, then `:609` `_round_minor(raw, mode)` (in the
+branch condition) and `:610-611` `factor = (Decimal(repr(raw)) / Decimal(prev_minor)).quantize(Decimal("0.0001"))`
+and `value_minor = apply_factor(prev_minor, factor, mode)`. The fractional rung values arrive from the engine as
+floats (evidence 8): a float is the carrier of a money amount that feeds the factor, and through it the rung
+value. `Decimal(repr(raw))` recovers the shortest decimal the float meant, which is what makes today's fixtures
+come out right; it does not make the operand a string or an integer, and it is exactly the conversion the
+FR-273 rule forbids the builder to depend on. The fix rewrites the builder (RL 9963's `string()` reads).
 
 ## Evidence
 
@@ -198,6 +211,41 @@ flag scan `14:15:29` load 4.84 to `14:29:02` load 2.87; corrected PostgreSQL fla
 `scoring_traces` replay `15:11:43` load 17.68 to `15:30:01` load 3.47. The load spike during the third run was
 other work on the box, not this scan's.
 
+**8. Reproduction, limb 3 (a float operand in the builder's arithmetic).** Scratch script `ladder_float.py`, kept
+with the evidence, under `uv run --no-sync python` at tree `11c76b6c`; `score.py` and `money.py` are
+**unchanged at current `origin/main` `25ca36df89b0ac6e97a14cb08ca2b07f54fef085`**
+(`git diff --stat 11c76b6c origin/main -- packages/pricing-core/src/pricing_core/rating/score.py
+packages/pricing-core/src/pricing_core/money.py` prints nothing), and the lines below are `score.py:592` and
+`:609-611` in that file. The script wraps `_build_ladder` to record what `score_one` hands it, then scores three
+fixture quotes. Output, verbatim (the floats' exact binary values added by `Decimal(x)`):
+
+```text
+call 0: values handed to _build_ladder as `result[...]`:
+    risk_premium_minor           type=int    value=1305
+    office_premium_minor         type=float  value=1435.5
+    instalment_loading_minor     type=float  value=1507.275
+call 2: values handed to _build_ladder as `result[...]`:
+    risk_premium_minor           type=int    value=1695
+    office_premium_minor         type=float  value=1864.5
+    instalment_loading_minor     type=float  value=1957.725
+
+1507.275 exact binary = 1507.27500000000009094947017729282379150390625
+1957.725 exact binary = 1957.72499999999990905052982270717620849609375
+
+score.py:592  raw = float(result[source_key]) -> float 1305.0
+score.py:610  factor = (Decimal(repr(raw)) / Decimal(prev_minor)).quantize(Decimal('0.0001')) -> 1.0000
+a float-carried money amount 4308.9: Decimal(repr(x)) = 4308.9, exact binary = 4308.899999999999636202119290828704833984375
+a float-carried money amount 66000.44: Decimal(repr(x)) = 66000.44, exact binary = 66000.4400000000023283064365386962890625
+```
+
+So the integer rung (`risk_premium_minor`) crosses as an `int`, as FR-273 requires, but the **fractional** ones
+(`office_premium_minor` 1435.5, `instalment_loading_minor` 1507.275 and 1957.725) cross as `float`, and the builder
+feeds them into `Decimal(repr(raw))` and `_round_minor(raw, …)`. Two of those amounts have no exact binary
+representation (the exact values above differ from the money amounts at the 15th significant digit), so what
+the arithmetic consumes is a float's shortest-repr decimal, not the amount. It reproduces the amount today because
+`repr` inverts the conversion; that is a property of `float`, not a money invariant, and it does not survive the
+amounts a 4 dp factor and a realistic scale produce (limb 2 is that scale).
+
 *Limits.* The MinIO counts are at one tree of the store (test runs add objects). Other environments, any dev or
 uat stack elsewhere and CI databases are out of scope, as in FD-1294's and FD-1297's checks. Batch score outputs
 (parquet) were not decoded; regression-run results were searched as text only.
@@ -209,6 +257,12 @@ uat stack elsewhere and CI databases are out of scope, as in FD-1294's and FD-12
 fresh high-effort DM" (outside the repository; quoted):
 
 > **(1) Fold N5 into FD 9949 as limb 2; FD 9949 is now HIGH.** One root: the vacuous check hid the builder's 4-dp factor drift. Limb 2's evidence: auditor-close1255's scratch run of the real `_build_ladder` (score.py:551-624) at 11c76b6c; raw 60000.4 → 66000.44 → 69402.0 gives a ladder replaying to **69399 ≠ payable 69402**. **The price is correct; the governed transparency artifact misstates how it was reached** for realistic-scale quotes, so FR-248 fails today. **HIGH** because the platform's core promise ("transparency of the maths", CLAUDE.md §1) is violated on every realistic quote's evidence, though no production or mispricing. **The data read** (stored traces whose ladder doesn't replay) goes in the FD.
+
+Limb 3 is routed by the entry "2026-09-30 16:16:06 BST — DP-S3-5 ruled (RL 9963, local 48621365): accepted in
+substance pending auditor-plans; routing of the 4 observed items" (quoted; the same header records RL 9963's
+acceptance in substance, and the other three routed items are separate records):
+
+> **(1) FR-273, fractional money as float feeding arithmetic** (score.py:592, :609-611): **FD 9949 limb 3, HIGH stands.** It also breaches **CLAUDE.md §7** ("Money is integer pence/cents, or Decimal in the rating path, never float"). Cite §7 explicitly. S3 fixes it with the builder rewrite; its acceptance includes a no-float-in-money-arithmetic test on the builder's path.
 
 This **supersedes** the same file's earlier severity, **medium**, set by the entry "2026-09-30 15:13:26 BST —
 DECISIONS: the reconcile_ladder FD (MEDIUM, WK-674 S3); DP-S3-3 → (a), ruled by me as scope" ("a missing
@@ -249,6 +303,11 @@ restated as rulings:
   whose ladder must replay to the payable premium exactly, red before the fix), plus a **scale sweep of about
   1e3 to 1e7 minor units** in S3's acceptance. Evidence item 6's sweep is the shape of the control, not a
   substitute for it.
+- **Limb 3, FR-273 and `CLAUDE.md` §7 (the 16:16:06 BST entry, item (1)):** **HIGH stands**; **owner WK-674 Slice 3,
+  which fixes it with the builder rewrite** (one fix for limbs 2 and 3, RL 9963's route). **Acceptance: a
+  no-float-in-money-arithmetic test on the builder's path** (red first on a planted `float` operand in a money
+  computation of `_build_ladder`, green on the rewrite: no `float`, and no `Decimal` built from a float, reaches
+  the rung arithmetic).
 - **`LADDER_RECONCILIATION_FAILED`:** whether a failed reconciliation is refused (raising the registered code) or
   only recorded is the plan's decision point; this finding does not decide it. The stored flag must never read
   `true` for a ladder that has not been checked.
@@ -257,7 +316,8 @@ restated as rulings:
 replacement) that takes the operations, runs on every scored quote, and is red first on a one-penny-off rung
 through `score_one` (also at `trace_sample_rate = 0`) at both call sites (`score.py:738`, `properties.py:303`);
 (b) the DP-S3-5 ruling implemented, with the realistic-scale exact-replay red case and the 1e3 to 1e7 sweep; and
-(c) the historical-flag rule implemented as the plan states.
+(c) the historical-flag rule implemented as the plan states; and (d) the no-float-in-money-arithmetic test on the
+builder's path (limb 3) green, red first on a planted float operand.
 
 ## Decision
 
