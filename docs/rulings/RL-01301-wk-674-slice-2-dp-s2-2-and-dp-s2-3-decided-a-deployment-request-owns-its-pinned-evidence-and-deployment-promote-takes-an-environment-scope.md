@@ -1,5 +1,5 @@
 ---
-id: RL-9906
+id: RL-1301
 family: ruling
 title: WK-674 Slice 2 DP-S2-2 and DP-S2-3 decided — a deployment request owns its pinned evidence, and deployment:promote takes an Environment scope
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -11,13 +11,17 @@ work: WK-674
 supersedes: []
 superseded_by: ~
 corrected_by: []
-corrects: ~                    # set to the OQ-1234 ruling's minted id at this record's mint turn (item C)
+corrects: RL-1296              # item C: the OQ-1234 ruling, minted as RL-1296
 relates: [PL-1237, CR-1212, RL-1232, FR-267, FR-429, FR-345, FR-356, FD-1200]
 ---
 
-# RL-9906 — WK-674 Slice 2 DP-S2-2 and DP-S2-3 decided: a deployment request owns its pinned evidence, and `deployment:promote` takes an Environment scope
+# RL-1301 — WK-674 Slice 2 DP-S2-2 and DP-S2-3 decided: a deployment request owns its pinned evidence, and `deployment:promote` takes an Environment scope
 
 ## How this was ruled
+
+**Minted 2026-09-30 as RL-1301** (assigned in the lead's mint train, stacked on #963's
+PL-1299/SL-1300; `doc-id.py next --ref origin/main` = 1298 at `4009de14`); it was filed under
+working id 9906.
 
 **Ruled at effort `high`**, by the decision-maker session `dm-effort-high`, launched with
 `claude --effort high` on the maintainer's order of 2026-09-30 09:34:27 BST (`to-lead.md`,
@@ -333,6 +337,11 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
           helper writes an `approval_requests` row with `status = 'approved'`, the row's
           `workspace_id` and its `artifact_ref`, which is `str(ArtifactRef(...))` for the
           artifact. It then writes the artifact.
+          It flushes the request before it writes the artifact, as `decide` flushes at
+          `:419` before the carry. It never relies on the ORM's unit-of-work ordering:
+          ordering across unrelated mappers is not guaranteed, and the three ORM shapes in
+          auditor-close1255's scratch build passed only because `approval_requests`
+          happened to flush first.
         - **On the two validation tables**, entering the context is enough while their
           allowance stands.
 
@@ -529,7 +538,7 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
      `uat` as well, and the test fails;
    - a Service Account is still refused (FR-347).
 
-### C. A dated amendment to the OQ-1234 ruling (#935, working id 9901, minted on its branch as the next ruling id)
+### C. A dated amendment to the OQ-1234 ruling (`RL-1296`; #935, working id 9901)
 
 **This record amends it; it does not reinterpret it** (the 11:04:57 BST entry's condition).
 That ruling's item 3 says the reason for a skip "is the **predecessor-deployment evidence
