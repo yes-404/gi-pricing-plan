@@ -193,6 +193,18 @@ tests/test_repository_invariants.py::test_journey_citations_are_audited_in_ci
   `ruff check --no-cache .` in this worktree reproduces the one error, and reports no other file. The pytest, mypy, import_linter, audit_docs,
   req_coverage, contracts and frontend results above are unaffected. The fix is `2d4223ec` (import order only); a fresh full gate on a clean checkout of the
   fixed head replaces this run as the slice's gate.
+- **GATE OF RECORD: a clean checkout of `2d4223ec42265f95c5a33d11e58fe2f6e006687e`** (the maintainer's rule; S-13 granted 2026-09-30 18:35:42 BST). `git worktree add --detach`
+  into a fresh directory (no `.ruff_cache`, `.mypy_cache` or `.pytest_cache`), `uv sync --all-packages`, `pnpm --dir frontend install --frozen-lockfile`, a per-worktree test
+  database created from the template, `alembic upgrade head`, and `alembic current` printing `a9f3c6d21b87 (head)`, which equals `alembic heads`. Recorded at the start
+  and the end, both times: `git rev-parse HEAD` = `2d4223ec42265f95c5a33d11e58fe2f6e006687e`, `git status --porcelain` empty, gate-1 and gate-2 both free (`flock -n`), so there was
+  **no other slot holder**, gate or not a gate. Start 2026-09-30 17:36:53 UTC: load 7.55/2.94/2.06 (this worktree's own `uv sync` had just run), `free -h` total 31Gi, used 14Gi, free 12Gi,
+  buff/cache 6.3Gi, available 16Gi. End 18:00:27 UTC: load 1.72/1.82/1.98, used 14Gi, free 11Gi, buff/cache 7.2Gi, available 17Gi. Wall **1414s**, no queue wait, the slot wrapper
+  verbatim, `LOKY_MAX_CPU_COUNT=4`, foreground `timeout 3600`. **7 of 7 stages pass** (ruff, mypy, import_linter, audit_docs, req_coverage, contracts, pytest), pytest
+  **4367 passed, 3 skipped**, 1392.73s. Frontend half on the same tree: `generate:api` rc 0, `lint` rc 0, `type-check` rc 0, `test` 609 passed (609), `build` rc 0.
+  This run replaces the struck `a6a37847` run as the slice's gate.
+- **Trap, for the dev-commands backlog.** `ruff` caches a clean result for an unchanged file without recording which modules could be resolved when it was linted.
+  After a `ruff check --fix` run before the imported modules exist, the cached result hides an isort misclassification. Run `ruff check --no-cache` (or remove `.ruff_cache`) before a gate,
+  and take the gate of record on a clean checkout.
 - **Frontend half** at `a6a37847`: `install --frozen-lockfile` and `generate:api` rc 0, `lint` rc 0, `type-check` rc 0, `test` 609 passed (609),
   `build` rc 0.
 - **RL-1263 contention: these runs are NOT counted as pairs** (the maintainer's ruling, `~/gi-pricing-plan.local/channel/to-lead.md`, outside the repository, the entry headed "2026-09-30 18:03:42 BST — RL-1263 pairs: no partial acceptance; the SAME test applies to pair 1").
