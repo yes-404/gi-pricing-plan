@@ -11,17 +11,37 @@ not a `derived_at`: the backend stamps that.
 
 from __future__ import annotations
 
-from collections.abc import Collection
+import ast
+from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass
 from typing import Any, Final
 
+import numpy as np
 import sympy
+from numpy.typing import NDArray
 from sympy.codegen.cfunctions import expm1, log1p
 
-from pricing_core.data.expression_sympy import to_sympy
-from pricing_core.data.expressions import ExpressionError, ExpressionLimits
+from pricing_core.data.expression_sympy import OBJECTIVE_SYMBOLS, to_sympy
+from pricing_core.data.expressions import (
+    ExpressionError,
+    ExpressionLimits,
+    GrammarProfile,
+    parse_expression,
+)
 
-__all__ = ["DERIVED_LIMITS", "Derived", "derive", "to_grammar"]
+__all__ = [
+    "DERIVED_LIMITS",
+    "Derived",
+    "Kernel",
+    "compile_kernel",
+    "derive",
+    "to_grammar",
+]
+
+_Arr = NDArray[np.float64]
+
+#: A compiled expression: `(y, f, w)` in, one array of the same length out.
+Kernel = Callable[[_Arr, _Arr, _Arr], _Arr]
 
 #: DP-S2-2 / DP-S2-7: derived text is parsed under its own limits. Set from the Task 1 spike
 #: (RS-, WK-690 S2): the largest derived text measured was 9081 nodes at depth 40 (the
@@ -148,3 +168,96 @@ def _branch(condition: Any, then: str, otherwise: str) -> str:
         f"where(({_print(condition.lhs)}) {symbol} ({_print(condition.rhs)}), "
         f"{then}, {otherwise})"
     )
+
+
+_ARITHMETIC: Final[Mapping[type[ast.operator], Callable[[Any, Any], Any]]] = {
+    ast.Add: np.add,
+    ast.Sub: np.subtract,
+    ast.Mult: np.multiply,
+    ast.Div: np.divide,
+    ast.Pow: np.power,
+}
+_COMPARISONS: Final[Mapping[type[ast.cmpop], Callable[[Any, Any], Any]]] = {
+    ast.Lt: np.less,
+    ast.LtE: np.less_equal,
+    ast.Gt: np.greater,
+    ast.GtE: np.greater_equal,
+    ast.Eq: np.equal,
+    ast.NotEq: np.not_equal,
+}
+_UNARY: Final[Mapping[str, Callable[[Any], Any]]] = {
+    "log": np.log,
+    "exp": np.exp,
+    "sqrt": np.sqrt,
+    "abs": np.abs,
+    "log1p": np.log1p,
+    "expm1": np.expm1,
+}
+
+
+def compile_kernel(
+    text: str,
+    *,
+    parameters: Mapping[str, float],
+    limits: ExpressionLimits = DERIVED_LIMITS,
+) -> Kernel:
+    """Compile `text` into a vectorised NumPy kernel, through the platform's own tree.
+
+    The text is parsed by the one parser, in the `objective` profile; the validated `ast` is
+    walked into NumPy calls on the caller's arrays. No string becomes code (NFR-483), and a
+    kernel works elementwise, so every array it makes is the input's length (FR-165).
+    Non-finite values are not warned about here: the boosting adapter aborts on them.
+    """
+    tree = parse_expression(
+        text,
+        GrammarProfile.OBJECTIVE,
+        symbols=OBJECTIVE_SYMBOLS | frozenset(parameters),
+        limits=limits,
+    )
+    constants = {name: np.float64(value) for name, value in parameters.items()}
+    body = tree.body
+
+    def kernel(y: _Arr, f: _Arr, w: _Arr) -> _Arr:
+        with np.errstate(all="ignore"):
+            result = _evaluate(body, {"y": y, "f": f, "w": w} | constants)
+        return np.asarray(np.broadcast_to(result, y.shape), dtype=np.float64)
+
+    return kernel
+
+
+def _evaluate(node: ast.expr, values: Mapping[str, Any]) -> Any:
+    match node:
+        case ast.Constant(value=int() | float() as value):
+            return np.float64(value)
+        case ast.Name(id=name):
+            return values[name]
+        case ast.UnaryOp(op=ast.USub(), operand=operand):
+            return np.negative(_evaluate(operand, values))
+        case ast.UnaryOp(op=ast.UAdd(), operand=operand):
+            return _evaluate(operand, values)
+        case ast.BinOp(left=left, op=op, right=right) if type(op) in _ARITHMETIC:
+            return _ARITHMETIC[type(op)](_evaluate(left, values), _evaluate(right, values))
+        case ast.Call(func=ast.Name(id="where"), args=[ast.Compare() as test, then, otherwise]):
+            relation = _COMPARISONS[type(test.ops[0])]
+            condition = relation(
+                _evaluate(test.left, values), _evaluate(test.comparators[0], values)
+            )
+            return np.where(condition, _evaluate(then, values), _evaluate(otherwise, values))
+        case ast.Call(func=ast.Name(id=name), args=args):
+            built = [_evaluate(a, values) for a in args]
+            if name in _UNARY:
+                return _UNARY[name](built[0])
+            if name == "min":
+                return _reduce(np.minimum, built)
+            if name == "max":
+                return _reduce(np.maximum, built)
+            if name == "clip":
+                return np.minimum(np.maximum(built[0], built[1]), built[2])
+    raise ExpressionError(f"{type(node).__name__} cannot be compiled", node=node)
+
+
+def _reduce(op: Callable[[Any, Any], Any], arguments: list[Any]) -> Any:
+    result = arguments[0]
+    for argument in arguments[1:]:
+        result = op(result, argument)
+    return result
