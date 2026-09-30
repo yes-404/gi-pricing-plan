@@ -125,6 +125,10 @@ Against the other lane:
   independent of machine load. So on this plan's reading it is not a "measurement step" in
   the sense of `RL-1263` item 3. That reading is the lead's to confirm at dispatch.
 
+- **This slice resolves finding working id 9975** (#959, HIGH). On main today the parser
+  silently drops extra arguments to the seven legacy functions (premise c), and that finding
+  records it. It resolves at this slice's merge, and Acceptance 12 is its proof through all
+  three reachable callers. *(Revised 2026-09-30 on the maintainer's ruling "DATA CHECK 0 ACCEPTED" (to-lead.md), relayed by the lead: DP-S1-2's defect is finding working id 9975, #959, severity HIGH, live on main; this slice is its fix.)*
 - Activation: _pending. The plan goes `active` once working ids 9971, 9972 and 9973 are
   merged and minted, because each blocking row then has its resolver id (`document-ids.md`
   §1.7), and it then cites their minted ids. Its merge carries the maintainer's MERGE-ACK.
@@ -195,6 +199,12 @@ A fresh reviewer checks each item by the command given, on the slice's final tre
     did not rise means the new tests were not collected.
 11. **The slice closes on its clean audit and the lead's merge on the maintainer's
     MERGE-ACK** (`.claude/roles/lead.md` rule 4; `CLAUDE.md` §13).
+12. **Finding working id 9975 is fixed at every reachable caller, not only in the parser.**
+    `uv run pytest packages/pricing-core/tests/test_expression_profiles.py -q -k
+    through_the_callers` passes. `round(y, 2)` is refused with a positioned `ExpressionError`
+    through a `derive_expression` recipe step (`prepare.py:167`), a `filter_rows` recipe step
+    (`prepare.py:170`) and an `expression` validation check (`validate.py:1892-1899`). Each
+    test is shown red first in the ledger: at `fb90d381` the call silently succeeds. *(Revised 2026-09-30 on the maintainer's ruling "DATA CHECK 0 ACCEPTED" (to-lead.md), relayed by the lead: DP-S1-2's defect is finding working id 9975, #959, severity HIGH, live on main; this slice is its fix.)*
 
 ## Global Constraints
 
@@ -820,6 +830,50 @@ def test_a_legacy_function_with_one_argument_is_still_accepted(
         parse_expression("coalesce(y, f, w)", profile, symbols=symbols)
 
 
+# -- finding working id 9975: the refusal reaches all three callers (Acceptance 12) -------
+
+
+def _round_check(expr: str) -> ValidationRule:
+    return ValidationRule(
+        id=uuid4(), slug="rounded", version=1, layer=ValidationLayer.ACTUARIAL_SANITY,
+        check="expression", severity=Severity.FAIL, target={"table": "t"},
+        params={"expr": expr},
+    )
+
+
+@pytest.mark.req("FR-36")
+def test_round_with_two_arguments_is_refused_through_the_callers_derive_expression() -> None:
+    """Red first: at fb90d381 this step succeeds and rounds to 0 decimals."""
+    with pytest.raises(ExpressionError, match=r"round\(\) takes exactly 1 argument") as e:
+        apply_recipe(
+            {"t": FRAME},
+            [{"step": "derive_expression", "params": {"column": "z", "expression": "round(y, 2)"}}],
+        )
+    assert (e.value.lineno, e.value.col_offset) == (1, 0)
+
+
+@pytest.mark.req("FR-36")
+def test_round_with_two_arguments_is_refused_through_the_callers_filter_rows() -> None:
+    """Red first: at fb90d381 this filter succeeds on the silently rounded value."""
+    with pytest.raises(ExpressionError, match=r"round\(\) takes exactly 1 argument") as e:
+        apply_recipe(
+            {"t": FRAME}, [{"step": "filter_rows", "params": {"expression": "round(y, 2) > 1"}}]
+        )
+    assert (e.value.lineno, e.value.col_offset) == (1, 0)
+
+
+@pytest.mark.req("FR-50")
+def test_round_with_two_arguments_is_refused_through_the_callers_expression_check() -> None:
+    """Red first: at fb90d381 the check runs and reports on the silently rounded value."""
+    with pytest.raises(ExpressionError, match=r"round\(\) takes exactly 1 argument") as e:
+        CHECKS["expression"](
+            _round_check("round(y, 2) > 1"),
+            {"t": FRAME},
+            ValidationContext(reference_tables={}, reference_frames={}),
+        )
+    assert (e.value.lineno, e.value.col_offset) == (1, 0)
+
+
 # -- the call sites pass their profiles (Acceptance 7) --------------------------------------
 
 
@@ -935,7 +989,11 @@ def test_the_same_parser_accepts_a_legitimate_expression(profile: GrammarProfile
   `test_prepare.py:300-310`'s. `ValidationRule`'s fields mirror `test_sql_check.py:39-48`. The `FACTOR_SYMBOLS` stand-in is enough, because
   Slice 4 binds the real columns.
 - [ ] **Step 2: Run and see it fail.** The expected red is an `ImportError` naming
-  `GrammarProfile`. After Step 3's first sub-step makes the names exist, re-run: the refusal
+  `GrammarProfile`. **The three `through_the_callers` tests are red at `fb90d381` for the
+  finding's own cause**, and the ledger quotes each. Run them against main with only the
+  `from pricing_core.data.expressions import (...)` names that exist there. Each fails with
+  `DID NOT RAISE`, because the call silently succeeds (finding working id 9975). *(Revised 2026-09-30 on the maintainer's ruling "DATA CHECK 0 ACCEPTED" (to-lead.md), relayed by the lead: DP-S1-2's defect is finding working id 9975, #959, severity HIGH, live on main; this slice is its fix.)*
+  Then, once Step 3's first sub-step makes the names exist, re-run: the refusal
   cases must now fail as `DID NOT RAISE` (the checks are not written yet). Quote both runs in
   the ledger (Acceptance 5).
 - [ ] **Step 3: Implement.** In `expressions.py`:
@@ -1511,6 +1569,9 @@ def _call(
   - the tree, premises a–i, and every red-then-green quote;
   - Task 2's table;
   - the three `RL-` records that resolved DP-S1-1 to DP-S1-3, and the task at which each was applied;
+  - that this slice resolves finding working id 9975 (#959): the three `through_the_callers`
+    quotes, red at `fb90d381` and green at the slice's head. The finding resolves at merge.
+    *(Revised 2026-09-30 on the maintainer's ruling "DATA CHECK 0 ACCEPTED" (to-lead.md), relayed by the lead: DP-S1-2's defect is finding working id 9975, #959, severity HIGH, live on main; this slice is its fix.)*
   - ~~DP-S1-2's silent-argument finding candidate, for the auditor.~~ Discharged by working
     id 9972, which refuses the silent drop. *(Revised 2026-09-30 on the decision-maker's ruling working id 9972, #957, unminted.)*
 - [ ] Open the PR against `main`, noting the lead's file-contention dispatch record
