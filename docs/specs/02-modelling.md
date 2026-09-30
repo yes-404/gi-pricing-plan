@@ -1032,6 +1032,11 @@ lifted outside the arithmetic. An algebraically equivalent form with the branch 
 factor is *not* what the tool emits, and the certificate records the canonical form so that
 two reviewers reading the same objective read the same text.
 
+> *(Amended 2026-09-30, `RL-1289`: `derivation_version` is the `sympy` version pinned
+> in `uv.lock`, `==1.14.0` in `packages/pricing-core/pyproject.toml`. The platform
+> reads it at derivation time from `sympy.__version__`, never from a literal in code.
+> The example's `1.14.0` is that pin.)*
+
 Note this example's hessian is negative wherever `exp(f) < y/2` — it is non-convex, so it
 needs `hessian_strategy` and a second Approver (FR-152). It also has a **kink** at
 `exp(f) = y`, which FR-147/148 exist to handle.
@@ -1066,9 +1071,13 @@ Produced by `POST /custom-objectives/{id}/certify`; required for submission (FR-
                "y_range": [0, 10000000], "f_range": [-20, 20], "w_range": [0.001, 10000]},
   "overall": "certified_with_findings",
   "_note": "Figures above are illustrative of the shape of a real certificate. The convexity share and error magnitudes are those measured for this objective on this sampling grid (research/track-a-findings.md F3/F4); they are not constants.",
-  "library_versions": {"sympy": "1.13.x", "numpy": "2.x", "xgboost": "2.x"}
+  "library_versions": {"sympy": "1.14.0", "numpy": "2.x", "xgboost": "2.x"}
 }
 ```
+
+> *(Amended 2026-09-30, `RL-1289`: `library_versions.sympy` is the version pinned in
+> `uv.lock`, read from `sympy.__version__`. The example's former value was a version
+> range with no recorded rationale, and it is replaced by the pin.)*
 
 `overall` ∈ `certified` | `certified_with_findings` | `failed`. A `failed` certificate
 blocks submission entirely.
@@ -2839,7 +2848,7 @@ Custom objective path: [`WF-702-custom-objective-lifecycle.md`](../workflows/WF-
 | **LightGBM** | Secondary GBM | `fobj`/`feval`, `init_score` as the offset, monotone constraint methods (`basic`/`intermediate`/`advanced`), native categoricals |
 | **interpret (EBM)** | Transparent ML (FR-140) | Exporting term shape functions as tables; treating an EBM as a set of additive lookups — resolved 2026-08-21 (WK-661, the EBM slice): pin `interpret-core==0.7.8`, installed with the slice |
 | ~~**SHAP**~~ **The backends' own TreeSHAP** | Transparency artifacts (FR-134) | **Amended 2026-08-17 (WK-661, transparency): the `shap` package is not a dependency.** XGBoost's `pred_contribs` and LightGBM's `pred_contrib` are the same TreeSHAP algorithm on the same trees, already linked against the booster `pricing-core` holds — and `shap` would have added a dependency of its own — for plotting the frontend does (§5.3) and aggregation that is fifteen lines — to the package ADR-703 keeps importable standalone. *(Corrected 2026-08-17, same day: this row first gave the cost as "would have pulled scikit-learn and its transitive weight in". The scikit-learn half was wrong when written — `glum` 3.4.1 requires it, so it was already installed in every environment this package has ever had, as OQ-583 found the next hour. The row's conclusion is unaffected: `shap` itself is still a dependency added for work already done elsewhere.)* What is genuinely lost is **interaction values on LightGBM**: XGBoost computes them (`pred_interactions`, feeding FR-135's suggestions and never a Factor), LightGBM does not compute them at all, and `ShapSummary.interactions_available` reports that as a capability rather than as an empty list. Revisit if a third backend or kernel SHAP for a non-tree model is ever needed |
-| **SymPy** | Symbolic gradient/hessian derivation (FR-144) — **Phase 2**, with `expression` objectives (FR-150) | Differentiation of `Piecewise` (from `where`), simplification, lambdify-free code generation into our own expression tree |
+| **SymPy** | Symbolic gradient/hessian derivation (FR-144) — **Phase 2**, with `expression` objectives (FR-150) | Differentiation of `Piecewise` (from `where`), simplification, lambdify-free code generation into our own expression tree. Pinned `==1.14.0` in `packages/pricing-core/pyproject.toml` and resolved once in `uv.lock` (`RL-1289`, 2026-09-30). |
 | **NumPy** | Compiled objective evaluation | Vectorised, allocation-conscious gradient/hessian evaluation; `np.errstate` discipline for log/exp edges |
 | **Python `ast`** | Restricted grammar parsing (§4.6) | Allow-list node walking, depth/size limits, why `eval`/`compile` on user input is never acceptable |
 | **Polars** | Factor resolution, banding/grouping application, diagnostic aggregation | `replace_strict` for grouping maps (it refuses an unmapped level rather than dropping it, which is FR-104's whole point). **Banding is `numpy.searchsorted`, not `pl.cut`** — the artifact's `closed`, `null_level`, `below_range` and `above_range` policies decide where a value lands, and `cut` implements one fixed convention (added 2026-08-15, WK-661) |
