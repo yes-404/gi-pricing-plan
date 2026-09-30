@@ -74,6 +74,23 @@ environment, key, old and new value; FR-430's monitoring-configuration limb; and
 prod-sampling rate. Later, in Slice 6, RL-1232 DP-2's per-environment FR-270/FR-271
 enablement.
 
+### Presence and absence, as verified
+
+*Added after the maintainer's standing rule of 2026-09-30: each presence or absence claim rests
+on a reading of the module that owns the concept.* The owning module for settings is
+`backend/src/app/platform/settings.py`, with the process configuration in
+`backend/src/app/config.py` and the source enum in
+`packages/model-schema/src/model_schema/settings.py`.
+
+| Claim | Verdict | How it was verified at `7c354305` |
+|---|---|---|
+| A scope or environment on a setting definition | **absent** | `SettingDefinition` (`settings.py:43-52`), read: its fields are `key`, `type`, `default`, `description`, `constraints` and `feature_flag`. |
+| An Environment layer in resolution | **absent** | `resolve` (`settings.py:292-310`) reads the process candidate and one `WorkspaceSettingRow`. `_resolution` (`:359-372`) chooses `ENV`, then `WORKSPACE`, then `DEFAULT`. `SettingSource` (`packages/model-schema/src/model_schema/settings.py:27-32`) has exactly those three members. |
+| The `ENV` layer is process-wide | **present** | `_env_candidate` (`settings.py:331-335`) reads `settings.setting_overrides`. `Settings.setting_overrides` (`backend/src/app/config.py:242-249`) returns every `os.environ` key starting with `GIP_SETTING_`. It is the process's environment, the same for every request the process serves. |
+| An audited write path for the process override | **absent** | `setting_overrides` is computed from `os.environ` (`config.py:249`). Nothing writes it. `git grep -n 'setting_overrides' 7c354305 -- backend/src` gives two hits: its definition (`config.py:242`) and its one read (`settings.py:332`). |
+| Write-time validation and caller-side audit | **present** | `set_workspace_setting` (`settings.py:388-416`) calls `definition.coerce` before it writes. Its docstring says "The caller audits the change". |
+| `SETTING_INVALID` | **present** | `backend/src/app/errors.py:61`, and `SettingDefinition.coerce`'s docstring (`settings.py:55`). |
+
 ## Options
 
 As prepared, unchanged:
