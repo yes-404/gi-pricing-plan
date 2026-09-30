@@ -41,7 +41,7 @@ Working id 9901, checked free at the time of filing: no `[A-Z]{2,3}-0?9901` toke
 
 ## Verified first, at aa14e90dd77c7461aa35cc6461557b129959463f
 
-**The question** (`docs/open-questions.md:193`; mirror `docs/specs/07-platform.md:512`):
+**The question** (`docs/open-questions.md:195`; mirror `docs/specs/07-platform.md:512`):
 where does `07` FR-429's *"unless the workspace policy explicitly permits skipping with a
 recorded reason"* live, and where is the recorded reason held?
 
@@ -51,7 +51,7 @@ route refuses with `PROMOTION_ORDER_VIOLATION`, the `prod` approval submission r
 predicate** — a successful `uat` deployment, *or a skip the workspace policy permits, with its
 reason recorded*. `PL-1237` puts the decision in Slice 2 (`PL-1237:419-422`, `:795-798`) and
 holds Slice 2's leaf plan at `draft` until it is decided (`:805`); roadmap §10 gate row
-(`docs/roadmap.md:1373`).
+(`docs/roadmap.md:1496`).
 
 **Premise re-checked at this tree** (`RL-1232`'s note was read at `c9f50232`; WK-674 S1,
 #933, has landed since):
@@ -68,7 +68,7 @@ holds Slice 2's leaf plan at `draft` until it is decided (`:805`); roadmap §10 
   (`packages/model-schema/src/model_schema/approvals.py:111-160`): frozen, `extra="forbid"`,
   per artifact type **and per target environment** (`environment: str | None`, `:119-121`);
   `entry_for(artifact_type, environment)` resolves the environment-qualified entry first
-  (`:147-160`). `EVIDENCE_FLOOR["deployment"] = ("rating_version_approval",
+  (`:146-160`). `EVIDENCE_FLOOR["deployment"] = ("rating_version_approval",
   "uat_deployment")` (`:107`).
 - Its write path, `set_policy` (`backend/src/app/platform/approvals.py:137-180`), is already
   permission-gated (`admin:manage_roles`), refuses a policy below the evidence floor
@@ -88,7 +88,7 @@ holds Slice 2's leaf plan at `draft` until it is decided (`:805`); roadmap §10 
 |---|---|---|---|
 | (a) | **A new workspace-policy object in `model-schema`** (ADR-704 contract change, generated to `docs/contracts/`) | Typed, versioned, validated; route and verifier import one definition; a clean home for future non-approval workspace policy | A new artifact shape, contract, contract guard, write route, permission and audit event — all of which `set_policy` already has for the approval policy; a second policy document beside the one the evidence floor already reads, so the two halves of DP-7's one predicate read two documents |
 | (b) | **Approval-policy configuration**: a field on the environment-qualified `deployment` entry of `ApprovalPolicy` (e.g. which predecessor environments may be skipped, and that a reason is required); the per-act reason held on the `uat_deployment` evidence item / the Deployment record the skip produces | The `uat_deployment` floor already reads this document, so route and floor read the same one — DP-7's *a permitted, recorded skip **is** the evidence item* gets a direct home; the write path is already gated, floor-checked and audited; per-environment keying already exists (`entry_for`); §4.2's `expedited` block is precedent for a policy-level exception with `requires_reason` in this same document | A `07` promotion-order rule configured in `06`'s approval policy; the deploy route must read the approval policy (a `07` → `06` read the dependency direction must permit — to be checked by the ruling pass against `07` §7 and `.importlinter`); `admin:manage_roles` gates it, not an environment-scoped permission |
-| (c) | **An Environment setting** (`07` FR-431, resolved by FR-446's precedence) on the Environment object Slice 2 creates | Sits with FR-428's promotion order; audited on change | **Its resolution is exactly what `OQ-1235` asks** — FR-446's precedence has no Environment level — and `OQ-1235` is gated *Before WK-674 Slice 3* (`roadmap.md:1374`), so (c) makes Slice 2 wait on Slice 3's gate; a Setting is an untyped value no schema constrains, so the predicate reads configuration rather than a contract |
+| (c) | **An Environment setting** (`07` FR-431, resolved by FR-446's precedence) on the Environment object Slice 2 creates | Sits with FR-428's promotion order; audited on change | **Its resolution is exactly what `OQ-1235` asks** — FR-446's precedence has no Environment level — and `OQ-1235` is gated *Before WK-674 Slice 3* (`roadmap.md:1497`), so (c) makes Slice 2 wait on Slice 3's gate; a Setting is an untyped value no schema constrains, so the predicate reads configuration rather than a contract |
 | (d) | **A field on the Environment record itself** (typed, on the `model-schema` shape Slice 2 creates), e.g. `skippable: bool` on the environment that may be bypassed | Typed and next to the promotion order; no dependency on `OQ-1235` | The evidence floor then reads two documents (policy for the floor, Environment for the skip), which is what DP-7's one predicate was ruled to avoid; the permission is workspace governance, and an Environment edit is not governed by the policy path |
 
 ## Provisional recommendation — (b), not ruled
@@ -127,8 +127,8 @@ per-entry `escalation`. Both models use `extra="forbid"`. So:
 - if FR-385 is built first, or later, it changes the same model. The ruling should name the
   order, or say that the two are independent.
 
-Observed, not ruled. The lead has routed the unmodelled-keys gap to an auditor as a candidate
-finding.
+Observed, not ruled. The unmodelled-keys gap is now filed as finding `FD-1281`; the
+`status: draft` gap as `FD-1280`.
 
 ## Ruled
 
