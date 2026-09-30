@@ -1,18 +1,18 @@
 ---
-id: PL-9820
+id: PL-1278
 family: plan
 kind: leaf
 title: WK-1250 Slice 1 — The sub-graph as a stored, versioned artifact (FR-217's artifact limb): leaf plan
 status: draft                   # draft → active → superseded | retired (§1.2a)
-created: 2026-09-29
+created: 2026-09-30
 owner: planner
-tree: 19c395acad594d1b193da197461bec85201d2248
+tree: 4f5da86413d96862331723249db0f7b0bc98ebc4
 phase: P2
 work: WK-1250
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1254, FD-1241, RL-1242, PL-1239]
+relates: [PL-1254, FD-1241, RL-1242, PL-1239, RL-1263, PL-1237, PL-1267, PL-1268]
 ---
 
 # WK-1250 Slice 1 — The sub-graph as a stored, versioned artifact (FR-217's artifact limb): leaf plan
@@ -28,7 +28,7 @@ inline, compile or score a sub-graph (Slice 2), and does not touch FR-218's purp
 (Slice 3).
 
 **Architecture.** The closest precedent is the Rating Algorithm: one row per version, its
-validated content stored as JSONB (`RatingAlgorithmRow`, `backend/src/app/db/models.py:1920-1948`),
+validated content stored as JSONB (`RatingAlgorithmRow`, `backend/src/app/db/models.py:1926-1954`),
 a thin router (`backend/src/app/api/rating_algorithms.py`) over a service module
 (`backend/src/app/platform/rating_algorithms.py`). The sub-graph follows it with three
 differences: every write records an Audit Event in the same transaction (the precedent for
@@ -41,7 +41,7 @@ pytest. No new dependency.
 
 **Spec:**
 - [`../specs/03-rating-engine.md`](../specs/03-rating-engine.md) §3.1 — **FR-217** (`03:86`
-  at the tree above); §4 (a new §4.11, Task 1); §5.1 (`03:741-768`, four new rows, Task 1).
+  at the tree above); §4 (a new §4.11, Task 1); §5.1 (`03:742-769`, four new rows, Task 1).
 - [`../specs/00-overview.md`](../specs/00-overview.md) §2 — the glossary, which gains
   **Sub-graph** (`CLAUDE.md` §7: "a new term goes there before first use"). `00` FR-4
   (`00:208`, immutability) and FR-16 (`00:220`, a workspace is not a tenant).
@@ -58,28 +58,45 @@ artifact (FR-217's artifact limb)"** (`PL-1254:260-286`), whose Sequencing block
 
 ## Status
 
-**Draft**, filed 2026-09-29 against the tree above under **working id 9820**, which is
-unused on `origin/main`, on every `origin/*` branch and on the head of every open PR at the
-time of filing (swept with `git grep -o -E '\b98[12][0-9]\b'` over each ref; the only hit in
-9810–9829 was 9829). It takes its real id from `python3 scripts/doc-id.py next --ref
-origin/main` at its merge turn. *(Revised 2026-09-29 on auditor-plans2's audit of #929 at
-`503c9e03`, F3: the first text said #924 held SL-1255 to SL-1259 unmerged. #924 has since
-merged. `origin/main` at `25b0ead2` carries SL-1255 to SL-1260, and `next` prints 1261
-there.)*
+**Draft.** Minted **PL-1278** on 2026-09-30 at its merge turn, from `python3 scripts/doc-id.py
+next --ref origin/main` at `4f5da86413d96862331723249db0f7b0bc98ebc4`, which printed 1278.
+First filed 2026-09-29 against `19c395acad594d1b193da197461bec85201d2248` as working id 9820.
 
-*Re-read 2026-09-29 at `25b0ead27a07dcf64ddd38845527fba29cdf5414`, merged into this branch.*
-`git diff 19c395ac 25b0ead2 -- backend packages` is empty, so every code cite and premise a–l
-holds unchanged. The migration head is still `a71c3e95d204`.
+*Re-read 2026-09-30 at `4f5da864`, merged into this branch; `tree:` above names it.* Between
+the first filing and this tree, WK-674 Slice 1 (SL-1255) merged as #933. It changed
+`backend/src/app/db/models.py` (+22 lines, including `TenantMarkerRow` at the end of the file),
+`backend/src/app/main.py` (the lifespan) and two migrations. `git diff 19c395ac 4f5da864 --
+backend packages scripts` touches no other file this plan cites. Every cite below was
+re-pinned at `4f5da864`. The moved ones:
+- `RatingAlgorithmRow` `:1920-1948` → `:1926-1954`;
+- its `id` `:1930` → `:1936`;
+- its `updated_at` `:1939-1941` → `:1945-1947`;
+- `RateTableRow` `:1951` → `:1957`;
+- `RateTableVersionRow` `:1978` → `:1984`;
+- the one `parent_id` column `:818` → `:824`;
+- `JobRow` `:90` → `:92`;
+- `main.py`'s lifespan `:75-94` → `:76-95`;
+- its router block `:134-145` → `:136-147` (`rating_algorithms` at `:136`; its import still at `:34`);
+- `backend/tests/test_api_jobs.py` `:172` → `:173` (the test's `def`; `:172` is its marker).
+- In the docs: `03` gained one line at `:733` (RL-1261), so its §5.1 table `:741-768` →
+  `:742-769` and the Regression Suite rows `:755-756` → `:756-757`. `docs/roadmap.md`'s
+  WK-1250 row `:862` → `:1086`, and `delivery-process.md` §8's rule `:156-157` → `:162-163`.
+  The texts quoted from each are unchanged.
+
+**The migration head changed** from `a71c3e95d204` to `d7e2a9b5c418`
+(`backend/migrations/versions/d7e2a9b5c418_tenant_marker.py`; 48 revision files, one head).
+Nothing else in premises a–l changed.
 
 **Activation needs, in order:**
-1. PL-1254 `active`. At the tree above it is `status: draft` (`PL-1254:6`), and WK-1250 is
+1. PL-1254 `active`. At `4f5da864` it is still `status: draft` (`PL-1254:6`), and WK-1250 is
    `status: draft` (`docs/roadmap.md`, `### WK-1250`).
 2. The three `SL-` rows for WK-1250 minted. PL-1254 cuts them but does not mint them: "The
    three `SL-` rows are cut here and minted, `draft`, with ids the lead issues, when this
    plan is activated" (`PL-1254:221-222`). **This PR adds no `SL-` row.**
-3. The map's **DP-1, DP-3 and DP-4** resolved by the decision-maker (`PL-1254:210`, `:212`, `:213`,
-   Blocking "yes — Slice 1" on each), and this plan's **DP-S1-1 to DP-S1-4** below.
-4. A free gate slot under the parallel-start ruling (working id 9760, #928), and the lead's go (see **Dependencies**).
+3. The map's **DP-1, DP-3 and DP-4** resolved by the decision-maker (`PL-1254:210`, `:212`,
+   `:213`, Blocking "yes — Slice 1" on each), and this plan's **DP-S1-1 to DP-S1-4** below.
+   #938 (head `f04e50d3`, titled "PREPARED, NOT RULED") carries them unruled.
+4. A free gate slot under RL-1263, and the lead's dispatch (see **Dependencies**).
 
 ### Dependencies — what Slice 1 needs that is not built or not merged
 
@@ -89,91 +106,84 @@ holds unchanged. The migration head is still `a71c3e95d204`.
   Constraints give the reason: every row carries a `workspace_id` (`00` FR-16) and reads are
   scoped to the caller's workspace, "which exists today. A workspace is not a tenant and not
   an isolation boundary (`00` FR-16), so nothing here depends on WK-674's tenancy"
-  (`PL-1254:125-131`). Checked against code at the tree above: the workspace filter this
-  slice copies is `RatingAlgorithmRow.workspace_id == workspace_id` in
-  `backend/src/app/platform/rating_algorithms.py` (`create_algorithm`, `get_algorithm`),
-  fed by `caller.workspace_id` in `backend/src/app/api/rating_algorithms.py:48,68`. Nothing
-  in PL-1239's tasks (the tenant marker, `platform_build`) is read or needed here. Checked from
-  WK-674's side as well: `grep -c -i 'sub_graph\|sub-graph\|FR-217\|FR-218\|WK-1250'` prints 0
-  on both PL-1237 (WK-674's map plan) and PL-1239.
+  (`PL-1254:125-131`). Checked against code: the workspace filter this slice copies is
+  `RatingAlgorithmRow.workspace_id == workspace_id` in
+  `backend/src/app/platform/rating_algorithms.py` (`create_algorithm`, `get_algorithm`), fed
+  by `caller.workspace_id` in `backend/src/app/api/rating_algorithms.py:48,68`. WK-674 Slice 1
+  has since merged, and it changed neither file.
 - **"After WK-674" is bare sequencing, not a dependency.** `PL-1254:230-231` gives §8's
-  one-slice-at-a-time rule as its only reason. `docs/roadmap.md:862` ("**Sequenced after
+  one-slice-at-a-time rule as its only reason. `docs/roadmap.md:1086` ("**Sequenced after
   WK-674 and before WK-675**, so that WK-675's DAG designer authors a sub-graph against a
-  backend that inlines one") gives a reason for the WK-675 half only. The parallel-start ruling
-  (working id 9760, #928), read at `477aa3fd`, quotes the maintainer's parallel-start decision, item 5: "The
-  planner re-derives each 'after WK-674' as either a dependency (a named slice or artifact)
-  or bare sequencing; bare sequencing is lifted." This slice names no WK-674 slice or
-  artifact, so the sequencing is lifted. The real dependencies the ruling lists for this Work are
-  "WK-675 S9 needs WK-1250" and "WK-1250 S2's trace limb needs the FD-1246 ruling". Neither
-  constrains Slice 1.
+  backend that inlines one") gives a reason for the WK-675 half only. RL-1263 quotes the
+  maintainer's parallel-start decision, item 5: "The planner re-derives each "after WK-674"
+  as either a dependency (a named slice or artifact) or bare sequencing; bare sequencing is
+  lifted." This slice names no WK-674 slice or artifact. The real dependencies RL-1263 lists
+  for this Work are "WK-675 S9 needs WK-1250" and "WK-1250 S2's trace limb needs the FD-1246
+  ruling". Neither constrains Slice 1.
 - **Decisions: seven open.** DP-1, DP-3, DP-4 (map) and DP-S1-1 to DP-S1-4 (below). None is
-  resolved on `origin/main` at `19c395ac` (re-checked at `25b0ead2`). No open PR carried a
-  ruling on any at filing: the head of every open PR was diffed against `origin/main` for
-  `sub-graph|sub_graph|FR-217|FR-218|PL-1254|WK-1250`. Only #920 (WK-675's map plan,
-  `1a2427f1`), #922 (`c310aea7`) and #909 (`259e8e16`) matched, and none of those lines rules
-  a DP.
-- **Process: the parallel start is recorded, in the parallel-start ruling (working id 9760, #928).** Under its rules,
-  **WK-1250 Slice 1 may run as a build slice beside another Work's slice once its DPs are
-  ruled.** The rules: at most two build slices at once, from different Works, each holding one
-  of the two gate slots; a slice that takes an NFR measurement runs alone. The two slices must
-  not both change the same existing function, class, method, spec section or policy table.
-  Registry files are exempt for append-only edits (the table below). This slice takes no NFR
-  measurement. The ruling also quotes the maintainer's 22:57:52 BST entry, whose title reads
-  "lane B opens with WK-690". So this slice takes a slot when the lead dispatches it into one;
-  it is not the slice that opens lane B. *(Revised 2026-09-29 on auditor-plans2's audit of
-  #929 at `503c9e03`, F1: the first text said the parallel start was not recorded and needed a
-  maintainer record. It predated #928.)*
+  resolved on `origin/main` at `4f5da864`: `git grep -n -E 'PL-1254|WK-1250' -- docs/rulings`
+  prints nothing. #938 is prepared and not ruled (its title).
+- **Process: the parallel start is recorded in RL-1263.** Under its rules, **WK-1250 Slice 1 may
+  run as a build slice beside another Work's slice once its DPs are ruled.** The rules:
+  - at most two build slices at once, from different Works, each holding one of the two gate
+    slots;
+  - a slice that takes an NFR measurement runs alone;
+  - the two slices must not both change the same existing function, class, method, spec
+    section or policy table;
+  - registry files are exempt for append-only edits (listed below).
 
-### File contention with WK-674 Slice 1, under the parallel-start ruling's option (c)
+  This slice takes no NFR measurement. RL-1263 quotes the maintainer's 22:57:52 BST entry,
+  whose title reads "lane B opens with WK-690", so this slice takes a slot when the lead
+  dispatches it into one. *(Revised 2026-09-29 on auditor-plans2's audit at `503c9e03`, F1;
+  re-cited 2026-09-30 by id now that the ruling is minted.)*
 
-The parallel-start ruling (working id 9760, #928) quotes the maintainer's option (c): two concurrent build slices
-"may not both change the same **existing** function, class, method, spec section, or policy
-table". **Registry files are exempt, and only these**, each for **append-only** edits:
+### File contention under RL-1263's option (c)
+
+RL-1263 quotes the maintainer's option (c): two concurrent build slices "may not both change
+the same **existing** function, class, method, spec section, or policy table". **Registry files
+are exempt, and only these**, each for **append-only** edits. This is the list as RL-1263's
+dated correction of 23:20:11 BST gives it (`RL-1263:104-116`):
 - `backend/src/app/db/models.py`, a new class appended;
 - `backend/src/app/main.py`, a router registration or lifespan hook added;
-- a new revision file in the migrations directory;
-- generated files (`docs/contracts/**` generated outputs, `docs/INDEX.md`).
+- `backend/migrations/versions/`, a new revision file;
+- generated files, exactly `docs/contracts/openapi/generated.json`,
+  `docs/contracts/schemas/generated/` and `docs/INDEX.md`. The hand-authored contracts are
+  **not** exempt.
 
-The ruling names the migrations directory as `backend/alembic/versions/`, but this repository's
-is `backend/migrations/versions/`. The lead reports a correction pending with the maintainer.
-"At the second merge", the later slice merges main in, re-points its `down_revision` to one
-head, regenerates the generated files, and re-runs its full gate on the merged tree.
+At the second merge, the later slice merges main in, re-points its `down_revision` to one
+head, regenerates the generated files and re-runs its full gate on the merged tree.
 
-WK-674 Slice 1's files are PL-1239's Tasks 1–5 at `origin/main` `25b0ead2` (it merged #924).
-Against this plan's file list (Tasks 1–5 below):
+**WK-674 Slice 1 is merged** (#933, SL-1255 closed by #934), so this slice's migration names
+`d7e2a9b5c418` as its `down_revision` from the start. The concurrent slices it can now meet are
+those of the Works with plans on `origin/main`:
+- WK-674 S2 to S6, in PL-1237;
+- WK-673, in PL-1267;
+- WK-690, in PL-1268, which is `active` with SL-1271 to SL-1275 cut (#943).
 
-| File | WK-674 S1 (PL-1239) | This slice | Under option (c) |
+PL-1276 (WK-1170) and PL-1277 (WK-1169) change no file on this slice's list. PL-1276 mentions
+`sub_graph` only to describe this Work (`PL-1276:247`). Each row below was read in the named
+plan at `4f5da864`.
+
+| This slice's path | What it does there | Also changed by | Under option (c) |
 |---|---|---|---|
-| `backend/migrations/versions/` | one new revision | one new revision (Task 3) | **Exempt**: a new revision file each. The single head at `25b0ead2` is `a71c3e95d204`, so both name it as `down_revision`; the second to merge re-points its own to the first's revision, leaving exactly one head (`07` FR-417, `tests/test_repository_invariants.py`) |
-| `backend/src/app/db/models.py` | edits the existing `JobRow` (`:90`), adding a column | appends a new `SubGraphVersionRow` class at the end of the file, and edits no existing class (Task 3) | **Exempt for this slice**: an append. `JobRow` is WK-674's edit to an existing class, which this slice does not touch, so no definition is changed by both |
-| `backend/src/app/main.py` | reorders and extends the existing lifespan (`:75-94`) | adds one router registration: its import beside `:34` and one `include_router` beside `:134-145`. Nothing else (Task 5) | **Exempt for this slice**: a router registration added. This slice does not touch the lifespan |
-| `docs/contracts/openapi/generated.json`, `docs/contracts/schemas/generated/` | regenerated (`Job` gains `platform_build`) | regenerated (four routes; `sub-graph.schema.json` added) | **Exempt**: generated, regenerated at the second merge, never hand-merged |
-| `docs/INDEX.md` | regenerated | regenerated | **Exempt**: generated |
-| `backend/tests/conftest.py` | "if `api_settings` needs the new setting" (PL-1239 Task 4) | not touched (a fixture this slice needs goes in its own test module) | Not shared |
+| `backend/migrations/versions/` | one new revision, `down_revision = "d7e2a9b5c418"` | WK-674 S2 (PL-1237 Task 2, the Deployment migration), WK-673 S4 (PL-1267, the persisted artifact) | **Exempt.** The second to merge re-points to one head |
+| `backend/src/app/db/models.py` | appends `SubGraphVersionRow` at the end of the file; edits no existing class | WK-674 S2, WK-673 S4 (new rows) | **Exempt** for this slice's append. An existing-class edit by another slice is not this slice's to check |
+| `backend/src/app/main.py` | one router import beside `:34`, one `include_router` in `:136-147` | WK-673 S4 (its routes) | **Exempt**: a router registration each |
+| `docs/contracts/openapi/generated.json`, `docs/contracts/schemas/generated/` | regenerated | any slice that adds a shape or route | **Exempt**: regenerated, never hand-merged |
+| `docs/INDEX.md` | regenerated | every docs change | **Exempt** |
+| `docs/specs/03-rating-engine.md` §5.1 | four rows appended to the REST table | WK-674 S2 (a `GET` for deployment history, `PL-1237:773-774`), WK-674 S6 (a routing route, `PL-1237:977-978`), WK-673 S4 (routes "with RBAC", `PL-1267:527`) and S7 (the diff route's portfolio parameter, `PL-1267:589`) | **Serialises.** §5.1 is one existing spec section, and it is not on the registry list |
+| `docs/specs/03-rating-engine.md` §4 | a new subsection, §4.11 | WK-674 S2 (the `Deployment` and `Environment` contracts, "appends one to `03` §4, after §4.8", `PL-1237:772`), WK-674 S6 (routing and shadow contracts, `PL-1237:977`), WK-673 S1 (`03` §4.6 and §4.8, `PL-1267:449`, `:454`) | **Serialises with WK-674 S2 and S6.** Each appends a new subsection to §4, and two slices each taking the next number, §4.11, is a section-number collision (`CLAUDE.md` §5). WK-673 S1 edits existing §4.6 and §4.8, which this slice does not touch, so that pair does not collide on §4 |
+| `docs/specs/03-rating-engine.md` §2 | one glossary row | none found | Not shared |
+| `docs/specs/00-overview.md` §2 | one glossary row (**Sub-graph**) | WK-673 S1, if it adds a term ("`00` §2 glossary first", `PL-1267:469`) | **Serialises if WK-673 S1 adds a term** |
+| `docs/specs/06-governance.md` | where DP-1's ruling lands; under DP-1 (b), likely §3.3 | WK-690 S3 (its coverage table gives it `06` §3.3's FR-366 and FR-367, `PL-1268:210-211`, and it adds a `06` §4.1 row, `:491-493`), WK-674 S2 (`06` §4.2, `PL-1237:776`) | **Serialises with WK-690 S3 if both change §3.3's text** (§3.3 holds both the evidence table and FR-366/FR-367, `06:105-148`); the lead checks at dispatch |
+| `scripts/generate-contracts.py` | one entry added to the slug → symbol map (`:39-101`) | any slice that registers a new generated shape (WK-673 S4's "generated contract", `PL-1267:522`) | **Not on the registry list.** An added dict entry is an edit to an existing definition, so it serialises unless the lead's dispatch record names the path, per RL-1263 ("unless the lead's dispatch record names the path and the check showing that no existing definition is edited by both") |
+| `packages/model-schema/src/model_schema/__init__.py` | two exports added | any slice exporting a new shape | **Not on the registry list**; the same as the row above |
+| `packages/model-schema/src/model_schema/rating.py` | only if a graph helper must be promoted (Task 2) | WK-673 (`rating.py:50-60`, `:569`, `PL-1267:316-318`) | **Serialises if Task 2 promotes a helper**; otherwise untouched |
 
-**No real conflict remains with WK-674 Slice 1.** Every other path this slice changes is
-outside PL-1239's list: `scripts/generate-contracts.py` (PL-1239 runs it but edits only
-`model_schema/jobs.py`), `model_schema/__init__.py`, `03`, `00` and `06`. PL-1239's other
-files are `07-platform.md`, `model_schema/jobs.py`, `config.py`, `platform/jobs.py`,
-`worker/tasks.py`, `platform/blobs.py`, `worker/celery_app.py`, `platform/tenancy.py` and their
-tests.
-
-**Existing sections this slice changes**, which the lead checks against whichever slice holds
-the other slot (the ruling names `03-rating-engine.md` as shared with WK-674 §3.10, WK-673 §3.11
-and FR-266, WK-690 FR-244 and WK-675 §5.1):
-- `03` §2 (a row appended);
-- `03` §4 (a new §4.11, no existing subsection edited);
-- `03` §5.1 (four rows appended to the REST table);
-- `00` §2 (a row);
-- `06`, wherever DP-1's ruling lands (under (b), likely §3.3);
-- `03` §4.3's FR-20 invariant (`03:399-401`), if DP-1's ruling puts the clarification in this
-  slice rather than Slice 2.
-
-Under DP-1 (a) the slice would also edit `packages/model-schema/src/model_schema/approvals.py`
-(the evidence entries beside `:103`) and `backend/src/app/platform/approvals.py`'s
-`CREATION_ACTIONS` (`:74-80`). Those are existing policy tables, so they serialise, and that
-outcome is replanned anyway. This slice touches no `score.py`, `TraceStep` or
-`compile_bundle` (DP-S1-4 (a)).
+**No `score.py`, `TraceStep` or `compile_bundle`** under DP-S1-4 (a). **No `approvals.py`**
+under DP-1 (b). Under DP-1 (a), `packages/model-schema/src/model_schema/approvals.py`'s
+policy tables (WK-674 S2 edits `DEFAULT_POLICY`, `PL-1237:776-778`) would serialise, and that
+outcome is replanned anyway.
 
 ## Acceptance Standard
 
@@ -232,7 +242,7 @@ predicts**; a failure for any other cause is a plan defect, reported, not worked
    passes with the four new routes in it.
 8. **Workspace scoping (`06` FR-345, `00` FR-16).** A sub-graph created in workspace A is
    **404, not 403**, to a caller in workspace B on `GET` of the version and absent from B's
-   list. Mirror `backend/tests/test_api_jobs.py:172`
+   list. Mirror `backend/tests/test_api_jobs.py:173`
    (`test_a_job_in_another_workspace_is_404_not_403`); do not invent a fixture.
 9. **Resolver.** `resolve_ref(session, workspace_id=…, ref=ArtifactRef)` (Task 4) returns
    exactly the addressed version's content for `sub_graph:slug@version`; an unknown slug, an
@@ -249,7 +259,7 @@ predicts**; a failure for any other cause is a plan defect, reported, not worked
     collected). `backend/tests/test_demo_guide.py` passes with the new §5.1 rows present in
     the generated contract.
 12. **Item 11.** Before the lead merges, the maintainer's **MERGE-ACK**, naming the PR's full
-    head SHA, is recorded in the lead's channel file (`~/gi-pricing-plan.local/channel/to-lead.md`),
+    head SHA, is recorded in the lead's channel file, `~/gi-pricing-plan.local/channel/to-lead.md`, a local file outside the repository that `.claude/roles/lead.md:156-157` (rule 4) names,
     given by the maintainer or on the maintainer's behalf. **It is never posted on the PR.**
     The slice's clean audit is filed. Per `CLAUDE.md` §13 a Slice closes on a clean audit and
     the lead's merge — no maintainer acceptance line is required for a slice, and none is to
@@ -269,7 +279,7 @@ predicts**; a failure for any other cause is a plan defect, reported, not worked
 - **A version is immutable** (`00` FR-4): no update route, no update code path.
 - **Every row carries a `workspace_id`; a workspace is not a tenant** (`00` FR-16).
 - **The migration chain has exactly one head** (`07` FR-417).
-- **Registry files are edited append-only** (the parallel-start ruling (working id 9760, #928), option (c)).
+- **Registry files are edited append-only** (RL-1263, option (c)).
   `db/models.py` gets a new class appended, `main.py` gets a router registration added, the
   migrations directory gets a new revision file, and generated files are regenerated. Any
   edit to an existing definition in a shared file is a serialisation question for the lead,
@@ -300,11 +310,11 @@ Supporting requirements this slice must honour but does not own: `00` FR-4, `00`
 - A mount-point check against a parent's steps → **Slice 2** (a fragment does not know its
   parent).
 
-### Premises re-derived at the tree above
+### Premises re-derived at the tree above (`4f5da864`)
 
 | # | Premise | Evidence |
 |---|---|---|
-| a | No sub-graph table, route or service exists | `git grep -n -i 'sub_graph\|subgraph' -- backend/src packages/*/src` prints 7 lines: `model_schema/__init__.py:282,669`, `model_schema/rating.py:340,343,390`, `model_schema/refs.py:25`, and `pricing_core/rating/score.py:399,401` (docstrings). None under `backend/src` |
+| a | No sub-graph table, route or service exists | `git grep -n -i 'sub_graph\|subgraph' -- backend/src packages/*/src` prints 8 lines *(corrected 2026-09-30: the first filing said 7 while listing these 8; the count is the same at `19c395ac` and `4f5da864`)*: `model_schema/__init__.py:282,669`, `model_schema/rating.py:340,343,390`, `model_schema/refs.py:25`, and `pricing_core/rating/score.py:399,401` (docstrings). None under `backend/src` |
 | b | `SubGraphRef` is `ref: ArtifactRef` + `mount_point: str`, frozen, `extra="forbid"`; `RatingAlgorithm.sub_graphs` defaults to `[]` | `packages/model-schema/src/model_schema/rating.py:340-351`, `:390` |
 | c | `"sub_graph"` is a legal `ArtifactRef` type | `packages/model-schema/src/model_schema/refs.py:25` |
 | d | Intermediate Derived Values carry no declared type: only `InputContractField` (`:205-211`) and `AlgorithmOutput` (`:238-244`) have a `type` | `grep -n 'type:' packages/model-schema/src/model_schema/rating.py` — so a port is a name, not a typed field (DP-3 (a) as recommended here) |
@@ -312,9 +322,9 @@ Supporting requirements this slice must honour but does not own: `00` FR-4, `00`
 | f | Neither the rating-algorithm nor the rate-table write path records an Audit Event; custom objectives do | `grep -n 'audit\.' backend/src/app/platform/rating_algorithms.py backend/src/app/platform/rate_tables.py` prints nothing; `backend/src/app/platform/objectives.py:238` calls `audit.record(…, action="custom_objective.created", entity_ref=f"custom_objective:{row.slug}@{row.version}", …)` |
 | g | `requires(permission)` passes no resource, so only a workspace-wide assignment satisfies it | `backend/src/app/api/authz.py:54-77`; `backend/src/app/platform/rbac.py:205-216` (`_covers`: "A scoped assignment cannot satisfy a question about no particular resource") |
 | h | `rating:read` and `rating:write` exist; the Analyst role holds both | `packages/model-schema/src/model_schema/permissions.py:47-48`, `:113-114` |
-| i | The migration chain's single head is `a71c3e95d204` | a scan of every `revision`/`down_revision` under `backend/migrations/versions/` (46 files) |
+| i | The migration chain's single head is `d7e2a9b5c418` (`backend/migrations/versions/d7e2a9b5c418_tenant_marker.py`) | a scan of every `revision`/`down_revision` under `backend/migrations/versions/` (48 files). *(2026-09-30: it was `a71c3e95d204` over 46 files at the first filing; WK-674 Slice 1's two revisions, #933, moved it.)* |
 | j | The generated-contract registry is a slug → symbol map | `scripts/generate-contracts.py:39-101` (e.g. `"custom-objective": "CustomObjective"`) |
-| k | `03` §4's last subsection is §4.10 `ScoreComparison`, and §5.1 has no sub-graph row | `grep -n '^### 4\.' docs/specs/03-rating-engine.md`; `03:741-768` |
+| k | `03` §4's last subsection is §4.10 `ScoreComparison`, and §5.1 has no sub-graph row | `grep -n '^### 4\.' docs/specs/03-rating-engine.md`; `03:742-769` |
 | l | `00` §2 has no "Sub-graph" term | `grep -n -i 'sub-graph\|sub_graph' docs/specs/00-overview.md` prints nothing |
 
 The executor re-reads each at its own tree and stops on any that no longer holds
@@ -331,8 +341,8 @@ decision-maker's (`delivery-process.md` §3). The planner rules none of them.
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-S1-1 | Which permission do the four routes check, and may a principal scoped to a named Rating Algorithm (`06` FR-345) author a sub-graph? | (a) `rating:write` for the two writes and `rating:read` for the two reads, through `requires()`, which admits only a workspace-wide assignment (premise g). No new permission, no new scope type; (b) new `sub_graph:read` / `sub_graph:write` permissions, added to `06`'s catalogue, `permissions.py` and the built-in roles, still workspace-wide; (c) as (a), plus a new `ScopeType.SUB_GRAPH` so an assignment can name one sub-graph | **(a).** A sub-graph is rating maths authored by whoever authors algorithms, and §5.1's Regression Suite rows set the precedent of reusing `rating:write`/`rating:read` for a rating artifact (`03:755-756`). A sub-graph can be mounted by any algorithm in the workspace, so authoring one is a workspace-wide act, which is exactly what `requires()` enforces today. (b) adds catalogue entries (`RL-1236` governs that catalogue) for no separation anyone has asked for. (c) builds a scope nobody needs before a designer exists | decision point | yes — Tasks 1 and 5 | |
-| DP-S1-2 | How are versions stored and numbered, and what are the routes? | (a) One table `sub_graph_versions`, one row per version, content as JSONB, unique `(workspace_id, slug, version)` — the `RatingAlgorithmRow` layout. `POST /api/v1/sub-graphs` creates version 1 of a new slug (409 if the slug exists); `POST /api/v1/sub-graphs/{slug}/versions` creates the next version, numbered by the server as the current maximum plus one, with the unique constraint turning a race into a 409 (the `objectives.py:229-236` form); `GET /api/v1/sub-graphs/{slug}@{version}`; `GET /api/v1/sub-graphs/{slug}/versions`, cursor-paginated with `app.api.pagination`; (b) two tables, `sub_graphs` + `sub_graph_versions`, the rate-table layout (`models.py:1951`, `:1978`); (c) as (a) but the client supplies `version` in the body and one `POST` does both, the rating-algorithm form (`api/rating_algorithms.py:28-50`) | **(a).** A server-numbered version has no gaps, so `@4` always means the fourth change; one table is enough because a sub-graph has no container-level state (no status under DP-1 (b), no owner beyond the workspace). (b) is a second table with nothing in it. (c) lets two authors pick `@5` and lets a pin name a version that was never the latest. **`00` FR-4's `parent_id`:** the only table carrying one is at `models.py:818`; neither rating artifact has one. Under (a) the previous version is `version - 1`, so no column is added — the decision-maker may rule otherwise | decision point | yes — Tasks 1, 3 and 5 | |
+| DP-S1-1 | Which permission do the four routes check, and may a principal scoped to a named Rating Algorithm (`06` FR-345) author a sub-graph? | (a) `rating:write` for the two writes and `rating:read` for the two reads, through `requires()`, which admits only a workspace-wide assignment (premise g). No new permission, no new scope type; (b) new `sub_graph:read` / `sub_graph:write` permissions, added to `06`'s catalogue, `permissions.py` and the built-in roles, still workspace-wide; (c) as (a), plus a new `ScopeType.SUB_GRAPH` so an assignment can name one sub-graph | **(a).** A sub-graph is rating maths authored by whoever authors algorithms, and §5.1's Regression Suite rows set the precedent of reusing `rating:write`/`rating:read` for a rating artifact (`03:756-757`). A sub-graph can be mounted by any algorithm in the workspace, so authoring one is a workspace-wide act, which is exactly what `requires()` enforces today. (b) adds catalogue entries (`RL-1236` governs that catalogue) for no separation anyone has asked for. (c) builds a scope nobody needs before a designer exists | decision point | yes — Tasks 1 and 5 | |
+| DP-S1-2 | How are versions stored and numbered, and what are the routes? | (a) One table `sub_graph_versions`, one row per version, content as JSONB, unique `(workspace_id, slug, version)` — the `RatingAlgorithmRow` layout. `POST /api/v1/sub-graphs` creates version 1 of a new slug (409 if the slug exists); `POST /api/v1/sub-graphs/{slug}/versions` creates the next version, numbered by the server as the current maximum plus one, with the unique constraint turning a race into a 409 (the `objectives.py:229-236` form); `GET /api/v1/sub-graphs/{slug}@{version}`; `GET /api/v1/sub-graphs/{slug}/versions`, cursor-paginated with `app.api.pagination`; (b) two tables, `sub_graphs` + `sub_graph_versions`, the rate-table layout (`models.py:1957`, `:1984`); (c) as (a) but the client supplies `version` in the body and one `POST` does both, the rating-algorithm form (`api/rating_algorithms.py:28-50`) | **(a).** A server-numbered version has no gaps, so `@4` always means the fourth change; one table is enough because a sub-graph has no container-level state (no status under DP-1 (b), no owner beyond the workspace). (b) is a second table with nothing in it. (c) lets two authors pick `@5` and lets a pin name a version that was never the latest. **`00` FR-4's `parent_id`:** the only table carrying one is at `models.py:824`; neither rating artifact has one. Under (a) the previous version is `version - 1`, so no column is added — the decision-maker may rule otherwise | decision point | yes — Tasks 1, 3 and 5 | |
 | DP-S1-3 | Which error codes does a refused sub-graph carry? | (a) Reuse `03` §5.1's codes: a cycle → `RATING_GRAPH_CYCLIC`; a consumed name nobody produces or an unproduced output → `RATING_GRAPH_UNRESOLVED_REF`; any other shape refusal (duplicate `step_id`, `sub_graphs` present, an `input`/`output` step, an empty change note) → `VALIDATION_FAILED`; unknown `slug@version` → `NOT_FOUND`; an existing version → 409 `VALIDATION_FAILED`, as `create_algorithm` does; (b) new `SUB_GRAPH_*` codes owned by `03` §5.1 | **(a).** The defects are the same defects the algorithm's own validator names, and a client that already handles them handles these. (b) adds codes that differ only in which artifact carried the defect, which the `instance` path already says | decision point | yes — Tasks 1 and 5 | |
 | DP-S1-4 | How deep is create-time validation? `pricing-core`'s `validate_algorithm` (`packages/pricing-core/src/pricing_core/rating/compile.py:261-275`) runs five checks — result types, determinism, division guards, scale cap, vocabulary — each taking a whole `RatingAlgorithm` | (a) The shape invariants only (acceptance 4), in `model-schema`. The five expression checks run on the **inlined** algorithm at compile, in Slice 2, where the parent's input contract and outputs exist; (b) generalise the five helpers to take a step list and run the context-free ones at create, leaving result types to compile; (c) wrap the fragment in a synthetic `RatingAlgorithm` and run `validate_algorithm` unchanged | **(a).** It keeps `pricing-core` out of this slice (and out of any file Slice 2 edits), and every check still runs before a bundle can score. The cost is that a fragment with a non-deterministic expression is saved and refused only when an algorithm that mounts it is compiled; Slice 2's gate must then prove that refusal. (b) is the stricter FR-212 reading ("rejected at save") and touches `compile.py`, which Slice 2 also rewrites. (c) invents an input contract the fragment does not have, so result-type checks would pass or fail on fiction | decision point | yes — Tasks 2 and 5 | |
 
@@ -354,9 +364,10 @@ then **replanned, not patched** (a new `PL-` with `supersedes:`). DP-3 (b) or (c
 - [ ] Re-derive premises a–l; record the tree and each result in the ledger.
 - [ ] `gh pr list --state open`, and read anything that rules on FR-217, sub-graphs, the
   permission catalogue or `03` §4–§5.1 ([`README.md`](README.md) convention 4). Name the SHA
-  read. **Check the migration head again** (premise i): if WK-674 Slice 1 has merged, its
-  revision is the new head and this slice's `down_revision` names it.
-- [ ] **At the second merge** (the parallel-start ruling (working id 9760, #928), option (c)), if the other gate slot's
+  read. **Check the migration head again** (premise i). At `4f5da864` it is `d7e2a9b5c418`,
+  WK-674 Slice 1's. If another revision has merged since, this slice's `down_revision` names
+  the new head.
+- [ ] **At the second merge** (RL-1263, option (c)), if the other gate slot's
   slice merges first: merge `origin/main` in, re-point `down_revision` so there is exactly one
   head, regenerate `docs/contracts/` and `docs/INDEX.md` (never hand-merge them), and re-run
   Task 6's full gate on the merged tree.
@@ -442,17 +453,17 @@ map at `:39-101`); regenerate `docs/contracts/`.
 ### Task 3: The table and its migration
 
 **Files:** Modify `backend/src/app/db/models.py` (a `SubGraphVersionRow` class **appended at
-the end of the file**, and no edit to any existing class — the parallel-start ruling (working id 9760, #928), option
+the end of the file**, and no edit to any existing class — RL-1263, option
 (c)'s registry exemption; see **File contention**); create one Alembic revision under
 `backend/migrations/versions/`; create `backend/tests/test_migration_sub_graphs.py`.
 
 - [ ] **Red first:** acceptance 3's constraint test. Predicted red: the table does not exist
   (`UndefinedTable`); any other cause is a plan defect.
-- [ ] The row, per DP-S1-2 (a): `id` (uuid7, as `RatingAlgorithmRow:1930`), `workspace_id`,
+- [ ] The row, per DP-S1-2 (a): `id` (uuid7, as `RatingAlgorithmRow`, `models.py:1936`), `workspace_id`,
   `slug` (`String(64)`), `version` (`Integer`), `content` (`JSONB`), `change_note` (`Text`,
   not null), `created_at`, `created_by`; `UniqueConstraint("workspace_id", "slug", "version",
   name="uq_sub_graph_versions_slug_version")` and an index on `(workspace_id, slug)`. **No
-  `updated_at`**: the precedent carries one (`:1939-1941`), but nothing may update this row
+  `updated_at`**: the precedent carries one (`:1945-1947`), but nothing may update this row
   (`00` FR-4), and a column that says otherwise invites the code path.
 - [ ] The revision: `down_revision` is the head Task 0 found. `upgrade` creates the table;
   `downgrade` drops it. Round-trip per acceptance 3.
@@ -491,7 +502,7 @@ the end of the file**, and no edit to any existing class — the parallel-start 
 
 **Files:** Create `backend/src/app/api/sub_graphs.py`, `backend/tests/test_sub_graphs_api.py`;
 modify `backend/src/app/main.py` (the import beside `:34`, `include_router` beside
-`:134-145`); regenerate `docs/contracts/openapi/generated.json`.
+`:136-147`); regenerate `docs/contracts/openapi/generated.json`.
 
 - [ ] **Red first:** acceptance 4 through the route (each refusal's code per DP-S1-3), 7
   (403 per route, unscoped and scoped) and 8 (404 across workspaces). Predicted red: 404 on

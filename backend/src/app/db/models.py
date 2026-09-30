@@ -29,6 +29,7 @@ from sqlalchemy import (
     Identity,
     Index,
     Integer,
+    SmallInteger,
     String,
     Text,
     UniqueConstraint,
@@ -66,6 +67,7 @@ __all__ = [
     "ServiceAccountRow",
     "SourceRow",
     "SubjectPurgeRow",
+    "TenantMarkerRow",
     "UserRow",
     "WorkspaceMemberRow",
     "WorkspaceSettingRow",
@@ -113,6 +115,10 @@ class JobRow(Base):
     retries: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
     trace_id: Mapped[str | None] = mapped_column(String(32))
+
+    # FR-18: `{version}+{build}` of the worker that ran the Job, written when it moves to
+    # `running`; null while `queued`.
+    platform_build: Mapped[str | None] = mapped_column(String(128))
 
     queued_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -2253,3 +2259,19 @@ class ScoringTraceRow(Base):
         # sequential scan of every trace (#868, the deputy's ruling of 18:55:39 BST).
         Index("ix_scoring_traces_blob_sha256", "blob_sha256"),
     )
+
+
+class TenantMarkerRow(Base):
+    """The single-row marker binding this database to one tenant (`07` FR-436, ADR-710).
+
+    Written once, by the migration that creates it, from `Settings.tenant_id`. The
+    application reads it at startup and never writes it. The `smallint` key with
+    `CHECK (id = 1)` is what makes a second row impossible: the database refuses it.
+    """
+
+    __tablename__ = "tenant_marker"
+
+    id: Mapped[int] = mapped_column(SmallInteger, primary_key=True, autoincrement=False)
+    tenant_id: Mapped[str] = mapped_column(Text, nullable=False)
+
+    __table_args__ = (CheckConstraint("id = 1", name="single_row"),)
