@@ -216,24 +216,45 @@ unpinned; wrong version on the table; model unpinned only) that exits 0.
   earlier "algorithm-shaped" label, and the "3986 pinless blobs" gap it created, came from a predicate that was too loose
   (a dict with a `steps` list holding a table, lookup or `model_call` step), which matched per-quote score-trace records; the
   classification above corrects it. (This is a different question from the filer's text scan in the parser finding; the two share no result.)
-- **MinIO, `gip-test-blobs`, complete partition** (auditor-922, read-only boto3 pass at 2026-09-30 09:41 UTC, reported, not
-  re-run by the filer): 14 602 objects = 2069 non-JSON + 6540 bundles + 3986 traces + 2007 other JSON. The growth over the
-  earlier 14 577 is 21 bundles whose `LastModified` clusters at 09:21-09:22 and 09:32 UTC on 2026-09-30, consistent with
-  auditor-922's two backend test runs that morning (their start times were not recorded, so "probably", not proven).
-  1. **Bundles, 6540 of 6540 checked** (a JSON dict with `resolved_payloads` and `graph`): every `rate_table_ref`,
-     `reference_table_ref`, `model_ref` and `peril_structure_ref` in `graph` compared with `pins` and `resolved_payloads`;
-     **0** outside them, the 21 newer ones included.
+- **MinIO, every bucket, recounted** (auditor-922, read-only boto3 pass of every object, 2026-09-30 09:44 UTC, reported, not
+  re-run by the filer; it corrected two of its own earlier figures, the growth and a truncated shape list). Classes: a
+  *bundle* is a JSON dict with `resolved_payloads` and `graph`; a *trace* is a per-quote score record; *other JSON* and
+  *non-JSON* are the rest.
+
+  | Bucket | Objects | Bundles | Traces | Other JSON | Non-JSON |
+  |---|---|---|---|---|---|
+  | `aud933-bucket` | 1 | 0 | 0 | 0 | 1 |
+  | `gip-bench-compiled-for` | 2 | 2 | 0 | 0 | 0 |
+  | `gip-bench-score-batch` | 11 | 2 | 0 | 3 | 6 |
+  | `gip-blobs` | 10 | 0 | 0 | 3 | 7 |
+  | `gip-test-blobs` | 14 602 | 6540 | 3986 | 2007 | 2069 |
+  | **Store-wide** | **14 626** | **6544** | **3986** | **2013** | **2083** |
+
+  Each row sums to its object count, and the store-wide row to 14 626. **Growth:** `gip-test-blobs` went from 14 577 to
+  14 602 objects (+25) and from 6515 to 6540 bundles (+25); every other bucket and class is unchanged, so all 25 new
+  objects are bundles. Their `LastModified` clusters at 09:21-09:22 and 09:32 UTC on 2026-09-30, plausibly auditor-922's two
+  backend test runs that morning; other sessions may also write to the bucket, so this is not proven. (An earlier figure of
+  "21 new bundles" mixed a per-bucket count with a store-wide one and is withdrawn.)
+  1. **Bundles: 6544 store-wide, all checked.** The 6540 in `gip-test-blobs` were checked on the last pass (every
+     `rate_table_ref`, `reference_table_ref`, `model_ref` and `peril_structure_ref` in `graph` compared with `pins` and
+     `resolved_payloads`): **0** outside them, the 25 newer ones included. The 4 in the two bench buckets were checked in
+     the first sweep (with the 6515 then in `gip-test-blobs`, 6519 in all, 0 hits); their counts are unchanged, but their
+     contents were not re-read in the recount.
   2. **Traces, 3986** (above): cannot be compiled or priced.
-  3. **Other JSON, 2007, all checked:** none is a bundle or a step list with table, lookup or `model_call` steps, and 0 carry
-     any `*_ref`, `pins`, `graph`, `algorithm_ref` or `resolved_payloads` key. Shapes: 1341 `dataset_version_id, results`;
-     618 `matrix, terms`; 35 trace-shaped with no table, lookup or `model_call` step; 9 `learner, version`; 3
-     `cases, counterexamples`. They cannot hold the defect.
-  4. **Non-JSON, 2069:** bundles and algorithms are JSON, so these are neither; each was also grepped for the bytes
-     `rate_table_ref`, `reference_table_ref`, `model_ref`, `peril_structure_ref`, `algorithm_ref` and `resolved_payloads`:
-     0 contain any. Their leading magics look like text or CSV-style content; no individual file was opened.
+  3. **Other JSON: 2013 store-wide, 2007 in `gip-test-blobs`, all checked:** none is a bundle or a step list with table,
+     lookup or `model_call` steps, and 0 carry any `*_ref`, `pins`, `graph`, `algorithm_ref` or `resolved_payloads` key. The
+     `gip-test-blobs` shapes are 1341 `dataset_version_id, results`; 618 `matrix, terms`; 35 trace-shaped with no table, lookup
+     or `model_call` step; 9 `learner, version`; 3 `cases, counterexamples`; 1 `changed_cells,
+     exposure_weighted_mean_change_pct, max_abs_change_pct` (1341 + 618 + 35 + 9 + 3 + 1 = 2007; the first version of this
+     list showed only the top five, summing to 2006). They cannot hold the defect. The 6 other-JSON objects in the two
+     other buckets were counted, not itemised by shape here.
+  4. **Non-JSON: 2083 store-wide, 2069 in `gip-test-blobs`:** bundles and algorithms are JSON, so these are neither; each
+     `gip-test-blobs` object was also grepped for the bytes `rate_table_ref`, `reference_table_ref`, `model_ref`,
+     `peril_structure_ref`, `algorithm_ref` and `resolved_payloads`: 0 contain any. Their leading magics look like text or
+     CSV-style content; no individual file was opened.
 
 Tally: `pricing-core` 76 compile calls, backend 70, PostgreSQL 22 rating versions (491 versions, 73 databases in the
-filer's read), MinIO 6540 of 6540 bundles: **0 unpinned in every one**, and the other 8062 objects of `gip-test-blobs` (3986 traces, 2007 other
+filer's read), MinIO 6544 bundles store-wide: **0 unpinned in every one**, and the other 8062 objects of `gip-test-blobs` (3986 traces, 2007 other
 JSON, 2069 non-JSON) classified as unable to hold the defect. No gap remains in the MinIO sweep. Limits kept: the backend sweep
 covered the 8 test files named above, not the whole backend suite, and counts only tests that reach `compile_bundle`. Owner of any
 further amendment: the auditor.
