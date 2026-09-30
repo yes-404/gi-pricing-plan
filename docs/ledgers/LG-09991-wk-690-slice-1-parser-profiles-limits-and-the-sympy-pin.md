@@ -217,8 +217,13 @@ or `doc-id check` on the real tree, and each shows `[noncontiguous] … gap betw
 `test_doc_id_check_exits_0_on_the_real_tree` and `test_an_index_skipping_a_reserved_block_breaks_contiguity`
 (`the live allocation is not contiguous: [(1295, 9991)]`). This is the memory-recorded
 "a working-id draft reds check 31 until minted", rc 1 expected. Removing the cause is the mint
-turn, which is the lead's: on minting, the ledger takes the next free id and the gap closes. These 13
-were not shown to pass on this tree. The 4024 passed includes +143 over main's 3881: the new
+turn, which is the lead's: on minting, the ledger takes the next free id and the gap closes. **Proof they are that alone:** in a scratch detached checkout of the
+pushed `7a6a9524` with only the ledger renamed `LG-9991` → `LG-1296` (contiguous with 1295) and
+`doc-index.py` re-run, `audit-docs.py` prints `All checks passed.` and the eight test files holding the 13
+(`test_audit_docs_finding_citations`, `_ids`, `_process_core_digest`, `_w37_11_ceiling`, `test_doc_index`,
+`test_register_lint`, `test_register_owed`, `test_repository_invariants`) give **257 passed** (211.81s, named
+files, unslotted). The scratch checkout was removed; the branch keeps 9991 until the mint turn. These 13
+were not shown to pass on the branch tree itself. The 4024 passed includes +143 over main's 3881: the new
 tests were collected (Acceptance 10).
 
 ## PRs
