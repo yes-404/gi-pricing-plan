@@ -230,6 +230,18 @@ WK-1170 Slice 1 ─→ Slice 1  the ownership map (docs) ─→ Slice 2  the cha
 - **Slice 2 needs Slice 1**, and is blocked on DP-2 and DP-3.
 - **Slice 3 needs Slice 2**, and is blocked on DP-2.
 - **Slice 4** (DP-8 resolved) is serialised against WK-1170's Slice 2 (shared skill manifests).
+- **File contention with WK-1170**, read against `PL-1276`'s Tasks at `9c59a2bc`:
+  - **Slice 1** and `PL-1276` Slice 1 both write `docs/findings/register.md` (each its register
+    pass). DP-9 already orders them, so they never overlap.
+  - **Slice 2** and `PL-1276` Slice 2 both edit `.claude/skills/README.md` (a skill edit updates
+    it in the same commit, `CLAUDE.md` §12), and may edit the same skill. Both are docs-only, and
+    option (c) is written for build slices; they are serialised on the maintainer's item 4 (*"Two
+    concurrent slices must not edit the same files"*, quoted in `RL-1263`), unless the lead's
+    dispatch record says otherwise.
+  - **Slice 3** is serialised against `PL-1276` Slices 3, 4 and 6 (`audit-docs.py`,
+    `doc-index.py`) under option (c); see Task 3.
+  - `docs/INDEX.md` is shared by every slice of both Works. It is on option (c)'s registry list
+    as a generated file, *"regenerated and never hand-merged"*.
 - **Docs and code.** Slices 1, 2 and 4 are docs-only and hold no gate slot. Slice 3 holds one.
 - **Recommended order:** 1 → 2 → 3, with 4 in any gap that WK-1170's Slice 2 is not using.
 
@@ -244,8 +256,10 @@ The sizing table's band for this Work is **1.5 / 3.25 / 9.5**, assumed at 2–5 
 is a local working file of the planner's (`~/gi-pricing-plan.local/scratch/planner-wk674-2/p2-sizing.md`,
 row WK-1169), not in the repository, so a reader cannot reproduce it from here. Its figures are
 given inline: the band is best 2 × 0.5 + 0.25 (map plan not yet drafted) + 0.25 (close) = 1.5;
-likely 3 × 0.75 + 0.5 + 0.5 = 3.25; worst 5 × 1.5 + 1 + 1 = 9.5, at the per-slice and overhead
-rates the paragraph above names. Four is inside the
+likely 3 × 0.75 + 0.5 + 0.5 = 3.25; worst 5 × 1.5 + 1 + 1 = 9.5. Its rates are 0.5 / 0.75 / 1.5
+days per slice, 0.25 / 0.5 / 1 for a map plan not yet drafted, and 0.25 / 0.5 / 1 for the close.
+The figures above this plan's band use 0 / 0.25 / 0.5 for rulings acceptance in place of the
+map-plan overhead, because the plan is now drafted. Four is inside the
 slice range. Best and likely sit above the band's (2.25 against 1.5, 3.75 against 3.25); worst sits
 below it. Only Slice 3 holds a gate slot, so the code lane carries one slice: 0.5 / 0.75 / 1.5.
 
@@ -321,13 +335,28 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
 
 - **Scope:**
   - The binding check, per DP-2: no charter grants an action §1.6 does not give that role. It
-    also reads a plan's Roles table (FD-1161).
+    also reads a plan's Roles table (FD-1161). **It lives in `scripts/audit-docs.py`** as a new
+    numbered check, because `document-ids.md` §1.11 puts every read-only id check there (*"every
+    read-only check is `audit-docs.py` checks 30+ so there is one gate and one report"*). Its tests
+    go beside the existing ones under `tests/`.
   - The ownership matrix derived from §1.6 itself, or a drift test against `_OWNERSHIP_TABLE`
     (Acceptance item 4).
   - F97: the broken-input test the row names, if the `lead.md` clause is backed by a script;
     otherwise the leaf plan puts the residual to the lead as a dated acceptance.
   - No `nudge.py` change: DP-5 (b) struck the roster claim.
 - **Depends on:** Slice 2. Blocked on DP-2; DP-1 is resolved.
+- **Files, and the contention they carry** (`RL-1263`'s option (c): two concurrent build slices
+  may not both change the same existing function, class, method, spec section or policy table,
+  and *"any other shared path serialises unless the lead's dispatch record names the path and the
+  check showing that no existing definition is edited by both"*). This slice edits `scripts/audit-docs.py` (the binding check) and `scripts/doc-index.py`
+  (`ownership_matrix()`, Acceptance item 4), with their tests. Read at `9c59a2bc` against
+  `PL-1276`'s Tasks:
+  - `PL-1276` Slice 3 is *"all in `scripts/audit-docs.py` and its tests"*;
+  - `PL-1276` Slice 4 edits `doc-index.py --phase` (FD-1155);
+  - `PL-1276` Slice 6 edits `audit-docs.py` (F29, check 10; its own *"both edit `audit-docs.py`"*).
+
+  **This slice is serialised against `PL-1276` Slices 3, 4 and 6**, unless the lead's dispatch
+  record names the path and the check that option (c) requires. `PL-1276` Slice 5 (`_docverify.py`, `doc-id.py`) shares neither file.
 - **Gate outline.**
   - Each check red on a deliberately broken charter or Roles-table fixture built in `tmp_path`,
     each failure named by its cause, and quiet on the real tree.
