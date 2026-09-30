@@ -1,5 +1,5 @@
 ---
-id: RL-9901
+id: RL-1296
 family: ruling
 title: OQ-1234 decided — FR-429's promotion-skip permission lives on the approval policy's environment-qualified deployment entry
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [OQ-1234, RL-1232, PL-1237, CR-1247, FD-1281]
 ---
 
-# RL-9901 — OQ-1234 decided: FR-429's promotion-skip permission lives on the approval policy's environment-qualified `deployment` entry
+# RL-1296 — OQ-1234 decided: FR-429's promotion-skip permission lives on the approval policy's environment-qualified `deployment` entry
 
 ## How this was ruled
 
@@ -29,8 +29,8 @@ The record was prepared earlier at effort `medium` (PR #935, head `4fc680ed`, "P
 RULED"), under the maintainer's decision of 2026-09-30 00:42:01 BST that the decision-maker
 prepares these rulings on medium and rules them only on high. This pass re-verified the
 prepared evidence at the tree below, found one premise the preparation had left open
-(the dependency direction, item 2 below) and resolved it, and rules. It keeps the working id
-9901; the id is minted at the lead's merge turn.
+(the dependency direction, item 2 below) and resolved it, and rules. Minted 2026-09-30 as RL-1296 (`doc-id.py next --ref origin/main` = 1296 at `9f63d0fe`); it
+was prepared and ruled under working id 9901.
 
 ## Verified first, at 7040cf1e5ead768059398d3c2dc02404b1e695f7
 
