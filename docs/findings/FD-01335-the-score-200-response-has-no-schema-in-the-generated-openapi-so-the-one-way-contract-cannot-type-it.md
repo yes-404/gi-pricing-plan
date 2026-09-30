@@ -1,5 +1,5 @@
 ---
-id: FD-9971
+id: FD-1335
 family: finding
 title: The /api/v1/score 200 response has no schema in the generated OpenAPI, so the one-way contract cannot type it
 status: active
@@ -10,12 +10,13 @@ corrected_by: []
 relates: [WK-671, WK-672, WK-675, WK-1178, FR-250, FR-262, FR-451, NFR-502]
 ---
 
-# FD-9971 — The `/api/v1/score` 200 response has no schema in the generated OpenAPI
+# FD-1335 — The `/api/v1/score` 200 response has no schema in the generated OpenAPI
 
 ## Finding
 
 **Severity: medium.** Proposed by the auditor, and **accepted MEDIUM, 2026-09-30, by the maintainer (by delegation)** in `~/gi-pricing-plan.local/channel/to-lead.md`, a local channel file outside the repository, entry "2026-09-30 17:13:45 BST — FD 9969 severity LOW CONFIRMED; FD 9971 (/score untyped) MEDIUM accepted, with timing and a regression guard" (its FD 9971 clauses are quoted in the Disposition below).
-Filed 2026-09-30 under working id 9971, minted at its merge turn.
+Filed 2026-09-30 under working id 9971; minted as FD-1335. **Working ids in the maintainer's entry headers quoted below are as
+written then:** FD 9971 is this record, and FD 9969 is FD-1333.
 
 **Scope, as the maintainer states it** (entry "2026-09-30 17:24:46 BST — FD 9971: FOLD the 12 open-object 2xx responses in, in
 two parts, so /score isn't delayed", `to-lead.md`): **"`{}` or a JSON object with no properties"**. The sweep below finds **6 + 12
@@ -312,7 +313,7 @@ each needs. **The fix is split so the WK-675 hold stays narrow.**
    Each form is shown red on broken input before the guard is written, and the two `{}` `/score` responses are form 1's red on
    the real document. **New instances fail from day one.** Its exclusion list has two parts:
    - **permanent, cited: the four stream and file routes** (the list below, with the lines that make each a non-JSON body);
-   - **temporary, each marked "pending FD 9971 part B": the 12 open-object routes** listed in Evidence §1.
+   - **temporary, each marked "pending FD-1335 part B": the 12 open-object routes** listed in Evidence §1.
 
    The four permanent exclusions, by method and path:
    - `GET /api/v1/audit/export`: `StreamingResponse`, `application/x-ndjson` or `text/csv` (`backend/src/app/api/audit.py:278-281`,
@@ -351,4 +352,4 @@ red on both forms) before WK-675 dispatches a slice that consumes `/score` or `/
 (each of the 12 before any WK-675 slice that consumes it), and **the finding closes when the guard's temporary exclusion list is
 empty.** The LOW sub-item follows in Part A or later and gates nothing. Ownership shape: event.
 
-*Disclosure: this record was filed under working id 9971 and is minted at its merge turn. The number 9971 was earlier the working id of a ruling that has since been minted under its own id; this record is unrelated to it.*
+*Disclosure: this record was filed under working id 9971 and minted as FD-1335 at its merge turn. The number 9971 was earlier the working id of a ruling that has since been minted under its own id; this record is unrelated to it.*

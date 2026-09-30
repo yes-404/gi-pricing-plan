@@ -156,3 +156,117 @@ def test_a_foreign_function_is_refused() -> None:
             step["expr"] = "foo(risk_premium_minor)"
     algorithm = RatingAlgorithm.model_validate(data)
     assert "EXPRESSION_INVALID_VOCABULARY" in codes(algorithm)
+
+
+# ---------------------------------------------------------------------------
+# WK-1178 code slice (PL-1314, RL-1312, RL-1313, FD-1317): FR-244's enforced allow-list, and
+# every authored string (expr, condition, clamp_bounds, key_expr) through the same checks.
+# ---------------------------------------------------------------------------
+
+
+def _with(step_id: str, **fields: object) -> RatingAlgorithm:
+    data = valid_algorithm()
+    for step in data["steps"]:
+        if step["step_id"] == step_id:
+            step.update(fields)
+    return RatingAlgorithm.model_validate(data)
+
+
+def _issues(algorithm: RatingAlgorithm, code: str) -> list:
+    return [issue for issue in validate_algorithm(algorithm) if issue.code == code]
+
+
+@pytest.mark.req("FR-244")
+@pytest.mark.parametrize("expr", [
+    "risk_premium_minor % 7",
+    "risk_premium_minor in [1, 2]",
+    "risk_premium_minor[0]",
+    "risk_premium_minor.b",
+    "len('x')",
+    "sum([risk_premium_minor, 1])",
+    "round(risk_premium_minor, 2)",
+    "floor(risk_premium_minor)",
+    "ceil(risk_premium_minor)",
+])
+def test_the_allow_list_refuses_a_construct_it_does_not_name(expr: str) -> None:
+    """RL-1312 item 1: each is compiled by the engine today, and each is refused at save."""
+    found = _issues(_with("s_office", expr=expr), "EXPRESSION_INVALID_VOCABULARY")
+    assert [(i.step_id, i.field) for i in found] == [("s_office", "expr")]
+    assert "FR-244" in found[0].message
+
+
+@pytest.mark.req("FR-244")
+@pytest.mark.parametrize("text", [
+    "risk_premium_minor ?? 0",
+    "expense_factor != 0 ? risk_premium_minor / expense_factor : 0",
+    "min([max([risk_premium_minor, 0]), 1])",
+    "abs(risk_premium_minor)",
+])
+def test_the_allow_list_accepts_the_ruled_constructs_in_an_expr(text: str) -> None:
+    assert validate_algorithm(_with("s_office", expr=text)) == []
+
+
+@pytest.mark.req("FR-244")
+@pytest.mark.parametrize("text", [
+    "(office_premium_minor ?? 0) >= 100",
+    "(expense_factor != 0 ? office_premium_minor / expense_factor : 0) >= 100",
+    "min([max([office_premium_minor, 0]), 1000]) >= 100",
+    "abs(office_premium_minor) >= 100",
+])
+def test_the_allow_list_accepts_the_ruled_constructs_in_a_condition(text: str) -> None:
+    assert validate_algorithm(_with("s_minprem", condition=text)) == []
+
+
+#: FD-1317's evidence table (measured at 9f63d0fe): each of these returned `[]` before this slice.
+_FD_1317_ROWS = [
+    ("condition", "sum([office_premium_minor, 1]) >= 100", "EXPRESSION_INVALID_VOCABULARY"),
+    ("condition", "office_premium_minor[0] >= 100", "EXPRESSION_INVALID_VOCABULARY"),
+    ("condition", "office_premium_minor / expense_factor >= 100", "EXPRESSION_UNGUARDED_DIVISION"),
+    ("condition", "office_premium_minor >=(((", "EXPRESSION_INVALID_VOCABULARY"),
+    ("condition", "now() >= 100", "EXPRESSION_NON_DETERMINISTIC"),
+    ("condition", "office_premium_minor >= 0." + "1" * 31, "EXPRESSION_SCALE_OVERFLOW"),
+    ("clamp_bounds.min", "100 / expense_factor", "EXPRESSION_UNGUARDED_DIVISION"),
+    ("clamp_bounds.min", "(((", "EXPRESSION_INVALID_VOCABULARY"),
+    ("expr", "risk_premium_minor % 7", "EXPRESSION_INVALID_VOCABULARY"),
+    ("key_expr[0]", "channel % 2", "EXPRESSION_INVALID_VOCABULARY"),
+]
+
+
+@pytest.mark.req("FR-274")
+@pytest.mark.parametrize(("field", "text", "code"), _FD_1317_ROWS)
+def test_every_authored_field_returns_its_issue(field: str, text: str, code: str) -> None:
+    if field.startswith("clamp_bounds"):
+        algorithm = _with("s_minprem", clamp_bounds={"min": text})
+        step_id = "s_minprem"
+    elif field == "condition":
+        algorithm, step_id = _with("s_minprem", condition=text), "s_minprem"
+    elif field.startswith("key_expr"):
+        algorithm, step_id = _with("s_expense", key_expr=[text]), "s_expense"
+    else:
+        algorithm, step_id = _with("s_office", expr=text), "s_office"
+    assert (step_id, field) in [(i.step_id, i.field) for i in _issues(algorithm, code)]
+
+
+@pytest.mark.req("FR-274")
+@pytest.mark.parametrize("unguarded", [
+    "{} / expense_factor ?? 0",
+    "({} / expense_factor) ?? 0",
+    "{} / expense_factor != null ? {} / expense_factor : 0",
+])
+def test_a_null_coalescing_form_is_never_a_division_guard(unguarded: str) -> None:
+    """RL-1312 item 2: `??` and `!= null` mask a division's null; they do not guard it."""
+    code = "EXPRESSION_UNGUARDED_DIVISION"
+    expr = unguarded.format("risk_premium_minor", "risk_premium_minor")
+    cond = "(" + unguarded.format("office_premium_minor", "office_premium_minor") + ") >= 100"
+    bound = unguarded.format("office_premium_minor", "office_premium_minor")
+    assert _issues(_with("s_office", expr=expr), code)
+    assert _issues(_with("s_minprem", condition=cond), code)
+    assert _issues(_with("s_minprem", clamp_bounds={"min": bound}), code)
+
+
+@pytest.mark.req("FR-274")
+def test_the_guard_markers_hold_no_dead_or_masking_entry() -> None:
+    from pricing_core.rating.compile import _GUARD_MARKERS
+
+    for dead in ("?:", "coalesce(", "??", "!= null"):
+        assert dead not in _GUARD_MARKERS
