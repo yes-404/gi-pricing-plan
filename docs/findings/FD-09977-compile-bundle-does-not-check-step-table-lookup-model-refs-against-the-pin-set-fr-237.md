@@ -190,10 +190,17 @@ unpinned; wrong version on the table; model unpinned only) that exits 0.
 
 **Sweeps of fixtures, examples and MinIO (auditor-922, at `eeda8f4b`, reported; not re-run by the filer).**
 - **`pricing-core` rating tests:** 118 passed; 76 `compile_bundle` calls logged; **0** step refs outside the pins.
-- **Backend fixtures: not swept properly.** 39 failed, 12 passed and 130 errored (`TenantMismatchError` on the
-  scratch database); only 10 further compile calls were logged, 0 with a missing pin. **This limb is a gap, not a
-  zero.**
-- **Examples and scripts:** `examples/fremtpl2/model.py:396` is the demo seed (read, not run);
+- **Backend fixtures (rerun, superseding the first attempt's tenant error).** auditor-922 used a per-worktree scratch
+  database with `alembic upgrade head` (the tenant-marker migration `d7e2a9b5c418` applied; the first database lacked it,
+  which caused the `TenantMismatchError`). Set: `test_rating_version_compile`, `test_rating_versions`,
+  `test_api_approvals`, `test_regression_runs`, `test_demo_rating_evidence`, `test_worker_raise_sites`,
+  `test_error_sinks`, `test_api_blobs`: 181 passed. A scratch instrumentation of `compile_bundle` logged **70 compile
+  calls** (`test_rating_versions` 48, `test_rating_version_compile` 11, `test_regression_runs` 9,
+  `test_demo_rating_evidence` 2), **0 with a step ref outside the pins**. **Limit:** the 70 count only tests that reach
+  `compile_bundle`, and auditor-922 did not check how many of them use a table, lookup or `model_call` step, so a 0
+  there is bounded by that.
+- **Examples and scripts:** the demo seed (`examples/fremtpl2/model.py:375-415`, `_demo_algorithm`) is input, then
+  expression `premium_in * 2`, then output, with `_EMPTY_PINS` and **no step refs at all** (read, not executed);
   `scripts/bench-rating.py`'s pins match its step refs (read, not run).
 - **PostgreSQL:** 22 rating versions with pins, 0 unpinned (agrees with the filer's read above).
 - **MinIO:** 5 buckets; 6519 bundle JSONs (`gip-bench-compiled-for` 2, `gip-bench-score-batch` 2,
@@ -201,9 +208,10 @@ unpinned; wrong version on the table; model unpinned only) that exits 0.
   algorithm-shaped blobs in `gip-test-blobs` carry no pins and are unchecked.** (This is a different question
   from the filer's text scan in the parser finding; the two share no result.)
 
-So "0 affected" now covers PostgreSQL, the `pricing-core` fixtures and the MinIO bundles; it does **not**
-cover the backend fixtures (the sweep failed on a tenant error) or the 3986 pinless blobs. Both gaps are
-stated, not counted as zero. Owner of any further amendment: the auditor.
+Tally: `pricing-core` 76 compile calls, backend 70, PostgreSQL 22 rating versions (491 versions, 73 databases in the
+filer's read), MinIO 6519 bundles: **0 unpinned in every one.** One gap remains stated, not counted as zero: the **3986
+algorithm-shaped blobs in `gip-test-blobs` that carry no pins** cannot be checked on their own. Owner of any further
+amendment: the auditor.
 
 ## Severity
 
