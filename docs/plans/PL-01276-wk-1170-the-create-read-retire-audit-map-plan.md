@@ -1,10 +1,10 @@
 ---
-id: PL-9811
+id: PL-1276
 family: plan
 kind: map
 title: WK-1170 — The create-read-retire audit (RFC-937's transition steps, RFC-897 Stage 4, and the instrument rows carried to it): map plan
 status: draft                   # draft → active → superseded | retired (§1.2a)
-created: 2026-09-29
+created: 2026-09-30
 owner: planner
 tree: 19c395acad594d1b193da197461bec85201d2248
 phase: P2
@@ -16,6 +16,8 @@ relates: [CR-1164, CR-1167, CR-1183, CR-1212, RFC-937, RFC-897, RL-943, RS-952, 
 ---
 
 # WK-1170 — The create-read-retire audit: map plan
+
+First filed 2026-09-29 as working id 9811; `created` re-dated to 2026-09-30 so the id sequence stays non-decreasing (check 31). Minted as `PL-1276` at #930's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `95639d87`.
 
 > **For agentic workers:** this is a **map plan**. It cuts WK-1170 into six slices and fixes their scope, order, dependencies and gates. It carries no code steps. Each slice gets its own leaf plan (`kind: leaf`) before it starts, and the executor works from that leaf plan. REQUIRED SUB-SKILL for each leaf plan's executor: subagent-driven-development (recommended) or executing-plans. Slices 1 and 2 also bind `docs-audit` and `spec-change` (they write only under `docs/` and `.claude/`); Slices 3–6 also bind `python-test` (broken-input proofs), `code-quality`, `dev-commands` (the gate) and `docs-audit`; Slice 6 also binds `contract-guard`. Every executor reads `docs/plans/README.md`'s five unchecked conventions before its first step.
 
@@ -130,11 +132,11 @@ never on a working tree.
   leaf plan or an audit record names all three.
 - **A register write needs a committed tree.** `register-owed.py` refuses a dirty register
   (`_dirty_register`, RL-912 §1). Every register reading in this Work is taken at a commit.
-- **Parallelism.** Under `delivery-process.md` §8 as amended by open PR #928 (the parallel-start
-  ruling, working id 9760, head `074d7778`, not merged at `19c395ac`): preparation (plans, rulings, audits) is not a
+- **Parallelism.** Under `delivery-process.md` §8 as amended by `RL-1263` (the parallel-start
+  ruling; #928, merged after `19c395ac`): preparation (plans, rulings, audits) is not a
   slice and runs alongside; at most two code slices from different Works run at once, each with a
-  gate slot (`.claude/roles/executor.md:110`), and none shares files with the other. If #928 does
-  not merge, §8 as it stands at `19c395ac` applies: one slice at a time.
+  gate slot (`.claude/roles/executor.md:110`), and none shares files with the other. The amendment is
+  on `main` (`delivery-process.md` §8, the dated line citing `RL-1263`).
 
 ---
 
@@ -228,12 +230,12 @@ The planner rules none of them. The cells stay empty until the resolver's record
 
 | # | Question | Options | Recommendation (the planner's input) | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-1 | `CR-1212` Proposal 2 labels this Work *"docs-only"*. Most of its carried rows are fixes to scripts and tests. Which scope does the maintainer accept? | (a) The Work takes the code slices (3–6), each holding a gate slot; the label is corrected by the maintainer's line; (b) the Work stays docs-only (Slices 1–2); every tooling row is re-dispositioned to WK-1178 (standing maintenance) with the lead's dated line; (c) split: the audit-docs and register instruments here (3, 4), the migration residue (5) and gate coverage (6) to WK-1178 | **(a).** The register names this Work as the event on every one of these rows, accepted by the maintainer's delegate at `CR-1164`'s D7 line and `CR-1167`'s acceptance. Moving twenty-seven rows again is the decay FD-1166 names. The label was written before any plan counted the rows | scope | yes — Slices 3, 4, 5, 6 | **(a) accepted:** the maintainer, by delegation, 2026-09-29 22:58:26 BST entry (the lead's channel file, "DECISIONS: WK-1170 map plan #930 (PL-9811), DP-1 to DP-3"). `CR-1212:289`'s label gets a dated correction citing that entry; it is not this plan's to write |
-| DP-2 | FR-240's clauses (4)–(6) are rating-engine validations in `compile_bundle`, not governance instruments. `CR-1167`'s acceptance item 1 gave the whole *"gate-coverage cluster"* to this Work because *"the cluster is about what the instruments cover"*. Where do these three clauses belong? | (a) Here, in Slice 6; (b) to a rating Work: WK-1178, or a Work the maintainer names; F27 (c), F29 and F33 stay here; (c) carried to P3 by a dated line | **(b).** F27 (c), F29 and F33 are instrument gaps, which is this Work's subject. Clauses (4)–(6) are product behaviour in `compile_bundle`, a file the parallel-start ruling's decision (#928, working id 9760) names as shared by WK-1250, WK-673 and WK-675. A governance slice editing it would have to serialise with three rating Works | scope | yes — Slice 6 | **(b) accepted:** the maintainer, by delegation, 2026-09-29 22:58:26 BST entry (the lead's channel file, "DECISIONS: WK-1170 map plan #930 (PL-9811), DP-1 to DP-3"). The rows stay WK-1170's until the move lands (never unowned, `CLAUDE.md` §14). The receiving Work is proposed below and confirmed by this plan's ACK |
-| DP-3 | Every carried row waits on *"the create-read-retire audit's first slice"*. Does that event require every row to be discharged in Slice 1? | (a) Yes: Slice 1 discharges all thirty rows; (b) Slice 1 fires the event by a register pass: each row's cell gains its `SL-` id in this Work, from this plan's Scope table, with the lead's dated line, and closes in that slice; (c) as (b), but the rows keep their text and only the map plan records the slice | **(b).** (a) makes Slice 1 the whole Work. (c) leaves the register naming an event that has fired, which is how rows decayed through reviews 11–14 (FD-1166). (b) also makes `register-owed.py WK-1170` work (Acceptance item 7) | scope | yes — Slice 1 | **(b) accepted:** the maintainer, by delegation, 2026-09-29 22:58:26 BST entry (the lead's channel file, "DECISIONS: WK-1170 map plan #930 (PL-9811), DP-1 to DP-3"), with the condition that Slice 1's acceptance includes `register-owed.py` listing the re-pointed rows, the count stated with the command |
+| DP-1 | `CR-1212` Proposal 2 labels this Work *"docs-only"*. Most of its carried rows are fixes to scripts and tests. Which scope does the maintainer accept? | (a) The Work takes the code slices (3–6), each holding a gate slot; the label is corrected by the maintainer's line; (b) the Work stays docs-only (Slices 1–2); every tooling row is re-dispositioned to WK-1178 (standing maintenance) with the lead's dated line; (c) split: the audit-docs and register instruments here (3, 4), the migration residue (5) and gate coverage (6) to WK-1178 | **(a).** The register names this Work as the event on every one of these rows, accepted by the maintainer's delegate at `CR-1164`'s D7 line and `CR-1167`'s acceptance. Moving twenty-seven rows again is the decay FD-1166 names. The label was written before any plan counted the rows | scope | yes — Slices 3, 4, 5, 6 | **(a) accepted:** the maintainer, by delegation, 2026-09-29 22:58:26 BST entry (the lead's channel file, "DECISIONS: WK-1170 map plan #930 (…), DP-1 to DP-3"). `CR-1212:289`'s label gets a dated correction citing that entry; it is not this plan's to write |
+| DP-2 | FR-240's clauses (4)–(6) are rating-engine validations in `compile_bundle`, not governance instruments. `CR-1167`'s acceptance item 1 gave the whole *"gate-coverage cluster"* to this Work because *"the cluster is about what the instruments cover"*. Where do these three clauses belong? | (a) Here, in Slice 6; (b) to a rating Work: WK-1178, or a Work the maintainer names; F27 (c), F29 and F33 stay here; (c) carried to P3 by a dated line | **(b).** F27 (c), F29 and F33 are instrument gaps, which is this Work's subject. Clauses (4)–(6) are product behaviour in `compile_bundle`, a file `RL-1263`'s quoted decision names as shared by WK-1250, WK-673 and WK-675. A governance slice editing it would have to serialise with three rating Works | scope | yes — Slice 6 | **(b) accepted:** the maintainer, by delegation, 2026-09-29 22:58:26 BST entry (the lead's channel file, "DECISIONS: WK-1170 map plan #930 (…), DP-1 to DP-3"). The rows stay WK-1170's until the move lands (never unowned, `CLAUDE.md` §14). The receiving Work is proposed below and confirmed by this plan's ACK |
+| DP-3 | Every carried row waits on *"the create-read-retire audit's first slice"*. Does that event require every row to be discharged in Slice 1? | (a) Yes: Slice 1 discharges all thirty rows; (b) Slice 1 fires the event by a register pass: each row's cell gains its `SL-` id in this Work, from this plan's Scope table, with the lead's dated line, and closes in that slice; (c) as (b), but the rows keep their text and only the map plan records the slice | **(b).** (a) makes Slice 1 the whole Work. (c) leaves the register naming an event that has fired, which is how rows decayed through reviews 11–14 (FD-1166). (b) also makes `register-owed.py WK-1170` work (Acceptance item 7) | scope | yes — Slice 1 | **(b) accepted:** the maintainer, by delegation, 2026-09-29 22:58:26 BST entry (the lead's channel file, "DECISIONS: WK-1170 map plan #930 (…), DP-1 to DP-3"), with the condition that Slice 1's acceptance includes `register-owed.py` listing the re-pointed rows, the count stated with the command |
 | DP-4 | Where does the "process step per transition" live once Slice 1 finds it? | (a) A new column in `document-ids.md` §1.6 naming each transition's step (a `process/` amendment: `RFC-` + `RL-`); (b) a table generated by `doc-index.py` from a declared data structure, with a drift check; (c) in the owning skill or charter only, with the Slice 1 record as the evidence and check 38 as the enforcement | **(c).** One source per step (RFC-756). §1.6 already names the role per action. What is missing is the step inside the role's skill. (b) adds a second transcription, which is the defect premise (b) found in `_OWNERSHIP_TABLE`. (a) amends a maintainer-owned file for a fact the skills already carry | decision point | yes — Slice 2 | *(decision-maker, by `RL-`; the maintainer's line too if the answer amends `docs/process/`)* |
 | DP-5 | Six rows are defects in `migrate`, a tool that has run once and now refuses a migrated tree (premise e): F78, F94, F96, F107, FD-1149 and FD-1152. Fix them, or accept them with #821's refusal as the control? | (a) Fix all six in Slice 5; (b) accept all six: `decision: accept`, the residual control being #821's exit-2 refusal, with proof 7 cited; (c) fix only what a later tool reuses (FD-1149's sweep, if any non-migrate caller uses it; F78's fixture, since `_discover_roadmap` also serves `doc-index.py`), accept the rest | **(c).** A fix to code that can no longer run buys nothing. A defect in a function another tool still calls is live. Slice 1 reads which functions have a live caller and names them, so this row is answered on evidence | register disposition (`document-ids.md` §1.6, FD row: *"lead sets `decision:`"*) | yes — Slice 5 | **(c) adopted by the lead**, 2026-09-29 (the lead's message to the planner after the 22:58:26 BST entry, which records DP-5 as the lead's: *"DP-5 (c) and DP-6 are yours: noted"*). The `decision:` cells are written at Slice 1's register pass, on Slice 1's live-caller evidence |
-| DP-6 | The order between WK-1170 and WK-1169, and between this Work and the code lane | (a) WK-1170's Slice 1 first; WK-1169 starts its binding slices after it (the parallel-start ruling's decision, #928, item 5: *"WK-1169 comes after WK-1170"*); (b) both Works' slices in parallel | **(a)**, re-derived as a real dependency: WK-1169 binds each role's transitions into its charter, and Slice 1 of this Work is where those transitions are named. RFC-897 §8 states the reverse (*"4 needs … 3's matrix"*), but the matrix exists, generated (premise b), so that dependency is already met | sequencing | no — applied at dispatch; default (a) | the activation commit cites the parallel-start ruling (#928) by its minted id |
+| DP-6 | The order between WK-1170 and WK-1169, and between this Work and the code lane | (a) WK-1170's Slice 1 first; WK-1169 starts its binding slices after it (`RL-1263`'s quoted decision, item 5: *"WK-1169 comes after WK-1170"*); (b) both Works' slices in parallel | **(a)**, re-derived as a real dependency: WK-1169 binds each role's transitions into its charter, and Slice 1 of this Work is where those transitions are named. RFC-897 §8 states the reverse (*"4 needs … 3's matrix"*), but the matrix exists, generated (premise b), so that dependency is already met | sequencing | no — applied at dispatch; default (a) | `RL-1263`, minted after this plan was first filed |
 | DP-7 | F92's 18 non-vendored skill manifests are the same 18 files inside FD-1157's 43 (check 30's skill-manifest failures at `19c395ac`: `python3 scripts/audit-docs.py 2>&1 \| grep '^  - check 30' \| grep -oE '\.claude/skills/[^/]+' \| sort -u` prints 43; the 18 not in `_docid._VENDORED_SKILLS` are F92's residual). FD-1157 is WK-1169's. Which Work stamps them? | (a) WK-1170 Slice 5 stamps the 18; WK-1169 takes the rest of FD-1157; (b) WK-1169 stamps the 18 with the rest of FD-1157, and F92's residual closes on that PR; (c) whichever slice runs first, with the other verifying | **(b).** One slice edits those 18 files once. FD-1157 is the wider row, and its treatment of the 25 vendored manifests needs the same decision (F93, the maintainer's) | scope | yes — Slice 5's F92 limb only | **(b) accepted:** the maintainer, by delegation, 2026-09-29, entry 'DECISIONS: WK-1169 map plan #931' (the lead's channel file, 23:05:29 BST), which rules this DP as the same line as WK-1169's map plan's DP-8 (#931, working id 9812). WK-1169's Slice 4 stamps the 18 once, and F92's residual closes there. Slice 5 drops them. The 25 vendored stay disclosed until F93, the maintainer's own amendment, not ruled by that line. WK-1169's Slice 4 is serialised against this Work's Slice 2 |
 
 **DP-2's receiving Work, proposed here for the ACK to confirm** (the 22:58:26 BST entry: *"the
@@ -243,9 +245,11 @@ validation. Read at each plan's open-PR head:
 - **WK-1250** (`PL-1254`, on `main`) edits `compile_bundle`'s validation: it resolves and inlines
   pinned sub-graphs there and adds refusals at compile (its Slice 2), and its DP-1 decides a
   `sub_graph` pin's maturity exemption beside `_MATURITY_CHECK_EXEMPT` (`compile.py:314`).
-- **WK-673** (its map plan, working id 9101, #844 at `69cba51e`) names `compile_bundle` only as something it calls
+- **WK-673** (`PL-1267`; read first on #844 at `69cba51e`, re-read as minted at `95639d87`) names
+  `compile_bundle` only as something it calls
   (its Tech Stack line) to build subset bundles. It adds no compile-time refusal.
-- **WK-690** (its map plan, working id 9103, #871 at `e7509ca6`): `grep -n -i "compile_bundle\|FR-240\|transitiv"`
+- **WK-690** (`PL-1268`; read first on #871 at `e7509ca6`, re-read as minted at `95639d87`):
+  `grep -n -i "compile_bundle\|FR-240\|transitiv"`
   over the plan prints nothing. It certifies and approves an `expression` objective. It does not
   touch the check that a pinned objective is approved at compile.
 
@@ -258,7 +262,7 @@ maintainer's line on that Work's map plan.
   objective, *"but not one reached transitively, and it is wholly untested"*. `03` (`:137`) does not
   name the transitive paths. Two are visible in the P2 plans: a pinned model version whose fit used
   a custom objective, and a sub-graph that WK-1250 will let an algorithm mount. So:
-  1. WK-690's map plan (#871) has no `compile_bundle` slice today (the grep above), and needs one;
+  1. WK-690's map plan (`PL-1268`) has no `compile_bundle` slice today (the grep above), and needs one;
   2. WK-1250's Slice 2 inlining must not open the sub-graph path unchecked. Either its compile
      refusal covers an objective reached through an inlined sub-graph, or WK-690's check runs on
      the inlined bundle.
@@ -294,7 +298,7 @@ Slice 1  the audit + register pass (docs) ─┬─→ Slice 2  the steps (docs)
 - **Slice 3 needs Slice 1**, because check 38's sub-clauses encode Slice 1's verdicts.
 - **Slices 4 and 5 need Slice 1's register pass**, which confirms their row sets.
 - **Slice 6 needs Slice 3**, because both edit `audit-docs.py`.
-- **Docs and code in parallel.** Slices 1 and 2 are docs-only and hold no gate slot. Under #928's
+- **Docs and code in parallel.** Slices 1 and 2 are docs-only and hold no gate slot. Under `RL-1263`'s
   amendment, Slice 2 may run beside one code slice of this Work only if they share no file. Two
   code slices of this Work never run together (the amendment admits two build slices *from
   different Works*).
@@ -474,17 +478,16 @@ activation commit:
    open, as `document-ids.md` §1.7's last sentence allows: *"an `SL-` may not move
    `draft → active` while any of its rows is open"*.
 2. The lead adds the six `SL-` rows under `### WK-1170`, each `draft`, with ids the lead issues.
-   WK-1170 is already `active` (`docs/roadmap.md:822`).
+   WK-1170 is already `active` (`docs/roadmap.md:1046` at `95639d87`).
 3. `docs/INDEX.md` is regenerated in the final commit only.
 
 ## Status
 
 - **Acceptance line:** _pending — the maintainer's dated line, or one given on the maintainer's
   behalf_.
-- **Working id 9811.** `PL-9811` is a working id, taken after `git grep` over `origin/main` and
-  every `origin/*` branch at `19c395ac` found no document carrying it. The lead mints the real
-  id with `python3 scripts/doc-id.py next --ref origin/main` at the merge turn. Until then
-  `doc-id.py check` reds this file under check 31, which is expected.
+- **Minted** at #930's merge turn, 2026-09-30, as the line under the title records. The working
+  id was taken after `git grep` over `origin/main` and every `origin/*` branch at `19c395ac`
+  found no document carrying it.
 - **Resolved 2026-09-29:** DP-1 (a), DP-2 (b) and DP-3 (b), the maintainer's by delegation at the
   22:58:26 BST entry; DP-5 (c), the lead's. DP-6 stays non-blocking, with its default.
 - **Resolved 2026-09-29, later:** DP-7 (b), the maintainer's by delegation at the 23:05:29 BST
@@ -503,8 +506,9 @@ activation commit:
 2. **Scope boundaries.** No charter is edited (WK-1169's). No `docs/process/` file is amended
    without `RFC-` + `RL-`. FR-240 (4)–(6) leave the Work (DP-2 (b)); a receiving Work is proposed.
 3. **Literals.** Every path, line, id and count in the premises and the Scope tables was read at
-   `19c395ac`. Every id resolves in `docs/INDEX.md` at that tree, except the parallel-start
-   ruling, which is named by its working id 9760 on open PR #928 with its head.
+   `19c395ac`. Every id resolves in `docs/INDEX.md` at that tree, and at `95639d87`, where
+   this plan was minted, the working ids first cited have their minted ids (`RL-1263`, `PL-1267`,
+   `PL-1268`). WK-1169's map plan is not yet minted and is cited in prose (#931).
 4. **Placeholders.** None. The empty `Resolved by` cells are the §1.7 form for open rows, and
    each names its resolver. There are no code steps; this is a map plan.
 5. **Consistency.** The slice numbers in the Scope tables, the DP `Blocking` cells, the
