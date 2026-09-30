@@ -1,5 +1,5 @@
 ---
-id: FD-9967
+id: FD-1330
 family: finding
 title: The premium ladder attributes a clamp's effect to the office_premium rung, not to the constraints rung
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-674]
 ---
 
-# FD-9967 — The premium ladder attributes a clamp's effect to the office_premium rung, not to the constraints rung
+# FD-1330 — The premium ladder attributes a clamp's effect to the office_premium rung, not to the constraints rung
 
 ## Finding
 
@@ -24,7 +24,7 @@ whole effect on the **`office_premium` rung**, as a large `multiply` factor, and
 ladder is the audit trail a reviewer reads, so a clamped quote's ladder says the office premium
 was built by a factor of 3.8314 when the real factor is 1.1000 and the clamp did the rest.
 
-It was surfaced by dm-eh-s3 while ruling DP-S3-5 (RL working id 9963, local head `48621365` in
+It was surfaced by dm-eh-s3 while ruling DP-S3-5 (RL-1329, drafted as working id 9963; local head `48621365` in
 the decision-maker's scratch tree, not in the repository), and routed by the maintainer's entry
 `to-lead.md` "2026-09-30 16:16:06 BST — DP-S3-5 ruled (RL 9963, local 48621365): accepted in
 substance pending auditor-plans; routing of the 4 observed items", item (3): *"the clamp's effect
@@ -106,8 +106,8 @@ holds in the clamped case above; the defect is the attribution, not the arithmet
 
 ## Disposition
 
-**Deferred with an owner: WK-674 Slice 3**, the same builder rewrite as DP-S3-5's (RL working id
-9963), fixed once, per the maintainer's entry cited above. Event that discharges it: Slice 3's merge.
+**Deferred with an owner: WK-674 Slice 3**, the same builder rewrite as DP-S3-5's (RL-1329, drafted as
+working id 9963), fixed once, per the maintainer's entry cited above. Event that discharges it: Slice 3's merge.
 
 **Acceptance, red first** (each written to fail on `origin/main` first): **a clamped quote's ladder
 attributes the clamp to its constraint rung.** On the reproduction above: the `office_premium` rung
@@ -117,4 +117,4 @@ rung goes **1436 to 5000** with an operation that **records the clamp** (not `ki
 The unclamped case is unchanged. Slice 3's own stop condition stands: it stops if any golden payable
 moves.
 
-*Drafted under working id 9967.*
+*Disclosure: this record was drafted under working id 9967 and minted as FD-1330; the working id survives only in this line and in PR #1000's history.*
