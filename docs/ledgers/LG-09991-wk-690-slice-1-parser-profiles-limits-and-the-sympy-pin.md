@@ -226,6 +226,51 @@ files, unslotted). The scratch checkout was removed; the branch keeps 9991 until
 were not shown to pass on the branch tree itself. The 4024 passed includes +143 over main's 3881: the new
 tests were collected (Acceptance 10).
 
+## Closing pass — for the slice audit
+
+**Gate-2 holder.** At both ends of the Task 7 gate, `/tmp/slots/gate-2` existed and its holder was not
+identified by me. The lead reports it will look into it. Nothing here depends on it.
+
+**The three rulings that resolved DP-S1-1 to DP-S1-3, and where each was applied.**
+- RL-1291 (#956, DP-S1-1 (a): `ast.expr` nodes, depth the longest `ast.expr` chain, root at 1): Task 2 (the counter)
+  and Task 4 (enforcement, 200 nodes and depth 20 in all four profiles).
+- RL-1292 (#957, DP-S1-2 (b): exact arity, against the plan's recommendation): Task 3 (`_ARITY` and `_check`),
+  with the 02 §4.6 arity note.
+- RL-1293 (#958, DP-S1-3 (a): `real=True`): Task 5 (`expression_sympy.py`, the symbol table), with the 02 §4.6 statement.
+- RL-1289 (`sympy==1.14.0`): Task 1. RL-1265 DP-5: Tasks 3 (`filter_rows` note) and 6 (FR-244).
+
+**FD-1294 (#959, HIGH) is resolved by this slice at merge.** Red at `9f63d0fe`: the three
+`through_the_callers` tests, `DID NOT RAISE ExpressionError` (quoted under Task 3). Green at the
+slice head: `uv run pytest packages/pricing-core/tests/test_expression_profiles.py -q -k through_the_callers`
+→ 3 passed; `-k call_site` → 2 passed.
+
+**Deviations from the frozen plan, for the auditor.**
+1. Task 3 Step 2's intermediate red ("names exist, the checks not yet written", refusals `DID NOT RAISE`) was
+   not run. It is replaced by mutation controls on the finished code, both in `test_expression_profiles.py`: with
+   the arity check disabled, 12 of the 54 tests fail; with `_check_structure` disabled, 6 fail. Each mutation
+   removes one refusal class and shows the tests for it go red, which is what the intermediate red would have shown for that class.
+   The limits (Task 4) did have both reds (9 failed, 10 passed).
+2. Task 5: the plan's `test_the_abs_derivative_is_the_real_one` passed vacuously without `real=True` (see Task 5). I
+   added `assert derivative == w * sympy.sign(f - y)`; under the mutation it fails.
+3. Task 6: the held sentence (below), and the words "superseded by this amendment" for "by this sentence".
+4. Task 0: the baseline `pytest -q` ran once, 1949.11s, with no load recorded. Also unslotted-suite runs at Tasks 2–4.
+
+**FR-144's marker covers its 2026-09-28 amendment clause only** (the `objective` profile, `where()` as
+`Piecewise`, the strict refusals, the limits). Its derivation, storage and fit-time clauses are Slices 2 and 3. The
+req-coverage count (FR-144: 7 test files) is therefore not whole coverage of FR-144 (`CLAUDE.md` §13).
+FR-145 has 9 test files, FR-36 13, FR-50 8 and NFR-483 9; NFR-483's third clause (FR-165's budget) is Slice 2's.
+
+**Acceptance checks run at the head.** 1: `grep -n '"sympy==1.14.0"' packages/pricing-core/pyproject.toml` prints one line.
+2: `463abf2c` lists `pyproject.toml`, `uv.lock`, `02-modelling.md`, `skills-map.md` (and the package pyproject). 4: Task 2's
+commit `4b5bc5e1` is an ancestor of Task 4's `42e174cb`. 6: `git diff 9f63d0fe` on `test_prepare.py` and
+`test_expression_nfrs.py` is empty. 9: only `expression_sympy.py` imports sympy; no new `import pandas`.
+
+**The held FR-244 sentence is carried by name to #967's slice** (dispatch condition 4). It is "the rating grammar is
+ZEN's expression language, restricted to the function list above" (PL-1295 Task 6). #967 (working id 9904) had not
+minted when this slice closed. FR-244's row says so in place. If #967 mints before the merge turn, the lead tells the
+executor and the minted record's "amended FR-244 text" is written there. `??`, `_GUARD_MARKERS`, `_check_vocabulary`
+and `compile.py` were not touched.
+
 ## PRs
 
 Draft PR opened on the slice branch; number recorded here when opened.
