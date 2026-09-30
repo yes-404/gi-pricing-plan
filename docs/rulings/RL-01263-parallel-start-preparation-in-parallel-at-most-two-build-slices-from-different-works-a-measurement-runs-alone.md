@@ -164,8 +164,12 @@ is kept whole: a measurement step runs alone.
 2. **`docs/process/delivery-process.core.json`** (the derived extract, `meta.authoritative:
    false`):
    - `hierarchy.children_execution` and the `parallelism` block record the amended rule;
-   - `meta.derived_from_digest` and `meta.verified_against_tree` are re-derived against the
-     amended markdown (checks 26 and 27).
+   - `meta.derived_from_digest` is re-derived against the amended markdown (checks 26 and 27).
+     `meta.verified_against_tree` is **not** changed: `.github/workflows/docs.yml`'s
+     `doc-id migrate --verify` stage reads it as the recorded pre-migration base (`0651c1e2` on
+     main), not as the tree the digest was reconciled at. *(Corrected before merge, 2026-09-30:
+     this item first said both fields are re-derived, which reddened the docs CI at 43710ff2.
+     auditor-928 found it.)*
 3. **CR-1212's "§8 stands"** (`:333`, `:474`) is amended by this ruling. CR-1212 is frozen; this
    ruling is the amending record, and CR-1212 gains `corrected_by: [RL-<minted id>]` at this
    ruling's mint turn (document-ids §1.5 permits `corrected_by:` on a frozen file).
