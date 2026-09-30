@@ -250,6 +250,31 @@ predicts**. A failure for any other cause is a plan defect, reported and not wor
    - an empty `change_note`: `VALIDATION_FAILED` (DP-1 item 1).
 
    Each route refusal is a 422, except the create-route cases in 5.
+4a. **The code the client sees, per refusal** (the maintainer's note on B1). The owning catalogue
+    is `03` §5.1's "Error codes owned by this module" (`03:771-779`) for the rating codes, and
+    `backend/src/app/errors.py`'s `_GENERIC_ERROR_CODES` (`:368-370`, "raised by the shared
+    request machinery") for the generic ones. Every code below is already registered:
+    `RATING_GRAPH_CYCLIC`, `RATING_GRAPH_UNRESOLVED_REF` and `RATING_TYPE_MISMATCH` at
+    `errors.py:288-290`, and `VALIDATION_FAILED` and `NOT_FOUND` in the generic set. No code is
+    added (RL-1309 DP-S1-3). Each row has one test in `backend/tests/test_sub_graphs_api.py`,
+    red first, asserting the HTTP status **and** the problem body's `code`:
+
+    | Refusal | Client sees | Owning catalogue | How the parse path produces it | Test |
+    |---|---|---|---|---|
+    | A cycle among the fragment's steps | 422 `RATING_GRAPH_CYCLIC` | `03` §5.1 | `SubGraphBody`'s validator raises a message containing "cycle" (Task 2). `graph_validation_error` matches "cycle" first, as `_parse_algorithm` does today (`platform/rating_algorithms.py:36`) | `test_a_cyclic_fragment_is_refused_rating_graph_cyclic` |
+    | A step consumes a name no step and no input port produces | 422 `RATING_GRAPH_UNRESOLVED_REF` | `03` §5.1 | the message contains "consumes undefined value", which the mapper matches second | `test_an_unresolved_consume_is_refused_rating_graph_unresolved_ref` |
+    | An output port no step produces | 422 `RATING_GRAPH_UNRESOLVED_REF` | `03` §5.1 | the message "output port {name!r} is an undefined value: no step produces it (FR-212)" contains "undefined value" (Task 2) | `test_an_unproduced_output_port_is_refused_rating_graph_unresolved_ref` |
+    | An output port's declared type incompatible with its expression producer's `result_type` | 422 `RATING_TYPE_MISMATCH` | `03` §5.1 | the parse succeeds; `fragment_output_type_issues` (Task 4) returns the issue, and `raise_first_issue` raises it with the issue's own code | `test_an_output_port_type_mismatch_is_refused_rating_type_mismatch` |
+    | Any other shape refusal: a duplicate `step_id`, a broken re-production chain, an orphan step, a `sub_graphs` field, an `input` or `output` step, an empty `change_note`, or a JSON object missing a required field | 422 `VALIDATION_FAILED` | generic | the mapper's fall-through, when neither "cycle" nor "undefined value" is in the message | `test_a_shape_refusal_is_validation_failed` (parametrised, one case per cause) |
+    | A body that is not a JSON object (for example an array or a string) | 422 `VALIDATION_FAILED` | generic | FastAPI refuses it against the `dict[str, Any]` annotation before the handler runs. `errors.py`'s request-validation handler (`:438-465`) returns `VALIDATION_FAILED` | `test_a_non_object_body_is_validation_failed` |
+    | `POST /api/v1/sub-graphs` on an existing slug, or a lost numbering race | 409 `VALIDATION_FAILED` | generic | the service's pre-check, or the unique constraint's `IntegrityError`, raises `PlatformError("VALIDATION_FAILED", …, 409, …)` (the form of `objectives.py:229-236`) | `test_create_on_an_existing_slug_is_409`, `test_a_lost_numbering_race_is_409` |
+    | `POST /api/v1/sub-graphs/{slug}/versions` on an unknown slug; `GET` of an unknown version | 404 `NOT_FOUND` | generic | the service raises `PlatformError("NOT_FOUND", …, 404, …)` | `test_versions_on_an_unknown_slug_is_not_found`, `test_get_of_an_unknown_version_is_not_found` |
+
+    **Precedence, stated so a body with two defects has one answer.** The shape refusals come
+    first: a body that fails parsing never reaches the type check. Within the mapper, "cycle"
+    wins over "undefined value", which wins over the fall-through, exactly as `_parse_algorithm`
+    orders them today. A test posts a body that has a cycle and a type mismatch together, and
+    asserts `RATING_GRAPH_CYCLIC`.
 5. **The two create routes and immutability** (`00` FR-4; RL-1309 DP-S1-2), red first:
    - `POST /api/v1/sub-graphs` on a slug that exists returns **409** `VALIDATION_FAILED`, and
      the stored content is byte-identical afterwards;
