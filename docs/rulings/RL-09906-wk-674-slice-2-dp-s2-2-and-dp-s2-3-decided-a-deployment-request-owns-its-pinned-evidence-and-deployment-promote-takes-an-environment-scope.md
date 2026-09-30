@@ -91,11 +91,43 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
      the module's functions is refused, and a test proves it. A migration adds no
      `ON UPDATE` path, and if the leaf plan chooses a database trigger, its test is also red
      first.
-   - **Only the single decision path writes `approved`.** The request row's status reaches
-     `approved` only through `_carry_to_the_artifact` → the deployment module's
-     `apply_approval_decision`, mirroring `rating_versions.py:312`/`:382`. A structural test
-     over `backend/src` (an AST walk, not a text grep) finds exactly one assignment of the
-     approved status to that row. A planted second writer fails it.
+   - **Only the single decision path writes `approved`: for every table, derived from the
+     models, not listed by hand.** *(Widened 2026-09-30 on the maintainer's must-check
+     relayed after #971's first push. It first covered the deployment-request row only.)*
+     - **The population:** every mapped class under `app.db.models.Base` that has a `status`
+       column, enumerated from the SQLAlchemy mapper registry at test time. A new table,
+       including the Deployment Request row, joins the population by existing, with no edit
+       to the test. The status columns are plain strings (`models.py:635`, `:788`, …,
+       `:1898`), so the population is keyed on the column, not on its type.
+     - **The writers:** an AST walk over `backend/src` finds every place that can set such a
+       row's `status`: an attribute assignment `<row>.status = …`, a constructor's
+       `status=…`, and the model's own `default=`/`server_default=`. A write whose value is
+       provably not `approved` (another literal, or another enum member) is ignored. Every
+       other write, including a non-literal one, must sit in that table's
+       `apply_approval_decision` reached from `_carry_to_the_artifact`
+       (`api/approvals.py:488`, carrying at `:499-517`), or, for `approval_requests` itself,
+       in `platform/approvals.py`'s decision (`_resolve_status`, `:547-554`).
+     - **Red first:** a planted second writer of `approved` on the deployment-request table
+       fails the check. So does a planted non-literal status write on any table, and a
+       planted `default="approved"`.
+     - **It does not hold today, and the check says so honestly.** At `9f63d0fe`, two
+       existing writers sit outside that path:
+       1. **validation rules** are approved through their own route,
+          `api/validation.py:359` → `validation_rules.approve_rule`
+          (`platform/validation_rules.py:395`), which writes `row.status = APPROVED` at
+          `:423`. `_carry_to_the_artifact` carries modelling, objectives, metrics and rating
+          versions only (`api/approvals.py:499-517`);
+       2. **validation rule sets** are approved by construction: the column's
+          `default="approved"` (`models.py:1195`), taken by `ValidationRuleSetRow(...)`
+          without a `status` (`validation_rules.py:621`). A rule set is not in `06` §2's
+          Governed Artifact list (`06-governance.md:64`).
+
+       The check lands with a **pinned baseline** of exactly these two, as a literal in the
+       test, citing this record. Any writer not in the literal fails, and the baseline can
+       only shrink, as `#940`'s exemption rule does. **Whether either is a defect is not ruled
+       here.** Both are offered to the lead as candidate findings of the FD-1200 class: a
+       second decision path for a Governed Artifact, and an `approved` status set with no
+       approval. The Deployment Request table has no baseline entry.
 5. **The deploy route executes only an approved request.** For a target whose deployments are
    approval-gated, `POST /api/v1/environments/{env}/deployments` names an **approved**
    Deployment Request and re-evaluates FR-429's one predicate from the request's **pinned**
@@ -178,8 +210,10 @@ The violations: **a deployment approved without its pinned evidence, evidence ch
 submission, a second writer of `approved`, or a Deployer acting outside the Environments its
 grant names.** In WK-674 Slice 2, each is shown failing on deliberately broken input
 (`CLAUDE.md` §13):
-- item A.4's three cases: approval without pinned evidence, an evidence update after
-  submission, and a planted second writer of `approved`;
+- item A.4's cases: approval without pinned evidence; an evidence update after submission;
+  and the model-derived one-writer check, red on a planted second writer on the
+  deployment-request table, a planted non-literal status write and a planted
+  `default="approved"`, green on the live tree only through its pinned two-entry baseline;
 - item A.5: a deploy to an approval-gated target naming no approved Deployment Request is
   refused. A request whose pinned predecessor item no longer satisfies FR-429's predicate is
   refused at the route;
