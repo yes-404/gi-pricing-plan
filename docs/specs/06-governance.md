@@ -587,8 +587,8 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 `APPROVAL_PINNED_ARTIFACT_CHANGED`, `APPROVAL_ALREADY_DECIDED`,
 `WITHDRAW_AFTER_DEPLOY_FORBIDDEN`,
 `BREAK_GLASS_REASON_REQUIRED`, `AUDIT_CHAIN_BROKEN`, `ATTESTATION_OVERDUE`,
-`ARTIFACT_TYPE_NOT_RESOLVABLE`. *(`APPROVAL_BY_EVIDENCE_AUTHOR` added 2026-09-28, `PL-1189`,
-the deputy's decision on audit finding F4: 403, FR-353's golden-quote delta rule.)*
+`ARTIFACT_TYPE_NOT_RESOLVABLE`, `APPROVAL_OUTSIDE_DECISION_PATH`. *(`APPROVAL_BY_EVIDENCE_AUTHOR` added 2026-09-28, `PL-1189`,
+the deputy's decision on audit finding F4: 403, FR-353's golden-quote delta rule. `APPROVAL_OUTSIDE_DECISION_PATH` added 2026-09-30, `PL-1303` (WK-674 Slice 2a), `RL-1301` A.4.2: 403, the database's refusal of an `approved` write that did not come through the decision path.)*
 
 ### 5.2 Backend service interfaces
 
