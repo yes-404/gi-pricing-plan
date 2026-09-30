@@ -77,7 +77,7 @@ It is not committed. The interpreter is the root checkout's `.venv` (`zen-engine
 `packages/model-schema/src`. `python -c 'import pricing_core.rating.score as s; print(s.__file__)'`
 under the same environment printed this worktree's `score.py`, which proves which builder the
 script imports. It is reproduced in full in the appendix, sha256
-`361793508c7cb351f66e5cbdde3dd616cab36e3cd997786aa792955c2197c512` (*re-run on audit, 2026-09-30, twice: first with the clamp case and the magnitude counter added (`05b92737…`), then with the relative-error counters added for S4; every earlier figure reproduced unchanged each time*).
+`7c39cf44e1827e0f98e0172a2e239b15e759273610923cd7089ae0a644675a4b`. *It was re-run in full on each audit round of 2026-09-30, each time with counters added and none changed: the clamp case and the magnitude counter (`05b92737…`); the relative-error counters for S4 (`36179350…`); the quote-wide sum for R1 (`13a8a195…`); the own term (`78106d73…`); and the exact bound (`7c39cf44…`, the appendix). Every earlier figure reproduced unchanged each time.*
 
 **Steps.**
 1. `git worktree add <path> fa9a73c2` (any checkout of this tree).
@@ -87,7 +87,9 @@ script imports. It is reproduced in full in the appendix, sha256
    more than one operation into the sweep. In that run, the trailing `x` turns on the
    `MISS` lines, which name any rung whose recorded operation differs from the applied one;
    none printed. In the other three runs the `x` has no effect (`len(sys.argv) > 4` is
-   false).
+   false). The final runs (`7c39cf44…`) were made with the script saved as `work_v8.py`,
+   so that the previous version could finish its own runs under the other name; the
+   content is the appendix, byte for byte.
 
 **What it builds.** A real ZEN decision: one expression node per rung, and one final node
 that reads every value with the engine's `string()`. It then runs:
@@ -224,8 +226,9 @@ maxima over the same non-payable rungs. With the one rounding unit included,
 the rounding unit, not the drift. With the rounding unit taken out, `(diff − 1) / value`,
 the largest are **4.453 × 10⁻⁵** (seed 20260930), **4.854 × 10⁻⁵** (seed 7), **4.445 × 10⁻⁵**
 (seed 1257) and **4.607 × 10⁻⁵** (seed 42, mixed). The maximum over the four runs is
-**4.854 × 10⁻⁵**. Acceptance 8's stop bound uses this figure rounded up (5 × 10⁻⁵), plus one
-minor unit.
+**4.854 × 10⁻⁵**, on an `optimisation_adjustment` rung whose factor is below 1. This
+figure supports the maintainer's "about 1e-4". It is not Acceptance 8's stop bound, which
+is the exact per-rung bound derived from the mechanism (see there).
 
 The cause is today's 4-dp factor quantisation (`score.py:610`). Each factor can be off by up
 to 5 × 10⁻⁵, so a rung is off by up to about 10⁻⁴ of its value. "1–2p" holds only at
@@ -406,11 +409,22 @@ For each rung present in `_RUNG_ORDER` (the fixed order is unchanged):
        save (`backend/src/app/platform/rating_algorithms.py:58-69`) and at compile
        (`compile_bundle`, `compile.py:497-499` at `origin/main` `32f3fa92`). So the refusal
        comes at save, which is earlier and better than at compile. It edits no existing
-       definition: it appends one function and one registry entry. Option (a), an edit
+       definition: it appends one function and one registry entry. **It reads only
+       `on_violation`, `consumes` and `produces` of a `constraint` step, and the output
+       steps' `output_name` and `consumes`**, never `expr`, `condition`, `clamp_bounds` or
+       `key_expr`. So it passes #967's closure 3c (i), which bans reading those four fields
+       outside the enumerator (*added on the third re-audit, E1*). Option (a), an edit
        inside `compile_bundle`, is rejected: it collides with #967's condition 3 and with
        WK-1250 S2.
      - **The code: a new `LADDER_CLAMP_UNPLACEABLE` (422)**, registered in `03` §5.1 by this
-       commit and in `backend/src/app/errors.py` by S3. `BUNDLE_COMPILE_FAILED`, which the
+       commit and in `backend/src/app/errors.py` by S3, as a new member of
+       `RATING_ERROR_CODES` (`errors.py:297` at `origin/main` `8d5c67a5`). **The same
+       ordering condition applies to that edit** (*added on the third re-audit, E1*):
+       #967 edits the same frozenset (PL-1314 `:160`), so S3's `errors.py` edit comes after
+       #967's code slice merges, as its `compile.py` edit does. The dispatch record names the
+       path and RL-1263's check: S3 appends a distinct member and edits no other. S2a's
+       `GOVERNANCE_ERROR_CODES` edit has merged (`8d5c67a5`), so it is no longer an
+       ordering constraint; the file is shared, nothing more. `BUNDLE_COMPILE_FAILED`, which the
        previous commit named, is a compile code and would mislabel a refusal at save. The
        `ValidationIssue` names the step and the rung, and carries no quote input. The check
        adds no `_raise_named` site: `compile_bundle` raises the first issue through its
@@ -528,6 +542,33 @@ contract is regenerated.
   step's source, rounded once with that step's `RoundSpec`, as an integer.** This is FR-273
   and `CLAUDE.md` §7, and it is part of the finding under working id 9949 that S3 owns.
   The same terminal read supplies it.
+  **This is a visible change of value** (*stated on the third re-audit, R2*). On `/score`,
+  such an output changes from the engine's float to an integer. The two differ by less than
+  one rounding unit of the step's `RoundSpec` (at most half a unit for the `half_*` modes,
+  under one unit for `ceiling` and `floor`). The maintainer ruled it a defect fix, quoted
+  verbatim as relayed by the lead:
+
+  > "2026-09-30 — the maintainer (by delegation) acknowledges that RL 9963 changes declared non-rung `money_minor` outputs served by /score from an unrounded float to the exact value rounded once by the output step's RoundSpec, an integer: a served-value change of at most one rounding unit plus a JSON type change from number-with-fraction to integer. This corrects a violation of FR-273 and aligns /score with score_batch, which already refuses a float money_minor. Conditions 1 and 2 of the W2 entry (a dated 03 note; a release-note line) cover it too."
+
+  So S3's release-note line (W2 condition 2) names this change too, and this commit adds
+  it to the `03` §4.4 note (condition 1). `score_batch` already raises on a float
+  `money_minor` output (`_coerce_output_value`, `score.py:834`).
+  **No contract types these outputs, so no contract change follows** (checked at
+  `a8fef919`, which carries `fa9a73c2`'s contracts unchanged):
+  - the hand-authored `docs/contracts/schemas/scoring.schema.json:54`: `"outputs": {"type": "object"}`;
+  - the generated `docs/contracts/schemas/generated/score-comparison.schema.json`,
+    `$defs.ScoringResult.properties.outputs`: `{"additionalProperties": true, "title":
+    "Outputs", "type": "object"}`;
+  - the generated `docs/contracts/openapi/generated.json`, `paths["/api/v1/score"].post.responses["200"]`:
+    `"schema": {}`, an untyped response.
+
+  The lead relayed the maintainer's confirmation that "the money_minor integer contract
+  change plus its regeneration" go in S3's write set. The check above finds no field for
+  that change to act on: `outputs` is a map keyed by the names each algorithm declares, and
+  every contract types it as an untyped object. **So S3 edits no contract for R2.** Its
+  contract-guard run and `generate-contracts --check` stay in the write set (B2), and they
+  must stay green. Typing the `/score` response, which OpenAPI leaves as `{}`, would be a
+  separate contract question. It is not ruled here, and it is listed under Observed.
   **Declared outputs of type `decimal` are out of this ruling.** They are not money, and
   serving them as exact strings would change their JSON type on `/score` from number to
   string. No acceptance covers that visible change. `score_batch` already emits them as
@@ -693,17 +734,52 @@ S3 carries each item red first, shown failing on `origin/main`.
 8. **The false-positive control** (the S3 plan's Acceptance 10, N2 (c)) runs under this
    predicate, and adds three counts, each of which stops the slice if it is above 0:
    - golden quotes whose payable changes;
-   - golden quotes with a declared output `o` for which `|new(o) − base(o)| >
-     REL_BOUND × |new(o)| + 1` minor unit, where `REL_BOUND` is **5 × 10⁻⁵** (the
-     measured maximum relative error over the four sweeps, 4.854 × 10⁻⁵, results part 6, rounded up;
-     *made explicit on audit, S4*). The measured figure is for the sweep's factors, which
-     lie in [0.8, 1.4]. The drift on a rung is up to 5 × 10⁻⁵ of the **previous** rung, so a
-     golden algorithm whose factor lies below 0.8 can exceed the bound truthfully. Such a
-     stop is reported with the rung and its factor, and the lead routes it; the bound is
-     not widened in the slice. The `+ 1` covers the one rounding. **The baseline
-     `base(o)` is `origin/main`'s builder run on the same golden contexts at S3's base
-     tree**, because a golden quote's `expected` stores only the payable and the outcome
-     (§4.7);
+   - golden quotes on which a declared rung output moves by more than its mechanism
+     bound (*made explicit on audit, S4; ruled on the third re-audit, R1, by the
+     maintainer, relayed by the lead: the **exact** form below is in force. It supersedes
+     the flat 5 × 10⁻⁵ bound, the maintainer's sum over the quote's factors, and the
+     own-term form*). For rung `i` of a golden quote, `new_i` is the ruled value and
+     `base_i` the baseline value. The slice stops if:
+     - on a `multiply` rung: **`|base_i − new_i| > 5 × 10⁻⁵ · |base_{i−1}| + 1`** minor
+       unit, where `base_{i−1}` is the previous rung in the baseline ladder;
+     - on an `add` or a `round` rung, and on the first rung: `|base_i − new_i| > 1`;
+     - on a `constraints` rung where a clamp binds: `new_i` is not exactly the bound.
+     **The comparison is evaluated in integers and `Decimal`, never in float.**
+     - **Derived from FD 9949's cause, not fitted** (`score.py:609-611`). Today's rung is
+       `apply_factor(base_{i−1}, q_i)`, where `q_i` is `raw_i / base_{i−1}` cut to 4 dp,
+       so `|q_i − raw_i / base_{i−1}| ≤ 5 × 10⁻⁵`, and `|base_{i−1} · q_i − raw_i| ≤
+       5 × 10⁻⁵ · |base_{i−1}|`. `apply_factor`'s rounding and the ruled value's rounding
+       add at most 0.5 each. The drift does not accumulate, because each rung's factor is
+       re-derived from its own raw value.
+     - **Validated on the four-sweep corpus** at tree `fa9a73c2`: seeds 20260930, 7, 1257
+       and 42 (mixed). The runs were `python work_v8.py 200 20260930 x`, `… 200 7 x`,
+       `… 500 1257 x` and `… 300 42 mixed x`, where `work_v8.py` is the appendix's script,
+       sha256 `7c39cf44…`, under a working name. **The exact bound had 0 exceedances on
+       every seed:** 0 of 31 200 rung outputs (seed 20260930), 0 of 31 600 (seed 7),
+       0 of 80 500 (seed 1257) and 0 of 45 900 (seed 42, mixed), 189 200 in all. Its
+       tightness, `(|diff| − 1) / (5 × 10⁻⁵ · |base_{i−1}|)`, reached 0.9998, 0.9998,
+       0.9996 and 0.9992, so the derived bound is almost attained, as the mechanism
+       predicts. `5 × 10⁻⁵ · |base_{i−1}| / |new_i|` reached at most 6.25 × 10⁻⁵ (the
+       sweep's smallest factor, 0.8), below the 2 × 10⁻⁴ report line.
+     - **Two other counters, recorded for the record.** The same runs also counted:
+       - the maintainer's earlier quote-wide sum, `Σ 5 × 10⁻⁵ / |q_j|` (first run with
+         script `13a8a195…`): 0 exceedances in 189 200 rung outputs. But the sum ran above
+         2 × 10⁻⁴ on 4491 of 31 200, 4961 of 31 600, 11 792 of 80 500 and 6050 of 45 900
+         rung outputs (max 3.28 × 10⁻⁴), because it assumed that the drift accumulates;
+       - the own term, `(5 × 10⁻⁵ / |q_i|) · |new_i| + 1` (first run with script
+         `78106d73…`): 0 exceedances on every seed, but tightness up to 0.9999, 0.9998,
+         0.9996 and 0.9991. It approximates `|base_{i−1}|` by `|new_i| / |q_i|`, so an
+         own-term exceedance with no exact exceedance would be expected. It is not a stop.
+     - **The 2 × 10⁻⁴ report** applies to `5 × 10⁻⁵ · |base_{i−1}| / |new_i|`: if it
+       exceeds 2 × 10⁻⁴ on a golden quote (a factor below about 0.25), S3 reports it to
+       the maintainer before it continues.
+     - **Any exceedance of the exact bound is reported to the maintainer**, with no looser
+       fallback. It would mean a second cause of drift.
+     - The acceptance line's "about 1e-4" stands: the measured maximum of `(|diff| − 1) /
+       value` is 4.854 × 10⁻⁵ (results part 6).
+     - **The baseline is `origin/main`'s builder run on the same golden contexts at S3's
+       base tree**, because a golden quote's `expected` stores only the payable and the
+       outcome (§4.7).
    - quotes on which a clamp's comparison and disposition disagree (S5).
 9. The ledger records `scripts/bench-rating.py` before and after (one extra generated node
    with one `string()` per rung). No budget is changed here.
@@ -843,6 +919,10 @@ stand unchanged: true operands, and one rounding on the replay path.
   ruling does not change them (§3 says why). Whether any stored value is affected, and the
   fix, are a separate question for the lead.
 - *(Removed on audit: the clamp-attribution item is now ruled, §1 and §2 step 5.)*
+- **The `/score` response is untyped in the generated OpenAPI** (`docs/contracts/openapi/generated.json`,
+  `paths["/api/v1/score"].post.responses["200"]`, `"schema": {}`), and so is `/score/compare`'s.
+  A client generated from it gets no `ScoringResult` type (*found on the third re-audit,
+  R2*).
 - **Declared `decimal` outputs reach `/score` as floats** (*added on audit, S6*).
   `_build_outputs` serves them from `result[source]`, and `score_one` does not convert them,
   while `score_batch` serialises them as strings. This ruling brings only `money_minor`
@@ -853,7 +933,7 @@ stand unchanged: true operands, and one rounding on the replay path.
 
 ## Appendix — the evidence script, verbatim
 
-`dp_s3_5_evidence.py`, sha256 `361793508c7cb351f66e5cbdde3dd616cab36e3cd997786aa792955c2197c512`:
+`dp_s3_5_evidence.py` (the final runs used the working name `work_v8.py`), sha256 `7c39cf44e1827e0f98e0172a2e239b15e759273610923cd7089ae0a644675a4b`:
 
 ```python
 """DP-S3-5 evidence (RL-9963). Scratch only, never committed.
@@ -880,6 +960,7 @@ ENGINE = zen.ZenEngine()
 DIFF_MAX, DIFF_HIST = {}, {}
 REL_MAX = [(Decimal(0), 0, '', '')]
 REL1_MAX = [(Decimal(0), 0, '', '')]
+MECH = {'rungs': 0, 'exceed_per_output': 0, 'exceed_quote_wide': 0, 'sigma_max': Decimal(0), 'sigma_over_2e-4': 0, 'tightness_max': Decimal(0), 'exceed_own_term': 0, 'own_max': Decimal(0), 'own_tightness_max': Decimal(0), 'exceed_exact_prev': 0, 'exact_tightness_max': Decimal(0), 'exact_rel_max': Decimal(0)}
 
 
 # ---- a real ZEN graph: a chain of expression nodes, then one node that reads every value as
@@ -1230,8 +1311,47 @@ def main(n_per_cell, seed):
                     totals["today_replay_fails"] += 1; cell_today += 1
                 if any(r.value_minor != rnd(values[present[r.rung]]) for r in v1 if r.rung in present):
                     totals["today_rung_misstated"] += 1
-                for r in v1:
+                sigma, quote_sigma = Decimal(0), sum(
+                    (Decimal("5E-5") / abs(Decimal(x.operation.factor)) for x in v1
+                     if x.operation and x.operation.kind == "multiply"), Decimal(0))
+                own = Decimal(0)
+                for idx, r in enumerate(v1):
+                    exact_term = Decimal(0)
+                    if idx > 0 and r.operation and r.operation.kind == "multiply":
+                        exact_term = Decimal("5E-5") * abs(v1[idx - 1].value_minor)
                     if r.rung in present and r.rung != "payable_premium":
+                        d_exact = abs(r.value_minor - rnd(values[present[r.rung]]))
+                        if d_exact > exact_term + 1:
+                            MECH["exceed_exact_prev"] += 1
+                        if exact_term > 0:
+                            MECH["exact_tightness_max"] = max(MECH["exact_tightness_max"],
+                                Decimal(max(d_exact - 1, 0)) / exact_term)
+                            MECH["exact_rel_max"] = max(MECH["exact_rel_max"],
+                                exact_term / abs(rnd(values[present[r.rung]])))
+                    own = Decimal(0)
+                    if r.operation and r.operation.kind == "multiply":
+                        own = Decimal("5E-5") / abs(Decimal(r.operation.factor))
+                        sigma += own
+                    if r.rung in present and r.rung != "payable_premium":
+                        new_v = rnd(values[present[r.rung]])
+                        if abs(r.value_minor - new_v) > own * abs(new_v) + 1:
+                            MECH["exceed_own_term"] += 1
+                        MECH["own_max"] = max(MECH["own_max"], own)
+                        if own > 0:
+                            MECH["own_tightness_max"] = max(MECH["own_tightness_max"],
+                                Decimal(max(abs(r.value_minor - new_v) - 1, 0)) / (own * abs(new_v)))
+                        mech = sigma * abs(new_v) + 1  # the per-output mechanism bound
+                        MECH["rungs"] += 1
+                        if abs(r.value_minor - new_v) > mech:
+                            MECH["exceed_per_output"] += 1
+                        if abs(r.value_minor - new_v) > quote_sigma * abs(new_v) + 1:
+                            MECH["exceed_quote_wide"] += 1
+                        MECH["sigma_max"] = max(MECH["sigma_max"], sigma)
+                        if sigma > Decimal("2E-4"):
+                            MECH["sigma_over_2e-4"] += 1
+                        if sigma > 0:
+                            MECH["tightness_max"] = max(MECH["tightness_max"],
+                                Decimal(max(abs(r.value_minor - new_v) - 1, 0)) / (sigma * abs(new_v)))
                         diff = abs(r.value_minor - rnd(values[present[r.rung]]))
                         rel = Decimal(diff) / abs(values[present[r.rung]])
                         if rel > REL_MAX[0][0]:
@@ -1267,6 +1387,8 @@ def main(n_per_cell, seed):
     print(f"  largest |diff| / engine value over non-payable rungs: {rel:.3E} ({diff} minor units on {rung} = {value})")
     rel, diff, value, rung = REL1_MAX[0]
     print(f"  largest (|diff| - 1) / engine value over non-payable rungs: {rel:.3E} ({diff} minor units on {rung} = {value})")
+    print("  mechanism bounds: sigma = sum of 5E-5/|q| over today's quantised factors up to the rung; own = the rung's own 5E-5/|q|; bound = term * |new| + 1; exact_prev: bound = 5E-5 * |today's previous rung| + 1 on a multiply rung, else 1:",
+          {k: (f"{v:.3E}" if isinstance(v, Decimal) else v) for k, v in MECH.items()})
 
 
 if __name__ == "__main__":
