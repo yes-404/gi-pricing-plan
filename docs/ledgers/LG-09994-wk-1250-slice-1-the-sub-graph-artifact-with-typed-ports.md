@@ -150,6 +150,20 @@ latter still registered in `ALGORITHM_CHECKS`. Green: `test_rating_compile.py` a
 `test_rating_authored_fields.py` (the #967 closure tests) 79 passed; `git diff --numstat` of the tests dir
 shows additions only (0 removed). `lint-imports`: 4 kept, 0 broken; ruff, mypy clean.
 
+### Task 5 — the service, the resolver and the mapper extraction
+
+Characterisation first (new tests in `backend/tests/test_rating_algorithms.py`, four): **before** the
+extraction `8 passed, 1 xfailed`; **after** `8 passed, 1 xfailed` (the `cycle_note` case is the xfail,
+`strict=True`). Extracted: `graph_validation_error(exc, *, artifact)` and `raise_first_issue(issues)` (the
+proposed names); `_parse_algorithm` and `_issues_to_error` call them. Red for the service: collection error
+on `app.platform.sub_graphs` (missing module). Green: `test_sub_graphs_service.py` 12 passed. Broken-input
+proof: with the `audit.record` call removed locally, `test_create_writes_version_one_and_one_audit_event`
+failed (1 failed, the count of events read 0); the call was restored and never committed. Service names:
+`create_sub_graph`, `create_version`, `get_version`, `list_versions`, `resolve_ref`; the content column
+holds the body (`inputs`, `outputs`, `steps`, `change_note`), the slug and version are columns. A list of an
+unknown slug is a 404 `NOT_FOUND` (the plan is silent). `resolve_ref` refuses a ref of another type with 422
+`VALIDATION_FAILED`, the others with 404 `NOT_FOUND`. ruff, mypy, lint-imports clean.
+
 ## Deviations from PL-1325, each named
 
 1. **Decimal example** (Task 1): the §4.11 example declares the output port type `relativity`, not
