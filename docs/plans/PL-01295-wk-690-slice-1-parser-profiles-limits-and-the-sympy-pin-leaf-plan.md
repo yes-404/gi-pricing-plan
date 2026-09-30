@@ -13,7 +13,7 @@ slice: SL-1271
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1268, RL-1184, RL-1265, RL-1289]
+relates: [PL-1268, RL-1184, RL-1265, RL-1289, RL-1291, RL-1292, RL-1293, FD-1294]
 ---
 
 # PL-1295 — WK-690 Slice 1 — the parser brought to §4.6's four profiles, with its limits and the sympy pin: leaf plan
@@ -78,7 +78,7 @@ that bind it:
 
 ## Status
 
-**Draft**, filed 2026-09-30 against `fb90d381` (origin/main). Minted 2026-09-30 as PL-1295 (`doc-id.py next --ref origin/main` = 1295 at `48792023`); it was drafted under working id 9960. DP-S1-1 to DP-S1-3 below are decision
+Filed 2026-09-30 against `fb90d381` (origin/main). Minted 2026-09-30 as PL-1295 (`doc-id.py next --ref origin/main` = 1295 at `48792023`); it was drafted under working id 9960. DP-S1-1 to DP-S1-3 below are decision
 points for the decision-maker, one `RL-` each, ruled at medium effort, each with an
 executable red/green proof. Each is resolved before this plan's activation, and applied at
 the task its row names (`document-ids.md` §1.7). **All three are now ruled**, each by its
