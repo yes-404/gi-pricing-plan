@@ -24,8 +24,10 @@ relates: [RL-1265, PL-1268, FR-244, FR-274, FR-276, FR-246]
 entry headed "maintainer order: re-spawn the decision-maker at high effort"). The session's
 own `echo "CLAUDE_EFFORT=$CLAUDE_EFFORT"` printed `CLAUDE_EFFORT=high`.
 
-**What was asked** (the lead's relay of the maintainer's entry, `to-lead.md` about 10:22 BST,
-on auditor-933's facts at `eeda8f4b`). This is a `CLAUDE.md` §0 disagreement between code and
+**What was asked** (the maintainer's entry `to-lead.md` "2026-09-30 10:15:07 BST — … `??` goes
+to the DM as a ruling", relayed by the lead, on auditor-933's facts at `eeda8f4b`). *(Time
+corrected: this record first cited "about 10:22 BST", an estimate the lead relayed. The time
+is now read from the file's own header.)* This is a `CLAUDE.md` §0 disagreement between code and
 spec about the rating expression grammar, and the grammar is the decision-maker's
 (`document-ids.md` §1.6, FR row). Rule:
 - whether FR-244 is an **enforced allow-list, operators included**;
@@ -37,8 +39,8 @@ The maintainer's steer was weighed on its merits. This record uses a new working
 checked free: no `[A-Z]{2,3}-0?9904` token under `docs/` on any `origin/*` ref, nor in
 `~/gi-pricing-plan.local/channel/`. It is minted at the lead's merge turn.
 
-**Context, not ruled here.** A HIGH finding is being filed at the time of writing, not yet
-on any ref: an unpinned or wrong-version `table` or `lookup` step prices silently wrong. It
+**Context, not ruled here.** A HIGH finding (FD working id 9977, HIGH per the 10:15:07 BST
+entry) is being filed at the time of writing, not yet on any ref: an unpinned or wrong-version `table` or `lookup` step prices silently wrong. It
 was reproduced through `??` consumers. Its fix, the WK-1178 slice due about 16:00 BST,
 refuses such a step at compile. That fix removes the upstream cause of the null that `??`
 masked. This ruling does not depend on it and does not block it.
@@ -77,6 +79,23 @@ probe was read-only, run from a scratch directory with the repository's `.venv` 
 | `a ?? 5` with `a = null` → `5`; with `a = 2` → `2` | evaluates |
 | `a / b` with `b = 0` → `null`; `(a / b) ?? 7` with `b = 0` → `7` | evaluates: **`??` turns a division-by-zero null into a value** |
 | `round(2.5)` → `3`, `round(-2.5)` → `-3`, `round(0.125, 2)` → `0.13` | the engine's `round` is **half away from zero** |
+
+**The binding boundary**, probed the same way for the maintainer's 10:53:10 BST entry, which
+asked for a boundary line in FR-244:
+
+| Case | Result |
+|---|---|
+| `round(2.675, 2)`, `round(1.005, 2)`, `round(-2.675, 2)`, `round(1234.565, 2)` | `2.68`, `1.01`, `-2.68`, `1234.57`: exact decimal, half away from zero, with no binary-float tie error |
+| `0.1 + 0.2 == 0.3` | `True` |
+| context `a = 0.30000000000000004` (a Python float); `a`, and `a == 0.3` | `0.3`, and `True`: a float input keeps about 15 significant digits |
+| context `a = 12345` (an int); `a * 1` | `12345.0`: outputs cross back as Python `float` |
+| context `a = Decimal("2.5")` | refused at the binding: "argument 'ctx': unsupported type Decimal" |
+| context `a = "2.5"` (a str); `a`, and `a + 1` | `'2.5'` is accepted **as a ZEN string**, and `a + 1` fails at evaluation (`vmError`, "Opcode Add: Unsupported type"). A number never arrives as a string |
+
+The platform passes money in as integer minor units (FR-273). It takes each output through
+`_round_minor` (`packages/pricing-core/src/pricing_core/rating/score.py:535-542`), which is
+`Decimal(repr(raw))` quantized with the step's declared mode. **Integers above 2^53 at the
+boundary are untested**: a stated limit, far above any premium in minor units.
 
 So of FR-244's seven functions, the engine has only `round`, in one- and two-argument forms,
 and `min` and `max` in their array forms. `coalesce(a, b)` cannot exist in the engine, and
@@ -132,7 +151,8 @@ nothing that exists, except the two deliberate negative-test functions.
      - `round(x)` and `round(x, dp)`, with `dp` an integer literal. The engine rounds **half
        away from zero**, and the amendment says so, because the output step's
        `half_even` is a different rule; **Half away from zero is accepted as P2's in-expression rounding**
-       (the maintainer, `to-lead.md` about 11:28 BST). FR-244's dropped `mode` intent is an
+       (the maintainer, `to-lead.md` entry "2026-09-30 10:46:20 BST — #967 … decisions on A
+       (rounding) and B"; first cited here as "about 11:28 BST", a relayed estimate). FR-244's dropped `mode` intent is an
        open question, OQ working id 9905, raised by this record and mirrored in `03` §10 and
        the register (owner WK-1178). Whether the engine rounds through binary float is
        auditor-rl's probe, and a separate finding if it does;
@@ -160,7 +180,8 @@ nothing that exists, except the two deliberate negative-test functions.
    cannot provide under that name. Refusing it would protect nothing. The same masking is
    written `x != null ? x : 0`, which also compiles and evaluates (the probe:
    `a / b != null ? a / b : 0` with `b = 0` gives `0`). And a nullable input (FR-213's
-   `nullable`) needs a coalescing form. What makes a masked null dangerous is controlled
+   `nullable`) needs a coalescing form. The steer for "one spelled, specified form" is met:
+   `??` becomes that one form, because `coalesce(` cannot compile. What makes a masked null dangerous is controlled
    elsewhere, and this ruling states each control:
    - **`??` is never a division guard.** FR-274 requires an explicit zero guard on every
      division. `a / b ?? 0` must stay refused as `EXPRESSION_UNGUARDED_DIVISION`, and so must
@@ -200,8 +221,13 @@ WK-690 Slice 1's Task 6 appends this to FR-244's cell, **in place of** the held 
 > `min([max([x, lo]), hi])`, `band` is a `table` step with a banded key (FR-228), and
 > `date_diff_years` is an input (FR-246). The allow-list binds every authored rating string
 > (`expr`, `condition`, clamp bounds, `key_expr`), and anything outside it is refused at
-> save with `EXPRESSION_INVALID_VOCABULARY`. "The same restricted grammar as `02` §4.6" is
-> superseded by this sentence.
+> save with `EXPRESSION_INVALID_VOCABULARY`. **Numbers at the engine boundary:** inside ZEN,
+> arithmetic and `round` are exact decimal (`round(2.675, 2)` is `2.68`, and `0.1 + 0.2 == 0.3`).
+> Callers pass money as integer minor units (FR-273). The binding refuses a `Decimal` input,
+> and takes a `str` input as a string, never a number. Outputs return as floats and are taken
+> through `_round_minor` (`Decimal(repr(x))`, quantized with the output step's declared mode).
+> Integers above 2^53 at the boundary are untested. "The same restricted grammar as `02`
+> §4.6" is superseded by this sentence.
 
 ## Which slice carries it
 
@@ -220,6 +246,13 @@ WK-690 Slice 1's Task 6 appends this to FR-244's cell, **in place of** the held 
   refusals. The planner cuts the slice, and the lead dispatches it.
 - **The ~16:00 fix slice is not changed by this ruling.** It must not treat `??` as a guard,
   and it must not refuse `??`. Today it does neither.
+- **The order is fixed by the maintainer** (the 10:53:10 BST entry): the fix slice (#963), then
+  this ruling's WK-1178 code slice, then WK-1250 Slice 1. All three write `compile.py`. The
+  condition and clamp-bound gap of item 3 is also filed as its own finding, by auditor-928, at
+  MEDIUM rising to HIGH on reproduction. Its owner is this code slice, kept separate from the
+  fix slice. Its acceptance adds: "a division guarded at save makes it unreachable; any
+  residual runtime evaluation failure in a condition or bound raises its own evaluation code,
+  never `RATE_TABLE_MISS`".
 
 ## What it obliges
 
