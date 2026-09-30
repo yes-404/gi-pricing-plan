@@ -12,7 +12,7 @@ work: WK-674
 slice: SL-1257
 supersedes: []
 superseded_by: ~
-corrected_by: [RL-1329]
+corrected_by: []
 relates: [PL-1237, PL-1306, PL-1303, RL-1184, RL-1301, RL-1232, RL-1236, RL-1263, RL-1311]
 ---
 
@@ -65,7 +65,7 @@ this slice keys everything on.
 Filed 2026-09-30 against the tree above, under **working id 9947** (checked free by the
 lead and recorded in `eta.md`'s "Working ids held"). The id is minted at this PR's merge turn.
 
-**Minted 2026-09-30 as PL-1342** (`python3 scripts/doc-id.py next --ref 71b672205f7212008d0ff00b5cbc4810b56f12e6` printed `1342`, and the lead allocated it in mint batch 12). It was filed under working id 9947, and this body keeps that id as written. Its last audit, auditor-close1255's delta audit of `27ab8c00..06e3e896`, was NOT CLEAN on finding **N5**: the ladder replay in Acceptance 10 (the four operation kinds and the comparison) and Task 6. **N5 is superseded by `RL-1329`** (`corrected_by: [RL-1329]`), and the replay text here is not operative. The operative text is in WK-674 S3's dispatch record and its ledger's Task 0.
+**Minted 2026-09-30 as PL-1342** (`python3 scripts/doc-id.py next --ref 71b672205f7212008d0ff00b5cbc4810b56f12e6` printed `1342`, and the lead allocated it in mint batch 12). It was filed under working id 9947, and this body keeps that id as written. Its last audit, auditor-close1255's delta audit of `27ab8c00..06e3e896`, was NOT CLEAN on finding **N5**: the ladder replay in Acceptance 10 (the four operation kinds and the comparison) and Task 6. **N5 is superseded by `RL-1329`**, and the replay text here is not operative. The operative text is in WK-674 S3's dispatch record and its ledger's Task 0.
 
 **Activation needs, in order** (activation is the `status:` flip only; the facts of each need
 met live in the dispatch record, quoted in the slice ledger's Task 0 — the maintainer's entry
