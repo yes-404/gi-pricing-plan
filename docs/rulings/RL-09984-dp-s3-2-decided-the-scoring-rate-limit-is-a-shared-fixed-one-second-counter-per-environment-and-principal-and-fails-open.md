@@ -206,6 +206,10 @@ specific, so it wins.
 ### 6. The other routes, and FR-452's other limbs
 
 - **`/score/batch` and `/score/compare` are not counted.** The reasons are in "Options, weighed".
+  So PL-1342 Task 5's "its dependency on the scoring routes" (`PL-1342:455-456`) means
+  `POST /api/v1/score` only: it is the one route where a Consumer System's request rate is the
+  load (NFR-489 budgets it per second), `/score/batch` is a 202 Job submission whose load the
+  worker pool bounds, and `/score/compare` needs `rating:read`, which no Service Account holds.
 - **Not delivered by this ruling: FR-452's management-API limits.** FR-452 says scoring limits are
   "configured separately from management-API limits". This ruling configures the scoring limit
   separately (its own setting, on `/score` only). It builds no management-API limit. FR-452 has no
@@ -230,8 +234,16 @@ WK-674 Slice 3, Task 5 (`PL-1342:452-456`), beside Acceptance 4:
   contract regenerated.
 - The response-header carrier on `PlatformError` and the problem handler (`errors.py` is already
   in the dispatch record's write set; the handler's module is added if it is not `errors.py`).
-- The process-wide Redis client, in the lifespan, with the timeouts of rule 5.
-- The counter `gip_rate_limit_unenforced_total` in `observability/metrics.py`.
+- The process-wide Redis client, built in the application lifespan (`backend/src/app/main.py`,
+  `lifespan` at `:76`; `app.state` is set at `:169-176`) and closed at shutdown, with the timeouts
+  of rule 5.
+- The counter `gip_rate_limit_unenforced_total` in `backend/src/app/observability/metrics.py`.
+- **Two more write-set additions, beside the two above:** `backend/src/app/main.py` (the lifespan
+  client) and `backend/src/app/observability/metrics.py` (the counter). `metrics.py` is not in
+  PL-1342's write set. `main.py` is there only for FD 9881's startup hook (`PL-1342:388`,
+  "`main.py` is registry-exempt only for an added hook"), so this client is a second edit there,
+  of a different kind. The lead adds
+  both to the dispatch record's write set with the RL-1263 check against lane A.
 - `07` FR-452 is **not** reworded by the slice. This ruling adds its dated clause.
 
 ## Acceptance — the violation that must become detectable
@@ -282,7 +294,7 @@ so cases 1 and 2 use two applications.
 ## Raised to the lead (not ruled here)
 
 - **FR-452's management-API limb has no owner.** Scope, so the lead's or the maintainer's.
-- **The write set.** `auth/service.py` and `api/deps.py` join Task 5's write set (above).
+- **The write set.** `auth/service.py`, `api/deps.py`, `main.py` and `observability/metrics.py` join Task 5's write set (above).
 - **PL-1342 cites NFR-499 at `03:1160` and NFR-496 at `03:1157`.** At `36b2a121` they are at
   `03:1168` and `03:1165`. The plan is frozen. The executor re-derives line numbers at its own tree,
   as the plan tells it to (`PL-1342:371`).
