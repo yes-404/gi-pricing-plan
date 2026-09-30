@@ -1,5 +1,5 @@
 ---
-id: RL-9201
+id: RL-1264
 family: ruling
 title: WK-673 DP-1 to DP-3 — subset bundles are ephemeral, changes are derived and regrouped, the threshold is policy, and the spec is right about engine arithmetic
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [RL-881, RL-885, RL-1172]
 ---
 
-# RL-9201 — WK-673 DP-1 to DP-3: subset bundles are ephemeral, changes are derived and regrouped, the threshold is policy, and the spec is right about engine arithmetic
+# RL-1264 — WK-673 DP-1 to DP-3: subset bundles are ephemeral, changes are derived and regrouped, the threshold is policy, and the spec is right about engine arithmetic
 
 ## Verified first, at ed123cb0fcf91e44872963bf8a8bad32b87c99bc
 
@@ -23,7 +23,7 @@ relates: [RL-881, RL-885, RL-1172]
 the deputy's entry on WK-673's DP-1 to DP-3 (by the maintainer's delegation, 28 Sep, extended goal),
 written at 14:05:30 BST and relayed by the lead, a recommendation under the maintainer's STRUCTURE
 entry (15:26:00, §2); it is quoted whole under Input, fenced. First filed 2026-09-28 as working id
-RL-9201; `created` re-dated at the reframe so the id sequence stays non-decreasing (check 31).
+9201; `created` re-dated at the reframe so the id sequence stays non-decreasing (check 31).
 
 **The plan these rule on** is WK-673's map plan, a draft on PR #844 at
 `af3f0518` (`status: draft`, `tree: 6c6f4532…`). It is not on `main`, so this record names
@@ -36,8 +36,8 @@ plan. **DP-4 is therefore not ruled here.** The plan cites this record once both
 
 This record was drafted in the decision-maker's worktree, on branch `p2-wk673-rl`, cut from
 `origin/main` = `ed123cb0` with a clean root. Clock at drafting: 2026-09-28 14:06:22 BST,
-read by `TZ=Europe/London date`. **Its id, RL-9201, is a working id.** It is minted with
-`doc-id.py next --ref origin/main` at its turn, and renumbered in one commit if it differs.
+read by `TZ=Europe/London date`. Filed under working id 9201; minted from working id 9201 at #845's merge turn, `RL-1264`,
+2026-09-30 01:30:24 BST, by `doc-id.py next --ref origin/main` at `e0a2b309`.
 
 **Re-read at `ed123cb0`, the facts the entry rests on:**
 
