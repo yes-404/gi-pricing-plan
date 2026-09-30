@@ -57,6 +57,15 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
      2026-08-15 table already writes it;
    - **`open`**: no authentication, as for the health and version routes.
 
+   **Multi-method rows.** Five rows name two methods: `GET`/`PUT` `/datasets/{slug}/rule-set`
+   (`01:880`); `GET`/`POST` `/roles` (`06:499`); `GET`/`PUT` `/approval-policy` (`06:502`);
+   `GET`/`POST` `/environments` (`07:306`); and `GET`/`PUT` `/settings` (`07:311`). Their cell
+   is **per method**, in the form `GET: <value>; PUT: <value>`, each value from the list
+   above. A cell with no method prefix applies to every method of its row. Rows are not
+   split, so the method and path cells, and both existing parsers' reading of them, are
+   unchanged. The rows stay at 152. *(Added on auditor-926-927's audit of `070a83fe`:
+   three of the five carry different permissions per method.)*
+
    An empty cell fails. `06`'s blockquoted `| Route | Requires |` table is folded into
    `06` §5.1's column in the same commit, and a dated note records the move. One
    declaration is kept, not two.
@@ -94,6 +103,18 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
    Unbuilt rows are declarations only, and the pin reads them when their route appears. The
    parser **reuses** the `_ENDPOINT_ROW`/`_ENDPOINT` row shape, never a third reading of
    these tables.
+   - **Paths are compared as `audit-docs.py`'s `_path_segments` compares them:** the
+     `/api/v1` prefix and any query string are dropped, and every `{placeholder}` collapses
+     to one segment. So `01` §5.1's `/api/v1/dataset-versions/{id}/lineage?direction=up|down`
+     (`01` §5.1, the lineage row) matches the live `/api/v1/dataset-versions/{version_id}/lineage`.
+   - **Two live routes have no row, owned elsewhere, and are an interim allow-list.**
+     `GET /api/v1/rating-versions` and `GET /api/v1/rating-versions/{rating_version_id}`
+     (`backend/src/app/api/models.py:1113`, `:1139`) appear in no §5.1. `03` §5.1 declares
+     only the `POST`. Their rows are other Works' spec changes: FD-1283 makes the list read
+     a WK-675 Slice 10 spec change, and the by-id read is DP-5 of the plan with PL working id 9681. This slice
+     does not write them. It carries exactly these two, named, dated 2026-09-30,
+     shrink-only, each citing its owner, and each owner's commit removes its entry red
+     first by adding the row.
 4. **The slice that carries it.**
    - **A WK-1178 slice: the column, filled for all 152 rows, and the pin.** WK-1178 is the
      standing maintenance Work that owns the authorisation sweep's gaps, and the lead cuts
@@ -112,12 +133,22 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
      - **WK-674 Slice 2** (`03` and `07` §5.1);
      - **the WK-1178 fix slice**;
      - **the #969 slice** (the `??`/FR-244 ruling's WK-1178 code slice);
-     - **WK-1250 Slice 1** (`03` §5.1).
+     - **WK-1250 Slice 1** (`03` §5.1);
+     - *(added on auditor-926-927's audit)* **WK-675 Slices 2 and 4** (each new read route
+       is spec-changed first, DP-4 (a)), **WK-675 Slice 10** (the list read), **the three
+       view slices' backend additions**, and **the fix for finding 1297** (not on `main` at this tree), which edits the code
+       catalogue inside `03` §5.1 (`03:772-776`).
 
-     **It is dispatched in the first gap** in which none of the four is in flight.
+     **The rule, not only the list:** the slice serialises against **every** slice holding
+     any of the five §5.1 sections open **at its dispatch**. The lead's dispatch record
+     (`RL-1263`) names them then. It is dispatched in the first gap in which none is in
+     flight, and otherwise it yields.
    - **S2's new routes are declared by whichever of S2 and this slice lands second**, as the
      11:17:35 BST entry says. If this slice lands second, it fills S2's rows. If S2 lands
      second, S2 writes its rows with the column, and its sweep pins them.
+   - **It lands after #942.** The name check reads `06` §4.1's Built and Specified tables,
+     which #942's D4 makes machine-readable. So this slice is not dispatched before #942 is
+     merged.
 5. **Every row, now and later, carries a cell.** The slice declares every §5.1 row at its
    tree. Its test then **fails on any §5.1 row, built or unbuilt, whose `Permission` cell is
    missing or empty**, so a later slice that appends a row cannot omit it. Check 22's
@@ -144,6 +175,10 @@ Each is shown failing on deliberately broken input (`CLAUDE.md` §13), in the WK
 - A handler-checked route (the deploy route of #971 B.2) whose handler's `permission=`
   differs from its row fails, although it carries no `PERMISSION_ATTRIBUTE`.
 - A cell naming a permission in neither of `06` §4.1's Built and Specified tables fails.
+- A multi-method row whose per-method cell omits a method, or names the wrong permission for
+  one method, fails. So `GET: settings:read; PUT: settings:read` fails on `/settings`.
+- A third live route with no row fails. The two allow-listed reads pass until their owners
+  add their rows.
 - A route declared `authenticated` that in fact demands a permission, or the reverse, fails.
 - Check 22 passes on all five tables after the migration: the header and every row carry
   four cells.
