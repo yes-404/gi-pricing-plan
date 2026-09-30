@@ -107,7 +107,10 @@ characterisation guard") set the severity **low** and moved the owner to **WK-12
 "**Owner: WK-1250 S1**, not WK-1178. S1 already extracts `_parse_algorithm`'s mapper
 (platform/rating_algorithms.py:23-52), so the typed-signal fix lands **in the same slice, same
 writer**, as its **last task** after the unchanged-extraction step." This supersedes the
-proposed owner (WK-1178) of the first filing.
+proposed owner (WK-1178) of the first filing. That file is outside the repository and is not a governed record: the entry
+is cited by its header time for provenance, and this essay states its operative content itself.
+
+**Order.** Fixed as WK-1250 Slice 1's last task, after the unchanged extraction of the mapper.
 
 **Fix direction.** Replace the substring match with a typed signal, matched on `exc.errors()`
 and not on `str(exc)`: either a pydantic custom error type per invariant (for example
