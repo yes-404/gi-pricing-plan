@@ -73,12 +73,19 @@ Output: `DATA: 39 pairs`; the captured cell is `' `/api/v1/dataset-versions/{id}
 23 pairs`. **`declared_endpoints("DATA")` gives 39 pairs where 40 are expected, and GOV gives 23
 where 25 are.**
 
-**2. The checker's own claim is false because of it.** `python3 scripts/scope-audit.py DATA
+**2. What the checker reports, and what it cannot see.** `python3 scripts/scope-audit.py DATA
 --endpoints` prints `declared : 39` and `published : 39  (100%)` and *"every declared endpoint is
-published in the contract"*. The spec declares 40, and the lineage route is not published (#977
-withdrew it as rowless), so the true figure is 39 of 40. For GOV the script prints `declared : 23`,
-`published : 13  (57%)`; the two hidden rows (`:539`, `:543`) would make the declared count 25.
-Whether those two routes are published was not checked here.
+published in the contract"*. That is true of the 39 it sees. The spec declares 40 (39 method rows
+in `01` §5.1, one of them two-method: `01:880`, `GET`/`PUT` on the rule-set route), and the
+lineage route **is live**: the generated contract carries it at
+`/api/v1/dataset-versions/{version_id}/lineage` (`docs/contracts/openapi/generated.json:17717`).
+So **nothing reads wrong today**: the figure would be 40 of 40. The blind spot is that a removed,
+renamed or unpublished lineage route would go undetected, and that #977's planned pin, which
+reuses the same row shape, would report the live route as rowless unless the shared regex or the
+row is fixed (auditor-926-927, who supplied the row count and this consequence; the first version
+of this record said the route was unbuilt, and that was wrong). For GOV the script prints
+`declared : 23`, `published : 13  (57%)`; the two hidden rows (`:539`, `:543`) would make the
+declared count 25. Whether those two routes are published was not checked here.
 
 **3. A second, loud consequence in another tool.** `scripts/doc-index.py:1061`, the register
 reader, splits every row on every pipe and drops any row that does not give exactly five cells
