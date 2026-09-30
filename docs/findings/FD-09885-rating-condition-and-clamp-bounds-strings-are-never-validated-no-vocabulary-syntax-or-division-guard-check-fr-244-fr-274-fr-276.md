@@ -109,9 +109,11 @@ The sweep, at `48792023`, **covered `condition` and `clamp_bounds` specifically*
 `%`, `^`, `in`, `!` or string or date operation, and the only functions were the two
 deliberate negative-test ones (`now()`, `foo()`). **It did find `/`** among the committed
 strings' operators, without saying in which string kind; this record's own listing under
-**Exposure** below resolves that. The maintainer's entry (10:53:10 BST, above) states *"0 stored
-or committed conditions or bounds use `??` or division"*. What the sweep shows of the stored
-data: the sweep's read-only
+**Exposure** below resolves that. The maintainer's dated correction (`to-lead.md`, "2026-09-30
+10:58:13 BST — DATED CORRECTION to my 10:53:10 entry (condition/clamp FD, "Exposure" bullet)")
+supersedes the 10:53:10 claim that 0 stored or committed conditions or bounds use `??` or
+division: **stored exposure = 0; committed exposure was UNKNOWN until this record's list.** What
+the sweep shows of the stored data: the sweep's read-only
 Postgres pass (one database with rows: 25 algorithms, 29 versions; strings
 `premium_in * 2`, `risk_premium_minor * expense_factor`, `office_premium_minor >= 100` and bare
 `key_expr`s) and MinIO pass (compiled bundles; `* + ( )` only) show no division and no `??`.
@@ -141,11 +143,11 @@ string, so a string split across lines, built by a helper, or given positionally
 independent line-scoped `git grep -A4` over `clamp_bounds`, `"condition"`, `condition=`,
 `"key_expr"` and `key_expr=` in `examples`, `backend`, `packages`, `scripts`, `tests`,
 `frontend`, `docs/specs`, `docs/workflows` and `docs/contracts`, filtered to ` / `, returned
-nothing. This is a listing at one tree, not a proof for later commits. It agrees with the
-maintainer's *"0 stored or committed conditions or bounds use `??` or division"* (10:53:10 BST).
-The maintainer asked for this list on "2026-09-30 10:57:06 BST" (above); with no unguarded
-committed condition or bound, there is **no committed example to add as an acceptance case**,
-and the #967 slice's acceptance uses the planted cases in the matrix test below.
+nothing. This is a listing at one tree, not a proof for later commits. The maintainer asked for
+this list on "2026-09-30 10:57:06 BST" and, in the 10:58:13 BST correction above, made
+committed exposure *"UNKNOWN until auditor-928's list"*: **it is now this list**, at `9f63d0fe`.
+Each unguarded committed condition or bound would be an acceptance case of the #967 slice; there
+is none, so the slice's acceptance uses the planted cases in the matrix test below.
 
 ## Score-level case — reported by auditor-rl, not re-run by this record's author
 
