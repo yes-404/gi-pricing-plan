@@ -228,6 +228,11 @@ class Job(BaseModel):
     result: JobResult | None = None
     error: JobError | None = None
     trace_id: str | None = Field(default=None, pattern="^[0-9a-f]{32}$")
+    platform_build: str | None = Field(
+        default=None,
+        description="The platform version and build the Job ran on, `{version}+{build}`, "
+        "recorded when the worker moves it to `running`; null while `queued` (FR-18).",
+    )
     progress_at: datetime | None = Field(
         default=None, description="Time of the last progress report (NFR-528)."
     )
