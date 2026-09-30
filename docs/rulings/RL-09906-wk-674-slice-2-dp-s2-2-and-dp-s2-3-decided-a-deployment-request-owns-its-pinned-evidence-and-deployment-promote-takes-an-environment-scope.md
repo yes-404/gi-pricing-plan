@@ -185,7 +185,7 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
             `uq_approval_decisions_one_each`) and the quorum count (`:540-554`). A trigger
             that also counted `approval_decisions` against `approvers_required` would make a
             forged request need forged decision rows too. That was considered, and it is
-            not required (the maintainer's 12:06:53 BST entry, sub-item 4).
+            not required (the maintainer's 12:06:53 BST entry).
           - **How the trigger derives the ref: one function, with per-table trigger
             arguments.** The stored ref is `str(ArtifactRef)`, `{type}:{slug}@{version}`
             (`refs.py:75`; `approvals.submit` stores it at `approvals.py:247`). Each of the
