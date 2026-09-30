@@ -130,7 +130,10 @@ has DP-5 at `:362`. It asks how FR-231's diff gets "the exposure weight behind e
 | The cache is read before any portfolio check could run | **present, today vacuously** | In `diff` (`rate_tables.py:237`), the table and both versions are loaded under the caller's workspace (`:267-282`), and then the cache is read (`:285-292`), before any use of `portfolio_dataset_version_id`, which nothing checks today. |
 | How a route loads a Dataset Version by id, scoped to the workspace | **present** | `load_version` (`backend/src/app/platform/datasets.py:763-781`) raises one `NOT_FOUND` 404, "Dataset version not found", with detail "No version {version_id}.", both when the row is missing and when `row.workspace_id != workspace_id` (`:778-781`). The response does not distinguish "not found" from "not yours". It takes a row lock (`with_for_update=True`, `:777`). |
 | The permission to read a Dataset Version | **present** | `api/dataset_versions.py:60`: `ReadDatasets = Annotated[Caller, Depends(requires(Perm.DATASET_READ))]`, on its read routes. `requires()` admits only a workspace-wide grant (`rbac._covers`, `backend/src/app/platform/rbac.py:205-217`). The diff route itself has only `RatingReadDep` (`api/rate_tables.py:45`, `:317`). |
-| A status gate that fits a read | **absent** | `fittable_or_refuse` (`datasets.py:743-760`) refuses every status but `validated` with `DATASET_NOT_VALIDATED` 409, so it would refuse an `archived` portfolio. `DATASET_NOT_VALIDATED` is owned by `01` (`01-data-management.md:929`), and `02` re-raises it (`02-modelling.md:2045`). |
+| The status gate for using a Dataset Version | **present** | `fittable_or_refuse` (`datasets.py:743-760`) accepts only `validated` and refuses every other status with `DATASET_NOT_VALIDATED` 409 ("There is no override"). `DATASET_NOT_VALIDATED` is owned by `01` (`01-data-management.md:929`), and `02` re-raises it (`02-modelling.md:2045`). |
+| The diff depends on the definition's key and value **names** | **present** | `_compute_diff` indexes both sides by `[key.name for key in keys]` and `value.name` (`operations.py:346-348`), and `diff` passes the **current** version's `table.keys` and `table.value` (`rate_tables.py:294`, `:296`). Neither name is in the key, which is cell hashes plus the portfolio. |
+| A Banding's approval lifecycle | **absent** | `Banding` (`packages/model-schema/src/model_schema/modelling.py:339`), read: its fields (`:354-380`) include no `status`. `06` §2's Governed Artifact list (`06-governance.md:64`) does not name it. |
+| How a Banding's `error` policy surfaces | **present** | `apply_banding` raises `FactorResolutionError` naming the offending values (`bandings.py:456`), and otherwise returns the labels as a `String` series (`:463`). |
 | A dedicated error code for a missing join column | **absent** | `03` §5.1's list of owned codes (`03-rating-engine.md:771-782`) was read. It has `RATE_TABLE_MISS`, `RATE_TABLE_INCOMPLETE` and `RATE_TABLE_KEY_DUPLICATE`, and none of them is about a portfolio column. |
 
 ### DP-5 — option (d)
@@ -145,7 +148,10 @@ has DP-5 at `:362`. It asks how FR-231's diff gets "the exposure weight behind e
    definition (the one `diff` already uses for both sides, `rate_tables.py:276`):
    - **a key with no `banding_ref`** maps from the portfolio column of the same name;
    - **a key with a `banding_ref`** maps from the pinned Banding version's `column`, banded with
-     `apply_banding`. Its out-of-range and null policies apply as the Banding declares them;
+     `apply_banding`. Its out-of-range and null policies apply as the Banding declares them.
+     The Banding is resolved **as pinned, with no approval check**. It has no approval
+     lifecycle and is not a Governed Artifact (the table above), and the rate table that pins
+     it has none either (FR-1186). The diff reports what the table declares;
    - **any other key** — no same-named column, and no banding — is **refused, by name**.
 
    The per-cell weight is Σ exposure over the rows that map to that cell, aggregated in
@@ -158,19 +164,33 @@ has DP-5 at `:362`. It asks how FR-231's diff gets "the exposure weight behind e
    - a same-named key column absent from the frame;
    - a banded key's source column absent from the frame;
    - a key that is neither same-named nor banded;
-   - **a portfolio whose rows match no cell of the table.** Without this refusal, the weighted
-     mean reads `None`, indistinguishable from an unweighted diff (the table above).
+   - **a portfolio whose rows match no cell of the table.** Such a portfolio is not a portfolio
+     of this table: every key value falls outside the table's cells;
+   - **a Banding `error` policy hit**: `apply_banding` raises, naming the offending values
+     (`bandings.py:456`). It is mapped to `VALIDATION_FAILED` 422, naming the column and those
+     values, like the other refusals.
+
+   A `None` weighted mean has two causes: no weights, or weights on no changed, comparable
+   cell (`operations.py:361-375`). A portfolio that matches cells none of which changed also
+   gives `None`, and it is **not** refused, because it is a correct answer. **Item 4's coverage
+   figures are what tell the cases apart** for a reader. The zero-match refusal is the
+   answer only to the case that is a wrong portfolio. *(Reworded after auditor-plans' audit.
+   This item earlier presented the refusal as the answer to the `None`.)*
 4. **Coverage is reported.** When a portfolio is given, the diff carries two figures: the
    portfolio's total exposure, and the exposure that mapped to a cell of the current
    version. A reader then sees how much of the book the weights cover. They are fields of
    `RateTableDiff` (`model-schema`), regenerated into the contract (FR-451's drift check).
-5. **The cache key: the portfolio, and now the bandings.** The DP3 key already carries the
-   portfolio Dataset Version's id (`diff_cache.py:77-88`, the table above), so two portfolios
-   never share an entry. That stays, and it gets a red-first test. **New at this pass:** when a
-   portfolio is given, the key also carries each key's `banding_ref`, or a hash of the
-   definition's `keys`. So two versions with identical cells but a different banding never
-   share a weighted entry. Without a portfolio, the diff is unweighted and the cells alone
-   determine it, so that key may stay as it is.
+5. **The cache key.** It carries everything the answer depends on:
+   - **the portfolio Dataset Version's id**, which it already carries (`diff_cache.py:77-88`,
+     the table above). Two portfolios never share an entry, red-first;
+   - **new at this pass — a hash of the current definition's `keys` and `value`**, meaning
+     each key's name and `banding_ref`, and the value's name, **always**, with or without a
+     portfolio. The diff indexes cells by those names (`operations.py:346-348`), and the
+     weights depend on the bandings. So cells alone do not determine the answer. *(Widened after
+     auditor-plans' audit. This item earlier said an unweighted key "may stay as it is".)*;
+   - **the caller's workspace id, when a portfolio is given** (the maintainer's decision on
+     `736de32e`). The same table content and portfolio id can then never share a weighted
+     entry across workspaces, even if the check order in item 8 regresses.
 6. **No portfolio** → the diff answers unweighted and says so (PL-1267 Slice 7, `:596-597`).
 8. **The portfolio's scope, permission and status** *(added on the maintainer's review of
    `6f74255f`)*. In this order, **before the cache is read**:
@@ -187,14 +207,17 @@ has DP-5 at `:362`. It asks how FR-231's diff gets "the exposure weight behind e
      tenant. `load_version` takes a row lock, which a read does
      not need. Slice 7 may read without the lock, keeping the same predicate and the same
      response.
-   - **Status.** `validated` and `archived` are accepted. A diff is a read of history, and a
-     weighted figure that cites an archived portfolio must stay re-computable. `draft` is
-     refused with **`DATASET_NOT_VALIDATED` 409**, re-raised from `01`, since a draft has no
-     validation report behind its exposure column. `fittable_or_refuse` is not reused, because
-     it refuses `archived`. `03` §5.1's list of owned codes gains `DATASET_NOT_VALIDATED`
+   - **Status: `validated` only**, following the one precedent, `fittable_or_refuse`
+     (`datasets.py:743-760`). `draft` **and `archived`** are refused with
+     **`DATASET_NOT_VALIDATED` 409**, re-raised from `01`. Slice 7 uses that gate's predicate,
+     with a detail naming the diff, since the precedent's detail names fitting. **A weighted
+     figure is reproduced from its persisted evidence item, never by re-running the diff
+     against an archived portfolio.** *(The maintainer's decision on `736de32e` withdrew
+     "`archived` accepted".)* `03` §5.1's list of owned codes gains `DATASET_NOT_VALIDATED`
      *(re-raised from `01`)*, as check 10 requires.
-   - **Why before the cache.** The key holds the portfolio's id and the two versions' cell
-     hashes. Another workspace with identical cells, weighted by its own portfolio, stores an
+   - **Why before the cache — required, and tested on a warm cache.** Authorization **and**
+     portfolio resolution run before the cache is read. The key held the portfolio's id and
+     the two versions' cell hashes, and no workspace. Another workspace with identical cells, weighted by its own portfolio, stores an
      entry under that key. If the cache were read first, a caller naming that foreign id
      would be served another workspace's exposure-weighted figure without any check.
 7. **(b) is not planned.** A key derived by an arbitrary expression, rather than by a declared
@@ -240,10 +263,21 @@ the table's own key declaration.** Each case is shown failing on deliberately br
 - **Cross-workspace:** a portfolio Dataset Version of another workspace is refused with the
   same 404 body as a nonexistent id. With the workspace predicate removed, the diff is
   weighted by the foreign portfolio, and the test fails.
-- **Cross-workspace, cached:** the foreign portfolio's entry is first placed in the cache by
-  its owner. The caller naming it is still refused, which proves the checks run before the
-  cache.
+- **Cross-workspace, on a warm cache, red-first:** the foreign portfolio's entry is first
+  placed in the cache by its owner. The caller naming it is still refused, which proves the
+  checks run before the cache. With the checks moved after the cache read, the test fails.
 - **No permission:** a caller with `rating:read` and no `dataset:read` gets 403 for an
   existing portfolio id and for a nonexistent one alike.
-- **Status:** a `draft` portfolio is refused with `DATASET_NOT_VALIDATED` 409, and an
-  `archived` one is accepted.
+- **Status:** a `draft` portfolio and an `archived` one are each refused with
+  `DATASET_NOT_VALIDATED` 409. A `validated` one is accepted.
+- **Workspace in the key, red-first:** the same table content and portfolio id, requested in
+  two workspaces, never share an entry. With the workspace component removed, the test
+  fails.
+- **Names in the key, red-first:** two versions with identical cells whose definitions differ
+  only in a key's or the value's name, or in a `banding_ref`, never share an entry, with or
+  without a portfolio.
+- **Banding `error` policy:** a portfolio value outside a banded key's range, where the
+  Banding declares `error`, is refused with `VALIDATION_FAILED` 422, naming the column and the
+  value.
+- **A matched portfolio with no changed cell** returns a `None` mean with non-zero matched
+  exposure, and is not refused.
