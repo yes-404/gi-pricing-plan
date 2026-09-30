@@ -54,6 +54,21 @@ async def test_a_padded_or_exponent_string_converts_like_its_plain_form(
 
 
 @pytest.mark.req("FR-244")
+@pytest.mark.parametrize(("string_form", "literal"), [
+    ("number(' 1.5 ')", "1.5"),
+    ("number('1e3')", "1000"),
+    ("number('1.1')", "1.1"),
+])
+async def test_a_numeric_string_converts_to_the_ruled_exact_decimal(
+    string_form: str, literal: str
+) -> None:
+    """RL-1322: the outcome is the plain literal's, asserted directly."""
+    assert await _price("1.1", expr=f"risk_premium_minor * {string_form}") == await _price(
+        "1.1", expr=f"risk_premium_minor * {literal}"
+    )
+
+
+@pytest.mark.req("FR-244")
 async def test_a_missing_lookup_row_takes_the_default() -> None:
     """`number(v ?? '1.0')` defaults a missing value; no row means the output is null."""
     assert await _price(None, expr="risk_premium_minor * number(missing_value ?? '1.0')") == 1_370
