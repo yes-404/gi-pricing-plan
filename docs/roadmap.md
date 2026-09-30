@@ -1102,7 +1102,7 @@ Minted 2026-09-28 on the maintainer's instruction of that day ("yes record and i
 id: SL-1300
 family: slice
 title: WK-1178 fix slice — compile_bundle refuses a step ref not pinned at its exact version (FR-237)
-status: active                 # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: eeda8f4ba20d247ac18d6a35d7f81589c8527ed2
@@ -1113,6 +1113,7 @@ relates: [PL-1299, FD-1297, RL-1298]
 ```
 
 `compile_bundle` refuses a `table`, `lookup` or `model_call` step whose ref is not pinned at its exact version, with `RATING_VERSION_UNPINNED`. `03` §5.1 gives that code a meaning, spec first, in the same commit. The model path's bare `KeyError`s at score become coded. The owner, severity, scope, acceptance and order are the maintainer's, as FD-1297 records under *Disposition*. Leaf plan `PL-1299`. *(Minted 2026-09-30 as SL-1300. The id was assigned in the lead's mint train, stacked on #964's RL-1298: `doc-id.py next --ref origin/main` printed 1298 at `4009de14`. It was filed under working id 9872.)* **Order:** it merges before WK-1250 Slice 1 is dispatched, since `compile.py` has a single writer. It takes the next free `RL-1263` slot and does not pre-empt WK-674 Slice 2 or WK-690 Slice 1. **Gate:** its leaf plan's DP-F1 to DP-F3 are ruled by RL-1298.
+**Closed 2026-09-30** at #988's merge, `2118679b3e1cb0bce5ffae01dc02a54ad651890a`, on a CLEAN slice audit (auditor-plans at `5578bdf8`) and the lead's merge (CLAUDE.md §13); its ledger is `LG-1308`. `FD-1297` is resolved by it.
 
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
