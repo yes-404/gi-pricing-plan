@@ -90,6 +90,9 @@ on a reading of the module that owns the concept.* The owning module for setting
 | An audited write path for the process override | **absent** | `setting_overrides` is computed from `os.environ` (`config.py:249`). Nothing writes it. `git grep -n 'setting_overrides' 7c354305 -- backend/src` gives two hits: its definition (`config.py:242`) and its one read (`settings.py:332`). |
 | Write-time validation and caller-side audit | **present** | `set_workspace_setting` (`settings.py:388-416`) calls `definition.coerce` before it writes. Its docstring says "The caller audits the change". |
 | `SETTING_INVALID` | **present** | `backend/src/app/errors.py:61`, and `SettingDefinition.coerce`'s docstring (`settings.py:55`). |
+| The resolve order | **present** | `resolve` (`settings.py:292-310`) and `resolve_all` (`:313-328`) both pass the process candidate first to `_resolution` (`:359-372`). That function returns the process value whenever it is not `None` (`:365-366`), before it looks at the workspace value. The process layer therefore wins for **every** key. |
+| The process layer is read at resolve time, not at startup | **present** | `Settings.setting_overrides` (`backend/src/app/config.py:241-249`) is a `@property` that filters `os.environ` on every call. `_env_candidate` (`settings.py:331-335`) calls it, and coerces the value at that moment. A variable present in the process, or set after startup, is seen at the next resolve. |
+| Startup validation of `GIP_SETTING_*` overrides | **absent** | The owning modules were read. `load_settings` (`config.py:270-291`) validates `Settings`' declared fields and calls `require_startable`. `create_app` (`backend/src/app/main.py:63`) runs the FR-273 and FR-436 startup checks in its lifespan (`:77-89`). Neither reads `setting_overrides`. `git grep -n 'GIP_SETTING\|setting_overrides' 7c354305 -- backend/src` gives five hits: `config.py:242` (the property), `:243` (its docstring), `:249` (its body), `settings.py:279` (`_env_name`) and `settings.py:332` (the one read). None is a startup path. So an unknown key, or an out-of-range override, surfaces at first resolve, not at startup. This is an observation against FR-447, offered to the lead as a candidate finding and not ruled here. |
 
 ## Options
 
@@ -111,7 +114,8 @@ declare they may vary per environment.
    (`GIP_SETTING_<KEY>`) → Environment setting → workspace setting → platform default.** The
    new layer sits **below** the process override, so an operator can still pin one value for
    every environment a process serves during an incident, as they can over a workspace
-   setting today. It sits **above** the workspace setting, so an environment can differ from
+   setting today. The one exception is an Environment-only key, which the process layer never
+   supplies (item 3a). It sits **above** the workspace setting, so an environment can differ from
    its workspace.
    - The deciding evidence: FR-431 already defines environment configuration as *"a Setting
      resolved by the precedence in §3.8 and … audited on change"*.
@@ -141,6 +145,38 @@ declare they may vary per environment.
    Slice 3 declares the scope of each key it makes per-environment. Slice 6 declares the two
    flags. A write at a level the key's scope does not permit is refused with
    `SETTING_INVALID`.
+
+   **3a. The process layer never supplies an Environment-only key** (added after the
+   maintainer's must-check on `c5746ab5`/`49490802`: the scope rule above refused a
+   workspace write but not the process layer). Under the precedence in item 1, the process
+   layer ranks above the Environment setting, and it is one value for every Environment the
+   process serves (the table above), `prod` included. So `GIP_SETTING_<FR-270 flag>=true`
+   would turn the flag on in `prod`. That is the same all-environments act that item 3
+   forbids at workspace level, and it has no audit event at all. That would break DP-2
+   (*"an environment setting with its own audit event"*) and FR-449 (off in every environment
+   until one is turned on).
+
+   **Ruled: option (i), in its stronger form.**
+   - **At startup, refused.** A `GIP_SETTING_<KEY>` present for an Environment-only key stops
+     the process from starting, with a message naming the key and this rule. FR-447 is the
+     form: "an invalid setting prevents startup with a clear message rather than failing at
+     first use". Refusing is chosen over ignoring, because an ignored override lets an operator
+     believe a value is in force that is not.
+   - **At resolve, skipped.** The resolver never reads the process layer for an
+     Environment-only key, and logs a warning naming the key if one is present. The property
+     reads `os.environ` on every call, so a variable set after startup would otherwise be
+     seen.
+   - **Option (ii) is rejected.** A process-wide value for an Environment-only key cannot be
+     reconciled with "Environment-only". There is also no per-environment audit event for it
+     to carry, so DP-2's condition cannot be met.
+   - **The incident override for such a key** is an Environment setting written for the
+     affected Environment, for example turning FR-270's flag off in `prod`. It is guarded by
+     `admin:manage_settings` and audited (item 5). It takes effect at the next resolve,
+     because the resolver reads the stored value per request. For every other scope, the
+     process override stays the operator's lever.
+   - **Not ruled here:** startup validation of the other `GIP_SETTING_*` overrides (unknown
+     keys, out-of-range values). It is absent (the table above). That is a candidate finding
+     against FR-447, for the lead to route.
 4. **FR-449, per environment** (the prepared item (4)). No new reading is needed. A flag's
    platform default is its safe value, and it is the default in every environment, because the
    default layer is below the Environment layer. So DP-2's flags are off in every environment
@@ -161,7 +197,9 @@ declare they may vary per environment.
      resolve them, since no request is tagged with an archived Environment.
 6. **What stays out.** The process override is not audited on change, today or after this
    ruling. It is the operator's deployment configuration, outside FR-431's "audited on
-   change", which binds the Environment setting. This ruling does not change that.
+   change", which binds the Environment setting. That is acceptable only because the
+   process layer never reaches an Environment-only key (item 3a). This ruling does not
+   change the absence of an audit event.
 
 **This ruling and OQ-1234's are independent.** OQ-1234's ruling (PR #935, not yet minted
 when this record was written, so it is cited by PR) put FR-429's skip permission on the
@@ -183,10 +221,14 @@ the obligation, and FR-446 is the rule it names.
   citing this record.
 - **The roadmap (the lead's file, not edited here):** the §10 row *Before WK-674 Slice 3*
   strikes `OQ-1235` and recounts to `1 (0 open)`. A decided question keeps its row.
-- **WK-674 Slice 3 (`PL-1237` Task 3):** items 1, 2, 3 and 5 above. That means
+- **WK-674 Slice 3 (`PL-1237` Task 3):** items 1, 2, 3, 3a and 5 above. That means
   `SettingSource.ENVIRONMENT_SETTING` and the regenerated contract, `SettingDefinition`'s
   scope with each Slice 3 key declared, the resolver's Environment argument and inspection,
-  and the audited write path.
+  the audited write path, and item 3a's startup refusal and resolve-time skip. Slice 3
+  builds item 3a with the scope, before any Environment-only key exists, so that Slice 6's
+  flags are covered the moment they are declared.
+- **The lead:** the startup-validation observation (the table above, and item 3a's "not
+  ruled here") is offered as a candidate finding.
 - **WK-674 Slice 6:** FR-270's and FR-271's flags declared Environment only (item 3).
 
 ## Acceptance — the violation that must become detectable
@@ -197,8 +239,16 @@ deliberately broken input (`CLAUDE.md` §13):
 - *Slice 3:* a key set for `uat` changes the effective value in `uat` only. The resolution
   reports `environment_setting` as its source, and `prod` still reports `workspace` or
   `default`.
-- *Slice 3:* a process override (`GIP_SETTING_<KEY>`) wins over an Environment setting in every
-  environment the process serves.
+- *Slice 3:* for a workspace-or-Environment key, a process override (`GIP_SETTING_<KEY>`) wins
+  over an Environment setting in every environment the process serves.
+- *Slice 3, red first:* for an Environment-only key (a test-registered one, until Slice 6
+  declares the real flags):
+  - a `GIP_SETTING_<KEY>` present at startup stops the process with a message naming the key;
+  - a variable set after startup is skipped at resolve, so the effective value's source stays
+    `environment_setting` or `default`, and a warning is logged.
+
+  With the refusal and the skip removed, the flag resolves on in every environment, and the
+  tests fail.
 - *Slice 3:* a workspace-only key written for an Environment is refused with
   `SETTING_INVALID`.
 - *Slice 3:* an Environment-setting write whose transaction commits with no Audit Event
