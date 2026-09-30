@@ -14,9 +14,13 @@ relates: [WK-1178]
 
 ## Finding
 
-**Severity: HIGH (effective on independent reproduction).** The maintainer's decision: HIGH,
-effective on auditor-docs's independent reproduction of the score-level case below; if it does
-not reproduce, the severity is medium and returns to the maintainer. The trigger was met by a
+**Severity: HIGH (effective on independent reproduction).** The maintainer's decision
+(`~/gi-pricing-plan.local/channel/to-lead.md`, "2026-09-30 10:53:10 BST — DECISION:
+condition/clamp FD (B) — HIGH on independent reproduction; owner and order; two small items"):
+HIGH, effective when auditor-docs's independent reproduction of the score-level case below
+confirms it; otherwise it stays medium and returns to the maintainer. The FD was first filed at
+medium (provisional) on the entry "2026-09-30 10:50:57 BST — #967 CLEAN on content: noted; B
+confirmed → file the FD now". The trigger was met by a
 silent wrong accept (D2 below) and a silently lost clamp (E4 below).
 
 `validate_algorithm` checks only `RatingExpressionStep.expr`. A constraint step's `condition`
@@ -34,7 +38,10 @@ constructs outside FR-244's list all validate clean.
   whether a `condition` is in their scope is a **spec question, not a settled breach**. FR-244's
   own grammar clause (*"the same restricted grammar as `02` §4.6 … No other functions"*) reads
   as a rule about the grammar, and a `condition` is evaluated by the same engine. This record
-  does not decide which reading is right (`CLAUDE.md` §0); the fix slice's spec side settles it.
+  does not decide which reading is right (`CLAUDE.md` §0). **The pending resolution is #967**
+(RL working id 9904), which rules FR-244 an enforced allow-list over every authored string (a
+step's `expr`, a constraint's `condition`, a clamp bound and a `key_expr`); once it merges, the
+scope question is answered by the spec.
 
 ## Evidence
 
@@ -80,7 +87,10 @@ The sweep, at `48792023`, **covered `condition` and `clamp_bounds` specifically*
 `tests`, `frontend` and `03`'s example, 68 occurrences and 37 distinct strings. It found no `??`,
 `%`, `^`, `in`, `!` or string or date operation, and the only functions were the two
 deliberate negative-test ones (`now()`, `foo()`). **It did find `/`** among the committed
-strings' operators, so "no division" is true only of the stored data: the sweep's read-only
+strings' operators, without saying in which string kind, so this record cannot say "no division"
+of the committed strings; the maintainer's entry (10:53:10 BST, above) states *"0 stored or
+committed conditions or bounds use `??` or division"*, and that statement is the maintainer's,
+not this record's measurement. What the sweep shows of the stored data: the sweep's read-only
 Postgres pass (one database with rows: 25 algorithms, 29 versions; strings
 `premium_in * 2`, `risk_premium_minor * expense_factor`, `office_premium_minor >= 100` and bare
 `key_expr`s) and MinIO pass (compiled bundles; `* + ( )` only) show no division and no `??`.
@@ -119,7 +129,7 @@ counting as a guard, is what would refuse D2 and E3/E4 at save.
 ## Disposition
 
 **Owner: the #967 WK-1178 code slice** (RL working id 9904, cited as prose), **kept separate from
-the #963 fix slice**, on the maintainer's decision. **Order:** the fix slice, then the #967 code
+the #963 fix slice**, on the maintainer's decision of 10:53:10 BST above. **Order:** the fix slice, then the #967 code
 slice, then WK-1250 S1, serialised on `compile.py`. The slice widens both checks to `condition`,
 `clamp_bounds` and `key_expr`. Event that discharges it: that slice's merge.
 
@@ -128,8 +138,9 @@ slice, then WK-1250 S1, serialised on `compile.py`. The slice widens both checks
 - **D2's condition and E3/E4's clamp bounds are refused at save**, and every non-baseline,
   non-control row of the evidence table returns an issue;
 - **`??` is never a division guard**: a masked division does not satisfy the guard check;
-- **the misleading `RATE_TABLE_MISS`**: residual evaluation failures (a zero or null division in
-  a condition or bound that reaches the engine) get their **own evaluation code**, red first.
+- **the misleading `RATE_TABLE_MISS`**, in the maintainer's words (10:53:10 BST): *"a division
+  guarded at save makes it unreachable; any residual runtime evaluation failure in a condition or
+  bound raises its own evaluation code, never RATE_TABLE_MISS"*, red first.
 
 The severity is HIGH on auditor-docs's independent reproduction; this record is amended with
 the result when the lead relays it.
