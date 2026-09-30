@@ -1,5 +1,5 @@
 ---
-id: FD-9945
+id: FD-1323
 family: finding
 title: Check 34 is vacuous on real trees — a frozen-family file's body changes with the gate green, and a plan's activation does it
 status: active
@@ -10,10 +10,9 @@ corrected_by: []
 relates: [FD-1282, WK-1170]
 ---
 
-# FD-9945 — Check 34 is vacuous on real trees
+# FD-1323 — Check 34 is vacuous on real trees
 
-**Working id 9945.** Filed as a working id; minted at the lead's merge turn. It is cited by its number,
-not as a token, until then, and the two places that carry it are this file and its register row.
+*Drafted under working id 9945 and minted as FD-1323; the working id survives only in this line and in PR #990's history.*
 
 ## Finding
 
