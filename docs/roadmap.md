@@ -1114,6 +1114,24 @@ relates: [PL-1299, FD-1297, RL-1298]
 
 `compile_bundle` refuses a `table`, `lookup` or `model_call` step whose ref is not pinned at its exact version, with `RATING_VERSION_UNPINNED`. `03` §5.1 gives that code a meaning, spec first, in the same commit. The model path's bare `KeyError`s at score become coded. The owner, severity, scope, acceptance and order are the maintainer's, as FD-1297 records under *Disposition*. Leaf plan `PL-1299`. *(Minted 2026-09-30 as SL-1300. The id was assigned in the lead's mint train, stacked on #964's RL-1298: `doc-id.py next --ref origin/main` printed 1298 at `4009de14`. It was filed under working id 9872.)* **Order:** it merges before WK-1250 Slice 1 is dispatched, since `compile.py` has a single writer. It takes the next free `RL-1263` slot and does not pre-empt WK-674 Slice 2 or WK-690 Slice 1. **Gate:** its leaf plan's DP-F1 to DP-F3 are ruled by RL-1298.
 
+#### SL-1315 — WK-1178 slice — FR-244's enforced allow-list and FR-274's guard over every authored rating string
+
+```yaml
+id: SL-1315
+family: slice
+title: WK-1178 slice — FR-244's enforced allow-list and FR-274's guard over every authored rating string
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-09-30
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 9f63d0feee524815e7e0c68c99a53ac3f80e6c37
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1314, RL-1312, RL-1313]
+```
+
+The code that the FR-244 ruling, RL-1312, assigns to WK-1178. FR-244's operator and function allow-list is enforced at save over every authored string: `expr`, `condition`, clamp bounds and `key_expr`. FR-276's compile, FR-274's division guard, and the determinism and scale checks are widened to the same strings, and `??` is never a guard. A residual evaluation failure at scoring gets its own code, not `RATE_TABLE_MISS`. It discharges the finding filed as #968 (FD working id 9885). Leaf plan `PL-1314`. *(Minted 2026-09-30 as SL-1315, by hand in the lead's batch-4 mint turn. It was filed under working id 9832.)* **Order:** after the fix slice (PL-1299) and before WK-1250 Slice 1, serialised on `compile.py` under `RL-1263`. **Gate:** its DP-G1, DP-G3, DP-G4 and DP-G5, ruled by RL-1313. DP-G1 is where FR-244's amended text lands: WK-690 Slice 1, Task 6.
+
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
