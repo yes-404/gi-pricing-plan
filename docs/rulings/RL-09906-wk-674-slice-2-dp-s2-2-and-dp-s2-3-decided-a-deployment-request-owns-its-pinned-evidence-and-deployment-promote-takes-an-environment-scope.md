@@ -92,8 +92,8 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
      `ON UPDATE` path, and if the leaf plan chooses a database trigger, its test is also red
      first.
    - **Only the single decision path writes `approved`: a database trigger on every
-     approval-capable table** (sub-item 2), **landed as its own slice ahead of Slice 2**
-     (sub-item 9). *(Restated a fourth time: the runtime-guard version below was moved to a
+     approval-capable table** (sub-item 2), **carried by WK-674 Slice 2a, which lands
+     before Slice 2** (sub-item 9). *(Restated a fourth time: the runtime-guard version below was moved to a
      trigger by the maintainer's 11:44:15 BST entry, and its test database rule and
      sequencing come from the entry "11:45:55 BST — the trigger pre-checks (one is
      critical); my lean on splitting S2". Restated a third time, and superseding the static
@@ -252,22 +252,23 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
           makes its site's write refused.
      8. **Zero writers.** `peril_structures` has no sanctioned writer of `approved` today, and
         its trigger refuses any attempt outside the decision path.
-     9. **Sequencing: the guard lands first, in its own slice** (the maintainer's lean in the
-        11:45:55 BST entry, adopted here).
-        - **The guard slice** carries sub-items 1–8 over the 8 existing tables: the
+     9. **Sequencing: the guard is WK-674 Slice 2a, which lands before Slice 2** (the
+        maintainer accepted the split in the 11:48:28 BST entry, after the lean in the
+        11:45:55 BST entry).
+        - **Slice 2a** carries sub-items 1–8 over the 8 existing tables: the
           vocabulary declarations, the trigger migration, `approval_decision()`, the static
           checks, the allowance literal, the fixture conversions of sub-item 6 and the red
           first cases of sub-item 7. It lands before both the WK-1178 validation fix slice
           and Slice 2.
-        - **The WK-1178 validation fix slice depends on it.** That slice removes the
+        - **The WK-1178 validation fix slice depends on Slice 2a.** That slice removes the
           temporary allowance entries of sub-item 5, and a removal is only red first once
           the trigger exists to refuse the write.
-        - **Slice 2 adds `deployment_requests`.** Its creating migration installs the same
+        - **Slice 2 carries the `deployment_requests` extension.** Its creating migration installs the same
           trigger function on the new table. The vocabulary of its `status` column joins
           item 1's derivation, so the `pg_trigger` test of sub-item 4 fails until the
           trigger is present. The deploy-side plant joins sub-item 7.
-        - The slice's id, its workstream row and its place in the dispatch order are the
-          planner's to cut and the lead's to dispatch. This ruling fixes only the dependency
+        - Slice 2a's leaf plan and its place in the dispatch order are the planner's to
+          write and the lead's to dispatch. This ruling fixes its scope and its dependency
           order.
     10. **The test database must carry the trigger, and the suite proves it rather than
         assuming it** (the maintainer's CRITICAL pre-check, 11:45:55 BST entry).
@@ -288,8 +289,8 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
         - **The rule:**
           - the `pg_trigger` test of sub-item 4 runs against `test_database_url()`, the
             database the suite runs on. It **fails, never skips**, when any table in item
-            1's derived set lacks the guard trigger. At the guard slice that set is the 8
-            existing tables, and at Slice 2 it adds `deployment_requests`;
+            1's derived set lacks the guard trigger. At Slice 2a that set is the 8 existing
+            tables, and at Slice 2 it adds `deployment_requests`;
           - sub-item 7's red-first plants run on that same database;
           - the fixtures stay on `alembic upgrade head`. A fixture that ever builds a
             schema some other way must install the trigger DDL by **importing it from the
@@ -298,8 +299,8 @@ a trace's link to its Deployment, is the medium-effort decision-maker's.
           - **red first:** against a scratch database built from the migration before the
             guard's, the `pg_trigger` test fails.
         - A head check in the `database` fixture (comparing `alembic_version` to the script
-          head) is a sound addition. It is not required, because the `pg_trigger` test
-          already fails on exactly that database. It
+          head) is a sound addition for Slice 2a. It is not required, because the
+          `pg_trigger` test already fails on exactly that database. It
         is guarded, and the note says so. Whether its `approved` state should be reachable
         is the perils finding's question, routed by the lead.
 5. **The deploy route executes only an approved request.** For a target whose deployments are
@@ -428,10 +429,13 @@ other.
 
 - **This commit:** this record only. The spec and contract changes are Slice 2's spec-first
   step (A.1, B.4).
+- **WK-674 Slice 2a (before Slice 2 and the WK-1178 validation fix slice):** A.4's
+  database trigger over the 8 existing approval tables, with its sub-items 1–8 and 10.
 - **WK-674 Slice 2 (the leaf plan, PL working id 9920):**
   - the Deployment Request row and its reference type (A.1);
   - the pinned evidence and its checks (A.2);
-  - the FD-1200-class acceptance (A.4) and the deploy route's use of the request (A.5);
+  - the FD-1200-class acceptance (A.4), including the `deployment_requests` extension of
+    Slice 2a's trigger (A.4 sub-item 9), and the deploy route's use of the request (A.5);
   - `ScopeType.ENVIRONMENT` and the handler's resource check (B), with the `06` FR-345
     amendment and the contract regeneration.
 - **The lead:** at the mint turn, the `corrects:`/`corrected_by:` pair of item C. And
@@ -441,8 +445,8 @@ other.
 
 The violations: **a deployment approved without its pinned evidence, evidence changed after
 submission, a second writer of `approved`, or a Deployer acting outside the Environments its
-grant names.** In WK-674 Slice 2, each is shown failing on deliberately broken input
-(`CLAUDE.md` §13):
+grant names.** In WK-674 Slice 2, or Slice 2a for the trigger over the existing tables,
+each is shown failing on deliberately broken input (`CLAUDE.md` §13):
 - item A.4's cases: approval without pinned evidence; an evidence update after submission;
   and item A.4's database trigger, red on each case of its sub-item 7, and green on the live
   tree only through the pinned allowance of its sub-item 5, with its `pg_trigger` test
