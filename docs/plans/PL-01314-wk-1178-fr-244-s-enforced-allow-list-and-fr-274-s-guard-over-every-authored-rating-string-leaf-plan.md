@@ -3,7 +3,7 @@ id: PL-1314
 family: plan
 kind: leaf
 title: WK-1178 slice — FR-244's enforced allow-list and FR-274's guard over every authored rating string: leaf plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-09-30
 owner: planner
 tree: 9f63d0feee524815e7e0c68c99a53ac3f80e6c37

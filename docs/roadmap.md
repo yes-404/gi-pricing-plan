@@ -1121,7 +1121,7 @@ relates: [PL-1299, FD-1297, RL-1298]
 id: SL-1315
 family: slice
 title: WK-1178 slice — FR-244's enforced allow-list and FR-274's guard over every authored rating string
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                  # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 9f63d0feee524815e7e0c68c99a53ac3f80e6c37
