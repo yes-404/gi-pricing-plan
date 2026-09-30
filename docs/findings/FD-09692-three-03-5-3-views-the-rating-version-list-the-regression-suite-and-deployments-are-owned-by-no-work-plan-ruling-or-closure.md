@@ -149,4 +149,27 @@ decision-maker's. This finding decides none of these.
 `/rating/:slug/v/:version/tests` and `/rating/environments` has a named owner in the roadmap or a
 ruling.
 
+## Decision (2026-09-30)
+
+**The maintainer ruled, by delegation: option A for all three views.** Recorded from
+`~/gi-pricing-plan.local/channel/to-lead.md`, the entry "2026-09-30 05:28:45 BST — SCOPE DECISION:
+#921 FD-9692, the three unowned `03` §5.3 rating views go to WK-675 (option A)", which rests on this
+essay's Options at `b6f8161d`, re-verified at `880feb49`. That entry is a channel entry, not a
+merged record; the ruling record is the mint turn's.
+
+- **Owner: WK-675**, with the three views as three new slices. The finding's confirming event
+  (each route has a named owner) is met once WK-675's plan (#920) carries them.
+- **Order inside WK-675:** the Rating version list, then the Regression suite, after S6 and before
+  S8/S9; the Deployments view last, after WK-674's deployment-history `GET` has landed. The planner
+  re-derives the order at #920's revision (that is `PL-9681`'s DP-4's interaction).
+- **Spec first (`CLAUDE.md` §0):** `03` §5.1 has no `GET` list route for rating versions (item 8).
+  The Version-list slice's first task is that spec change, a new FR and the §5.1 row, in the same
+  commit as its code. It is not built ahead of its spec.
+- **Budget:** #920 absorbs the three slices at its revision, 9 to 12 slices, sized 9 / 12 / 24 days.
+- **Why A, and not E for Deployments** (the entry's reason, summarised): the three are specified P2
+  views, so dropping one is a scope cut and the standing instruction is to complete works, not trim
+  them; G2's deploy step is a scripted journey, so E was possible but not needed; with two lanes under
+  `RL-1263` the extra three likely days are absorbed, and one frontend Work keeps one router owner.
+- **Adjacent, not decided here:** `07` §5.3's other views have their own finding.
+
 Ownership shape: event
