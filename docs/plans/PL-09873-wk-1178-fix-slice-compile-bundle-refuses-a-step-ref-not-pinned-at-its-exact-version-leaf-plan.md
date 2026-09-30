@@ -286,7 +286,7 @@ the order and the acceptance (#961, *Disposition*). None of that is reopened her
 - [ ] Build each variant by **copying and editing** the fixture's dicts: a step's ref, and the
   version's `pins`. Do not mutate the shared helpers. For `@2` artifacts, add payloads to a local
   resolver whose `resolve` returns `ResolvedArtifact(status="approved", payload=…)`, as
-  `_FakeResolver` does (`test_rating_score.py:108-116`).
+  `_FakeResolver` does (`test_rating_score.py:103-115`).
 - [ ] **Lookup variants.** Replace `s_expense` with a `lookup` step on
   `reference_table:expense@1`, with rows `direct → "1.1"` and `broker → "1.25"`, and `@2` at
   `direct → "2.0"`. Use `on_miss="default"` and `s_office`'s expression
