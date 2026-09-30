@@ -1,5 +1,5 @@
 ---
-id: RL-9978
+id: RL-1298
 family: ruling
 title: DP-F1 to DP-F3 decided — check_step_refs_pinned in compile, load_bundle re-checks pins, and an unreferenced extra pin stays allowed
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -12,10 +12,10 @@ supersedes: []
 superseded_by: ~
 corrected_by: []
 corrects: ~
-relates: [RL-1263]
+relates: [RL-1263, FD-1297]
 ---
 
-# RL-9978 — DP-F1 to DP-F3 decided: (a), (c), (a)
+# RL-1298 — DP-F1 to DP-F3 decided: (a), (c), (a)
 
 ## How this was ruled
 
@@ -27,16 +27,16 @@ pre-accepted as within the fix's scope, if the DM rules it … Its acceptance ad
 case: a pre-fix-style bundle with an unpinned or wrong-version step ref is refused at load."
 The session's `$CLAUDE_EFFORT` read `medium`.
 
-**Working id 9978.** It was checked free on every `origin/*` branch, in every open PR's
-title and body, and in the local channel files. It is minted at the merge turn, which the
-lead schedules.
+**Minted 2026-09-30 as RL-1298** (`doc-id.py next --ref origin/main` = 1298 at `4009de14`);
+it was filed under working id 9978.
 
 **Sources.**
 - The decision points are those of the WK-1178 fix-slice leaf plan, #963 (working id 9873),
   branch `wk1178-pin-membership-leaf`. I read the plan at `529928cf`, then again at
   `d024eb60`, where its three DP rows (`:272-274`) are unchanged.
-- The finding it fixes is #961 (working id 9977, severity high, head `f78d4340`).
-- Neither is minted, so both are cited as prose.
+- The finding it fixes is `FD-1297` (filed as #961 under working id 9977, severity high;
+  read at head `f78d4340`).
+- The plan is not minted, so it is cited as prose.
 
 ## Verified first, at 48792023e09cd79c771c2184d6808e378732b76b
 
@@ -106,11 +106,11 @@ $ … -k "not today"
 
 **What the proof shows.**
 - Today, a bundle whose `table` step names a ref that is unpinned, or pinned at another
-  version, **loads without complaint**. #961's *Evidence* shows what such a bundle then
+  version, **loads without complaint**. `FD-1297`'s *Evidence* shows what such a bundle then
   prices.
 - Under (c), both are refused at load with `RATING_VERSION_UNPINNED`.
 - The pinned control loads, and a bundle carrying an extra pin no step names still loads.
-  That is the DP-F3 (a) case, #961 Table 1's "both table v1 and v2 pinned" row.
+  That is the DP-F3 (a) case, `FD-1297` Table 1's "both table v1 and v2 pinned" row.
 
 ## Ruled
 
@@ -200,9 +200,9 @@ the decision-maker at effort high. This record says nothing about `_GUARD_MARKER
 - It changes no FR text and no published contract: no schema, no route, and no new error
   code, since both codes are registered.
 - `03` §5.1's meaning line for `RATING_VERSION_UNPINNED` is the plan's Task 2, already inside
-  the maintainer's decided scope (#961, *Disposition*).
+  the maintainer's decided scope (`FD-1297`, *Disposition*).
 - One effect is disclosed: under (c), a stored bundle with an unpinned or wrong-version step
-  ref stops loading. #961 (at `f78d4340`, *Sweeps*, auditor-922 at `eeda8f4b`) reports the
+  ref stops loading. `FD-1297` (at `f78d4340`, *Sweeps*, auditor-922 at `eeda8f4b`) reports the
   sweep's result:
   - PostgreSQL: 0 such bundles.
   - MinIO: 6519 bundle JSONs across its buckets, 0 with a graph step ref outside their pins
