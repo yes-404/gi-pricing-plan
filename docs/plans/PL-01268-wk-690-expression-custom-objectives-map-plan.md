@@ -72,8 +72,10 @@ its ruling.)*
 
 - **No dependency on WK-674** *(revised 2026-09-29 against 19c395ac)*. No slice here waits on a
   WK-674 slice, and no WK-674 output is an input to any slice. Before this revision the plan
-  did not name WK-674 at all: `git show 97986b7a:docs/plans/PL-09103-wk-690-expression-custom-objectives-map-plan.md | grep -c WK-674`
-  prints `0`. The names below were added for the serialisation list only. *(Corrected
+  did not name WK-674 at all:
+  `git show 97986b7a:"$(git ls-tree -r --name-only 97986b7a docs/plans/ | grep wk-690-expression)" | grep -c WK-674`
+  prints `0`. *(Re-worded 2026-09-30 at the mint: the command no longer spells the file's
+  pre-mint name, and it resolves the same single file.)* The names below were added for the serialisation list only. *(Corrected
   2026-09-29 on auditor-plans' finding F1 at 18f85019: the text said that this file never
   names WK-674, with a count of `0`. At 18f85019 this bullet itself named WK-674.)*
   The files that WK-690 slices and WK-674 slices both write, for the lead's serialisation:
