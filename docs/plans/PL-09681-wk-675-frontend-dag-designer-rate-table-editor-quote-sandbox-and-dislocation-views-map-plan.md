@@ -27,7 +27,7 @@ First filed 2026-09-29 as working id 9681; `created` re-dated so the id sequence
 > **`status: draft` while DP-1 (OQ-550, the decision-maker's) or any other open DP has no
 > resolver** (see *Decision points*).
 >
-> **Revised 2026-09-30 by the planner (planner-maps), on the lead's instruction, while
+> **Revised 2026-09-30 by the planner (planner-maps), on the lead's instructions, while
 > `draft`.** The draft was written at `f0c3d197`, and this revision brings it to origin/main
 > `880feb49`:
 > 1. **Citations refreshed.** #834 is `RS-1269` (its F2 decision is quoted at
@@ -45,6 +45,9 @@ First filed 2026-09-29 as working id 9681; `created` re-dated so the id sequence
 > 5. **DP-4 is ruled (a)** by the maintainer's scope decision of 2026-09-30 05:34:33 BST, which
 >    also accepts S12's wait on SL-1260 (the full view) and covers S11's possible run-list
 >    route under (a). (a′) is pre-authorised if S2 or S4 splits: 13 slices, up to 15.
+> 6. **S13 (Jobs) and S14 (Job detail)** are added by the maintainer's #949 decision (option D,
+>    2026-09-30 05:35:06 BST): 15 slices, 11.25 / 15 / 30 days. Settings and System status are
+>    placed in P3, with a recommended owner. DP-7 = OQ-9871 is raised for the decision-maker.
 
 ## Goal
 
@@ -52,7 +55,9 @@ Build the four rating-engine views WK-675's roadmap row names: the **DAG designe
 **rate table editor**, the **quote sandbox with its ladder waterfall and compare**, and the
 **dislocation views** (`03` §5.3); and, by the maintainer's scope decision of 2026-09-30
 05:28:45 BST on #921's finding (option A), the other three §5.3 views: the **Rating version
-list**, the **Regression suite** view and the **Deployments** view. Each is built on routes that a backend Work has delivered
+list**, the **Regression suite** view and the **Deployments** view; and, by the maintainer's
+scope decision of 2026-09-30 05:35:06 BST on #949's finding (option D), `07` §5.3's **Jobs**
+and **Job detail** views. Each is built on routes that a backend Work has delivered
 or delivers, and none hand-writes a shape (`CLAUDE.md` §2, §3). The Work is done when every
 id in **Scope** has a verdict and every *Acceptance Standard* item below holds.
 
@@ -94,10 +99,12 @@ slice. Every command runs in the executor's own worktree against the range
 1. **Every decision point below is ruled** by a filed `RL-` before the slice it blocks starts:
    `git grep -n 'OQ-550\|OQ-1223\|OQ-1231' docs/open-questions.md` shows each `closed`, citing
    its `RL-`. DP-4, DP-5 and DP-6 are each an `RL-` with its spec amendment in the same commit.
-2. **The seven views' routes are registered and reachable** (FR-25):
+2. **The nine views' routes are registered and reachable** (FR-25):
    `grep -nE 'rating/:slug/v/:version/(design|tables/:tableSlug|sandbox|dislocation|tests)' frontend/src/router/index.ts`
-   prints five lines, `grep -nE "path: '/rating(/environments)?'" frontend/src/router/index.ts`
-   prints two, and `pnpm --dir frontend test` passes the route-graph test
+   prints five lines; `grep -nE 'path: "/(rating|rating/environments|jobs|jobs/:id)",' frontend/src/router/index.ts`
+   prints four (the router writes `path: "…"`, double-quoted);
+   `frontend/src/router/__tests__/reachability.test.ts` no longer whitelists
+   `/models/:slug/backtests/:backtestId`; and `pnpm --dir frontend test` passes the route-graph test
    (`frontend/src/router/__tests__/routeGraph.test.ts`) with each route reachable from `/`.
 3. **Each FR in Scope has a test naming it.** A view limb is tested in the frontend, in this
    repo's convention of the id in the test name: for each id,
@@ -184,6 +191,35 @@ all three are **WK-675's**, as three new slices, **S10**, **S11** and **S12** (a
 slice numbers other records cite stay fixed). The Version-list slice's first task is the `03`
 §5.1 list-`GET` spec change, a new FR plus the §5.1 row, in the same commit as its code.
 
+### `07` §5.3's platform views: Jobs and Job detail here, the other three placed in P3
+
+#949's finding (working id 9693) traced `07` §5.3's platform views, which no Work owned. **The
+maintainer's scope decision, by delegation, 2026-09-30 05:35:06 BST** (to-lead.md, "2026-09-30 05:35:06 BST — SCOPE DECISION: #949 [the finding], the `07` §5.3 platform views, option D (split by view)"; the
+finding's id is written as its working id until it mints), option D, splits them by view:
+
+- **Jobs** (`/jobs`, `07:390`) and **Job detail** (`/jobs/:id`, `07:391`) are **WK-675's**, as
+  **S13** and **S14** (appended). No spec change is needed: every route is declared
+  (`07:301-305`) and built (`backend/src/app/api/jobs.py:105-254`). They are bound by FR-402's UI
+  limb ("viewable in the UI with the `trace_id`", `07:91`) and FR-401 (cancellation, `07:90`).
+  S13 closes `reachability.test.ts`'s waiting exception and corrects its comment
+  (`frontend/src/router/__tests__/reachability.test.ts:33` cites FR-24 for "the jobs view is a
+  later phase"; the decision records that as a mis-cite).
+- **Service accounts** (`07:393`) goes to **WK-676** in P3, by a dated roadmap line (the lead's).
+- **Settings** (`07:394`) and **System status** (`07:395`) go to P3, to "a P3 platform Work, or
+  WK-1251"; the planner names which. **Recommendation: a new P3 platform-administration Work,
+  not WK-1251.** WK-1251 is *Production packaging and supply chain*: FR-432 (container images),
+  FR-433 (the Helm chart), FR-438 (signed images with an SBOM) and three NFRs (`roadmap.md`,
+  `### WK-1251`). Those are build- and deploy-time. The two views are runtime administration:
+  Settings reads FR-446's effective value and its source, and System status reads FR-443's
+  metrics and FR-444's health endpoints. Each needs a spec change first (no status route; no
+  cache hit rate emitted). Folding them into WK-1251 would give a packaging Work a UI and two
+  spec changes it does not otherwise need. WK-1251 is the fallback if the maintainer prefers no
+  new Work: it carries NFR-527 ("queue depth and wait time are observable"), which System status
+  displays. Creating a Work is the maintainer's scope decision, and the roadmap line is the
+  lead's.
+- **`/admin/environments` beside `/rating/environments`** is not decided there. It is filed as
+  **DP-7 = OQ-9871** (working id), owned by WK-675, for the decision-maker.
+
 **A consequence for FR-25:** until S10's rating version list lands, a designer or sandbox route
 needs another path from the entry. Until then, each view's slice links to its route from the
 existing `RatingVersionView` (`/rating-versions/:id`, `frontend/src/router/index.ts:235`),
@@ -202,11 +238,12 @@ recommendations are the planner's proposal, not a ruling.
 | **DP-4** | The views need read routes **declared nowhere and built nowhere**: an algorithm by `{slug}@{version}` (the designer's load), and a rate table's cells and a version's table list (the editor). Who adds them? | (a) **this Work**: each route is spec-changed first by the decision-maker and built in the slice whose view consumes it, as F-W10-3 already makes this Work own `POST /rate-tables/{slug}/versions`; (b) a WK-1178 backend slice before WK-675; (c) leave the views to compose reads from existing routes | **(a).** The consuming view is the only place the route's shape is known; F-W10-3 is the precedent; (c) is impossible for the designer, since no route returns an algorithm's graph | scope | ruled | **(a), by the maintainer's scope decision, by delegation** (to-lead.md, "2026-09-30 05:34:33 BST — SCOPE DECISION: #920 DP-4, option (a); the S12 order corrected; the S11 run-list route covered"). Each missing read route gets a spec change first (a new FR plus its `03` §5.1 row) and is built in the WK-675 slice that consumes it: the algorithm-by-`{slug}@{version}` load in **S2**, the rate-table cells and a version's table list in **S4**. **(a′) is pre-authorised as a fallback:** if S2's or S4's leaf plan must split, the split, or one read-routes slice before S2, needs no further scope call; the planner records it at that leaf plan's ACK |
 | **DP-5** | §5.3 routes address a version as `:slug/v/:version`, but the backend reads a Rating Version only by UUID (`GET /rating-versions/{id}`, `models.py:1139`), a Phase 1b route in no §5.1 | (a) add `{slug}@{version}` read routes, the form `03` §5.1 already uses for algorithms and tables; (b) change the §5.3 and `00` §5.6 routes to `/rating-versions/:id/...` | **(a).** It matches every other versioned route in `03` §5.1 and keeps `00` §5.6's four canonical routes unchanged | decision point | no — resolved before Slice 2's leaf plan goes `active`. Until then, views are linked from `/rating-versions/:id` | decision-maker, by `RL-` |
 | **DP-6** | The designer's **on-node live validation** is an FR-24 exception, binding until discharged at this view's slice plan (`00:228`). What discharges it, and how does the view validate before save? | (a) raise it as a numbered `03` FR, served by a **validate-only route** that runs the server's own checks (spec change: the FR plus the route); (b) raise the FR, and re-implement the cycle, reference and type checks in the frontend; (c) declare the cell exhaustive and validate on save only | **(a).** (b) defines the validation rules twice, the divergence `CLAUDE.md` §2 forbids; (c) fails the *Interaction requirement* that an invalid graph be "visibly invalid before save" | decision point | no — resolved before Slice 3's leaf plan goes `active`. Until then, the FR-24 exception stays binding and undischarged | decision-maker, by `RL-` |
+| **DP-7 = OQ-9871** | Is `03` §5.3's Deployments view (`/rating/environments`, `03:1051`) a duplicate of `07` §5.3's Environments view (`/admin/environments`, `07:392`)? Both name the live deployments and the shadow configuration, and `00` §5.6 lists only `/admin/*` for environments (`00:413`) | (a) one view at the canonical `/admin/environments`; (b) two views split by concern: deployment actions under `/rating`, environment administration under `/admin`, with a `00` §5.6 row added; (c) both as written | **(a)**, as `docs/open-questions.md` records it: it agrees with `00` §5.6 as written, and shadow configuration is an administration setting (`PL-1237` Task 6). (c) defines one control twice | decision point | no — resolved before S12's leaf plan goes `active` | decision-maker, by `RL-` (raised on the maintainer's #949 decision) |
 
 **The freeze.** DP-2 is ruled (`RL-1261`) and DP-4 is ruled (a) (the maintainer, 2026-09-30
 05:34:33 BST). **DP-1 is open, and it is the decision-maker's**: OQ-550, prepared in #936
 (`dm-prep-b-oq550`, open, "PREPARED, NOT RULED"). This plan stays `draft` until DP-1 and every
-other open DP has a resolver (DP-3, DP-5, DP-6: each the decision-maker's). DP-1 decides Slice
+other open DP has a resolver (DP-3, DP-5, DP-6, DP-7: each the decision-maker's). DP-1 decides Slice
 1's content; DP-2's ruling makes the compare work two slices, S7b then S7. DP-3, DP-5 and DP-6
 each also block only their slice's leaf plan, which does not go `active` until its DP is
 ruled.
@@ -271,6 +308,8 @@ FR-25 and NFR-463 obligations.
 | **S10 — Rating version list** (`/rating`, `03:1045`; #921's finding, option A) | **First task, spec first (`CLAUDE.md` §0):** a new `03` FR and the §5.1 row for a `GET` list route over Rating Versions, in the same commit as its code. Then the view: versions by status, **live-in-environment badges**, effective dates (`03:1045`); each row links to the version's `:slug/v/:version` routes, which **removes the interim FR-25 path** through `RatingVersionView` | S6 (order); DP-5 (the rows' route form); **WK-674 Slice 2, SL-1256** (a live badge needs the Deployment record: nothing is `live` without it, `PL-1267` premise j) | 1 / 2 |
 | **S11 — Regression suite view** (`/rating/:slug/v/:version/tests`, `03:1049`; #921's finding, option A) | Golden quotes with pass/fail and actual-vs-expected, property assertion results with counterexamples (FR-260, FR-261, FR-1221), over WK-672's routes (`03:756-763`). **Both run reads need a `run_id`, and no route lists a version's runs**: the leaf plan establishes whether the version's evidence gives the run id; **if not, the run-list read route is added under DP-4 (a), spec first (a new FR plus its §5.1 row), in S11**, with no new scope call (the maintainer's 05:34:33 entry) | S10 (order); DP-5 | 1 / 2 |
 | **S12 — Deployments view** (`/rating/environments`, `03:1051`; #921's finding, option A) | Per-environment live version, deployment history, rollback control, shadow configuration (`03:1051`; FR-267, FR-269, FR-271). The overlap with `07`'s `/admin/environments` (`07:392`) is resolved in its leaf plan | **WK-674's last slice, SL-1260**, and so SL-1256 (history `GET`, live version) and SL-1259 (rollback, FR-269) before it; shadow configuration is FR-271, SL-1260. **The full view; no partial Deployments view ships** (the maintainer's dated correction to the 05:28:45 order, in the 05:34:33 entry); S11 (order) | 1 / 2 |
+| **S13 — Jobs** (`/jobs`, `07:390`; #949's finding, option D) | The filterable list with kind, status, progress bars, submitter and duration, live over the SSE stream (`GET /api/v1/jobs` and `/jobs/{id}/events`, `07:301, 305`); FR-25 link from the entry; **removes the `reachability.test.ts` exception** for `/models/:slug/backtests/:backtestId` (reachable through a Job's result link) and **corrects its FR-24 comment** (`:33`). New functions in `frontend/src/api/jobs.ts`; no backend change | S4 (order: before S5, the first slice that renders a Job) | 1 / 2 |
+| **S14 — Job detail** (`/jobs/:id`, `07:391`; #949's finding, option D) | Parameters, progress stages, logs with `trace_id` (FR-402's UI limb, `07:91`; `GET /jobs/{id}/logs`), the result link, the cancel action (FR-401, `POST /jobs/{id}/cancel`), error detail. The logs render nothing FR-402 excludes (no secrets, no full quote inputs) | S13 | 1 / 2 |
 
 **The band, re-derived from this cut.** The frontend bands are 0.75 / 1 / 2 days per slice
 (best / likely / worst), from the §5a sizing at
@@ -283,7 +322,8 @@ days.
 |---|---|---|---|---|
 | ~~(a), the trace rule stays~~ | ~~9~~ | ~~6.75~~ | ~~9~~ | ~~18~~ |
 | **(b), definition equality — ruled, `RL-1261`** | 10 (with S7b) | 7.5 | 10 | 20 |
-| **(b), plus #921's three views (S10–S12)** | **13** | **9.75** | **13** | **26** |
+| **(b), plus #921's three views (S10–S12)** | 13 | 9.75 | 13 | 26 |
+| **plus #949's two views (S13, S14)** | **15** | **11.25** | **15** | **30** |
 
 *(Dated 2026-09-30.) The maintainer's scope decision (to-lead.md, "2026-09-30 05:28:45 BST —
 SCOPE DECISION: #921 …") first sized the absorbed Work as "9 to 12, sized 9 / 12 / 24
@@ -292,7 +332,11 @@ correction (to-lead.md, "2026-09-30 05:29:29 BST — DATED CORRECTION to "SCOPE 
 (05:28:45): the slice count only") reads it as **from 10 to 13 slices**, at this plan's
 per-slice band: **9.75 / 13 / 26 days** (13 × 0.75 / 1 / 2). Under DP-4 (a) the Work is 13
 slices, and **up to 15** if S2 and S4 each split under the pre-authorised (a′): **11.25 / 15 / 30
-days** (the maintainer's 05:34:33 BST entry asks the planner to state these figures).*
+days** (the maintainer's 05:34:33 BST entry asks the planner to state these figures).
+With S13 and S14 (the maintainer's 05:35:06 BST entry on #949, option D), the Work is **15
+slices: 11.25 / 15 / 30 days**. It is **16 slices (12 / 16 / 32 days)** if one of S2 or S4
+splits, or one read-routes slice is added, under (a′); and **17 slices (12.75 / 17 / 34 days)**
+if both split. The entry's "16 under (a′)" is the one-split case.*
 
 **S2 and S4 carry more than a typical slice:** S2 holds spike F2's five conditions as well as
 the canvas, and S4 a new dependency as well as two backend routes. Their leaf plans confirm the
@@ -315,9 +359,15 @@ cut or split them, and the band moves with any split.
   | S10 | WK-674 Slice 2, SL-1256 | a live-in-environment badge needs a Deployment |
   | S12 | WK-674 Slices 2, 5 and 6: SL-1256, SL-1259, SL-1260 | history and live version; rollback (FR-269); shadow configuration (FR-271) |
 
-  S1–S4, S6, S7b, S7 and S11 need nothing from another Work.
-- **Inside the Work:** S1 → S2 → S3 → S4 → S5 → S6 → S7b → S7 → S10 → S11 → S8 → S9 → S12.
+  S1–S4, S6, S7b, S7, S11, S13 and S14 need nothing from another Work: the job routes are
+  declared and built.
+- **Inside the Work:** S1 → S2 → S3 → S4 → S13 → S14 → S5 → S6 → S7b → S7 → S10 → S11 → S8 → S9 → S12.
   - S1 comes first because DP-1's ruling changes every chart after it.
+  - **S13 and S14 come before S5**, the first slice that renders a Job (the diff route's 202,
+    FR-232). After them, S5, S8 and S11 link a Job to its detail page instead of each building
+    its own progress display, and the exit demo's long regression run has visible progress.
+    No dependency forces this. They need nothing from another Work or from S1–S4, so the lead
+    may dispatch them earlier.
   - S10 and S11 follow S6 and precede S8 and S9, as the maintainer's 05:28:45 entry orders.
     Nothing forces a change. S10 could run earlier, since it needs only SL-1256, DP-5 and
     its own spec change, and running it earlier would end the interim FR-25 path through
@@ -350,6 +400,8 @@ for append-only edits). Read at `880feb49` against the merged plans. A pair mark
 | S1 | `ChartFigure` and its call sites | WK-690 Slice 5 adds a caller (`PL-1268`:541-547) | ordered: whichever lands second migrates or uses the new API |
 | every view slice | `frontend/src/router/index.ts` `routes` | WK-690 Slice 5 extends the existing `/objectives` view, and would edit `routes` only if it adds a child route | within WK-675, serial anyway; against WK-690 Slice 5, **serialise** if its leaf plan adds a route |
 | any | `permissions.py`, `approvals.py` | WK-690 Slice 3; WK-674 Slice 2; WK-673 Slice 5 | WK-675 edits neither: no conflict |
+| S13, S14 | `frontend/src/api/jobs.ts` (`getJob` and the poll helper) | WK-690 Slice 5, if its certification view uses the poll helper (`02` FR-146's 202) | new functions: no conflict; **serialise** only if either edits the poll helper |
+| S13, S14 | `frontend/src/router/index.ts` `routes` (`/jobs`, `/jobs/:id`) and `reachability.test.ts` | none: WK-675 is the one router owner | exclusive |
 | any | `db/models.py`, `main.py`, `backend/migrations/versions/`, the generated files | several | exempt (append-only) |
 
 ## Status
