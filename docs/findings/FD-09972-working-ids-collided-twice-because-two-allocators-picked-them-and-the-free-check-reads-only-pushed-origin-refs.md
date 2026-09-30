@@ -17,40 +17,50 @@ minted at the records PR. It is cited by number, not as a token, until then.
 
 ## Finding
 
-**Severity: LOW; owner WK-1178.** Both collisions were caught **before a mint**, and `doc-id.py` assigns the final id at the
+**Severity: LOW; owner WK-1178.** Both collisions (and a third near-collision, below) were caught **before a mint**, and `doc-id.py` assigns the final id at the
 mint, so the cost was rework and confusion, not a duplicate governed id. The maintainer's order: "FILE THE FD NOW: owner
 WK-1178, LOW (caught before a mint; doc-id assigns the final ids)". A working id is picked by hand, from a free-check that
 cannot see everything that holds one, by more than one allocator. That is a process gap, and it has now failed twice in one
-day.
+day, and a third time was caught.
 
-- **Instance 1: 9991, 2026-09-30 about 11:30 BST.** A finding drafted under working id 9991 (the perils finding, now
-  under 9995) collided with a ledger that already held it: the commit is `939799b3`, dated 2026-09-30 11:31:20 BST
-  (10:31:20Z), subject "docs(findings): the perils finding (working id 9995) — renumbered from 9991, which executor-690s1's ledger holds;
-  owner basis confirmed". The other holder, the ledger numbered 9991 (WK-690 Slice 1's
-  ledger, executor-690s1), is on the executor's branch: `git log --all --grep='the ledger numbered 9991'` finds its commits, and the earliest
-  whose subject names the id is dated 2026-09-30 11:37 BST, **after** the collision was caught, so the reservation had no
-  pushed trace that the free-check could have read when the finding took the number; it existed on the executor's branch
-  and in a brief.
+- **Instance 1: 9991, 2026-09-30 about 11:30 BST, a near-simultaneous race.** A finding drafted under working id 9991 (the
+  perils finding, now under 9995) collided with a ledger numbered 9991 (WK-690 Slice 1's ledger, executor-690s1). Times, from
+  commits and the remote-ref reflog of this clone (`git log -S` and `git reflog show --date=iso origin/sl-1271-arity-refusal`):
+  the ledger was created in commit `463abf2c` (message "pin sympy==1.14.0 …", which does not name it; `git log -S` finds the
+  ledger's first appearance there) at 11:28:52 BST, amended 11:29:47, and **pushed at 11:29:49 BST** (10:29:49Z); the
+  perils finding's commit `97f5a4ae` is dated 11:29:20 BST, **29 seconds before that push**; the maintainer's entry is
+  11:30:55; the renumber `939799b3` is dated 11:31:20 BST (subject "… renumbered from 9991, which executor-690s1's ledger
+  holds; owner basis confirmed"). So a free-check at pick time could not have seen the reservation: it was a local commit,
+  and it reached `origin` 29 seconds after the finding took the number. (An earlier draft of this essay dated the ledger by
+  the first commit **message** naming it, 11:37 BST; that instrument reads messages and misses a ledger created in a commit
+  about something else.)
 - **Instance 2: 9970, 2026-09-30 about 17:05 to 17:12 BST.** The auditor (this finding's author) picked working id 9970
-  for the open question that FD 9969 raises, on a branch not yet pushed (its head commit is `e86c6e42`, dated 17:07:35 BST),
-  because the lead's brief for FD 9969 said "an OQ working id (check it free)". The lead had, meanwhile, assigned 9970 to
-  auditor-933 for a different finding. The lead's free-check (a `git grep` over `origin` refs, and `eta.md`) could not see the
-  unpushed commit. **Resolution: the OQ kept 9970 and auditor-933's finding moved to 9971** (`eta.md`, the lead's reservation
-  table: "9971 | FD | auditor-933 | /score 200 response untyped", and the row "9970 | OQ | auditor-close1255 (via FD 9969) …
-  self-picked ~17:05 (collision instance 2)"). The rule that authors do not pick did not yet exist; it was made after this
-  (below).
+  for the open question that FD 9969 raises (the lead's eta row records "self-picked ~17:05"), because the lead's brief for FD 9969
+  said "an OQ working id (check it free)". The lead had, meanwhile, assigned 9970 to auditor-933 for a different finding.
+  The auditor's commit `e86c6e42` is dated 17:07:35 BST and was **pushed at 17:07:36 BST** (remote-ref reflog of
+  `origin/fd-9969-decimal-output-float`, 16:07:36Z). **What is established and what is not:** at pick time (about 17:05) the
+  pick was unpushed. The lead reports (the lead's own statement, not a recorded measurement) that a re-check of 9970 (a loose-pattern
+  `git grep` over `refs/remotes/origin` after `git fetch`) read it free, that the time of that check was **not recorded to the
+  second**, and that it ran shortly before the FD 9969 report reached the lead (about 17:08 BST); the lead later verified that this
+  pattern does match the content of `e86c6e42` (OQ 9970 twelve times in five files), so **the pattern was not the cause**.
+  Either the check preceded the push by seconds (a race, as in instance 1) or the fetch did not see it; **neither is established
+  to the second**. That is itself a gap: a check with no timestamp cannot be placed against a push. **Resolution: the OQ kept
+  9970 and auditor-933's finding moved to 9971** (`eta.md`, the lead's reservation table: "9971 | FD | auditor-933 | /score 200
+  response untyped", and the row "9970 | OQ | auditor-close1255 (via FD 9969) … self-picked ~17:05 (collision instance 2)"). The
+  rule that authors do not pick did not yet exist; it was made after this (below).
 - **Instance 3, a near-collision: 9970 again, 2026-09-30 about 17:12 BST.** auditor-933 filed the `/score` finding under
-  working id 9970 (commit `cfe3359d`, 2026-09-30T16:12:07Z = 17:12 BST, branch `fd-9970-score-200-untyped`, subject "docs(findings):
-  the working-id-9970 finding — the /score 200 response has no schema in the generated OpenAPI (working id)"), because the lead's correction to
-  9971 was a chat message that crossed with its work; the finding is being re-numbered to 9971 (the lead's report, not yet
-  seen on a pushed ref). Its free-check looked only for its own family's file, so it could not see the open question already
-  pushed under 9970 in the same number space. **Two more causes** follow from it: a **correction travels by chat**, and a
-  free-check matches **one family** only.
+  working id 9970 (commit `cfe3359d`, committed 17:12:07 BST and pushed 17:12:10 BST, branch `fd-9970-score-200-untyped`, subject
+  "docs(findings): the working-id-9970 finding — the /score 200 response has no schema in the generated OpenAPI (working id)"),
+  because the lead's correction to 9971 was a chat message that crossed with its work; the finding is being re-numbered to
+  9971 (the lead's report, not yet seen on a pushed ref). **This is not the unpushed blind spot:** 9970 had been on `origin`
+  since 17:07:36, so a check over `origin` refs **would have caught it**. Its causes are that a **correction travels by chat**
+  and that its free-check looked only for its own family's file, so it did not see the open question under the same number in
+  another family.
 
 ## Evidence
 
 **1. The maintainer's entries, verbatim, with their headers** (`~/gi-pricing-plan.local/channel/to-lead.md`, outside the
-repository).
+repository). The 11:30:55 entry also has a third bullet of status notes, omitted here, one clause of which (the perils finding "renumbered to 9995") corroborates instance 1.
 
 > ## 2026-09-30 11:30:55 BST — the working-id collision (9991): interim OK, plus a WK-1178 item for a mechanical fix
 > - The eta.md reservation list is **accepted as the interim.**
@@ -70,11 +80,11 @@ The 17:08:59 BST entry ("… the 9970 id collision", item (3)) had noted the sec
 
 **2. The cause: two allocators, and a check blind to what is not on an origin ref.** Before the 17:09:40 rule, ids were
 picked by the lead **and by authors** (the lead's brief told the author to "check it free"). The check that both used reads
-pushed `origin` refs and `eta.md`. It cannot see: (a) a commit on a local branch that has not been pushed; (b) an edit in a
+pushed `origin` refs and `eta.md`. It cannot see: (a) a commit on a local branch that has not been pushed (instance 1 at pick time; instance 2 unless the check followed the push); a push that lands seconds after the pick (a race, instances 1 and 2), for which a check with no recorded time cannot be placed; (b) an edit in a
 worktree that is not committed; (c) a reservation that lives in a brief or another role's ledger only (instance 1).
 
 **3. The blind spots, measured** (scratch worktree from `origin/main` `8d5c67a56c27a9dcbba8d4e4ad28a1895e1dd862`, removed
-afterwards; the plant an FD numbered 9990 was a scratch string never pushed and never used as an id). Predicate, verbatim, a
+afterwards, measured at the refs of that time (the baseline for 9990 was 0, before this essay existed; the essay now mentions 9990, so a re-run must use an id absent from it); the plant an FD numbered 9990 was a scratch string never pushed and never used as an id). Predicate, verbatim, a
 family-prefixed token: `(^|[^0-9A-Za-z.])(FD|OQ|RL|PL|SL|LG|CR|WK|RFC|ADR|NT|RS|F)-0*9990([^0-9]|$)`, `git grep -c -E … <ref> --
 docs`, summed per ref set.
 
@@ -91,7 +101,7 @@ still cannot see a reservation that exists only in a brief or another role's pri
 hyphen or a zero. Measured for 9972 at the tree above: `git grep -c -E '(-|0)9972\b' <ref> -- docs` summed over the 66
 `origin` refs gives **53 hits**, all one occurrence counted once per ref that contains it: `docs/findings/FD-01294-*.md:27`,
 which mentions the branch name `` `dm-rl-9972-dp-s1-2` `` (a branch, not an id). The family-prefixed pattern of
-evidence 3, run for 9972, gives **0 hits** on the same refs. (Numbers such as `0.99972` would match the loose pattern too.)
+evidence 3, run for 9972, gives **0 hits** on the same refs. (Numbers such as `0.09972` would match the loose pattern too.)
 A free-check must be prefixed by an id family.
 
 ## Disposition
@@ -111,12 +121,12 @@ A free-check must be prefixed by an id family.
   an open PR title. **Coverage of the three causes, read from its text:** (1) *two allocators*: covered in aim ("working ids
   are picked by hand", make an invisible reservation impossible) but only if every picker goes through the script; the slice
   does not say that hand-picking is retired. (2) *a free-check blind to unpushed work*: **gap**: it names `origin` refs and PR
-  titles only, which is instance 2's blind spot (evidence 3 checks A and B), so local refs and worktree files must be added.
+  titles only, which is the blind spot of evidence 3's checks A and B (instance 1 at pick time; instance 2 unless the check followed the push), so local refs and worktree files must be added.
   (3) *a single-family pattern, and corrections by chat*: **gap**: the slice names no matching pattern (evidence 4 needs the
   family-prefixed one, across all families), and says nothing of a re-assignment: it must be an appended ledger row that
   supersedes the earlier holder, not a chat message (instance 3). It also leaves open whether the ledger is in the repository
   or local; only a local ledger can see an unpushed reservation (instance 1), and only a repository one can be read by CI.
-  The slice's remark "not an FD unless it recurs" is discharged: it has now recurred.
+  The slice's remark "not an FD unless it recurs" is stale: the maintainer's 17:09:40 BST entry (evidence 1) supersedes it by filing this FD, and the slice text should point here.
 - **Acceptance, red first, on broken input** (so the fix is not a green stamp): with an id present only in the ledger, only on an
   unpushed local commit, and only in an uncommitted worktree edit, the picker refuses each in turn; with the ledger check removed,
   each is accepted and the test fails; a bare number such as `0.99972` does not refuse an id.
@@ -128,5 +138,4 @@ Ownership shape: workstream
 
 ## Decision
 
-Not yet decided. The proposal above is the auditor's; the lead adopts, amends or rejects it. The owner and the severity are the
-maintainer's, per the entries quoted under evidence 1.
+The decision is the lead's and the maintainer's, recorded in this finding's row of `docs/findings/register.md`, not here (a frozen essay goes stale).
