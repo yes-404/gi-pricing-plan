@@ -1,5 +1,5 @@
 ---
-id: RL-9904
+id: RL-1312
 family: ruling
 title: FR-244 decided — an enforced allow-list of operators and functions, and ?? is its coalescing operator
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -12,10 +12,10 @@ supersedes: []
 superseded_by: ~
 corrected_by: []
 corrects: ~
-relates: [RL-1265, PL-1268, FR-244, FR-274, FR-276, FR-246]
+relates: [RL-1265, PL-1268, FR-244, FR-274, FR-276, FR-246, OQ-1316]
 ---
 
-# RL-9904 — FR-244 decided: an enforced allow-list of operators and functions, and `??` is its coalescing operator
+# RL-1312 — FR-244 decided: an enforced allow-list of operators and functions, and `??` is its coalescing operator
 
 ## How this was ruled
 
@@ -35,9 +35,10 @@ spec about the rating expression grammar, and the grammar is the decision-maker'
 - after a sweep of stored algorithms, `examples/` and the test fixtures;
 - and **which slice carries the change**.
 
-The maintainer's steer was weighed on its merits. This record uses a new working id, 9904,
-checked free: no `[A-Z]{2,3}-0?9904` token under `docs/` on any `origin/*` ref, nor in
-`~/gi-pricing-plan.local/channel/`. It is minted at the lead's merge turn.
+The maintainer's steer was weighed on its merits. This record was minted 2026-09-30 as
+RL-1312 (hand-assigned in the lead's batch plan, batch 4, under the maintainer's option (B));
+it was filed under working id 9904, which had been checked free: no `[A-Z]{2,3}-0?9904` token
+under `docs/` on any `origin/*` ref, nor in `~/gi-pricing-plan.local/channel/`.
 
 **Context, not ruled here.** A HIGH finding (FD working id 9977, HIGH per the 10:15:07 BST
 entry) is being filed at the time of writing, not yet on any ref: an unpinned or wrong-version `table` or `lookup` step prices silently wrong. It
@@ -174,7 +175,7 @@ nothing that exists, except the two deliberate negative-test functions.
        spec change.
      - **The question — whether rounding is offered inside an algorithm, where, with what
        mode, and how it is recorded so the ladder reconciles and nothing rounds twice — is
-       OQ working id 9905**, broadened for this. The dimensionless-factor rule is one of its
+       `OQ-1316`**, broadened for this. The dimensionless-factor rule is one of its
        options. The engine's `round` is half away from zero, which records what that option
        would use.
    - **Struck from FR-244's intent list, each with its replacement:**
@@ -185,7 +186,7 @@ nothing that exists, except the two deliberate negative-test functions.
      - `date_diff_years(a, b)` → a declared input, since a quote timestamp is already an input
        (FR-246);
      - `round(x, mode, dp)` → the output step's declared rounding (FR-226); intermediate
-       rounding is OQ working id 9905;
+       rounding is `OQ-1316`;
      - the two-argument `min` and `max` → the array forms.
 
      None of the struck forms exists in the engine (the probe above).
@@ -226,7 +227,7 @@ nothing that exists, except the two deliberate negative-test functions.
 WK-690 Slice 1's Task 6 appends this to FR-244's cell, **in place of** the held sentence
 (the leaf plan's lines 1538-1543 at `57a4833e`). The `02` §4.6 note of Task 6, Step 2 is unchanged. Nothing is struck:
 
-> **Amended 2026-09-30, `RL-1265` DP-5 and `RL-9904`:** the rating grammar is FR-244's own:
+> **Amended 2026-09-30, `RL-1265` DP-5 and `RL-1312`:** the rating grammar is FR-244's own:
 > ZEN's expression language, **restricted to an enforced allow-list of operators and
 > functions** and verified against the engine by FR-276. It shares function names with
 > `02` §4.6 where they coincide, but it is not one of §4.6's profiles, and
@@ -237,7 +238,7 @@ WK-690 Slice 1's Task 6 appends this to FR-244's cell, **in place of** the held 
 > **Literals:** numbers, `true`, `false`, `null` and single-quoted strings. **Functions:**
 > `min([…])`, `max([…])` and `abs`. **No rounding function** (`round`, `floor`, `ceil`): money
 > is rounded only by an `output` step's declared rounding (FR-226), never twice (NFR-496).
-> Whether rounding is offered anywhere else is an open question (`03` §10, working id 9905).
+> Whether rounding is offered anywhere else is an open question (`03` §10, `OQ-1316`).
 > The list above states intent that the engine does not meet. `coalesce(a, b)` is written
 > `a ?? b`, `clip(x, lo, hi)` is `min([max([x, lo]), hi])`, `round(x, mode, dp)` is the
 > output step's rounding, `band` is a `table` step with a banded key (FR-228), and
@@ -278,14 +279,14 @@ WK-690 Slice 1's Task 6 appends this to FR-244's cell, **in place of** the held 
 
 ## What it obliges
 
-- **This commit:** this record, and the new open question (OQ working id 9905) in `03` §10 and
+- **This commit:** this record, and the new open question (`OQ-1316`) in `03` §10 and
   `docs/open-questions.md`. No FR-244 text changes here, because the FR-244 text is
   the Slice 1 leaf plan's Task 6, in its own commit with the `02` §4.6 note.
 - **WK-690 Slice 1 (its leaf plan's Task 6):** the amended text above, in place of the held sentence.
 - **WK-1178, a new slice after the fix slice:** items 1 to 3, with the acceptance below.
 - **The lead:** routes the slice, and tells the WK-690 Slice 1 executor that Task 6's
   sentence is released in this wording.
-- **The lead (the roadmap is the lead's file):** places OQ working id 9905 on `docs/roadmap.md`
+- **The lead (the roadmap is the lead's file):** places `OQ-1316` on `docs/roadmap.md`
   §10's decision-gate table, at *Deferred / any time*, as `spec-change` requires of a new `OQ-`.
 
 ## Acceptance — the violation that must become detectable
