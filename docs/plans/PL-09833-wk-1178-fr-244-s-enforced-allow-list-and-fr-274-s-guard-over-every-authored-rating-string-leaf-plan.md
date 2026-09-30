@@ -72,7 +72,7 @@ MINTED"; first read at `fb4833a9`, re-read at its head `6eb68d776aa7ef974fc234be
 ~16:00 fix slice") and its *Acceptance* section.
 
 It also discharges the finding in #968 (FD working id 9885, HIGH in force). It was first read at
-`46b4d445` and then `fede7e5d`, and re-read at its live head `02f3f5888b83f92ef8bb813947a55e0b393a5365`, which every
+`46b4d445` and then `fede7e5d`, and re-read at `02f3f588` and at its live head `7222023c`, which every
 quote below is checked against. It is titled "Rating condition and clamp_bounds strings
 are never validated — no vocabulary, syntax or division-guard check (FR-244, FR-274, FR-276)".
 That finding's *Disposition* names this slice as owner: "Owner: the #967 WK-1178 code slice (RL
@@ -98,6 +98,11 @@ local channel file, outside the repository:
   in FR-244's text, not checked here: its own `round` is half away from zero, and at the float
   boundary a `Decimal` input is refused while a `str` input is accepted as a ZEN string, not a
   number. OQ working id 9905 is broadened, and stays out of scope.
+- "2026-09-30 11:07:11 BST — DECISION: #970 DP-G4 residual → (a), recorded as a LOW FD; #970
+  G1–G3 accepted". The maintainer accepted the rulings on this plan's decision points: #970
+  (RL working id 9982, read at `39dce368ef582b067a9be931ee2bd63ca2c6dd03`, unminted). The G4
+  residual is recorded as a LOW finding, owner WK-1178, which auditor-928 is filing; it has no
+  PR at this revision.
 
 ## Status
 
@@ -111,7 +116,7 @@ use.
 1. **The fix slice (#963) merged.** `compile.py` has one writer at a time (`RL-1263`; #967,
    *Which slice carries it*).
 2. **FR-244's amended text on `main`, or carried by this slice** (DP-G1).
-3. The decision-maker's rulings on DP-G1, DP-G3, DP-G4 and DP-G5 (DP-G2 is withdrawn: the maintainer decided it).
+3. The decision-maker's rulings on DP-G1, DP-G3, DP-G4 and DP-G5 (DP-G2 is withdrawn: the maintainer decided it). **Ruled** in #970 (working id 9982, at `39dce368`, unminted): (a), (a), (a)+(i), (a)+(i). The maintainer accepted them at 11:07:11 BST.
 4. #967 and #968 minted, and this plan's citations re-pointed (Task 0).
 5. A free `RL-1263` gate slot, and the lead's dispatch record with its write-set check (below).
 
@@ -187,6 +192,8 @@ case says otherwise.
      must be shown red, like any other refusal"; the maintainer's 11:05:21 BST entry): an `expr`
      using `round(p, 2)`, then `floor(x)`, then `ceil(x)`. Each is refused, red first. **Predicted
      red:** it saves today, because the engine compiles all three.
+1a. **The tokenizer's lists equal FR-244's text** (#970, DP-G3), red first on a planted
+    difference (Task 3).
 2. **The allow-list accepts** (#967): `a ?? 0`, `x != 0 ? y / x : 0`, `min([max([x, 0]), 1])`
    and `abs(x)`, each in an `expr` **and** in a `condition`.
 3. **Every authored field is covered, red first** (#967 item 3; #968's table). On the
@@ -286,12 +293,31 @@ case says otherwise.
    `x != 0 ? y / x : 0` stays accepted. `_GUARD_MARKERS` contains neither `"??"` nor
    `"!= null"`, which a test asserts directly. With `"?:"` and `"coalesce("` removed, **every
    existing guard test passes unchanged** (#967, *Acceptance*: "Dead markers").
-6. **A residual evaluation failure has its own code, red first** (DP-G4). The score fixture's
-   A2/A3 and C1 rows (#968) are a decline condition or clamp bound dividing by a zero or null
-   input. They are built by bypassing the save-time check, since after this slice they cannot
-   be saved. Build a `Bundle` by hand, the route #963's plan (working id 9873), acceptance 5a, names: `to_jdm`,
-   `bundle_hash`, `load_bundle`, `score_one`. Each now raises `CodedError` with the new code,
-   not `RATE_TABLE_MISS`. **Predicted red:** `RATE_TABLE_MISS` (`score.py:491`).
+6. **A residual evaluation failure has its own code, red first** (DP-G4, ruled by #970). The
+   score fixture's A2/A3 and C1 rows (#968) are a decline condition or clamp bound dividing by
+   a zero or null input. They are built by bypassing the save-time check, since after this slice
+   they cannot be saved. Build a `Bundle` by hand, the route #963's plan (working id 9873),
+   acceptance 5a, names: `to_jdm`, `bundle_hash`, `load_bundle`, `score_one`.
+   - **Scope, narrowed as #970 rules and the maintainer accepted (11:07:11 BST):** every
+     condition or bound **whose step does not directly consume an `on_miss="error"` output**
+     raises `CodedError` `RATING_EVALUATION_FAILED`, never `RATE_TABLE_MISS`. This covers every
+     row of #968's reproduction table, because those constraints consume
+     `office_premium_minor`, not a table's output (#970, DP-G4).
+   - Attribution reads the engine error's JSON `nodeId`, which **is the step id** for
+     expression, condition and clamp failures alike (#970, *Probe*: `"nodeId":"s_office"`,
+     `"s_decl_cap"`, `"s_clamp"`). No suffix mapping is needed.
+   - A missing or unparseable `nodeId`, and the former bare `raise exc` fallthrough
+     (`score.py:497`), also raise `RATING_EVALUATION_FAILED`. So no engine failure escapes
+     `score_one` as a bare `RuntimeError`, and that is tested red first (#970, *Acceptance*).
+   - **The residual, stated and not tested as fixed.** A failing step that itself directly
+     consumes an `on_miss="error"` output, and fails for another reason, still reports the miss
+     code. The engine error has the same shape in both cases (#970, *Probe*, rows EXPR and MISS).
+     It is a wrong diagnosis on a refused quote, never a silent price. Its fix, the wire-level
+     change `score.py:469-483`'s docstring names, is outside this slice. It is recorded as the
+     LOW finding that auditor-928 is filing (owner WK-1178), cited here as prose until it has a PR.
+
+   **Predicted red:** `RATE_TABLE_MISS` (`score.py:491`), and a bare `RuntimeError` for the
+   fallthrough case.
 7. **A genuine miss keeps its code.** An `on_miss="error"` table step with no matching row,
    whose output a later `expr` consumes, still raises `RATE_TABLE_MISS` (the case
    `_reraise_engine_failure`'s docstring describes, `score.py:470-482`). The equivalent
@@ -420,11 +446,11 @@ of the vocabulary and guard checks. None of that is reopened.
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-G1 | This slice enforces FR-244's allow-list. The text that says so is WK-690 Slice 1's Task 6 (#967, *Which slice carries it*). What if that text is not on `main` when the fix slice merges? | (a) This slice's dispatch waits until WK-690 Slice 1's Task 6 commit is on `main`. The code then lands against its spec; (b) this slice carries #967's amended FR-244 sentence itself, spec first, and WK-690 Slice 1's Task 6 is re-scoped to the `02` §4.6 note only. FR-244's row becomes this slice's write, and PL-1295 needs a dated delta; (c) dispatch without the text, and reconcile later | **(a), with (b) as the fallback the lead may take if WK-690 Slice 1 is not merged when the fix slice merges.** (a) keeps one writer per spec row and needs no change to PL-1295. (b) is clean if taken before WK-690 Slice 1's executor reaches Task 6, but it is a replan of another Work's slice, so it is the lead's and the decision-maker's to route. (c) is code ahead of its spec, which `CLAUDE.md` §0 refuses | decision point | yes — dispatch | |
+| DP-G1 | This slice enforces FR-244's allow-list. The text that says so is WK-690 Slice 1's Task 6 (#967, *Which slice carries it*). What if that text is not on `main` when the fix slice merges? | (a) This slice's dispatch waits until WK-690 Slice 1's Task 6 commit is on `main`. The code then lands against its spec; (b) this slice carries #967's amended FR-244 sentence itself, spec first, and WK-690 Slice 1's Task 6 is re-scoped to the `02` §4.6 note only. FR-244's row becomes this slice's write, and PL-1295 needs a dated delta; (c) dispatch without the text, and reconcile later | **(a), with (b) as the fallback the lead may take if WK-690 Slice 1 is not merged when the fix slice merges.** (a) keeps one writer per spec row and needs no change to PL-1295. (b) is clean if taken before WK-690 Slice 1's executor reaches Task 6, but it is a replan of another Work's slice, so it is the lead's and the decision-maker's to route. (c) is code ahead of its spec, which `CLAUDE.md` §0 refuses | decision point | yes — dispatch | #970 (working id 9982), at `39dce368`: **(a)**, with (b) as the lead's fallback, only before WK-690 Slice 1 reaches Task 6 |
 | DP-G2 | *(Withdrawn 2026-09-30: the maintainer's 10:55:40 BST entry requires **every** expression check to iterate one enumerator, which is option (a). The row is kept so the id is not reused.)* #968 requires "every non-baseline, non-control row" to return an issue. That includes a `now()` condition (FR-216) and a 31-decimal-place literal (FR-275), which the vocabulary and guard checks do not catch. Are `_check_determinism` and `_check_scale_cap` widened too? | (a) Yes: all four checks iterate `_authored_strings`; (b) only the two #967 names (vocabulary and division guard), with the other two rows deferred as a finding | **(a).** The walk is one helper, so widening two more checks costs one line each. #968's acceptance names both rows, and a 31-place literal in a clamp bound is the same hazard FR-275 exists for. (b) leaves #968 open against its own acceptance | withdrawn | — | the maintainer, 10:55:40 BST |
-| DP-G3 | How is the allow-list enforced? The engine exposes a compile, not a syntax tree | (a) A small tokenizer in `pricing_core/rating/vocabulary.py`: numbers, single-quoted strings, names, the ruled operators, brackets; a name followed by `(` must be a ruled function; `[` is permitted only as the sole argument of `min` or `max`; `.` other than in a number, `{`, `%`, `^`, `!` as authored text, and `in` are refused. FR-276's engine compile then runs as today; (b) reuse `pricing_core.data.expressions`' parser in a new profile; (c) refuse by regex substring search | **(a).** #967 rules that `pricing_core.data.expressions` "never parses" the rating grammar, which rules out (b). (c) cannot tell `a.b` from `1.5`, or `[` as `min`'s argument from indexing. A tokenizer states the list as data (one tuple per class), so the list in the code is checkable against FR-244's text. The engine compile still catches what is on the list but malformed (#967 item 1: "a construct can be on the list and still not compile") | decision point | yes — Task 2 | |
-| DP-G4 | Which code does a residual evaluation failure carry, and how is it told apart from a genuine miss? | Code: (a) a new `RATING_EVALUATION_FAILED`, added to `03` §5.1's catalogue with a one-line meaning (spec first) and to `RATING_ERROR_CODES`; (b) reuse `BUNDLE_COMPILE_FAILED` (a compile code, wrong for scoring); (c) reuse `INPUT_CONTRACT_VIOLATION` (an input-contract code; the input may be valid). Attribution: (i) read the `nodeId` the engine error carries (a JSON field, `runtime.py:89-90`). Report a table or lookup miss only when that node consumes an `on_miss="error"` table or lookup step's output; otherwise report the new code; (ii) report the new code for every engine failure, and drop the miss inference | **(a) with (i).** No existing code means "the engine failed evaluating an authored expression" (premise i), and FR-255 wants errors typed. (b) and (c) name a cause that did not happen, which is the defect being fixed. (i) keeps the genuine-miss path (acceptance 7), and it reads a structured field, not free text. (ii) would re-label a real table miss, which is the same class of error in reverse. **If the `nodeId` for a constraint's condition is its wire id (`<step_id>_v` or `<step_id>_c`, `runtime.py:292`, `:314`), the mapping strips the suffix. The executor proves this on the red run and does not assume it** | decision point | yes — Task 4 | |
-| DP-G5 | Where do the two field registries and the enumerator live, and is `as_at` an expression field? | Placement: (a) a new `pricing_core/rating/authored.py`, next to the checks; (b) `model_schema.rating`, beside the step models, so a field author sees the registry. `as_at`: (i) non-expression, with the reason "names a date input; not wired to the engine (`runtime.py:26-35`)", and its registry comment says it moves to `EXPRESSION_FIELDS` when the window is wired; (ii) an expression field now | **(a) and (i).** (b) puts check policy in the shape package, and it edits `model_schema/__init__.py`, a file every shape slice touches. Closure 1's schema walk already makes a new field visible wherever it is added, without the registry sitting beside the model. For `as_at`: nothing evaluates it today (premise m), so checking it as an expression would refuse or accept a string no engine reads. (i) keeps the registry honest, and the comment carries the trigger for moving it | decision point | yes — Task 2 | |
+| DP-G3 | How is the allow-list enforced? The engine exposes a compile, not a syntax tree | (a) A small tokenizer in `pricing_core/rating/vocabulary.py`: numbers, single-quoted strings, names, the ruled operators, brackets; a name followed by `(` must be a ruled function; `[` is permitted only as the sole argument of `min` or `max`; `.` other than in a number, `{`, `%`, `^`, `!` as authored text, and `in` are refused. FR-276's engine compile then runs as today; (b) reuse `pricing_core.data.expressions`' parser in a new profile; (c) refuse by regex substring search | **(a).** #967 rules that `pricing_core.data.expressions` "never parses" the rating grammar, which rules out (b). (c) cannot tell `a.b` from `1.5`, or `[` as `min`'s argument from indexing. A tokenizer states the list as data (one tuple per class), so the list in the code is checkable against FR-244's text. The engine compile still catches what is on the list but malformed (#967 item 1: "a construct can be on the list and still not compile") | decision point | yes — Task 2 | #970 (working id 9982), at `39dce368`: **(a)**, plus the lists-equal-FR-244 test |
+| DP-G4 | Which code does a residual evaluation failure carry, and how is it told apart from a genuine miss? | Code: (a) a new `RATING_EVALUATION_FAILED`, added to `03` §5.1's catalogue with a one-line meaning (spec first) and to `RATING_ERROR_CODES`; (b) reuse `BUNDLE_COMPILE_FAILED` (a compile code, wrong for scoring); (c) reuse `INPUT_CONTRACT_VIOLATION` (an input-contract code; the input may be valid). Attribution: (i) read the `nodeId` the engine error carries (a JSON field, `runtime.py:89-90`). Report a table or lookup miss only when that node consumes an `on_miss="error"` table or lookup step's output; otherwise report the new code; (ii) report the new code for every engine failure, and drop the miss inference | **(a) with (i).** No existing code means "the engine failed evaluating an authored expression" (premise i), and FR-255 wants errors typed. (b) and (c) name a cause that did not happen, which is the defect being fixed. (i) keeps the genuine-miss path (acceptance 7), and it reads a structured field, not free text. (ii) would re-label a real table miss, which is the same class of error in reverse. *(The suffix-mapping contingency first written here is moot: #970's probe shows `nodeId` is the step id.)* | decision point | yes — Task 4 | #970 (working id 9982), at `39dce368`: **(a)+(i)**, with the stated residual, accepted by the maintainer at 11:07:11 BST |
+| DP-G5 | Where do the two field registries and the enumerator live, and is `as_at` an expression field? | Placement: (a) a new `pricing_core/rating/authored.py`, next to the checks; (b) `model_schema.rating`, beside the step models, so a field author sees the registry. `as_at`: (i) non-expression, with the reason "names a date input; not wired to the engine (`runtime.py:26-35`)", and its registry comment says it moves to `EXPRESSION_FIELDS` when the window is wired; (ii) an expression field now | **(a) and (i).** (b) puts check policy in the shape package, and it edits `model_schema/__init__.py`, a file every shape slice touches. Closure 1's schema walk already makes a new field visible wherever it is added, without the registry sitting beside the model. For `as_at`: nothing evaluates it today (premise m), so checking it as an expression would refuse or accept a string no engine reads. (i) keeps the registry honest, and the comment carries the trigger for moving it | decision point | yes — Task 2 | #970 (working id 9982), at `39dce368`: **(a)** and **(i)** |
 
 ---
 
@@ -439,7 +465,7 @@ of the vocabulary and guard checks. None of that is reopened.
   *Exposure* list at its live head (acceptance 10).
 - [ ] `gh pr list --state open`, and read anything that rules on FR-244, FR-274, FR-276,
   FR-255, `compile.py`'s checks, `??` or OQ working id 9905 ([`README.md`](README.md)
-  convention 4). Name the SHA read. **Re-point #967 and #968 to their ids if minted.**
+  convention 4). Name the SHA read. **Re-point #967, #968, #970 and the LOW finding to their ids if minted.**
 - [ ] Confirm DP-G1, DP-G3, DP-G4 and DP-G5's resolutions, by record id, in the ledger. **Under DP-G1 (a),
   confirm FR-244's amended text is on `main`** (`03:146` carries "restricted to an enforced
   allow-list of operators and functions"). If it is not, stop and report.
@@ -516,6 +542,12 @@ FR-244's row `:146` only under DP-G1 (b)).
   call to any of them is refused like any other off-list function. Implement the tokenizer.
   Unit-test it against every ruled construct and every "Not on the list" construct
   (#967 item 1).
+- [ ] **The lists equal FR-244's text, item for item** (#970, DP-G3). A test parses FR-244's
+  amended cell in `docs/specs/03-rating-engine.md` (its "Operators:", "Literals:" and
+  "Functions:" clauses, as #967 words them) and asserts that each tokenizer tuple equals the
+  spec's set. **Broken-input proof:** with an operator added to the tuple and not to the text,
+  the test fails. It needs the amended text on `main` (DP-G1 (a)); under the (b) fallback it
+  reads this slice's own Task 1 text.
 - [ ] Register the allow-list in `STRING_CHECKS`, ahead of the engine compile, as
   `EXPRESSION_INVALID_VOCABULARY`. The 3a matrix then goes green in its allow-list column with
   no change to the test.
@@ -593,5 +625,5 @@ WK-1250 Slice 1 is dispatched after this slice merges (the maintainer's order).
   named. `authored.py`, `AuthoredString`, `EXPRESSION_FIELDS`, `NON_EXPRESSION_FIELDS`,
   `authored_expression_fields`, `STRING_CHECKS`, `ALGORITHM_CHECKS`, `check_allow_list`,
   `vocabulary.py` and `RATING_EVALUATION_FAILED` are proposals, named once each and used consistently.
-- **Open:** DP-G1, DP-G3, DP-G4 and DP-G5, the decision-maker's (DP-G2 withdrawn). #967 and #968 unminted. The fix slice
+- **Ruled:** DP-G1, DP-G3, DP-G4 and DP-G5, by #970 (working id 9982), unminted (DP-G2 withdrawn). #967 and #968 unminted. The fix slice
   unmerged.
