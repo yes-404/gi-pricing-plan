@@ -44,10 +44,13 @@ First filed 2026-09-29 as working id 9681; `created` re-dated so the id sequence
 >    `PL-1278`.
 > 5. **DP-4 is ruled (a)** by the maintainer's scope decision of 2026-09-30 05:34:33 BST, which
 >    also accepts S12's wait on SL-1260 (the full view) and covers S11's possible run-list
->    route under (a). (a′) is pre-authorised if S2 or S4 splits: 13 slices, up to 15.
+>    route under (a). (a′) is pre-authorised if S2 or S4 splits: 13 slices, up to 15 at
+>    that point (before item 6; superseded by item 6's sizing).
 > 6. **S13 (Jobs) and S14 (Job detail)** are added by the maintainer's #949 decision (option D,
 >    2026-09-30 05:35:06 BST): 15 slices, 11.25 / 15 / 30 days. Settings and System status are
->    placed in P3, with a recommended owner. DP-7 = OQ-9871 is raised for the decision-maker.
+>    placed in P3, with a recommended owner. DP-7, the `/admin/environments` OQ (working id
+>    9871), is raised for the decision-maker. **Sizing now: 15 slices base (11.25 / 15 / 30
+>    days), up to 17 if S2 and S4 both split under (a′).**
 
 ## Goal
 
@@ -218,7 +221,7 @@ finding's id is written as its working id until it mints), option D, splits them
   displays. Creating a Work is the maintainer's scope decision, and the roadmap line is the
   lead's.
 - **`/admin/environments` beside `/rating/environments`** is not decided there. It is filed as
-  **DP-7 = OQ-9871** (working id), owned by WK-675, for the decision-maker.
+  **DP-7, the `/admin/environments` OQ (working id 9871)**, owned by WK-675, for the decision-maker.
 
 **A consequence for FR-25:** until S10's rating version list lands, a designer or sandbox route
 needs another path from the entry. Until then, each view's slice links to its route from the
@@ -238,7 +241,7 @@ recommendations are the planner's proposal, not a ruling.
 | **DP-4** | The views need read routes **declared nowhere and built nowhere**: an algorithm by `{slug}@{version}` (the designer's load), and a rate table's cells and a version's table list (the editor). Who adds them? | (a) **this Work**: each route is spec-changed first by the decision-maker and built in the slice whose view consumes it, as F-W10-3 already makes this Work own `POST /rate-tables/{slug}/versions`; (b) a WK-1178 backend slice before WK-675; (c) leave the views to compose reads from existing routes | **(a).** The consuming view is the only place the route's shape is known; F-W10-3 is the precedent; (c) is impossible for the designer, since no route returns an algorithm's graph | scope | ruled | **(a), by the maintainer's scope decision, by delegation** (to-lead.md, "2026-09-30 05:34:33 BST — SCOPE DECISION: #920 DP-4, option (a); the S12 order corrected; the S11 run-list route covered"). Each missing read route gets a spec change first (a new FR plus its `03` §5.1 row) and is built in the WK-675 slice that consumes it: the algorithm-by-`{slug}@{version}` load in **S2**, the rate-table cells and a version's table list in **S4**. **(a′) is pre-authorised as a fallback:** if S2's or S4's leaf plan must split, the split, or one read-routes slice before S2, needs no further scope call; the planner records it at that leaf plan's ACK |
 | **DP-5** | §5.3 routes address a version as `:slug/v/:version`, but the backend reads a Rating Version only by UUID (`GET /rating-versions/{id}`, `models.py:1139`), a Phase 1b route in no §5.1 | (a) add `{slug}@{version}` read routes, the form `03` §5.1 already uses for algorithms and tables; (b) change the §5.3 and `00` §5.6 routes to `/rating-versions/:id/...` | **(a).** It matches every other versioned route in `03` §5.1 and keeps `00` §5.6's four canonical routes unchanged | decision point | no — resolved before Slice 2's leaf plan goes `active`. Until then, views are linked from `/rating-versions/:id` | decision-maker, by `RL-` |
 | **DP-6** | The designer's **on-node live validation** is an FR-24 exception, binding until discharged at this view's slice plan (`00:228`). What discharges it, and how does the view validate before save? | (a) raise it as a numbered `03` FR, served by a **validate-only route** that runs the server's own checks (spec change: the FR plus the route); (b) raise the FR, and re-implement the cycle, reference and type checks in the frontend; (c) declare the cell exhaustive and validate on save only | **(a).** (b) defines the validation rules twice, the divergence `CLAUDE.md` §2 forbids; (c) fails the *Interaction requirement* that an invalid graph be "visibly invalid before save" | decision point | no — resolved before Slice 3's leaf plan goes `active`. Until then, the FR-24 exception stays binding and undischarged | decision-maker, by `RL-` |
-| **DP-7 = OQ-9871** | Is `03` §5.3's Deployments view (`/rating/environments`, `03:1051`) a duplicate of `07` §5.3's Environments view (`/admin/environments`, `07:392`)? Both name the live deployments and the shadow configuration, and `00` §5.6 lists only `/admin/*` for environments (`00:413`) | (a) one view at the canonical `/admin/environments`; (b) two views split by concern: deployment actions under `/rating`, environment administration under `/admin`, with a `00` §5.6 row added; (c) both as written | **(a)**, as `docs/open-questions.md` records it: it agrees with `00` §5.6 as written, and shadow configuration is an administration setting (`PL-1237` Task 6). (c) defines one control twice | decision point | no — resolved before S12's leaf plan goes `active` | decision-maker, by `RL-` (raised on the maintainer's #949 decision) |
+| **DP-7 = the `/admin/environments` OQ (working id 9871)** | Is `03` §5.3's Deployments view (`/rating/environments`, `03:1051`) a duplicate of `07` §5.3's Environments view (`/admin/environments`, `07:392`)? Both name the live deployments and the shadow configuration, and `00` §5.6 lists only `/admin/*` for environments (`00:413`) | (a) one view at the canonical `/admin/environments`; (b) two views split by concern: deployment actions under `/rating`, environment administration under `/admin`, with a `00` §5.6 row added; (c) both as written | **(a)**, as `docs/open-questions.md` records it: it agrees with `00` §5.6 as written, and shadow configuration is an administration setting (`PL-1237` Task 6). (c) defines one control twice | decision point | no — resolved before S12's leaf plan goes `active` | decision-maker, by `RL-` (raised on the maintainer's #949 decision) |
 
 **The freeze.** DP-2 is ruled (`RL-1261`) and DP-4 is ruled (a) (the maintainer, 2026-09-30
 05:34:33 BST). **DP-1 is open, and it is the decision-maker's**: OQ-550, prepared in #936
@@ -330,10 +333,11 @@ SCOPE DECISION: #921 …") first sized the absorbed Work as "9 to 12, sized 9 / 
 days". That count predates counting S7b, which `RL-1261` requires. The maintainer's dated
 correction (to-lead.md, "2026-09-30 05:29:29 BST — DATED CORRECTION to "SCOPE DECISION: #921"
 (05:28:45): the slice count only") reads it as **from 10 to 13 slices**, at this plan's
-per-slice band: **9.75 / 13 / 26 days** (13 × 0.75 / 1 / 2). Under DP-4 (a) the Work is 13
-slices, and **up to 15** if S2 and S4 each split under the pre-authorised (a′): **11.25 / 15 / 30
-days** (the maintainer's 05:34:33 BST entry asks the planner to state these figures).
-With S13 and S14 (the maintainer's 05:35:06 BST entry on #949, option D), the Work is **15
+per-slice band: **9.75 / 13 / 26 days** (13 × 0.75 / 1 / 2). Under DP-4 (a) and before #949, the
+Work was 13 slices, up to 15 if S2 and S4 each split under the pre-authorised (a′) (the
+maintainer's 05:34:33 BST entry asks the planner to state these figures).
+**Current sizing: 15 slices base (11.25 / 15 / 30 days), up to 17 if S2 and S4 both split under
+(a′).** With S13 and S14 (the maintainer's 05:35:06 BST entry on #949, option D), the Work is **15
 slices: 11.25 / 15 / 30 days**. It is **16 slices (12 / 16 / 32 days)** if one of S2 or S4
 splits, or one read-routes slice is added, under (a′); and **17 slices (12.75 / 17 / 34 days)**
 if both split. The entry's "16 under (a′)" is the one-split case.*
