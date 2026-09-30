@@ -1,5 +1,5 @@
 ---
-id: PL-9923
+id: PL-1303
 family: plan
 kind: leaf
 title: WK-674 Slice 2a — The approval guard (only the decision path writes approved): leaf plan
@@ -9,7 +9,7 @@ owner: planner
 tree: daa7f5f8d6f0ff80dee7dfccf8ca18309d626816
 phase: P2
 work: WK-674
-slice: SL-9922
+slice: SL-1302
 supersedes: []
 superseded_by: ~
 corrected_by: []
@@ -56,13 +56,14 @@ dependency: no `uv.lock` or `pyproject.toml` change.
 
 **What this plan implements.** WK-674's map plan **PL-1237**, Task 2, as **split** by the
 maintainer (below): the approval-guard half of Slice 2, landing **before** Slice 2. The
-slice row is **SL-9922** (working id), cut in this PR under `### WK-674` in
-`docs/roadmap.md`.
+slice row is **SL-1302**, cut in this PR under `### WK-674` in `docs/roadmap.md`.
 
 ## Status
 
-**Draft**, filed 2026-09-30 against the tree above, under **working id 9923**; its slice
-row under working id **9922**. Both are minted at this PR's merge turn.
+**Draft**, filed 2026-09-30 against the tree above. **Minted 2026-09-30 as PL-1303, with its
+slice row as SL-1302**, assigned in the lead's mint train, stacked on #971's `RL-1301`;
+`doc-id.py next --ref origin/main` printed 1298 at `c39d14b4` (the train holds 1298–1301 for
+the PRs ahead of this one); filed under working ids 9923 (the plan) and 9922 (the row).
 
 **The split, as a dated delta to the map plan** *(2026-09-30)*. The maintainer's entry headed
 `2026-09-30 11:48:28 BST — DECISION + ACCEPTANCE (maintainer by delegation): WK-674 S2 split, option (b), S2a = the approval guard`
