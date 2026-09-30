@@ -2,7 +2,7 @@
 id: LG-1262
 family: ledger
 title: WK-674 Slice 1 — Tenancy and provenance (FR-436, FR-18)
-status: active
+status: closed
 created: 2026-09-29
 owner: executor
 tree: e537e50e92046732fc539f1916ee0fd7829be144
@@ -96,4 +96,10 @@ FR-18) added after the `progress_at`/`stalled` note. FR-436 and FR-18 not reword
 
 ## PRs
 
-None opened yet; the draft PR is opened after Task 1's commit is pushed.
+`#933`, merged as `aa14e90dd77c7461aa35cc6461557b129959463f` (parent `46188a88`, tree `6d920afb47e2a2607c6b79da54a44ef0940d5624`).
+
+## Closing — 2026-09-30, auditor
+
+Closed on a clean audit and the lead's merge (`CLAUDE.md` §13; `document-ids.md` §1.6 SL row). auditor-933's slice audit: the full audit at `7a63809d` was NOT CLEAN, solely on F1 (the check-31 id gap 1260→1262, a merge-order finding that cleared when #927 merged), closed at `a8d2dfd9`; CLEAN at the deltas `a8d2dfd9` and `7f4468a5`; the full two-half gate passed at `7f4468a5` (Gate 2 above). Acceptance items 1-7 of `PL-1239` verified by the auditor on `origin/main` at `aa14e90d`, not on a branch; item 8 (MERGE-ACK) is the lead's record.
+
+**Deferred with an owner (`PL-1239` Acceptance 6):** the dossier half of FR-18, `06` FR-376 (a generated dossier states the platform build), is **deferred to WK-680** (Phase 3; `docs/roadmap.md` `### WK-680` lists FR-376). This slice delivers the Job half only; the dossier half is not claimed.
