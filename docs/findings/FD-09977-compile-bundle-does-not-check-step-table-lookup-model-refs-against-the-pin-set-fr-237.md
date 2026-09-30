@@ -236,7 +236,7 @@ than restated as a ruling:
   version**, with a `CodedError` (`RATING_VERSION_UNPINNED`, evidence item 4), **with the code's catalogue meaning amended in the same commit (spec first)**. The model-path `KeyError`
   becomes coded by the same refusal.
 - **Acceptance:** red first, per kind (table, lookup, model_call), **both unpinned and wrong-version**,
-  **including the null-tolerant case that priced 1370, written through the `??` consumer** (the only null-tolerant form this engine compiles; see below).
+  **including the null-tolerant case that priced 1370, written with the `??` consumer**; `coalesce(` is refused at compile at this tree (`EXPRESSION_INVALID_VOCABULARY`), so it is not an acceptance case (see below).
   The controls stay green at **1507** and **2740**.
 - **Order:** it merges before the WK-1250 Slice 1 dispatch (`compile.py` has a single writer), in the next
   free RL-1263 slot. It does not pre-empt WK-674 Slice 2 or WK-690 Slice 1: there is no production, and 0
@@ -255,12 +255,15 @@ than restated as a ruling:
   parse: a separate §0 matter, not this fix's. `_check_vocabulary` (`compile.py:233`) accepts only what ZEN compiles, which
   is why `coalesce(` is refused and `??` is accepted. The maintainer's 10:15:07 BST entry sends the `??` question to the DM
   as a §0 code/spec disagreement and notes that the class is wider than `??`; that entry's reading of `coalesce(` is being
-  corrected. WK-690 Slice 1 must not change `??` semantics while that is open. The finding does not depend on the ruling:
-  the missing pin check is the same whichever spelling the DM keeps.
+  corrected. WK-690 Slice 1 must not change `??` semantics while that is open. The finding does not depend on the ruling,
+  because the fix refuses an unpinned or wrong-version ref at compile whatever the consumer, `??` or any other form. FR-244
+  listing `coalesce(a, b)` while the engine cannot parse it is the second §0 direction the DM may take (a spec correction,
+  or a grammar change), and is not this fix's.
 - **The model-call `KeyError` and the sentinel path.** The handler at `runtime.py:463` runs inside ZEN, which swallows a
   handler's exception (`runtime.py:85-91`, `_model_call_failure`'s docstring: the raised type, message and code are
   discarded and surface as the generic `NodeError`). So "coded" for the model path means the `MODEL_CALL_FAILED` sentinel
-  path, not a raised `CodedError`. The leaf plan decides it as a decision point (planner-1250's read).
+  path, not a raised `CodedError`. Any coded outcome, such as `MODEL_CALL_FAILED` through the sentinel, meets the requirement; the leaf plan decides the
+  mechanism as a decision point (planner-1250's read).
 
 **Event that next confirms or discharges it:** the WK-1178 fix slice merges with the exact-version
 pin-membership refusal for table, lookup and `model_call` refs and its red-first tests (unpinned and
