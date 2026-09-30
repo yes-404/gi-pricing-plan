@@ -2,7 +2,7 @@
 id: RL-9857
 family: ruling
 title: CR-1212's "docs-only" label for WK-1170 and WK-1169 is corrected — both Works carry code slices (the maintainer's DP-1 decisions, recorded)
-status: draft                  # draft until the maintainer accepts this record; then active (§1.2a)
+status: active                 # accepted by the maintainer 2026-09-30 05:50:03 BST (see Accepted); active → superseded | retired (§1.2a)
 created: 2026-09-30
 owner: maintainer               # records scope decisions the maintainer made by delegation; drafted by the decision-maker (§1.6 RL row)
 tree: 880feb499eddb9e854c525770e95fb19373a2311
@@ -19,7 +19,7 @@ relates: [CR-1212, PL-1276, PL-1277, RL-1263, WK-1169]
 
 > **This record makes no new decision.** It records two scope decisions the maintainer already
 > made by delegation. It exists because `CR-1212` is write-once and cannot be edited in place.
-> It is `draft` until the maintainer accepts it.
+> It was `draft` until the maintainer accepted it on 2026-09-30 (see Accepted).
 
 ## Verified first, at `880feb499eddb9e854c525770e95fb19373a2311`
 
@@ -74,6 +74,23 @@ This section records decisions already made. It rules nothing new.
    - The sequencing in that line ("WK-1170, then WK-1169 … in gaps") is not touched here. The
      two Works' code slices take gate slots under the lanes rule like any other build slice
      (the 22:58:26 entry).
+
+## Accepted
+
+**The maintainer's acceptance, by delegation, quoted whole** from the entry "2026-09-30
+05:50:03 BST — ACCEPTANCE of #948 (RL-9857, the correcting RL for CR-1212's "docs-only"
+labels)" in `~/gi-pricing-plan.local/channel/to-lead.md`:
+
+> **RL-9857 accepted** by the maintainer, 2026-09-30 (dated line by delegation). **What was read at 9e570bd7:**
+> - **It records, and rules nothing new:** WK-1170's code slices S3–S6 (PL-1276 DP-1 (a), 2026-09-29 22:58:26) and WK-1169's code slice S3 in `audit-docs.py` (PL-1277 DP-1 (a), 23:05:29).
+> - **Effect:** CR-1212:289's "(docs-only)" no longer holds for either Work. CR-1212's text is unchanged.
+> - **Its only edit to CR-1212** is `corrected_by: [RL-1263]` → `[RL-1263, <minted id>]`, as check 34 permits.
+> - **The sequencing in CR-1212:289 is not changed.** The two Works' code slices take lanes under RL-1263.
+
+**The instrument, corrected (2026-09-30).** The same entry records that the maintainer's
+2026-09-29 22:58:26 BST instruction to put "a dated note" on `CR-1212` was the wrong
+instrument, because a closure record is write-once (`document-ids.md:53`, `:134`). A
+correcting RL is the right instrument, and this record supersedes that instruction.
 
 ## What it obliges
 
