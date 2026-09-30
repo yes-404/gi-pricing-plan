@@ -154,8 +154,9 @@ ruling.
 **The maintainer ruled, by delegation: option A for all three views.** Recorded from
 `~/gi-pricing-plan.local/channel/to-lead.md`, the entry "2026-09-30 05:28:45 BST — SCOPE DECISION:
 #921 FD-9692, the three unowned `03` §5.3 rating views go to WK-675 (option A)", which rests on this
-essay's Options at `b6f8161d`, re-verified at `880feb49`. That entry is a channel entry, not a
-merged record; the ruling record is the mint turn's.
+essay's Options at `b6f8161d`, re-verified at `880feb49`, **as corrected by** the entry "2026-09-30
+05:29:29 BST — DATED CORRECTION to "SCOPE DECISION: #921" (05:28:45): the slice count only". Both are
+channel entries, not merged records; the ruling record is the mint turn's.
 
 - **Owner: WK-675**, with the three views as three new slices. The finding's confirming event
   (each route has a named owner) is met once WK-675's plan (#920) carries them.
@@ -165,7 +166,11 @@ merged record; the ruling record is the mint turn's.
 - **Spec first (`CLAUDE.md` §0):** `03` §5.1 has no `GET` list route for rating versions (item 8).
   The Version-list slice's first task is that spec change, a new FR and the §5.1 row, in the same
   commit as its code. It is not built ahead of its spec.
-- **Budget:** #920 absorbs the three slices at its revision, 9 to 12 slices, sized 9 / 12 / 24 days.
+- **Budget:** #920 absorbs the three slices at its revision, **from 10 to 13 slices**, about 9.75 / 13 / 26
+  days at the plan's per-slice band (exact figure per the planner's re-derivation on #920). The
+  maintainer's first entry said 9 to 12 and 9 / 12 / 24; his **dated correction** supersedes the count
+  only, because `PL-9681` already has 10 slices with `RL-1261`'s S7b. The Options above quoted 9 slices
+  because they read `PL-9681`'s row (a) (DP-2 as it then stood); `RL-1261` has since ruled (b).
 - **Why A, and not E for Deployments** (the entry's reason, summarised): the three are specified P2
   views, so dropping one is a scope cut and the standing instruction is to complete works, not trim
   them; G2's deploy step is a scripted journey, so E was possible but not needed; with two lanes under
