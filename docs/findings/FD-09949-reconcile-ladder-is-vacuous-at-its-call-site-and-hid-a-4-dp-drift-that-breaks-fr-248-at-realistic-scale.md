@@ -57,11 +57,15 @@ value rounded once; 0 payable flips in RL 9963's 42 000-quote sweeps). **What is
 is the served non-payable outputs.** `_build_outputs` (`score.py:626-644`, the assignment at `:641`) sets every
 declared output named like a rung, `<rung>_minor`, from `by_rung`, the ladder's own drifted value, so a caller
 receives the drift in `ScoringResult.outputs`, and the same values reach the batch `outputs_json` column and the
-persisted `served_summary` (evidence 9). **Affected outputs, when an algorithm declares them:**
-`expense_loading_minor`, `commission_minor`, `profit_loading_minor`, `optimisation_adjustment_minor`,
-`office_premium_minor`, `constraints_minor` (which carries the previous rung's value), `instalment_loading_minor` and
-`ipt_and_fees_minor`. **Not affected:** `payable_premium_minor` and `risk_premium_minor` (the first rung is the engine
-value rounded once). Every algorithm in the repository (`examples/fremtpl2/model.py:336`, the three bench
+persisted `served_summary` (evidence 9). **Affected outputs, when an algorithm declares them:** the rungs built by the `multiply` operation, whose factor is
+quantised to 4 dp: `expense_loading_minor`, `commission_minor`, `profit_loading_minor`,
+`optimisation_adjustment_minor`, `office_premium_minor` (which reaches the `multiply` branch through the
+`or _round_minor(raw, mode) != prev_minor` fallback) and `instalment_loading_minor`; and `constraints_minor`, which
+inherits the previous rung's value, is affected only when that rung is. **Not affected:** `payable_premium_minor` (the `round`
+rung, set from the raw output), `risk_premium_minor` (the first rung is the engine value rounded once), and
+**`ipt_and_fees_minor`**: it is in `_ADD_RUNGS`, and its branch sets `target = _round_minor(raw, mode)` and
+`value = prev_minor + (target − prev_minor)`, which is exactly the engine value rounded once. **Which rung kinds drift:**
+`multiply` (the factor quantisation) does; `add`, `round`, `none` and the first rung do not (evidence 6). Every algorithm in the repository (`examples/fremtpl2/model.py:336`, the three bench
 algorithms in `scripts/`, `03`'s worked example) declares only `payable_premium_minor`, so no repository algorithm
 serves a drifted output today; the exposure is any algorithm that declares a rung-named output, and an API consumer
 of it receives the wrong number. FR-248 (`03:155`) and `NFR-496` (`03:1157`) say "to the penny" and "in 100 % of
@@ -185,7 +189,7 @@ operations − recorded payable\|, last hop only, a `round` at `dp=0` being the 
 **The same predicate over RL 9963's corpus (real factor types).** RL 9963's evidence script `dp_s3_5_evidence.py`
 (sha256 `05b927376b7c93fb1c2e60430c14d8506f82e899799f28820c6490d5319cc96b`, the verbatim appendix of that ruling) was
 run unchanged apart from one added tally (`dp_s3_5_lasthop.py`, sha256
-`b80025bcc6ac42397ebabaea6eef799a3df36da71b0b64e0055c8f318e984f03`; the diff is four added lines that record, per
+`b80025bcc6ac42397ebabaea6eef799a3df36da71b0b64e0055c8f318e984f03`; the diff is six added lines in three places, printed below, that record, per
 decade, the number of quotes, how many do not replay, and the largest \|replay − payable\|). Command:
 `python dp_s3_5_lasthop.py 200 7 x`, run by the filer under `uv run --no-sync` at tree `11c76b6c` (`score.py` and
 `money.py` are unchanged at current `origin/main` `8d5c67a56c27a9dcbba8d4e4ad28a1895e1dd862`, evidence 8). *Corpus:*
@@ -212,6 +216,152 @@ of minor units at 1e7 (8883 at the last hop, 12 521 on a single rung), not 1 to 
 factors. Neither table is over stored quotes (evidence 7: none exist); they show how far the drift goes, not how often
 real algorithms hit it. Finding: auditor-close1255's scratch run of `_build_ladder` at `11c76b6c` (as relayed by the
 lead) is the first observation of the 69399 / 69402 case; the filer reproduced it and swept it.
+
+**Provenance of the script, and what was added to it.** `dp_s3_5_evidence.py` was taken from the appendix of RL 9963 at
+`9b15183cdf8ccca3e6fd1129c4ea1b0c72601cd7` (working id 9963; the appendix's code, sha256 `05b927376b7c93fb1c2e60430c14d8506f82e899799f28820c6490d5319cc96b`). The figures above are those of the **`05b92737` version**, run unchanged apart from the six added
+lines below (`dp_s3_5_lasthop.py`, sha256 `b80025bcc6ac42397ebabaea6eef799a3df36da71b0b64e0055c8f318e984f03`), which only record
+tallies and change no computation. `diff dp_s3_5_evidence.py dp_s3_5_lasthop.py`, verbatim:
+
+```diff
+22a23
+> LASTHOP = {}
+368a370,373
+>                 _lh = abs(replay_today(v1) - v1[-1].value_minor)
+>                 LASTHOP.setdefault(decade, [0, 0, 0]); LASTHOP[decade][0] += 1
+>                 if _lh:
+>                     LASTHOP[decade][1] += 1; LASTHOP[decade][2] = max(LASTHOP[decade][2], _lh)
+399a405
+>     print("  LAST-HOP (auditor-926-927): |strict replay - recorded payable| per decade [quotes, not replaying, max diff]:", {f"1e{d}": v for d, v in sorted(LASTHOP.items())})
+```
+
+**Which rung kinds drift (per-rung counts).** `rung_kinds.py` (below; it imports the same script's `ladder_case`
+and `rnd`) runs 600 quotes at 1e6 to 1e7 with all six optional rungs present and counts, per rung, the quotes where the
+recorded rung value differs from the engine value rounded once (seed 11). Output, verbatim:
+
+```text
+600 quotes at 1e6-1e7 with all six optional rungs; rung value != engine value rounded once, per rung kind:
+  risk_premium               misstated    0 of 600
+  expense_loading            misstated   62 of 600
+  commission                 misstated  600 of 600
+  profit_loading             misstated  600 of 600
+  office_premium             misstated  600 of 600
+  optimisation_adjustment    misstated  600 of 600
+  instalment_loading         misstated  600 of 600
+  ipt_and_fees               misstated    0 of 600
+  payable_premium            misstated    0 of 600
+```
+
+`ipt_and_fees_minor` is an `add` rung and never drifts; the six `multiply`-kind rungs do.
+
+```python
+import collections, random, sys
+sys.path.insert(0, "/tmp/scan")
+from decimal import Decimal
+import numpy as np
+import dp_s3_5_evidence as E
+
+rng = random.Random(11)
+optional = [("expense_loading", "mul"), ("commission", "gross"), ("profit_loading", "mul"),
+            ("optimisation_adjustment", "mul"), ("instalment_loading", "mul"), ("ipt_and_fees", "ipt")]
+mis = collections.Counter(); seen = collections.Counter()
+N = 600
+for _ in range(N):
+    decade = rng.choice((6, 7))
+    risk = float(np.float32(rng.uniform(10 ** decade, 10 ** (decade + 1))))
+    loadings = []
+    for rung, kind in optional:
+        if kind == "mul":
+            loadings.append((rung, "{p} * " + str(Decimal(rng.randint(8000, 14000)) / 10000)))
+        elif kind == "gross":
+            loadings.append((rung, "{p} / (1 - 0.125)"))
+        else:
+            loadings.append((rung, "{p} * 1.12 + 250"))
+    v1, v2, anchors, payable, present, values = E.ladder_case(risk, loadings)
+    for r in v1:
+        if r.rung in present:
+            seen[r.rung] += 1
+            if r.value_minor != E.rnd(values[present[r.rung]]):
+                mis[r.rung] += 1
+print(f"{N} quotes at 1e6-1e7 with all six optional rungs; rung value != engine value rounded once, per rung kind:")
+for rung in ("risk_premium", "expense_loading", "commission", "profit_loading", "office_premium", "optimisation_adjustment", "instalment_loading", "ipt_and_fees", "payable_premium"):
+    kinds = {}
+    print(f"  {rung:26} misstated {mis[rung]:4} of {seen[rung]}")
+```
+
+**The best-case chain, verbatim.** `ladder_drift.py` (the maintainer's chain, then the scale sweep behind the first table;
+it uses the repository's own `_compiled` fixture and the real `_build_ladder`), run under `uv run --no-sync python` at
+`11c76b6c`:
+
+```python
+import asyncio, random, sys
+sys.path.insert(0, "packages/pricing-core/tests")
+from decimal import Decimal
+from pricing_core.money import apply_factor
+import pricing_core.rating.score as sm
+from test_rating_score import _compiled
+
+
+def replay(ladder):
+    """Strict re-derivation: apply every recorded operation in order. It differs from test_rating_score.py:191-236 in one place: a `round` at dp=0 is the identity on the running integer (the test instead sets value = the recorded rung value, which accepts any payable)."""
+    value = ladder[0].value_minor
+    for rung in ladder[1:]:
+        op = rung.operation
+        if op.kind == "multiply":
+            value = apply_factor(value, Decimal(op.factor), op.mode or "half_even")
+        elif op.kind == "add":
+            value += op.amount_minor
+        elif op.kind == "round":
+            pass  # rounding an integer minor-unit value at dp=0 is the identity; the recorded value must equal it
+        if value != rung.value_minor:
+            return False, rung.rung, value, rung.value_minor
+    return True, None, value, ladder[-1].value_minor
+
+
+async def main():
+    compiled = await _compiled()
+    algo = compiled.algorithm
+    outs = sm._output_steps_by_name(algo)
+    print("output steps (name -> consumes, dp, mode):")
+    for name, st in outs.items():
+        print("  ", name, "->", st.consumes, st.rounding.dp, st.rounding.mode)
+
+    def build(risk, office, instalment, payable):
+        # keys are what each output step consumes
+        result = {}
+        raws = {"risk_premium_minor": risk, "office_premium_minor": office, "instalment_loading_minor": instalment, "payable_premium_minor": payable}
+        for name, raw in raws.items():
+            st = outs.get(name)
+            if st is not None:
+                result[str(sm._as_list(st.consumes)[0])] = raw
+        return sm._build_ladder(algo, result, [])
+
+    rungs, by = build(60000.4, 66000.44, 69402.0, 69402.0)
+    print("\nthe maintainer's example (raw 60000.4 -> 66000.44 -> 69402.0):")
+    for r in rungs:
+        op = r.operation
+        print("  ", r.rung, r.value_minor, (op.kind, op.factor, op.mode) if op else None)
+    ok, at, got, want = replay(rungs)
+    print("replay of the recorded operations:", "AGREES" if ok else f"DISAGREES at {at}: replay {got} != recorded {want}")
+    print("trace flag at this ladder (reconcile_ladder as shipped):", sm.reconcile_ladder(rungs[0].value_minor, [(r.rung, r.value_minor) for r in rungs]))
+
+    # scale sweep: raw chain risk -> office (x1.10) -> instalment (x1.0515, a realistic loading) -> payable == instalment
+    rnd = random.Random(20260930)
+    print("\nscale sweep (2000 random quotes per magnitude; office = risk x 1.10, instalment = office x 1.05, payable = instalment):")
+    print("  magnitude(minor)  mismatching  max |replay - payable|")
+    for mag in (1_000, 10_000, 100_000, 1_000_000, 10_000_000):
+        bad = 0; worst = 0
+        for _ in range(2000):
+            risk = mag * (0.5 + rnd.random())
+            office = risk * 1.10
+            inst = office * 1.05
+            rungs, by = build(risk, office, inst, inst)
+            ok, at, got, want = replay(rungs)
+            if not ok:
+                bad += 1; worst = max(worst, abs(got - want))
+        print(f"  {mag:>16,}  {bad:>6}/2000  {worst}")
+
+asyncio.run(main())
+```
 
 **7. The data read.** *Question:* what stored records carry `ladder_reconciled`, and what stored premium
 ladders exist that could be replayed? `scoring_traces` stores a blob reference (`blob_sha256`) plus
@@ -307,29 +457,34 @@ columns `premium_ladder_json` and `outputs_json` (`score.py:998-999`); and the p
 (`backend/src/app/platform/traces.py:64`, `:145-148`, "the served answer").
 
 *Enumeration of in-repo consumers that derive money from a served non-payable rung output* (`enum_consumers.py
-origin/main`, tree `origin/main` `8d5c67a56c27a9dcbba8d4e4ad28a1895e1dd862`; scripts kept with the evidence). Three
-predicates, verbatim:
+origin/main`, tree `origin/main` `8d5c67a56c27a9dcbba8d4e4ad28a1895e1dd862`; scripts kept with the evidence). Four
+predicates, verbatim (the pathspec exclusions are quoted as in a shell; `enum_consumers.py` now prints them quoted, its first log printed them unquoted, which a shell would glob-expand):
 
 ```text
 E1  git grep -n -E 'office_premium_minor|expense_loading_minor|commission_minor|profit_loading_minor|optimisation_adjustment_minor|instalment_loading_minor|ipt_and_fees_minor|constraints_minor' origin/main -- packages backend/src frontend/src scripts examples ':!*/tests/*' ':!frontend/src/api/generated' ':!*__tests__*'
 E2  git grep -n -E '\.outputs\b|\["outputs"\]|premium_ladder' origin/main -- packages backend/src frontend/src scripts examples ':!*/tests/*' ':!frontend/src/api/generated' ':!*__tests__*'
 E3  git grep -l -i 'dislocation' (and 'impact') origin/main -- packages/pricing-core/src backend/src frontend/src
+E4  git grep -n 'payable_minor(' origin/main -- packages backend/src scripts ':!*/tests/*'
 ```
 
 | Predicate | Result | Positive control |
 |---|---|---|
-| E1, a non-test source that names a rung-named output | **1** hit, a comment (`score.py:74`) | the same pattern over `packages/pricing-core/tests`, `backend/tests` and `tests` finds **39** hits in 7 files |
+| E1, a non-test source that names a rung-named output | **1** hit, a comment (`score.py:74`), run exactly as printed; **without** the two test and generated exclusions the same command returns 44, the extra 43 being test files | the same pattern over `packages/pricing-core/tests`, `backend/tests` and `tests` finds **39** hits in 7 files |
 | E2, a non-test reader of a served result's `outputs` or `premium_ladder` | **27** lines, classified below | finds the known reader `golden.py:37` and the known writer `premium_ladder=ladder` (`score.py:752`) |
 | E3, dislocation or impact code | `dislocation`: 2 files, `impact`: **0** files | n/a |
+| E4, a caller of the payable-only reader `payable_minor(` | **7** lines: the definitions (`golden.py:33`, `properties.py:85`) and the calls `golden.py:62`, `properties.py:240`, `:292`, `:305` | finds the known payable reader `golden.py:62` |
 
 The 27 E2 lines are: the serialisers and sinks (`score.py:280`, `:297`, `:752`, `:876-880`, `:986-999`, and the
 comments and column names at `traces.py:64`, `:145`, `:148`, `db/models.py:2281`), the schema and compile code that read
 the *declaration* `algo.outputs` (`model_schema/rating.py:404`, `:616`, `compile.py:121`, `:386`, `replay.py:76`,
-`testing.py:264`, `score.py:635`, `:880`), the shape (`model_schema/scoring.py:185`), and **four readers of the served
-values**: `golden.py:37` and `properties.py:89` read **only the `payable_premium` rung** (a golden quote expects only
-`payable_premium_minor` and the outcome, `regression.py:46-56`); `properties.py:295-296` (`NoNullOutput`) reads only
-whether an output is non-null; and `properties.py:300` (`LadderReconciles`) reads **every** rung value, but only to
-check the chain (limb 1's second call site), not to derive a price. E3: `dislocation` appears in
+`testing.py:264`, `score.py:635`, `:880`), the shape (`model_schema/scoring.py:185`), and **the readers of the served
+values**: the payable-only ones, which go through `payable_minor` and read **only the `payable_premium` rung**
+(`golden.py:33-40` and its call at `:62`, where a golden quote expects only `payable_premium_minor` and the outcome,
+`regression.py:46-56`; and `properties.py:85-92` with its calls at `:240` (the monotone sweep), `:292` (`PremiumPositive`) and `:305`
+(`PremiumBounded`)); `properties.py:295-296` (`NoNullOutput`), which reads only whether an output is non-null; and
+`properties.py:300` (`LadderReconciles`), which reads **every** rung value, but only to check the chain (limb 1's second call
+site), not to derive a price. (`properties.py:283` is a docstring line, not a reader.) **Five readers of a served value
+in all, none of which derives money from a non-payable rung.** E3: `dislocation` appears in
 `backend/src/app/api/approvals.py:14` (a comment) and `backend/src/app/platform/jobs.py:79` (`JobKind.DISLOCATION_RUN`
 routed to the compute queue), so **dislocation (WK-673) has no implementation to read an output**; `impact` has no
 hit; the frontend (`frontend/src`, generated client excluded) has no reader.
@@ -413,7 +568,9 @@ restated as rulings:
 - **Served outputs (the 16:40:42 BST entry, requirements 1 and 4):** the acceptance covers the served
   `ScoringResult.outputs`, not only the trace and the ladder: after the fix, every declared rung-named output equals the
   engine value rounded once, red first on a scratch algorithm that declares `instalment_loading_minor` (evidence 9's
-  case: 69399 today, 69402 after). Owner **WK-674 Slice 3**.
+  case: 69399 today, 69402 after); it covers every `multiply`-kind rung output (`expense_loading`, `commission`,
+  `profit_loading`, `optimisation_adjustment`, `office_premium`, `instalment_loading`) and keeps `ipt_and_fees_minor`
+  (an `add` rung, never drifted) and `constraints_minor` (inherits) as green controls. Owner **WK-674 Slice 3**.
 - **F4, an owned item: the NFR-496 test's `round` re-derivation.** `test_rating_score.py:224-225` (`elif op.kind ==
   "round": value = rung.value_minor`) accepts any payable premium, against its own docstring (`:191-195`) that
   calls the manual half "strictly stronger than `reconcile_ladder`". **Owner WK-674 Slice 3, in the same task that
