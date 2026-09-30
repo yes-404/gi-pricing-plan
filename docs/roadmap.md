@@ -1077,6 +1077,25 @@ Minted 2026-09-28 on the maintainer's instruction of that day ("yes record and i
 
 **NFR-526, NFR-527 and NFR-536 are measured under WK-1178**, on the exit tree *(added 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 7: "NFR-526, 527 and 536 are measured under WK-1178.")*. They measure paths built today (API metadata p95, Job submission latency and trace propagation), so G4 reads them as measured, not carried.
 
+#### SL-1300 — WK-1178 fix slice — compile_bundle refuses a step ref not pinned at its exact version (FR-237)
+
+```yaml
+id: SL-1300
+family: slice
+title: WK-1178 fix slice — compile_bundle refuses a step ref not pinned at its exact version (FR-237)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-09-30
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: eeda8f4ba20d247ac18d6a35d7f81589c8527ed2
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1299, FD-1297, RL-1298]
+```
+
+`compile_bundle` refuses a `table`, `lookup` or `model_call` step whose ref is not pinned at its exact version, with `RATING_VERSION_UNPINNED`. `03` §5.1 gives that code a meaning, spec first, in the same commit. The model path's bare `KeyError`s at score become coded. The owner, severity, scope, acceptance and order are the maintainer's, as FD-1297 records under *Disposition*. Leaf plan `PL-1299`. *(Minted 2026-09-30 as SL-1300. The id was assigned in the lead's mint train, stacked on #964's RL-1298: `doc-id.py next --ref origin/main` printed 1298 at `4009de14`. It was filed under working id 9872.)* **Order:** it merges before WK-1250 Slice 1 is dispatched, since `compile.py` has a single writer. It takes the next free `RL-1263` slot and does not pre-empt WK-674 Slice 2 or WK-690 Slice 1. **Gate:** its leaf plan's DP-F1 to DP-F3 are ruled by RL-1298.
+
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
