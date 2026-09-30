@@ -1077,12 +1077,12 @@ Minted 2026-09-28 on the maintainer's instruction of that day ("yes record and i
 
 **NFR-526, NFR-527 and NFR-536 are measured under WK-1178**, on the exit tree *(added 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 7: "NFR-526, 527 and 536 are measured under WK-1178.")*. They measure paths built today (API metadata p95, Job submission latency and trace propagation), so G4 reads them as measured, not carried.
 
-#### SL-9836 — WK-1178 backlog: a working-id reservation ledger, and an allocator that refuses a held id
+#### SL-9836 — WK-1178 backlog — a working-id reservation ledger, and an allocator that refuses a held id
 
 ```yaml
 id: SL-9836
 family: slice
-title: 'WK-1178 backlog: a working-id reservation ledger, and an allocator that refuses a held id'
+title: WK-1178 backlog — a working-id reservation ledger, and an allocator that refuses a held id
 status: draft                  # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
@@ -1093,7 +1093,7 @@ corrected_by: []
 relates: []
 ```
 
-**A backlog item: unscheduled, with no leaf plan yet.** Logged on the maintainer's entry "2026-09-30 11:30:55 BST — the working-id collision (9991): interim OK, plus a WK-1178 item for a mechanical fix" (`to-lead.md`, the lead's local channel file, outside the repository). **What happened:** a finding's author took working id 9991 for a new finding (#980). WK-690 Slice 1's ledger already held it, but only in the local dispatch record and `eta.md`, which no scan of refs or PRs could see. #980 was renumbered to 9995. **The item:** one shared, **append-only reservation ledger** of working ids, recording id, holder, purpose and date. Working-id allocation reads it. `scripts/doc-id.py` gains a working-id allocation that **refuses any id already in the ledger, on any `origin` ref, or in an open PR's title**. `doc-id.py next` today allocates only real ids, from `origin/main`. Working ids are picked by hand. The aim is to make an invisible reservation impossible, not a habit to remember. **Interim** (accepted in the same entry): `eta.md`'s "Working ids held" table. **Open for its leaf plan:** whether the ledger lives in the repository or in the local handover tree (the entry's example is local), since a check run by CI can read only the former. The entry says this is "not an FD unless it recurs". **Gate:** the lead schedules it; nothing is built until a leaf plan exists.
+**A backlog item: unscheduled, with no leaf plan yet.** Logged on the maintainer's entry "2026-09-30 11:30:55 BST — the working-id collision (9991): interim OK, plus a WK-1178 item for a mechanical fix" (`to-lead.md`, the lead's local channel file, outside the repository). **What happened:** a finding's author took working id 9991 for a new finding (#980). WK-690 Slice 1's ledger already held it, but only in the local dispatch record and `eta.md`, which no scan of refs or PRs could see. `eta.md` is a **local handover file** (`~/gi-pricing-plan.local/handover/eta.md`), not in the repository. #980 was renumbered to 9995. **The item:** one shared, **append-only reservation ledger** of working ids, recording id, holder, purpose and date. Working-id allocation reads it. `scripts/doc-id.py` gains a working-id allocation that **refuses any id already in the ledger, on any `origin` ref, or in an open PR's title**. `doc-id.py next` today allocates only real ids, from `origin/main`. Working ids are picked by hand. The aim is to make an invisible reservation impossible, not a habit to remember. **Interim** (accepted in the same entry): the local `eta.md`'s "Working ids held" table. **Open for its leaf plan:** whether the ledger lives in the repository or in the local handover tree (the entry's example is local), since a check run by CI can read only the former. The entry says this is "not an FD unless it recurs". **Gate:** the lead schedules it; nothing is built until a leaf plan exists.
 
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
