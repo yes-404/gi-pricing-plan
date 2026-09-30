@@ -1,5 +1,5 @@
 ---
-id: FD-9968
+id: FD-1337
 family: finding
 title: DecimalStr and Relativity serialise small and normalised decimals in exponent form, which their own JSON Schema refuses, and the spelling changes a content hash
 status: active
@@ -10,12 +10,12 @@ corrected_by: []
 relates: [WK-1178, FR-10, FR-451]
 ---
 
-# FD-9968 — `DecimalStr` serialises exponent form and preserves spelling, so a value can violate its own schema and change a hash
+# FD-1337 — `DecimalStr` serialises exponent form and preserves spelling, so a value can violate its own schema and change a hash
 
 ## Finding
 
 **Severity: MEDIUM**, ruled by the maintainer (see *Severity*). **Proposed by the auditor; the disposition is the
-lead's.** FD-9968 is a working id, minted at the records PR.
+lead's.** FD-1337 was minted from working id 9968 at the records PR.
 
 `model_schema.money.DecimalStr` (`packages/model-schema/src/model_schema/money.py:85-91`) and `Relativity`
 (`:94-99`) serialise with `PlainSerializer(str, …)`, and `str()` of a `Decimal` uses exponent form outside
@@ -34,7 +34,7 @@ a plain-positional range. Two consequences, both measured at `origin/main`
    have different bytes, and **any hash taken over the dump differs**. Evidence 3 shows it on the one content
    hash that includes a `DecimalStr`.
 
-`dm-eh-s3`'s RL 9963 (working id 9963, part 1a) found it while ruling the premium ladder and recorded it as an
+`dm-eh-s3`'s RL-1329 (working id 9963, part 1a) found it while ruling the premium ladder and recorded it as an
 observation "for the lead", and chose a **new** `PositionalDecimalStr` for the ladder's own fields rather than
 change `DecimalStr`, because "`DecimalStr` has 23 uses in `model_schema` outside `money.py` … some of them in
 content-hashed artifacts. Changing its serialiser would change stored bytes and hashes beyond this slice."
@@ -45,10 +45,10 @@ This record measures that.
 Run at `origin/main` `32f3fa92afad81d1be611b21ae16ff35211eded8`, 2026-09-30, by the filer, under
 `uv run --no-sync python`; the scripts are kept with the evidence.
 
-**1. The reproduction** (`decstr_repro.py`; the first block is RL 9963's own snippet). Output, verbatim:
+**1. The reproduction** (`decstr_repro.py`; the first block is RL-1329's own snippet). Output, verbatim:
 
 ```text
-1. the RL 9963 part 1a snippet, at this tree:
+1. the RL-1329 part 1a snippet, at this tree:
    '0.0000001'                          -> {"a":"1E-7","r":"1E-7"}
    '0.00000000000000000000000000012'    -> {"a":"1.2E-28","r":"1.2E-28"}
    '10'                                 -> {"a":"10","r":"10"}
@@ -72,7 +72,7 @@ Run at `origin/main` `32f3fa92afad81d1be611b21ae16ff35211eded8`, 2026-09-30, by 
 `LargeLossTreatment.restoration_loading` and `.loading_factor` (`perils.py:155`, `:165`),
 `Reconciliation.tolerance` (`:308`), `Histogram.exposure` (a tuple, `profiles.py:67`), `LevelCount.exposure_years`
 (`:110`), `OneWayRow.exposure_years` (`:154`) and `MonotoneInInput.lower` and `.upper` (`regression.py:103-104`).
-The 23 in RL 9963 is a line count (`git grep -n "DecimalStr\b"` outside `money.py` also counts imports and the
+The 23 in RL-1329 is a line count (`git grep -n "DecimalStr\b"` outside `money.py` also counts imports and the
 `__init__` re-export); `Relativity` is declared but is the type of no field. **Where a value feeds a content
 hash:** `suite_content_hash` (`regression.py:219`) is `sha256` over
 `RegressionSuiteContent.model_dump(mode="json")`, which includes each property's `check`, and `MonotoneInInput`
@@ -226,7 +226,7 @@ print("PG predicate on TEMP table (2 planted exponent rows of 3):", r.stdout.str
 read-only scan of the reachable PostgreSQL databases gives the stored side. *Predicate* (`decexp_pg.py`): per
 table, `select count(*) … where r::text ~ '"+-?[0-9]+(\.[0-9]+)?[eE][+-]?[0-9]+"+'`, i.e. a quoted exponent-form
 decimal, with one or two quote characters because a `jsonb` column renders its quotes doubled inside a record's text
-(the lesson of FD 9949's positive control, working id 9949), in `BEGIN TRANSACTION READ ONLY` with `PGOPTIONS='-c
+(the lesson of FD-1336's positive control, working id 9949), in `BEGIN TRANSACTION READ ONLY` with `PGOPTIONS='-c
 default_transaction_read_only=on'`. *Corpus:* **81 databases, 3841 tables**. *Result:* **0 rows**. *Positive
 control:* a `TEMP` table with `{"lower": "1E-7"}`, `{"lower": "0.0000001"}` and `{"exposure_years": "1.2E-28", "u":
 "10"}`: the predicate counts **2** (the two exponent rows; the plain one is not counted). *Population for the hashed
@@ -273,10 +273,10 @@ above replace it, and the eight-model figure it used is withdrawn.
 **Proposed by the auditor; the verdict is the lead's.** The maintainer's decisions (the 17:15:31 and 17:20:19 BST entries, quoted
 under *Severity*) are recorded below.
 
-- **Fix direction.** Serialise positionally, as RL 9963 already rules for the ladder's own decimals
+- **Fix direction.** Serialise positionally, as RL-1329 already rules for the ladder's own decimals
   (`PositionalDecimalStr`: the same float refusal and the same JSON Schema, and a serialiser that renders
   `format(value, "f")`). Two decisions belong to the fix's plan, not to this finding: (a) **whether `DecimalStr` itself
-  changes or a second type is kept** (RL 9963 kept `DecimalStr`, to avoid changing stored bytes in S3; this finding
+  changes or a second type is kept** (RL-1329 kept `DecimalStr`, to avoid changing stored bytes in S3; this finding
   is the count that decides it), and (b) **whether to also normalise trailing zeros** so equal values have one
   spelling (`66000.440` and `66000.44`), which the positional form alone does not do. Normalising and rendering
   positionally together makes the serialised form a function of the value.

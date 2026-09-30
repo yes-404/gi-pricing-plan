@@ -24,6 +24,7 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
+from backend.tests.approved_rows import mark_approved
 from backend.tests.test_api_datasets import _headers
 from backend.tests.test_contracts import OPENAPI, _load
 from backend.tests.test_model_jobs_gbm import _gbm_spec
@@ -130,7 +131,10 @@ def _advance(metric_id: UUID, *, status: MetricStatus) -> None:
             row = await session.get(CustomMetricRow, metric_id)
             assert row is not None
             row.certificate_id = new_uuid7()
-            row.status = status.value
+            if status.value == "approved":
+                await mark_approved(session, row)
+            else:
+                row.status = status.value
 
     _run(_update)
 

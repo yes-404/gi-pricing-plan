@@ -151,6 +151,10 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         1, "the allow-list itself: reached only for a `CodedError`, whose text is input-free"),
     ("packages/pricing-core/src/pricing_core/rating/compile.py", "_check_vocabulary", "{exc}"): (
         1, "compile time, artifact-level: no quote is involved"),
+    ("packages/pricing-core/src/pricing_core/rating/score.py", "_failing_node", "str(exc)"): (
+        1, "reads only the engine error's JSON `nodeId`; the text is neither stored nor logged, "
+        "and only a matched step's own id reaches the raised message: "
+        "test_rating_score.py::test_an_engine_error_text_never_reaches_the_raised_message"),
     ("packages/pricing-core/src/pricing_core/rating/score.py", "_score_batch_row",
      "error_message key"): (
         2, "test_scoring_handlers.py and test_quote_input_raise_sites.py (the error row and "
