@@ -7,7 +7,7 @@ created: 2026-09-30
 owner: auditor
 tree: 11c76b6c83647c512796fedb9c0143927dcd78cb
 corrected_by: []
-relates: [WK-1178, WK-1250, FR-212, FD-1297]
+relates: [WK-1250, FR-212, FD-1297]
 ---
 
 # FD-9948 — The rating algorithm save route picks its graph error code by substring-matching the echoed request body
@@ -99,27 +99,32 @@ the substring matches. The defect is then shared by two paths, and the fix shoul
 
 ## Disposition
 
-**carry forward with an owner: WK-1178** (rating validation hardening), proposed by the
-auditor; the lead's verdict.
+**carry forward with an owner: WK-1250 Slice 1**, fixed by its merge. Proposed by the auditor
+as WK-1178's; **the maintainer's decision, 2026-09-30 15:10:21 BST** (by delegation, the lead's
+local channel file `~/gi-pricing-plan.local/channel/to-lead.md`, "2026-09-30 15:10:21 BST — FD
+9948 (the substring-matched error codes): LOW; the fix folded into WK-1250 S1; the N1
+characterisation guard") set the severity **low** and moved the owner to **WK-1250 Slice 1**:
+"**Owner: WK-1250 S1**, not WK-1178. S1 already extracts `_parse_algorithm`'s mapper
+(platform/rating_algorithms.py:23-52), so the typed-signal fix lands **in the same slice, same
+writer**, as its **last task** after the unchanged-extraction step." This supersedes the
+proposed owner (WK-1178) of the first filing.
 
 **Fix direction.** Replace the substring match with a typed signal, matched on `exc.errors()`
 and not on `str(exc)`: either a pydantic custom error type per invariant (for example
-`PydanticCustomError("graph_cyclic", …)`), or a `ValueError` subclass per invariant. Then the
-mapper reads each error's `type`, which no client value can reach. The `input_value` echo is
-then never consulted.
+`PydanticCustomError("graph_cyclic", …)`), or a `ValueError` subclass per invariant. The mapper
+then reads each error's `type`, which no client value can reach.
 
-**Order.** The fix lands **before** the extraction for the sub-graph, or **as part of it**, so
-that the extracted mapper is the typed one and there is no window in which two artifacts carry
-the string match. Before the change, add characterisation tests for the two unproven branches
-(`RATING_GRAPH_UNRESOLVED_REF` and the `VALIDATION_FAILED` fallback), green on the current code,
-so that the change is proven behaviour-preserving for real invariants. Add the cases 3, 4, 5 and
-7 above as red-first tests, and show them green after. Rows 2 and 6 stay green.
+**The guard, per the same entry.** The characterisation tests written first for the mapper
+"**must not pin the bug.**" The `cycle_note` case, and any other substring false positive found,
+is a **`strict=True` xfail citing FD 9948**, which the typed-signal task flips to a pass as the
+proof of the fix. Cases 3, 4, 5 and 7 above are the false positives known at this tree. The
+tests for the two unproven branches (`RATING_GRAPH_UNRESOLVED_REF` and the `VALIDATION_FAILED`
+fallback) are green on the current code, and rows 2 and 6 stay green.
 
-**Event.** The WK-1178 slice that types the invariants merges with those tests. Ownership shape:
-event.
+**Event.** WK-1250 Slice 1 merges with the typed signal as its last task and the strict xfails
+flipped. Ownership shape: event.
 
-**Severity reasoning.** Low, not medium: no data is stored or priced wrongly and the request is
-refused either way; the wrong code needs an unusual body (an unknown field, or an echoed value,
-containing those words); and no consumer branches on the code yet. It would rise to medium if the
-designer (WK-675) or an API client maps these codes to user-facing text, or if a second artifact
-inherits the match before the fix.
+**Severity reasoning.** Low, not medium: no data is stored or priced wrongly, the request is
+refused either way (it fails closed); the wrong code needs an unusual body (an unknown field, or
+an echoed value, containing those words); and no consumer branches on the code yet. It would
+rise to medium if the designer (WK-675) or an API client maps these codes to user-facing text.
