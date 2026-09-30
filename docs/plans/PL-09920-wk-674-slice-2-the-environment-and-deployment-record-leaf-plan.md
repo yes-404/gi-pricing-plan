@@ -181,6 +181,14 @@ cause, and the guard is restored; the ledger quotes both runs.
      `deployment` entry naming `prd`, a slug no Environment has, with 422
      `VALIDATION_FAILED`; **retiring an Environment that a policy entry names is refused**
      with 409 naming the entry (this plan's choice, below), until the entry is removed;
+   - **(auditor-plans N1–N3, each red first)** `POST /api/v1/environments` refuses a slug
+     that does not match `_SLUG` (`refs.py:33`) — a one-character slug and an upper-case
+     slug — with 422 `VALIDATION_FAILED` (N2); creating an Environment with the slug of a
+     **retired** one is refused, because a slug is never reissued (N1: otherwise an old
+     `deployment:<slug>@n` reference would come to mean a different Environment); after
+     `uat` is retired, `set_policy` refuses a `deployment` entry naming `uat`, and a Service
+     Account key naming `uat` is refused (N3: "an existing Environment slug" means a
+     **non-retired** one);
    - **(#971 A.6 at `327e1179`, credentials, each red first)** creating or rotating a Service
      Account key whose `environments` names `prd`, a slug no Environment has, is refused with
      422 `VALIDATION_FAILED` naming it; retiring `uat` while an unrevoked key names it is
@@ -510,7 +518,9 @@ them to "Slice 2", its "Not ruled here"):
   `slug`** (`_SLUG`'s grammar, `refs.py:33`) and a mutable display `name`. The seeds are slugs
   `dev`, `uat`, `prod`. The policy's `environment`, `ApprovalRequestRow.environment`, every
   `{env}` path parameter and every Environment reference name the slug; FR-428's rename
-  changes the `name` only.
+  changes the `name` only. **A slug is never reissued**: a retired Environment keeps its
+  row and its slug (auditor-plans N1), and "an existing Environment" means a non-retired one
+  wherever it is checked (N3).
 - **The Deployment Request slug scheme** (#971 A.1 leaves it to this plan, "the slug must not
   be a renamable name"): **the target Environment's slug**, e.g. `deployment:prod@3` — the
   third request into `prod`. *(Revised 2026-09-30: the first draft used the Environment's id
@@ -716,7 +726,7 @@ def promotion_order_refusal(
   `backend/tests/test_migration_dataset_owner.py`; do not invent new fixtures), with two
   `scoring_traces` rows inserted before the upgrade. Predicted failure: the `environments`
   table does not exist.
-- [ ] The revision: `environments` (UUID id, unique immutable `slug`, display `name`, description, `promotion_order`,
+- [ ] The revision: `environments` (UUID id, immutable `slug` unique across **all** rows, retired included (N1), display `name`, description, `promotion_order`,
   `requires_prior_environment` nullable, `retired_at` nullable), seeded `dev`/`uat`/`prod`;
   `deployments` (UUID id, `workspace_id`, `environment_id` FK, `rating_version_ref`, `bundle_hash`,
   `deployed_by`, `deployed_at`, `reason`, and the Deployment Request id it executed, nullable
@@ -751,6 +761,13 @@ modify `backend/src/app/main.py` (one registration); test `backend/tests/test_en
   policy entry names the slug. `set_policy` (`backend/src/app/platform/approvals.py:137-190`)
   refuses a `deployment` entry whose `environment` is not an existing Environment slug,
   reading the environments platform module (permitted by DEP-1, Acceptance 5).
+- [ ] **Slug validity and permanence (auditor-plans N1, N2).** `POST /api/v1/environments`
+  validates the new `slug` with `model-schema`'s `Slug` type (`refs.py:41`, built from
+  `_SLUG` at `:33`), never a second copy of the pattern. A retired Environment keeps its row
+  (`retired_at` set) and its slug, and the `environments` table's unique constraint on `slug`
+  covers retired rows, so a slug is never reissued. Red first: Acceptance 4's N1 and N2 cases.
+- [ ] **"Existing" means non-retired (N3).** The existence checks of `set_policy` and of the
+  credential step below both read `retired_at IS NULL`. Red first: Acceptance 4's N3 cases.
 - [ ] **Credentials name only existing Environments (#971 A.6 at `327e1179`).** In
   `backend/src/app/api/service_accounts.py`, each name in `environments` (`:63`, a free
   `list[str]` today) is checked against the Environment slugs at creation and at rotation —
@@ -921,6 +938,10 @@ Task 6's per-request resolution with the switch, and reuses Task 5's route shape
   vocabulary step, Write set); A.6's credentials (Task 4, Acceptance 4, Write set); the
   deployment-wide confirmation (Decided in this plan); DP-S2-5 closed; DP-S2-4 ruled (a) by
   #977 (DP table, Acceptance 12 (c), Write set).
+- **auditor-plans N1–N3** (its audit of `a79fc6b4`): N1 and N2 Task 4 and Acceptance 4, with
+  the Task 3 constraint; N3 Task 4 and Acceptance 4. Its G1 is Acceptance 13's declared
+  vocabulary (#971 A.4 at `327e1179`, `models.py:635`, `:1195`, `:1898` among the `String`
+  status columns it covers).
 - **Each ruling applied where it operates.** RL-1296 items 1 (Task 2 validator), 3
   (`PromotionSkip`, pinned on the Deployment Request as #971 C amends it), 4 (the predicate's place, Acceptance 5), 5 (one commit, Task 2),
   6 (no new permission: `set_policy` stays the grant path, nothing added); its Acceptance
