@@ -1,5 +1,5 @@
 ---
-id: LG-9962
+id: LG-1329
 family: ledger
 title: WK-1178 code slice (SL-1315) — FR-244's enforced allow-list and every authored rating string checked (FR-244, FR-274, FR-276, FR-255)
 status: active
@@ -13,12 +13,12 @@ corrected_by: []
 relates: [RL-1312, RL-1313, RL-1322, FD-1317, OQ-1316, RL-1263]
 ---
 
-# LG-9962 — WK-1178 code slice (SL-1315): FR-244's allow-list and every authored string
+# LG-1329 — WK-1178 code slice (SL-1315): FR-244's allow-list and every authored string
 
 Executed from `PL-1314` (SL-1315) under `RL-1312`, `RL-1313` and the correction `RL-1322`
 (working id 9965 until batch 6; it is on `main` at `32f3fa92`). Branch `sl-1315-fr244-allowlist`,
 from `origin/main` `fa9a73c2d8b5cfebf4c699961015e6ff8dde1fb1` (`git ls-remote`), lane B.
-Drafted under working id 9962 (the lead allocates every working id); minted at the merge turn.
+Drafted under working id 9962 (the lead allocates every working id) and minted `LG-1329` at its merge turn, after batch 8. The working id survives only in the dispatch record quoted below and in this line.
 
 ## Tasks
 
