@@ -155,6 +155,7 @@ never on a working tree.
 | `CR-1212` Proposal 13 | Plan-status staleness: an INDEX-derived check, no hand edit | 3 |
 | `CR-1164` §10, C3 | Row (g): the standing FAIL at `classified-by-none=207`, with the LIMIT (45 files) | 5 |
 | `CR-1164` §5, C15 | #757's 207 g2 per-file entries, derived and not filed | 5 |
+| *(Added 2026-09-30 by a dated delta, on the maintainer's decision, by delegation, in the lead's channel file entry *"2026-09-30 11:52:53 BST — #983's closure sweep: accepted (no §13 verdict owed); DECISIONS on the recurrence and FR-384"*, item 1.)* The recurrence #983 records against `CR-823` item (c) (plan review 5, 2026-08-27: a parser blind spot, recommended for a fix, never owned) | **A one-time sweep of every accepted `CLAUDE.md` §14 plan-review proposal filed before 2026-09-29 that has no owned record**, as an input to the Slice 1 audit. Each one found gets an owner then. The predicate is in Task 1 | 1 |
 
 ### Carried register rows, each individually
 
@@ -369,6 +370,39 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
   - **DP-5's evidence**: for each of F78, F94, F96, F107, FD-1149 and FD-1152, whether the
     function at fault has a live caller outside `migrate`, by `git grep` at the audit's tree.
   - **A charter gap is an `FD-` routed to WK-1169**, never a charter edit here.
+  - **The unowned-proposal sweep** *(added 2026-09-30 by a dated delta, on the maintainer's decision, by delegation, in the lead's channel file entry *"2026-09-30 11:52:53 BST — #983's closure sweep: accepted (no §13 verdict owed); DECISIONS on the recurrence and FR-384"*, item 1)*. It
+    runs once, before the 2026-09-29 amendment of `CLAUDE.md` §14 (`RFC-1248`, `RL-1249`) that
+    made an unowned accepted proposal impermissible. **It is text-only**: it reads records under
+    `docs/` and `.claude/` and runs no suite, so it needs no gate slot. Its predicate:
+    - **The population** is every `CR-` with `kind: review` under `docs/closures/` whose
+      `created:` is before 2026-09-29. At `daa7f5f8` that is fifteen records, plan reviews 1 to 15
+      (`CR-722`, `CR-723`, `CR-755`, `CR-788`, `CR-823`, `CR-824`, `CR-825`, `CR-830`, `CR-925`,
+      `CR-926`, `CR-932`, `CR-1050`, `CR-1064`, `CR-1167`, `CR-1212`), listed by reading the
+      `kind:` and `created:` fields of every `docs/closures/CR-*.md`. **One boundary record:**
+      `CR-1247` (plan review 16) is `created: 2026-09-29`, and its acceptance line cites the
+      17:27:28 BST entry, while the §14 amendment's line is the maintainer's entry of 18:57:24 BST
+      that day (`document-ids.md` §1.6, the Phase row's note). It is outside the population by date
+      and inside it by mechanism. **Default: included**, unless the lead's dispatch of Slice 1
+      says otherwise.
+    - **An accepted proposal** is a proposal, recommendation or lettered item in one of those
+      records that a dated maintainer acceptance line accepts, in whole or as amended. The line
+      may be in the record itself, or in a later record that accepts it (as `CR-823`'s table row 2.2
+      asks of review 4's). A line that accepts "the review" accepts every proposal in it. A proposal
+      that no dated line accepts is **not** in the sweep. It is listed apart, as never accepted,
+      and given no owner here.
+    - **An owned record** is a governed record at the sweep's tree that (i) names the proposal,
+      by its `CR-` id and its proposal number or item letter, and (ii) carries an owner: an
+      `owner:` field, a register row with an owner and an event, or a `WK-`/`SL-` row. A landed
+      change that enacts the proposal and cites it (a commit, by full SHA) counts as *resolved in
+      fact*, not unowned. Candidates are found with `git grep -n -E 'CR-<n>\b'` over `docs/` and
+      `.claude/`, one pass per record. A grep hit is a candidate only: each is read to the clause
+      that carries the proposal before it counts.
+    - **The output** is one row per accepted proposal in the audit record: owned (the record's
+      id), resolved in fact (the SHA), or **unowned**. Each unowned one becomes an `FD-` with
+      the lead's owner and event, per §14's rule that "unowned" is not a permitted state.
+      `CR-823` item (c) is already recorded as a recurrence in #983's finding (open at
+      `daa7f5f8`, working id 9894), and the sweep cites that finding by its minted id rather than
+      filing it twice.
 - **Depends on:** nothing in WK-1170. DP-3 is resolved.
 - **Gate outline.**
   - The audit record passes check 37 (its template's sections) and check 30 (its header).
@@ -496,6 +530,9 @@ activation commit:
   22:58:26 BST entry; DP-5 (c), the lead's. DP-6 stays non-blocking, with its default.
 - **Resolved 2026-09-29, later:** DP-7 (b), the maintainer's by delegation at the 23:05:29 BST
   entry.
+- **Delta, 2026-09-30:** the unowned-proposal sweep added to Slice 1's inputs (the Scope table's
+  last row; Task 1), on the maintainer's decision, by delegation, in the lead's channel file entry *"2026-09-30 11:52:53 BST — #983's closure sweep: accepted (no §13 verdict owed); DECISIONS on the recurrence and FR-384"*, item 1. No new record, so no id is taken. The slice count and the
+  sizing are unchanged: the sweep is text-only and adds no gate slot.
 - **Open:** DP-4 (the decision-maker's, awaiting its ruling), and the ACK's confirmation of DP-2's
   receiving Work.
 - **Revised 2026-09-29**, while `draft`, to record those resolutions at every site (Scope, the DP
