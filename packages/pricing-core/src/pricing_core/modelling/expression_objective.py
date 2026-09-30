@@ -21,7 +21,13 @@ import sympy
 from numpy.typing import NDArray
 from sympy.codegen.cfunctions import expm1, log1p
 
-from model_schema import HessianStrategy, YDomain
+from model_schema import (
+    CertificateResult,
+    HessianStrategy,
+    ResponseKind,
+    SamplingSpec,
+    YDomain,
+)
 from pricing_core.data.expression_sympy import OBJECTIVE_SYMBOLS, to_sympy
 from pricing_core.data.expressions import (
     DEFAULT_LIMITS,
@@ -31,12 +37,20 @@ from pricing_core.data.expressions import (
     parse_expression,
 )
 from pricing_core.modelling.errors import ObjectiveError
-from pricing_core.modelling.objectives import ExpressionKernels, ObjectiveFns
+from pricing_core.modelling.objectives import (
+    BranchCondition,
+    Denominator,
+    ExpressionKernels,
+    ObjectiveFns,
+    certify_compiled,
+)
+from pricing_core.progress import ProgressCallback
 
 __all__ = [
     "DERIVED_LIMITS",
     "Derived",
     "Kernel",
+    "certify_expression_objective",
     "compile_expression_objective",
     "compile_kernel",
     "derive",
@@ -213,19 +227,26 @@ def compile_kernel(
     kernel works elementwise, so every array it makes is the input's length (FR-165).
     Non-finite values are not warned about here: the boosting adapter aborts on them.
     """
-    tree = parse_expression(
+    return _kernel(_parse(text, parameters, limits), parameters)
+
+
+def _parse(text: str, parameters: Mapping[str, float], limits: ExpressionLimits) -> ast.expr:
+    return parse_expression(
         text,
         GrammarProfile.OBJECTIVE,
         symbols=OBJECTIVE_SYMBOLS | frozenset(parameters),
         limits=limits,
-    )
+    ).body
+
+
+def _kernel(body: ast.expr, parameters: Mapping[str, float]) -> Kernel:
     constants = {name: np.float64(value) for name, value in parameters.items()}
-    body = tree.body
 
     def kernel(y: _Arr, f: _Arr, w: _Arr) -> _Arr:
         with np.errstate(all="ignore"):
             result = _evaluate(body, {"y": y, "f": f, "w": w} | constants)
-        return np.asarray(np.broadcast_to(result, y.shape), dtype=np.float64)
+        shape = np.broadcast_shapes(y.shape, f.shape, w.shape)
+        return np.asarray(np.broadcast_to(result, shape), dtype=np.float64)
 
     return kernel
 
@@ -295,6 +316,12 @@ def compile_expression_objective(
             terms=[ref],
         )
     texts = derived if derived is not None else derive(loss, parameters=parameters.keys())
+    bodies = (
+        _parse(loss, parameters, DEFAULT_LIMITS),
+        _parse(texts.gradient, parameters, DERIVED_LIMITS),
+        _parse(texts.hessian, parameters, DERIVED_LIMITS),
+    )
+    conditions, denominators = _found_branches_and_divisors(bodies, parameters)
     return ObjectiveFns(
         ref=ref,
         template=None,
@@ -304,9 +331,130 @@ def compile_expression_objective(
         y_domain=y_domain,
         _template=None,
         _expression=ExpressionKernels(
-            loss=compile_kernel(loss, parameters=parameters, limits=DEFAULT_LIMITS),
-            grad=compile_kernel(texts.gradient, parameters=parameters),
-            hess=compile_kernel(texts.hessian, parameters=parameters),
+            loss=_kernel(bodies[0], parameters),
+            grad=_kernel(bodies[1], parameters),
+            hess=_kernel(bodies[2], parameters),
             inverse_link=inverse_link,
+            conditions=conditions,
+            denominators=denominators,
         ),
+    )
+
+
+def _found_branches_and_divisors(
+    bodies: tuple[ast.expr, ...], parameters: Mapping[str, float]
+) -> tuple[tuple[BranchCondition, ...], tuple[Denominator, ...]]:
+    """Every `where()` condition and every divisor in the loss and its derived text.
+
+    Found, not declared (FR-147, FR-148; §4.6's division rule), because an expression
+    declares neither. A divisor is the right operand of `/` (a bare constant is not one), or
+    the base of a negative constant power, which is how SymPy writes `1/x` and so how the
+    printer prints it. Duplicates are the same source text.
+    """
+    conditions: dict[str, BranchCondition] = {}
+    divisors: dict[str, Denominator] = {}
+    for body in bodies:
+        for node in ast.walk(body):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == "where"
+                and isinstance(node.args[0], ast.Compare)
+            ):
+                test = node.args[0]
+                text = ast.unparse(test)
+                if text not in conditions:
+                    lhs = _kernel(test.left, parameters)
+                    rhs = _kernel(test.comparators[0], parameters)
+                    relation = _COMPARISONS[type(test.ops[0])]
+                    conditions[text] = BranchCondition(
+                        text=text,
+                        test=_test_of(relation, lhs, rhs),
+                        gap=_gap_of(lhs, rhs),
+                    )
+            divisor = _divisor_of(node)
+            if divisor is not None:
+                text = ast.unparse(divisor)
+                if text not in divisors:
+                    divisors[text] = Denominator(text=text, value=_kernel(divisor, parameters))
+    return tuple(conditions.values()), tuple(divisors.values())
+
+
+def _test_of(
+    relation: Callable[[Any, Any], Any], lhs: Kernel, rhs: Kernel
+) -> Callable[[_Arr, _Arr, _Arr], NDArray[np.bool_]]:
+    def test(y: _Arr, f: _Arr, w: _Arr) -> NDArray[np.bool_]:
+        return np.asarray(relation(lhs(y, f, w), rhs(y, f, w)), dtype=np.bool_)
+
+    return test
+
+
+def _gap_of(lhs: Kernel, rhs: Kernel) -> Kernel:
+    def gap(y: _Arr, f: _Arr, w: _Arr) -> _Arr:
+        return np.asarray(lhs(y, f, w) - rhs(y, f, w), dtype=np.float64)
+
+    return gap
+
+
+def _divisor_of(node: ast.AST) -> ast.expr | None:
+    if not isinstance(node, ast.BinOp):
+        return None
+    if isinstance(node.op, ast.Div):
+        return None if isinstance(node.right, ast.Constant) else node.right
+    if isinstance(node.op, ast.Pow) and _is_negative_constant(node.right):
+        return node.left
+    return None
+
+
+def _is_negative_constant(node: ast.expr) -> bool:
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
+        return isinstance(node.operand, ast.Constant)
+    return isinstance(node, ast.Constant) and isinstance(node.value, int | float) and node.value < 0
+
+
+#: What `ObjectiveFns` is certified against for each kind of inverse link (FR-146): the
+#: synthetic response the smoke fit draws. Severity for a log link, conversion for a logistic.
+_SMOKE_RESPONSES: Final[Mapping[str, ResponseKind]] = {
+    "exp": ResponseKind.CLAIM_SEVERITY,
+    "logistic": ResponseKind.CONVERSION,
+}
+
+
+def certify_expression_objective(
+    *,
+    ref: str,
+    loss: str,
+    parameters: Mapping[str, float],
+    y_domain: YDomain,
+    hessian_strategy: HessianStrategy,
+    hessian_min: float,
+    inverse_link: Literal["exp", "logistic"] = "exp",
+    sampling: SamplingSpec,
+    derived: Derived | None = None,
+    progress: ProgressCallback | None = None,
+) -> CertificateResult:
+    """§4.7's nine checks over an `expression` objective (FR-146, FR-151).
+
+    The first two are `symbolic_vs_numeric_gradient` and `_hessian`: the SymPy-derived
+    derivatives against a Richardson-extrapolated numeric derivative of the loss, with the
+    points near a found `where()` boundary excluded (FR-147, FR-149). The certificate
+    records `sympy.__version__`, read at the call (RL-1289). Persistence, the id and
+    `certified_at` are the backend's (ADR-703).
+    """
+    fns = compile_expression_objective(
+        ref=ref,
+        loss=loss,
+        parameters=parameters,
+        y_domain=y_domain,
+        hessian_strategy=hessian_strategy,
+        hessian_min=hessian_min,
+        inverse_link=inverse_link,
+        derived=derived,
+    )
+    return certify_compiled(
+        fns,
+        sampling=sampling,
+        smoke_response=_SMOKE_RESPONSES[inverse_link],
+        versions={"numpy": str(np.__version__), "sympy": sympy.__version__},
+        progress=progress,
     )

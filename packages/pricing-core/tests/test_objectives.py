@@ -17,13 +17,17 @@ checks warning.
 
 from __future__ import annotations
 
+import json
+import re
 import time
 from dataclasses import replace
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 import numpy as np
 import pytest
+import sympy
 
 from model_schema import (
     TEMPLATE_APPLICABILITY,
@@ -50,7 +54,12 @@ from pricing_core.modelling.errors import (
     ObjectiveError,
     RoundBudgetExceededError,
 )
-from pricing_core.modelling.expression_objective import compile_expression_objective
+from pricing_core.modelling.expression_objective import (
+    Derived,
+    certify_expression_objective,
+    compile_expression_objective,
+    derive,
+)
 from pricing_core.modelling.objectives import (
     _TEMPLATES,
     DEFAULT_ROUND_BUDGET_S,
@@ -748,3 +757,184 @@ def test_an_expression_objective_matches_the_builtin_it_equals() -> None:
     assert np.allclose(expression.grad(y, f, w), builtin.grad(y, f, w))
     assert np.allclose(expression.stabilise(y, f, w), builtin.stabilise(y, f, w))
     assert expression.inverse_link == "exp"
+
+
+# --- the expression certificate (WK-690 S2, FR-146 to FR-151) ------------------------------
+
+_SPEC_EXAMPLE = "w * where(exp(f) < y, w_under, w_over) * (y - exp(f)) ** 2"
+_SPEC_PARAMS = {"w_under": 2.0, "w_over": 1.0}
+_EXPRESSION_SAMPLING = SamplingSpec(
+    n_points=1000, seed=_SEED, y_range=(0.1, 50.0), f_range=(-2.0, 4.0), w_range=(0.5, 2.0)
+)
+
+
+def _certify_expression(
+    loss: str,
+    *,
+    parameters: dict[str, float] | None = None,
+    derived: Derived | None = None,
+    sampling: SamplingSpec = _EXPRESSION_SAMPLING,
+) -> Any:
+    return certify_expression_objective(
+        ref="custom_objective:test-expression@1",
+        loss=loss,
+        parameters=parameters or {},
+        derived=derived,
+        y_domain=YDomain(min_inclusive=0.0),
+        hessian_strategy=HessianStrategy.CLIP_TO_MIN,
+        hessian_min=1e-6,
+        inverse_link="exp",
+        sampling=sampling,
+    )
+
+
+_SYMBOLIC_NAMES = (
+    "symbolic_vs_numeric_gradient",
+    "symbolic_vs_numeric_hessian",
+    "finiteness",
+    "convexity",
+    "branch_discontinuity",
+    "minimum_at_truth",
+    "monotone_loss",
+    "scale_behaviour",
+    "smoke_fit",
+)
+
+
+@pytest.mark.req("FR-146")
+@pytest.mark.req("FR-147")
+@pytest.mark.req("FR-148")
+@pytest.mark.req("FR-151")
+def test_expression_certificate_spec_example() -> None:
+    """§4.6's example, certified: nine checks with the symbolic pair, a real `where()`
+    boundary found and excluded, and the SymPy version recorded."""
+    result = _certify_expression(_SPEC_EXAMPLE, parameters=_SPEC_PARAMS)
+
+    assert tuple(c.name for c in result.checks) == _SYMBOLIC_NAMES
+    assert result.overall is CertificateOutcome.CERTIFIED_WITH_FINDINGS
+    assert _status(result, "convexity") is CheckStatus.VIOLATED
+    assert _status(result, "branch_discontinuity") is CheckStatus.WARN
+    assert _status(result, "symbolic_vs_numeric_gradient") is CheckStatus.PASS
+    assert _status(result, "symbolic_vs_numeric_hessian") is CheckStatus.PASS
+    match = re.search(r"([\d,]+) of [\d,]+ excluded within h of", _detail(
+        result, "symbolic_vs_numeric_gradient"))
+    assert match is not None
+    assert int(match.group(1).replace(",", "")) > 0
+    assert result.library_versions["sympy"] == sympy.__version__
+
+
+@pytest.mark.req("FR-146")
+@pytest.mark.req("FR-149")
+def test_expression_certificate_smooth_loss() -> None:
+    """No `where()`: nothing to exclude, and the symbolic pair agrees with the numerics."""
+    result = _certify_expression(_EXPRESSION_LOSS)
+
+    assert _status(result, "branch_discontinuity") is CheckStatus.PASS
+    assert "no branch boundary" in _detail(result, "branch_discontinuity")
+    assert "no branch boundary" in _detail(result, "symbolic_vs_numeric_gradient")
+    assert _status(result, "symbolic_vs_numeric_gradient") is CheckStatus.PASS
+    assert _status(result, "symbolic_vs_numeric_hessian") is CheckStatus.PASS
+
+
+@pytest.mark.req("FR-148")
+def test_expression_certificate_names_a_dropped_dirac_delta_as_a_found_boundary() -> None:
+    """DP-S2-2's condition: `abs` has a kink the printer rewrote to `where`, and the
+    certificate names it rather than certifying the loss as smooth."""
+    result = _certify_expression("w * abs(y - f)")
+
+    assert _status(result, "branch_discontinuity") is CheckStatus.WARN
+    assert "y" in _detail(result, "branch_discontinuity")
+    assert " > " in _detail(result, "branch_discontinuity")
+
+
+@pytest.mark.req("FR-146")
+@pytest.mark.req("FR-149")
+def test_expression_certificate_catches_a_wrong_derivative() -> None:
+    """The check on broken input: a hessian off by 1 % must fail the symbolic comparison."""
+    good = derive(_EXPRESSION_LOSS)
+    wrong = replace(good, hessian=f"1.01 * ({good.hessian})")
+
+    result = _certify_expression(_EXPRESSION_LOSS, derived=wrong)
+
+    assert _status(result, "symbolic_vs_numeric_hessian") is CheckStatus.FAILED
+    assert _status(result, "symbolic_vs_numeric_gradient") is CheckStatus.PASS
+    assert result.overall is CertificateOutcome.FAILED
+
+
+@pytest.mark.req("FR-146")
+@pytest.mark.req("FR-165")
+def test_expression_certificate_division_by_a_denominator_that_reaches_zero_fails() -> None:
+    """§4.6 and DP-S2-5 (a): `f` crosses 0 over the f-range, so `/ f` fails `finiteness`
+    naming the denominator. The control has a denominator bounded away from 0."""
+    failing = _certify_expression("w * (y - f) ** 2 / f")
+    assert _status(failing, "finiteness") is CheckStatus.FAILED
+    assert "denominator" in _detail(failing, "finiteness")
+
+    control = _certify_expression("w * (y - f) ** 2 / (1 + f ** 2)")
+    assert _status(control, "finiteness") is CheckStatus.PASS
+    assert control.overall is not CertificateOutcome.FAILED
+
+
+@pytest.mark.req("FR-146")
+@pytest.mark.req("FR-165")
+def test_expression_certificate_division_catches_an_even_order_zero() -> None:
+    """DP-S2-5's refinement: `(exp(f) - 3) ** 2` touches 0 at `f = log 3` with no sign change,
+    and a grid step can straddle it. The bounded refinement drives the minimum to 0."""
+    result = _certify_expression("w * y / ((exp(f) - 3) ** 2 + 1e-30)")
+    # The 1e-30 keeps the denominator positive, so only the refinement sees it reach 0.
+    assert _status(result, "finiteness") is CheckStatus.FAILED
+    assert "denominator" in _detail(result, "finiteness")
+
+
+@pytest.mark.req("FR-146")
+@pytest.mark.req("FR-165")
+def test_expression_certificate_division_catches_a_sign_change_with_no_zero_on_the_grid() -> None:
+    """DP-S2-5's sign-change clause on its own: a denominator that jumps from -1 to 1 has no
+    zero and no minimum of its magnitude for the refinement to find, so only the sign change
+    sees it (by continuity a zero lies between, and here there is a discontinuity instead)."""
+    result = _certify_expression("w * y / where(f < 1, -1, 1)")
+    assert _status(result, "finiteness") is CheckStatus.FAILED
+    assert "changes sign" in _detail(result, "finiteness")
+
+
+@pytest.mark.req("FR-146")
+def test_expression_certificate_records_the_patched_sympy_version_derivation_version(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RL-1289's second violation, on the certificate: `library_versions.sympy` is read from
+    `sympy.__version__` at the call, never written from a literal."""
+    monkeypatch.setattr(sympy, "__version__", "9.9.9")
+    result = _certify_expression(_EXPRESSION_LOSS)
+    assert result.library_versions["sympy"] == "9.9.9"
+
+
+_BEFORE = json.loads(
+    (Path(__file__).parent / "data" / "template_certificates_before_wk690s2.json").read_text(
+        encoding="utf-8"
+    )
+)
+
+
+@pytest.mark.req("FR-146")
+@pytest.mark.req("FR-151")
+@pytest.mark.parametrize("template", list(T), ids=lambda t: t.value)
+def test_template_certificate_unchanged(template: ObjectiveTemplate) -> None:
+    """A template certificate is what it was before this slice, check by check.
+
+    The reference is `certify_objective`'s own output at `origin/main` 71b67220, on this
+    file's `_objective` and `_sampling`, with the smoke fit's elapsed seconds normalised:
+    the ledger (LG-9979, Task 5) records how it was produced.
+    """
+    result = certify_objective(_objective(template), sampling=_sampling(template))
+    expected = _BEFORE[template.value]
+    assert result.overall.value == expected["overall"]
+    assert sorted(result.library_versions) == expected["library_versions_keys"]
+    got = [
+        {
+            "name": c.name,
+            "status": c.status.value,
+            "detail": re.sub(r"\d+\.\ds$", "<t>s", c.detail),
+        }
+        for c in result.checks
+    ]
+    assert got == expected["checks"]

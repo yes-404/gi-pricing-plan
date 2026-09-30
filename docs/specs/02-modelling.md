@@ -1113,6 +1113,19 @@ For `kind: template` the first two checks are named `analytic_vs_numeric_gradien
 derivatives rather than a SymPy-derived form (FR-151). Every other check, and the
 `sampling` block that makes the findings interpretable, is identical for both kinds.
 
+> *(Amended 2026-09-30, WK-690 Slice 2, `RL-1328` DP-S2-2 and DP-S2-5: an `expression`
+> certificate carries the nine checks with the `symbolic_vs_numeric` pair, and `model-schema`
+> accepts exactly one of the two batteries, never a mixture. For an expression, branch
+> boundaries are found from its `where()` conditions, in the loss and in the derived text,
+> not declared (FR-147, FR-148): the grid is sampled at each, the points within `h` of one
+> are excluded from the derivative comparison and counted, and `branch_discontinuity` names
+> each condition. That includes the conditions the printer wrote for a `DiracDelta` it
+> dropped (`abs`, `min`, `max`, `clip`), so a kink is never certified as smooth. A
+> denominator that is zero, that changes sign, or whose magnitude has an interior minimum a
+> bounded refinement drives to zero, over the sampled domain, fails `finiteness` and names
+> it (§4.6). `library_versions.sympy` is read from `sympy.__version__` at the call
+> (`RL-1289`).)*
+
 > **Amended 2026-08-18 (WK-661), built.** Six corrections, all in the code's favour bar the
 > last, which is in the contract's.
 >
