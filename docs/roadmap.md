@@ -786,6 +786,8 @@ Per-environment keys, rate limits and monitoring configuration, and environment 
 
 *Dated 2026-09-30: the **ladder half** of this slice (RL-1329 in full, FD-1336 with NFR-496, FD-1330, R2, the release note, the OQ-1316 note) is carved out to `SL-1345` on the maintainer's entry "2026-09-30 23:57:25 BST — DECISION on the S3 halt: (A) carve the ladder half into its own slice; lane B takes WK-1250 S1 now". This slice keeps the environment half and stays `draft` behind Slice 2; `PL-1342` is not edited. DP-S3-1 and DP-S3-2 are assigned by the new leaf plan to the half that needs them.*
 
+*Dated 2026-10-01, mint batch 13a: **FR-452 (the `/score` limb, `RL-1347`)** is this slice's, with DP-S3-2 resolved by `RL-1347` (assigned here by `PL-1348`). FR-452's **management-API limb** is owned by WK-674 (the maintainer's entry "2026-09-30 23:48:24 BST — OWNER DECISION: FR-452 → WK-674, not WK-1178") and is carried to a later WK-674 slice, which a planner names in a dispatch record before WK-674 closes; that slice's row is annotated when named. DP-S3-1 is resolved by `RL-1346` and belongs to `SL-1345`.*
+
 #### SL-1345 — Slice 3L: the premium ladder — exact unrounded rungs, true operations, one rounding (FR-247, FR-248, NFR-496, FD-1336, FD-1330; RL-1329)
 
 ```yaml
@@ -803,6 +805,8 @@ relates: [PL-1342, RL-1329]
 ```
 
 Carved from `SL-1257` on the maintainer's entry "2026-09-30 23:57:25 BST — DECISION on the S3 halt: (A) carve the ladder half into its own slice; lane B takes WK-1250 S1 now": the ladder half of `PL-1342`, which depends on nothing in Slice 2. A new leaf plan (a planner, quoting `PL-1342`'s text, never editing it) carries it; its decision points are minted before activation. It takes the first free lane after activation. The work already built for it is on a salvage branch from the halted WK-674 S3 dispatch. Minted as `SL-1345` at this PR's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `248dbf11`.
+
+*Dated 2026-10-01, mint batch 13a: its leaf plan is `PL-1348` (draft until activation). DP-S3-1 is resolved by `RL-1346`. The activation needs are `PL-1348`'s own, each a command with an expected output.*
 
 #### SL-1258 — Slice 4: the deployment path (FR-437, FR-412 memory half, FR-415, FR-434, FR-435, NFR-531, NFR-534, FD-1211)
 
