@@ -3,7 +3,7 @@ id: PL-1268
 family: plan
 kind: map
 title: WK-690 — `expression` custom objectives: Map Plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-09-29
 owner: planner
 tree: 6c6f4532c7d0ec65646225108f8cf9f8f570c746
@@ -87,12 +87,16 @@ its ruling.)*
     WK-674 slice that regenerates it (Slice 1's `Job`, `PL-1239`).
   - `docs/skills-map.md`: WK-690 Slice 1 **edits** it (the `sympy` row, Acceptance item 3).
     WK-674 may edit it: `PL-1237`:49 says a leaf plan that needs a new dependency updates it.
-  - `docs/specs/07-platform.md`: WK-690 only **cites** it (FR-448, FR-449 and FR-450). No
-    slice here edits it. WK-674 Slice 1 edits it (§4.1 `Job`, `PL-1239` Task 1). The order
+  - `docs/specs/07-platform.md`: WK-690 only **cites** it (FR-448 and FR-449). No
+    slice here edits it. *(Corrected 2026-09-30 in the activation commit, on the
+    maintainer's correction 1: FR-450 is removed. Premise 2 records that this plan does
+    not cite FR-450 for the flag.)* WK-674 Slice 1 edits it (§4.1 `Job`, `PL-1239` Task 1). The order
     matters only if a WK-690 leaf plan finds that `07` must change.
   *(Added 2026-09-29 on auditor-plans' list-gap finding at 18f85019.)*
 
-- Acceptance and Work activation: _pending — the deputy's dated line by delegation_
+- Acceptance and Work activation: ~~_pending — the deputy's dated line by delegation_~~
+  **Accepted and activated 2026-09-30.** The maintainer's acceptance line is quoted
+  verbatim under Activation, and `status: active` is set in the same commit.
 
 ## Acceptance Standard
 
@@ -379,9 +383,12 @@ Slice 1 ────────────────────────
                                                          (after Slice 3, by the one-at-a-time rule)
 ```
 
-Slice 4 depends only on Slice 1 in code. It runs after Slice 3 because of the
-one-slice-at-a-time rule, not because of a data dependency. The lead may move it earlier
-without a replan if Slice 3 is waiting on DP-3.
+Slice 4 depends only on Slice 1 in code. ~~It runs after Slice 3 because of the
+one-slice-at-a-time rule, not because of a data dependency.~~ It waits only on Slice 1,
+and on a free lane under `RL-1263`. The lead may move it earlier without a replan if
+Slice 3 is waiting on DP-3. *(Corrected 2026-09-30 in the activation commit, on the
+maintainer's correction 2. Under `RL-1263`, two build slices from the same Work still never
+run at once, so Slice 4 does not run beside another WK-690 slice.)*
 
 ### Slice 1 — The parser brought to §4.6's four profiles, with its limits
 
@@ -575,9 +582,31 @@ activation. Each blocks a slice's leaf plan:
   commit that adds `custom_objective:author` (`CR-1247` Proposal 1 (c); Slice 3's Depends
   on). Neither exists at `dd25db94`.
 - **Slice 4:** no blocker of its own. DP-4 is resolved by `RL-1265`. Slice 4 waits only on
-  Slice 1 and on the one-slice-at-a-time rule. The permission-parity check does not bind it,
+  Slice 1, and on a free lane under `RL-1263` *(corrected 2026-09-30 in the activation
+  commit; it read "and on the one-slice-at-a-time rule")*. The permission-parity check does not bind it,
   because Slice 4 adds no permission.
 - **Slices 2 and 5:** nothing beyond the slice before each.
+
+**Maintainer acceptance, quoted verbatim** from the entry headed `2026-09-30 02:53:07 BST —
+MERGE-ACK #871 and ACCEPTANCE of PL-1268 (WK-690 map plan)` (to-lead.md, its "ACCEPTANCE
+LINE"):
+
+> **PL-1268 accepted as WK-690's map plan** by the maintainer, 2026-09-30 (dated line by delegation). What was read at head 1428ed3a:
+> - **Scope:** the core scope (§Scope :182–213, 23 ids) was compared with `### WK-690` on main dd25db94, which names FR-144, FR-150, FR-151 and FR-367. All four are covered. FR-85, FR-86's field, FR-210 with FR-208's `spline` and `polynomial` arms, and FR-154's expression half go to Phase 3 per RL-1265 DP-1.
+> - **Slices:** five.
+> - **Decision points:** DP-1 to DP-5 are resolved by RL-1265, and none is open. **The plan goes `active` in its activation commit.**
+> - **Slice gates, which do not block activation:**
+>   - **S1** needs **OQ-1266** (the exact `sympy` pin) ruled;
+>   - **S3** needs **CR-1247 Proposal 1 (c)** delivered: the DM's RL, or ADR, with the `06` amendment, plus **WK-1178's check** that fails when `06`'s permission tokens and `model_schema.Permission`/`BUILTIN_ROLES` disagree. Proposal 1 was accepted 2026-09-29, with owners the decision-maker and WK-1178;
+>   - S2, S4 and S5 wait only on their predecessors.
+> - **OQ-550** is WK-675's, and S5 consumes or records it, per the 2026-09-30 00:51:17 scope decision.
+
+**Activated 2026-09-30** on branch `wk690-activate`. `status: active` is set in the same
+commit as this quotation and as the entry's two corrections: FR-450 is removed from the `07`
+row of Status, and Slice 4 now waits "only on Slice 1, and on a free lane under RL-1263".
+Step 1's condition holds, because every Decision point row has its resolver, `RL-1265`.
+Step 3's five `SL-` rows are cut under `### WK-690` in `docs/roadmap.md` in this PR, with
+working ids minted at the PR's mint turn. Step 2 is the lead's.
 
 ## Self-review
 
