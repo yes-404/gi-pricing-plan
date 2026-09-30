@@ -604,6 +604,25 @@ shows the exposure weight behind each cell, from a portfolio Dataset Version.
 Depends on: Slice 2; DP-5. Unblocks WK-675 Slice 5. Gate: as Slice 2, plus
 `generate-contracts.py --check`.
 
+## Activation
+
+*(Added 2026-09-30 at the mint turn, on the lead's question; the form is `PL-1237`'s
+Activation section.)* **The SL rows are not cut in this plan's filing PR.** When the
+maintainer (or the session acting on the maintainer's behalf) accepts this plan, the
+activation commit:
+
+1. Sets `status: active` in the front matter, only if every blocking Decision point row has
+   a resolver id (`document-ids.md` §1.7). DP-5 (Slice 7 only) is open at the mint turn. If
+   it is still open at acceptance, the plan stays `draft`, and the acceptance line names
+   DP-5 as the open row.
+2. Leaves the `From "Workstreams"` line under `### WK-673` in `docs/roadmap.md` to **the
+   lead**, as `PL-1237` did for WK-674. This plan proposes the ids it should add: FR-224,
+   FR-257 limb (2), `06` FR-364 and FR-231 (F-W10-2).
+3. Adds the seven `SL-` rows under `### WK-673`, one per slice (Slices 1–7), each `draft`,
+   with ids the lead issues. The planner writes them (`.claude/roles/planner.md`: the
+   planner cuts the `SL-` rows in the map plan).
+4. Regenerates `docs/INDEX.md` in the final commit only.
+
 ## Self-review
 
 **1. Spec coverage.** FR-263 → Slices 2, 4. FR-264 → Slice 2. FR-265 → Slice 4. FR-266 →
