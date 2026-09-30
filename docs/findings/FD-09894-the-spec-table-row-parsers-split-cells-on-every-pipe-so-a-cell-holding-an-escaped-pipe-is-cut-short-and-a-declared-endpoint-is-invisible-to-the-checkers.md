@@ -260,16 +260,26 @@ as deferred?
 **Are the unbuilt hidden routes in any closed Work's scope?** **No.** The dossier route
 (06:539) belongs to **WK-680** (P3, `active`, "Dossier generation, commentary blocks, PDF,
 point-in-time regeneration", FR-376 to FR-381). The dependencies route (06:543, FR-384, blast
-radius) is **held by no roadmap row at this tree** (already recorded at
-`PL-1237` `:525`; `RS-708` `:303` puts FR-383 to FR-385 in Phase 3, not started). **So no
-closed Work's scope hid an unbuilt route**, and none comes to the maintainer under §13's four
-verdicts from this sweep. The one route the false figures did hide from a closed Work's scope,
+radius) was **held by no roadmap row at this tree** (already recorded at
+`PL-1237` `:525`; `RS-708` `:303` puts FR-383 to FR-385 in Phase 3, not started); the
+maintainer has since made **WK-680 its owner, provisionally** (§14 does not permit it to be
+unowned; the lead's roadmap row, #985, cites `to-lead.md` "2026-09-30 11:52:53 BST — #983's
+closure sweep: accepted (no §13 verdict owed); DECISIONS on the recurrence and FR-384"). **So no
+closed Work's scope hid an unbuilt route**, and **no §13 verdict is owed** (the same entry:
+"DATA closures under-count, but lineage is built; the GOV-hidden routes are unbuilt but in no
+closed Work's scope"). The one route the false figures did hide from a closed Work's scope,
 lineage, is built. What the sweep does show: the two GOV figures (`CR-722:36`, `CR-823:31`)
 were understated by two declared routes, and `CR-823:67-72` had already named the cause ("fix
 the parser or record the limitation in the close-workstream skill before the WK-664 close counts
 GOV endpoints"); **`.claude/skills/close-workstream/SKILL.md` and
 `.claude/skills/docs-audit/SKILL.md` record no such limitation** (searched for `pipe` and
-`escaped`), and no owner was ever assigned. MODEL, RATE and PLAT figures are unaffected: no
+`escaped`), and no owner was ever assigned. **This record is a recurrence of `CR-823` item (c)**
+(plan review 5, 2026-08-27), **not a separate finding of a new defect**, per the maintainer's
+11:52:53 BST entry (above): the recommendation predates the 2026-09-29 §14 amendment
+(RFC-1248, RL-1249) that forbids an unowned accepted proposal. The class may have other members:
+the maintainer sends a one-time sweep of accepted §14 plan-review proposals before 2026-09-29
+that never became an owned record to WK-1170's Slice 1 audit (PL-1276's inputs, by the planner's
+dated delta), where each unowned one gets an owner. MODEL, RATE and PLAT figures are unaffected: no
 escaped pipe sits in one of their path cells.
 
 ## Disposition
@@ -296,6 +306,9 @@ BST — DECISION: the shared row parser is route (a), a stdlib-only module file;
   (the lookbehind splits), as do the register reader (`doc-index.py:1061`) and the other cell
   splitters that read a table. **"Never a fourth" means the row-splitting logic**, not a count of
   regexes;
+- **the demo guide's "63 of 148"** (`CR-718:56-63`, produced by `guide.py`'s copy of the regex)
+  **is corrected when `guide.py` moves to the shared parser**, its declared count rising by the
+  three hidden routes;
 - **red first:** `declared_endpoints("DATA")` **39 to 40**, GOV **23 to 25** (and GOV published
   stays 13, so 13 of 25), the demo guide's declared count up by the same three, and **the
   `doc-index.py --phase P2` raise** (evidence 3).
