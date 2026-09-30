@@ -1,5 +1,5 @@
 ---
-id: FD-9966
+id: FD-1331
 family: finding
 title: FR-275's intermediate precision limb is not met at runtime, because the ZEN engine silently rounds its own intermediates at 28–29 significant digits
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9966 — FR-275's intermediate precision limb is not met at runtime, because the ZEN engine silently rounds its own intermediates at 28–29 significant digits
+# FD-1331 — FR-275's intermediate precision limb is not met at runtime, because the ZEN engine silently rounds its own intermediates at 28–29 significant digits
 
 ## Finding
 
@@ -36,8 +36,8 @@ Measured at `origin/main` `25ca36df89b0ac6e97a14cb08ca2b07f54fef085`, under the 
 `.venv`, whose `zen-engine` is **0.53.0**, the version locked by `packages/pricing-core/pyproject.toml:64`
 (`"zen-engine==0.53.0"`) and `uv.lock`.
 
-**The source of the finding.** The decision-maker's ruling for DP-S3-5 (working id 9963, local
-commit `48621365`, not pushed at the time of filing) found it while building the exact-replay
+**The source of the finding.** The decision-maker's ruling for DP-S3-5 (RL-1329, drafted under working id 9963; local
+commit `48621365` at the time of filing) found it while building the exact-replay
 ladder: *"The engine rounds its own intermediates at 28–29 significant digits. The eighth
 product has 30 digits exactly, and the engine returned 29 digits"*, and *"The 'intermediate' limb
 of FR-275 is not met at runtime … compilation cannot see runtime values. The effect is about 10⁻²⁸
@@ -76,7 +76,7 @@ intermediate.
 
 **What was not measured.** The finding is about the engine's `string()` view of a value. This
 record did not trace how much of the rounding survives in the engine's numeric result, or
-through the binding in `score.py`. RL working id 9963's sweeps (42 000 quotes per run) are the
+through the binding in `score.py`. RL-1329's sweeps (42 000 quotes per run) are the
 evidence for the size of the effect on ladders.
 
 The lead relays that an independent run by another auditor saw the engine's raw numeric result
@@ -99,11 +99,11 @@ LOW, owner WK-1178.
 intermediate precision (a §0 disagreement; the spec is the side to fix, unless the DM finds a
 cheap code guard), citing RL 9963's tolerance."*
 
-**The tolerance is from a different bullet of the entry.** The entry's first bullet accepts RL
-working id 9963 in substance, and names its "three engine-forced departures: string() reads, a
+**The tolerance is from a different bullet of the entry.** The entry's first bullet accepts RL-1329
+(working id 9963) in substance, and names its "three engine-forced departures: string() reads, a
 1e-26 relative per-rung tolerance with an exact chained replay, the `divide` op". The
 **1e-26 relative per-rung tolerance** is that departure, and is what item (2) means by "RL
-9963's tolerance". Item (2) itself does not state the number.
+9963's tolerance" (RL-1329's). Item (2) itself does not state the number.
 
 **What a correct FR-275 says, for the amendment's author to decide.**
 - The compile-time limbs stay: no rate table value, constant, literal or bound beyond scale 28,
@@ -114,4 +114,4 @@ working id 9963 in substance, and names its "three engine-forced departures: str
 - The S1 sentence *"`(1/3) * 3 == 1` evaluates `false`"* is the same limitation seen from the
   other side, and can stay as its example.
 
-*Drafted under working id 9966.*
+*Minted as FD-1331 (drafted under working id 9966).*
