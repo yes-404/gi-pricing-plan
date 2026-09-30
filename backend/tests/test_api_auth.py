@@ -7,19 +7,21 @@ client_id are what a *public* client publishes, and nothing here is a credential
 import pytest
 from fastapi.testclient import TestClient
 
-from app.config import Environment, Settings
+from app.config import Settings
 from app.main import create_app
 
 
 @pytest.mark.req("FR-394")
-def test_the_auth_config_publishes_the_flow_s_bootstrap_values() -> None:
+def test_the_auth_config_publishes_the_flow_s_bootstrap_values(api_settings: Settings) -> None:
+    # The lifespan checks the stores' tenant markers (FR-436), so the app needs the test
+    # database and bucket that `api_settings` names, not the packaged defaults.
     app = create_app(
-        Settings(
-            environment=Environment.LOCAL,
-            version="test",
-            oidc_issuer="https://idp.example/realms/gip",
-            oidc_client_id="gi-pricing-frontend",
-            dev_auth_enabled=True,
+        api_settings.model_copy(
+            update={
+                "oidc_issuer": "https://idp.example/realms/gip",
+                "oidc_client_id": "gi-pricing-frontend",
+                "dev_auth_enabled": True,
+            }
         )
     )
     with TestClient(app, raise_server_exceptions=False) as client:

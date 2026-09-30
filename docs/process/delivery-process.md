@@ -50,6 +50,10 @@ Project
          └─ Slice (repeat, one at a time — TDD leaf, no children)
 ```
 
+*(Amended 2026-09-29 by the maintainer, dated line by delegation: "one at a time" above is now
+qualified by §8's amendment. Up to 2 build slices, from different Works, may run at once; RL-1263
+(working id).)*
+
 One template, applied recursively three times (§5), plus a leaf-level variant at Slice
 (§6). **Project** is the whole-repository scope `CLAUDE.md` §1 (Mission) already names
 informally — no new artifact, per the rulings record Part C row 3; only the label is new.
@@ -90,7 +94,9 @@ declared in the phase's own milestone section and checked by `phase-close.md` (r
    if the issue isn't fixable at this layer at all (not available at Project — it has no
    parent). **Proceed** continues.
 5. **Process children, one at a time** — invoke the next layer's flow for each child,
-   strictly sequentially at this level (see §8 for the read-only fan-out carve-out).
+   strictly sequentially at this level (see §8 for the read-only fan-out carve-out). *(Amended 2026-09-29: "strictly
+sequentially" is qualified by §8's amendment, which allows up to 2 build slices from different
+Works; RL-1263.)*
 6. **Audit** — auditor reviews the completed children against this layer's plan: no
    missing requirements, every gate actually achieved, watching specifically for drift at
    this layer's own level (a Phase audit checks work-level drift, not implementation
@@ -156,11 +162,22 @@ mechanism; only their instrumentation moved from prose to an artifact.
 Sequential processing of a layer's **children** (Project→Phase→Work→Slice: no two Slices
 run at once, at any layer) — the same bound on context/resource usage per session
 the **reproduced design proposal's** §7 intended, at
-`docs/rfcs/RFC-00840-a-layered-slice-based-workflow-project-phase-work-slice-gated-at-every-layer.md:322-327` ("this bounds context/resource
+`docs/rfcs/RFC-00840-a-layered-slice-based-workflow-project-phase-work-slice-gated-at-every-layer.md:326-331` *(cite corrected 2026-09-29, was :322-327;
+the quote is at :326-331)* ("this bounds context/resource
 usage per session ... revisit only if resource budget materially changes"). That is the
 proposal reproduced *inside* the note, **not** RFC-840's own §7, which is a different
 subject; the bare "RFC-840 §7" resolved only for a reader who already knew which numbering
 was meant (RL-871, `docs/rulings/RL-00871-no-8-stands-unamended-and-unexcepted-and-the-test-the-question-proposed-is-the-wrong-one.md`).
+
+*(Amended 2026-09-29 by the maintainer, dated line by delegation: preparation runs in
+parallel; at most 2 build slices from different Works at once, each holding a gate slot, no
+shared files; a measurement step runs alone. CR-1212's "§8 stands" is amended by this
+line.)* The ruling is RL-1263. It rests on this section's own "revisit only if
+resource budget materially changes": an 8-core box and the 2-slot gate cap.
+Plan-independence is still not an exception (RL-871). "Preparation" means plans, rulings,
+rebases, mints and audits. It is not a slice and runs alongside. What "no shared files"
+covers (a closed append-only registry list) and RL-871 §7's three conditions are defined in
+RL-1263, not restated here.
 
 **The interest §8 protects is resource contention, not plan stability.** Two children can be
 perfectly plan-independent and running them concurrently still breaches this rule, so an
