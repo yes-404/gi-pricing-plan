@@ -240,6 +240,13 @@ slice's merge.
 - **the misleading `RATE_TABLE_MISS`**, in the maintainer's words (10:53:10 BST): *"a division
   guarded at save makes it unreachable; any residual runtime evaluation failure in a condition or
   bound raises its own evaluation code, never RATE_TABLE_MISS"*, red first.
+  **Dated note, 2026-09-30, narrowing this line** (`to-lead.md`, "2026-09-30 11:07:11 BST —
+  DECISION: #970 DP-G4 residual → (a), recorded as a LOW FD; #970 G1–G3 accepted"; #970, RL
+  working id 9982, DP-G4, as prose): "never RATE_TABLE_MISS" applies to **every condition or bound
+  whose step does not directly consume an `on_miss='error'` output**. It still covers every row of
+  the reproduction above (A2, A3 and C1 consume `office_premium_minor`). The residual, where the
+  failing step does directly consume such an output, is accepted as fail-closed and recorded as
+  its own LOW finding (working id 9888).
 
 **The structural fix**, in the slice's acceptance ("2026-09-30 10:55:40 BST — time-citation
 correction acknowledged; #968 widened, so fix the CLASS structurally"), each red first:
