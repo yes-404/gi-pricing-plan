@@ -1,5 +1,5 @@
 ---
-id: FD-9803
+id: FD-1348
 family: finding
 title: The contract guard does not compare the objective-certificate check-name enum against the code's check vocabulary
 status: active
@@ -10,9 +10,9 @@ corrected_by: []
 relates: [WK-690]
 ---
 
-# FD-9803 — The contract guard does not compare the objective-certificate check-name enum
+# FD-1348 — The contract guard does not compare the objective-certificate check-name enum
 
-**Filed under working id 9803; the final id is assigned at the mint.** Source: executor-690s2 found it in WK-690 Slice 2
+**Minted 2026-10-01 as FD-1348** (`python3 scripts/doc-id.py next --ref f689c7828cb05eb2298f3fec505a4638c4437a11` printed `1346`, and the lead allocated `1348` in mint batch 13, after RL-1346 and RL-1347). It was filed under working id 9803. Source: executor-690s2 found it in WK-690 Slice 2
 (ledger LG working id 9979, Task 5, draft PR #1025, branch `sl-1272-symbolic-derivation`); auditor-690s2 proposed it;
 this record is the auditor's.
 
@@ -34,7 +34,7 @@ reader builds against is now 11 names held by hand against a 9-plus-2 code vocab
 Broken input: in `docs/contracts/schemas/objective-certificate.schema.json` replace `symbolic_vs_numeric_gradient`,
 `symbolic_vs_numeric_hessian`, `finiteness`, `convexity` and `smoke_fit` with `"BOGUS"` (a python string replace; `git diff
 --stat`: 1 file, 3 insertions, 3 deletions; `grep -n BOGUS` shows lines 29, 30 and 32). The same pytest command →
-`144 passed, 2 skipped`, rc 0. **Identical to the baseline.** Reverted with `git checkout --`; `git status --short` empty.
+`144 passed, 2 skipped`, rc 0 (replacing all 11 names gives the same result, reproduced by auditor-1029). **Identical to the baseline.** Reverted with `git checkout --`; `git status --short` empty.
 
 **2. Cause: no comparison reaches the enum.** The generated side gives `name` as a bare string:
 `docs/contracts/schemas/generated/objective-certificate.schema.json`, `"name": {"title": "Name", "type": "string"}`
@@ -59,3 +59,7 @@ follow-up slice adds the guard comparison per `.claude/skills/contract-guard` (m
 prove it red on broken input as in Evidence 1, add its meta-guard) and lands **before WK-690 closes**.
 
 **Event that next confirms or discharges it:** that slice merges, with Evidence 1's broken input turning the guard red.
+
+## Decision
+
+Adopted by the lead at MEDIUM, owner WK-690 (`DISPATCH-WK-690-S2-2026-09-30.md` Delta 4). Discharged when the follow-up slice's guard comparison merges and Evidence 1's broken input turns it red.
