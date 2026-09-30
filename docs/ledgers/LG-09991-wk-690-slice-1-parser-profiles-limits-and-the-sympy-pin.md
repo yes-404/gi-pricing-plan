@@ -119,6 +119,33 @@ holds 6 strings that are this task's own new test fixtures — `a + b`, the two 
 Both predicates are within limits for every corpus expression, so no deputy decision is needed
 (Acceptance 4: the Task 2 commit precedes Task 4's).
 
+### Task 3 — the four profiles, where(), the new functions, the strict refusals
+
+Applies RL-1292 (DP-S1-2 (b), exact arity) in `_ARITY` and `_check`.
+
+**Red before the code** (FD-1294, at `9f63d0fe`, the three caller tests run against the
+unmodified parser through a temporary file carrying only names that existed there):
+
+```text
+FAILED …test_round_with_two_arguments_is_refused_through_the_callers_derive_expression - Failed: DID NOT RAISE ExpressionError
+FAILED …test_round_with_two_arguments_is_refused_through_the_callers_filter_rows - Failed: DID NOT RAISE ExpressionError
+FAILED …test_round_with_two_arguments_is_refused_through_the_callers_expression_check - Failed: DID NOT RAISE ExpressionError
+3 failed
+```
+
+The temporary file was deleted. The profile and hostile-input files were red as
+`ImportError` (`GrammarProfile`) before the implementation.
+
+**Deviation from the plan's Step 2:** I did not run the intermediate "names exist, checks
+not written" red. I replaced it with mutation controls on the finished code, both in
+`test_expression_profiles.py`: with the arity check disabled, **12 failed, 42 passed**; with
+`_check_structure` disabled, **6 failed, 48 passed**. Both restored; the file passes 54/54.
+
+**Green.** `uv run pytest packages/pricing-core/tests -q`: 1059 passed (rc 0),
+including `test_prepare.py` and `test_expression_nfrs.py` unmodified (Acceptance 6). `ruff check .`
+rc 0, `mypy` no issues in 209 files, `lint-imports` 4 kept 0 broken. Spec notes (RL-1265 DP-5,
+RL-1292 arity) added to 02 §4.6.
+
 ## PRs
 
 Draft PR opened on the slice branch; number recorded here when opened.

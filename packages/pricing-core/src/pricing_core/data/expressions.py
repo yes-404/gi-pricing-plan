@@ -1,4 +1,7 @@
-"""The restricted expression grammar for `derive_expression` (FR-36).
+"""The restricted expression grammar, in 02 §4.6's four profiles (FR-36, FR-144, FR-145).
+
+`recipe` (`derive_expression`, `filter_rows`), `check` (the `expression` check), `factor`
+and `objective`.
 
 > It cannot call out to the network, filesystem, or Python builtins.
 
@@ -18,6 +21,7 @@ import ast
 from collections import deque
 from collections.abc import Iterator
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Final
 
 import polars as pl
@@ -25,50 +29,58 @@ import polars as pl
 __all__ = [
     "ExpressionError",
     "ExpressionSize",
+    "GrammarProfile",
     "compile_expression",
     "measure_expression",
+    "parse_expression",
     "referenced_columns",
 ]
 
-#: Node types the grammar admits. Everything else — attribute access, subscripts, lambdas,
-#: comprehensions, f-strings, walrus — is refused, because each is a route to something
-#: this grammar has no business reaching.
-_ALLOWED_NODES: Final[tuple[type[ast.AST], ...]] = (
-    ast.Expression,
-    ast.BinOp,
-    ast.UnaryOp,
-    ast.BoolOp,
-    ast.Compare,
-    ast.IfExp,
-    ast.Name,
-    ast.Load,
-    ast.Constant,
-    ast.Call,
-    ast.Add,
-    ast.Sub,
-    ast.Mult,
-    ast.Div,
-    ast.Mod,
-    ast.Pow,
-    ast.USub,
-    ast.UAdd,
-    ast.Not,
-    ast.And,
-    ast.Or,
-    ast.Eq,
-    ast.NotEq,
-    ast.Lt,
-    ast.LtE,
-    ast.Gt,
-    ast.GtE,
-)
+class GrammarProfile(StrEnum):
+    """02 §4.6's profile table. The context names which grammar an expression is parsed in."""
 
-#: The only callable names. No statistical functions — FR-36 excludes them, because a
-#: preparation step that could compute a mean over the column it is deriving would make the
-#: result depend on which rows happened to be in the extract.
-_FUNCTIONS: Final[frozenset[str]] = frozenset(
-    {"abs", "min", "max", "round", "floor", "ceil", "coalesce", "log", "exp", "sqrt"}
+    OBJECTIVE = "objective"
+    FACTOR = "factor"
+    RECIPE = "recipe"
+    CHECK = "check"
+
+
+_STRICT: Final = frozenset({GrammarProfile.OBJECTIVE, GrammarProfile.FACTOR})
+_COMPARISONS: Final = (ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE)
+
+#: `objective` and `factor`: §4.6's EBNF. Arithmetic, unary minus, calls, and comparisons
+#: (which `_check_structure` then confines to where()'s condition).
+_STRICT_NODES: Final[tuple[type[ast.AST], ...]] = (
+    ast.Expression, ast.BinOp, ast.UnaryOp, ast.Compare, ast.Name, ast.Load, ast.Constant,
+    ast.Call, ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow, ast.USub, *_COMPARISONS,
 )
+#: `recipe` and `check`: exactly the node set accepted before profiles (only-add).
+_LENIENT_NODES: Final[tuple[type[ast.AST], ...]] = (
+    *_STRICT_NODES, ast.BoolOp, ast.IfExp, ast.Mod, ast.UAdd, ast.Not, ast.And, ast.Or,
+)
+#: The ten in §4.6's `func`. `ceil coalesce floor round` are not differentiable, so they
+#: are recipe and check only (the profile note). No statistical functions — FR-36 excludes
+#: them, because a preparation step that could compute a mean over the column it is
+#: deriving would make the result depend on which rows happened to be in the extract.
+_STRICT_FUNCTIONS: Final = frozenset(
+    {"log", "exp", "sqrt", "abs", "min", "max", "clip", "where", "log1p", "expm1"}
+)
+_LENIENT_FUNCTIONS: Final = _STRICT_FUNCTIONS | {"ceil", "coalesce", "floor", "round"}
+#: Exact arity, in every profile (RL-1292, DP-S1-2 (b)). The seven legacy
+#: single-argument functions no longer drop extra arguments silently. `min`, `max` and
+#: `coalesce` are absent: they keep "at least one", which `_call`'s empty-args refusal holds.
+_ARITY: Final = {
+    "where": 3, "clip": 3, "log1p": 1, "expm1": 1,
+    "abs": 1, "round": 1, "floor": 1, "ceil": 1, "log": 1, "exp": 1, "sqrt": 1,
+}
+
+
+def _nodes(profile: GrammarProfile) -> tuple[type[ast.AST], ...]:
+    return _STRICT_NODES if profile in _STRICT else _LENIENT_NODES
+
+
+def _functions(profile: GrammarProfile) -> frozenset[str]:
+    return _STRICT_FUNCTIONS if profile in _STRICT else _LENIENT_FUNCTIONS
 
 
 class ExpressionError(ValueError):
@@ -150,13 +162,15 @@ def _walk_positioned(node: ast.AST) -> Iterator[tuple[ast.AST, ast.AST | None]]:
         yield current, position
 
 
-def _check(node: ast.AST) -> None:
+def _check(node: ast.AST, profile: GrammarProfile) -> None:
+    functions = _functions(profile)
+    allowed = _nodes(profile)
     for child, position in _walk_positioned(node):
-        if not isinstance(child, _ALLOWED_NODES):
+        if not isinstance(child, allowed):
             raise ExpressionError(
-                f"{type(child).__name__} is not permitted in a derive_expression "
-                "(FR-36). The grammar admits arithmetic, comparison, conditionals and "
-                f"a fixed function list: {sorted(_FUNCTIONS)}.",
+                f"{type(child).__name__} is not permitted in the {profile} profile "
+                "(02 §4.6). The grammar admits arithmetic, comparison, conditionals and "
+                f"a fixed function list: {sorted(functions)}.",
                 node=position,
             )
         if isinstance(child, ast.Call):
@@ -164,38 +178,128 @@ def _check(node: ast.AST) -> None:
                 raise ExpressionError(
                     "only plain function calls are permitted", node=child
                 )
-            if child.func.id not in _FUNCTIONS:
+            if child.func.id not in functions:
                 raise ExpressionError(
                     f"{child.func.id!r} is not an allowed function; permitted: "
-                    f"{sorted(_FUNCTIONS)}",
+                    f"{sorted(functions)}",
                     node=child,
                 )
             if child.keywords:
                 raise ExpressionError(
                     "keyword arguments are not permitted", node=child.keywords[0]
                 )
+            arity = _ARITY.get(child.func.id)
+            if arity is not None and len(child.args) != arity:
+                raise ExpressionError(
+                    f"{child.func.id}() takes exactly {arity} argument(s), "
+                    f"got {len(child.args)}",
+                    node=child,
+                )
 
 
-def referenced_columns(expression: str) -> frozenset[str]:
-    """Column names an expression reads, for lineage and for pre-flight checks."""
+def _check_structure(
+    node: ast.expr, profile: GrammarProfile, *, where_condition: bool = False
+) -> None:
+    """What the node-type walk cannot see: where a comparison may stand, and literals."""
+    strict = profile in _STRICT
+    if (
+        isinstance(node, ast.Constant)
+        and strict
+        and (isinstance(node.value, bool) or not isinstance(node.value, int | float))
+    ):
+        raise ExpressionError(
+            f"only numeric literals are permitted in the {profile} profile", node=node
+        )
+    if isinstance(node, ast.Compare):
+        if len(node.ops) > 1:
+            raise ExpressionError(
+                "chained comparisons are not permitted; use `and`", node=node
+            )
+        if strict and not where_condition:
+            raise ExpressionError(
+                "a comparison is permitted only as the condition of where(cond, a, b) "
+                f"in the {profile} profile",
+                node=node,
+            )
+        for side in (node.left, *node.comparators):
+            _check_structure(side, profile)
+        return
+    if (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "where"
+        and len(node.args) == 3
+    ):
+        condition = node.args[0]
+        if not isinstance(condition, ast.Compare):
+            raise ExpressionError(
+                "where(cond, a, b) needs cond to be one comparison between two "
+                "sub-expressions",
+                node=condition,
+            )
+        _check_structure(condition, profile, where_condition=True)
+        for arg in node.args[1:]:
+            _check_structure(arg, profile)
+        return
+    for child in ast.iter_child_nodes(node):
+        if isinstance(child, ast.expr):
+            _check_structure(child, profile)
+
+
+def _check_symbols(tree: ast.AST, symbols: frozenset[str]) -> None:
+    """Every name that is not a function's own must be bound or declared."""
+    called = {id(n.func) for n in ast.walk(tree) if isinstance(n, ast.Call)}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and id(node) not in called and node.id not in symbols:
+            raise ExpressionError(
+                f"{node.id!r} is not a bound symbol or declared parameter", node=node
+            )
+
+
+def parse_expression(
+    expression: str, profile: GrammarProfile, *, symbols: frozenset[str] | None = None
+) -> ast.Expression:
+    """Parse and validate `expression` in `profile`: the one allow-list walk (02 §4.6)."""
+    if profile in _STRICT and symbols is None:
+        raise ValueError("the objective and factor profiles need their bound symbols")
     tree = ast.parse(expression, mode="eval")
-    _check(tree)
+    _check(tree, profile)
+    _check_structure(tree.body, profile)
+    if symbols is not None:
+        _check_symbols(tree, symbols)
+    return tree
+
+
+def referenced_columns(
+    expression: str, *, profile: GrammarProfile = GrammarProfile.RECIPE
+) -> frozenset[str]:
+    """Column names an expression reads, for lineage and for pre-flight checks."""
+    tree = parse_expression(expression, profile)
+    functions = _functions(profile)
     return frozenset(
         node.id
         for node in ast.walk(tree)
-        if isinstance(node, ast.Name) and node.id not in _FUNCTIONS
+        if isinstance(node, ast.Name) and node.id not in functions
     )
 
 
-def compile_expression(expression: str) -> pl.Expr:
+def compile_expression(
+    expression: str,
+    *,
+    profile: GrammarProfile = GrammarProfile.RECIPE,
+    symbols: frozenset[str] | None = None,
+) -> pl.Expr:
     """Translate a restricted expression into a Polars expression.
 
     Translation, not evaluation. The result is a Polars expression object built node by
     node — Python never runs the user's text, so there is nothing for it to reach out of.
     """
-    tree = ast.parse(expression, mode="eval")
-    _check(tree)
-    return _translate(tree.body)
+    if profile is GrammarProfile.OBJECTIVE:
+        raise ValueError(
+            "the objective profile translates to SymPy: use "
+            "pricing_core.data.expression_sympy.to_sympy"
+        )
+    return _translate(parse_expression(expression, profile, symbols=symbols).body)
 
 
 def _translate(node: ast.AST) -> pl.Expr:
@@ -294,4 +398,14 @@ def _call(name: str, args: list[pl.Expr], *, node: ast.AST) -> pl.Expr:
             return pl.max_horizontal(args)
         case "coalesce":
             return pl.coalesce(args)
+        case "where":
+            return pl.when(args[0]).then(args[1]).otherwise(args[2])
+        case "clip":
+            return args[0].clip(args[1], args[2])
+        case "log1p":
+            return args[0].log1p()
+        case "expm1":
+            # Polars has no `expm1` (premise f); the precision loss near 0 is a `recipe`
+            # and `check` matter only, since `objective` compiles through SymPy.
+            return args[0].exp() - 1
     raise ExpressionError(f"{name!r} is not an allowed function", node=node)

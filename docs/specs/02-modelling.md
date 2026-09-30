@@ -936,6 +936,17 @@ validation checks (`01` §4.5). One grammar, one parser, one security review.
 > bind all four profiles. Before enforcing them, WK-690's slice measures the repository's
 > recipe and check corpus against both limits. If a real expression exceeds one, the slice
 > reports to the deputy rather than raising the limit.
+>
+> *(Amended 2026-09-30, `RL-1265` DP-5: `filter_rows` (`01` FR-35) parses in the `recipe`
+> profile. It is a data-preparation step, and it already used `recipe`'s operator set.)*
+>
+> *(Amended 2026-09-30, RL-1292 (DP-S1-2): the arity of every function, in every
+> profile. `abs`, `round`, `floor`, `ceil`, `log`, `exp`, `sqrt`, `log1p` and `expm1` take
+> exactly one argument. `clip` and `where` take exactly three. `min`, `max` and `coalesce`
+> take one or more. Any other count is refused with a position-accurate error naming the
+> function and the count. An extra argument was silently dropped before this date, so
+> `round(x, 2)` rounded to 0 decimals and `log(x, 10)` was the natural log. Both are now
+> refused. Honouring a second argument is not specified.)*
 
 ```ebnf
 expr      = term , { ("+" | "-") , term } ;
