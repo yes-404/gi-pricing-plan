@@ -106,7 +106,7 @@ routes call, not HTTP**. Three variants, each with the same result:
 | Variant | Job | `dry_run_report_id` | Report and rule outcome | Submit | Approve |
 |---|---|---|---|---|---|
 | missing column (`range` on `no_such_column`) | succeeded | attached | `error`, rule `['error']` | `review` | **`approved`** |
-| unknown check (`no_such_check`) | succeeded | attached | `error`, rule `['error']` | `review` | **`approved`** (`create_rule` did not refuse it) |
+| unknown check (`no_such_check`) | succeeded | attached | `error`, rule `['error']` | `review` | **`approved`** |
 | missing table (`no_such_table`) | succeeded | attached | `error`, rule `['error']` | `review` | **`approved`** |
 
 **Cause:** `attach_dry_run` (`data_handlers.py:292-296`) attaches the report whatever its outcome;
@@ -114,8 +114,13 @@ routes call, not HTTP**. Three variants, each with the same result:
 `approved_rule_dry_run_and_separate_approver` test only that `dry_run_report_id` is non-null. **A
 rule that never executed reaches `approved`**, against `01` §4.5 step 2 ("must execute
 successfully") and `01:470-473`, where the mandatory dry-run is what stops an `error` outcome
-reaching approval. This is the `06:114` gap, and it is in this FD's acceptance. Not tested: a
-dry-run against a version with zero rows. **HIGH stands either way** (the quorum bypass).
+reaching approval. This is the `06:114` gap, and it is in this FD's acceptance. **A non-defect,
+recorded per spec:** `create_rule` accepting an unknown `check` is **not** part of the gap. `01:470`
+says the vocabulary *"is enforced when the rule **runs**, not when it is authored"*, so authoring
+an unknown check is per spec; the defect is that the `error` outcome of its dry-run does not stop
+it reaching approval (the maintainer's `to-lead.md` "2026-09-30 11:32:49 BST", item 1). Not
+tested: a dry-run against a version with zero rows (optional; not measured here). **HIGH stands
+either way** (the quorum bypass).
 
 **Not measured, stated as such:** the **FR-363 evidence floor** (`06:109`, "enforced at
 submission") on the generic path: the submit body has no evidence field, so what enforces it
@@ -162,9 +167,11 @@ Event that discharges it: that slice's merge.
 - red-first cases: **with a quorum of 2, one approval leaves the rule in `review`** (case 4
   becomes a refusal); the direct route is gone or refused; **the generic decide carries** to the
   rule (case 5 now moves it to `approved`);
-- **a rule whose dry-run outcome is `error` is refused at submit** (and at approve): the three
-  variants above (missing column, unknown check, missing table) each become a refusal, red
-  first; a `fail` outcome stays accepted (the measured non-defect). **The layers:** the refusal
+- **a rule whose dry-run outcome is `error` is refused at submit and at approve, one red-first
+  case per cause** (the maintainer's `to-lead.md` "2026-09-30 11:32:49 BST — three rulings: the
+  error-outcome gap; #971 A.4 method; the WK-690 S1 baseline", item 1): missing column, unknown
+  check and missing table each get their own case, for submit and for approve; a `fail` outcome
+  stays accepted (the measured non-defect). **The layers:** the refusal
   is at the **service layer, at submit** (`submit_for_review`, `validation_rules.py:371`) **and at
   approve** (`approve_rule`), each reading the attached report's outcome; and it is the
   **evidence floor** once approval goes through `approvals.submit` (`06:114`, the policy's
