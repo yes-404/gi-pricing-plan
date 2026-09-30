@@ -35,11 +35,9 @@ from pricing_core.safe_error import CodedError
 # ---------------------------------------------------------------------------
 
 _TOLERANT_TABLE_EXPR = "risk_premium_minor * (expense_factor ?? 1.0)"
-#: A lookup's output is always a string in the engine, and the allow-list has no `number()`, so
-#: the factor is chosen by comparing the tier (RL-1312; FD-1317's lookup cases, restated).
-_TOLERANT_LOOKUP_EXPR = (
-    "risk_premium_minor * (expense_factor == 'std' ? 1.1 : (expense_factor == 'hi' ? 2.0 : 1.0))"
-)
+#: A lookup's output is always a string, so arithmetic on it goes through `number()`
+#: (FR-244 as corrected by RL-1322).
+_TOLERANT_LOOKUP_EXPR = "risk_premium_minor * number(expense_factor ?? '1.0')"
 
 
 def _step(algo: dict[str, Any], step_id: str) -> dict[str, Any]:
@@ -108,8 +106,8 @@ def _with_pins(
 
 _EXTRA = {
     "rate_table:motor-expense@2": _rate_table_v2(),
-    "reference_table:expense@1": _ref_table_payload("std", "std"),
-    "reference_table:expense@2": _ref_table_payload("hi", "hi"),
+    "reference_table:expense@1": _ref_table_payload("1.1", "1.25"),
+    "reference_table:expense@2": _ref_table_payload("2.0", "2.5"),
 }
 
 
@@ -233,7 +231,7 @@ def _veh_algo(kind: str, ref: str) -> dict[str, Any]:
         step = {"step_id": "s_veh", "type": "lookup", "label": "Vehicle loading",
                 "reference_table_ref": ref, "key_expr": ["veh"], "as_at": "veh",
                 "on_miss": "default", "consumes": ["veh"], "produces": "veh_loading"}
-        expr = "base_minor * (veh_loading == 'a' ? 1.30 : (veh_loading == 'b' ? 1.80 : 1.0))"
+        expr = "base_minor * number(veh_loading ?? '1.0')"
         produced = "veh_loading"
     else:
         step = {"step_id": "s_veh", "type": "table", "label": "Vehicle factor",
@@ -279,7 +277,7 @@ def _veh_payloads() -> dict[str, dict[str, Any]]:
 
     return {
         "rate_table:veh@1": rate(1, "1.30"), "rate_table:veh@2": rate(2, "1.80"),
-        "reference_table:veh@1": ref("a"), "reference_table:veh@2": ref("b"),
+        "reference_table:veh@1": ref("1.30"), "reference_table:veh@2": ref("1.80"),
     }
 
 

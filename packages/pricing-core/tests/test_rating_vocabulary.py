@@ -40,6 +40,9 @@ _SPEC = Path(__file__).resolve().parents[3] / "docs" / "specs" / "03-rating-engi
     "abs(x - 1)",
     "x != null ? x : 0",
     "1.05",
+    "number(a)",
+    "a * number(b ?? '1.0')",
+    "number('1e3') + abs(number(x))",
 ])
 def test_the_ruled_constructs_are_accepted(text: str) -> None:
     assert check_allow_list(text) is None
@@ -74,6 +77,8 @@ def test_the_ruled_constructs_are_accepted(text: str) -> None:
     ("a | b", "|"),
     ("a $ b", "$"),
     ("date('2020-01-01')", "date"),
+    ("number()", "number"),
+    ("number(a, b)", ","),
     ("1.2.3", "."),
     ("x.5", "."),
 ])
@@ -122,10 +127,8 @@ def _spec_lists(cell: str) -> tuple[set[str], set[str], set[str]]:
             operators |= {token for token in span.split() if not token.isalpha() or token in
                           {"and", "or", "not"}}
     words = set(_spans(_clause(cell, "**Literals:**", "**Functions:**")))
-    functions = {
-        re.match(r"[a-z]+", span)[0]  # type: ignore[index]
-        for span in _spans(_clause(cell, "**Functions:**", "**No rounding function**"))
-    }
+    listed = _clause(cell, "**Functions:**", "**No rounding function**").split(". ")[0]
+    functions = {re.match(r"[a-z]+", span)[0] for span in _spans(listed)}  # type: ignore[index]
     return operators, words, functions
 
 
@@ -135,7 +138,7 @@ def test_the_tokenizer_lists_equal_the_amended_spec_text() -> None:
     assert set(vocabulary.OPERATORS) == operators
     assert set(vocabulary.LITERAL_WORDS) == words
     assert set(vocabulary.FUNCTIONS) == functions
-    assert functions == {"min", "max", "abs"}
+    assert functions == {"min", "max", "abs", "number"}
     assert {"round", "floor", "ceil"}.isdisjoint(functions)
 
 

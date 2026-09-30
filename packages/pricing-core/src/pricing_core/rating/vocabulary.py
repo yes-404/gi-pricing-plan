@@ -25,9 +25,10 @@ OPERATORS: tuple[str, ...] = (
 )
 #: FR-244's **Literals:** clause, beside numbers and single-quoted strings.
 LITERAL_WORDS: tuple[str, ...] = ("true", "false", "null")
-#: FR-244's **Functions:** clause. `min` and `max` take one array literal; there is no rounding
+#: FR-244's **Functions:** clause. `min` and `max` take one array literal, `number` takes one
+#: argument (RL-1322, correcting RL-1312: a lookup's output is a string); there is no rounding
 #: function (RL-1312, OQ-1316).
-FUNCTIONS: tuple[str, ...] = ("min", "max", "abs")
+FUNCTIONS: tuple[str, ...] = ("min", "max", "abs", "number")
 
 _ARRAY_FUNCTIONS = frozenset({"min", "max"})
 _WORD_OPERATORS = frozenset(op for op in OPERATORS if op.isalpha())
@@ -120,6 +121,8 @@ def check_allow_list(text: str) -> str | None:
             structural |= allowed
         elif token in _ARRAY_FUNCTIONS:
             return _refused(token) + " (only the array form `" + token + "([...])` is ruled)"
+        elif token == "number" and tokens[index + 1 : index + 3] == ["(", ")"]:
+            return _refused(token) + " (it takes exactly one argument)"
     for index, token in enumerate(tokens):
         if token in {"[", "]", ","} and index not in structural:
             return _refused(token)
