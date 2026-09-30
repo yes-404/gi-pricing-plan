@@ -155,4 +155,28 @@ placement, not before.
 **Event that next confirms or discharges it:** each of `/jobs`, `/jobs/:id`, `/admin/service-accounts`,
 `/admin/settings` and `/admin/status` has a named owner in the roadmap or a ruling.
 
+## Decision (2026-09-30)
+
+**The maintainer ruled, by delegation: option D (split by view).** Recorded from
+`~/gi-pricing-plan.local/channel/to-lead.md`, the entry "2026-09-30 05:35:06 BST — SCOPE DECISION:
+#949 FD-9693, the `07` §5.3 platform views, option D (split by view)", made on this essay's ownership
+trace at `6987bf9d`. It is a channel entry, not a merged record; the ruling record is the mint turn's.
+
+- **Jobs and Job detail: P2, two WK-675 slices.** Owner **WK-675**. FR-402's UI limb and FR-401
+  bind them, every backend route is built so no spec change is needed, and the regression run needs
+  visible progress. WK-675 goes to **15 slices, about 11.25 / 15 / 30 days, or 16 under (a′)**; the
+  planner states the figures. The slices close `reachability.test.ts`'s waiting exception.
+- **Service accounts: P3, to WK-676.**
+- **Settings and System status: P3, to a P3 platform Work or WK-1251**; the planner names which at the
+  roadmap PR. The move is made by a dated roadmap line. **This is placement, not a cut:** no P2 Work
+  ever owned these three, the change is spec and roadmap only, and nothing is built ahead of the phase.
+  Two of the three need a spec change first (no service-account list `GET`; no status route, and the
+  cache hit rate is not emitted).
+- **The FR-24 mis-cite (evidence item 7) is recorded here and nowhere else.** `PL-809` is frozen and
+  is not edited. The comment at `frontend/src/router/__tests__/reachability.test.ts:32-34` is
+  corrected in the WK-675 Jobs slice that removes the exception.
+- **`/admin/environments` beside `/rating/environments` is not decided here.** It is a spec
+  duplication question, not a scope one. The planner files it as an OQ owned by WK-675, for the
+  decision-maker, at #920's revision; it is not to be settled silently in a plan.
+
 Ownership shape: event
