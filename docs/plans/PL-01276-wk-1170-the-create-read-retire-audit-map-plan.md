@@ -374,16 +374,16 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
     runs once, before the 2026-09-29 amendment of `CLAUDE.md` §14 (`RFC-1248`, `RL-1249`) that
     made an unowned accepted proposal impermissible. **It is text-only**: it reads records under
     `docs/` and `.claude/` and runs no suite, so it needs no gate slot. Its predicate:
-    - **The population** is every `CR-` with `kind: review` under `docs/closures/` whose
-      `created:` is before 2026-09-29. At `daa7f5f8` that is fifteen records, plan reviews 1 to 15
-      (`CR-722`, `CR-723`, `CR-755`, `CR-788`, `CR-823`, `CR-824`, `CR-825`, `CR-830`, `CR-925`,
-      `CR-926`, `CR-932`, `CR-1050`, `CR-1064`, `CR-1167`, `CR-1212`), listed by reading the
-      `kind:` and `created:` fields of every `docs/closures/CR-*.md`. **One boundary record:**
+    - **The population** is sixteen records: every `CR-` with `kind: review` under
+      `docs/closures/` whose `created:` is before 2026-09-29 (at `daa7f5f8`, fifteen: plan reviews 1 to 15,
+      `CR-722`, `CR-723`, `CR-755`, `CR-788`, `CR-823`, `CR-824`, `CR-825`, `CR-830`, `CR-925`,
+      `CR-926`, `CR-932`, `CR-1050`, `CR-1064`, `CR-1167` and `CR-1212`, listed by reading the
+      `kind:` and `created:` fields of every `docs/closures/CR-*.md`), plus one boundary record:
       `CR-1247` (plan review 16) is `created: 2026-09-29`, and its acceptance line cites the
       17:27:28 BST entry, while the §14 amendment's line is the maintainer's entry of 18:57:24 BST
-      that day (`document-ids.md` §1.6, the Phase row's note). It is outside the population by date
-      and inside it by mechanism. **Default: included**, unless the lead's dispatch of Slice 1
-      says otherwise.
+      that day (`document-ids.md` §1.6, the Phase row's note). It is outside the date rule and inside
+      the gap by mechanism. **Included** (the lead, 2026-09-30, on the
+      acceptance-before-amendment timing).
     - **An accepted proposal** is a proposal, recommendation or lettered item in one of those
       records that a dated maintainer acceptance line accepts, in whole or as amended. The line
       may be in the record itself, or in a later record that accepts it (as `CR-823`'s table row 2.2
