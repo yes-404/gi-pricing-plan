@@ -203,12 +203,24 @@ It needs no `docs/process/` amendment. If the maintainer later wants the roles w
 4. **The binding check, and the over-grant sweep.**
    - **Mechanical:** Slice 3 adds a check that each of the seven charters carries DP-2.1's
      line exactly once, shown red on a charter fixture without it.
-   - **By reading — a new `close-workstream` step, which WK-1169 Slice 2 writes:** at every
-     Work close, for each file under `.claude/roles/` changed in the Work's range
-     (`git diff --name-only <base>...<head> -- .claude/roles`), the auditor reads every
-     changed line that has the role write, create, amend, decide or close something. Each is
-     compared with that role's row of the exact owner table (`ownership_matrix()`) and with
-     §1.6's other four columns. A grant §1.6 does not give that role is filed as an `FD-`.
+   - **By reading — a new `close-workstream` step, which WK-1169 Slice 2 writes.**
+     - **When:** at every Work close, **and at every phase close**. The phase close covers
+       standing work that never closes. WK-1178 is `active` maintenance and amended
+       `planner.md` and `lead.md` in #926, and a per-Work sweep would never read those edits.
+       *(Added on auditor-docs' F-6.)*
+     - **Over what:** each file under `.claude/roles/` changed **since the last sweep**. Each
+       sweep records its end commit in the closure record that carries it, and the next sweep
+       starts there: `git diff --name-only <last-swept>..<head> -- .claude/roles`. The first
+       sweep starts at this record's tree.
+     - **What is read:** every changed line that has the role write, create, amend, decide or
+       close something.
+     - **Against what:** **§1.6's cells, read directly, until WK-1169 Slice 3's exact owner
+       table lands, then that table** (`ownership_matrix()` over it), and §1.6's other four
+       columns throughout. Before Slice 3, `ownership_matrix()` is still the name-matching one
+       of item A. It would accept an over-grant such as "the planner opens a Work", so the
+       step must not name it as its reference until then. *(Corrected on auditor-docs'
+       F-7.)*
+     - **Outcome:** a grant §1.6 does not give that role is filed as an `FD-`.
    - The sweep is reading-based and is stated as such. **A mechanical check is not viable**,
      for the reason in item 2: an over-grant is prose, with no syntax a check could read.
      *(Corrected after auditor-docs' audit of `561e329d`. This item said that `RL-9853` item
@@ -320,6 +332,10 @@ Each is shown failing on deliberately broken input (`CLAUDE.md` §13):
   pass it.
 - A charter fixture without DP-2.1's line, or with it twice, fails the pointer check.
 - The over-grant sweep (by reading, WK-1169 Slice 2): a scratch copy of a charter with a
-  **planted over-grant** is put through the sweep's procedure, and the sweep reports it. The
-  planted line is, for example, "the executor writes the Work's closure record". The result
-  is recorded in the slice's evidence.
+  **planted over-grant that only §1.6 catches** is put through the sweep's procedure, and the
+  sweep reports it. The plant is **"the planner opens a Work"** in `planner.md`: the
+  name-matching `ownership_matrix()` of item A lists the planner under `work (WK)` and would
+  accept it, while §1.6's WK row gives opening to the maintainer (`document-ids.md:153`).
+  The result is recorded in the slice's evidence. *(The earlier plant, "the executor writes
+  the Work's closure record", was replaced on auditor-docs' F-7. Even the over-inclusive
+  matrix catches that one, so it could not show the reference is sound.)*
