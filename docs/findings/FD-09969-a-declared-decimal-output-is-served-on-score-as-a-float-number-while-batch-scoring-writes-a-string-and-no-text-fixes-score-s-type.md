@@ -82,7 +82,7 @@ Every measurement is at `origin/main` `8d5c67a56c27a9dcbba8d4e4ad28a1895e1dd862`
 
 **2. What the contracts say, verbatim, with full paths.**
 
-- `docs/contracts/schemas/scoring.schema.json`, `$defs.ScoringResult.properties.outputs` is `{"type": "object"}`: the
+- `docs/contracts/schemas/scoring.schema.json:54`, `$defs.ScoringResult.properties.outputs` is `{"type": "object"}`: the
   values are untyped. (Authored file; the schema's `$defs` are `QuoteContext`, `LadderRung`, `ScoringResult`, `Trace`.)
 - `docs/contracts/schemas/generated/score-comparison.schema.json`, `$defs.ScoringResult.properties.outputs` is
   `{"additionalProperties": true, "title": "Outputs", "type": "object"}`: also untyped (generated from
