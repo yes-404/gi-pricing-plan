@@ -1140,7 +1140,7 @@ The code that the FR-244 ruling, RL-1312, assigns to WK-1178. FR-244's operator 
 id: WK-1250
 family: work
 title: Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
-status: draft
+status: active
 created: 2026-09-29
 owner: maintainer
 phase: P2
@@ -1153,6 +1153,62 @@ Opened `draft` 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 1
 **Demo-able outcome:** **`WF-699` end to end** plus the deployment half of `WF-701` — an
 approved model becomes rate tables, becomes a rating version, passes regression and
 dislocation, and serves a live quote inside the latency budget.
+
+Set `active` 2026-09-30 on the maintainer's entry "2026-09-30 22:33:30 BST — DECISIONS on your 23:05 (WK-1250 S1 blocked; lane re-order; ci-1018)", Decision 1, quoted verbatim: *"2026-09-30 — the maintainer (by delegation) accepts PL-1254 (the WK-1250 map, three slices) as the plan for WK-1250. Resolvers: DP-1, DP-3 and DP-4 by RL-1309. **DP-2 is open** (blocking Slices 2 and 3). Per PL-1254's Activation step 1 the plan stays `draft` until DP-2 has a resolver. WK-1250 is set `active`, and its three `SL-` rows are cut `draft`."* The form follows WK-675 (an active Work with a draft map, `PL-1286`). DP-2's ruling is in preparation; when it mints, `PL-1254` goes `active` (a status flip) and then `PL-1325`.
+
+#### SL-1339 — Slice 1: the sub-graph as a stored, versioned artifact (FR-217's artifact limb)
+
+```yaml
+id: SL-1339
+family: slice
+title: Slice 1: the sub-graph as a stored, versioned artifact (FR-217's artifact limb)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-09-30
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 8cef871d4ec30869dc3ef20559f3cac64e239a5c
+phase: P2
+work: WK-1250
+corrected_by: []
+relates: [PL-1254]
+```
+
+`PL-1254` Task 1; leaf plan `PL-1325` (draft until `PL-1254` is active, its prerequisite 2). Minted as `SL-1339` at this PR's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `8cef871d` (1339 onward).
+
+#### SL-1340 — Slice 2: the pin and the inlining (FR-217's pin and inlining limbs; FR-258's inlined steps)
+
+```yaml
+id: SL-1340
+family: slice
+title: Slice 2: the pin and the inlining (FR-217's pin and inlining limbs; FR-258's inlined steps)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-09-30
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 8cef871d4ec30869dc3ef20559f3cac64e239a5c
+phase: P2
+work: WK-1250
+corrected_by: []
+relates: [PL-1254]
+```
+
+`PL-1254` Task 2. Blocked on DP-2 (open). Minted as `SL-1340` at this PR's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `8cef871d` (1339 onward).
+
+#### SL-1341 — Slice 3: FR-218's purpose mount and the real check (retires `RL-1242`)
+
+```yaml
+id: SL-1341
+family: slice
+title: Slice 3: FR-218's purpose mount and the real check (retires `RL-1242`)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-09-30
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 8cef871d4ec30869dc3ef20559f3cac64e239a5c
+phase: P2
+work: WK-1250
+corrected_by: []
+relates: [PL-1254]
+```
+
+`PL-1254` Task 3. Blocked on DP-2 (open). Minted as `SL-1341` at this PR's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `8cef871d` (1339 onward).
 
 
 
