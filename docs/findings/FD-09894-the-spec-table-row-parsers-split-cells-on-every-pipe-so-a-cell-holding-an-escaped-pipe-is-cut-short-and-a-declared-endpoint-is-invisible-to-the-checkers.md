@@ -14,7 +14,13 @@ relates: [WK-1178]
 
 ## Finding
 
-**Severity: low**, because it silently under-reads the checkers' input. Three copies of one
+**Severity: MEDIUM** (raised from low by the maintainer, `to-lead.md` "2026-09-30 11:46:58 BST —
+#983 (escaped-pipe FD) raised to MEDIUM; the closure-evidence check": `scope-audit` is §13 close
+evidence, so a false completeness figure can have let a closure report coverage the repository
+does not have; see the closure-evidence sweep below). It silently under-reads the checkers'
+input, and **it is a recurrence**: plan review 5 at WK-664's close recorded the same blind spot on
+2026-08-27 with a recommendation and no owner (`docs/closures/CR-00823-plan-review-5-at-wk-664-s-close.md:67-72`,
+item (c)). Three copies of one
 regular expression capture a §5.1 row's path cell with `([^|]+)`: `_ENDPOINT` in
 `scripts/scope-audit.py:68`, `_ENDPOINT_ROW` in `scripts/audit-docs.py:299`, and
 `_SPEC_ENDPOINT` in `backend/src/app/demo/guide.py:64`. Markdown spells a pipe inside a cell as a
@@ -158,14 +164,75 @@ Each hit, and whether the escaped pipe affects it today:
 idiom (`re.split`, `csv`) or a regex that names the pipe by another spelling is not seen. It is a
 listing at one tree.
 
+## Closure-evidence sweep
+
+The maintainer's 11:46:58 entry asks for every closure record (`docs/closures/`) and slice ledger
+(`docs/ledgers/`) that cites a DATA or GOV endpoint coverage figure from `scope-audit`, whether the
+three affected routes were counted, and whether each is built. **Predicates, verbatim** (text
+only; run from the repository root at `daa7f5f8`):
+
+```
+git grep -n -i -E "(declared|published)[ :]+[0-9]+|endpoints? (declared|published)|scope-audit.*--endpoints|--endpoints|[0-9]+ ?% ?published|published.*[0-9]+ ?%" -- docs/closures docs/ledgers
+git grep -n -E "scope-audit(\.py)? (DATA|GOV)|(DATA|GOV) (endpoints|--endpoints)|(DATA|GOV)[^a-z].*(declared|published)|(declared|published).*(DATA|GOV)[^a-z]" -- docs/closures docs/ledgers
+git grep -n -E "(28|33|34|39) ?(/|of) ?(28|33|34|39)( |\)|$|\*)|GOV.{0,40}[0-9]+ ?(/|of) ?[0-9]+|11 ?/ ?20|10 published" -- docs/closures docs/ledgers
+```
+
+The first gives 33 hits (MODEL and RATE figures included); the second and third narrow it to the
+DATA and GOV ones below. **The affected routes were counted in none of them**: the parser cannot
+see them, so every figure below excludes them by construction. Built status is read at
+`origin/main` `daa7f5f8`: a route is built if the generated contract carries it
+(`docs/contracts/openapi/generated.json`) and a router exists under `backend/src/app/api/`.
+
+| Record, line | Created | Figure cited | Hidden routes it would cover | Built? |
+|---|---|---|---|---|
+| `CR-00721` `:47` (WK-660 close) | 2026-08-15 | DATA `--endpoints` **28 / 28 (100 %)** | 01:873 lineage | **yes** (the first commit naming lineage in `api/dataset_versions.py` is `989308b3`, 2026-08-15, "close the Data Workbench"; in `generated.json:17717`) |
+| `CR-00719` `:54` (WK-663 close) | 2026-08-15 | DATA `28 / 28` then **33 / 33** | lineage | yes |
+| `CR-00723` `:25` (plan review 1) | 2026-08-15 | **33/33** endpoints | lineage | yes |
+| `CR-00722` `:34` (plan review 2) | 2026-08-15 | DATA **34 / 34** | lineage | yes |
+| `CR-00722` `:36` (plan review 2) | 2026-08-15 | GOV **11 / 20** | 06:539 dossiers, 06:543 dependencies | **no** (neither is in `generated.json`; no router; `gi-pricing.yaml:439` declares `/dossiers` as a hand-authored stub) |
+| `CR-00819` `:106` (WK-664 close) | 2026-08-27 | DATA **28/28 → 39/39** | lineage | yes |
+| `CR-00823` `:31` (plan review 5) | 2026-08-27 | DATA **39/39**, GOV **13/23** | lineage; dossiers, dependencies | lineage yes; the other two **no** |
+| `CR-00718` `:56-63` (demo entrance) | 2026-08-15 | the demo guide's **63 of 148** endpoints published (`guide.py`'s copy of the regex) | all three | lineage yes; the other two no |
+
+**No slice ledger cites a DATA or GOV endpoint figure**: the second predicate finds only
+catalogue and RATE lines in the ledgers (`LG-00730:527`, `LG-01225:314`).
+
+**Are the unbuilt hidden routes in any closed Work's scope?** **No.** The dossier route
+(06:539) belongs to **WK-680** (P3, `active`, "Dossier generation, commentary blocks, PDF,
+point-in-time regeneration", FR-376 to FR-381). The dependencies route (06:543, FR-384, blast
+radius) is **held by no roadmap row at this tree** (already recorded at
+`PL-01237` `:525`; `RS-00708` `:303` puts FR-383 to FR-385 in Phase 3, not started). **So no
+closed Work's scope hid an unbuilt route**, and none comes to the maintainer under §13's four
+verdicts from this sweep. The one route the false figures did hide from a closed Work's scope,
+lineage, is built. What the sweep does show: the two GOV figures (`CR-00722:36`, `CR-00823:31`)
+were understated by two declared routes, and `CR-00823:67-72` had already named the cause ("fix
+the parser or record the limitation in the close-workstream skill before the WK-664 close counts
+GOV endpoints"); **`.claude/skills/close-workstream/SKILL.md` and
+`.claude/skills/docs-audit/SKILL.md` record no such limitation** (searched for `pipe` and
+`escaped`), and no owner was ever assigned. MODEL, RATE and PLAT figures are unaffected: no
+escaped pipe sits in one of their path cells.
+
 ## Disposition
 
-**Deferred with an owner: #977's slice (DP-S2-4, RL working id 9907), a WK-1178 slice.** Event
-that discharges it: that slice's merge. **Acceptance, red first:** **one shared table-row
-parser**, not per-script regexes and never a fourth (the model is `register-lint.py`'s
-`_split_row`), read by `scope-audit.py`, `audit-docs.py`, `doc-index.py` and, through whatever
-seam the application allows, `demo/guide.py`; **or** pipe-free cells in the three §5.1 rows. The
-red-first case is **01:873: `declared_endpoints("DATA")` goes from 39 pairs to 40**, with GOV
-23 to 25 as a second case, and `doc-index.py --phase P2` no longer raising.
+**Deferred with an owner: #977's slice (DP-S2-4, RL working id 9907), a WK-1178 slice**;
+dm-effort-high carries it in #977 (the 11:46:58 entry). Event that discharges it: that slice's
+merge, except the secondary instance below.
+
+**Acceptance, red first:**
+
+- **one shared table-row parser, a `model-schema` helper modelled on `register-lint.py`'s
+  `_split_row`** (`:165-170`, already correct), importable by the backend and by the scripts,
+  **replacing all three copies** (`scripts/audit-docs.py:299`, `scripts/scope-audit.py:68`,
+  `backend/src/app/demo/guide.py:64`), never a fourth; the register reader
+  (`doc-index.py:1061`) and the other cell splitters read it too (or pipe-free cells in the three
+  §5.1 rows, if the DM so rules within #977);
+- **01:873: `declared_endpoints("DATA")` goes from 39 pairs to 40**, and GOV **23 to 25**, as
+  red-first cases; the demo guide's declared count rises by the same three.
+
+**Secondary instance, in this same FD: `doc-index.py --phase P2` raises** `ValueError:
+findings/register.md: parsed 183 of 185 data row(s)` (evidence 3), because `register.md:197` and
+`:213` hold an escaped pipe. It is loud, but **a P2 phase check that cannot run is a gap before
+the P2 exit review**: its fix, making the phase report run, **red first on `:197` and `:213`,
+lands before the P2 exit review**.
 
 *Drafted under working id 9894.*
