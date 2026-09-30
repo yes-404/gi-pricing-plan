@@ -26,17 +26,18 @@ Make "`approved`" unreachable except through the approval decision path, on **ev
 approval-capable table, **enforced by the database**, so that no write path — ORM, Core,
 raw SQL, bulk, a non-literal value, or a table nothing approves yet — can set it on its own.
 
-**Architecture.** One PL/pgSQL function, installed as a
-`BEFORE INSERT OR UPDATE OF status … FOR EACH ROW` trigger on each of the 8 existing
-approval tables, raises when `NEW.status = 'approved'` (on update, only when
-`OLD.status IS DISTINCT FROM NEW.status`) and
-`current_setting('app.approval_decision', true) IS DISTINCT FROM 'on'`. One context
+**Architecture.** One PL/pgSQL function, installed with per-table arguments as a
+`BEFORE INSERT OR UPDATE OF status, workspace_id, <slug column>, version … FOR EACH ROW`
+trigger on each of the 8 existing approval tables, refuses an `approved` row **without its
+evidence**: on the 5 evidence-only artifact tables, a matching `approved` `approval_requests`
+row must exist; on the two validation tables, evidence **or** the decision flag; on
+`approval_requests` itself, the flag. One context
 manager, `approval_decision()`, in `backend/src/app/platform/approvals.py`, executes
-`SET LOCAL app.approval_decision = 'on'` in the session's transaction and **resets it to
-`'off'` on exit** (T2, below). It is entered at exactly two sanctioned sites and a named,
+`SET LOCAL app.approval_decision = 'on'` in the session's transaction and, on exit, **flushes
+and then resets it to `'off'`** in a `finally` (T2, below). It is entered at exactly two sanctioned sites and a named,
 shrink-only list of allowance sites. The trigger ships as one Alembic revision; an ORM hook
 is optional and secondary; three static checks back it. WK-674 Slice 2 installs the same
-trigger on `deployment_requests` in the migration that creates that table.
+trigger on `deployment_requests`, evidence-only, in the migration that creates that table.
 
 **Tech Stack:** PostgreSQL 16 (PL/pgSQL), Alembic, SQLAlchemy 2.x async, pytest. No new
 dependency: no `uv.lock` or `pyproject.toml` change.
@@ -47,9 +48,9 @@ dependency: no `uv.lock` or `pyproject.toml` change.
   **FR-356** (`06:97`, pinned approvals); `06:22` ("approved" means the same thing for every
   governed artifact).
 - **The ruling this slice executes: #971** (working id 9906), item A.4, sub-items **1–8 and
-  10**, read at head `58ee5ea0c4a73e69a838fe17ebb4b802eb194ec4` (the trigger form, first at
-  `ed879f7b`). **It is still under audit by auditor-close1255**, and two fixes are being added
-  to it (T2 and T3, below); cited by PR number until it mints. Its sub-item 9 sets this
+  10**, read at head `3de69560643b2abc8d20afc923416a4ef66104a1` (the **evidence-based** trigger form, which adopts the
+  maintainer's 11:55:31 BST steer and carries T2 and T3). **It is still under audit by
+  auditor-close1255**; cited by PR number until it mints. Its sub-item 9 sets this
   slice's scope and order.
 
 **What this plan implements.** WK-674's map plan **PL-1237**, Task 2, as **split** by the
@@ -77,10 +78,11 @@ in Slice 2's leaf plan (#973, working id 9920) by its own dated delta. `PL-1237`
 edited.
 
 **Activation needs, in order:**
-1. **#971 audit-clean and minted**, with T2 and T3 in it, and the maintainer's
-   evidence-based steer (the entry headed `2026-09-30 11:55:31 BST — #971 trigger at ed879f7b: T1–T3 agreed; the forgeable-flag residual gets a steer toward an evidence-based condition`) ruled either way. This
-   plan is then aligned to the minted text by a dated delta; every item below that depends
-   on an unsettled point is marked **pending #971**.
+1. **#971 audit-clean and minted.** At `3de69560643b2abc8d20afc923416a4ef66104a1` it carries T2, T3 and the evidence-based
+   condition (the maintainer's steer headed
+   `2026-09-30 11:55:31 BST — #971 trigger at ed879f7b: T1–T3 agreed; the forgeable-flag residual gets a steer toward an evidence-based condition`,
+   adopted). If the audit changes it, this plan is aligned to the minted text by a dated
+   delta.
 2. **The lead's go.**
 
 ## Acceptance Standard
@@ -114,15 +116,36 @@ and the guard restored.
    executor re-derives it and quotes it. Red first: a planted status column with neither
    declaration fails; a planted wrong marker on a column whose CHECK names `'approved'`
    fails.
-2. **The trigger** (sub-item 2). One PL/pgSQL function and one
-   `BEFORE INSERT OR UPDATE OF status … FOR EACH ROW` trigger per table of item 1's set, in
-   one Alembic revision (precedent: `backend/migrations/versions/61981ea8f274_custom_metrics.py`
-   installs PL/pgSQL triggers). It refuses when `NEW.status = 'approved'` (on update, only
-   when `OLD.status IS DISTINCT FROM NEW.status`) and
-   `current_setting('app.approval_decision', true) IS DISTINCT FROM 'on'` — never `= ''` or
-   `IS NULL`, since a used setting reads `''` after its transaction. Its SQLSTATE maps to one
-   named refusal in the platform's error translation. `OF status` narrows only UPDATE, so
-   every INSERT, including one relying on a column default, fires it.
+2. **The trigger, evidence-based** (sub-item 2, at `3de69560643b2abc8d20afc923416a4ef66104a1`). One PL/pgSQL function in one
+   Alembic revision (precedent: `backend/migrations/versions/61981ea8f274_custom_metrics.py`
+   installs PL/pgSQL triggers), installed on each table of item 1's set with `TG_ARGV`
+   `(artifact type, slug column[, 'flag'])`. It checks whenever `NEW.status = 'approved'` on
+   an INSERT, or on an UPDATE of `status`, `workspace_id`, the slug column or `version`
+   (the `UPDATE OF` list), so re-pointing an approved row is re-checked. It requires:
+   - **on the 5 evidence-only tables** (`models`, `custom_metrics`, `custom_objectives`,
+     `peril_structures`, `rating_versions`): an `approval_requests` row with
+     `workspace_id = NEW.workspace_id`, `status = 'approved'` and `artifact_ref` equal to the
+     row's ref, committed or written earlier in the same transaction (`decide` writes it at
+     `:416` and flushes at `:419`, before the carry). **The flag never satisfies it**;
+   - **on `validation_rules` and `validation_rule_sets`**: evidence **or** the flag (their
+     triggers carry the `'flag'` argument). Every allowance site of item 7 writes one of these
+     two tables and no other. When a table's last allowance site goes, a migration removes its
+     `'flag'` argument — shrink-only;
+   - **on `approval_requests`**: the flag, behind `decide`'s existing guards
+     (`SUBMITTER_CANNOT_APPROVE` `:330`, `AUTHOR_CANNOT_APPROVE` `:351`,
+     `DUPLICATE_APPROVER` `:407` with `uq_approval_decisions_one_each`, and the quorum count
+     `:540-554`).
+
+   The function composes the ref as
+   `TG_ARGV[0] || ':' || (to_jsonb(NEW) ->> TG_ARGV[1]) || '@' || NEW.version`; the slug
+   column is `slug`, except `models`, where it is `model_family_slug`
+   (`backend/src/app/platform/modelling.py:1152-1154`). The flag comparison is
+   `IS DISTINCT FROM 'on'`, never `= ''` or `IS NULL`. Its SQLSTATE maps to one named
+   refusal in the platform's error translation. **The ref pin:** the ref format now has a
+   second writer, in SQL, so a test inserts a row on each of the 7 artifact tables and
+   asserts the trigger's composed ref equals `str(ArtifactRef(type=…, slug=…, version=…))`
+   (`packages/model-schema/src/model_schema/refs.py:75`; stored by `approvals.submit`,
+   `backend/src/app/platform/approvals.py:247`). Red first on a planted `'/'` separator.
 3. **Every write form is refused, red first, against a database migrated to head**
    (sub-item 7): the five bypasses of the ORM guard at `80afeb40` — a Core `update()` on the
    `Table`, raw `text()`, `bulk_update_mappings`, a non-literal value
@@ -132,12 +155,23 @@ and the guard restored.
    set**, a direct `approved` write outside the context is refused. **With the trigger
    dropped in a scratch database, each of those writes succeeds** and the test fails.
    `peril_structures` has no sanctioned writer and is guarded all the same (sub-item 8).
+   **The evidence cases**, each red first, on each of the 5 evidence-only tables:
+   `set_config('app.approval_decision', 'on', true)` followed by an approved write — a
+   **forgery** — is refused; an approved write whose only approved request names **another
+   version** of the same slug, **another workspace's** ref, or a request **still in
+   `review`**, is refused; **re-pointing** an approved row's `version` to a ref with no
+   approved request is refused; and with the evidence condition replaced by the flag check,
+   the forgery case fails.
 4. **The flag: `SET LOCAL`, spanning the write and its flush, and reset on exit.**
    - `approval_decision()` executes `SET LOCAL app.approval_decision = 'on'` (sub-item 3)
-     and, on exit (in a `finally`), `SET LOCAL app.approval_decision = 'off'` — **T2**,
-     being added to #971 by auditor-close1255's finding that `SET LOCAL` otherwise lasts to
-     the end of the transaction. Red first: an `approved` write **after** the block, in the
-     same unit of work, is refused.
+     and, on exit, **flushes the session and then**, in a `finally`, executes
+     `SET LOCAL app.approval_decision = 'off'` — **T2** (auditor-close1255's W1 and W2:
+     `SET LOCAL` lasts to the end of the transaction). The flush before the reset lets the
+     block's own pending write meet the trigger while the flag is on; a write left unflushed
+     is flushed later under `'off'` and refused, which fails closed. Red first: an
+     `approved` write **after** the block, in the same unit of work, is refused (without the
+     reset, this case fails). **No leak:** the next transaction on the same pooled
+     connection reads the flag as not `'on'`, red first against a session-level `SET`.
    - **Positive control (M2):** `decide` assigns at
      `backend/src/app/platform/approvals.py:416` and flushes at `:419`; the block covers
      both. `Database.unit_of_work` (`backend/src/app/db/session.py:69`) is one transaction
@@ -152,8 +186,11 @@ and the guard restored.
 5. **Three static checks, by name** (sub-items 3–4), each red first on a planted
    violation: `approval_decision()` is entered nowhere in `backend/src` or `examples/`
    except the two sanctioned sites and item 7's allowance sites; the literal
-   `app.approval_decision` appears nowhere else in `backend/src`, `backend/migrations` or
-   `examples/`; and no SQL string in `backend/src` or `examples/` sets
+   `app.approval_decision` appears **only** in `backend/src/app/platform/approvals.py` (which
+   defines `approval_decision()`) and the guard's migration — nowhere else in `backend/src`,
+   `backend/migrations` or `examples/`; the allowance sites enter the context manager and
+   never name the flag; the scan also refuses a session-level `SET` (without `LOCAL`) or
+   `set_config(…, false)`; and no SQL string in `backend/src` or `examples/` sets
    `session_replication_role` (the one mention in `backend/src`,
    `platform/objectives.py:108`, is docstring prose). `backend/tests/` is exempt, and
    nothing else. The check also fails any `create_task`, `gather` or `run_in_executor`
@@ -204,13 +241,10 @@ and the guard restored.
    `test_paired_quantile_models.py`, `test_rate_tables_service.py`,
    `test_rating_version_compile.py`, `test_rating_versions.py`, `test_reference_pin.py`,
    `test_validation_reports.py`, `test_wf01_journey.py`.
-9. **Evidence-based authorisation — pending #971** (the maintainer's steer headed
-   `2026-09-30 11:55:31 BST — #971 trigger at ed879f7b: T1–T3 agreed; the forgeable-flag residual gets a steer toward an evidence-based condition`, for the decision-maker to rule). If adopted, an artifact row
-   may become `approved` only when a matching `approved` `approval_requests` row exists for
-   its reference and version, while `approval_requests`' own transition keeps the flag plus
-   separation of duties, quorum and evidence. Red first then gains: a forged
-   `set_config('app.approval_decision', 'on', true)` with no decided request is refused; and
-   a decided request for **another version** does not authorise this one.
+9. **Evidence-based authorisation — adopted** (#971 at `3de69560643b2abc8d20afc923416a4ef66104a1`, on the maintainer's steer headed
+   `2026-09-30 11:55:31 BST — #971 trigger at ed879f7b: T1–T3 agreed; the forgeable-flag residual gets a steer toward an evidence-based condition`).
+   Carried by items 2 and 3. Forging an approved artifact on the 5 evidence-only tables now
+   takes a forged, decided `approval_requests` row.
 10. **The migration (FR-417).** One revision; `down_revision` is the head at the executor's
     tree (re-pointed at merge, RL-1263). `upgrade`, `downgrade -1`, `upgrade` exit 0, and
     after `downgrade -1` `pg_trigger` shows the trigger and function gone from **every**
@@ -221,9 +255,13 @@ and the guard restored.
       `session_replication_role = replica`, which needs superuser (used on purpose by the
       teardown and by the audit tamper tests, `test_audit.py:168`, `:194`;
       `test_api_audit.py:153`);
-    - **the advisory residual** (auditor-close1255): any code able to run SQL can call
-      `set_config('app.approval_decision', 'on', true)`, so the flag's authority rests on
-      item 5's literal static scan. Item 9, if adopted, removes this for artifact rows;
+    - **the residual: the flag is not a capability** (auditor-close1255's advisory). Any code
+      on the application's connection can run
+      `SELECT set_config('app.approval_decision', 'on', true)`. Under the evidence
+      condition that forgery is refused on the 5 evidence-only tables; what the flag still
+      opens is `approval_requests`' own transition, and the two validation tables while they
+      hold an allowance. The literal scan of item 5 guards the flag, and a literal assembled
+      at run time (concatenated, or in an f-string) evades it — named, not hidden;
     - Alembic data migrations are covered by the trigger; one that must write `approved`
       sets the flag in SQL, which the second static check refuses unless reviewed. At the
       close the auditor runs
@@ -320,7 +358,7 @@ The executor re-reads each at its own tree and stops on any that no longer holds
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| — | None of this plan's own. The guard's design is #971's (A.4); its open points (T2, T3, the evidence-based steer) are being ruled there (**Status**, activation need 1) | — | — | — | — | — |
+| — | None of this plan's own. The guard's design is #971's (A.4), which carries T2, T3 and the evidence-based condition at the cited head, still under audit (**Status**, activation need 1) | — | — | — | — | — |
 
 The order against the validation-rule fix slice is a recommendation for the lead
 (**Serialisation**), not a decision point.
@@ -333,9 +371,9 @@ The order against the validation-rule fix slice is a recommendation for the lead
 
 - [ ] `pwd` is the executor's worktree; `git branch --show-current` is the slice branch;
   `uv sync --all-packages`.
-- [ ] Confirm #971 is merged and minted, with T2 and T3, and the evidence-based steer ruled;
-  **stop if not**. Align every "pending #971" item to it by a dated delta before the first
-  code step.
+- [ ] Confirm #971 is merged and minted; **stop if not**. If its minted text differs from
+  the head this plan cites, align this plan to it by a dated delta before the first code
+  step.
 - [ ] Re-derive premises a–h and item 1's set; quote both.
 - [ ] `gh pr list --state open`; read anything ruling on approvals, the guard or the
   validation rules; name the SHA read. Run the serialisation check against every slice in
@@ -362,7 +400,10 @@ trigger's SQLSTATE; `backend/tests/test_approval_guard.py`; `backend/tests/conft
 - [ ] The revision (Acceptance 2), over the set Task 1 derives; the downgrade drops the
   trigger and function from every table.
 - [ ] Red first, Acceptance 3's forms on every table, each also shown to succeed with the
-  trigger dropped in a scratch database.
+  trigger dropped in a scratch database; then Acceptance 3's evidence cases on the 5
+  evidence-only tables, including the flag-only substitution that makes the forgery case
+  fail.
+- [ ] The ref pin test of Acceptance 2, red first on a planted `'/'` separator.
 - [ ] The round trip, head and head−1, and `tests/test_repository_invariants.py`; commit.
 
 ### Task 3: The decision path sets and resets the flag
@@ -408,7 +449,9 @@ Slice 2 as the lead sets.
   Task 4); 6 (Acceptance 8, Task 4); 7 (Acceptance 3); 8 (Acceptance 3); 10 (Acceptance 6,
   Task 2).
 - **auditor-close1255 on `ed879f7b`:** T2 (Acceptance 4, Task 3), T3 (Acceptance 6, Task 2),
-  the advisory residual (Acceptance 11).
+  the advisory residual (Acceptance 11). **#971 at `3de69560643b2abc8d20afc923416a4ef66104a1`** (evidence-based, still under
+  audit): Acceptance 2's per-table requirement and ref pin, 3's evidence cases, 4's
+  flush-then-reset and no-leak case, 5's narrowed scan, 9 adopted, 11's residual.
 - **auditor-plans' seven trigger items:** the revision count and downgrade with `pg_trigger`
   per table (Acceptance 10); `SET LOCAL` replacing the ContextVar as the guarantee
   (Acceptance 4; the ContextVar stays only for the static checks); the ORM hook secondary
@@ -418,5 +461,5 @@ Slice 2 as the lead sets.
   (Acceptance 11). Also M1's caveat as the fourth cross-check (Acceptance 1).
 - **Maintainer entries applied:** 11:21:51 (1), 11:23:26 (7, Serialisation), 11:42:08 and
   11:43:28 (12), 11:44:15 (Architecture, 2–5), 11:45:55 (6), 11:48:28 (Status, Global
-  Constraints), 11:55:31 (9, pending).
+  Constraints), 11:55:31 (2, 3, 9, adopted in #971).
 - **Open:** no decision point of this plan's own. Activation waits on #971.
