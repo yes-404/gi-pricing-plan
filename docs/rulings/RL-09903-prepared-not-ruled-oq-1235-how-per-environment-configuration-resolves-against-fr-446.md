@@ -33,7 +33,7 @@ Working id 9903 was checked free on `origin/main` and every `origin/*` branch.
 
 ## Verified first, at aa14e90dd77c7461aa35cc6461557b129959463f
 
-**The question** (`docs/open-questions.md:194`; mirror `docs/specs/07-platform.md:513`): how
+**The question** (`docs/open-questions.md:196`; mirror `docs/specs/07-platform.md:513`): how
 is per-environment configuration resolved, when `07` FR-446's precedence has no Environment
 level?
 
@@ -67,6 +67,12 @@ level?
 guarded by `admin:manage_settings` (`RL-1236` DP-D) with an Audit Event naming environment,
 key, old and new value; FR-430's monitoring-configuration limb; NFR-496's prod-sampling rate;
 and — later, Slice 6 — DP-2's per-environment FR-270/FR-271 enablement.
+
+*Refreshed 2026-09-30 onto main `0bc69b5b2c3c16ec8391387cdfab19734ff85d2b`. The deciding
+evidence is unchanged there: `git diff aa14e90d 0bc69b5b --stat` over
+`backend/src/app/platform/settings.py`, `packages/model-schema/src/model_schema/settings.py`
+and `docs/specs/07-platform.md` is empty, and each cited line re-reads the same. `OQ-1235`
+is still open. One cite moved: the open-questions row is now `:196`.*
 
 ## Options
 
