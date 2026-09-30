@@ -65,8 +65,8 @@ Run at `origin/main` `32f3fa92afad81d1be611b21ae16ff35211eded8`, 2026-09-30, by 
    and arithmetic results: Decimal(100).normalize() -> 1E+2 | dumps: {"a":"1E+2","r":"1"}
 ```
 
-**2. The uses.** `DecimalStr` is the type of **13 fields in 11 models** (`git grep -n -E ":\s*(tuple\[|list\[)?(DecimalStr|Relativity)"
--- packages/model-schema/src`, minus `money.py`): `DoubleLiftBin.exposure_years` (`comparison.py:136`),
+**2. The uses.** `DecimalStr` is the type of **13 fields in 11 models** (`git grep -n -E ":\s*(tuple\[|list\[)?(DecimalStr|Relativity)\b"
+-- packages/model-schema/src`, then `grep -v money.py`: **13 lines**, rerun at `7a81cf27`; without the `\b` it is 14, because `comparison.py:196`, `tuple[RelativityDifference, …]`, matches through the `Relativity` prefix): `DoubleLiftBin.exposure_years` (`comparison.py:136`),
 `VersionTotals.exposure_years` (`datasets.py:281`), `AeCell.exposure_years` (`diagnostics.py:93`),
 `LiftBin.exposure_years` (`:114`), `BandingMinimums.min_exposure_per_band` (`modelling.py:334`),
 `LargeLossTreatment.restoration_loading` and `.loading_factor` (`perils.py:155`, `:165`),
@@ -153,6 +153,45 @@ for f in files:
         pop[k] += 1; where[(f.split("/")[0], os.path.splitext(f)[1])] += 1
 print("ref", ref, "| quoted plain-decimal values under a DecimalStr field name:", sum(pop.values()), dict(pop))
 print("by (top dir, ext):", dict(where))
+```
+
+*The driver the control calls, `decexp.py`, verbatim (the control runs it in its scratch repository, so the essay holds both scripts; save this as `/tmp/scan/decexp.py`):*
+
+```python
+"""Committed files holding a decimal in exponent form as a quoted string (the shape `DecimalStr` serialises).
+Reads the tracked blobs of a git ref (default HEAD), never the working tree."""
+import collections, os, re, subprocess, sys
+ref = sys.argv[1] if len(sys.argv) > 1 else "HEAD"
+FIELDS = ("exposure_years", "min_exposure_per_band", "restoration_loading", "loading_factor", "tolerance", "exposure", "lower", "upper", "factor")
+Q = re.compile(r"""(?:"|')(-?\d+(?:\.\d+)?[eE][+-]?\d+)(?:"|')""")
+KEYED = re.compile(r"""(?:"|')(%s)(?:"|')\s*:\s*\[?\s*(?:"|')(-?\d+(?:\.\d+)?[eE][+-]?\d+)(?:"|')""" % "|".join(FIELDS))
+files = [f.decode() for f in subprocess.run(["git", "ls-tree", "-r", "-z", "--name-only", ref], capture_output=True).stdout.split(b"\0") if f]
+tot = collections.Counter(); byclass = collections.Counter(); hits = []; keyed = []
+skipped = 0
+for f in files:
+    blob = subprocess.run(["git", "show", f"{ref}:{f}"], capture_output=True).stdout
+    try:
+        text = blob.decode("utf-8")
+    except UnicodeDecodeError:
+        skipped += 1; continue
+    tot["files_scanned"] += 1
+    m = Q.findall(text)
+    if m:
+        ext = os.path.splitext(f)[1].lower() or "(none)"
+        byclass[(f.split("/")[0], ext)] += len(m)
+        hits.append((f, len(m), sorted(set(m))[:4]))
+        tot["quoted_exponent_strings"] += len(m)
+    for k in KEYED.findall(text):
+        keyed.append((f, k))
+print("ref:", ref, subprocess.run(["git", "rev-parse", ref], capture_output=True, text=True).stdout.strip())
+print("files scanned:", tot["files_scanned"], "(binary/undecodable skipped:", skipped, ")")
+print("quoted exponent-form strings:", tot["quoted_exponent_strings"], "in", len(hits), "files")
+print("by (top dir, extension):", dict(byclass))
+for h in hits:
+    print("  HIT", h)
+print("keyed to a DecimalStr field name:", len(keyed))
+for k in keyed:
+    print("  KEYED", k)
 ```
 
 *The positive-control script, `decexp_ctl.py`, verbatim:*
