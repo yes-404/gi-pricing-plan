@@ -246,7 +246,9 @@ WK-1170 Slice 1 ─→ Slice 1  the ownership map (docs) ─→ Slice 2  the cha
 - **Recommended order:** 1 → 2 → 3, with 4 in any gap that WK-1170's Slice 2 is not using.
 
 **Sizing, like for like with the P2 sizing table** (its rates: 0.5 / 0.75 / 1.5 days per slice;
-rulings acceptance 0 / 0.25 / 0.5, since this plan is now drafted; the close 0.25 / 0.5 / 1).
+a map plan not yet drafted 0.25 / 0.5 / 1, which the table's band below uses; rulings acceptance
+0 / 0.25 / 0.5 in its place once the plan is drafted, which the figures here use; the close
+0.25 / 0.5 / 1).
 Four slices give:
 - best 4 × 0.5 + 0 + 0.25 = **2.25**;
 - likely 4 × 0.75 + 0.25 + 0.5 = **3.75**;
@@ -256,10 +258,8 @@ The sizing table's band for this Work is **1.5 / 3.25 / 9.5**, assumed at 2–5 
 is a local working file of the planner's (`~/gi-pricing-plan.local/scratch/planner-wk674-2/p2-sizing.md`,
 row WK-1169), not in the repository, so a reader cannot reproduce it from here. Its figures are
 given inline: the band is best 2 × 0.5 + 0.25 (map plan not yet drafted) + 0.25 (close) = 1.5;
-likely 3 × 0.75 + 0.5 + 0.5 = 3.25; worst 5 × 1.5 + 1 + 1 = 9.5. Its rates are 0.5 / 0.75 / 1.5
-days per slice, 0.25 / 0.5 / 1 for a map plan not yet drafted, and 0.25 / 0.5 / 1 for the close.
-The figures above this plan's band use 0 / 0.25 / 0.5 for rulings acceptance in place of the
-map-plan overhead, because the plan is now drafted. Four is inside the
+likely 3 × 0.75 + 0.5 + 0.5 = 3.25; worst 5 × 1.5 + 1 + 1 = 9.5, at the rates quoted where the Sizing
+paragraph opens, with the not-yet-drafted overhead. Four is inside the
 slice range. Best and likely sit above the band's (2.25 against 1.5, 3.75 against 3.25); worst sits
 below it. Only Slice 3 holds a gate slot, so the code lane carries one slice: 0.5 / 0.75 / 1.5.
 
