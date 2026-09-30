@@ -77,6 +77,20 @@ this role file it. RL-881 still reads `superseded_by: ~` and `corrected_by: []` 
 
   The ruling pass decides whether to take finding 3 into this correction (see option (c)).
 
+*Refreshed 2026-09-30 onto main `0bc69b5b2c3c16ec8391387cdfab19734ff85d2b`. Every
+deciding-evidence claim was re-read there and holds at the same lines:
+- `06-governance.md:344-352` (and its dated fix at `:355-358`);
+- `approvals.py:101-108`;
+- `RL-1184` E4 (`:114`);
+- `PL-1267` e′;
+- `RL-1264` `:132`;
+- `_regression_run_gate` (`rating_versions.py:289`, `:619`);
+- `GOLDEN_QUOTE_MISMATCH` (`errors.py:353`, `rating_versions.py:597`).
+
+`delivery-process.md` still does not cite 881 (rc 1). No record on main `corrects:` or
+supersedes RL-881 (`git grep '^corrects: RL-881'` rc 1), and RL-881 on main still reads
+`corrected_by: []`.*
+
 ## Options
 
 | | Option | For | Against |
