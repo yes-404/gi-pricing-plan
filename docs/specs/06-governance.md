@@ -192,14 +192,7 @@ auditor, or a regulator:
   "role": {
     "slug": "pricing-actuary",
     "name": "Pricing Actuary",
-    "permissions": [
-      "dataset:read", "dataset:create_version", "dataset:acknowledge_warning",
-      "factor:write", "banding:write", "grouping:write",
-      "model:fit", "model:submit",
-      "rating_algorithm:write", "rate_table:write", "rating_version:submit",
-      "optimisation:run", "optimisation:materialise",
-      "monitor:write", "alert:acknowledge", "alert:resolve"
-    ],
+    "permissions": "BUILTIN_ROLES[\"pricing_actuary\"] — see below",
     "builtin": true
   },
   "assignment": {
@@ -214,6 +207,14 @@ auditor, or a regulator:
   }
 }
 ```
+
+*(Amended 2026-09-30, `RL-9856` (working id) item D4, on `CR-1247` Proposal 1 (c): the
+example's permission list is replaced by a reference.)* A built-in role's permission set is
+**`BUILTIN_ROLES`** in `packages/model-schema/src/model_schema/permissions.py`, the one
+definition of the names and of the built-in role sets (ADR-704). This page states what each
+name governs (the tables below) and never restates a role's set. The list this example
+carried named sixteen permissions, twelve of which the platform never defined. Their
+successors are in the tables below.
 
 Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:decide`
 *(amended 2026-09-28, `RL-1236` DP-C: one approval permission)* and
@@ -257,23 +258,40 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 > `RL-1236`'s decision points are decided, and every ruled name is listed.)*
 >
 > **Built and now specified.** Each is checked by the route or service named in `RL-1236`, and
-> is part of the closed vocabulary §3.1 describes:
+> is part of the closed vocabulary §3.1 describes. *(Amended 2026-09-30, `RL-9856` (working id)
+> item D4.)* **This table has exactly one row per member of `model_schema.Permission`.** The
+> names are the enum's, and this table states their meaning. A gate check holds the two equal
+> in both directions (`RL-9856` D1 and D2). A new permission lands in one commit: its row
+> here, its enum member, and its check (FR-367). **Check owner** names the Work that builds a
+> member's first check, and is empty once a check exists. The eleven members this table
+> lacked until 2026-09-30 are added, each with its governing text and that text's source:
 >
-> | Permission | Governs |
-> |---|---|
-> | `dataset:validate` | Running validation on a Dataset Version |
-> | `rating:read` | Reading Rating Algorithms, Rate Tables, Rating Versions and scoring traces |
-> | `rating:compile` | Compiling a Rating Version to its Bundle |
-> | `audit:read` | Reading the audit log |
-> | `score:execute` | Real-time scoring (a Service Account may hold it, FR-347) |
-> | `score:batch` | Batch scoring (a Service Account may hold it, FR-347) |
-> | `job:read` | Reading Jobs |
-> | `job:cancel` | Cancelling a Job |
-> | `settings:read` | Reading workspace settings |
-> | `admin:manage_settings` | Changing workspace settings and reference data, and every per-environment setting value: `07` FR-431's settings, and FR-270/FR-271's routing and shadow switches and shadow configuration (DP-D). Each change writes an Audit Event naming the environment, the key, the old value and the new value. Nothing it guards can change which Rating Version prices a live quote |
-> | `admin:manage_service_accounts` | Creating, rotating and revoking Service Accounts |
-> | `admin:break_glass` | Break-glass elevation (FR-349) |
-> | `admin:manage_environments` | The Environment record's lifecycle: create, rename, retire (`07` FR-428). Not its settings, which are `admin:manage_settings`. Owned by WK-674 Slice 2, whose route is its first check |
+> | Permission | Governs | Check owner |
+> |---|---|---|
+> | `dataset:read` | Reading Datasets, Dataset Versions and their validation reports and profiles (the dataset read routes; before 2026-09-30 no `06` text named it) |  |
+> | `dataset:write` | Creating Datasets and Dataset Versions, and writing blobs, validation rules and ingestion (`RL-1236` DP-A, which folds `dataset:create_version` into it) |  |
+> | `dataset:validate` | Running validation on a Dataset Version |  |
+> | `dataset:acknowledge_warning` | Acknowledging a validation `warn` with a justification (§3.3's Dataset Version row, `01` FR-46; §2's Permission term) |  |
+> | `model:read` | Reading Models, Model Specs and their diagnostics (the superseded note above: "the built surface checks `model:read`, `model:fit` and `model:submit`") |  |
+> | `model:fit` | Fitting a Model, and writing Factors, Bandings and Groupings (`RL-1236` DP-A). It governs catalogue Custom Objectives (FR-366) |  |
+> | `model:submit` | Submitting a Model, or a catalogue Custom Objective, for approval (the notes above; FR-367) |  |
+> | `rating:read` | Reading Rating Algorithms, Rate Tables, Rating Versions and scoring traces |  |
+> | `rating:write` | Writing Rating Algorithms and Rate Tables, and creating a Rating Version (`RL-1236` DP-A) |  |
+> | `rating:submit` | Submitting a Rating Version for approval (the mapped note below) |  |
+> | `rating:compile` | Compiling a Rating Version to its Bundle |  |
+> | `approval:decide` | Deciding an approval request. Which roles may decide which artifact type is §4.2's `approver_roles` (`RL-1236` DP-C, the note below) |  |
+> | `deployment:promote` | Deploying an approved Rating Version to an Environment (`03` FR-267; R1, FR-347; `RL-1232` DP-6) | WK-674 |
+> | `audit:read` | Reading the audit log |  |
+> | `score:execute` | Real-time scoring (a Service Account may hold it, FR-347) |  |
+> | `score:batch` | Batch scoring (a Service Account may hold it, FR-347) |  |
+> | `job:read` | Reading Jobs |  |
+> | `job:cancel` | Cancelling a Job |  |
+> | `settings:read` | Reading workspace settings |  |
+> | `admin:manage_roles` | Changing permissions, roles and role assignments (FR-348), and the workspace Approval Policy, "a permission change written in another table" |  |
+> | `admin:manage_settings` | Changing workspace settings and reference data, and every per-environment setting value: `07` FR-431's settings, and FR-270/FR-271's routing and shadow switches and shadow configuration (DP-D). Each change writes an Audit Event naming the environment, the key, the old value and the new value. Nothing it guards can change which Rating Version prices a live quote |  |
+> | `admin:manage_service_accounts` | Creating, rotating and revoking Service Accounts |  |
+> | `admin:break_glass` | Break-glass elevation (FR-349). Checked in the service layer, not by a route (`RL-9856` D1) |  |
+> | `admin:manage_environments` | The Environment record's lifecycle: create, rename, retire (`07` FR-428). Not its settings, which are `admin:manage_settings`. Its route, WK-674 Slice 2's, is its first check | WK-674 |
 >
 > **Mapped: the same capability under two names; the code's name survives.**
 > `rating_version:submit` (the Pricing Actuary set above) is `rating:submit`.
@@ -290,17 +308,37 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 > datasets, blobs, validation rules and ingestion. The per-artifact split in the role example
 > above is carried to WK-676 (Phase 3, scoped assignments).
 >
+> **Names used before, and the enum name each maps to** *(added 2026-09-30, `RL-9856` (working
+> id) item D4: the aliases of the notes above, as a table the gate check reads)*:
+>
+> | Name used before | Enum name |
+> |---|---|
+> | `rating_version:submit` | `rating:submit` |
+> | `custom_objective:submit` | `model:submit` |
+> | `rating_algorithm:write` | `rating:write` |
+> | `rate_table:write` | `rating:write` |
+> | `factor:write` | `model:fit` |
+> | `banding:write` | `model:fit` |
+> | `grouping:write` | `model:fit` |
+> | `dataset:create_version` | `dataset:write` |
+>
 > **One approval permission (decided 2026-09-28, `RL-1236` DP-C):** `approval:decide`. Which
 > roles may approve an artifact type is the `ApprovalPolicy` entry's `approver_roles` (§4.2),
 > and from Phase 3 also the scope of the assignment. There are no per-type `*:approve`
 > permissions.
 >
-> **Specified and not yet built, carried to the Work that builds it:**
-> - `custom_objective:author` → WK-690 (FR-367);
-> - `monitor:write` → WK-687;
-> - `alert:acknowledge` and `alert:resolve` → WK-688;
-> - `optimisation:run` → WK-684;
-> - `optimisation:materialise` → WK-686.
+> **Specified and not yet built, carried to the Work that builds it.** A name here is **not**
+> an enum member. Its row moves to the table above in the commit that adds the member and its
+> check *(table form 2026-09-30, `RL-9856` (working id) item D4)*:
+>
+> | Permission | Owner Work |
+> |---|---|
+> | `custom_objective:author` | WK-690 (FR-367) |
+> | `monitor:write` | WK-687 |
+> | `alert:acknowledge` | WK-688 |
+> | `alert:resolve` | WK-688 |
+> | `optimisation:run` | WK-684 |
+> | `optimisation:materialise` | WK-686 |
 
 ### 4.2 `ApprovalPolicy` (workspace defaults)
 
