@@ -97,7 +97,7 @@ outcome)**, not that the data passed: that rule worked and caught bad rows. It i
 in this FD and has **no** red-first acceptance item.
 
 **The `06:114` gap, measured: a rule whose dry-run outcome is `error` is submitted and approved.**
-Measured by auditor-922 (attributed; reproduction by auditor-924d pending; not re-run by this
+Measured by auditor-922 (attributed; reproduced by auditor-924d over HTTP at `65b33479`, three variants, plus a `fail` control; not re-run by this
 record's author) on a per-worktree database at `9f63d0fe`, alembic head. Method: a real
 `DATASET_VALIDATE` job with `dry_run_rule_id` on an ingested dataset version, then
 `submit_for_review` and `approve_rule` by a second approver, **through the service functions the
@@ -186,8 +186,8 @@ Event that discharges it: that slice's merge.
 
 **Follow-ons** (the maintainer's 11:23:26 entry names both):
 
-1. **The `error`-outcome dry-run**: measured above, and in the acceptance; auditor-924d's
-   reproduction is pending.
+1. **The `error`-outcome dry-run**: measured above, and in the acceptance; reproduced by auditor-924d over HTTP at `65b33479`, three variants, plus a `fail` control: all three
+   error variants gave 200 `review` then 200 `approved`, and the `fail` control was approved, confirming the non-defect.
 2. **Data check: approved rules with no approved approval request.** **The fix's obligation, per
    the maintainer's 11:27:20 entry:** there is no production, so the fix slice **resets
    non-built-in approved rules that have no approved approval request to `review`** in the
@@ -250,15 +250,16 @@ and 20,245 rules in all. The 9 databases holding approved non-built-in rules: `g
 scratch database inherits.** **Reconciling the two counts: they are two different populations
 measured at two different times, not a count that fell.**
 
-| | This record's author | auditor-922 |
-|---|---|---|
-| Database list predicate | `datname like 'gipricing%' and not datistemplate` | `not datistemplate and datallowconn` |
-| Databases | 77 (74 with the table, 3 without or errored) | 80 (76 with the table, 4 without) |
-| Approved non-built-in rules, none with an approved request | 739 of 739, in 8 databases | 749 of 749, in 9 databases |
-| Row predicate | the script above | the SQL above, verbatim |
-| When | 2026-09-30, before 11:30 BST (the run was not timestamped) | 2026-09-30, later; its list includes `gipricing_aud976b` (10 rules), created during an audit |
+| | This record's author | auditor-922 | auditor-924d (a re-run of this record's script) |
+|---|---|---|---|
+| Database list predicate | `datname like 'gipricing%' and not datistemplate` | `not datistemplate and datallowconn` | as this record's script |
+| Databases | 77 (74 with the table, 3 without or errored) | 80 (76 with the table, 4 without) | 76 (73 with the table) |
+| Approved non-built-in rules, none with an approved request | 739 of 739, in 8 databases | 749 of 749, in 9 databases | **534 of 534** |
+| Approved built-ins (`01` FR-68) | 18,962 | 19,494 | 13,072 |
+| Row predicate | the script above | the SQL above, verbatim | the script above |
+| When | 2026-09-30, before 11:30 BST (the run was not timestamped) | 2026-09-30, later; its list includes `gipricing_aud976b` (10 rules), created during an audit | 2026-09-30, later than both (not timestamped by the reporter) |
 
-The 10 extra rules are `gipricing_aud976b`'s. **Provenance
+The 10 extra rules in the middle column are `gipricing_aud976b`'s. **The figures move: they are illustrative of a moving set of scratch databases, not a fixed number** (worktree databases are created and dropped, so the same script gave 739, 749 and then 534, and the built-in totals moved with them). The obligation does not depend on any of them: the fix slice resets, to `review`, the non-built-in approved rules that have no approved request, and **records the count at fix time**. **Provenance
 was not checked:** whether any row came from a real approval route or a test or seed insert.
 749 of 749 is what the bypass predicts, since the direct route never writes an `approval_request`.
 
