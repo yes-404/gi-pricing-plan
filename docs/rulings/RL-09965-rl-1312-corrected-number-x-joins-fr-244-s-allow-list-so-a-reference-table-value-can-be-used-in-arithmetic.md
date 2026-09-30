@@ -47,7 +47,7 @@ relates: [RL-1312, RL-1313, OQ-9964, FR-244, FR-227, FR-69]
 | Why `RL-1312` missed it | `RL-1312`, "The sweep" (at `48792023`) | present | It found no function in any committed or stored expression. `number(` arrived later, in `packages/pricing-core/tests/test_rating_pin_membership.py:38` and `:232`, from `2118679b` (#988, `git log -S'number(expense_factor'`) |
 | The executor's interim | SL-1315's head `6bcf73e5` (not pushed; in the shared object store) | present | `test_rating_pin_membership.py`, 9+/5−: the `number(` expressions were rewritten as tier comparisons |
 | The evaluation-failure code | `RL-1313` DP-G4 | present, not yet built | `RATING_EVALUATION_FAILED`, which the same code slice (SL-1315) adds spec first to `03` §5.1 and to `RATING_ERROR_CODES` |
-| FR-227 on lookups | `03` FR-227; `packages/model-schema/src/model_schema/rating.py:275-280` | **absent** | "Every step declares its result type", but `RatingLookupStep` has no `result_type`. This is `OQ-9964` |
+| FR-227 on lookups | `03` FR-227; `packages/model-schema/src/model_schema/rating.py:275-288` | **absent** | "Every step declares its result type", but neither `RatingLookupStep` (`:275-280`) nor `RatingTableStep` (`:283-288`) has a `result_type`; only `RatingExpressionStep` does (`:294`). Reference-table payload columns are declared by name only (`01` FR-69; `model_schema/reference.py:43`, `:79`). This is `OQ-9964` |
 
 **Probe of the locked engine.** Scratch `probe_number.py` (sha256 prefix `d016a20ed0771296`),
 using `zen-engine==0.53.0`, the `uv.lock:2786-2787` pin, installed in a scratch venv and run
