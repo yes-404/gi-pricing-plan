@@ -1,5 +1,5 @@
 ---
-id: LG-1329
+id: LG-1332
 family: ledger
 title: WK-1178 code slice (SL-1315) — FR-244's enforced allow-list and every authored rating string checked (FR-244, FR-274, FR-276, FR-255)
 status: active
@@ -13,12 +13,12 @@ corrected_by: []
 relates: [RL-1312, RL-1313, RL-1322, FD-1317, OQ-1316, RL-1263]
 ---
 
-# LG-1329 — WK-1178 code slice (SL-1315): FR-244's allow-list and every authored string
+# LG-1332 — WK-1178 code slice (SL-1315): FR-244's allow-list and every authored string
 
 Executed from `PL-1314` (SL-1315) under `RL-1312`, `RL-1313` and the correction `RL-1322`
 (working id 9965 until batch 6; it is on `main` at `32f3fa92`). Branch `sl-1315-fr244-allowlist`,
 from `origin/main` `fa9a73c2d8b5cfebf4c699961015e6ff8dde1fb1` (`git ls-remote`), lane B.
-Drafted under working id 9962 (the lead allocates every working id) and minted `LG-1329` at its merge turn, after batch 8. The working id survives only in the dispatch record quoted below and in this line.
+Drafted under working id 9962 (the lead allocates every working id) and minted `LG-1332` at its merge turn, after batches 8 and 9 (it was first minted on the branch as number 1329, before batch 9 took 1329 to 1331). The working id survives only in the dispatch record quoted below and in this line.
 
 ## Tasks
 
@@ -201,6 +201,77 @@ tests/test_repository_invariants.py::test_journey_citations_are_audited_in_ci
   `uv run ruff check --no-cache .` printed the same, rc 1. The cache directory had been rebuilt by the runs made since (its timestamps show writes at 16:02 UTC and 18:02 UTC), so the stale entry
   no longer exists. I do not infer the earlier state from this re-run; the first pair above is the observation made at the time. The branch was restored to
   `sl-1315-fr244-allowlist` afterwards.
+
+  *Verbatim outputs of the re-run*, at `git checkout --detach 6a1b9e33` in this worktree (`git rev-parse HEAD` = `6a1b9e334034d8a5d860dc091bdb1ef6b30d5c5f`,
+  `git status --porcelain` empty; ANSI colour codes stripped). The cached run shows the error too, because the cache was rebuilt; the earlier state is not inferred from it.
+  The two outputs are byte-identical (62 lines each; `diff` prints nothing). `uv run ruff check .` (cached):
+
+```text
+I001 [*] Import block is un-sorted or un-formatted
+  --> packages/pricing-core/tests/test_rating_authored_fields.py:12:1
+   |
+10 |   """
+11 |
+12 | / from __future__ import annotations
+13 | |
+14 | | import ast
+15 | | import inspect
+16 | | import itertools
+17 | | import types
+18 | | import typing
+19 | | from pathlib import Path
+20 | | from typing import Annotated, Any, Literal, get_args, get_origin
+21 | |
+22 | | import pricing_core.rating.authored as authored_module
+23 | | import pricing_core.rating.vocabulary as vocabulary_module
+24 | | import pytest
+25 | | from pricing_core.rating.authored import (
+26 | |     EXPRESSION_FIELDS,
+27 | |     NON_EXPRESSION_FIELDS,
+28 | |     authored_expression_fields,
+29 | | )
+30 | | from test_rating_compile import valid_algorithm
+31 | |
+32 | | import pricing_core.rating.compile as compile_module
+33 | | from model_schema import rating as rating_schema
+34 | | from model_schema.rating import RatingAlgorithm, RatingExpressionStep, RatingStep
+35 | | from pricing_core.rating.compile import (
+36 | |     ALGORITHM_CHECKS,
+37 | |     STRING_CHECKS,
+38 | |     validate_algorithm,
+39 | | )
+   | |_^
+40 |
+41 |   # ---------------------------------------------------------------------------
+   |
+help: Organize imports
+   |
+21 |
+22 + import pytest
+23 + from test_rating_compile import valid_algorithm
+24 +
+25 | import pricing_core.rating.authored as authored_module
+26 + import pricing_core.rating.compile as compile_module
+27 | import pricing_core.rating.vocabulary as vocabulary_module
+   - import pytest
+28 + from model_schema import rating as rating_schema
+29 + from model_schema.rating import RatingAlgorithm, RatingExpressionStep, RatingStep
+30 | from pricing_core.rating.authored import (
+--------------------------------------------------------------------------------
+34 | )
+   - from test_rating_compile import valid_algorithm
+   -
+   - import pricing_core.rating.compile as compile_module
+   - from model_schema import rating as rating_schema
+   - from model_schema.rating import RatingAlgorithm, RatingExpressionStep, RatingStep
+35 | from pricing_core.rating.compile import (
+   |
+
+Found 1 error.
+[*] 1 fixable with the `--fix` option.
+```
+
+  and `uv run ruff check --no-cache .` printed, verbatim, the same 62 lines (identical to the block above).
 - **GATE OF RECORD: a clean checkout of `2d4223ec42265f95c5a33d11e58fe2f6e006687e`** (the maintainer's rule; S-13 granted 2026-09-30 18:35:42 BST). `git worktree add --detach`
   into a fresh directory (no `.ruff_cache`, `.mypy_cache` or `.pytest_cache`), `uv sync --all-packages`, `pnpm --dir frontend install --frozen-lockfile`, a per-worktree test
   database created from the template, `alembic upgrade head`, and `alembic current` printing `a9f3c6d21b87 (head)`, which equals `alembic heads`. Recorded at the start
