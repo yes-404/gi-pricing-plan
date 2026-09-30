@@ -68,9 +68,13 @@ on 2026-09-28.
   `p2-wk690-map`, `p2-wk690-rl`, `p2-f2-rs`, `p2-wk673-map`, `p2-wk673-rl` and
   `worktree-planner-p2-wk674-s1`.
 - The new callers exist only in plans:
-  - WK-690 Slice 5's loss-curve preview (working id 9103, `origin/p2-wk690-map` at `69be18ae`,
-    lines 529-530).
-  - At least four WK-675 charts (working id 9681, `origin/wk675-map-plan` at `1a2427f1`).
+  - WK-690 Slice 5's loss-curve preview (PL-1268, §Tasks, "Slice 5 — The authoring view, and
+    `WF-702` Route B end to end").
+  - At least four WK-675 charts (PL-1286, §Tasks).
+  - *(Citations refreshed 2026-09-30 at origin/main `0bc69b5b`. The two plans have minted,
+    and they are now cited by id and section heading. At `0bc69b5b` there are still 13
+    `<ChartFigure` sites and no new caller; `ChartFigure.vue` and `test-tables.ts` are
+    unchanged since `aa14e90d`.)*
 - There is no backend or `model-schema` counterpart. `git grep ChartFigure` over `backend/`
   and `packages/` finds nothing, so CLAUDE.md §2's no-second-shape rule does not bind here.
 
@@ -83,8 +87,9 @@ on 2026-09-28.
   (`git grep -n 'generic=' origin/main -- frontend/src` finds nothing).
 
 **What WK-675 needs.**
-- Working id 9681's DP-1 is this question. That plan recommends **(b)**, stays `draft` until
-  DP-1 is ruled, and makes Slice 1 ("Chart foundation") migrate all 13 call sites first.
+- PL-1286's DP-1 (§Decision points, "DP-1 = OQ-550") is this question. That plan recommends
+  **(b)**, stays `draft` while DP-1 is open (§Status), and makes S1 ("Chart foundation")
+  migrate all 13 call sites first (§Tasks).
 - Its acceptance item 5 asserts each new chart "with the column-by-name reader the ruling
   names". The ruling must therefore say whether `cellUnder` stays.
 
@@ -93,8 +98,9 @@ on 2026-09-28.
 - `RL-1184` E10 stands: OQ-550 is WK-675's, and it is decided at WK-675's map plan.
 - WK-690 Slice 5 does not decide or revisit OQ-550. It consumes OQ-550's ruling if it is ruled
   by then. Otherwise it adds its `ChartFigure` caller under the current API and records that
-  caller in OQ-550's call-site count. The line at working id 9103, `:529-530`, is corrected at
-  #871's next revision.
+  caller in OQ-550's call-site count. *(Refreshed 2026-09-30 at `0bc69b5b`: done. PL-1268
+  §Tasks, Slice 5, now strikes "Slice 5's leaf plan revisits OQ-550" and carries the
+  consume-or-record line, citing this scope decision.)*
 - Sequencing item 1 below is therefore **no longer open**. The high pass rules only the
   technical question: whether vue-tsc infers the row type at a real call site, and (c) versus
   (b′).
@@ -128,8 +134,8 @@ common errors (a missing column or a misspelt key) into compile errors, with no 
 risk.
 
 **What the ruling should also settle, whichever option it picks.**
-1. **Sequencing** *(decided 2026-09-30, see the scope line above; kept as prepared)*. WK-690 Slice 5's loss-curve preview adopts the ruled shape. Working id
-   9103, lines 529-530, says that Slice 5's leaf plan "revisits OQ-550". That conflicts with
+1. **Sequencing** *(decided 2026-09-30, see the scope line above; kept as prepared)*. WK-690 Slice 5's loss-curve preview adopts the ruled shape. PL-1268
+   (then working id 9103) said that Slice 5's leaf plan "revisits OQ-550". That conflicted with
    `RL-1184` E10, which assigns OQ-550 to WK-675. The ruling should state that the question
    is answered once, here. Otherwise a 14th positional caller can land before WK-675 Slice 1
    migrates the others.
@@ -137,8 +143,8 @@ risk.
    reason. Retiring one silently would drop a proven check (CLAUDE.md §13).
    - Under (c), the arity guard retires by construction.
    - `cellUnder` stays in every option. It still reads hand-written tables such as
-     `DatasetListView`, and it is the "column-by-name reader" that working id 9681's
-     acceptance needs.
+     `DatasetListView`, and it is the "column-by-name reader" that PL-1286's
+     acceptance needs (§Acceptance Standard).
 3. **Slice 1's scope.** It also fixes the heading-text `:key` collision, the "diagnostic"
    empty-state text and the missing `<th scope="row">` row headers.
 4. **The mirrors.** At the ruling, OQ-550 closes in both `docs/open-questions.md` and
