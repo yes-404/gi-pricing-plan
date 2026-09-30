@@ -24,7 +24,8 @@ First filed 2026-09-29 as working id 9681; `created` re-dated so the id sequence
 > plan (`kind: leaf`) before it starts, and the executor works from the leaf plan with
 > `subagent-driven-development` or `executing-plans`. **Working id `9681`**; minted at this
 > PR's merge turn with `python3 scripts/doc-id.py next --ref origin/main`.
-> **`status: draft`: one decision point, DP-1, blocks its freeze** (see *Decision points*).
+> **`status: draft` while DP-1 (OQ-550, the decision-maker's) or any other open DP has no
+> resolver** (see *Decision points*).
 >
 > **Revised 2026-09-30 by the planner (planner-maps), on the lead's instruction, while
 > `draft`.** The draft was written at `f0c3d197`, and this revision brings it to origin/main
@@ -41,6 +42,9 @@ First filed 2026-09-29 as working id 9681; `created` re-dated so the id sequence
 > 4. **Sequencing is re-derived** under `RL-1263`: real cross-Work dependencies only, and
 >    the (c) contention table against `PL-1237`, `PL-1254`, `PL-1267`, `PL-1268` and
 >    `PL-1278`.
+> 5. **DP-4 is ruled (a)** by the maintainer's scope decision of 2026-09-30 05:34:33 BST, which
+>    also accepts S12's wait on SL-1260 (the full view) and covers S11's possible run-list
+>    route under (a). (a′) is pre-authorised if S2 or S4 splits: 13 slices, up to 15.
 
 ## Goal
 
@@ -195,13 +199,17 @@ recommendations are the planner's proposal, not a ruling.
 | **DP-1 = OQ-550** | How does `ChartFigure` relate a row's values to its columns? (`00:552`; re-opened 2026-09-28 as **WK-675's entry decision, due at this map plan**, `RL-1184` E10) | (a) positional rows with the two W6b-9 checks; (b) rows keyed by column name, checked by the type system; (c) a column descriptor, rows staying domain objects | **(b).** It makes misalignment a compile error at the one moment the cost is lowest: 13 call sites today (`git grep -n '<ChartFigure' -- 'frontend/src/*.vue'`), and this Work adds at least four charts. (c) also removes the transcription step, but it makes `ChartFigure` generic, which is the largest change, for a smaller further gain | decision point | **yes**: the plan's freeze, and **Slice 1** (the migration) and every chart slice after it (S6's waterfall, S8's dislocation charts) | decision-maker, by `RL-` |
 | **DP-2 = OQ-1231** | Is `StepChange.own_change` derived from the traces (a) or from step-definition equality by `step_id` across the two compiled algorithms (b)? (gated *Before WK-675's map plan* by #917, merged as `90675848`) | as the OQ states them | the OQ's own recommendation was (b) | decision point | was **yes**, for this plan's freeze; now ruled | **`RL-1261`: (b)**, merged as `46188a88`. OQ-1231 is decided in both mirrors (`docs/open-questions.md:136`, `03:1179`). WK-675 builds it in **S7b**, with `RL-1261`'s five named negative tests |
 | **DP-3 = OQ-1223** | How does an ordinal categorical input take part in a `monotone` property? | as the OQ states them | the OQ's own recommendation is (a), "when the rate-table editor introduces the order" | decision point | no — resolved before Slice 5's leaf plan goes `active`. Until then, a categorical `monotone` is refused before generation (the OQ's stated interim) | decision-maker, by `RL-` |
-| **DP-4** | The views need read routes **declared nowhere and built nowhere**: an algorithm by `{slug}@{version}` (the designer's load), and a rate table's cells and a version's table list (the editor). Who adds them? | (a) **this Work**: each route is spec-changed first by the decision-maker and built in the slice whose view consumes it, as F-W10-3 already makes this Work own `POST /rate-tables/{slug}/versions`; (b) a WK-1178 backend slice before WK-675; (c) leave the views to compose reads from existing routes | **(a).** The consuming view is the only place the route's shape is known; F-W10-3 is the precedent; (c) is impossible for the designer, since no route returns an algorithm's graph | scope | no — resolved before Slice 2's and Slice 4's leaf plans go `active`. Until then, no read route is added | maintainer, by `RL-` or `RFC-` (a scope question, `document-ids.md` §1.7) |
+| **DP-4** | The views need read routes **declared nowhere and built nowhere**: an algorithm by `{slug}@{version}` (the designer's load), and a rate table's cells and a version's table list (the editor). Who adds them? | (a) **this Work**: each route is spec-changed first by the decision-maker and built in the slice whose view consumes it, as F-W10-3 already makes this Work own `POST /rate-tables/{slug}/versions`; (b) a WK-1178 backend slice before WK-675; (c) leave the views to compose reads from existing routes | **(a).** The consuming view is the only place the route's shape is known; F-W10-3 is the precedent; (c) is impossible for the designer, since no route returns an algorithm's graph | scope | ruled | **(a), by the maintainer's scope decision, by delegation** (to-lead.md, "2026-09-30 05:34:33 BST — SCOPE DECISION: #920 DP-4, option (a); the S12 order corrected; the S11 run-list route covered"). Each missing read route gets a spec change first (a new FR plus its `03` §5.1 row) and is built in the WK-675 slice that consumes it: the algorithm-by-`{slug}@{version}` load in **S2**, the rate-table cells and a version's table list in **S4**. **(a′) is pre-authorised as a fallback:** if S2's or S4's leaf plan must split, the split, or one read-routes slice before S2, needs no further scope call; the planner records it at that leaf plan's ACK |
 | **DP-5** | §5.3 routes address a version as `:slug/v/:version`, but the backend reads a Rating Version only by UUID (`GET /rating-versions/{id}`, `models.py:1139`), a Phase 1b route in no §5.1 | (a) add `{slug}@{version}` read routes, the form `03` §5.1 already uses for algorithms and tables; (b) change the §5.3 and `00` §5.6 routes to `/rating-versions/:id/...` | **(a).** It matches every other versioned route in `03` §5.1 and keeps `00` §5.6's four canonical routes unchanged | decision point | no — resolved before Slice 2's leaf plan goes `active`. Until then, views are linked from `/rating-versions/:id` | decision-maker, by `RL-` |
 | **DP-6** | The designer's **on-node live validation** is an FR-24 exception, binding until discharged at this view's slice plan (`00:228`). What discharges it, and how does the view validate before save? | (a) raise it as a numbered `03` FR, served by a **validate-only route** that runs the server's own checks (spec change: the FR plus the route); (b) raise the FR, and re-implement the cycle, reference and type checks in the frontend; (c) declare the cell exhaustive and validate on save only | **(a).** (b) defines the validation rules twice, the divergence `CLAUDE.md` §2 forbids; (c) fails the *Interaction requirement* that an invalid graph be "visibly invalid before save" | decision point | no — resolved before Slice 3's leaf plan goes `active`. Until then, the FR-24 exception stays binding and undischarged | decision-maker, by `RL-` |
 
-**The freeze.** This plan stays `draft` until DP-1 is ruled; DP-2 is ruled (`RL-1261`). DP-1
-decides Slice 1's content; DP-2's ruling makes the compare work two slices, S7b then S7. DP-3 to DP-6 each block
-only their slice's leaf plan, which does not go `active` until its DP is ruled.
+**The freeze.** DP-2 is ruled (`RL-1261`) and DP-4 is ruled (a) (the maintainer, 2026-09-30
+05:34:33 BST). **DP-1 is open, and it is the decision-maker's**: OQ-550, prepared in #936
+(`dm-prep-b-oq550`, open, "PREPARED, NOT RULED"). This plan stays `draft` until DP-1 and every
+other open DP has a resolver (DP-3, DP-5, DP-6: each the decision-maker's). DP-1 decides Slice
+1's content; DP-2's ruling makes the compare work two slices, S7b then S7. DP-3, DP-5 and DP-6
+each also block only their slice's leaf plan, which does not go `active` until its DP is
+ruled.
 
 ## Carried obligations
 
@@ -261,8 +269,8 @@ FR-25 and NFR-463 obligations.
 | **S8 — Dislocation views** | The change histogram (FR-263), segment grid (FR-264), attribution waterfall (FR-266), largest movers with drill-down to individual quotes (FR-263; the §5.3 cell says "traces", and FR-263's word governs), the run cited as a persisted artifact by its id (FR-265), each chart with its table | **`PL-1267` Slice 4** (WK-673's routes and generated `DislocationRun`); S1 | 1 / 2 |
 | **S9 — Designer III: sub-graph mounting** | Mounting a pinned sub-graph in the designer (FR-217, FR-218's authoring view) | **WK-1250** (`PL-1254`; inlining and the mount declaration); S3 | 1 / 2 |
 | **S10 — Rating version list** (`/rating`, `03:1045`; #921's finding, option A) | **First task, spec first (`CLAUDE.md` §0):** a new `03` FR and the §5.1 row for a `GET` list route over Rating Versions, in the same commit as its code. Then the view: versions by status, **live-in-environment badges**, effective dates (`03:1045`); each row links to the version's `:slug/v/:version` routes, which **removes the interim FR-25 path** through `RatingVersionView` | S6 (order); DP-5 (the rows' route form); **WK-674 Slice 2, SL-1256** (a live badge needs the Deployment record: nothing is `live` without it, `PL-1267` premise j) | 1 / 2 |
-| **S11 — Regression suite view** (`/rating/:slug/v/:version/tests`, `03:1049`; #921's finding, option A) | Golden quotes with pass/fail and actual-vs-expected, property assertion results with counterexamples (FR-260, FR-261, FR-1221), over WK-672's routes (`03:756-763`). **Both run reads need a `run_id`, and no route lists a version's runs**: the leaf plan establishes whether the version's evidence gives the run id, and otherwise the list route is a DP-4-class read route, spec first | S10 (order); DP-5; DP-4 if a list route is needed | 1 / 2 |
-| **S12 — Deployments view** (`/rating/environments`, `03:1051`; #921's finding, option A) | Per-environment live version, deployment history, rollback control, shadow configuration (`03:1051`; FR-267, FR-269, FR-271). The overlap with `07`'s `/admin/environments` (`07:392`) is resolved in its leaf plan | **WK-674 Slices 2, 5 and 6: SL-1256** (history `GET`, live version), **SL-1259** (rollback, FR-269), **SL-1260** (shadow configuration, FR-271); S11 (order) | 1 / 2 |
+| **S11 — Regression suite view** (`/rating/:slug/v/:version/tests`, `03:1049`; #921's finding, option A) | Golden quotes with pass/fail and actual-vs-expected, property assertion results with counterexamples (FR-260, FR-261, FR-1221), over WK-672's routes (`03:756-763`). **Both run reads need a `run_id`, and no route lists a version's runs**: the leaf plan establishes whether the version's evidence gives the run id; **if not, the run-list read route is added under DP-4 (a), spec first (a new FR plus its §5.1 row), in S11**, with no new scope call (the maintainer's 05:34:33 entry) | S10 (order); DP-5 | 1 / 2 |
+| **S12 — Deployments view** (`/rating/environments`, `03:1051`; #921's finding, option A) | Per-environment live version, deployment history, rollback control, shadow configuration (`03:1051`; FR-267, FR-269, FR-271). The overlap with `07`'s `/admin/environments` (`07:392`) is resolved in its leaf plan | **WK-674's last slice, SL-1260**, and so SL-1256 (history `GET`, live version) and SL-1259 (rollback, FR-269) before it; shadow configuration is FR-271, SL-1260. **The full view; no partial Deployments view ships** (the maintainer's dated correction to the 05:28:45 order, in the 05:34:33 entry); S11 (order) | 1 / 2 |
 
 **The band, re-derived from this cut.** The frontend bands are 0.75 / 1 / 2 days per slice
 (best / likely / worst), from the §5a sizing at
@@ -282,7 +290,9 @@ SCOPE DECISION: #921 …") first sized the absorbed Work as "9 to 12, sized 9 / 
 days". That count predates counting S7b, which `RL-1261` requires. The maintainer's dated
 correction (to-lead.md, "2026-09-30 05:29:29 BST — DATED CORRECTION to "SCOPE DECISION: #921"
 (05:28:45): the slice count only") reads it as **from 10 to 13 slices**, at this plan's
-per-slice band: **9.75 / 13 / 26 days** (13 × 0.75 / 1 / 2).*
+per-slice band: **9.75 / 13 / 26 days** (13 × 0.75 / 1 / 2). Under DP-4 (a) the Work is 13
+slices, and **up to 15** if S2 and S4 each split under the pre-authorised (a′): **11.25 / 15 / 30
+days** (the maintainer's 05:34:33 BST entry asks the planner to state these figures).*
 
 **S2 and S4 carry more than a typical slice:** S2 holds spike F2's five conditions as well as
 the canvas, and S4 a new dependency as well as two backend routes. Their leaf plans confirm the
@@ -316,9 +326,9 @@ cut or split them, and the band moves with any split.
     move up; that is the lead's call at dispatch, one slice at a time.
   - **S12 is last, and it waits on WK-674's last slice.** The entry says "after WK-674's
     history GET" (SL-1256). The view's `03:1051` row also needs rollback control (SL-1259)
-    and shadow configuration (SL-1260), so S12 starts after SL-1260 merges. The alternative
-    is to build it after SL-1256 with those two controls left out, which is a partial view
-    and a scope question, not this plan's.
+    and shadow configuration (SL-1260), so S12 starts after SL-1260 merges. **Accepted by the
+    maintainer** as a dated correction to the 05:28:45 order (the 05:34:33 BST entry): S12
+    waits on SL-1260, and it is the full view; no partial Deployments view ships.
 
 **Contention under `RL-1263` (c)** (two concurrent build slices may not change the same
 existing function, class, method, spec section or policy table; the registry files are exempt
@@ -344,8 +354,10 @@ for append-only edits). Read at `880feb49` against the merged plans. A pair mark
 
 ## Status
 
-`draft` at `880feb49`. DP-2 is ruled (`RL-1261`). It goes `active` when DP-1 is ruled and the
-lead accepts it.
+`draft` at `880feb49`. DP-2 is ruled (`RL-1261`) and DP-4 is ruled (a) (the maintainer,
+2026-09-30 05:34:33 BST). It stays `draft` while DP-1 (OQ-550, the decision-maker's, #936) or
+any other open DP has no resolver, and goes `active` when they do and the maintainer's WK-675
+map acceptance line is given.
 The maintainer then activates WK-675 on it.
 
 ## Self-review
