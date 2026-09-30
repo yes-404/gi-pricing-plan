@@ -26,17 +26,23 @@ relates: [WK-1170, FD-1161]
 ## Evidence
 
 **Trees.**
-- The map plan is working id 9812, on PR #931, `origin/wk1169-map` at
-  `19b086ea13f3f85ff15bda2e182b7899ba9fd75c`. It is the one plan file that branch adds, with
-  the slug `wk-1169-the-charter-investigation-map-plan`.
+- The map plan is **PL-1277** (PR #931; first read on `origin/wk1169-map` at
+  `19b086ea13f3f85ff15bda2e182b7899ba9fd75c`, before it minted). It is now cited by section
+  heading.
+- *Refreshed 2026-09-30 at origin/main `0bc69b5b`.* Every premise below was re-checked there.
+  `document-ids.md`, `audit-docs.py`, `doc-index.py`, `CLAUDE.md:223-225` and the charters are
+  unchanged. The §1.6 citation counts per charter are unchanged (planner 4). No
+  `Permitted owners:` line exists yet. The `owner: lead` findings are still exactly FD-1067,
+  FD-1068, FD-1069, FD-1074 and FD-1079: the new FD-1280 to FD-1284 are auditor-owned
+  (103 auditor, 5 lead).
 - Everything else was read at `origin/main` `aa14e90dd77c7461aa35cc6461557b129959463f`.
 - The plan read its premises at `19c395ac`. Since then, #926 changed `planner.md` and
   `lead.md`.
 
 **The rows.**
-- DP-2 is at `:200`: *"What form does '§1.6 made binding in each charter' take?"* It blocks
+- DP-2 is in PL-1277 §Decision points: *"What form does '§1.6 made binding in each charter' take?"* It blocks
   Slices 2 and 3.
-- DP-3 is at `:201`: *"What does each directory's `Permitted owners:` line say?"* It blocks
+- DP-3 is in the same table: *"What does each directory's `Permitted owners:` line say?"* It blocks
   Slice 2.
 
 **Premises, checked at `aa14e90d`.**

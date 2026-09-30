@@ -26,14 +26,20 @@ relates: [WK-1169]
 ## Evidence
 
 **Trees.**
-- The map plan is working id 9811, on PR #930, `origin/wk1170-map` at
-  `25436a37ed6c00264b37066d794db618554bddac`. It is the one plan file that branch adds, with
-  the slug `wk-1170-the-create-read-retire-audit-map-plan`.
+- The map plan is **PL-1276** (PR #930; first read on `origin/wk1170-map` at
+  `25436a37ed6c00264b37066d794db618554bddac`, before it minted). It is now cited by section
+  heading.
+- *Refreshed 2026-09-30 at origin/main `0bc69b5b`.* `document-ids.md`, `audit-docs.py`,
+  `doc-index.py`, the charters, the skills README and `process/checklists/` are unchanged since
+  `aa14e90d`, so their file:line citations below still hold. `delivery-process.md` gained lines,
+  and its one moved citation is updated below.
 - Everything else was read at `origin/main` `aa14e90dd77c7461aa35cc6461557b129959463f`.
 - The plan read its own premises at `19c395ac`, an ancestor of main.
 
-**The row.** DP-4 is at `:234`. It asks: *"Where does the 'process step per transition' live
-once Slice 1 finds it?"* It is blocking for Slice 2 (`:375-390`). Its "Resolved by" cell reads:
+**The row.** DP-4 is in PL-1276 §Decision points. It asks: *"Where does the 'process step per
+transition' live once Slice 1 finds it?"* It is blocking for Slice 2 (§Tasks, "Task 2 — Slice
+2: the missing steps written where they belong (docs-only)": "Blocked on DP-4"). At
+`0bc69b5b` it is still open. Its "Resolved by" cell reads:
 *"decision-maker, by `RL-`; the maintainer's line too if the answer amends `docs/process/`"*.
 
 **Premises, checked at `aa14e90d`.**
@@ -53,14 +59,15 @@ once Slice 1 finds it?"* It is blocking for Slice 2 (`:375-390`). Its "Resolved 
   that option (c)'s "only" would exclude.
 - The "one source, point from process" convention is already written down:
   - `delivery-process.md:31`: *"Tool scope lives once, in each role's own file"*;
-  - `:241-243`: *"Not restated here; one source, not two."*
+  - `:257-260` (was `:241-243` at `aa14e90d`; the text is unchanged): *"Not restated here; one
+    source, not two."*
 - `.claude/skills/README.md:73-75` has a `Creates` column naming the family each skill mints.
   It covers the create transition only.
 - `document-ids.md:169`: skills are amended by *"the five roles already permitted; lead
   approves"*. Under (c), the skill half therefore needs no maintainer line. The charter half
   does, because charters are `owner: maintainer` (for example
   `.claude/roles/decision-maker.md` front matter). The plan itself routes charter gaps to
-  WK-1169 (`:362`).
+  WK-1169 (PL-1276 §Tasks, Task 1 and Task 2: "a charter gap … goes to WK-1169 as an `FD-`").
 
 ## Options
 
@@ -84,7 +91,7 @@ once Slice 1 finds it?"* It is blocking for Slice 2 (`:375-390`). Its "Resolved 
 
   The provisional answer is **(2) now, and (1) only if WK-1169's parser lands**: the
   mechanical check then costs one rule, not a parser.
-- **Charter gaps** go to WK-1169, as the plan's `:362` already routes them. A charter edit
+- **Charter gaps** go to WK-1169, as PL-1276's Task 2 already routes them. A charter edit
   needs the maintainer's line, so (c)'s "or charter" is not available inside WK-1170.
 
 ## Ruled
