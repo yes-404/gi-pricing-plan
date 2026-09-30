@@ -24,6 +24,15 @@ from model_schema import JobStatus
 
 
 @pytest.mark.req("FR-237")
+def test_the_autouse_handler_registration_fixture_applies_to_this_module(request) -> None:
+    """`_handlers` is autouse in `test_rating_version_compile`; importing the name here is what
+    makes it apply, and `HANDLERS` is process-global, so the compile test below could pass
+    on another module's registration. This asserts the fixture itself is active (WK-1178
+    dispatch condition 8a)."""
+    assert "_handlers" in request.fixturenames
+
+
+@pytest.mark.req("FR-237")
 def test_a_step_ref_the_pins_do_not_carry_is_refused_over_http(
     api_client, workspace_id, principal, grant, database, blob_store
 ) -> None:
