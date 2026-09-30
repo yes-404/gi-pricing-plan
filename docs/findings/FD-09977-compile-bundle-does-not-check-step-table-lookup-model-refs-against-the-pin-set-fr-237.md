@@ -101,6 +101,12 @@ quoted, no decline reasons, no warning):
 | Wrong version, no coalesce: step @1, pin @2 | `number(x)` | expense@2 | OK | `RuntimeError` on `s_office`, no price |
 | Wrong version, no coalesce: step @2, pin @1 | `number(x)` | expense@1 | OK | `RuntimeError` on `s_office`, no price |
 
+**Table step through a tolerant consumer (auditor-922, additions of the same day).** Table step,
+`on_miss="default"`, `s_office` = `risk_premium_minor * (expense_factor ?? 1.0)`, rate table **unpinned**:
+compile OK; **quoted, 1370 against 1507 pinned** with the same expression, silently. With `on_miss="error"` the
+step raises `CodedError RATE_TABLE_MISS`; without `??` it raises `RuntimeError NodeError` on `s_office`. A
+`model_call` unpinned or at the wrong version raises the bare `KeyError` for **any** consumer, so no silent price.
+
 **Other consumers of the missing value:**
 - **(b) constraint step.** `clamp_bounds.min = number(expense_factor ?? "0") * 1000`: pinned 1507;
   unpinned with the coalesce in `s_office` gives 1370. The constraint tolerates the missing value; it is
@@ -180,9 +186,24 @@ auditor-922's independent read agrees (73 non-template databases, 22 rating vers
 unpinned; it did not scan `sub_graphs` steps or compare `custom_objectives`). **Nothing stored is
 affected, and nothing stored could be, because no stored version names a step ref at all.** The defect is
 latent in the data and live in the code. `rvlogic.py` carries a four-case self-test (pinned control; all
-unpinned; wrong version on the table; model unpinned only) that exits 0. The repository fixtures and
-examples, and the MinIO rating artifacts, are being swept by auditor-922; **this record is amended when
-that lands**, and until then "0 affected" covers PostgreSQL only.
+unpinned; wrong version on the table; model unpinned only) that exits 0. 
+
+**Sweeps of fixtures, examples and MinIO (auditor-922, at `eeda8f4b`, reported; not re-run by the filer).**
+- **`pricing-core` rating tests:** 118 passed; 76 `compile_bundle` calls logged; **0** step refs outside the pins.
+- **Backend fixtures: not swept properly.** 39 failed, 12 passed and 130 errored (`TenantMismatchError` on the
+  scratch database); only 10 further compile calls were logged, 0 with a missing pin. **This limb is a gap, not a
+  zero.**
+- **Examples and scripts:** `examples/fremtpl2/model.py:396` is the demo seed (read, not run);
+  `scripts/bench-rating.py`'s pins match its step refs (read, not run).
+- **PostgreSQL:** 22 rating versions with pins, 0 unpinned (agrees with the filer's read above).
+- **MinIO:** 5 buckets; 6519 bundle JSONs (`gip-bench-compiled-for` 2, `gip-bench-score-batch` 2,
+  `gip-test-blobs` 6515), **0** with a graph step ref outside its pins or `resolved_payloads`; **3986
+  algorithm-shaped blobs in `gip-test-blobs` carry no pins and are unchecked.** (This is a different question
+  from the filer's text scan in the parser finding; the two share no result.)
+
+So "0 affected" now covers PostgreSQL, the `pricing-core` fixtures and the MinIO bundles; it does **not**
+cover the backend fixtures (the sweep failed on a tenant error) or the 3986 pinless blobs. Both gaps are
+stated, not counted as zero. Owner of any further amendment: the auditor.
 
 ## Severity
 
