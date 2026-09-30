@@ -1,5 +1,5 @@
 ---
-id: RL-9974
+id: RL-1343
 family: ruling
 title: OQ-1334 decided — a declared decimal output is served on every scoring path as an exact decimal string, rounded once by its output step
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,7 +15,7 @@ corrects: ~
 relates: [OQ-1334, FD-1333, FD-1335, RL-1329, OQ-1316, FR-214, FR-226, FR-227, FR-250, FR-254, FR-273, NFR-502, WK-674, WK-675]
 ---
 
-# RL-9974 — OQ-1334 decided: a declared `decimal` output is served on every scoring path as an exact decimal string, rounded once by its output step
+# RL-1343 — OQ-1334 decided: a declared `decimal` output is served on every scoring path as an exact decimal string, rounded once by its output step
 
 ## How this was ruled
 
@@ -28,8 +28,11 @@ filed in FD-1333 (options (a)–(d), recommendation (a) with (d) as the interim)
 read that entry itself. The lead's brief relayed the same order and dated it about 22:45 BST.
 The entry's own header says 22:26:52.
 
-**Filed under working id 9974**, which the lead hand-assigned. The lead is the only allocator
-(FD-1338), so this session did not run `doc-id next`. The id is minted at the lead's merge turn.
+**Minted 2026-09-30 as RL-1343** (`python3 scripts/doc-id.py next --ref 71b672205f7212008d0ff00b5cbc4810b56f12e6`
+printed `1342`. The WK-674 Slice 3 leaf plan, filed as PL 9947, takes it as PL-1342, and the lead
+allocated 1343 to this record in the mint GO.) It was filed under working id 9974, hand-assigned by the lead,
+who is the only allocator (FD-1338). Quotations of the maintainer's entries keep working ids as
+written, and so does the appendix script's docstring, which is kept as it was run.
 
 **The question, as filed.** `FD-1333` raises it, and `docs/open-questions.md` and `03` §10
 mirror it: *should `/score` serve a declared `decimal` output as a JSON string, as batch
@@ -125,7 +128,7 @@ The other consumers of `outputs`, from
 dependency bumps and security findings", `docs/roadmap.md:1081`). WK-671, which owns `/score`,
 is `closed` (`:650`). WK-675 is `active` (`:840`). SL-1257 (WK-674 Slice 3) is `draft`
 (`:767-780`). The maintainer's 22:33:30 BST entry, Decision 4, schedules it "at its PL 9947
-mint (~03:30)".
+mint (~03:30)" (PL 9947 is minted as PL-1342).
 
 ## Options, weighed
 
