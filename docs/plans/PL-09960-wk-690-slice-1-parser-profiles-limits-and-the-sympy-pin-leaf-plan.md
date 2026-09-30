@@ -77,9 +77,9 @@ that bind it:
 
 **Draft**, filed 2026-09-30 against `fb90d381` (origin/main). The working id is 9960, and
 the real id is minted at this PR's merge turn. DP-S1-1 to DP-S1-3 below are decision
-points for the decision-maker, one `RL-` for the three. None blocks the start. Each names
-the step it must be resolved before, and the default the executor applies until then
-(`document-ids.md` §1.7). *(Revised 2026-09-30 on auditor-plans2's audit of #954 at 3e4402cd, finding F1.)*
+points for the decision-maker, one `RL-` each, ruled at medium effort, each with an
+executable red/green proof. Each is resolved before this plan's activation, and applied at
+the task its row names (`document-ids.md` §1.7). *(Revised 2026-09-30 on the maintainer's pre-decision, relayed by the lead: the decision-maker rules each at medium effort, one `RL-` each, each with an executable red/green proof.)* *(Revised 2026-09-30 on auditor-plans2's audit of #954 at 3e4402cd, finding F1.)*
 
 **Gates, both verified at `fb90d381`:**
 1. `RL-1265` is on main (`docs/rulings/RL-01265-…md`, merged by #847 at `a6146ec4`).
@@ -120,9 +120,9 @@ Against the other lane:
   independent of machine load. So on this plan's reading it is not a "measurement step" in
   the sense of `RL-1263` item 3. That reading is the lead's to confirm at dispatch.
 
-- Acceptance and activation: _pending — the maintainer's acceptance. By `document-ids.md`
-  §1.7, `active` is permitted once every blocking row has a resolver id and every
-  non-blocking row names a step. All three rows are non-blocking and name their step._
+- Acceptance and activation: _pending — the decision-maker's three `RL-` records for DP-S1-1
+  to DP-S1-3 (each blocking activation), then the maintainer's acceptance. By
+  `document-ids.md` §1.7, `active` is permitted once every blocking row has a resolver id._
 
 ## Acceptance Standard
 
@@ -268,15 +268,11 @@ i. **`Profile` is taken.** `pricing_core.data.profile` imports `Profile` (the da
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-S1-1 | What does §4.6's "AST node count ≤ 200; nesting depth ≤ 20" count? | **(a)** `ast.expr` nodes only (the sub-expressions an author wrote: names, literals, calls, operations), with depth as the longest chain of nested `ast.expr` nodes, the root at 1. **(b)** Every node `ast.walk` yields, including operator tokens and `Load` contexts, with depth over the same. | **(a).** It is what an author can count. Under (b), `a + b` is 6 nodes, and 200 means about 100 written terms, a limit the spec did not state. Task 2 measures both, so the ruling can be made from data. | decision point: it interprets what §4.6's limit means, and a measurement informs it but cannot settle it | no. **Resolving step: before Task 4 Step 3** (the enforcing commit). Default (a) applies to Tasks 2 and 3. Task 4 Step 1 names the constants that change under (b) | decision-maker, one `RL-` for DP-S1-1 to DP-S1-3 (pending) |
-| DP-S1-2 | Do the legacy single-argument functions (`abs round floor ceil log exp sqrt`) keep ignoring extra arguments in `recipe` and `check` (premise c)? | **(a)** Keep them, because `recipe` and `check` only add. Exact arity binds the four new functions in every profile, and every function in `objective` and `factor`. **(b)** Enforce exact arity everywhere. | **(a)**, with the silent drop reported to the auditor as a finding candidate. (b) could refuse an expression that works today, which the only-add rule forbids. | decision point: a behaviour choice for existing callers | no. **Resolving step: before Task 3 Step 3** (where arity is implemented). Default (a) | decision-maker, the same `RL-` (pending) |
-| DP-S1-3 | What SymPy assumptions do the objective symbols (`y`, `f`, `w`, parameters) carry? | **(a)** `real=True`. **(b)** None. | **(a).** §4.6's domains are real (`y_domain`, raw score `f`, weight `w`). Without the assumption, `Abs` differentiates to the complex form in premise g, and that would become the canonical text Slice 2 records. | decision point: it fixes the canonical derived text a reviewer approves | no. **Resolving step: before Task 5 Step 4** (where the symbols are created). Default (a). Slice 2 inherits it | decision-maker, the same `RL-` (pending) |
+| DP-S1-1 | What does §4.6's "AST node count ≤ 200; nesting depth ≤ 20" count? | **(a)** `ast.expr` nodes only (the sub-expressions an author wrote: names, literals, calls, operations), with depth as the longest chain of nested `ast.expr` nodes, the root at 1. **(b)** Every node `ast.walk` yields, including operator tokens and `Load` contexts, with depth over the same. | **(a).** It is what an author can count. Under (b), `a + b` is 6 nodes, and 200 means about 100 written terms, a limit the spec did not state. Task 2 measures both, so the ruling can be made from data. | decision point: it interprets what §4.6's limit means, and a measurement informs it but cannot settle it | **yes, for activation.** Resolving step: the plan's activation. Applied at Task 4 (Steps 1, 3 and 4); Task 4 Step 1 names the constants that change under (b). Task 2 measures both predicates either way | decision-maker, its own `RL-` at medium, with an executable red/green proof (pending; working id to follow) |
+| DP-S1-2 | Do the legacy single-argument functions (`abs round floor ceil log exp sqrt`) keep ignoring extra arguments in `recipe` and `check` (premise c)? | **(a)** Keep them, because `recipe` and `check` only add. Exact arity binds the four new functions in every profile, and every function in `objective` and `factor`. **(b)** Enforce exact arity everywhere. | **(a)**, with the silent drop reported to the auditor as a finding candidate. (b) could refuse an expression that works today, which the only-add rule forbids. | decision point: a behaviour choice for existing callers | **yes, for activation.** Resolving step: the plan's activation. Applied at Task 3 Step 3 (where arity is implemented) | decision-maker, its own `RL-` at medium, with an executable red/green proof (pending; working id to follow) |
+| DP-S1-3 | What SymPy assumptions do the objective symbols (`y`, `f`, `w`, parameters) carry? | **(a)** `real=True`. **(b)** None. | **(a).** §4.6's domains are real (`y_domain`, raw score `f`, weight `w`). Without the assumption, `Abs` differentiates to the complex form in premise g, and that would become the canonical text Slice 2 records. | decision point: it fixes the canonical derived text a reviewer approves | **yes, for activation.** Resolving step: the plan's activation. Applied at Task 5 Step 4 (where the symbols are created). Slice 2 inherits it | decision-maker, its own `RL-` at medium, with an executable red/green proof (pending; working id to follow) |
 
-*(Revised 2026-09-30 on auditor-plans2's audit of #954 at 3e4402cd, finding F1.)* The three rows were filed as kind *fact*. They are decisions: an
-interpretation of the spec, a behaviour choice and a canonical-form choice. So their
-resolver is the decision-maker (`document-ids.md` §1.7), and each names the step it must
-precede. The recommendations are unchanged. When the `RL-` lands, the executor cites its id
-at the named step and in the ledger.
+*(Revised 2026-09-30 on auditor-plans2's audit of #954 at 3e4402cd, finding F1.)* The three rows were filed as kind *fact*. They are decisions: an interpretation of the spec, a behaviour choice and a canonical-form choice. So their resolver is the decision-maker (`document-ids.md` §1.7). *(Revised 2026-09-30 on the maintainer's pre-decision, relayed by the lead: the decision-maker rules each at medium effort, one `RL-` each, each with an executable red/green proof.)* Each row is ruled before activation and applied at its named task. The recommendations are unchanged. The executor cites each `RL-` id at its task and in the ledger.
 
 ## Tasks
 
@@ -1054,7 +1050,7 @@ def test_the_limits_are_configurable() -> None:
   > function sets are the table's. Comparisons in `objective` and `factor` exist only as
   > `where()`'s condition.)*
 
-  DP-S1-1's `RL-` is resolved before this task (its resolving step). Cite that `RL-` id in
+  DP-S1-1's `RL-` is ruled before this plan's activation. Cite that `RL-` id in
   place of "see the slice's leaf plan and ruling". If the ruling chose (b), the note says
   "counted over every `ast` node" instead.
 - [ ] **Step 5: Green.** Run `uv run pytest packages/pricing-core/tests -q`, with Acceptance
@@ -1355,7 +1351,7 @@ def _call(
 - [ ] The ledger records:
   - the tree, premises a–i, and every red-then-green quote;
   - Task 2's table;
-  - the `RL-` that resolved DP-S1-1 to DP-S1-3, and the step at which each was applied;
+  - the three `RL-` records that resolved DP-S1-1 to DP-S1-3, and the task at which each was applied;
   - DP-S1-2's silent-argument finding candidate, for the auditor.
 - [ ] Open the PR against `main`, noting the lead's file-contention dispatch record
   (Status). Report the head SHA.
