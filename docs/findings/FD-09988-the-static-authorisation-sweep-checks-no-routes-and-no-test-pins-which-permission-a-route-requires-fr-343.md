@@ -54,9 +54,10 @@ non-member refusal. Route accounting 123 + 5 + 7 + 2 = 137 (below). The only `/m
 not in the sweep's allow-list, so the static test would need to be told it is guarded by membership.
 
 
-Source: auditor-close1255's per-worktree run at `9f63d0fe` (as relayed by the lead), **reproduced by the
-auditor in a detached worktree at the same tree** (`uv sync --all-packages`, `alembic upgrade head` on a
-scratch database made with `createdb -T`). A temporary pytest over the `api_client` fixture printed:
+### Reproduced by the auditor at `9f63d0fe`
+
+In a detached worktree at the same tree (`uv sync --all-packages`, `alembic upgrade head` on a scratch database
+made with `createdb -T`), a temporary pytest over the `api_client` fixture printed:
 
 ```text
 types {'Route': 4, '_IncludedRouter': 22, 'APIRoute': 2}
@@ -85,7 +86,7 @@ Flattening the included routers gives 137 `APIRoute`s, 123 with a `requires()` d
   `/approval-requests/{request_id}`, `/approval-policy`);
 - 2 guarded elsewhere: `POST /api/v1/validation-rules` (the service layer, `platform/validation_rules.py:192` and
   `:199`, `rbac.require_permission` with `ADMIN_MANAGE_SETTINGS` or the analyst permission) and `POST /api/v1/me/workspace`
-  (the membership check, `backend/src/app/api/me.py:241` and `:251`, `WORKSPACE_SCOPE_DENIED`; FR-396 and FR-397).
+  (the membership check, `backend/src/app/api/me.py:249` (the check) and `:251` (the raise), `WORKSPACE_SCOPE_DENIED`; FR-396 and FR-397).
 
 ### Route accounting, 137 operations at `9f63d0fe`
 
@@ -162,7 +163,7 @@ route's permission is the `PERMISSION_ATTRIBUTE` of a dependency in `route.depen
 | GET | `/api/v1/jobs/{job_id}/events` | `job:read` (route-level `requires()`) |
 | GET | `/api/v1/jobs/{job_id}/logs` | `job:read` (route-level `requires()`) |
 | GET | `/api/v1/me` | authenticated, permission-free on purpose (`NO_PERMISSION_REQUIRED`) |
-| POST | `/api/v1/me/workspace` | **guarded elsewhere**: membership check, `api/me.py:241` and `:251` (`WORKSPACE_SCOPE_DENIED`) |
+| POST | `/api/v1/me/workspace` | **guarded elsewhere**: membership check, `api/me.py:249` and `:251` (`WORKSPACE_SCOPE_DENIED`) |
 | GET | `/api/v1/me/workspaces` | authenticated, permission-free on purpose (`NO_PERMISSION_REQUIRED`) |
 | POST | `/api/v1/model-specs/validate` | `model:fit` (route-level `requires()`) |
 | GET | `/api/v1/models` | `model:read` (route-level `requires()`) |
@@ -241,12 +242,15 @@ the same way today, and the fix task still names them so a future one is covered
 
 ### What the spec declares, and does not
 
-`06-governance.md` §5.1's route tables (e.g. `:534-536`, the audit routes) have three columns and **no
-permission column**, and no `x-permission` extension appears in `docs/contracts/` or `backend/src` (checked with
-`grep -rn "x-permission\|x-required-permission" backend/src docs/contracts`, 0 hits). "Pin each route's permission
-against the spec's declared permission" therefore needs a *source* first: a declared column or contract field. That
-is a spec-change question for the fix's plan (it is not decided here); the acceptance below says it must not be a
-hand-written map inside the test (CLAUDE.md §2).
+No spec declares route permissions. Every §5.1 route table in `01` to `07` has the header
+`| Method | Path | Purpose |` (`06-governance.md:534-536`, the audit routes, is one), and `docs/contracts/openapi/generated.json`
+has no `x-permission` (also `grep -rn "x-permission\|x-required-permission" backend/src docs/contracts`, 0 hits).
+*(Corrected 2026-09-30 by the auditor: the first draft of this section, and the maintainer's earlier A1 entries,
+named "the §5.1 permission column, or the contract" as the source to pin against. The maintainer's entry of
+2026-09-30 11:17:35 BST, "DATED CORRECTION to my A1 entries", supersedes that parenthetical: the mechanism does not
+exist.)* The principle stands, pin against a declaration and never a test-local map (CLAUDE.md §2), but the
+declaration is not there yet. **DP-S2-4** decides it, with dm-effort-high: (a) a §5.1 Permission column, or (b) a
+routes cell on `06` §4.1's Built rows; the entry rejects (c) as circular.
 
 ## Disposition
 
@@ -260,9 +264,12 @@ WK-690 Slice 1. Its acceptance, as decided:
 
 - flatten the included routers in the static sweep;
 - assert the iterated count equals the openapi operation count, so it cannot shrink silently again;
-- pin each route's specific permission against the spec's declared permission (the `06`/`03` §5.1 permission
+- ~~pin each route's specific permission against the spec's declared permission (the `06`/`03` §5.1 permission
   column, or the contract), never a hand-written map in the test; red first on the `AUDIT_READ` to `JOB_READ` swap
-  (M2 above);
+  (M2 above);~~ *(Struck 2026-09-30 on the maintainer's entry of 11:17:35 BST: that column or contract field does not
+  exist. This comparison step **moves out of Slice 2** into the slice DP-S2-4's ruling names, which pins each route's
+  permission against the declaration the ruling creates, never a hand-written map, red first on the `AUDIT_READ` to
+  `JOB_READ` swap (M2 above). Slice 2's new deploy routes are declared by whichever of the two lands second.)*
 - account for all 137 routes; triage `POST /validation-rules` and `POST /me/workspace` and record each
   service-layer guard in a **named allow-list with file:line**, so the static sweep knows them rather than
   skipping silently;
@@ -271,11 +278,15 @@ WK-690 Slice 1. Its acceptance, as decided:
 - remove `requires()` from one real guarded route and show the test red (M1 is the shape);
 - fix the sibling tests that iterate `app.routes` the same way in the same task.
 
+Slice 2 keeps everything above except the struck comparison step.
+
 The maintainer's entry of 11:08:22 BST also rules that **no permission is needed on `/me/workspace`**: membership
 (FR-396, FR-397) is the right control for choosing among one's own workspaces, and no spec change follows from it.
 
-**Event that next confirms or discharges it:** WK-674 Slice 2's first task merges with the acceptance above (the
-behavioural condition is already met; see the evidence section).
+**Event that next confirms or discharges it:** (a) WK-674 Slice 2's first task merges with the acceptance above
+(flattening, count equality, the 137-route accounting, the named allow-list, valid body with 401 or 403, the M1 shape
+and the sibling tests); and (b) the slice DP-S2-4's ruling names merges the permission-pinning comparison (M2 red first).
+The behavioural condition is already met; see the evidence section.
 
 Ownership shape: event
 
