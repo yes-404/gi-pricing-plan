@@ -67,8 +67,6 @@ repository). The 11:30:55 entry also has a third bullet of status notes, omitted
 > - The eta.md reservation list is **accepted as the interim.**
 > - **A WK-1178 backlog item (planner logs it; not an FD unless it recurs):** make working-id allocation read **one shared append-only reservation ledger** (for example `~/gi-pricing-plan.local/working-ids.md`: id, holder, purpose, date). The allocation script, and any role's picker, **refuses an id already in the ledger or on any origin ref or PR title**. A reservation that exists only in a brief is the invisible case; a check should make it impossible, not a habit.
 
-(The entry has a third bullet, unrelated status noting; it is omitted here.)
-
 > ## 2026-09-30 17:09:40 BST — working-id collision: FILE THE FD NOW (my 11:30:55 trigger "unless it recurs" has fired)
 > - **File an FD, owner WK-1178, severity LOW** (both collisions were caught before a mint, and `doc-id` minting assigns the final ids). It records:
 >   - both instances with their dates;
@@ -81,7 +79,7 @@ The 17:08:59 BST entry ("… the 9970 id collision", item (3)) had noted the sec
 
 **2. The cause: two allocators, and a check blind to what is not on an origin ref.** Before the 17:09:40 rule, ids were
 picked by the lead **and by authors** (the lead's brief told the author to "check it free"). The check that both used reads
-pushed `origin` refs and `eta.md`. It cannot see: (a) a commit on a local branch that has not been pushed (instance 1 at pick time; instance 2 unless the check followed the push); a push that lands seconds after the pick (a race, instances 1 and 2), for which a check with no recorded time cannot be placed; (b) an edit in a
+pushed `origin` refs and `eta.md`. It cannot see: (a) a commit on a local branch that has not been pushed (instance 1 at pick time; instance 2 unless the check followed the push); a push that lands seconds after the pick (a race in instance 1, and possibly in instance 2), for which a check with no recorded time cannot be placed; (b) an edit in a
 worktree that is not committed; (c) a reservation that lives in a brief or another role's ledger only (instance 1).
 
 **3. The blind spots, measured** (scratch worktree from `origin/main` `8d5c67a56c27a9dcbba8d4e4ad28a1895e1dd862`, removed
