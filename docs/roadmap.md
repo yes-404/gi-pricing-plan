@@ -1259,6 +1259,8 @@ phase: P3
 
 From “Workstreams” (line 471): Dossier generation, commentary blocks, PDF, point-in-time regeneration | FR-376, FR-377, FR-379, FR-380, FR-381
 
+*(Dated 2026-09-30 by the lead, on the maintainer's entry "2026-09-30 11:52:53 BST — #983's closure sweep: accepted (no §13 verdict owed); DECISIONS on the recurrence and FR-384": `06` FR-384 (artifact dependencies / blast radius, route `GET /api/v1/artifacts/{ref}/dependencies`, `06` §5.1) was held by no roadmap row (`PL-1237` line 525). It is owned **provisionally** by this Work, which owns its sibling dossier route (FR-379). The planner confirms the fit or proposes another Work to the maintainer; FR-384 joins this Work's requirement list only on that confirmation.)*
+
 
 ### WK-681 — Regulatory evidence export
 
