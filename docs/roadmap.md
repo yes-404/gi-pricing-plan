@@ -1251,6 +1251,8 @@ phase: P3
 
 From “Workstreams” (line 468): Approval policies, escalation, evidence enforcement, attestations | FR-351, FR-352, FR-353, FR-354, FR-355, FR-356, FR-357, FR-358, FR-359, FR-361, FR-363
 
+*(Dated 2026-09-30 by the lead, on the maintainer's entry "2026-09-30 11:56:33 BST — DECISIONS: slice order after the split; FR-384 confirmed; FR-383 and FR-385 owners": `06` FR-385 (expedited changes, an `ApprovalPolicy` feature, `06` §4.2) was held by no roadmap row; it is already raised as `FD-1281`, whose register owner cell names this Work. It is **owned by this Work** and joins its requirement list by a dated amendment when its map plan is cut.)*
+
 
 ### WK-678 — **Approvals inbox with inline evidence**
 
@@ -1281,6 +1283,8 @@ phase: P3
 
 From “Workstreams” (line 470): Audit explorer, chain verification, export | FR-368, FR-369, FR-370, FR-371, FR-372, FR-374, FR-375
 
+*(Dated 2026-09-30 by the lead, on the maintainer's entry "2026-09-30 11:56:33 BST — DECISIONS: slice order after the split; FR-384 confirmed; FR-383 and FR-385 owners": `06` FR-383 (the uniform per-artifact history view, `06` line 179, route `06` §5.1 line 542) was held by no roadmap row. It is **owned by this Work** — its content (versions, transitions, actors, timestamps, justifications, diffs) is audit-derived. It joins this Work's requirement list by a dated amendment when its map plan is cut.)*
+
 
 ### WK-680 — Dossier generation, commentary blocks, PDF, point-in-time regeneration
 
@@ -1295,6 +1299,8 @@ phase: P3
 ```
 
 From “Workstreams” (line 471): Dossier generation, commentary blocks, PDF, point-in-time regeneration | FR-376, FR-377, FR-379, FR-380, FR-381
+
+*(Dated 2026-09-30 by the lead, on the maintainer's entries "2026-09-30 11:52:53 BST — #983's closure sweep: accepted (no §13 verdict owed); DECISIONS on the recurrence and FR-384" and "2026-09-30 11:56:33 BST — DECISIONS: slice order after the split; FR-384 confirmed; FR-383 and FR-385 owners": `06` FR-384 (artifact dependencies / blast radius, route `GET /api/v1/artifacts/{ref}/dependencies`, `06` §5.1; view "Dependencies", `06` §5.3 line 588) was held by no roadmap row (`PL-1237` line 525). It is **owned by this Work**, confirmed by the maintainer, with two conditions: (i) this Work's map plan builds FR-384 — the dependency graph, its route and the view — in its **first slice**, before FR-379's bundle and FR-380's as-at regeneration, which reuse its down traversal; (ii) WK-681 reuses that slice for FR-382 and builds no second traversal. FR-384 joins this Work's requirement list by a dated amendment when its map plan is cut.)*
 
 
 ### WK-681 — Regulatory evidence export
