@@ -17,7 +17,7 @@ relates: [FR-212, FR-240]
 
 First filed 2026-09-28; `created` re-dated so the id sequence stays non-decreasing (check 31).
 
-Minted as RS-1269 on 2026-09-30; it was filed under the working id RS-9801 (earlier RS-WORKING).
+Minted as RS-1269 on 2026-09-30; it was filed under working id 9801.
 
 Spike F2 of Track F, run 2026-09-28 by the executor `spike-f2`. The timebox started at
 11:36:37 BST. The last measurement ended at 12:19:59 BST. **The verdict in this record
