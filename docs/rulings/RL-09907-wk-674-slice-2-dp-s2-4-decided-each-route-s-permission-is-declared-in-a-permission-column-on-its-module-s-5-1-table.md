@@ -38,7 +38,7 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
 |---|---|---|
 | A per-route permission column in the module specs | **absent** | Each module spec's `### 5.1` table header, read. `01-data-management.md:847`, `02-modelling.md:1759`, `03-rating-engine.md:742`, `06-governance.md:494` and `07-platform.md:299` are each `\| Method \| Path \| Purpose \|`. The five tables hold 39, 44, 26, 23 and 20 method rows: 152 in all (the rows beginning `` \| `GET` `` and so on, inside `### 5.1`). |
 | A permission in the published contract | **absent** | `git show 65b33479:docs/contracts/openapi/generated.json \| grep -c x-permission` prints `0`. |
-| A route-to-permission declaration anywhere | **present, once, for 6 routes** | `06` §5.1 carries a blockquoted `\| Route \| Requires \|` table for its approval routes, "stated 2026-08-15 after an independent audit" (`06-governance.md`, the note after the approval-request rows). Its cells are a permission name or `authenticated`. It is the precedent for (a)'s cell vocabulary. |
+| A route-to-permission declaration anywhere | **present, once: 6 rows covering 7 operations** (decide and withdraw share a row, `06:514`) | `06` §5.1 carries a blockquoted `\| Route \| Requires \|` table for its approval routes, "stated 2026-08-15 after an independent audit" (`06-governance.md`, the note after the approval-request rows). Its cells are a permission name or `authenticated`. It is the precedent for (a)'s cell vocabulary. |
 | Existing `§5.1` parsers | **present, two, reading only the first two cells** | `audit-docs.py:297` `_ENDPOINT_ROW` and `scope-audit.py:68` `_ENDPOINT` each match `^\|\s*method\s*\|([^\|]+)\|` and ignore the rest of the row. A fourth column breaks neither. Check 22 (`audit-docs.py`, "Every markdown table row has its own header's cell count") requires that the header and every row gain the column in the same commit. |
 | How a route states its permission in code | **present, in two forms** | A `requires(<member>)` dependency tags itself with `PERMISSION_ATTRIBUTE` (`backend/src/app/api/authz.py:41`, `:76`). A handler may also call `rbac.require_permission(…, permission=…, resource=…)` itself, which the deploy route must do under #971's item B.2 (an Environment resource). So a pin read from `PERMISSION_ATTRIBUTE` alone would miss a handler-checked route. |
 
@@ -57,14 +57,19 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
      2026-08-15 table already writes it;
    - **`open`**: no authentication, as for the health and version routes.
 
-   **Multi-method rows.** Five rows name two methods: `GET`/`PUT` `/datasets/{slug}/rule-set`
-   (`01:880`); `GET`/`POST` `/roles` (`06:499`); `GET`/`PUT` `/approval-policy` (`06:502`);
-   `GET`/`POST` `/environments` (`07:306`); and `GET`/`PUT` `/settings` (`07:311`). Their cell
-   is **per method**, in the form `GET: <value>; PUT: <value>`, each value from the list
-   above. A cell with no method prefix applies to every method of its row. Rows are not
-   split, so the method and path cells, and both existing parsers' reading of them, are
-   unchanged. The rows stay at 152. *(Added on auditor-926-927's audit of `070a83fe`:
-   three of the five carry different permissions per method.)*
+   **Multi-method rows are split, one row per method** (the maintainer's entry "11:37:11 BST
+   — #977 NOT CLEAN: steers; …", item 1). Five rows name two methods:
+   - `GET`/`PUT` `/datasets/{slug}/rule-set` (`01:880`);
+   - `GET`/`POST` `/roles` (`06:499`);
+   - `GET`/`PUT` `/approval-policy` (`06:502`);
+   - `GET`/`POST` `/environments` (`07:306`);
+   - `GET`/`PUT` `/settings` (`07:311`).
+
+   Three of them carry different permissions per method. Each becomes two rows with one
+   method and its own `Permission` cell, and there is **no per-method cell syntax**. The
+   tables go from **152 to 157 rows**. The first two cells keep their shape, so both parsers
+   read the split rows unchanged. *(This supersedes this record's previous head, which kept
+   152 rows with a per-method cell.)*
 
    An empty cell fails. `06`'s blockquoted `| Route | Requires |` table is folded into
    `06` §5.1's column in the same commit, and a dated note records the move. One
@@ -80,7 +85,7 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
      `authenticated`, or by nothing has no natural row, and `rating:read`'s cell alone would
      list dozens of routes. A reader asking "what does this route need" would have to scan
      the whole catalogue. The row a reader already reads is the route's own.
-   - **(a)'s cost is one-time.** One migration commit edits five §5.1 tables (152 rows).
+   - **(a)'s cost is one-time.** One migration commit edits five §5.1 tables: 152 rows at this tree, 157 after the split and 159 with the two added reads.
      That serialises once, against the slices in flight that append §5.1 rows (item 4),
      rather than forever.
    - **(c) stays rejected**, as the maintainer ruled. A declaration generated from
@@ -107,16 +112,22 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
      `/api/v1` prefix and any query string are dropped, and every `{placeholder}` collapses
      to one segment. So `01` §5.1's `/api/v1/dataset-versions/{id}/lineage?direction=up|down`
      (`01` §5.1, the lineage row) matches the live `/api/v1/dataset-versions/{version_id}/lineage`.
-   - **Two live routes have no row, owned elsewhere, and are an interim allow-list.**
+   - **Two live routes have no row. The spec is behind the code (`CLAUDE.md` §0), and the
+     slice adds both rows spec-first** (the 11:37:11 BST entry, item 2). They are
      `GET /api/v1/rating-versions` and `GET /api/v1/rating-versions/{rating_version_id}`
-     (`backend/src/app/api/models.py:1113`, `:1139`) appear in no §5.1. `03` §5.1 declares
-     only the `POST`. Their rows are other Works' spec changes: FD-1283 makes the list read
-     a WK-675 Slice 10 spec change, and the by-id read is DP-5 of the plan with PL working id 9681. This slice
-     does not write them. It carries exactly these two, named, dated 2026-09-30,
-     shrink-only, each citing its owner, and each owner's commit removes its entry red
-     first by adding the row.
+     (`backend/src/app/api/models.py:1113`, `:1139`). `03` §5.1 declares only the `POST`.
+     - Each row carries a dated note: "records an existing route, 2026-09-30", and cites the
+       row's owner Work. The list read belongs to WK-675 Slice 10 (FD-1283). The by-id read
+       belongs to DP-5 of the plan with PL working id 9681.
+     - The pin is then green on day one, and the owners' later spec changes amend those
+       rows, not add them.
+     - **The third route the audit reported already has a row.** `01` §5.1's
+       `GET /api/v1/dataset-versions/{id}/lineage?direction=up|down` is the live
+       `/api/v1/dataset-versions/{version_id}/lineage`. They differ only in the placeholder
+       name and the query string, both of which the comparison above collapses. No row is
+       added for it.
 4. **The slice that carries it.**
-   - **A WK-1178 slice: the column, filled for all 152 rows, and the pin.** WK-1178 is the
+   - **A WK-1178 slice: the column, filled on every row (157 after the split, plus the two added reads), and the pin.** WK-1178 is the
      standing maintenance Work that owns the authorisation sweep's gaps, and the lead cuts
      and dispatches it.
    - **Its first commit is the spec change** (`spec-change`): the five columns, and the fold
@@ -146,9 +157,13 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
    - **S2's new routes are declared by whichever of S2 and this slice lands second**, as the
      11:17:35 BST entry says. If this slice lands second, it fills S2's rows. If S2 lands
      second, S2 writes its rows with the column, and its sweep pins them.
-   - **It lands after #942.** The name check reads `06` §4.1's Built and Specified tables,
-     which #942's D4 makes machine-readable. So this slice is not dispatched before #942 is
-     merged.
+   - **It lands after #942, and its name check reads #942's tables.** The check reads `06`
+     §4.1's Built and Specified tables, which #942's D4 makes machine-readable. At `65b33479`,
+     before #942, 15 of the 21 permissions that live `requires()` routes use have no §4.1 row
+     (auditor-926-927's measurement; `admin:manage_roles`, for one, appears only in FR-348
+     and FR-360). So this slice is not dispatched before #942 is merged.
+   - **Known future §5.1 holders**, named so the lead can plan the gap: WK-675 Slices 2, 4
+     and 10.
 5. **Every row, now and later, carries a cell.** The slice declares every §5.1 row at its
    tree. Its test then **fails on any §5.1 row, built or unbuilt, whose `Permission` cell is
    missing or empty**, so a later slice that appends a row cannot omit it. Check 22's
@@ -175,10 +190,10 @@ Each is shown failing on deliberately broken input (`CLAUDE.md` §13), in the WK
 - A handler-checked route (the deploy route of #971 B.2) whose handler's `permission=`
   differs from its row fails, although it carries no `PERMISSION_ATTRIBUTE`.
 - A cell naming a permission in neither of `06` §4.1's Built and Specified tables fails.
-- A multi-method row whose per-method cell omits a method, or names the wrong permission for
-  one method, fails. So `GET: settings:read; PUT: settings:read` fails on `/settings`.
-- A third live route with no row fails. The two allow-listed reads pass until their owners
-  add their rows.
+- After the split, `PUT /settings` declared `settings:read` fails, and so does any split row
+  whose permission differs from its method's check.
+- A live route with no row fails. The two rating-version reads pass through their
+  "records an existing route" rows.
 - A route declared `authenticated` that in fact demands a permission, or the reverse, fails.
 - Check 22 passes on all five tables after the migration: the header and every row carry
   four cells.
