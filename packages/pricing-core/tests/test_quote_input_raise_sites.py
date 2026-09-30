@@ -69,6 +69,7 @@ _INPUT_FREE = {
     # The model-call sentinel re-raised as a coded error: its text is `MODEL_CALL_FAILED: ` plus a
     # static sentence built in `runtime.py`, never a model's or the engine's own error text.
     ("rating/score.py", "_check_model_call_sentinel"): 1,
+    ("rating/runtime.py", "_load_boosters"): 1,  # step id and ref string, no quote
     ("rating/runtime.py", "handler"): 2,  # `_model_call_failure`: step id and the pinned model_type
     ("rating/compile.py", "check_step_refs_pinned"): 1,  # step id and ref string, no quote
     ("rating/compile.py", "compile_bundle"): 5,  # artifact-level (compile time), no quote
