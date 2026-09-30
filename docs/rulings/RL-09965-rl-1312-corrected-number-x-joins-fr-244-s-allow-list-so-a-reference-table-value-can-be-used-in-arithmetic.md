@@ -76,7 +76,12 @@ A failure is **loud**: a raise at evaluation, never a silent `null` or `0`.
      **inside the engine** (`RL-1312`'s boundary rule, "exact decimal inside ZEN"). ZEN
      returns a Python float **at the boundary**, and `RL-1312`'s boundary rule already covers
      that: outputs are taken through `_round_minor` (`Decimal(repr(x))`, quantized with the
-     output step's declared mode). `number()` adds no float step of its own (`CLAUDE.md` §7)
+     output step's declared mode). **No new float path beyond `RL-1312`'s boundary rule:** the
+     engine computes exact decimal inside, the result crosses as a float, and `_round_minor`
+     (`packages/pricing-core/src/pricing_core/rating/score.py:535`, `Decimal(repr(raw))` at
+     `:542`) takes it to integer minor units (`CLAUDE.md` §7). auditor-933's probe:
+     `number(a) + number(c)` → float `0.3`; `number("1234.5678") * number("1.07")` → float
+     `1320.987546`
      *(F2 of auditor-933's audit at `c96cf32e`: this said "never introduces a float on the
      rating path", which overstated the boundary)*.
    - It exists for `lookup` outputs, which are always strings.
@@ -90,7 +95,9 @@ A failure is **loud**: a raise at evaluation, never a silent `null` or `0`.
      inference over ZEN expressions, which `RL-1312` found the codebase does not have
      (FR-213's input types are known, but an argument is an arbitrary sub-expression). At
      evaluation the engine offers no hook to refuse it. A reviewer reads `number(flag)` as
-     0 or 1, and the FR-244 text says so.
+     0 or 1, and the FR-244 text says so. The practical reach is small: lookup outputs are
+     strings, so only an authored literal `true` or `false`, or a `bool` input, reaches this
+     case (auditor-933, F1).
 3. **The error is `RATING_EVALUATION_FAILED`, `RL-1313`'s code, not a new one.**
    - A `number()` failure is exactly "the engine failed evaluating an authored rating string",
      which is that code's meaning.
