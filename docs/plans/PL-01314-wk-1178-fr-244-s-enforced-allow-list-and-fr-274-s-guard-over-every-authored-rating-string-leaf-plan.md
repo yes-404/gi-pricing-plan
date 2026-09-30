@@ -98,7 +98,7 @@ local channel file, outside the repository:
   rounded only at the output step (FR-226, NFR-496, FR-248). The engine's facts are documented
   in FR-244's text, not checked here: its own `round` is half away from zero, and at the float
   boundary a `Decimal` input is refused while a `str` input is accepted as a ZEN string, not a
-  number. OQ working id 9905 is broadened, and stays out of scope.
+  number. OQ-1316 is broadened, and stays out of scope.
 - "2026-09-30 11:07:11 BST — DECISION: #970 DP-G4 residual → (a), recorded as a LOW FD; #970
   G1–G3 accepted". The maintainer accepted the rulings on this plan's decision points: RL-1313,
   filed as #970 under RL working id 9982, read at `39dce368ef582b067a9be931ee2bd63ca2c6dd03`. The G4
@@ -380,7 +380,7 @@ case says otherwise.
       parsed by `pricing_core.data.expressions` under `02` §4.6, not by the rating engine (RL-1312:
       the rating grammar "is not one of §4.6's profiles"). The extractor keys on the rating
       step models' fields, and the ledger names the pattern.
-11. **`??` semantics and OQ working id 9905 are untouched.** No change to how `??` evaluates, and
+11. **`??` semantics and OQ-1316 are untouched.** No change to how `??` evaluates, and
     none to `round`. `git diff origin/main...HEAD -- packages/pricing-core/src/pricing_core/rating/runtime.py`
     is empty.
 12. **Coverage.** `uv run python scripts/req-coverage.py` lists the new tests against FR-244,
@@ -428,7 +428,7 @@ case says otherwise.
 
 **Not in this slice:**
 - FR-244's text → WK-690 Slice 1, Task 6 (RL-1312), unless DP-G1 rules (b).
-- OQ working id 9905, broadened to "is rounding offered anywhere but an output step" (the
+- OQ-1316, broadened to "is rounding offered anywhere but an output step" (the
   maintainer's 11:05:21 BST entry) → open, owner WK-1178, **not** this slice. This slice only
   refuses `round`, `floor` and `ceil` at save, as the allow-list requires.
 - Any change to `??` → none.
@@ -483,7 +483,7 @@ of the vocabulary and guard checks. None of that is reopened.
 - [ ] Re-derive premises a–o at that tree. Record each in the ledger. Re-read #968's
   *Exposure* list at its live head (acceptance 10).
 - [ ] `gh pr list --state open`, and read anything that rules on FR-244, FR-274, FR-276,
-  FR-255, `compile.py`'s checks, `??` or OQ working id 9905 ([`README.md`](README.md)
+  FR-255, `compile.py`'s checks, `??` or OQ-1316 ([`README.md`](README.md)
   convention 4). Name the SHA read. **Re-point #968 and #972 (FD working id 9888) to their ids if minted.** RL-1312 and RL-1313 are minted.
 - [ ] Confirm DP-G1, DP-G3, DP-G4 and DP-G5's resolutions, by record id, in the ledger. **Under DP-G1 (a),
   confirm FR-244's amended text is on `main`** (`03:146` carries "restricted to an enforced
