@@ -1,5 +1,5 @@
 ---
-id: FD-9692
+id: FD-1283
 family: finding
 title: Three 03 §5.3 views (the rating version list, the regression suite and Deployments) are owned by no Work, plan, ruling or closure
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-675, WK-674, WK-673, WK-1250, RL-1263]
 ---
 
-# FD-9692 — Three 03 §5.3 views have no owner
+# FD-1283 — Three 03 §5.3 views have no owner
 
 *First filed 2026-09-29 as a working-id draft on #921; `created:` is the date the id is to be minted against (2026-09-30), so that `created` is non-decreasing with the number (check 31).*
 
@@ -21,8 +21,7 @@ row (`docs/roadmap.md:820`) names four: the DAG designer, the rate table editor,
 sandbox and the dislocation views. **The other three have no owner:** the rating version list
 (`/rating`, `03:1045`), the regression suite (`/rating/:slug/v/:version/tests`, `03:1049`) and
 Deployments (`/rating/environments`, `03:1051`, which overlaps `07:392`'s `/admin/environments`).
-**Proposed by the auditor; the disposition is the lead's.** FD-9692 is a working id, minted at
-the records PR. First read at `origin/main` `f0c3d197`, 2026-09-29; **re-verified at `880feb49`,
+**Proposed by the auditor; the disposition is the lead's.** FD-1283 was filed as working id 9692 and minted at #921's mint turn (2026-09-30). First read at `origin/main` `f0c3d197`, 2026-09-29; **re-verified at `880feb49`,
 2026-09-30** (evidence items 1 and 7; the finding stands, its line numbers moved by one to six).
 
 ## Evidence
