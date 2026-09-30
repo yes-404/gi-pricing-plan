@@ -52,10 +52,17 @@ first resolve of workspace.currency raised: PlatformError workspace.currency: 'N
 `load_settings()` succeeds with both overrides present; the currency then fails at first
 resolve; the bogus key is reported nowhere.
 
-**What this does not prove.** The `create_app` lifespan was **not run** in this reproduction,
-because it needs a database. The claim that the lifespan does not read the overrides rests on
-**code reading** (the lifespan body above, and the five-hit grep). The `load_settings` and
-first-resolve results are measured.
+**The lifespan, measured by auditor-plans2 (not re-run by this record's author).** The
+`create_app` lifespan was **not run** in the reproduction above, because it needs a database.
+auditor-plans2 ran it at `48792023`: a per-worktree database (dev-commands `createdb -T
+gipricing`, then `alembic upgrade head`), Postgres and MinIO up, and
+`create_app(load_settings()).router.lifespan_context(...)` entered with
+`GIP_SETTING_TOTALLY_BOGUS_KEY=x` and `GIP_SETTING_WORKSPACE_CURRENCY=NOT_A_CURRENCY_` set.
+Result: **"LIFESPAN STARTED (startup succeeded)"**. Control: with `GIP_TENANT_ID=other-tenant` the
+same harness raised `TenantMismatchError … (FR-436)`, so it can fail on a startup check that
+exists. The **mechanism** is the code reading above (the lifespan body and the five-hit grep):
+nothing in it reads the overrides. The `load_settings` and first-resolve results are this
+record's own measurement.
 
 ## Disposition
 
@@ -69,7 +76,8 @@ Slice 3's **red-first acceptance** (each written to fail on `origin/main` first)
 - an **ill-typed or out-of-range** override value refuses startup with a clear message;
 - an **Environment-only key** present as a process override refuses startup (#939's rule 3a);
 - the acceptance runs the **real `create_app` lifespan with the database**, not `load_settings()`
-  alone, because that is the path FR-447 names and the one this record could not run.
+  alone, because that is the path FR-447 names, and the one whose failure to refuse is measured
+  above.
 
 #939's rule 3a startup refusal must be a **new** check: none exists to extend, and
 `require_startable` and the lifespan's two checks do not touch overrides.
