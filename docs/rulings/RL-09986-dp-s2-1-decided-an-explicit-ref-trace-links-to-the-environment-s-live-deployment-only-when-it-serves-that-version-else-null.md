@@ -45,7 +45,7 @@ this point turns on, each read in its owning module.
 | A persisted real-time trace always has an environment | `score.py:407-418` | present | With no `caller.environment`, it raises rather than write (RL-916 part 3) |
 | The trace row cannot be updated by the application | `backend/migrations/versions/835988d1de4c_scoring_traces_row_plus_blob_body.py:78` | present | `REVOKE UPDATE ON scoring_traces FROM {APP_ROLE}` |
 | The explicit ref is the only scoring path today (plan's (j)) | `score.py:128-151` (`_required_ref`) | present | No ref gives 409 `NO_LIVE_RATING_VERSION` (RL-880) |
-| Governance evidence does not read traces | `docs/specs/06-governance.md` (grep `trace`); `git grep -n scoring_traces 9f63d0fe -- backend/src` | **absent** | `06`'s only trace mentions are `rating:read` (`:265`), an audit `trace_id` (`:479`) and prose (`:47`). `scoring_traces` is read only by `api/traces.py` (`GET /traces`) and written by `platform/traces.py` |
+| Governance evidence does not read traces | `docs/specs/06-governance.md` (grep `trace`); `git grep -n scoring_traces 9f63d0fe -- backend/src` | **absent** | `06`'s only trace mentions are `rating:read` (`:265`), an audit `trace_id` (`:479`) and prose (`:47`). `scoring_traces` is written by `platform/traces.py` (`write_pending_trace`, and `complete_pending_trace` at `:198-272`) and read by `api/traces.py` (`GET /traces`), `worker/trace_handlers.py:53` (the off-path completion) and the blob GC's column list (`platform/blobs.py:497`). None of these is governance *(reader list corrected 2026-09-30 on auditor-close1255's F3; the conclusion stands)* |
 | `uat_deployment` is a Deployment fact | `07-platform.md:140` (FR-429); `approvals.py:107`; #971 item 2 | present | "a prior successful deployment to `uat`". #971 pins it on the deployment request as "the id of the successful predecessor Deployment … or a skip record". It is never a trace |
 | Traces feed monitoring | `03` FR-259 (`03:176`); `05-monitoring.md:376`; `00:263` | present | Sampled production traces go to `05`'s aggregates, keyed through the Deployment |
 
@@ -66,8 +66,20 @@ it is null. A default-live quote (no ref) always carries the Deployment that ser
   to the trace write. It is never re-read at write time. So a switchover between scoring and
   sampling cannot attach the quote to a Deployment that did not serve it (`03` FR-268, `03:196`:
   "either the old or the new bundle, never a mix").
-- **Written once.** It is written with the pending row, never back-filled: `UPDATE` is
-  revoked on `scoring_traces`.
+- **Written with the pending row, never back-filled** (`UPDATE` is revoked on
+  `scoring_traces`, migration `835988d1de4c:78`), **and carried through completion.**
+  *(Added 2026-09-30 on auditor-close1255's F1, material.)*
+  - The problem: `complete_pending_trace` (`platform/traces.py:198-272`, read at
+    `9f63d0fe`) never updates the row. It builds a new `ScoringTraceRow(...)` with its fields
+    listed one by one (`:252-264`), then `session.delete(row)` and `session.add(completed)`.
+  - Unchanged, it would drop `deployment_id` on every completed row. The completed row is
+    the one `GET /traces` reads (`api/traces.py:134` requires `blob_sha256`).
+  - So the completed row **carries the pending row's `deployment_id`**, in all three
+    branches: `complete`, `mismatch` with a body, and `mismatch` with `trace=None`.
+  - The slice also adds a structural guard, so that the next column cannot be lost the same
+    way. A test compares `ScoringTraceRow`'s mapped columns with the fields
+    `complete_pending_trace` carries across, and fails on any column neither carried nor
+    named as a completion field (`status`, `pending_quote_context`, `blob_sha256`).
 - **The comparison is exact.** The environment's live Deployment's Rating Version, pinned
   through its approved deployment request (#971 item 1), must equal the explicit ref as an
   `ArtifactRef`: type, slug and version. A different version of the same slug gives null.
@@ -93,9 +105,14 @@ it is null. A default-live quote (no ref) always carries the Deployment that ser
   Deployment row references an approved deployment request that pins the Rating Version and
   the target Environment's identity, not its name. So the comparison reads the Rating
   Version through that request.
-- (a) is also robust to an Environment rename (`07` FR-428). The live lookup is by the
-  caller's environment identity at resolution time, and the trace keeps the string it
-  already keeps.
+- **Rename.** The lookup is by name today: `Caller.environment` is a plain `str`
+  (`backend/src/app/api/deps.py:69`), and `scoring_traces.environment` is `String(32)`
+  (`models.py:2199`). #971 (at `324ea165`, item A.6) rules that every Environment has an
+  **immutable `slug`** (`00` ID-1), and that a rename (`07` FR-428) changes only its display
+  `name`. So the live lookup resolves the caller's environment **by that slug**, and a rename
+  cannot change which Deployment a quote links to. The trace keeps the string it already
+  keeps. *(Corrected 2026-09-30 on auditor-close1255's F2: this read "by identity" before,
+  which the code does not have.)*
 - None of #971's options changes (a).
 
 **Departure from the recommendation: none.**
@@ -107,8 +124,11 @@ it is null. A default-live quote (no ref) always carries the Deployment that ser
 
 ## What it obliges
 
-- **WK-674 Slice 2, Task 6.** Write `deployment_id` as ruled, resolved with the bundle.
-- **Acceptance 7.** Its explicit-ref case carries these tests, each red first:
+- **WK-674 Slice 2, Task 6.** Write `deployment_id` as ruled, resolved with the bundle, and carry it through `complete_pending_trace` (`platform/traces.py`, already in Task 6's file list), with the structural column guard.
+- **Acceptance 7.** Its default-live case (#973 at `22cb24b3`, `:174`: "A sampled trace of a
+  default-live score carries the serving Deployment's id") is kept, and is listed in the
+  Acceptance section below *(added 2026-09-30 on auditor-close1255's F4)*. Its explicit-ref
+  case carries these tests, each red first:
   - an explicit ref equal to the environment's live Rating Version → the live Deployment's id;
   - an explicit ref naming a non-live version, or another version of the same slug → null;
   - an environment with no live Deployment → null.
@@ -126,3 +146,11 @@ This commit edits no spec, plan or roadmap text.
   Deployment between scoring and the trace write, and the trace must still carry the
   Deployment resolved with the bundle.
 - *Violation: a pre-Slice-2 row gains a non-null Deployment reference.*
+- *Violation: a sampled default-live trace (no ref) carries anything but the serving
+  Deployment's id* (#973 Acceptance 7).
+- *Violation: a completed trace row has a different `deployment_id` from its pending row.*
+  This holds in each branch of `complete_pending_trace`: `complete`, `mismatch` with a body,
+  and `mismatch` with `trace=None`. It must be red first against today's function.
+- *Violation: a `ScoringTraceRow` column is neither carried by `complete_pending_trace` nor
+  named as a completion field.* This is the structural guard, and it must be shown red by
+  adding a column that the function does not carry.
