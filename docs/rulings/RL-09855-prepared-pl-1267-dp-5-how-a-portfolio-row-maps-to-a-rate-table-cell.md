@@ -25,6 +25,15 @@ relates: [PL-1267, FR-231, FR-228]
 
 ## Evidence, read at `dd25db94bad0b511042f536213a07e720677aad5` (origin/main)
 
+*Refreshed 2026-09-30 at origin/main `0bc69b5b`: nothing changed.*
+- PL-1267 and every code file cited below are unchanged since `dd25db94` (`git diff --stat`).
+  That covers `operations.py`, `platform/rate_tables.py`, `api/rate_tables.py`,
+  `diff_cache.py`, `bandings.py` and `model-schema`.
+- `03` gained one line at `:1180`, after every `03` line cited here. `03:749` is still the diff
+  route row.
+- PL-1267's DP-5 is still "open (decision-maker)".
+- None of this record's citations was a working id that has since minted.
+
 **The row.** PL-1267 (`docs/plans/PL-01267-wk-673-dislocation-with-attribution-map-plan.md`)
 has DP-5 at `:362`. It asks how FR-231's diff gets "the exposure weight behind each cell
 (from the portfolio dataset)": which portfolio, and how a row maps to a cell.
