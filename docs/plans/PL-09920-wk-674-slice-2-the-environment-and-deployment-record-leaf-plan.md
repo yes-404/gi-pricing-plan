@@ -71,11 +71,15 @@ already exists (**SL-1256**), so this PR cuts no `SL-` row.
    2026-09-30 after the merge: the PR-number citations are replaced by the id throughout, and
    the id is added to `relates:`. #971 C amends its item 3; that pair is the lead's to set at
    #971's mint.)*
-2. **DP-S2-1 to DP-S2-5 below resolved.** Each is blocking, and each names its resolver.
+2. **DP-S2-1, DP-S2-2, DP-S2-3 and DP-S2-5 below resolved** — all four are, as of this
+   revision: DP-S2-1 by #974, DP-S2-2 and DP-S2-3 by #971 A–B, DP-S2-5 by #971 A.6.
+   **DP-S2-4 does not block this slice** (the maintainer's entry headed
+   `2026-09-30 11:17:35 BST — DATED CORRECTION to my A1 entries (12:0x "pin each route's permission against the spec's declared permission (06/03 §5.1 permission column, or the contract)"); DP-S2-4 routing`).
    *(2026-09-30: DP-S2-2 and DP-S2-3 are ruled by #971, working id 9906, read at its head
    `5fb440fb9b29c335eddb714fa5cea51705e8e0af`, dm-effort-high. #971 was ruled from the lead's
    relay before this plan was pushed; this revision aligns the plan to it at every site class,
-   each marked *(#971)*. DP-S2-1 and DP-S2-4 remain open.)*
+   each marked *(#971)*. A later revision applies #971's A.6 at head
+   `324ea1659ca1542db4b1e362dc3864da6a476bbb` and #974.)*
 3. **The lead's go.**
 
 **Dispatch needs** (the lead's, not activation conditions — listed so the dispatch record
@@ -161,9 +165,13 @@ cause, and the guard is restored; the ledger quotes both runs.
    - **(#971 audit advisory A2, red first)** a generic `POST /api/v1/approval-requests`
      naming a deployment request that is not in `review`, or whose `evidence` lacks a floor
      item, is refused; naming one that is in `review` with both items is accepted;
-   - **(A3, per DP-S2-5, red first)** renaming `prod`: a deploy into the renamed Environment
-     still needs its approved Deployment Request. Under DP-S2-5 (a) the rename is also
-     refused if it would change an entry's resolution;
+   - **(A3; #971 A.6, each red first)** changing `prod`'s display `name` leaves it gated: a
+     deploy to it still requires its approved Deployment Request (with resolution keyed on
+     the display name, this test fails); a request to change `prod`'s **slug** is refused
+     with 422 `VALIDATION_FAILED` naming the slug as immutable; `set_policy` refuses a
+     `deployment` entry naming `prd`, a slug no Environment has, with 422
+     `VALIDATION_FAILED`; **retiring an Environment that a policy entry names is refused**
+     with 409 naming the entry (this plan's choice, below), until the entry is removed;
    - **(#971 A.5)** a deploy to an approval-gated target naming no **approved** Deployment
      Request is refused with 409 `DEPLOY_REQUIRES_APPROVAL`; a request whose **pinned**
      predecessor item no longer satisfies FR-429's predicate is refused at the route with 409
@@ -185,8 +193,9 @@ cause, and the guard is restored; the ledger quotes both runs.
      (with the `prod` approval) `prod`; a permitted, reasoned skip deploys to `prod`.
 5. **The dependency direction (DEP-1, RL-1296 item 4).** The predicate lives in
    `packages/model-schema/src/model_schema/approvals.py`, reads only its arguments, and loads
-   nothing. `git grep -n -E 'from app\.(platform|api)\.(deployments|environments|rating)' --
-   backend/src/app/platform/approvals.py` prints nothing. (No `lint-imports` contract covers
+   nothing. `git grep -n -E 'from app\.(platform|api)\.(deployments|rating)' --
+   backend/src/app/platform/approvals.py` prints nothing. (Environments are `07`'s, so PLAT,
+   left of GOV in DEP-1's order: `set_policy`'s existence check of #971 A.6 may read them.) (No `lint-imports` contract covers
    modules inside `app`, so this command and the review are the check.)
 6. **Default-live scoring (RL-880, register F43 L1).** In `backend/tests/test_score.py`:
    an API-key caller scoped to an environment with a Deployment, posting no
@@ -194,8 +203,15 @@ cause, and the guard is restored; the ledger quotes both runs.
    with no Deployment still gets 409 `NO_LIVE_RATING_VERSION`; a bearer caller (no
    environment) with no ref gets the same 409. Each red first: before Task 6, the first case
    gets the 409.
-7. **The trace link (RL-888, RL-916, per DP-S2-1).** A sampled trace of a default-live score
-   carries the serving Deployment's id; the explicit-ref case carries what DP-S2-1 rules.
+7. **The trace link (RL-888, RL-916; DP-S2-1 ruled (a) by #974, working id 9986, head
+   `849dce653e2cbb4123d3546d3f8e72bf3dbb155a`).** In `backend/tests/test_traces.py`, each
+   red first: a default-live score's sampled trace carries the serving Deployment's id; an
+   explicit ref **equal** (type, slug and version) to the live Deployment's Rating Version
+   carries that Deployment's id; an explicit ref to a non-live version, or another version of
+   the same slug, carries null; an explicit ref in an environment with no live Deployment
+   carries null; **the switchover case**: a Deployment recorded between the bundle's
+   resolution and the trace write does not relink the trace (the id resolved with the bundle
+   is the one written, `03` FR-268). The `environment` string is written exactly as today.
 8. **The `STALE_OWNER` obligation (the ruling of #942, working id 9856, D1 item 4), on
    whichever branch holds at Task 4's and Task 5's check commits:**
    - **Branch A — #942 has merged:** `06` §4.1's `Check owner` cells for
@@ -233,9 +249,12 @@ cause, and the guard is restored; the ledger quotes both runs.
       tree above it iterates the 2 open routes, so the equality fails naming both counts;
     - **(b) a guard removed is seen:** with `requires()` removed from one real guarded route
       in the test's setup, the static sweep fails naming that route;
-    - **(c) the permission is pinned against the spec**, per DP-S2-4, never a hand-written
-      map in the test (`CLAUDE.md` §2). Red first on the `AUDIT_READ → JOB_READ` swap at
-      `backend/src/app/api/audit.py:52`, which every test passes today;
+    - **(c) moved out of this slice** (the 11:17:35 entry): pinning each route's permission
+      against a spec declaration goes to the slice DP-S2-4's ruling names, with its red first
+      on the `AUDIT_READ → JOB_READ` swap (`backend/src/app/api/audit.py:52`). **This slice's
+      new routes** (the environments, deployment-request and deploy routes) get their
+      permission declared in that mechanism by **whichever of this slice and that one lands
+      second**, and the later one checks the earlier's routes;
     - **(d) the no-roles behavioural sweep asserts 401 or 403, with a valid body per route.**
       A 422 is not a refusal. Red first on `POST /api/v1/me/workspace`, which passes today
       only because an empty body is refused with 422;
@@ -407,9 +426,10 @@ named with the slices that may also touch it.
 | `backend/src/app/main.py` | two router registrations | WK-1250 S1 | exempt (append only) |
 | `backend/migrations/versions/` | one new revision | WK-1250 S1, WK-690 S1 (none planned) | exempt; re-point `down_revision` at the second merge |
 | `backend/src/app/api/score.py` (`_required_ref`, `_fetch_bundle`), `backend/src/app/platform/traces.py` | default-live resolution; the trace's Deployment reference | WK-1250, WK-673, WK-675 S7b (RL-1263 item 4 names `score.py`) | **serialises** with any in-flight slice editing `score.py` |
+| `backend/src/app/platform/approvals.py` (`set_policy`, `:137-190`) | the existence check of #971 A.6: an entry naming no Environment slug is refused | any slice editing `set_policy` | an edit to an existing function: serialises unless the dispatch record shows no other in-flight slice edits it |
 | `backend/src/app/api/approvals.py` (`Withdraw`, `withdraw_request`) | server-derived liveness | none found | not shared |
 | `backend/tests/test_api_authorisation_sweep.py` (and any sibling Acceptance 12 (f) finds) | Task 0A: flattening, the count equality, the spec pin, the valid-body sweep, the named allow-list | none found | test-only; **no RL-1263 overlap with WK-690 S1 and no third slot** (the 11:01:50 entry) |
-| the five modules' §5.1 REST tables (`01`, `02`, `03`, `06`, `07`) | a `Permission` column, **only if DP-S2-4 rules (a)** | WK-1250 S1 (`03` §5.1 rows), WK-1178 fix slice (`03:771-786`), any slice appending §5.1 rows | **serialises** with each: a new column edits every existing row of the table |
+| the five modules' §5.1 REST tables (`01`, `02`, `03`, `06`, `07`) | **nothing in this slice**: Task 0A (c) moved out (the 11:17:35 entry); if DP-S2-4 rules (a), the slice it names adds the column | WK-1250 S1 (`03` §5.1 rows), WK-1178 fix slice (`03:771-786`), any slice appending §5.1 rows | **serialises** with each: a new column edits every existing row of the table |
 | `backend/src/app/api/approvals.py` (`_carry_to_the_artifact`) | one call added, to the deployment module's `apply_approval_decision` (#971 A.4) | any slice adding an approvable type | an edit to an existing function: serialises unless the dispatch record shows the two diffs add different calls only |
 | `docs/contracts/schemas/common/artifact-ref.schema.json` | regenerated with `deployment` in the type list (#971 A.1); if the guard shows it is hand-authored, edited to match | WK-1250 | **not exempt** if hand-authored (`RL-1263`, "Registry list, as corrected") |
 | new: `backend/src/app/api/environments.py`, `backend/src/app/api/deployments.py`, `backend/src/app/platform/environments.py`, `backend/src/app/platform/deployments.py`, their tests | created | — | not shared |
@@ -418,11 +438,11 @@ named with the slices that may also touch it.
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-S2-1 | When a quote is scored with an **explicit** `rating_version_ref`, which Deployment does its sampled trace reference? `00`'s ER line makes every trace a child of a Deployment (`00:263`); RL-916 made the environment string reconcilable to "the Deployment that actually served the quote"; an explicit ref may name a version that is not live anywhere | (a) The environment's live Deployment if its Rating Version equals the ref, else null; (b) always null for an explicit ref; (c) refuse an explicit ref outside `local`, so every served quote has a Deployment | **(a).** It records the truth in both cases: a quote served by the live version is attributable to its Deployment, and a what-if quote against another version is not pretended to be. (c) breaks every caller that pins a version today (RL-880 made the explicit ref the only path until now). Pre-existing rows get null under every option: no Deployment existed to serve them | decision point | yes — Task 6 | *open* — **routed to the decision-maker at medium effort**: it concerns monitoring's input (`05`), not governance evidence |
+| DP-S2-1 | When a quote is scored with an **explicit** `rating_version_ref`, which Deployment does its sampled trace reference? `00`'s ER line makes every trace a child of a Deployment (`00:263`); RL-916 made the environment string reconcilable to "the Deployment that actually served the quote"; an explicit ref may name a version that is not live anywhere | (a) The environment's live Deployment if its Rating Version equals the ref, else null; (b) always null for an explicit ref; (c) refuse an explicit ref outside `local`, so every served quote has a Deployment | **(a).** It records the truth in both cases: a quote served by the live version is attributable to its Deployment, and a what-if quote against another version is not pretended to be. (c) breaks every caller that pins a version today (RL-880 made the explicit ref the only path until now). Pre-existing rows get null under every option: no Deployment existed to serve them | decision point | yes — Task 6 | **#974 (working id 9986, head `849dce65`, the decision-maker at medium effort) — (a)**: the live Deployment only if it serves exactly the ref's Rating Version (type, slug, version), else null; resolved once with the bundle and never re-read; the `environment` string unchanged, the link additive |
 | DP-S2-2 | **What does a `deployment` approval request name, and where is its evidence pinned?** The policy and the floor are keyed `deployment` (premise b) and `submit` looks up `entry_for(artifact_ref.type, environment)` (`platform/approvals.py:227`), but no `ArtifactRef` can name a deployment (premise g), and an approval request holds no evidence (premise h). RL-1296 (item 3) puts the skip reason in "the predecessor-deployment evidence item of that request", which therefore has no home yet | (a) Add `deployment` to `ARTIFACT_TYPES`; the rating module creates a **deployment request** row (Rating Version, target environment, the pinned evidence: the RV's approval request id, and the `uat` Deployment id **or** the skip record), and submits it through the unchanged `approvals.submit`, as every other owning module does; the Deployment row that the route writes references the approved request; (b) the request names the **Rating Version** ref with `environment="prod"`, and `approvals.submit` gains a policy-key override (`"deployment"`); evidence is held in a new table keyed by request id; (c) give `ApprovalRequestRow` an evidence column (the `06` §4.3 `evidence_bundle` made real) for every artifact type | **(a).** It is the existing pattern (premise h): the owning module holds and pins the evidence, governance reads the policy by the reference's type, and `submit`'s signature does not change. (b) makes governance's lookup key differ from the thing approved, and the open-request uniqueness constraint (`uq_approval_requests_open_artifact`, `models.py:645`) would then collide an RV's own review with its deployment review. (c) changes every module's evidence path, which is wider than this slice | decision point | yes — Tasks 1, 2, 3 and 5 | **#971 (working id 9906) A — (a)**: a Deployment Request row owned by the deployment module, `deployment` in `ARTIFACT_TYPES`, evidence pinned on the row at submission, the deploy route executing only an approved request and re-evaluating FR-429 from the pinned evidence. #971 C amends the OQ-1234 ruling's item 3: the skip record is pinned on the Deployment Request row |
 | DP-S2-3 | **The shape of `CR-1212` item 4's environment scope on `deployment:promote`.** The test is fixed ("a Deployer whose grant names only `uat` is refused on `prod`", `PL-1237:810-811`); the mechanism is not. A grant's scope today is one resource or the workspace (premise f) | (a) Add `ScopeType.ENVIRONMENT`, with `scope_id` the Environment's id; the deploy route checks `deployment:promote` against `ResourceRef(ENVIRONMENT, env.id)`, so `_covers` is reused unchanged and a workspace-wide Deployer still covers every environment; (b) as (a), but `deployment:promote` is honoured **only** through an environment-scoped grant, so a workspace-wide Deployer deploys nowhere; (c) a list of environment names on the assignment | **(a).** It reuses the one scope mechanism and its one check (`rbac.py:205-217`), keeps today's workspace-wide Deployer working, and satisfies the test. (b) is stricter and makes every existing grant useless at once. (c) adds a second scope mechanism beside `scope_type` | decision point | yes — Tasks 1, 2 and 5 | **#971 (working id 9906) B — (a)**: `ScopeType.ENVIRONMENT`, checked **in the handler** with `resource=ResourceRef(ScopeType.ENVIRONMENT, <environment id>)`, never by a bare `requires(Permission.DEPLOYMENT_PROMOTE)`; `06` FR-345 gains "or Environments" in the spec-first commit |
-| DP-S2-4 | **Where is "the spec's declared permission" for a route?** Acceptance 12 (c) must pin each route's permission against the spec, never a hand-written map (the 11:06:50 entry). At the tree above **no spec declares one per route**: every module's §5.1 REST table has the columns `Method \| Path \| Purpose` only (`01`, `02`, `03`, `06`, `07`), and `docs/contracts/openapi/generated.json` carries no `x-` extension at all (`grep -o '"x-[a-z-]*"' docs/contracts/openapi/generated.json` prints nothing) | (a) A `Permission` column on each module spec's §5.1 REST table, filled for every route (the spec is where a route is declared), and a parser in the test; (b) a routes cell on each Built row of `06` §4.1's permission table (#942's D4), one place beside the catalogue WK-1178 checks; (c) an `x-permission` extension emitted into the generated OpenAPI from `requires()` | **(a).** The route's row is the one place a reader looks for what a route requires, and a missing cell is visible there. (b) puts routes into a permission catalogue whose rows are keyed by permission, so a route guarded by two permissions or none has no natural row, and it couples this task to #942's table. (c) is circular: the "spec" would be generated from the code under test, so the `AUDIT_READ → JOB_READ` swap would change both sides and stay green. **Cost of (a):** a spec edit to five modules' §5.1 tables, which serialises with every in-flight slice appending §5.1 rows (**Write set**) | decision point | yes — Task 0A (c) | *open* — to be routed by the lead; it is a spec-versus-code question of how RBAC is declared (`delivery-process.md` §3) |
-| DP-S2-5 | **The policy is keyed by environment *name*, and FR-428 lets an Environment be renamed** (#971 audit advisory A3). `ApprovalPolicy.entry_for(artifact_type, environment)` matches a string (`packages/model-schema/src/model_schema/approvals.py:146-162`) and `ApprovalRequestRow.environment` is `String(32)` (`backend/src/app/db/models.py:627`). #971 A.1 pins the Environment's identity on the request row but not on the policy key, so renaming `prod` would leave the `prod` entry matching nothing, and by #971 A.5 a target with no entry needs no request: a rename makes a gated target look ungated | (a) Key the policy by Environment identity, and refuse a rename that would change any entry's resolution; (b) refuse any rename of an Environment named by a policy entry; (c) re-key the policy's entries in the rename's transaction | **(a)**, the maintainer's steer (the 11:14:48 entry, last bullet). It closes the hole at its cause, since the key stops being renamable. (b) leaves the key renamable and relies on every rename path remembering the check. (c) edits governance's policy from `07`'s rename route, a second writer of the policy beside `set_policy` | decision point | yes — Tasks 2, 4 and 5 | *open* — **with the decision-maker at high effort**, to come back as a #971 delta (a governance bypass risk, the 11:14:48 entry) |
+| DP-S2-4 | **Where is "the spec's declared permission" for a route?** Acceptance 12 (c) must pin each route's permission against the spec, never a hand-written map (the 11:06:50 entry). At the tree above **no spec declares one per route**: every module's §5.1 REST table has the columns `Method \| Path \| Purpose` only (`01`, `02`, `03`, `06`, `07`), and `docs/contracts/openapi/generated.json` carries no `x-` extension at all (`grep -o '"x-[a-z-]*"' docs/contracts/openapi/generated.json` prints nothing) | (a) A `Permission` column on each module spec's §5.1 REST table, filled for every route (the spec is where a route is declared), and a parser in the test; (b) a routes cell on each Built row of `06` §4.1's permission table (#942's D4), one place beside the catalogue WK-1178 checks; (c) an `x-permission` extension emitted into the generated OpenAPI from `requires()` | **(a).** The route's row is the one place a reader looks for what a route requires, and a missing cell is visible there. (b) puts routes into a permission catalogue whose rows are keyed by permission, so a route guarded by two permissions or none has no natural row, and it couples this task to #942's table. (c) is circular: the "spec" would be generated from the code under test, so the `AUDIT_READ → JOB_READ` swap would change both sides and stay green. **Cost of (a):** a spec edit to five modules' §5.1 tables, which serialises with every in-flight slice appending §5.1 rows (**Write set**) | decision point | **no** — Task 0A (c) moved out of this slice (the 11:17:35 entry) | *open* — **with the decision-maker at high effort** (the 11:17:35 entry). The slice it names carries Task 0A (c); this slice's new routes are declared by whichever of the two lands second |
+| DP-S2-5 | **The policy is keyed by environment *name*, and FR-428 lets an Environment be renamed** (#971 audit advisory A3). `ApprovalPolicy.entry_for(artifact_type, environment)` matches a string (`packages/model-schema/src/model_schema/approvals.py:146-162`) and `ApprovalRequestRow.environment` is `String(32)` (`backend/src/app/db/models.py:627`). #971 A.1 pins the Environment's identity on the request row but not on the policy key, so renaming `prod` would leave the `prod` entry matching nothing, and by #971 A.5 a target with no entry needs no request: a rename makes a gated target look ungated | (a) Key the policy by Environment identity, and refuse a rename that would change any entry's resolution; (b) refuse any rename of an Environment named by a policy entry; (c) re-key the policy's entries in the rename's transaction | **(a)**, the maintainer's steer (the 11:14:48 entry, last bullet). It closes the hole at its cause, since the key stops being renamable. (b) leaves the key renamable and relies on every rename path remembering the check. (c) edits governance's policy from `07`'s rename route, a second writer of the policy beside `set_policy` | decision point | yes — Tasks 2, 4 and 5 | **#971 A.6 (head `324ea165`) — an immutable Environment slug**: policy, `ApprovalRequestRow.environment`, `{env}` and every reference key on the slug; FR-428's rename changes the display name only; a slug change is refused; `set_policy` refuses an entry naming no existing slug. Retiring a policy-named Environment is left to this plan (refused, **Decided in this plan**) |
 
 **Decided in this plan, as slice design, not decision points** (RL-1296 leaves
 them to "Slice 2", its "Not ruled here"):
@@ -439,12 +459,22 @@ them to "Slice 2", its "Not ruled here"):
   environment E" is read per workspace.
 - **Predecessor**: the Environment's `requires_prior_environment` (`07:252`), as the §4.2
   contract already declares it, seeded `null`, `dev`, `uat`.
+- **Environment slug and display name** (#971 A.6): every Environment has an **immutable
+  `slug`** (`00` ID-1, `_SLUG`'s grammar) and a mutable display `name`. The seeds are slugs
+  `dev`, `uat`, `prod`. The policy's `environment`, `ApprovalRequestRow.environment`, every
+  `{env}` path parameter and every Environment reference name the slug; FR-428's rename
+  changes the `name` only.
 - **The Deployment Request slug scheme** (#971 A.1 leaves it to this plan, "the slug must not
-  be a renamable name"): `env-<the target Environment's id as 32 lowercase hex>`, e.g.
-  `deployment:env-0192f3c4a5b67d8e9f0a1b2c3d4e5f60@3` — the third request into that
-  Environment. It satisfies `_SLUG` (`refs.py:33`, `[a-z0-9][a-z0-9-]{1,62}`: 36
-  characters), it is immutable because the id is, and ID-2's "monotone per parent" reads
-  naturally as per Environment. The Rating Version is pinned on the row, not in the slug.
+  be a renamable name"): **the target Environment's slug**, e.g. `deployment:prod@3` — the
+  third request into `prod`. *(Revised 2026-09-30: the first draft used the Environment's id
+  in hex because the name was renamable; #971 A.6 makes the slug immutable, so the readable
+  form now meets the same constraint.)* ID-2's "monotone per parent" reads as per
+  Environment. The Environment is pinned on the row by its id as well, and the Rating Version
+  is pinned on the row, not in the slug.
+- **Retiring an Environment that a policy entry names** (#971 A.6 leaves it to this plan):
+  **refused**, with 409 naming the entry, until `set_policy` removes it. Otherwise the policy
+  would hold an entry for an Environment that no longer resolves, which is the silent
+  ungating #971 A.6 exists to prevent.
 - **Who may submit a deployment request**: the same handler check as the deploy itself,
   `deployment:promote` with the target Environment as the resource (#971 B.2). Submitting is
   the Deployer's act of asking to deploy.
@@ -458,8 +488,7 @@ them to "Slice 2", its "Not ruled here"):
 - [ ] `pwd` is the executor's worktree; `git branch --show-current` is the slice branch.
 - [ ] `uv sync --all-packages` (a fresh worktree without it reports hundreds of phantom mypy
   errors — `dev-commands`).
-- [ ] Confirm, naming the `origin/main` SHA read: `RL-1296` is on `main`; #960 is merged; #971 is merged and minted; DP-S2-1, DP-S2-4 and
-  DP-S2-5 each have a resolver. **Stop if any does not hold.**
+- [ ] Confirm, naming the `origin/main` SHA read: `RL-1296` is on `main`; #960 is merged; #971 is merged and minted; #974 is merged and minted. **Stop if any does not hold.**
 - [ ] Record whether #942 has merged (`grep -c 'Check owner' docs/specs/06-governance.md` at
   `origin/main`), which fixes Acceptance 8's branch **for now**; re-check at Tasks 4 and 5.
 - [ ] Re-derive premises a–r; record the tree and each result in the ledger.
@@ -475,9 +504,7 @@ them to "Slice 2", its "Not ruled here"):
 `test_every_operation_refuses_a_caller_holding_no_roles` `:103`,
 `test_every_operation_declares_the_permission_it_enforces` `:175-202`,
 `test_the_sweep_covers_the_whole_published_surface` `:205-211`); each sibling Acceptance 12 (f)
-finds; the §5.1 tables **only if DP-S2-4 rules (a)** (that spec edit goes through `spec-change`
-first, in its own commit). **Blocked on DP-S2-4 for step (c) only**; (a), (b), (d), (e), (f)
-and (g) do not wait for it.
+finds. **Step (c) is not in this slice** (the 11:17:35 entry); nothing here waits on DP-S2-4.
 
 **Interfaces — Produces** (a test-module helper; later tasks' routes are checked by it):
 ```python
@@ -512,11 +539,6 @@ HANDLER_GUARDED: Final[dict[tuple[str, str], tuple[str, int]]]
   named in a constant with its reason, and that constant's size is asserted, so it cannot
   grow silently. Red first: `POST /api/v1/me/workspace` with a valid body for a workspace the
   caller is not a member of — the current sweep passes it only on 422.
-- [ ] **(c), after DP-S2-4:** the static sweep compares each route's declared permission
-  (`PERMISSION_ATTRIBUTE`, `backend/src/app/api/authz.py:41`) with the spec's, read by a parser
-  from where DP-S2-4 rules. **Red first** on a scratch copy with `ReadAudit` switched from
-  `Permission.AUDIT_READ` to `Permission.JOB_READ` (`backend/src/app/api/audit.py:52`): the
-  test fails naming the audit routes.
 - [ ] **(f), (g):** fix each sibling; assert the partition of Acceptance 12 (g).
 - [ ] Green; quote the iterated count and the OpenAPI count in the ledger. Commit:
   `test(api): the authorisation sweep flattens included routers and pins every route (A1, WK-674 S2)`.
@@ -543,7 +565,7 @@ Task 2's commit (RL-1296, item 5).
 - [ ] `07` §4.2: a dated note after the `Environment` example: `live_deployments` is derived
   from Deployment rows (never stored twice), `settings` lands in Slice 3 (`OQ-1235`), and
   `requires_prior_environment` is FR-429's predecessor.
-- [ ] `07` §5.1: append `| PATCH | /api/v1/environments/{name} | Rename or redescribe an environment (`admin:manage_environments`) |` and `| POST | /api/v1/environments/{name}/retire | Retire an environment that has no live Deployment |`.
+- [ ] `07` §5.1: append `| PATCH | /api/v1/environments/{slug} | Change an environment's display name or description; the slug is immutable (`admin:manage_environments`) |` and `| POST | /api/v1/environments/{slug}/retire | Retire an environment that has no live Deployment and that no policy entry names |`. `07` §4.2's `Environment` gains `slug` beside `name`, in a dated note citing #971 A.6.
 - [ ] `06` FR-345: its list of scopes gains "or Environments", dated, citing #971 (by id
   once minted) and `CR-1212` item 4 (#971 B.4); the scope kind is the `ScopeType` value
   `environment`, which Task 2 adds to the enum (so the contract regenerates there). `06` §4.1's assignment example may show an
@@ -554,7 +576,7 @@ Task 2's commit (RL-1296, item 5).
 - [ ] `06` §4.2: a dated note after the JSON: the `deployment` entry is now in
   `DEFAULT_POLICY` (RL-886).
 - [ ] `03`'s new §4 subsection also declares the **Deployment Request** (#971 A.1–A.2): its
-  reference form `deployment:env-<environment id hex>@<n>`, the pinned Rating Version and
+  reference form `deployment:<environment slug>@<n>`, the pinned Rating Version and
   Environment identity, the two pinned evidence items (`rating_version_approval`: the
   decided approval request of the pinned version; `uat_deployment`: the predecessor
   Deployment's id **or** a `PromotionSkip`), written once at submission and never updated
@@ -635,7 +657,7 @@ def promotion_order_refusal(
   `backend/tests/test_migration_dataset_owner.py`; do not invent new fixtures), with two
   `scoring_traces` rows inserted before the upgrade. Predicted failure: the `environments`
   table does not exist.
-- [ ] The revision: `environments` (UUID id, unique name, description, `promotion_order`,
+- [ ] The revision: `environments` (UUID id, unique immutable `slug`, display `name`, description, `promotion_order`,
   `requires_prior_environment` nullable, `retired_at` nullable), seeded `dev`/`uat`/`prod`;
   `deployments` (UUID id, `workspace_id`, `environment_id` FK, `rating_version_ref`, `bundle_hash`,
   `deployed_by`, `deployed_at`, `reason`, and the Deployment Request id it executed, nullable
@@ -658,12 +680,15 @@ modify `backend/src/app/main.py` (one registration); test `backend/tests/test_en
   create / rename / retire by an Admin. Predicted failure: 404 on `/api/v1/environments`
   (no router) — the ledger quotes it; after the router exists without the check, the
   predicted red is "the non-Admin call succeeds".
-- [ ] **The rename, per DP-S2-5** (A3): red first on renaming `prod` (Acceptance 4), then the
-  mechanism the ruling gives — under (a), `ApprovalPolicyEntry.environment` resolves by the
-  Environment's identity and the `PATCH` refuses a rename that would change an entry's
-  resolution.
-- [ ] `GET`/`POST /api/v1/environments`, `PATCH /api/v1/environments/{name}`,
-  `POST /api/v1/environments/{name}/retire` (refused while any Deployment in it is live),
+- [ ] **The slug and the rename (#971 A.6)**, red first on Acceptance 4's A3 cases: `PATCH
+  /api/v1/environments/{slug}` changes `name` and `description` only, and a body naming a
+  different `slug` is refused; `POST /api/v1/environments/{slug}/retire` is refused while a
+  policy entry names the slug. `set_policy` (`backend/src/app/platform/approvals.py:137-190`)
+  refuses a `deployment` entry whose `environment` is not an existing Environment slug,
+  reading the environments platform module (permitted by DEP-1, Acceptance 5).
+- [ ] `GET`/`POST /api/v1/environments`, `PATCH /api/v1/environments/{slug}`,
+  `POST /api/v1/environments/{slug}/retire` (refused while any Deployment in it is live, or
+  while a policy entry names it),
   each writing its Audit Event; the three writes use
   `Depends(requires(Permission.ADMIN_MANAGE_ENVIRONMENTS))`.
 - [ ] **Acceptance 8, this permission:** re-check `origin/main` for #942. Branch A: empty the
@@ -688,9 +713,10 @@ modify `backend/src/app/main.py` (one registration), `backend/src/app/errors.py`
   3. Call `promotion_order_refusal` with the target's environment-qualified entry; a reason
      → 422 `EVIDENCE_INCOMPLETE`. A missing floor item → the same.
   4. Write the row with its `evidence` **once**, then call the unchanged `approvals.submit`
-     with `artifact_ref=deployment:env-<id hex>@<n>` and `environment=<name>`, as
+     with `artifact_ref=deployment:<environment slug>@<n>` and `environment=<slug>`, as
      `rating_versions.submit_for_review` does (`backend/src/app/platform/rating_versions.py:293-305`).
-     `backend/src/app/platform/approvals.py` gains no import (Acceptance 5).
+     `backend/src/app/platform/approvals.py` imports nothing from the rating or deployment
+     modules (Acceptance 5).
   5. `apply_approval_decision` in the deployment module moves the row to `approved` (or back),
      called from a **new deployment branch of `_carry_to_the_artifact`**
      (`backend/src/app/api/approvals.py:488`, beside the four at `:499-517`; #971 audit
@@ -745,7 +771,13 @@ modify `backend/src/app/main.py` (one registration), `backend/src/app/errors.py`
 - [ ] `_required_ref`: with no ref and a caller environment, resolve that environment's live
   Deployment for the caller's workspace; with none, or with no caller environment, keep the
   409. Update its docstring's "until then" sentence with a dated note, not by deletion.
-- [ ] Trace: write `deployment_id` per DP-S2-1.
+- [ ] **Trace (#974):** resolve the Deployment **once**, together with the ref and the bundle
+  in `_fetch_bundle` (`backend/src/app/api/score.py:153`, its ref resolution at `:182`), before scoring: for a
+  default-live quote, the Deployment that served it; for an explicit ref, the caller
+  environment's live Deployment if its Rating Version equals the ref exactly, else null.
+  Pass that value to the trace write in `backend/src/app/platform/traces.py`; never re-read
+  it at write time. Written with the pending row, never back-filled (`UPDATE` is revoked on
+  `scoring_traces`, #974).
 - [ ] `withdraw_request` — **the owner of auditor-928's client-supplied-liveness finding**
   (cited as prose until it is filed; the maintainer's entry headed
   `2026-09-30 11:12:45 BST — #973 (WK-674 S2 plan): (a) agreed; (b) its own FD, plus a class sweep`,
@@ -808,7 +840,9 @@ Task 6's per-request resolution with the switch, and reuses Task 5's route shape
   four wording gaps (the pinned skip at the route, the request row's slug and identity, the
   model-derived one-writer check with its baseline, and Task 1's FR-345 amendment), each
   closed in the revision after it, with #971's audit advisories A2–A5.
-- **Open**: DP-S2-1 (Task 6), DP-S2-4 (Task 0A step (c)) and DP-S2-5 (Tasks 2, 4, 5), all
-  blocking, all the decision-maker's. The plan stays `draft` until each has a resolver.
-- **Placeholder scan**: the DP-S2-1 and DP-S2-4 steps say "per DP-S2-n" and name what each
-  option changes; nothing else is deferred.
+- **Open: none that blocks this slice.** DP-S2-1 (#974), DP-S2-2 and DP-S2-3 (#971 A–B) and
+  DP-S2-5 (#971 A.6) are ruled; DP-S2-4 is with the decision-maker at high effort and, by the
+  11:17:35 entry, does not block this slice. The plan goes `active` on the lead's go once
+  #971 and #974 are minted.
+- **Placeholder scan**: no step says "per DP-S2-n" any more; nothing is deferred except
+  Task 0A (c), which is another slice's.
