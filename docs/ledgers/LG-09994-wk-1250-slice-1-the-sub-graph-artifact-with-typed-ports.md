@@ -116,6 +116,17 @@ in PL-1325 *Decision points*. No difference found.
 **Sub-graph**. `06` §4.1's `rating:read` row and the "Coarse write rights" note name Sub-graphs and
 Regression Suites. Nothing else goes to `06`.
 
+### Task 2 — `model-schema` shapes and contract
+
+Red: `packages/model-schema/tests/test_sub_graph.py` failed at collection, `ModuleNotFoundError: No module
+named 'model_schema.graph_errors'` (the plan predicted the `sub_graphs` module; the test imports both, so
+the first missing one raised). Green: 15 passed. New modules `graph_errors.py` and `sub_graphs.py`; the
+fragment validator reuses `_produced_by`, `_consumed_by`, `_as_list` and `RatingAlgorithm._reachable` /
+`_reaches_output`, and keeps its own Kahn loop (`_topological_order`) so `rating.py` is untouched until
+Task 7. `--check`: 34 generated contracts match. `sub-graph.schema.json` properties: `change_note`,
+`inputs`, `outputs`, `slug`, `steps`, `version`. `test_contracts.py` passes (144 passed, 2 skipped).
+`mypy` (repo config): no issues in 214 files. `ruff check --no-cache .`: clean.
+
 ## Deviations from PL-1325, each named
 
 1. **Decimal example** (Task 1): the §4.11 example declares the output port type `relativity`, not
@@ -124,6 +135,10 @@ Regression Suites. Nothing else goes to `06`.
 2. **No `03` §2 glossary row** (Task 1): `scripts/audit-docs.py` check 13 fails a `03` §2 row for a term
    `00` §2 already defines ("reference it, do not redefine"). The plan's restating row is therefore
    omitted; `03` §4.11 points at `00` §2.3 instead.
+
+3. **`backend/tests/test_contracts.py`** (Task 2) gains three `ONE_SIDED_SLUGS` entries
+   (`sub-graph`, `sub-graph-create`, `sub-graph-body`, "first written form — 03 §4.11"), append-only.
+   The plan's write set omits this file; `test_every_one_sided_slug_is_declared` goes red without it.
 
 ## PRs
 
