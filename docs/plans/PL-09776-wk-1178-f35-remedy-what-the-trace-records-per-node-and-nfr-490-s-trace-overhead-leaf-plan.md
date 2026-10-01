@@ -45,7 +45,8 @@ omits the `input` and `output` steps).
    trace entry. That copy is the cost. Trimming in `_build_trace` alone cannot remove it: the
    research note measured our own post-processing at 12–25 % of the added time
    (`docs/research/w11-task-1-5-nfr-rate-1-2.md:207-223`). This is the mechanism question,
-   DP-F35-4, which a spike (S1) informs before it is ruled.
+   DP-F35-4, which a spike (S1) informs before it is ruled. **M3, a trim in `_build_trace`
+   only, does NOT satisfy NFR-490** (the maintainer's change of 2026-10-01 to this plan).
 
 The result must not change: R3 (`03` §1.3) and NFR-490's second limb.
 
@@ -112,12 +113,17 @@ decision-maker rules it."
 
 ## Status
 
-`draft`. It has **four blocking decision points** (§"Decision points"). It turns `active` only
+`draft`. It has **five blocking decision points** (§"Decision points"). It turns `active` only
 when every activation need below is met, each shown by its command at a named `origin/main`
 SHA in the dispatch record.
 
 Filed under **working id 9776**, allocated by the lead (the only allocator). The id is minted
 at this PR's merge turn.
+
+**Amended pre-merge, 2026-10-01, on the maintainer's five changes relayed by the lead:** DP-F35-5
+moves to the decision-maker (blocking, verbatim text on NFR-490's row); M3 is stated not to
+satisfy NFR-490; Spike S1's corpus is the real seeded algorithms, with declines and errors,
+compared byte for byte; DP-F35-1 waits on the auditor's FR-246 sweep; DP-F35-3 cites OQ 9774.
 
 **SL.** WK-1178 is standing maintenance. The lead mints its slices at triage
 ([`document-ids.md`](../process/document-ids.md) §1.9). The proposed row text is in
@@ -142,10 +148,10 @@ unmet.** The lead's GO check starts here, before anything else.
    ```
    Expected: `1` or more. `0` means F35's row still names the closed WK-671 as owner:
    **unmet**.
-2. **DP-F35-1, DP-F35-2 and DP-F35-3 are ruled and minted** (the decision-maker's `TraceStep`
-   ruling, `CR-1247` Proposals 3 and 11):
+2. **DP-F35-1, DP-F35-2, DP-F35-3 and DP-F35-5 are ruled and minted** (the decision-maker's
+   `TraceStep` ruling, `CR-1247` Proposals 3 and 11, and the NFR-490 statistic):
    ```bash
-   git grep -l --all-match -e 'DP-F35-1' -e 'DP-F35-2' -e 'DP-F35-3' "$M" -- docs/rulings/
+   git grep -l --all-match -e 'DP-F35-1' -e 'DP-F35-2' -e 'DP-F35-3' -e 'DP-F35-5' "$M" -- docs/rulings/
    ```
    Expected: exactly one path, or one path per ruling if the decision-maker files them
    separately. Each path's 5-digit id (`basename <path> | cut -c4-8`) is below `09000`. A
@@ -153,8 +159,13 @@ unmet.** The lead's GO check starts here, before anything else.
    ```bash
    git show "$M":docs/specs/03-rating-engine.md | grep -E '^\| \*\*FR-258\*\*' | grep -c 'Clarified 2026-1[0-2]'
    git show "$M":docs/open-questions.md | grep -c 'sampled-trace schema'
+   git show "$M":docs/specs/03-rating-engine.md | grep -E '^\| \*\*NFR-490\*\*' | grep -c 'Clarified 2026-1[0-2]'
+   git show "$M":<the ruling path above> | grep -c 'FR-246'
    ```
-   Expected: `1` and `1` or more, under DP-F35-1 (iii) (a) and DP-F35-3's recommended
+   Expected: `1`, `1` or more (OQ 9774's row, minted), `1` (DP-F35-5's dated clarification on
+   NFR-490's row, verbatim as ruled) and `1` or more (the ruling cites the auditor's sweep of
+   undeclared reads, DP-F35-1's precondition; the dispatch record names that record). The
+   first two hold under DP-F35-1 (iii) (a) and DP-F35-3's recommended
    placement: the dated `03` text lands in the ruling's own commit. If the ruling instead
    assigns the `03` text to this slice, the first prints `0`, and the write set gains `03`
    §3.8 and §4.5; the dispatch record says so.
@@ -163,7 +174,8 @@ unmet.** The lead's GO check starts here, before anything else.
    git grep -l -e 'Spike S1' -e 'DP-F35-4' "$M" -- docs/research/
    ```
    Expected: at least one path whose 5-digit id is below `09000` and whose front matter reads
-   `kind: spike`.
+   `kind: spike`. S1's corpus needs `FD-1357`'s fix (§"Spike S1" step 5), so in practice
+   need 6 is met before this one.
 4. **DP-F35-4 is ruled and minted** on S1's evidence:
    ```bash
    git grep -l -e 'DP-F35-4' "$M" -- docs/rulings/
@@ -417,8 +429,13 @@ not build concurrently, and the second merges `origin/main` first and re-runs it
 engine's share and ours (`:997-1028`). The budget is `BUDGET_TRACE_OVERHEAD` in that file, by
 symbol.
 
-**The statistic is p99**, the one the harness prints, F35 measured and `#1045`'s bench line
-used. NFR-490 names no statistic (DP-F35-5, non-blocking, default p99).
+**The statistic is DP-F35-5's ruling.** NFR-490 (`03:1191`) names none, so choosing one
+interprets the spec, and the decision-maker rules it. This plan is written for **p99**,
+the maintainer's lean, which holds only if NFR-489 states its scoring-latency budget at p99
+(the decision-maker verifies; `03:1190` reads "Real-time scoring p99 < 50 ms" at
+`19155b50`). p99 is also the statistic the harness prints, F35 measured and `#1045`'s bench
+line used. If the ruling names another statistic, the margin statement below uses it: a
+method difference, named in the dispatch record.
 
 **The latest figure at a base**, for orientation only (not this slice's measurement): the
 maintainer's entry "2026-10-01 08:57:07 BST — #1045's budget line is complete" reads "NFR-490
@@ -453,15 +470,15 @@ Proposal 11's question"). DP-F35-4 waits on Spike S1.
 
 | DP | Question | Options | Recommendation | Kind | Blocking? | Resolved by |
 |---|---|---|---|---|---|---|
-| **DP-F35-1** | **What does a `TraceStep` record per node?** (F35, F55; FR-258's "consumed values, produced value"; R3's "full Trace") | **(a)** Declared names: `consumed` = the values of the step's declared `consumes`; `produced` = its declared `produces` (F55's wording). **(b)** What the step reads: `consumed` = the values of every name the step references (declared `consumes` plus the names its `expr`, `condition`, `clamp_bounds`, `key_expr` or `feature_map` reads), as the step received them; `produced` = its declared `produces`. **(c)** The full accumulated context, as today. **(d)** (a) or (b) by default, and the full context only on an explicit caller option | **(b).** It is `03` §4.5's own example (P6). (a) silently drops a clamp bound or decline threshold the step used (P5), so a trace could not explain its own clamp. (c) leaves NFR-490 about 18× over and NFR-500 about 2.58× over. (d) turns `QuoteContextOptions.trace` from a bool into an enum, a contract change for a debugging aid no requirement names. Under (b), "full" in R3 reads as every step, which is FR-258's "every step" | decision point | **yes** | decision-maker (`RL-`) |
+| **DP-F35-1** | **What does a `TraceStep` record per node?** (F35, F55; FR-258's "consumed values, produced value"; R3's "full Trace") | **(a)** Declared names: `consumed` = the values of the step's declared `consumes`; `produced` = its declared `produces` (F55's wording). **(b)** What the step reads: `consumed` = the values of every name the step references (declared `consumes` plus the names its `expr`, `condition`, `clamp_bounds`, `key_expr` or `feature_map` reads), as the step received them; `produced` = its declared `produces`. **(c)** The full accumulated context, as today. **(d)** (a) or (b) by default, and the full context only on an explicit caller option | **(b).** It is `03` §4.5's own example (P6). (a) silently drops a clamp bound or decline threshold the step used (P5), so a trace could not explain its own clamp. (c) leaves NFR-490 about 18× over and NFR-500 about 2.58× over. (d) turns `QuoteContextOptions.trace` from a bool into an enum, a contract change for a debugging aid no requirement names. Under (b), "full" in R3 reads as every step, which is FR-258's "every step" | decision point | **yes** | decision-maker (`RL-`). **Precondition (the maintainer, 2026-10-01): DP-F35-1 is not ruled before the auditor's sweep of undeclared reads (FR-246; P5) over every stored algorithm and seed is in the decision-maker's commission** |
 | DP-F35-1 (i) | Does `produced` keep the engine's internal keys (`<step>__violated`; `SL-1345`'s `__before`, `__min`, `__max`)? | (a) no: declared `produces` only; the `violation` field already records a clamp or decline. (b) yes | **(a)** | decision point | yes (with DP-F35-1) | decision-maker |
 | DP-F35-1 (ii) | Should compile refuse an undeclared reference, so that (a) and (b) coincide? | (a) not in this slice: raise it as an `OQ-`, and the auditor files P5 as a finding (§"Hand-off"). (b) in this slice: an FR-246 enforcement check over every step type | **(a).** (b) refuses algorithms that score today, including this repository's own fixture, which is a separate governed change | decision point | yes (with DP-F35-1) | decision-maker |
 | DP-F35-1 (iii) | Who writes FR-258's dated clarification and the `TraceStep` reading into `03`? | (a) the ruling's own commit (the precedent `RL-1305` D4 set). (b) this slice | **(a).** It keeps `03` out of this slice's write set, which `SL-1345` also edits (§4.5) | decision point | yes (with DP-F35-1) | decision-maker |
 | DP-F35-1 (iv) | Does `Trace` carry a marker of which reading a persisted trace holds? | (a) no marker: the shape is unchanged; a trace carries `bundle_hash` and its row a timestamp; no reader of persisted `consumed` exists yet (`05`'s monitors are a later phase). (b) an integer field on `Trace`, after `Trace.ladder_check_version`'s precedent (`SL-1345`) | **(a).** If `05`'s input-drift monitor (FR-307) later reads `consumed`, its spec states what it needs then (`CLAUDE.md` §0: a later phase is a spec change) | decision point | yes (with DP-F35-1) | decision-maker |
 | **DP-F35-2** | **Are the `input` and `output` steps traced?** (FD-1246) | (a) FR-258 gains a dated clarification that they are not, and the code is unchanged. (b) the trace carries one entry per `input` step (`consumed` `{}`, `produced` its declared name and value, from the engine's `inputNode` entry) and per `output` step (`consumed` its declared name and value, from the `outputNode` entry), each with `elapsed_us` 0 because the engine evaluates them as one collapsed node | **(b).** FR-258 says "every step"; under DP-F35-1 (b) each such entry is a few bytes; and `SL-1340`'s inlined ports are then traceable without a second ruling. Cost: `score/compare`'s `unchanged` counts rise (Acceptance 7), and a test that pins today's omission inverts | decision point | **yes** | decision-maker (the same `RL-`) |
-| **DP-F35-3** | **What does NFR-500's "sampled-trace schema" name?** (`CR-1247` Proposal 11; F37) | (a) the `Trace` contract after this slice's trim, measured uncompressed. (b) the persisted encoding with a named compression. (c) both: the trimmed `Trace`, persisted with a named compression, the budget stated for the persisted bytes | **(a)**, as `CR-1247` recommended and the maintainer accepted. **At `19155b50` the `OQ-` is not filed** (`grep -c 'sampled-trace schema' docs/open-questions.md` prints 0); filing it is the decision-maker's, in the same sitting | design unknown → `OQ-`, then `RL-` | **yes** (Acceptance 9 reads against it) | decision-maker |
-| **DP-F35-4** | **How is the engine made to carry less?** (P1, P3, P4) | **(M1)** One graph: `passThrough` off on every node; an edge from the producer of each name a step references (the `inputNode` for a raw input); every node whose output a later node does not overwrite wired to `outputNode`; `inputNode` wired to `outputNode`. **(M2)** No engine trace: score untraced and rebuild each entry from the result; `elapsed_us` and `matched` (FR-258) are lost or recomputed in Python. **(M3)** Trim in `_build_trace` only. **(M4)** Two graphs: today's for untraced calls and M1's for traced ones; R3 then compares two graphs on every traced call | **M1, if S1 shows equality on the whole corpus and no mixed producer**; else **M4**, which leaves the serving path untouched. **M3 is not a remedy for NFR-490** (P4: our share is 12–25 %); it fixes F55 and NFR-500 only, and taking it means NFR-490 stays red with the residual owned by the maintainer's dated line. M2 loses two FR-258 fields | decision point (on S1's facts) | **yes** | decision-maker, after S1 |
-| DP-F35-5 | Which statistic does NFR-490's "adds ≤ 20 %" name? (`RL-862` Addendum: "NFR-490 names no statistic"; no record of it is filed at `19155b50`) | (a) p99, as the harness prints. (b) the mean. (c) every quantile, as the harness's ratio ladder prints | default **(a)** until ruled | scope | no: **default p99 applies at Tasks 1 and 6**; resolved at SL-1259's close or by an `OQ-` the lead raises | lead |
+| **DP-F35-3** | **What does NFR-500's "sampled-trace schema" name?** (`CR-1247` Proposal 11; F37) | (a) the `Trace` contract after this slice's trim, measured uncompressed. (b) the persisted encoding with a named compression. (c) both: the trimmed `Trace`, persisted with a named compression, the budget stated for the persisted bytes | **(a)**, as `CR-1247` recommended and the maintainer accepted. Raised as **OQ 9774** (working id; NFR-500's sampled-trace schema; owner this plan), ruled in the same sitting | design unknown → `OQ-`, then `RL-` | **yes** (Acceptance 9 reads against it) | decision-maker |
+| **DP-F35-4** | **How is the engine made to carry less?** (P1, P3, P4) | **(M1)** One graph: `passThrough` off on every node; an edge from the producer of each name a step references (the `inputNode` for a raw input); every node whose output a later node does not overwrite wired to `outputNode`; `inputNode` wired to `outputNode`. **(M2)** No engine trace: score untraced and rebuild each entry from the result; `elapsed_us` and `matched` (FR-258) are lost or recomputed in Python. **(M3)** Trim in `_build_trace` only. **(M4)** Two graphs: today's for untraced calls and M1's for traced ones; R3 then compares two graphs on every traced call | **M1, if S1 shows equality on the whole corpus and no mixed producer**; else **M4**, which leaves the serving path untouched. **M3 (trim only) does NOT satisfy NFR-490** (P4: our share is 12–25 %); it fixes F55 and NFR-500 only, and taking it means NFR-490 stays red with the residual owned by the maintainer's dated line. M2 loses two FR-258 fields | decision point (on S1's facts) | **yes** | decision-maker, after S1 |
+| **DP-F35-5** | **Which statistic does NFR-490's "adds ≤ 20 %" name?** NFR-490 (`03:1191`) names none (`RL-862` Addendum: "NFR-490 names no statistic"), so choosing one interprets the spec | (a) p99. (b) the mean. (c) every quantile, as the harness's ratio ladder prints | **(a) p99, the maintainer's lean, IF NFR-489 (`03` §9's scoring-latency NFR) states its budget at p99**, which the decision-maker verifies (`03:1190` reads "Real-time scoring p99 < 50 ms" at `19155b50`). One statistic for the two budgets on one path keeps them comparable | spec interpretation → decision point | **yes** (Tasks 1 and 6 read against it) | **decision-maker**, in the same session as DP-F35-1 to -3, with **verbatim text and placement**: a dated clarification on NFR-490's row (`03` §9) |
 | DP-F35-6 | Does a passing NFR-490 trigger `RL-862`'s override ("if #416's audit shows traced cost can be brought inside NFR-490's ceiling — in which case always-capture becomes affordable and the simpler design returns")? | (a) no: the off-path design stays; any reversion is a new ruling. (b) yes, in this slice | default **(a)**: this slice touches no backend file (Acceptance 12) | scope | no: **default (a) applies throughout**; named in §"Hand-off" | decision-maker, if raised |
 
 ## Spike S1 — the fact DP-F35-4 needs (an `RS-` of `kind: spike`, before activation)
@@ -492,20 +509,41 @@ names the SHA either way):
    `packages/model-schema/tests/test_rating_algorithm.py:28` describes). A non-empty list goes
    to the decision-maker with the ruling: M1 cannot place such a node without the merge-order
    fact, and M4 is then the recommendation.
-3. **Equality.** Build the M1 wire (Task 4's sample). Over the corpus, score every context
-   untraced on today's wire and on M1's, and traced on M1's. Compare `ScoringResult` with
-   `trace` and `timing_ms` blanked, as canonical JSON. Report `equal N of N` per algorithm and
-   list every difference by quote and key.
+3. **Equality: the result UNCHANGED** (NFR-490's "never changes the result"; R3). Build the M1
+   wire (Task 4's sample). Over the corpus of step 5, score every context untraced on today's
+   wire, untraced on M1's, and traced on M1's. **The comparison:** the served `ScoringResult`
+   serialised with `model_dump_json()` after `trace` and `timing_ms` are blanked, re-dumped as
+   canonical JSON (`json.dumps(..., sort_keys=True, separators=(",", ":"))`), and compared
+   **byte for byte**. A quote that raises compares its error code and message byte for byte.
+   Report `equal N of N` per algorithm and per outcome class (quoted, declined, error), and
+   list every difference by quote and key. **Quotes, declines and errors each need a
+   non-zero count**, or the class is unproven and the `RS-` says so.
 4. **Payload bytes.** For the 63- and 200-step structures (`bench-trace-size.py`'s builder), record
    `len(json.dumps(out["trace"]))` from `async_evaluate(context, {"trace": True})` on both wires,
    the entry count, and the mean and maximum bytes per entry. Then predict the overhead from
    P4's 1:1 bytes-to-cost, labelled a prediction.
-5. **Corpus:** `test_rating_score.py`'s `_compiled()` and `_compiled(glm=True)` with 240 seeded
-   contexts each (`driver_age` 17–99; both channels; `min_premium_minor` 0 and above the
-   office premium, so the clamp fires; `sanity_cap_minor` and `sanity_floor_minor` set so each
-   decline fires on some quotes); the 200-step structure with 1000 seeded contexts; and every
-   algorithm under `packages/pricing-core/tests/` and `examples/` that `compile_bundle` accepts.
-   The `RS-` lists the algorithms it found.
+5. **Corpus: the REAL seeded algorithms first, then the fixtures.**
+   - **The freMTPL2 seven-factor GLM rating version.** The seed fits a GLM on seven factors
+     (`examples/fremtpl2/model.py:57-70`: `driv_age`, `veh_age`, `veh_power`, `veh_brand`,
+     `veh_gas`, `area`, `region`). At `19155b50` the seeded rating algorithm is a fixture
+     (`payable = premium_in * 2`, `examples/fremtpl2/model.py:327-330`, "Not priced from the
+     GLM"), and seeding a multi-factor rate table fails (FD-1357). So S1 runs **after
+     `FD-1357`'s fix** (activation need 6) and uses G2's real algorithm if it is on `main` by
+     then. If it is not, S1 builds one from the seed's approved GLM: one rate table per factor
+     via `seed_from_model`, the multiplying expression, a minimum-premium clamp and a decline
+     constraint, and the payable output. The `RS-` records the algorithm JSON and its
+     `content_hash`. Contexts: 1000 rows drawn with a recorded seed from the freMTPL2 data the
+     seed ingests.
+   - **Every other seeded or stored algorithm** the seed and `examples/` write, including the
+     fixture above, and every algorithm under `packages/pricing-core/tests/` that
+     `compile_bundle` accepts. The `RS-` lists them.
+   - **Declines and errors, on purpose:** contexts that fire each decline constraint; and
+     contexts that raise, at least a rate-table miss (`RATE_TABLE_MISS`), an input-contract
+     violation, and a `model_call` failure where the algorithm has one.
+   - `test_rating_score.py`'s `_compiled()` and `_compiled(glm=True)` with 240 seeded
+     contexts each (`driver_age` 17–99; both channels; `min_premium_minor` 0 and above the
+     office premium, so the clamp fires; `sanity_cap_minor` and `sanity_floor_minor` set so
+     each decline fires on some quotes); and the 200-step structure with 1000 seeded contexts.
 
 ## Tasks
 
@@ -1155,7 +1193,7 @@ For **every** suite-level run, the full gate and each solo window, the ledger re
 | A pass inside one stdev | a pass booked on noise | the margin statement's reading column | recorded as a watch item; SL-1259 measures on the dedicated host |
 | A contended measurement | a slow figure booked as a pass or a fail | the slot reads, `uptime`, the `pgrep` line | discard and re-run in a new window |
 | The rulings differ from the recommendations | Tasks 2–5 test the wrong content | activation needs 2 and 4; Task 0 Step 2 | method-only difference: the dispatch record names it. Acceptance difference: a superseding `PL-` |
-| NFR-500's `OQ-` is never filed | DP-F35-3 cannot be ruled; Acceptance 9 has no reading | activation need 2's `grep -c 'sampled-trace schema'` | unmet; the lead raises it with the decision-maker |
+| OQ 9774 (working id) is not minted or not ruled | DP-F35-3 cannot be ruled; Acceptance 9 has no reading | activation need 2's `grep -c 'sampled-trace schema'` | unmet; the lead raises it with the decision-maker |
 | A rolling deploy mixes old-wire and new-wire workers | an off-path reproduction compares two wires (P11) | the reproduction check (`traces.py:198-272`) records `mismatch` | Acceptance 6 makes equality hold by test; a `mismatch` in production is a finding, not noise |
 | `SL-1340` or the `RL-1343` rule-4 slice reaches `_build_trace` or `TraceStep` first | a merge on the same function | Task 0 Step 4 | serialise; the second merges `main` and re-gates |
 | The DB stack is absent | mass fixture errors that look like failures | an `ERROR` at setup, not a `FAILED` assert | bring the stack up and re-run; an error at setup is never quoted as a red |
