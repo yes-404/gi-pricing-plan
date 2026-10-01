@@ -12,7 +12,7 @@ supersedes: []
 superseded_by: ~
 corrected_by: []
 corrects: ~
-relates: [PL-1286, FR-212, FR-228, FR-229, FR-232, FR-237, FD-1283]
+relates: [PL-1286, FR-212, FR-228, FR-229, FR-232, FR-237, FD-1283, FD-1366]
 ---
 
 # RL-9753 — PL-1286 DP-4's texts: the algorithm read by `slug@version` (S2), and a rate table version's definition and cell-page reads (S4); a version's table list is its pins, not a route
@@ -90,23 +90,30 @@ and DP-7 (`OQ-1285`).
    - `GET /api/v1/rate-tables/{slug}@{version}` → 200 **`RateTable`**, the existing
      definition shape, without cells.
    - `GET /api/v1/rate-tables/{slug}@{version}/cells?cursor=&limit=` → 200
-     **`Page[RateTableCell]`**, for both storages, never a Job (FR-232), in a fixed order
-     by key.
-   - A new model-schema **`RateTableCell`** is a `RootModel[dict[str, str | int]]`: §4.2's
-     row form, which `RateTableVersion.rows` already uses. `rows` and both `default_row`
-     fields are retyped to it, so the row is defined once, and the `dict[str, Any]` in
-     `RateTable.default_row` leaves the published shape.
+     **`Page[RateTableCell]`**, for both storages, never a Job (FR-232). The order is the
+     **code-point order of the key columns' string values, column by column in the declared
+     key order**, sorted in one place for both storages.
+   - A new model-schema **`RateTableCell`** is a `RootModel[dict[str, str]]`: §4.2's row
+     form. `rows` and both `default_row` fields are retyped to it, so the row is defined
+     once, and the `dict[str, Any]` in `RateTable.default_row` leaves the published shape.
+     *(Amended 2026-10-01 10:43 BST, F1 and F2: the type said `dict[str, str | int]`, and
+     the order was not defined. `RateTableVersion.rows` inherited the `| int` arm, which
+     nothing produces: `CellRow = dict[str, str]` (`pricing_core/rate_tables/operations.py:81`),
+     `_wire_rows` "every value is a decimal string" (`backend/src/app/platform/rate_tables.py:184-186`), and §4.2
+     "Values are stored as decimal strings" (`03:310`). So the arm is dropped, not
+     carried.)*
 3. **No route for a version's table list.** It is `pins.rate_tables` on the Rating Version,
    which RL 9766's read returns. A list route would be a second source for the same fact.
    The editor reads each table's definition through item 2.
 
 **Why `RateTableCell` is an open-keyed object.** A table's columns are data, declared per
-table by FR-228, so no static type can name them. The value types are closed (`str | int`),
+table by FR-228, so no static type can name them. The value type is closed (`str`),
 and the column set is checked against the version's declared keys on the server. This is
 the narrowest type that is still §4.2's wire form. A positional alternative
 (`{"keys": [...], "value": ...}`) would be a second row representation beside `rows`, and
-`CLAUDE.md` §2 forbids that. *Not swept by FD 9779 (working id)'s instruments: that finding
-names nested open objects as out of its scope.*
+`CLAUDE.md` §2 forbids that. *(Amended 2026-10-01 10:43 BST, accepted by the lead.)* **A
+map with typed values whose keys are data (FR-228) is not an "open object" in FD-1366's
+sense, and `RateTable.default_row`'s `dict[str, Any]` is removed.**
 
 **The routes, and their types.**
 
@@ -118,7 +125,7 @@ names nested open objects as out of its scope.*
 
 No `dict[str, Any]` appears in any signature.
 
-**FD 9779 (working id), rule (ii).** S2 saves through `POST /api/v1/rating-algorithms`, one
+**FD-1366, rule (ii).** S2 saves through `POST /api/v1/rating-algorithms`, one
 of that finding's five untyped request bodies (`body: dict[str, Any]`, the handler at
 `rating_algorithms.py:34`). Under the finding's per-route hold, a slice that edits that
 handler types its body (as `RatingAlgorithm`) in the same slice and removes the guard entry
@@ -162,7 +169,7 @@ immediately before the blank line that precedes `### 3.4 Rating versions and bun
 (after the FR-1186 row at `:128` at this tree). Nothing is struck.
 
 ```text
-| **FR-<b>** | **A Rate Table Version's definition and cells are readable by its `slug@version`, and its cells are paged in either storage without a Job.** *(Added <date>, `RL-<this>`, `PL-1286` DP-4.)* `GET /api/v1/rate-tables/{slug}@{version}` returns the version's definition as a `RateTable` (§4.2: keys, value, storage, rateable flag and default row), never its cells. `GET /api/v1/rate-tables/{slug}@{version}/cells` returns the cells as cursor-paginated pages of `RateTableCell` rows, each in §4.2's row form, in one fixed order: by the key columns in their declared order, each compared as its wire-form value. The version is immutable, so a cursor stays valid across calls. Both storages, `rows` and `parquet`, answer **200** (FR-232): paging is never a Job. Both reads require `rating:read` and answer **404** `RATE_TABLE_MISS` for an unknown table or version, or another workspace's. The tables a Rating Version pins are not a separate read: they are `pins.rate_tables` on the Rating Version (§4.3, FR-237), read by its `slug@version` (§5.1). |
+| **FR-<b>** | **A Rate Table Version's definition and cells are readable by its `slug@version`, and its cells are paged in either storage without a Job.** *(Added <date>, `RL-<this>`, `PL-1286` DP-4.)* `GET /api/v1/rate-tables/{slug}@{version}` returns the version's definition as a `RateTable` (§4.2: keys, value, storage, rateable flag and default row), never its cells. `GET /api/v1/rate-tables/{slug}@{version}/cells` returns the cells as cursor-paginated pages of `RateTableCell` rows, each in §4.2's row form, in one fixed order: code-point order, per key column in declared order, compared as strings (so `"10"` sorts before `"9"`, and `"B"` before `"a"`), the same for both storages. The version is immutable, so a cursor stays valid across calls. Both storages, `rows` and `parquet`, answer **200** (FR-232): paging is never a Job. Both reads require `rating:read` and answer **404** `RATE_TABLE_MISS` for an unknown table or version, or another workspace's. The tables a Rating Version pins are not a separate read: they are `pins.rate_tables` on the Rating Version (§4.3, FR-237), read by its `slug@version` (§5.1). |
 ```
 
 **T4 — `03` §5.1, two rows (S4).** Insert both, in this order, immediately **before** the
@@ -200,7 +207,7 @@ immediately before the line `### 4.3 `RatingVersion`` (`:345`), after the blockq
 ends `remain mutually exclusive.`. Nothing is struck.
 
 ```text
-*(Added <date>, `RL-<this>`.)* **`RateTableCell`** is one row in the form `rows` uses above: an object whose members are the table's key columns and its value column, each value a string, or an integer where the column is integer-typed. A Rate Table Version's `rows` and `default_row` are typed as `RateTableCell`, and the cells read (§5.1, FR-<b>) returns pages of it. The definition read returns a `RateTable`, which carries every field above except `rows`, `cells`, `change_note`, `seeded_from`, `created_by_operation` and `created_by_import`.
+*(Added <date>, `RL-<this>`.)* **`RateTableCell`** is one row in the form `rows` uses above: an object whose members are the table's key columns and its value column, each value a string (a key level or a decimal string). A Rate Table Version's `rows` and `default_row` are typed as `RateTableCell`, and the cells read (§5.1, FR-<b>) returns pages of it. The definition read returns a `RateTable`, which carries every field above except `rows`, `cells`, `change_note`, `seeded_from`, `created_by_operation`, `created_by_import`, `diff_vs_previous` and `diff_vs_seed`.
 ```
 
 The executor applies each text above byte-for-byte; authorship stays with the decision-maker (document-ids §1.6 FR row; CLAUDE.md §2 one-commit rule; the RL-1296 precedent). Any executor wording is a stop. If a text's anchor is not found exactly once, that is a stop too, reported to the lead; the executor does not re-word it.
@@ -214,18 +221,23 @@ The executor applies each text above byte-for-byte; authorship stays with the de
   - `docs/contracts/` regenerated, so `RatingAlgorithm` reaches `generated.json` (F2
     condition 1);
   - the designer loads through the generated client;
-  - FD 9779 (working id) rule (ii), above.
+  - FD-1366 rule (ii), above.
 - **S4, in one commit with T3, T4 and T5:**
   - `RateTableCell` in model-schema;
   - `RateTableVersion.rows`, `RateTableVersion.default_row` and `RateTable.default_row`
     retyped to it;
   - the two handlers in `backend/src/app/api/rate_tables.py`, typed `-> RateTable` and
     `-> Page[RateTableCell]`, built on `_load_table`, `_load_version` and `_load_cells_of`;
-  - **the cell page ordered by key.** `_load_cells` gains an `ORDER BY` on the key, and the
-    parquet path sorts the same way, so both storages page identically;
+  - **the cell page ordered by key, sorted in one place.** *(Amended 2026-10-01 10:43 BST,
+    F2.)* One function sorts the loaded cells of both storages, in Python, by code-point
+    order per key column in declared order, compared as strings. The rows path does not
+    rely on a database `ORDER BY`, whose collation could differ from the parquet path's.
+    A test pins the result, red first on a fixture with mixed-case levels (`"B"`, `"a"`)
+    and numeric strings (`"10"`, `"9"`). The rows path loads the version's cells per page,
+    a cost bounded by FR-232's threshold, and S4 states that bound under test;
   - `docs/contracts/` regenerated.
   - **A stop, not a decision:** if any persisted `default_row` or row value is not a
-    `str` or `int`, the retyping would reject stored data. S4 measures that against the
+    `str`, the retyping would reject stored data. S4 measures that against the
     test database's seeded tables before retyping, and stops and reports if there is one.
 - **Contention** (`PL-1286` *Sequencing*): T1 is in §3.1, T3 in §3.3, T2 and T4 in §5.1,
   and T5 in §4.2. Each serialises as that table says. T1 and RL 9767 T1 both land at the
@@ -245,8 +257,10 @@ broken input.
 3. **Cell pages, both storages (FR-<b>, FR-232).**
    - A table written as `rows` and the same cells written as `parquet` (the threshold
      lowered in the test) page to identical sequences, and the calls create no Job.
-   - Broken input: drop the `ORDER BY`, and the sequences differ, or a reshuffled fixture
-     shows that the order is not fixed.
+   - Broken input: sort the rows path in the database under a non-C collation, or leave
+     either path unsorted, and the sequences differ on the mixed-case and numeric-string
+     fixture. *(Amended 2026-10-01 10:43 BST, F2.)* The expected order is written out in the
+     test: `"10"` before `"9"`, and `"B"` before `"a"`.
 4. **Pagination.** Concatenated pages equal the full cell set with no duplicates. A
    malformed cursor answers 400 `VALIDATION_FAILED`, and a `limit` above the maximum
    answers 422.
@@ -258,3 +272,24 @@ broken input.
    --check` exits 0.
 7. **Table list.** The editor's test reads the tables from the Rating Version's
    `pins.rate_tables` and makes no other list call.
+
+## Amendment, 2026-10-01 10:43 BST: auditor-1067's F1, F2 and F3, the open-object line, and FD-1366
+
+*By the decision-maker session `dm-675dp56` (effort `medium`), on auditor-1067's audit of
+`272e109b`, all three findings adopted by the lead. The branch was merged with origin/main
+`92b4e4ac` (mint batch A) so that `FD-1366` resolves. The ruled routes are unchanged.*
+
+- **F2 (MED): the order is named.** It is code-point order, per key column in declared
+  order, compared as strings, sorted in one Python function for both storages, and pinned by
+  a red-first mixed-case and numeric-string test. T3, *Ruled* item 2, *What it obliges* and
+  Acceptance 3 are rewritten.
+- **F1 (LOW-MED): the `int` arm is dropped.** `RateTableCell` is
+  `RootModel[dict[str, str]]`. No producer emits an int (`pricing_core/rate_tables/operations.py:81`; `backend/src/app/platform/rate_tables.py:184-186`;
+  `03:310`). T5 reads "each value a string (a key level or a decimal string)". The S4 stop now
+  fires on any persisted non-`str` value.
+- **F3 (LOW):** T5's list of fields `RateTable` lacks adds `diff_vs_previous` and
+  `diff_vs_seed` (`03:304-306`).
+- **Accepted line:** a typed-value map whose keys are data (FR-228) is not an "open object"
+  in FD-1366's sense, and `RateTable.default_row`'s `dict[str, Any]` is removed.
+- **FD 9779 (working id) is re-pointed to `FD-1366`** (three places) and added to
+  `relates:`.
