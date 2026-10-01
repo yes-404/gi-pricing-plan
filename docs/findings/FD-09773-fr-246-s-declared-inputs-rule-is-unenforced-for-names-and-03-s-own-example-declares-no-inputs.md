@@ -200,6 +200,6 @@ Filed 2026-10-01 as working id 9773.
 
 Corrected 2026-10-01 (pre-mint): five evaluating steps under-declare (s_area at 03:254-257 was missed), and s_out consumes an unproduced name.
 
-Corrected 2026-10-01 (pre-mint, 2nd): the sweep predicate now reads as_at; 03's example also fails FR-214 and a second FR-212, and has five unproduced raw names.
+Corrected 2026-10-01 (pre-mint, 2nd): the sweep predicate now reads as_at; 03's example also fails FR-214 and a second FR-212, and has five unproduced raw names, plus a sixth (effective_date) under the widened predicate.
 
 Corrected 2026-10-01 (pre-mint, 3rd): the discharge clause is widened to model_validate in full, then compile, then the declared-reads check, on a complete valid algorithm.
