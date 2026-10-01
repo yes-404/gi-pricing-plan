@@ -226,7 +226,9 @@ Each item can be checked by a command run from the repository root on the merge 
      `git checkout -- docs/specs/06-governance.md`.
    - (b) In `checked_permissions()`, pass `walk=_top_level_only` to `route_checks`. The live
      test fails, and each line begins `route walk did not reach a published path:`. There is
-     one line per published path: 120 at `101e32dc`. Revert the edit.
+     one line per unreached published path: 118 at `101e32dc` (120 published paths, less the
+     2 top-level `APIRoute`s the walk still reaches), the first naming
+     `/api/v1/approval-policy`. Revert the edit.
 6. **Every side of the comparison triggers the test in CI.**
    `test_python_workflow_triggers_on_every_parity_input` passes. For both `push` and
    `pull_request`, the `paths` of `.github/workflows/python.yml` include `packages/**`,
@@ -308,7 +310,7 @@ are not are exactly the 2 owner rows.**
   version=…, log_level="ERROR"))`, the construction that `scripts/generate-contracts.py`
   uses, with no database and no lifespan. The leg walks
   `fastapi.routing.iter_route_contexts(app.routes)` and keeps `APIRoute` originals.
-  - It walks 141 route contexts over 120 distinct paths. `app.openapi()["paths"]` has 120.
+  - It walks 145 route contexts, of which 141 are `APIRoute`s, over 120 distinct paths. `app.openapi()["paths"]` has 120.
     Both set differences are empty, so the reach is complete.
   - Reading `PERMISSION_ATTRIBUTE` off each route's dependency tree gives **21** members.
 - **The top-level walk is blind**, as `RL-1305` says. Iterating `app.routes` directly gives
@@ -767,7 +769,9 @@ the import alias, and a reference that is not a check does not count.
   - `checked_permissions() -> frozenset[str]`. It is the live union of the two legs, and it
     asserts that the shortfall is empty.
 
-- [ ] **Step 1: Add the imports to the module top.**
+- [ ] **Step 1: Add the imports to the module top**, beside Task 1's, not at the append
+  point. Then run `uv run ruff check --fix tests/test_permission_parity.py`, which sorts
+  them into place (I001).
 
 ```python
 import ast
@@ -961,7 +965,11 @@ def test_flattened_route_walk_reaches_nested_routers() -> None:
   - make the first line of `service_layer_checks`
     `return frozenset(members[n] for src in sources for n in _TEXT_REGEX.findall(src) if n in members)`,
     which is `PL-1279`'s text-regex predicate;
-  - give `route_checks` the default `walk=_top_level_only`.
+  - give `route_checks` the default `walk=lambda app: _top_level_only(app)`. Write the lambda,
+    not `walk=_top_level_only`: a default is evaluated when `route_checks` is defined, and
+    `_top_level_only` is defined further down the module, so the bare name raises
+    `NameError` at collection. The lambda looks the name up only when it is called.
+    (Step 4's edit has no such problem: it passes the walk at a call inside a function body.)
 
   Then run `uv run pytest -q tests/test_permission_parity.py -k 'check_site or service_layer or flatten'`.
   - Expected: 2 failed and 2 passed.
@@ -977,7 +985,9 @@ def test_flattened_route_walk_reaches_nested_routers() -> None:
 - [ ] **Step 4: Red proof on the real app** (Acceptance item 5 (b)). In
   `checked_permissions()`, pass `walk=_top_level_only` to `route_checks`, then run the module.
   - Expected: only the live test fails. Every line begins
-    `route walk did not reach a published path:`. At `101e32dc` there are 120 lines.
+    `route walk did not reach a published path:`. At `101e32dc` there are 118 lines (120
+    published paths, less the 2 top-level `APIRoute`s), the first naming
+    `/api/v1/approval-policy`.
   - Revert the edit. Record the count and the first line.
 - [ ] **Step 5: Commit Tasks 2 and 3 together.**
 
@@ -986,12 +996,22 @@ git add tests/test_permission_parity.py
 git commit -m "test(governance): live permission parity and the check-site route leg (WK-1178)"
 ```
 
-**Known limit, fail-closed.** A `requires()` dependency attached at router level
-(`APIRouter(dependencies=[…])` or `include_router(…, dependencies=[…])`) is not in a route's
-own `dependant` tree. At `101e32dc` the only router-level dependency is `demo_enabled`
-(`backend/src/app/api/demo.py:51`), which is not a permission. A future router-level
-permission would read as **no** check site. The result is a red gate, never a false green, and
-the fix is to read the include context then.
+**Known limit.** The two router-level forms behave differently:
+- `APIRouter(dependencies=[Depends(x)])` **is** seen. FastAPI copies a router's own
+  dependencies into each route's `dependant` when the route is added, so the walk reads them.
+- `include_router(…, dependencies=[…])` is **not** seen. Those dependencies live on the
+  include context, not on the route's `dependant`. A permission declared only that way has
+  two effects:
+  - for `NO_CHECK_NO_OWNER` it fails closed: the member reads as having no check site, and
+    the gate goes red;
+  - for `STALE_OWNER` it can **hide** a violation: if the member carries an owner cell, the
+    member reads as unchecked, so a stale owner passes green.
+
+Neither form declares a permission in `backend/src` at `101e32dc`. The only router-level
+dependency is `demo_enabled` (`backend/src/app/api/demo.py:51`, the `APIRouter(…)` form),
+which is not a permission, and no `include_router(` call passes `dependencies=`. If a
+permission is ever declared through `include_router(…, dependencies=[…])`, the route leg
+must read the include context in the same commit.
 
 ### Task 4: The trigger proof, the gate and the ledger
 
@@ -1023,6 +1043,16 @@ def test_python_workflow_triggers_on_every_parity_input() -> None:
 git add tests/test_permission_parity.py
 git commit -m "test(governance): python.yml must trigger the parity check on every input (WK-1178)"
 ```
+
+- [ ] **Step 5: Record the trigger as observed.** `RL-1305` §Acceptance closes: "A commit
+  touching only `packages/model-schema/src/model_schema/permissions.py` triggers
+  `python.yml`, and so the test. This is shown by the workflow's `paths` (the table above) and
+  observed on the slice's first such push." In the ledger, record the first pushed commit that
+  touches `permissions.py` and no other file. Give its SHA, the `python.yml` run id it
+  triggered, and that run's result for `tests/test_permission_parity.py`. If no such push
+  happens while the slice is open, the ledger marks this line as owed, with the lead as owner.
+  It is filled in on the first later push of that kind. Do not make a commit only to produce
+  one: Acceptance item 8 forbids a `packages/*/src` edit in this slice.
 
 ## Hand-off
 
@@ -1077,7 +1107,7 @@ git commit -m "test(governance): python.yml must trigger the parity check on eve
    - `uv run pytest -q tests/test_permission_parity.py`: **16 passed**;
    - Acceptance item 5 (a): 1 failed, with the single line
      `enum member with no 06 §4.1 Built row: dataset:read`;
-   - Acceptance item 5 (b): 1 failed, with 120 reach-shortfall lines, the first being
+   - Acceptance item 5 (b): 1 failed, with 118 reach-shortfall lines, the first being
      `route walk did not reach a published path: /api/v1/approval-policy`;
    - Task 3 Step 3's proxy stubs: 2 failed and 2 passed, exactly as that step states.
 
