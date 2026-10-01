@@ -41,6 +41,16 @@ cited in working-id form and kept out of `relates:` (check 32). Three are cited 
 number 1364), `FD 9779` (untyped JSON request bodies, draft PR #1044, batch A number 1366),
 and `PL 9765` (WK-674 Slice 2's superseding plan). Each is re-pointed when it is minted.
 
+**Amended before its mint, 2026-10-01, on auditor-1057's audit of #1057 at `205e71e2`** (four
+findings, all adopted by the lead). A plan freezes at its first merge, so this is pre-merge
+authoring of the same draft. The changes:
+- F1: DP-1 is reframed as (a1), (a2) and (b) against `_resolve_baseline`, and "no diff
+  output" is now conditional on it.
+- F2: `__init__.py` exports both `RateTableVersion` and `SeedFromModelRequest`.
+- F3: Acceptance 9 counts by text kind.
+- F4: red-first cases are added (the `factor_ref` type, the request refusals, Acceptance 4's
+  red), with the hardening message rule and the refusal order.
+
 **`draft`.** The plan stays `draft` while any **blocking** decision point below is open and
 until every activation need is met. It turns `active` in a **separate activation PR**, on the
 maintainer's agreement and the lead's go.
@@ -113,12 +123,18 @@ not evidence (`CLAUDE.md` §13).
    v1's lineage gives 201 and version 2 of the table, and its key's `factor_ref` is
    `factor:<slug>@2`. **Broken input:** the slug check compares the whole
    `factor:<slug>@<version>` reference. The seed is refused, and the test fails.
+   **Red on `1dd5e264`:** the re-seeded version's key carries no `factor_ref` (the field does
+   not exist, so the JSON key is absent), and the assertion on `factor:<slug>@2` fails.
 5. **One binding, never two** (`FR-228`, `RL-1361` Ruled item 9).
    `packages/model-schema/tests/test_rate_tables.py::test_a_key_carries_at_most_one_of_factor_ref_and_banding_ref`
    first asserts that a key with **only** `factor_ref` validates, then that a key with both
-   is refused with `ValidationError`. **Red on `1dd5e264`:** the first assertion fails
-   (`extra="forbid"` refuses `factor_ref`). The first assertion exists so that the second
-   cannot pass vacuously on the current tree.
+   is refused with `ValidationError`. A second test,
+   `test_a_factor_ref_of_another_artifact_type_is_refused`, first asserts that a valid
+   `factor:<slug>@<version>` key is accepted, then that a `factor_ref` of another type (for
+   example `banding:<slug>@<version>`) is refused with `ValidationError` (`RL-1361` Ruled
+   item 9, "of type `factor`"). **Red on `1dd5e264`:** in both tests the first assertion
+   fails (`extra="forbid"` refuses `factor_ref`). The first assertion exists so that the
+   refusal cannot pass vacuously on the current tree.
 6. **The request is typed** (maintainer's rule (i); `FD 9779`'s seed-from-model entry).
    `test_api_rate_tables.py::test_the_seed_route_publishes_a_typed_request_and_201`, against
    `docs/contracts/openapi/generated.json`. The `POST /api/v1/rate-tables/{slug}/seed-from-model`
@@ -128,6 +144,15 @@ not evidence (`CLAUDE.md` §13).
    **Red on `1dd5e264`:** the schema is
    `{"additionalProperties": true, "title": "Body", "type": "object"}`, and the body without
    `factor` gives 201.
+   **6b. The request's own refusals** (per DP-3's ruling; listed here for DP-3 (a)).
+   `packages/model-schema/tests/test_rate_tables.py::test_the_seed_request_refuses_bad_bodies`,
+   parametrised, each case after a positive control (a valid body validates):
+   a blank or whitespace-only `change_note` (FR-229), a `model_ref` of another artifact type
+   (`rating_algorithm:x@1`), an empty `factor`, and an unknown field (under `extra="forbid"`).
+   Each raises `ValidationError`. At the route, each is 422 `VALIDATION_FAILED` with a field
+   error. **Red on `1dd5e264`:** `ImportError` (`SeedFromModelRequest` does not exist). At
+   the route, the unknown field and the missing `factor` give 201. Under DP-3 (c), the
+   unknown-field case is dropped.
 7. **The 201 is typed** (maintainer's rule (ii)). The same test asserts that the 201 JSON
    schema is a `$ref` to the `RateTableVersion` component, and that
    `docs/contracts/schemas/generated/rate-table-version.schema.json` exists.
@@ -143,11 +168,16 @@ not evidence (`CLAUDE.md` §13).
    `VALIDATION_FAILED`. **Red on `1dd5e264`:** `KeyError` at `operations.py:289`, `:232` and
    `:327`. Subject to DP-6.
 9. **The `RL-1361` texts are applied byte for byte.** For each text this slice applies (see
-   *Spec texts this slice applies*), a script in the ledger prints the count of the find
-   string (0) and the count of the replacement (1) in the file. The only filled placeholders
-   are `<fix date>` and `<first date>`, both the date of the fix commit, written
-   `YYYY-MM-DD`. **Red before the edit:** each find count is 1, and each replacement count
-   is 0.
+   *Spec texts this slice applies*), a script in the ledger prints two counts in the file.
+   The expected values depend on the text's kind:
+   - **Replace texts (`T4`, `T7`, `T8`, `T9`):** after the edit, the find string's count is 0
+     and the replacement's count is 1. **Red before the edit:** find 1, replacement 0.
+   - **Append and insert texts (`T1`, `T2`, `T5`; `T3` is of this kind but is Slice 7's):**
+     the anchor stays, so after the edit the anchor's count is 1 and the appended or inserted
+     text's count is 1. **Red before the edit:** anchor 1, text 0.
+
+   The only filled placeholders are `<fix date>` and `<first date>`, both the date of the fix
+   commit, written `YYYY-MM-DD`.
 10. **The untyped-body guard agrees, in either merge order.**
     - **Case A, this slice merges before `PL 9788`** (lane B order). `UNTYPED_REQUEST_PENDING`
       does not exist on main, and this slice adds no entry to any guard list. After this
@@ -195,7 +225,9 @@ not evidence (`CLAUDE.md` §13).
 - **`WF-699` A1 (`T12`) is not this slice's.** A decision-maker applies it in its own PR
   after this slice merges (`RL-1361` T12).
 - **FD-1358 is out of this slice.** Its owner is WK-673, and its fix is undecided
-  (`RL-1361` section F). This slice changes no diff output. `T3`, `T6`, `T10` and `T11` are
+  (`RL-1361` section F). This slice changes no diff output **under DP-1 (a1) or (b)**.
+  Under DP-1 (a2), `_resolve_baseline` changes, and so does `against=seed`'s answer on a
+  re-seeded lineage. That interplay with WK-673 Slice 7 and FD-1358 is stated in DP-1. `T3`, `T6`, `T10` and `T11` are
   WK-673 Slice 7's.
 
 ## Scope
@@ -256,7 +288,7 @@ way, from its ruling file.
 ### Out of scope
 
 - FD-1358 (per-cell weight in the diff output; owner WK-673). Its fix is not decided
-  (`RL-1361` section F), and this slice touches no diff output.
+  (`RL-1361` section F). This slice touches no diff output unless DP-1 is ruled (a2).
 - FR-231's weighting (`T3`, `T6`, `T10`, `T11`; WK-673 Slice 7).
 - `WF-699` A1 (`T12`; a decision-maker, after this merges).
 - The other four `FD 9779` routes (its Part B).
@@ -267,23 +299,24 @@ way, from its ruling file.
 
 | DP | Question | Options | Recommendation | Owner | Blocking | Resolver |
 |---|---|---|---|---|---|---|
-| DP-1 | `03:334-335` says `seeded_from` is set "only by seed-from-model, on the first version of a lineage". The code sets it on every seed, including a seed appended to an existing lineage (`platform/rate_tables.py:162`). `RL-1361` "What it obliges" says the fix must settle which is right. A spec-versus-code conflict (`CLAUDE.md` §0) | (a) The code is right: a seed starts a new baseline, so a re-seed's `seeded_from` names the new model, and `03:334-335` gets a dated clarification in the decision-maker's exact text. (b) The spec is right: a re-seed inherits the first version's `seeded_from`, and the code changes | **(a).** A re-seed from a newer model is a new technical rate. With (b), `diff_vs_seed` would measure distance from a superseded model, which defeats FR-230's "how far have we moved from the technical rate?". (a) changes no code and needs one dated sentence | decision-maker | **yes** (Acceptance 4 asserts the re-seeded version; the spec cannot be left contradicting the code in the same commit) | open |
+| DP-1 | `03:334-335` says `seeded_from` is set "only by seed-from-model, on the first version of a lineage". The code sets it on every seed, including a seed appended to an existing lineage (`platform/rate_tables.py:162`). The diff baseline is a separate matter: `_resolve_baseline(..., against="seed")` (`platform/rate_tables.py:433-446`) picks the **lowest-numbered** version with `seeded_from` set, which is the first seed, and `test_api_rate_tables.py:225-262` asserts v3-vs-v1 after three seeds. `RL-1361` "What it obliges" says the fix must settle which statement is right. This is a spec-versus-code conflict (`CLAUDE.md` §0), and `dm-1357` is ruling it | **(a1) First-seed baseline; the code is right.** A re-seed records its own `seeded_from` (the new model), and `against=seed` still resolves to the first seeded version. Code: none. Diff: no change, and `:225-262` stays green. Spec: a dated clarification of `03:334-335`, in the decision-maker's exact text. **(a2) A re-seed is a new baseline.** `_resolve_baseline` picks the highest-numbered seeded version at or below the diffed version. Code: `_resolve_baseline` changes (a behaviour change), `:225-262` is rewritten, and the diff cache must not serve an answer computed before the change. Diff: `against=seed` on a re-seeded lineage answers against the re-seed. This touches the diff path that WK-673 Slice 7 edits and that FD-1358 concerns, so it serialises with both. Spec: a dated clarification in the decision-maker's text. **(b) The spec is right.** A re-seed inherits the first version's `seeded_from`, and the platform seed changes (`:162`). Diff: no change, because the baseline is still the first seed. The re-seeded version no longer records the model it came from, so FR-230's "recording the source model reference" is met only on the first version | **None over the ruling now in progress.** The planner's reading: (a1) keeps the slice minimal (no code and no diff change) and records each seed's source model. (a2) answers a real product question (which technical rate "how far have we moved" measures from), and it touches WK-673's diff work. (b) drops the re-seed's provenance. The decision-maker rules | decision-maker (`dm-1357`) | **yes** (Acceptance 4 asserts the re-seeded version; the spec cannot be left contradicting the code in the same commit; under (a2) the write set grows by `_resolve_baseline` and its test) | open |
 | DP-2 | A re-seed into an existing lineage whose current version's key is **unbound** (a table seeded before `factor_ref`, or a hand-authored table, perhaps with several keys). `RL-1361` section A rules only "the slug the lineage's key is bound to" | (a) Accept when the current version has exactly one key, the key has no `factor_ref` and no `banding_ref`, and its name equals the named Factor's slug (every pre-fix seed named its key after the slug, `operations.py:191-194`). Otherwise refuse 422 by name. (b) Refuse every unbound lineage, so the caller must seed a new table slug. (c) Accept any unbound lineage | **(a).** `RL-1361` "What it obliges" says a table seeded before `factor_ref` "must be re-seeded to be weighted through a Factor". (a) lets that re-seed keep its lineage and its diff-vs-previous. (b) breaks it, and (c) lets a vehicle × area table take a one-key seed. Any spec sentence for (a) is the decision-maker's exact text, or the ruling says that `T2` and `T7` suffice | decision-maker | **yes** (Acceptance 3(e) and the lineage check) | open |
 | DP-3 | The typed request. The maintainer's rule (i) decides that it is typed. `T7` fixes the fields `{"model_ref", "factor", "change_note"}`. `RL-1361` says "Whether the body gains a typed `model-schema` shape is not decided by this ruling", and it carries no text naming the shape | (a) `SeedFromModelRequest` in `model_schema/rating.py`: `model_ref: ArtifactRef` (an `after` validator refuses a type other than `model`), `factor: str` (non-empty), `change_note: str` (stripped and non-empty, FR-229), with `extra="forbid"`. No spec text: `T7`'s row states the body, and `generated/seed-from-model-request.schema.json` is the shape's written form. (b) As (a), plus a `03` §4.2 note naming the shape, in the decision-maker's exact text. (c) As (a), but `extra="ignore"`, so unknown fields keep being accepted | **(a).** `extra="forbid"` is the `model-schema` convention (`RateTableKey`, `rating.py:665`), and the break is already marked. The sub-graph request shapes were published with no spec note (`generate-contracts.py`, the `sub-graph-create` comment). (b) is acceptable if the decision-maker supplies the text | decision-maker | **yes** (Acceptance 6 and the schema slug) | open |
 | DP-4 | Under which generated slug the 201's `RateTableVersion` is published, and whether the authored `docs/contracts/schemas/rate-table.schema.json` gains `factor_ref` | (a) A new generated-only slug `rate-table-version`, declared in `ONE_SIDED_SLUGS` with the reason "first written form of the route's 201; the authored rate-table contract is F27(c)'s, never compared". The authored file is not edited, and the ledger records the new divergence (`factor_ref`) for F27(c)'s owner. (b) The slug `rate-table`, which pairs it with the authored file and forces the comparison walkers over F27's seven known divergences. (c) No generated file, only the OpenAPI component | **(a).** (b) is F27(c)'s Work, which is a separate audit, and it would grow this slice by a contract reconciliation. (c) fails the maintainer's rule (ii), "a `$ref` into `docs/contracts/schemas/generated/`". The reason string is a code comment, not spec text | decision-maker | **yes** (Acceptance 7 and `ONE_SIDED_SLUGS`) | open |
 | DP-5 | Does this slice land `factor_ref` (and so `T1` and `T5`), or does WK-673 Slice 7? `RL-1361`: "Which comes first is the lead's to order" | (a) This slice lands it, with `T1` and `T5`. (b) Slice 7 lands it first, and this slice waits for it | **(a).** The lane B order (the maintainer, about 10:10 BST) puts this fix ahead of every WK-673 slice, and seeding cannot set a field that does not exist | lead | yes (the dispatch record states it) | open |
-| DP-6 | Is the FD-1357 *Disposition*'s hardening in this slice (Acceptance 8), and with which code? | (a) In: `validate_rate_table`, `_value_issue` and `_index_rows` raise a `ValueError` naming the missing key, which `_map_operation_error` maps to 422 `VALIDATION_FAILED` (`platform/rate_tables.py:92`). No new code name and no spec text. (b) In, with a new named code, which needs the decision-maker's `03` §5.2 text. (c) Out, as a follow-up | **(a).** The *Disposition* names it ("never a `KeyError`"). (a) adds no code name, so it needs no spec text under rule (iv) | lead (scope); decision-maker only if (b) | no (Acceptance 8 drops if (c)) | open |
+| DP-6 | Is the FD-1357 *Disposition*'s hardening in this slice (Acceptance 8), and with which code? | (a) In: `validate_rate_table`, `_value_issue` and `_index_rows` raise a `ValueError` naming the missing key, which `_map_operation_error` maps to 422 `VALIDATION_FAILED` (`platform/rate_tables.py:92`). The message must **not** begin with an `UPPER_SNAKE: ` prefix, because `_map_operation_error` (`:84-92`) turns any such prefix into a new error code. No new code name and no spec text. (b) In, with a new named code, which needs the decision-maker's `03` §5.2 text. (c) Out, as a follow-up | **(a).** The *Disposition* names it ("never a `KeyError`"). (a) adds no code name, so it needs no spec text under rule (iv) | lead (scope); decision-maker only if (b) | no (Acceptance 8 drops if (c)) | open |
 
 **FD-1358 is out** (not a decision point). `RL-1361` section F rules that the per-cell weight
 in the diff output predates the ruling, is owned by WK-673, and has no decided fix. This slice
-changes neither `RateTableDiff` nor any diff route.
+changes neither `RateTableDiff` nor any diff route's shape. Under DP-1 (a2) only, it changes
+which version `against=seed` resolves to.
 
 ## Write set, and its serialisation (`RL-1263`)
 
 | Path | Change | Shared with | Serialisation |
 |---|---|---|---|
 | `packages/model-schema/src/model_schema/rating.py` | `RateTableKey.factor_ref` and its validator (existing class); new `SeedFromModelRequest` | WK-673 Slice 7 (`RateTableKey`, `RateTableDiff`); WK-674 S2 / `PL 9765` (working id) if it edits this file | serialises with Slice 7 (same class): this slice first, under DP-5. Against `PL 9765`: the dispatch record names the path and checks that no existing definition is edited by both |
-| `packages/model-schema/src/model_schema/__init__.py` | one export appended | WK-674 S2 / `PL 9765`, WK-1250 (`PL-1306:503`; `PL-1278:178-179`) | not on the registry list: serialises unless the dispatch record names the path (append-only `__all__` entries, with no existing definition edited) |
+| `packages/model-schema/src/model_schema/__init__.py` | **two** exports appended, each with its `__all__` entry: `RateTableVersion` and `SeedFromModelRequest`. `RateTableVersion` is not exported at `1dd5e264` (`grep -n RateTable packages/model-schema/src/model_schema/__init__.py` prints nothing). `generate-contracts.py` resolves each slug with `getattr(model_schema, name)` (`build_schemas`), so both must be exported | WK-674 S2 / `PL 9765`, WK-1250 (`PL-1306:503`; `PL-1278:178-179`) | not on the registry list: serialises unless the dispatch record names the path (append-only `__all__` entries, with no existing definition edited) |
 | `packages/pricing-core/src/pricing_core/rate_tables/operations.py` | `seed_from_model`, `extract_relativity_table`, `_key_domains_of`, `validate_rate_table`, `_value_issue`, `_index_rows` | WK-673 Slice 7 (the diff functions take `weights`) | serialises with Slice 7 |
 | `backend/src/app/platform/rate_tables.py` | `seed_from_model` (Factor loading, the lineage check) | WK-673 Slice 7 (`diff`), the FD-1356 fix if it touches it | serialises with Slice 7 |
 | `backend/src/app/api/rate_tables.py` | the seed handler typed; `_seed_body` removed | WK-675 S4 and S5 (`PL-1286`), Slice 7 (the diff route) | the FD 9779 hold, rule (i): a WK-675 slice that calls this route waits for this slice's merge. Serialises with Slice 7 |
@@ -349,7 +382,11 @@ slice waits.
   type is not `factor`. Update the class docstring to cite `RL-1361`.
 - [ ] Append the `SeedFromModelRequest` tests (per DP-3's ruling: a valid body, a missing
   `factor`, a blank `change_note`, a non-model `model_ref`, and an unknown field if
-  `extra="forbid"`). Run them red (`ImportError`), then add the class and its export.
+  `extra="forbid"`). Run them red (`ImportError`), then add the class.
+- [ ] Export **both** `SeedFromModelRequest` and `RateTableVersion` from
+  `model_schema/__init__.py`: the import line and the `__all__` entry for each.
+  `generate-contracts.py` reads each slug's class with `getattr(model_schema, name)`, so a
+  missing export fails generation. Neither is exported at `1dd5e264`.
 - [ ] Run the model-schema tests green.
 
 ### Task 2: pricing-core — one table per Factor, and the hardening (Acceptance 2, 3(a)–(d), 8)
@@ -364,7 +401,10 @@ slice waits.
   The domain and cells come from that entry alone.
 - [ ] Hardening (DP-6 (a)): in `validate_rate_table`, `_value_issue` and `_index_rows`, a row
   missing a declared key raises `ValueError` naming the key and the row index. It never
-  raises `KeyError`.
+  raises `KeyError`. The message starts with lower-case prose (for example
+  `"row 1 lacks declared key 'region'"`), never with an `UPPER_SNAKE: ` prefix, because
+  `_map_operation_error` (`platform/rate_tables.py:84-92`) would read that prefix as a new
+  code. Acceptance 8's route-level assertion is `code == "VALIDATION_FAILED"`.
 - [ ] Update the existing pure tests' `seed_from_model` calls (premise e) to pass `factor` and
   `factors`. Run the module green.
 
@@ -375,6 +415,20 @@ slice waits.
   `factor`. Update every seed call (premise e).
 - [ ] Append the route tests (Acceptance 1, 3(e), 3(f), 4, 6, 7). Run them against the
   unmodified `src/`, and quote each red. Acceptance 1's red is the 500 with `KeyError`.
+- [ ] **Refusal order (a plan choice).** The platform checks approval **before** it loads
+  Factors: `load_model` → `to_model` → `check_model_approved` (imported from pricing-core) →
+  `load_factors` → the pure seed. So a non-approved model with a dangling Factor id gives
+  **422 `PIN_NOT_APPROVED`**, not 404. The reasons:
+  - FR-230 seeds only approved models, so approval is the route's first precondition.
+  - A caller learns nothing about an ungoverned model's Factors.
+  - `test_seed_refuses_a_non_approved_model` (`:293-319`) keeps asserting
+    `PIN_NOT_APPROVED` without pinning Factor rows.
+
+  A route test pins this order: a `fitted` model whose `spec.factors` holds an id that
+  resolves nowhere gives 422 `PIN_NOT_APPROVED`. **Red:** on `1dd5e264` this test is green
+  for the wrong reason (nothing loads Factors), so its red is shown on broken input. With
+  `load_factors` moved before the approval check, the route answers 404 and the test
+  fails. The pure function keeps its own `check_model_approved` call (defence in depth).
 - [ ] Platform `seed_from_model` gains `factor: str`. It calls `load_factors(session,
   workspace_id=workspace_id, factor_ids=list(model.spec.factors))` and passes `factor` and
   the Factors to the pure function. If the lineage exists, it reads the current version's
