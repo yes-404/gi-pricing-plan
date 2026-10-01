@@ -140,6 +140,8 @@ corrected example land, verbatim, in Task 1A's commit. And the example's range c
 which the ruled example must clear on both checks. And the delta audit's F4 (a compile-time
 refusal only, with a release note) and F5 (the 12 backend files in Task 1A Step 7, in a gate
 slot), the corrected example's raw names (P5a), and the maintainer's two `03` example tests.
+Then the maintainer's widening: the ruled example is a complete valid algorithm, and it must
+pass `model_validate` in full, then compile (stub payloads), then the declared-reads check.
 
 **SL.** WK-1178 is standing maintenance. The lead mints its slices at triage
 ([`document-ids.md`](../process/document-ids.md) §1.9). The proposed row text is in
@@ -194,9 +196,11 @@ unmet.** The lead's GO check starts here, before anything else.
    (`:258`), `s_expense`'s `key_expr` (`:262`), `s_office`'s expression (`:265-267`) and
    `s_minprem`'s condition and clamp bound (`:268-271`). **And `s_out` (`:272-274`) consumes
    `payable_premium_pre_round`, which no step produces**, so the example also fails the
-   existing graph invariant (`RATING_GRAPH_UNRESOLVED_REF`, `rating.py:419`). **The ruled
-   example must pass both** that invariant (all of `RatingAlgorithm`'s validation) and the new
-   declared-reads check (P5a); Task 1A's two example tests hold it to that. The
+   existing graph invariant (`RATING_GRAPH_UNRESOLVED_REF`, `rating.py:419`), besides P5a's
+   other defects. **The ruled §4.1 example must pass `RatingAlgorithm.model_validate` in full, then compile
+   (`compile_bundle`), then the new declared-reads check** (the maintainer's widening of
+   2026-10-01, superseding "passes both the existing invariant and the new check"), shown by
+   Task 1A's two example tests, which extract it verbatim from `03`. The
    first two hold under DP-F35-1 (iii) (a) and DP-F35-3's recommended
    placement: the dated `03` text lands in the ruling's own commit. If the ruling instead
    assigns the `03` text to this slice, the first prints `0`, and the write set gains `03`
@@ -278,8 +282,10 @@ unless it names the base.
     packages/pricing-core/tests/test_rating_declared_reads.py` exits 0 and collects **6**
     tests: the two refusal tests and the extractor test, each seen red first (Task 1A Steps 2
     and 3); the control, proved on broken input (Task 1A Step 6); and the two `03` example
-    tests, red against today's `03` on their named causes (Task 1A Step 3) and green on the
-    ruled example applied in the same commit (Step 8). The 12 backend files of Step 7 pass; FD 9773's predicate prints
+    tests, which extract §4.1's example verbatim from `03` and show it passes
+    `RatingAlgorithm.model_validate` in full, then `compile_bundle` (stub payloads for its pins),
+    then the declared-reads check: red against today's `03` on their named causes (Task 1A
+    Step 3), green on the ruled complete example applied in the same commit (Step 8). The 12 backend files of Step 7 pass; FD 9773's predicate prints
     0 undeclared reads over the merge tree (Task 1A Step 8).
 3. **Each `TraceStep` carries exactly the step's reference set and declared produces**
    (DP-F35-1 (b)). On the `test_rating_score.py` fixture (`_compiled()`), `s_clamp`'s
@@ -427,7 +433,8 @@ these are current.
     any step's `produces`. Only `driver_age` has an `input` step (`s_input_age`, `03:252`).
   - **`s_area`'s `as_at: "effective_date"`** is a read too. FD 9773's predicate does not read
     `as_at` (a blind spot); this plan's `referenced_names` does (Task 1A Step 3).
-  - So **the corrected example adds**, at the decision-maker's choice of form: an `input` step
+  - So the decision-maker writes a complete valid algorithm (DP-F35-1 (ii)). **The corrected
+    example adds**, at the decision-maker's choice of form: an `input` step
     for each raw name a step reads (`postcode_outcode`, `effective_date`, and the four above,
     each with an `input_contract` entry where missing), or a producing step for it; `consumes`
     on the five evaluating steps; a producer for `s_out`'s consume (or a different consume);
@@ -562,7 +569,7 @@ Proposal 11's question"). DP-F35-4 waits on Spike S1.
 |---|---|---|---|---|---|---|
 | **DP-F35-1** | **What does a `TraceStep` record per node?** (F35, F55; FR-258's "consumed values, produced value"; R3's "full Trace") | **(a)** Declared names: `consumed` = the values of the step's declared `consumes`; `produced` = its declared `produces` (F55's wording). **(b)** What the step reads: `consumed` = the values of every name the step references (declared `consumes` plus the names its `expr`, `condition`, `clamp_bounds`, `key_expr` or `feature_map` reads), as the step received them; `produced` = its declared `produces`. **(c)** The full accumulated context, as today. **(d)** (a) or (b) by default, and the full context only on an explicit caller option | **(b).** It is `03` §4.5's own example (P6). (a) silently drops a clamp bound or decline threshold the step used (P5), so a trace could not explain its own clamp. (c) leaves NFR-490 about 18× over and NFR-500 about 2.58× over. (d) turns `QuoteContextOptions.trace` from a bool into an enum, a contract change for a debugging aid no requirement names. Under (b), "full" in R3 reads as every step, which is FR-258's "every step" | decision point | **yes** | decision-maker (`RL-`). **Evidence record: FD 9773** (working id, PR #1053; the auditor's P5 sweep; MEDIUM, WK-1178, remedy via this plan). **Precondition (the maintainer, 2026-10-01): DP-F35-1 is not ruled before the auditor's sweep of undeclared reads (FR-246; P5) over every stored algorithm and seed is in the decision-maker's commission** |
 | DP-F35-1 (i) | Does `produced` keep the engine's internal keys (`<step>__violated`; `SL-1345`'s `__before`, `__min`, `__max`)? | (a) no: declared `produces` only; the `violation` field already records a clamp or decline. (b) yes | **(a)** | decision point | yes (with DP-F35-1) | decision-maker |
-| DP-F35-1 (ii) | **Refusal or ordering from reads; FR-246's step-type scope; whether `consumes` is mandatory** (FD 9773). Enforcement is **in this plan's scope** (the lead's instruction of 2026-10-01): Task 1A | **Mechanism:** (a) refuse an undeclared read at save time; (b) accept it and order and wire the graph from what each step reads. **Scope:** (a) every field a step evaluates, on every step type that has one: an `expression`'s `expr`, a `table`'s or `lookup`'s `key_expr`, a `model_call`'s `feature_map`, a `constraint`'s `condition` and `clamp_bounds` (`03`'s own §4.1 example under-declares in five evaluating steps, `03:254-271`, `s_area`'s `key_expr` among them); (b) `expression` only, as FR-246 is worded today. **Mandatory:** (a) yes: a step that reads a name declares it in `consumes`; (b) no: `consumes` stays advisory and only the trace uses the reference set. | **Mechanism (a), scope (a), mandatory (a).** (b) mechanism makes the declared graph a fiction the engine no longer follows, and a reviewer reading `consumes` would be misled. All four under-declarers in the code are constraint steps, and the spec's example adds `feature_map` and `key_expr` cases, so (b) scope would enforce nothing that exists. **The ruled §4.1 example (`03:252-274`) must pass both the existing graph invariant (`RATING_GRAPH_UNRESOLVED_REF`, `rating.py:419`: today `s_out` consumes `payable_premium_pre_round`, which no step produces; and the rest of `RatingAlgorithm`'s validation, which today refuses it first on FR-214, P5a) and the new declared-reads check (five evaluating steps under-declare, `03:254-271`; `postcode_outcode` needs an `input` step, P5a)**; (a) mandatory makes DP-F35-1's options (a) and (b) coincide for every algorithm that compiles; the code is (iii-a)'s question. **The undeclared reads also bear on M1 (DP-F35-4):** M1 wires edges from reference sets, so an undeclared read adds an edge the declared graph lacks, which can reorder evaluation or close a cycle that the engine refuses in `load_bundle` for a pinned bundle that hydrates today (P11: the content hash is unchanged). Task 1A's check stops new ones at save time; it does not reach a bundle already pinned: (iii-b) rules that, and Spike S1 step 6 lists those edges and cycles | decision point | yes (with DP-F35-1) | decision-maker, with verbatim `03` text (FR-246 and the corrected §4.1 example, `03:252-274`) |
+| DP-F35-1 (ii) | **Refusal or ordering from reads; FR-246's step-type scope; whether `consumes` is mandatory** (FD 9773). Enforcement is **in this plan's scope** (the lead's instruction of 2026-10-01): Task 1A | **Mechanism:** (a) refuse an undeclared read at save time; (b) accept it and order and wire the graph from what each step reads. **Scope:** (a) every field a step evaluates, on every step type that has one: an `expression`'s `expr`, a `table`'s or `lookup`'s `key_expr`, a `model_call`'s `feature_map`, a `constraint`'s `condition` and `clamp_bounds` (`03`'s own §4.1 example under-declares in five evaluating steps, `03:254-271`, `s_area`'s `key_expr` among them); (b) `expression` only, as FR-246 is worded today. **Mandatory:** (a) yes: a step that reads a name declares it in `consumes`; (b) no: `consumes` stays advisory and only the trace uses the reference set. | **Mechanism (a), scope (a), mandatory (a).** (b) mechanism makes the declared graph a fiction the engine no longer follows, and a reviewer reading `consumes` would be misled. All four under-declarers in the code are constraint steps, and the spec's example adds `feature_map` and `key_expr` cases, so (b) scope would enforce nothing that exists. **The decision-maker writes a COMPLETE, VALID §4.1 algorithm (`03:252-274` and its `input_contract` and `outputs`):** an `input` step (and an `input_contract` entry) for every raw name a step reads, every declared output produced by an output step, `consumes` on every evaluating step, a producer for every consume; **all of P5a's defects fixed in one ruling** (accepted by the maintainer, 2026-10-01). It must pass **`RatingAlgorithm.model_validate` in full, then compile (`compile_bundle`, with stub payloads for its pinned refs, Task 1A), then the new declared-reads check** (the maintainer's widening, superseding "both the existing invariant and the new check"); (a) mandatory makes DP-F35-1's options (a) and (b) coincide for every algorithm that compiles; the code is (iii-a)'s question. **The undeclared reads also bear on M1 (DP-F35-4):** M1 wires edges from reference sets, so an undeclared read adds an edge the declared graph lacks, which can reorder evaluation or close a cycle that the engine refuses in `load_bundle` for a pinned bundle that hydrates today (P11: the content hash is unchanged). Task 1A's check stops new ones at save time; it does not reach a bundle already pinned: (iii-b) rules that, and Spike S1 step 6 lists those edges and cycles | decision point | yes (with DP-F35-1) | decision-maker, with verbatim `03` text (FR-246 and the corrected §4.1 example, `03:252-274`) |
 | DP-F35-1 (iii) | Who writes FR-258's dated clarification and the `TraceStep` reading into `03`? | (a) the ruling's own commit (the precedent `RL-1305` D4 set). (b) this slice | **(a).** It keeps `03` §3.8 and §4.5 out of this slice's write set (`SL-1345` also edits §4.5). **FR-246's amendment and the corrected §4.1 example are different:** they land in Task 1A's commit, beside the code that enforces them (the maintainer, 2026-10-01) | decision point | yes (with DP-F35-1) | decision-maker |
 | DP-F35-1 (iii-a) | **The error code an undeclared read is refused with** | (a) reuse `RATING_GRAPH_UNRESOLVED_REF` (FR-212's "consumes undefined value"). (b) a **new** code (for example `RATING_STEP_UNDECLARED_READ`), with its row in `03`'s owned-codes table (§5.1) and its entry in `RATING_ERROR_CODES` (`backend/src/app/errors.py`) | **(b).** **Undeclared is not unresolved:** an FR-212 refusal means no step produces the name; here a producer exists and the step simply did not declare the read. One code for both would make a caller's fix ambiguous. Cost: `03` §5.1 and `errors.py` join the write set (Task 1A, same commit), and Acceptance 12's `backend/src/` exclusion admits that one registry line | decision point | yes (with DP-F35-1) | decision-maker, with the code's verbatim `03` row |
 | DP-F35-1 (iii-b) | **The fate of a stored or pinned bundle that fails the new check** | (a) refused at reload (`load_bundle` runs the check). (b) grandfathered: a bundle compiled before the check loads and scores as it did, and the check binds at save and compile only (the FR-4 pattern: a rule binds forward). (c) migrated: re-compiled with the reads added to `consumes`, which is a new bundle and a new hash, so a new Rating Version through approval | **(b).** (a) can take a live, approved Rating Version out of service on a code change, which R1 (`03` §1.3: a live version is immutable) forbids in spirit. (c) is a governed re-approval per bundle, not a code task. Under (b), M1 must still hydrate such a bundle: Spike S1 step 6 is the evidence, and **"0 stored rows in the local databases" does not settle other installs**, so the ruling states the behaviour, not the count | decision point | yes (with DP-F35-1; S1 step 6 reads against it) | decision-maker |
@@ -929,18 +936,61 @@ def _spec_example() -> dict[str, Any]:
     return payload
 
 
+class _StubResolver:
+    """The example's own algorithm, and an approved stub payload for every other pinned ref.
+
+    `compile_bundle` resolves each pin for its status and stores the payload verbatim
+    (`compile.py:556-571`); it never parses a pinned payload, so a stub is enough for it to run.
+    """
+
+    def __init__(self, algorithm_ref: str, algorithm: dict[str, Any]) -> None:
+        self._algorithm_ref = algorithm_ref
+        self._algorithm = algorithm
+
+    async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+        if str(ref) == self._algorithm_ref:
+            return ResolvedArtifact(status="approved", payload=self._algorithm)
+        return ResolvedArtifact(status="approved", payload={"stub_for": str(ref)})
+
+
+def _example_version(example: dict[str, Any]) -> RatingVersion:
+    """A draft Rating Version pinning exactly the refs the example's steps name, mirroring
+    `test_rating_score._version()` (`test_rating_score.py:118-134`)."""
+    steps = example["steps"]
+    rate = [s["rate_table_ref"] for s in steps if s.get("rate_table_ref")]
+    reference = [s["reference_table_ref"] for s in steps if s.get("reference_table_ref")]
+    models = [s.get("model_ref") or s["peril_structure_ref"] for s in steps if s["type"] == "model_call"]
+    modes = {s["mode"] for s in steps if s["type"] == "model_call"}
+    return RatingVersion.model_validate({
+        "id": str(uuid4()), "workspace_id": str(uuid4()), "slug": example["slug"],
+        "version": example["version"], "status": "draft", "dataset_version_id": str(uuid4()),
+        "model_ref": models[0] if models else None,
+        "created_at": "2026-10-01T00:00:00Z", "created_by": str(uuid4()),
+        "updated_at": "2026-10-01T00:00:00Z",
+        "algorithm_ref": f"rating_algorithm:{example['slug']}@{example['version']}",
+        "pins": {"rate_tables": rate, "models": models, "reference_tables": reference,
+                 "custom_objectives": []},
+        "model_reference_mode": modes.pop() if len(modes) == 1 else "exact",
+    })
+
+
 @pytest.mark.req("FR-246")
-def test_the_03_example_passes_the_graph_invariants() -> None:
-    """FR-212 and FR-214 (`RatingAlgorithm`), then save-time validation (`compile.py:550`)."""
-    algorithm = RatingAlgorithm.model_validate(_spec_example())
-    issues = validate_algorithm(algorithm)
-    graph = [i for i in issues if i.code in ("RATING_GRAPH_UNRESOLVED_REF", "RATING_GRAPH_CYCLIC")]
-    assert graph == [], graph
+async def test_the_03_example_validates_in_full_and_compiles() -> None:
+    """`RatingAlgorithm.model_validate` in full (FR-212, FR-214, every field), then
+    `compile_bundle`, which runs `validate_algorithm` (`compile.py:550`) and so the
+    declared-reads check once Step 4 registers it."""
+    example = _spec_example()
+    RatingAlgorithm.model_validate(example)
+    version = _example_version(example)
+    assert version.algorithm_ref is not None
+    bundle = await compile_bundle(version, _StubResolver(str(version.algorithm_ref), example))
+    assert bundle.content_hash.startswith("sha256:")
 
 
 @pytest.mark.req("FR-246")
 def test_the_03_example_declares_every_read() -> None:
-    """Read over the raw step dicts, so it is independent of the invariant test above."""
+    """The declared-reads check stated on its own, over the raw step dicts, so its red is
+    visible even while the example fails validation."""
     undeclared = {
         step["step_id"]: sorted(referenced_names(step) - set(_as_list(step.get("consumes"))))
         for step in _spec_example()["steps"]
@@ -956,12 +1006,24 @@ def _as_list(value: Any) -> list[str]:
     return [str(v) for v in (value if isinstance(value, list) else [value])]
 ```
 
-  Add `import json`, `from pathlib import Path` and `from typing import Any` to the imports.
-  The two example tests stop short of `compile_bundle`: the example pins artifacts
-  (`reference_table:ons-postcode-directory@7`, `peril_structure:motor-gb-2026h2@2`,
-  `rate_table:motor-expense@3`, `sub_graph:ncd-ladder@4`) whose payloads exist nowhere, so
-  they run the two checks `compile_bundle` runs first: `RatingAlgorithm`'s validation and
-  `validate_algorithm` (`compile.py:550`).
+  Add `import json`, `from pathlib import Path`, `from typing import Any`, `from uuid import
+  uuid4`, `from model_schema.rating import RatingVersion`, `from model_schema.refs import
+  ArtifactRef` and `from pricing_core.rating.compile import ResolvedArtifact, compile_bundle`
+  to the imports (each is imported the same way in `test_rating_score.py:36-39`).
+
+  **How "then compile" is met: the test supplies stub payloads for the pinned refs**, so
+  `compile_bundle` runs. The other option, a ruled example that pins fixture artifacts from the
+  test corpus, is rejected: it would write test-fixture names (`rate_table:motor-expense@1`,
+  `model:motor-freq@1`) into the governed spec's example, which must read as a real
+  algorithm. Stubs suffice because `compile_bundle` resolves each pin for its status and
+  stores the payload verbatim (`compile.py:556-571`) without parsing it. **What this does not
+  cover:** hydration (`load_bundle`, where `to_wire` reads rate-table rows and boosters) needs
+  real payloads for every pin and is not run on the example; and `compile_bundle` does not read
+  `sub_graphs` at `19155b50` (`score.py:398-399`), so the example's sub-graph mount is not
+  resolved. If `SL-1340` (the pin and inlining) has merged before Task 1A, `_StubResolver`
+  serves the sub-graph ref as well and the dispatch record says so. If `RatingVersion`'s pins
+  refuse the example's `peril_structure` ref under `models`, stop and report: the ruled
+  example then needs a pinnable model ref.
 
 - [ ] **Step 2: Run them, and record each red by its cause.**
   Run: `uv run pytest -q packages/pricing-core/tests/test_rating_declared_reads.py`.
@@ -1026,8 +1088,8 @@ def referenced_names(node: Mapping[str, Any]) -> frozenset[str]:
   module again. Expected: the extractor test passes; the two refusal tests fail on an empty
   issue list (`[] == [("s_clamp", …)]`); the fixed-fixture control passes **only by accident**
   (no check yet), which Step 5 then makes real. **The two example tests are red against
-  today's `03`, each on its own cause:** `test_the_03_example_passes_the_graph_invariants`
-  with a `ValidationError` naming FR-214 (`declared output 'premium_ladder' has no output
+  today's `03`, each on its own cause:** `test_the_03_example_validates_in_full_and_compiles`
+  with a `ValidationError` from `RatingAlgorithm.model_validate` naming FR-214 (`declared output 'premium_ladder' has no output
   step`, the first of P5a's refusals); `test_the_03_example_declares_every_read` naming the
   five steps `s_area`, `s_rp`, `s_expense`, `s_office` and `s_minprem`. Any other cause is a
   plan defect.
