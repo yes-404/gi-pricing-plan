@@ -120,5 +120,8 @@ maintainer's lean was (a), conditional on NFR-489's statistic, and that conditio
 verified above. Until the maintainer's dated line below is filled in, PL 9776's Tasks 1
 and 6 read p99 provisionally, and the text above is not applied.
 
-**Maintainer acceptance:** *(pending — the maintainer's dated line goes here: "Accepted /
-Amended / Rejected, YYYY-MM-DD HH:MM BST")*
+**Maintainer acceptance:** Accepted by the maintainer (by delegation), 2026-10-01 10:30:00 BST (to-lead.md entry headed '2026-10-01 10:30:00 BST — ACCEPTANCE: RL 9770 (NFR-490's statistic = p99) as the spec interpretation; FD 9759 limb (2) discharged at the compile site alone; #1060 audit noted'): NFR-490's statistic is the p99, as ruled; the row text applies at mint.
+
+*(Recorded by the decision-maker on the lead's relay. This session did not read the channel
+file. The status stays `draft`; the mint PR applies the NFR-490 row and sets this record
+`active`.)*
