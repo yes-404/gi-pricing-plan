@@ -21,9 +21,9 @@ relates: [FR-222, FR-223, FR-227, FR-237, FR-239, FR-240, FR-403, PL-1286]
 
 **Ruled 2026-10-01 10:25 BST at effort `medium`** by the decision-maker session `dm-675dp56`.
 The command line is `claude --effort medium --model opus --name dm-675dp56`, and the session
-printed `CLAUDE_EFFORT=medium`. The lead relayed the commission at ~10:34 BST by the lead's
-clock. The session's own clock, read with `TZ=Europe/London date`, said 10:25 at this
-ruling, and every stamp in this record is from that clock. The maintainer's words, as the
+printed `CLAUDE_EFFORT=medium`. The lead relayed the commission. Every stamp in this record is
+from `TZ=Europe/London date`. *(2026-10-01 10:27 BST: the clock remark is withdrawn; the lead's
+earlier stamps were estimates; one box clock.)* The maintainer's words, as the
 lead relayed them: "a DM rules FR-223's check point (compile + the RL 9767 validate route vs
 'save'), verbatim text, recording which side was wrong". This session did not read the
 channel entry itself.
