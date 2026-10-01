@@ -20,7 +20,7 @@ example must pass FULL validation; the class (unvalidated spec examples) becomes
 
 ## Finding
 
-**Severity: to be set by the maintainer; owner WK-1178 (backlog).** No check in the gate validates a JSON artifact example
+**Severity: MEDIUM; owner WK-1178.** No check in the gate validates a JSON artifact example
 in `docs/specs/` against the `model-schema` class it illustrates. `scripts/audit-docs.py` reads the specs for ids,
 sections and links, and `backend/tests/test_contracts.py` compares the generated contracts with the hand-authored ones;
 neither parses an example block and calls `model_validate` on it. So an example can contradict the shape it shows, and the
@@ -130,7 +130,25 @@ again with nothing red.
 
 ## Disposition
 
-**Severity: to be set by the maintainer.** Owner **WK-1178** (backlog).
+**Severity: MEDIUM; owner WK-1178.** Not LOW: the spec is the contract the code is written against (`CLAUDE.md` §2), and
+10 of the 22 checkable examples (45%) disagree with `model-schema`, each an unresolved `CLAUDE.md` §0 spec/code
+disagreement. Not HIGH: they are loud (a copied example is refused, not mispriced); the silent case is `FD 9773`'s
+(working id).
+
+**Discharge, all of:**
+
+1. **Each of the 10 structural failures is resolved individually, recording which side was wrong** (`CLAUDE.md` §0). The
+   spec example is never matched to the code silently. Where the code is wrong, that is its own finding. `03:233` is
+   discharged by the ruling on `FD 9773` (working id).
+2. **The docs check lands.** Every artifact example in `docs/specs/` carries a class marker or an "illustrative fragment"
+   marker. The check runs `model_validate` in full on every class-marked example, is proven on deliberately broken input
+   (`CLAUDE.md` §13), and fails the gate on any unmarked `json` block in `docs/specs/`. The rule goes into the docs-process
+   text first, then the check.
+3. **Placeholder, unclassified and unparsed blocks are all marked**, so the end state has 0 unmarked blocks, counted by the
+   check itself.
+
+**Timing.** Before the docs freeze (5 Nov), scheduled in the lead's lane-loading plan for the scope-freeze re-baseline
+(Sat 3 Oct).
 
 **Proposed check.** A docs check in `scripts/audit-docs.py` that, for each fenced JSON block in `docs/specs/*.md`:
 
@@ -148,6 +166,8 @@ needs `model_schema` importable from the docs gate, which the docs half does not
 plan, not decided here.
 
 **Recorded here.** Proposed by the auditor, 2026-10-01; the lead gives the verdict. Event that next confirms or discharges
-it: the maintainer sets severity, and the WK-1178 plan for the docs check is filed.
+it: the WK-1178 plan for the docs check is filed and the discharge above is met.
 
 Filed 2026-10-01 as working id 9772.
+
+Severity and discharge set by the maintainer 2026-10-01 (pre-mint).
