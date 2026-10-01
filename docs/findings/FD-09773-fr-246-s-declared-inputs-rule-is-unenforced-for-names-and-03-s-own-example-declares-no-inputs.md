@@ -186,8 +186,12 @@ maintainer's severity ruling recorded above; the lead gives the verdict.
    decision-maker receives this finding and the sweep output.
 2. **Enforcement** lands with a **RED-FIRST constraint-step test**: a constraint step reading a name outside its `consumes`
    refuses at save, red on the current tree.
-   **The corrected example must pass BOTH the existing graph invariant (`_graph_invariants`, `rating.py:394`) and the new
-   declared-reads check, shown by a TEST that compiles the example verbatim from `03`, in Task 1A's commit** (PL 9776 (working id)).
+   **Widened by the maintainer (relayed by the lead, 2026-10-01), superseding the previous wording "passes BOTH the existing
+   invariant and the new check": the corrected example must pass `RatingAlgorithm.model_validate` IN FULL, then compile, then
+   the new declared-reads check, shown by a TEST that extracts the example verbatim from `03`, in Task 1A's commit** (PL 9776
+   (working id)). The DP-F35-1 decision-maker writes a **complete valid algorithm**: an `input` step for every raw name and
+   every declared output produced. Fixing all of §4.1's defects (the errors pasted in "A third defect class" above, as the
+   filer's own run shows them) in one ruling, one edit of the same block, is accepted.
 3. **The 4 test steps** are fixed, or kept as **named negative fixtures**.
 4. **Interim guard.** G2's Exit-demo slice (a) acceptance line, "every step's reads ⊆ its declared consumes", checked by
    running the sweep on the new algorithm with 0 undeclared reads. Until enforcement lands, that line is the only guard.
@@ -197,3 +201,5 @@ Filed 2026-10-01 as working id 9773.
 Corrected 2026-10-01 (pre-mint): five evaluating steps under-declare (s_area at 03:254-257 was missed), and s_out consumes an unproduced name.
 
 Corrected 2026-10-01 (pre-mint, 2nd): the sweep predicate now reads as_at; 03's example also fails FR-214 and a second FR-212, and has five unproduced raw names.
+
+Corrected 2026-10-01 (pre-mint, 3rd): the discharge clause is widened to model_validate in full, then compile, then the declared-reads check, on a complete valid algorithm.
