@@ -29,6 +29,7 @@ from model_schema.rating import (
     AlgorithmOutput,
     Pins,
     RatingAlgorithm,
+    RatingConstraintStep,
     RatingExpressionStep,
     RatingInputStep,
     RatingLookupStep,
@@ -42,6 +43,7 @@ from model_schema.rating import (
 from model_schema.refs import ArtifactRef
 from model_schema.sub_graphs import SubGraphInputPort
 from pricing_core.rating.authored import authored_expression_fields
+from pricing_core.rating.ladder import RUNG_ORDER, output_steps_by_name, rung_output_name
 from pricing_core.rating.vocabulary import check_allow_list
 from pricing_core.safe_error import CodedError
 
@@ -197,6 +199,62 @@ def fragment_output_type_issues(
     return output_type_issues(types, outputs)
 
 
+def _check_clamp_placement(algo: RatingAlgorithm) -> list[ValidationIssue]:
+    """FR-240 (`RL-1329` §2 step 5, W-c): a clamp the Premium Ladder cannot place is refused.
+
+    A clamp overwrites the name it produces in place, and the ladder states it once, on the
+    `constraints` rung, after `optimisation_adjustment` (FR-247). That is truthful only when
+    the clamp's produced name is the source of the **last rung present before
+    `constraints`**, and the clamp produces the name it consumes. A clamp on the source of
+    any other rung (an earlier rung whose later rungs consume the clamped value, or a rung
+    after `constraints`) cannot be stated at the `constraints` position without breaking the
+    chain; nor can a clamp that produces a rung's source under a different name from the one
+    it consumes. Both are decidable from the algorithm alone.
+
+    Reads only `on_violation`, `consumes` and `produces` of a constraint step and the output
+    steps' `output_name` and `consumes`, never `expr`, `condition`, `clamp_bounds` or
+    `key_expr` (#967's closure 3c (i)).
+    """
+    output_steps = output_steps_by_name(algo)
+    sources: dict[str, str] = {}
+    for rung in RUNG_ORDER:
+        step = output_steps.get(rung_output_name(rung))
+        consumed = _as_list(step.consumes) if step is not None else []
+        if rung != "constraints" and consumed:
+            sources[rung] = str(consumed[0])
+    before = [rung for rung in RUNG_ORDER[: RUNG_ORDER.index("constraints")] if rung in sources]
+    placeable = before[-1] if before else None
+    issues: list[ValidationIssue] = []
+    for step in algo.steps:
+        if not (isinstance(step, RatingConstraintStep) and step.on_violation == "clamp"):
+            continue
+        produced = [str(name) for name in _as_list(step.produces) if name]
+        if not produced:
+            continue
+        consumed_names = [str(name) for name in _as_list(step.consumes) if name]
+        for rung, source in sources.items():
+            if source != produced[0]:
+                continue
+            if rung != placeable:
+                reason = f"rung {rung!r} is not the last rung before constraints ({placeable!r})"
+            elif not consumed_names or consumed_names[0] != produced[0]:
+                reason = f"it produces {produced[0]!r} but consumes {consumed_names[:1]!r}"
+            else:
+                continue
+            issues.append(
+                ValidationIssue(
+                    code="LADDER_CLAMP_UNPLACEABLE",
+                    message=(
+                        f"clamp step {step.step_id!r} cannot be placed on the premium "
+                        f"ladder: {reason} (FR-240, FR-247)"
+                    ),
+                    step_id=step.step_id,
+                    field="produces",
+                )
+            )
+    return issues
+
+
 def _check_determinism(text: str) -> tuple[str, str] | None:
     """FR-216/246: evaluation is deterministic — no wall-clock, no randomness."""
     lowered = text.lower()
@@ -299,6 +357,7 @@ STRING_CHECKS: tuple[Callable[[str], tuple[str, str] | None], ...] = (
 ALGORITHM_CHECKS: tuple[Callable[[RatingAlgorithm], list[ValidationIssue]], ...] = (
     _check_result_types,
     _check_input_bound_scale,
+    _check_clamp_placement,
 )
 
 
