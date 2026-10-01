@@ -2,7 +2,7 @@
 id: LG-1353
 family: ledger
 title: WK-1178 hotfix SL-1352 — runner-independent template-certificate test
-status: active
+status: closed
 created: 2026-10-01
 owner: executor
 tree: 7190787f494a921f89339ae62f8e3ae666bc4e2b
@@ -230,3 +230,14 @@ All 155 hits of the widened predicate have a row in FD-1354's second addendum (k
 test), with the method, command and blind spots stated. No same-family pinned hit was found in `test_objectives.py` beyond
 the ones fixed, so the gate did not re-run for that. Owned item (WK-1178): the 30 measured rows outside `objectives.py`.
 
+
+## Close — 2026-10-01 05:44 BST (supersedes the `## Close` entry of 04:54 BST, voided by Task 4)
+
+auditor-1352e: delta audit over `5a4beb63..0039c9f5` (and `origin/main...0039c9f5`, main `8933a29e`): CLEAN, no blocking finding.
+Write set is `test_objectives.py`, FD-1354, LG-1353, the roadmap and INDEX (plus the FD's register row); `git diff 8933a29e
+0039c9f5 -- 'packages/*/src' backend/src frontend scripts` is empty and the test file is untouched since the gated `5b7b24dd`.
+The widened predicate (`grep -rnP`) reproduces 155 hits (13 failure-only, 15 input, 40 measured, 87 not a format spec);
+the 24 in `objectives.py` are all normalised, bounded by `_TOLERANCE_PASS`/`_TOLERANCE_WARN` (`_status_for`) or held by status.
+The guard test is red 12 of 12 with one normaliser removed and green with every measured figure perturbed runner-style.
+The FD-1354 original text is byte-identical to its `5a4beb63` form; the frozen-family guard prints nothing. This ledger and
+SL-1352 are set `closed` on that audit; the lead merges and records CI twice on the final head.

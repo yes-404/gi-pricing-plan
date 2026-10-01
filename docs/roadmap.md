@@ -1169,7 +1169,7 @@ The code that the FR-244 ruling, RL-1312, assigns to WK-1178. FR-244's operator 
 id: SL-1352
 family: slice
 title: WK-1178 hotfix — runner-independent template-certificate test
-status: active                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-01
 owner: executor
 tree: 7190787f494a921f89339ae62f8e3ae666bc4e2b
