@@ -133,7 +133,7 @@ true and unchanged. (c) adds a route `02` §5.1 does not declare.
 
 **Spec change, applied by the executor at Task 3.** *(New at the text-fix pass, audit F2.)*
 FR-367 gets a one-line dated clarification: `custom_objective:author` is required in
-addition to `model:fit`, never instead of it, on create and on derive, citing this ruling.
+addition to `model:fit`, never instead of it, on create and on derive, citing this ruling. The exact text and its placement are **S1** under *Spec changes — the exact texts*.
 
 **Order.** Both permission checks run before the flag is read, so a caller without the
 permission gets 403 whatever the flag, and learns nothing about it. On create, FastAPI's
@@ -203,6 +203,8 @@ Remove the "(declared, Phase 2)" marker from `OBJECTIVE_GRAMMAR_VIOLATION` and
 "`submit_for_review` stands in with `VALIDATION_FAILED` today." with a dated note citing
 this ruling and stating the `draft` predicate. Add a dated note to the §5.1 certify row:
 an underived `expression` objective is refused with `VALIDATION_FAILED` naming `/derive`.
+The exact texts and their placements are **S2** (Tasks 4 and 7), **S3** (Task 5) and **S4**
+(Task 7) under *Spec changes — the exact texts*.
 
 **Red first.** (1) The grammar test fails at the base with 409 `OBJECTIVE_KIND_NOT_ENABLED`
 under the flag on; at green it asserts the status, `["code"]`, and
@@ -233,7 +235,8 @@ templates: it enforces a rule that applies to them now.
 **Spec change, applied by the executor at Task 7.** FR-163 gets a dated note: the
 "`expression` objectives with `convexity: violated` need two Approvers" clause reads "any
 objective whose certificate has `convexity: violated` needs the policy's Approvers plus one
-(FR-152); at the default policy that is two". FR-152 needs no change.
+(FR-152); at the default policy that is two". FR-152 needs no change. The exact text and its
+placement are **S5** under *Spec changes — the exact texts*.
 
 **Red first.** At the base, count the template fixtures and seeded objectives whose
 certificate is `violated` (PL 9789 Task 7) and record the count with its command. A
@@ -330,7 +333,7 @@ Task 7.
    > `"escalation": {"when": "certificate.convexity == 'violated'", "approvers_required": 2}`. That
    > was an absolute count, which added nobody under a policy of two, and the model never accepted
    > it (`FD-1281`).
-3. `02` FR-163: the dated note that this DP-S3-4 already records.
+3. `02` FR-163: text **S5** under *Spec changes — the exact texts*.
 4. `02` §7.1, the `06-governance` row (`docs/specs/02-modelling.md:2859`): "two approvers for
    non-convex objectives" becomes "an additional Approver for a non-convex objective (FR-152):
    two under the default policy".
@@ -412,12 +415,204 @@ the `DECLARED_AND_UNBUILT` notes in `backend/tests/test_contracts.py` (`model` a
 `model-spec`), and the staging descriptions on `model.custom_objective_ref` and
 `model-spec`'s `GlmSpec` branch. Before writing, the executor greps for every quotation:
 `git grep -n "custom_objective_ref" -- docs/specs docs/contracts packages backend frontend/src`.
+The exact texts and their placements are **S6** (FR-207) and **S7** (the sweep) under
+*Spec changes — the exact texts*.
 
 **Red first.** No behaviour changes, so the red step is the drift check. Before Task 8,
 `git grep -n -E "custom_objective_ref.*WK-690|WK-690.*custom_objective_ref" -- packages backend frontend/src docs/contracts docs/specs`
 lists every quotation of the old owner. After Task 8 it prints only FR-207's own dated
 history. `generate-contracts.py --check` passes. The contract keeps both properties with
 their notes; neither is dropped.
+
+## Spec changes — the exact texts
+
+*(Added at the final pre-mint text pass, 2026-10-01, on the maintainer's exact-text rule.)*
+Each item below
+gives the file, the place, and the exact bytes to find and to write. `<Task N date>` is the
+date of the commit that applies the item. `RL-<minted id>` is this ruling's minted id. Nothing
+else in a text is a placeholder. Placement was read at `origin/main` `65fc6129`.
+
+**S1 — `06` FR-367, Task 3 (DP-S3-2).** Placement: `docs/specs/06-governance.md`, the FR-367
+row (`:148`). The text is **appended** to the end of the row's second cell, after
+`` with the `expression` kind: adding a member now that nothing checks would recreate the exact defect §4.1 records. `` and one space, before the closing ` |`. Nothing is struck.
+
+```text
+**Clarified <Task 3 date> (`RL-<minted id>` DP-S3-2): `custom_objective:author` is required in addition to `model:fit`, never instead of it, on create and on derive.** Create and derive are one act, so a principal must not derive an objective that it cannot create. Both routes keep their `model:fit` dependency, and an `expression` objective adds the author check to it. Template create and certify remain `model:fit`, and submit remains `model:submit`. This row is silent on the conjunction; the clarification is the ruling's reading, not a reading of the text above.
+```
+
+**S2 — `02` §5.1 owned codes, Task 4 and Task 7 (DP-S3-3).** Placement:
+`docs/specs/02-modelling.md`, the §5.1 owned-codes list (`:2102`, `:2104`). Each marker is
+**removed** in place, in the commit that registers its code. Task 4 replaces the line
+
+```text
+`OBJECTIVE_GRAMMAR_VIOLATION` (declared, Phase 2),
+```
+
+with
+
+```text
+`OBJECTIVE_GRAMMAR_VIOLATION`,
+```
+
+Task 7 replaces the line
+
+```text
+`OBJECTIVE_NOT_CERTIFIED` (declared, Phase 2),
+```
+
+with
+
+```text
+`OBJECTIVE_NOT_CERTIFIED`,
+```
+
+The other two `(declared, Phase 2)` markers (`OBJECTIVE_NONFINITE_DERIVATIVE`,
+`OBJECTIVE_ROUND_BUDGET_EXCEEDED`) are not this ruling's and are unchanged.
+
+**S3 — `02` §5.1 certify row, Task 5 (DP-S3-3).** Placement: `docs/specs/02-modelling.md`,
+the §5.1 endpoint row for `POST /api/v1/custom-objectives/{id}/certify` (`:1837`). The third
+cell is **appended to**. Task 5 replaces the row
+
+```text
+| `POST` | `/api/v1/custom-objectives/{id}/certify` | **202** Run the certificate checks (FR-146) |
+```
+
+with
+
+```text
+| `POST` | `/api/v1/custom-objectives/{id}/certify` | **202** Run the certificate checks (FR-146). An `expression` objective whose `derived` is null is refused 409 `VALIDATION_FAILED` before a job is enqueued, with a `detail` naming `POST /api/v1/custom-objectives/{id}/derive` (**added <Task 5 date>, `RL-<minted id>` DP-S3-3**) |
+```
+
+**S4 — `02` §5.1 stand-in sentence, Task 7 (DP-S3-3).** Placement:
+`docs/specs/02-modelling.md`, the third bullet of the blockquote that begins
+`` `OBJECTIVE_NOT_CERTIFIED`, `OBJECTIVE_GRAMMAR_VIOLATION` and `` (`:2140-2142`). The sentence
+is **struck and replaced**, with the dated note after it. Task 7 replaces the line
+
+```text
+>   raises them is scheduled. `submit_for_review` stands in with `VALIDATION_FAILED` today.
+```
+
+with
+
+```text
+>   raises them is scheduled. ~~`submit_for_review` stands in with `VALIDATION_FAILED` today.~~
+>   **Amended <Task 7 date> (`RL-<minted id>` DP-S3-3): the stand-in is replaced.** A
+>   submission of a `draft` objective, of either kind, is refused 409
+>   `OBJECTIVE_NOT_CERTIFIED`. The predicate is the status `draft`: `record_certificate` sets
+>   `draft` on a failed certificate and `certified` on a passing one, so `draft` is exactly
+>   "no passing certificate for this version". Every other invalid transition to `review`
+>   keeps 409 `VALIDATION_FAILED`.
+```
+
+**S5 — `02` FR-163, Task 7 (DP-S3-4).** Placement: `docs/specs/02-modelling.md`, the FR-163
+row (`:227`). One clause is **struck and replaced**, and a dated note is **appended** to the
+end of the second cell. Task 7 replaces
+
+```text
+Approval is by an Approver who is not the author; `expression` objectives with `convexity: violated` need two Approvers (FR-152). Editing an `approved` objective creates a new version requiring fresh certification and approval. |
+```
+
+with
+
+```text
+Approval is by an Approver who is not the author; ~~`expression` objectives with `convexity: violated` need two Approvers (FR-152)~~ any objective whose certificate has `convexity: violated` needs the policy's Approvers plus one (FR-152); at the default policy that is two. Editing an `approved` objective creates a new version requiring fresh certification and approval. **Amended <Task 7 date> (`RL-<minted id>` DP-S3-4): the non-convex rule is relative and applies to both kinds.** FR-152's Approver is *additional* to the policy's count, so an absolute two adds nobody under a policy of two. The quantile template already certifies `convexity: violated`, so the rule is not the `expression` kind's alone. The count is fixed on the request at submission, and no policy key sets the increment (`06` §4.2). |
+```
+
+**S6 — `02` FR-207, Task 8 (DP-S3-5).** Placement: `docs/specs/02-modelling.md`, the FR-207
+row (`:370`). The text is **appended** to the end of the row's second cell, after
+`` so it goes stale silently. `` and one space, before the closing ` |`. Nothing is struck: the
+earlier amendments are dated history.
+
+```text
+**Amended <Task 8 date> (`RL-<minted id>` DP-S3-5; the Phase 3 destination accepted by the maintainer, by delegation, 2026-10-01): both `custom_objective_ref` residuals move from WK-690 to Phase 3, together, owned by the maintainer.** The GLM arm's custom objective is a separate capability that this spec does not specify: a `glum` fit is a family and a link fitted by IRLS, and a per-observation loss in §4.6's grammar has no family and no path to such a fit. So `GlmSpec.custom_objective_ref` cannot go live in WK-690. `Model.custom_objective_ref` moves with it, because the 2026-08-25 amendment above holds that the `Model` field records what the `GlmSpec` field declares. Made live for a GBM, it would be a second, lossy record of `spec.objective.ref`, the defect `transparency_artifact_id` was struck for. The verdicts do not change: the `GlmSpec` field is absent entirely and the `Model` field is declared and unbuilt, and the contract keeps both properties with their notes. The P2 phase closure record lists both for P3's first plan. The owner clause is corrected in the same commit everywhere it was quoted: `model_schema/objectives.py` (`ObjectiveBackend`), `frontend/src/components/ObjectivePicker.vue`, `backend/tests/test_contracts.py`'s `DECLARED_AND_UNBUILT` note, and the staging descriptions on `model.custom_objective_ref` and `model-spec`'s `GlmSpec` branch.
+```
+
+**S7 — the owner-quotation sweep, Task 8 (DP-S3-5), in the same commit as S6.** Each item
+replaces the exact bytes shown, and nothing else. No replacement names WK-690, so that the
+DP-S3-5 drift `git grep` prints only FR-207's own dated history after Task 8. The generated
+schemas (`docs/contracts/schemas/generated/custom-objective.schema.json` and
+`custom-metric.schema.json`, `ObjectiveBackend`'s description) are regenerated by
+`uv run python scripts/generate-contracts.py`, never hand-edited.
+
+S7.1 — `packages/model-schema/src/model_schema/objectives.py`, the `ObjectiveBackend`
+docstring (`:107-110`). Replace
+
+```text
+    needs `GlmSpec.custom_objective_ref`, which FR-207 records as absent entirely
+    and owned by WK-690 — Phase 2, not this one. The owner was reassigned on 2026-08-22 and
+    confirmed on 2026-08-25 to cover this field as well as its `Model` twin, which
+    records what it declares. The member exists because FR-153 names it and an author
+```
+
+with
+
+```text
+    needs `GlmSpec.custom_objective_ref`, which FR-207 records as absent entirely
+    and owned by Phase 3: a separate, unspecified capability, moved there on <Task 8 date>
+    (RL-<minted id> DP-S3-5) together with its `Model` twin, which records what it
+    declares. The member exists because FR-153 names it and an author
+```
+
+S7.2 — `frontend/src/components/ObjectivePicker.vue`, the header comment (`:11`). Replace
+
+```text
+ * entirely" with **WK-690** as owner — Phase 2, reassigned 2026-08-22 — and
+```
+
+with
+
+```text
+ * entirely" with **Phase 3** as owner — moved there on <Task 8 date>, RL-<minted id> — and
+```
+
+S7.3 — `backend/tests/test_contracts.py`, the `DECLARED_AND_UNBUILT` note (`:532-534`).
+Replace
+
+```text
+#:   and the `Model` one *"declared and unbuilt"*. **Both are owned by WK-690** — Phase 2,
+#:   reassigned 2026-08-22 and confirmed 2026-08-25 to reach the pair rather than the
+#:   `Model` half alone. They cannot be split: `Model.custom_objective_ref` would record
+```
+
+with
+
+```text
+#:   and the `Model` one *"declared and unbuilt"*. **Both are owned by Phase 3**, a
+#:   separate, unspecified capability, moved there together on <Task 8 date>
+#:   (RL-<minted id> DP-S3-5). They cannot be split: `Model.custom_objective_ref` would record
+```
+
+S7.4 — `docs/contracts/schemas/model.schema.json`, the `custom_objective_ref` description
+(`:168`). Replace
+
+```text
+DECLARED AND UNBUILT (FR-207, owner WK-690 — Phase 2, reassigned 2026-08-22 and confirmed 2026-08-25 to reach this field and its `GlmSpec` twin, not the `Model` one alone).
+```
+
+with
+
+```text
+DECLARED AND UNBUILT (FR-207, owner Phase 3, moved there on <Task 8 date> with its `GlmSpec` twin, RL-<minted id> DP-S3-5: the GLM arm's custom objective is a separate, unspecified capability).
+```
+
+S7.5 — `docs/contracts/schemas/model-spec.schema.json`, the `GlmSpec` branch's
+`custom_objective_ref` description (`:83`). Replace
+
+```text
+DECLARED AND UNBUILT (FR-207, owner WK-690 — Phase 2, reassigned 2026-08-22 and confirmed 2026-08-25 to reach this field and its `Model` twin).
+```
+
+with
+
+```text
+DECLARED AND UNBUILT (FR-207, owner Phase 3, moved there on <Task 8 date> with its `Model` twin, RL-<minted id> DP-S3-5: the GLM arm's custom objective is a separate, unspecified capability).
+```
+
+Checked and unchanged by S7: `02-modelling.md:643-658` (dated 2026-08-17 and 2026-08-21
+notes, history) and `:1314` (names no owner). If the executor's `git grep` finds a quotation
+that S7 does not list, that is a stop, reported to the lead; the executor does not word it.
+
+The executor applies each text above byte-for-byte; authorship stays with the decision-maker (document-ids §1.6 FR row; CLAUDE.md §2 one-commit rule; the RL-1296 precedent). Any executor wording is a stop. This covers every text S1 to S7 above and the §4.2 texts under DP-S3-4.
 
 ## What it obliges
 
@@ -443,8 +638,7 @@ on the base (`PL 9789` Acceptance items 6, 8 and 9, read through the deltas abov
 2. **DP-S3-2.** A caller with `model:fit` and without `custom_objective:author` creates
    (`kind: expression`) or derives: the two 403 tests fail on `["code"]` (409
    `OBJECTIVE_KIND_NOT_ENABLED` at the base). A caller with author and without `model:fit`
-   creates or derives: the new author-without-`model:fit` test fails on the route that let
-   it through (green at the base, a control). `test_deriving_without_model_fit_is_refused`
+   creates or derives: the new author-without-`model:fit` test is green at the base (a control) and fails if the route's `model:fit` dependency is removed. `test_deriving_without_model_fit_is_refused`
    (`:617`) grants only the auditor role and is unchanged. *(Corrected at the text-fix
    pass, audit F3: this item said `:617` fails for that caller, which it cannot see.)* A built-in role grants the
    member: the `BUILTIN_ROLES` test fails.
