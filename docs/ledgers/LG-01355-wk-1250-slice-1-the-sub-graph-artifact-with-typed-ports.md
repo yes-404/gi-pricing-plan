@@ -1,5 +1,5 @@
 ---
-id: LG-1352
+id: LG-1355
 family: ledger
 title: WK-1250 Slice 1 — the sub-graph artifact with typed ports and FR-227 at create
 status: closed
@@ -14,10 +14,10 @@ corrected_by: []
 relates: [RL-1309, RL-1263, FD-1326]
 ---
 
-# LG-1352 — WK-1250 Slice 1 (SL-1339)
+# LG-1355 — WK-1250 Slice 1 (SL-1339)
 
 Executed from `PL-1325`. Branch `sl-1339-sub-graph-artifact`, from `origin/main`
-`f689c7828cb05eb2298f3fec505a4638c4437a11` (#1027). Drafted under working id 9994 (reserved by the lead 2026-10-01 00:01 BST; the lead allocates every working id) and minted `LG-1352` at its merge turn, against `origin/main` `8933a29e` (`doc-id next` = 1352). The working id survives only in the history this ledger records below (the dispatch record, gate notes and the correction), which is dated and stays as written.
+`f689c7828cb05eb2298f3fec505a4638c4437a11` (#1027). Drafted under working id 9994 (reserved by the lead 2026-10-01 00:01 BST; the lead allocates every working id) and minted at its merge turn as `LG-1355` (first as 1352 against `origin/main` `8933a29e`, re-minted when #1035 took 1352 to 1354; see the re-mint section below). The working id survives only in the history this ledger records below (the dispatch record, gate notes and the correction), which is dated and stays as written.
 
 ## Tasks
 
@@ -350,10 +350,20 @@ half on the same head: install, `generate:api`, `lint`, `type-check`, `build`, `
 - **A re-pointed line.** The run-1 gate entry's sentence read, as first written: "They pass once LG‑9994 is minted." (verbatim, except that the
   hyphen is written U+2011, the non-breaking hyphen, because check 32 reads every `LG` plus ASCII hyphen
   plus number token, in prose or in a fence, and the first-written form no longer resolves). The mint commit re-pointed it to "They pass once this ledger is
-  minted (it was working id 9994 then)." because the ledger's own working id had become `LG-1352` and
+  minted (it was working id 9994 then)." because the ledger's own working id had become `LG‑1352` and
   `scripts/audit-docs.py` check 32 refuses a draft-id token of that form that no longer resolves in `docs/INDEX.md`.
   The lead rules this the permitted in-batch re-point of a record's own working id at its minting commit.
   Nothing else in the earlier entries changed.
 - **`LOKY_MAX_CPU_COUNT`.** Gate runs 1 to 4 each used `LOKY_MAX_CPU_COUNT=4`: it is line 1 of the gate
   script (`gate.sh`) run for each, exported before the dev-commands slot wrapper's body.
+
+### Re-mint: LG‑1352 became LG-1355 (2026-10-01, BST)
+
+The hotfix #1035 merged first and took `SL-1352`, `LG-1353` and `FD-1354`, so the number this ledger
+was first minted under (written with a U+2011 hyphen in this section and above, because that id no longer
+exists and check 32 refuses an unresolved ASCII form) was no longer free. The lead allocated `LG-1355`; the
+maintainer approved the in-batch re-point of this unmerged record. Id-only change: the file is renamed (padded form of its new number),
+and `id:`, the H1, the disclosure in the opening paragraph, and the roadmap's SL-1339 closing
+line now read `LG-1355`. Main's `LG-1353`, which mentions this ledger's old number, is not edited. The
+earlier entries stand as written.
 
