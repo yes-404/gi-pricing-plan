@@ -7,7 +7,7 @@ created: 2026-10-01
 owner: auditor
 tree: 98d7191b62e73dcfba4bb294c743ee97cf6f6f59
 corrected_by: []
-relates: [WK-1178, NFR-502, RL-883, FD-1335, PL-9788]
+relates: [WK-1178, NFR-502, RL-883, FD-1335]
 ---
 
 # FD-9775 — The NFR-502 behavioural test is blind to an instance-returning validating route
@@ -18,12 +18,11 @@ relates: [WK-1178, NFR-502, RL-883, FD-1335, PL-9788]
 
 ## Finding
 
-**Severity: LOW–MEDIUM; owner WK-1178.** `03` NFR-502 says a scoring route validates inbound and never outbound
-(as amended by `RL-883`). Its only behavioural test, `backend/tests/test_score.py::test_the_result_is_returned_without_outbound_validation`,
+**Severity: LOW; owner WK-1178.** Ruled by the maintainer (`~/gi-pricing-plan.local/channel/to-lead.md`, "2026-10-01 09:22:11 BST — PL 9788 re-audit (837ce184) accepted; FD 9775 = LOW (WK-1178), with conditions; F-A and F-B adopted"; first proposed LOW–MEDIUM by the auditor). The shipped route makes 0 outbound validations (the spy's raw count in the table below), so nothing in production is wrong: the defect is a blind test and a false docstring. `03` NFR-502 says a scoring route validates inbound and never outbound
+(as amended by `RL-883`, the ruling whose acceptance test this is; RL-883 is frozen and this finding does not propose amending it). Its only behavioural test, `backend/tests/test_score.py::test_the_result_is_returned_without_outbound_validation`,
 checks that rule by a **side effect**: a malformed body comes back verbatim with a 200. A route that **does** validate
 outbound, and is handed an instance of its declared class, also gives a 200 with the same bytes, so the test passes on
-a violating route. It is a contract-protection gap, not a mispricing: today's `/score` returns a raw `Response`, so the
-rule holds. The test would not notice if that changed in the way shown below. `/score/compare` has no such test at all.
+a violating route. The rule holds today because `/score` returns a raw `Response`. The test would not notice if that changed in the way shown below. `/score/compare` has no such test at all.
 
 ## Evidence
 
@@ -37,7 +36,8 @@ rule holds. The test would not notice if that changed in the way shown below. `/
 - `:379` `assert body["timing_ms"] == {"total": "not-a-float"}`
 
 Its docstring (`:343-354`) says a route "carrying a Pydantic return annotation or a `response_model=` answers 500 here".
-So it treats a 500 as the only symptom of outbound validation.
+That is **false** for an instance return (table below): it holds for dict returns only. The test treats a 500 as the only
+symptom of outbound validation.
 
 **The reproduction** (scratch app, not committed). A bare `FastAPI()` with the repository's
 `app.errors.install_error_handlers(app)`, at fastapi 0.141.1 (the repo `.venv`, 2026-10-01), driven by
@@ -62,10 +62,15 @@ behaves the same with `ScoreComparison`.
 
 ## Disposition
 
-**fix before close with an owner: WK-1178.** Covered by PL 9788 (working id) Acceptance 8b: an
-`outbound_validation_spy` counts calls to `fastapi._compat.v2.ModelField.validate` whose `loc` starts with
-`("response",)`, asserts 0 on `/score` and on `/score/compare`, and proves the spy is not blind with a planted
-`response_model=` control route (count ≥ 1). Its red-first steps include the instance form, where the spy counts 1 while
-the 500-style test stays green. The existing test stays as the dict-form check. `/score/compare` gets both its 500 test
-(Acceptance 8) and its spy test (8b), because it has none today. The finding closes when PL 9788's slice merges and
-both spy tests are on `main`. The severity is the auditor's proposal; the lead gives the verdict.
+**fix before close with an owner: WK-1178.** Severity LOW (the maintainer's ruling, above). **Discharged at PL 9788's
+(working id) merge**, which does two things:
+- Acceptance 8b adds an `outbound_validation_spy` that counts calls to `fastapi._compat.v2.ModelField.validate` whose
+  `loc` starts with `("response",)`, asserts 0 on `/score` and on `/score/compare`, and proves the spy is not blind with
+  a planted `response_model=` control route (count >= 1). Its red-first steps include the instance form, where the spy
+  counts 1 while the 500-style test stays green. **`/score/compare` is covered too**: it has no such test today, and
+  PL 9788 gives it both its 500 test (Acceptance 8) and its spy test (8b).
+- The slice **corrects the docstring** at `test_score.py:341-356`: the 500 holds for dict returns only, the existing test
+  is the dict-form check, and the spy test is the one that catches every form. The existing test stays.
+
+The finding closes when PL 9788's slice merges with both spy tests on `main` and the docstring corrected.
+`RL-883` is named, not amended. The severity is the maintainer's; the lead gives the verdict on disposition.
