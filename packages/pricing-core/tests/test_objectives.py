@@ -62,6 +62,8 @@ from pricing_core.modelling.expression_objective import (
 )
 from pricing_core.modelling.objectives import (
     _TEMPLATES,
+    _TOLERANCE_PASS,
+    _TOLERANCE_WARN,
     DEFAULT_ROUND_BUDGET_S,
     _finite_or_abort,
 )
@@ -935,6 +937,15 @@ _BEFORE = json.loads(
 )
 
 
+_MAX_RELATIVE_ERROR = re.compile(r"max relative error (\S+)")
+
+
+def _normalise_measured(detail: str) -> str:
+    """Replace the two runner-dependent measurements: elapsed seconds and the error figure."""
+    detail = re.sub(r"\d+\.\ds$", "<t>s", detail)
+    return _MAX_RELATIVE_ERROR.sub("max relative error <e>", detail)
+
+
 @pytest.mark.req("FR-146")
 @pytest.mark.req("FR-151")
 @pytest.mark.parametrize("template", list(T), ids=lambda t: t.value)
@@ -953,8 +964,17 @@ def test_template_certificate_unchanged(template: ObjectiveTemplate) -> None:
         {
             "name": c.name,
             "status": c.status.value,
-            "detail": re.sub(r"\d+\.\ds$", "<t>s", c.detail),
+            "detail": _normalise_measured(c.detail),
         }
         for c in result.checks
     ]
-    assert got == expected["checks"]
+    assert got == [
+        {**c, "detail": _normalise_measured(c["detail"])} for c in expected["checks"]
+    ]
+    # The error figure is a measurement that varies by runner (2.28e-12 against 3.21e-12 at
+    # the same tree), so it is normalised above and bounded here instead: each reported
+    # figure must lie within the engine's own tolerance for the status the check carries.
+    for c in result.checks:
+        for figure in _MAX_RELATIVE_ERROR.findall(c.detail):
+            bound = _TOLERANCE_PASS if c.status.value == "pass" else _TOLERANCE_WARN
+            assert float(figure) <= bound, (c.name, figure, bound)
