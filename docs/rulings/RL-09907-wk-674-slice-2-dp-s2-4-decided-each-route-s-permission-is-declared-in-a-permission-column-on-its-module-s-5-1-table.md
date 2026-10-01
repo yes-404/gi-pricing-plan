@@ -407,3 +407,24 @@ DP-5) also adds a §5.1 row for the existing `GET /api/v1/rating-versions/{id}`,
 as item 4's added read `GET /api/v1/rating-versions/{rating_version_id}`. Whichever of the two
 lands second must not add a second row for it. The lead orders the two, and the
 decision-maker amends the second record's text to match.
+
+## Amendment, 2026-10-01 10:28 BST: the by-id row's exact text, and WK-675 Slices 2 and 3 in item 4's list (F-2, F-3)
+
+*By the decision-maker session `dm-675dp56` (effort `medium`), on the lead's order of
+2026-10-01 10:27 BST after auditor-1055's scoped re-check of #1055. This **resolves the
+10:18 BST amendment's "overlap to resolve before mint"**. Nothing ruled above is changed.*
+
+- **F-2: the by-id read of item 3 is satisfied by RL 9766 (working id) T2's by-id row,
+  verbatim.** This record describes the two added reads under item 3 and gives no row text.
+  RL 9766's T2 carries the one exact text for `GET /api/v1/rating-versions/{id}`, the live
+  `/rating-versions/{rating_version_id}`, in a three-cell and a four-cell form. This slice
+  applies the four-cell form, because it lands the `Permission` column. Whichever of
+  WK-675 Slice 2 and this record's WK-1178 slice applies first adds the row, and the other
+  adds nothing. The list read, `GET /api/v1/rating-versions`, is unaffected: it is still
+  described here and owned by WK-675 Slice 10.
+- **F-3: WK-675 Slices 2 and 3 join item 4's serialisation and contention list.** Slice 2
+  adds RL 9766 (working id)'s rows, and Slice 3 adds RL 9767 (working id)'s validate row,
+  both to `03` §5.1. If this record's slice lands second, it fills the `Permission` cell
+  of any row already added: `rating:read` for RL 9766's rows and `rating:write` for RL
+  9767's row, as those records' four-cell forms give them. If it lands first, those slices
+  apply their four-cell forms.
