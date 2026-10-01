@@ -44,7 +44,8 @@ to port 3000 during `pnpm --dir frontend test`.
 `rows: readonly T[]` and `columns: readonly Column<T>[]`. The `Cell` and `Column` types live in
 a new plain module, `frontend/src/chart-table.ts`, which callers import. Each cell renders as
 `column.value(row)`; the first column's cells render as `<th scope="row">`. The dev-only arity
-guard is deleted, and a dev-only duplicate-key refusal replaces it. Type-level refusals are
+guard is deleted. A duplicate-key refusal that runs in **every build** replaces it: the figure
+shows a visible error in place of its table, and never renders a table with colliding keys. Type-level refusals are
 held in the gate by fixture components under `frontend/src/components/__typecheck__/`, each
 marked `<!-- @vue-expect-error -->`. `vue-tsc` fails if the marked error stops occurring.
 Runtime behaviour is tested in vitest. The 13 call sites are rewritten in three groups,
@@ -215,16 +216,34 @@ These are the planner's choices on method, inside what `RL-1307` rules. None cha
    dropped, so it is true for a rating version's sandbox chart as well as a model's
    diagnostic. No other test or view matches the old text: `git grep -n 'recorded nothing'
    1dd5e264 -- frontend/src` prints only `ChartFigure.vue:128`.
-3. **The duplicate-key refusal is dev-only**, under `import.meta.env.DEV`, like the arity guard
-   it replaces. *Reasons.* `RL-1307` item 5 (i) says "refuses", and acceptance says "Refused,
-   under test". Vitest runs with `DEV` true, so the test proves it. The retired guard's own
-   reasoning was that a mis-shaped table "is worth failing a test over and never worth blanking
-   a page over" (`ChartFigure.vue:52-53`), and that applies here too. A duplicate cannot arise
-   from data either: generated keys use the partition's **index**, not its label (Task 5), so
-   two partitions with the same caption still get distinct keys.
-   *Disclosed:* there is no type-level backstop. A production duplicate would render with the
-   key collision `RL-1307` item 3 names. It is mitigated by the partition-index keys and by
-   the test run, where `DEV` is true. The maintainer may overrule this choice.
+3. **The duplicate-key refusal runs in every build, with no `import.meta.env.DEV` gate.**
+   *Revised 2026-10-01 on the maintainer's overrule of this choice, relayed by the lead on
+   #1058.* This plan first made the refusal dev-only. The maintainer ruled that this re-creates
+   what `RL-1307` removed. `RL-1307` retires the arity guard because it was dev-only ("The
+   dev guard ran only in development", `:288`). Item 5 (i) says the slice "refuses a duplicated
+   `key` within one figure" (`:300`), and §Acceptance says "Refused, under test" (`:339`).
+   So:
+   - **In every build**, when two columns share a `key`, `ChartFigure` renders no table and
+     no colliding cells. In the table's place it renders a visible error, `role="alert"`. It
+     never falls back silently to Vue's last-wins patching. The chart slot still renders.
+   - **It does not throw.** A throw from a render would blank the whole page in production.
+     A visible error in the figure is the refusal, and it is what a reader and a test can see.
+   - **It is tested in the CI frontend run** (`pnpm --dir frontend test`). The test runs twice,
+     once as built and once with `vi.stubEnv("DEV", false)`, so a later `DEV` gate fails it.
+     It is shown red first with a duplicated key, and the output is pasted (Acceptance 4).
+   - **No type-level uniqueness check is added in S1.** One may be added later on top of the
+     runtime refusal, never instead of it. Dynamic keys (Task 5) cannot be checked by type.
+   Generated keys still use the partition's **index**, not its caption (Task 5), so two
+   partitions captioned alike cannot trigger the refusal.
+   **The error-state wording is a plan choice:**
+   `Table unavailable: two columns in "<title>" share the key "<key>" (<key> | <key> | …).`
+   *Reasons.* (i) It says that the accessible table is **missing**. A screen-reader user is
+   told that the figure's tabular equivalent is absent, rather than being shown values under
+   the wrong headings or nothing at all. `role="alert"` makes it announced. (ii) It names the
+   figure, because a page may hold several (`title` is unique per page,
+   `ChartFigure.vue:32`). (iii) It names the key and the full key list, so a bug report carries
+   the cause without anyone opening developer tools. (iv) It names no module, like the
+   empty-state wording (*Choices* 2).
 4. **`Cell` and `Column` live in `frontend/src/chart-table.ts`**, not as exports from the SFC.
    *Reasons.* The spike exported them from `<script setup>`, but it ran only `vue-tsc`. A plain
    module is also safe for the Vite build and ESLint, and it follows `frontend/src/test-tables.ts`'s
@@ -290,11 +309,23 @@ Every command runs in the executor's worktree at the slice head, against the ran
    fault corrected, `type-check` fails with TS2578 "Unused '@ts-expect-error' directive". A
    failure with the right status code and a **different message** is a plan defect, not a
    pass (`README.md` convention 2).
-4. **A duplicated key is refused, under test** (`RL-1307` §Acceptance, item 3).
-   `pnpm --dir frontend exec vitest run src/components/__tests__/ChartFigure.test.ts` passes a
-   test whose name contains `NFR-463` and "refuses two columns that share a key", asserting
-   the message `/two columns share the key "predicted"/`. The ledger records it failing first
-   (Task 2 Step 3) because nothing throws.
+4. **A duplicated key is refused in every build, under test** (`RL-1307` §Acceptance,
+   violation 3; *Choices* 3 as revised on the maintainer's overrule).
+   - `git grep -n 'import.meta.env.DEV' HEAD -- frontend/src/components/ChartFigure.vue` prints
+     nothing.
+   - `pnpm --dir frontend exec vitest run src/components/__tests__/ChartFigure.test.ts` passes
+     the test whose name contains `NFR-463` and "refuses two columns that share a key", in
+     **both** of its cases (as built, and with `DEV` stubbed `false`).
+   - Each case asserts three things: the alert's exact text
+     `Table unavailable: two columns in "Lift by decile" share the key "predicted" (bin | predicted | predicted).`;
+     that `queryByRole("table")` is `null`, so no colliding table renders; and that the chart
+     slot still renders.
+   - The test also runs in the CI frontend workflow's `pnpm --dir frontend test` step, and the
+     PR's CI run is cited in the ledger.
+   - **Red first, with output pasted:** the ledger records both cases failing on the old
+     component (Task 2 Step 3), where no alert renders. If the executor writes the refusal
+     with a `DEV` gate at any point, the stubbed case is the one that must fail. Task 2
+     Step 5a proves that by adding the gate temporarily and pasting the failure.
 5. **Each row is named by its first cell** (`RL-1307` item 5 (ii)). The same file asserts that
    `within(table).getAllByRole("rowheader")` has one element per row, with the first column's
    text, and that a `null` first-column value renders `—`.
@@ -556,8 +587,9 @@ afterEach(() => {
 - Produces: `export type Cell = string | number | null;` and
   `export interface Column<R> { readonly key: string; readonly label: string; readonly value: (row: R) => Cell }`
   from `@/chart-table`. `ChartFigure` props: `title: string; caption?: string; columns:
-  readonly Column<T>[]; rows: readonly T[]`. The dev-only error message for a duplicate key:
-  `ChartFigure "<title>": two columns share the key "<key>" (<key> | <key> | …).`
+  readonly Column<T>[]; rows: readonly T[]`. In every build, the visible error that replaces
+  the table when two columns share a key (`role="alert"`):
+  `Table unavailable: two columns in "<title>" share the key "<key>" (<key> | <key> | …).`
 
 - [ ] **Step 1: Create the types module.** Create `frontend/src/chart-table.ts`:
 
@@ -698,7 +730,7 @@ const rows: Band[] = [{ band: "A" }];
 ```ts
 import { render, screen, within } from "@testing-library/vue";
 import type { Component } from "vue";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Column } from "@/chart-table";
 import { cellUnder } from "@/test-tables";
@@ -797,17 +829,33 @@ describe("ChartFigure (NFR-463)", () => {
     expect(screen.getByText("No rows — this figure has no data to show.")).toBeInTheDocument();
   });
 
-  it("NFR-463: refuses two columns that share a key, naming the key and the figure", () => {
+  describe("NFR-463: refuses two columns that share a key, in every build", () => {
     // RL-1307 item 5 (i): `key` is the Vue key and must be unique within one figure. Two
-    // equal keys would let Vue reuse one column's cells for the other.
+    // equal keys would let Vue patch one column's cells with the other's. The refusal must
+    // not depend on a dev build: RL-1307 retired the arity guard because it was dev-only, so
+    // the second case runs with DEV stubbed false, and a DEV gate fails it.
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
     const duplicate: readonly Column<Bin>[] = [
       COLUMNS[0]!,
       COLUMNS[1]!,
       { key: "predicted", label: "Actual", value: (r) => r.actual },
     ];
-    expect(() => renderFigure(duplicate)).toThrow(
-      /ChartFigure "Lift by decile": two columns share the key "predicted" \(bin \| predicted \| predicted\)/,
-    );
+
+    it.each([
+      ["as built", undefined],
+      ["with DEV false, as in production", false],
+    ] as const)("refuses two columns that share a key, %s", (_name, dev) => {
+      if (dev !== undefined) vi.stubEnv("DEV", dev);
+      renderFigure(duplicate);
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        'Table unavailable: two columns in "Lift by decile" share the key "predicted" (bin | predicted | predicted).',
+      );
+      expect(screen.queryByRole("table")).toBeNull();
+      expect(screen.getByTestId("chart")).toBeInTheDocument();
+    });
   });
 
   it("accepts two columns with the same label under different keys", () => {
@@ -825,8 +873,9 @@ describe("ChartFigure (NFR-463)", () => {
   Run: `pnpm --dir frontend exec vitest run src/components/__tests__/ChartFigure.test.ts`.
   Expected: FAIL. The cause must be that the old component treats each column as a string:
   the headers render as `[object Object]`, or a render throws in the arity guard with "row 0
-  has … cells" (rows are objects, so `row.length` is `undefined`). The duplicate-key test
-  fails because no error mentions "two columns share the key". Record which tests fail and
+  has … cells" (rows are objects, so `row.length` is `undefined`). Both duplicate-key cases
+  fail because no `alert` renders: `getByRole("alert")` finds nothing. Paste that output into
+  the ledger (Acceptance 4). Record which tests fail and
   why. A failure from a missing import or a syntax error is a test defect: fix it and re-run
   until every failure has one of the causes above.
 
@@ -864,27 +913,28 @@ const props = defineProps<{
 }>();
 
 /**
- * The columns, refused if two share a `key`.
+ * The refusal of two columns that share a `key`, in **every build** (RL-1307 item 5 (i)).
  *
  * `key` is the Vue key of every header and cell in its column, so two equal keys would let
- * Vue patch one column's cells with the other's. A label is display text and may repeat. The
- * check is dev-only for the reason the arity guard it replaces was: a mis-keyed table is worth
- * failing a test over and never worth blanking a page over.
+ * Vue patch one column's cells with the other's: a table showing a value under a heading it
+ * does not belong to, which is the violation this component exists to make impossible. A
+ * label is display text and may repeat. There is deliberately no `import.meta.env.DEV` gate.
+ * RL-1307 retired the arity guard because it ran only in development, so this check runs in
+ * production too. It does not throw, because a throw from a render blanks the page. The figure
+ * shows a visible error in its table's place, and no table renders.
  */
-const checkedColumns = computed(() => {
-  if (import.meta.env.DEV) {
-    const seen = new Set<string>();
-    for (const column of props.columns) {
-      if (seen.has(column.key)) {
-        throw new Error(
-          `ChartFigure "${props.title}": two columns share the key "${column.key}" ` +
-            `(${props.columns.map((c) => c.key).join(" | ")}).`,
-        );
-      }
-      seen.add(column.key);
+const duplicateKeyError = computed<string | null>(() => {
+  const seen = new Set<string>();
+  for (const column of props.columns) {
+    if (seen.has(column.key)) {
+      return (
+        `Table unavailable: two columns in "${props.title}" share the key "${column.key}" ` +
+        `(${props.columns.map((c) => c.key).join(" | ")}).`
+      );
     }
+    seen.add(column.key);
   }
-  return props.columns;
+  return null;
 });
 </script>
 
@@ -904,14 +954,23 @@ const checkedColumns = computed(() => {
 
     <slot />
 
+    <p
+      v-if="duplicateKeyError"
+      role="alert"
+      class="mt-2 text-sm text-red-700"
+    >
+      {{ duplicateKeyError }}
+    </p>
+
     <table
+      v-else
       :aria-label="title"
       class="mt-2 w-full text-left text-sm"
     >
       <thead class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
         <tr>
           <th
-            v-for="column in checkedColumns"
+            v-for="column in columns"
             :key="column.key"
             scope="col"
             class="py-2 font-medium"
@@ -927,7 +986,7 @@ const checkedColumns = computed(() => {
           class="border-b border-slate-100"
         >
           <template
-            v-for="(column, columnIndex) in checkedColumns"
+            v-for="(column, columnIndex) in columns"
             :key="column.key"
           >
             <th
@@ -949,7 +1008,7 @@ const checkedColumns = computed(() => {
     </table>
 
     <p
-      v-if="rows.length === 0"
+      v-if="!duplicateKeyError && rows.length === 0"
       class="mt-1 text-xs text-slate-500"
     >
       No rows — this figure has no data to show.
@@ -962,6 +1021,14 @@ const checkedColumns = computed(() => {
   "(lines 2-28 of the old file, unchanged)" in the file.
 
 - [ ] **Step 5: Run the component's test.** Same command as Step 3. Expected: PASS, every test.
+- [ ] **Step 5a: Prove that a `DEV` gate is caught** (Acceptance 4). Temporarily wrap the body
+  of `duplicateKeyError` in `if (import.meta.env.DEV) { … }` and return `null` otherwise.
+  Re-run Step 3's command. Expected: FAIL in the case "refuses two columns that share a key,
+  with DEV false, as in production" only, because `getByRole("alert")` finds nothing. Paste the
+  output into the ledger, then remove the gate and re-run to PASS. The gated version is never
+  committed. If both cases pass with the gate in place, `vi.stubEnv` does not reach this
+  component's `import.meta.env`. Stop and report: the plan's proof does not hold on this
+  toolchain.
 - [ ] **Step 6: Prove each fixture red twice** (Acceptance 3). For each of the four fixtures:
   (a) delete its directive line, run `pnpm --dir frontend type-check 2>&1 | grep __typecheck__`,
   record the line, and restore the directive. (b) Correct the fault (`r.bnad` → `r.band`;

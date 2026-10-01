@@ -902,7 +902,8 @@ becomes generic over the caller's row objects, with one `{ key, label, value }` 
 column. That is `RL-1307`'s option (c), which supersedes `PL-1286`'s stale DP-1 text
 (`:240`, `:249-250`, `:415-416`). The 13 call sites (`git grep -n '<ChartFigure' origin/main --
 'frontend/src/*.vue'` at `1dd5e264`) move to the new API. The dev-only arity guard retires;
-the slice adds a dev-only duplicate-key refusal, `<th scope="row">` row headers, and empty-state
+the slice adds a duplicate-key refusal that runs in every build (a visible error in place of the
+table, never a silent key collision), `<th scope="row">` row headers, and empty-state
 text that names no module. `cellUnder`'s stale text is corrected. The slice also diagnoses
 register row F39 (port 3000 opened by the frontend test run). The auditor writes F39's dated
 register resolution at close. First in the Work: nothing precedes it (`PL-1286` Sequencing).
