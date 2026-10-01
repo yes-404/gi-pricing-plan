@@ -102,7 +102,9 @@ here (see *What it obliges*).
    time" names a point where the version is not available. The **code** was right about the
    check point but wrong about the outcome: it answers `BUNDLE_COMPILE_FAILED` where the
    spec names `MODEL_REFERENCE_MODE_INCONSISTENT`. The spec was also incomplete: that code
-   is missing from `03` §5.1's owned-code list, so check 10 had nothing to own.
+   is missing from `03` §5.1's owned-code list. *(Amended 2026-10-01 10:30 BST, F2: a clause
+   naming audit-docs check 10 is struck. That check finds a code claimed by more than one
+   module and cannot see a missing one, so no mechanical check covers this gap.)*
 
 **Why.** The check compares two artifacts, and compilation is the first point where both are
 present. It is also a point every scored, submitted or deployed version must pass. A
@@ -180,10 +182,35 @@ refused under the wrong code or not refused at all.**
 1. **Compile, named.** An `approximation` version pinning an algorithm with an `exact`
    `model_call` step fails the `rating.compile` Job with
    `MODEL_REFERENCE_MODE_INCONSISTENT`, and the message names the step. Red on main:
-   `BUNDLE_COMPILE_FAILED`.
+   `BUNDLE_COMPILE_FAILED`. *(Amended 2026-10-01 10:30 BST, F3.)* No route writes
+   `model_reference_mode`, so the test sets it on the row or the schema directly. At the
+   pure level it can extend pricing-core's existing fixture,
+   `packages/pricing-core/tests/test_rating_compile_bundle.py:234`
+   (`test_a_mode_mismatch_is_refused_at_compile`). That test asserts only a `ValueError`
+   matching `FR-223`, and it is tightened to the named code.
 2. **Compile, agreeing.** The same version with a matching step compiles.
 3. **Spec and code agree.** `MODEL_REFERENCE_MODE_INCONSISTENT` is in `03` §5.1's
-   owned-code list and in `errors.py`'s registry. Check 10 passes.
+   owned-code list and in `RATING_ERROR_CODES` (`backend/src/app/errors.py:297`).
+   *(Amended 2026-10-01 10:30 BST, F2.)* No mechanical check covers this: audit-docs check
+   10 (`scripts/audit-docs.py:15`) finds a code claimed by more than one module and cannot
+   see a missing one. So the slice adds a test, red first, that asserts the code is in both.
+   It reads the §5.1 owned list from `docs/specs/03-rating-engine.md` and imports
+   `RATING_ERROR_CODES`.
 4. **No save-time check.** Saving the mismatching algorithm through
    `POST /rating-algorithms` succeeds (201). It carries no version, and that is now the
    spec's statement, not a gap.
+
+## Amendment, 2026-10-01 10:30 BST: auditor-1061's F2 and F3
+
+*By the decision-maker session `dm-675dp56` (effort `medium`), on auditor-1061's audit of
+`f70593b5`, as the lead adopted it at 10:29 BST. The ruling is unchanged. F1, on FD 9759
+(working id) limb (2)'s validate-route clause, is pending the maintainer and is not
+addressed here.*
+
+- **F2.** Item 4 and Acceptance 3 cited audit-docs check 10, which cannot see a missing
+  owned code. The clause in item 4 is struck. Acceptance 3 now requires a test that
+  `MODEL_REFERENCE_MODE_INCONSISTENT` is in both `03` §5.1's owned list and
+  `RATING_ERROR_CODES`.
+- **F3.** Acceptance 1 now says how the red test is built when no route writes the mode:
+  it sets the mode on the row or the schema directly, or tightens pricing-core's
+  `test_rating_compile_bundle.py:234`.
