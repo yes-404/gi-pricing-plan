@@ -97,6 +97,48 @@ the fix with the same plant: `12 passed`; planted mutation `1e-05 > 1e-06` red).
 exposes only these private module constants, so the test imports them rather than typing a literal. Write set:
 `packages/pricing-core/tests/test_objectives.py` only (the data file and `src/` are unchanged).
 
+### Task 2 — the first CI, at the working-id head `0f725f0f` (2026-10-01 03:57 BST, from the lead's Delta 2)
+
+Python run 36806710473: `GATE: FAIL — 1 of 8 stages failed: pytest`, 13 failed and 4404 passed. All 13 are docs-gate
+tests failing on check 31's gap between 1351 and 9790. The six `test_template_certificate_unchanged` cases passed on CI's
+runner, which is the fix working where the original red was measured. That head can never be green; the ids were minted
+in `98124cc8` (SL-1352, LG-1353, FD-1354).
+
+### Task 3 — the full two-half gate, on a separate detached worktree of each minted head
+
+Both runs: `git worktree add --detach /tmp/gate790{b,c}-wt <sha>`, `git status --porcelain` empty at start,
+`uv sync --all-packages`, a per-worktree database from the template and `alembic upgrade head`,
+`ruff check --no-cache .` and `mypy --no-incremental` run on their own (both rc 0, 213 source files), then the
+dev-commands slot wrapper (`.claude/skills/dev-commands/SKILL.md`, the gate body, copied by script from the file's own
+lines) with `LOKY_MAX_CPU_COUNT=4`, in the foreground under `timeout 3500`. `/tmp/slots/gate-1` and `gate-2` both read
+free by `flock -n` at the start, so there was no other holder. The frontend half then ran on the same tree.
+
+**a. Head `98124cc8` (the minted head): `GATE: FAIL — 2 of 7 stages failed: audit_docs pytest`.** Cause: this ledger's
+quoted dispatch record named two ids of the unmerged #1034 ledger, `LG 1352` and `LG 1355`, and check 32 read them as
+citations that do not resolve in INDEX. Pytest: `11 failed, 4406 passed, 3 skipped`, every failure in the docs-gate
+family (`grep -E '^FAILED'` filtered by `test_audit_docs|test_doc_index|test_register_|test_repository_i` leaves 0). Fixed
+in `d651e33b` by spelling those two ids `LG 01352` and `LG 1355` in the quoted text, with the deviation stated in Task 0.
+This run was my error (I pushed before running audit-docs on a clean checkout); the stage table caught it.
+
+**b. Head `d651e33b` (start 04:26:30 BST, end 04:50:47 BST).** Start: load average 3.23, `free -h` 20Gi free of 31Gi.
+End: load average 5.56, 18Gi free. Stage table:
+
+| stage | result | detail |
+|---|---|---|
+| ruff | pass | exit=0 |
+| mypy | pass | exit=0 |
+| import_linter | pass | exit=0 |
+| audit_docs | pass | exit=0 |
+| req_coverage | pass | exit=0 |
+| contracts | pass | exit=0 |
+| pytest | pass | exit=0 (`4417 passed, 3 skipped`, 1311.67 s) |
+
+`GATE: pass — 7 of 7 stages passed`. Frontend half: `pnpm --dir frontend install --frozen-lockfile`, `generate:api`,
+`lint`, `type-check`, `test` (97 files, 609 tests passed) and `build`, each rc 0. Also run on `98124cc8`'s checkout:
+`doc-id.py check` rc 0, `doc-index.py --check` OK (byte-stable), `register-lint.py` OK (0 violations).
+
+CI twice is not recorded here: the lead records it on the final head after the auditor's status flips.
+
 ## PRs
 
-(Appended below as the PR is opened and its CI runs complete.)
+Draft PR #1035, branch `sl-9790-template-certificate-runner-independent`.
