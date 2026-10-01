@@ -154,14 +154,14 @@ If RL 9907 (working id)'s `Permission` column has not landed in `03` §5.1 when 
 
 ```text
 | `GET` | `/api/v1/rating-versions/{slug}@{version}` | Read one Rating Version by its `slug@version` (FR-<new>); requires `rating:read`. **200** with a `RatingVersion` (§4.3); 401; 403; **404** `NOT_FOUND` on an unknown version or another workspace's. Registered before the `{id}` read, which would otherwise take the request. **Added <date>** (`RL-<this>`) |
-| `GET` | `/api/v1/rating-versions/{id}` | Read one Rating Version by `id`, the handle the `{id}` routes below take (FR-237); requires `rating:read`. **200** with a `RatingVersion` (§4.3); 401; 403; **404** `NOT_FOUND` on an unknown id or another workspace's. Records an existing route, built in Phase 1b (FR-440); declared <date> (`RL-<this>`), owner WK-675 (`PL-1286` DP-5) |
+| `GET` | `/api/v1/rating-versions/{id}` | Read one Rating Version by `id`, the handle the `{id}` routes below take (FR-237); requires `rating:read`. **200** with a `RatingVersion` (§4.3); 401; 403; **404** `NOT_FOUND` on an unknown id or another workspace's. Built in Phase 1b (FR-440); records an existing route, 2026-09-30; declared <date> (`RL-<this>`), owner WK-675 (`PL-1286` DP-5) |
 ```
 
 If RL 9907 (working id)'s `Permission` column has landed in `03` §5.1 when a row is applied, the row carries a fourth cell, `rating:read`, and is applied in its four-cell form instead:
 
 ```text
 | `GET` | `/api/v1/rating-versions/{slug}@{version}` | Read one Rating Version by its `slug@version` (FR-<new>); requires `rating:read`. **200** with a `RatingVersion` (§4.3); 401; 403; **404** `NOT_FOUND` on an unknown version or another workspace's. Registered before the `{id}` read, which would otherwise take the request. **Added <date>** (`RL-<this>`) | `rating:read` |
-| `GET` | `/api/v1/rating-versions/{id}` | Read one Rating Version by `id`, the handle the `{id}` routes below take (FR-237); requires `rating:read`. **200** with a `RatingVersion` (§4.3); 401; 403; **404** `NOT_FOUND` on an unknown id or another workspace's. Records an existing route, built in Phase 1b (FR-440); declared <date> (`RL-<this>`), owner WK-675 (`PL-1286` DP-5) | `rating:read` |
+| `GET` | `/api/v1/rating-versions/{id}` | Read one Rating Version by `id`, the handle the `{id}` routes below take (FR-237); requires `rating:read`. **200** with a `RatingVersion` (§4.3); 401; 403; **404** `NOT_FOUND` on an unknown id or another workspace's. Built in Phase 1b (FR-440); records an existing route, 2026-09-30; declared <date> (`RL-<this>`), owner WK-675 (`PL-1286` DP-5) | `rating:read` |
 ```
 
 The by-id row is the one exact text for `GET /api/v1/rating-versions/{id}`, and it satisfies RL 9907 (working id) item 3's by-id read verbatim. It is applied either by WK-675 Slice 2 with this record's T1, or by RL 9907 (working id)'s WK-1178 slice; whichever slice applies first adds it, and the other adds nothing. It cites FR-237, not T1's FR, so it can be applied before T1. Either applier needs this record minted, because the row cites `RL-<this>`; an unminted record is a stop.
@@ -247,3 +247,19 @@ lead withdrew as wrong (auditor-1055's scoped re-check, F-2). The ruled option i
 - **F-3.** RL 9907 item 1 adds a fourth `Permission` cell to every §5.1 row, now and later.
   T2 now gives each row in a three-cell and a four-cell form (`rating:read`), chosen by
   whether that column has landed. The permission names are proved by the grep pasted in T2.
+
+## Amendment, 2026-10-01 10:36 BST: the by-id row carries RL 9907 (working id)'s note verbatim (G1)
+
+*By the decision-maker session `dm-675dp56` (effort `medium`), on auditor-1055's
+side-by-side re-check (G1), as the lead relayed it at 10:35 BST. The ruled option is
+unchanged.*
+
+RL 9907 (working id) item 3 quotes the note as "records an existing route, 2026-09-30", and
+its acceptance passes the two reads through their "records an existing route" rows. The by-id
+row in T2 read "Records an existing route, built in Phase 1b (FR-440); declared <date>", with
+a capital R and no fixed date. **Choice: the row adopts RL 9907's phrase exactly.** Both
+forms of the by-id row now read "Built in Phase 1b (FR-440); records an existing route,
+2026-09-30; declared <date> (`RL-<this>`), owner WK-675 (`PL-1286` DP-5)". The
+lower-case phrase and its fixed date match RL 9907 byte for byte. `<date>` stays the
+applying commit's date. RL 9907's matching line is in its amendment of the same time
+(#977). No other text changes.
