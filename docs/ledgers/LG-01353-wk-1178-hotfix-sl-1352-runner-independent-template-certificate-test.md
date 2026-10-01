@@ -2,7 +2,7 @@
 id: LG-1353
 family: ledger
 title: WK-1178 hotfix SL-1352 — runner-independent template-certificate test
-status: closed
+status: active
 created: 2026-10-01
 owner: executor
 tree: 7190787f494a921f89339ae62f8e3ae666bc4e2b
@@ -146,3 +146,58 @@ Draft PR #1035, branch `sl-9790-template-certificate-runner-independent`.
 ## Close — 2026-10-01 04:54 BST
 
 auditor-1352d: delta audit over `0f725f0f..a2c035ee` (and `origin/main...a2c035ee`, main `8933a29e`): CLEAN. No code hunk since `0f725f0f` (`git diff 0f725f0f a2c035ee -- packages backend frontend scripts` is empty); ids contiguous at 1352-1354; sweep reproduces (26, 0); frozen-family guard prints nothing. This ledger and SL-1352 set `closed` on that audit; the lead merges and records CI twice on the final head.
+
+## Task 4 — reopened: the first fix was incomplete (2026-10-01 05:11 BST)
+
+Reason: CI run 1 on the final head `5a4beb63`, python run 36812617020, failed with `1 failed, 4416 passed`:
+`test_template_certificate_unchanged[tweedie]`, check `minimum_at_truth`, `max |f* - log y| = 2.08e-16` on the runner
+against `1.8e-16` pinned. The earlier green at `d651e33b` (run 36810512763) was by chance. The SL-1352 row and this
+ledger are `active` again by this commit; the `## Close` entry above is superseded by the re-audit this rework needs.
+My first sweep predicate (`max relative error <digit>`) matched the shape of the known bug, not the class; FD-1354's
+addendum records the producer sweep that replaces it. Scope: the lead's Delta 5 and Delta 6 (the dispatch record,
+local). Red is run 36812617020.
+
+### Task 5 — producer sweep, normalisation, bounds (2026-10-01 05:30 BST)
+
+The lead's predicate `grep -nP '\{[^{}]*:\.[0-9]+[geE]\}' packages/pricing-core/src/pricing_core/modelling/objectives.py`
+gives 12 lines at `8933a29e`, as the lead said (the same pattern over `objectives.py` at this tree gives 12). It is
+narrower than the class: it misses `%` and `.1f` format specs. The widened predicate
+`\{[^{}]*:[^{}]*[geEf%]\}` found four more measured figures in the same producers, which the first guard run showed:
+:1293 (share of negative hessians), :1341 (share of sampled y above a branch), :1466 (orders spanned), :1581 (smoke-fit
+percentage error). Measured figures normalised, by producer and check:
+
+| line | check | figure | bound |
+|---|---|---|---|
+| 1141, 1150 | `analytic_vs_numeric_gradient`, `_hessian` | max relative error | `<= _TOLERANCE_PASS` for pass, `<= _TOLERANCE_WARN` otherwise (read from `_status_for`, which sets the status from these two constants) |
+| 1434 | `minimum_at_truth` | `max abs(f* - log y)` | none: the check's status is `above` (a step away raises the loss) and has no numeric tolerance on this figure, and a non-zero deviation is expected for quantile and the asymmetric pair (0.676 for `capped_gamma`, 6.84 for `focal_binomial` are deterministic maths, pinned no longer); status only |
+| 1466, 1467 | `scale_behaviour` | orders spanned, gradient min and max | none: the pass limit is the inline literal `orders <= 6.0`, no symbol; status only (it decides pass or warn) |
+| 1293 | `convexity` | share of negative hessians | none: any negative share is `VIOLATED`, a finding with a mitigation (FR-152); status only |
+| 1341 | `branch_discontinuity` | share of y above the cap | none: always `WARN`; status only |
+| 1580, 1581 | `smoke_fit` | recovered relativity, error percentage | none as a symbol: the limit is the inline literal `error <= 0.20`; status only |
+| 1582 | `smoke_fit` | elapsed seconds | normalised since the first fix |
+
+Inputs, kept (closed list `_DETERMINISTIC_INPUTS` in the test): :1168-1170, :1181-1182, :1235, :1241, :1388 (sampling and
+bad-point ranges), :1142 and :1151 (`h=`), :1296 (`hessian_min=`), :1446 (steps), and the smoke fit's true relativity.
+Failure-only: :821-822 (elapsed against the per-round budget, in an error message, never in a pass detail).
+
+**Red and green, run on this tree before the commit.**
+- Red, the CI figure: the previous test file with `|f* - log y| = 1.8e-16` changed to `2.08e-16` in the data file:
+  `1 failed, 87 deselected` (`tweedie`). The new test with the same plant: `12 passed`.
+- Runner-style perturbation of every newly normalised figure at once (deviation `1.8e-16` to `2.08e-16` and `0.676` to
+  `0.677`, orders `9.3` to `9.4` with min and max moved, share `55.0%` to `55.1%`, relativity `1.58` to `1.57`, the
+  smoke percentage error `1.1%`, branch share `29.3%` to `29.4%`, and the `3.21e-12` error to `2.28e-12`):
+  `24 passed` (12 comparison cases, 12 guard cases), the data file restored after.
+- No newly normalised figure has a tolerance symbol, so there is no new planted mutation of a bound. The bound's own
+  mutation (`h_error + 1e-5`, `1e-05 > 1e-06`) stands from FD-1354 Evidence 3.
+
+### Task 6 — the guard test (2026-10-01 05:35 BST)
+
+`test_no_measured_figure_survives_normalisation_in_a_template_certificate` (12 cases, one per template) renders every
+template's certificate, runs `_normalise_measured`, removes the deterministic inputs by the closed regex
+`_DETERMINISTIC_INPUTS`, and fails if any float in fixed or exponent notation (`\d+\.\d+(e[-+]?\d+)?|\d+e[-+]?\d+`)
+is left. It tells the inputs apart from measurements by shape and context, not by value: a range is only `[yfw] ∈ [..]`,
+the step is only `h=`, the objective's own parameter is only `hessian_min=`, the true relativity is only `against a true`,
+and the loss steps only `steps of`. Any figure in another position fails.
+**Red first:** with the `|f* - log y|` normaliser commented out, the guard fails 12 of 12 cases (survivors such as
+`{'minimum_at_truth': ['1.8e-16']}`); restored, `24 passed`. The guard's first run, before the closed list was complete,
+also failed on `hessian_min=1e-06` and the branch percentage (`29.3`), which is how the :1341 producer was found.

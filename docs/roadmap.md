@@ -1169,7 +1169,7 @@ The code that the FR-244 ruling, RL-1312, assigns to WK-1178. FR-244's operator 
 id: SL-1352
 family: slice
 title: WK-1178 hotfix — runner-independent template-certificate test
-status: closed                  # draft → active → closed | retired (§1.2a)
+status: active                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-01
 owner: executor
 tree: 7190787f494a921f89339ae62f8e3ae666bc4e2b
@@ -1179,7 +1179,9 @@ corrected_by: []
 relates: [FD-1354, LG-1353, LG-1350]
 ```
 
-Test-only hotfix for main's red CI after #1025: `test_template_certificate_unchanged` pinned a runner-dependent `max relative error` figure. The comparison normalises the figure and asserts it against the engine's tolerance. No leaf plan; the dispatch record `DISPATCH-WK-1178-HOTFIX-9790-2026-10-01.md` (local) and the maintainer's ruling of 2026-10-01 are the scope. *(Minted 2026-10-01 as SL-1352; filed under working id 9790. Ledger `LG-1353`, finding `FD-1354`.)*
+Test-only hotfix for main's red CI after #1025: `test_template_certificate_unchanged` pinned a runner-dependent `max relative error` figure. The comparison normalises every measured figure a template certificate prints and bounds the two finite-difference errors by the engine's tolerance; a guard test fails if any other figure survives. No leaf plan; the dispatch record `DISPATCH-WK-1178-HOTFIX-9790-2026-10-01.md` (local) and the maintainer's ruling of 2026-10-01 are the scope. *(Minted 2026-10-01 as SL-1352; filed under working id 9790. Ledger `LG-1353`, finding `FD-1354`.)*
+
+*(Reopened 2026-10-01 05:11 BST to `active`: CI run 36812617020 at `5a4beb63` failed on a second runner-dependent figure the first fix did not normalise; the lead's Delta 5 and Delta 6 are the rework scope. A fresh auditor re-closes.)*
 
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
