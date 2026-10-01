@@ -12997,6 +12997,18 @@
             "title": "Bundle Hash",
             "type": "string"
           },
+          "ladder_check_version": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ladder Check Version"
+          },
           "ladder_reconciled": {
             "title": "Ladder Reconciled",
             "type": "boolean"
@@ -28364,6 +28376,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Internal server error"
           }
         },
         "summary": "Score one Quote Context against an explicit Rating Version",
@@ -28616,6 +28643,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Internal server error"
           }
         },
         "summary": "Score one Quote Context against two Rating Versions, with a step-level diff",

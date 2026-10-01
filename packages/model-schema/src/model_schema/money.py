@@ -40,7 +40,15 @@ from pydantic import BeforeValidator, Field, GetJsonSchemaHandler, PlainSerializ
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 
-__all__ = ["Currency", "DecimalStr", "MoneyMinor", "Relativity", "apply_factor", "to_minor"]
+__all__ = [
+    "Currency",
+    "DecimalStr",
+    "MoneyMinor",
+    "PositionalDecimalStr",
+    "Relativity",
+    "apply_factor",
+    "to_minor",
+]
 
 
 class _DecimalStrSchema:
@@ -86,6 +94,19 @@ DecimalStr = Annotated[
     Decimal,
     BeforeValidator(_reject_float),
     PlainSerializer(str, return_type=str, when_used="always"),
+    _DecimalStrSchema(),
+]
+
+#: An exact decimal that always serialises in positional notation (`RL-1329` §3, B2).
+#: `DecimalStr` renders with `str()`, so `Decimal("0.0000001")` becomes `"1E-7"` and
+#: `Decimal("1.2E-28")` stays `"1.2E-28"`, both outside the type's own JSON Schema
+#: pattern. This type renders `format(value, "f")` instead, with the same float refusal and
+#: the same JSON Schema. `DecimalStr` is left alone: changing its serialiser would change
+#: stored bytes and content hashes beyond the ladder.
+PositionalDecimalStr = Annotated[
+    Decimal,
+    BeforeValidator(_reject_float),
+    PlainSerializer(lambda v: format(v, "f"), return_type=str, when_used="always"),
     _DecimalStrSchema(),
 ]
 
