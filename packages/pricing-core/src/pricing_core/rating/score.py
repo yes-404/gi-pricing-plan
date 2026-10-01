@@ -234,7 +234,7 @@ from pricing_core.safe_error import CodedError, safe_error_detail
 
 __all__ = ["build_scoring_result", "score_batch", "score_one"]
 
-#: The rungs that are relativities: an unchanged value on one of them is recorded as ×1, on any
+#: The rungs that are relativities: an unchanged value on one of them is recorded as x1, on any
 #: other rung as `none` (see `_build_ladder`).
 _MULTIPLY_RUNGS = frozenset(
     {
@@ -816,7 +816,7 @@ def _build_trace(
         quote_id=quote_id,
         steps=steps,
         # Every trace is built after the check passed (`build_scoring_result` refuses a ladder
-        # that does not reconcile), so the verdict is always true and the check is FR-248's full one.
+        # that does not reconcile): the verdict is always true, by FR-248's full check.
         ladder_reconciled=True,
         ladder_check_version=_LADDER_CHECK_VERSION,
     )

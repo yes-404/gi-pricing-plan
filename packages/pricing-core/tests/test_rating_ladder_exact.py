@@ -6,8 +6,8 @@ through a real ZEN evaluation and `score_one(trace=True)`, never a reimplementat
 
 from __future__ import annotations
 
-from datetime import date, datetime
 import json
+from datetime import date, datetime
 from decimal import Decimal, localcontext
 from typing import Any
 
@@ -401,7 +401,9 @@ async def test_a_max_clamp_and_a_step_declaring_both_bounds() -> None:
     declares both bounds (the side that set the final value is the one recorded)."""
     from pricing_core.rating.ladder import ladder_violations
 
-    cap = _clamp_variant({"max": "sanity_floor_minor"}, "office_premium_minor <= sanity_floor_minor")
+    cap = _clamp_variant(
+        {"max": "sanity_floor_minor"}, "office_premium_minor <= sanity_floor_minor"
+    )
     ladder, inputs, _ = await _built(cap, **{**_CLAMP_INPUTS, "sanity_floor_minor": 1000})
     constraints = next(r for r in ladder if r.rung == "constraints")
     assert constraints.operation is not None
@@ -594,7 +596,9 @@ def test_the_engines_precision_is_what_the_tolerance_rests_on() -> None:
             "id": node_id, "type": "expressionNode", "name": node_id,
             "position": {"x": 0, "y": 0},
             "content": {
-                "expressions": [{"id": f"x{index}", "key": f"k{index}", "value": f"{name} * {factor}"}],
+                "expressions": [
+                    {"id": f"x{index}", "key": f"k{index}", "value": f"{name} * {factor}"}
+                ],
                 "passThrough": True,
             },
         })

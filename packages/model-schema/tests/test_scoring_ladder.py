@@ -88,6 +88,6 @@ def test_a_trace_carries_an_optional_ladder_check_version() -> None:
     }
     assert Trace.model_validate(base).ladder_check_version is None  # a stored trace
     assert Trace.model_validate({**base, "ladder_check_version": 2}).ladder_check_version == 2
-    props = json.loads(_SCHEMA.read_text())["$defs"]["Trace"]["properties"]
-    assert set(Trace.model_fields) <= set(props)
-    assert "ladder_check_version" not in json.loads(_SCHEMA.read_text())["$defs"]["Trace"]["required"]
+    trace_def = json.loads(_SCHEMA.read_text())["$defs"]["Trace"]
+    assert set(Trace.model_fields) <= set(trace_def["properties"])
+    assert "ladder_check_version" not in trace_def["required"]

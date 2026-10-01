@@ -295,7 +295,7 @@ def _refusal_bundle_payload() -> Any:
 
 async def _assert_the_ladder_refusal_is_input_free() -> None:
     """An authored R0 quote (the clamp binds, its condition says it does not) with a sentinel as
-    its `quote_id`, through `score_one` and `score_batch`: the code is there, the sentinel is not."""
+    its `quote_id`, through `score_one` and `score_batch`: the code is there, the sentinel not."""
     from test_rating_ladder_exact import _CLAMP_INPUTS, _compile_payload, _context
 
     bundle = await _compile_payload(_refusal_bundle_payload())

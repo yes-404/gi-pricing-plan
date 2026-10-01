@@ -105,15 +105,17 @@ async def test_batch_writes_one_error_row_and_one_scored_row_and_no_sentinel() -
 
 
 @pytest.mark.req("FR-248")
-async def test_controls_a_correct_ladder_is_served_with_check_version_2_and_an_empty_one_is_not_refused() -> None:
+async def test_controls_a_correct_ladder_is_served_with_version_2_and_an_empty_one_is_not() -> None:
     bundle = await _compile_payload(_score_fixture())
-    result = await score_one(bundle, _context(**{**_CLAMP_INPUTS, "min_premium_minor": 0}), trace=True)
+    unclamped = _context(**{**_CLAMP_INPUTS, "min_premium_minor": 0})
+    result = await score_one(bundle, unclamped, trace=True)
     assert result.trace is not None
     assert result.trace.ladder_reconciled is True
     assert result.trace.ladder_check_version == 2
 
     only = _chain_algorithm(factors=[])
-    only["steps"] = [s for s in only["steps"] if s["step_id"] not in ("s_out_risk", "s_out_payable")]
+    dropped = ("s_out_risk", "s_out_payable")
+    only["steps"] = [s for s in only["steps"] if s["step_id"] not in dropped]
     only["outputs"] = []
     empty = await score_one(await _compile_payload(only), _context(risk_premium_minor=1000))
     assert empty.premium_ladder == []

@@ -1155,3 +1155,80 @@ def test_a_trace_sampling_failure_logs_no_quote_input(
     assert "ValueError" in caplog.text
     assert sentinel not in caplog.text
 
+
+
+# --------------------------------------------------------------------------------------
+# RL-1346 (DP-S3-1): a ladder that does not reconcile is refused on /score, logged and counted.
+# --------------------------------------------------------------------------------------
+
+_LADDER_SENTINEL = "SENTINEL-quote-input-8a1f66"
+
+
+def _plant_a_ladder_one_unit_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The real builder's ladder with its last rung one minor unit off (a test-only mutation)."""
+    from pricing_core.rating import score as core_score
+
+    real = core_score._build_ladder
+
+    def off_by_one(inputs: Any, codes: Any) -> Any:
+        ladder = real(inputs, codes)
+        ladder[-1] = ladder[-1].model_copy(update={"value_minor": ladder[-1].value_minor + 1})
+        return ladder
+
+    monkeypatch.setattr(core_score, "_build_ladder", off_by_one)
+
+
+def _ladder_refusals(environment: str) -> float:
+    from app.observability.metrics import REGISTRY
+
+    value = REGISTRY.get_sample_value(
+        "gip_ladder_reconciliation_failed_total", {"environment": environment}
+    )
+    return value or 0.0
+
+
+@pytest.mark.req("FR-248")
+@pytest.mark.parametrize("rate", [None, 0.0])
+def test_a_ladder_that_does_not_reconcile_is_a_500_with_its_code_logged_and_counted(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    database: Any,
+    workspace_id: Any,
+    rate: float | None,
+) -> None:
+    """Acceptance 3 and 4 of RL-1346: the quote is refused in `uat`, whatever the trace-sampling
+    rate, with an RFC 9457 body carrying the code and no quote input."""
+    body = {**_quote({"rating_version_ref": SCORED_REF}), "quote_id": _LADDER_SENTINEL}
+    assert client.post(SCORE_URL, json=body, headers=scoring_headers).status_code == 200  # control
+    if rate is not None:
+        _run(_set_trace_sample_rate(database, workspace_id, rate))
+    _plant_a_ladder_one_unit_off(monkeypatch)
+    before = _ladder_refusals("uat")
+
+    with caplog.at_level(logging.INFO):
+        response = client.post(SCORE_URL, json=body, headers=scoring_headers)
+
+    assert response.status_code == 500, response.text
+    assert response.json()["code"] == "LADDER_RECONCILIATION_FAILED"
+    assert "Retry-After" not in response.headers
+    assert _LADDER_SENTINEL not in response.text
+    assert _ladder_refusals("uat") == before + 1
+    errors = [r for r in caplog.records if r.levelno == logging.ERROR]
+    assert any("LADDER_RECONCILIATION_FAILED" in r.getMessage() for r in errors)
+    assert _LADDER_SENTINEL not in caplog.text
+
+
+@pytest.mark.req("FR-248")
+def test_a_correct_ladder_is_served_and_not_counted(
+    client: TestClient, scoring_headers: dict[str, str], compiled_version: Any
+) -> None:
+    before = _ladder_refusals("uat")
+    body = {**_quote({"rating_version_ref": SCORED_REF, "trace": True})}
+    response = client.post(SCORE_URL, json=body, headers=scoring_headers)
+    assert response.status_code == 200, response.text
+    assert response.json()["trace"]["ladder_reconciled"] is True
+    assert response.json()["trace"]["ladder_check_version"] == 2
+    assert _ladder_refusals("uat") == before
