@@ -136,3 +136,9 @@ Neither reading loosens the bound on any rung that D1/D2 name; both need the lea
 **Decimal-output guard (record condition 5).** `git grep -n -E "type[\"']?[:=] *[\"']decimal[\"']" HEAD -- ':!**/tests/**' ':!docs/**' ':!frontend/**'` printed one line at `30a641cc`: `scripts/bench-rating.py:213: {"name": name, "type": "decimal", "nullable": False} for name in FEATURE_ORDER`, an input-contract row, not an output. No committed non-test algorithm, seed or example declares a `decimal` output. (Test files are excluded by the pathspec; this slice's `decimal` output fixtures are in tests.)
 
 **Task 5 hold.** HELD since 2026-10-01 02:29 BST. At 02:49 BST `gh pr view 1034` printed `state: OPEN`, `mergedAt: null`. No release yet.
+
+### Release-note paragraph, drafted (appended 2026-10-01 BST; for the squash body, Acceptance 9)
+
+Declared non-payable rung outputs change on most quotes, as a correction of FD-1336's drift, by up to about 10⁻⁴ of the value (57–64 % of quotes, maximum 12521 minor units at the 1e7 scale, across the four seeded sweeps at `fa9a73c2`; the maintainer's acceptance line in force, RL-1329 §4). Payables change only at a near-tie, by at most 1 minor unit (0 of 42 000). A declared non-rung `money_minor` output on `/score` changes from a JSON number with a fraction to an integer, by less than one rounding unit (R2). A quote whose ladder does not reconcile is now refused with 500 `LADDER_RECONCILIATION_FAILED` (RL-1346).
+
+Status at this entry: Task 6 not final (the two readings are with the maintainer); no gate slot; Task 5 held (#1034 open); bench waits for a solo window. Lead's Delta 1 records the unslotted directory run.
