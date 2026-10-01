@@ -320,3 +320,16 @@ I found it when the other 13 went green on the minted tree, rather than at the f
 classified the whole set by its common cause without reading each assertion. Fixed: the pin is 70 with a
 dated comment line in the file's own convention. The named file passes.
 
+### Task 8 — gate, run 4: the full re-gate after merging main and the mint (head `44bd29e08e7d586b84eace454b78b3fb3cab526b`)
+
+Required because this slice is second to merge on `model_schema/__init__.py` (WK-690 S2, #1025, merged
+first; record condition 2). A **separate detached worktree** of that SHA (`exec-1250s1-gate`),
+`git status --porcelain` empty, fresh `uv sync --all-packages`, a fresh test database cut from the template
+and migrated to the single head `2f598e89d12c`; `ruff check --no-cache` and `mypy --no-incremental` clean
+beforehand; wrapper verbatim, `timeout 3300`, foreground-waited. **Times in BST** (`TZ=Europe/London date`):
+02:38:02 to 03:00:17 on 1 Oct. Start: load 1.18 1.53 1.28, 20Gi free of 31Gi; end: load 1.87 1.90 1.93,
+19Gi free. Both slots free via `flock -n` before the start. Stage table: **ruff pass, mypy pass,
+import_linter pass, audit_docs pass, req_coverage pass, contracts pass, pytest pass** — `GATE: pass — 7 of
+7 stages passed`; pytest **4488 passed, 3 skipped in 1316.60s** (baseline 1469.6s), no failures. Frontend
+half on the same head: install, `generate:api`, `lint`, `type-check`, `build`, `test` all rc 0 (97 files, 609 tests passed).
+
