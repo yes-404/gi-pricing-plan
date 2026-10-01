@@ -162,3 +162,12 @@ The lead gives the verdict and the maintainer sets the severity.
   `:270`, `:294`).
 - **Not measured:** whether any client of the published contract exists today; the table is a statement about the three
   definitions, not about a consumer.
+
+## Maintainer's decision (2026-10-01 10:38:52 BST)
+
+Recorded from the maintainer's entry headed "2026-10-01 10:38:52 BST — FD 9752 (#1066 @24933167, the approval request's three disagreeing shapes): MEDIUM, owner WK-1178, deadline BEFORE the P2 exit demo, plus a consumer hold" (`to-lead.md`, a local channel file, so cited by its header). It supersedes the "Proposed severity" and "Proposed: fix before close" wording above, which stays as written and is **struck by this section**, not edited.
+
+- **Severity: MEDIUM; owner WK-1178.** The worst field is the decision enum: the code emits `approve`/`reject`/`request_changes`; the published contract and `06` §4.3's example say `approved`/`rejected`/`changes_requested`. That is a silent misreading of a governance decision for any consumer (so not LOW). No consumer exists (exposure 0, so not HIGH).
+- **Deadline: fixed before the P2 exit demo**, not "before close": WF-699's deploy step walks approvals.
+- **HOLD:** no slice ships code that reads a response of any of the four `to_dict` routes until a DM rules the enum. Typing the request bodies is unaffected.
+- **Discharge, all of:** (1) a DM rules per field which shape is right (`CLAUDE.md` §0), the enum first, with verbatim `06` text if the spec moves; the contract and the spec example agreeing is not proof. (2) One shape: the `model-schema` model, the hand-authored schema retired ("generated wins"), the four routes' 2xx typed by `$ref`. (3) The F27 class: the `ONE_SIDED_SLUGS` reason fixed, and a guard that fails when a listed slug has a `model-schema` class, proven on broken input.
