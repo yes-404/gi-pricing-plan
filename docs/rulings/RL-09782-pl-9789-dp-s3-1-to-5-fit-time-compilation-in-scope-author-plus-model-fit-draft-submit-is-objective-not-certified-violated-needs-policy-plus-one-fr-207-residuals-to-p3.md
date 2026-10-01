@@ -42,6 +42,10 @@ applied on main, and PR #942 is `CLOSED`. DP-S3-2 is ruled against `RL-1305` as 
 is **not conditional**. What remains unbuilt is the WK-1178 parity-check **slice**
 (`PL-1279`), and that is a sequencing dependency of Task 3, stated under DP-S3-2.
 
+**DP-S3-4's §4.2 interaction** was ruled by the decision-maker session `dm-9782hi` at effort
+`high`, on the maintainer's raise to the lead of 2026-10-01 08:14:25 BST; evidence re-read at
+`101e32dc`, first clock read 08:24 BST.
+
 ## Premises re-verified at `101e32dc`
 
 `git diff --stat 9b0fb97c 101e32dc -- backend/src packages docs/specs/02-modelling.md
@@ -238,10 +242,130 @@ it in `review` (fails at the base, because it moves to `approved`), and a second
 approves it. Under a policy of two, two approvals leave it in `review`. A `pass` objective
 under a policy of one is approved by one approval (the control).
 
-**§4.2 interaction open: escalated to a decision-maker at high effort (lead, 2026-10-01).**
-*(Text-fix pass, audit F1.)* `06` §4.2's default `ApprovalPolicy` gives `custom_objective` an
-absolute escalation of two Approvers on violated convexity (`docs/specs/06-governance.md:349-351`).
-How that combines with this ruling's policy plus one is not settled by this record.
+**§4.2 interaction ruled 2026-10-01 08:24 BST, by `dm-9782hi` at effort high: policy plus one is
+a platform rule, not a policy key. §4.2's `escalation` key is struck and replaced by a stated
+rule.** *(Raised by the text-fix pass, audit F1; escalated by the lead the same day.)* `06`
+§4.2's default `ApprovalPolicy` gave `custom_objective` an absolute escalation:
+`"escalation": {"when": "certificate.convexity == 'violated'", "approvers_required": 2}`
+(`docs/specs/06-governance.md:349-351` at `101e32dc`). It is not combined with this ruling's
+count: it is removed. The request's count is the matching entry's `approvers_required` plus one,
+for both kinds, and no policy sets the increment. The §4.2 default instance is `1 + 1 = 2`, so the defaults' outcome
+does not change.
+
+*Premises, re-verified at `101e32dc`.* `ApprovalPolicyEntry` is `extra="forbid"` and has no
+`escalation` field, and `approvers_required` is `Field(ge=1, le=5)`
+(`packages/model-schema/src/model_schema/approvals.py:114`, `:117`). `ApprovalRequest.approvers_required`
+is `Field(ge=1)` with no upper bound (`:288`), and the table's only check is
+`approvers_required >= 1` (`backend/src/app/db/models.py:687`). So policy 5 plus one stores 6
+and no bound clips it. `git grep -n -i escalation origin/main -- backend packages frontend/src docs/contracts`
+prints no approval escalation. The hits are FR-348's role escalation (`rbac.py`, `test_rbac.py`),
+the contract-drift guard's own use of the word (`test_contracts.py:1766`, `:1904`), and one
+docstring that names policy escalation as `06`'s (`backend/src/app/api/validation.py:370`, copied
+into `docs/contracts/openapi/generated.json`). `FD-1281` measured the §4.2 document against the
+model: it is refused, and `policies.1.escalation` is one of its three `extra_forbidden` errors.
+
+| Option | Count at policy 1 / 2 / 5 | Verdict |
+|---|---|---|
+| (a) policy plus one, fixed by the platform | 2 / 3 / 6 | **Adopted.** FR-152 says "an *additional* Approver", and that is relative at every count. FR-163's "two" is the same rule read at the default of one |
+| (a′) policy plus `n`, with `n` a policy key such as `approvers_added`, `n ≥ 1` | 1+`n` / 2+`n` / 5+`n` | Rejected. No requirement asks for an `n` other than one. It needs a model field, a regenerated contract and an evaluator for `when`. `when` is a second expression language that no section specifies. FR-354 names count, roles and evidence as the policy's content, not conditions on certificate contents. A workspace that wants more Approvers raises the entry's count |
+| (b) `max(policy, 2)` | 2 / 2 / 5 | Rejected. It adds nobody at policy 2 or more, which breaks FR-152 |
+| (c) the escalation's count replaces the policy's (§4.2 built as printed) | 2 / 2 / 2 | Rejected. It adds nobody at policy 2, and it lowers 5 to 2. A policy edit can also set it to 1 and remove FR-152's Approver. `06` R1 refuses that for separation of duties ("cannot be configured away"), and `ApprovalPolicy._separation_of_duties_is_not_configurable` gives the reason in code: "a rule that configuration can disable is not one" |
+| (d) policy plus the escalation's count | 3 / 4 / 7 | Rejected. It gives 3 at the default, which contradicts FR-163's "two". It adds two, where FR-152 says one |
+| (e) strike the key and state nothing in its place | 2 / 3 / 6 | Rejected. A reader of §4.2 would not see what a non-convex objective needs. FR-364's mechanism (i) restates its floor in §4.2 for that reason |
+
+*Tested against the other rules.* **FR-353**: past one Approver, the Approvers must be distinct
+Principals, and neither the submitter nor the Author decides. So policy `p` with a `violated`
+certificate needs `p + 1` eligible Principals. A small workspace may be unable to approve. That is
+the control working, not a defect. **FR-354**: unchanged. The entry still defines count, roles
+and evidence, and the plus one is not an entry field. **FR-364**: an evidence floor, so it is not
+amended. Its principle holds by analogy: a policy may add to what a requirement fixes and may not
+remove it. (c) would let it remove FR-152's Approver, and (a) cannot. **FR-365** (Phase 3): the
+base is the tier-matched entry's count. **FR-385** (unbuilt, `FD-1281`): an `expedited` request
+needs its expedited count plus one. FR-385 permits the *policy* to reduce *its* count. FR-152 is
+`02`'s requirement on the objective, and no policy count reaches it. `RL-1296` item 5 holds
+`expedited` independent of the approver-count work, and this keeps it so. **`RL-1296`** leaves to
+`FD-1281` whether the unmodelled §4.2 keys are modelled or struck. This ruling decides the
+`escalation` limb only: struck. `expedited` and `separation_of_duties` stay `FD-1281`'s. The
+row's `decision:` is the lead's. **The count is fixed at submission**: it is stored on the request
+row from the latest certificate at `submit`. A later policy edit does not move an open request.
+That is the behaviour of `approvals.submit` today (`backend/src/app/platform/approvals.py:286`). A
+re-certification cannot happen under review: `certify` accepts only `draft` and `certified`
+(`backend/src/app/platform/objectives.py:451`).
+
+*Every §4.2 entry, checked at `101e32dc` (`docs/specs/06-governance.md:344-372`).* One entry
+changes. The others do not change.
+
+| §4.2 item | Lines | Before | After |
+|---|---|---|---|
+| `validation_rule` | 347-348 | as printed | unchanged |
+| `custom_objective` | 349-351 | `{"artifact_type": "custom_objective", "approvers_required": 1,` / `"approver_roles": ["approver"], "evidence": ["objective_certificate"],` / `"escalation": {"when": "certificate.convexity == 'violated'", "approvers_required": 2}},` | `{"artifact_type": "custom_objective", "approvers_required": 1,` / `"approver_roles": ["approver"], "evidence": ["objective_certificate"]},` |
+| `custom_metric` | 352-353 | as printed | unchanged. FR-157: a metric certificate has no convexity check ("absent, not `not_applicable`"), so the rule cannot apply |
+| `model` | 354-356 | as printed | unchanged |
+| `peril_structure` | 357-358 | as printed | unchanged |
+| `rating_version` | 359-361 | as printed | unchanged |
+| `deployment` (`prod`) | 362-364 | as printed | unchanged. `RL-1296`'s field is not affected |
+| `expedited` (top level) | 366-367 | as printed | unchanged text. The new note gives the plus one on top of it once FR-385 is built |
+| `separation_of_duties` (top level) | 368 | as printed | unchanged |
+| prose after the block | after 372 | none | the note below, added |
+
+**The spec change, recorded and not applied.** It is applied at **WK-690 S3 Task 7**, in the one
+commit that adds the `submit` increment (`CLAUDE.md` §2: spec, code and tests in one commit). It
+does not take its own path. Only one entry changes, and the code that enforces the rule is Task 7's.
+An earlier, separate change would print a rule that nothing enforces, which is the gap `FD-1281`
+records. `RL-1296` item 5 orders its §4.2 field the same way. The executor applies the text below
+verbatim under `.claude/skills/spec-change`. The design step is this record. A wording change is a
+new ruling, not a judgement at Task 7. The dispatch record carries it as a further DP-S3-4 delta at
+Task 7.
+
+1. `06` §4.2 `custom_objective` entry: before and after as in the table above.
+2. `06` §4.2, a new note after the paragraph `` `separation_of_duties.configurable: false` is deliberate ``:
+   > **A non-convex Custom Objective needs the policy's count plus one, and that is not a policy
+   > key** (`02` FR-152; added <Task 7 date>, `RL-<minted id>` DP-S3-4). When the latest
+   > certificate of a submitted `custom_objective` version has a `convexity` check with status
+   > `violated`, the request's `approvers_required` is the matching entry's `approvers_required`
+   > plus one. That is two under the defaults above and three under a policy of two. It applies to
+   > both objective kinds. When FR-385 is built, it applies to the expedited count too. It is
+   > stored on the request row (§4.3) at submission, and no policy can configure it, for R1's
+   > reason: a rule that a policy edit can remove is not a rule. It replaces the entry's former
+   > `"escalation": {"when": "certificate.convexity == 'violated'", "approvers_required": 2}`. That
+   > was an absolute count, which added nobody under a policy of two, and the model never accepted
+   > it (`FD-1281`).
+3. `02` FR-163: the dated note that this DP-S3-4 already records.
+4. `02` §7.1, the `06-governance` row (`docs/specs/02-modelling.md:2859`): "two approvers for
+   non-convex objectives" becomes "an additional Approver for a non-convex objective (FR-152):
+   two under the default policy".
+5. **`WF-702` step B4.2** (`docs/workflows/WF-00702-custom-objective-lifecycle.md:121`):
+   "Escalates: convexity `violated` triggers the two-approver rule from the Approval Policy"
+   becomes "Escalates: convexity `violated` adds one Approver to the Approval Policy's count,
+   two under the default policy". The citation `` `02` FR-152, `06` §4.2 `` is unchanged. **Not
+   Task 7's executor:** `document-ids.md` §1.6's WF row gives the journey to the decision-maker
+   via `spec-change`, and the executor "never amends the journey itself". A decision-maker
+   applies it in its own PR after Task 7 merges.
+
+Checked and unchanged: FR-152 (relative already); FR-353, FR-354, FR-364, FR-365 and FR-385
+(above); `06` §4.3, whose `approvers_required` is already the request's own count; and
+`02-modelling.md:1067` ("a second Approver (FR-152)"), which is the default instance.
+
+**Red first, at the base.** The tests use a `violated` objective of each kind unless they say
+otherwise.
+
+1. Policy 1: the request row's `approvers_required` is 2, and the submission's audit `after`
+   gives 2. One non-author approval leaves the objective in `review`. A second, distinct
+   approval approves it. This fails at the base, where the row holds 1 and one approval approves.
+2. Policy 2: the row holds 3. Two approvals leave the objective in `review`, and a third
+   approves it. This fails at the base and **also under (b)**, which stores 2.
+3. The §4.2 default instance: under `DEFAULT_POLICY` the row holds 2. That is the outcome the
+   struck key printed, and the test fails at the base, where the row holds 1.
+4. Policy 5: the row holds 6, and `ApprovalRequest` validates it. This shows that the policy's
+   `le=5` does not clip the request.
+5. Controls, green at the base and after: a `pass` certificate under policy 1 stores 1, and one
+   approval approves it. A policy document whose `custom_objective` entry carries an
+   `escalation` key is refused `extra_forbidden`, so no workspace can configure the rule.
+6. Measured, by `FD-1281`'s method: the `policies` array parsed out of §4.2 and validated as
+   `ApprovalPolicyEntry` values is refused on `policies.1.escalation` at the base and validates
+   after Task 7's commit. The whole document stays refused on `expedited` and
+   `separation_of_duties` (`FD-1281`'s other limbs). Record the command and both outputs in the
+   ledger.
 
 ### DP-S3-5 — FR-207's two `custom_objective_ref` residuals: **(a), both re-noted to Phase 3, spec change first — the destination subject to the maintainer's line**
 
