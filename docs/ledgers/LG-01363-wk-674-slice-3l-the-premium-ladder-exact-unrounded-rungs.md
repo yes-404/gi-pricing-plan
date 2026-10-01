@@ -1,5 +1,5 @@
 ---
-id: LG-1364
+id: LG-1363
 family: ledger
 title: WK-674 Slice 3L (SL-1345) — the premium ladder, exact unrounded rungs, true operations, one rounding (RL-1329, RL-1346)
 status: closed
@@ -13,7 +13,7 @@ corrected_by: []
 relates: [RL-1329, RL-1346, RL-1343, FD-1336, FD-1330, OQ-1316, RL-1263, PL-1342]
 ---
 
-# LG-1364 — WK-674 Slice 3L (SL-1345)
+# LG-1363 — WK-674 Slice 3L (SL-1345)
 
 Executed from `PL-1348` under the dispatch record below. Branch `sl-1345-premium-ladder`, from
 `origin/main` `8933a29ee2658012ead53132c6e2909a2aa339d8`, lane A, executor-ladder. The id is a
@@ -253,4 +253,4 @@ The 20 % ceiling on those untraced p99s would be 16.9 ms (base) and 12.8 ms (sli
 
 ## Close (2026-10-01 08:57 BST)
 
-The slice audit `46776296` was CLEAN, conditional on the fixes of Deltas 6–7, which were verified. The delta audits: `36e808db`, then `c3867ef4` and `35f158a4`, ledger-only (one appended traced-bench budget line, NFR-490; `git diff --stat c3867ef4 35f158a4` names this file only, 17 added lines, 0 deleted). This commit is the mint and the closes: SL-1345 and this ledger are set `closed` here. Opened as working id 9805; minted 2026-10-01 as LG-1364.
+The slice audit `46776296` was CLEAN, conditional on the fixes of Deltas 6–7, which were verified. The delta audits: `36e808db`, then `c3867ef4` and `35f158a4`, ledger-only (one appended traced-bench budget line, NFR-490; `git diff --stat c3867ef4 35f158a4` names this file only, 17 added lines, 0 deleted). This commit is the mint and the closes: SL-1345 and this ledger are set `closed` here. Opened as working id 9805; minted 2026-10-01 as LG-1363.
