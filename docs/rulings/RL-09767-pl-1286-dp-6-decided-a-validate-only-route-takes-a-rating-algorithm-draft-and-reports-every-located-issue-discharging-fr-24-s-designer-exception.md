@@ -111,7 +111,7 @@ plan going `active`.
    first breach it returns, with the same exception classes it raises today, so
    `graph_validation_error` and every save code are unchanged. The validate route calls the
    same function and reports all the breaches it returns. **The checks run in today's order
-   (`packages/model-schema/src/model_schema/rating.py:395-470`), and the issues are returned
+   (`packages/model-schema/src/model_schema/rating.py:395-475`), and the issues are returned
    in that order.** Acceptance 5's first-issue parity depends on it:
    1. **Duplicate `step_id`** (FR-215, `:397-399`): one `VALIDATION_FAILED` issue per
       duplicated id, carrying that `step_id`. **It stops the remaining graph checks.** Every
@@ -128,7 +128,7 @@ plan going `active`.
       downstream of a cycle gets no issue. This set is not computed today, because the
       validator raises a `GraphCycleError` that names no step. The function computes it from
       the unordered steps.
-   5. **Ambiguous producer** (FR-212, `:445-455`): one `VALIDATION_FAILED` issue per later
+   5. **Ambiguous producer** (FR-212, `:444-455`): one `VALIDATION_FAILED` issue per later
       producer that does not consume the name, carrying its `step_id`. **Skipped after a
       cycle.** It orders producers by topological position, which does not exist then.
    6. **Orphan** (FR-212): one `VALIDATION_FAILED` issue per orphan step, carrying its
@@ -208,8 +208,30 @@ algorithms*. **Insert one new row immediately after the row that begins `| **FR-
 after the row that begins `| `GET` | `/api/v1/rating-algorithms/{slug}@{version}/diff?against=` |`**
 (`:780`). Nothing is struck.
 
+If RL 9907 (working id)'s `Permission` column has not landed in `03` §5.1 when this row is applied, the row is applied in its three-cell form:
+
 ```text
 | `POST` | `/api/v1/rating-algorithms/validate` | Validate an unsaved algorithm without saving it (FR-<new>); requires `rating:write`. The body is a `RatingAlgorithmDraft` (§4.1). **200** with an `AlgorithmValidationReport`, whose `issues` list is empty when save-time validation would pass; 401; 403; **422** `VALIDATION_FAILED` with field-level errors only for a body that is not a `RatingAlgorithmDraft`. Nothing is persisted. **Added <date>** (`RL-<this>`) |
+```
+
+If RL 9907 (working id)'s `Permission` column has landed in `03` §5.1 when this row is applied, the row carries a fourth cell, `rating:write`, and is applied in its four-cell form instead:
+
+```text
+| `POST` | `/api/v1/rating-algorithms/validate` | Validate an unsaved algorithm without saving it (FR-<new>); requires `rating:write`. The body is a `RatingAlgorithmDraft` (§4.1). **200** with an `AlgorithmValidationReport`, whose `issues` list is empty when save-time validation would pass; 401; 403; **422** `VALIDATION_FAILED` with field-level errors only for a body that is not a `RatingAlgorithmDraft`. Nothing is persisted. **Added <date>** (`RL-<this>`) | `rating:write` |
+```
+
+*(The four-cell form was added 2026-10-01 10:28 BST, on finding F-3.)*
+
+**The permission names exist** (pasted on the maintainer's addition, 2026-10-01 10:28 BST). Run at origin/main `1dd5e264`:
+`git grep -n -E 'RATING_(READ|WRITE) = ' origin/main -- packages/model-schema/src/model_schema/permissions.py`
+and `` git grep -n -E '^> \| `rating:(read|write)` \|' origin/main -- docs/specs/06-governance.md ``.
+The second command's hits are rows of `06` §4.1's *Built and now specified* table, which starts at `06:260`. That table "has exactly one row per member of `model_schema.Permission`". Output, verbatim:
+
+```text
+origin/main:packages/model-schema/src/model_schema/permissions.py:47:    RATING_READ = "rating:read"
+origin/main:packages/model-schema/src/model_schema/permissions.py:48:    RATING_WRITE = "rating:write"
+origin/main:docs/specs/06-governance.md:278:> | `rating:read` | Reading Rating Algorithms, Sub-graphs, Regression Suites, Rate Tables, Rating Versions and scoring traces |  |
+origin/main:docs/specs/06-governance.md:279:> | `rating:write` | Writing Rating Algorithms and Rate Tables, and creating a Rating Version (`RL-1236` DP-A) |  |
 ```
 
 **T3 — `03` §4.1, a dated note.** Placement: §4.1 `RatingAlgorithm`. **Insert one new
@@ -269,8 +291,10 @@ The violation: **an invalid graph that the designer shows as valid before save, 
 that validation and save apply differently.** Each backend test carries
 `@pytest.mark.req("FR-<new>")` and is shown red on deliberately broken input.
 
-1. **Cycle, located.** A two-step cycle with a third step downstream of it answers 200 with
-   `RATING_GRAPH_CYCLIC` on the two cycle steps only. Broken input: type the body
+1. **Cycle, located.** A two-step cycle with a third step downstream of it answers 200, and
+   only those two steps carry `RATING_GRAPH_CYCLIC`. *(Amended 2026-10-01 10:28 BST, F-4.)*
+   Orphan issues may also appear after a cycle, so the test asserts the set of
+   `RATING_GRAPH_CYCLIC` issues, never that the whole list has two entries. Broken input: type the body
    `RatingAlgorithm`, and the request answers 422. A second broken input names the whole
    unordered set, and the downstream step is then reported too.
 1a. *(Added 2026-10-01 10:23 BST, findings A and B.)* **The check order and its skips.** A
@@ -328,3 +352,17 @@ auditor-1055's three LOW findings on `03d838a8`. This is one dated pass, folded 
 
 T1 and T3 above are rewritten in full. The byte-for-byte sentence stands unchanged. T2 and
 T4 are unchanged.
+
+## Amendment, 2026-10-01 10:28 BST: T2's four-cell form (F-3), acceptance item 1 (F-4), two locators
+
+*By the decision-maker session `dm-675dp56` (effort `medium`), on auditor-1055's scoped
+re-check as the lead adopted it at 10:27 BST. The ruled option is unchanged.*
+
+- **F-3.** T2 now gives the validate row in a three-cell and a four-cell form
+  (`rating:write`), chosen by whether RL 9907 (working id)'s `Permission` column has landed.
+  The permission names are proved by the grep pasted in T2.
+- **F-4.** Acceptance item 1 asserts that only the two cycle steps carry
+  `RATING_GRAPH_CYCLIC`. Orphan issues may also appear after a cycle, so a test must not
+  assert the whole list.
+- **Locators.** The invariant block is `rating.py:395-475` (was `:395-470`). The
+  ambiguous-producer block starts at `:444` (was `:445`).

@@ -97,9 +97,10 @@ answer through S2's routes.
 **(a).** A Rating Version is **addressed** by its `slug@version` and read by it.
 `GET /api/v1/rating-versions/{slug}@{version}` returns the `RatingVersion`, whose `id` is the
 handle the existing `{id}` action routes take. In `/rating/:slug/v/:version/…`, the slug and
-version are the **Rating Version's own**, never its algorithm's. The existing by-id read gets
-its §5.1 row from RL 9907 (working id) item 4, not from this record. *(Amended 2026-10-01
-10:23 BST; see the amendment section.)*
+version are the **Rating Version's own**, never its algorithm's. The existing by-id read's
+§5.1 row is this record's T2 text. RL 9907 (working id) item 3 describes that read, and T2's
+row satisfies it verbatim. *(Amended 2026-10-01 10:28 BST, superseding the 10:23 BST
+amendment; see the amendment sections.)*
 
 **Why.** (a) is the form `03` §5.1 already uses for every other versioned artifact. It keeps
 human-readable URLs, which `00` §5.6 already declares. It is built on mechanisms that exist:
@@ -112,7 +113,7 @@ client.
 | Method, path | Request body | 2xx response | Permission |
 |---|---|---|---|
 | `GET /api/v1/rating-versions/{slug}@{version}` | none (path only: `slug: str`, `version: int`) | **200** `RatingVersion` (`packages/model-schema/src/model_schema/rating.py:137`) | `rating:read` |
-| `GET /api/v1/rating-versions/{id}` *(exists, unchanged; its §5.1 row is RL 9907 (working id)'s)* | none | **200** `RatingVersion` (same) | `rating:read` |
+| `GET /api/v1/rating-versions/{id}` *(exists, unchanged; its canonical §5.1 row is T2's)* | none | **200** `RatingVersion` (same) | `rating:read` |
 
 No `dict[str, Any]` appears in either signature. No new model-schema type is needed.
 
@@ -143,16 +144,39 @@ versions and bundles*. **Insert one new row immediately after the row that begin
 | **FR-<new>** | **A Rating Version is addressed by its `slug@version`; its `id` is a handle, not an address.** *(Added <date>, `RL-<this>`, `PL-1286` DP-5.)* The pair `(slug, version)` is unique within a workspace, and every §5.3 view route names a Rating Version by that pair: in `/rating/:slug/v/:version/…`, `:slug` and `:version` are the Rating Version's own `slug` and `version` (§4.3), never its algorithm's, whose version is read from `algorithm_ref`. `GET /api/v1/rating-versions/{slug}@{version}` reads the version by the pair. Its response carries the `id` that the §5.1 routes keyed by `{id}` take, so a view resolves the pair once and then acts by `id`. Both reads, by pair and by `id`, require `rating:read` and answer **404** `NOT_FOUND` for another workspace's version exactly as for one that does not exist. `00` §5.6's routes are unchanged. |
 ```
 
-**T2 — `03` §5.1, one row.** *(Amended 2026-10-01 10:23 BST: was two rows.)* Placement:
-the §5.1 table. **Insert this row immediately after the row that begins
-`| `POST` | `/api/v1/rating-versions` |`** (`:792`), before the `compile` row. Nothing is
-struck.
+**T2 — `03` §5.1, two rows.** *(Amended 2026-10-01 10:28 BST: the by-id row is restored as
+the one exact text, and each row has a four-cell form. This supersedes the 10:23 BST
+one-row form.)* Placement: the §5.1 table. **Insert the `slug@version` row immediately after
+the row that begins `| `POST` | `/api/v1/rating-versions` |`** (`:792`), and the by-id row
+immediately after it, before the `compile` row. Nothing is struck.
+
+If RL 9907 (working id)'s `Permission` column has not landed in `03` §5.1 when a row is applied, the row is applied in its three-cell form:
 
 ```text
 | `GET` | `/api/v1/rating-versions/{slug}@{version}` | Read one Rating Version by its `slug@version` (FR-<new>); requires `rating:read`. **200** with a `RatingVersion` (§4.3); 401; 403; **404** `NOT_FOUND` on an unknown version or another workspace's. Registered before the `{id}` read, which would otherwise take the request. **Added <date>** (`RL-<this>`) |
+| `GET` | `/api/v1/rating-versions/{id}` | Read one Rating Version by `id`, the handle the `{id}` routes below take (FR-237); requires `rating:read`. **200** with a `RatingVersion` (§4.3); 401; 403; **404** `NOT_FOUND` on an unknown id or another workspace's. Records an existing route, built in Phase 1b (FR-440); declared <date> (`RL-<this>`), owner WK-675 (`PL-1286` DP-5) |
 ```
 
-The by-id row is RL 9907 (working id) item 4's; whichever slice applies first adds it with that ruling's text verbatim, and the other adds nothing.
+If RL 9907 (working id)'s `Permission` column has landed in `03` §5.1 when a row is applied, the row carries a fourth cell, `rating:read`, and is applied in its four-cell form instead:
+
+```text
+| `GET` | `/api/v1/rating-versions/{slug}@{version}` | Read one Rating Version by its `slug@version` (FR-<new>); requires `rating:read`. **200** with a `RatingVersion` (§4.3); 401; 403; **404** `NOT_FOUND` on an unknown version or another workspace's. Registered before the `{id}` read, which would otherwise take the request. **Added <date>** (`RL-<this>`) | `rating:read` |
+| `GET` | `/api/v1/rating-versions/{id}` | Read one Rating Version by `id`, the handle the `{id}` routes below take (FR-237); requires `rating:read`. **200** with a `RatingVersion` (§4.3); 401; 403; **404** `NOT_FOUND` on an unknown id or another workspace's. Records an existing route, built in Phase 1b (FR-440); declared <date> (`RL-<this>`), owner WK-675 (`PL-1286` DP-5) | `rating:read` |
+```
+
+The by-id row is the one exact text for `GET /api/v1/rating-versions/{id}`, and it satisfies RL 9907 (working id) item 3's by-id read verbatim. It is applied either by WK-675 Slice 2 with this record's T1, or by RL 9907 (working id)'s WK-1178 slice; whichever slice applies first adds it, and the other adds nothing. It cites FR-237, not T1's FR, so it can be applied before T1. Either applier needs this record minted, because the row cites `RL-<this>`; an unminted record is a stop.
+
+**The permission names exist** (pasted on the maintainer's addition, 2026-10-01 10:28 BST). Run at origin/main `1dd5e264`:
+`git grep -n -E 'RATING_(READ|WRITE) = ' origin/main -- packages/model-schema/src/model_schema/permissions.py`
+and `` git grep -n -E '^> \| `rating:(read|write)` \|' origin/main -- docs/specs/06-governance.md ``.
+The second command's hits are rows of `06` §4.1's *Built and now specified* table, which starts at `06:260`. That table "has exactly one row per member of `model_schema.Permission`". Output, verbatim:
+
+```text
+origin/main:packages/model-schema/src/model_schema/permissions.py:47:    RATING_READ = "rating:read"
+origin/main:packages/model-schema/src/model_schema/permissions.py:48:    RATING_WRITE = "rating:write"
+origin/main:docs/specs/06-governance.md:278:> | `rating:read` | Reading Rating Algorithms, Sub-graphs, Regression Suites, Rate Tables, Rating Versions and scoring traces |  |
+origin/main:docs/specs/06-governance.md:279:> | `rating:write` | Writing Rating Algorithms and Rate Tables, and creating a Rating Version (`RL-1236` DP-A) |  |
+```
 
 The executor applies each text above byte-for-byte; authorship stays with the decision-maker (document-ids §1.6 FR row; CLAUDE.md §2 one-commit rule; the RL-1296 precedent). Any executor wording is a stop. If a text's anchor row is not found exactly once, that is a stop too, reported to the lead; the executor does not re-word it.
 
@@ -206,3 +230,20 @@ carries the lead's sentence: "The by-id row is RL 9907 (working id) item 4's; wh
 applies first adds it with that ruling's text verbatim, and the other adds nothing." *Ruled*
 and the route table are reworded to match. The ruled option, T1 and the acceptance tests are
 unchanged.
+
+## Amendment, 2026-10-01 10:28 BST: T2 restores the by-id row as the one exact text and gains four-cell forms (F-2, F-3)
+
+*By the decision-maker session `dm-675dp56` (effort `medium`), on the lead's order of
+2026-10-01 10:27 BST. It **supersedes the 10:23 BST amendment's pointer**, which the
+lead withdrew as wrong (auditor-1055's scoped re-check, F-2). The ruled option is unchanged.*
+
+- **F-2.** RL 9907 (working id) at `56e49b6f` gives no byte-exact by-id row. Its item 3
+  describes the two added reads (its `:218-231`), and item 4 only counts them. The 10:23 BST
+  sentence pointed at text that does not exist. **T2 again carries the by-id row, now as the
+  one exact text.** It cites FR-237, so it can be applied before T1, and it carries RL
+  9907's "records an existing route" note. RL 9907 gets a matching dated line (#977).
+  Whichever slice applies first adds the row, and the other adds nothing. *Ruled* and the
+  route table are reworded to match.
+- **F-3.** RL 9907 item 1 adds a fourth `Permission` cell to every §5.1 row, now and later.
+  T2 now gives each row in a three-cell and a four-cell form (`rating:read`), chosen by
+  whether that column has landed. The permission names are proved by the grep pasted in T2.
