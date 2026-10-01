@@ -143,7 +143,7 @@ maintainer's severity ruling recorded above; the lead gives the verdict.
 2. **Enforcement** lands with a **RED-FIRST constraint-step test**: a constraint step reading a name outside its `consumes`
    refuses at save, red on the current tree.
    **The corrected example must pass BOTH the existing graph invariant (`_graph_invariants`, `rating.py:394`) and the new
-   declared-reads check, shown by a TEST that compiles the example verbatim from `03`, in Task 1A's commit** (PL 9776 (working id)).
+   declared-reads check, shown by a TEST that compiles the example verbatim from `03` (the steps block `03:252-274` as amended by the ruling), in Task 1A's commit** (PL 9776 (working id)).
 3. **The 4 test steps** are fixed, or kept as **named negative fixtures**.
 4. **Interim guard.** G2's Exit-demo slice (a) acceptance line, "every step's reads ⊆ its declared consumes", checked by
    running the sweep on the new algorithm with 0 undeclared reads. Until enforcement lands, that line is the only guard.
