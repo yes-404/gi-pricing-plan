@@ -407,6 +407,19 @@
           "title": "Bundle Hash",
           "type": "string"
         },
+        "ladder_check_version": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ladder Check Version"
+        },
         "ladder_reconciled": {
           "title": "Ladder Reconciled",
           "type": "boolean"

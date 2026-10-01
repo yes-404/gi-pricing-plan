@@ -480,9 +480,12 @@ breakdown — `docs/rulings/RL-00931-correct-the-example-do-not-build-the-breakd
      "violation": {"applied": "clamp", "reason_code": "MIN_PREMIUM_APPLIED"},
      "elapsed_us": 3}
   ],
-  "ladder_reconciled": true
+  "ladder_reconciled": true,
+  "ladder_check_version": 2
 }
 ```
+
+*(Added 2026-10-01, `PL-1348` (SL-1345), from `PL-1342`'s Acceptance 10 and `RL-1346` §2. `ladder_check_version` is optional. Absent or `1` means the stored `ladder_reconciled` came from the check before this change, which compared the first rung and integer-ness only, and is **not** a reconciliation; a stored trace is never upgraded. `2` means FR-248's full check: `RL-1329`'s predicate over `RL-1329`'s ladder shape. Every trace built after this change carries `2` and `ladder_reconciled: true`, because a ladder that does not reconcile is refused (FR-248, `RL-1346`) and no trace is built for it.)*
 
 ### 4.6 `DislocationRun`
 

@@ -75,3 +75,19 @@ def test_the_hand_authored_contract_declares_every_model_field() -> None:
         assert operation[decimal_field] == {"$ref": "common/money.schema.json#/$defs/Decimal"}
     assert rung["unrounded_minor"] == {"$ref": "common/money.schema.json#/$defs/Decimal"}
     assert rung["rounding"] == {"$ref": "common/money.schema.json#/$defs/Rounding"}
+
+
+@pytest.mark.req("FR-248")
+def test_a_trace_carries_an_optional_ladder_check_version() -> None:
+    """`PL-1342` Acceptance 10: absent or 1 means the pre-ruling shallow check, 2 the full one."""
+    from model_schema.scoring import Trace
+
+    base: dict[str, object] = {
+        "rating_version_ref": _REF, "bundle_hash": "sha256:" + "0" * 64,
+        "steps": [], "ladder_reconciled": True,
+    }
+    assert Trace.model_validate(base).ladder_check_version is None  # a stored trace
+    assert Trace.model_validate({**base, "ladder_check_version": 2}).ladder_check_version == 2
+    props = json.loads(_SCHEMA.read_text())["$defs"]["Trace"]["properties"]
+    assert set(Trace.model_fields) <= set(props)
+    assert "ladder_check_version" not in json.loads(_SCHEMA.read_text())["$defs"]["Trace"]["required"]

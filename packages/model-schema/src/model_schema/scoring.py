@@ -195,6 +195,10 @@ class Trace(BaseModel):
     quote_id: str | None = None
     steps: list[TraceStep]
     ladder_reconciled: bool
+    # Which check produced `ladder_reconciled` (PL-1342 Acceptance 10, RL-1346 §2). Absent or 1:
+    # first rung and int-ness only, before FR-248's full check, so not a reconciliation. 2: the
+    # RL-1329 §5 predicate over RL-1329's ladder shape. Optional because stored traces lack it.
+    ladder_check_version: int | None = Field(default=None, ge=1)
 
 
 class ScoringResult(BaseModel):
