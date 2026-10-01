@@ -1,0 +1,138 @@
+---
+id: FD-9773
+family: finding
+title: FR-246's declared-inputs rule is unenforced for names, and 03's own canonical example declares no inputs
+status: active
+created: 2026-10-01
+owner: auditor
+tree: 19155b505741317da6967362707f387b39bd2cef
+corrected_by: []
+relates: [WK-1178, FR-246, FR-244, FR-212]
+---
+
+# FD-9773 — FR-246's declared-inputs rule against an engine that never compares a read with `consumes`
+
+**Filed** by auditor-fd9773 on the maintainer's ruling (the entry of `to-lead.md` after 09:34 BST beginning "P5 severity:
+MEDIUM"), found by auditor-pl9776's sweep (the F35 plan, PL 9776 (working id)). The `tree:` is `origin/main` at `19155b50`;
+every spec, code and sweep figure below was read or re-run at it.
+
+## Finding
+
+**Severity: MEDIUM; owner WK-1178; remedy via PL 9776 (working id).** The maintainer's reason: "a SILENT mispricing path
+in shipped code (edges from consumes only, nothing refuses an undeclared read) and the spec's canonical example teaches
+it. Not HIGH: 0 exposure today, and G2's algorithm is guarded by its acceptance line."
+
+`docs/specs/03-rating-engine.md:148`, FR-246: "Expression steps cannot reference anything outside their declared inputs — no
+globals, no environment, no time-of-day. `now()` does not exist; a quote timestamp is an input." Nothing in the code
+enforces the first clause for any step type, and the spec's own example does not follow it.
+
+### The mechanism
+
+- **Compile does not compare identifiers with `consumes`.** `zen.compile_expression` checks syntax and the FR-244 allow-list;
+  it does not resolve variables, so a name an expression reads is never matched to a declaration.
+- **`RatingAlgorithm._graph_invariants`** (`packages/model-schema/src/model_schema/rating.py:394`) checks `consumes` against
+  `produces` only: a consumed name with no producer raises `GraphUnresolvedRefError` (`:419`). It never looks at what a
+  step reads.
+- **`to_wire` builds edges from `consumes` only**: `edges.append(_edge(produced_by.get(name, _INPUT_ID), step_id))`
+  (`packages/pricing-core/src/pricing_core/rating/runtime.py:412`). Every expression node sets `passThrough`
+  (`runtime.py:162`, `:256`, `:322`; the rule is stated at `:152`), so an undeclared read resolves from the inherited context. An undeclared read of a name
+  an earlier **step** produces has **no ordering edge**: the reader can run before the producer, or be ordered by accident of
+  the topological sort.
+
+The result is silent. The rating is computed with a value that was never declared, from whichever context the engine hands the
+node. No check, no refusal, and no reason code.
+
+### The spec gap
+
+1. **FR-246's step-type scope is unstated.** It says "expression steps". A `constraint`'s `condition` and `clamp_bounds`, a
+   `table`/`lookup` `key_expr` and a `model_call` `feature_map` also read names. The requirement neither covers nor excludes them.
+2. **The canonical example declares no inputs.** `03-rating-engine.md:258-271` (the premium-ladder example; `s_out` at `:272`
+   is the only step that declares `consumes`):
+   - `s_rp` (`:258-261`, `model_call`) has `"feature_map": {"driver_age": "driver_age", "rating_area": "rating_area"}` and no `consumes`.
+   - `s_expense` (`:262-264`, `table`) has `"key_expr": ["distribution_channel"]` and no `consumes`.
+   - `s_office` (`:265-267`, `expression`) has `"expr": "risk_premium_minor * expense_factor * commission_factor * profit_factor"`
+     and **no `consumes`**: an expression step, FR-246's own named case, reading four names with none declared.
+   - `s_minprem` (`:268-271`, `constraint`) has `"condition": "office_premium_minor >= min_premium_minor"` and
+     `"clamp_bounds": {"min": "min_premium_minor"}` and **no `consumes`**.
+
+   The trace example at `:466-482` shows `s_minprem` consuming `office_premium_minor` and `min_premium_minor`, so the example's
+   declaration is what the engine saw at run time; the step as authored declares neither. A reader copying `:258-272` writes
+   exactly the undeclared form.
+
+## Evidence
+
+**The sweep** is `/home/puzhenhao1989/.claude/jobs/6fa41099/tmp/p5/sweep.py` (auditor-pl9776's, re-run by the filer). Run as
+`python3 sweep.py <tree>` over a `git archive origin/main packages backend examples scripts docs/contracts` extract at
+`19155b50`.
+
+**Predicate, in words.** A *step* is every dict literal in a tracked `*.py` with constant string `step_id` and a `type` in
+`expression`, `table`, `lookup`, `model_call`, `constraint`, plus every `*.json` object with such a `step_id` and `type`
+(`input` and `output` steps are skipped). A step's *reads* are the union of: the identifiers in `expr` and `condition`; the
+identifiers in each `clamp_bounds` value; the identifiers in each `key_expr` entry; and the `feature_map` **keys**. Identifiers
+are found by PL 9776's `referenced_names` tokenizer: string literals stripped, then `[A-Za-z_]\w*` not preceded by `.`, `$`
+or another word character and not followed by `(`, minus the keywords `true false null and or not in`. A step has an
+*undeclared read* when its reads minus its `consumes` are non-empty.
+
+**Caveat.** The predicate is that tokenizer, **not the engine's parser, and it is unvalidated against the engine**. Spike S1
+step 1 of PL 9776 (working id) validates it. A dotted path or a `$`-prefixed name is skipped by construction; the table is
+therefore a floor on literal steps, not a proof of the engine's own reads.
+
+**Exposure, as measured at `19155b50`** (filer's re-run, matching auditor-pl9776's):
+
+| Population | Steps | Undeclared reads |
+|---|---|---|
+| All literal steps scanned | 70 steps in 22 files | **4 steps** |
+| `packages/pricing-core/tests/test_rating_score.py:76` `s_clamp` (constraint) | | `min_premium_minor` |
+| `packages/pricing-core/tests/test_rating_score.py:80` `s_decl_cap` (constraint) | | `sanity_cap_minor` |
+| `packages/pricing-core/tests/test_rating_score.py:83` `s_decl_floor` (constraint) | | `sanity_floor_minor` |
+| `packages/model-schema/tests/test_rating_algorithm.py:65` `s_minprem` (constraint) | | `min_premium_minor` |
+| Seed builder `examples/fremtpl2/model.py:327` | | 0 |
+| Bench builders (`scripts/bench-rating.py`) | | 0 literal; see below |
+| `rating_algorithms` rows, every local `gipricing*` DB (81 databases; 78 have the table, 3 do not) | | **0 rows** |
+
+All four are `constraint` steps in **tests**; none is in shipped code, a seed or a database row. The 3 databases without the
+table are `gipricing_w37_6_d7_g_executor`, `gipricing_clone_m2` and `gipricing_w37-6-run2` (relation does not exist).
+
+**12 steps are non-literal and are "NOT EVALUATED", not zero.** The sweep cannot read a field whose value is not a literal
+(an f-string, a variable or a call), so it neither passes nor fails them:
+
+- `scripts/bench-rating.py:246` `s_v000`; `:234` `s_risk`
+- `backend/tests/test_sub_graphs_api.py:54` `s_x`
+- `packages/pricing-core/tests/test_rating_score.py:66` `s_risk`
+- `packages/pricing-core/tests/test_rating_pin_membership.py:231` `s_veh`; `:237` `s_veh`; `:61` `s_expense`; `:255` `s_expr`
+- `packages/pricing-core/tests/test_testing.py:472` `s_risk`
+- `packages/pricing-core/tests/test_rating_compile.py:304` `s_last`
+- `packages/pricing-core/tests/test_rating_runtime.py:121` `s_risk`
+- `packages/model-schema/tests/test_rating_version.py:105` `s_rp`
+
+Command, verbatim: `python3 /home/puzhenhao1989/.claude/jobs/6fa41099/tmp/p5/sweep.py <extract>`; last line
+`steps scanned 70 files 22 steps_with_undeclared 4 steps_with_nonliteral_fields 12`. DB count:
+`docker exec gi-pricing-postgres-1 psql -U gipricing -At -d <db> -c "select count(*) from rating_algorithms"`, over every
+`pg_database` row `like 'gipricing%'`, 0 in each of the 78 that has the table.
+
+**What the sweep does not show:** that the 4 test steps are wrong. A test may declare an input absent on purpose; they are
+unlabelled, so nothing says so. Nor does it show that the 12 non-literal steps are clean.
+
+## Why it matters now
+
+Phase 2's G2 algorithm is the first rating algorithm authored through the documented journey. Its author's reference is
+`03:258-272`, which teaches the undeclared form. Today the exposure is 0 rows and 0 shipped steps, so the path is latent. The
+first algorithm built from the example prices correctly only while the context happens to hold every name, and silently
+otherwise.
+
+## Disposition
+
+**Fix before close with an owner: WK-1178.** Remedy via PL 9776 (working id) (the F35 plan). Proposed by the auditor, with the
+maintainer's severity ruling recorded above; the lead gives the verdict.
+
+1. **Decision.** PL 9776's DP-F35-1 decision-maker rules, explicitly: (a) FR-246's step-type scope (expression only, or also
+   constraint `condition`/`clamp_bounds`, `key_expr`, `feature_map`); (b) whether `consumes` is mandatory. The ruling carries
+   verbatim `03` text and its placement, **including the corrected example at `03:262-272`** (`:258-272` on this tree). The
+   decision-maker receives this finding and the sweep output.
+2. **Enforcement** lands with a **RED-FIRST constraint-step test**: a constraint step reading a name outside its `consumes`
+   refuses at save, red on the current tree.
+3. **The 4 test steps** are fixed, or kept as **named negative fixtures**.
+4. **Interim guard.** G2's Exit-demo slice (a) acceptance line, "every step's reads ⊆ its declared consumes", checked by
+   running the sweep on the new algorithm with 0 undeclared reads. Until enforcement lands, that line is the only guard.
+
+Filed 2026-10-01 as working id 9773.
