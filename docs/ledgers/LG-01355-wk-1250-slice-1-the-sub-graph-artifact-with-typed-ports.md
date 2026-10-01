@@ -367,3 +367,17 @@ and `id:`, the H1, the disclosure in the opening paragraph, and the roadmap's SL
 line now read `LG-1355`. Main's `LG-1353`, which mentions this ledger's old number, is not edited. The
 earlier entries stand as written.
 
+### Task 8 — gate, run 5: the full re-gate after the hotfix merge and the re-mint (head `b83d51cc4018f40d24616ee524751424d3644632`)
+
+Required because this slice is second to merge onto shared files (RL-1263). A **separate detached
+worktree** of that SHA, `git status --porcelain` empty, fresh `uv sync --all-packages`, a fresh test
+database (dropped if present, cut from the template, `alembic upgrade head`, single head `2f598e89d12c`);
+`ruff check --no-cache` and `mypy --no-incremental` clean beforehand; the wrapper verbatim with
+`LOKY_MAX_CPU_COUNT=4` (line 1 of `gate.sh`), `timeout 3300`, foreground-waited. **Times in BST**: slot
+granted 06:23:33; run 06:24:38 to 06:48:15. Start: load 0.78 0.61 0.59, 20Gi free of 31Gi; end: load
+1.73 1.54 1.31, 20Gi free. The other holder: `flock -n` on `gate-1` and `gate-2` both free before the start
+and after the end (nobody else gating). Stage table: **ruff pass, mypy pass, import_linter pass, audit_docs
+pass, req_coverage pass, contracts pass, pytest pass** — `GATE: pass — 7 of 7 stages passed`; pytest **4500
+passed, 3 skipped in 1399.29s** (baseline 1469.6s), no failures. Frontend half on the same head: install,
+`generate:api`, `lint`, `type-check`, `build`, `test` all rc 0 (97 files, 609 tests passed).
+
