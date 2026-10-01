@@ -1,5 +1,5 @@
 ---
-id: FD-9786
+id: FD-1357
 family: finding
 title: seed_from_model cannot seed a GLM with two or more factors, because each seeded row carries one factor key and validation reads every declared key
 status: active
@@ -10,10 +10,10 @@ corrected_by: []
 relates: [WK-1178, FR-230, FR-228, FR-234]
 ---
 
-# FD-9786 — seed_from_model cannot seed a GLM with two or more factors
+# FD-1357 — seed_from_model cannot seed a GLM with two or more factors
 
-**Filed under working id 9786** by auditor-rl9855, found while auditing the DP-5 ruling (working id 9855) (draft PR #941). The id is minted by the
-lead at the merge turn. The `tree:` is the tree of `9b0fb97c`; main's code files are unchanged at `101e32dc`
+**Filed** by auditor-rl9855, found while auditing the DP-5 ruling (working id 9855) (draft PR #941).
+The `tree:` is the tree of `9b0fb97c`; main's code files are unchanged at `101e32dc`
 (`git diff --stat 9b0fb97c 101e32dc -- packages backend` is empty).
 
 ## Finding
@@ -123,3 +123,5 @@ option, since it keeps the relativity as the fit reported it.
 **HIGH: the exit demo must walk A1-A2.** Owner WK-1178 (a defect in a delivered FR-230 path, found at the WK-673 boundary). It depends on the DP-5 ruling's amendment defining the seeded shape (`dm-9855b`, in progress), and it goes ahead of PL 9788 (FD-1335 Part A). Red-first: a two-factor fixture
 seeds, and the test fails on the current tree with `KeyError`. Hardening: an unseedable shape raises a named
 `ValueError` (mapped to 422), never a `KeyError`. The lead gives the verdict.
+
+Filed 2026-10-01 as working id 9786; minted 2026-10-01 as FD-1357.

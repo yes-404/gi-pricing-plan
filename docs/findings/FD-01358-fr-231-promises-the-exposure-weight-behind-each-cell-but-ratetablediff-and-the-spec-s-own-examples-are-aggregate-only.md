@@ -1,5 +1,5 @@
 ---
-id: FD-9785
+id: FD-1358
 family: finding
 title: FR-231 promises the exposure weight behind each cell, but RateTableDiff and the spec's own examples are aggregate-only
 status: active
@@ -10,10 +10,10 @@ corrected_by: []
 relates: [WK-673, FR-231, FR-232, PL-1267]
 ---
 
-# FD-9785 — FR-231's per-cell weight against an aggregate-only RateTableDiff
+# FD-1358 — FR-231's per-cell weight against an aggregate-only RateTableDiff
 
-**Filed under working id 9785** by auditor-rl9855, found while auditing the DP-5 ruling (working id 9855) (draft PR #941), which flagged it and
-decided nothing. The id is minted by the lead at the merge turn. The `tree:` is the tree of `9b0fb97c`; the cited
+**Filed** by auditor-rl9855, found while auditing the DP-5 ruling (working id 9855) (draft PR #941), which flagged it and
+decided nothing. The `tree:` is the tree of `9b0fb97c`; the cited
 spec, model-schema and code files are unchanged at `101e32dc`.
 
 ## Finding
@@ -66,3 +66,5 @@ both a spec change before code (`CLAUDE.md` §0), and the choice is the lead's o
 
 Evidence would be a test that the diff of a two-cell change returns each cell's absolute change, relative change and
 weight (red on the current tree), or the amendment line. The lead gives the verdict.
+
+Filed 2026-10-01 as working id 9785; minted 2026-10-01 as FD-1358.
