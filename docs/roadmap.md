@@ -794,7 +794,7 @@ Per-environment keys, rate limits and monitoring configuration, and environment 
 id: SL-1345
 family: slice
 title: Slice 3L: the premium ladder — exact unrounded rungs, true operations, one rounding (FR-247, FR-248, NFR-496, FD-1336, FD-1330; RL-1329)
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 248dbf11aa0a044ff4eaadcaa32aa82960aa6740

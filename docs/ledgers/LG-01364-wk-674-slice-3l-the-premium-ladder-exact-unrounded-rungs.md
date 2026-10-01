@@ -1,8 +1,8 @@
 ---
-id: LG-9805
+id: LG-1364
 family: ledger
 title: WK-674 Slice 3L (SL-1345) — the premium ladder, exact unrounded rungs, true operations, one rounding (RL-1329, RL-1346)
-status: active
+status: closed
 created: 2026-10-01
 owner: executor
 tree: 8933a29ee2658012ead53132c6e2909a2aa339d8
@@ -13,7 +13,7 @@ corrected_by: []
 relates: [RL-1329, RL-1346, RL-1343, FD-1336, FD-1330, OQ-1316, RL-1263, PL-1342]
 ---
 
-# LG-9805 — WK-674 Slice 3L (SL-1345)
+# LG-1364 — WK-674 Slice 3L (SL-1345)
 
 Executed from `PL-1348` under the dispatch record below. Branch `sl-1345-premium-ladder`, from
 `origin/main` `8933a29ee2658012ead53132c6e2909a2aa339d8`, lane A, executor-ladder. The id is a
@@ -250,3 +250,7 @@ The 20 % ceiling on those untraced p99s would be 16.9 ms (base) and 12.8 ms (sli
 **Disposition.** A known open finding, F35 (`docs/findings/register.md` line 77: "NFR-490 measured failing (F35)", five of five runs spanning +497 % to +723 %), **not introduced by this slice**: the base already fails it by +384 %. The traced p99 moved by +1.859 ms (68.015 → 69.874 ms, +2.7 %) between the trees, which the slice audit judged noise against a traced stdev of about 5 ms (4.964 and 5.051 ms here). The larger overhead percentage in the slice run comes from a lower untraced p99 (14.052 → 10.650 ms), the denominator, not from a slower traced path. The untraced path did not get slower in the run.
 
 **NFR-489's 50 ms ceiling against the traced figure.** NFR-489's wording (`03` §9: "Real-time scoring p99 < 50 ms server-side … for a ~200-step motor structure with one `exact` GBM call") does not mention tracing, and the bench measures it untraced (trace off), which is the figure in the margin entry above (10.650 ms). If the maintainer reads it as covering a traced request too, the traced p99 is 68.015 ms (base) and 69.874 ms (slice), over 50 ms by 18.0 ms and 19.9 ms, also over in both trees and also not introduced here. This slice's own contribution to either number is inside the noise stated above.
+
+## Close (2026-10-01 08:57 BST)
+
+The slice audit `46776296` was CLEAN, conditional on the fixes of Deltas 6–7, which were verified. The delta audits: `36e808db`, then `c3867ef4` and `35f158a4`, ledger-only (one appended traced-bench budget line, NFR-490; `git diff --stat c3867ef4 35f158a4` names this file only, 17 added lines, 0 deleted). This commit is the mint and the closes: SL-1345 and this ledger are set `closed` here. Opened as working id 9805; minted 2026-10-01 as LG-1364.
