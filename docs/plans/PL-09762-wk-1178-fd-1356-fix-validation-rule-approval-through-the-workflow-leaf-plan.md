@@ -12,7 +12,7 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [FD-1356, RL-1301, PL-1303, PL-1306, SL-1256, SL-1302, RL-1263, FD-1357, PL-1359, SL-1360]
+relates: [FD-1356, RL-1301, PL-1303, PL-1306, SL-1256, SL-1302, RL-1263, FD-1357, PL-1359, SL-1360, PL-1364, RL-1365, SL-1367]
 ---
 
 # PL 9762 (working id) — WK-1178: the FD-1356 fix, validation-rule approval through the approval workflow, leaf plan
@@ -88,7 +88,9 @@ plan does not edit `PL-1306`.
 
 ## Status
 
-`draft`. **Blocking decision points are open** (§"Decision points": DP-0 to DP-6). The plan
+`draft`. **Blocking decision points are open** (§"Decision points": DP-1, DP-2, DP-3's open
+part, DP-5 and DP-6). DP-0 and DP-4 are decided by the maintainer (dated 2026-10-01; the
+entries are quoted in their rows). The plan
 moves to `active` only through a separate activation PR, after every activation need below
 holds. That PR carries the `SL-` row's status flip and this plan's.
 
@@ -100,11 +102,15 @@ holds. That PR carries the `SL-` row's status flip and this plan's.
    `RL-1263`.
 2. **Lane B order:** `SL-1360` (the permission-parity check, `PL-1359`) merged, then the
    FD-1357 fix (PL 9764, working id) merged. This slice is third in lane B, before the
-   `RL-1343` decimal-output fix and PL 9788 (working id; FD-1335 Part A, which mint batch A is minting next).
-3. **DP-0 to DP-6 ruled**, each by its owner in §"Decision points", as dated records.
-4. **Task 0's containment query prints `TOTAL route_approved=0`**, or the maintainer's DP-0
-   ruling says how its non-zero result is disposed. It printed **5** at planning time
-   (§"Task 0 at planning time"), so this need does not hold today.
+   `RL-1343` decimal-output fix and `PL-1364` (FD-1335 Part A, minted at `92b4e4ac` with `RL-1365` and `SL-1367`).
+3. **DP-1, DP-2, DP-3 (its open part), DP-5 and DP-6 ruled**, each by its owner in
+   §"Decision points", as dated records.
+4. **Task 0's containment query prints `TOTAL route_approved=0`, re-confirmed at dispatch.**
+   It printed **5** at planning time (§"Task 0 at planning time"). DP-0 is decided as (c):
+   the 5 rows and their audit events are exported verbatim with their provenance evidence,
+   then the scratch database is dropped, then Task 0 is re-run and must print 0. auditor-dp0
+   is executing that into
+   `/home/puzhenhao1989/gi-pricing-plan.local/handover/fd1356-dp0-export-2026-10-01/`.
 5. **The maintainer's agreement**, and **the lead's go in a separate activation PR**.
 
 ## Acceptance Standard
@@ -117,7 +123,8 @@ failure line as printed.
 
 1. **Containment (Task 0).** `bash` of the Task 0 script exits 0 and its last line reads
    `TOTAL route_approved=0`, at dispatch and again before the P2 exit demo (Hand-off item 2).
-   The two runs are recorded in the ledger with their timestamps (BST) and the database count.
+   The two runs are recorded in the ledger with their timestamps (BST) and the database count,
+   and the DP-0 export is quoted verbatim in the ledger (Task 0 Step 2).
 2. **Quorum 2 (FD-1356 case 4 becomes a refusal).** With the workspace policy's
    `validation_rule` entry at `approvers_required=2`, one approver's approval leaves the rule
    in `review` and the request in `review`; a second, distinct approver's approval moves both
@@ -154,8 +161,12 @@ failure line as printed.
    takes), are refused at decide with `422 EVIDENCE_INCOMPLETE`; the rule stays `review`,
    the request stays `review`, and no `approval_decisions` row survives (the decision rolls
    back with the carry). Test:
-   `test_an_error_dry_run_is_refused_at_approve[missing_column|unknown_check|missing_table]`.
-   Red first: on the base tree the direct route approves each.
+   `test_an_error_dry_run_is_refused_at_approve[missing_column|unknown_check|missing_table]`,
+   which drives the generic `POST /approval-requests/{id}/decide`. Red first, by its cause: on
+   the base tree decide returns `200` and the rule **stays `review`** (the carry has no
+   validation-rule branch, FD-1356 case 5), so each case fails on its status-code assertion
+   (`422` expected, `200` received) with the request moved to `approved`. A failure because
+   the rule became `approved` would mean the test drove the direct route: a test defect.
 7. **A `fail` dry-run stays accepted (the measured non-defect).** A `range` rule
    (`min_exclusive: 0`, severity `fail`) dry-run on a version with one negative
    `exposure_years` gets a report with `overall` `fail` and `error_count` 0; submit gives
@@ -166,7 +177,8 @@ failure line as printed.
    has `error_count > 0` is refused at `POST /approval-requests` with `422
    EVIDENCE_INCOMPLETE` (FR-363 "enforced at submission"). Test:
    `test_the_generic_submit_refuses_an_error_dry_run`. Red first: 201 on the base tree.
-9. **A dangling report id fails closed (DP-3).** A rule whose `dry_run_report_id` names no
+9. **A dangling report id fails closed (DP-3's open part; scope growth beyond FD-1356, only
+   if the decision-maker rules it in).** A rule whose `dry_run_report_id` names no
    `validation_reports` row in its workspace is refused at submit with `422
    EVIDENCE_INCOMPLETE`. Test: `test_a_dry_run_report_that_cannot_be_read_is_refused`. Red
    first: 200 on the base tree (the existing tests attach `new_uuid7()` and pass).
@@ -200,14 +212,32 @@ failure line as printed.
     `ValidationRuleRow` to `("validation_rule", "slug")` in `_EVIDENCE` and no longer lists it
     in `_FLAG_ONLY`, so every fixture-approved rule has a decided request. Test: the whole
     backend suite passes with it.
-15. **Every route this slice edits is typed** (the lead's holds register,
-    `holds-2026-10-01.md`, FD 9779 (working id) per-route rule as made precise by the maintainer; FD 9779's
+15. **Every request body this slice edits is typed; decide's `200` is characterised, not
+    typed** (DP-4, decided by the maintainer: "2026-10-01 10:34:13 BST — The DP-S2-6 header for quoting; #1063 DP-0 HELD until auditor-1063's provenance check (and the evidence rule if (c)); DP-4 (a) accepted; status noted",
+    which says to "type decide_request's BODY in this slice; its 200 goes to FD 9752 / FD-1335
+    Part B with a key-set characterisation test". Under WK-674 S2's DP-S2-6 (c), "2026-10-01 10:32:26 BST — #1062 DP-S2-6: option (c) ACCEPTED with three conditions; it narrows my item (3) for the 2 CHANGED routes' 2xx only; the three-shape disagreement becomes its own FD",
+    no approval route's 2xx is `$ref`-typed; FD 9752 (working id, #1066) owns that 2xx.)
+    The typing rule comes from the lead's holds register,
+    `holds-2026-10-01.md`, `FD-1366` per-route rule (filed as FD 9779) as made precise by the maintainer, and `FD-1366`'s
     dispatch line "every new or changed JSON route has typed request and 2xx response
-    schemas"). For each route in §"Write set" marked "edited", `app.openapi()` shows its JSON
-    request body (where it has one) as a `$ref` to a `model-schema` type and its 2xx as a
-    `$ref`, never `{}` or an open object. Test:
-    `test_every_route_this_slice_edits_is_typed_both_ways`, red first on decide's `200` at
-    `1dd5e264` (an open object) if DP-4 is (a).
+    schemas"), limbed by DP-4 for the approval routes:
+    - **Bodies.** For each route in §"Write set" marked "edited" that takes a JSON body
+      (`POST /api/v1/validation-rules/{rule_id}/submit` under DP-2 (a), and
+      `POST /api/v1/approval-requests/{request_id}/decide`), `app.openapi()` shows the request
+      body as a `$ref` to a `model-schema` type, never `{}` or an open object. `Decide` moves
+      from `backend/src/app/api/approvals.py:83-87` into `model-schema`. Test:
+      `test_every_body_this_slice_edits_is_a_model_schema_type`, red first on decide's body
+      (a `$ref` to the route-local `Decide`, which is not a `model-schema` name) and, under
+      DP-2 (a), on the submit's absent body.
+    - **Non-approval 2xx.** The rule routes this slice edits keep their `ValidationRule` 2xx,
+      a `$ref` to a `model-schema` type (unchanged at `1dd5e264`).
+    - **Decide's `200` is characterised, not typed.**
+      `test_the_decide_response_keeps_its_key_set` asserts the exact set of top-level keys of
+      decide's `200` body against a literal set read at the dispatch tree, and fails on any
+      undeclared addition, removal or rename. Red first: with one key renamed in a scratch
+      copy of `service.to_dict` (`backend/src/app/platform/approvals.py:648`), the test fails
+      naming both the missing and the unexpected key; the edit is reverted. Typing that `200`
+      is FD 9752's (working id, #1066), not this slice's.
 16. **The built-in exemption is named, not silent.** `seed_builtin_rules` is unchanged and
     keeps its `ALLOWANCE_SITES` entry (`01` FR-68; FD-1356 §"Triage"). A workspace's built-in
     rules are `approved` with no request, and the data reset of item 13 leaves them so.
@@ -260,8 +290,10 @@ failure line as printed.
 ### Task 0 at planning time (measured, not asserted)
 
 Run by this plan's author at `2026-10-01 10:23:33 BST`, against the compose server
-`gi-pricing-postgres-1` (`docker ps`: up 36 hours), with the Task 0 script exactly as written
-in Task 0 Step 1. Output, verbatim:
+`gi-pricing-postgres-1` (`docker ps`: up 36 hours). This run used the script's first form,
+at `46dea9a4`: it matched **any** `validation_rule.approved` event without
+`approval_request_id`, not only the latest one. Otherwise the script is the same as Task 0
+Step 1's. Output, verbatim:
 
 ```text
 gipricing route_approved=0 self_approved=0 user_approved_no_approved_request=10
@@ -293,8 +325,31 @@ STOP: route_approved > 0
   provenance check.**
 - **`self_approved=0` everywhere**, as the DB check `approved_rule_dry_run_and_separate_approver`
   (`backend/src/app/db/models.py:1201-1205`) requires.
-- **The STOP fires.** The maintainer expected 0. This plan does not narrow the population or
-  the predicate to make it pass: DP-0 asks the maintainer how it is disposed.
+- **The STOP fired.** The maintainer expected 0. This plan did not narrow the population or
+  the predicate to make it pass. The maintainer decided DP-0 as (c) (its row).
+- **Re-run with the revised predicate** (Task 0 Step 1 as it now stands: each rule judged by
+  its **latest** `validation_rule.approved` event, auditor-1063's finding 2), finished at about
+  `2026-10-01 10:41:59 BST`, after `gipricing_w37-6-run2-gate-1789676768` had already been
+  dropped under DP-0 (c):
+
+```text
+gipricing route_approved=0 self_approved=0 user_approved_no_approved_request=10
+gipricing_clone_m2 no_table_or_error
+gipricing_tree-s3 route_approved=0 self_approved=0 user_approved_no_approved_request=10
+gipricing_w37-6-run2 no_table_or_error
+gipricing_w37-6-run2-gate-1789690960 route_approved=0 self_approved=0 user_approved_no_approved_request=10
+gipricing_w37_6_d7_g_executor no_table_or_error
+gipricing_wt-d9d13-redo route_approved=0 self_approved=0 user_approved_no_approved_request=101
+gipricing_wt-paths-d9-d13 route_approved=0 self_approved=0 user_approved_no_approved_request=183
+databases=80 with_tables=77 without_table_or_error=3
+TOTAL route_approved=0 self_approved=0 user_approved_no_approved_request=314
+```
+
+  **What this does and does not show.** The revised predicate was not run while the 5 rows
+  existed, so it was not seen to count them. By reading: the join query above returned one
+  event per rule for the 5 (5 rows for 5 refs), so each rule's latest approval event was a
+  direct-route one with no `approval_request_id`, and the revised predicate counts each. The
+  re-confirmation at dispatch (activation need 4) is the binding run.
 
 ### Write set, and its contention (`RL-1263`)
 
@@ -304,12 +359,13 @@ file. Rows marked *(DP-n x)* exist only under that option.
 | Path | Change | Other slices touching it | Consequence |
 |---|---|---|---|
 | `backend/src/app/platform/validation_rules.py` | edited: `submit_for_review` (`:366-400`), `resolve_artifact_ref` (`:317-349`), `__all__`; removed: `approve_rule` (`:403-447`) under DP-1 (b) or (a); added: `_require_executed_dry_run`, `apply_approval_decision`, `open_request_for` *(DP-1 b)* | none in flight (`PL-1306` reads `:192`, `:199` only) | none |
-| `backend/src/app/api/approvals.py` | edited: `_carry_to_the_artifact` (`:488-523`, one call added), `decide_request` (`:232-270`, its body calls the new helper; its 2xx typed under DP-4 (a)); added: `decide_and_carry` | **WK-674 S2** edits `_carry_to_the_artifact` (deployment call), `submit_for_approval`, `Withdraw`, `withdraw_request`, `_resolve_the_artifact` (`PL-1306` `:511-515`; PL 9765, working id) | **serial: S2 first** (activation need 1). This slice rebases on S2's merge and re-reads the file |
+| `backend/src/app/api/approvals.py` | edited: `_carry_to_the_artifact` (`:488-523`, one call added), `decide_request` (`:232-270`: its body calls the new helper, and its request body is the `model-schema` `Decide` type, DP-4 decided; its `200` stays as it is, owned by FD 9752); removed: the route-local class `Decide` (`:83-87`); added: `decide_and_carry` | **WK-674 S2** edits `_carry_to_the_artifact` (deployment call), `submit_for_approval`, `Withdraw`, `withdraw_request`, `_resolve_the_artifact` (`PL-1306` `:511-515`; PL 9765, working id) | **serial: S2 first** (activation need 1). This slice rebases on S2's merge and re-reads the file |
 | `backend/src/app/platform/approvals.py` | **read only.** No function here changes | WK-674 S2 (`set_policy`, A.6) | none. If the executor finds a change is needed here, that is a replan trigger to the lead, not a silent widening |
 | `backend/src/app/api/validation.py` | edited: `approve_rule` route (`:354-380`, thin client) *(DP-1 b)* or removed *(DP-1 a)*; `submit_rule` (`:335-351`, typed body) *(DP-2 a)* | none found | none |
 | `packages/model-schema/src/model_schema/validation.py`, `__init__.py` | added: `ValidationRuleSubmission` *(DP-2 a)* | none found | none |
-| `docs/contracts/` (generated) | regenerated | **PL 9788** (working id) (FD-1335 Part A) regenerates; WK-674 S2 regenerates | generated: regenerate on the merge base, never hand-merge |
-| `backend/tests/test_contracts.py` | appended only if PL 9788 has merged first and its `UNTYPED_2XX_PENDING_PART_B` lists a route this slice types: the entry is removed in the same commit (its "typed route still listed fails" rule) | **PL 9788** (working id) (after this slice in lane B) | lane order puts this slice first, so PL 9788 re-derives its list at its own dispatch; recorded for whichever merges second |
+| `packages/model-schema/src/model_schema/approvals.py`, `__init__.py` | added: the `Decide` request body, moved from `backend/src/app/api/approvals.py:83-87` (DP-4, decided), unless WK-674 S2 has already moved it (Task 0 Step 4 records which) | **WK-674 S2** (PL 9765, working id) edits `approvals.py` (`ApprovalPolicyEntry`, `DEFAULT_POLICY`, the predicate; `PL-1306` `:500`) | serial (S2 first); a new class, not an edit to S2's definitions |
+| `docs/contracts/` (generated) | regenerated | **`PL-1364`** (FD-1335 Part A) regenerates; WK-674 S2 regenerates | generated: regenerate on the merge base, never hand-merge |
+| `backend/tests/test_contracts.py` | edited only if `PL-1364`'s untyped-body guard is on `main` at dispatch (it is not at `92b4e4ac`) and lists the `decide` request body: that entry is removed in the same commit (the guard's "typed route still listed fails" rule). Decide's `200` stays on whatever list owns it (FD 9752) | **`PL-1364`** (after this slice in lane B) | conditional; recorded for whichever merges second |
 | `backend/migrations/versions/<rev>_reset_rule_approvals_without_a_request.py` | added *(DP-6 a)*; `down_revision` = the head at dispatch (after S2's migration) | WK-674 S2 adds a migration | registry, append-only; serial anyway |
 | `examples/fremtpl2/seed.py` (`run`, its rule write at `:437-455`) | edited *(DP-5 a)* | **FD-1357 fix** (PL 9764, working id; multi-factor seeding) is expected to edit `seed.py` | serial: FD-1357 fix first (activation need 2); this slice re-reads `seed.py` after it |
 | `backend/tests/test_approval_guard_static.py` | edited: `ALLOWANCE_SITES` (`:37-46`); and `("examples/fremtpl2/seed.py", "run")` removed *(DP-5 a)* | none | none |
@@ -326,12 +382,12 @@ file. Rows marked *(DP-n x)* exist only under that option.
 **Open PRs read at `1dd5e264` (`gh pr list --state open`, 2026-10-01 10:1x BST), none
 rules on this slice's subject:** #1049 (`SL-1360`, the parity check: it reads `requires()`
 sites; DP-1 (a) removes one `approval:decide` site and leaves others, so parity is unchanged);
-#1036 (PL 9788, working id; contention above); #979 (OQ 9987, working id: is a Validation
+#1036 (merged as `PL-1364` at `92b4e4ac`; contention above); #979 (OQ 9987, working id: is a Validation
 Rule Set governed; it decides `replace_rule_set`'s allowance, which this slice leaves alone);
 #977 (§5.1 Permission column, above); #976 (FD 9890, S2's withdraw); #975 (FD 9988, the
 authorisation sweep); the rest are findings and plans on other subjects. **PL 9765 and PL 9764
 were not pushed at `1dd5e264`**, so their write sets were read from the lead's reservation
-table (`eta.md`) and `PL-1306`, not from the plans. Task 0 Step 3 re-reads both at dispatch.
+table (`eta.md`) and `PL-1306`, not from the plans. Task 0 Step 4 re-reads both at dispatch.
 
 ### Size
 
@@ -346,13 +402,77 @@ None is decided here. Each owner rules by a dated record.
 
 | DP | Question | Options | Recommendation | Owner | Blocks |
 |---|---|---|---|---|---|
-| **DP-0** | Task 0 printed `TOTAL route_approved=5` (§"Task 0 at planning time"): 5 rules in one scratch W37-6 gate database, read as test-run residue. How is the STOP disposed? | (a) The STOP stands; the slice does not activate until a re-run prints 0 over the same population and predicate. (b) The maintainer accepts these 5 by a dated line naming the database and the 5 refs; the dispatch and exit-demo re-runs must print exactly that set and nothing else. (c) The maintainer authorises dropping `gipricing_w37-6-run2-gate-1789676768` (a dead gate scratch database), and the re-run must print 0. (d) Narrow the population (e.g. exclude `*-gate-*` databases) | **(c)**, with (b) as the fallback if the database must be kept. (d) changes the maintainer's own predicate to fit the answer, which is the move §13 forbids. Who drops a shared database is the maintainer's call, not the slice's | **maintainer** | activation need 4 |
+| **DP-0** | Task 0 printed `TOTAL route_approved=5` (§"Task 0 at planning time"): 5 rules in one scratch W37-6 gate database. Which reading of "self-approval route" does the containment check encode, and how is the STOP disposed? | Readings: ROUTE_APPROVED (approved through the rule's own direct route; 5 at planning time) or `approved_by = authored_by` (0 by the CHECK, so a check that can never fire). Dispositions: (a) the STOP stands until a re-run prints 0; (b) a dated line accepts the 5 refs; (c) export, then drop the scratch database, then re-run expecting 0; (d) narrow the population | the plan recommended (c) and refused (d) | **DECIDED by the maintainer**, "2026-10-01 10:39:13 BST — #1063 DP-0 DECIDED: (c) export, then drop, then re-run expecting 0; the reading question: the PLAN's reading is mine (route_approved); my wording was ambiguous": the reading is ROUTE_APPROVED; **(c), in order**: (1) export the 5 rows (every column) plus their audit events, verbatim, with the provenance evidence, into the FD-1356 fix ledger; (2) drop `gipricing_w37-6-run2-gate-1789676768`; (3) re-run Task 0 and expect 0. (d) "is not on the table". The 5 rows also show the direct route was reachable and exercised by the test suite, consistent with FD-1356's HIGH. Record: §"DP-0's decided record" | activation need 4 (re-confirmed at dispatch) |
 | **DP-1** | The direct route: removed, or a thin client of the workflow (FD-1356 Disposition, bullet 1) | (a) **Remove** `POST /validation-rules/{id}/approve`, the service `approve_rule`, the frontend `approveRule`, and strike the `01` §5.1 row with a dated note. The rule-set view then needs an approvals client (find the open request; decide). (b) **Thin client**: the route resolves the rule's open request (`open_request_for`) and calls `decide_and_carry(..., decision=APPROVE)`, the decide route's own path; it never writes `approved`; no open request → `409 APPROVAL_SUBJECT_NOT_IN_REVIEW`; self-approval becomes `403` (Acceptance 11) | **(b).** It removes the bypass (the route has no write of its own) while keeping the rule-set view's one-button flow, which has no approvals client today (`frontend/src/api/` has none). (a) pulls a new approvals client into this slice, and the list and decide routes it would call return `dict[str, Any]` today. The `01` §5.1 row survives under (b), but the `01:919-927` note ("This is the module's own step") becomes false and needs a dated note | **decision-maker** (spec text in Task 6 comes from the ruling) | Tasks 3, 4, 5, 6 |
 | **DP-2** | Where the approval request is created | (a) The module submit (`POST /validation-rules/{id}/submit`) calls `approvals.submit` with a `change_summary` from a typed `model-schema` body (`ValidationRuleSubmission`), as `objectives.submit_for_review` does; the frontend collects the summary. (b) The module submit stays `draft → review` only; the client then calls `POST /approval-requests` (the generic path, which works today, case 5). (c) As (a), with the summary taken from the rule's own `rationale` field, so the route keeps no body | **(a).** It is the existing pattern of all four sibling modules (`approvals.submit` docstring, `platform/approvals.py:237-241`), and FR-352 requires a change summary from the submitter. (b) leaves a rule in `review` with no request, "reviewable by nobody" (the comment at `api/approvals.py:290-292`). (c) mistakes a rule's rationale for a statement of what changed, which is wrong for version 2 onward | **decision-maker** | Tasks 3, 4, 5 |
-| **DP-3** | The `error`-outcome refusal: its layers, its code, and whether a DB CHECK backs it (FD-1356 leaves the DB CHECK to the slice) | (a) **Service layer only**: `_require_executed_dry_run` at the module submit, at the generic submit's resolver and at the carry; it refuses when the report cannot be read in the rule's workspace (fail closed) or has `error_count > 0`; code `EVIDENCE_INCOMPLETE` (422, `06`-owned and registered, `backend/src/app/errors.py:273`, as `objectives._require_evidence` raises it). (b) As (a), plus a `dry_run_outcome` column on `validation_rules`, written by `attach_dry_run`, and the CHECK extended with `AND dry_run_outcome <> 'error'`. (c) As (a) with a new module code (a spec change to `01`'s owned codes) | **(a).** The report is immutable and already indexed (`error_count`, `backend/src/app/db/models.py:1057`). A copy on the rule row is a second source that can disagree with it (`CLAUDE.md` §2's reason for one shape), and it adds a migration to a table S2's trigger also covers. (b) is the stronger guard against a future writer that skips the service, so it is offered as a follow-on, not refused. `RULE_NOT_APPROVED` stays the code for "no dry-run at all", unchanged | **decision-maker** | Tasks 2, 3 |
-| **DP-4** | The decide route's handler body changes (it calls `decide_and_carry`), and its `200` is `dict[str, Any]` at `1dd5e264`. Does the holds rule ("any route this slice edits has a typed body and typed 2xx") reach it? | (a) Yes: type decide's `200` with the same `model-schema` shape WK-674 S2 types `POST /approval-requests`' `201` with (PL 9765's "typed both ways"); `Decide`'s body moves to `model-schema` if S2 has not moved it. (b) No: only the route's helper changed in substance; decide stays on PL 9788 (working id)'s Part B list | **(a).** The route's observable behaviour changes (it now moves a rule), and after S2 the shape exists, so typing costs one annotation. (b) leaves a changed route untyped, which the hold's own reason (FD 9779) argues against | **lead** (the holds register is the lead's; the hold is the maintainer's) | Task 4 |
+| **DP-3** | The `error`-outcome refusal. **Decided by FD-1356 itself** (its §"Disposition", the maintainer's "2026-09-30 11:32:49 BST" entry, item 1): the refusal is at the service layer, at submit and at approve, each reading the attached report's outcome, with one red-first case per cause and `fail` accepted. **Open:** (i) whether a DB CHECK backs it; (ii) the error code; (iii) whether a report that cannot be read is refused | (i-a) no DB CHECK; (i-b) a `dry_run_outcome` column on `validation_rules`, written by `attach_dry_run`, and the CHECK extended with `AND dry_run_outcome <> 'error'`. (ii-a) `EVIDENCE_INCOMPLETE` (422, `06`-owned and registered, `backend/src/app/errors.py:273`, as `objectives._require_evidence` raises it); (ii-b) a new module code (a spec change to `01`'s owned codes). (iii-a) refuse a dangling `dry_run_report_id` (fail closed; Acceptance 9); (iii-b) leave it as today (only `error_count` is read when a report exists) | **(i-a), (ii-a), (iii-a).** (i): the report is immutable and already indexed (`error_count`, `backend/src/app/db/models.py:1057`); a copy on the rule row is a second source that can disagree with it (`CLAUDE.md` §2), and it adds a migration to a table S2's trigger also covers; (i-b) is the stronger guard against a future writer that skips the service, so it is offered as a follow-on. (iii) **is scope growth beyond FD-1356**, which names the `error` outcome only. It is recommended because the platform refuses what it cannot check (`APPROVAL_AUTHOR_UNRESOLVED`), but it forces every fixture that attaches `new_uuid7()` to store a real report (Task 2), so it is the decision-maker's choice, not the plan's. `RULE_NOT_APPROVED` stays the code for "no dry-run at all" | **decision-maker** (open parts only) | Tasks 2, 3 |
+| **DP-4** | The decide route's handler body changes (it calls `decide_and_carry`), and at `1dd5e264` its body is the route-local `Decide` and its `200` is `dict[str, Any]`. Does the holds rule reach it? | (a) type it in this slice; (b) leave it | the plan recommended (a) | **DECIDED by the maintainer**, "2026-10-01 10:34:13 BST — The DP-S2-6 header for quoting; #1063 DP-0 HELD until auditor-1063's provenance check (and the evidence rule if (c)); DP-4 (a) accepted; status noted": "type decide_request's BODY in this slice; its 200 goes to FD 9752 / FD-1335 Part B with a key-set characterisation test, as for DP-S2-6 (c). FD 9752 names this route too." So: `Decide` moves to `model-schema` (Task 4 Step 4); decide's `200` gets `test_the_decide_response_keeps_its_key_set` (Acceptance 15) and is owned by FD 9752 (working id, #1066) | Task 4 |
 | **DP-5** | The demo seed writes `approved` user rules with no request, through the allowance entry `("examples/fremtpl2/seed.py", "run")` (`RL-1301` A.4.5 calls it legitimate "while legitimate", "re-read by that finding's triage"; FD-1356's triage re-read only `seed_builtin_rules` and `replace_rule_set`). Without a change, the next seed re-creates what item 13 resets | (a) The seed walks its rules through the workflow (its analyst authors and submits, its actuary decides) and its allowance entry is removed, red first, as the `approve_rule` entry is. (b) The entry stays as a named demo-data exemption; the reset of item 13 and Task 0's population exclude the seed's slugs (`exposure-positive-*`), each named | **(a).** "Approved rules with no approved request" then has no writer outside the built-ins, so item 13's count stays 0 after a reseed. (b) keeps a second population that every later check must remember to subtract | **decision-maker** | Task 7 |
-| **DP-6** | How follow-on 2's reset is applied | (a) An Alembic data migration: `UPDATE validation_rules SET status='review', approved_by=NULL WHERE status='approved' AND builtin IS NOT TRUE AND NOT EXISTS (<FD-1356's approved-request predicate>)`, which reaches the template and every database as it upgrades; the count is printed by the migration and recorded. (b) A one-off script run against `gipricing` only, plus the fixture change of item 14 | **(a).** It is reproducible, reviewable (`RL-1301` A.4.4 has the auditor read every new migration) and lands everywhere at once. The trigger does not fire on a write to `review` (it checks only `NEW.status = 'approved'`), and the CHECK holds for a non-approved row. (b) depends on someone running it on every database | **decision-maker** | Task 7 |
+| **DP-6** | How follow-on 2's reset is applied, and with what record | (a) **An Alembic data migration**: `UPDATE validation_rules SET status='review', approved_by=NULL WHERE status='approved' AND builtin IS NOT TRUE AND NOT EXISTS (<FD-1356's approved-request predicate>)`. It is **permanent in the chain**, its `downgrade()` is a no-op, it **reaches every database that upgrades, non-scratch ones included** (any future real deployment too), and it **writes no Audit Event**: the count goes to stdout only, and the ledger records it. (a') As (a), but the migration also writes one `validation_rule.reset_to_review` Audit Event per row (actor: a named system principal, `source` the migration's, `before`/`after` the statuses), so each reset row carries its own record in the hash chain. (b) **A scoped one-off script** under `scripts/`, run by the executor against the named databases only (`gipricing` and the fixtures' template), which can write the same Audit Events through `audit.record`, leaves no migration in the chain, and does nothing on a database it is not pointed at | **(a')**: reproducible and reviewed like (a) (`RL-1301` A.4.4 has the auditor read every new migration), but no approval is silently withdrawn, since every reset is in the audit chain (`06`'s audit rules apply to post-approval states, FR-351). Its cost is a migration that knows the audit writer's chain lock (`sequence`, `prev_event_hash`); if that is judged too heavy for a migration, (b) is the next choice and (a) the last. The trigger does not fire on a write to `review` (it checks only `NEW.status = 'approved'`), and the CHECK holds for a non-approved row | **decision-maker** | Task 7 |
+
+### DP-0's decided record
+
+Executed by auditor-dp0 on the maintainer's DP-0 (c) decision, as relayed by the lead at about
+10:4x BST on 2026-10-01 (no minute stamp on the relay). It is written into the plan because the
+export directory is local to this VM; the plan's copy survives when the plan merges.
+
+- **Export directory** (local; **kept until the slice ledger merges**, Task 0 Step 2):
+  `/home/puzhenhao1989/gi-pricing-plan.local/handover/fd1356-dp0-export-2026-10-01/`.
+- **`SHA256SUMS`, verbatim** (re-verified by the lead with absolute paths, 6 of 6 OK; re-run by
+  this plan's author with `sha256sum` on the six files, all six match):
+
+```text
+42e9503b08c147a1439684ddb892b61a466af47f9cc4b624a03e547b5ab64c3b  audit_events.csv
+ee074f2b78196f0572182f2b52b16a77faf2b5cf1eb26c6f83428071af52afb2  audit_events.jsonl
+aa7dbc4e531a80913c9931936e5a4de8daab4ec1f20d53a090de41bc77d2a650  validation_rules.csv
+8c9e57ca173ad7018c853fd17b3c6cd7f664d36b5d3e207092295ab8c44361e0  validation_rules.jsonl
+9c4f945c7d366d15969150afc64bbde4f6759d3f0d42d183bf4106add0e7c119  provenance.md
+948404e2a2f99cccf6d5582eb05947763c8bee1eb2fa56727f9962bd016493e5  drop-and-rerun.md
+```
+
+- **Counts:** 5 rules (every column) and 15 Audit Events (for each rule, one
+  `validation_rule.created`, one `validation_rule.submitted` and one
+  `validation_rule.approved`), confirmed by count queries and a re-read (auditor-dp0).
+- **Key columns**, tabulated by this plan's author from `validation_rules.jsonl` and
+  `audit_events.jsonl`. Each approval event was joined to its rule on `workspace_id` and
+  `entity_ref = 'validation_rule:<slug>@<version>'`:
+
+| slug | version | workspace_id | authored_by | approved_by | approval event id | event `at` | actor.display | `after` has `approval_request_id` |
+|---|---|---|---|---|---|---|---|---|
+| `rng-bf487669` | 1 | `01a0b10d-ee00-70fe-af35-35501548dafd` | `01a0b10d-ee00-7485-a86b-8d9f6154fc92` | `01a0b10d-f27b-72b9-ba4e-f84d30f07079` | `01a0b10d-f29e-7699-bf5f-da06a2bf443a` | `2026-09-17T20:27:56.441279+00:00` | `dev@localhost` | no |
+| `rng-c1c106c8` | 1 | `01a0b10d-f2c7-7f29-8863-ee6daa940b72` | `01a0b10d-f2c7-78d1-8a43-628bdd866ace` | `01a0b10d-f329-70d6-a423-67ff9f9184a6` | `01a0b10d-f53a-77e8-a0d6-e33432e99837` | `2026-09-17T20:27:57.107788+00:00` | `dev@localhost` | no |
+| `rng-f8e9b7c4` | 1 | `01a0b10d-f2c7-7f29-8863-ee6daa940b72` | `01a0b10d-f2c7-78d1-8a43-628bdd866ace` | `01a0b10d-f329-70d6-a423-67ff9f9184a6` | `01a0b10d-f592-7861-abe0-439f40713aa8` | `2026-09-17T20:27:57.197872+00:00` | `dev@localhost` | no |
+| `rng-2f0a876d` | 1 | `01a0b10d-f601-7f80-a811-d9f96b9ed567` | `01a0b10d-f601-7981-8fd3-e6439d68b787` | `01a0b10d-f667-7f3d-98fc-d2ce538a3e60` | `01a0b10d-f868-7f0c-afe7-d0c6bdaed70f` | `2026-09-17T20:27:57.91956+00:00` | `dev@localhost` | no |
+| `rng-b73d354e` | 1 | `01a0b10d-f601-7f80-a811-d9f96b9ed567` | `01a0b10d-f601-7981-8fd3-e6439d68b787` | `01a0b10d-f667-7f3d-98fc-d2ce538a3e60` | `01a0b10d-f8dd-759b-afc5-3abbf95b8c3b` | `2026-09-17T20:27:58.036136+00:00` | `dev@localhost` | no |
+
+- **The drop:** `DROP DATABASE "gipricing_w37-6-run2-gate-1789676768";` at 10:41:04–10:41:05
+  BST, with 0 connections at 10:41:04 (auditor-dp0).
+- **The re-run (auditor-dp0):** Task 0, 10:41:08–10:41:19 BST, exit 0, its last two lines:
+
+```text
+databases=80 with_tables=77 without_table_or_error=3
+TOTAL route_approved=0 self_approved=0 user_approved_no_approved_request=314
+```
+
+  329 → 314 because the dropped database held 15 of the follow-on-2 population. This plan's
+  author's own re-run at about 10:41:59 BST (§"Task 0 at planning time") printed the same two
+  lines.
+- **Caveats, recorded as such:** the timing is evidence, not proof; the per-test 1+2+2
+  workspace mapping was matched to quoted lines of `test_api_datasets.py` but not re-derived;
+  the gate log's `STOPPED` line has no date, and 17 September is assumed. The 5 rows also show
+  that the direct route was reachable and exercised by the test suite, which is consistent
+  with FD-1356's HIGH, not a reason to doubt it (the maintainer's entry).
+- **`FD-1241`'s database list** (minted and frozen, not edited) is a one-off snapshot of 81
+  databases that names `gipricing_w37-6-run2-gate-1789676768`. That database was dropped on
+  2026-10-01 under this DP, which is why the snapshot's count no longer matches the server.
+
+**A rule reset to `review` with no request (Task 7) has no path through the DP-1 (b) thin
+client.** `open_request_for` finds no open request and answers `409
+APPROVAL_SUBJECT_NOT_IN_REVIEW`, whose name is misleading there (the rule **is** in `review`;
+what is missing is the request), and the module submit refuses a non-`draft` rule. The only
+way forward is a raw `POST /approval-requests` naming the rule's ref, which the generic
+resolver accepts for a rule in `review` whose dry-run executed. The DP-1 and DP-6 rulings may
+want to say whether that is acceptable or whether the reset should go to `draft` instead.
 
 **Observed, not a decision point of this slice:** a dry-run whose only result is `skipped`
 (for example a distributional rule with no reference profile) did not execute either.
@@ -375,9 +495,10 @@ OQ 9987's (working id, #979, the decision-maker's), per `RL-1301` A.4.5 and FD-1
 
 ```bash
 #!/bin/bash
-# PL 9762 Task 0: VR versions approved via the direct (self-approval) route, every gipricing* DB.
+# PL 9762 Task 0: ROUTE_APPROVED VR versions (approved through the rule's own direct approve route,
+# outside the approval workflow), judged by each rule's LATEST approval event, every gipricing* DB.
 # STOP if TOTAL route_approved > 0.
-Q="BEGIN READ ONLY; select count(*) filter (where v.builtin is not true and exists (select 1 from audit_events e where e.workspace_id=v.workspace_id and e.action='validation_rule.approved' and e.entity_ref='validation_rule:'||v.slug||'@'||v.version and not (coalesce(e.after, '{}'::jsonb) ? 'approval_request_id'))), count(*) filter (where v.builtin is not true and v.approved_by = v.authored_by), count(*) filter (where v.builtin is not true and not exists (select 1 from approval_requests a where a.workspace_id=v.workspace_id and a.artifact_type='validation_rule' and a.artifact_ref='validation_rule:'||v.slug||'@'||v.version and a.status='approved')) from validation_rules v where v.status='approved'; ROLLBACK;"
+Q="BEGIN READ ONLY; select count(*) filter (where v.builtin is not true and exists (select 1 from (select e.after from audit_events e where e.workspace_id=v.workspace_id and e.action='validation_rule.approved' and e.entity_ref='validation_rule:'||v.slug||'@'||v.version order by e.sequence desc limit 1) last_approval where not (coalesce(last_approval.after, '{}'::jsonb) ? 'approval_request_id'))), count(*) filter (where v.builtin is not true and v.approved_by = v.authored_by), count(*) filter (where v.builtin is not true and not exists (select 1 from approval_requests a where a.workspace_id=v.workspace_id and a.artifact_type='validation_rule' and a.artifact_ref='validation_rule:'||v.slug||'@'||v.version and a.status='approved')) from validation_rules v where v.status='approved'; ROLLBACK;"
 dbs=$(docker exec gi-pricing-postgres-1 psql -U gipricing -d postgres -Atc "select datname from pg_database where datname like 'gipricing%' and not datistemplate order by 1")
 n=0; has=0; nohas=0; r=0; s=0; z=0
 for d in $dbs; do
@@ -397,8 +518,12 @@ if [ "$r" -ne 0 ]; then echo "STOP: route_approved > 0"; exit 1; fi
 ```
 
   **What each column counts, and why the first is the STOP predicate.**
-  - `route_approved`: non-built-in `approved` rules with a `validation_rule.approved` Audit
-    Event for the same workspace and ref whose `after` has **no** `approval_request_id`. At
+  - `route_approved` (**ROUTE_APPROVED**, the maintainer's reading in "2026-10-01 10:39:13 BST — #1063 DP-0 DECIDED: (c) export, then drop, then re-run expecting 0; the reading question: the PLAN's reading is mine (route_approved); my wording was ambiguous": "a VR version approved through its own direct approve route,
+    outside the approval workflow"): non-built-in `approved` rules whose **latest**
+    `validation_rule.approved` Audit Event for the same workspace and ref (by the workspace's
+    monotonic `sequence`) has **no** `approval_request_id` in its `after`. The latest event is
+    used so that a rule reset to `review` by Task 7 and re-approved through the workflow is not
+    counted for its old direct-route event (auditor-1063 finding 2, accepted in the same entry). At
     `1dd5e264` that event has exactly one writer, `approve_rule`
     (`git grep -n 'validation_rule.approved' -- backend/src examples backend/migrations`
     prints only `backend/src/app/platform/validation_rules.py:442`), and its `after` is
@@ -406,20 +531,29 @@ if [ "$r" -ne 0 ]; then echo "STOP: route_approved > 0"; exit 1; fi
     **with** `approval_request_id` (Acceptance 12), so the predicate keeps meaning "approved
     by the direct route" at the exit-demo re-run. Seeds and fixtures record no such event,
     so they are not counted.
-  - `self_approved`: `approved_by = authored_by`, the literal reading of "self-approval"; the
-    CHECK refuses it, so it must print 0. A non-zero here is a broken constraint: stop and
+  - `self_approved`: `approved_by = authored_by`, the other reading of "self-approval", which
+    the maintainer's entry rules is **not** the containment reading; the CHECK refuses it, so it
+    must print 0. A non-zero here is a broken constraint: stop and
     report.
   - `user_approved_no_approved_request`: FD-1356 follow-on 2's population, for context and
     for Task 7's before-count. It is not a STOP condition.
   - `no_table_or_error`: an empty database or a query error; Step 1 records which.
 
-  **STOP** if the last line is `STOP: route_approved > 0`, unless the maintainer's DP-0
-  ruling disposes of exactly the rows printed. Report to the lead with the output. Do not
-  proceed, and do not edit the predicate or the population.
-- [ ] **Step 2: Confirm the order.** `git log --oneline origin/main` shows WK-674 S2
+  **STOP** if the last line is `STOP: route_approved > 0`. Report to the lead with the output.
+  Do not proceed, and do not edit the predicate or the population (the maintainer: narrowing
+  the population "is the shape of a check edited until it passes").
+- [ ] **Step 2: Quote the DP-0 export into the ledger, and verify it.** Copy every file of
+  `/home/puzhenhao1989/gi-pricing-plan.local/handover/fd1356-dp0-export-2026-10-01/` verbatim into the slice's
+  `LG-` ledger (the 5 rows with every column, their audit events, the creating actors, the
+  approving requests, and the provenance evidence). Run `sha256sum` on each file and compare
+  each line with §"DP-0's decided record"'s `SHA256SUMS` lines; record the comparison. Any
+  mismatch, or a missing file: **stop** and report to the lead. **The local export directory is
+  not deleted until that ledger has merged**: it is the only copy of the bypass having fired
+  outside the plan's own key columns.
+- [ ] **Step 3: Confirm the order.** `git log --oneline origin/main` shows WK-674 S2
   (`SL-1256`), `SL-1360` and the FD-1357 fix merged. Read `alembic heads` on the merge base and
   record it; it is Task 7's `down_revision`.
-- [ ] **Step 3: Re-read the shared files after S2 and the FD-1357 fix.** Record the line
+- [ ] **Step 4: Re-read the shared files after S2 and the FD-1357 fix.** Record the line
   ranges, at the dispatch tree, of `_carry_to_the_artifact`, `decide_request`,
   `submit_for_approval` and `_resolve_the_artifact` (`backend/src/app/api/approvals.py`),
   `approve_rule`, `submit_for_review` and `resolve_artifact_ref`
@@ -428,7 +562,7 @@ if [ "$r" -ne 0 ]; then echo "STOP: route_approved > 0"; exit 1; fi
   `model-schema` names (DP-4 uses them). **Any temporary validation-rule exemption S2 added
   to a one-writer check** (`git grep -n -i 'FD-1356\|9892\|validation-rule fix slice' -- backend
   tests`) is listed and joins Task 1's removals.
-- [ ] **Step 4:** `gh pr list --state open`, and read any PR touching
+- [ ] **Step 5:** `gh pr list --state open`, and read any PR touching
   `api/approvals.py`, `platform/approvals.py`, `validation_rules.py`, `api/validation.py`,
   `seed.py`, `01` §5.1 or `test_contracts.py`; name each head SHA in the ledger.
 
@@ -577,7 +711,7 @@ async def stored_dry_run_report(
   | `test_an_error_dry_run_is_refused_at_submit[missing_column]` | `range` on `{"table": "policy_exposure", "column": "no_such_column"}`; real dry-run | report `error_count >= 1`; submit `422`, `code == "EVIDENCE_INCOMPLETE"`; rule `draft` | submit `200`, `review` |
   | `…[unknown_check]` | `check: "no_such_check"` (authoring is per spec, `01:470`) | as above | as above |
   | `…[missing_table]` | target table `no_such_table` | as above | as above |
-  | `test_an_error_dry_run_is_refused_at_approve[…]` (same three) | the rule's status set to `review` and an `ApprovalRequestRow` (`status="review"`, `approvers_required=1`) added by test-only writes; another approver decides `approve` | decide `422 EVIDENCE_INCOMPLETE`; rule `review`; request `review`; `approval_decisions` count for it `0` | direct route `200 approved` |
+  | `test_an_error_dry_run_is_refused_at_approve[…]` (same three) | the rule's status set to `review` and an `ApprovalRequestRow` (`status="review"`, `approvers_required=1`) added by test-only writes; another approver decides `approve` | decide `422 EVIDENCE_INCOMPLETE`; rule `review`; request `review`; `approval_decisions` count for it `0` | decide `200`, the request `approved` and the rule **still `review`** (no carry branch): fails on the status-code assertion |
   | `test_a_fail_dry_run_is_still_approvable` | `range` `min_exclusive: 0` severity `fail` on `exposure_years`, a version with one negative row | report `overall == "fail"`, `error_count == 0`; submit `200 review`; second approver `approved` | passes (control) |
   | `test_the_generic_submit_refuses_an_error_dry_run` | an `error` rule set to `review` by a test-only write; `POST /approval-requests` | `422 EVIDENCE_INCOMPLETE` | `201` |
   | `test_a_dry_run_report_that_cannot_be_read_is_refused` | `dry_run_report_id = new_uuid7()`, no row | submit `422 EVIDENCE_INCOMPLETE` | `200` |
@@ -689,17 +823,24 @@ async def _require_executed_dry_run(
 **Files:**
 - Modify: `backend/src/app/api/validation.py` (`submit_rule`, `approve_rule`)
 - Modify: `packages/model-schema/src/model_schema/validation.py`, `__init__.py` *(DP-2 a)*
-- Modify: `backend/src/app/api/approvals.py` (`decide_request`'s return type, DP-4 (a))
+- Modify: `backend/src/app/api/approvals.py` (`Decide` removed; `decide_request`'s body parameter, DP-4 decided)
+- Modify: `packages/model-schema/src/model_schema/approvals.py`, `__init__.py` (`Decide`, DP-4 decided)
 - Regenerate: `docs/contracts/`
 
-- [ ] **Step 1: Red first.** Add `test_every_route_this_slice_edits_is_typed_both_ways` to
-  `test_validation_rule_approval.py`: for each `(method, path)` in a literal list of the
-  routes this slice edits (`POST /api/v1/validation-rules/{rule_id}/submit`, and under DP-1 (b)
-  `…/approve`, and under DP-4 (a) `POST /api/v1/approval-requests/{request_id}/decide`), read
-  `create_app(...).openapi()` (construct it as `scripts/generate-contracts.py` does, without a
-  database) and assert the JSON request body, where present, and the 2xx schema each carry a
-  `$ref`. Run it: under DP-4 (a) it fails on decide's 200 (an open object at `1dd5e264`); under
-  DP-2 (a) on the submit's absent body. Record the failure lines.
+- [ ] **Step 1: Red first.** Add two tests to `test_validation_rule_approval.py`. Build
+  `create_app(...).openapi()` as `scripts/generate-contracts.py` does, without a database.
+  - `test_every_body_this_slice_edits_is_a_model_schema_type`: for
+    `POST /api/v1/approval-requests/{request_id}/decide` and, under DP-2 (a),
+    `POST /api/v1/validation-rules/{rule_id}/submit`, the JSON request body is a `$ref` whose
+    target name is an attribute of `model_schema`. Red: decide's body names the route-local
+    `Decide`, which `model_schema` does not export (check with `hasattr(model_schema, "Decide")`
+    at the dispatch tree; if S2 already moved it, this case is green and the ledger says so);
+    the submit has no body.
+  - `test_the_decide_response_keeps_its_key_set`: drive one decision and assert
+    `set(response.json()) == DECIDE_RESPONSE_KEYS`, a literal set read from `service.to_dict`
+    (`backend/src/app/platform/approvals.py:648-`) at the dispatch tree. Red: rename one key in
+    a scratch edit of `to_dict`, run, record the failure naming both keys, revert.
+  Record each failure line.
 - [ ] **Step 2: The body** *(DP-2 a)*. In `model_schema/validation.py`:
 
 ```python
@@ -718,14 +859,18 @@ class ValidationRuleSubmission(BaseModel):
   calls `open_request_for`, then `decide_and_carry(session, caller=caller, request_id=…, decision=DecisionKind.APPROVE, comment=None)`,
   refreshes the row and returns `to_schema(row)`. Its docstring loses "This is the module's
   own step" and says it is a client of the decide path. Under DP-1 (a), delete the route.
-- [ ] **Step 4: Decide's 200** *(DP-4 a)*. Annotate `decide_request`'s return as the
-  `model-schema` shape Task 0 Step 3 recorded for `POST /approval-requests`' 201, and build it
-  as S2's submit route does.
+- [ ] **Step 4: Decide's body** (DP-4, decided). Move `Decide` (`backend/src/app/api/approvals.py:83-87`:
+  `decision: DecisionKind`, `comment: str | None = None`, `extra="forbid"`) to
+  `packages/model-schema/src/model_schema/approvals.py`, keeping its name, fields and config,
+  and export it from `model_schema/__init__.py`; `decide_request` imports it. If Task 0 Step 4
+  recorded that S2 already moved it, this step is a no-op. Decide's `200` is **not** changed
+  (FD 9752's).
 - [ ] **Step 5:** `uv run python scripts/generate-contracts.py` then `--check`; run Step 1's
-  test green and `uv run pytest -q backend/tests/test_contracts.py`. If PL 9788 (working id) has merged
-  and its `UNTYPED_2XX_PENDING_PART_B` still lists decide's 200, remove that entry in this
-  commit. Commit:
-  `git commit -m "feat(validation): the rule routes are clients of the approval workflow, typed both ways (FD-1356)"`.
+  tests green and `uv run pytest -q backend/tests/test_contracts.py`. **Only if** `PL-1364`'s
+  untyped-body guard is on `main` at dispatch (it is not at `92b4e4ac`) and lists decide's
+  request body, remove that entry in this commit; decide's `200` stays wherever FD 9752 puts
+  it. Commit:
+  `git commit -m "feat(validation): the rule routes are clients of the approval workflow; decide's body typed (FD-1356)"`.
 
 ### Task 5: The frontend (DP-2 (a); DP-1 (a) if ruled)
 
@@ -793,7 +938,7 @@ UPDATE validation_rules v
 ```
 
   `downgrade()` is a no-op with a comment: an approval made outside the workflow is not
-  restored. `down_revision` is Task 0 Step 2's head. Run
+  restored. `down_revision` is Task 0 Step 3's head. Run
   `uv run alembic upgrade head` with the DSN `dev-commands` names, against the `gipricing`
   database, and record the printed count.
 - [ ] **Step 5: The after-count** (Acceptance 13). Re-run Step 3's script; `gipricing` must
@@ -825,9 +970,10 @@ UPDATE validation_rules v
 4. Follow-ons not built here, each with an owner: the `dry_run_outcome` column and DB CHECK
    (DP-3 (b), the decision-maker, if wanted); the `skipped`-only dry-run question (the lead);
    `replace_rule_set`'s allowance (OQ 9987, working id, the decision-maker).
-5. PL 9788 (working id) (lane B, after this slice) re-derives its `UNTYPED_2XX_PENDING_PART_B` at its own
-   dispatch: decide's 200 is typed here under DP-4 (a), and S2 types the submit and withdraw
-   routes.
+5. `PL-1364` (lane B, after this slice) re-derives its guard's lists at its own dispatch:
+   decide's **request body** is typed here (DP-4), and its `200` is not; that `200` is owned
+   by FD 9752 (working id, #1066), as are the other approval routes' 2xx under WK-674 S2's
+   DP-S2-6 (c).
 
 ## Self-review
 
@@ -847,12 +993,13 @@ UPDATE validation_rules v
      evidence floor once approval goes through `approvals.submit`": Acceptance 8.
    - the DB CHECK "left to the fix slice": DP-3, not picked.
    - "the creation sites stay as triaged": Acceptance 16; `replace_rule_set` untouched.
-   - "remove S2's temporary A.4 exemption, red first": Task 1, Acceptance 10; Task 0 Step 3
+   - "remove S2's temporary A.4 exemption, red first": Task 1, Acceptance 10; Task 0 Step 4
      catches any further exemption S2 adds.
    - follow-on 1: Acceptance 5–7 (it is in the acceptance); follow-on 2: Task 7,
      Acceptance 13, 14; DP-5, DP-6.
 2. **Every design choice the Disposition leaves open is a DP with an owner** (DP-1, DP-3,
    DP-6); so are the three this plan found (DP-2, DP-4, DP-5) and the Task 0 STOP (DP-0).
+   DP-0 and DP-4 have since been decided by the maintainer, and their rows quote the entries.
    No spec text is written without a ruling (Task 6).
 3. **Repository literals checked at `1dd5e264`:** the line ranges in §"Write set";
    `ALLOWANCE_SITES` `test_approval_guard_static.py:37-46`; `approved_rows.py` `_EVIDENCE`
@@ -865,7 +1012,7 @@ UPDATE validation_rules v
    `DEFAULT_POLICY`'s `validation_rule` entry (`model_schema/approvals.py:205-209`);
    `dry_run_rule_id` (`data_handlers.py:220`); the frontend callers (`rules.ts:86-99`).
 4. **What was not executed.** Task 0's script was run (output above). The `python` samples
-   were **not** assembled and run: they depend on DP-1, DP-2 and DP-4, and on S2's shapes,
+   were **not** assembled and run: they depend on DP-1 and DP-2, and on S2's shapes,
    none of which exist yet. The executor runs each red-first step and records it; a sample
    that does not run as written is a plan defect to report, not to work around.
 5. **Type consistency.** `_require_executed_dry_run(session, *, workspace_id, row)` is called
