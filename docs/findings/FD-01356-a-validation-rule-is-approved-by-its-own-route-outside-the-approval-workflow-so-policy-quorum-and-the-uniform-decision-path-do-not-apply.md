@@ -1,16 +1,16 @@
 ---
-id: FD-9892
+id: FD-1356
 family: finding
 title: A validation rule is approved by its own route outside the approval workflow, so policy quorum and the uniform decision path do not apply
 status: active
-created: 2026-09-30
+created: 2026-10-01
 owner: auditor
 tree: 65b334792e65704206d2c21015690d7c613092cc
 corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9892 — A validation rule is approved by its own route outside the approval workflow, so policy quorum and the uniform decision path do not apply
+# FD-1356 — A validation rule is approved by its own route outside the approval workflow, so policy quorum and the uniform decision path do not apply
 
 ## Finding
 
@@ -263,4 +263,23 @@ The 10 extra rules in the middle column are `gipricing_aud976b`'s. **The figures
 was not checked:** whether any row came from a real approval route or a test or seed insert.
 749 of 749 is what the bypass predicts, since the direct route never writes an `approval_request`.
 
-*Drafted under working id 9892.*
+## Currency at mint (9b0fb97c)
+
+Re-read at `origin/main` `9b0fb97c` against this record's tree `65b33479`. **The bypass still exists; the measured evidence above is not rewritten.** Line numbers moved because `8d5c67a5` (WK-674 Slice 2a, #997) and later commits edited the files; `api/validation.py`, `worker/data_handlers.py` and the cited spec lines (`06:22,64,95,109,114`; `01:169,470-473,520-521`) are unchanged.
+
+| Locator cited above | At `65b33479` | At `9b0fb97c` |
+|---|---|---|
+| `validation_rules.py` `approve_rule` | `:395-431` | `:403-` (body to about `:450`) |
+| `approve_rule` writes `APPROVED` / `approved_by` | `:423-424` | `:434-435`, now inside `async with approvals.approval_decision(session):` under a comment `ALLOWANCE (PL-1303 Acceptance 7): temporary, removed by the validation-rule fix slice (WK-1178)` |
+| `approve_rule` status / author checks | `:406`, `:413` | `RULE_NOT_APPROVED` `:416`, `SUBMITTER_CANNOT_APPROVE` `:423` |
+| `submit_for_review` non-null dry-run test | `:371` | `:379` |
+| `seed_builtin_rules` | `:89-` | `:93-` |
+| `replace_rule_set` / `RULE_NOT_APPROVED` | `:538-` / `:585` | `:549-` / `:596` |
+| `api/validation.py` approve route | `:355-` | `:355-` (file unchanged) |
+| `data_handlers.py` `attach_dry_run` | `:292-296` | unchanged |
+| `api/approvals.py` `_carry_to_the_artifact` | `:488-` | `:488-`; four calls (`model`, `custom_objective`, `custom_metric`, `rating_version`), **no validation-rule branch** |
+| `db/models.py` `approved_rule_dry_run_and_separate_approver` | `:1155-1157` | `:1204` |
+
+**What changed, and what it means.** WK-674 Slice 2a added a PostgreSQL trigger refusing any write of an approved status outside the decision path. `approve_rule` now passes it by opening `approvals.approval_decision`, a **named, temporary allowance**, so the direct route still approves a rule with no `approval_request`. That is the "S2's temporary exemption" the Disposition names: the defect is unchanged and the allowance is the item the fix slice removes. Not re-run at `9b0fb97c`: the HTTP cases 1-5 and the database counts (code read only); no commit since 2026-09-30 touches the route, the service function's logic or `_carry_to_the_artifact`'s branches.
+
+*Filed 2026-09-30 as working id 9892; minted 2026-10-01 as FD-1356.*

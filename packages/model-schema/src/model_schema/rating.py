@@ -24,6 +24,7 @@ from pydantic import (
     model_validator,
 )
 
+from model_schema.graph_errors import GraphCycleError, GraphUnresolvedRefError
 from model_schema.refs import ArtifactRef, BlobRef, Slug
 from model_schema.regression import GoldenQuoteEvidence
 
@@ -415,7 +416,7 @@ class RatingAlgorithm(BaseModel):
             for name in _as_list(step.consumes):
                 producers = produced.get(name)
                 if not producers:
-                    raise ValueError(
+                    raise GraphUnresolvedRefError(
                         f"step {step.step_id!r} consumes undefined value {name!r} "
                         "(FR-212)"
                     )
@@ -436,7 +437,7 @@ class RatingAlgorithm(BaseModel):
                     if pending[other.step_id] == 0:
                         ready.append(other.step_id)
         if len(order) != len(steps):
-            raise ValueError("the rating DAG contains a cycle (FR-212)")
+            raise GraphCycleError("the rating DAG contains a cycle (FR-212)")
         position = {sid: i for i, sid in enumerate(order)}
         step_by_id = {s.step_id: s for s in steps}
 

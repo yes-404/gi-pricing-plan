@@ -22,6 +22,7 @@ import pytest
 
 from model_schema import (
     OBJECTIVE_CERTIFICATE_CHECKS,
+    OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC,
     TEMPLATE_APPLICABILITY,
     TEMPLATE_PARAMETERS,
     VALID_OBJECTIVE_TRANSITIONS,
@@ -351,3 +352,37 @@ def test_a_check_name_outside_the_battery_is_refused() -> None:
     names = (*OBJECTIVE_CERTIFICATE_CHECKS[:8], "smoke_fitt")
     with pytest.raises(pydantic.ValidationError, match=r"unexpected \['smoke_fitt'\]"):
         _certificate(_battery(names))
+
+
+@pytest.mark.req("FR-158")
+@pytest.mark.req("FR-151")
+def test_battery_accepts_the_symbolic_pair_for_an_expression_certificate() -> None:
+    """FR-151: `symbolic_vs_numeric` substitutes for `analytic_vs_numeric`, and every other
+    check is shared: the second battery is the first with its first two names swapped."""
+    assert OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC[:2] == (
+        "symbolic_vs_numeric_gradient",
+        "symbolic_vs_numeric_hessian",
+    )
+    assert OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC[2:] == OBJECTIVE_CERTIFICATE_CHECKS[2:]
+    certificate = _certificate(_battery(OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC))
+    assert len(certificate.result.checks) == 9
+
+
+@pytest.mark.req("FR-158")
+def test_battery_refuses_a_certificate_that_mixes_the_two_pairs() -> None:
+    """One `analytic_*` and one `symbolic_*` name: nine rows, and neither battery."""
+    names = (
+        "symbolic_vs_numeric_gradient",
+        "analytic_vs_numeric_hessian",
+        *OBJECTIVE_CERTIFICATE_CHECKS[2:],
+    )
+    assert len(names) == 9
+    with pytest.raises(pydantic.ValidationError) as raised:
+        _certificate(_battery(names))
+    assert "analytic_vs_numeric_hessian" in str(raised.value)
+
+
+@pytest.mark.req("FR-158")
+def test_battery_refuses_a_symbolic_certificate_short_of_nine() -> None:
+    with pytest.raises(pydantic.ValidationError, match="missing"):
+        _certificate(_battery(OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC[:8]))

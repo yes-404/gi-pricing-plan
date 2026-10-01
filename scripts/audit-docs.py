@@ -2661,6 +2661,10 @@ _CONTRACT_ARTIFACT_PATHS: Final = (
     "docs/contracts/schemas/generated/regression-run.schema.json",
     # 2026-09-29, PL-1213
     "docs/contracts/schemas/generated/score-comparison.schema.json",
+    # 2026-10-01, PL-1325 (WK-1250 Slice 1)
+    "docs/contracts/schemas/generated/sub-graph.schema.json",
+    "docs/contracts/schemas/generated/sub-graph-create.schema.json",
+    "docs/contracts/schemas/generated/sub-graph-body.schema.json",
     "docs/contracts/schemas/generated/problem-detail.schema.json",
     "docs/contracts/schemas/generated/profile.schema.json",
     "docs/contracts/schemas/generated/transparency-artifact.schema.json",

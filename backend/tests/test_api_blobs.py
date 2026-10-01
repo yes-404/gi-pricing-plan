@@ -14,6 +14,7 @@ from collections.abc import Iterator
 
 import pytest
 import pytest_asyncio
+from backend.tests.approved_rows import add_approved
 from backend.tests.blob_fixtures import (
     blob_row,
     dataset_blob,
@@ -169,7 +170,8 @@ async def _bundle_blob(database: Database, workspace_id, sha256: str) -> None:
     """A Rating Version in `workspace_id` whose compiled bundle is `sha256`."""
     await blob_row(database, sha256, "application/json")
     async with database.unit_of_work() as session:
-        session.add(
+        await add_approved(
+            session,
             RatingVersionRow(
                 workspace_id=workspace_id,
                 slug=f"rv-{sha256[:8]}",
@@ -179,7 +181,7 @@ async def _bundle_blob(database: Database, workspace_id, sha256: str) -> None:
                 model_ref="model:m@1",
                 created_by=new_uuid7(),
                 bundle={"content_hash": "sha256:" + "1" * 64, "blob_sha256": sha256},
-            )
+            ),
         )
 
 
