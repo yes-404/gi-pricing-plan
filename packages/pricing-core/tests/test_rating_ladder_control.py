@@ -37,7 +37,7 @@ from test_rating_ladder_sweep import _config, _quotes
 
 from model_schema.scoring import LadderRung
 from pricing_core.rating import score as score_module
-from pricing_core.rating.ladder import LadderInputs, ladder_violations, round_once
+from pricing_core.rating.ladder import LadderInputs, binding_side, ladder_violations, round_once
 from pricing_core.rating.runtime import CompiledBundle
 
 _FIVE_E5 = Decimal("0.00005")
@@ -149,6 +149,15 @@ def compare_quote(
                 or n.operation.bound not in ("min", "max")
             ):
                 report.exceedances.append(f"{where}: clamp rung {b.rung} is not exactly the bound")
+            if exact is not None:
+                # the bound is the engine's own, read independently of the ladder: the side that
+                # binds last and its exact value must equal `bound` and `bound_unrounded_minor`
+                sides = [binding_side(c) for c in exact[0].clamps]
+                last = next((x for x in reversed(sides) if x is not None), None)
+                if last is None or (n.operation.bound, n.operation.bound_unrounded_minor) != last:
+                    report.exceedances.append(
+                        f"{where}: clamp rung {b.rung} bound_unrounded_minor is not the engine's"
+                    )
             continue
         if kind == "multiply" and source > 0:
             prev = abs(Decimal(base[source - 1].value_minor))
@@ -306,6 +315,17 @@ async def test_the_exact_clamp_and_inheritance_checks_fail_on_broken_input() -> 
     report = Report()
     compare_quote(report, "q", base, broken_con, exact)
     assert any("not exactly the bound" in e for e in report.exceedances)
+    # (b2) `bound_unrounded_minor` is not the engine's bound, though `constraints` carries it too
+    wrong_bound = new[con].operation.model_copy(  # type: ignore[union-attr]
+        update={"bound_unrounded_minor": Decimal("5000.001")}
+    )
+    broken_bound = list(new)
+    broken_bound[con] = new[con].model_copy(
+        update={"operation": wrong_bound, "unrounded_minor": Decimal("5000.001")}
+    )
+    report = Report()
+    compare_quote(report, "q", base, broken_bound, exact)
+    assert any("not the engine's" in e for e in report.exceedances)
     # (c) the served output is the pre-clamp value
     served = (exact[0], {**exact[1], "office_premium_minor": new[pre].value_minor})
     report = Report()
