@@ -58,6 +58,7 @@ Each change is marked *(PL-9765)* where it stands in the body.
 | C15 | Acceptance 2; Task 2; Write set *(pre-merge)* | Every new generated-only slug in `ONE_SIDED_SLUGS`; `test_contracts.py` and the FD-1357 fix (PL 9764, working id; #1057), PL 9788, `PL-1364` and WK-1250 named as overlappers | auditor-1062 F1 (MED), adopted |
 | C16 | Acceptance 17; Acceptance 15 *(pre-merge)* | Acceptance 17's second check is an AST comparison of `args` and `returns` (the `grep` was blind to an added parameter); "13 existing `Page_*_`" corrected to 12 typed plus the open `Page_dict_str__Any__` | auditor-1062 F2 (LOW-MED) and its note, adopted |
 | C17 | `relates:`; Global Constraints *(disclosed pre-merge)* | Two changes made in the first filing and not announced there: (a) `relates:` gained `PL-1359`, `FD-1335`, `FD-1356`; (b) the dated note that WK-690 Slice 1 is `SL-1271`, closed, so PL-1306's two RL-1263 conditions against it no longer bind | auditor-1062's notes, adopted |
+| C18 | Acceptance 2; Task 2; Write set *(pre-merge)* | Every new generated schema registered in `_CONTRACT_ARTIFACT_PATHS` and the `non_markdown` count bumped, else checks 30 and 35 fail; serialised with the FD-1357 fix | auditor-1065's cross-finding (on the FD-1357 fix), relayed by the lead; the maintainer's addendum (second to merge re-bumps; first to merge writes the `contract-schema` skill step) |
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended) or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. The executor also binds `spec-change` (Task 1), `contract-schema` and `contract-guard` (Task 2), `python-package` (Tasks 2–6), `python-test` (every task), `fastapi-service` (Tasks 4–6) and `dev-commands` (the gate and the migration), and reads [`README.md`](README.md)'s five unchecked conventions before its first step.
 
@@ -212,6 +213,23 @@ cause, and the guard is restored; the ledger quotes both runs.
    `approval-withdrawal`, `approval-submission`, and `promotion-skip` if it is registered. The
    guard's own check (`:2648-2661`) fails on an undeclared one-sided slug, so the red first is
    the guard run after registration and before the entries are added, naming each slug.
+   *(PL-9765, C18; auditor-1065's cross-finding, relayed by the lead.)* Each new generated
+   schema file is also registered as a literal path in `_CONTRACT_ARTIFACT_PATHS`
+   (`scripts/audit-docs.py:2620`; the generated block ends with the `sub-graph*` entries at
+   `:2665-2667`), and `tests/test_audit_docs_ids.py:2117`'s `assert len(non_markdown) == 70` is
+   bumped by the number of files added (70 at the tree above; +9, or +10 with
+   `promotion-skip`). Without both, `python3 scripts/audit-docs.py` fails check 30 (no front
+   matter) and check 35 (not in the F83 register) on each new file. **Check:** with the new
+   files present, `python3 scripts/audit-docs.py` reports no check 30 or check 35 failure, and
+   `uv run pytest tests/test_audit_docs_ids.py -q` passes. **Red first:** regenerate the
+   contracts before registering the paths, and quote the check 30 and check 35 failures naming
+   the new files.
+   **Shared with the FD-1357 fix** (PL 9764, working id; +2) under RL-1263 (`:89`), and with any
+   other slice adding generated schemas. A count bump is not append-only, so **the second of
+   the two to merge re-bumps on the merged count and re-runs its gate**; it never adds to a
+   number read earlier (the maintainer's addendum, relayed by the lead, 2026-10-01).
+   Precedent: `SL-1339` (#1034, plan `PL-1325`, the sub-graph slice) moved it 67 → 70
+   (`git log -S'len(non_markdown) == 70' -- tests/test_audit_docs_ids.py` prints `9b0fb97c`).
 3. **Migration (FR-417).** One new Alembic revision, whose `down_revision` is the head at
    the executor's tree (`2f598e89d12c` at the tree above, *(PL-9765)* the one revision no
    `down_revision` names, in `backend/migrations/versions/2f598e89d12c_sub_graph_versions.py`;
@@ -832,6 +850,8 @@ named with the slices that may also touch it.
 | `backend/src/app/api/approvals.py` (`Withdraw` and `SubmitApproval` moved out; `withdraw_request` and `submit_for_approval` typed) | server-derived liveness; both bodies become `model-schema` types; both 2xx unchanged, pinned by Acceptance 18 (DP-S2-6 (c)) *(PL-9765, C1)* | the FD-1335 Part B slice (carrier WK-1178: these two routes are 2 of its 12), the FD-1356 fix | an edit to existing functions: serialises with each. The two routes' 2xx stay on Part B's list (DP-S2-6 (c); owner FD 9752, working id) |
 | `packages/model-schema/src/model_schema/deployments.py` (new), `approvals.py` (`PromotionSkip`, `ApprovalWithdrawal`, `ApprovalSubmission`), `scripts/generate-contracts.py` (`GENERATED_SHAPES`: the Route table's slugs) | the Route table's shapes *(PL-9765, C1)* | WK-1250, WK-673 S4 (`GENERATED_SHAPES` appends); **the FD-1357 fix (PL 9764, working id; #1057)**, which also edits `packages/model-schema/src/model_schema/__init__.py`, `scripts/generate-contracts.py`, `backend/tests/test_contracts.py` and `03` §5.1 rows *(PL-9765, C15)* | appends to a dict: serialises unless the dispatch record shows different keys only. `approval-request` is not registered (DP-S2-6 (c)) |
 | `backend/tests/test_contracts.py` (`ONE_SIDED_SLUGS`, `:69`) *(PL-9765, C15)* | one entry per new generated-only slug | the FD-1357 fix (PL 9764, working id; #1057), PL 9788 (working id) and `PL-1364` (their guard lists), WK-1250 | an edit to an existing dict: serialises with each unless the dispatch record shows different keys only |
+| `scripts/audit-docs.py` (`_CONTRACT_ARTIFACT_PATHS`, `:2620`), `tests/test_audit_docs_ids.py` (`:2117`, the `non_markdown` count) *(PL-9765, C18)* | one literal path per new generated schema; the count bumped | the FD-1357 fix (PL 9764, working id; +2), any slice adding generated schemas, WK-1170 and WK-1169 slices (`audit-docs.py`) | **serialises** (RL-1263 `:89`): the count is one shared number and its bump is not append-only, so the second to merge re-bumps on the merged count and re-runs its gate |
+| `.claude/skills/contract-schema/SKILL.md` (and, if apt, a pointer in `.claude/skills/docs-audit/SKILL.md`'s check 35 text) *(PL-9765, C18)* | **conditional:** the registration step and a refreshed `Verified` date, **only if this slice merges before the FD-1357 fix** | the FD-1357 fix (PL 9764, working id), the same conditional step | whichever lands first writes it; the other skips it |
 | `backend/src/app/platform/rating_versions.py` (`compile_rating_version`, `:395-542`), `backend/src/app/api/models.py` (the compile route, `:1233`, only if RL 9751 needs it) *(PL-9765, C14)* | the compile guard, as RL 9751 (working id) rules | any in-flight slice editing either function; the FD-1357 fix if it touches them | an edit to existing functions: serialises. `models.py:1215` (the governance gate) stays read-only (Acceptance 17) |
 | `backend/tests/test_api_authorisation_sweep.py` (and any sibling Acceptance 12 (f) finds) | Task 0A: flattening, the count equality, the spec pin, the valid-body sweep, the named allow-list | none found | test-only; **no RL-1263 overlap with WK-690 S1 and no third slot** (the 11:01:50 entry) |
 | the five modules' §5.1 REST tables (`01`, `02`, `03`, `06`, `07`) | **nothing in this slice**: Task 0A (c) moved out (the 11:17:35 entry); #977 (a) puts the column in a WK-1178 slice. **If that slice lands first**, this slice fills the column for its own new rows (`03` and `07` §5.1) | WK-1250 S1 (`03` §5.1 rows), WK-1178 fix slice (`03:810-845`), any slice appending §5.1 rows | **serialises** with each: a new column edits every existing row of the table |
@@ -1092,7 +1112,20 @@ def promotion_order_refusal(
   each class validates its example and refuses an unknown key; predicted red, `ImportError`.
   Acceptance 2's two counts are quoted. Each new slug gets its `ONE_SIDED_SLUGS` entry in
   `backend/tests/test_contracts.py` in the same commit (C15), red first as Acceptance 2 says;
-  `approval-withdrawal` and `approval-submission` get theirs in Tasks 6 and 5. `ApprovalWithdrawal` and `ApprovalSubmission` land in Tasks 6 and 5, with the routes that
+  `approval-withdrawal` and `approval-submission` get theirs in Tasks 6 and 5. *(C18.)* In the
+  same commit, each new `docs/contracts/schemas/generated/<slug>.schema.json` path goes into
+  `_CONTRACT_ARTIFACT_PATHS` (`scripts/audit-docs.py:2620`, after `:2667`), and the count at
+  `tests/test_audit_docs_ids.py:2117` is re-derived, red first as Acceptance 2 says; Tasks 6
+  and 5 do the same for their two slugs. If the FD-1357 fix has merged first, the count is
+  re-derived on the merged tree and the gate re-run.
+- [ ] **Conditional: only if this slice merges before the FD-1357 fix (PL 9764, working id)**
+  *(C18; `CLAUDE.md` §12)*. Write the step into `.claude/skills/contract-schema/SKILL.md`:
+  "a new generated schema → register its literal path in `scripts/audit-docs.py`
+  `_CONTRACT_ARTIFACT_PATHS` and bump `tests/test_audit_docs_ids.py`'s `non_markdown`
+  count", and refresh that skill's `## Verified` date with the tree. If apt, add a one-line
+  pointer from `.claude/skills/docs-audit/SKILL.md`'s check 35 text (the paragraph on adding
+  a file that cannot carry a header, `:363-368`). Same commit as the registration. If the
+  FD-1357 fix merged first, it wrote the step: the ledger says so and this step is skipped. `ApprovalWithdrawal` and `ApprovalSubmission` land in Tasks 6 and 5, with the routes that
   use them; those routes' 2xx stay untyped (DP-S2-6 (c), FD 9752 working id).
 
 ### Task 3: The migration
@@ -1490,7 +1523,7 @@ Task 6's per-request resolution with the switch, and reuses Task 5's route shape
 
 ### Self-review of this superseding plan (PL-9765, 2026-10-01)
 
-- **Every change has a source and a site.** C1–C17 (**Changes from PL-1306**) each name the
+- **Every change has a source and a site.** C1–C18 (**Changes from PL-1306**) each name the
   maintainer's entry or audit finding behind them and the sections they touch. Each site is
   marked *(PL-9765)* in the body. Nothing else in `PL-1306`'s content was changed.
 - **The three accepted acceptance items are 14, 15 and 16**, each red first on broken input
