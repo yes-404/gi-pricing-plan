@@ -565,3 +565,41 @@ the base, fails:
 The executor quotes the base run's exit code with the base SHA. After the edit, the same
 test passes on the slice's tree. If the slice merges second, it re-bumps on the merged count
 and re-gates, per the maintainer's rule.
+
+## Amendment 2026-10-01 10:47 BST — auditor-rc2's two LOW findings, adopted by the lead
+
+**LOW-a: F2's predicates, in a form grep can use.** In the first amendment's F2, the
+backslashes inside the inline code spans are literal, so copying them into `grep -cF`
+counts 0. Those predicates are superseded by the four below, one per fenced block, exactly
+as `grep -cF` must receive them. Each is counted over `docs/specs/03-rating-engine.md`.
+
+T-A find (1 before, 0 after):
+
+```text
+> seed-from-model, on the first version of a lineage; every derived version — manual
+```
+
+T-A replacement (0 before, 1 after):
+
+```text
+> `against=seed` on a version resolves to its seed origin: the lowest-numbered version of
+```
+
+T-B anchor (1 before, 1 after; T-B is an insert):
+
+```text
+> `created_by_import` remain mutually exclusive.
+```
+
+T-B replacement (0 before, 1 after). Fill `<fix date>` and `<RL id>` before counting:
+
+```text
+> **Re-seeding an existing table (added <fix date>, `<RL id>` DP-2, FR-230).** A seed
+```
+
+**LOW-b: the stop condition, stated plainly.** In the 10:45 amendment, the sentence "The
+check is that this test, run unmodified on the base, fails" is superseded by this one.
+The executor stops and reports to the lead if the unmodified
+`test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_exempts`
+**fails** on the base. On a consistent base it passes, and the executor then proceeds with
+`N` read from its assert, whatever `N` is.
