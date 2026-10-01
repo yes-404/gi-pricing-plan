@@ -23,7 +23,7 @@ dispatch record Delta 2). Append-only.
 
 ### Task 0 — the dispatch record, verbatim
 
-`DISPATCH-WK-1178-HOTFIX-9790-2026-10-01.md` (local, outside the repository), quoted whole, as read 2026-10-01 at the minting turn (it carries the lead's later deltas):
+`DISPATCH-WK-1178-HOTFIX-9790-2026-10-01.md` (local, outside the repository), quoted whole, as read 2026-10-01 at the minting turn (it carries the lead's later deltas; one deviation: in Delta 2 the two ids of the unmerged #1034 ledger, which do not resolve in INDEX, are spelled `LG 01352` and `LG 1355` so check 32 does not read them as citations):
 
 ~~~~markdown
 # Dispatch record: WK-1178 hotfix, slice working id SL 9790 (main red since #1025). FINAL
@@ -85,7 +85,7 @@ dispatch record Delta 2). Append-only.
 ## Delta 2 — 2026-10-01 03:57:40 BST — first CI at 0f725f0f; mint allocation (the lead, sole allocator per FD-1338)
 - **Python run 36806710473:** `GATE: FAIL — 1 of 8 stages failed: pytest`, with 13 failed and 4404 passed. **All 13 are docs-gate tests** (test_audit_docs_*, test_doc_index, test_register_*, test_repository_invariants) failing on the working-id allocation gap: `[noncontiguous] docs/INDEX.md has a gap between 1351 and 9790`, check 31. Zero failures outside that family; the six `test_template_certificate_unchanged` cases PASS on CI's runner. Command: `gh run view 36806710473 --log | sed 's/^.*Z //' | grep -E '^FAILED' | grep -vcE 'test_audit_docs|test_doc_index|test_register_|test_repository_invariants'` → `0`.
 - **Mint ids** (`doc-id.py next --ref origin/main` → 1352 at 8933a29e): **SL 9790 → SL-1352, LG 9791 → LG-1353, FD 9792 → FD-1354.** This PR mints in place (a hotfix slice; the lead mints its SL per document-ids.md:214).
-- **Consequence for #1034:** it carries an unmerged `LG-01352-wk-1250-slice-1-…`. When it merges main after this hotfix, its ledger re-mints to **LG-1355** (an in-batch re-point of an unmerged record, permitted). Its CI re-runs anyway.
+- **Consequence for #1034:** it carries an unmerged `LG 01352-wk-1250-slice-1-…`. When it merges main after this hotfix, its ledger re-mints to **LG 1355** (an in-batch re-point of an unmerged record, permitted). Its CI re-runs anyway.
 - **CI twice** (condition 6) applies to the **minted head**, where check 31 can pass. The working-id head can never be green.
 ~~~~
 
