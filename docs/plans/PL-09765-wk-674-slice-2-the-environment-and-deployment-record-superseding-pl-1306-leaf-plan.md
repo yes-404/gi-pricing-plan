@@ -41,18 +41,23 @@ Each change is marked *(PL-9765)* where it stands in the body.
 
 | # | Section | Change | Source |
 |---|---|---|---|
-| C1 | Acceptance 14, 15, 16 (new); Task 4, Task 5, Task 6; **Route table** (new, under Scope) | **The routes are typed both ways.** The 7 new routes are enumerated, each with a named `model-schema` request type (or none) and a named 2xx type. Three new acceptance items, each red first: request bodies are `model-schema` types (AST walk and OpenAPI); every new 2xx is a `$ref` to a shape published under `docs/contracts/schemas/generated/`, never `{}` or an open object; and S2's deltas on the 2 changed existing routes are typed the same way (their bodies here; their 2xx as DP-S2-6 rules, C12) | F-B2; the 10:10:46 entry, first bullet; the entry headed `2026-10-01 10:03:41 BST — Lane A: WK-674 S2 (SL-1256, PL-1306) AGREED as the pick; …`, "Add (a)" |
+| C1 | Acceptance 14, 15, 16 (new); Task 4, Task 5, Task 6; **Route table** (new, under Scope) | **The routes are typed both ways.** The 7 new routes are enumerated, each with a named `model-schema` request type (or none) and a named 2xx type. Three new acceptance items, each red first: request bodies are `model-schema` types (AST walk and OpenAPI); every new 2xx is a `$ref` to a shape published under `docs/contracts/schemas/generated/`, never `{}` or an open object; and S2's deltas on the 2 changed existing routes are typed the same way (their bodies here; their 2xx left untyped by DP-S2-6 (c), C12–C13) | F-B2; the 10:10:46 entry, first bullet; the entry headed `2026-10-01 10:03:41 BST — Lane A: WK-674 S2 (SL-1256, PL-1306) AGREED as the pick; …`, "Add (a)" |
 | C2 | Acceptance 8; Tasks 0, 4, 5; premise q | **Branch A only.** `RL-1305` has merged, so `06` §4.1 has the `Check owner` column (`06:269`), with `WK-674` on `deployment:promote` (`06:283`) and `admin:manage_environments` (`06:294`). Branch B is struck. `PL-1359:372-376`: once `SL-1360` merges, `STALE_OWNER` fails a commit that adds a check and leaves its cell | the audit's `RL-1305` D1 item 4 row; the 10:10:32 entry, fourth bullet |
 | C3 | Task 6; Acceptance 17 (new); Write set | **F-B1.** `_fetch_bundle` is also called by the governance gate (`backend/src/app/api/models.py:1215`), and `_compiled_for` is reused by `backend/src/app/worker/scoring_handlers.py:85`/`:208` and `backend/src/app/worker/trace_handlers.py:30`/`:82`. All are read-only to this slice. The Deployment is resolved in the score handler, beside the ref, **without changing `_fetch_bundle`'s or `_compiled_for`'s signature or return type** | F-B1 (METHOD); the 10:10:32 entry, fourth bullet |
 | C4 | Task 1; Write set; premise p | **`03` §4.12** for the `Deployment` subsection (§4.11 is `SubGraph`, `03:743`), in place of "the next free number at merge" | the 10:10:32 entry, fourth bullet |
 | C5 | Acceptance 3; Task 3; premise o | **Alembic head `2f598e89d12c`** (`backend/migrations/versions/2f598e89d12c_sub_graph_versions.py`), in place of `d7e2a9b5c418` | the same |
 | C6 | Acceptance 12 (a); premise n | **141 operations**, re-measured with the predicate stated verbatim, in place of "137 at the finding's tree" | the same |
 | C7 | Status (activation need 3); Write set; Global Constraints | **Order (b): S2 → the FD-1356 fix.** Need 3 becomes "S2a (`SL-1302`) and the fix slice `SL-1300` are closed" (both are). The FD-1356 fix is **not** a need of this slice; that fix's plan carries "WK-674 S2 merged" as its own activation need | the 10:10:32 entry, first bullet; the 10:10:46 entry, second bullet |
-| C8 | Write set; Global Constraints; Status (dispatch needs) | **Never concurrent with `SL-1367`** (`PL-1364`, FD-1335 Part A, also edits `backend/src/app/api/score.py`); the dispatch records say so | F-B4; the maintainer's quoted decision of 2026-10-01 ~10:10 BST |
+| C8 | Write set; Global Constraints; Status (dispatch needs) | **Never concurrent with SL 1367 (#1056)** (PL 1364 (#1056), FD-1335 Part A, also edits `backend/src/app/api/score.py`); the dispatch records say so | F-B4; the maintainer's quoted decision of 2026-10-01 ~10:10 BST |
 | C9 | Status; DP table; Acceptance 7 | **DP-S2-1** cited as "RL 9986 (working id; #974)", read at head `6bc51cf0`; kept out of `relates:`; "#974 merged and minted" stays an activation need | the lead's commission |
 | C10 | Premises; every locator | Re-derived at the tree above (`1dd5e264`) | the 10:10:32 entry ("refreshed locators") |
 | C11 | Acceptance 4 (FR-357); Task 6 | **A correction found in carrying forward.** `PL-1306` said a client *sending* `artifact_is_live: false` is refused with 409. Once the field is removed and `Withdraw` keeps `extra="forbid"`, sending it is refused with **422** `VALIDATION_FAILED`, and omitting it gives the 409. Both cases are now tested | this planner, on the carry-forward self-review |
 | C12 | DP table (DP-S2-6, new, blocking); Acceptance 16; Route table rows 8–9; activation need 2 | **The 2xx half of item 16 is a decision point.** Read at the tree above, `service.to_dict` (what both changed routes return) disagrees with `ApprovalRequest` and with the hand-authored `approval-request.schema.json`, so no existing shape can be declared without a §0 reconciliation. Options and a recommendation, not a pick | this planner, measuring item 16 before writing it |
+| C13 | DP-S2-6 row; Acceptance 16, 18 (new); Route table rows 8–9; Tasks 5, 6; activation need 2 *(2026-10-01, pre-merge)* | **DP-S2-6 decided (c)** by the maintainer; the two 2xx stay untyped, owned by FD 9752 (working id); **new Acceptance 18**, red first: S2 does not widen the untyped surface (exact key sets pinned) | the maintainer's entry headed `2026-10-01 10:32:26 BST — #1062 DP-S2-6: option (c) ACCEPTED with three conditions; it narrows my item (3) for the 2 CHANGED routes' 2xx only; the three-shape disagreement becomes its own FD` (`~/gi-pricing-plan.local/channel/to-lead.md`); the lead's message of 10:33 BST |
+| C14 | DP table (DP-S2-7, new, blocking); Acceptance 19; Task 5A (placeholder); activation need 3a; Write set *(2026-10-01, pre-merge)* | **Compiling a non-draft Rating Version** (FD 9754, working id): S2 does not merge unless it is handled as RL 9751 (working id) rules, red first | the maintainer's entry headed `2026-10-01 10:34:45 BST — FD 9754 (#1064, a non-draft rating version can be recompiled and its bundle rewritten): MEDIUM, owner WK-674 S2, and **S2 does not merge without the guard**; the option choice goes to a DM now`; the lead's message of 10:35:31 BST |
+| C15 | Acceptance 2; Task 2; Write set *(pre-merge)* | Every new generated-only slug in `ONE_SIDED_SLUGS`; `test_contracts.py` and the FD-1357 fix (PL 9764, working id; #1057), PL 9788, PL 1364 (#1056) and WK-1250 named as overlappers | auditor-1062 F1 (MED), adopted |
+| C16 | Acceptance 17; Acceptance 15 *(pre-merge)* | Acceptance 17's second check is an AST comparison of `args` and `returns` (the `grep` was blind to an added parameter); "13 existing `Page_*_`" corrected to 12 typed plus the open `Page_dict_str__Any__` | auditor-1062 F2 (LOW-MED) and its note, adopted |
+| C17 | `relates:`; Global Constraints *(disclosed pre-merge)* | Two changes made in the first filing and not announced there: (a) `relates:` gained `PL-1359`, `FD-1335`, `FD-1356`; (b) the dated note that WK-690 Slice 1 is `SL-1271`, closed, so PL-1306's two RL-1263 conditions against it no longer bind | auditor-1062's notes, adopted |
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended) or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. The executor also binds `spec-change` (Task 1), `contract-schema` and `contract-guard` (Task 2), `python-package` (Tasks 2–6), `python-test` (every task), `fastapi-service` (Tasks 4–6) and `dev-commands` (the gate and the migration), and reads [`README.md`](README.md)'s five unchecked conventions before its first step.
 
@@ -106,7 +111,9 @@ Slice 2a's plan (#984) is `PL-1303` with its row `SL-1302`. #978's finding is mi
 of `relates:` until it mints (in batch C, by the 10:10:32 entry's fifth bullet). #977
 (DP-S2-4) is not minted either and stays cited by PR number. The slice row already exists
 (**SL-1256**), so this PR cuts no `SL-` row. It appends one dated line to that row naming
-this plan.
+this plan. *(2026-10-01, pre-merge:)* PL 1364 and SL 1367 are cited by number with
+their mint PR, #1056 (mint batch A), because they are not on `main` at the tree above; at
+this plan's mint they are cited by id.
 
 **Activation needs, in order** *(PL-9765: need 2 re-cited, need 3 replaced by order (b))*:
 1. **OQ-1234 decided** — done by **`RL-1296`** (#935, working id 9901; read at its head
@@ -119,7 +126,7 @@ this plan.
    DP-S2-3 by RL-1301 A–B, DP-S2-5 disposed by RL-1301 A.6 (head `80afeb40`; A.6 is unchanged since `327e1179`).
    **#974 is not yet merged and minted** (batch C): this need is open until it is.
    *(PL-9765, C12.)* **And DP-S2-6 resolved** (new in this plan, blocking the 2xx half of
-   Acceptance 16). Open.
+   Acceptance 16). **Done 2026-10-01: (c), by the maintainer's entry headed `2026-10-01 10:32:26 BST — #1062 DP-S2-6: option (c) ACCEPTED with three conditions; it narrows my item (3) for the 2 CHANGED routes' 2xx only; the three-shape disagreement becomes its own FD` (`~/gi-pricing-plan.local/channel/to-lead.md`).** Condition 3 of that entry: auditor-1062 verifies the three-shape premise field by field before this plan mints; if the premise is wrong, (c) falls and DP-S2-6 goes to a decision-maker.
    **DP-S2-4 does not block this slice** (the maintainer's entry headed
    `2026-09-30 11:17:35 BST — DATED CORRECTION to my A1 entries (12:0x "pin each route's permission against the spec's declared permission (06/03 §5.1 permission column, or the contract)"); DP-S2-4 routing`).
    *(2026-09-30: DP-S2-2 and DP-S2-3 are ruled by RL-1301, working id 9906, read at its head
@@ -138,6 +145,8 @@ this plan.
    merged" as its activation need (the 10:10:46 entry, second bullet). The two never run
    concurrently: both edit `backend/src/app/platform/approvals.py` and `_carry_to_the_artifact`
    in `backend/src/app/api/approvals.py` (**Write set**).
+3a. **RL 9751 (working id) ruled and minted** *(PL-9765, C14)*: DP-S2-7 below, the decision-maker
+   dm-s2c7's ruling, in progress at the tree above. Open.
 4. **The lead's go.**
 
 **The split, as a dated delta to the map plan** *(2026-09-30)*. The maintainer's entry headed
@@ -162,10 +171,10 @@ can cite them):
 - **The RL-1263 write-set check** against every build slice in flight at dispatch (see
   **Write set**), and the contention measurement if this is the first overlap (see **Global
   Constraints**).
-- **Never concurrent with `SL-1367`** *(PL-9765, F-B4)*: `PL-1364` (FD-1335 Part A) edits the
+- **Never concurrent with SL 1367 (#1056)** *(PL-9765, F-B4)*: PL 1364 (#1056) (FD-1335 Part A) edits the
   route decorators in `backend/src/app/api/score.py`, which Task 6 also edits. The dispatch
-  record of this slice, and of `SL-1367`, each say so and name the order. Under the lane-B
-  order of the 10:10:32 entry (third bullet), `SL-1367` comes later anyway.
+  record of this slice, and of SL 1367 (#1056), each say so and name the order. Under the lane-B
+  order of the 10:10:32 entry (third bullet), SL 1367 (#1056) comes later anyway.
 - **Serial with the FD-1356 fix, this slice first** *(PL-9765, order (b))*: the dispatch
   record names it.
 
@@ -197,7 +206,14 @@ cause, and the guard is restored; the ledger quotes both runs.
    prints **exactly eight** lines: five in `deployments.py` and three in
    `packages/model-schema/src/model_schema/approvals.py`. The regenerated
    `docs/contracts/schemas/generated/` holds a file for each slug in the Route table. The
-   contract guard (`contract-guard`) passes, quoted.
+   contract guard (`contract-guard`) passes, quoted. *(PL-9765, C15; auditor-1062 F1.)* Every new
+   generated-only slug is declared in `ONE_SIDED_SLUGS` (`backend/tests/test_contracts.py:69`)
+   with a "first written form" reason, as the `sub-graph*` entries are (`:77-79`):
+   `environment`, `environment-create`, `environment-update`, `deployment`,
+   `deployment-create`, `deployment-request`, `deployment-request-create`,
+   `approval-withdrawal`, `approval-submission`, and `promotion-skip` if it is registered. The
+   guard's own check (`:2648-2661`) fails on an undeclared one-sided slug, so the red first is
+   the guard run after registration and before the entries are added, naming each slug.
 3. **Migration (FR-417).** One new Alembic revision, whose `down_revision` is the head at
    the executor's tree (`2f598e89d12c` at the tree above, *(PL-9765)* the one revision no
    `down_revision` names, in `backend/migrations/versions/2f598e89d12c_sub_graph_versions.py`;
@@ -504,7 +520,8 @@ component whose name is a published shape".
     `properties.items.items` is `{"$ref": "#/components/schemas/<Name>"}` with `<Name>` a
     published shape. `Page` is the backend's cursor envelope
     (`backend/src/app/api/pagination.py:48`, `extra="forbid"`, declared properties), which the
-    13 existing `Page_*_` components at the tree above use. It is not an open object, and it
+    12 typed `Page_*_` components at the tree above use (13 exist; the thirteenth,
+    `Page_dict_str__Any__`, has open-object items and is exactly what item 15 refuses). It is not an open object, and it
     is not hand-written per shape. FD-1335's two forms are each refused by name: form 1, a
     schema equal to `{}`; form 2, an `object` with no `properties`. **Red first, on broken
     input:** with one handler's return annotation removed, the test fails naming the route
@@ -520,16 +537,16 @@ component whose name is a published shape".
     **Route table**'s last two rows give:
     - each body is a `model-schema` type, **moved, not duplicated**: `git grep -n -E '^class (Withdraw|SubmitApproval)\b' -- backend/src`
       prints nothing, and the AST and OpenAPI asserts of item 14 pass on both handlers;
-    - **each 2xx as DP-S2-6 resolves** (below; blocking). Under its recommended option (c),
-      both 2xx are left as they are, keep their place in FD-1335 Part B (with the marker
-      `pending FD-1335 part B` if Part A's guard has merged), and the test asserts they are
-      **unchanged**: S2 widens nothing. Under (a) or (b), each 2xx is
-      `{"$ref": "#/components/schemas/<the ruled shape>"}`, a published shape, and item 15's
-      form checks pass on both.
+    - **each 2xx is left as it is: DP-S2-6 is decided (c)** *(2026-10-01, by the maintainer's entry headed `2026-10-01 10:32:26 BST — #1062 DP-S2-6: option (c) ACCEPTED with three conditions; it narrows my item (3) for the 2 CHANGED routes' 2xx only; the three-shape disagreement becomes its own FD` (`~/gi-pricing-plan.local/channel/to-lead.md`))*.
+      Both 2xx stay open objects, keep their place in FD-1335 Part B (with the marker
+      `pending FD-1335 part B` if Part A's guard has merged), and are owned by **FD 9752
+      (working id)**, which names both routes. Acceptance 18 pins that S2 does not widen
+      them. For these two routes' 2xx only, this supersedes item (3) of the maintainer's entry
+      headed `2026-10-01 10:10:46 BST — S2 addendum (F-B2 confirmed): the three acceptance items accepted; need 3 text for the superseding PL`;
+      the bodies half of item (3) stands.
     - **Red first:** before the change, the test is run over these two operations and fails
-      naming `Withdraw` and `SubmitApproval` as unpublished (and, under (a) or (b), both 2xx as
-      form 2).
-    - **Why the 2xx half is a decision point, measured by reading the code at the tree above.**
+      naming `Withdraw` and `SubmitApproval` as unpublished.
+    - **Why the 2xx half was a decision point, measured by reading the code at the tree above.**
       Both routes return `service.to_dict(row, decisions)`
       (`backend/src/app/platform/approvals.py:648-673`). That output carries `environment`
       (`:654`) and has no `workspace_id`. `ApprovalRequest`
@@ -545,23 +562,100 @@ component whose name is a published shape".
       plan's and not the executor's. The same `to_dict` serves `decide` and
       `GET /api/v1/approval-requests/{request_id}`, which are FD-1335 Part B's (carrier
       WK-1178).
-    - **FD-1335's list.** Whatever DP-S2-6 rules, `decide` and
-      `GET /api/v1/approval-requests/{request_id}` are not this slice's deltas and stay with
-      Part B. Under (a) or (b), the two routes typed here leave Part B's temporary exclusion
-      list in this slice's commit, if Part A's guard has merged by then.
+    - **FD-1335's list.** All four approval-request routes that share `to_dict` keep their
+      2xx in Part B: `decide` and `GET /api/v1/approval-requests/{request_id}` because they are
+      not this slice's deltas, and the two changed routes by DP-S2-6 (c), with FD 9752
+      (working id) as the owner of their 2xx. This slice removes nothing from Part B's
+      temporary exclusion list.
 17. **F-B1: the other callers stay read-only, and the bundle functions keep their shape**
-    *(PL-9765, C3)*. Two commands, each quoted with its output in the ledger:
+    *(PL-9765, C3; second check replaced by C16, auditor-1062 F2)*. Two checks, each quoted
+    with its output in the ledger:
     - `git diff --stat origin/main...HEAD -- backend/src/app/api/models.py backend/src/app/worker/scoring_handlers.py backend/src/app/worker/trace_handlers.py`
       prints nothing;
-    - `git diff -U0 origin/main...HEAD -- backend/src/app/api/score.py | grep -E '^[-+].*(def _fetch_bundle|def _compiled_for|-> CompiledBundle)'`
-      prints nothing (exit 1): neither function's signature nor its return type changes.
+    - ~~a `git diff -U0 … | grep` over the `def` lines~~ *(struck 2026-10-01: blind to an added
+      parameter, because both signatures span several lines, `score.py:163-170` and
+      `:230-237`)*. Instead, this script, run from the worktree root, compares each
+      function's `args` and `returns` nodes at `origin/main` and at `HEAD`, and prints
+      nothing when they are equal (measured: nothing, rc 0, at the tree above against
+      itself):
+
+      ```python
+      import ast
+      import subprocess
+
+      NAMES = ("_fetch_bundle", "_compiled_for")
+
+
+      def signatures(ref: str) -> dict[str, tuple[str, str]]:
+          src = subprocess.run(
+              ["git", "show", f"{ref}:backend/src/app/api/score.py"],
+              capture_output=True, text=True, check=True,
+          ).stdout
+          tree = ast.parse(src)
+          return {
+              n.name: (ast.dump(n.args), ast.dump(n.returns) if n.returns else "")
+              for n in ast.walk(tree)
+              if isinstance(n, ast.AsyncFunctionDef) and n.name in NAMES
+          }
+
+
+      base, head = signatures("origin/main"), signatures("HEAD")
+      assert set(base) == set(NAMES), f"not found at origin/main: {set(NAMES) - set(base)}"
+      for name in NAMES:
+          if base[name] != head.get(name):
+              print(f"{name}: signature or return annotation changed")
+      ```
+
+      **Red on broken input:** with a dummy keyword parameter (`unused: int = 0`) added to
+      `_fetch_bundle` in a scratch commit, the script prints
+      `_fetch_bundle: signature or return annotation changed`; the commit is dropped. Quoted.
     The governance gate's call (`backend/src/app/api/models.py:1215`, which uses
     `_fetch_bundle` and never `_compiled_for`, `:1212-1214`) and the two workers'
     `_compiled_for` calls (`backend/src/app/worker/scoring_handlers.py:85` import, `:208`
     call; `backend/src/app/worker/trace_handlers.py:30` import, `:82` call) keep passing
-    their existing tests in the full gate (Acceptance 10). This item is a constraint on the
-    diff, not a guard, so it has no red-on-broken-input run; Acceptance 6 and 7 carry the
+    their existing tests in the full gate (Acceptance 10). Acceptance 6 and 7 carry the
     behaviour's reds.
+18. **S2 does not widen the untyped surface of the 2 changed routes** *(PL-9765, C13; the
+    lead's message of 2026-10-01 10:33 BST, on DP-S2-6 (c))*. Their 2xx stay open objects
+    (owner FD 9752, working id), so nothing in the OpenAPI holds their content. A
+    characterisation test in `backend/tests/test_deployment_route_types.py` does instead.
+    - **What it pins:** for `POST /api/v1/approval-requests` (201) and
+      `POST /api/v1/approval-requests/{request_id}/withdraw` (200), the **exact** set of
+      top-level response keys, and the exact key set of each element of `decisions`, compared
+      with `==` (not a subset). Any undeclared add, drop or rename is red, naming the key.
+    - **The key sets at the tree above**, read from `service.to_dict`
+      (`backend/src/app/platform/approvals.py:648-673`), which both routes return: top level
+      `id`, `artifact_ref`, `artifact_type`, `environment`, `submitted_by`, `submitted_at`,
+      `change_summary`, `status`, `approvers_required`, `approvers_recorded`, `decisions`,
+      `withdrawn_reason` (12 keys); each `decisions` element `approver_id`, `decision`, `at`,
+      `comment` (4 keys).
+    - **Keys this slice adds: none.** Neither Task 5 nor Task 6 changes `to_dict` or what the
+      two routes return. The test's expected sets are therefore the sets above, before and
+      after. If the executor finds it must add, drop or rename a key, it **stops and
+      reports**: the key goes into this list with its type by a dated delta first, never
+      into the test alone.
+    - **Before and after:** the test is written and run green against the tree before
+      Tasks 5 and 6 change either route (it characterises today's output), and it stays green,
+      unchanged, after them. Exercised for the deployment branch of `POST
+      /api/v1/approval-requests` (a Deployment Request in `review`) and for a `rating_version`
+      ref, and for the withdraw route on a request with one decision recorded, so
+      `decisions` is non-empty.
+    - **Red first, on broken input:** with `to_dict` patched to add a key (`"extra": 1`), to
+      drop `withdrawn_reason`, and to rename `environment` to `env`, each run is red naming
+      the key and the route. Restore. Quoted in the ledger.
+19. **A compile of a non-draft Rating Version is handled as RL 9751 rules — BLOCKING: S2 does
+    not merge without it** *(PL-9765, C14; FD 9754 (working id); the maintainer's entry headed
+    `2026-10-01 10:34:45 BST — FD 9754 (#1064, a non-draft rating version can be recompiled and its bundle rewritten): MEDIUM, owner WK-674 S2, and **S2 does not merge without the guard**; the option choice goes to a DM now`)*. `compile_rating_version`
+    (`backend/src/app/platform/rating_versions.py:395-542`) and its route
+    (`POST /api/v1/rating-versions/{rating_version_id}/compile`, `backend/src/app/api/models.py:1233`,
+    handler `:1237`) read no status, so an approved version's bundle and `content_hash` can be
+    rewritten after approval. The first Deployment, which this slice creates, is the trigger
+    for real exposure. **The behaviour is DP-S2-7's, as RL 9751 (working id) rules it**; this
+    item is completed by a dated delta once the ruling lands, naming its cases. Whatever it
+    rules, each case is **red first** in `backend/tests/test_rating_versions.py` (or the file
+    the ruling names), run, not reasoned: the audit's red was reasoned from code. Under
+    option (1), for example, a compile of a `review`, `approved` or `archived` version is
+    refused, and the version's `bundle` metadata is unchanged after the refusal.
 
 ## Global Constraints
 
@@ -600,7 +694,7 @@ component whose name is a published shape".
   Slice 1 is `SL-1271`, `status: closed` at the tree above, so these two conditions no longer
   bind against it. The dispatch record applies the same two checks to whichever slice holds
   lane B at dispatch.)*
-- **Never concurrent with `SL-1367`** *(PL-9765, C8; F-B4)*. `PL-1364` (FD-1335 Part A)
+- **Never concurrent with SL 1367 (#1056)** *(PL-9765, C8; F-B4)*. PL 1364 (#1056) (FD-1335 Part A)
   edits the route decorators of `backend/src/app/api/score.py`, and Task 6 edits the same
   file. `score.py` is shared and not registry-exempt, so the two serialise (RL-1263). The
   dispatch records of both slices state it and name the order.
@@ -673,11 +767,12 @@ each is named once here and used as named.
 | 5 | `POST /api/v1/environments/{env}/deployment-requests` | `DeploymentRequestCreate` (`deployments.py`, slug `deployment-request-create`): `rating_version_ref: ArtifactRef`, `change_summary`, `skip: PromotionSkip \| None` (`PromotionSkip` in `approvals.py`, reached through the body's `$defs`) | 201 `DeploymentRequest` (`deployments.py`, slug `deployment-request`) | 5 |
 | 6 | `POST /api/v1/environments/{env}/deployments` | `DeploymentCreate` (`deployments.py`, slug `deployment-create`): `rating_version_ref: ArtifactRef`, `reason`, `deployment_request_ref: ArtifactRef \| None`, `extra="forbid"` (no `skip`, RL-1301 A.5) | 201 `Deployment` (`deployments.py`, slug `deployment`) | 5 |
 | 7 | `GET /api/v1/environments/{env}/deployments` | none (no body) | 200 `Page[Deployment]` | 5 |
-| 8 *(changed)* | `POST /api/v1/approval-requests/{request_id}/withdraw` | **today** `Withdraw` (`backend/src/app/api/approvals.py:90`, backend class; `reason`, `artifact_is_live`). **After:** `ApprovalWithdrawal` (`approvals.py`, slug `approval-withdrawal`): `reason` only, `min_length=1`, `extra="forbid"` | **today** 200 open object (FD-1335 form 2). **After:** as **DP-S2-6** rules; under its recommendation (c), unchanged and left to FD-1335 Part B | 6 |
-| 9 *(changed)* | `POST /api/v1/approval-requests` (its deployment branch, Task 5 step 6) | **today** `SubmitApproval` (`backend/src/app/api/approvals.py:75`, backend class). **After:** `ApprovalSubmission` (`approvals.py`, slug `approval-submission`), the same three fields unchanged | **today** 201 open object (FD-1335 form 2). **After:** as **DP-S2-6** rules, as row 8 | 5 |
+| 8 *(changed)* | `POST /api/v1/approval-requests/{request_id}/withdraw` | **today** `Withdraw` (`backend/src/app/api/approvals.py:90`, backend class; `reason`, `artifact_is_live`). **After:** `ApprovalWithdrawal` (`approvals.py`, slug `approval-withdrawal`): `reason` only, `min_length=1`, `extra="forbid"` | **today** 200 open object (FD-1335 form 2). **After:** unchanged (DP-S2-6 (c)); owner FD 9752 (working id), in FD-1335 Part B; pinned by Acceptance 18 | 6 |
+| 9 *(changed)* | `POST /api/v1/approval-requests` (its deployment branch, Task 5 step 6) | **today** `SubmitApproval` (`backend/src/app/api/approvals.py:75`, backend class). **After:** `ApprovalSubmission` (`approvals.py`, slug `approval-submission`), the same three fields unchanged | **today** 201 open object (FD-1335 form 2). **After:** unchanged, as row 8 | 5 |
 
-Status codes follow the neighbouring routes (`201` for a create). The 2xx of rows 8 and 9 wait
-on DP-S2-6: no shape that exists today matches what those routes emit (Acceptance 16).
+Status codes follow the neighbouring routes (`201` for a create). The 2xx of rows 8 and 9 stay
+untyped by DP-S2-6 (c): no shape that exists today matches what those routes emit (Acceptance
+16), and FD 9752 (working id) owns them. Acceptance 18 pins their exact key sets.
 
 ### Premises re-derived at the tree above
 
@@ -731,13 +826,15 @@ named with the slices that may also touch it.
 | `backend/src/app/db/models.py` | `EnvironmentRow`, `DeploymentRow` appended (exempt); **`ScoringTraceRow` gains a column** (an edit to an existing class) | WK-1250 S1 (appends) | the appends are exempt; the `ScoringTraceRow` edit serialises with any slice editing that class |
 | `backend/src/app/main.py` | two router registrations | WK-1250 S1 | exempt (append only) |
 | `backend/migrations/versions/` | one new revision | WK-1250 S1, WK-690 S1 (none planned) | exempt; re-point `down_revision` at the second merge |
-| `backend/src/app/api/score.py` (`_required_ref` and the `score` handler; **not** `_fetch_bundle` or `_compiled_for`, whose signatures and return types do not change, Acceptance 17), `backend/src/app/platform/traces.py` | default-live resolution; the trace's Deployment reference *(PL-9765, C3)* | **SL-1367** (`PL-1364`, FD-1335 Part A: the route decorators), WK-1250, WK-673, WK-675 S7b (RL-1263 item 4 names `score.py`) | **serialises** with any in-flight slice editing `score.py`; **never concurrent with `SL-1367`**, and the dispatch records of both say so (C8) |
+| `backend/src/app/api/score.py` (`_required_ref` and the `score` handler; **not** `_fetch_bundle` or `_compiled_for`, whose signatures and return types do not change, Acceptance 17), `backend/src/app/platform/traces.py` | default-live resolution; the trace's Deployment reference *(PL-9765, C3)* | **SL 1367 (#1056)** (PL 1364 (#1056), FD-1335 Part A: the route decorators), WK-1250, WK-673, WK-675 S7b (RL-1263 item 4 names `score.py`) | **serialises** with any in-flight slice editing `score.py`; **never concurrent with SL 1367 (#1056)**, and the dispatch records of both say so (C8) |
 | `backend/src/app/api/models.py` (the governance gate's `_fetch_bundle` call, `:1215`), `backend/src/app/worker/scoring_handlers.py` (`:85`, `:208`), `backend/src/app/worker/trace_handlers.py` (`:30`, `:82`) | **nothing: read-only** *(PL-9765, C3, F-B1)* | — | not touched; Acceptance 17's `git diff --stat` prints nothing |
 | `backend/src/app/api/service_accounts.py` (`:63`, `:180`, `:246`) | the Environment-slug check at creation and rotation (RL-1301 A.6) | WK-674 S3 (per-environment keys, register F54: the same lines) | an edit to existing functions: serialises with any in-flight slice editing them; S3 follows this slice anyway |
 | `backend/src/app/platform/approvals.py` (`set_policy`, `:170-222`) | the existence check of RL-1301 A.6 (the guard's `decide` change is Slice 2a's) | any slice editing `set_policy` | an edit to an existing function: serialises unless the dispatch record shows no other in-flight slice edits it |
 | Slice 2a's shared paths (`approvals.py` in `platform/` and `api/`, `models.py`, the migrations registry) | this slice follows Slice 2a in lane A | Slice 2a (PL-1303, closed), the FD-1356 fix | Slice 2a has closed. Against the FD-1356 fix: **this slice first, then the fix, never concurrently** (both edit `_carry_to_the_artifact` and `platform/approvals.py`), by order (b) of the 10:10:32 entry *(PL-9765, C7; PL-1306 had S2a → the fix → S2)* |
-| `backend/src/app/api/approvals.py` (`Withdraw` and `SubmitApproval` moved out; `withdraw_request` and `submit_for_approval` typed) | server-derived liveness; both bodies become `model-schema` types, and both 2xx as DP-S2-6 rules (Acceptance 16) *(PL-9765, C1)* | the FD-1335 Part B slice (carrier WK-1178: these two routes are 2 of its 12), the FD-1356 fix | an edit to existing functions: serialises with each. Under DP-S2-6 (a) or (b), the two routes leave Part B's temporary exclusion list in this slice's commit, if Part A's guard has merged |
-| `packages/model-schema/src/model_schema/deployments.py` (new), `approvals.py` (`PromotionSkip`, `ApprovalWithdrawal`, `ApprovalSubmission`), `scripts/generate-contracts.py` (`GENERATED_SHAPES`: the Route table's slugs) | the Route table's shapes *(PL-9765, C1)* | WK-1250, WK-673 S4 (`GENERATED_SHAPES` appends) | appends to a dict: serialises unless the dispatch record shows different keys only. Under DP-S2-6 (a), registering `approval-request` would make the hand-authored `docs/contracts/schemas/approval-request.schema.json` two-sided |
+| `backend/src/app/api/approvals.py` (`Withdraw` and `SubmitApproval` moved out; `withdraw_request` and `submit_for_approval` typed) | server-derived liveness; both bodies become `model-schema` types; both 2xx unchanged, pinned by Acceptance 18 (DP-S2-6 (c)) *(PL-9765, C1)* | the FD-1335 Part B slice (carrier WK-1178: these two routes are 2 of its 12), the FD-1356 fix | an edit to existing functions: serialises with each. The two routes' 2xx stay on Part B's list (DP-S2-6 (c); owner FD 9752, working id) |
+| `packages/model-schema/src/model_schema/deployments.py` (new), `approvals.py` (`PromotionSkip`, `ApprovalWithdrawal`, `ApprovalSubmission`), `scripts/generate-contracts.py` (`GENERATED_SHAPES`: the Route table's slugs) | the Route table's shapes *(PL-9765, C1)* | WK-1250, WK-673 S4 (`GENERATED_SHAPES` appends); **the FD-1357 fix (PL 9764, working id; #1057)**, which also edits `packages/model-schema/src/model_schema/__init__.py`, `scripts/generate-contracts.py`, `backend/tests/test_contracts.py` and `03` §5.1 rows *(PL-9765, C15)* | appends to a dict: serialises unless the dispatch record shows different keys only. `approval-request` is not registered (DP-S2-6 (c)) |
+| `backend/tests/test_contracts.py` (`ONE_SIDED_SLUGS`, `:69`) *(PL-9765, C15)* | one entry per new generated-only slug | the FD-1357 fix (PL 9764, working id; #1057), PL 9788 (working id) and PL 1364 (#1056) (their guard lists), WK-1250 | an edit to an existing dict: serialises with each unless the dispatch record shows different keys only |
+| `backend/src/app/platform/rating_versions.py` (`compile_rating_version`, `:395-542`), `backend/src/app/api/models.py` (the compile route, `:1233`, only if RL 9751 needs it) *(PL-9765, C14)* | the compile guard, as RL 9751 (working id) rules | any in-flight slice editing either function; the FD-1357 fix if it touches them | an edit to existing functions: serialises. `models.py:1215` (the governance gate) stays read-only (Acceptance 17) |
 | `backend/tests/test_api_authorisation_sweep.py` (and any sibling Acceptance 12 (f) finds) | Task 0A: flattening, the count equality, the spec pin, the valid-body sweep, the named allow-list | none found | test-only; **no RL-1263 overlap with WK-690 S1 and no third slot** (the 11:01:50 entry) |
 | the five modules' §5.1 REST tables (`01`, `02`, `03`, `06`, `07`) | **nothing in this slice**: Task 0A (c) moved out (the 11:17:35 entry); #977 (a) puts the column in a WK-1178 slice. **If that slice lands first**, this slice fills the column for its own new rows (`03` and `07` §5.1) | WK-1250 S1 (`03` §5.1 rows), WK-1178 fix slice (`03:810-845`), any slice appending §5.1 rows | **serialises** with each: a new column edits every existing row of the table |
 | `backend/src/app/api/approvals.py` (`_carry_to_the_artifact`) | one call added, to the deployment module's `apply_approval_decision` (RL-1301 A.4) | any slice adding an approvable type | an edit to an existing function: serialises unless the dispatch record shows the two diffs add different calls only |
@@ -753,7 +850,8 @@ named with the slices that may also touch it.
 | DP-S2-3 | **The shape of `CR-1212` item 4's environment scope on `deployment:promote`.** The test is fixed ("a Deployer whose grant names only `uat` is refused on `prod`", `PL-1237:810-811`); the mechanism is not. A grant's scope today is one resource or the workspace (premise f) | (a) Add `ScopeType.ENVIRONMENT`, with `scope_id` the Environment's id; the deploy route checks `deployment:promote` against `ResourceRef(ENVIRONMENT, env.id)`, so `_covers` is reused unchanged and a workspace-wide Deployer still covers every environment; (b) as (a), but `deployment:promote` is honoured **only** through an environment-scoped grant, so a workspace-wide Deployer deploys nowhere; (c) a list of environment names on the assignment | **(a).** It reuses the one scope mechanism and its one check (`rbac.py:205-217`), keeps today's workspace-wide Deployer working, and satisfies the test. (b) is stricter and makes every existing grant useless at once. (c) adds a second scope mechanism beside `scope_type` | decision point | yes — Tasks 1, 2 and 5 | **RL-1301 (working id 9906) B — (a)**: `ScopeType.ENVIRONMENT`, checked **in the handler** with `resource=ResourceRef(ScopeType.ENVIRONMENT, <environment id>)`, never by a bare `requires(Permission.DEPLOYMENT_PROMOTE)`; `06` FR-345 gains "or Environments" in the spec-first commit |
 | DP-S2-4 | **Where is "the spec's declared permission" for a route?** Acceptance 12 (c) must pin each route's permission against the spec, never a hand-written map (the 11:06:50 entry). At the tree above **no spec declares one per route**: every module's §5.1 REST table has the columns `Method \| Path \| Purpose` only (`01`, `02`, `03`, `06`, `07`), and `docs/contracts/openapi/generated.json` carries no `x-` extension at all (`grep -o '"x-[a-z-]*"' docs/contracts/openapi/generated.json` prints nothing) | (a) A `Permission` column on each module spec's §5.1 REST table, filled for every route (the spec is where a route is declared), and a parser in the test; (b) a routes cell on each Built row of `06` §4.1's permission table (RL-1305's D4), one place beside the catalogue WK-1178 checks; (c) an `x-permission` extension emitted into the generated OpenAPI from `requires()` | **(a).** The route's row is the one place a reader looks for what a route requires, and a missing cell is visible there. (b) puts routes into a permission catalogue whose rows are keyed by permission, so a route guarded by two permissions or none has no natural row, and it couples this task to RL-1305's table. (c) is circular: the "spec" would be generated from the code under test, so the `AUDIT_READ → JOB_READ` swap would change both sides and stay green. **Cost of (a):** a spec edit to five modules' §5.1 tables, which serialises with every in-flight slice appending §5.1 rows (**Write set**) | decision point | **no** — Task 0A (c) moved out of this slice (the 11:17:35 entry) | **#977 (working id 9907, head `070a83fe` as PL-1306 read it; `1dfca5c7` at the tree above, dm-effort-high) — (a)**: a Permission column on all 152 §5.1 rows (*PL-9765*: the audit's F-A2 measured 156 at the tree above; the WK-1178 pin slice re-derives the population at its dispatch), carried by a WK-1178 slice **serialised with this one**; this slice's new routes are declared by whichever of the two lands second, and the later checks the earlier's |
 | DP-S2-5 | **The policy is keyed by environment *name*, and FR-428 lets an Environment be renamed** (RL-1301 audit advisory A3). `ApprovalPolicy.entry_for(artifact_type, environment)` matches a string (`packages/model-schema/src/model_schema/approvals.py:146-162`) and `ApprovalRequestRow.environment` is `String(32)` (`backend/src/app/db/models.py:659`). RL-1301 A.1 pins the Environment's identity on the request row but not on the policy key, so renaming `prod` would leave the `prod` entry matching nothing, and by RL-1301 A.5 a target with no entry needs no request: a rename makes a gated target look ungated | (a) Key the policy by Environment identity, and refuse a rename that would change any entry's resolution; (b) refuse any rename of an Environment named by a policy entry; (c) re-key the policy's entries in the rename's transaction | **(a)**, the maintainer's steer (the 11:14:48 entry, last bullet). It closes the hole at its cause, since the key stops being renamable. (b) leaves the key renamable and relies on every rename path remembering the check. (c) edits governance's policy from `07`'s rename route, a second writer of the policy beside `set_policy` | decision point | yes — Tasks 2, 4 and 5 | **Disposed by RL-1301 A.6 (head `80afeb40`, text unchanged since `327e1179`: "This item disposes of the leaf plan's DP-S2-5") — an immutable Environment slug**: policy, `ApprovalRequestRow.environment`, `{env}` and every reference key on the slug; FR-428's rename changes the display name only; a slug change is refused; `set_policy` refuses an entry naming no existing slug. Retiring a policy-named Environment is left to this plan (refused, **Decided in this plan**; RL-1301 A.6 at `80afeb40` confirms both this and the request slug) |
-| DP-S2-6 *(PL-9765)* | **What 2xx type do the 2 changed approval-request routes declare?** The 10:10:46 entry accepts "the method deltas on Withdraw and POST /approval-requests' deployment branch, typed the same way". The bodies can be (Acceptance 16). The 2xx cannot be typed as any shape that exists today without resolving a disagreement first: `service.to_dict` (`backend/src/app/platform/approvals.py:648-673`) emits `environment` and no `workspace_id`; `ApprovalRequest` (`packages/model-schema/src/model_schema/approvals.py:275`, `extra="forbid"`) requires `workspace_id` and has no `environment`; the hand-authored `docs/contracts/schemas/approval-request.schema.json` requires `evidence_bundle` and `checklist`, which neither carries (RL-1301 A.2) | (a) **Reconcile, then type:** a dated `06` §4.3 amendment and `ApprovalRequest` gains `environment`; `to_dict` emits `workspace_id`; the hand-authored contract is ruled on (amended, or declared one-sided); both routes' 2xx become `$ref ApprovalRequest`. (b) **A view shape:** a published `ApprovalRequestView` in `model-schema` that matches what `to_dict` emits, as the backend's `AuditEventView` (`backend/src/app/api/audit.py:63`) and `TraceView` (`backend/src/app/api/traces.py:100`) are views; `06` §4.3 and `ApprovalRequest` untouched, the disagreement filed as a finding. (c) **Bodies only in S2:** this slice types the two bodies and leaves both 2xx in FD-1335 Part B, asserted unchanged; the disagreement is resolved once, for all four routes that share `to_dict`, by Part B's slice (WK-1178) | **(c).** The disagreement is one defect across four routes. Resolving it for two of them in S2 splits one fix across two Works, and puts a §0 reconciliation, which needs a ruling, on G2's critical path (the 10:10:32 entry: S2 is "on G2's critical path"). (a) is the right end state, but it is a spec change plus a contract ruling; it belongs with Part B, which must make it for `decide` and `GET` anyway. (b) adds a second shape for one concept beside `ApprovalRequest`, close to what `CLAUDE.md` §2 forbids ("a shape defined twice will diverge"). **Cost of (c):** it narrows the 2xx half of the acceptance the maintainer accepted, so it needs the maintainer's confirmation, not only a ruling | decision point | **yes** — Acceptance 16's 2xx half, Tasks 5 and 6 (rows 8 and 9) | open: to the lead, for the maintainer (scope) or the decision-maker (the §0 reconciliation, if (a)) |
+| DP-S2-6 *(PL-9765)* | **What 2xx type do the 2 changed approval-request routes declare?** The 10:10:46 entry accepts "the method deltas on Withdraw and POST /approval-requests' deployment branch, typed the same way". The bodies can be (Acceptance 16). The 2xx cannot be typed as any shape that exists today without resolving a disagreement first: `service.to_dict` (`backend/src/app/platform/approvals.py:648-673`) emits `environment` and no `workspace_id`; `ApprovalRequest` (`packages/model-schema/src/model_schema/approvals.py:275`, `extra="forbid"`) requires `workspace_id` and has no `environment`; the hand-authored `docs/contracts/schemas/approval-request.schema.json` requires `evidence_bundle` and `checklist`, which neither carries (RL-1301 A.2) | (a) **Reconcile, then type:** a dated `06` §4.3 amendment and `ApprovalRequest` gains `environment`; `to_dict` emits `workspace_id`; the hand-authored contract is ruled on (amended, or declared one-sided); both routes' 2xx become `$ref ApprovalRequest`. (b) **A view shape:** a published `ApprovalRequestView` in `model-schema` that matches what `to_dict` emits, as the backend's `AuditEventView` (`backend/src/app/api/audit.py:63`) and `TraceView` (`backend/src/app/api/traces.py:100`) are views; `06` §4.3 and `ApprovalRequest` untouched, the disagreement filed as a finding. (c) **Bodies only in S2:** this slice types the two bodies and leaves both 2xx in FD-1335 Part B, asserted unchanged; the disagreement is resolved once, for all four routes that share `to_dict`, by Part B's slice (WK-1178) | **(c).** The disagreement is one defect across four routes. Resolving it for two of them in S2 splits one fix across two Works, and puts a §0 reconciliation, which needs a ruling, on G2's critical path (the 10:10:32 entry: S2 is "on G2's critical path"). (a) is the right end state, but it is a spec change plus a contract ruling; it belongs with Part B, which must make it for `decide` and `GET` anyway. (b) adds a second shape for one concept beside `ApprovalRequest`, close to what `CLAUDE.md` §2 forbids ("a shape defined twice will diverge"). **Cost of (c):** it narrows the 2xx half of the acceptance the maintainer accepted, so it needs the maintainer's confirmation, not only a ruling | decision point | **yes** — Acceptance 16's 2xx half, Tasks 5 and 6 (rows 8 and 9) | **(c), decided 2026-10-01 by the maintainer's entry headed `2026-10-01 10:32:26 BST — #1062 DP-S2-6: option (c) ACCEPTED with three conditions; it narrows my item (3) for the 2 CHANGED routes' 2xx only; the three-shape disagreement becomes its own FD` (`~/gi-pricing-plan.local/channel/to-lead.md`)**. Supersedes, for these two routes' 2xx only, item (3) of the 10:10:46 entry. The 2xx are owned by **FD 9752 (working id)**, which names both routes; Acceptance 18 pins that S2 does not widen them. Condition 3 of that entry: auditor-1062 verifies the three-shape premise field by field before this plan mints; if the premise is wrong, (c) falls and DP-S2-6 goes to a decision-maker. |
+| DP-S2-7 *(PL-9765, C14)* | **Can a non-draft Rating Version be compiled?** FD 9754 (working id; #1064): `compile_rating_version` (`backend/src/app/platform/rating_versions.py:395-542`) and its route (`backend/src/app/api/models.py:1233`) read no status, so an approved version's bytes can move after approval | (1) refuse compile unless `draft`, in the service; (2) allow, but bind the compiled bundle immutably (RL-915 §4's deferred which-bundle-is-live policy); (3) intended, and documented | none from this plan: the maintainer sent it straight to a decision-maker, with a lean to (1) "for the DM to test, not a ruling" (the 10:34:45 entry) | decision point | **yes — S2 does not merge without it**: Acceptance 19, Task 5A | open: decision-maker dm-s2c7, RL 9751 (working id), in progress; the maintainer's entry headed `2026-10-01 10:34:45 BST — FD 9754 (#1064, a non-draft rating version can be recompiled and its bundle rewritten): MEDIUM, owner WK-674 S2, and **S2 does not merge without the guard**; the option choice goes to a DM now` |
 
 **Decided in this plan, as slice design, not decision points** (RL-1296 leaves
 them to "Slice 2", its "Not ruled here"):
@@ -817,7 +915,7 @@ them to "Slice 2", its "Not ruled here"):
 - [ ] *(PL-9765, C2.)* Run Acceptance 8's predicate at `origin/main` and record its output
   (2 at the tree above). Record whether `SL-1360` (`PL-1359`) has merged, which decides
   whether Acceptance 8's `STALE_OWNER` red can be shown.
-- [ ] *(PL-9765, C8.)* Confirm `SL-1367` is not in flight, and that no other in-flight slice
+- [ ] *(PL-9765, C8.)* Confirm SL 1367 (#1056) is not in flight, and that no other in-flight slice
   edits `backend/src/app/api/score.py`; name the SHA read. **Stop if one does.**
 - [ ] Re-derive premises a–u; record the tree and each result in the ledger.
 - [ ] Note the gate-slot rule of Acceptance 10 (the 11:42:08 entry) for every full run
@@ -994,8 +1092,10 @@ def promotion_order_refusal(
   `environment-create`, `environment-update`, `deployment`, `deployment-create`,
   `deployment-request` and `deployment-request-create`. Red first: a model-schema test that
   each class validates its example and refuses an unknown key; predicted red, `ImportError`.
-  Acceptance 2's two counts are quoted. `ApprovalWithdrawal` and `ApprovalSubmission` land in Tasks 6 and 5, with the routes that
-  use them; any 2xx shape for those routes lands as DP-S2-6 rules.
+  Acceptance 2's two counts are quoted. Each new slug gets its `ONE_SIDED_SLUGS` entry in
+  `backend/tests/test_contracts.py` in the same commit (C15), red first as Acceptance 2 says;
+  `approval-withdrawal` and `approval-submission` get theirs in Tasks 6 and 5. `ApprovalWithdrawal` and `ApprovalSubmission` land in Tasks 6 and 5, with the routes that
+  use them; those routes' 2xx stay untyped (DP-S2-6 (c), FD 9752 working id).
 
 ### Task 3: The migration
 
@@ -1164,12 +1264,24 @@ modify `backend/src/app/main.py` (one registration), `backend/src/app/errors.py`
 - [ ] **Route types, rows 5–7 and row 9** *(PL-9765, C1)*: red first, Acceptance 14 and 15
   over rows 5–7, with the route-set pin widened to all 7; and Acceptance 16 for row 9
   (`POST /api/v1/approval-requests`): `SubmitApproval` moved to `model-schema` as
-  `ApprovalSubmission` (slug `approval-submission`); the 2xx as DP-S2-6 rules (under (c),
-  asserted unchanged).
+  `ApprovalSubmission` (slug `approval-submission`); the 2xx unchanged (DP-S2-6 (c)), with
+  Acceptance 18's characterisation test red first.
 - [ ] The red-on-broken-input runs: G3 type check, blanket-skip validator, audit call, the
   handler's `resource=` argument (RL-1301 B.5), the floor-item check (RL-1301 A.4), and the
   deployment-request plant (Acceptance 13), each against Slice 2a's trigger.
 - [ ] Green; commit.
+
+### Task 5A: The compile guard, as RL 9751 rules (FD 9754; DP-S2-7) — placeholder *(PL-9765, C14)*
+
+**Files:** Modify `backend/src/app/platform/rating_versions.py` (`compile_rating_version`,
+`:395-542`) and, if the ruling needs it, `backend/src/app/api/models.py` (the compile route,
+`:1233`; not the governance gate's `_fetch_bundle` call at `:1215`, which stays read-only,
+Acceptance 17); tests as the ruling names.
+
+- [ ] **Not executable until RL 9751 (working id) is ruled and minted** (activation need 3a).
+  The lead fills this task by a dated delta naming the ruled option and its cases.
+- [ ] Red first, run: each case of Acceptance 19, with its predicted cause.
+- [ ] Green; commit. **S2 does not merge without this task's commit.**
 
 ### Task 6: Default-live scoring, the trace link, and server-derived liveness (RL-880, RL-888, RL-916, FR-357)
 
@@ -1227,8 +1339,8 @@ and `_maybe_sample_trace` `:420`; **not** `_fetch_bundle` or `_compiled_for`, *(
 - [ ] **Route types, row 8** *(PL-9765, C1)*: Acceptance 16 for
   `POST /api/v1/approval-requests/{request_id}/withdraw`. The body becomes `ApprovalWithdrawal`
   in `model-schema` (`reason` only, slug `approval-withdrawal`), the backend `Withdraw` class
-  is removed, and the 2xx is as DP-S2-6 rules (under (c), asserted unchanged). Red first, as
-  Acceptance 16 states.
+  is removed, and the 2xx is unchanged (DP-S2-6 (c)). Red first, as Acceptance 16 and 18
+  state.
 - [ ] Green; commit.
 
 ### Task 7: The gate and the ledger
@@ -1380,7 +1492,7 @@ Task 6's per-request resolution with the switch, and reuses Task 5's route shape
 
 ### Self-review of this superseding plan (PL-9765, 2026-10-01)
 
-- **Every change has a source and a site.** C1–C12 (**Changes from PL-1306**) each name the
+- **Every change has a source and a site.** C1–C17 (**Changes from PL-1306**) each name the
   maintainer's entry or audit finding behind them and the sections they touch. Each site is
   marked *(PL-9765)* in the body. Nothing else in `PL-1306`'s content was changed.
 - **The three accepted acceptance items are 14, 15 and 16**, each red first on broken input
@@ -1394,7 +1506,8 @@ Task 6's per-request resolution with the switch, and reuses Task 5's route shape
   the same way") cannot be met without a §0 reconciliation. DP-S2-6 records three options and
   recommends (c), bodies only in S2. That recommendation narrows what the maintainer accepted,
   so it is flagged for the maintainer, not assumed. The reading is static (no environment was
-  run at the root); the executor's red-first run is what confirms it.
+  run at the root); the executor's red-first run is what confirms it. *(2026-10-01: the
+  maintainer accepted (c); C13 applies it, with Acceptance 18.)*
 - **F-B1 is a constraint with a check** (Acceptance 17), not prose: two `git diff` commands
   whose expected output is empty.
 - **Branch A is checked by a predicate that was run** at the tree above (it printed 2), not
@@ -1408,5 +1521,6 @@ Task 6's per-request resolution with the switch, and reuses Task 5's route shape
   `require_in_review` call is `rating_versions.py:358`, not `:357`. Locators inside quoted
   history (dated notes and the self-review of `PL-1306` above) are left as written, except
   where a line names current code.
-- **Still open:** activation need 2 (#974 merged and minted, batch C; and DP-S2-6) and need 4
-  (the lead's go). Need 1 and need 3 hold.
+- **Still open:** activation need 2 (#974 merged and minted, batch C) and need 4 (the lead's
+  go), and **need 3a, RL 9751 (DP-S2-7, blocking the merge)**. Need 1 and need 3 hold. DP-S2-6
+  is decided (c) (C13, applied pre-merge).
