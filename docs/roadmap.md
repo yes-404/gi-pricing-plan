@@ -1201,6 +1201,24 @@ relates: [PL-1359, RL-1305, CR-1247, RL-1236, PL-1268]
 
 A pytest invariant fails the gate in three cases: `06` §4.1's permission tables and `model_schema.Permission` disagree; a Built name has no check site (a flattened, reach-proved `requires()` route dependency, or an AST-found `require_permission(` call) and no owner; or a Built name has a check site and still carries an owner (`CR-1247` Proposal 1 (c), decided by `RL-1305`). It must merge before WK-690 Slice 3's commit that adds `custom_objective:author` (`PL-1268` Slice 3). It retires `RL-1236`'s interim re-derive-at-each-close rule when it merges. Leaf plan `PL-1359`, which supersedes `PL-1279`, activated with this row. *(Minted and activated 2026-10-01 as SL-1360, on the maintainer's entry "2026-10-01 08:04:53 BST — correction ACCEPTED (RL 9856 = RL-1305, already minted); lane B proposal AGREED, with the delta in the dispatch record".)*
 
+#### SL-9761 — WK-1178 fix slice — FD-1356: a validation rule is approved only through the approval workflow
+
+```yaml
+id: SL-9761
+family: slice
+title: WK-1178 fix slice — FD-1356: a validation rule is approved only through the approval workflow
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-01
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 1dd5e264195677b4a13268b80ac8673c2c027135
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1356, RL-1301, PL-1306, SL-1256]
+```
+
+`FD-1356`'s fix (HIGH): rule approval goes through `approvals.submit` and `approvals.decide`, `_carry_to_the_artifact` gains the validation-rule branch, and the direct approve route becomes a thin client of the decide path or is removed (DP-1). A quorum of 2 leaves the rule in `review` after one approval. A dry-run whose outcome is `error` is refused at submit and at approve, one red-first case per cause (missing column, unknown check, missing table), and a `fail` outcome stays accepted. `RL-1301` A.4.5's temporary `approve_rule` allowance is removed red first. Rule approvals that no approval request backs are reset to `review`, with the count recorded (follow-on 2). Task 0 is the maintainer's containment query over every `gipricing*` database, with a STOP on a non-zero result; it printed 5 at planning time (DP-0). Leaf plan PL 9762 (working id; `draft`). **Activation needs:** WK-674 S2 (`SL-1256`) merged (the maintainer, 2026-10-01 ~10:10 BST, order (b) S2 → this fix); lane B order `SL-1360` → the FD-1357 fix → this slice → the `RL-1343` decimal fix → FD-1335 Part A; the plan's decision points ruled; the maintainer's agreement and the lead's go in a separate activation PR. Filed under working ids 9761 (this row) and 9762 (the plan), reserved by the lead; both are minted at the plan PR's merge turn.
+
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
