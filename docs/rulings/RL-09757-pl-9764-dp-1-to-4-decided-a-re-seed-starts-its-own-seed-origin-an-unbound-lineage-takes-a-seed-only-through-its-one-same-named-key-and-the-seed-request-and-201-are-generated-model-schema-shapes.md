@@ -445,3 +445,83 @@ to the lead. The executor does not re-word it.
   (201).
 - The seed route's `requestBody` or 201 is an open object in `generated.json`: red at
   `1dd5e264`.
+
+## Amendment 2026-10-01 10:43 BST — auditor-1065's F1 to F4, adopted by the lead
+
+auditor-1065 audited this record at `cb3f9705`. The lead adopted F1 to F4 and asked for
+them as one dated amendment. Nothing above is edited. Where this section and a clause
+above differ, this section governs. F5 (RL-1361 T7's `:783` locator, now `:786`) goes to
+the dispatch record, not here.
+
+**Re-checked at `origin/main` `92b4e4ac155536f80a5be183ad21be88cc92868f`, 2026-10-01
+10:43 BST (F4).** `git diff --stat 1dd5e264 92b4e4ac -- docs/specs backend packages scripts tests`
+prints nothing. No file that this record cites under those paths has moved, and every
+`file:line` above still holds.
+
+**F1 (MED), adopted: DP-4 also registers the two generated files with F83.** DP-4's ruled
+(a) gains two edits, made in the slice's one commit. Each was read at `92b4e4ac`.
+`scripts/audit-docs.py`'s `_CONTRACT_ARTIFACT_PATHS` (`:2620`) lists each generated schema
+by literal path. Without the entries, checks 30 and 35 fail on the new files. The auditor
+showed this with a dummy `rate-table-version.schema.json`, following the PL-1325 precedent
+(67 → 70). `<fix date>` and `<RL id>` are as defined in *Spec texts this ruling carries*.
+
+1. `scripts/audit-docs.py`: three lines **inserted** after the line below (`:2667`; it
+   occurs exactly once), before
+   `    "docs/contracts/schemas/generated/problem-detail.schema.json",`.
+
+   ```text
+       "docs/contracts/schemas/generated/sub-graph-body.schema.json",
+   ```
+
+   ```text
+       # <fix date>, FD-1357 fix (<RL id> DP-4)
+       "docs/contracts/schemas/generated/rate-table-version.schema.json",
+       "docs/contracts/schemas/generated/seed-from-model-request.schema.json",
+   ```
+
+2. `tests/test_audit_docs_ids.py` (`:2117`): the line below is **replaced**.
+
+   ```text
+       assert len(non_markdown) == 70, len(non_markdown)
+   ```
+
+   It is replaced with:
+
+   ```text
+       # 70 became 72 (WK-1178, FD-1357 fix, <fix date>): the generated
+       # `rate-table-version` and `seed-from-model-request` schemas, registered for F83's reason.
+       assert len(non_markdown) == 72, len(non_markdown)
+   ```
+
+   If the count on the slice's base is not 70, because another slice registered files
+   first, the executor stops and reports to the lead. The executor does not re-count.
+
+The lead proposed the comment date "2026-10-01". The text uses `<fix date>` instead. Each
+precedent comment carries the date of the slice that registers the files, and the fix may
+land later.
+
+*What it obliges* gains: PL 9764's write set and Acceptance 7 add `scripts/audit-docs.py`
+and `tests/test_audit_docs_ids.py`. Its acceptance gains "checks 30 and 35 are green with
+both generated files present". Red before the edit: both checks fail on the new files.
+
+**F2 (LOW), adopted: T-A's count predicate.** T-A's first find line also appears unchanged
+in its replacement, so a line-based count of that line stays 1. The predicates for
+Acceptance 9 are, each `grep -cF` over `docs/specs/03-rating-engine.md`:
+
+- find, before 1 and after 0:
+  `> seed-from-model, on the first version of a lineage; every derived version — manual`
+- replacement, before 0 and after 1:
+  `> \`against=seed\` on a version resolves to its seed origin: the lowest-numbered version of`
+
+T-B is an insert. Its anchor `> \`created_by_import\` remain mutually exclusive.` stays at
+1, and its replacement predicate (before 0, after 1) is
+`> **Re-seeding an existing table (added <fix date>, \`<RL id>\` DP-2, FR-230).** A seed`,
+with both placeholders filled.
+
+**F3 (LOW), adopted: DP-1 item 4's account of `:491` was wrong.** Item 4 says the tests
+other than `:258` "seed once or derive by import". `:491` does neither. It belongs to
+`test_diff_seed_without_a_seed_origin_404s` (`test_api_rate_tables.py:441-495`), which
+inserts an unseeded v1 directly and expects 404 `RATE_TABLE_MISS` "No seed origin". (a2)
+keeps that answer: v1 has no `seeded_from`, so DP-1 item 2's no-anchor case applies, and the
+test is unchanged. `:638` seeds once, and the service module's `:556` derives by import.
+Only `:258` re-seeds.
