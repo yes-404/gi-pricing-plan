@@ -310,3 +310,13 @@ labelled BST. BST is UTC+1 (`TZ=Europe/London date` confirms). The old lines sta
 
 The `uptime` load and `free -h` readings are unaffected (they carry no zone).
 
+### Correction (mint turn): one of the "14 audit-rc tests" failed for a second cause
+
+Gate runs 1 to 3 above call all 14 residual pytest failures tests that fail on check 31 alone. **That was
+wrong for one of them.** `tests/test_audit_docs_ids.py::test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_exempts`
+failed with `AssertionError: 70` against its pinned `== 67`, because this slice adds three entries to the
+F83 exemption register (the generated `sub-graph*.schema.json`). It would have stayed red after the mint.
+I found it when the other 13 went green on the minted tree, rather than at the first run, where I had
+classified the whole set by its common cause without reading each assertion. Fixed: the pin is 70 with a
+dated comment line in the file's own convention. The named file passes.
+

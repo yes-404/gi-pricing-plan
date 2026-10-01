@@ -2112,7 +2112,9 @@ def test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_e
     # `regression-run.schema.json`, the run's contract now compared against the model.
     # 66 became 67 (WK-672 Slice 4, PL-1213, 2026-09-29): the generated
     # `score-comparison.schema.json`, registered for F83's reason.
-    assert len(non_markdown) == 67, len(non_markdown)
+    # 67 became 70 (WK-1250 Slice 1, PL-1325, 2026-10-01): the generated `sub-graph`,
+    # `sub-graph-create` and `sub-graph-body` schemas, registered for F83's reason.
+    assert len(non_markdown) == 70, len(non_markdown)
     assert set(non_markdown) <= rels
 
     # Named individually, so the proof is "one of the 63" and not "63 of something".
