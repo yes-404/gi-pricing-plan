@@ -6,7 +6,7 @@ title: WK-1178 slice — FD-1335 Part A, the /score and /score/compare 200 respo
 status: draft                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-01
 owner: planner
-tree: 65fc6129e7a972a74afb95187246c9a483419b10
+tree: 427323218abaeb208a141cbbcd0a363a3ddc8815
 phase: P2
 work: WK-1178
 slice: SL-9787
@@ -70,7 +70,10 @@ of the same draft (#1036), not a revision of a frozen plan. The decision folds i
 (working id 9779, draft PR #1044, MEDIUM, owner WK-1178), the request-side twin of `FD-1335`. It
 is re-derived at `origin/main` `65fc6129e7a972a74afb95187246c9a483419b10`, and
 `git diff --stat 9b0fb97c 65fc6129` touches only `docs/`, so every code premise read at
-`9b0fb97c` still holds there. The decision's four items, and where each lands:
+`9b0fb97c` still holds there. **Bumped to `42732321`** (`427323218abaeb208a141cbbcd0a363a3ddc8815`)
+at the audit fix. `git diff --stat 65fc6129 42732321 -- . ':!docs'` prints nothing, and the
+committed `docs/contracts/openapi/generated.json` is byte-identical at both trees (`cmp`). So
+both sweeps and every code premise hold unchanged at `42732321`. The decision's four items, and where each lands:
 1. **One guard over 2xx responses and JSON request bodies, each side red first on broken input:**
    an untyped route that is not on the allow-list fails. This lands in Acceptance 1–5 and
    Tasks 1–2.
@@ -249,13 +252,26 @@ Evidence §1, which `FD 9779`'s predicate 2 restates:
 - `is_open_object`;
 - a 2xx response with no `content` is reported apart.
 
-**Test count.** Eight new test functions, which collect as twelve test items:
-- seven functions in `backend/tests/test_contracts.py`, which collect as eleven items, listed in
+**Helper API** (names fixed here, so the stub step's results can be predicted):
+- `_untyped_bodies(document) -> list[tuple[str, str, str, str, str]]` returns
+  `(side, METHOD, path, key, form)` for every reported body.
+- `_visited_bodies(document) -> Iterator[tuple[str, str, str, str]]` yields
+  `(side, METHOD, path, key)` for every body the walker inspected, reported or not.
+- `_guard_remainder(document) -> set[tuple[str, str, str, str]]` is the set of
+  `(side, METHOD, path, key)` that `_untyped_bodies` reports, minus the side's allow-list.
+  Response keys are matched on `(METHOD, path, status)` and request keys on `(METHOD, path)`.
+
+**Test count.** Ten new test functions, which collect as fifteen test items, plus one new
+fixture:
+- seven functions in `backend/tests/test_contracts.py`, which collect as twelve items, listed in
   1–6 below;
-- one function in `backend/tests/test_score_compare.py` (8 below).
+- two functions in `backend/tests/test_score_compare.py`: the 500 test (8) and the spy test
+  (8b);
+- one function in `backend/tests/test_score.py`: the spy test (8b);
+- the `outbound_validation_spy` fixture, appended to `backend/tests/conftest.py` (8b).
 
 Each function carries `@pytest.mark.req("FR-451")` unless another marker is named. The ledger
-quotes the `pytest --collect-only -q` lines for the new node ids. Their count must be 12.
+quotes the `pytest --collect-only -q` lines for the new node ids. Their count must be 15.
 
 1. **Each predicate is red on planted input before it is implemented, on each side** (`FD-1335`
    *Disposition* item 3: "Each form is shown red on broken input before the guard is written",
@@ -269,9 +285,15 @@ quotes the `pytest --collect-only -q` lines for the new node ids. Their count mu
      (`$ref BatchScoreRequest`) blanked to `{}`;
    - **request, form 2:** that body replaced by the open object.
 
-   The test runs first against `_untyped_bodies` defined as `return []`. **Predicted red, 4 of
-   4:** the assertion that the planted body is reported fails, because the stub reports nothing.
-   Then the predicates go in, and all 4 are green.
+   **The stub step.** `_untyped_bodies` is first defined as `return []`, and `_visited_bodies` as
+   `return iter(())`. Run this test and Acceptance 2's test against the stubs:
+   - **Predicted for this test, 4 of 4 red:** the assertion that the planted body is reported
+     fails, because the stub reports nothing.
+   - **Predicted for Acceptance 2's test, 1 red:** it fails on its first **visited** assertion,
+     because the stub visits nothing. Its "not reported" assertions would pass against a stub,
+     so this red is the reach control's, not the negative controls'.
+
+   Then the predicates and the walker go in, and all 5 are green.
 2. **Negative controls and the reach control**, in
    `test_the_untyped_body_predicates_pass_typed_bodies` (1 item). These are reported in neither
    form:
@@ -279,35 +301,48 @@ quotes the `pytest --collect-only -q` lines for the new node ids. Their count mu
    - the real `POST /api/v1/score` request body (`$ref QuoteContext`);
    - an object **with** `properties`, on either side.
 
-   The two real bodies are also asserted **visited**, so a walker that stops descending fails on
+   The two real bodies are also asserted **visited** (in `_visited_bodies`), so a walker that stops descending fails on
    a named path, not on a count (`contract-guard`, "Never count what a walker reached — name a
    path"). The test is green from the start. Its enforcement is shown by one deliberate break:
    on a backup copy, `is_open_object` loses its `"properties" not in schema` clause, and the
    control then fails on the object with `properties`. The break is quoted, then restored
    (`contract-guard` step 5).
-3. **The real document, each side red first.** `test_no_json_body_is_untyped` (1 item) collects
-   every reported body from `docs/contracts/openapi/generated.json`. It subtracts the allow-list:
+3. **The real document, each side isolated and red first.** `test_no_json_body_is_untyped` is
+   parametrised over side, which makes **2 items**. Each item asserts that **its own side** of
+   `_guard_remainder(_load(OPENAPI))` is empty, and on failure names side, method, path and key.
+   The allow-lists are:
    - responses: `UNTYPED_2XX_PERMANENT` and `UNTYPED_2XX_PENDING_PART_B`;
    - requests: `UNTYPED_REQUEST_PENDING`.
 
-   It asserts that the remainder is empty, and on failure it names side, method, path and key.
-   - **Response side, predicted red before Task 3:** the remainder is exactly
-     `("response", "POST", "/api/v1/score", "200")` and
-     `("response", "POST", "/api/v1/score/compare", "200")`, both form 1. It is green after
-     Task 3.
-   - **Request side:** green on the real document today, because all five are listed (the
-     maintainer's item 3). It is **red first on broken input**. On a backup copy, remove
-     `("POST", "/api/v1/rating-algorithms")` from `UNTYPED_REQUEST_PENDING`. The test then fails
-     with exactly `("request", "POST", "/api/v1/rating-algorithms", "application/json")`,
-     form 2. Quote it, then restore.
+   The two sides never share an assertion, so neither side's state can enter the other's
+   predicted output. Predicted outputs at each step:
 
-   Any other member of either remainder means a stale list: stop and report.
+   | Step | `[response]` | `[request]` |
+   |---|---|---|
+   | end of Task 2, real lists | **red**, remainder exactly `{("response", "POST", "/api/v1/score", "200"), ("response", "POST", "/api/v1/score/compare", "200")}`, both form 1 | green, remainder `set()` (all five listed, the maintainer's item 3) |
+   | end of Task 2, `("POST", "/api/v1/rating-algorithms")` removed from `UNTYPED_REQUEST_PENDING` on a backup copy | red, unchanged (the same two keys) | **red**, remainder exactly `{("request", "POST", "/api/v1/rating-algorithms", "application/json")}`, form 2 |
+   | after Task 3 | green, `set()` | green, `set()` |
+
+   The request side's red-first is the second row. The executor quotes it, then restores. Any
+   other member of either remainder means a stale list: stop and report.
 4. **An untyped route that is not on the allow-list fails, on each side.**
    `test_the_guard_fails_on_an_unlisted_open_body` is parametrised over side, which makes
-   **2 items**. Each takes the real document and makes one body an open object:
-   `POST /api/v1/score/batch`'s 202 response, or its JSON request body. The test asserts that
-   the guard's remainder is exactly that one key. It is green on correct code. Its enforcement
-   is the same red as Acceptance 1.
+   **2 items**. Each takes a `copy.deepcopy` of the real document and makes one body an open
+   object: `POST /api/v1/score/batch`'s 202 response, or its JSON request body. It asserts
+   **`_guard_remainder(planted) == _guard_remainder(real) | {planted_key}`**, where `real` is the
+   unplanted document at that moment. So the assertion holds whatever the baseline holds:
+   - the response planted key is `("response", "POST", "/api/v1/score/batch", "202")`;
+   - the request planted key is `("request", "POST", "/api/v1/score/batch", "application/json")`.
+
+   Exact predicted sets:
+   - **end of Task 2:** `[response]`'s planted remainder is the two `/score` keys plus the
+     planted key (3 keys), and `[request]`'s is the planted key alone (1 key);
+   - **after Task 3:** each is the planted key alone.
+
+   Both items are green at both steps. The test also asserts `planted_key not in
+   _guard_remainder(real)`, so a baseline that already held the key cannot make the union
+   vacuous. Its enforcement is Acceptance 1's red: against the stub, `_guard_remainder(planted)`
+   is empty and the equality fails.
 5. **The allow-lists are exact, each temporary entry carries its marker, and multipart is pinned
    by citation.** Two tests:
    - **`test_every_untyped_body_exclusion_is_still_untyped` (1 item).** It asserts that every
@@ -375,10 +410,107 @@ quotes the `pytest --collect-only -q` lines for the new node ids. Their count mu
    marked `@pytest.mark.req("NFR-502")`, returns a `ScoreComparison.model_construct(…)` that
    carries values violating its declared types, and asserts a 200 with those values verbatim.
    Mirror the neighbouring `/score` test and the module's own fixtures. Do not reinvent them
-   (`README.md` convention 3). **Shown red on broken input**, both tests: add
-   `response_model=ScoringResult` (or `ScoreComparison`) to the decorator on a backup copy. Each
-   test then fails with a **500** from FastAPI's outbound validation, and the executor quotes the
-   cause line. Then restore. A red with any other cause is a plan defect.
+   (`README.md` convention 3).
+
+   **Shown red on broken input**, both tests. On a backup copy of `score.py`:
+   - change the handler's return annotation to `-> ScoringResult` (or `-> ScoreComparison`);
+   - replace `return Response(content=….model_dump_json(), media_type="application/json")`
+     with `return result.model_dump()` (or `return comparison.model_dump()`).
+
+   Each test then fails with a **500**. The handler now hands FastAPI a value that has to pass
+   through the response field. `serialize_response` calls `field.validate`, the malformed dict
+   fails it, and the `ResponseValidationError` is mapped to 500 by `_handle_unexpected`
+   (`backend/src/app/errors.py`; the client is built with `raise_server_exceptions=False`,
+   `backend/tests/conftest.py:35`). This is the case `test_score.py:341-356`'s docstring names.
+   The executor quotes the 500 and the cause line, then restores.
+
+   **Measured, and reproducible by the re-audit.** The scratch app is a bare `FastAPI()` with the
+   repository's `app.errors.install_error_handlers(app)`, at fastapi 0.141.1 (the `uv.lock` pin,
+   in a `uv sync --all-packages` venv of `9b0fb97c`, 2026-10-01). It is driven by
+   `TestClient(app, raise_server_exceptions=False)`, as `conftest.py` does. Each route returns:
+   - `ScoringResult.model_construct(outcome="quoted", rating_version_ref="x", bundle_hash=12345, premium_ladder="not-a-list", outputs={}, decline_reasons=[], trace=None, timing_ms={"total": "not-a-float"})`;
+   - for compare, `ScoreComparison.model_construct(base=<that>, comparison=<that>, diff="not-a-diff")`;
+   - or the `.model_dump()` of either.
+
+   Why the instance passes: FastAPI's `serialize_response` calls `field.validate(response_content, …)`,
+   and pydantic accepts an instance of the declared class without revalidating it
+   (`revalidate_instances='never'`). The results:
+
+   | Break form | Status |
+   |---|---|
+   | annotation, returning the `model_dump()` dict | 500 |
+   | `response_model=`, returning the `model_dump()` dict | 500 |
+   | `ScoreComparison` annotation, returning the `model_dump()` dict | 500 |
+   | `response_model=`, still returning the raw `Response` | **200** (FastAPI passes a `Response` through untouched) |
+   | annotation or `response_model=`, returning the `model_construct` **instance** | **200** (pydantic does not revalidate an instance of the declared class, `revalidate_instances='never'`) |
+
+   So neither the raw-`Response` form nor the return-the-instance form can go red. Only the
+   returned dict can. A red with any other cause, or a 200 on the dict form, is a plan defect:
+   stop and report.
+
+   **8b. The property itself: a spy on outbound validation.** This was added 2026-10-01 by the
+   maintainer, in place and before the mint. The 500 tests above observe a **side effect** of
+   validation: a malformed body failing it. They are blind to a route that validates and
+   passes, which is the instance-return row of the table. They are also blind to any FastAPI
+   change in how a failure surfaces. **A check on the property survives a FastAPI upgrade,
+   where a 500 proxy may not.** So the slice also counts calls to the outbound-validation entry
+   point directly.
+
+   **The spy point, measured under fastapi 0.141.1.** It is
+   `fastapi._compat.v2.ModelField.validate`, counted only when `loc[:1] == ("response",)`. The
+   reasons, read from `fastapi.routing.get_request_handler` at that version:
+   - Every response validation passes through it. The plain-return path calls
+     `serialize_response`, which calls `field.validate(response_content, {}, loc=("response",))`.
+     The JSONL and SSE stream path calls `stream_item_field.validate(data, {}, loc=("response",))`
+     directly, without `serialize_response`.
+   - A raw `Response` return (`isinstance(raw_response, Response)`) skips both.
+   - **Not `serialize_response`.** It misses the stream path. It is also called with
+     `field=None` for an unannotated non-`Response` return, which runs `jsonable_encoder` and
+     validates nothing.
+   - **Not `TypeAdapter.validate_python` or `model_validate`.** They run for inbound bodies and
+     in application code too, and carry no `loc` to tell outbound from inbound.
+   - The `loc` filter is what separates outbound from inbound. Request bodies go through the same
+     `ModelField.validate` with `loc=("body", …)`.
+
+   Measured in the scratch app described above, with a `QuoteContext` body
+   (`/tmp/planner1335a/spy_measure.py`, sha256 prefix `cd7f23f0a90d799b`; its source is described
+   here because the file is not committed):
+
+   | Route in the scratch app | Status | `loc=("response",)` calls | All spy events |
+   |---|---|---|---|
+   | raw `Response`, with `responses={200: {"model": ScoringResult}}` (the /score shape after Part A) | 200 | **0** | one `("body",)` validate |
+   | planted control: `response_model=ScoringResult`, returning a dict | 500 (malformed) | **1** | body, `serialize_response`, response |
+   | `-> ScoringResult`, returning `model_dump()` (the red-first break) | 500 | **1** | body, `serialize_response`, response |
+   | `-> ScoringResult`, returning the instance | **200** | **1** | body, `serialize_response`, response |
+
+   The last row is the case the 500 proxy cannot see and the spy can.
+
+   **The tests.**
+   - **A shared fixture `outbound_validation_spy`, appended to `backend/tests/conftest.py`.** It
+     monkeypatches `ModelField.validate` with a wrapper that calls through and appends `loc` to a
+     list. It returns an object whose `.calls` counts the `("response",)` entries and whose
+     `.reset()` clears the list. One definition, used by both tests, so the spy is not
+     hand-written twice.
+   - **`backend/tests/test_score.py::test_no_outbound_validation_runs_on_score`**, marked
+     `@pytest.mark.req("NFR-502")`, using the module's own fixtures and its `_scored()` builder:
+     - `POST /api/v1/score` with `score_one` stubbed returns 200, and the spy counts **0**;
+     - then a **planted control** route: in this test's app only,
+       `app.add_api_route("/__nfr502_control", <async fn returning _scored().model_dump(mode="json")>, methods=["POST"], response_model=ScoringResult)`;
+     - posting to it returns 200 (a valid dict), and the spy counts **≥ 1**. So the spy is
+       proven not blind, at the same FastAPI version, in the same process.
+   - **`backend/tests/test_score_compare.py::test_no_outbound_validation_runs_on_compare`**,
+     marked `@pytest.mark.req("NFR-502")`. It does the same for `POST /api/v1/score/compare`,
+     with its own control route returning a valid `ScoreComparison` dict and
+     `response_model=ScoreComparison`.
+
+   **Red first, on broken input.** On a backup copy of `score.py`, `/score` returns
+   `result.model_dump()` under `-> ScoringResult`. `test_no_outbound_validation_runs_on_score`
+   then fails with a spy count of **≥ 1** (measured: exactly 1) where 0 is asserted. Do the
+   same for `/score/compare` with `comparison.model_dump()` under `-> ScoreComparison`. Then
+   also show the instance form (`return result` under `-> ScoringResult`): the spy counts 1
+   while the 500 test stays green. That is the point of 8b. Quote each, then restore. **A
+   control count of 0 is a stop**: the spy point has moved, which is what the control exists
+   to catch at a FastAPI upgrade.
 9. **The handlers' bodies are unchanged.**
    `git diff origin/main...HEAD -- backend/src/app/api/score.py` shows changes only in:
    - the two `responses=` arguments;
@@ -426,8 +558,8 @@ quotes the `pytest --collect-only -q` lines for the new node ids. Their count mu
     quoted against `origin/main`'s. `uv run python scripts/generate-contracts.py --check` exits
     0. `uv run python scripts/req-coverage.py` shows the new tests under FR-451 and NFR-502.
 13. **The ledger** (an `LG-` under `docs/ledgers/`, with an id from the lead) records the base
-    (`SL-1345`'s squash SHA and `origin/main` at start), premises a–k re-read, the 12 collected
-    node ids (Acceptance 1–6 and 8), every red quote on each side,
+    (`SL-1345`'s squash SHA and `origin/main` at start), premises a–k re-read, the 15 collected
+    node ids (Acceptance 1–6, 8 and 8b), every red quote on each side and every spy count,
     the DP resolutions by record id, the Acceptance 7 output, the Acceptance 10 figures and the
     Acceptance 11 counts.
 
@@ -489,7 +621,7 @@ quotes the `pytest --collect-only -q` lines for the new node ids. Their count mu
   schema, as both findings' predicates do (`FD 9779`: "Not swept: open objects **nested
   inside** a typed body"). The skill note (Task 6) states this limit.
 
-### Premises, read at `9b0fb97c`; a–h re-read and i–k added at `65fc6129` (only `docs/` changed between)
+### Premises, read at `9b0fb97c`; a–h re-read and i–k added at `65fc6129`; all re-confirmed at `42732321` (only `docs/` changed across both steps)
 
 The executor reads each one again at its own base, which is after `SL-1345`, and stops on any
 that no longer holds.
@@ -535,8 +667,10 @@ pins.
 | Path | This slice | Existing definitions edited |
 |---|---|---|
 | `backend/src/app/api/score.py` | `200: {"model": ScoringResult}` and `200: {"model": ScoreComparison}` merged into the two `responses=` mappings; one sentence in the module docstring's NFR-502 paragraph (`:21-27`) | **yes**: the `score` and `score_compare` decorators; the module docstring |
-| `backend/tests/test_contracts.py` | appended: `UNTYPED_2XX_PERMANENT`, `UNTYPED_2XX_PENDING_PART_B`, `UNTYPED_REQUEST_PENDING`, `NON_JSON_REQUEST_BODIES`, `_untyped_bodies` and its two predicates, and the seven test functions of Acceptance 1–6 (11 collected items) | none |
-| `backend/tests/test_score_compare.py` | one appended test (Acceptance 8) | none |
+| `backend/tests/test_contracts.py` | appended: `UNTYPED_2XX_PERMANENT`, `UNTYPED_2XX_PENDING_PART_B`, `UNTYPED_REQUEST_PENDING`, `NON_JSON_REQUEST_BODIES`, `_untyped_bodies`, `_visited_bodies`, `_guard_remainder` and the two predicates, and the seven test functions of Acceptance 1–6 (12 collected items) | none |
+| `backend/tests/test_score_compare.py` | two appended tests: the 500 test (Acceptance 8) and the spy test (8b) | none |
+| `backend/tests/test_score.py` | one appended test: the spy test (8b) | none |
+| `backend/tests/conftest.py` | one appended fixture, `outbound_validation_spy` (8b) | none |
 | `docs/contracts/openapi/generated.json` | regenerated | registry-exempt (`RL-1263:104-116`) |
 | `docs/specs/03-rating-engine.md` §9, the NFR-502 row | `RL 9783`'s exact dated text, appended at the end of the row's second cell (DP-A1 ruled (b)) | **yes**: that row |
 | `docs/ledgers/LG-<id>-….md` | new (Acceptance 13) | none |
@@ -550,7 +684,7 @@ pins.
   `backend/src/app/api/rate_tables.py`, `backend/src/app/api/rating_algorithms.py`,
   `backend/src/app/api/sub_graphs.py` and `backend/src/app/api/datasets.py`. No handler there is
   edited;
-- `backend/tests/test_score.py`, which is run, not edited.
+- `test_score.py`'s existing tests, which are run, not edited (the file is only appended to).
 
 Nothing under `frontend/` is committed.
 
@@ -569,6 +703,7 @@ concurrently, and the second merges `origin/main` first and re-runs its full gat
 | `docs/contracts/openapi/generated.json` | regenerated | regenerated | exempt. Regenerate on the merged base |
 | `docs/specs/03-rating-engine.md` §9 | the NFR-496 row | the NFR-502 row (`RL 9783`'s text) | different rows. Serial anyway |
 | `backend/src/app/api/rate_tables.py`, `rating_algorithms.py`, `sub_graphs.py`, `datasets.py` | none | **read only** (citations in the request side's reasons) | no conflict |
+| `backend/tests/test_score.py`, `test_score_compare.py`, `backend/tests/conftest.py` | "backend route, batch and property tests" (`PL-1348` write set) | one appended test in each scoring test module, and one appended fixture (Acceptance 8, 8b) | append-only, no existing definition edited. `SL-1345` has merged by this slice's start, so its tests are in this slice's gate |
 | timing runs | `scripts/bench-rating.py`, solo (`PL-1348` Acceptance 9) | Task 5's NFR-502 run, solo | **never the same window** |
 
 ### Against WK-675's planned slices (`PL-1286`, `draft`)
@@ -583,8 +718,17 @@ concurrently, and the second merges `origin/main` first and re-runs its full gat
 | S13, S14 (Jobs views) | consume `GET /api/v1/jobs/{job_id}/events`, a permanent exclusion | no conflict. No backend change (`PL-1286`: "no backend change") |
 | S1, S8, S9, S12 | none | no conflict |
 
-### Against other open work at `65fc6129`
+### Against other open work at `42732321`
 
+- **`PL-1359`** (WK-1178's permission-parity check, `active`, on lane B at `42732321`). It
+  creates `tests/test_permission_parity.py` and its ledger. Its live test imports
+  `app.main.create_app`, which imports `backend/src/app/api/score.py`. It also AST-walks
+  `backend/src/**`, read only (`PL-1359:357-368`). So it **reads** `score.py` and edits no file
+  in this slice's write set: there is no shared definition. Its parity result reads
+  `requires()` check sites, and this slice changes none (only `responses=` and a docstring
+  sentence). `PL-1359` is also a **WK-1178** slice, the same Work as this one. `RL-1263` allows
+  concurrent build slices only from different Works, so the two run one after the other in any
+  case, and the second re-gates on the first's merge.
 - **`FD 9779` Part B** (WK-1178, not yet planned) types four request bodies in
   `rate_tables.py` (bulk-operation), `rating_algorithms.py` and `sub_graphs.py` (two routes). It
   also edits this slice's `UNTYPED_REQUEST_PENDING`, removing each entry as it types the route.
@@ -625,6 +769,8 @@ concurrently, and the second merges `origin/main` first and re-runs its full gat
 | The DB stack is absent | mass fixture errors that look like test failures (`test_score.py` needs `GIP_TEST_DATABASE_URL`) | an `ERROR` at setup, not a `FAILED` assert | bring the stack up and re-run. An error at setup is never quoted as a red |
 | The guard over-reaches into a non-JSON body that the LOW sub-item later re-documents | a false red after that slice | Acceptance 5's exactness | the keys are method, path and status, not media type, so the permanent entries still match |
 | The guard reads only the top-level schema | a nested open object (`outputs`, `UpdateSettings.values`) stays untyped | stated in Scope and in the skill note | `RL-1343` rule 4 types `outputs`. The rest is outside both findings |
+| **Observation for the lead, not a finding of this plan:** `test_score.py:341-356`'s docstring says "a route carrying a Pydantic return annotation or a `response_model=` answers 500 here" | under fastapi 0.141.1 the claim holds only for a **non-instance** return value. Returning the `model_construct` instance under the annotation or `response_model=` answers **200** (Acceptance 8's table: pydantic `revalidate_instances='never'`, and `serialize_response`'s `field.validate` accepts an instance of the declared class). So the existing 500 test does not discriminate the instance-return regression | measured in the scratch app (Acceptance 8) | recorded here for the lead. Acceptance 8b's spy closes the gap for both routes. Whether the docstring is corrected, and by whom, is the lead's call |
+| The spy patches a private FastAPI symbol (`fastapi._compat.v2.ModelField.validate`) | a FastAPI upgrade moves it, and the spy goes blind: 0 calls everywhere | the planted control's ≥ 1 assertion fails (Acceptance 8b) | intended: the control makes a blind spy a red, never a false green. Re-measure the spy point at the new version |
 | The request side is green on the real document today, so its enforcement could go unshown | a guard that has never printed a failure on real input | Acceptance 3 (an entry removed on a backup copy gives a named red), Acceptance 1 and 4 (planted) | each red quoted in the ledger, per side |
 | Another slice types a listed request route first (`FD-1357`'s fix, or WK-675 S2, S5) | a stale entry | activation need 3 at GO; Acceptance 5 at build | drop the entry at Task 0; after merge, the typing slice removes it |
 | The `FD 9779` marker is written with the working id | a marker that names no minted record | activation need 4; Acceptance 5's reason-string assert | the executor writes the minted id |
@@ -675,8 +821,14 @@ For **every** suite-level run, the full gate and Task 5, the ledger records each
   `test_the_untyped_body_predicates_pass_typed_bodies` to `backend/tests/test_contracts.py`,
   each `@pytest.mark.req("FR-451")`. Each planted document is a `copy.deepcopy` of
   `_load(OPENAPI)` (the module's own loader, `test_contracts.py:141`).
-- [ ] Define `_untyped_bodies(document) -> list[tuple[str, str, str, str, str]]` as `return []`.
-  Run the two tests. Quote the red: all four planted cases are not reported, two per side.
+- [ ] Define the stubs `_untyped_bodies(document)` as `return []` and `_visited_bodies(document)`
+  as `return iter(())` (the **Helper API** in Acceptance). Run the two tests and quote the
+  predicted reds:
+  - the planted test is red **4 of 4** (the planted body is not reported);
+  - the pass-typed test is red **1 of 1**, on its first visited assertion (the stub visits
+    nothing).
+
+  A red with any other cause is a plan defect.
 - [ ] Implement `_untyped_bodies`:
   - the response side, with `FD-1335` Evidence §1's iteration;
   - the request side over `operation["requestBody"]["content"]`, for each media type whose name
@@ -684,7 +836,9 @@ For **every** suite-level run, the full gate and Task 5, the ledger records each
   - both sides with `is_empty` and `is_open_object`, verbatim and shared.
 
   It returns `(side, METHOD, path, key, form)`, where `key` is the status for a response and
-  the media type for a request. Expose the visited keys too, for the reach control. Green.
+  the media type for a request. Implement `_visited_bodies` over the same iteration. It yields
+  `(side, METHOD, path, key)` for every body inspected, reported or not. Add
+  `_guard_remainder`. All 5 items are green.
 - [ ] Break `is_open_object` on a backup copy, quote the negative control's red, and restore.
 
 ### Task 2: The guard on the real document, red first on each side (Acceptance 3, 4, 5)
@@ -753,26 +907,43 @@ For **every** suite-level run, the full gate and Task 5, the ledger records each
   `("response", "POST", "/api/v1/score/batch", "202")` and
   `("request", "POST", "/api/v1/score", "application/json")` as **visited and not reported**
   (`contract-guard`, "Never count what a walker reached — name a path").
-- [ ] Run them, and quote:
-  - **the response side's red on the real document**: the remainder is exactly the two
-    `/score` 200 keys;
-  - **the request side's red on broken input**: `("POST", "/api/v1/rating-algorithms")` removed
-    from `UNTYPED_REQUEST_PENDING` on a backup copy, which gives exactly that one request key,
-    then restore;
+- [ ] Run them, and quote each predicted output from Acceptance 3's and 4's tables:
+  - `test_no_json_body_is_untyped[response]` is **red**, with remainder exactly the two `/score`
+    200 keys;
+  - `[request]` is green;
+  - **the request side's red on broken input**: with `("POST", "/api/v1/rating-algorithms")`
+    removed from `UNTYPED_REQUEST_PENDING` on a backup copy, `[request]` is red with exactly
+    that one key (`[response]` is unchanged). Then restore;
+  - both `test_the_guard_fails_on_an_unlisted_open_body` items are green, with planted
+    remainders of 3 keys (response) and 1 key (request);
   - Acceptance 5's reds: a planted stale entry on each side, and one `NON_JSON_REQUEST_BODIES`
     entry deleted, each then restored.
 
-  After this task, the request side is green on the real document and the response side is red
-  only on the two `/score` keys.
-- [ ] `uv run pytest --collect-only -q backend/tests/test_contracts.py -k "untyped_body or non_json_request or unlisted_open_body"`
-  lists 10 node ids here. The shape test (Task 3) brings `test_contracts.py` to 11, and the
-  compare test to 12.
+  After this task, exactly one item is red: `test_no_json_body_is_untyped[response]`. Task 3
+  turns it green.
+- [ ] `uv run pytest --collect-only -q backend/tests/test_contracts.py -k "untyped_body or no_json_body or non_json_request or unlisted_open_body"`
+  lists **11** node ids here:
+  - `test_the_untyped_body_predicates_flag_each_planted_form`, 4 items;
+  - `test_the_untyped_body_predicates_pass_typed_bodies`, 1;
+  - `test_no_json_body_is_untyped`, 2;
+  - `test_the_guard_fails_on_an_unlisted_open_body`, 2;
+  - `test_every_untyped_body_exclusion_is_still_untyped`, 1;
+  - `test_non_json_request_bodies_are_exactly_the_cited_routes`, 1.
+
+  The selector needs `no_json_body`, because `test_no_json_body_is_untyped` does not contain
+  `untyped_body`. Task 3 adds the shape test (`test_contracts.py` reaches 12) and three tests in
+  the scoring modules, for 15 in all.
 
 ### Task 3: The two response declarations, and the regenerated contract (Acceptance 6–9)
 
 - [ ] Append `test_the_score_responses_document_their_models`
   (`@pytest.mark.req("FR-250")`, `@pytest.mark.req("FR-262")`, `@pytest.mark.req("FR-451")`)
   and the `/score/compare` `NFR-502` test. Quote the shape test's red (premise a).
+- [ ] Append the `outbound_validation_spy` fixture to `backend/tests/conftest.py`,
+  `test_no_outbound_validation_runs_on_score` to `test_score.py`, and
+  `test_no_outbound_validation_runs_on_compare` to `test_score_compare.py` (Acceptance 8b). On
+  the current routes they are green: 0 calls on the route, and ≥ 1 on the planted control.
+  Their red is on broken input, below.
 - [ ] In `backend/src/app/api/score.py`, on the `score` decorator:
   ```python
       responses={**problems(<the statuses on main after SL-1345>), 200: {"model": ScoringResult}},
@@ -792,8 +963,18 @@ For **every** suite-level run, the full gate and Task 5, the ledger records each
 - [ ] `uv run python scripts/generate-contracts.py`, then `--check` (exit 0). Run the
   Acceptance 7 comparison script and quote it.
 - [ ] Run Task 2's tests, the shape test and both `NFR-502` tests: all green, on both sides of
-  the guard. Then make the `response_model=` break on a backup copy, quote both 500s, and
-  restore.
+  the guard. Then, on a backup copy of `score.py`, make Acceptance 8's break on each handler:
+  the return annotation becomes `-> ScoringResult` (or `-> ScoreComparison`), and
+  `return result.model_dump()` (or `return comparison.model_dump()`) replaces the raw
+  `Response`. Quote, for each route:
+  - the 500 test's red: `ResponseValidationError`, mapped by `_handle_unexpected`;
+  - the spy test's red: a count of 1 where 0 is asserted.
+
+  Then switch each break to the instance form (`return result` / `return comparison` under the
+  same annotation). Quote that the spy test is red (count 1) while the 500 test is green
+  (status 200), which is Acceptance 8b's point. Then restore. Do not use the
+  `response_model=`-only form, which leaves the raw `Response` and stays 200 with a count of 0
+  (Acceptance 8's table).
 - [ ] The Acceptance 9 diff, quoted.
 
 ### Task 4: The spec line (`RL 9783` DP-A1; Acceptance 10)
@@ -879,8 +1060,24 @@ For **every** suite-level run, the full gate and Task 5, the ledger records each
   - 3, the five temporary exceptions with their markers → `UNTYPED_REQUEST_PENDING`, Acceptance
     5's reason-string asserts.
   - 4, Part B not in this plan, named as the follow-up → Scope, Hand-off.
-  - The write set (no handler edited outside `score.py`), Acceptance (12 items, red first per
+  - The write set (no handler edited outside `score.py`), Acceptance (15 items, red first per
     side), contention (the request side's files are reads) and risks → each updated.
+- **The maintainer's spy addition (2026-10-01):**
+  - NFR-502's property is checked directly → Acceptance 8b, Task 3.
+  - The spy point is measured and justified (`ModelField.validate`, `loc=("response",)`) → 8b's
+    reasons and table.
+  - 0 calls on `/score` and on `/score/compare`, a planted control with ≥ 1 call, and red first
+    on a backup copy → 8b.
+  - The rationale (a property check survives a FastAPI upgrade) → 8b.
+  - The test count (15), the write set (`conftest.py`, `test_score.py` and
+    `test_score_compare.py`, append-only) → updated.
+- **The audit's findings:**
+  - F1, a break that can go red, with the instance form recorded as 200 → Acceptance 8, Task 3,
+    Risks.
+  - F2, per-side isolation and baseline-relative remainders → Acceptance 3 and 4.
+  - F3, the selector → Task 2.
+  - F4, the visited API and the stub-step predictions → Helper API, Acceptance 1.
+  - F6a, `PL-1359` and the tree bump → File contention, Status, premises.
 - **`RL 9783`:** DP-A1's exact text → Task 4, Acceptance 10. DP-A2's three limbs, three runs,
   warm-up, alternation and stop conditions → Task 5, Acceptance 10. The compare scope extension
   → Acceptance 8, Scope (NFR-502).
