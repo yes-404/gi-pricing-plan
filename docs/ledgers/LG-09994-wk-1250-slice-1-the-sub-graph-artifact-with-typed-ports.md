@@ -271,4 +271,4 @@ removes no authored string from the scan; it removes generated property labels. 
 
 ## PRs
 
-None yet.
+#1034 (draft), branch `sl-1339-sub-graph-artifact`, opened 2026-10-01.
