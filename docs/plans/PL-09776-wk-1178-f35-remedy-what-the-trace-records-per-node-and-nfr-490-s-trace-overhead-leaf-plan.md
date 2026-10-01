@@ -1,0 +1,1244 @@
+---
+id: PL-9776
+family: plan
+kind: leaf
+title: WK-1178 slice — F35 remedy, what the trace records per node and NFR-490's trace overhead (F35, F55, FD-1246; FR-258, NFR-490, NFR-500): leaf plan
+status: draft                   # draft → active → superseded | retired (§1.2a)
+created: 2026-10-01
+owner: planner
+tree: 19155b505741317da6967362707f387b39bd2cef
+phase: P2
+work: WK-1178
+supersedes: []
+superseded_by: ~
+corrected_by: []
+relates: [RL-862, RL-863, CR-1247, FD-1246, RL-1261, RL-1263, PL-1348, PL-1237, PL-1254, PL-1359, SL-1259, SL-1345, SL-1360]
+---
+
+# PL-9776 (working id) — WK-1178: the F35 remedy, leaf plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
+> or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`)
+> syntax for tracking. The executor also binds `python-test` (the `req` marker and
+> broken-input proofs), `test-driven-development` (every test is seen red before the code
+> that turns it green), `dev-commands` (the two-half gate, the slot wrapper and the NFR
+> measurement rules) and `git-hygiene`. Read [`README.md`](README.md)'s five unchecked
+> conventions before the first step. The executor is spawned from `.claude/roles/executor.md`.
+
+## Goal
+
+Make a scoring trace record, per node, only what that node read and wrote, so that asking for
+a trace stops costing about five times an untraced score. Today the trace copies the whole
+accumulated evaluation context into every node entry, twice.
+
+This is the remedy for register finding **F35** ("NFR-490 measured failing"). The same lever
+discharges **F55** (`TraceStep.consumed`/`.produced` carry the full context) and is the one
+`CR-1247` Proposal 11 names for **NFR-500**. The same ruling decides **FD-1246** (the trace
+omits the `input` and `output` steps).
+
+**Architecture.** Two changes, in this order:
+1. **What the trace records** (`pricing_core.rating.score._build_trace`): each `TraceStep`
+   carries the values of the names the step reads and the names it declares it produces.
+   This is the content question, DP-F35-1.
+2. **What the engine is asked to carry** (`pricing_core.rating.runtime.to_wire`): today every
+   node sets `passThrough: true`, so the engine copies the whole context into every node's
+   trace entry. That copy is the cost. Trimming in `_build_trace` alone cannot remove it: the
+   research note measured our own post-processing at 12–25 % of the added time
+   (`docs/research/w11-task-1-5-nfr-rate-1-2.md:207-223`). This is the mechanism question,
+   DP-F35-4, which a spike (S1) informs before it is ruled.
+
+The result must not change: R3 (`03` §1.3) and NFR-490's second limb.
+
+**Tech Stack:** Python 3.12, `zen-engine` 0.53.0 (`uv.lock`), pytest, `scripts/bench-rating.py`,
+`scripts/bench-trace-size.py`.
+
+**Spec:** [`03-rating-engine.md`](../specs/03-rating-engine.md) §1.3 (R3), §3.5 (FR-246), §3.8
+(FR-258, FR-259, FR-262), §4.5 (`Trace`), §4.10 (`ScoreComparison`), §9 (NFR-489, NFR-490,
+NFR-500). Rulings and records: `docs/rulings/RL-00862-serve-untraced-produce-the-trace-off-the-request-path-by-deterministic-re-score.md`
+(§6 and the Addendum); `docs/rulings/RL-00863-sampling-cannot-remedy-either-requirement-and-the-reasons-differ.md`
+§4; `docs/closures/CR-01247-plan-review-16-at-wk-672-s-close-the-permission-source-of-record-f35-s-owner-the-dedicated-host-and-p2-s-exit.md`
+Proposals 3 and 11; `docs/findings/register.md` rows F35, F55 and F37;
+`docs/findings/FD-01246-a-scoring-trace-omits-the-algorithm-s-input-and-output-steps-where-fr-258-says-every-step.md`.
+
+## The maintainer's decision, quoted verbatim
+
+From `~/gi-pricing-plan.local/channel/to-lead.md` (a local channel file, not in the repository).
+
+**2026-10-01 08:58:26 BST — "F35 RE-OWNED to WK-1178 (my decision); the remedy is planned inside P2, not carried":**
+
+> **Not "carry forward" again:** NFR-490 is a P2 requirement failing on main by roughly 18×.
+> **WK-1178 gets a leaf plan for F35's remedy before code freeze (4 Nov), and its first
+> decision point is the design question F35 names: what the trace records per node** (a
+> minimal per-node entry against the full `passThrough` payload). The decision-maker rules it.
+
+> Lane order: F35's remedy queues after the parity check and FD-1357's fix on WK-1178
+> (serial); its plan can be written now in parallel.
+
+**2026-10-01 09:00:44 BST — "F35: the split ACCEPTED (remedy to WK-1178, measurement stays with SL-1259); the gate discharged":**
+
+> **The code check is accepted:** RL-862's off-path capture **LANDED** (score.py:310-319
+> untraced serving; `write_pending_trace` traces.py:159 plus the `SCORE_TRACE_PRODUCE` job;
+> trace_handlers.py:90 refuses a changed bundle; :98 re-scores with trace=True; the
+> reproduction check at traces.py:198-272; 7 tests incl. test_score.py:996). **F35's gate is
+> discharged.** The cost that remains is `to_wire(passThrough: True)`
+> (`pricing_core/rating/runtime.py:344`), as RL-862 §6 foresaw. *These bodies were read, not
+> run:* **the leaf plan's Task 0 runs those 7 tests at its base and records the result**, so
+> the discharge rests on a run before the build.
+
+> **The remedy → WK-1178:** a leaf plan before code freeze; first DP the per-node trace content
+> (minimal entry against the `passThrough` payload), for a decision-maker. **The gate is
+> discharged, so it can be planned and built without a prerequisite**, queued on WK-1178 after
+> the parity check and FD-1357's fix.
+
+> **The measurement stays with SL-1259** (WK-674 Slice 5, which has NFR-490 in its title).
+> **Its close shows NFR-490 passing after WK-1178's fix, or states the residual with an
+> owner.** Record in F35's row, and in SL-1259's next dispatch record, that SL-1259's NFR-490
+> limb **depends on** WK-1178's F35 slice (a cross-Work dependency, named both ways).
+
+And the earlier acceptance this plan also honours, `CR-1247` Proposal 3, verbatim:
+"Accepted: (a). F35's remedy is a WK-1178 slice before WK-674 Slice 5, after the TraceStep
+ruling." Proposal 11: "Accepted: NFR-500 is raised as an OQ with the recommendation (a). The
+decision-maker rules it."
+
+**What this plan takes from those lines.**
+- **DP-F35-1 is the first decision point**, and the decision-maker rules it. This plan gives
+  options and a recommendation and picks nothing.
+- **Task 0 runs the 7 tests** at the build base and records the result.
+- **The NFR-490 verdict is SL-1259's.** This slice measures NFR-490 red at its base and again
+  after the change, as evidence that the remedy moved the cost. It does not book a verdict.
+  SL-1259's NFR-490 limb depends on this slice.
+- **Build order on WK-1178:** after `SL-1360` (the permission-parity check) and after
+  `FD-1357`'s fix (activation needs 5 and 6).
+
+## Status
+
+`draft`. It has **four blocking decision points** (§"Decision points"). It turns `active` only
+when every activation need below is met, each shown by its command at a named `origin/main`
+SHA in the dispatch record.
+
+Filed under **working id 9776**, allocated by the lead (the only allocator). The id is minted
+at this PR's merge turn.
+
+**SL.** WK-1178 is standing maintenance. The lead mints its slices at triage
+([`document-ids.md`](../process/document-ids.md) §1.9). The proposed row text is in
+§"Proposed SL row". This PR does not add it.
+
+**Rulings that differ from a recommendation.** Tasks 2–6 below are written for the
+recommended answers. Where a ruling differs:
+- if it changes only a Task's **method**, the dispatch record names each difference, and the
+  ruling wins;
+- if it changes a Task's **acceptance**, a superseding `PL-` is filed instead of an activation
+  (the rule `PL-1359` applied to `PL-1279`).
+
+### Activation needs, in order
+
+Run them from any checkout after `git fetch -q origin`. The SHA recorded is
+`M=$(git rev-parse origin/main)`. **A need with no pasted output in the dispatch record is
+unmet.** The lead's GO check starts here, before anything else.
+
+1. **F35's re-own and OQ 9777 (working id) are on `main`** (PR #1048):
+   ```bash
+   git show "$M":docs/findings/register.md | grep -c 'measurement SL-1259'
+   ```
+   Expected: `1` or more. `0` means F35's row still names the closed WK-671 as owner:
+   **unmet**.
+2. **DP-F35-1, DP-F35-2 and DP-F35-3 are ruled and minted** (the decision-maker's `TraceStep`
+   ruling, `CR-1247` Proposals 3 and 11):
+   ```bash
+   git grep -l --all-match -e 'DP-F35-1' -e 'DP-F35-2' -e 'DP-F35-3' "$M" -- docs/rulings/
+   ```
+   Expected: exactly one path, or one path per ruling if the decision-maker files them
+   separately. Each path's 5-digit id (`basename <path> | cut -c4-8`) is below `09000`. A
+   file printing `09xxx` is a working-id draft: **unmet**. Then:
+   ```bash
+   git show "$M":docs/specs/03-rating-engine.md | grep -E '^\| \*\*FR-258\*\*' | grep -c 'Clarified 2026-1[0-2]'
+   git show "$M":docs/open-questions.md | grep -c 'sampled-trace schema'
+   ```
+   Expected: `1` and `1` or more, under DP-F35-1 (iii) (a) and DP-F35-3's recommended
+   placement: the dated `03` text lands in the ruling's own commit. If the ruling instead
+   assigns the `03` text to this slice, the first prints `0`, and the write set gains `03`
+   §3.8 and §4.5; the dispatch record says so.
+3. **Spike S1 is filed** (an `RS-` of `kind: spike`, by an executor, §"Spike S1"):
+   ```bash
+   git grep -l -e 'Spike S1' -e 'DP-F35-4' "$M" -- docs/research/
+   ```
+   Expected: at least one path whose 5-digit id is below `09000` and whose front matter reads
+   `kind: spike`.
+4. **DP-F35-4 is ruled and minted** on S1's evidence:
+   ```bash
+   git grep -l -e 'DP-F35-4' "$M" -- docs/rulings/
+   ```
+   Expected: one path whose 5-digit id is below `09000`. **Where the ruling's wire rule and
+   Task 4's sample differ, the ruling wins**, and the dispatch record names each difference.
+5. **`SL-1360` has merged** (the permission-parity check, `PL-1359`; first on WK-1178 by the
+   maintainer's lane order):
+   ```bash
+   S=$(git log -n1 --format=%H -E --grep='^(test|feat|fix)\([^)]*\): SL-1360 ' "$M"); echo "squash=${S:-NONE}"; test -n "$S" && git merge-base --is-ancestor "$S" "$M" && echo MET
+   ```
+   Expected: `squash=<a 40-hex SHA>` and then `MET`. The `docs(plans,roadmap): activate …`
+   commit does not match the `test|feat|fix` prefix, by design.
+6. **`FD-1357`'s fix has merged** (second on WK-1178):
+   ```bash
+   S=$(git log -n1 --format=%H -E --grep='^(feat|fix)\([^)]*\): .*FD-1357' "$M"); echo "squash=${S:-NONE}"; test -n "$S" && git merge-base --is-ancestor "$S" "$M" && echo MET
+   ```
+   Expected: `squash=<a 40-hex SHA>` and `MET`. If the fix's PR title names only its `SL-`,
+   the lead names that squash SHA in the dispatch record and runs
+   `git merge-base --is-ancestor <sha> "$M" && echo MET` on it instead.
+7. **`SL-1345` has merged** (file contention, §"File contention": `runtime.py`'s
+   `_constraint_node` and `to_wire`, `score.py`, `03` §4.5):
+   ```bash
+   S=$(git log -n1 --format=%H -E --grep='^(feat|fix)\([^)]*\): SL-1345 ' "$M"); echo "squash=${S:-NONE}"; test -n "$S" && git merge-base --is-ancestor "$S" "$M" && echo MET
+   ```
+   Expected: `squash=<a 40-hex SHA>` and `MET`.
+8. **This plan and its slice row are minted on `main`:**
+   ```bash
+   git grep -l -E '^title: WK-1178 slice — F35 remedy' "$M" -- docs/plans/
+   git show "$M":docs/roadmap.md | grep -E '^#### SL-[0-9]+ — WK-1178 slice — F35 remedy'
+   ```
+   Expected: exactly one path whose 5-digit id is below `09000`, and exactly one heading whose
+   `SL-` number is below `9000`. `09776` is the working-id draft: **unmet**.
+9. **The status flip has merged, and the lead has given the go:**
+   ```bash
+   P=$(git grep -l -E '^title: WK-1178 slice — F35 remedy' "$M" -- docs/plans/ | sed 's/^[^:]*://'); git show "$M":"$P" | grep -m1 '^status:'
+   git show "$M":docs/roadmap.md | awk '/^#### SL-[0-9]+ — WK-1178 slice — F35 remedy/{f=1} f && /^status:/{print; exit}'
+   ```
+   Expected: both lines begin `status: active`. Then the lead's go, dated, in the dispatch
+   record, with the DP-resolver line.
+
+### Build-start conditions (Task 0, after activation; not activation needs)
+
+- **A free lane under `RL-1263`:** at most two build slices at once, from different Works,
+  each holding a gate slot, with no shared file outside the registry list. WK-1178's own
+  slices run one at a time.
+- **Two solo windows**, each granted by the lead and dated in the dispatch record: one for
+  Task 1 (the base measured red) and one for Task 6 (base and HEAD interleaved). No other gate,
+  suite, benchmark or `migrate --verify` runs during either (`delivery-process.md` §8, amended
+  2026-09-29: "a measurement step runs alone").
+- **The DB stack is up** for Task 0 Step 1 and the backend tests (`GIP_TEST_DATABASE_URL`).
+
+## Acceptance Standard
+
+Each item is checked by a command run from the repository root on the slice's merge tree,
+unless it names the base.
+
+1. **The 7 `RL-862` capture tests pass at the base and at HEAD** (Task 0 Step 1, Task 5
+   Step 4). The command is in Task 0 Step 1. Expected: `7 passed` on each tree, both trees
+   named. A setup `ERROR` is not a result.
+2. **The trace-shape tests exist, were red before their code, and are green at HEAD.**
+   `uv run pytest -q packages/pricing-core/tests/test_rating_trace_minimal.py` exits 0 and
+   collects **8** tests (Task 2: 5; Task 3: 1; Task 4: 2). Six were seen red with the cause
+   their task names: four of Task 2's at the base, Task 3's extractor test, and Task 4's
+   payload-bound test. Two are guards that pass before and after their code, and are proved
+   on broken input instead: Task 2's violation control, and Task 4's R3 differential
+   (Acceptance 6). The ledger quotes each red's printed line. A red with another cause is a
+   plan defect, not a pass.
+3. **Each `TraceStep` carries exactly the step's reference set and declared produces**
+   (DP-F35-1 (b)). On the `test_rating_score.py` fixture (`_compiled()`), `s_clamp`'s
+   `consumed` is exactly `{"office_premium_minor", "min_premium_minor"}` (pre-clamp value),
+   and `s_office`'s is exactly `{"risk_premium_minor", "expense_factor"}`.
+4. **The `input` and `output` steps are traced** (DP-F35-2 (b)). Every `step_id` of the
+   fixture's algorithm appears once in `trace.steps`.
+5. **The engine's per-node payload is bounded** (DP-F35-4 (M1)).
+   `test_engine_entry_input_is_bounded_by_its_references` asserts, for every interior entry,
+   that the entry's `input` keys are a subset of the step's reference set plus the request
+   context's keys. It is red at the base (the `passThrough` context) and green at HEAD.
+6. **The result did not change** (R3; NFR-490's second limb):
+   - `packages/pricing-core/tests/test_rating_score.py::test_trace_true_returns_a_populated_trace_and_the_identical_premium`
+     passes (traced equals untraced);
+   - `test_the_remedy_changes_no_served_result` passes: over the frozen base corpus (Task 1
+     Step 6), every `ScoringResult` at HEAD, with `trace` and `timing_ms` blanked, equals the
+     base's as canonical JSON;
+   - **broken-input proof:** with constraint nodes left off the `outputNode` wiring (Task 4
+     Step 5), that test fails and names at least one quote whose `outcome` changed. The ledger
+     quotes the failure line;
+   - the 200-step structure: Task 6 Step 4's equality script prints `equal 1000 of 1000` at
+     HEAD against the base.
+7. **`score/compare` is re-proved on the trimmed trace** (`CR-1247` Proposal 3, fact 3):
+   `uv run pytest -q backend/tests/test_score_compare.py` exits 0. The three existing diff
+   tests carry Task 5's derived expectations, each seen red first with the cause Task 5 Step 1
+   names; the own change is still exactly `s_expr`; and the new
+   `test_a_step_whose_references_did_not_move_is_traced_and_not_listed` passes.
+8. **NFR-490 is measured red at the base before any code, and again after** (Task 1, Task 6),
+   each with the budget-margin statement of §"How NFR-490 is measured". The stop rule in Task 6
+   Step 3 did not fire. **This is evidence for the remedy, not the NFR-490 verdict**, which is
+   SL-1259's.
+9. **NFR-500 is re-measured** under DP-F35-3's reading (`CR-1247` Proposal 11: "re-measured in
+   the same WK-1178 slice"): `uv run python scripts/bench-trace-size.py` at the base and at
+   HEAD, both outputs in the ledger, the projection read against 200 GB/year.
+10. **The contract is regenerated, and only `TraceStep`'s description moved:**
+    `uv run python scripts/generate-contracts.py --check` exits 0, and
+    `git diff origin/main...HEAD -- docs/contracts/` changes only description text.
+11. **The full two-half gate** of `CLAUDE.md` §11 exits 0 on the merge tree, under §"Gate
+    evidence rules".
+12. **The write set holds:** `git diff --stat origin/main...HEAD` names only the paths in
+    §"Write set". It names no file under `backend/src/` and no file under `docs/specs/`
+    (DP-F35-1 (iii) (a)).
+
+## Global Constraints
+
+- **Money is integer minor units, or `Decimal` in the rating path, never float** (R2;
+  `CLAUDE.md` §7). This slice changes no arithmetic.
+- **Tracing changes performance, never results** (R3, `03` §1.3). Acceptance 6.
+- **Nobody hand-writes a shape that already exists in `model-schema`** (`CLAUDE.md` §2).
+  `TraceStep`'s shape does not change; its docstring does.
+- **`pricing-core` stays importable standalone** (`CLAUDE.md` §2; `.importlinter`'s
+  `core-has-no-infrastructure`). Nothing here imports outside `pricing_core` and
+  `model_schema`.
+- **Enforcement is proven on deliberately broken input** (`CLAUDE.md` §13). Acceptance 2, 5
+  and 6.
+- **NFRs are measured, not asserted** (`CLAUDE.md` §13). Acceptance 8 and 9.
+- **Shared files** (`RL-1263` option (c)): two concurrent build slices may not both change the
+  same existing function, class, spec section or policy table. `docs/INDEX.md` and
+  `docs/contracts/schemas/generated/`, `docs/contracts/openapi/generated.json` are registry
+  files, regenerated and never hand-merged.
+
+## Scope
+
+### Requirement coverage, each id individually
+
+| Spec | Id | What this slice does | Marker |
+|---|---|---|---|
+| `03` §3.8 | FR-258 | The trace keeps every field FR-258 names; `consumed`/`produced` take DP-F35-1's reading; `input`/`output` steps are traced under DP-F35-2 (b) | `req("FR-258")` on the Task 2–4 tests |
+| `03` §9 | NFR-490 | Both limbs. Latency: measured red at the base and after (evidence; the verdict is SL-1259's). Result: Acceptance 6 | `req("NFR-490")` on the R3 differential test |
+| `03` §9 | NFR-500 | Re-measured under DP-F35-3's reading (`CR-1247` Proposal 11's placement) | none (a projection, in the ledger) |
+| `03` §3.8 | FR-262 | `score/compare` re-proved on the trimmed trace | `req("FR-262")` on the appended compare test |
+| `03` §3.8 | FR-259 | Read: the 7 capture tests run at base and HEAD; persisted traces shrink | none added |
+
+**Not covered:** NFR-489 (SL-1259's; OQ 9777 asks whether it covers traced requests), FR-254
+(batch takes no trace, RL-890), NFR-499 (unchanged: a trace still holds the quote inputs a
+step reads, under the same access control), FR-246's enforcement (a proposed finding, §"Hand-off").
+
+**Register rows this slice addresses:** F35 (remedy), F55 (the same lever), FD-1246 (DP-F35-2),
+F37 (NFR-500's re-measure; the spec text lands with DP-F35-3's ruling). Closing each row is the
+auditor's and the lead's, at the slice audit, never the executor's.
+
+### Premises, read at `19155b50` (verified against the source, not the register's prose)
+
+Each line names the file and line it was read at. Line numbers in older records have drifted;
+these are current.
+
+- **P1. The engine copies the whole context into each node.** `to_wire` sets
+  `"passThrough": True` on every expression node (`runtime.py:162`), decision-table node
+  (`:256`) and constraint node (`:322`). Its docstring (`:362-368`) states the consequence:
+  "`passThrough` (rule 3) carries a node's entire received context forward … edges carry the
+  whole merged dict".
+- **P2. `_build_trace` passes the engine's dicts through.** `consumed=dict(entry.get("input") or {})`
+  and `produced=dict(output)` (`score.py:726-727`, inside `_build_trace` at `:700-739`). F55
+  cites `:686-687`, which is stale.
+- **P3. The engine offers no slimmer trace.** `DecisionEvaluateOptions` has two keys,
+  `max_depth` and `trace` (the installed `zen/__init__.pyi:5-7`, `zen-engine` 0.53.0, the
+  version `uv.lock:2786-2787` pins). A smaller payload must come from the graph we hand it.
+- **P4. Our own post-processing is the minor share.** 12–25 % of the added time, depending on
+  the cut; about 88 % sits inside `async_evaluate()`, and engine-side cost tracks payload bytes
+  at about 1:1 (`docs/research/w11-task-1-5-nfr-rate-1-2.md:192-223`).
+  `scripts/bench-rating.py`'s A/B/C decomposition (`_measure_abc`, `:415-470`) prints the split.
+- **P5. Declared `consumes` under-declare what a step reads.** In the scoring fixture
+  (`packages/pricing-core/tests/test_rating_score.py:46-105`), `s_clamp` declares
+  `consumes: ["office_premium_minor"]` but its `condition` and `clamp_bounds` read
+  `min_premium_minor`; `s_decl_cap` declares `["office_premium_minor"]` and its `condition`
+  reads `sanity_cap_minor`. Under `passThrough` this resolves silently. `03` FR-246 says an
+  expression step "cannot reference anything outside their declared inputs"; nothing enforces
+  it: `grep -rn "FR-246" packages/*/src` prints only the `now()` comment at
+  `packages/pricing-core/src/pricing_core/rating/compile.py:49`. FR-246 names expression steps
+  only, and both under-declarers here are constraint steps.
+- **P6. The spec's own example is the minimal entry.** `03` §4.5's `s_minprem` step records
+  `"consumed": {"office_premium_minor": 26_400, "min_premium_minor": 28_000}`: the premium and
+  the bound it read, nothing else. `TraceStep`'s docstring
+  (`packages/model-schema/src/model_schema/scoring.py:139-144`) records the opposite reading:
+  "`03` does not specify a narrower shape than 'consumed values, produced value'".
+- **P7. R3 says "full".** `03` §1.3: "**R3 — Every scoring call can produce a full Trace**,
+  and a traced call and an untraced call return identical premiums." DP-F35-1 must say whether
+  "full" means every step (FR-258) or every value.
+- **P8. `own_change` reads `consumed` until WK-675 delivers `RL-1261`.** `03` §4.10
+  (`:735`, `:737-738`). With the full context, a step downstream of an edit lists as `changed`
+  even when the values it reads did not move. With the reference set, it does not list at all.
+- **P9. `score/compare` traces both sides** (`backend/src/app/api/score.py:359-362`), so this
+  is on a P2 deliverable's path (`CR-1247` Proposal 3, fact 2).
+- **P10. The 7 capture tests exist at the cited lines:** `backend/tests/test_score.py:775`,
+  `:996`, `:1047`; `backend/tests/test_traces.py:407`, `:415`, `:441`, `:469`, each marked
+  `req("FR-259")`. Both citations of the serving path hold: `score.py:310-319` (the
+  maintainer's) and `:379-441` (`_maybe_sample_trace`).
+- **P11. Changing `to_wire` does not change a bundle's hash.** `to_wire` runs inside
+  `load_bundle` (`runtime.py:590`) over `bundle.graph`; `content_hash` is computed from the
+  graph and pins (`compile.py`'s `bundle_hash`), so a pinned bundle re-scores under the new
+  wire. Off-path reproduction (`trace_handlers.py:90-98`) therefore compares a result served by
+  one wire with one reproduced by the other during a rolling deploy. Acceptance 6 is what
+  makes that safe.
+
+### Write set
+
+| Path | This slice | Existing definitions edited |
+|---|---|---|
+| `packages/pricing-core/src/pricing_core/rating/references.py` | **new**: `referenced_names(node)` over a `JdmGraph` node | — |
+| `packages/pricing-core/src/pricing_core/rating/runtime.py` | `to_wire` (reference edges, `outputNode` wiring), `_expression_node`, `_decision_table_node`, `_constraint_node` (`passThrough` off), `CompiledBundle` (a `references` field), `load_bundle` (fills it), the module docstring's rule 3 | **yes**: those six |
+| `packages/pricing-core/src/pricing_core/rating/score.py` | `_build_trace` (the reference-set trim; the `input`/`output` entries); `build_scoring_result` passes `bundle.references` | **yes**: those two |
+| `packages/model-schema/src/model_schema/scoring.py` | `TraceStep`'s docstring only | **yes**: that docstring |
+| `docs/contracts/schemas/generated/`, `docs/contracts/openapi/generated.json` | regenerated (the docstring is the schema `description`) | registry-exempt (`RL-1263:104-116`) |
+| `packages/pricing-core/tests/test_rating_trace_minimal.py` | **new**: 8 tests | — |
+| `packages/pricing-core/tests/data/trace_remedy_baseline.json` | **new**: the frozen base corpus (Task 1 Step 6) | — |
+| `packages/pricing-core/tests/test_rating_score.py` | `test_trace_true_returns_a_populated_trace_and_the_identical_premium`: the `isdisjoint` assertion on `input`/`output` steps inverts (DP-F35-2 (b)) | **yes**: that test |
+| `backend/tests/test_score_compare.py` | the expectations of `test_compare_returns_both_traced_results_and_the_step_diff`, `test_exactly_one_step_is_the_own_change_at_the_http_layer` and `test_identical_refs_give_an_empty_diff` (Task 5's derivation); one appended test | **yes**: those three tests |
+| `docs/ledgers/LG-<id>-….md` | new | none |
+| `docs/INDEX.md` | regenerated | registry-exempt |
+
+**Read, not edited:** `backend/src/app/api/score.py`, `backend/src/app/worker/trace_handlers.py`,
+`backend/src/app/platform/traces.py`, `pricing_core/rating/trace_diff.py`, `compile.py`,
+`03`, the hand-authored `docs/contracts/schemas/scoring.schema.json` (its `TraceStep` carries
+no description, `:72-86`), `scripts/bench-rating.py`, `scripts/bench-trace-size.py`.
+
+### File contention
+
+Read at `19155b50` against the merged plans and the open PRs. **Serialise** means the two do
+not build concurrently, and the second merges `origin/main` first and re-runs its full gate.
+
+| Other slice | Shared path or dependency | This slice | The other slice | Kind |
+|---|---|---|---|---|
+| **`SL-1345`** (lane A, WK-674 Slice 3L, `PL-1348`, `active`, PR #1045) | `pricing_core/rating/runtime.py` | `to_wire`, `_constraint_node`, the node builders | `to_wire`'s `string()` read; `_constraint_node`'s `__before`, `__min`, `__max` (`PL-1348:525-590`) | **serialise: this slice after `SL-1345` merges** (activation need 7). The same two functions |
+| `SL-1345` | `pricing_core/rating/score.py` | `_build_trace`; `build_scoring_result`'s call to it | the ladder builder, `_build_outputs`, `build_scoring_result`'s raise, docstrings | same function (`build_scoring_result`): serialised by the row above |
+| `SL-1345` | `model_schema/scoring.py` | `TraceStep`'s docstring | `LadderOperationKind`, `LadderOperation`, `LadderRung`, `Trace.ladder_check_version` | different classes; serialised anyway |
+| `SL-1345` | `03` §4.5 | read only (the ruling writes `03`) | a note in §4.5 | none for this slice; the DP-F35-1 ruling's `03` edit is the decision-maker's, after `SL-1345` |
+| `SL-1345` | `test_rating_score.py` | the `:530` test | the `:224` and `:262` tests | different functions |
+| `SL-1345` | timing runs | Task 1, Task 6 (`bench-rating.py`) | its `bench-rating.py` run (`PL-1348` Acceptance 9) | **never the same window** |
+| **`SL-1257`** (WK-674 Slice 3, environment half, `draft`) | `backend/src/app/api/score.py`, `observability/metrics.py` | read only | edits both (`PL-1348:584-586`) | no shared definition. Its dispatch record re-checks |
+| **`SL-1259`** (WK-674 Slice 5, `draft`) | the NFR-490 measurement; `backend/src/app/api/score.py` (`/score` reads `live` once, `PL-1237` Task 5) | the base/HEAD evidence; reads `score.py` | the NFR-490 verdict | **dependency: SL-1259's NFR-490 limb comes after this slice** (the maintainer's 09:00:44 entry). Measurements never share a window. No shared file |
+| **PL 9788 (working id)** (WK-1178, `FD-1335` Part A, PR #1036, `draft`) | `backend/src/app/api/score.py` `responses=`; `backend/tests/test_score_compare.py` (one appended test); `generated.json` | reads `score.py`; edits three existing compare tests and appends one | edits the two decorators; appends one test | same Work, so **serial** by `RL-1263`. In the compare test file, no existing function is edited by both; the second to merge re-gates. `generated.json` is exempt: whichever lands second regenerates (once Part A's `$ref ScoringResult` lands, `TraceStep`'s description appears in more places) |
+| **`SL-1360`** (WK-1178, `active`) | none | — | `tests/test_permission_parity.py` | order only (activation need 5) |
+| **`FD-1357`'s fix** (WK-1178, not yet planned) | none (`rate_tables.py`, the seeding path) | — | — | order only (activation need 6) |
+| **`SL-1340`** (WK-1250 Slice 2, `draft`) | `_build_trace` (inlined steps traced and attributable, FR-258's limb); possibly `TraceStep` | `_build_trace`, `TraceStep`'s docstring | its trace limb "starts only after" the `TraceStep` ruling (`PL-1254:171-177`) | **serialise.** Recommended order: this slice first, so `SL-1340` builds on the ruled content. The lead decides |
+| **The `RL-1343` rule-4 slice** (WK-1178, not yet planned) | `score.py`, `model_schema/scoring.py`, `docs/contracts/` | `_build_trace`, `TraceStep`'s docstring | `outputs`' type (per PL 9788's contention section) | same Work: serial |
+| **WK-675 S7b** (`PL-1286`, `draft`) | `trace_diff.py`, `score_compare`'s body (`RL-1261`) | read only | edits both | no shared definition. Behavioural: once `RL-1261` lands, `own_change` no longer reads `consumed`, so P8 stops mattering |
+
+## How NFR-490 is measured (red first at the base)
+
+**The instrument** is `scripts/bench-rating.py`, unmodified, default arguments
+(`uv run python scripts/bench-rating.py`). Its NFR-490 line is the p99 overhead of the
+`trace=True` block over the `trace=False` block on the same 200-step structure with one
+`exact` GBM call (`main`, `:959-973`), and its A/B/C block splits the added time into the
+engine's share and ours (`:997-1028`). The budget is `BUDGET_TRACE_OVERHEAD` in that file, by
+symbol.
+
+**The statistic is p99**, the one the harness prints, F35 measured and `#1045`'s bench line
+used. NFR-490 names no statistic (DP-F35-5, non-blocking, default p99).
+
+**The latest figure at a base**, for orientation only (not this slice's measurement): the
+maintainer's entry "2026-10-01 08:57:07 BST — #1045's budget line is complete" reads "NFR-490
+≤ 20%; +384% and +556%; negative margins; run counts and window; traced p99 68.0 → 69.9 ms
+against a stdev of about 5 ms" (solo window 08:35:36–08:40:11 BST, per F35's dated
+observation in PR #1048). F35's own row records +497 % to +723 % across 5 of 5 runs.
+
+**The budget-margin statement**, filled in for each tree, in each window:
+
+| Field | Definition |
+|---|---|
+| Budget | traced p99 ≤ 1.20 × untraced p99 (`BUDGET_TRACE_OVERHEAD`) |
+| Runs | at least 3 per tree; each run is one full `bench-rating.py` invocation |
+| Per run | untraced p99 U (the "NFR-489 with GBM … trace=False" block), traced p99 T (the "NFR-490 with GBM, trace=True" block), overhead O = the script's printed line, and the 1-minute load span the script prints for each block |
+| Measured | median U, median T, median O; min and max O |
+| Stdev | s = the sample standard deviation of T across the tree's runs (ms) |
+| Margin | m = 1.20 × median U − median T (ms), and 20 % − median O (percentage points) |
+| Window | start and end, BST, with `uptime`, `free -h`, both `flock -n` slot reads and the `pgrep` line at each end |
+| Reading | m < 0: **over**. 0 ≤ m < s: **under, and a watch item** (the margin is inside one stdev). m ≥ s: **under** |
+
+**The prediction, stated so it can be falsified:** F35's row extrapolates a minimal entry to
+"roughly 1.6 ms against the 1.847 ms allowance". If that holds, the margin is about 0.25 ms,
+well inside a 5 ms stdev, so **a pass on this box is expected to be a watch item at best**.
+That is why the verdict stays with SL-1259 on the dedicated host (`PL-1237` Task 5): a
+shared-VM figure near a bound is diagnostic only.
+
+## Decision points
+
+DP-F35-1 is the maintainer's named first decision point. DP-F35-1, -2 and -3 are one ruling's
+subject (`CR-1247` Proposal 3: "one ruling on F35, F55, the trace input/output finding and
+Proposal 11's question"). DP-F35-4 waits on Spike S1.
+
+| DP | Question | Options | Recommendation | Kind | Blocking? | Resolved by |
+|---|---|---|---|---|---|---|
+| **DP-F35-1** | **What does a `TraceStep` record per node?** (F35, F55; FR-258's "consumed values, produced value"; R3's "full Trace") | **(a)** Declared names: `consumed` = the values of the step's declared `consumes`; `produced` = its declared `produces` (F55's wording). **(b)** What the step reads: `consumed` = the values of every name the step references (declared `consumes` plus the names its `expr`, `condition`, `clamp_bounds`, `key_expr` or `feature_map` reads), as the step received them; `produced` = its declared `produces`. **(c)** The full accumulated context, as today. **(d)** (a) or (b) by default, and the full context only on an explicit caller option | **(b).** It is `03` §4.5's own example (P6). (a) silently drops a clamp bound or decline threshold the step used (P5), so a trace could not explain its own clamp. (c) leaves NFR-490 about 18× over and NFR-500 about 2.58× over. (d) turns `QuoteContextOptions.trace` from a bool into an enum, a contract change for a debugging aid no requirement names. Under (b), "full" in R3 reads as every step, which is FR-258's "every step" | decision point | **yes** | decision-maker (`RL-`) |
+| DP-F35-1 (i) | Does `produced` keep the engine's internal keys (`<step>__violated`; `SL-1345`'s `__before`, `__min`, `__max`)? | (a) no: declared `produces` only; the `violation` field already records a clamp or decline. (b) yes | **(a)** | decision point | yes (with DP-F35-1) | decision-maker |
+| DP-F35-1 (ii) | Should compile refuse an undeclared reference, so that (a) and (b) coincide? | (a) not in this slice: raise it as an `OQ-`, and the auditor files P5 as a finding (§"Hand-off"). (b) in this slice: an FR-246 enforcement check over every step type | **(a).** (b) refuses algorithms that score today, including this repository's own fixture, which is a separate governed change | decision point | yes (with DP-F35-1) | decision-maker |
+| DP-F35-1 (iii) | Who writes FR-258's dated clarification and the `TraceStep` reading into `03`? | (a) the ruling's own commit (the precedent `RL-1305` D4 set). (b) this slice | **(a).** It keeps `03` out of this slice's write set, which `SL-1345` also edits (§4.5) | decision point | yes (with DP-F35-1) | decision-maker |
+| DP-F35-1 (iv) | Does `Trace` carry a marker of which reading a persisted trace holds? | (a) no marker: the shape is unchanged; a trace carries `bundle_hash` and its row a timestamp; no reader of persisted `consumed` exists yet (`05`'s monitors are a later phase). (b) an integer field on `Trace`, after `Trace.ladder_check_version`'s precedent (`SL-1345`) | **(a).** If `05`'s input-drift monitor (FR-307) later reads `consumed`, its spec states what it needs then (`CLAUDE.md` §0: a later phase is a spec change) | decision point | yes (with DP-F35-1) | decision-maker |
+| **DP-F35-2** | **Are the `input` and `output` steps traced?** (FD-1246) | (a) FR-258 gains a dated clarification that they are not, and the code is unchanged. (b) the trace carries one entry per `input` step (`consumed` `{}`, `produced` its declared name and value, from the engine's `inputNode` entry) and per `output` step (`consumed` its declared name and value, from the `outputNode` entry), each with `elapsed_us` 0 because the engine evaluates them as one collapsed node | **(b).** FR-258 says "every step"; under DP-F35-1 (b) each such entry is a few bytes; and `SL-1340`'s inlined ports are then traceable without a second ruling. Cost: `score/compare`'s `unchanged` counts rise (Acceptance 7), and a test that pins today's omission inverts | decision point | **yes** | decision-maker (the same `RL-`) |
+| **DP-F35-3** | **What does NFR-500's "sampled-trace schema" name?** (`CR-1247` Proposal 11; F37) | (a) the `Trace` contract after this slice's trim, measured uncompressed. (b) the persisted encoding with a named compression. (c) both: the trimmed `Trace`, persisted with a named compression, the budget stated for the persisted bytes | **(a)**, as `CR-1247` recommended and the maintainer accepted. **At `19155b50` the `OQ-` is not filed** (`grep -c 'sampled-trace schema' docs/open-questions.md` prints 0); filing it is the decision-maker's, in the same sitting | design unknown → `OQ-`, then `RL-` | **yes** (Acceptance 9 reads against it) | decision-maker |
+| **DP-F35-4** | **How is the engine made to carry less?** (P1, P3, P4) | **(M1)** One graph: `passThrough` off on every node; an edge from the producer of each name a step references (the `inputNode` for a raw input); every node whose output a later node does not overwrite wired to `outputNode`; `inputNode` wired to `outputNode`. **(M2)** No engine trace: score untraced and rebuild each entry from the result; `elapsed_us` and `matched` (FR-258) are lost or recomputed in Python. **(M3)** Trim in `_build_trace` only. **(M4)** Two graphs: today's for untraced calls and M1's for traced ones; R3 then compares two graphs on every traced call | **M1, if S1 shows equality on the whole corpus and no mixed producer**; else **M4**, which leaves the serving path untouched. **M3 is not a remedy for NFR-490** (P4: our share is 12–25 %); it fixes F55 and NFR-500 only, and taking it means NFR-490 stays red with the residual owned by the maintainer's dated line. M2 loses two FR-258 fields | decision point (on S1's facts) | **yes** | decision-maker, after S1 |
+| DP-F35-5 | Which statistic does NFR-490's "adds ≤ 20 %" name? (`RL-862` Addendum: "NFR-490 names no statistic"; no record of it is filed at `19155b50`) | (a) p99, as the harness prints. (b) the mean. (c) every quantile, as the harness's ratio ladder prints | default **(a)** until ruled | scope | no: **default p99 applies at Tasks 1 and 6**; resolved at SL-1259's close or by an `OQ-` the lead raises | lead |
+| DP-F35-6 | Does a passing NFR-490 trigger `RL-862`'s override ("if #416's audit shows traced cost can be brought inside NFR-490's ceiling — in which case always-capture becomes affordable and the simpler design returns")? | (a) no: the off-path design stays; any reversion is a new ruling. (b) yes, in this slice | default **(a)**: this slice touches no backend file (Acceptance 12) | scope | no: **default (a) applies throughout**; named in §"Hand-off" | decision-maker, if raised |
+
+## Spike S1 — the fact DP-F35-4 needs (an `RS-` of `kind: spike`, before activation)
+
+**Who and when.** An executor, before activation, as preparation. It measures **bytes and
+equality, never time**, so it is not a measurement step under `RL-1263` item 3. Whether it may
+run beside a build slice is the lead's call. It commits no code: its scripts go inline in the
+`RS-`, each with its sha256 prefix.
+
+**At the tree the spike names** (`origin/main` after `SL-1345` merges, if it has; the `RS-`
+names the SHA either way):
+
+1. **Reference sets.** For every algorithm in the corpus below, compute each interior step's
+   reference set with Task 3's `referenced_names` and list every step whose set is not a subset
+   of its declared `consumes`, with the extra names. Check the extractor against the engine:
+   for each expression, `zen.evaluate_expression` (or `zen.compile_expression`, whichever the
+   binding exposes) with the reference set alone in the context must succeed, and with one
+   name removed must fail. Report any expression where it does not.
+2. **Merge order, then mixed producers.** First the engine fact: on a two-node probe, both
+   nodes wired to `outputNode` and both writing key `k`, which value does the result keep,
+   with the node list in order and with the edge list reversed? Record both. If the
+   topologically later writer wins in both, M1 may wire every interior node to `outputNode`,
+   and the rest of this step is moot. Otherwise, list every **mixed producer**: an interior
+   node whose output holds a key a later node also writes and a key no later node writes.
+   The `inputNode` counts as the writer of every raw input name. A constraint node always
+   writes its own `<step>__violated` key, so **a clamp whose clamped name a later clamp
+   re-produces is a mixed producer** (the clamp-in-place chain
+   `packages/model-schema/tests/test_rating_algorithm.py:28` describes). A non-empty list goes
+   to the decision-maker with the ruling: M1 cannot place such a node without the merge-order
+   fact, and M4 is then the recommendation.
+3. **Equality.** Build the M1 wire (Task 4's sample). Over the corpus, score every context
+   untraced on today's wire and on M1's, and traced on M1's. Compare `ScoringResult` with
+   `trace` and `timing_ms` blanked, as canonical JSON. Report `equal N of N` per algorithm and
+   list every difference by quote and key.
+4. **Payload bytes.** For the 63- and 200-step structures (`bench-trace-size.py`'s builder), record
+   `len(json.dumps(out["trace"]))` from `async_evaluate(context, {"trace": True})` on both wires,
+   the entry count, and the mean and maximum bytes per entry. Then predict the overhead from
+   P4's 1:1 bytes-to-cost, labelled a prediction.
+5. **Corpus:** `test_rating_score.py`'s `_compiled()` and `_compiled(glm=True)` with 240 seeded
+   contexts each (`driver_age` 17–99; both channels; `min_premium_minor` 0 and above the
+   office premium, so the clamp fires; `sanity_cap_minor` and `sanity_floor_minor` set so each
+   decline fires on some quotes); the 200-step structure with 1000 seeded contexts; and every
+   algorithm under `packages/pricing-core/tests/` and `examples/` that `compile_bundle` accepts.
+   The `RS-` lists the algorithms it found.
+
+## Tasks
+
+### Task 0: Preconditions (no code)
+
+- [ ] **Step 1: Run the 7 `RL-862` capture tests at the base.** On a clean checkout of the
+  base SHA, DB stack up, `GIP_TEST_DATABASE_URL` set as the slot wrapper sets it:
+  ```bash
+  uv run pytest -q \
+    "backend/tests/test_score.py::test_a_decline_is_persisted_as_a_pending_trace_and_a_job_is_submitted" \
+    "backend/tests/test_score.py::test_a_sampled_trace_is_completed_by_the_off_path_job" \
+    "backend/tests/test_score.py::test_a_pinned_bundle_that_no_longer_resolves_is_refused_not_silently_rescored" \
+    "backend/tests/test_traces.py::test_write_pending_trace_has_no_body_yet" \
+    "backend/tests/test_traces.py::test_completing_a_pending_trace_that_reproduces_marks_it_complete" \
+    "backend/tests/test_traces.py::test_completing_a_pending_trace_that_does_not_reproduce_keeps_the_body" \
+    "backend/tests/test_traces.py::test_completing_a_pending_trace_with_no_reproduction_leaves_no_body"
+  ```
+  Expected: `7 passed`. Record the line, the SHA and `uptime`. **If any test fails, stop**:
+  F35's gate-discharge record rests on this run, and the failure goes to the lead as a finding
+  against the capture, before any code here.
+- [ ] **Step 2:** Diff each minted ruling (activation needs 2 and 4) against this plan's
+  recommendations, and name each difference in the dispatch record (§"Status").
+- [ ] **Step 3:** Re-verify P1–P11 at the base: the three `passThrough` lines, `_build_trace`'s
+  two lines, the `zen` stub, the fixture's two under-declared constraints. `SL-1345` moves
+  lines in `runtime.py` and `score.py`; record the new numbers.
+- [ ] **Step 4:** `gh pr list --state open`, and read anything that touches `runtime.py`,
+  `score.py`, `TraceStep` or `03` §3.8/§4.5 (`SL-1340`, the `RL-1343` rule-4 slice, PL 9788).
+  Name each head SHA in the ledger.
+
+### Task 1: NFR-490 red at the base, and the frozen base corpus (solo window 1)
+
+**Files:**
+- Create: `packages/pricing-core/tests/data/trace_remedy_baseline.json`
+
+- [ ] **Step 1:** In the lead's solo window, record `uptime`, `free -h`,
+  `flock -n /tmp/slots/gate-1 true; echo $?`, `flock -n /tmp/slots/gate-2 true; echo $?` and
+  `pgrep -af 'pytest|bench-|migrate --verify' | grep -v pgrep`. An rc of 1 means the slot is
+  held: the window is not solo, so stop.
+- [ ] **Step 2:** On the base checkout, run `uv run python scripts/bench-rating.py` three times
+  in a row, with `LOKY_MAX_CPU_COUNT=4` and the dev-commands thread caps exported. Keep each
+  full output.
+- [ ] **Step 3:** Fill in the budget-margin statement (§"How NFR-490 is measured") for the
+  base. **Expected: over** (m < 0), as F35 and `#1045` found. A base that reads under is a
+  stop: report it to the lead before any code, because the premise has moved.
+- [ ] **Step 4:** Record each run's A/B/C line (`engine-side (B-A)` and `ours (C-B)`). This is
+  the base split that Task 6 compares.
+- [ ] **Step 5:** `uv run python scripts/bench-trace-size.py` on the base. Record its output
+  (NFR-500, bytes; not timing-sensitive, but run inside the window for one record).
+- [ ] **Step 6: Freeze the base corpus.** On the base, run this script and commit its output.
+  It is the R3 baseline Task 4 compares against. Paste the script and its sha256 prefix in
+  the ledger.
+
+```python
+"""Write the frozen base corpus for test_the_remedy_changes_no_served_result (PL 9776 Task 1)."""
+import asyncio
+import json
+import random
+import sys
+from pathlib import Path
+
+# Run from the repository root with `uv run python <this file>`.
+sys.path.insert(0, str(Path("packages/pricing-core/tests").resolve()))
+
+from test_rating_score import _compiled, _ctx  # noqa: E402
+
+from pricing_core.rating.score import score_one  # noqa: E402
+
+
+def contexts(seed: int, n: int) -> list[dict[str, object]]:
+    rng = random.Random(seed)
+    out = []
+    for _ in range(n):
+        out.append({
+            "driver_age": rng.randint(17, 99),
+            "channel": rng.choice(["direct", "broker"]),
+            "min_premium_minor": rng.choice([0, 0, 10**9]),
+            "sanity_cap_minor": rng.choice([10**12, 10**12, 1]),
+            "sanity_floor_minor": rng.choice([0, 0, 10**12]),
+        })
+    return out
+
+
+async def served(compiled: object, inputs: dict[str, object]) -> dict[str, object]:
+    """The served result with `trace` and `timing_ms` blanked, or the raised error's code."""
+    try:
+        result = await score_one(compiled, _ctx(inputs=inputs))  # type: ignore[arg-type]
+    except Exception as exc:  # a raise is a result too; record which one
+        return {"error": str(getattr(exc, "code", type(exc).__name__))}
+    return json.loads(result.model_copy(update={"trace": None, "timing_ms": {}}).model_dump_json())
+
+
+async def main() -> None:
+    corpus = []
+    for glm in (False, True):
+        compiled = await _compiled(glm=glm)
+        for inputs in contexts(seed=9776 + int(glm), n=240):
+            corpus.append({
+                "glm": glm,
+                "inputs": inputs,
+                "result": await served(compiled, inputs),
+            })
+    Path("packages/pricing-core/tests/data/trace_remedy_baseline.json").write_text(
+        json.dumps(corpus, sort_keys=True, indent=1) + "\n", encoding="utf-8"
+    )
+    print(f"wrote {len(corpus)} quotes")
+
+
+asyncio.run(main())
+```
+
+  The five input names are the fixture's defaults (`test_rating_score.py:148-151`), and
+  `_ctx(inputs=…)` replaces the whole dict. Check them against the fixture's `input_contract`
+  at the base before running: **mirror the fixture, not this sample** ([`README.md`](README.md)
+  convention 3). A quote that raises is recorded as `{"error": <code>}` in place of `result`,
+  and the differential test compares the same way. Expected: `wrote 480 quotes`, with at least one `declined` and at least
+  one clamped quote in each half (count them in the ledger).
+- [ ] **Step 7:** Record `uptime` and `free -h` at the window's end.
+
+```bash
+git add packages/pricing-core/tests/data/trace_remedy_baseline.json
+git commit -m "test(rating): freeze the base scoring corpus for the trace remedy's R3 check (WK-1178)"
+```
+
+### Task 2: The trace-shape tests, red at the base
+
+**Files:**
+- Create: `packages/pricing-core/tests/test_rating_trace_minimal.py`
+
+**Interfaces:**
+- Consumes: `test_rating_score._compiled`, `_ctx`; `pricing_core.rating.score.score_one`.
+- Produces: the module that Tasks 3 and 4 append to; `_by_id(trace)`.
+
+- [ ] **Step 1: Write the failing tests.**
+
+```python
+"""PL 9776 (WK-1178, F35): a TraceStep records what its step read and declared, nothing more."""
+
+from __future__ import annotations
+
+import pytest
+from test_rating_score import _compiled, _ctx
+
+from model_schema.scoring import Trace, TraceStep
+from pricing_core.rating.score import score_one
+
+
+#: The fixture's default inputs; `_ctx(inputs=…)` replaces the whole dict (`test_rating_score.py:143-155`).
+_DEFAULT_INPUTS = dict(_ctx().inputs)
+
+
+def _by_id(trace: Trace) -> dict[str, TraceStep]:
+    return {step.step_id: step for step in trace.steps}
+
+
+async def _trace(**overrides: object) -> Trace:
+    compiled = await _compiled()
+    result = await score_one(compiled, _ctx(inputs={**_DEFAULT_INPUTS, **overrides}), trace=True)
+    assert result.trace is not None
+    return result.trace
+
+
+@pytest.mark.req("FR-258")
+async def test_an_expression_step_records_only_what_it_read() -> None:
+    step = _by_id(await _trace())["s_office"]
+    extra = set(step.consumed) - {"risk_premium_minor", "expense_factor"}
+    assert not extra, f"consumed has keys beyond the step's references: {sorted(extra)}"
+    assert set(step.consumed) == {"risk_premium_minor", "expense_factor"}
+
+
+@pytest.mark.req("FR-258")
+async def test_a_clamp_records_the_bound_it_read_and_the_pre_clamp_value() -> None:
+    step = _by_id(await _trace())["s_clamp"]
+    assert set(step.consumed) == {"office_premium_minor", "min_premium_minor"}, (
+        f"consumed keys {sorted(step.consumed)}"
+    )
+    assert set(step.produced) == {"office_premium_minor"}, f"produced keys {sorted(step.produced)}"
+
+
+@pytest.mark.req("FR-258")
+async def test_produced_holds_only_declared_names() -> None:
+    trace = await _trace()
+    compiled = await _compiled()
+    declared = {
+        s.step_id: set([s.produces] if isinstance(s.produces, str) else s.produces)
+        for s in compiled.algorithm.steps
+    }
+    for step in trace.steps:
+        extra = set(step.produced) - declared[step.step_id]
+        assert not extra, f"{step.step_id}: produced has undeclared keys {sorted(extra)}"
+
+
+@pytest.mark.req("FR-258")
+async def test_a_clamp_still_records_its_violation_after_the_trim() -> None:
+    # A minimum premium above any office premium the fixture produces, so the clamp fires.
+    step = _by_id(await _trace(min_premium_minor=10**9))["s_clamp"]
+    assert step.violation is not None, "the clamp fired but the trace lost its violation"
+
+
+@pytest.mark.req("FR-258")
+async def test_every_algorithm_step_is_traced_once() -> None:
+    trace = await _trace()
+    compiled = await _compiled()
+    traced = [s.step_id for s in trace.steps]
+    expected = [s.step_id for s in compiled.algorithm.steps]
+    missing = sorted(set(expected) - set(traced))
+    assert not missing, f"steps missing from the trace: {missing}"
+    assert sorted(traced) == sorted(expected)
+```
+
+  `_ctx(**overrides)` replaces top-level `QuoteContext` fields, so an input override passes a
+  whole `inputs` dict, as `test_rating_score.py:201` and `:246` do.
+- [ ] **Step 2: Run them at the base, and record each red's cause.**
+  Run: `uv run pytest -q packages/pricing-core/tests/test_rating_trace_minimal.py`.
+  Expected, each by its cause:
+  - `test_an_expression_step_records_only_what_it_read`: FAIL, `consumed has keys beyond the
+    step's references:` followed by the context keys (`channel`, `driver_age`, …);
+  - `test_a_clamp_records_the_bound_it_read_and_the_pre_clamp_value`: FAIL, `consumed keys`
+    listing the whole context;
+  - `test_produced_holds_only_declared_names`: FAIL, `produced has undeclared keys`;
+  - `test_a_clamp_still_records_its_violation_after_the_trim`: **PASS** at the base (the
+    control: it guards the trim, and Task 3 must keep it green);
+  - `test_every_algorithm_step_is_traced_once`: FAIL, `steps missing from the trace:` naming
+    the `input` and `output` steps (FD-1246).
+
+  A failure with any other cause is a plan defect: stop and report it.
+
+```bash
+git add packages/pricing-core/tests/test_rating_trace_minimal.py
+git commit -m "test(rating): a trace step records what its step read and declared — red (WK-1178, F35)"
+```
+
+### Task 3: What the trace records (DP-F35-1 (b), DP-F35-2 (b))
+
+**Files:**
+- Create: `packages/pricing-core/src/pricing_core/rating/references.py`
+- Modify: `packages/pricing-core/src/pricing_core/rating/runtime.py` (`CompiledBundle`, `load_bundle`)
+- Modify: `packages/pricing-core/src/pricing_core/rating/score.py` (`_build_trace`, `build_scoring_result`)
+- Modify: `packages/model-schema/src/model_schema/scoring.py` (`TraceStep`'s docstring)
+- Modify: `packages/pricing-core/tests/test_rating_score.py` (the `:530` test's `isdisjoint` assertion)
+- Test: `packages/pricing-core/tests/test_rating_trace_minimal.py` (append one test)
+
+**Interfaces:**
+- Produces: `referenced_names(node: Mapping[str, Any]) -> frozenset[str]`;
+  `CompiledBundle.references: Mapping[str, frozenset[str]]` (step id → reference set, interior
+  steps only); `_build_trace(algorithm, engine_trace, references, rating_version_ref,
+  bundle_hash, quote_id, ladder_reconciled) -> Trace`.
+
+- [ ] **Step 1: Append the extractor test** (red: the module does not exist yet).
+
+```python
+from pricing_core.rating.references import referenced_names
+
+
+@pytest.mark.req("FR-258")
+def test_referenced_names_reads_every_field_a_step_evaluates() -> None:
+    clamp = {
+        "type": "constraint", "consumes": ["office_premium_minor"], "produces": ["office_premium_minor"],
+        "condition": "office_premium_minor >= min_premium_minor",
+        "clamp_bounds": {"min": "min_premium_minor"},
+    }
+    assert referenced_names(clamp) == {"office_premium_minor", "min_premium_minor"}
+    expr = {"type": "expression", "consumes": ["a"], "produces": "c", "expr": "a * b + round(a, 'half_even', 0)"}
+    assert referenced_names(expr) == {"a", "b"}
+    table = {"type": "table", "consumes": ["channel"], "produces": "f", "key_expr": ["channel"]}
+    assert referenced_names(table) == {"channel"}
+    model = {"type": "model_call", "consumes": ["driver_age"], "produces": ["r"],
+             "feature_map": {"driver_age": "age_years"}}
+    assert referenced_names(model) == {"driver_age"}
+    quoted = {"type": "expression", "consumes": [], "produces": "c", "expr": "channel == 'broker_fee'"}
+    assert referenced_names(quoted) == {"channel"}
+```
+
+  Run it. Expected: FAIL at collection with `ModuleNotFoundError: No module named
+  'pricing_core.rating.references'`.
+- [ ] **Step 2: Write `references.py`.** Use the form Spike S1 verified against the engine. If
+  S1 found a binding call that lists an expression's variables, use that instead of the
+  tokenizer below, and the `RS-` records which.
+
+```python
+"""Which names a rating step reads (PL 9776, DP-F35-1 (b)).
+
+A step's declared `consumes` can under-declare what it evaluates: a constraint's `condition`
+and `clamp_bounds` may read a raw input it does not list (`test_rating_score.py`'s `s_clamp`
+and `s_decl_cap`). The trace records the values a step read, so it needs the names it reads,
+not only the names it declares. Computed once per bundle in `load_bundle`, never per quote.
+"""
+
+from __future__ import annotations
+
+import re
+from collections.abc import Mapping
+from typing import Any
+
+#: A ZEN expression's string literals, removed before identifiers are read.
+_STRING = re.compile(r"'(?:[^'\\]|\\.)*'|\"(?:[^\"\\]|\\.)*\"")
+#: An identifier not followed by `(` (a call) and not preceded by `.` (a member).
+_NAME = re.compile(r"(?<![\w.$])([A-Za-z_][A-Za-z0-9_]*)\b(?!\s*\()")
+_KEYWORDS = frozenset({"true", "false", "null", "and", "or", "not", "in"})
+
+
+def _names_in(text: str) -> set[str]:
+    return {m for m in _NAME.findall(_STRING.sub(" ", text)) if m not in _KEYWORDS}
+
+
+def _as_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    return [str(v) for v in (value if isinstance(value, list) else [value])]
+
+
+def referenced_names(node: Mapping[str, Any]) -> frozenset[str]:
+    """Declared `consumes` plus every name the node's evaluated fields read."""
+    names = set(_as_list(node.get("consumes")))
+    for field in ("expr", "condition"):
+        if isinstance(node.get(field), str):
+            names |= _names_in(node[field])
+    for bound in (node.get("clamp_bounds") or {}).values():
+        names |= _names_in(str(bound))
+    for key in _as_list(node.get("key_expr")):
+        names |= _names_in(key)
+    names |= set((node.get("feature_map") or {}).keys())
+    return frozenset(names)
+```
+
+  A string-valued `clamp_bounds` entry may be a literal number; `_names_in("28000")` returns
+  the empty set, which is right.
+- [ ] **Step 3:** In `runtime.py`, add `references: Mapping[str, frozenset[str]]` as the last
+  field of `CompiledBundle`, and in `load_bundle` fill it with
+  `{sid: referenced_names(node) for sid, node in bundle.graph.nodes.items() if node["type"] in _ENGINE_NODE_TYPE}`.
+  Grep every `CompiledBundle(` construction in `packages/`, `backend/` and `scripts/` and add
+  the field at each site (a test double included).
+- [ ] **Step 4: Rewrite `_build_trace`'s loop.** The signature gains `references` after
+  `engine_trace`; `build_scoring_result` passes `bundle.references`. The loop body:
+
+```python
+    step_meta = {step.step_id: step for step in algorithm.steps}
+    entries = sorted(engine_trace.values(), key=lambda entry: entry.get("order", 0))
+    by_id = {str(entry.get("id")): entry for entry in entries}
+    context = dict((by_id.get(_INPUT_NODE_ID) or {}).get("output") or {})
+    result = dict((by_id.get(_OUTPUT_NODE_ID) or {}).get("input") or {})
+    steps: list[TraceStep] = []
+    # DP-F35-2 (b): input steps first, in algorithm order. The engine evaluates every input
+    # step as one collapsed `inputNode`, so a per-step elapsed time does not exist: 0.
+    for step in algorithm.steps:
+        if isinstance(step, RatingInputStep):
+            steps.append(TraceStep(
+                step_id=step.step_id, type=step.type, label=step.label, consumed={},
+                produced={n: context[n] for n in _as_list(step.produces) if n in context},
+                elapsed_us=0,
+            ))
+    for entry in entries:
+        step = step_meta.get(entry.get("id"))
+        if step is None or isinstance(step, (RatingInputStep, RatingOutputStep)):
+            continue  # the wire nodes; input/output steps are recorded above and below
+        received = entry.get("input") or {}
+        output = entry.get("output") or {}
+        violation: dict[str, object] | None = None
+        if isinstance(step, RatingConstraintStep) and bool(output.get(f"{step.step_id}__violated", False)):
+            violation = {"reason_code": step.reason_code, "on_violation": step.on_violation}
+        trace_data = entry.get("traceData")
+        steps.append(TraceStep(
+            step_id=step.step_id, type=step.type, label=step.label,
+            consumed={n: received[n] for n in sorted(references[step.step_id]) if n in received},
+            produced={n: output[n] for n in _as_list(step.produces) if n in output},
+            matched=trace_data if isinstance(trace_data, dict) else None,
+            violation=violation,
+            elapsed_us=_parse_elapsed_us(str(entry.get("performance", "0"))),
+        ))
+    # Output steps last, in algorithm order, from what reached the `outputNode`.
+    for step in algorithm.steps:
+        if isinstance(step, RatingOutputStep):
+            steps.append(TraceStep(
+                step_id=step.step_id, type=step.type, label=step.label,
+                consumed={n: result[n] for n in _as_list(step.consumes) if n in result},
+                produced={}, elapsed_us=0,
+            ))
+```
+
+  `_INPUT_NODE_ID` and `_OUTPUT_NODE_ID` are `runtime.py`'s `_INPUT_ID` (`"input"`) and
+  `_OUTPUT_ID` (`"output"`), imported under those names; if the import-linter or the
+  underscore convention objects, export them from `runtime.py` without the underscore. Confirm
+  `RatingInputStep` is imported in `score.py` (it imports `RatingOutputStep` at `:200`). Keep the
+  existing violation-flag read, which reads the engine's output **before** the trim.
+- [ ] **Step 5:** Invert the `isdisjoint` assertion in
+  `test_trace_true_returns_a_populated_trace_and_the_identical_premium`
+  (`test_rating_score.py:545-550`) so it asserts the five `input`/`output` step ids are
+  **present**, and update its comment to cite DP-F35-2 (b).
+- [ ] **Step 6:** Replace `TraceStep`'s docstring (`scoring.py:139-144`) with the ruled reading:
+
+```python
+    """One node of a `Trace` (FR-258, `scoring.schema.json:71-86`).
+
+    `consumed` holds the value of every name the step reads (its declared `consumes` and
+    every name its expression, condition, clamp bounds, table key or feature map reads), as
+    the step received it; `produced` holds its declared `produces`. Never the engine's
+    accumulated context (F35, F55; the DP-F35-1 ruling). `input` and `output` steps are
+    traced with `elapsed_us` 0, because the engine evaluates each kind as one node.
+    """
+```
+
+  Cite the minted ruling id in place of "the DP-F35-1 ruling".
+- [ ] **Step 7:** Run `uv run python scripts/generate-contracts.py` and confirm
+  `git diff -- docs/contracts/` changes description text only (Acceptance 10).
+- [ ] **Step 8:** Run `uv run pytest -q packages/pricing-core/tests/test_rating_trace_minimal.py packages/pricing-core/tests/test_rating_score.py`.
+  Expected: all Task 2 tests and the extractor test pass. The engine still sends the whole
+  context (P1); Task 4 removes that.
+
+```bash
+git add packages/pricing-core/src/pricing_core/rating/references.py packages/pricing-core/src/pricing_core/rating/runtime.py packages/pricing-core/src/pricing_core/rating/score.py packages/model-schema/src/model_schema/scoring.py packages/pricing-core/tests/test_rating_trace_minimal.py packages/pricing-core/tests/test_rating_score.py docs/contracts/
+git commit -m "fix(rating): a trace step records what its step read and declared (WK-1178, F35, F55, FD-1246)"
+```
+
+### Task 4: What the engine carries (DP-F35-4 (M1)), with R3 held
+
+**Files:**
+- Modify: `packages/pricing-core/src/pricing_core/rating/runtime.py` (`to_wire`, the three node builders, the module docstring's rule 3)
+- Test: `packages/pricing-core/tests/test_rating_trace_minimal.py` (append two tests)
+
+- [ ] **Step 1: Append the payload-bound test** (red at this point: `passThrough` is still on).
+
+```python
+@pytest.mark.req("FR-258")
+async def test_engine_entry_input_is_bounded_by_its_references() -> None:
+    compiled = await _compiled()
+    ctx = _ctx()
+    context_keys = {"effective_date", "purpose", *ctx.inputs}
+    out = await compiled.decision.async_evaluate(
+        {"effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **ctx.inputs},
+        {"trace": True},
+    )
+    for entry in out["trace"].values():
+        sid = str(entry.get("id"))
+        if sid not in compiled.references:
+            continue  # the wire nodes
+        extra = set(entry.get("input") or {}) - compiled.references[sid] - context_keys
+        assert not extra, f"{sid}: the engine carried names the step never reads: {sorted(extra)}"
+```
+
+  Run it. Expected: FAIL, `the engine carried names the step never reads:` naming computed
+  names such as `risk_premium_minor` on a step downstream of `s_risk` that does not read it.
+- [ ] **Step 2: Append the R3 differential test.**
+
+```python
+import json
+from pathlib import Path
+
+_BASELINE = Path(__file__).parent / "data" / "trace_remedy_baseline.json"
+
+
+@pytest.mark.req("NFR-490")
+async def test_the_remedy_changes_no_served_result() -> None:
+    corpus = json.loads(_BASELINE.read_text(encoding="utf-8"))
+    compiled = {glm: await _compiled(glm=glm) for glm in (False, True)}
+    changed: list[str] = []
+    for i, case in enumerate(corpus):
+        try:
+            result = await score_one(compiled[case["glm"]], _ctx(inputs=case["inputs"]))
+        except Exception as exc:
+            now: dict[str, object] = {"error": str(getattr(exc, "code", type(exc).__name__))}
+        else:
+            now = json.loads(
+                result.model_copy(update={"trace": None, "timing_ms": {}}).model_dump_json()
+            )
+        if now != case["result"]:
+            changed.append(f"quote {i}: outcome {case['result'].get('outcome')} -> {now.get('outcome')}")
+    assert not changed, f"{len(changed)} of {len(corpus)} served results changed: {changed[:5]}"
+```
+
+  It reads results exactly as Task 1 Step 6's `served()` wrote them. It passes now (Task 3
+  changed no result).
+- [ ] **Step 3: Change the wire.** In `to_wire`, keep the interior loop and change what it
+  wires. Use the rule DP-F35-4's ruling adopts from Spike S1; this is the candidate:
+
+```python
+    refs = {sid: referenced_names(graph.nodes[sid]) for sid in interior_ids}
+    produced_by: dict[str, str] = {}
+    writes: dict[str, list[str]] = {}          # name -> every interior step writing it, in order
+    for step_id in interior_ids:
+        node = graph.nodes[step_id]
+        sources = {produced_by.get(name, _INPUT_ID) for name in refs[step_id]}
+        for source in sorted(sources):
+            edges.append(_edge(source, step_id))
+        # ... the existing per-type node construction, unchanged except `passThrough` ...
+        for name in _as_list(node["produces"]):
+            produced_by[str(name)] = step_id
+            writes.setdefault(str(name), []).append(step_id)
+
+    # The result must still hold every key the scoring tail reads: every produced name's
+    # final value, every constraint's `__violated` flag, a model_call's error sentinel, and
+    # the raw inputs. A node is wired to `outputNode` unless a later node overwrites every
+    # name it produces. A constraint node is always wired: its `__violated` key is its own,
+    # and `_apply_constraints` reads it from the result. Spike S1 step 2 showed either that
+    # the later writer wins at `outputNode`, or that the corpus has no mixed producer.
+    edges.append(_edge(_INPUT_ID, _OUTPUT_ID))
+    for step_id in interior_ids:
+        names = [str(n) for n in _as_list(graph.nodes[step_id]["produces"])]
+        overwritten = [n for n in names if writes[n][-1] != step_id]
+        if names and len(overwritten) == len(names) and graph.nodes[step_id]["type"] != "constraint":
+            continue
+        edges.append(_edge(step_id, _OUTPUT_ID))
+```
+
+  This replaces the existing consumes-edge loop (`for name in _as_list(node["consumes"])`,
+  which also fills `consumed_by_someone`) and the final `outputNode` wiring loop; the per-type
+  node construction between them is unchanged except for `passThrough`. Set
+  `"passThrough": False` in `_expression_node` (`:162`), `_decision_table_node` (`:256`) and
+  `_constraint_node` (`:322`). Rewrite the module docstring's rule 3 and `to_wire`'s
+  docstring paragraph on `passThrough` (`:362-368`) to state the new rule and cite the minted
+  DP-F35-4 ruling. **If S1 found the later writer wins at `outputNode`, the ruling may simplify
+  the rule to "wire every interior node"; use the ruling's form.**
+- [ ] **Step 4:** Run `uv run pytest -q packages/pricing-core/tests/` (the whole pricing-core
+  suite, a named directory). Expected: green, including the payload-bound test, the R3
+  differential, `test_rating_score.py` and `SL-1345`'s ladder sweep. Any red in
+  `test_rating_score.py` or the sweep is an R3 failure: **stop and report**; do not adjust an
+  expected value.
+- [ ] **Step 5: The broken-input proof** (Acceptance 6). In the working tree, change the
+  last `if` so constraint nodes are skipped as well (delete `and graph.nodes[step_id]["type"] !=
+  "constraint"` and add `or graph.nodes[step_id]["type"] == "constraint"` before the `continue`).
+  Run the differential test. Expected: FAIL, `served results changed:` naming at least one quote
+  whose outcome moved from `declined` to `quoted`. Quote the line in the ledger. Revert with
+  `git checkout -- packages/pricing-core/src/pricing_core/rating/runtime.py`.
+
+```bash
+git add packages/pricing-core/src/pricing_core/rating/runtime.py packages/pricing-core/tests/test_rating_trace_minimal.py
+git commit -m "perf(rating): the engine carries only what each node reads; result unchanged (WK-1178, F35, NFR-490)"
+```
+
+### Task 5: `score/compare` and the capture path, re-proved
+
+**Files:**
+- Modify: `backend/tests/test_score_compare.py`
+
+**The derivation.** The fixture (`test_score_compare.py:55-115`, built on
+`backend/tests/test_rating_version_compile.py:50-72`) has four steps: `s_in` (produces
+`premium_in`), `s_expr` (reads `premium_in`, produces `payable`; `* 2` in version 1, `* 3` in
+version 2), `s_adj` (reads `payable`, produces `adjusted`) and `s_out` (reads `adjusted`). At
+the base only `s_expr` and `s_adj` are traced. Under DP-F35-1 (b) and DP-F35-2 (b):
+- `s_in`: `consumed` `{}`, `produced` `{"premium_in": 1000}` on both sides: **unchanged**;
+- `s_expr`: same `consumed`, different `produced`: **changed**, `own_change` true;
+- `s_adj`: `consumed` moved: **changed**, `own_change` false;
+- `s_out`: `consumed` `{"adjusted": …}` moved: **changed**, `own_change` false.
+
+So three existing tests change, each red first:
+
+- [ ] **Step 1:** Run `uv run pytest -q backend/tests/test_score_compare.py` at the end of
+  Task 4, unchanged. Expected reds, each by its cause:
+  - `test_compare_returns_both_traced_results_and_the_step_diff`: the step list is
+    `["s_expr", "s_adj", "s_out"]` against the expected `["s_expr", "s_adj"]`;
+  - `test_exactly_one_step_is_the_own_change_at_the_http_layer`: the downstream list is
+    `["s_adj", "s_out"]` against `["s_adj"]` (its `unchanged == 0` would also fail: it is 1);
+  - `test_identical_refs_give_an_empty_diff`: `"unchanged": 4` against 2.
+
+  Any other red is a plan defect: stop.
+- [ ] **Step 2:** Update the three expectations to the derivation above: the step list
+  `["s_expr", "s_adj", "s_out"]`; downstream `["s_adj", "s_out"]`, each with `consumed` in its
+  `changed_fields`, and `unchanged == 1`; `{"steps": [], "unchanged": 4}`. The own change is
+  still exactly `["s_expr"]` (`RL-1172`'s one-step proof holds).
+- [ ] **Step 3: Append the test the trimmed trace makes possible.**
+
+```python
+@pytest.mark.req("FR-262")
+def test_a_step_whose_references_did_not_move_is_traced_and_not_listed(
+    client: TestClient, reader_headers: dict[str, str], two_versions: None
+) -> None:
+    """F55's lever at the HTTP layer: `s_in` is in both traces, reads nothing the edit moved,
+    and so is counted unchanged rather than listed."""
+    body = client.post(COMPARE_URL, json=_body(), headers=reader_headers).json()
+    assert "s_in" in {s["step_id"] for s in body["base"]["trace"]["steps"]}
+    assert "s_in" not in {s["step_id"] for s in body["diff"]["steps"]}
+    assert body["diff"]["unchanged"] == 1
+```
+
+  At the base it fails on the first assert (`s_in` is not traced, FD-1246). Run
+  `uv run pytest -q backend/tests/test_score_compare.py`. Expected: green.
+- [ ] **Step 4:** Run Task 0 Step 1's command again at HEAD. Expected: `7 passed`.
+
+```bash
+git add backend/tests/test_score_compare.py
+git commit -m "test(scoring): score/compare re-proved on the trimmed trace (WK-1178, F35, FR-262)"
+```
+
+### Task 6: NFR-490 and NFR-500 after the change (solo window 2)
+
+- [ ] **Step 1:** In the lead's second solo window, the same opening checks as Task 1 Step 1.
+- [ ] **Step 2:** Run `uv run python scripts/bench-rating.py` six times, alternating
+  base, HEAD, base, HEAD, base, HEAD, each on its own clean checkout, both SHAs named.
+- [ ] **Step 3:** Fill in the budget-margin statement for each tree. **Stop rule:** if HEAD's
+  median overhead is not below half of the base's median overhead in this window, the premise
+  that bytes drive the cost (P4) has failed. Stop and report to the lead before merging; the
+  slice does not merge on a remedy that did not move the cost.
+- [ ] **Step 4: The 200-step equality.** Run, on each tree, a script that scores 1000 seeded
+  contexts on `bench-rating.py`'s 200-step structure untraced and prints each `ScoringResult`
+  (trace and timing blanked) as canonical JSON, one line each; then `diff` the two outputs and
+  print `equal N of 1000`. Paste the script and its sha256 prefix. Expected: `equal 1000 of
+  1000`.
+- [ ] **Step 5:** `uv run python scripts/bench-trace-size.py` at HEAD. Read the 200-step
+  projection against 200 GB/year under DP-F35-3's ruled reading, beside Task 1 Step 5's base
+  figure.
+- [ ] **Step 6:** Record the A/B/C split at HEAD beside the base's. The engine-side share
+  (B−A) is the one this remedy targets.
+- [ ] **Step 7:** `uptime` and `free -h` at the end. A run with a held slot, or a load above
+  the box's core count at either end of a run, is discarded and re-run. Never average a
+  contended run in.
+
+### Task 7: The gate and the ledger
+
+- [ ] **Step 1:** Regenerate `docs/INDEX.md` after adding the ledger (`python3 scripts/doc-index.py`),
+  and run `python3 scripts/doc-id.py migrate --verify <tmpdir> --ref HEAD`, reading row (a)
+  (`delivery-process.md` §11a).
+- [ ] **Step 2:** Run the full gate under §"Gate evidence rules".
+- [ ] **Step 3:** The ledger records: Task 0's two capture-test runs; every red proof with its
+  printed line (paraphrase a line that names an undefined id, [`README.md`](README.md) rule 2);
+  both budget-margin statements; both NFR-500 projections; the A/B/C splits; the 200-step
+  equality; the gate table.
+
+## Gate evidence rules
+
+For **every** suite-level run, the full gate and each solo window, the ledger records:
+
+- **A clean checkout of the named SHA:** `git status --porcelain` prints nothing; `HEAD` quoted.
+- **The dev-commands slot wrapper, verbatim** (`.claude/skills/dev-commands/SKILL.md:122-171`:
+  the gate body and the two-slot `flock -n -E 99` / `flock -w 7200 -E 98` loop), with
+  **`LOKY_MAX_CPU_COUNT=4`** exported beside the thread caps, in the foreground under a
+  `timeout`.
+- **`ruff check --no-cache`**, and **`mypy --no-incremental`** (or a fresh cache).
+- **`uptime` and `free -h`** at the start and at the end.
+- **The other slot's holder**, read with `flock -n /tmp/slots/gate-1 true; echo $?` and
+  `flock -n /tmp/slots/gate-2 true; echo $?` before the run, and named as gate or not-gate. An
+  rc of 1 means the slot is held.
+- **The wall time and the pytest time** against the solo baseline `PL-1348` uses
+  (`PL-1348:433-434`). A slower run is read as load first.
+- **Every rc** of the two-half gate (`CLAUDE.md` §11), the `N passed` line, and `origin/main`'s
+  `N passed` beside it. Only named single test files or node ids are exempt. Docs checks run on
+  a clean detached checkout. After merging a `main` that adds a migration, run `alembic upgrade
+  head` on the per-worktree test database first.
+- **The solo window** (Tasks 1 and 6): no gate, suite, benchmark or `migrate --verify` runs
+  during it, shown by the slot reads and the `pgrep` line at both ends, and the lead's grant is
+  dated in the dispatch record.
+
+## Risks
+
+| Risk | Effect | Detection | Response |
+|---|---|---|---|
+| M1 changes a served result (a raw input or `__violated` key missing from the result, a merge-order clash at `outputNode`) | a mispricing, R3 broken | Spike S1 step 3; Acceptance 6's differential and its broken-input proof; `SL-1345`'s ladder sweep | stop. The decision-maker considers M4 (two graphs). Never adjust an expected value |
+| An expression reads a name the tokenizer misses (a member access, a `$` reference, a name inside a nested call) | under M1 the engine lacks the name, and the step fails or reads null | Spike S1 step 1 checks every expression against the engine with its reference set alone | use the binding's own variable listing if S1 finds one; else extend the extractor and re-run S1 |
+| The remedy cuts bytes but not latency | NFR-490 stays red; P4's premise was wrong | Task 6 Step 3's stop rule; the A/B/C split | stop before merge; the lead decides replan vs proceed (`delivery-process.md` §3) |
+| A pass inside one stdev | a pass booked on noise | the margin statement's reading column | recorded as a watch item; SL-1259 measures on the dedicated host |
+| A contended measurement | a slow figure booked as a pass or a fail | the slot reads, `uptime`, the `pgrep` line | discard and re-run in a new window |
+| The rulings differ from the recommendations | Tasks 2–5 test the wrong content | activation needs 2 and 4; Task 0 Step 2 | method-only difference: the dispatch record names it. Acceptance difference: a superseding `PL-` |
+| NFR-500's `OQ-` is never filed | DP-F35-3 cannot be ruled; Acceptance 9 has no reading | activation need 2's `grep -c 'sampled-trace schema'` | unmet; the lead raises it with the decision-maker |
+| A rolling deploy mixes old-wire and new-wire workers | an off-path reproduction compares two wires (P11) | the reproduction check (`traces.py:198-272`) records `mismatch` | Acceptance 6 makes equality hold by test; a `mismatch` in production is a finding, not noise |
+| `SL-1340` or the `RL-1343` rule-4 slice reaches `_build_trace` or `TraceStep` first | a merge on the same function | Task 0 Step 4 | serialise; the second merges `main` and re-gates |
+| The DB stack is absent | mass fixture errors that look like failures | an `ERROR` at setup, not a `FAILED` assert | bring the stack up and re-run; an error at setup is never quoted as a red |
+| Persisted traces from before the change keep the full context for 13 months (FR-259) | two readings in one store | DP-F35-1 (iv) | accepted under (iv) (a); a later `05` consumer states its need |
+
+## Proposed SL row (the lead mints it; not added here)
+
+````markdown
+#### SL-<n> — WK-1178 slice — F35 remedy: what the trace records per node, and NFR-490's trace overhead (PL-<id>)
+
+```yaml
+id: SL-<n>
+family: slice
+title: WK-1178 slice — F35 remedy: what the trace records per node, and NFR-490's trace overhead (PL-<id>)
+status: draft                   # draft → active → closed | retired (§1.2a)
+created: <mint date>
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: <mint tree>
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-<id>, RL-862, CR-1247, FD-1246, SL-1259]
+```
+
+The scoring trace records, per node, the values its step reads and declares, not the engine's
+accumulated context, and the engine is wired so that it carries only those values (register
+F35 and F55; FD-1246; `CR-1247` Proposals 3 and 11). R3 is held by a frozen base corpus.
+NFR-490 is measured red at the base and again after, as evidence; the verdict is SL-1259's,
+whose NFR-490 limb depends on this slice. NFR-500 is re-measured here. Runs after `SL-1360`
+and `FD-1357`'s fix on WK-1178, and after `SL-1345` (shared `runtime.py` and `score.py`
+functions). Leaf plan `PL-<id>`.
+````
+
+## Size
+
+Medium. About 60 lines of production change across `references.py` (new), `runtime.py` and
+`score.py`, a docstring, and about 200 lines of tests. Before activation: one ruling sitting
+(DP-F35-1 to -3) and one spike plus a ruling (DP-F35-4). In the slice: two solo windows of
+about 15 minutes and 30 minutes, and one full gate (a gate slot under `RL-1263`).
+
+## Hand-off
+
+- **To the lead:** record in SL-1259's next dispatch record that its NFR-490 limb depends on
+  this slice (the maintainer's 09:00:44 entry: "named both ways"). This plan names it here and
+  in the SL row.
+- **To the auditor:** P5 as a proposed finding: FR-246 ("cannot reference anything outside
+  their declared inputs") is not enforced, and `passThrough` made undeclared references
+  resolve; this slice's reference set makes them work without `passThrough`, which hides the
+  same gap one level down. Filing it is the auditor's; whether compile should refuse it is
+  DP-F35-1 (ii)'s `OQ-`.
+- **At the slice audit:** F35's, F55's and FD-1246's rows take their dispositions from the
+  auditor and the lead. F37's spec half is discharged by DP-F35-3's ruling text, and its
+  measurement half by Acceptance 9.
+- **`RL-862`'s override clause** stays unexercised (DP-F35-6 (a)). If NFR-490 passes at
+  SL-1259 on the dedicated host, whether always-capture returns is a new ruling.
+- **To `SL-1340`'s dispatch:** its trace limb builds on DP-F35-1 and DP-F35-2 as ruled, and on
+  `CompiledBundle.references`, which an inlined step's references must join.
+
+## Self-review
+
+1. **Coverage of the maintainer's decision.** DP-F35-1 is first and is the decision-maker's
+   (§"Decision points"). The 7 tests run in Task 0 Step 1 and again in Task 5 Step 4. The
+   measurement verdict stays with SL-1259 (Acceptance 8; §"Hand-off"). The build order is
+   activation needs 5 and 6.
+2. **Coverage of `CR-1247`.** Proposal 3's three facts: the shared lever (Tasks 3–4), the
+   compare path (Task 5), §4.10's `own_change` (P8; Acceptance 7). Proposal 11: DP-F35-3 and
+   Acceptance 9. FD-1246: DP-F35-2.
+3. **The trim alone is not offered as the remedy.** P4 is cited at the DP-F35-4 row and in the
+   Architecture paragraph, so M3 cannot be ruled as if it closed NFR-490.
+4. **Placeholder scan.** `<n>`, `<id>`, `<mint date>` and `<mint tree>` in the SL row are the
+   lead's at minting. The minted ruling ids are named at Task 3 Step 6 and Task 4 Step 3 as
+   "cite the minted id". No step says "add tests" without the test.
+5. **Repository literals checked at `19155b50`:** `passThrough` at `runtime.py:162`, `:256`,
+   `:322`; `to_wire` at `:344`; `_INPUT_ID`/`_OUTPUT_ID` at `:55-56`; `CompiledBundle` at
+   `:549-568`; `load_bundle` at `:571-602`; `_build_trace` at `score.py:700-739`;
+   `build_scoring_result` at `:747-788`; `RatingOutputStep` imported at `score.py:200`;
+   `TraceStep` at `scoring.py:138-155`; `zen/__init__.pyi:5-7`; `uv.lock:2786-2787`; the 7
+   tests' lines (P10); `test_score_compare.py`'s three tests (`:133-171`);
+   `test_rating_score.py:530-556` and its fixture (`:46-105`, `:137-150`); `BUDGET_TRACE_OVERHEAD`
+   in `scripts/bench-rating.py`; `asyncio_mode = "auto"` in `pyproject.toml`; the cross-module
+   test import precedent (`test_quote_input_raise_sites.py:22`).
+6. **Not executed.** Unlike `PL-1359`, these samples were not assembled and run: Task 3's
+   samples depend on DP-F35-1's ruling, and Task 4's wire rule on Spike S1. Each sample that
+   names a fixture literal says to mirror the fixture, and each predicted red names its cause.
+
+Drafted as working id 9776, allocated by the lead.
