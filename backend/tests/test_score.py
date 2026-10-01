@@ -1232,3 +1232,90 @@ def test_a_correct_ladder_is_served_and_not_counted(
     assert response.json()["trace"]["ladder_reconciled"] is True
     assert response.json()["trace"]["ladder_check_version"] == 2
     assert _ladder_refusals("uat") == before
+
+
+# --------------------------------------------------------------------------------------
+# PL-1348 Acceptance 7 (RL-1329 §4, R2): a declared non-rung `money_minor` output is a JSON integer.
+# --------------------------------------------------------------------------------------
+
+
+def _fee_algorithm() -> dict[str, Any]:
+    """`_minimal_algorithm` plus `fee_minor`, a non-rung `money_minor` output whose source is, in
+    the engine, exactly `premium_in + 0.5000000000000000001` (1234.5000000000000001 at 1234)."""
+    algorithm = _minimal_algorithm()
+    algorithm["outputs"].append({"name": "fee_minor", "type": "money_minor", "required": True})
+    algorithm["steps"] += [
+        {"step_id": "s_fee", "type": "expression", "label": "Fee",
+         "expr": "premium_in + 0.5000000000000000001", "result_type": "money_minor",
+         "consumes": ["premium_in"], "produces": "fee_value"},
+        {"step_id": "s_out_fee", "type": "output", "label": "Fee out", "output_name": "fee_minor",
+         "rounding": {"mode": "half_even", "dp": 0}, "consumes": ["fee_value"]},
+    ]
+    return algorithm
+
+
+@pytest.fixture
+def compiled_fee_version(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    database: Any,
+    blob_store: Any,
+    principal: Any,
+    workspace_id: Any,
+) -> Any:
+    register_rating_handlers()
+    created = client.post("/api/v1/rating-algorithms", json=_fee_algorithm(), headers=admin_headers)
+    assert created.status_code in (200, 201), created.text
+    row = asyncio.get_event_loop().run_until_complete(
+        _insert_version(
+            database, workspace_id, principal.id,
+            algorithm_ref="rating_algorithm:minimal@1", pins=_empty_pins(),
+        )
+    )
+    job = _run_compile_job(client, admin_headers, database, blob_store, row.id)
+    assert job.status is JobStatus.SUCCEEDED, job.error
+    return row
+
+
+def _assert_the_route_serves_the_fee_as_a_json_integer(response: Any) -> None:
+    import json
+    import re
+
+    assert response.status_code == 200, response.text
+    served = json.loads(response.text)["outputs"]["fee_minor"]
+    assert type(served) is int, (type(served), response.text)
+    assert served == 1235  # the exact string rounded once; the float 1234.5 would give 1234
+    raw = re.search(r'"fee_minor"\s*:\s*(-?[0-9.eE+]+)', response.text)
+    assert raw is not None
+    assert "." not in raw.group(1)
+    assert "e" not in raw.group(1).lower()
+
+
+@pytest.mark.req("FR-273")
+def test_a_non_rung_money_minor_output_is_a_json_integer_on_score(
+    client: TestClient, scoring_headers: dict[str, str], compiled_fee_version: Any
+) -> None:
+    body = {**_quote({"rating_version_ref": SCORED_REF}), "inputs": {"premium_in": 1234}}
+    _assert_the_route_serves_the_fee_as_a_json_integer(
+        client.post(SCORE_URL, json=body, headers=scoring_headers)
+    )
+
+
+@pytest.mark.req("FR-273")
+def test_the_float_path_fails_the_route_level_fee_assert(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_fee_version: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Red first, by planting the float path (`_build_outputs` reads `result[name]`): the body
+    carries `1234.5`, and the same assert fails."""
+    from pricing_core.rating import score as core_score
+
+    monkeypatch.setattr(core_score, "_exact", lambda result, name: None)
+    body = {**_quote({"rating_version_ref": SCORED_REF}), "inputs": {"premium_in": 1234}}
+    response = client.post(SCORE_URL, json=body, headers=scoring_headers)
+    assert response.status_code == 200, response.text
+    assert '"fee_minor":1234.5' in response.text
+    with pytest.raises(AssertionError):
+        _assert_the_route_serves_the_fee_as_a_json_integer(response)

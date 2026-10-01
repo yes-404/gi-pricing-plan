@@ -548,6 +548,48 @@ async def test_a_non_rung_money_minor_output_is_an_integer_from_the_exact_string
     assert value == 68281  # 61234.5 * 1.1 * 1.0137 = 68280.7..., rounded once
 
 
+async def _near_tie_fee_result(monkeypatch: pytest.MonkeyPatch | None = None) -> Any:
+    """`fee_minor`, a declared non-rung `money_minor` output whose source is, in the engine,
+    exactly `1234.50000000000000012345` (`RL-1329` part 1): half_even, dp 0."""
+    if monkeypatch is not None:  # the planted float path: `_build_outputs` reads `result[name]`
+        from pricing_core.rating import score as score_module
+
+        monkeypatch.setattr(score_module, "_exact", lambda result, name: None)
+    payload = _chain_algorithm(
+        factors=[("office_premium", "{prev} * 1.1", "half_even")], extra_outputs=("fee_minor",)
+    )
+    payload["steps"].insert(-1, {
+        "step_id": "s_fee", "type": "expression", "label": "fee",
+        "expr": "risk_premium_minor + 0.5000000000000000001", "result_type": "money_minor",
+        "consumes": ["risk_premium_minor"], "produces": "fee_value",
+    })
+    payload["steps"].insert(-1, _out("s_out_fee", "fee_minor", "fee_value"))
+    return await score_one(await _compile_payload(payload), _context(risk_premium_minor=1234))
+
+
+def _assert_the_fee_is_the_integer_1235(result: Any) -> None:
+    value = result.outputs["fee_minor"]
+    assert type(value) is int
+    assert value == 1235  # 1234.5000000000000001 rounded once; the float 1234.5 gives 1234
+    assert '"fee_minor":1235' in result.model_dump_json()
+
+
+@pytest.mark.req("FR-273")
+async def test_a_near_tie_non_rung_money_minor_output_is_the_integer_1235() -> None:
+    """PL-1348 Acceptance 7 (R2): the exact string rounded once, as an integer."""
+    _assert_the_fee_is_the_integer_1235(await _near_tie_fee_result())
+
+
+@pytest.mark.req("FR-273")
+async def test_the_float_path_fails_the_near_tie_fee_case(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Red first, by planting the float path: the value is the float 1234.5."""
+    result = await _near_tie_fee_result(monkeypatch)
+    assert result.outputs["fee_minor"] == 1234.5
+    assert type(result.outputs["fee_minor"]) is float
+    with pytest.raises(AssertionError):
+        _assert_the_fee_is_the_integer_1235(result)
+
+
 @pytest.mark.req("FR-273")
 async def test_a_decimal_output_is_served_exactly_as_before_rl_1343() -> None:
     """`RL-1343` items 2 and 3, which bind this slice because it carries the `_build_outputs`
