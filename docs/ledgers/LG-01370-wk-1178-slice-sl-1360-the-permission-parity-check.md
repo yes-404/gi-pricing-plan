@@ -1,8 +1,8 @@
 ---
-id: LG-9778
+id: LG-1370
 family: ledger
 title: WK-1178 slice — the permission-parity check (SL-1360, PL-1359, RL-1305)
-status: active
+status: closed
 created: 2026-10-01
 owner: executor
 tree: 98d7191b62e73dcfba4bb294c743ee97cf6f6f59
@@ -14,7 +14,7 @@ corrected_by: []
 relates: [RL-1305, CR-1247, RL-1236, RL-1263, PL-1279]
 ---
 
-# LG-9778 — WK-1178 slice SL-1360, the permission-parity check
+# LG-1370 — WK-1178 slice SL-1360, the permission-parity check
 
 Executed from `PL-1359` by `executor-1360` (sonnet, medium). Branch `sl-1360-permission-parity-check`, from `origin/main` `19155b505741317da6967362707f387b39bd2cef` (#1046; tree `98d7191b62e73dcfba4bb294c743ee97cf6f6f59`). The ledger's id `9778` is a working id, reserved by the lead; the lead is the only allocator and mints the final id. Every time is `TZ=Europe/London date`, BST.
 
@@ -196,3 +196,7 @@ Stage table as printed (the wrapper's `wrapper final=1`; read from the table):
 **Frontend half, same worktree, 10:13:17 to 10:14:33 BST** (load 7.89 at end, available 20Gi): `pnpm --dir frontend install --frozen-lockfile` rc 0, `generate:api` rc 0, `lint` rc 0, `type-check` rc 0, `test` rc 0, `build` rc 0.
 
 Acceptance 7 therefore reads: green but for the check-31 family, which clears when the lead mints the id (the ledger then takes its real id and INDEX closes the gap).
+
+**Note (F-B, 2026-10-01 BST):** Task 0's quote of the dispatch record is as of its Delta 1; Deltas 2–4 are in the dispatch record.
+
+Opened as working id 9778; minted 2026-10-01 as LG-1370.

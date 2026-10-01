@@ -111,6 +111,8 @@ def test_the_enumerator_yields_every_authored_string_with_its_field() -> None:
         ("s_office", "expr", "risk_premium_minor * expense_factor"),
         ("s_minprem", "condition", "office_premium_minor >= 100"),
         ("s_minprem", "clamp_bounds.min", "100"),
+        # SL-1345: the payable's own expression step, so the clamp above is placeable
+        ("s_payable", "expr", "office_premium_minor * 1"),
     ]
 
 

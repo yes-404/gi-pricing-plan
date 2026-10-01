@@ -59,6 +59,7 @@ from app.db.models import BlobRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.observability.logging import get_logger
+from app.observability.metrics import ladder_reconciliation_failed
 from app.platform import jobs as job_service
 from app.platform import rating_versions as rating_versions_service
 from app.platform import settings as settings_service
@@ -89,7 +90,9 @@ router = APIRouter(tags=["rating"])
 
 #: The per-quote codes `score_one` raises as code-named `ValueError`s, each already owned by
 #: `03` §5.1 and registered in `app.errors`. A code outside this set is not a per-quote
-#: refusal and must not be turned into one — it reaches the caller as a 500.
+#: refusal and must not be turned into one — it reaches the caller as a 500, with one named
+#: exception: `LADDER_RECONCILIATION_FAILED` (`RL-1346`), mapped explicitly to a 500 that
+#: carries its code, in `_as_platform_error`.
 _PER_QUOTE_CODES: Final[frozenset[str]] = frozenset(
     {
         "INPUT_CONTRACT_VIOLATION",
@@ -97,6 +100,13 @@ _PER_QUOTE_CODES: Final[frozenset[str]] = frozenset(
         "REFERENCE_LOOKUP_MISS",
         "MODEL_CALL_FAILED",
     }
+)
+
+#: `RL-1346`: a ladder that does not reconcile is a platform fault, not the caller's input.
+_LADDER_REFUSAL_CODE: Final[str] = "LADDER_RECONCILIATION_FAILED"
+_LADDER_REFUSAL_STATUS: Final[int] = 500
+_LADDER_REFUSAL_NOTE: Final[str] = (
+    "The failure is deterministic for this Rating Version and quote: a retry fails the same way."
 )
 
 #: 422: the quote is well-formed but cannot be priced as given. `03` §5.1 owns the codes.
@@ -266,6 +276,15 @@ def _as_platform_error(exc: ValueError) -> PlatformError | None:
     if not isinstance(exc, CodedError):
         return None
     code, separator, detail = str(exc).partition(": ")
+    if separator and code == _LADDER_REFUSAL_CODE:
+        # RL-1346 §4: a named 500 beside the per-quote 422s, so no other unmapped code gains a
+        # status. The text is `build_scoring_result`'s own input-free clause, rungs and difference.
+        return PlatformError(
+            code,
+            "Ladder reconciliation failed",
+            _LADDER_REFUSAL_STATUS,
+            f"{detail}. {_LADDER_REFUSAL_NOTE}",
+        )
     if not separator or code not in _PER_QUOTE_CODES:
         return None
     return PlatformError(
@@ -283,7 +302,7 @@ def _as_platform_error(exc: ValueError) -> PlatformError | None:
     # named version has no compiled bundle — and 422 carries FR-255's four per-quote
     # codes. 404 is a ref naming no version; 401 and 403 are authentication and the
     # `score:execute` check.
-    responses=problems(401, 403, 404, 409, 422),
+    responses=problems(401, 403, 404, 409, 422, 500),
 )
 async def score(
     ctx: QuoteContext,
@@ -314,11 +333,33 @@ async def score(
         problem = _as_platform_error(exc)
         if problem is None:
             raise
+        if problem.code == _LADDER_REFUSAL_CODE:
+            _record_ladder_refusal(caller, compiled, ref, problem)
         raise problem from exc
 
     await _maybe_sample_trace(database, settings, caller, ctx, result)
 
     return Response(content=result.model_dump_json(), media_type="application/json")
+
+
+def _record_ladder_refusal(
+    caller: Caller, compiled: CompiledBundle, ref: ArtifactRef, problem: PlatformError
+) -> None:
+    """`RL-1346` §5: one `ERROR` line and one counter increment per refusal on `/score`. Only the
+    code, the input-free message, the version, the bundle, the workspace and the Environment —
+    nothing from the Quote Context (NFR-499)."""
+    environment = caller.environment or ""
+    ladder_reconciliation_failed.labels(environment=environment).inc()
+    _log.error(
+        f"{problem.code}: {problem.detail}",
+        extra={
+            "code": problem.code,
+            "rating_version_ref": str(ref),
+            "bundle_hash": compiled.content_hash,
+            "workspace_id": str(caller.workspace_id),
+            "environment": environment,
+        },
+    )
 
 
 def _naming_side(problem: PlatformError, side: str) -> PlatformError:
@@ -331,7 +372,7 @@ def _naming_side(problem: PlatformError, side: str) -> PlatformError:
     "/score/compare",
     summary="Score one Quote Context against two Rating Versions, with a step-level diff",
     status_code=200,
-    responses=problems(401, 403, 404, 409, 422),
+    responses=problems(401, 403, 404, 409, 422, 500),
 )
 async def score_compare(
     body: ScoreCompareRequest,
