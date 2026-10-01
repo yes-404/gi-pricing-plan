@@ -277,7 +277,7 @@ exists yet: `05`'s monitors are a later phase. If FR-307's input-drift monitor l
 | FR-212: `s_out` consumed `payable_premium_pre_round`, which nothing produced | A new step `s_ipt` produces it: the office premium times `ipt_factor`. It is an `expression`, so it adds the `ipt_and_fees` rung. `s_out` cannot consume `office_premium_minor` directly: the clamp would then sit on the source of the `payable_premium` rung, which `_check_clamp_placement` refuses (`LADDER_CLAMP_UNPLACEABLE`, FR-240). |
 | FR-212: `office_premium_minor` produced twice with no chain | `s_minprem` consumes `office_premium_minor` first, then `min_premium_minor`, and re-produces it: a valid re-production chain, and a placeable clamp (the clamp's first consumed name equals its produced name). |
 | Five evaluating steps declared no `consumes` | Each declares exactly what it reads. `s_area` declares `effective_date`, its `as_at`. |
-| Raw names with no producer: `postcode_outcode`, `effective_date` (contract, no input step); `distribution_channel`, `commission_factor`, `profit_factor`, `min_premium_minor` (neither) | An `input` step and an `input_contract` entry for each, and for `ipt_factor`. |
+| Raw names with no producer: `postcode_outcode`, `effective_date` (contract, no input step); `distribution_channel`, `commission_factor`, `profit_factor`, `min_premium_minor` (neither) | An `input` step and an `input_contract` entry for each, and for `ipt_factor`. *(Amended 2026-10-01 10:29 BST, F1 below: for `effective_date` this is a choice, not a necessity. `score_one` already puts the Quote Context's top-level `effective_date` and `purpose` into the engine context (`score.py:910-912`). The contract entry adds one requirement: the caller also sends `effective_date` inside `inputs`, because `_validate_inputs` checks the contract against `ctx.inputs` only (`score.py:896`). T2 is unchanged.)* |
 | `purpose` in the contract, read by no step | Removed. A quote's purpose is the Quote Context's own field (`03:419`, read by `_check_purpose_mount`, `score.py:395`), not an algorithm input. Listing it would require every quote to repeat it in `inputs`. |
 | `mount_point: "s_ncd"` names no step | The mount is removed (`"sub_graphs": []`). A mount's port map and inlining are WK-1250 Slice 2's (`SL-1340`; `03` §4.11's header), so no mount the example could carry has a specified meaning yet. `s_ncd` is the step id **inside** §4.11's `ncd-ladder` fragment. |
 
@@ -701,12 +701,40 @@ below).
   (`score.py:729-758`) serves a non-rung, non-`money_minor` output (such as T2's
   `peril_risk_premium` map) as the engine's value, unrounded. Its `RoundSpec` is required by
   the shape and then unused. Related to `OQ-1316`.
-- **The Quote Context's top-level `effective_date` does not reach the engine.** Scoring
+- ~~**The Quote Context's top-level `effective_date` does not reach the engine.** Scoring
   validates and evaluates `ctx.inputs` (`score.py:333`), so an algorithm that reads
   `effective_date` must receive it in `inputs` too. T2 therefore declares it as an input,
-  which is the code's model today. §4.4's example puts it at the top level only.
+  which is the code's model today. §4.4's example puts it at the top level only.~~
+  *(Struck 2026-10-01 10:29 BST, F1 below: false.)* **The input contract is checked against `ctx.inputs`
+  only.** `score_one` validates with `_validate_inputs(algorithm, ctx.inputs)`
+  (`score.py:896`). It builds the engine context as `{"effective_date": …, "purpose": …,
+  **ctx.inputs}` (`score.py:910-912`), so the top-level `effective_date` does reach the
+  engine. T2's non-nullable `effective_date` contract entry therefore makes a caller repeat
+  it inside `inputs`. A §4.4-style quote that carries it only at the top level fails with
+  `INPUT_CONTRACT_VIOLATION`.
+- **§4.4's request example and T2 no longer describe one algorithm.** This is partly
+  pre-existing. T2's contract requires `commission_factor`, `profit_factor`,
+  `min_premium_minor` and `ipt_factor`, and §4.4's `inputs` (`03:422-423`) carries none of
+  them. §4.4 carries `vehicle_group`, `ncd_years` and `annual_mileage`, which T2 does not
+  declare. This is evidence for FD 9772 (working id; spec examples are never validated). No
+  T2 change is required.
 - **`RatingAlgorithm`'s docstring** (`rating.py:375-382`) still says "exactly one upstream
   step", as `03:280` did. It is code text, so T3 does not reach it.
+
+## Amendment, 2026-10-01 10:29 BST — F1 (auditor-1060, LOW, adopted by the lead)
+
+The auditor reviewed #1060 at `d1a7bec4`. It reproduced the example's four checks and
+controls A–C from this record's text, and found one false statement. The statement was in
+"Observed, not ruled" and in the T2 change table: that the Quote Context's top-level
+`effective_date` does not reach the engine. `score.py:910-912` (at `1dd5e264`) puts it, and
+`purpose`, into the engine context. The claim had been inferred from `_validate_inputs`
+alone, without reading where `score_one` builds the context. The bullet is struck and
+corrected, and the table row is annotated, above.
+
+**No ruled content changed.** DP-F35-1 to -3, T1–T10, the release notes and the example are
+byte-identical. T2's `effective_date` input step and contract entry stay. That is a valid
+and complete reading, and the correction only changes the reason given for it. The §4.4
+mismatch is recorded above for FD 9772 (working id).
 
 ## Appendix — the scripts, verbatim
 
