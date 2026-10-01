@@ -7,18 +7,18 @@ created: 2026-10-01
 owner: auditor
 tree: 0e2c6a1d7d1539b0f97447c8be43c5931d80cf68
 corrected_by: []
-relates: [WK-1178, FR-230, FR-228, FR-234, RL-9855]
+relates: [WK-1178, FR-230, FR-228, FR-234]
 ---
 
 # FD-9786 — seed_from_model cannot seed a GLM with two or more factors
 
-**Filed under working id 9786** by auditor-rl9855, found while auditing RL-9855 (draft PR #941). The id is minted by the
+**Filed under working id 9786** by auditor-rl9855, found while auditing the DP-5 ruling (working id 9855) (draft PR #941). The id is minted by the
 lead at the merge turn. The `tree:` is the tree of `9b0fb97c`; main's code files are unchanged at `101e32dc`
 (`git diff --stat 9b0fb97c 101e32dc -- packages backend` is empty).
 
 ## Finding
 
-**Severity: HIGH; owner WK-1178.** FR-230 says a rate table can be seeded from a Model's GLM relativity table.
+**Severity: MEDIUM; owner WK-1178** (the maintainer's ruling of 2026-10-01: provisional HIGH, set MEDIUM if the WF-699 demo path does not hit the defect; it does not, see "The WF-699 demo path"). FR-230 says a rate table can be seeded from a Model's GLM relativity table.
 `seed_from_model` (`packages/pricing-core/src/pricing_core/rate_tables/operations.py:168`) fails for any GLM whose
 relativity table has **two or more factors**, which is the ordinary motor or home model. A single-factor model seeds;
 every multi-factor model raises `KeyError`.
@@ -36,13 +36,33 @@ every multi-factor model raises `KeyError`.
   which a one-way relativity extract can never satisfy. The seeding path was therefore written for a table whose
   rows carry every key, and the extract does not produce one.
 
-**Why HIGH.** The failure is loud, not a silent mispricing: no wrong figure is produced. It is HIGH because the
-capability FR-230 names is unusable on realistic models, the failure is an uncaught `KeyError` rather than a named
-refusal (`platform/rate_tables.py:130` catches only `ValueError`, so the route answers 500; read from the code, not
-run), and the defect blocks other work: `RL-9855`'s seeding limb (`factor_ref` on every seeded key) and its "seeded and
-banded" red-first test, and `PL-1267` Slice 7's weighted diff of a seeded table. The existing tests all use one factor
+**Why MEDIUM, and what would make it HIGH.** The failure is loud, not a silent mispricing: no wrong figure is produced.
+FR-230 is unusable on a multi-factor GLM, the failure is an uncaught `KeyError` rather than a named refusal
+(`platform/rate_tables.py:130` catches only `ValueError`, so the route answers 500; read from the code, not run), and it
+blocks the DP-5 ruling's seeding limb (working id 9855) and PL-1267 Slice 7's seeded red-first test. The existing tests all use one factor
 (`packages/pricing-core/tests/test_rate_table_operations.py:150`, `_DRIVER_LEVELS`), which is how it passed. The
-severity is the auditor's; the maintainer may revise it.
+executable demo does not seed a rate table (next section), so the maintainer's condition for HIGH is not met; it would be
+met if the demo path seeded one from a GLM with two or more factors.
+
+## The WF-699 demo path
+
+The question: does the demo seed a rate table from a GLM with two or more factors through `seed_from_model` /
+`extract_relativity_table`? **No.** Commands, at `101e32dc`:
+
+```
+grep -rniE 'seed-from-model|seed_from_model|extract_relativity_table|rate-tables|rate_table' examples scripts/demo.py
+examples/fremtpl2/model.py:323:    "rate_tables": [], "models": [], "reference_tables": [], "custom_objectives": [],
+```
+
+The one hit is an empty pin list (`_EMPTY_PINS`, `model.py:322-324`). `seed.py` and `scripts/demo.py` seed the **dataset** (`fetch.py`,
+`last-seed.json`), not a rate table. So the freMTPL2 demo never calls the seed path and does not reach the defect.
+
+Two things the demo does not show: the demo's GLM carries seven identity factors, three continuous and four categorical
+(`model.py:57-66`, `:216`), so seeding it through `POST /api/v1/rate-tables/{slug}/seed-from-model` would hit the defect
+(by reading; not run). And the WF-699 journey describes that call: A1 "seed-from-model on the AD frequency model", A2 "repeats for
+every rateable factor" (`docs/workflows/WF-00699-approved-models-to-approved-rating-version.md:41-42`), so the documented
+journey is blocked even though the shipped demo does not walk it. If the demo is extended to walk A1 on the freMTPL2 GLM, the
+severity should go to HIGH and this fix goes ahead of PL 9788 (FD-1335 Part A).
 
 ## Evidence
 
@@ -93,7 +113,7 @@ requires full coverage of the declared key domain, which is a Cartesian product.
 
 This is a design choice the specs leave open, so it goes to `docs/open-questions.md` with options and a recommendation
 (`CLAUDE.md` §0), not a silent pick. The auditor's reading is the first option, since it keeps the relativity as the
-fit reported it. `RL-9855` item 9 must state which one it binds `factor_ref` onto.
+fit reported it. the DP-5 ruling (working id 9855) item 9 must state which one it binds `factor_ref` onto.
 
 ## Disposition
 

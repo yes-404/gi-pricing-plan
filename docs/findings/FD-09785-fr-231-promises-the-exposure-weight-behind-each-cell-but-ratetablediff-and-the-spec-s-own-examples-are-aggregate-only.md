@@ -7,19 +7,19 @@ created: 2026-10-01
 owner: auditor
 tree: 0e2c6a1d7d1539b0f97447c8be43c5931d80cf68
 corrected_by: []
-relates: [WK-673, FR-231, FR-232, PL-1267, RL-9855]
+relates: [WK-673, FR-231, FR-232, PL-1267]
 ---
 
 # FD-9785 — FR-231's per-cell weight against an aggregate-only RateTableDiff
 
-**Filed under working id 9785** by auditor-rl9855, found while auditing RL-9855 (draft PR #941), which flagged it and
+**Filed under working id 9785** by auditor-rl9855, found while auditing the DP-5 ruling (working id 9855) (draft PR #941), which flagged it and
 decided nothing. The id is minted by the lead at the merge turn. The `tree:` is the tree of `9b0fb97c`; the cited
 spec, model-schema and code files are unchanged at `101e32dc`.
 
 ## Finding
 
 **Severity: MEDIUM; owner WK-673.** FR-231 and the delivered diff shape disagree, and the spec disagrees with itself.
-It **predates RL-9855**; that ruling reported it.
+It **predates the DP-5 ruling (working id 9855)**; that ruling reported it.
 
 - **The requirement.** `docs/specs/03-rating-engine.md:122`, FR-231: "Rate table edits are diffable cell-by-cell
   against any prior version, with the diff showing absolute and relative change and the exposure weight behind each cell
@@ -50,8 +50,8 @@ claim is that a field does not exist.
 
 ## Why it matters now
 
-`PL-1267` Slice 7 implements FR-231's weights, and `RL-9855` (DP-5) adds two **aggregate** coverage figures to
-`RateTableDiff`. That deepens the aggregate shape. RL-9855's FR-231 dated clarification must not say the per-cell weight
+`PL-1267` Slice 7 implements FR-231's weights, and the DP-5 ruling (working id 9855) (DP-5) adds two **aggregate** coverage figures to
+`RateTableDiff`. That deepens the aggregate shape. the DP-5 ruling's FR-231 dated clarification must not say the per-cell weight
 is delivered. A per-cell result also interacts with FR-232: a parquet-stored table's diff is a Job returning "the same
 artifact", so a per-cell artifact over millions of cells is a different size of result than three numbers.
 
