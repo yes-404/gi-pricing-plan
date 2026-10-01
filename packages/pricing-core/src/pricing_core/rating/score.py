@@ -217,6 +217,7 @@ from pricing_core.rating.ladder import (
     ClampReading,
     LadderInputs,
     binding_side,
+    ladder_violations,
     output_steps_by_name,
     reconcile_ladder,
     recover_operation,
@@ -297,6 +298,14 @@ _SCORING_RESULT_TO_BATCH_COLUMN: dict[str, str] = {
 #: this is always `None`) and `timing_ms` (per-call wall-clock timing that means nothing
 #: aggregated across a chunk, and `score_batch` does not set it the way `score_one` does).
 _SCORING_RESULT_BATCH_EXCLUDED_FIELDS = frozenset({"trace", "timing_ms"})
+
+
+#: `Trace.ladder_check_version` of a trace this code builds: `RL-1329` §5's predicate over
+#: `RL-1329`'s ladder shape (absent or 1 is the shallow pre-ruling check).
+_LADDER_CHECK_VERSION = 2
+
+#: `RL-1346`: what a ladder that does not reconcile raises.
+_LADDER_REFUSAL_CODE = "LADDER_RECONCILIATION_FAILED"
 
 
 def _raise_named(code: str, message: str) -> NoReturn:
@@ -775,7 +784,6 @@ def _build_trace(
     rating_version_ref: ArtifactRef,
     bundle_hash: str,
     quote_id: str | None,
-    ladder_reconciled: bool,
 ) -> Trace:
     step_meta = {step.step_id: step for step in algorithm.steps}
     entries = sorted(engine_trace.values(), key=lambda entry: entry.get("order", 0))
@@ -807,7 +815,10 @@ def _build_trace(
         bundle_hash=bundle_hash,
         quote_id=quote_id,
         steps=steps,
-        ladder_reconciled=ladder_reconciled,
+        # Every trace is built after the check passed (`build_scoring_result` refuses a ladder
+        # that does not reconcile), so the verdict is always true and the check is FR-248's full one.
+        ladder_reconciled=True,
+        ladder_check_version=_LADDER_CHECK_VERSION,
     )
 
 
@@ -836,13 +847,17 @@ def build_scoring_result(
     ladder_inputs = _ladder_inputs(bundle.algorithm, result, clamp_reason_codes)
     ladder = _build_ladder(ladder_inputs, clamp_reason_codes)
     outputs = _build_outputs(bundle.algorithm, result)
-    ladder_reconciled = reconcile_ladder(ladder, ladder_inputs)
+    if not reconcile_ladder(ladder, ladder_inputs):
+        # RL-1346: a quote whose ladder does not reconcile is not served, on every path and in
+        # every Environment, whatever the trace-sampling rate. The one raise site. The message
+        # holds clause, rung names and derived minor-unit differences, and no quote input.
+        _raise_named(_LADDER_REFUSAL_CODE, "; ".join(ladder_violations(ladder, ladder_inputs)))
 
     trace_obj: Trace | None = None
     if engine_trace is not None:
         trace_obj = _build_trace(
             bundle.algorithm, engine_trace, rating_version_ref, bundle.content_hash,
-            ctx.quote_id, ladder_reconciled,
+            ctx.quote_id,
         )
 
     outcome: ScoringOutcome = "declined" if decline_reasons else "quoted"
