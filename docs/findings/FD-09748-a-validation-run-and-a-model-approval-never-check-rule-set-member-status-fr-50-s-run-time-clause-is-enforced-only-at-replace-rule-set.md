@@ -20,7 +20,7 @@ conflated two populations"*: the remedy (run-time member-status enforcement plus
 missing-member drop) rides IN the FD-1356 fix slice (PL 9762); `dm-1356` rules where, in RL 9750;
 the discharge is that slice's merge. The deadline and the "its own FD" disposition below are
 superseded; severity stays MEDIUM.** The reason: DP-6 resets `gipricing`'s 10 rows
-(`user_approved_no_approved_request=10`, the maintainer's figure), so without run-time enforcement
+(~~`user_approved_no_approved_request=10`, the maintainer's figure~~; count re-attributed to its measurement on the maintainer's instruction, 2026-10-01: the count is the DP-0 re-run by auditor-dp0, PL 9762's Task 0 script run 2026-10-01 10:41:08–10:41:19 BST, output line `gipricing route_approved=0 self_approved=0 user_approved_no_approved_request=10`, column `user_approved_no_approved_request`, recorded in PL 9762's "DP-0's decided record" (#1063)), so without run-time enforcement
 the record would say `review` while the run says running. The earlier text is kept below and
 struck in place, not rewritten.
 
