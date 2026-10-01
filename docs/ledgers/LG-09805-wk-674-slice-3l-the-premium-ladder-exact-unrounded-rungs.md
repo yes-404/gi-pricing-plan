@@ -231,3 +231,5 @@ Draft PR **#1045**, `gh pr create --draft`, title "feat(rating): SL-1345 — the
 ### Correction of the O1 entry (appended 2026-10-01 BST)
 
 (1) The O1 entry's JSON fragment for the planted route-level float was reworded in place, in-batch (this ledger is unmerged and unminted), because its quoted-key form tripped docs check 12 (FR-23: a `_minor` key followed by a decimal number); the meaning is unchanged. (2) The docs-checks claim made at the code head `fa9af040` ("check 31 only") was false at the head that first carried the O1 entry (`68df591b`): check 12 was red as well. It is corrected now: the check is re-run below. No other `_minor` key with a decimal value remains in this ledger (the check-12 pattern finds none).
+
+Re-run (appended 2026-10-01 BST): `python3 scripts/audit-docs.py` on a clean detached checkout (`git status --porcelain` empty) of `d3bc7698`, the head that carries the in-place reword and the correction: `FAILED (1)`, check 31 only ("gap in the full allocation between 1358 and 9805"); check 12 passes.
