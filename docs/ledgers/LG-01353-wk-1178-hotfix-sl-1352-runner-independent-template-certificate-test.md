@@ -2,7 +2,7 @@
 id: LG-1353
 family: ledger
 title: WK-1178 hotfix SL-1352 — runner-independent template-certificate test
-status: active
+status: closed
 created: 2026-10-01
 owner: executor
 tree: 7190787f494a921f89339ae62f8e3ae666bc4e2b
@@ -142,3 +142,7 @@ CI twice is not recorded here: the lead records it on the final head after the a
 ## PRs
 
 Draft PR #1035, branch `sl-9790-template-certificate-runner-independent`.
+
+## Close — 2026-10-01 04:54 BST
+
+auditor-1352d: delta audit over `0f725f0f..a2c035ee` (and `origin/main...a2c035ee`, main `8933a29e`): CLEAN. No code hunk since `0f725f0f` (`git diff 0f725f0f a2c035ee -- packages backend frontend scripts` is empty); ids contiguous at 1352-1354; sweep reproduces (26, 0); frozen-family guard prints nothing. This ledger and SL-1352 set `closed` on that audit; the lead merges and records CI twice on the final head.
