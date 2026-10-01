@@ -220,6 +220,17 @@ this slice, found by the gate**, fixed in the next commit (existing-test registr
   and `docs/contracts/schemas/generated/` join `_SKIP_PREFIXES`.
 Those three files pass (10 passed). A new head needs a new grant (S-13).
 
+**Gate, run 2 (head `74d46cf1b138fd8dbd1dccacc1e39899f19361ea`, a detached checkout of that SHA in this
+worktree, `git status --porcelain` empty).** `ruff check --no-cache` and `mypy --no-incremental` clean
+first; the same wrapper, `timeout 3300`, foreground-waited. 00:12:13 to 00:33:30 BST. Start: load 0.84 1.64
+2.10, 18Gi free of 31Gi; end: load 1.47 1.58 1.74, 20Gi free. Both slots free via `flock -n` before the
+start. Stage table: ruff pass, mypy pass, import_linter pass, **audit_docs FAIL** (check 31 only, the
+working-id gap 1345..9994), req_coverage pass, contracts pass, **pytest FAIL: 14 failed, 4423 passed,
+3 skipped in 1263.42s** (baseline 1469.6s). The 14 failures are exactly the run-1 audit-docs-rc set (the
+three real regressions are gone: 17 → 14); each asserts `audit-docs.py` or `doc-id.py` exits 0 and fails on
+check 31. They pass once LG-9994 is minted. Frontend half on the same SHA: `pnpm install --frozen-lockfile`,
+`generate:api`, `lint`, `type-check`, `build` all rc 0; `pnpm test` 97 files, 609 tests passed.
+
 **The committed-strings exclusion, with it removed** (lead's Delta 3). `_authored_strings()` with the two
 generated prefixes taken out of `_SKIP_PREFIXES`, run at `a0c0a57a`, reports exactly **8** unexplained
 hits, over 4 files × 2 strings: `docs/contracts/openapi/generated.json` and the three
