@@ -1,5 +1,5 @@
 ---
-id: PL-9769
+id: PL-1368
 family: plan
 kind: leaf
 title: WK-675 Slice 1 — ChartFigure's accessible table per RL-1307, its 13 call sites migrated, and F39's socket diagnosis: leaf plan
@@ -9,18 +9,19 @@ owner: planner
 tree: 1dd5e264195677b4a13268b80ac8673c2c027135
 phase: P2
 work: WK-675
+slice: SL-1369
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1286, RL-1307, RL-1184, RL-1263, PL-1268, PL-803, CR-1212, NFR-463, SL-1275]
+relates: [SL-1369, PL-1286, RL-1307, RL-1184, RL-1263, PL-1268, PL-803, CR-1212, NFR-463, SL-1275]
 ---
 
-# WK-675 Slice 1 — ChartFigure's accessible table per RL-1307, its 13 call sites migrated, and F39's socket diagnosis: leaf plan
+# PL-1368 — WK-675 Slice 1 — ChartFigure's accessible table per RL-1307, its 13 call sites migrated, and F39's socket diagnosis: leaf plan
 
-Filed as **PL 9769 (working id)** for the slice row **SL 9768 (working id)**. Both ids were
-reserved by the lead, the only allocator. Neither is minted, so neither appears in
-`relates:` (check 32), and this file carries no `slice:` field until the mint. The mint
-renames the file, sets `id:`, adds `slice:`, and fills the slice row's `relates:`.
+The leaf plan for slice row **SL-1369**. Drafted as working id 9769; minted 2026-10-01 as
+PL-1368. The slice row was drafted as working id 9768 and minted the same day as SL-1369.
+Both ids were allocated by the lead, the only allocator, in merge order at `origin/main`
+`92b4e4ac`. Minting does not activate: `status:` stays `draft` until the activation PR.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
 > or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`)
@@ -164,9 +165,9 @@ met in a separate activation PR.
 Each is met before the lead dispatches S1. The activation is its own PR, not this one.
 
 1. **The maintainer's agreement** to this leaf plan, as a dated line.
-2. **The lead's go**, recorded in the activation PR. That PR sets this plan `active`, mints
-   PL 9769 (working id) and SL 9768 (working id), renames this file, adds `slice:`, and fills
-   the slice row's `relates:` with the minted plan id.
+2. **The lead's go**, recorded in the activation PR. That PR sets this plan `active` and
+   SL-1369 `active` at dispatch. The ids were minted in #1058 (PL-1368, SL-1369); minting did
+   not activate.
 3. **S1's dispatch record carries the maintainer's line** (handover holds file, 2026-10-01,
    "WK-675 S1 dispatch-record line"): `PL-1286` `:240`, `:249-250` and `:415-416` (DP-1 open,
    recommending (b)) are superseded by `RL-1307` (c).
