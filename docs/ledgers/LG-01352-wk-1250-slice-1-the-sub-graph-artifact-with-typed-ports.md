@@ -1,5 +1,5 @@
 ---
-id: LG-9994
+id: LG-1352
 family: ledger
 title: WK-1250 Slice 1 — the sub-graph artifact with typed ports and FR-227 at create
 status: active
@@ -14,11 +14,10 @@ corrected_by: []
 relates: [RL-1309, RL-1263, FD-1326]
 ---
 
-# LG-9994 — WK-1250 Slice 1 (SL-1339)
+# LG-1352 — WK-1250 Slice 1 (SL-1339)
 
 Executed from `PL-1325`. Branch `sl-1339-sub-graph-artifact`, from `origin/main`
-`f689c7828cb05eb2298f3fec505a4638c4437a11` (#1027). Working id 9994, reserved by the lead
-2026-10-01 00:01 BST; minted at the merge turn.
+`f689c7828cb05eb2298f3fec505a4638c4437a11` (#1027). Drafted under working id 9994 (reserved by the lead 2026-10-01 00:01 BST; the lead allocates every working id) and minted `LG-1352` at its merge turn, against `origin/main` `8933a29e` (`doc-id next` = 1352). The working id survives only in the history this ledger records below (the dispatch record, gate notes and the correction), which is dated and stays as written.
 
 ## Tasks
 
@@ -228,7 +227,7 @@ start. Stage table: ruff pass, mypy pass, import_linter pass, **audit_docs FAIL*
 working-id gap 1345..9994), req_coverage pass, contracts pass, **pytest FAIL: 14 failed, 4423 passed,
 3 skipped in 1263.42s** (baseline 1469.6s). The 14 failures are exactly the run-1 audit-docs-rc set (the
 three real regressions are gone: 17 → 14); each asserts `audit-docs.py` or `doc-id.py` exits 0 and fails on
-check 31. They pass once LG-9994 is minted. Frontend half on the same SHA: `pnpm install --frozen-lockfile`,
+check 31. They pass once this ledger is minted (it was working id 9994 then). Frontend half on the same SHA: `pnpm install --frozen-lockfile`,
 `generate:api`, `lint`, `type-check`, `build` all rc 0; `pnpm test` 97 files, 609 tests passed.
 
 **The committed-strings exclusion, with it removed** (lead's Delta 3). `_authored_strings()` with the two
