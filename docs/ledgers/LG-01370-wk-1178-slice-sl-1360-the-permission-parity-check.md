@@ -199,4 +199,31 @@ Acceptance 7 therefore reads: green but for the check-31 family, which clears wh
 
 **Note (F-B, 2026-10-01 BST):** Task 0's quote of the dispatch record is as of its Delta 1; Deltas 2–4 are in the dispatch record.
 
+### Gate of record on the gate head, 11:19 to 11:51 BST
+
+Gate head `759a524ff6f73c464d9292a75b9da37c174e2456` (the merge of `origin/main` 49cd25be, the LG-1370 mint and the SL-1360 close; the earlier gate at `892ffd8f` above covered the test file, whose content is unchanged). Separate detached worktree `.claude/worktrees/gate-1360b`, `git status --porcelain` empty (0 lines). The lead's slot grant: 11:18:15 BST, both slots free, load 2.00, 19Gi available.
+
+- `uv sync --all-packages` done; `ruff check --no-cache .` All checks passed; `mypy --no-incremental` Success, no issues in 219 source files (11:19:54 BST).
+- The per-worktree test database `gipricing_gate-1360b_d95449cd` was created first (`createdb -T gipricing`, `alembic upgrade head`, both rc 0).
+- The dev-commands slot wrapper verbatim, `LOKY_MAX_CPU_COUNT=4` exported, pytest stage under `timeout 3300`, foreground under `timeout 3600` (the harness moved the call to the background at 590 s; the turn waited on the gate's pid after `readlink /proc/<pid>/cwd` named this worktree). It took slot `gate-1`; at the end `flock -n` showed both slots free. No other holder was seen at the start (both free) or the end.
+- Start 11:21:16 BST: load 2.37, available 20Gi. End 11:49:16 BST: load 1.27, available 21Gi. Wall 28 min 00 s; pytest 1660.59 s (4579 passed, 3 skipped, 57 warnings). Load never rose above the slot's own, so no sign of an overlapping gate; I did not observe WK-675 S1's gate, so I record no contention pair.
+
+Stage table as printed:
+
+| stage | result | detail |
+|---|---|---|
+| ruff | pass | exit=0 |
+| mypy | pass | exit=0 |
+| import_linter | pass | exit=0 |
+| audit_docs | pass | exit=0 |
+| req_coverage | pass | exit=0 |
+| contracts | pass | exit=0 |
+| pytest | pass | exit=0 |
+
+`GATE: pass — 7 of 7 stages passed` (`wrapper final=0`, read from the table). Check 31 is contiguous through 1370: the audit and the tests that run it are green.
+
+Frontend half, same worktree, 11:49:41 to 11:50:53 BST: `pnpm --dir frontend install --frozen-lockfile`, `generate:api`, `lint`, `type-check`, `test` and `build`, each rc 0.
+
+Acceptance 7 is met on the gate head with no red.
+
 Opened as working id 9778; minted 2026-10-01 as LG-1370.
