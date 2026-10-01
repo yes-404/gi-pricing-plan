@@ -298,3 +298,16 @@ pass, **audit_docs FAIL** (check 31 only, the gap 1348..9994), req_coverage pass
 audit-docs-rc set as run 2, each failing on check 31 alone; no other test fails. Frontend half on the
 same head: install, `generate:api`, `lint`, `type-check`, `build` rc 0; `pnpm test` 97 files, 609 tests.
 
+### Correction (2026-10-01, BST): the gate windows above are UTC, not BST
+
+The three gate windows in Task 8 above were read from the box clock (`date`), which is UTC, and were
+labelled BST. BST is UTC+1 (`TZ=Europe/London date` confirms). The old lines stand; the windows in BST:
+
+| run | head | as written (UTC, mislabelled BST) | in BST (UTC+1) |
+|---|---|---|---|
+| 1 | `a0c0a57a` | 23:47:07 to 00:09:11 (30 Sep to 1 Oct) | 00:47:07 to 01:09:11, 1 Oct |
+| 2 | `74d46cf1` | 00:12:13 to 00:33:30 | 01:12:13 to 01:33:30, 1 Oct |
+| 3 | `4e6272a8` | 00:43:14 to 01:06:27 | 01:43:14 to 02:06:27, 1 Oct |
+
+The `uptime` load and `free -h` readings are unaffected (they carry no zone).
+
