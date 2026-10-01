@@ -14,14 +14,22 @@ relates: [FR-223, FR-222, FR-240, WK-675, WK-1178]
 
 ## Finding
 
-**Severity: LOW. Decided by the maintainer, 2026-10-01 ~10:33 BST (relayed by the lead), verbatim:**
+**Severity: LOW. Decided by the maintainer, 2026-10-01, received by the lead before 10:23 BST (the maintainer's entry), verbatim:**
 
 > FD 9759: LOW. The invariant IS enforced (it raises at compile), so nothing inconsistent compiles; the defect is the error contract (generic BUNDLE_COMPILE_FAILED) plus an unreachable 'at save'. Loud, not a mispricing.
 > Discharge, all of: (1) a DM rules FR-223's check point (compile + the RL 9767 validate route vs 'save'), verbatim text, recording which side was wrong; (2) a typed error mapped to MODEL_REFERENCE_MODE_INCONSISTENT at compile AND in the validate route, red first; (3) a listed, counted sweep of bare ValueError raises in ALGORITHM_CHECKS / compile_bundle so no other check maps to the generic code.
 > Owner: the WK-675 slice that builds RL 9767's validate route (S3's leaf), NOT WK-1178. If S3 is cut to P3 Saturday, it re-homes to WK-1178 by a dated line.
 
-RL 9767 (working id) rules that route; RL 9758 (working id) is the FR-223 ruling. This replaces the auditor's earlier proposal
-(LOW-MEDIUM, owner WK-1178).
+RL 9767 (working id) rules that route; RL 9758 (working id) is the FR-223 ruling. This replaces the auditor's earlier proposal,
+kept below as struck text (append-only):
+
+> ~~**Severity: proposed: LOW-MEDIUM; severity is the maintainer's.** Reasoning: a version whose steps disagree with its
+> `model_reference_mode` **is** refused (at compile), so no wrong price results. What fails is the specified refusal: the code
+> the spec names is never returned, the refusal comes back as a generic `BUNDLE_COMPILE_FAILED`, and the "at save time" limb has
+> no code path.~~
+> ~~**Owner: proposed WK-1178.** Reason: the defect is in the compile and refusal path, the rating-engine correctness stream
+> WK-1178 owns. The alternative was WK-675 Slice 2, which shows the mode read-only in the designer but builds a view and not this
+> path.~~ *(Struck 2026-10-01: superseded by the maintainer's decision above.)*
 
 `docs/specs/03-rating-engine.md` FR-223 (§3.2): every `model_call` step's `mode` "must equal [the version's
 `model_reference_mode`], **checked at save time** beside FR-227's type check, and a version whose steps disagree with it is
