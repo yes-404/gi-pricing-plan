@@ -1183,12 +1183,12 @@ Test-only hotfix for main's red CI after #1025: `test_template_certificate_uncha
 
 *(Reopened 2026-10-01 05:11 BST to `active`: CI run 36812617020 at `5a4beb63` failed on a second runner-dependent figure the first fix did not normalise; the lead's Delta 5 and Delta 6 are the rework scope. A fresh auditor re-closes.)*
 
-#### SL-9787 — WK-1178 slice — FD-1335 Part A: the /score and /score/compare 200 responses documented, and the untyped-2xx guard
+#### SL-9787 — WK-1178 slice — FD-1335 Part A: the /score and /score/compare 200 responses documented, and one untyped-body guard over 2xx responses and JSON request bodies
 
 ```yaml
 id: SL-9787
 family: slice
-title: WK-1178 slice — FD-1335 Part A: the /score and /score/compare 200 responses documented, and the untyped-2xx guard
+title: WK-1178 slice — FD-1335 Part A: the /score and /score/compare 200 responses documented, and one untyped-body guard over 2xx responses and JSON request bodies
 status: draft                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-01
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
@@ -1200,6 +1200,8 @@ relates: [FD-1335, PL-9788, PL-1348, SL-1345, RL-1343]
 ```
 
 `FD-1335` Part A: `responses={200: {"model": ScoringResult}}` on `POST /api/v1/score` and the `ScoreComparison` equivalent on `POST /api/v1/score/compare`, with the raw `Response` kept and no outbound validation (`NFR-502`); `docs/contracts/` regenerated (`FR-451`); `NFR-502` measured again in a solo window; and a guard in `backend/tests/test_contracts.py` over both forms of an untyped JSON 2xx response, each form proven red first, with four permanent exclusions and twelve marked `pending FD-1335 part B`. Leaf plan `PL-9788` (working id; `draft`). **Serialised after `SL-1345` merges**, by the lead's decision on the evidence: both edit the `responses=` argument on the same two `score.py` decorators, which is not registry-exempt (`RL-1263`), and the contract must document the post-ladder rung shape. It lands before WK-675 dispatches a slice that consumes `/score` or `/score/compare` (`FD-1335` *Disposition* item 1). Filed under working ids 9787 (this row) and 9788 (the plan), allocated by the lead; both are minted at the plan PR's merge turn.
+
+*(Amended before mint, 2026-10-01, by the maintainer's decision, relayed by the lead.)* The guard is now one guard over both 2xx responses and JSON request bodies, folding in `FD 9779` (working id 9779). Each side is shown red first on broken input. Multipart bodies are excluded with a citation. The five untyped request routes are temporary exceptions: four are marked `pending FD 9779 Part B`, and `seed-from-model` is marked `pending FD-1357's fix DP`. No handler outside `score.py` is edited. `FD 9779` Part B types the four existing shapes in a later slice. DP-A1 and DP-A2 are ruled by `RL 9783` (working id 9783).
 
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
