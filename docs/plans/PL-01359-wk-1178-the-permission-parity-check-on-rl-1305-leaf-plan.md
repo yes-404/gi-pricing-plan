@@ -1,5 +1,5 @@
 ---
-id: PL-9781
+id: PL-1359
 family: plan
 kind: leaf
 title: WK-1178 — The permission-parity check on RL-1305 (CR-1247 Proposal 1 (c)), superseding PL-1279: leaf plan
@@ -15,11 +15,11 @@ corrected_by: []
 relates: [RL-1305, CR-1247, RL-1236, RL-1263, PL-1268, PL-1237, PL-1348, ADR-704]
 ---
 
-# WK-1178: the permission-parity check on RL-1305, leaf plan (supersedes PL-1279)
+# PL-1359 — WK-1178: the permission-parity check on RL-1305, leaf plan (supersedes PL-1279)
 
-Filed 2026-10-01 under working id 9781, allocated by the lead. The lead mints it. At the mint,
-`PL-1279` takes `status: superseded` and `superseded_by:` this plan's id. Those are the only
-edits a frozen plan may take (`document-ids.md` §1.5). This plan does not edit `PL-1279`.
+At this plan's mint, `PL-1279` takes `status: superseded` and `superseded_by: PL-1359`, in
+the same commit. Those are the only edits a frozen plan may take (`document-ids.md` §1.5).
+Nothing else in `PL-1279` changes.
 
 **Why a new plan and not an activation.** `RL-1305` changes `PL-1279`'s **acceptance**, not
 only its method. The maintainer's rule is: "If any change alters a Task's ACCEPTANCE rather
@@ -171,7 +171,7 @@ leg on a check-site predicate that reads checks, not references". Items 1–5:
 
 ## Status
 
-`draft` until the lead mints it. It has **no open blocking decision point**: `RL-1305`
+`draft` until its activation. It has **no open blocking decision point**: `RL-1305`
 resolves `PL-1279`'s DP-1 to DP-3 (§"Decision points"), and its D4 amendment is on `main`
 (Task 0 Step 2). Activation is the lead's dispatch with the maintainer's agreement, in a
 separate PR. That PR carries the `SL-` row and this plan's status flip.
@@ -378,12 +378,12 @@ something to fix in this slice.
 ### Proposed SL row (the lead mints it; not added here)
 
 ````markdown
-#### SL-<n> — WK-1178 slice — the permission-parity check (PL-<this plan>, RL-1305)
+#### SL-<n> — WK-1178 slice — the permission-parity check (PL-1359, RL-1305)
 
 ```yaml
 id: SL-<n>
 family: slice
-title: WK-1178 slice — the permission-parity check (PL-<this plan>, RL-1305)
+title: WK-1178 slice — the permission-parity check (PL-1359, RL-1305)
 status: draft                   # draft → active → closed | retired (§1.2a)
 created: <mint date>
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
@@ -391,7 +391,7 @@ tree: <mint tree>
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [PL-<this plan>, RL-1305, CR-1247, RL-1236, PL-1268]
+relates: [PL-1359, RL-1305, CR-1247, RL-1236, PL-1268]
 ```
 
 A pytest invariant fails the gate in three cases: `06` §4.1's permission tables and
@@ -400,7 +400,7 @@ A pytest invariant fails the gate in three cases: `06` §4.1's permission tables
 Built name has a check site and still carries an owner (`CR-1247` Proposal 1 (c), decided by
 `RL-1305`). It must merge before WK-690 Slice 3's commit that adds `custom_objective:author`
 (`PL-1268` Slice 3). It retires `RL-1236`'s interim re-derive-at-each-close rule when it merges.
-Leaf plan `PL-<this plan>`, which supersedes `PL-1279`.
+Leaf plan `PL-1359`, which supersedes `PL-1279`.
 ````
 
 ### Size
@@ -1056,7 +1056,7 @@ git commit -m "test(governance): python.yml must trigger the parity check on eve
 
 ## Hand-off
 
-- The lead mints this plan's id and the `SL-`, and dispatches the slice. It must merge
+- The lead mints the `SL-` and dispatches the slice. It must merge
   **before** WK-690 Slice 3's commit that adds `custom_objective:author` (`PL-1268` Slice 3,
   Depends on).
 - When this slice merges, `RL-1236`'s interim rule (re-derive the table at each Work close that
@@ -1080,7 +1080,7 @@ git commit -m "test(governance): python.yml must trigger the parity check on eve
    - Item 8 loses the DP-3 (b) exception.
    - The removed conditionals are listed in §"Decision points".
 3. **Placeholder scan.** The header literals are now verified at `101e32dc` (M2). The SL row
-   text holds `<n>`, `<this plan>`, `<mint date>` and `<mint tree>`, which the lead fills in
+   text holds `<n>`, `<mint date>` and `<mint tree>`, which the lead fills in
    at minting.
 4. **Type consistency.**
    - `parity_violations` has the same signature in Tasks 1 and 2.
@@ -1112,3 +1112,5 @@ git commit -m "test(governance): python.yml must trigger the parity check on eve
    - Task 3 Step 3's proxy stubs: 2 failed and 2 passed, exactly as that step states.
 
    The scratch file was deleted, and this PR adds no test.
+
+Drafted as working id 9781; minted 2026-10-01 as PL-1359.
