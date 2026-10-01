@@ -141,8 +141,8 @@ the ledger and relies on `PL-9788` Acceptance 8 for the second on `/score/compar
 ### DP-A1: option (b), one dated amendment on the `NFR-502` row, with fixed content
 
 `03` `NFR-502` gains **one** dated amendment, appended after the 2026-08-29 one, written by
-the executor in `PL-9788` Task 4 **after** Task 5 so it quotes measured figures. It must say,
-in the executor's words, these five things and nothing more:
+the executor in `PL-9788` Task 4 **after** Task 5 so it quotes measured figures. It says
+these five things and nothing more, in the exact text given under *The exact text* below:
 
 1. Both `POST /api/v1/score` and `POST /api/v1/score/compare` document their 200 through the
    decorator's `responses=` mapping (`ScoringResult`, `ScoreComparison`), so the generated
@@ -159,6 +159,29 @@ in the executor's words, these five things and nothing more:
 5. The rule and every budget are unchanged, citing `RL-9783` (re-pointed at mint).
 
 The amendment cites `RL-9783`, not the ledger alone.
+
+### The exact text
+
+*(Added at the final pre-mint text pass, 2026-10-01, on the maintainer's exact-text rule.)*
+Placement: `docs/specs/03-rating-engine.md`, the `NFR-502` row (`03:1203` at `origin/main`
+`65fc6129`). The text is **appended** as a dated note at the end of the row's second cell,
+after `` Ruled in `docs/rulings/RL-00883-f1-nfr-502-is-amended-to-the-property-it-was-always-about-orjson-is-not-added.md` RL-883.)* `` and one space, before the closing ` |`. Nothing is struck, and
+the rule's first sentence and both earlier amendments stay byte-identical.
+
+The placeholders are: `<Task 4 date>`, the date of the Task 4 commit; `RL-<minted id>`, this
+ruling's minted id; and, from the DP-A2 ledger rows, `<limb 1 tree, 40 hex>`, the four limb-1
+medians (`<V+S untraced p99>`, `<V+S traced p99>`, `<S untraced p99>`, `<S traced p99>`, in ms
+to three decimal places), the four limb-2 medians (`<score base p99>`, `<score HEAD p99>`,
+`<compare base p99>`, `<compare HEAD p99>`, in ms to two decimal places), and `<base tree, 40
+hex>` and `<HEAD tree, 40 hex>`. Every other word is fixed. Each sentence maps to a clause
+above: the first two bold runs are clauses 1 and 2, "Re-measured" is clause 3, "Route level" is
+clause 4, and the last sentence is clause 5.
+
+```text
+*(Amended <Task 4 date>, PL-9788 Task 4 — `RL-<minted id>` DP-A1; the scope extension to `/score/compare` accepted by the maintainer, by delegation, 2026-10-01. **Two routes document their 200, and this requirement's scope extends to the second.** `POST /api/v1/score` and `POST /api/v1/score/compare` document their 200 through the decorator's `responses=` mapping (`ScoringResult`, `ScoreComparison`), so the generated contract carries a `$ref` (`FR-451`, `FD-1335`). Naming `/score/compare` is a dated scope extension of this requirement, not a clarification: compare serialises a `ScoreComparison`, and it too returns a raw `Response` built from trusted models. **`responses=` is documentation, not validation.** It is read only when the OpenAPI document is built. Neither route has a `response_model` or a `response_field`, so nothing validates the response. Documenting a response is not validating it, and this amendment does not permit `response_model=` or a Pydantic return annotation. **Re-measured at `<limb 1 tree, 40 hex>`**, each figure the median of three runs of the p99 of 1000 iterations after 100 warm-up: validate-and-serialise <V+S untraced p99> ms untraced and <V+S traced p99> ms traced (20 rate steps); serialise-only, the route's own operation, <S untraced p99> ms untraced and <S traced p99> ms traced. These are the current figures. They supersede the 0.070 ms above as the current figure and do not confirm it. **Route level**, in process with `score_one` stubbed so that no GBM runs, each figure the median p99 of three alternating runs: `/score` <score base p99> ms at base `<base tree, 40 hex>` and <score HEAD p99> ms at `<HEAD tree, 40 hex>`; `/score/compare`, stated as measured with no new target, <compare base p99> ms at base and <compare HEAD p99> ms at HEAD. **The rule and every budget are unchanged**: NFR-489's 50 ms, and 15 ms without a GBM call.)*
+```
+
+The executor applies each text above byte-for-byte; authorship stays with the decision-maker (document-ids §1.6 FR row; CLAUDE.md §2 one-commit rule; the RL-1296 precedent). Any executor wording is a stop.
 
 **Naming `/score/compare` in clause 1 is a dated scope extension of `NFR-502`, not a
 clarification.** *(Corrected at the text-fix pass, audit F2.)* An earlier text of this
@@ -214,8 +237,8 @@ routes of the built app, `route.response_model` and `route.response_field` (both
 expected), and their 200 schemas from `app.openapi()` (a `$ref` each).
 
 **Reading the figures.** No limb fails `NFR-502` on a number: the requirement is a design
-rule, and the budgets are `NFR-489`'s: *"Real-time scoring p99 < 50 ms server-side … with
-one `exact` GBM call (NFR-454). Without a GBM call, p99 < 15 ms."* (`03:1190`). *(Amended at
+rule, and the budgets are `NFR-489`'s: *"Real-time scoring p99 < 50 ms server-side at 200 rps per replica for a ~200-step motor
+structure with one `exact` GBM call (NFR-454). Without a GBM call, p99 < 15 ms."* (`03:1190`). *(Amended at
 the text-fix pass, audit F3.)* Limb 1 measures one component of either path and is quoted
 beside 0.070 ms, 50 ms and 15 ms. Limb 2 stubs `score_one`, so no GBM runs: its figures are
 read beside the 15 ms no-GBM budget, not the 50 ms one. Limb 3 is structural and has no
@@ -258,8 +281,9 @@ prefixes, and the before-and-after load readings; and the `NFR-502` amendment's 
 
 ## Spec changes in this commit
 
-**None.** The `NFR-502` amendment is recorded here and applied by the slice (`PL-9788`
-Task 4), because its clauses 3 and 4 quote figures that do not yet exist.
+**None.** The `NFR-502` amendment is recorded here as exact text (*The exact text*, under
+DP-A1) and applied by the slice (`PL-9788` Task 4), because its clauses 3 and 4 quote figures
+that do not yet exist. The slice fills the placeholders and changes no other word.
 
 ## Observed, not ruled (for the lead)
 
