@@ -5,7 +5,7 @@ title: PL 9762 DP-1, DP-2, DP-3, DP-5 and DP-6 decided — the rule routes are c
 status: draft                  # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
 created: 2026-10-01
 owner: decision-maker
-tree: 92b4e4ac155536f80a5be183ad21be88cc92868f
+tree: 49cd25be441382aebc1cc9c9ff325bd73fd81bc1
 phase: P2
 work: WK-1178
 supersedes: []
@@ -69,7 +69,15 @@ Each locator below was read at that tree in this session (bodies, not names). `o
 moved to `49cd25be441382aebc1cc9c9ff325bd73fd81bc1` (#1058, 11:02:04 BST check) before the
 commit; `git diff --stat 92b4e4ac 49cd25be` touches only `docs/INDEX.md`, `docs/roadmap.md`
 and the new `PL-1368` file, none of them cited below, so the table holds at both trees. This
-branch is cut from `49cd25be`.
+branch is cut from `49cd25be`, and the front matter's `tree:` names it.
+
+**Two functions this ruling builds on do not exist at either tree:** `decide_and_carry`
+and `open_request_for` are PL 9762's new functions (`git grep -n 'def decide_and_carry\|def open_request_for' 49cd25be -- backend`
+prints nothing). Their specification is the plan's (Task 3 Interfaces and Step 5,
+`decide_and_carry(session, *, caller, request_id, decision, comment) -> ApprovalRequestRow`;
+Step 6, `open_request_for`), which this ruling adopts with DP-1's one change. What they are
+built from does exist: `service.decide` and `_carry_to_the_artifact` in one `unit_of_work`
+(`api/approvals.py:250-260`). *(Amended 2026-10-01 11:06:58 BST, auditor-1070 F1–F4, adopted by the lead.)*
 
 | What | Where | Read |
 |---|---|---|
@@ -135,7 +143,7 @@ today). It writes nothing itself. It keeps its `DecideApprovals` dependency
   slice without breaching the HOLD. It also strikes a `01` §5.1 row that #977's Permission-
   column slice is editing.
 - **(b) thin client.** Removes the bypass (no write of its own), keeps the one-button flow,
-  and reads no approval-route response: `decide_and_carry` returns the ORM row, and the
+  and reads no approval-route response: `decide_and_carry` returns the `ApprovalRequestRow`, and the
   route returns the typed `ValidationRule`. HOLD-clean.
 - **The plan's no-request code, `APPROVAL_SUBJECT_NOT_IN_REVIEW`, is rejected for that
   case.** Its defined meaning (`platform/approvals.py:133-140`) is "only a version in review
@@ -154,9 +162,9 @@ accepts for a rule in `review` whose dry run executed (Step 3 of PL 9762 Task 3,
 below), and then a decision through either route. A rule whose `dry_run_report_id` is
 dangling (every seed-written rule, DP-3 (iii)) is first dry-run again; the dry-run route has
 no status check (`api/validation.py:302-330`), so this works from `review`. The reset target
-stays `review`, as the maintainer decided (11:27:20); this ruling does not move it.
+stays `review`, as the maintainer decided in *"2026-09-30 11:27:20 BST — correction to the failed-dry-run follow-on: the spec means EXECUTED successfully; measure the `error` outcome instead"*; this ruling does not move it.
 
-**Wire changes accepted by name.** (1) Self-approval through the route answers `06`'s
+**Wire changes, ruled here.** No maintainer acceptance of them is on record; they are ruled on `06`'s ownership of `SUBMITTER_CANNOT_APPROVE` as a 403 (`platform/approvals.py:361-367`; `06-governance.md:583`), and `01` never states 409 for self-approval (the 409 is the service's, `validation_rules.py:422-430`). (1) Self-approval through the route answers `06`'s
 `SUBMITTER_CANNOT_APPROVE` **403** (the author submitted) or `AUTHOR_CANNOT_APPROVE` **403**
 (another member submitted), not `SUBMITTER_CANNOT_APPROVE` 409: `decide` owns the separation
 of duties. `test_a_rule_walks_draft_to_approved_and_never_by_its_author`
@@ -376,7 +384,7 @@ trail)"):
   migration is a no-op; its only effect is on the local pre-fix databases a script reaches.
 - **(b) a scoped script** gets the same trail **through the existing writer**: one
   `audit.record` per row inside one `unit_of_work`, with the writer's own lock, sequence and
-  hash. It matches the maintainer's scope ("in the template and fixtures", 11:27:20) rather
+  hash. It matches the maintainer's scope ("in the template and fixtures", *"2026-09-30 11:27:20 BST — correction to the failed-dry-run follow-on: the spec means EXECUTED successfully; measure the `error` outcome instead"*) rather
   than every database that will ever upgrade. Its cost: it is not replayed on a database
   restored from a pre-fix dump. That is acceptable with no production, and it is detectable:
   FD-1356's follow-on predicate and Task 0 are the instruments.
@@ -409,7 +417,11 @@ lock is handled by the code that already owns it.
 - **Where it runs:** the database named `gipricing` (the maintainer's "template"), always.
   Scratch databases are **not** written (they are disposable, and a running gate may hold
   one); their counts are recorded, not changed (below).
-- **Target state `review`**, the maintainer's (11:27:20). The trigger does not fire on a write
+- **What the reset does not do.** It corrects the governed record; it does **not** stop a
+  Rule Set running the rule. A validation run never checks member status, so `01` FR-50's
+  run-time clause (`01:112`) is enforced only when a set is written (`replace_rule_set`),
+  verified by auditor-1070 (observation (1) below).
+- **Target state `review`**, the maintainer's (*"2026-09-30 11:27:20 BST — correction to the failed-dry-run follow-on: the spec means EXECUTED successfully; measure the `error` outcome instead"*). The trigger does not fire on a write
   to `review`, and the CHECK holds for a non-approved row (PL 9762 DP-6 row, verified against
   `RL-1301` A.4 sub-item 2 and `models.py:1201-1205`).
 
@@ -500,7 +512,7 @@ Per DP above, each red first on the base tree by its stated cause, plus, for the
   first merge, or the dispatch record names each difference.
 - **Task 6** applies texts 1–4 with the code, in one commit.
 - **The HOLD (FD 9752)**: no ruling here needs code that reads any of the four `to_dict`
-  approval-route responses. `decide_and_carry` returns the ORM row; the rule routes return
+  approval-route responses. `decide_and_carry` returns the `ApprovalRequestRow`; the rule routes return
   `ValidationRule`; the seed and the reset script call services. Decide's `200` stays untyped
   and owned by FD 9752, with `test_the_decide_response_keeps_its_key_set` (DP-4, PL 9762
   Acceptance 15).
