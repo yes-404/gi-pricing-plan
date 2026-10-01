@@ -46,8 +46,12 @@ node. No check, no refusal, and no reason code.
 
 1. **FR-246's step-type scope is unstated.** It says "expression steps". A `constraint`'s `condition` and `clamp_bounds`, a
    `table`/`lookup` `key_expr` and a `model_call` `feature_map` also read names. The requirement neither covers nor excludes them.
-2. **The canonical example declares no inputs.** `03-rating-engine.md:258-271` (the premium-ladder example; `s_out` at `:272`
-   is the only step that declares `consumes`):
+2. **The canonical example declares no inputs.** The example's steps block is `03-rating-engine.md:252-274`; its five
+   evaluating steps are `:254-271`, and `s_out` (`:272-274`) is the only step that declares `consumes`. `s_input_age`
+   (`:252-253`, an `input` step) reads nothing and declares `produces`, so it is outside the reads question and inside the
+   corrected-example range:
+   - `s_area` (`:254-257`, `lookup`) has `"key_expr": ["postcode_outcode"]` and no `consumes`. A `lookup`'s `key_expr` is in
+     the scope question of item 1.
    - `s_rp` (`:258-261`, `model_call`) has `"feature_map": {"driver_age": "driver_age", "rating_area": "rating_area"}` and no `consumes`.
    - `s_expense` (`:262-264`, `table`) has `"key_expr": ["distribution_channel"]` and no `consumes`.
    - `s_office` (`:265-267`, `expression`) has `"expr": "risk_premium_minor * expense_factor * commission_factor * profit_factor"`
@@ -56,8 +60,14 @@ node. No check, no refusal, and no reason code.
      `"clamp_bounds": {"min": "min_premium_minor"}` and **no `consumes`**.
 
    The trace example at `:466-482` shows `s_minprem` consuming `office_premium_minor` and `min_premium_minor`, so the example's
-   declaration is what the engine saw at run time; the step as authored declares neither. A reader copying `:258-272` writes
+   declaration is what the engine saw at run time; the step as authored declares neither. A reader copying `:252-274` writes
    exactly the undeclared form.
+3. **A second defect in the same example: `s_out` consumes a name nothing produces.** `s_out` (`:272-274`) declares
+   `"consumes": "payable_premium_pre_round"`. No step in the example produces that name (`s_minprem` produces
+   `office_premium_minor`; the only occurrence of `payable_premium_pre_round` in `03` is `:274`). `_graph_invariants`
+   (`rating.py:394`) raises `GraphUnresolvedRefError` (`RATING_GRAPH_UNRESOLVED_REF`, `:419`) for a consumed name with no
+   producer, so the example would fail the **existing** invariant, before any declared-reads check exists. The corrected
+   example must pass both the existing invariant and the new declared-reads check.
 
 ## Evidence
 
@@ -116,7 +126,7 @@ unlabelled, so nothing says so. Nor does it show that the 12 non-literal steps a
 ## Why it matters now
 
 Phase 2's G2 algorithm is the first rating algorithm authored through the documented journey. Its author's reference is
-`03:258-272`, which teaches the undeclared form. Today the exposure is 0 rows and 0 shipped steps, so the path is latent. The
+`03:252-274`, which teaches the undeclared form and does not resolve. Today the exposure is 0 rows and 0 shipped steps, so the path is latent. The
 first algorithm built from the example prices correctly only while the context happens to hold every name, and silently
 otherwise.
 
@@ -127,7 +137,8 @@ maintainer's severity ruling recorded above; the lead gives the verdict.
 
 1. **Decision.** PL 9776's DP-F35-1 decision-maker rules, explicitly: (a) FR-246's step-type scope (expression only, or also
    constraint `condition`/`clamp_bounds`, `key_expr`, `feature_map`); (b) whether `consumes` is mandatory. The ruling carries
-   verbatim `03` text and its placement, **including the corrected example at `03:262-272`** (`:258-272` on this tree). The
+   verbatim `03` text and its placement, **including the corrected example at `03:252-274`** (the whole steps block on this tree; it must fix both the five
+   under-declared evaluating steps and `s_out`'s unproduced `payable_premium_pre_round`). The
    decision-maker receives this finding and the sweep output.
 2. **Enforcement** lands with a **RED-FIRST constraint-step test**: a constraint step reading a name outside its `consumes`
    refuses at save, red on the current tree.
@@ -136,3 +147,5 @@ maintainer's severity ruling recorded above; the lead gives the verdict.
    running the sweep on the new algorithm with 0 undeclared reads. Until enforcement lands, that line is the only guard.
 
 Filed 2026-10-01 as working id 9773.
+
+Corrected 2026-10-01 (pre-mint): five evaluating steps under-declare (s_area at 03:254-257 was missed), and s_out consumes an unproduced name.
