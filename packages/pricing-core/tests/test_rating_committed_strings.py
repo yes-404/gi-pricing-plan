@@ -60,13 +60,22 @@ def _flat(node: ast.AST) -> list[str]:
     return []
 
 
-def _json_strings(value: object) -> list[str]:
+def _json_strings(value: object, under_properties: bool = False) -> list[str]:
+    """Authored strings in a JSON value.
+
+    A field-named key directly under a JSON Schema `properties` is a property *definition*;
+    its `title` is a generated label ("Clamp Bounds"), not an expression, so only that one
+    key is ignored there. Every other string in the definition is still scanned.
+    """
     if isinstance(value, dict):
         out: list[str] = []
         for key, item in value.items():
             if key in _FIELDS:
-                out += [t for t in _json_flat(item)]
-            out += _json_strings(item)
+                scanned = item
+                if under_properties and isinstance(item, dict):
+                    scanned = {k: v for k, v in item.items() if k != "title"}
+                out += [t for t in _json_flat(scanned)]
+            out += _json_strings(item, under_properties=key == "properties")
         return out
     if isinstance(value, list):
         return [text for item in value for text in _json_strings(item)]
@@ -182,3 +191,18 @@ def test_every_declared_negative_is_still_committed(
 ) -> None:
     texts = {text for _, _, _, text in committed}
     assert set(_NEGATIVES) <= texts
+
+
+@pytest.mark.req("FR-244")
+def test_a_property_definition_title_is_ignored_and_nothing_else_in_it() -> None:
+    """Broken-input proof for the narrowed JSON predicate (WK-1250 Slice 1).
+
+    Only the generated `title` under `properties` is skipped; a `default` carrying a real
+    expression in the same definition is still scanned, and a field-named key outside
+    `properties` is scanned whole.
+    """
+    # Built from parts so this test's own source is not an authored string to the scan above.
+    field, bad = "ex" + "pr", "fo" + "o(1)"
+    schema = {"properties": {field: {"title": "T", "default": bad}}}
+    assert _json_strings(schema) == [bad]
+    assert _json_strings({field: {"title": "T"}}) == ["T"]

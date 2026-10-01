@@ -737,6 +737,34 @@ evidence reads the run whose `bundle_hash` equals the version's current bundle h
 - **Known limit (auditor-b F5).** `own_change` is derived from `consumed`, so a downstream step that is itself edited *and* whose input moved reads `own_change: false`: the diff reports the change but cannot separate the two causes. The one-step acceptance of `RL-1172` §5 holds for a single edit. OQ-1231 (§10) asks whether `own_change` should come from step-definition equality instead. *(2026-09-29: this limit ends when WK-675 delivers `RL-1261`, below.)*
 - **`own_change` from step definitions** *(amended 2026-09-29, `RL-1261`, deciding `OQ-1231` (b); owner WK-675, not yet built)*. For a step present on both sides and changed in the traces, `own_change` is true exactly when its definition differs between the two compiled algorithms, as FR-219's `diff_algorithms` reports it: an entry in its `changed_steps` for that `step_id` whose field is not `note` (`note` is excluded at this call site; `diff_algorithms` keeps counting it). An added or removed step stays true. Each step carries its own pinned refs, so a changed rate table is a changed `rate_table_ref` on the step that reads it. `diff_traces` takes both algorithms as well as both traces. The request and response shapes do not change. Until WK-675 delivers it, the trace-derived rule above stays in force.
 
+### 4.11 `SubGraph`
+
+*(Added 2026-10-01, WK-1250 Slice 1, `PL-1325`; FR-217's artifact limb, FR-227 at create. Ruled by `RL-1309`. The shapes are `model-schema`'s: `SubGraphInputPort`, `SubGraphBody`, `SubGraphCreate` and `SubGraph`, generated as `sub-graph.schema.json`, `sub-graph-create.schema.json` and `sub-graph-body.schema.json`. The pin, the inlining and the mount port map are Slice 2's; FR-218's purpose mount is Slice 3's.)*
+
+A Sub-graph Version is a stored, immutable fragment of a Rating Algorithm, addressed as `sub_graph:<slug>@<version>`. It is **not a Governed Artifact** (`RL-1309` DP-1): it has no status and no approval lifecycle of its own. Its change reaches approval inside the Rating Version that pins it, and every version carries a required, non-empty `change_note`.
+
+```json
+{
+  "slug": "ncd-ladder",
+  "version": 4,
+  "inputs": [{"name": "ncd_years", "type": "int"}],
+  "outputs": [{"name": "ncd_factor", "type": "relativity", "required": true}],
+  "steps": [
+    {"step_id": "s_ncd", "type": "table", "label": "NCD ladder",
+     "rate_table_ref": "rate_table:ncd@2", "key_expr": ["ncd_years"],
+     "consumes": "ncd_years", "produces": "ncd_factor"}
+  ],
+  "change_note": "Step-back after one claim is two years, not three."
+}
+```
+
+- **Typed ports** (`RL-1309` DP-3). An input port is a `name` and a `type` (a result type, never `float`, FR-227). An output port is an `AlgorithmOutput` (`name`, `type`, `required`): the same shape and result-type vocabulary as a Rating Algorithm's outputs, with no second vocabulary. The fragment's own names are namespaced when a parent inlines it (Slice 2).
+- **No `input` or `output` steps.** The ports replace them. A fragment carrying either step type is refused.
+- **Mounts nothing** (`RL-1309` DP-4). The shape has no `sub_graphs` field and is `extra="forbid"`, so a fragment cannot mount another: depth is 1.
+- **Graph invariants** (FR-212, restated for ports). Every name a step consumes is an input port or is produced by a step (`RATING_GRAPH_UNRESOLVED_REF`). Every output port is produced by a step (`RATING_GRAPH_UNRESOLVED_REF`: a port is a reference to a named value). An input port is the first producer of its name; a step that produces it without consuming it is refused, while a step that consumes it and re-produces it (a clamp chain) is accepted. A step reachable from no input port and contributing to no output port is refused. A cycle is refused (`RATING_GRAPH_CYCLIC`). A duplicate `step_id` is refused. These other refusals are `VALIDATION_FAILED`.
+- **Result types at create** (FR-227; `RL-1309` DP-S1-4). An output port whose declared type is incompatible with its producing step's result type is refused with `RATING_TYPE_MISMATCH`, naming the producing step and the port. Only producers whose type is known at save are checked: an `expression` step's `result_type` and an input port's declared type. An output produced by a `table`, `lookup` or `model_call` step is not checked at create, as for an algorithm today; its type is known only against the pinned artifact, at compile.
+- **Versions are immutable** (`00` FR-4). The server numbers versions: the current maximum plus one. There is no update and no delete. Every write records an Audit Event `sub_graph.created` with `entity_ref` `sub_graph:<slug>@<version>`, in the same transaction (`06` FR-368).
+
 ---
 
 ## 5. Interfaces
@@ -747,6 +775,10 @@ evidence reads the run whose `bundle_hash` equals the version's current bundle h
 |---|---|---|
 | `POST` | `/api/v1/rating-algorithms` | Create/version an algorithm (validated on save, FR-212) |
 | `GET` | `/api/v1/rating-algorithms/{slug}@{version}/diff?against=` | Structural diff (FR-219) |
+| `POST` | `/api/v1/sub-graphs` | Create a Sub-graph (version 1) from a `SubGraphCreate`; requires `rating:write`. **201**; **409** `VALIDATION_FAILED` on an existing slug; **422** `RATING_GRAPH_CYCLIC`, `RATING_GRAPH_UNRESOLVED_REF`, `RATING_TYPE_MISMATCH` or `VALIDATION_FAILED` (FR-217, FR-227; §4.11). **Added 2026-10-01** (`PL-1325`) |
+| `POST` | `/api/v1/sub-graphs/{slug}/versions` | New version of an existing Sub-graph from a `SubGraphBody`; requires `rating:write`. **201**; **404** `NOT_FOUND` on an unknown slug; **409** on a lost numbering race; the same 422 codes (FR-217). **Added 2026-10-01** (`PL-1325`) |
+| `GET` | `/api/v1/sub-graphs/{slug}@{version}` | Read one Sub-graph version; requires `rating:read`; **404** `NOT_FOUND` on an unknown version or another workspace's (FR-217). **Added 2026-10-01** (`PL-1325`) |
+| `GET` | `/api/v1/sub-graphs/{slug}/versions` | List a Sub-graph's versions, cursor-paginated; requires `rating:read` (FR-217). **Added 2026-10-01** (`PL-1325`) |
 | `POST` | `/api/v1/rate-tables/{slug}/versions` | New Rate Table Version from manual cell edits, with a required change note (FR-229). This is the manual-editing path, and it follows the import route below: the request names the base version and carries the edited cells, and the response is a cell diff against that base for confirmation (FR-231). `confirm: true` re-computes the diff and creates the version. **Amended 2026-09-28** (`RL-1184` E5): this row named no request shape, and no route implements it (register F-W10-3). Owner: WK-675's editor slice. |
 | `POST` | `/api/v1/rate-tables/{slug}/seed-from-model` | Seed from a model's relativities (FR-230) |
 | `POST` | `/api/v1/rate-tables/{slug}@{version}/bulk-operation` | Uplift / floor / cap / rebase on that version's cells → new version, operation + parameters recorded (FR-233) |

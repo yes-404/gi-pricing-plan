@@ -2358,3 +2358,32 @@ def approval_guarded_tables() -> set[str]:
         if "status" in table.c
         and hasattr(table.c["status"].info.get("status_vocabulary"), "APPROVED")
     }
+
+
+class SubGraphVersionRow(Base):
+    """One immutable Sub-graph Version (03 §4.11, FR-217's artifact limb; WK-1250 Slice 1).
+
+    A version is written once and never changed (`00` FR-4): there is no `updated_at` and
+    no `parent_id`, and no code path updates a row. The validated `SubGraph` is stored as
+    JSON content, never a pickle. `change_note` is required on every version (RL-1309 DP-1).
+    """
+
+    __tablename__ = "sub_graph_versions"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    content: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    change_note: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    created_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id", "slug", "version", name="uq_sub_graph_versions_slug_version"
+        ),
+        Index("ix_sub_graph_versions_workspace", "workspace_id", "slug"),
+    )
