@@ -417,3 +417,12 @@ def test_broken_route_walk_without_flattening_fails_its_reach() -> None:
 @pytest.mark.req("FR-343")
 def test_flattened_route_walk_reaches_nested_routers() -> None:
     assert route_checks(_nested_app(), _ATTRIBUTE) == (frozenset({"a:read"}), [])
+
+
+def test_python_workflow_triggers_on_every_parity_input() -> None:
+    """docs.yml does not run on packages/** or backend/**; this module must run on all three."""
+    workflow = (ROOT / ".github" / "workflows" / "python.yml").read_text(encoding="utf-8")
+    push, _, pull_request = workflow.partition("\n  pull_request:")
+    for block in (push, pull_request):
+        for path in ("'packages/**'", "'backend/**'", "'docs/**'"):
+            assert f"- {path}" in block, f"python.yml no longer triggers on {path}"
