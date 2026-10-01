@@ -139,7 +139,7 @@ Command, verbatim: `python3 /home/puzhenhao1989/.claude/jobs/6fa41099/tmp/p5/swe
 **What the sweep does not show:** that the 4 test steps are wrong. A test may declare an input absent on purpose; they are
 unlabelled, so nothing says so. Nor does it show that the 12 non-literal steps are clean.
 
-## A third defect class: 03's example is refused three ways, with five unproduced raw names
+## A third defect class: 03's example is refused three ways, with five unproduced raw names, plus a sixth (effective_date) under the widened predicate
 
 The 2nd pre-mint correction. `RatingAlgorithm.model_validate` over the `03` §4.1 JSON block (`03-rating-engine.md:233-283`,
 extracted verbatim), at `19155b50`, run as `uv run python v.py ex03.json` (`/home/puzhenhao1989/.claude/jobs/6fa41099/tmp/v.py`,
@@ -182,7 +182,7 @@ maintainer's severity ruling recorded above; the lead gives the verdict.
    constraint `condition`/`clamp_bounds`, `key_expr`, `feature_map`); (b) whether `consumes` is mandatory. The ruling carries
    verbatim `03` text and its placement, **including the corrected example at `03:252-274`** (the whole steps block on this tree; it must fix the five
    under-declared evaluating steps, `s_out`'s unproduced `payable_premium_pre_round`, the FR-214 and second FR-212 refusals and
-   the five unproduced raw names). The
+   the five unproduced raw names, plus a sixth (effective_date) under the widened predicate). The
    decision-maker receives this finding and the sweep output.
 2. **Enforcement** lands with a **RED-FIRST constraint-step test**: a constraint step reading a name outside its `consumes`
    refuses at save, red on the current tree.
