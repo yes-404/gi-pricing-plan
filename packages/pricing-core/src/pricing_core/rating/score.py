@@ -86,21 +86,21 @@ ever produces the first one directly. So:
   that rung's own value in place — see `runtime._constraint_node`), annotated with every
   firing clamp's `reason_code` in `operation.applied`, matching `03:412`'s worked example
   (`{"kind": "none", "applied": []}` when nothing fired).
-- **The operation `kind` per rung is a fixed table** (`_MULTIPLY_RUNGS`, `_ADD_RUNGS`
-  below), matching `03:404-414`'s own worked example: expense/commission/profit/
-  optimisation/instalment loadings are relativities (`multiply`); IPT and fees is a flat
-  amount (`add`); the terminal rung is the algorithm's own declared rounding (`round`). A
-  rung whose raw value is unchanged from the previous present rung is `none` — a
-  checkpoint, not a computation (`office_premium` and `constraints`, ordinarily) — *unless*
-  its value differs, in which case it degrades to `multiply` so a simpler algorithm that
-  skips the named loading rungs still reconciles correctly.
-- **The recorded `factor`/`amount_minor` is derived from the ratio or delta between
-  consecutive present rungs, quantized to 4 decimal places, and then *reapplied* via
-  `pricing_core.money.apply_factor`/addition to produce `value_minor`.** This is
-  deliberate and important: `value_minor` is the *output* of applying the recorded
-  operation, never an independently-sourced number the operation is asked to explain after
-  the fact — so the ladder reconciles **by construction**, to the penny, and not merely
-  according to `reconcile_ladder`'s own (shallow — first-rung and int-ness only) check.
+- **Each rung records the engine's exact value and the operation it really applied
+  (`RL-1329`).** `unrounded_minor` is the engine's own exact decimal for the rung's source,
+  read across the binding with `string()` (`to_wire`), never the float (FR-273). `value_minor`
+  is that value rounded once with the rung's own `RoundSpec`, never computed from another
+  rung's rounded value. The operation is recovered from the two unrounded values
+  (`ladder.recover_operation`): the exact factor, else the exact divisor, else a short
+  terminating operand within the engine's precision, else an exact added amount. A rung whose
+  value is unchanged is `none` (a checkpoint, such as `office_premium`), and `payable_premium`,
+  when it is not first, is `round`. A binding clamp is a `clamp` operation on `constraints`,
+  and the rung before it carries the value before the clamp.
+- **The ladder is checked, on every scored quote, in every Environment, and never sampled.**
+  `reconcile_ladder` (`RL-1329` §5, R0 to R4) takes its inputs from the evaluated result and
+  the algorithm, never from the ladder it checks, and replays the recorded operations on the
+  unrounded chain with one rounding at the payable. `build_scoring_result` refuses a quote
+  whose ladder does not reconcile with `LADDER_RECONCILIATION_FAILED` (`RL-1346`).
 
 **`on_violation="error"` is deliberately left undesigned, matching `runtime.to_wire`'s own
 precedent.** `03-rating-engine.md`'s constraint-step table row names three modes but
@@ -233,8 +233,8 @@ from pricing_core.safe_error import CodedError, safe_error_detail
 
 __all__ = ["build_scoring_result", "score_batch", "score_one"]
 
-#: See the module docstring's "Ladder construction" note for why these two sets exist and
-#: what a rung outside them defaults to.
+#: The rungs that are relativities: an unchanged value on one of them is recorded as ×1, on any
+#: other rung as `none` (see `_build_ladder`).
 _MULTIPLY_RUNGS = frozenset(
     {
         "expense_loading", "commission", "profit_loading",
