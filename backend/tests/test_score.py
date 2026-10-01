@@ -1155,3 +1155,167 @@ def test_a_trace_sampling_failure_logs_no_quote_input(
     assert "ValueError" in caplog.text
     assert sentinel not in caplog.text
 
+
+
+# --------------------------------------------------------------------------------------
+# RL-1346 (DP-S3-1): a ladder that does not reconcile is refused on /score, logged and counted.
+# --------------------------------------------------------------------------------------
+
+_LADDER_SENTINEL = "SENTINEL-quote-input-8a1f66"
+
+
+def _plant_a_ladder_one_unit_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The real builder's ladder with its last rung one minor unit off (a test-only mutation)."""
+    from pricing_core.rating import score as core_score
+
+    real = core_score._build_ladder
+
+    def off_by_one(inputs: Any, codes: Any) -> Any:
+        ladder = real(inputs, codes)
+        ladder[-1] = ladder[-1].model_copy(update={"value_minor": ladder[-1].value_minor + 1})
+        return ladder
+
+    monkeypatch.setattr(core_score, "_build_ladder", off_by_one)
+
+
+def _ladder_refusals(environment: str) -> float:
+    from app.observability.metrics import REGISTRY
+
+    value = REGISTRY.get_sample_value(
+        "gip_ladder_reconciliation_failed_total", {"environment": environment}
+    )
+    return value or 0.0
+
+
+@pytest.mark.req("FR-248")
+@pytest.mark.parametrize("rate", [None, 0.0])
+def test_a_ladder_that_does_not_reconcile_is_a_500_with_its_code_logged_and_counted(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    database: Any,
+    workspace_id: Any,
+    rate: float | None,
+) -> None:
+    """Acceptance 3 and 4 of RL-1346: the quote is refused in `uat`, whatever the trace-sampling
+    rate, with an RFC 9457 body carrying the code and no quote input."""
+    body = {**_quote({"rating_version_ref": SCORED_REF}), "quote_id": _LADDER_SENTINEL}
+    assert client.post(SCORE_URL, json=body, headers=scoring_headers).status_code == 200  # control
+    if rate is not None:
+        _run(_set_trace_sample_rate(database, workspace_id, rate))
+    _plant_a_ladder_one_unit_off(monkeypatch)
+    before = _ladder_refusals("uat")
+
+    with caplog.at_level(logging.INFO):
+        response = client.post(SCORE_URL, json=body, headers=scoring_headers)
+
+    assert response.status_code == 500, response.text
+    assert response.json()["code"] == "LADDER_RECONCILIATION_FAILED"
+    assert "Retry-After" not in response.headers
+    assert _LADDER_SENTINEL not in response.text
+    assert _ladder_refusals("uat") == before + 1
+    errors = [r for r in caplog.records if r.levelno == logging.ERROR]
+    assert any("LADDER_RECONCILIATION_FAILED" in r.getMessage() for r in errors)
+    assert _LADDER_SENTINEL not in caplog.text
+
+
+@pytest.mark.req("FR-248")
+def test_a_correct_ladder_is_served_and_not_counted(
+    client: TestClient, scoring_headers: dict[str, str], compiled_version: Any
+) -> None:
+    before = _ladder_refusals("uat")
+    body = {**_quote({"rating_version_ref": SCORED_REF, "trace": True})}
+    response = client.post(SCORE_URL, json=body, headers=scoring_headers)
+    assert response.status_code == 200, response.text
+    assert response.json()["trace"]["ladder_reconciled"] is True
+    assert response.json()["trace"]["ladder_check_version"] == 2
+    assert _ladder_refusals("uat") == before
+
+
+# --------------------------------------------------------------------------------------
+# PL-1348 Acceptance 7 (RL-1329 §4, R2): a declared non-rung `money_minor` output is a JSON integer.
+# --------------------------------------------------------------------------------------
+
+
+def _fee_algorithm() -> dict[str, Any]:
+    """`_minimal_algorithm` plus `fee_minor`, a non-rung `money_minor` output whose source is, in
+    the engine, exactly `premium_in + 0.5000000000000000001` (1234.5000000000000001 at 1234)."""
+    algorithm = _minimal_algorithm()
+    algorithm["outputs"].append({"name": "fee_minor", "type": "money_minor", "required": True})
+    algorithm["steps"] += [
+        {"step_id": "s_fee", "type": "expression", "label": "Fee",
+         "expr": "premium_in + 0.5000000000000000001", "result_type": "money_minor",
+         "consumes": ["premium_in"], "produces": "fee_value"},
+        {"step_id": "s_out_fee", "type": "output", "label": "Fee out", "output_name": "fee_minor",
+         "rounding": {"mode": "half_even", "dp": 0}, "consumes": ["fee_value"]},
+    ]
+    return algorithm
+
+
+@pytest.fixture
+def compiled_fee_version(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    database: Any,
+    blob_store: Any,
+    principal: Any,
+    workspace_id: Any,
+) -> Any:
+    register_rating_handlers()
+    created = client.post("/api/v1/rating-algorithms", json=_fee_algorithm(), headers=admin_headers)
+    assert created.status_code in (200, 201), created.text
+    row = asyncio.get_event_loop().run_until_complete(
+        _insert_version(
+            database, workspace_id, principal.id,
+            algorithm_ref="rating_algorithm:minimal@1", pins=_empty_pins(),
+        )
+    )
+    job = _run_compile_job(client, admin_headers, database, blob_store, row.id)
+    assert job.status is JobStatus.SUCCEEDED, job.error
+    return row
+
+
+def _assert_the_route_serves_the_fee_as_a_json_integer(response: Any) -> None:
+    import json
+    import re
+
+    assert response.status_code == 200, response.text
+    served = json.loads(response.text)["outputs"]["fee_minor"]
+    assert type(served) is int, (type(served), response.text)
+    assert served == 1235  # the exact string rounded once; the float 1234.5 would give 1234
+    raw = re.search(r'"fee_minor"\s*:\s*(-?[0-9.eE+]+)', response.text)
+    assert raw is not None
+    assert "." not in raw.group(1)
+    assert "e" not in raw.group(1).lower()
+
+
+@pytest.mark.req("FR-273")
+def test_a_non_rung_money_minor_output_is_a_json_integer_on_score(
+    client: TestClient, scoring_headers: dict[str, str], compiled_fee_version: Any
+) -> None:
+    body = {**_quote({"rating_version_ref": SCORED_REF}), "inputs": {"premium_in": 1234}}
+    _assert_the_route_serves_the_fee_as_a_json_integer(
+        client.post(SCORE_URL, json=body, headers=scoring_headers)
+    )
+
+
+@pytest.mark.req("FR-273")
+def test_the_float_path_fails_the_route_level_fee_assert(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_fee_version: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Red first, by planting the float path (`_build_outputs` reads `result[name]`): the body
+    carries `1234.5`, and the same assert fails."""
+    from pricing_core.rating import score as core_score
+
+    monkeypatch.setattr(core_score, "_exact", lambda result, name: None)
+    body = {**_quote({"rating_version_ref": SCORED_REF}), "inputs": {"premium_in": 1234}}
+    response = client.post(SCORE_URL, json=body, headers=scoring_headers)
+    assert response.status_code == 200, response.text
+    assert '"fee_minor":1234.5' in response.text
+    with pytest.raises(AssertionError):
+        _assert_the_route_serves_the_fee_as_a_json_integer(response)

@@ -14,6 +14,7 @@ import asyncio
 from uuid import UUID, uuid4
 
 import pytest
+from backend.tests.approved_rows import mark_approved
 from backend.tests.test_api_reference import _table as _seed_reference_table
 from backend.tests.test_custom_objectives_api import _advance, _create
 from backend.tests.test_model_jobs_gbm import _fitted_gbm
@@ -37,7 +38,7 @@ from app.platform.blobs import BlobStore, to_ref
 from app.platform.rating_versions import compile_rating_version
 from app.worker.rating_handlers import register_rating_handlers
 from app.worker.tasks import execute_job
-from model_schema import JobSource, JobStatus, ModelStatus, ObjectiveStatus
+from model_schema import JobSource, JobStatus, ObjectiveStatus
 from pricing_core.rating.compile import _APPROVED_OR_BETTER, Bundle
 
 
@@ -590,7 +591,7 @@ def test_the_compiled_bundle_survives_persistence(
         async with database.unit_of_work() as session:
             model_row = await session.get(ModelRow, model_id)
             assert model_row is not None
-            model_row.status = ModelStatus.APPROVED.value
+            await mark_approved(session, model_row)
             slug, version = model_row.model_family_slug, model_row.version
         return f"model:{slug}@{version}"
 

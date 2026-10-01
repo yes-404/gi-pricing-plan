@@ -334,3 +334,76 @@ Each is shown failing on deliberately broken input (`CLAUDE.md` §13), in the WK
 - A route declared `authenticated` that in fact demands a permission, or the reverse, fails.
 - Check 22 passes on all five tables after the migration: the header and every row carry
   four cells.
+
+## Amendment, 2026-10-01 10:18 BST: F-A3 and the F-A2 drift note
+
+*By the decision-maker session `dm-675dp56` (effort `medium`; `CLAUDE_EFFORT=medium`), on the
+lead's relay of the maintainer's instruction: "#977 waits for a DM-dated line (F-A3; medium;
+can share a small session)". The branch was merged with origin/main `1dd5e264`. Nothing ruled
+above is changed. This section adds one population member (F-A3) and records drift (F-A2).*
+
+**F-A3: a new P1 hit from #1049.** #1049 (SL-1360, draft) adds
+`tests/test_permission_parity.py`. Its line 62 splits a markdown row of `06` §4.1 on a bare
+pipe:
+
+```text
+rows.append([cell.strip() for cell in line.strip("|").split("|")])
+```
+
+The line is a member of item 3's population.
+- **When #1049 merges, the WK-1178 pin slice migrates that line to `table_rows`.**
+- `tests/test_permission_parity.py` joins the code write-set and its serialisation list. Like
+  every other entry, that list is re-checked at dispatch.
+- If #1049 has not merged at the slice's dispatch, the file is not in the slice's tree. The
+  dispatch-time re-derivation then finds it whenever it lands.
+
+P1 was re-run on #1049's head `9a79c9c6` (`9a79c9c639d3ad90ecf3fd5339f1b26fe53d3399`). The
+form is the one item 3 states: the ERE compiled with Python's `re` and matched line by line
+over `git ls-tree -r --name-only` `*.py` at that commit, minus `.claude/skills/ui-ux-pro-max/`.
+The output, verbatim:
+
+```text
+backend/src/app/demo/guide.py:87: return [cell.strip() for cell in line.strip().strip("|").split("|")]
+scripts/_docid.py:1611: cells = [c.strip() for c in line.strip("|").split("|")]
+scripts/audit-docs.py:353: cells = [c.strip() for c in line.strip().strip("|").split("|")]
+scripts/audit-docs.py:394: cells = [c.strip() for c in line.strip().strip("|").split("|")]
+scripts/audit-docs.py:578: cells = [c.strip() for c in line.strip().strip("|").split("|")]
+scripts/audit-docs.py:4122: cells = [c.strip() for c in line.strip().strip("|").split("|")]
+scripts/doc-id.py:2921: title = row_match.group(4).split("|", 1)[0].strip()
+scripts/doc-index.py:1061: cells = [c.strip() for c in line.strip().strip("|").split("|")]
+scripts/register-lint.py:169: fields = [f.strip() for f in tmp.strip().strip("|").split("|")]
+tests/test_doc_id_migrate.py:4951: cell = line[1:].split("|", 1)[0].strip()
+tests/test_findings_ids.py:157: seen += _CITED_ID.findall(line.split("|")[1])
+tests/test_permission_parity.py:62: rows.append([cell.strip() for cell in line.strip("|").split("|")])
+COUNT 12
+```
+
+At origin/main `1dd5e264` the same predicate gives 11 hits: the same lines without
+`test_permission_parity.py:62`. One of item 3's locators has drifted. `audit-docs.py:4118` is
+now `:4122`, with the same source text.
+
+**F-A2: drift only.** The population is re-derived at dispatch (item 4), so this records
+the movement and rules nothing. The predicate: in each of the five specs, the lines from
+`### 5.1` up to the next `##`/`###` heading that match the Python regex
+``^\| `?(GET|POST|PUT|PATCH|DELETE)``. A blockquoted table starts with `>`, so it is not
+counted. Results at origin/main `1dd5e264`:
+
+| Spec | §5.1 heading line | Rows | Multi-method rows |
+|---|---|---|---|
+| `01` | `:845` | 39 | 1 |
+| `02` | `:1805` | 44 | 0 |
+| `03` | `:775` | 30 (was 26; WK-1250 Slice 1's four sub-graph rows) | 0 |
+| `06` | `:529` | 23 | 2 |
+| `07` | `:297` | 20 | 2 |
+| **Total** | | **156** (was 152) | **5** |
+
+- **After the split: 161 rows. With the two added reads: 163** (they were 157 and 159).
+- The same predicate at this record's tree `65b33479` gives 152, the figure ruled above.
+- `06`'s blockquoted `| Route | Requires |` table is now at `06:551`.
+- These counts agree with the lead's relay.
+
+**An overlap to resolve before mint (not ruled here).** RL 9766 (working id; #1055, PL-1286
+DP-5) also adds a §5.1 row for the existing `GET /api/v1/rating-versions/{id}`, the same route
+as item 4's added read `GET /api/v1/rating-versions/{rating_version_id}`. Whichever of the two
+lands second must not add a second row for it. The lead orders the two, and the
+decision-maker amends the second record's text to match.

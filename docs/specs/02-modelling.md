@@ -226,7 +226,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-162** | A Custom Metric is readable and governable over the API: create, read, certify, read the certificate, submit for approval, and list usage — FR-166's argument applied to metrics, since an approver who cannot fetch the certificate is being asked to approve a verdict they cannot see. |
 | **FR-163** | Custom Objective lifecycle is `draft → certified → review → approved → deprecated`. Approval is by an Approver who is not the author; `expression` objectives with `convexity: violated` need two Approvers (FR-152). Editing an `approved` objective creates a new version requiring fresh certification and approval. |
 | **FR-164** | Objective usage is fully traceable: for any objective version, the platform lists every Model, Rating Version, and live Deployment using it — the blast-radius query needed when a defect is found. |
-| **FR-165** | Objective execution is resource-bounded: compiled expressions are evaluated on fixed-size NumPy arrays with no allocation of unbounded intermediates, wall-clock is budgeted per boosting round, and NaN/inf appearing in a gradient or hessian aborts the fit with a named error identifying the round and the offending input range. |
+| **FR-165** | Objective execution is resource-bounded: compiled expressions are evaluated on fixed-size NumPy arrays with no allocation of unbounded intermediates, wall-clock is budgeted per boosting round, and NaN/inf appearing in a gradient or hessian aborts the fit with a named error identifying the round and the offending input range. *(Amended 2026-09-30, `RL-1328` DP-S2-3 and DP-S2-4, WK-690 Slice 2: the per-round budget times the objective callable, gradient and hessian, inside each backend adapter. The default is 30 s per round, configurable per fit. Exceeding it raises `OBJECTIVE_ROUND_BUDGET_EXCEEDED`, naming the round and the budget. It binds template and `expression` objectives alike. The NaN/inf abort is a coded error whose text names the round, the row count and the fields `y` and `f`, and no value: the offending ranges are structured attributes of the error, for a record that is access-controlled, so that no input value reaches a stored error message or a log.)* |
 | **FR-166** | **A Custom Objective and its certificate are readable.** `GET /api/v1/custom-objectives/{id}` returns the objective with its status, its certificate outcome and its `approval_request_id`; `GET /api/v1/custom-objectives/{id}/certificate` returns the latest `ObjectiveCertificate` for that version, or a 404 naming it. Added 2026-08-18 (WK-661), because §5.1 declared five write endpoints and no way to read what they wrote: FR-146 makes a certificate the condition of submission and FR-163 puts an Approver in front of it, and an approver who cannot fetch the certificate is being asked to approve a verdict they cannot see. Certification is a **202** job (FR-146), so a caller that cannot read the result back has no completion signal either. **Evidenced 2026-08-23 (W32-6).** The prior evidence was one OpenAPI-presence assertion over all seven routes — the paths are spelled correctly. `backend/tests/test_custom_objectives_api.py` now covers the create/get/usage/certify/submit permits, both workspace boundaries, four permission refusals and the three conflicts. **Three things the slice's plan expected are not what the code does, and the code is the correct side in all three:** *(a)* **there is no list route** — seven routes and none of them lists, so the boundary is proven on `GET /{id}` and on `GET /{id}/usage`, the latter being the one whose leak would be a set of another workspace's models; *(b)* **re-certifying an objective already `certified` does not conflict** — `certifiable_or_refuse` admits `{draft, certified}` deliberately, because re-certification after a library upgrade is how a finding is found, and the conflict is `review` and past, where a certificate an approver is reading would move under a live decision; *(c)* **`_require_evidence` guards `submit`, not `certify`** — certification *produces* the evidence, so requiring it beforehand would be circular. **Corrected 2026-08-24 (W32-8).** Point *(a)* went false at commit `799ef78`: `GET /api/v1/custom-objectives` lists the library, so there are **eight** routes and one of them lists. FR-167 is what added it — this sentence is the observation that requirement was written to cure, and it is left standing rather than rewritten (`CLAUDE.md` §5), because it records what was true on 2026-08-23 and is the reason FR-167 exists. **The evidence the sentence cites is unaffected**: the workspace boundary is still proven on `GET /{id}` and on `GET /{id}/usage`, and `test_the_library_stops_at_the_workspace_boundary` now proves it a third time on the list route, which is the one whose leak would be a page of another workspace's artifacts. Points *(b)* and *(c)* are untouched and still hold. |
 | **FR-167** | *(appended 2026-08-23, WK-664 slice-map backlog item 4)* **The three artifact libraries §5.3 renders are listable.** `GET /custom-objectives`, `GET /custom-metrics` and `GET /peril-structures` each return the workspace's artifacts, cursor-paginated, filterable by `status` and by `slug`. Until this date all three had create, detail, certify, submit and usage routes and **no route that lists** — FR-166's 2026-08-23 amendment recorded "seven routes and none of them lists" as an observation and cured nothing — so `02` §5.3 asked for three screens whose data no endpoint could supply. This is the same shape as the omissions FR-139, FR-186, FR-192 and FR-94 each repaired, and it stayed invisible for the same reason: **an endpoint absent from both §5.1 and the implementation is absent from the audit that compares them.** The `slug` filter is load-bearing beyond the list itself — it is what makes §5.3's `slug@version` addresses resolvable against UUID-only detail routes, so this requirement is a precondition of those views and not only of the library screens. **`usage_count` is on the row**, as §5.3 asks: the count of Model Specs referencing that artifact. `GET /models`' refusal to carry per-row `flags` is a real precedent and it does not reach here — a flag needed a per-row evaluation, a usage count is one grouped aggregate. **The budget is part of the requirement: one aggregate per page, never one per row.** It is stated because the query reads a JSONB spec column with no index today and the metric side needs a lateral expansion, so an implementation that quietly becomes N+1 would be indistinguishable from a correct one until a workspace has a few hundred artifacts. *(amended 2026-08-24, WK-692 closure proposal Part D items 3 and 4.)* Three clauses above were counterfactual when this row was written; they are corrected here rather than deleted, because which side was wrong is the record. **First**, §5.3 rendered **one** artifact library and not three — the Custom metric library and the Peril structure library were the missing rows, and both were added to §5.3 on this date against routes §5.1 already declared, so the opening sentence now describes §5.3 as it stands rather than as it was. **Second**, the peril side never had a certify route or a usage route: §5.1's peril block is create, list, detail, reconcile and submit, so "all three had create, detail, certify, submit and usage routes" is withdrawn as to Peril Structures and holds for Custom Objectives and Custom Metrics only. **Third**, `usage_count` holds for those same two libraries and not for the peril list. The quantity is defined in this row as the count of Model Specs referencing that artifact, and a Model Spec cannot reference a Peril Structure — the reference runs the other way, a Peril Structure pinning models per §4.10 — so the count is undefinable on a peril row rather than merely unimplemented. §5.1's peril list row omitting it is correct as written, and an implementation must not invent a peril usage count to make the three shapes symmetric. *(A Peril Structure does have a blast radius — `03` FR-237 pins one per `model_call` — so the absent `/usage` route is a separate question and not evidence for this one.)* Owner: **WK-692** — backend only, three routes and one shared aggregate. |
 | **FR-168** | *(appended 2026-08-23, OQ-601)* **An interaction candidate carries a holdout strength ratio, and that is the only evidence beside it.** The ranker's `strength` — the mean absolute sum of the pair's off-diagonal TreeSHAP entries — is recomputed on the holdout partition named by the Model Spec's `split_ref` (`01` FR-76) and published as `holdout_strength_ratio`: the holdout value over the in-sample one. A ratio near `1` says the structure survives out of sample; a collapse toward `0` says the pair is a fitting artefact, which is the one thing an actuary needs before spending a Factor on it. *(Amended 2026-08-26, OQ-608: the interpretive sentence states the null band — the value expected under no collapse is published alongside the ratio, and a reader compares against that baseline rather than against 1.)* **The two passes are one code path run twice** — the same seed, the same row cap and the same encoding on each partition (FR-134) — so the numerator and the denominator are comparable rather than merely adjacent, and the cost is bounded by that cap rather than by book size. The holdout frame is already loaded beside the training frame wherever the summary is built, so this adds a second pass over a capped sample and no new data path. It is **XGBoost-only**, like the candidates themselves — LightGBM computes no interaction values, and `ShapSummary.interactions_available` already reports that as a capability rather than as an empty list (§8) — and on a rebuild it is reused rather than recomputed, with the rest of the surrogate's stored numbers (FR-138). **No threshold is attached to it and nothing else stands beside a candidate**: a ratio is ranked evidence, never an admission test, so FR-135's refusal to write a Factor is untouched, and the withdrawn exposure share stays withdrawn because it is `1.0` by construction. "Over how much of the book" is not answerable per pair at all and is not asked here. Owner: the slice that builds the factor workbench's suggestion panel; until it lands the artifact publishes `strength` alone and `holdout_strength_ratio` is absent rather than defaulted, which is the interim OQ-601 names and not a resting place. *(Landed 2026-08-25 (W6b-5a), backend half. `build_shap_summary` takes a required `holdout` and runs one code path twice — `_encoded_matrix` then `_pair_strengths`, with the same seed, the same row cap and the same `categorical_maps` on each partition — and `_interaction_candidates` ranks by the in-sample map and looks the holdout up on the pairs that ranking chose. A ratio is absent, carried as `null`, where no quotient exists: an in-sample `strength` of `0.0`, which arises only where the booster found no interaction at all. The **panel** remains this requirement's owner by description and is `W6b-5b`'s. Two clauses of this row are **not** discharged. The rebuild clause — 'on a rebuild it is reused rather than recomputed, with the rest of the surrogate's stored numbers (FR-138)' — is **unsatisfied**: `reusable_numbers()` returns only the `GlmApproximation` block and `build_shap_summary` runs unconditionally outside that branch, so the summary and its ratios are recomputed on every rebuild and this requirement's cost argument leans on a behaviour nothing implements. Owner: the slice that makes the transparency artifact reusable under FR-138; not WK-664, which may discharge an expired condition but may not author new capability on this surface. And the comparability clause is weaker than it reads — see `OQ-608`.)* |
@@ -936,6 +936,21 @@ validation checks (`01` §4.5). One grammar, one parser, one security review.
 > bind all four profiles. Before enforcing them, WK-690's slice measures the repository's
 > recipe and check corpus against both limits. If a real expression exceeds one, the slice
 > reports to the deputy rather than raising the limit.
+>
+> *(Amended 2026-09-30, `RL-1265` DP-5: `filter_rows` (`01` FR-35) parses in the `recipe`
+> profile. It is a data-preparation step, and it already used `recipe`'s operator set.)*
+>
+> *(Amended 2026-09-30, `RL-1265` DP-5: rating `expression` steps are not a profile of
+> this parser. They are ZEN expressions under `03` FR-244 and FR-276, and `03` FR-244 now
+> says so.)*
+>
+> *(Amended 2026-09-30, RL-1292 (DP-S1-2): the arity of every function, in every
+> profile. `abs`, `round`, `floor`, `ceil`, `log`, `exp`, `sqrt`, `log1p` and `expm1` take
+> exactly one argument. `clip` and `where` take exactly three. `min`, `max` and `coalesce`
+> take one or more. Any other count is refused with a position-accurate error naming the
+> function and the count. An extra argument was silently dropped before this date, so
+> `round(x, 2)` rounded to 0 decimals and `log(x, 10)` was the natural log. Both are now
+> refused. Honouring a second argument is not specified.)*
 
 ```ebnf
 expr      = term , { ("+" | "-") , term } ;
@@ -996,6 +1011,17 @@ Rules enforced by the parser (FR-145):
 > `%`, ternaries and boolean operators. In all four profiles it enforces the node-count
 > and depth limits. The fix is WK-690's first slice (FR-144's 2026-09-28 amendment).
 
+> *(Delivered 2026-09-30, WK-690 Slice 1: the parser implements the profile table. The
+> three 2026-08-22 divergences are closed. Both limits are enforced in all four profiles,
+> counted over `ast.expr` nodes (DP-S1-1, RL-1291). The
+> function sets are the table's. Comparisons in `objective` and `factor` exist only as
+> `where()`'s condition.)*
+>
+> *(Amended 2026-09-30, RL-1293 (DP-S1-3): the `objective` profile's bound
+> symbols and declared parameters are real-valued, and the derivation treats them so.
+> `abs` therefore differentiates to `sign`, and the `derived` text a reviewer approves is
+> the real-variable form.)*
+
 
 Example `expression` objective — under-pricing penalised twice as hard, on a log link:
 
@@ -1032,6 +1058,11 @@ lifted outside the arithmetic. An algebraically equivalent form with the branch 
 factor is *not* what the tool emits, and the certificate records the canonical form so that
 two reviewers reading the same objective read the same text.
 
+> *(Amended 2026-09-30, `RL-1289`: `derivation_version` is the `sympy` version pinned
+> in `uv.lock`, `==1.14.0` in `packages/pricing-core/pyproject.toml`. The platform
+> reads it at derivation time from `sympy.__version__`, never from a literal in code.
+> The example's `1.14.0` is that pin.)*
+
 Note this example's hessian is negative wherever `exp(f) < y/2` — it is non-convex, so it
 needs `hessian_strategy` and a second Approver (FR-152). It also has a **kink** at
 `exp(f) = y`, which FR-147/148 exist to handle.
@@ -1066,9 +1097,13 @@ Produced by `POST /custom-objectives/{id}/certify`; required for submission (FR-
                "y_range": [0, 10000000], "f_range": [-20, 20], "w_range": [0.001, 10000]},
   "overall": "certified_with_findings",
   "_note": "Figures above are illustrative of the shape of a real certificate. The convexity share and error magnitudes are those measured for this objective on this sampling grid (research/track-a-findings.md F3/F4); they are not constants.",
-  "library_versions": {"sympy": "1.13.x", "numpy": "2.x", "xgboost": "2.x"}
+  "library_versions": {"sympy": "1.14.0", "numpy": "2.x", "xgboost": "2.x"}
 }
 ```
+
+> *(Amended 2026-09-30, `RL-1289`: `library_versions.sympy` is the version pinned in
+> `uv.lock`, read from `sympy.__version__`. The example's former value was a version
+> range with no recorded rationale, and it is replaced by the pin.)*
 
 `overall` ∈ `certified` | `certified_with_findings` | `failed`. A `failed` certificate
 blocks submission entirely.
@@ -1077,6 +1112,19 @@ For `kind: template` the first two checks are named `analytic_vs_numeric_gradien
 `analytic_vs_numeric_hessian` — the comparison is against `pricing-core`'s analytic
 derivatives rather than a SymPy-derived form (FR-151). Every other check, and the
 `sampling` block that makes the findings interpretable, is identical for both kinds.
+
+> *(Amended 2026-09-30, WK-690 Slice 2, `RL-1328` DP-S2-2 and DP-S2-5: an `expression`
+> certificate carries the nine checks with the `symbolic_vs_numeric` pair, and `model-schema`
+> accepts exactly one of the two batteries, never a mixture. For an expression, branch
+> boundaries are found from its `where()` conditions, in the loss and in the derived text,
+> not declared (FR-147, FR-148): the grid is sampled at each, the points within `h` of one
+> are excluded from the derivative comparison and counted, and `branch_discontinuity` names
+> each condition. That includes the conditions the printer wrote for a `DiracDelta` it
+> dropped (`abs`, `min`, `max`, `clip`), so a kink is never certified as smooth. A
+> denominator that is zero, that changes sign, or whose magnitude has an interior minimum a
+> bounded refinement drives to zero, over the sampled domain, fails `finiteness` and names
+> it (§4.6). `library_versions.sympy` is read from `sympy.__version__` at the call
+> (`RL-1289`).)*
 
 > **Amended 2026-08-18 (WK-661), built.** Six corrections, all in the code's favour bar the
 > last, which is in the contract's.
@@ -2055,6 +2103,7 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 `OBJECTIVE_KIND_NOT_ENABLED`, `MODEL_SPEC_EXCEEDS_COMPLEXITY_LIMIT`,
 `OBJECTIVE_GRAMMAR_VIOLATION` (declared, Phase 2),
 `OBJECTIVE_NONFINITE_DERIVATIVE` (declared, Phase 2),
+`OBJECTIVE_ROUND_BUDGET_EXCEEDED` (declared, Phase 2),
 ~~`TRANSPARENCY_ARTIFACT_REQUIRED`~~, `MODEL_IMMUTABLE`,
 ~~`PICKLE_PERSISTENCE_REFUSED`~~,
 `PERIL_STRUCTURE_RECONCILIATION_FAILED`, `MODELS_NOT_COMPARABLE`,
@@ -2839,7 +2888,7 @@ Custom objective path: [`WF-702-custom-objective-lifecycle.md`](../workflows/WF-
 | **LightGBM** | Secondary GBM | `fobj`/`feval`, `init_score` as the offset, monotone constraint methods (`basic`/`intermediate`/`advanced`), native categoricals |
 | **interpret (EBM)** | Transparent ML (FR-140) | Exporting term shape functions as tables; treating an EBM as a set of additive lookups — resolved 2026-08-21 (WK-661, the EBM slice): pin `interpret-core==0.7.8`, installed with the slice |
 | ~~**SHAP**~~ **The backends' own TreeSHAP** | Transparency artifacts (FR-134) | **Amended 2026-08-17 (WK-661, transparency): the `shap` package is not a dependency.** XGBoost's `pred_contribs` and LightGBM's `pred_contrib` are the same TreeSHAP algorithm on the same trees, already linked against the booster `pricing-core` holds — and `shap` would have added a dependency of its own — for plotting the frontend does (§5.3) and aggregation that is fifteen lines — to the package ADR-703 keeps importable standalone. *(Corrected 2026-08-17, same day: this row first gave the cost as "would have pulled scikit-learn and its transitive weight in". The scikit-learn half was wrong when written — `glum` 3.4.1 requires it, so it was already installed in every environment this package has ever had, as OQ-583 found the next hour. The row's conclusion is unaffected: `shap` itself is still a dependency added for work already done elsewhere.)* What is genuinely lost is **interaction values on LightGBM**: XGBoost computes them (`pred_interactions`, feeding FR-135's suggestions and never a Factor), LightGBM does not compute them at all, and `ShapSummary.interactions_available` reports that as a capability rather than as an empty list. Revisit if a third backend or kernel SHAP for a non-tree model is ever needed |
-| **SymPy** | Symbolic gradient/hessian derivation (FR-144) — **Phase 2**, with `expression` objectives (FR-150) | Differentiation of `Piecewise` (from `where`), simplification, lambdify-free code generation into our own expression tree |
+| **SymPy** | Symbolic gradient/hessian derivation (FR-144) — **Phase 2**, with `expression` objectives (FR-150) | Differentiation of `Piecewise` (from `where`), simplification, lambdify-free code generation into our own expression tree. Pinned `==1.14.0` in `packages/pricing-core/pyproject.toml` and resolved once in `uv.lock` (`RL-1289`, 2026-09-30). |
 | **NumPy** | Compiled objective evaluation | Vectorised, allocation-conscious gradient/hessian evaluation; `np.errstate` discipline for log/exp edges |
 | **Python `ast`** | Restricted grammar parsing (§4.6) | Allow-list node walking, depth/size limits, why `eval`/`compile` on user input is never acceptable |
 | **Polars** | Factor resolution, banding/grouping application, diagnostic aggregation | `replace_strict` for grouping maps (it refuses an unmapped level rather than dropping it, which is FR-104's whole point). **Banding is `numpy.searchsorted`, not `pl.cut`** — the artifact's `closed`, `null_level`, `below_range` and `above_range` policies decide where a value lands, and `cut` implements one fixed convention (added 2026-08-15, WK-661) |

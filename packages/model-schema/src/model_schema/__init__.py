@@ -96,6 +96,7 @@ from model_schema.diagnostics import (
     Weighting,
 )
 from model_schema.envelope import ArtifactEnvelope
+from model_schema.graph_errors import GraphCycleError, GraphUnresolvedRefError
 from model_schema.ids import new_uuid7, uuid7_timestamp_ms
 from model_schema.jobs import (
     TERMINAL_STATUSES,
@@ -188,6 +189,7 @@ from model_schema.money import Currency, DecimalStr, MoneyMinor, Relativity, app
 from model_schema.objectives import (
     FITTABLE_OBJECTIVE_STATUSES,
     OBJECTIVE_CERTIFICATE_CHECKS,
+    OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC,
     TEMPLATE_APPLICABILITY,
     TEMPLATE_PARAMETERS,
     TERMINAL_OBJECTIVE_STATUSES,
@@ -344,6 +346,7 @@ from model_schema.settings import (
     SettingSource,
     SettingType,
 )
+from model_schema.sub_graphs import SubGraph, SubGraphBody, SubGraphCreate, SubGraphInputPort
 from model_schema.transparency import (
     EbmShapeFunctions,
     GlmApproximation,
@@ -386,6 +389,7 @@ __all__ = [
     "MODELLING_FORBIDDEN_PII",
     "MODEL_SPEC_ADAPTER",
     "OBJECTIVE_CERTIFICATE_CHECKS",
+    "OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC",
     "READ_PERMISSIONS",
     "SCOREABLE_MODEL_STATUSES",
     "SURROGATE_RESPONSE_COLUMN",
@@ -510,6 +514,8 @@ __all__ = [
     "GoldenQuoteNotChecked",
     "GoldenQuoteResult",
     "GoldenQuoteTolerance",
+    "GraphCycleError",
+    "GraphUnresolvedRefError",
     "Grouping",
     "GroupingEvaluation",
     "GroupingEvidence",
@@ -666,6 +672,10 @@ __all__ = [
     "SpecValidation",
     "SplitRef",
     "StepChange",
+    "SubGraph",
+    "SubGraphBody",
+    "SubGraphCreate",
+    "SubGraphInputPort",
     "SubGraphRef",
     "TemplateParameter",
     "Trace",
