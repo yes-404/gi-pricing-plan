@@ -3,7 +3,7 @@ id: PL-1279
 family: plan
 kind: leaf
 title: WK-1178 — The permission-parity check (CR-1247 Proposal 1 (c)): leaf plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-09-30
 owner: planner
 tree: a09101e28530f0f2dc18c02a70c9fed6f320a9e8

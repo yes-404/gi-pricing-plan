@@ -600,7 +600,7 @@ a date. The freeze gates limit only what may **enter** P2, never when a start ha
 
 | WS | Scope | Status |
 |---|---|---|
-| **Exit demo** | Phase 2's exit criterion G2: `WF-699` end to end on the freMTPL2 seed, with its deploy step. Its scope is the real freMTPL2 rating algorithm in the seed, `WF-699` Phases A to E and its deploy step as one scripted journey, and the journey test that cites `WF-699` by id. **Owner: the lead.** It is sequenced after WK-673 and WK-674, because it needs dislocation and deployment. It can be cut in parallel with WK-675 where no view is needed, still one slice at a time (`delivery-process.md` §8). It discharges FD-1209's event. The two `WF-699` findings, FD-1244 (D4 against FR-261) and FD-1245 (E2 against FR-257), are on the §10 gate "Before the P2 exit demo", for the decision-maker | **not started**: opened 2026-09-29 (`CR-1247` Proposal 12) |
+| **Exit demo** | Phase 2's exit criterion G2: `WF-699` end to end on the freMTPL2 seed, with its deploy step. Its scope is the real freMTPL2 rating algorithm in the seed, `WF-699` Phases A to E and its deploy step as one scripted journey, and the journey test that cites `WF-699` by id; **the script walks `WF-699` A1–A2 (seed-from-model) on the 7-factor freMTPL2 GLM** — added 2026-10-01 by the maintainer (entry "2026-10-01 08:01:45 BST — FD 9786 severity: HIGH"), on FD 9786 (working id; the multi-factor seeding defect). **Owner: the lead.** It is sequenced after WK-673 and WK-674, because it needs dislocation and deployment. It can be cut in parallel with WK-675 where no view is needed, still one slice at a time (`delivery-process.md` §8). It discharges FD-1209's event. The two `WF-699` findings, FD-1244 (D4 against FR-261) and FD-1245 (E2 against FR-257), are on the §10 gate "Before the P2 exit demo", for the decision-maker | **not started**: opened 2026-09-29 (`CR-1247` Proposal 12) |
 
 ### WK-668 — **Spike S1/S2 resolution and ADR-706 confirmation**
 
@@ -1182,6 +1182,24 @@ relates: [FD-1354, LG-1353, LG-1350]
 Test-only hotfix for main's red CI after #1025: `test_template_certificate_unchanged` pinned a runner-dependent `max relative error` figure. The comparison normalises every measured figure a template certificate prints and bounds the two finite-difference errors by the engine's tolerance; a guard test fails if any other figure survives. No leaf plan; the dispatch record `DISPATCH-WK-1178-HOTFIX-9790-2026-10-01.md` (local) and the maintainer's ruling of 2026-10-01 are the scope. *(Minted 2026-10-01 as SL-1352; filed under working id 9790. Ledger `LG-1353`, finding `FD-1354`.)*
 
 *(Reopened 2026-10-01 05:11 BST to `active`: CI run 36812617020 at `5a4beb63` failed on a second runner-dependent figure the first fix did not normalise; the lead's Delta 5 and Delta 6 are the rework scope. A fresh auditor re-closes.)*
+
+#### SL-1359 — WK-1178 slice — the permission-parity check (PL-1279, RL-1305)
+
+```yaml
+id: SL-1359
+family: slice
+title: WK-1178 slice — the permission-parity check (PL-1279, RL-1305)
+status: active                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-01
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 101e32dc5baf8edeb986063b680ccec31e5ba724
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1279, RL-1305, CR-1247, RL-1236, PL-1268]
+```
+
+A pytest invariant fails the gate when `06` §4.1's permission tables and `model_schema.Permission` disagree, or when a Built name has neither a check site nor an owner (`CR-1247` Proposal 1 (c), decided by `RL-1305`). It must merge before WK-690 Slice 3's commit that adds `custom_objective:author` (`PL-1268` Slice 3). It retires `RL-1236`'s interim re-derive-at-each-close rule when it merges. Leaf plan `PL-1279`, activated with this row. *(Minted and activated 2026-10-01 as SL-1359, on the maintainer's entry "2026-10-01 08:04:53 BST — correction ACCEPTED (RL 9856 = RL-1305, already minted); lane B proposal AGREED, with the delta in the dispatch record".)*
 
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
