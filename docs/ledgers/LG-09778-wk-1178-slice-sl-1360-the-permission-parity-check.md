@@ -80,6 +80,7 @@ Executed from `PL-1359` by `executor-1360` (sonnet, medium). Branch `sl-1360-per
 >
 > ## Deltas
 > (none yet)
+> - **Delta 1 — 2026-10-01 09:20:24 BST (lead):** built in ~6 min by executor-1360; draft PR #1049 at 892ffd8f, 16 tests passing, the write set is the test file + LG 9778 + INDEX only. Task 0 at tree 98d7191b reproduces PL-1359's measurements (24/24; 145 contexts / 141 APIRoute / 120 paths; route leg 21, AST 11, union 22; the 2 unchecked = the 2 owner rows; STALE_OWNER clean). One count difference is recorded and accepted: 47 `require_permission(permission=…)` calls against the plan's 46. The extra is authz.py:67's `permission=permission` pass-through, which is not a member check site. Every red proof is in the ledger. Task 4 Step 5 is owed, with the lead as owner. **Gate slot granted** at 09:20:06 BST (both slots free; load 1.73). The gate on 892ffd8f is the gate of record; the check-31 family is the only allowed red.
 
 **Step 1 (RL-1305 active, not superseded)**, 2026-10-01 09:14:17 BST, at `origin/main` 19155b50:
 `git grep -n '^status:\|^superseded_by:' origin/main -- 'docs/rulings/RL-01305-*'` prints `5:status: active …` and `12:superseded_by: ~`. Met.
@@ -142,8 +143,56 @@ The full collection is 16 tests: the clean control and nine `test_broken_*` case
 
 ## PRs
 
-None yet. The draft PR, titled `test(governance): SL-1360 — the permission-parity check (WK-1178, PL-1359, LG 9778)`, is appended below when opened (the ledger is append-only).
+None yet.
+
+#1049 (draft), branch `sl-1360-permission-parity-check`, opened 2026-10-01 09:19 BST at head `892ffd8fe447e3c9eb2a7daa24c3d29d7907b659`, titled `test(governance): SL-1360 — the permission-parity check (WK-1178, PL-1359, LG 9778)`. Appended, not replaced (the ledger is append-only).
 
 ## Gate
 
-Pending: the full two-half gate runs after the lead's "gate slot granted" for the pushed head. Its stage table and conditions are appended here.
+Gate of record for the code: head `892ffd8fe447e3c9eb2a7daa24c3d29d7907b659` (tree = this branch's content before this ledger append), on a separate detached worktree (`.claude/worktrees/gate-1360`), `git status --porcelain` empty (0 lines). Lead's grant: 09:20:06 BST, both slots free by `flock -n`.
+
+Condition 5 fields, per run:
+- `uv sync --all-packages`: run in the gate worktree; `ruff check --no-cache .`: All checks passed; `mypy --no-incremental`: Success, no issues in 218 source files (09:20:46 BST).
+- The dev-commands slot wrapper verbatim, with `LOKY_MAX_CPU_COUNT=4` exported and the pytest stage under `timeout 3300`, run in the foreground under `timeout 3600`. (The harness moved the call to the background at 590 s; the turn stayed open and waited on the gate's pid, which was checked by `readlink /proc/<pid>/cwd`.)
+- Both runs took slot `gate-1`; at each end `flock -n` showed both slots free (no other holder).
+
+**Run 1, 09:21:52 to 09:45:48 BST: invalid, environment.** `uptime` at start load 1.74, at end 3.60; `free -h` available 20Gi then 15Gi. The wrapper's per-worktree test database `gipricing_gate-1360_cc93f586` did not exist (the dev-commands block had not been run for the new worktree): 444 errors `InvalidCatalogNameError` and 2 worker-entrypoint failures that need the database. Not a reading of the code. I then ran the once-per-worktree block (`createdb -T gipricing`, `alembic upgrade head`, both rc 0).
+
+**Run 2, 09:46:26 to 10:12:37 BST (26 min 11 s; pytest 1553.69 s), the run of record.** `uptime` at start load 4.47 (another job was running; `free` showed 350Mi free, 6.2Gi available), at end 2.23; end `free -h` available 20Gi.
+
+Stage table as printed (the wrapper's `wrapper final=1`; read from the table):
+
+| stage | result | detail |
+|---|---|---|
+| ruff | pass | exit=0 |
+| mypy | pass | exit=0 |
+| import_linter | pass | exit=0 |
+| audit_docs | FAIL | exit=1 |
+| req_coverage | pass | exit=0 |
+| contracts | pass | exit=0 |
+| pytest | FAIL | exit=1 |
+
+`GATE: FAIL — 2 of 7 stages failed: audit_docs pytest`. The pytest line: `13 failed, 4503 passed, 3 skipped`.
+
+**Every red is the check-31 family, the gap between 1360 and 9778 that the working id 9778 leaves until the lead mints the id, and nothing else.**
+- `audit_docs`: `FAILED (1): check 31: gap in the full allocation between 1360 and 9778`. No other check failed.
+- The 13 failed tests (each runs the audit or `doc-id.py check` on the real tree, and each printed that check 31 line or the matching noncontiguous line):
+  1. `tests/test_audit_docs_finding_citations.py::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`
+  2. `tests/test_audit_docs_ids.py::test_the_real_tree_passes_all_ten_checks`
+  3. `tests/test_audit_docs_ids.py::test_doc_id_check_exits_0_on_the_real_tree` (`doc-id.py check: [noncontiguous] docs/INDEX.md has a gap between 1360 and 9778`)
+  4. `tests/test_audit_docs_process_core_digest.py::test_an_unrelated_file_edit_is_the_negative_control_and_stays_green`
+  5. `tests/test_audit_docs_process_core_digest.py::test_the_committed_digest_currently_matches_the_committed_spec`
+  6. `tests/test_audit_docs_w37_11_ceiling.py::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`
+  7. `tests/test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity` (`the live allocation is not contiguous: [(1360, 9778)]`)
+  8. `tests/test_register_lint.py::test_check_29_is_wired_into_the_docs_gate`
+  9. `tests/test_register_lint.py::test_check_29_note_carries_the_residue_line`
+  10. `tests/test_register_lint.py::test_phase1b_residue_count_matches_check_29s_own_count`
+  11. `tests/test_register_owed.py::test_check_29_wiring_is_undisturbed`
+  12. `tests/test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit`
+  13. `tests/test_repository_invariants.py::test_journey_citations_are_audited_in_ci`
+
+  The text `check 31: gap in the full allocation between 1360 and 9778` appears 22 times in the pytest log. Zero other failures and zero errors. `tests/test_permission_parity.py` passed in full (16 of 16).
+
+**Frontend half, same worktree, 10:13:17 to 10:14:33 BST** (load 7.89 at end, available 20Gi): `pnpm --dir frontend install --frozen-lockfile` rc 0, `generate:api` rc 0, `lint` rc 0, `type-check` rc 0, `test` rc 0, `build` rc 0.
+
+Acceptance 7 therefore reads: green but for the check-31 family, which clears when the lead mints the id (the ledger then takes its real id and INDEX closes the gap).
