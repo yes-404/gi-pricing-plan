@@ -7,22 +7,21 @@ created: 2026-10-01
 owner: auditor
 tree: 8bd782acbbdde8e3b4195b5a0acb89183b5a0253
 corrected_by: []
-relates: [FR-223, FR-222, FR-240, WK-1178, WK-675]
+relates: [FR-223, FR-222, FR-240, WK-675, WK-1178]
 ---
 
 # FD-9759 — FR-223's named code is never emitted, and its save-time check cannot run
 
 ## Finding
 
-**Severity: proposed: LOW-MEDIUM; severity is the maintainer's.** Reasoning: a version whose steps disagree with its
-`model_reference_mode` **is** refused (at compile), so no wrong price results. What fails is the specified refusal: the
-code the spec names is never returned, the refusal comes back as a generic `BUNDLE_COMPILE_FAILED`, and the "at save time"
-limb of the requirement has no code path.
+**Severity: LOW. Decided by the maintainer, 2026-10-01 ~10:33 BST (relayed by the lead), verbatim:**
 
-**Owner: proposed WK-1178; the lead and the maintainer confirm.** Reason: the defect is in the compile and refusal path
-(`pricing-core` compile plus the backend's error mapping), the rating-engine correctness stream WK-1178 owns. The
-alternative is WK-675 Slice 2, which shows the mode read-only in the designer (PL 1286), but it builds a view and not this
-path. A designer cannot discharge this finding: a mismatch arises where a version pins an algorithm, not in the designer.
+> FD 9759: LOW. The invariant IS enforced (it raises at compile), so nothing inconsistent compiles; the defect is the error contract (generic BUNDLE_COMPILE_FAILED) plus an unreachable 'at save'. Loud, not a mispricing.
+> Discharge, all of: (1) a DM rules FR-223's check point (compile + the RL 9767 validate route vs 'save'), verbatim text, recording which side was wrong; (2) a typed error mapped to MODEL_REFERENCE_MODE_INCONSISTENT at compile AND in the validate route, red first; (3) a listed, counted sweep of bare ValueError raises in ALGORITHM_CHECKS / compile_bundle so no other check maps to the generic code.
+> Owner: the WK-675 slice that builds RL 9767's validate route (S3's leaf), NOT WK-1178. If S3 is cut to P3 Saturday, it re-homes to WK-1178 by a dated line.
+
+RL 9767 (working id) rules that route; RL 9758 (working id) is the FR-223 ruling. This replaces the auditor's earlier proposal
+(LOW-MEDIUM, owner WK-1178).
 
 `docs/specs/03-rating-engine.md` FR-223 (§3.2): every `model_call` step's `mode` "must equal [the version's
 `model_reference_mode`], **checked at save time** beside FR-227's type check, and a version whose steps disagree with it is
@@ -63,13 +62,10 @@ not run (no database in this session).
 
 ## Disposition
 
-**Fix before close with an owner (proposed WK-1178).** Proposed by the auditor; the lead gives the verdict.
-
-1. Emit the named code: `check_model_reference_mode` raises with the `MODEL_REFERENCE_MODE_INCONSISTENT: ` prefix (or a typed
-   error), so the existing mapping returns it. A red-first test asserts the code, not only the message.
-2. Decide the save-time limb: either FR-223's "checked at save time" is amended to name compile (and the version create path,
-   where the pin and the mode first meet), or the version-create route checks it. That is a spec change, so a decision-maker
-   ruling with verbatim text, not an executor's choice.
-3. The designer's read-only mode (PL 1286 S2) does not discharge this; it only stops one authoring route.
+**Owner: WK-675 S3's leaf (the slice that builds RL 9767's validate route), per the maintainer's decision above.** Discharge is
+all three of the maintainer's items: (1) a decision-maker rules FR-223's check point, with verbatim text, recording which side
+was wrong (item 5 of the evidence is the spec-side gap); (2) a typed error mapped to `MODEL_REFERENCE_MODE_INCONSISTENT` at
+compile and in the validate route, red first, asserting the code and not only the message; (3) a listed, counted sweep of bare
+`ValueError` raises in `ALGORITHM_CHECKS` and `compile_bundle`, so no other check maps to the generic code.
 
 Filed 2026-10-01 as working id 9759.
