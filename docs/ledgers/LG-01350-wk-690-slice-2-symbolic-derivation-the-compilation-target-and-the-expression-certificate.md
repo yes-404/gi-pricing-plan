@@ -281,3 +281,10 @@ Lead's grant: dispatch record Delta 2 (2026-09-30 23:27:25 BST). This checkout i
 ## PRs
 
 None yet.
+
+### Docs checks on the pushed mint commit (delta-audit F2), 2026-10-01
+
+*(Appended; supersedes the Task 7 line "Docs checks on a clean detached checkout of the pushed commit: not yet run".)* A detached worktree of the pushed mint commit
+`ab2a1a7aae6b2359c00db60c3b0fa4b8c20e1e3d` (origin/main `7e71b701` merged in), `git status --porcelain` empty (0 lines): `python3 scripts/audit-docs.py` rc 0 ("All checks passed.");
+`python3 scripts/doc-id.py check` rc 0; `python3 scripts/doc-index.py --check` rc 0 ("INDEX.md: OK (byte-stable)"). With the ids minted, check 31's gap no longer exists, which was the only failure of the
+Task 7 gate's `audit_docs` stage and of its 13 `pytest` failures. The full gate was not re-run on this head (the code is unchanged since `125a403b`; the delta since is docs, the ledger/RS rename and one test docstring).
