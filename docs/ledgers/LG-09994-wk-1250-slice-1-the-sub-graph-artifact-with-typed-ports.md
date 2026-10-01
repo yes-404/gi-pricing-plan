@@ -285,3 +285,16 @@ None yet.
   `_SKIP_PREFIXES` entries are dropped; `_json_strings` ignores only the `title` of a field-named property
   definition directly under `properties`, with a broken-input test that a `default` in the same definition
   is still scanned. New gate below.
+
+### Task 8 — gate, run 3 (merged head `4e6272a878f2280ea072a8ce73e521415faf979e`)
+
+`origin/main` `214fd4d7` (#1031, #1032, docs only) merged first (`docs/INDEX.md` regenerated, never
+hand-merged; no migration came in). Clean tree (`git status --porcelain` empty), `ruff check --no-cache .`
+and `mypy --no-incremental` clean beforehand, the same wrapper under `timeout 3300`, foreground-waited.
+00:43:14 to 01:06:27 BST. Start: load 1.59 1.57 1.67, 19Gi free of 31Gi; end: load 1.44 1.89 1.86, 19Gi
+free. Both slots free via `flock -n` before the start. Stage table: ruff pass, mypy pass, import_linter
+pass, **audit_docs FAIL** (check 31 only, the gap 1348..9994), req_coverage pass, contracts pass,
+**pytest FAIL: 14 failed, 4424 passed, 3 skipped in 1376.75s** (baseline 1469.6s). The 14 are the same
+audit-docs-rc set as run 2, each failing on check 31 alone; no other test fails. Frontend half on the
+same head: install, `generate:api`, `lint`, `type-check`, `build` rc 0; `pnpm test` 97 files, 609 tests.
+
