@@ -275,7 +275,7 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 > | `model:read` | Reading Models, Model Specs and their diagnostics (the superseded note above: "the built surface checks `model:read`, `model:fit` and `model:submit`") |  |
 > | `model:fit` | Fitting a Model, and writing Factors, Bandings and Groupings (`RL-1236` DP-A). It governs catalogue Custom Objectives (FR-366) |  |
 > | `model:submit` | Submitting a Model, or a catalogue Custom Objective, for approval (the notes above; FR-367) |  |
-> | `rating:read` | Reading Rating Algorithms, Rate Tables, Rating Versions and scoring traces |  |
+> | `rating:read` | Reading Rating Algorithms, Sub-graphs, Regression Suites, Rate Tables, Rating Versions and scoring traces |  |
 > | `rating:write` | Writing Rating Algorithms and Rate Tables, and creating a Rating Version (`RL-1236` DP-A) |  |
 > | `rating:submit` | Submitting a Rating Version for approval (the mapped note below) |  |
 > | `rating:compile` | Compiling a Rating Version to its Bundle |  |
@@ -303,7 +303,7 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 >
 > **Coarse write rights are the Phase 2 catalogue (decided 2026-09-28, `RL-1236` DP-A):**
 > `rating_algorithm:write` and `rate_table:write` are `rating:write`, which also covers creating
-> a Rating Version. `factor:write`, `banding:write` and `grouping:write` are `model:fit`, which
+> a Rating Version, and writing Sub-graphs and Regression Suites (`RL-1309` DP-S1-1). `factor:write`, `banding:write` and `grouping:write` are `model:fit`, which
 > also covers fitting. `dataset:create_version` is `dataset:write`, which also covers
 > datasets, blobs, validation rules and ingestion. The per-artifact split in the role example
 > above is carried to WK-676 (Phase 3, scoped assignments).

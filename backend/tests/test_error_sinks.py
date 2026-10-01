@@ -91,10 +91,10 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         2, "a bulk operation's named refusal over a rate table; a rate table is not a quote input"),
     ("backend/src/app/platform/rate_tables.py", "bulk_operation", "str(exc)"): (
         1, "a rate-table bulk operation's parameter validation, echoed to the caller who sent it"),
-    ("backend/src/app/platform/rating_algorithms.py", "_parse_algorithm", "str(exc)"): (
-        2, "one read only to choose a code by keyword (`cycle`, `undefined value`); the other "
-        "RETURNS Pydantic's text of the submitter's own algorithm JSON to the submitter in the "
-        "422 body; not stored, not logged; an artifact definition, not a Quote Context"),
+    ("backend/src/app/platform/rating_algorithms.py", "graph_validation_error", "str(exc)"): (
+        1, "RETURNS Pydantic's text of the submitter's own algorithm or sub-graph JSON to the "
+        "submitter in the 422 body; not stored, not logged; an artifact definition, not a Quote "
+        "Context. The code is chosen by the typed error class, never by this text (FD-1326)"),
     ("backend/src/app/platform/rating_versions.py", "compile_rating_version", "str(exc)"): (
         1, "compile time: an artifact-level `ValueError` from `compile_bundle`; no quote is "
         "involved"),

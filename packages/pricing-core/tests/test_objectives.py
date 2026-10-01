@@ -62,6 +62,8 @@ from pricing_core.modelling.expression_objective import (
 )
 from pricing_core.modelling.objectives import (
     _TEMPLATES,
+    _TOLERANCE_PASS,
+    _TOLERANCE_WARN,
     DEFAULT_ROUND_BUDGET_S,
     _finite_or_abort,
 )
@@ -935,6 +937,74 @@ _BEFORE = json.loads(
 )
 
 
+_MAX_RELATIVE_ERROR = re.compile(r"max relative error (\S+)")
+
+#: Every figure a certificate detail prints that is a measurement rather than an input, as
+#: `certify_objective` produces it (the producer sweep is FD-1354's addendum). Each is
+#: replaced before the comparison, because each depends on the runner's floating point,
+#: its BLAS or its threading: the two finite-difference errors, the deviation of the
+#: minimiser from log y, the gradient's span and extremes, the share of negative hessians,
+#: the share of sampled y above a branch, the smoke fit's recovered relativity and its
+#: percentage error, and its elapsed time.
+_MEASURED_FIGURES = (
+    (_MAX_RELATIVE_ERROR, "max relative error <e>"),
+    (re.compile(r"\|f\* - log y\| = [^;. ]+(?:\.\d+)?(?:e[-+]\d+)?"), "|f* - log y| = <d>"),
+    (
+        re.compile(r"spans \S+ orders over the sampled domain \([^)]*\)"),
+        "spans <o> orders over the sampled domain (<lo> to <hi>)",
+    ),
+    (re.compile(r"hessian < 0 at \S+%"), "hessian < 0 at <p>%"),
+    (re.compile(r"; \S+% of the sampled y lie"), "; <p>% of the sampled y lie"),
+    (re.compile(r"relativity of \S+ against a true ([\d.]+) \(\S+%\)"),
+     r"relativity of <r> against a true \1 (<p>%)"),
+    (re.compile(r"\d+\.\ds$"), "<t>s"),
+)
+
+
+def _normalise_measured(detail: str) -> str:
+    """Replace every runner-dependent measurement in a certificate detail."""
+    for pattern, placeholder in _MEASURED_FIGURES:
+        detail = pattern.sub(placeholder, detail)
+    return detail
+
+
+#: What a rendered detail prints that is an INPUT, not a measurement, and so may keep its
+#: figures: the sampling ranges (`y ∈ [a, b]`, `f ∈ [a, b]`, `w ∈ [a, b]` - they come from
+#: the `SamplingSpec` the test passes), the finite-difference step `h=`, the objective's own
+#: `hessian_min=`, the smoke fit's
+#: true relativity, and the loss-surface steps. The guard tells them apart from a
+#: measurement by this closed list of shapes, so a new figure of any other shape fails.
+_DETERMINISTIC_INPUTS = re.compile(
+    r"[yfw] ∈ \[[^\]]*\]|h=[0-9.e+-]+|hessian_min=[0-9.e+-]+|against a true [0-9.]+"
+    r"|steps of [0-9., ]+"
+)
+#: A float in fixed, g or e notation: the shape every measured figure is rendered in.
+_FLOAT_LITERAL = re.compile(r"\d+\.\d+(?:e[-+]?\d+)?|\d+e[-+]?\d+")
+
+
+def _surviving_floats(detail: str) -> list[str]:
+    return _FLOAT_LITERAL.findall(_DETERMINISTIC_INPUTS.sub("", _normalise_measured(detail)))
+
+
+@pytest.mark.req("FR-146")
+@pytest.mark.parametrize("template", list(T), ids=lambda t: t.value)
+def test_no_measured_figure_survives_normalisation_in_a_template_certificate(
+    template: ObjectiveTemplate,
+) -> None:
+    """A measured figure is normalised or the test fails here, every time.
+
+    Without this, a certificate figure that the comparison above forgot to normalise
+    fails only on the runner whose floating point differs - one run in N (main went red
+    on `max relative error` and then on `max |f* - log y|`, each found by CI, not by
+    reading). This renders every template's certificate and fails if a float in fixed or
+    exponent notation survives `_normalise_measured`, outside the closed list of
+    deterministic inputs in `_DETERMINISTIC_INPUTS`. FD-1354 has the producer sweep.
+    """
+    result = certify_objective(_objective(template), sampling=_sampling(template))
+    survivors = {c.name: _surviving_floats(c.detail) for c in result.checks}
+    assert {name: found for name, found in survivors.items() if found} == {}
+
+
 @pytest.mark.req("FR-146")
 @pytest.mark.req("FR-151")
 @pytest.mark.parametrize("template", list(T), ids=lambda t: t.value)
@@ -953,8 +1023,20 @@ def test_template_certificate_unchanged(template: ObjectiveTemplate) -> None:
         {
             "name": c.name,
             "status": c.status.value,
-            "detail": re.sub(r"\d+\.\ds$", "<t>s", c.detail),
+            "detail": _normalise_measured(c.detail),
         }
         for c in result.checks
     ]
-    assert got == expected["checks"]
+    assert got == [
+        {**c, "detail": _normalise_measured(c["detail"])} for c in expected["checks"]
+    ]
+    # The finite-difference error varies by runner (2.28e-12 against 3.21e-12 at the same
+    # tree), so it is normalised above and bounded here: each reported figure must lie
+    # within the engine's own tolerance for the status the check carries. The other
+    # measured figures have no engine symbol to bound them (the deviation from log y has no
+    # tolerance; the scale and smoke-fit thresholds are inline literals), so those checks
+    # are held by their status, which is compared above and which each figure decides.
+    for c in result.checks:
+        for figure in _MAX_RELATIVE_ERROR.findall(c.detail):
+            bound = _TOLERANCE_PASS if c.status.value == "pass" else _TOLERANCE_WARN
+            assert float(figure) <= bound, (c.name, figure, bound)

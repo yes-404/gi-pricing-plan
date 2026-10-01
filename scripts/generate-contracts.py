@@ -147,6 +147,13 @@ GENERATED_SHAPES: dict[str, str] = {
     # counterpart** — `03` §4.10 is the shape's first written form (the `model-comparison`
     # and `dataset-lineage` precedent).
     "score-comparison": "ScoreComparison",
+    # Added 2026-10-01 (WK-1250 Slice 1, PL-1325 Task 2). **No hand-authored Phase-0
+    # counterpart** — `03` §4.11 is the shapes' first written form. The two request shapes
+    # are published too: the routes take a raw body, so OpenAPI shows an open object, and a
+    # client that authors a sub-graph must generate its request type from these.
+    "sub-graph": "SubGraph",
+    "sub-graph-create": "SubGraphCreate",
+    "sub-graph-body": "SubGraphBody",
 }
 
 

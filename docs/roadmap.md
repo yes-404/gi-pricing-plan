@@ -1163,6 +1163,26 @@ The code that the FR-244 ruling, RL-1312, assigns to WK-1178. FR-244's operator 
 
 **Closed 2026-09-30** at #1012's merge, `3a5f7cd5ba869eddf913761dba29d636e66afe94`, on a CLEAN slice audit (auditor at `3fa635eb60c18e05103205696cfd504ad69ba5ca`, recorded in the maintainer's channel entry "2026-09-30 18:07:45 BST") and the lead's merge (CLAUDE.md §13); the maintainer's MERGE-ACK and read-back ("2026-09-30 19:28:53 BST — #1012 read-back verified; SL-1315 closed") confirm it. Its ledger is `LG-1332`. The row read `active` after the merge and was flipped here, a forward status, by the auditor at `origin/main` 248dbf11.
 
+#### SL-1352 — WK-1178 hotfix — runner-independent template-certificate test
+
+```yaml
+id: SL-1352
+family: slice
+title: WK-1178 hotfix — runner-independent template-certificate test
+status: closed                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-01
+owner: executor
+tree: 7190787f494a921f89339ae62f8e3ae666bc4e2b
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1354, LG-1353, LG-1350]
+```
+
+Test-only hotfix for main's red CI after #1025: `test_template_certificate_unchanged` pinned a runner-dependent `max relative error` figure. The comparison normalises every measured figure a template certificate prints and bounds the two finite-difference errors by the engine's tolerance; a guard test fails if any other figure survives. No leaf plan; the dispatch record `DISPATCH-WK-1178-HOTFIX-9790-2026-10-01.md` (local) and the maintainer's ruling of 2026-10-01 are the scope. *(Minted 2026-10-01 as SL-1352; filed under working id 9790. Ledger `LG-1353`, finding `FD-1354`.)*
+
+*(Reopened 2026-10-01 05:11 BST to `active`: CI run 36812617020 at `5a4beb63` failed on a second runner-dependent figure the first fix did not normalise; the lead's Delta 5 and Delta 6 are the rework scope. A fresh auditor re-closes.)*
+
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
@@ -1194,7 +1214,7 @@ Set `active` 2026-09-30 on the maintainer's entry "2026-09-30 22:33:30 BST — D
 id: SL-1339
 family: slice
 title: Slice 1: the sub-graph as a stored, versioned artifact (FR-217's artifact limb)
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 8cef871d4ec30869dc3ef20559f3cac64e239a5c
@@ -1205,6 +1225,8 @@ relates: [PL-1254]
 ```
 
 `PL-1254` Task 1; leaf plan `PL-1325` (draft until `PL-1254` is active, its prerequisite 2). Minted as `SL-1339` at this PR's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `8cef871d` (1339 onward).
+
+**Closed 2026-10-01** at its mint PR #1034 (mint commit `0e04c4ea`): slice audit CLEAN at `04e8e53e`, adopted items closed CLEAN at `78674b7e`; gate 7/7 at `44bd29e0`; ledger `LG-1355` (re-minted from 1352 when #1035 took 1352 to 1354). The row read `active` until the auditor's forward status flip (§1.6).
 
 #### SL-1340 — Slice 2: the pin and the inlining (FR-217's pin and inlining limbs; FR-258's inlined steps)
 

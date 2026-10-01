@@ -132,6 +132,31 @@
         "title": "AeCell",
         "type": "object"
       },
+      "AlgorithmOutput": {
+        "additionalProperties": false,
+        "description": "A declared output (FR-214): name, type, required flag.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "required": {
+            "default": true,
+            "title": "Required",
+            "type": "boolean"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "AlgorithmOutput",
+        "type": "object"
+      },
       "Applicability": {
         "additionalProperties": false,
         "description": "Where an objective may be used (FR-153).\n\nA Model Spec pairing an objective with a response outside `responses`, a backend outside\n`backends`, or no offset where one is required, is refused **at spec validation** —\nbefore any compute is spent, and with a `SpecProblem` naming which of the three it was.",
@@ -8355,6 +8380,42 @@
         "title": "Page[PerilStructure]",
         "type": "object"
       },
+      "Page_SubGraph_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SubGraph"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[SubGraph]",
+        "type": "object"
+      },
       "Page_TraceView_": {
         "additionalProperties": false,
         "properties": {
@@ -9647,6 +9708,619 @@
           "changed_cells"
         ],
         "title": "RateTableDiff",
+        "type": "object"
+      },
+      "RatingConstraintStep": {
+        "additionalProperties": false,
+        "properties": {
+          "clamp_bounds": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clamp Bounds"
+          },
+          "condition": {
+            "title": "Condition",
+            "type": "string"
+          },
+          "consumes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Consumes"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "on_violation": {
+            "enum": [
+              "clamp",
+              "decline",
+              "error"
+            ],
+            "title": "On Violation",
+            "type": "string"
+          },
+          "produces": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Produces"
+          },
+          "reason_code": {
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "step_id": {
+            "minLength": 1,
+            "title": "Step Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "constraint",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "label",
+          "type",
+          "condition",
+          "on_violation",
+          "reason_code"
+        ],
+        "title": "RatingConstraintStep",
+        "type": "object"
+      },
+      "RatingExpressionStep": {
+        "additionalProperties": false,
+        "properties": {
+          "consumes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Consumes"
+          },
+          "expr": {
+            "title": "Expr",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "produces": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Produces"
+          },
+          "result_type": {
+            "title": "Result Type",
+            "type": "string"
+          },
+          "step_id": {
+            "minLength": 1,
+            "title": "Step Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "expression",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "label",
+          "type",
+          "expr",
+          "result_type"
+        ],
+        "title": "RatingExpressionStep",
+        "type": "object"
+      },
+      "RatingInputStep": {
+        "additionalProperties": false,
+        "properties": {
+          "consumes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Consumes"
+          },
+          "input_name": {
+            "title": "Input Name",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "on_missing": {
+            "enum": [
+              "error",
+              "default",
+              "null"
+            ],
+            "title": "On Missing",
+            "type": "string"
+          },
+          "produces": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Produces"
+          },
+          "step_id": {
+            "minLength": 1,
+            "title": "Step Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "input",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "label",
+          "type",
+          "input_name",
+          "on_missing"
+        ],
+        "title": "RatingInputStep",
+        "type": "object"
+      },
+      "RatingLookupStep": {
+        "additionalProperties": false,
+        "properties": {
+          "as_at": {
+            "title": "As At",
+            "type": "string"
+          },
+          "consumes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Consumes"
+          },
+          "key_expr": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Key Expr",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "on_miss": {
+            "enum": [
+              "error",
+              "default"
+            ],
+            "title": "On Miss",
+            "type": "string"
+          },
+          "produces": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Produces"
+          },
+          "reference_table_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "step_id": {
+            "minLength": 1,
+            "title": "Step Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "lookup",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "label",
+          "type",
+          "reference_table_ref",
+          "as_at",
+          "on_miss"
+        ],
+        "title": "RatingLookupStep",
+        "type": "object"
+      },
+      "RatingModelCallStep": {
+        "additionalProperties": false,
+        "properties": {
+          "consumes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Consumes"
+          },
+          "feature_map": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Feature Map",
+            "type": "object"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "exact",
+              "approximation"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "model_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "peril_structure_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "produces": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Produces"
+          },
+          "step_id": {
+            "minLength": 1,
+            "title": "Step Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "model_call",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "label",
+          "type",
+          "mode"
+        ],
+        "title": "RatingModelCallStep",
+        "type": "object"
+      },
+      "RatingOutputStep": {
+        "additionalProperties": false,
+        "properties": {
+          "consumes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Consumes"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "output_name": {
+            "title": "Output Name",
+            "type": "string"
+          },
+          "produces": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Produces"
+          },
+          "rounding": {
+            "$ref": "#/components/schemas/RoundSpec"
+          },
+          "step_id": {
+            "minLength": 1,
+            "title": "Step Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "output",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "label",
+          "type",
+          "output_name",
+          "rounding"
+        ],
+        "title": "RatingOutputStep",
+        "type": "object"
+      },
+      "RatingTableStep": {
+        "additionalProperties": false,
+        "properties": {
+          "consumes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Consumes"
+          },
+          "interpolation": {
+            "default": "none",
+            "enum": [
+              "none",
+              "linear"
+            ],
+            "title": "Interpolation",
+            "type": "string"
+          },
+          "key_expr": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Key Expr",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "on_miss": {
+            "default": "error",
+            "enum": [
+              "error",
+              "default"
+            ],
+            "title": "On Miss",
+            "type": "string"
+          },
+          "produces": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Produces"
+          },
+          "rate_table_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "step_id": {
+            "minLength": 1,
+            "title": "Step Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "table",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "label",
+          "type",
+          "rate_table_ref"
+        ],
+        "title": "RatingTableStep",
         "type": "object"
       },
       "RatingVersion": {
@@ -11006,6 +11680,33 @@
         "title": "RoleAssignmentView",
         "type": "object"
       },
+      "RoundSpec": {
+        "additionalProperties": false,
+        "description": "Explicit rounding for an `output` step (FR-226) — never implicit, never twice.",
+        "properties": {
+          "dp": {
+            "minimum": 0.0,
+            "title": "Dp",
+            "type": "integer"
+          },
+          "mode": {
+            "enum": [
+              "half_even",
+              "half_up",
+              "ceiling",
+              "floor"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "dp"
+        ],
+        "title": "RoundSpec",
+        "type": "object"
+      },
       "RuleCreate": {
         "additionalProperties": false,
         "properties": {
@@ -12029,6 +12730,113 @@
           "parts"
         ],
         "title": "SplitRequest",
+        "type": "object"
+      },
+      "SubGraph": {
+        "additionalProperties": false,
+        "description": "A stored, immutable Sub-graph Version (`sub_graph:<slug>@<version>`).",
+        "properties": {
+          "change_note": {
+            "minLength": 1,
+            "title": "Change Note",
+            "type": "string"
+          },
+          "inputs": {
+            "items": {
+              "$ref": "#/components/schemas/SubGraphInputPort"
+            },
+            "title": "Inputs",
+            "type": "array"
+          },
+          "outputs": {
+            "items": {
+              "$ref": "#/components/schemas/AlgorithmOutput"
+            },
+            "title": "Outputs",
+            "type": "array"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "constraint": "#/components/schemas/RatingConstraintStep",
+                  "expression": "#/components/schemas/RatingExpressionStep",
+                  "input": "#/components/schemas/RatingInputStep",
+                  "lookup": "#/components/schemas/RatingLookupStep",
+                  "model_call": "#/components/schemas/RatingModelCallStep",
+                  "output": "#/components/schemas/RatingOutputStep",
+                  "table": "#/components/schemas/RatingTableStep"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/RatingInputStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RatingLookupStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RatingTableStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RatingExpressionStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RatingModelCallStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RatingConstraintStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RatingOutputStep"
+                }
+              ]
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "inputs",
+          "outputs",
+          "steps",
+          "change_note",
+          "slug",
+          "version"
+        ],
+        "title": "SubGraph",
+        "type": "object"
+      },
+      "SubGraphInputPort": {
+        "additionalProperties": false,
+        "description": "A declared input of a fragment: a name and a result type (never float, FR-227).",
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "SubGraphInputPort",
         "type": "object"
       },
       "SubmitApproval": {
@@ -28736,6 +29544,515 @@
         "summary": "Preview a source without creating a version",
         "tags": [
           "datasets"
+        ]
+      }
+    },
+    "/api/v1/sub-graphs": {
+      "post": {
+        "description": "**201** with version 1. The body is a `SubGraphCreate` (03 §4.11); **409** if the\nslug exists, and a refusal carries the code of the rule it broke.",
+        "operationId": "create_sub_graph_api_v1_sub_graphs_post",
+        "parameters": [
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubGraph"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Create a Sub-graph",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/v1/sub-graphs/{slug}/versions": {
+      "get": {
+        "description": "**200** with a page of versions, oldest first.",
+        "operationId": "list_sub_graph_versions_api_v1_sub_graphs__slug__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_SubGraph_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "List a Sub-graph's versions",
+        "tags": [
+          "rating"
+        ]
+      },
+      "post": {
+        "description": "**201** with the next version (maximum plus one). The body is a `SubGraphBody`;\n**404** on an unknown slug.",
+        "operationId": "create_sub_graph_version_api_v1_sub_graphs__slug__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubGraph"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Write the next version of a Sub-graph",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/v1/sub-graphs/{slug}@{version}": {
+      "get": {
+        "description": "**200** with the version; another workspace's is a **404**.",
+        "operationId": "get_sub_graph_api_v1_sub_graphs__slug___version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubGraph"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Read one Sub-graph version",
+        "tags": [
+          "rating"
         ]
       }
     },
