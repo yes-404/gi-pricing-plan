@@ -879,6 +879,37 @@ From “Workstreams” (line 385): Frontend: **DAG designer (Vue Flow)**, rate t
 
 **2026-09-28 — the Quote Sandbox's backend is WK-672's** (`RL-1172` item 5, the deputy's DP1 decision by delegation, option A). The quote sandbox view in this Work consumes `POST /api/v1/score/compare`, which WK-672 builds and tests; this Work builds the view only. FR-262 is delivered only when both limbs have landed.
 
+#### SL-9768 — Slice 1: chart foundation — ChartFigure's column descriptors per RL-1307, its 13 call sites migrated, and register F39's socket diagnosis (NFR-463)
+
+```yaml
+id: SL-9768
+family: slice
+title: Slice 1: chart foundation — ChartFigure's column descriptors per RL-1307, its 13 call sites migrated, and register F39's socket diagnosis (NFR-463)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-01
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 1dd5e264195677b4a13268b80ac8673c2c027135
+phase: P2
+work: WK-675
+corrected_by: []
+relates: []                      # ids only — its leaf plan, once minted
+```
+
+`PL-1286` S1 (`:303`), cut as a draft row for its leaf plan, PL 9769 (working id). The leaf
+plan is `docs/plans/PL-09769-wk-675-slice-1-chartfigure-accessible-table-per-rl-1307-leaf-plan.md`.
+This row's `relates:` stays empty until the leaf plan is minted (check 32). `ChartFigure`
+becomes generic over the caller's row objects, with one `{ key, label, value }` descriptor per
+column. That is `RL-1307`'s option (c), which supersedes `PL-1286`'s stale DP-1 text
+(`:240`, `:249-250`, `:415-416`). The 13 call sites (`git grep -n '<ChartFigure' origin/main --
+'frontend/src/*.vue'` at `1dd5e264`) move to the new API. The dev-only arity guard retires;
+the slice adds a dev-only duplicate-key refusal, `<th scope="row">` row headers, and empty-state
+text that names no module. `cellUnder`'s stale text is corrected. The slice also diagnoses
+register row F39 (port 3000 opened by the frontend test run). The auditor writes F39's dated
+register resolution at close. First in the Work: nothing precedes it (`PL-1286` Sequencing).
+It is ordered against WK-690 Slice 5 (SL-1275), which adds a `ChartFigure` caller: whichever
+lands second migrates or uses the new API. **Gate:** the leaf plan's Activation needs, in a
+separate activation PR: the maintainer's agreement and the lead's go.
+
 
 ### WK-690 — **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with**
 
