@@ -78,16 +78,32 @@ node. No check, no refusal, and no reason code.
 **Predicate, in words.** A *step* is every dict literal in a tracked `*.py` with constant string `step_id` and a `type` in
 `expression`, `table`, `lookup`, `model_call`, `constraint`, plus every `*.json` object with such a `step_id` and `type`
 (`input` and `output` steps are skipped). A step's *reads* are the union of: the identifiers in `expr` and `condition`; the
-identifiers in each `clamp_bounds` value; the identifiers in each `key_expr` entry; and the `feature_map` **keys**. Identifiers
+identifiers in each `clamp_bounds` value; the identifiers in each `key_expr` entry; the identifier in a `lookup` step's `as_at` (**added 2026-10-01 in the 2nd
+pre-mint correction; the first predicate did not read `as_at` at all, a blind spot**); and the `feature_map` **keys**. Identifiers
 are found by PL 9776's `referenced_names` tokenizer: string literals stripped, then `[A-Za-z_]\w*` not preceded by `.`, `$`
 or another word character and not followed by `(`, minus the keywords `true false null and or not in`. A step has an
 *undeclared read* when its reads minus its `consumes` are non-empty.
+
+**Name-bearing fields of the step models** (`packages/model-schema/src/model_schema/rating.py:262-320`), each with its
+inclusion or exclusion: `expr` (`RatingExpressionStep`) and `condition` (`RatingConstraintStep`), included, evaluated
+expressions; `clamp_bounds` values, included, evaluated; `key_expr` (`lookup`, `table`), included, names read as the key;
+`as_at` (`lookup`), **included now**: `NON_EXPRESSION_FIELDS` (`pricing_core/rating/authored.py:60`) says it "names a date
+input; nothing evaluates it" today and moves to evaluated when the runtime does (RL-1313 DP-G5 (i)), so it is a declared
+name to count, not an evaluated read; `feature_map` **keys**, included (graph value names; the values are model feature names,
+excluded); `consumes`/`produces`, the declarations themselves, excluded; `input_name` and `output_name` (`input`/`output`
+steps, skipped by construction) and `reason_code` (a recorded code), excluded; `*_ref` fields, artifact references, excluded.
 
 **Caveat.** The predicate is that tokenizer, **not the engine's parser, and it is unvalidated against the engine**. Spike S1
 step 1 of PL 9776 (working id) validates it. A dotted path or a `$`-prefixed name is skipped by construction; the table is
 therefore a floor on literal steps, not a proof of the engine's own reads.
 
-**Exposure, as measured at `19155b50`** (filer's re-run, matching auditor-pl9776's):
+**Exposure, as measured at `19155b50`** (filer's re-run, matching auditor-pl9776's). **Re-run 2026-10-01 with the `as_at`
+predicate** over a fresh `git archive origin/main packages backend examples scripts docs/contracts` extract (script
+`/home/puzhenhao1989/.claude/jobs/6fa41099/tmp/p5b/sweep2.py`, `sweep.py` plus the one `as_at` line): **identical to the
+old predicate, 70 steps in 22 files, 4 undeclared, 12 not evaluated, seed 0, bench 0 literal, the same four steps, no new
+under-declaring step**. The blind spot hid nothing in the scanned code (the `lookup` steps with an `as_at` add no
+undeclared read); it hid `s_area` in `03`, which no code sweep reaches (`.md` is not
+scanned) and the table below does not list:
 
 | Population | Steps | Undeclared reads |
 |---|---|---|
@@ -98,7 +114,7 @@ therefore a floor on literal steps, not a proof of the engine's own reads.
 | `packages/model-schema/tests/test_rating_algorithm.py:65` `s_minprem` (constraint) | | `min_premium_minor` |
 | Seed builder `examples/fremtpl2/model.py:327` | | 0 |
 | Bench builders (`scripts/bench-rating.py`) | | 0 literal; see below |
-| `rating_algorithms` rows, every local `gipricing*` DB (81 databases; 78 have the table, 3 do not) | | **0 rows** |
+| `rating_algorithms` rows, every local `gipricing*` DB (81 databases; 78 have the table, 3 do not; **re-counted 2026-10-01: 82 databases, 79 have the table, 3 do not, 0 rows**) | | **0 rows** |
 
 All four are `constraint` steps in **tests**; none is in shipped code, a seed or a database row. The 3 databases without the
 table are `gipricing_w37_6_d7_g_executor`, `gipricing_clone_m2` and `gipricing_w37-6-run2` (relation does not exist).
@@ -123,6 +139,33 @@ Command, verbatim: `python3 /home/puzhenhao1989/.claude/jobs/6fa41099/tmp/p5/swe
 **What the sweep does not show:** that the 4 test steps are wrong. A test may declare an input absent on purpose; they are
 unlabelled, so nothing says so. Nor does it show that the 12 non-literal steps are clean.
 
+## A third defect class: 03's example is refused three ways, with five unproduced raw names
+
+The 2nd pre-mint correction. `RatingAlgorithm.model_validate` over the `03` §4.1 JSON block (`03-rating-engine.md:233-283`,
+extracted verbatim), at `19155b50`, run as `uv run python v.py ex03.json` (`/home/puzhenhao1989/.claude/jobs/6fa41099/tmp/v.py`,
+`v2.py`):
+
+```
+1 validation error for RatingAlgorithm
+  Value error, declared output 'premium_ladder' has no output step (FR-214) [type=value_error, input_value={'slug': 'motor-gb', 'ver...mount_point': 's_ncd'}]}, input_type=dict]
+```
+
+The validator raises the first violation only, so the rest were found by removing each cause in turn (`v2.py`):
+
+1. **FR-214**: three of four declared outputs, `premium_ladder`, `peril_risk_premium` and `decline_reasons`, have no `output`
+   step (the only output step is `payable_premium_minor`).
+2. After removing them: `Value error, step 's_out' consumes undefined value 'payable_premium_pre_round' (FR-212)` (item 3
+   above).
+3. After repointing `s_out`: `Value error, value 'office_premium_minor' is produced by 2 steps that do not form a single
+   re-production chain (FR-212)`. `s_office` and `s_minprem` both produce it and `s_minprem` declares no `consumes`.
+4. **Five raw names have no producer**: `postcode_outcode` is in `input_contract` (`:240`) but has no `input` step;
+   `distribution_channel`, `commission_factor`, `profit_factor` and `min_premium_minor` are in neither `input_contract` nor any
+   `produces`. The widened predicate adds a sixth, `effective_date` (read only by `s_area`'s `as_at`; in the contract, no
+   `input` step). `purpose` is in the contract and read by no step.
+
+These are defects of the same canonical example. The corrected example of DP-F35-1 must pass **every existing invariant**
+(FR-214, both FR-212 limbs, the raw-name resolution) and the new declared-reads check, shown by the verbatim-compile test.
+
 ## Why it matters now
 
 Phase 2's G2 algorithm is the first rating algorithm authored through the documented journey. Its author's reference is
@@ -137,8 +180,9 @@ maintainer's severity ruling recorded above; the lead gives the verdict.
 
 1. **Decision.** PL 9776's DP-F35-1 decision-maker rules, explicitly: (a) FR-246's step-type scope (expression only, or also
    constraint `condition`/`clamp_bounds`, `key_expr`, `feature_map`); (b) whether `consumes` is mandatory. The ruling carries
-   verbatim `03` text and its placement, **including the corrected example at `03:252-274`** (the whole steps block on this tree; it must fix both the five
-   under-declared evaluating steps and `s_out`'s unproduced `payable_premium_pre_round`). The
+   verbatim `03` text and its placement, **including the corrected example at `03:252-274`** (the whole steps block on this tree; it must fix the five
+   under-declared evaluating steps, `s_out`'s unproduced `payable_premium_pre_round`, the FR-214 and second FR-212 refusals and
+   the five unproduced raw names). The
    decision-maker receives this finding and the sweep output.
 2. **Enforcement** lands with a **RED-FIRST constraint-step test**: a constraint step reading a name outside its `consumes`
    refuses at save, red on the current tree.
@@ -151,3 +195,5 @@ maintainer's severity ruling recorded above; the lead gives the verdict.
 Filed 2026-10-01 as working id 9773.
 
 Corrected 2026-10-01 (pre-mint): five evaluating steps under-declare (s_area at 03:254-257 was missed), and s_out consumes an unproduced name.
+
+Corrected 2026-10-01 (pre-mint, 2nd): the sweep predicate now reads as_at; 03's example also fails FR-214 and a second FR-212, and has five unproduced raw names.
