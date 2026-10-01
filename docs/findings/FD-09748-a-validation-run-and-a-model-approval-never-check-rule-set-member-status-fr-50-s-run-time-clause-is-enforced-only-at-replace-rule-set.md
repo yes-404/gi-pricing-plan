@@ -14,7 +14,17 @@ relates: [WK-1178, FD-1356, FR-50, FR-45, FR-48, FR-51]
 
 ## Finding
 
-**Severity: MEDIUM, owner WK-1178, deadline before the P2 exit demo.** All three are the
+**Corrected 2026-10-01, on the maintainer's entry headed *"2026-10-01 11:10:39 BST — CORRECTION:
+option (ii) WITHDRAWN; FD 9748's remedy comes INTO the FD-1356 fix slice (option i); my rationale
+conflated two populations"*: the remedy (run-time member-status enforcement plus the silent
+missing-member drop) rides IN the FD-1356 fix slice (PL 9762); `dm-1356` rules where, in RL 9750;
+the discharge is that slice's merge. The deadline and the "its own FD" disposition below are
+superseded; severity stays MEDIUM.** The reason: DP-6 resets `gipricing`'s 10 rows
+(`user_approved_no_approved_request=10`, the maintainer's figure), so without run-time enforcement
+the record would say `review` while the run says running. The earlier text is kept below and
+struck in place, not rewritten.
+
+**Severity: MEDIUM, owner WK-1178, ~~deadline before the P2 exit demo~~ (superseded, see above).** All three are the
 maintainer's, set in the entry headed *"2026-10-01 11:07:12 BST — #1070 audit: observation (1) →
 its OWN FD (option ii), MEDIUM, deadline before the P2 exit demo; observation (2) → an FD,
 MEDIUM, remedy RIDES in the FD-1356 fix slice; F1–F4 adopted"* (lead's channel, `to-lead.md`),
@@ -79,7 +89,7 @@ does not reach a rule that is never loaded.)
    reviewed by an Approver is the control; a set that runs a rule nobody approved gates modelling
    on something nobody reviewed, which is the reason the write-time refusal itself states
    (`validation_rules.py:600-601`).
-2. **It is independent of FD-1356.** FD-1356's reset (the follow-on 2, `RL 9750` DP-6) writes
+2. **~~It is independent of FD-1356.~~ (Superseded 2026-10-01, 11:10:39 entry: DP-6's reset puts `gipricing`'s 10 rows at `review`, and they keep running, so it is not independent.)** Original text: FD-1356's reset (the follow-on 2, `RL 9750` DP-6) writes
    `review` onto an approved rule with no approved request, and that rule would keep running in
    its sets. But the maintainer's re-run of Task 0 measured `route_approved = 0` on every
    database (the 11:07:28 addendum), so **today that reset touches no row, and FD-1356's own
@@ -122,7 +132,7 @@ member; 0 missing members; 0 non-`approved` members; 0 non-`approved` enabled me
 local Rule Set holds a member that should not run today.** A control query over the same join
 (count of members, and of members whose status is `approved`) returned **314 members, 314
 `approved`**, so the join resolves rows and reads `status`: the zero is not an empty join.
-**Limits:** local databases only, the set moves as worktree databases come and go; 3 of the 80
+**This measures the state before DP-6's reset:** the zero is today's, and the reset would add `review` members that still run. **Limits:** local databases only, the set moves as worktree databases come and go; 3 of the 80
 databases are not counted (the first query ended in an error there; `gipricing_clone_m2` has no
 `validation_rule_sets` table, the other two I did not inspect); only each dataset's newest set is
 read, not older versions; and the zero cannot show that the filter fires on a non-approved row,
@@ -162,6 +172,9 @@ FR-50 names. Either alone leaves the clause half-enforced. The DM decides.
 
 ## Disposition
 
-Open. Filed by the auditor, 2026-10-01, on the maintainer's 11:07:12 decision; the verdict is
-the lead's. Not part of the FD-1356 fix slice (PL 9762): the reset it contains touches no row
-today.
+**Current (2026-10-01, the maintainer's 11:10:39 entry):** the remedy rides in the FD-1356 fix slice
+(PL 9762). `dm-1356` rules where, in RL 9750 (the run, model approval, or both; the silent
+missing-member drop is ruled with it, per the 11:07:28 addendum). **Discharge = the FD-1356 slice's
+merge.** Filed by the auditor; the verdict is the lead's.
+
+**Superseded (struck, kept for the record):** ~~Open. Not part of the FD-1356 fix slice (PL 9762): the reset it contains touches no row today; its own FD, deadline before the P2 exit demo, a DM rules WHERE (the maintainer, 11:07:12 and 11:07:28).~~
