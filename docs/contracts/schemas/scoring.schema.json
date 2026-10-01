@@ -30,12 +30,18 @@
                           "office_premium", "optimisation_adjustment", "constraints",
                           "instalment_loading", "ipt_and_fees", "payable_premium"]},
         "value_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+        "unrounded_minor": {"$ref": "common/money.schema.json#/$defs/Decimal"},
+        "rounding": {"$ref": "common/money.schema.json#/$defs/Rounding"},
         "operation": {
           "type": ["object", "null"],
           "properties": {
-            "kind": {"enum": ["multiply", "add", "round", "none"]},
+            "kind": {"enum": ["multiply", "divide", "add", "clamp", "round", "none"]},
             "factor": {"$ref": "common/money.schema.json#/$defs/Decimal"},
+            "divisor": {"$ref": "common/money.schema.json#/$defs/Decimal"},
             "amount_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+            "amount_unrounded_minor": {"$ref": "common/money.schema.json#/$defs/Decimal"},
+            "bound": {"enum": ["min", "max"]},
+            "bound_unrounded_minor": {"$ref": "common/money.schema.json#/$defs/Decimal"},
             "mode": {"type": "string"}, "dp": {"type": "integer"},
             "applied": {"type": "array", "items": {"type": "string"}}
           }
@@ -57,7 +63,7 @@
         "timing_ms": {"type": "object", "additionalProperties": {"type": "number"}}
       },
       "invariants": [
-        "applying every rung's recorded operation to risk_premium reproduces payable_premium exactly (FR-248)",
+        "applying every rung's recorded operation, with no rounding, to the first rung's unrounded value and then rounding once at payable_premium reproduces the priced payable to the penny (FR-248 as amended by RL-1329)",
         "a traced call and an untraced call return identical premiums (03 R3)"
       ]
     },
