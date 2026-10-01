@@ -127,3 +127,38 @@ migrated trees and keep them against the pinned base. Re-record versus retire is
 
 `dev-commands`' `migrate --verify <root>` reads as a repo root; `<root>` must be a new or empty snapshot dir
 outside any work tree, or omitted (a real checkout is refused, exit 2, as the maintainer found).
+
+## Decision — the maintainer, 2026-10-01 11:15:54 BST (appended 2026-10-01 11:20 BST; nothing above is edited)
+
+Cited verbatim from the maintainer's entry headed *"FD 9755 (#1073): MEDIUM, owner WK-1178, NO DM needed; MY
+"main reports 9 fatal rows" WITHDRAWN (my invocation); CI's form at every ACK from now on"*
+(`gi-pricing-plan.local/channel/to-lead.md`, `## 2026-10-01 11:15:54 BST`):
+
+> **Withdrawn:** … **It was my invocation:** `--ref HEAD` re-migrates an already-migrated tree. … In CI's form, main exits 1 with UNCHANGED: 1 ((g) only) = the record. **The bisect … proves it.** … **#1056 and #1058:** the main-vs-head comparison was measured the same way on both sides, so it stands as a no-change check, but the absolute rows I quoted (incl. "h1 PASS") were meaningless and are withdrawn as evidence.
+>
+> **Severity: MEDIUM** (not LOW): the documented invocation (dev-commands, delivery-process §11a, core.json:477) is wrong on any migrated checkout, and the instrument is silent. It produced a false alarm here, **and a false PASS (h1 DISCLOSE → PASS)**, so it can hide as well as invent. Owner WK-1178.
+>
+> **Discharge (no DM):** main matches its record, so there is nothing to re-record or retire. (1) **The three documented invocations corrected** to CI's form (`--ref <meta.verified_against_tree> --record-ref HEAD`), core.json via its digest-bump rule, with the `<root>` → "an empty snapshot dir, or omit" wording; (2) **the instrument refuses (exit 2, a named message) when `--ref`'s tree is already migrated** … the planner picks the predicate and proves it on broken input both ways … A skill update in the same commit (CLAUDE.md §12).
+
+What this changes in the record above:
+
+- **Severity: MEDIUM, ruled** (the "proposed; the maintainer's" in §Severity is now the maintainer's).
+- **§Disposition is struck.** The options list, and the auditor's earlier proposal (re-record versus retire, for a decision-maker),
+  are superseded: there is **no decision-maker**. Main matches its record, so option (iii) and (iv) are void and nothing is
+  re-recorded or retired. Options (i) (refuse, exit 2, naming the pinned ref) and (ii) (amend the three forms) are
+  the discharge, below. The §Why-this-matters item 2 "a standing nine-row red" and the title's "nine fatal rows on main"
+  describe the maintainer's `--ref HEAD` invocation, not main's state.
+- **§Rows at main is withdrawn as evidence of main's state**, as is every absolute row quoted from that invocation, including
+  (h1) PASS (which was also a false PASS: DISCLOSE read as PASS). The bisect and the pinned-form row stand. #1056 and #1058's
+  main-versus-head comparisons stand as no-change checks only.
+- **Why MEDIUM:** the documented form is wrong in three places and silent, so it gives a false alarm and a false PASS; it can hide a
+  regression as well as invent one.
+
+### Discharge (owner WK-1178)
+
+1. `dev-commands`, `delivery-process.md` §11a and `delivery-process.core.json:477` corrected to CI's form,
+   `--ref <meta.verified_against_tree> --record-ref HEAD` (core.json by its digest rule), with the `<root>` wording: an empty snapshot dir, or omitted.
+2. The instrument **refuses (exit 2, a named message)** when `--ref`'s tree is already migrated; the planner picks the predicate and
+   proves it on broken input both ways (a migrated ref refused, an un-migrated ref accepted); a skill update lands in the same commit.
+
+**Going forward:** every ACK that runs it quotes CI's form with its rc and row line.
