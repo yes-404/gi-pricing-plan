@@ -428,3 +428,20 @@ decision-maker amends the second record's text to match.
   of any row already added: `rating:read` for RL 9766's rows and `rating:write` for RL
   9767's row, as those records' four-cell forms give them. If it lands first, those slices
   apply their four-cell forms.
+
+## Amendment, 2026-10-01 10:36 BST: the note's exact phrase, and the mint stop (G1, G2, G3)
+
+*By the decision-maker session `dm-675dp56` (effort `medium`), on auditor-1055's
+side-by-side re-check, as the lead relayed it at 10:35 BST. Nothing ruled above is changed.*
+
+- **G1: the phrase is exact.** Item 3's note, "records an existing route, 2026-09-30", is
+  matched exactly: lower case, with the fixed date 2026-09-30. RL 9766 (working id) T2's
+  by-id row now carries it byte for byte ("…; records an existing route, 2026-09-30;
+  declared <date> …"). So the acceptance check that passes the reads "through their
+  'records an existing route' rows" needs no case-insensitive or any-date matching.
+- **G2: the mint stop.** RL 9766's row cites `RL-<this>`, RL 9766's own minted id. Either
+  applier needs that record minted, and an unminted record is a stop. This binds this
+  record's WK-1178 slice exactly as it binds WK-675 Slice 2.
+- **G3: the list is extended.** Item 4's list of known §5.1 holders (`:251`, `:283-284`:
+  WK-675 Slices 2, 4 and 10) is extended by the 10:28 BST amendment to include WK-675
+  Slice 3.
