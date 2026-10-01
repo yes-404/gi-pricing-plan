@@ -233,3 +233,20 @@ Draft PR **#1045**, `gh pr create --draft`, title "feat(rating): SL-1345 — the
 (1) The O1 entry's JSON fragment for the planted route-level float was reworded in place, in-batch (this ledger is unmerged and unminted), because its quoted-key form tripped docs check 12 (FR-23: a `_minor` key followed by a decimal number); the meaning is unchanged. (2) The docs-checks claim made at the code head `fa9af040` ("check 31 only") was false at the head that first carried the O1 entry (`68df591b`): check 12 was red as well. It is corrected now: the check is re-run below. No other `_minor` key with a decimal value remains in this ledger (the check-12 pattern finds none).
 
 Re-run (appended 2026-10-01 BST): `python3 scripts/audit-docs.py` on a clean detached checkout (`git status --porcelain` empty) of `d3bc7698`, the head that carries the in-place reword and the correction: `FAILED (1)`, check 31 only ("gap in the full allocation between 1358 and 9805"); check 12 passes.
+
+### The traced measurement against its budget (appended 2026-10-01 BST, ordered by the maintainer)
+
+**Budget.** NFR-490 (`03` §9): "Tracing adds ≤ 20 % to scoring latency and never changes the result (R3)." The overhead is measured at p99 by `scripts/bench-rating.py` (200-step motor structure, one `exact` GBM call), traced against untraced.
+
+**Measured, one run per tree** (200 warmup and 1000 measured calls; window 08:35:36–08:40:11 BST, both slot locks held; the same run as the bench entry above):
+
+| Tree | Traced p99 (stdev) | Untraced p99 (stdev) | Overhead at p99 | Margin to the 20 % budget |
+|---|---|---|---|---|
+| base `8933a29e` | 68.015 ms (5.051 ms) | 14.052 ms (1.888 ms) | +384.0 % | **negative: over by 364.0 percentage points** |
+| slice `9da33177` | 69.874 ms (4.964 ms) | 10.650 ms (1.319 ms) | +556.1 % | **negative: over by 536.1 percentage points** |
+
+The 20 % ceiling on those untraced p99s would be 16.9 ms (base) and 12.8 ms (slice); the traced p99 is above both by more than 50 ms. **Over budget in both trees.**
+
+**Disposition.** A known open finding, F35 (`docs/findings/register.md` line 77: "NFR-490 measured failing (F35)", five of five runs spanning +497 % to +723 %), **not introduced by this slice**: the base already fails it by +384 %. The traced p99 moved by +1.859 ms (68.015 → 69.874 ms, +2.7 %) between the trees, which the slice audit judged noise against a traced stdev of about 5 ms (4.964 and 5.051 ms here). The larger overhead percentage in the slice run comes from a lower untraced p99 (14.052 → 10.650 ms), the denominator, not from a slower traced path. The untraced path did not get slower in the run.
+
+**NFR-489's 50 ms ceiling against the traced figure.** NFR-489's wording (`03` §9: "Real-time scoring p99 < 50 ms server-side … for a ~200-step motor structure with one `exact` GBM call") does not mention tracing, and the bench measures it untraced (trace off), which is the figure in the margin entry above (10.650 ms). If the maintainer reads it as covering a traced request too, the traced p99 is 68.015 ms (base) and 69.874 ms (slice), over 50 ms by 18.0 ms and 19.9 ms, also over in both trees and also not introduced here. This slice's own contribution to either number is inside the noise stated above.
