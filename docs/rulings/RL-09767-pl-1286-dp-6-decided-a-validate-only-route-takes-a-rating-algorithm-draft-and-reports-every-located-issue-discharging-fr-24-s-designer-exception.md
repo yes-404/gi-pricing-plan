@@ -12,7 +12,7 @@ supersedes: []
 superseded_by: ~
 corrected_by: []
 corrects: ~
-relates: [PL-1286, FR-24, FR-212, FR-214, FR-219, FR-223, FR-227, FR-244, FR-246, FR-276, FD-1335]
+relates: [PL-1286, FR-24, FR-212, FR-214, FR-219, FR-223, FR-227, FR-244, FR-246, FR-276, FD-1335, FD-1366]
 ---
 
 # RL-9767 — PL-1286 DP-6 decided: a validate-only route takes a `RatingAlgorithmDraft` and reports every located issue through the server's own checks, discharging `00` FR-24's designer exception
@@ -44,8 +44,7 @@ plan going `active`.
   value shows the error on the node, not in a save-time toast". The designer cell names
   "cycles, unresolved refs, type mismatches" (`:1094`).
 - **Save today.** `POST /rating-algorithms` (`backend/src/app/api/rating_algorithms.py:28-50`)
-  takes `body: dict[str, Any]` and returns `dict[str, Any]`. It is one of FD 9779 (working
-  id)'s five untyped request bodies. The service (`backend/src/app/platform/rating_algorithms.py`):
+  takes `body: dict[str, Any]` and returns `dict[str, Any]`. It is one of FD-1366's five untyped request bodies. The service (`backend/src/app/platform/rating_algorithms.py`):
   - `_parse_algorithm` (`:68-73`) parses `RatingAlgorithm` and maps a shape refusal with
     `graph_validation_error` (`:32-65`);
   - `_issues_to_error` (`:89-91`) runs `validate_algorithm` and **refuses on the first
@@ -90,7 +89,7 @@ plan going `active`.
 | (a) | A numbered `03` FR, served by a validate-only route running the server's own checks (the plan's (a)) | The rules stay defined once. It needs a body type without the invariants, located graph issues, and a model-schema response, none of which exists yet. |
 | (b) | The FR, with the cycle, reference and type checks re-implemented in the frontend (the plan's (b)) | Two definitions of the save rules, the divergence `CLAUDE.md` §2 forbids. The expression checks (FR-244, FR-276) cannot be re-implemented without the engine. |
 | (c) | Declare the cell exhaustive and validate on save only (the plan's (c)) | Fails the *Interaction requirement*: an error appears only at save. |
-| (d) | *(not in the plan)* A `dry_run` flag on `POST /rating-algorithms` | One route with two 2xx meanings (201 saved, 200 not saved), on a handler under FD 9779 (working id)'s per-route hold. Save also still reports only the first issue. |
+| (d) | *(not in the plan)* A `dry_run` flag on `POST /rating-algorithms` | One route with two 2xx meanings (201 saved, 200 not saved), on a handler under FD-1366's per-route hold. Save also still reports only the first issue. |
 | (e) | *(not in the plan)* Save each edit as a new algorithm version | Versions are immutable. It writes one version per keystroke and still reports one issue. |
 | (f) | *(not in the plan)* Run `pricing-core` in the browser (Pyodide) | One definition, but a new runtime dependency of tens of MB in the designer chunk, against F2 condition 3's bundle split. |
 
@@ -271,8 +270,7 @@ The executor applies each text above byte-for-byte; authorship stays with the de
   - **backend:** the handler is typed `body: RatingAlgorithmDraft` and
     `-> AlgorithmValidationReport`. It sits in `backend/src/app/api/rating_algorithms.py`,
     with its logic in `backend/src/app/platform/rating_algorithms.py`.
-    **`create_rating_algorithm` (`api/rating_algorithms.py:34`) is not edited.** Under FD 9779
-    (working id)'s per-route hold, a slice that edits that handler types it in the same
+    **`create_rating_algorithm` (`api/rating_algorithms.py:34`) is not edited.** Under FD-1366's per-route hold, a slice that edits that handler types it in the same
     slice. If S3 must edit it, S3 types it;
   - `docs/contracts/` is regenerated. Whether the new shapes also get a `GENERATED_SHAPES`
     slug is the leaf plan's call, under `PL-1286`'s contention row for that table;
@@ -282,7 +280,7 @@ The executor applies each text above byte-for-byte; authorship stays with the de
   Each serialises with the slices that table names. T4 is in `00` §3, which no table row
   names. The executor merges `origin/main` first.
 - **Context for the lead, not ruled here:** S2's save goes through `POST
-  /rating-algorithms`, one of FD 9779 (working id)'s five untyped routes. Under that
+  /rating-algorithms`, one of FD-1366's five untyped routes. Under that
   finding's per-route hold (i), S2 waits until the route is typed.
 
 ## Acceptance — the violation that must become detectable
@@ -366,3 +364,5 @@ re-check as the lead adopted it at 10:27 BST. The ruled option is unchanged.*
   assert the whole list.
 - **Locators.** The invariant block is `rating.py:395-475` (was `:395-470`). The
   ambiguous-producer block starts at `:444` (was `:445`).
+
+*2026-10-01 10:44 BST: "FD 9779 (working id)" is re-pointed to `FD-1366`, its minted id, and added to `relates:`. No other change (decision-maker `dm-675dp56`, on the lead's order).*
