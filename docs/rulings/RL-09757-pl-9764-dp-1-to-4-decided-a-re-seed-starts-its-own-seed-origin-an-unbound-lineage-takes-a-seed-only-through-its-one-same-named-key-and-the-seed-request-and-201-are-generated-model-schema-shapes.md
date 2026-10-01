@@ -525,3 +525,43 @@ inserts an unseeded v1 directly and expects 404 `RATE_TABLE_MISS` "No seed origi
 keeps that answer: v1 has no `seeded_from`, so DP-1 item 2's no-anchor case applies, and the
 test is unchanged. `:638` seeds once, and the service module's `:556` derives by import.
 Only `:258` re-seeds.
+
+## Amendment 2026-10-01 10:45 BST — F1's count edit follows the merged count (the lead, on the maintainer's serialisation rule)
+
+The maintainer's serialisation rule says that whichever of the FD-1357 fix and WK-674 S2
+(PL 9765, working id, which adds about ten generated schemas) merges second re-bumps on
+the merged count and re-gates. The first amendment's F1 item 2 conflicts with that rule.
+It fixes `== 70` → `== 72` and stops on any other base count, so it would stop on a
+sanctioned state. **F1 item 2 is superseded by the text below.** F1 item 1 (the three
+`_CONTRACT_ARTIFACT_PATHS` lines) is unchanged. Its anchor line
+`    "docs/contracts/schemas/generated/sub-graph-body.schema.json",` must still occur exactly
+once. The three lines are inserted after it, even when another slice's lines already
+follow it.
+
+**F1 item 2, as amended.** In `tests/test_audit_docs_ids.py`,
+`test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_exempts`
+(`:2072`; the assert is at `:2117` at `92b4e4ac`), the line below is **replaced**.
+`N` is the integer in that assert on the slice's base. It is 70 at `92b4e4ac`, and it is a
+measured figure that the executor records in the ledger with the base SHA.
+
+```text
+    assert len(non_markdown) == N, len(non_markdown)
+```
+
+It is replaced with the following. `N+2` is written as the computed integer, and
+`<fix date>` is filled as before.
+
+```text
+    # N became N+2 (WK-1178, FD-1357 fix, <fix date>): the generated
+    # `rate-table-version` and `seed-from-model-request` schemas, registered for F83's reason.
+    assert len(non_markdown) == N+2, len(non_markdown)
+```
+
+**When it stops.** A base `N` other than 70 is expected if WK-674 S2 merged first, and it
+is **not** a stop. The executor stops and reports to the lead only if `N` disagrees with the
+registered set's actual length at the base. The check is that this test, run unmodified on
+the base, fails:
+`uv run pytest -q "tests/test_audit_docs_ids.py::test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_exempts"`.
+The executor quotes the base run's exit code with the base SHA. After the edit, the same
+test passes on the slice's tree. If the slice merges second, it re-bumps on the merged count
+and re-gates, per the maintainer's rule.
