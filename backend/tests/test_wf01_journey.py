@@ -38,6 +38,7 @@ from uuid import UUID, uuid4
 
 import pydantic
 import pytest
+from backend.tests.approved_rows import add_approved
 from backend.tests.test_data_jobs import _ingest, _validate
 from sqlalchemy import select
 
@@ -227,11 +228,11 @@ async def _dataset_with_rules(
                 approved_by=new_uuid7(),
                 dry_run_report_id=new_uuid7(),
             )
-            session.add(rule)
-            await session.flush()
+            await add_approved(session, rule)
             rule_ids.append(str(rule.id))
 
-        session.add(
+        await add_approved(
+            session,
             ValidationRuleSetRow(
                 workspace_id=workspace_id,
                 dataset_id=dataset_id,
@@ -239,7 +240,7 @@ async def _dataset_with_rules(
                 version=1,
                 body={"rule_ids": rule_ids},
                 status="approved",
-            )
+            ),
         )
     return dataset_id
 

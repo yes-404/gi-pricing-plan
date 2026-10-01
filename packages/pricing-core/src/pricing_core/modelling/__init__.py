@@ -27,6 +27,7 @@ from pricing_core.modelling.errors import (
     ModellingError,
     NonFiniteDerivativeError,
     ObjectiveError,
+    RoundBudgetExceededError,
 )
 from pricing_core.modelling.factors import FactorMatrix, rateable, resolve_factors
 from pricing_core.modelling.gbm import (
@@ -92,6 +93,7 @@ __all__ = [
     "ObjectiveError",
     "ObjectiveFns",
     "PredictionError",
+    "RoundBudgetExceededError",
     "apply_banding",
     "apply_grouping",
     "apply_loss_treatment",

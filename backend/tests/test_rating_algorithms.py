@@ -117,6 +117,23 @@ def test_an_unguarded_division_is_refused_at_save_time(
     assert response.json()["code"] == "EXPRESSION_UNGUARDED_DIVISION"
 
 
+@pytest.mark.req("FR-274")
+def test_a_masked_division_in_a_condition_is_refused_at_save_time(
+    api_client, workspace_id, principal, grant
+) -> None:
+    """FD-1317 D2: a `??` "guard" on a constraint's condition (WK-1178 code slice)."""
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    body = valid_algorithm()
+    for step in body["steps"]:
+        if step["step_id"] == "s_minprem":
+            step["condition"] = "((office_premium_minor / expense_factor) ?? 0) >= 100"
+    response = api_client.post(
+        "/api/v1/rating-algorithms", json=body, headers=_headers(principal, workspace_id)
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "EXPRESSION_UNGUARDED_DIVISION"
+
+
 @pytest.mark.req("FR-219")
 def test_the_diff_route_names_the_changes(
     api_client, workspace_id, principal, grant
@@ -149,3 +166,66 @@ def test_the_diff_route_names_the_changes(
     assert len(repoints) == 1
     assert repoints[0]["step_id"] == "s_expense"
     assert repoints[0]["after"] == "rate_table:motor-expense@4"
+
+
+# --- WK-1250 Slice 1: the shape-refusal -> code mapping, characterised before its extraction ---
+
+
+def _post(api_client, workspace_id, principal, grant, body):
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    return api_client.post(
+        "/api/v1/rating-algorithms", json=body, headers=_headers(principal, workspace_id)
+    )
+
+
+@pytest.mark.req("FR-212")
+def test_an_undefined_value_is_refused_with_rating_graph_unresolved_ref(
+    api_client, workspace_id, principal, grant
+) -> None:
+    body = valid_algorithm()
+    body["steps"][6]["consumes"] = ["risk_premium_minor", "expense_factor", "commission_factor"]
+    response = _post(api_client, workspace_id, principal, grant, body)
+    assert response.status_code == 422, response.text
+    problem = response.json()
+    assert problem["code"] == "RATING_GRAPH_UNRESOLVED_REF"
+    assert problem["title"] == "Rating graph references an undefined value"
+    assert problem["detail"] == "Every consumed value is produced by a step (FR-212)."
+
+
+@pytest.mark.req("FR-212")
+def test_another_shape_refusal_is_validation_failed(
+    api_client, workspace_id, principal, grant
+) -> None:
+    body = valid_algorithm()
+    body["steps"][1]["step_id"] = body["steps"][0]["step_id"]
+    response = _post(api_client, workspace_id, principal, grant, body)
+    assert response.status_code == 422, response.text
+    problem = response.json()
+    assert problem["code"] == "VALIDATION_FAILED"
+    assert problem["title"] == "Rating algorithm is invalid"
+    assert "every step_id is unique (FR-215)" in problem["detail"]
+
+
+@pytest.mark.req("FR-212")
+def test_an_unknown_field_named_cycle_note_is_validation_failed(
+    api_client, workspace_id, principal, grant
+) -> None:
+    body = valid_algorithm()
+    body["cycle_note"] = "not a graph cycle"
+    response = _post(api_client, workspace_id, principal, grant, body)
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "VALIDATION_FAILED"
+
+
+@pytest.mark.req("FR-214")
+def test_a_declared_output_without_an_output_step_is_validation_failed(
+    api_client, workspace_id, principal, grant
+) -> None:
+    body = valid_algorithm()
+    body["outputs"].append({"name": "extra_out", "type": "money_minor", "required": False})
+    response = _post(api_client, workspace_id, principal, grant, body)
+    assert response.status_code == 422, response.text
+    problem = response.json()
+    assert problem["code"] == "VALIDATION_FAILED"
+    assert problem["title"] == "Rating algorithm is invalid"
+    assert "has no output step (FR-214)" in problem["detail"]

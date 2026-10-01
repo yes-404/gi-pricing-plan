@@ -39,6 +39,7 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
+from backend.tests.approved_rows import mark_approved
 from backend.tests.test_api_datasets import _headers
 from backend.tests.test_model_jobs_gbm import _gbm_spec
 from fastapi.testclient import TestClient
@@ -154,7 +155,10 @@ def _advance(objective_id: UUID, *, status: ObjectiveStatus) -> None:
             row = await session.get(CustomObjectiveRow, objective_id)
             assert row is not None
             row.certificate_id = new_uuid7()
-            row.status = status.value
+            if status.value == "approved":
+                await mark_approved(session, row)
+            else:
+                row.status = status.value
 
     _run(_update)
 
