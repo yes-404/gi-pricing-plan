@@ -69,6 +69,19 @@ lead mints it. So for those 21 hours the record claimed a standing it did not ha
 claimed it for (d). This disclosure is the record of it. The amending pass does not know
 whether any reader acted on that claim.
 
+### Argument withdrawal disclosure — required by the maintainer, 2026-10-01 (after 08:10 BST)
+
+The argument **"(d) cannot weight a seeded table"** was this record's decisive reason for
+(e) at `40153afb`. It was **withdrawn on 2026-10-01** by `dm-9855b`'s amendment (commit
+`8d870f8e`, 2026-10-01 08:07:51 BST), after audit findings F1 and F3. Why: F1 showed that a
+seeded table with two or more factors cannot be made on main, so the seeded-table shape
+the argument reasoned about was undefined. F3 showed that the defect belonged to today's
+seeding code, which writes `banding_ref: None`, and not to (d): seeding could set
+`banding_ref`, and (d) would then band the key with the same `apply_banding` that
+`resolve_factors` calls. (e) now rests on Grouping keys, interaction keys and a declared
+binding for identity keys (section C). The ruling's outcome, (e), did not change; its
+reason did. Any reader who relied on the withdrawn argument should re-read section C.
+
 ## Locators — evidence tree `dd25db94` against origin/main `9b0fb97c`
 
 `git diff --stat dd25db94 9b0fb97c` was run over every file cited below. Every code file is
@@ -152,7 +165,7 @@ through `seed_from_model`. With this worktree's `pricing_core` on the path,
    *(Amended by the amending pass, audit F1 and F3.)* The last sentence holds for today's
    code only, and it was this ruling's decisive argument. Two corrections:
    - **Multi-factor seeded tables cannot exist today.** Seeding a model with two or more
-     factors raises `KeyError` (FD working id 9786). Every seeded table that exists has one
+     factors raises `KeyError` (FD working id 9786, minted as FD 1357 in #1038, which is not yet merged). Every seeded table that exists has one
      key. The seeded-table shape was therefore undefined; section A defines it.
    - **The defect is not intrinsic to (d).** Seeding could set `banding_ref`, and (d) would
      then band the key with `apply_banding`, the same function `resolve_factors` calls
@@ -280,11 +293,18 @@ fix that sets `banding_ref`, and test it on each Factor type:
   is banded, grouped or raw (`_cross`, `factors.py:246`). Covering it puts the operand list,
   and each operand's transformation, on the key.
 
-So (d), widened to cover what seeding produces, restates the Factor on the key:
-`banding_ref`, `grouping_ref`, operand refs, a naming rule. That is a second statement of
-the `Factor` shape (`modelling.py:122`), which `CLAUDE.md` §2 forbids ("a shape defined
-twice will diverge"). (e)'s `factor_ref` points at the one statement, and `resolve_factors`
-already resolves every type from it. Groupings (vehicle group, postcode area) and
+So (d), widened to cover what seeding produces, puts on the key a `banding_ref`, a
+`grouping_ref`, operand refs and a naming rule. Each is a second statement of which
+transformation produced the key's labels. The first statement is the Factor's own
+`banding_id`, `grouping_id` and `operand_factor_ids` (`modelling.py:154-161`), which
+`resolve_factors` reads. The two statements can diverge, and a table whose key names one
+transformation while its labels came from another misjoins without an error. *(Amended by
+the text-fix pass, re-audit A1: this paragraph said the restatement is "a second statement
+of the `Factor` shape, which `CLAUDE.md` §2 forbids". §2 forbids hand-writing a shape that
+already exists in `model-schema`; a `grouping_ref` would be a new field, so §2's rule does
+not reach it. The argument is the single source of derivation. §2 is cited for its spirit
+only: "a shape defined twice will diverge".)* (e)'s `factor_ref` points at the one
+statement, and `resolve_factors` already resolves every type from it. Groupings (vehicle group, postcode area) and
 interactions are ordinary in UK motor and home rating, so refusing them is not a narrow
 loss.
 
@@ -321,7 +341,7 @@ for identity keys. The seeded banding case is not one of its reasons.
   with "source column absent". This is a dependency on Slice 1, reported to the lead.
   PL-1267 is not edited.
 
-### F. FR-231's per-cell weight (FD working id 9785)
+### F. FR-231's per-cell weight (FD working id 9785, minted as FD 1358 in #1038, which is not yet merged)
 
 This ruling computes a weight per cell and feeds it to the aggregate
 `exposure_weighted_mean_change_pct`. It does **not** deliver FR-231's "exposure weight
@@ -449,8 +469,10 @@ working id 9785, owner WK-673, and its fix is not decided here.
 **Why (e).** *(Restated by the amending pass; section C has the argument.)*
 - It keeps everything the planner valued in (a): a citable portfolio, no algorithm, and a
   join.
-- It weights Grouping and interaction keys. (d) cannot weight them without restating the
-  Factor on the key, piece by piece.
+- It weights Grouping and interaction keys. (d) cannot weight them without a second,
+  key-level statement of which transformation produced the labels (`grouping_ref`,
+  operand refs), which can diverge from the Factor's `grouping_id` and
+  `operand_factor_ids`. *(Reworded at the text-fix pass, re-audit A1.)*
 - It makes the binding FR-228 names a declared field, not a coincidence of names.
 - It uses the function that produced the levels, so band and group labels agree by
   construction.
@@ -489,6 +511,17 @@ the lead's to order.
 - **`03` §5.1, the seed route (`:783`) [seeding].** *(New at the amending pass.)* The body
   gains the required `factor`. The row names the 422 refusals of sections A and D and
   `load_factors`'s 404.
+- **The contract, a breaking change [seeding].** *(New at the text-fix pass, re-audit A2.)*
+  The required `factor` on the seed body breaks every existing caller of the route. The
+  `model-schema` request shape changes, and the contracts are regenerated in the same
+  commit: the seed route in `docs/contracts/openapi/gi-pricing.yaml:234` and
+  `"/api/v1/rate-tables/{slug}/seed-from-model"` in `docs/contracts/openapi/generated.json`
+  (line 25235 at `101e32dc`). The commit message marks the break.
+- **WF-699 step A1, dated clarification [seeding].** *(New at the text-fix pass, re-audit
+  A2.)* `docs/workflows/WF-00699-approved-models-to-approved-rating-version.md:41` reads as
+  one seed request that makes "its relativity table" the starting rate table. Under
+  section A, a model with K categorical factors gives K seed requests and K tables, one
+  per Factor. The clarification says so.
 - **`03` §5.2, `seed_from_model` (`:973-974`) [seeding].** *(New at the amending pass.)* The
   signature gains `factor: str` and `factors: Sequence[Factor]` (section D).
 - **`03` §5.1, the diff row (`:785`).** Add the `portfolio` parameter, the 403, 404, 409 and
@@ -510,6 +543,11 @@ the lead's to order.
   loading. Until it lands, a seeded table with two or more factors cannot be made. A table
   seeded before `factor_ref` exists stays unbound (FR-4) and must be re-seeded to be
   weighted through a Factor.
+  - *(Noted at the text-fix pass for the fix planner of FD working id 9786; not a defect of this ruling.)*
+    `03` §4.2 (`03:334-335`) says `seeded_from` is set only on the first version of a
+    lineage, but seeding into an existing table sets it on the appended version
+    (`backend/src/app/platform/rate_tables.py:108-111`, `:162`). "A lineage holds one
+    Factor" relies on that behaviour, so the fix must settle which of the two is right.
 - **Not decided here.** *(Amended by the amending pass: now filed.)* FR-231's per-cell
   weight in the diff output is FD working id 9785 (owner WK-673), section F.
 
@@ -535,6 +573,10 @@ the table's own key declaration.** Each case is shown failing on deliberately br
   - two passed Factors with the same slug;
   - a `factor` that names no relativity entry, including a continuous factor;
   - a re-seed of a lineage with a different Factor slug.
+- **Re-seed with a newer version of the same Factor is accepted.** *(New at the text-fix
+  pass, re-audit A3.)* The lineage gains its next version, and that version's key carries
+  `factor_ref` to the newer Factor version. If the slug check compares the whole
+  `factor:<slug>@<version>` reference, the seed is refused and the test fails.
   - The platform path: a `model.spec.factors` id that does not resolve in the caller's
     workspace gives `NOT_FOUND` 404.
 - **One test per Factor type** that `resolve_factors` implements: identity with a slug that
