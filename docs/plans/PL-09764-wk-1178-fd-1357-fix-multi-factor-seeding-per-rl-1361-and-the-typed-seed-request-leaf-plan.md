@@ -198,7 +198,9 @@ not evidence (`CLAUDE.md` §13).
      find string's count is 0 and the replacement's count is 1. **Red before the edit:** find
      1, replacement 0. `T-A`'s find string is the two-line predicate that `RL 9757` states
      (the first two lines of the "Seed lineage survives every derivation" blockquote,
-     `03:334-335`), counted as one multi-line string.
+     `03:334-335`), counted as one multi-line string. Every find string and count predicate
+     is copied from `RL 9757`'s **fenced** blocks at `23ff15d1`, exactly as `grep -cF` takes
+     them, with no backslash escapes. A single-backtick form with a literal escape counts 0.
    - **Append and insert texts (`T1`, `T2`, `T5`, and `RL 9757`'s `T-B`; `T3` is of this kind
      but is Slice 7's):**
      the anchor stays, so after the edit the anchor's count is 1 and the appended or inserted
@@ -337,9 +339,9 @@ lands `factor_ref` first (DP-5). Each is applied verbatim from
 If WK-673 Slice 7 lands `factor_ref` first, it applies `T1` and `T5`, and this slice cites
 them and does not re-apply them. `T-A` and `T-B` are applied verbatim from
 [`RL 9757`](https://github.com/yes-404/gi-pricing-plan/pull/1065) (working id) at
-`dae9d254`, its "Spec texts this ruling carries", never from this plan. `RL 9757` is not
+`23ff15d1`, its "Spec texts this ruling carries", never from this plan. `RL 9757` is not
 minted yet. At dispatch the executor re-copies both texts from the minted ruling file on main,
-and any difference from `dae9d254` is reported in the ledger.
+and any difference from `23ff15d1` is reported in the ledger.
 
 **Dispatch hint.** `RL-1361` `T7` cites the §5.1 seed row at `:783` (read at `101e32dc`). At
 `1dd5e264` it is at `:786`. The find-once rule covers this: the executor matches the bytes,
@@ -392,7 +394,7 @@ resolved pair, and (a2) only chooses the pair).
 | `backend/tests/test_api_rate_tables.py` | Acceptance 1, 3, 4, 6, 7 and 13 appended; `test_diff_vs_seed_compares_against_the_origin_not_the_previous_version` rewritten with derived versions (Acceptance 14); `_seed_approved_model`, `_seed_body` and every seed call updated (Factor rows pinned) | Slice 7 | serialises with Slice 7 |
 | `backend/tests/test_rate_tables_service.py` | its `_seed_approved_model` and `_seed` updated | Slice 7 | as above |
 | `scripts/audit-docs.py` | `_CONTRACT_ARTIFACT_PATHS` (`:2620`), the generated block (about `:2640-2667`): the two literal paths `docs/contracts/schemas/generated/rate-table-version.schema.json` and `docs/contracts/schemas/generated/seed-from-model-request.schema.json` registered | WK-674 S2 / `PL 9765` (it adds about ten generated schemas), any slice adding a generated schema | shared under `RL-1263` (`:89`): a tuple entry is an edit to an existing definition. Serialises: the **second** of this slice and `PL 9765` to merge re-applies its entries on the merged tuple and re-gates |
-| `tests/test_audit_docs_ids.py` | the count assertion at `:2117` (in `test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_exempts`, `:2072`) goes from `== N` to `== N+2`, where N is the base's count (70 at `92b4e4ac`), with a dated comment line in the existing pattern (`RL 9757` as amended at `dae9d254`). The ledger records N as measured, with the base SHA | WK-674 S2 / `PL 9765`, any slice adding a generated schema | a count bump is not append-only. The **second** of the two slices to merge re-bumps on the merged count (70 + both slices' additions) and re-gates |
+| `tests/test_audit_docs_ids.py` | the count assertion at `:2117` (in `test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_exempts`, `:2072`) goes from `== N` to `== N+2`, where N is the base's count (70 at `92b4e4ac`), with a dated comment line in the existing pattern (`RL 9757` as amended at `23ff15d1`). The ledger records N as measured, with the base SHA | WK-674 S2 / `PL 9765`, any slice adding a generated schema | a count bump is not append-only. The **second** of the two slices to merge re-bumps on the merged count (70 + both slices' additions) and re-gates |
 | `.claude/skills/contract-schema/SKILL.md` | **conditional:** whichever of this slice and `PL 9765` merges **first** writes the step "a new generated schema → register its literal path in `scripts/audit-docs.py` `_CONTRACT_ARTIFACT_PATHS` and bump `tests/test_audit_docs_ids.py`'s count", with a `Verified` date and tree (`CLAUDE.md` §12), plus a pointer from `.claude/skills/docs-audit/SKILL.md`'s check-35 text if that text names the register | `PL 9765` | the second slice to merge does not write it again; it checks that the step is there |
 | `docs/ledgers/LG-<id>-….md`, `docs/INDEX.md` | the ledger; the index regenerated | — | `INDEX.md` is registry-exempt |
 
@@ -522,10 +524,11 @@ slice waits.
 - [ ] Register the two generated schema paths in `scripts/audit-docs.py`'s
   `_CONTRACT_ARTIFACT_PATHS` (the generated block). Then change the count assertion at
   `tests/test_audit_docs_ids.py:2117` from `== N` to `== N+2`, where N is the base's count,
-  with a dated comment line in the file's pattern (`RL 9757` as amended at `dae9d254`). First
+  with a dated comment line in the file's pattern (`RL 9757` as amended at `23ff15d1`). First
   run the test at `:2072` on the base and record N and the base SHA in the ledger (N is 70
   at `92b4e4ac`). A base where N is not 70 (for example because WK-674 S2 merged first) is
-  **not** a stop. The stop is the test at `:2072` **failing on the base**. Run
+  **not** a stop. The executor stops if the unmodified test at `:2072` **fails on the
+  base**. Run
   `uv run pytest -q tests/test_audit_docs_ids.py` and `python3 scripts/audit-docs.py`.
 - [ ] **Conditional, if this slice merges before `PL 9765`:** add the step to
   `.claude/skills/contract-schema/SKILL.md` ("a new generated schema → register its literal
