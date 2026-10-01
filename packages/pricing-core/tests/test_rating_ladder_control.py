@@ -37,7 +37,7 @@ from test_rating_ladder_sweep import _config, _quotes
 
 from model_schema.scoring import LadderRung
 from pricing_core.rating import score as score_module
-from pricing_core.rating.ladder import ladder_violations
+from pricing_core.rating.ladder import LadderInputs, ladder_violations, round_once
 from pricing_core.rating.runtime import CompiledBundle
 
 _FIVE_E5 = Decimal("0.00005")
@@ -84,7 +84,11 @@ class Report:
 
 
 def compare_quote(
-    report: Report, where: str, base: list[LadderRung], new: list[LadderRung]
+    report: Report,
+    where: str,
+    base: list[LadderRung],
+    new: list[LadderRung],
+    exact: tuple[LadderInputs, dict[str, Any]] | None = None,
 ) -> None:
     """Evaluate the stop predicate for one quote (`base` is the baseline ladder)."""
     report.quotes += 1
@@ -101,13 +105,33 @@ def compare_quote(
             report.exceedances.append(f"{where}: rung {b.rung} missing from the ruled ladder")
             continue
         report.rungs += 1
+        if b.operation is not None and b.operation.kind == "none":
+            report.none_rungs += 1
         if b.rung == clamp_pre:
+            # Dispatch Delta 2 (1): by design the rung before `constraints` carries the
+            # pre-clamp value, so it is outside the drift predicate and checked exactly.
             report.clamp_pre_rungs += 1
+            if exact is not None:
+                inputs, outputs = exact
+                pre = inputs.exact[b.rung]
+                # (a) the exact pre-clamp value, rounded once
+                if n.unrounded_minor != pre or n.value_minor != round_once(pre, n.rounding):  # type: ignore[arg-type]
+                    report.exceedances.append(f"{where}: clamp pre-rung {b.rung} (a)")
+                # (c) the served declared output is still the post-clamp bound (C2)
+                served = outputs.get(f"{b.rung}_minor")
+                if served is not None and served != by_new["constraints"].value_minor:
+                    report.exceedances.append(f"{where}: clamp pre-rung {b.rung} output (c)")
             continue
-        # A `constraints` rung with no binding clamp inherits the previous rung's value, so it
-        # carries that rung's drift: its bound is the previous rung's, not "none"'s two
-        # roundings (the literal D2 reading). Recorded in the ledger as an interpretation.
-        source = index - 1 if b.rung == "constraints" and index > 0 else index
+        if b.rung == "constraints" and not (n.operation and n.operation.kind == "clamp"):
+            # Dispatch Delta 2 (2): an inheriting rung is checked by exact inheritance.
+            before_new = new[[r.rung for r in new].index("constraints") - 1]
+            if base[index].value_minor != base[index - 1].value_minor or not (
+                n.value_minor == before_new.value_minor
+                and n.unrounded_minor == before_new.unrounded_minor
+            ):
+                report.exceedances.append(f"{where}: constraints does not inherit exactly")
+            continue
+        source = index
         kind = "first" if source == 0 else (base[source].operation or b.operation).kind  # type: ignore[union-attr]
         diff = abs(Decimal(b.value_minor) - Decimal(n.value_minor))
         applied_mode = b.operation.mode if b.operation and b.operation.mode else None
@@ -118,10 +142,12 @@ def compare_quote(
                 if not mode.startswith("half_"):
                     report.directed_modes[mode] = report.directed_modes.get(mode, 0) + 1
         slack = _e(applied_mode or ruled_mode) + _e(ruled_mode)
-        if b.operation is not None and b.operation.kind == "none":
-            report.none_rungs += 1
         if n.operation is not None and n.operation.kind == "clamp":
-            if n.unrounded_minor != n.operation.bound_unrounded_minor:
+            # (b) `constraints` is exactly the bound, with the clamp kind and the bound's value
+            if (
+                n.unrounded_minor != n.operation.bound_unrounded_minor
+                or n.operation.bound not in ("min", "max")
+            ):
                 report.exceedances.append(f"{where}: clamp rung {b.rung} is not exactly the bound")
             continue
         if kind == "multiply" and source > 0:
@@ -144,14 +170,15 @@ def compare_quote(
 
 async def _both(
     bundle: CompiledBundle, context: dict[str, Any]
-) -> tuple[list[LadderRung], list[LadderRung], list[str]]:
-    """`(baseline ladder, ruled ladder, the ruled ladder's violations)` for one engine result."""
+) -> tuple[list[LadderRung], list[LadderRung], list[str], tuple[LadderInputs, dict[str, Any]]]:
+    """`(baseline ladder, ruled ladder, violations, (inputs, served outputs))` for one result."""
     result = bundle.decision.evaluate(context)["result"]
     _, codes = score_module._apply_constraints(bundle.algorithm, result)
     base, _ = baseline_build_ladder(bundle.algorithm, result, codes)
     inputs = score_module._ladder_inputs(bundle.algorithm, result, codes)
     new = score_module._build_ladder(inputs, codes)
-    return base, new, ladder_violations(new, inputs)
+    outputs = score_module._build_outputs(bundle.algorithm, result)
+    return base, new, ladder_violations(new, inputs), (inputs, outputs)
 
 
 def _file(report: Report, where: str, violations: list[str]) -> None:
@@ -169,14 +196,14 @@ async def _corpus() -> Report:
     report = Report()
 
     # 1. the score fixture over a grid of contexts: the clamp binds on some, not on others
-    bundle = await _compile_payload(_score_fixture())
+    bundle = await _compile_payload(_score_fixture(outputs=("office_premium_minor",)))
     for age, channel, minimum in product(range(17, 100, 6), ("direct", "broker"), (0, 5000, 10**6)):
         inputs = {**_CLAMP_INPUTS, "driver_age": age, "channel": channel,
                   "min_premium_minor": minimum}
         where = f"score-fixture age={age} channel={channel} min={minimum}"
-        base, new, violations = await _both(bundle, _context(**inputs))
+        base, new, violations, exact = await _both(bundle, _context(**inputs))
         _file(report, where, violations)
-        compare_quote(report, where, base, new)
+        compare_quote(report, where, base, new, exact)
 
     # 2. the demo suite's golden quote (`examples/fremtpl2/model.py`): a payable-only ladder
     demo = {
@@ -198,9 +225,9 @@ async def _corpus() -> Report:
     demo_bundle = await _compile_payload(demo)
     for premium_in in (0, 1, 1234, 999_999):
         where = f"demo-suite premium_in={premium_in}"
-        base, new, violations = await _both(demo_bundle, _context(premium_in=premium_in))
+        base, new, violations, exact = await _both(demo_bundle, _context(premium_in=premium_in))
         _file(report, where, violations)
-        compare_quote(report, where, base, new)
+        compare_quote(report, where, base, new, exact)
 
     # 3. the RL-1329 sweep configurations, at every decade, two seeds
     configs = (*(("plain", k) for k in range(7)), ("grossup", 3), ("add", 3), ("mixed", 4))
@@ -210,9 +237,10 @@ async def _corpus() -> Report:
         for seed, decade in product((20260930, 7), (3, 4, 5, 6, 7)):
             for risk in _quotes(seed, decade, 12):
                 where = f"sweep {kind}/{count} seed={seed} decade={decade} risk={risk!r}"
-                base, new, violations = await _both(sweep_bundle, _context(risk_premium_minor=risk))
+                context = _context(risk_premium_minor=risk)
+                base, new, violations, exact = await _both(sweep_bundle, context)
                 _file(report, where, violations)
-                compare_quote(report, where, base, new)
+                compare_quote(report, where, base, new, exact)
     return report
 
 
@@ -235,7 +263,7 @@ async def test_the_control_fails_when_one_baseline_rung_is_shifted_to_its_bound_
         ("expense_loading", "{prev} * 1.15", "half_even"),
         ("office_premium", "{prev} * 1.131", "half_even"),
     ]))
-    base, new, _ = await _both(bundle, _context(risk_premium_minor=61234.5))
+    base, new, _, _exact = await _both(bundle, _context(risk_premium_minor=61234.5))
     clean = Report()
     compare_quote(clean, "q", base, new)
     assert clean.exceedances == []
@@ -251,3 +279,46 @@ async def test_the_control_fails_when_one_baseline_rung_is_shifted_to_its_bound_
     compare_quote(broken, "q", shifted, new)
     assert len(broken.exceedances) == 1
     assert "expense_loading" in broken.exceedances[0]
+
+
+@pytest.mark.req("NFR-496")
+async def test_the_exact_clamp_and_inheritance_checks_fail_on_broken_input() -> None:
+    """Dispatch Delta 2: each exact check is red when its own object is broken."""
+    bundle = await _compile_payload(_score_fixture(outputs=("office_premium_minor",)))
+    inputs = {**_CLAMP_INPUTS, "min_premium_minor": 5000}
+    base, new, _, exact = await _both(bundle, _context(**inputs))
+    clean = Report()
+    compare_quote(clean, "q", base, new, exact)
+    assert clean.exceedances == []
+    assert clean.clamp_pre_rungs == 1
+
+    names = [r.rung for r in new]
+    pre, con = names.index("office_premium"), names.index("constraints")
+    # (a) the pre-clamp rung carries the clamped value instead of the exact pre-clamp one
+    broken_pre = list(new)
+    broken_pre[pre] = new[pre].model_copy(update={"value_minor": new[con].value_minor})
+    report = Report()
+    compare_quote(report, "q", base, broken_pre, exact)
+    assert any("(a)" in e for e in report.exceedances)
+    # (b) `constraints` is not the bound
+    broken_con = list(new)
+    broken_con[con] = new[con].model_copy(update={"unrounded_minor": Decimal("4999.5")})
+    report = Report()
+    compare_quote(report, "q", base, broken_con, exact)
+    assert any("not exactly the bound" in e for e in report.exceedances)
+    # (c) the served output is the pre-clamp value
+    served = (exact[0], {**exact[1], "office_premium_minor": new[pre].value_minor})
+    report = Report()
+    compare_quote(report, "q", base, new, served)
+    assert any("(c)" in e for e in report.exceedances)
+
+    # inheritance: an unclamped quote whose `constraints` rung is one unit off its predecessor
+    free_base, free_new, _, free_exact = await _both(
+        bundle, _context(**{**_CLAMP_INPUTS, "min_premium_minor": 0})
+    )
+    c = [r.rung for r in free_new].index("constraints")
+    off = list(free_new)
+    off[c] = free_new[c].model_copy(update={"value_minor": free_new[c].value_minor + 1})
+    report = Report()
+    compare_quote(report, "q", free_base, off, free_exact)
+    assert any("inherit" in e for e in report.exceedances)
