@@ -7,11 +7,16 @@ below is proved red on a synthetic input before the live tree is asserted clean 
 
 from __future__ import annotations
 
+import ast
 import re
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 
 import pytest
+from fastapi import Depends, FastAPI
+from fastapi.routing import APIRoute, APIRouter, iter_route_contexts
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = ROOT / "docs" / "specs" / "06-governance.md"
@@ -220,3 +225,195 @@ def test_broken_name_in_two_tables() -> None:
     spec = _CLEAN.replace("| `a:author` | WK-690 |", extra)
     # `a:read` is Built and Specified, so it is also a Specified enum member: both are right.
     _only(parity_violations(spec, _ENUM, _CHECKED, _WORKS), DUPLICATE_ROW, SPECIFIED_IS_MEMBER)
+
+
+def _roadmap_works() -> frozenset[str]:
+    text = (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8")
+    return frozenset(re.findall(r"^### (WK-\d+)\b", text, re.MULTILINE))
+
+
+@pytest.mark.req("FR-344")
+def test_live_tree_has_no_parity_violations() -> None:
+    from model_schema import Permission
+
+    violations = parity_violations(
+        SPEC.read_text(encoding="utf-8"),
+        frozenset(p.value for p in Permission),
+        checked_permissions(),
+        _roadmap_works(),
+    )
+    assert not violations, "permission parity (CR-1247 P1 (c)):\n" + "\n".join(violations)
+
+
+BACKEND_SRC = ROOT / "backend" / "src"
+#: The one service-layer check function (`backend/src/app/platform/rbac.py`); `requires()`
+#: is one of its callers (`backend/src/app/api/authz.py`). RL-1305 D1 item 3.
+CHECK_FUNCTION = "require_permission"
+REACH_SHORTFALL = "route walk did not reach a published path"
+
+
+def service_layer_checks(sources: Iterable[str], members: Mapping[str, str]) -> frozenset[str]:
+    """Members passed as `permission=` to a `require_permission(` call (RL-1305 D1 item 2).
+
+    `members` maps an enum attribute name to its value. The enum's local name is resolved
+    through each module's own `from model_schema import Permission [as X]`, so an alias is
+    followed and a bare reference elsewhere (a role set, an allow-list, a comparison) is not
+    a check site.
+    """
+    found: set[str] = set()
+    for source in sources:
+        tree = ast.parse(source)
+        local = {
+            alias.asname or alias.name
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module == "model_schema"
+            for alias in node.names
+            if alias.name == "Permission"
+        }
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            callee = func.id if isinstance(func, ast.Name) else getattr(func, "attr", None)
+            if callee != CHECK_FUNCTION:
+                continue
+            for kw in node.keywords:
+                value = kw.value
+                if (
+                    kw.arg == "permission"
+                    and isinstance(value, ast.Attribute)
+                    and isinstance(value.value, ast.Name)
+                    and value.value.id in local
+                    and value.attr in members
+                ):
+                    found.add(members[value.attr])
+    return frozenset(found)
+
+
+def walk_api_routes(app: FastAPI) -> list[tuple[str, APIRoute]]:
+    """Every API route with its full path, included routers flattened (RL-1305 D1 item 2)."""
+    return [
+        (str(context.path), context.original_route)
+        for context in iter_route_contexts(app.routes)
+        if isinstance(context.original_route, APIRoute)
+    ]
+
+
+def route_checks(
+    app: FastAPI,
+    attribute: str,
+    walk: Callable[[FastAPI], list[tuple[str, APIRoute]]] = walk_api_routes,
+) -> tuple[frozenset[str], list[str]]:
+    """Members declared by `requires()` on the walked routes, and the leg's reach shortfall."""
+
+    def calls(dependant: object) -> Iterable[object]:
+        for dependency in getattr(dependant, "dependencies", []):
+            yield dependency.call
+            yield from calls(dependency)
+
+    walked = walk(app)
+    members = frozenset(
+        str(getattr(call, attribute).value)
+        for _, route in walked
+        for call in calls(route.dependant)
+        if getattr(call, attribute, None) is not None
+    )
+    reached = {path for path, _ in walked}
+    shortfall = [f"{REACH_SHORTFALL}: {p}" for p in sorted(set(app.openapi()["paths"]) - reached)]
+    return members, shortfall
+
+
+def checked_permissions() -> frozenset[str]:
+    """The live check sites: routes (flattened, reach proved) and service-layer calls."""
+    from app.api.authz import PERMISSION_ATTRIBUTE
+    from app.config import Environment, Settings
+    from app.main import create_app
+    from model_schema import Permission
+
+    app = create_app(Settings(environment=Environment.LOCAL, version="parity", log_level="ERROR"))
+    routed, shortfall = route_checks(app, PERMISSION_ATTRIBUTE)
+    assert not shortfall, "\n".join(shortfall)
+    sources = (p.read_text(encoding="utf-8") for p in sorted(BACKEND_SRC.rglob("*.py")))
+    return routed | service_layer_checks(sources, {m.name: m.value for m in Permission})
+
+
+# --- synthetic check sites --------------------------------------------------------------
+
+_MEMBERS = {"A_READ": "a:read", "A_DEPLOY": "a:deploy"}
+_ROLE_SET_ONLY = """
+from model_schema import Permission as P
+
+READERS = frozenset({P.A_READ, P.A_DEPLOY})
+
+async def promote(session, actor):
+    if P.A_DEPLOY in READERS:
+        return actor
+"""
+_SERVICE_CHECK = """
+from model_schema import Permission as P
+from app.platform import rbac
+
+async def promote(session, actor):
+    await rbac.require_permission(session, principal=actor, permission=P.A_DEPLOY)
+"""
+_TEXT_REGEX = re.compile(r"\b(?:Perm|Permission|P)\.([A-Z_]+)\b")  # PL-1279 Task 3's proxy
+
+
+@pytest.mark.req("FR-343")
+def test_broken_member_referenced_but_never_checked_has_no_check_site() -> None:
+    # The text-regex proxy counts both members; the AST predicate counts neither.
+    assert {_MEMBERS[n] for n in _TEXT_REGEX.findall(_ROLE_SET_ONLY)} == {"a:read", "a:deploy"}
+    assert service_layer_checks([_ROLE_SET_ONLY], _MEMBERS) == frozenset()
+    checked = service_layer_checks([_ROLE_SET_ONLY], _MEMBERS) | {"a:read"}
+    old, new = "| `a:deploy` | Deploying A | WK-674 |", "| `a:deploy` | Deploying A |  |"
+    _only(parity_violations(_CLEAN.replace(old, new), _ENUM, checked, _WORKS), NO_CHECK_NO_OWNER)
+
+
+@pytest.mark.req("FR-343")
+def test_service_layer_require_permission_counts_as_checked() -> None:
+    assert service_layer_checks([_SERVICE_CHECK], _MEMBERS) == frozenset({"a:deploy"})
+    old, new = "| `a:deploy` | Deploying A | WK-674 |", "| `a:deploy` | Deploying A |  |"
+    checked = service_layer_checks([_SERVICE_CHECK], _MEMBERS) | {"a:read"}
+    assert parity_violations(_CLEAN.replace(old, new), _ENUM, checked, _WORKS) == []
+
+
+class _P(StrEnum):
+    A_READ = "a:read"
+
+
+_ATTRIBUTE = "__parity_probe__"
+
+
+def _nested_app() -> FastAPI:
+    async def dependency() -> None:
+        return None
+
+    setattr(dependency, _ATTRIBUTE, _P.A_READ)
+    inner = APIRouter(prefix="/inner")
+
+    @inner.get("/thing", dependencies=[Depends(dependency)])
+    async def thing() -> dict[str, str]:
+        return {}
+
+    outer = APIRouter(prefix="/outer")
+    outer.include_router(inner)
+    app = FastAPI()
+    app.include_router(outer, prefix="/api")
+    return app
+
+
+def _top_level_only(app: FastAPI) -> list[tuple[str, APIRoute]]:
+    """The walk `backend/tests/test_api_authorisation_sweep.py` uses: no flattening."""
+    return [(str(r.path), r) for r in app.routes if isinstance(r, APIRoute)]
+
+
+@pytest.mark.req("FR-343")
+def test_broken_route_walk_without_flattening_fails_its_reach() -> None:
+    members, shortfall = route_checks(_nested_app(), _ATTRIBUTE, walk=_top_level_only)
+    assert members == frozenset()
+    assert shortfall == [f"{REACH_SHORTFALL}: /api/outer/inner/thing"]
+
+
+@pytest.mark.req("FR-343")
+def test_flattened_route_walk_reaches_nested_routers() -> None:
+    assert route_checks(_nested_app(), _ATTRIBUTE) == (frozenset({"a:read"}), [])
