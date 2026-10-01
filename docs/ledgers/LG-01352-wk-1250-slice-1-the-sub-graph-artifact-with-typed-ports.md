@@ -333,3 +333,15 @@ import_linter pass, audit_docs pass, req_coverage pass, contracts pass, pytest p
 7 stages passed`; pytest **4488 passed, 3 skipped in 1316.60s** (baseline 1469.6s), no failures. Frontend
 half on the same head: install, `generate:api`, `lint`, `type-check`, `build`, `test` all rc 0 (97 files, 609 tests passed).
 
+### Notes on run 4 (lead's Delta 8) and on unslotted runs
+
+- **Possible overlap.** The lead reports that executor-ladder ran an unslotted model-schema suite of about
+  7 s at about 02:38 BST, which may overlap the start of run 4 (02:38:02 to 03:00:17 BST). The result
+  (7 of 7 pass, 4488 passed) stands; the timing (1316.60s) is confounded for pair use and is not offered
+  as a clean baseline comparison.
+- **My own multi-file runs without a slot.** Before the maintainer's new rule (a pytest over more than one
+  file goes through the slot wrapper), I ran named multi-file lists without a slot at the mint turn: one
+  of 13 files (924 passed, 1 failed, 237.54s) and, earlier, short two to six file lists in Tasks 3 to 7.
+  They ran under the then-current "named files are exempt" reading, which the new rule supersedes; I
+  record them rather than leave them unstated, and I apply the new rule from now on.
+
