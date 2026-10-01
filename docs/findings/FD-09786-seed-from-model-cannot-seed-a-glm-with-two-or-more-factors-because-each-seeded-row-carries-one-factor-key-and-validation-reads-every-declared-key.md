@@ -18,7 +18,7 @@ lead at the merge turn. The `tree:` is the tree of `9b0fb97c`; main's code files
 
 ## Finding
 
-**Severity: MEDIUM; owner WK-1178** (the maintainer's ruling of 2026-10-01: provisional HIGH, set MEDIUM if the WF-699 demo path does not hit the defect; it does not, see "The WF-699 demo path"). FR-230 says a rate table can be seeded from a Model's GLM relativity table.
+**Severity: HIGH; owner WK-1178** (the maintainer's ruling of 2026-10-01, which set it provisional HIGH, then MEDIUM on the auditor's reading of the shipped demo, then HIGH again on the reading of "the WF-699 demo path" that the roadmap gives; see "The WF-699 demo path"). FR-230 says a rate table can be seeded from a Model's GLM relativity table.
 `seed_from_model` (`packages/pricing-core/src/pricing_core/rate_tables/operations.py:168`) fails for any GLM whose
 relativity table has **two or more factors**, which is the ordinary motor or home model. A single-factor model seeds;
 every multi-factor model raises `KeyError`.
@@ -36,18 +36,22 @@ every multi-factor model raises `KeyError`.
   which a one-way relativity extract can never satisfy. The seeding path was therefore written for a table whose
   rows carry every key, and the extract does not produce one.
 
-**Why MEDIUM, and what would make it HIGH.** The failure is loud, not a silent mispricing: no wrong figure is produced.
-FR-230 is unusable on a multi-factor GLM, the failure is an uncaught `KeyError` rather than a named refusal
-(`platform/rate_tables.py:130` catches only `ValueError`, so the route answers 500; read from the code, not run), and it
-blocks the DP-5 ruling's seeding limb (working id 9855) and PL-1267 Slice 7's seeded red-first test. The existing tests all use one factor
-(`packages/pricing-core/tests/test_rate_table_operations.py:150`, `_DRIVER_LEVELS`), which is how it passed. The
-executable demo does not seed a rate table (next section), so the maintainer's condition for HIGH is not met; it would be
-met if the demo path seeded one from a GLM with two or more factors.
+**Why HIGH.** The failure is loud, not a silent mispricing: no wrong figure is produced. It is HIGH because FR-230 is
+unusable on a multi-factor GLM; the failure is an uncaught `KeyError` rather than a named refusal
+(`platform/rate_tables.py:130` catches only `ValueError`, so the route answers 500; read from the code, not run); it
+blocks the DP-5 ruling's seeding limb (working id 9855) and PL-1267 Slice 7's seeded red-first test; and, on the maintainer's
+reading below, it blocks Phase 2's exit criterion G2. The existing tests all use one factor
+(`packages/pricing-core/tests/test_rate_table_operations.py:150`, `_DRIVER_LEVELS`), which is how it passed.
 
 ## The WF-699 demo path
 
-The question: does the demo seed a rate table from a GLM with two or more factors through `seed_from_model` /
-`extract_relativity_table`? **No.** Commands, at `101e32dc`:
+**The maintainer's test and ruling (2026-10-01).** The test was "the WF-699 demo path". Phase 2's exit criterion G2
+(`docs/roadmap.md:566`, the Exit demo row at `:603`) defines that path as the **documented journey**, "`WF-699` Phases A to E
+and its deploy step as one scripted journey". A1 and A2 call seed-from-model for every rateable factor on the seven-factor GLM,
+so G2 is blocked. The shipped demo not walking A1 is a demo gap, not a mitigation. **HIGH stands.**
+
+**What the auditor measured first (kept as the record of the shipped demo).** Does the shipped demo seed a rate table from a
+GLM with two or more factors through `seed_from_model` / `extract_relativity_table`? **No.** Commands, at `101e32dc`:
 
 ```
 grep -rniE 'seed-from-model|seed_from_model|extract_relativity_table|rate-tables|rate_table' examples scripts/demo.py
@@ -56,14 +60,12 @@ examples/fremtpl2/model.py:323:    "rate_tables": [], "models": [], "reference_t
 
 The WF-699 journey has no test or script: `grep -rl "WF-699" backend/tests packages scripts frontend/src frontend/tests` prints nothing, so no
 journey test reaches the seed path either. The one hit above is an empty pin list (`_EMPTY_PINS`, `model.py:322-324`). `seed.py` and `scripts/demo.py` seed the **dataset** (`fetch.py`,
-`last-seed.json`), not a rate table. So the freMTPL2 demo never calls the seed path and does not reach the defect.
+`last-seed.json`), not a rate table. So the shipped demo does not reach the defect; the journey G2 requires does.
 
-Two things the demo does not show: the demo's GLM carries seven identity factors, three continuous and four categorical
-(`model.py:57-66`, `:216`), so seeding it through `POST /api/v1/rate-tables/{slug}/seed-from-model` would hit the defect
-(by reading; not run). And the WF-699 journey describes that call: A1 "seed-from-model on the AD frequency model", A2 "repeats for
-every rateable factor" (`docs/workflows/WF-00699-approved-models-to-approved-rating-version.md:41-42`), so the documented
-journey is blocked even though the shipped demo does not walk it. If the demo is extended to walk A1 on the freMTPL2 GLM, the
-severity should go to HIGH and this fix goes ahead of PL 9788 (FD-1335 Part A).
+The demo's GLM carries seven identity factors, three continuous and four categorical (`model.py:57-66`, `:216`), so seeding it
+through `POST /api/v1/rate-tables/{slug}/seed-from-model` would hit the defect (by reading; not run). The journey describes that call:
+A1 "seed-from-model on the AD frequency model", A2 "repeats for every rateable factor"
+(`docs/workflows/WF-00699-approved-models-to-approved-rating-version.md:41-42`).
 
 ## Evidence
 
@@ -118,6 +120,6 @@ option, since it keeps the relativity as the fit reported it.
 
 ## Disposition
 
-Owner WK-1178 (a defect in a delivered FR-230 path, found at the WK-673 boundary). Red-first: a two-factor fixture
+**HIGH: the exit demo must walk A1-A2.** Owner WK-1178 (a defect in a delivered FR-230 path, found at the WK-673 boundary). It depends on the DP-5 ruling's amendment defining the seeded shape (`dm-9855b`, in progress), and it goes ahead of PL 9788 (FD-1335 Part A). Red-first: a two-factor fixture
 seeds, and the test fails on the current tree with `KeyError`. Hardening: an unseedable shape raises a named
 `ValueError` (mapped to 422), never a `KeyError`. The lead gives the verdict.
