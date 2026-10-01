@@ -271,4 +271,17 @@ removes no authored string from the scan; it removes generated property labels. 
 
 ## PRs
 
-#1034 (draft), branch `sl-1339-sub-graph-artifact`, opened 2026-10-01.
+None yet.
+
+#1034 (draft), branch `sl-1339-sub-graph-artifact`, opened 2026-10-01. Appended, not replaced (the ledger is append-only).
+
+## Closing verdicts
+
+- **FR-217** (`03` §3.1): artifact limb delivered (SL-1339); pin and inlining limbs not started, owned by
+  Slice 2 (SL-1340).
+- **FR-227** (`03` §3.2): delivered at create for a fragment's output ports whose producer type is known at
+  save (an `expression` step or an input port); the algorithm path is unchanged.
+- **Slice audit item 4 (adopted, Delta 4):** the committed-strings exclusion is narrowed. The two
+  `_SKIP_PREFIXES` entries are dropped; `_json_strings` ignores only the `title` of a field-named property
+  definition directly under `properties`, with a broken-input test that a `default` in the same definition
+  is still scanned. New gate below.
