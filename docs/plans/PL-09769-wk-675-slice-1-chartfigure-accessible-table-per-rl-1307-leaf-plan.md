@@ -192,7 +192,8 @@ These are the planner's choices on method, inside what `RL-1307` rules. None cha
 
 1. **The migration order** (`RL-1307` leaves it open). Three groups, after the component
    itself:
-   - **Group A, Task 3** (7 sites, static columns, one row object per row already):
+   - **Group A, Task 3** (7 sites, static columns; six already map over one row object per
+     row, and `LineageGraph` builds tuple arrays, so it gets a component-local row interface):
      `GbmEvalCurveChart`, `CrossValidationPanel` (2), `GbmImportanceCharts` (2),
      `PartialDependencePanel`, `LineageGraph`.
    - **Group B, Task 4** (3 sites, a column present or absent at run time, or formatted
@@ -221,6 +222,9 @@ These are the planner's choices on method, inside what `RL-1307` rules. None cha
    a page over" (`ChartFigure.vue:52-53`), and that applies here too. A duplicate cannot arise
    from data either: generated keys use the partition's **index**, not its label (Task 5), so
    two partitions with the same caption still get distinct keys.
+   *Disclosed:* there is no type-level backstop. A production duplicate would render with the
+   key collision `RL-1307` item 3 names. It is mitigated by the partition-index keys and by
+   the test run, where `DEV` is true. The maintainer may overrule this choice.
 4. **`Cell` and `Column` live in `frontend/src/chart-table.ts`**, not as exports from the SFC.
    *Reasons.* The spike exported them from `<script setup>`, but it ran only `vue-tsc`. A plain
    module is also safe for the Vite build and ESLint, and it follows `frontend/src/test-tables.ts`'s
@@ -271,11 +275,14 @@ Every command runs in the executor's worktree at the slice head, against the ran
    cannot type-check against `columns: readonly Column<T>[]`. The ledger records the error
    list after each of Tasks 2 to 5, shrinking to nothing.
 3. **The type-level violations are refused in the gate, each shown red** (`RL-1307` §Acceptance,
-   items 1 and 2). Four fixtures exist under `frontend/src/components/__typecheck__/`:
-   `ChartFigureBadAccessor.vue`, `ChartFigureBadCellType.vue`, `ChartFigureMismatch.vue` and
-   `ChartFigureNoAnyLeak.vue` (the last is beyond `RL-1307`'s four, from its spike). Each holds
+   violations 1 and 2). Four fixtures exist under `frontend/src/components/__typecheck__/`:
+   `ChartFigureBadAccessor.vue` and `ChartFigureBadCellType.vue` (violation 1),
+   `ChartFigureMismatch.vue` (violation 2), and `ChartFigureNoAnyLeak.vue`. **`NoAnyLeak` is an
+   extra fixture beyond the ruling's four violations**, taken from its spike. Each holds
    one `<!-- @vue-expect-error -->` directive, and `type-check` exits 0 with them in place. **The
-   ledger records two red runs per fixture**, each with its own output verbatim:
+   fixtures are proven on the locked `vue-tsc` 3.3.11** (Task 0 Step 4 records the installed
+   version; a run on any other version does not satisfy this item). **The ledger records two
+   red runs per fixture**, each with its own output verbatim:
    (a) with the directive removed, `type-check` fails with the named error: TS2339 "Property
    'bnad' does not exist on type 'Band'", TS2322 "Type 'string[]' is not assignable to type
    'Cell'", TS2322 "Type 'Band[]' is not assignable to type 'readonly Other[]'", and TS2322
@@ -302,6 +309,12 @@ Every command runs in the executor's worktree at the slice head, against the ran
    reads it with `cellUnder` by label. `CalibrationChart`, `GbmEvalCurveChart` and
    `LineageGraph` each gain a test file whose test name contains `NFR-463` and which reads at
    least two cells with `cellUnder`, comparing each with the fixture's source value.
+   **`RL-1307` §Acceptance's fourth violation is shown red once** (Task 3 Step 4a): in
+   `GbmEvalCurveChart.test.ts`, with one accessor deliberately pointed at the wrong field
+   (`Train` reading `p.holdout`), the `cellUnder` assertion for `Train` fails with
+   `expected element to have text content` naming the fixture's train value. The ledger
+   pastes that output verbatim. The test passes again once the accessor is restored. A
+   failure from any other cause (a missing row, a missing column) is a plan defect.
 9. **F39 is diagnosed** (`PL-1286` Acceptance 9). The ledger names the test file(s) and the
    call that open the socket, with the commands and their output verbatim, at a named tree.
    If the remedy lands (*Choices* 7): `pnpm --dir frontend test 2>&1 | grep -c ECONNREFUSED`
@@ -1010,7 +1023,13 @@ const checkedColumns = computed(() => {
 - Consumes: `Column` from `@/chart-table`; `ChartFigure`'s props (Task 2).
 
 Each site follows one pattern: the old `rows` array of arrays goes away; `:rows` takes the
-row objects the old code mapped over; `:columns` takes descriptors whose labels are the old
+row objects the old code mapped over. **`LineageGraph` is the exception:** it builds tuple
+arrays (`["Built from", name, op, null]`, `:106-117`) rather than mapping over an existing
+object. There the executor defines a component-local row interface,
+`interface LineageRow { kind: string; name: string; operation: string | null; status: string | null }`,
+and builds objects instead. This is not an API type (no backend or `model-schema` shape
+describes a lineage table row), so `CLAUDE.md` §3's "never hand-write an API type" is not
+engaged. Then `:columns` takes descriptors whose labels are the old
 header strings **verbatim**, in the same order, and whose accessors return exactly what the old
 array held in that position. Descriptor arrays that do not depend on props are module
 constants. Ones that do are `computed`. Each is annotated `readonly Column<RowType>[]` with
@@ -1062,6 +1081,14 @@ with `:rows="evalCurve"` in the template, and the old `rows` computed deleted.
 - [ ] **Step 4: Run** `pnpm --dir frontend exec vitest run src/components/__tests__/{GbmEvalCurveChart,CrossValidationPanel,GbmImportanceCharts,PartialDependencePanel,LineageGraph}.test.ts`.
   Expected: PASS. Then `pnpm --dir frontend type-check 2>&1 | grep 'error TS'`: no line names a
   Group A file. Record the remaining list.
+- [ ] **Step 4a: Show `RL-1307`'s fourth violation red** (Acceptance 8). In
+  `GbmEvalCurveChart.vue`, temporarily change the `Train` accessor to `(p) => p.holdout ?? null`.
+  Run `pnpm --dir frontend exec vitest run src/components/__tests__/GbmEvalCurveChart.test.ts`.
+  Expected: FAIL, with `cellUnder(…, "Train")`'s assertion reporting the holdout value where the
+  fixture's train value was expected. Paste the output into the ledger. Restore the accessor,
+  re-run, and confirm PASS. This deliberately broken change is not committed. The fixture must
+  give `train` and `holdout` different values at the row read, or the check cannot fail: if
+  they are equal, change the fixture first.
 - [ ] **Step 5: Commit.** `refactor(frontend): migrate seven static-column ChartFigure sites (RL-1307, WK-675 S1)`.
 
 ### Task 4: Group B — conditional columns and formatted cells
