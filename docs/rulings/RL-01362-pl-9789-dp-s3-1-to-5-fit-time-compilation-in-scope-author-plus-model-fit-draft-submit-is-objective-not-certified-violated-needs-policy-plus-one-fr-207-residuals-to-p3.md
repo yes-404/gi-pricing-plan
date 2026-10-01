@@ -1,5 +1,5 @@
 ---
-id: RL-1363
+id: RL-1362
 family: ruling
 title: PL 9789 DP-S3-1 to DP-S3-5 decided — fit-time compilation in scope, author plus model:fit, a draft submit is OBJECTIVE_NOT_CERTIFIED, violated needs policy plus one, FR-207's residuals to P3
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -16,7 +16,7 @@ corrects: ~
 relates: [PL-1268, RL-1265, RL-1305, RL-1263, FD-1349, FR-144, FR-146, FR-150, FR-152, FR-163, FR-207, FR-366, FR-367, FR-449]
 ---
 
-# RL-1363 — PL 9789 DP-S3-1 to DP-S3-5 decided
+# RL-1362 — PL 9789 DP-S3-1 to DP-S3-5 decided
 
 ## How this was ruled
 
@@ -340,7 +340,7 @@ Task 7.
    table above summarises the entry; this block is the text the executor applies.
 2. `06` §4.2, a new note after the paragraph `` `separation_of_duties.configurable: false` is deliberate ``:
    > **A non-convex Custom Objective needs the policy's count plus one, and that is not a policy
-   > key** (`02` FR-152; added <Task 7 date>, `RL-1363` DP-S3-4). When the latest
+   > key** (`02` FR-152; added <Task 7 date>, `RL-1362` DP-S3-4). When the latest
    > certificate of a submitted `custom_objective` version has a `convexity` check with status
    > `violated`, the request's `approvers_required` is the matching entry's `approvers_required`
    > plus one. That is two under the defaults above and three under a policy of two. It applies to
@@ -446,7 +446,7 @@ their notes; neither is dropped.
 *(Added at the final pre-mint text pass, 2026-10-01, on the maintainer's exact-text rule.)*
 Each item below
 gives the file, the place, and the exact bytes to find and to write. `<Task N date>` is the
-date of the commit that applies the item. `RL-1363` is this ruling's minted id. Nothing
+date of the commit that applies the item. `RL-1362` is this ruling's minted id. Nothing
 else in a text is a placeholder. Placement was read at `origin/main` `65fc6129`.
 
 **S1 — `06` FR-367, Task 3 (DP-S3-2).** Placement: `docs/specs/06-governance.md`, the FR-367
@@ -454,7 +454,7 @@ row (`:148`). The text is **appended** to the end of the row's second cell, afte
 `` with the `expression` kind: adding a member now that nothing checks would recreate the exact defect §4.1 records. `` and one space, before the closing ` |`. Nothing is struck.
 
 ```text
-**Clarified <Task 3 date> (`RL-1363` DP-S3-2): `custom_objective:author` is required in addition to `model:fit`, never instead of it, on create and on derive.** Create and derive are one act, so a principal must not derive an objective that it cannot create. Both routes keep their `model:fit` dependency, and an `expression` objective adds the author check to it. Template create and certify remain `model:fit`, and submit remains `model:submit`. This row is silent on the conjunction; the clarification is the ruling's reading, not a reading of the text above.
+**Clarified <Task 3 date> (`RL-1362` DP-S3-2): `custom_objective:author` is required in addition to `model:fit`, never instead of it, on create and on derive.** Create and derive are one act, so a principal must not derive an objective that it cannot create. Both routes keep their `model:fit` dependency, and an `expression` objective adds the author check to it. Template create and certify remain `model:fit`, and submit remains `model:submit`. This row is silent on the conjunction; the clarification is the ruling's reading, not a reading of the text above.
 ```
 
 **S2 — `02` §5.1 owned codes, Task 4 and Task 7 (DP-S3-3).** Placement:
@@ -497,7 +497,7 @@ cell is **appended to**. Task 5 replaces the row
 with
 
 ```text
-| `POST` | `/api/v1/custom-objectives/{id}/certify` | **202** Run the certificate checks (FR-146). An `expression` objective whose `derived` is null is refused 409 `VALIDATION_FAILED` before a job is enqueued, with a `detail` naming `POST /api/v1/custom-objectives/{id}/derive` (**added <Task 5 date>, `RL-1363` DP-S3-3**) |
+| `POST` | `/api/v1/custom-objectives/{id}/certify` | **202** Run the certificate checks (FR-146). An `expression` objective whose `derived` is null is refused 409 `VALIDATION_FAILED` before a job is enqueued, with a `detail` naming `POST /api/v1/custom-objectives/{id}/derive` (**added <Task 5 date>, `RL-1362` DP-S3-3**) |
 ```
 
 **S4 — `02` §5.1 stand-in sentence, Task 7 (DP-S3-3).** Placement:
@@ -513,7 +513,7 @@ with
 
 ```text
 >   raises them is scheduled. ~~`submit_for_review` stands in with `VALIDATION_FAILED` today.~~
->   **Amended <Task 7 date> (`RL-1363` DP-S3-3): the stand-in is replaced.** A
+>   **Amended <Task 7 date> (`RL-1362` DP-S3-3): the stand-in is replaced.** A
 >   submission of a `draft` objective, of either kind, is refused 409
 >   `OBJECTIVE_NOT_CERTIFIED`. The predicate is the status `draft`: `record_certificate` sets
 >   `draft` on a failed certificate and `certified` on a passing one, so `draft` is exactly
@@ -532,7 +532,7 @@ Approval is by an Approver who is not the author; `expression` objectives with `
 with
 
 ```text
-Approval is by an Approver who is not the author; ~~`expression` objectives with `convexity: violated` need two Approvers (FR-152)~~ any objective whose certificate has `convexity: violated` needs the policy's Approvers plus one (FR-152); at the default policy that is two. Editing an `approved` objective creates a new version requiring fresh certification and approval. **Amended <Task 7 date> (`RL-1363` DP-S3-4): the non-convex rule is relative and applies to both kinds.** FR-152's Approver is *additional* to the policy's count, so an absolute two adds nobody under a policy of two. The quantile template already certifies `convexity: violated`, so the rule is not the `expression` kind's alone. The count is fixed on the request at submission, and no policy key sets the increment (`06` §4.2). |
+Approval is by an Approver who is not the author; ~~`expression` objectives with `convexity: violated` need two Approvers (FR-152)~~ any objective whose certificate has `convexity: violated` needs the policy's Approvers plus one (FR-152); at the default policy that is two. Editing an `approved` objective creates a new version requiring fresh certification and approval. **Amended <Task 7 date> (`RL-1362` DP-S3-4): the non-convex rule is relative and applies to both kinds.** FR-152's Approver is *additional* to the policy's count, so an absolute two adds nobody under a policy of two. The quantile template already certifies `convexity: violated`, so the rule is not the `expression` kind's alone. The count is fixed on the request at submission, and no policy key sets the increment (`06` §4.2). |
 ```
 
 **S6 — `02` FR-207, Task 8 (DP-S3-5).** Placement: `docs/specs/02-modelling.md`, the FR-207
@@ -541,7 +541,7 @@ row (`:370`). The text is **appended** to the end of the row's second cell, afte
 earlier amendments are dated history.
 
 ```text
-**Amended <Task 8 date> (`RL-1363` DP-S3-5; the Phase 3 destination accepted by the maintainer, by delegation, 2026-10-01): both `custom_objective_ref` residuals move from WK-690 to Phase 3, together, owned by the maintainer.** The GLM arm's custom objective is a separate capability that this spec does not specify: a `glum` fit is a family and a link fitted by IRLS, and a per-observation loss in §4.6's grammar has no family and no path to such a fit. So `GlmSpec.custom_objective_ref` cannot go live in WK-690. `Model.custom_objective_ref` moves with it, because the 2026-08-25 amendment above holds that the `Model` field records what the `GlmSpec` field declares. Made live for a GBM, it would be a second, lossy record of `spec.objective.ref`, the defect `transparency_artifact_id` was struck for. The verdicts do not change: the `GlmSpec` field is absent entirely and the `Model` field is declared and unbuilt, and the contract keeps both properties with their notes. The P2 phase closure record lists both for P3's first plan. The owner clause is corrected in the same commit everywhere it was quoted: `model_schema/objectives.py` (`ObjectiveBackend`), `frontend/src/components/ObjectivePicker.vue`, `backend/tests/test_contracts.py`'s `DECLARED_AND_UNBUILT` note, and the staging descriptions on `model.custom_objective_ref` and `model-spec`'s `GlmSpec` branch.
+**Amended <Task 8 date> (`RL-1362` DP-S3-5; the Phase 3 destination accepted by the maintainer, by delegation, 2026-10-01): both `custom_objective_ref` residuals move from WK-690 to Phase 3, together, owned by the maintainer.** The GLM arm's custom objective is a separate capability that this spec does not specify: a `glum` fit is a family and a link fitted by IRLS, and a per-observation loss in §4.6's grammar has no family and no path to such a fit. So `GlmSpec.custom_objective_ref` cannot go live in WK-690. `Model.custom_objective_ref` moves with it, because the 2026-08-25 amendment above holds that the `Model` field records what the `GlmSpec` field declares. Made live for a GBM, it would be a second, lossy record of `spec.objective.ref`, the defect `transparency_artifact_id` was struck for. The verdicts do not change: the `GlmSpec` field is absent entirely and the `Model` field is declared and unbuilt, and the contract keeps both properties with their notes. The P2 phase closure record lists both for P3's first plan. The owner clause is corrected in the same commit everywhere it was quoted: `model_schema/objectives.py` (`ObjectiveBackend`), `frontend/src/components/ObjectivePicker.vue`, `backend/tests/test_contracts.py`'s `DECLARED_AND_UNBUILT` note, and the staging descriptions on `model.custom_objective_ref` and `model-spec`'s `GlmSpec` branch.
 ```
 
 **S7 — the owner-quotation sweep, Task 8 (DP-S3-5), in the same commit as S6.** Each item
@@ -568,7 +568,7 @@ with
 ```text
     needs `GlmSpec.custom_objective_ref`, which FR-207 records as absent entirely
     and owned by Phase 3: a separate, unspecified capability, moved there on <Task 8 date>
-    (RL-1363 DP-S3-5) together with its `Model` twin, which records what it
+    (RL-1362 DP-S3-5) together with its `Model` twin, which records what it
     declares. The member exists because FR-153 names it and an author
 ```
 
@@ -581,7 +581,7 @@ S7.2 — `frontend/src/components/ObjectivePicker.vue`, the header comment (`:11
 with
 
 ```text
- * entirely" with **Phase 3** as owner — moved there on <Task 8 date>, RL-1363 — and
+ * entirely" with **Phase 3** as owner — moved there on <Task 8 date>, RL-1362 — and
 ```
 
 S7.3 — `backend/tests/test_contracts.py`, the `DECLARED_AND_UNBUILT` note (`:532-534`).
@@ -598,7 +598,7 @@ with
 ```text
 #:   and the `Model` one *"declared and unbuilt"*. **Both are owned by Phase 3**, a
 #:   separate, unspecified capability, moved there together on <Task 8 date>
-#:   (RL-1363 DP-S3-5). They cannot be split: `Model.custom_objective_ref` would record
+#:   (RL-1362 DP-S3-5). They cannot be split: `Model.custom_objective_ref` would record
 ```
 
 S7.4 — `docs/contracts/schemas/model.schema.json`, the `custom_objective_ref` description
@@ -611,7 +611,7 @@ DECLARED AND UNBUILT (FR-207, owner WK-690 — Phase 2, reassigned 2026-08-22 an
 with
 
 ```text
-DECLARED AND UNBUILT (FR-207, owner Phase 3, moved there on <Task 8 date> with its `GlmSpec` twin, RL-1363 DP-S3-5: the GLM arm's custom objective is a separate, unspecified capability).
+DECLARED AND UNBUILT (FR-207, owner Phase 3, moved there on <Task 8 date> with its `GlmSpec` twin, RL-1362 DP-S3-5: the GLM arm's custom objective is a separate, unspecified capability).
 ```
 
 S7.5 — `docs/contracts/schemas/model-spec.schema.json`, the `GlmSpec` branch's
@@ -624,7 +624,7 @@ DECLARED AND UNBUILT (FR-207, owner WK-690 — Phase 2, reassigned 2026-08-22 an
 with
 
 ```text
-DECLARED AND UNBUILT (FR-207, owner Phase 3, moved there on <Task 8 date> with its `Model` twin, RL-1363 DP-S3-5: the GLM arm's custom objective is a separate, unspecified capability).
+DECLARED AND UNBUILT (FR-207, owner Phase 3, moved there on <Task 8 date> with its `Model` twin, RL-1362 DP-S3-5: the GLM arm's custom objective is a separate, unspecified capability).
 ```
 
 Checked and unchanged by S7: `02-modelling.md:643-658` (dated 2026-08-17 and 2026-08-21
@@ -670,4 +670,4 @@ on the base (`PL 9789` Acceptance items 6, 8 and 9, read through the deltas abov
 5. **DP-S3-5.** A quotation of WK-690 as the residuals' owner survives Task 8: the
    `git grep` above prints it.
 
-Drafted as working id 9782; minted 2026-10-01 as RL-1363.
+Drafted as working id 9782; minted 2026-10-01 as RL-1362.
