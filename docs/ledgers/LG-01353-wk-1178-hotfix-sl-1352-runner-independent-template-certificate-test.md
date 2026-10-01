@@ -201,3 +201,32 @@ and the loss steps only `steps of`. Any figure in another position fails.
 **Red first:** with the `|f* - log y|` normaliser commented out, the guard fails 12 of 12 cases (survivors such as
 `{'minimum_at_truth': ['1.8e-16']}`); restored, `24 passed`. The guard's first run, before the closed list was complete,
 also failed on `hessian_min=1e-06` and the branch percentage (`29.3`), which is how the :1341 producer was found.
+
+### Task 7 — the full two-half gate on `5b7b24dd` (2026-10-01, granted 05:13:54 BST by the lead)
+
+Separate detached worktree `/tmp/gate790d-wt` at `5b7b24dd96656f9baf98ae5fd2d2b38de7e33094`, `git status --porcelain` empty,
+`uv sync --all-packages`, per-worktree database and `alembic upgrade head`, `ruff check --no-cache .` rc 0, `mypy
+--no-incremental` rc 0 (213 source files), then the slot wrapper with `LOKY_MAX_CPU_COUNT=4` in the foreground under
+`timeout 3500`. `/tmp/slots/gate-1` and `gate-2` both free by `flock -n`. **Start 05:14:16 BST** (load average 0.97, 21Gi
+free of 31Gi); **end 05:38:59 BST** (load average 4.22, 19Gi free).
+
+| stage | result | detail |
+|---|---|---|
+| ruff | pass | exit=0 |
+| mypy | pass | exit=0 |
+| import_linter | pass | exit=0 |
+| audit_docs | pass | exit=0 |
+| req_coverage | pass | exit=0 |
+| contracts | pass | exit=0 |
+| pytest | pass | exit=0 (`4429 passed, 3 skipped`, 1357.74 s) |
+
+`GATE: pass — 7 of 7 stages passed`. Frontend half: install, `generate:api`, `lint`, `type-check`, `test` (609 passed) and
+`build`, each rc 0. The head after this entry adds docs only (this ledger and FD-1354's second addendum, with INDEX); the
+four docs checks were re-run on a clean checkout of it.
+
+### Task 8 — FD-1354 addendum 2 (2026-10-01 05:50 BST)
+
+All 155 hits of the widened predicate have a row in FD-1354's second addendum (kind, interpolated expression, pinned by a
+test), with the method, command and blind spots stated. No same-family pinned hit was found in `test_objectives.py` beyond
+the ones fixed, so the gate did not re-run for that. Owned item (WK-1178): the 30 measured rows outside `objectives.py`.
+
