@@ -2,7 +2,7 @@
 id: LG-1350
 family: ledger
 title: WK-690 Slice 2 — symbolic derivation, the compilation target and the expression certificate
-status: active
+status: closed
 created: 2026-10-01
 owner: executor
 tree: 71b672205f7212008d0ff00b5cbc4810b56f12e6
