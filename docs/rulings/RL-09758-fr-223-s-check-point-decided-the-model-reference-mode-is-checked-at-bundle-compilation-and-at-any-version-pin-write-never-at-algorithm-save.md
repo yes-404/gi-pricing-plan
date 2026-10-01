@@ -165,6 +165,14 @@ The executor applies each text above byte-for-byte; authorship stays with the de
   - Red first: a compile test with an `approximation` version pinning an `exact`
     `model_call` asserts the Job's error code. On main it reads `BUNDLE_COMPILE_FAILED`.
   - How the error is typed is the build's to design. This record does not rule its code.
+  - *(Added 2026-10-01 10:30 BST, auditor-1061 F1.)* FD 9759 (working id) limb (2)'s
+    validate-route clause falls away by item 3. The validate route has no Rating Version,
+    and so no `model_reference_mode`; RL 9767 (working id) item 7 agrees. Limb (2) is
+    discharged by the compile-site typed error alone. The maintainer accepted this on
+    2026-10-01 at 10:30:00 BST, in the `to-lead.md` entry headed "2026-10-01 10:30:00 BST —
+    ACCEPTANCE: RL 9770 (NFR-490's statistic = p99) as the spec interpretation; FD 9759
+    limb (2) discharged at the compile site alone; #1060 audit noted", as the lead relayed
+    it. That supersedes the maintainer's earlier "at compile AND in the validate route".
 - **FD 9759 (working id), limb (3): the bare-`ValueError` sweep.** Build owned by S3. The
   build finds the other bare `ValueError`s that reach `compile_rating_version`'s fallback
   (`rating_versions.py:530-536`), and either names them or records why
@@ -203,9 +211,11 @@ refused under the wrong code or not refused at all.**
 ## Amendment, 2026-10-01 10:30 BST: auditor-1061's F2 and F3
 
 *By the decision-maker session `dm-675dp56` (effort `medium`), on auditor-1061's audit of
-`f70593b5`, as the lead adopted it at 10:29 BST. The ruling is unchanged. F1, on FD 9759
-(working id) limb (2)'s validate-route clause, is pending the maintainer and is not
-addressed here.*
+`f70593b5`, as the lead adopted it at 10:29 BST. The ruling is unchanged.*
+
+- **F1** *(folded in at 10:30 BST, on the maintainer's answer of 10:30:00 BST, relayed by the
+  lead).* FD 9759 (working id) limb (2) is discharged at the compile site alone. The
+  validate-route clause falls away by item 3. The new bullet is in *What it obliges*.
 
 - **F2.** Item 4 and Acceptance 3 cited audit-docs check 10, which cannot see a missing
   owned code. The clause in item 4 is struck. Acceptance 3 now requires a test that
