@@ -54,7 +54,8 @@ grep -rniE 'seed-from-model|seed_from_model|extract_relativity_table|rate-tables
 examples/fremtpl2/model.py:323:    "rate_tables": [], "models": [], "reference_tables": [], "custom_objectives": [],
 ```
 
-The one hit is an empty pin list (`_EMPTY_PINS`, `model.py:322-324`). `seed.py` and `scripts/demo.py` seed the **dataset** (`fetch.py`,
+The WF-699 journey has no test or script: `grep -rl "WF-699" backend/tests packages scripts frontend/src frontend/tests` prints nothing, so no
+journey test reaches the seed path either. The one hit above is an empty pin list (`_EMPTY_PINS`, `model.py:322-324`). `seed.py` and `scripts/demo.py` seed the **dataset** (`fetch.py`,
 `last-seed.json`), not a rate table. So the freMTPL2 demo never calls the seed path and does not reach the defect.
 
 Two things the demo does not show: the demo's GLM carries seven identity factors, three continuous and four categorical
@@ -111,9 +112,9 @@ requires full coverage of the declared key domain, which is a Cartesian product.
 - **One table with every key**, whose cells are the product of the factors' levels (a multiplied-out table). That
   changes what the seeded value means (a product of relativities) and needs interaction handling.
 
-This is a design choice the specs leave open, so it goes to `docs/open-questions.md` with options and a recommendation
-(`CLAUDE.md` §0), not a silent pick. The auditor's reading is the first option, since it keeps the relativity as the
-fit reported it. the DP-5 ruling (working id 9855) item 9 must state which one it binds `factor_ref` onto.
+The shape is being defined by the decision-maker session `dm-9855b` in the amendment to the DP-5 ruling (working id 9855), so
+no open-questions row is added here; the fix follows that amendment. The auditor's reading, for the record, is the first
+option, since it keeps the relativity as the fit reported it.
 
 ## Disposition
 
