@@ -48,14 +48,14 @@ Each change is marked *(PL-9765)* where it stands in the body.
 | C5 | Acceptance 3; Task 3; premise o | **Alembic head `2f598e89d12c`** (`backend/migrations/versions/2f598e89d12c_sub_graph_versions.py`), in place of `d7e2a9b5c418` | the same |
 | C6 | Acceptance 12 (a); premise n | **141 operations**, re-measured with the predicate stated verbatim, in place of "137 at the finding's tree" | the same |
 | C7 | Status (activation need 3); Write set; Global Constraints | **Order (b): S2 → the FD-1356 fix.** Need 3 becomes "S2a (`SL-1302`) and the fix slice `SL-1300` are closed" (both are). The FD-1356 fix is **not** a need of this slice; that fix's plan carries "WK-674 S2 merged" as its own activation need | the 10:10:32 entry, first bullet; the 10:10:46 entry, second bullet |
-| C8 | Write set; Global Constraints; Status (dispatch needs) | **Never concurrent with SL 1367 (#1056)** (PL 1364 (#1056), FD-1335 Part A, also edits `backend/src/app/api/score.py`); the dispatch records say so | F-B4; the maintainer's quoted decision of 2026-10-01 ~10:10 BST |
+| C8 | Write set; Global Constraints; Status (dispatch needs) | **Never concurrent with `SL-1367`** (`PL-1364`, FD-1335 Part A, also edits `backend/src/app/api/score.py`); the dispatch records say so | F-B4; the maintainer's quoted decision of 2026-10-01 ~10:10 BST |
 | C9 | Status; DP table; Acceptance 7 | **DP-S2-1** cited as "RL 9986 (working id; #974)", read at head `6bc51cf0`; kept out of `relates:`; "#974 merged and minted" stays an activation need | the lead's commission |
 | C10 | Premises; every locator | Re-derived at the tree above (`1dd5e264`) | the 10:10:32 entry ("refreshed locators") |
 | C11 | Acceptance 4 (FR-357); Task 6 | **A correction found in carrying forward.** `PL-1306` said a client *sending* `artifact_is_live: false` is refused with 409. Once the field is removed and `Withdraw` keeps `extra="forbid"`, sending it is refused with **422** `VALIDATION_FAILED`, and omitting it gives the 409. Both cases are now tested | this planner, on the carry-forward self-review |
 | C12 | DP table (DP-S2-6, new, blocking); Acceptance 16; Route table rows 8–9; activation need 2 | **The 2xx half of item 16 is a decision point.** Read at the tree above, `service.to_dict` (what both changed routes return) disagrees with `ApprovalRequest` and with the hand-authored `approval-request.schema.json`, so no existing shape can be declared without a §0 reconciliation. Options and a recommendation, not a pick | this planner, measuring item 16 before writing it |
 | C13 | DP-S2-6 row; Acceptance 16, 18 (new); Route table rows 8–9; Tasks 5, 6; activation need 2 *(2026-10-01, pre-merge)* | **DP-S2-6 decided (c)** by the maintainer; the two 2xx stay untyped, owned by FD 9752 (working id); **new Acceptance 18**, red first: S2 does not widen the untyped surface (exact key sets pinned) | the maintainer's entry headed `2026-10-01 10:32:26 BST — #1062 DP-S2-6: option (c) ACCEPTED with three conditions; it narrows my item (3) for the 2 CHANGED routes' 2xx only; the three-shape disagreement becomes its own FD` (`~/gi-pricing-plan.local/channel/to-lead.md`); the lead's message of 10:33 BST |
 | C14 | DP table (DP-S2-7, new, blocking); Acceptance 19; Task 5A (placeholder); activation need 3a; Write set *(2026-10-01, pre-merge)* | **Compiling a non-draft Rating Version** (FD 9754, working id): S2 does not merge unless it is handled as RL 9751 (working id) rules, red first | the maintainer's entry headed `2026-10-01 10:34:45 BST — FD 9754 (#1064, a non-draft rating version can be recompiled and its bundle rewritten): MEDIUM, owner WK-674 S2, and **S2 does not merge without the guard**; the option choice goes to a DM now`; the lead's message of 10:35:31 BST |
-| C15 | Acceptance 2; Task 2; Write set *(pre-merge)* | Every new generated-only slug in `ONE_SIDED_SLUGS`; `test_contracts.py` and the FD-1357 fix (PL 9764, working id; #1057), PL 9788, PL 1364 (#1056) and WK-1250 named as overlappers | auditor-1062 F1 (MED), adopted |
+| C15 | Acceptance 2; Task 2; Write set *(pre-merge)* | Every new generated-only slug in `ONE_SIDED_SLUGS`; `test_contracts.py` and the FD-1357 fix (PL 9764, working id; #1057), PL 9788, `PL-1364` and WK-1250 named as overlappers | auditor-1062 F1 (MED), adopted |
 | C16 | Acceptance 17; Acceptance 15 *(pre-merge)* | Acceptance 17's second check is an AST comparison of `args` and `returns` (the `grep` was blind to an added parameter); "13 existing `Page_*_`" corrected to 12 typed plus the open `Page_dict_str__Any__` | auditor-1062 F2 (LOW-MED) and its note, adopted |
 | C17 | `relates:`; Global Constraints *(disclosed pre-merge)* | Two changes made in the first filing and not announced there: (a) `relates:` gained `PL-1359`, `FD-1335`, `FD-1356`; (b) the dated note that WK-690 Slice 1 is `SL-1271`, closed, so PL-1306's two RL-1263 conditions against it no longer bind | auditor-1062's notes, adopted |
 
@@ -111,9 +111,7 @@ Slice 2a's plan (#984) is `PL-1303` with its row `SL-1302`. #978's finding is mi
 of `relates:` until it mints (in batch C, by the 10:10:32 entry's fifth bullet). #977
 (DP-S2-4) is not minted either and stays cited by PR number. The slice row already exists
 (**SL-1256**), so this PR cuts no `SL-` row. It appends one dated line to that row naming
-this plan. *(2026-10-01, pre-merge:)* PL 1364 and SL 1367 are cited by number with
-their mint PR, #1056 (mint batch A), because they are not on `main` at the tree above; at
-this plan's mint they are cited by id.
+this plan.
 
 **Activation needs, in order** *(PL-9765: need 2 re-cited, need 3 replaced by order (b))*:
 1. **OQ-1234 decided** — done by **`RL-1296`** (#935, working id 9901; read at its head
@@ -171,10 +169,10 @@ can cite them):
 - **The RL-1263 write-set check** against every build slice in flight at dispatch (see
   **Write set**), and the contention measurement if this is the first overlap (see **Global
   Constraints**).
-- **Never concurrent with SL 1367 (#1056)** *(PL-9765, F-B4)*: PL 1364 (#1056) (FD-1335 Part A) edits the
+- **Never concurrent with `SL-1367`** *(PL-9765, F-B4)*: `PL-1364` (FD-1335 Part A) edits the
   route decorators in `backend/src/app/api/score.py`, which Task 6 also edits. The dispatch
-  record of this slice, and of SL 1367 (#1056), each say so and name the order. Under the lane-B
-  order of the 10:10:32 entry (third bullet), SL 1367 (#1056) comes later anyway.
+  record of this slice, and of `SL-1367`, each say so and name the order. Under the lane-B
+  order of the 10:10:32 entry (third bullet), `SL-1367` comes later anyway.
 - **Serial with the FD-1356 fix, this slice first** *(PL-9765, order (b))*: the dispatch
   record names it.
 
@@ -694,7 +692,7 @@ component whose name is a published shape".
   Slice 1 is `SL-1271`, `status: closed` at the tree above, so these two conditions no longer
   bind against it. The dispatch record applies the same two checks to whichever slice holds
   lane B at dispatch.)*
-- **Never concurrent with SL 1367 (#1056)** *(PL-9765, C8; F-B4)*. PL 1364 (#1056) (FD-1335 Part A)
+- **Never concurrent with `SL-1367`** *(PL-9765, C8; F-B4)*. `PL-1364` (FD-1335 Part A)
   edits the route decorators of `backend/src/app/api/score.py`, and Task 6 edits the same
   file. `score.py` is shared and not registry-exempt, so the two serialise (RL-1263). The
   dispatch records of both slices state it and name the order.
@@ -826,14 +824,14 @@ named with the slices that may also touch it.
 | `backend/src/app/db/models.py` | `EnvironmentRow`, `DeploymentRow` appended (exempt); **`ScoringTraceRow` gains a column** (an edit to an existing class) | WK-1250 S1 (appends) | the appends are exempt; the `ScoringTraceRow` edit serialises with any slice editing that class |
 | `backend/src/app/main.py` | two router registrations | WK-1250 S1 | exempt (append only) |
 | `backend/migrations/versions/` | one new revision | WK-1250 S1, WK-690 S1 (none planned) | exempt; re-point `down_revision` at the second merge |
-| `backend/src/app/api/score.py` (`_required_ref` and the `score` handler; **not** `_fetch_bundle` or `_compiled_for`, whose signatures and return types do not change, Acceptance 17), `backend/src/app/platform/traces.py` | default-live resolution; the trace's Deployment reference *(PL-9765, C3)* | **SL 1367 (#1056)** (PL 1364 (#1056), FD-1335 Part A: the route decorators), WK-1250, WK-673, WK-675 S7b (RL-1263 item 4 names `score.py`) | **serialises** with any in-flight slice editing `score.py`; **never concurrent with SL 1367 (#1056)**, and the dispatch records of both say so (C8) |
+| `backend/src/app/api/score.py` (`_required_ref` and the `score` handler; **not** `_fetch_bundle` or `_compiled_for`, whose signatures and return types do not change, Acceptance 17), `backend/src/app/platform/traces.py` | default-live resolution; the trace's Deployment reference *(PL-9765, C3)* | **`SL-1367`** (`PL-1364`, FD-1335 Part A: the route decorators), WK-1250, WK-673, WK-675 S7b (RL-1263 item 4 names `score.py`) | **serialises** with any in-flight slice editing `score.py`; **never concurrent with `SL-1367`**, and the dispatch records of both say so (C8) |
 | `backend/src/app/api/models.py` (the governance gate's `_fetch_bundle` call, `:1215`), `backend/src/app/worker/scoring_handlers.py` (`:85`, `:208`), `backend/src/app/worker/trace_handlers.py` (`:30`, `:82`) | **nothing: read-only** *(PL-9765, C3, F-B1)* | — | not touched; Acceptance 17's `git diff --stat` prints nothing |
 | `backend/src/app/api/service_accounts.py` (`:63`, `:180`, `:246`) | the Environment-slug check at creation and rotation (RL-1301 A.6) | WK-674 S3 (per-environment keys, register F54: the same lines) | an edit to existing functions: serialises with any in-flight slice editing them; S3 follows this slice anyway |
 | `backend/src/app/platform/approvals.py` (`set_policy`, `:170-222`) | the existence check of RL-1301 A.6 (the guard's `decide` change is Slice 2a's) | any slice editing `set_policy` | an edit to an existing function: serialises unless the dispatch record shows no other in-flight slice edits it |
 | Slice 2a's shared paths (`approvals.py` in `platform/` and `api/`, `models.py`, the migrations registry) | this slice follows Slice 2a in lane A | Slice 2a (PL-1303, closed), the FD-1356 fix | Slice 2a has closed. Against the FD-1356 fix: **this slice first, then the fix, never concurrently** (both edit `_carry_to_the_artifact` and `platform/approvals.py`), by order (b) of the 10:10:32 entry *(PL-9765, C7; PL-1306 had S2a → the fix → S2)* |
 | `backend/src/app/api/approvals.py` (`Withdraw` and `SubmitApproval` moved out; `withdraw_request` and `submit_for_approval` typed) | server-derived liveness; both bodies become `model-schema` types; both 2xx unchanged, pinned by Acceptance 18 (DP-S2-6 (c)) *(PL-9765, C1)* | the FD-1335 Part B slice (carrier WK-1178: these two routes are 2 of its 12), the FD-1356 fix | an edit to existing functions: serialises with each. The two routes' 2xx stay on Part B's list (DP-S2-6 (c); owner FD 9752, working id) |
 | `packages/model-schema/src/model_schema/deployments.py` (new), `approvals.py` (`PromotionSkip`, `ApprovalWithdrawal`, `ApprovalSubmission`), `scripts/generate-contracts.py` (`GENERATED_SHAPES`: the Route table's slugs) | the Route table's shapes *(PL-9765, C1)* | WK-1250, WK-673 S4 (`GENERATED_SHAPES` appends); **the FD-1357 fix (PL 9764, working id; #1057)**, which also edits `packages/model-schema/src/model_schema/__init__.py`, `scripts/generate-contracts.py`, `backend/tests/test_contracts.py` and `03` §5.1 rows *(PL-9765, C15)* | appends to a dict: serialises unless the dispatch record shows different keys only. `approval-request` is not registered (DP-S2-6 (c)) |
-| `backend/tests/test_contracts.py` (`ONE_SIDED_SLUGS`, `:69`) *(PL-9765, C15)* | one entry per new generated-only slug | the FD-1357 fix (PL 9764, working id; #1057), PL 9788 (working id) and PL 1364 (#1056) (their guard lists), WK-1250 | an edit to an existing dict: serialises with each unless the dispatch record shows different keys only |
+| `backend/tests/test_contracts.py` (`ONE_SIDED_SLUGS`, `:69`) *(PL-9765, C15)* | one entry per new generated-only slug | the FD-1357 fix (PL 9764, working id; #1057), PL 9788 (working id) and `PL-1364` (their guard lists), WK-1250 | an edit to an existing dict: serialises with each unless the dispatch record shows different keys only |
 | `backend/src/app/platform/rating_versions.py` (`compile_rating_version`, `:395-542`), `backend/src/app/api/models.py` (the compile route, `:1233`, only if RL 9751 needs it) *(PL-9765, C14)* | the compile guard, as RL 9751 (working id) rules | any in-flight slice editing either function; the FD-1357 fix if it touches them | an edit to existing functions: serialises. `models.py:1215` (the governance gate) stays read-only (Acceptance 17) |
 | `backend/tests/test_api_authorisation_sweep.py` (and any sibling Acceptance 12 (f) finds) | Task 0A: flattening, the count equality, the spec pin, the valid-body sweep, the named allow-list | none found | test-only; **no RL-1263 overlap with WK-690 S1 and no third slot** (the 11:01:50 entry) |
 | the five modules' §5.1 REST tables (`01`, `02`, `03`, `06`, `07`) | **nothing in this slice**: Task 0A (c) moved out (the 11:17:35 entry); #977 (a) puts the column in a WK-1178 slice. **If that slice lands first**, this slice fills the column for its own new rows (`03` and `07` §5.1) | WK-1250 S1 (`03` §5.1 rows), WK-1178 fix slice (`03:810-845`), any slice appending §5.1 rows | **serialises** with each: a new column edits every existing row of the table |
@@ -915,7 +913,7 @@ them to "Slice 2", its "Not ruled here"):
 - [ ] *(PL-9765, C2.)* Run Acceptance 8's predicate at `origin/main` and record its output
   (2 at the tree above). Record whether `SL-1360` (`PL-1359`) has merged, which decides
   whether Acceptance 8's `STALE_OWNER` red can be shown.
-- [ ] *(PL-9765, C8.)* Confirm SL 1367 (#1056) is not in flight, and that no other in-flight slice
+- [ ] *(PL-9765, C8.)* Confirm `SL-1367` is not in flight, and that no other in-flight slice
   edits `backend/src/app/api/score.py`; name the SHA read. **Stop if one does.**
 - [ ] Re-derive premises a–u; record the tree and each result in the ledger.
 - [ ] Note the gate-slot rule of Acceptance 10 (the 11:42:08 entry) for every full run
