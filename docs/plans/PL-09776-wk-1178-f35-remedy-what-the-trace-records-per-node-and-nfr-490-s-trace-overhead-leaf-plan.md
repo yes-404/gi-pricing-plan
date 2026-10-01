@@ -142,6 +142,7 @@ refusal only, with a release note) and F5 (the 12 backend files in Task 1A Step 
 slot), the corrected example's raw names (P5a), and the maintainer's two `03` example tests.
 Then the maintainer's widening: the ruled example is a complete valid algorithm, and it must
 pass `model_validate` in full, then compile (stub payloads), then the declared-reads check.
+Then the scoped re-check of `56460dd7` (F-1 to F-5 and the import merge).
 
 **SL.** WK-1178 is standing maintenance. The lead mints its slices at triage
 ([`document-ids.md`](../process/document-ids.md) §1.9). The proposed row text is in
@@ -285,7 +286,11 @@ unless it names the base.
     tests, which extract §4.1's example verbatim from `03` and show it passes
     `RatingAlgorithm.model_validate` in full, then `compile_bundle` (stub payloads for its pins),
     then the declared-reads check: red against today's `03` on their named causes (Task 1A
-    Step 3), green on the ruled complete example applied in the same commit (Step 8). The 12 backend files of Step 7 pass; FD 9773's predicate prints
+    Step 3), green on the ruled complete example applied in the same commit (Step 8).
+    **'Compiles' here means `compile_bundle` over stub payloads: the example is not hydrated
+    by `load_bundle`, not scored, and its `sub_graphs` mount is not read (`score.py:398-399`);
+    a dangling `mount_point` (e.g. `s_ncd`, not a step) also passes.** The 12 backend files of
+    Step 7 pass; FD 9773's predicate prints
     0 undeclared reads over the merge tree (Task 1A Step 8).
 3. **Each `TraceStep` carries exactly the step's reference set and declared produces**
    (DP-F35-1 (b)). On the `test_rating_score.py` fixture (`_compiled()`), `s_clamp`'s
@@ -660,7 +665,8 @@ names the SHA either way):
    every step whose reference set adds an edge beyond its declared `consumes`, with the
    source of that edge, and every added edge that closes a cycle; then call `load_bundle` on
    each stored bundle under the M1 wire and record each refusal. Expected: no cycle and no
-   refusal. Any cycle, or a refusal, goes to the decision-maker with the ruling (M4, which
+   refusal. Any cycle, or a refusal, goes to the decision-maker with the ruling (DP-F35-1
+   (iii-b)) (M4, which
    keeps today's wire for untraced calls, then still needs a traced graph that hydrates).
 
 ## Tasks
@@ -812,6 +818,7 @@ under (iii-a) (b), the new code's owned-codes row. The executor applies the ruli
   steps, and `consumes` on `s_clamp`, `s_decl_cap`, `s_decl_floor`)
 - Modify: `packages/model-schema/tests/test_rating_algorithm.py` (its `s_minprem`, `:65`, and one
   input step)
+- Modify: `backend/src/app/errors.py` (the new code in `RATING_ERROR_CODES`; (iii-a) (b) only)
 
 **Interfaces:**
 - Produces: `referenced_names(node: Mapping[str, Any]) -> frozenset[str]` (Tasks 3 and 4 use it);
@@ -822,7 +829,9 @@ field, `consumes` mandatory; (iii-a) (b) a new code, written below as
 `RATING_STEP_UNDECLARED_READ` (the ruling names it; the executor uses the ruled name); (iii-b)
 (b) grandfathered. A different scope changes `_DECLARED_READ_STEP_TYPES` only (method). Under
 (iii-a) (b) the code's registry entry is added to `RATING_ERROR_CODES` in
-`backend/src/app/errors.py`, which is in the write set for that branch only.
+`backend/src/app/errors.py`, which is in the write set for that branch only. **Under DP-F35-1
+(ii) mandatory = no:** no `_check_declared_reads`, no refusal tests, Acceptance 2a reduces to
+the example-validity test, and Task 3 still uses `referenced_names`.
 
 **A compile-time refusal only** (the auditor's F4). The check runs inside `validate_algorithm`,
 so it refuses at the save path (`backend/src/app/platform/rating_algorithms.py:91`,
@@ -857,8 +866,8 @@ import copy
 import pytest
 from test_rating_score import _algorithm_payload
 
-from model_schema.rating import RatingAlgorithm
-from pricing_core.rating.compile import validate_algorithm
+from model_schema.rating import RatingAlgorithm, RatingVersion
+from pricing_core.rating.compile import ResolvedArtifact, compile_bundle, validate_algorithm
 from pricing_core.rating.references import referenced_names
 
 #: DP-F35-1 (iii-a)'s ruled code; `RATING_STEP_UNDECLARED_READ` under the recommendation.
@@ -1007,9 +1016,9 @@ def _as_list(value: Any) -> list[str]:
 ```
 
   Add `import json`, `from pathlib import Path`, `from typing import Any`, `from uuid import
-  uuid4`, `from model_schema.rating import RatingVersion`, `from model_schema.refs import
-  ArtifactRef` and `from pricing_core.rating.compile import ResolvedArtifact, compile_bundle`
-  to the imports (each is imported the same way in `test_rating_score.py:36-39`).
+  uuid4` and `from model_schema.refs import ArtifactRef` to the imports. `RatingVersion`,
+  `ResolvedArtifact` and `compile_bundle` are already in the module's two single import lines
+  above (as `test_rating_score.py:36-39` imports them).
 
   **How "then compile" is met: the test supplies stub payloads for the pinned refs**, so
   `compile_bundle` runs. The other option, a ruled example that pins fixture artifacts from the
@@ -1172,6 +1181,7 @@ def _check_declared_reads(algo: RatingAlgorithm) -> list[ValidationIssue]:
   text as **one** commit, and run Task 1 Step 6.
 
 ```bash
+# (iii-a) (b) only: also `git add backend/src/app/errors.py`
 git add docs/specs/03-rating-engine.md packages/pricing-core/src/pricing_core/rating/references.py packages/pricing-core/src/pricing_core/rating/compile.py packages/pricing-core/tests/test_rating_declared_reads.py packages/pricing-core/tests/test_rating_score.py packages/model-schema/tests/test_rating_algorithm.py
 git commit -m "fix(rating): a step reads only names it declares — FR-246 enforced, fixtures fixed (WK-1178, FD 9773)"
 ```
