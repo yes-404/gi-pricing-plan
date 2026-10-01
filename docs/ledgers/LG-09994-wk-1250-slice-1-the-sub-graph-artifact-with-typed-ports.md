@@ -220,6 +220,16 @@ this slice, found by the gate**, fixed in the next commit (existing-test registr
   and `docs/contracts/schemas/generated/` join `_SKIP_PREFIXES`.
 Those three files pass (10 passed). A new head needs a new grant (S-13).
 
+**The committed-strings exclusion, with it removed** (lead's Delta 3). `_authored_strings()` with the two
+generated prefixes taken out of `_SKIP_PREFIXES`, run at `a0c0a57a`, reports exactly **8** unexplained
+hits, over 4 files × 2 strings: `docs/contracts/openapi/generated.json` and the three
+`docs/contracts/schemas/generated/sub-graph{,-create,-body}.schema.json`, each with `'Clamp Bounds'` and
+`'Key Expr'`. Classification: all 8 are the `title` of the JSON Schema *property definition* named
+`clamp_bounds` / `key_expr` (a pydantic-generated label), not an authored rating expression; none is
+an expression, a condition or a bound. No generated file carries an authored string. The exclusion
+removes no authored string from the scan; it removes generated property labels. The hand-authored
+`rating-algorithm.schema.json` stays scanned.
+
 ## Deviations from PL-1325, each named
 
 1. **Decimal example** (Task 1): the §4.11 example declares the output port type `relativity`, not
