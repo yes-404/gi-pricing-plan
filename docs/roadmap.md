@@ -1194,7 +1194,7 @@ Set `active` 2026-09-30 on the maintainer's entry "2026-09-30 22:33:30 BST — D
 id: SL-1339
 family: slice
 title: Slice 1: the sub-graph as a stored, versioned artifact (FR-217's artifact limb)
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 8cef871d4ec30869dc3ef20559f3cac64e239a5c
@@ -1205,6 +1205,8 @@ relates: [PL-1254]
 ```
 
 `PL-1254` Task 1; leaf plan `PL-1325` (draft until `PL-1254` is active, its prerequisite 2). Minted as `SL-1339` at this PR's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `8cef871d` (1339 onward).
+
+**Closed 2026-10-01** at its mint PR #1034 (mint commit `0e04c4ea`): slice audit CLEAN at `04e8e53e`, adopted items closed CLEAN at `78674b7e`; gate 7/7 at `44bd29e0`; ledger `LG-1352`. The row read `active` until the auditor's forward status flip (§1.6).
 
 #### SL-1340 — Slice 2: the pin and the inlining (FR-217's pin and inlining limbs; FR-258's inlined steps)
 

@@ -2,7 +2,7 @@
 id: LG-1352
 family: ledger
 title: WK-1250 Slice 1 — the sub-graph artifact with typed ports and FR-227 at create
-status: active
+status: closed
 created: 2026-10-01
 owner: executor
 tree: f689c7828cb05eb2298f3fec505a4638c4437a11
