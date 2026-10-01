@@ -12,7 +12,7 @@ supersedes: []
 superseded_by: ~
 corrected_by: []
 corrects: ~
-relates: [PL-1267, FR-228, FR-230, FR-231, FR-232, RL-1264]
+relates: [PL-1267, FR-228, FR-230, FR-231, FR-232, RL-1264, FD-1357, FD-1358]
 ---
 
 # RL-9855 — PL-1267 DP-5 decided — a seeded rate table holds one Factor, and a named portfolio joins each key through its bound Factor, its declared Banding or its same-named column; the cache key covers the definition
@@ -135,12 +135,12 @@ changed, so every locator in this record holds at `101e32dc`. The Slice 7 row is
 | `extract_relativity_table` (`operations.py`) | `:142`; the row at `:156` | each row carries **one** factor's key: `{factor: level.level, value_name: …}` |
 | `validate_rate_table` | `:269`; the read at `:289` | reads every declared key from every row: `KeyError` on a second factor (reproduced below) |
 | `seed_from_model` (pure); `_key_domains_of` | `:168`; `:160` | one table, one key per relativity entry; one domain per entry |
-| `GlmFitResult.relativities` (`modelling.py`) | `:1588` | `dict[str, tuple[RelativityLevel, …]]`, keyed by **factor slug**: `_design` iterates `matrix.terms` (`glm.py:247`), whose keys are slugs (`factors.py:86-99`) |
+| `GlmFitResult.relativities` (`model_schema/modelling.py`) | `:1588` | `dict[str, tuple[RelativityLevel, …]]`, keyed by **factor slug**: `_design` iterates `matrix.terms` (`glm.py:247`), whose keys are slugs (`factors.py:86-99`) |
 | `_relativities` (`pricing_core/modelling/glm.py`) | `:922`; loop `:950` | one table per categorical factor; a continuous factor has none |
 | Level labels: `_levels`, `_design` | `glm.py:217`, `:252` | `series.cast(pl.String)`, so a boolean level is `"true"` |
-| `RelativityLevel` | `modelling.py:1530` | per-factor, marginal levels: no joint combinations |
-| `ModelSpecCommon.factors`; `Model.spec` | `modelling.py:842`; `:2057` | `tuple[UUID, …]`: no slug, no version |
-| `Factor.banding_id` | `modelling.py:154` | a banding Factor pins its Banding by id |
+| `RelativityLevel` | `model_schema/modelling.py:1530` | per-factor, marginal levels: no joint combinations |
+| `ModelSpecCommon.factors`; `Model.spec` | `model_schema/modelling.py:842`; `:2057` | `tuple[UUID, …]`: no slug, no version |
+| `Factor.banding_id` | `model_schema/modelling.py:154` | a banding Factor pins its Banding by id |
 | `resolve_factors` banding; grouping; interaction | `factors.py:190`; `:194`; `_cross` `:246` | calls `apply_banding`; calls `apply_grouping`; crosses the operands' resolved levels |
 | `load_factors` (`backend/src/app/platform/modelling.py`) | `:284` | loads a spec's Factors by id, operands too; a missing id is `NOT_FOUND` |
 | platform `seed_from_model` (`platform/rate_tables.py`) | `:95` | passes no Factors to the pure function |
@@ -165,7 +165,7 @@ through `seed_from_model`. With this worktree's `pricing_core` on the path,
    *(Amended by the amending pass, audit F1 and F3.)* The last sentence holds for today's
    code only, and it was this ruling's decisive argument. Two corrections:
    - **Multi-factor seeded tables cannot exist today.** Seeding a model with two or more
-     factors raises `KeyError` (FD working id 9786, minted as FD 1357 in #1038, which is not yet merged). Every seeded table that exists has one
+     factors raises `KeyError` (FD-1357). Every seeded table that exists has one
      key. The seeded-table shape was therefore undefined; section A defines it.
    - **The defect is not intrinsic to (d).** Seeding could set `banding_ref`, and (d) would
      then band the key with `apply_banding`, the same function `resolve_factors` calls
@@ -221,7 +221,7 @@ through `seed_from_model`. With this worktree's `pricing_core` on the path,
 
 ## Amendments by the amending pass
 
-### A. The seeded-table shape (audit F1): the shape FD working id 9786's fix builds
+### A. The seeded-table shape (audit F1): the shape FD-1357's fix builds
 
 **Ruled: one table per Factor.** A model with K relativity entries seeds K tables, one per
 seed request. Each seeded table has exactly one key, bound to the Factor its relativities
@@ -296,7 +296,7 @@ fix that sets `banding_ref`, and test it on each Factor type:
 So (d), widened to cover what seeding produces, puts on the key a `banding_ref`, a
 `grouping_ref`, operand refs and a naming rule. Each is a second statement of which
 transformation produced the key's labels. The first statement is the Factor's own
-`banding_id`, `grouping_id` and `operand_factor_ids` (`modelling.py:154-161`), which
+`banding_id`, `grouping_id` and `operand_factor_ids` (`model_schema/modelling.py:154-161`), which
 `resolve_factors` reads. The two statements can diverge, and a table whose key names one
 transformation while its labels came from another misjoins without an error. *(Amended by
 the text-fix pass, re-audit A1: this paragraph said the restatement is "a second statement
@@ -313,7 +313,7 @@ for identity keys. The seeded banding case is not one of its reasons.
 
 ### D. Factor resolution at seeding (audit F2)
 
-- `ModelSpecCommon.factors` is `tuple[UUID, …]` (`modelling.py:842`). The pure
+- `ModelSpecCommon.factors` is `tuple[UUID, …]` (`model_schema/modelling.py:842`). The pure
   `seed_from_model` takes no database (ADR-703), so it cannot turn a UUID into
   `factor:slug@version`.
 - **The platform loads the Factors and passes them in.** Platform `seed_from_model`
@@ -341,13 +341,12 @@ for identity keys. The seeded banding case is not one of its reasons.
   with "source column absent". This is a dependency on Slice 1, reported to the lead.
   PL-1267 is not edited.
 
-### F. FR-231's per-cell weight (FD working id 9785, minted as FD 1358 in #1038, which is not yet merged)
+### F. FR-231's per-cell weight (FD-1358)
 
 This ruling computes a weight per cell and feeds it to the aggregate
 `exposure_weighted_mean_change_pct`. It does **not** deliver FR-231's "exposure weight
 behind each cell" in the diff output. `RateTableDiff` (`rating.py:717-729`) and the spec's
-own examples (`03:304-306`) are aggregate only. That gap predates this ruling. It is FD
-working id 9785, owner WK-673, and its fix is not decided here.
+own examples (`03:304-306`) are aggregate only. That gap predates this ruling. It is FD-1358, owner WK-673, and its fix is not decided here.
 
 ## Options, re-derived
 
@@ -357,7 +356,7 @@ working id 9785, owner WK-673, and its fix is not decided here.
 | (b) | Evaluate the algorithm's `table` step `key_expr` (the plan says "`lookup`", but a `lookup` step feeds reference tables, `rating.py:276-281`) | Honours any derivation | A partial re-rate. The diff depends on an algorithm version that the cache key does not carry. |
 | (c) | A workspace default portfolio | No parameter | The weighting portfolio cannot be cited |
 | (d) | (a), plus `apply_banding` where a key declares `banding_ref` | Covers a hand-authored banded key; with seeding setting `banding_ref`, a seeded banding key too (section C) | Refuses Grouping and interaction keys (section C). An identity key matches only if its name is its column. *(Amended by the amending pass: the earlier cell said "dead on seeded tables", which was today's code, not (d).)* |
-| **(e)** | (d), plus a key bound to a **Factor** is resolved through that Factor with `resolve_factors` | FR-228's own binding. Covers every factor type a model can carry, including Grouping and interaction. Still a join, with no algorithm and no expression evaluator. The labels come from the function that made them. | One optional field on `RateTableKey`. Seeding must set it, so it waits on FD working id 9786's fix and on section D's Factor loading. |
+| **(e)** | (d), plus a key bound to a **Factor** is resolved through that Factor with `resolve_factors` | FR-228's own binding. Covers every factor type a model can carry, including Grouping and interaction. Still a join, with no algorithm and no expression evaluator. The labels come from the function that made them. | One optional field on `RateTableKey`. Seeding must set it, so it waits on FD-1357's fix and on section D's Factor loading. |
 
 ## Ruled
 
@@ -487,7 +486,7 @@ These are recorded here and **applied by Slice 7's spec-first step** under
 commit, and PL-1267 is not edited.
 
 *(Amended by the amending pass.)* The seeding changes, marked **[seeding]** below, are
-applied instead by FD working id 9786's fix (owner WK-1178), in the same commit as its code
+applied instead by FD-1357's fix (owner WK-1178), in the same commit as its code
 (`CLAUDE.md` §2: spec, code and tests land as one commit). The `factor_ref` field lands with
 whichever of that fix and Slice 7 comes first, and the other cites it. Which comes first is
 the lead's to order.
@@ -501,7 +500,7 @@ the lead's to order.
   mapping, from a named `validated` portfolio Dataset Version. Coverage is reported. A
   portfolio that matches no cell is refused. *(Amended by the amending pass.)* The
   clarification says how the weight is **computed** and that it feeds the aggregate mean.
-  It must not say the diff shows the weight per cell: that is FD working id 9785 (owner
+  It must not say the diff shows the weight per cell: that is FD-1358 (owner
   WK-673), open.
 - **`03` §4.2.** The `RateTable` shape gains `factor_ref`. `RateTableDiff` gains the two
   coverage figures. Both go through `model-schema` and the contract regeneration.
@@ -529,6 +528,223 @@ the lead's to order.
 - **`03` §5.1, the owned codes (`:807-821`).** Add `DATASET_NOT_VALIDATED`, marked "(re-raised from
   `01`)" so that check 10 (one owner per code) holds.
 
+Every item above is carried as exact text in *The exact texts* below (T1 to T12). Where a
+bullet above and its text differ in wording, the text is the one applied.
+
+### The exact texts
+
+*(Added at the final pre-mint text pass, 2026-10-01, on the maintainer's exact-text rule.)*
+Each item gives the file, the place, who applies it, and the exact bytes to find and to
+write. Placement was read at `origin/main` `65fc6129`. The placeholders are:
+`RL-<minted id>`, this ruling's minted id; `<fix date>`, the date of FD-1357's fix commit;
+`<Slice 7 date>`, the date of the WK-673 Slice 7 commit that applies the item;
+`<first date>`, the date of whichever of those two commits first lands `factor_ref`;
+`<WF date>`, the date of the decision-maker's `WF-699` commit. Nothing else in a text is a
+placeholder.
+
+**T1 — `03` FR-228, applied with `factor_ref` (FD-1357's fix or Slice 7, whichever is
+first).** Placement: `docs/specs/03-rating-engine.md`, the FR-228 row (`:119`). The text is
+**appended** to the end of the second cell, after `and an optional default row.` and one
+space, before the closing ` |`. Nothing is struck.
+
+```text
+**Clarified <first date> (`RL-<minted id>`): the binding is a declared field.** "Bound to a Factor" is `factor_ref`, a pinned `factor:<slug>@<version>`. "A banded input" is `banding_ref`, a pinned Banding with no Factor. A key carries at most one of them, and `model-schema` refuses a key that carries both. A key with neither is joined by its own name. A version written before `factor_ref` existed stays unbound (FR-4).
+```
+
+**T2 — `03` FR-230 [seeding], FD-1357's fix (WK-1178).** Placement: the FR-230 row
+(`:121`). The text is **appended** to the end of the second cell, after `is always
+answerable.` and one space, before the closing ` |`. Nothing is struck.
+
+```text
+**Clarified <fix date> (`RL-<minted id>` section A): a seed request names one Factor.** The request's required `factor` is the Factor's slug, a key of the model's relativities. The seeded table holds that Factor's relativities under one key, bound by `factor_ref` to the Factor version the model pins, so a model with K categorical factors seeds K tables. A continuous factor has no relativity table and is refused. A lineage holds one Factor: a re-seed that names another Factor's slug is refused, and a newer version of the same Factor is accepted. A hand-authored table may still have several keys (FR-228).
+```
+
+**T3 — `03` FR-231, Slice 7 (WK-673).** Placement: the FR-231 row (`:122`). The text is
+**appended** to the end of the second cell, after `so an actuary sees which edits matter.`
+and one space, before the closing ` |`. Nothing is struck.
+
+```text
+**Clarified <Slice 7 date> (`RL-<minted id>`): how the exposure weight is computed.** The caller names a `validated` portfolio Dataset Version, and there is no default. Each portfolio row maps to at most one cell of the current version through each key's binding (FR-228): a `factor_ref` key through that Factor's resolution, a `banding_ref` key through that Banding, and an unbound key by the column of its own name, compared in the key's declared type. A cell's weight is Σ exposure over the rows that map to it, and it weights the aggregate `exposure_weighted_mean_change_pct`. A cell whose Σ is 0 carries no weight. The diff reports the portfolio's total exposure and the exposure that mapped to a cell. A portfolio whose rows map to no cell is refused, and so is a null or negative exposure. This clarification does not make the diff show the weight per cell: that is FD-1358.
+```
+
+**T4 — `03` §4.2's seeded example [seeding], FD-1357's fix.** Placement: the
+`RateTable` / `RateTableVersion` JSON block (`:284-300`). Four lines are **replaced**; the
+example stays a one-key table and names `02` §4.2's own example Factor. Replace
+
+```text
+  "keys": [{"name": "driver_age_band", "type": "string", "banding_ref": "banding:driver-age-actuarial-v2@2"}],
+```
+
+with
+
+```text
+  "keys": [{"name": "driver_age_banded", "type": "string", "factor_ref": "factor:driver_age_banded@3"}],
+```
+
+and replace the three lines
+
+```text
+    {"driver_age_band": "17-20", "relativity": "1.8400"},
+    {"driver_age_band": "21-24", "relativity": "1.4100"},
+    {"driver_age_band": "25-29", "relativity": "1.1200"}
+```
+
+with
+
+```text
+    {"driver_age_banded": "17-20", "relativity": "1.8400"},
+    {"driver_age_banded": "21-24", "relativity": "1.4100"},
+    {"driver_age_banded": "25-29", "relativity": "1.1200"}
+```
+
+**T5 — `03` §4.2, the `factor_ref` note, in the same commit as T1.** Placement: a new
+blockquote paragraph **inserted** after the line `Values are stored as decimal strings,
+never JSON floats (R2).` and one blank line, before the `storage` note.
+
+```text
+> **`factor_ref` added <first date> (`RL-<minted id>`, FR-228).** A key's `factor_ref`
+> pins the Factor version the key is bound to, and a key carries at most one of
+> `factor_ref` and `banding_ref`. A seeded table has one key, named after the Factor's slug
+> and bound by `factor_ref` (FR-230), and this example is one.
+```
+
+**T6 — `03` §4.2, the coverage figures, Slice 7.** Placement: the same JSON block. The two
+diff lines are **replaced**. Replace
+
+```text
+  "diff_vs_previous": {"changed_cells": 3, "max_abs_change_pct": 4.2,
+                       "exposure_weighted_mean_change_pct": 0.8},
+  "diff_vs_seed": {"changed_cells": 7, "exposure_weighted_mean_change_pct": -2.1}
+```
+
+with
+
+```text
+  "diff_vs_previous": {"changed_cells": 3, "max_abs_change_pct": 4.2,
+                       "exposure_weighted_mean_change_pct": 0.8,
+                       "portfolio_exposure": "48210.5", "matched_exposure": "47902.0"},
+  "diff_vs_seed": {"changed_cells": 7, "exposure_weighted_mean_change_pct": -2.1,
+                   "portfolio_exposure": "48210.5", "matched_exposure": "47902.0"}
+```
+
+and **insert** this blockquote paragraph after T5's, with one blank line between them:
+
+```text
+> **Coverage added <Slice 7 date> (`RL-<minted id>`, FR-231).** `RateTableDiff` carries
+> `portfolio_exposure` and `matched_exposure`, decimal strings: the named portfolio's total
+> exposure and the exposure that mapped to a cell of the current version. Both are null
+> when no portfolio is named. They tell apart the reasons for a null mean: no portfolio,
+> weights on no changed cell, or only zero-weight cells.
+```
+
+**T7 — `03` §5.1, the seed route [seeding], FD-1357's fix.** Placement: the §5.1 row
+(`:783`), **replaced**. Replace
+
+```text
+| `POST` | `/api/v1/rate-tables/{slug}/seed-from-model` | Seed from a model's relativities (FR-230) |
+```
+
+with
+
+```text
+| `POST` | `/api/v1/rate-tables/{slug}/seed-from-model` | **201** Seed one Factor's relativities from a model (FR-230). The body is `{"model_ref", "factor", "change_note"}`; `factor` is required and is the Factor's slug, a key of the model's `relativities`. The seeded table has one key, bound by `factor_ref` to the Factor version the model pins. **422** `VALIDATION_FAILED` for a `factor` that names no relativity entry of the model (a continuous factor included), for a named entry with no pinned Factor of its slug, for two pinned Factors with that slug, and for a re-seed of a lineage bound to another Factor's slug; **404** `NOT_FOUND` for a pinned Factor id that does not resolve in the caller's workspace (`load_factors`) (**amended <fix date>, `RL-<minted id>` sections A and D**) |
+```
+
+**T8 — the seed route's design stub [seeding], FD-1357's fix.** Placement:
+`docs/contracts/openapi/gi-pricing.yaml`, the `/rate-tables/{slug}/seed-from-model`
+`description` (`:238`), **replaced**. Replace
+
+```text
+      description: FR-230. Records the source model so the diff-vs-technical-seed stays answerable.
+```
+
+with
+
+```text
+      description: FR-230. The body names the model (`model_ref`), one Factor (`factor`, required, the Factor's slug) and a `change_note`; one seeded table holds one Factor. Records the source model so the diff-vs-technical-seed stays answerable.
+```
+
+**T9 — `03` §5.2, `seed_from_model` [seeding], FD-1357's fix.** Placement: the §5.2
+signature block (`:973-974`), **replaced**. Replace
+
+```text
+def seed_from_model(model: Model, *, table_slug: str, change_note: str, seeded_at: datetime,
+                    rateable: bool = True, value_name: str = "relativity") -> SeedResult
+```
+
+with
+
+```text
+# `factor` and `factors` added <fix date> (RL-<minted id> section D): the platform loads the
+# model's Factors and passes them in; the pure function binds the one key to `factor`'s Factor
+def seed_from_model(model: Model, *, factor: str, factors: Sequence[Factor], table_slug: str,
+                    change_note: str, seeded_at: datetime, rateable: bool = True,
+                    value_name: str = "relativity") -> SeedResult
+```
+
+**T10 — `03` §5.1, the diff row, Slice 7.** Placement: the §5.1 row (`:785`), **replaced**.
+Replace
+
+```text
+| `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against=` | **200** Cell-level diff with exposure weights (FR-231); **202** with a Job where either version is `storage: parquet` (FR-232) |
+```
+
+with
+
+```text
+| `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against=&portfolio=` | **200** Cell-level diff (FR-231), exposure-weighted when `portfolio` names a `validated` portfolio Dataset Version, with §4.2's coverage figures; **202** with a Job where either version is `storage: parquet` (FR-232), the Job's parameters carrying `portfolio`. With `portfolio`, these are checked before the cache is read and before any Job: **403** without `dataset:read`, the same for any id; **404** `NOT_FOUND` for a portfolio that is missing or in another workspace; **409** `DATASET_NOT_VALIDATED` for a `draft` or `archived` portfolio. **404** `NOT_FOUND` for a `factor_ref` or `banding_ref` that does not resolve, naming the key and the ref; **422** `VALIDATION_FAILED` naming the key, the column or the ref for an absent column, a non-numeric banded column, a resolution error, a null or negative exposure, or a portfolio that maps to no cell. A Job fails with the same codes (**amended <Slice 7 date>, `RL-<minted id>`**) |
+```
+
+**T11 — `03` §5.1, the owned codes, Slice 7.** Placement: the end of the "Error codes owned
+by this module" paragraph (`:807-842`). The final `)*.` is **replaced** by an appended code.
+Replace
+
+```text
+orphaning a blob. `app.platform.traces.complete_pending_trace` is the only raiser)*.
+```
+
+with
+
+```text
+orphaning a blob. `app.platform.traces.complete_pending_trace` is the only raiser)*,
+`DATASET_NOT_VALIDATED` (re-raised from `01`)
+*(added <Slice 7 date>, `RL-<minted id>` — **409** from
+`GET /api/v1/rate-tables/{slug}@{version}/diff` when the named `portfolio` is not
+`validated`, and the failure of its `rate_table.diff` Job when the portfolio is archived
+between submit and run; the detail names the diff)*.
+```
+
+**T12 — `WF-699` step A1 [seeding], applied by a decision-maker, not an executor.**
+`document-ids.md` §1.6's WF row gives a journey to the decision-maker via `spec-change`, and
+an executor "never amends the journey itself". A decision-maker applies T12 in its own PR
+after FD-1357's fix merges. Placement:
+`docs/workflows/WF-00699-approved-models-to-approved-rating-version.md`, the A1 row (`:41`),
+**replaced**. Replace
+
+```text
+| A1 | Pricing Actuary | `POST /rate-tables/{slug}/seed-from-model` on the AD frequency model — its relativity table becomes the starting rate table, with `seeded_from` recorded. | `03` FR-230 |
+```
+
+with
+
+```text
+| A1 | Pricing Actuary | `POST /rate-tables/{slug}/seed-from-model` on the AD frequency model, naming one Factor — that Factor's relativity table becomes the starting rate table, its one key bound to the Factor by `factor_ref`, with `seeded_from` recorded. *(Clarified <WF date>, `RL-<minted id>` section A: one seed request per Factor, so a model with K categorical factors gives K requests and K tables.)* | `03` FR-230 |
+```
+
+**The contract, corrected at this pass.** The "contract, a breaking change" bullet above
+says the `model-schema` request shape changes and both contracts are regenerated. At
+`65fc6129` neither holds. The seed body is `body: dict[str, Any]`, parsed by `_seed_body`
+(`backend/src/app/api/rate_tables.py:57`, `:120`), so no `model-schema` shape carries it,
+and `generated.json` publishes it as an open object (`"additionalProperties": true`). Adding
+`factor` does not change `generated.json`; `generate-contracts.py --check` must still pass.
+`gi-pricing.yaml` is the hand-authored design stub, which `generate-contracts.py` never
+overwrites (its module docstring), so it gets T8. The break is behavioural: a body without
+`factor` is now refused 422, and the commit message still marks it. Whether the body gains a
+typed `model-schema` shape is not decided by this ruling.
+
+The executor applies each text above byte-for-byte; authorship stays with the decision-maker (document-ids §1.6 FR row; CLAUDE.md §2 one-commit rule; the RL-1296 precedent). Any executor wording is a stop. If a text's find string is not found exactly once, that is a stop too, reported to the lead; the executor does not re-word it.
+
+
 ## What it obliges
 
 - **This commit:** this record only.
@@ -539,17 +755,17 @@ the lead's to order.
     design is the planner's.
   - *(New at the amending pass.)* **Slice 1's `03` §4.8 schema must pass through columns
     outside its declared set** (section E). Without it, no key of any kind is weightable.
-- **FD working id 9786 (owner WK-1178)** builds section A's shape and section D's Factor
+- **FD-1357 (owner WK-1178)** builds section A's shape and section D's Factor
   loading. Until it lands, a seeded table with two or more factors cannot be made. A table
   seeded before `factor_ref` exists stays unbound (FR-4) and must be re-seeded to be
   weighted through a Factor.
-  - *(Noted at the text-fix pass for the fix planner of FD working id 9786; not a defect of this ruling.)*
+  - *(Noted at the text-fix pass for the fix planner of FD-1357; not a defect of this ruling.)*
     `03` §4.2 (`03:334-335`) says `seeded_from` is set only on the first version of a
     lineage, but seeding into an existing table sets it on the appended version
     (`backend/src/app/platform/rate_tables.py:108-111`, `:162`). "A lineage holds one
     Factor" relies on that behaviour, so the fix must settle which of the two is right.
 - **Not decided here.** *(Amended by the amending pass: now filed.)* FR-231's per-cell
-  weight in the diff output is FD working id 9785 (owner WK-673), section F.
+  weight in the diff output is FD-1358 (owner WK-673), section F.
 
 ## Acceptance — the violation that must become detectable
 
@@ -560,7 +776,7 @@ the table's own key declaration.** Each case is shown failing on deliberately br
 - **Seeded and banded, red-first, with two or more factors.** *(Amended by the amending
   pass, audit F1.)* The fixture GLM has at least two categorical Factors: a banding Factor
   and a grouping Factor. It is seeded once per Factor.
-  - On main `101e32dc` the seed raises `KeyError`. That is the red (FD working id 9786).
+  - On main `101e32dc` the seed raises `KeyError`. That is the red (FD-1357).
   - After the fix, the seeds give two one-key tables, each with `factor_ref`.
   - Each table is weighted. Σ exposure per band, and per group, equals a hand-computed
     figure.
@@ -572,13 +788,13 @@ the table's own key declaration.** Each case is shown failing on deliberately br
     With a fallback to an unbound key, the seed succeeds and the test fails;
   - two passed Factors with the same slug;
   - a `factor` that names no relativity entry, including a continuous factor;
-  - a re-seed of a lineage with a different Factor slug.
+  - a re-seed of a lineage with a different Factor slug;
+  - The platform path: a `model.spec.factors` id that does not resolve in the caller's
+    workspace gives `NOT_FOUND` 404.
 - **Re-seed with a newer version of the same Factor is accepted.** *(New at the text-fix
   pass, re-audit A3.)* The lineage gains its next version, and that version's key carries
   `factor_ref` to the newer Factor version. If the slug check compares the whole
   `factor:<slug>@<version>` reference, the seed is refused and the test fails.
-  - The platform path: a `model.spec.factors` id that does not resolve in the caller's
-    workspace gives `NOT_FOUND` 404.
 - **One test per Factor type** that `resolve_factors` implements: identity with a slug that
   differs from its column, banding, grouping, and interaction. Each is weighted equal to a
   hand-computed figure.
