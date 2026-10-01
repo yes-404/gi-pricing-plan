@@ -1,11 +1,11 @@
 ---
 id: RL-9855
 family: ruling
-title: PL-1267 DP-5 decided — a named portfolio joins each key through its bound Factor, its declared Banding or its same-named column, compared in the key's type; the cache key covers the definition
-status: draft                  # RULED 2026-10-01, NOT MINTED — draft until the lead's mint turn (check 33 red by design)
+title: PL-1267 DP-5 decided — a seeded rate table holds one Factor, and a named portfolio joins each key through its bound Factor, its declared Banding or its same-named column; the cache key covers the definition
+status: draft                  # RULED AND AMENDED 2026-10-01, NOT MINTED — draft until the lead's mint turn (check 33 red by design)
 created: 2026-10-01              # the ruling date; first prepared 2026-09-30 (see "How this was ruled")
 owner: decision-maker
-tree: 9b0fb97c9ed1cea743639897351191bc1a862041
+tree: 101e32dc5baf8edeb986063b680ccec31e5ba724
 phase: P2
 work: WK-673
 supersedes: []
@@ -15,7 +15,7 @@ corrects: ~
 relates: [PL-1267, FR-228, FR-230, FR-231, FR-232, RL-1264]
 ---
 
-# RL-9855 — PL-1267 DP-5 decided — a named portfolio joins each key through its bound Factor, its declared Banding or its same-named column, compared in the key's type; the cache key covers the definition
+# RL-9855 — PL-1267 DP-5 decided — a seeded rate table holds one Factor, and a named portfolio joins each key through its bound Factor, its declared Banding or its same-named column; the cache key covers the definition
 
 ## How this was ruled
 
@@ -39,10 +39,35 @@ merge turn.
    - auditor-plans' findings F1–F3 and N1.
 
    That pass was never minted. It set `status: active` on an unminted record.
-3. **This pass** re-verified every premise at origin/main `9b0fb97c`. It **replaces (d) with
-   (e)**, for the reasons under "New at this pass". **The maintainer's decisions in item 2
+3. **The dm-dp5 pass** re-verified every premise at origin/main `9b0fb97c`. It **replaces (d) with
+   (e)**, for the reasons under "New at the dm-dp5 pass". **The maintainer's decisions in item 2
    are kept as they were made.** They are inputs to this ruling, not this role's to reopen,
    and they appear in items 7 and 5 below. `status` goes back to `draft` until the mint.
+4. **An amending pass** by session `dm-9855b` (2026-10-01, from 08:00 BST), at effort
+   `high`: the process command line is `claude --effort high --model opus --name dm-9855b`,
+   and `echo "CLAUDE_EFFORT=$CLAUDE_EFFORT"` printed `CLAUDE_EFFORT=high`. It was opened on
+   the maintainer's raise of 2026-10-01: "F1 breaks the ruling's decisive premise, so the
+   (e)-vs-(d) argument must be re-made against the seeding shape the fix defines." Its input
+   is auditor-rl9855's audit of `9b0fb97c...40153afb`, verdict FINDINGS, adopted by the lead
+   at 07:55:11 BST (findings F1–F5). This pass merged origin/main `101e32dc` (no rebase),
+   re-checked every locator there, and wrote "Amendments by the amending pass" below. **The ruling is
+   still (e).** Its reasons changed: see section C there.
+
+### Premise disclosure — required by the maintainer, 2026-10-01 07:50 BST
+
+This record was set `status: active` before it was minted, and with a different ruling.
+Verified with `git show <commit>:<file>` at each commit of the branch:
+
+- **`d8ec408d` (2026-09-30 10:24:48 BST) to `9bcf8036` (2026-10-01 07:47:17 BST):**
+  `status: active`, with a "Ruled" section headed "DP-5 — option (d)". The session
+  `dm-effort-high` set it so on 30 Sep. `9bcf8036` is `dm-dp5`'s merge of main and did not
+  touch the record, so the `active` status was still there.
+- **`40153afb` (2026-10-01 07:47:53 BST):** `dm-dp5` set `status: draft` and ruled (e).
+
+An unminted record has no id that the gate resolves, and a ruling is not in force until the
+lead mints it. So for those 21 hours the record claimed a standing it did not have, and it
+claimed it for (d). This disclosure is the record of it. The amending pass does not know
+whether any reader acted on that claim.
 
 ## Locators — evidence tree `dd25db94` against origin/main `9b0fb97c`
 
@@ -52,9 +77,14 @@ import line at `:27`, so every later line moves by +1. In `03`, hunks at `:459` 
 (+28) and `:778` (+4) move every later line. `02` moves by +48 before `:2045`. `01`, `06:64`
 and PL-1267 are unchanged. The claim column was re-read at `9b0fb97c`, body and all.
 
+**Re-checked at origin/main `101e32dc` by the amending pass.**
+`git diff --stat 9b0fb97c 101e32dc -- <every file cited here>` prints nothing: no cited file
+changed, so every locator in this record holds at `101e32dc`. The Slice 7 row is corrected
+(audit F5). The rows after the table are new at the amending pass.
+
 | What | At `dd25db94` | At `9b0fb97c` | Claim at `9b0fb97c` |
 |---|---|---|---|
-| PL-1267 premise (k); DP table; DP-5; Slice 7 | `:319`; `:356`; `:362`; `:585-606` | unchanged | holds; DP-5 still "open (decision-maker)" |
+| PL-1267 premise (k); DP table; DP-5; Slice 7 | `:319`; `:356`; `:362`; heading `:584`, body to `:605` | unchanged | holds; DP-5 still "open (decision-maker)". *(Corrected by the amending pass, audit F5: the earlier text gave Slice 7 as `:585-606`.)* |
 | `Weights`, `KeyTuple` (`pricing_core/rate_tables/operations.py`) | `:85`, `:87-88` | unchanged | holds |
 | `_index_rows` | `:322-328` | unchanged | keys are the cells' **stored strings**, exact-matched |
 | `_compute_diff` | `:331-381` | unchanged | holds; and `total_weight` 0 divides by zero (`:370-372`), new below |
@@ -85,7 +115,31 @@ and PL-1267 are unchanged. The claim column was re-read at `9b0fb97c`, body and 
 | `01` owns `DATASET_NOT_VALIDATED`; `02` re-raises it | `:929`; `:2045` | `:929`; `:2093` | `02` +48; holds |
 | `06` Governed Artifact list | `:64` | `:64` | holds; Banding is not on it |
 
-## New at this pass
+**New locators, read at `101e32dc` by the amending pass.** Paths as above unless named.
+
+| What | At `101e32dc` | Claim |
+|---|---|---|
+| `extract_relativity_table` (`operations.py`) | `:142`; the row at `:156` | each row carries **one** factor's key: `{factor: level.level, value_name: …}` |
+| `validate_rate_table` | `:269`; the read at `:289` | reads every declared key from every row: `KeyError` on a second factor (reproduced below) |
+| `seed_from_model` (pure); `_key_domains_of` | `:168`; `:160` | one table, one key per relativity entry; one domain per entry |
+| `GlmFitResult.relativities` (`modelling.py`) | `:1588` | `dict[str, tuple[RelativityLevel, …]]`, keyed by **factor slug**: `_design` iterates `matrix.terms` (`glm.py:247`), whose keys are slugs (`factors.py:86-99`) |
+| `_relativities` (`pricing_core/modelling/glm.py`) | `:922`; loop `:950` | one table per categorical factor; a continuous factor has none |
+| Level labels: `_levels`, `_design` | `glm.py:217`, `:252` | `series.cast(pl.String)`, so a boolean level is `"true"` |
+| `RelativityLevel` | `modelling.py:1530` | per-factor, marginal levels: no joint combinations |
+| `ModelSpecCommon.factors`; `Model.spec` | `modelling.py:842`; `:2057` | `tuple[UUID, …]`: no slug, no version |
+| `Factor.banding_id` | `modelling.py:154` | a banding Factor pins its Banding by id |
+| `resolve_factors` banding; grouping; interaction | `factors.py:190`; `:194`; `_cross` `:246` | calls `apply_banding`; calls `apply_grouping`; crosses the operands' resolved levels |
+| `load_factors` (`backend/src/app/platform/modelling.py`) | `:284` | loads a spec's Factors by id, operands too; a missing id is `NOT_FOUND` |
+| platform `seed_from_model` (`platform/rate_tables.py`) | `:95` | passes no Factors to the pure function |
+| `03` seed route; §5.2 `seed_from_model` | `:783`; `:973-974` | the body names a model only; the signature takes no Factors |
+| `03` §4.2 diff examples | `:304-306` | aggregate only |
+
+**F1 reproduced at the amending pass**, as the audit did, on the row shape and not end-to-end
+through `seed_from_model`. With this worktree's `pricing_core` on the path,
+`validate_rate_table([{"age": "17-20", "relativity": "1.8"}, {"region": "north",
+"relativity": "1.1"}], <keys age, region>, …)` raised `KeyError 'region'`.
+
+## New at the dm-dp5 pass
 
 1. **Model-seeded tables bind no key.** FR-230 seeding is the only path that builds a rate
    table automatically. It writes every key as `type: string, banding_ref: None`
@@ -94,6 +148,15 @@ and PL-1267 are unchanged. The claim column was re-read at `9b0fb97c`, body and 
    holds raw values, never band labels, so nothing matches, and the zero-match refusal is the
    only result. (d) cannot weight the case it was chosen for, on the tables most diffs will
    be about.
+
+   *(Amended by the amending pass, audit F1 and F3.)* The last sentence holds for today's
+   code only, and it was this ruling's decisive argument. Two corrections:
+   - **Multi-factor seeded tables cannot exist today.** Seeding a model with two or more
+     factors raises `KeyError` (FD working id 9786). Every seeded table that exists has one
+     key. The seeded-table shape was therefore undefined; section A defines it.
+   - **The defect is not intrinsic to (d).** Seeding could set `banding_ref`, and (d) would
+     then band the key with `apply_banding`, the same function `resolve_factors` calls
+     (`factors.py:190`). Section C re-makes the argument without this item.
 2. **A spec-vs-code disagreement, ruled here (`CLAUDE.md` §0).**
    - **The spec.** FR-228 says every key is "bound to a Factor or a banded input" (`03:119`).
      `03` §4.2's own example is a seeded table whose key declares `banding_ref`
@@ -111,6 +174,10 @@ and PL-1267 are unchanged. The claim column was re-read at `9b0fb97c`, body and 
      artifact, and it needs no database. It produced the levels that the model's relativities
      carry, and so the levels that seeded cells carry. Its `FactorMatrix` docstring states the
      purpose: "the relativity table weights them by exposure".
+
+   *(Amended by the amending pass.)* Section C weighs each limb. The Grouping and
+   interaction limbs carry the ruling. The renamed-identity limb is weak, because seeding
+   could name an identity key after its source column instead.
 4. **Stored key strings are not canonical.**
    - `_index_rows` matches the cells' stored strings exactly.
    - An import accepts `"03"` for an `int` key and `"True"` for a `bool` key
@@ -139,6 +206,129 @@ and PL-1267 are unchanged. The claim column was re-read at `9b0fb97c`, body and 
    wrong: `:456` is the null refusal, which gives a count. The range refusal is at `:480`,
    and it gives a count and **one** example value.
 
+## Amendments by the amending pass
+
+### A. The seeded-table shape (audit F1): the shape FD working id 9786's fix builds
+
+**Ruled: one table per Factor.** A model with K relativity entries seeds K tables, one per
+seed request. Each seeded table has exactly one key, bound to the Factor its relativities
+came from.
+
+- **The request names the entry.** The body of `POST /api/v1/rate-tables/{slug}/seed-from-model`
+  (`03:783`) gains a required `factor`: the Factor's slug, which is the key of
+  `GlmFitResult.relativities`. One rule for every model, so a one-factor model names its
+  factor too. At `101e32dc` the route's only caller is `backend/tests/test_api_rate_tables.py`
+  (`grep -rln 'seed-from-model\|seedFromModel' frontend/src backend/tests`); the frontend
+  has none.
+- **The key** is `{"name": <factor slug>, "type": "string", "factor_ref": "factor:<slug>@<version>"}`.
+  Its domain is the entry's levels that carry a relativity, as `_key_domains_of` computes it
+  today.
+- **Refused by name, 422 `VALIDATION_FAILED`:** a `factor` that names no relativity entry
+  of the model. A continuous factor is one, because it has no relativity table
+  (`glm.py:950` iterates categorical levels only).
+- **A lineage holds one Factor.** Seeding into an existing table appends its next version
+  (platform `rate_tables.py:95`). If the named Factor's slug differs from the slug the
+  lineage's key is bound to, the seed is refused by name. A newer version of the same
+  Factor is accepted.
+- **An interaction is one entry, so one table.** Its key's levels are the crossed labels
+  `_cross` builds (`factors.py:246`).
+- **No migration.** A seed of two or more factors has never succeeded, so every seeded
+  table that exists already has this shape, less the binding.
+
+**Why one table per Factor.** The lead named two shapes for one table with a key column per
+factor. Both are refused.
+
+| Shape | Against FR-230 | Against FR-228 | Verdict |
+|---|---|---|---|
+| One table, the full cross-product of every factor's levels, each cell Π relativities | Cells grow as the product of the level counts: ten factors of ten levels is 10^10 cells, against FR-232's default row threshold of 250 000. FR-234 requires every combination. One edited relativity changes every cell that holds it, so "how far have we moved from the technical rate?" counts products, not edits. FR-233's "rebase to a chosen base level" has no one factor to rebase. | Each key is bound to a Factor, but no cell value belongs to one Factor. | refused |
+| One table, the model's observed level combinations | The Model holds marginal relativities per factor (`RelativityLevel`), never joint ones. The combinations need the training data at seed time, so seeding stops being a read of the Model. An unseen combination fails FR-234 unless a `default_row` invents its rate. | As above. | refused |
+| **One table per Factor** | FR-230 imports "a GLM's relativity table", and the fit makes one per factor (`_relativities`, `glm.py:922`). A diff against the seed counts edited levels. The product of factors is the algorithm's work: one `table` step per factor (`RatingTableStep`, `rating.py:284-289`). `03` §4.2's own seeded example (`03:284-300`) has one key. | The one key is bound to exactly the Factor its values came from. | **ruled** |
+
+FR-228 still permits a hand-authored table with several keys (FR-232's vehicle × area
+table). This shape binds seeding only.
+
+### B. The cell key tuple
+
+- **For any table (unchanged).** `KeyTuple` (`operations.py:87`): one stored string per
+  declared key, in key-declaration order. `_index_rows` indexes cells by it, and `Weights`
+  is keyed by it (`:90`).
+- **For a seeded table.** The 1-tuple `(level,)`, where `level` is the named entry's
+  `RelativityLevel.level`. That string is the Factor's resolved value under
+  `cast(pl.String)` (`glm.py:217`, `:252`): a band label, a group label, an interaction's
+  crossed label, or an identity value as Polars renders it (`"true"`, never `"True"`).
+- **The join for a `factor_ref` key** applies the same `cast(pl.String)` to the resolved
+  frame column and compares exactly. This is Ruled item 2's "comparison in the key's type"
+  for a `string` key, and it is how the stored strings were made.
+
+### C. The (e)-versus-(d) argument, re-made against this shape
+
+Under A, a seeded table has one key, bound to one Factor. Take (d) together with a seeding
+fix that sets `banding_ref`, and test it on each Factor type:
+
+- **Banding: (d) suffices.** Seeding could set `banding_ref` to the Banding the Factor pins
+  (`Factor.banding_id`). (d) then bands the Banding's `column` with `apply_banding`, the
+  function `resolve_factors` calls (`factors.py:190`). The labels agree. **"(d) cannot weight
+  a seeded table" described today's code, not (d). It is withdrawn as a reason for (e).**
+- **Identity: (d) suffices** if seeding names the key after the source column instead of
+  the slug. Under A no two keys share a table, so the names cannot collide. The cost is that
+  the binding becomes a coincidence of names. FR-228 says "bound", and `03` §4.2 names its
+  key `driver_age_band`, which is not a column. This is a weak reason for (e), not a
+  decisive one.
+- **Grouping: (d) cannot.** A key has no field for a Grouping. Adding one is a
+  `grouping_ref`.
+- **Interaction: (d) cannot.** The level is the operands' levels crossed, and each operand
+  is banded, grouped or raw (`_cross`, `factors.py:246`). Covering it puts the operand list,
+  and each operand's transformation, on the key.
+
+So (d), widened to cover what seeding produces, restates the Factor on the key:
+`banding_ref`, `grouping_ref`, operand refs, a naming rule. That is a second statement of
+the `Factor` shape (`modelling.py:122`), which `CLAUDE.md` §2 forbids ("a shape defined
+twice will diverge"). (e)'s `factor_ref` points at the one statement, and `resolve_factors`
+already resolves every type from it. Groupings (vehicle group, postcode area) and
+interactions are ordinary in UK motor and home rating, so refusing them is not a narrow
+loss.
+
+**Ruling: (e) stands.** It rests on Grouping and interaction keys, and on a declared binding
+for identity keys. The seeded banding case is not one of its reasons.
+
+### D. Factor resolution at seeding (audit F2)
+
+- `ModelSpecCommon.factors` is `tuple[UUID, …]` (`modelling.py:842`). The pure
+  `seed_from_model` takes no database (ADR-703), so it cannot turn a UUID into
+  `factor:slug@version`.
+- **The platform loads the Factors and passes them in.** Platform `seed_from_model`
+  (`rate_tables.py:95`) calls `load_factors` (`platform/modelling.py:284`) with
+  `model.spec.factors`, under the caller's workspace. A missing id is `load_factors`'s
+  `NOT_FOUND`, never an empty list.
+- **The pure signature** gains `factor: str` and `factors: Sequence[Factor]`. It takes the
+  passed Factor whose slug equals `factor`, and sets `factor_ref` from its slug and version.
+- **Refused by name, 422:** a relativity entry with no Factor of that slug among those
+  passed, and two passed Factors with that slug.
+
+### E. Two rulings the audit found missing (audit F4)
+
+- **Null exposure is refused.** A null in the exposure column gives 422
+  `VALIDATION_FAILED`, naming the column and the count of null rows. It is not read as 0:
+  a weight read as 0 makes a figure smaller and says nothing. This joins Ruled item 3.
+- **A null resolved key** maps to no cell, unless the Factor's or Banding's own null policy
+  refuses it first (`bandings.py:456`). Its exposure counts in Ruled item 4's total, not in
+  its matched figure.
+- **The portfolio-frame premise.** Every branch of Ruled item 2, and (a) and (d) as well,
+  needs the frame to carry each Factor's and Banding's source columns under the names the
+  model's Dataset uses (`Factor.source_columns`). `03` §4.8's schema is PL-1267 Slice 1's,
+  and Slice 2's reader reads it. **That schema must let columns outside its declared set
+  pass through.** A reader that keeps only the declared columns makes every bound key fail
+  with "source column absent". This is a dependency on Slice 1, reported to the lead.
+  PL-1267 is not edited.
+
+### F. FR-231's per-cell weight (FD working id 9785)
+
+This ruling computes a weight per cell and feeds it to the aggregate
+`exposure_weighted_mean_change_pct`. It does **not** deliver FR-231's "exposure weight
+behind each cell" in the diff output. `RateTableDiff` (`rating.py:717-729`) and the spec's
+own examples (`03:304-306`) are aggregate only. That gap predates this ruling. It is FD
+working id 9785, owner WK-673, and its fix is not decided here.
+
 ## Options, re-derived
 
 | | Option | For | Against |
@@ -146,8 +336,8 @@ and PL-1267 are unchanged. The claim column was re-read at `9b0fb97c`, body and 
 | (a) | A `portfolio` parameter. A row maps to a cell by same-named columns. | Explicit, citable, no algorithm | Refuses every derived key: band, group, interaction, renamed identity |
 | (b) | Evaluate the algorithm's `table` step `key_expr` (the plan says "`lookup`", but a `lookup` step feeds reference tables, `rating.py:276-281`) | Honours any derivation | A partial re-rate. The diff depends on an algorithm version that the cache key does not carry. |
 | (c) | A workspace default portfolio | No parameter | The weighting portfolio cannot be cited |
-| (d) | (a), plus `apply_banding` where a key declares `banding_ref` | Covers a hand-authored banded key | Dead on seeded tables (new item 1). Refuses groupings, interactions and renamed identities (new item 3). |
-| **(e)** | (d), plus a key bound to a **Factor** is resolved through that Factor with `resolve_factors` | FR-228's own binding. Covers every factor type a model can carry. Still a join, with no algorithm and no expression evaluator. The labels come from the function that made them. | One optional field on `RateTableKey`, and seeding must set it |
+| (d) | (a), plus `apply_banding` where a key declares `banding_ref` | Covers a hand-authored banded key; with seeding setting `banding_ref`, a seeded banding key too (section C) | Refuses Grouping and interaction keys (section C). An identity key matches only if its name is its column. *(Amended by the amending pass: the earlier cell said "dead on seeded tables", which was today's code, not (d).)* |
+| **(e)** | (d), plus a key bound to a **Factor** is resolved through that Factor with `resolve_factors` | FR-228's own binding. Covers every factor type a model can carry, including Grouping and interaction. Still a join, with no algorithm and no expression evaluator. The labels come from the function that made them. | One optional field on `RateTableKey`. Seeding must set it, so it waits on FD working id 9786's fix and on section D's Factor loading. |
 
 ## Ruled
 
@@ -194,6 +384,7 @@ and PL-1267 are unchanged. The claim column was re-read at `9b0fb97c`, body and 
      - a resolution error: `FactorResolutionError` from a Banding or Grouping policy. The
        response carries its message, which gives the count and the example value;
      - a negative exposure value;
+     - a null exposure value, naming the count (section E, new at the amending pass);
      - **a portfolio whose rows match no cell of the table.**
    - **`NOT_FOUND` 404** for a `factor_ref` or `banding_ref` that does not resolve in the
      caller's workspace. The detail names the key and the ref. This is the form of
@@ -247,20 +438,25 @@ and PL-1267 are unchanged. The claim column was re-read at `9b0fb97c`, body and 
      Factor.
    - **Seeding.** FR-230 seeding sets `factor_ref` on every key to the Factor version that the
      model pins for that relativity entry. A relativity entry with no pinned Factor is
-     refused by name at seeding.
+     refused by name at seeding. *(Amended by the amending pass.)* The seeded table has
+     section A's shape: one table per Factor, one key. The Factors come from section D:
+     the platform loads them and passes them in.
    - **Existing versions** are immutable (FR-4), so they stay unbound. Their derived keys are
      refused under item 3 until the table is re-seeded. No migration rewrites them.
 10. **(b) is not planned.** A key derived by an arbitrary expression is refused by name. If
     such keys turn out to matter, that is a later spec change.
 
-**Why (e).**
+**Why (e).** *(Restated by the amending pass; section C has the argument.)*
 - It keeps everything the planner valued in (a): a citable portfolio, no algorithm, and a
   join.
-- It weights the keys FR-228 says every key is: bound to a Factor or a banded input.
-- It uses the function that produced the levels, so the band and group labels agree by
-  construction, not by convention.
-- (d) is the special case of (e) for a hand-authored banded key. On its own, (d) leaves the
-  FR-230 path, the main origin of rate tables, unweightable.
+- It weights Grouping and interaction keys. (d) cannot weight them without restating the
+  Factor on the key, piece by piece.
+- It makes the binding FR-228 names a declared field, not a coincidence of names.
+- It uses the function that produced the levels, so band and group labels agree by
+  construction.
+- (d) with a seeding fix that sets `banding_ref` would weight a seeded banding key as well
+  as (e) does. That case is not a reason for (e). *(The earlier bullet said (d) "leaves the
+  FR-230 path … unweightable". That held for today's code only, and is withdrawn.)*
 
 ## Spec changes this ruling requires
 
@@ -268,15 +464,33 @@ These are recorded here and **applied by Slice 7's spec-first step** under
 `.claude/skills/spec-change` (PL-1267 Slice 7, "Spec first"). They are not applied in this
 commit, and PL-1267 is not edited.
 
+*(Amended by the amending pass.)* The seeding changes, marked **[seeding]** below, are
+applied instead by FD working id 9786's fix (owner WK-1178), in the same commit as its code
+(`CLAUDE.md` §2: spec, code and tests land as one commit). The `factor_ref` field lands with
+whichever of that fix and Slice 7 comes first, and the other cites it. Which comes first is
+the lead's to order.
+
 - **FR-228, dated clarification.** "Bound to a Factor" is `factor_ref`. "A banded input" is
   `banding_ref`. A key has at most one of them. A key with neither is joined by its name.
-- **FR-230, dated clarification.** Seeding binds each key to the Factor version the model
-  pins.
+- **FR-230, dated clarification [seeding].** A seed request names one Factor. A seeded
+  table holds that Factor's relativities, with one key bound to that Factor's version as
+  the model pins it (section A). A lineage holds one Factor.
 - **FR-231, dated clarification.** The weight is Σ portfolio exposure per cell, under item 2's
   mapping, from a named `validated` portfolio Dataset Version. Coverage is reported. A
-  portfolio that matches no cell is refused.
+  portfolio that matches no cell is refused. *(Amended by the amending pass.)* The
+  clarification says how the weight is **computed** and that it feeds the aggregate mean.
+  It must not say the diff shows the weight per cell: that is FD working id 9785 (owner
+  WK-673), open.
 - **`03` §4.2.** The `RateTable` shape gains `factor_ref`. `RateTableDiff` gains the two
   coverage figures. Both go through `model-schema` and the contract regeneration.
+- **`03` §4.2's seeded example (`03:284-300`) [seeding].** *(New at the amending pass, audit
+  F3.)* It is a seeded table, so its key carries `factor_ref`, names the Factor's slug, and
+  has no `banding_ref`; its rows use that key name. The example stays a one-key table.
+- **`03` §5.1, the seed route (`:783`) [seeding].** *(New at the amending pass.)* The body
+  gains the required `factor`. The row names the 422 refusals of sections A and D and
+  `load_factors`'s 404.
+- **`03` §5.2, `seed_from_model` (`:973-974`) [seeding].** *(New at the amending pass.)* The
+  signature gains `factor: str` and `factors: Sequence[Factor]` (section D).
 - **`03` §5.1, the diff row (`:785`).** Add the `portfolio` parameter, the 403, 404, 409 and
   422 refusals, and the 202 path's carriage of the parameter.
 - **`03` §5.1, the owned codes (`:807-821`).** Add `DATASET_NOT_VALIDATED`, marked "(re-raised from
@@ -290,11 +504,14 @@ commit, and PL-1267 is not edited.
   - Slice 7's scope gains items 3–5, 8 and 9.
   - **The seeding limb of item 9 may be cut as its own process-slice before Slice 7.** Slice
     design is the planner's.
-- **Not decided here. Reported to the lead.**
-  - FR-231 says the diff shows "the exposure weight behind each **cell**".
-  - `RateTableDiff` is aggregate only (`rating.py`, `class RateTableDiff`): it has no
-    per-cell rows. Per-cell output is a question about how FR-231 is delivered, not about
-    how a row maps to a cell.
+  - *(New at the amending pass.)* **Slice 1's `03` §4.8 schema must pass through columns
+    outside its declared set** (section E). Without it, no key of any kind is weightable.
+- **FD working id 9786 (owner WK-1178)** builds section A's shape and section D's Factor
+  loading. Until it lands, a seeded table with two or more factors cannot be made. A table
+  seeded before `factor_ref` exists stays unbound (FR-4) and must be re-seeded to be
+  weighted through a Factor.
+- **Not decided here.** *(Amended by the amending pass: now filed.)* FR-231's per-cell
+  weight in the diff output is FD working id 9785 (owner WK-673), section F.
 
 ## Acceptance — the violation that must become detectable
 
@@ -302,9 +519,24 @@ The violation: **a weighted diff whose weights do not come from the named portfo
 the table's own key declaration.** Each case is shown failing on deliberately broken input.
 
 **The join**
-- **Seeded and banded, red-first.** A table seeded from a fixture GLM with a banded Factor
-  is weighted. Σ exposure per band equals a hand-computed figure. With seeding's `factor_ref`
-  removed, the request is refused with zero match, and the test fails.
+- **Seeded and banded, red-first, with two or more factors.** *(Amended by the amending
+  pass, audit F1.)* The fixture GLM has at least two categorical Factors: a banding Factor
+  and a grouping Factor. It is seeded once per Factor.
+  - On main `101e32dc` the seed raises `KeyError`. That is the red (FD working id 9786).
+  - After the fix, the seeds give two one-key tables, each with `factor_ref`.
+  - Each table is weighted. Σ exposure per band, and per group, equals a hand-computed
+    figure.
+  - With seeding's `factor_ref` removed, the request is refused with zero match, and the
+    test fails.
+- **Seeding refusals (section A, D).** *(New at the amending pass, audit F2.)* Each is
+  refused by name:
+  - a relativity entry with no Factor of its slug among those passed to the pure function.
+    With a fallback to an unbound key, the seed succeeds and the test fails;
+  - two passed Factors with the same slug;
+  - a `factor` that names no relativity entry, including a continuous factor;
+  - a re-seed of a lineage with a different Factor slug.
+  - The platform path: a `model.spec.factors` id that does not resolve in the caller's
+    workspace gives `NOT_FOUND` 404.
 - **One test per Factor type** that `resolve_factors` implements: identity with a slug that
   differs from its column, banding, grouping, and interaction. Each is weighted equal to a
   hand-computed figure.
@@ -322,6 +554,14 @@ the table's own key declaration.** Each case is shown failing on deliberately br
 - A dangling `factor_ref` or `banding_ref` gives 404 and names the key and the ref. A ref
   that exists only in another workspace gives the same 404.
 - Only zero-weight changed cells: a `None` mean, no 500, and non-zero coverage figures.
+  *(Amended by the amending pass, audit F4.)* With the zero-weight exclusion removed, the
+  division at `operations.py:370-372` raises, the route answers 500, and the test fails.
+- *(New at the amending pass, audit F4.)* A null exposure value gives 422 and names the
+  column and the null count. With nulls read as 0, a figure is served and the test fails.
+- *(New at the amending pass, audit F4.)* **The frame premise.** A portfolio whose Factor
+  source column is outside `03` §4.8's declared set is read through Slice 2's reader, and the
+  Factor resolves it. With the reader keeping only the declared columns, the request is
+  refused "source column absent" and the test fails.
 - A matched portfolio with no changed cell: a `None` mean, non-zero matched exposure, not
   refused.
 - The coverage figures equal the fixture's total and matched exposure.
@@ -349,3 +589,10 @@ the table's own key declaration.** Each case is shown failing on deliberately br
 - A refused portfolio on a parquet version gives the refusal and **no Job row**.
 - An accepted one gives a Job whose result equals the 200 path's weighted figure on the
   rows-stored twin.
+- *(New at the amending pass, audit F4.)* A rating-only caller with a `portfolio` on a
+  parquet version gets 403 and **no Job row**.
+- *(New at the amending pass, audit F4.)* A portfolio archived after submit and before the
+  worker runs fails the Job with `DATASET_NOT_VALIDATED`. With the worker's re-check
+  removed, the Job succeeds and the test fails.
+- *(New at the amending pass, audit F4.)* A dangling `factor_ref` or `banding_ref` on a
+  parquet version fails the Job with `NOT_FOUND`, naming the key and the ref.
