@@ -7,7 +7,7 @@ created: 2026-10-01
 owner: auditor
 tree: 08990db3ee7bcf950ea7cbfd8edd5e5f7d129d4f
 corrected_by: []
-relates: [WK-1178, FR-212, FR-214, FD-9773]
+relates: [WK-1178, FR-212, FR-214]
 ---
 
 # FD-9772 — the spec's artifact examples are never validated against `model-schema`
@@ -132,7 +132,7 @@ again with nothing red.
 
 **Severity: MEDIUM; owner WK-1178.** Not LOW: the spec is the contract the code is written against (`CLAUDE.md` §2), and
 10 of the 22 checkable examples (45%) disagree with `model-schema`, each an unresolved `CLAUDE.md` §0 spec/code
-disagreement. Not HIGH: they are loud (a copied example is refused, not mispriced); the silent case is `FD 9773`'s
+disagreement. Not HIGH: they are loud (a copied example is refused, not mispriced); the silent case belongs to `FD 9773`
 (working id).
 
 **Discharge, all of:**
