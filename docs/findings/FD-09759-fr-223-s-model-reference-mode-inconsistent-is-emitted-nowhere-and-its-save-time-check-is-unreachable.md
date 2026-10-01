@@ -14,7 +14,7 @@ relates: [FR-223, FR-222, FR-240, WK-675, WK-1178]
 
 ## Finding
 
-**Severity: LOW. Decided by the maintainer, 2026-10-01, received by the lead before 10:23 BST (the maintainer's entry), verbatim:**
+**Severity: LOW. Decided by the maintainer, 2026-10-01, received by the lead before 10:23 BST (the maintainer's entry headed "2026-10-01 10:22:24 BST"), verbatim:**
 
 > FD 9759: LOW. The invariant IS enforced (it raises at compile), so nothing inconsistent compiles; the defect is the error contract (generic BUNDLE_COMPILE_FAILED) plus an unreachable 'at save'. Loud, not a mispricing.
 > Discharge, all of: (1) a DM rules FR-223's check point (compile + the RL 9767 validate route vs 'save'), verbatim text, recording which side was wrong; (2) a typed error mapped to MODEL_REFERENCE_MODE_INCONSISTENT at compile AND in the validate route, red first; (3) a listed, counted sweep of bare ValueError raises in ALGORITHM_CHECKS / compile_bundle so no other check maps to the generic code.
@@ -75,5 +75,11 @@ all three of the maintainer's items: (1) a decision-maker rules FR-223's check p
 was wrong (item 5 of the evidence is the spec-side gap); (2) a typed error mapped to `MODEL_REFERENCE_MODE_INCONSISTENT` at
 compile and in the validate route, red first, asserting the code and not only the message; (3) a listed, counted sweep of bare
 `ValueError` raises in `ALGORITHM_CHECKS` and `compile_bundle`, so no other check maps to the generic code.
+
+**Limb (2) amended 2026-10-01 10:30 BST** by the maintainer, `to-lead.md` entry headed "2026-10-01 10:30:00 BST — ACCEPTANCE:
+RL 9770 (NFR-490's statistic = p99) as the spec interpretation; FD 9759 limb (2) discharged at the compile site alone; #1060
+audit noted": limb (2) is discharged by the compile-site typed error alone; the validate-route clause falls away, because that
+route has no rating version, hence no `model_reference_mode` (RL 9758 and RL 9767 (working ids) agree). This supersedes "...
+at compile AND in the validate route" above, which is kept as written.
 
 Filed 2026-10-01 as working id 9759.
