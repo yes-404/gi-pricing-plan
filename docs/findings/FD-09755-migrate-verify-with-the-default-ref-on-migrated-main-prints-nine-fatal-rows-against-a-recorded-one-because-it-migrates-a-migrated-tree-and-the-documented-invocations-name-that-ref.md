@@ -1,0 +1,129 @@
+---
+id: FD-9755
+family: finding
+title: migrate --verify with the default ref on migrated main prints nine fatal rows against a recorded one, because it migrates a migrated tree, and the documented invocations name that ref
+status: active
+created: 2026-10-01
+owner: auditor
+tree: 1dd5e264195677b4a13268b80ac8673c2c027135
+corrected_by: []
+relates: [WK-1178, RL-1043, RL-1045, RL-1046, CR-1063, FD-1154]
+---
+
+# FD-9755 (working id) — `migrate --verify --ref HEAD` on migrated main is a false nine-row red
+
+**Filed** by auditor-mv at the maintainer's request of 2026-10-01 (received 10:24 BST). `tree:` is
+`origin/main` = `1dd5e264195677b4a13268b80ac8673c2c027135`, the tree every figure below was
+measured on unless a row says otherwise. The id is a working id until the lead mints it.
+
+## Finding
+
+> "on main itself the instrument prints '9 fatal row(s) against a recorded 1. This change MOVED A
+> ROW', with REGRESSION (a), (d1), (d5), (f) plus 4 DISCLOSE→FAIL … Is that tracked …? If not,
+> it's a standing-FAIL hiding the next regression."
+
+**Reproduced exactly, and it is not a regression on main.** Nothing in main's history turned a row. The
+default invocation migrates a tree the migration has already migrated, so the instrument's control tree
+equals its migrated tree and every row that reads "unchanged" reads as a regression. The same tool, on the
+same main, with the ref the CI step uses, prints `UNCHANGED: 1 fatal row(s)` and exits 1 — the recorded standing red.
+**The defect that remains is that the invocations the repository documents name the wrong ref on a migrated
+checkout**, and the instrument gives no warning.
+
+**Was it already tracked?** The mechanism is recorded; the documented-invocation defect is not.
+`grep -rn -E "MOVED A ROW|SET CHANGE \(9\)" docs/findings docs/rulings docs/closures` finds the nine-row output only
+in `CR-1063` §2 (CI run `35261236904`, head `323b523`) and `CR-1064` (the table row at line 412). The fix landed in
+`.github/workflows/docs.yml` (the `doc-id migrate --verify` step: on a migrated checkout, `--ref` is
+`delivery-process.core.json` `meta.verified_against_tree`, `--record-ref HEAD`). No `FD-` or `RL-` covers the
+local and documented forms. `grep -n -E "migrate --verify" .claude/skills/dev-commands/SKILL.md
+docs/process/delivery-process.md docs/process/delivery-process.core.json` shows all three give `--ref` as
+omitted (`<root>`) or `--ref HEAD`.
+
+## Evidence
+
+### What the instrument is
+
+`python3 scripts/doc-id.py migrate --verify [SNAPSHOT] [--ref REF] [--record-ref REF]` (RL-1043 §1). It
+`git archive`s `--ref` into a control tree, runs `migrate()` on a copy, and computes RFC-937 §7 rows (a)–(i) with
+a predicate each, plus the §7(f) baseline tree at `8f5d57d`. It compares the verdict set against
+`_docverify.EXPECTED_VERDICTS` (exit 0 green, 1 the recorded standing red unchanged, 3 a moved set, 2 a refusal).
+Rows that fail here: **(a)** zero `none` family over `docs/`; **(d1)** no `NT-nnnn`; **(d5)** no `Ruling n`;
+**(f)** `VR-DST-1` count unchanged across the migration; **(d4/d8/d9/d10)** disclosed legacy-id classes.
+All of them assert that the migration *removed* legacy forms, which is only measurable if `--ref` is a
+tree that still has them.
+
+### Rows at main (maintainer's invocation)
+
+Command: `python3 scripts/doc-id.py migrate --verify <empty dir> --ref HEAD` (record ref defaults to `--ref`,
+so also HEAD), on `1dd5e264`, `nice -n 10`, `POLARS_MAX_THREADS=4`; **exit 3**, 2m12s.
+
+| Row | Recorded | At main, `--ref HEAD` | Why |
+|---|---|---|---|
+| (a) | PASS | FAIL | control `none=0 of 694`; "the classifier cannot be shown to produce a `none`" |
+| (d1) | PASS | FAIL | `NT-\d{4}`: migrated 6 lines / 5 files, control 6 / 5 — INERT, control equals migrated |
+| (d5) | PASS | FAIL | `Ruling \d+`: migrated 9 / 6, control 9 / 6 — INERT |
+| (f) | PASS | FAIL | `VR-DST-1`: control 156 / 42 files, migrated 152 / 41, residual −4 (4 hits are `docs/INDEX.md`, generated, excluded) |
+| (d4), (d8), (d9), (d10) | DISCLOSE | FAIL | legacy-form hits in files the W37-11 record does not name (RESIDUE CEILING block of the run) |
+| (h1) | DISCLOSE | PASS | the one PROGRESS |
+| (g) | FAIL | FAIL | the recorded standing red, unchanged |
+
+Plus a `W37-11 RESIDUE CEILING (97)` block with 50 `REGRESSION (residue exceeds W37-11 ceiling)` lines
+(e.g. `scripts/doc-id.py` (d10) 44 against a ceiling of 15) and many `PROGRESSED` lines.
+
+### Where each row turned — bisect
+
+The variable is the corpus ref, not the tool: every run below uses main's `scripts/doc-id.py` at
+`1dd5e264` and `--record-ref HEAD`. The first-parent range `8f5d57d..origin/main` is 421 commits; the
+migration is atomic, so the bisect needed only the commit that introduced `docs/INDEX.md` and
+`docs/REDIRECTS.csv` (the sentinel `audit-docs.py` `migrated_tree()` and `docs.yml` use):
+`git log --first-parent --diff-filter=A -- docs/REDIRECTS.csv` returns one commit.
+
+| `--ref` | Result |
+|---|---|
+| `0651c1e2` (parent, un-migrated) | exit 1; `UNCHANGED: 1 fatal row(s)`; only (g) fails |
+| `71f5a220` (the migration) | exit 3; `SET CHANGE (9)`: **(a), (d1), (d5), (f) PASS→FAIL; (d4), (d8), (d9), (d10) DISCLOSE→FAIL** |
+| `0651c1e265648cbd3918adfc729ad965b83b1e0b` = `meta.verified_against_tree`, as `docs.yml` passes it, run from main | exit 1; `UNCHANGED: 1 fatal row(s)`; (g) only; no residue block |
+
+**First bad commit for every one of the eight rows, (a) and (f) included: `71f5a220`**,
+`refactor(doc-id): W37-6 run 2 — the NT-0019/RFC-937 migration of the documentation corpus` (2026-09-17 21:03:42 BST),
+the commit that landed the migrated corpus. Parent `0651c1e2` is clean. They are adjacent in the first-parent
+chain, so no further bisection exists. The rows "turned" because the corpus became migrated, which is the
+instrument's input, not a regression in main.
+
+## Why this matters
+
+1. **The documented forms are wrong on every migrated checkout.** `dev-commands` (`migrate --verify <root>`, lines
+   273 and 788–791) gives no `--ref`; `delivery-process.md` §11a ("`--verify <tmpdir> --ref HEAD` before its PR
+   is opened, read row (a)") and `delivery-process.core.json:477` give `--ref HEAD`. §11a was written 2026-09-03 for
+   an un-migrated tree. After `71f5a220` an author who follows it reads row (a) as FAIL — the row §11a tells them to read.
+2. **A standing nine-row red hides a real one.** Once an author learns that "main prints nine rows", a genuine
+   (a) or (f) regression prints the same lines among those nine; exit 3 carries no information. The
+   recorded standing red (one row, (g)) is only visible in the pinned-ref form.
+3. **The pinned form cannot see a regression in the migrated tree.** `docs.yml`'s form verifies this checkout's
+   *tool* against the pre-migration base. It proves the tool, not today's corpus; (a) and (f) on today's corpus
+   are `doc-id.py check` and the tool's own checks. Whether row (f) should have a live-tree counterpart is for the
+   decision-maker.
+4. **The instrument does not detect the case.** On a migrated checkout (`docs/INDEX.md` + `docs/REDIRECTS.csv`) it
+   runs the full migration over a migrated archive and prints no migrated-checkout notice in the runs above; its own output says "control has zero
+   `none` too" and "INERT: control equals migrated", per row, and only the reader joins those. `FD-1154`
+   records the same key's two meanings.
+
+## Severity (proposed; the maintainer's)
+
+**MEDIUM.** Nothing is mispriced and CI is correct. It is not LOW because the only documented local procedure
+produces a false fatal result on every migrated checkout, and the maintainer reached it unprompted on main. It
+is not HIGH because the gate (`docs.yml`) uses the right ref, so no regression passes unseen today.
+
+## Disposition
+
+Options, for the decision-maker, not a pick: (i) make `--verify` on a migrated checkout default `--ref` to
+`meta.verified_against_tree` (as `docs.yml` does) or refuse with exit 2 naming it; (ii) amend the three
+documented forms to the CI form; (iii) re-record `EXPECTED_VERDICTS` — **not** advised, since the nine-row set is
+produced by migrating a migrated tree and would record the artefact; (iv) retire rows (a), (d1), (d5), (f) for
+migrated trees and keep them against the pinned base. Re-record versus retire is the decision-maker's.
+
+**Owner: WK-1178.**
+
+## WK-1178 backlog (separate, one line)
+
+`dev-commands`' `migrate --verify <root>` reads as a repo root; `<root>` must be a new or empty snapshot dir
+outside any work tree, or omitted (a real checkout is refused, exit 2, as the maintainer found).
