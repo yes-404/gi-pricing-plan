@@ -598,8 +598,13 @@ with
 ```
 
 **T5 — `03` §4.2, the `factor_ref` note, in the same commit as T1.** Placement: a new
-blockquote paragraph **inserted** after the line `Values are stored as decimal strings,
-never JSON floats (R2).` and one blank line, before the `storage` note.
+blockquote paragraph **inserted** after the line below (one line in the spec,
+`docs/specs/03-rating-engine.md:310` at `origin/main` `65fc6129`; it occurs exactly once in
+the file) and one blank line, before the `storage` note.
+
+```text
+Values are stored as decimal strings, never JSON floats (R2).
+```
 
 ```text
 > **`factor_ref` added <first date> (`RL-<minted id>`, FR-228).** A key's `factor_ref`
