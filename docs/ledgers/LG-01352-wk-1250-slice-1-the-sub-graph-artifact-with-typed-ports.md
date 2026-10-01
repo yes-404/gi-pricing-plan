@@ -351,7 +351,7 @@ half on the same head: install, `generate:api`, `lint`, `type-check`, `build`, `
   hyphen is written U+2011, the non-breaking hyphen, because check 32 reads every `LG` plus ASCII hyphen
   plus number token, in prose or in a fence, and the first-written form no longer resolves). The mint commit re-pointed it to "They pass once this ledger is
   minted (it was working id 9994 then)." because the ledger's own working id had become `LG-1352` and
-  `scripts/audit-docs.py` check 32 refuses an `LG-9994` token that no longer resolves in `docs/INDEX.md`.
+  `scripts/audit-docs.py` check 32 refuses a draft-id token of that form that no longer resolves in `docs/INDEX.md`.
   The lead rules this the permitted in-batch re-point of a record's own working id at its minting commit.
   Nothing else in the earlier entries changed.
 - **`LOKY_MAX_CPU_COUNT`.** Gate runs 1 to 4 each used `LOKY_MAX_CPU_COUNT=4`: it is line 1 of the gate
