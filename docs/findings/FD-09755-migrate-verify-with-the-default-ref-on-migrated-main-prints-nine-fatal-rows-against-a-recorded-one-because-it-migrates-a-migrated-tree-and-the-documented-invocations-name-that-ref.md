@@ -84,7 +84,7 @@ migration is atomic, so the bisect needed only the commit that introduced `docs/
 | `0651c1e265648cbd3918adfc729ad965b83b1e0b` = `meta.verified_against_tree`, as `docs.yml` passes it, run from main | exit 1; `UNCHANGED: 1 fatal row(s)`; (g) only; no residue block |
 
 **First bad commit for every one of the eight rows, (a) and (f) included: `71f5a220`**,
-`refactor(doc-id): W37-6 run 2 — the NT-0019/RFC-937 migration of the documentation corpus` (2026-09-17 21:03:42 BST),
+the W37-6 run 2 migration commit (2026-09-17 21:03:42 BST; title quote removed 2026-10-01 11:18 BST: it carried a legacy id that check 36 flags; the record is unminted, so this is authoring),
 the commit that landed the migrated corpus. Parent `0651c1e2` is clean. They are adjacent in the first-parent
 chain, so no further bisection exists. The rows "turned" because the corpus became migrated, which is the
 instrument's input, not a regression in main.
