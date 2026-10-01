@@ -188,6 +188,38 @@ the class from `exc.errors()` (cycle, then unresolved, then fall-through) and ne
 `test_rating_algorithms.py` (six tests, the four characterisation cases and the two existing),
 `test_sub_graphs_api.py` and `test_sub_graphs_service.py`. No other caller matches the message text.
 
+### Task 8 — gate, run 1 (head `a0c0a57a44003e5227fe604eaf272ca1da41dbab`)
+
+Clean tree (`git status --porcelain` empty), `ruff check --no-cache .` and `mypy --no-incremental` clean
+beforehand; wrapper verbatim from `.claude/skills/dev-commands/SKILL.md` plus `LOKY_MAX_CPU_COUNT=4`, in a
+`timeout 3300` shell, foreground-waited. Start 23:47:07 BST, end 00:09:11 BST. Start: `uptime` load 0.88
+1.94 2.86, `free -h` 21Gi free of 31Gi; end: load 1.31 2.05 2.29, 19Gi free. Other holder: `flock -n` on
+`gate-1` and `gate-2` both free before the start. Stage table:
+
+| stage | result |
+|---|---|
+| ruff | pass |
+| mypy | pass |
+| import_linter | pass |
+| audit_docs | FAIL (check 31 only: working id 9994 gap, expected until minted) |
+| req_coverage | pass |
+| contracts | pass |
+| pytest | FAIL: 17 failed, 4420 passed, 3 skipped in 1310.35s (baseline 1469.6s) |
+
+Of the 17 failures, 14 are tests that assert `audit-docs.py` / `doc-id.py` exit 0 on the real tree and
+fail on that same check 31 (`test_audit_docs_ids`, `test_doc_index`, `test_register_lint`,
+`test_register_owed`, `test_repository_invariants`, `test_audit_docs_process_core_digest`,
+`test_audit_docs_w37_11_ceiling`, `test_audit_docs_finding_citations`). **Three were real regressions of
+this slice, found by the gate**, fixed in the next commit (existing-test registry lines, plan gap 3):
+- `test_error_sinks`: `_SINKS` keyed the `str(exc)` sink on `_parse_algorithm`; the extraction moved it to
+  `graph_validation_error`, and Task 7 removed the keyword read, so the count is 1.
+- `test_worker_raise_sites`: `_SITES` keyed the dynamic raise on `_issues_to_error`; it moved to
+  `raise_first_issue`.
+- `test_rating_committed_strings`: the scan read the `title` of the `expr`/`clamp_bounds` property
+  definitions in the new generated schemas as authored strings; `docs/contracts/openapi/generated.json`
+  and `docs/contracts/schemas/generated/` join `_SKIP_PREFIXES`.
+Those three files pass (10 passed). A new head needs a new grant (S-13).
+
 ## Deviations from PL-1325, each named
 
 1. **Decimal example** (Task 1): the §4.11 example declares the output port type `relativity`, not
@@ -212,6 +244,9 @@ the class from `exc.errors()` (cycle, then unresolved, then fall-through) and ne
    the guard, and one test (`test_a_compatible_fragment_output_port_raises_no_issue`) whose expression
    step has `result_type="decimal"` against a `money_minor` port — a test fixture, which the
    maintainer's 22:43:26 BST entry excludes ("no committed algorithm outside tests").
+7. **Three existing test registries** (plan gap 3, found by the gate): `backend/tests/test_error_sinks.py`
+   (`_SINKS` key renamed), `backend/tests/test_worker_raise_sites.py` (`_SITES` key renamed),
+   `packages/pricing-core/tests/test_rating_committed_strings.py` (`_SKIP_PREFIXES` appended).
 
 ## PRs
 

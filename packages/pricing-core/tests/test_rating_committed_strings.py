@@ -33,6 +33,9 @@ _SKIP_PREFIXES = (
     "node_modules/", "docs/INDEX.md", "frontend/src/api/generated", "uv.lock", "docs/plans/",
     "docs/rulings/", "docs/findings/", "docs/ledgers/", "docs/research/", "docs/rfcs/",
     "docs/closures/",
+    # Generated from `model-schema`: a JSON Schema property named `expr` or `clamp_bounds` is a
+    # definition whose `title` is not an authored string (WK-1250 Slice 1).
+    "docs/contracts/openapi/generated.json", "docs/contracts/schemas/generated/",
 )
 #: `02` §4.6 data-preparation expressions, not rating strings.
 _DATA_PREPARATION = (

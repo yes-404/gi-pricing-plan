@@ -149,7 +149,7 @@ _SITES: dict[_Key, tuple[frozenset[str], str]] = {
         frozenset({"slug"}),
         "an artifact slug; not a per-quote miss",
     ),
-    ("backend/src/app/platform/rating_algorithms.py", "_issues_to_error", _DYNAMIC): (
+    ("backend/src/app/platform/rating_algorithms.py", "raise_first_issue", _DYNAMIC): (
         frozenset({"issue.code.replace('_', ' ').title()", "issue.message"}),
         "save-time graph-validation issues about an algorithm's own nodes; no quote is involved",
     ),
