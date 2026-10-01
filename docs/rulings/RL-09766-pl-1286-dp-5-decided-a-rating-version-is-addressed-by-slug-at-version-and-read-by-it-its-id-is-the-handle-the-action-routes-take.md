@@ -97,8 +97,9 @@ answer through S2's routes.
 **(a).** A Rating Version is **addressed** by its `slug@version` and read by it.
 `GET /api/v1/rating-versions/{slug}@{version}` returns the `RatingVersion`, whose `id` is the
 handle the existing `{id}` action routes take. In `/rating/:slug/v/:version/…`, the slug and
-version are the **Rating Version's own**, never its algorithm's. The existing by-id read is
-declared in `03` §5.1 beside it, so the spec states how the two forms meet.
+version are the **Rating Version's own**, never its algorithm's. The existing by-id read gets
+its §5.1 row from RL 9907 (working id) item 4, not from this record. *(Amended 2026-10-01
+10:23 BST; see the amendment section.)*
 
 **Why.** (a) is the form `03` §5.1 already uses for every other versioned artifact. It keeps
 human-readable URLs, which `00` §5.6 already declares. It is built on mechanisms that exist:
@@ -111,7 +112,7 @@ client.
 | Method, path | Request body | 2xx response | Permission |
 |---|---|---|---|
 | `GET /api/v1/rating-versions/{slug}@{version}` | none (path only: `slug: str`, `version: int`) | **200** `RatingVersion` (`packages/model-schema/src/model_schema/rating.py:137`) | `rating:read` |
-| `GET /api/v1/rating-versions/{id}` *(exists; declared, not changed)* | none | **200** `RatingVersion` (same) | `rating:read` |
+| `GET /api/v1/rating-versions/{id}` *(exists, unchanged; its §5.1 row is RL 9907 (working id)'s)* | none | **200** `RatingVersion` (same) | `rating:read` |
 
 No `dict[str, Any]` appears in either signature. No new model-schema type is needed.
 
@@ -142,14 +143,16 @@ versions and bundles*. **Insert one new row immediately after the row that begin
 | **FR-<new>** | **A Rating Version is addressed by its `slug@version`; its `id` is a handle, not an address.** *(Added <date>, `RL-<this>`, `PL-1286` DP-5.)* The pair `(slug, version)` is unique within a workspace, and every §5.3 view route names a Rating Version by that pair: in `/rating/:slug/v/:version/…`, `:slug` and `:version` are the Rating Version's own `slug` and `version` (§4.3), never its algorithm's, whose version is read from `algorithm_ref`. `GET /api/v1/rating-versions/{slug}@{version}` reads the version by the pair. Its response carries the `id` that the §5.1 routes keyed by `{id}` take, so a view resolves the pair once and then acts by `id`. Both reads, by pair and by `id`, require `rating:read` and answer **404** `NOT_FOUND` for another workspace's version exactly as for one that does not exist. `00` §5.6's routes are unchanged. |
 ```
 
-**T2 — `03` §5.1, two rows.** Placement: the §5.1 table. **Insert these two rows
-immediately after the row that begins `| `POST` | `/api/v1/rating-versions` |`** (`:792`),
-before the `compile` row. Nothing is struck.
+**T2 — `03` §5.1, one row.** *(Amended 2026-10-01 10:23 BST: was two rows.)* Placement:
+the §5.1 table. **Insert this row immediately after the row that begins
+`| `POST` | `/api/v1/rating-versions` |`** (`:792`), before the `compile` row. Nothing is
+struck.
 
 ```text
 | `GET` | `/api/v1/rating-versions/{slug}@{version}` | Read one Rating Version by its `slug@version` (FR-<new>); requires `rating:read`. **200** with a `RatingVersion` (§4.3); 401; 403; **404** `NOT_FOUND` on an unknown version or another workspace's. Registered before the `{id}` read, which would otherwise take the request. **Added <date>** (`RL-<this>`) |
-| `GET` | `/api/v1/rating-versions/{id}` | Read one Rating Version by `id`, the handle the `{id}` routes below take (FR-<new>); requires `rating:read`. **200** with a `RatingVersion` (§4.3); 401; 403; **404** `NOT_FOUND` on an unknown id or another workspace's. Built in Phase 1b (FR-440); declared here <date> (`RL-<this>`) |
 ```
+
+The by-id row is RL 9907 (working id) item 4's; whichever slice applies first adds it with that ruling's text verbatim, and the other adds nothing.
 
 The executor applies each text above byte-for-byte; authorship stays with the decision-maker (document-ids §1.6 FR row; CLAUDE.md §2 one-commit rule; the RL-1296 precedent). Any executor wording is a stop. If a text's anchor row is not found exactly once, that is a stop too, reported to the lead; the executor does not re-word it.
 
@@ -189,3 +192,17 @@ test carries `@pytest.mark.req("FR-<new>")` and is shown red on deliberately bro
 6. **Frontend (FR-25).** One view test (id `FR-<new>` in its name) mounts a
    `/rating/:slug/v/:version/…` route and asserts that the generated client was called with
    the slug and version from the URL.
+
+## Amendment, 2026-10-01 10:23 BST: T2 adds the `slug@version` row only
+
+*By the decision-maker session `dm-675dp56` (effort `medium`), on the lead's order of
+2026-10-01 ~10:22 BST. auditor-1055 found this record CLEAN at `03d838a8`, and reproduced the
+route-order trap: id-first gives 422 `uuid_parsing`, ref-first gives 200.*
+
+RL 9907 (working id) item 4 (#977, ruled 2026-09-30) already adds a §5.1 row for the existing
+`GET /api/v1/rating-versions/{rating_version_id}`. This record's T2 added a second row for
+the same route. **RL 9907 owns that row.** T2 now inserts only the `slug@version` row, and it
+carries the lead's sentence: "The by-id row is RL 9907 (working id) item 4's; whichever slice
+applies first adds it with that ruling's text verbatim, and the other adds nothing." *Ruled*
+and the route table are reworded to match. The ruled option, T1 and the acceptance tests are
+unchanged.
