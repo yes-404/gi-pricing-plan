@@ -3,7 +3,7 @@ id: FD-1349
 family: finding
 title: The contract guard does not compare the objective-certificate check-name enum against the code's check vocabulary
 status: active
-created: 2026-09-30
+created: 2026-10-01
 owner: auditor
 tree: ee5de4438c84cb76ba1343012dcf4bca3444cad7
 corrected_by: []
