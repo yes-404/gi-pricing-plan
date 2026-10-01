@@ -85,8 +85,10 @@ prints nothing, so every premise below holds at both trees.
    `outcome`, `rating_version_ref`, `bundle_hash`, `premium_ladder: list[LadderRung]`,
    `outputs: dict[str, object]`, `decline_reasons`, `trace: Trace | None`, `timing_ms`.
    `SL-1345` (`PL-1348`, WK-674's ladder slice) is `active` and **not merged** at this tree
-   (`git log --oneline 9b0fb97c..101e32dc` shows its activation, `214fd4d7`, and no
-   delivery). It changes `LadderRung` (`03` FR-248's 2026-09-30 amendment: each rung
+   (`git log --oneline -1 214fd4d7` shows its activation, which is an ancestor of
+   `9b0fb97c`; no later commit to `101e32dc` delivers it). *(Corrected at the text-fix
+   pass, audit F1: the command cited here was `git log --oneline 9b0fb97c..101e32dc`, which
+   cannot show `214fd4d7` because that commit is an ancestor of `9b0fb97c`.)* It changes `LadderRung` (`03` FR-248's 2026-09-30 amendment: each rung
    records its unrounded value). `PL-9788` sequences after it.
 7. **The existing behavioural proof.** `backend/tests/test_score.py:341-380`,
    `@pytest.mark.req("NFR-502")`: a `model_construct` result that violates its own types is
@@ -152,15 +154,31 @@ in the executor's words, these five things and nothing more:
 3. The re-measured model-level p99 for each shape DP-A2 names (validate-and-serialise and
    serialise-only), with the tree measured at, beside the 0.070 ms it supersedes as the
    current figure.
-4. The route-level `/score` p99s, base and HEAD, with both trees.
+4. The route-level p99s, base and HEAD, with both trees: `/score`, and `/score/compare`
+   stated as measured, with no new target.
 5. The rule and every budget are unchanged, citing `RL-9783` (re-pointed at mint).
 
-The amendment cites `RL-9783`, not the ledger alone. `/score/compare` is named in clause 1
-because `PL-9788` Acceptance 8 tags its new test `NFR-502`; that tag rests on this clause,
-which makes explicit that the rule's *"scoring endpoint"* covers both routes that serialise a
-trusted `ScoringResult`. This is a clarification of the requirement's scope, not a new
-requirement: `/score/compare` already returns a raw `Response` (`score.py:376`) for the same
-reason.
+The amendment cites `RL-9783`, not the ledger alone.
+
+**Naming `/score/compare` in clause 1 is a dated scope extension of `NFR-502`, not a
+clarification.** *(Corrected at the text-fix pass, audit F2.)* An earlier text of this
+paragraph called it a clarification, on the ground that compare serialises a trusted
+`ScoringResult`. It does not: it serialises a `ScoreComparison` (`score.py:376`). Naming a
+second route widens the requirement, so the scope decision is the maintainer's. The
+maintainer decided it, in the entry headed *"2026-10-01 08:14:25 BST — ruling-audit fixes:
+dm-fixes at MEDIUM agreed; one scope decision (RL 9783 F2); RL 9782 F1 is a likely stop; FD
+9780 MEDIUM confirmed by me"* in the lead's channel:
+
+> *"2026-10-01 — the maintainer (by delegation) accepts extending NFR-502's measured scope
+> to `POST /api/v1/score/compare`. That route serves the same raw `Response` path that PL
+> 9788 adds a documented 200 schema to, so the no-validation claim must be measured on both.
+> This is a scope extension made before the 3 Oct freeze. The budget for compare is stated
+> as measured (no new target invented); a regression is a stop."*
+
+The true reason is the one quoted: compare also returns a raw `Response` built from trusted
+models, so the same rule applies and must be measured. `PL-9788` Acceptance 8 tags its
+compare test `NFR-502`; that tag rests on this extension. The amendment's clause 1 says it
+is a scope extension and cites this record.
 
 ### DP-A2: option (c), both limbs, script inline in the ledger, with these specifications
 
@@ -185,6 +203,10 @@ iterations after 100 discarded warm-up iterations, p99 = the 990th sorted value)
 same harness as `test_score.py:341-380`, 100 warm-up then 1000 timed requests, p99 = the
 990th sorted value. Run it on the **base** tree and on **HEAD**, alternating
 **base, HEAD, base, HEAD, base, HEAD**, so drift falls on both. Quote all six p50/p99/max.
+*(Added at the text-fix pass, on the maintainer's F2 decision.)* Run the same harness, in
+the same alternation, against `/api/v1/score/compare`, with `score_one` returning a
+pre-built Shape T result (compare calls it with `trace=True`, `score.py:362`). Quote those
+six p50/p99/max too. Compare's figure is stated as measured; no target is set for it.
 
 **Limb 3, structural** (the discriminator neither timing limb provides). At HEAD, quote the
 output of a one-liner that prints, for the `/api/v1/score` and `/api/v1/score/compare` POST
@@ -192,11 +214,16 @@ routes of the built app, `route.response_model` and `route.response_field` (both
 expected), and their 200 schemas from `app.openapi()` (a `$ref` each).
 
 **Reading the figures.** No limb fails `NFR-502` on a number: the requirement is a design
-rule, and the 50 ms budget is `NFR-489`'s. The figures are quoted beside 0.070 ms and 50 ms.
+rule, and the budgets are `NFR-489`'s: *"Real-time scoring p99 < 50 ms server-side … with
+one `exact` GBM call (NFR-454). Without a GBM call, p99 < 15 ms."* (`03:1190`). *(Amended at
+the text-fix pass, audit F3.)* Limb 1 measures one component of either path and is quoted
+beside 0.070 ms, 50 ms and 15 ms. Limb 2 stubs `score_one`, so no GBM runs: its figures are
+read beside the 15 ms no-GBM budget, not the 50 ms one. Limb 3 is structural and has no
+budget.
 Two outcomes **stop the slice and go to the lead** before Task 4 is written:
 - limb 3 prints anything other than `None`, `None` and a `$ref` for either route; or
-- HEAD's median route-level p99 exceeds base's median by more than base's own range across
-  its three runs (max p99 minus min p99). That threshold is the measurement's own noise, not
+- for either route, HEAD's median route-level p99 exceeds base's median by more than base's
+  own range across its three runs (max p99 minus min p99). That threshold is the measurement's own noise, not
   a chosen number.
 
 **Script, environment, record.** One script for limbs 1 and 3, one for limb 2, both inline in
@@ -215,8 +242,8 @@ conditions (`uptime`, `free -h`, both `flock -n` slot reads, before and after). 
 - `python3 scripts/audit-docs.py` reports only check 31 (working ids) red while ids are
   unminted.
 
-**DP-A2** — detectable if a limb is skipped or the figures are not the measured ones: the ledger carries 12 limb-1 rows, 6 limb-2 rows
-labelled base/HEAD with both trees, the limb-3 output verbatim, both scripts with sha256
+**DP-A2** — detectable if a limb is skipped or the figures are not the measured ones: the ledger carries 12 limb-1 rows, 12 limb-2 rows
+(6 for `/score`, 6 for `/score/compare`) labelled base/HEAD with both trees, the limb-3 output verbatim, both scripts with sha256
 prefixes, and the before-and-after load readings; and the `NFR-502` amendment's figures
 (DP-A1 clauses 3 and 4) are the medians of those rows.
 
