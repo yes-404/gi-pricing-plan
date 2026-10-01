@@ -24,9 +24,9 @@ Ruled at effort `medium` by the decision-maker session `dm-9789dp`, on the maint
 order of 2026-10-01 ("NOW … medium DM passes for … PL 9789 DP-S3-1..5 (if Kind is
 decision-maker)"). Started 2026-10-01 07:58 BST; evidence read at `origin/main`
 `101e32dc5baf8edeb986063b680ccec31e5ba724`. The plan is PL 9789 (working id) on draft PR
-#1037, branch `wk690-s3-leaf-plan`, head `2323b5447a420e2344c3c6339507795f980b33cb`, file
-`docs/plans/PL-09789-wk-690-slice-3-the-expression-kind-through-the-platform-behind-the-flag-leaf-plan.md`
-(cited below as `PL 9789:<line>` at that head). The plan is frozen by family and is not
+#1037, branch `wk690-s3-leaf-plan`, head `2323b5447a420e2344c3c6339507795f980b33cb`
+(cited below as `PL 9789:<line>` at that head). *(Text-fix pass, audit F4: the plan's file
+path is not cited, because the file is not on main and check 32 cannot resolve it.)* The plan is frozen by family and is not
 edited; every delta is stated here for the dispatch record to carry.
 
 **Kind check.** PL 9789's decision-point table (`PL 9789:330-337`) gives DP-S3-1 to DP-S3-5
@@ -113,12 +113,23 @@ version"); no route is added.
 
 **Why not the plan's (a).** (a) gives create the conjunction (`model:fit` and author) and
 derive the author permission alone. The same principal can then derive an objective they
-could not have created, which is two rules for one act. FR-366's own text settles which
-rule is right: what FR-367 adds is "an *additional* control, never the only one", and its
-first half, "`model:fit` governs Custom Objectives", is not withdrawn. So the author
-permission is added to `model:fit`, never substituted for it. (b) also leaves
+could not have created, which is two rules for one act. **FR-367 is silent on the
+conjunction:** it names the permission an `expression` objective needs, and says nothing
+about whether `model:fit` is still needed with it. The ruling decides it on same-act
+consistency: create and derive are one act, so a principal must not derive what they
+cannot create. Create keeps `model:fit` (its route dependency is not in question), so
+derive keeps it too, and the author permission is added to `model:fit`, never substituted
+for it. **This reading is the ruling's, not the text's.** *(Corrected at the text-fix pass,
+audit F2: this paragraph rested (b) on FR-366's "an *additional* control, never the only
+one". That word is relative to FR-353's submitter-cannot-approve and `02` FR-163's
+non-author Approver, the controls that stood in for a distinct permission. It is not
+relative to `model:fit`, so it does not settle the conjunction.)* (b) also leaves
 `test_deriving_without_model_fit_is_refused` (`backend/tests/test_custom_objectives.py:617`)
 true and unchanged. (c) adds a route `02` §5.1 does not declare.
+
+**Spec change, applied by the executor at Task 3.** *(New at the text-fix pass, audit F2.)*
+FR-367 gets a one-line dated clarification: `custom_objective:author` is required in
+addition to `model:fit`, never instead of it, on create and on derive, citing this ruling.
 
 **Order.** Both permission checks run before the flag is read, so a caller without the
 permission gets 403 whatever the flag, and learns nothing about it. On create, FastAPI's
@@ -142,8 +153,11 @@ the check to a route of its own.
 **Red first.** Two 403 tests for a caller with `model:fit` and without author, on create
 (`kind: expression`) and derive. Both fail at the base **on `["code"]`**, receiving 409
 `OBJECTIVE_KIND_NOT_ENABLED` where 403 is expected (PL 9789 Task 3). A third: a caller with
-author and without `model:fit` gets 403 on both routes. On create, this passes at the base
-by the existing route dependency and stays as the control. A regression test that template
+author and without `model:fit` gets 403 on both routes. This is a **new** test on create
+and on derive. It passes at the base on both, because both routes carry `model:fit` as a
+route dependency, and it stays as the control that guards the conjunction.
+`test_deriving_without_model_fit_is_refused` (`:617`) grants only the auditor role, so it
+cannot see this caller; it stays unchanged. *(Corrected at the text-fix pass, audit F3.)* A regression test that template
 create with `model:fit` alone is 201. And a test that no set in `BUILTIN_ROLES` contains the
 member (FR-367 "not granted by any built-in role").
 
@@ -224,6 +238,11 @@ it in `review` (fails at the base, because it moves to `approved`), and a second
 approves it. Under a policy of two, two approvals leave it in `review`. A `pass` objective
 under a policy of one is approved by one approval (the control).
 
+**§4.2 interaction open: escalated to a decision-maker at high effort (lead, 2026-10-01).**
+*(Text-fix pass, audit F1.)* `06` §4.2's default `ApprovalPolicy` gives `custom_objective` an
+absolute escalation of two Approvers on violated convexity (`docs/specs/06-governance.md:349-351`).
+How that combines with this ruling's policy plus one is not settled by this record.
+
 ### DP-S3-5 — FR-207's two `custom_objective_ref` residuals: **(a), both re-noted to Phase 3, spec change first — the destination subject to the maintainer's line**
 
 **Ruled (a) on the technical question.** The GLM arm's custom objective **is a separate
@@ -247,6 +266,20 @@ accepts the Phase 3 destination: the maintainer's, or the lead's under delegatio
 deferral is in that pattern: Phase 3, spec change first, owner the maintainer, event the P2
 phase closure record, which lists both for P3's first plan.
 
+**The dated line exists.** *(Added at the text-fix pass.)* The maintainer's acceptance, in
+the lead's channel entry headed *"2026-10-01 08:07:02 BST — ACCEPTANCE: RL 9782 DP-S3-5's Phase 3 destination; FILE the quantile-convexity gap as an FD now"*, verbatim:
+
+> *"2026-10-01 — the maintainer (by delegation) accepts Phase 3 as the destination of
+> FR-207's two `custom_objective_ref` residuals (`GlmSpec.custom_objective_ref` and
+> `Model.custom_objective_ref`), as RL 9782 DP-S3-5 (a) rules: the GLM arm's custom
+> objective is a separate, unspecified capability (a `glum` IRLS fit has no path from a
+> per-observation loss in `02` §4.6's grammar), and the `Model` field moves with it to avoid
+> a second, lossy source of truth. It follows the RL-1265 pattern, and PL-1268 Slice 3
+> anticipated it ('re-noted'). Conditions: spec change first (FR-207 gets a dated amendment
+> citing RL 9782, with every owner quotation swept); owner the maintainer; listed in the P2
+> phase closure record for P3's first plan. This is a scope move made before the 3 Oct scope
+> freeze."*
+
 **Spec change, applied by the executor at Task 8.** FR-207 gets a dated amendment: both
 `custom_objective_ref` residuals move from WK-690 to Phase 3 as above, citing this ruling.
 The same commit corrects the owner clause wherever FR-207's 2026-08-25 sweep list found it
@@ -267,10 +300,10 @@ their notes; neither is dropped.
 | Ruling | Applied at | Delta from PL 9789's recommendation |
 |---|---|---|
 | DP-S3-1 (a) | Task 6 | Compiles the stored `derived`, never re-derives. The status gate is unchanged (`certified`, `review`, `approved`). The link is read by the certify function |
-| DP-S3-2 (b) | Task 3 | Derive keeps `model:fit` and adds author, where the plan dropped `model:fit`. `:617` is unchanged. Task 3 waits for `PL-1279`'s parity slice to merge |
+| DP-S3-2 (b) | Task 3 | Derive keeps `model:fit` and adds author, where the plan dropped `model:fit`. `:617` is unchanged; a new author-without-`model:fit` test guards both routes. FR-367 gets a dated clarification. Task 3 waits for `PL-1279`'s parity slice to merge |
 | DP-S3-3 (a) amended | Tasks 4, 5, 7 | The position goes in `errors[0]`, not a problem extension. An underived certify is `VALIDATION_FAILED`, not `OBJECTIVE_NOT_CERTIFIED`. A submit is `OBJECTIVE_NOT_CERTIFIED` only from `draft` |
 | DP-S3-4 (a), both kinds | Task 7 | None. The quantile template is a live instance today, which corrects `PL-1268`'s "first reachable by an `expression` objective" |
-| DP-S3-5 (a) | Task 8 | Task 8 waits for a dated line accepting the Phase 3 destination |
+| DP-S3-5 (a) | Task 8 | The dated line accepting the Phase 3 destination exists (quoted under DP-S3-5); Task 8 quotes it |
 
 The dispatch record carries these deltas against the frozen plan. PL 9789's Acceptance
 items 6, 8 and 9 are read through them.
@@ -286,7 +319,10 @@ on the base (`PL 9789` Acceptance items 6, 8 and 9, read through the deltas abov
 2. **DP-S3-2.** A caller with `model:fit` and without `custom_objective:author` creates
    (`kind: expression`) or derives: the two 403 tests fail on `["code"]` (409
    `OBJECTIVE_KIND_NOT_ENABLED` at the base). A caller with author and without `model:fit`
-   derives: `test_deriving_without_model_fit_is_refused` fails. A built-in role grants the
+   creates or derives: the new author-without-`model:fit` test fails on the route that let
+   it through (green at the base, a control). `test_deriving_without_model_fit_is_refused`
+   (`:617`) grants only the auditor role and is unchanged. *(Corrected at the text-fix
+   pass, audit F3: this item said `:617` fails for that caller, which it cannot see.)* A built-in role grants the
    member: the `BUILTIN_ROLES` test fails.
 3. **DP-S3-3.** A grammar error without its position: the `errors[0]` assertion fails. An
    underived expression enqueues a certify job: the no-job-row assertion fails. A `draft`
