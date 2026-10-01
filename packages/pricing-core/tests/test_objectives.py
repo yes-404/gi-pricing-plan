@@ -943,7 +943,7 @@ def test_template_certificate_unchanged(template: ObjectiveTemplate) -> None:
 
     The reference is `certify_objective`'s own output at `origin/main` 71b67220, on this
     file's `_objective` and `_sampling`, with the smoke fit's elapsed seconds normalised:
-    the ledger (LG-9979, Task 5) records how it was produced.
+    the ledger (LG-1350, Task 5) records how it was produced.
     """
     result = certify_objective(_objective(template), sampling=_sampling(template))
     expected = _BEFORE[template.value]

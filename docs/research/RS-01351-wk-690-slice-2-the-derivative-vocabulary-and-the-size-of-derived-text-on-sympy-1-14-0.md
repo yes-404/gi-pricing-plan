@@ -1,10 +1,10 @@
 ---
-id: RS-9980
+id: RS-1351
 family: research
 kind: spike
 title: WK-690 Slice 2 — the derivative vocabulary and the size of derived text on sympy 1.14.0 (DP-S2-7)
 status: active
-created: 2026-09-30
+created: 2026-10-01
 owner: executor
 tree: 71b672205f7212008d0ff00b5cbc4810b56f12e6
 phase: P2
@@ -13,7 +13,7 @@ corrected_by: []
 relates: [PL-1327, RL-1328, RL-1291]
 ---
 
-# RS-9980 — The derivative vocabulary and the size of derived text
+# RS-1351 — The derivative vocabulary and the size of derived text
 
 ## Question
 

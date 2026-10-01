@@ -1,9 +1,9 @@
 ---
-id: LG-9979
+id: LG-1350
 family: ledger
 title: WK-690 Slice 2 — symbolic derivation, the compilation target and the expression certificate
 status: active
-created: 2026-09-30
+created: 2026-10-01
 owner: executor
 tree: 71b672205f7212008d0ff00b5cbc4810b56f12e6
 phase: P2
@@ -14,11 +14,14 @@ corrected_by: []
 relates: [RL-1328, RL-1265, RL-1289, RL-1291, RL-1292, RL-1293, RL-1263]
 ---
 
-# LG-9979 — WK-690 Slice 2 (SL-1272)
+# LG-1350 — WK-690 Slice 2 (SL-1272)
 
 Executed from `PL-1327`. Branch `sl-1272-symbolic-derivation`, from `origin/main` `1dae2081`, then
 main merged to `71b67220` (#1019, docs only). Working id 9979, reserved by the lead 2026-09-30 22:41 BST;
 minted at the merge turn.
+
+**The mint.** Minted 2026-10-01 as LG-1350 (`python3 scripts/doc-id.py next --ref origin/main` = 1350 at main `7e71b701`, after the mint trains of 13a and 13b); it was filed under working id 9979. Its spike record was filed under working id 9980 and is minted as RS-1351 in the same commit. The entries below that quote check 31's gap `1341 to 9979`, and the sentences naming working ids 9979 and 9980, are numbers as measured at the heads they name and are left as written.
+Both headers' `created:` is the mint date, 2026-10-01, because check 31 requires `created` to be non-decreasing with the number (FD-1349 is 2026-10-01).
 
 ## Tasks
 
