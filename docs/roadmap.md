@@ -1221,6 +1221,24 @@ relates: [FD-1335, FD-1366, PL-1364, PL-1348, SL-1345, RL-1343, RL-1365]
 
 *(Amended before mint, 2026-10-01, by the maintainer's decision, relayed by the lead.)* The guard is now one guard over both 2xx responses and JSON request bodies, folding in `FD-1366` (filed as working id 9779). Each side is shown red first on broken input. Multipart bodies are excluded with a citation. The five untyped request routes are temporary exceptions: four are marked `pending FD-1366 Part B`, and `seed-from-model` is marked `pending FD-1357's fix DP`. No handler outside `score.py` is edited. `FD-1366` Part B types the four existing shapes in a later slice. DP-A1 and DP-A2 are ruled by `RL-1365` (filed as working id 9783). *(Minted 2026-10-01 as SL-1367, filed under working id 9787; its plan is PL-1364, mint batch A.)*
 
+#### SL-9763 — WK-1178 fix slice — FD-1357: multi-factor seeding per RL-1361, typed seed request and 201
+
+```yaml
+id: SL-9763
+family: slice
+title: WK-1178 fix slice — FD-1357, multi-factor seeding per RL-1361, typed seed request and 201
+status: draft                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-01
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 1dd5e264195677b4a13268b80ac8673c2c027135
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1357, RL-1361, PL-1267]
+```
+
+`seed_from_model` seeds a GLM with two or more factors: one seed request names one Factor and gives one table with one key, bound by `factor_ref` to the Factor version the model pins (`RL-1361` sections A and D; FD-1357, HIGH, on G2's path). The seed route's request body becomes a typed `model-schema` request and its 201 a typed response, both published under `docs/contracts/schemas/generated/` (the maintainer's rules (i) and (ii); the seed-from-model entry of `FD-1366`). The `[seeding]` texts of `RL-1361` are applied byte for byte. Leaf plan `PL 9764` (working id), `draft`. **Order:** lane B, after `SL-1360` and before the FD-1356 fix, the RL-1343 decimal-output fix and `PL-1364` (the maintainer, 2026-10-01, about 10:10 BST). *(Filed 2026-10-01 under working id 9763, reserved by the lead.)*
+
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
