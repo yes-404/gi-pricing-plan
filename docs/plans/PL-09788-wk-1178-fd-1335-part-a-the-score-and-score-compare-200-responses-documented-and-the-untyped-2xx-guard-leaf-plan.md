@@ -191,6 +191,14 @@ unmet.** The lead's GO check starts here, before anything else.
    ```
    Expected: exactly one path. The executor writes its minted id, not 9779, into the
    `pending FD-<id> Part B` markers. `FD-1357` is already minted (`65fc6129`).
+
+   **And FD 9775**, whose minted id Task 3's docstring text carries. A minted finding records
+   its working id in its closing disclosure, as `FD-1357`'s last line does ("Filed 2026-10-01
+   as working id 9786; minted … as FD-1357"):
+   ```bash
+   git grep -l -E 'working id 9775\b' "$M" -- docs/findings/ | grep -E '/FD-0[0-8][0-9]{3}-'
+   ```
+   Expected: exactly one path, and its 5-digit id is the number written into the docstring.
 5. **This plan and its slice row are minted on `main`:**
    ```bash
    git grep -l -E '^title: WK-1178 slice — FD-1335 Part A' "$M" -- docs/plans/
@@ -262,13 +270,14 @@ Evidence §1, which `FD 9779`'s predicate 2 restates:
   Response keys are matched on `(METHOD, path, status)` and request keys on `(METHOD, path)`.
 
 **Test count.** Ten new test functions, which collect as fifteen test items, plus one new
-fixture:
+test-helper module (no test functions):
 - seven functions in `backend/tests/test_contracts.py`, which collect as twelve items, listed in
   1–6 below;
 - two functions in `backend/tests/test_score_compare.py`: the 500 test (8) and the spy test
   (8b);
 - one function in `backend/tests/test_score.py`: the spy test (8b);
-- the `outbound_validation_spy` fixture, appended to `backend/tests/conftest.py` (8b).
+- the new helper module `backend/tests/outbound_validation_spy.py` (8b), which collects nothing
+  because its name does not start with `test_`.
 
 Each function carries `@pytest.mark.req("FR-451")` unless another marker is named. The ledger
 quotes the `pytest --collect-only -q` lines for the new node ids. Their count must be 15.
@@ -486,11 +495,22 @@ quotes the `pytest --collect-only -q` lines for the new node ids. Their count mu
    The last row is the case the 500 proxy cannot see and the spy can.
 
    **The tests.**
-   - **A shared fixture `outbound_validation_spy`, appended to `backend/tests/conftest.py`.** It
-     monkeypatches `ModelField.validate` with a wrapper that calls through and appends `loc` to a
-     list. It returns an object whose `.calls` counts the `("response",)` entries and whose
-     `.reset()` clears the list. One definition, used by both tests, so the spy is not
-     hand-written twice.
+   - **A new helper module, `backend/tests/outbound_validation_spy.py`** (adopted at re-audit
+     F-B, in place of a `conftest.py` append). It exposes one function,
+     `install_outbound_validation_spy(monkeypatch: pytest.MonkeyPatch)`, which returns an object
+     with `.calls` (an `int` property) and `.reset()`. The function:
+     - wraps `fastapi._compat.v2.ModelField.validate`, whose signature is
+       `(self, value, values={}, *, loc=())`;
+     - always calls through to the original;
+     - counts a call when `kwargs.get("loc", ())[:1] == ("response",)`. It reads `loc` from the
+       keyword arguments, because `loc` is keyword-only.
+
+     `monkeypatch` undoes the wrap at teardown. Both spy tests import it by the sibling-module
+     form the suite already uses (`test_score_compare.py:17`,
+     `from backend.tests.test_rating_version_compile import (…)`):
+     `from backend.tests.outbound_validation_spy import install_outbound_validation_spy`. One
+     definition, not duplicated, and it adds no edit to a shared file that is not
+     registry-exempt.
    - **`backend/tests/test_score.py::test_no_outbound_validation_runs_on_score`**, marked
      `@pytest.mark.req("NFR-502")`, using the module's own fixtures and its `_scored()` builder:
      - `POST /api/v1/score` with `score_one` stubbed returns 200, and the spy counts **0**;
@@ -669,8 +689,8 @@ pins.
 | `backend/src/app/api/score.py` | `200: {"model": ScoringResult}` and `200: {"model": ScoreComparison}` merged into the two `responses=` mappings; one sentence in the module docstring's NFR-502 paragraph (`:21-27`) | **yes**: the `score` and `score_compare` decorators; the module docstring |
 | `backend/tests/test_contracts.py` | appended: `UNTYPED_2XX_PERMANENT`, `UNTYPED_2XX_PENDING_PART_B`, `UNTYPED_REQUEST_PENDING`, `NON_JSON_REQUEST_BODIES`, `_untyped_bodies`, `_visited_bodies`, `_guard_remainder` and the two predicates, and the seven test functions of Acceptance 1–6 (12 collected items) | none |
 | `backend/tests/test_score_compare.py` | two appended tests: the 500 test (Acceptance 8) and the spy test (8b) | none |
-| `backend/tests/test_score.py` | one appended test: the spy test (8b) | none |
-| `backend/tests/conftest.py` | one appended fixture, `outbound_validation_spy` (8b) | none |
+| `backend/tests/test_score.py` | one appended test: the spy test (8b); and the docstring of `test_the_result_is_returned_without_outbound_validation` (`:348-355`) replaced by Task 3's exact text (FD 9775) | **yes**: that one docstring. No assertion and no other line of the test changes |
+| `backend/tests/outbound_validation_spy.py` | **new**: `install_outbound_validation_spy` (8b) | none |
 | `docs/contracts/openapi/generated.json` | regenerated | registry-exempt (`RL-1263:104-116`) |
 | `docs/specs/03-rating-engine.md` §9, the NFR-502 row | `RL 9783`'s exact dated text, appended at the end of the row's second cell (DP-A1 ruled (b)) | **yes**: that row |
 | `docs/ledgers/LG-<id>-….md` | new (Acceptance 13) | none |
@@ -684,7 +704,8 @@ pins.
   `backend/src/app/api/rate_tables.py`, `backend/src/app/api/rating_algorithms.py`,
   `backend/src/app/api/sub_graphs.py` and `backend/src/app/api/datasets.py`. No handler there is
   edited;
-- `test_score.py`'s existing tests, which are run, not edited (the file is only appended to).
+- `test_score.py`'s existing tests, which are run, not edited. The one exception is the
+  FD 9775 docstring replacement in the row above.
 
 Nothing under `frontend/` is committed.
 
@@ -703,7 +724,7 @@ concurrently, and the second merges `origin/main` first and re-runs its full gat
 | `docs/contracts/openapi/generated.json` | regenerated | regenerated | exempt. Regenerate on the merged base |
 | `docs/specs/03-rating-engine.md` §9 | the NFR-496 row | the NFR-502 row (`RL 9783`'s text) | different rows. Serial anyway |
 | `backend/src/app/api/rate_tables.py`, `rating_algorithms.py`, `sub_graphs.py`, `datasets.py` | none | **read only** (citations in the request side's reasons) | no conflict |
-| `backend/tests/test_score.py`, `test_score_compare.py`, `backend/tests/conftest.py` | "backend route, batch and property tests" (`PL-1348` write set) | one appended test in each scoring test module, and one appended fixture (Acceptance 8, 8b) | append-only, no existing definition edited. `SL-1345` has merged by this slice's start, so its tests are in this slice's gate |
+| `backend/tests/test_score.py`, `test_score_compare.py` | "backend route, batch and property tests" (`PL-1348` write set) | appended tests (Acceptance 8, 8b), plus one existing docstring in `test_score.py` (`test_the_result_is_returned_without_outbound_validation`, FD 9775). That is an existing definition, so this slice runs after `SL-1345` in any case (activation need 1). The spy helper is a new module, `backend/tests/outbound_validation_spy.py`, which no other plan names | append-only, no existing definition edited. `SL-1345` has merged by this slice's start, so its tests are in this slice's gate. `conftest.py` is not touched |
 | timing runs | `scripts/bench-rating.py`, solo (`PL-1348` Acceptance 9) | Task 5's NFR-502 run, solo | **never the same window** |
 
 ### Against WK-675's planned slices (`PL-1286`, `draft`)
@@ -720,7 +741,8 @@ concurrently, and the second merges `origin/main` first and re-runs its full gat
 
 ### Against other open work at `42732321`
 
-- **`PL-1359`** (WK-1178's permission-parity check, `active`, on lane B at `42732321`). It
+- **`PL-1359`** (WK-1178's permission-parity check). It was `draft` at
+  `42732321` and was activated in #1046 (`19155b50`, docs-only), for lane B. It
   creates `tests/test_permission_parity.py` and its ledger. Its live test imports
   `app.main.create_app`, which imports `backend/src/app/api/score.py`. It also AST-walks
   `backend/src/**`, read only (`PL-1359:357-368`). So it **reads** `score.py` and edits no file
@@ -769,7 +791,7 @@ concurrently, and the second merges `origin/main` first and re-runs its full gat
 | The DB stack is absent | mass fixture errors that look like test failures (`test_score.py` needs `GIP_TEST_DATABASE_URL`) | an `ERROR` at setup, not a `FAILED` assert | bring the stack up and re-run. An error at setup is never quoted as a red |
 | The guard over-reaches into a non-JSON body that the LOW sub-item later re-documents | a false red after that slice | Acceptance 5's exactness | the keys are method, path and status, not media type, so the permanent entries still match |
 | The guard reads only the top-level schema | a nested open object (`outputs`, `UpdateSettings.values`) stays untyped | stated in Scope and in the skill note | `RL-1343` rule 4 types `outputs`. The rest is outside both findings |
-| **Observation for the lead, not a finding of this plan:** `test_score.py:341-356`'s docstring says "a route carrying a Pydantic return annotation or a `response_model=` answers 500 here" | under fastapi 0.141.1 the claim holds only for a **non-instance** return value. Returning the `model_construct` instance under the annotation or `response_model=` answers **200** (Acceptance 8's table: pydantic `revalidate_instances='never'`, and `serialize_response`'s `field.validate` accepts an instance of the declared class). So the existing 500 test does not discriminate the instance-return regression | measured in the scratch app (Acceptance 8) | recorded here for the lead. Acceptance 8b's spy closes the gap for both routes. Whether the docstring is corrected, and by whom, is the lead's call |
+| The existing NFR-502 test (`test_score.py::test_the_result_is_returned_without_outbound_validation`) is **blind to an instance-returning validating route**. This is filed as **FD 9775 (working id, LOW)**, WK-1178 | its docstring's claim, "a route carrying a Pydantic return annotation or a `response_model=` answers 500 here", holds only for a dict or other non-instance return. A `model_construct` instance returned under either answers 200 (Acceptance 8's table) | measured in the scratch app (Acceptance 8) | covered by Acceptance 8b (the spy catches every form). **FD 9775 is discharged at this plan's merge**, which also corrects the docstring with the exact text in Task 3 |
 | The spy patches a private FastAPI symbol (`fastapi._compat.v2.ModelField.validate`) | a FastAPI upgrade moves it, and the spy goes blind: 0 calls everywhere | the planted control's ≥ 1 assertion fails (Acceptance 8b) | intended: the control makes a blind spy a red, never a false green. Re-measure the spy point at the new version |
 | The request side is green on the real document today, so its enforcement could go unshown | a guard that has never printed a failure on real input | Acceptance 3 (an entry removed on a backup copy gives a named red), Acceptance 1 and 4 (planted) | each red quoted in the ledger, per side |
 | Another slice types a listed request route first (`FD-1357`'s fix, or WK-675 S2, S5) | a stale entry | activation need 3 at GO; Acceptance 5 at build | drop the entry at Task 0; after merge, the typing slice removes it |
@@ -939,11 +961,37 @@ For **every** suite-level run, the full gate and Task 5, the ledger records each
 - [ ] Append `test_the_score_responses_document_their_models`
   (`@pytest.mark.req("FR-250")`, `@pytest.mark.req("FR-262")`, `@pytest.mark.req("FR-451")`)
   and the `/score/compare` `NFR-502` test. Quote the shape test's red (premise a).
-- [ ] Append the `outbound_validation_spy` fixture to `backend/tests/conftest.py`,
-  `test_no_outbound_validation_runs_on_score` to `test_score.py`, and
+- [ ] Create `backend/tests/outbound_validation_spy.py` (`install_outbound_validation_spy`,
+  Acceptance 8b), append `test_no_outbound_validation_runs_on_score` to `test_score.py`, and append
   `test_no_outbound_validation_runs_on_compare` to `test_score_compare.py` (Acceptance 8b). On
   the current routes they are green: 0 calls on the route, and ≥ 1 on the planted control.
   Their red is on broken input, below.
+- [ ] **Correct the existing docstring (FD 9775, discharged at this plan's merge).** In
+  `backend/tests/test_score.py`, replace the docstring of
+  `test_the_result_is_returned_without_outbound_validation`. At `42732321` it is `:348-355`,
+  from `"""RL-883's acceptance test, and the one that discriminates the implementations.` through
+  the closing `"""`. Replace it with exactly the text below, byte for byte, at the same 4-space
+  indent. Change nothing else in the test. Any other wording is a stop.
+  ```python
+      """RL-883's acceptance test: the route emits an unvalidated result verbatim.
+
+      A `ScoringResult` built with `model_construct` holds values that violate its own
+      declared types — no validation ran to stop them. The route must emit those bytes
+      verbatim with a 200, which is what NFR-502 requires: validate inbound, never outbound.
+
+      **This test is not the discriminator for every validating form** (FD-<minted id of
+      FD 9775>). A route whose handler returns a dict or other non-instance value under a
+      Pydantic return annotation or `response_model=` answers 500 here, because FastAPI
+      validates that value on the way out. A route that returns this `ScoringResult`
+      *instance* under either answers 200 and passes this test, because pydantic does not
+      revalidate an instance of the declared class (`revalidate_instances='never'`), although
+      FastAPI's response validation still runs. The test that catches every form is
+      `test_no_outbound_validation_runs_on_score`, which counts calls to the response
+      validation entry point directly (PL-<minted id of PL 9788> Acceptance 8b).
+      """
+  ```
+  Fill the two `<minted id …>` placeholders with the minted numbers. They are the only words the
+  executor writes, and Task 0 reads them from `main`. Run the test: it is unchanged and green.
 - [ ] In `backend/src/app/api/score.py`, on the `score` decorator:
   ```python
       responses={**problems(<the statuses on main after SL-1345>), 200: {"model": ScoringResult}},
@@ -1069,8 +1117,17 @@ For **every** suite-level run, the full gate and Task 5, the ledger records each
   - 0 calls on `/score` and on `/score/compare`, a planted control with ≥ 1 call, and red first
     on a backup copy → 8b.
   - The rationale (a property check survives a FastAPI upgrade) → 8b.
-  - The test count (15), the write set (`conftest.py`, `test_score.py` and
-    `test_score_compare.py`, append-only) → updated.
+  - The test count (15), the write set (the new helper module
+    `backend/tests/outbound_validation_spy.py`; `test_score.py` and `test_score_compare.py`,
+    append-only) → updated.
+- **Re-audit fixes:**
+  - F-A, `PL-1359`'s status at `42732321` → File contention (`draft` there, activated in #1046).
+  - F-B, the spy as a new helper module instead of a `conftest.py` fixture → Acceptance 8b, the
+    write set, contention, Task 3 and the test count.
+  - The `test_score.py` observation replaced by FD 9775 (working id, LOW) → Risks.
+  - FD 9775 is discharged at this merge by correcting `test_score.py`'s docstring, with the
+    exact replacement text → Task 3, the write set (an existing docstring edited), contention,
+    and activation need 4 (its minted id).
 - **The audit's findings:**
   - F1, a break that can go red, with the instance form recorded as 200 → Acceptance 8, Task 3,
     Risks.
