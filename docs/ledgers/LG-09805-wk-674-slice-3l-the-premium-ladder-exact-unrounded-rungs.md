@@ -98,3 +98,7 @@ See need 5. **No task is held for a DP.** Task 5 has a separate *order* hold (co
   - `test_rating_score.py`: 2 failed (`test_the_ladder_reconciles_over_a_battery_of_generated_contexts`, `test_a_binding_clamp_is_attributed_to_the_constraints_rung`); `test_testing.py`: 1 failed (`test_run_ladder_reconciles_fails_when_the_payable_is_not_the_last_rung_priced`).
 - **Premises a–l re-read at `8933a29e`:** a `money.py:55`, `score.py:769`, `properties.py:303` ✓; b `errors.py:339`, no raise site ✓; c `score.py:566/582/657` ✓; d `test_rating_score.py:224` ✓; f `compile.py:247`, `:277` ✓; g one `valid_algorithm` in each file ✓; i FR-248 `03:155`, NFR-496 `03:1165` ✓ and `money.py:63` "sampled in prod" ✓; j `settings.py:196` ✓; l the decimal grep prints one line, `scripts/bench-rating.py:213` (input contract) ✓. e, h, k not individually re-read yet (re-read at Tasks 3–4). No premise failed.
 - **Open PRs read** (`gh pr list --state open`, 02:3x BST): #1034 WK-1250 S1 (`compile.py`, held-order); the rest are docs/finding PRs, none ruling on the ladder, `score.py` or the served outputs.
+
+## PRs
+
+None yet. Opened at Task 7.
