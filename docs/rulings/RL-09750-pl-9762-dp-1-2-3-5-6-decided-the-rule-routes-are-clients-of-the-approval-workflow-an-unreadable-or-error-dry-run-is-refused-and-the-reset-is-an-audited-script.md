@@ -72,7 +72,7 @@ and the new `PL-1368` file, none of them cited below, so the table holds at both
 branch is cut from `49cd25be`, and the front matter's `tree:` names it.
 
 **Two functions this ruling builds on do not exist at either tree:** `decide_and_carry`
-and `open_request_for` are PL 9762's new functions, to be added by that plan (Task 3 Interfaces, plan `:745-746`; `git grep -n 'def decide_and_carry\|def open_request_for' 49cd25be -- backend`
+and `open_request_for` are PL 9762's new functions, to be added by that plan (PL 9762, working id, at #1063 head `1c4e6a2b`, §"Task 3: The service and the carry", its **Interfaces** block `:742-746`, the two signatures at `:745-746`; re-verified at `1c4e6a2b` after auditor-1070b's L1, which read `:606-612` at an earlier head; the line range will move when the planner commits these rulings, and the section name stands; `git grep -n 'def decide_and_carry\|def open_request_for' 49cd25be -- backend`
 prints nothing). Their specification is the plan's (Task 3 Interfaces and Step 5,
 `decide_and_carry(session, *, caller, request_id, decision, comment) -> ApprovalRequestRow`;
 Step 6, `open_request_for`), which this ruling adopts with DP-1's one change. What they are
@@ -443,7 +443,11 @@ write set loses the migration row and gains the script and its test):
 2. **Recovery first:** with every code task of the slice committed (the enforcement, DP-5's
    seed, the reset script), run the DP-5 seed against `gipricing` (`dev-commands`' DSN form).
    It creates a new workspace and rewrites `examples/fremtpl2/data/last-seed.json`. Its output
-   goes to the ledger, with the new workspace id.
+   goes to the ledger, with the new workspace id **and its exit code**. **The reset runs only
+   after the recovery seed exits 0** (auditor-1070b N1). The seed writes `last-seed.json` at
+   `seed.py:378`, before its rules, set and jobs, so a seed that dies partway leaves the record
+   naming a half-seeded workspace. On a non-zero exit, stop: no reset, report to the lead. The
+   pre-flight of condition 2 refuses such a workspace too (it has no rule set).
 3. Run the reset script against `gipricing`; its output to the ledger.
 4. **After:** the follow-on script again. `gipricing` prints
    `user_approved_with_no_approved_request=0`. Its `builtin_approved` equals step 1's figure
@@ -553,7 +557,10 @@ write already gives. So:
    It raises the helper's `NOT_FOUND` for a missing member, so `GET …/rule-set` answers 404
    naming the unknown ids instead of showing a smaller set than the one stored. Approval status
    is **not** checked on the read: the read must show a set with a `review` member, so that a
-   user can see what to fix.
+   user can see what to fix. `_to_rule_set` has a second caller, `replace_rule_set`'s return
+   (`validation_rules.py:687`). It runs just after that function's own member checks, so the
+   new `NOT_FOUND` can never fire there (auditor-1070b N2); it is named so that the executor
+   does not wonder.
 4. **Unchanged:** the dry run, `rule_set_for`'s `NOT_FOUND` for a dataset with no set, and the
    built-ins (approved).
 
@@ -617,9 +624,9 @@ with its time.
   `validation_rule.approval_reset` event, and its Rule Sets are refused at run time
   (`RULE_NOT_APPROVED`). **That is deliberate and stays so.** Those rules are no longer
   approved, and FR-50 forbids running them. They are history, auditable through the reset
-  events, and the demo does not use them. **`scripts/demo.py --skip-seed` is not used on
-  `gipricing` until the recovery seed has run**, because before then `last-seed.json` names a
-  pre-fix workspace.
+  events, and the demo does not use them. *(The prose rule that stood here, "`--skip-seed`
+  is not used on `gipricing` until the recovery seed has run", is replaced by a check:
+  condition 2 below.)*
 - **No `gipricing` Rule Set runs a non-approved member, and none drops a member silently.**
 
 So the maintainer's "no commit leaves `gipricing` with an unrunnable Rule Set" holds for the
@@ -636,6 +643,124 @@ the seed's validation report (`executed`); for each member, its status (`approve
 its `dry_run_report_id` resolves to a `validation_reports` row in the workspace with
 `error_count = 0`; and the queries, verbatim. Red first: on the base tree the seed's rules
 have report ids naming no report, so "a real report" fails for every user rule.
+
+### The maintainer's three conditions on the end state: an actionable refusal, a demo pre-flight, a release note
+
+*(Added 2026-10-01 at 11:18:54 BST, on the maintainer's *"2026-10-01 11:16:23 BST — #1070 RL 9750 @80199a22: the end state for pre-fix workspaces is ACCEPTED, with three conditions"*, which accepts this
+record at `80199a22` on these conditions.)*
+
+**Condition 1 — the refusal names every member and the way back.** `_require_runnable_members`
+raises with these exact strings. `<members>` is the members sorted by slug then version,
+joined by `, `, each rendered as `{rule_id} ({slug}@{version}, {status})`; `<ids>` is the
+missing ids, sorted, joined by `, `; `<slug>` is the dataset's slug.
+
+- `RULE_NOT_APPROVED`, 409, title `Every rule in a rule set must be approved` (unchanged), detail:
+
+```text
+Not approved: <members>. A rule set runs only approved rules (`01` FR-50). The way back, for each rule: attach a new dry run (POST /api/v1/validation-rules/{id}/dry-run), then submit an approval request (POST /api/v1/validation-rules/{id}/submit for a draft rule, POST /api/v1/approval-requests for a rule in review), and have an approver decide it. Or replace the rule set without it (PUT /api/v1/datasets/<slug>/rule-set).
+```
+
+- `NOT_FOUND`, 404, title `The rule set names rules that do not exist` (unchanged), detail:
+
+```text
+Unknown rule id(s): <ids>. A rule set runs only rules that exist (`01` FR-50). The way back: replace the rule set without them (PUT /api/v1/datasets/<slug>/rule-set).
+```
+
+Both replace the details at `validation_rules.py:590` and `:599-601`, so `replace_rule_set`
+gives the same text (no test pins the old text: `git grep -n 'Not approved:' -- backend/tests`
+prints nothing at `49cd25be`). The helper therefore takes the dataset's slug. **Pinned:**
+`test_a_rule_reset_by_dp6_does_not_execute_in_its_sets_next_run` asserts that the job's
+recorded detail **equals** the rendered `RULE_NOT_APPROVED` text for rule A, and
+`test_a_rule_set_run_refuses_a_member_with_no_rule` asserts it for `NOT_FOUND`. Red first: on
+the base tree there is no refusal at all.
+
+**Condition 2 — a check, not a rule a person must remember.** Verified at `49cd25be`:
+`scripts/demo.py` imports nothing from `app` and runs each step as a checked subprocess
+(`run`, `:74-79`); a failed step raises `DemoRefusedError`, and `main` returns 1 (`:348-350`).
+The seed record holds `workspace_id` but no dataset (`seed.py:378-387`).
+- **A new script, `scripts/check-rule-sets-runnable.py <workspace_id>`**, in the style of
+  `scripts/revalidate-artifacts.py` (its `sys.path` shim `:30-32`, `DEFAULT_DSN`, the
+  `GIP_DATABASE_URL` override). It opens `database.session()` (read-only, no unit of work).
+  For every dataset in that workspace that has a Rule Set, it calls
+  `rule_service.rule_set_to_run`, which applies `_require_runnable_members`; the helper stays
+  private. On a `PlatformError` it prints the error's detail (condition 1's text) to stderr and
+  exits 1. If the workspace has **no** Rule Set, it prints `Workspace <workspace_id> has no rule set: the seed did not finish. Re-run the seed.` to stderr and exits 1 (a half-seeded workspace, auditor-1070b N1). Otherwise it prints `rule sets runnable: <n>` and exits 0.
+- **`scripts/demo.py`**: immediately after `record = read_seed_record()` (`:235`), before the
+  API command is built, `run(["uv", "run", "python", "scripts/check-rule-sets-runnable.py",
+  record["workspace_id"]], step="pre-flight: the demo workspace's rule sets are runnable",
+  env=env)`. This runs on every path, `--skip-seed` included. It cannot run before the first
+  step (the compose stack and the migrations), because it reads the database; it runs before
+  anything is served.
+- **Red first:** on a database where the reset has run and `last-seed.json` still names a
+  pre-fix workspace, `uv run python scripts/demo.py --skip-seed` exits 1, and its output holds
+  the `RULE_NOT_APPROVED` text naming that workspace's reset rules. The ledger quotes it.
+  `test_demo_command.py` gains a wiring assertion that the pre-flight step runs after
+  `read_seed_record` and before the API starts, as that file already asserts the browser path
+  without running the orchestration (`demo.py:184-185`). The check script gets its own test:
+  exit 1 with the text on a workspace holding a `review` member, exit 0 on a runnable one.
+- **Recovery and the check together:** after DP-6's step 2 (the recovery seed),
+  `last-seed.json` names the new workspace and the pre-flight passes. Before step 2, it refuses.
+  The order is therefore enforced, not only written down.
+
+**Condition 3 — the release note, verbatim.** No release-notes file exists at `49cd25be`:
+`git ls-files | grep -iE 'change|release'` lists only findings and skill files. **Where the
+note lives is the planner's write-set choice** (routed to the lead); the text is fixed
+wherever it lands.
+
+````text
+### Validation rules: approval goes through the approval workflow, and a rule set runs only approved rules (FD-1356)
+
+**What changes**
+- A custom validation rule reaches `approved` only through an approval request. `POST /api/v1/validation-rules/{id}/submit` now requires a body, `{"change_summary": "…"}`, and creates the request. `POST /api/v1/validation-rules/{id}/approve` records a decision on that request under the workspace's Approval Policy (approver count and roles). Approving your own rule now answers 403, not 409.
+- Submission and approval refuse a rule whose dry-run report cannot be read, or records an `error` outcome (`EVIDENCE_INCOMPLETE`, 422). A `fail` outcome is still accepted.
+- A new dry-run report can no longer be attached to an `approved` rule (`RULE_VERSION_IMMUTABLE`, 409).
+- A validation run now refuses its Rule Set, and writes no report, if any member is not `approved` (`RULE_NOT_APPROVED`, 409) or names a rule that does not exist (`NOT_FOUND`, 404). Before this release, such a member ran (not approved) or was left out without notice (missing). `GET /api/v1/datasets/{slug}/rule-set` also answers 404 for a missing member.
+
+**Who is affected**
+- Any install with a Rule Set that holds a rule that is not `approved`, or a member whose rule does not exist. After the upgrade, validation runs of those datasets are refused until the set is fixed.
+- Any client that calls the rule submit route without a body.
+
+**Check before you upgrade.** This read-only query lists every member that the upgraded platform will refuse to run. No rows means no run will be refused.
+
+```sql
+WITH latest AS (
+  SELECT DISTINCT ON (workspace_id, dataset_id) id, workspace_id, dataset_id, version, body
+    FROM validation_rule_sets
+   ORDER BY workspace_id, dataset_id, version DESC
+), members AS (
+  SELECT l.workspace_id, l.dataset_id, l.version, (m.value ->> 'rule_id')::uuid AS rule_id
+    FROM latest l, jsonb_array_elements(l.body -> 'rules') m
+  UNION ALL
+  SELECT l.workspace_id, l.dataset_id, l.version, (r.value #>> '{}')::uuid
+    FROM latest l, jsonb_array_elements(l.body -> 'rule_ids') r
+   WHERE l.body -> 'rules' IS NULL
+)
+SELECT m.workspace_id, m.dataset_id, m.version AS rule_set_version, m.rule_id,
+       v.slug, v.version AS rule_version, coalesce(v.status, 'missing') AS status
+  FROM members m
+  LEFT JOIN validation_rules v ON v.id = m.rule_id AND v.workspace_id = m.workspace_id
+ WHERE v.id IS NULL OR v.status <> 'approved'
+ ORDER BY 1, 2, 5;
+```
+
+**The way back, for each rule the refusal names.** Attach a new dry run (`POST /api/v1/validation-rules/{id}/dry-run`). Then submit an approval request: `POST /api/v1/validation-rules/{id}/submit` for a `draft` rule, or `POST /api/v1/approval-requests` for a rule already in `review`. Then have an approver decide it. Or replace the rule set without the rule (`PUT /api/v1/datasets/{slug}/rule-set`). For a member whose rule does not exist, replace the rule set.
+
+**Approvals made before this release** through the old approve route have no approval request. They keep running. To return them to `review`, each with an audit event, run `scripts/reset-unbacked-rule-approvals.py` against your database (it writes; read it first), then re-approve each one through the steps above.
+````
+
+**The query, verified by this session** on the compose server's `gipricing`, read-only
+(`BEGIN READ ONLY … ROLLBACK`), at 11:18 BST. It printed `(0 rows)`. Two broken-input
+controls were run, each inside a rolled-back transaction. One member moved to `review`
+printed that member with `status = review` (`exposure-positive-3149b9`). One stored set
+re-pointed at a missing id printed it with `status = missing`. Both controls exercised the
+`rule_ids` body form, which every one of `gipricing`'s 10 sets uses (`body ? 'rule_ids'`:
+10 of 10). **The `rules` form was not exercised** (0 rows hold it there); the slice's ledger
+runs the same control on a set written in the `rules` form.
+
+**What it obliges.** The planner adds to PL 9762's write set
+`scripts/check-rule-sets-runnable.py` and its test, the `scripts/demo.py` edit, the
+`test_demo_command.py` assertion, and the release-note file. The acceptance items above join
+PL 9762 in place, before its merge.
 
 ### How DP-3 (iii), DP-5, DP-6, FD 9747 and FD 9748 interact
 
