@@ -925,7 +925,7 @@ Minted as `SL-1271` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-
 id: SL-1272
 family: slice
 title: Slice 2: symbolic derivation, the compilation target and the expression certificate (FR-144, FR-146, FR-147, FR-148, FR-149, FR-165, NFR-476, NFR-483, `02` §4.7 expression half)
-status: active                 # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: dee49f781fd23f9df2e72161885c77fa17a6f1ab
@@ -937,6 +937,8 @@ relates: [PL-1268]
 
 SymPy derivation of the gradient and hessian, a vectorised compiler through the platform's own expression tree (never `lambdify`), FR-165's per-round budget for both kinds (`RL-1265`), and the `symbolic_vs_numeric` certificate checks. `PL-1268` Slice 2. Starts after Slice 1 closes. *(Title completed 2026-09-30 on auditor-plans' F1 for #943: it now lists every id that `PL-1268`'s Core scope table assigns to this slice.)*
 Minted as `SL-1272` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `08bd1c5a` (working id 9951 before the mint).
+
+**Closed 2026-10-01** at its mint PR #1025 (mint commit `ab2a1a7a`): slice audit CLEAN at `36a2f672` after F1–F6; ledger `LG-1350`; spike `RS-1351`. The row read `active` until the auditor's forward status flip (§1.6).
 
 #### SL-1273 — Slice 3: the `expression` kind through the platform, behind the flag, with `custom_objective:author` (FR-144, FR-146, FR-150, FR-152, FR-163, FR-207, FR-366, FR-367, FR-448, FR-449, NFR-480, NFR-484)
 
