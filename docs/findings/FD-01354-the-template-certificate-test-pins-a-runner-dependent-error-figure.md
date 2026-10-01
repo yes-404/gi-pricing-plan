@@ -1,5 +1,5 @@
 ---
-id: FD-9792
+id: FD-1354
 family: finding
 title: The template-certificate test pins a runner-dependent error figure
 status: active
@@ -10,10 +10,9 @@ corrected_by: []
 relates: [WK-1178, LG-1350]
 ---
 
-# FD-9792 — The template-certificate test pins a runner-dependent error figure
+# FD-1354 — The template-certificate test pins a runner-dependent error figure
 
-**Filed 2026-10-01 under working id 9792**, by executor-hotfix790 in the WK-1178 hotfix SL 9790 (ledger LG working id
-9791). The lead mints the final id. The `tree:` is `origin/main^{tree}` at `8933a29e`.
+**Minted 2026-10-01 as FD-1354** (the lead allocated it, dispatch record Delta 2); it was filed under working id 9792. Filed under working id 9792 by executor-hotfix790 in the WK-1178 hotfix SL-1352 (working id 9790; ledger LG-1353, working id 9791). The `tree:` is `origin/main^{tree}` at `8933a29e`.
 
 ## Finding
 
@@ -65,6 +64,6 @@ expression would not match, which this sweep does not claim to cover.
 
 ## Disposition
 
-Fixed in the same PR as this record (SL 9790), so the register row carries `fix before close` already discharged by
+Fixed in the same PR as this record (SL-1352), so the register row carries `fix before close` already discharged by
 that PR's merge. Residual: the data file still holds one runner's figures; they are now ignored by the comparison and
 bounded by the tolerance assertion.

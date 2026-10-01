@@ -1163,10 +1163,10 @@ The code that the FR-244 ruling, RL-1312, assigns to WK-1178. FR-244's operator 
 
 **Closed 2026-09-30** at #1012's merge, `3a5f7cd5ba869eddf913761dba29d636e66afe94`, on a CLEAN slice audit (auditor at `3fa635eb60c18e05103205696cfd504ad69ba5ca`, recorded in the maintainer's channel entry "2026-09-30 18:07:45 BST") and the lead's merge (CLAUDE.md §13); the maintainer's MERGE-ACK and read-back ("2026-09-30 19:28:53 BST — #1012 read-back verified; SL-1315 closed") confirm it. Its ledger is `LG-1332`. The row read `active` after the merge and was flipped here, a forward status, by the auditor at `origin/main` 248dbf11.
 
-#### SL-9790 — WK-1178 hotfix — runner-independent template-certificate test
+#### SL-1352 — WK-1178 hotfix — runner-independent template-certificate test
 
 ```yaml
-id: SL-9790
+id: SL-1352
 family: slice
 title: WK-1178 hotfix — runner-independent template-certificate test
 status: active                  # draft → active → closed | retired (§1.2a)
@@ -1176,10 +1176,10 @@ tree: 7190787f494a921f89339ae62f8e3ae666bc4e2b
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [FD-9792, LG-9791, LG-1350]
+relates: [FD-1354, LG-1353, LG-1350]
 ```
 
-Test-only hotfix for main's red CI after #1025: `test_template_certificate_unchanged` pinned a runner-dependent `max relative error` figure. The comparison normalises the figure and asserts it against the engine's tolerance. No leaf plan; the dispatch record `DISPATCH-WK-1178-HOTFIX-9790-2026-10-01.md` (local) and the maintainer's ruling of 2026-10-01 are the scope. *(Filed under working id 9790; the lead mints the final id. Ledger `LG-9791`, finding `FD-9792`.)*
+Test-only hotfix for main's red CI after #1025: `test_template_certificate_unchanged` pinned a runner-dependent `max relative error` figure. The comparison normalises the figure and asserts it against the engine's tolerance. No leaf plan; the dispatch record `DISPATCH-WK-1178-HOTFIX-9790-2026-10-01.md` (local) and the maintainer's ruling of 2026-10-01 are the scope. *(Minted 2026-10-01 as SL-1352; filed under working id 9790. Ledger `LG-1353`, finding `FD-1354`.)*
 
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half

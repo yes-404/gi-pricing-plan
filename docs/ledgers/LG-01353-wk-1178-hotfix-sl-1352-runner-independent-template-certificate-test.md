@@ -1,28 +1,29 @@
 ---
-id: LG-9791
+id: LG-1353
 family: ledger
-title: WK-1178 hotfix SL 9790 — runner-independent template-certificate test
+title: WK-1178 hotfix SL-1352 — runner-independent template-certificate test
 status: active
 created: 2026-10-01
 owner: executor
 tree: 7190787f494a921f89339ae62f8e3ae666bc4e2b
 phase: P2
 work: WK-1178
-slice: SL-9790
+slice: SL-1352
 corrected_by: []
-relates: [FD-9792, LG-1350]
+relates: [FD-1354, LG-1350]
 ---
 
-# LG-9791 — WK-1178 hotfix SL 9790
+# LG-1353 — WK-1178 hotfix SL-1352
 
 Branch `sl-9790-template-certificate-runner-independent`, from `origin/main` `8933a29e`. Executor: executor-hotfix790.
-Working ids 9790 (SL), 9791 (this ledger), 9792 (FD); the lead mints the final ids. Append-only.
+Working ids 9790 (SL), 9791 (this ledger), 9792 (FD), minted 2026-10-01 as SL-1352, LG-1353 and FD-1354 (the lead's allocation,
+dispatch record Delta 2). Append-only.
 
 ## Tasks
 
 ### Task 0 — the dispatch record, verbatim
 
-`DISPATCH-WK-1178-HOTFIX-9790-2026-10-01.md` (local, outside the repository), quoted whole:
+`DISPATCH-WK-1178-HOTFIX-9790-2026-10-01.md` (local, outside the repository), quoted whole, as read 2026-10-01 at the minting turn (it carries the lead's later deltas):
 
 ~~~~markdown
 # Dispatch record: WK-1178 hotfix, slice working id SL 9790 (main red since #1025). FINAL
@@ -73,11 +74,24 @@ Working ids 9790 (SL), 9791 (this ledger), 9792 (FD); the lead mints the final i
 10. **Executor:** a fresh `executor-hotfix790`, spawned from `.claude/roles/executor.md` with its Model / effort line (sonnet, medium), in a new worktree from origin/main (8933a29e). It never `cd`s.
 11. **PR:** a draft, titled `fix(modelling): SL 9790 — runner-independent template-certificate test (WK-1178 hotfix)`. No merge: the lead merges on the maintainer's MERGE-ACK.
 
+## Delta 1 — 2026-10-01 03:39:52 BST — slice audit at 0f725f0f: CLEAN (the lead's verdict)
+- **Range:** `origin/main...0f725f0fa4e5de7c32f6f10fadfe4a7a89da1cec`, main 8933a29e. PR #1035 (draft). Auditor: auditor-hotfix790 (sonnet, auditor.md).
+- **Write set:** 6 files, no src/. The tolerance symbols are `_TOLERANCE_PASS`/`_TOLERANCE_WARN` (objectives.py:102-103), the same symbols `_status_for` (:1066-1072) applies, verified by body read.
+- **Planted mutation:** reproduced independently. `{h_error + 1e-5:.3g}` is red at test_objectives.py:980; the runner-style `{h_error * 0.7:.3g}` stays green (12 passed).
+- **FD 9792 sweep:** the count of 26 reproduces; the `==` float-literal sweep gives 0.
+- **Docs:** audit-docs fails only check 31 (the expected working-id gap 1351→9790); doc-index OK; register-lint OK; the frozen-family guard prints nothing.
+- **The lead's verdict:** CLEAN at 0f725f0f. Two LOW notes are accepted as non-blocking: (i) the WARN bound on a `failed` check is redundant with the status equality; (ii) the ledger does not yet record the condition-5 gate evidence or the condition-6 CI run ids, and needs BST stamps. Note (ii) is due work, not a defect: a delta re-audit of the ledger follows once they are appended, before the ACK request.
+
+## Delta 2 — 2026-10-01 03:57:40 BST — first CI at 0f725f0f; mint allocation (the lead, sole allocator per FD-1338)
+- **Python run 36806710473:** `GATE: FAIL — 1 of 8 stages failed: pytest`, with 13 failed and 4404 passed. **All 13 are docs-gate tests** (test_audit_docs_*, test_doc_index, test_register_*, test_repository_invariants) failing on the working-id allocation gap: `[noncontiguous] docs/INDEX.md has a gap between 1351 and 9790`, check 31. Zero failures outside that family; the six `test_template_certificate_unchanged` cases PASS on CI's runner. Command: `gh run view 36806710473 --log | sed 's/^.*Z //' | grep -E '^FAILED' | grep -vcE 'test_audit_docs|test_doc_index|test_register_|test_repository_invariants'` → `0`.
+- **Mint ids** (`doc-id.py next --ref origin/main` → 1352 at 8933a29e): **SL 9790 → SL-1352, LG 9791 → LG-1353, FD 9792 → FD-1354.** This PR mints in place (a hotfix slice; the lead mints its SL per document-ids.md:214).
+- **Consequence for #1034:** it carries an unmerged `LG-01352-wk-1250-slice-1-…`. When it merges main after this hotfix, its ledger re-mints to **LG-1355** (an in-batch re-point of an unmerged record, permitted). Its CI re-runs anyway.
+- **CI twice** (condition 6) applies to the **minted head**, where check 31 can pass. The working-id head can never be green.
 ~~~~
 
 ### Task 1 — red, fix, mutation (2026-10-01 03:40 BST)
 
-Evidence is in `FD-9792` under *Evidence* 1 to 3 (red on the planted runner figure: `1 failed, 11 passed`; green after
+Evidence is in `FD-1354` under *Evidence* 1 to 3 (red on the planted runner figure: `1 failed, 11 passed`; green after
 the fix with the same plant: `12 passed`; planted mutation `1e-05 > 1e-06` red). The tolerance symbols are
 `_TOLERANCE_PASS` and `_TOLERANCE_WARN` in `packages/pricing-core/src/pricing_core/modelling/objectives.py`; the engine
 exposes only these private module constants, so the test imports them rather than typing a literal. Write set:
