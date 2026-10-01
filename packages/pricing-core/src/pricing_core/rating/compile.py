@@ -218,8 +218,8 @@ def _check_clamp_placement(algo: RatingAlgorithm) -> list[ValidationIssue]:
     output_steps = output_steps_by_name(algo)
     sources: dict[str, str] = {}
     for rung in RUNG_ORDER:
-        step = output_steps.get(rung_output_name(rung))
-        consumed = _as_list(step.consumes) if step is not None else []
+        output_step = output_steps.get(rung_output_name(rung))
+        consumed = _as_list(output_step.consumes) if output_step is not None else []
         if rung != "constraints" and consumed:
             sources[rung] = str(consumed[0])
     before = [rung for rung in RUNG_ORDER[: RUNG_ORDER.index("constraints")] if rung in sources]
@@ -232,11 +232,13 @@ def _check_clamp_placement(algo: RatingAlgorithm) -> list[ValidationIssue]:
         if not produced:
             continue
         consumed_names = [str(name) for name in _as_list(step.consumes) if name]
-        for rung, source in sources.items():
+        for rung_name, source in sources.items():
             if source != produced[0]:
                 continue
-            if rung != placeable:
-                reason = f"rung {rung!r} is not the last rung before constraints ({placeable!r})"
+            if rung_name != placeable:
+                reason = (
+                    f"rung {rung_name!r} is not the last rung before constraints ({placeable!r})"
+                )
             elif not consumed_names or consumed_names[0] != produced[0]:
                 reason = f"it produces {produced[0]!r} but consumes {consumed_names[:1]!r}"
             else:

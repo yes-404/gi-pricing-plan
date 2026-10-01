@@ -647,7 +647,8 @@ def _clamped_chain(*, clamp_on: str, produces: str | None = None) -> dict[str, A
         "clamp_bounds": {"min": "100"}, "reason_code": "MIN_APPLIED",
         "consumes": [clamp_on], "produces": [produces or clamp_on],
     }
-    index = next(i for i, s in enumerate(payload["steps"]) if s["step_id"] == f"s_{clamp_on.removesuffix('_minor')}")
+    target = f"s_{clamp_on.removesuffix('_minor')}"
+    index = next(i for i, s in enumerate(payload["steps"]) if s["step_id"] == target)
     payload["steps"].insert(index + 1, clamp)
     return payload
 
