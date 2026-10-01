@@ -1,7 +1,7 @@
 ---
 id: RL-9750
 family: ruling
-title: PL 9762 DP-1, DP-2, DP-3, DP-5 and DP-6 decided — the rule routes are clients of the approval workflow, an unreadable or `error` dry-run is refused, the demo seed goes through the workflow, and the unbacked-approval reset is an audited script
+title: PL 9762 DP-1, DP-2, DP-3, DP-5 and DP-6 decided — the rule routes are clients of the approval workflow, an unreadable or `error` dry-run is refused, the demo seed goes through the workflow, the unbacked-approval reset is an audited script, and an approved rule's dry run cannot be replaced
 status: draft                  # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
 created: 2026-10-01
 owner: decision-maker
@@ -15,7 +15,7 @@ corrects: ~
 relates: [FD-1356, RL-1301, RL-1263, FD-1366, FR-48, FR-50, FR-68, FR-351, FR-352, FR-353, FR-354, FR-355, FR-363, FR-386]
 ---
 
-# RL 9750 (working id) — PL 9762 DP-1, DP-2, DP-3, DP-5 and DP-6 decided: the rule routes are clients of the approval workflow, an unreadable or `error` dry-run is refused, the demo seed goes through the workflow, and the unbacked-approval reset is an audited script
+# RL 9750 (working id) — PL 9762 DP-1, DP-2, DP-3, DP-5 and DP-6 decided: the rule routes are clients of the approval workflow, an unreadable or `error` dry-run is refused, the demo seed goes through the workflow, the unbacked-approval reset is an audited script, and an approved rule's dry run cannot be replaced
 
 ## How this was ruled
 
@@ -72,7 +72,7 @@ and the new `PL-1368` file, none of them cited below, so the table holds at both
 branch is cut from `49cd25be`, and the front matter's `tree:` names it.
 
 **Two functions this ruling builds on do not exist at either tree:** `decide_and_carry`
-and `open_request_for` are PL 9762's new functions (`git grep -n 'def decide_and_carry\|def open_request_for' 49cd25be -- backend`
+and `open_request_for` are PL 9762's new functions, to be added by that plan (Task 3 Interfaces, plan `:745-746`; `git grep -n 'def decide_and_carry\|def open_request_for' 49cd25be -- backend`
 prints nothing). Their specification is the plan's (Task 3 Interfaces and Step 5,
 `decide_and_carry(session, *, caller, request_id, decision, comment) -> ApprovalRequestRow`;
 Step 6, `open_request_for`), which this ruling adopts with DP-1's one change. What they are
@@ -164,7 +164,7 @@ dangling (every seed-written rule, DP-3 (iii)) is first dry-run again; the dry-r
 no status check (`api/validation.py:302-330`), so this works from `review`. The reset target
 stays `review`, as the maintainer decided in *"2026-09-30 11:27:20 BST — correction to the failed-dry-run follow-on: the spec means EXECUTED successfully; measure the `error` outcome instead"*; this ruling does not move it.
 
-**Wire changes, ruled here.** No maintainer acceptance of them is on record; they are ruled on `06`'s ownership of `SUBMITTER_CANNOT_APPROVE` as a 403 (`platform/approvals.py:361-367`; `06-governance.md:583`), and `01` never states 409 for self-approval (the 409 is the service's, `validation_rules.py:422-430`). (1) Self-approval through the route answers `06`'s
+**Wire changes, ruled here.** No maintainer acceptance of them is on record, and the maintainer makes no ruling on them (in *"2026-10-01 11:07:12 BST — #1070 audit: observation (1) → its OWN FD (option ii), MEDIUM, deadline before the P2 exit demo; observation (2) → an FD, MEDIUM, remedy RIDES in the FD-1356 fix slice; F1–F4 adopted"*). Their basis is PL 9762 Acceptance 11 and `06`'s ownership of `SUBMITTER_CANNOT_APPROVE` as a 403 (`platform/approvals.py:361-367`; `06-governance.md:583`); and `01` never states 409 for self-approval (the 409 is the service's, `validation_rules.py:422-430`). (1) Self-approval through the route answers `06`'s
 `SUBMITTER_CANNOT_APPROVE` **403** (the author submitted) or `AUTHOR_CANNOT_APPROVE` **403**
 (another member submitted), not `SUBMITTER_CANNOT_APPROVE` 409: `decide` owns the separation
 of duties. `test_a_rule_walks_draft_to_approved_and_never_by_its_author`
@@ -417,10 +417,18 @@ lock is handled by the code that already owns it.
 - **Where it runs:** the database named `gipricing` (the maintainer's "template"), always.
   Scratch databases are **not** written (they are disposable, and a running gate may hold
   one); their counts are recorded, not changed (below).
-- **What the reset does not do.** It corrects the governed record; it does **not** stop a
-  Rule Set running the rule. A validation run never checks member status, so `01` FR-50's
-  run-time clause (`01:112`) is enforced only when a set is written (`replace_rule_set`),
-  verified by auditor-1070 (observation (1) below).
+- **What the reset does not do.** The reset corrects the governed record; it does **not**
+  stop a Rule Set member running (see FD 9748, working id). A validation run never checks
+  member status, so `01` FR-50's run-time clause (`01:112`) is enforced only when a set is
+  written (`replace_rule_set`), verified by auditor-1070. Where that is enforced is FD 9748's,
+  for a later ruling, by the maintainer's *"2026-10-01 11:07:12 BST — #1070 audit: observation (1) → its OWN FD (option ii), MEDIUM, deadline before the P2 exit demo; observation (2) → an FD, MEDIUM, remedy RIDES in the FD-1356 fix slice; F1–F4 adopted"*.
+  **Two counts, kept apart.** Task 0's `route_approved` is 0 on every `gipricing*` database
+  after DP-0 (PL 9762 §"DP-0's decided record": `TOTAL route_approved=0`), so no rule the
+  direct route approved is running today. The reset's **own** population, FD-1356's
+  follow-on predicate (approved, not built-in, no approved request), is **not** 0: the same
+  re-run printed `user_approved_no_approved_request=314` in total and `10` for `gipricing`.
+  Those rows are reset to `review` by this script, and their Rule Sets keep running them until
+  FD 9748 is discharged.
 - **Target state `review`**, the maintainer's (*"2026-09-30 11:27:20 BST — correction to the failed-dry-run follow-on: the spec means EXECUTED successfully; measure the `error` outcome instead"*). The trigger does not fire on a write
   to `review`, and the CHECK holds for a non-approved row (PL 9762 DP-6 row, verified against
   `RL-1301` A.4 sub-item 2 and `models.py:1201-1205`).
@@ -450,9 +458,46 @@ does) and runs its reset function on the test database:
   a scratch edit, C is reset and the test fails naming it; (2) with the `audit.record` call
   removed in a scratch edit, the event assertion fails. Each edit is reverted.
 
+### FD 9747 (working id) — an approved rule's dry run cannot be replaced: `attach_dry_run` refuses an `approved` rule with a new `01` code, `RULE_VERSION_IMMUTABLE` (409)
+
+*(Added 2026-10-01 at 11:09:04 BST, on the maintainer's *"2026-10-01 11:07:12 BST — #1070 audit: observation (1) → its OWN FD (option ii), MEDIUM, deadline before the P2 exit demo; observation (2) → an FD, MEDIUM, remedy RIDES in the FD-1356 fix slice; F1–F4 adopted"*, which puts the remedy in
+this slice.)*
+
+**Ruling.** `validation_rules.attach_dry_run` (`:352-363`) refuses a rule whose status is
+`approved` with `PlatformError("RULE_VERSION_IMMUTABLE", "An approved rule's dry run cannot
+be replaced", 409, f"validation_rule:{row.slug}@{row.version} is approved. `01` §4.5 step 4:
+an approved rule is immutable, and its dry-run report is its approval evidence. Dry-run a new
+version instead.")`, before it writes `dry_run_report_id`. A `draft` or `review` rule attaches
+as today (`review` is DP-1's legacy path). This is the **one** refusal, in the one function
+that writes the field; the route and the handler are not changed.
+
+**The code.** No existing code fits. `RULE_NOT_APPROVED` says the opposite of the case.
+`DATASET_VERSION_IMMUTABLE` (`01`, `datasets.py:537`) names another artifact. `VALIDATION_FAILED`
+is the generic code for bad caller input, and here the input is valid but the rule's state
+forbids it (the distinction `06` FR-386 draws). A new `01` code follows the per-artifact
+precedent of `DATASET_VERSION_IMMUTABLE` and `02`'s `MODEL_IMMUTABLE` (`modelling.py:816`,
+409). It is registered in `DATA_ERROR_CODES` (`backend/src/app/errors.py:80-`) and in
+`01`'s owned-codes list (text 2).
+
+**What happens to the dry-run job.** The handler stores the report and attaches it in one
+`unit_of_work` (`data_handlers.py:278-296`), so the refusal rolls the report back with it. The
+job does not succeed and the rule keeps its approved report: it fails closed, with no orphan
+report.
+
+**What it obliges.** PL 9762 gains the acceptance item below and the `errors.py` row; Task 6
+applies texts 2 and 5.
+
+**Acceptance, red first.** `test_an_approved_rules_dry_run_cannot_be_replaced`, in
+`backend/tests/test_validation_rule_approval.py`: an `approved` rule with a stored report R1
+is dry-run through the real `DATASET_VALIDATE` job. After the fix: the job does not succeed;
+`dry_run_report_id` is still R1; the number of `validation_reports` rows is unchanged; and,
+where the job records the error's code, it is `RULE_VERSION_IMMUTABLE` (the ledger says which).
+The control: a `review` rule's dry run attaches its new report. Red on the base tree: the
+approved rule's `dry_run_report_id` is replaced by the new report's id.
+
 ## The spec texts
 
-Four texts. Task 6 of PL 9762 applies them **in one commit with the code** (`CLAUDE.md` §2),
+Five texts. Task 6 of PL 9762 applies them **in one commit with the code** (`CLAUDE.md` §2),
 following `spec-change`, then runs `python3 scripts/audit-docs.py`. The placeholders are
 `<Task 6 date>`, the date of that commit, and `RL-<minted id>`, this ruling's minted id.
 Every other character is fixed.
@@ -472,7 +517,7 @@ module:**` paragraph (`01:929-935`). Its last line, `` `REJECT_RATE_EXCEEDED`, `
 (`01:935`), is replaced by the line below. No other line changes.
 
 ```text
-`REJECT_RATE_EXCEEDED`, `DERIVATION_NOT_MATERIALISED`, `EVIDENCE_INCOMPLETE` (re-raised from `06`).
+`REJECT_RATE_EXCEEDED`, `DERIVATION_NOT_MATERIALISED`, `RULE_VERSION_IMMUTABLE`, `EVIDENCE_INCOMPLETE` (re-raised from `06`).
 ```
 
 **Text 3** — placement: `docs/specs/06-governance.md`, the `FR-351` row (`06:92`). Appended
@@ -492,6 +537,15 @@ has appended to the cell first, this text goes after S2's.
 *(Clarified <Task 6 date>, `RL-<minted id>` DP-3, on the maintainer's reading of `01` §4.5 step 2 of 2026-09-30: "successful" means the dry run executed. Its report can be read in the workspace and records no `error` outcome. A `fail` outcome is a run that executed and caught rows, and is accepted. A refusal is `EVIDENCE_INCOMPLETE`.)*
 ```
 
+**Text 5** — placement: `docs/specs/01-data-management.md` §4.5 "Governance of custom rules",
+step 4, the line `` 4. `approved` rules are immutable; edits create a new rule version needing re-approval. ``
+(`01:523`). Appended at the **end of that line**, after `re-approval.` and one space. No other
+line changes.
+
+```text
+*(Amended <Task 6 date>, `RL-<minted id>`: the dry-run report is an approved rule's approval evidence, so it is immutable too. Attaching a new dry-run report to an `approved` rule is refused with `RULE_VERSION_IMMUTABLE` (409); a `draft` or `review` rule's dry run attaches as before.)*
+```
+
 The executor applies each text above byte-for-byte; authorship stays with the decision-maker (document-ids §1.6 FR row; CLAUDE.md §2 one-commit rule; the RL-1296 precedent). Any executor wording is a stop.
 
 ## Acceptance — the violation that must become detectable
@@ -499,8 +553,9 @@ The executor applies each text above byte-for-byte; authorship stays with the de
 Per DP above, each red first on the base tree by its stated cause, plus, for the texts:
 - `git diff <base>..HEAD -- docs/specs/01-data-management.md docs/specs/06-governance.md`
   shows exactly: two added lines after `01:927` (text 1), one replaced line at `01:935`
-  (text 2), and one appended run at the end of each of the `FR-351` and Validation Rule rows
-  (texts 3 and 4); every earlier character of those rows is byte-identical.
+  (text 2), one appended run at the end of each of the `FR-351` and Validation Rule rows
+  (texts 3 and 4), and one appended run at the end of §4.5 step 4 at `01:523` (text 5); every
+  earlier character of those lines is byte-identical.
 - `python3 scripts/audit-docs.py` exits 0 on the slice's tree (check 10 included: text 2's
   annotation keeps ownership exclusive).
 
@@ -510,7 +565,7 @@ Per DP above, each red first on the base tree by its stated cause, plus, for the
   and order; DP-6's script in place of the migration, Task 7 Steps 3–5 and Acceptance 13; the
   three tests this ruling adds), **the ruling wins**. The planner aligns the plan before its
   first merge, or the dispatch record names each difference.
-- **Task 6** applies texts 1–4 with the code, in one commit.
+- **Task 6** applies texts 1–5 with the code, in one commit.
 - **The HOLD (FD 9752)**: no ruling here needs code that reads any of the four `to_dict`
   approval-route responses. `decide_and_carry` returns the `ApprovalRequestRow`; the rule routes return
   `ValidationRule`; the seed and the reset script call services. Decide's `200` stays untyped
@@ -522,23 +577,16 @@ Per DP above, each red first on the base tree by its stated cause, plus, for the
 
 ## Spec changes in this commit
 
-**None.** Texts 1–4 are recorded here and applied by the slice (PL 9762 Task 6), because the
+**None.** Texts 1–5 are recorded here and applied by the slice (PL 9762 Task 6), because the
 code they describe does not exist until then.
 
 ## Observed, not ruled (for the lead)
 
-- **A Rule Set keeps running a rule that is no longer `approved`.** Neither the validation
-  handler nor `platform/validation.py` checks member status at run time (a `git grep` for
-  `APPROVED`/`"approved"` in both prints nothing at `92b4e4ac`); `01` FR-50 ("only `approved`
-  rules may run in a Rule Set …") is enforced only when the set is written
-  (`replace_rule_set`, `RULE_NOT_APPROVED`). After DP-6's reset, the `gipricing` database's
-  approved Rule Sets will hold `review` members that still run. A possible finding; not this
-  slice's.
-- **`attach_dry_run` has no status check** (`validation_rules.py:352-363`; the dry-run route
-  `api/validation.py:302-330` has none either), so a rule's evidence can be replaced while it
-  is in `review` or after it is `approved` (`01` §4.5 step 4 calls an approved rule
-  immutable). DP-1's legacy path relies on it from `review`; whether it should be refused
-  after approval is a question for the lead, not ruled here.
+- *(Superseded by the maintainer's *"2026-10-01 11:07:12 BST — #1070 audit: observation (1) → its OWN FD (option ii), MEDIUM, deadline before the P2 exit demo; observation (2) → an FD, MEDIUM, remedy RIDES in the FD-1356 fix slice; F1–F4 adopted"*.)* The first observation (a Rule Set keeps
+  running a member that is no longer `approved`) is **FD 9748** (working id), MEDIUM, with
+  its own later ruling. The second (`attach_dry_run` has no status check) is **FD 9747**
+  (working id), MEDIUM, and its remedy rides in this slice: **"FD 9747 — an approved rule's
+  dry run cannot be replaced"**, below.
 - **The `skipped`-only dry run** (PL 9762 §"Decision points", the observed paragraph) is
   unchanged by this ruling: the refusal reads `error` only, as FD-1356 says.
 - **Working id 9749** is not used; the lead may release it.
