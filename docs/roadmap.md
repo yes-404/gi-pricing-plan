@@ -708,7 +708,7 @@ tree: d672f991bdc59008e09cf3f464cd7cffe5699553
 phase: P2
 work: WK-673
 corrected_by: []
-relates: [PL-1267, RL-1264, RL-1184]
+relates: [PL-1267, PL-1395, RL-1264, RL-1184]
 ```
 
 Spec only, no application code beyond one test-file label. FR-266's dated amendment (exact Shapley over the declared changes for K ≤ 6, largest-remainder allocation to integer minor units, the isolated and cumulative views, the residual line, the above-six rule); the hard gate appended to `03` §3.9 as requirements; `03` §4.6 reconciled with the contract and extended with the attribution fields; `03` §4.8's portfolio frame schema; `RL-1264`'s DP-1 and DP-2 obligations as spec text; `03` §5.2's `DislocationSpec`, `BundleDelta`, `Attribution` and `attribute`'s amended signature; `00` §2 glossary terms first; the `test_contracts.py:84` label and `_round_minor`'s docstring corrected. `PL-1267` Slice 1. First in the chain: nothing in WK-673 precedes it, and it does not depend on WK-674. Its leaf plan states, as a decision point or a premise, what the portfolio frame does with a column the contract does not declare (the `03` §4.8 undeclared-column pass-through), per the maintainer's acceptance of `PL-1267`, "2026-10-03 17:53:43 BST — ACCEPTANCE: PL-1267 (WK-673 map plan, dislocation with attribution) by the maintainer (by delegation); GO planner-673act", condition 2.
@@ -880,7 +880,7 @@ A database trigger, primary, on every approval-capable table refuses `approved` 
 id: SL-1256
 family: slice
 title: Slice 2: the Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit and NFR-498 for deploy)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-29
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
@@ -893,6 +893,7 @@ relates: [PL-1237]
 The Environment and Deployment records, promotion order and their audit limb for deploy (FR-272, NFR-498), with the carried rulings. `PL-1237` Task 2. Starts after Slice 1 closes; its leaf plan also waits on `OQ-1234` (the maintainer's acceptance line on `PL-1237`).
 
 *Dated 2026-10-03 (at PL-1392's mint): the leaf plan is now **`PL-1392`**, which **supersedes `PL-1306`** on the maintainer's entry "2026-10-01 10:10:32 BST — WK-674 S2 currency audit: ORDER AMENDED to (b) S2 → FD-1356 fix; a superseding PL for S2; …" and its 10:10:46 addendum: the 7 new routes typed both ways, Acceptance 8 Branch A, order (b) S2 → the FD-1356 fix, and never concurrent with FD-1335 Part A's slice (both edit `score.py`). This row's status and fields are unchanged.*
+(Activated 2026-10-03 as WK-674 Slice 2, on the maintainer's GO check, "2026-10-03 20:02:13 BST — DISPATCH GO: WK-674 Slice 2 (SL-1256 / PL-1392) on lane A; executor-1256 starts after #1087 merges"; dispatch record DISPATCH-WK-674-SL1256-2026-10-03.)
 
 #### SL-1257 — Slice 3: environment isolation (FR-430, FR-431, register F54 and F48, NFR-496 prod-sampling limb)
 
