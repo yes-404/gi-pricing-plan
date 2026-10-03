@@ -7,6 +7,7 @@ import { computed } from "vue";
 import VChart from "vue-echarts";
 
 import type { PartitionCaption, PartitionDiagnostics } from "@/api/diagnostics";
+import type { Column } from "@/chart-table";
 import ChartFigure from "@/components/ChartFigure.vue";
 
 use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
@@ -61,25 +62,30 @@ const option = computed(() => ({
   series: series.value,
 }));
 
-const columns = computed(() => [
-  "Factor and level",
-  ...props.partitions.flatMap(([label]) => [`${label} A/E`, `${label} exposure years`]),
-]);
-
 /**
  * `exposure_years` is an exact decimal **string** (FR-10) and is passed through as one.
  * It is not plotted and nothing computes with it, so there is no reason to widen it to a
  * float here — the string is what the fit recorded.
+ *
+ * The rows are the level labels, and each partition's column looks its cell up by that label.
+ * Keys use the partition's index, never its caption: a caption is display text, and two
+ * partitions captioned alike must not produce a duplicate key.
  */
-const rows = computed(() =>
-  levels.value.map((level) => [
-    level,
-    ...props.partitions.flatMap(([, partition]) => {
-      const cell = partition.ae_by_factor.find((candidate) => key(candidate) === level);
-      return [cell?.ae ?? null, cell?.exposure_years ?? null];
-    }),
-  ]),
-);
+const columns = computed<readonly Column<string>[]>(() => [
+  { key: "level", label: "Factor and level", value: (level) => level },
+  ...props.partitions.flatMap(([label, partition], index): Column<string>[] => {
+    const cellAt = (level: string) =>
+      partition.ae_by_factor.find((candidate) => key(candidate) === level);
+    return [
+      { key: `p${index}-ae`, label: `${label} A/E`, value: (level) => cellAt(level)?.ae ?? null },
+      {
+        key: `p${index}-exposure-years`,
+        label: `${label} exposure years`,
+        value: (level) => cellAt(level)?.exposure_years ?? null,
+      },
+    ];
+  }),
+]);
 </script>
 
 <template>
@@ -87,7 +93,7 @@ const rows = computed(() =>
     title="A/E by factor"
     caption="Actual over expected at each factor level, exposure shown beside it."
     :columns="columns"
-    :rows="rows"
+    :rows="levels"
   >
     <VChart
       class="h-80 w-full"
