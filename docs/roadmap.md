@@ -701,7 +701,7 @@ From “Workstreams” (line 383): Dislocation with attribution | FR-263, FR-264
 id: SL-1385
 family: slice
 title: Slice 1: spec — FR-266's amendment, the hard gate as requirements, the contract and the types
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-03
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: d672f991bdc59008e09cf3f464cd7cffe5699553
@@ -712,6 +712,7 @@ relates: [PL-1267, PL-1395, RL-1264, RL-1184]
 ```
 
 Spec only, no application code beyond one test-file label. FR-266's dated amendment (exact Shapley over the declared changes for K ≤ 6, largest-remainder allocation to integer minor units, the isolated and cumulative views, the residual line, the above-six rule); the hard gate appended to `03` §3.9 as requirements; `03` §4.6 reconciled with the contract and extended with the attribution fields; `03` §4.8's portfolio frame schema; `RL-1264`'s DP-1 and DP-2 obligations as spec text; `03` §5.2's `DislocationSpec`, `BundleDelta`, `Attribution` and `attribute`'s amended signature; `00` §2 glossary terms first; the `test_contracts.py:84` label and `_round_minor`'s docstring corrected. `PL-1267` Slice 1. First in the chain: nothing in WK-673 precedes it, and it does not depend on WK-674. Its leaf plan states, as a decision point or a premise, what the portfolio frame does with a column the contract does not declare (the `03` §4.8 undeclared-column pass-through), per the maintainer's acceptance of `PL-1267`, "2026-10-03 17:53:43 BST — ACCEPTANCE: PL-1267 (WK-673 map plan, dislocation with attribution) by the maintainer (by delegation); GO planner-673act", condition 2.
+(Activated 2026-10-03 as WK-673 Slice 1, on the maintainer's GO check, "2026-10-03 21:17:03 BST — DISPATCH GO: WK-673 Slice 1 (SL-1385 / PL-1395) on lane B; executor-1385 starts after #1087, #1093 and #1092 have merged"; dispatch record DISPATCH-WK-673-SL1385-2026-10-03.)
 
 #### SL-1386 — Slice 2: the Dislocation Run on ZEN, in integer minor units
 
