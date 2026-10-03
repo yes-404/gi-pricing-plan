@@ -62,7 +62,7 @@
     },
     "attribution": {
       "type": "array",
-      "description": "Per change group: the Shapley part of record and the isolated and cumulative views, in integer minor units (FR-266 as amended, RW1).",
+      "description": "Per change group: the Shapley part of record and the isolated and cumulative views, in integer minor units (FR-266 as amended, FR-1397).",
       "items": {
         "type": "object",
         "required": ["group", "shapley_minor", "isolated_minor", "cumulative_minor", "mean_change_pct"],
@@ -78,7 +78,7 @@
     },
     "derived_changes": {
       "type": "array",
-      "description": "The changes derived from baseline and candidate at step granularity (RW3).",
+      "description": "The changes derived from baseline and candidate at step granularity (FR-1399).",
       "items": {
         "type": "object",
         "required": ["id", "kind", "description"],
@@ -91,7 +91,7 @@
     },
     "change_groups": {
       "type": "array", "maxItems": 6,
-      "description": "The analyst's groups, partitioning derived_changes exactly (RW3). Their order is the declared change order.",
+      "description": "The analyst's groups, partitioning derived_changes exactly (FR-1399). Their order is the declared change order.",
       "items": {
         "type": "object",
         "required": ["name", "changes"],
@@ -103,7 +103,7 @@
     },
     "attribution_summary": {
       "type": "object",
-      "description": "Method, totals, S and R, and the subset bundles compiled (FR-266 as amended, RW1, RW2).",
+      "description": "Method, totals, S and R, and the subset bundles compiled (FR-266 as amended, FR-1397, FR-1398).",
       "required": ["method", "total_change_minor", "residual_minor", "order_sensitivity_lower_bound",
                    "residual_share", "orders_sampled", "subset_bundle_count", "subset_bundle_hashes",
                    "subset_valuation", "replay_fell_back"],

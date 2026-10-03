@@ -1,5 +1,5 @@
 ---
-id: LG-9738
+id: LG-1400
 family: ledger
 title: WK-673 slice SL-1385 — the portfolio frame and the types, spec only (PL-1395, RL-1394)
 status: active
@@ -14,11 +14,11 @@ corrected_by: []
 relates: [RL-1394, RL-1264, RL-1361, RL-1184, RL-1263, PL-1267, FD-1374]
 ---
 
-# LG-9738 — WK-673 slice SL-1385, the portfolio frame and the types
+# LG-1400 — WK-673 slice SL-1385, the portfolio frame and the types
 
 Executed from `PL-1395` by `executor-1385` (sonnet; `echo $CLAUDE_EFFORT` printed `medium`). Branch
-`sl-1385-portfolio-frame-and-types`. Stamps are BST (`TZ=Europe/London date`). The id `LG-9738` is a working id
-allocated by the lead (2026-10-03 21:16:24 BST); the lead mints the final id.
+`sl-1385-portfolio-frame-and-types`. Stamps are BST (`TZ=Europe/London date`). The ledger's working id was `LG 9738`
+(allocated by the lead 2026-10-03 21:16:24 BST); it was minted as `LG-1400` at the mint moment (see "Mint" below).
 
 The executor charter's Model / effort line, verbatim: "`sonnet` (currently Sonnet 5); medium, inherited from the
 lead — the highest-volume role; per-slice gates and the auditor's re-check bound the risk of a cheaper setting."
@@ -173,10 +173,9 @@ The PR body asks the lead to carry these rows into the dispatch records of SL-13
    diff one line as Task 6 Step 2 requires. The alternative (a split implicit string) would make the diff two lines.
 2. **The entry's line number.** The plan and dispatch record say `test_contracts.py:87`; at `8252741c` the entry is at
    line 89 (the file grew). The edit is to the one entry's value, as ruled.
-3. **Working ids.** `RW1`, `RW2`, `RW3` are kept as the requirement working ids; the lead's mint replaces them.
-   `audit-docs.py` reports no finding for them. Its one remaining finding on the final tree is check 31, "gap in
-   the full allocation between 1396 and 9738": this PR's own working id `LG-9738` (acceptable per PL-1395
-   Acceptance 13, named here); the lead's mint clears it.
+3. **Working ids (at the gate of record, before the mint).** `RW1`, `RW2`, `RW3` were kept as the requirement working ids
+   and `LG 9738` as the ledger working id; the mint replaced them (see "Mint" below). At that tree `audit-docs.py`
+   reported check 31, "gap in the full allocation between 1396 and 9738", which the mint clears.
 4. **`docs/INDEX.md` (check 39).** From the Task 2 commit onward `audit-docs.py` reports check 39 (INDEX stale
    against a regeneration) until the INDEX is regenerated; PL-1395 Task 8 Step 4 regenerates it in the last commit
    only, and that commit does so.
@@ -192,7 +191,7 @@ The PR body asks the lead to carry these rows into the dispatch records of SL-13
 | 1 | RL-1394 id resolves in PL-1395's Decision points table (activation need 1 met, #1091, #1092) |
 | 2 | a script that extracts each fenced block under the ruling's "The exact texts" and tests it, with only the three ids substituted, as a substring of the committed file, run at the committed tree: T1, T2, T3, T4, T5 (frame and note), T6 (note, example, contract members, dependentRequired), T7 (block and types), T8 and T9's value each printed "identical after substituting date/RL/PL ids" (14 of 14), rc 0 |
 | 3 | FR-266's row: `grep -c` per phrase printed 1 for each of `exact Shapley`, `largest remainder`, `declared change order`, `plain rounding is forbidden`, `isolated`, `cumulative`, `total − Σ isolated`, `order-dependent`, `FR-273` |
-| 4 | `grep -c '^. \*\*RW[123]\*\*' docs/specs/*.md` prints 3 in `03-rating-engine.md` only; the three rows sit between FR-266's row and `### 3.10` |
+| 4 | (as written before the mint, with the working ids; re-run on the minted ids under "Mint" below) `grep -c '^. \*\*RW[123]\*\*' docs/specs/*.md` prints 3 in `03-rating-engine.md` only; the three rows sit between FR-266's row and `### 3.10` |
 | 5 | `grep -n '^#### The portfolio frame (WK-673' docs/specs/03-rating-engine.md` prints one line (688), inside §4.8; the "does not design that schema now." sentence carries T5's dated note |
 | 6 | the agreement check printed `OK`; red-first quoted above |
 | 7 | `grep -n 'def dislocate\|def derive_changes\|def attribute'` prints the three lines T7 adopts and no other; the old `attribute(changes: …)` line is gone from the block |
@@ -202,12 +201,12 @@ The PR body asks the lead to carry these rows into the dispatch records of SL-13
 | 11 | `git diff --name-only origin/main...HEAD` lists only the write set: `backend/tests/test_contracts.py`, `docs/contracts/schemas/dislocation-run.schema.json`, `docs/specs/00-overview.md`, `docs/specs/03-rating-engine.md`, plus this ledger and `docs/INDEX.md` in the last commit |
 | 12 | Task 7's table above; PR body carries the request |
 | 13 | see "Gate" below |
-| 14 | see "Gate" below; `req-coverage.py` is expected to list RW1 to RW3 as specified with no test (Slices 3 and 4 build their tests) |
+| 14 | see "Gate" below; `req-coverage.py` is expected to list the three requirement rows (working ids RW1 to RW3, now FR-1397 to FR-1399) as specified with no test (Slices 3 and 4 build their tests) |
 | 15 | the maintainer's MERGE-ACK and the auditor's clean audit: not this ledger's |
 
 ## PRs
 
-Draft PR "feat(rating): SL-1385 — the portfolio frame and the types (WK-673 Slice 1, PL-1395, LG 9738)" from branch
+Draft PR "feat(rating): SL-1385 — the portfolio frame and the types (WK-673 Slice 1, PL-1395, LG 1400)" from branch
 `sl-1385-portfolio-frame-and-types`; PR #1094.
 
 ## Gate
@@ -241,7 +240,7 @@ run (22:33+); it was not probed during the run, so a contention pair with execut
 `GATE: FAIL — 2 of 13 stages failed: audit_docs pytest`. pytest: 13 failed, 4611 passed, 3 skipped, 1309 s.
 
 **Reading of the two reds (not a pass).** `audit_docs` reports exactly one finding, check 31, "gap in the full
-allocation between 1396 and 9738": this PR's own working id `LG-9738`, named above and allowed by PL-1395
+allocation between 1396 and 9738": this PR's own working id `LG 9738`, named above and allowed by PL-1395
 Acceptance 13. All 13 pytest failures are tests that run `audit-docs.py`, `doc-id.py check` or `doc-index.py` on the
 real tree and receive that one finding: `test_audit_docs_finding_citations` (1), `test_audit_docs_ids` (2:
 `test_the_real_tree_passes_all_ten_checks`, `test_doc_id_check_exits_0_on_the_real_tree` — "[noncontiguous] docs/INDEX.md
@@ -252,3 +251,41 @@ the check-36 line about a legacy pre-migration requirement id in the custom-obje
 inference from the failure messages, not a re-run: the proof is a re-run at the lead's minted head, where the working
 id is replaced by an allocated one and the gap closes. No test outside those docs-audit tests failed; the
 backend, pricing-core, model-schema and frontend suites are green.
+
+## Mint (2026-10-03, the lead's "GO-MINT: SL-1385 (#1094 @687f9552), option (a)", 22:38:34 BST)
+
+**One `doc-id` run, 2026-10-03 22:40 BST, on `origin/main` = `8252741cc3849058b6fc6836967448d88ff9821c`.** Command
+`python3 scripts/doc-id.py next` printed `1397` (and "0 file(s) skipped"). The four ids were taken in order from that
+one run: **FR-1397, FR-1398, FR-1399** for the three requirement rows in row order, then **LG-1400** for this ledger.
+Merging `origin/main` into the branch first was a no-op ("Already up to date"): the branch already contained
+`8252741c`.
+
+| Working label | Minted id | Row (03 §3.9) |
+|---|---|---|
+| `RW1` | `FR-1397` | Attribution reconciles exactly on the rating path's own integers, on every run |
+| `RW2` | `FR-1398` | Attribution runs on the ZEN engine through the ordinary compile path; its subset bundles are ephemeral |
+| `RW3` | `FR-1399` | The declared changes are derived, and the analyst may group them |
+| ledger working label 9738 | `LG-1400` | this ledger (the file was renamed to carry the minted id) |
+
+`RL-1394`'s frozen text keeps the labels `RW1` to `RW3`; this table is how its reader resolves them. Replaced in the
+slice's own files: `docs/specs/03-rating-engine.md` (the three rows, the §4.6 amendment note, the `derive_changes`
+signature comment), `docs/contracts/schemas/dislocation-run.schema.json` (four descriptions) and this ledger.
+`backend/tests/test_contracts.py` and `packages` carried no `RW` label. `docs/INDEX.md` was regenerated with
+`python3 scripts/doc-index.py`, never hand-edited.
+
+**Acceptance 4 on the minted ids** (`grep -c "^| \*\*FR-<id>\*\*" docs/specs/*.md | grep -v ':0'`): each of FR-1397,
+FR-1398, FR-1399 printed exactly one line, `docs/specs/03-rating-engine.md:1`. The rows sit at lines 190, 191 and 192,
+after FR-266 (189) and before `### 3.10 Deployment` (194).
+`git grep -n 'RW[123]' -- docs/specs docs/contracts backend packages` prints nothing.
+
+**req-coverage (condition 4).** `uv run python scripts/req-coverage.py` (539 specified, 350 marked) lists none of
+FR-1397, FR-1398, FR-1399 among the marked requirements: "specified, no test", as PL-1395 :134 expects. Their owners are
+**Slice 3 (`SL-1387`) and later slices** (the attribution code and its tests; Slice 4 adds the route and Job handler).
+
+**Plan gap (condition 4).** PL-1395 requires the three ids from the lead at the mint turn (:151-153, :203-204,
+Acceptance 4) but no Task step names the FR mint, so this slice's executor flow had no step for it. The audit
+(`handover/audit-1385-2026-10-03.md`, item 6) found the same gap. It is recorded here, not fixed in the frozen plan.
+
+**Close.** The audit is CLEAN (`handover/audit-1385-2026-10-03.md`); the dispatch record is
+`DISPATCH-WK-673-SL1385-2026-10-03.md`, Deltas 1 and 2. The roadmap row for `SL-1385` is set to `closed` in this
+commit. The gate of record above ran at `a96f7ce4`, before the mint; the minted-head gate result is appended below.
