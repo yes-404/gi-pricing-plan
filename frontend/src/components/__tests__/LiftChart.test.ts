@@ -1,7 +1,8 @@
-import { render, screen, within } from "@testing-library/vue";
+import { render, screen } from "@testing-library/vue";
 import { describe, expect, it, vi } from "vitest";
 
 import { partitions } from "@/api/diagnostics";
+import { cellUnder } from "@/test-tables";
 import { DIAGNOSTICS } from "@/views/__tests__/fixtures";
 
 import LiftChart from "../LiftChart.vue";
@@ -39,16 +40,18 @@ describe("LiftChart", () => {
   it("tabulates rows per bin, because a decile on few rows is not a decile", () => {
     render(LiftChart, { props: { partitions: partitions(DIAGNOSTICS.universal) } });
     const table = screen.getByRole("table", { name: /lift by decile/i });
-    const row = within(table).getAllByRole("row")[1] as HTMLElement;
-    expect(within(row).getAllByRole("cell").map((c) => c.textContent?.trim())).toEqual([
-      "1",
-      "40753",
-      "0.021",
-      "0.023",
-      "16950",
-      "0.022",
-      "0.025",
-    ]);
+    const expected: [string, string][] = [
+      ["Bin", "1"],
+      ["Train rows", "40753"],
+      ["Train predicted", "0.021"],
+      ["Train actual", "0.023"],
+      ["Holdout rows", "16950"],
+      ["Holdout predicted", "0.022"],
+      ["Holdout actual", "0.025"],
+    ];
+    for (const [label, value] of expected) {
+      expect(cellUnder(table, /^1\s/, label).textContent?.trim()).toBe(value);
+    }
   });
 
   // FR-187: a caption may not assert a relationship the artifact does not carry. This
