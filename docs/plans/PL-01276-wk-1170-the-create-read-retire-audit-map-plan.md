@@ -119,8 +119,12 @@ never on a working tree.
 
 - **Do not build ahead of the phase** (`CLAUDE.md` §0). This Work is P2 governance tooling. It
   adds no product capability. FR-240's clauses (4)–(6) leave it (DP-2 (b)).
-- **A frozen record is corrected only as `document-ids.md` §1.5 and check 34 allow**: `status:`
-  forward, `superseded_by:`, an append to `corrected_by:`. A frozen plan's error is corrected by a
+- **A frozen record is corrected only as `document-ids.md` §1.5 allows** (its header comments):
+  `status:` forward, `superseded_by:`, an append to `corrected_by:`. *(Corrected 2026-09-30,
+  auditor-924d's audit of #986: this line said "§1.5 and check 34 allow". Check 34 is the freeze
+  check `document-ids.md` §1.11 names, but its own docstring (`scripts/audit-docs.py`,
+  `check_freeze`) says the merge-base comparison "finds nothing to run against on the real tree
+  today"; only its `corrected_by:` cross-check is live.)* A frozen plan's error is corrected by a
   new `RL-` or `RFC-` (F114's own cell).
 - **`docs/process/` is the maintainer's** (§1.6's `process/` row: *"amendments arrive as `RFC-` +
   `RL-`"*). A slice that amends `delivery-process.md` or `document-ids.md` carries that pair.
@@ -155,6 +159,7 @@ never on a working tree.
 | `CR-1212` Proposal 13 | Plan-status staleness: an INDEX-derived check, no hand edit | 3 |
 | `CR-1164` §10, C3 | Row (g): the standing FAIL at `classified-by-none=207`, with the LIMIT (45 files) | 5 |
 | `CR-1164` §5, C15 | #757's 207 g2 per-file entries, derived and not filed | 5 |
+| *(Added 2026-09-30 by a dated delta, on the maintainer's decision, by delegation, in the lead's channel file entry *"2026-09-30 11:52:53 BST — #983's closure sweep: accepted (no §13 verdict owed); DECISIONS on the recurrence and FR-384"*, item 1.)* The recurrence #983 records against `CR-823` item (c) (plan review 5, 2026-08-27: a parser blind spot, recommended for a fix, never owned) | **A one-time sweep of every accepted `CLAUDE.md` §14 plan-review proposal accepted before 2026-09-29 18:57:24 BST (the §14 amendment's effective moment) that has no owned record**, as an input to the Slice 1 audit. Each one found gets an owner then. The predicate is in Task 1 | 1 |
 
 ### Carried register rows, each individually
 
@@ -369,6 +374,82 @@ steps are written in its leaf plan. **Item 11 of every slice** is the close cond
   - **DP-5's evidence**: for each of F78, F94, F96, F107, FD-1149 and FD-1152, whether the
     function at fault has a live caller outside `migrate`, by `git grep` at the audit's tree.
   - **A charter gap is an `FD-` routed to WK-1169**, never a charter edit here.
+  - **The unowned-proposal sweep** *(added 2026-09-30 by a dated delta, on the maintainer's decision, by delegation, in the lead's channel file entry *"2026-09-30 11:52:53 BST — #983's closure sweep: accepted (no §13 verdict owed); DECISIONS on the recurrence and FR-384"*, item 1)*. It
+    runs once, over proposals accepted before the 2026-09-29 amendment of `CLAUDE.md` §14 (`RFC-1248`, `RL-1249`) that
+    made an unowned accepted proposal impermissible. **It is text-only**: it reads records under
+    `docs/` and `.claude/` and runs no suite, so it needs no gate slot. Its predicate:
+    - **The population** is every `CR-` with `kind: review` under `docs/closures/` whose
+      **maintainer acceptance line is dated before 2026-09-29 18:57:24 BST**, the moment the §14
+      amendment took effect (`RFC-1248`, `RL-1249`; `document-ids.md` §1.6, the Phase row's note).
+      The boundary is the rule's effective moment, not a record's `created:` date *(restated
+      2026-09-30 on the maintainer's decision by delegation, the lead's channel file entry
+      "2026-09-30 11:58:56 BST — #986 sweep boundary: CR-1247 INCLUDED; restate the predicate by
+      the acceptance moment"; it replaces the first form, "created before 2026-09-29", and the
+      interim "included (the lead …)" wording)*.
+    - **How the acceptance moment is read.** It is the time the record's own acceptance line cites:
+      the header of the channel entry it quotes or names. Where the line carries a date only
+      (reviews 1 to 11), the date decides; each of those dates is before 2026-09-29.
+      Where a record has several acceptance lines, the latest decides. At `daa7f5f8` the population
+      is **sixteen records**, plan reviews 1 to 16, read from the `kind:` field of every
+      `docs/closures/CR-*.md` and then each record's acceptance line:
+
+      | Review | Record | Acceptance line | Moment it cites |
+      |---|---|---|---|
+      | 1 | `CR-723` | `:102` | 2026-08-15 |
+      | 2 | `CR-722` | `:71`, `:127` | 2026-08-15 |
+      | 3 | `CR-755` | `:86` | 2026-08-22 |
+      | 4 | `CR-788` | `:104` | 2026-08-29 |
+      | 5 | `CR-823` | `:162` | 2026-08-27 |
+      | 6 | `CR-824` | `:43` | 2026-08-27 |
+      | 7 | `CR-825` | `:103`, `:169`, `:196` | 2026-08-29 |
+      | 8 | `CR-830` | `:57`, `:102`, `:150`, `:232`, `:266` | 2026-08-29 |
+      | 9 | `CR-925` | `:859` | 2026-09-01 |
+      | 10 | `CR-926` | `:314` | 2026-09-01 |
+      | 11 | `CR-932` | `:288` | 2026-09-01 |
+      | 12 | `CR-1050` | `:284` | 2026-09-26 17:06:12 BST — dated as **superseded by `CR-1064`**, not accepted on its own; its proposals enter the sweep only as `CR-1064` re-derives them |
+      | 13 | `CR-1064` | `:632-634` | 2026-09-26 17:06:12 BST |
+      | 14 | `CR-1167` | `:199-202` | 2026-09-27 16:18:24 BST |
+      | 15 | `CR-1212` | `:89`, `:152`, `:275`, and its foot | 2026-09-28 19:05:44 BST (Proposals 3–12 by the 18:13:19 BST entry) |
+      | 16 | `CR-1247` | `:159` and each proposal's line | 2026-09-29 17:27:28 BST |
+
+      No other `kind: review` record exists at `daa7f5f8`. A record whose line cites a later moment
+      is outside the sweep: §14 as amended already requires its proposals to be owned.
+    - **An accepted proposal** is a proposal, recommendation or lettered item in one of those
+      records that a dated maintainer acceptance line accepts, in whole or as amended. The line
+      may be in the record itself, or in a later record that accepts it (as `CR-823`'s table row 2.2
+      asks of review 4's). A line that accepts "the review" accepts every proposal in it. **Where
+      records conflict, the later dated acceptance line wins** *(2026-09-30, auditor-924d's audit of #986)*: `CR-823` (2026-08-27)
+      says review 4 was never accepted, and `CR-788:104` records *"accepted as proposed,
+      2026-08-29"*, so review 4's proposals are accepted. A proposal
+      that no dated line accepts is **not** in the sweep. It is listed apart, as never accepted,
+      and given no owner here.
+    - **An owned record** is a governed record at the sweep's tree that (i) names the proposal,
+      by its record and its proposal label, and (ii) carries an owner: an
+      `owner:` field, a register row with an owner and an event, or a `WK-`/`SL-` row. A landed
+      change that enacts the proposal and cites it (a commit, by full SHA) counts as *resolved in
+      fact*, not unowned. *(2026-09-30, auditor-924d's audit of #986)*
+      - **A proposal's label.** A proposal can carry two labels in one record: `CR-823` numbers
+        one proposal **2.3** in its table and letters it **(c)** in its text. A candidate matches
+        on **either** label. The sweep records both against the one proposal and counts it once.
+      - **The candidate search** is three passes over `docs/` and `.claude/` for each record,
+        because older owning records do not cite the `CR-` id. For example, `CR-788`'s Q4
+        (`scope-audit.py --params`) is carried in `PL-786`, `PL-810` and `PL-811` as "P6" under
+        "Review 4" (the latter two mark it unowned), and none of the three cites `CR-788`:
+        1. `git grep -n -E 'CR-<n>\b'`;
+        2. `git grep -n -i -E '(plan )?review <N>\b'`, where `<N>` is the review's number;
+        3. each of the record's pre-migration ids and paths in `docs/REDIRECTS.csv` (the
+           `old_id` and `old_path` columns of the rows whose `new_id` is `CR-<n>`). For reviews 1 to 12 the old path is the one pre-migration
+           plan-reviews file. Reviews 13 to 16 (`CR-1064`, `CR-1167`, `CR-1212`, `CR-1247`) have
+           no pre-migration id, so pass 3 finds nothing for them.
+      - A grep hit is a candidate only: each is read to the clause that carries the proposal
+        before it counts. **"Unowned" is concluded only after all three passes** find no owning
+        record.
+    - **The output** is one row per accepted proposal in the audit record: owned (the record's
+      id), resolved in fact (the SHA), or **unowned**. Each unowned one becomes an `FD-` with
+      the lead's owner and event, per §14's rule that "unowned" is not a permitted state.
+      `CR-823` item (c) is already recorded as a recurrence in #983's finding (open at
+      `daa7f5f8`, working id 9894), and the sweep cites that finding by its minted id rather than
+      filing it twice.
 - **Depends on:** nothing in WK-1170. DP-3 is resolved.
 - **Gate outline.**
   - The audit record passes check 37 (its template's sections) and check 30 (its header).
@@ -496,6 +577,12 @@ activation commit:
   22:58:26 BST entry; DP-5 (c), the lead's. DP-6 stays non-blocking, with its default.
 - **Resolved 2026-09-29, later:** DP-7 (b), the maintainer's by delegation at the 23:05:29 BST
   entry.
+- **Delta, 2026-09-30:** the unowned-proposal sweep added to Slice 1's inputs (the Scope table's
+  last row; Task 1), on the maintainer's decision, by delegation, in the lead's channel file entry *"2026-09-30 11:52:53 BST — #983's closure sweep: accepted (no §13 verdict owed); DECISIONS on the recurrence and FR-384"*, item 1. PL-1276 is `draft`, so the delta is written in place and dated: a plan stays `draft`
+  while a decision point is open (`document-ids.md` §1.6, the PL map/leaf row), and freeze is
+  mechanical, reached only when every blocking row has a resolver (§1.7). DP-4 is still open. No
+  new record, so no id is taken. The slice count and the
+  sizing are unchanged: the sweep is text-only and adds no gate slot.
 - **Open:** DP-4 (the decision-maker's, awaiting its ruling), and the ACK's confirmation of DP-2's
   receiving Work.
 - **Revised 2026-09-29**, while `draft`, to record those resolutions at every site (Scope, the DP
