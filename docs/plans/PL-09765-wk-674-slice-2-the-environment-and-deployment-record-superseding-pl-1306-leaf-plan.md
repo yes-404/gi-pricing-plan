@@ -215,8 +215,7 @@ cause, and the guard is restored; the ledger quotes both runs.
    the guard run after registration and before the entries are added, naming each slug.
    *(PL-9765, C18; auditor-1065's cross-finding, relayed by the lead.)* Each new generated
    schema file is also registered as a literal path in `_CONTRACT_ARTIFACT_PATHS`
-   (`scripts/audit-docs.py:2620`; the generated block ends with the `sub-graph*` entries at
-   `:2665-2667`), and `tests/test_audit_docs_ids.py:2117`'s `assert len(non_markdown) == 70` is
+   (`scripts/audit-docs.py:2620`; the new paths go after `:2667`), and `tests/test_audit_docs_ids.py:2117`'s `assert len(non_markdown) == 70` is
    bumped by the number of files added (70 at the tree above; +9, or +10 with
    `promotion-skip`). Without both, `python3 scripts/audit-docs.py` fails check 30 (no front
    matter) and check 35 (not in the F83 register) on each new file. **Check:** with the new
@@ -563,8 +562,10 @@ component whose name is a published shape".
     - **Red first:** before the change, the test is run over these two operations and fails
       naming `Withdraw` and `SubmitApproval` as unpublished.
     - **Why the 2xx half was a decision point, measured by reading the code at the tree above.**
-      Both routes return `service.to_dict(row, decisions)`
-      (`backend/src/app/platform/approvals.py:648-673`). That output carries `environment`
+      Both routes return `service.to_dict(row, [])` (`backend/src/app/api/approvals.py:156`
+      submit, `:294` withdraw; `to_dict` at `backend/src/app/platform/approvals.py:648-673`).
+      *(Corrected 2026-10-03 before mint: this read `service.to_dict(row, decisions)`, which
+      is `decide`'s call, `:270`, not these two routes'.)* That output carries `environment`
       (`:654`) and has no `workspace_id`. `ApprovalRequest`
       (`packages/model-schema/src/model_schema/approvals.py:275`) is `extra="forbid"`, has no
       `environment` field, and requires `workspace_id`. So declaring `ApprovalRequest` as the
@@ -637,14 +638,17 @@ component whose name is a published shape".
     characterisation test in `backend/tests/test_deployment_route_types.py` does instead.
     - **What it pins:** for `POST /api/v1/approval-requests` (201) and
       `POST /api/v1/approval-requests/{request_id}/withdraw` (200), the **exact** set of
-      top-level response keys, and the exact key set of each element of `decisions`, compared
-      with `==` (not a subset). Any undeclared add, drop or rename is red, naming the key.
-    - **The key sets at the tree above**, read from `service.to_dict`
-      (`backend/src/app/platform/approvals.py:648-673`), which both routes return: top level
-      `id`, `artifact_ref`, `artifact_type`, `environment`, `submitted_by`, `submitted_at`,
-      `change_summary`, `status`, `approvers_required`, `approvers_recorded`, `decisions`,
-      `withdrawn_reason` (12 keys); each `decisions` element `approver_id`, `decision`, `at`,
-      `comment` (4 keys).
+      top-level response keys, compared with `==` (not a subset), and `decisions == []`. Any
+      undeclared add, drop or rename is red, naming the key.
+    - **The key set at the tree above**, read from `service.to_dict`
+      (`backend/src/app/platform/approvals.py:648-673`), which both routes call as
+      `service.to_dict(row, [])` (`backend/src/app/api/approvals.py:156` submit, `:294`
+      withdraw): `id`, `artifact_ref`, `artifact_type`, `environment`, `submitted_by`,
+      `submitted_at`, `change_summary`, `status`, `approvers_required`,
+      `approvers_recorded`, `decisions`, `withdrawn_reason` (12 keys). Because both routes
+      pass `[]`, `decisions` is always `[]` on them, so no `decisions` element key set is
+      pinned here. *(Corrected 2026-10-03 before mint: this item also pinned a 4-key element
+      set and a non-empty `decisions` on withdraw, which neither route can emit.)*
     - **Keys this slice adds: none.** Neither Task 5 nor Task 6 changes `to_dict` or what the
       two routes return. The test's expected sets are therefore the sets above, before and
       after. If the executor finds it must add, drop or rename a key, it **stops and
@@ -654,8 +658,7 @@ component whose name is a published shape".
       Tasks 5 and 6 change either route (it characterises today's output), and it stays green,
       unchanged, after them. Exercised for the deployment branch of `POST
       /api/v1/approval-requests` (a Deployment Request in `review`) and for a `rating_version`
-      ref, and for the withdraw route on a request with one decision recorded, so
-      `decisions` is non-empty.
+      ref, and for the withdraw route; on every case `decisions == []`.
     - **Red first, on broken input:** with `to_dict` patched to add a key (`"extra": 1`), to
       drop `withdrawn_reason`, and to rename `environment` to `env`, each run is red naming
       the key and the route. Restore. Quoted in the ledger.
@@ -1117,7 +1120,9 @@ def promotion_order_refusal(
   `_CONTRACT_ARTIFACT_PATHS` (`scripts/audit-docs.py:2620`, after `:2667`), and the count at
   `tests/test_audit_docs_ids.py:2117` is re-derived, red first as Acceptance 2 says; Tasks 6
   and 5 do the same for their two slugs. If the FD-1357 fix has merged first, the count is
-  re-derived on the merged tree and the gate re-run.
+  re-derived on the merged tree and the gate re-run. `ApprovalWithdrawal` and
+  `ApprovalSubmission` land in Tasks 6 and 5, with the routes that use them; those routes'
+  2xx stay untyped (DP-S2-6 (c), FD 9752 working id).
 - [ ] **Conditional: only if this slice merges before the FD-1357 fix (PL 9764, working id)**
   *(C18; `CLAUDE.md` §12)*. Write the step into `.claude/skills/contract-schema/SKILL.md`:
   "a new generated schema → register its literal path in `scripts/audit-docs.py`
@@ -1125,8 +1130,7 @@ def promotion_order_refusal(
   count", and refresh that skill's `## Verified` date with the tree. If apt, add a one-line
   pointer from `.claude/skills/docs-audit/SKILL.md`'s check 35 text (the paragraph on adding
   a file that cannot carry a header, `:363-368`). Same commit as the registration. If the
-  FD-1357 fix merged first, it wrote the step: the ledger says so and this step is skipped. `ApprovalWithdrawal` and `ApprovalSubmission` land in Tasks 6 and 5, with the routes that
-  use them; those routes' 2xx stay untyped (DP-S2-6 (c), FD 9752 working id).
+  FD-1357 fix merged first, it wrote the step: the ledger says so and this step is skipped.
 
 ### Task 3: The migration
 
