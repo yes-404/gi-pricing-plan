@@ -141,3 +141,18 @@ def test_the_metric_floor_is_exactly_what_is_checkable() -> None:
     """
     assert EVIDENCE_FLOOR["custom_metric"] == ("metric_certificate",)
     assert DEFAULT_POLICY.effective_evidence("custom_metric") == ("metric_certificate",)
+
+
+@pytest.mark.req("FR-364")
+def test_the_default_policy_has_a_prod_deployment_entry() -> None:
+    """`06` §4.2 shows a `prod` `deployment` entry (`RL-886`); `DEFAULT_POLICY` must carry it.
+
+    Predicted red: `entry_for` returns `None` (premise b, no `deployment` entry), which is why
+    `submit` refused a Deployment Request with "no approval policy for this artifact type".
+    """
+    entry = DEFAULT_POLICY.entry_for("deployment", "prod")
+    assert entry is not None
+    assert entry.approvers_required == 1
+    assert entry.approver_roles == ("deployer",)
+    assert entry.environment == "prod"
+    assert entry.evidence == EVIDENCE_FLOOR["deployment"]

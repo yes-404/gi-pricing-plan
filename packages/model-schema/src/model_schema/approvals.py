@@ -257,6 +257,17 @@ DEFAULT_POLICY: Final[ApprovalPolicy] = ApprovalPolicy(
             approver_roles=("approver",),
             evidence=("structural_diff", "regression_run", "dislocation_run"),
         ),
+        # Added 2026-10-03 (WK-674 Slice 2, RL-886). `06` §4.2 shows this entry and §3.3's
+        # floor names `deployment`, but the code had no entry, so `submit` refused a
+        # Deployment Request with "no approval policy for this artifact type". The
+        # `environment` is an Environment's slug (`07` §4.2).
+        ApprovalPolicyEntry(
+            artifact_type="deployment",
+            environment="prod",
+            approvers_required=1,
+            approver_roles=("deployer",),
+            evidence=("rating_version_approval", "uat_deployment"),
+        ),
     )
 )
 
