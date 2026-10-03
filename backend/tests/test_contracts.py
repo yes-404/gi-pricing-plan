@@ -77,7 +77,7 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "sub-graph": "first written form — 03 §4.11 (WK-1250 Slice 1, FR-217)",
     "sub-graph-create": "first written form — 03 §4.11 (WK-1250 Slice 1, FR-217)",
     "sub-graph-body": "first written form — 03 §4.11 (WK-1250 Slice 1, FR-217)",
-    "rate-table-version": "first written form of the seed route's 201 (RL-1375 DP-4); the authored rate-table contract is F27(c)'s, never compared",
+    "rate-table-version": "first written form of the seed route's 201 (RL-1375 DP-4); the authored rate-table contract is F27(c)'s, never compared",  # noqa: E501 -- RL-1375 DP-4's string, verbatim
     "seed-from-model-request": "first written form — 03 §5.1 seed row (RL-1375 DP-3, FR-230)",
     "objective-usage": "first written form — FR-164 named the query",
     "oidc-auth-config": "first written form — FR-394 names the contents",
