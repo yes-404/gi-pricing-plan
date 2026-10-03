@@ -600,7 +600,7 @@ and this is the first of the four `pl.LazyFrame`-taking/returning signatures §5
 publishes (`score_batch`'s `frame`, `dislocate`'s `portfolio`, `attribute`'s `portfolio`,
 `score_batch`'s own return) to become real — `dislocate` and `attribute` are unbuilt. This
 subsection is written so it can hold the portfolio frame's schema when WK-673 designs it; it
-does not design that schema now.
+does not design that schema now. *(Superseded in part 2026-10-03: the portfolio frame's schema is designed in "The portfolio frame (WK-673)" below, `RL-1394`.)*
 
 **Not a `model-schema` artifact.** No document under `docs/contracts/` defines a tabular
 row schema, and Polars column layouts have no generator, no `scripts/generate-contracts.py
@@ -664,6 +664,22 @@ chunked transform has to provide regardless of which task is charged with the re
 id. The threshold policy that decides whether the *run* aborts, and the per-category
 counting and sampling FR-255 also names, are Task 3B's, reading `error_code` off this
 column.
+
+#### The portfolio frame (WK-673, added 2026-10-03)
+
+*(Added 2026-10-03, WK-673 Slice 1, PL-1395; the ruling `RL-1394`; `RL-1361` §E for pass-through.)* `dislocate`'s and `attribute`'s `portfolio` is one row per policy of a portfolio Dataset Version.
+
+| Column | Type | Rule |
+|---|---|---|
+| `quote_id` | string | required, non-null and unique: the policy's identity, the key on which the baseline and candidate passes are joined, and the drill-down key for movers |
+| `exposure_years` | decimal | required, non-null and never negative; zero allowed; never read as 0 when null (`RL-1361` §E). The weight for exposure shares (FR-263) and for FR-231's per-cell weights |
+| each name in either bundle's `input_contract` | as declared | the algorithm inputs |
+
+**A portfolio that breaks this schema is refused before any rating, with `VALIDATION_FAILED`,** naming the column and the count of offending rows: a missing, null or duplicated `quote_id`; a missing, null or negative `exposure_years`; a column named `purpose`, `effective_date` or `rating_version_ref`. A fault in one row's algorithm inputs is not a frame refusal: it is that row's own error, as below.
+
+**`purpose`, `effective_date` and `rating_version_ref` are stamped, never read from the portfolio.** `DislocationSpec.purpose` (`new_business` or `renewal`) and `DislocationSpec.as_at` (an ISO date) are written into every row of every pass as `purpose` and `effective_date`. The baseline pass and the candidate pass stamp their own Rating Version's `rating_version_ref`, as this subsection requires of every `score_batch` frame. An attribution subset pass stamps the **baseline's** `rating_version_ref`, because a subset bundle has no Rating Version (`03` §3.9) and `score_batch` requires a reference on every row; its output rows are scratch inputs to attribution, never persisted or returned as scoring results, and the subset is identified by their `bundle_hash`, never by that reference. A `mid_term_adjustment`, `cancellation` or `what_if` row therefore cannot occur in a run; when FR-217's inlining is built, admitting the first two is a change to this subsection (FR-218).
+
+**Every other column passes through the reader** and stays available for slicing by any Factor (FR-264), for exposure weighting, for drill-down, and for resolving a Factor's source columns (FR-231, `RL-1361`). **It never reaches the engine.** Each scoring pass — the baseline, the candidate and every attribution subset — rates a frame of the stamped columns, `quote_id`, and exactly the names in **that pass's own bundle's** `input_contract`; the other columns are joined back to the scored rows by `quote_id`. A name a bundle declares but the portfolio lacks is FR-213's missing input, written as an `"error"` row with `INPUT_CONTRACT_VIOLATION`, as `score_batch` already does. `score_batch`'s own tolerance of extra columns (above) is unchanged: this projection is `dislocate`'s and `attribute`'s, because forwarding an undeclared column lets an undeclared read resolve from the book (`FD-1374`) and lets a column with a billing name refuse every row (FR-252), so a run's result would depend on columns no contract names.
 
 ### 4.9 `RegressionRun`
 
