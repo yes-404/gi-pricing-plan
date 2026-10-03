@@ -887,7 +887,7 @@ From “Workstreams” (line 385): Frontend: **DAG designer (Vue Flow)**, rate t
 id: SL-1369
 family: slice
 title: Slice 1: chart foundation — ChartFigure's column descriptors per RL-1307, its 13 call sites migrated, and register F39's socket diagnosis (NFR-463)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-01
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 1dd5e264195677b4a13268b80ac8673c2c027135
@@ -912,6 +912,7 @@ It is ordered against WK-690 Slice 5 (SL-1275), which adds a `ChartFigure` calle
 lands second migrates or uses the new API. **Gate:** the leaf plan's Activation needs, in a
 separate activation PR: the maintainer's agreement and the lead's go.
 Drafted as working id 9768; minted 2026-10-01 as SL-1369 (its leaf plan, drafted as working id 9769, minted as PL-1368).
+(Activated 2026-10-03 as WK-675 Slice 1, on the maintainer's GO check of 2026-10-01, "2026-10-01 11:04:02 BST — GO: WK-675 Slice 1 (SL-1369, PL-1368) on lane A, with ONE correction to the dispatch record (DP-4's label is (b), not (a)); this entry is PL-1368 activation need 1's dated maintainer agreement"; dispatch record DISPATCH-WK-675-SL1369-2026-10-01.)
 
 
 ### WK-690 — **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with**
