@@ -1,7 +1,8 @@
-import { render, screen, within } from "@testing-library/vue";
+import { render, screen } from "@testing-library/vue";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PartialDependence } from "@/api/diagnostics";
+import { cellUnder } from "@/test-tables";
 import { DIAGNOSTICS } from "@/views/__tests__/fixtures";
 
 import PartialDependencePanel from "../PartialDependencePanel.vue";
@@ -47,8 +48,7 @@ describe("PartialDependencePanel", () => {
   it("carries exposure share, so a curve over almost no exposure is visible as such", () => {
     render(PartialDependencePanel, { props: { partialDependence: PD } });
     const table = screen.getByRole("table", { name: /vehicle_age/ });
-    const row = within(table).getByRole("row", { name: /0-3/ });
-    expect(within(row).getAllByRole("cell")[2]).toHaveTextContent("0.31");
+    expect(cellUnder(table, /0-3/, "Exposure share")).toHaveTextContent("0.31");
   });
 
   it("names an omitted factor rather than leaving it out", () => {
