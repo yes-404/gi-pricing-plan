@@ -208,8 +208,47 @@ The PR body asks the lead to carry these rows into the dispatch records of SL-13
 ## PRs
 
 Draft PR "feat(rating): SL-1385 — the portfolio frame and the types (WK-673 Slice 1, PL-1395, LG 9738)" from branch
-`sl-1385-portfolio-frame-and-types`; its number is added here once opened.
+`sl-1385-portfolio-frame-and-types`; PR #1094.
 
 ## Gate
 
-(Appended after the gate slot is granted.)
+**Gate of record at `a96f7ce43015966c9d664efa0dc759eb0931d464`** (slot granted by the lead 2026-10-03 22:09:33 BST,
+"Both slots free; load 1.18; 27Gi available"). Run in this worktree on a detached HEAD at that SHA, porcelain empty
+(0 lines), `uv sync --all-packages` clean, test DB `gipricing_agent-ad47e75a4877e6ae8_06fd4d9a` created from the
+template and migrated to head first. The slot wrapper is `.claude/skills/dev-commands`' gate body verbatim, with
+`ruff check --no-cache`, `mypy --no-incremental`, `LOKY_MAX_CPU_COUNT=4` (and `RUFF_NO_CACHE`, a scratch
+`MYPY_CACHE_DIR`), plus the frontend six run sequentially inside the same slot (it took `gate-1`, `slot_i=1`).
+Start 22:10:16 BST: load average 1.14, 1.07, 0.86; `free -g` available 26. End 22:33:24 BST (23 min): load 9.05 (1
+minute, the suite's own); available 26. The other holder: `flock -n /tmp/slots/gate-2` probed free **after** the
+run (22:33+); it was not probed during the run, so a contention pair with executor-1256 is neither shown nor ruled out.
+
+| stage | result | detail |
+|---|---|---|
+| ruff | pass | exit=0 |
+| mypy | pass | exit=0 |
+| import_linter | pass | exit=0 |
+| audit_docs | FAIL | exit=1 |
+| req_coverage | pass | exit=0 |
+| contracts | pass | exit=0 |
+| pytest | FAIL | exit=1 |
+| fe_install | pass | exit=0 |
+| fe_generate | pass | exit=0 |
+| fe_lint | pass | exit=0 |
+| fe_typecheck | pass | exit=0 |
+| fe_test | pass | exit=0 |
+| fe_build | pass | exit=0 |
+
+`GATE: FAIL — 2 of 13 stages failed: audit_docs pytest`. pytest: 13 failed, 4611 passed, 3 skipped, 1309 s.
+
+**Reading of the two reds (not a pass).** `audit_docs` reports exactly one finding, check 31, "gap in the full
+allocation between 1396 and 9738": this PR's own working id `LG-9738`, named above and allowed by PL-1395
+Acceptance 13. All 13 pytest failures are tests that run `audit-docs.py`, `doc-id.py check` or `doc-index.py` on the
+real tree and receive that one finding: `test_audit_docs_finding_citations` (1), `test_audit_docs_ids` (2:
+`test_the_real_tree_passes_all_ten_checks`, `test_doc_id_check_exits_0_on_the_real_tree` — "[noncontiguous] docs/INDEX.md
+has a gap between 1396 and 9738"), `test_audit_docs_process_core_digest` (2), `test_audit_docs_w37_11_ceiling` (1),
+`test_doc_index` (1: "the live allocation is not contiguous: [(1396, 9738)]"), `test_register_lint` (3),
+`test_register_owed` (1), `test_repository_invariants` (2). The audit's other output line,
+"check 36 … FR-MODEL-46 (legacy pre-migration form survives)", is a disclosed note, not a failure. This is
+inference from the failure messages, not a re-run: the proof is a re-run at the lead's minted head, where the working
+id is replaced by an allocated one and the gap closes. No test outside those docs-audit tests failed; the
+backend, pricing-core, model-schema and frontend suites are green.
