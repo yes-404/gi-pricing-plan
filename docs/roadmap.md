@@ -1262,7 +1262,7 @@ relates: [FD-1335, FD-1366, PL-1364, PL-1348, SL-1345, RL-1343, RL-1365]
 id: SL-1377
 family: slice
 title: WK-1178 fix slice — FD-1357, multi-factor seeding per RL-1361, typed seed request and 201
-status: draft                   # draft → active → closed | retired (§1.2a)
+status: active                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-03
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 1dd5e264195677b4a13268b80ac8673c2c027135
@@ -1272,7 +1272,8 @@ corrected_by: []
 relates: [FD-1357, RL-1361, PL-1267]
 ```
 
-`seed_from_model` seeds a GLM with two or more factors: one seed request names one Factor and gives one table with one key, bound by `factor_ref` to the Factor version the model pins (`RL-1361` sections A and D; FD-1357, HIGH, on G2's path). The seed route's request body becomes a typed `model-schema` request and its 201 a typed response, both published under `docs/contracts/schemas/generated/` (the maintainer's rules (i) and (ii); the seed-from-model entry of `FD-1366`). The `[seeding]` texts of `RL-1361` are applied byte for byte. Leaf plan `PL-1376`, `draft`. **Order:** lane B, after `SL-1360` and before the FD-1356 fix, the RL-1343 decimal-output fix and `PL-1364` (the maintainer, 2026-10-01, about 10:10 BST). *(Filed 2026-10-01 under working id 9763, reserved by the lead. Minted 2026-10-03 as SL-1377; its plan is PL-1376, the FD-1357 batch.)*
+`seed_from_model` seeds a GLM with two or more factors: one seed request names one Factor and gives one table with one key, bound by `factor_ref` to the Factor version the model pins (`RL-1361` sections A and D; FD-1357, HIGH, on G2's path). The seed route's request body becomes a typed `model-schema` request and its 201 a typed response, both published under `docs/contracts/schemas/generated/` (the maintainer's rules (i) and (ii); the seed-from-model entry of `FD-1366`). The `[seeding]` texts of `RL-1361` are applied byte for byte. Leaf plan `PL-1376`, `active`. **Order:** lane B, after `SL-1360` and before the FD-1356 fix, the RL-1343 decimal-output fix and `PL-1364` (the maintainer, 2026-10-01, about 10:10 BST). *(Filed 2026-10-01 under working id 9763, reserved by the lead. Minted 2026-10-03 as SL-1377; its plan is PL-1376, the FD-1357 batch.)*
+(Activated 2026-10-03 as the FD-1357 fix (WK-1178), on the maintainer's GO check, "2026-10-03 16:59:11 BST — DISPATCH GO: the FD-1357 fix (SL-1377, PL-1376; WK-1178) on lane B; this entry is PL-1376 activation need 7's maintainer agreement"; dispatch record DISPATCH-WK-1178-SL1377-2026-10-03.)
 
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
