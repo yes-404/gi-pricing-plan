@@ -879,6 +879,8 @@ From “Workstreams” (line 385): Frontend: **DAG designer (Vue Flow)**, rate t
 
 **2026-09-28 — the Quote Sandbox's backend is WK-672's** (`RL-1172` item 5, the deputy's DP1 decision by delegation, option A). The quote sandbox view in this Work consumes `POST /api/v1/score/compare`, which WK-672 builds and tests; this Work builds the view only. FR-262 is delivered only when both limbs have landed.
 
+**2026-10-03 — Slice 12 (the Deployments view) moves to Phase 3** (`PL-1371` §9 DP-2 (a), the maintainer's acceptance by delegation in the entry "2026-10-03 14:56:08 BST — PL 9746 (#1076 @ee0ea8d2): ACCEPTED with your four amendments; DP-1 (a), DP-2 (a), DP-3 (a); amendment 4 answered; DP-4 to the user; no separate audit"). Deferred with an owner: the maintainer; event: the P2 phase closure record, for Phase 3's first plan. DP-7 (OQ-1285) moves with it. The rest of this Work stays in P2; the conditional cuts (S13 and S14, then S9) are `PL-1371` DP-3's trigger, each brought to the maintainer when it fires, never applied automatically.
+
 #### SL-1369 — Slice 1: chart foundation — ChartFigure's column descriptors per RL-1307, its 13 call sites migrated, and register F39's socket diagnosis (NFR-463)
 
 ```yaml
