@@ -26,6 +26,7 @@ from model_schema.rating import (
     RateTableKey,
     RateTableValue,
 )
+from model_schema.refs import ArtifactRef
 from pricing_core.rate_tables.operations import (
     SeedResult,
     check_model_approved,
@@ -491,3 +492,21 @@ def test_a_row_lacking_a_declared_key_is_a_named_refusal() -> None:
         diff_vs_previous(one_key_row, one_key_row, keys, _value())
     with pytest.raises(ValueError, match="lacks declared key 'region'"):
         diff_vs_seed(one_key_row, one_key_row, keys, _value())
+
+
+@pytest.mark.req("FR-230")
+@pytest.mark.parametrize("slug", ["Region", "x", "veh brand"])
+def test_a_pinned_factor_slug_outside_the_factor_grammar_is_refused_by_name(slug: str) -> None:
+    """RL-1383 Ruled item 3: `Factor.slug` is an unconstrained `str` (FD-1384), so the seed
+    refuses a slug the reference grammar cannot hold, by name, rather than failing later."""
+    ok = _seed(
+        _glm_model(ModelStatus.APPROVED, relativities={"veh_brand": _REGION_LEVELS}),
+        "veh_brand",
+        [_factor("veh_brand")],
+    )  # positive control: an underscore slug is inside the factor grammar
+    assert ok.table.keys[0].factor_ref == ArtifactRef(type="factor", slug="veh_brand", version=1)
+    model = _glm_model(ModelStatus.APPROVED, relativities={slug: _REGION_LEVELS})
+    with pytest.raises(ValueError, match="outside the factor slug grammar") as caught:
+        _seed(model, slug, [_factor(slug)])
+    assert repr(slug) in str(caught.value)
+    assert not str(caught.value).partition(": ")[0].isupper()

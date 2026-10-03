@@ -53,7 +53,7 @@ from model_schema.rating import (
     UpliftTableOperation,
     UpliftTableParameters,
 )
-from model_schema.refs import ArtifactRef
+from model_schema.refs import ArtifactRef, slug_is_admitted
 from pricing_core.rating.compile import ValidationIssue
 
 _APPROVED_OR_BETTER = frozenset({"approved", "live", "retired"})
@@ -208,6 +208,13 @@ def seed_from_model(
             "binds to exactly one"
         )
     bound = pinned[0]
+    if not slug_is_admitted("factor", bound.slug):
+        # `Factor.slug` is an unconstrained `str` (FD-1384); a reference to it could not be
+        # re-read, so refuse by name here rather than 500 on a later read (RL-1383 item 3).
+        raise ValueError(
+            f"the pinned Factor slug {bound.slug!r} is outside the factor slug grammar "
+            "([a-z0-9][a-z0-9_-]{1,62}); it cannot be referenced"
+        )
     cells = tuple(extract_relativity_table(model, value_name=value_name, factor=factor))
     if not cells:
         raise ValueError(

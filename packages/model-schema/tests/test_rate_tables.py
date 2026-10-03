@@ -63,7 +63,7 @@ class TestRateTableShape:
             name="postcode",
             type="string",
             banding_ref=ArtifactRef(
-                type="Banding",
+                type="banding",
                 slug="uk-postcodes",
                 version=1,
             ),
@@ -602,15 +602,15 @@ def test_a_key_carries_at_most_one_of_factor_ref_and_banding_ref() -> None:
     bound = RateTableKey(
         name="driver_age_banded",
         type="string",
-        factor_ref="factor:driver-age-banded@3",
+        factor_ref="factor:driver_age_banded@3",
     )
-    assert bound.factor_ref == ArtifactRef(type="factor", slug="driver-age-banded", version=3)
+    assert bound.factor_ref == ArtifactRef(type="factor", slug="driver_age_banded", version=3)
     assert bound.banding_ref is None
     with pytest.raises(ValidationError, match="factor_ref and banding_ref"):
         RateTableKey(
             name="driver_age_banded",
             type="string",
-            factor_ref="factor:driver-age-banded@3",
+            factor_ref="factor:driver_age_banded@3",
             banding_ref="banding:driver-age-actuarial-v2@2",
         )
 
@@ -619,7 +619,7 @@ def test_a_key_carries_at_most_one_of_factor_ref_and_banding_ref() -> None:
 def test_a_factor_ref_of_another_artifact_type_is_refused() -> None:
     """RL-1361 Ruled item 9: `factor_ref` is of type `factor`."""
     accepted = RateTableKey(
-        name="driver_age_banded", type="string", factor_ref="factor:driver-age@3"
+        name="driver_age_banded", type="string", factor_ref="factor:driver_age@3"
     )
     assert accepted.factor_ref is not None
     assert accepted.factor_ref.type == "factor"
@@ -673,3 +673,24 @@ def test_the_seed_request_requires_factor() -> None:
         SeedFromModelRequest.model_validate(
             {"model_ref": "model:motor-ad-frequency@7", "change_note": "seed"}
         )
+
+
+@pytest.mark.req("FR-228")
+def test_a_factor_ref_with_an_underscore_slug_round_trips() -> None:
+    """RL-1383 (FR-9, FR-228): a key bound to an underscore Factor survives a re-read.
+
+    A Factor's slug is a term name (`veh_brand`, `driver_age_banded`), so it contains `_`;
+    a stored definition is re-validated on every read (`platform/rate_tables.py` `_to_version`).
+    """
+    key = RateTableKey(name="veh_brand", type="string", factor_ref="factor:veh_brand@1")
+    assert key.factor_ref == ArtifactRef(type="factor", slug="veh_brand", version=1)
+    assert RateTableKey.model_validate(key.model_dump(mode="json")) == key
+    table = RateTable(
+        slug="motor-veh-brand-relativity",
+        version=1,
+        rateable=True,
+        storage="rows",
+        keys=[key],
+        value=RateTableValue(name="relativity", type="relativity", unit="factor"),
+    )
+    assert RateTable.model_validate(table.model_dump(mode="json")) == table
