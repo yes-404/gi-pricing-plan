@@ -116,9 +116,9 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 
 | ID | Requirement |
 |---|---|
-| **FR-228** | A **Rate Table** is a typed table with declared key columns (each bound to a Factor or a banded input), a declared value column with a type and unit (`relativity`, `money_minor`, `percentage`, `count`), and an optional default row. |
+| **FR-228** | A **Rate Table** is a typed table with declared key columns (each bound to a Factor or a banded input), a declared value column with a type and unit (`relativity`, `money_minor`, `percentage`, `count`), and an optional default row. **Clarified 2026-10-03 (`RL-1361`): the binding is a declared field.** "Bound to a Factor" is `factor_ref`, a pinned `factor:<slug>@<version>`. "A banded input" is `banding_ref`, a pinned Banding with no Factor. A key carries at most one of them, and `model-schema` refuses a key that carries both. A key with neither is joined by its own name. A version written before `factor_ref` existed stays unbound (FR-4). |
 | **FR-229** | Rate Table Versions are immutable. Editing produces a new version with a required change note. The previous version stays referenceable by existing Rating Versions. |
-| **FR-230** | A rate table can be **seeded from a Model**: a GLM's relativity table (or a GBM's GLM-approximation relativities) is imported as a starting point, recording the source model reference. Subsequent manual edits are diffed against that seed, so "how far have we moved from the technical rate?" is always answerable. |
+| **FR-230** | A rate table can be **seeded from a Model**: a GLM's relativity table (or a GBM's GLM-approximation relativities) is imported as a starting point, recording the source model reference. Subsequent manual edits are diffed against that seed, so "how far have we moved from the technical rate?" is always answerable. **Clarified 2026-10-03 (`RL-1361` section A): a seed request names one Factor.** The request's required `factor` is the Factor's slug, a key of the model's relativities. The seeded table holds that Factor's relativities under one key, bound by `factor_ref` to the Factor version the model pins, so a model with K categorical factors seeds K tables. A continuous factor has no relativity table and is refused. A lineage holds one Factor: a re-seed that names another Factor's slug is refused, and a newer version of the same Factor is accepted. A hand-authored table may still have several keys (FR-228). |
 | **FR-231** | Rate table edits are diffable cell-by-cell against any prior version, with the diff showing absolute and relative change and the exposure weight behind each cell (from the portfolio dataset), so an actuary sees which edits matter. |
 | **FR-232** | **A Rate Table Version's cells are stored as PostgreSQL rows up to a workspace-configurable cell count (default 250 000) and spill to a content-addressed parquet blob above it, under one contract either way.** (OQ-616, decided 2026-08-18; **Phase 2**, with the rate-table slice.) Rows are the default because they are what makes the rest of this section cheap: FR-231's cell diff is a SQL join, its exposure weighting is a join to the portfolio dataset, and the editor pages without a job. Blobs exist because a vehicle × area table reaches millions of cells, where rows stop being free — and the tail must not dictate the design for the many small tables that are the common case. **The threshold is a stored property of the version, not a runtime decision**: `storage` is `rows \| parquet` on `RateTableVersion` (§4.2), fixed when the version is written and immutable with it, so a reader never has to ask which form a past version took and a change of threshold cannot silently re-home existing versions. **What degrades above the threshold is stated rather than discovered:** FR-231's diff and its exposure weighting become a Job returning the same artifact, and the API answers 202 rather than 200 for them (`07` FR-411's model). Everything a caller may *ask* is identical; only the latency and the status code differ. |
 | **FR-233** | Bulk operations are first-class and recorded as such: uplift a whole table by a percentage, uplift a subset by key filter, floor/cap values, and rebase to a chosen base level. Each records its parameters, not just the resulting cells. |
@@ -289,13 +289,13 @@ and unreferenced by an `output` (FR-212).
   "version": 6,
   "rateable": true,
   "storage": "rows",
-  "keys": [{"name": "driver_age_band", "type": "string", "banding_ref": "banding:driver-age-actuarial-v2@2"}],
+  "keys": [{"name": "driver_age_banded", "type": "string", "factor_ref": "factor:driver_age_banded@3"}],
   "value": {"name": "relativity", "type": "relativity", "min": 0.2, "max": 5.0},
   "default_row": null,
   "rows": [
-    {"driver_age_band": "17-20", "relativity": "1.8400"},
-    {"driver_age_band": "21-24", "relativity": "1.4100"},
-    {"driver_age_band": "25-29", "relativity": "1.1200"}
+    {"driver_age_banded": "17-20", "relativity": "1.8400"},
+    {"driver_age_banded": "21-24", "relativity": "1.4100"},
+    {"driver_age_banded": "25-29", "relativity": "1.1200"}
   ],
   "seeded_from": {"model_ref": "model:motor-ad-frequency@7", "seeded_at": "2026-07-02T10:00:00Z"},
   "created_by_operation": null,
@@ -308,6 +308,11 @@ and unreferenced by an `output` (FR-212).
 ```
 
 Values are stored as decimal strings, never JSON floats (R2).
+
+> **`factor_ref` added 2026-10-03 (`RL-1361`, FR-228).** A key's `factor_ref`
+> pins the Factor version the key is bound to, and a key carries at most one of
+> `factor_ref` and `banding_ref`. A seeded table has one key, named after the Factor's slug
+> and bound by `factor_ref` (FR-230), and this example is one.
 
 > **`storage` added 2026-08-18 with FR-232** (OQ-616). `rows` or `parquet`, decided
 > against the workspace's cell-count threshold when the version is written and **immutable
@@ -332,7 +337,11 @@ Values are stored as decimal strings, never JSON floats (R2).
 > hand, so both are `null`.
 
 > **Seed lineage survives every derivation.** `seeded_from` is set only by
-> seed-from-model, on the first version of a lineage; every derived version — manual
+> seed-from-model, ~~on the first version of a lineage~~ on every version a seed creates:
+> the first version of a lineage, or a re-seed appended to it, which records its own
+> source model and starts a new seed origin (**amended 2026-10-03, `RL-1375` DP-1**).
+> `against=seed` on a version resolves to its seed origin: the lowest-numbered version of
+> the table whose `seeded_from` equals that version's. Every derived version — manual
 > edit, bulk operation, import — inherits the baseline's `seeded_from` unchanged, and a
 > version whose baseline had none carries none. This example's hand-edited version keeps
 > its `seeded_from`, and FR-230's "how far have we moved from the technical rate?"
@@ -341,6 +350,14 @@ Values are stored as decimal strings, never JSON floats (R2).
 > the resolved baseline — `BulkOperation.applied_to` or `created_by_import.applied_to` —
 > and a derived version may not invent or drop the anchor. `created_by_operation` and
 > `created_by_import` remain mutually exclusive.
+
+> **Re-seeding an existing table (added 2026-10-03, `RL-1375` DP-2, FR-230).** A seed
+> into an existing table is accepted only when its current version has exactly one key,
+> and that key either carries a `factor_ref` naming the named Factor's slug, at any
+> version, or carries neither `factor_ref` nor `banding_ref` and is named after that slug,
+> as every key seeded before `factor_ref` existed is. The new version's key is bound by
+> `factor_ref`. Any other existing table refuses the seed with **422**
+> `VALIDATION_FAILED`, naming the table and its keys; seed a new table slug instead.
 
 ### 4.3 `RatingVersion`
 
@@ -783,7 +800,7 @@ A Sub-graph Version is a stored, immutable fragment of a Rating Algorithm, addre
 | `GET` | `/api/v1/sub-graphs/{slug}@{version}` | Read one Sub-graph version; requires `rating:read`; **404** `NOT_FOUND` on an unknown version or another workspace's (FR-217). **Added 2026-10-01** (`PL-1325`) |
 | `GET` | `/api/v1/sub-graphs/{slug}/versions` | List a Sub-graph's versions, cursor-paginated; requires `rating:read` (FR-217). **Added 2026-10-01** (`PL-1325`) |
 | `POST` | `/api/v1/rate-tables/{slug}/versions` | New Rate Table Version from manual cell edits, with a required change note (FR-229). This is the manual-editing path, and it follows the import route below: the request names the base version and carries the edited cells, and the response is a cell diff against that base for confirmation (FR-231). `confirm: true` re-computes the diff and creates the version. **Amended 2026-09-28** (`RL-1184` E5): this row named no request shape, and no route implements it (register F-W10-3). Owner: WK-675's editor slice. |
-| `POST` | `/api/v1/rate-tables/{slug}/seed-from-model` | Seed from a model's relativities (FR-230) |
+| `POST` | `/api/v1/rate-tables/{slug}/seed-from-model` | **201** Seed one Factor's relativities from a model (FR-230). The body is `{"model_ref", "factor", "change_note"}`; `factor` is required and is the Factor's slug, a key of the model's `relativities`. The seeded table has one key, bound by `factor_ref` to the Factor version the model pins. **422** `VALIDATION_FAILED` for a `factor` that names no relativity entry of the model (a continuous factor included), for a named entry with no pinned Factor of its slug, for two pinned Factors with that slug, and for a re-seed of a lineage bound to another Factor's slug; **404** `NOT_FOUND` for a pinned Factor id that does not resolve in the caller's workspace (`load_factors`) (**amended 2026-10-03, `RL-1361` sections A and D**) |
 | `POST` | `/api/v1/rate-tables/{slug}@{version}/bulk-operation` | Uplift / floor / cap / rebase on that version's cells → new version, operation + parameters recorded (FR-233) |
 | `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against=` | **200** Cell-level diff with exposure weights (FR-231); **202** with a Job where either version is `storage: parquet` (FR-232) |
 | `GET` | `/api/v1/rate-tables/{slug}@{version}/export/csv` | Export cells to CSV (FR-235) |
@@ -973,8 +990,11 @@ def import_confirmed(version: RateTableVersion, content: bytes, *, filename: str
 # CellRow = dict[str, str] and Cells = Sequence[CellRow] are this module's aliases
 def check_model_approved(model: Model) -> None
 def extract_relativity_table(model: Model, *, value_name: str = "relativity") -> list[CellRow]
-def seed_from_model(model: Model, *, table_slug: str, change_note: str, seeded_at: datetime,
-                    rateable: bool = True, value_name: str = "relativity") -> SeedResult
+# `factor` and `factors` added 2026-10-03 (RL-1361 section D): the platform loads the
+# model's Factors and passes them in; the pure function binds the one key to `factor`'s Factor
+def seed_from_model(model: Model, *, factor: str, factors: Sequence[Factor], table_slug: str,
+                    change_note: str, seeded_at: datetime, rateable: bool = True,
+                    value_name: str = "relativity") -> SeedResult
 def validate_rate_table(cells: Cells, keys: Sequence[RateTableKey], value: RateTableValue, *,
                         key_domains: Mapping[str, frozenset[str]],
                         default_row: CellRow | None = None) -> list[ValidationIssue]

@@ -279,7 +279,7 @@ tenants would show two of these trees in two systems.
 |---|---|
 | **ID-1** | Every entity has a `uuid` primary key (`UUIDv7`, time-ordered) plus a human-readable `slug` unique within its parent scope. |
 | **ID-2** | Versioned entities carry `version: int` starting at 1, monotonically increasing per parent, and never reused — including after deletion of a draft. |
-| **ID-3** | The canonical external reference to any artifact is `{type}:{slug}@{version}` (e.g. `model:motor-ad-freq@7`, `rating_version:motor-gb@27`). This string form appears in traces, documentation, and the audit log. The version is always the ID-2 integer — the earlier `motor-gb@2026-04` example contradicted ID-2 and the reference pattern, and was corrected 2026-08-14 when generation compared the two. |
+| **ID-3** | The canonical external reference to any artifact is `{type}:{slug}@{version}` (e.g. `model:motor-ad-freq@7`, `rating_version:motor-gb@27`). This string form appears in traces, documentation, and the audit log. The version is always the ID-2 integer — the earlier `motor-gb@2026-04` example contradicted ID-2 and the reference pattern, and was corrected 2026-08-14 when generation compared the two. **Amended 2026-10-03 (`RL-1383`): a `factor` reference's slug may contain `_`.** For every other type the slug is `[a-z0-9][a-z0-9-]{1,62}`, the `slug` pattern of §4.3. For `factor` it is `[a-z0-9][a-z0-9_-]{1,62}`, because a Factor's slug is the name of its term in a design matrix, a feature list and a rate-table key (`02` §4.1), and `02`'s own example, `driver_age_banded`, contains one. A reference whose slug its type's pattern does not admit is refused, whether it is parsed from the string or built from its fields. |
 | **ID-4** | Content-addressed blobs (parquet, booster JSON, report PDFs) are stored at `blob/{sha256}` and referenced by hash + size + media type. Identical content is stored once. |
 | **ID-5** | Soft-delete only: entities gain `archived_at`; nothing is removed from the database. Physical purge is an Admin-only, audited, workspace-scoped operation used for GDPR erasure. |
 
@@ -305,6 +305,10 @@ Every persisted entity carries the envelope below (defined once in `model-schema
   "description": "string|null"
 }
 ```
+
+> **A Factor's slug, noted 2026-10-03 (`RL-1383`).** The `slug` pattern above holds for
+> every entity except a Factor, whose slug is `^[a-z0-9][a-z0-9_-]{1,62}$`: it may contain
+> `_`, because it names the Factor's term wherever the term appears (`02` §4.1, ID-3).
 
 ---
 

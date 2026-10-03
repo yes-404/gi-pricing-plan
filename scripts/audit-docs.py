@@ -2665,6 +2665,9 @@ _CONTRACT_ARTIFACT_PATHS: Final = (
     "docs/contracts/schemas/generated/sub-graph.schema.json",
     "docs/contracts/schemas/generated/sub-graph-create.schema.json",
     "docs/contracts/schemas/generated/sub-graph-body.schema.json",
+    # 2026-10-03, FD-1357 fix (RL-1375 DP-4)
+    "docs/contracts/schemas/generated/rate-table-version.schema.json",
+    "docs/contracts/schemas/generated/seed-from-model-request.schema.json",
     "docs/contracts/schemas/generated/problem-detail.schema.json",
     "docs/contracts/schemas/generated/profile.schema.json",
     "docs/contracts/schemas/generated/transparency-artifact.schema.json",

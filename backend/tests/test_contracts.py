@@ -77,6 +77,8 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "sub-graph": "first written form — 03 §4.11 (WK-1250 Slice 1, FR-217)",
     "sub-graph-create": "first written form — 03 §4.11 (WK-1250 Slice 1, FR-217)",
     "sub-graph-body": "first written form — 03 §4.11 (WK-1250 Slice 1, FR-217)",
+    "rate-table-version": "first written form of the seed route's 201 (RL-1375 DP-4); the authored rate-table contract is F27(c)'s, never compared",  # noqa: E501 -- RL-1375 DP-4's string, verbatim
+    "seed-from-model-request": "first written form — 03 §5.1 seed row (RL-1375 DP-3, FR-230)",
     "objective-usage": "first written form — FR-164 named the query",
     "oidc-auth-config": "first written form — FR-394 names the contents",
     "problem-detail": "first written form — the RFC 9457 problem shape",
@@ -357,6 +359,13 @@ def test_artifact_ref_pattern_matches_the_authored_contract() -> None:
         ("nonsense:motor-gb@1", False),        # not an artifact type
         ("model:Motor-GB@1", False),           # slugs are lowercase
         ("model:motor-gb", False),             # no version
+        # RL-1383: `_` is in the factor slug grammar and in no other type's.
+        ("factor:veh_brand@1", True),
+        ("factor:driver_age_banded@3", True),
+        ("model:motor_gb@1", False),
+        ("banding:driver_age@1", False),
+        ("factor:Veh_brand@1", False),
+        ("factor:x@1", False),
     ],
 )
 def test_authored_pattern_accepts_exactly_what_the_parser_accepts(
