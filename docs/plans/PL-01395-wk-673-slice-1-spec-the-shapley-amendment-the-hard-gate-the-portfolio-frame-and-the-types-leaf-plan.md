@@ -3,7 +3,7 @@ id: PL-1395
 family: plan
 kind: leaf
 title: WK-673 Slice 1 — spec: FR-266's Shapley amendment, the hard gate as requirements, the portfolio frame, the contract and the types: leaf plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-03
 owner: planner
 tree: 7b7757b3b868a08351130533454ff4afbade15af
