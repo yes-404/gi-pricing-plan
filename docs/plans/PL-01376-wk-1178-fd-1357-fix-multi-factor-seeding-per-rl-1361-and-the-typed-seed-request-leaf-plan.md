@@ -3,7 +3,7 @@ id: PL-1376
 family: plan
 kind: leaf
 title: WK-1178 slice — FD-1357's fix, multi-factor seeding per RL-1361 (one table per Factor, factor_ref), with the seed route's request and 201 typed (FR-228, FR-230, FR-234, FR-451): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-03
 owner: planner
 tree: 1dd5e264195677b4a13268b80ac8673c2c027135
