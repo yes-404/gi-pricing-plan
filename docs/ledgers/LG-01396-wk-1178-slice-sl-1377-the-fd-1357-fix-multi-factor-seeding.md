@@ -1,8 +1,8 @@
 ---
-id: LG-9744
+id: LG-1396
 family: ledger
 title: WK-1178 slice SL-1377 — the FD-1357 fix, one seeded rate table per Factor (RL-1361), the seed request and 201 typed, a re-seed's own origin, the factor reference's slug grammar (RL-1383) (PL-1376)
-status: active
+status: closed
 created: 2026-10-03
 owner: executor
 tree: fa151110e1ba751d5593bfc24809918ef3377013
@@ -14,7 +14,7 @@ corrected_by: []
 relates: [RL-1361, RL-1375, RL-1383, FD-1357, FD-1384, RL-1263, FR-9, FR-228, FR-229, FR-230, FR-234, FR-451]
 ---
 
-# LG-9744 — WK-1178 slice SL-1377, the FD-1357 fix
+# LG-1396 — WK-1178 slice SL-1377, the FD-1357 fix
 
 Executed from `PL-1376` by `executor-1377b` (sonnet, medium: `echo $CLAUDE_EFFORT` printed `medium`), resuming
 the first executor's WIP `f08fa07e` (Tasks 1 and 2) after it stopped on a premise defect that `RL-1383` ruled
@@ -373,3 +373,11 @@ reported free). Wall 23 m 56 s; pytest alone 1421 s.
   still owed on the final head.
 
 Next: a new head (the two fixes above) needs a new grant, per S-13.
+
+## Mint and close (2026-10-03, 20:16 BST)
+
+Opened as working id 9744; minted 2026-10-03 as LG-1396, by the lead's GO-mint ("2026-10-03 20:15:00 BST — GO-MINT: SL-1377 (#1087 @b0203bca)"). `origin/main` was `ee584dccb89bbf8d34cf40ef9ec52e10a4145598` (#1086) at the mint; `python3 scripts/doc-id.py next` printed `1394` there. **Ids 1394 and 1395 are held by the WK-673 Slice 1 mint batch PR (draft, unmerged; its ruling and plan take them), so this ledger takes 1396**, as the lead ordered; `doc-id.py next` printed nothing above 1396. Until that batch merges, check 31 reports a gap at 1394 to 1395 on this branch alone (expected, not a defect of this slice). `origin/main` was merged into the branch (`docs/INDEX.md` regenerated with `python3 scripts/doc-index.py`, not hand-resolved). The ledger file was renamed from its working-id file name to its minted-id file name, its `id` and heading set to LG-1396, its status set to `closed`. The earlier text of this ledger that names working id 9744 or `LG 9744` is kept as written (the ledger is append-only).
+
+Closed on the slice audit `audit-1377-2026-10-03.md` (the auditor's local handover file; verdict CLEAN, three non-blocking carried notes, range `origin/main...b0203bca`), adopted by the lead's verdict "2026-10-03 20:14:41 BST — LEAD VERDICT: SL-1377 slice audit CLEAN, adopted", and on the dispatch record `DISPATCH-WK-1178-SL1377-2026-10-03.md`, Deltas 1 to 5. SL-1377's roadmap row is set to `closed` in the same commit.
+
+**Carry-forward, owner the lead (audit item (f), Case A):** the seed route's untyped request body (its `UNTYPED_REQUEST_PENDING` entry) is NOT removed by this slice, because `UNTYPED_REQUEST_PENDING` does not exist on `origin/main` until PL-1364. Its removal is deferred to PL-1364's slice and carried in that dispatch record. The slice does not close silently over it.

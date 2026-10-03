@@ -892,6 +892,8 @@ relates: [PL-1237]
 
 The Environment and Deployment records, promotion order and their audit limb for deploy (FR-272, NFR-498), with the carried rulings. `PL-1237` Task 2. Starts after Slice 1 closes; its leaf plan also waits on `OQ-1234` (the maintainer's acceptance line on `PL-1237`).
 
+*Dated 2026-10-03 (at PL-1392's mint): the leaf plan is now **`PL-1392`**, which **supersedes `PL-1306`** on the maintainer's entry "2026-10-01 10:10:32 BST — WK-674 S2 currency audit: ORDER AMENDED to (b) S2 → FD-1356 fix; a superseding PL for S2; …" and its 10:10:46 addendum: the 7 new routes typed both ways, Acceptance 8 Branch A, order (b) S2 → the FD-1356 fix, and never concurrent with FD-1335 Part A's slice (both edit `score.py`). This row's status and fields are unchanged.*
+
 #### SL-1257 — Slice 3: environment isolation (FR-430, FR-431, register F54 and F48, NFR-496 prod-sampling limb)
 
 ```yaml
@@ -1389,7 +1391,7 @@ relates: [FD-1335, FD-1366, PL-1364, PL-1348, SL-1345, RL-1343, RL-1365]
 id: SL-1377
 family: slice
 title: WK-1178 fix slice — FD-1357, multi-factor seeding per RL-1361, typed seed request and 201
-status: active                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-03
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 1dd5e264195677b4a13268b80ac8673c2c027135
