@@ -248,7 +248,7 @@ real tree and receive that one finding: `test_audit_docs_finding_citations` (1),
 has a gap between 1396 and 9738"), `test_audit_docs_process_core_digest` (2), `test_audit_docs_w37_11_ceiling` (1),
 `test_doc_index` (1: "the live allocation is not contiguous: [(1396, 9738)]"), `test_register_lint` (3),
 `test_register_owed` (1), `test_repository_invariants` (2). The audit's other output line,
-"check 36 … FR-MODEL-46 (legacy pre-migration form survives)", is a disclosed note, not a failure. This is
+the check-36 line about a legacy pre-migration requirement id in the custom-objective workflow, is a disclosed note, not a failure. This is
 inference from the failure messages, not a re-run: the proof is a re-run at the lead's minted head, where the working
 id is replaced by an allocated one and the gap closes. No test outside those docs-audit tests failed; the
 backend, pricing-core, model-schema and frontend suites are green.
