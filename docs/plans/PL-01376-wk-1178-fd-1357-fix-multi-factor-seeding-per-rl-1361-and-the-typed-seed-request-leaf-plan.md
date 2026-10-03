@@ -43,7 +43,7 @@ Each is re-pointed when it is minted. *(Re-pointed 2026-10-01 at the merge of `o
 *(Minted 2026-10-03 at `origin/main` `6891b30e` as `PL-1376`, filed under working id 9764, with
 its slice row `SL-1377`, filed under working id 9763, and the ruling `RL-1375`, filed under
 working id 9757. The citations of those three are re-pointed. `PL 9765` stays in working-id
-form. Mint batch C.)*
+form. The FD-1357 batch.)*
 
 **Amended before its mint, 2026-10-01, on auditor-1057's audit of #1057 at `205e71e2`** (four
 findings, all adopted by the lead). A plan freezes at its first merge, so this is pre-merge

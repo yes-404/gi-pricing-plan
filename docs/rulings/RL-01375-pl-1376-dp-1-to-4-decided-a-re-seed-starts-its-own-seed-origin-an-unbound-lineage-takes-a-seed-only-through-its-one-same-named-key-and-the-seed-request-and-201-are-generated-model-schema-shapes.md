@@ -604,4 +604,4 @@ The executor stops and reports to the lead if the unmodified
 **fails** on the base. On a consistent base it passes, and the executor then proceeds with
 `N` read from its assert, whatever `N` is.
 
-*Drafted as working id 9757; minted 2026-10-03 as RL-1375 (mint batch C, with PL-1376 from working id 9764 and its slice row SL-1377 from working id 9763).*
+*Drafted as working id 9757; minted 2026-10-03 as RL-1375 (the FD-1357 batch, with PL-1376 from working id 9764 and its slice row SL-1377 from working id 9763).*
