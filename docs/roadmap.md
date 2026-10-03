@@ -1221,7 +1221,7 @@ Test-only hotfix for main's red CI after #1025: `test_template_certificate_uncha
 id: SL-1360
 family: slice
 title: WK-1178 slice — the permission-parity check (PL-1359, RL-1305)
-status: active                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-01
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: f95e10007329575aac81283d7c3832d8b2db1164
@@ -1231,7 +1231,7 @@ corrected_by: []
 relates: [PL-1359, RL-1305, CR-1247, RL-1236, PL-1268]
 ```
 
-A pytest invariant fails the gate in three cases: `06` §4.1's permission tables and `model_schema.Permission` disagree; a Built name has no check site (a flattened, reach-proved `requires()` route dependency, or an AST-found `require_permission(` call) and no owner; or a Built name has a check site and still carries an owner (`CR-1247` Proposal 1 (c), decided by `RL-1305`). It must merge before WK-690 Slice 3's commit that adds `custom_objective:author` (`PL-1268` Slice 3). It retires `RL-1236`'s interim re-derive-at-each-close rule when it merges. Leaf plan `PL-1359`, which supersedes `PL-1279`, activated with this row. *(Minted and activated 2026-10-01 as SL-1360, on the maintainer's entry "2026-10-01 08:04:53 BST — correction ACCEPTED (RL 9856 = RL-1305, already minted); lane B proposal AGREED, with the delta in the dispatch record".)*
+A pytest invariant fails the gate in three cases: `06` §4.1's permission tables and `model_schema.Permission` disagree; a Built name has no check site (a flattened, reach-proved `requires()` route dependency, or an AST-found `require_permission(` call) and no owner; or a Built name has a check site and still carries an owner (`CR-1247` Proposal 1 (c), decided by `RL-1305`). It must merge before WK-690 Slice 3's commit that adds `custom_objective:author` (`PL-1268` Slice 3). It retires `RL-1236`'s interim re-derive-at-each-close rule when it merges. Leaf plan `PL-1359`, which supersedes `PL-1279`, activated with this row. *(Minted and activated 2026-10-01 as SL-1360, on the maintainer's entry "2026-10-01 08:04:53 BST — correction ACCEPTED (RL 9856 = RL-1305, already minted); lane B proposal AGREED, with the delta in the dispatch record".)* *(Closed 2026-10-01 on a clean slice audit: the executor ledger is `LG-1370`, and the slice delivers in PR #1049 with the merge to come.)*
 
 #### SL-1367 — WK-1178 slice — FD-1335 Part A: the /score and /score/compare 200 responses documented, and one untyped-body guard over 2xx responses and JSON request bodies
 
