@@ -293,7 +293,7 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 > | `admin:manage_settings` | Changing workspace settings and reference data, and every per-environment setting value: `07` FR-431's settings, and FR-270/FR-271's routing and shadow switches and shadow configuration (DP-D). Each change writes an Audit Event naming the environment, the key, the old value and the new value. Nothing it guards can change which Rating Version prices a live quote |  |
 > | `admin:manage_service_accounts` | Creating, rotating and revoking Service Accounts |  |
 > | `admin:break_glass` | Break-glass elevation (FR-349). Checked in the service layer, not by a route (`RL-1305` D1) |  |
-> | `admin:manage_environments` | The Environment record's lifecycle: create, rename, retire (`07` FR-428). Not its settings, which are `admin:manage_settings`. Its route, WK-674 Slice 2's, is its first check | WK-674 |
+> | `admin:manage_environments` | The Environment record's lifecycle: create, rename, retire (`07` FR-428). Not its settings, which are `admin:manage_settings`. Its route, WK-674 Slice 2's, is its first check |  |
 >
 > **Mapped: the same capability under two names; the code's name survives.**
 > `rating_version:submit` (the Pricing Actuary set above) is `rating:submit`.

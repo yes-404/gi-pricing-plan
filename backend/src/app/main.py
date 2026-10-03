@@ -25,6 +25,7 @@ from app.api import (
     dataset_versions,
     datasets,
     demo,
+    environments,
     health,
     jobs,
     me,
@@ -126,6 +127,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health.router)
     app.include_router(jobs.router, prefix=API_PREFIX)
     app.include_router(service_accounts.router, prefix=API_PREFIX)
+    app.include_router(environments.router, prefix=API_PREFIX)
     app.include_router(settings_api.router, prefix=API_PREFIX)
     app.include_router(me.router, prefix=API_PREFIX)
     app.include_router(audit.router, prefix=API_PREFIX)

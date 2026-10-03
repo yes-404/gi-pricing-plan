@@ -370,8 +370,9 @@ async def test_an_artifact_cannot_be_rewritten_from_the_owner_connection(
         )
 
     # `deployments` is the one table here that something references
-    # (`scoring_traces.deployment_id`), and PostgreSQL refuses a `TRUNCATE` of a referenced table on the foreign key before any
-    # trigger runs. Naming the referencing table too gets the statement to the trigger.
+    # (`scoring_traces.deployment_id`), and PostgreSQL refuses a `TRUNCATE` of a referenced
+    # table on the foreign key before any trigger runs. Naming the referencing table too gets
+    # the statement to the trigger.
     truncated = f"{table}, scoring_traces" if table == "deployments" else table
     for statement in (
         f"UPDATE {table} SET workspace_id = workspace_id WHERE id = :id",

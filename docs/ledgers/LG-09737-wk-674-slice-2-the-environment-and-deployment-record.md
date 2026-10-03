@@ -290,6 +290,87 @@ checked out). A continuation executor, sonnet, `echo $CLAUDE_EFFORT` printed `me
   `audit-docs.py` and fail only on check 31 for this ledger's working id (as at Task 2). `ruff check .` clean, `mypy` 220
   files clean, `lint-imports` 4 kept 0 broken.
 
+### Task 4 — Environments: the entity and its routes (FR-428)
+
+Stamp 2026-10-03 23:07 BST (`TZ=Europe/London date`; load average 6.76 on a shared box). Base: branch head `e10bbfb0`
+(fetched, checked out). A continuation executor, sonnet, `echo $CLAUDE_EFFORT` printed `medium`. Test database
+`gipricing_agent-a52a31535b6669265_7dbaa699`, created from the template and migrated to head `c4a81f6d2e95`.
+
+- **Red first, the permission and the routes.** `backend/tests/test_environments.py` (25 tests), run before any router
+  existed: 22 failed, 3 passed (the 3 are controls and the two 404 tests, which pass for the wrong reason, as the plan
+  predicts). The predicted cause, quoted: `assert 404 == 403` on `POST /api/v1/environments`. After the router with the
+  write dependency weakened to `settings:read`, the predicted second red: `AssertionError: assert 201 == 403` (the
+  deployer creates an Environment); the same weakening re-run once the fixture was fixed gave the same line. The file's
+  first draft granted `admin` and `deployer` to one principal, which made that test unable to fail; the deployer is now a
+  second principal (an error of mine, found by running it red).
+- **Red first, the A.6 existence checks.** With the router in place and `set_policy` and the two Service Account routes
+  unchanged, 5 failed: `assert 200 == 422` (policy naming `prd`, policy naming a retired Environment), `assert 201 == 422`
+  (a key for `prd`, a key for a retired Environment) and `assert 200 == 422` (rotation for an account naming a retired
+  Environment). After the edits: 25 passed.
+- **What the code does.** `platform/environments.py`: `list_environments` (retired included, ordered `promotion_order`
+  then id, cursor is the last row's id), `create_environment`, `update_environment`, `retire_environment`,
+  `require_existing` (non-retired, 422 `VALIDATION_FAILED` naming the slug and who named it). `api/environments.py`: the
+  four routes; the three writes `Depends(requires(Permission.ADMIN_MANAGE_ENVIRONMENTS))`. `main.py` registers the router.
+  `set_policy` calls `require_existing` for each environment-qualified `deployment` entry; `service_accounts.py` calls it at
+  creation and at rotation (rotation checks the account's stored list). Each write has one Audit Event in the same
+  transaction (`environment.created`, `.updated`, `.retired`, `entity_ref` `environment:<slug>`), asserted as the exact
+  sequence, and a refused write adds none. Rename and retire load the row `FOR UPDATE`.
+- **Retire refusals** (409 `VALIDATION_FAILED`, each naming what blocks): a live Deployment (the latest per workspace,
+  naming the reference), a `deployment` policy entry naming the slug in any workspace's stored policy (or
+  `DEFAULT_POLICY` when some workspace has no policy row), an unrevoked key. Tested on fresh slugs, each lifted by
+  removing the blocker. The deployment test inserts a `DeploymentRow` directly (Task 5 has no route yet).
+- **Acceptance 8, `admin:manage_environments`.** The predicate, verbatim: `grep -c -E '^> \| `(deployment:promote|admin:manage_environments)` \|.*\| WK-674 \|$' docs/specs/06-governance.md`
+  printed 2 before and **1** after. Red first, quoted: with the check in place and the cell
+  left as `WK-674`, `tests/test_permission_parity.py::test_live_tree_has_no_parity_violations` failed `Built name has a
+  check site and still carries an owner: clear it in the same commit: admin:manage_environments (WK-674)`; after emptying
+  the cell, 16 passed. The row is `docs/specs/06-governance.md:296`, not `:294` as the plan says.
+- **Route types, rows 1-4 (Acceptance 14, 15).** `backend/tests/test_deployment_route_types.py` (11 tests): the route
+  set pin (rows 1-4; the filter excludes `/deployment` paths until Task 5 widens it), an AST walk (each body-taking
+  handler's `body` is the bare name the table gives, imported from `model_schema`; no-body handlers take none; the return
+  annotation is the table's 2xx type, `Page[Environment]` for the list), and an OpenAPI check (request body and every 2xx
+  exactly `{"$ref": ...}` of a name in `GENERATED_SHAPES`, the list's `Page_Environment_.items.items` the same, FD-1335's
+  form 1 and form 2 refused by name), run against the live app and the committed `generated.json`. The checkers are pure
+  functions, so the test file also feeds them broken copies and asserts each is refused naming the route.
+- **Broken-input runs on the real handler** (each restored; run with `-k "in_the_source or ref_to_a_published"`):
+  **A** body `dict[str, Any]`: the AST, request-body and 2xx tests all failed (3 failed). **B** a local `BaseModel` named
+  `EnvironmentCreate`: the AST test failed (`not imported from model_schema`); the OpenAPI tests still passed, because the
+  class has the same name and so the same `$ref`: **the plan's prediction that the OpenAPI half also fails does not hold
+  when the local class reuses the published name**; only the AST half catches it (1 failed, 2 passed). **C** return
+  annotation and `response_model` removed: AST and 2xx failed (2 failed). **D** `dict[str, Any]` return and
+  `response_model`: AST and 2xx failed (2 failed).
+- **The contract.** `generate-contracts.py` regenerated `docs/contracts/openapi/generated.json` (+695 lines: the four
+  operations, `Environment`, `EnvironmentCreate`, `EnvironmentUpdate`, `LiveDeployment`, `Page_Environment_`);
+  `--check` exits 0 ("43 generated contracts match the models"). No new slug (all three were Task 2's), so
+  `_CONTRACT_ARTIFACT_PATHS` and the count are unchanged.
+- **DEP-1.** `git grep -n -E 'from app\.(platform|api)\.(deployments|rating)' -- backend/src/app/platform/approvals.py`
+  prints nothing (exit 1); `approvals.py` imports `app.platform.environments`, which is `07`'s.
+- **Checks run, targeted (no suite-level gate, Task 7).** `pytest backend/tests/test_api_authorisation_sweep.py
+  test_api_service_accounts.py test_api_approvals.py test_approvals.py test_contracts.py test_environments.py
+  test_deployment_route_types.py test_auth_keys.py test_score.py tests/test_permission_parity.py`: 390 passed, 2 skipped.
+  `ruff check .` clean, `mypy` 222 files clean, `lint-imports` 4 kept 0 broken. `ruff` had found a long line in
+  `test_artifact_immutability.py:373` from Task 3's commit; wrapped here.
+- **Deviations and flags, stated.**
+  1. **The list route's permission is `settings:read`, a pick the plan does not make.** The plan names the permission only
+     for the three writes. The sweep needs a declared permission or an allow-list entry, and `settings:read` is in
+     `READ_PERMISSIONS`, so the Auditor reads Environments (FR-346). The lead or a decision-maker may prefer another; it is
+     a one-line change plus the test's refusal case.
+  2. **`live_deployments` is the latest Deployment of the caller's workspace in the Environment** (one entry), derived at
+     read. `03` §4.12 says only that the live Deployment is "derived from these rows". Retirement is therefore refused
+     while any workspace has any Deployment in the Environment (the latest is live), which stays true until a rollback or
+     retirement of a Deployment exists. Task 5 and Slice 5 may refine "live"; the derivation is one function.
+  3. **Conflicts and in-use refusals use `VALIDATION_FAILED` with 409**, as `POST /service-accounts` does for a duplicate
+     slug. The plan names no code for them and a new code would be a spec change (`07` or `03` §5.1's catalogue).
+  4. **The audit actions `environment.created`, `environment.updated` and `environment.retired` are not in any spec
+     catalogue** (`03` §4.12 names the `deployment.*` ones). The plan names none for Environments; flagged for a spec row.
+  5. **`07` §5.1's retire row reads "no live Deployment and that no policy entry names"; the plan and the code also refuse
+     while an unrevoked key names it.** The row is Task 1's text; I did not edit it. A dated clause is the decision-maker's.
+  6. **`requires_prior_environment` on create must name an existing, non-retired Environment** (422), which the plan does
+     not say; without it the foreign key would answer 500.
+  7. **A retired Environment is refused a rename and a second retirement** (409), which the plan does not say.
+  8. **The retire key check reads unrevoked keys, expired or not**, as the plan words it; the Task 3 migration pre-check
+     ignores expired keys. An expired key can be revoked through the existing route.
+  9. The `06` permission row is at `:296`, not `:294`; the other Acceptance 8 cell (`deployment:promote`) is Task 5's.
+
 ## PRs
 
 Not yet opened (draft PR at the first push).
