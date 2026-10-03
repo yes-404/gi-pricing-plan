@@ -9,6 +9,7 @@ question of what a submission requires — which is the defect OQ-639 existed to
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from model_schema import DEFAULT_POLICY, EVIDENCE_FLOOR, ApprovalPolicy, ApprovalPolicyEntry
 
@@ -156,3 +157,44 @@ def test_the_default_policy_has_a_prod_deployment_entry() -> None:
     assert entry.approver_roles == ("deployer",)
     assert entry.environment == "prod"
     assert entry.evidence == EVIDENCE_FLOOR["deployment"]
+
+
+def _entry_with_skip(**overrides: object) -> ApprovalPolicyEntry:
+    fields: dict[str, object] = {
+        "artifact_type": "deployment",
+        "environment": "prod",
+        "approvers_required": 1,
+        "approver_roles": ("deployer",),
+        "evidence": EVIDENCE_FLOOR["deployment"],
+        "skippable_predecessors": ("uat",),
+    }
+    fields.update(overrides)
+    return ApprovalPolicyEntry(**fields)  # type: ignore[arg-type]
+
+
+@pytest.mark.req("FR-429")
+def test_a_skippable_predecessor_is_refused_without_an_environment() -> None:
+    """RL-1296 item 5: the field is valid only on the environment-qualified entry.
+
+    Predicted red before the field exists: `extra="forbid"` rejects the unknown field
+    (a `ValidationError` naming `skippable_predecessors`). After the field is added without
+    the validator, the red becomes "no error raised".
+    """
+    with pytest.raises(ValidationError, match="skippable_predecessors"):
+        _entry_with_skip(environment=None)
+
+
+@pytest.mark.req("FR-429")
+def test_a_skippable_predecessor_is_refused_on_another_artifact_type() -> None:
+    """The same refusal for `artifact_type="rating_version"` (RL-1296 item 5)."""
+    with pytest.raises(ValidationError, match="skippable_predecessors"):
+        _entry_with_skip(artifact_type="rating_version", evidence=())
+
+
+@pytest.mark.req("FR-429")
+def test_a_qualified_deployment_entry_accepts_skippable_predecessors() -> None:
+    """Control: the one place the field is valid, so the validator does not over-refuse."""
+    assert _entry_with_skip().skippable_predecessors == ("uat",)
+    prod = DEFAULT_POLICY.entry_for("deployment", "prod")
+    assert prod is not None
+    assert prod.skippable_predecessors == ()

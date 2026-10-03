@@ -256,6 +256,15 @@
             },
             "title": "Evidence",
             "type": "array"
+          },
+          "skippable_predecessors": {
+            "default": [],
+            "description": "Predecessor Environment slugs a deployment into this entry's environment may skip (`03` FR-429, RL-1296). Empty by default; valid only on a `deployment` entry that names an environment.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Skippable Predecessors",
+            "type": "array"
           }
         },
         "required": [

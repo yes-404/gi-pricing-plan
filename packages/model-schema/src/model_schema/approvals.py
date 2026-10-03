@@ -120,6 +120,33 @@ class ApprovalPolicyEntry(BaseModel):
         default=None, description="Rating Version deployments differ per target environment."
     )
     evidence: tuple[str, ...] = ()
+    skippable_predecessors: tuple[str, ...] = Field(
+        default=(),
+        description=(
+            "Predecessor Environment slugs a deployment into this entry's environment may "
+            "skip (`03` FR-429, RL-1296). Empty by default; valid only on a `deployment` "
+            "entry that names an environment."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _skip_permission_is_only_on_a_qualified_deployment_entry(
+        self,
+    ) -> ApprovalPolicyEntry:
+        """RL-1296 item 5: the skip permission has one home, and it is not the fallback.
+
+        An unqualified entry applies to every environment, so a skip listed there would
+        let any target skip its predecessor; the field is refused unless the entry is the
+        `deployment` entry of one named environment.
+        """
+        if self.skippable_predecessors and (
+            self.artifact_type != "deployment" or self.environment is None
+        ):
+            raise ValueError(
+                "skippable_predecessors is valid only on a `deployment` entry that names an "
+                "environment (`06` §4.2, RL-1296)"
+            )
+        return self
 
 
 class ApprovalPolicy(BaseModel):

@@ -363,7 +363,8 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
      "evidence": ["structural_diff", "rate_table_diffs", "regression_run", "dislocation_run", "gipp_check_if_enabled", "change_summary"]},
     {"artifact_type": "deployment", "environment": "prod", "approvers_required": 1,
      "approver_roles": ["deployer"],
-     "evidence": ["rating_version_approval", "uat_deployment"]}
+     "evidence": ["rating_version_approval", "uat_deployment"],
+     "skippable_predecessors": []}
   ],
   "expedited": {"enabled": true, "approvers_required": 1,
                 "requires_reason": true, "reported_in_exception_log": true},
@@ -374,6 +375,8 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 `separation_of_duties.configurable: false` is deliberate and is not a placeholder (R1).
 
 > **The `deployment` entry in `DEFAULT_POLICY`, dated 2026-10-03 (WK-674 Slice 2; `RL-886`).** The `deployment` entry above, for `prod`, is added to `DEFAULT_POLICY` in `model-schema` by this slice. `RL-886` ruled that the spec was right and the code was one entry short: §3.3's floor already names `deployment` (FR-364), and `submit` refused a Deployment Request with "no approval policy for this artifact type" for want of the entry. Its `environment` is an Environment's slug (`07` §4.2).
+
+> **`skippable_predecessors`, dated 2026-10-03 (WK-674 Slice 2; `RL-1296`).** The `prod` entry above carries the field that `OQ-1234` decided (`03` FR-429; `07` FR-429's amendment of 2026-09-30). It names the predecessor Environment slugs a deployment into the entry's environment may skip, and is empty by default, so no skip is permitted until a workspace lists one. `ApprovalPolicyEntry` refuses a non-empty value unless the entry's `artifact_type` is `deployment` and it names an `environment`: an unqualified entry applies to every environment, and a skip listed there would grant one to all of them. The reason for a skip is always required and is not configurable; it is the `uat_deployment` evidence item's `PromotionSkip.reason` (`03` §4.12).
 
 > **`risk_tier` joins the entry shape in Phase 3 with FR-365** (OQ-636, decided
 > 2026-08-18): an entry may carry `"risk_tier": 1`, and an entry **without** one applies to
