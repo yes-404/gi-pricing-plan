@@ -2,7 +2,7 @@
 id: LG-1400
 family: ledger
 title: WK-673 slice SL-1385 — the portfolio frame and the types, spec only (PL-1395, RL-1394)
-status: active
+status: closed
 created: 2026-10-03
 owner: executor
 tree: 2411060d81b8821193c5e7239a2423c6a9cf1667
