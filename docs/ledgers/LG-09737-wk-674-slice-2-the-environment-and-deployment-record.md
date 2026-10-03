@@ -135,6 +135,90 @@ Stamp 2026-10-03 22:15 BST (`TZ=Europe/London date`). Base: branch head `924980c
 - **Not done here, by plan:** the skip field and `"skippable_predecessors"` in `06` §4.2's JSON (Task 2); the compile
   guard texts T1 to T4 of RL-1379 (Task 5A); `06` §4.1's `deployment:promote` cell (Task 5).
 
+### Task 2 — `model-schema`: shapes, the policy entry, the skip field and the predicate
+
+Stamp 2026-10-03 22:34 BST (`TZ=Europe/London date`; `uptime` load average 5.41 at the stamp, another gate holding
+`/tmp/slots/gate-1`). Base: branch head `4a8656a9` on `8252741c`. Four commits: `11d692dc`, `4143cef0`, `0a1bdd94`,
+`030d8864`. Skills read: `spec-change` (Task 1), `contract-schema`, `contract-guard`, `python-package`, `python-test`.
+
+- **Commit 1, the `deployment` entry (RL-886).** Red first, `test_the_default_policy_has_a_prod_deployment_entry`
+  (`packages/model-schema/tests/test_approvals.py`): `assert None is not None` on `DEFAULT_POLICY.entry_for("deployment",
+  "prod")`, the predicted cause (premise b). Green after the entry was added to `DEFAULT_POLICY` (`prod`, 1 approver,
+  role `deployer`, evidence the two floor kinds, as `06` §4.2 shows). `generate-contracts.py --check` exit 0.
+- **Commit 2, the skip field, its validator, `06` §4.2 and the contract, together (RL-1296 item 5).** Red first, both
+  predicted forms quoted. Before the field: the control test failed with `skippable_predecessors / Extra inputs are not
+  permitted [type=extra_forbidden]` (the two refusal tests pass at that point for the wrong reason, which is why the
+  control is in the set). Field added without the validator: the two refusal tests failed `DID NOT RAISE
+  ValidationError` (`environment=None`; `artifact_type="rating_version"`). With the `@model_validator(mode="after")` all
+  10 tests pass. `06` §4.2 gains `"skippable_predecessors": []` on the `prod` entry and a dated note citing `RL-1296`.
+  `docs/contracts/openapi/generated.json` regenerated (+9 lines); `--check` exit 0.
+- **Commit 3, the predicate.** Red first: `ImportError: cannot import name 'PromotionSkip' from 'model_schema'`. Then
+  `PromotionSkip` (blank `reason` refused by a `field_validator`) and `promotion_order_refusal` in `approvals.py`. A
+  9-row table test, a blank-reason test (one through the validator, one through `model_construct` straight into the
+  predicate) and the F8 test (an unqualified entry built with `model_construct` carrying the field grants no skip):
+  21 passed in the file. Every refusal reason names the target and the predecessor (asserted).
+- **Commit 4, the shapes.** Red first: `ImportError: cannot import name 'Deployment' from 'model_schema'`
+  (`tests/test_deployments.py`: each class validates its example and refuses an unknown key). `deployments.py` adds
+  `Environment`, `LiveDeployment`, `EnvironmentCreate`, `EnvironmentUpdate`, `Deployment`, `DeploymentCreate`,
+  `DeploymentRequestStatus`, `DeploymentRequestEvidence`, `DeploymentRequest`, `DeploymentRequestCreate`;
+  `ScopeType.ENVIRONMENT`; `"deployment"` in `ARTIFACT_TYPES`; seven slugs in `GENERATED_SHAPES`
+  (`environment`, `environment-create`, `environment-update`, `deployment`, `deployment-create`, `deployment-request`,
+  `deployment-request-create`); `promotion-skip` is not registered (reached through `deployment-request-create`'s
+  `$defs`). The slugs are typed with `refs.Slug`, references with `ArtifactRef`; every class is `extra="forbid"`.
+- **Acceptance 2 counts, at this head.** `git grep -n -E '^class (Environment|Deployment)\b' -- packages backend/src
+  frontend/src` prints **3** lines (`config.py:32`, `deployments.py:55`, `:99`). The Route-table predicate prints **6**
+  (`approvals.py:230` `PromotionSkip`; `deployments.py:75, :87, :123, :163, :181`); the final 8 needs `ApprovalWithdrawal`
+  and `ApprovalSubmission`, which are Tasks 6 and 5.
+- **Red on the contract guard, then green.** After registering the slugs and before declaring them,
+  `backend/tests/test_contracts.py` failed: `a schema present on exactly one side must declare that in ONE_SIDED_SLUGS
+  (OQ-649 (b)): ['deployment', 'deployment-create', 'deployment-request', 'deployment-request-create', 'environment',
+  'environment-create', 'environment-update']`. It also failed on the artifact-ref pattern (the model had `deployment`, the
+  authored `common/artifact-ref.schema.json` did not); see deviation 2. After the edits: `test_contracts.py` 150
+  passed, 2 skipped.
+- **`ONE_SIDED_SLUGS` keys this slice added (Delta 4):** `environment`, `environment-create`, `environment-update`,
+  `deployment`, `deployment-create`, `deployment-request`, `deployment-request-create`, each a new key in the
+  generated-only block after `seed-from-model-request`. `"dislocation-run"` is untouched. Tasks 5 and 6 add
+  `approval-submission` and `approval-withdrawal`.
+- **Red on checks 30 and 35, then green (C18).** With the seven schemas regenerated and not registered,
+  `python3 scripts/audit-docs.py` failed check 30 (``no `---` front-matter header found``) and check 35 (`in the
+  checks-30-39 scope with no parseable header, and not in the F83 exemption register`) naming each of the seven files.
+  After the seven literal paths went into `_CONTRACT_ARTIFACT_PATHS` (`scripts/audit-docs.py`, after the
+  `seed-from-model-request` line) and `tests/test_audit_docs_ids.py`'s `non_markdown` count went 72 to **79**, the only
+  failure is check 31 for LG 9737 (the working id, expected until minted). **F1 count:** 72 measured at base `8252741c`
+  (SL-1377 merged, +2 over 70); +7 here. **Second-to-merge note:** this slice merges second against SL-1377, so the
+  re-bump is this one; if anything else merges first, re-measure on the merged tree. The contract-schema skill step is
+  already written by SL-1377 (`.claude/skills/contract-schema/SKILL.md` line 124), so the plan's conditional step is skipped.
+  Two tests in `tests/test_audit_docs_ids.py` (`test_the_real_tree_passes_all_ten_checks`,
+  `test_doc_id_check_exits_0_on_the_real_tree`) fail only on that check 31 gap; the count test passes.
+- **Checks run, targeted (no suite-level gate, Task 7).** `ruff check .` clean, `mypy` 220 files clean, `lint-imports` 4
+  kept 0 broken, `generate-contracts.py --check` 43 contracts match; `pytest packages/model-schema
+  backend/tests/test_contracts.py tests/test_permission_parity.py`: 659 passed, 2 skipped. The backend tests that need the
+  per-worktree database were not run here (no database for this worktree yet).
+- **Deviations and flags, stated.**
+  1. **`approval-policy` has no generated schema.** Acceptance 2 says "`approval-policy`'s schema carries the skip field".
+     `ApprovalPolicy` is in no `GENERATED_SHAPES` slug at this tree (`find docs/contracts -name 'approval*'` finds only the
+     authored `approval-request.schema.json`). The field is published in `docs/contracts/openapi/generated.json` (the
+     `ApprovalPolicyEntry` component). I did not add an `approval-policy` slug, since the plan's slug list names none; the
+     auditor decides whether the OpenAPI component discharges the clause.
+  2. **`docs/contracts/schemas/common/artifact-ref.schema.json` is hand-edited, not regenerated.** The generator does not
+     write it; the contract guard compares its `pattern` with the model's. The one-token edit (`deployment|` after
+     `dataset_version|`) follows the precedent `109cd065` (WK-672 Slice 2), and the pattern now equals the generated
+     `artifact-ref.schema.json`'s (compared in a script: True).
+  3. **Regenerating moved ten other generated schemas** (`artifact-ref`, `peril-structure`, `regression-run`,
+     `regression-suite`, `score-comparison`, `rate-table-version`, `seed-from-model-request`, `sub-graph*`): each embeds the
+     artifact-ref pattern, which gained `deployment`. That is the generator's output, not an edit.
+  4. **Shape fields the plan leaves open, chosen once here:** `Environment` carries `slug`, `name`, `description`,
+     `promotion_order`, `requires_prior_environment`, `retired_at` and the derived `live_deployments` (a
+     `LiveDeployment` list); `DeploymentRequest` carries `id`, `workspace_id`, `ref`, `environment`,
+     `rating_version_ref`, `change_summary`, `status`, `approval_request_id`, `evidence`, `submitted_by`, `created_at`, with
+     `evidence` a `DeploymentRequestEvidence` (`rating_version_approval: UUID`, `uat_deployment: UUID | PromotionSkip`,
+     the two floor kinds' names). Task 3's row columns and Task 5's handlers read these; any change is a delta.
+  5. **A process slip, corrected:** a `ruff format packages/model-schema` run reformatted 39 files the slice does not own.
+     All but the three owned files were restored by checkout, and the one stray hunk in `approvals.py` was reverted by
+     hand; the commits carry only this task's lines. The repository is not `ruff format`-clean at base (the format step is
+     not part of the gate).
+  6. The commit-msg hook refuses a `Claude-Session:` line (F49), so the four commits carry only `Co-Authored-By:`.
+
 ## PRs
 
 Not yet opened (draft PR at the first push).
