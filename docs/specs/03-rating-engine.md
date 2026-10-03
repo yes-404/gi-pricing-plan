@@ -509,11 +509,14 @@ breakdown — `docs/rulings/RL-00931-correct-the-example-do-not-build-the-breakd
 
 ### 4.6 `DislocationRun`
 
+*(Amended 2026-10-03, WK-673 Slice 1, `RL-1394`: reconciled with `dislocation-run.schema.json` (`job_id`, `by_ladder_rung` and `errors` added to the example) and extended with FR-266's attribution as amended, RW1, RW2 and RW3. Money is integer minor units. `mean_change_pct` and `cumulative_change_pct` on an `attribution` item are derived views: `shapley_minor` (or, under `order_dependent`, `isolated_minor`) and `cumulative_minor` as a percentage of `totals.baseline_premium_minor`. `method` is `shapley` or `order_dependent`; `shapley_minor` is null only under `order_dependent`, and `order_sensitivity_lower_bound`, `residual_share` and `orders_sampled` are non-null only under it. S and R are decimal strings. `subset_valuation` is `rerate` or `ladder_replay`, and `replay_fell_back` is true where a replay mismatch fell the run back to re-rates (`RL-1264`); Slice 3 may amend these two with a dated note if it does not adopt replay.)*
+
 ```json
 {
   "baseline_ref": "rating_version:motor-gb@26",
   "candidate_ref": "rating_version:motor-gb@27",
   "portfolio_dataset_version_id": "uuid",
+  "job_id": "uuid",
   "policy_count": 1_284_902, "exposure_years": "1240118.4",
   "totals": {"baseline_premium_minor": 41_882_100_00, "candidate_premium_minor": 42_698_300_00,
              "change_pct": 1.95},
@@ -527,12 +530,29 @@ breakdown — `docs/rulings/RL-00931-correct-the-example-do-not-build-the-breakd
   ],
   "by_segment": [{"factor": "driver_age_band", "level": "17-20",
                   "policies": 22_104, "mean_change_pct": -6.4, "exposure_share": 0.017}],
-  "attribution": [
-    {"change": "peril_structure:motor-gb-2026h2@1 → @2", "mean_change_pct": 1.42},
-    {"change": "rate_table:motor-driver-age-relativity@5 → @6", "mean_change_pct": -0.31},
-    {"change": "min_premium 26000 → 28000", "mean_change_pct": 0.84}
+  "by_ladder_rung": [{"rung": "base_premium", "contribution_pct": 1.10}],
+  "derived_changes": [
+    {"id": "c1", "kind": "step_changed", "description": "s_model: peril_structure:motor-gb-2026h2@1 → @2"},
+    {"id": "c2", "kind": "table_repointed", "description": "s_age: rate_table:motor-driver-age-relativity@5 → @6"},
+    {"id": "c3", "kind": "step_changed", "description": "s_minprem: min_premium 26000 → 28000"}
   ],
-  "largest_movers_blob": "blob:sha256:…"
+  "change_groups": [{"name": "models", "changes": ["c1"]}, {"name": "age curve", "changes": ["c2"]},
+                    {"name": "minimum premium", "changes": ["c3"]}],
+  "attribution": [
+    {"group": "models", "shapley_minor": 594_700_00, "isolated_minor": 571_000_00,
+     "cumulative_minor": 571_000_00, "mean_change_pct": 1.42, "cumulative_change_pct": 1.36},
+    {"group": "age curve", "shapley_minor": -129_800_00, "isolated_minor": -131_200_00,
+     "cumulative_minor": -128_100_00, "mean_change_pct": -0.31, "cumulative_change_pct": -0.31},
+    {"group": "minimum premium", "shapley_minor": 351_300_00, "isolated_minor": 322_400_00,
+     "cumulative_minor": 373_300_00, "mean_change_pct": 0.84, "cumulative_change_pct": 0.89}
+  ],
+  "attribution_summary": {"method": "shapley", "total_change_minor": 816_200_00,
+                          "residual_minor": 54_000_00, "order_sensitivity_lower_bound": null,
+                          "residual_share": null, "orders_sampled": null,
+                          "subset_bundle_count": 8, "subset_bundle_hashes": ["sha256:…"],
+                          "subset_valuation": "rerate", "replay_fell_back": false},
+  "largest_movers_blob": "blob:sha256:…",
+  "errors": [{"code": "INPUT_CONTRACT_VIOLATION", "count": 0}]
 }
 ```
 

@@ -6,6 +6,7 @@
   "type": "object",
   "required": ["baseline_ref", "candidate_ref", "portfolio_dataset_version_id",
                "policy_count", "exposure_years", "totals", "distribution"],
+  "dependentRequired": {"attribution": ["derived_changes", "change_groups", "attribution_summary"]},
   "properties": {
     "baseline_ref": {"$ref": "common/artifact-ref.schema.json"},
     "candidate_ref": {"$ref": "common/artifact-ref.schema.json"},
@@ -61,15 +62,62 @@
     },
     "attribution": {
       "type": "array",
-      "description": "Each change applied in isolation and cumulatively, decomposing the movement into its causes (FR-266).",
+      "description": "Per change group: the Shapley part of record and the isolated and cumulative views, in integer minor units (FR-266 as amended, RW1).",
       "items": {
         "type": "object",
-        "required": ["change", "mean_change_pct"],
+        "required": ["group", "shapley_minor", "isolated_minor", "cumulative_minor", "mean_change_pct"],
         "properties": {
-          "change": {"type": "string"},
+          "group": {"type": "string"},
+          "shapley_minor": {"anyOf": [{"$ref": "common/money.schema.json#/$defs/MoneyMinor"}, {"type": "null"}]},
+          "isolated_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+          "cumulative_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
           "mean_change_pct": {"type": "number"},
           "cumulative_change_pct": {"type": "number"}
         }
+      }
+    },
+    "derived_changes": {
+      "type": "array",
+      "description": "The changes derived from baseline and candidate at step granularity (RW3).",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "description"],
+        "properties": {
+          "id": {"type": "string"},
+          "kind": {"enum": ["pin", "step_added", "step_removed", "step_changed", "table_repointed"]},
+          "description": {"type": "string"}
+        }
+      }
+    },
+    "change_groups": {
+      "type": "array", "maxItems": 6,
+      "description": "The analyst's groups, partitioning derived_changes exactly (RW3). Their order is the declared change order.",
+      "items": {
+        "type": "object",
+        "required": ["name", "changes"],
+        "properties": {
+          "name": {"type": "string"},
+          "changes": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+        }
+      }
+    },
+    "attribution_summary": {
+      "type": "object",
+      "description": "Method, totals, S and R, and the subset bundles compiled (FR-266 as amended, RW1, RW2).",
+      "required": ["method", "total_change_minor", "residual_minor", "order_sensitivity_lower_bound",
+                   "residual_share", "orders_sampled", "subset_bundle_count", "subset_bundle_hashes",
+                   "subset_valuation", "replay_fell_back"],
+      "properties": {
+        "method": {"enum": ["shapley", "order_dependent"]},
+        "total_change_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+        "residual_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+        "order_sensitivity_lower_bound": {"anyOf": [{"$ref": "common/money.schema.json#/$defs/Decimal"}, {"type": "null"}]},
+        "residual_share": {"anyOf": [{"$ref": "common/money.schema.json#/$defs/Decimal"}, {"type": "null"}]},
+        "orders_sampled": {"type": ["integer", "null"], "minimum": 2},
+        "subset_bundle_count": {"type": "integer", "minimum": 0},
+        "subset_bundle_hashes": {"type": "array", "items": {"type": "string"}},
+        "subset_valuation": {"enum": ["rerate", "ladder_replay"]},
+        "replay_fell_back": {"type": "boolean"}
       }
     },
     "largest_movers_blob": {"type": ["string", "null"],
