@@ -19,7 +19,7 @@ relates: [PL-1392, SL-1256, RL-1301, RL-1296, RL-1379, RL-1236, FR-353, FR-267, 
 
 ## How this was ruled
 
-- **Filed under working id 9736, allocated by the lead.** The mint replaces `RL-9736` with
+- **Filed under working id 9736, allocated by the lead.** The mint replaces the working id (RL 9736) with
   the minted id everywhere it appears, in this record and in the texts of §"Spec texts".
 - **Mandate:** the lead's GO in `~/gi-pricing-plan.local/channel/to-lead.md`, the entry headed
   "2026-10-03 23:13:48 BST — GO: dm-1256 (opus/medium, WK-674's one DM today) rules RL 9736 —
