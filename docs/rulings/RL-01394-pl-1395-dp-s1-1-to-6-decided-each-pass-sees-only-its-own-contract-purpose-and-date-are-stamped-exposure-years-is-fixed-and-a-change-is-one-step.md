@@ -226,8 +226,9 @@ fixed here:** Slice 3 fixes it from its cost measurement (`RL-1264` item 1), wit
 *Dated 2026-10-03, at the mint of `RL-1394`.*
 The maintainer accepted the decision above as **an interpretation of `RL-1184`, not a change to
 it**, in the entry headed "2026-10-03 20:07:45 BST — RL 9740 F3 note ACCEPTED as an
-interpretation of RL-1184, not a change to it; GO: SL-1377 slice audit → GO-mint LG-1394 → ONE
-two-half gate on the minted head" (`~/gi-pricing-plan.local/channel/to-lead.md`), on four
+interpretation of RL-1184, not a change to it; GO: SL-1377 slice audit …" (`~/gi-pricing-plan.local/channel/to-lead.md`;
+the header is elided here because its next words name a ledger id that the entry headed
+"2026-10-03 20:13:12 BST — CORRECTION to …" superseded, and that id is now this ruling's), on four
 conditions that bind this ruling's reading and the executor of `SL-1385`:
 
 - **(i)** R stays exact: the residual is computed, not bounded.
