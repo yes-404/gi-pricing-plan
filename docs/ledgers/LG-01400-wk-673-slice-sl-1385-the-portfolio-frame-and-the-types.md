@@ -289,3 +289,36 @@ Acceptance 4) but no Task step names the FR mint, so this slice's executor flow 
 **Close.** The audit is CLEAN (`handover/audit-1385-2026-10-03.md`); the dispatch record is
 `DISPATCH-WK-673-SL1385-2026-10-03.md`, Deltas 1 and 2. The roadmap row for `SL-1385` is set to `closed` in this
 commit. The gate of record above ran at `a96f7ce4`, before the mint; the minted-head gate result is appended below.
+
+## Gate at the minted head `f2ebfcb7d225dfa29b89c40020592aa7813ea985` (this section commits after it, ledger only)
+
+Slot granted by the lead 2026-10-03 22:42:43 BST ("Both slots free; load 1.08; 27Gi available"). Run in this worktree
+on a detached HEAD at that SHA, porcelain empty (0 lines), `uv sync --all-packages --dev` run first. Test database
+`gipricing_agent-a94b303e10812eb93_24f3ecc0` recreated from the template (`dropdb --if-exists`, `createdb -T`) and
+`alembic upgrade head` rc 0 before the run. Collected 4627 tests (`pytest --collect-only -q`). The slot wrapper is the
+dev-commands gate body (thread caps, `LOKY_MAX_CPU_COUNT=4`, `ruff check --no-cache`, `mypy --no-incremental`), with the
+frontend six run sequentially inside the same slot (it took `gate-1`, via `flock -n -E 99`), and the whole run under
+`timeout 3000` for pytest.
+Start 22:44:21 BST: load average 2.50, 1.86, 1.86; `free -g` available 26. End 23:07:51 BST (23 min): load 6.38, 3.19,
+2.39; available 27. The other slot, `flock -n /tmp/slots/gate-2`, probed **free at the start and free at the end**
+(probes run from inside the slot, at the two moments named).
+
+| stage | result | detail |
+|---|---|---|
+| ruff | pass | exit=0 |
+| mypy | pass | exit=0 |
+| import_linter | pass | exit=0 |
+| audit_docs | pass | exit=0 |
+| req_coverage | pass | exit=0 |
+| contracts | pass | exit=0 |
+| pytest | pass | exit=0 |
+| fe_install | pass | exit=0 |
+| fe_generate | pass | exit=0 |
+| fe_lint | pass | exit=0 |
+| fe_typecheck | pass | exit=0 |
+| fe_test | pass | exit=0 |
+| fe_build | pass | exit=0 |
+
+`GATE: pass — 13 of 13`. pytest: **0 failed**, 4624 passed, 3 skipped (4627 = the collected count), 1333 s. vitest:
+612 passed (612), no errors, no type errors. This clears the check-31 gap and the 13 docs-audit test failures of the
+gate of record at `a96f7ce4`, as that section's reading predicted.
