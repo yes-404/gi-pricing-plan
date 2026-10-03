@@ -2116,7 +2116,11 @@ def test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_e
     # `sub-graph-create` and `sub-graph-body` schemas, registered for F83's reason.
     # 70 became 72 (WK-1178, FD-1357 fix, 2026-10-03): the generated
     # `rate-table-version` and `seed-from-model-request` schemas, registered for F83's reason.
-    assert len(non_markdown) == 72, len(non_markdown)
+    # 72 became 79 (WK-674 Slice 2, PL-1392, 2026-10-03; measured at base 8252741c, where
+    # SL-1377 had merged and the count was 72): the generated `environment`,
+    # `environment-create`, `environment-update`, `deployment`, `deployment-create`,
+    # `deployment-request` and `deployment-request-create` schemas, registered for F83's reason.
+    assert len(non_markdown) == 79, len(non_markdown)
     assert set(non_markdown) <= rels
 
     # Named individually, so the proof is "one of the 63" and not "63 of something".

@@ -159,6 +159,17 @@ GENERATED_SHAPES: dict[str, str] = {
     # authored `rate-table.schema.json` is F27(c)'s, never compared).
     "rate-table-version": "RateTableVersion",
     "seed-from-model-request": "SeedFromModelRequest",
+    # Added 2026-10-03 (WK-674 Slice 2, PL-1392 C1). The Environment and Deployment shapes
+    # and the request bodies of the new routes: first written forms, with no hand-authored
+    # counterpart (`03` §4.12, `07` §4.2). A client that creates an Environment or deploys
+    # generates its request type from these.
+    "environment": "Environment",
+    "environment-create": "EnvironmentCreate",
+    "environment-update": "EnvironmentUpdate",
+    "deployment": "Deployment",
+    "deployment-create": "DeploymentCreate",
+    "deployment-request": "DeploymentRequest",
+    "deployment-request-create": "DeploymentRequestCreate",
 }
 
 

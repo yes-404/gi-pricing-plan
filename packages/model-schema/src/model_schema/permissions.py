@@ -100,6 +100,9 @@ class ScopeType(enum.StrEnum):
     DATASET = "dataset"
     MODEL_FAMILY = "model_family"
     RATING_ALGORITHM = "rating_algorithm"
+    #: Added 2026-10-03 (WK-674 Slice 2, RL-1301 B.1): `deployment:promote` is checked with
+    #: the target Environment as the resource, so a grant can be limited to one Environment.
+    ENVIRONMENT = "environment"
 
 
 def _analyst() -> frozenset[Permission]:
