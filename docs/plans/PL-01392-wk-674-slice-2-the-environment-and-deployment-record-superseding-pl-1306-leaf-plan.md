@@ -3,7 +3,7 @@ id: PL-1392
 family: plan
 kind: leaf
 title: WK-674 Slice 2 — The Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit and NFR-498 for deploy), superseding PL-1306 — routes typed both ways, Branch A, order (b): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-03
 owner: planner
 tree: 1dd5e264195677b4a13268b80ac8673c2c027135
