@@ -13,6 +13,8 @@ from uuid import uuid4
 import pytest
 
 from model_schema.modelling import (
+    Factor,
+    FactorType,
     GlmFitResult,
     GlmSpec,
     Model,
@@ -139,6 +141,8 @@ class TestSeedFromModel:
     def test_seed_returns_table_cells_and_origin(self) -> None:
         result = seed_from_model(
             _glm_model(ModelStatus.APPROVED),
+            factor="driver_age_band",
+            factors=[_factor("driver_age_band")],
             table_slug="motor-driver-age-relativity",
             change_note="Seeded from motor-ad-frequency@1",
             seeded_at=datetime(2026, 7, 2, 10, 0, tzinfo=UTC),
@@ -157,6 +161,8 @@ class TestSeedFromModel:
         with pytest.raises(ValueError, match="PIN_NOT_APPROVED"):
             seed_from_model(
                 _glm_model(ModelStatus.FITTED),
+                factor="driver_age_band",
+                factors=[],
                 table_slug="motor-driver-age-relativity",
                 change_note="x",
                 seeded_at=datetime(2026, 7, 2, 10, 0, tzinfo=UTC),
@@ -355,3 +361,133 @@ class TestDiff:
         ]
         diff = diff_vs_previous(before, after, [_key()], _value())
         assert diff.changed_cells == 3  # 17-20 changed, 21-24 removed, 25-29 added
+
+
+# --- WK-1178 SL-1377 (PL-1376, RL-1361, FD-1357): one seeded table per Factor ----------
+
+_REGION_LEVELS = (
+    RelativityLevel(level="north", relativity=1.30, estimate=0.26),
+    RelativityLevel(level="south", relativity=0.90, estimate=-0.10),
+)
+_TWO_FACTORS = {"driver_age_band": _DRIVER_LEVELS, "region": _REGION_LEVELS}
+
+
+def _factor(slug: str, version: int = 1) -> Factor:
+    return Factor(
+        id=uuid4(),
+        slug=slug,
+        dataset_id=uuid4(),
+        version=version,
+        type=FactorType.IDENTITY,
+        source_columns=(slug,),
+    )
+
+
+def _seed(model: Model, factor: str, factors: list[Factor]) -> SeedResult:
+    return seed_from_model(
+        model,
+        factor=factor,
+        factors=factors,
+        table_slug="motor-relativity",
+        change_note="seed",
+        seeded_at=datetime(2026, 10, 3, 10, 0, tzinfo=UTC),
+    )
+
+
+@pytest.mark.req("FR-230")
+@pytest.mark.req("FR-228")
+def test_the_seeded_key_is_bound_to_the_pinned_factor_version() -> None:
+    model = _glm_model(ModelStatus.APPROVED, relativities=_TWO_FACTORS)
+    result = _seed(model, "region", [_factor("driver_age_band"), _factor("region", 4)])
+    assert [k.model_dump(mode="json") for k in result.table.keys] == [
+        {
+            "name": "region",
+            "type": "string",
+            "banding_ref": None,
+            "factor_ref": "factor:region@4",
+        }
+    ]
+    assert result.table.keys[0].banding_ref is None
+    assert {row["region"] for row in result.cells} == {"north", "south"}
+    assert all(set(row) == {"region", "relativity"} for row in result.cells)
+
+
+@pytest.mark.req("FR-230")
+def test_a_two_factor_model_seeds_one_table_per_factor_purely() -> None:
+    model = _glm_model(ModelStatus.APPROVED, relativities=_TWO_FACTORS)
+    factors = [_factor("driver_age_band"), _factor("region")]
+    age = _seed(model, "driver_age_band", factors)
+    region = _seed(model, "region", factors)
+    assert [k.name for k in age.table.keys] == ["driver_age_band"]
+    assert len(age.cells) == 3
+    assert [k.name for k in region.table.keys] == ["region"]
+    assert len(region.cells) == 2
+
+
+@pytest.mark.req("FR-230")
+def test_an_interaction_entry_seeds_one_table_of_the_crossed_labels() -> None:
+    crossed = (
+        RelativityLevel(level="17-20 x north", relativity=1.1, estimate=0.1),
+        RelativityLevel(level="17-20 x south", relativity=0.9, estimate=-0.1),
+    )
+    model = _glm_model(ModelStatus.APPROVED, relativities={"age_x_region": crossed})
+    result = _seed(model, "age_x_region", [_factor("age_x_region")])
+    assert [k.name for k in result.table.keys] == ["age_x_region"]
+    assert {row["age_x_region"] for row in result.cells} == {"17-20 x north", "17-20 x south"}
+
+
+@pytest.mark.req("FR-230")
+def test_a_factor_that_names_no_relativity_entry_is_refused() -> None:
+    model = _glm_model(ModelStatus.APPROVED, relativities=_TWO_FACTORS)
+    ok = _seed(model, "region", [_factor("region")])  # positive control
+    assert ok.cells
+    with pytest.raises(ValueError, match="names no relativity entry") as caught:
+        _seed(model, "vehicle_age", [_factor("vehicle_age")])
+    assert "vehicle_age" in str(caught.value)
+    assert not str(caught.value).partition(": ")[0].isupper()
+
+
+@pytest.mark.req("FR-230")
+def test_a_continuous_factor_has_no_relativity_entry_and_is_refused() -> None:
+    # A continuous factor is absent from `GlmFitResult.relativities` (glm.py iterates
+    # categorical levels only), so it is the same refusal.
+    model = _glm_model(ModelStatus.APPROVED, relativities={"region": _REGION_LEVELS})
+    with pytest.raises(ValueError, match="names no relativity entry"):
+        _seed(model, "driver_age", [_factor("driver_age"), _factor("region")])
+
+
+@pytest.mark.req("FR-230")
+def test_a_relativity_entry_with_no_pinned_factor_of_its_slug_is_refused() -> None:
+    model = _glm_model(ModelStatus.APPROVED, relativities=_TWO_FACTORS)
+    ok = _seed(model, "region", [_factor("region")])  # positive control
+    assert ok.table.keys[0].factor_ref is not None
+    # Broken input: a fallback to an unbound key would make this seed succeed.
+    with pytest.raises(ValueError, match="no pinned Factor with slug 'region'"):
+        _seed(model, "region", [_factor("driver_age_band")])
+    with pytest.raises(ValueError, match="no pinned Factor with slug 'region'"):
+        _seed(model, "region", [])
+
+
+@pytest.mark.req("FR-230")
+def test_two_pinned_factors_with_the_slug_are_refused() -> None:
+    model = _glm_model(ModelStatus.APPROVED, relativities=_TWO_FACTORS)
+    with pytest.raises(ValueError, match="2 pinned Factors with slug 'region'"):
+        _seed(model, "region", [_factor("region", 1), _factor("region", 2)])
+
+
+@pytest.mark.req("FR-234")
+def test_a_row_lacking_a_declared_key_is_a_named_refusal() -> None:
+    keys = [_key("driver_age_band"), _key("region")]
+    one_key_row = [{"driver_age_band": "17-20", "relativity": "1.92"}]
+    domains = {
+        "driver_age_band": frozenset({"17-20"}),
+        "region": frozenset({"north"}),
+    }
+    with pytest.raises(ValueError, match="row 0 lacks declared key 'region'") as caught:
+        validate_rate_table(one_key_row, keys, _value(), key_domains=domains)
+    # Never an `UPPER_SNAKE: ` prefix: `_map_operation_error` would read it as a code.
+    assert not str(caught.value).partition(": ")[0].isupper()
+    with pytest.raises(ValueError, match="lacks declared key 'region'"):
+        diff_vs_previous(one_key_row, one_key_row, keys, _value())
+    with pytest.raises(ValueError, match="lacks declared key 'region'"):
+        diff_vs_seed(one_key_row, one_key_row, keys, _value())
