@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/vue";
 import { describe, expect, it, vi } from "vitest";
 
+import { cellUnder } from "@/test-tables";
 import { DIAGNOSTICS } from "@/views/__tests__/fixtures";
 
 import GbmImportanceCharts from "../GbmImportanceCharts.vue";
@@ -52,19 +53,15 @@ describe("GbmImportanceCharts", () => {
   it("carries the repeat count and seed, without which a degradation is not reproducible", () => {
     render(GbmImportanceCharts, { props: props() });
     const table = screen.getByRole("table", { name: /permutation importance \(holdout\)/i });
-    const row = within(table).getByRole("row", { name: /vehicle_age/ });
-    const cells = within(row).getAllByRole("cell");
-    expect(cells[3]).toHaveTextContent("5");
-    expect(cells[4]).toHaveTextContent("20260824");
+    expect(cellUnder(table, /vehicle_age/, "Repeats")).toHaveTextContent("5");
+    expect(cellUnder(table, /vehicle_age/, "Seed")).toHaveTextContent("20260824");
   });
 
   it("writes a null cover as an em dash rather than as a zero", () => {
     render(GbmImportanceCharts, { props: props() });
     const table = screen.getByRole("table", { name: /^feature importance/i });
-    const row = within(table).getByRole("row", { name: /driver_age/ });
-    const cells = within(row).getAllByRole("cell");
-    expect(cells[1]).toHaveTextContent("—");
-    expect(cells[1]).not.toHaveTextContent("0");
+    expect(cellUnder(table, /driver_age/, "Cover")).toHaveTextContent("—");
+    expect(cellUnder(table, /driver_age/, "Cover")).not.toHaveTextContent("0");
   });
 
   /**
