@@ -230,3 +230,27 @@ Closed on the slice audit `audit-1369-2026-10-03.md` (the auditor's local handov
 ### Gate attempt 1 at `1c3c7abe`, 16:54 to 17:19 BST: FAIL, my fault, not the code
 
 Slot granted by the lead 2026-10-03 16:54:03 BST for head `1c3c7abe`. The gate ran in the clean detached checkout `.claude/worktrees/gate-1369m` (`git status --porcelain` 0 lines), test database created first. The stage table showed `audit_docs` FAIL and `pytest` FAIL (11 failed, 4568 passed, 3 skipped, 1372.86 s); the other five stages passed, and the frontend half (install, generate:api, lint, type-check, test, build) was rc 0 on all six. All 12 reds had one cause: check 32 on this ledger's own mint paragraph, which cited the working id with the `LG-` prefix and the padded file name of the minted id (two citations that do not resolve). My pre-commit `audit-docs.py` run had passed because the renamed file was not yet `git add`ed, and the audit's corpus is `git ls-files`. The fix is the sentence in the mint paragraph, with INDEX regenerated; `audit-docs.py` now prints "All checks passed." This is a new head, so the lead's grant for it is asked for.
+
+### Gate of record at `2de4f19f`, 17:23 to 17:49 BST: PASS
+
+Slot granted by the lead 2026-10-03 17:23:11 BST for head `2de4f19f`; the lead verified that the range from `1c3c7abe` to `2de4f19f` touches only this ledger. Clean detached checkout `.claude/worktrees/gate-1369m` (`git status --porcelain` 0 lines), `uv sync --all-packages` rc 0, `ruff check --no-cache .` and `mypy --no-incremental` (219 source files) clean. The per-worktree test database was dropped and recreated from the template first (`createdb -T`, `alembic upgrade head`, both rc 0). The dev-commands slot wrapper ran in the foreground under `timeout 3600`, with `LOKY_MAX_CPU_COUNT=4` exported (the harness moved the call to the background at 600 s; the turn waited on the gate's pid).
+
+Start 17:23:24 BST: load 0.88, 28Gi available. After the Python half, 17:48:08: load 1.69, 27Gi available. End 17:49:08: load 5.21 (the vite build), 27Gi available. `flock -n` on both gate slots returned rc 0 (free) before and after, so no other holder; the lead recorded that executor-1377 was building, not gating. Pytest 1425.56 s. No contention pair recorded.
+
+Stage table as printed:
+
+| stage | result | detail |
+|---|---|---|
+| ruff | pass | exit=0 |
+| mypy | pass | exit=0 |
+| import_linter | pass | exit=0 |
+| audit_docs | pass | exit=0 |
+| req_coverage | pass | exit=0 |
+| contracts | pass | exit=0 |
+| pytest | pass | exit=0 |
+
+`GATE: pass — 7 of 7 stages passed`; pytest line `4579 passed, 3 skipped, 57 warnings in 1425.56s`. Check 31 is contiguous through 1378.
+
+Frontend half, same checkout, 17:48:08 to 17:49:08 BST: `pnpm --dir frontend install --frozen-lockfile`, `generate:api`, `lint`, `type-check` (`vue-tsc --build --force`), `test` ("Type Errors no errors") and `build`, each rc 0.
+
+The final head adds only this section.
