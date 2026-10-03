@@ -695,6 +695,132 @@ From “Workstreams” (line 383): Dislocation with attribution | FR-263, FR-264
 
 *(Amended 2026-09-30 by the lead, on `PL-1267` §Activation item 2 and the maintainer's entry "2026-09-30 02:33:58 BST — MERGE-ACK #844 and ACCEPTANCE of PL-1267 (WK-673 map plan)", whose carry-forward reads "the lead's next roadmap PR adds the plan's ids to `### WK-673`'s "From Workstreams" line".)* FR-224, FR-257 limb (2), `06` FR-364 and FR-231 (finding F-W10-2, the exposure-weight limb only) are added to WK-673's scope, as `PL-1267` proposes. NFR-495 and NFR-496, applied to this Work's artifacts, are added from the same entry's acceptance line, whose Scope clause reads "takes FR-224, FR-257 limb (2), `06` FR-364, FR-231 (the F-W10-2 weight limb) and NFR-495/NFR-496 (applied to this Work's artifacts) from RL-1264 and CR-1212". The line named FR-263 to FR-266 only.
 
+#### SL-1385 — Slice 1: spec — FR-266's amendment, the hard gate as requirements, the contract and the types
+
+```yaml
+id: SL-1385
+family: slice
+title: Slice 1: spec — FR-266's amendment, the hard gate as requirements, the contract and the types
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-03
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: d672f991bdc59008e09cf3f464cd7cffe5699553
+phase: P2
+work: WK-673
+corrected_by: []
+relates: [PL-1267, RL-1264, RL-1184]
+```
+
+Spec only, no application code beyond one test-file label. FR-266's dated amendment (exact Shapley over the declared changes for K ≤ 6, largest-remainder allocation to integer minor units, the isolated and cumulative views, the residual line, the above-six rule); the hard gate appended to `03` §3.9 as requirements; `03` §4.6 reconciled with the contract and extended with the attribution fields; `03` §4.8's portfolio frame schema; `RL-1264`'s DP-1 and DP-2 obligations as spec text; `03` §5.2's `DislocationSpec`, `BundleDelta`, `Attribution` and `attribute`'s amended signature; `00` §2 glossary terms first; the `test_contracts.py:84` label and `_round_minor`'s docstring corrected. `PL-1267` Slice 1. First in the chain: nothing in WK-673 precedes it, and it does not depend on WK-674. Its leaf plan states, as a decision point or a premise, what the portfolio frame does with a column the contract does not declare (the `03` §4.8 undeclared-column pass-through), per the maintainer's acceptance of `PL-1267`, "2026-10-03 17:53:43 BST — ACCEPTANCE: PL-1267 (WK-673 map plan, dislocation with attribution) by the maintainer (by delegation); GO planner-673act", condition 2.
+
+#### SL-1386 — Slice 2: the Dislocation Run on ZEN, in integer minor units
+
+```yaml
+id: SL-1386
+family: slice
+title: Slice 2: the Dislocation Run on ZEN, in integer minor units
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-03
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: d672f991bdc59008e09cf3f464cd7cffe5699553
+phase: P2
+work: WK-673
+corrected_by: []
+relates: [PL-1267]
+```
+
+`dislocate(baseline, candidate, portfolio, spec)` in `pricing_core/rating/analysis.py`: two `score_batch` passes joined per policy on integer minor units; distribution bands, averages overall and by segment, exposure and policy counts per band, movers beyond the spec's thresholds (FR-263); slicing by any portfolio Factor and by the first differing ladder rung (FR-264); `DislocationSpec` and `DislocationRun` in `model-schema`; NFR-495 (byte-identical repeat run) and NFR-496 (totals equal the sum of per-policy minor units) tested. `PL-1267` Slice 2. Starts after Slice 1 closes.
+
+#### SL-1387 — Slice 3: attribution — exact Shapley, largest remainder, the broken-input proof, the cost
+
+```yaml
+id: SL-1387
+family: slice
+title: Slice 3: attribution — exact Shapley, largest remainder, the broken-input proof, the cost
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-03
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: d672f991bdc59008e09cf3f464cd7cffe5699553
+phase: P2
+work: WK-673
+corrected_by: []
+relates: [PL-1267, RL-1264]
+```
+
+`attribute` per Slice 1's signature: declared changes derived and grouped per DP-2; the 2^K subset bundles built per DP-1 and rated on ZEN; exact Shapley per policy, largest-remainder allocation to minor units, the isolated and cumulative views, the residual line, the labelled above-six fallback; `BundleDelta` and `Attribution` in `model-schema`. Reconciliation asserted on every run and proven on broken input; the feasibility rule (measured `score_batch` rate, ladder replay proven equal to a true re-rate, the estimated rating count shown before launch); the F3 carried items. `PL-1267` Slice 3. Starts after Slice 7 closes, in the plan's one-slice-at-a-time order 1 → 2 → 7 → 3 → 4 → 5 → 6 (its data dependency is Slice 2); serialised against any WK-1250 slice that edits `compile_bundle` or the trace.
+
+#### SL-1388 — Slice 4: backend — the Job, the routes, the persisted artifact, the generated contract
+
+```yaml
+id: SL-1388
+family: slice
+title: Slice 4: backend — the Job, the routes, the persisted artifact, the generated contract
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-03
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: d672f991bdc59008e09cf3f464cd7cffe5699553
+phase: P2
+work: WK-673
+corrected_by: []
+relates: [PL-1267, RL-1236]
+```
+
+The `dislocation.run` handler owning the Job identity, output location and resumability; `POST /api/v1/dislocation-runs` (202 plus a Job) and `GET /api/v1/dislocation-runs/{id}` with RBAC and RFC 9457 errors; the artifact persisted as a citable row with content-addressed blobs (FR-265); `DislocationRun` registered for generation, `docs/contracts/` regenerated and the slug moved to `COMPARED_SLUGS`. Route permissions picked from `RL-1236`'s catalogue, citing FD-1197. `PL-1267` Slice 4. Starts after Slice 3 closes.
+
+#### SL-1389 — Slice 5: the approval gate, part one — structural_diff, FR-257 limb (2), FR-224
+
+```yaml
+id: SL-1389
+family: slice
+title: Slice 5: the approval gate, part one — structural_diff, FR-257 limb (2), FR-224
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-03
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: d672f991bdc59008e09cf3f464cd7cffe5699553
+phase: P2
+work: WK-673
+corrected_by: []
+relates: [PL-1267, RL-1264]
+```
+
+`06` FR-364's `structural_diff` persisted at submission with a verifier registered; FR-257 limb (2) on `submit_for_review` (refused with `EVIDENCE_INCOMPLETE` without a Dislocation Run on the current bundle hash against the current live version); FR-224's exact-mode comparison for an `approximation`-mode version, its threshold a new `ApprovalPolicyEntry` field and never read from Settings. `PL-1267` Slice 5. Starts after Slice 4 closes and after WK-674 Slice 2 (`SL-1256`) has merged; serialised against `SL-1256` on `approvals.py` and `06` §4.2.
+
+#### SL-1390 — Slice 6: the approval gate, part two — the floor wiring
+
+```yaml
+id: SL-1390
+family: slice
+title: Slice 6: the approval gate, part two — the floor wiring
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-03
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: d672f991bdc59008e09cf3f464cd7cffe5699553
+phase: P2
+work: WK-673
+corrected_by: []
+relates: [PL-1267]
+```
+
+`submit_for_review` checks `policy.effective_evidence("rating_version")` against a verifiable map (`structural_diff`, `regression_run`, `dislocation_run`), replacing the direct limb checks, limb (1)'s `_regression_run_gate` call included; a workspace policy naming a kind nothing can verify is refused by name (`06` FR-364). `PL-1267` Slice 6. Starts after Slice 5 closes, and so transitively after `SL-1256`.
+
+#### SL-1391 — Slice 7: FR-231's exposure weights through the portfolio frame (F-W10-2)
+
+```yaml
+id: SL-1391
+family: slice
+title: Slice 7: FR-231's exposure weights through the portfolio frame (F-W10-2)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-03
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: d672f991bdc59008e09cf3f464cd7cffe5699553
+phase: P2
+work: WK-673
+corrected_by: []
+relates: [PL-1267, RL-1361, RL-1375]
+```
+
+The weight limb of FR-231: the rate-table diff shows the exposure weight behind each cell, from a portfolio Dataset Version. `03` §5.1's diff route gains the portfolio parameter and the refusal `RL-1361` settles (DP-5); the portfolio frame aggregated to Σ exposure per cell key in Polars and passed as `weights`, on the 202 path too; negative tests for an absent key column, an unweighted diff that says so, and a hand-computed weighted mean; register row `FR-231 (F-W10-2)` discharged on merge. `PL-1267` Slice 7. Starts after Slice 2 closes and runs before Slice 3, one slice at a time; unblocks WK-675 Slice 5. Per the maintainer's acceptance of `PL-1267` (the 17:53:43 BST entry above), condition 1: `RL-1375` DP-1 (a2) applies, so the FD-1357 slice `SL-1377` merges first and this slice never runs concurrently with it (shared `RateTableKey`, `operations.py`, the `rate_tables` routes); its leaf plan also carries FD-1358 (the per-cell weight display) as `RL-1361` §F placed it.
+
 
 ### WK-674 — Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires**
 
