@@ -168,6 +168,11 @@ term must be added here before it is used in any other document.**
 | **Scoring** | Evaluating a Rating Version for one or more risks. **Real-time** (single quote, target p99 < 50 ms) or **batch** (portfolio re-rate). |
 | **Trace** | The per-step record of a single scoring call: step id, every intermediate value, table row matched, model output, and per-step timing. The backbone of explainability and dispute resolution. |
 | **Dislocation** | The distribution of premium change between two Rating Versions over a fixed portfolio. |
+| **Shapley attribution** | The decomposition of a Dislocation Run's premium change into its declared changes by exact Shapley values, allocated to integer minor units by largest remainder (`03` FR-266). |
+| **Interaction residual** | Total change minus the sum of the isolated changes: the part no single change explains alone (`03` FR-266). |
+| **Change group** | A named set of derived changes that attribution treats as one; the groups partition the derived changes exactly, at most 6 (`03` §3.9). |
+| **Subset bundle** | An ephemeral, content-addressed bundle with a subset of the declared changes applied, compiled only to rate attribution; it has no Rating Version identity (`03` §3.9). |
+| **Portfolio frame** | The one-row-per-policy input a Dislocation Run rates, with its columns and stamping rules (`03` §4.8). |
 
 ### 2.4 Optimisation & monitoring layer
 
