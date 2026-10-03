@@ -15,7 +15,7 @@ from __future__ import annotations
 from decimal import ROUND_CEILING, ROUND_DOWN, ROUND_FLOOR, ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal
 from typing import Final, Literal
 
-__all__ = ["ROUNDING_MODES", "RoundingMode", "apply_factor", "reconcile_ladder"]
+__all__ = ["ROUNDING_MODES", "RoundingMode", "apply_factor"]
 
 RoundingMode = Literal["half_even", "half_up", "ceiling", "floor", "down"]
 
@@ -50,21 +50,3 @@ def apply_factor(amount_minor: int, factor: Decimal, mode: RoundingMode) -> int:
             "reintroduces binary rounding into the rating path (FR-10)"
         )
     return int((Decimal(amount_minor) * factor).quantize(Decimal(1), rounding=ROUNDING_MODES[mode]))
-
-
-def reconcile_ladder(risk_premium_minor: int, steps: list[tuple[str, int]]) -> bool:
-    """Check that a premium ladder reconciles to the penny (FR-248).
-
-    `steps` is the ordered list of `(rung, value_minor)` a scoring call produced. The
-    ladder reconciles when each rung's recorded value is exactly what the previous rung
-    plus that rung's operation produced — i.e. the chain is closed and nothing was
-    computed off-ladder.
-
-    This is asserted continuously in non-prod and sampled in prod, so it lives in the core
-    where both paths reach it.
-    """
-    if not steps:
-        return True
-    if steps[0][1] != risk_premium_minor:
-        return False
-    return all(isinstance(value, int) for _, value in steps)

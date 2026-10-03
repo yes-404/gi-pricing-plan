@@ -13,9 +13,56 @@ import pytest
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
 
+#: The pre-edit `valid_algorithm` body, verbatim (SL-1345, RL-1329 §2 step 5): its clamp is on the
+#: source of the payable's rung, so the placement check refuses it with LADDER_CLAMP_UNPLACEABLE.
+PRE_EDIT_VALID_ALGORITHM: dict = {
+    "slug": "motor-gb",
+    "version": 1,
+    "input_contract": [
+        {"name": "driver_age", "type": "int", "nullable": False, "min": 17, "max": 99},
+        {"name": "effective_date", "type": "date", "nullable": False},
+        {"name": "channel", "type": "enum", "domain": ["direct", "broker"], "nullable": False},
+    ],
+    "outputs": [
+        {"name": "payable_premium_minor", "type": "money_minor", "required": True},
+    ],
+    "steps": [
+        {"step_id": "s_in_age", "type": "input", "label": "Driver age",
+         "input_name": "driver_age", "on_missing": "error", "produces": "driver_age"},
+        {"step_id": "s_in_eff", "type": "input", "label": "Effective date",
+         "input_name": "effective_date", "on_missing": "error", "produces": "effective_date"},
+        {"step_id": "s_in_channel", "type": "input", "label": "Channel",
+         "input_name": "channel", "on_missing": "error", "produces": "channel"},
+        {"step_id": "s_area", "type": "lookup", "label": "Area",
+         "reference_table_ref": "reference_table:ons-postcode-directory@7",
+         "key_expr": ["channel"], "as_at": "effective_date", "on_miss": "error",
+         "consumes": ["channel", "effective_date"], "produces": "rating_area"},
+        {"step_id": "s_rp", "type": "model_call", "label": "Risk premium",
+         "model_ref": "model:motor-ad-frequency@7", "mode": "exact",
+         "feature_map": {"driver_age": "driver_age", "rating_area": "rating_area"},
+         "consumes": ["driver_age", "rating_area"],
+         "produces": ["risk_premium_minor", "peril_risk_premium"]},
+        {"step_id": "s_expense", "type": "table", "label": "Expense",
+         "rate_table_ref": "rate_table:motor-expense@3", "key_expr": ["channel"],
+         "on_miss": "default", "consumes": ["channel"], "produces": "expense_factor"},
+        {"step_id": "s_office", "type": "expression", "label": "Office premium",
+         "expr": "risk_premium_minor * expense_factor", "result_type": "money_minor",
+         "consumes": ["risk_premium_minor", "expense_factor"],
+         "produces": "office_premium_minor"},
+        {"step_id": "s_minprem", "type": "constraint", "label": "Min premium",
+         "condition": "office_premium_minor >= 100", "on_violation": "clamp",
+         "clamp_bounds": {"min": "100"}, "reason_code": "MIN_PREMIUM_APPLIED",
+         "consumes": ["office_premium_minor"], "produces": "office_premium_minor"},
+        {"step_id": "s_out", "type": "output", "label": "Payable premium",
+         "output_name": "payable_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
+         "consumes": ["office_premium_minor"]},
+    ],
+    "sub_graphs": [],
+}
+
 
 def valid_algorithm() -> dict:
-    """A consistent seven-step graph whose expressions compile against the engine."""
+    """A consistent twelve-step graph whose expressions compile against the engine."""
     return {
         "slug": "motor-gb",
         "version": 1,
@@ -54,9 +101,17 @@ def valid_algorithm() -> dict:
              "condition": "office_premium_minor >= 100", "on_violation": "clamp",
              "clamp_bounds": {"min": "100"}, "reason_code": "MIN_PREMIUM_APPLIED",
              "consumes": ["office_premium_minor"], "produces": "office_premium_minor"},
+            # The clamped name is the source of the last rung before `constraints`
+            # (`office_premium`), and the payable reads a later name: a placeable clamp.
+            {"step_id": "s_out_office", "type": "output", "label": "Office premium",
+             "output_name": "office_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
+             "consumes": ["office_premium_minor"]},
+            {"step_id": "s_payable", "type": "expression", "label": "Payable premium value",
+             "expr": "office_premium_minor * 1", "result_type": "money_minor",
+             "consumes": ["office_premium_minor"], "produces": "payable_value"},
             {"step_id": "s_out", "type": "output", "label": "Payable premium",
              "output_name": "payable_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
-             "consumes": ["office_premium_minor"]},
+             "consumes": ["payable_value"]},
         ],
         "sub_graphs": [],
     }
@@ -229,3 +284,19 @@ def test_a_declared_output_without_an_output_step_is_validation_failed(
     assert problem["code"] == "VALIDATION_FAILED"
     assert problem["title"] == "Rating algorithm is invalid"
     assert "has no output step (FR-214)" in problem["detail"]
+
+
+@pytest.mark.req("FR-240")
+def test_the_pre_edit_valid_algorithm_is_refused_at_save_time(
+    api_client, workspace_id, principal, grant
+) -> None:
+    """SL-1345: the old shape (a clamp on the payable's own source) stays refused, with the
+    code that names it, so the fixture edit did not make the check pass by weakening it."""
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    response = api_client.post(
+        "/api/v1/rating-algorithms",
+        json=PRE_EDIT_VALID_ALGORITHM,
+        headers=_headers(principal, workspace_id),
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "LADDER_CLAMP_UNPLACEABLE"

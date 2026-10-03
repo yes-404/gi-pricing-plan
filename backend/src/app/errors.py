@@ -312,6 +312,8 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "RATE_TABLE_MISS",
         # Scoring: an engine failure that is not a table or lookup miss (RL-1313 DP-G4, FR-255).
         "RATING_EVALUATION_FAILED",
+        # FR-240 (RL-1329): a clamp the premium ladder cannot place, refused at save and at compile.
+        "LADDER_CLAMP_UNPLACEABLE",
         "RATE_TABLE_INCOMPLETE",
         "RATE_TABLE_KEY_DUPLICATE",
         "PIN_NOT_APPROVED",

@@ -600,7 +600,7 @@ a date. The freeze gates limit only what may **enter** P2, never when a start ha
 
 | WS | Scope | Status |
 |---|---|---|
-| **Exit demo** | Phase 2's exit criterion G2: `WF-699` end to end on the freMTPL2 seed, with its deploy step. Its scope is the real freMTPL2 rating algorithm in the seed, `WF-699` Phases A to E and its deploy step as one scripted journey, and the journey test that cites `WF-699` by id. **Owner: the lead.** It is sequenced after WK-673 and WK-674, because it needs dislocation and deployment. It can be cut in parallel with WK-675 where no view is needed, still one slice at a time (`delivery-process.md` §8). It discharges FD-1209's event. The two `WF-699` findings, FD-1244 (D4 against FR-261) and FD-1245 (E2 against FR-257), are on the §10 gate "Before the P2 exit demo", for the decision-maker | **not started**: opened 2026-09-29 (`CR-1247` Proposal 12) |
+| **Exit demo** | Phase 2's exit criterion G2: `WF-699` end to end on the freMTPL2 seed, with its deploy step. Its scope is the real freMTPL2 rating algorithm in the seed, `WF-699` Phases A to E and its deploy step as one scripted journey, and the journey test that cites `WF-699` by id; **the script walks `WF-699` A1–A2 (seed-from-model) on the 7-factor freMTPL2 GLM** — added 2026-10-01 by the maintainer (entry "2026-10-01 08:01:45 BST — FD 9786 severity: HIGH"), on FD-1357 (multi-factor seeding). **Owner: the lead.** It is sequenced after WK-673 and WK-674, because it needs dislocation and deployment. It can be cut in parallel with WK-675 where no view is needed, still one slice at a time (`delivery-process.md` §8). It discharges FD-1209's event. The two `WF-699` findings, FD-1244 (D4 against FR-261) and FD-1245 (E2 against FR-257), are on the §10 gate "Before the P2 exit demo", for the decision-maker | **not started**: opened 2026-09-29 (`CR-1247` Proposal 12) |
 
 ### WK-668 — **Spike S1/S2 resolution and ADR-706 confirmation**
 
@@ -794,7 +794,7 @@ Per-environment keys, rate limits and monitoring configuration, and environment 
 id: SL-1345
 family: slice
 title: Slice 3L: the premium ladder — exact unrounded rungs, true operations, one rounding (FR-247, FR-248, NFR-496, FD-1336, FD-1330; RL-1329)
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 248dbf11aa0a044ff4eaadcaa32aa82960aa6740
@@ -878,6 +878,41 @@ phase: P2
 From “Workstreams” (line 385): Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views | The DAG designer is the single largest frontend effort in the project
 
 **2026-09-28 — the Quote Sandbox's backend is WK-672's** (`RL-1172` item 5, the deputy's DP1 decision by delegation, option A). The quote sandbox view in this Work consumes `POST /api/v1/score/compare`, which WK-672 builds and tests; this Work builds the view only. FR-262 is delivered only when both limbs have landed.
+
+**2026-10-03 — Slice 12 (the Deployments view) moves to Phase 3** (`PL-1371` §9 DP-2 (a), the maintainer's acceptance by delegation in the entry "2026-10-03 14:56:08 BST — PL 9746 (#1076 @ee0ea8d2): ACCEPTED with your four amendments; DP-1 (a), DP-2 (a), DP-3 (a); amendment 4 answered; DP-4 to the user; no separate audit"). Deferred with an owner: the maintainer; event: the P2 phase closure record, for Phase 3's first plan. DP-7 (OQ-1285) moves with it. The rest of this Work stays in P2; the conditional cuts (S13 and S14, then S9) are `PL-1371` DP-3's trigger, each brought to the maintainer when it fires, never applied automatically.
+
+#### SL-1369 — Slice 1: chart foundation — ChartFigure's column descriptors per RL-1307, its 13 call sites migrated, and register F39's socket diagnosis (NFR-463)
+
+```yaml
+id: SL-1369
+family: slice
+title: Slice 1: chart foundation — ChartFigure's column descriptors per RL-1307, its 13 call sites migrated, and register F39's socket diagnosis (NFR-463)
+status: active                 # draft → active → closed | retired (§1.2a)
+created: 2026-10-01
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 1dd5e264195677b4a13268b80ac8673c2c027135
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [PL-1368, RL-1307, PL-1286, SL-1275]                      # ids only
+```
+
+`PL-1286` S1 (`:303`), cut as a draft row for its leaf plan, `PL-1368`
+(`docs/plans/PL-01368-wk-675-slice-1-chartfigure-accessible-table-per-rl-1307-leaf-plan.md`). `ChartFigure`
+becomes generic over the caller's row objects, with one `{ key, label, value }` descriptor per
+column. That is `RL-1307`'s option (c), which supersedes `PL-1286`'s stale DP-1 text
+(`:240`, `:249-250`, `:415-416`). The 13 call sites (`git grep -n '<ChartFigure' origin/main --
+'frontend/src/*.vue'` at `1dd5e264`) move to the new API. The dev-only arity guard retires;
+the slice adds a duplicate-key refusal that runs in every build (a visible error in place of the
+table, never a silent key collision), `<th scope="row">` row headers, and empty-state
+text that names no module. `cellUnder`'s stale text is corrected. The slice also diagnoses
+register row F39 (port 3000 opened by the frontend test run). The auditor writes F39's dated
+register resolution at close. First in the Work: nothing precedes it (`PL-1286` Sequencing).
+It is ordered against WK-690 Slice 5 (SL-1275), which adds a `ChartFigure` caller: whichever
+lands second migrates or uses the new API. **Gate:** the leaf plan's Activation needs, in a
+separate activation PR: the maintainer's agreement and the lead's go.
+Drafted as working id 9768; minted 2026-10-01 as SL-1369 (its leaf plan, drafted as working id 9769, minted as PL-1368).
+(Activated 2026-10-03 as WK-675 Slice 1, on the maintainer's GO check of 2026-10-01, "2026-10-01 11:04:02 BST — GO: WK-675 Slice 1 (SL-1369, PL-1368) on lane A, with ONE correction to the dispatch record (DP-4's label is (b), not (a)); this entry is PL-1368 activation need 1's dated maintainer agreement"; dispatch record DISPATCH-WK-675-SL1369-2026-10-01.)
 
 
 ### WK-690 — **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with**
@@ -1182,6 +1217,63 @@ relates: [FD-1354, LG-1353, LG-1350]
 Test-only hotfix for main's red CI after #1025: `test_template_certificate_unchanged` pinned a runner-dependent `max relative error` figure. The comparison normalises every measured figure a template certificate prints and bounds the two finite-difference errors by the engine's tolerance; a guard test fails if any other figure survives. No leaf plan; the dispatch record `DISPATCH-WK-1178-HOTFIX-9790-2026-10-01.md` (local) and the maintainer's ruling of 2026-10-01 are the scope. *(Minted 2026-10-01 as SL-1352; filed under working id 9790. Ledger `LG-1353`, finding `FD-1354`.)*
 
 *(Reopened 2026-10-01 05:11 BST to `active`: CI run 36812617020 at `5a4beb63` failed on a second runner-dependent figure the first fix did not normalise; the lead's Delta 5 and Delta 6 are the rework scope. A fresh auditor re-closes.)*
+
+#### SL-1360 — WK-1178 slice — the permission-parity check (PL-1359, RL-1305)
+
+```yaml
+id: SL-1360
+family: slice
+title: WK-1178 slice — the permission-parity check (PL-1359, RL-1305)
+status: closed                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-01
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: f95e10007329575aac81283d7c3832d8b2db1164
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1359, RL-1305, CR-1247, RL-1236, PL-1268]
+```
+
+A pytest invariant fails the gate in three cases: `06` §4.1's permission tables and `model_schema.Permission` disagree; a Built name has no check site (a flattened, reach-proved `requires()` route dependency, or an AST-found `require_permission(` call) and no owner; or a Built name has a check site and still carries an owner (`CR-1247` Proposal 1 (c), decided by `RL-1305`). It must merge before WK-690 Slice 3's commit that adds `custom_objective:author` (`PL-1268` Slice 3). It retires `RL-1236`'s interim re-derive-at-each-close rule when it merges. Leaf plan `PL-1359`, which supersedes `PL-1279`, activated with this row. *(Minted and activated 2026-10-01 as SL-1360, on the maintainer's entry "2026-10-01 08:04:53 BST — correction ACCEPTED (RL 9856 = RL-1305, already minted); lane B proposal AGREED, with the delta in the dispatch record".)* *(Closed 2026-10-01 on a clean slice audit: the executor ledger is `LG-1370`, and the slice delivers in PR #1049 with the merge to come.)*
+
+#### SL-1367 — WK-1178 slice — FD-1335 Part A: the /score and /score/compare 200 responses documented, and one untyped-body guard over 2xx responses and JSON request bodies
+
+```yaml
+id: SL-1367
+family: slice
+title: WK-1178 slice — FD-1335 Part A: the /score and /score/compare 200 responses documented, and one untyped-body guard over 2xx responses and JSON request bodies
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-01
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 9b0fb97c9ed1cea743639897351191bc1a862041
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1335, FD-1366, PL-1364, PL-1348, SL-1345, RL-1343, RL-1365]
+```
+
+`FD-1335` Part A: `responses={200: {"model": ScoringResult}}` on `POST /api/v1/score` and the `ScoreComparison` equivalent on `POST /api/v1/score/compare`, with the raw `Response` kept and no outbound validation (`NFR-502`); `docs/contracts/` regenerated (`FR-451`); `NFR-502` measured again in a solo window; and a guard in `backend/tests/test_contracts.py` over both forms of an untyped JSON 2xx response, each form proven red first, with four permanent exclusions and twelve marked `pending FD-1335 part B`. Leaf plan `PL-1364`. **Serialised after `SL-1345` merges**, by the lead's decision on the evidence: both edit the `responses=` argument on the same two `score.py` decorators, which is not registry-exempt (`RL-1263`), and the contract must document the post-ladder rung shape. It lands before WK-675 dispatches a slice that consumes `/score` or `/score/compare` (`FD-1335` *Disposition* item 1). Filed under working ids 9787 (this row) and 9788 (the plan), allocated by the lead; both are minted at the plan PR's merge turn.
+
+*(Amended before mint, 2026-10-01, by the maintainer's decision, relayed by the lead.)* The guard is now one guard over both 2xx responses and JSON request bodies, folding in `FD-1366` (filed as working id 9779). Each side is shown red first on broken input. Multipart bodies are excluded with a citation. The five untyped request routes are temporary exceptions: four are marked `pending FD-1366 Part B`, and `seed-from-model` is marked `pending FD-1357's fix DP`. No handler outside `score.py` is edited. `FD-1366` Part B types the four existing shapes in a later slice. DP-A1 and DP-A2 are ruled by `RL-1365` (filed as working id 9783). *(Minted 2026-10-01 as SL-1367, filed under working id 9787; its plan is PL-1364, mint batch A.)*
+
+#### SL-1377 — WK-1178 fix slice — FD-1357: multi-factor seeding per RL-1361, typed seed request and 201
+
+```yaml
+id: SL-1377
+family: slice
+title: WK-1178 fix slice — FD-1357, multi-factor seeding per RL-1361, typed seed request and 201
+status: active                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-03
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 1dd5e264195677b4a13268b80ac8673c2c027135
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1357, RL-1361, PL-1267]
+```
+
+`seed_from_model` seeds a GLM with two or more factors: one seed request names one Factor and gives one table with one key, bound by `factor_ref` to the Factor version the model pins (`RL-1361` sections A and D; FD-1357, HIGH, on G2's path). The seed route's request body becomes a typed `model-schema` request and its 201 a typed response, both published under `docs/contracts/schemas/generated/` (the maintainer's rules (i) and (ii); the seed-from-model entry of `FD-1366`). The `[seeding]` texts of `RL-1361` are applied byte for byte. Leaf plan `PL-1376`, `active`. **Order:** lane B, after `SL-1360` and before the FD-1356 fix, the RL-1343 decimal-output fix and `PL-1364` (the maintainer, 2026-10-01, about 10:10 BST). *(Filed 2026-10-01 under working id 9763, reserved by the lead. Minted 2026-10-03 as SL-1377; its plan is PL-1376, the FD-1357 batch.)*
+(Activated 2026-10-03 as the FD-1357 fix (WK-1178), on the maintainer's GO check, "2026-10-03 16:59:11 BST — DISPATCH GO: the FD-1357 fix (SL-1377, PL-1376; WK-1178) on lane B; this entry is PL-1376 activation need 7's maintainer agreement"; dispatch record DISPATCH-WK-1178-SL1377-2026-10-03.)
 
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half

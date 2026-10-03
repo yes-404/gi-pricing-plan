@@ -12,7 +12,7 @@
     },
     "LadderOperation": {
       "additionalProperties": false,
-      "description": "`LadderRung.operation` (`scoring.schema.json:33-42`).\n\n`factor` is a `Decimal`-exact string (R2 — never a JSON float); `amount_minor` is an\ninteger minor unit (FR-273). `applied` carries the reason codes of every firing\n`constraint` step recorded at this rung — non-empty only on the `constraints` rung, and\nempty rather than absent when nothing fired, matching `03:412`'s worked example.",
+      "description": "`LadderRung.operation` (`scoring.schema.json`, FR-248 as amended by `RL-1329`).\n\nThe operation a rung applied to the previous rung's **unrounded** value. Operands are\nexact and never quantised: `factor` (`multiply`), `divisor` (`divide`),\n`amount_unrounded_minor` (`add`), and `bound` with `bound_unrounded_minor` (`clamp`,\non the `constraints` rung only). `mode` and `dp` are emitted only on `round`.\n`applied` carries the reason codes of the binding clamps on the `constraints` rung\n(`clamp` or `none`), empty rather than absent when nothing fired. `amount_minor` is\n**legacy**: kept so a stored pre-ruling ladder still validates; the builder no longer\nemits it. Every field added by `RL-1329` is optional, because stored ladders are\nwrite-once and lack them.",
       "properties": {
         "amount_minor": {
           "anyOf": [
@@ -27,12 +27,70 @@
           "default": null,
           "title": "Amount Minor"
         },
+        "amount_unrounded_minor": {
+          "anyOf": [
+            {
+              "description": "Exact decimal as a string; never a binary float (FR-10).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amount Unrounded Minor"
+        },
         "applied": {
           "items": {
             "type": "string"
           },
           "title": "Applied",
           "type": "array"
+        },
+        "bound": {
+          "anyOf": [
+            {
+              "enum": [
+                "min",
+                "max"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bound"
+        },
+        "bound_unrounded_minor": {
+          "anyOf": [
+            {
+              "description": "Exact decimal as a string; never a binary float (FR-10).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bound Unrounded Minor"
+        },
+        "divisor": {
+          "anyOf": [
+            {
+              "description": "Exact decimal as a string; never a binary float (FR-10).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Divisor"
         },
         "dp": {
           "anyOf": [
@@ -49,6 +107,8 @@
         "factor": {
           "anyOf": [
             {
+              "description": "Exact decimal as a string; never a binary float (FR-10).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
               "type": "string"
             },
             {
@@ -61,7 +121,9 @@
         "kind": {
           "enum": [
             "multiply",
+            "divide",
             "add",
+            "clamp",
             "round",
             "none"
           ],
@@ -87,9 +149,37 @@
       "title": "LadderOperation",
       "type": "object"
     },
+    "LadderRounding": {
+      "additionalProperties": false,
+      "description": "A rung's declared rounding (`common/money.schema.json#/$defs/Rounding`, `RL-1329` §3).",
+      "properties": {
+        "dp": {
+          "minimum": 0,
+          "title": "Dp",
+          "type": "integer"
+        },
+        "mode": {
+          "enum": [
+            "half_even",
+            "half_up",
+            "ceiling",
+            "floor",
+            "down"
+          ],
+          "title": "Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode",
+        "dp"
+      ],
+      "title": "LadderRounding",
+      "type": "object"
+    },
     "LadderRung": {
       "additionalProperties": false,
-      "description": "One rung of the Premium Ladder (FR-247/248, `scoring.schema.json:25-45`).",
+      "description": "One rung of the Premium Ladder (FR-247/248, `scoring.schema.json`).\n\n`unrounded_minor` is the engine's exact value for the rung; `value_minor` is that value\nrounded once with `rounding` (`RL-1329` §2). Displayed values do not multiply into each\nother; the unrounded column is the one that replays (FR-248).",
       "properties": {
         "components": {
           "anyOf": [
@@ -118,6 +208,17 @@
           ],
           "default": null
         },
+        "rounding": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LadderRounding"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "rung": {
           "enum": [
             "risk_premium",
@@ -133,6 +234,20 @@
           ],
           "title": "Rung",
           "type": "string"
+        },
+        "unrounded_minor": {
+          "anyOf": [
+            {
+              "description": "Exact decimal as a string; never a binary float (FR-10).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unrounded Minor"
         },
         "value_minor": {
           "description": "Amount in minor units (pence/cents) of the workspace currency.",
@@ -291,6 +406,19 @@
           "pattern": "^sha256:[a-f0-9]{64}$",
           "title": "Bundle Hash",
           "type": "string"
+        },
+        "ladder_check_version": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ladder Check Version"
         },
         "ladder_reconciled": {
           "title": "Ladder Reconciled",

@@ -368,3 +368,34 @@ def test_compare_logs_no_input_value(
     assert caplog.records, "the capture is empty, so its silence proves nothing"
     assert sentinel not in caplog.text
     assert sentinel not in " ".join(str(r.__dict__) for r in caplog.records)
+
+
+@pytest.mark.req("FR-248")
+@pytest.mark.parametrize(("side", "failing_call"), [("base", 0), ("comparison", 1)])
+def test_a_ladder_that_does_not_reconcile_on_one_side_is_a_500_naming_that_side(
+    client: TestClient,
+    reader_headers: dict[str, str],
+    two_versions: None,
+    monkeypatch: pytest.MonkeyPatch,
+    side: str,
+    failing_call: int,
+) -> None:
+    """RL-1346 Acceptance 5: the real builder's ladder is planted one minor unit off on one call."""
+    from pricing_core.rating import score as core_score
+
+    real = core_score._build_ladder
+    calls: list[int] = []
+
+    def off_by_one(inputs: Any, codes: Any) -> Any:
+        calls.append(1)
+        ladder = real(inputs, codes)
+        if len(calls) - 1 == failing_call:
+            ladder[-1] = ladder[-1].model_copy(update={"value_minor": ladder[-1].value_minor + 1})
+        return ladder
+
+    monkeypatch.setattr(core_score, "_build_ladder", off_by_one)
+    response = client.post(COMPARE_URL, json=_body(), headers=reader_headers)
+
+    assert response.status_code == 500, response.text
+    assert response.json()["code"] == "LADDER_RECONCILIATION_FAILED"
+    assert response.json()["detail"].startswith(f"{side}: ")
