@@ -154,6 +154,11 @@ GENERATED_SHAPES: dict[str, str] = {
     "sub-graph": "SubGraph",
     "sub-graph-create": "SubGraphCreate",
     "sub-graph-body": "SubGraphBody",
+    # Added 2026-10-03 (WK-1178 SL-1377, PL-1376, RL-1375 DP-3/DP-4). The seed route's
+    # request and its 201: first written form, with no hand-authored counterpart (the
+    # authored `rate-table.schema.json` is F27(c)'s, never compared).
+    "rate-table-version": "RateTableVersion",
+    "seed-from-model-request": "SeedFromModelRequest",
 }
 
 

@@ -980,6 +980,26 @@
         "title": "BuildTransparency",
         "type": "object"
       },
+      "BulkOperationResult": {
+        "additionalProperties": false,
+        "description": "The outcome of a bulk operation (04 §4.4): what changed and what it created.",
+        "properties": {
+          "changed_cells": {
+            "minimum": 0.0,
+            "title": "Changed Cells",
+            "type": "integer"
+          },
+          "new_version": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          }
+        },
+        "required": [
+          "changed_cells",
+          "new_version"
+        ],
+        "title": "BulkOperationResult",
+        "type": "object"
+      },
       "BundleMetadata": {
         "additionalProperties": false,
         "description": "The compiled Bundle's identity (03 §4.3, FR-239): a reproducible content hash,\nand the blob key the serialised bundle was stored under.\n\n**`content_hash` and `blob_sha256` are hashes of different things, and their patterns\nkeep them apart on purpose.** `content_hash` is reproducible from the graph and pins\n(FR-239) and carries a `sha256:` prefix. `blob_sha256` is the blob store's content\naddress for the serialised bundle and is bare hex, matching `BlobRef.sha256`. Neither\nvalue validates into the other's field, so passing one where the other belongs is\nrefused loudly at the boundary rather than warned about in a comment (RL-915 §3).",
@@ -4331,6 +4351,55 @@
         "title": "FieldError",
         "type": "object"
       },
+      "FloorAndCapOperation": {
+        "additionalProperties": false,
+        "properties": {
+          "applied_to": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "kind": {
+            "const": "floor_and_cap",
+            "title": "Kind",
+            "type": "string"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/FloorAndCapParameters"
+          },
+          "result": {
+            "$ref": "#/components/schemas/BulkOperationResult"
+          }
+        },
+        "required": [
+          "applied_to",
+          "result",
+          "kind",
+          "parameters"
+        ],
+        "title": "FloorAndCapOperation",
+        "type": "object"
+      },
+      "FloorAndCapParameters": {
+        "additionalProperties": false,
+        "description": "`floor_and_cap`'s parameters (04 §4.4): the clamp bounds, decimal strings.",
+        "properties": {
+          "cap": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cap",
+            "type": "string"
+          },
+          "floor": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Floor",
+            "type": "string"
+          }
+        },
+        "required": [
+          "floor",
+          "cap"
+        ],
+        "title": "FloorAndCapParameters",
+        "type": "object"
+      },
       "GbmDiagnostics": {
         "additionalProperties": false,
         "description": "GBM-specific evidence (FR-174), all six things the requirement names.\n\nThe evaluation curve is here rather than on `GbmFitResult` because FR-174 calls it\na diagnostic and asks for **train and holdout** — which is FR-183's shape, and the\nshape `diagnostics.schema.json` has carried since Phase 0. `fit_gbm` produces it and\nhands it back for the caller to place here; only `best_iteration` stays on the fit,\nbecause scoring needs it and diagnostics are not loaded to score.",
@@ -6188,6 +6257,37 @@
           }
         },
         "title": "Histogram",
+        "type": "object"
+      },
+      "ImportVerdict": {
+        "additionalProperties": false,
+        "description": "The source identity of a version created by import (03 §4.2, 03 §5.2).\n\n`round_trip` is the strict verdict: the file parsed back to exactly the cells it was\nexported from, so an import can never silently drop or re-type a cell. `applied_to`\nnames the addressed baseline version (the import endpoint addresses `{slug}@{version}`),\nso the seed-lineage inheritance check (03 §4.2) is expressible at save time and\nauditable after.",
+        "properties": {
+          "applied_to": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "content_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Content Sha256",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "round_trip": {
+            "const": "passed",
+            "title": "Round Trip",
+            "type": "string"
+          }
+        },
+        "required": [
+          "filename",
+          "content_sha256",
+          "round_trip",
+          "applied_to"
+        ],
+        "title": "ImportVerdict",
         "type": "object"
       },
       "IntervalFor": {
@@ -9710,6 +9810,277 @@
         "title": "RateTableDiff",
         "type": "object"
       },
+      "RateTableKey": {
+        "additionalProperties": false,
+        "description": "A key column declaration (FR-228): name, type, optional Factor or Banding binding.\n\n`factor_ref` pins the Factor version the key is bound to (`RL-1361`); `banding_ref`\npins a Banding with no Factor. A key carries at most one of them, and a key with\nneither is joined by its own name.",
+        "properties": {
+          "banding_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "factor_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/RateTableKeyType"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "RateTableKey",
+        "type": "object"
+      },
+      "RateTableKeyType": {
+        "description": "Valid types for a rate table key.",
+        "enum": [
+          "int",
+          "string",
+          "date",
+          "bool"
+        ],
+        "title": "RateTableKeyType",
+        "type": "string"
+      },
+      "RateTableStorageMode": {
+        "description": "Storage mode for rate table cells (FR-232, 03 §3.3).\n\n`rows` is the default for small tables (< 250k cells); `parquet` is used\nfor larger tables. Once written, the storage mode is immutable with the version.",
+        "enum": [
+          "rows",
+          "parquet"
+        ],
+        "title": "RateTableStorageMode",
+        "type": "string"
+      },
+      "RateTableValue": {
+        "additionalProperties": false,
+        "description": "A value column declaration (FR-228): name, type, unit, optional bounds.",
+        "properties": {
+          "max": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/RateTableValueType"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "unit"
+        ],
+        "title": "RateTableValue",
+        "type": "object"
+      },
+      "RateTableValueType": {
+        "description": "Valid types for a rate table value (FR-228, 03 §3.3).",
+        "enum": [
+          "relativity",
+          "money_minor",
+          "percentage",
+          "count"
+        ],
+        "title": "RateTableValueType",
+        "type": "string"
+      },
+      "RateTableVersion": {
+        "additionalProperties": false,
+        "description": "A Rate Table Version (FR-229, FR-232, 03 §4.2).\n\nAn immutable version of one rate table, in the §4.2 wire form: the definition\n(`keys`, `value`, `default_row`), the cells (`rows` for row storage, `cells` as a\nparquet BlobRef above the threshold), the seed origin, and the creation metadata.\nEditing produces a new version with a required change note. The storage mode is\nfixed when the version is written and immutable with it (FR-232), and a version\nis created by a seed, an operation or an import — never more than one.",
+        "properties": {
+          "cells": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlobRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "change_note": {
+            "title": "Change Note",
+            "type": "string"
+          },
+          "created_by_import": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImportVerdict"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_by_operation": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "floor_and_cap": "#/components/schemas/FloorAndCapOperation",
+                    "rebase_to_level": "#/components/schemas/RebaseToLevelOperation",
+                    "uplift_by_filter": "#/components/schemas/UpliftByFilterOperation",
+                    "uplift_table": "#/components/schemas/UpliftTableOperation"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/UpliftTableOperation"
+                  },
+                  {
+                    "$ref": "#/components/schemas/UpliftByFilterOperation"
+                  },
+                  {
+                    "$ref": "#/components/schemas/FloorAndCapOperation"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RebaseToLevelOperation"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By Operation"
+          },
+          "default_row": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Row"
+          },
+          "keys": {
+            "items": {
+              "$ref": "#/components/schemas/RateTableKey"
+            },
+            "title": "Keys",
+            "type": "array"
+          },
+          "rateable": {
+            "title": "Rateable",
+            "type": "boolean"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          },
+          "seeded_from": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SeededFrom"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "storage": {
+            "$ref": "#/components/schemas/RateTableStorageMode"
+          },
+          "value": {
+            "$ref": "#/components/schemas/RateTableValue"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "slug",
+          "version",
+          "rateable",
+          "storage",
+          "keys",
+          "value",
+          "change_note"
+        ],
+        "title": "RateTableVersion",
+        "type": "object"
+      },
       "RatingConstraintStep": {
         "additionalProperties": false,
         "properties": {
@@ -10634,6 +11005,54 @@
           "status"
         ],
         "title": "ReadinessReport",
+        "type": "object"
+      },
+      "RebaseToLevelOperation": {
+        "additionalProperties": false,
+        "properties": {
+          "applied_to": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "kind": {
+            "const": "rebase_to_level",
+            "title": "Kind",
+            "type": "string"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/RebaseToLevelParameters"
+          },
+          "result": {
+            "$ref": "#/components/schemas/BulkOperationResult"
+          }
+        },
+        "required": [
+          "applied_to",
+          "result",
+          "kind",
+          "parameters"
+        ],
+        "title": "RebaseToLevelOperation",
+        "type": "object"
+      },
+      "RebaseToLevelParameters": {
+        "additionalProperties": false,
+        "description": "`rebase_to_level`'s parameters (04 §4.4): the reference level that becomes 1.0.",
+        "properties": {
+          "base_level": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Base Level",
+            "type": "object"
+          }
+        },
+        "required": [
+          "base_level"
+        ],
+        "title": "RebaseToLevelParameters",
         "type": "object"
       },
       "ReconcileRequest": {
@@ -12136,6 +12555,51 @@
         "title": "ScoreCompareRequest",
         "type": "object"
       },
+      "SeedFromModelRequest": {
+        "additionalProperties": false,
+        "description": "`POST /api/v1/rate-tables/{slug}/seed-from-model` body (FR-230, `03` §5.1).\n\nOne seed request names one Factor of an approved model (`RL-1361` section A);\n`factor` is the Factor's slug, a key of the model's relativities. Exactly three\nfields, and an unknown field is refused (`RL-1375` DP-3).",
+        "properties": {
+          "change_note": {
+            "title": "Change Note",
+            "type": "string"
+          },
+          "factor": {
+            "minLength": 1,
+            "title": "Factor",
+            "type": "string"
+          },
+          "model_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          }
+        },
+        "required": [
+          "model_ref",
+          "factor",
+          "change_note"
+        ],
+        "title": "SeedFromModelRequest",
+        "type": "object"
+      },
+      "SeededFrom": {
+        "additionalProperties": false,
+        "description": "The seed origin of a rate table version (03 §4.2, FR-230).\n\nThe pinned source model reference and the timestamp at which the relativities were\nimported, so \"how far have we moved from the technical rate?\" is answerable by\ndiffing against this origin.",
+        "properties": {
+          "model_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "seeded_at": {
+            "format": "date-time",
+            "title": "Seeded At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model_ref",
+          "seeded_at"
+        ],
+        "title": "SeededFrom",
+        "type": "object"
+      },
       "SemanticType": {
         "description": "What a column *means*, inferred separately from its dtype (FR-60).\n\nA dtype says `int32`; a semantic type says whether that is a policy id, a vehicle\ngroup, or an age. The distinction decides whether a one-way summary is meaningful —\nbanding a policy id produces a chart with five million bars.",
         "enum": [
@@ -13579,6 +14043,103 @@
           "values"
         ],
         "title": "UpdateSettings",
+        "type": "object"
+      },
+      "UpliftByFilterOperation": {
+        "additionalProperties": false,
+        "properties": {
+          "applied_to": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "kind": {
+            "const": "uplift_by_filter",
+            "title": "Kind",
+            "type": "string"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/UpliftByFilterParameters"
+          },
+          "result": {
+            "$ref": "#/components/schemas/BulkOperationResult"
+          }
+        },
+        "required": [
+          "applied_to",
+          "result",
+          "kind",
+          "parameters"
+        ],
+        "title": "UpliftByFilterOperation",
+        "type": "object"
+      },
+      "UpliftByFilterParameters": {
+        "additionalProperties": false,
+        "description": "`uplift_by_filter`'s parameters (04 §4.4): the percentage plus the key filter.",
+        "properties": {
+          "filter": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Filter",
+            "type": "object"
+          },
+          "percentage": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Percentage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "percentage",
+          "filter"
+        ],
+        "title": "UpliftByFilterParameters",
+        "type": "object"
+      },
+      "UpliftTableOperation": {
+        "additionalProperties": false,
+        "properties": {
+          "applied_to": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "kind": {
+            "const": "uplift_table",
+            "title": "Kind",
+            "type": "string"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/UpliftTableParameters"
+          },
+          "result": {
+            "$ref": "#/components/schemas/BulkOperationResult"
+          }
+        },
+        "required": [
+          "applied_to",
+          "result",
+          "kind",
+          "parameters"
+        ],
+        "title": "UpliftTableOperation",
+        "type": "object"
+      },
+      "UpliftTableParameters": {
+        "additionalProperties": false,
+        "description": "`uplift_table`'s parameters (04 §4.4): the percentage, applied to every cell.",
+        "properties": {
+          "percentage": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Percentage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "percentage"
+        ],
+        "title": "UpliftTableParameters",
         "type": "object"
       },
       "UploadUrlRequest": {
@@ -25246,7 +25807,7 @@
     },
     "/api/v1/rate-tables/{slug}/seed-from-model": {
       "post": {
-        "description": "**201** with the seeded version: its definition, rows, and `seeded_from` (FR-229).\n\nThe source model must be approved (PIN_NOT_APPROVED otherwise), and its relativities\nmust validate as a rate table (named `RATE_TABLE_*` codes, 03 §5.2). Storage is\ndecided against the workspace's cell-count threshold at creation and immutable with\nthe version (FR-232, DP2).",
+        "description": "**201** with the seeded version: its definition, rows, and `seeded_from` (FR-229).\n\nThe body is a `SeedFromModelRequest`: `model_ref`, `factor` (the Factor's slug, a key of\nthe model's relativities) and `change_note`; an unknown field is refused. One seed\nholds one Factor, bound by `factor_ref` to the Factor version the model pins (FR-230,\n`RL-1361`). The source model must be approved (PIN_NOT_APPROVED otherwise); a Factor id\nof the model that does not resolve is 404. A `factor` that names no relativity entry, a\nFactor outside the factor slug grammar, and a re-seed of a lineage bound to another\nFactor are 422 `VALIDATION_FAILED`; the relativities must validate as a rate table\n(named `RATE_TABLE_*` codes, 03 §5.2). Storage is decided against the workspace's\ncell-count threshold at creation and immutable with the version (FR-232, DP2).",
         "operationId": "seed_rate_table_from_model_api_v1_rate_tables__slug__seed_from_model_post",
         "parameters": [
           {
@@ -25281,9 +25842,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "additionalProperties": true,
-                "title": "Body",
-                "type": "object"
+                "$ref": "#/components/schemas/SeedFromModelRequest"
               }
             }
           },
@@ -25294,9 +25853,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Seed Rate Table From Model Api V1 Rate Tables  Slug  Seed From Model Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/RateTableVersion"
                 }
               }
             },
