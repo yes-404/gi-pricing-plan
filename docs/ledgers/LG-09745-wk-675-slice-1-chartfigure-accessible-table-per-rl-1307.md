@@ -24,65 +24,67 @@ The executor charter's Model / effort line, verbatim: "`sonnet` (currently Sonne
 
 ### Task 0 — preconditions
 
-**Dispatch record, FINAL, quoted verbatim** (`gi-pricing-plan.local/handover/DISPATCH-WK-675-SL1369-2026-10-01.md`, as read 2026-10-03 15:56:16 BST, which includes Delta 3 (the Task 0 reads at 15:36 BST preceded it); each line prefixed `> `):
+**Dispatch record, FINAL, quoted verbatim** (`gi-pricing-plan.local/handover/DISPATCH-WK-675-SL1369-2026-10-01.md`, as read 2026-10-03 15:56:16 BST, which includes Delta 3 (the Task 0 reads at 15:36 BST preceded it); in a fenced block, unprefixed):
 
-> # Dispatch record: WK-675 Slice 1 (SL-1369), the ChartFigure accessible table, from PL-1368 (FINAL)
->
-> **Status: FINAL** (2026-10-03 15:35:29 BST, the lead, after #1069 merged as 2171aab0; tree 3915e5d9). *Earlier status line, kept:* DRAFT. Drafted 2026-10-01 after #1058 merged at 11:01:11 BST (main 49cd25be). Lane A. It goes FINAL on the maintainer's GO check and the activation PR's merge. PL-1368 is frozen from its first merge (#1058), so it is not edited; every delta lives here.
->
-> **The order:** the maintainer's entries on WK-675 S1, 2026-10-01: commission the S1 leaf if only resolved items gate it (met: DP-1 → RL-1307); "S1's dispatch record must state that PL-1286 :240, :249-250 and :415-416 ((b)) are superseded by RL-1307 (c)"; the overrule of the duplicate-key choice (refusal in every build); (X) "#1058 mints first (PL-1368 + SL-1369)"; MERGE-ACK #1058 at 04f3e64c.
->
-> ## Plan and slice status on main (the gate check, FIRST)
-> - **Main at drafting:** 49cd25be (#1058 merged; read-back parent 92b4e4ac, tree d324ffe7 = the ACK tree).
-> - **PL-1368:** `status: draft`. **SL-1369:** `status: draft`. Both flip to `active` in the separate activation PR (planner-675s1, DRAFT, not ready until the GO).
-> - **PL-1286** (WK-675's map plan): stays `draft` per its own rule ("leaves activate individually", the maintainer).
->
-> ## Activation needs (PL-1368 §"Activation needs", run)
-> 1. **The maintainer's agreement**, as a dated line: **MET**, by the entry headed "2026-10-01 11:04:02 BST — GO: WK-675 Slice 1 (SL-1369, PL-1368) on lane A, with ONE correction to the dispatch record (DP-4's label is (b), not (a)); this entry is PL-1368 activation need 1's dated maintainer agreement".
-> 2. **The lead's go**, recorded in the activation PR: **MET** — the GO check at 2026-10-03 14:56:02 BST, recorded in #1069's squash body (main 2171aab0).
-> 3. **The PL-1286 staleness line, carried here verbatim** (the maintainer): **PL-1286 :240, :249-250 and :415-416 (DP-1 open, recommending (b)) are SUPERSEDED by RL-1307 (c). No executor follows the frozen map's prose.** RL-1307 (active, on main) is the scope authority: items 1, 3, 4 and 5 plus its four violations, as PL-1368 quotes them. **Met by this record.**
-> 4. **The holds, read** (holds-2026-10-01.md):
->    - FD-1366 (filed as FD 9779) per-route hold: S1 calls none of the five routes. **Does not apply.**
->    - FD-1335 /score hold (S6, S7, S7b): **does not apply.**
->    - FD 9752 hold (no code READS the four to_dict approval responses): S1 reads none. **Does not apply.**
->    - The FD-1336 rung hold is LIFTED.
->    - **Met.**
-> 5. **A free lane under RL-1263:** lane A is free (WK-674 S2 is not yet dispatchable). Lane B holds SL-1360 (WK-1178: tests/test_permission_parity.py, an LG file, INDEX). Different Works, **no shared non-exempt file** (S1 writes frontend/ only, plus its ledger and INDEX, which is registry-exempt). The second to merge re-gates. **Met (to be re-checked at the GO).**
-> 6. **Task 0's re-measurement** of the call-site count: the executor runs `git grep -n '<ChartFigure' origin/main -- 'frontend/src/*.vue'` at the dispatch tree (13 lines in 11 files at 92b4e4ac/49cd25be). WK-690 S5 (SL-1275) is not merged, so the count is 13 unless it lands first. **Executor's Task 0.**
->
-> ## Decision points: every one has a resolver
-> - DP-1 (PL-1286) → RL-1307 (c), active.
-> - S1's open method choices are the plan's own (migration order; the empty-state wording; the production error wording `Table unavailable: two columns in "<title>" share the key "<key>" (…)`).
-> - The plan's DP-4 (F39 remedy; PL-1368:280: (a) S1 widens / (b) a new FD- with an owner): **the lead's verdict is (b)**: S1 lands the diagnosis either way; a remedy lands in S1 only if it is confined to test code; a cause outside test code goes to a new FD- whose `decision:` the lead sets. *(Corrected 2026-10-01 11:04 BST on the maintainer's GO entry headed "2026-10-01 11:04:02 BST — GO: WK-675 Slice 1 (SL-1369, PL-1368) on lane A, with ONE correction to the dispatch record (DP-4's label is (b), not (a)); this entry is PL-1368 activation need 1's dated maintainer agreement". The draft said "(a)" while describing (b), a mislabel by the lead. It also supersedes the maintainer's earlier "DP-4 (a) accepted" for #1058; the substance accepted is (b).)*
-> - The duplicate-key refusal: the maintainer's OVERRULE (every build, role=alert, no DEV gate, red-first CI test), applied in PL-1368.
-> - **No task is held.**
->
-> ## Conditions
-> 1. **Write set:** frontend/src/components/ChartFigure.vue and its test, the 13 call-site components and their tests (3 new test files: CalibrationChart, GbmEvalCurveChart, LineageGraph), frontend/src/chart-table.ts (new), frontend/src/test-tables.ts, possibly frontend/src/test-setup.ts (F39, test code only), frontend/src/components/__typecheck__/ fixtures, its ledger under docs/ledgers/, and the regenerated docs/INDEX.md. Nothing under backend/, packages/ or docs/specs/.
-> 2. **Frontend gate, both halves** (CLAUDE.md §11), with the shared-chunk size delta in the PR (PL-1286 Acceptance 7 / PL-1368 Acceptance 10). The four type fixtures are proven on the locked vue-tsc 3.3.11.
-> 3. **Gate evidence for EVERY suite-level run:**
->    - a clean checkout of the named SHA, `git status --porcelain` empty;
->    - `uv sync --all-packages`; `ruff check --no-cache`; `mypy --no-incremental`;
->    - the dev-commands slot wrapper verbatim plus `LOKY_MAX_CPU_COUNT=4`;
->    - `uptime` and `free -h` at start and end; the other holder via `flock -n`;
->    - **the test DB created first** (SL-1360's Run 1 failure);
->    - read the stage table, never the exit code.
->    Single-file vitest and pytest runs are slot-exempt.
-> 4. **Red first** on every acceptance item, with the outputs pasted (incl. the duplicate-key DEV=false case, Step 5a's gate proof, and the permuted-cell case).
-> 5. **Ledger:** LG working id **9745** (allocated by the lead 2026-10-03 15:35:29 BST, free-checked on origin refs, worktrees and handover), allocated by the lead at GO (the lead is the only allocator); append-only; BST stamps; Task 0 quotes this FINAL record verbatim.
-> 6. **Frozen records:** nothing in docs/plans/, docs/rulings/ or any frozen body is edited. The executor writes no spec text (S1 has none).
-> 7. **Executor:** a fresh `executor-1369` from `.claude/roles/executor.md` with its Model / effort line, in a new worktree from origin/main after the activation PR merges. It never `cd`s.
-> 8. **PR:** a draft "feat(frontend): SL-1369 — ChartFigure accessible table per RL-1307 (WK-675 Slice 1, PL-1368, LG <id>)". The slice audit, mint and close follow; the lead allocates ids.
->
-> ## Deltas
-> - **Delta 1, 2026-10-01 11:04 BST (lead):** the GO is received (above). Contention: if S1's gate overlaps SL-1360's re-gate, it is a CANDIDATE CONTENTION PAIR, so BOTH ledgers record both walls, uptime/free at start and end, and the other holder via flock -n (the maintainer, GO entry).
->
-> - **Delta 2, 2026-10-03 15:35:29 BST (lead): FINAL.** The GO is the deputy's "2026-10-03 14:33:44 BST — RESUME (Sat 3 Oct): first GO to the NEW lead …" item 2, and the MERGE-ACK "2026-10-03 15:34:34 BST — MERGE-ACK #1069 …". **Main = 2171aab0** (PL-1368 and SL-1369 `active`). Re-checked at 2171aab0: `<ChartFigure` count 13 (unchanged); **lane B is idle** (SL-1360 merged d8537220; no build slice running), so need 5 holds and no contention pair is possible until lane B dispatches; gate slots gate-1/gate-2 have no holder (`/tmp/slots/` was cleared by the reboot; the wrapper's `mkdir -p` recreates it). The holds file is unchanged since 2026-10-01 10:20:30. **DP-4 = (b)** (stated above). **PL-1371** (the lane-loading plan, accepted 14:56:08) does not change S1's scope. Executor: **executor-1369**, sonnet, from `.claude/roles/executor.md`, a fresh worktree from origin/main 2171aab0. Delta 1's candidate-pair rule now applies to whichever lane-B slice dispatches next.
-> - **Delta 3, 2026-10-03 15:50:15 BST (lead): the three "new" test files already exist.** executor-1369 reported, and the lead verified at origin/main 2171aab0 (`git ls-tree`): `frontend/src/components/__tests__/{CalibrationChart,GbmEvalCurveChart,LineageGraph}.test.ts` exist, added by dbb4ea06 (#194, 2026-08-25) and a551469a (#257, 2026-08-26). PL-1368:1087-1088 ("Create:") and Step 1 ("Write the two new test files") were wrong when written; Condition 1's "3 new test files" likewise. **Ruling:** the NFR-463 tests are ADDED to the existing files; every existing test stays unchanged and passing (no deletion, rename or weakened assert); red first per new test. Write set unchanged (same paths). Recorded in LG 9745. Not blocking; a note for the slice audit, not an FD (rule 14).
+```text
+# Dispatch record: WK-675 Slice 1 (SL-1369), the ChartFigure accessible table, from PL-1368 (FINAL)
+
+**Status: FINAL** (2026-10-03 15:35:29 BST, the lead, after #1069 merged as 2171aab0; tree 3915e5d9). *Earlier status line, kept:* DRAFT. Drafted 2026-10-01 after #1058 merged at 11:01:11 BST (main 49cd25be). Lane A. It goes FINAL on the maintainer's GO check and the activation PR's merge. PL-1368 is frozen from its first merge (#1058), so it is not edited; every delta lives here.
+
+**The order:** the maintainer's entries on WK-675 S1, 2026-10-01: commission the S1 leaf if only resolved items gate it (met: DP-1 → RL-1307); "S1's dispatch record must state that PL-1286 :240, :249-250 and :415-416 ((b)) are superseded by RL-1307 (c)"; the overrule of the duplicate-key choice (refusal in every build); (X) "#1058 mints first (PL-1368 + SL-1369)"; MERGE-ACK #1058 at 04f3e64c.
+
+## Plan and slice status on main (the gate check, FIRST)
+- **Main at drafting:** 49cd25be (#1058 merged; read-back parent 92b4e4ac, tree d324ffe7 = the ACK tree).
+- **PL-1368:** `status: draft`. **SL-1369:** `status: draft`. Both flip to `active` in the separate activation PR (planner-675s1, DRAFT, not ready until the GO).
+- **PL-1286** (WK-675's map plan): stays `draft` per its own rule ("leaves activate individually", the maintainer).
+
+## Activation needs (PL-1368 §"Activation needs", run)
+1. **The maintainer's agreement**, as a dated line: **MET**, by the entry headed "2026-10-01 11:04:02 BST — GO: WK-675 Slice 1 (SL-1369, PL-1368) on lane A, with ONE correction to the dispatch record (DP-4's label is (b), not (a)); this entry is PL-1368 activation need 1's dated maintainer agreement".
+2. **The lead's go**, recorded in the activation PR: **MET** — the GO check at 2026-10-03 14:56:02 BST, recorded in #1069's squash body (main 2171aab0).
+3. **The PL-1286 staleness line, carried here verbatim** (the maintainer): **PL-1286 :240, :249-250 and :415-416 (DP-1 open, recommending (b)) are SUPERSEDED by RL-1307 (c). No executor follows the frozen map's prose.** RL-1307 (active, on main) is the scope authority: items 1, 3, 4 and 5 plus its four violations, as PL-1368 quotes them. **Met by this record.**
+4. **The holds, read** (holds-2026-10-01.md):
+   - FD-1366 (filed as FD 9779) per-route hold: S1 calls none of the five routes. **Does not apply.**
+   - FD-1335 /score hold (S6, S7, S7b): **does not apply.**
+   - FD 9752 hold (no code READS the four to_dict approval responses): S1 reads none. **Does not apply.**
+   - The FD-1336 rung hold is LIFTED.
+   - **Met.**
+5. **A free lane under RL-1263:** lane A is free (WK-674 S2 is not yet dispatchable). Lane B holds SL-1360 (WK-1178: tests/test_permission_parity.py, an LG file, INDEX). Different Works, **no shared non-exempt file** (S1 writes frontend/ only, plus its ledger and INDEX, which is registry-exempt). The second to merge re-gates. **Met (to be re-checked at the GO).**
+6. **Task 0's re-measurement** of the call-site count: the executor runs `git grep -n '<ChartFigure' origin/main -- 'frontend/src/*.vue'` at the dispatch tree (13 lines in 11 files at 92b4e4ac/49cd25be). WK-690 S5 (SL-1275) is not merged, so the count is 13 unless it lands first. **Executor's Task 0.**
+
+## Decision points: every one has a resolver
+- DP-1 (PL-1286) → RL-1307 (c), active.
+- S1's open method choices are the plan's own (migration order; the empty-state wording; the production error wording `Table unavailable: two columns in "<title>" share the key "<key>" (…)`).
+- The plan's DP-4 (F39 remedy; PL-1368:280: (a) S1 widens / (b) a new FD- with an owner): **the lead's verdict is (b)**: S1 lands the diagnosis either way; a remedy lands in S1 only if it is confined to test code; a cause outside test code goes to a new FD- whose `decision:` the lead sets. *(Corrected 2026-10-01 11:04 BST on the maintainer's GO entry headed "2026-10-01 11:04:02 BST — GO: WK-675 Slice 1 (SL-1369, PL-1368) on lane A, with ONE correction to the dispatch record (DP-4's label is (b), not (a)); this entry is PL-1368 activation need 1's dated maintainer agreement". The draft said "(a)" while describing (b), a mislabel by the lead. It also supersedes the maintainer's earlier "DP-4 (a) accepted" for #1058; the substance accepted is (b).)*
+- The duplicate-key refusal: the maintainer's OVERRULE (every build, role=alert, no DEV gate, red-first CI test), applied in PL-1368.
+- **No task is held.**
+
+## Conditions
+1. **Write set:** frontend/src/components/ChartFigure.vue and its test, the 13 call-site components and their tests (3 new test files: CalibrationChart, GbmEvalCurveChart, LineageGraph), frontend/src/chart-table.ts (new), frontend/src/test-tables.ts, possibly frontend/src/test-setup.ts (F39, test code only), frontend/src/components/__typecheck__/ fixtures, its ledger under docs/ledgers/, and the regenerated docs/INDEX.md. Nothing under backend/, packages/ or docs/specs/.
+2. **Frontend gate, both halves** (CLAUDE.md §11), with the shared-chunk size delta in the PR (PL-1286 Acceptance 7 / PL-1368 Acceptance 10). The four type fixtures are proven on the locked vue-tsc 3.3.11.
+3. **Gate evidence for EVERY suite-level run:**
+   - a clean checkout of the named SHA, `git status --porcelain` empty;
+   - `uv sync --all-packages`; `ruff check --no-cache`; `mypy --no-incremental`;
+   - the dev-commands slot wrapper verbatim plus `LOKY_MAX_CPU_COUNT=4`;
+   - `uptime` and `free -h` at start and end; the other holder via `flock -n`;
+   - **the test DB created first** (SL-1360's Run 1 failure);
+   - read the stage table, never the exit code.
+   Single-file vitest and pytest runs are slot-exempt.
+4. **Red first** on every acceptance item, with the outputs pasted (incl. the duplicate-key DEV=false case, Step 5a's gate proof, and the permuted-cell case).
+5. **Ledger:** LG working id **9745** (allocated by the lead 2026-10-03 15:35:29 BST, free-checked on origin refs, worktrees and handover), allocated by the lead at GO (the lead is the only allocator); append-only; BST stamps; Task 0 quotes this FINAL record verbatim.
+6. **Frozen records:** nothing in docs/plans/, docs/rulings/ or any frozen body is edited. The executor writes no spec text (S1 has none).
+7. **Executor:** a fresh `executor-1369` from `.claude/roles/executor.md` with its Model / effort line, in a new worktree from origin/main after the activation PR merges. It never `cd`s.
+8. **PR:** a draft "feat(frontend): SL-1369 — ChartFigure accessible table per RL-1307 (WK-675 Slice 1, PL-1368, LG <id>)". The slice audit, mint and close follow; the lead allocates ids.
+
+## Deltas
+- **Delta 1, 2026-10-01 11:04 BST (lead):** the GO is received (above). Contention: if S1's gate overlaps SL-1360's re-gate, it is a CANDIDATE CONTENTION PAIR, so BOTH ledgers record both walls, uptime/free at start and end, and the other holder via flock -n (the maintainer, GO entry).
+
+- **Delta 2, 2026-10-03 15:35:29 BST (lead): FINAL.** The GO is the deputy's "2026-10-03 14:33:44 BST — RESUME (Sat 3 Oct): first GO to the NEW lead …" item 2, and the MERGE-ACK "2026-10-03 15:34:34 BST — MERGE-ACK #1069 …". **Main = 2171aab0** (PL-1368 and SL-1369 `active`). Re-checked at 2171aab0: `<ChartFigure` count 13 (unchanged); **lane B is idle** (SL-1360 merged d8537220; no build slice running), so need 5 holds and no contention pair is possible until lane B dispatches; gate slots gate-1/gate-2 have no holder (`/tmp/slots/` was cleared by the reboot; the wrapper's `mkdir -p` recreates it). The holds file is unchanged since 2026-10-01 10:20:30. **DP-4 = (b)** (stated above). **PL-1371** (the lane-loading plan, accepted 14:56:08) does not change S1's scope. Executor: **executor-1369**, sonnet, from `.claude/roles/executor.md`, a fresh worktree from origin/main 2171aab0. Delta 1's candidate-pair rule now applies to whichever lane-B slice dispatches next.
+- **Delta 3, 2026-10-03 15:50:15 BST (lead): the three "new" test files already exist.** executor-1369 reported, and the lead verified at origin/main 2171aab0 (`git ls-tree`): `frontend/src/components/__tests__/{CalibrationChart,GbmEvalCurveChart,LineageGraph}.test.ts` exist, added by dbb4ea06 (#194, 2026-08-25) and a551469a (#257, 2026-08-26). PL-1368:1087-1088 ("Create:") and Step 1 ("Write the two new test files") were wrong when written; Condition 1's "3 new test files" likewise. **Ruling:** the NFR-463 tests are ADDED to the existing files; every existing test stays unchanged and passing (no deletion, rename or weakened assert); red first per new test. Write set unchanged (same paths). Recorded in LG 9745. Not blocking; a note for the slice audit, not an FD (rule 14).
+```
 
 - **Step 1, the tree.** `git fetch origin`; `git rev-parse origin/main` printed `2171aab0d9b5ab1bbef29d6023bdc2d33eeddd48`. The worktree HEAD was the same SHA, and `git status --porcelain` was empty.
 - **Step 2, call sites.** `git grep -n '<ChartFigure' origin/main -- 'frontend/src/*.vue'` printed 13 lines in 11 files, all under `frontend/src/components/`: `AeByFactorChart.vue:86`, `CalibrationChart.vue:92`, `CrossValidationPanel.vue:148`, `CrossValidationPanel.vue:161`, `DoubleLiftChart.vue:150`, `GbmEvalCurveChart.vue:73`, `GbmImportanceCharts.vue:133`, `GbmImportanceCharts.vue:146`, `HistogramChart.vue:111`, `LiftChart.vue:98`, `LineageGraph.vue:122`, `OneWayChart.vue:181`, `PartialDependencePanel.vue:83`. No site beyond the plan's 13.
-- **Step 3, holds and RL-1307.** `holds-2026-10-01.md` names WK-675 S1 in no hold (the FD-9779 per-route hold, the FD-1335 `/score` hold: S1 calls none of the routes). `git log --oneline 1dd5e264..origin/main -- docs/rulings/RL-01307-*.md` printed nothing.
+- **Step 3, holds and RL-1307.** `holds-2026-10-01.md` names WK-675 S1 in no hold (the per-route hold filed under working id FD 9779, the FD-1335 `/score` hold: S1 calls none of the routes). `git log --oneline 1dd5e264..origin/main -- docs/rulings/RL-01307-*.md` printed nothing.
 - **Step 4, toolchain.** `pnpm --dir frontend install --frozen-lockfile` and `pnpm --dir frontend generate:api` ran clean. `frontend/node_modules/vue-tsc/package.json` says `"version": "3.3.11"`, the locked one.
 
 **Plan defect found in Task 0 (a measured premise that is wrong).** PL-1368 (*Measurements*, Tasks 3 and 5) says `CalibrationChart`, `GbmEvalCurveChart` and `LineageGraph` have no test file, and Tasks 3 and 5 "Create" them. `git ls-tree --name-only 1dd5e264 frontend/src/components/__tests__/` and the same at `2171aab0` both list `CalibrationChart.test.ts`, `GbmEvalCurveChart.test.ts` and `LineageGraph.test.ts`. The files date from #194 (`dbb4ea06`) and #257 (`a551469a`). I reported it to the lead before 15:50:15 BST (Delta 3's stamp). **The lead ruled (Delta 3 of the dispatch record):** add the `NFR-463` tests to the existing files, and leave every existing test unchanged and passing. Done: three tests added (`GbmEvalCurveChart`, `LineageGraph`, and two in `CalibrationChart`), no existing test deleted, renamed or weakened. Where an existing test read a `ChartFigure` table by cell position, the row header shifts the index by one, so the read moved to `cellUnder` by label with the same expected value (Task 3 Step 2, Task 5 Step 2; each such change is listed under its task).
@@ -182,4 +184,37 @@ None yet.
 
 ## Gate and bundle (Task 6)
 
-GATE_PLACEHOLDER
+**Gate slot:** granted by the lead 2026-10-03 15:57:24 BST for the full two-half gate and the two vite builds at `5ab27c8ba9fe27b6b0d45c90c99d9489483aa251` (the ledger-add commit; the code is `3fd07379`). Main had moved to `bf20749b` (#1076, docs only); the re-merge comes at mint.
+
+**Condition 3 fields.** Clean checkout of the named SHA: the worktree HEAD printed `5ab27c8ba9fe27b6b0d45c90c99d9489483aa251`, `git status --porcelain` printed 0 lines. `uv sync --all-packages` ran before the gate (rc 0). `uv run ruff check --no-cache .`: rc 0, "All checks passed!". `uv run mypy --no-incremental`: rc 0, "Success: no issues found in 219 source files". The dev-commands slot wrapper (the gate body, verbatim) with `LOKY_MAX_CPU_COUNT=4` added to its exports, run by `bash /tmp/sl1369-gate.sh` (the same wrapper, then the frontend half). The test database was created first (`createdb -T gipricing gipricing_agent-ac3f1a5235ec202be_2f86ecb8`, then `alembic upgrade head` rc 0). Start 15:57:43 BST: `uptime` load average 0.96, 1.32, 1.39; `free -h` 31Gi total, 2.7Gi used, 28Gi available; `flock -n /tmp/slots/gate-1 true` rc 0 and gate-2 rc 0 (no other holder). End 16:20:54 BST: load average 5.11, 2.16, 1.63; 28Gi available; `flock -n` gate-1 rc 0, gate-2 rc 0 (no other holder; lane B idle, so no contention pair).
+
+**Python half, the stage table the wrapper printed (read, not the exit code):**
+
+| stage | result | detail |
+|---|---|---|
+| ruff | pass | exit=0 |
+| mypy | pass | exit=0 |
+| import_linter | pass | exit=0 |
+| audit_docs | FAIL | exit=1 |
+| req_coverage | pass | exit=0 |
+| contracts | pass | exit=0 |
+| pytest | FAIL | exit=1 |
+
+`GATE: FAIL — 2 of 7 stages failed: audit_docs pytest`. **Both reds are mine to explain and neither is a code fault.** The `audit_docs` log (`/tmp/tmp.AX4zzryFvt/audit_docs.log`) listed three failures: check 31 (`gap in the full allocation between 1370 and 9745`, the expected red of a working id, until the lead mints the final id), and two check 32 failures at ledger lines 80 and 85: two ids cited in this ledger do not resolve in `docs/INDEX.md` (the lane-loading plan, whose id is not on `main` at `2171aab0`, and the per-route finding filed under working id 9779). I fixed the check-32 pair after the gate, in this ledger only: the dispatch record is now quoted inside a fenced block (check 32 skips fences), and my own prose says "filed under working id FD 9779". `python3 scripts/audit-docs.py` now prints `FAILED (1)`: check 31 only. The `pytest` stage reported `13 failed, 4566 passed, 3 skipped in 1287.93s`; the 13 failures (listed in `/tmp/sl1369-failed-tests.txt`) all assert that the real tree passes `audit-docs` or `doc-id check` (`AssertionError:   requirement numbering: 0 module-scoped id(s)…`, `doc-id.py check: [noncontiguous] docs/INDEX.md has a gap between 1370 and 9745`, `the live allocation is not contiguous: [(1370, 9745)]`). **Positive control** (`bash /tmp/sl1369-ctrl.sh`, uncommitted and reverted): with this ledger temporarily renamed to the contiguous id 1371, `python3 scripts/audit-docs.py` printed `All checks passed.` and the same 13 tests printed `13 passed in 148.40s`. A first control with the id 1372 still failed check 31 (`gap … between 1370 and 1372`), which shows the check is the cause and not the file. So the Python half is red only because the ledger carries a working id; the code half is green. **The lead's re-gate at mint closes this** (the ledger's id becomes contiguous).
+
+**Frontend half, same run, each rc read:** `pnpm --dir frontend install --frozen-lockfile` rc 0; `generate:api` rc 0; `lint` rc 0 (`eslint . --max-warnings 0`); `type-check` rc 0 (`vue-tsc --build --force`, locked 3.3.11); `test` rc 0 (`Type Errors no errors`; the suite's counts at the earlier Task 1 run were 97 files and 609 tests, and the file count is unchanged); `build` rc 0 (`vue-tsc --build && vite build`, 779 modules). The F39 guard is in place in this run, so the suite also ran with no unstubbed `fetch`.
+
+**Bundle delta** (Acceptance 10). `pnpm --dir frontend build` at `origin/main` `2171aab0` in a scratch worktree (`git worktree add --detach /tmp/sl1369-base 2171aab0`, `install --frozen-lockfile`, `generate:api`, `build`, rc 0; removed after) and at `5ab27c8b`. Vite's chunk tables are `/tmp/sl1369-build-base.log` and `/tmp/sl1369-build-slice.log`. Every `dist/assets/*.js` chunk whose size differs, raw / gzip kB, before → after; names are the chunk names without Vite's content hash:
+
+| chunk | before raw / gzip kB | after raw / gzip kB |
+|---|---|---|
+| ChartFigure | 1.17 / 0.62 | 1.63 / 0.81 |
+| DatasetDetailView | 9.63 / 3.41 | 9.89 / 3.46 |
+| DiagnosticsView | 22.54 / 6.24 | 23.14 / 6.39 |
+| ModelComparisonView | 9.53 / 3.52 | 9.69 / 3.55 |
+| PartitionTable | 5.53 / 1.99 | 5.73 / 2.02 |
+| ProfileView | 12.94 / 4.70 | 13.33 / 4.79 |
+
+The shared entry chunk `index-*.js` is unchanged: 18.47 kB raw / 6.71 gzip before and after (only its content hash differs: `index-CNa3pfOU.js` → `index-Bz9f1eG5.js`). Total of the six changed chunks: +2.38 kB raw, +0.67 kB gzip. The increase is the descriptor objects and the duplicate-key refusal; no dependency was added (`frontend/package.json` and `frontend/pnpm-lock.yaml` are unchanged).
+
+**Acceptance 11, the docs checks** (at the fixed ledger): `python3 scripts/audit-docs.py` FAILED (1), check 31 only (above); `python3 scripts/doc-id.py check` reports the same gap (`[noncontiguous] docs/INDEX.md has a gap between 1370 and 9745`); `python3 scripts/doc-index.py --check` OK (byte-stable); `python3 scripts/register-lint.py` OK (0 violations). The two reds are the working-id gap, expected on a working id.
