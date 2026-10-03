@@ -1,9 +1,9 @@
 ---
-id: PL-9746
+id: PL-1371
 family: plan
 kind: map
 title: P2 scope-freeze lane-loading plan — every remaining P2 slice by Work, lane and dependency order against the 4 Nov code freeze
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-03
 owner: planner
 tree: 49cd25be441382aebc1cc9c9ff325bd73fd81bc1
@@ -15,15 +15,17 @@ corrected_by: []
 relates: [CR-1212, RL-1263, PL-1237, PL-1267, PL-1268, PL-1276, PL-1277, PL-1254, PL-1286, PL-1364, PL-1368, FD-1209, FD-1244, FD-1245, FD-1356, FD-1357, FD-1358, FD-1366]
 ---
 
-# PL 9746 (working id) — P2 scope-freeze lane-loading plan
+# PL-1371 — P2 scope-freeze lane-loading plan
 
 > **This is a load plan, not an implementation plan.** It says what P2 has left to build, which
 > gate slot carries each slice, in what order, and what that costs against the code freeze. It
-> builds nothing and edits no other record. Its working id is **9746**, reserved by the lead in
-> `eta.md` ("9746 | PL (map) | planner-lanes"), and is minted by the lead in merge order.
+> builds nothing and edits no other record. It was drafted as working id **9746**, reserved by the
+> lead in `eta.md` ("9746 | PL (map) | planner-lanes"), and minted **PL-1371** on 2026-10-03 with the
+> id the lead allocated (`python3 scripts/doc-id.py next` printed `1371`). It is `active`: every
+> blocking decision point has its resolver (§9).
 > **Executors bind nothing here:** each slice still runs from its own leaf plan, spawned from
 > `.claude/roles/executor.md`. The lead dispatches from the priority list (§5) and the
-> maintainer accepts or amends §8.
+> maintainer accepted §8 with four amendments on 2026-10-03 (§9).
 
 ## Goal
 
@@ -54,7 +56,7 @@ Every command runs from a checkout of this branch, at the repository root.
 
 1. **Every open P2 slice row is in the inventory.** This prints nothing:
    ```bash
-   P=docs/plans/PL-09746-p2-scope-freeze-lane-loading-plan-every-remaining-slice-against-the-code-freeze-map-plan.md
+   P=docs/plans/PL-01371-p2-scope-freeze-lane-loading-plan-every-remaining-slice-against-the-code-freeze-map-plan.md
    awk 'NR>=555 && NR<1406' docs/roadmap.md | python3 -c "
    import re,sys
    cur=None
@@ -75,8 +77,11 @@ Every command runs from a checkout of this branch, at the repository root.
    its first line and, on the `baseline R=2.0` line under `--- eff 1.00`, `ALL Sat 31 Oct`.
 4. **Every option has a cost and the recommendation is one line.** `grep -c '^\*\*Cost' "$P"`
    prints `3`, and `grep -c '^\*\*Recommendation' "$P"` prints `1`.
-5. **Docs checks.** `python3 scripts/audit-docs.py` fails only check 31 (the working-id gap)
-   until the lead mints this plan; `python3 scripts/doc-index.py --check` exits 0.
+5. **Docs checks.** `python3 scripts/audit-docs.py`, `python3 scripts/doc-index.py --check` and
+   `python3 scripts/doc-id.py check` each exit 0.
+6. **The inventory re-derives.** §8.1 item 3's command, run with tree `d8537220` in place of
+   `origin/main`, prints `remaining 46 | §3 rows still open or uncut 46 | open P2 rows not in §3 0`
+   on its last line: §3's 47 build rows less WK-675 S12, cut to P3 by DP-2 (a).
 
 ## Global Constraints
 
@@ -88,6 +93,10 @@ Every command runs from a checkout of this branch, at the repository root.
   (the maintainer's 24h usage report); add them to the handover as rules 12–16"):** at most 3 live
   sessions besides the lead, "one executor per lane (≤2) plus ONE auditor-or-DM at a time";
   one audit per artifact and one scoped re-check at most; one DM session per Work per day.
+  **A planner occupies that one preparation slot**, and when a lane is idle its slot may run a
+  second preparation session, the total staying 3 (the maintainer, by delegation, answering the
+  lead's amendment 4, entry "2026-10-03 14:56:08 BST — PL 9746 (#1076 @ee0ea8d2): ACCEPTED with your four amendments; DP-1 (a), DP-2 (a), DP-3 (a); amendment 4 answered; DP-4 to the user; no separate audit" in
+  `~/gi-pricing-plan.local/channel/to-lead.md`).
 - **Dates (`docs/roadmap.md` "P2 freeze dates and target"):** code freeze Wed 2026-11-04 (G1),
   docs freeze Thu 2026-11-05, exit demo Thu 2026-11-12. They are a forecast, not a target: "No
   Work, slice, plan, ruling or merge waits for a date." Scope freeze is today: "No new Work enters
@@ -106,10 +115,12 @@ slices → the script) finishes between 13 and 17 Oct in every scenario modelled
 before the code freeze. What does not fit comfortably is **G1**: all seven open P2 Works
 delivered. That is **47 build slices** (§3) on **2 gate slots**.
 
-- At the planning rate of 1 slice per lane per day, working **every day** (the rhythm the P2
-  dates assume), the 47 finish on **Sat 31 Oct**, 4 days inside the freeze.
-- Working **five days in seven** (the rhythm the dates block says "slips about two weeks"; the
-  2-day pause of 1–3 Oct was this), they finish on **Tue 10 Nov**, 6 days late.
+- **The planning baseline is five days in seven** (the rhythm the dates block says "slips about
+  two weeks"): at the planning rate of 1 slice per lane per day, the 47 finish on **Tue 10 Nov**,
+  6 days late. The 1–3 Oct pause was forced by the usage budget, which still binds, so this is
+  the rhythm to plan on (the lead's amendment 1, adopted by the maintainer; §9).
+- **The best case is every day** (the rhythm the P2 dates assume): the 47 finish on
+  **Sat 31 Oct**, 4 days inside the freeze.
 
 The rate is PL-1286's and the P2 sizing table's likely figure (§4). The observed rate in the
 last burst was higher, but it ran under looser session rules than rules 12–16 now allow.
@@ -189,7 +200,7 @@ Dependencies are `PL-1286` `:302-317`'s "Depends on" column plus the holds.
 | S11 | — | 1 | A | S10 | — |
 | S8 | — | 1 | A | S1; WK-673 S4 | — |
 | S9 | — | 1 | A | S3; WK-1250 S3 | conditional cut, §8 C2 |
-| S12 | — | 1 | — | `SL-1260` | **recommended to P3 now**, §8 C1 |
+| S12 | — | 1 | — | `SL-1260` | **cut to P3** (DP-2 (a)), §8 C1 |
 
 ### 3.4 WK-690 — `expression` objectives (map `PL-1268`; 3 build slices left)
 
@@ -241,16 +252,15 @@ order and appends the rest after "…".
 | 3 | FD-1356 fix (carries FD 9747 and FD 9748; states the demo DB end state) | 1 | WK-674 S2 merged | PL 9762 (#1063 `d4b69066`) + RL 9750 (#1070): final re-check, mint |
 | 4 | `SL-1367` FD-1335 Part A (`PL-1364`) | 1 | never concurrent with S2 (score.py) | minted; activation |
 | 5 | FD 9752 one ApprovalRequest shape | 1 | a DM rules the decision enum; after 3 (`approvals.py`) | FD filed (#1066); deadline before the exit demo |
-| 6 | Exit demo (a): the real freMTPL2 algorithm | 1 | 1; Spike S1 of PL 9776 filed; FD 9773 minted | **unplanned**; home is DP-1 |
-| 7 | Exit demo (b): the scripted `WF-699` journey | 1 | WK-673 S6, WK-674 S2, 3, 5, 6 | **unplanned**; home is DP-1 |
+| 6 | Exit demo (a): the real freMTPL2 algorithm | 1 | 1; Spike S1 of PL 9776 filed; FD 9773 minted | **unplanned**; WK-1178 by DP-1 (a) |
+| 7 | Exit demo (b): the scripted `WF-699` journey | 1 | WK-673 S6, WK-674 S2, 3, 5, 6 | **unplanned**; WK-1178 by DP-1 (a) |
 | 8 | F35 remedy (PL 9776) | 1 | 1; 4 | PL 9776 (#1051): align to RL 9771/9770, audit, mint |
 | 9 | FD-1366 residue: the routes no handler-editing slice types (§8 (iii)) | 0–1 | — | leaf plan, sized at WK-1250 S2's leaf |
 | 10 | FD 9772 check (audit-docs) | 1 | the docs track has marked every block (§7) | leaf plan |
 | 11 | FD 9755 discharge (documented `migrate --verify` form plus the refusal) | 1 | — | leaf plan |
 | — | NFR-526, NFR-527, NFR-536 measured on the exit tree | solo window | code freeze | at the exit tree, both slots empty |
 
-Items 6 and 7 are WK-1178's only if DP-1 is ruled (a); otherwise they leave this table and keep
-their place in §5.
+Items 6 and 7 are WK-1178's: DP-1 was resolved (a) (§9). They keep their place first in §5.
 
 ## 4. Rates, and why these
 
@@ -268,7 +278,9 @@ their place in §5.
   slot. 39 slices have no leaf plan (§3), so about 39 plan audits, 47 slice audits and about 10
   rulings, around 96 sessions in about 25 days, or 4 a day back to back. The model runs it at 2
   leaf plans ready per day (R=2) and at 1.5 (R=1.5). Below 1.5, preparation, not the lanes,
-  sets the date.
+  sets the date, so R is measured at every Friday checkpoint (§8.1). Plans share that slot too:
+  a planner occupies it, and an idle lane's slot may run a second preparation session (Global
+  Constraints, Sessions). That raises the ceiling on R; it does not change the model's R=2.
 
 ## 5. Dependency order: the dispatch priority list
 
@@ -299,14 +311,14 @@ places it. The week cells are a view of Appendix A's day table, which the lead r
 re-baseline (§8). The model ignores file contention beyond rule 4's pairs, which costs some
 packing. Read the table as an order, not as dates.
 
-**Preparation order (the one auditor-or-DM slot, in this order):** (1) this plan's acceptance;
+**Preparation order (the one auditor-or-DM slot, in this order):** (1) this plan's acceptance (done 2026-10-03, §9);
 (2) mint batch B (FD 9775, OQ 9774, FD 9773); (3) the FD-1357 batch (#1057 scoped re-check; RL 9757
 + PL 9764 + SL 9763); (4) PL 9789 mint and activation (WK-690 S3); (5) RL 9751 audit (#1068) and
 the maintainer's four DM questions, batch C (#974 + FD 9772), then the PL 9765 re-check and mint
 (WK-674 S2); (6) `PL-1267` activation, WK-673's SL rows, its S1 and S2 leaves; (7) PL 9762 + RL
 9750 final re-check and mint (FD-1356 fix); (8) one WK-675 DM session: DP-3 (OQ-1223) plus the
 pending RL 9753, RL 9766, RL 9767 texts; (9) one DM session for FD 9752's enum and FD-1244 and
-FD-1245; (10) the RL-1343 leaf plan; (11) the exit-demo leaves, once DP-1 is ruled; then leaves in
+FD-1245; (10) the RL-1343 leaf plan; (11) the exit-demo leaves, under WK-1178 (DP-1 (a)); then leaves in
 §5's order, about two days ahead of their slot.
 
 ## 6. What the model says
@@ -324,8 +336,11 @@ FD-1245; (10) the RL-1343 leaf plan; (11) the exit-demo leaves, once DP-1 is rul
 | (ii) a third lane, R=1.5 | Mon 02 Nov | Sun 08 Nov | as baseline |
 | (iii) WK-675's views as a second Work | Thu 29 Oct | Tue 10 Nov | as baseline |
 
-Read across: **on the every-day rhythm, two lanes fit** with 2 to 4 days of slack, and cutting
-S12 alone buys 3 more. On five days in seven, only a third lane with fast preparation fits by
+Read across: **on the five-days-in-seven baseline, two lanes do not fit**; **on the every-day
+best case they fit** with 2 to 4 days of slack, and cutting S12 alone buys 3 more. **That slack
+is an upper bound:** the model has no rework, no contention below rule 4's pairs and no new
+slices from FD 9772's code-side errors (Appendix A, "What the model is not"; the lead's
+amendment 3). On five days in seven, only a third lane with fast preparation fits by
 4 Nov. Cutting 5 slices gets to 2 days late, and those 2 days come out of the docs freeze and the
 exit-demo week, which have 8 days between them. On the every-day rhythm, the last slices after
 the cuts are WK-675 S9 and the FD 9772 check, which waits for the docs track.
@@ -409,15 +424,101 @@ If that is later than Wed 4 Nov, the next C2 cut goes to the maintainer that day
 cut and it is still later, (ii) goes to the user. This keeps every cut reversible until the data
 says it is needed.
 
+**Accepted 2026-10-03** by the maintainer, by delegation, with the lead's four amendments
+(§9 DP-1 to DP-3), and DP-4 ruled by the user (§9). On the baseline (§1) the trigger is expected
+to fire at the first checkpoint, Fri 9 Oct. **When it fires, the lead brings the maintainer the
+specific cut that day; a cut is never applied automatically** (DP-3).
+
+### 8.1 The Friday checkpoint
+
+Each Friday from Fri 9 Oct, and at WK-674 S2's merge, the lead records these in `eta.md`, each
+with the tree it was read at:
+
+1. **The trigger** (§8): `today + remaining ÷ (slices merged since 3 Oct ÷ days elapsed)`, with
+   "remaining" from item 3. Later than Wed 4 Nov → the next C2 cut to the maintainer that day.
+2. **R, leaf plans activated per day since 3 Oct** (the lead's amendment 2). Predicate: plan
+   files under `docs/plans/` whose header reads `kind: leaf` and `status: active`, counted at the
+   checkpoint tree minus at `49cd25be` (where it prints `129`), divided by days elapsed. A leaf
+   plan superseded or retired inside the window drops out, so R reads low by that many. **R < 1.5
+   is escalated to the maintainer the same day, separately from the trigger**: below it,
+   preparation sets the date (§4). Saved as `r.py` and run as `python3 r.py 49cd25be origin/main`:
+   ```python
+   import re, subprocess, sys
+   g = lambda *a: subprocess.run(["git", *a], capture_output=True, text=True, check=True).stdout
+   for T in sys.argv[1:]:
+       n = 0
+       for f in g("ls-tree", "-r", "--name-only", T, "docs/plans").split():
+           h = g("show", f"{T}:{f}").split("\n---", 1)[0]
+           n += bool(re.search(r"^kind: leaf", h, re.M) and re.search(r"^status: active", h, re.M))
+       print(T, "active leaf plans", n)
+   ```
+3. **The inventory, re-derived** (the maintainer's acceptance: "the Friday checkpoint re-derives
+   it with a stated command, and a different count is reported"). The 47 of §3 is the planner's
+   count at `49cd25be`. The command reads §3's build rows (an `Est` cell that starts with a digit
+   or `0–1` and does not say `docs`) and the `SL-` rows of `docs/roadmap.md` `## P2` at tree `T`.
+   A §3 row marked **cut to P3** never counts (S12 now; a later C2 cut is marked the same way
+   in the same commit as its maintainer line). Any other §3 row counts as remaining when its `SL-` row (matched by id, or by Work and `Slice N`) is
+   `draft` or `active`, or when it has no row yet (`uncut`). An open `## P2` row that matches no
+   §3 row is printed `NEW` and counted. Two cases are struck by hand from the listing: a `NEW`
+   WK-1178 row, matched to its §3.8 item (WK-1178 rows carry no slice number, so both would
+   count), and an `uncut` item that merged without an `SL-` row. **The result is the "remaining"
+   of item 1; a count other than 46 (47 less S12) less what merged is reported to the maintainer with its
+   listing.** Saved as `inv.py` and run as `python3 inv.py "$P" origin/main`, with `P` as in
+   Acceptance 1:
+   ```python
+   import re, subprocess, sys
+   P, T = sys.argv[1], sys.argv[2]
+   rm = subprocess.run(["git", "show", f"{T}:docs/roadmap.md"], capture_output=True, text=True, check=True).stdout.splitlines()
+   lo = next(i for i, l in enumerate(rm) if l.startswith("## P2"))
+   hi = next(i for i, l in enumerate(rm) if l.startswith("## P3"))
+   rows, w, cur = {}, None, None
+   for l in rm[lo:hi]:
+       if m := re.match(r"### (WK-\d+)", l): w = m.group(1)
+       if m := re.match(r"#### (SL-\d+)(?:.*?Slice (\d+[a-z]?)\b)?", l): cur = m.group(1); rows[cur] = [w, m.group(2) and "S" + m.group(2), None]
+       if (s := re.match(r"status:\s*(\w+)", l)) and cur: rows[cur][2] = s.group(1); cur = None
+   opn = lambda i: rows[i][2] in ("draft", "active")
+   plan = open(P).read().split("\n## 3. ")[1].split("\n## 4. ")[0].splitlines()
+   left, seen, w = [], set(), None
+   for l in plan:
+       if m := re.match(r"### 3\.\d+ (WK-\d+)", l): w = m.group(1); continue
+       if not l.startswith("|") or set(l.strip()) <= set("|-"): continue
+       c = [x.strip() for x in l.strip().strip("|").split("|")]
+       if "Est" in c: est, idc = c.index("Est"), next(c.index(h) for h in ("Row", "Item", "Slice") if h in c); continue
+       sl = re.search(r"SL-\d+", c[idc])
+       key = (re.match(r"(S\d+[a-z]?)", c[0]) or [None])[0]
+       hit = sl.group(0) if sl else next((i for i, r in rows.items() if r[0] == w and key and r[1] == key), None)
+       if hit: seen.add(hit)
+       if "cut to P3" in l: continue
+       if not re.match(r"(\d|0–1)", c[est]) or "docs" in c[est]: continue
+       if hit is None or opn(hit): left.append((w, c[0][:28], hit or "uncut"))
+   new = [(r[0], i, "NEW") for i, r in rows.items() if opn(i) and i not in seen]
+   for x in left + new: print(*x, sep="  ")
+   print("remaining", len(left) + len(new), "| §3 rows still open or uncut", len(left), "| open P2 rows not in §3", len(new))
+   ```
+   At `49cd25be` and at `d8537220` it prints `remaining 46 | §3 rows still open or uncut 46 | open
+   P2 rows not in §3 0`: the 12 open `SL-` rows (5 of WK-674, 3 of WK-690, 2 of WK-1250,
+   `SL-1369` and `SL-1367`) plus 34 uncut. With the `cut to P3` line removed it prints 47, the
+   planner's count, re-derived. It fails on broken input: with §3's `SL-1369` cell changed to
+   `SL-1360` (closed at `d8537220`), it prints `remaining 46 | §3 rows still open or uncut 45 |
+   open P2 rows not in §3 1`, dropping the closed row and listing `SL-1369` as `NEW`.
+4. **The third lane is revisited at the Fri 9 Oct checkpoint** (the user's ruling, §9 DP-4).
+
 ## 9. Decision points
+
+Every row is resolved or names its step, so the plan is `active` (`document-ids.md` §1.7, "Freeze
+is mechanical"). The resolutions cite three dated entries in `~/gi-pricing-plan.local/channel/`:
+the lead's verdict in `from-lead-2026-10-03.md`, entry "2026-10-03 14:55:17 BST — LEAD VERDICT on PL 9746 (#1076 @ee0ea8d2): ADOPT with four amendments; DP-1..3 to the maintainer, DP-4 to the user"; the
+maintainer's acceptance, by delegation, in `to-lead.md`, entry "2026-10-03 14:56:08 BST — PL 9746 (#1076 @ee0ea8d2): ACCEPTED with your four amendments; DP-1 (a), DP-2 (a), DP-3 (a); amendment 4 answered; DP-4 to the user; no separate audit"; and the user's
+ruling in `to-lead.md`, entry "2026-10-03 14:57:13 BST — DP-4 (the third lane): THE USER ruled "Not now"". The lead's four amendments
+are applied at §1 (1), §8.1 item 2 (2), §6 (3) and Global Constraints, Sessions (4).
 
 | # | Question | Options | Recommendation | Kind | Blocking? | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-1 | Which Work carries the two exit-demo slices? | (a) WK-1178; (b) a new Work, opened today, before the scope freeze closes; (c) WK-673 or WK-674 | (a): its scope sentence fits, G1 exempts it, and no new Work enters | scope | yes, for the exit-demo SL rows | maintainer |
-| DP-2 | WK-675 S12 to P3 now? | (a) yes, with DP-7/OQ-1285; (b) keep it in P2 | (a) | scope | yes, for WK-675's DP-7 ruling | maintainer |
-| DP-3 | The C2 conditional cuts and their trigger, as §8 states them | (a) accept; (b) amend the order or the trigger; (c) cut now | (a) | scope | no: default (a) applied from Fri 9 Oct | maintainer |
-| DP-4 | A third lane | (a) not now, held for the trigger; (b) now | (a) | scope | no: default (a) | the user |
-| DP-5 | WK-675 DP-3 (OQ-1223) and DP-7 (OQ-1285), held to today | DP-3: rule it now, since S5 stays in P2. DP-7: moves to P3 if DP-2 (a); else rule it now | as stated | decision point | no: resolved before S5's and S12's leaves go `active` | decision-maker, in preparation item 8 |
+| DP-1 | Which Work carries the two exit-demo slices? | (a) WK-1178; (b) a new Work, opened today, before the scope freeze closes; (c) WK-673 or WK-674 | (a): its scope sentence fits, G1 exempts it, and no new Work enters | scope | yes, for the exit-demo SL rows | **Resolved (a)** by the maintainer, by delegation, entry "2026-10-03 14:56:08 BST — PL 9746 (#1076 @ee0ea8d2): ACCEPTED with your four amendments; DP-1 (a), DP-2 (a), DP-3 (a); amendment 4 answered; DP-4 to the user; no separate audit": the two slices go to WK-1178 and stay first in lane B's priority under §5 rule 1 |
+| DP-2 | WK-675 S12 to P3 now? | (a) yes, with DP-7/OQ-1285; (b) keep it in P2 | (a) | scope | yes, for WK-675's DP-7 ruling | **Resolved (a)** by the maintainer, by delegation, entry "2026-10-03 14:56:08 BST — PL 9746 (#1076 @ee0ea8d2): ACCEPTED with your four amendments; DP-1 (a), DP-2 (a), DP-3 (a); amendment 4 answered; DP-4 to the user; no separate audit": S12 to P3 now, with DP-7/OQ-1285, deferred with an owner (the maintainer; event: the P2 phase closure record, for P3's first plan). The lead applies it as a dated line on WK-675's roadmap row (Task 2) |
+| DP-3 | The C2 conditional cuts and their trigger, as §8 states them | (a) accept; (b) amend the order or the trigger; (c) cut now | (a) | scope | no: default (a) applied from Fri 9 Oct | **Resolved (a)** by the maintainer, by delegation, entry "2026-10-03 14:56:08 BST — PL 9746 (#1076 @ee0ea8d2): ACCEPTED with your four amendments; DP-1 (a), DP-2 (a), DP-3 (a); amendment 4 answered; DP-4 to the user; no separate audit": the order and the trigger as amended (§8, §8.1). When it fires, the lead brings the maintainer the specific cut that day; it is not applied automatically |
+| DP-4 | A third lane | (a) not now, held for the trigger; (b) now | (a) | scope | no: default (a) | **Resolved (a), not now,** by the user, entry "2026-10-03 14:57:13 BST — DP-4 (the third lane): THE USER ruled "Not now"": two lanes; WK-675 S12 cut now; further cuts on the Fri 9 Oct trigger; a code-freeze slip of a few days accepted as possible; the third lane revisited at the Fri 9 Oct checkpoint (§8.1 item 4) |
+| DP-5 | WK-675 DP-3 (OQ-1223) and DP-7 (OQ-1285), held to today | DP-3: rule it now, since S5 stays in P2. DP-7: moves to P3 if DP-2 (a); else rule it now | as stated | decision point | no: resolved before S5's and S12's leaves go `active` | decision-maker, in preparation item 8: DP-3 (OQ-1223) in the next WK-675 DM batch (adopted in entry "2026-10-03 14:55:17 BST — LEAD VERDICT on PL 9746 (#1076 @ee0ea8d2): ADOPT with four amendments; DP-1..3 to the maintainer, DP-4 to the user"); DP-7 moves to P3 with S12 (DP-2 (a)) |
 | DP-6 | Does exit demo (b)'s script call any WK-674 S3–S6 route? | — | expected no (§7) | fact | no: checked in (b)'s leaf plan; until then (b) depends on S2 only | planner, at (b)'s leaf |
 | DP-7 | FD 9759's re-homing if WK-675 S3 is cut | — | moot: S3 is not a cut candidate | scope | no | — |
 
@@ -425,27 +526,29 @@ says it is needed.
 
 A load plan's tasks are the steps that put it into use. None is an executor's.
 
-- [ ] **Task 1 (the maintainer; the user for DP-4):** accept or amend §8 and rule DP-1 to DP-4, each
-  by a dated line. This plan stays `draft` until DP-1 and DP-2 have resolvers.
+- [x] **Task 1 (the maintainer; the user for DP-4):** accept or amend §8 and rule DP-1 to DP-4, each
+  by a dated line. Done 2026-10-03: §9 cites each entry.
 - [ ] **Task 2 (the lead):** apply each accepted cut as the maintainer's dated line on the Work's
   roadmap row, and route DP-5 to the WK-675 DM session (preparation item 8).
 - [ ] **Task 3 (the planner, on the lead's order):** cut the exit-demo SL rows under DP-1's Work,
   `draft`, in `docs/roadmap.md`, and write their leaf plans in §5's preparation order.
-- [ ] **Task 4 (the lead, each Friday from Fri 9 Oct, and at WK-674 S2's merge):** compute the
-  §8 trigger from measured throughput, record it in `eta.md`, and raise the next C2 cut or (ii)
-  when it fires. Re-run Appendix A with the merged slices removed when the inventory changes.
+- [ ] **Task 4 (the lead, each Friday from Fri 9 Oct, and at WK-674 S2's merge):** run §8.1:
+  the trigger, R and the re-derived inventory, recorded in `eta.md`; bring the next C2 cut to
+  the maintainer when the trigger fires, escalate R < 1.5 the same day, and revisit the third
+  lane on Fri 9 Oct. Re-run Appendix A with the merged slices removed when the inventory changes.
 
 ## 10. Self-review
 
 - Every open P2 SL row and every slice in the seven map plans' tables is in §3 (Acceptance 1, 2).
   The `eta.md` figure "Lane A's ~25 slices" counted lane A only. §3 counts 47 build slices across
   both lanes, including WK-674's five (`eta.md` read four) and WK-1178's 11 (the two exit-demo
-  slices among them, pending DP-1).
+  slices among them, by DP-1 (a)). WK-675 S12 stays listed, marked **cut to P3** (DP-2 (a)).
 - No date here waits for a date: the trigger reads throughput, not the calendar.
-- No id is minted or renumbered. Working ids are written with a space (`PL 9765`) and only minted
+- This plan's own id was minted from working id 9746 as `PL-1371`; no other id is minted or
+  renumbered. Working ids are written with a space (`PL 9765`) and only minted
   ids go in `relates:`.
 - What this plan does not do: cut SL rows (for WK-673, WK-675 S2–S14, WK-1169, WK-1170 and the
-  exit demo, they are cut when their map plans activate or DP-1 is ruled), rule any decision point,
+  exit demo, they are cut when their map plans activate or on the lead's order under DP-1 (a)), rule any decision point,
   or edit `docs/roadmap.md`.
 
 ## Appendix A — the load model (verbatim)
@@ -453,7 +556,7 @@ A load plan's tasks are the steps that put it into use. None is an executor's.
 `lanesim.py`:
 
 ```python
-"""Lane-loading simulation for PL 9746 (working id). Day 0 = Sat 2026-10-03.
+"""Lane-loading simulation for PL-1371 (drafted as working id 9746). Day 0 = Sat 2026-10-03.
 
 Slice tuple: (id, work, deps, ready_day, duration_days, kind)
   ready_day: day its leaf plan is minted+active; None = needs a leaf plan from the prep queue.
