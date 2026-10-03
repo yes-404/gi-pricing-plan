@@ -985,7 +985,11 @@ def score_batch(bundle: CompiledBundle, frame: pl.LazyFrame, *,
 # pricing_core/rating/analysis.py
 def dislocate(baseline: CompiledBundle, candidate: CompiledBundle,
               portfolio: pl.LazyFrame, spec: DislocationSpec) -> DislocationRun
-def attribute(changes: Sequence[BundleDelta], portfolio: pl.LazyFrame) -> list[Attribution]
+async def derive_changes(baseline: RatingVersion, candidate: RatingVersion,    # added 2026-10-03 (WK-673 S1, RW3)
+                         resolver: ArtifactResolver) -> list[BundleDelta]
+async def attribute(baseline: RatingVersion, candidate: RatingVersion,         # amended 2026-10-03 (WK-673 S1,
+                    portfolio: pl.LazyFrame, spec: DislocationSpec,            # RL-1264 premise: the old form took
+                    resolver: ArtifactResolver) -> Attribution                 # no baseline and could not compile subsets)
 
 # pricing_core/rating/testing.py
 def run_regression(bundle: CompiledBundle, suite: RegressionSuite,
@@ -1044,6 +1048,8 @@ def diff_vs_seed(seed_cells: Cells, current_cells: Cells,
                  keys: Sequence[RateTableKey], value: RateTableValue, *,
                  weights: Weights | None = None) -> RateTableDiff
 ```
+
+*`DislocationSpec` (added 2026-10-03, `RL-1394`): `baseline_ref`, `candidate_ref`, `portfolio_dataset_version_id`, `purpose`, `as_at` (§4.8's portfolio frame), `segments` (the Factors FR-263 averages by), `band_edges_pct`, `mover_threshold_pct` (FR-263), and optional `change_groups` (RW3). `BundleDelta`: one derived change, `id`, `kind`, `description`, as §4.6's `derived_changes` item. `Attribution`: §4.6's `derived_changes`, `change_groups`, `attribution` and `attribution_summary` together. All three are defined in `model-schema` by the slice that first returns them (WK-673 Slices 2 and 3) and match §4.6 field for field.*
 
 > *(Corrected 2026-09-28, RL-1172 — the decision-maker ruled the spec was wrong on F59 and
 > on all four limbs of F60, and the code right.)* The block above had omitted nine live
