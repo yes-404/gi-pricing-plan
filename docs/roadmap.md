@@ -880,7 +880,7 @@ A database trigger, primary, on every approval-capable table refuses `approved` 
 id: SL-1256
 family: slice
 title: Slice 2: the Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit and NFR-498 for deploy)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-29
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
@@ -893,6 +893,7 @@ relates: [PL-1237]
 The Environment and Deployment records, promotion order and their audit limb for deploy (FR-272, NFR-498), with the carried rulings. `PL-1237` Task 2. Starts after Slice 1 closes; its leaf plan also waits on `OQ-1234` (the maintainer's acceptance line on `PL-1237`).
 
 *Dated 2026-10-03 (at PL-1392's mint): the leaf plan is now **`PL-1392`**, which **supersedes `PL-1306`** on the maintainer's entry "2026-10-01 10:10:32 BST — WK-674 S2 currency audit: ORDER AMENDED to (b) S2 → FD-1356 fix; a superseding PL for S2; …" and its 10:10:46 addendum: the 7 new routes typed both ways, Acceptance 8 Branch A, order (b) S2 → the FD-1356 fix, and never concurrent with FD-1335 Part A's slice (both edit `score.py`). This row's status and fields are unchanged.*
+(Activated 2026-10-03 as WK-674 Slice 2, on the maintainer's GO check, "2026-10-03 20:02:13 BST — DISPATCH GO: WK-674 Slice 2 (SL-1256 / PL-1392) on lane A; executor-1256 starts after #1087 merges"; dispatch record DISPATCH-WK-674-SL1256-2026-10-03.)
 
 #### SL-1257 — Slice 3: environment isolation (FR-430, FR-431, register F54 and F48, NFR-496 prod-sampling limb)
 
