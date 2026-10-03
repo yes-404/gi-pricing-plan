@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/vue";
 import { describe, expect, it, vi } from "vitest";
 
+import { cellUnder } from "@/test-tables";
 import { DIAGNOSTICS } from "@/views/__tests__/fixtures";
 
 import GbmEvalCurveChart from "../GbmEvalCurveChart.vue";
@@ -52,6 +53,21 @@ describe("GbmEvalCurveChart", () => {
     render(GbmEvalCurveChart, { props: { evalCurve: CURVE } });
     const table = screen.getByRole("table", { name: /evaluation curve/i });
     expect(within(table).getAllByRole("row")).toHaveLength(CURVE.length + 1);
+  });
+
+  it("NFR-463: puts each partition's value under its own heading, read by label", () => {
+    // RL-1307 §Acceptance, the fourth violation: the table is compared with the chart's source
+    // data cell by cell, by label. The fixture's train and holdout differ at every row.
+    render(GbmEvalCurveChart, { props: { evalCurve: CURVE } });
+    const table = screen.getByRole("table", { name: /evaluation curve/i });
+    expect(cellUnder(table, /^1\s/, "Train")).toHaveTextContent(String(CURVE[1]?.train));
+    expect(cellUnder(table, /^1\s/, "Holdout")).toHaveTextContent(String(CURVE[1]?.holdout));
+    expect(cellUnder(table, /^2\s/, "Train")).toHaveTextContent(String(CURVE[2]?.train));
+    expect(within(table).getAllByRole("rowheader").map((h) => h.textContent?.trim())).toEqual([
+      "0",
+      "1",
+      "2",
+    ]);
   });
 
   /**
