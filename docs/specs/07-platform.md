@@ -258,6 +258,12 @@ Failure shape:
 }
 ```
 
+> **Environment: three dated clarifications, 2026-10-03 (WK-674 Slice 2, `PL-1392`).** The example above is not rewritten.
+>
+> - **`live_deployments` is derived.** It is read from the Deployment rows of `03` §4.12 and is never stored a second time. The Deployment's shape is declared once, in `03`.
+> - **`slug` beside `name`** (`RL-1301` A.6). Every Environment has an immutable `slug` (the grammar of a reference slug; the seeds are `dev`, `uat` and `prod`) and a mutable display `name`. The slug is what the Approval Policy's `environment`, an approval request's `environment`, every `{env}` path parameter and every Environment reference name, and FR-428's rename changes the `name` only. A change of slug is refused, and a slug is never reissued, so a retired Environment keeps its row and its slug. Environments are deployment-wide, not per workspace (ADR-710).
+> - **`settings` is not in this slice's shape.** The `settings` object lands with WK-674 Slice 3 (`OQ-1235`, decided by `RL-1311`). `requires_prior_environment` is the predecessor that FR-429's predicate reads; the seeds carry `null`, `dev` and `uat`.
+
 ### 4.3 `ServiceAccount` / API key
 
 ```json
@@ -305,6 +311,8 @@ The key value itself appears exactly once, in the creation response (FR-389).
 | `GET` | `/api/v1/jobs/{id}/events` | SSE stream of progress updates |
 | `GET`/`POST` | `/api/v1/environments` | List / create environments |
 | `PUT` | `/api/v1/environments/{name}/settings` | Update environment settings (audited) |
+| `PATCH` | `/api/v1/environments/{slug}` | Change an environment's display name or description; the slug is immutable (`admin:manage_environments`) |
+| `POST` | `/api/v1/environments/{slug}/retire` | Retire an environment that has no live Deployment and that no policy entry names |
 | `POST` | `/api/v1/service-accounts` | Create a service account + key (key shown once) |
 | `POST` | `/api/v1/service-accounts/{id}/rotate` | Rotate with an overlap window |
 | `DELETE` | `/api/v1/service-accounts/{id}/keys/{prefix}` | Revoke |

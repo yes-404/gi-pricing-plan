@@ -199,6 +199,10 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 | **FR-271** | Optional **shadow scoring**: a proportion of live traffic is additionally scored against a candidate version, with results recorded but never returned to the caller — the pre-deployment safety net feeding `05-monitoring.md`. |
 | **FR-272** | Every deployment, rollback, and routing change emits an Audit Event and a notification to a configured channel. **Amended 2026-09-28 (`RL-1232` DP-4): the two halves are split by phase.** WK-674 emits the Audit Event in the same transaction as the change. That event is the durable deployment event `05` consumes (§7). WK-674 builds ~~no channel and~~ no second event store. ~~Delivering a notification to a configured channel, with the retry and failure-surfacing obligations of `05` FR-336, is `05`'s alert routing, owned by WK-688 (Phase 4). Until WK-688 delivers it, no channel is configured and none is claimed.~~ **Amended 2026-09-29 (`RL-1232` DP-4, the maintainer's answer Q848-1): the channel is `07` FR-453's signed deployment-notification webhooks.** Which Work delivers FR-453's deployment-notification limb is open (`07` §10, `OQ-1233`). Until it is decided and delivered, no channel is configured and none is claimed. *(Amended 2026-09-29, `RL-1252`: `OQ-1233` is decided (b). The notification limb is deferred to Phase 4, with WK-688 as its owner, and is delivered through FR-453's signed webhooks, which WK-688 builds for both limbs. The Audit Event limb stays WK-674's, in Phase 2. Until WK-688 delivers the notification, no channel is configured and none is claimed.)* |
 
+> **The Deployment contract, added 2026-10-03 (WK-674 Slice 2, `PL-1392`), for FR-267.** The Deployment's shape, its invariants (append-only, `approved` Rating Versions only, a `rating_version` reference only), the Deployment Request that gates a `prod` deployment (`RL-1301` A) and the audit actions this Work emits are §4.12. The requirement above is not reworded. `GET /api/v1/environments/{env}/deployments` (§5.1) is the history that `06` FR-382 reads.
+>
+> **The Audit Event limb for deploy, dated 2026-10-03 (WK-674 Slice 2, `PL-1392`), for FR-272.** Slice 2 delivers the Audit Event limb for a deployment only: `deployment.created`, written in the same transaction as the Deployment row (§4.12). The rollback event `deployment.rolled_back` is Slice 5's, and the routing and shadow events are Slice 6's; §4.12 names all four once. The notification limb stays WK-688's (`RL-1232` DP-4, as amended above).
+
 ### 3.11 Numeric precision at the engine boundary
 
 Spike **S1** (2026-08-14, `zen-engine` 0.53.0) tested this end to end. The result splits
@@ -785,6 +789,43 @@ A Sub-graph Version is a stored, immutable fragment of a Rating Algorithm, addre
 - **Result types at create** (FR-227; `RL-1309` DP-S1-4). An output port whose declared type is incompatible with its producing step's result type is refused with `RATING_TYPE_MISMATCH`, naming the producing step and the port. Only producers whose type is known at save are checked: an `expression` step's `result_type` and an input port's declared type. An output produced by a `table`, `lookup` or `model_call` step is not checked at create, as for an algorithm today; its type is known only against the pinned artifact, at compile.
 - **Versions are immutable** (`00` FR-4). The server numbers versions: the current maximum plus one. There is no update and no delete. Every write records an Audit Event `sub_graph.created` with `entity_ref` `sub_graph:<slug>@<version>`, in the same transaction (`06` FR-368).
 
+### 4.12 `Deployment`
+
+*(Added 2026-10-03, WK-674 Slice 2, `PL-1392`; FR-267, and FR-272's Audit Event limb for deploy. The Deployment Request follows `RL-1301` A, the promotion skip `RL-1296`, the Environment's immutable slug `RL-1301` A.6. The shapes are `model-schema`'s: `Deployment`, `DeploymentRequest` and `PromotionSkip`, generated as `deployment.schema.json` and `deployment-request.schema.json`. The Environment is `07` §4.2's, declared once there.)*
+
+A Deployment binds one `approved` Rating Version to one Environment at a point in time. It is a record, not a Governed Artifact: it has no status and no approval lifecycle of its own. Approval attaches to the **Deployment Request** that precedes it, below.
+
+```json
+{
+  "id": "6f1c0e52-8a43-4d3b-9b0e-2f6a7c1d9e10",
+  "workspace_id": "0c6e8f0a-5d21-4b7e-8d62-1a9b3c4d5e6f",
+  "environment": "prod",
+  "rating_version_ref": "rating_version:motor-gb@27",
+  "bundle_hash": "sha256:9f2c…",
+  "deployed_by": "3b8e4d7a-1c52-4f09-a6d3-7e5b2c8f1a04",
+  "deployed_at": "2026-10-01T06:00:00Z",
+  "reason": "Annual rate review, effective 1 November",
+  "deployment_request_ref": "deployment:prod@3"
+}
+```
+
+- **`environment` is the Environment's slug** (`07` §4.2), which a rename cannot change (`RL-1301` A.6). `bundle_hash` is the Rating Version's compiled Bundle hash at the time of the deploy (FR-239). `deployment_request_ref` is the approved Deployment Request this Deployment executed, and is `null` only for a target that has no `deployment` entry in the Approval Policy (`06` §4.2; `RL-1301` A.5).
+- **Append-only.** A Deployment is never updated in place and never deleted (`00` FR-4). The live Deployment of an Environment is derived from these rows, never stored a second time (`07` §4.2).
+- **`approved` Rating Versions only** (FR-238). A request to deploy a version in any other status is refused.
+- **A Rating Version is the only deployable subject.** A `sub_graph` reference, or any reference whose type is not `rating_version`, is refused. A Sub-graph reaches a deployment only inside the Rating Version that pins it (§4.11).
+- **Audit actions this Work emits**, each named here once so that no later slice appends to the catalogue: `deployment.created` (WK-674 Slice 2: a Deployment row is written, `before` the previous live Deployment of the Environment or `null`, `after` this one, in the same transaction as the row); `deployment.rolled_back` (Slice 5, FR-269); `deployment.routing_changed` and `deployment.shadow_configured` (Slice 6, FR-270 and FR-271). The `entity_ref` of each names the Deployment or the Environment it changes.
+
+#### Deployment Request
+
+An Environment may be gated by a `deployment` entry in the Approval Policy (`06` §4.2; `prod` by default). A deploy into a gated Environment names an **approved Deployment Request**. A Deployment Request is an artifact owned by this module (`RL-1301` A.1, DP-S2-2).
+
+- **Reference form** `deployment:<environment slug>@<n>`, for example `deployment:prod@3`: the third request into `prod`. The slug is the target Environment's immutable slug, so a reference never changes its meaning; the version is monotone per Environment (`00` ID-2). `deployment` is a member of the artifact reference types (`ARTIFACT_TYPES` in `model-schema`; `docs/contracts/schemas/common/artifact-ref.schema.json` carries the same list), and an approval request for a Deployment Request carries `artifact_type: "deployment"`.
+- **Pins.** The request pins the approved Rating Version it deploys and the target Environment's identity. It is the subject of the `deployment` approval request, whose `environment` is the Environment's slug.
+- **Two pinned evidence items**, written once at submission and never updated (FR-356, `00` FR-4), the floor of `06` FR-364: `rating_version_approval`, the decided approval request of the pinned Rating Version; and `uat_deployment`, the predecessor item, which is **either** the id of the successful Deployment of that Rating Version in the predecessor Environment, **or** a `PromotionSkip` (`skipped_environment`, and a `reason` that is not empty after trimming). A skip is valid only where the target's environment-qualified `deployment` entry lists the skipped Environment (`RL-1296`; `07` FR-429).
+- **The deploy route executes only an approved request.** It re-evaluates `07` FR-429's one predicate from the request's **pinned** evidence and never re-reads a changeable source. A request is executed once. A target with no `deployment` entry needs no request: the predicate then reads the predecessor's successful Deployment directly, and no skip is possible (`RL-1301` A.5).
+- **Submission** is `POST /api/v1/environments/{env}/deployment-requests` (§5.1), which writes the request and submits it through the generic approval path in one transaction. The Deployer permission (`deployment:promote`) is checked with the target Environment as the resource (`06` FR-345).
+
+
 ---
 
 ## 5. Interfaces
@@ -823,6 +864,8 @@ A Sub-graph Version is a stored, immutable fragment of a Rating Algorithm, addre
 | `POST` | `/api/v1/environments/{env}/deployments/rollback` | Roll back (FR-269) |
 | `PUT` | `/api/v1/environments/{env}/shadow` | Configure shadow scoring (FR-271) |
 | `GET` | `/api/v1/traces?rating_version=&from=&to=` | Sampled production traces (FR-259) |
+| `GET` | `/api/v1/environments/{env}/deployments` | Deployment history for an environment (FR-267; read by `06` FR-382) |
+| `POST` | `/api/v1/environments/{env}/deployment-requests` | Submit a deployment request for approval (FR-267, FR-429) |
 
 **Error codes owned by this module:** `RATING_GRAPH_CYCLIC`, `RATING_GRAPH_UNRESOLVED_REF`,
 `RATING_TYPE_MISMATCH`, `MONETARY_FLOAT_REFUSED`, `EXPRESSION_NON_DETERMINISTIC`,

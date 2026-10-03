@@ -36,7 +36,7 @@ database `gipricing_agent-a0f7a7db50ec2ab16_83653597`, created from the template
 **Checks at that SHA.**
 
 - `RL-1296`, `RL-1301`, `RL-1379` and `RL-1380` are files under `docs/rulings/` (listed with
-  `ls docs/rulings | grep -E "RL-0(1296|1301|1380|1379)"`, four lines). #974 is RL-1380, minted.
+  `ls docs/rulings` filtered by the four numbers, four lines; the filter's text is dropped at Task 1 because audit check 32 read its zero-padded prefix as an id). #974 is RL-1380, minted.
 - `docs/roadmap.md`: `SL-1302` `status: closed`; `SL-1300` `status: closed`; `SL-1360` `status: closed`;
   `SL-1367` `status: draft` (not in flight); `SL-1256` `status: active`.
 - **Acceptance 8's predicate** (`grep -c -E '^> \| `(deployment:promote|admin:manage_environments)` \|.*\| WK-674 \|$'
@@ -99,6 +99,41 @@ file, so Acceptance 12 (f) has nothing else to fix).
 - Iterated count 141, OpenAPI count 141 (predicate: the plan's `python3 -c` over `docs/contracts/openapi/generated.json`
   and `_published_operations`, the same figure). Result: `9 passed`; `ruff check`, `ruff format --check` and `mypy`
   clean on the file.
+
+### Task 1 — spec: `03`, `07`, `06`
+
+Stamp 2026-10-03 22:15 BST (`TZ=Europe/London date`). Base: branch head `924980cf` on `8252741c`. Spec only; nothing in
+`packages/`, `backend/` or `docs/contracts/` is touched.
+
+- **Red first (spec form).** The plan gives no test for Task 1, so the red is the absence predicate, run over the
+  pre-edit text (the base's files saved to scratch files from the branch head, after the edit, so the values are the
+  base's): `grep -c -E "^### 4\.12 .Deployment"` over `03` printed 0;
+  `grep -c -E "deployment-requests|environments/\{slug\}/retire"` printed 0 over `03` and 0 over `07`;
+  `grep -c "Amended 2026-10-03"` over `06` printed 0. After the edit the first prints 1, the second 2 (`03`) and 1
+  (`07`), and `06` carries the FR-345 amendment. An absence predicate is not a test of the prose, so the auditor's read
+  of each note against RL-1301 is the real check.
+- **`03`** (`docs/specs/03-rating-engine.md`): new §4.12 `Deployment`, after §4.11 (free at this tree: §4 ended at
+  §4.11), carrying the shape and example, the four invariants, the four audit actions named once, and the Deployment
+  Request (reference `deployment:<environment slug>@<n>`, the two pinned evidence items, `PromotionSkip`, execute-once,
+  the generic reference type). §3.10: two dated blockquote notes after the table (FR-267 contract; FR-272's deploy
+  Audit Event limb); the FR-267..FR-272 rows are not reworded. §5.1: two rows appended at the end of the table (the
+  history `GET` and the `deployment-requests` `POST`); the owned-codes paragraph is not touched.
+- **`07`**: §4.2 one dated note (three bullets: `live_deployments` derived; `slug` beside `name`, RL-1301 A.6;
+  `settings` is Slice 3's, `requires_prior_environment` is FR-429's predecessor); §5.1 two rows after the settings row
+  (`PATCH /api/v1/environments/{slug}`, `POST /api/v1/environments/{slug}/retire`), worded as the plan gives them.
+- **`06`**: FR-345 gains a dated "or Environments" amendment citing RL-1301 B and CR-1212 item 4; §4.1 a dated note after
+  the `RL-1232` DP-6 paragraph showing an `environments` scope; §4.2 a dated RL-886 note after `separation_of_duties`.
+  The §4.2 note says the entry is added "by this slice" (the code is Task 2's), so no sentence is false at this commit.
+- **Deviations and flags, stated.** (1) **Glossary:** `spec-change` wants a new term in the glossary first, and the term
+  "Deployment Request" is new. The glossary rows are in `00` §2.3 (`Deployment` at `:166`), which the dispatch record
+  forbids this slice (WK-673 S1's). The term is defined where it is first used, in `03` §4.12; the glossary row is
+  left for the lead to route. (2) The plan's `ARTIFACT_TYPES` bullet: the list is stated in no spec table at this tree
+  (`grep -n -E "gipp_check" docs/specs/*.md` finds none naming the list); `03` §4.12 states that `deployment` joins it
+  and names `artifact-ref.schema.json`, which Task 2 regenerates. (3) §3.10 notes are blockquotes after the table, not
+  table rows, because a row would need a new id. (4) The §4.1 `environments` scope JSON is illustrative in the example's
+  own form; the stored form is `scope_type` and `scope_id`, as `ScopeType` has it.
+- **Not done here, by plan:** the skip field and `"skippable_predecessors"` in `06` §4.2's JSON (Task 2); the compile
+  guard texts T1 to T4 of RL-1379 (Task 5A); `06` §4.1's `deployment:promote` cell (Task 5).
 
 ## PRs
 

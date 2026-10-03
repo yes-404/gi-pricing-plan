@@ -78,7 +78,7 @@ auditor, or a regulator:
 | **FR-342** | Every API call resolves to a Principal. Anonymous access exists only for health checks and the OpenAPI document. |
 | **FR-343** | Permissions are checked in the backend on every request against `(principal, permission, resource, scope)`. The frontend hides what a user cannot do; it never *enforces* it. |
 | **FR-344** | The platform ships the roles from `00` §1.4 (Analyst, Pricing Actuary, Approver, Deployer, Auditor, Admin) with documented default permission sets, and supports custom roles composed from the same permission vocabulary. |
-| **FR-345** | Role assignments are **scoped**: workspace-wide, or limited to named Datasets, Model Families, or Rating Algorithms — so a motor actuary cannot approve home pricing without an explicit assignment. |
+| **FR-345** | Role assignments are **scoped**: workspace-wide, or limited to named Datasets, Model Families, or Rating Algorithms — so a motor actuary cannot approve home pricing without an explicit assignment. *(Amended 2026-10-03, WK-674 Slice 2, `RL-1301` B and `CR-1212` item 4: the list of scopes gains **Environments**, so that a Deployer can be limited to named environments. The scope kind is the `ScopeType` value `environment`, and `scope_id` is the Environment's id. A workspace-wide Deployer still covers every environment. `deployment:promote` is checked with the target Environment as the resource, so a Deployer whose assignment names only `uat` is refused on `prod`.)* |
 | **FR-346** | The **Auditor** role is read-everything, write-nothing, including access to the audit log, superseded artifacts, and archived datasets. No role, including Admin, can hide an artifact from an Auditor. |
 | **FR-347** | Service Accounts (for Consumer Systems) hold scoring permissions only, scoped to named environments, with credentials issued and rotated per `07-platform.md`. A Service Account can never hold an approval or deployment permission. |
 | **FR-348** | Permission changes, role creation/edit, and role assignment are themselves audited and require the `admin:manage_roles` permission. A user cannot grant themselves a permission they do not hold. |
@@ -220,6 +220,8 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 *(amended 2026-09-28, `RL-1236` DP-C: one approval permission)* and
 ~~`rating_version:deploy_*`~~ `deployment:promote` (R1, FR-347). *(Amended 2026-09-28,
 `RL-1232` DP-6.)*
+
+> **An `environments` scope, dated 2026-10-03 (WK-674 Slice 2; `RL-1301` B.4, amending the scope example of `RL-1232` DP-6).** An assignment may be scoped to Environments, as it may be to Datasets: a Deployer limited to `uat` carries `"scope": {"kind": "restricted", "environments": ["uat"]}` in the example's form, and is stored as `scope_type` `environment` with `scope_id` the Environment's id (FR-345). The example above is not rewritten.
 
 > **Superseded 2026-08-18 (WK-661, the custom-objectives slice).** The role above lists
 > `custom_objective:author` and `custom_objective:submit`. **Neither exists**, and the built
@@ -370,6 +372,8 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 ```
 
 `separation_of_duties.configurable: false` is deliberate and is not a placeholder (R1).
+
+> **The `deployment` entry in `DEFAULT_POLICY`, dated 2026-10-03 (WK-674 Slice 2; `RL-886`).** The `deployment` entry above, for `prod`, is added to `DEFAULT_POLICY` in `model-schema` by this slice. `RL-886` ruled that the spec was right and the code was one entry short: §3.3's floor already names `deployment` (FR-364), and `submit` refused a Deployment Request with "no approval policy for this artifact type" for want of the entry. Its `environment` is an Environment's slug (`07` §4.2).
 
 > **`risk_tier` joins the entry shape in Phase 3 with FR-365** (OQ-636, decided
 > 2026-08-18): an entry may carry `"risk_tier": 1`, and an entry **without** one applies to
