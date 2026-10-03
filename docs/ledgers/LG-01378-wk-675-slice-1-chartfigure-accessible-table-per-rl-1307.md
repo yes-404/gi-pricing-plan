@@ -1,8 +1,8 @@
 ---
-id: LG-9745
+id: LG-1378
 family: ledger
 title: WK-675 slice 1 — ChartFigure's accessible table per RL-1307, its 13 call sites migrated, F39 diagnosed (SL-1369, PL-1368, RL-1307)
-status: active
+status: closed
 created: 2026-10-03
 owner: executor
 tree: 3915e5d977870da4a084f77243aa036d378972a7
@@ -14,7 +14,7 @@ corrected_by: []
 relates: [RL-1307, PL-1286, RL-1263, NFR-463]
 ---
 
-# LG-9745 — WK-675 slice SL-1369, the ChartFigure accessible table
+# LG-1378 — WK-675 slice SL-1369, the ChartFigure accessible table
 
 Executed from `PL-1368` by `executor-1369` (sonnet, medium: `echo $CLAUDE_EFFORT` printed `medium`). Branch `sl-1369-chartfigure-accessible-table`, from `origin/main` `2171aab0d9b5ab1bbef29d6023bdc2d33eeddd48` (#1069; tree `3915e5d977870da4a084f77243aa036d378972a7`). The ledger's id `9745` is a working id, allocated by the lead; the lead is the only allocator and mints the final id. Every time is `TZ=Europe/London date`, BST. Append-only: later entries add, none rewrites.
 
@@ -220,3 +220,9 @@ None yet.
 The shared entry chunk `index-*.js` is unchanged: 18.47 kB raw / 6.71 gzip before and after (only its content hash differs: `index-CNa3pfOU.js` → `index-Bz9f1eG5.js`). Total of the six changed chunks: +2.38 kB raw, +0.67 kB gzip. The increase is the descriptor objects and the duplicate-key refusal; no dependency was added (`frontend/package.json` and `frontend/pnpm-lock.yaml` are unchanged).
 
 **Acceptance 11, the docs checks** (at the fixed ledger): `python3 scripts/audit-docs.py` FAILED (1), check 31 only (above); `python3 scripts/doc-id.py check` reports the same gap (`[noncontiguous] docs/INDEX.md has a gap between 1370 and 9745`); `python3 scripts/doc-index.py --check` OK (byte-stable); `python3 scripts/register-lint.py` OK (0 violations). The two reds are the working-id gap, expected on a working id.
+
+## Mint and close (2026-10-03 16:53 BST)
+
+Opened as working id 9745; minted 2026-10-03 as LG-1378, by the lead's allocation ("2026-10-03 16:40:40 BST — WK-675 S1 (SL-1369, #1079 @44bfbafe): audit CLEAN noted; GO-mint after #1078 merges"). `python3 scripts/doc-id.py next` printed `1378` before the mint. `origin/main` 58c7f5e8 (#1078) was merged into the branch (merge commit `ce10e3db`; `docs/INDEX.md` regenerated with `python3 scripts/doc-index.py`, not hand-resolved). The ledger file was renamed from `LG-09745-…` to `LG-01378-…`, its `id` and heading set to LG-1378, its status set to `closed`. The earlier text of this ledger that names working id 9745 is kept as written (the ledger is append-only).
+
+Closed on the slice audit `audit-1369-2026-10-03.md` (the auditor's local handover file; proposed overall verdict CLEAN, three non-blocking notes N1-N3, range `origin/main...44bfbafe`), and on the dispatch record `DISPATCH-WK-675-SL1369-2026-10-01.md`, Deltas 1 to 4 (Delta 4, one under-listed test file inside lane A's area, accepted by the lead 2026-10-03 16:40:40 BST). SL-1369's roadmap row is set to `closed` in the same commit. Precedent: SL-1360 / LG-1370 in #1049 (`d8537220`).
