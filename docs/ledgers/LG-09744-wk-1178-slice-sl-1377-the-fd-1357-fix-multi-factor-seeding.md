@@ -156,7 +156,7 @@ backend/tests scripts | wc -l` prints 0, so this slice adds no guard entry and r
 **DP-5 outcome:** (a) as ruled. This slice lands `factor_ref`, so it applies `T1` and `T5`.
 
 **Contract registry (Condition 3).** `PL 9765` (WK-674 S2) has not merged on `origin/main` (`git log origin/main --oneline |
-grep -i "9765\|SL-1285"` shows only WK-674 Slice 2a and a roadmap commit, neither adding a generated schema). So this slice
+grep -i "9765\|WK-674 Slice 2"` shows only WK-674 Slice 2a and a roadmap commit, neither adding a generated schema). So this slice
 merges first and writes the `contract-schema` skill step (below).
 
 ### Task 1 — model-schema (the WIP's Task 1, plus RL-1383)
@@ -326,4 +326,50 @@ written). The two facts it names are covered by tests that pass now and by the T
 
 ## PRs
 
-(appended per PR)
+#1087 (draft), opened 2026-10-03 at head `6c86fb04`. Title: `fix(rating): SL-1377 — one seeded rate table per Factor, typed
+seed request and 201 (WK-1178, PL-1376, LG 9744)`. Body carries the `BREAKING CHANGE:` text.
+
+## Gate (Task 5), attempt 1 at `6c86fb04`
+
+Slot granted by the lead 2026-10-03 19:39:38 BST (both `/tmp/slots/gate-*` free by `flock -n`, load 0.54, 28Gi available,
+lane A running no build). Tree: `git rev-parse HEAD` = `6c86fb0489783176c927f51c9b413d919382a208`, tree
+`1f9c5e77b46eb8ff9a5a077e357d2fca99070434`, `git status --porcelain` empty (the executor's own worktree on the branch at that
+head, not a separate detached checkout). `uv sync --all-packages` ("Checked 116 packages"). Test database dropped and recreated
+from the template (`createdb -T gipricing`), then `alembic upgrade head`, before the run. The dev-commands body, verbatim, with
+`ruff check --no-cache`, `mypy --no-incremental` and `LOKY_MAX_CPU_COUNT=4` added, under `flock -n -E 99` and `timeout 3600`
+(`/tmp/sl1377_gate.sh`). Start 19:40:19 BST, uptime load average 0.99, 1.10, 1.02; `free -h` 28Gi available. End 20:04:15 BST,
+load average 1.82, 1.88, 1.60; 27Gi available. The other holder: none (the gate took the first slot, which `flock -n` had
+reported free). Wall 23 m 56 s; pytest alone 1421 s.
+
+| stage | result | detail |
+|---|---|---|
+| ruff | pass | exit=0 |
+| mypy | pass | exit=0 |
+| import_linter | pass | exit=0 |
+| audit_docs | FAIL | exit=1 |
+| req_coverage | pass | exit=0 |
+| contracts | pass | exit=0 |
+| pytest | FAIL | exit=1 |
+
+`GATE: FAIL — 2 of 7 stages failed: audit_docs pytest`. pytest: 14 failed, 4610 passed, 3 skipped.
+
+- **audit_docs** printed two findings. Check 31 (`gap in the full allocation between 1391 and 9744`) is the working id: it is red
+  by design until the lead mints LG 9744. Check 32 (an unresolved slice id cited in the grep text) was this ledger's own
+  defect, a citation of an id that is not a governed record, in the Task 0 `git log` grep text; fixed in the next commit
+  (the grep now reads `WK-674 Slice 2`).
+- **pytest:** 13 of the 14 are tests that run `audit-docs.py` over the real tree (`test_the_real_tree_passes_all_ten_checks`
+  and 12 others in `tests/test_audit_docs_*.py`, `test_doc_index.py`, `test_register_lint.py`, `test_register_owed.py`,
+  `test_repository_invariants.py`), and fail on the same check 31 and 32 findings. They cannot be green before the mint.
+  The 14th is a real defect of this slice:
+  `backend/tests/test_error_sinks.py::test_every_failure_sink_on_a_quote_input_path_is_accounted_for`. Its `_SINKS` list
+  names `("backend/src/app/api/rate_tables.py", "_seed_body", "str(exc)")`, and this slice deletes `_seed_body`
+  (the typed `SeedFromModelRequest` replaces it). The assertion says "a sink that stores or logs an exception's text was
+  added, moved or removed". The sink was removed, with its function; no sink replaced it (the refusals now come from
+  FastAPI's request validation). Removed the three-line `_SINKS` entry. **This file is outside PL-1376's named write set**
+  (Condition 1); it is a mechanical consequence of the deletion the plan orders, and is disclosed here for the lead.
+  After the edit the file passes alone: `uv run pytest -q backend/tests/test_error_sinks.py` (rerun below).
+- **Frontend half** (Condition 1: nothing under `frontend/`; the plan's Acceptance 12 lists it): not run in this attempt. The
+  slice touches nothing under `frontend/`; `generate:api` would regenerate from the OpenAPI that changed, so the half is
+  still owed on the final head.
+
+Next: a new head (the two fixes above) needs a new grant, per S-13.
