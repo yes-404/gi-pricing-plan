@@ -11,7 +11,14 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from model_schema import DEFAULT_POLICY, EVIDENCE_FLOOR, ApprovalPolicy, ApprovalPolicyEntry
+from model_schema import (
+    DEFAULT_POLICY,
+    EVIDENCE_FLOOR,
+    ApprovalPolicy,
+    ApprovalPolicyEntry,
+    PromotionSkip,
+    promotion_order_refusal,
+)
 
 
 @pytest.mark.req("FR-364")
@@ -198,3 +205,111 @@ def test_a_qualified_deployment_entry_accepts_skippable_predecessors() -> None:
     prod = DEFAULT_POLICY.entry_for("deployment", "prod")
     assert prod is not None
     assert prod.skippable_predecessors == ()
+
+
+def _prod_entry(*skippable: str) -> ApprovalPolicyEntry:
+    return _entry_with_skip(skippable_predecessors=tuple(skippable))
+
+
+_UAT_SKIP = PromotionSkip(skipped_environment="uat", reason="UAT frozen for the release")
+
+
+@pytest.mark.req("FR-429")
+@pytest.mark.parametrize(
+    ("label", "entry", "predecessor", "deployed", "skip", "refused"),
+    [
+        ("no predecessor", None, None, False, None, False),
+        ("predecessor deployed", None, "uat", True, None, False),
+        ("predecessor deployed, skip ignored", None, "uat", True, _UAT_SKIP, False),
+        ("not deployed, no skip", _prod_entry("uat"), "uat", False, None, True),
+        ("not deployed, skip permitted", _prod_entry("uat"), "uat", False, _UAT_SKIP, False),
+        ("skip, no entry", None, "uat", False, _UAT_SKIP, True),
+        ("skip, predecessor not listed", _prod_entry(), "uat", False, _UAT_SKIP, True),
+        (
+            "skip names another environment",
+            _prod_entry("uat"),
+            "uat",
+            False,
+            PromotionSkip(skipped_environment="dev", reason="x"),
+            True,
+        ),
+        (
+            "entry names another target",
+            _entry_with_skip(environment="uat"),
+            "uat",
+            False,
+            _UAT_SKIP,
+            True,
+        ),
+    ],
+)
+def test_the_promotion_order_predicate(
+    label: str,
+    entry: ApprovalPolicyEntry | None,
+    predecessor: str | None,
+    deployed: bool,
+    skip: PromotionSkip | None,
+    refused: bool,
+) -> None:
+    """`07` FR-429's one predicate, over a table (RL-1301 A.5): it reads only its arguments.
+
+    Predicted red before it exists: `ImportError` for `promotion_order_refusal`. Every
+    refusal names the target and the predecessor.
+    """
+    reason = promotion_order_refusal(
+        entry,
+        target="prod",
+        predecessor=predecessor,
+        predecessor_deployed=deployed,
+        skip=skip,
+    )
+    assert (reason is not None) is refused, label
+    if reason is not None:
+        assert "prod" in reason
+        assert predecessor is not None
+        assert predecessor in reason
+
+
+@pytest.mark.req("FR-429")
+def test_a_blank_skip_reason_is_refused() -> None:
+    """A skip whose reason is empty after trimming grants nothing (the reason is required)."""
+    with pytest.raises(ValidationError, match="reason"):
+        PromotionSkip(skipped_environment="uat", reason="   ")
+    blank = PromotionSkip.model_construct(skipped_environment="uat", reason="  ")
+    assert (
+        promotion_order_refusal(
+            _prod_entry("uat"),
+            target="prod",
+            predecessor="uat",
+            predecessor_deployed=False,
+            skip=blank,
+        )
+        is not None
+    )
+
+
+@pytest.mark.req("FR-429")
+def test_an_unqualified_entry_carrying_the_field_grants_no_skip() -> None:
+    """Hardening (auditor-plans F8): the predicate checks `entry.environment == target`.
+
+    `model_construct` bypasses the validator, so the entry is one the validator would have
+    refused; the predicate must still refuse the skip.
+    """
+    rogue = ApprovalPolicyEntry.model_construct(
+        artifact_type="deployment",
+        environment=None,
+        approvers_required=1,
+        approver_roles=("deployer",),
+        evidence=(),
+        skippable_predecessors=("uat",),
+    )
+    assert (
+        promotion_order_refusal(
+            rogue,
+            target="prod",
+            predecessor="uat",
+            predecessor_deployed=False,
+            skip=_UAT_SKIP,
+        )
+        is not None
+    )

@@ -15,6 +15,8 @@ from model_schema.approvals import (
     ApprovalRequest,
     ApprovalStatus,
     DecisionKind,
+    PromotionSkip,
+    promotion_order_refusal,
 )
 from model_schema.audit import (
     AuditEvent,
@@ -602,6 +604,7 @@ __all__ = [
     "Profile",
     "ProfileComparison",
     "Progress",
+    "PromotionSkip",
     "PropertyCheck",
     "PropertyResult",
     "QuantileCrossing",
@@ -719,6 +722,7 @@ __all__ = [
     "context_hash",
     "diff_algorithms",
     "new_uuid7",
+    "promotion_order_refusal",
     "role_permissions",
     "suite_content_hash",
     "to_minor",

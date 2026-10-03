@@ -21,7 +21,7 @@ from datetime import datetime
 from typing import Final
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from model_schema.refs import ArtifactRef
 
@@ -35,6 +35,8 @@ __all__ = [
     "ApprovalRequest",
     "ApprovalStatus",
     "DecisionKind",
+    "PromotionSkip",
+    "promotion_order_refusal",
 ]
 
 
@@ -223,6 +225,55 @@ class ApprovalPolicy(BaseModel):
             if missing:
                 below[entry.artifact_type] = missing
         return below
+
+
+class PromotionSkip(BaseModel):
+    """A recorded skip of a predecessor Environment (`03` §4.12, `07` FR-429, RL-1296)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    skipped_environment: str = Field(description="The predecessor Environment's slug.")
+    reason: str = Field(description="Why the order was skipped; never empty after trimming.")
+
+    @field_validator("reason")
+    @classmethod
+    def _reason_is_not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("a promotion skip needs a reason that is not empty after trimming")
+        return value
+
+
+def promotion_order_refusal(
+    entry: ApprovalPolicyEntry | None,
+    *,
+    target: str,
+    predecessor: str | None,
+    predecessor_deployed: bool,
+    skip: PromotionSkip | None,
+) -> str | None:
+    """`07` FR-429's one predicate: `None` when the order holds, otherwise why not.
+
+    Satisfied when the target has no predecessor or the predecessor is deployed. Otherwise it
+    is satisfied only by a skip that names the predecessor, carries a reason, and rests on an
+    `entry` that names this `target` and lists the predecessor in `skippable_predecessors`.
+    The `entry.environment == target` test is hardening (auditor-plans F8): an unqualified
+    entry that somehow carried the field grants nothing. It reads only its arguments, so `06`
+    receives deployment facts from its caller and imports nothing from `03` (DEP-1).
+    """
+    if predecessor is None or predecessor_deployed:
+        return None
+    where = f"{target!r} requires a successful deployment to {predecessor!r} first"
+    if skip is None:
+        return f"{where}, and no skip was given"
+    if skip.skipped_environment != predecessor:
+        return f"{where}; the skip names {skip.skipped_environment!r}, not {predecessor!r}"
+    if not skip.reason.strip():
+        return f"{where}; the skip of {predecessor!r} has no reason"
+    if entry is None or entry.environment != target:
+        return f"{where}; no deployment policy entry for {target!r} permits a skip"
+    if predecessor not in entry.skippable_predecessors:
+        return f"{where}; the policy for {target!r} does not permit skipping {predecessor!r}"
+    return None
 
 
 #: The defaults `06` §4.2 documents. A workspace may edit them; it starts here.
