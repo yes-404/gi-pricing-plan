@@ -381,3 +381,21 @@ Opened as working id 9744; minted 2026-10-03 as LG-1396, by the lead's GO-mint (
 Closed on the slice audit `audit-1377-2026-10-03.md` (the auditor's local handover file; verdict CLEAN, three non-blocking carried notes, range `origin/main...b0203bca`), adopted by the lead's verdict "2026-10-03 20:14:41 BST — LEAD VERDICT: SL-1377 slice audit CLEAN, adopted", and on the dispatch record `DISPATCH-WK-1178-SL1377-2026-10-03.md`, Deltas 1 to 5. SL-1377's roadmap row is set to `closed` in the same commit.
 
 **Carry-forward, owner the lead (audit item (f), Case A):** the seed route's untyped request body (its `UNTYPED_REQUEST_PENDING` entry) is NOT removed by this slice, because `UNTYPED_REQUEST_PENDING` does not exist on `origin/main` until PL-1364. Its removal is deferred to PL-1364's slice and carried in that dispatch record. The slice does not close silently over it.
+
+## Gate of record at the minted head `3e8719581ed04f21dceec78834469973adbd5d99`
+
+Run after the lead's grant ("GATE SLOT GRANTED 2026-10-03 21:07:54 BST", for this head) and after #1091 merged (`origin/main` 86034259, merged into the branch; `audit-docs` printed "All checks passed." before the push). Object measured: a detached checkout of `3e8719581ed04f21dceec78834469973adbd5d99` in the executor's own worktree, `git status --porcelain` empty before and after. `uv sync --all-packages`. The test database `gipricing_agent-a4c7d0d5bf742eba1_0dcde992` was created from the template (`createdb -T gipricing`, after `dropdb --if-exists`), then `alembic upgrade head`, before the run. Backend half: the dev-commands body (`ruff check --no-cache`, `mypy --no-incremental`, `LOKY_MAX_CPU_COUNT=4`) under `flock -n -E 99` and `timeout 3600`, the script `/tmp/sl1377_gate2.sh` (the first slot took the lock; the other slot was not held by this run). Backend start 21:08:28 BST, `uptime` load average 1.10, 0.55, 0.42, `free -h` 27Gi available; backend end 21:32:50 BST, load average 1.22, 1.25, 1.27, 27Gi available. Frontend six ran in the same checkout from 21:33:07 to 21:34:19 BST (load average 4.93, 2.31, 1.63 at the end, 27Gi available).
+
+| stage | result | detail |
+|---|---|---|
+| ruff | pass | exit=0 |
+| mypy | pass | exit=0 |
+| import_linter | pass | exit=0 |
+| audit_docs | pass | exit=0 |
+| req_coverage | pass | exit=0 |
+| contracts | pass | exit=0 |
+| pytest | pass | exit=0 |
+
+`GATE: pass — 7 of 7 stages passed`. pytest: `4624 passed, 3 skipped, 63 warnings in 1440.61s (0:24:00)`, 0 failed (the earlier attempt's 14 failures are closed: check 31 by the mint and the merge, `test_error_sinks.py` by the `_SINKS` edit).
+
+Frontend six (`pnpm --dir frontend ...`): `install --frozen-lockfile` exit 0; `generate:api` exit 0; `lint` exit 0 (`--max-warnings 0`); `type-check` exit 0; `test` exit 0 (97 files, 612 tests passed, no type errors); `build` exit 0. Acceptance 12's frontend half is thereby evidenced on a head.
