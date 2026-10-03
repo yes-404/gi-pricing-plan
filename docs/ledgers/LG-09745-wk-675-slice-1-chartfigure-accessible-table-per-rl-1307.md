@@ -182,6 +182,8 @@ Notes. Item 1's second command, as the plan wrote it, prints two lines that are 
 
 None yet.
 
+#1079 (draft), branch `sl-1369-chartfigure-accessible-table`, opened 2026-10-03 16:32 BST at head `19407b27f08f06a423ff99e282a411162ff939a9` (verified by `gh pr view 1079`: draft true, base main), titled `feat(frontend): SL-1369 — ChartFigure accessible table per RL-1307 (WK-675 Slice 1, PL-1368, LG 9745)`. The gate above ran at `5ab27c8b`; the later commits change only this ledger and `docs/INDEX.md`. Appended, not replaced (the ledger is append-only).
+
 ## Gate and bundle (Task 6)
 
 **Gate slot:** granted by the lead 2026-10-03 15:57:24 BST for the full two-half gate and the two vite builds at `5ab27c8ba9fe27b6b0d45c90c99d9489483aa251` (the ledger-add commit; the code is `3fd07379`). Main had moved to `bf20749b` (#1076, docs only); the re-merge comes at mint.
