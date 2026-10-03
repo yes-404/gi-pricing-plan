@@ -219,6 +219,77 @@ Stamp 2026-10-03 22:34 BST (`TZ=Europe/London date`; `uptime` load average 5.41 
      not part of the gate).
   6. The commit-msg hook refuses a `Claude-Session:` line (F49), so the four commits carry only `Co-Authored-By:`.
 
+### Task 3 — the migration
+
+Stamp 2026-10-03 22:53 BST (`TZ=Europe/London date`; `uptime` load average 2.53). Base: branch head `46beb268` (fetched,
+checked out). A continuation executor, sonnet, `echo $CLAUDE_EFFORT` printed `medium`. Test database
+`gipricing_agent-a725903e49a4a5364_5d69b56d`, created from the template and migrated to head. Revision
+`c4a81f6d2e95`, `down_revision` `2f598e89d12c` (premise o, re-read: the only revision no `down_revision` named).
+
+- **Red first, Acceptance 3.** `backend/tests/test_migration_deployments.py` (scratch database mirrored from
+  `test_migration_dataset_owner.py`, except that it fails rather than skips when PostgreSQL is unreachable), run before
+  the revision existed: 7 failed. The predicted cause, quoted: `relation "environments" does not exist`; the
+  credential tests failed `DID NOT RAISE Exception`; the round trip `assert '2f598e89d12c' != '2f598e89d12c'`. After the
+  revision: 7 passed. The first run failed for a reason of mine, not the plan's (`NotNullViolation` on
+  `scoring_traces.status`): the row insert in the test now names `status`.
+- **What the revision does.** The credential pre-check is the first statement of `upgrade()`, before any DDL: it
+  selects unrevoked, **unexpired** `api_keys` and non-archived `service_accounts` whose `environments` list names
+  anything outside `dev`/`uat`/`prod`, and raises `RuntimeError` naming each id and name. Tests: a `staging` key blocks
+  (error names the key id, database stays at `2f598e89d12c`, no `environments` table); an expired unrevoked `staging`
+  key does not appear in the error; after the key is revoked the upgrade runs; a `uat` key never blocks; a Service
+  Account listing `staging` blocks and, once archived, does not. Then `environments` (`slug` unique, retired included;
+  `requires_prior_environment` a foreign key to `environments.slug`; `promotion_order >= 1`), seeded `dev` 1 null, `uat`
+  2 `dev`, `prod` 3 `uat`; `deployment_requests`; `deployments`; `scoring_traces.deployment_id` nullable foreign key.
+  The seed test inserts a `prod` and a `staging` trace **before** the upgrade: both keep their `environment` string, both
+  get a null `deployment_id`.
+- **Red first, Acceptance 13 (Slice 2a's presence check).** With the three Row classes added and the revision not yet
+  written, `test_every_guarded_table_carries_the_trigger_on_the_test_database` failed `no approval_guard trigger on:
+  deployment_requests` (also `test_the_trigger_is_in_force_again_after_the_teardown_suspends_it`, the round trip and
+  the derived-set test); `test_approval_guard.py`'s derived set failed on the extra table. The revision installs
+  `approval_guard('deployment', 'slug')`, no `'flag'` argument. Tests changed to the new population:
+  `test_approval_guard.py` `EXPECTED_GUARDED` gains `deployment_requests` and `len(derived) == 9` (its own comment said
+  "Slice 2 adds `deployment_requests` here"); in `test_approval_guard_trigger.py` the guard's own revision keeps its 8
+  (`SLICE_2A_TABLES`), the presence helpers take an optional population, and the derived-set test asserts the 8 plus
+  `deployment_requests`. **A raw-SQL plant** in the new file: an approved `deployment_requests` insert is refused `GP001`
+  with no approval request, with the decision flag forged by `set_config`, with a request still in `review`, and with
+  another version's approved request; a decided request for the exact ref `deployment:dev@1` lets it through (positive
+  control). The ORM and Core write forms and the cross-workspace case are Task 5's.
+- **Deviations and flags, stated.**
+  1. **`deployments` carries the `artifact_append_only()` trigger pair, which the plan does not list.** Red first:
+     `test_every_table_the_grants_call_append_only_carries_both_triggers` failed `[('deployments', 0, 0)]` because the
+     table has `SELECT, INSERT` grants and so enters that test's derived set (`00` FR-4 says a Deployment is never
+     updated). The revision adds `deployments_no_modify` and `deployments_no_truncate`. `test_artifact_immutability.py`
+     gains `deployments` in `APPEND_ONLY_TABLES` and in `_APPEND_ONLY_ROWS`; its `TRUNCATE` statement names
+     `scoring_traces` too for this one table, because PostgreSQL refuses a `TRUNCATE` of a referenced table on the foreign
+     key before any trigger runs (`cannot truncate a table referenced in a foreign key constraint`).
+  2. **The suite's teardown wiped the seeds.** `backend/tests/conftest_db.py`'s `_EMPTY_THE_DATABASE` truncates every
+     table but `alembic_version` and `tenant_marker`, so after the first session `environments` was empty and the new
+     immutability test failed `null value in column "environment_id"` (observed red). The block now re-inserts the three
+     seeds when the table exists; `ENVIRONMENT_SEEDS` is pinned equal to the migration's `SEEDS` by
+     `test_the_teardown_restores_the_three_seeds_the_migration_wrote`, which also calls `empty_the_database()` and reads
+     the rows back. **Task 4 and later tests that rename or retire a seed are covered by the same re-seed at session end;
+     one that does so mid-session leaves the change until then.**
+  3. **No `evidence` update trigger.** RL-1301 A.4 permits one and the plan makes it optional; the revision adds none, and
+     the application's write-once rule for `evidence` is Task 5's. If the auditor wants the trigger, it is a delta.
+  4. **`evidence` is `NOT NULL`** (the `DeploymentRequest` shape has it required; a request is created at submission), and
+     the `deployments` row stores `deployment_request_id` (a nullable foreign key) where the shape's
+     `deployment_request_ref` is derived from it at read.
+  5. **Grants.** `environments` and `deployment_requests`: `SELECT, INSERT, UPDATE`, `DELETE` revoked from `gip_app` and
+     `PUBLIC`; `deployments`: `SELECT, INSERT`, `UPDATE, DELETE` revoked. Tested through `has_table_privilege('gip_app', …)`.
+  6. `alembic check` on the worktree database lists differences on `custom_metrics`, `custom_objectives`,
+     `peril_structures`, `rating_versions`, `rate_table_versions` and an index on `models`; **none names a table this
+     revision touches** (checked in the output: `environments`, `deployments`, `deployment_requests`, `scoring_traces` do not
+     appear). They are at base and not this slice's.
+- **Round trip, quoted rc.** On the worktree database: `alembic downgrade -1` rc 0, `upgrade head` rc 0, `downgrade -1` rc 0,
+  `upgrade head` rc 0; `alembic current` prints `c4a81f6d2e95 (head)`. The scratch-database test does the same and also
+  asserts that the downgrade drops the three tables, the column and the one trigger, and keeps Slice 2a's triggers.
+- **Checks run (targeted; no suite-level gate, Task 7).** `pytest backend/tests/test_migration_deployments.py
+  test_artifact_immutability.py test_approval_guard_trigger.py test_approval_guard.py test_approval_guard_static.py
+  test_conftest_db.py test_audit.py`: all passed. `pytest backend/tests -k "trace or approval or contract or audit or rbac or
+  permission"`: 602 passed, 2 skipped. `tests/test_repository_invariants.py` passes except the two tests that read
+  `audit-docs.py` and fail only on check 31 for this ledger's working id (as at Task 2). `ruff check .` clean, `mypy` 220
+  files clean, `lint-imports` 4 kept 0 broken.
+
 ## PRs
 
 Not yet opened (draft PR at the first push).

@@ -39,6 +39,7 @@ APPEND_ONLY_TABLES = (
     "audit_events",
     "backtests",
     "bandings",
+    "deployments",
     "diagnostics",
     "groupings",
     "metric_certificates",
@@ -312,6 +313,14 @@ _APPEND_ONLY_ROWS: dict[str, str] = {
         "INSERT INTO bandings (id, workspace_id, dataset_id, slug, version, column_name, "
         "body) VALUES (:id, :ws, gen_random_uuid(), :slug, 1, 'vehicle_age', :body)"
     ),
+    #: **Added 2026-10-03 (WK-674 Slice 2, PL-1392 Task 3).** A Deployment is a record, never
+    #: updated or deleted (`00` FR-4). The one foreign key is satisfied by the seeded `dev`.
+    "deployments": (
+        "INSERT INTO deployments (id, workspace_id, environment_id, rating_version_ref, "
+        "bundle_hash, deployed_by, reason) VALUES (:id, :ws, "
+        "(SELECT id FROM environments WHERE slug = 'dev'), 'rating_version:motor@1', "
+        "'sha256:' || repeat('a', 64), gen_random_uuid(), :body)"
+    ),
     "diagnostics": (
         "INSERT INTO diagnostics (id, workspace_id, model_id, payload) "
         "VALUES (:id, :ws, gen_random_uuid(), :body)"
@@ -360,10 +369,14 @@ async def test_an_artifact_cannot_be_rewritten_from_the_owner_connection(
             },
         )
 
+    # `deployments` is the one table here that something references
+    # (`scoring_traces.deployment_id`), and PostgreSQL refuses a `TRUNCATE` of a referenced table on the foreign key before any
+    # trigger runs. Naming the referencing table too gets the statement to the trigger.
+    truncated = f"{table}, scoring_traces" if table == "deployments" else table
     for statement in (
         f"UPDATE {table} SET workspace_id = workspace_id WHERE id = :id",
         f"DELETE FROM {table} WHERE id = :id",
-        f"TRUNCATE {table}",  # a row trigger does not fire on this, which is why two exist
+        f"TRUNCATE {truncated}",  # a row trigger does not fire on this, which is why two exist
     ):
         with pytest.raises(DBAPIError) as refused:
             async with database.unit_of_work() as session:

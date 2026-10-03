@@ -24,12 +24,13 @@ from app.db.models import approval_guarded_tables
 
 _PLATFORM = Path(__file__).resolve().parents[1] / "src" / "app" / "platform"
 
-#: The derived set at the tree PL-1303 was written against, re-derived at 22fe674b. Slice 2
-#: adds `deployment_requests` here.
+#: The derived set at the tree PL-1303 was written against, re-derived at 22fe674b, plus
+#: `deployment_requests`, which WK-674 Slice 2 (PL-1392 Acceptance 13) adds.
 EXPECTED_GUARDED = {
     "approval_requests",
     "custom_metrics",
     "custom_objectives",
+    "deployment_requests",
     "models",
     "peril_structures",
     "rating_versions",
@@ -192,7 +193,7 @@ def test_the_guarded_set_is_derived_from_the_declarations() -> None:
     derived = _vocabulary_with_approved(Base.metadata)
     assert derived == EXPECTED_GUARDED
     assert approval_guarded_tables() == EXPECTED_GUARDED
-    assert len(derived) == 8
+    assert len(derived) == 9
 
 
 @pytest.mark.req("FR-351")
