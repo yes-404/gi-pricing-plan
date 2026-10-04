@@ -729,7 +729,7 @@ tree: d672f991bdc59008e09cf3f464cd7cffe5699553
 phase: P2
 work: WK-673
 corrected_by: []
-relates: [PL-1267]
+relates: [PL-1267, PL-1403]
 ```
 
 `dislocate(baseline, candidate, portfolio, spec)` in `pricing_core/rating/analysis.py`: two `score_batch` passes joined per policy on integer minor units; distribution bands, averages overall and by segment, exposure and policy counts per band, movers beyond the spec's thresholds (FR-263); slicing by any portfolio Factor and by the first differing ladder rung (FR-264); `DislocationSpec` and `DislocationRun` in `model-schema`; NFR-495 (byte-identical repeat run) and NFR-496 (totals equal the sum of per-policy minor units) tested. `PL-1267` Slice 2. Starts after Slice 1 closes.
