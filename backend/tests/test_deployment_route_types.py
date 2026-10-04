@@ -6,8 +6,11 @@ class, found by walking the handler's own source rather than by trusting the Ope
 body typed `dict[str, Any]` or a class the API module defines fails the AST half and the
 OpenAPI half **separately**.
 
-**Task 4 pins rows 1 to 4 of the Route table** (the four Environment routes). Task 5 widens
-`ROWS`, `MODULES` and `PINNED_PREFIX_FILTER` to all seven; nothing here is hand-listed twice.
+**Task 4 pinned rows 1 to 4 of the Route table** (the four Environment routes). **Task 5 widens
+`ROWS` and `MODULES` to rows 5 to 7** (the deployment-request, deploy and history routes) **and
+row 9** (`POST /api/v1/approval-requests`, body only: DP-S2-6 (c) leaves its 2xx an open object,
+owned by FD 9752; the characterisation test below pins its key set instead). Nothing here is
+hand-listed twice.
 """
 
 from __future__ import annotations
@@ -36,7 +39,9 @@ class Row:
     method: str
     path: str
     request: str | None  # a model-schema class name, or None for "no body"
-    response: str  # the 2xx class name; for a list route, the item class
+    #: The 2xx class name; for a list route, the item class. `None` for a route whose 2xx is
+    #: deliberately left an open object (DP-S2-6 (c)): only its body is checked.
+    response: str | None
     paged: bool = False
 
 
@@ -45,10 +50,29 @@ ROWS: tuple[Row, ...] = (
     Row("POST", "/api/v1/environments", "EnvironmentCreate", "Environment"),
     Row("PATCH", "/api/v1/environments/{slug}", "EnvironmentUpdate", "Environment"),
     Row("POST", "/api/v1/environments/{slug}/retire", None, "Environment"),
+    Row(
+        "POST",
+        "/api/v1/environments/{env}/deployment-requests",
+        "DeploymentRequestCreate",
+        "DeploymentRequest",
+    ),
+    Row("POST", "/api/v1/environments/{env}/deployments", "DeploymentCreate", "Deployment"),
+    Row("GET", "/api/v1/environments/{env}/deployments", None, "Deployment", paged=True),
+    # Row 9: the body is typed; the 2xx is `FD-1335` Part B's (FD 9752), pinned by key set.
+    Row("POST", "/api/v1/approval-requests", "ApprovalSubmission", None),
 )
 
-#: The module of each row's handler. Task 5 adds `deployments.py`.
-MODULES: tuple[Path, ...] = (API / "environments.py",)
+#: The module of each row's handler.
+MODULES: tuple[Path, ...] = (
+    API / "environments.py",
+    API / "deployments.py",
+    API / "approvals.py",
+)
+
+#: Rows that are Environment-prefixed routes: the set `test_the_route_set_is_pinned` holds equal.
+ENVIRONMENT_ROWS: tuple[Row, ...] = tuple(
+    row for row in ROWS if row.path.startswith("/api/v1/environments")
+)
 
 
 def _published_names() -> set[str]:
@@ -103,6 +127,8 @@ def openapi_problems(document: dict[str, Any], rows: tuple[Row, ...] = ROWS) -> 
             if row.request not in published:
                 problems.append(f"{where}: request type {row.request} is not a published shape")
 
+        if row.response is None:
+            continue
         twoxx = {c: r for c, r in operation["responses"].items() if c.startswith("2")}
         if not twoxx:
             problems.append(f"{where}: no 2xx response")
@@ -232,6 +258,8 @@ def ast_problems(sources: dict[str, str], rows: tuple[Row, ...] = ROWS) -> list[
                     f"{where}: {module} body {annotation.id} is not imported from model_schema "
                     "(a class the API module defines is a second copy of a shape)"
                 )
+        if row.response is None:
+            continue
         expected = f"Page[{row.response}]" if row.paged else row.response
         returns = ast.unparse(node.returns) if node.returns is not None else None
         if returns != expected:
@@ -255,21 +283,25 @@ def document() -> dict[str, Any]:
     return app.openapi()
 
 
-@pytest.mark.req("FR-428")
-def test_the_route_set_is_pinned(document: dict[str, Any]) -> None:
-    """The operations of the Environment routes equal the Route table's rows, exactly.
-
-    A route added or removed unchecked fails here naming it. Task 5 widens the filter to the
-    deployment routes under the same prefix.
-    """
-    live = {
+def _environment_operations(document: dict[str, Any]) -> set[tuple[str, str]]:
+    return {
         (method.upper(), path)
         for path, operations in document["paths"].items()
-        if path.startswith(f"{API_PREFIX}/environments") and "/deployment" not in path
+        if path.startswith(f"{API_PREFIX}/environments")
         for method in operations
         if method in _METHODS
     }
-    expected = {(row.method, row.path) for row in ROWS}
+
+
+@pytest.mark.req("FR-428")
+def test_the_route_set_is_pinned(document: dict[str, Any]) -> None:
+    """The operations under `/api/v1/environments` equal the Route table's seven rows, exactly.
+
+    A route added or removed unchecked fails here naming it.
+    """
+    live = _environment_operations(document)
+    expected = {(row.method, row.path) for row in ENVIRONMENT_ROWS}
+    assert len(expected) == 7
     assert live == expected, (
         f"extra: {sorted(live - expected)}; missing: {sorted(expected - live)}"
     )
@@ -393,11 +425,245 @@ def test_a_missing_or_open_return_annotation_is_refused() -> None:
 def test_a_route_added_unchecked_fails_the_pin(document: dict[str, Any]) -> None:
     extra = copy.deepcopy(document)
     extra["paths"]["/api/v1/environments/{slug}/wipe"] = {"delete": {"responses": {}}}
-    live = {
-        (method.upper(), path)
-        for path, operations in extra["paths"].items()
-        if path.startswith(f"{API_PREFIX}/environments") and "/deployment" not in path
-        for method in operations
-        if method in _METHODS
+    extra["paths"]["/api/v1/environments/{env}/deployments/rollback"] = {
+        "post": {"responses": {}}
     }
-    assert live != {(row.method, row.path) for row in ROWS}
+    assert _environment_operations(extra) != {(row.method, row.path) for row in ENVIRONMENT_ROWS}
+
+
+# --- the new routes, on broken input (Acceptance 14 and 15 over rows 5 to 7) -------------------
+
+
+@pytest.mark.req("FR-267")
+def test_a_deploy_body_retyped_dict_is_refused_by_both_halves(document: dict[str, Any]) -> None:
+    original = _sources()["deployments.py"]
+    source = original.replace("body: DeploymentCreate,", "body: dict[str, Any],", 1)
+    assert source != original
+    problems = ast_problems({"deployments.py": source})
+    assert any(
+        "POST /api/v1/environments/{env}/deployments:" in p and "dict[str, Any]" in p
+        for p in problems
+    )
+    broken = copy.deepcopy(document)
+    broken["paths"]["/api/v1/environments/{env}/deployments"]["post"]["requestBody"]["content"][
+        "application/json"
+    ]["schema"] = {"type": "object", "additionalProperties": True}
+    assert any(
+        p.startswith("POST /api/v1/environments/{env}/deployments: request body is")
+        for p in openapi_problems(broken)
+    )
+
+
+@pytest.mark.req("FR-267")
+def test_a_request_body_class_defined_in_the_api_module_is_refused() -> None:
+    original = _sources()["deployments.py"]
+    text = original.replace("    DeploymentRequestCreate,\n", "", 1) + (
+        "\n\nfrom pydantic import BaseModel\n\n\n"
+        "class DeploymentRequestCreate(BaseModel):\n    x: int\n"
+    )
+    assert text != original
+    problems = ast_problems({"deployments.py": text})
+    assert any(
+        "not imported from model_schema" in p and "DeploymentRequestCreate" in p for p in problems
+    )
+
+
+@pytest.mark.req("FR-267")
+def test_each_untyped_2xx_of_the_deployment_routes_is_refused_by_name(
+    document: dict[str, Any],
+) -> None:
+    form1 = copy.deepcopy(document)
+    form1["paths"]["/api/v1/environments/{env}/deployments"]["post"]["responses"]["201"][
+        "content"
+    ]["application/json"]["schema"] = {}
+    assert any("form 1" in p and "deployments" in p for p in openapi_problems(form1))
+
+    form2 = copy.deepcopy(document)
+    form2["paths"]["/api/v1/environments/{env}/deployment-requests"]["post"]["responses"][
+        "201"
+    ]["content"]["application/json"]["schema"] = {"type": "object", "additionalProperties": True}
+    assert any("form 2" in p and "deployment-requests" in p for p in openapi_problems(form2))
+
+    open_page = copy.deepcopy(document)
+    open_page["components"]["schemas"]["Page_Deployment_"]["properties"]["items"]["items"] = {
+        "type": "object",
+        "additionalProperties": True,
+    }
+    assert any("Page_Deployment_" in p for p in openapi_problems(open_page))
+
+    original = _sources()["deployments.py"]
+    for broken, shown in (
+        (original.replace(") -> Deployment:\n", "):\n", 1), "None"),
+        (original.replace(") -> Deployment:\n", ") -> dict[str, Any]:\n", 1), "dict[str, Any]"),
+    ):
+        assert broken != original
+        assert any(f"returns {shown}" in p for p in ast_problems({"deployments.py": broken}))
+
+
+@pytest.mark.req("FR-267")
+def test_the_approval_submission_body_is_a_model_schema_type_not_a_class_the_api_defines() -> None:
+    """Acceptance 16: moved, not duplicated. `SubmitApproval` is gone from the backend, and the
+    generic route's body is `ApprovalSubmission` from `model_schema`; reintroducing a local
+    class of the old name fails the AST half."""
+    import subprocess
+
+    found = subprocess.run(
+        ["git", "grep", "-n", "-E", r"^class (Withdraw|SubmitApproval)\b", "--", "backend/src"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    ).stdout
+    assert "SubmitApproval" not in found
+
+    original = _sources()["approvals.py"]
+    local = original.replace(
+        "    ApprovalSubmission,\n", "", 1
+    ) + "\n\nclass ApprovalSubmission(BaseModel):\n    artifact_ref: str\n"
+    problems = ast_problems({"approvals.py": local}, rows=(ROWS[-1],))
+    assert any("not imported from model_schema" in p for p in problems)
+
+
+# --- Acceptance 18: S2 does not widen the untyped surface of the two changed routes -------------
+
+#: `service.to_dict`'s 12 top-level keys (`platform/approvals.py`, both routes call it as
+#: `to_dict(row, [])`). Neither Task 5 nor Task 6 changes what these routes return.
+APPROVAL_REQUEST_KEYS = frozenset(
+    {
+        "id",
+        "artifact_ref",
+        "artifact_type",
+        "environment",
+        "submitted_by",
+        "submitted_at",
+        "change_summary",
+        "status",
+        "approvers_required",
+        "approvers_recorded",
+        "decisions",
+        "withdrawn_reason",
+    }
+)
+
+
+@pytest.fixture
+def client():
+    from backend.tests.conftest_db import test_blob_bucket, test_database_url
+    from fastapi.testclient import TestClient
+    from pydantic import SecretStr
+
+    from app.config import Environment, Settings
+    from app.main import create_app
+
+    settings = Settings(
+        environment=Environment.LOCAL,
+        version="test",
+        dev_auth_enabled=True,
+        database_url=SecretStr(test_database_url()),
+        blob_bucket=test_blob_bucket(),
+    )
+    with TestClient(create_app(settings), raise_server_exceptions=False) as c:
+        yield c
+
+
+def _keys(response: Any, status: int) -> set[str]:
+    assert response.status_code == status, response.text
+    body = response.json()
+    assert body["decisions"] == []
+    return set(body)
+
+
+def _assert_exact(keys: set[str], route: str) -> None:
+    """`==`, not a subset: an undeclared add, drop or rename fails naming the key."""
+    assert keys == APPROVAL_REQUEST_KEYS, (
+        f"{route}: added {sorted(keys - APPROVAL_REQUEST_KEYS)}, "
+        f"dropped {sorted(APPROVAL_REQUEST_KEYS - keys)}"
+    )
+
+
+@pytest.mark.req("FR-267")
+@pytest.mark.asyncio
+async def test_the_two_changed_approval_routes_return_exactly_the_declared_keys(
+    client, database, workspace_id, grant
+) -> None:
+    """Condition 2 of the maintainer's DP-S2-6 (c) entry. The test **characterises today's
+    output**: it was green at `14c7e805` for the `rating_version` and withdraw cases before
+    Task 5 touched either route, and stays green, unchanged, after. The deployment branch is
+    exercised through a Deployment Request put back in `review` by a fixture after its
+    approval request was withdrawn (a row in `review` otherwise always holds its open request,
+    which is why the generic route refuses it)."""
+    from uuid import uuid4
+
+    from backend.tests.test_deployments import (
+        Seat,
+        _approval_id,
+        _request_for_prod,
+    )
+    from sqlalchemy import text
+
+    from app.db.models import RatingVersionRow
+    from model_schema import new_uuid7
+
+    async def seat(*roles: str) -> Seat:
+        made = Seat(workspace_id)
+        for role in roles:
+            await grant(role, principal_id=made.id)
+        return made
+
+    # rating_version: a version in `review`, submitted through the generic route.
+    slug = f"rv-{uuid4().hex[:8]}"
+    async with database.unit_of_work() as session:
+        session.add(
+            RatingVersionRow(
+                workspace_id=workspace_id, slug=slug, version=1, status="review",
+                dataset_version_id=uuid4(), model_ref="model:motor-ad-frequency@7",
+                created_by=new_uuid7(),
+            )
+        )
+    analyst = await seat("analyst")
+    created = client.post(
+        "/api/v1/approval-requests",
+        json={"artifact_ref": f"rating_version:{slug}@1", "change_summary": "go"},
+        headers=analyst.headers,
+    )
+    _assert_exact(_keys(created, 201), "POST /api/v1/approval-requests (rating_version)")
+
+    # withdraw
+    approver = await seat("approver")
+    withdrawn = client.post(
+        f"/api/v1/approval-requests/{created.json()['id']}/withdraw",
+        json={"reason": "not ready"},
+        headers=approver.headers,
+    )
+    _assert_exact(_keys(withdrawn, 200), "POST /api/v1/approval-requests/{id}/withdraw")
+
+    # deployment branch
+    submitter, _, request = await _request_for_prod(client, database, workspace_id, seat)
+    first = _approval_id(client, submitter, request["ref"])
+    assert client.post(
+        f"/api/v1/approval-requests/{first}/withdraw",
+        json={"reason": "redo"},
+        headers=approver.headers,
+    ).status_code == 200
+    async with database.unit_of_work() as session:
+        await session.execute(
+            text("UPDATE deployment_requests SET status = 'review' WHERE workspace_id = :w"),
+            {"w": workspace_id},
+        )
+    again = client.post(
+        "/api/v1/approval-requests",
+        json={"artifact_ref": request["ref"], "change_summary": "again", "environment": "prod"},
+        headers=submitter.headers,
+    )
+    _assert_exact(_keys(again, 201), "POST /api/v1/approval-requests (deployment)")
+
+
+@pytest.mark.req("FR-267")
+def test_the_key_set_check_names_an_added_dropped_or_renamed_key() -> None:
+    """Broken input for `_assert_exact`: each of the three departures fails, naming the key."""
+    added = set(APPROVAL_REQUEST_KEYS) | {"extra"}
+    dropped = set(APPROVAL_REQUEST_KEYS) - {"withdrawn_reason"}
+    renamed = (set(APPROVAL_REQUEST_KEYS) - {"environment"}) | {"env"}
+    for broken, needle in ((added, "extra"), (dropped, "withdrawn_reason"), (renamed, "env")):
+        with pytest.raises(AssertionError) as raised:
+            _assert_exact(broken, "route")
+        assert needle in str(raised.value)

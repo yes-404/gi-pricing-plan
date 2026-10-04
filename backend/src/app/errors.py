@@ -308,6 +308,9 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # Bundle compilation (W9-3).
         "RATING_VERSION_UNPINNED",
         "BUNDLE_COMPILE_FAILED",
+        # A deploy into an approval-gated Environment without an approved, unexecuted
+        # Deployment Request (FR-267, `RL-1301` A.5; WK-674 Slice 2).
+        "DEPLOY_REQUIRES_APPROVAL",
         # Rate tables (W10-2), enumerated in 03 §5.1.
         "RATE_TABLE_MISS",
         # Scoring: an engine failure that is not a table or lookup miss (RL-1313 DP-G4, FR-255).

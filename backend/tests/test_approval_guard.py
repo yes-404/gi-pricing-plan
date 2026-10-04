@@ -197,13 +197,15 @@ def test_the_guarded_set_is_derived_from_the_declarations() -> None:
 
 
 @pytest.mark.req("FR-351")
-def test_the_carry_walker_reaches_the_four_artifact_tables() -> None:
-    """A walker that stopped descending would make the third leg vacuous."""
+def test_the_carry_walker_reaches_the_five_artifact_tables() -> None:
+    """A walker that stopped descending would make the third leg vacuous. `deployment_requests`
+    joined the four with WK-674 Slice 2's deployment branch of the carry (`PL-1392` Task 5)."""
     assert _tables_written_by_the_carry() == {
         "models",
         "custom_objectives",
         "custom_metrics",
         "rating_versions",
+        "deployment_requests",
     }
 
 

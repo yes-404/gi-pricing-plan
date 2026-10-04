@@ -92,6 +92,10 @@ CREATION_ACTION = {
     "validation_rule": "validation_rule.created",
     "dataset_version": "dataset_version.created",
     "rating_version": "rating_version.created",
+    # Added 2026-10-04 (WK-674 Slice 2, `RL-1401`): the eighth type. A Deployment Request is
+    # created only by `platform.deployments`, so the generic parametrised tests over
+    # `APPROVABLE` do not reach it; `tests/test_deployments.py` does.
+    "deployment": "deployment_request.created",
 }
 
 
@@ -895,11 +899,12 @@ async def test_a_version_with_no_creation_event_cannot_be_approved(
 
 @pytest.mark.req("FR-353")
 def test_the_check_knows_the_creation_action_of_every_approvable_type() -> None:
-    """The check's table and the create paths' actions are one mapping, over all seven."""
+    """The check's table and the create paths' actions are one mapping, over all eight
+    (`deployment` is `APPROVABLE`'s eighth in the policy, not its generic-route tests')."""
     from app.platform import approvals
 
     assert dict(approvals.CREATION_ACTIONS) == CREATION_ACTION
-    assert set(CREATION_ACTION) == set(APPROVABLE)
+    assert set(CREATION_ACTION) == set(APPROVABLE) | {"deployment"}
 
 
 # -- only a version in review can be put to a decision (`06` FR-351) --------------------

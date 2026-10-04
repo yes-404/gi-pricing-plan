@@ -34,6 +34,7 @@ __all__ = [
     "ApprovalPolicyEntry",
     "ApprovalRequest",
     "ApprovalStatus",
+    "ApprovalSubmission",
     "DecisionKind",
     "PromotionSkip",
     "promotion_order_refusal",
@@ -348,6 +349,21 @@ DEFAULT_POLICY: Final[ApprovalPolicy] = ApprovalPolicy(
         ),
     )
 )
+
+
+class ApprovalSubmission(BaseModel):
+    """The body of `POST /api/v1/approval-requests` (`06` §5.1): an artifact put forward.
+
+    Moved here from the API module (WK-674 Slice 2, `PL-1392` Acceptance 16, DP-S2-6 (c)) so the
+    request body is a published shape rather than a class the backend defines. The route's 2xx
+    stays untyped until `FD-1335` Part B (owner FD 9752).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    artifact_ref: str = Field(description="Canonical `{type}:{slug}@{version}` (ID-3).")
+    change_summary: str = Field(min_length=1)
+    environment: str | None = None
 
 
 class ApprovalDecision(BaseModel):

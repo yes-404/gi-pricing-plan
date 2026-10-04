@@ -86,6 +86,7 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "deployment-create": "first written form — 03 §5.1 (WK-674 Slice 2, FR-267)",
     "deployment-request": "first written form — 03 §4.12 (WK-674 Slice 2, FR-267, RL-1301 A)",
     "deployment-request-create": "first written form — 03 §5.1 (WK-674 Slice 2, FR-267, RL-1301 A)",
+    "approval-submission": "first written form — 06 §5.1 (WK-674 Slice 2, PL-1392 Acceptance 16)",
     "objective-usage": "first written form — FR-164 named the query",
     "oidc-auth-config": "first written form — FR-394 names the contents",
     "problem-detail": "first written form — the RFC 9457 problem shape",

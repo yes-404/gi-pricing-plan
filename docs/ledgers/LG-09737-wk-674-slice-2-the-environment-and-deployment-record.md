@@ -370,6 +370,102 @@ Stamp 2026-10-03 23:07 BST (`TZ=Europe/London date`; load average 6.76 on a shar
   8. **The retire key check reads unrevoked keys, expired or not**, as the plan words it; the Task 3 migration pre-check
      ignores expired keys. An expired key can be revoked through the existing route.
   9. The `06` permission row is at `:296`, not `:294`; the other Acceptance 8 cell (`deployment:promote`) is Task 5's.
+### Task 5 — the deploy route, the Deployment Request and the `prod` approval (FR-267, FR-429, FR-272, NFR-498, G3, FR-347), with `RL-1401` Delta 7
+
+Executor `executor-1256g`; `echo $CLAUDE_EFFORT` printed `medium`. Worktree `wt-1256g` from `14c7e805`, merged with
+`origin/main` `7e2ee2ba` (`011b0b27`; only `docs/INDEX.md` conflicted, regenerated with `python3 scripts/doc-index.py`).
+Test database `gipricing_wt-1256g_58a80177`, created from the template, `alembic upgrade head`.
+
+**Commit 1 — the submission, the Author resolution (`RL-1401` item 1), T1 and T2.** The retired-Environment and the
+uncompiled-version refusals (items 2 and 3, with T3 and T4) are **deliberately absent from this commit's code** so that
+commit 2 shows them red against the broken input (the module's `_authorised_environment` had no `_require_not_retired`
+call, and `_approved_compiled_version` took the hash without refusing its absence).
+
+- **Red first, item 1 (a), (d), (e)** — the module and the routes exist, `CREATION_ACTIONS` is unchanged from `14c7e805`
+  (the positive control "red at `14c7e805`": the tree before this commit has no deployment module at all, so the red is
+  quoted at the first state in which the request exists and the key does not). Command, run from the worktree:
+  `uv run pytest -q backend/tests/test_deployments.py --color=no --tb=line -rfEp` →
+  `FAILED …::test_a_deployer_who_is_neither_submitter_nor_author_approves_a_deployment_request` (403
+  `APPROVAL_AUTHOR_UNRESOLVED`: "deployment:prod@1 has no creation Audit Event, so whether the approver is its author
+  cannot be checked"), `FAILED …::test_every_approvable_type_has_an_author_resolution` (`assert ['deployment'] == []`),
+  `FAILED …::test_the_author_of_the_deployed_rating_version_is_not_barred_by_the_author_check` (the same 403);
+  `PASSED` (b) `…submitter_cannot_decide…`, (c) `…no_creation_event_is_refused_fail_closed…` and the event-shape test.
+  **`3 failed, 3 passed`.** (c) passes for the wrong reason before the key exists (the author is unresolved either way),
+  which is why it is only meaningful after: its fixture deletes the event, and (a) green proves the event is there to delete.
+- **Green** after `"deployment": "deployment_request.created"` in `CREATION_ACTIONS` and the route's `audit.record`:
+  the same command, **`6 passed`**. The route records the event in the transaction that writes the row and calls
+  `approvals.submit` (`platform/deployments.py::submit_request`), `entity_ref` the request's reference, actor the submitter.
+- **Acceptance 8 (Branch A), `06` `deployment:promote` Check owner.** Predicate
+  `grep -c -E '^> \| `(deployment:promote|admin:manage_environments)` \|.*\| WK-674 \|$' docs/specs/06-governance.md`
+  printed **1** before and **0** after. Red first: with the handler's check in and the cell still `WK-674`,
+  `uv run pytest -q tests/test_permission_parity.py --color=no --tb=short` →
+  `Built name has a check site and still carries an owner: clear it in the same commit: deployment:promote (WK-674)`,
+  `1 failed, 15 passed`; green after the cell is emptied. `origin/main` read: `7e2ee2ba` (SL-1360's parity test is on it).
+- **Route types, rows 5-7 and row 9 (Acceptance 14, 15, 16).** `test_deployment_route_types.py` widened (`ROWS`,
+  `MODULES`, the pin over all seven `/api/v1/environments` operations; row 9 is body-only). Red first for row 9, run over the
+  `14c7e805` text of `api/approvals.py` and `docs/contracts/openapi/generated.json` with the test's own checkers
+  (`/tmp/red16_1256g.py`): AST `['POST /api/v1/approval-requests: approvals.py body is SubmitApproval, not
+  ApprovalSubmission']`, OpenAPI `["POST /api/v1/approval-requests: request body is {'$ref':
+  '#/components/schemas/SubmitApproval'}, not {'$ref': '#/components/schemas/ApprovalSubmission'}"]`. `SubmitApproval` is
+  gone from the backend (`ApprovalSubmission`, slug `approval-submission`, in `model-schema`); `Withdraw` stays (its body
+  and `artifact_is_live` are Task 6's). Generated: `docs/contracts/schemas/generated/approval-submission.schema.json`,
+  `_CONTRACT_ARTIFACT_PATHS` +1, `tests/test_audit_docs_ids.py` count **79 → 80** (measured at the branch merged with
+  main `7e2ee2ba`: the test failed with `AssertionError: 80` before the bump), `ONE_SIDED_SLUGS` key
+  `approval-submission` appended (a new key only; `dislocation-run` untouched, Delta 4).
+- **Acceptance 18, the characterisation test** (`test_the_two_changed_approval_routes_return_exactly_the_declared_keys` in `test_deployment_route_types.py`): the
+  12 keys of `service.to_dict`, `==`, `decisions == []`, for the generic route (a `rating_version` ref and a Deployment
+  Request put back in `review` by a fixture), and withdraw. **It was written after Task 5's change to the routes and not
+  before** (the plan wants it green first against the tree before the change); `git diff 14c7e805 -- backend/src/app/platform/approvals.py`
+  touches only `CREATION_ACTIONS`, so `to_dict` and both routes' returns are unchanged. Red on broken input, `to_dict`
+  patched: `out["extra"] = 1` → `added ['extra'], dropped []`; `out.pop("withdrawn_reason")` → `added [], dropped
+  ['withdrawn_reason']`; `out["env"] = out.pop("environment")` → `added ['env'], dropped ['environment']`; each `1 failed`.
+- **The refusals of Acceptance 4 not covered by Task 4** (`test_deployments.py`, 44 at this point): the broken-input runs,
+  each on the real code, each restored (`diff` against the saved copy empty): **G3 type check deleted**
+  (`-k "g3_a_reference and sub_graph"`): `FAILED …[sub_graph]`, `1 failed`; **the floor check removed from
+  `apply_approval_decision`** (`-k stripped_of_a_floor`): `1 failed`; **the `WHERE status = 'approved'` removed**:
+  the concurrent test still passed (the row lock serialises the two deploys, so the second reads `executed` earlier; `2
+  passed`), so a **deterministic stale-snapshot test** was added (`test_a_stale_approved_snapshot_cannot_execute_a_request_twice`:
+  the second deploy is handed the pre-execution row) and with the `WHERE` removed it fails (`1 failed`), green with it;
+  **`audit.record` for `deployment.created` replaced by a no-op**: `FAILED …dev_then_uat_then_prod…` (`1 failed`).
+  **The handler's `resource=` argument** is exercised in the test itself (`require_permission` wrapped to drop it: the
+  `uat`-scoped Deployer is then refused in `uat`, asserted). **Not shown red**: the blanket-skip validator (Task 2's, its
+  own tests) and the `retired`/`slug` refusals (Task 4's). `RL-886`'s refusal, A.4's floor at submission, A2's generic-route
+  refusals (no row 404, not in review, stripped floor) and F4 (`require_in_review` in the module) have tests.
+- **The approvals fan-out.** `api/approvals.py`: `_resolve_the_artifact` gains `deployments_service.resolve_artifact_ref`
+  (a Deployment Request in `review` with both floor items, else 404 / 409 / 422), `_carry_to_the_artifact` gains
+  `deployments_service.apply_approval_decision` (the only writer of `approved`, locked row, `require_in_review`, floor
+  check). `platform/approvals.py` imports nothing from `deployments` (DEP-1).
+- **The authorisation sweep.** Both writes are in `HANDLER_GUARDED` at `platform/deployments.py:84`
+  (`require_permission(`); the sweep's no-roles half needed `RESOURCE_BACKED`, a per-route real path value and a
+  Rating-Version ref, because G3 and the Environment load legitimately precede the permission check for a route whose
+  resource is the Environment (a random id would answer 404 or 422, not 403). Red then green: before, `reachable with no
+  roles: … → 404 / 422`.
+- **Two existing tests that pinned the old shape were updated, not weakened**: `test_api_approvals.py::
+  test_the_check_knows_the_creation_action_of_every_approvable_type` (now all eight) and
+  `test_approval_guard.py::test_the_carry_walker_reaches_the_five_artifact_tables` (`deployment_requests` joins the four).
+- **Checks run, targeted** (no suite-level gate, Task 7): `backend/tests/test_deployments.py`,
+  `test_deployment_route_types.py`, `test_api_authorisation_sweep.py`, `test_contracts.py`, `test_environments.py`,
+  `tests/test_permission_parity.py` together: **261 passed, 2 skipped** (after the one fix below);
+  `test_api_approvals.py` and the five `test_approval_guard*.py`: **243 passed**; `tests/test_audit_docs_ids.py -k
+  widening_the_scope_roots` passed. `ruff check .` clean, `mypy` 224 files clean, `lint-imports` 4 kept 0 broken,
+  `python3 scripts/audit-docs.py` fails only check 31 (the working id gap `1401…9737`, expected while LG 9737 is a working id).
+- **Deviations and flags, stated.**
+  1. **The history route's permission is `rating:read`, a pick the plan does not make** (it names none). A no-permission
+     route fails the sweep; `rating:read` is in the read set the Deployer, Approver and Auditor hold. A one-line change.
+  2. **`EVIDENCE_INCOMPLETE` is also raised for a target with no predecessor Environment**, because the floor's
+     `uat_deployment` item then has nothing to pin; the policy default (`prod`) has `uat`, so this arises only for a
+     configured gated first Environment. Flagged for the decision-maker (a gated target with no predecessor).
+  3. **A deploy to an ungated target that names a `deployment_request_ref` is refused 422** (`VALIDATION_FAILED`): the plan
+     is silent, and ignoring the reference would record a request the Deployment did not execute.
+  4. **A request for changes ends a Deployment Request as `rejected`** (it has no draft to return to and no resubmission
+     route); `06` FR-355's "back to draft" has no state to return to.
+  5. **`deployment.created`'s `entity_ref` is `environment:<slug>`** (`03` §4.12: "names the Deployment or the Environment
+     it changes"); the Deployment id is in `after`.
+  6. **Delta 6's `settings:read` text is not applied here** (it concerns Task 4's route, not Task 5); the `06` row still
+     carries the old description. Flagged for the lead.
+  7. The unreachable plan case "no decided approval request for the version" cannot be tested: the approval guard refuses
+     an `approved` Rating Version with no approved request, so the evidence lookup always finds one.
+
 
 ## PRs
 

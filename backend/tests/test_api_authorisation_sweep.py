@@ -90,6 +90,16 @@ HANDLER_GUARDED: dict[tuple[str, str], tuple[tuple[str, int, str], ...]] = {
         ("api/me.py", 251, "WORKSPACE_SCOPE_DENIED"),
         ("api/me.py", 260, "WORKSPACE_SCOPE_DENIED"),
     ),
+    # `deployment:promote` with the Environment as the resource (`RL-1301` B.2): the Environment
+    # row the resource names is loaded in the handler, so neither route carries a bare
+    # `requires(...)`. Both reach the one check in `_authorised_environment` (WK-674 Slice 2,
+    # PL-1392 Task 5).
+    ("POST", "/api/v1/environments/{env}/deployments"): (
+        ("platform/deployments.py", 84, "require_permission("),
+    ),
+    ("POST", "/api/v1/environments/{env}/deployment-requests"): (
+        ("platform/deployments.py", 84, "require_permission("),
+    ),
 }
 
 _METHODS = ("get", "post", "put", "patch", "delete")
@@ -274,10 +284,42 @@ UNSATISFIABLE: dict[tuple[str, str], str] = {
 }
 
 
+#: Routes whose permission is checked against a **resource the handler loads**, so a request
+#: that names no real resource is refused for that, not for the permission. Each maps the path
+#: parameter to a real value and a body field to one the handler's own first check accepts
+#: (WK-674 Slice 2, PL-1392 Task 5: the Environment is the resource of `deployment:promote`,
+#: `RL-1301` B.2, and G3 refuses a non-Rating-Version reference before any row is read).
+RESOURCE_BACKED: dict[tuple[str, str], tuple[dict[str, str], dict[str, Any]]] = {
+    ("POST", "/api/v1/environments/{env}/deployments"): (
+        {"env": "dev"},
+        {"rating_version_ref": "rating_version:sweep-version@1"},
+    ),
+    ("POST", "/api/v1/environments/{env}/deployment-requests"): (
+        {"env": "dev"},
+        {"rating_version_ref": "rating_version:sweep-version@1"},
+    ),
+}
+
+
 def _request_for(
     document: dict[str, Any], method: str, path: str
 ) -> tuple[str, dict[str, Any], dict[str, Any] | None]:
     """The concrete path, the query parameters and the JSON body of a valid request."""
+    filled, query, body = _built_request(document, method, path)
+    backed = RESOURCE_BACKED.get((method, path))
+    if backed is not None:
+        values, patch = backed
+        filled = path
+        for name, value in values.items():
+            filled = filled.replace("{" + name + "}", value)
+        assert body is not None
+        body = {**body, **patch}
+    return filled, query, body
+
+
+def _built_request(
+    document: dict[str, Any], method: str, path: str
+) -> tuple[str, dict[str, Any], dict[str, Any] | None]:
     operation = document["paths"][path][method.lower()]
     filled = path
     query: dict[str, Any] = {}

@@ -170,6 +170,9 @@ GENERATED_SHAPES: dict[str, str] = {
     "deployment-create": "DeploymentCreate",
     "deployment-request": "DeploymentRequest",
     "deployment-request-create": "DeploymentRequestCreate",
+    # Added 2026-10-04 (WK-674 Slice 2, PL-1392 Task 5, Acceptance 16): the body of
+    # `POST /api/v1/approval-requests`, moved out of the API module.
+    "approval-submission": "ApprovalSubmission",
 }
 
 

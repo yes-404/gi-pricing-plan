@@ -112,6 +112,10 @@ CREATION_ACTIONS: Final[Mapping[str, str]] = {
     "validation_rule": "validation_rule.created",
     "dataset_version": "dataset_version.created",
     "rating_version": "rating_version.created",
+    # A Deployment Request's Author is its submitter (`06` FR-353 as amended 2026-10-03,
+    # `RL-1401`): `platform.deployments` records this event with the request's own
+    # reference in the transaction that writes and submits it.
+    "deployment": "deployment_request.created",
 }
 
 

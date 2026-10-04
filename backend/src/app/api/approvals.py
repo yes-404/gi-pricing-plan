@@ -41,6 +41,7 @@ from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals as service
 from app.platform import datasets as datasets_service
+from app.platform import deployments as deployments_service
 from app.platform import metrics as metrics_service
 from app.platform import modelling as modelling_service
 from app.platform import objectives as objectives_service
@@ -50,6 +51,7 @@ from app.platform import validation_rules as validation_rules_service
 from model_schema import (
     ApprovalPolicy,
     ApprovalStatus,
+    ApprovalSubmission,
     ArtifactRef,
     DecisionKind,
     Permission,
@@ -70,14 +72,6 @@ def _database(request: Request) -> Database:
 
 
 DatabaseDep = Annotated[Database, Depends(_database)]
-
-
-class SubmitApproval(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    artifact_ref: str = Field(description="Canonical `{type}:{slug}@{version}` (ID-3).")
-    change_summary: str = Field(min_length=1)
-    environment: str | None = None
 
 
 class Decide(BaseModel):
@@ -119,7 +113,7 @@ async def _detail(database: Database, row: ApprovalRequestRow) -> dict[str, Any]
     responses=problems(401, 403, 404, 409, 422),
 )
 async def submit_for_approval(
-    body: SubmitApproval, caller: AnyCaller, database: DatabaseDep
+    body: ApprovalSubmission, caller: AnyCaller, database: DatabaseDep
 ) -> dict[str, Any]:
     """Anyone authenticated may submit; the policy decides who may approve.
 
@@ -467,6 +461,12 @@ async def _resolve_the_artifact(
         session, workspace_id=workspace_id, artifact_ref=artifact_ref
     ):
         return
+    # A Deployment Request: only one the deployment module wrote, in `review`, holding both
+    # floor items (`PL-1392` Task 5 step 6; `RL-1301` audit advisory A2).
+    if await deployments_service.resolve_artifact_ref(
+        session, workspace_id=workspace_id, artifact_ref=artifact_ref
+    ):
+        return
     raise PlatformError(
         # Registered in GOVERNANCE_ERROR_CODES and declared in `06` §5.1 on 2026-08-22.
         # Deliberately **not** `VALIDATION_FAILED`, which the malformed-reference branch
@@ -516,6 +516,12 @@ async def _carry_to_the_artifact(
             request=request,
         )
         await rating_versions_service.apply_approval_decision(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            request=request,
+        )
+        await deployments_service.apply_approval_decision(
             session,
             workspace_id=caller.workspace_id,
             actor=caller.principal,
