@@ -64,7 +64,8 @@ def main() -> None:
         times.append(seconds)
         print(f"run {i + 1}: {seconds:.3f} s  ({type(result).__name__})")
     if runs > 1:
-        print(f"median {statistics.median(times):.3f} s  min {min(times):.3f}  max {max(times):.3f}")
+        median = statistics.median(times)
+        print(f"median {median:.3f} s  min {min(times):.3f}  max {max(times):.3f}")
 
 
 if __name__ == "__main__":
