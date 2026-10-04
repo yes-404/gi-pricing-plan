@@ -10,7 +10,7 @@
 Every body is a `model-schema` type and every 2xx a `model-schema` shape (the Route table of
 `PL-1392`, rows 1 to 4; `tests/test_deployment_route_types.py`). The three writes need
 `admin:manage_environments`; the list needs `settings:read` (the plan names no read
-permission for the list; the choice is recorded in `LG-9737` for the lead).
+permission for the list; the choice is recorded in `LG-1405` for the lead).
 """
 
 from __future__ import annotations

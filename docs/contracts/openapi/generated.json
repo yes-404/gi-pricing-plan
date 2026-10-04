@@ -22593,7 +22593,7 @@
     },
     "/api/v1/environments/{env}/deployments": {
       "get": {
-        "description": "**200**, newest first; needs `rating:read` (the history is `06` FR-382's evidence; the\nplan names no permission for it, and the choice is recorded in `LG-9737`).",
+        "description": "**200**, newest first; needs `rating:read` (the history is `06` FR-382's evidence; the\nplan names no permission for it, and the choice is recorded in `LG-1405`).",
         "operationId": "list_deployments_api_v1_environments__env__deployments_get",
         "parameters": [
           {

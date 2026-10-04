@@ -312,7 +312,7 @@ The key value itself appears exactly once, in the creation response (FR-389).
 | `GET`/`POST` | `/api/v1/environments` | List / create environments |
 | `PUT` | `/api/v1/environments/{name}/settings` | Update environment settings (audited) |
 | `PATCH` | `/api/v1/environments/{slug}` | Change an environment's display name or description; the slug is immutable (`admin:manage_environments`) |
-| `POST` | `/api/v1/environments/{slug}/retire` | Retire an environment that has no live Deployment and that no policy entry names |
+| `POST` | `/api/v1/environments/{slug}/retire` | Retire an environment; refused 409 `VALIDATION_FAILED` while a Deployment is live in it, a `deployment` approval policy entry names it (for a workspace with no stored policy, `DEFAULT_POLICY`'s `prod` entry), or an unrevoked Service Account key names it; the row and its slug are kept *(amended 2026-10-04, WK-674 Slice 2: the unrevoked-key refusal named)* |
 | `POST` | `/api/v1/service-accounts` | Create a service account + key (key shown once) |
 | `POST` | `/api/v1/service-accounts/{id}/rotate` | Rotate with an overlap window |
 | `DELETE` | `/api/v1/service-accounts/{id}/keys/{prefix}` | Revoke |

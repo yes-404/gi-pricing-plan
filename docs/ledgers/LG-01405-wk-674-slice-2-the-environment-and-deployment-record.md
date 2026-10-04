@@ -1,11 +1,11 @@
 ---
-id: LG-9737
+id: LG-1405
 family: ledger
 title: WK-674 slice SL-1256 — the Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit, NFR-498 for deploy), routes typed both ways, the compile guard of RL-1379 (PL-1392)
 status: active
-created: 2026-10-03
+created: 2026-10-04
 owner: executor
-tree: 8252741cc3849058b6fc6836967448d88ff9821c
+tree: 934dcabe4b4647b74b1488fd83253d91943b7799
 phase: P2
 work: WK-674
 slice: SL-1256
@@ -14,7 +14,7 @@ corrected_by: []
 relates: [RL-1379, RL-1380, RL-1301, RL-1296, RL-1263, FD-1393, FR-267, FR-428, FR-429, FR-272, NFR-498, FR-343]
 ---
 
-# LG-9737 — WK-674 slice SL-1256, the Environment and Deployment record
+# LG-1405 — WK-674 slice SL-1256, the Environment and Deployment record
 
 Executed from `PL-1392` by `executor-1256` (sonnet, medium: `echo $CLAUDE_EFFORT` printed `medium`). Branch
 `sl-1256-environment-and-deployment-record`. Stamps are BST (`TZ=Europe/London date`).
@@ -184,7 +184,7 @@ Stamp 2026-10-03 22:34 BST (`TZ=Europe/London date`; `uptime` load average 5.41 
   checks-30-39 scope with no parseable header, and not in the F83 exemption register`) naming each of the seven files.
   After the seven literal paths went into `_CONTRACT_ARTIFACT_PATHS` (`scripts/audit-docs.py`, after the
   `seed-from-model-request` line) and `tests/test_audit_docs_ids.py`'s `non_markdown` count went 72 to **79**, the only
-  failure is check 31 for LG 9737 (the working id, expected until minted). **F1 count:** 72 measured at base `8252741c`
+  failure is check 31 for LG-1405 (the working id, expected until minted). **F1 count:** 72 measured at base `8252741c`
   (SL-1377 merged, +2 over 70); +7 here. **Second-to-merge note:** this slice merges second against SL-1377, so the
   re-bump is this one; if anything else merges first, re-measure on the merged tree. The contract-schema skill step is
   already written by SL-1377 (`.claude/skills/contract-schema/SKILL.md` line 124), so the plan's conditional step is skipped.
@@ -448,7 +448,7 @@ call, and `_approved_compiled_version` took the hash without refusing its absenc
   `tests/test_permission_parity.py` together: **261 passed, 2 skipped** (after the one fix below);
   `test_api_approvals.py` and the five `test_approval_guard*.py`: **243 passed**; `tests/test_audit_docs_ids.py -k
   widening_the_scope_roots` passed. `ruff check .` clean, `mypy` 224 files clean, `lint-imports` 4 kept 0 broken,
-  `python3 scripts/audit-docs.py` fails only check 31 (the working id gap `1401…9737`, expected while LG 9737 is a working id).
+  `python3 scripts/audit-docs.py` fails only check 31 (the working-id gap, expected while this ledger's id was a working id; minted as LG-1405 on 2026-10-04).
 - **Deviations and flags, stated.**
   1. **The history route's permission is `rating:read`, a pick the plan does not make** (it names none). A no-permission
      route fails the sweep; `rating:read` is in the read set the Deployer, Approver and Auditor hold. A one-line change.
@@ -537,14 +537,16 @@ FR-239 rows quote the amended text). T1–T4 applied byte-for-byte.
 `for_update=True` at the `compile_rating_version` and `submit_for_review` call sites.
 
 **Gates, targeted.** `ruff check .` clean; `mypy` 224 files clean; `lint-imports` 4 kept 0 broken;
-`generate-contracts.py --check` 44 match; `audit-docs.py` fails check 31 only (the working-id gap 1401…9737, the expected
+`generate-contracts.py --check` 44 match; `audit-docs.py` fails check 31 only (the working-id gap, the expected
 one for this ledger's draft id; it is the same at the base).
 
 **Deviations, stated.** (1) `<fix date>` is written `2026-10-04`, the date of this commit, as RL-1379 §"Spec texts" defines
 it; Delta 1 says "the slice's merge date". The two differ; the lead decides whether to re-stamp at merge. (2) The deployment
 case of C1 deploys through the S2 route (`POST /environments/dev/deployments`) a version whose `bundle` the test compiled.
 (3) C4 sets `review` and `draft` by direct write (the guard reads the status, not the path); the `changes_requested` decision
-path is covered by `_target_status`'s own tests. (4) The ruling item 2's note that the handler's `prior_hash` read stays:
+path is not exercised by C4, and `_target_status` has no test of that path (corrected 2026-10-04 on the slice audit, which
+found none; this ledger had said its own tests covered it). C4 writes the status directly because the compile guard reads
+only the status, so a direct write reaches the state the guard sees without a second route. (4) The ruling item 2's note that the handler's `prior_hash` read stays:
 untouched.
 
 ### Task 6 — default-live scoring, the trace link and server-derived liveness (RL-880, RL-888, RL-916, RL-1380, FR-357) — executor-1256i, 2026-10-04

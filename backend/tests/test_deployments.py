@@ -2,7 +2,7 @@
 
 `RL-1401` item 1's five cases come first: the positive control (a), the submitter (b), the
 fail-closed half (c), the parity test (d) and limb (ii) as ruled (e). Each is red first, with
-the red quoted in `LG-9737`.
+the red quoted in `LG-1405`.
 
 Every test starts from a fresh workspace and a fresh Rating Version slug. The Environments are
 deployment-wide (`dev`, `uat`, `prod` are seeded by the migration), so a test that changed one

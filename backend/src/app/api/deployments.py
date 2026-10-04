@@ -101,7 +101,7 @@ async def list_deployments(
     limit: int = Query(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
 ) -> Page[Deployment]:
     """**200**, newest first; needs `rating:read` (the history is `06` FR-382's evidence; the
-    plan names no permission for it, and the choice is recorded in `LG-9737`)."""
+    plan names no permission for it, and the choice is recorded in `LG-1405`)."""
     return await service.list_deployments(
         database,
         workspace_id=caller.workspace_id,
