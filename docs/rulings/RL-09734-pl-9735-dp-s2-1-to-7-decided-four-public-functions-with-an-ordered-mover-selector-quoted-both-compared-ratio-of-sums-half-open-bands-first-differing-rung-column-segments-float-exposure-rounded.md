@@ -429,3 +429,134 @@ deliberately broken input:
 - *Violation: a null segment level dropped.* Filtering nulls out of `by_segment` fails the
   null-level row assertion.
 - *Violation: a NaN exposure read as a number.* Removing the NaN check fails the refusal test.
+
+## Amendment N2, 2026-10-04 — a negative baseline (pre-mint)
+
+*Dated 2026-10-04 (`TZ=Europe/London date`: 2026-10-04 12:29:22 BST), before the mint of RL 9734
+(working id).* Raised by this record's audit (`~/gi-pricing-plan.local/handover/audit-9734-2026-10-04.md`,
+N2); the lead routed it here in the entry headed "2026-10-04 12:27:35 BST — N2 DECIDED (a): a
+pre-mint amendment to RL 9734 by dm-9734b (opus/medium) …"
+(`~/gi-pricing-plan.local/channel/to-lead.md`). This section rules N2 only and reopens nothing
+else above. Where it gives a text, that text **replaces** the one above it names; every other text
+above stands. Verified at `origin/main` `7e2ee2ba`.
+
+**The defect.** DP-S2-2 and S3 define the banded set as "the compared set less its
+`zero_baseline` policies", and `zero_baseline` counts a baseline of exactly 0. A quoted-both
+policy with `baseline_minor < 0` is then banded. For it, DP-S2-1's membership test
+`100 × |change_minor| ≥ mover_threshold_pct × baseline_minor` has a negative right side, so it is
+a mover for every change, 0 included; and its percentage `change ÷ baseline × 100` has the
+opposite sign to its change, so it lands in the wrong band. The mover order's `|change_minor| /
+baseline_minor` is negative for it too.
+
+### Item 3 — a negative baseline is a legitimate value, not an error row
+
+It is a value, counted and excluded; it is never an `"error"` row and never a refusal:
+
+- `MoneyMinor` admits it: `packages/model-schema/src/model_schema/money.py:69` is
+  `Annotated[int, Strict(), Field(...)]`, with no lower bound (contrast `perils.py:290`, which adds
+  `Field(ge=0)` where a bound is meant).
+- Positivity is an opt-in test, not a runtime bound: `03`'s glossary (`03-rating-engine.md:69`)
+  makes "no-negative-premium" a Regression Suite property assertion, and the code's form of it
+  is `PremiumPositive`, `kind: Literal["premium_positive"]`
+  (`packages/model-schema/src/model_schema/regression.py:90-93`), which a suite may declare.
+- §4.8's error rows are rows `score_batch` writes for a row's own fault, with an `error_code`
+  (`03-rating-engine.md` §4.8's `error_code` row: "populated only on an `"error"` row, the
+  `_raise_named` convention's code"); its frame refusals name `exposure_years`' sign, never a
+  premium's (`03:698`). A dislocation run reads both passes' outputs; it does not reclassify a
+  `quoted` row. A Rating Version that can quote a negative premium is the Regression Suite's to
+  catch, before approval; the run reports how many there are.
+
+### Item 1 — the banded set is `baseline_minor > 0`
+
+The banded set is the quoted-both policies whose baseline payable premium is **above 0**. Bands,
+the band `exposure_share` denominator, the mover inequality, the mover percentage and the mover
+order are over it only, so every division in them has a positive divisor. The compared set is
+unchanged: a negative-baseline policy stays in `totals`, `by_segment` and `by_ladder_rung`, and
+in every ratio-of-sums over a group it belongs to; DP-S2-3's ratio is the exact ratio of the
+group's sums as their signs give it, and only a zero denominator is `null`.
+
+### Item 2 — reported in a new count, `outcomes.negative_baseline`
+
+Not dropped silently, and not folded into `zero_baseline`: a zero premium and a negative one are
+different findings for an approver, and one count holding both would hide which. **A new
+required count is added**: `negative_baseline`, the quoted-both policies whose baseline payable
+premium is below 0. Then, for every run:
+Σ `distribution[].policies` = `quoted_both` − `zero_baseline` − `negative_baseline`.
+The contract and `03` §4.6 change, through texts S3, S4 and S5, which are already in Slice 2's
+write set (PL 9735 Task 1 and its write-set row for `dislocation-run.schema.json`). The three
+replacements:
+
+**N2-a — replaces, in S3's "Outcomes, and the two sets." paragraph, the two sentences** from "and
+`zero_baseline`, the quoted-both policies whose baseline payable premium is 0." to "The **banded
+set** is the compared set less its `zero_baseline` policies." with:
+
+> `zero_baseline`, the quoted-both policies whose baseline payable premium is 0; and
+> `negative_baseline`, those whose baseline payable premium is below 0. The **compared set** is
+> the quoted-both policies. The **banded set** is the compared policies whose baseline payable
+> premium is above 0: the compared set less its `zero_baseline` and `negative_baseline`
+> policies, so Σ `distribution[].policies` = `quoted_both` − `zero_baseline` −
+> `negative_baseline`. A negative baseline is a value a Rating Version can return, not an error
+> (no-negative-premium is a Regression Suite property, not a runtime bound): it stays in the
+> compared set and enters no band and no mover.
+
+The first sentence of that paragraph keeps its list up to "which sum to `policy_count`;"; the
+sentence beginning "`errors` has one item" is unchanged. S3's "Bands and movers" paragraph is
+unchanged: it already says "over the banded set".
+
+**N2-b — replaces S4's edit 2** (the inserted `outcomes` lines) with:
+
+`  "outcomes": {"quoted_both": 1_284_902, "quoted_to_declined": 0, "declined_to_quoted": 0,`
+`               "declined_both": 0, "error": 0, "zero_baseline": 0, "negative_baseline": 0},`
+
+and its parenthesis stands (every policy is in the banded set).
+
+**N2-c — replaces S5 edit 1's `outcomes` property** with:
+
+```json
+"outcomes": {
+  "type": "object",
+  "description": "Every policy counted once by its two outcomes; the first five sum to policy_count. zero_baseline and negative_baseline count the quoted-both policies with a baseline payable premium of 0 and below 0; neither is in a band or a mover (03 §4.6).",
+  "required": ["quoted_both", "quoted_to_declined", "declined_to_quoted", "declined_both", "error", "zero_baseline", "negative_baseline"],
+  "properties": {
+    "quoted_both": {"type": "integer", "minimum": 0},
+    "quoted_to_declined": {"type": "integer", "minimum": 0},
+    "declined_to_quoted": {"type": "integer", "minimum": 0},
+    "declined_both": {"type": "integer", "minimum": 0},
+    "error": {"type": "integer", "minimum": 0},
+    "zero_baseline": {"type": "integer", "minimum": 0},
+    "negative_baseline": {"type": "integer", "minimum": 0}
+  }
+}
+```
+
+S5's placement ("after `totals`", `"outcomes"` added to the top-level `required`) and its edits
+2 to 4 stand.
+
+### Item 4 — which side was wrong (`CLAUDE.md` §0)
+
+**This ruling**, in DP-S2-2, S3, S4 and S5: it defined the banded set by the zero case alone, so
+a negative baseline was banded and a mover under any change. **The plan** had the set right
+(`baseline_minor > 0`, PL 9735 at `f6864de8` lines 395 and 924) and was wrong in one part: it
+put the negative-baseline policy outside `zero_baseline` and in no other count, so the run
+dropped it from every report silently. The spec was silent; FR-263 does not name the case.
+
+### What N2 obliges
+
+- **The SL-1386 executor** applies N2-a to N2-c in place of the texts they replace, in the same
+  commit as S3 to S5.
+- **PL 9735 (the planner's, pre-merge):** cite this section — "RL 9734 (working id), Amendment
+  N2" until the mint, then `RL-<n>`'s — where the plan states N2: its audit-items paragraph
+  (line 52), Task 0 Step 4 (lines 392-403, whose stop condition this section resolves: the S3
+  copied into the ledger is N2-a's), and "The sets" (lines 924-928, where "outside
+  `zero_baseline`" becomes "counted in `outcomes.negative_baseline`"). And, to agree with N2-c:
+  `DislocationOutcomes` (lines 629-637) gains `negative_baseline: _Count`; the run's validator
+  (lines 694-699) also refuses a run where Σ `distribution[].policies` ≠ `quoted_both` −
+  `zero_baseline` − `negative_baseline`; the Task 2 test's `DislocationOutcomes(...)` (line 522)
+  passes `negative_baseline=0`; the outcomes test (line 975) asserts seven figures, with
+  `negative_baseline == 1` on the Task 5 fixture's negative-baseline policy; the bands test (line
+  961) asserts the identity above. The PL-1267 delta in "What it obliges" reads "a required
+  `outcomes` field" and needs no change.
+- *Violation that must become detectable:* banding a negative baseline. Building the banded set
+  as "compared less `zero_baseline`" puts the fixture's negative-baseline policy in a band and in
+  `select_movers`' output, and fails both the bands identity and the movers' ordered list; the
+  Slice 2 executor shows it red.
