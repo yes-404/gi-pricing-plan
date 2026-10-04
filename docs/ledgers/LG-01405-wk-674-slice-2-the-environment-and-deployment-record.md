@@ -2,7 +2,7 @@
 id: LG-1405
 family: ledger
 title: WK-674 slice SL-1256 — the Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit, NFR-498 for deploy), routes typed both ways, the compile guard of RL-1379 (PL-1392)
-status: active
+status: closed
 created: 2026-10-04
 owner: executor
 tree: 934dcabe4b4647b74b1488fd83253d91943b7799
@@ -719,7 +719,20 @@ free 21827 MB, available 27678 MB; gate-2 rc 0.
   Whether the harness saturates near 40 rps on `main` (with the Deployment code absent) was **not** measured; the component half
   passes, so the over-budget figures belong to the route path, not to the evaluator, and are not shown to be this slice's.
   The auditor rules the NFR-489 verdict; the 200 rps rung and the saturation owner (SL-1259 or F35, not checked here) are open.
-- Heavy load during passes: none other than the bench (0 pytest processes at each start; gate slots free).
+- **Correction (the lead, after Task 7 was written): the gate window was contended, the bench passes were not.** The box clock
+  is UTC (`date` 15:06:20 UTC = `TZ=Europe/London date` 16:06:20 BST); the stamps above are UTC. The lead's
+  `doc-id migrate --verify` ran 14:38:49 to 14:57:17 BST and the deputy's about 14:58 to 15:03 BST (load 7.76), that is
+  13:38:49 to about 14:03 UTC. **The gate (13:37:09 to 14:02:35 UTC) overlapped it**, so its end load of 5.95 and its 25 min
+  26 s wall time are not an uncontended reading; pass/fail stands per the lead. The "uncontended: 0 pytest processes at start"
+  claim above holds only at the gate's start, 13:37:00 UTC.
+  **Bench passes, start to end (UTC, then BST) and `uptime` load at the pass's end:** the crashed run
+  14:02:54 to 14:05:53 UTC (15:02:54 to 15:05:53 BST; load 2.06; overlaps the window's tail; no numbers taken from it);
+  the run that hit `timeout 1800` 14:06:08 to 14:36:08 UTC (load 1.18; no numbers taken from it);
+  the "with" pass of the default sweep, after 14:36:08 UTC and ended by 14:45:44 UTC (15:36 to 15:45 BST; its component
+  half at load 1.06 to 1.42); the "without" pass 14:45:44 to 14:54:44 UTC (15:45:44 to 15:54:44 BST; load 1.23);
+  the four 25,50 rps passes, run in order without, with, without, with, 14:54:44 to 15:04:35 UTC (15:54:44 to 16:04:35 BST;
+  load 1.13 at the first start, 1.50 at the last end). **Every pass whose numbers are reported started after the window's
+  end (14:03 UTC), so none is re-run.** The per-rung loads the script printed were 0.8 to 2.1 throughout.
 
 ## PRs
 
