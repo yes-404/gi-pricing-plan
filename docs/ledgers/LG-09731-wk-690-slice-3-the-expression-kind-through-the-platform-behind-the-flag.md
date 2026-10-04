@@ -217,6 +217,63 @@ The `06` Built row deleted: `FAILED tests/test_permission_parity.py::test_live_t
 **Format.** No `ruff format` on any existing file; the added hunks are format-clean (`ruff format --diff` hunk counts for
 the three test files equal the base's: 17, 8, 6).
 
+### Task 4 — the flag made liftable; create and derive; `OBJECTIVE_GRAMMAR_VIOLATION`; the derivation event
+
+(2026-10-04 BST, `executor-1273d`, sonnet, `echo $CLAUDE_EFFORT` = `medium`; per-worktree database
+`gipricing_wt-1273d_706402dd`.)
+
+**Plan defect found.** The plan's red expects the set-true cases to fail with 409 `OBJECTIVE_KIND_NOT_ENABLED`, but Task 3 did
+not add the expression fields to `CreateCustomObjective` (the plan's write-set row lists them under tasks 3 and 4). First run,
+`uv run pytest backend/tests/test_custom_objectives_expression.py backend/tests/test_custom_objectives.py
+backend/tests/test_custom_objectives_api.py -k "flag or derive or grammar or refused_by_name"`: `10 failed, 6 passed`, each
+create answering 422 `VALIDATION_FAILED` with `errors` for `bound_symbols`, `parameters`, `loss`
+`EXTRA_FORBIDDEN` (the wrong cause). The three body fields were added (no behaviour) and the reds re-taken.
+
+**Red (the right cause).** Same command: `8 failed, 8 passed`. Failure lines: `test_flag_true_accepts_create_as_an_underived_draft`
+`assert 409 == 201` (body `OBJECTIVE_KIND_NOT_ENABLED`); `test_derive_stores_what_pricing_core_derives_stamped_and_audited`,
+`test_derive_stores_the_installed_sympy_version` and `test_grammar_violation_is_not_raised_for_a_valid_loss`, each
+`assert 409 == 201` on the create; `test_derive_refuses_a_template_objective_and_a_second_derivation`
+`assert 'OBJECTIVE_KIND_NOT_ENABLED' == 'VALIDATION_FAILED'`; `test_grammar_violation_is_422_with_the_position_in_errors` and
+`test_grammar_violation_covers_text_that_does_not_parse` `assert 409 == 422` (the grammar case fails with the 409, not with a
+grammar code); the rewritten service test `test_an_expression_objective_is_refused_by_name_while_the_flag_is_off` raised
+`app.errors.PlatformError: ... Phase 1 ships `template` objectives only` in its set-true step. The unset and `false` cases
+pass at the base (the refusal was unconditional), as Acceptance 4 predicts.
+
+**Rewritten tests.** `test_an_expression_objective_is_refused_by_name_whether_the_flag_is_on_or_off` is now the three flag
+cases (unset, `false`, `true`); `test_deriving_refuses_by_name_rather_than_pretending_the_concept_is_unknown` and
+`test_creating_an_expression_objective_is_refused_by_name` are renamed `..._while_the_flag_is_off` and keep their
+(unset-flag) assertions; `test_author_with_model_fit_still_reaches_the_unconditional_refusal` is renamed
+`..._reaches_the_flag_refusal`.
+
+**Green.** `refuse_expression_kind` returns unless the resolved value `is True`. `create_objective` takes the expression fields,
+validates the contract first, then parses `loss` in the `objective` profile (`_require_the_grammar`), storing `derived = NULL`.
+`OBJECTIVE_GRAMMAR_VIOLATION` is 422 with one `FieldError` on `loss` whose message starts `line <L>, column <C>:` (RL-1362
+DP-S3-3 (1)); no problem extension. New `derive_objective` (route: `model:fit` + author, then the flag, then the service) refuses
+a template, a non-`draft` and an already-derived objective with 409 `VALIDATION_FAILED`, stores `DerivedBlock` with
+`derived_at = datetime.now(UTC)`, and records `custom_objective.derived` with `before {"derived": None}`. `to_objective`
+returns the four expression fields. `errors.py` registers the code. `models.py`: the four JSONB expression columns gain
+`none_as_null=True` (an ORM `None` stored JSON `null`, which the Task 2 CHECK `IS NULL` refused: 37 failures in the three
+files until fixed). `02`: S2's marker removal (byte for byte), the §5.1 derive row, a dated FR-150 amendment, a dated note on the
+stale "refused for the whole of Phase 1" bullet. `docs/contracts/openapi/generated.json` regenerated; `docs/INDEX.md`
+regenerated (`doc-index.py`) for the FR-150 row.
+
+**Result.** The three files: `69 passed`. `test_contracts.py test_rbac.py test_errors.py` and the approvals tests run with the checks below.
+
+**Broken-input proofs** (each restored from a saved copy; `git diff` sha identical after): the flag check forced to refuse:
+`8 failed, 7 passed` (the eight Red tests, `assert 409 == 201`/`409 == 422`). Column without the 1-based `+1`:
+`FAILED test_grammar_violation_is_422_with_the_position_in_errors`, `1 failed, 2 passed`. Audit action renamed:
+`FAILED test_derive_stores_what_pricing_core_derives_stamped_and_audited` (`assert 0 == 1`). The already-derived guard dropped:
+`FAILED test_derive_refuses_a_template_objective_and_a_second_derivation` (`assert 500 == 409`). `derivation_version` hardcoded:
+`FAILED test_derive_stores_the_installed_sympy_version`.
+
+**Deviations from the plan, for the auditor.** (1) A `SyntaxError` from the loss (text that is not Python) is the same 422
+refusal, positioned by `SyntaxError.lineno`/`offset`; the plan names only `ExpressionError`. (2) An `ExpressionError` raised by
+`derive` itself (a node SymPy cannot print into the grammar) is also 422 `OBJECTIVE_GRAMMAR_VIOLATION` on `loss`. (3) A create
+of `kind: expression` without `applicability` is 422 `VALIDATION_FAILED` (no template to default from). (4) A second derive is
+409 `VALIDATION_FAILED`. (5) The module and route docstrings' pre-migration `FR-MODEL-` ids were replaced with
+FR-142/144/146/150/163/166, read from the spec's own headings. (6) No `ruff format` on any existing file; touched hunks are
+format-clean (objectives.py 4 hunks, base 4; test_custom_objectives.py 17, base 17).
+
 ## PRs
 
 None yet: the branch is pushed, no PR is opened (the lead's order for this turn).

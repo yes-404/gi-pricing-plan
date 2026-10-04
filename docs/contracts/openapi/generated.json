@@ -1884,7 +1884,7 @@
       },
       "CreateCustomObjective": {
         "additionalProperties": false,
-        "description": "FR-142's artifact. Every range and rule is `CustomObjective`'s, not this one's.\n\n`kind` is here rather than assumed so that a caller asking for an `expression`\nobjective is *answered* — FR-150 makes that a named refusal, and a body that\nsilently forbade the field would leave them reading a 422 about an unexpected key.",
+        "description": "FR-142's artifact. Every range and rule is `CustomObjective`'s, not this one's.\n\n`kind` is here rather than assumed: an `expression` objective carries `bound_symbols`,\n`parameters` and `loss` (FR-144) and no template, and while the flag is off a caller\nasking for it is *answered* with FR-150's named refusal, not a 422 about an unexpected key.",
         "properties": {
           "applicability": {
             "anyOf": [
@@ -1895,6 +1895,25 @@
                 "type": "null"
               }
             ]
+          },
+          "bound_symbols": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "y",
+                    "f",
+                    "w"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bound Symbols"
           },
           "description": {
             "anyOf": [
@@ -1920,6 +1939,31 @@
           "kind": {
             "$ref": "#/components/schemas/ObjectiveKind",
             "default": "template"
+          },
+          "loss": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loss"
+          },
+          "parameters": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ObjectiveParameter"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parameters"
           },
           "params": {
             "additionalProperties": {
@@ -18999,7 +19043,7 @@
     },
     "/api/v1/custom-objectives/{objective_id}/derive": {
       "post": {
-        "description": "Always refused in Phase 1 with `OBJECTIVE_KIND_NOT_ENABLED` (FR-MODEL-40, 75).\n\nBuilt as a refusal rather than left out: FR-150 names this endpoint as one of the\ntwo that answer that code, and the distinction between \"no such concept\" and \"not until\nPhase 2\" is exactly what a 404 would destroy. The return type is the one Phase 2 will\nanswer with; nothing reaches it yet.",
+        "description": "Derive and store the gradient and hessian of an `expression` draft (FR-144).\n\nNeeds `model:fit` and `custom_objective:author` (FR-367, RL-1362 DP-S3-2), both checked\nbefore the flag is read, so a caller without them learns nothing about it. While the\nworkspace's flag is off the answer is 409 `OBJECTIVE_KIND_NOT_ENABLED` whatever the id\nnames: the flag is reached before any lookup (FR-150).",
         "operationId": "derive_custom_objective_api_v1_custom_objectives__objective_id__derive_post",
         "parameters": [
           {

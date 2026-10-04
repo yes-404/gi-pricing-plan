@@ -589,7 +589,7 @@ def test_submitting_without_the_required_evidence_is_refused(
 
 
 @pytest.mark.req("FR-150")
-def test_creating_an_expression_objective_is_refused_by_name(
+def test_creating_an_expression_objective_is_refused_by_name_while_the_flag_is_off(
     client: TestClient, expression_author: dict[str, str]
 ) -> None:
     """409 `OBJECTIVE_KIND_NOT_ENABLED`, not a 422 about an unexpected key.

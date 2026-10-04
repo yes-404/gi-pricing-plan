@@ -175,39 +175,47 @@ async def test_a_parameter_outside_the_templates_range_is_refused_before_the_row
 
 
 @pytest.mark.req("FR-150")
-async def test_an_expression_objective_is_refused_by_name_whether_the_flag_is_on_or_off(
+async def test_an_expression_objective_is_refused_by_name_while_the_flag_is_off(
     database: Database, workspace_id, api_settings
 ) -> None:
-    """The flag being **on** must still refuse (FR-150).
+    """Refused while the flag is unset or `false`, accepted while it is `true` (FR-150).
 
-    A feature flag that admitted the kind would persist an artifact nothing can certify or
-    fit — the derivation, the compilation target and the review path are not built, and no
-    setting builds them. The message differs; the answer does not.
+    Three flag cases against `refuse_expression_kind`: an unset key resolves to the
+    definition's default (`False`) and refuses; an explicit `false` refuses; `true` returns.
+    The set-true case is the one that failed before the flag became liftable.
     """
     from app.platform import settings as settings_service
 
-    async with database.session() as session:
-        with pytest.raises(PlatformError) as off:
-            await service.refuse_expression_kind(
-                session, settings=api_settings, workspace_id=workspace_id
-            )
-    assert off.value.code == "OBJECTIVE_KIND_NOT_ENABLED"
-    assert off.value.status_code == 409
+    async def _refusal() -> PlatformError:
+        async with database.session() as session:
+            with pytest.raises(PlatformError) as refused:
+                await service.refuse_expression_kind(
+                    session, settings=api_settings, workspace_id=workspace_id
+                )
+        return refused.value
 
-    async with database.unit_of_work() as session:
-        # FR-395: the settings row now references a workspace row.
-        await workspaces.ensure_workspace(session, workspace_id=workspace_id)
-        await settings_service.set_workspace_setting(
-            session, workspace_id, "features.expression_objectives_enabled", True
-        )
-    async with database.session() as session:
-        with pytest.raises(PlatformError) as on:
-            await service.refuse_expression_kind(
-                session, settings=api_settings, workspace_id=workspace_id
+    unset = await _refusal()
+    assert unset.code == "OBJECTIVE_KIND_NOT_ENABLED"
+    assert unset.status_code == 409
+
+    async def _set(value: bool) -> None:
+        async with database.unit_of_work() as session:
+            # FR-395: the settings row now references a workspace row.
+            await workspaces.ensure_workspace(session, workspace_id=workspace_id)
+            await settings_service.set_workspace_setting(
+                session, workspace_id, "features.expression_objectives_enabled", value
             )
-    assert on.value.code == "OBJECTIVE_KIND_NOT_ENABLED"
-    assert on.value.status_code == 409
-    assert (on.value.detail or "") != (off.value.detail or "")
+
+    await _set(False)
+    off = await _refusal()
+    assert off.code == "OBJECTIVE_KIND_NOT_ENABLED"
+    assert off.status_code == 409
+
+    await _set(True)
+    async with database.session() as session:
+        await service.refuse_expression_kind(
+            session, settings=api_settings, workspace_id=workspace_id
+        )
 
 
 # -- the definition cannot move ------------------------------------------------------------
@@ -644,7 +652,7 @@ async def test_deriving_without_model_fit_is_refused(
 
 
 @pytest.mark.req("FR-150")
-async def test_deriving_refuses_by_name_rather_than_pretending_the_concept_is_unknown(
+async def test_deriving_refuses_by_name_while_the_flag_is_off(
     api_client: TestClient, database: Database, workspace_id
 ) -> None:
     """The arm the old test could never reach. Granting `model:fit` is what makes this a test
@@ -805,10 +813,10 @@ async def test_author_without_model_fit_is_refused_on_create_and_derive(
 
 
 @pytest.mark.req("FR-367")
-async def test_author_with_model_fit_still_reaches_the_unconditional_refusal(
+async def test_author_with_model_fit_reaches_the_flag_refusal(
     api_client: TestClient, database: Database, workspace_id
 ) -> None:
-    """Both held: past the permission checks, the flag refusal answers (Task 4 lifts it)."""
+    """Both held: past the permission checks, the flag (unset here) refuses."""
     headers = await _principal_holding(
         database, workspace_id, {"custom_objective:author", "model:fit", "model:read"}
     )

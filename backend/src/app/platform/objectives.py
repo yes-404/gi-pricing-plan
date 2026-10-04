@@ -1,12 +1,12 @@
 """Custom Objectives — authoring, certification, submission and blast radius.
 
-`02` §3.7 (FR-MODEL-38, 42, 44, 46, 47, 75), §4.5 the catalogue, §4.7 the certificate.
+`02` §3.7 (FR-142, FR-144, FR-146, FR-150, FR-163), §4.5 the catalogue, §4.7 the certificate.
 
 Three things about this service are worth reading before using it.
 
 * **The artifact is validated by its contract before the row exists.** `create_objective`
   builds a `CustomObjective` and lets its validators refuse — the template's own parameter
-  ranges, an applicability wider than §4.5's, a kind Phase 1 does not ship. A row that
+  ranges, an applicability wider than §4.5's, an `expression` objective's missing loss. A row that
   reached the table without passing them would be an objective that fails at fit time, in
   a worker, with a message about NumPy.
 
@@ -29,7 +29,8 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
-from typing import Any, NoReturn
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -54,9 +55,13 @@ from model_schema import (
     CertificateOutcome,
     CertificateResult,
     CustomObjective,
+    DerivedBlock,
+    FieldError,
     HessianStrategy,
     JobSource,
     ObjectiveCertificate,
+    ObjectiveKind,
+    ObjectiveParameter,
     ObjectiveStatus,
     ObjectiveTemplate,
     ObjectiveUsage,
@@ -67,12 +72,15 @@ from model_schema import (
     SamplingSpec,
     new_uuid7,
 )
+from pricing_core.data.expressions import ExpressionError, GrammarProfile, parse_expression
+from pricing_core.modelling.expression_objective import derive
 
 __all__ = [
     "apply_approval_decision",
     "certifiable_or_refuse",
     "create_objective",
     "default_sampling",
+    "derive_objective",
     "list_objectives",
     "load_certificate",
     "load_objective",
@@ -123,6 +131,10 @@ def to_objective(
             "kind": row.kind,
             "template": row.template,
             "params": row.params,
+            "bound_symbols": row.bound_symbols,
+            "parameters": row.parameters,
+            "loss": row.loss,
+            "derived": row.derived,
             "applicability": row.applicability,
             "hessian_strategy": row.hessian_strategy,
             "hessian_min": row.hessian_min,
@@ -156,12 +168,16 @@ async def create_objective(
     workspace_id: UUID,
     actor: Principal,
     slug: str,
-    template: ObjectiveTemplate,
+    template: ObjectiveTemplate | None,
     params: dict[str, float],
     applicability: Applicability | None,
     hessian_strategy: HessianStrategy,
     hessian_min: float,
     description: str | None,
+    kind: ObjectiveKind = ObjectiveKind.TEMPLATE,
+    bound_symbols: Sequence[str] | None = None,
+    parameters: Sequence[ObjectiveParameter] | None = None,
+    loss: str | None = None,
 ) -> CustomObjectiveRow:
     """Create the next version of a Custom Objective, as a `draft` (FR-MODEL-38, 46).
 
@@ -173,6 +189,11 @@ async def create_objective(
     §4.5 states where each template's derivatives are valid, an author may narrow that and
     may not widen it, and a default of "everything" would invert the direction the contract
     allows movement in.
+
+    An `expression` objective has no template to default from, so its `applicability` is
+    required, and its `loss` is parsed in the `objective` profile after the contract has
+    accepted the shape: a grammar error is `OBJECTIVE_GRAMMAR_VIOLATION` with its position
+    (FR-145), stored as `derived = NULL` until `derive_objective` runs.
     """
     await rbac.require_permission(
         session,
@@ -198,8 +219,14 @@ async def create_objective(
             "id": str(new_uuid7()),
             "slug": slug,
             "version": version,
-            "template": template.value,
+            "kind": kind.value,
+            "template": template.value if template is not None else None,
             "params": params,
+            "bound_symbols": list(bound_symbols) if bound_symbols is not None else None,
+            "parameters": (
+                [p.model_dump(mode="json") for p in parameters] if parameters is not None else None
+            ),
+            "loss": loss,
             "applicability": (
                 applicability.model_dump(mode="json") if applicability is not None else None
             ),
@@ -209,6 +236,12 @@ async def create_objective(
         },
         template=template,
     )
+    if objective.loss is not None:
+        _require_the_grammar(
+            objective.loss,
+            symbols=frozenset(objective.bound_symbols or ())
+            | frozenset(p.name for p in objective.parameters or ()),
+        )
     row = CustomObjectiveRow(
         id=objective.id,
         workspace_id=workspace_id,
@@ -218,6 +251,13 @@ async def create_objective(
         kind=objective.kind.value,
         template=objective.template.value if objective.template else None,
         params=dict(objective.params),
+        bound_symbols=list(objective.bound_symbols) if objective.bound_symbols else None,
+        parameters=(
+            [p.model_dump(mode="json") for p in objective.parameters]
+            if objective.parameters is not None
+            else None
+        ),
+        loss=objective.loss,
         applicability=objective.applicability.model_dump(mode="json"),
         hessian_strategy=objective.hessian_strategy.value,
         hessian_min=objective.hessian_min,
@@ -247,51 +287,126 @@ async def create_objective(
             "template": row.template,
             "params": row.params,
             "hessian_strategy": row.hessian_strategy,
+            **({"kind": row.kind, "loss": row.loss} if row.loss is not None else {}),
         },
+    )
+    return row
+
+
+def _require_the_grammar(loss: str, *, symbols: frozenset[str]) -> None:
+    """FR-145: `loss` parses in the `objective` profile, or 422 with the position in `errors[0]`.
+
+    RL-1362 DP-S3-3: one `FieldError` on `loss`, its message beginning `line <L>, column <C>:`
+    with `ExpressionError.lineno` and `col_offset` (1-based column). No problem extension:
+    `ProblemDetail` is `extra="forbid"`. A text that does not parse as Python at all is the
+    same refusal, positioned by `SyntaxError`, whose `offset` is already 1-based.
+    """
+    try:
+        parse_expression(loss, GrammarProfile.OBJECTIVE, symbols=symbols)
+    except ExpressionError as exc:
+        line, column = exc.lineno, None if exc.col_offset is None else exc.col_offset + 1
+        reason = str(exc)
+    except SyntaxError as exc:
+        line, column, reason = exc.lineno, exc.offset, exc.msg
+    else:
+        return
+    message = reason if line is None else f"line {line}, column {column}: {reason}"
+    raise PlatformError(
+        "OBJECTIVE_GRAMMAR_VIOLATION",
+        "The loss is outside the objective grammar",
+        422,
+        "`02` §4.6's `objective` profile refused the loss (FR-145).",
+        errors=(FieldError(field="loss", code="OBJECTIVE_GRAMMAR_VIOLATION", message=message),),
+    )
+
+
+async def derive_objective(
+    session: AsyncSession, *, workspace_id: UUID, actor: Principal, objective_id: UUID
+) -> CustomObjectiveRow:
+    """Derive and store an `expression` draft's gradient and hessian (FR-144).
+
+    The permissions are the route's (`model:fit` and `custom_objective:author`) and the flag
+    is checked before this runs. Refused, 409 `VALIDATION_FAILED` (the module's lifecycle
+    code), for a template, a non-`draft` objective, and one already derived: `derived` is
+    written once from NULL (the definition trigger), so a second write would be refused by
+    the database with a message about a trigger.
+    """
+    row = await _get_or_404(session, workspace_id=workspace_id, objective_id=objective_id)
+    ref = f"{row.slug}@{row.version}"
+    if row.kind != ObjectiveKind.EXPRESSION.value or row.loss is None:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "Only an expression objective is derived",
+            409,
+            f"{ref} is a {row.kind} objective; a template's derivatives are analytic.",
+        )
+    if row.status != ObjectiveStatus.DRAFT.value or row.derived is not None:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "This objective cannot be derived in its current state",
+            409,
+            f"{ref} is {row.status} and "
+            f"{'already derived' if row.derived is not None else 'not yet derived'}. "
+            "Derivation is written once, on a draft; create the next version to change the loss.",
+        )
+    try:
+        derived = derive(row.loss, parameters=[p["name"] for p in row.parameters or []])
+    except ExpressionError as exc:
+        raise PlatformError(
+            "OBJECTIVE_GRAMMAR_VIOLATION",
+            "The loss cannot be derived",
+            422,
+            str(exc),
+            errors=(
+                FieldError(field="loss", code="OBJECTIVE_GRAMMAR_VIOLATION", message=str(exc)),
+            ),
+        ) from exc
+    block = DerivedBlock(
+        gradient=derived.gradient,
+        hessian=derived.hessian,
+        derivation_tool="sympy",
+        derivation_version=derived.derivation_version,
+        derived_at=datetime.now(UTC),
+    ).model_dump(mode="json")
+    row.derived = block
+    await session.flush()
+    await audit.record(
+        session,
+        workspace_id=workspace_id,
+        actor=actor,
+        source=JobSource.API,
+        action="custom_objective.derived",
+        entity_ref=f"custom_objective:{row.slug}@{row.version}",
+        before={"derived": None},
+        after={"derived": block},
     )
     return row
 
 
 async def refuse_expression_kind(
     session: AsyncSession, *, settings: Settings, workspace_id: UUID
-) -> NoReturn:
-    """FR-150: `expression` objectives are Phase 2, and the flag is how it is said.
+) -> None:
+    """FR-150: `expression` objectives are behind `features.expression_objectives_enabled`.
 
-    Two refusals, and the second is the one that matters. With the flag **off** — its
-    default, and its value for the whole of Phase 1 — this is the feature gate `07`
-    FR-448/449 describes. With the flag **on**, it still refuses, because turning a flag
-    on cannot build the symbolic derivation, the second compilation target and the review
-    path that an expression objective needs; accepting one then would persist an artifact
-    nothing can evaluate and no certificate can describe.
-
-    Better here than at the contract alone: `CustomObjective` refuses the kind too, but its
-    message is about a shape, and a caller who asked for a Phase 2 capability deserves to be
-    told that is what happened.
+    Raises 409 `OBJECTIVE_KIND_NOT_ENABLED` unless the workspace's setting resolves to
+    `True`; an unset key resolves to the definition's default, `False`. Better here than at
+    the contract alone: `CustomObjective` accepts the kind, and a caller who asked for a
+    capability the workspace has not enabled deserves to be told that is what happened.
     """
     from app.platform import settings as settings_service
 
     resolution = await settings_service.resolve(
         session, settings, workspace_id, "features.expression_objectives_enabled"
     )
-    enabled = bool(resolution.effective_value)
-
-    detail = (
-        "`02` FR-150 and OQ-573 (decided 2026-08-15): Phase 1 ships `template` "
-        "objectives only. §4.6's grammar is specified and its parser is built, but the "
-        "symbolic derivation of gradient and hessian, the vectorised compilation target "
-        "and the review path for a user-authored loss are not — so an expression objective "
-        "would be an artifact nothing could certify or fit."
-    )
-    if enabled:
-        detail += (
-            " `features.expression_objectives_enabled` is on in this workspace, and it "
-            "gates a capability that does not exist yet rather than one being withheld."
-        )
+    if resolution.effective_value is True:
+        return
     raise PlatformError(
         "OBJECTIVE_KIND_NOT_ENABLED",
         "Expression objectives are not available",
         409,
-        detail,
+        "`features.expression_objectives_enabled` is off in this workspace (FR-150): it "
+        "is off unless set, and an `expression` objective is created and derived only "
+        "while it is on.",
     )
 
 
@@ -793,7 +908,7 @@ _DEFAULT_POINTS = 2_000
 _DEFAULT_WEIGHTS = (0.01, 10.0)
 
 
-def _validated(payload: dict[str, Any], *, template: ObjectiveTemplate) -> CustomObjective:
+def _validated(payload: dict[str, Any], *, template: ObjectiveTemplate | None) -> CustomObjective:
     """`CustomObjective` or a 422 that names what the template actually allows.
 
     The contract's validators carry the explanation — §4.5's parameter ranges, the
@@ -801,6 +916,14 @@ def _validated(payload: dict[str, Any], *, template: ObjectiveTemplate) -> Custo
     them differently.
     """
     if payload.get("applicability") is None:
+        if template is None:
+            raise PlatformError(
+                "VALIDATION_FAILED",
+                "An expression objective states its applicability",
+                422,
+                "There is no template to default `applicability` from (§4.5), so an "
+                "`expression` objective names the responses and backends it applies to.",
+            )
         payload["applicability"] = TEMPLATE_APPLICABILITY[template].model_dump(mode="json")
     try:
         return CustomObjective.model_validate(payload)

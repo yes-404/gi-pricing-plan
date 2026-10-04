@@ -195,3 +195,238 @@ async def test_storage_the_lifecycle_of_an_expression_row_still_moves(
             text("UPDATE custom_objectives SET status = 'deprecated' WHERE id = :id"),
             {"id": row_id},
         )
+
+
+# -- Task 4: the flag made liftable; create and derive; the grammar refusal ----------------------
+#
+# `-k flag`, `-k derive` and `-k grammar`. The set-true cases are the red-first ones: at the
+# base the refusal is unconditional, so the *unset* case passes there for the wrong reason.
+
+_FLAG = "features.expression_objectives_enabled"
+_LOSS = "w * where(exp(f) < y, w_under, w_over) * (y - exp(f)) ** 2"
+_EXAMPLE_PARAMETERS = [
+    {"name": "w_under", "type": "float", "default": 2.0, "min": 1.0, "max": 10.0},
+    {"name": "w_over", "type": "float", "default": 1.0, "min": 0.1, "max": 10.0},
+]
+
+
+def _expression_body(**over: Any) -> dict[str, Any]:
+    """`02` §4.6's example as a create request: no `derived`, which the platform generates."""
+    body: dict[str, Any] = {
+        "slug": f"expr-{new_uuid7().hex[-8:]}",
+        "kind": "expression",
+        "bound_symbols": ["y", "f", "w"],
+        "parameters": _EXAMPLE_PARAMETERS,
+        "loss": _LOSS,
+        "applicability": {
+            "responses": ["burning_cost", "claim_severity"],
+            "backends": ["xgboost", "lightgbm"],
+            "offset_required": False,
+            "y_domain": {"min_inclusive": 0},
+        },
+    }
+    body.update(over)
+    return body
+
+
+async def _set_flag(database: Database, workspace_id: Any, value: bool) -> None:
+    from app.platform import settings as settings_service
+    from app.platform import workspaces
+
+    async with database.unit_of_work() as session:
+        await workspaces.ensure_workspace(session, workspace_id=workspace_id)
+        await settings_service.set_workspace_setting(session, workspace_id, _FLAG, value)
+
+
+@pytest.fixture
+async def author(database: Database, workspace_id: Any) -> dict[str, str]:
+    """`model:fit` and `custom_objective:author`: the two permissions create and derive need."""
+    from backend.tests.test_custom_objectives import _principal_holding
+
+    return await _principal_holding(
+        database, workspace_id, {"custom_objective:author", "model:fit", "model:read"}
+    )
+
+
+@pytest.mark.req("FR-150")
+async def test_flag_unset_refuses_create_and_derive_by_name(api_client: Any, author: Any) -> None:
+    """An unset key resolves to the definition's default, `False` (FR-150)."""
+    created = api_client.post("/api/v1/custom-objectives", json=_expression_body(), headers=author)
+    derived = api_client.post(
+        f"/api/v1/custom-objectives/{new_uuid7()}/derive", json={}, headers=author
+    )
+    for response in (created, derived):
+        assert response.status_code == 409, response.text
+        assert response.json()["code"] == "OBJECTIVE_KIND_NOT_ENABLED"
+
+
+@pytest.mark.req("FR-150")
+async def test_flag_false_refuses_create_and_derive_by_name(
+    api_client: Any, author: Any, database: Database, workspace_id: Any
+) -> None:
+    await _set_flag(database, workspace_id, False)
+    created = api_client.post("/api/v1/custom-objectives", json=_expression_body(), headers=author)
+    derived = api_client.post(
+        f"/api/v1/custom-objectives/{new_uuid7()}/derive", json={}, headers=author
+    )
+    for response in (created, derived):
+        assert response.status_code == 409, response.text
+        assert response.json()["code"] == "OBJECTIVE_KIND_NOT_ENABLED"
+
+
+@pytest.mark.req("FR-150")
+async def test_flag_true_accepts_create_as_an_underived_draft(
+    api_client: Any, author: Any, database: Database, workspace_id: Any
+) -> None:
+    await _set_flag(database, workspace_id, True)
+    response = api_client.post("/api/v1/custom-objectives", json=_expression_body(), headers=author)
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["kind"] == "expression"
+    assert body["status"] == "draft"
+    assert body["template"] is None
+    assert body["loss"] == _LOSS
+    assert body["bound_symbols"] == ["y", "f", "w"]
+    assert [p["name"] for p in body["parameters"]] == ["w_under", "w_over"]
+    assert body["derived"] is None
+
+
+async def _created(api_client: Any, author: Any, database: Database, workspace_id: Any) -> dict:
+    await _set_flag(database, workspace_id, True)
+    response = api_client.post("/api/v1/custom-objectives", json=_expression_body(), headers=author)
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+@pytest.mark.req("FR-144")
+async def test_derive_stores_what_pricing_core_derives_stamped_and_audited(
+    api_client: Any, author: Any, database: Database, workspace_id: Any
+) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy import select
+
+    from app.db.models import AuditEventRow
+    from pricing_core.modelling.expression_objective import derive
+
+    created = await _created(api_client, author, database, workspace_id)
+    before = datetime.now(UTC)
+    response = api_client.post(
+        f"/api/v1/custom-objectives/{created['id']}/derive", json={}, headers=author
+    )
+    assert response.status_code == 200, response.text
+    stored = response.json()["derived"]
+    expected = derive(_LOSS, parameters=["w_under", "w_over"])
+    assert stored["gradient"] == expected.gradient
+    assert stored["hessian"] == expected.hessian
+    assert stored["derivation_tool"] == "sympy"
+    assert stored["derivation_version"] == expected.derivation_version
+    stamped = datetime.fromisoformat(stored["derived_at"])
+    assert before - timedelta(seconds=1) <= stamped <= datetime.now(UTC) + timedelta(seconds=1)
+
+    async with database.session() as session:
+        events = (
+            await session.scalars(
+                select(AuditEventRow).where(
+                    AuditEventRow.workspace_id == workspace_id,
+                    AuditEventRow.action == "custom_objective.derived",
+                )
+            )
+        ).all()
+    assert len(events) == 1
+    assert events[0].entity_ref == f"custom_objective:{created['slug']}@1"
+    assert events[0].before["derived"] is None
+    assert events[0].after["derived"]["gradient"] == expected.gradient
+
+
+@pytest.mark.req("NFR-484")
+async def test_derive_stores_the_installed_sympy_version(
+    api_client: Any, author: Any, database: Database, workspace_id: Any, monkeypatch: Any
+) -> None:
+    """`RL-1289`'s rule carried to storage: the version is read when derive runs."""
+    import sympy
+
+    created = await _created(api_client, author, database, workspace_id)
+    monkeypatch.setattr(sympy, "__version__", "9.9.9")
+    response = api_client.post(
+        f"/api/v1/custom-objectives/{created['id']}/derive", json={}, headers=author
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["derived"]["derivation_version"] == "9.9.9"
+
+
+@pytest.mark.req("FR-144")
+async def test_derive_refuses_a_template_objective_and_a_second_derivation(
+    api_client: Any, author: Any, database: Database, workspace_id: Any
+) -> None:
+    await _set_flag(database, workspace_id, True)
+    template = api_client.post(
+        "/api/v1/custom-objectives",
+        json={"slug": "tmpl-for-derive", "template": "poisson"},
+        headers=author,
+    )
+    assert template.status_code == 201, template.text
+    refused = api_client.post(
+        f"/api/v1/custom-objectives/{template.json()['id']}/derive", json={}, headers=author
+    )
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "VALIDATION_FAILED"
+
+    expression = api_client.post(
+        "/api/v1/custom-objectives", json=_expression_body(), headers=author
+    ).json()
+    url = f"/api/v1/custom-objectives/{expression['id']}/derive"
+    assert api_client.post(url, json={}, headers=author).status_code == 200
+    again = api_client.post(url, json={}, headers=author)
+    assert again.status_code == 409, again.text
+    assert again.json()["code"] == "VALIDATION_FAILED"
+
+
+@pytest.mark.req("FR-145")
+async def test_grammar_violation_is_422_with_the_position_in_errors(
+    api_client: Any, author: Any, database: Database, workspace_id: Any
+) -> None:
+    from pricing_core.data.expressions import ExpressionError, GrammarProfile, parse_expression
+
+    await _set_flag(database, workspace_id, True)
+    loss = "w * numpy.where(y, f, w)"
+    with pytest.raises(ExpressionError) as parsed:
+        parse_expression(loss, GrammarProfile.OBJECTIVE, symbols=frozenset({"y", "f", "w"}))
+    line, column = parsed.value.lineno, parsed.value.col_offset + 1
+
+    response = api_client.post(
+        "/api/v1/custom-objectives",
+        json=_expression_body(loss=loss, parameters=[]),
+        headers=author,
+    )
+    assert response.status_code == 422, response.text
+    body = response.json()
+    assert body["code"] == "OBJECTIVE_GRAMMAR_VIOLATION"
+    assert "position" not in body
+    assert body["errors"][0]["field"] == "loss"
+    assert body["errors"][0]["code"] == "OBJECTIVE_GRAMMAR_VIOLATION"
+    assert body["errors"][0]["message"].startswith(f"line {line}, column {column}:")
+
+
+@pytest.mark.req("FR-145")
+async def test_grammar_violation_covers_text_that_does_not_parse(
+    api_client: Any, author: Any, database: Database, workspace_id: Any
+) -> None:
+    await _set_flag(database, workspace_id, True)
+    response = api_client.post(
+        "/api/v1/custom-objectives",
+        json=_expression_body(loss="w * (y - ", parameters=[]),
+        headers=author,
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "OBJECTIVE_GRAMMAR_VIOLATION"
+    assert response.json()["errors"][0]["message"].startswith("line 1, column ")
+
+
+@pytest.mark.req("FR-145")
+async def test_grammar_violation_is_not_raised_for_a_valid_loss(
+    api_client: Any, author: Any, database: Database, workspace_id: Any
+) -> None:
+    """The control: the same route and caller, a loss inside the grammar, is 201."""
+    created = await _created(api_client, author, database, workspace_id)
+    assert created["loss"] == _LOSS

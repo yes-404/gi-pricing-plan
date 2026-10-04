@@ -1729,10 +1729,10 @@ class CustomObjectiveRow(Base):
     #: `loss`, `parameters` and `bound_symbols` are definition columns, frozen at insert by
     #: the trigger. `derived` is the platform's own output and is written once, from NULL,
     #: while the row is a `draft` (the same trigger).
-    bound_symbols: Mapped[list[str] | None] = mapped_column(JSONB)
-    parameters: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
+    bound_symbols: Mapped[list[str] | None] = mapped_column(JSONB(none_as_null=True))
+    parameters: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB(none_as_null=True))
     loss: Mapped[str | None] = mapped_column(Text)
-    derived: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    derived: Mapped[dict[str, Any] | None] = mapped_column(JSONB(none_as_null=True))
 
     #: FR-146's evidence. Not a foreign key to `objective_certificates` only because
     #: the certificate points back the other way and one direction is enough; the CHECK
