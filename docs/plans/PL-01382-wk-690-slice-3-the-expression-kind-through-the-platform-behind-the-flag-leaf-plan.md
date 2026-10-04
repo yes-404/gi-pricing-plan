@@ -3,7 +3,7 @@ id: PL-1382
 family: plan
 kind: leaf
 title: WK-690 Slice 3 — the `expression` kind through the platform, behind the flag, with `custom_objective:author`: leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-03
 owner: planner
 tree: 9b0fb97c9ed1cea743639897351191bc1a862041
