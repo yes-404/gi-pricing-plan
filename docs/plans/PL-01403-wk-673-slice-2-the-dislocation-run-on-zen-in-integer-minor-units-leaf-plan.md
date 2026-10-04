@@ -3,7 +3,7 @@ id: PL-1403
 family: plan
 kind: leaf
 title: WK-673 Slice 2 — the Dislocation Run on ZEN, in integer minor units: leaf plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-04
 owner: planner
 tree: 1ab1776dae080dcde4eb8e79ac84f5f5f653136a
