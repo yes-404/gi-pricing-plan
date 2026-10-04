@@ -349,8 +349,7 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
     {"artifact_type": "validation_rule", "approvers_required": 1,
      "approver_roles": ["approver", "admin"], "evidence": ["dry_run_result"]},
     {"artifact_type": "custom_objective", "approvers_required": 1,
-     "approver_roles": ["approver"], "evidence": ["objective_certificate"],
-     "escalation": {"when": "certificate.convexity == 'violated'", "approvers_required": 2}},
+     "approver_roles": ["approver"], "evidence": ["objective_certificate"]},
     {"artifact_type": "custom_metric", "approvers_required": 1,
      "approver_roles": ["approver"], "evidence": ["metric_certificate"]},
     {"artifact_type": "model", "approvers_required": 1,
@@ -373,6 +372,18 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 ```
 
 `separation_of_duties.configurable: false` is deliberate and is not a placeholder (R1).
+
+> **A non-convex Custom Objective needs the policy's count plus one, and that is not a policy
+> key** (`02` FR-152; added 2026-10-04, `RL-1362` DP-S3-4). When the latest
+> certificate of a submitted `custom_objective` version has a `convexity` check with status
+> `violated`, the request's `approvers_required` is the matching entry's `approvers_required`
+> plus one. That is two under the defaults above and three under a policy of two. It applies to
+> both objective kinds. When FR-385 is built, it applies to the expedited count too. It is
+> stored on the request row (§4.3) at submission, and no policy can configure it, for R1's
+> reason: a rule that a policy edit can remove is not a rule. It replaces the entry's former
+> `"escalation": {"when": "certificate.convexity == 'violated'", "approvers_required": 2}`. That
+> was an absolute count, which added nobody under a policy of two, and the model never accepted
+> it (`FD-1281`).
 
 > **The `deployment` entry in `DEFAULT_POLICY`, dated 2026-10-03 (WK-674 Slice 2; `RL-886`).** The `deployment` entry above, for `prod`, is added to `DEFAULT_POLICY` in `model-schema` by this slice. `RL-886` ruled that the spec was right and the code was one entry short: §3.3's floor already names `deployment` (FR-364), and `submit` refused a Deployment Request with "no approval policy for this artifact type" for want of the entry. Its `environment` is an Environment's slug (`07` §4.2).
 

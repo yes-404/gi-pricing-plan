@@ -54,6 +54,7 @@ from model_schema import (
     ArtifactRef,
     CertificateOutcome,
     CertificateResult,
+    CheckStatus,
     CustomObjective,
     DerivedBlock,
     FieldError,
@@ -700,6 +701,17 @@ async def submit_for_review(
     )
     row = await _get_or_404(session, workspace_id=workspace_id, objective_id=objective_id)
     current = ObjectiveStatus(row.status)
+    # RL-1362 DP-S3-3: the predicate is the status. `record_certificate` sets `draft` on a
+    # failed certificate and `certified` on a passing one, so `draft` is exactly "no passing
+    # certificate for this version". Every other invalid transition keeps VALIDATION_FAILED.
+    if current is ObjectiveStatus.DRAFT:
+        raise PlatformError(
+            "OBJECTIVE_NOT_CERTIFIED",
+            "This objective has no passing certificate",
+            409,
+            f"{row.slug}@{row.version} is a `draft`: certify it (POST "
+            "/api/v1/custom-objectives/{id}/certify) before submitting it (FR-146, FR-163).",
+        )
     if ObjectiveStatus.REVIEW not in VALID_OBJECTIVE_TRANSITIONS[current]:
         raise PlatformError(
             "VALIDATION_FAILED",
@@ -711,6 +723,25 @@ async def submit_for_review(
         )
     await _require_evidence(session, workspace_id=workspace_id, row=row)
 
+    # FR-152 / RL-1362 DP-S3-4: a `violated` convexity check adds one Approver to the
+    # policy's count, for both kinds, read from the latest certificate.
+    # No certificate row, which only a hand-written row can lack, is no `violated` finding:
+    # the rule is the ruling's literal predicate.
+    latest = (
+        await session.execute(
+            select(ObjectiveCertificateRow)
+            .where(
+                ObjectiveCertificateRow.workspace_id == workspace_id,
+                ObjectiveCertificateRow.custom_objective_id == objective_id,
+            )
+            .order_by(ObjectiveCertificateRow.certified_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    non_convex = latest is not None and any(
+        check.name == "convexity" and check.status is CheckStatus.VIOLATED
+        for check in to_certificate(latest).result.checks
+    )
     request = await approvals.submit(
         session,
         workspace_id=workspace_id,
@@ -719,6 +750,7 @@ async def submit_for_review(
             type="custom_objective", slug=row.slug, version=row.version
         ),
         change_summary=change_summary,
+        additional_approvers=1 if non_convex else 0,
     )
     row.status = ObjectiveStatus.REVIEW.value
     row.approval_request_id = request.id

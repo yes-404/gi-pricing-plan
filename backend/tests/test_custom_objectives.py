@@ -447,7 +447,9 @@ async def test_submission_without_a_certificate_is_refused(
                 session, workspace_id=workspace_id, actor=actor,
                 objective_id=row.id, change_summary="please",
             )
-    assert refused.value.status_code == 409  # `draft → review` is not a transition at all
+    assert refused.value.status_code == 409
+    # `draft → review` is not a transition; RL-1362 DP-S3-3 names the missing certificate.
+    assert refused.value.code == "OBJECTIVE_NOT_CERTIFIED"
 
 
 @pytest.mark.req("FR-163")
