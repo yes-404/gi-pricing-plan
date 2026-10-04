@@ -2274,6 +2274,25 @@
             ],
             "title": "Approval Request Id"
           },
+          "bound_symbols": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "y",
+                    "f",
+                    "w"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bound Symbols"
+          },
           "certificate_id": {
             "anyOf": [
               {
@@ -2285,6 +2304,16 @@
               }
             ],
             "title": "Certificate Id"
+          },
+          "derived": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DerivedBlock"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "description": {
             "anyOf": [
@@ -2315,6 +2344,32 @@
           "kind": {
             "$ref": "#/components/schemas/ObjectiveKind",
             "default": "template"
+          },
+          "loss": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loss"
+          },
+          "parameters": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ObjectiveParameter"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parameters"
           },
           "params": {
             "additionalProperties": {
@@ -3637,6 +3692,43 @@
           "operation"
         ],
         "title": "DeriveRequest",
+        "type": "object"
+      },
+      "DerivedBlock": {
+        "additionalProperties": false,
+        "description": "The gradient and hessian the platform derived from an `expression` loss (FR-144).\n\nGenerated, never hand-written; `derived_at` is the backend's clock, which\n`pricing-core` may not read (ADR-703).",
+        "properties": {
+          "derivation_tool": {
+            "const": "sympy",
+            "title": "Derivation Tool",
+            "type": "string"
+          },
+          "derivation_version": {
+            "title": "Derivation Version",
+            "type": "string"
+          },
+          "derived_at": {
+            "format": "date-time",
+            "title": "Derived At",
+            "type": "string"
+          },
+          "gradient": {
+            "title": "Gradient",
+            "type": "string"
+          },
+          "hessian": {
+            "title": "Hessian",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gradient",
+          "hessian",
+          "derivation_tool",
+          "derivation_version",
+          "derived_at"
+        ],
+        "title": "DerivedBlock",
         "type": "object"
       },
       "DerivedFrom": {
@@ -8275,6 +8367,46 @@
         ],
         "title": "ObjectiveKind",
         "type": "string"
+      },
+      "ObjectiveParameter": {
+        "additionalProperties": false,
+        "description": "One declared parameter of an `expression` objective (`02` §4.6).",
+        "properties": {
+          "default": {
+            "title": "Default",
+            "type": "number"
+          },
+          "max": {
+            "title": "Max",
+            "type": "number"
+          },
+          "min": {
+            "title": "Min",
+            "type": "number"
+          },
+          "name": {
+            "pattern": "^[a-z_][a-z0-9_]*$",
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "float",
+              "int"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "default",
+          "min",
+          "max"
+        ],
+        "title": "ObjectiveParameter",
+        "type": "object"
       },
       "ObjectiveStatus": {
         "description": "FR-163's lifecycle.",

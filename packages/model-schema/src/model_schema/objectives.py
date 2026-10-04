@@ -2,15 +2,15 @@
 
 `02` §3.7 (FR-142…48, 68…70, 75/76), §4.5 the catalogue, §4.7 the certificate.
 
-**Phase 1 ships `template` objectives only** (FR-150, OQ-573 decided 2026-08-15).
-A template is a parameterised standard loss whose gradient and hessian `pricing-core`
-implements analytically; it carries no user code, and the artifact carries no expression.
-`ObjectiveKind.EXPRESSION` exists here because `POST /custom-objectives` must be able to
-*name* what it is refusing (`OBJECTIVE_KIND_NOT_ENABLED`) — but `CustomObjective` refuses to
-be constructed with it, because the fields an expression objective needs (`loss`, the
-derived gradient and hessian, the parameter declarations of §4.6) are not built. FR-207
-forbids declaring a shape and leaving it structurally empty: a null that can never be
-anything else teaches that null means *nothing* rather than *not yet*.
+A `template` objective is a parameterised standard loss whose gradient and hessian
+`pricing-core` implements analytically; it carries no user code. An `expression` objective
+(`02` §4.6, FR-144) carries the author's `loss` text, its declared `parameters` and
+`bound_symbols`, and the `derived` gradient and hessian the platform generated from it
+(`derived` is `None` while the objective is a `draft` not yet derived). The two arms share
+one artifact and each field belongs to exactly one arm, so `CustomObjective` refuses a
+template carrying expression fields and the reverse (FR-207: a shape is declared where it
+is built, not left structurally empty). Whether `kind: expression` may be *created* is the
+platform's flag (FR-150, `features.expression_objectives_enabled`), not this type's.
 
 Three shapes here are worth reading before using them.
 
@@ -41,7 +41,7 @@ import enum
 from typing import Final, Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 from model_schema.modelling import ResponseKind
 from model_schema.refs import Slug
@@ -60,10 +60,12 @@ __all__ = [
     "CertificateResult",
     "CheckStatus",
     "CustomObjective",
+    "DerivedBlock",
     "HessianStrategy",
     "ObjectiveBackend",
     "ObjectiveCertificate",
     "ObjectiveKind",
+    "ObjectiveParameter",
     "ObjectiveStatus",
     "ObjectiveTemplate",
     "ObjectiveUsage",
@@ -339,8 +341,12 @@ TEMPLATE_PARAMETERS: Final[dict[ObjectiveTemplate, tuple[TemplateParameter, ...]
     ObjectiveTemplate.GAMMA: (),
     ObjectiveTemplate.TWEEDIE: (
         TemplateParameter(
-            name="p", minimum=1.0, maximum=2.0,
-            minimum_exclusive=True, maximum_exclusive=True, default=1.5,
+            name="p",
+            minimum=1.0,
+            maximum=2.0,
+            minimum_exclusive=True,
+            maximum_exclusive=True,
+            default=1.5,
         ),
     ),
     ObjectiveTemplate.CAPPED_GAMMA: (
@@ -368,8 +374,12 @@ TEMPLATE_PARAMETERS: Final[dict[ObjectiveTemplate, tuple[TemplateParameter, ...]
     ),
     ObjectiveTemplate.QUANTILE: (
         TemplateParameter(
-            name="alpha", minimum=0.0, maximum=1.0,
-            minimum_exclusive=True, maximum_exclusive=True, default=0.5,
+            name="alpha",
+            minimum=0.0,
+            maximum=1.0,
+            minimum_exclusive=True,
+            maximum_exclusive=True,
+            default=0.5,
         ),
     ),
     ObjectiveTemplate.ZERO_INFLATED_POISSON: (
@@ -377,9 +387,7 @@ TEMPLATE_PARAMETERS: Final[dict[ObjectiveTemplate, tuple[TemplateParameter, ...]
             name="pi", minimum=0.0, maximum=1.0, minimum_exclusive=True, maximum_exclusive=True
         ),
     ),
-    ObjectiveTemplate.FOCAL_BINOMIAL: (
-        TemplateParameter(name="gamma", minimum=0.0, default=2.0),
-    ),
+    ObjectiveTemplate.FOCAL_BINOMIAL: (TemplateParameter(name="gamma", minimum=0.0, default=2.0),),
 }
 
 #: §4.5's "each template declares its `applicability` block". The template states where its
@@ -387,53 +395,109 @@ TEMPLATE_PARAMETERS: Final[dict[ObjectiveTemplate, tuple[TemplateParameter, ...]
 #: may not widen it.
 TEMPLATE_APPLICABILITY: Final[dict[ObjectiveTemplate, Applicability]] = {
     ObjectiveTemplate.POISSON: Applicability(
-        responses=frozenset({ResponseKind.CLAIM_COUNT}), backends=_GBM,
-        offset_required=True, y_domain=_NON_NEGATIVE,
+        responses=frozenset({ResponseKind.CLAIM_COUNT}),
+        backends=_GBM,
+        offset_required=True,
+        y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.GAMMA: Applicability(
-        responses=frozenset({ResponseKind.CLAIM_SEVERITY}), backends=_GBM, y_domain=_POSITIVE,
+        responses=frozenset({ResponseKind.CLAIM_SEVERITY}),
+        backends=_GBM,
+        y_domain=_POSITIVE,
     ),
     ObjectiveTemplate.TWEEDIE: Applicability(
-        responses=frozenset({ResponseKind.BURNING_COST}), backends=_GBM,
-        offset_required=True, y_domain=_NON_NEGATIVE,
+        responses=frozenset({ResponseKind.BURNING_COST}),
+        backends=_GBM,
+        offset_required=True,
+        y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.CAPPED_GAMMA: Applicability(
-        responses=frozenset({ResponseKind.CLAIM_SEVERITY}), backends=_GBM, y_domain=_POSITIVE,
+        responses=frozenset({ResponseKind.CLAIM_SEVERITY}),
+        backends=_GBM,
+        y_domain=_POSITIVE,
     ),
     ObjectiveTemplate.SPLICED_SEVERITY: Applicability(
-        responses=frozenset({ResponseKind.CLAIM_SEVERITY}), backends=_GBM, y_domain=_POSITIVE,
+        responses=frozenset({ResponseKind.CLAIM_SEVERITY}),
+        backends=_GBM,
+        y_domain=_POSITIVE,
     ),
     ObjectiveTemplate.ASYMMETRIC_SQUARED: Applicability(
         responses=frozenset({ResponseKind.BURNING_COST, ResponseKind.CLAIM_SEVERITY}),
-        backends=_GBM, y_domain=_NON_NEGATIVE,
+        backends=_GBM,
+        y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.ASYMMETRIC_POISSON: Applicability(
-        responses=frozenset({ResponseKind.CLAIM_COUNT}), backends=_GBM,
-        offset_required=True, y_domain=_NON_NEGATIVE,
+        responses=frozenset({ResponseKind.CLAIM_COUNT}),
+        backends=_GBM,
+        offset_required=True,
+        y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.HUBER: Applicability(
         responses=frozenset({ResponseKind.BURNING_COST, ResponseKind.CLAIM_SEVERITY}),
-        backends=_GBM, y_domain=_NON_NEGATIVE,
+        backends=_GBM,
+        y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.PSEUDO_HUBER: Applicability(
         responses=frozenset({ResponseKind.BURNING_COST, ResponseKind.CLAIM_SEVERITY}),
-        backends=_GBM, y_domain=_NON_NEGATIVE,
+        backends=_GBM,
+        y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.QUANTILE: Applicability(
         responses=frozenset(
             {ResponseKind.BURNING_COST, ResponseKind.CLAIM_SEVERITY, ResponseKind.CLAIM_COUNT}
         ),
-        backends=_GBM, y_domain=_NON_NEGATIVE,
+        backends=_GBM,
+        y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.ZERO_INFLATED_POISSON: Applicability(
-        responses=frozenset({ResponseKind.CLAIM_COUNT}), backends=_GBM,
-        offset_required=True, y_domain=_NON_NEGATIVE,
+        responses=frozenset({ResponseKind.CLAIM_COUNT}),
+        backends=_GBM,
+        offset_required=True,
+        y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.FOCAL_BINOMIAL: Applicability(
         responses=frozenset({ResponseKind.CONVERSION, ResponseKind.RETENTION}),
-        backends=_GBM, y_domain=YDomain(min_inclusive=0.0, max_inclusive=1.0),
+        backends=_GBM,
+        y_domain=YDomain(min_inclusive=0.0, max_inclusive=1.0),
     ),
 }
+
+
+class ObjectiveParameter(BaseModel):
+    """One declared parameter of an `expression` objective (`02` §4.6)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str = Field(pattern=r"^[a-z_][a-z0-9_]*$")
+    type: Literal["float", "int"]
+    default: float
+    min: float
+    max: float
+
+    @model_validator(mode="after")
+    def _the_default_is_inside_the_range(self) -> Self:
+        if not self.min <= self.default <= self.max:
+            raise ValueError(
+                f"parameter {self.name!r} must satisfy min <= default <= max, "
+                f"got {self.min} <= {self.default} <= {self.max}."
+            )
+        return self
+
+
+class DerivedBlock(BaseModel):
+    """The gradient and hessian the platform derived from an `expression` loss (FR-144).
+
+    Generated, never hand-written; `derived_at` is the backend's clock, which
+    `pricing-core` may not read (ADR-703).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    gradient: str
+    hessian: str
+    derivation_tool: Literal["sympy"]
+    derivation_version: str
+    derived_at: AwareDatetime
 
 
 class CustomObjective(BaseModel):
@@ -452,6 +516,11 @@ class CustomObjective(BaseModel):
     kind: ObjectiveKind = ObjectiveKind.TEMPLATE
     template: ObjectiveTemplate | None = None
     params: dict[str, int | float] = Field(default_factory=dict)
+    #: The `expression` arm (`02` §4.6, FR-144): all four are `None` on a template.
+    bound_symbols: tuple[Literal["y", "f", "w"], ...] | None = None
+    parameters: tuple[ObjectiveParameter, ...] | None = None
+    loss: str | None = Field(default=None, max_length=2000)
+    derived: DerivedBlock | None = None
     applicability: Applicability
     hessian_strategy: HessianStrategy = HessianStrategy.CLIP_TO_MIN
     #: The floor `clip_to_min` clips to, and the minimum both backends need to avoid a
@@ -479,24 +548,44 @@ class CustomObjective(BaseModel):
     usage_count: int | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
-    def _only_templates_are_built(self) -> Self:
-        """FR-150, at the type.
+    def _each_field_belongs_to_one_arm(self) -> Self:
+        """FR-144, FR-207: a template carries no expression field and the reverse.
 
-        The API refuses `kind: expression` with `OBJECTIVE_KIND_NOT_ENABLED` before it gets
-        here; this is the second door, so that no other caller — a fixture, a migration, a
-        service constructing an artifact directly — can persist an objective whose loss is
-        nowhere written down.
+        Whether `kind: expression` may be created is the API's flag (FR-150); this is the
+        shape. An `expression` objective's `derived` is `None` until the platform derives it
+        and may not exist without the `loss` it came from.
         """
-        if self.kind is not ObjectiveKind.TEMPLATE:
+        who = f"custom objective {self.slug}@{self.version}"
+        if self.kind is ObjectiveKind.TEMPLATE:
+            if self.template is None:
+                raise ValueError(f"{who} is a template objective and names no template.")
+            carried = [
+                name
+                for name in ("bound_symbols", "parameters", "loss", "derived")
+                if getattr(self, name) is not None
+            ]
+            if carried:
+                raise ValueError(
+                    f"{who} is a template objective and carries expression fields "
+                    f"({', '.join(carried)}): a template objective carries no loss."
+                )
+            return self
+        if self.template is not None:
             raise ValueError(
-                f"custom objective {self.slug}@{self.version} is kind {self.kind.value!r}. "
-                "Phase 1 ships templates only (FR-150); the fields an expression "
-                "objective needs are not built, so the artifact would carry no loss."
+                f"{who} is an expression objective and names template "
+                f"{self.template.value!r}: an expression objective names no template."
             )
-        if self.template is None:
+        if self.params:
             raise ValueError(
-                f"custom objective {self.slug}@{self.version} is a template objective and "
-                "names no template."
+                f"{who} is an expression objective and carries template params; its "
+                "parameters are the `parameters` block."
+            )
+        if self.loss is None and self.derived is not None:
+            raise ValueError(f"{who}: an expression objective has no loss to derive from.")
+        if self.loss is None or self.bound_symbols is None or self.parameters is None:
+            raise ValueError(
+                f"{who} is an expression objective and must carry bound_symbols, "
+                "parameters and loss."
             )
         return self
 

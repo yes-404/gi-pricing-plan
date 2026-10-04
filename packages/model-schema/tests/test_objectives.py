@@ -45,7 +45,10 @@ from model_schema import (
 )
 
 SAMPLING = SamplingSpec(
-    n_points=1000, seed=20260818, y_range=(0.0, 1e7), f_range=(-20.0, 20.0),
+    n_points=1000,
+    seed=20260818,
+    y_range=(0.0, 1e7),
+    f_range=(-20.0, 20.0),
     w_range=(1e-3, 1e4),
 )
 
@@ -53,8 +56,7 @@ SAMPLING = SamplingSpec(
 def _battery(names: tuple[str, ...] = OBJECTIVE_CERTIFICATE_CHECKS) -> tuple[CertificateCheck, ...]:
     """A passing check per name — §4.7's nine unless a test asks for something else."""
     return tuple(
-        CertificateCheck(name=name, status=CheckStatus.PASS, detail=f"{name} ran")
-        for name in names
+        CertificateCheck(name=name, status=CheckStatus.PASS, detail=f"{name} ran") for name in names
     )
 
 
@@ -97,15 +99,106 @@ def test_a_template_objective_is_the_artifact_a_model_can_reference() -> None:
     assert objective.hessian_strategy is HessianStrategy.CLIP_TO_MIN
 
 
-@pytest.mark.req("FR-150")
-def test_an_expression_objective_cannot_be_constructed_in_phase_1() -> None:
-    """The second door behind the API's `OBJECTIVE_KIND_NOT_ENABLED`.
+SPEC_LOSS = "w * where(exp(f) < y, w_under, w_over) * (y - exp(f)) ** 2"
 
-    The artifact carries no `loss` field, so an `expression` objective persisted through
-    any other route would be one whose loss is nowhere written down.
-    """
-    with pytest.raises(pydantic.ValidationError, match="templates only"):
-        _objective(kind=ObjectiveKind.EXPRESSION)
+
+def _expression_fields(**overrides: object) -> dict[str, object]:
+    """`02` §4.6's example `expression` objective, as keyword arguments."""
+    fields: dict[str, object] = {
+        "kind": ObjectiveKind.EXPRESSION,
+        "bound_symbols": ["y", "f", "w"],
+        "parameters": [
+            {"name": "w_under", "type": "float", "default": 2.0, "min": 1.0, "max": 10.0},
+            {"name": "w_over", "type": "float", "default": 1.0, "min": 0.1, "max": 10.0},
+        ],
+        "loss": SPEC_LOSS,
+        "derived": {
+            "gradient": "where(y > exp(f), 2*w*w_under*(exp(f) - y)*exp(f), "
+            "2*w*w_over*(exp(f) - y)*exp(f))",
+            "hessian": "where(y > exp(f), 2*w*w_under*(2*exp(f) - y)*exp(f), "
+            "2*w*w_over*(2*exp(f) - y)*exp(f))",
+            "derivation_tool": "sympy",
+            "derivation_version": "1.14.0",
+            "derived_at": _datetime.datetime(2026, 8, 14, 11, 2, tzinfo=_datetime.UTC),
+        },
+        "applicability": Applicability(
+            responses=frozenset({ResponseKind.BURNING_COST, ResponseKind.CLAIM_SEVERITY}),
+            backends=frozenset({ObjectiveBackend.XGBOOST, ObjectiveBackend.LIGHTGBM}),
+            offset_required=False,
+            y_domain=YDomain(min_inclusive=0),
+        ),
+    }
+    fields.update(overrides)
+    return fields
+
+
+def _expression(**overrides: object) -> CustomObjective:
+    return CustomObjective(
+        id=new_uuid7(),
+        slug="asymmetric-burning-cost",
+        version=1,
+        **_expression_fields(**overrides),  # type: ignore[arg-type]
+    )
+
+
+@pytest.mark.req("FR-144")
+def test_the_spec_example_expression_objective_validates() -> None:
+    objective = _expression()
+    assert objective.kind is ObjectiveKind.EXPRESSION
+    assert objective.template is None
+    assert objective.loss == SPEC_LOSS
+    assert objective.derived is not None
+    assert objective.derived.derivation_version == "1.14.0"
+    assert [p.name for p in objective.parameters or ()] == ["w_under", "w_over"]
+
+
+@pytest.mark.req("FR-144")
+def test_an_expression_objective_may_be_a_draft_with_no_derived_block() -> None:
+    assert _expression(derived=None).derived is None
+
+
+@pytest.mark.req("FR-144")
+def test_a_template_objective_has_none_of_the_expression_fields() -> None:
+    template = _objective()
+    assert (template.bound_symbols, template.parameters, template.loss, template.derived) == (
+        None,
+        None,
+        None,
+        None,
+    )
+
+
+@pytest.mark.req("FR-144")
+def test_a_template_with_an_expression_loss_is_refused() -> None:
+    with pytest.raises(pydantic.ValidationError, match="a template objective carries no loss"):
+        _objective(loss=SPEC_LOSS)
+
+
+@pytest.mark.req("FR-144")
+def test_an_expression_with_a_template_is_refused() -> None:
+    with pytest.raises(pydantic.ValidationError, match="an expression objective names no template"):
+        _expression(template=ObjectiveTemplate.TWEEDIE)
+
+
+@pytest.mark.req("FR-144")
+def test_an_expression_with_a_derived_block_and_no_loss_is_refused() -> None:
+    with pytest.raises(
+        pydantic.ValidationError, match="an expression objective has no loss to derive from"
+    ):
+        _expression(loss=None)
+
+
+@pytest.mark.req("FR-145")
+def test_an_expression_loss_over_2000_characters_is_refused() -> None:
+    with pytest.raises(pydantic.ValidationError, match="at most 2000 characters"):
+        _expression(loss="y + " * 500 + "w")
+
+
+@pytest.mark.req("FR-144")
+def test_an_expression_parameter_default_outside_its_range_is_refused() -> None:
+    bad = [{"name": "w_under", "type": "float", "default": 20.0, "min": 1.0, "max": 10.0}]
+    with pytest.raises(pydantic.ValidationError, match="min <= default <= max"):
+        _expression(parameters=bad)
 
 
 @pytest.mark.req("FR-143")
@@ -171,8 +264,12 @@ def test_an_author_may_narrow_applicability() -> None:
     )
     assert narrowed.is_within(template)
     objective = CustomObjective(
-        id=new_uuid7(), slug="robust-bc", version=1, template=ObjectiveTemplate.HUBER,
-        params={"delta": 500_000}, applicability=narrowed,
+        id=new_uuid7(),
+        slug="robust-bc",
+        version=1,
+        template=ObjectiveTemplate.HUBER,
+        params={"delta": 500_000},
+        applicability=narrowed,
     )
     assert objective.applicability.responses == frozenset({ResponseKind.BURNING_COST})
 
@@ -187,8 +284,11 @@ def test_an_author_may_not_widen_applicability_beyond_the_template() -> None:
     )
     with pytest.raises(pydantic.ValidationError, match="wider than template"):
         CustomObjective(
-            id=new_uuid7(), slug="gamma-everywhere", version=1,
-            template=ObjectiveTemplate.GAMMA, applicability=wider,
+            id=new_uuid7(),
+            slug="gamma-everywhere",
+            version=1,
+            template=ObjectiveTemplate.GAMMA,
+            applicability=wider,
         )
 
 
@@ -211,9 +311,10 @@ def test_an_applicability_naming_nothing_is_refused() -> None:
 def test_a_status_past_draft_without_a_certificate_is_refused() -> None:
     with pytest.raises(pydantic.ValidationError, match="with no certificate"):
         _objective(status=ObjectiveStatus.CERTIFIED)
-    assert _objective(
-        status=ObjectiveStatus.CERTIFIED, certificate_id=new_uuid7()
-    ).status is ObjectiveStatus.CERTIFIED
+    assert (
+        _objective(status=ObjectiveStatus.CERTIFIED, certificate_id=new_uuid7()).status
+        is ObjectiveStatus.CERTIFIED
+    )
 
 
 @pytest.mark.req("FR-146")
@@ -243,26 +344,34 @@ def test_a_review_decision_returns_an_objective_to_certified_not_to_draft() -> N
 @pytest.mark.req("FR-146")
 def test_a_certificate_verdict_its_checks_contradict_is_refused() -> None:
     checks = (
-        CertificateCheck(name="analytic_vs_numeric_gradient", status=CheckStatus.PASS,
-                         detail="max relative error 8.9e-7"),
-        CertificateCheck(name="finiteness", status=CheckStatus.FAILED,
-                         detail="NaN gradient at y=0"),
+        CertificateCheck(
+            name="analytic_vs_numeric_gradient",
+            status=CheckStatus.PASS,
+            detail="max relative error 8.9e-7",
+        ),
+        CertificateCheck(
+            name="finiteness", status=CheckStatus.FAILED, detail="NaN gradient at y=0"
+        ),
     )
     with pytest.raises(pydantic.ValidationError, match="cannot be allowed to say different"):
+        CertificateResult(checks=checks, sampling=SAMPLING, overall=CertificateOutcome.CERTIFIED)
+    assert (
         CertificateResult(
-            checks=checks, sampling=SAMPLING, overall=CertificateOutcome.CERTIFIED
-        )
-    assert CertificateResult(
-        checks=checks, sampling=SAMPLING, overall=CertificateOutcome.FAILED
-    ).overall is CertificateOutcome.FAILED
+            checks=checks, sampling=SAMPLING, overall=CertificateOutcome.FAILED
+        ).overall
+        is CertificateOutcome.FAILED
+    )
 
 
 @pytest.mark.req("FR-152")
 def test_a_violated_convexity_check_is_a_finding_and_not_a_failure() -> None:
     """FR-152: a non-convex loss is legitimate, flagged, and carried to an approver."""
     checks = (
-        CertificateCheck(name="convexity", status=CheckStatus.VIOLATED,
-                         detail="hessian < 0 wherever exp(f) < y/2"),
+        CertificateCheck(
+            name="convexity",
+            status=CheckStatus.VIOLATED,
+            detail="hessian < 0 wherever exp(f) < y/2",
+        ),
     )
     assert CertificateResult.outcome_of(checks) is CertificateOutcome.CERTIFIED_WITH_FINDINGS
 
@@ -284,7 +393,10 @@ def test_a_certificate_over_a_coarse_grid_is_refused() -> None:
     """
     with pytest.raises(pydantic.ValidationError, match="greater than or equal to 1000"):
         SamplingSpec(
-            n_points=10, seed=1, y_range=(0.0, 1e7), f_range=(-20.0, 20.0),
+            n_points=10,
+            seed=1,
+            y_range=(0.0, 1e7),
+            f_range=(-20.0, 20.0),
             w_range=(1e-3, 1e4),
         )
 
@@ -294,7 +406,10 @@ def test_a_certificate_over_an_empty_grid_is_refused() -> None:
     """Every check passes over no points, and the certificate would say `certified`."""
     with pytest.raises(pydantic.ValidationError, match="samples nothing"):
         SamplingSpec(
-            n_points=1000, seed=1, y_range=(0.0, 0.0), f_range=(-20.0, 20.0),
+            n_points=1000,
+            seed=1,
+            y_range=(0.0, 0.0),
+            f_range=(-20.0, 20.0),
             w_range=(1e-3, 1e4),
         )
 
@@ -311,9 +426,7 @@ def test_the_full_nine_check_battery_is_accepted() -> None:
     """The positive control for the two refusals below — nine names, each once."""
     certificate = _certificate(_battery())
     assert len(certificate.result.checks) == 9
-    assert {check.name for check in certificate.result.checks} == set(
-        OBJECTIVE_CERTIFICATE_CHECKS
-    )
+    assert {check.name for check in certificate.result.checks} == set(OBJECTIVE_CERTIFICATE_CHECKS)
 
 
 @pytest.mark.req("FR-158")

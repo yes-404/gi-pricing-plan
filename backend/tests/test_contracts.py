@@ -168,9 +168,7 @@ def _authored(slug: str) -> pathlib.Path | None:
     `GENERATED` is a *child* of `AUTHORED`, so a plain recursive search matches every
     generated schema against itself and would report all 25 as having an authored side.
     """
-    hits = sorted(
-        p for p in AUTHORED.rglob(f"{slug}.schema.json") if GENERATED not in p.parents
-    )
+    hits = sorted(p for p in AUTHORED.rglob(f"{slug}.schema.json") if GENERATED not in p.parents)
     assert len(hits) <= 1, f"two authored schemas claim the slug {slug!r}: {hits}"
     return hits[0] if hits else None
 
@@ -251,9 +249,9 @@ def test_decimal_money_is_pinned_to_the_string_form() -> None:
     bare = Bare.model_json_schema(mode="validation")["properties"]["premium_minor"]
     assert "anyOf" in bare
     assert any(branch.get("type") == "number" for branch in bare["anyOf"])
-    assert "anyOf" not in Bare.model_json_schema(mode="serialization")["properties"][
-        "premium_minor"
-    ]
+    assert (
+        "anyOf" not in Bare.model_json_schema(mode="serialization")["properties"]["premium_minor"]
+    )
 
 
 @pytest.mark.req("FR-10")
@@ -363,11 +361,11 @@ def test_artifact_ref_pattern_matches_the_authored_contract() -> None:
     [
         ("model:motor-ad-frequency@7", True),
         ("rating_version:motor-gb@27", True),
-        ("model:motor-gb@0", False),           # ID-2: versions start at 1
-        ("model:motor-gb@2026-04", False),     # ID-2: the version is an integer
-        ("nonsense:motor-gb@1", False),        # not an artifact type
-        ("model:Motor-GB@1", False),           # slugs are lowercase
-        ("model:motor-gb", False),             # no version
+        ("model:motor-gb@0", False),  # ID-2: versions start at 1
+        ("model:motor-gb@2026-04", False),  # ID-2: the version is an integer
+        ("nonsense:motor-gb@1", False),  # not an artifact type
+        ("model:Motor-GB@1", False),  # slugs are lowercase
+        ("model:motor-gb", False),  # no version
         # RL-1383: `_` is in the factor slug grammar and in no other type's.
         ("factor:veh_brand@1", True),
         ("factor:driver_age_banded@3", True),
@@ -500,9 +498,7 @@ def _composes_the_envelope(authored: dict[str, Any]) -> bool:
     `Diagnostics.id` — required fields on artifacts that carry no envelope at all — were
     exempted from a check they should always have failed.
     """
-    return any(
-        entry.get("$ref") == _ENVELOPE_SCHEMA for entry in authored.get("allOf", [])
-    )
+    return any(entry.get("$ref") == _ENVELOPE_SCHEMA for entry in authored.get("allOf", []))
 
 
 #: **A recorded divergence the guard is told not to litigate** (WK-661 audit, 2026-08-22).
@@ -566,17 +562,14 @@ MODEL_ONLY_UNRECONCILED: Final[dict[str, frozenset[str]]] = {
 #:   `Model`. The deciding fact is cardinality: `ix_transparency_model` is not unique, so a
 #:   single id here could name only one of the artifacts a model accumulates. It stays in
 #:   the contract as a documented dead property, never as a gap to fill.
-#: * `custom-objective`'s `if kind == "expression"` branch — `loss`, `derived`,
-#:   `bound_symbols`, `parameters`. `ObjectiveKind.EXPRESSION` is Phase 2 behind
-#:   `expression_objectives_enabled` (`objectives.py:75-81`) and `CustomObjective` **refuses
-#:   to be constructed with it** (`objectives.py:8-12`), so the shape is not merely absent —
-#:   it is refused by name (OQ-573).
+#: * `custom-objective`'s `if kind == "expression"` branch was listed here (`loss`, `derived`,
+#:   `bound_symbols`, `parameters`) until WK-690 Slice 3 built the `expression` arm of
+#:   `CustomObjective` (FR-144); it is now compared like any built field.
 #:
 #: The `if kind == "template"` branch is *not* here: `template` and `params` are built, and
 #: the flattening above now sees them where the retired `CONDITIONAL_FIELDS` exemption used
 #: to assert them by hand.
 DECLARED_AND_UNBUILT: Final[dict[str, frozenset[str]]] = {
-    "custom-objective": frozenset({"loss", "derived", "bound_symbols", "parameters"}),
     "model": frozenset({"custom_objective_ref", "transparency_artifact_id"}),
     "model-spec": frozenset({"custom_objective_ref", "filter"}),
 }
@@ -733,9 +726,10 @@ _JSON_TYPE_OF: Final[dict[type, str]] = {
     str: "string",
 }
 
-def _deref(document: dict[str, Any], node: dict[str, Any], base: pathlib.Path) -> tuple[
-    dict[str, Any], dict[str, Any]
-]:
+
+def _deref(
+    document: dict[str, Any], node: dict[str, Any], base: pathlib.Path
+) -> tuple[dict[str, Any], dict[str, Any]]:
     """Follow `$ref`, local or into a sibling file, returning the node and its document.
 
     `_resolve` follows one local hop, which is all the flat comparisons need. The authored
@@ -856,9 +850,7 @@ def _variants(
                 if values
                 else arm
             )
-            found.extend(
-                _variants(document, branch, base, path=path, arm=child, _depth=_depth + 1)
-            )
+            found.extend(_variants(document, branch, base, path=path, arm=child, _depth=_depth + 1))
     # `else` stays unconditional. Its true constraint is the complement of the `if`, which a
     # set of admitted values cannot express, and inventing one would be worse than the honest
     # under-constraint: an `else` field lands in every arm, so a comparison can produce a
@@ -873,9 +865,7 @@ def _variants(
         if guard is not None and keyword == "then":
             name, guard_values = guard
             child = arm | {(f"{path}.{name}".lstrip("."), guard_values)}
-        found.extend(
-            _variants(document, branch, base, path=path, arm=child, _depth=_depth + 1)
-        )
+        found.extend(_variants(document, branch, base, path=path, arm=child, _depth=_depth + 1))
     return found
 
 
@@ -1140,6 +1130,8 @@ def _type_map(
 #: non-null. Resolved per OQ-553 option (a), the authored side, and the pin was
 #: **released — deleted, not relaxed**.
 UNRESOLVED_TYPE_DISAGREEMENTS: Final[dict[str, frozenset[str]]] = {}
+
+
 def _admits(constraints: Arm, arm: Arm) -> bool:
     """Does a complete `arm` satisfy every constraint in `constraints`?
 
@@ -1205,9 +1197,7 @@ def _arm_name(arm: Arm) -> str:
     """
     if not arm:
         return "<every arm>"
-    return ",".join(
-        f"{name}={'|'.join(sorted(values))}" for name, values in sorted(arm)
-    ) + ":"
+    return ",".join(f"{name}={'|'.join(sorted(values))}" for name, values in sorted(arm)) + ":"
 
 
 @pytest.mark.req("FR-9")
@@ -1309,12 +1299,9 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
         for key in sorted(compared, key=lambda k: (k[1], _arm_name(k[0])))
         if produced[key] != declared[key]
     }
-    assert not disagreed, (
-        "the model and the contract disagree on the type of "
-        + ", ".join(
-            f"{_arm_name(arm)} {path} (model {g}, contract {a})"
-            for (arm, path), (g, a) in disagreed.items()
-        )
+    assert not disagreed, "the model and the contract disagree on the type of " + ", ".join(
+        f"{_arm_name(arm)} {path} (model {g}, contract {a})"
+        for (arm, path), (g, a) in disagreed.items()
     )
 
 
@@ -1656,15 +1643,11 @@ ONE_SIDED_KEYWORDS: Final[dict[tuple[str, str], frozenset[str]]] = {
     ("grouping", "evidence.source_level_stats.[].frequency_ci"): frozenset(
         {"minItems", "maxItems"}
     ),
-    ("grouping", "evidence.source_level_stats.[].severity_ci"): frozenset(
-        {"minItems", "maxItems"}
-    ),
+    ("grouping", "evidence.source_level_stats.[].severity_ci"): frozenset({"minItems", "maxItems"}),
     ("grouping", "evidence.target_level_stats.[].frequency_ci"): frozenset(
         {"minItems", "maxItems"}
     ),
-    ("grouping", "evidence.target_level_stats.[].severity_ci"): frozenset(
-        {"minItems", "maxItems"}
-    ),
+    ("grouping", "evidence.target_level_stats.[].severity_ci"): frozenset({"minItems", "maxItems"}),
     ("grouping", "slug"): frozenset({"pattern"}),
     ("job", "error.code"): frozenset({"pattern"}),
     ("job", "result.kind"): frozenset({"pattern"}),
@@ -1678,9 +1661,7 @@ ONE_SIDED_KEYWORDS: Final[dict[tuple[str, str], frozenset[str]]] = {
     ("model-spec", "model_family_slug"): frozenset({"pattern"}),
     ("objective-certificate", "result.checks"): frozenset({"minItems"}),
     ("peril-structure", "reconciliation.modelled_burning_cost"): frozenset({"minimum"}),
-    ("peril-structure", "reconciliation.perils.[].modelled_burning_cost"): frozenset(
-        {"minimum"}
-    ),
+    ("peril-structure", "reconciliation.perils.[].modelled_burning_cost"): frozenset({"minimum"}),
     ("profile", "one_ways.[].rows.[].frequency"): frozenset({"minimum"}),
     ("validation-report", "results.[].affected_exposure_fraction"): frozenset(
         {"minimum", "maximum"}
@@ -1997,13 +1978,10 @@ def test_generated_and_authored_agree_on_scalar_constraints(slug: str) -> None:
                     produced[key][keyword],
                     declared[key][keyword],
                 )
-    assert not disagreed, (
-        "the model and the contract disagree on a bound at "
-        + "; ".join(
-            f"{_arm_name(arm)} {path}: "
-            + ", ".join(f"{k} model={g} contract={a}" for k, (g, a) in d.items())
-            for (arm, path), d in disagreed.items()
-        )
+    assert not disagreed, "the model and the contract disagree on a bound at " + "; ".join(
+        f"{_arm_name(arm)} {path}: "
+        + ", ".join(f"{k} model={g} contract={a}" for k, (g, a) in d.items())
+        for (arm, path), d in disagreed.items()
     )
 
 
@@ -2036,7 +2014,7 @@ def test_a_constraint_keyword_on_one_side_is_not_silent() -> None:
                 "(OQ-649 (b), F2)"
             )
 
-        for (slug_, path) in sorted(ONE_SIDED_KEYWORDS):
+        for slug_, path in sorted(ONE_SIDED_KEYWORDS):
             if slug_ != slug:
                 continue
             if path not in set(produced) & set(declared):
@@ -2083,8 +2061,7 @@ def test_the_escalated_constraint_disagreements_are_still_unresolved(slug: str) 
         (path, keyword)
         for path, keyword in sorted(UNRESOLVED_CONSTRAINT_DISAGREEMENTS[slug])
         if not any(
-            produced.get((arm, path), {}).get(keyword)
-            != declared.get((arm, path), {}).get(keyword)
+            produced.get((arm, path), {}).get(keyword) != declared.get((arm, path), {}).get(keyword)
             for arm in arms
         )
     ]
@@ -2150,11 +2127,7 @@ def test_an_authored_conditional_arm_is_tagged_from_its_sibling_if() -> None:
     `_variants` has always refused and still refuses.
     """
     document = _load(AUTHORED / "model-spec.schema.json")
-    values = {
-        v
-        for _, _, arm in _variants(document, document, AUTHORED)
-        for _, v in arm
-    }
+    values = {v for _, _, arm in _variants(document, document, AUTHORED) for _, v in arm}
     assert frozenset({"glm"}) in values
 
 
@@ -2266,9 +2239,7 @@ def test_a_closed_map_moved_between_arms_is_drift() -> None:
     sides' constraints or the expansion drops the very keys the difference lives in.
     """
     authored = _load(AUTHORED / "model-spec.schema.json")
-    moved = _move_property_between_arms(
-        authored, "family_params", source="glm", target="ebm"
-    )
+    moved = _move_property_between_arms(authored, "family_params", source="glm", target="ebm")
     generated = _load(GENERATED / "model-spec.schema.json")
 
     produced = _closure_map(generated, generated, GENERATED)
@@ -2436,7 +2407,6 @@ def test_two_variants_bounding_one_path_differently_are_refused() -> None:
         _constraint_map(document, document, AUTHORED)
 
 
-
 #: Nested fields this slice added to the `02`-owned contracts, named so their removal is
 #: noticed. Each must be a path the comparison reaches **on both sides**.
 #:
@@ -2468,8 +2438,16 @@ REACHED_NESTED_PATHS: Final[dict[str, frozenset[str]]] = {
         }
     ),
     "model-spec": frozenset(
-        {"alpha", "select_by", "tweedie.p_grid.[]", "interval_for.alpha", "max_bins",
-         "loss_treatment.kind", "approximates_model_id", "offset_acknowledgement"}
+        {
+            "alpha",
+            "select_by",
+            "tweedie.p_grid.[]",
+            "interval_for.alpha",
+            "max_bins",
+            "loss_treatment.kind",
+            "approximates_model_id",
+            "offset_acknowledgement",
+        }
     ),
     "diagnostics": frozenset(
         {
@@ -2537,9 +2515,9 @@ def test_the_comparison_reaches_the_nested_fields_this_slice_added(slug: str) ->
     generated = _load(GENERATED / f"{slug}.schema.json")
     authored = _load(_authored_schema(slug))
     keep_null = slug in NULLABILITY_COMPARED_SLUGS
-    compared = set(
-        _paths(_type_map(generated, generated, GENERATED, keep_null=keep_null))
-    ) & set(_paths(_type_map(authored, authored, AUTHORED, keep_null=keep_null)))
+    compared = set(_paths(_type_map(generated, generated, GENERATED, keep_null=keep_null))) & set(
+        _paths(_type_map(authored, authored, AUTHORED, keep_null=keep_null))
+    )
 
     wanted = REACHED_NESTED_PATHS[slug]
     assert wanted <= compared, (
@@ -2649,9 +2627,7 @@ def _one_sided_slugs() -> tuple[set[str], set[str]]:
     """
     generated = {p.name.split(".")[0] for p in GENERATED.glob("*.schema.json")}
     authored = {
-        p.name.split(".")[0]
-        for p in AUTHORED.rglob("*.schema.json")
-        if GENERATED not in p.parents
+        p.name.split(".")[0] for p in AUTHORED.rglob("*.schema.json") if GENERATED not in p.parents
     }
     return authored - generated, generated - authored
 
@@ -2754,9 +2730,7 @@ def test_the_grouping_evidence_rows_are_the_shared_one_way_row(block: str) -> No
     }
 
     assert produced, f"the model produces no leaves under {block}"
-    assert not produced - declared, (
-        f"the contract does not declare: {sorted(produced - declared)}"
-    )
+    assert not produced - declared, f"the contract does not declare: {sorted(produced - declared)}"
     assert not declared - produced, (
         f"the contract declares fields the model lacks: {sorted(declared - produced)}"
     )
@@ -2825,16 +2799,12 @@ def test_the_injected_validation_error_is_stripped_and_ours_is_kept() -> None:
     """
     injected = {
         "content": {
-            "application/json": {
-                "schema": {"$ref": "#/components/schemas/HTTPValidationError"}
-            }
+            "application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}
         }
     }
     declared = {
         "content": {
-            "application/problem+json": {
-                "schema": {"$ref": "#/components/schemas/ProblemDetail"}
-            }
+            "application/problem+json": {"schema": {"$ref": "#/components/schemas/ProblemDetail"}}
         }
     }
     document = {

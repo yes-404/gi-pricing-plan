@@ -42,6 +42,43 @@
       "title": "Applicability",
       "type": "object"
     },
+    "DerivedBlock": {
+      "additionalProperties": false,
+      "description": "The gradient and hessian the platform derived from an `expression` loss (FR-144).\n\nGenerated, never hand-written; `derived_at` is the backend's clock, which\n`pricing-core` may not read (ADR-703).",
+      "properties": {
+        "derivation_tool": {
+          "const": "sympy",
+          "title": "Derivation Tool",
+          "type": "string"
+        },
+        "derivation_version": {
+          "title": "Derivation Version",
+          "type": "string"
+        },
+        "derived_at": {
+          "format": "date-time",
+          "title": "Derived At",
+          "type": "string"
+        },
+        "gradient": {
+          "title": "Gradient",
+          "type": "string"
+        },
+        "hessian": {
+          "title": "Hessian",
+          "type": "string"
+        }
+      },
+      "required": [
+        "gradient",
+        "hessian",
+        "derivation_tool",
+        "derivation_version",
+        "derived_at"
+      ],
+      "title": "DerivedBlock",
+      "type": "object"
+    },
     "HessianStrategy": {
       "description": "FR-152's three declared treatments of a negative hessian.\n\nAlways declared, never inferred: boosting divides by the hessian, so what happens where\nit is negative decides what the fit *is*, and a default chosen inside the fitting code\nwould be a modelling decision made where no reviewer reads it.",
       "enum": [
@@ -70,6 +107,46 @@
       ],
       "title": "ObjectiveKind",
       "type": "string"
+    },
+    "ObjectiveParameter": {
+      "additionalProperties": false,
+      "description": "One declared parameter of an `expression` objective (`02` §4.6).",
+      "properties": {
+        "default": {
+          "title": "Default",
+          "type": "number"
+        },
+        "max": {
+          "title": "Max",
+          "type": "number"
+        },
+        "min": {
+          "title": "Min",
+          "type": "number"
+        },
+        "name": {
+          "pattern": "^[a-z_][a-z0-9_]*$",
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "float",
+            "int"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "default",
+        "min",
+        "max"
+      ],
+      "title": "ObjectiveParameter",
+      "type": "object"
     },
     "ObjectiveStatus": {
       "description": "FR-163's lifecycle.",
@@ -190,6 +267,26 @@
       "default": null,
       "title": "Approval Request Id"
     },
+    "bound_symbols": {
+      "anyOf": [
+        {
+          "items": {
+            "enum": [
+              "y",
+              "f",
+              "w"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Bound Symbols"
+    },
     "certificate_id": {
       "anyOf": [
         {
@@ -202,6 +299,17 @@
       ],
       "default": null,
       "title": "Certificate Id"
+    },
+    "derived": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DerivedBlock"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "description": {
       "anyOf": [
@@ -233,6 +341,34 @@
     "kind": {
       "$ref": "#/$defs/ObjectiveKind",
       "default": "template"
+    },
+    "loss": {
+      "anyOf": [
+        {
+          "maxLength": 2000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Loss"
+    },
+    "parameters": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/ObjectiveParameter"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Parameters"
     },
     "params": {
       "additionalProperties": {
