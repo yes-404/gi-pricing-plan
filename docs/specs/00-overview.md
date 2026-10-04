@@ -164,6 +164,7 @@ term must be added here before it is used in any other document.**
 | **Rate Table** | A versioned, typed table of rating factors/loadings keyed by one or more Factors. The unit an actuary edits when making a rate change. |
 | **Rating Version** | An **immutable deployable bundle**: rating algorithm + all rate tables + referenced model artifacts + reference table pins. Lifecycle `draft → review → approved → live → retired`. |
 | **Deployment** | The binding of a Rating Version to an Environment at a point in time. Recorded, reversible, audited. |
+| **Deployment Request** | The subject of a `deployment` approval request: its own artifact, owned by the deployment module, whose row pins its evidence (RL-1301 A.1). |
 | **Environment** | A named runtime target: `dev`, `uat`, `prod`. Each owns its own live Rating Version deployments and service-account scopes. |
 | **Scoring** | Evaluating a Rating Version for one or more risks. **Real-time** (single quote, target p99 < 50 ms) or **batch** (portfolio re-rate). |
 | **Trace** | The per-step record of a single scoring call: step id, every intermediate value, table row matched, model output, and per-step timing. The backbone of explainability and dispute resolution. |

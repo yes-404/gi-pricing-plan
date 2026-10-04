@@ -27,6 +27,7 @@ from app.db.models import (
     ApprovalRequestRow,
     AuditEventRow,
     DeploymentRequestRow,
+    EnvironmentRow,
     RatingVersionRow,
 )
 from app.db.session import Database
@@ -733,8 +734,23 @@ async def test_a_request_for_another_version_or_environment_does_not_authorise_a
     refused = deploy(client, submitter, "prod", other, deployment_request_ref=request["ref"])
     assert refused.status_code == 409
     assert refused.json()["code"] == "DEPLOY_REQUIRES_APPROVAL"
+    uat_history = "/api/v1/environments/uat/deployments"
+    before = client.get(uat_history, headers=submitter.headers).json()["items"]
     ungated = deploy(client, submitter, "uat", ref, deployment_request_ref=request["ref"])
-    assert ungated.status_code == 422  # `uat` takes no request at all
+    # `uat` takes no request at all: RL-1404 D3 refuses the reference rather than ignoring it.
+    assert ungated.status_code == 422
+    assert ungated.json()["code"] == "VALIDATION_FAILED"
+    assert client.get(uat_history, headers=submitter.headers).json()["items"] == before
+    async with database.session() as session:
+        assert (
+            await session.execute(
+                select(DeploymentRequestRow.status).where(
+                    DeploymentRequestRow.workspace_id == workspace_id,
+                    DeploymentRequestRow.slug == "prod",
+                    DeploymentRequestRow.version == 1,
+                )
+            )
+        ).scalar_one() == "approved"
 
 
 @pytest.mark.req("FR-267")
@@ -757,6 +773,178 @@ async def test_an_environment_with_no_deployment_policy_entry_takes_no_request(
     assert refused.status_code == 422
     assert refused.json()["code"] == "VALIDATION_FAILED"
     assert "No approval policy for this artifact type" in refused.json()["title"]
+
+
+# --- RL-1404 D2, D4, D5: the Task 5 flags, decided ------------------------------------------
+
+
+async def _gated_environment(client: TestClient, seat, *, requires_prior: str | None) -> str:
+    """A fresh Environment (the seeded ones are deployment-wide and stay untouched) and a
+    `deployment` entry for it in the workspace policy, copied from `prod`'s."""
+    admin = await seat("admin")
+    slug = f"env-{uuid4().hex[:8]}"
+    created = client.post(
+        "/api/v1/environments",
+        json={
+            "slug": slug,
+            "name": slug,
+            "description": "gated for a test",
+            "promotion_order": 5,
+            "requires_prior_environment": requires_prior,
+        },
+        headers=admin.headers,
+    )
+    assert created.status_code == 201, created.text
+    _set_policy_entry(client, admin, slug, present=True)
+    return slug
+
+
+def _set_policy_entry(client: TestClient, admin: Seat, slug: str, *, present: bool) -> None:
+    policy = client.get("/api/v1/approval-policy", headers=admin.headers).json()
+    policy["policies"] = [
+        p
+        for p in policy["policies"]
+        if not (p["artifact_type"] == "deployment" and p["environment"] == slug)
+    ]
+    if present:
+        prod = next(
+            p
+            for p in policy["policies"]
+            if p["artifact_type"] == "deployment" and p["environment"] == "prod"
+        )
+        policy["policies"].append({**prod, "environment": slug, "skippable_predecessors": []})
+    assert (
+        client.put("/api/v1/approval-policy", json=policy, headers=admin.headers).status_code == 200
+    )
+
+
+@pytest.mark.req("FR-429", "FR-364")
+@pytest.mark.asyncio
+async def test_a_gated_environment_with_no_predecessor_refuses_every_request_naming_the_remedy(
+    client: TestClient, database, workspace_id, seat
+) -> None:
+    """RL-1404 D2: a gated Environment with `requires_prior_environment` `null` has no
+    predecessor item to pin, so every request into it is 422 `EVIDENCE_INCOMPLETE`, and the
+    detail names the Environment and the remedy (removing its `deployment` policy entry), since
+    `requires_prior_environment` cannot be changed after creation. No row is written."""
+    slug = await _gated_environment(client, seat, requires_prior=None)
+    deployer = await seat("deployer")
+    ref = await approved_version(database, workspace_id, new_uuid7())
+    refused = request_into(client, deployer, slug, ref)
+    assert refused.status_code == 422, refused.text
+    assert refused.json()["code"] == "EVIDENCE_INCOMPLETE"
+    detail = refused.json()["detail"]
+    assert slug in detail
+    assert f"Remove the `deployment` policy entry for {slug!r}" in detail
+    assert "requires_prior_environment" in detail
+    async with database.session() as session:
+        assert (
+            await session.execute(
+                select(DeploymentRequestRow).where(
+                    DeploymentRequestRow.workspace_id == workspace_id
+                )
+            )
+        ).first() is None
+
+
+@pytest.mark.req("FR-355", "FR-267")
+@pytest.mark.asyncio
+async def test_a_request_for_changes_ends_a_deployment_request_rejected(
+    client: TestClient, database, workspace_id, seat
+) -> None:
+    """RL-1404 D4: a request for changes has no pre-submission state to return a Deployment
+    Request to, so it ends `rejected` (read from its row, not from an approval response), with
+    a `deployment_request.rejected` Audit Event. A deploy naming it is 409
+    `DEPLOY_REQUIRES_APPROVAL`; a new request for the same version into the same Environment is
+    accepted as the next `@n`."""
+    submitter, ref, request = await _request_for_prod(client, database, workspace_id, seat)
+    decider = await seat("approver", "deployer")
+    decided = client.post(
+        f"/api/v1/approval-requests/{_approval_id(client, submitter, request['ref'])}/decide",
+        json={"decision": "request_changes", "comment": "pin a newer uat deployment"},
+        headers=decider.headers,
+    )
+    assert decided.status_code == 200, decided.text
+    async with database.session() as session:
+        status = (
+            await session.execute(
+                select(DeploymentRequestRow.status).where(
+                    DeploymentRequestRow.workspace_id == workspace_id,
+                    DeploymentRequestRow.slug == "prod",
+                    DeploymentRequestRow.version == 1,
+                )
+            )
+        ).scalar_one()
+        event = (
+            await session.execute(
+                select(AuditEventRow).where(
+                    AuditEventRow.workspace_id == workspace_id,
+                    AuditEventRow.action == "deployment_request.rejected",
+                )
+            )
+        ).scalar_one_or_none()
+    assert status == "rejected"
+    assert event is not None
+    refused = deploy(client, submitter, "prod", ref, deployment_request_ref=request["ref"])
+    assert refused.status_code == 409
+    assert refused.json()["code"] == "DEPLOY_REQUIRES_APPROVAL"
+    again = request_into(client, submitter, "prod", ref)
+    assert again.status_code == 201, again.text
+    assert again.json()["ref"].endswith("@2")
+
+
+@pytest.mark.req("FR-428", "FR-267")
+@pytest.mark.asyncio
+async def test_a_request_approved_before_its_target_was_retired_is_refused_at_execution(
+    client: TestClient, database, workspace_id, seat
+) -> None:
+    """`RL-1401` T3's last sentence, as tested through the routes (RL-1404 D5): the request is
+    approved while the policy entry exists; the entry is then removed and the Environment
+    retired (nothing now names it); then a deploy naming the approved request (i) and a deploy
+    naming none (ii) are each 409 `VALIDATION_FAILED` naming the retirement. No Deployment row
+    is written and the request stays `approved`."""
+    from app.db.models import DeploymentRow
+
+    admin = await seat("admin")
+    submitter = await seat("deployer")
+    slug = await _gated_environment(client, seat, requires_prior="uat")
+    ref = await approved_version(database, workspace_id, new_uuid7())
+    promoted_to_uat(client, submitter, ref)
+    created = request_into(client, submitter, slug, ref)
+    assert created.status_code == 201, created.text
+    request_ref = created.json()["ref"]
+    await _approve(client, seat, submitter, request_ref)
+    _set_policy_entry(client, admin, slug, present=False)
+    retired = client.post(f"/api/v1/environments/{slug}/retire", headers=admin.headers)
+    assert retired.status_code == 200, retired.text
+
+    named = deploy(client, submitter, slug, ref, deployment_request_ref=request_ref)
+    none = deploy(client, submitter, slug, ref)
+    for refused in (named, none):
+        assert refused.status_code == 409, refused.text
+        assert refused.json()["code"] == "VALIDATION_FAILED"
+        assert slug in refused.json()["detail"]
+        assert "retired" in refused.json()["detail"]
+    async with database.session() as session:
+        assert (
+            await session.execute(
+                select(DeploymentRow).where(
+                    DeploymentRow.workspace_id == workspace_id,
+                    DeploymentRow.environment_id
+                    == select(EnvironmentRow.id)
+                    .where(EnvironmentRow.slug == slug)
+                    .scalar_subquery(),
+                )
+            )
+        ).first() is None
+        assert (
+            await session.execute(
+                select(DeploymentRequestRow.status).where(
+                    DeploymentRequestRow.workspace_id == workspace_id,
+                    DeploymentRequestRow.slug == slug,
+                )
+            )
+        ).scalar_one() == "approved"
 
 
 # --- RL-1301 A.4: the evidence floor, and the generic route -----------------------------------

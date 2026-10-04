@@ -612,6 +612,37 @@ fixtures (`scoring_headers`, `_rows_for`, the held-bundle patch); the completion
 (that is Task 7's or WK-671's measurement). (3) `_serving_ref`'s bearer-caller refusal is tested on the helper, because no
 credential produces a no-environment `Caller` over HTTP.
 
+### Task 5B — RL-1404 items 1–6 and S1–S5, with Deltas 5 and 6 — executor-1256j, 2026-10-04
+
+Merge: `origin/main` `374e630b` into the branch; the one conflict was the generated `docs/INDEX.md`, taken from main
+and regenerated with `python3 scripts/doc-index.py`.
+
+**Reds, each quoted (test file `backend/tests/test_deployments.py`, run `uv run pytest -q -k <name>`).**
+- D2 `test_a_gated_environment_with_no_predecessor_refuses_every_request_naming_the_remedy`, red at the unchanged
+  `submit_request` detail: `E  assert ('remove' in "'env-2d641b8b' has no predecessor Environment to pin a deployment or a skip of.")`
+  at `:838`, `1 failed`. Green after the detail names the remedy (the assertion is then the exact sentence
+  "Remove the `deployment` policy entry for '<slug>'").
+- D3 (completed), D4 and D5 tests are **green at once**: RL-1404 rules the code right in all three, so there is no
+  red to quote; each is proven by its broken input below. The four-test run printed `1 failed, 3 passed` before the
+  D2 code change and `4 passed` after.
+
+**Broken-input proofs (each restored to the D2-only diff, `git diff --stat backend/src` = 1 file, 4 lines).**
+- D3: the ungated `deployment_request_ref` refusal made unreachable (`if False:`):
+  `test_a_request_for_another_version_or_environment_does_not_authorise_a_deploy` fails,
+  `E  assert 201 == 422` at `:741`.
+- D4: the `ApprovalStatus.CHANGES_REQUESTED` entry removed from `apply_approval_decision`'s map:
+  `test_a_request_for_changes_ends_a_deployment_request_rejected` fails,
+  `E  AssertionError: assert 'review' == 'rejected'` at `:886`.
+- D5: `environments._require_not_retired` removed from `_authorised_environment`:
+  `test_a_request_approved_before_its_target_was_retired_is_refused_at_execution` fails on (i), the deploy naming the
+  request, `E  assert 422 == 409` at `:924` (D3's check refuses it first, as the ruling predicts). The loop stops at
+  the first refusal, so (ii)'s write is **not** separately shown by this run.
+
+**Texts applied (date 2026-10-04, `<RL id>` = RL-1404):** S1 (`06` `rating:read` row), S2 (`03` §4.12 "Two pinned evidence
+items" bullet), S3 (`03` §4.12 deploy-route bullet), S4 (`06` FR-355 cell), S5 (`06` workflow row 5a), Delta 5 (`00`
+§2.3 "Deployment Request" row, after **Deployment**), Delta 6 (`06` `settings:read` row). `api/deployments.py:39` stays
+`Permission.RATING_READ`. No new error code.
+
 ## PRs
 
 Not yet opened (draft PR at the first push).

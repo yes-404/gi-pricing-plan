@@ -274,7 +274,9 @@ async def submit_request(
                 f"{ref} has no decided approval request."
                 if approval is None
                 else f"{env.slug!r} has no predecessor Environment to pin a deployment or a "
-                "skip of."
+                "skip of, so every request into it is refused. Remove the `deployment` policy "
+                f"entry for {env.slug!r} to make it an ungated target "
+                "(`requires_prior_environment` cannot be changed after creation)."
             ),
         )
     evidence = DeploymentRequestEvidence(rating_version_approval=approval.id, uat_deployment=pinned)
