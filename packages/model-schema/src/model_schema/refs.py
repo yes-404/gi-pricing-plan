@@ -27,6 +27,9 @@ ARTIFACT_TYPES: Final[frozenset[str]] = frozenset(
         # Added 2026-09-28 (WK-672 Slice 2, PL-1189): a reference only — never approvable,
         # never resolvable by the approval route (03 §4.7).
         "regression_suite",
+        # Added 2026-10-03 (WK-674 Slice 2, RL-1301 A.1): a Deployment Request, owned by
+        # `03` §4.12 and approvable (`deployment:<environment slug>@<n>`).
+        "deployment",
     }
 )
 

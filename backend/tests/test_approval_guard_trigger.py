@@ -63,6 +63,10 @@ EVIDENCE_ONLY = (
 #: The two that accept evidence or the flag while they hold an allowance.
 EVIDENCE_OR_FLAG = ("validation_rules", "validation_rule_sets")
 ALL_GUARDED = (*EVIDENCE_ONLY, *EVIDENCE_OR_FLAG, "approval_requests")
+#: What the guard's own revision installs the trigger on. `deployment_requests` joins in the
+#: Environment and Deployment revision (PL-1392 Acceptance 13), tested in
+#: `test_migration_deployments.py`.
+SLICE_2A_TABLES = set(ALL_GUARDED)
 
 #: Each artifact table's reference type. `models` is the one whose slug column is
 #: `model_family_slug`.
@@ -274,18 +278,20 @@ WHERE t.tgname = 'approval_guard' AND NOT t.tgisinternal
 """
 
 
-async def _tables_missing_the_trigger(url: str) -> list[str]:
+async def _tables_missing_the_trigger(url: str, population: set[str] | None = None) -> list[str]:
     engine = create_async_engine(url)
     try:
         async with engine.connect() as conn:
             present = {r[0] for r in await conn.execute(text(_TRIGGERS_PRESENT))}
     finally:
         await engine.dispose()
-    return sorted(approval_guarded_tables() - present)
+    return sorted((approval_guarded_tables() if population is None else population) - present)
 
 
-async def _assert_every_guarded_table_carries_the_trigger(url: str) -> None:
-    missing = await _tables_missing_the_trigger(url)
+async def _assert_every_guarded_table_carries_the_trigger(
+    url: str, population: set[str] | None = None
+) -> None:
+    missing = await _tables_missing_the_trigger(url, population)
     assert not missing, f"no approval_guard trigger on: {', '.join(missing)}"
 
 
@@ -417,7 +423,7 @@ async def test_the_migration_round_trips_and_head_refuses_what_head_minus_one_al
 
     await _alembic(command.upgrade, cfg, _REVISION)
     assert await _revision_of(scratch_database) == _REVISION
-    await _assert_every_guarded_table_carries_the_trigger(scratch_database)
+    await _assert_every_guarded_table_carries_the_trigger(scratch_database, SLICE_2A_TABLES)
     assert await _insert_approved_request(scratch_database) == GUARD_SQLSTATE
 
     await _alembic(command.downgrade, cfg, "-1")
@@ -426,14 +432,17 @@ async def test_the_migration_round_trips_and_head_refuses_what_head_minus_one_al
     assert await _function_count(scratch_database) == 0, "the downgrade left the function behind"
 
     await _alembic(command.upgrade, cfg, _REVISION)
-    await _assert_every_guarded_table_carries_the_trigger(scratch_database)
+    await _assert_every_guarded_table_carries_the_trigger(scratch_database, SLICE_2A_TABLES)
     assert await _function_count(scratch_database) == 1
 
 
 @pytest.mark.req("FR-351")
 def test_the_migration_guards_exactly_the_derived_set() -> None:
-    assert set(_GUARD.GUARDED_TABLES) == approval_guarded_tables()
-    assert set(ALL_GUARDED) == approval_guarded_tables()
+    """Slice 2a's revision guards its 8; `deployment_requests` joins in WK-674 Slice 2's own
+    revision (PL-1392 Acceptance 13), so the derived set is the 8 plus that one."""
+    assert set(_GUARD.GUARDED_TABLES) == SLICE_2A_TABLES
+    assert set(ALL_GUARDED) == SLICE_2A_TABLES
+    assert approval_guarded_tables() == SLICE_2A_TABLES | {"deployment_requests"}
 
 
 @pytest.mark.req("FR-351")
