@@ -1,11 +1,11 @@
 ---
-id: LG-9732
+id: LG-1406
 family: ledger
 title: WK-673 slice SL-1386 — the Dislocation Run on ZEN in integer minor units, spec first (PL-1403, RL-1402)
-status: active
+status: closed
 created: 2026-10-04
 owner: executor
-tree: bb12d1e5cc1f0bfc76a56dc1a6b3364a505d7349
+tree: dfddfad890243a13b8c700f4f279f944125e777f
 phase: P2
 work: WK-673
 slice: SL-1386
@@ -14,12 +14,11 @@ corrected_by: []
 relates: [RL-1402, RL-1394, RL-1264, RL-1263, PL-1267, PL-1395, LG-1400]
 ---
 
-# LG 9732 (working id) — WK-673 slice SL-1386, the Dislocation Run on ZEN
+# LG-1406 — WK-673 slice SL-1386, the Dislocation Run on ZEN
 
 Executed from `PL-1403` by `executor-1386` (sonnet; `echo $CLAUDE_EFFORT` printed `medium`). Branch
-`sl-1386-dislocation-run`. Stamps are BST (`TZ=Europe/London date`). The ledger's working id is `9732`, allocated by
-the lead 2026-10-04 13:01:36 BST; it is renumbered at the mint. This ledger covers **Tasks 0 and 1** (the first
-executor turn); later tasks are appended.
+`sl-1386-dislocation-run`. Stamps are BST (`TZ=Europe/London date`). The ledger's working id was `9732`, allocated by
+the lead 2026-10-04 13:01:36 BST; it was renumbered to LG-1406 at the mint (2026-10-04, `doc-id.py next` at origin/main dfddfad8). This ledger covers Tasks 0 to 6; the Task 7 entry follows the minted-head gate.
 
 The executor charter's Model / effort line, verbatim: "`sonnet` (currently Sonnet 5); medium, inherited from the
 lead — the highest-volume role; per-slice gates and the auditor's re-check bound the risk of a cheaper setting."
@@ -275,13 +274,28 @@ Restored: `38 passed`.
 **Checks.** `ruff check .` all passed; `ruff format --check` on the two changed files clean; `mypy` "no issues found in 221 source files"; `lint-imports` "4 kept, 0 broken";
 `git grep -n 'compile_bundle\|compile_rating_version' -- packages/pricing-core/src/pricing_core/rating/analysis.py` printed nothing.
 
+### Task 6 — NFR-495 across fresh interpreters (re-run at the mint step, executor-1386m, `echo $CLAUDE_EFFORT` printed `medium`; stamped 2026-10-04)
+
+The Task 6 tests were committed at d538f3cb without a ledger entry (audit N-A). At the mint step only the two NFR-495 tests were re-run, each red produced by a throwaway edit to
+`packages/pricing-core/tests/test_rating_dislocation.py`, restored with `git checkout -- <file>` (`git status --short` empty after each).
+`test_dislocation_is_byte_identical_across_fresh_interpreters` compares `_child("1")` with `_child("2")` (`PYTHONHASHSEED` 1 and 2, one fresh interpreter each);
+`test_the_comparator_can_fail_when_the_portfolio_changes` is its negative control.
+
+**Red 1 (the `_child` helper renamed to `_child_x`).** `2 failed, 38 deselected`: both tests `NameError: name '_child' is not defined` (test file :800 and :806).
+**Red 2 (the child's mutation switch disabled: `if len(sys.argv) > 2 and sys.argv[2] == "mutate":` replaced by `if False:`).** The comparator test alone: `1 failed, 39 deselected` with
+`assert '{"baseline_ref":"rating_version:score-fixture@1",…"errors":[]}' != '{"baseline_ref":"rating_version:score-fixture@1",…"errors":[]}'` — the two runs are equal, so the `!=` comparator fails when the portfolio is not changed.
+**Green (file restored).** `2 passed, 38 deselected in 13.11s` (`LOKY_MAX_CPU_COUNT=4`). No other test was run for this entry.
+
 ## Deviations and disclosures
 
 1. **`<date>` is 2026-10-04**, the day of this commit; S1-S3 say "the merge date the executor writes", which this run cannot know. If the merge lands on a later day the lead may correct the three dated phrases (":1005", ":562", ":1077").
-2. The ledger's front matter `id` carries the working id `LG-9732` in the form the branch's other working-id records use; no body header names it.
+2. The ledger's front matter `id` carries the working id `LG-1406` in the form the branch's other working-id records use; no body header names it.
 3. **Task 5 disclosure:** a `ruff format packages/pricing-core` run (broader than the two files) reformatted about ninety unrelated files; they were reverted with `git checkout --` before the commit, and the commit holds only `analysis.py`, `test_rating_dislocation.py` and this ledger.
 4. **Task 5 deviation from the plan's sketch:** `by_ladder_rung`'s parts-sum test also checks the `Fraction` parts against the total by arithmetic on the frame's integer sums; the mutation named for it in the plan (an origin comparing `unrounded_minor` alone) belongs to Task 4's `_origin_rung`, so m7 above is this task's rung mutation.
 
+5. **Delta 1 at the mint step:** the three `<date>` stamps (03:562, :1005, :1077) are left at 2026-10-04; the merge is expected the same day (mint-step brief, 2026-10-04). If it lands later, re-stamp them then.
+6. **Delta 3 and N-C:** the Task 6 entry above was added and the stale `tree:` front matter corrected to origin/main `dfddfad8` (the merge base of the mint step). The Task 7 entry (gate stage table, wall times) belongs to the minted-head gate and is not written here.
+
 ## PRs
 
-None opened: this turn is Tasks 0 and 1 only; branch `sl-1386-dislocation-run` pushed, no PR (the lead's instruction).
+The slice's pull request is opened after the minted-head gate (Task 7); its number is recorded then. Until then the branch `sl-1386-dislocation-run` is pushed with no PR.

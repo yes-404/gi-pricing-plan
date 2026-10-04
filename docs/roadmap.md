@@ -722,7 +722,7 @@ Spec only, no application code beyond one test-file label. FR-266's dated amendm
 id: SL-1386
 family: slice
 title: Slice 2: the Dislocation Run on ZEN, in integer minor units
-status: active                 # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-03
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: d672f991bdc59008e09cf3f464cd7cffe5699553
@@ -734,6 +734,8 @@ relates: [PL-1267, PL-1403]
 
 `dislocate(baseline, candidate, portfolio, spec)` in `pricing_core/rating/analysis.py`: two `score_batch` passes joined per policy on integer minor units; distribution bands, averages overall and by segment, exposure and policy counts per band, movers beyond the spec's thresholds (FR-263); slicing by any portfolio Factor and by the first differing ladder rung (FR-264); `DislocationSpec` and `DislocationRun` in `model-schema`; NFR-495 (byte-identical repeat run) and NFR-496 (totals equal the sum of per-policy minor units) tested. `PL-1267` Slice 2. Starts after Slice 1 closes.
 (Activated 2026-10-04 as WK-673 Slice 2, on the maintainer's GO check, "2026-10-04 13:03:47 BST — DISPATCH GO: WK-673 Slice 2 (SL-1386 / PL-1403) on lane B; executor-1386 starts after #1101 merges. N1: the S5 mint-pass note on RL 9733 is ACCEPTED (text below)"; dispatch record DISPATCH-WK-673-SL1386-2026-10-04.)
+
+(Closed 2026-10-04 as a Slice, on a clean audit and the lead's merge: audit `handover/audit-sl1386-2026-10-04.md`; dispatch record `DISPATCH-WK-673-SL1386-2026-10-04` Delta 3; ledger `LG-1406`.)
 
 #### SL-1387 — Slice 3: attribution — exact Shapley, largest remainder, the broken-input proof, the cost
 
