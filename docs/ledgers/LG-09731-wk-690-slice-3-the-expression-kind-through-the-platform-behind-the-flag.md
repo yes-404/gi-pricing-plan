@@ -414,3 +414,22 @@ None yet: the branch is pushed, no PR is opened (the lead's order for this turn)
 **Spec texts** in `docs/specs/02-modelling.md`, byte for byte, `<Task date>` and `<fix date>` = 2026-10-04, `<RL id>` = `RL-1410`: S1 (FR-144 row, `:208`), S2 (create row, `:1841`), S3 and S4 (derive row, `:1844`), S5 (submit row, `:1847`). No other sentence. R2 and R4 need no code or test change.
 
 **Deviations.** None beyond the above; `ruff format` was not run.
+
+### Task 10 — NFR-480, measured in a solo window
+
+**Grant.** The lead granted the solo window at 18:58:40 UTC (`RL-1263` item 3): 0 pytest/bench/uvicorn processes, both gate slots free, load 1.09. Announced `nfr_480_solo` at 18:59:04 UTC against tree `935bd65673b853d4ec09c9fc67d688f293098c4b`.
+
+**Harness.** None existed for an expression objective (`scripts/bench-*.py` time other components; `certify_expression_objective` is called only by `worker/model_handlers.py` and tests). Added `scripts/bench-expression-certify.py`: no Job, no database; calls `certify_expression_objective` on §4.6's `asymmetric-burning-cost` loss over `default_sampling`'s `burning_cost` grid (2 000 points, seed 20260818, `y` (0, 1e6), `f` (-5, 15), `w` (0.01, 10)), timing the whole call (compile, nine checks, smoke fit). It prints times and no verdict. Run as a fresh process each time, under `flock /tmp/slots/gate-1`, with `LOKY_MAX_CPU_COUNT=4` and the dev-commands caps.
+
+| Run | Start UTC / BST | End UTC / BST | Wall (certify call) | Load avg at start → end | pytest/bench/uvicorn procs start / end |
+|---|---|---|---|---|---|
+| 1 (cold) | 18:59:36 / 19:59:36 | 18:59:44 / 19:59:44 | 2.318 s | 0.62 → 0.68 | 0 / 0 |
+| 2 | 18:59:44 / 19:59:44 | 18:59:47 / 19:59:47 | 0.957 s | 0.68 → 1.02 | 0 / 0 |
+| 3 | 18:59:47 / 19:59:47 | 18:59:50 / 19:59:50 | 0.934 s | 1.02 → 1.02 | 0 / 0 |
+| 4 | 18:59:50 / 19:59:50 | 18:59:53 / 19:59:53 | 0.876 s | 1.02 → 1.10 | 0 / 0 |
+
+Load figures are the 1-minute average.
+
+**Median 0.945 s; spread 0.876–2.318 s (the first run is cold: SymPy and NumPy first use).** The timed span excludes interpreter start and imports (a few seconds of wall per run).
+
+**Verdict, against NFR-480's 180 s: met.** The slowest run is 2.318 s, about 1.3 % of the budget. Measured on one grid and one loss; a larger `n_points` or a `where()`-heavy loss was not measured. The certificate's per-check statuses were not inspected: this measures time only.
