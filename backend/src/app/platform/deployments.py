@@ -88,6 +88,7 @@ async def _authorised_environment(
         permission=Permission.DEPLOYMENT_PROMOTE,
         resource=rbac.ResourceRef(scope_type=ScopeType.ENVIRONMENT, scope_id=env.id),
     )
+    environments._require_not_retired(env, "deployed to")
     return env
 
 
@@ -120,7 +121,16 @@ async def _approved_compiled_version(
             409,
             f"{ref} is {row.status}; only an `approved` version deploys (FR-238, FR-267).",
         )
-    content_hash = (row.bundle or {}).get("content_hash") or ""
+    content_hash = (row.bundle or {}).get("content_hash")
+    if not content_hash:
+        raise PlatformError(
+            "BUNDLE_COMPILE_FAILED",
+            "The Rating Version has no compiled Bundle",
+            409,
+            f"{ref} has no `content_hash`, so there is no Bundle hash to record (FR-239; "
+            "`RL-1401`). It cannot be compiled once it has left `draft` (`RL-1379`): the way "
+            "forward is a new draft version.",
+        )
     return row, str(content_hash)
 
 

@@ -467,6 +467,36 @@ call, and `_approved_compiled_version` took the hash without refusing its absenc
      an `approved` Rating Version with no approved request, so the evidence lookup always finds one.
 
 
+**Commit 2 — the uncompiled-version and retired-Environment refusals (`RL-1401` items 2 and 3), T3 and T4.**
+
+- **Red first, run against commit 1's code** (`uv run pytest -q backend/tests/test_deployments.py --color=no --tb=line
+  -rfEp -k "never_compiled or content_hash or retired or unknown_slug"`): `FAILED …::test_an_approved_version_that_was_never_compiled_is_refused_at_both_routes`
+  (`assert 500 == 409`: the deploy reaches the `bundle_hash` format constraint), `FAILED …::test_a_bundle_with_no_content_hash_is_refused_the_same_way`,
+  `FAILED …::test_a_retired_environment_is_refused_at_both_routes_and_writes_nothing` (404 `NOT_FOUND` "No rating version
+  rating_version:no-such-version@1": the version is read before the Environment is checked, which is the order the
+  ruling reverses), `PASSED …::test_the_permission_check_comes_before_the_retired_refusal_and_an_unknown_slug_is_404`
+  (the control: it holds before and after). **`3 failed, 1 passed`**, as predicted in each docstring.
+- **Green** with `environments._require_not_retired(env, "deployed to")` after the permission check in
+  `_authorised_environment` and the `content_hash` refusal after the `approved` check in `_approved_compiled_version`:
+  the whole file, **`49 passed`**. Both routes call both helpers, so the order the ruling fixes is in one place.
+- **T3 and T4** applied in this commit (`03` §4.12's two invariant bullets after "`approved` Rating Versions only", and the
+  dated parenthetical on the two §5.1 rows), verbatim from `RL-1401`'s §"Spec texts, with placement"; **T1 and T2** are in
+  commit 1, with the code that makes them true.
+- **Deviation from item 3's fixture, stated.** The ruling says "retire `uat`". The Environments are deployment-wide and the
+  suite re-seeds them only at session end, so the test retires a **fresh** Environment (created, then retired), which has
+  no live Deployment and no policy entry either; retiring `uat` would break every later test that deploys to it. The
+  ruling's case is the same check on the same code path.
+- **Item 2's fixture, stated.** "Approved through a no-suite submission and never compiled" is built as an `approved`
+  version with `bundle = null` (`approved_rows.add_approved`, the approval guard satisfied), which is the state such a
+  submission leaves: only `compile` writes `bundle`, and a version cannot compile once it has left `draft` (`RL-1379`).
+- **T3's last sentence is not tested**: "a request approved before its target was retired is refused when it is executed"
+  holds because the deploy route runs the retired check unconditionally, but the case cannot be built through the routes:
+  retiring an Environment a policy entry names is refused (Task 4), and without the entry the target is ungated and takes
+  no request. Flagged.
+- **Checks run, targeted**: `test_deployments.py`, `test_deployment_route_types.py`, `test_api_authorisation_sweep.py`,
+  `test_contracts.py`, `test_environments.py`, `tests/test_permission_parity.py` together: **266 passed, 2 skipped**.
+  `ruff check .` clean, `mypy` 224 files clean, `lint-imports` 4 kept 0 broken.
+
 ## PRs
 
 Not yet opened (draft PR at the first push).

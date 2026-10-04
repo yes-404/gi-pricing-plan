@@ -887,3 +887,156 @@ async def test_a_decision_on_a_request_not_in_review_is_refused_by_the_module(
                 request=approval,
             )
         assert refused.value.status_code == 409
+
+
+# --- RL-1401 items 2 and 3: the uncompiled version and the retired Environment ---------------
+
+
+@pytest.mark.req("FR-239", "FR-267")
+@pytest.mark.asyncio
+async def test_an_approved_version_that_was_never_compiled_is_refused_at_both_routes(
+    client: TestClient, database, workspace_id, seat
+) -> None:
+    """`RL-1401` item 2. The fixture is an `approved` version with no `bundle` metadata: what a
+    no-suite submission leaves, since only `compile` writes it and a version cannot compile
+    once it has left `draft` (`RL-1379`). Predicted red before the check: the deploy reaches
+    the `bundle_hash` column's format constraint (a 500), and the request is accepted (201).
+    After it, both routes refuse 409 `BUNDLE_COMPILE_FAILED`, naming the version, and no
+    Deployment row or audit event is written."""
+    from app.db.models import DeploymentRow
+
+    deployer = await seat("deployer")
+    ref = await approved_version(database, workspace_id, new_uuid7(), compiled=False)
+    refused = deploy(client, deployer, "dev", ref)
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "BUNDLE_COMPILE_FAILED"
+    assert ref in refused.json()["detail"]
+    requested = request_into(client, deployer, "prod", ref)
+    assert requested.status_code == 409, requested.text
+    assert requested.json()["code"] == "BUNDLE_COMPILE_FAILED"
+    async with database.session() as session:
+        assert (
+            await session.execute(
+                select(DeploymentRow).where(DeploymentRow.workspace_id == workspace_id)
+            )
+        ).first() is None
+        assert (
+            await session.execute(
+                select(AuditEventRow).where(
+                    AuditEventRow.workspace_id == workspace_id,
+                    AuditEventRow.action.in_(("deployment.created", "deployment_request.created")),
+                )
+            )
+        ).first() is None
+
+
+@pytest.mark.req("FR-239")
+@pytest.mark.asyncio
+async def test_a_bundle_with_no_content_hash_is_refused_the_same_way(
+    client: TestClient, database, workspace_id, seat
+) -> None:
+    """Metadata present but without `content_hash` is as uncompiled as none at all."""
+    deployer = await seat("deployer")
+    slug = f"rv-{uuid4().hex[:8]}"
+    async with database.unit_of_work() as session:
+        await add_approved(
+            session,
+            RatingVersionRow(
+                workspace_id=workspace_id,
+                slug=slug,
+                version=1,
+                status="approved",
+                dataset_version_id=uuid4(),
+                model_ref="model:motor-ad-frequency@7",
+                created_by=new_uuid7(),
+                bundle={"blob": "elsewhere"},
+            ),
+        )
+    refused = deploy(client, deployer, "dev", f"rating_version:{slug}@1")
+    assert refused.status_code == 409
+    assert refused.json()["code"] == "BUNDLE_COMPILE_FAILED"
+
+
+async def _retired_environment(client: TestClient, seat) -> str:
+    """A fresh Environment, retired. `uat` itself is not retired here: the Environments are
+    deployment-wide and the suite re-seeds them only at session end, so retiring a seed would
+    break every later test that deploys to it (`test_environments.py` starts every test from a
+    fresh slug for the same reason). `RL-1401` item 3 names `uat` for its having no live
+    Deployment and no policy entry; a fresh Environment has neither."""
+    admin = await seat("admin")
+    slug = f"env-{uuid4().hex[:8]}"
+    created = client.post(
+        "/api/v1/environments",
+        json={
+            "slug": slug,
+            "name": slug,
+            "description": "retired for a test",
+            "promotion_order": 4,
+            "requires_prior_environment": "prod",
+        },
+        headers=admin.headers,
+    )
+    assert created.status_code == 201, created.text
+    assert (
+        client.post(f"/api/v1/environments/{slug}/retire", headers=admin.headers).status_code == 200
+    )
+    return slug
+
+
+@pytest.mark.req("FR-428", "FR-267")
+@pytest.mark.asyncio
+async def test_a_retired_environment_is_refused_at_both_routes_and_writes_nothing(
+    client: TestClient, database, workspace_id, seat
+) -> None:
+    """`RL-1401` item 3, after the permission check and before the Rating Version is read: the
+    version here does not exist, so a refusal that names the Environment proves the order.
+    Predicted red before the check: 404 (the version is read first). After it, both routes
+    refuse 409 `VALIDATION_FAILED` naming the slug and the retirement, and no Deployment row,
+    no Deployment Request row and no audit event is written."""
+    from app.db.models import DeploymentRow
+
+    slug = await _retired_environment(client, seat)
+    deployer = await seat("deployer")
+    ghost = "rating_version:no-such-version@1"
+    for refused in (
+        deploy(client, deployer, slug, ghost),
+        request_into(client, deployer, slug, ghost),
+    ):
+        assert refused.status_code == 409, refused.text
+        assert refused.json()["code"] == "VALIDATION_FAILED"
+        assert slug in refused.json()["detail"]
+        assert "retired" in refused.json()["detail"]
+    async with database.session() as session:
+        for table in (DeploymentRow, DeploymentRequestRow):
+            assert (
+                await session.execute(select(table).where(table.workspace_id == workspace_id))
+            ).first() is None
+        assert (
+            await session.execute(
+                select(AuditEventRow).where(
+                    AuditEventRow.workspace_id == workspace_id,
+                    AuditEventRow.action.in_(("deployment.created", "deployment_request.created")),
+                )
+            )
+        ).first() is None
+
+
+@pytest.mark.req("FR-428")
+@pytest.mark.asyncio
+async def test_the_permission_check_comes_before_the_retired_refusal_and_an_unknown_slug_is_404(
+    client: TestClient, database, workspace_id, seat
+) -> None:
+    """`RL-1401` T3: the refusal is after the permission check, so an analyst is told 403 and
+    not that the Environment is retired; an unknown slug is 404 `NOT_FOUND`."""
+    slug = await _retired_environment(client, seat)
+    analyst = await seat("analyst")
+    ghost = "rating_version:no-such-version@1"
+    assert deploy(client, analyst, slug, ghost).status_code == 403
+    assert request_into(client, analyst, slug, ghost).status_code == 403
+    deployer = await seat("deployer")
+    for missing in (
+        deploy(client, deployer, "no-such-env", ghost),
+        request_into(client, deployer, "no-such-env", ghost),
+    ):
+        assert missing.status_code == 404
+        assert missing.json()["code"] == "NOT_FOUND"
