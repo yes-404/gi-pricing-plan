@@ -237,10 +237,50 @@ because the model already holds a `Decimal`; the mutation was changed to compare
 source files"; `lint-imports` "4 kept, 0 broken"; `python3 scripts/audit-docs.py` `FAILED (3)`: check 31 (gap 1403 to 9732) and
 check 32 twice (this ledger's two earlier citations of #1102's ruling), the three Delta 2 expects.
 
+### Task 5 — the summary: `select_movers`, `summarise_dislocation`, `dislocate` (executor-1386e, `echo $CLAUDE_EFFORT` printed `medium`)
+
+**Red.** `uv run pytest packages/pricing-core/tests/test_rating_dislocation.py -q` after adding the 11 Task 5 tests (38 in
+the file), no implementation: `ImportError: cannot import name 'dislocate' from 'pricing_core.rating.analysis'`, 1 error
+during collection (`dislocate` is the first of the four new names in the import list; `select_movers` is the next). A whole-module red; each
+test's own red is the mutation runs below. **Acceptance 7's red:** a first version of `summarise_dislocation` took the totals as
+`pl.col("baseline_minor").cast(pl.Float64).sum()`; `test_dislocation_totals_are_sums_of_per_policy_minor_units` failed with
+`pydantic_core._pydantic_core.ValidationError: 2 validation errors for DislocationTotals … baseline_premium_minor Input should be a
+valid integer [type=int_type, input_value=8800.0, input_type=float]` (and `9580.0` for `candidate_premium_minor`). Before that, with the float
+reaching `Fraction`, the same test failed `TypeError: both arguments should be Rational instances`. The float version was deleted; the totals are
+`int(sum(...))` over the compared rows.
+
+**Green.** Same file after the implementation in `analysis.py`: `38 passed`. The fixture is `_book16` (16 policies: nine at baseline 1000
+spanning all six bands, two segment levels and a null level; a zero baseline P10; a negative baseline P11; one `quoted_to_declined`, one
+`declined_both`, one `declined_to_quoted`, two `error` rows, one in both passes). Every expected figure is hand-computed in the test's
+docstring from the fixture's integers. Percentages and shares are `Fraction` of ints rounded once with `round(fraction, n)`, converted to `Decimal`
+exactly, and to `float` last. The banded set is `baseline_minor > 0`; the negative baseline is counted in `outcomes.negative_baseline` and enters the totals,
+`by_segment` and `by_ladder_rung` only (RL-1402, Amendment N2). The mover order is `-Fraction(|chg|, base)`, `-|chg|`, `quote_id`.
+
+**Mutations (each applied to the committed green `analysis.py`; `-q --tb=line`; restored with `git checkout -- analysis.py`, `git diff` empty after the run).**
+(m1) totals summed over every quoted baseline row: `3 failed, 35 passed` — `totals_are_sums` `assert 9800 == 8800`; `change_pct_is_the_ruled_ratio` `assert -2.24 == 8.86`;
+`by_ladder_rung_parts_sum_to_the_total` `1.73` against `1.93`. (m2) the unweighted mean of per-policy percentages: `3 failed, 35 passed` — `change_pct` `assert 2.0 == 8.86`;
+two more fail with `ZeroDivisionError` on books with no banded policy (an artefact of the mutation). (m3) the two-step `Decimal` conversion (`prec=4`, then quantize): `3 failed, 35 passed` —
+`test_dislocation_rounds_each_ratio_once` `assert 0.14 == 0.13`; the band shares (`0.1429` for `0.142857`) and the segment shares also fail, since four-digit contexts lose the
+six-place share. (m4a) the edge test `>` for `>=`: `1 failed, 37 passed` — `bands_count_policies…` `assert [1, 1, 2, 2, 2, 1] == [1, 1, 1, 2, 2, 2]`. (m4b) the share denominator over the
+compared set: `2 failed, 36 passed` — `bands_count…` `[0.111111, …] == [0.142857, …]` (and `empty_band_mean_is_none`). (m5) `0.0` for a zero denominator: `1 failed, 37 passed` —
+`test_dislocation_empty_band_mean_is_none` `assert False`. (m6) nulls filtered out of `by_segment`: `1 failed, 37 passed` — `by_segment_reports_each_level` (the null row is missing).
+(m7) every rung listed, no origin filter: `2 failed, 36 passed` — `by_ladder_rung_parts_sum…` and `dislocate_is_the_summary_of_the_frame_on_a_real_book` (`['risk_premiu…', …] == ['office_premium']`).
+(m8) a both-pass error counted under both codes: `6 failed, 32 passed` — `ValidationError … DislocationRun` (the model's own `errors counts must sum to outcomes.error`), plus
+`outcomes_and_errors_are_counted`. (m9a) movers sorted by signed change: `1 failed, 37 passed` — `assert ['X', 'B', 'E', 'A'] == ['X', 'A', 'B', 'E']`. (m9b) the `quote_id` tie-break dropped:
+`1 failed, 37 passed` — `assert ['X', 'B', 'A', 'E'] == ['X', 'A', 'B', 'E']`. (m10) sort step 2 removed: `1 failed, 37 passed` —
+`test_select_movers_breaks_a_pct_tie_by_absolute_minor_change`: `assert ['M1', 'M2'] == ['M2', 'M1']` (audit-9734 N1's quoted failure). (m11) the banded set `!= 0` for `> 0` (a negative baseline banded):
+`6 failed, 32 passed` — `ValidationError` on the identity `distribution policies must equal quoted_both - zero_baseline - negative_baseline` (the Amendment N2 identity), plus the bands test.
+Restored: `38 passed`.
+
+**Checks.** `ruff check .` all passed; `ruff format --check` on the two changed files clean; `mypy` "no issues found in 221 source files"; `lint-imports` "4 kept, 0 broken";
+`git grep -n 'compile_bundle\|compile_rating_version' -- packages/pricing-core/src/pricing_core/rating/analysis.py` printed nothing.
+
 ## Deviations and disclosures
 
 1. **`<date>` is 2026-10-04**, the day of this commit; S1-S3 say "the merge date the executor writes", which this run cannot know. If the merge lands on a later day the lead may correct the three dated phrases (":1005", ":562", ":1077").
 2. The ledger's front matter `id` carries the working id `LG-9732` in the form the branch's other working-id records use; no body header names it.
+3. **Task 5 disclosure:** a `ruff format packages/pricing-core` run (broader than the two files) reformatted about ninety unrelated files; they were reverted with `git checkout --` before the commit, and the commit holds only `analysis.py`, `test_rating_dislocation.py` and this ledger.
+4. **Task 5 deviation from the plan's sketch:** `by_ladder_rung`'s parts-sum test also checks the `Fraction` parts against the total by arithmetic on the frame's integer sums; the mutation named for it in the plan (an origin comparing `unrounded_minor` alone) belongs to Task 4's `_origin_rung`, so m7 above is this task's rung mutation.
 
 ## PRs
 
