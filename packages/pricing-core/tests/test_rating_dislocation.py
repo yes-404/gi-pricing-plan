@@ -4,6 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import os
+import pathlib
+import subprocess
+import sys
+import textwrap
 from datetime import date
 from decimal import Decimal
 from fractions import Fraction
@@ -732,3 +737,70 @@ def test_select_movers_breaks_a_pct_tie_by_absolute_minor_change() -> None:
     |change| (300) goes first. Mutation: remove sort step 2, which gives ["M1", "M2"]."""
     frame = _frame([_q("M1", 1000, 1150), _q("M2", 2000, 2300)])
     assert select_movers(frame, _dspec())["quote_id"].to_list() == ["M2", "M1"]
+
+
+# ---------------------------------------------------------------------------
+# Task 6: NFR-495 — byte-identical across processes (mirrors test_testing_determinism.py).
+# ---------------------------------------------------------------------------
+
+
+_TESTS_DIR = str(pathlib.Path(__file__).parent)
+
+_CHILD = textwrap.dedent(
+    """
+    import sys
+    from datetime import date
+    from uuid import UUID
+
+    sys.path.insert(0, sys.argv[1])
+    from test_rating_dislocation import _BASE_REF, _CAND_REF, _compiled_from, _policies
+    from test_rating_score import _algorithm_payload
+
+    from model_schema.dislocation import DislocationSpec
+    from pricing_core.rating.analysis import dislocate
+
+    base = _compiled_from(_algorithm_payload())
+    cand = _compiled_from(_algorithm_payload(), expense_direct="1.2")
+    spec = DislocationSpec(
+        baseline_ref=_BASE_REF,
+        candidate_ref=_CAND_REF,
+        portfolio_dataset_version_id=UUID(int=1),  # fixed: a uuid4 would differ per process
+        purpose="renewal",
+        as_at=date(2026, 9, 1),
+        segments=["channel"],
+        band_edges_pct=["-10", "-5", "0", "5", "10"],
+        mover_threshold_pct="10",
+    )
+    exposure = [1.0, 0.5, 1.0]
+    if len(sys.argv) > 2 and sys.argv[2] == "mutate":
+        exposure[0] = 2.0  # the first policy's exposure changes: the run must differ
+    book = _policies(exposure_years=exposure)
+    print(dislocate(base, cand, book, spec).model_dump_json())
+    """
+)
+
+
+def _child(hashseed: str, *, mutate_first_row: bool = False) -> str:
+    """`run.model_dump_json()` from a fresh interpreter under `PYTHONHASHSEED=hashseed`."""
+    argv = [sys.executable, "-c", _CHILD, _TESTS_DIR]
+    if mutate_first_row:
+        argv.append("mutate")
+    out = subprocess.run(
+        argv,
+        check=True,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PYTHONHASHSEED": hashseed},
+    )
+    return out.stdout.strip().splitlines()[-1]
+
+
+@pytest.mark.req("NFR-495")
+def test_dislocation_is_byte_identical_across_fresh_interpreters() -> None:
+    assert _child("1") == _child("2")
+    assert '"totals"' in _child("1")  # the run is really there to compare
+
+
+@pytest.mark.req("NFR-495")
+def test_the_comparator_can_fail_when_the_portfolio_changes() -> None:
+    assert _child("1") != _child("1", mutate_first_row=True)
