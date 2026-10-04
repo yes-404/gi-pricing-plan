@@ -733,7 +733,7 @@ relates: [PL-1267, PL-1403]
 ```
 
 `dislocate(baseline, candidate, portfolio, spec)` in `pricing_core/rating/analysis.py`: two `score_batch` passes joined per policy on integer minor units; distribution bands, averages overall and by segment, exposure and policy counts per band, movers beyond the spec's thresholds (FR-263); slicing by any portfolio Factor and by the first differing ladder rung (FR-264); `DislocationSpec` and `DislocationRun` in `model-schema`; NFR-495 (byte-identical repeat run) and NFR-496 (totals equal the sum of per-policy minor units) tested. `PL-1267` Slice 2. Starts after Slice 1 closes.
-(Activated 2026-10-04 as WK-673 Slice 2, on the maintainer's GO check, "<the deputy's DISPATCH GO, full header>"; dispatch record DISPATCH-WK-673-SL1386-2026-10-04.)
+(Activated 2026-10-04 as WK-673 Slice 2, on the maintainer's GO check, "2026-10-04 13:03:47 BST — DISPATCH GO: WK-673 Slice 2 (SL-1386 / PL-1403) on lane B; executor-1386 starts after #1101 merges. N1: the S5 mint-pass note on RL 9733 is ACCEPTED (text below)"; dispatch record DISPATCH-WK-673-SL1386-2026-10-04.)
 
 #### SL-1387 — Slice 3: attribution — exact Shapley, largest remainder, the broken-input proof, the cost
 
