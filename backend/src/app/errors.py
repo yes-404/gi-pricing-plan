@@ -190,6 +190,9 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "OBJECTIVE_KIND_NOT_ENABLED",
         # FR-145, WK-690 S3 Task 4 (RL-1362 DP-S3-3): the loss is outside §4.6's grammar.
         "OBJECTIVE_GRAMMAR_VIOLATION",
+        # FR-165, WK-690 S3 Task 6: the fit job surfaces Slice 2's two coded errors.
+        "OBJECTIVE_NONFINITE_DERIVATIVE",
+        "OBJECTIVE_ROUND_BUDGET_EXCEEDED",
         "MODEL_TERM_UNRESOLVED",
         "MODEL_LINK_UNSUPPORTED",
         "MODEL_OFFSET_MISSING",

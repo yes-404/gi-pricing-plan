@@ -306,6 +306,41 @@ path passes the stored block. (4) A mixed-link applicability (probability and no
 link, as `default_sampling` already treats it; no refusal is added, since RL-1362 and the plan name none and every `ResponseKind` is log or logit.
 (5) Template certify is untouched: its existing tests pass unmodified.
 
+### Task 6 — fit-time compilation, and the fit job's coded errors
+
+(2026-10-04 BST, `executor-1273f`, sonnet, `echo $CLAUDE_EFFORT` = `medium`; per-worktree database `gipricing_wt-1273f_8fb4b735`.)
+
+**Red, quoted.** `-k compile_dispatch` in `packages/pricing-core/tests/test_objectives.py` (base `a0f545be` plus the tests): `5 failed`, each
+`ObjectiveError: objective test-expression@1 is not a template objective. Phase 1 compiles templates only (FR-150).` (`compile_objective`'s
+`OBJECTIVE_KIND_NOT_ENABLED`); the underived test failed `Regex pattern did not match … no stored derivation`. Backend
+`backend/tests/test_expression_objective_fit.py`, the objectives change reverted to base: `4 failed`: the two fits
+`assert <JobStatus.FAILED: 'failed'> is <JobStatus.SUCCEEDED: 'succeeded'>`; the two error cases `assert 'OBJECTIVE_KIND_NOT_ENABLED' ==
+'OBJECTIVE_NO…TE_DERIVATIVE'` and `… == 'OBJECTIVE_RO…DGET_EXCEEDED'`. With the compile in and the worker mapping not yet written, the two error
+cases failed `assert 'JOB_HANDLER_FAILED' == 'OBJECTIVE_NONFINITE_DERIVATIVE'` and `… == 'OBJECTIVE_ROUND_BUDGET_EXCEEDED'`.
+
+**Green.** `compile_objective` sends `kind: expression` to `_compile_stored_expression` (`objectives.py`), which passes the stored `derived` block
+(as `Derived`) to `compile_expression_objective` and never takes its `derived=None` path; an expression with `derived` null is refused by name
+(`ObjectiveError`, code `OBJECTIVE_KIND_NOT_ENABLED`, the code the function's existing guard used). The link is `inverse_link_for(applicability.responses)`,
+the function `_certify_expression` calls. The status gate (`gbm._compile_custom`) is untouched. `model.fit` maps `NonFiniteDerivativeError` and
+`RoundBudgetExceededError` to `PlatformError(exc.code, …, 409, str(exc))`; both codes are in `MODELLING_ERROR_CODES`; `02` §5.1's two
+"(declared, Phase 2)" markers are removed. Result: `141 passed` (the objectives, fit, errors and expression-storage files).
+
+**"Stored, not re-derived" is shown here**, which Task 5 could not show: `test_compile_dispatch_uses_the_stored_derived_text_and_never_re_derives`
+stores a hessian that differs from `derive()`'s and asserts the kernel's output; the backend overflow test stores a gradient (`w * exp(1000 * exp(f))`)
+no derivation would give, and the fit aborts on it.
+
+**Broken-input proofs** (each restored, `cmp` equal): `derived=None` passed to `compile_expression_objective`: `FAILED
+test_compile_dispatch_uses_the_stored_derived_text_and_never_re_derives` (`assert False` on the `np.allclose` line), `1 failed, 4 passed`. The
+worker `except` replaced by `except ZeroDivisionError`: `FAILED` both error-case fit tests, `JOB_HANDLER_FAILED`, `2 failed, 2 passed`. The two codes
+removed from `errors.py`: the same two tests failed, `2 failed, 2 passed`.
+
+**Deviations and notes for the auditor.** (1) Executor-worded spec sentences: none; the only `docs/` edit is the removal of the two markers.
+(2) The refusal of a null `derived` reuses `OBJECTIVE_KIND_NOT_ENABLED`; RL-1362 says "refused by name" and names no code. (3) The `template is None` guard's
+message ("Phase 1 compiles templates only") was false after the dispatch, so it now says the objective names no template. (4) The round-budget case
+patches `gbm.make_xgb_objective` with `round_budget_s=1e-9`: `fit_gbm` passes no budget (the default is 30 s), so a slowed callable cannot be
+made through the API. (5) The overflow row is a `draft` after its failing certificate; the test points `certificate_id` at that certificate and sets
+`certified`, so the status gate passes and the fit's abort is what is tested. (6) `ruff format` only on the new test file.
+
 ## PRs
 
 None yet: the branch is pushed, no PR is opened (the lead's order for this turn).

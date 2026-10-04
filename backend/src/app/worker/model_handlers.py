@@ -311,6 +311,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         fit_glm,
         linear_predictor,
     )
+    from pricing_core.modelling.errors import NonFiniteDerivativeError, RoundBudgetExceededError
     from pricing_core.modelling.factors import FactorResolutionError
 
     # The offset-from-another-model arrays (FR-116): the referenced fit's linear
@@ -395,6 +396,13 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         # `pricing-core` names the failure; the platform gives it the HTTP shape. Mapped
         # rather than re-raised so a job's stored error carries `02` §5.1's code and a
         # reader can look it up.
+        raise PlatformError(
+            exc.code, f"The {spec.model_type} model could not be fitted", 409, str(exc)
+        ) from exc
+    except (NonFiniteDerivativeError, RoundBudgetExceededError) as exc:
+        # FR-165: an objective that overflowed or ran past its round budget. Both are
+        # `CodedError`s whose text names the round and the fields and holds no input value
+        # (FD-1219, DP-S2-4), so `str(exc)` is safe to persist as the detail.
         raise PlatformError(
             exc.code, f"The {spec.model_type} model could not be fitted", 409, str(exc)
         ) from exc
