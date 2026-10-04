@@ -100,7 +100,9 @@ the named test ran and failed **for the stated cause** before the code that turn
 1. **Attribution recorded (Task 0).** The ledger carries Task 0's phase table (p50, p99, max per
    phase, both arms, 25 and 50 rps, three runs each) and a list of every event of 100 ms or more with
    the phase or mechanism it was attributed to, or "unattributed" with the instruments that saw
-   nothing. The DP ruling cites this table.
+   nothing. **The exit demo's `/score` path is a measured path too:** the same table for Task 0
+   Step 3b's default-live arm, and its one-line answer on whether it does the same per-request work
+   as the `bench-rating.py` path. The DP ruling cites this table.
 2. **NFR-489, full path, uncontended.** Predicate, verbatim from
    [`03-rating-engine.md`](../specs/03-rating-engine.md) NFR-489: *"Real-time scoring p99 < 50 ms
    server-side at 200 rps per replica for a ~200-step motor structure with one `exact` GBM call
@@ -316,6 +318,28 @@ class phase:
   more, with its source.
 - [ ] **Step 3: Run.** `bench-rating.py --http --rates 25`, three times; then `--rates 50`, three times.
   Per pass record start and end (UTC and BST), `uptime`, `pgrep -c pytest`.
+- [ ] **Step 3b: The exit demo's `/score` path, measured beside it.** Added at the deputy's
+  order, `to-lead.md` entry "2026-10-04 19:46:13 BST — #1111 (FD 9729, NFR-489) noted; mint it before
+  the ACK; the demo-path disclosure stays and PL 9728 Task 0 traces the demo's /score calls". Fact,
+  read at planning time on `2cd4896f`: **no exit-demo code calls `/score` today.** `scripts/demo.py`
+  calls only `GET /api/v1/demo/guide` (`:265`) and `GET /api/v1/models` (`:308`);
+  `examples/fremtpl2/model.py:413` scores the golden quote in-process with `score_one`, not over
+  HTTP; no frontend view posts to `/api/v1/score`; the P2 exit-demo row is "not started"
+  (`docs/roadmap.md:603`) and its scripted journey is "unplanned" (`PL-1371` §3.8, item 7). The path
+  is therefore the one G2 specifies (`docs/roadmap.md:566`: deployment to `uat` and then `prod`,
+  `07` FR-429), whose consumer is a Service Account scoped per environment (`WF-701` prerequisites,
+  `07` FR-389/430). **It differs from the bench path in one branch:** the bench sends an explicit
+  ref (`scripts/bench-rating.py:347`) with a `uat` key (`:645`–`:653`) against a `draft` Rating
+  Version and seeds no Deployment, so `_serving_ref`'s Deployment query
+  (`backend/src/app/api/score.py:186`–`:204`) returns no row; the demo's default-live quote sends no
+  ref and that query returns the live Deployment, which supplies the ref and `served_by`. Auth
+  (API key), the statement count and the bundle-slot path are otherwise the same by reading; Step 3b
+  measures it rather than assuming it. In the scratch worktree, seed the bench workspace's bundle
+  as a Deployment of the key's environment (`DeploymentRow` on `uat`, the scratch copy only), drive
+  the same `_drive` loop with the request body's `options.rating_version_ref` removed, at 25 and 50
+  rps, three times each, under the same Step 2 instruments and the same per-pass record. Step 5
+  tabulates it as a third arm, "exit-demo path (default-live, Deployment hit)", and states in one
+  line whether it does the same per-request work as the bench path, naming any phase that differs.
 - [ ] **Step 4: Optional sampling profile.** One 25 rps pass with the server under
   `uvx py-spy record -o <scratch>/profile.svg -- <the uvicorn command>`. If `uvx` cannot fetch it, say
   so; do not install it.
