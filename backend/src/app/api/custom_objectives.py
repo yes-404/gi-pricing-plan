@@ -51,6 +51,7 @@ from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import jobs as job_service
 from app.platform import objectives as service
+from app.platform import rbac
 from model_schema import (
     Applicability,
     CustomObjective,
@@ -75,6 +76,7 @@ router = APIRouter(tags=["modelling"])
 ReadModels = Annotated[Caller, Depends(requires(Perm.MODEL_READ))]
 FitModels = Annotated[Caller, Depends(requires(Perm.MODEL_FIT))]
 SubmitModels = Annotated[Caller, Depends(requires(Perm.MODEL_SUBMIT))]
+AuthorObjectives = Annotated[Caller, Depends(requires(Perm.CUSTOM_OBJECTIVE_AUTHOR))]
 
 
 def _database(request: Request) -> Database:
@@ -247,6 +249,16 @@ async def create_custom_objective(
     """
     async with database.unit_of_work() as session:
         if body.kind is not ObjectiveKind.TEMPLATE:
+            # FR-367, RL-1362 DP-S3-2: author is required in addition to `model:fit` (the
+            # route dependency), and is checked before the flag so a caller without it
+            # learns nothing about the flag.
+            await rbac.require_permission(
+                session,
+                workspace_id=caller.workspace_id,
+                principal=caller.principal,
+                permission=Perm.CUSTOM_OBJECTIVE_AUTHOR,
+                credential_permissions=caller.permissions,
+            )
             await service.refuse_expression_kind(
                 session, settings=settings, workspace_id=caller.workspace_id
             )
@@ -296,6 +308,7 @@ async def get_custom_objective(
 async def derive_custom_objective(
     objective_id: UUID,
     caller: FitModels,
+    _author: AuthorObjectives,
     database: DatabaseDep,
     settings: SettingsDep,
 ) -> CustomObjective:

@@ -9655,6 +9655,7 @@
           "model:read",
           "model:fit",
           "model:submit",
+          "custom_objective:author",
           "rating:read",
           "rating:write",
           "rating:submit",

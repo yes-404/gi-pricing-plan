@@ -173,6 +173,50 @@ by `AND OLD.derived IS NOT NULL`, upgraded: `FAILED …::test_storage_derived_ca
 **Format.** `ruff format` ran only on the two new files; `backend/src/app/db/models.py` was not format-clean at the
 base (`ruff format --check` on `git show origin/main:` of it reported it would reformat) and was not formatted.
 
+### Task 3 — `custom_objective:author`, its `06` row and its checks
+
+**Red 1 (the parity check, member only added).** `uv run pytest tests/test_permission_parity.py -q -x`:
+`1 failed, 10 passed`; `AssertionError: permission parity (CR-1247 P1 (c)):` with
+`enum member with no 06 §4.1 Built row: custom_objective:author` and `Specified name is an enum member: move its row
+to Built in the same commit: custom_objective:author`.
+
+**Red 2 (the routes, member kept).** `uv run pytest backend/tests/test_custom_objectives.py backend/tests/test_rbac.py
+-k "author or template_create_with"`: `2 failed, 4 passed`. Both failures are
+`assert 409 == 403` on `test_creating_an_expression_objective_without_author_is_403` and
+`test_deriving_without_author_is_403`, the body being `"code":"OBJECTIVE_KIND_NOT_ENABLED"` (the caller reached the
+refusal). The four that pass at the base are the DP-S3-2 controls and the no-built-in-role test: author without
+`model:fit` on create and on derive (403 from the existing route dependency), author with `model:fit` (409 refusal),
+template create with `model:fit` alone (201), and `test_no_builtin_role_holds_custom_objective_author`.
+
+**Green.** `permissions.py`: `CUSTOM_OBJECTIVE_AUTHOR = "custom_objective:author"`, granted to no built-in role. `api/custom_objectives.py`:
+derive gains `AuthorObjectives = requires(Perm.CUSTOM_OBJECTIVE_AUTHOR)` beside `FitModels`; create calls
+`rbac.require_permission(…, permission=Perm.CUSTOM_OBJECTIVE_AUTHOR, credential_permissions=caller.permissions)` for a
+non-template kind, before `refuse_expression_kind`. `06` §4.1: the row moves from Specified to Built (Check owner empty),
+and RL-1362's S1 text is appended to FR-367 byte for byte, with `<Task 3 date>` = 2026-10-04. The FR-366 discharge note the
+plan's Task 3 lists is **not written**: RL-1362 gives no text for it, its S1 is FR-367's only, FR-366 already reads
+"Amended 2026-08-18: the trigger is discharged", and RL-1362:634 makes any executor wording a stop. `docs/contracts/openapi/generated.json`
+regenerated: one line, the new enum value.
+
+**Re-pointed tests (quoted).** `test_deriving_without_model_fit_is_refused` (`:617`) is unchanged, as ruled.
+`test_deriving_refuses_by_name_rather_than_pretending_the_concept_is_unknown` granted `analyst` and expected 409; with the
+check in it failed `AssertionError: {"type":"…permission-denied…` (403), and now uses a caller holding `model:fit`,
+`model:read` and author. `test_creating_an_expression_objective_is_refused_by_name` (`test_custom_objectives_api.py`) is
+re-pointed the same way (an `expression_author` fixture); it was not run red, it follows by construction.
+
+**Result.** `tests/test_permission_parity.py`, `backend/tests/test_custom_objectives.py`, `_api.py`, `test_rbac.py`: `86 passed`.
+
+**Broken-input proofs** (each restored by copying the saved file back; `git diff` equal to before): derive without the
+author dependency: `FAILED test_deriving_without_author_is_403`, `1 failed, 45 passed`. Create without the author check:
+`FAILED test_creating_an_expression_objective_without_author_is_403`, `1 failed, 45 passed`. `analyst` holding the member:
+`FAILED test_creating_…_without_author_is_403`, `test_deriving_without_author_is_403`,
+`test_rbac.py::test_no_builtin_role_holds_custom_objective_author`, `3 failed, 59 passed`. Derive's `FitModels` replaced by
+the author dependency alone: `FAILED test_author_without_model_fit_is_refused_on_create_and_derive`, `1 failed, 61 passed`.
+The `06` Built row deleted: `FAILED tests/test_permission_parity.py::test_live_tree_has_no_parity_violations`,
+`1 failed, 61 passed`.
+
+**Format.** No `ruff format` on any existing file; the added hunks are format-clean (`ruff format --diff` hunk counts for
+the three test files equal the base's: 17, 8, 6).
+
 ## PRs
 
 None yet: the branch is pushed, no PR is opened (the lead's order for this turn).
