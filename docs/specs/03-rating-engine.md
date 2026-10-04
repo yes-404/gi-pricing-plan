@@ -517,20 +517,23 @@ breakdown — `docs/rulings/RL-00931-correct-the-example-do-not-build-the-breakd
   "candidate_ref": "rating_version:motor-gb@27",
   "portfolio_dataset_version_id": "uuid",
   "job_id": "uuid",
-  "policy_count": 1_284_902, "exposure_years": "1240118.4",
+  "policy_count": 1_284_902, "exposure_years": "1240118.400000",
   "totals": {"baseline_premium_minor": 41_882_100_00, "candidate_premium_minor": 42_698_300_00,
              "change_pct": 1.95},
+  "outcomes": {"quoted_both": 1_284_902, "quoted_to_declined": 0, "declined_to_quoted": 0,
+               "declined_both": 0, "error": 0, "zero_baseline": 0, "negative_baseline": 0},
   "distribution": [
     {"band": "< -10%", "policies": 41_204, "exposure_share": 0.031, "mean_change_pct": -14.2},
     {"band": "-10% to -5%", "policies": 118_402, "exposure_share": 0.092, "mean_change_pct": -7.1},
     {"band": "-5% to 0%", "policies": 402_118, "exposure_share": 0.314, "mean_change_pct": -2.2},
     {"band": "0% to +5%", "policies": 511_402, "exposure_share": 0.398, "mean_change_pct": 2.6},
     {"band": "+5% to +10%", "policies": 174_882, "exposure_share": 0.136, "mean_change_pct": 7.0},
-    {"band": "> +10%", "policies": 36_894, "exposure_share": 0.029, "mean_change_pct": 14.8}
+    {"band": "≥ +10%", "policies": 36_894, "exposure_share": 0.029, "mean_change_pct": 14.8}
   ],
   "by_segment": [{"factor": "driver_age_band", "level": "17-20",
                   "policies": 22_104, "mean_change_pct": -6.4, "exposure_share": 0.017}],
-  "by_ladder_rung": [{"rung": "base_premium", "contribution_pct": 1.10}],
+  "by_ladder_rung": [{"rung": "risk_premium", "contribution_pct": 1.11},
+                     {"rung": "constraints", "contribution_pct": 0.84}],
   "derived_changes": [
     {"id": "c1", "kind": "step_changed", "description": "s_model: peril_structure:motor-gb-2026h2@1 → @2"},
     {"id": "c2", "kind": "table_repointed", "description": "s_age: rate_table:motor-driver-age-relativity@5 → @6"},
@@ -552,9 +555,23 @@ breakdown — `docs/rulings/RL-00931-correct-the-example-do-not-build-the-breakd
                           "subset_bundle_count": 8, "subset_bundle_hashes": ["sha256:…"],
                           "subset_valuation": "rerate", "replay_fell_back": false},
   "largest_movers_blob": "blob:sha256:…",
-  "errors": [{"code": "INPUT_CONTRACT_VIOLATION", "count": 0}]
+  "errors": []
 }
 ```
+
+*(Amended 2026-10-04, WK-673 Slice 2, `RL-1402`: the run's arithmetic, for FR-263 and FR-264. The example's top band label, its `exposure_years`, `by_ladder_rung` and `errors` were changed and `outcomes` added to match.)*
+
+**Outcomes, and the two sets.** `policy_count` counts every portfolio row. `outcomes` counts each policy once by its two outcomes: `quoted_both`, `quoted_to_declined`, `declined_to_quoted`, `declined_both` and `error` (an `"error"` row in either pass), which sum to `policy_count`; `zero_baseline`, the quoted-both policies whose baseline payable premium is 0; and `negative_baseline`, those whose baseline payable premium is below 0. The **compared set** is the quoted-both policies. The **banded set** is the compared policies whose baseline payable premium is above 0: the compared set less its `zero_baseline` and `negative_baseline` policies, so Σ `distribution[].policies` = `quoted_both` − `zero_baseline` − `negative_baseline`. A negative baseline is a value a Rating Version can return, not an error (no-negative-premium is a Regression Suite property, not a runtime bound): it stays in the compared set and enters no band and no mover. `errors` has one item for each error code with at least one policy, in code order: an `error` policy is counted once, under its baseline pass's `error_code` where that pass errored and otherwise under its candidate pass's, so the counts sum to `outcomes.error`; `sample` holds up to 10 of those policies as `{"quote_id": …}`, the first 10 by `quote_id`.
+
+**Money and ratios.** Every money figure is a sum over the compared set of the `payable_premium` rung's `value_minor`, as integers (FR-1397's arithmetic, NFR-496). A policy's change is its candidate minus its baseline payable premium. A mean or total change in percent over a group is the group's Σ change ÷ Σ baseline × 100, computed as an exact rational of the integers and rounded once to 2 decimal places, half-even. An `exposure_share` is the group's Σ `exposure_years` ÷ the Σ over the set the group is part of, rounded once to 6 places, half-even. A ratio whose denominator is 0 is `null`. `exposure_years` is the exact decimal sum over every policy, rounded once to 6 places, half-even. `totals`, `by_segment` and `by_ladder_rung` cover the compared set.
+
+**Bands and movers** cover the banded set, because they need a per-policy percentage change, (candidate − baseline) ÷ baseline × 100, exactly. `band_edges_pct` (required; decimals; at least one; strictly increasing) cuts it into half-open bands `[lo, hi)`, labelled "< e₀%", "eᵢ% to eᵢ₊₁%" and "≥ eₙ%", each edge printed as its plain decimal string with no exponent and no trailing zeros, with "+" before a positive edge. Every band is listed, in edge order; an empty band has `policies` 0. A **mover** is a banded policy whose percentage change has an absolute value of at least `mover_threshold_pct` (required; a positive decimal), decided exactly on the integers. Movers are ordered by the absolute percentage change, largest first, then by the absolute change in minor units, largest first, then by `quote_id` in code-point order.
+
+**Rungs.** A compared policy's **originating rung** is the first rung, in the ladder's fixed order (FR-247, FR-252), that differs between its two ladders: present in one ladder only, or with a different `value_minor`, or with a different `unrounded_minor` compared as decimal values. A policy with no differing rung has a change of 0. `by_ladder_rung` has one row for each rung that originates at least one compared policy's change, in ladder order; its `contribution_pct` is those policies' Σ change ÷ the compared set's Σ baseline × 100. The integer sums of change by originating rung add up exactly to `candidate_premium_minor − baseline_premium_minor`.
+
+**Segments.** Each name in `segments` (distinct) is a portfolio column of a string, categorical, integer, boolean or date dtype; any other dtype, or an absent column, is refused with `VALIDATION_FAILED` naming the column. `by_segment` has one row per segment and level, in `segments` order, then by level in the value's own order (strings by code point, integers by value, `false` before `true`, dates by date), with the null level last. The level is the value as a string (an integer in decimal, a date in ISO form, a boolean as `true` or `false`), or `null`: null values form one level and are never dropped.
+
+**`exposure_years` as read.** §4.8's "decimal" is how the column is read: an integer or decimal dtype exactly; a float dtype row by row as the decimal of the value rounded to 6 places (FR-62's rule); a NaN or infinite value is refused with the nulls; any other dtype is refused with `VALIDATION_FAILED` naming the column and its dtype.
 
 ### 4.7 `RegressionSuite` and `GoldenQuote`
 
@@ -985,6 +1002,12 @@ def score_batch(bundle: CompiledBundle, frame: pl.LazyFrame, *,
 # pricing_core/rating/analysis.py
 def dislocate(baseline: CompiledBundle, candidate: CompiledBundle,
               portfolio: pl.LazyFrame, spec: DislocationSpec) -> DislocationRun
+def read_portfolio(portfolio: pl.LazyFrame, *,                     # added 2026-10-04 (WK-673 S2, RL-1402): §4.8's
+                   segments: Sequence[str] = ()) -> pl.LazyFrame    # reader; refuses at the call; Slice 7 reuses it
+def dislocation_frame(baseline: CompiledBundle, candidate: CompiledBundle,
+                      portfolio: pl.LazyFrame, spec: DislocationSpec) -> pl.DataFrame   # one row per policy
+def select_movers(frame: pl.DataFrame, spec: DislocationSpec) -> pl.DataFrame          # FR-263's movers, in §4.6's order
+def summarise_dislocation(frame: pl.DataFrame, spec: DislocationSpec) -> DislocationRun  # dislocate = this ∘ dislocation_frame
 async def derive_changes(baseline: RatingVersion, candidate: RatingVersion,    # added 2026-10-03 (WK-673 S1, FR-1399)
                          resolver: ArtifactResolver) -> list[BundleDelta]
 async def attribute(baseline: RatingVersion, candidate: RatingVersion,         # amended 2026-10-03 (WK-673 S1,
@@ -1050,6 +1073,8 @@ def diff_vs_seed(seed_cells: Cells, current_cells: Cells,
 ```
 
 *`DislocationSpec` (added 2026-10-03, `RL-1394`): `baseline_ref`, `candidate_ref`, `portfolio_dataset_version_id`, `purpose`, `as_at` (§4.8's portfolio frame), `segments` (the Factors FR-263 averages by), `band_edges_pct`, `mover_threshold_pct` (FR-263), and optional `change_groups` (FR-1399). `BundleDelta`: one derived change, `id`, `kind`, `description`, as §4.6's `derived_changes` item. `Attribution`: §4.6's `derived_changes`, `change_groups`, `attribution` and `attribution_summary` together. All three are defined in `model-schema` by the slice that first returns them (WK-673 Slices 2 and 3) and match §4.6 field for field.*
+
+*`analysis.py`'s public surface (added 2026-10-04, WK-673 Slice 2, `RL-1402`).* `read_portfolio` checks §4.8's frame and each name in `segments` (present, of a dtype §4.6 admits) when it is called, not when its result is collected, and returns the frame with every column kept and `exposure_years` read as §4.6 states. `PortfolioFrameError` is a `ValueError` with `code = "VALIDATION_FAILED"`, raised for any such fault, and by `dislocation_frame` for a portfolio column named as one of its own columns; its message names the column and the count, or the column and its dtype, and never a value; the platform maps it to `VALIDATION_FAILED`. `dislocation_frame` calls `read_portfolio(portfolio, segments=spec.segments)` before any rating and returns one row per policy, sorted by `quote_id`: `quote_id`; `baseline_outcome`, `candidate_outcome`; `baseline_minor`, `candidate_minor`, the `payable_premium` rung's `value_minor` as an integer, null unless that pass quoted; `change_minor`, `candidate_minor − baseline_minor`, null unless both passes quoted; `baseline_error_code`, `candidate_error_code`; `origin_rung` (§4.6), null unless both passes quoted and a rung differs; then every portfolio column, in the portfolio's order. `select_movers` returns the frame's rows for FR-263's movers, in §4.6's mover order; Slice 4 writes them to `largest_movers_blob`. `dislocate(b, c, p, s)` is exactly `summarise_dislocation(dislocation_frame(b, c, p, s), s)`. `band_edges_pct` and `mover_threshold_pct` keep the names `RL-1394` gave them; §4.6 states their rules.*
 
 > *(Corrected 2026-09-28, RL-1172 — the decision-maker ruled the spec was wrong on F59 and
 > on all four limbs of F60, and the code right.)* The block above had omitted nine live
