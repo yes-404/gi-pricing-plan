@@ -177,6 +177,22 @@ shows `Σ distribution.policies = quoted_both - zero_baseline - negative_baselin
 files"; `lint-imports` "4 kept, 0 broken"; `python3 scripts/audit-docs.py` fails check 31 (expected) and check 32 at
 this ledger's Task 1 text naming RL-1404 (present before this task's change; not introduced here).
 
+### Task 3 — the portfolio reader (executor-1386c, `echo $CLAUDE_EFFORT` printed `medium`)
+
+**Red.** `uv run pytest packages/pricing-core/tests/test_rating_dislocation.py -q -p no:cacheprovider` (17 tests, no
+module yet): `ModuleNotFoundError: No module named 'pricing_core.rating.analysis'`, 1 error during collection.
+
+**Green.** Same command after `packages/pricing-core/src/pricing_core/rating/analysis.py`: `17 passed`. It covers the
+reserved names (one test each), null, NaN or infinite, negative and missing exposure, a string exposure naming its
+dtype, a missing, null and duplicated `quote_id`, a float and an absent segment, the admitted segment dtypes, the float
+exposure read as `Decimal` of scale 6 (`0.1234567` → `0.123457`), the integer exposure read exactly, and every column
+kept. Each refusal asserts `code == "VALIDATION_FAILED"` and, where a value could leak, that it is absent.
+
+**Broken input (plan Step 4), each against the restored green file.** (1) The reserved-name loop emptied: `3 failed, 14
+passed`. (2) `fill_null(0)` on exposure: `1 failed, 16 passed`. (3) The `is_nan() | is_infinite()` term removed: `1
+failed, 16 passed`. (4) The counts moved into a `map_batches` evaluated only at `.collect()`: `5 failed, 12 passed` (the
+tests call `read_portfolio` and never collect, so none raises). Restored: `17 passed`.
+
 ## Deviations and disclosures
 
 1. **`<date>` is 2026-10-04**, the day of this commit; S1-S3 say "the merge date the executor writes", which this run cannot know. If the merge lands on a later day the lead may correct the three dated phrases (":1005", ":562", ":1077").
