@@ -1414,6 +1414,24 @@ relates: [FD-1357, RL-1361, PL-1267]
 `seed_from_model` seeds a GLM with two or more factors: one seed request names one Factor and gives one table with one key, bound by `factor_ref` to the Factor version the model pins (`RL-1361` sections A and D; FD-1357, HIGH, on G2's path). The seed route's request body becomes a typed `model-schema` request and its 201 a typed response, both published under `docs/contracts/schemas/generated/` (the maintainer's rules (i) and (ii); the seed-from-model entry of `FD-1366`). The `[seeding]` texts of `RL-1361` are applied byte for byte. Leaf plan `PL-1376`, `active`. **Order:** lane B, after `SL-1360` and before the FD-1356 fix, the RL-1343 decimal-output fix and `PL-1364` (the maintainer, 2026-10-01, about 10:10 BST). *(Filed 2026-10-01 under working id 9763, reserved by the lead. Minted 2026-10-03 as SL-1377; its plan is PL-1376, the FD-1357 batch.)*
 (Activated 2026-10-03 as the FD-1357 fix (WK-1178), on the maintainer's GO check, "2026-10-03 16:59:11 BST — DISPATCH GO: the FD-1357 fix (SL-1377, PL-1376; WK-1178) on lane B; this entry is PL-1376 activation need 7's maintainer agreement"; dispatch record DISPATCH-WK-1178-SL1377-2026-10-03.)
 
+#### SL-1409 — WK-1178 fix slice — FD-1356: a validation rule is approved only through the approval workflow
+
+```yaml
+id: SL-1409
+family: slice
+title: WK-1178 fix slice — FD-1356: a validation rule is approved only through the approval workflow
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-04
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 1dd5e264195677b4a13268b80ac8673c2c027135
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1356, RL-1301, PL-1306, SL-1256, RL-1407, PL-1408]
+```
+
+`FD-1356`'s fix (HIGH): rule approval goes through `approvals.submit` and `approvals.decide`, `_carry_to_the_artifact` gains the validation-rule branch, and the direct approve route becomes a thin client of the decide path or is removed (DP-1). A quorum of 2 leaves the rule in `review` after one approval. A dry-run whose outcome is `error` is refused at submit and at approve, one red-first case per cause (missing column, unknown check, missing table), and a `fail` outcome stays accepted. `RL-1301` A.4.5's temporary `approve_rule` allowance is removed red first. Rule approvals that no approval request backs are reset to `review`, with the count recorded (follow-on 2). Task 0 is the maintainer's containment query over every `gipricing*` database, with a STOP on a non-zero result; it printed 5 at planning time. The maintainer decided DP-0 as (c): export the rows, drop the scratch database, re-run. The re-run printed 0 on 2026-10-01, to be re-confirmed at dispatch. The remedies of FD 9747 (an approved rule's dry run cannot be replaced) and FD 9748 (a Rule Set runs only approved, existing members) also ride in this slice, as the maintainer decided. RL-1407 rules the plan's decision points and these remedies. Leaf plan PL-1408 (`draft`). **Activation needs:** WK-674 S2 (`SL-1256`) merged (the maintainer, 2026-10-01 ~10:10 BST, order (b) S2 → this fix); lane B order `SL-1360` → the FD-1357 fix → this slice → the `RL-1343` decimal fix → FD-1335 Part A; the plan's decision points ruled; the maintainer's agreement and the lead's go in a separate activation PR. *(Filed 2026-10-01 under working ids 9761 (this row) and 9762 (the plan), reserved by the lead. Minted 2026-10-04 as SL-1409; its plan is PL-1408 and its ruling RL-1407.)*
+
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
