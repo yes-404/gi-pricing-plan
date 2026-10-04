@@ -47,9 +47,10 @@ sources. Each is named here so a reader can find what changed and why:
   check 31 only. B2 is ruled by RL 9734 (working id) DP-S2-1 (`select_movers`). N1, N2, N3 and N6
   are ruled there too; N4, N5 and N7 are applied in Tasks 4 and 5 and Acceptance 3 and 6.
 - **RL 9734's audit** (`~/gi-pricing-plan.local/handover/audit-9734-2026-10-04.md`; the lead's
-  verdict CLEAN, with three non-blocking items to land in this plan, the ruling not edited): N1
-  (a mover tie on |pct| broken by |change_minor|, Task 5), N2 (the banded set is
-  `baseline_minor > 0`, Task 0 Step 4 and Task 5), N3 (a band's `exposure_share` is over the
+  verdict CLEAN, with three non-blocking items to land in this plan, the ruling not edited for
+  N1 and N3): N1 (a mover tie on |pct| broken by |change_minor|, Task 5), N2 (the banded set is
+  `baseline_minor > 0`, Task 0 Step 4 and Task 5; ruled by RL 9734 (working id), Amendment N2,
+  which adds the count `outcomes.negative_baseline`), N3 (a band's `exposure_share` is over the
   banded set, Task 5).
 
 The premises below stay as read at `1ab1776d`. `git diff --stat 1ab1776d 7e2ee2ba` lists only
@@ -392,15 +393,14 @@ and the Tasks below follow the ruling.
 - [ ] **Step 4:** Copy the ruling's texts S1 to S5 ("The exact texts") into the ledger with the
   ruling's minted id and line range. Every later step applies the ledger copy, never this plan's
   Appendix. **Then check one reading against the copy.** This plan builds the banded set as the
-  quoted-both policies with `baseline_minor > 0` (the lead's verdict on audit-9734 N2): a
+  quoted-both policies with `baseline_minor > 0` (RL 9734 (working id), Amendment N2): a
   negative payable premium is not excluded by type (`MoneyMinor` is a strict `int`,
   `money.py`; "no-negative-premium" is a Regression Suite property in `03`'s glossary, not a
   runtime bound), and with a negative baseline the mover inequality holds for every change and
-  the percentage's sign inverts. If the minted S3 still defines the banded set only as "the
-  compared set less its `zero_baseline` policies", with no negative case, then the spec text
-  and this plan disagree for a negative baseline. Unless a dated decision-maker record named in
-  the dispatch record already resolves that case, stop and report to the lead before Task 1
-  (`CLAUDE.md` §0), naming the S3 line.
+  the percentage's sign inverts. RL 9734 (working id), Amendment N2 resolves this case: the S3
+  copied into the ledger is N2-a's text (and S4 edit 2 is N2-b's, S5 edit 1's `outcomes` is
+  N2-c's), each in place of the text it replaces. Confirm the ledger copy defines the banded set
+  as the compared policies with a baseline payable premium above 0.
 - [ ] **Step 5:** Record the dtype of `exposure_years` in the public freMTPL2 portfolio the seed
   builds (`examples/fremtpl2/seed.py`; read it, do not guess), and quote the line. RL 9734
   (working id) DP-S2-7 admits a `Float64` column (read rounded to 6 places), so no dtype stops
@@ -519,7 +519,7 @@ def test_outcomes_must_sum_to_policy_count() -> None:
 
     outcomes = DislocationOutcomes(
         quoted_both=3, quoted_to_declined=1, declined_to_quoted=0,
-        declined_both=0, error=1, zero_baseline=0,
+        declined_both=0, error=1, zero_baseline=0, negative_baseline=0,
     )
     with pytest.raises(ValidationError, match="policy_count"):
         DislocationRun.model_validate({
@@ -635,6 +635,7 @@ class DislocationOutcomes(BaseModel):
     declined_both: _Count
     error: _Count
     zero_baseline: _Count
+    negative_baseline: _Count
 
 
 class DislocationBand(BaseModel):
@@ -697,6 +698,8 @@ class DislocationRun(BaseModel):
             raise ValueError("outcomes must sum to policy_count")
         if sum(e.count for e in self.errors) != o.error:
             raise ValueError("errors counts must sum to outcomes.error")
+        if sum(b.policies for b in self.distribution) != o.quoted_both - o.zero_baseline - o.negative_baseline:
+            raise ValueError("distribution policies must equal quoted_both - zero_baseline - negative_baseline")
         return self
 ```
 
@@ -917,13 +920,14 @@ def test_read_portfolio_reads_a_float_exposure_rounded_to_six_places() -> None:
   and `def dislocate(baseline: CompiledBundle, candidate: CompiledBundle, portfolio: pl.LazyFrame, spec: DislocationSpec) -> DislocationRun`
   (T7), defined as `summarise_dislocation(dislocation_frame(baseline, candidate, portfolio, spec), spec)`.
 
-**The sets, as this plan builds them** (RL 9734 (working id) DP-S2-2, S3, with audit-9734 N2
-and N3 stated):
+**The sets, as this plan builds them** (RL 9734 (working id) DP-S2-2, S3, with its Amendment N2
+and audit-9734 N3 stated):
 - the **compared set** is the rows with both outcomes `quoted`; `totals`, `by_segment` and
   `by_ladder_rung` are over it;
 - the **banded set** is the compared rows with `baseline_minor > 0`. For `baseline_minor ≥ 0`
   this is S3's "the compared set less its `zero_baseline` policies". A negative baseline is
-  outside it, and outside `zero_baseline` (which counts `baseline_minor == 0` only): it enters
+  outside it, and counted in `outcomes.negative_baseline` (RL 9734 (working id), Amendment
+  N2; `zero_baseline` counts `baseline_minor == 0` only): it enters
   the money totals, `by_segment` and `by_ladder_rung`, and no band and no mover (Task 0 Step 4
   carries the spec-text check). Bands and movers are over the banded set only;
 - an **`exposure_share`** is the group's Σ `exposure_years` ÷ the Σ over the set the group is
@@ -958,7 +962,9 @@ every column kept.
   - `test_dislocation_bands_count_policies_and_exposure_shares` — `req("FR-263")`; half-open
     `[lo, hi)` with a policy exactly on an edge (in the upper band); labels as S3 prints them
     (`"< -10%"`, `"-10% to -5%"`, …, `"≥ +10%"`); `Σ policies` equals the banded set's size
-    (so the `zero_baseline` and negative-baseline policies are in no band); each
+    (so the `zero_baseline` and negative-baseline policies are in no band), and
+    `Σ distribution[].policies == quoted_both − zero_baseline − negative_baseline`
+    (RL 9734 (working id), Amendment N2); each
     `exposure_share` is over the banded set's Σ `exposure_years`; mutation: the edge test
     `> lo` instead of `≥ lo`, and separately a denominator over the compared set.
   - `test_dislocation_empty_band_mean_is_none` — `req("FR-263")`; a band with no policy has
@@ -972,8 +978,9 @@ every column kept.
     `origin_rung` add up exactly to `candidate_premium_minor − baseline_premium_minor`**; and
     the `Fraction` parts sum exactly to `Fraction(Σchange, Σbaseline) × 100`; mutation: an
     origin comparing `unrounded_minor` alone.
-  - `test_dislocation_outcomes_and_errors_are_counted` — `req("FR-263")`; the six `outcomes`
-    figures; the first five sum to `policy_count`; `Σ errors[].count == outcomes.error`; an
+  - `test_dislocation_outcomes_and_errors_are_counted` — `req("FR-263")`; the seven `outcomes`
+    figures, with `negative_baseline == 1` on the fixture's negative-baseline policy
+    (RL 9734 (working id), Amendment N2); the first five sum to `policy_count`; `Σ errors[].count == outcomes.error`; an
     error in both passes is counted under the baseline's code; each `sample` is a list of
     `{"quote_id": …}` objects, the first 10 by `quote_id`; mutation: count a both-pass error
     under both codes.
