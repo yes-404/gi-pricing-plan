@@ -186,7 +186,10 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 | **FR-263** | A **Dislocation Run** re-rates a fixed portfolio Dataset Version under a baseline and a candidate Rating Version and reports: the distribution of premium change (absolute and percentage), average change overall and by declared segment, the exposure/policy count in each change band, movers beyond configurable thresholds with drill-down to individual quotes, and total portfolio premium change. |
 | **FR-264** | Dislocation results are sliceable by any Factor available on the portfolio dataset, and by the ladder rung at which the change originated — answering "which part of the change caused this?", not merely "how much did it change?". |
 | **FR-265** | Dislocation output is a persisted, citable artifact referenced by the approval request, not a transient screen. |
-| **FR-266** | Where the candidate and baseline differ in more than one respect (new model *and* rate table edits), dislocation supports **attribution**: re-rating with each change applied in isolation and cumulatively, so the change is decomposed into its causes. |
+| **FR-266** | Where the candidate and baseline differ in more than one respect (new model *and* rate table edits), dislocation supports **attribution**: re-rating with each change applied in isolation and cumulatively, so the change is decomposed into its causes. *(Amended 2026-10-03, WK-673 Slice 1, on OQ-1187's decision (`RL-1184` F3), the deputy's F3 decision of 2026-09-28 12:10:21 BST as corrected at 13:57:02 BST (`RS-1201`), `RL-1264` and `RL-1394`.)* **The attribution of record is exact Shapley over the declared changes, for K ≤ 6.** For each policy, each change's Shapley value is computed exactly, as a rational with denominator K!, from v(S) for each of the 2^K subsets S of the declared changes, where v(S) is the policy's payable premium in integer minor units under the subset bundle for S (FR-1398), or a ladder replay proven equal to it under `RL-1264`'s feasibility rule. The K values are allocated to integer minor units by **largest remainder**, ties broken in the declared change order (FR-1399), so that the policy's parts sum exactly to its candidate minus baseline payable premium; plain rounding is forbidden. Portfolio figures are sums of the per-policy integer parts. The **isolated** figure (the change applied alone) and the declared-order **cumulative** figure are views beside the Shapley figure, never the attribution, and the **interaction residual**, total − Σ isolated, is its own line. **Above K = 6** the analyst groups the changes into at most 6 change groups (FR-1399) and Shapley runs over the groups; where the analyst does not group them, the isolated-plus-cumulative method with its residual line is shown with R and a lower bound on S (`RS-1201` defines both), labelled order-dependent and never presented as a decomposition. R is exact. The bound is the maximum over a declared number of orders, at least 2 and always including the declared order and its reverse; it is printed as "S ≥ x over n orders", never as S, and the run records n. Exactness holds on the integer minor units each rating returns through FR-273's boundary, not on a decimal carried through the engine (§3.11). |
+| **FR-1397** | **Attribution reconciles exactly on the rating path's own integers, on every run.** Every attribution part, the interaction-residual line and the total are integer minor units taken from the payable premium's `value_minor` as the rating path produces it (FR-273). Per policy and at portfolio level, the Shapley parts sum exactly to the total, and the isolated figures plus the residual line sum exactly to the total, as integers, with no float summed after rounding. The run checks both on every run and fails, naming the first policy that does not reconcile, rather than persist a result that does not. The check is proven on deliberately broken input: a plain-rounding allocation, on a policy where plain rounding does not sum to the total, and a Shapley value perturbed by one minor unit are each refused. *(Added 2026-10-03, WK-673 Slice 1: the deputy's F3 item 4, corrected 2026-09-28 13:57:02 BST; `RL-1394`.)* |
+| **FR-1398** | **Attribution runs on the ZEN engine through the ordinary compile path, and its subset bundles are ephemeral.** Each subset of the declared changes is a bundle built at step granularity from the baseline's pins and algorithm with that subset's changes substituted, compiled by `compile_bundle` and hydrated by `load_bundle`, so it passes the same validation as a real version (FR-240, FR-274, FR-275, FR-276) and is rated by the engine, never by a mirror of it. This holds for every subset bundle a run compiles, whether v(S) is read from it or it verifies a ladder replay (FR-266's amendment). A subset bundle is content-addressed and has **no Rating Version identity**: it is never a `rating_version` row, and it is never approvable, deployable or listed in any version list. It is cached per run by its content hash and discarded with the run's scratch. A subset that fails to compile fails the run with `BUNDLE_COMPILE_FAILED`, naming the subset; it is never skipped. The run artifact records how many subset bundles were compiled and their content hashes, and whether v(S) came from re-rating or from ladder replay (§4.6). *(Added 2026-10-03, WK-673 Slice 1: `RL-1264` DP-1 (a), with its conditions; `RL-1394`.)* |
+| **FR-1399** | **The declared changes are derived, and the analyst may group them.** The server derives the change list from the difference between baseline and candidate, at step granularity: each `step_id` the structural diff (FR-219) reports as added, removed, or present in both with any field changed is exactly one derived change, however many of its fields changed. Its kind is `step_added`, `step_removed`, `table_repointed` where the only changed field is the step's table or lookup reference, or `step_changed`. A pin difference (FR-237) that a derived step change accounts for, through that step's table, lookup or model reference, is part of that change, never a second one; a pin difference no step change accounts for is its own derived change, of kind `pin`. Derived changes are numbered `c1`, `c2`, … in the derived order: step changes sorted by `step_id`, then unaccounted pin differences sorted by their reference string. The analyst may merge derived changes into at most 6 named **change groups** in the `DislocationSpec`. The server checks that the groups partition the derived list exactly, every derived change in exactly one group, and refuses otherwise with `VALIDATION_FAILED`, naming each change left out or placed twice. With no groups given, each derived change is its own group, named by its id, and above 6 FR-266's above-six rule applies. The **declared change order** is the order of the groups as the analyst gives them, or with no groups the derived order. The derived list and the groups are both on the artifact (§4.6). *(Added 2026-10-03, WK-673 Slice 1: `RL-1264` DP-2 (c); `RL-1394`.)* |
 
 ### 3.10 Deployment
 
@@ -510,11 +513,14 @@ breakdown — `docs/rulings/RL-00931-correct-the-example-do-not-build-the-breakd
 
 ### 4.6 `DislocationRun`
 
+*(Amended 2026-10-03, WK-673 Slice 1, `RL-1394`: reconciled with `dislocation-run.schema.json` (`job_id`, `by_ladder_rung` and `errors` added to the example) and extended with FR-266's attribution as amended, FR-1397, FR-1398 and FR-1399. Money is integer minor units. `mean_change_pct` and `cumulative_change_pct` on an `attribution` item are derived views: `shapley_minor` (or, under `order_dependent`, `isolated_minor`) and `cumulative_minor` as a percentage of `totals.baseline_premium_minor`. `method` is `shapley` or `order_dependent`; `shapley_minor` is null only under `order_dependent`, and `order_sensitivity_lower_bound`, `residual_share` and `orders_sampled` are non-null only under it. S and R are decimal strings. `subset_valuation` is `rerate` or `ladder_replay`, and `replay_fell_back` is true where a replay mismatch fell the run back to re-rates (`RL-1264`); Slice 3 may amend these two with a dated note if it does not adopt replay.)*
+
 ```json
 {
   "baseline_ref": "rating_version:motor-gb@26",
   "candidate_ref": "rating_version:motor-gb@27",
   "portfolio_dataset_version_id": "uuid",
+  "job_id": "uuid",
   "policy_count": 1_284_902, "exposure_years": "1240118.4",
   "totals": {"baseline_premium_minor": 41_882_100_00, "candidate_premium_minor": 42_698_300_00,
              "change_pct": 1.95},
@@ -528,12 +534,29 @@ breakdown — `docs/rulings/RL-00931-correct-the-example-do-not-build-the-breakd
   ],
   "by_segment": [{"factor": "driver_age_band", "level": "17-20",
                   "policies": 22_104, "mean_change_pct": -6.4, "exposure_share": 0.017}],
-  "attribution": [
-    {"change": "peril_structure:motor-gb-2026h2@1 → @2", "mean_change_pct": 1.42},
-    {"change": "rate_table:motor-driver-age-relativity@5 → @6", "mean_change_pct": -0.31},
-    {"change": "min_premium 26000 → 28000", "mean_change_pct": 0.84}
+  "by_ladder_rung": [{"rung": "base_premium", "contribution_pct": 1.10}],
+  "derived_changes": [
+    {"id": "c1", "kind": "step_changed", "description": "s_model: peril_structure:motor-gb-2026h2@1 → @2"},
+    {"id": "c2", "kind": "table_repointed", "description": "s_age: rate_table:motor-driver-age-relativity@5 → @6"},
+    {"id": "c3", "kind": "step_changed", "description": "s_minprem: min_premium 26000 → 28000"}
   ],
-  "largest_movers_blob": "blob:sha256:…"
+  "change_groups": [{"name": "models", "changes": ["c1"]}, {"name": "age curve", "changes": ["c2"]},
+                    {"name": "minimum premium", "changes": ["c3"]}],
+  "attribution": [
+    {"group": "models", "shapley_minor": 594_700_00, "isolated_minor": 571_000_00,
+     "cumulative_minor": 571_000_00, "mean_change_pct": 1.42, "cumulative_change_pct": 1.36},
+    {"group": "age curve", "shapley_minor": -129_800_00, "isolated_minor": -131_200_00,
+     "cumulative_minor": -128_100_00, "mean_change_pct": -0.31, "cumulative_change_pct": -0.31},
+    {"group": "minimum premium", "shapley_minor": 351_300_00, "isolated_minor": 322_400_00,
+     "cumulative_minor": 373_300_00, "mean_change_pct": 0.84, "cumulative_change_pct": 0.89}
+  ],
+  "attribution_summary": {"method": "shapley", "total_change_minor": 816_200_00,
+                          "residual_minor": 54_000_00, "order_sensitivity_lower_bound": null,
+                          "residual_share": null, "orders_sampled": null,
+                          "subset_bundle_count": 8, "subset_bundle_hashes": ["sha256:…"],
+                          "subset_valuation": "rerate", "replay_fell_back": false},
+  "largest_movers_blob": "blob:sha256:…",
+  "errors": [{"code": "INPUT_CONTRACT_VIOLATION", "count": 0}]
 }
 ```
 
@@ -601,7 +624,7 @@ and this is the first of the four `pl.LazyFrame`-taking/returning signatures §5
 publishes (`score_batch`'s `frame`, `dislocate`'s `portfolio`, `attribute`'s `portfolio`,
 `score_batch`'s own return) to become real — `dislocate` and `attribute` are unbuilt. This
 subsection is written so it can hold the portfolio frame's schema when WK-673 designs it; it
-does not design that schema now.
+does not design that schema now. *(Superseded in part 2026-10-03: the portfolio frame's schema is designed in "The portfolio frame (WK-673)" below, `RL-1394`.)*
 
 **Not a `model-schema` artifact.** No document under `docs/contracts/` defines a tabular
 row schema, and Polars column layouts have no generator, no `scripts/generate-contracts.py
@@ -665,6 +688,22 @@ chunked transform has to provide regardless of which task is charged with the re
 id. The threshold policy that decides whether the *run* aborts, and the per-category
 counting and sampling FR-255 also names, are Task 3B's, reading `error_code` off this
 column.
+
+#### The portfolio frame (WK-673, added 2026-10-03)
+
+*(Added 2026-10-03, WK-673 Slice 1, PL-1395; the ruling `RL-1394`; `RL-1361` §E for pass-through.)* `dislocate`'s and `attribute`'s `portfolio` is one row per policy of a portfolio Dataset Version.
+
+| Column | Type | Rule |
+|---|---|---|
+| `quote_id` | string | required, non-null and unique: the policy's identity, the key on which the baseline and candidate passes are joined, and the drill-down key for movers |
+| `exposure_years` | decimal | required, non-null and never negative; zero allowed; never read as 0 when null (`RL-1361` §E). The weight for exposure shares (FR-263) and for FR-231's per-cell weights |
+| each name in either bundle's `input_contract` | as declared | the algorithm inputs |
+
+**A portfolio that breaks this schema is refused before any rating, with `VALIDATION_FAILED`,** naming the column and the count of offending rows: a missing, null or duplicated `quote_id`; a missing, null or negative `exposure_years`; a column named `purpose`, `effective_date` or `rating_version_ref`. A fault in one row's algorithm inputs is not a frame refusal: it is that row's own error, as below.
+
+**`purpose`, `effective_date` and `rating_version_ref` are stamped, never read from the portfolio.** `DislocationSpec.purpose` (`new_business` or `renewal`) and `DislocationSpec.as_at` (an ISO date) are written into every row of every pass as `purpose` and `effective_date`. The baseline pass and the candidate pass stamp their own Rating Version's `rating_version_ref`, as this subsection requires of every `score_batch` frame. An attribution subset pass stamps the **baseline's** `rating_version_ref`, because a subset bundle has no Rating Version (`03` §3.9) and `score_batch` requires a reference on every row; its output rows are scratch inputs to attribution, never persisted or returned as scoring results, and the subset is identified by their `bundle_hash`, never by that reference. A `mid_term_adjustment`, `cancellation` or `what_if` row therefore cannot occur in a run; when FR-217's inlining is built, admitting the first two is a change to this subsection (FR-218).
+
+**Every other column passes through the reader** and stays available for slicing by any Factor (FR-264), for exposure weighting, for drill-down, and for resolving a Factor's source columns (FR-231, `RL-1361`). **It never reaches the engine.** Each scoring pass — the baseline, the candidate and every attribution subset — rates a frame of the stamped columns, `quote_id`, and exactly the names in **that pass's own bundle's** `input_contract`; the other columns are joined back to the scored rows by `quote_id`. A name a bundle declares but the portfolio lacks is FR-213's missing input, written as an `"error"` row with `INPUT_CONTRACT_VIOLATION`, as `score_batch` already does. `score_batch`'s own tolerance of extra columns (above) is unchanged: this projection is `dislocate`'s and `attribute`'s, because forwarding an undeclared column lets an undeclared read resolve from the book (`FD-1374`) and lets a column with a billing name refuse every row (FR-252), so a run's result would depend on columns no contract names.
 
 ### 4.9 `RegressionRun`
 
@@ -989,7 +1028,11 @@ def score_batch(bundle: CompiledBundle, frame: pl.LazyFrame, *,
 # pricing_core/rating/analysis.py
 def dislocate(baseline: CompiledBundle, candidate: CompiledBundle,
               portfolio: pl.LazyFrame, spec: DislocationSpec) -> DislocationRun
-def attribute(changes: Sequence[BundleDelta], portfolio: pl.LazyFrame) -> list[Attribution]
+async def derive_changes(baseline: RatingVersion, candidate: RatingVersion,    # added 2026-10-03 (WK-673 S1, FR-1399)
+                         resolver: ArtifactResolver) -> list[BundleDelta]
+async def attribute(baseline: RatingVersion, candidate: RatingVersion,         # amended 2026-10-03 (WK-673 S1,
+                    portfolio: pl.LazyFrame, spec: DislocationSpec,            # RL-1264 premise: the old form took
+                    resolver: ArtifactResolver) -> Attribution                 # no baseline and could not compile subsets)
 
 # pricing_core/rating/testing.py
 def run_regression(bundle: CompiledBundle, suite: RegressionSuite,
@@ -1048,6 +1091,8 @@ def diff_vs_seed(seed_cells: Cells, current_cells: Cells,
                  keys: Sequence[RateTableKey], value: RateTableValue, *,
                  weights: Weights | None = None) -> RateTableDiff
 ```
+
+*`DislocationSpec` (added 2026-10-03, `RL-1394`): `baseline_ref`, `candidate_ref`, `portfolio_dataset_version_id`, `purpose`, `as_at` (§4.8's portfolio frame), `segments` (the Factors FR-263 averages by), `band_edges_pct`, `mover_threshold_pct` (FR-263), and optional `change_groups` (FR-1399). `BundleDelta`: one derived change, `id`, `kind`, `description`, as §4.6's `derived_changes` item. `Attribution`: §4.6's `derived_changes`, `change_groups`, `attribution` and `attribution_summary` together. All three are defined in `model-schema` by the slice that first returns them (WK-673 Slices 2 and 3) and match §4.6 field for field.*
 
 > *(Corrected 2026-09-28, RL-1172 — the decision-maker ruled the spec was wrong on F59 and
 > on all four limbs of F60, and the code right.)* The block above had omitted nine live
