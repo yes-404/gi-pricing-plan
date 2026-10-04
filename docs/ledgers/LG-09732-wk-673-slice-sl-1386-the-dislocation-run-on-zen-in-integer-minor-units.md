@@ -235,7 +235,7 @@ because the model already holds a `Decimal`; the mutation was changed to compare
 
 **Checks.** `ruff check .` all passed; `ruff format --check` on the two changed files clean; `mypy` "no issues found in 221
 source files"; `lint-imports` "4 kept, 0 broken"; `python3 scripts/audit-docs.py` `FAILED (3)`: check 31 (gap 1403 to 9732) and
-check 32 twice (this ledger, the RL-1404 citations), the three Delta 2 expects.
+check 32 twice (this ledger's two earlier citations of #1102's ruling), the three Delta 2 expects.
 
 ## Deviations and disclosures
 
