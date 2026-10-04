@@ -573,6 +573,14 @@ async def certifiable_or_refuse(
             "would change the evidence a decision was made against. Withdraw the "
             "submission, or create the next version.",
         )
+    if row.kind == "expression" and row.derived is None:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "This expression objective has not been derived",
+            409,
+            f"{row.slug}@{row.version} has no derived gradient and hessian to certify. "
+            "Run POST /api/v1/custom-objectives/{id}/derive first.",
+        )
     return row
 
 

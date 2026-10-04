@@ -274,6 +274,38 @@ of `kind: expression` without `applicability` is 422 `VALIDATION_FAILED` (no tem
 FR-142/144/146/150/163/166, read from the spec's own headings. (6) No `ruff format` on any existing file; touched hunks are
 format-clean (objectives.py 4 hunks, base 4; test_custom_objectives.py 17, base 17).
 
+### Task 5 — certification of an expression
+
+(2026-10-04 BST, `executor-1273e`, sonnet, `echo $CLAUDE_EFFORT` = `medium`; per-worktree database `gipricing_wt-1273e_366b231b`.)
+
+**Red, quoted** (`uv run pytest backend/tests/test_custom_objectives_expression.py -k certify`, base `d7b7f0c4` plus the two tests):
+`2 failed`. (1) `test_certify_refuses_an_underived_expression_before_a_job_exists` failed `AssertionError: {"id":"01a107d8-…","workspace_id"…`,
+a 202 job body where 409 was expected. (2) `test_certify_runs_a_derived_expression_as_the_existing_job` failed
+`assert <JobStatus.FAILED: 'failed'> is <JobStatus.SUCCEEDED…`; the job log's last frame is `compile_objective`
+(`objectives.py:739`, `raise ObjectiveError`), reached from `certify_objective` through `_certify`, the plan's stated cause.
+
+**Green.** `certifiable_or_refuse` refuses `kind == "expression"` with `derived is None` as 409 `VALIDATION_FAILED`, `detail` naming
+`POST /api/v1/custom-objectives/{id}/derive`, before `job_service.submit` (RL-1362 DP-S3-3 (2)). `_certify` dispatches an expression to the
+new `_certify_expression`, which passes the stored `loss`, parameter defaults, the stored `derived` (as `Derived`, without `derived_at`),
+`y_domain`, strategy, `hessian_min`, `default_sampling`'s grid from the job parameters, and `inverse_link_for(applicability.responses)`.
+`inverse_link_for` is new in `pricing_core/modelling/expression_objective.py`: logistic when every response is a probability response,
+else exp, the split `default_sampling` already draws its grid by; DP-S3-1 asks certify and the fit to read the link through one function,
+and Task 6 is to call it. `record_certificate` is unchanged. `02` §5.1 certify row: RL-1362's S3 byte for byte, `<Task 5 date>` = 2026-10-04.
+Result: the file `22 passed`; with `test_custom_objectives.py`, `_api.py` and `packages/pricing-core/tests/test_expression_objective.py`
+`83 passed` after one fix (my no-job-row count was database-wide, not per workspace; scoped to `workspace_id`).
+
+**Broken-input proofs** (each restored, `cmp` against the saved copy equal): the route guard replaced by `if False:`:
+`FAILED test_certify_refuses_an_underived_expression_before_a_job_exists`, `1 failed, 1 passed`. The `_certify` expression dispatch replaced by
+`if False:`: `FAILED test_certify_runs_a_derived_expression_as_the_existing_job`, `1 failed, 1 passed`. `inverse_link_for` returning `"exp"`
+always: `FAILED test_certify_inverse_link_follows_the_applicability_responses`, `AssertionError: assert 'exp' == 'logistic'`, `1 failed, 11 deselected`.
+
+**Deviations and notes for the auditor.** (1) Executor-worded spec sentences: none; the only `docs/` edit is S3. (2) The plan's Task 5 Green
+lists `default_sampling`; it needed no change (it already reads the applicability). (3) No test pins that the *stored* `derived` text, rather
+than a re-derivation, is certified: the trigger makes `derived` write-once, so the two cannot be told apart through the API, and the code
+path passes the stored block. (4) A mixed-link applicability (probability and non-probability responses together) is certified on the exp
+link, as `default_sampling` already treats it; no refusal is added, since RL-1362 and the plan name none and every `ResponseKind` is log or logit.
+(5) Template certify is untouched: its existing tests pass unmodified.
+
 ## PRs
 
 None yet: the branch is pushed, no PR is opened (the lead's order for this turn).

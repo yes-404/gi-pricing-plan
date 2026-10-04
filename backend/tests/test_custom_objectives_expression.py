@@ -430,3 +430,78 @@ async def test_grammar_violation_is_not_raised_for_a_valid_loss(
     """The control: the same route and caller, a loss inside the grammar, is 201."""
     created = await _created(api_client, author, database, workspace_id)
     assert created["loss"] == _LOSS
+
+
+# -- certification (Task 5, `-k certify`) ---------------------------------------------------
+
+
+async def _derived(api_client: Any, author: Any, database: Database, workspace_id: Any) -> dict:
+    created = await _created(api_client, author, database, workspace_id)
+    response = api_client.post(
+        f"/api/v1/custom-objectives/{created['id']}/derive", json={}, headers=author
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+@pytest.mark.req("FR-146")
+async def test_certify_refuses_an_underived_expression_before_a_job_exists(
+    api_client: Any, author: Any, database: Database, workspace_id: Any
+) -> None:
+    """`RL-1362` DP-S3-3 (2): 409 `VALIDATION_FAILED` naming `/derive`, and no job row."""
+    from sqlalchemy import func, select
+
+    from app.db.models import JobRow
+
+    created = await _created(api_client, author, database, workspace_id)
+    response = api_client.post(
+        f"/api/v1/custom-objectives/{created['id']}/certify", json={}, headers=author
+    )
+    assert response.status_code == 409, response.text
+    body = response.json()
+    assert body["code"] == "VALIDATION_FAILED"
+    assert "POST /api/v1/custom-objectives/{id}/derive" in body["detail"]
+    async with database.session() as session:
+        queued = await session.scalar(
+            select(func.count())
+            .select_from(JobRow)
+            .where(JobRow.workspace_id == workspace_id, JobRow.kind == "objective.certify")
+        )
+    assert queued == 0
+
+
+@pytest.mark.req("FR-146")
+async def test_certify_runs_a_derived_expression_as_the_existing_job(
+    api_client: Any, author: Any, database: Database, workspace_id: Any, blob_store: Any
+) -> None:
+    """Acceptance 7: 202, then a certificate over the symbolic battery."""
+    from uuid import UUID
+
+    from app.platform import objectives as service
+    from app.worker.model_handlers import register_model_handlers
+    from app.worker.tasks import execute_job
+    from model_schema import (
+        OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC,
+        CertificateOutcome,
+        CheckStatus,
+        JobStatus,
+    )
+
+    register_model_handlers()
+    derived = await _derived(api_client, author, database, workspace_id)
+    response = api_client.post(
+        f"/api/v1/custom-objectives/{derived['id']}/certify", json={}, headers=author
+    )
+    assert response.status_code == 202, response.text
+    job_id = UUID(response.json()["id"])
+    assert await execute_job(database, job_id, blob_store) is JobStatus.SUCCEEDED
+    async with database.session() as session:
+        certificate = await service.load_certificate(
+            session, workspace_id=workspace_id, objective_id=UUID(derived["id"])
+        )
+    result = certificate.result
+    assert tuple(check.name for check in result.checks) == OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC
+    assert result.overall is CertificateOutcome.CERTIFIED_WITH_FINDINGS
+    convexity = next(check for check in result.checks if check.name == "convexity")
+    assert convexity.status is CheckStatus.VIOLATED
+    assert result.library_versions["sympy"]

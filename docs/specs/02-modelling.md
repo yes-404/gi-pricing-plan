@@ -1842,7 +1842,7 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 | `GET` | `/api/v1/custom-objectives` | The workspace's objectives, cursor-paginated, filterable by `status` and `slug`, each row carrying `usage_count` (FR-167) |
 | `GET` | `/api/v1/custom-objectives/{id}` | The objective, its status and its certificate outcome (FR-166) |
 | `POST` | `/api/v1/custom-objectives/{id}/derive` | Symbolically derive gradient/hessian from `loss` (FR-144) and store them with `derived_at` and an audit event. Refused with `OBJECTIVE_KIND_NOT_ENABLED` (FR-150) while the workspace's flag is off; 409 `VALIDATION_FAILED` for a template, a non-`draft` or an already derived objective (**built 2026-10-04, WK-690 Slice 3, `RL-1362`**) |
-| `POST` | `/api/v1/custom-objectives/{id}/certify` | **202** Run the certificate checks (FR-146) |
+| `POST` | `/api/v1/custom-objectives/{id}/certify` | **202** Run the certificate checks (FR-146). An `expression` objective whose `derived` is null is refused 409 `VALIDATION_FAILED` before a job is enqueued, with a `detail` naming `POST /api/v1/custom-objectives/{id}/derive` (**added 2026-10-04, `RL-1362` DP-S3-3**) |
 | `GET` | `/api/v1/custom-objectives/{id}/certificate` | The latest `ObjectiveCertificate` for that version (FR-166) |
 | `POST` | `/api/v1/custom-objectives/{id}/submit` | Submit for approval (FR-163) |
 | `GET` | `/api/v1/custom-objectives/{id}/usage` | Blast radius: models, rating versions, deployments (FR-164) |

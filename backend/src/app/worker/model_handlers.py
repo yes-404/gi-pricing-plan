@@ -44,6 +44,7 @@ from model_schema import (
     FIT_RESULT_ADAPTER,
     MODEL_SPEC_ADAPTER,
     Banding,
+    CertificateResult,
     CrossValidationDiagnostics,
     CustomMetric,
     CustomObjective,
@@ -1525,6 +1526,43 @@ def _reconcile(parameters: dict[str, Any], callback: ProgressCallback) -> JobRes
     )
 
 
+def _certify_expression(
+    objective: CustomObjective, *, sampling: SamplingSpec, progress: ProgressCallback
+) -> CertificateResult:
+    """§4.7's symbolic battery over an `expression` objective's **stored** derivation (FR-146).
+
+    The Approver reads the stored `derived` text, so that is what is certified: it is passed
+    through, never re-derived. The route refuses an underived objective before a Job exists
+    (`RL-1362` DP-S3-3); a `None` here would be a hand-built artifact.
+    """
+    from pricing_core.modelling.expression_objective import (
+        Derived,
+        certify_expression_objective,
+        inverse_link_for,
+    )
+
+    stored = objective.derived
+    if objective.loss is None or stored is None:
+        raise ValueError(f"{objective.slug}@{objective.version} has no stored derivation")
+    return certify_expression_objective(
+        ref=f"custom_objective:{objective.slug}@{objective.version}",
+        loss=objective.loss,
+        parameters={p.name: p.default for p in objective.parameters or ()},
+        y_domain=objective.applicability.y_domain,
+        hessian_strategy=objective.hessian_strategy,
+        hessian_min=objective.hessian_min,
+        inverse_link=inverse_link_for(objective.applicability.responses),
+        sampling=sampling,
+        derived=Derived(
+            gradient=stored.gradient,
+            hessian=stored.hessian,
+            derivation_tool=stored.derivation_tool,
+            derivation_version=stored.derivation_version,
+        ),
+        progress=progress,
+    )
+
+
 def _certify(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     """`objective.certify` — §4.7's checks over a Custom Objective (FR-146).
 
@@ -1554,11 +1592,16 @@ def _certify(parameters: dict[str, Any], callback: ProgressCallback) -> JobResul
             )
 
     objective = progress.run_on_loop(load())
-    result = certify_objective(
-        objective,
-        sampling=sampling,
-        progress=ScaledProgress(progress, start=0.1, end=0.9),
-    )
+    if objective.kind == "expression":
+        result = _certify_expression(
+            objective, sampling=sampling, progress=ScaledProgress(progress, start=0.1, end=0.9)
+        )
+    else:
+        result = certify_objective(
+            objective,
+            sampling=sampling,
+            progress=ScaledProgress(progress, start=0.1, end=0.9),
+        )
 
     async def store() -> UUID:
         async with progress.database.unit_of_work() as session:
