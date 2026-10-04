@@ -369,7 +369,7 @@ def summarise_dislocation(frame: pl.DataFrame, spec: DislocationSpec) -> Disloca
     ]
 
     # Bands over the banded set, half-open [lo, hi); an edge belongs to the band above it.
-    edges = [Fraction(str(e)) for e in spec.band_edges_pct]
+    edges = [Fraction(str(edge)) for edge in spec.band_edges_pct]
     labels = _band_labels(spec.band_edges_pct)
     members: list[list[dict[str, Any]]] = [[] for _ in labels]
     for r in banded:

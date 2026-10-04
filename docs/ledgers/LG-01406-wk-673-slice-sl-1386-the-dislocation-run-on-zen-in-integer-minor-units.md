@@ -296,6 +296,8 @@ The Task 6 tests were committed at d538f3cb without a ledger entry (audit N-A). 
 5. **Delta 1 at the mint step:** the three `<date>` stamps (03:562, :1005, :1077) are left at 2026-10-04; the merge is expected the same day (mint-step brief, 2026-10-04). If it lands later, re-stamp them then.
 6. **Delta 3 and N-C:** the Task 6 entry above was added and the stale `tree:` front matter corrected to origin/main `dfddfad8` (the merge base of the mint step). The Task 7 entry (gate stage table, wall times) belongs to the minted-head gate and is not written here.
 
+7. **Delta 4: NFR-499 census false positive** (2026-10-04 17:20 BST). The minted-head gate at 320d8f0b failed `backend/tests/test_error_sinks.py::test_every_failure_sink_on_a_quote_input_path_is_accounted_for` (`req("NFR-499")`): unlisted `('packages/pricing-core/src/pricing_core/rating/analysis.py', 'summarise_dislocation', 'str(exc)'): 1`. Cause: analysis.py:372 `Fraction(str(e)) for e in spec.band_edges_pct` is a Decimal band edge, not an exception; the census matches `str(e)`. Fix: loop variable renamed `e` to `edge`; `_SINKS` and test_error_sinks.py untouched. Red (before): `uv run pytest -q backend/tests/test_error_sinks.py -k test_every_failure_sink_on_a_quote_input_path_is_accounted_for -rf --tb=line` gave `1 failed, 3 deselected`. Green (after): same command `1 passed, 3 deselected`; `uv run pytest -q packages/pricing-core/tests/test_rating_dislocation.py` gave `40 passed`.
+
 ## PRs
 
 The slice's pull request is opened after the minted-head gate (Task 7); its number is recorded then. Until then the branch `sl-1386-dislocation-run` is pushed with no PR.
