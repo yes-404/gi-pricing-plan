@@ -419,6 +419,14 @@ Two things about the example above, so a reader does not take either for a promi
   introduced; it is named again only so the next reader does not "fix" one divergence while
   believing they fixed both.
 
+**Noted 2026-10-03 (`RL-1383`): the slug may contain `_`.** A Factor's `slug` is
+`^[a-z0-9][a-z0-9_-]{1,62}$`, the one exception to `00` §4.3's slug pattern. It is the name of
+the Factor's term in the design matrix, in `feature_order` and `monotone_constraints`, and in
+a seeded rate table's key (`03` FR-230), and those names follow the dataset's columns, as
+`driver_age_banded` above does. A pinned reference to a Factor is `factor:<slug>@<version>` in
+this pattern (`00` ID-3). The `Factor` type does not yet refuse a slug outside it
+(`FD-1384`); seeding refuses one by name.
+
 ### 4.2 `Banding`
 
 ```json

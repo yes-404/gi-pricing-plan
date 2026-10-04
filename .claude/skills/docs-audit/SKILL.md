@@ -366,6 +366,10 @@ that docstring:
   F83 condition 2 working as designed, not an obstacle: the register is enumerated as
   literal paths rather than matched by a directory-and-extension rule precisely so the
   population cannot grow without someone deciding that it should.
+  A new **generated** contract schema is registered through `_CONTRACT_ARTIFACT_PATHS`
+  (which feeds the register) and moves the count in
+  `tests/test_audit_docs_ids.py` — the step is written in `contract-schema`'s
+  "Generation" section.
 
 **The two the bullets above never name, so that all ten carry a describing clause here:**
 

@@ -3,7 +3,7 @@ id: PL-1368
 family: plan
 kind: leaf
 title: WK-675 Slice 1 — ChartFigure's accessible table per RL-1307, its 13 call sites migrated, and F39's socket diagnosis: leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-01
 owner: planner
 tree: 1dd5e264195677b4a13268b80ac8673c2c027135
