@@ -24,7 +24,7 @@ handover file, not in the repository) and from `LG-1405` Task 7; **no benchmark 
 
 ## Finding
 
-**Severity HIGH** (the deputy's, confirmed by the lead on main). A P2 NFR fails by 2× to 70× at the rates
+**Severity HIGH** (the maintainer's, by delegation, confirmed by the lead on main). A P2 NFR fails by 2× to 70× at the rates
 measured. It is not CRITICAL: no correctness or security is lost, and the journey still functions.
 **Owner of the measurement: SL-1259** (WK-674 Slice 5, `docs/roadmap.md`, `#### SL-1259`, whose title lists
 NFR-489). **Remedy: a WK-1178 leaf plan (PL 9728, working id), dispatched on lane B after the FD-1356 fix**,
