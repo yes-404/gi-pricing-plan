@@ -108,9 +108,9 @@ class ObjectiveBackend(enum.StrEnum):
 
     `glm` is declared and no shipped template names it: a custom objective on the GLM arm
     needs `GlmSpec.custom_objective_ref`, which FR-207 records as absent entirely
-    and owned by WK-690 — Phase 2, not this one. The owner was reassigned on 2026-08-22 and
-    confirmed on 2026-08-25 to cover this field as well as its `Model` twin, which
-    records what it declares. The member exists because FR-153 names it and an author
+    and owned by Phase 3: a separate, unspecified capability, moved there on 2026-10-04
+    (RL-1362 DP-S3-5) together with its `Model` twin, which records what it
+    declares. The member exists because FR-153 names it and an author
     narrowing applicability should not be able to name a backend the enum has never heard
     of — not because anything reaches it today.
     """

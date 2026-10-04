@@ -353,6 +353,16 @@ made through the API. (5) The overflow row is a `draft` after its failing certif
 
 **Broken-input proofs** (each restored, `cmp` equal to a pre-edit copy): `additional_approvers=1 if non_convex else 0` replaced by `0`: `6 failed, 7 passed`, the two policy-1 tests, the two policy-2 tests, `test_the_default_policy_instance_stores_two`, `test_policy_five_stores_six_and_the_request_validates` (`:228`, `:244`, `:259`, `:273`). `if current is ObjectiveStatus.DRAFT:` replaced by `if False:`: `3 failed, 11 passed`, both draft tests (`:195`) and `test_submission_without_a_certificate_is_refused` (`:452`).
 
+### Task 8 — FR-207's residuals (DP-S3-5)
+
+**Precondition** (`RL-1362` DP-S3-5): *"Task 8 therefore applies only after a dated line accepts the Phase 3 destination: the maintainer's, or the lead's under delegation."* Met at `c3950d89`: the ruling quotes the maintainer's line of 2026-10-01 (entry *"2026-10-01 08:07:02 BST — ACCEPTANCE: RL 9782 DP-S3-5's Phase 3 destination"*), and that heading is present in the lead's local channel file `to-lead.md`.
+
+**Applied byte for byte** from `RL-1362`, with `<Task 8 date>` set to 2026-10-04 (the only substitution): S6 (appended to `02` FR-207's second cell) and S7.1 to S7.5 (`objectives.py` `ObjectiveBackend` docstring, `ObjectivePicker.vue` header, `test_contracts.py` `DECLARED_AND_UNBUILT` note, `model.schema.json` and `model-spec.schema.json` descriptions). The two schema edits are the ruling's S7.4 and S7.5 and were reproduced by `generate-contracts.py`, which also regenerated `generated.json`, `custom-objective.schema.json` and `custom-metric.schema.json` (`ObjectiveBackend`'s description); `--check` rc 0 after.
+
+**Drift grep.** `git grep -n -E "custom_objective_ref.*WK-690|WK-690.*custom_objective_ref" -- packages backend frontend/src docs/contracts docs/specs` after: only the FR-207 row (its dated history). No quotation outside S7's list was found. Not touched, though it names the same owner for a different subject: `pricing_core/modelling/factors.py:20` (`expression` not built, owned by WK-690 with §4.6's grammar), which is not a `custom_objective_ref` quotation.
+
+**Executor-worded spec sentences: none.**
+
 ## FD 9780 — the quantile template certifies convexity `violated` and no second Approver is enforced
 
 Broken input (the base, which is the finding): a `quantile` template certified through the real Job, submitted at policy 1. `test_a_violated_objective_needs_two_approvers_at_policy_one[template]` fails red at `:228` (`assert 1 == 2`: the row holds 1, so one approval would approve it) and is green after the change: the row and the audit `after` hold 2, one approval leaves the objective in `review`, a second approves it. The same test for an `expression` objective (§4.6's example, which certifies `violated` through the real Job), the policy-2 pair (3 stored; two approvals leave `review`, a third approves), `DEFAULT_POLICY` (2) and policy 5 (6, and `ApprovalRequest` validates) are red at base and green after; the controls (a `pass` certificate at policy 1 stores 1 and one approval approves; an `approved` objective's resubmission stays `VALIDATION_FAILED`; a `validation_rule` stores the entry's count; an `escalation` key is refused `extra_forbidden`) are green at both.

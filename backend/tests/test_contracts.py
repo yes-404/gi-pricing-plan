@@ -547,9 +547,9 @@ MODEL_ONLY_UNRECONCILED: Final[dict[str, frozenset[str]]] = {
 #:
 #: * `model.custom_objective_ref` / `model-spec`'s `custom_objective_ref` — FR-207,
 #:   which gives the two *different* verdicts: the `GlmSpec` field is *"absent entirely"*
-#:   and the `Model` one *"declared and unbuilt"*. **Both are owned by WK-690** — Phase 2,
-#:   reassigned 2026-08-22 and confirmed 2026-08-25 to reach the pair rather than the
-#:   `Model` half alone. They cannot be split: `Model.custom_objective_ref` would record
+#:   and the `Model` one *"declared and unbuilt"*. **Both are owned by Phase 3**, a
+#:   separate, unspecified capability, moved there together on 2026-10-04
+#:   (RL-1362 DP-S3-5). They cannot be split: `Model.custom_objective_ref` would record
 #:   what `GlmSpec.custom_objective_ref` declares, and a GBM names its objective through
 #:   `spec.objective` instead, which is what `02` R4 is enforced off.
 #:   `ObjectiveBackend.glm` exists so an author can narrow applicability to a backend
