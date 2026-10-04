@@ -211,7 +211,7 @@ System-level requirements that no single module owns. Module codes are defined i
 
 | ID | Requirement |
 |---|---|
-| **FR-4** | Every Artifact is immutable once it leaves `draft`. Corrections create a new version with `parent_id` set; nothing is edited in place or hard-deleted. |
+| **FR-4** | Every Artifact is immutable once it leaves `draft`. Corrections create a new version with `parent_id` set; nothing is edited in place or hard-deleted. *(Amended 2026-10-04, RL-1379: an Artifact's compiled output is part of the Artifact for this rule, not derived metadata outside it. A Rating Version's Bundle summary and blob key are written only while the version is `draft` (`03` FR-239); a version that has left `draft` gets a new compiled output only as a new version.)* |
 | **FR-5** | Every Artifact is JSON-serialisable and round-trippable: export → import into a clean instance reproduces byte-identical scoring behaviour. Binary blobs (boosters, parquet) are referenced by content hash, never embedded as pickles. |
 | **FR-6** | Every number displayed in the UI is traceable to the Artifact and computation that produced it, via a stable `provenance` reference (`{entity_type, entity_id, version, produced_by_job_id}`). |
 | **FR-7** | Every state transition of a governed Artifact emits an Audit Event (see `06-governance.md`). Audit writes are in the same transaction as the state change. |

@@ -497,6 +497,56 @@ call, and `_approved_compiled_version` took the hash without refusing its absenc
   `test_contracts.py`, `test_environments.py`, `tests/test_permission_parity.py` together: **266 passed, 2 skipped**.
   `ruff check .` clean, `mypy` 224 files clean, `lint-imports` 4 kept 0 broken.
 
+### Task 5A — the compile guard, as RL-1379 rules (FD-1393; DP-S2-7; Delta 1) — executor-1256h, 2026-10-04
+
+**Tree.** Worktree from `origin/sl-1256-environment-and-deployment-record` at `2ef9f675`; own test database
+`gipricing_wt-1256h_59e99a54`, created from the template and migrated to head.
+
+**Red first** (RL-1379 C1–C4 in `backend/tests/test_rating_version_compile.py`, source under `backend/src/` stashed, tests
+kept; `uv run pytest -q backend/tests/test_rating_version_compile.py -k "c1_ or c2_ or c3_ or c4_" -rf --tb=line`):
+
+```text
+FAILED backend/tests/test_rating_version_compile.py::test_c1_the_route_refuses_to_compile_a_version_that_has_left_draft[review] - AssertionError: {"id":"01a106c4-56c6-721d-92de-06b557b151c4","workspace_id"...
+FAILED backend/tests/test_rating_version_compile.py::test_c1_the_route_refuses_to_compile_a_version_that_has_left_draft[approved] - AssertionError: {"id":"01a106c4-5a2d-7781-aed9-a90f88dee28b","workspace_id"...
+FAILED backend/tests/test_rating_version_compile.py::test_c1_the_route_refuses_to_compile_a_version_that_has_left_draft[live] - AssertionError: {"id":"01a106c4-5c8a-7118-8cb9-e74c557b471d","workspace_id"...
+FAILED backend/tests/test_rating_version_compile.py::test_c1_the_route_refuses_to_compile_a_version_that_has_left_draft[retired] - AssertionError: {"id":"01a106c4-5eeb-7f07-b047-31d3b0c04b5c","workspace_id"...
+FAILED backend/tests/test_rating_version_compile.py::test_c1_the_route_refuses_to_compile_a_version_that_has_left_draft[approved+deployment] - AssertionError: {"id":"01a106c4-62f5-7930-984d-34d7ef6dc546","works
+FAILED backend/tests/test_rating_version_compile.py::test_c2_the_service_refuses_a_status_that_changed_after_submission - AssertionError: assert <JobStatus.SUCCEEDED: 'succeeded'> is <JobStatus.FAI...
+FAILED backend/tests/test_rating_version_compile.py::test_c4_control_a_version_returned_to_draft_compiles_again - AssertionError: assert 202 == 409
+7 failed, 1 passed, 12 deselected, 1 warning in 6.89s
+```
+
+Predicted and found: **C1** (5 cases): 202 and a queued `rating.compile` Job where 409 is ruled (assert at the
+status check). **C2**: the Job `succeeded` where `failed` is ruled. **C3** (control, draft compiles twice): passes red and
+green. **C4** (control): red before only because its first step asserts the 409 on `review`; its second step (back to
+`draft`, compile succeeds) is the green control.
+
+**Green** (guard in): the same selector, then the whole file, `test_rating_versions.py`, `test_errors.py`,
+`test_bundle_slot.py`, `test_contracts.py`: **240 passed, 2 skipped**; the compile file alone **20 passed**.
+
+**What was built.** `rating_versions.require_compilable` (the ruling's `raise`, verbatim) is called by
+`compile_rating_version` after its `FOR UPDATE` load and by the compile route before `job_service.submit`. One guard, two
+callers. `load_rating_version` gained `for_update: bool = False` (`session.get(..., with_for_update=…,
+populate_existing=…)`), used by `compile_rating_version` and `submit_for_review`. The route's `responses` gain 409.
+`RATING_VERSION_IMMUTABLE` is in `RATING_ERROR_CODES` with T3, in the same commit. `bundle_slot.py` carries the ruling's
+correcting paragraph. `docs/contracts/openapi/generated.json` regenerated; `docs/INDEX.md` regenerated (its FR-4 and
+FR-239 rows quote the amended text). T1–T4 applied byte-for-byte.
+
+**The two `FOR UPDATE` locks: delivered, not concurrency-tested** (the ruling's own verdict for them). The lines:
+`backend/src/app/platform/rating_versions.py`, `load_rating_version`'s `with_for_update=for_update`, with
+`for_update=True` at the `compile_rating_version` and `submit_for_review` call sites.
+
+**Gates, targeted.** `ruff check .` clean; `mypy` 224 files clean; `lint-imports` 4 kept 0 broken;
+`generate-contracts.py --check` 44 match; `audit-docs.py` fails check 31 only (the working-id gap 1401…9737, the expected
+one for this ledger's draft id; it is the same at the base).
+
+**Deviations, stated.** (1) `<fix date>` is written `2026-10-04`, the date of this commit, as RL-1379 §"Spec texts" defines
+it; Delta 1 says "the slice's merge date". The two differ; the lead decides whether to re-stamp at merge. (2) The deployment
+case of C1 deploys through the S2 route (`POST /environments/dev/deployments`) a version whose `bundle` the test compiled.
+(3) C4 sets `review` and `draft` by direct write (the guard reads the status, not the path); the `changes_requested` decision
+path is covered by `_target_status`'s own tests. (4) The ruling item 2's note that the handler's `prior_hash` read stays:
+untouched.
+
 ## PRs
 
 Not yet opened (draft PR at the first push).

@@ -28520,7 +28520,7 @@
     },
     "/api/v1/rating-versions/{rating_version_id}/compile": {
       "post": {
-        "description": "**202** with a Job (`03` §5.1:514, FR-239/240, WK-671 Task 1.2).\n\nCompilation resolves the pinned algorithm, rate tables, reference tables, custom\nobjectives and model to their real content and persists the compiled Bundle as a\nblob — no longer a synchronous 200, since resolving real content can do real I/O.\nPolling the returned Job to completion yields a `JobResult(kind=\"blob\")` whose `ref`\nis the persisted Bundle's content-addressed sha256.",
+        "description": "**202** with a Job (`03` §5.1:514, FR-239/240, WK-671 Task 1.2).\n\nCompilation resolves the pinned algorithm, rate tables, reference tables, custom\nobjectives and model to their real content and persists the compiled Bundle as a\nblob — no longer a synchronous 200, since resolving real content can do real I/O.\nPolling the returned Job to completion yields a `JobResult(kind=\"blob\")` whose `ref`\nis the persisted Bundle's content-addressed sha256. **409** `RATING_VERSION_IMMUTABLE`,\nwith no Job, unless the version is `draft` (FR-239, RL-1379).",
         "operationId": "compile_rating_version_api_v1_rating_versions__rating_version_id__compile_post",
         "parameters": [
           {
@@ -28607,6 +28607,21 @@
               }
             },
             "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
           },
           "422": {
             "content": {
