@@ -193,6 +193,50 @@ passed`. (2) `fill_null(0)` on exposure: `1 failed, 16 passed`. (3) The `is_nan(
 failed, 16 passed`. (4) The counts moved into a `map_batches` evaluated only at `.collect()`: `5 failed, 12 passed` (the
 tests call `read_portfolio` and never collect, so none raises). Restored: `17 passed`.
 
+**Task 3 broken-input re-proof (2026-10-04 13:39 BST, executor-1386d, `echo $CLAUDE_EFFORT` printed `medium`).** The totals above were not
+accepted alone, so each mutation was re-run against the green file at d2d6fe55 with `uv run pytest
+packages/pricing-core/tests/test_rating_dislocation.py -q -rf --tb=line`, then restored (`git diff` empty after each).
+Every failing line below is `test_rating_dislocation.py:26: Failed: DID NOT RAISE PortfolioFrameError`, the
+`pytest.raises` in the `_refused` helper, so each fails because the refusal no longer happens, as the plan predicts.
+(1) Reserved-name loop emptied (`_STAMPED = ()`): `3 failed, 14 passed`: `test_read_portfolio_refuses_a_purpose_column_by_name`,
+`test_read_portfolio_refuses_each_other_stamped_column_by_name[effective_date]`, `[rating_version_ref]`. (2) `fill_null(0)`
+on `exposure_years`: `1 failed, 16 passed`: `test_read_portfolio_refuses_a_null_exposure_naming_the_column_and_count`.
+(3) `is_nan() | is_infinite()` term removed: `1 failed, 16 passed`: `test_read_portfolio_refuses_a_nan_exposure`.
+(4) The count `select` moved into a `map_batches` evaluated only at `.collect()`: `5 failed, 12 passed`:
+`..._a_null_exposure_naming_the_column_and_count` (the plan's named case), `..._a_nan_exposure`, `..._a_negative_exposure`,
+`..._a_null_quote_id`, `..._a_duplicated_quote_id`. The four extra failures are the same property (the count-based refusals
+are no longer at the call), not a different cause.
+
+### Task 4 — the two passes and the per-policy frame (executor-1386d, `echo $CLAUDE_EFFORT` printed `medium`)
+
+**Red.** `uv run pytest packages/pricing-core/tests/test_rating_dislocation.py -q` after adding the 10 Task 4 tests (27 in
+the file): `ImportError: cannot import name 'dislocation_frame' from 'pricing_core.rating.analysis'`, 1 error during
+collection. That is a whole-module red, not one per test; each test's own red is the broken-input runs below.
+
+**Green.** Same command after `dislocation_frame`, `_score_pass` and `_origin_rung` in `analysis.py`: `27 passed`. Two
+fixtures needed a change from the plan's sketch, found by running them: (a) `compile_bundle` and `_hand_compiled` both refuse
+an expression step that consumes `secret_loading` (FR-212), so the step reads it as `(secret_loading ?? 0)` and lists no
+`consumes`; with a bare `secret_loading` both runs were all `RATE_TABLE_MISS` error rows and the equality was vacuous; (b)
+the rounding-only candidate sets `s_out_office` to `ceiling` (the fixture's risk premiums are whole numbers, so changing
+`s_out_risk` moves nothing); office premiums 1435.5, 1631.25, 1864.5 give origin `[None, office_premium, office_premium]`.
+`_origin_rung` compares `LadderRung.unrounded_minor`, already a `Decimal` on the model, so no second `Decimal(...)` is taken.
+
+**Broken input (each against the restored green file; `-rf --tb=line`).** (1) Projection replaced by `portfolio.drop([])`:
+`3 failed, 24 passed`: `test_dislocation_undeclared_column_never_reaches_the_engine` (`test_rating_dislocation.py:235:
+AssertionError: assert False`, the with/without-column frames are unequal), `test_dislocation_undeclared_billing_named_column_refuses_no_row`
+(`:245: assert 'error' not in ['error', 'error', 'error']`), `test_dislocation_each_pass_sees_only_its_own_contract`
+(`:276: assert 'vehicle_group' not in ['quote_id', 'exposure_years', ...]`). (2) The collision loop emptied: `1 failed, 26
+passed`: `test_dislocation_frame_refuses_a_colliding_portfolio_column` (`:296: Failed: DID NOT RAISE PortfolioFrameError`).
+(3) `value_minor` comparison removed (an `unrounded_minor`-only rule): `1 failed, 26 passed`:
+`test_dislocation_frame_origin_rung_is_the_first_differing_rung` (`:372: assert [None, None, None] == [None, 'offic...fice_premium']`).
+(4) `str(...) != str(...)` on `unrounded_minor`: `1 failed, 26 passed`: `test_origin_rung_compares_unrounded_as_decimals_not_strings`
+(`:379: assert 'risk_premium' is None`). A first version of (4) that compared the `Decimal` values directly passed 27 of 27,
+because the model already holds a `Decimal`; the mutation was changed to compare `str()`. Restored: `27 passed`.
+
+**Checks.** `ruff check .` all passed; `ruff format --check` on the two changed files clean; `mypy` "no issues found in 221
+source files"; `lint-imports` "4 kept, 0 broken"; `python3 scripts/audit-docs.py` `FAILED (3)`: check 31 (gap 1403 to 9732) and
+check 32 twice (this ledger, the RL-1404 citations), the three Delta 2 expects.
+
 ## Deviations and disclosures
 
 1. **`<date>` is 2026-10-04**, the day of this commit; S1-S3 say "the merge date the executor writes", which this run cannot know. If the merge lands on a later day the lead may correct the three dated phrases (":1005", ":562", ":1077").
