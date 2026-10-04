@@ -5,7 +5,7 @@
   "description": "Premium change between two Rating Versions over a fixed portfolio. A persisted, citable artifact, not a transient screen (03 FR-263, FR-264, FR-265, FR-266, §4.6).",
   "type": "object",
   "required": ["baseline_ref", "candidate_ref", "portfolio_dataset_version_id",
-               "policy_count", "exposure_years", "totals", "distribution"],
+               "policy_count", "exposure_years", "totals", "outcomes", "distribution"],
   "dependentRequired": {"attribution": ["derived_changes", "change_groups", "attribution_summary"]},
   "properties": {
     "baseline_ref": {"$ref": "common/artifact-ref.schema.json"},
@@ -20,7 +20,21 @@
       "properties": {
         "baseline_premium_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
         "candidate_premium_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
-        "change_pct": {"type": "number"}
+        "change_pct": {"type": ["number", "null"]}
+      }
+    },
+    "outcomes": {
+      "type": "object",
+      "description": "Every policy counted once by its two outcomes; the first five sum to policy_count. zero_baseline and negative_baseline count the quoted-both policies with a baseline payable premium of 0 and below 0; neither is in a band or a mover (03 §4.6).",
+      "required": ["quoted_both", "quoted_to_declined", "declined_to_quoted", "declined_both", "error", "zero_baseline", "negative_baseline"],
+      "properties": {
+        "quoted_both": {"type": "integer", "minimum": 0},
+        "quoted_to_declined": {"type": "integer", "minimum": 0},
+        "declined_to_quoted": {"type": "integer", "minimum": 0},
+        "declined_both": {"type": "integer", "minimum": 0},
+        "error": {"type": "integer", "minimum": 0},
+        "zero_baseline": {"type": "integer", "minimum": 0},
+        "negative_baseline": {"type": "integer", "minimum": 0}
       }
     },
     "distribution": {
@@ -31,8 +45,8 @@
         "properties": {
           "band": {"type": "string"},
           "policies": {"type": "integer", "minimum": 0},
-          "exposure_share": {"type": "number", "minimum": 0, "maximum": 1},
-          "mean_change_pct": {"type": "number"}
+          "exposure_share": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+          "mean_change_pct": {"type": ["number", "null"]}
         }
       }
     },
@@ -44,10 +58,10 @@
         "required": ["factor", "level", "policies", "mean_change_pct"],
         "properties": {
           "factor": {"type": "string"},
-          "level": {"type": "string"},
+          "level": {"type": ["string", "null"]},
           "policies": {"type": "integer", "minimum": 0},
-          "mean_change_pct": {"type": "number"},
-          "exposure_share": {"type": "number", "minimum": 0, "maximum": 1}
+          "mean_change_pct": {"type": ["number", "null"]},
+          "exposure_share": {"type": ["number", "null"], "minimum": 0, "maximum": 1}
         }
       }
     },
@@ -57,7 +71,7 @@
       "items": {
         "type": "object",
         "required": ["rung", "contribution_pct"],
-        "properties": {"rung": {"type": "string"}, "contribution_pct": {"type": "number"}}
+        "properties": {"rung": {"type": "string"}, "contribution_pct": {"type": ["number", "null"]}}
       }
     },
     "attribution": {
@@ -129,8 +143,8 @@
         "required": ["code", "count"],
         "properties": {
           "code": {"type": "string"},
-          "count": {"type": "integer", "minimum": 0},
-          "sample": {"type": "array", "items": {"type": "object"}}
+          "count": {"type": "integer", "minimum": 1},
+          "sample": {"type": "array", "maxItems": 10, "items": {"type": "object", "required": ["quote_id"], "properties": {"quote_id": {"type": "string"}}, "additionalProperties": false}}
         }
       }
     }
