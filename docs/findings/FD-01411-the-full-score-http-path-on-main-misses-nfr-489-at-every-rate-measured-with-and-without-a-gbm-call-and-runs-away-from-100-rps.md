@@ -1,5 +1,5 @@
 ---
-id: FD-9729
+id: FD-1411
 family: finding
 title: The full /score HTTP path on main misses NFR-489 at every rate measured, with and without a GBM call, and runs away from 100 rps
 status: active
@@ -10,12 +10,12 @@ corrected_by: []
 relates: [WK-674, WK-1178, SL-1259, NFR-489, NFR-454, NFR-490, RL-921, RL-1263, LG-1405, PL-1237]
 ---
 
-# FD-9729 (working id) — the full `/score` HTTP path misses NFR-489 at 25, 50, 100 and 200 rps
+# FD-1411 — the full `/score` HTTP path misses NFR-489 at 25, 50, 100 and 200 rps
 
 **Filed** by auditor-fd489 on the lead's order of 2026-10-04 (`to-lead.md`, the entry headed
 "2026-10-04 19:18:54 BST — NFR-489 ON MAIN (c08a48e5, uncontended): the FD is FILED NOW at severity
 HIGH, not in the batch; its remedy is pulled forward ahead of other WK-1178 items; the no-GBM anomaly is
-re-measured", amended by the entry of 19:42:49 BST). The id is a working id until the lead mints it. **Every
+re-measured", amended by the entry of 19:42:49 BST). Working id 9729, minted as FD-1411 on 2026-10-04. **Every
 figure below is copied from the measurement record `nfr489-main-baseline-2026-10-04.md`** (a local
 handover file, not in the repository) and from `LG-1405` Task 7; **no benchmark was run for this finding.**
 `tree:` is `origin/main` at filing; the measurements ran on `c08a48e5de4b48929e979361105eff49ddeb3df4`
@@ -40,7 +40,7 @@ whose acceptance is NFR-489's own predicate at 25, 50, 100 and 200 rps with at l
 **What was measured is the path the exit demo scores through.** The lead's order states that the exit
 demo's scoring path is the one measured: the `/score` route end to end (auth, bundle fetch, `score_one`,
 response) behind a single uvicorn process. Roadmap G2 (`docs/roadmap.md`, "**G2.**") ends the demo at a
-served page after deployment to `uat` and `prod`. I did not trace the demo's calls to the route myself.
+served page after deployment to `uat` and `prod`. I did not trace the demo's calls to the route myself. **The exit demo is therefore "at risk, untraced"**: PL 9728 (working id)'s Task 0 traces the demo's `/score` calls.
 
 **The component half passes; the HTTP half does not.** `score_one` alone: p99 11.329 ms against 50 with
 a GBM call, 7.758 ms against 15 without (the record, same invocation as the 25 rps pass). `LG-1405` Task 7
