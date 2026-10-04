@@ -129,6 +129,49 @@ the diff of those three carries format churn beside the change. `uv run pytest p
 backend/tests/test_contracts.py -q`: `650 passed, 2 skipped`. The refusal of an expression objective elsewhere
 (`OBJECTIVE_KIND_NOT_ENABLED`, the DB CHECK, the compile dispatch) is unchanged in this task.
 
+### Task 1, correction (Delta 2, lead 2026-10-04 17:22:36 BST)
+
+The Task 1 entry's "ruff format was run on the four changed Python files" is superseded: the lead did not adopt the
+churn. Every formatting-only hunk in `backend/tests/test_contracts.py`, `packages/model-schema/src/model_schema/objectives.py`
+and `packages/model-schema/tests/test_objectives.py` is reverted to `origin/main` (`663433e4`), keeping each semantic
+change. `git diff --stat` and `git diff -w --stat` of `origin/main..HEAD` over the three files plus `__init__.py` now
+agree: 4 files changed, 193 insertions, 37 deletions, both. `uv run pytest packages/model-schema
+backend/tests/test_contracts.py -q`: `650 passed, 2 skipped`.
+
+### Task 2 — storage
+
+**Red.** `backend/tests/test_custom_objectives_expression.py` (new), `-k storage`, 11 tests against the migrated
+per-worktree database. At the base all 11 fail with the same line, `asyncpg.exceptions.UndefinedColumnError: column
+"bound_symbols" of relation "custom_objectives" does not exist`. **Plan defect (recorded):** the plan's red says the
+expression insert fails "naming `custom_objective_is_a_template_in_phase_1`"; with the four columns absent the insert
+fails on the column first. The CHECK refusal is shown separately at the base by `psql` on an expression insert with no
+new column: `ERROR:  new row for relation "custom_objectives" violates check constraint
+"ck_custom_objectives_custom_objective_is_a_template_in_phase_1"`. The constraint carries the `ck_<table>_` prefix of
+`NAMING_CONVENTION` (`db/base.py:19`).
+
+**Green.** `CustomObjectiveRow` gains `bound_symbols`, `parameters` (JSONB), `loss` (Text), `derived` (JSONB), all
+nullable. Revision `e5b7d9f1a3c6` (down `c4a81f6d2e95`; the plan names `2f598e89d12c` as head, which WK-674 Slice 2
+moved on) drops `custom_objective_is_a_template_in_phase_1` and adds `custom_objective_fields_follow_kind` (the plan's
+unnamed kind-arm CHECK; `ck_custom_objectives_` plus the longer name `…fields_belong_to_the_kind_arm` is 67 characters,
+over PostgreSQL's 63, and alembic hashed it in a first attempt): a `template` row needs `template` and carries no
+expression field (`derived` included), an `expression` row needs `loss`, `bound_symbols`, `parameters` and no
+`template`. The trigger function `custom_objectives_definition_immutable` gains `loss`, `parameters` and
+`bound_symbols`, and refuses a `derived` change unless it goes from NULL while `OLD.status = 'draft'`. Downgrade
+restores the old function and CHECK and refuses while an expression row exists (shown by hand: `cannot downgrade:
+expression Custom Objectives exist (02 FR-164)`, head stays `e5b7d9f1a3c6`). RL-1362 has no amendment to Task 2.
+
+**Result.** `-k storage`: `11 passed`. `alembic heads` prints one head, `e5b7d9f1a3c6`; upgrade, downgrade, upgrade ran
+on the per-worktree database. `backend/tests/test_custom_objectives.py`, `_api.py`, `_expression.py`, `test_contracts.py`:
+`205 passed, 2 skipped`. A first test used `status = 'approved'` and was stopped by the FR-351 approval trigger, so the
+write-after-draft test uses `certified`.
+
+**Broken-input proof.** In the migration's trigger, `AND (OLD.derived IS NOT NULL OR OLD.status <> 'draft')` replaced
+by `AND OLD.derived IS NOT NULL`, upgraded: `FAILED …::test_storage_derived_cannot_be_first_written_after_the_draft`,
+`1 failed, 10 passed`. Restored by copying the saved file back, re-upgraded: `11 passed`.
+
+**Format.** `ruff format` ran only on the two new files; `backend/src/app/db/models.py` was not format-clean at the
+base (`ruff format --check` on `git show origin/main:` of it reported it would reformat) and was not formatted.
+
 ## PRs
 
 None yet: the branch is pushed, no PR is opened (the lead's order for this turn).
