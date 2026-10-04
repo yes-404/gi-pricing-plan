@@ -7,6 +7,7 @@ import { computed } from "vue";
 import VChart from "vue-echarts";
 
 import type { PartitionCaption, PartitionDiagnostics } from "@/api/diagnostics";
+import type { Column } from "@/chart-table";
 import ChartFigure from "@/components/ChartFigure.vue";
 
 use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
@@ -74,24 +75,29 @@ const option = computed(() => ({
   series: series.value,
 }));
 
-const columns = computed(() => [
-  "Bin",
-  ...props.partitions.flatMap(([label]) => [
-    `${label} rows`,
-    `${label} predicted`,
-    `${label} actual`,
-  ]),
+/**
+ * Keys use the partition's index, never its caption: two partitions captioned alike must not
+ * produce a duplicate key.
+ */
+const columns = computed<readonly Column<number>[]>(() => [
+  { key: "bin", label: "Bin", value: (bin) => bin },
+  ...props.partitions.flatMap(([label, partition], index): Column<number>[] => {
+    const found = (bin: number) => partition.lift.find((candidate) => candidate.bin === bin);
+    return [
+      { key: `p${index}-rows`, label: `${label} rows`, value: (bin) => found(bin)?.rows ?? null },
+      {
+        key: `p${index}-predicted`,
+        label: `${label} predicted`,
+        value: (bin) => found(bin)?.predicted ?? null,
+      },
+      {
+        key: `p${index}-actual`,
+        label: `${label} actual`,
+        value: (bin) => found(bin)?.actual ?? null,
+      },
+    ];
+  }),
 ]);
-
-const rows = computed(() =>
-  bins.value.map((bin) => [
-    bin,
-    ...props.partitions.flatMap(([, partition]) => {
-      const found = partition.lift.find((candidate) => candidate.bin === bin);
-      return [found?.rows ?? null, found?.predicted ?? null, found?.actual ?? null];
-    }),
-  ]),
-);
 </script>
 
 <template>
@@ -99,7 +105,7 @@ const rows = computed(() =>
     title="Lift by decile"
     :caption="caption"
     :columns="columns"
-    :rows="rows"
+    :rows="bins"
   >
     <VChart
       class="h-80 w-full"

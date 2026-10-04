@@ -3,7 +3,7 @@ id: PL-1306
 family: plan
 kind: leaf
 title: WK-674 Slice 2 — The Environment and Deployment record (FR-267, FR-428, FR-429, FR-272 audit and NFR-498 for deploy): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: superseded             # draft → active → superseded | retired (§1.2a)
 created: 2026-09-30
 owner: planner
 tree: 9f63d0feee524815e7e0c68c99a53ac3f80e6c37
@@ -11,7 +11,7 @@ phase: P2
 work: WK-674
 slice: SL-1256
 supersedes: []
-superseded_by: ~
+superseded_by: PL-1392
 corrected_by: []
 relates: [PL-1237, RL-1296, RL-1301, RL-1305, PL-1303, RL-1232, RL-1236, RL-1263, RL-880, RL-886, RL-888, RL-916, CR-1212, FD-1197, FD-1281]
 ---
