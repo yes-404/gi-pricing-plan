@@ -45,10 +45,7 @@ from model_schema import (
 )
 
 SAMPLING = SamplingSpec(
-    n_points=1000,
-    seed=20260818,
-    y_range=(0.0, 1e7),
-    f_range=(-20.0, 20.0),
+    n_points=1000, seed=20260818, y_range=(0.0, 1e7), f_range=(-20.0, 20.0),
     w_range=(1e-3, 1e4),
 )
 
@@ -56,7 +53,8 @@ SAMPLING = SamplingSpec(
 def _battery(names: tuple[str, ...] = OBJECTIVE_CERTIFICATE_CHECKS) -> tuple[CertificateCheck, ...]:
     """A passing check per name — §4.7's nine unless a test asks for something else."""
     return tuple(
-        CertificateCheck(name=name, status=CheckStatus.PASS, detail=f"{name} ran") for name in names
+        CertificateCheck(name=name, status=CheckStatus.PASS, detail=f"{name} ran")
+        for name in names
     )
 
 
@@ -264,12 +262,8 @@ def test_an_author_may_narrow_applicability() -> None:
     )
     assert narrowed.is_within(template)
     objective = CustomObjective(
-        id=new_uuid7(),
-        slug="robust-bc",
-        version=1,
-        template=ObjectiveTemplate.HUBER,
-        params={"delta": 500_000},
-        applicability=narrowed,
+        id=new_uuid7(), slug="robust-bc", version=1, template=ObjectiveTemplate.HUBER,
+        params={"delta": 500_000}, applicability=narrowed,
     )
     assert objective.applicability.responses == frozenset({ResponseKind.BURNING_COST})
 
@@ -284,11 +278,8 @@ def test_an_author_may_not_widen_applicability_beyond_the_template() -> None:
     )
     with pytest.raises(pydantic.ValidationError, match="wider than template"):
         CustomObjective(
-            id=new_uuid7(),
-            slug="gamma-everywhere",
-            version=1,
-            template=ObjectiveTemplate.GAMMA,
-            applicability=wider,
+            id=new_uuid7(), slug="gamma-everywhere", version=1,
+            template=ObjectiveTemplate.GAMMA, applicability=wider,
         )
 
 
@@ -311,10 +302,9 @@ def test_an_applicability_naming_nothing_is_refused() -> None:
 def test_a_status_past_draft_without_a_certificate_is_refused() -> None:
     with pytest.raises(pydantic.ValidationError, match="with no certificate"):
         _objective(status=ObjectiveStatus.CERTIFIED)
-    assert (
-        _objective(status=ObjectiveStatus.CERTIFIED, certificate_id=new_uuid7()).status
-        is ObjectiveStatus.CERTIFIED
-    )
+    assert _objective(
+        status=ObjectiveStatus.CERTIFIED, certificate_id=new_uuid7()
+    ).status is ObjectiveStatus.CERTIFIED
 
 
 @pytest.mark.req("FR-146")
@@ -344,34 +334,26 @@ def test_a_review_decision_returns_an_objective_to_certified_not_to_draft() -> N
 @pytest.mark.req("FR-146")
 def test_a_certificate_verdict_its_checks_contradict_is_refused() -> None:
     checks = (
-        CertificateCheck(
-            name="analytic_vs_numeric_gradient",
-            status=CheckStatus.PASS,
-            detail="max relative error 8.9e-7",
-        ),
-        CertificateCheck(
-            name="finiteness", status=CheckStatus.FAILED, detail="NaN gradient at y=0"
-        ),
+        CertificateCheck(name="analytic_vs_numeric_gradient", status=CheckStatus.PASS,
+                         detail="max relative error 8.9e-7"),
+        CertificateCheck(name="finiteness", status=CheckStatus.FAILED,
+                         detail="NaN gradient at y=0"),
     )
     with pytest.raises(pydantic.ValidationError, match="cannot be allowed to say different"):
-        CertificateResult(checks=checks, sampling=SAMPLING, overall=CertificateOutcome.CERTIFIED)
-    assert (
         CertificateResult(
-            checks=checks, sampling=SAMPLING, overall=CertificateOutcome.FAILED
-        ).overall
-        is CertificateOutcome.FAILED
-    )
+            checks=checks, sampling=SAMPLING, overall=CertificateOutcome.CERTIFIED
+        )
+    assert CertificateResult(
+        checks=checks, sampling=SAMPLING, overall=CertificateOutcome.FAILED
+    ).overall is CertificateOutcome.FAILED
 
 
 @pytest.mark.req("FR-152")
 def test_a_violated_convexity_check_is_a_finding_and_not_a_failure() -> None:
     """FR-152: a non-convex loss is legitimate, flagged, and carried to an approver."""
     checks = (
-        CertificateCheck(
-            name="convexity",
-            status=CheckStatus.VIOLATED,
-            detail="hessian < 0 wherever exp(f) < y/2",
-        ),
+        CertificateCheck(name="convexity", status=CheckStatus.VIOLATED,
+                         detail="hessian < 0 wherever exp(f) < y/2"),
     )
     assert CertificateResult.outcome_of(checks) is CertificateOutcome.CERTIFIED_WITH_FINDINGS
 
@@ -393,10 +375,7 @@ def test_a_certificate_over_a_coarse_grid_is_refused() -> None:
     """
     with pytest.raises(pydantic.ValidationError, match="greater than or equal to 1000"):
         SamplingSpec(
-            n_points=10,
-            seed=1,
-            y_range=(0.0, 1e7),
-            f_range=(-20.0, 20.0),
+            n_points=10, seed=1, y_range=(0.0, 1e7), f_range=(-20.0, 20.0),
             w_range=(1e-3, 1e4),
         )
 
@@ -406,10 +385,7 @@ def test_a_certificate_over_an_empty_grid_is_refused() -> None:
     """Every check passes over no points, and the certificate would say `certified`."""
     with pytest.raises(pydantic.ValidationError, match="samples nothing"):
         SamplingSpec(
-            n_points=1000,
-            seed=1,
-            y_range=(0.0, 0.0),
-            f_range=(-20.0, 20.0),
+            n_points=1000, seed=1, y_range=(0.0, 0.0), f_range=(-20.0, 20.0),
             w_range=(1e-3, 1e4),
         )
 
@@ -426,7 +402,9 @@ def test_the_full_nine_check_battery_is_accepted() -> None:
     """The positive control for the two refusals below — nine names, each once."""
     certificate = _certificate(_battery())
     assert len(certificate.result.checks) == 9
-    assert {check.name for check in certificate.result.checks} == set(OBJECTIVE_CERTIFICATE_CHECKS)
+    assert {check.name for check in certificate.result.checks} == set(
+        OBJECTIVE_CERTIFICATE_CHECKS
+    )
 
 
 @pytest.mark.req("FR-158")

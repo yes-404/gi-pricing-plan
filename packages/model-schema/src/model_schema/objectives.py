@@ -341,12 +341,8 @@ TEMPLATE_PARAMETERS: Final[dict[ObjectiveTemplate, tuple[TemplateParameter, ...]
     ObjectiveTemplate.GAMMA: (),
     ObjectiveTemplate.TWEEDIE: (
         TemplateParameter(
-            name="p",
-            minimum=1.0,
-            maximum=2.0,
-            minimum_exclusive=True,
-            maximum_exclusive=True,
-            default=1.5,
+            name="p", minimum=1.0, maximum=2.0,
+            minimum_exclusive=True, maximum_exclusive=True, default=1.5,
         ),
     ),
     ObjectiveTemplate.CAPPED_GAMMA: (
@@ -374,12 +370,8 @@ TEMPLATE_PARAMETERS: Final[dict[ObjectiveTemplate, tuple[TemplateParameter, ...]
     ),
     ObjectiveTemplate.QUANTILE: (
         TemplateParameter(
-            name="alpha",
-            minimum=0.0,
-            maximum=1.0,
-            minimum_exclusive=True,
-            maximum_exclusive=True,
-            default=0.5,
+            name="alpha", minimum=0.0, maximum=1.0,
+            minimum_exclusive=True, maximum_exclusive=True, default=0.5,
         ),
     ),
     ObjectiveTemplate.ZERO_INFLATED_POISSON: (
@@ -387,7 +379,9 @@ TEMPLATE_PARAMETERS: Final[dict[ObjectiveTemplate, tuple[TemplateParameter, ...]
             name="pi", minimum=0.0, maximum=1.0, minimum_exclusive=True, maximum_exclusive=True
         ),
     ),
-    ObjectiveTemplate.FOCAL_BINOMIAL: (TemplateParameter(name="gamma", minimum=0.0, default=2.0),),
+    ObjectiveTemplate.FOCAL_BINOMIAL: (
+        TemplateParameter(name="gamma", minimum=0.0, default=2.0),
+    ),
 }
 
 #: §4.5's "each template declares its `applicability` block". The template states where its
@@ -395,70 +389,51 @@ TEMPLATE_PARAMETERS: Final[dict[ObjectiveTemplate, tuple[TemplateParameter, ...]
 #: may not widen it.
 TEMPLATE_APPLICABILITY: Final[dict[ObjectiveTemplate, Applicability]] = {
     ObjectiveTemplate.POISSON: Applicability(
-        responses=frozenset({ResponseKind.CLAIM_COUNT}),
-        backends=_GBM,
-        offset_required=True,
-        y_domain=_NON_NEGATIVE,
+        responses=frozenset({ResponseKind.CLAIM_COUNT}), backends=_GBM,
+        offset_required=True, y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.GAMMA: Applicability(
-        responses=frozenset({ResponseKind.CLAIM_SEVERITY}),
-        backends=_GBM,
-        y_domain=_POSITIVE,
+        responses=frozenset({ResponseKind.CLAIM_SEVERITY}), backends=_GBM, y_domain=_POSITIVE,
     ),
     ObjectiveTemplate.TWEEDIE: Applicability(
-        responses=frozenset({ResponseKind.BURNING_COST}),
-        backends=_GBM,
-        offset_required=True,
-        y_domain=_NON_NEGATIVE,
+        responses=frozenset({ResponseKind.BURNING_COST}), backends=_GBM,
+        offset_required=True, y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.CAPPED_GAMMA: Applicability(
-        responses=frozenset({ResponseKind.CLAIM_SEVERITY}),
-        backends=_GBM,
-        y_domain=_POSITIVE,
+        responses=frozenset({ResponseKind.CLAIM_SEVERITY}), backends=_GBM, y_domain=_POSITIVE,
     ),
     ObjectiveTemplate.SPLICED_SEVERITY: Applicability(
-        responses=frozenset({ResponseKind.CLAIM_SEVERITY}),
-        backends=_GBM,
-        y_domain=_POSITIVE,
+        responses=frozenset({ResponseKind.CLAIM_SEVERITY}), backends=_GBM, y_domain=_POSITIVE,
     ),
     ObjectiveTemplate.ASYMMETRIC_SQUARED: Applicability(
         responses=frozenset({ResponseKind.BURNING_COST, ResponseKind.CLAIM_SEVERITY}),
-        backends=_GBM,
-        y_domain=_NON_NEGATIVE,
+        backends=_GBM, y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.ASYMMETRIC_POISSON: Applicability(
-        responses=frozenset({ResponseKind.CLAIM_COUNT}),
-        backends=_GBM,
-        offset_required=True,
-        y_domain=_NON_NEGATIVE,
+        responses=frozenset({ResponseKind.CLAIM_COUNT}), backends=_GBM,
+        offset_required=True, y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.HUBER: Applicability(
         responses=frozenset({ResponseKind.BURNING_COST, ResponseKind.CLAIM_SEVERITY}),
-        backends=_GBM,
-        y_domain=_NON_NEGATIVE,
+        backends=_GBM, y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.PSEUDO_HUBER: Applicability(
         responses=frozenset({ResponseKind.BURNING_COST, ResponseKind.CLAIM_SEVERITY}),
-        backends=_GBM,
-        y_domain=_NON_NEGATIVE,
+        backends=_GBM, y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.QUANTILE: Applicability(
         responses=frozenset(
             {ResponseKind.BURNING_COST, ResponseKind.CLAIM_SEVERITY, ResponseKind.CLAIM_COUNT}
         ),
-        backends=_GBM,
-        y_domain=_NON_NEGATIVE,
+        backends=_GBM, y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.ZERO_INFLATED_POISSON: Applicability(
-        responses=frozenset({ResponseKind.CLAIM_COUNT}),
-        backends=_GBM,
-        offset_required=True,
-        y_domain=_NON_NEGATIVE,
+        responses=frozenset({ResponseKind.CLAIM_COUNT}), backends=_GBM,
+        offset_required=True, y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.FOCAL_BINOMIAL: Applicability(
         responses=frozenset({ResponseKind.CONVERSION, ResponseKind.RETENTION}),
-        backends=_GBM,
-        y_domain=YDomain(min_inclusive=0.0, max_inclusive=1.0),
+        backends=_GBM, y_domain=YDomain(min_inclusive=0.0, max_inclusive=1.0),
     ),
 }
 
