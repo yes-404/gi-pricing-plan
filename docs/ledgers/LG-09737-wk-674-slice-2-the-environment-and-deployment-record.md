@@ -547,6 +547,71 @@ case of C1 deploys through the S2 route (`POST /environments/dev/deployments`) a
 path is covered by `_target_status`'s own tests. (4) The ruling item 2's note that the handler's `prior_hash` read stays:
 untouched.
 
+### Task 6 — default-live scoring, the trace link and server-derived liveness (RL-880, RL-888, RL-916, RL-1380, FR-357) — executor-1256i, 2026-10-04
+
+**Tree.** Branch `sl-1256-environment-and-deployment-record` on `8879e2ad` (Task 5A), plus this task's commit.
+
+**Red first** (pre-change code, test files only edited; `LOKY_MAX_CPU_COUNT=4`, own test DB, no suite run):
+
+```
+uv run pytest -q -p no:cacheprovider --no-header -rf backend/tests/test_score.py -k "live_deployment or no_deployment_still or no_environment_and_no_ref or default_live_trace or equal_to_the_live or not_live_carries or no_live_deployment_carries or recorded_mid_request"
+FAILED test_a_quote_with_no_ref_is_scored_against_the_environments_live_deployment - AssertionError: {"type":"https://docs.gi-pricing.dev/errors/no-live-rating-...
+FAILED test_a_caller_with_no_environment_and_no_ref_is_refused_even_when_deployments_exist - AttributeError: module 'app.api.score' has no attribute '_serving_ref'
+FAILED test_a_default_live_trace_carries_the_deployment_that_served_it - AssertionError: {"type":"https://docs.gi-pricing.dev/errors/no-live-rating-...
+FAILED test_an_explicit_ref_equal_to_the_live_version_carries_its_deployment - AssertionError: assert None == UUID('01a106c9-ac2f-788a-a931-2e8f3a3a5026')
+FAILED test_a_deployment_recorded_mid_request_does_not_relink_the_trace - AssertionError: {"type":"https://docs.gi-pricing.dev/errors/no-live-rating-...
+5 failed, 4 passed, 33 deselected
+
+uv run pytest ... backend/tests/test_traces.py -k completed_trace_still
+FAILED test_a_completed_trace_still_carries_the_deployment_it_was_written_with - TypeError: write_pending_trace() got an unexpected keyword argument 'deploy...
+1 failed, 38 deselected
+
+uv run pytest ... backend/tests/test_api_approvals.py -k "withdraw or no_longer_assert or with_no_deployment"
+FAILED test_withdrawing_after_deployment_is_refused - AssertionError: {"id":"01a106c9-fad0-7ad7-a100-f456e81b315d","artifact_ref"...   (the withdrawal SUCCEEDED, 200)
+FAILED test_a_client_can_no_longer_assert_that_the_artifact_is_not_live - AssertionError: {"id":"01a106c9-fe9b-7bd1-b578-1888242d890e","artifact_ref"...   (200, not 422)
+2 failed, 1 passed, 94 deselected
+
+uv run pytest ... backend/tests/test_deployment_route_types.py
+FAILED test_every_request_body_is_a_model_schema_type_in_the_source / ..._a_ref_to_a_published_shape / test_every_2xx_is_a_ref_to_a_published_shape / test_the_committed_contract_types_the_routes_the_same_way / test_the_approval_submission_body_is_a_model_schema_type_not_a_class_the_api_defines (backend/src/app/api/approvals.py:84:class Withdraw(BaseModel):) / test_the_withdrawal_body_is_a_model_schema_type_with_no_liveness_field (ImportError: cannot import name 'ApprovalWithdrawal')
+6 failed, 12 passed
+```
+
+Predicted and found: both withdrawals **succeed** because the route trusts the body; the default-live quote gets the 409.
+The passes in the first group are the guards that hold before and after (an explicit ref to a non-live version or slug, and
+one in an environment with no Deployment, carry null; `uat` with no Deployment still 409s). The positive control
+(`a_rating_version_with_no_deployment_can_still_be_withdrawn`) passes red and green.
+
+**Green:** the same four commands: **9 passed**, **1 passed**, **3 passed**, **18 passed**. Wider targeted run (not the
+gate): `test_score.py test_traces.py test_api_approvals.py test_approvals.py test_contracts.py test_deployment_route_types.py
+test_api_authorisation_sweep.py test_deployments.py tests/test_audit_docs_ids.py`: see the commit-time rerun below.
+
+**What was built.** `score._serving_ref(database, caller, ctx)` (beside `_required_ref`) resolves the ref and the
+Deployment together, once, before `_compiled_for`: default-live = the caller Environment's latest Deployment of the
+workspace (same predicate as `environments._live_by_environment`); explicit ref = that Deployment only if its
+`rating_version_ref` string equals `str(ref)` exactly, else null; no caller environment = no live Deployment. `_required_ref`
+keeps the 409 and takes the live ref (docstring: dated note, original sentence quoted). `_maybe_sample_trace` gains
+`deployment_id` (default `None`, existing direct callers unchanged) and passes it to `traces.write_pending_trace`, which
+gains the same keyword; `complete_pending_trace` copies `deployment_id` into the re-inserted row (#974 F1).
+`/score/compare` and `/score/batch` untouched. `Withdraw` is removed; the body is `model_schema.ApprovalWithdrawal`
+(`reason` only, slug `approval-withdrawal`, frozen, `extra="forbid"`); `withdraw_request` derives liveness with
+`_is_deployed` (artifact type `rating_version` and any `DeploymentRow` of that ref in the workspace) and passes it to
+`service.withdraw`, whose signature is unchanged. `ONE_SIDED_SLUGS` gains the new key `approval-withdrawal` only (Delta 4;
+`dislocation-run` untouched). `_CONTRACT_ARTIFACT_PATHS` gains the one path and the count goes 80 → 81 (measured at the
+branch head `8879e2ad`, where it was 80).
+
+**Acceptance 17 (read-only callers).** The signature script (`_fetch_bundle`, `_compiled_for`, `ast` `args` and `returns`,
+`origin/main` against the working tree) prints nothing. `git diff --stat origin/main...HEAD -- api/models.py
+worker/scoring_handlers.py worker/trace_handlers.py` prints `models.py | 9 +++++++--`: **not this task**: hunks at
+`:1235`, `:1249`, `:1253` are the compile route and `submit_rating_version` from Task 5A (RL-1379, PL-1392 C14), and
+the governance gate's `_fetch_bundle` call (`:1215`) is untouched. This task's own diff touches none of the three files
+(`git diff --name-only` for the task commit).
+
+**Deviations, stated.** (1) Acceptance 7's route-level cases are in `backend/tests/test_score.py`, beside the scoring
+fixtures (`scoring_headers`, `_rows_for`, the held-bundle patch); the completion case is in `test_traces.py`.
+(2) The default-live per-request read is one extra indexed query on `/score`; it is not measured against NFR-489 here
+(that is Task 7's or WK-671's measurement). (3) `_serving_ref`'s bearer-caller refusal is tested on the helper, because no
+credential produces a no-environment `Caller` over HTTP.
+
 ## PRs
 
 Not yet opened (draft PR at the first push).

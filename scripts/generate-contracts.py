@@ -173,6 +173,8 @@ GENERATED_SHAPES: dict[str, str] = {
     # Added 2026-10-04 (WK-674 Slice 2, PL-1392 Task 5, Acceptance 16): the body of
     # `POST /api/v1/approval-requests`, moved out of the API module.
     "approval-submission": "ApprovalSubmission",
+    # Added 2026-10-04 (PL-1392 Task 6): the body of `.../withdraw`, moved out of the API module.
+    "approval-withdrawal": "ApprovalWithdrawal",
 }
 
 

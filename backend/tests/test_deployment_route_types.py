@@ -60,6 +60,8 @@ ROWS: tuple[Row, ...] = (
     Row("GET", "/api/v1/environments/{env}/deployments", None, "Deployment", paged=True),
     # Row 9: the body is typed; the 2xx is `FD-1335` Part B's (FD 9752), pinned by key set.
     Row("POST", "/api/v1/approval-requests", "ApprovalSubmission", None),
+    # Row 8 (Task 6): the withdraw body is `reason` only; the server derives liveness.
+    Row("POST", "/api/v1/approval-requests/{request_id}/withdraw", "ApprovalWithdrawal", None),
 )
 
 #: The module of each row's handler.
@@ -513,13 +515,31 @@ def test_the_approval_submission_body_is_a_model_schema_type_not_a_class_the_api
         capture_output=True,
         text=True,
     ).stdout
-    assert "SubmitApproval" not in found
+    assert found == "", found  # neither `SubmitApproval` nor `Withdraw` is a backend class
 
     original = _sources()["approvals.py"]
     local = original.replace(
         "    ApprovalSubmission,\n", "", 1
     ) + "\n\nclass ApprovalSubmission(BaseModel):\n    artifact_ref: str\n"
-    problems = ast_problems({"approvals.py": local}, rows=(ROWS[-1],))
+    submission_row = next(r for r in ROWS if r.request == "ApprovalSubmission")
+    problems = ast_problems({"approvals.py": local}, rows=(submission_row,))
+    assert any("not imported from model_schema" in p for p in problems)
+
+
+@pytest.mark.req("FR-357")
+def test_the_withdrawal_body_is_a_model_schema_type_with_no_liveness_field() -> None:
+    """Acceptance 16 for the withdraw route: the body is `ApprovalWithdrawal` from `model_schema`,
+    and it carries `reason` only (`PL-1392` Task 6, C11) — liveness is the server's."""
+    from model_schema import ApprovalWithdrawal
+
+    assert set(ApprovalWithdrawal.model_fields) == {"reason"}
+    assert ApprovalWithdrawal.model_config.get("extra") == "forbid"
+    original = _sources()["approvals.py"]
+    local = original.replace(
+        "    ApprovalWithdrawal,\n", "", 1
+    ) + "\n\nclass ApprovalWithdrawal(BaseModel):\n    reason: str\n"
+    withdraw_row = next(r for r in ROWS if r.request == "ApprovalWithdrawal")
+    problems = ast_problems({"approvals.py": local}, rows=(withdraw_row,))
     assert any("not imported from model_schema" in p for p in problems)
 
 

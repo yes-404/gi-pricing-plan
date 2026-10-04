@@ -2678,6 +2678,8 @@ _CONTRACT_ARTIFACT_PATHS: Final = (
     "docs/contracts/schemas/generated/deployment-request-create.schema.json",
     # 2026-10-04, PL-1392 Task 5 (WK-674 Slice 2)
     "docs/contracts/schemas/generated/approval-submission.schema.json",
+    # 2026-10-04, PL-1392 Task 6 (WK-674 Slice 2)
+    "docs/contracts/schemas/generated/approval-withdrawal.schema.json",
     "docs/contracts/schemas/generated/problem-detail.schema.json",
     "docs/contracts/schemas/generated/profile.schema.json",
     "docs/contracts/schemas/generated/transparency-artifact.schema.json",

@@ -321,6 +321,22 @@
         "title": "ApprovalSubmission",
         "type": "object"
       },
+      "ApprovalWithdrawal": {
+        "additionalProperties": false,
+        "description": "The body of `POST /api/v1/approval-requests/{request_id}/withdraw` (`06` §5.1, FR-357).\n\n`reason` only. Whether the artifact is live is the server's to derive from the owning\nmodule's rows (`PL-1392` Task 6, C11): a field the client could set was a client asserting\n\"not live\". Moved here from the API module for `ApprovalSubmission`'s reason; the route's\n2xx stays untyped until `FD-1335` Part B (owner FD 9752).",
+        "properties": {
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ApprovalWithdrawal",
+        "type": "object"
+      },
       "ApproximatedModel": {
         "additionalProperties": false,
         "description": "The Model this GLM approximates, addressed the way a human reads it (FR-169).\n\nThe id stays the lookup key — `approximates_model_id` is how the platform resolves the\npin. This block carries the **slug and version** instead, following `IntervalFor`'s\nid-and-version shape with the id left out: naming the same id twice is a fact stated\ntwice, and `CLAUDE.md` §2's rule against a shape defined twice holds for a fact as\nmuch as for a field. `motor-ad-frequency@7` is what a reviewer reads; the slug alone\nwould resolve to the family's latest version, which may not be the version the id\npins.",
@@ -15171,27 +15187,6 @@
         "title": "Weighting",
         "type": "string"
       },
-      "Withdraw": {
-        "additionalProperties": false,
-        "properties": {
-          "artifact_is_live": {
-            "default": false,
-            "description": "Supplied by the caller: liveness belongs to the owning module (`03` for a Rating Version), not to governance. Governance owns the rule.",
-            "title": "Artifact Is Live",
-            "type": "boolean"
-          },
-          "reason": {
-            "minLength": 1,
-            "title": "Reason",
-            "type": "string"
-          }
-        },
-        "required": [
-          "reason"
-        ],
-        "title": "Withdraw",
-        "type": "object"
-      },
       "WorkspaceMembership": {
         "additionalProperties": false,
         "description": "One workspace this principal may act in, named (FR-395, FR-396).",
@@ -16013,6 +16008,7 @@
     },
     "/api/v1/approval-requests/{request_id}/withdraw": {
       "post": {
+        "description": "Withdraw a request before its artifact is deployed (FR-357).\n\nLiveness is the server's to derive, never the client's to assert (`PL-1392` Task 6): a\nRating Version with a Deployment row is live, and the request is refused 409\n`WITHDRAW_AFTER_DEPLOY_FORBIDDEN`. Governance owns the rule (`service.withdraw`); the\ndeployment state is `03`'s fact, read here from its rows.",
         "operationId": "withdraw_request_api_v1_approval_requests__request_id__withdraw_post",
         "parameters": [
           {
@@ -16048,7 +16044,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Withdraw"
+                "$ref": "#/components/schemas/ApprovalWithdrawal"
               }
             }
           },

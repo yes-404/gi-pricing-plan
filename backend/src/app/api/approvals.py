@@ -21,7 +21,7 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,7 +36,7 @@ from app.api.pagination import (
     encode_cursor,
 )
 from app.api.responses import problems
-from app.db.models import ApprovalDecisionRow, ApprovalRequestRow
+from app.db.models import ApprovalDecisionRow, ApprovalRequestRow, DeploymentRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals as service
@@ -52,6 +52,7 @@ from model_schema import (
     ApprovalPolicy,
     ApprovalStatus,
     ApprovalSubmission,
+    ApprovalWithdrawal,
     ArtifactRef,
     DecisionKind,
     Permission,
@@ -79,17 +80,6 @@ class Decide(BaseModel):
 
     decision: DecisionKind
     comment: str | None = None
-
-
-class Withdraw(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    reason: str = Field(min_length=1)
-    artifact_is_live: bool = Field(
-        default=False,
-        description="Supplied by the caller: liveness belongs to the owning module (`03` "
-        "for a Rating Version), not to governance. Governance owns the rule.",
-    )
 
 
 async def _detail(database: Database, row: ApprovalRequestRow) -> dict[str, Any]:
@@ -264,22 +254,56 @@ async def decide_request(
         return service.to_dict(row, decisions)
 
 
+async def _is_deployed(session: AsyncSession, workspace_id: UUID, request_id: UUID) -> bool:
+    """Whether the request's artifact is a Rating Version with at least one Deployment.
+
+    An unknown request is not live: `service.withdraw` answers it 404 itself.
+    """
+    row = (
+        await session.execute(
+            select(ApprovalRequestRow.artifact_type, ApprovalRequestRow.artifact_ref).where(
+                ApprovalRequestRow.id == request_id,
+                ApprovalRequestRow.workspace_id == workspace_id,
+            )
+        )
+    ).one_or_none()
+    if row is None or row.artifact_type != "rating_version":
+        return False
+    deployment = await session.scalar(
+        select(DeploymentRow.id)
+        .where(
+            DeploymentRow.workspace_id == workspace_id,
+            DeploymentRow.rating_version_ref == row.artifact_ref,
+        )
+        .limit(1)
+    )
+    return deployment is not None
+
+
 @router.post(
     "/approval-requests/{request_id}/withdraw",
     summary="Withdraw before deployment (FR-357)",
     responses=problems(401, 403, 404, 409, 422),
 )
 async def withdraw_request(
-    request_id: UUID, body: Withdraw, caller: Decider, database: DatabaseDep
+    request_id: UUID, body: ApprovalWithdrawal, caller: Decider, database: DatabaseDep
 ) -> dict[str, Any]:
+    """Withdraw a request before its artifact is deployed (FR-357).
+
+    Liveness is the server's to derive, never the client's to assert (`PL-1392` Task 6): a
+    Rating Version with a Deployment row is live, and the request is refused 409
+    `WITHDRAW_AFTER_DEPLOY_FORBIDDEN`. Governance owns the rule (`service.withdraw`); the
+    deployment state is `03`'s fact, read here from its rows.
+    """
     async with database.unit_of_work() as session:
+        artifact_is_live = await _is_deployed(session, caller.workspace_id, request_id)
         row = await service.withdraw(
             session,
             workspace_id=caller.workspace_id,
             request_id=request_id,
             actor=caller.principal,
             reason=body.reason,
-            artifact_is_live=body.artifact_is_live,
+            artifact_is_live=artifact_is_live,
         )
         # A withdrawn request leaves the artifact where a rejected one does: back in its
         # pre-submission state. Without this the model would sit in `review` for ever with

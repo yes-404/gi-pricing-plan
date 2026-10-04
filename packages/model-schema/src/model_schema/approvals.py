@@ -35,6 +35,7 @@ __all__ = [
     "ApprovalRequest",
     "ApprovalStatus",
     "ApprovalSubmission",
+    "ApprovalWithdrawal",
     "DecisionKind",
     "PromotionSkip",
     "promotion_order_refusal",
@@ -364,6 +365,20 @@ class ApprovalSubmission(BaseModel):
     artifact_ref: str = Field(description="Canonical `{type}:{slug}@{version}` (ID-3).")
     change_summary: str = Field(min_length=1)
     environment: str | None = None
+
+
+class ApprovalWithdrawal(BaseModel):
+    """The body of `POST /api/v1/approval-requests/{request_id}/withdraw` (`06` §5.1, FR-357).
+
+    `reason` only. Whether the artifact is live is the server's to derive from the owning
+    module's rows (`PL-1392` Task 6, C11): a field the client could set was a client asserting
+    "not live". Moved here from the API module for `ApprovalSubmission`'s reason; the route's
+    2xx stays untyped until `FD-1335` Part B (owner FD 9752).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    reason: str = Field(min_length=1)
 
 
 class ApprovalDecision(BaseModel):

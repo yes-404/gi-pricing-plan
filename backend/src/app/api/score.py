@@ -49,13 +49,14 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import select
 
 from app.api.authz import requires
 from app.api.deps import Caller, SettingsDep, job_identity
 from app.api.rating_algorithms import RatingReadDep
 from app.api.responses import problems
 from app.config import Settings
-from app.db.models import BlobRow
+from app.db.models import BlobRow, DeploymentRow, EnvironmentRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.observability.logging import get_logger
@@ -135,29 +136,72 @@ ScoreExecuteDep = Annotated[Caller, Depends(requires(Permission.SCORE_EXECUTE))]
 ScoreBatchDep = Annotated[Caller, Depends(requires(Permission.SCORE_BATCH))]
 
 
-def _required_ref(ctx: QuoteContext) -> ArtifactRef:
-    """The explicit ref, or RL-880's refusal.
+def _required_ref(ctx: QuoteContext, live_ref: ArtifactRef | None = None) -> ArtifactRef:
+    """The explicit ref, else the environment's live Rating Version, else RL-880's refusal.
 
     Raised *here*, before `score_one`, and that ordering is the whole point. `score_one`
     also refuses a missing ref — with `INPUT_CONTRACT_VIOLATION`, its own input-contract
     error — and forwarding to it would answer a caller who omitted the ref by telling them
     their input was malformed, when the truth is that this platform has no live Rating
-    Version to score against. `live` is a property of a Deployment (FR-238), which is
-    WK-674's; until then the endpoint refuses rather than guessing which version is live.
+    Version to score against. `live` is a property of a Deployment (FR-238).
 
-    The branch is permanent rather than a stub: after WK-674 it is what an environment holding
-    no Deployment answers, and WK-674 narrows the trigger instead of deleting a placeholder.
+    *(Dated 2026-10-04, WK-674 Slice 2 Task 6: the original text read "which is WK-674's;
+    until then the endpoint refuses rather than guessing which version is live".)* WK-674
+    has landed the Deployment, so `live_ref` is the Rating Version of the caller's
+    Environment's live Deployment (`_serving_ref` resolves it). The refusal is unchanged and
+    permanent: it is what an environment holding no Deployment, or a caller holding no
+    environment, answers, and WK-674 narrowed the trigger instead of deleting a placeholder.
     """
     ref = ctx.options.rating_version_ref if ctx.options is not None else None
+    if ref is None:
+        ref = live_ref
     if ref is None:
         raise PlatformError(
             "NO_LIVE_RATING_VERSION",
             "No live Rating Version",
             409,
-            "This platform has no live Rating Version to score against. Supply "
-            "options.rating_version_ref explicitly.",
+            "This environment has no live Rating Version to score against. Supply "
+            "options.rating_version_ref explicitly, or deploy a Rating Version to it.",
         )
     return ref
+
+
+async def _serving_ref(
+    database: Database, caller: Caller, ctx: QuoteContext
+) -> tuple[ArtifactRef, UUID | None]:
+    """The ref to score and the Deployment that serves it, resolved together and once.
+
+    `RL-1380` (#974): the Deployment is read here, before the bundle, and the value is carried
+    to the trace write and never re-read, so a Deployment recorded while the quote is in
+    flight does not relink its trace (`03` FR-268). For a default-live quote it is the
+    caller's Environment's live Deployment (the latest, `03` §4.12); for an explicit ref it
+    is that Deployment only when it serves exactly that Rating Version (type, slug and
+    version), else `None`: a what-if quote is not pretended to be a served one. A caller with
+    no Environment (a bearer caller) has no live Deployment to resolve.
+
+    Deliberately **not** inside `_fetch_bundle` or `_compiled_for`: the governance gate and
+    both workers call those and must not change with this (`PL-1392` Acceptance 17).
+    """
+    live: tuple[str, UUID] | None = None
+    if caller.environment is not None:
+        async with database.session() as session:
+            found = (
+                await session.execute(
+                    select(DeploymentRow.rating_version_ref, DeploymentRow.id)
+                    .join(EnvironmentRow, EnvironmentRow.id == DeploymentRow.environment_id)
+                    .where(
+                        DeploymentRow.workspace_id == caller.workspace_id,
+                        EnvironmentRow.slug == caller.environment,
+                    )
+                    .order_by(DeploymentRow.deployed_at.desc(), DeploymentRow.id.desc())
+                    .limit(1)
+                )
+            ).one_or_none()
+        if found is not None:
+            live = (found[0], found[1])
+    ref = _required_ref(ctx, ArtifactRef.parse(live[0]) if live is not None else None)
+    served_by = live[1] if live is not None and live[0] == str(ref) else None
+    return ref, served_by
 
 
 async def _fetch_bundle(
@@ -322,7 +366,7 @@ async def score(
     A decline is **not** an error: `build_scoring_result` sets `outcome = "declined"` with a
     populated ladder, and FR-256 makes that a 200.
     """
-    ref = _required_ref(ctx)
+    ref, deployment_id = await _serving_ref(database, caller, ctx)
     compiled = await _compiled_for(
         database, blob_store, slot, workspace_id=caller.workspace_id, ref=ref
     )
@@ -337,7 +381,7 @@ async def score(
             _record_ladder_refusal(caller, compiled, ref, problem)
         raise problem from exc
 
-    await _maybe_sample_trace(database, settings, caller, ctx, result)
+    await _maybe_sample_trace(database, settings, caller, ctx, result, deployment_id)
 
     return Response(content=result.model_dump_json(), media_type="application/json")
 
@@ -423,6 +467,7 @@ async def _maybe_sample_trace(
     caller: Caller,
     ctx: QuoteContext,
     result: ScoringResult,
+    deployment_id: UUID | None = None,
 ) -> None:
     """FR-259's sampling decision, and the pending-row write it leads to (WK-671 Task 4B,
     RL-862). `result` is already untraced — this never sets `trace=True`; a sampled
@@ -468,6 +513,7 @@ async def _maybe_sample_trace(
                 environment=caller.environment,
                 quote_context=ctx.model_dump(mode="json"),
                 served_summary=traces_service.summarise_result(result),
+                deployment_id=deployment_id,
             )
             await job_service.submit(
                 session,
