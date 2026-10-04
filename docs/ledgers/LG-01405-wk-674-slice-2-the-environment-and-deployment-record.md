@@ -645,6 +645,82 @@ items" bullet), S3 (`03` §4.12 deploy-route bullet), S4 (`06` FR-355 cell), S5 
 §2.3 "Deployment Request" row, after **Deployment**), Delta 6 (`06` `settings:read` row). `api/deployments.py:39` stays
 `Permission.RATING_READ`. No new error code.
 
+### Task 7 — the minted-head gate and NFR-489 (Delta 9, Delta 10) — executor-1256n, 2026-10-04
+
+Executor charter line, verbatim: "`sonnet` (currently Sonnet 5); medium, inherited from the lead — the highest-volume role;
+per-slice gates and the auditor's re-check bound the risk of a cheaper setting." `echo $CLAUDE_EFFORT` printed `medium`.
+
+**Object measured:** a clean detached checkout of `4304748898ed56b8db29f5a2c2ef7f1c2f47c544` (`git status --porcelain` empty),
+`uv sync --all-packages` first. Slot `/tmp/slots/gate-1` (granted by the lead for that head only), announced with
+`write_runtime_state.py announce --what full_test_suite --by executor-1256n`. Gate window 13:37:09 to 14:02:35 UTC
+(`date -Iseconds` read 2026-10-04T13:37:09+00:00 and 2026-10-04T14:02:35+00:00; 25 min 26 s). Test database: a
+per-worktree copy of `gipricing` made with `createdb -T`, then `alembic upgrade head`. Gate body: the `dev-commands` body
+with `ruff check --no-cache`, `mypy --no-incremental` and `LOKY_MAX_CPU_COUNT=4`, plus the frontend six after the seven
+parallel stages; slot wrapper `flock -n -E 99 /tmp/slots/gate-1 -c "export GIP_GATE_SLOT=/tmp/slots/gate-1; …"`.
+
+| stage | rc | totals |
+|---|---|---|
+| `ruff check --no-cache .` | 0 | All checks passed |
+| `mypy --no-incremental` | 0 | no issues found in 224 source files |
+| `lint-imports` | 0 | 4 contracts kept, 0 broken |
+| `pytest -q` (`LOKY_MAX_CPU_COUNT=4`) | 0 | **4790 passed, 3 skipped, 0 failed**, 85 warnings, 1443.05 s |
+| `generate-contracts.py --check` | 0 | 45 generated contracts match the models |
+| `audit-docs.py` | 0 | "All checks passed." (fully green) |
+| `req-coverage.py` | 0 | report printed, rc 0 |
+| `pnpm --dir frontend install --frozen-lockfile` | 0 | |
+| `pnpm --dir frontend generate:api` | 0 | |
+| `pnpm --dir frontend lint` (`eslint . --max-warnings 0`) | 0 | |
+| `pnpm --dir frontend type-check` (`vue-tsc --build --force`) | 0 | |
+| `pnpm --dir frontend test` | 0 | 97 files, 612 tests passed |
+| `pnpm --dir frontend build` | 0 | chunk-size advisory only |
+
+**Load.** Start (13:37:00 UTC): `load average: 1.53, 1.12, 1.15`; free 23009 MB, available 28256 MB of 32099 MB, swap 0;
+`flock -n /tmp/slots/gate-2 true` rc 0 (free); 0 pytest processes. End (14:02:35 UTC): `load average: 5.95, 3.35, 2.55`;
+free 21827 MB, available 27678 MB; gate-2 rc 0.
+
+**NFR-489 (Delta 9).** Predicate, the NFR-489 row (`docs/specs/03-rating-engine.md:1258`, no dated amendment on the row):
+"Real-time scoring p99 < 50 ms server-side at 200 rps per replica for a ~200-step motor structure with one `exact` GBM call
+(NFR-454). Without a GBM call, p99 < 15 ms."
+
+- **The harness was stale at the head, and a scratch fix was needed to run it at all.** `scripts/bench-rating.py --http` died
+  in `_measure_fetch` with `TypeError: _fetch_bundle() missing 1 required positional argument: 'slot'` (rc 1; the script
+  calls `_fetch_bundle(database, blob_store, workspace_id=…, ref=…)`, and `_fetch_bundle` takes a `slot` parameter at the head; the script's own last
+  changes are `98eca403` and `71f5a220`). The side measurement was patched in a scratch copy only
+  (`BundleSlot()` passed as the third argument; 3 lines; never committed). The sweep through the route is unaffected.
+- **Commands, verbatim.** Both passes: `cd <checkout>; GIP_TEST_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_bench1256n PYTHONUNBUFFERED=1 timeout 280 uv run python scripts/bench-rating.py --http --warmup 50 --iterations 100 --abc-iterations 20 --rates 25,50`.
+  "With" = the head's `_serving_ref` (one indexed Deployment read per request when the caller has an Environment; the bench's
+  key is scoped to `uat`, so the read runs). "Without" = a scratch checkout of the same SHA with
+  `if caller.environment is not None:` changed to `if False and caller.environment is not None:` in `_serving_ref`. Deployments and
+  deployment_requests rows in the bench database: 0 and 0 (`select count(*)`), so "with" measures the read against empty
+  tables, a lower bound for its cost. The default sweep (25 to 200 rps, `--rates` omitted) was also run once per arm with
+  `--warmup 50 --iterations 100 --abc-iterations 20` and cut at `timeout 540`.
+- **Component half (`score_one` alone, same box, load 1.06; the read is not on this path):** with GBM p50 7.966 ms, p99 10.964 ms
+  against 50 ms: PASS. Without GBM p50 5.443 ms, p99 9.634 ms against 15 ms: PASS.
+- **Full HTTP path, p50 / p99 in ms, 25 rps offered** (uncontended: load 1.2 to 2.1 recorded per rung by the script; lines
+  are with GBM then without GBM):
+
+| run | arm | with GBM p50 / p99 (budget 50) | without GBM p50 / p99 (budget 15) |
+|---|---|---|---|
+| 1 | without the read | 33.7 / 45.3 | 32.6 / 45.2 |
+| 1 | with the read (head) | 35.5 / 51.0 | 34.9 / 50.2 |
+| 2 | without the read | 39.0 / 59.1 | 36.7 / 52.6 |
+| 2 | with the read (head) | 42.8 / 58.6 | 39.3 / 71.2 |
+| default sweep | without the read | 37.4 / 51.3 | not captured |
+| default sweep | with the read (head) | 36.1 / 48.4 | not captured |
+
+  The 50 rps rung: p50 44.7 to 62.9 ms in every run, p99 between 67 and 2405 ms (queueing knee), in both arms. The 100 and 150
+  rps rungs of the sweep ran away to p99 above 30 s in both arms; the 200 rps rung was never reached inside `timeout 540`
+  (the 100 rps rung's backlog already runs for minutes; a first head run with no `--rates` hit `timeout 1800` for the same reason). **200 rps, the rate NFR-489 names, is
+  not measured by this run.**
+- **Reading.** The head's full HTTP path as this harness drives it is over the 50 ms and 15 ms budgets at 25 rps in most runs
+  **with and without the read**, and the p99 spread between repeats of one arm (45.3 to 59.1 ms) is larger than the
+  difference between arms. The read's cost is not resolved from run-to-run noise at p99; at p50 the "with" arm is 0 to 3.8 ms
+  above "without" in the pairs run. Two runs per arm cannot establish more.
+  Whether the harness saturates near 40 rps on `main` (with the Deployment code absent) was **not** measured; the component half
+  passes, so the over-budget figures belong to the route path, not to the evaluator, and are not shown to be this slice's.
+  The auditor rules the NFR-489 verdict; the 200 rps rung and the saturation owner (SL-1259 or F35, not checked here) are open.
+- Heavy load during passes: none other than the bench (0 pytest processes at each start; gate slots free).
+
 ## PRs
 
 Not yet opened (draft PR at the first push).
