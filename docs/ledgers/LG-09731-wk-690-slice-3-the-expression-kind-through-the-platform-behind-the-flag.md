@@ -392,3 +392,13 @@ Broken input (the base, which is the finding): a `quantile` template certified t
 ## PRs
 
 None yet: the branch is pushed, no PR is opened (the lead's order for this turn).
+
+### Task 9 — `FD-1349`'s guard comparison (DP-S3-6 (a))
+
+**Measured first (before writing the test).** The authored enum (`docs/contracts/schemas/objective-certificate.schema.json`, `properties.result.properties.checks.items.properties.name.enum`) has 11 names; `OBJECTIVE_CERTIFICATE_CHECKS` has 9, `OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC` has 9, their union has 11 (the plan's 11, verified). **Expected:** the new comparison passes on the unmodified tree, drift set empty. **Observed:** `2 passed` for `-k certificate_check_name`.
+
+**Added** (only additions, 48 lines at the end of `backend/tests/test_contracts.py`; `ONE_SIDED_SLUGS` untouched, no key needed — `objective-certificate` is a compared slug already): `test_the_certificate_check_name_enum_is_the_code_vocabulary` (`FR-146`) and its meta-guard `test_the_certificate_check_name_comparison_reaches_the_enum_and_can_fail`.
+
+**Red 1 — FD-1349 Evidence 1's input** (`symbolic_vs_numeric_gradient`, `symbolic_vs_numeric_hessian`, `finiteness`, `convexity`, `smoke_fit` → `"BOGUS"`; Evidence 1 reproduced against base: `144 passed`; here the whole file): `2 failed, 150 passed, 2 skipped`; `AssertionError: authored enum vs code vocabulary differ on: ['BOGUS', 'convexity', 'finiteness', 'smoke_fit', 'symbolic_vs_numeric_gradient', 'symbolic_vs_numeric_hessian']` (the second failure is the meta-guard's reach assertion on the broken contract). Reverted from a saved copy, `cmp` equal; green `152 passed, 2 skipped`.
+
+**Red 2 — the meta-guard's own** (drift function body replaced by `return set()`): `1 failed, 151 passed`; `AssertionError: assert set() == {'BOGUS', 'convexity'}`. Restored from a saved copy; green `152 passed, 2 skipped`.

@@ -2895,3 +2895,51 @@ def test_problem_responses_advertise_the_rfc_9457_media_type() -> None:
 @pytest.mark.req("FR-450")
 def test_the_settings_endpoints_are_published() -> None:
     assert "/api/v1/settings" in _load(OPENAPI)["paths"]
+
+
+def _certificate_check_name_drift(authored: Iterable[str], code: Iterable[str]) -> set[str]:
+    """The names on exactly one side of the certificate check-name comparison."""
+    return set(authored) ^ set(code)
+
+
+def _authored_certificate_check_names() -> list[str]:
+    schema = _load(AUTHORED / "objective-certificate.schema.json")
+    checks = schema["properties"]["result"]["properties"]["checks"]
+    return list(checks["items"]["properties"]["name"]["enum"])
+
+
+@pytest.mark.req("FR-146")
+def test_the_certificate_check_name_enum_is_the_code_vocabulary() -> None:
+    """FD-1349: `CertificateCheck.name` is a bare `str` in the generated schema, so no
+    walker reaches the authored `result.checks[].name` enum. The code's vocabulary is the
+    union of `OBJECTIVE_CERTIFICATE_CHECKS` and `OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC` —
+    the numeric and the symbolic battery share nine names, so the union is eleven. A name
+    on one side only is published vocabulary the emitter never produces, or the reverse."""
+    from model_schema import (
+        OBJECTIVE_CERTIFICATE_CHECKS,
+        OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC,
+    )
+
+    code = {*OBJECTIVE_CERTIFICATE_CHECKS, *OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC}
+    authored = _authored_certificate_check_names()
+    assert not _certificate_check_name_drift(authored, code), (
+        f"authored enum vs code vocabulary differ on: "
+        f"{sorted(_certificate_check_name_drift(authored, code))}"
+    )
+    assert len(authored) == len(set(authored)), "the enum repeats a name"
+
+
+def test_the_certificate_check_name_comparison_reaches_the_enum_and_can_fail() -> None:
+    """Meta-guard for the comparison above: it names two paths it must reach (both
+    symbolic names, in the authored enum and in the code union), and shows the drift
+    function reports a broken input rather than passing on two empty sets."""
+    from model_schema import OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC
+
+    authored = _authored_certificate_check_names()
+    assert len(authored) == 11
+    for name in ("symbolic_vs_numeric_gradient", "symbolic_vs_numeric_hessian", "smoke_fit"):
+        assert name in authored
+        assert name in OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC
+    broken = ["BOGUS" if name == "convexity" else name for name in authored]
+    assert _certificate_check_name_drift(broken, authored) == {"BOGUS", "convexity"}
+    assert _certificate_check_name_drift([], []) == set()
