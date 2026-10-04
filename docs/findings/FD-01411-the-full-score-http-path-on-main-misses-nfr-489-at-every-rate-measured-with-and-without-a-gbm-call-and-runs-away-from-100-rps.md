@@ -85,13 +85,27 @@ saturation finding: the single process sustains roughly 15 to 38 rps by the reco
 Load inside the harness never exceeded 2.9 on the 8-vCPU box, nothing else ran (the 2.57 at the 50 rps start
 is the 25 rps pass's tail), so contention does not explain the result. Raw output: `/tmp/perf489_out_{25,50,100,200}.txt`.
 
-### `_fetch_bundle` is paid by every request
+### `_fetch_bundle` alone, on a cache miss (a side measurement)
 
 Measured alone, 200 sequential calls (the record): with a GBM call mean 78.0 ms (p99 92.3); without a GBM call
-mean 33.9 ms (p50 30.7, p99 342.7). Every request pays it. **Leading suspect, not proven:** the bundle is
-fetched or deserialised on each request, and the `BundleSlot` memo does not take effect across requests on
-this path. Task 0 of the remedy plan tests it. The attribution is a side measurement (`_measure_fetch`), not
-a profile of the served request.
+mean 33.9 ms (p50 30.7, p99 342.7). **Corrected 2026-10-04 (supersedes the earlier attribution "every
+request pays `_fetch_bundle`" and its "leading suspect" that the `BundleSlot` memo does not take effect
+across requests):** these figures are the **cache-miss** path. `_fetch_bundle` (`backend/src/app/api/score.py:248-251`)
+does `compiled = slot.get(content_hash)` and, on a hit, `return compiled` before the blob read at `:253`;
+`_measure_fetch` (`scripts/bench-rating.py:678-722`) passes a fresh `BundleSlot()` on every call, so it never
+hits. On a warm served request the slot hits, and the figure is not that request's cost.
+**Unproven until PL 9728's Task 0 measures it:** the per-request work the code shows on a warm served request is
+auth (`api/deps.py:239`, `authenticate_api_key` in `auth/service.py`: an API-key SELECT, a service-account read,
+and an UPDATE of `last_used_at` at `:226`, in one unit of work that commits), rbac (`api/authz.py:62`), `_serving_ref`'s
+Deployment read (`api/score.py:187`), the Rating Version row read (`api/score.py:235-238`) and the trace-sampling
+settings read (`api/score.py:487-488`, in a second unit of work that commits). That is about 5 pool checkouts,
+each with `pool_pre_ping` (`db/session.py:42`), at least 7 statements and 2 commits. The runs above show handler
+time of 35 to 52 ms against `score_one` at 5 to 11 ms in both arms; no profile attributes the difference.
+The attribution is a side measurement (`_measure_fetch`), not a profile of the served request.
+
+The harness's miss-path figure, and the `_measure_fetch` docstring (`scripts/bench-rating.py:678-688`) that says
+the slot is "consulted only after `_fetch_bundle` has returned" (code that no longer exists), are themselves a
+defect. It is not fixed here; it is to be filed in the next FD batch, owner WK-1178.
 
 ### The first no-GBM figure (1017.5 ms at 25 rps) did not reproduce
 
@@ -148,8 +162,9 @@ This finding is the main-tree confirmation, now at all four rates.
 - Each rate is measured once, except 25 rps (once, plus three re-runs). The 50, 100 and 200 rps figures are
   therefore single runs; the acceptance requires at least three per rate.
 - The 200 rps GBM rung is void under the harness's own rule (generator behind), so no valid 200 rps p99 exists.
-- The 78 ms and 34 ms `_fetch_bundle` figures are a side measurement. They show the cost is large; they do
-  not show it is the cause of the 25 rps p99 or of the saturation.
+- The 78 ms and 34 ms `_fetch_bundle` figures are a side measurement of the cache-miss path (corrected
+  2026-10-04, above). They do not describe a warm served request, and they do not show a cause of the 25 rps
+  p99 or of the saturation.
 
 ## Disposition
 
