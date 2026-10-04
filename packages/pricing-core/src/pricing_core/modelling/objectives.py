@@ -784,10 +784,11 @@ def _compile_stored_expression(objective: CustomObjective) -> ObjectiveFns:
     stored = objective.derived
     if objective.loss is None or stored is None:
         raise ObjectiveError(
-            "OBJECTIVE_KIND_NOT_ENABLED",
+            "VALIDATION_FAILED",
             f"objective {objective.slug}@{objective.version} has no stored derivation to "
-            "compile: it is fitted from the derivation an Approver read, never re-derived "
-            "(FR-144).",
+            "compile: an expression objective is fitted from the derivation an Approver "
+            "read, never re-derived (FR-144), and is derived on its draft at "
+            "POST /api/v1/custom-objectives/{id}/derive before it is certified.",
             terms=[objective.slug],
         )
     return compile_expression_objective(

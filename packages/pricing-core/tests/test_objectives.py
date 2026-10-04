@@ -1114,8 +1114,10 @@ def test_compile_dispatch_uses_the_stored_derived_text_and_never_re_derives() ->
 
 @pytest.mark.req("FR-144")
 def test_compile_dispatch_refuses_an_underived_expression_objective_by_name() -> None:
-    with pytest.raises(ObjectiveError, match=r"test-expression@1.*no stored derivation"):
+    with pytest.raises(ObjectiveError, match=r"test-expression@1.*no stored derivation") as refused:
         compile_objective(_expression_artifact(stored=False))
+    assert refused.value.code == "VALIDATION_FAILED"
+    assert "/derive" in str(refused.value)
 
 
 @pytest.mark.req("FR-144")

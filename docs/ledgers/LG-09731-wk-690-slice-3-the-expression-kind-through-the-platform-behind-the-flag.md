@@ -402,3 +402,15 @@ None yet: the branch is pushed, no PR is opened (the lead's order for this turn)
 **Red 1 — FD-1349 Evidence 1's input** (`symbolic_vs_numeric_gradient`, `symbolic_vs_numeric_hessian`, `finiteness`, `convexity`, `smoke_fit` → `"BOGUS"`; Evidence 1 reproduced against base: `144 passed`; here the whole file): `2 failed, 150 passed, 2 skipped`; `AssertionError: authored enum vs code vocabulary differ on: ['BOGUS', 'convexity', 'finiteness', 'smoke_fit', 'symbolic_vs_numeric_gradient', 'symbolic_vs_numeric_hessian']` (the second failure is the meta-guard's reach assertion on the broken contract). Reverted from a saved copy, `cmp` equal; green `152 passed, 2 skipped`.
 
 **Red 2 — the meta-guard's own** (drift function body replaced by `return set()`): `1 failed, 151 passed`; `AssertionError: assert set() == {'BOGUS', 'convexity'}`. Restored from a saved copy; green `152 passed, 2 skipped`.
+
+### RL-1410's delta — the refusal codes (R1, R3; S1–S5)
+
+**Supersedes Task 6's red text** (N2): Task 6's account of the null-`derived` refusal as `OBJECTIVE_KIND_NOT_ENABLED` is superseded by `RL-1410` R1; the refusal is 409 `VALIDATION_FAILED`. `worker/model_handlers.py:1554` (the certify job's "no stored derivation" `ValueError`) is not touched (N2). This ledger is in the write set (N1).
+
+**R1 red, first.** `test_compile_dispatch_refuses_an_underived_expression_objective_by_name` now binds `refused` and asserts `refused.value.code == "VALIDATION_FAILED"` and `"/derive" in str(refused.value)`. Red at base on the code assertion: `AssertionError: assert 'OBJECTIVE_KIND_NOT_ENABLED' == 'VALIDATION_FAILED'`. Then C1 applied byte for byte in `_compile_stored_expression`; green, `test_objectives.py` `105 passed`.
+
+**R3's new test**, `test_an_expression_objective_without_applicability_is_refused_422` (`FR-153`). The code already exists, so the red step is the broken-input proof: the `if template is None:` branch in `_validated` replaced by `if False:` makes the create answer 500 (`KeyError` from `TEMPLATE_APPLICABILITY[None]`), and the test fails on `assert 500 == 422`. Restored from a saved copy, `cmp` equal; green `1 passed`.
+
+**Spec texts** in `docs/specs/02-modelling.md`, byte for byte, `<Task date>` and `<fix date>` = 2026-10-04, `<RL id>` = `RL-1410`: S1 (FR-144 row, `:208`), S2 (create row, `:1841`), S3 and S4 (derive row, `:1844`), S5 (submit row, `:1847`). No other sentence. R2 and R4 need no code or test change.
+
+**Deviations.** None beyond the above; `ruff format` was not run.

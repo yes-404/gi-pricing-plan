@@ -423,6 +423,22 @@ async def test_grammar_violation_covers_text_that_does_not_parse(
     assert response.json()["errors"][0]["message"].startswith("line 1, column ")
 
 
+@pytest.mark.req("FR-153")
+async def test_an_expression_objective_without_applicability_is_refused_422(
+    api_client: Any, author: Any, database: Database, workspace_id: Any
+) -> None:
+    """RL-1410 R3: an `expression` has no template to default `applicability` from."""
+    await _set_flag(database, workspace_id, True)
+    body = _expression_body()
+    del body["applicability"]
+    response = api_client.post("/api/v1/custom-objectives", json=body, headers=author)
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "VALIDATION_FAILED"
+    listed = api_client.get(f"/api/v1/custom-objectives?slug={body['slug']}", headers=author)
+    assert listed.status_code == 200, listed.text
+    assert [row for row in listed.json()["items"] if row["slug"] == body["slug"]] == []
+
+
 @pytest.mark.req("FR-145")
 async def test_grammar_violation_is_not_raised_for_a_valid_loss(
     api_client: Any, author: Any, database: Database, workspace_id: Any
