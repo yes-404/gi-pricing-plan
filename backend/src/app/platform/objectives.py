@@ -722,6 +722,19 @@ async def submit_for_review(
             "approval reads.",
         )
     await _require_evidence(session, workspace_id=workspace_id, row=row)
+    # WK-690 S3 Delta 7 (g): `certificate_id` is a bare pointer (no foreign key), and
+    # `_require_evidence` only checks it is set. A pointer to no certificate row is no
+    # evidence, and would otherwise read below as "no `violated` finding".
+    pointed = await session.get(ObjectiveCertificateRow, row.certificate_id)
+    if pointed is None or pointed.workspace_id != workspace_id:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "The objective's certificate does not exist",
+            409,
+            f"{row.slug}@{row.version} names certificate {row.certificate_id}, which has "
+            "no certificate row: re-certify it (POST /api/v1/custom-objectives/{id}/certify) "
+            "before submitting it (FR-146, FR-163).",
+        )
 
     # FR-152 / RL-1362 DP-S3-4: a `violated` convexity check adds one Approver to the
     # policy's count, for both kinds, read from the latest certificate.

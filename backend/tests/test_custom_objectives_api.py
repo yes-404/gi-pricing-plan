@@ -46,15 +46,26 @@ from backend.tests.test_model_jobs_gbm import _gbm_spec
 from fastapi.testclient import TestClient
 
 from app.config import Settings
-from app.db.models import ApprovalPolicyRow, CustomObjectiveRow, ModelRow
+from app.db.models import (
+    ApprovalPolicyRow,
+    CustomObjectiveRow,
+    ModelRow,
+    ObjectiveCertificateRow,
+)
 from app.db.session import Database
 from app.platform.objectives import default_sampling
 from model_schema import (
     DEFAULT_POLICY,
+    OBJECTIVE_CERTIFICATE_CHECKS,
     ApprovalPolicy,
+    CertificateCheck,
+    CertificateOutcome,
+    CertificateResult,
+    CheckStatus,
     CustomObjective,
     GbmFunctionRef,
     ObjectiveStatus,
+    SamplingSpec,
     new_uuid7,
 )
 
@@ -157,13 +168,37 @@ def _advance(objective_id: UUID, *, status: ObjectiveStatus) -> None:
 
     `status IN ('draft','deprecated') OR certificate_id IS NOT NULL` is a CHECK, so a
     certificate id travels with the status — which is the invariant, not a fixture detail.
+    The id names a real certificate row (all nine checks passing): submission refuses a
+    pointer to no row (WK-690 S3 Delta 7 (g)).
     """
 
     async def _update(database: Database) -> None:
         async with database.unit_of_work() as session:
             row = await session.get(CustomObjectiveRow, objective_id)
             assert row is not None
-            row.certificate_id = new_uuid7()
+            certificate = ObjectiveCertificateRow(
+                id=new_uuid7(),
+                workspace_id=row.workspace_id,
+                custom_objective_id=row.id,
+                objective_version=row.version,
+                payload=CertificateResult(
+                    checks=tuple(
+                        CertificateCheck(name=name, status=CheckStatus.PASS, detail="ok")
+                        for name in OBJECTIVE_CERTIFICATE_CHECKS
+                    ),
+                    sampling=SamplingSpec(
+                        n_points=1_000,
+                        y_range=(0.0, 20.0),
+                        f_range=(-5.0, 4.0),
+                        w_range=(0.01, 10.0),
+                        seed=7,
+                    ),
+                    overall=CertificateOutcome.CERTIFIED,
+                ).model_dump(mode="json"),
+            )
+            session.add(certificate)
+            await session.flush()
+            row.certificate_id = certificate.id
             if status.value == "approved":
                 await mark_approved(session, row)
             else:

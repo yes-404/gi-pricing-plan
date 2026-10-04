@@ -363,6 +363,22 @@ made through the API. (5) The overflow row is a `draft` after its failing certif
 
 **Executor-worded spec sentences: none.**
 
+### Delta 7 — (g) a dangling `certificate_id` is refused; (f) all six templates need the extra Approver
+
+**(g) Red first.** `test_submitting_with_a_certificate_id_that_names_no_row_is_validation_failed` (`backend/tests/test_objective_submission.py`): a template objective certified through the real Job, its `certificate_id` then updated to a uuid with no certificate row, then `submit_for_review`. Base: `Failed: DID NOT RAISE PlatformError` (`1 failed`): the submission was accepted and read as "no `violated` finding".
+
+**(g) Fix.** `submit_for_review` (`backend/src/app/platform/objectives.py`, the only code file changed) loads the pointed certificate (`session.get(ObjectiveCertificateRow, row.certificate_id)`), after `_require_evidence`, and refuses a missing row, or one in another workspace, with 409 `VALIDATION_FAILED` (a registered code, none added); `detail` names `<slug>@<version>` and the missing certificate id. No foreign key added (goes to the FD batch). Green: `1 passed`.
+
+**(g) Broken-input proof.** The guard condition replaced by `if False:`: the new test fails `Failed: DID NOT RAISE PlatformError` (`1 failed`); restored from a saved copy, `cmp` equal.
+
+**(g) Existing tests re-cut.** `_advance` in `backend/tests/test_custom_objectives_api.py` (used by every test that moves an objective to `certified` or `review`, including `test_a_certified_objective_submits_into_review` and `test_submitting_an_objective_twice_conflicts`) stamped `new_uuid7()` with no row. It now inserts a real `ObjectiveCertificateRow` (nine passing checks, valid `CertificateResult`) and points `certificate_id` at it. No assertion changed. `test_custom_objectives_api.py` + `test_objective_submission.py`: `44 passed`. This supersedes Task 7's note (2) above, which said those tests "stand unmodified"; the code now fails closed.
+
+**No spec sentence written for (g):** its text (S5) lands later with RL 9730's delta.
+
+#### FD 9780 — (f) the six templates that certify `violated`
+
+`test_each_template_certified_violated_needs_the_extra_approver` is parametrised over `asymmetric_squared`, `huber` (`delta=1000`), `pseudo_huber` (`delta=1`), `quantile` (`alpha=0.9`), `zero_inflated_poisson` (`pi=0.3`), `focal_binomial`. Each is certified through the real Job on its `default_sampling` grid, asserts `convexity` is `violated`, submits at policy 1 (`required == 2`), and one approval leaves it in `review`. **Red** (`additional_approvers=1 if non_convex else 0` replaced by `0`): `6 failed`, each `assert 1 == 2`. **Green:** `6 passed`; restored, `cmp` equal. Note: `pseudo_huber` with `delta` 100, 1000 and 100000 certified `failed` on the default grid (a draft, not `violated`), so `delta=1` is used; a point for the FD batch.
+
 ## FD 9780 — the quantile template certifies convexity `violated` and no second Approver is enforced
 
 Broken input (the base, which is the finding): a `quantile` template certified through the real Job, submitted at policy 1. `test_a_violated_objective_needs_two_approvers_at_policy_one[template]` fails red at `:228` (`assert 1 == 2`: the row holds 1, so one approval would approve it) and is green after the change: the row and the audit `after` hold 2, one approval leaves the objective in `review`, a second approves it. The same test for an `expression` objective (§4.6's example, which certifies `violated` through the real Job), the policy-2 pair (3 stored; two approvals leave `review`, a third approves), `DEFAULT_POLICY` (2) and policy 5 (6, and `ApprovalRequest` validates) are red at base and green after; the controls (a `pass` certificate at policy 1 stores 1 and one approval approves; an `approved` objective's resubmission stays `VALIDATION_FAILED`; a `validation_rule` stores the entry's count; an `escalation` key is refused `extra_forbidden`) are green at both.

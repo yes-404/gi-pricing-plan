@@ -30,12 +30,14 @@ from app.db.models import (
     ApprovalRequestRow,
     AuditEventRow,
     CustomObjectiveRow,
+    ObjectiveCertificateRow,
 )
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals as approval_service
 from app.platform import jobs as job_service
 from app.platform import objectives as service
+from app.platform.objectives import default_sampling
 from app.worker.model_handlers import register_model_handlers
 from app.worker.tasks import execute_job
 from model_schema import (
@@ -44,6 +46,7 @@ from model_schema import (
     ApprovalRequest,
     ApprovalStatus,
     ArtifactRef,
+    CheckStatus,
     DecisionKind,
     JobKind,
     JobStatus,
@@ -225,6 +228,44 @@ async def test_submitting_an_approved_objective_is_still_validation_failed(
     assert refused.value.code == "VALIDATION_FAILED"
 
 
+@pytest.mark.req("FR-146")
+@pytest.mark.req("FR-163")
+async def test_submitting_with_a_certificate_id_that_names_no_row_is_validation_failed(
+    database: Database, blob_store, workspace_id
+) -> None:
+    """Delta 7 (g): the pointer is the evidence, so a pointer to nothing is no evidence.
+
+    There is no foreign key, so a `certified` row can carry a `certificate_id` with no
+    certificate behind it. Before the guard that read as "no `violated` finding" and the
+    objective went to `review` with the policy's plain count.
+    """
+    from uuid import uuid4
+
+    from sqlalchemy import update
+
+    actor = await _actuary(database, workspace_id)
+    row = await _certified(database, blob_store, workspace_id, actor)
+    dangling = uuid4()
+    async with database.unit_of_work() as session:
+        await session.execute(
+            update(CustomObjectiveRow)
+            .where(CustomObjectiveRow.id == row.id)
+            .values(certificate_id=dangling)
+        )
+    async with database.unit_of_work() as session:
+        with pytest.raises(PlatformError) as refused:
+            await service.submit_for_review(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                objective_id=row.id,
+                change_summary="please",
+            )
+    assert refused.value.status_code == 409
+    assert refused.value.code == "VALIDATION_FAILED"
+    assert str(dangling) in (refused.value.detail or "")
+
+
 # -- the extra Approver -------------------------------------------------------------------
 
 
@@ -255,6 +296,63 @@ async def test_a_violated_objective_needs_three_approvers_at_policy_two(
     assert required == 3
     assert await _approve(database, workspace_id, request_id, 2) == ObjectiveStatus.REVIEW.value
     assert await _approve(database, workspace_id, request_id, 1) == ObjectiveStatus.APPROVED.value
+
+
+# FD 9780 (working id): six of the twelve templates certify `convexity: violated`.
+_VIOLATED_TEMPLATES: dict[ObjectiveTemplate, dict[str, float]] = {
+    ObjectiveTemplate.ASYMMETRIC_SQUARED: {},
+    ObjectiveTemplate.HUBER: {"delta": 1000},
+    ObjectiveTemplate.PSEUDO_HUBER: {"delta": 1},
+    ObjectiveTemplate.QUANTILE: {"alpha": 0.9},
+    ObjectiveTemplate.ZERO_INFLATED_POISSON: {"pi": 0.3},
+    ObjectiveTemplate.FOCAL_BINOMIAL: {},
+}
+
+
+@pytest.mark.req("FR-152")
+@pytest.mark.parametrize("template", list(_VIOLATED_TEMPLATES), ids=lambda t: t.value)
+async def test_each_template_certified_violated_needs_the_extra_approver(
+    template: ObjectiveTemplate, database: Database, blob_store, workspace_id
+) -> None:
+    """FD 9780 (working id): each of the six, certified through the real Job on its own
+    `default_sampling` grid, reaches `convexity: violated`, and one approval leaves it in
+    `review` (two Approvers under the default policy)."""
+    actor = await _actuary(database, workspace_id)
+    draft = await _objective(
+        database, workspace_id, actor, template=template, params=_VIOLATED_TEMPLATES[template]
+    )
+    grid = default_sampling(service.to_objective(draft))
+    async with database.unit_of_work() as session:
+        job = await job_service.submit(
+            session,
+            JobKind.OBJECTIVE_CERTIFY,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": actor.model_dump(mode="json"),
+                "objective_id": str(draft.id),
+                "sampling": grid.model_dump(mode="json"),
+            },
+            actor,
+            workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+    async with database.session() as session:
+        certificate = (
+            await session.execute(
+                select(ObjectiveCertificateRow).where(
+                    ObjectiveCertificateRow.custom_objective_id == draft.id
+                )
+            )
+        ).scalar_one()
+    convexity = next(
+        check
+        for check in service.to_certificate(certificate).result.checks
+        if check.name == "convexity"
+    )
+    assert convexity.status is CheckStatus.VIOLATED
+    request_id, required = await _submit(database, workspace_id, draft.id)
+    assert required == 2
+    assert await _approve(database, workspace_id, request_id, 1) == ObjectiveStatus.REVIEW.value
 
 
 @pytest.mark.req("FR-152")
