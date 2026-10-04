@@ -733,6 +733,11 @@ free 21827 MB, available 27678 MB; gate-2 rc 0.
   the four 25,50 rps passes, run in order without, with, without, with, 14:54:44 to 15:04:35 UTC (15:54:44 to 16:04:35 BST;
   load 1.13 at the first start, 1.50 at the last end). **Every pass whose numbers are reported started after the window's
   end (14:03 UTC), so none is re-run.** The per-rung loads the script printed were 0.8 to 2.1 throughout.
+- **NFR-489 verdict (the lead), 2026-10-04 16:07 BST: deferred with an owner — SL-1259** (WK-674 Slice 5, which lists NFR-489's
+  measurement, docs/roadmap.md :962). Trigger: SL-1259's dispatch record carries this entry's numbers, the `bench-rating.py --http`
+  fix, and main's own full-path figures. The numbers above are informative only: no per-pass clock times were recorded, and a
+  contention window (14:38:49–15:03 BST) overlapped this session's gate. Task 6's Deployment read is below the measurement noise.
+  Slice audit record: `handover/audit-sl1256-2026-10-04.md` (closing `status: closed` per document-ids.md §1.6, 2026-10-04 amendment).
 
 ## PRs
 
