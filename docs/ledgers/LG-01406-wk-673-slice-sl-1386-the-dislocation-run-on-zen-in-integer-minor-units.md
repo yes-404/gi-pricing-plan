@@ -286,6 +286,31 @@ The Task 6 tests were committed at d538f3cb without a ledger entry (audit N-A). 
 `assert '{"baseline_ref":"rating_version:score-fixture@1",…"errors":[]}' != '{"baseline_ref":"rating_version:score-fixture@1",…"errors":[]}'` — the two runs are equal, so the `!=` comparator fails when the portfolio is not changed.
 **Green (file restored).** `2 passed, 38 deselected in 13.11s` (`LOKY_MAX_CPU_COUNT=4`). No other test was run for this entry.
 
+## Closing note
+
+This ledger is closed under the executor charter's mint-step clause (`.claude/roles/executor.md`, "As the mint step…", added 2026-10-04) and `docs/process/document-ids.md` §1.6's 2026-10-04 amendment to the SL and LG close cells: the executor performed the closing acts in the mint commit on the auditor's behalf, after the slice audit — the front matter `status: closed`, the roadmap SL-1386 row `status: closed` with its dated line, `docs/INDEX.md` regenerated, `audit-docs` green. The audit it cites is `handover/audit-sl1386-2026-10-04.md` (CLEAN, lead-adopted; local, not in the repository). The Task 7 entry follows the minted-head gate.
+
+### Task 7 — the minted-head gate at a72a7231 (executor-1386i, `echo $CLAUDE_EFFORT` printed `medium`)
+
+Clean detached checkout of `a72a7231afeb8653ffde53613b260e04117c3adb` (porcelain empty; the head carries Delta 4's `e` to `edge` rename in `analysis.py`), slot `/tmp/slots/gate-1` granted by the lead for that head only.
+`uv sync --all-packages`; per-worktree test DB from the template, `alembic upgrade head`; the dev-commands gate body with `ruff check --no-cache .`, `mypy --no-incremental` and `LOKY_MAX_CPU_COUNT=4`; the seven stages ran at once inside the slot.
+
+| stage | result | detail |
+|---|---|---|
+| ruff | pass | exit 0 |
+| mypy | pass | exit 0 |
+| lint-imports | pass | exit 0 |
+| pytest | pass | exit 0; 4841 passed, 3 skipped, 0 failed, in 1430.87s (0:23:50) |
+| generate-contracts --check | pass | exit 0; 45 generated contracts match the models |
+| audit-docs | pass | exit 0; "All checks passed." |
+| req-coverage | pass | exit 0 |
+| frontend: install --frozen-lockfile, generate:api, lint, type-check, test, build | pass | each exit 0 |
+
+**NFR results (inside the 4841).** NFR-499: `backend/tests/test_error_sinks.py::test_every_failure_sink_on_a_quote_input_path_is_accounted_for` PASSED (the red at 320d8f0b; re-run alone with the file: 44 passed). NFR-495: `test_dislocation_is_byte_identical_across_fresh_interpreters` and
+`test_the_comparator_can_fail_when_the_portfolio_changes` passed. NFR-496: `test_dislocation_totals_are_sums_of_per_policy_minor_units` passed (all in `packages/pricing-core/tests/test_rating_dislocation.py`).
+
+**Clocks and load.** Start 2026-10-04 16:23:38 UTC (17:23:38 BST), load average 1.53 1.95 1.72, memory available 27460 MB; `flock -n /tmp/slots/gate-2 true` rc 0 (free). End of the Python half 16:48:18 UTC (17:48:18 BST), load 2.33 2.13 2.01; at 16:48:22 UTC gate-2 free (rc 0), available 27519 MB. The frontend six ran after, 16:48 to 16:49 UTC; a later load of 5.97 at 16:49:28 UTC was another session's work, outside the pytest window.
+
 ## Deviations and disclosures
 
 1. **`<date>` is 2026-10-04**, the day of this commit; S1-S3 say "the merge date the executor writes", which this run cannot know. If the merge lands on a later day the lead may correct the three dated phrases (":1005", ":562", ":1077").
