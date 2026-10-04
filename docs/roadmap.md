@@ -1432,6 +1432,24 @@ relates: [FD-1356, RL-1301, PL-1306, SL-1256, RL-1407, PL-1408]
 
 `FD-1356`'s fix (HIGH): rule approval goes through `approvals.submit` and `approvals.decide`, `_carry_to_the_artifact` gains the validation-rule branch, and the direct approve route becomes a thin client of the decide path or is removed (DP-1). A quorum of 2 leaves the rule in `review` after one approval. A dry-run whose outcome is `error` is refused at submit and at approve, one red-first case per cause (missing column, unknown check, missing table), and a `fail` outcome stays accepted. `RL-1301` A.4.5's temporary `approve_rule` allowance is removed red first. Rule approvals that no approval request backs are reset to `review`, with the count recorded (follow-on 2). Task 0 is the maintainer's containment query over every `gipricing*` database, with a STOP on a non-zero result; it printed 5 at planning time. The maintainer decided DP-0 as (c): export the rows, drop the scratch database, re-run. The re-run printed 0 on 2026-10-01, to be re-confirmed at dispatch. The remedies of FD 9747 (an approved rule's dry run cannot be replaced) and FD 9748 (a Rule Set runs only approved, existing members) also ride in this slice, as the maintainer decided. RL-1407 rules the plan's decision points and these remedies. Leaf plan PL-1408 (`draft`). **Activation needs:** WK-674 S2 (`SL-1256`) merged (the maintainer, 2026-10-01 ~10:10 BST, order (b) S2 → this fix); lane B order `SL-1360` → the FD-1357 fix → this slice → the `RL-1343` decimal fix → FD-1335 Part A; the plan's decision points ruled; the maintainer's agreement and the lead's go in a separate activation PR. *(Filed 2026-10-01 under working ids 9761 (this row) and 9762 (the plan), reserved by the lead. Minted 2026-10-04 as SL-1409; its plan is PL-1408 and its ruling RL-1407.)*
 
+#### SL 9727 (working id) — WK-1178 fix slice — NFR-489: the /score request path meets its p99 budget at 25 to 200 rps
+
+```yaml
+id: SL-9727
+family: slice
+title: WK-1178 fix slice — NFR-489: the /score request path meets its p99 budget at 25 to 200 rps
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-04
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 4eb1364428a2861fbc8014957e89924f631dd1ff
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [SL-1259, SL-1409, PL-1371, RL-921, RL-882, RL-1379, RL-1263, LG-1405]
+```
+
+The remedy for FD 9729 (working id, HIGH): `POST /api/v1/score` misses NFR-489 at every rate measured on `main` and runs away from 100 rps. Task 0 attributes every per-request millisecond and the ~200–300 ms in-handler stalls on `main` (per-phase timers, pool events, a slot hit/miss counter, `gc.callbacks`, asyncio slow-callback logging), and the decision-maker rules the fix from that record (DP-1 to DP-4): fewer pool checkouts and statements per request, the per-request `last_used_at` write, pool configuration, the stall's cause, and what "per replica" means. Reading at planning time shows the bundle slot already hits on the served path; the 78 ms `_fetch_bundle` figure is the harness's forced-miss path. A timing-free CI guard bounds statements and checkouts per warm request, red first. Acceptance is NFR-489's own predicate at 25, 50, 100 and 200 rps, three runs per rate, alone on the box, per-run times and load recorded; the component half stays PASS. The NFR-489 verdict on the exit tree stays `SL-1259`'s. An unreachable budget goes to the maintainer as DP-5, never a silent re-baseline. Leaf plan PL 9728 (working id, `draft`). **Activation needs:** lane B, dispatched after the FD-1356 fix (`SL-1409`) merges, ahead of the other WK-1178 items under `PL-1371`'s G2 priority (the deputy, 2026-10-04 19:18:54 BST); FD 9729 minted; an exclusive measurement window (`RL-1263`); Tasks 1 to 5 only after the DP-1 to DP-4 ruling merges and the lead's go. *(Filed 2026-10-04 under working ids 9727 (this row) and 9728 (the plan), reserved by the lead.)*
+
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
