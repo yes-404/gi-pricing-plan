@@ -158,6 +158,25 @@ text** (`<date>` = 2026-10-04, `RL-<n>` = RL-1402). Placements in `docs/specs/03
 - `grep -c 'whose baseline payable premium is above 0'`: the spec :1, this ledger :2 — the banded set is `baseline_minor > 0` (Step 4's confirmation).
 - `python3 scripts/doc-index.py` then `python3 scripts/audit-docs.py`: rc 1 with only check 31 ("gap in the full allocation between 1403 and 9732", the ledger's working id, expected) after this ledger's `PRs` section was added (check 37 had named it missing).
 
+### Task 2 — `model-schema`: `DislocationSpec` and `DislocationRun` (executor-1386b, `echo $CLAUDE_EFFORT` printed `medium`)
+
+**Red.** `uv run pytest packages/model-schema/tests/test_dislocation.py -q -p no:cacheprovider` (new test file, no
+module yet): `ModuleNotFoundError: No module named 'model_schema.dislocation'`, 1 error during collection. (An earlier
+run before `uv sync --all-packages` failed on `No module named 'pydantic'`; it was discarded as an environment fault.)
+
+**Green.** Same command after `packages/model-schema/src/model_schema/dislocation.py`: `10 passed`. The contract-match
+test compares property names and `required` for the top level and for `totals`, `outcomes`, `distribution.items`,
+`by_segment.items`, `by_ladder_rung.items`, `errors.items` and `errors.items.sample.items`, and that the seven
+nullable places RL-1402 S5 names admit `null`. The N2 identity test builds a run with `negative_baseline: 1` and
+shows `Σ distribution.policies = quoted_both - zero_baseline - negative_baseline` accepts 2 and refuses 3.
+
+**Mutation (plan Step 4).** Renaming `policy_count` to `policies_count` in the model: `4 failed, 6 passed`; restored,
+`uv run pytest packages/model-schema backend/tests/test_contracts.py -q` printed `615 passed, 2 skipped`.
+
+**Checks.** `ruff check packages/model-schema` rc 0; `ruff format` applied; `mypy` "no issues found in 220 source
+files"; `lint-imports` "4 kept, 0 broken"; `python3 scripts/audit-docs.py` fails check 31 (expected) and check 32 at
+this ledger's Task 1 text naming RL-1404 (present before this task's change; not introduced here).
+
 ## Deviations and disclosures
 
 1. **`<date>` is 2026-10-04**, the day of this commit; S1-S3 say "the merge date the executor writes", which this run cannot know. If the merge lands on a later day the lead may correct the three dated phrases (":1005", ":562", ":1077").
