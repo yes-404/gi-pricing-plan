@@ -133,7 +133,7 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 |---|---|
 | **FR-237** | A **Rating Version** pins: one Rating Algorithm version, an exact Rate Table Version per referenced table, an exact Model/Peril Structure version per `model_call`, an exact Reference Table Version per `lookup`, and the input contract. Nothing is unpinned. |
 | **FR-238** | Lifecycle is `draft → review → approved → live → retired`. Only `approved` versions can be deployed; `live` is a property of a Deployment, and the same Rating Version can be `live` in `uat` and not in `prod`. |
-| **FR-239** | A Rating Version compiles to a self-contained **Bundle** with a content hash. The bundle is sufficient to score with no database access (NFR-491) and is what gets cached and distributed. |
+| **FR-239** | A Rating Version compiles to a self-contained **Bundle** with a content hash. The bundle is sufficient to score with no database access (NFR-491) and is what gets cached and distributed. *(Amended 2026-10-04, RL-1379, on FD 9754: a compile runs only while the Rating Version is `draft`. A compile requested for a version in any other status — `review`, `approved`, `live`, `retired` — is refused with `RATING_VERSION_IMMUTABLE` (409), synchronously by the route when the status is already non-draft and by the `rating.compile` Job, which ends `failed` with that code, when the status changed after submission; the version's Bundle summary and blob key are unchanged. A version in `review` is recompiled only after the decision path returns it to `draft` (`06` FR-355), which resubmits it through FR-257's gate; an `approved` or later version is never recompiled, and a new compiled output is a new version (`00` FR-4).)* |
 | **FR-240** | Bundle compilation validates the whole structure: DAG acyclic and fully connected, all references resolvable and at a sufficient maturity (FR-20), all types compatible, all constraints satisfiable, no `control`-intent factor in a rateable path (`02` FR-88), no unapproved custom objective transitively reachable. *(Amended 2026-09-30, `RL-1329`: saving an algorithm and compiling a bundle also refuse, with `LADDER_CLAMP_UNPLACEABLE` (422), a `clamp` constraint that the Premium Ladder cannot place; the check is one of the algorithm checks that `validate_algorithm` runs at both points. That is a clamp whose produced name is the source of a ladder rung other than the last rung present before `constraints` (FR-247), or whose produced name is a rung's source but differs from the name it consumes. The ladder records a binding clamp on the `constraints` rung (FR-248), so a clamp anywhere else would break the ladder's chain on every quote on which it binds. The message names the step and the rung.)* |
 | **FR-241** | A Rating Version declares its `effective_from` business date and optional `effective_to`, independent of when it is deployed. Scoring uses the version bound to the environment; the effective date is metadata for governance and monitoring, not a runtime selector — unless the deployment explicitly uses date-based routing (FR-247). |
 | **FR-242** | Rating Versions carry a required **change summary**: what changed versus the previous version, why, and expected impact. It is generated as a draft from the structural and rate-table diffs and edited by the actuary. |
@@ -201,6 +201,10 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 | **FR-270** | Optional **date-based routing** allows an environment to hold multiple deployed versions selected by the quote's effective date, for pre-loading a future rate change. Overlapping date ranges are rejected at deployment time. |
 | **FR-271** | Optional **shadow scoring**: a proportion of live traffic is additionally scored against a candidate version, with results recorded but never returned to the caller — the pre-deployment safety net feeding `05-monitoring.md`. |
 | **FR-272** | Every deployment, rollback, and routing change emits an Audit Event and a notification to a configured channel. **Amended 2026-09-28 (`RL-1232` DP-4): the two halves are split by phase.** WK-674 emits the Audit Event in the same transaction as the change. That event is the durable deployment event `05` consumes (§7). WK-674 builds ~~no channel and~~ no second event store. ~~Delivering a notification to a configured channel, with the retry and failure-surfacing obligations of `05` FR-336, is `05`'s alert routing, owned by WK-688 (Phase 4). Until WK-688 delivers it, no channel is configured and none is claimed.~~ **Amended 2026-09-29 (`RL-1232` DP-4, the maintainer's answer Q848-1): the channel is `07` FR-453's signed deployment-notification webhooks.** Which Work delivers FR-453's deployment-notification limb is open (`07` §10, `OQ-1233`). Until it is decided and delivered, no channel is configured and none is claimed. *(Amended 2026-09-29, `RL-1252`: `OQ-1233` is decided (b). The notification limb is deferred to Phase 4, with WK-688 as its owner, and is delivered through FR-453's signed webhooks, which WK-688 builds for both limbs. The Audit Event limb stays WK-674's, in Phase 2. Until WK-688 delivers the notification, no channel is configured and none is claimed.)* |
+
+> **The Deployment contract, added 2026-10-03 (WK-674 Slice 2, `PL-1392`), for FR-267.** The Deployment's shape, its invariants (append-only, `approved` Rating Versions only, a `rating_version` reference only), the Deployment Request that gates a `prod` deployment (`RL-1301` A) and the audit actions this Work emits are §4.12. The requirement above is not reworded. `GET /api/v1/environments/{env}/deployments` (§5.1) is the history that `06` FR-382 reads.
+>
+> **The Audit Event limb for deploy, dated 2026-10-03 (WK-674 Slice 2, `PL-1392`), for FR-272.** Slice 2 delivers the Audit Event limb for a deployment only: `deployment.created`, written in the same transaction as the Deployment row (§4.12). The rollback event `deployment.rolled_back` is Slice 5's, and the routing and shadow events are Slice 6's; §4.12 names all four once. The notification limb stays WK-688's (`RL-1232` DP-4, as amended above).
 
 ### 3.11 Numeric precision at the engine boundary
 
@@ -841,6 +845,45 @@ A Sub-graph Version is a stored, immutable fragment of a Rating Algorithm, addre
 - **Result types at create** (FR-227; `RL-1309` DP-S1-4). An output port whose declared type is incompatible with its producing step's result type is refused with `RATING_TYPE_MISMATCH`, naming the producing step and the port. Only producers whose type is known at save are checked: an `expression` step's `result_type` and an input port's declared type. An output produced by a `table`, `lookup` or `model_call` step is not checked at create, as for an algorithm today; its type is known only against the pinned artifact, at compile.
 - **Versions are immutable** (`00` FR-4). The server numbers versions: the current maximum plus one. There is no update and no delete. Every write records an Audit Event `sub_graph.created` with `entity_ref` `sub_graph:<slug>@<version>`, in the same transaction (`06` FR-368).
 
+### 4.12 `Deployment`
+
+*(Added 2026-10-03, WK-674 Slice 2, `PL-1392`; FR-267, and FR-272's Audit Event limb for deploy. The Deployment Request follows `RL-1301` A, the promotion skip `RL-1296`, the Environment's immutable slug `RL-1301` A.6. The shapes are `model-schema`'s: `Deployment`, `DeploymentRequest` and `PromotionSkip`, generated as `deployment.schema.json` and `deployment-request.schema.json`. The Environment is `07` §4.2's, declared once there.)*
+
+A Deployment binds one `approved` Rating Version to one Environment at a point in time. It is a record, not a Governed Artifact: it has no status and no approval lifecycle of its own. Approval attaches to the **Deployment Request** that precedes it, below.
+
+```json
+{
+  "id": "6f1c0e52-8a43-4d3b-9b0e-2f6a7c1d9e10",
+  "workspace_id": "0c6e8f0a-5d21-4b7e-8d62-1a9b3c4d5e6f",
+  "environment": "prod",
+  "rating_version_ref": "rating_version:motor-gb@27",
+  "bundle_hash": "sha256:9f2c…",
+  "deployed_by": "3b8e4d7a-1c52-4f09-a6d3-7e5b2c8f1a04",
+  "deployed_at": "2026-10-01T06:00:00Z",
+  "reason": "Annual rate review, effective 1 November",
+  "deployment_request_ref": "deployment:prod@3"
+}
+```
+
+- **`environment` is the Environment's slug** (`07` §4.2), which a rename cannot change (`RL-1301` A.6). `bundle_hash` is the Rating Version's compiled Bundle hash at the time of the deploy (FR-239). `deployment_request_ref` is the approved Deployment Request this Deployment executed, and is `null` only for a target that has no `deployment` entry in the Approval Policy (`06` §4.2; `RL-1301` A.5).
+- **Append-only.** A Deployment is never updated in place and never deleted (`00` FR-4). The live Deployment of an Environment is derived from these rows, never stored a second time (`07` §4.2).
+- **`approved` Rating Versions only** (FR-238). A request to deploy a version in any other status is refused.
+- **Compiled Rating Versions only** (FR-239; `RL-1401`). A version whose `bundle` metadata is absent, or has no `content_hash`, has no Bundle hash to record and is refused with 409 `BUNDLE_COMPILE_FAILED`, at Deployment Request submission and at deploy. It cannot be compiled once it has left `draft` (`RL-1379`). The way forward is a new draft version.
+- **Not into a retired Environment** (`07` FR-428; `RL-1301` A.6; `RL-1401`). A deploy or a Deployment Request whose target Environment is retired is refused with 409 `VALIDATION_FAILED`, naming the slug and when it was retired. The refusal comes after the permission check and before the Rating Version is read. An unknown slug is 404 `NOT_FOUND`. A request approved before its target was retired is refused when it is executed.
+- **A Rating Version is the only deployable subject.** A `sub_graph` reference, or any reference whose type is not `rating_version`, is refused. A Sub-graph reaches a deployment only inside the Rating Version that pins it (§4.11).
+- **Audit actions this Work emits**, each named here once so that no later slice appends to the catalogue. **The deployment request:** `deployment_request.created` (WK-674 Slice 2: a Deployment Request is written and submitted; `before` `null`, `after` the request with its pins and its pinned evidence; `entity_ref` exactly the request's reference `deployment:<environment slug>@<n>`; the submitting Principal as actor; in the same transaction as the row and its approval request). Its actor is the request's Author for `06` FR-353, as amended 2026-10-03 (`RL-1401`). **FR-272's four:** `deployment.created` (WK-674 Slice 2: a Deployment row is written, `before` the previous live Deployment of the Environment or `null`, `after` this one, in the same transaction as the row); `deployment.rolled_back` (Slice 5, FR-269); `deployment.routing_changed` and `deployment.shadow_configured` (Slice 6, FR-270 and FR-271). The `entity_ref` of each of FR-272's four names the Deployment or the Environment it changes. **The Environment (WK-674 Slice 2, added 2026-10-04):** `environment.created` (`before` `null`, `after` the Environment), `environment.updated` and `environment.retired` (`before` and `after` the Environment); the `entity_ref` of each is `environment:<slug>`.
+
+#### Deployment Request
+
+An Environment may be gated by a `deployment` entry in the Approval Policy (`06` §4.2; `prod` by default). A deploy into a gated Environment names an **approved Deployment Request**. A Deployment Request is an artifact owned by this module (`RL-1301` A.1, DP-S2-2).
+
+- **Reference form** `deployment:<environment slug>@<n>`, for example `deployment:prod@3`: the third request into `prod`. The slug is the target Environment's immutable slug, so a reference never changes its meaning; the version is monotone per Environment (`00` ID-2). `deployment` is a member of the artifact reference types (`ARTIFACT_TYPES` in `model-schema`; `docs/contracts/schemas/common/artifact-ref.schema.json` carries the same list), and an approval request for a Deployment Request carries `artifact_type: "deployment"`.
+- **Pins.** The request pins the approved Rating Version it deploys and the target Environment's identity. It is the subject of the `deployment` approval request, whose `environment` is the Environment's slug.
+- **Two pinned evidence items**, written once at submission and never updated (FR-356, `00` FR-4), the floor of `06` FR-364: `rating_version_approval`, the decided approval request of the pinned Rating Version; and `uat_deployment`, the predecessor item, which is **either** the id of the successful Deployment of that Rating Version in the predecessor Environment, **or** a `PromotionSkip` (`skipped_environment`, and a `reason` that is not empty after trimming). A skip is valid only where the target's environment-qualified `deployment` entry lists the skipped Environment (`RL-1296`; `07` FR-429). **A gated target with no predecessor** — an Environment whose `requires_prior_environment` is `null` and which a `deployment` entry names — has no predecessor item to pin, so every Deployment Request into it is refused with 422 `EVIDENCE_INCOMPLETE` (`07` FR-429; `06` FR-364: the floor kind is never removed). The refusal names the remedy: remove the entry, which makes the target ungated (`RL-1301` A.5), because `requires_prior_environment` cannot be changed after creation. *(Added 2026-10-04, `RL-1404`.)*
+- **The deploy route executes only an approved request.** It re-evaluates `07` FR-429's one predicate from the request's **pinned** evidence and never re-reads a changeable source. A request is executed once. A target with no `deployment` entry needs no request: the predicate then reads the predecessor's successful Deployment directly, and no skip is possible (`RL-1301` A.5). A deploy into such a target that names a `deployment_request_ref` is refused with 422 `VALIDATION_FAILED`, naming the Environment, and writes nothing: the Deployment would otherwise record a request it did not execute. *(Added 2026-10-04, `RL-1404`.)*
+- **Submission** is `POST /api/v1/environments/{env}/deployment-requests` (§5.1), which writes the request and submits it through the generic approval path in one transaction. The Deployer permission (`deployment:promote`) is checked with the target Environment as the resource (`06` FR-345).
+
+
 ---
 
 ## 5. Interfaces
@@ -863,7 +906,7 @@ A Sub-graph Version is a stored, immutable fragment of a Rating Algorithm, addre
 | `GET` | `/api/v1/rate-tables/{slug}@{version}/export/xlsx` | Export cells to XLSX (FR-235) |
 | `POST` | `/api/v1/rate-tables/{slug}@{version}/import` | Import CSV/XLSX → returns a diff vs the addressed version for confirmation; `confirm: true` re-computes the diff and creates the version (FR-235) |
 | `POST` | `/api/v1/rating-versions` | Create a draft Rating Version with pins (FR-237) |
-| `POST` | `/api/v1/rating-versions/{id}/compile` | **202** Compile + validate the bundle (FR-240) |
+| `POST` | `/api/v1/rating-versions/{id}/compile` | **202** Compile + validate the bundle (FR-240); **409** `RATING_VERSION_IMMUTABLE` unless the version is `draft` (FR-239) |
 | `POST` | `/api/v1/rating-versions/{id}/submit` | Submit for approval; evidence completeness checked (FR-257); golden quotes re-scored and the suite pinned (FR-260). **Amended 2026-09-28** (`PL-1189`) |
 | `POST` | `/api/v1/regression-suites/{slug}/versions` | Create a new Regression Suite version; `rating:write`; **201** (FR-260). **Added 2026-09-28** (`PL-1189`) |
 | `GET` | `/api/v1/regression-suites/{slug}@{version}` | Read a Regression Suite version; `rating:read`; access-controlled per NFR-499 (FR-260). **Added 2026-09-28** (`PL-1189`) |
@@ -875,10 +918,12 @@ A Sub-graph Version is a stored, immutable fragment of a Rating Algorithm, addre
 | `GET` | `/api/v1/rating-versions/{id}/regression-runs/{run_id}/cases` | Read the run's case log (its generated cases and counterexamples); `rating:read`; the only route that reads this blob, which `GET /api/v1/blobs/{sha256}` refuses (`FR-1221`, NFR-499). **Deliberately unpaginated:** the log holds at most `generation.cases` contexts, and `RegressionGeneration.cases` is capped at 10 000, so the response is bounded by that cap (about 10 000 Quote Contexts plus one counterexample per failing property). **Added 2026-09-28** (`PL-1205`) |
 | `POST` | `/api/v1/dislocation-runs` | **202** Baseline vs candidate over a portfolio (FR-263) |
 | `GET` | `/api/v1/dislocation-runs/{id}` | Dislocation artifact |
-| `POST` | `/api/v1/environments/{env}/deployments` | Deploy an approved version (FR-267) |
+| `POST` | `/api/v1/environments/{env}/deployments` | Deploy an approved version (FR-267) *(Refusals added 2026-10-03, `RL-1401`: 409 `VALIDATION_FAILED` when the Environment is retired; 409 `BUNDLE_COMPILE_FAILED` when the Rating Version has no compiled bundle; §4.12.)* |
 | `POST` | `/api/v1/environments/{env}/deployments/rollback` | Roll back (FR-269) |
 | `PUT` | `/api/v1/environments/{env}/shadow` | Configure shadow scoring (FR-271) |
 | `GET` | `/api/v1/traces?rating_version=&from=&to=` | Sampled production traces (FR-259) |
+| `GET` | `/api/v1/environments/{env}/deployments` | Deployment history for an environment (FR-267; read by `06` FR-382) |
+| `POST` | `/api/v1/environments/{env}/deployment-requests` | Submit a deployment request for approval (FR-267, FR-429) *(Refusals added 2026-10-03, `RL-1401`: 409 `VALIDATION_FAILED` when the Environment is retired; 409 `BUNDLE_COMPILE_FAILED` when the Rating Version has no compiled bundle; §4.12.)* |
 
 **Error codes owned by this module:** `RATING_GRAPH_CYCLIC`, `RATING_GRAPH_UNRESOLVED_REF`,
 `RATING_TYPE_MISMATCH`, `MONETARY_FLOAT_REFUSED`, `EXPRESSION_NON_DETERMINISTIC`,
@@ -915,7 +960,9 @@ serving request: a sampled real-time outcome is first persisted `pending`, and a
 off-path Job re-scores the pinned bundle and fills in the body. This code is refused when
 that completion is attempted against a row that is not `pending` — already completed, or
 never a pending row — so a re-delivered Job stops rather than re-running the re-score and
-orphaning a blob. `app.platform.traces.complete_pending_trace` is the only raiser)*.
+orphaning a blob. `app.platform.traces.complete_pending_trace` is the only raiser)*,
+`RATING_VERSION_IMMUTABLE`
+*(added 2026-10-04, RL-1379, WK-674 Slice 2 — **409**. FR-239: a compile of a Rating Version whose status is not `draft`. `POST /api/v1/rating-versions/{id}/compile` refuses it synchronously and creates no Job; a `rating.compile` Job whose version left `draft` after submission ends `failed` with this code. `app.platform.rating_versions.require_compilable` is the only raiser)*.
 
 > **`RATING_VERSION_UNPINNED` (meaning added 2026-09-30, on FD-1297, FR-237).** The Rating
 > Version cannot be compiled, or a compiled bundle cannot be loaded: it has no `algorithm_ref`,

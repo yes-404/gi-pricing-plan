@@ -1,0 +1,33 @@
+{
+  "additionalProperties": false,
+  "description": "The body of `PATCH /api/v1/environments/{slug}`: `name` and `description` only.\n\n`extra=\"forbid\"` is what refuses a body naming `slug` (RL-1301 A.6).",
+  "properties": {
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "name": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Name"
+    }
+  },
+  "title": "EnvironmentUpdate",
+  "type": "object"
+}
