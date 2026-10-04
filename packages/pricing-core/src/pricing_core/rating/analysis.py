@@ -8,19 +8,39 @@ column and its dtype, and never a portfolio value.
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
-from decimal import Decimal
+from collections.abc import Iterable, Sequence
+from datetime import date
+from decimal import ROUND_HALF_EVEN, Decimal
+from fractions import Fraction
+from itertools import pairwise
 from typing import Any, Final
 
 import polars as pl
 
-from model_schema.dislocation import DislocationSpec
+from model_schema.dislocation import (
+    DislocationBand,
+    DislocationOutcomes,
+    DislocationRun,
+    DislocationSpec,
+    DislocationTotals,
+    ErrorSample,
+    ErrorTally,
+    RungContribution,
+    SegmentSlice,
+)
 from model_schema.scoring import LadderRung
 from pricing_core.rating.ladder import RUNG_ORDER
 from pricing_core.rating.runtime import CompiledBundle
 from pricing_core.rating.score import score_batch
 
-__all__ = ["PortfolioFrameError", "dislocation_frame", "read_portfolio"]
+__all__ = [
+    "PortfolioFrameError",
+    "dislocate",
+    "dislocation_frame",
+    "read_portfolio",
+    "select_movers",
+    "summarise_dislocation",
+]
 
 _STAMPED: Final[tuple[str, ...]] = ("purpose", "effective_date", "rating_version_ref")
 _EXPOSURE_SCALE: Final = 6
@@ -204,3 +224,222 @@ def dislocation_frame(
         },
     )
     return frame.join(checked, on="quote_id", how="left", maintain_order="left").sort("quote_id")
+
+
+# ---------------------------------------------------------------------------
+# The summary (RL-1402 S1, S3-S5, Amendment N2; 03 §4.6). Money is an `int`; every ratio is a
+# `Fraction` of ints rounded once; a float appears only at the model boundary.
+# ---------------------------------------------------------------------------
+
+_SAMPLE_SIZE: Final = 10
+_SHARE_PLACES: Final = 6
+
+
+def _rounded_float(ratio: Fraction, places: int) -> float:
+    """Round the exact ratio once (half-even), exactly to a `Decimal`, and only then to a float."""
+    r = round(ratio, places)
+    return float(Decimal(r.numerator) / Decimal(r.denominator))
+
+
+def _pct(change: int, baseline: int) -> float | None:
+    """Σ change ÷ Σ baseline x 100 to 2 places; null when the denominator is 0."""
+    return None if baseline == 0 else _rounded_float(Fraction(change, baseline) * 100, 2)
+
+
+def _share(part: Decimal, whole: Decimal) -> float | None:
+    return None if whole == 0 else _rounded_float(Fraction(part) / Fraction(whole), _SHARE_PLACES)
+
+
+def _compared(frame: pl.DataFrame) -> pl.DataFrame:
+    return frame.filter(
+        (pl.col("baseline_outcome") == "quoted") & (pl.col("candidate_outcome") == "quoted")
+    )
+
+
+def _banded(frame: pl.DataFrame) -> pl.DataFrame:
+    """The compared policies with a positive baseline (RL-1402, Amendment N2)."""
+    return _compared(frame).filter(pl.col("baseline_minor") > 0)
+
+
+def select_movers(frame: pl.DataFrame, spec: DislocationSpec) -> pl.DataFrame:
+    """FR-263's movers: banded policies whose |change %| is at least `mover_threshold_pct`,
+    decided on ints; by |pct| descending, |change_minor| descending, then `quote_id`."""
+    threshold = Fraction(str(spec.mover_threshold_pct))
+    kept = [
+        row
+        for row in _banded(frame).iter_rows(named=True)
+        if 100 * abs(row["change_minor"]) >= threshold * row["baseline_minor"]
+    ]
+    kept.sort(
+        key=lambda r: (
+            -Fraction(abs(r["change_minor"]), r["baseline_minor"]),
+            -abs(r["change_minor"]),
+            r["quote_id"],
+        )
+    )
+    return pl.DataFrame(kept, schema=frame.schema)
+
+
+def _edge_text(edge: Decimal) -> str:
+    text = format(edge.normalize(), "f")
+    return f"+{text}" if edge > 0 else text
+
+
+def _band_labels(edges: Sequence[Decimal]) -> list[str]:
+    text = [_edge_text(e) for e in edges]
+    return [
+        f"< {text[0]}%",
+        *(f"{a}% to {b}%" for a, b in pairwise(text)),
+        f"≥ {text[-1]}%",
+    ]
+
+
+def _sum_decimal(values: Iterable[Decimal]) -> Decimal:
+    return sum(values, Decimal(0))
+
+
+def _level_text(value: object) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, date):
+        return value.isoformat()
+    return str(value)
+
+
+def _level_sort_key(value: object) -> tuple[Any, ...]:
+    """Native order, the null level last (`false` before `true` falls out of `bool`'s order)."""
+    return (value is None, value) if value is not None else (True,)
+
+
+def _group_stats(rows: Sequence[dict[str, Any]]) -> tuple[int, int, int, Decimal]:
+    return (
+        len(rows),
+        sum(r["change_minor"] for r in rows),
+        sum(r["baseline_minor"] for r in rows),
+        _sum_decimal(r["exposure_years"] for r in rows),
+    )
+
+
+def summarise_dislocation(frame: pl.DataFrame, spec: DislocationSpec) -> DislocationRun:
+    """Fold the per-policy frame into the run's summary (03 §4.6; RL-1402 S3-S5)."""
+    rows = list(frame.iter_rows(named=True))
+    compared = list(_compared(frame).iter_rows(named=True))
+    banded = [r for r in compared if r["baseline_minor"] > 0]
+
+    # Totals: integer sums over the compared set.
+    base_total = int(sum(r["baseline_minor"] for r in compared))
+    cand_total = int(sum(r["candidate_minor"] for r in compared))
+    totals = DislocationTotals(
+        baseline_premium_minor=base_total,
+        candidate_premium_minor=cand_total,
+        change_pct=_pct(cand_total - base_total, base_total),
+    )
+
+    # Outcomes: each policy once.
+    errored = [r for r in rows if "error" in (r["baseline_outcome"], r["candidate_outcome"])]
+    pair = [(r["baseline_outcome"], r["candidate_outcome"]) for r in rows]
+    outcomes = DislocationOutcomes(
+        quoted_both=len(compared),
+        quoted_to_declined=sum(p == ("quoted", "declined") for p in pair),
+        declined_to_quoted=sum(p == ("declined", "quoted") for p in pair),
+        declined_both=sum(p == ("declined", "declined") for p in pair),
+        error=len(errored),
+        zero_baseline=sum(r["baseline_minor"] == 0 for r in compared),
+        negative_baseline=sum(r["baseline_minor"] < 0 for r in compared),
+    )
+
+    # Errors: one tally per code, under the baseline's code where that pass errored.
+    by_code: dict[str, list[str]] = {}
+    for r in errored:
+        code = (
+            r["baseline_error_code"]
+            if r["baseline_outcome"] == "error"
+            else r["candidate_error_code"]
+        )
+        by_code.setdefault(code, []).append(r["quote_id"])
+    errors = [
+        ErrorTally(
+            code=code,
+            count=len(ids),
+            sample=[ErrorSample(quote_id=i) for i in sorted(ids)[:_SAMPLE_SIZE]],
+        )
+        for code, ids in sorted(by_code.items())
+    ]
+
+    # Bands over the banded set, half-open [lo, hi); an edge belongs to the band above it.
+    edges = [Fraction(str(e)) for e in spec.band_edges_pct]
+    labels = _band_labels(spec.band_edges_pct)
+    members: list[list[dict[str, Any]]] = [[] for _ in labels]
+    for r in banded:
+        pct = Fraction(r["change_minor"], r["baseline_minor"]) * 100
+        members[sum(pct >= e for e in edges)].append(r)
+    banded_exposure = _sum_decimal(r["exposure_years"] for r in banded)
+    distribution = []
+    for label, group in zip(labels, members, strict=True):
+        n, change, baseline, exposure = _group_stats(group)
+        distribution.append(
+            DislocationBand(
+                band=label,
+                policies=n,
+                exposure_share=_share(exposure, banded_exposure),
+                mean_change_pct=_pct(change, baseline),
+            )
+        )
+
+    # Segments over the compared set: native level order, the null level last.
+    compared_exposure = _sum_decimal(r["exposure_years"] for r in compared)
+    by_segment: list[SegmentSlice] = []
+    for factor in spec.segments:
+        levels = {r[factor] for r in compared}
+        for level in sorted(levels, key=_level_sort_key):
+            n, change, baseline, exposure = _group_stats(
+                [r for r in compared if r[factor] == level]
+            )
+            by_segment.append(
+                SegmentSlice(
+                    factor=factor,
+                    level=_level_text(level),
+                    policies=n,
+                    mean_change_pct=_pct(change, baseline),
+                    exposure_share=_share(exposure, compared_exposure),
+                )
+            )
+
+    # Rungs: the change of the compared policies each rung originates, over Σ baseline.
+    by_ladder_rung = [
+        RungContribution(
+            rung=rung,
+            contribution_pct=_pct(
+                sum(r["change_minor"] for r in compared if r["origin_rung"] == rung), base_total
+            ),
+        )
+        for rung in RUNG_ORDER
+        if any(r["origin_rung"] == rung for r in compared)
+    ]
+
+    total_exposure = _sum_decimal(r["exposure_years"] for r in rows)
+    return DislocationRun(
+        baseline_ref=spec.baseline_ref,
+        candidate_ref=spec.candidate_ref,
+        portfolio_dataset_version_id=spec.portfolio_dataset_version_id,
+        policy_count=len(rows),
+        exposure_years=total_exposure.quantize(Decimal("0.000001"), ROUND_HALF_EVEN),
+        totals=totals,
+        outcomes=outcomes,
+        distribution=distribution,
+        by_segment=by_segment,
+        by_ladder_rung=by_ladder_rung,
+        errors=errors,
+    )
+
+
+def dislocate(
+    baseline: CompiledBundle,
+    candidate: CompiledBundle,
+    portfolio: pl.LazyFrame,
+    spec: DislocationSpec,
+) -> DislocationRun:
+    """Both passes, then the summary (RL-1402 S1)."""
+    return summarise_dislocation(dislocation_frame(baseline, candidate, portfolio, spec), spec)
