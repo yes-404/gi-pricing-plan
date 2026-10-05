@@ -240,6 +240,11 @@ notes, 2026-10-05). **DP-5 (i) is settled by that correction, and DP-5 (ii) is r
 code. The plan moves to `active` only
 through a separate activation PR, after every activation need below holds.
 
+*Dated note, 2026-10-05 (pre-mint), on the 18:51:33 BST entry: the save check of items 13,
+18 and 19 is membership-only, NOT a completeness check. Completeness is compile-time,
+decided by that entry and carried by PL 9494 / SL 9495 (working ids, #1216); item 13's
+readings carry the full note.*
+
 ### Activation needs, in order
 
 1. **FD 9605 minted** at HIGH (item 2 above).
@@ -389,6 +394,16 @@ quoted above. Each is red first.*
       `RatingModelCallStep`). *(Dated note, 2026-10-05: first written as "not changed …
       reported to the lead as a gap". Ruled at 17:27:55 BST: "the SAME check applies there,
       via the same function, with its own red test, in A-2". Item 18.)*
+    - *Dated note, 2026-10-05 (pre-mint), on the maintainer's (by delegation) entry
+      "2026-10-05 18:51:33 BST — Save-time completeness: DECIDED NOW as (b), completeness at
+      COMPILE" (`channel/to-lead.md`): **this check is MEMBERSHIP-ONLY and is NOT a
+      completeness check.** It refuses a `feature_map` value that the pinned Model does not
+      accept (R2, R3). It does not refuse a map that leaves one of the Model's Factors, or
+      one `feature_order` entry, unmapped, and none of items 13, 18 and 19 tests that.
+      Completeness is decided by that entry as compile-time: `compile_bundle` refuses it,
+      per component for a Peril Structure, with this item's code reused. It is ruled by
+      RL 9491 and carried by PL 9494 / SL 9495 (working ids, #1216), which run after this
+      slice. Nothing in this slice's scope, items or write set changes.*
 14. **The offset's value comes from the quote** (DP-3 (a) with the precision, the 17:03:45
     entry). `test_the_offset_moves_the_glm_by_exactly_the_exposure` (new pricing-core module,
     a GLM with a `log_column` exposure offset): the same quote at exposure 1.0 and at 0.5
