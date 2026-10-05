@@ -152,7 +152,8 @@ the `SL-` row's status flip and this plan's.
    this slice needs no spike at all. Under (ii) the need reverts to "Spike S1 filed as an
    `RS-` of `kind: spike`" and Acceptance 7 re-runs that `RS-`'s inline harness.
 4. **Serialisation on shared files** (§"Write set"): `SL-1409` (the FD-1356 fix, `active` on
-   lane B) merged, because it edits `examples/fremtpl2/seed.py`. The FD 9708 fix (PL 9683,
+   lane B) merged, because it edits `examples/fremtpl2/seed.py`. **That half is met:** `SL-1409`
+   is `closed`, merged as `cdaaa573` (#1157). The FD 9708 fix (PL 9683,
    working id, #1140) merged first if it is active first, because it edits the same two
    functions of `examples/fremtpl2/model.py`. Under the maintainer's (by delegation) priority rule, entry
    "2026-10-05 13:12:56 BST — DECISIONS 15 and 16; CORRECTION to my 13:03:23 item 11; a priority
@@ -378,7 +379,7 @@ failure line as printed.
 |---|---|---|---|
 | `examples/fremtpl2/algorithm.py` | added (new module): `build_fremtpl2_algorithm`, `band_expression`, `base_premium_minor`, `FREMTPL2_ALGORITHM_SLUG` | none | none. Slice (b)'s journey imports it |
 | `examples/fremtpl2/model.py` | edited: `_create_factor` (`:143-166`, takes a `FactorType` and an optional `banding_id`) *(DP-a1 a)*, `fit_demo_models` (`:194-`, creates the three Bandings first) *(DP-a1 a)*, `author_demo_rating_evidence` (`:366-`), `create_approved_rating_version` (`:490-`); removed: `_demo_algorithm` (`:327-348`), `DEMO_PREMIUM_IN`, `_EMPTY_PINS`; added: `seed_demo_rate_tables` | **PL 9683** (FD 9708 fix) edits `author_demo_rating_evidence` and `create_approved_rating_version` and adds `save_demo_algorithm`; **PL 9688** (FD 9707 fix) and **PL 9728** (NFR-489) read `:323`, `:334-343` and `:413`; PL 9776 reads `:327-330` | **serial with PL 9683**: whichever merges second rebases on it and re-reads both functions. This slice keeps PL 9683's route-based create if PL 9683 has merged. Reads by PL 9688, 9728 and 9776: none |
-| `examples/fremtpl2/seed.py` | edited: `run`'s order (`:609-623`): `seed_demo_rate_tables` after `compare_and_approve`, before `create_approved_rating_version` | **SL-1409** (`active`) edits `run`'s rule write (`:437-455`) and the order before the first `ingest` (`:536`) | **serial: SL-1409 first** (activation need 4). Different statements of the same function: the second to merge re-reads `run` |
+| `examples/fremtpl2/seed.py` | edited: `run`'s order (`:609-623` at `809a3794`; `:651-665` at `cdaaa573`, after `SL-1409`): `seed_demo_rate_tables` after `compare_and_approve`, before `create_approved_rating_version` | **SL-1409** (`active`) edits `run`'s rule write (`:437-455`) and the order before the first `ingest` (`:536`) | **serial: SL-1409 first** (activation need 4), **met**: `SL-1409` merged as `cdaaa573` (#1157), so this slice re-reads `run` at its dispatch tree |
 | `backend/tests/test_demo_rating_evidence.py` | edited: `:37-39` (the made-up `model_ref`), `:51`, `:68-73` (fixture assertions); added: Acceptance 1, 2, 3, 5 and 6 tests | **PL 9683** edits it; **PL 9688** and PL 9776 name it in their acceptance runs | serial with PL 9683, as above |
 | `backend/tests/test_fremtpl2_algorithm.py` | added: the builder tests, Acceptance 4 (both tests) and the band-expression tests | none | none |
 | `examples/fremtpl2/README.md` | edited: the seed's rating paragraph (the fixture becomes the real algorithm) | none found | none |
@@ -583,14 +584,14 @@ once per Factor in the approved GLM's relativities, in `FACTOR_SET` order.
    recommendations and name each alternative's effect.
 3. **Repository literals checked at `809a3794`:** the `model.py` line ranges (`:60-70`,
    `:143-166`, `:194`, `:322-324`, `:327-348`, `:366`, `:396-397`, `:413`, `:490`);
-   `seed.py:108-125` and `:609-623`; `operations.py:139`, `:159`, `:194-198`;
+   `seed.py:108-125` and `:609-623` (`:651-665` at `cdaaa573`); `operations.py:139`, `:159`, `:194-198`;
    `runtime.py:221-227`, `:235-245`, `:264`, `:298-301`, `:568-579`; `test_api_rate_tables.py:1232`;
    `api/models.py:395-411`; `api/rate_tables.py`'s six route decorators;
    `platform/rate_tables.py:419-430`; `modelling.py:1040-1045` and `:1616-1617`;
    `test_demo_rating_evidence.py:37-39`, `:51`, `:68-73`. The draft exit-demo script's cites
    were re-checked at this tree by a read-only sweep. One was wrong at both trees:
    `model_schema/approvals.py:282` opens `DEFAULT_POLICY`, and the Rating Version quorum is
-   at `:335-338`. This plan does not use it.
+   at `:335-338` (`:292` and `:345-348` at `cdaaa573`). This plan does not use it.
 4. **What was not executed.** No code or test was run (docs-only preparation wave). The
    ternary-banding approach rests on the ternary being verified live (`runtime.py:298-301`)
    and is proven in Task 1 Step 1 (`test_band_expression_maps_each_edge`) before anything
@@ -612,4 +613,7 @@ rests on"); §"Status" and activation needs 2 and 3; §"Activation need 3: the p
 (rewritten for (i), with (ii) kept); Acceptance 8 and Task 1's base step (DP-a2's label);
 Acceptance 11 (new: DP-a1's condition); the Goal (the label); a **Ruled** line after the
 decision-point table; Task 4 Steps 1 and 4; Self-review item 1. No scope, task cut, write set
-or other decision point changed. Verified at `origin/main` `809a3794`.
+or other decision point changed. Verified at `origin/main` `809a3794`; then, after merging
+`origin/main` `cdaaa573` (#1157, `SL-1409`), re-verified there at 15:38:18 BST: activation
+need 4's `SL-1409` half is met, and the `seed.py` and `approvals.py` line cites that moved are
+re-anchored beside their `809a3794` values.
