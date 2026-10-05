@@ -17,7 +17,7 @@ relates: [WK-673, FR-221, FR-71, FD-1374]
 
 ## Finding
 
-**Severity HIGH (the deputy's, 2026-10-05 13:11:05 BST, final unless an upstream filter covers every scoring path; none found, see §3). Owner WK-673; deadline before the P2 exit demo.** A lookup over
+**Severity HIGH (the maintainer's (by delegation), 2026-10-05 13:11:05 BST, final unless an upstream filter covers every scoring path; none found, see §3). Owner WK-673; deadline before the P2 exit demo.** A lookup over
 effective-dated rows returns the first row whose key matches, whatever the quote's `as_at`. When a key has more
 than one row, a quote whose date falls in a later row's window is priced on an earlier row. That is a wrong rate
 on a rated quote, not a missing feature.
@@ -120,4 +120,4 @@ verified `vmError`), so the window test needs the date as a numeric ordinal or a
 decision is built. That is a design choice for `docs/open-questions.md`, not this record's. Red first: the
 reproduction above as a test, with the control that a single-row key still resolves.
 
-Open. Filed by the auditor, 2026-10-05. Severity HIGH, owner WK-673 and the deadline (before the P2 exit demo) are the deputy's, 2026-10-05 13:11:05 BST (confirmed 13:20:26 BST); the fix is PL 9688 (working id).
+Open. Filed by the auditor, 2026-10-05. Severity HIGH, owner WK-673 and the deadline (before the P2 exit demo) are the maintainer's (by delegation), 2026-10-05 13:11:05 BST (confirmed 13:20:26 BST); the fix is PL 9688 (working id).
