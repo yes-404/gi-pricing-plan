@@ -36,7 +36,10 @@ relates: [FD-1358, RL-1361, PL-1267, PL-1286, FR-231, FR-232, FR-450]
   text needed a detail the decisions do not name, the detail is the repository's standing
   convention or behaviour already on main, cited at the tree above; each one is listed under
   "Details taken from main" so a reader can check that no new choice was made.
-- **Brief:** `brief-dm-1358-2026-10-05.md` (the lead, 2026-10-05).
+- **Brief:** `brief-dm-1358-2026-10-05.md` (the lead, 2026-10-05). The T-texts' "DP-A item
+  N" labels are that brief's DP-A draft list, items (1) to (6): the route's §5.1 row, the
+  paging and ordering, the cell schema, the refusals, the 202/Job behaviour under FR-232, and
+  the FR-231 clarification. The decision entry above has no numbered DP-A items.
 
 ## Locators — read at `caa4e411`
 
