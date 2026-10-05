@@ -44,6 +44,7 @@ from model_schema import (
     FIT_RESULT_ADAPTER,
     MODEL_SPEC_ADAPTER,
     Banding,
+    CertificateResult,
     CrossValidationDiagnostics,
     CustomMetric,
     CustomObjective,
@@ -310,6 +311,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         fit_glm,
         linear_predictor,
     )
+    from pricing_core.modelling.errors import NonFiniteDerivativeError, RoundBudgetExceededError
     from pricing_core.modelling.factors import FactorResolutionError
 
     # The offset-from-another-model arrays (FR-116): the referenced fit's linear
@@ -394,6 +396,13 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         # `pricing-core` names the failure; the platform gives it the HTTP shape. Mapped
         # rather than re-raised so a job's stored error carries `02` §5.1's code and a
         # reader can look it up.
+        raise PlatformError(
+            exc.code, f"The {spec.model_type} model could not be fitted", 409, str(exc)
+        ) from exc
+    except (NonFiniteDerivativeError, RoundBudgetExceededError) as exc:
+        # FR-165: an objective that overflowed or ran past its round budget. Both are
+        # `CodedError`s whose text names the round and the fields and holds no input value
+        # (FD-1219, DP-S2-4), so `str(exc)` is safe to persist as the detail.
         raise PlatformError(
             exc.code, f"The {spec.model_type} model could not be fitted", 409, str(exc)
         ) from exc
@@ -1525,6 +1534,43 @@ def _reconcile(parameters: dict[str, Any], callback: ProgressCallback) -> JobRes
     )
 
 
+def _certify_expression(
+    objective: CustomObjective, *, sampling: SamplingSpec, progress: ProgressCallback
+) -> CertificateResult:
+    """§4.7's symbolic battery over an `expression` objective's **stored** derivation (FR-146).
+
+    The Approver reads the stored `derived` text, so that is what is certified: it is passed
+    through, never re-derived. The route refuses an underived objective before a Job exists
+    (`RL-1362` DP-S3-3); a `None` here would be a hand-built artifact.
+    """
+    from pricing_core.modelling.expression_objective import (
+        Derived,
+        certify_expression_objective,
+        inverse_link_for,
+    )
+
+    stored = objective.derived
+    if objective.loss is None or stored is None:
+        raise ValueError(f"{objective.slug}@{objective.version} has no stored derivation")
+    return certify_expression_objective(
+        ref=f"custom_objective:{objective.slug}@{objective.version}",
+        loss=objective.loss,
+        parameters={p.name: p.default for p in objective.parameters or ()},
+        y_domain=objective.applicability.y_domain,
+        hessian_strategy=objective.hessian_strategy,
+        hessian_min=objective.hessian_min,
+        inverse_link=inverse_link_for(objective.applicability.responses),
+        sampling=sampling,
+        derived=Derived(
+            gradient=stored.gradient,
+            hessian=stored.hessian,
+            derivation_tool=stored.derivation_tool,
+            derivation_version=stored.derivation_version,
+        ),
+        progress=progress,
+    )
+
+
 def _certify(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     """`objective.certify` — §4.7's checks over a Custom Objective (FR-146).
 
@@ -1554,7 +1600,8 @@ def _certify(parameters: dict[str, Any], callback: ProgressCallback) -> JobResul
             )
 
     objective = progress.run_on_loop(load())
-    result = certify_objective(
+    certify = _certify_expression if objective.kind == "expression" else certify_objective
+    result = certify(
         objective,
         sampling=sampling,
         progress=ScaledProgress(progress, start=0.1, end=0.9),

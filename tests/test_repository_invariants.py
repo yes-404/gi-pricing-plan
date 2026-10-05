@@ -290,7 +290,7 @@ def test_every_error_code_pricing_core_raises_is_registered_and_declared() -> No
     import sys
 
     sys.path.insert(0, str(ROOT / "backend" / "src"))
-    from app.errors import MODELLING_ERROR_CODES
+    from app.errors import _GENERIC_ERROR_CODES, MODELLING_ERROR_CODES
 
     modelling = ROOT / "packages" / "pricing-core" / "src" / "pricing_core" / "modelling"
     trees = {path: ast.parse(path.read_text(encoding="utf-8")) for path in modelling.glob("*.py")}
@@ -324,7 +324,7 @@ def test_every_error_code_pricing_core_raises_is_registered_and_declared() -> No
 
     unregistered = {
         code: where for code, where in raised.items()
-        if code not in MODELLING_ERROR_CODES
+        if code not in MODELLING_ERROR_CODES | _GENERIC_ERROR_CODES
     }
     assert not unregistered, (
         f"raised by pricing-core and unknown to PlatformError: {sorted(unregistered)}. "
@@ -335,7 +335,13 @@ def test_every_error_code_pricing_core_raises_is_registered_and_declared() -> No
     marker = "**Error codes owned by this module:**"
     block = spec[spec.index(marker) : spec.index("\n\n", spec.index(marker))]
     declared = set(re.findall(r"`([A-Z][A-Z0-9_]{2,})`", block))
-    undeclared = sorted(code for code in raised if code not in declared)
+    # A generic code (`VALIDATION_FAILED`, the request machinery's own) is registered in
+    # `_GENERIC_ERROR_CODES` and owned by `00`/`01`, not by this module, so §5.1's "owned by
+    # this module" block does not list it (WK-690 S3, RL-1410: an underived fit is 409
+    # `VALIDATION_FAILED`, raised by `pricing-core`'s `ObjectiveError`).
+    undeclared = sorted(
+        code for code in raised if code not in declared and code not in _GENERIC_ERROR_CODES
+    )
     assert not undeclared, f"raised and registered but absent from `02` §5.1: {undeclared}"
 
 

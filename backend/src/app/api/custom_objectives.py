@@ -1,11 +1,11 @@
-"""Custom Objectives over HTTP (`02` §5.1, FR-MODEL-38..47, 75, 127).
+"""Custom Objectives over HTTP (`02` §5.1, FR-142 to FR-152, FR-163, FR-166).
 
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/custom-objectives` | **201** Create or version an objective → `draft` (FR-142) |
 | `GET` | `/custom-objectives` | The library: paginated, filtered, counted (FR-167) |
 | `GET` | `/custom-objectives/{id}` | The objective and its lifecycle (FR-166) |
-| `POST` | `/custom-objectives/{id}/derive` | Refused: `expression` is Phase 2 (FR-MODEL-40, 75) |
+| `POST` | `/custom-objectives/{id}/derive` | Derive an `expression` draft (FR-144) |
 | `POST` | `/custom-objectives/{id}/certify` | **202** Run §4.7's checks → Job (FR-146) |
 | `GET` | `/custom-objectives/{id}/certificate` | The latest certificate (FR-166) |
 | `POST` | `/custom-objectives/{id}/submit` | Submit for approval (FR-163) |
@@ -22,15 +22,11 @@ contract, and an endpoint missing from both is in neither. FR-166 declares them.
 listed, which FR-166's amendment recorded as an observation and cured nothing: `02`
 §5.3 asked for a library screen no endpoint could supply, and a `slug@version` address had
 nothing to resolve against a UUID-only detail route.
-
-`/derive` **is** built, as a refusal. FR-150 names it explicitly as one of the two
-paths that answer `OBJECTIVE_KIND_NOT_ENABLED`, and a declared endpoint that 404s says
-"this platform has no such concept" where the truth is "not until Phase 2".
 """
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, Response, status
@@ -51,6 +47,7 @@ from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import jobs as job_service
 from app.platform import objectives as service
+from app.platform import rbac
 from model_schema import (
     Applicability,
     CustomObjective,
@@ -60,6 +57,7 @@ from model_schema import (
     JobQueue,
     ObjectiveCertificate,
     ObjectiveKind,
+    ObjectiveParameter,
     ObjectiveStatus,
     ObjectiveTemplate,
     ObjectiveUsage,
@@ -75,6 +73,7 @@ router = APIRouter(tags=["modelling"])
 ReadModels = Annotated[Caller, Depends(requires(Perm.MODEL_READ))]
 FitModels = Annotated[Caller, Depends(requires(Perm.MODEL_FIT))]
 SubmitModels = Annotated[Caller, Depends(requires(Perm.MODEL_SUBMIT))]
+AuthorObjectives = Annotated[Caller, Depends(requires(Perm.CUSTOM_OBJECTIVE_AUTHOR))]
 
 
 def _database(request: Request) -> Database:
@@ -88,9 +87,9 @@ DatabaseDep = Annotated[Database, Depends(_database)]
 class CreateCustomObjective(BaseModel):
     """FR-142's artifact. Every range and rule is `CustomObjective`'s, not this one's.
 
-    `kind` is here rather than assumed so that a caller asking for an `expression`
-    objective is *answered* — FR-150 makes that a named refusal, and a body that
-    silently forbade the field would leave them reading a 422 about an unexpected key.
+    `kind` is here rather than assumed: an `expression` objective carries `bound_symbols`,
+    `parameters` and `loss` (FR-144) and no template, and while the flag is off a caller
+    asking for it is *answered* with FR-150's named refusal, not a 422 about an unexpected key.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -98,6 +97,11 @@ class CreateCustomObjective(BaseModel):
     slug: Slug
     kind: ObjectiveKind = ObjectiveKind.TEMPLATE
     template: ObjectiveTemplate | None = None
+    #: The `expression` arm (`02` §4.6, FR-144). `derived` is not accepted: the platform
+    #: generates it at `/derive` and a hand-written one would be exactly what §4.6 forbids.
+    bound_symbols: tuple[Literal["y", "f", "w"], ...] | None = None
+    parameters: tuple[ObjectiveParameter, ...] | None = None
+    loss: str | None = None
     #: `int | float`, `CustomObjective.params`'s own type — a money-kind template parameter
     #: (`capped_gamma.cap`, `spliced_severity`'s threshold) must arrive as an integer
     #: minor-unit amount (`CLAUDE.md` §7), and a narrower `dict[str, float]` here would
@@ -247,23 +251,36 @@ async def create_custom_objective(
     """
     async with database.unit_of_work() as session:
         if body.kind is not ObjectiveKind.TEMPLATE:
+            # FR-367, RL-1362 DP-S3-2: author is required in addition to `model:fit` (the
+            # route dependency), and is checked before the flag so a caller without it
+            # learns nothing about the flag.
+            await rbac.require_permission(
+                session,
+                workspace_id=caller.workspace_id,
+                principal=caller.principal,
+                permission=Perm.CUSTOM_OBJECTIVE_AUTHOR,
+                credential_permissions=caller.permissions,
+            )
             await service.refuse_expression_kind(
                 session, settings=settings, workspace_id=caller.workspace_id
             )
-        if body.template is None:
+        if body.kind is ObjectiveKind.TEMPLATE and body.template is None:
             raise PlatformError(
                 "VALIDATION_FAILED",
                 "A template objective names a template",
                 422,
-                "Phase 1 ships template objectives only (FR-150), so `template` is "
-                "required. §4.5 lists the twelve.",
+                "`template` is required for `kind: template`. §4.5 lists the twelve.",
             )
         row = await service.create_objective(
             session,
             workspace_id=caller.workspace_id,
             actor=caller.principal,
             slug=body.slug,
+            kind=body.kind,
             template=body.template,
+            bound_symbols=body.bound_symbols,
+            parameters=body.parameters,
+            loss=body.loss,
             params=dict(body.params),
             applicability=body.applicability,
             hessian_strategy=body.hessian_strategy,
@@ -296,20 +313,28 @@ async def get_custom_objective(
 async def derive_custom_objective(
     objective_id: UUID,
     caller: FitModels,
+    _author: AuthorObjectives,
     database: DatabaseDep,
     settings: SettingsDep,
 ) -> CustomObjective:
-    """Always refused in Phase 1 with `OBJECTIVE_KIND_NOT_ENABLED` (FR-MODEL-40, 75).
+    """Derive and store the gradient and hessian of an `expression` draft (FR-144).
 
-    Built as a refusal rather than left out: FR-150 names this endpoint as one of the
-    two that answer that code, and the distinction between "no such concept" and "not until
-    Phase 2" is exactly what a 404 would destroy. The return type is the one Phase 2 will
-    answer with; nothing reaches it yet.
+    Needs `model:fit` and `custom_objective:author` (FR-367, RL-1362 DP-S3-2), both checked
+    before the flag is read, so a caller without them learns nothing about it. While the
+    workspace's flag is off the answer is 409 `OBJECTIVE_KIND_NOT_ENABLED` whatever the id
+    names: the flag is reached before any lookup (FR-150).
     """
-    async with database.session() as session:
+    async with database.unit_of_work() as session:
         await service.refuse_expression_kind(
             session, settings=settings, workspace_id=caller.workspace_id
         )
+        row = await service.derive_objective(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            objective_id=objective_id,
+        )
+        return service.to_objective(row)
 
 
 @router.post(
