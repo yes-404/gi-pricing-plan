@@ -124,6 +124,57 @@ line. Under (ii) or (iii), Task 2b is rewritten before dispatch.
 emergency slice after PL 9560, by the maintainer's correction to item 3 of the 17:27:55 entry.
 Task 2b then moves out of this plan by a further delta.
 
+## Delta 3, 2026-10-05 (after 17:37:04 BST, pre-mint): (R-b)'s red set widened; T1 here, T2 not
+
+The maintainer's (by delegation) entry "2026-10-05 17:34:25 BST — FD 9572 fan-in measurement
+accepted: (c) ALONE stands; A-2 create_sub_graph_version IN", items 1 and 2, verbatim:
+
+> 1. auditor-fanin (fanin.py dc4958c0…, fanin2.py 758a08c7…, at 4d3be141): no wrong price. A decline side branch forked BEFORE the clamp makes the engine REFUSE with LADDER_RECONCILIATION_FAILED; every other order gives 5250, or 1507 with min_premium=0. ACCEPTED. PL 9560 = guard (c) + T2 and mints after RL 9562. The stated LIMITS (one fixture, decline branches only, no case without ladder reconciliation) go VERBATIM into FD 9572's mint text and into PL 9567's (R-b) red set as the cases it must cover: a produce-nothing side branch, and an algorithm with no ladder reconciliation. So (R-b) closes what this measurement could not reach, and the HOLD on deploy/approve stands until (c) merges (it is not lifted by this measurement).
+> 2. #1196: "root in score_one" withdrawn in place, T2 added. Yes. #1193 (R-b) red-first plus the mechanism DP: noted; I rule it when it arrives with its hash impact. #1195's pre-mint T2 edit (dm-9562b): my mint ACK reads that head.
+
+auditor-fanin's limits, verbatim, as the lead relayed them for this plan: "Limits: I tested one
+fixture and the decline-constraint kind of side branch. I did not test other produce-nothing
+step kinds, or a case with no ladder reconciliation." The trace file
+(`handover/trace-fd9572-premise-fanin-2026-10-05.md`, a local handover file) records the same
+limits as "one fixture; decline-constraint side branches only; a case with no ladder
+reconciliation was not tested".
+
+**What this delta changes:**
+1. **(R-b)'s red set, in Task 2b Step 1.** All the cases below run at the engine, with no
+   caller key unless one is named, so guard (c) (PL 9560) is bypassed by construction.
+   - The 777 fan-in case (Delta 2). It stays.
+   - **The reorder pair from r5** (auditor-premise r5.py, sha256 `98aea5df…`). The trace says:
+     "With s_instalment moved before the decline steps → 5250; listed after them → 777."
+   - **Limit (i): a produce-nothing side branch that is not a decline constraint.** It is a
+     `constraint` with `on_violation: "error"`, plus a terminal expression that no interior step
+     consumes.
+   - **Limit (ii): an algorithm with no ladder reconciliation.** It has no rung outputs, so
+     there is no `LADDER_RECONCILIATION_FAILED` backstop, and its output reads the clamped
+     name directly.
+2. **T1 stays here and T2 does not.** RL 9562 owns both texts (17:30:02 item 2). T1 (FR-212)
+   is applied by this plan (Task 2 Step 6b). T2 (FR-213) moved with guard (c) to PL 9560 and is
+   no longer this plan's (Delta 1 withdrew Task 3, and T2 with it).
+3. **DP-R1 is still open.** The maintainer rules it "when it arrives with its hash impact"
+   (17:34:25 item 2). The impact, stated: **under the recommended option (i), no bundle hash
+   changes.** `content_hash = bundle_hash(graph, pins)` (`compile.py:641`) hashes the
+   `JdmGraph`, and `to_wire` is not an input to it. What does change is the wire edges of every
+   algorithm with a branch. Options (ii) and (iii) leave every hash unchanged too.
+
+**Whether these cases are red at the base commit.** The trace's reasoning is: "Because wiring
+is positional, a branch forked before the clamp is necessarily listed before s_instalment, so
+it cannot be the last edge into the sink." By that reasoning, the limit cases with no caller
+key may already give the right price at the base commit. Each case is recorded at the base
+commit either way:
+- a case that fails is a red, with its price;
+- a case that passes is a pin (the case the measurement could not reach, now covered), and
+  the ledger says so.
+
+The executor does not weaken a case to make it fail.
+
+**An import note.** The withdrawn (c) tests were the only users of `polars` (`pl`) and
+`score_batch` in Task 1's sample module. Drop those imports, and keep any other import that
+`ruff` reports still in use.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
 > or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax
 > for tracking. Also bound: `python-test` (the `req` markers, the negative tests),
@@ -873,7 +924,83 @@ async def test_no_side_branch_carries_a_stale_copy_into_the_sink() -> None:
 ```
 
   At the base commit it must FAIL with `assert 777 == 5250`. If it fails for another reason,
-  or passes, STOP and report it: the cause trace's premise has then moved. If auditor-fanin's
+  or passes, STOP and report it: the cause trace's premise has then moved.
+
+  Then append the Delta 3 cases:
+
+```python
+@pytest.mark.req("FR-212")
+@pytest.mark.parametrize("instalment_early", [True, False])
+async def test_the_r5_reorder_pair_prices_alike(instalment_early: bool) -> None:
+    """auditor-premise r5: with a raw `instalment_loading_minor`, `s_instalment` moved before
+    the decline steps gave 5250, and listed after them (the fixture's order) gave 777."""
+    compiled = await (
+        _score_fixture(move="s_instalment", before="s_decl_cap") if instalment_early
+        else _score_fixture()
+    )
+    context = {"effective_date": "2026-09-01", "purpose": "new_business",
+               **_BASE_INPUTS, "min_premium_minor": 5000, "instalment_loading_minor": 777}
+    out = await compiled.decision.async_evaluate(context)
+    assert out["result"]["instalment_loading_minor"] == 5250
+
+
+# Limit (ii): no ladder. `base` is clamped up to a declared `floor`, and the output reads
+# `base` itself, so no rung reconciliation can refuse a stale value.
+_NL_IN_X = {"step_id": "s_in_x", "type": "input", "label": "x", "input_name": "x",
+            "on_missing": "error", "produces": "x"}
+_NL_IN_F = {"step_id": "s_in_f", "type": "input", "label": "floor", "input_name": "floor",
+            "on_missing": "error", "produces": "floor"}
+_NL_A = {"step_id": "s_a", "type": "expression", "label": "base = x*100", "expr": "x * 100",
+         "result_type": "money_minor", "consumes": ["x"], "produces": "base"}
+_NL_CLAMP = {"step_id": "s_clamp", "type": "constraint", "label": "Floor",
+             "condition": "base >= floor", "on_violation": "clamp",
+             "clamp_bounds": {"min": "floor"}, "reason_code": "FLOOR",
+             "consumes": ["base"], "produces": ["base"]}
+_NL_OUT = {"step_id": "s_out", "type": "output", "label": "out", "output_name": "base_out",
+           "rounding": {"mode": "half_even", "dp": 0}, "consumes": ["base"]}
+# Limit (i): produce-nothing or terminal side branches other than a decline constraint.
+_NL_SIDE = {
+    "decline": {"step_id": "s_side", "type": "constraint", "label": "Cap",
+                "condition": "base <= 100000", "on_violation": "decline",
+                "reason_code": "CAP", "consumes": ["base"]},
+    "error": {"step_id": "s_side", "type": "constraint", "label": "Cap",
+              "condition": "base <= 100000", "on_violation": "error",
+              "reason_code": "CAP", "consumes": ["base"]},
+    "terminal_expression": {"step_id": "s_side", "type": "expression", "label": "Tap",
+                            "expr": "base + 0", "result_type": "money_minor",
+                            "consumes": ["base"], "produces": "tap"},
+}
+
+
+def _no_ladder(side: dict[str, Any], side_first: bool) -> dict[str, Any]:
+    middle = [side, _NL_CLAMP] if side_first else [_NL_CLAMP, side]
+    return {"slug": "no-ladder", "version": 1,
+            "input_contract": [{"name": "x", "type": "int", "nullable": False, "min": 0,
+                                "max": 1000},
+                               {"name": "floor", "type": "int", "nullable": False}],
+            "outputs": [{"name": "base_out", "type": "money_minor", "required": True}],
+            "steps": [_NL_IN_X, _NL_IN_F, _NL_A, *middle, _NL_OUT], "sub_graphs": []}
+
+
+@pytest.mark.req("FR-212")
+@pytest.mark.parametrize("kind", ["decline", "error", "terminal_expression"])
+@pytest.mark.parametrize("side_first", [True, False])
+async def test_no_ladder_side_branch_never_carries_the_pre_clamp_value(
+    kind: str, side_first: bool
+) -> None:
+    """auditor-fanin's limits: other produce-nothing kinds, and no ladder backstop. With no
+    caller key, the clamped value (5000) reaches the result whatever the list order."""
+    compiled = load_bundle(await compile_bundle(
+        _order_version(), _OneAlgorithm(_no_ladder(_NL_SIDE[kind], side_first))))
+    out = await compiled.decision.async_evaluate({"x": 3, "floor": 5000})
+    assert out["result"]["base"] == 5000
+```
+
+  `_order_version()` names the slug `order-test`. If compile refuses a slug mismatch, give
+  `_order_version` a `slug` parameter rather than copying it. If `RatingAlgorithm` refuses
+  one of the `_NL_SIDE` kinds (an `error` constraint may need fields the decline one does
+  not), mirror the shipped `RatingConstraintStep` and record the change. Do not drop the kind.
+  Record each case's base-commit result in the ledger, as Delta 3 says. If auditor-fanin's
   no-key case is still in this plan, append it too, with the price it measured as the
   base-commit failure.
 
