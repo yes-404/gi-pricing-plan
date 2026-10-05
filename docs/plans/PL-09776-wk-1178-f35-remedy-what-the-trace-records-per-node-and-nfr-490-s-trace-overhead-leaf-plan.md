@@ -112,6 +112,101 @@ decision-maker rules it."
 - **Build order on WK-1178:** after `SL-1360` (the permission-parity check) and after
   `FD-1357`'s fix (activation needs 5 and 6).
 
+## Delta, 2026-10-05 (after 17:39:08 BST, pre-mint): re-planned against the ordered chain (PL 9567); DP-F35-7 open
+
+This plan is still an unmerged draft. This delta records one ruling and what it does to the
+plan's `passThrough`-off. It deletes no text: each part it changes keeps its text and carries a
+pointer back here.
+
+**The ruling.** The maintainer's (by delegation) entry "2026-10-05 17:39:08 BST — DP-R1 (PL 9567
+#1193 @dd254b6d): (i) the ordered chain, with TWO conditions; PL 9776 re-plans after it; NFR-498
+auditor yes", item 1's first line and item 2, verbatim:
+
+> 1. DP-R1: (i) ADOPTED. It is the only option that removes the merge rather than relying on it. (ii) is subsumed by (c), and (iii) rests on an unread zen merge order.
+
+> 2. PL 9776 (#1051, unminted): (i) lands FIRST. PL 9776 re-plans its passThrough-off against the chain pre-mint, because it is an optimisation and (i) is a correctness root. Both plans name the dependency.
+
+The ruling record is RL 9562 (working id, #1195; Amendment N2 records DP-R1). The plan that
+builds the chain is PL 9567 (working id, #1193; slice SL 9568, WK-673).
+
+**1. The dependency: PL 9567 / SL 9568 merges FIRST.** This slice consumes SL 9568's output:
+the chain wire in `to_wire` and the context pass-through in `_model_call_handler`. So the two
+have a plan dependency under RL 9620 (b) and never run at once. **Activation need 10** is added
+below the others:
+
+```bash
+S=<the squash SHA of SL 9568 on main, named in the dispatch record>; git merge-base --is-ancestor "$S" "$M" && echo MET
+```
+
+Expected: `MET`. SL 9568 and PL 9567 are working ids that change at the mint, so the lead names
+the squash SHA rather than grepping for an id. Task 1's base measurement and Spike S1 run at or after that commit, because
+the base they measure is the chain.
+
+**2. What this plan turns off today, and where.** The write set (§"Write set", the `runtime.py`
+row), DP-F35-4's (M1) and Task 4 Step 3 say the same thing:
+- `"passThrough": False` in `_expression_node`, `_decision_table_node` and `_constraint_node`;
+- `to_wire` wires an edge from the producer of each name a step references (`inputNode` for a
+  raw input), so a node can have several incoming edges;
+- every interior node whose output a later node does not overwrite is wired to `outputNode`,
+  constraint and `model_call` nodes always, and `inputNode` is wired to `outputNode` too.
+
+**3. The same thing, restated for the chain.** After SL 9568, the serving graph is one path:
+`inputNode` → the first interior step → … → the last → `outputNode` (or `__exact_reads` →
+`outputNode`), over `_dependency_order`. Every node has exactly one incoming edge, and every
+node, `model_call` included, passes on the whole context it received. On that graph:
+- **`passThrough` cannot be turned off on the serving path.** On one path, a node's output is
+  the next node's only input. A node with `passThrough` off outputs only its own expressions,
+  so every step after it loses every name produced before it. The first later step that reads
+  an earlier name then fails. This is a property of the wire, not something a test needs to show.
+- **M1 as written brings back what DP-R1 (i) removed.** Its reference edges give interior
+  nodes a fan-in. Its `outputNode` wiring gives the sink a fan-in again: every node that is
+  not overwritten, plus `inputNode`. Where two of those edges carry the same name, the result
+  depends on how zen merges a fan-in. That is the basis the ruling rejected for (iii). So
+  Spike S1 step 2's way out ("If the topologically later writer wins in both, M1 may wire
+  every interior node to `outputNode`") can no longer justify a wire. Step 2 may still record
+  the merge-order fact.
+- **M4's "today's graph for untraced calls" now means the chain.**
+
+So `passThrough` off, if it lands at all, can only be on a **separate traced graph**. The serving
+chain stays as SL 9568 leaves it. That is a design choice the specs leave open, so it is
+**DP-F35-7**, below, **open and blocking**. This item STOPS here for the lead. Task 4 is not
+rewritten until DP-F35-7 is ruled. If the ruling changes Task 4's acceptance, a superseding `PL-`
+is filed, by §"Status"'s rule on rulings that differ from a recommendation.
+
+**4. NFR-490's measurement premise, re-checked under the chain.** Reasoned from the code at
+`4d3be141`. **It is unmeasured.**
+- **The instrument's structure** is `scripts/bench-rating.py`
+  `_algorithm_payload(with_gbm=True, n_expr=187)` (`:197`, `N_EXPR_STEPS` `:91`). On today's wire:
+  `s_expense` (`table`) and `s_risk` (`model_call`) both start at `inputNode`, and both feed
+  `s_v000`, which also reads `driver_age` from `inputNode`. Then 186 expression steps form a
+  chain, `s_v001` … `s_v186`. Only `s_v186`'s name is unconsumed, so the sink has **no** fan-in
+  in this structure (`runtime.py:494-499`).
+- **On the chain:** `inputNode` → `s_expense` → `s_risk` → `s_v000` → … → `s_v186` → sink.
+  Three things change. `s_risk`'s input also holds `expense_factor`. `s_risk`'s output holds the
+  whole context, not one key (`runtime.py:581` today; SL 9568's Task 2b Step 2). And `s_v000`
+  receives one edge, not three. The entry count is the same, and each node still copies the
+  whole context into its trace entry (P1). Only the `model_call` entry grows, by about one
+  context, out of about 190 entries.
+- **So the overhead case still holds.** By P4's bytes-to-cost ratio of about 1:1, the traced
+  overhead on the chain is expected to stay where F35 measured it (+384 % to +723 %, by F35's row
+  and the 08:57:07 entry), not to fall. The untraced figure U is expected to stay too: one extra
+  dict copy per `model_call` call. **Both are unmeasured.** The remedy is still needed.
+- **The prediction changes in one respect.** §"How NFR-490 is measured" says that M1 "also
+  moves the untraced figure U … which moves the allowance itself". Under DP-F35-7 (a), the
+  serving path is not changed, so U and the allowance (1.20 × U) do not move. Only T can fall.
+- **Spike S1 and Task 1 read against the chain:** S1 step 3's "untraced on today's wire" means
+  untraced on the chain; S1 step 4 compares the traced chain with the traced candidate; and Task 1's
+  frozen base corpus is recorded at or after SL 9568's merge (activation need 10).
+
+**5. What this delta changes in the plan:**
+- **Activation needs:** need 10 (above).
+- **Decision points:** DP-F35-7 appended to the table, open and blocking. DP-F35-4's row stays
+  as written, and DP-F35-7 restates its options for the chain.
+- **The write set's `runtime.py` row, DP-F35-4 (M1) and Task 4:** superseded by DP-F35-7
+  until it is ruled. The text stays as written.
+- **File contention:** a row for SL 9568 is appended (plan dependency, and `to_wire` and
+  `_model_call_handler`).
+
 ## Status
 
 `draft`. It was filed with **five blocking decision points** (§"Decision points"); four are decided, see the amendment of 2026-10-05 below. It turns `active` only
@@ -268,6 +363,15 @@ unmet.** The lead's GO check starts here, before anything else.
    ```
    Expected: both lines begin `status: active`. Then the lead's go, dated, in the dispatch
    record, with the DP-resolver line.
+
+10. **SL 9568 (PL 9567's slice, WK-673, the ordered chain) has merged** *(added 2026-10-05
+    by the Delta after 17:39:08 BST; the maintainer's (by delegation) ruling, item 2)*:
+    ```bash
+    S=<the squash SHA of SL 9568 on main, named in the dispatch record>; git merge-base --is-ancestor "$S" "$M" && echo MET
+    ```
+    Expected: `MET`. Without it, **unmet**. And **DP-F35-7 is ruled and minted**:
+    `git grep -l -e 'DP-F35-7' "$M" -- docs/rulings/` prints one path whose 5-digit id is below
+    `09000`.
 
 ### Build-start conditions (Task 0, after activation; not activation needs)
 
@@ -513,6 +617,8 @@ these are current.
 | `docs/ledgers/LG-<id>-….md` | new | none |
 | `docs/INDEX.md` | regenerated | registry-exempt |
 
+*(The Delta of 2026-10-05, after 17:39:08 BST: the `runtime.py` row above is superseded by DP-F35-7 until it is ruled. On SL 9568's chain, `passThrough` stays on in the serving graph.)*
+
 **Read, not edited:** `backend/src/app/api/score.py`, `backend/src/app/worker/trace_handlers.py`,
 `backend/src/app/platform/traces.py`, `pricing_core/rating/trace_diff.py`,
 `03` apart from Task 1A's rows, the hand-authored `docs/contracts/schemas/scoring.schema.json` (its `TraceStep` carries
@@ -541,6 +647,7 @@ not build concurrently, and the second merges `origin/main` first and re-runs it
 | **`SL-1340`** (WK-1250 Slice 2, `draft`) | `_build_trace` (inlined steps traced and attributable, FR-258's limb); possibly `TraceStep` | `_build_trace`, `TraceStep`'s docstring | its trace limb "starts only after" the `TraceStep` ruling (`PL-1254:171-177`) | **serialise.** Recommended order: this slice first, so `SL-1340` builds on the ruled content. The lead decides |
 | **The `RL-1343` rule-4 slice** (WK-1178, not yet planned) | `score.py`, `model_schema/scoring.py`, `docs/contracts/` | `_build_trace`, `TraceStep`'s docstring | `outputs`' type (per PL 9788's contention section) | same Work: serial |
 | **WK-675 S7b** (`PL-1286`, `draft`) | `trace_diff.py`, `score_compare`'s body (`RL-1261`) | read only | edits both | no shared definition. Behavioural: once `RL-1261` lands, `own_change` no longer reads `consumed`, so P8 stops mattering |
+| **SL 9568** (WK-673, PL 9567, #1193; the ordered chain) *(added 2026-10-05 by the Delta after 17:39:08 BST)* | `runtime.py` `to_wire`, `_model_call_handler`, `_model_call_failure`, the docstring's wiring rules; **plan dependency**: this slice consumes the chain | `to_wire` and the node builders (DP-F35-7 decides how) | rewrites `to_wire` as one path; the `model_call` pass-through | **dependency: SL 9568 merges first** (activation need 10); RL 9620 (b) fails, so never at once |
 
 ## How NFR-490 is measured (red first at the base)
 
@@ -592,7 +699,7 @@ shared-VM figure near a bound is diagnostic only.
 
 DP-F35-1 is the maintainer's named first decision point. DP-F35-1, -2 and -3 are one ruling's
 subject (`CR-1247` Proposal 3: "one ruling on F35, F55, the trace input/output finding and
-Proposal 11's question"). DP-F35-4 waits on Spike S1.
+Proposal 11's question"). DP-F35-4 waits on Spike S1. *(The Delta of 2026-10-05, after 17:39:08 BST: on the chain, DP-F35-4's options are restated as DP-F35-7, open and blocking.)*
 
 | DP | Question | Options | Recommendation | Kind | Blocking? | Resolved by |
 |---|---|---|---|---|---|---|
@@ -608,6 +715,7 @@ Proposal 11's question"). DP-F35-4 waits on Spike S1.
 | **DP-F35-4** | **How is the engine made to carry less?** (P1, P3, P4) | **(M1)** One graph: `passThrough` off on every node; an edge from the producer of each name a step references (the `inputNode` for a raw input); every node whose output a later node does not overwrite wired to `outputNode`; `inputNode` wired to `outputNode`. **(M2)** No engine trace: score untraced and rebuild each entry from the result; `elapsed_us` and `matched` (FR-258) are lost or recomputed in Python. **(M3)** Trim in `_build_trace` only. **(M4)** Two graphs: today's for untraced calls and M1's for traced ones; R3 then compares two graphs on every traced call | **M1, if S1 shows equality on the whole corpus and no mixed producer**; else **M4**, which leaves the serving path untouched. **M3 (trim only) does NOT satisfy NFR-490** (P4: our share is 12–25 %); it fixes F55 and NFR-500 only, and taking it means NFR-490 stays red with the residual owned by the maintainer's dated line. M2 loses two FR-258 fields | decision point (on S1's facts) | **yes** | decision-maker, after S1 |
 | **DP-F35-5** | **Which statistic does NFR-490's "adds ≤ 20 %" name?** NFR-490 (`03:1331`) names none (`RL-862` Addendum: "NFR-490 names no statistic"), so choosing one interprets the spec | (a) p99. (b) the mean. (c) every quantile, as the harness's ratio ladder prints | **(a) p99, the maintainer's lean, IF NFR-489 (`03` §9's scoring-latency NFR) states its budget at p99**, which the decision-maker verifies (NFR-489's row, `03:1190` at `19155b50` and `03:1330` at `ef5dc6e7`, reads "Real-time scoring p99 < 50 ms"). One statistic for the two budgets on one path keeps them comparable | spec interpretation → decision point | **yes** (Tasks 1 and 6 read against it) | **Decided (a) p99** by RL 9770 (working id, #1060, not yet minted); the maintainer's acceptance is dated in it (2026-10-01 10:30:00 BST). **decision-maker**, in the same session as DP-F35-1 to -3, with **verbatim text and placement**: a dated clarification on NFR-490's row (`03` §9) |
 | DP-F35-6 | Does a passing NFR-490 trigger `RL-862`'s override ("if #416's audit shows traced cost can be brought inside NFR-490's ceiling — in which case always-capture becomes affordable and the simpler design returns")? | (a) no: the off-path design stays; any reversion is a new ruling. (b) yes, in this slice | default **(a)**: this slice touches no serving-path backend file (Acceptance 12; at most the `errors.py` registry entry under DP-F35-1 (iii-a) (b)) | scope | no: **default (a) applies throughout**; named in §"Hand-off" | decision-maker, if raised |
+| **DP-F35-7** *(added 2026-10-05 by the Delta after 17:39:08 BST; DP-F35-4 restated for the chain)* | **On the ordered chain (PL 9567, DP-R1 (i)), how does a traced call carry less?** The serving chain needs `passThrough` on every node (the Delta, item 3), and M1 as written re-creates the fan-in DP-R1 (i) removed | **(a) Two graphs, the traced one admitted only where nothing merges.** Untraced serving stays on the chain, unchanged. A traced call scores on a second wire: `passThrough` off, reference edges, and the not-overwritten nodes wired to `outputNode`, as in Task 4 Step 3. That wire is built only when a compile-time check shows that **no name reaches `outputNode` by two edges**. The check counts `inputNode` as the writer of every context key, and counts each constraint's `<step>__violated` and the `model_call` error key. An algorithm that fails the check (for example, a clamp that re-produces a declared input) is traced on the chain with the `_build_trace` trim only, and the ledger counts those algorithms. R3 compares each traced result with the chain's. **(b) M2 on the chain:** no engine trace; each entry is rebuilt from the result, and FR-258's `elapsed_us` and `matched` are lost or recomputed in Python. **(c) M3 on the chain:** trim in `_build_trace` only; NFR-490 stays red, and the residual is owned by the maintainer's dated line. *(Excluded: the chain with `passThrough` off and each node re-emitting every earlier name as an expression. That is `passThrough` under another name, with the same payload.)* | **(a).** Every price stays on the chain, so the correctness root is not touched. The traced graph relies on no merge order, because no name arrives at the sink twice, and a union of disjoint dicts does not depend on order. Its costs: `load_bundle` builds two wires per bundle; the traced `model_call` node needs the handler to return only its produced names, which adds a mode to `_model_call_handler` (shared with A-1, A-2 and A-3, so serialise); and an algorithm that fails the check gets no NFR-490 relief. (b) loses two FR-258 fields. (c) does not remedy NFR-490 (P4) | decision point (on Spike S1's facts, re-read against the chain) | **yes** | decision-maker, after S1; **open** |
 
 ## Spike S1 — the fact DP-F35-4 needs (an `RS-` of `kind: spike`, before activation)
 
@@ -1435,6 +1543,8 @@ git commit -m "fix(rating): a trace step records what its step read and declared
 ```
 
 ### Task 4: What the engine carries (DP-F35-4 (M1)), with R3 held
+
+*(The Delta of 2026-10-05, after 17:39:08 BST: this task is written for M1 on today's wire. On SL 9568's chain it waits for DP-F35-7, and it is rewritten, or the plan superseded, once DP-F35-7 is ruled.)*
 
 **Files:**
 - Modify: `packages/pricing-core/src/pricing_core/rating/runtime.py` (`to_wire`, the three node builders, the module docstring's rule 3)
