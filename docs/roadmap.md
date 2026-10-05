@@ -1074,7 +1074,7 @@ first slice. **Backend first:**
 - `RatingAlgorithmDraft` (RL 9767 item 1's type only), with `RatingAlgorithm` as its
   subclass;
 - `POST /api/v1/rating-algorithms` typed with that body and a `RatingAlgorithmSaved` 201,
-  keeping every FR-212 save code. This is FD-1366 rule (ii), and the deputy decided
+  keeping every FR-212 save code. This is FD-1366 rule (ii), and the maintainer (by delegation) decided
   DP-S2-1 (a) and DP-S2-2 on 2026-10-05 at 12:59:02 BST;
 - `GET /api/v1/rating-algorithms/{slug}@{version}` (RL 9753 T1, T2) and
   `GET /api/v1/rating-versions/{slug}@{version}` (RL 9766 T1, T2), each spec-first with the
@@ -1090,12 +1090,12 @@ first slice. **Backend first:**
 - a keyboard node navigator, checked against WCAG 2.2 AA;
 - save from the view, and the FR-25 link from `RatingVersionView`;
 - for a version that pins no algorithm, a "no algorithm pinned" state and an empty canvas
-  that saves `<slug>@1`, with no re-pinning (DP-S2-3 (a), the deputy, 2026-10-05 13:03:23 BST);
+  that saves `<slug>@1`, with no re-pinning (DP-S2-3 (a), the maintainer (by delegation), 2026-10-05 13:03:23 BST);
 - the bundle delta and the dev-build pan and zoom re-measure (F2 conditions 3 and 5).
 
 S2 shows no graph validation of its own: FR-24's designer exception stays with S3. **Lane:**
 the third build lane's candidate.
-- It shares `03` §5.1 with lane A's `SL-1391`. The deputy decided to run both (2026-10-05
+- It shares `03` §5.1 with lane A's `SL-1391`. The maintainer (by delegation) decided to run both (2026-10-05
   13:00:09 BST, item 8), with the hunks and anchors named in both dispatch records,
   non-adjacent rows, merge-tree rc 0 and a re-gate on the second merge, and gates that never
   overlap.
