@@ -511,3 +511,9 @@ Fix commit `76897a8ba6b089af1f761e4972c033c171705943` (on `f1953378…`, the mer
 | `pnpm type-check` | 0 | |
 | `pnpm test` | 0 | 97 files, 612 tests passed |
 | `pnpm build` | 0 | |
+
+## Forward entry, 2026-10-05 10:25 UTC — mutation proof of the `_fit` sink pin, and a disclosed exception
+
+**Disclosure.** Gated head `76897a8b` → `f76a8283`: 3 commits touching only `backend/tests/test_error_sinks.py` (+3/−1) so the census entry names its pin, plus this ledger entry. The gate for them is #1122's PR CI python run. This is an exception to "after the gated head, only the ledger", on the deputy's narrowed (A).
+
+**Mutation proof** (scratch edit, never committed). The pin is `packages/pricing-core/tests/test_objectives.py::test_nonfinite_aborts_an_expression_naming_the_round_and_no_value`. Edit: in `_finite_or_abort`, the `NonFiniteDerivativeError` f-string gained ` y={float(y_bad.min())}` after `boosting round {round_index}`. Red, verbatim: `AssertionError: assert '7.25' not in 'OBJECTIVE_N...lds y and f.'` (`test_objectives.py:732`; xgboost and lightgbm both fail). Restore: the file was copied back from a backup; `cmp <backup> <file>` exit 0; `git diff --quiet -- packages/pricing-core/src` exit 0. Green after restore: `2 passed, 103 deselected`.
