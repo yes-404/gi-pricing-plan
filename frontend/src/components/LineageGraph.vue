@@ -7,6 +7,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import VChart from "vue-echarts";
 
 import type { DatasetLineage } from "@/api/datasets";
+import type { Column } from "@/chart-table";
 import ChartFigure from "./ChartFigure.vue";
 
 use([GraphChart, TooltipComponent, CanvasRenderer]);
@@ -100,19 +101,40 @@ const option = computed(() => ({
   ],
 }));
 
-const columns = ["Kind", "Name", "Operation", "Status"] as const;
+/**
+ * One row of the lineage table. Component-local: no backend shape describes it, since the
+ * table flattens the parent, this version, its derived versions and its models into one list.
+ */
+interface LineageRow {
+  kind: string;
+  name: string;
+  operation: string | null;
+  status: string | null;
+}
 
-const rows = computed<readonly (readonly (string | number | null)[])[]>(() => {
-  const list: (string | number | null)[][] = [];
+const columns: readonly Column<LineageRow>[] = [
+  { key: "kind", label: "Kind", value: (r) => r.kind },
+  { key: "name", label: "Name", value: (r) => r.name },
+  { key: "operation", label: "Operation", value: (r) => r.operation },
+  { key: "status", label: "Status", value: (r) => r.status },
+];
+
+const rows = computed<readonly LineageRow[]>(() => {
+  const list: LineageRow[] = [];
   if (parentNode.value) {
-    list.push(["Built from", parentNode.value.name, props.lineage.built_from?.operation ?? null, null]);
+    list.push({
+      kind: "Built from",
+      name: parentNode.value.name,
+      operation: props.lineage.built_from?.operation ?? null,
+      status: null,
+    });
   }
-  list.push(["This version", versionNode.value.name, null, null]);
+  list.push({ kind: "This version", name: versionNode.value.name, operation: null, status: null });
   for (const child of props.lineage.depends_on_this.derived_versions ?? []) {
-    list.push(["Derived version", `v${child.version}`, child.operation, null]);
+    list.push({ kind: "Derived version", name: `v${child.version}`, operation: child.operation, status: null });
   }
   for (const model of props.lineage.depends_on_this.models ?? []) {
-    list.push(["Model", model.slug, null, model.status]);
+    list.push({ kind: "Model", name: model.slug, operation: null, status: model.status });
   }
   return list;
 });

@@ -13,6 +13,7 @@ import VChart from "vue-echarts";
 
 import type { OneWaySummary } from "@/api/profiles";
 import { formatDecimalString, formatMinor } from "@/api/versions";
+import type { Column } from "@/chart-table";
 import ChartFigure from "@/components/ChartFigure.vue";
 
 use([BarChart, LineChart, CustomChart, GridComponent, TooltipComponent, LegendComponent,
@@ -134,18 +135,6 @@ function renderInterval(params: unknown, api: unknown): unknown {
  *   one and the mean severity does not, which is not what FR-61 says; severity from
  *   nine claims is the less stable of the two, not the more.
  */
-const columns = [
-  "Level",
-  "Exposure",
-  "Claims",
-  "Incurred",
-  "Frequency",
-  "Frequency CI",
-  "Severity",
-  "Severity CI",
-  "Burning cost",
-];
-
 /** An interval as one cell. `—` when it is absent, which below two claims it always is. */
 function interval(ci: readonly [number, number] | null | undefined, digits: number, scale = 1) {
   if (ci == null) return null;
@@ -162,19 +151,32 @@ function interval(ci: readonly [number, number] | null | undefined, digits: numb
  * sum `mean_severity` is (`pricing_core.data.profile._one_way_row`), so it is divided the
  * same way rather than on the assumption that an interval matches its statistic.
  */
-const tableRows = computed(() =>
-  rows.value.map((row) => [
-    row.level,
-    formatDecimalString(row.exposure_years),
-    row.claim_count.toLocaleString(),
-    formatMinor(row.claim_amount_minor, props.currency),
-    row.frequency?.toFixed(4) ?? null,
-    interval(row.frequency_ci, 4),
-    row.mean_severity == null ? null : (row.mean_severity / 100).toFixed(2),
-    interval(row.severity_ci, 2, 100),
-    row.mean_burning_cost == null ? null : (row.mean_burning_cost / 100).toFixed(2),
-  ]),
-);
+type SummaryRow = NonNullable<OneWaySummary["rows"]>[number];
+
+const columns = computed<readonly Column<SummaryRow>[]>(() => [
+  { key: "level", label: "Level", value: (row) => row.level },
+  { key: "exposure", label: "Exposure", value: (row) => formatDecimalString(row.exposure_years) },
+  { key: "claims", label: "Claims", value: (row) => row.claim_count.toLocaleString() },
+  {
+    key: "incurred",
+    label: "Incurred",
+    value: (row) => formatMinor(row.claim_amount_minor, props.currency),
+  },
+  { key: "frequency", label: "Frequency", value: (row) => row.frequency?.toFixed(4) ?? null },
+  { key: "frequency-ci", label: "Frequency CI", value: (row) => interval(row.frequency_ci, 4) },
+  {
+    key: "severity",
+    label: "Severity",
+    value: (row) => (row.mean_severity == null ? null : (row.mean_severity / 100).toFixed(2)),
+  },
+  { key: "severity-ci", label: "Severity CI", value: (row) => interval(row.severity_ci, 2, 100) },
+  {
+    key: "burning-cost",
+    label: "Burning cost",
+    value: (row) =>
+      row.mean_burning_cost == null ? null : (row.mean_burning_cost / 100).toFixed(2),
+  },
+]);
 </script>
 
 <template>
@@ -184,7 +186,7 @@ const tableRows = computed(() =>
     caption="Exposure and claim frequency by level, with intervals on the frequency and the
              mean severity."
     :columns="columns"
-    :rows="tableRows"
+    :rows="rows"
   >
     <VChart
       class="h-80 w-full"

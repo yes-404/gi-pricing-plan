@@ -93,7 +93,7 @@ instrument's input, not a regression in main.
 
 1. **The documented forms are wrong on every migrated checkout.** `dev-commands` (`migrate --verify <root>`, lines
    273 and 788–791) gives no `--ref`; `delivery-process.md` §11a ("`--verify <tmpdir> --ref HEAD` before its PR
-   is opened, read row (a)") and `delivery-process.core.json:477` give `--ref HEAD`. §11a was written 2026-09-03 for
+   is opened, read row (a)") and `delivery-process.core.json` (the `"command": "python3 scripts/doc-id.py migrate --verify <tmpdir> --ref HEAD"` row, `:481` at `origin/main` `ef5dc6e7317281ac9d1840fa61861597e3c1b8b1`; `:477` at the filing tree) give `--ref HEAD`. §11a was written 2026-09-03 for
    an un-migrated tree. After `71f5a220` an author who follows it reads row (a) as FAIL — the row §11a tells them to read.
 2. **A standing nine-row red hides a real one.** Once an author learns that "main prints nine rows", a genuine
    (a) or (f) regression prints the same lines among those nine; exit 3 carries no information. The
@@ -136,7 +136,7 @@ Cited verbatim from the maintainer's entry headed *"FD 9755 (#1073): MEDIUM, own
 
 > **Withdrawn:** … **It was my invocation:** `--ref HEAD` re-migrates an already-migrated tree. … In CI's form, main exits 1 with UNCHANGED: 1 ((g) only) = the record. **The bisect … proves it.** … **#1056 and #1058:** the main-vs-head comparison was measured the same way on both sides, so it stands as a no-change check, but the absolute rows I quoted (incl. "h1 PASS") were meaningless and are withdrawn as evidence.
 >
-> **Severity: MEDIUM** (not LOW): the documented invocation (dev-commands, delivery-process §11a, core.json:477) is wrong on any migrated checkout, and the instrument is silent. It produced a false alarm here, **and a false PASS (h1 DISCLOSE → PASS)**, so it can hide as well as invent. Owner WK-1178.
+> **Severity: MEDIUM** (not LOW): the documented invocation (dev-commands, delivery-process §11a, core.json, the `migrate --verify` command row) is wrong on any migrated checkout, and the instrument is silent. It produced a false alarm here, **and a false PASS (h1 DISCLOSE → PASS)**, so it can hide as well as invent. Owner WK-1178.
 >
 > **Discharge (no DM):** main matches its record, so there is nothing to re-record or retire. (1) **The three documented invocations corrected** to CI's form (`--ref <meta.verified_against_tree> --record-ref HEAD`), core.json via its digest-bump rule, with the `<root>` → "an empty snapshot dir, or omit" wording; (2) **the instrument refuses (exit 2, a named message) when `--ref`'s tree is already migrated** … the planner picks the predicate and proves it on broken input both ways … A skill update in the same commit (CLAUDE.md §12).
 
@@ -156,9 +156,11 @@ What this changes in the record above:
 
 ### Discharge (owner WK-1178)
 
-1. `dev-commands`, `delivery-process.md` §11a and `delivery-process.core.json:477` corrected to CI's form,
-   `--ref <meta.verified_against_tree> --record-ref HEAD` (core.json by its digest rule), with the `<root>` wording: an empty snapshot dir, or omitted.
-2. The instrument **refuses (exit 2, a named message)** when `--ref`'s tree is already migrated; the planner picks the predicate and
-   proves it on broken input both ways (a migrated ref refused, an un-migrated ref accepted); a skill update lands in the same commit.
+> **Amended 2026-10-05 before mint:** the discharge is split in two halves with different owners, so the finding closes only when both land. The `delivery-process.core.json` cite is re-anchored by symbol (the `"command": "python3 scripts/doc-id.py migrate --verify <tmpdir> --ref HEAD"` row, `:481` at `origin/main` `ef5dc6e7317281ac9d1840fa61861597e3c1b8b1`; the filed text said `:477`, and the triage's `:479` was also stale at that tree). The line cites above `delivery-process.md:265` and `dev-commands` `:273`, `:788` re-resolved at the same tree.
+
+1. **Docs half — owner: contributor onboarding item 3** (`handover/contributor-onboarding-2026-10-06.md`, "Item 3 — FD 9755's docs part", accepted 2026-10-05; a local handover file, not in the repository). `dev-commands`, `delivery-process.md` §11a and `delivery-process.core.json` (the `migrate --verify` command row above) corrected to CI's form, `--ref <meta.verified_against_tree> --record-ref HEAD` (core.json by its digest rule), with the `<root>` wording: an empty snapshot dir, or omitted. That item's prerequisite is this finding minted.
+2. **Instrument half — owner: WK-1178** (`PL-1371` row 11, "FD 9755 discharge (documented `migrate --verify` form plus the refusal)"; the onboarding item states the refusal "is code and stays with a lane"). The instrument **refuses (exit 2, a named message)** when `--ref`'s tree is already migrated; the planner picks the predicate and proves it on broken input both ways (a migrated ref refused, an un-migrated ref accepted); a skill update lands in the same commit.
+
+The finding is discharged when **both** halves are merged; either alone leaves it open.
 
 **Going forward:** every ACK that runs it quotes CI's form with its rc and row line.
