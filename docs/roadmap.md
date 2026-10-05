@@ -1138,7 +1138,7 @@ relates: [PL-1286, PL-1371, FD-1284, RL-1263]
 ```
 
 `PL-1286` S13 (`:316`), cut as a draft row for its leaf plan, PL 9576 (working id; the plan's
-own PR). `07` §5.3's `/jobs` view (`07:390`): kind, status, progress bars, submitter and
+own PR). `07` §5.3's `/jobs` view (`07:398` at `4d3be141`; `PL-1286` cites `:390`): kind, status, progress bars, submitter and
 duration, live over `GET /api/v1/jobs` and `/jobs/{id}/events`; the FR-25 link from the entry;
 the `reachability.test.ts` exception for `/models/:slug/backtests/:backtestId` removed and its
 FR-24 comment corrected. New functions in `frontend/src/api/jobs.ts`; no backend change.
@@ -1167,7 +1167,7 @@ relates: [PL-1286, PL-1371, FD-1284, RL-1263]
 ```
 
 `PL-1286` S14 (`:317`), cut as a draft row for its leaf plan, PL 9574 (working id; the plan's
-own PR). `07` §5.3's `/jobs/:id` view (`07:391`): parameters, progress stages, logs with
+own PR). `07` §5.3's `/jobs/:id` view (`07:399` at `4d3be141`; `PL-1286` cites `:391`): parameters, progress stages, logs with
 `trace_id` (FR-402's UI limb, `GET /jobs/{id}/logs`), the result link, the cancel action
 (FR-401, `POST /jobs/{id}/cancel`) and error detail; the logs render nothing FR-402 excludes.
 **Order:** after S13, whose view it extends; a conditional cut with S13 under `PL-1371` §8 C2.
