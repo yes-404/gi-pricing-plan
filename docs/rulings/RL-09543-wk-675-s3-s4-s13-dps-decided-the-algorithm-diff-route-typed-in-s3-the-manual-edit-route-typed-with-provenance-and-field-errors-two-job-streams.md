@@ -205,7 +205,10 @@ Each find string is counted with `grep -cF` over the plan file at the PR head na
 
 - **P1, the DP table.** After the line beginning `| **DP-S4-4** |`, insert a blank line and:
   `**Ruled 2026-10-05 (RL 9543, working id):** DP-S4-1 (a), its 200 a bare `RateTableDiff` and a 409 for a base that is not the latest; DP-S4-1c (ii), `created_by_edit`; DP-S4-2 (d), every failure a `FieldError` in the problem's existing `errors`; DP-S4-3 and DP-S4-4 as recommended.`
-- **P2, the write set.** Find `` | same | new `RateTableCell`; the DP-S4-1 request and response types | added | ``;
+- **P2, the write set.** Find (the fenced line, byte for byte)
+  ```text
+  | same | new `RateTableCell`; the DP-S4-1 request and response types | added |
+  ```
   replace with
   `` | same | new `RateTableCell`, `RateTableManualEdit` and `ManualEdit`; `RateTableVersion.created_by_edit` and `_one_creation_path` widened (RL 9543) | added | ``
   and insert after it
@@ -231,8 +234,10 @@ Each find string is counted with `grep -cF` over the plan file at the PR head na
 
 **PL 9578 (S3), #1186 at `20ba9a2e`; re-counted at `c5d1d03a` (amendment of 2026-10-05 17:42 BST below).**
 
-- **P7, Status.** Find
-  ``` `draft`. DP-S3-1 and DP-S3-2 (below) are open and are the maintainer's (by delegation). The```;
+- **P7, Status.** Find (the fenced line, byte for byte)
+  ```text
+  `draft`. DP-S3-1 and DP-S3-2 (below) are open and are the maintainer's (by delegation). The
+  ```
   replace with
   ``` `draft`. DP-S3-1 and DP-S3-2 (below) are decided by the maintainer (by delegation), recorded in RL 9543 (working id): DP-S3-1 (a), DP-S3-2 (a). The```.
 - **P8, Activation need 4.** Find `4. **DP-S3-1 and DP-S3-2 decided**, each by a dated line.`;
@@ -248,8 +253,10 @@ Each find string is counted with `grep -cF` over the plan file at the PR head na
 
 **PL 9576 (S13), #1185 at `06fb5ca3`.**
 
-- **P11, Status.** Find
-  ``` `draft`. One decision point is open and blocks activation (DP-S13-1). The plan stays```;
+- **P11, Status.** Find (the fenced line, byte for byte)
+  ```text
+  `draft`. One decision point is open and blocks activation (DP-S13-1). The plan stays
+  ```
   replace with
   ``` `draft`. DP-S13-1 is decided, (a′), in RL 9543 (working id). The plan stays```.
 - **P12, Acceptance 5.** Find
@@ -338,3 +345,20 @@ plan file at `c5d1d03a`:
 
 So the planner applies P7 and P8 only. PL 9582 (`800d3a70`) and PL 9576 (`06fb5ca3`) are
 unchanged at their heads (ls-remote at 17:42 BST), so P1–P6 and P11–P14 stand as counted.
+
+## Pre-mint note, 2026-10-05 18:45 BST: P2, P7 and P11's find strings re-quoted as fenced lines
+
+Presentation only; nothing ruled or applied changes (decision-maker, on the maintainer's (by
+delegation) entry of 2026-10-05 18:43:10 BST in the lead's channel: "P2, P7 and P11's find
+strings count 0 when read LITERALLY and 1 only under CommonMark code-span padding removal …
+Or RL 9543 re-quotes those three without the padding; the DM picks one form"). The three were
+code spans padded with a space so that they could open with a backtick or a pipe; read
+literally the padding is part of the string, and the count is 0. P7 and P11 carried a leading
+space only, which CommonMark itself does not strip, so a padding-rule sentence would not have
+resolved them. Each is now a fenced line: the find string is that line's bytes, without the
+two-space list indentation every continuation line in this list carries. Counted with Python
+`str.count` on the plan file at its pre-apply head, each is **1**: P2 in PL 9582 at
+`800d3a7082b1aa4ab51019cc2a8993c9510129ff`, P7 in PL 9578 at
+`c5d1d03acdb292e34ff30ebaf58ff87ab3f918d3`, P11 in PL 9576 at
+`06fb5ca3745e12379d0763cdfe63359155c9acce`. The planner applied them in this reading (PL 9582
+#1187 at `3b15a829`, PL 9578 #1186 at `aea4b634`, PL 9576 #1185 at `0857c5e1`).
