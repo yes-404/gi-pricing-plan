@@ -1,16 +1,16 @@
 ---
-id: FD-9572
+id: FD-1425
 family: finding
 title: `to_wire` wires a consumed name by step-list order, not dependency order: a clamp listed before its producer is silently bypassed, and FR-212's save check accepts the list
 status: active
-created: 2026-10-05            # working id; the mint date will replace this (check 31)
+created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: auditor
 tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8
 corrected_by: []
 relates: [WK-673, WK-1178, FR-212, FR-243]
 ---
 
-# FD-9572 — `to_wire` resolves each consumed name to the producer seen so far in LIST order; a valid saved algorithm whose list order differs from its dependency order prices wrongly, silently
+# FD-1425 — `to_wire` resolves each consumed name to the producer seen so far in LIST order; a valid saved algorithm whose list order differs from its dependency order prices wrongly, silently
 
 **Filed** by auditor-towire on the lead's order of 2026-10-05, from the maintainer's (by delegation) entry headed "2026-10-05 17:01:30 BST — Discrepancy CLOSED; PR triage accepted (4 closes, each after its absorber merges); A-3/A-4/S3 rulings; the to_wire defect: REPRODUCE NOW" (`to-lead.md`, a local channel file, so cited by its header), and the lead's follow-up order for the two severity checks. The defect was first reported in dm-finals2's WK-1250 S2 addendum (`handover/dp-memo-wk1250-s2-2026-10-05.md`, a local file). Working id 9572 (reserved in the lead's `eta.md`). `tree:` is `origin/main` at filing; every measurement below ran at that tree.
 

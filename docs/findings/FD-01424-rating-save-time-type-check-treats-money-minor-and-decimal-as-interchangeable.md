@@ -1,16 +1,16 @@
 ---
-id: FD-9549
+id: FD-1424
 family: finding
 title: The rating save-time type check treats money_minor and decimal as interchangeable for expression producers
 status: active
-created: 2026-10-05            # working id; the mint date will replace this (check 31)
+created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: auditor
 tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6
 corrected_by: []
 relates: [WK-1178, FR-226, FR-227]
 ---
 
-# FD-9549 — `_compatible` passes every pair of `_NUMERIC` types (`compile.py:124-129`)
+# FD-1424 — `_compatible` passes every pair of `_NUMERIC` types (`compile.py:124-129`)
 
 **Filed** by auditor-numeric on the lead's brief of 2026-10-05, working id 9549 (reserved in the lead's `eta.md`),
 from the maintainer's (by delegation) ruling in `to-lead.md`, entry "RULINGS at 17:30:02 BST", item 3. The claim
