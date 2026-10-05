@@ -1,10 +1,10 @@
 ---
-id: PL-9567
+id: PL-1435
 family: plan
 kind: leaf
-title: WK-673 — FD 9572 fix, to_wire wires each consumed name to its producer over a stable topological order, and a quote input never shadows a produced value (FR-212, FR-213): leaf plan
+title: WK-673 — FD-1425 fix, to_wire wires each consumed name to its producer over a stable topological order, and a quote input never shadows a produced value (FR-212, FR-213): leaf plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-05            # working id; the mint date will replace this (check 31)
+created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: planner
 tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6
 phase: P2
@@ -15,15 +15,15 @@ corrected_by: []
 relates: [FD-1374, RL-1263, SL-1391]
 ---
 
-# PL 9567 (working id) — WK-673: the FD 9572 fix, wiring by dependency order and no shadowed produced value, leaf plan
+# PL-1435 — WK-673: the FD-1425 fix, wiring by dependency order and no shadowed produced value, leaf plan
 
-Filed under working id 9567 (this plan) and slice working id 9568 (its `SL-` row under WK-673 in
-[`../roadmap.md`](../roadmap.md), `draft`). The lead reserved both. The finding is FD 9572
-(working id, draft PR #1183, branch `fd-9572-to-wire-list-order`). Everything below was measured
+Filed under PL-1435 (this plan) and slice SL-1436 (its `SL-` row under WK-673 in
+[`../roadmap.md`](../roadmap.md), `draft`). The lead reserved both. The finding is FD-1425
+(minted; the draft PR #1183 is closed). Everything below was measured
 at `origin/main` `4d3be1414ad4dacdaa0c14ef49fb21853adbaed6` on 2026-10-05, unless a line says
 otherwise.
 
-## Delta, 2026-10-05 (after 17:30:13 BST, pre-mint): fix (c) moves to PL 9560; DP-1..DP-4 ruled
+## Delta, 2026-10-05 (after 17:30:13 BST, pre-mint): fix (c) moves to PL-1426; DP-1..DP-4 ruled
 
 This plan is still an unmerged draft. This delta records three rulings and what each removes
 from the plan. It does not rewrite the plan: each withdrawn part keeps its text and carries a
@@ -37,19 +37,19 @@ pointer back here.
    - DP-3: not decided ("(c) is exactly 'an undeclared key naming a produced value'; FR-246's
      declared-inputs rule (FD-1374 / PL 9776) stays its own").
    - DP-4 (a): "an RL adopts T1 (FR-212 …) and T2 (FR-213) BEFORE activation". That ruling is
-     RL 9562 (working id).
+     RL-1423.
 2. **The STOP fired, and (c) moved.** The maintainer's (by delegation) entry "2026-10-05
-   17:25:07 BST — URGENT RULING: FD 9572's premise FALSE; OPTION (iii): a HOLD now, and an
+   17:25:07 BST — URGENT RULING: FD-1425's premise FALSE; OPTION (iii): a HOLD now, and an
    EMERGENCY (c)-only slice FIRST in lane B (WK-1178); the wiring fix after", item 3, verbatim:
    > The WIRING fix (PL 9567, list order) follows as planned, after the emergency slice, rebased on it; its (c) part is then already delivered, so PL 9567 drops (c) by a dated delta and keeps (a)/(b).
 
-   Fix (c) and its reds are now **PL 9560** (working id; SL 9561 under WK-1178; #1196). PL 9560
+   Fix (c) and its reds are now **PL-1426** (SL-1427 under WK-1178; #1196). PL-1426
    also fixes the root that auditor-premise found in `score_one`'s path.
 3. **The premise, answered.** The maintainer's (by delegation) addendum, "2026-10-05 17:25:23
    BST — ADDENDUM to my 17:25:07 urgent ruling …", says: "the ZEN wiring of an ORDERED graph is
    correct (350 for every extra key)". So `test_a_misordered_algorithm_prices_as_its_topological_twin[ctx1]`
    (engine level, `{x: 3, base: 7}`) is expected to pass after Task 2. The shadow that was found
-   sits in `score_one`'s path, and it is PL 9560's.
+   sits in `score_one`'s path, and it is PL-1426's.
 
 **What this removes from this plan:**
 - Task 3, in full (the check, its calls, its `_INPUT_FREE` entry, the in-place clamp test, T2).
@@ -60,7 +60,7 @@ pointer back here.
 - The `score.py` row, so this plan no longer edits `score.py` at all.
 
 **What the plan keeps:** (a) and (b). That is Tasks 1 and 2 without the (c) tests, Task 4,
-the pins, and T1 (FR-212, adopted by RL 9562; applied in Task 2 as Step 6b below).
+the pins, and T1 (FR-212, adopted by RL-1423; applied in Task 2 as Step 6b below).
 
 **Contention, now:**
 - This plan's write set is `runtime.py` (`to_wire` and the new helper), its own test module,
@@ -69,14 +69,14 @@ the pins, and T1 (FR-212, adopted by RL 9562; applied in Task 2 as Step 6b below
   is name-disjoint from PL 9688's (`_decision_table_node` in `runtime.py`).
 - It still serialises with PL 9776 on `to_wire`.
 
-**Activation needs, replacing those in the SL 9568 row:**
-- FD 9572 minted.
-- RL 9562 minted (it adopts T1) before this plan.
-- PL 9560 merged, and this slice rebased onto it.
+**Activation needs, replacing those in the SL-1436 row:**
+- FD-1425 minted.
+- RL-1423 minted (it adopts T1) before this plan.
+- PL-1426 merged, and this slice rebased onto it.
 - This plan made `active` by a dated line.
 - A free build lane.
 
-**Task 2, Step 6b (added by this delta):** apply T1, byte-for-byte as RL 9562 adopts it, at
+**Task 2, Step 6b (added by this delta):** apply T1, byte-for-byte as RL-1423 adopts it, at
 the end of the FR-212 row's last cell (`03` `:81`). Then run `python3 scripts/audit-docs.py`:
 only check 31 may fail before the mint.
 
@@ -104,7 +104,7 @@ planner and requires approval of any bundle-hash change.
 | Option | What it does | Bundle hash | Cost and risk |
 |---|---|---|---|
 | **(i) One ordered path** | `to_wire` wires the interior steps as a single chain over the stable topological order of Task 2 (`_dependency_order`): input → the first step → … → the last step → the sink (or `__exact_reads` → output). Every node then has exactly one incoming edge. The dependency edges and the sink fan-in are gone, so no merge happens anywhere, and each name's final producer writes it after every earlier copy. The `model_call` handler (`_model_call_handler`, `runtime.py:512`) must pass the context through: today it returns only `{"output": {produced names}}` (`:581`), which a chain would turn into a dropped context. | **Unchanged.** `content_hash = bundle_hash(graph, pins)` (`compile.py:641`) hashes the `JdmGraph`, never the wire. | The wire changes for every algorithm with a branch; a purely linear one (`[in, A, B, out]`) wires exactly as today. It relies on whole-context `passThrough`, which **PL 9776 (#1051, F35 remedy) turns off** for `_constraint_node` and `_decision_table_node` (its plan `:503`). The two cannot both land as written. |
-| (ii) Strip produced names from the relayed context | `inputNode` relays only the declared inputs. | Unchanged | It closes only caller copies, which guard (c) (PL 9560) already refuses at the entry. It cannot remove an internal stale copy (a branch that forks before an in-place clamp), which is the case auditor-fanin is measuring. |
+| (ii) Strip produced names from the relayed context | `inputNode` relays only the declared inputs. | Unchanged | It closes only caller copies, which guard (c) (PL-1426) already refuses at the entry. It cannot remove an internal stale copy (a branch that forks before an in-place clamp), which is the case auditor-fanin is measuring. |
 | (iii) An ordered merge at the sink | Keep the DAG and order the sink's incoming edges so that the final producers merge last. | Unchanged | It rests on zen's fan-in merge order, which was inferred from three runs and never read. A dependency on unread engine behaviour is the class of defect this finding is. |
 
 **Recommendation: (i).** It is the only option that does not depend on how zen merges a
@@ -121,7 +121,7 @@ maintainer's to settle**:
 line. Under (ii) or (iii), Task 2b is rewritten before dispatch.
 
 **If auditor-fanin answers YES** (a misprice with no caller key), (R-b) becomes a second
-emergency slice after PL 9560, by the maintainer's correction to item 3 of the 17:27:55 entry.
+emergency slice after PL-1426, by the maintainer's correction to item 3 of the 17:27:55 entry.
 Task 2b then moves out of this plan by a further delta.
 
 ## Delta 3, 2026-10-05 (after 17:37:04 BST, pre-mint): (R-b)'s red set widened; T1 here, T2 not
@@ -141,7 +141,7 @@ reconciliation was not tested".
 
 **What this delta changes:**
 1. **(R-b)'s red set, in Task 2b Step 1.** All the cases below run at the engine, with no
-   caller key unless one is named, so guard (c) (PL 9560) is bypassed by construction.
+   caller key unless one is named, so guard (c) (PL-1426) is bypassed by construction.
    - The 777 fan-in case (Delta 2). It stays.
    - **The reorder pair from r5** (auditor-premise r5.py, sha256 `98aea5df…`). The trace says:
      "With s_instalment moved before the decline steps → 5250; listed after them → 777."
@@ -151,8 +151,8 @@ reconciliation was not tested".
    - **Limit (ii): an algorithm with no ladder reconciliation.** It has no rung outputs, so
      there is no `LADDER_RECONCILIATION_FAILED` backstop, and its output reads the clamped
      name directly.
-2. **T1 stays here and T2 does not.** RL 9562 owns both texts (17:30:02 item 2). T1 (FR-212)
-   is applied by this plan (Task 2 Step 6b). T2 (FR-213) moved with guard (c) to PL 9560 and is
+2. **T1 stays here and T2 does not.** RL-1423 owns both texts (17:30:02 item 2). T1 (FR-212)
+   is applied by this plan (Task 2 Step 6b). T2 (FR-213) moved with guard (c) to PL-1426 and is
    no longer this plan's (Delta 1 withdrew Task 3, and T2 with it).
 3. **DP-R1 is still open.** The maintainer rules it "when it arrives with its hash impact"
    (17:34:25 item 2). The impact, stated: **under the recommended option (i), no bundle hash
@@ -175,7 +175,7 @@ The executor does not weaken a case to make it fail.
 `score_batch` in Task 1's sample module. Drop those imports, and keep any other import that
 `ruff` reports still in use.
 
-## Delta 4, 2026-10-05 (after 17:39:08 BST, pre-mint): DP-R1 ruled (i), with conditions A and B; PL 9567 lands before PL 9776
+## Delta 4, 2026-10-05 (after 17:39:08 BST, pre-mint): DP-R1 ruled (i), with conditions A and B; PL-1435 lands before PL 9776
 
 The maintainer's (by delegation) entry "2026-10-05 17:39:08 BST — DP-R1 (PL 9567 #1193
 @dd254b6d): (i) the ordered chain, with TWO conditions; PL 9776 re-plans after it; NFR-498
@@ -187,7 +187,7 @@ auditor yes", items 1 and 2, verbatim:
 >    The model_call handler passing the context through (runtime.py:581) is in scope; a hand-off line names it for A-2/A-3, which build on that handler.
 > 2. PL 9776 (#1051, unminted): (i) lands FIRST. PL 9776 re-plans its passThrough-off against the chain pre-mint, because it is an optimisation and (i) is a correctness root. Both plans name the dependency.
 
-The ruling record is RL 9562 (working id, #1195); its Amendment N2 records DP-R1.
+The ruling record is RL-1423 (#1195); its Amendment N2 records DP-R1.
 
 **1. DP-R1 is ruled: (i), the ordered chain over `_dependency_order`.** The interior has no
 fan-in. Task 2b is written for (i) and stays as Delta 2 and Delta 3 wrote it. The text of
@@ -215,14 +215,14 @@ bundle again (the trace re-score at `trace_handlers.py:98`, a regression replay,
 9572's stale copy decided the price: a context that carried a produced name into a side
 branch that the sink fan-in took last. This is the intended effect, because the fix is a
 correctness root. It is also a reproducibility fact, and the maintainer (by delegation)
-requires it stated. **Hand-off to the lead:** the same fact goes into FD 9572's mint text or
-into RL 9562 (Amendment N2 records DP-R1). Which record carries it is the lead's routing, not
+requires it stated. **Hand-off to the lead:** the same fact goes into FD-1425's mint text or
+into RL-1423 (Amendment N2 records DP-R1). Which record carries it is the lead's routing, not
 this plan's.
 
 **3. Condition B: the golden replay, Task 2c (below).** Every committed algorithm in the case
 set scores identically before and after the chain. The case set is named in Task 2c. **Any
-difference outside the FD 9572 fixtures is a STOP for the maintainer (by delegation).** The
-edge-set STOP of Task 2b Step 4 stays. "The FD 9572 fixtures" means exactly the cases in
+difference outside the FD-1425 fixtures is a STOP for the maintainer (by delegation).** The
+edge-set STOP of Task 2b Step 4 stays. "The FD-1425 fixtures" means exactly the cases in
 `test_rating_wire_order.py` from Task 1 and Task 2b. No other algorithm or context is one.
 
 **4. The `model_call` handler is in scope.** Task 2b Step 2 makes `_model_call_handler`
@@ -242,7 +242,7 @@ the chain) shows it. **Order:** this slice and each of A-1, A-2 and A-3 serialis
 `_model_call_handler`. The one that merges second rebases and re-runs
 `test_rating_wire_order.py` and Task 2c's replay script.
 
-**5. The dependency: PL 9567 lands before PL 9776.** This is the 17:39:08 entry's item 2. PL
+**5. The dependency: PL-1435 lands before PL 9776.** This is the 17:39:08 entry's item 2. PL
 9776 (#1051, WK-1178) re-plans its `passThrough`-off against the chain by its own pre-mint
 delta, and it consumes this slice's output (the chain wire and the `model_call` pass-through).
 So the two slices have a plan dependency under RL 9620 (b), and they cannot run at once.
@@ -253,9 +253,9 @@ So the two slices have a plan dependency under RL 9620 (b), and they cannot run 
 - **The write set** gains `_model_call_handler` and `_model_call_failure` in the `runtime.py`
   row, and the contention table gains A-1, A-2 and A-3, and the dependency on PL 9776. Both
   are recorded in a note under the table, so the table's own text stays as it was.
-- **The SL 9568 row** in `../roadmap.md` gains a Delta 4 note.
+- **The SL-1436 row** in `../roadmap.md` gains a Delta 4 note.
 - **Activation needs:** the Delta 2 need "DP-R1 decided by the maintainer (by delegation)"
-  is met by the 17:39:08 entry, and RL 9562 minted (already a need) carries it as Amendment
+  is met by the 17:39:08 entry, and RL-1423 minted (already a need) carries it as Amendment
   N2. No new activation need is added.
 
 ## Delta 5, 2026-10-05 (after 17:51:03 BST, pre-mint): the trace question; a mismatch is marked where it is read
@@ -288,7 +288,7 @@ worker compares and marks. The read route does not show the mark.
   field, and `_view` (`:145-157`) builds the item from the body alone. So a `mismatch` row with a
   body (the re-score ran and differed) is listed exactly as a `complete` one is.
 
-**So:** after SL 9568, a pending trace of a pre-fix quote where FD 9572's stale copy decided the
+**So:** after SL-1436, a pending trace of a pre-fix quote where FD-1425's stale copy decided the
 price re-scores to a different summary. The row lands `mismatch`. The reader of
 `GET /api/v1/traces` sees it as the quote's trace, with no mark. The worker is not silent; the
 read surface is. The ruling's "If it is silent" branch applies, at the read surface.
@@ -303,14 +303,14 @@ reproduce"), and not in `03` §5.1 (the route's row, `03:924`, says "Sampled pro
 first** (`CLAUDE.md` §0). No new route.
 
 **T-M1, owed by an RL (the decision-maker's; the lead routes it, for example as an amendment
-of RL 9562; *superseded by Delta 6: a new RL, RL 9505*).** The planner names what it must say and does not draft it: `03`'s
+of RL-1423; *superseded by Delta 6: a new RL, RL-1434*).** The planner names what it must say and does not draft it: `03`'s
 `GET /api/v1/traces` row (§5.1) or FR-259 states that each item carries the row's reproduction
 status, `complete` or `mismatch`, and that a `mismatch` item is a re-score that did not reproduce
 the served result, never presented as that quote's trace. Whether `mismatch` items stay listed
 (marked) or are also filterable is the RL's. The ruling's word is "MARKED", so this plan does not
 offer exclusion.
 
-**3. The red: Task 2d, below.** It runs after Task 2c, so SL 9568's chain is in place.
+**3. The red: Task 2d, below.** It runs after Task 2c, so SL-1436's chain is in place.
 
 **4. One mechanism for both slices.** PL 9776's condition (i) (DP-F35-7 (a): if R3 finds
 trace ≠ serve, the trace is refused or marked and the served result stands) uses the same
@@ -323,7 +323,7 @@ comparator (`summarise_result`'s four fields, `traces.py:257`) and the same mark
 - **The write set** gains three paths, listed in a note under the table. The table's own text
   stays as it was.
 - **Activation needs:** one need is added: the RL that adopts T-M1 is minted before activation
-  (as RL 9562 is for T1).
+  (as RL-1423 is for T1).
 - **Contention:** no open PR touches `backend/src/app/api/traces.py`,
   `backend/src/app/platform/traces.py`, `backend/src/app/worker/trace_handlers.py` or
   `backend/tests/test_traces.py` (`gh pr list --state open --limit 200 --json number,title,files`,
@@ -331,7 +331,7 @@ comparator (`summarise_result`'s four fields, `traces.py:257`) and the same mark
   three and edits none of them, and its delta of the same date consumes T-M1's field: a plan
   dependency that the existing order (this slice first) already covers.
 
-## Delta 6, 2026-10-05 (after 18:01:45 BST, pre-mint): FD 9502 and RL 9505 named; T-M1 is its own RL
+## Delta 6, 2026-10-05 (after 18:01:45 BST, pre-mint): FD-1433 and RL-1434 named; T-M1 is its own RL
 
 The maintainer's (by delegation) entry "2026-10-05 18:01:45 BST — Trace mismatch: a NEW small RL
 for T-M1 AND an FD (it is live on main today); DP-F35-8 = (c); the U measurement accepted", item 1,
@@ -342,19 +342,19 @@ verbatim:
 >    (b) a NEW small RL adopting T-M1 (spec first; the 03 §5.1 row for GET /api/v1/traces or FR-259, as the DM finds the right anchor), NOT an RL 9562 amendment: RL 9562 must not be held, because it gates the emergency PL 9560. PL 9567's new activation need = that RL minted. Agreed.
 
 **What this delta changes in the plan:**
-1. **The defect is FD 9502** (working id; filed by an auditor; proposed owner WK-1178). It is
-   live on `main` today, whatever the cause of a mismatch, and is independent of FD 9572. **Its
+1. **The defect is FD-1433** (filed by an auditor; proposed owner WK-1178). It is
+   live on `main` today, whatever the cause of a mismatch, and is independent of FD-1425. **Its
    discharger is this slice's Task 2d.** Task 2d's test docstring, its commit message and the
-   ledger cite FD 9502 by its minted id.
-2. **T-M1 is adopted by a new RL, RL 9505** (working id; the decision-maker drafts it), **not**
-   by an amendment of RL 9562. Delta 5's "for example as an amendment of RL 9562" is superseded
+   ledger cite FD-1433 by its minted id.
+2. **T-M1 is adopted by a new RL, RL-1434** (the decision-maker drafts it), **not**
+   by an amendment of RL-1423. Delta 5's "for example as an amendment of RL-1423" is superseded
    by this item; its text stays. The RL's anchor (`03` §5.1's `GET /api/v1/traces` row or FR-259)
-   is the decision-maker's. Task 2d applies RL 9505's text byte for byte, and cites RL 9505.
-3. **Activation need, replacing Delta 5's "the RL that adopts T-M1 is minted":** RL 9505 minted.
-   The other activation needs stay. RL 9562 is not held by T-M1.
-4. **Acceptance 12 and 13** read "the adopting RL" as RL 9505. No other acceptance changes.
+   is the decision-maker's. Task 2d applies RL-1434's text byte for byte, and cites RL-1434.
+3. **Activation need, replacing Delta 5's "the RL that adopts T-M1 is minted":** RL-1434 minted.
+   The other activation needs stay. RL-1423 is not held by T-M1.
+4. **Acceptance 12 and 13** read "the adopting RL" as RL-1434. No other acceptance changes.
 
-## Delta 7, 2026-10-05 (after 18:08:20 BST, pre-mint): RL 9505's readings; Task 2d runs the frontend half and corrects `models.py:2287`; the `score.py` row withdrawn in place
+## Delta 7, 2026-10-05 (after 18:08:20 BST, pre-mint): RL-1434's readings; Task 2d runs the frontend half and corrects `models.py:2287`; the `score.py` row withdrawn in place
 
 The maintainer's (by delegation) entry "2026-10-05 18:08:20 BST — RL 9505 (#1209 @77e5cfe1,
 T-M1): placement and the three readings ACCEPTED", verbatim:
@@ -366,7 +366,7 @@ T-M1): placement and the three readings ACCEPTED", verbatim:
 
 Repository facts below were read at `origin/main` `fb178c360f6fd5b2fdb7ae60eea924811a65492f`.
 
-**1. RL 9505's three accepted readings, which Task 2d implements:**
+**1. RL-1434's three accepted readings, which Task 2d implements:**
 - **(1) A mismatch stays listed, marked, with no status filter.** `_filtered`
   (`backend/src/app/api/traces.py:119-142`) is not changed, and no query parameter is added.
   Task 2d's red already asserts both rows are listed (`set(by_quote) == {…}`).
@@ -375,7 +375,7 @@ Repository facts below were read at `origin/main` `fb178c360f6fd5b2fdb7ae60eea92
   schema), and `generated.json` is regenerated. No file under `packages/model-schema/` is
   written.
 - **(3) One mechanism, shared with PL 9776 DP-F35-8 (c):** the existing comparator and mark
-  (`traces.py:257`), carried onto the read route. Delta 5 item 4 already says so; RL 9505 is now
+  (`traces.py:257`), carried onto the read route. Delta 5 item 4 already says so; RL-1434 is now
   its citation.
 - **The placement:** T-M1 goes in FR-259 (`03:176`), as the third dated clarification after
   RL-916's; the `03` §5.1 row (`:924`) stays an index and is not edited. Task 2d's "at the place
@@ -443,6 +443,10 @@ way.
   stale lines are marked in place. Delta 1's remaining contention lines, and the A-1/A-2/A-3,
   PL 9776 and S7 notes, do not cite `score.py` and stand.
 
+## Delta 8, 2026-10-05 (after 22:12:11 BST, pre-mint): DP-3 is moot for this plan; the block at the head of Task 3 is satisfied
+
+The maintainer's (by delegation) entry "2026-10-05 22:12:11 BST — Lane B: SL 9568 / PL 9567 (the FD-1425 wiring limb) NEXT; DP-3 is MOOT for PL 9567; the batch mint AGREED", item 2, rules that DP-3 ("where (c) ends against FD-1374") is MOOT FOR THIS PLAN: this plan no longer carries (c). Delta 1 withdrew it, and it merged as SL-1427 (#1219, `b6dd96fd`), so no task of this plan depends on DP-3. The block "Blocked until DP-1, DP-2, DP-3 and DP-4 are decided" is **satisfied** here by DP-1, DP-2 and DP-4 decided in RL-1423, and DP-3 moot. **DP-3 itself is not decided.** It stays open and is carried to FR-246's general declared-inputs plan (FD-1374 / PL 9776), whose dispatch must decide it before that slice builds; PL 9776 names it as a need. The block is marked in place; the text above it is not edited.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
 > or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax
 > for tracking. Also bound: `python-test` (the `req` markers, the negative tests),
@@ -465,7 +469,7 @@ that names a value a non-`input` step produces, on both engine paths (`score_one
 dependency (`heapq` is the standard library).
 
 **Spec:** [`../specs/03-rating-engine.md`](../specs/03-rating-engine.md) §3 (FR-212, FR-213,
-FR-255) and §5.2 (`score_one`). The finding: FD 9572 (#1183; its essay carries the ruled fix
+FR-255) and §5.2 (`score_one`). The finding: FD-1425 (#1183; its essay carries the ruled fix
 verbatim). The ruling: the maintainer's (by delegation) entries quoted under "Sources".
 
 ## Acceptance Standard
@@ -481,7 +485,7 @@ Each item is a command a fresh reviewer can run from the worktree root, after `u
 3. `test_a_clamp_listed_before_its_producer_still_binds` gives `payable_premium_minor` 5250
    and a `constraints` rung of 5000 with `s_clamp` listed before `s_office` and
    `min_premium_minor` 5000.
-4. *(Withdrawn 2026-10-05 by the Delta: (c) is PL 9560's.)* `test_a_quote_input_naming_a_produced_value_is_refused` raises `INPUT_CONTRACT_VIOLATION`
+4. *(Withdrawn 2026-10-05 by the Delta: (c) is PL-1426's.)* `test_a_quote_input_naming_a_produced_value_is_refused` raises `INPUT_CONTRACT_VIOLATION`
    naming the key, through `score_one` and through `score_batch` (DP-1 and DP-2 as
    recommended; if decided otherwise, the dated decision line names the replacement assert).
 5. `test_a_topologically_listed_algorithm_wires_exactly_as_listed` and
@@ -494,7 +498,7 @@ Each item is a command a fresh reviewer can run from the worktree root, after `u
 7. The full gate (`CLAUDE.md` §11, both halves) passes on the slice head, run by the
    gate-runner inside the one gate slot, and the ledger names the tree it ran on.
 8. `python3 scripts/audit-docs.py` fails only on check 31 until the mint, and is clean after.
-9. *(Withdrawn 2026-10-05 by the Delta: the four path reds are PL 9560's.)* One red test **per reachable path** of fix (c), each recorded failing at the base commit
+9. *(Withdrawn 2026-10-05 by the Delta: the four path reds are PL-1426's.)* One red test **per reachable path** of fix (c), each recorded failing at the base commit
    for the cause Task 1 Step 2 names, and passing at the head (the 17:15:09 entry):
    - `/score`: `backend/tests/test_score.py::test_a_quote_input_naming_a_produced_value_is_refused_on_score`
    - `/score/compare`: `backend/tests/test_score_compare.py::test_a_context_input_naming_a_produced_value_is_a_422_on_compare`
@@ -623,7 +627,7 @@ Dislocation is left as it is, because it already selects declared inputs only (R
 - **FD-1374** ([`../findings/FD-01374-fr-246-s-declared-inputs-rule-is-unenforced-for-names-and-03-s-own-example-declares-no-inputs.md`](../findings/FD-01374-fr-246-s-declared-inputs-rule-is-unenforced-for-names-and-03-s-own-example-declares-no-inputs.md))
   is the finding on undeclared names. Its remedy is PL 9776 (working id, `draft`, #1051,
   WK-1178). This is DP-3.
-- **The reproduction** is FD 9572's Evidence §2 and §3 (script 1, sha256 `6690fa73…114ae0`;
+- **The reproduction** is FD-1425's Evidence §2 and §3 (script 1, sha256 `6690fa73…114ae0`;
   script 2, sha256 `fc02caa4…35228d`), run at `137bc817`. The values this plan asserts
   (350, 57, 1507, 5250, 1050) are copied from that essay's verbatim output.
 
@@ -633,7 +637,7 @@ Dislocation is left as it is, because it already selects declared inputs only (R
 section above and blocks Task 2b.)*
 
 *(Delta 4, 2026-10-05: DP-R1 is **ruled (i)**, the ordered chain, by the maintainer (by
-delegation) at 17:39:08 BST, with conditions A and B; RL 9562 records it as Amendment N2. See
+delegation) at 17:39:08 BST, with conditions A and B; RL-1423 records it as Amendment N2. See
 Delta 4.)*
 
 Three are open and block activation, so this plan stays `draft` until a dated decision line
@@ -647,11 +651,11 @@ settles them. Each is the decision-maker's (`delivery-process.md` §3), not the 
 | **DP-4** | Does `03` take a text for the new behaviour? FR-212 says "directed acyclic graph" but not that list order carries no meaning; FR-213 says nothing on an input naming a produced value | (a) two T-texts below, adopted by a ruling before activation (as RL 9633 adopts PL 9649's); (b) no spec text: the fix makes code meet FR-212 as written, and (c) is a contract violation under FR-255 category 1 already | (a): (c) is a new refusal a caller can meet, and a capability not yet specified is a spec change first (`CLAUDE.md` §0) | open | 3, 4 |
 
 **T1 (DP-4 (a)), appended to the FR-212 row as a dated amendment:** "*(Amended 2026-10-05,
-FD 9572.)* The order in which an algorithm lists its steps carries no meaning: each consumed
+FD-1425.)* The order in which an algorithm lists its steps carries no meaning: each consumed
 name is wired to its producer through the graph, over a stable topological order of the
 dependency edges. A misordered list is not refused at save."
 
-**T2 (DP-4 (a)), appended to the FR-213 row:** "*(Amended 2026-10-05, FD 9572.)* A Quote
+**T2 (DP-4 (a)), appended to the FR-213 row:** "*(Amended 2026-10-05, FD-1425.)* A Quote
 Context input whose name is a value some step produces, and is not itself a declared input, is
 a contract violation, refused with a field-level error naming the key: a quote input never
 stands in for a produced value."
@@ -667,17 +671,17 @@ rules (exempt / one-sided / name-disjoint / serialise) and (b) NO plan dependenc
 consumes the other's output (named, both ways)". The columns below were read on each plan's
 branch at the head named in its header cell, on 2026-10-05.
 
-| Path | This slice | FD 9707 fix (PL 9688, #1145 @`2f3269c8`) | S7 (PL-1419, #1127 @`305ffca9`) | FR-240 fix (PL 9649, #1152 @`df8ba756`) | F35 remedy (PL 9776, #1051 @`ecbb82ab`, WK-1178) | Class |
+| Path | This slice | FD-1420 fix (PL 9688, #1145 @`2f3269c8`) | S7 (PL-1419, #1127 @`305ffca9`) | FR-240 fix (PL 9649, #1152 @`df8ba756`) | F35 remedy (PL 9776, #1051 @`ecbb82ab`, WK-1178) | Class |
 |---|---|---|---|---|---|---|
 | `packages/pricing-core/src/pricing_core/rating/runtime.py` | added: `_dependency_order`, `import heapq`, the `GraphCycleError` import; edited: `to_wire` (`:453-499`: the iteration order and the comment at `:463-473`) | `_decision_table_node`, module docstring, `_as_at_window` | — | reads `_model_call_handler` only | **`to_wire`** (reference edges, `outputNode` wiring), `_decision_table_node`, `_constraint_node`, docstring rule 3 | **serialise with PL 9776** (the same existing function). Name-disjoint with PL 9688 |
-| `packages/pricing-core/src/pricing_core/rating/score.py` | *(Withdrawn by the delta of 2026-10-05, after 17:30:13 BST; `score.py` is now read-only for SL 9568 — Delta 7 item 4.)* ~~added: `_check_no_shadowed_produced_names`; edited: `score_one` (`:876`, one call), `_score_context_sync` (`:1045`, one call)~~ | added `_check_as_at_values`; **`score_one` and `_score_context_sync`**, one call each | — | — | — | ~~**serialise with PL 9688** (the same existing functions). This slice goes first (the 17:10:08 tie-break)~~ *(Delta 7 item 4: no shared path left here.)* |
+| `packages/pricing-core/src/pricing_core/rating/score.py` | *(Withdrawn by the delta of 2026-10-05, after 17:30:13 BST; `score.py` is now read-only for SL-1436 — Delta 7 item 4.)* ~~added: `_check_no_shadowed_produced_names`; edited: `score_one` (`:876`, one call), `_score_context_sync` (`:1045`, one call)~~ | added `_check_as_at_values`; **`score_one` and `_score_context_sync`**, one call each | — | — | — | ~~**serialise with PL 9688** (the same existing functions). This slice goes first (the 17:10:08 tie-break)~~ *(Delta 7 item 4: no shared path left here.)* |
 | `packages/pricing-core/tests/test_rating_wire_order.py` | added (new module) | — | — | — | — | none |
 | `backend/tests/test_score.py` | *(Withdrawn by the delta of 2026-10-05, after 17:30:13 BST; marked by Delta 7 item 4.)* ~~added (appended, no existing test edited): the `/score` and trace-reproduction reds~~ | none. PL 9688 adds its own module `backend/tests/test_score_as_at.py` and does not edit this file | — | — | — | ~~append-only; name-disjoint~~ *(Delta 7 item 4: no shared path left here.)* |
 | `backend/tests/test_score_compare.py` | *(Withdrawn by the delta of 2026-10-05, after 17:30:13 BST; marked by Delta 7 item 4.)* ~~added (appended): the `/score/compare` red~~ | — | — | — | — | ~~append-only~~ *(Delta 7 item 4: no shared path left here.)* |
 | `backend/tests/test_scoring_handlers.py` | *(Withdrawn by the delta of 2026-10-05, after 17:30:13 BST; marked by Delta 7 item 4.)* ~~added (appended): the batch red~~ | — | — | — | — | ~~append-only~~ *(Delta 7 item 4: no shared path left here.)* |
 | `packages/pricing-core/tests/test_quote_input_raise_sites.py` | *(Withdrawn by the delta of 2026-10-05, after 17:30:13 BST; marked by Delta 7 item 4.)* ~~edited: `_INPUT_FREE` (`:62-79`, one entry added)~~ | one entry added | — | — | — | ~~registry (append); the second to merge re-gates~~ *(Delta 7 item 4: no shared path left here.)* |
 | `docs/specs/03-rating-engine.md` | DP-4 (a) only: the FR-212 row (`:81`) and the FR-213 row (`:82`), a dated amendment each | the FR-221 row (`:107`) | the FR-231 row, §4.2, §5.1, §5.2 | adjacent `03` hunks (its T-texts) | — | shared file, distinct rows: the dispatch record names the path, the rows, and a trial `git merge-tree` rc between the heads |
-| `docs/roadmap.md` | added: the SL 9568 row (plan PR only) | adds the SL 9685 row at the same place | — | adds its SL row | — | registry (append, distinct rows); the second to merge re-reads |
+| `docs/roadmap.md` | added: the SL-1436 row (plan PR only) | adds the SL 9685 row at the same place | — | adds its SL row | — | registry (append, distinct rows); the second to merge re-reads |
 | `docs/INDEX.md`; the slice's ledger | regenerated; added | every PR | every PR | every PR | every PR | `generated` |
 
 **Plan dependency, both ways.** None of PL 9688, PL-1419 or PL 9649 consumes this slice's
@@ -704,7 +708,7 @@ lines add to it:
   Task 2c's replay. The hand-off is in Delta 4 item 4.
 - **PL 9776 (#1051):** besides `to_wire`, there is now a **plan dependency**: PL 9776 consumes
   this slice's output (the chain and the `model_call` pass-through), so RL 9620 (b) fails and
-  the two never run at once. **PL 9567 lands first** (the 17:39:08 entry, item 2).
+  the two never run at once. **PL-1435 lands first** (the 17:39:08 entry, item 2).
 - **Task 2c** adds no repository file: its script and outputs live in the ledger and the
   executor's scratch directory.
 
@@ -738,10 +742,10 @@ lines add to it:
   fixtures: import them, as `test_quote_input_raise_sites.py` does.
 
 ```python
-"""FD 9572: wiring follows dependency order, never list order (FR-212); a quote input never
+"""FD-1425: wiring follows dependency order, never list order (FR-212); a quote input never
 shadows a produced value (FR-213).
 
-The algorithms and values are FD 9572's own reproduction (its Evidence §2 and §3)."""
+The algorithms and values are FD-1425's own reproduction (its Evidence §2 and §3)."""
 
 from __future__ import annotations
 
@@ -841,7 +845,7 @@ _BASE_INPUTS: dict[str, Any] = {
 async def test_a_misordered_algorithm_prices_as_its_topological_twin(
     ctx: dict[str, Any],
 ) -> None:
-    """FD 9572 Evidence §2: `[in, B, A, out]` raised a NodeError with ctx {x: 3} and gave 57
+    """FD-1425 Evidence §2: `[in, B, A, out]` raised a NodeError with ctx {x: 3} and gave 57
     with ctx {x: 3, base: 7}. Its topological twin gives 350."""
     compiled = load_bundle(await _bundle([_IN, _B, _A, _OUT]))
     out = await compiled.decision.async_evaluate(ctx)
@@ -850,7 +854,7 @@ async def test_a_misordered_algorithm_prices_as_its_topological_twin(
 
 @pytest.mark.req("FR-212")
 async def test_a_clamp_listed_before_its_producer_still_binds() -> None:
-    """FD 9572 Evidence §3, C1: the clamp listed before `s_office` was wired to the input and
+    """FD-1425 Evidence §3, C1: the clamp listed before `s_office` was wired to the input and
     skipped the minimum premium (payable 1507). Topological: 5250."""
     compiled = await _score_fixture(move="s_clamp", before="s_office")
     ctx = _ctx(inputs={**_BASE_INPUTS, "min_premium_minor": 5000})
@@ -860,13 +864,13 @@ async def test_a_clamp_listed_before_its_producer_still_binds() -> None:
     assert rungs["constraints"] == 5000
 
 
-# --- (c) WITHDRAWN 2026-10-05 by the Delta (PL 9560's): do not add the tests in this block ---
+# --- (c) WITHDRAWN 2026-10-05 by the Delta (PL-1426's): do not add the tests in this block ---
 
 
 @pytest.mark.req("FR-213")
 @pytest.mark.parametrize("misordered", [False, True])
 async def test_a_quote_input_naming_a_produced_value_is_refused(misordered: bool) -> None:
-    """FD 9572 Evidence §3, E0 and E2: `office_premium_minor` sent as an input was ignored on
+    """FD-1425 Evidence §3, E0 and E2: `office_premium_minor` sent as an input was ignored on
     the ordered list (payable 1507) and set the price on the misordered one (payable 1050).
     Either way the key is refused, by name (DP-1 (a), DP-2 (a))."""
     compiled = await (
@@ -928,16 +932,16 @@ async def test_the_bundle_hash_is_unchanged() -> None:
   - The batch test's row mirrors `test_quote_input_raise_sites.py`'s `_row` and its reads of
     `outcome`, `error_code` and `error_message` (`:250-254`). If that helper has moved, mirror
     the shipped one, not this sample.
-  - **Not measured by FD 9572:** the topologically ordered algorithm with ctx
+  - **Not measured by FD-1425:** the topologically ordered algorithm with ctx
     `{x: 3, base: 7}`. The ruling asserts it "still gives 350, never 57". If Task 2 Step 4
     shows `…_topological_twin[ctx1]` giving anything but 350, STOP and report it: the
     shadowing would then sit in the engine's merge of a node's output over its received
     context, not in the wiring, and (a) alone would not close it.
   - The edge literal in `test_a_topologically_listed_algorithm_wires_exactly_as_listed` is
-    FD 9572's verbatim output for the topological run. If it differs at the base commit, STOP:
+    FD-1425's verbatim output for the topological run. If it differs at the base commit, STOP:
     the essay's premise moved, and the lead hears it before any code changes.
 
-- [ ] **Step 1c: (Withdrawn 2026-10-05 by the Delta: PL 9560's; do not add.)** The four per-path reds (the 17:15:09 entry). Each is appended to the
+- [ ] **Step 1c: (Withdrawn 2026-10-05 by the Delta: PL-1426's; do not add.)** The four per-path reds (the 17:15:09 entry). Each is appended to the
   module that already holds that path's fixtures; none edits an existing test. The algorithm
   is `_minimal_algorithm` (`backend/tests/test_rating_version_compile.py:50`): its `s_expr`
   produces `payable`, and its one declared input is `premium_in`. Its list is topological, so
@@ -957,7 +961,7 @@ async def test_the_bundle_hash_is_unchanged() -> None:
 def test_a_quote_input_naming_a_produced_value_is_refused_on_score(
     client: TestClient, scoring_headers: dict[str, str], compiled_version: Any
 ) -> None:
-    """FD 9572 (c), `/score` (`api/score.py:350-375`): `s_expr` produces `payable`, so an
+    """FD-1425 (c), `/score` (`api/score.py:350-375`): `s_expr` produces `payable`, so an
     input named `payable` is refused, by name, and never relayed to the engine."""
     body = _quote({"rating_version_ref": SCORED_REF})
     body["inputs"]["payable"] = 1
@@ -976,7 +980,7 @@ def test_a_pending_trace_whose_context_names_a_produced_value_is_not_reproduced_
     blob_store: Any,
     workspace_id: Any,
 ) -> None:
-    """FD 9572 (c), trace reproduction (`trace_handlers.py:98`). After the fix `/score`
+    """FD-1425 (c), trace reproduction (`trace_handlers.py:98`). After the fix `/score`
     refuses such a context before any trace is pended, so the case is a row pended before
     the fix: a served quote's pending context with `payable` planted in its inputs."""
     register_trace_handlers()
@@ -1022,7 +1026,7 @@ def test_a_pending_trace_whose_context_names_a_produced_value_is_not_reproduced_
 def test_a_context_input_naming_a_produced_value_is_a_422_on_compare(
     client: TestClient, reader_headers: dict[str, str], two_versions: None
 ) -> None:
-    """FD 9572 (c), `/score/compare` (`api/score.py:447`)."""
+    """FD-1425 (c), `/score/compare` (`api/score.py:447`)."""
     body = _body()
     body["context"]["inputs"]["payable"] = 1
     response = client.post(COMPARE_URL, json=body, headers=reader_headers)
@@ -1042,7 +1046,7 @@ async def test_a_dataset_column_named_like_a_produced_value_is_refused_per_row(
     api_client: TestClient, headers: dict[str, str], database: Database, blob_store: BlobStore,
     workspace_id: UUID, principal: Principal, grant: Any,
 ) -> None:
-    """FD 9572 (c), batch (`scoring_handlers` → `_score_context_sync`): every dataset column
+    """FD-1425 (c), batch (`scoring_handlers` → `_score_context_sync`): every dataset column
     but the reserved four becomes `ctx.inputs`, so a column named `payable` is refused on
     every row. Per-row isolation (FR-255) keeps the Job itself running."""
     await _compiled_version(
@@ -1110,7 +1114,7 @@ OMP_NUM_THREADS=1 nice uv run pytest packages/pricing-core/tests/test_rating_wir
 ```bash
 git add packages/pricing-core/tests/test_rating_wire_order.py backend/tests/test_score.py \
   backend/tests/test_score_compare.py backend/tests/test_scoring_handlers.py
-git commit -m "test(rating): FD 9572 reds — wiring by list order, a clamp bypassed, a shadowing input"
+git commit -m "test(rating): FD-1425 reds — wiring by list order, a clamp bypassed, a shadowing input"
 ```
 
 ### Task 2: `to_wire` iterates a stable topological order
@@ -1133,7 +1137,7 @@ git commit -m "test(rating): FD 9572 reds — wiring by list order, a clamp bypa
 
 ```python
 def _dependency_order(graph: JdmGraph, interior_ids: Sequence[str]) -> list[str]:
-    """The interior steps in a stable topological order (FR-212, FD 9572).
+    """The interior steps in a stable topological order (FR-212, FD-1425).
 
     A Rating Algorithm is a DAG, so the order its steps are listed in carries no meaning and
     must never decide wiring. The dependency rule is `RatingAlgorithm._graph_invariants`'s: a
@@ -1185,7 +1189,7 @@ def _dependency_order(graph: JdmGraph, interior_ids: Sequence[str]) -> list[str]
 ```
 
   Amend the comment at `:463-473` with one sentence after its first: "It is built over
-  `_dependency_order`'s topological order, never the list order (FD 9572): a producer listed
+  `_dependency_order`'s topological order, never the list order (FD-1425): a producer listed
   after its consumer is still seen first." Leave the loop's body as it is: the incremental
   `produced_by` is what keeps the clamp-in-place edge off itself, and it is correct once the
   order is.
@@ -1212,7 +1216,7 @@ def _dependency_order(graph: JdmGraph, interior_ids: Sequence[str]) -> list[str]
 
 ```bash
 git add packages/pricing-core/src/pricing_core/rating/runtime.py
-git commit -m "fix(rating): to_wire wires each consumed name over a stable topological order (FD 9572)"
+git commit -m "fix(rating): to_wire wires each consumed name over a stable topological order (FD-1425)"
 ```
 
 ### Task 2b: (R-b) — one ordered path to the sink (DP-R1 (i); added by Delta 2)
@@ -1361,7 +1365,7 @@ async def test_no_ladder_side_branch_never_carries_the_pre_clamp_value(
   maintainer's to approve with DP-R1, not the executor's.
 
 - [ ] **Step 5: Commit:** `fix(rating): to_wire wires one ordered path, so no branch carries
-  a stale copy into the sink (FD 9572 R-b)`.
+  a stale copy into the sink (FD-1425 R-b)`.
 
 ### Task 2c: The golden replay — nothing else moves (DP-R1 Condition B; added by Delta 4)
 
@@ -1409,7 +1413,7 @@ first).
    context in `test_testing.py`. And Step 3 runs the golden test files unchanged.
 
 No context in the case set carries a key that is not in the algorithm's `input_contract`. So
-the FD 9572 shadow, which needs such a key or a misordered list, cannot occur in it, and an
+the FD-1425 shadow, which needs such a key or a misordered list, cannot occur in it, and an
 identical result is the expected outcome on every case.
 
 - [ ] **Step 1: At the base commit, record.** For each algorithm: `compile_bundle` it, and write
@@ -1446,14 +1450,14 @@ identical result is the expected outcome on every case.
 
 - [ ] **Step 4: STOP rule.** **Any difference** in Step 2 (a served result, an error, a raw
   engine dict, or a `content_hash`), or a red in Step 3, **is a STOP for the maintainer (by
-  delegation)**. The case set has no FD 9572 fixture in it, so no difference here is expected
+  delegation)**. The case set has no FD-1425 fixture in it, so no difference here is expected
   or allowed. The executor does not edit a case, a comparator or an expected value. It records
   the difference in the ledger, with the algorithm, the context and both lines, and reports
   it to the lead.
 
 ### Task 2d: A trace that did not reproduce is marked where it is read (added by Delta 5)
 
-**Blocked until the RL adopting T-M1 is minted** (*Delta 6: RL 9505; this task discharges FD 9502*). The field name and values below are this
+**Blocked until the RL adopting T-M1 is minted** (*Delta 6: RL-1434; this task discharges FD-1433*). The field name and values below are this
 plan's reading of T-M1. Where the RL's text differs, the RL wins and the dispatch record names
 each difference.
 
@@ -1482,7 +1486,7 @@ async def test_a_reproduction_that_differs_from_the_served_quote_is_marked(
     workspace_id,
     reader_headers,
 ) -> None:
-    """PL 9567 Delta 5 (T-M1): a re-score that did not reproduce the served result is
+    """PL-1435 Delta 5 (T-M1): a re-score that did not reproduce the served result is
     listed marked `mismatch`, never as the quote's trace. `traces.py:257` already sets the
     row's status; this is the read route carrying it."""
     await _write_real_time(
@@ -1547,7 +1551,7 @@ async def test_a_reproduction_that_differs_from_the_served_quote_is_marked(
   `traces.py` shows only Step 3's change.
 
 - [ ] **Step 6: Commit:** `fix(traces): GET /api/v1/traces marks a trace that did not reproduce
-  the served quote (FD 9572; T-M1)`, with `03`, *(Delta 6: the message cites FD 9502 and RL 9505 by their minted ids)* the route, the test and the regenerated contract
+  the served quote (FD-1425; T-M1)`, with `03`, *(Delta 6: the message cites FD-1433 and RL-1434 by their minted ids)* the route, the test and the regenerated contract
   in one commit.
 
 **What Task 2d does not change.** The comparator and the mark (`trace_handlers.py:98-107`,
@@ -1557,11 +1561,12 @@ for that half, and Task 4's full gate runs them.
 
 ### Task 3: A quote input never shadows a produced value
 
-**Withdrawn 2026-10-05 by the Delta above: (c) is PL 9560's. The executor does not run this
+**Withdrawn 2026-10-05 by the Delta above: (c) is PL-1426's. The executor does not run this
 task.** Its text stays as filed.
 
 **Blocked until DP-1, DP-2, DP-3 and DP-4 are decided.** The code below is DP-1 (a), DP-2 (a)
 and DP-3 (a). A different decision rewrites this task before it starts.
+*(Delta 8, 2026-10-05: satisfied for this plan by DP-1, DP-2 and DP-4 decided in RL-1423 and DP-3 moot here; DP-3 stays open, carried to FD-1374 / PL 9776.)*
 
 **Files:**
 - Modify: `packages/pricing-core/src/pricing_core/rating/score.py` (a new check after
@@ -1584,7 +1589,7 @@ and DP-3 (a). A different decision rewrites this task before it starts.
 def _check_no_shadowed_produced_names(
     algorithm: RatingAlgorithm, inputs: Mapping[str, Any]
 ) -> None:
-    """FR-213 (FD 9572 (c)): a quote input never stands in for a value a step produces.
+    """FR-213 (FD-1425 (c)): a quote input never stands in for a value a step produces.
     `inputNode` relays the whole context, so a key named like a produced value reaches the
     engine. A declared input that a step re-produces in place (a clamp on an input) is a
     legitimate key and is not refused."""
@@ -1661,7 +1666,7 @@ def test_a_declared_input_re_produced_in_place_is_not_a_shadow() -> None:
 git add packages/pricing-core/src/pricing_core/rating/score.py \
   packages/pricing-core/tests/test_quote_input_raise_sites.py \
   packages/pricing-core/tests/test_rating_wire_order.py docs/specs/03-rating-engine.md
-git commit -m "fix(rating): refuse a quote input that names a produced value (FD 9572 (c))"
+git commit -m "fix(rating): refuse a quote input that names a produced value (FD-1425 (c))"
 ```
 
 ### Task 4: The gate and the ledger
@@ -1679,7 +1684,7 @@ git commit -m "fix(rating): refuse a quote input that names a produced value (FD
 - [ ] **Step 4:** The ledger records, verbatim: Task 1 Step 2's base-commit run (the four
   backend reds included), Task 2 Step 5's two broken-pin runs, Task 3 Step 5's two
   removed-call runs, the four backend reds passing at the head, and the gate table.
-- [ ] **Step 5:** FD 9572's discharge line ("the fix PR merging with all three tests red first
+- [ ] **Step 5:** FD-1425's discharge line ("the fix PR merging with all three tests red first
   on the unfixed tree") is answered in the ledger by the commit of Task 1 Step 2's run.
 
 ## What this plan does not cover

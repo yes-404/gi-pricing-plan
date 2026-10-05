@@ -1,9 +1,9 @@
 ---
-id: FD-9502
+id: FD-1433
 family: finding
 title: The trace read route lists a mismatch trace as the quote's trace
 status: active
-created: 2026-10-05            # working id; the mint date will replace this (check 31)
+created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: auditor
 tree: 5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a
 corrected_by: []
@@ -12,7 +12,7 @@ relates: [WK-1178, WK-671, SL-1391, FR-259, FR-258, RL-862]
 
 # The trace read route lists a mismatch trace as the quote's trace
 
-**Filed under working id 9502** by the auditor, on the lead's order of 2026-10-05, from the
+**Filed under working id 9502 (minted as FD-1433)** by the auditor, on the lead's order of 2026-10-05, from the
 maintainer's (by delegation) entry headed "2026-10-05 18:01:45 BST — Trace mismatch: a NEW small
 RL for T-M1 AND an FD (it is live on main today); DP-F35-8 = (c); the U measurement accepted"
 (`to-lead.md`, a local channel file, so cited by its header), item 1 (a), quoted verbatim:
@@ -28,8 +28,8 @@ the maintainer (by delegation) in the same entry; the auditor re-read every line
 
 ## Finding
 
-**Proposed severity: MEDIUM (the maintainer sets it); owner: WK-1178; discharged by SL 9568 Task 2d
-(`PL 9567`, #1193), spec first through `RL 9505` (working id, drafting).**
+**Proposed severity: MEDIUM (the maintainer sets it); owner: WK-1178; discharged by SL-1436 Task 2d
+(`PL-1435`, #1193), spec first through `RL-1434`.**
 
 A `scoring_traces` row whose off-path re-score did not reproduce the served result is stored with
 `status = "mismatch"` **and its body kept**. `GET /api/v1/traces` never reads `status`, so it lists
@@ -86,7 +86,7 @@ is on the view.
 
 1. **Can a `mismatch` row exist today?** Yes, by construction. Form (b) needs the worker to re-score the pinned bundle and get a different summary. Re-score is "deterministic" by RL-862's premise, so a mismatch needs a divergence between serve time and re-score time that the bundle hash does not cover:
    - a code change in the engine or `pricing-core` between serve and re-score, under the same `bundle_hash` (the hash is the compiled bundle's `content_hash`, `trace_handlers.py:90`, so it does not move when the evaluator does);
-   - **the chain change of FD 9572 under the same hash**, on `PL 9567`'s condition A: if the `to_wire` list-order fix changes a price for a stored bundle without changing its hash, every pending row served before the fix and re-scored after it lands `mismatch`;
+   - **the chain change of FD-1425 under the same hash**, on `PL-1435`'s condition A: if the `to_wire` list-order fix changes a price for a stored bundle without changing its hash, every pending row served before the fix and re-scored after it lands `mismatch`;
    - non-determinism in the re-score path, were any to exist (not measured here; RL-862's premise says none does);
    - a worker whose version differs from the serving process.
    Form (a) arises when the Rating Version has moved on since serve (`trace_handlers.py:90`); it is already hidden by the null body.
@@ -100,27 +100,27 @@ is on the view.
 - **FR-258** (`:175`): a trace is "every step's id, label, consumed values, produced value, matched table row key, and elapsed time, plus the bundle hash and rating version reference". Nothing in the text says a trace is the account of the quote that was served.
 - `RL-862`'s own text records the mismatch rather than discarding it, so the platform has already decided a mismatch is recorded; the specs do not say how a reader is to be told.
 
-Read plainly: a listed item is a "sampled production trace", and the natural reading of "the quote's trace" is the trace that explains the quote that was served. A (b) row is, by its own definition, a trace that does **not** reproduce what was served. Presenting it under the same shape as a `complete` one is not forbidden by any sentence of FR-259 or §5.1, and it is not what either means. That is a gap in the specs, not a contradiction of a clause, so **the spec comes first**: the maintainer has ordered `RL 9505` (T-M1, working id) to state it, and §5.1's row or FR-259 is the anchor the decision-maker finds. This finding does not pick the rule. Two shapes are open to it: a `status` field on `TraceView` with mismatch rows listed and marked, or `status = 'complete'` added to `_filtered`. The entry that ordered this finding names "the red plus the field", which is the first.
+Read plainly: a listed item is a "sampled production trace", and the natural reading of "the quote's trace" is the trace that explains the quote that was served. A (b) row is, by its own definition, a trace that does **not** reproduce what was served. Presenting it under the same shape as a `complete` one is not forbidden by any sentence of FR-259 or §5.1, and it is not what either means. That is a gap in the specs, not a contradiction of a clause, so **the spec comes first**: the maintainer has ordered `RL-1434` (T-M1, working id) to state it, and §5.1's row or FR-259 is the anchor the decision-maker finds. This finding does not pick the rule. Two shapes are open to it: a `status` field on `TraceView` with mismatch rows listed and marked, or `status = 'complete'` added to `_filtered`. The entry that ordered this finding names "the red plus the field", which is the first.
 
 ## Severity (proposed): MEDIUM
 
-- **For raising it:** it is silent. The route is the audit-facing read of what pricing did, and a governed system's trace that does not match the served quote is the kind of evidence an auditor would trust wrongly. The fix for FD 9572 makes a mismatch an expected event for every pending row it touches, so this finding turns from latent to routine at that moment.
+- **For raising it:** it is silent. The route is the audit-facing read of what pricing did, and a governed system's trace that does not match the served quote is the kind of evidence an auditor would trust wrongly. The fix for FD-1425 makes a mismatch an expected event for every pending row it touches, so this finding turns from latent to routine at that moment.
 - **For holding it at MEDIUM:** no reader beyond the route exists today (Evidence 4), no mismatch row exists in any reachable database, form (a) is already hidden, the data is intact (the row records `mismatch` and nothing is lost), and the fix is one field and one test.
-- **Condition:** if `PL 9567`'s chain change can reach a database holding pending rows before Task 2d lands, the exposure is HIGH. The ordering of the two inside SL 9568 should keep Task 2d first or in the same slice.
+- **Condition:** if `PL-1435`'s chain change can reach a database holding pending rows before Task 2d lands, the exposure is HIGH. The ordering of the two inside SL-1436 should keep Task 2d first or in the same slice.
 
-## Remedy (a proposal; `RL 9505` states the rule)
+## Remedy (a proposal; `RL-1434` states the rule)
 
-Task 2d, in `backend/src/app/api/traces.py`: the red first, a route test that writes a `mismatch` row with a body and reads it back through `GET /api/v1/traces`; then the rule `RL 9505` states, with the contract regenerated (`docs/contracts/openapi/generated.json`; FR-451). The `list_traces` docstring is corrected in the same change.
+Task 2d, in `backend/src/app/api/traces.py`: the red first, a route test that writes a `mismatch` row with a body and reads it back through `GET /api/v1/traces`; then the rule `RL-1434` states, with the contract regenerated (`docs/contracts/openapi/generated.json`; FR-451). The `list_traces` docstring is corrected in the same change.
 
 ## Disposition
 
-Open. Owner WK-1178. Discharged by SL 9568 Task 2d on `RL 9505`. Closed in place by the auditor, citing the PR, when it merges and the re-audit has read the route against a `mismatch` row.
+Open. Owner WK-1178. Discharged by SL-1436 Task 2d on `RL-1434`. Closed in place by the auditor, citing the PR, when it merges and the re-audit has read the route against a `mismatch` row.
 
 ### Disposition — the lead's decision (pre-mint), 2026-10-05 18:06 BST
 
-Per `docs/process/document-ids.md` §1.6; the maintainer may override. **MEDIUM; carry forward with an owner, WK-1178; discharged by SL 9568 Task 2d.** The spec rule comes first, via `RL 9505` (working id).
+Per `docs/process/document-ids.md` §1.6; the maintainer may override. **MEDIUM; carry forward with an owner, WK-1178; discharged by SL-1436 Task 2d.** The spec rule comes first, via `RL-1434`.
 
-**Condition:** within SL 9568, Task 2d (the route carries the status) lands **before, or in the same commit as, the chain change**, so that no chain-caused mismatch is ever listed as the quote's trace. This is the HIGH trigger named under "Severity (proposed)" above, discharged by ordering.
+**Condition:** within SL-1436, Task 2d (the route carries the status) lands **before, or in the same commit as, the chain change**, so that no chain-caused mismatch is ever listed as the quote's trace. This is the HIGH trigger named under "Severity (proposed)" above, discharged by ordering.
 
 ### Disposition — accepted by the maintainer (by delegation), 2026-10-05
 
