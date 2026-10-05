@@ -164,7 +164,11 @@ failure line as printed. The pricing-core tests are in
    would survive items 1–6, not this one.
 8. **The FR-240 text is RL 9491's, verbatim.** `grep -cF '<RL 9491's anchor>'
    docs/specs/03-rating-engine.md` prints `1`, with the anchor copied from the minted RL;
-   `python3 scripts/audit-docs.py` exits with no new FAILED line.
+   `python3 scripts/audit-docs.py` exits with no new FAILED line. *(Dated note, 2026-10-05,
+   pre-mint: before applying, the find string is re-counted at this slice's own base under
+   the FR-240 anchor rule (§"Write set", the SL 9647 row). The ledger records that count;
+   any count other than 1 is a STOP to the maintainer. After applying, a distinctive
+   phrase of RL 9491's own text counts 1.)*
 9. **One fault, one code.** `git diff origin/main...HEAD -- backend/src/app/errors.py`
    is empty (the code is A-2's), and `git grep -c MODEL_CALL_FEATURE_MAP_INVALID --
    packages/pricing-core/src/pricing_core/rating/compile.py` prints `1` or more.
@@ -265,6 +269,20 @@ named.** `PL-1371` §5 rule 4 serialises `compile_bundle` outright.
 | **PL 9610**, **PL 9609** (WK-1250 S2/S3; #1170, #1173) and **PL 9689** (WK-673 S3; #1138) | `compile.py` `compile_bundle` | as A-2's table records | one call | **SERIALISE** (rule 4) |
 | **A-4**, PL 9593 (WK-1178; #1175 @`24eca966`) | none (`examples/`, backend tests) | B4's `model_call` over the AD structure | the check A-4's map must pass | **plan dependency, reversed**: A-4 follows this slice (need 5's proposal) |
 | `docs/roadmap.md` WK-1178 tail | — | A-3 (SL 9596) and A-4 (SL 9594) append at the same place | the SL 9495 row | registry append, distinct rows → the second to merge re-reads |
+| **SL 9647**, PL 9649 applying RL 9633's T1 (WK-673; #1152 @`df8ba756`; RL 9633 #1155 @`95590c87`) *(row added 2026-10-05, pre-mint)* | `03` FR-240 row (`:137`), its second cell | T1 appended with the find string `The message names the step and the rung.)* \|` | RL 9491's T-text appended with the **same** find string (RL 9491 #1214 @`b900e008`) | the same anchor: whichever slice applies second counts 0 → **SERIALISE** on the FR-240 row, under the anchor rule below |
+
+*Dated note, 2026-10-05 (pre-mint): **the FR-240 anchor rule**, accepted by the maintainer (by
+delegation) in the entry "2026-10-05 18:58:28 BST — S7 gate 1: (a) _SINKS entries ADOPTED;
+the re-gate plan CONFIRMED, with an explicit allowed-failure set; the measurement re-run in
+the slot" (`channel/to-lead.md`), item 4, verbatim: "RL 9491 #1214 @b900e008 and the FR-240
+anchor collision with RL 9633 T1: the rule (append after the last amendment then present,
+re-counted at its own base, ≠1 is a STOP to me) is ACCEPTED, and it is named in BOTH RL 9491
+and PL 9649's contention." SL 9495 and SL 9647 serialise on the FR-240 row. The slice that
+applies second appends its text at the end of FR-240's second cell, after the last amendment
+then present; it re-counts its find string at its own base; any count other than 1 is a STOP
+to the maintainer. This slice follows PL 9649 (need 2), so SL 9495 is expected to apply
+second. The code's home is unchanged: `MODEL_CALL_FEATURE_MAP_INVALID` is not yet in `03`'s
+owned list (A-2's T3 homes it), so SL 9495 serialises after A-2 (need 3).*
 
 ### Size
 
@@ -417,7 +435,11 @@ def check_model_call_coverage(
 
 - [ ] **Step 1:** Apply RL 9491's FR-240 T-text to `docs/specs/03-rating-engine.md`'s FR-240
   row, verbatim, at the position the RL names. Run the RL's `grep -cF` anchor (prints `1`)
-  and `python3 scripts/audit-docs.py`.
+  and `python3 scripts/audit-docs.py`. *(Dated note, 2026-10-05, pre-mint: under the FR-240
+  anchor rule (§"Write set", the SL 9647 row), re-count the find string at this slice's own
+  base first. If SL 9647's T1 is already applied, append at the end of FR-240's second cell,
+  after the last amendment then present. Any count other than 1 is a STOP to the
+  maintainer, never a re-anchoring by the executor.)*
 - [ ] **Step 2:** Commit: `docs(specs): FR-240 — compile refuses a model_call's incomplete
   feature_map (RL 9491)`.
 
