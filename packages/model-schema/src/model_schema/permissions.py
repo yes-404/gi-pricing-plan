@@ -42,6 +42,7 @@ class Permission(enum.StrEnum):
     MODEL_READ = "model:read"
     MODEL_FIT = "model:fit"
     MODEL_SUBMIT = "model:submit"
+    CUSTOM_OBJECTIVE_AUTHOR = "custom_objective:author"
 
     # Rating (`03`)
     RATING_READ = "rating:read"

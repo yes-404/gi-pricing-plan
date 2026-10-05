@@ -1119,7 +1119,7 @@ Minted as `SL-1272` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-
 id: SL-1273
 family: slice
 title: Slice 3: the `expression` kind through the platform, behind the flag, with `custom_objective:author` (FR-144, FR-146, FR-150, FR-152, FR-163, FR-207, FR-366, FR-367, FR-448, FR-449, NFR-480, NFR-484)
-status: active                 # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: dee49f781fd23f9df2e72161885c77fa17a6f1ab
@@ -1130,6 +1130,7 @@ relates: [PL-1268, PL-1382]
 ```
 
 `kind: expression` in `model-schema`, `/derive`, the flag made liftable with its default off (`RL-1265` DP-3), certification as a job, and the objective error codes registered. `custom_objective:author`: the `06` §4.1 row, the enum member and the route check land in one commit. `PL-1268` Slice 3. Starts after Slice 2 closes. **Gate:** `CR-1247` Proposal 1 (c) is delivered first. That means the decision-maker's `RL-` (or ADR) with the `06` amendment, and WK-1178's permission-parity check, both merged before the commit that adds `custom_objective:author`. *(Title completed 2026-09-30 on auditor-plans' F1 for #943: it now lists every id that `PL-1268`'s Core scope table assigns to this slice.)*
+**Closed 2026-10-05** on the slice audit (`handover/audit-sl1273-2026-10-04.md`, local) and its re-check of 2026-10-05, at the mint of ledger `LG-1412` (the executor's closing acts, `executor.md` mint step; `document-ids.md` §1.6).
 (Activated 2026-10-04 as WK-690 Slice 3, on the maintainer's GO check, "2026-10-04 16:54:04 BST — DISPATCH GO: WK-690 Slice 3 (SL-1273 / PL-1382) on lane A; executor-1273 starts after #1106 merges"; dispatch record DISPATCH-WK-690-SL1273-2026-10-03.)
 Minted as `SL-1273` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `08bd1c5a` (working id 9952 before the mint).
 
@@ -1420,7 +1421,7 @@ relates: [FD-1357, RL-1361, PL-1267]
 id: SL-1409
 family: slice
 title: WK-1178 fix slice — FD-1356: a validation rule is approved only through the approval workflow
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-04
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 1dd5e264195677b4a13268b80ac8673c2c027135
@@ -1430,7 +1431,8 @@ corrected_by: []
 relates: [FD-1356, RL-1301, PL-1306, SL-1256, RL-1407, PL-1408]
 ```
 
-`FD-1356`'s fix (HIGH): rule approval goes through `approvals.submit` and `approvals.decide`, `_carry_to_the_artifact` gains the validation-rule branch, and the direct approve route becomes a thin client of the decide path or is removed (DP-1). A quorum of 2 leaves the rule in `review` after one approval. A dry-run whose outcome is `error` is refused at submit and at approve, one red-first case per cause (missing column, unknown check, missing table), and a `fail` outcome stays accepted. `RL-1301` A.4.5's temporary `approve_rule` allowance is removed red first. Rule approvals that no approval request backs are reset to `review`, with the count recorded (follow-on 2). Task 0 is the maintainer's containment query over every `gipricing*` database, with a STOP on a non-zero result; it printed 5 at planning time. The maintainer decided DP-0 as (c): export the rows, drop the scratch database, re-run. The re-run printed 0 on 2026-10-01, to be re-confirmed at dispatch. The remedies of FD 9747 (an approved rule's dry run cannot be replaced) and FD 9748 (a Rule Set runs only approved, existing members) also ride in this slice, as the maintainer decided. RL-1407 rules the plan's decision points and these remedies. Leaf plan PL-1408 (`draft`). **Activation needs:** WK-674 S2 (`SL-1256`) merged (the maintainer, 2026-10-01 ~10:10 BST, order (b) S2 → this fix); lane B order `SL-1360` → the FD-1357 fix → this slice → the `RL-1343` decimal fix → FD-1335 Part A; the plan's decision points ruled; the maintainer's agreement and the lead's go in a separate activation PR. *(Filed 2026-10-01 under working ids 9761 (this row) and 9762 (the plan), reserved by the lead. Minted 2026-10-04 as SL-1409; its plan is PL-1408 and its ruling RL-1407.)*
+`FD-1356`'s fix (HIGH): rule approval goes through `approvals.submit` and `approvals.decide`, `_carry_to_the_artifact` gains the validation-rule branch, and the direct approve route becomes a thin client of the decide path or is removed (DP-1). A quorum of 2 leaves the rule in `review` after one approval. A dry-run whose outcome is `error` is refused at submit and at approve, one red-first case per cause (missing column, unknown check, missing table), and a `fail` outcome stays accepted. `RL-1301` A.4.5's temporary `approve_rule` allowance is removed red first. Rule approvals that no approval request backs are reset to `review`, with the count recorded (follow-on 2). Task 0 is the maintainer's containment query over every `gipricing*` database, with a STOP on a non-zero result; it printed 5 at planning time. The maintainer decided DP-0 as (c): export the rows, drop the scratch database, re-run. The re-run printed 0 on 2026-10-01, to be re-confirmed at dispatch. The remedies of FD-1415 (an approved rule's dry run cannot be replaced) and FD-1414 (a Rule Set runs only approved, existing members) also ride in this slice, as the maintainer decided. RL-1407 rules the plan's decision points and these remedies. Leaf plan PL-1408 (`active`). **Activation needs:** WK-674 S2 (`SL-1256`) merged (the maintainer, 2026-10-01 ~10:10 BST, order (b) S2 → this fix); lane B order `SL-1360` → the FD-1357 fix → this slice → the `RL-1343` decimal fix → FD-1335 Part A; the plan's decision points ruled; the maintainer's agreement and the lead's go in a separate activation PR. *(Filed 2026-10-01 under working ids 9761 (this row) and 9762 (the plan), reserved by the lead. Minted 2026-10-04 as SL-1409; its plan is PL-1408 and its ruling RL-1407.)*
+(Activated 2026-10-05 as the WK-1178 FD-1356 fix slice, on the maintainer's GO check, "2026-10-05 09:44:39 BST — DISPATCH GO: FD-1356 fix (SL-1409 / PL-1408) on lane B, option (b); executor-1409 starts once the `__all__` registry amendment merges (or once WK-690 S3 merges, if that comes first)"; dispatch record DISPATCH-WK-1178-SL1409-2026-10-04.)
 
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half

@@ -41,19 +41,31 @@ import pytest
 import pytest_asyncio
 from backend.tests.approved_rows import mark_approved
 from backend.tests.test_api_datasets import _headers
+from backend.tests.test_custom_objectives import _principal_holding
 from backend.tests.test_model_jobs_gbm import _gbm_spec
 from fastapi.testclient import TestClient
 
 from app.config import Settings
-from app.db.models import ApprovalPolicyRow, CustomObjectiveRow, ModelRow
+from app.db.models import (
+    ApprovalPolicyRow,
+    CustomObjectiveRow,
+    ModelRow,
+    ObjectiveCertificateRow,
+)
 from app.db.session import Database
 from app.platform.objectives import default_sampling
 from model_schema import (
     DEFAULT_POLICY,
+    OBJECTIVE_CERTIFICATE_CHECKS,
     ApprovalPolicy,
+    CertificateCheck,
+    CertificateOutcome,
+    CertificateResult,
+    CheckStatus,
     CustomObjective,
     GbmFunctionRef,
     ObjectiveStatus,
+    SamplingSpec,
     new_uuid7,
 )
 
@@ -74,6 +86,14 @@ async def author(workspace_id, principal, grant) -> dict[str, str]:
     """
     await grant("analyst")
     return _headers(principal.id, workspace_id)
+
+
+@pytest_asyncio.fixture
+async def expression_author(workspace_id, database) -> dict[str, str]:
+    """`model:fit` and `custom_objective:author` (FR-367, RL-1362 DP-S3-2)."""
+    return await _principal_holding(
+        database, workspace_id, {"custom_objective:author", "model:fit", "model:read"}
+    )
 
 
 @pytest_asyncio.fixture
@@ -148,13 +168,37 @@ def _advance(objective_id: UUID, *, status: ObjectiveStatus) -> None:
 
     `status IN ('draft','deprecated') OR certificate_id IS NOT NULL` is a CHECK, so a
     certificate id travels with the status — which is the invariant, not a fixture detail.
+    The id names a real certificate row (all nine checks passing): submission refuses a
+    pointer to no row (WK-690 S3 Delta 7 (g)).
     """
 
     async def _update(database: Database) -> None:
         async with database.unit_of_work() as session:
             row = await session.get(CustomObjectiveRow, objective_id)
             assert row is not None
-            row.certificate_id = new_uuid7()
+            certificate = ObjectiveCertificateRow(
+                id=new_uuid7(),
+                workspace_id=row.workspace_id,
+                custom_objective_id=row.id,
+                objective_version=row.version,
+                payload=CertificateResult(
+                    checks=tuple(
+                        CertificateCheck(name=name, status=CheckStatus.PASS, detail="ok")
+                        for name in OBJECTIVE_CERTIFICATE_CHECKS
+                    ),
+                    sampling=SamplingSpec(
+                        n_points=1_000,
+                        y_range=(0.0, 20.0),
+                        f_range=(-5.0, 4.0),
+                        w_range=(0.01, 10.0),
+                        seed=7,
+                    ),
+                    overall=CertificateOutcome.CERTIFIED,
+                ).model_dump(mode="json"),
+            )
+            session.add(certificate)
+            await session.flush()
+            row.certificate_id = certificate.id
             if status.value == "approved":
                 await mark_approved(session, row)
             else:
@@ -580,8 +624,8 @@ def test_submitting_without_the_required_evidence_is_refused(
 
 
 @pytest.mark.req("FR-150")
-def test_creating_an_expression_objective_is_refused_by_name(
-    client: TestClient, author: dict[str, str]
+def test_creating_an_expression_objective_is_refused_by_name_while_the_flag_is_off(
+    client: TestClient, expression_author: dict[str, str]
 ) -> None:
     """409 `OBJECTIVE_KIND_NOT_ENABLED`, not a 422 about an unexpected key.
 
@@ -594,7 +638,7 @@ def test_creating_an_expression_objective_is_refused_by_name(
     response = client.post(
         "/api/v1/custom-objectives",
         json={"slug": _slug(), "kind": "expression", "template": "poisson"},
-        headers=author,
+        headers=expression_author,
     )
     assert response.status_code == 409, response.text
     assert response.json()["code"] == "OBJECTIVE_KIND_NOT_ENABLED"

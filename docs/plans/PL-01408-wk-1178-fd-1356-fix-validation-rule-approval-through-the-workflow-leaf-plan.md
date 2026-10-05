@@ -3,7 +3,7 @@ id: PL-1408
 family: plan
 kind: leaf
 title: WK-1178 — FD-1356 fix, validation-rule approval through the approval workflow (FR-50, FR-351, FR-353, FR-354, FR-355, FR-363): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-04              # the mint date (check 31); filed 2026-10-01
 owner: planner
 tree: 1dd5e264195677b4a13268b80ac8673c2c027135

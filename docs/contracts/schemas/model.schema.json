@@ -165,7 +165,7 @@
     },
     "custom_objective_ref": {
       "type": ["string", "null"],
-      "description": "DECLARED AND UNBUILT (FR-207, owner WK-690 — Phase 2, reassigned 2026-08-22 and confirmed 2026-08-25 to reach this field and its `GlmSpec` twin, not the `Model` one alone). A custom objective on the GLM arm needs `GlmSpec.custom_objective_ref`, which is absent entirely; a GBM names its objective through `spec.objective` instead, and R4 is enforced off that ref rather than this one. This field would record what the GLM arm cannot yet declare, so it cannot be built before its twin."
+      "description": "DECLARED AND UNBUILT (FR-207, owner Phase 3, moved there on 2026-10-04 with its `GlmSpec` twin, RL-1362 DP-S3-5: the GLM arm's custom objective is a separate, unspecified capability). A custom objective on the GLM arm needs `GlmSpec.custom_objective_ref`, which is absent entirely; a GBM names its objective through `spec.objective` instead, and R4 is enforced off that ref rather than this one. This field would record what the GLM arm cannot yet declare, so it cannot be built before its twin."
     },
     "parent_model_id": {"type": ["string", "null"], "format": "uuid"},
     "change_reason": {
