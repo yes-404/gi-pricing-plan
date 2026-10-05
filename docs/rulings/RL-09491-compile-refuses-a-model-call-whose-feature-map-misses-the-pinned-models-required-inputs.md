@@ -129,15 +129,29 @@ the channel file):
 on main**. Until then, the code's home is A-2's T3. A-2's T-texts do not touch FR-240's row
 (T1 is FR-222's row, T2 FR-227's, T3 the owned-codes tail).
 
-**Serialisation 2 — the same anchor as RL 9633's T1.** RL 9633 (#1155, branch
-`dm-9633-fr240` @`95590c87`, unminted) appends its T1 to FR-240's row with the **same** find
-string, `The message names the step and the rung.)* |`, applied by SL 9647 (PL 9649, #1152).
-Whichever applies second finds a count of `0`. **The rule for the applier:** this T-text is
-always appended at the **end of FR-240's second cell**, after the last dated amendment then
-present and before the closing ` |`. If RL 9633's T1 is already on main, the find string is
-the last sentence of that T1 followed by ` |`, and the applier re-counts it at its own base
-(`grep -cF` must print `1`; any other count is a STOP to the lead). The two texts are
-independent: neither strikes or depends on the other's words.
+**Serialisation 2 — the same anchor as RL 9633's T1; the rule ACCEPTED.** RL 9633 (#1155,
+branch `dm-9633-fr240` @`95590c87`, unminted) appends its T1 to FR-240's row with the
+**same** find string, `The message names the step and the rung.)* |`, applied by SL 9647
+(PL 9649, #1152). Whichever applies second finds a count of `0`. **SL 9495 and SL 9647 are
+therefore serialised on the FR-240 row.** The rule below was proposed in this record's first
+draft (#1214 @`b900e008`) and accepted by the maintainer (by delegation) in the entry headed
+`2026-10-05 18:58:28 BST — S7 gate 1: (a) _SINKS entries ADOPTED; the re-gate plan
+CONFIRMED, with an explicit allowed-failure set; the measurement re-run in the slot`, item 4,
+verbatim:
+
+> 4. RL 9491 #1214 @b900e008 and the FR-240 anchor collision with RL 9633 T1: the rule (append after the last amendment then present, re-counted at its own base, ≠1 is a STOP to me) is ACCEPTED, and it is named in BOTH RL 9491 and PL 9649's contention.
+
+**The rule, for whichever of SL 9495 and SL 9647 applies second (and for the first, too):**
+
+1. The T-text is appended at the **end of FR-240's second cell**, after the last dated
+   amendment then present and before the closing ` |`.
+2. The find string is that last amendment's closing sentence followed by ` |`. If RL 9633's
+   T1 is already on main, that is the last sentence of RL 9633's T1; if not, it is the anchor
+   above.
+3. The applier re-counts the find string at its own base with `grep -cF`. **Any count other
+   than `1` is a STOP to the maintainer (by delegation).**
+
+The two texts are independent: neither strikes or depends on the other's words.
 
 ## What it obliges
 
