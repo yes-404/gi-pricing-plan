@@ -229,7 +229,7 @@ Each find string is counted with `grep -cF` over the plan file at the PR head na
   The pure-core tests' raise form (`apply_cell_edits`, Step 1) is the planner's to keep or
   reshape, provided P4's Acceptance holds.
 
-**PL 9578 (S3), #1186 at `20ba9a2e`.**
+**PL 9578 (S3), #1186 at `20ba9a2e`; re-counted at `c5d1d03a` (amendment of 2026-10-05 17:42 BST below).**
 
 - **P7, Status.** Find
   ``` `draft`. DP-S3-1 and DP-S3-2 (below) are open and are the maintainer's (by delegation). The```;
@@ -238,11 +238,11 @@ Each find string is counted with `grep -cF` over the plan file at the PR head na
 - **P8, Activation need 4.** Find `4. **DP-S3-1 and DP-S3-2 decided**, each by a dated line.`;
   append
   `` Decided (RL 9543). The dispatch record names `backend/tests/test_contracts.py` as shared with `SL-1367`; whichever of S3 and `SL-1367` dispatches second carries the pending-list delta (11 entries if S3 is first; RL 9543 item 7).``
-- **P9, Acceptance 21.** Find
+- **P9, Acceptance 21.** *(Discharged before mint: the planner's dated note at `c5d1d03a` already carries it; not applied. See the amendment below.)* Find
   ``21. **The diff route is typed** (DP-S3-1, if (a)). In `generated.json`, the 200 response of``;
   replace with
   ``21. **The diff route is typed in the slice's first commit** (DP-S3-1 (a), RL 9543 item 6), before any frontend code consumes it, with `generate-contracts.py --check` green at that commit. In `generated.json`, the 200 response of``.
-- **P10, Task 5.** Find `### Task 5: The diff route typed; the contract and the client (DP-S3-1)`;
+- **P10, Task 5.** *(Discharged before mint: at `c5d1d03a` the task is Task 0A, the slice's first commit, and Task 5 is a tombstone; not applied. See the amendment below.)* Find `### Task 5: The diff route typed; the contract and the client (DP-S3-1)`;
   insert after it a blank line and
   `**Order (RL 9543 item 6):** Step 1 and the contract regeneration are the slice's first commit, made before Task 1.`
 
@@ -272,7 +272,7 @@ Each find string is counted with `grep -cF` over the plan file at the PR head na
 ## What it obliges
 
 - **This commit:** this record only. No spec, plan or code file is edited here.
-- **The planner** applies P1–P6 to PL 9582, P7–P10 to PL 9578 and P11–P14 to PL 9576 before
+- **The planner** applies P1–P6 to PL 9582, P7 and P8 to PL 9578 (P9 and P10 are discharged) and P11–P14 to PL 9576 before
   each mints, citing this record. If a find string no longer counts 1 at the plan's head, the
   planner stops and reports it to the decision-maker; it is never re-anchored by guess.
 - **WK-675 S4** applies T1–T4 with its code in one commit, with `docs/contracts/` and the
@@ -319,3 +319,22 @@ Each is a test that is red on the code before its slice and green after it.
   `backend/src/app/platform/rate_tables.py` writes one at `4d3be141` (`git grep -i audit`: no
   hit). `created_by_edit` is the version's own record and does not discharge it. Routed to the
   lead as a possible finding; not ruled here.
+
+## Amendment, 2026-10-05 17:42 BST: P7–P10 re-counted at PL 9578's new head, before mint
+
+Plan-text update only; nothing ruled above changes (decision-maker `dm-675s4`, on the lead's
+order). PL 9578 (#1186) moved from `20ba9a2e` to `c5d1d03acdb292e34ff30ebaf58ff87ab3f918d3`:
+the planner moved the diff-route typing to a new Task 0A, "the slice's FIRST commit", left
+Task 5 as a tombstone ("### Task 5: moved to Task 0A (dated pre-mint note)"), and added a
+dated note to Acceptance 21. Each find string was re-counted with Python `str.count` on the
+plan file at `c5d1d03a`:
+
+| P-text | Find string (start) | Count at `c5d1d03a` | Disposition |
+|---|---|---|---|
+| P7 | `` `draft`. DP-S3-1 and DP-S3-2 (below) are open `` | 1 | applies as written |
+| P8 | `4. **DP-S3-1 and DP-S3-2 decided**, each by a dated line.` | 1 | applies as written (no `SL-1367` delta is in the plan's activation needs yet; `SL-1367` appears only in `relates:` and Task 0 row 0.13) |
+| P9 | `21. **The diff route is typed** (DP-S3-1, if (a)).` | 1 | **discharged**: the line's own dated note now reads "this holds in the slice's **first** commit (Task 0A), before any frontend code consumes the route, with `generate-contracts --check` exiting 0 at that commit", which is P9's content; applying P9 would state it twice |
+| P10 | `### Task 5: The diff route typed; the contract and the client (DP-S3-1)` | **0** | **discharged**: the heading is now `### Task 0A: The diff route typed; the contract and the client (DP-S3-1) — the slice's FIRST commit` (count 1), which is P10's order |
+
+So the planner applies P7 and P8 only. PL 9582 (`800d3a70`) and PL 9576 (`06fb5ca3`) are
+unchanged at their heads (ls-remote at 17:42 BST), so P1–P6 and P11–P14 stand as counted.
