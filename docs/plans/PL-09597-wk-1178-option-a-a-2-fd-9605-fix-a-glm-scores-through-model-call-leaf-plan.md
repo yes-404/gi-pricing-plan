@@ -231,6 +231,17 @@ red-first change does not re-declare it. Under (B) the fixture omits `result_typ
 That is item 16's backend evidence. The step feeds `s_office`, an `expression`, and no
 `output` directly, so item 15's type refusal does not reach it.
 
+**Dated note, 2026-10-05 (pre-mint): the one required-inputs helper is born in this slice.**
+From `~/gi-pricing-plan.local/channel/to-lead.md`, the maintainer's (by delegation) entry
+headed *"2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2"*, items 1 and 3, read in full by this planner. Verbatim:
+
+> 1. ORDER: A-2 → A-3 → SL 9495 → A-4, ACCEPTED (the per-component limb needs A-3's _resolve_peril_components; it still satisfies after A-2 and before A-4). The need "PL 9649 merged" (ResolvedArtifact.factors): accepted.
+
+> 3. DP-1: ONE public pricing-core helper defines "a model's required inputs" (its Factors, or fit_result.feature_order when it has none). It is BORN IN A-2, which merges first: A-2's plan (PL 9597, unminted) gains a pre-mint task that creates the helper in pricing-core and has its own save check call it. SL 9495 then REUSES it with no second definition. If A-2 has already merged without it when SL 9495 starts, SL 9495 extracts it from A-2's function as a no-behaviour-change refactor commit before its reds. Either way, one definition, and a test proves both call sites use it (one helper, two callers, by grep in the test or an import assertion).
+
+"DP-1" there is **PL 9494's** DP-1, not this plan's DP-1 (the Bundle's carriage, §"Decision
+points"). This plan carries it as Task 1b and items 20 and 21.
+
 ## Status
 
 `draft`. **DP-1 to DP-4 are ruled** by the maintainer (by delegation) in the 17:02:50 and
@@ -244,6 +255,11 @@ through a separate activation PR, after every activation need below holds.
 18 and 19 is membership-only, NOT a completeness check. Completeness is compile-time,
 decided by that entry and carried by PL 9494 / SL 9495 (working ids, #1216); item 13's
 readings carry the full note.*
+
+*Dated note, 2026-10-05 (pre-mint), on the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 3: this slice
+creates the one public helper `required_model_inputs` in `pricing-core` (Task 1b, items 20
+and 21), and the save check of items 13, 18 and 19 computes R3's set by calling it. SL 9495
+(PL 9494, working ids) reuses it for compile completeness. No activation need changes.*
 
 ### Activation needs, in order
 
@@ -404,6 +420,11 @@ quoted above. Each is red first.*
       per component for a Peril Structure, with this item's code reused. It is ruled by
       RL 9491 and carried by PL 9494 / SL 9495 (working ids, #1216), which run after this
       slice. Nothing in this slice's scope, items or write set changes.*
+    - *Dated note, 2026-10-05 (pre-mint), on the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 3: R3's set is
+      computed by one call, `required_model_inputs(factors, feature_order)` (item 20), with
+      the Model's loaded Factors and `getattr(model.fit_result, "feature_order", ())`. The
+      accepted set is that tuple plus R2's offset column. The check does not restate the
+      "Factors, else `feature_order`" choice. Item 21 tests the call.*
 14. **The offset's value comes from the quote** (DP-3 (a) with the precision, the 17:03:45
     entry). `test_the_offset_moves_the_glm_by_exactly_the_exposure` (new pricing-core module,
     a GLM with a `log_column` exposure offset): the same quote at exposure 1.0 and at 0.5
@@ -538,6 +559,33 @@ quoted above. Each is red first.*
     version 2. **Red first:** at the base the raw-column map writes version 2. `create_version`
     (`platform/sub_graphs.py:127`) calls item 13's one function inside its unit of work,
     before `_write` (`:140`). R1 to R4 hold.
+20. *(Added 2026-10-05, pre-mint, on the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 3.)* **One public
+    helper defines a model's required inputs.** `required_model_inputs(factors, feature_order)`
+    in `packages/pricing-core/src/pricing_core/modelling/factors.py`, appended after
+    `rateable` (`:323-329` at `ecbd1954`) and added to `__all__` (`:82`), returns the
+    Factors' slugs in the given order, or `feature_order` when there are no Factors. Three
+    tests appended to `packages/pricing-core/tests/test_factor_resolution.py`, each
+    `req("FR-222")`: `test_required_model_inputs_are_the_factor_slugs_when_the_model_has_factors`
+    (two Factors and a non-empty `feature_order`: the slugs win),
+    `test_required_model_inputs_fall_back_to_feature_order_without_factors` (no Factors: a
+    GBM's `feature_order`), and `test_required_model_inputs_are_empty_with_neither` (no
+    Factors, empty `feature_order`: `()`). The offset column is **not** a required input
+    (R2 adds it to the save check's accepted set, outside the helper). **Red first:** at
+    the base the import fails with `ImportError: cannot import name 'required_model_inputs'`.
+21. *(Added 2026-10-05, pre-mint, the same entry, item 3.)* **The save check calls the
+    helper, and the helper is defined once.** Two tests appended to
+    `backend/tests/test_rating_algorithms.py`, each `req("FR-222")`.
+    `test_the_feature_map_save_check_calls_the_one_required_inputs_helper`: the module
+    `app.platform.rating_algorithms` holds the same object as
+    `pricing_core.modelling.factors.required_model_inputs` (an import assertion); a spy
+    patched over that module attribute records its calls, and item 13's slug-map control,
+    posted to `POST /api/v1/rating-algorithms`, answers `201` with exactly one recorded call,
+    whose Factor slugs are the fitted GLM's. `test_required_model_inputs_is_defined_once`:
+    under `packages/*/src` and `backend/src`, exactly one file contains
+    `def required_model_inputs(`, and it is `pricing_core/modelling/factors.py`. SL 9495
+    extends the first test with its compile caller (PL 9494). **Red first:** at the base the
+    import assertion fails with `AttributeError: module 'app.platform.rating_algorithms' has
+    no attribute 'required_model_inputs'`, and the defined-once test fails on an empty list.
 
 ## Global Constraints
 
@@ -577,6 +625,9 @@ quoted above. Each is red first.*
 | `03` | NFR-489 | The scoring p99 budget, measured for a GLM `model_call` | ledger only (item 9) |
 | `03` | FR-227 | A `model_call` declares `result_type` (`decimal` default, or `money_minor`), and a `money_minor` one feeding a non-money output is refused *(added 2026-10-05, DP-4 as corrected)* | `req("FR-227")` on items 15, 16 |
 | `03` | FR-226 | A `model_call` is never rounded; the `output` step rounds once *(added 2026-10-05, DP-4 as corrected)* | `req("FR-226")` on item 15 |
+
+*Dated note, 2026-10-05 (pre-mint): items 20 and 21 carry `req("FR-222")`, FR-222's save
+check as amended (T1). No id is added to the table.*
 
 Out of scope, named so no reader assumes it: a Peril Structure's scoring (A-3, which
 calls this slice's GLM path for each component); `approximation` mode (FR-222's other half,
@@ -641,6 +692,10 @@ file" above.*
 | `backend/src/app/platform/sub_graphs.py` | edited: `create_sub_graph` (`:104`) and `create_version` (`:127`) each call item 13's check before `_write` (items 18 and 19; R5, 17:27:55 BST; 17:34:25 BST item 3) |
 | `backend/tests/test_sub_graphs_api.py` | appended: items 18's and 19's tests and controls |
 | `docs/specs/03-rating-engine.md` §5.1 | the owned-codes list (`:928` onward), T3 appended at its tail |
+| `packages/pricing-core/src/pricing_core/modelling/factors.py` | edited *(added 2026-10-05, pre-mint, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 3)*: `required_model_inputs` appended after `rateable` (`:323-329` at `ecbd1954`); `__all__` (`:82`) gains it (item 20) |
+| `packages/pricing-core/tests/test_factor_resolution.py` | appended *(same)*: item 20's three tests, using the module's `_factor` builder (`:82`) |
+| `backend/src/app/platform/rating_algorithms.py` | *(same)* item 13's one function imports `required_model_inputs` at module level, beside the existing `pricing_core.rating.compile` import (`:21`), and calls it for R3 (no new path) |
+| `backend/tests/test_rating_algorithms.py` | appended *(same)*: item 21's two tests |
 
 **Contention.** Classes as in `docs/process/delivery-process.core.json`'s `no_shared_files`.
 **Snapshot: open PRs at `137bc817`, 2026-10-05 between 16:52 and 17:40 BST; each plan's write
@@ -678,6 +733,7 @@ write-set rows.*
 | **The owned-codes tail and `RATING_ERROR_CODES`** *(added 2026-10-05, DP-5 (ii) (a))*: PL 9649 (#1152, `CONTROL_FACTOR_IN_RATEABLE_PATH`), PL 9683 (#1140, `MODEL_REFERENCE_MODE_INCONSISTENT`), PL 9578 (#1186, WK-675 S3, the same code), PL 9591 (#1176, `ATTRIBUTION_RECONCILIATION_FAILED`), PL 9689 (#1138, the list's tail), PL 9595 (#1174, `:933`) | `03` §5.1 owned-codes list; `errors.py` `RATING_ERROR_CODES` | one code appended each | `MODEL_CALL_FEATURE_MAP_INVALID` appended | the same existing object's tail → **SERIALISE**, as the 17:14:54 entry says ("it serialises on the owned-codes tail per my rules"); PL 9649 and PL 9683 already precede A-2 |
 | **`create_algorithm`** *(added 2026-10-05)* | `backend/src/app/platform/rating_algorithms.py` | read in each plan file's write set (the same sweep as above): no open plan edits it | edited | none found; the dispatch re-reads it |
 | **`create_sub_graph`** *(added 2026-10-05, 17:29:39 BST)* | `backend/src/app/platform/sub_graphs.py` | PL 9610 (#1170) cites the resolver (`:202-213`) as a fact and edits no function here; no other open plan names the file in a write-set row | edited | none found; the dispatch re-reads it (WK-1250 S2 and S3 are near this module) |
+| **`modelling/factors.py`** *(added 2026-10-05, pre-mint; swept after 19:04:15 BST, the 100 open PRs listed by `gh pr list --state open --limit 100`, each head's `docs/plans/` grepped with `git grep -l -E 'modelling/factors\.py\|required_model_inputs'`)* | `packages/pricing-core/src/pricing_core/modelling/factors.py` | PL 9595 (#1174 @`2404ac86`) cites `:170-172` as a fact; PL 9624 (#1161 @`6714cc79`) cites `:223-224` as a fact; neither edits it. PL 9494 (#1216) defines a `required_model_inputs` of its own in `rating/compile.py` at `b4e4fdf5`, which the 19:03:24 entry replaces with a reuse of this one | added | no write contention; **plan dependency**: SL 9495 consumes this helper (order A-2 → A-3 → SL 9495 → A-4) |
 | **PL 9616**, FD-1416 fix (#1168; WK-1178) and **PL 9591**, WK-673 S4 (#1176) | `scripts/generate-contracts.py`; generated contracts | `GENERATED_SHAPES` keys; regenerated | not edited (`RatingModelCallStep` is in no `GENERATED_SHAPES` key; it reaches `generated.json` through referenced shapes); regenerated | generated files exempt (regenerate on the merge base); PL 9616 same Work → `RL 9620` (a)/(b) written |
 
 Every other open plan (#1127 PL 9716, #1131 PL 9713, #1140 PL 9683, #1146 PL 9662, #1161 PL
@@ -754,6 +810,140 @@ date. Its part (i) is settled by the 17:12:40 BST correction (option (B), item 1
   --dir frontend generate:api`; Task 6's T1 and T2; item 16 green. Commit: `feat:
   model_call declares a type-only result_type, decimal by default (FR-227; FD 9605)`.
 - [ ] **Step 4:** Commit (red): `test: FD 9605 — a GLM model_call is refused at score (FR-222, FR-193)`.
+
+### Task 1b: The one required-inputs helper (items 20, 21)
+
+*(Added 2026-10-05, pre-mint, on the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 3.)* Runs before the save
+check of items 13, 18 and 19 is implemented, so that check is written as a caller.
+
+**Files:** Modify `packages/pricing-core/src/pricing_core/modelling/factors.py` (after
+`rateable`, `:323-329` at `ecbd1954`; `__all__`, `:82`),
+`packages/pricing-core/tests/test_factor_resolution.py`,
+`backend/src/app/platform/rating_algorithms.py`, `backend/tests/test_rating_algorithms.py`.
+
+**Interfaces:**
+- Produces: `required_model_inputs(factors: Sequence[Factor], feature_order: Sequence[str]) -> tuple[str, ...]`,
+  public, importable as `from pricing_core.modelling.factors import required_model_inputs`.
+  SL 9495's compile check (PL 9494) calls it with `ResolvedArtifact.factors` and the pinned
+  payload's `fit_result.get("feature_order", ())`.
+- Consumes: `model_schema.Factor` (already imported by `factors.py`, `:44`).
+
+- [ ] **Step 1: Write the failing pricing-core tests (item 20)**
+
+```python
+from pricing_core.modelling.factors import required_model_inputs
+
+
+@pytest.mark.req("FR-222")
+def test_required_model_inputs_are_the_factor_slugs_when_the_model_has_factors() -> None:
+    factors = [_factor("age_band", "driver_age"), _factor("region", "region")]
+    assert required_model_inputs(factors, ("x", "y")) == ("age_band", "region")
+
+
+@pytest.mark.req("FR-222")
+def test_required_model_inputs_fall_back_to_feature_order_without_factors() -> None:
+    assert required_model_inputs((), ("driver_age", "vehicle_age")) == (
+        "driver_age",
+        "vehicle_age",
+    )
+
+
+@pytest.mark.req("FR-222")
+def test_required_model_inputs_are_empty_with_neither() -> None:
+    assert required_model_inputs((), ()) == ()
+```
+
+- [ ] **Step 2: Run them; expect the red**
+
+Run: `uv run pytest packages/pricing-core/tests/test_factor_resolution.py -k required_model_inputs -q`
+Expected: collection error, `ImportError: cannot import name 'required_model_inputs'`.
+
+- [ ] **Step 3: Write the helper**
+
+```python
+def required_model_inputs(
+    factors: Sequence[Factor], feature_order: Sequence[str]
+) -> tuple[str, ...]:
+    """A model's required inputs: its Factors' slugs, or its `feature_order` without Factors.
+
+    The one definition (PL 9494's DP-1, ruled 2026-10-05). A-2's `feature_map` save check
+    tests membership against it; SL 9495's compile check tests completeness against it.
+    The offset column is not a required input here: the save check adds it (A-2's R2).
+    """
+    if factors:
+        return tuple(factor.slug for factor in factors)
+    return tuple(feature_order)
+```
+
+and `__all__` becomes `["FactorMatrix", "FactorResolutionError", "rateable",
+"required_model_inputs", "resolve_factors"]`.
+
+- [ ] **Step 4: Run Step 2's command; expect 3 passed.**
+
+- [ ] **Step 5: Write the failing backend tests (item 21)**, appended to
+  `backend/tests/test_rating_algorithms.py`. The fitted GLM and the slug-map body are item
+  13's own fixture and control, reused, not rebuilt.
+
+```python
+from pathlib import Path
+
+import app.platform.rating_algorithms as algorithms_module
+from pricing_core.modelling import factors as pricing_core_factors
+
+REPO = Path(__file__).resolve().parents[2]
+
+
+@pytest.mark.req("FR-222")
+def test_the_feature_map_save_check_calls_the_one_required_inputs_helper(
+    monkeypatch, <item 13's client and fitted-GLM fixtures>
+) -> None:
+    assert (
+        algorithms_module.required_model_inputs
+        is pricing_core_factors.required_model_inputs
+    )
+    calls: list[tuple[str, ...]] = []
+
+    def spy(factors, feature_order):
+        result = pricing_core_factors.required_model_inputs(factors, feature_order)
+        calls.append(result)
+        return result
+
+    monkeypatch.setattr(algorithms_module, "required_model_inputs", spy)
+    response = <item 13's slug-map control, posted to POST /api/v1/rating-algorithms>
+    assert response.status_code == 201
+    assert calls == [<the fitted GLM's Factor slugs, in spec order>]
+
+
+@pytest.mark.req("FR-222")
+def test_required_model_inputs_is_defined_once() -> None:
+    roots = [*(REPO / "packages").glob("*/src"), REPO / "backend" / "src"]
+    hits = sorted(
+        path.relative_to(REPO).as_posix()
+        for root in roots
+        for path in root.rglob("*.py")
+        if "def required_model_inputs(" in path.read_text(encoding="utf-8")
+    )
+    assert hits == ["packages/pricing-core/src/pricing_core/modelling/factors.py"]
+```
+
+The three angle-bracketed slots are the names item 13's test defines when Task 1 Step 3a
+writes it; the executor fills them with those names, and adds no new fixture.
+
+- [ ] **Step 6: Run them; expect the red**
+
+Run: `uv run pytest backend/tests/test_rating_algorithms.py -k "required_inputs" -q`
+Expected: the first fails with `AttributeError: module 'app.platform.rating_algorithms' has
+no attribute 'required_model_inputs'`; the second fails on `[] == [...]`.
+
+- [ ] **Step 7: Make the save check a caller.** In `rating_algorithms.py`, add
+  `from pricing_core.modelling.factors import required_model_inputs` beside the import at
+  `:21`. Item 13's one function computes, per `model_call` step whose `model_ref` resolves
+  (R1), `accepted = set(required_model_inputs(factors, getattr(model.fit_result,
+  "feature_order", ()))) | <R2's offset column, if the spec declares one>`. It writes no
+  other "Factors, else `feature_order`" branch.
+
+- [ ] **Step 8: Run Step 6's command and items 13, 18 and 19; expect all passed.** Commit:
+  `feat: one pricing-core helper for a model's required inputs; the feature_map save check calls it (FR-222; PL 9494 DP-1)`.
 
 ### Task 2: The resolver carries the inputs (items 4, 5)
 
@@ -869,6 +1059,12 @@ date. Its part (i) is settled by the 17:12:40 BST correction (option (B), item 1
 4. **For the lead:** the sizing memo names "NFR-490 p99" for this measurement; the scoring
    p99 budget is **NFR-489** (`03:1330`). NFR-490 is the tracing overhead (`03:1331`). This
    plan measures NFR-489.
+5. *(Added 2026-10-05, pre-mint, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", items 1 and 3.)* **SL 9495
+   reuses `required_model_inputs`** (PL 9494, working ids; the order A-2 → A-3 → SL 9495 →
+   A-4). It calls this slice's helper from its compile completeness check and defines no
+   second one. It extends item 21's first test with its own caller, so one test proves both
+   callers use the one helper. If this slice merges without the helper, SL 9495 extracts it
+   from this slice's save check in a no-behaviour-change commit before its reds.
 
 ## Self-review
 
@@ -891,3 +1087,13 @@ date. Its part (i) is settled by the 17:12:40 BST correction (option (B), item 1
 5. **What was not executed.** No test or code was run. The steps are sketches against names
    read at `137bc817` and PL 9649's branch; a step that does not run as written is a plan
    defect to report, not to work around.
+6. *(Added 2026-10-05, pre-mint, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2".)* **The helper's location was
+   read at `ecbd1954` (`origin/main`).** `rateable` (`modelling/factors.py:323-329`) is
+   where pricing-core already selects a model's Factors for rating, and its docstring says
+   "keeps the intent with the definition". `factors.py` imports `Factor` (`:44`), and both
+   callers can import it: `rating/runtime.py:49` already imports `pricing_core.modelling`,
+   and `rating_algorithms.py:21` imports `pricing_core` at module level. `git grep -n
+   required_model_inputs ecbd1954 -- packages backend` prints nothing. PL 9494's `b4e4fdf5`
+   sketch took a `ResolvedArtifact`. The backend save has no `ResolvedArtifact`, so the
+   shared signature takes the Factors and `feature_order`, which both callers hold. No test
+   or code was run.
