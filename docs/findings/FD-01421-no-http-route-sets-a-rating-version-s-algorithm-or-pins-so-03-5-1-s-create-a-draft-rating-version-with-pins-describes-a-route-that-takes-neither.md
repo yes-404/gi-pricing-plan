@@ -1,16 +1,16 @@
 ---
-id: FD-9708
+id: FD-1421
 family: finding
 title: No HTTP route sets a Rating Version's algorithm or pins, so 03 §5.1's "Create a draft Rating Version with pins" describes a route that takes neither
 status: active
-created: 2026-10-05            # working id; the mint date is set at the mint (check 31)
+created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: auditor
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc
 corrected_by: []
 relates: [WK-673, WK-1178, FR-237, FR-440, FD-1297]
 ---
 
-# FD-9708 — `POST /rating-versions` cannot declare the algorithm or any pin
+# FD-1421 — `POST /rating-versions` cannot declare the algorithm or any pin
 
 **Filed** by the auditor at the lead's request of 2026-10-05, from planner-demo's exit-demo draft
 (step C1). `tree:` is `origin/main` = `caa4e411a9c07a389cf47092a923c7761b2b92dc`, the tree every

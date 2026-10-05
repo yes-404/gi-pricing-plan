@@ -1,23 +1,23 @@
 ---
-id: FD-9697
+id: FD-1422
 family: finding
 title: compile_bundle accepts a rate table seeded from a control-intent factor, so FR-240's "no control-intent factor in a rateable path" has no implementation
 status: active
-created: 2026-10-05            # working id; the mint date will replace this (check 31)
+created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: auditor
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc
 corrected_by: []
 relates: [WK-1178, FR-240, FR-88, FR-230, FR-20]
 ---
 
-# FD-9697 — FR-240's "no `control`-intent factor in a rateable path" has no implementation
+# FD-1422 — FR-240's "no `control`-intent factor in a rateable path" has no implementation
 
-**Filed** by auditor-gaps on the lead's order of 2026-10-05, from the exit-demo draft's gap row C3. Working id 9697
+**Filed** by auditor-gaps on the lead's order of 2026-10-05, from the exit-demo draft's gap row C3. Minted as FD-1422
 (reserved in the lead's `eta.md`). `tree:` is `origin/main` at filing, and the reproduction ran at that tree.
 
 ## Finding
 
-**Severity HIGH (the maintainer's (by delegation), 2026-10-05 13:20:26 BST, decisions 22–27; final at the mint). Owner WK-673 (the maintainer's (by delegation) ruling, 2026-10-05 13:38:03 BST, "Finding batch 1: FD 9697's owner = WK-673; FD 9659's limb-3 severity depends on one fact": the fix is in `compile_bundle` against FR-240, which WK-673 owns); deadline: none set for this finding alone; the maintainer's (by delegation) 2026-10-05 14:12:13 BST ruling puts it in ONE fix plan for the FR-240 family (with FD 9659), owner WK-673, red first, "a HIGH G2 blocker" (PL 9649, working id).** FR-240 requires that bundle compilation validates "no `control`-intent
+**Severity HIGH (the maintainer's (by delegation), 2026-10-05 13:20:26 BST, decisions 22–27; final at the mint). Owner WK-673 (the maintainer's (by delegation) ruling, 2026-10-05 13:38:03 BST, "Finding batch 1: FD-1422's owner = WK-673; FD 9659's limb-3 severity depends on one fact": the fix is in `compile_bundle` against FR-240, which WK-673 owns); deadline: none set for this finding alone; the maintainer's (by delegation) 2026-10-05 14:12:13 BST ruling puts it in ONE fix plan for the FR-240 family (with FD 9659), owner WK-673, red first, "a HIGH G2 blocker" (PL 9649, working id).** FR-240 requires that bundle compilation validates "no `control`-intent
 factor in a rateable path (`02` FR-88)", and `compile_bundle` does not. A rate table built from a `control` factor is
 accepted and compiles, so a price can depend on a factor the platform declared must not price. That is a mispricing
 class, not a test gap (the maintainer's (by delegation) reasoning, 13:20:26 BST).

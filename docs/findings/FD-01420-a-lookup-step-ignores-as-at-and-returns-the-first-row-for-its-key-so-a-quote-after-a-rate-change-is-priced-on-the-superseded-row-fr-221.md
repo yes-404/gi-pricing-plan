@@ -1,18 +1,18 @@
 ---
-id: FD-9707
+id: FD-1420
 family: finding
 title: A lookup step ignores as_at and returns the first row for its key, so a quote after a rate change is priced on the superseded row (FR-221)
 status: active
-created: 2026-10-05            # working id; the mint date will replace this (check 31)
+created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: auditor
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc
 corrected_by: []
 relates: [WK-673, FR-221, FR-71, FD-1374]
 ---
 
-# FD-9707 — `to_wire` translates a `lookup` step to an exact key match; `as_at` is never read
+# FD-1420 — `to_wire` translates a `lookup` step to an exact key match; `as_at` is never read
 
-**Filed** by auditor-gaps on the lead's order of 2026-10-05, from the exit-demo draft's gap row B3. Working id 9707
+**Filed** by auditor-gaps on the lead's order of 2026-10-05, from the exit-demo draft's gap row B3. Minted as FD-1420
 (reserved in the lead's `eta.md`). `tree:` is `origin/main` at filing, and the reproduction ran at that tree.
 
 ## Finding
