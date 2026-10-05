@@ -98,7 +98,7 @@
         "required": ["id", "kind", "description"],
         "properties": {
           "id": {"type": "string"},
-          "kind": {"enum": ["pin", "step_added", "step_removed", "step_changed", "table_repointed", "input_field", "output"]},
+          "kind": {"enum": ["pin", "step_added", "step_removed", "step_changed", "table_repointed"]},
           "description": {"type": "string"}
         }
       }
