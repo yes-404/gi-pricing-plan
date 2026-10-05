@@ -185,6 +185,33 @@ committed step reads a float input after a `model_call`:** `f0`..`f7` are consum
 produced before the call) carrying more than 15 significant digits would see it cut to 15 digits at the 1e-15 level; none is
 committed. A LOW finding (WK-673) by an auditor follows, recording the mechanism proved in (1).
 
+### The gate (2026-10-06, gate-1, one hold, head `e0e2ff2085c370c5b4e011acd84cfd1f632c8cf5`, tree `24595ee9483b0ef2cec32962972752116a7100a8`)
+
+Granted by the lead for that head. `alembic current` == `alembic heads` == `e5b7d9f1a3c6` at the start. The Python half is
+`dev-commands`' gate body verbatim, the frontend half follows inside the same `flock` hold (`flock -n -E 99 /tmp/slots/gate-1 env
+GIP_GATE_SLOT=/tmp/slots/gate-1 timeout 3500 bash <script>`). The harness moved the foreground call to the background at its 600 s
+cap; the wait was on the flock's pid (cwd read as this worktree). Python half 00:20:12 to 00:47:44 BST (start `load average:
+2.05, 2.30, 1.93`, free 18048 MB; end 1.53, 1.51, 1.62, free 19609 MB); frontend half 00:47:44 to 00:48:45 BST (end 4.04, 2.15, 1.84).
+
+| stage | result |
+|---|---|
+| ruff, mypy, import_linter, req_coverage, contracts | pass (exit 0) |
+| audit_docs | FAIL (exit 1): only `check 31: gap in the full allocation between 1442 and 9482` (LG 9482 pre-mint) |
+| pytest | FAIL (exit 1): `13 failed, 4957 passed, 4 skipped, 86 warnings in 1636.90s (0:27:16)` |
+| pnpm install --frozen-lockfile, generate:api, lint, type-check, test, build | all rc 0 |
+
+The 13 failed tests, each failing through audit-docs's check 31 or the `docs/INDEX.md` contiguity gap at 9482:
+`test_audit_docs_finding_citations.py::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`,
+`test_audit_docs_ids.py::test_the_real_tree_passes_all_ten_checks`, `::test_doc_id_check_exits_0_on_the_real_tree`,
+`test_audit_docs_process_core_digest.py::test_an_unrelated_file_edit_is_the_negative_control_and_stays_green`,
+`::test_the_committed_digest_currently_matches_the_committed_spec`,
+`test_audit_docs_w37_11_ceiling.py::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`,
+`test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity`,
+`test_register_lint.py::test_check_29_is_wired_into_the_docs_gate`, `::test_check_29_note_carries_the_residue_line`,
+`::test_phase1b_residue_count_matches_check_29s_own_count`, `test_register_owed.py::test_check_29_wiring_is_undisturbed`,
+`test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit`,
+`::test_journey_citations_are_audited_in_ci`. The set was not compared with a recorded known set by the executor; the lead compares it.
+
 ## PRs
 
 None opened at this entry (2026-10-06, before the gate). The draft PR, `SL-1436: …`, opens from branch
