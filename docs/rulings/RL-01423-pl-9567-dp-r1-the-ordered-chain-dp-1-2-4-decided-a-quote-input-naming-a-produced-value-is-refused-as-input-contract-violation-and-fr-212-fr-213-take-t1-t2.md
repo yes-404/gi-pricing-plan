@@ -1,9 +1,9 @@
 ---
-id: RL-9562
+id: RL-1423
 family: ruling
-title: PL 9567 (the FD 9572 fix) DP-1, DP-2 and DP-4 decided — a quote input naming a produced value is refused by name as INPUT_CONTRACT_VIOLATION, declared inputs subtracted, and FR-212 and FR-213 take T1 and T2; DP-3 stays open
+title: PL 9567 (the FD 9572 fix) DP-R1 the ordered chain (no sink fan-in); DP-1, DP-2 and DP-4 decided — a quote input naming a produced value is refused by name as INPUT_CONTRACT_VIOLATION, declared inputs subtracted, and FR-212 and FR-213 take T1 and T2; DP-3 stays open
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-05            # working id; the mint date is set at the mint (check 31)
+created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: decision-maker
 tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6
 phase: P2
@@ -15,7 +15,7 @@ corrects: ~
 relates: [FR-212, FR-213, FR-246, FR-255, FD-1374]
 ---
 
-# RL 9562 (working id) — PL 9567 (the FD 9572 fix): DP-1, DP-2 and DP-4 decided, DP-3 open
+# RL-1423 — PL 9567 (the FD 9572 fix): DP-R1 the ordered chain (no sink fan-in); DP-1, DP-2 and DP-4 decided; DP-3 open
 
 ## How this was ruled
 
