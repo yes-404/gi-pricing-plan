@@ -21,14 +21,15 @@ relates: [FR-221, FR-69, FR-71, FR-255, FR-213, FR-227, FD-1374, RL-1263]   # at
 - **Filed under a working id the lead allocates after `SL-1409`'s gate.** `RL 9642` in this
   draft, and `RL-9642` in the texts below, stand for this ruling's minted id. Nothing else is
   a placeholder except `<SL 9685 date>` (T1).
-- **The decisions are not this record's.** They are the maintainer's, by delegation (the
-  deputy), in `~/gi-pricing-plan.local/channel/to-lead.md`, cited below by entry header and
+- **The decisions are not this record's.** They are the maintainer's, by delegation, in `~/gi-pricing-plan.local/channel/to-lead.md`, cited below by entry header and
   quoted verbatim. This record carries them as a dated artifact (`CLAUDE.md` §12) and makes
   PL 9688's activation need 2 true. It decides nothing beyond them.
 - **Inputs, read at the heads named:** FD 9707, draft #1132, branch `fd-9707` @`473b27e4`;
   PL 9688, draft #1145, branch `pl-9688-fd9707-asat-fix` @`2f3269c8` (planned at
   `caa4e411`). Every spec and code locator below was re-read at `origin/main`
-  `99afcde2` on 2026-10-05.
+  `99afcde2` on 2026-10-05, and again at `origin/main`
+  `809a3794af6d3a6ba688663b0d9b59f951190680` at 2026-10-05 15:08 BST: every locator is at the
+  line given (`03` changed between them only at `:136`, FR-239's finding id re-pointed, #1150).
 - **Brief:** `brief-dm-9707-2026-10-05.md` (the lead, 2026-10-05).
 
 ## Locators — read at `99afcde2`
@@ -112,7 +113,8 @@ to the end of the second cell, after `The date source is explicit in the step.` 
 space, before the closing ` |`. Nothing is struck. The row stays one physical line. The text
 holds no `|`.
 
-Find string, `grep -cF` over `docs/specs/03-rating-engine.md` at `99afcde2` gives **1**:
+Find string, `grep -cF` over `docs/specs/03-rating-engine.md` at `99afcde2` gives **1**, and
+again **1** (`:107`) at `809a3794`:
 
 ```text
 never "now" (`01` FR-71). The date source is explicit in the step. |
@@ -128,9 +130,9 @@ Append
 
 1. "*(Amended 2026-10-05, FD 9707; DP-1 to DP-3 decided by the deputy.)*" →
    "*(Amended <SL 9685 date>, `RL-9642`, FD 9707.)*". A spec amendment cites the governed
-   record that rules it, as `RL-9710`'s texts do; the deputy's entries live in a local
+   record that rules it, as RL 9710's (working id, #1128) texts do; the maintainer's (by delegation) entries live in a local
    channel file a spec reader cannot open, and this record quotes them. The date is the
-   applying commit's, as in `RL-9710`. It also now covers DP-4, which the proposal's marker
+   applying commit's, as in RL 9710 (working id). It also now covers DP-4, which the proposal's marker
    omitted.
 2. "refused when the algorithm is validated" → "refused when the algorithm is saved, and
    again when its bundle is compiled". DP-4 as confirmed (Ruled 4): "checked at save and at
