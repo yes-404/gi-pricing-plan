@@ -441,6 +441,12 @@ UTC, load 4.44/2.78/2.52, 19 475 MB free). No measurement ran from this head and
 uptime` line never ran, because of the quoting error), and the frontend half's start `uptime` and `free` (not recorded at
 19:42:39 BST).
 
+**The maintainer's ruling on this re-gate** (by delegation, `to-lead.md`, after 19:44 BST, relayed by the lead): the
+re-gate COUNTS. The missing `uptime` and `free` stamps (the python half's end, the frontend half's start) are a checklist
+omission, recorded here together with the unintended 19:32:26 BST release caused by the script's quoting error. The frontend
+half's start porcelain is unproven but immaterial: no frontend path is in the delta and the half writes no tracked file.
+The backstop is a fully green CI at the mint head before the maintainer's ACK.
+
 **The order of the measurement.** The maintainer (by delegation) ordered, relayed by the lead: at `READY_FOR_MEASUREMENT` do
 not measure, release `gate-1`, and report from the log. S7 may mint and merge on that report plus CI. The cost measurement,
 parquet and a rows-stored baseline at limit 50 with N of at least 10, under the START / GO MEASURE protocol, runs later on the
