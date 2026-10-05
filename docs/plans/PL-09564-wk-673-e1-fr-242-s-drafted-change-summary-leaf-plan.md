@@ -217,8 +217,11 @@ database); `H` is `backend/tests/test_rating_version_change_summary_route.py` (n
 16. `uv run python scripts/generate-contracts.py --check` exits 0 with the route and
     `ChangeSummaryDraft` (by `$ref`) in `docs/contracts/openapi/generated.json`; the response
     is typed, not an open object.
-17. `grep -c 'change-summary-draft' docs/specs/03-rating-engine.md` prints `1`, and the row is
-    the ruling's text byte for byte (Appendix P1 as ruled).
+17. `grep -c 'change-summary-draft' docs/specs/03-rating-engine.md` prints ~~`1`~~ `2` (the T1
+    row and the T2 clause), and the row is the ruling's text byte for byte (Appendix P1 as
+    ruled). *(Pre-mint edit 2026-10-05, 17:42 BST, on RL 9541 (working id; draft #1199 @`82d801c6`), which governs its T1 and T2 over this appendix's proposals.)* It also gains T2's check:
+    `grep -cF 'refuses with **409** and this code when the version has no' docs/specs/03-rating-engine.md`
+    prints `1`, and the clause is RL 9541's T2 byte for byte (Appendix P2 as ruled).
 18. `python3 scripts/audit-docs.py` and `uv run python scripts/req-coverage.py` pass; FR-242 is
     marker-evidenced by at least items 1, 10 and 14.
 19. The two-half gate (`dev-commands`) passes once, in a held gate slot.
@@ -230,9 +233,10 @@ database); `H` is `backend/tests/test_rating_version_change_summary_route.py` (n
     ArtifactRef | None`) yields `structural_diff: null`, the baseline still named in
     `baseline`, and a `text` that says the baseline has no algorithm (DP-E1-5 as ruled). Red:
     `ModuleNotFoundError` for `app.platform.change_summary`, as item 1.
-21. `grep -cF 'refuses with **409** and this code when the version has no' docs/specs/03-rating-engine.md`
+21. *(Pre-mint edit 2026-10-05, 17:42 BST, on RL 9541 (working id; draft #1199 @`82d801c6`), which governs its T1 and T2 over this appendix's proposals.)* Folded into item 17, as RL 9541 places it; kept here, not renumbered:
+    ~~`grep -cF 'refuses with **409** and this code when the version has no' docs/specs/03-rating-engine.md`
     prints `1`, and the clause is the ruling's T2 byte for byte (Appendix P2 as ruled), in the
-    `RATING_VERSION_UNPINNED` meaning note.
+    `RATING_VERSION_UNPINNED` meaning note.~~
 
 ## Global Constraints
 
@@ -495,6 +499,20 @@ Three-cell form (if RL 9907's, working id, `Permission` column has not landed):
 
 Four-cell form: the same, with `rating:read` as the fourth cell.
 
+**As ruled: RL 9541 T1, which governs** *(Pre-mint edit 2026-10-05, 17:42 BST, on RL 9541 (working id; draft #1199 @`82d801c6`), which governs its T1 and T2 over this appendix's proposals.)* The proposal above is superseded by it; the
+ruled text differs in the third cell (`Why:` and `Expected impact:` named, "Requires
+`rating:read`." added per `03:899`, "and no Job is created" added) and in its tail. Placement:
+immediately after the line that starts `` | `POST` | `/api/v1/rating-versions/{id}/submit` | Submit for approval; ``
+(`grep -cF` = 1 at `4d3be141`; the bare path matches 2). Three-cell form:
+
+```
+| `GET` | `/api/v1/rating-versions/{id}/change-summary-draft` | The drafted change summary (FR-242; WF-699 E1): the structural diff (FR-219) and each re-pinned rate table's diff (FR-231, unweighted) against the most recently approved other version of the same algorithm, and a `text` stating what changed, with `Why:` and `Expected impact:` left for the actuary to edit before submitting. Requires `rating:read`. Writes nothing; a pair with a `storage: parquet` side is named `pending`, not computed, and no Job is created. **404** `NOT_FOUND`; **409** `RATING_VERSION_UNPINNED` without an algorithm or pins. (**added <E1 date>, RL 9541, FR-242**) |
+```
+
+If a `Permission` column has landed in §5.1 when T1 is applied, use the same row with
+"Requires `rating:read`. " taken out of the third cell and `rating:read` added as the fourth
+cell (RL 9541).
+
 ### P2 — `03` §5.1, T2: one clause after `RATING_VERSION_UNPINNED`'s meaning note (`:967-970`)
 
 *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* DP-E1-1 as ruled, the text from dm-e1's memo. Inserted as the line immediately
@@ -503,6 +521,14 @@ after `` > matching pin list (`rate_tables`, `reference_tables`, `models`) at th
 
 ```
 > *(Use added <apply date>, PL 9564, working id, FR-242):* `GET /api/v1/rating-versions/{id}/change-summary-draft` refuses with **409** and this code when the version has no `algorithm_ref` or no `pins`, because there is nothing to diff.
+```
+
+**As ruled: RL 9541 T2, which governs** *(Pre-mint edit 2026-10-05, 17:42 BST, on RL 9541 (working id; draft #1199 @`82d801c6`), which governs its T1 and T2 over this appendix's proposals.)* The proposal above is superseded by it; the
+ruled text differs only in its tag (`<E1 date>, RL 9541`, not `<apply date>, PL 9564, working
+id`). Placement as above, inside the same blockquote:
+
+```
+> *(Use added <E1 date>, RL 9541, FR-242):* `GET /api/v1/rating-versions/{id}/change-summary-draft` refuses with **409** and this code when the version has no `algorithm_ref` or no `pins`, because there is nothing to diff.
 ```
 
 ## Self-review
@@ -517,3 +543,6 @@ after `` > matching pin list (`rate_tables`, `reference_tables`, `models`) at th
   locators were re-read at `4d3be141` (`rate_tables.py:291-300`, `api/models.py:1203`,
   `errors.py:321` and `:425-432`, `03:967-970`); RL 9541 is cited by working id and kept out
   of `relates:`.
+- *(Pre-mint edit 2026-10-05, 17:42 BST, on RL 9541 (working id; draft #1199 @`82d801c6`), which governs its T1 and T2 over this appendix's proposals.)* Appendix P1 and P2 now carry RL 9541's T1 and T2 verbatim, and Acceptance 17
+  carries both checks (`2` for the bare grep; T2's `grep -cF` = 1). Where this plan's
+  proposals differ from them, the RL's text wins.
