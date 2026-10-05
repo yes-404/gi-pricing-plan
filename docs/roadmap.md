@@ -827,6 +827,24 @@ relates: [PL-1267, RL-1361, RL-1375]
 
 The weight limb of FR-231: the rate-table diff shows the exposure weight behind each cell, from a portfolio Dataset Version. `03` §5.1's diff route gains the portfolio parameter and the refusal `RL-1361` settles (DP-5); the portfolio frame aggregated to Σ exposure per cell key in Polars and passed as `weights`, on the 202 path too; negative tests for an absent key column, an unweighted diff that says so, and a hand-computed weighted mean; register row `FR-231 (F-W10-2)` discharged on merge. `PL-1267` Slice 7. Starts after Slice 2 closes and runs before Slice 3, one slice at a time; unblocks WK-675 Slice 5. Per the maintainer's acceptance of `PL-1267` (the 17:53:43 BST entry above), condition 1: `RL-1375` DP-1 (a2) applies, so the FD-1357 slice `SL-1377` merges first and this slice never runs concurrently with it (shared `RateTableKey`, `operations.py`, the `rate_tables` routes); its leaf plan also carries FD-1358 (the per-cell weight display) as `RL-1361` §F placed it. Leaf plan PL-1419 (minted from working id 9716; `draft`; filed 2026-10-05). **Activation needs:** the plan made `active` by a dated line; RL-1418 (minted from working id 9710; dm-1358) merged and minted, carrying the exact texts of DP-A (FD-1358: a separate paged cells route), DP-B (`03` §5.2's pure `exposure_weights`) and DP-C (`RL-1361` T11 re-anchored), which the maintainer (by delegation) decided on 2026-10-05 (12:58:22 and 13:00:09 BST); lane C (WK-675 S2) may run beside it under the maintainer's (by delegation) option (b) on `03` §5.1; the maintainer's dispatch GO and the lead's go in a separate activation PR. *(Plan cite added 2026-10-05 by the planner; working id 9716 reserved by the lead.)*
 
+#### SL-9565 — WF-699 E1: FR-242's drafted change summary, over HTTP
+
+```yaml
+id: SL-9565
+family: slice
+title: WF-699 E1 — FR-242's drafted change summary, over HTTP
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6
+phase: P2
+work: WK-673
+corrected_by: []
+relates: [PL-1267, SL-1389, SL-1391, CR-838]
+```
+
+`03` FR-242's drafting limb (WF-699 E1): `GET /api/v1/rating-versions/{id}/change-summary-draft` drafts a change summary from the structural diff (`diff_algorithms`) and each re-pinned rate table's diff against `_baseline`'s most recently approved version, for the actuary to edit and submit; it writes nothing. Cut on the maintainer's (by delegation) entry "2026-10-05 17:14:54 BST — FD 9572 placement accepted; WK-673 S4/S5/S6, A-1, A-2 and CR-838 DECISIONS (1–8)", item 4: "E1 OWNER: its OWN small WK-673 slice beside S5 (it needs only diff_algorithms, the rate-table diff and _baseline, all on main; off the critical path). ACCEPTED; the planner cuts the row and leaf." The owner RL 9668 (working id) cites for `CR-838`'s FR-242 correction (same entry, item 8). Leaf plan PL 9564 (working id; `draft`; five decision points open). It may run beside `SL-1389` under RL 9620 (working id) condition 2 if the dispatch record names both; its `03` §5.1 row serialises with `SL-1391`, WK-675 S2 and PL 9683 unless the maintainer dates an option.
+
 
 ### WK-674 — Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires**
 
