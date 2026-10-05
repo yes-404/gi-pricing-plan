@@ -186,32 +186,32 @@ async def test_an_expression_objective_is_refused_by_name_while_the_flag_is_off(
     """
     from app.platform import settings as settings_service
 
-    async def _refusal() -> PlatformError:
-        async with database.session() as session:
-            with pytest.raises(PlatformError) as refused:
-                await service.refuse_expression_kind(
-                    session, settings=api_settings, workspace_id=workspace_id
-                )
-        return refused.value
-
-    unset = await _refusal()
-    assert unset.code == "OBJECTIVE_KIND_NOT_ENABLED"
-    assert unset.status_code == 409
-
-    async def _set(value: bool) -> None:
-        async with database.unit_of_work() as session:
-            # FR-395: the settings row now references a workspace row.
-            await workspaces.ensure_workspace(session, workspace_id=workspace_id)
-            await settings_service.set_workspace_setting(
-                session, workspace_id, "features.expression_objectives_enabled", value
+    async with database.session() as session:
+        with pytest.raises(PlatformError) as off:
+            await service.refuse_expression_kind(
+                session, settings=api_settings, workspace_id=workspace_id
             )
+    assert off.value.code == "OBJECTIVE_KIND_NOT_ENABLED"
+    assert off.value.status_code == 409
 
-    await _set(False)
-    off = await _refusal()
-    assert off.code == "OBJECTIVE_KIND_NOT_ENABLED"
-    assert off.status_code == 409
+    async with database.unit_of_work() as session:
+        # FR-395: the settings row now references a workspace row.
+        await workspaces.ensure_workspace(session, workspace_id=workspace_id)
+        await settings_service.set_workspace_setting(
+            session, workspace_id, "features.expression_objectives_enabled", False
+        )
+    async with database.session() as session:
+        with pytest.raises(PlatformError) as explicit_off:
+            await service.refuse_expression_kind(
+                session, settings=api_settings, workspace_id=workspace_id
+            )
+    assert explicit_off.value.code == "OBJECTIVE_KIND_NOT_ENABLED"
+    assert explicit_off.value.status_code == 409
 
-    await _set(True)
+    async with database.unit_of_work() as session:
+        await settings_service.set_workspace_setting(
+            session, workspace_id, "features.expression_objectives_enabled", True
+        )
     async with database.session() as session:
         await service.refuse_expression_kind(
             session, settings=api_settings, workspace_id=workspace_id

@@ -1600,16 +1600,12 @@ def _certify(parameters: dict[str, Any], callback: ProgressCallback) -> JobResul
             )
 
     objective = progress.run_on_loop(load())
-    if objective.kind == "expression":
-        result = _certify_expression(
-            objective, sampling=sampling, progress=ScaledProgress(progress, start=0.1, end=0.9)
-        )
-    else:
-        result = certify_objective(
-            objective,
-            sampling=sampling,
-            progress=ScaledProgress(progress, start=0.1, end=0.9),
-        )
+    certify = _certify_expression if objective.kind == "expression" else certify_objective
+    result = certify(
+        objective,
+        sampling=sampling,
+        progress=ScaledProgress(progress, start=0.1, end=0.9),
+    )
 
     async def store() -> UUID:
         async with progress.database.unit_of_work() as session:
