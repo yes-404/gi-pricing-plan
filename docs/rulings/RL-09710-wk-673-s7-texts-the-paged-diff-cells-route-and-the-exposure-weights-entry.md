@@ -11,7 +11,7 @@ work: WK-673
 supersedes: []
 superseded_by: ~
 corrected_by: []
-corrects: ~
+corrects: [RL-1361]
 relates: [FD-1358, RL-1361, PL-1267, PL-1286, FR-231, FR-232, FR-450]
 ---
 
@@ -72,7 +72,7 @@ relates: [FD-1358, RL-1361, PL-1267, PL-1286, FR-231, FR-232, FR-450]
   `Location: /api/v1/jobs/{id}`; the Job stores its artifact as a blob, `result.ref` its
   sha256. `backend/src/app/platform/diff_cache.py:1-17`: the DP3 cache is keyed by both
   versions' content hashes and the portfolio identity, never a date, and fails open.
-- `PL-01286` (WK-675) `:288-292` (F-W10-2 to WK-673; "The editor's exposure-weight column
+- `PL-1286` (WK-675) `:288-292` (F-W10-2 to WK-673; "The editor's exposure-weight column
   (Slice 5) depends on `PL-1267` Slice 7 and ships with the weights") and `:307` (S5: the
   diff route's 202 with a Job, "the view polls the Job and renders the same artifact"; the
   exposure-weight column). S4 (`:306`) pages the grid "with no Job" through the cell read
@@ -110,6 +110,15 @@ differ"; a separate kind breaks neither.
    are T1–T4.
 2. **DP-B, as decided (option (a)).** `exposure_weights(...) -> PortfolioWeights` is a pure
    `pricing-core` function with a dated `03` §5.2 entry. The text is T5.
+3. **DP-C, as decided.** `RL-1361` T11's anchor is stale; it is re-anchored with its
+   payload unchanged (the correction section below).
+
+**Scope of "each cell".** The texts serve every cell the diff counts as changed, in the
+decision's own words: "A paged route serves every changed cell with its absolute and
+relative change and its weight" (item 2). Nothing in T1–T4 narrows that set to a sample, a
+cap or an aggregate; the page size bounds one response only. This follows the maintainer's
+constraint of 2026-10-05 12:59:43 BST (`channel/to-lead.md`, relayed by the lead): the
+FR-231 clarification says only how each cell is served.
 
 ## The spec texts
 
@@ -124,7 +133,7 @@ in a text is a placeholder. All five are applied by Slice 7, in one commit with 
 replaces; insert after T10's replacement if T10 is applied first). Insert
 
 ```text
-| `GET` | `/api/v1/rate-tables/{slug}@{version}/diff/cells?against=&portfolio=&limit=&cursor=` | **200** One cursor page of the diff's changed cells (FR-231), `Page[RateTableDiffCell]` (§4.2): every cell the diff's `changed_cells` counts, ordered by key tuple (§4.2), with each cell's baseline and current value, absolute and relative change, and its exposure weight when `portfolio` names a `validated` portfolio Dataset Version, weighted as the diff row states. The pages together hold every changed cell; nothing is capped but the page. Requires `rating:read`. `limit` is 1 to `MAX_LIMIT`, default `DEFAULT_LIMIT` (`00` §5.2); `next_cursor` is null on the last page; `total_estimate` is the diff's `changed_cells`, counted up to `COUNT_CAP`. **202** with a `rate_table.diff_cells` Job and a `Location` header where either version is `storage: parquet` (FR-232) and the query's cell artifact is not yet stored: the Job writes every changed cell, in order, as one content-addressed blob keyed like the diff's cache by both versions' content hashes and the portfolio's identity, and the same request then answers **200** with pages read from it; an artifact that cannot be found is computed again, never served from another query. `against` and `portfolio` are checked as on the diff row, before any cell is read and before any Job: **404** `NOT_FOUND` for an unknown table, version or `against`; with `portfolio`, **403** without `dataset:read`, the same for any id, **404** `NOT_FOUND` for a portfolio that is missing or in another workspace, **409** `DATASET_NOT_VALIDATED` for a `draft` or `archived` portfolio, **404** `NOT_FOUND` for a `factor_ref` or `banding_ref` that does not resolve, and **422** `VALIDATION_FAILED` for the diff row's portfolio faults. **400** `VALIDATION_FAILED` for a cursor this API did not issue or one past the last cell; **422** `VALIDATION_FAILED` for a `limit` out of range. A Job fails with the same codes. `RateTableDiff` on the diff row is unchanged. (**added <Slice 7 date>, `RL-9710`, FD-1358**) |
+| `GET` | `/api/v1/rate-tables/{slug}@{version}/diff/cells?against=&portfolio=&limit=&cursor=` | **200** One cursor page of the diff's changed cells (FR-231), `Page[RateTableDiffCell]` (§4.2): every cell the diff's `changed_cells` counts, ordered by key tuple (§4.2), with each cell's baseline and current value, absolute and relative change, and its exposure weight when `portfolio` names a `validated` portfolio Dataset Version, weighted as the diff row states. The pages together hold every changed cell: a page bounds one response, not the cells. Requires `rating:read`. `limit` is 1 to `MAX_LIMIT`, default `DEFAULT_LIMIT` (`00` §5.2); `next_cursor` is null on the last page; `total_estimate` is the diff's `changed_cells`, counted up to `COUNT_CAP`. **202** with a `rate_table.diff_cells` Job and a `Location` header where either version is `storage: parquet` (FR-232) and the query's cell artifact is not yet stored: the Job writes every changed cell, in order, as one content-addressed blob keyed like the diff's cache by both versions' content hashes and the portfolio's identity, and the same request then answers **200** with pages read from it; an artifact that cannot be found is computed again, never served from another query. `against` and `portfolio` are checked as on the diff row, before any cell is read and before any Job: **404** `NOT_FOUND` for an unknown table, version or `against`; with `portfolio`, **403** without `dataset:read`, the same for any id, **404** `NOT_FOUND` for a portfolio that is missing or in another workspace, **409** `DATASET_NOT_VALIDATED` for a `draft` or `archived` portfolio, **404** `NOT_FOUND` for a `factor_ref` or `banding_ref` that does not resolve, and **422** `VALIDATION_FAILED` for the diff row's portfolio faults. **400** `VALIDATION_FAILED` for a cursor this API did not issue or one past the last cell; **422** `VALIDATION_FAILED` for a `limit` out of range. A Job fails with the same codes. `RateTableDiff` on the diff row is unchanged. (**added <Slice 7 date>, `RL-9710`, FD-1358**) |
 ```
 
 **T2 — `03` §4.2, the cell shape and its order (DP-A items 2 and 3).** Placement: a
@@ -167,11 +176,55 @@ The text is **appended** to the end of the second cell, after `RL-1361` T3's tex
 closing ` |`. Nothing is struck.
 
 ```text
-**Clarified <Slice 7 date> (`RL-9710`): the weight behind each cell (FD-1358).** Each changed cell's baseline and current value, absolute and relative change and exposure weight are served by `GET /api/v1/rate-tables/{slug}@{version}/diff/cells` (§5.1), one cursor page at a time in §4.2's key order, with no cap on the cells but the page. `RateTableDiff`, on the diff route, stays the aggregate summary of the same cells.
+**Clarified <Slice 7 date> (`RL-9710`): the weight behind each cell (FD-1358).** Each changed cell's baseline and current value, absolute and relative change and exposure weight are served by `GET /api/v1/rate-tables/{slug}@{version}/diff/cells` (§5.1), one cursor page at a time in §4.2's key order. Every changed cell is served: a page bounds one response, not the cells. `RateTableDiff`, on the diff route, stays the aggregate summary of the same cells.
 ```
 
 **T5 — `03` §5.2, `exposure_weights` (DP-B).** *Pending planner-1391's proposed text; this
 item is completed, and the adoption or amendment stated, before the PR leaves draft.*
+
+## Correction of `RL-1361` T11's anchor (DP-C)
+
+*Added on the maintainer's decision by delegation, entry "2026-10-05 13:00:09 BST" in
+`channel/to-lead.md`, item 9, relayed by the lead. `RL-1361`'s body is not edited. At the
+mint, `RL-1361`'s front matter gains this record's id in `corrected_by` (on main it is
+`[RL-1383]`). `RL-1383` does not touch T11 (`grep -n "T11"` on its file gives no hits).*
+
+- **The old find string.** `RL-1361` T11 replaces
+  `` orphaning a blob. `app.platform.traces.complete_pending_trace` is the only raiser)*. ``
+  At `caa4e411`, `grep -cF` for that string over `docs/specs/03-rating-engine.md` returns
+  **0**.
+- **The cause.** `dfddfad8` (#1104, SL-1256, WK-674 Slice 2) appended
+  `RATING_VERSION_IMMUTABLE` (`RL-1379`) after that clause. The clause now ends `)*,`
+  (`03:963`), and the paragraph's final `)*.` now closes the new code's note (`03:965`).
+- **The new anchor.** At `caa4e411`, `grep -cF` for
+  `` `app.platform.rating_versions.require_compilable` is the only raiser)*. `` over the same
+  file returns **1** (`03:965`, at the end of the line).
+- **The corrected T11.** Placement: the end of the "Error codes owned by this module"
+  paragraph (`03:928-965` at `caa4e411`). The final `)*.` is **replaced** by an appended
+  code. Replace
+
+```text
+`app.platform.rating_versions.require_compilable` is the only raiser)*.
+```
+
+with
+
+```text
+`app.platform.rating_versions.require_compilable` is the only raiser)*,
+`DATASET_NOT_VALIDATED` (re-raised from `01`)
+*(added <Slice 7 date>, `RL-1361` — **409** from
+`GET /api/v1/rate-tables/{slug}@{version}/diff` when the named `portfolio` is not
+`validated`, and the failure of its `rate_table.diff` Job when the portfolio is archived
+between submit and run; the detail names the diff)*.
+```
+
+- **The payload is unchanged.** Only the first line, the anchor, differs. The payload is
+  every line of the replacement after the first. Its five lines are byte-identical to
+  `RL-1361` T11's. Predicate, run at `caa4e411` from the repository root:
+  `diff <(awk '/^\*\*T11/{f=1} f&&/^with$/{g=1;next} g&&/^```text$/{h=1;n=0;next} h&&/^```$/{exit} h{n++; if(n>1)print}' docs/rulings/RL-01361-*.md) <(awk '/^- \*\*The corrected T11/{f=1} f&&/^with$/{g=1;next} g&&/^```text$/{h=1;n=0;next} h&&/^```$/{exit} h{n++; if(n>1)print}' docs/rulings/RL-09710-*.md) | wc -l`
+  printed **0**; the same predicate with one byte of the third payload line changed printed
+  **4**. The `<Slice 7 date>` and `RL-1361` in the payload keep `RL-1361`'s
+  meaning: this is `RL-1361`'s text, re-anchored, not a text of this record.
 
 ## What it obliges
 
@@ -186,12 +239,8 @@ item is completed, and the adoption or amendment stated, before the PR leaves dr
   lead's.
 - **PL-1286 S5 (WK-675)** reads the per-cell weight from this route. That plan is frozen and
   is not edited; its S5 leaf plan names the route.
-- **Observed at `caa4e411`, for the lead (not a correction of `RL-1361`, which this record
-  does not make):** `RL-1361` T11's find string ends
-  `` `app.platform.traces.complete_pending_trace` is the only raiser)*. `` On main that
-  clause now ends `)*,` and `RATING_VERSION_IMMUTABLE` (`RL-1379`) follows it
-  (`03:963-965`), so T11's bytes do not match. Its intent — append `DATASET_NOT_VALIDATED`
-  at the paragraph's end — is unaffected; Slice 7's executor will meet the mismatch.
+- **`RL-1361` T11** is applied by Slice 7 in the corrected form above, not with its original
+  find string. At the mint, `RL-1361` gains this record's id in `corrected_by`.
 
 ## Acceptance — the violation that must become detectable
 
