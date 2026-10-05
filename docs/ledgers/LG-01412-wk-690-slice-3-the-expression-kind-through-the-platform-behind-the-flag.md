@@ -481,3 +481,33 @@ Statuses, identical in all five runs: `symbolic_vs_numeric_gradient` pass; `symb
 ## Closing note
 
 This ledger is closed under the executor charter's mint-step clause (`.claude/roles/executor.md`, "As the mint step…", added 2026-10-04) and `docs/process/document-ids.md` §1.6's 2026-10-04 amendment to the SL and LG close cells: on 2026-10-05 the executor performed the closing acts in the mint commit on the auditor's behalf, after the slice audit — the front matter `status: closed`, the roadmap SL-1273 row `status: closed` with its dated line, `docs/INDEX.md` regenerated, `audit-docs` green. The audit it cites is `handover/audit-sl1273-2026-10-04.md`, with its "Re-check 2026-10-05" section (local, not in the repository). The minted-head gate's record and the PR number are appended after the gate.
+
+## Gate fix and re-gate (2026-10-05)
+
+A dated forward entry, appended after the closing note above; nothing above it is edited. The minted-head gate at `9963f22d54535638d8b2ba14189d2e18edafd45f` (slot gate-1, 09:08:27Z–09:40:36Z) ended `3 failed, 4908 passed, 3 skipped`, everything else exit 0. Retry counter `slice:SL-1273:fix -> 1/2`. All three failures were in tests, none in the slice's product code.
+
+| Failing test | Root cause | Fix |
+|---|---|---|
+| `backend/tests/test_migration_deployments.py::test_the_migration_round_trips` | The #1104 test upgraded to `head` and downgraded one step, assuming `c4a81f6d2e95` is head. This slice's `e5b7d9f1a3c6` now sits on top, so `downgrade -1` landed on `c4a81f6d2e95`, not `2f598e89d12c`. Red reproduced before the fix: `assert 'c4a81f6d2e95' == '2f598e89d12c'`. | The test upgrades to `_THIS_REVISION = "c4a81f6d2e95"`, its own revision, and no longer depends on head. No migration changed. |
+| `backend/tests/test_error_sinks.py::test_every_failure_sink_on_a_quote_input_path_is_accounted_for` | The census counted 2 `str(exc)` sinks in `model_handlers._fit` against 1 listed. The new one is the `except (NonFiniteDerivativeError, RoundBudgetExceededError)` clause (FR-165). Both are `CodedError`s raised in `pricing_core/modelling/objectives.py` during a fit job on a Dataset Version; their text names the round, the objective ref, a row count or timings, and keeps the y/f range out of it (FD-1219, DP-S2-4). It cannot carry a quote input. Reading the census diff also showed three more unlisted sinks in `backend/src/app/platform/objectives.py`: `_require_the_grammar` (1) and `derive_objective` (2), each the `ExpressionError` text of an author's own loss. | Limb (a): `_SINKS` lists all four, with the same justification form as the existing `_validated` entry (a custom objective's own declaration error, no Quote Context). The census mechanism is untouched. |
+| `tests/test_repository_invariants.py::test_every_error_code_pricing_core_raises_is_registered_and_declared` | `pricing_core/modelling/objectives.py` raises `ObjectiveError("VALIDATION_FAILED", …)` for an underived expression objective (RL-1410). The test required every raised code in `MODELLING_ERROR_CODES` and in `02` §5.1's "Error codes owned by this module" block. `VALIDATION_FAILED` is a generic code, registered in `_GENERIC_ERROR_CODES` and owned by the request machinery. | The test accepts a code registered in `_GENERIC_ERROR_CODES` as registered, and does not require a generic code in the module-owned block. No spec text added. |
+
+Fix commit `76897a8ba6b089af1f761e4972c033c171705943` (on `f1953378…`, the merge of `origin/main` `ef5dc6e7`).
+
+**Re-gate at that head.** Slot gate-1 (the block in `.claude/skills/dev-commands`, copied verbatim apart from a `timeout 3300` on `pytest`). Start 09:45:44Z: `uptime` load average 1.25, 2.12, 2.11; `free -m` 32 099 total, 21 683 free; the other slot (gate-2) probed free. End 10:16:50Z: load average 4.82, 3.01, 2.70; 19 984 free; gate-2 free.
+
+| Stage | Exit | Totals |
+|---|---|---|
+| `ruff check .` | 0 | |
+| `mypy` | 0 | |
+| `lint-imports` | 0 | |
+| `audit-docs.py` | 0 | |
+| `req-coverage.py` | 0 | |
+| `generate-contracts.py --check` | 0 | |
+| `pytest -q` | 0 | `4911 passed, 3 skipped` in 1755.00 s |
+| `pnpm install --frozen-lockfile` | 0 | |
+| `pnpm generate:api` | 0 | |
+| `pnpm lint` | 0 | |
+| `pnpm type-check` | 0 | |
+| `pnpm test` | 0 | 97 files, 612 tests passed |
+| `pnpm build` | 0 | |
