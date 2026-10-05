@@ -1,0 +1,114 @@
+---
+id: RL-9668
+family: ruling
+title: CR-838 corrected — FR-237 was delivered for the pinned shape and for compile, not for declaring the pins when a Rating Version is created, which is owed to the FD 9708 fix in WK-1178
+status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
+created: 2026-10-05            # working id; the mint date is set at the mint (check 31)
+owner: decision-maker
+tree: caa4e411a9c07a389cf47092a923c7761b2b92dc
+phase: P2
+work: WK-1178
+supersedes: []
+superseded_by: ~
+corrected_by: []
+corrects: CR-838
+relates: [CR-838, WK-669, WK-1178, FR-237]
+---
+
+# RL 9668 (working id) — CR-838 corrected: FR-237 was not delivered for the create route
+
+## How this was ruled
+
+- **This record rules nothing new.** The decision that CR-838 needs a correcting record is
+  the maintainer's, by delegation (the deputy), in
+  `~/gi-pricing-plan.local/channel/to-lead.md`, the entry headed *"2026-10-05 13:15:53 BST —
+  DECISIONS 17–21 (PL 9689 DP-S3-2/3/6; FD 9707 DP-1; RL 9695 follow-ups)"*, item 21(ii):
+  *"CR-838 marks FR-237 delivered without the create route: YES, a correcting record is needed
+  (document-ids.md :136 `corrects:`; check 34 allows only an append to the frozen record's
+  `corrected_by:`). It states the false "delivered", cites FD 9708, and corrects CR-838."*
+  The decision-maker session `dm-9708` (`echo $CLAUDE_EFFORT` printed `medium`) drafted this
+  record on the lead's relay of that item and re-read every site below at `origin/main`
+  `caa4e411a9c07a389cf47092a923c7761b2b92dc`, 2026-10-05. Unminted records (FD 9708,
+  RL 9695) are cited in working-id form and kept out of `relates:` (check 32).
+- **Who may write it.** `docs/process/document-ids.md` §1.6 gives the **RL** row's author as
+  *"decision-maker; the maintainer may author one on scope or process"*. Its **CR** row gives
+  the closure's author as the auditor, its acceptance (*"maintainer accepts a Work or Phase
+  close"*), and no correction path (`—`). So the RL family is this role's to write, but what
+  it corrects is a maintainer-accepted close. Per the same item 21(ii), **the deputy accepts
+  this record at its ACK**; it binds nothing before then.
+- **The form** follows RL 9718 (#1119, `corrects: RL-1401`): a correcting record whose
+  `corrects:` names the frozen file, and the frozen file's body is never edited.
+  `document-ids.md:136` gives `corrects:` as a scalar, *"the frozen id it corrects"*, and
+  RL 9718 writes it that way. This record does too, `corrects: CR-838`, where the lead's brief
+  wrote the list form.
+
+## The false verdict
+
+`docs/closures/CR-00838-work-item-record-wk-669-the-rating-contract-validation-and-bundle-compilation.md:40`,
+verbatim:
+
+> `| FR-237, FR-238, FR-239, FR-240, FR-241, FR-242 | delivered | marker-evidenced (22: 3, 23: 1, 24: 4, 25: 1, 26: 1, 27: 1) |`
+
+and its slice row, `:33`: W9-3 (#293) delivered *"FR-237 (pins)"*, evidenced by the *"widened
+`RatingVersion` (spec-reconciled vs `03` §4.3); `compile_bundle`/`to_jdm`/`bundle_hash` …;
+`POST /rating-versions/{id}/compile`"*.
+
+## What it missed
+
+| Fact | Where |
+|---|---|
+| At CR-838's own tree, `3a4958a9b67936efe7cb25079be46741fff0df89` (its line 16), `03` §5.1 already had the row `` `POST` `/api/v1/rating-versions` `` *"Create a draft Rating Version with pins"*, and the WF-699 journey's C1 said that call *"declares the algorithm version and every pin"* | `git grep` at `3a4958a`: `docs/specs/03-rating-engine.md:483`; WF-699's file at that tree (its pre-migration name), line 56 |
+| At that tree no route created a Rating Version at all: `class RatingVersionCreate` does not exist there | `git grep -n 'class RatingVersionCreate' 3a4958a -- backend` prints nothing |
+| The create route came two days after the close, without pins: `RatingVersionCreate` takes `slug`, `dataset_version_id` and `model_ref` only, under `extra="forbid"` | first added by `0d942b3e` (2026-08-29T17:01:09+01:00, #371, *"wire POST /rating-versions and /submit routes"*); at `caa4e411`, `backend/src/app/api/models.py:271-276` |
+| No HTTP route sets `algorithm_ref` or `pins` today; the demo seed writes them to the ORM row | FD 9708 (#1130, working id), its tables; `examples/fremtpl2/model.py:396-397` at `caa4e411` |
+| The spec governs and the code is behind: `POST /rating-versions` is to accept `algorithm_ref` and the pins, checked at compile, in a WK-1178 slice | RL 9695 (#1133, working id), decided by the deputy at 13:12:56 BST, item 15 |
+
+So the evidence CR-838 cited — FR-237's markers, the widened shape, and compile reading the
+pins — proves that a Rating Version *can hold* pins and that compile *uses* them. It does not
+reach the part of FR-237 that the spec routes through `POST /rating-versions`: a client
+*declaring* the algorithm and the pins. That part was not built at the close and is not built
+at `caa4e411`. The verdict "delivered" was therefore false for that limb at CR-838's own tree.
+
+## Ruled
+
+The correction:
+
+> **FR-237 is partly delivered.** Delivered, at CR-838's tree: the pinned `RatingVersion` shape
+> (`algorithm_ref`, `pins`, `model_reference_mode`) and its use by `compile_bundle` (W9-3, #293).
+> **Not delivered:** declaring the algorithm version and the pins when a Rating Version is
+> created, which `03` §5.1's `POST /api/v1/rating-versions` row and `WF-699` step C1 require.
+> That limb is owed to the FD 9708 fix in WK-1178, as RL 9695 decided. FR-238 to FR-242 and
+> every other verdict in CR-838 are unaffected by this correction.
+
+The verdict for this limb is **deferred with an owner** (`CLAUDE.md` §13's four verdicts):
+owner WK-1178, the FD 9708 fix slice, deadline before the P2 exit demo (the deputy's
+13:12:56 BST entry, item 15). WK-669 stays closed; the owed work is WK-1178's, not a reopen.
+
+## What it obliges
+
+- **This draft:** this record only. CR-838 is not edited.
+- **The mint turn (the lead, in merge order):** this record's working id becomes its minted id
+  everywhere this commit writes it, and CR-838's header gains `corrected_by: [<this record's
+  minted id>]`. That append is CR-838's only edit, in the same PR. **Owed at the mint.**
+- **The FD 9708 fix slice (WK-1178):** its ledger names this record as discharged when the
+  create route accepts the pins, so the "deferred with an owner" verdict above closes.
+
+## Acceptance — the violation that must become detectable
+
+- *Violation: after the mint, CR-838's `corrected_by:` names this record while this record's
+  `corrects:` does not name CR-838.* `audit-docs.py` check 34 reports it (`check_freeze`).
+  **The other direction is not checked:** a `corrects:` with no `corrected_by:` back passes
+  check 34, which is why this draft is green before the mint. The mint turn's read-back of
+  CR-838's header is the only guard on that direction.
+- *Violation: the mint edits any other line of CR-838.* Check 34 reports a frozen-family diff
+  that is not a `status:`, `superseded_by:` or `corrected_by:` change.
+- *Violation: FR-237's create limb is claimed delivered while the route takes no pins.* The
+  FD 9708 slice's acceptance (RL 9695, its first violation) fails: a create carrying
+  `algorithm_ref` and `pins` is refused 422.
+
+## Observed, not ruled (for the lead)
+
+CR-838 already carries a body edit: a blockquote headed *"Dated correction, 2026-09-29 (the
+auditor), on the maintainer's decision"* at `:46`, about FR-217. It predates the RL 9718 form
+and is not touched here. Whether it needs a correcting record of its own is not this
+record's question.
