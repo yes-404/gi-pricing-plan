@@ -17,7 +17,7 @@ relates: [WK-1178, FR-227, FR-245, FR-212]
 
 ## Finding
 
-**Proposed severity LOW; the deputy sets it at the mint. Proposed owner WK-1178 (provisional).** The refusal
+**Severity LOW, ruled by the maintainer (by delegation) in the entry headed *"2026-10-05 13:20:26 BST — DECISIONS 22–27; severity signals for the four gap findings"* (`to-lead.md`, a local channel file, so cited by its header): "as proposed". Owner: proposed: WK-1178 (provisional); ruled by the maintainer (by delegation) at the ACK.** The refusal
 happens, which is why the severity is low: a float result type never reaches a rating version. What is wrong is the
 code. `MONETARY_FLOAT_REFUSED` is in `RATING_ERROR_CODES` (`backend/src/app/errors.py:310`) and is listed among
 `03`'s error codes (`docs/specs/03-rating-engine.md:929`), and nothing raises it. A client that handles the
