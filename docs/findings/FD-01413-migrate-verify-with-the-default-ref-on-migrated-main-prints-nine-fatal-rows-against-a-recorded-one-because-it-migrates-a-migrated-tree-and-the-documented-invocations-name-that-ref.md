@@ -1,16 +1,16 @@
 ---
-id: FD-9755
+id: FD-1413
 family: finding
 title: migrate --verify with the default ref on migrated main prints nine fatal rows against a recorded one, because it migrates a migrated tree, and the documented invocations name that ref
 status: active
-created: 2026-10-01
+created: 2026-10-05            # the mint date (check 31); filed 2026-10-01
 owner: auditor
 tree: 1dd5e264195677b4a13268b80ac8673c2c027135
 corrected_by: []
 relates: [WK-1178, RL-1043, RL-1045, RL-1046, CR-1063, FD-1154]
 ---
 
-# FD-9755 (working id) — `migrate --verify --ref HEAD` on migrated main is a false nine-row red
+# FD-1413 — `migrate --verify --ref HEAD` on migrated main is a false nine-row red
 
 **Filed** by auditor-mv at the maintainer's request of 2026-10-01 (received 10:24 BST). `tree:` is
 `origin/main` = `1dd5e264195677b4a13268b80ac8673c2c027135`, the tree every figure below was
@@ -93,7 +93,7 @@ instrument's input, not a regression in main.
 
 1. **The documented forms are wrong on every migrated checkout.** `dev-commands` (`migrate --verify <root>`, lines
    273 and 788–791) gives no `--ref`; `delivery-process.md` §11a ("`--verify <tmpdir> --ref HEAD` before its PR
-   is opened, read row (a)") and `delivery-process.core.json` (the `"command": "python3 scripts/doc-id.py migrate --verify <tmpdir> --ref HEAD"` row, `:481` at `origin/main` `ef5dc6e7317281ac9d1840fa61861597e3c1b8b1`; `:477` at the filing tree) give `--ref HEAD`. §11a was written 2026-09-03 for
+   is opened, read row (a)") and `delivery-process.core.json` (the `"command": "python3 scripts/doc-id.py migrate --verify <tmpdir> --ref HEAD"` row, `:481` at `origin/main` `36a9f48325af47b482bd1f3211b01e90d2b4b149`; `:477` at the filing tree) give `--ref HEAD`. §11a was written 2026-09-03 for
    an un-migrated tree. After `71f5a220` an author who follows it reads row (a) as FAIL — the row §11a tells them to read.
 2. **A standing nine-row red hides a real one.** Once an author learns that "main prints nine rows", a genuine
    (a) or (f) regression prints the same lines among those nine; exit 3 carries no information. The
@@ -156,7 +156,7 @@ What this changes in the record above:
 
 ### Discharge (owner WK-1178)
 
-> **Amended 2026-10-05 before mint:** the discharge is split in two halves with different owners, so the finding closes only when both land. The `delivery-process.core.json` cite is re-anchored by symbol (the `"command": "python3 scripts/doc-id.py migrate --verify <tmpdir> --ref HEAD"` row, `:481` at `origin/main` `ef5dc6e7317281ac9d1840fa61861597e3c1b8b1`; the filed text said `:477`, and the triage's `:479` was also stale at that tree). The line cites above `delivery-process.md:265` and `dev-commands` `:273`, `:788` re-resolved at the same tree.
+> **Amended 2026-10-05 before mint:** the discharge is split in two halves with different owners, so the finding closes only when both land. The `delivery-process.core.json` cite is re-anchored by symbol (the `"command": "python3 scripts/doc-id.py migrate --verify <tmpdir> --ref HEAD"` row, `:481` at `origin/main` `36a9f48325af47b482bd1f3211b01e90d2b4b149`; the filed text said `:477`, and the triage's `:479` was also stale at that tree). The line cites above `delivery-process.md:265` and `dev-commands` `:273`, `:788` re-resolved at the same tree.
 
 1. **Docs half — owner: contributor onboarding item 3** (`handover/contributor-onboarding-2026-10-06.md`, "Item 3 — FD 9755's docs part", accepted 2026-10-05; a local handover file, not in the repository). `dev-commands`, `delivery-process.md` §11a and `delivery-process.core.json` (the `migrate --verify` command row above) corrected to CI's form, `--ref <meta.verified_against_tree> --record-ref HEAD` (core.json by its digest rule), with the `<root>` wording: an empty snapshot dir, or omitted. That item's prerequisite is this finding minted.
 2. **Instrument half — owner: WK-1178** (`PL-1371` row 11, "FD 9755 discharge (documented `migrate --verify` form plus the refusal)"; the onboarding item states the refusal "is code and stays with a lane"). The instrument **refuses (exit 2, a named message)** when `--ref`'s tree is already migrated; the planner picks the predicate and proves it on broken input both ways (a migrated ref refused, an un-migrated ref accepted); a skill update lands in the same commit.
