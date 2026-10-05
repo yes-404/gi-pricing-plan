@@ -612,6 +612,23 @@ harness passed that tuple to the lookup as the key. The fix was one line (unpack
 run's own setup that prints the load at timing start. No product code changed, and the harness is scratch, not in the repository. The lookup filters `JobRow.parameters["key"]` without an index; at 10 001 Jobs it costs 13 ms, so no
 migration is proposed.
 
+### Task 9 — the merge of main and RL-1442's texts
+
+**The merge.** `origin/main` `43a60938260a0620c381e04574d7c93cde2ff613` (batch 2: FD-1439, OQ-1440, RL-1441, RL-1442) was merged
+into the branch, no rebase: merge commit `6501b1b80eef21de37f4113ff527124d850b4ea8`. The only conflict was the generated
+`docs/INDEX.md`, resolved by taking main's and regenerating it (`python3 scripts/doc-index.py`).
+
+**RL-1442's texts**, applied byte for byte by script from the minted record (T1' the cells row, T3' the diff row, T2' the FR-232
+append), `<Slice 7 date>` set to 2026-10-05 (the commit date, `TZ=Europe/London`). `grep` counts over
+`docs/specs/03-rating-engine.md`, before: the cells row's prefix `` | `GET` | `/api/v1/rate-tables/{slug}@{version}/diff/cells?against= ``
+1; the diff row's prefix `` | `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against=&portfolio=` | `` 1; the FR-232 anchor
+`only the latency and the status code differ. |` 1. After: the T2' marker `**Amended 2026-10-05 (` + "`RL-1442`" + `, FD-1439): the first request
+for a diff may answer 202` 1; T1''s marker tail `the 202 condition, the artifact, the key, the Job in flight, the ref 404 and the content faults
+amended 2026-10-05` 1; T3''s `the 202 condition, the artifact, the Job kind, the ref 404 and the content faults amended 2026-10-05` 1; the
+superseded RL-1418 T1 clause `where either version is` + "`storage: parquet`" + ` (FR-232) and the query` 0; `<Slice 7 date>` 0.
+RL-1442's predicate for T1' and T3' (`git diff --no-index --word-diff=plain` of the row at `386f4d54` against each applied row)
+printed exactly the changes the record lists.
+
 ## PRs
 
 #1206, a draft, `SL-1391: Slice 7: FR-231's exposure weights through the portfolio frame (F-W10-2)`, head branch
