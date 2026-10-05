@@ -43,6 +43,7 @@ _REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 #: The head before this revision (PL-1392, C5), and the SQLSTATE `approval_guard()` raises.
 _PREVIOUS_REVISION = "2f598e89d12c"
+_THIS_REVISION = "c4a81f6d2e95"  # this migration; head moves on as later slices append
 _MIGRATION_FILE = "c4a81f6d2e95_environments_and_deployments.py"
 _GUARD_SQLSTATE = "GP001"
 
@@ -352,9 +353,9 @@ async def test_the_migration_round_trips(
     monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
     cfg = _alembic_config()
     await _upgrade(cfg, _PREVIOUS_REVISION)
-    await _upgrade(cfg, "head")
+    await _upgrade(cfg, _THIS_REVISION)
     head = await _revision_of(scratch_database)
-    assert head != _PREVIOUS_REVISION
+    assert head == _THIS_REVISION
     tables = ("environments", "deployment_requests", "deployments")
     for table in tables:
         assert await _table_exists(scratch_database, table), table
@@ -369,8 +370,8 @@ async def test_the_migration_round_trips(
     assert "deployment_requests" not in await _trigger_tables(scratch_database)
     assert await _trigger_tables(scratch_database), "the downgrade must keep Slice 2a's triggers"
 
-    await _upgrade(cfg, "head")
-    assert await _revision_of(scratch_database) == head
+    await _upgrade(cfg, _THIS_REVISION)
+    assert await _revision_of(scratch_database) == _THIS_REVISION
     assert "deployment_requests" in await _trigger_tables(scratch_database)
 
 

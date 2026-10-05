@@ -102,6 +102,10 @@ DATA_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # valid unchanged once the operation is built, which is the opposite of what a
         # validation failure tells a caller.
         "DERIVATION_NOT_MATERIALISED",
+        # FD-1415 / RL-1407 (#1070 @24ea2130): an approved rule's dry-run report is its
+        # approval evidence, so a new one cannot replace it. Per-artifact, as
+        # `DATASET_VERSION_IMMUTABLE` is.
+        "RULE_VERSION_IMMUTABLE",
     }
 )
 
@@ -188,6 +192,14 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "OBJECTIVE_EARLY_STOPPING_UNSUPPORTED",
         "OBJECTIVE_HESSIAN_STRATEGY_UNSUPPORTED",
         "OBJECTIVE_KIND_NOT_ENABLED",
+        # FR-145, WK-690 S3 Task 4 (RL-1362 DP-S3-3): the loss is outside §4.6's grammar.
+        "OBJECTIVE_GRAMMAR_VIOLATION",
+        # FR-146, WK-690 S3 Task 7 (RL-1362 DP-S3-3): a `draft` objective has no passing
+        # certificate, so its submission is refused by that name.
+        "OBJECTIVE_NOT_CERTIFIED",
+        # FR-165, WK-690 S3 Task 6: the fit job surfaces Slice 2's two coded errors.
+        "OBJECTIVE_NONFINITE_DERIVATIVE",
+        "OBJECTIVE_ROUND_BUDGET_EXCEEDED",
         "MODEL_TERM_UNRESOLVED",
         "MODEL_LINK_UNSUPPORTED",
         "MODEL_OFFSET_MISSING",

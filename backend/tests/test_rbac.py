@@ -512,3 +512,11 @@ async def test_enforcement_follows_the_credential_not_the_account_row(
             permission=Permission.SCORE_BATCH,
             credential_permissions=frozenset({"score:execute"}),
         )
+
+
+@pytest.mark.req("FR-367")
+def test_no_builtin_role_holds_custom_objective_author() -> None:
+    """FR-367: not default-granted. A permission every fitter holds would be vocabulary
+    without a decision behind it, so an Admin grants it explicitly."""
+    for slug, permissions in BUILTIN_ROLES.items():
+        assert Permission.CUSTOM_OBJECTIVE_AUTHOR not in permissions, slug

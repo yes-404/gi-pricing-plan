@@ -1884,7 +1884,7 @@
       },
       "CreateCustomObjective": {
         "additionalProperties": false,
-        "description": "FR-142's artifact. Every range and rule is `CustomObjective`'s, not this one's.\n\n`kind` is here rather than assumed so that a caller asking for an `expression`\nobjective is *answered* — FR-150 makes that a named refusal, and a body that\nsilently forbade the field would leave them reading a 422 about an unexpected key.",
+        "description": "FR-142's artifact. Every range and rule is `CustomObjective`'s, not this one's.\n\n`kind` is here rather than assumed: an `expression` objective carries `bound_symbols`,\n`parameters` and `loss` (FR-144) and no template, and while the flag is off a caller\nasking for it is *answered* with FR-150's named refusal, not a 422 about an unexpected key.",
         "properties": {
           "applicability": {
             "anyOf": [
@@ -1895,6 +1895,25 @@
                 "type": "null"
               }
             ]
+          },
+          "bound_symbols": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "y",
+                    "f",
+                    "w"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bound Symbols"
           },
           "description": {
             "anyOf": [
@@ -1920,6 +1939,31 @@
           "kind": {
             "$ref": "#/components/schemas/ObjectiveKind",
             "default": "template"
+          },
+          "loss": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loss"
+          },
+          "parameters": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ObjectiveParameter"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parameters"
           },
           "params": {
             "additionalProperties": {
@@ -2274,6 +2318,25 @@
             ],
             "title": "Approval Request Id"
           },
+          "bound_symbols": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "y",
+                    "f",
+                    "w"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bound Symbols"
+          },
           "certificate_id": {
             "anyOf": [
               {
@@ -2285,6 +2348,16 @@
               }
             ],
             "title": "Certificate Id"
+          },
+          "derived": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DerivedBlock"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "description": {
             "anyOf": [
@@ -2315,6 +2388,32 @@
           "kind": {
             "$ref": "#/components/schemas/ObjectiveKind",
             "default": "template"
+          },
+          "loss": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loss"
+          },
+          "parameters": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ObjectiveParameter"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parameters"
           },
           "params": {
             "additionalProperties": {
@@ -3161,6 +3260,7 @@
       },
       "Decide": {
         "additionalProperties": false,
+        "description": "The body of `POST /approval-requests/{id}/decide`.",
         "properties": {
           "comment": {
             "anyOf": [
@@ -3637,6 +3737,43 @@
           "operation"
         ],
         "title": "DeriveRequest",
+        "type": "object"
+      },
+      "DerivedBlock": {
+        "additionalProperties": false,
+        "description": "The gradient and hessian the platform derived from an `expression` loss (FR-144).\n\nGenerated, never hand-written; `derived_at` is the backend's clock, which\n`pricing-core` may not read (ADR-703).",
+        "properties": {
+          "derivation_tool": {
+            "const": "sympy",
+            "title": "Derivation Tool",
+            "type": "string"
+          },
+          "derivation_version": {
+            "title": "Derivation Version",
+            "type": "string"
+          },
+          "derived_at": {
+            "format": "date-time",
+            "title": "Derived At",
+            "type": "string"
+          },
+          "gradient": {
+            "title": "Gradient",
+            "type": "string"
+          },
+          "hessian": {
+            "title": "Hessian",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gradient",
+          "hessian",
+          "derivation_tool",
+          "derivation_version",
+          "derived_at"
+        ],
+        "title": "DerivedBlock",
         "type": "object"
       },
       "DerivedFrom": {
@@ -8208,7 +8345,7 @@
         "type": "object"
       },
       "ObjectiveBackend": {
-        "description": "FR-153's backend vocabulary.\n\n`glm` is declared and no shipped template names it: a custom objective on the GLM arm\nneeds `GlmSpec.custom_objective_ref`, which FR-207 records as absent entirely\nand owned by WK-690 — Phase 2, not this one. The owner was reassigned on 2026-08-22 and\nconfirmed on 2026-08-25 to cover this field as well as its `Model` twin, which\nrecords what it declares. The member exists because FR-153 names it and an author\nnarrowing applicability should not be able to name a backend the enum has never heard\nof — not because anything reaches it today.",
+        "description": "FR-153's backend vocabulary.\n\n`glm` is declared and no shipped template names it: a custom objective on the GLM arm\nneeds `GlmSpec.custom_objective_ref`, which FR-207 records as absent entirely\nand owned by Phase 3: a separate, unspecified capability, moved there on 2026-10-04\n(RL-1362 DP-S3-5) together with its `Model` twin, which records what it\ndeclares. The member exists because FR-153 names it and an author\nnarrowing applicability should not be able to name a backend the enum has never heard\nof — not because anything reaches it today.",
         "enum": [
           "xgboost",
           "lightgbm",
@@ -8275,6 +8412,46 @@
         ],
         "title": "ObjectiveKind",
         "type": "string"
+      },
+      "ObjectiveParameter": {
+        "additionalProperties": false,
+        "description": "One declared parameter of an `expression` objective (`02` §4.6).",
+        "properties": {
+          "default": {
+            "title": "Default",
+            "type": "number"
+          },
+          "max": {
+            "title": "Max",
+            "type": "number"
+          },
+          "min": {
+            "title": "Min",
+            "type": "number"
+          },
+          "name": {
+            "pattern": "^[a-z_][a-z0-9_]*$",
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "float",
+              "int"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "default",
+          "min",
+          "max"
+        ],
+        "title": "ObjectiveParameter",
+        "type": "object"
       },
       "ObjectiveStatus": {
         "description": "FR-163's lifecycle.",
@@ -9523,6 +9700,7 @@
           "model:read",
           "model:fit",
           "model:submit",
+          "custom_objective:author",
           "rating:read",
           "rating:write",
           "rating:submit",
@@ -15027,6 +15205,22 @@
         "title": "ValidationRuleSet",
         "type": "object"
       },
+      "ValidationRuleSubmission": {
+        "additionalProperties": false,
+        "description": "The body of `POST /validation-rules/{id}/submit` (`06` FR-352: a change summary).",
+        "properties": {
+          "change_summary": {
+            "minLength": 1,
+            "title": "Change Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "change_summary"
+        ],
+        "title": "ValidationRuleSubmission",
+        "type": "object"
+      },
       "VersionCreate": {
         "additionalProperties": false,
         "properties": {
@@ -18866,7 +19060,7 @@
     },
     "/api/v1/custom-objectives/{objective_id}/derive": {
       "post": {
-        "description": "Always refused in Phase 1 with `OBJECTIVE_KIND_NOT_ENABLED` (FR-MODEL-40, 75).\n\nBuilt as a refusal rather than left out: FR-150 names this endpoint as one of the\ntwo that answer that code, and the distinction between \"no such concept\" and \"not until\nPhase 2\" is exactly what a 404 would destroy. The return type is the one Phase 2 will\nanswer with; nothing reaches it yet.",
+        "description": "Derive and store the gradient and hessian of an `expression` draft (FR-144).\n\nNeeds `model:fit` and `custom_objective:author` (FR-367, RL-1362 DP-S3-2), both checked\nbefore the flag is read, so a caller without them learns nothing about it. While the\nworkspace's flag is off the answer is 409 `OBJECTIVE_KIND_NOT_ENABLED` whatever the id\nnames: the flag is reached before any lookup (FR-150).",
         "operationId": "derive_custom_objective_api_v1_custom_objectives__objective_id__derive_post",
         "parameters": [
           {
@@ -32743,7 +32937,7 @@
     },
     "/api/v1/validation-rules/{rule_id}/approve": {
       "post": {
-        "description": "FR-50 step 3: `review` → `approved`, by someone other than the author.\n\nThe separation is the control, and it is enforced in three places rather than trusted\nhere: this route requires `approval:decide`, the service refuses when the approver is\nthe author, and the table's check constraint refuses an approved row whose approver\nmatches. A rule decides whether data may be modelled on — one person deciding both what\nit says and that it is right is not a review.\n\nApproval **policies** — quorum, escalation, evidence bundles — are `06`'s (WK-677). This is\nthe module's own step, in the terms `01` §4.5 states it.",
+        "description": "FR-50 step 3: `review` → `approved`, as a client of the approval workflow.\n\nThis route writes nothing itself: it finds the rule's open approval request and\ndecides it through `decide_and_carry`, the path `POST /approval-requests/{id}/decide`\ntakes. So the submitter and author checks, the policy's roles and quorum, and the\ndry-run evidence are the workflow's, not a second copy here (FD-1356).",
         "operationId": "approve_rule_api_v1_validation_rules__rule_id__approve_post",
         "parameters": [
           {
@@ -33023,7 +33217,7 @@
     },
     "/api/v1/validation-rules/{rule_id}/submit": {
       "post": {
-        "description": "FR-50 step 3: `draft` → `review`, and only with a dry run attached.",
+        "description": "FR-50 step 3: `draft` → `review`, filing the approval request (`06` FR-352).\n\nOnly with a dry run attached that executed, and only with a change summary.",
         "operationId": "submit_rule_api_v1_validation_rules__rule_id__submit_post",
         "parameters": [
           {
@@ -33055,6 +33249,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidationRuleSubmission"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {

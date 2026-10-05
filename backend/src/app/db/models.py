@@ -1710,11 +1710,10 @@ class CustomObjectiveRow(Base):
         info={"status_vocabulary": ObjectiveStatus},
     )
 
-    #: `template` for the whole of Phase 1 (FR-150). Stored rather than assumed,
-    #: because Phase 2's `expression` rows will live in this table beside these and a
-    #: column added later cannot say what the existing rows were.
+    #: `template` or `expression` (FR-144). Stored rather than assumed, because the two arms
+    #: live in this table side by side.
     kind: Mapped[str] = mapped_column(String(16), nullable=False, default="template")
-    #: §4.5's template name. Null is reserved for the `expression` kind the flag refuses.
+    #: §4.5's template name. Null on an `expression` row.
     template: Mapped[str | None] = mapped_column(String(32))
     #: The author's chosen parameters — **not** §4.5's defaults resolved into them.
     #: `compile_objective` resolves defaults at fit time on purpose: a stored artifact that
@@ -1726,6 +1725,14 @@ class CustomObjectiveRow(Base):
     hessian_strategy: Mapped[str] = mapped_column(String(16), nullable=False, default="clip_to_min")
     hessian_min: Mapped[float] = mapped_column(Float, nullable=False, default=1e-6)
     description: Mapped[str | None] = mapped_column(Text)
+    #: The `expression` arm (`02` §4.6, FR-144); all four are NULL on a `template` row.
+    #: `loss`, `parameters` and `bound_symbols` are definition columns, frozen at insert by
+    #: the trigger. `derived` is the platform's own output and is written once, from NULL,
+    #: while the row is a `draft` (the same trigger).
+    bound_symbols: Mapped[list[str] | None] = mapped_column(JSONB(none_as_null=True))
+    parameters: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB(none_as_null=True))
+    loss: Mapped[str | None] = mapped_column(Text)
+    derived: Mapped[dict[str, Any] | None] = mapped_column(JSONB(none_as_null=True))
 
     #: FR-146's evidence. Not a foreign key to `objective_certificates` only because
     #: the certificate points back the other way and one direction is enough; the CHECK
@@ -1758,12 +1765,16 @@ class CustomObjectiveRow(Base):
             "status IN ('draft', 'deprecated') OR certificate_id IS NOT NULL",
             name="certified_objective_has_a_certificate",
         ),
-        # FR-150 for the whole of Phase 1. A row whose `kind` is `expression` would
-        # carry no loss at all — every field an expression objective needs is unbuilt — so
-        # this is a refusal to persist an artifact nothing could evaluate, not a feature gate.
+        # FR-144, FR-207: each field belongs to one arm. A `template` row names its template
+        # and carries none of the expression fields; an `expression` row carries its loss,
+        # its symbols and its parameters and names no template. `derived` may be NULL on an
+        # expression (a draft not yet derived), so it is not required here.
         CheckConstraint(
-            "kind = 'template' AND template IS NOT NULL",
-            name="custom_objective_is_a_template_in_phase_1",
+            "(kind = 'template' AND template IS NOT NULL AND bound_symbols IS NULL "
+            "AND parameters IS NULL AND loss IS NULL AND derived IS NULL) "
+            "OR (kind = 'expression' AND template IS NULL AND bound_symbols IS NOT NULL "
+            "AND parameters IS NOT NULL AND loss IS NOT NULL)",
+            name="custom_objective_fields_follow_kind",
         ),
         Index("ix_custom_objectives_slug_status", "workspace_id", "slug", "status"),
     )

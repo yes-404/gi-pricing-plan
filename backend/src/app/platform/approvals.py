@@ -246,8 +246,16 @@ async def submit(
     change_summary: str,
     environment: str | None = None,
     resolve: ArtifactResolver | None = None,
+    additional_approvers: int = 0,
 ) -> ApprovalRequestRow:
     """Submit an artifact for approval: `draft → review` (FR-351).
+
+    `additional_approvers` is what the owning module's own requirement adds to the policy
+    entry's count (`02` FR-152: a non-convex Custom Objective needs one more). The request
+    stores `entry.approvers_required + additional_approvers`, fixed at submission, and the
+    submission's audit event records the same number. It defaults to 0, so no other artifact
+    type changes, and it is an argument rather than a policy key: a rule a policy edit can
+    remove is not a rule (`06` R1).
 
     `resolve` closes FR-386. Omitting it asserts that the caller already **holds** the
     row it names, which is true of the four module submit paths — `modelling`,
@@ -290,6 +298,7 @@ async def submit(
     if resolve is not None:
         await resolve(session, workspace_id=workspace_id, artifact_ref=artifact_ref)
 
+    approvers_required = entry.approvers_required + additional_approvers
     row = ApprovalRequestRow(
         workspace_id=workspace_id,
         artifact_ref=str(artifact_ref),
@@ -298,7 +307,7 @@ async def submit(
         submitted_by=submitter.id,
         change_summary=change_summary,
         status=ApprovalStatus.REVIEW.value,
-        approvers_required=entry.approvers_required,
+        approvers_required=approvers_required,
     )
     session.add(row)
     try:
@@ -321,7 +330,7 @@ async def submit(
         entity_ref=str(artifact_ref),
         after={
             "status": ApprovalStatus.REVIEW.value,
-            "approvers_required": entry.approvers_required,
+            "approvers_required": approvers_required,
         },
         justification=change_summary,
     )
