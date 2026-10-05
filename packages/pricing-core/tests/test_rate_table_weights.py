@@ -25,8 +25,8 @@ from model_schema import (
     GroupingMethod,
     UnseenLevelBehaviour,
 )
-from model_schema.rating import RateTableKey, RateTableValue
-from pricing_core.rate_tables.operations import diff_vs_previous
+from model_schema.rating import RateTableDiffCell, RateTableKey, RateTableValue
+from pricing_core.rate_tables.operations import diff_cells, diff_vs_previous
 from pricing_core.rate_tables.weights import (
     PortfolioWeights,
     WeightJoinError,
@@ -357,3 +357,101 @@ def test_rows_that_map_with_zero_exposure_are_no_weight_not_a_refusal() -> None:
     diff = diff_vs_previous(cells, changed, keys, value, weights=result.weights)
     assert diff.changed_cells == 1
     assert diff.exposure_weighted_mean_change_pct is None
+
+
+# --- the per-cell diff (RL-1418 T2, T3; FD-1358) ---------------------------------------------
+
+
+def _value() -> RateTableValue:
+    return RateTableValue(name="relativity", type="relativity", unit="x")  # type: ignore[arg-type]
+
+
+def _rows(*pairs: tuple[str, str]) -> list[dict[str, str]]:
+    return [{"band": band, "relativity": value} for band, value in pairs]
+
+
+@pytest.mark.req("FR-231")
+def test_diff_cells_gives_each_cells_change_and_weight() -> None:
+    """Two changed cells; every figure is worked by hand."""
+    keys = [_key("band")]
+    baseline = _rows(("a", "1.0"), ("b", "2.0"), ("c", "5.0"))
+    current = _rows(("a", "1.1"), ("b", "1.5"), ("c", "5.0"))
+    weights = {("a",): D("3"), ("b",): D("2")}
+    cells = diff_cells(baseline, current, keys, _value(), weights=weights)
+    assert cells == [
+        RateTableDiffCell(
+            key={"band": "a"}, change="changed", baseline_value=D("1.0"),
+            current_value=D("1.1"), abs_change=D("0.1"), rel_change_pct=D("10"), weight=D("3"),
+        ),
+        RateTableDiffCell(
+            key={"band": "b"}, change="changed", baseline_value=D("2.0"),
+            current_value=D("1.5"), abs_change=D("-0.5"), rel_change_pct=D("-25"), weight=D("2"),
+        ),
+    ]
+
+
+@pytest.mark.req("FR-231")
+def test_the_cells_are_in_key_order_by_code_point() -> None:
+    """`"10"` sorts before `"9"`: each value compared as its stored string."""
+    keys = [_key("band")]
+    baseline = _rows(("9", "1.0"), ("10", "1.0"), ("2", "1.0"))
+    current = _rows(("9", "2.0"), ("10", "2.0"), ("2", "2.0"))
+    cells = diff_cells(baseline, current, keys, _value())
+    assert [c.key["band"] for c in cells] == ["10", "2", "9"]
+
+
+@pytest.mark.req("FR-231")
+def test_the_weight_has_three_states() -> None:
+    """Null with no weights; null on a removed cell; `"0"` on a current cell no row maps to
+    and on one whose weight is 0, which is also left out of the mean."""
+    keys = [_key("band")]
+    baseline = _rows(("a", "1.0"), ("b", "1.0"), ("gone", "1.0"), ("z", "1.0"))
+    current = _rows(("a", "1.1"), ("b", "1.1"), ("new", "1.0"), ("z", "1.2"))
+    unweighted = diff_cells(baseline, current, keys, _value())
+    assert [c.weight for c in unweighted] == [None, None, None, None, None]
+
+    weights = {("a",): D("2"), ("b",): D("0"), ("gone",): D("9")}
+    by_band = diff_cells(baseline, current, keys, _value(), weights=weights)
+    weighted = {c.key["band"]: c for c in by_band}
+    assert weighted["a"].weight == D("2")
+    assert weighted["b"].weight == D("0")  # Σ 0: reads "0", not null
+    assert weighted["z"].weight == D("0")  # no row maps to it
+    assert weighted["new"].weight == D("0")  # an added cell is a cell of the current version
+    assert weighted["gone"].weight is None  # removed: rows map only to the current version
+    assert weighted["gone"].change == "removed"
+    assert weighted["new"].change == "added"
+    assert weighted["new"].baseline_value is None
+    assert weighted["gone"].current_value is None
+    assert weighted["new"].abs_change is None
+    assert weighted["new"].rel_change_pct is None
+
+
+@pytest.mark.req("FR-231")
+@pytest.mark.parametrize("with_weights", [False, True])
+def test_the_cells_agree_with_the_summary(with_weights: bool) -> None:
+    """The summary is recomputed from the items: one pass, so they cannot disagree. A
+    zero baseline is a change but never a percentage, in the cells and in the summary."""
+    keys = [_key("band")]
+    baseline = _rows(("a", "1.0"), ("b", "2.0"), ("c", "0"), ("d", "4.0"), ("gone", "1.0"))
+    current = _rows(("a", "1.1"), ("b", "1.0"), ("c", "3.0"), ("d", "4.0"), ("new", "1.0"))
+    weights = (
+        {("a",): D("3"), ("b",): D("1"), ("c",): D("5"), ("new",): D("7")} if with_weights else None
+    )
+    summary = diff_vs_previous(baseline, current, keys, _value(), weights=weights)
+    cells = diff_cells(baseline, current, keys, _value(), weights=weights)
+
+    assert summary.changed_cells == len(cells) == 5
+    pcts = [c.rel_change_pct for c in cells if c.rel_change_pct is not None]
+    assert summary.max_abs_change_pct == max(abs(pct) for pct in pcts) == D("50")
+    pairs = [
+        (c.weight, c.rel_change_pct) for c in cells
+        if c.weight is not None and c.weight != 0 and c.rel_change_pct is not None
+    ]
+    if with_weights:
+        total = sum((w for w, _ in pairs), D(0))
+        mean = sum((w * p for w, p in pairs), D(0)) / total
+        assert summary.exposure_weighted_mean_change_pct == mean
+        assert summary.exposure_weighted_mean_change_pct == D("-5")
+    else:
+        assert pairs == []
+        assert summary.exposure_weighted_mean_change_pct is None

@@ -754,6 +754,30 @@ class RateTableDiff(BaseModel):
     matched_exposure: Decimal | None = None
 
 
+class RateTableDiffCell(BaseModel):
+    """One changed cell of a rate table diff (03 §4.2, FR-231, `RL-1418` T2).
+
+    `key` holds each declared key's name and the cell's stored value for it. `change` says
+    whether the cell was added, removed or changed. The values are decimal strings on the
+    wire (R2), null on the side where the cell is absent. `abs_change` is
+    `current_value - baseline_value` and `rel_change_pct` is that over `baseline_value` x 100;
+    each is null unless both values are present, and the percentage also when the baseline is
+    zero. `weight` is the cell's Σ exposure (FR-231): `"0"` for a current cell whose Σ is 0 or
+    that no portfolio row maps to, and null when no portfolio is named or the cell is
+    `removed`, because rows map only to cells of the current version.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    key: dict[str, str]
+    change: Literal["added", "removed", "changed"]
+    baseline_value: Decimal | None = None
+    current_value: Decimal | None = None
+    abs_change: Decimal | None = None
+    rel_change_pct: Decimal | None = None
+    weight: Decimal | None = None
+
+
 #: The key filter of 03 §5.2: exact-value match over the table's declared keys.
 KeyFilter = dict[str, list[str]]
 

@@ -177,6 +177,35 @@ Also: `docs/contracts/openapi/generated.json` regenerated for the `portfolio` pa
 `test_api_rate_tables.py` 46 passed, `test_worker_rate_tables.py` 3, `test_api_authorisation_sweep.py` 9,
 `test_contracts.py` 152 passed and 2 skipped; `ruff`, `mypy` clean.
 
+### Task 5 — the model-schema fields and the contract (Acceptance 9, 18, 20)
+
+Its Step 1 and Step 2 landed with Tasks 3 and 4, because those consume the fields and the route parameter.
+`git diff origin/main -- packages/model-schema/src/model_schema/rating.py` shows `RateTableDiff` changed only by its
+docstring and the two optional fields `portfolio_exposure` and `matched_exposure` (`Decimal | None = None`); its three
+existing fields are untouched. `generate-contracts.py --check` exits 0 (45 match).
+
+**A shared test** (dispatch record §(9), the lead's note): `backend/tests/test_diff_cache.py::
+test_diff_is_computed_on_miss_and_served_from_the_cache_on_hit`, which this slice edited at `5134906a`, is shared with
+`SL 9515` (the `FD 9529` fix, not yet active). Whichever slice merges second rebases it and re-runs the full gate (the
+maintainer's ruling).
+
+### Task 6 — the paged cells route (DP-A (c), `RL-1418` T1 to T4; Acceptance 18), part 1: the pure core
+
+**Stop reported to the lead.** The new Job kind needs an Alembic migration (`JobKind` is the native PostgreSQL enum
+`job_kind`, `backend/src/app/db/models.py:95-107`, as in `d5e6f7a8b9c0_rate_table_diff_job_kind.py:31`), and
+`backend/migrations/` is in neither the plan's nor the dispatch record's write set. Everything that submits or reads a
+`rate_table.diff_cells` Job waits for the lead's ruling; the parts below touch write-set paths only.
+
+**Red**, `uv run pytest packages/pricing-core/tests/test_rate_table_weights.py -q`: collection error
+`ImportError: cannot import name 'RateTableDiffCell' from 'model_schema.rating'`.
+
+**Green**: `RateTableDiffCell` (`model_schema/rating.py`) and `diff_cells` (`operations.py`, next to `_compute_diff`, not
+near `seed_from_model`). The changed-set pass is now one function, `_diff_cells`, which `diff_cells` returns and
+`_compute_diff` summarises, so the summary and the cells cannot disagree. The new tests: `test_diff_cells_gives_each_
+cells_change_and_weight`, `test_the_cells_are_in_key_order_by_code_point` (`"10"` before `"2"` before `"9"`),
+`test_the_weight_has_three_states`, `test_the_cells_agree_with_the_summary[False|True]` (the mean, -5, and the maximum,
+50, recomputed from the items). 57 passed with `test_rate_table_operations.py`; `ruff` and `mypy` clean.
+
 ## PRs
 
 Not yet opened (the PR is opened as a draft after Task 2 is committed and pushed).
