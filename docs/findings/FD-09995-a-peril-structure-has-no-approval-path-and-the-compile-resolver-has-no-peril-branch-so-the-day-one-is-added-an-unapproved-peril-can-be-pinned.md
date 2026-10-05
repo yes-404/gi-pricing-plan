@@ -14,9 +14,11 @@ relates: [WK-1178, FR-237, FR-351, FR-386]
 
 ## Finding
 
-**Severity: low**, on the maintainer's entry of 2026-09-30 11:25:33 BST, "#976's service-account item: LOW (recorded);
-perils: LOW FD with a named owner and a tripwire" (`~/gi-pricing-plan.local/channel/to-lead.md`): fail-closed today, so
-nothing prices wrongly. **A latent dependency, not a live defect.** Two facts hold at `9f63d0fe` and `65b33479`:
+**Severity: HIGH. Owner: WK-1178. Deadline: before the P2 exit demo.** Ruled by the maintainer in the entry headed `## 2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record` (`~/gi-pricing-plan.local/channel/to-lead.md`), item 2: "SEVERITY: FD 9995 → HIGH, deadline before the P2 exit demo (now a G2 blocker)." The reason is item 1 of that entry: G2 takes Option A, and slice A-1 "FD 9995 in full (the peril approval carry plus the _Resolver peril branch; it flips PL 9683's Acceptance 7)" is the first of four serial build slices under WK-1178 for WF-699's literal Peril Structure path.
+
+*History.* The severity was **low** on the maintainer's entry of 2026-09-30 11:25:33 BST, "#976's service-account item: LOW (recorded);
+perils: LOW FD with a named owner and a tripwire": fail-closed today, so
+nothing prices wrongly. **A latent dependency, not a live defect** — the analysis below is unchanged, only what the plan now needs from it. Two facts hold at `9f63d0fe` and `65b33479`:
 
 1. **Nothing writes `approved` for a peril structure.** `platform/perils.py` writes only `DRAFT` (`:124`),
    `RECONCILED` (`:256`) and `REVIEW` (`:338`) (re-read at `47d770e8`: unchanged); no other backend code sets `PerilStructureStatus.APPROVED`, and
@@ -75,7 +77,9 @@ returned a peril would be refused with `PIN_NOT_APPROVED` unless its status was 
 
 ## Disposition
 
-**Proposed disposition: carry forward with an owner.** Owner: **WK-1178**, on the maintainer's rule in the entry of
+**Ruled 2026-10-05 (16:43:31 BST entry above): fix before the P2 exit demo, owner WK-1178, by slice A-1 of Option A.** A-1 builds the approval path and the resolver branch together and flips PL 9683's Acceptance 7 (the tripwire, below) deliberately. The text that follows is the earlier proposal, kept because the tripwire it describes is what Acceptance 7 implements and A-1 replaces.
+
+*Earlier proposal (carry forward with an owner).* Owner: **WK-1178**, on the maintainer's rule in the entry of
 2026-09-30 11:25:33 BST ("If no P2 Work schedules it, the owner is WK-1178, with the trigger 'before any resolver
 branch'"). The auditor checked `docs/roadmap.md` at `65b33479` (`grep -n -i peril docs/roadmap.md` finds lines `350`,
 `410`, `412`, `496`, all Phase 1b closure text, and `:496` "Bandings, Peril Structure and reconciliation are recorded
@@ -105,8 +109,7 @@ Ownership shape: event
 
 ## Decision
 
-Not yet decided. The proposal above is the auditor's; the lead adopts, amends or rejects it. The maintainer's entry of
-11:25:33 BST has already agreed a LOW FD, the owner rule and the tripwire acceptance.
+Severity, owner and deadline are the maintainer's (by delegation), in the 16:43:31 BST entry named above. The lead gives the verdict on the register row.
 
 *Disclosure: drafted under working id 9995; minted at the merge, when the id is re-read against `origin/main`.*
 
@@ -124,3 +127,5 @@ backend table yet (Phase 2)" `NOT_FOUND` (`:550-556`); the `PerilStructureRow` s
 is at `models.py:1671`; no backend test is a peril tripwire; `docs/roadmap.md` still names no
 P2 Work for a peril resolver or approval path (`grep -n -i peril docs/roadmap.md`: lines 350,
 410, 412, 496).
+
+Re-anchored 2026-10-05 17:00:59 BST at `origin/main` 137bc817: every claim above was re-read and still holds, and `tree:` above stays the filing tree. The cites that moved, because `cdaaa573` (#1157) edited `api/approvals.py` and `rating_versions.py`: `_carry_to_the_artifact` `:512` → `:529` (its "a Peril Structure and a Rating Version each gain one with the slice that builds them" docstring, formerly `:520`, now `:536-538`); the approvals import `:48` → `:47`, its resolver reference-check `:472` → `:489`, its comment `:345` → `:362`; the resolver's `NOT_FOUND` raise `:550-556` → `:550-555` (the call ends at `:555`); the maturity loop in `compile_bundle` `:624-630` → `:624-632` (the loop body through `payloads[str(ref)] = resolved.payload`). Unchanged: `_Resolver.resolve` `:446`, `PerilStructureRow` `:1618`, the status `CHECK` `:1671`, `_MATURITY_CHECK_EXEMPT` `:431`, `_APPROVED_OR_BETTER` `:404`, `perils.py` `:124`/`:256`/`:338`, the `model_schema/perils.py` and test hits of the `PerilStructureStatus.APPROVED|SUPERSEDED` `git grep`, and `06-governance.md:64`. No backend test is a peril tripwire by that name; the tripwire is PL 9683's Acceptance 7 (`pl-9683-fd9708-rv-pins`, #1140, not yet merged).
