@@ -36,12 +36,10 @@ SANCTIONED_SITES = frozenset(
 #: entry is a change; adding one is refused by the test below until a ruling adds it here.
 ALLOWANCE_SITES = frozenset(
     {
-        # Temporary: removed, red first, by the WK-1178 validation-rule fix slice.
-        ("backend/src/app/platform/validation_rules.py", "approve_rule"),
+        # Temporary: pending OQ 9987 (working id), per RL-1301 A.4.5.
         ("backend/src/app/platform/validation_rules.py", "replace_rule_set"),
         # Legitimate seed writers.
         ("backend/src/app/platform/validation_rules.py", "seed_builtin_rules"),
-        ("examples/fremtpl2/seed.py", "run"),
     }
 )
 
