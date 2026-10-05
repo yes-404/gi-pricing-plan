@@ -25,11 +25,11 @@ draft PR #1133, branch `dm-9695-rv-pins-http`, read first at head `68096376` and
 `614ad96b` (12:23:39Z), which records DP-1 and DP-2 below). Neither is minted, so both are
 cited unhyphenated and kept out of `relates:` (check 32).
 
-**Ordered by** the deputy's entry in `~/gi-pricing-plan.local/channel/to-lead.md` of
+**Ordered by** the maintainer's (by delegation) entry in `~/gi-pricing-plan.local/channel/to-lead.md` of
 2026-10-05 13:12:56 BST, item 15, as the lead relayed it in the brief
 `~/gi-pricing-plan.local/handover/brief-plan-fd9708-2026-10-05.md`: *"RL 9695: OPTION (a).
 FD 9708 is HIGH, owner WK-1178, deadline before the exit demo. Spawn its planner now."* The
-severity, owner and option are the deputy's. This plan did not read the channel entry itself.
+severity, owner and option are the maintainer's (by delegation). This plan did not read the channel entry itself.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
 > or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`)
@@ -83,9 +83,9 @@ reads in `frontend/src/api/ratingVersions.ts` and a router link, at `caa4e411`).
 ## Status
 
 `draft`. **The three blocking decision points are decided**, each sent to the lead when found:
-DP-1 (a), DP-2 (a) and DP-3 (a), by the deputy's entry headed *"2026-10-05 13:20:26 BST — DECISIONS 22–27; severity signals for the four gap findings"* in `~/gi-pricing-plan.local/channel/to-lead.md`, items 25, 26 and 27, read by this planner in that
+DP-1 (a), DP-2 (a) and DP-3 (a), by the maintainer's (by delegation) entry headed *"2026-10-05 13:20:26 BST — DECISIONS 22–27; severity signals for the four gap findings"* in `~/gi-pricing-plan.local/channel/to-lead.md`, items 25, 26 and 27, read by this planner in that
 file. RL 9695 at `614ad96b` already carries DP-1's T3 amendment and DP-2's predicate. DP-4 (a)
-and DP-5 (a) are accepted, with conditions, by the deputy's entry headed *"2026-10-05 13:29:05 BST — DECISIONS 32 and 33 (PL 9683, the FD 9708 fix)"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 33. RL 9695's texts govern at dispatch: where its minted text differs from the
+and DP-5 (a) are accepted, with conditions, by the maintainer's (by delegation) entry headed *"2026-10-05 13:29:05 BST — DECISIONS 32 and 33 (PL 9683, the FD 9708 fix)"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 33. RL 9695's texts govern at dispatch: where its minted text differs from the
 head cited here, the minted text wins and the dispatch record names each difference
 ([`README.md`](README.md) rule 4).
 
@@ -109,9 +109,9 @@ maintainer (by delegation) lifts it.
    (the brief).
 2. **DP-1 to DP-5 decided: met** (13:20:26 BST, items 25–27; 13:29:05 BST, item 33).
 3. **This plan `active`**, by the lead's activation PR, which flips this plan and the `SL-` row.
-4. **The lane.** The deputy's priority rule (13:12:56 BST, as the brief relays it): *a HIGH
+4. **The lane.** The maintainer's (by delegation) priority rule (13:12:56 BST, as the brief relays it): *a HIGH
    finding that blocks G2 takes the first build lane that frees once its plan is active.*
-   The deputy's entry headed *"2026-10-05 13:29:05 BST — DECISIONS 32 and 33 (PL 9683, the FD 9708 fix)"* in `~/gi-pricing-plan.local/channel/to-lead.md` applies it: **this fix goes first in lane C, and WK-675 S2 (PL 9713,
+   The maintainer's (by delegation) entry headed *"2026-10-05 13:29:05 BST — DECISIONS 32 and 33 (PL 9683, the FD 9708 fix)"* in `~/gi-pricing-plan.local/channel/to-lead.md` applies it: **this fix goes first in lane C, and WK-675 S2 (PL 9713,
    working id) follows it there.** That order is also what the contention table below
    needs: this slice and S2 change adjacent rows of `03` §5.1 and the same §3.4 table.
 5. **The dispatch GO** (the maintainer's GO check and the lead's go, in the activation PR).
@@ -220,7 +220,7 @@ failure line as printed. Tests live in the new module
   their fields. No migration (the columns exist; `_insert_version` writes them today,
   `backend/tests/test_rating_version_compile.py:86-110`).
 - **No route is added**, and no pin is mutable after create: RL 9695 refused option (c), and
-  the deputy's DP-S2-3 decision (PL 9713, *"no re-pin (no route exists)"*) relies on it.
+  the maintainer's (by delegation) DP-S2-3 decision (PL 9713, *"no re-pin (no route exists)"*) relies on it.
 - **Effective dates are not in the create body.** RL 9695 T1 lists the body's fields, and
   `effective_from`/`effective_to` are not among them.
 - **No spec text is written by this slice unless a ruling carries it verbatim** (Task 5). Any
@@ -251,7 +251,7 @@ Out of scope, named so no reader assumes it: FD 9995's resolver branch for `peri
 `MODEL_REFERENCE_MODE_INCONSISTENT`, RL 9758, given to "S3"); the exit-demo script's C1 call
 (`PL-1371` §3.8 row 7, which names this slice and FD 9995 as prerequisites, per RL 9695
 *What it obliges*); `CR-838`'s FR-237 "delivered" line, which RL 9668 (working id, #1137) corrects to "partly
- delivered" (the deputy's entry of 13:24:03 BST, item 1).
+ delivered" (the maintainer's (by delegation) entry of 13:24:03 BST, item 1).
 
 ### Task 0 at planning time (measured, not asserted)
 
@@ -301,14 +301,14 @@ Read at `caa4e411`:
 
 | Other slice (lane; source read) | Shared path | Them | Us | Class → consequence |
 |---|---|---|---|---|
-| **WK-675 S2**, PL 9713 (lane C; #1131 @ `origin/pl-9713-wk675-s2-leaf`, §"Write set", read 2026-10-05 between 13:15 and 13:24 BST) | `docs/specs/03-rating-engine.md` §5.1 | RL 9766 T2: two rows inserted **immediately after `:908`** (anchor: the row whose first two cells are `POST` and `/api/v1/rating-versions`) | T1 replaces `:908`'s purpose cell | `forbidden` (same section), and the hunks are **adjacent**, so the deputy's lanes A/C option (b) condition 2 (non-adjacency) fails → **SERIALISE**. Either order keeps both anchors (S2's anchor is the row's first two cells; T1's is the third cell), so the second re-applies after a textual merge |
+| **WK-675 S2**, PL 9713 (lane C; #1131 @ `origin/pl-9713-wk675-s2-leaf`, §"Write set", read 2026-10-05 between 13:15 and 13:24 BST) | `docs/specs/03-rating-engine.md` §5.1 | RL 9766 T2: two rows inserted **immediately after `:908`** (anchor: the row whose first two cells are `POST` and `/api/v1/rating-versions`) | T1 replaces `:908`'s purpose cell | `forbidden` (same section), and the hunks are **adjacent**, so the maintainer's (by delegation) lanes A/C option (b) condition 2 (non-adjacency) fails → **SERIALISE**. Either order keeps both anchors (S2's anchor is the row's first two cells; T1's is the third cell), so the second re-applies after a textual merge |
 | | `03` §3.4 | RL 9766 T1 inserted after FR-243 (`:140`) | T3 appended to FR-237 (`:134`) | `forbidden` (same table) → SERIALISE |
 | | `packages/model-schema/src/model_schema/rating.py` | `RatingAlgorithm` (`:375`) split into `RatingAlgorithmDraft` + `RatingAlgorithm` | `RatingVersionCreate` added after `RatingVersion` | `other_shared_path`, different classes → ALLOWED one-sided |
 | | `backend/src/app/api/models.py` | `get_rating_version_by_ref` added between the list and by-id reads | `RatingVersionCreate` removed, `create_rating_version` edited | `other_shared_path`, different definitions → ALLOWED one-sided |
 | | `model_schema/__init__.py` `__all__` | `RatingAlgorithmDraft`, `RatingAlgorithmSaved` | `RatingVersionCreate` | exempt (name-disjoint) |
 | | `generated.json`, `docs/INDEX.md` | regenerated | regenerated | exempt |
 | | `backend/tests/test_contracts.py` | `UNTYPED_REQUEST_PENDING` (only if `SL-1367` landed) | `ONE_SIDED_SLUGS` | different definitions; `ONE_SIDED_SLUGS` exempt |
-| **SL-1391**, PL 9716 (lane A; #1127, §"Write set", read as above) | `03` §5.1 | T10 replaces the diff row (`:904`); RL 9710 T1 inserts immediately after it | `:908` | `forbidden` (same section), gap `:905-907` unchanged between the hunks → **ALLOWED: option (b) EXTENDED to this pair** on the 13:00:09 conditions, by the deputy's entry headed *"2026-10-05 13:29:05 BST — DECISIONS 32 and 33 (PL 9683, the FD 9708 fix)"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 32. Addition: once both branches exist, a trial `git merge-tree --write-tree <S7 head> <this slice's head>` is run and its exit code recorded in both dispatch records (Task 0 Step 5); rc 0 confirms the gap, **rc 1 means SERIALISE** and the second to merge re-applies its row |
+| **SL-1391**, PL 9716 (lane A; #1127, §"Write set", read as above) | `03` §5.1 | T10 replaces the diff row (`:904`); RL 9710 T1 inserts immediately after it | `:908` | `forbidden` (same section), gap `:905-907` unchanged between the hunks → **ALLOWED: option (b) EXTENDED to this pair** on the 13:00:09 conditions, by the maintainer's (by delegation) entry headed *"2026-10-05 13:29:05 BST — DECISIONS 32 and 33 (PL 9683, the FD 9708 fix)"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 32. Addition: once both branches exist, a trial `git merge-tree --write-tree <S7 head> <this slice's head>` is run and its exit code recorded in both dispatch records (Task 0 Step 5); rc 0 confirms the gap, **rc 1 means SERIALISE** and the second to merge re-applies its row |
 | | `model_schema/rating.py` | `RateTableDiff` (`:735-747`) edited, `RateTableDiffCell` added | `RatingVersionCreate` added | `other_shared_path`, different classes → ALLOWED one-sided |
 | | `generated.json`, `docs/INDEX.md` | regenerated | regenerated | exempt |
 | **SL-1409**, PL-1408 (lane B; in flight, `git diff --name-only origin/main...origin/sl-1409-validation-rule-approval-through-the-workflow`, 34 paths, read 2026-10-05 between 13:15 and 13:24 BST) | `backend/src/app/errors.py` | `RULE_VERSION_IMMUTABLE` added to `DATA_ERROR_CODES` | *(DP-1 a)* a code added to `RATING_ERROR_CODES` | `other_shared_path`, different definitions → ALLOWED one-sided |
@@ -318,19 +318,19 @@ Read at `caa4e411`:
 | **PL 9728** / SL 9727 (lane B after SL-1409; #1113, §"Write set") | — | `score.py`, `db/session.py`, `config.py`, `api/deps.py`, `api/authz.py`, `auth/service.py`, `main.py` (DP-4 a), `scripts/bench-rating.py`, `scripts/demo.py` (DP-6 a); `03`/`00` only under its DP-3 (b) or DP-5 | — | disjoint, unless its DP-3 (b) or DP-5 lands text in `03` §3.4 or §5.1, which then serialises; both dispatch records name it |
 | **The FD 9707 fix**, PL 9688 / SL 9685 (working ids; **not on `origin` at the time of reading**) | unknown | FR-221's lookup `as_at` (pricing-core lookup evaluation, `/score`, `/score/compare`, batch, per its brief) | — | **not read**: the dispatch re-reads its write set. Expected disjoint from this slice's code; a `03` §3.4 or §5.1 text would serialise |
 | **FD 9759 limb 2's owner "S3"** (RL 9758, *What it obliges*) | `errors.py` `RATING_ERROR_CODES`; `03` FR-223 row (`:109`); §5.1 owned list | adds `MODEL_REFERENCE_MODE_INCONSISTENT` and RL 9758 T1 | the same, **under DP-1 (a)** | `forbidden` (same registry entry and same spec row) → **whichever merges first applies them, and the other re-reads and drops its copy**; both dispatch records name it (sent to the lead with DP-1) |
-| **WK-673 S3** (SL-1387; #1138 @ `f3603e7c`, as the lead relayed it; not read by this planner) | `docs/specs/03-rating-engine.md` §5.1's owned-code list (`:928` onward, *"Error codes owned by this module:"*) | appends `ATTRIBUTION_RECONCILIATION_FAILED` at the list's tail | ~~appends `MODEL_REFERENCE_MODE_INCONSISTENT` at the same tail (DP-1, item 25)~~ no edit: the code is already at `:936` *(Corrected 2026-10-05, pre-mint fix F1; see §"Status".)* | one list, one tail → **SERIALISE**, by the deputy's entry headed *"2026-10-05 13:25:23 BST — 29: RL 9663 OK; 30: extend option (b) to S3 vs S2, with one serialisation; 31: close #986 OK"*, item 30: the second to merge merges `main` and re-appends its code at the tail. Dispatch-record item 2. *(Note 2026-10-05, pre-mint fix F1: this slice no longer appends to the list, so the stated reason no longer holds; the serialisation stands until the maintainer (by delegation) lifts it.)* |
+| **WK-673 S3** (SL-1387; #1138 @ `f3603e7c`, as the lead relayed it; not read by this planner) | `docs/specs/03-rating-engine.md` §5.1's owned-code list (`:928` onward, *"Error codes owned by this module:"*) | appends `ATTRIBUTION_RECONCILIATION_FAILED` at the list's tail | ~~appends `MODEL_REFERENCE_MODE_INCONSISTENT` at the same tail (DP-1, item 25)~~ no edit: the code is already at `:936` *(Corrected 2026-10-05, pre-mint fix F1; see §"Status".)* | one list, one tail → **SERIALISE**, by the maintainer's (by delegation) entry headed *"2026-10-05 13:25:23 BST — 29: RL 9663 OK; 30: extend option (b) to S3 vs S2, with one serialisation; 31: close #986 OK"*, item 30: the second to merge merges `main` and re-appends its code at the tail. Dispatch-record item 2. *(Note 2026-10-05, pre-mint fix F1: this slice no longer appends to the list, so the stated reason no longer holds; the serialisation stands until the maintainer (by delegation) lifts it.)* |
 
 ### Dispatch-record items
 
-Each item is named in this slice's dispatch record and in the other slice's, as the deputy
+Each item is named in this slice's dispatch record and in the other slice's, as the maintainer (by delegation)
 required.
 
-1. **`MODEL_REFERENCE_MODE_INCONSISTENT` and RL 9758 T1** (DP-1, the deputy's entry headed
+1. **`MODEL_REFERENCE_MODE_INCONSISTENT` and RL 9758 T1** (DP-1, the maintainer's (by delegation) entry headed
    *"2026-10-05 13:20:26 BST — DECISIONS 22–27; severity signals for the four gap findings"*,
    item 25): the first of this slice and the RL 9758 slice (FD 9759 limb 2, "S3") to merge
    registers the code in `RATING_ERROR_CODES` and lands RL 9758 T1. The second rebases, drops
    its copy, and its ledger says so.
-2. **The `03` owned-codes tail** (the deputy's entry headed *"2026-10-05 13:25:23 BST — 29: RL 9663 OK; 30: extend option (b) to S3 vs S2, with one serialisation; 31: close #986 OK"*, item 30): this slice and WK-673 S3 (SL-1387) each append one
+2. **The `03` owned-codes tail** (the maintainer's (by delegation) entry headed *"2026-10-05 13:25:23 BST — 29: RL 9663 OK; 30: extend option (b) to S3 vs S2, with one serialisation; 31: close #986 OK"*, item 30): this slice and WK-673 S3 (SL-1387) each append one
    code at the tail of `03` §5.1's owned-code list (`:928` onward). They serialise: the second to
    merge merges `main`, re-appends its code at the tail, re-runs the merge-tree check reading its
    exit code, and re-gates. *(Note 2026-10-05, pre-mint fix F1: this slice no longer appends to
@@ -340,7 +340,7 @@ required.
    (FR-237 `:134` against S2's insertion after FR-243 `:140`). Each side's hunks and anchors are
    listed.
 4. **SL-1391 (PL 9716, lane A's S7)**: `03` §5.1 `:904` against `:908`. Option (b) is extended to
-   this pair (the deputy's entry headed *"2026-10-05 13:29:05 BST — DECISIONS 32 and 33 (PL 9683, the FD 9708 fix)"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 32): both dispatch records list both sides' hunks and anchors and the
+   this pair (the maintainer's (by delegation) entry headed *"2026-10-05 13:29:05 BST — DECISIONS 32 and 33 (PL 9683, the FD 9708 fix)"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 32): both dispatch records list both sides' hunks and anchors and the
    re-measured gap (`:905-907` at `caa4e411`), and the exit code of the trial `git merge-tree --write-tree <S7 head> <this slice's head>`
    (Task 0 Step 5). rc 1 means the pair serialises; the second to merge merges `main`, re-runs the
    merge-tree check reading its exit code, re-applies its row and re-gates. The two gates never run at once.
@@ -359,7 +359,7 @@ measurement (it need not run exclusive). One full two-half gate (a gate slot und
 ## Decision points
 
 DP-1, DP-2 and DP-3 blocked activation; they were sent to the lead on 2026-10-05 between
-13:15 and 13:24 BST and are **decided** by the deputy's entry headed *"2026-10-05 13:20:26 BST — DECISIONS 22–27; severity signals for the four gap findings"* in `~/gi-pricing-plan.local/channel/to-lead.md`, items 25–27. DP-4 and DP-5 do not block; the recommendation is applied unless ruled otherwise.
+13:15 and 13:24 BST and are **decided** by the maintainer's (by delegation) entry headed *"2026-10-05 13:20:26 BST — DECISIONS 22–27; severity signals for the four gap findings"* in `~/gi-pricing-plan.local/channel/to-lead.md`, items 25–27. DP-4 and DP-5 do not block; the recommendation is applied unless ruled otherwise.
 Two choices the brief offered as examples are **not open**: pins are not mutable after create,
 and the effective dates are not in the create body; RL 9695 decides both (§"Global Constraints").
 
@@ -368,8 +368,8 @@ and the effective dates are not in the create body; RL 9695 decides both (§"Glo
 | **DP-1** | RL 9758 item 2: *"Any route that writes a Rating Version's `algorithm_ref` or `model_reference_mode` refuses a mismatching write with **422** `MODEL_REFERENCE_MODE_INCONSISTENT` … this binds the slice that adds one."* This slice adds one. RL 9695 T3 says the create route *"stores them and does not resolve them"*. Both cannot hold | **(a)** check at create when `algorithm_ref` resolves in the workspace (load `RatingAlgorithmRow`, run `check_model_reference_mode`); an algorithm that does not resolve is stored and refused at compile (`NOT_FOUND`); this slice also registers the code and lands RL 9758 T1 plus an owned-list text, unless S3 merged them first. **(b)** RL 9758 item 2 is satisfied at compile only for this route (amend RL 9758); create checks nothing. **(c)** check at create and refuse an unresolvable algorithm at create too (422 or 404), amending T1/T3's "resolvability at compile" | **(a)**: it honours both rulings in their intent — RL 9758's check where the version and algorithm first meet, RL 9695's "no resolution at create" for everything else — and costs one query. (b) weakens a ruling already audited; (c) puts resolvability in two places, which RL 9695 rejected | **DECIDED, (a)**, item 25: *"Check MODEL_REFERENCE_MODE_INCONSISTENT at create when algorithm_ref resolves; an unresolvable ref stays compile's. … The slice that merges first registers the code and lands RL 9758 T1; both dispatch records name it; the second rebases and drops its copy, its ledger saying so."* RL 9695 T3 amended pre-mint (`614ad96b`) | Tasks 3, 5; Acceptance 8 |
 | **DP-2** | RL 9695 *Acceptance* bullet 5's predicate `grep -rn "algorithm_ref\s*=\|\.pins\s*=" --include=*.py examples/ backend/src/` matches at `caa4e411` beyond the seed (0.7) and would match this slice's own keyword arguments. It cannot print nothing | (a) replace it with `grep -rnE "\.(algorithm_ref\|pins)\s*=[^=]" --include=*.py examples/ backend/src/` (attribute assignment only; prints the two seed lines today); (b) keep the intent in prose and drop the predicate | **(a)**, corrected in RL 9695 before its mint | **DECIDED, (a)**, item 26; RL 9695 at `614ad96b` carries the predicate with its corpus and tree | Acceptance 12 |
 | **DP-3** | Where the wrong-type check (RL 9695 T1, *"a ref of the wrong type in any of them is **422**"*) lives. `Pins`' lists are bare `list[ArtifactRef]` (0.4) | (a) a validator on the new `RatingVersionCreate` only; (b) tighten `Pins` itself (per-list admitted types) | **(a)**: T1 scopes the check to the create body. (b) changes every stored row's read (`to_schema` runs `Pins.model_validate` on every list, get, create and submit) and the published `RatingVersion` contract, so one mis-typed bench or legacy row would fail every read of its workspace (the blast-radius argument `BundleMetadata.blob_sha256`'s docstring makes). Admitted types under (a): `algorithm_ref` `rating_algorithm`; `rate_tables` `rate_table`; `models` `model` or `peril_structure` (0.5); `reference_tables` `reference_table`; `custom_objectives` `custom_objective`; `model_ref` stays as today (no new rule) | **DECIDED, (a)**, item 27: *"a validator on the new RatingVersionCreate only. Tightening Pins would change every stored read and the contract."* | Task 2; Acceptance 3, 4 |
-| **DP-4** | RL 9695 *Ruled*: *"The seed moves to the route in the same slice."* The seed calls services and has no HTTP client (`examples/fremtpl2/model.py:17-31`) | (a) the seed passes `algorithm_ref` and `pins` to `rating_versions_service.create_rating_version`, the function the route calls; (b) the seed calls the route through an HTTP client | **(a)**: it removes the ORM write the ruling targets with no new dependency in `examples/`; the route itself is proven by Acceptance 1 | **DECIDED, (a)**, by the deputy's entry headed *"2026-10-05 13:29:05 BST — DECISIONS 32 and 33 (PL 9683, the FD 9708 fix)"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 33, on a condition: the slice still proves the HTTP create route end to end, create with pins over HTTP then compile (Acceptance 1, which therefore may not be replaced by a service-level test), because G2 is over HTTP; and the exit-demo script creates its version through HTTP (`PL-1371` §3.8 row 7, §"Hand-off") | Task 4 |
-| **DP-5** | Acceptance 7, the peril pin, while FD 9995 is open | (a) assert today's `NOT_FOUND` at compile, as FD 9995's tripwire, changed by FD 9995's fix; (b) a strict `xfail` asserting `succeeded`; (c) no peril test here | **(a)**: a strict assertion of today's behaviour that FD 9995's fix must visibly flip; (b) hides the failure mode in a marker; (c) loses the brief's case | **DECIDED, (a)**, by the deputy's entry headed *"2026-10-05 13:29:05 BST — DECISIONS 32 and 33 (PL 9683, the FD 9708 fix)"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 33, on a condition: the test's name or docstring cites FD 9995 and says the assertion is expected to flip when FD 9995 is fixed, so nobody reads it as the intended behaviour (Task 1's docstring) | Acceptance 7 |
+| **DP-4** | RL 9695 *Ruled*: *"The seed moves to the route in the same slice."* The seed calls services and has no HTTP client (`examples/fremtpl2/model.py:17-31`) | (a) the seed passes `algorithm_ref` and `pins` to `rating_versions_service.create_rating_version`, the function the route calls; (b) the seed calls the route through an HTTP client | **(a)**: it removes the ORM write the ruling targets with no new dependency in `examples/`; the route itself is proven by Acceptance 1 | **DECIDED, (a)**, by the maintainer's (by delegation) entry headed *"2026-10-05 13:29:05 BST — DECISIONS 32 and 33 (PL 9683, the FD 9708 fix)"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 33, on a condition: the slice still proves the HTTP create route end to end, create with pins over HTTP then compile (Acceptance 1, which therefore may not be replaced by a service-level test), because G2 is over HTTP; and the exit-demo script creates its version through HTTP (`PL-1371` §3.8 row 7, §"Hand-off") | Task 4 |
+| **DP-5** | Acceptance 7, the peril pin, while FD 9995 is open | (a) assert today's `NOT_FOUND` at compile, as FD 9995's tripwire, changed by FD 9995's fix; (b) a strict `xfail` asserting `succeeded`; (c) no peril test here | **(a)**: a strict assertion of today's behaviour that FD 9995's fix must visibly flip; (b) hides the failure mode in a marker; (c) loses the brief's case | **DECIDED, (a)**, by the maintainer's (by delegation) entry headed *"2026-10-05 13:29:05 BST — DECISIONS 32 and 33 (PL 9683, the FD 9708 fix)"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 33, on a condition: the test's name or docstring cites FD 9995 and says the assertion is expected to flip when FD 9995 is fixed, so nobody reads it as the intended behaviour (Task 1's docstring) | Acceptance 7 |
 
 ## Tasks
 
@@ -386,7 +386,7 @@ and the effective dates are not in the create body; RL 9695 decides both (§"Glo
   `RATING_ERROR_CODES` on the dispatch tree; if it is, Task 3 Step 5 and Task 5 Step 3 are
   skipped and the ledger says so.
 
-- [ ] **Step 5: The trial merge with S7** (the deputy's entry headed *"2026-10-05 13:29:05 BST — DECISIONS 32 and 33 (PL 9683, the FD 9708 fix)"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 32). Once this slice's branch and SL-1391's
+- [ ] **Step 5: The trial merge with S7** (the maintainer's (by delegation) entry headed *"2026-10-05 13:29:05 BST — DECISIONS 32 and 33 (PL 9683, the FD 9708 fix)"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 32). Once this slice's branch and SL-1391's
   (lane A's S7) both exist, run `git merge-tree --write-tree <S7 head> <this slice's head>` and record its exit code and the
   two heads in both dispatch records and in the ledger. rc 0: option (b) holds. rc 1: the pair
   serialises; report to the lead before the first gate. Read the exit code, never the first
