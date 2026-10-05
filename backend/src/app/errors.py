@@ -102,6 +102,10 @@ DATA_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # valid unchanged once the operation is built, which is the opposite of what a
         # validation failure tells a caller.
         "DERIVATION_NOT_MATERIALISED",
+        # FD-1415 / RL-1407 (#1070 @24ea2130): an approved rule's dry-run report is its
+        # approval evidence, so a new one cannot replace it. Per-artifact, as
+        # `DATASET_VERSION_IMMUTABLE` is.
+        "RULE_VERSION_IMMUTABLE",
     }
 )
 

@@ -40,10 +40,12 @@ function ruleSet(over: Record<string, unknown> = {}) {
 
 let posted: string[] = [];
 let putBodies: Record<string, unknown>[] = [];
+let postedBodies: Record<string, unknown>[] = [];
 
 function stub(body: unknown, status = 200, postStatus = 200, postBody?: unknown): void {
   posted = [];
   putBodies = [];
+  postedBodies = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: string | URL, init?: RequestInit) => {
@@ -57,6 +59,7 @@ function stub(body: unknown, status = 200, postStatus = 200, postBody?: unknown)
       }
       if (init?.method === "POST") {
         posted.push(url);
+        if (init.body != null) postedBodies.push(JSON.parse(String(init.body)));
         return new Response(JSON.stringify(postBody ?? {}), {
           status: postStatus,
           headers: { "Content-Type": "application/json" },
@@ -171,8 +174,31 @@ describe("the rule set view", () => {
     render(RuleSetView, { props, ...mounted });
     expect(await screen.findByRole("button", { name: "Submit" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Change summary for driv-age-range"), "Raise the age floor");
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
     await waitFor(() => expect(posted.some((u) => u.endsWith("/submit"))).toBe(true));
+  });
+
+  it("will not submit without a change summary, and posts the one entered (FR-352)", async () => {
+    stub(ruleSet({ entries: [{ rule: rule({ status: "draft" }), enabled: true, severity_override: null }] }));
+    render(RuleSetView, { props, ...mounted });
+    const submit = await screen.findByRole("button", { name: "Submit" });
+    expect(submit).toBeDisabled();
+    await userEvent.type(screen.getByLabelText("Change summary for driv-age-range"), "Raise the age floor");
+    expect(submit).toBeEnabled();
+    await userEvent.click(submit);
+    await waitFor(() => expect(posted.some((u) => u.endsWith("/submit"))).toBe(true));
+    expect(postedBodies).toEqual([{ change_summary: "Raise the age floor" }]);
+  });
+
+  it("says the dry run did not execute when the evidence is incomplete", async () => {
+    stub(ruleSet({ entries: [{ rule: rule({ status: "draft" }), enabled: true, severity_override: null }] }),
+      200, 409,
+      { title: "Conflict", status: 409, code: "EVIDENCE_INCOMPLETE", errors: [] });
+    render(RuleSetView, { props, ...mounted });
+    await userEvent.type(await screen.findByLabelText("Change summary for driv-age-range"), "x");
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/dry run did not execute/);
   });
 
   it("carries every other entry through when one is disabled", async () => {
