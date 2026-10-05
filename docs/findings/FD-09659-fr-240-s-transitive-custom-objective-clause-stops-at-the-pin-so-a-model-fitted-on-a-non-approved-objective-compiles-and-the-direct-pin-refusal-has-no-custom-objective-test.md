@@ -18,7 +18,7 @@ first drafted by auditor-gaps, from the exit-demo draft's gap row C3). Working i
 
 ## Finding
 
-**Proposed severity MEDIUM (limb 3 sets it; limb 2 alone would be LOW); the deputy rules at the mint. Proposed owner WK-1178 (provisional).**
+**Severity HIGH; owner WK-673; deadline: before the P2 exit demo** (the deputy's rule of 2026-10-05 13:38:03 BST, "Finding batch 1: FD 9697's owner = WK-673; FD 9659's limb-3 severity depends on one fact": approval does not refuse an unapproved objective, measured below, so a priced bundle can rest on an objective that never passed review). **By limb:** the test gap (item 1 below; the deputy's "limb 2") is LOW, WK-673; the transitive clause (item 2 below; the deputy's "limb 3") is HIGH, WK-673. **The record's severity is the higher limb's.** The deputy rules at the mint.
 
 FR-240 (`docs/specs/03-rating-engine.md:137`): bundle compilation validates "… no `control`-intent factor in a
 rateable path (`02` FR-88), no unapproved custom objective transitively reachable." This record is the second half.
@@ -92,15 +92,52 @@ The same objective is refused when pinned and accepted when reached through the 
 The payload is a unit-test construction: the `spec` block is placed by hand in the fixture's model payload, and the
 objective is never resolved because `compile_bundle` never looks. It does not show a real model reaching `approved`
 with a `review` objective: `fit_gbm` and the validator allow the fit (see above), and a read of
-`backend/src/app/platform/approvals.py` found no check of a model's objective on model approval (read, not run).
-That end-to-end path was not run. Which artifact the spec means by "transitively" (the model's own objective, or
+`backend/src/app/platform/approvals.py` found no check of a model's objective on model approval (read; section 3 measured it).
+The end-to-end path was run afterwards: section 3. Which artifact the spec means by "transitively" (the model's own objective, or
 also a peril structure's) is for the spec, not this record. No database exposure was measured.
+
+### 3. Measured: a Model is approved while its custom objective is not approved
+
+Run at worktree `HEAD` `14e26c95e676648b38c5f745782a7f8ed82f5595` (this branch, `fd-9659`; its tree differs from the
+`caa4e411` of section 1 only by docs), 2026-10-05 13:09:02 to 13:09:15 UTC (14:09 BST), on a per-worktree test database,
+with SL-1409's gate finished (`gate-1` and `gate-2` free, no `pytest` running). One scratch test file, not committed
+and deleted after the run; no full suite. It reused the fixtures of `backend/tests/test_expression_objective_fit.py`
+(`_expression_objective(..., approve=False)`, `_fit`), `test_glm_approximation_model.py::_transparency_job` and
+`test_model_lifecycle.py::_principal_with`:
+
+1. an `expression` custom objective is created and certified through the real Job, then set to `review` by a direct
+   `UPDATE custom_objectives SET status='review'` (the fixture leaves it `certified`; the test needs `review`), and its status is read back;
+2. a GBM model is fitted on it through the real `model.fit` Job (`_fit`), then given its transparency artifact through
+   the real `model.transparency` Job, because submission refuses a non-GLM model without one (first attempt, same sha:
+   `SUBMIT REFUSED EVIDENCE_INCOMPLETE`, FR-211, which is that rule, not an objective rule);
+3. `modelling.submit_for_review` as a `pricing_actuary`; then `approvals.decide(APPROVE)` and
+   `modelling.apply_approval_decision` as a different principal with the `approver` role (service layer, not HTTP).
+
+Output, verbatim (`uv run pytest -q -s`, the test's `print` lines):
+
+```
+OBJECTIVE_STATUS review
+SUBMIT ok
+APPROVAL ok
+MODEL_STATUS approved
+OBJECTIVE_STATUS_AFTER review
+1 passed, 1 warning in 5.29s
+```
+
+**The fact: a Model CAN be approved while a custom objective it uses is NOT approved.** Submission was accepted and
+approval was not refused; the model row reads `approved`. `OBJECTIVE_STATUS_AFTER` re-prints the status read in
+step 1, not a second read, so the line shows nothing about the objective after the approval. What the run does show
+is that no code on the submit or approve path refused with the objective in `review` at step 1. This agrees with the
+read: `apply_approval_decision` (`backend/src/app/platform/modelling.py:1284`) refuses only `ARTIFACT_FLAGGED`
+(FR-205), and `_require_evidence` checks policy evidence and the transparency artifact, with no objective status.
+The comment at `objectives.py:175-178` says the resulting model "simply cannot be approved until the objective is";
+the run shows nothing enforces that. A bypass needs no later status change.
 
 ## Disposition
 
-Open. Filed by the auditor, 2026-10-05; severity and owner are proposals, and the verdict is the lead's.
+Open. Filed by the auditor, 2026-10-05; severity and owner follow the deputy's 2026-10-05 13:38:03 BST rule and the measurement in section 3, and the verdict is the lead's.
 
 Remedy for the lead's verdict: say in FR-240 what "transitively" reaches; have the resolver or compile read each pinned
 model's objective ref and refuse one that is not approved or better; give the unapproved custom-objective pin its
-negative test. Red first for each: the reproduction above must end in a refusal, and the direct-pin test must fail if
+negative test. Add to that: refuse at model approval too, or state in `02` that approval is not the gate. Red first for each: the reproduction above must end in a refusal, and the direct-pin test must fail if
 `custom_objectives` leaves `all_refs`.
