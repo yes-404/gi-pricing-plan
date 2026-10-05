@@ -27,6 +27,8 @@ relates: [PL-1267, RL-1264, RL-917, CR-927, WK-1178, FR-263, FR-224, FR-257, FR-
     entry headed *"2026-10-05 17:14:54 BST — FD 9572 placement accepted; WK-673 S4/S5/S6,
     A-1, A-2 and CR-838 DECISIONS (1–8)"*, items 1, 2, 3, 4 and 7. Item 8 is folded into
     RL 9668, not this record. Items 5 and 6 and the FD 9572 paragraph are other slices'.
+    T7's three choices are the maintainer's too, on the 18:54:06 BST entry (amended
+    2026-10-05, pre-mint; quoted under T7).
   - **The decision-maker's (this role's charter: technical decision points):** DP-S4-2,
     DP-S4-5, DP-S5-1, DP-S5-3, DP-S5-4 and DP-S5-5. The entry headed *"2026-10-05 17:07:00
     BST"* called DP-S4-2's and DP-S4-5's recommendations "fine to present" and asked for
@@ -290,6 +292,31 @@ without interpolation; rounding toward +∞ is the safe side for an upper bound;
 set is the one §4.6 already defines a per-policy percentage change over; and `attribution`
 and `attribution_summary` are already optional in `dislocation-run.schema.json`.
 
+**Amended 2026-10-05, pre-mint: T7's three choices are the maintainer's (by delegation), not
+the decision-maker's.** The paragraph above calls them "technical, the decision-maker's". The
+maintainer's (by delegation) entry in `~/gi-pricing-plan.local/channel/to-lead.md`, headed
+*"2026-10-05 18:54:06 BST — RL 9566 T7 (#1191 @bb70663b): case (a) accepted; T7's three
+choices ACCEPTED; the recurring cd: fix the role files"*, accepts them as rulings of its own.
+Its decision lines, verbatim (fenced, so that check 32 reads its ids as quotation; its
+closing PROCESS paragraph is about role files, not this record):
+
+```text
+Case (a) is accepted: under (b), T4's citation of 4.6 would point at nothing.
+T7's three choices are ACCEPTED as the maintainer's (by delegation), each to be named in the RL as such:
+ (1) NEAREST RANK at ⌈q × n⌉, with "1" = the max; exact on integers.
+ (2) The decimal string rounded ONCE to 6 places TOWARD +∞: conservative for an upper-bound gate (the values are absolute changes, so non-negative).
+ (3) n = 0: every value null, and FR-224's gate REFUSES the run (no vacuous pass).
+Each gets a red in S5: a nearest-rank case where interpolation would differ; a value whose 7th place would round DOWN under half-even (proving +∞); an empty banded set refused.
+```
+
+So these three are **the maintainer's (by delegation) rulings**: (1) nearest rank at ⌈q × n⌉;
+(2) rounding once, toward +∞, at 6 places; (3) with n = 0 every value is `null` and FR-224's
+gate refuses the run. Case (a), read above, is the maintainer's acceptance too. The rest of
+T7 — the banded set as the population and the `baseline_mode_override: "exact"` run
+without attribution — stays the decision-maker's (DP-S5-3, DP-S5-4). **T7's text is
+unchanged.** Its trial apply was re-run on `03` at `ecbd1954` after this amendment: the find
+string counts 1 before and 0 after, at `:572`; the marker counts 0 before and 1 after.
+
 **C1 — PL 9590 premise h, a correction for the planner to apply at the plan's next pre-mint
 edit (a citation fix, no scope).** The "At `137bc817`" cell reads "`slug`, `name`,
 `predecessor`, `retired_at`". At `4d3be141` (`deployments.py:55`) it should read:
@@ -319,6 +346,18 @@ Insert before its final ` |`:
   `QUOTE_INPUT_BLOB_COLUMNS`.
 - **Slice 5 (PL 9590)** applies T3 to T5 and T7, and writes the observed quantiles of its first
   freMTPL2 run into its ledger (item 7). The planner applies C1 before the mint.
+  *(Amended 2026-10-05, pre-mint, on the 18:54:06 BST entry quoted under T7.)* Slice 5 also
+  shows three reds, one per maintainer's choice in T7, each failing on the broken form named:
+  1. **Nearest rank, not interpolation.** A banded set where linear interpolation gives a
+     different quantile from nearest rank at some q in the fixed set — for example the changes
+     1, 2, 3, 4 at `"0.5"`: rank ⌈0.5 × 4⌉ = 2 gives `2`, interpolation gives `2.5`. The run
+     reports the nearest-rank value; with an interpolating quantile the test fails.
+  2. **Toward +∞, not half-even.** An exact quantile whose half-even rounding at 6 places goes
+     down — for example `0.1234565`, which half-even writes `0.123456`. The run writes
+     `"0.123457"`; with half-even rounding the test fails.
+  3. **An empty banded set is refused.** With n = 0 every one of the six values is `null`,
+     and FR-224's gate refuses the run; with a gate that passes a run with no figure, the test
+     fails.
 - **Slice 6 (PL 9589)** applies T6 and names the `rate_table_diffs` owner slice in its
   dispatch record.
 - **WK-1178** gains the fan-out follow-up (item 1), to be cut when the trigger fires or the
