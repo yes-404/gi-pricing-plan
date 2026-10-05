@@ -241,6 +241,14 @@ only), `backend/src/app/api/approvals.py` (route-local `Decide` and unused pydan
 removed), `docs/contracts/openapi/generated.json` (regenerated), the test file, this ledger.
 No `PL-1364` untyped-body guard entry was touched (none present). Decide's `200` unchanged.
 
+### Task 5 — the frontend, red first (2026-10-05, executor-1409-t5)
+
+Red (`pnpm --dir frontend exec vitest run` on `RuleSetView.test.ts`, `RuleBuilder.test.ts`, `src/api`), before any code: `Tests  8 failed | 16 passed (24)` in the two view files. Cause: no change-summary input exists — seven `Unable to find a label with the text of: Change summary`, and `will not submit without a change summary` failing on `toBeDisabled()` (the Submit button was enabled with an empty summary, and no body was sent). Cause matches the plan's prediction.
+
+Code: `submitRule(ruleId, body)` takes `ValidationRuleSubmission` (generated, `schema.requests.d.ts`, aliased in `frontend/src/api/rules.ts`); `RuleBuilder.vue` gains a required "Change summary" input and disables its button while it is blank; `RuleSetView.vue` gains one "Change summary for <slug>" input per draft row, Submit disabled while blank, and `act` now reports through `explain`, which gains an `EVIDENCE_INCOMPLETE` message ("the rule's dry run did not execute"); `SUBMITTER_CANNOT_APPROVE` stays keyed on `code`. Deviation: the plan names `explain` only implicitly; folding `act`'s duplicate inline message into `explain` removes a second copy of the same code-keyed text.
+
+Green: the three files above `Test Files  26 passed (26) / Tests  119 passed (119)`; full frontend `pnpm test` `97 passed / 615 passed`; `lint`, `type-check`, `build` exit 0. Files: `frontend/src/api/rules.ts`, `frontend/src/components/RuleBuilder.vue`, `frontend/src/views/RuleSetView.vue`, `frontend/src/components/__tests__/RuleBuilder.test.ts`, `frontend/src/views/__tests__/RuleSetView.test.ts`, this ledger.
+
 ### The write set under the `__all__` amendment (Delta 4, #1118)
 
 Names this slice appends to `packages/model-schema/src/model_schema/__init__.py`, appended only, each with its import

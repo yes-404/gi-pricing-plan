@@ -26,6 +26,8 @@ const problem = ref<ProblemError | null>(null);
 const missing = ref<string | null>(null);
 const acting = ref<string | null>(null);
 const actionError = ref<string | null>(null);
+/** `06` FR-352: what each draft rule's submission will record, keyed by rule id. */
+const summaries = ref<Record<string, string>>({});
 /** The rule whose next version is being authored, or `null`. */
 const versioning = ref<ValidationRule | null>(null);
 
@@ -116,6 +118,10 @@ function explain(error: ProblemError): string {
     return "An override may only raise severity. Deciding a failure is acceptable is a "
       + "change to the rule itself, which goes through the rule's own review.";
   }
+  if (error.code === "EVIDENCE_INCOMPLETE") {
+    return "The rule's dry run did not execute, so it cannot be submitted. Run it against a "
+      + "real dataset version and wait for it to finish.";
+  }
   return `${error.problem.title}. ${error.problem.detail ?? ""}`.trim();
 }
 
@@ -123,21 +129,15 @@ async function act(rule: ValidationRule, what: "submit" | "approve"): Promise<vo
   acting.value = rule.id;
   actionError.value = null;
   try {
-    await (what === "submit" ? submitRule(rule.id) : approveRule(rule.id));
+    await (what === "submit"
+      ? submitRule(rule.id, { change_summary: (summaries.value[rule.id] ?? "").trim() })
+      : approveRule(rule.id));
     await load();
   } catch (error) {
-    if (error instanceof ProblemError) {
-      // `SUBMITTER_CANNOT_APPROVE` is not a permission problem — holding `approval:decide`
-      // does not let you approve your own rule. The message has to say "someone else",
-      // not "ask for access", or the reader goes looking for a grant they already have.
-      // `error.code`, not `isProblem(error, …)`: inside this branch `error` is already a
-      // `ProblemError`, so the type guard's *false* arm narrows it to `never` and the
-      // fallback string stops compiling.
-      actionError.value =
-        error.code === "SUBMITTER_CANNOT_APPROVE"
-          ? "A rule cannot be approved by its author. Someone else must review it."
-          : `${error.problem.title}. ${error.problem.detail ?? ""}`.trim();
-    } else throw error;
+    // `explain` keys on `error.code`, so the separation-of-duties and evidence messages
+    // survive a status change.
+    if (error instanceof ProblemError) actionError.value = explain(error);
+    else throw error;
   } finally {
     acting.value = null;
   }
@@ -377,11 +377,18 @@ onMounted(() => void load());
                 >
                   {{ entry.enabled ? "Disable" : "Enable" }}
                 </button>
+                <input
+                  v-if="entry.rule.status === 'draft'"
+                  v-model="summaries[entry.rule.id]"
+                  :aria-label="`Change summary for ${entry.rule.slug}`"
+                  placeholder="Change summary"
+                  class="ml-2 rounded border border-slate-300 px-2 py-0.5 text-xs"
+                >
                 <button
                   v-if="entry.rule.status === 'draft'"
                   type="button"
-                  class="ml-2 rounded border border-slate-300 px-2 py-0.5 text-xs hover:bg-slate-50"
-                  :disabled="acting === entry.rule.id"
+                  class="ml-2 rounded border border-slate-300 px-2 py-0.5 text-xs hover:bg-slate-50 disabled:opacity-50"
+                  :disabled="acting === entry.rule.id || !(summaries[entry.rule.id] ?? '').trim()"
                   @click="act(entry.rule, 'submit')"
                 >
                   Submit

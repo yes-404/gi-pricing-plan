@@ -45,6 +45,7 @@ const form = ref({
   params: JSON.stringify(props.seed?.params ?? {}, null, 2),
   rationale: props.seed?.rationale ?? "",
   versionId: "",
+  changeSummary: "",
 });
 
 const busy = computed(() => stage.value !== "idle" && stage.value !== "done");
@@ -108,7 +109,7 @@ async function author(): Promise<void> {
     }
 
     stage.value = "submitting";
-    await submitRule(rule.id);
+    await submitRule(rule.id, { change_summary: form.value.changeSummary.trim() });
     stage.value = "done";
     emit("authored");
   } catch (caught) {
@@ -207,6 +208,14 @@ async function author(): Promise<void> {
         >
       </label>
       <label class="text-sm">
+        <span class="text-slate-600">Change summary</span>
+        <input
+          v-model="form.changeSummary"
+          required
+          class="mt-1 w-full rounded border border-slate-300 px-2 py-1"
+        >
+      </label>
+      <label class="text-sm">
         <span class="text-slate-600">Dry-run against</span>
         <select
           v-model="form.versionId"
@@ -241,7 +250,7 @@ async function author(): Promise<void> {
     <div class="mt-4 flex items-center gap-3">
       <button
         type="submit"
-        :disabled="busy || !versions.length"
+        :disabled="busy || !versions.length || !form.changeSummary.trim()"
         class="rounded bg-slate-900 px-3 py-1.5 text-sm text-white disabled:opacity-50"
       >
         Author, dry-run and submit

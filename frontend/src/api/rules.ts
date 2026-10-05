@@ -13,6 +13,8 @@ export type Severity = components["schemas"]["Severity"];
 // `RuleSetMemberWrite.enabled` carry defaults a request may omit.
 export type RuleSetMemberWrite = requestComponents["schemas"]["RuleSetMemberWrite"];
 export type RuleCreate = requestComponents["schemas"]["RuleCreate"];
+/** `06` FR-352: a submission carries its change summary. */
+export type ValidationRuleSubmission = requestComponents["schemas"]["ValidationRuleSubmission"];
 
 /** The four layers, in the order `01` §3.3 and §4.4 present them. */
 export const LAYERS: readonly ValidationLayer[] = [
@@ -82,9 +84,12 @@ export function dryRun(ruleId: string, datasetVersionId: string): Promise<unknow
   });
 }
 
-/** Step 3: `draft` → `review`, and only with a dry run attached. */
-export function submitRule(ruleId: string): Promise<ValidationRule> {
-  return request<ValidationRule>(`/validation-rules/${ruleId}/submit`, { method: "POST" });
+/**
+ * Step 3: `draft` → `review`, and only with an executed dry run attached. The body carries
+ * the change summary the approval request records (`06` FR-352).
+ */
+export function submitRule(ruleId: string, body: ValidationRuleSubmission): Promise<ValidationRule> {
+  return request<ValidationRule>(`/validation-rules/${ruleId}/submit`, { method: "POST", body });
 }
 
 /**
