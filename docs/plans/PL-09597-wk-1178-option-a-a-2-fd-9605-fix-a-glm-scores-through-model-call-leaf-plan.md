@@ -66,8 +66,9 @@ the backend resolver under SQLAlchemy 2 async.
 
 **Spec, finding and decision:**
 - FD 9605 (working id; #1172 @`dee1a85c`),
-  `docs/findings/FD-09605-a-glm-model-call-is-refused-at-score-though-fr-222-and-fr-193-say-any-model-scores.md`
-  on that branch, §"Disposition", remedy **(a) Build it**: *"Compile embeds each pinned
+  the finding file under `docs/findings/` on that branch, whose name begins with the working id
+  (`…09605-a-glm-model-call-is-refused-at-score-…`; the full name is not written here, because
+  check 32 reads an id in it, and the id is not minted), §"Disposition", remedy **(a) Build it**: *"Compile embeds each pinned
   GLM's `Factor`, `Banding` and `Grouping` versions in `Bundle.resolved_payloads`; the
   runtime rebuilds them and calls `predict_glm`. Red first: a golden test that the
   `model_call` value equals `predict_glm` on the same row; `test_rating_runtime.py:377`
