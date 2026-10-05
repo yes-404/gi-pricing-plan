@@ -64,6 +64,17 @@ correcting RL yes; A-2 does not absorb", which the 18:04:32 entry rules within:
 > 4. A-2 does NOT absorb the audit event. Agreed.
 > #1132 @19d0c51c: noted; the ACK at green.
 
+The same file, the entry headed "2026-10-05 18:12:58 BST — PL 9514 @1cabc274: the
+stored-wire-form constructor accepted as implementation, with one STOP; RL 9501 @1e6a59df:
+03:343 IS amended (T-1d), not read around", item 2 (item 1 concerns the plan, and its first
+line accepts the hash and the key `cells_digest`):
+
+> 2. RL 9501, 03:343 ("the before/after cells and the actor belong to NFR-498's Audit Event, not here"): I do NOT read around it. Read literally, it places the CELLS in the event, while DP-2 carries a digest. So RL 9501 adds T-1d, a dated note at :343 saying the Audit Event carries the cells BY the immutable version's reference PLUS cells_digest (their canonical content hash), not inline, citing T-1b and DP-2. Its anchor counts 1, as for T-1a to T-1c. That keeps the spec saying what the code will do, with no silent reading.
+>    T-1a, T-1b and T-1c: ACCEPTED as drafted.
+
+Item 1's first line, also verbatim: "1. DP-2's hash = version_content_hash (diff_cache.py:46-56),
+not BlobRef.sha256 (parquet bytes, absent for rows): ACCEPTED; key cells_digest."
+
 ## Verified first, at `fb178c36`
 
 Every locator below was read at `origin/main` `fb178c36`, the `tree:` above, with `grep -n`
@@ -74,7 +85,8 @@ and `sed -n`. Nothing was run but reads and the `grep -cF` predicates named.
   routing changes all emit Audit Events with before/after state." No dated amendment.
   `grep -n "NFR-498" docs/specs/03-rating-engine.md` gives `:343` and `:1339` only.
 - **`03:343`**, in §4.2's `created_by_import` note: "the before/after cells and the actor
-  belong to NFR-498's Audit Event, not here". T-1b says how the event carries them (DP-2).
+  belong to NFR-498's Audit Event, not here". Read literally, it places the cells in the
+  event; T-1d amends it (Ruled, item 6).
 - **The precedents.** `03:846` (§4.11): "Every write records an Audit Event `sub_graph.created`
   with `entity_ref` `sub_graph:<slug>@<version>`, in the same transaction (`06` FR-368)."
   `03:874` (§4.12), "Audit actions this Work emits": each action is named once with its
@@ -142,6 +154,11 @@ and `sed -n`. Nothing was run but reads and the `grep -cF` predicates named.
    the version's stored content, steps included, and `create_version`'s event gains a
    `before`: the stored content of version N−1. Version 1's `before` stays absent. The
    reason is the entry's: "A steps-less after is a summary, not the state NFR-498 names."
+6. **`03:343` is amended (T-1d), not read around** (the 18:12:58 entry, item 2). Read
+   literally, its "the before/after cells and the actor belong to NFR-498's Audit Event"
+   places the cells in the event, while DP-2 carries a digest. T-1d adds a dated note there:
+   the event carries the cells by the immutable version's reference plus `cells_digest`, not
+   inline, citing T-1b and DP-2. T-1a, T-1b and T-1c are accepted as drafted (same item).
 
 **Also in the 18:04:32 entry, recorded here so that the plan's fold cites one record.** Task 1
 (the `Principal` threaded through the four services, no behaviour change) is accepted as a
@@ -164,13 +181,15 @@ plans name it. The bound of 4 November 2026 holds.
 
 ## T-1 — the `03` texts
 
-Three insertions in `docs/specs/03-rating-engine.md`, applied by SL 9515 (PL 9514 Task 5) byte
+Four insertions in `docs/specs/03-rating-engine.md`, applied by SL 9515 (PL 9514 Task 5) byte
 for byte, under `spec-change`, in one commit with the code (`CLAUDE.md` §2). The placeholders
 are `RL 9501` (this record's minted id) and `<Slice date>` (the date of the SL 9515 commit
 that applies them). Nothing else in a text is a placeholder. Nothing is struck. Each anchor
 was counted at `fb178c36` with `grep -cF -- '<anchor>' docs/specs/03-rating-engine.md` over
 the whole file, and each printed **1**. The same predicate with one byte of each anchor
-changed (`4.2` → `4.9`, `4.3` → `4.8`, `FR-368` → `FR-369`) printed **0** each time.
+changed (`4.2` → `4.9`, `4.3` → `4.8`, `FR-368` → `FR-369`, `here` → `hare`) printed **0**
+each time. A trial apply of all four to a copy of `03` at `fb178c36` put each inserted text's
+first line at count **1**.
 
 **T-1a — §4.1, the algorithm event.** Placement: a new paragraph inserted immediately before
 the heading line
@@ -231,10 +250,23 @@ and one space. Insert
 *(Amended <Slice date>, `RL 9501`, NFR-498: the event's `after` is the stored content of the version written, steps included, and its `before` is the stored content of version N−1, or absent for version 1.)*
 ```
 
+**T-1d — §4.2, `03:343`, where the event carries the cells.** Placement: inside the
+`created_by_import` note, line `03:343`. The text is **inserted** immediately after the bytes
+
+```text
+belong to NFR-498's Audit Event, not here.
+```
+
+and one space, before `This example's version`, on the same line. Insert
+
+```text
+*(Amended <Slice date>, `RL 9501`, DP-2 and T-1b: the Audit Event carries the cells by reference, not inline: by its `entity_ref`, which addresses this immutable version, plus `cells_digest`, the cells' canonical content hash. "Audit Events" at the end of this section says what `before` and `after` hold.)*
+```
+
 ## What it obliges
 
 - **This commit:** this record only. No spec, `model-schema` or code file is edited here.
-- **SL 9515 (PL 9514)** applies DP-1 to DP-5 in code and T-1a to T-1c in `03`, in one commit
+- **SL 9515 (PL 9514)** applies DP-1 to DP-5 in code and T-1a to T-1d in `03`, in one commit
   with the code (`CLAUDE.md` §2). Its reds are PL 9514's Acceptance Standard items 1 to 8,
   with DP-2 now ruled (b): the `after` of a rate table version also carries the cells hash
   under `cells_digest`, and items 1 to 4 assert it. The key is PL 9514's proposal (#1207 at
@@ -249,11 +281,6 @@ and one space. Insert
 
 ## What this record does not decide
 
-- **`03:343`'s sentence is not amended.** It assigns "the before/after cells" to the Audit
-  Event; T-1b says that the event carries them as a hash, with the immutable version addressed
-  by `entity_ref`. Read together they agree. A reader who takes `:343` to require the cell
-  values inline in the event is answered by DP-2, the maintainer's decision, not by this
-  record.
 - **NFR-498's other limbs** (compilations, approvals, deployments, rollbacks, routing
   changes), **`CR-1212`'s correction** (RL 9519's) and **the order of merges** beyond what the
   18:04:32 entry states.
