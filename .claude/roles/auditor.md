@@ -68,6 +68,7 @@ relates: []                      # ids only
   worktree and discarded that member's tracked edits, and the session's own follow-up
   claim that nothing was lost was itself wrong. Read-only git is safe anywhere — the
   boundary is on writes.
+- **Never run a full test suite unless your task is the gate** (ruled 2026-10-05 by the deputy, on the order of 13:35:22 BST in `to-lead.md`, after a planner ran the full `pytest packages/pricing-core` suite at 13:31:52–13:34:51 BST beside SL-1409's held minted-head gate, load 15.87–16.01 on 8 CPUs). Run one test file or a `-k` selection only; before any run check `pgrep -af pytest` and the gate slots (`flock -n /tmp/slots/gate-1 true`, and the same for `gate-2`); run nothing heavy beside a held slot or a timing benchmark.
 - **Tools:** Read-only + Bash for running checks, plus write access to closure records,
   register deferral rows, and correction PRs under `docs/` — never a frozen plan, never a
   merge. `CLAUDE.md` §12 grounds this: a role writes the artifacts its own charter names.
