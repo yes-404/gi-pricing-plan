@@ -11,7 +11,9 @@ caller can route around:
 * Approval requires a **dry run** — the rule must have executed against a real version
   (step 2). An approver reading a rule's JSON cannot tell whether it selects three rows
   or three million.
-* The approver is never the author (step 3), enforced by a table constraint as well.
+* The approver is never the author (step 3), enforced by a table constraint as well, and
+  approval is a decision on an approval request: this module submits the request and
+  carries the decision (`apply_approval_decision`), and writes `approved` nowhere else.
 * An `approved` rule is immutable; an edit is a **new version** needing its own approval
   (step 4).
 """
@@ -27,12 +29,20 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import DatasetRow, ValidationRuleRow, ValidationRuleSetRow, ValidationRuleStatus
+from app.db.models import (
+    ApprovalRequestRow,
+    DatasetRow,
+    ValidationReportRow,
+    ValidationRuleRow,
+    ValidationRuleSetRow,
+    ValidationRuleStatus,
+)
 from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.platform import approvals, audit, rbac
 from model_schema import (
     BUILTIN_RULES,
+    ApprovalStatus,
     ArtifactRef,
     JobSource,
     Permission,
@@ -48,13 +58,15 @@ from model_schema import (
 
 __all__ = [
     "RuleSetMember",
-    "approve_rule",
+    "apply_approval_decision",
     "attach_dry_run",
     "create_rule",
     "load_rule",
+    "open_request_for",
     "replace_rule_set",
     "resolve_artifact_ref",
     "rule_set_for",
+    "rule_set_to_run",
     "seed_builtin_rules",
     "submit_for_review",
     "to_schema",
@@ -323,30 +335,65 @@ async def resolve_artifact_ref(
     `api/approvals.py`'s fan-out is built on.
 
     By slug and version rather than by id, unlike `load_rule`: a reference *is* a slug and a
-    version (ID-3), and `uq_validation_rule_version` makes the pair identify one row. §4.5's
-    own lifecycle question — is this rule dry-run, is the approver its author — belongs to
-    `approve_rule`; this answers only whether there is a rule to ask it about.
+    version (ID-3), and `uq_validation_rule_version` makes the pair identify one row. This
+    answers whether there is a rule in `review` whose dry run executed
+    (`_require_executed_dry_run`); whether the approver is its author is the decide path's.
     """
     if artifact_ref.type != "validation_rule":
         return False
-    found = (
+    row = (
         await session.execute(
-            select(ValidationRuleRow.status).where(
+            select(ValidationRuleRow).where(
                 ValidationRuleRow.workspace_id == workspace_id,
                 ValidationRuleRow.slug == artifact_ref.slug,
                 ValidationRuleRow.version == artifact_ref.version,
             )
         )
     ).scalar_one_or_none()
-    if found is None:
+    if row is None:
         raise PlatformError(
             "NOT_FOUND",
             "Validation rule not found",
             404,
             f"{artifact_ref} resolves to no validation rule in this workspace.",
         )
-    approvals.require_in_review(artifact_ref, found)
+    approvals.require_in_review(artifact_ref, row.status)
+    await _require_executed_dry_run(session, workspace_id=workspace_id, row=row)
     return True
+
+
+async def _require_executed_dry_run(
+    session: AsyncSession, *, workspace_id: UUID, row: ValidationRuleRow
+) -> None:
+    """The dry run executed: its report exists here and has no `error` (FR-363, `06:114`).
+
+    `01` §4.5 step 2 says the rule "must execute successfully", and `01:470-473` says the
+    mandatory dry run is what stops an `error` outcome reaching approval. A `fail` is a rule
+    that ran and caught rows, so it passes. A report that cannot be read is refused, never
+    assumed (the platform's fail-closed rule, as `APPROVAL_AUTHOR_UNRESOLVED`).
+    """
+    report = (
+        None
+        if row.dry_run_report_id is None
+        else await session.get(ValidationReportRow, row.dry_run_report_id)
+    )
+    if report is None or report.workspace_id != workspace_id:
+        raise PlatformError(
+            "EVIDENCE_INCOMPLETE",
+            "Required evidence is missing",
+            422,
+            f"validation_rule:{row.slug}@{row.version}: its dry-run report "
+            f"{row.dry_run_report_id} cannot be read in this workspace. `06` FR-363.",
+        )
+    if report.error_count > 0:
+        raise PlatformError(
+            "EVIDENCE_INCOMPLETE",
+            "Required evidence is missing",
+            422,
+            f"validation_rule:{row.slug}@{row.version}: its dry run did not execute "
+            f"({report.error_count} `error` result(s)). `01` §4.5 step 2 requires a run "
+            "that executed; a `fail` outcome would be accepted. `06` FR-363.",
+        )
 
 
 async def attach_dry_run(
@@ -356,17 +403,42 @@ async def attach_dry_run(
     rule_id: UUID,
     report_id: UUID,
 ) -> ValidationRuleRow:
-    """Record that this rule executed against a real version (FR-50 step 2)."""
+    """Record that this rule executed against a real version (FR-50 step 2).
+
+    Refused for an `approved` rule: its dry-run report is its approval evidence, and
+    `01` §4.5 step 4 makes an approved rule immutable (FD-1415, RL-1407 (#1070 @24ea2130)).
+    The worker stores the report and attaches it in one unit of work, so this refusal rolls
+    the report back with it.
+    """
     row = await load_rule(session, workspace_id=workspace_id, rule_id=rule_id)
+    if row.status == APPROVED:
+        raise PlatformError(
+            "RULE_VERSION_IMMUTABLE",
+            "An approved rule's dry run cannot be replaced",
+            409,
+            f"validation_rule:{row.slug}@{row.version} is approved. `01` §4.5 step 4: "
+            "an approved rule is immutable, and its dry-run report is its approval "
+            "evidence. Dry-run a new version instead.",
+        )
     row.dry_run_report_id = report_id
     await session.flush()
     return row
 
 
 async def submit_for_review(
-    session: AsyncSession, *, workspace_id: UUID, actor: Principal, rule_id: UUID
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    rule_id: UUID,
+    change_summary: str,
 ) -> ValidationRuleRow:
-    """`draft` → `review`, and only with a dry run attached (FR-50 steps 2 and 3)."""
+    """`draft` → `review` and the approval request it exists to create (FR-50 steps 2, 3).
+
+    Only with a dry run attached that executed. The request is filed here, as
+    `objectives.submit_for_review` files its own, so that approval is a decision on a
+    request (`apply_approval_decision`) and not a status this module writes by itself.
+    """
     row = await load_rule(session, workspace_id=workspace_id, rule_id=rule_id)
     if row.status != DRAFT:
         raise PlatformError(
@@ -384,7 +456,15 @@ async def submit_for_review(
             "FR-50 step 2 attaches the dry-run result to the approval request. "
             "Without it the approver is reading JSON and guessing what it selects.",
         )
+    await _require_executed_dry_run(session, workspace_id=workspace_id, row=row)
 
+    request = await approvals.submit(
+        session,
+        workspace_id=workspace_id,
+        submitter=actor,
+        artifact_ref=ArtifactRef(type="validation_rule", slug=row.slug, version=row.version),
+        change_summary=change_summary,
+    )
     row.status = REVIEW
     await session.flush()
     await audit.record(
@@ -395,62 +475,136 @@ async def submit_for_review(
         action="validation_rule.submitted",
         entity_ref=f"validation_rule:{row.slug}@{row.version}",
         before={"status": DRAFT},
-        after={"status": REVIEW, "dry_run_report_id": str(row.dry_run_report_id)},
+        after={
+            "status": REVIEW,
+            "dry_run_report_id": str(row.dry_run_report_id),
+            "approval_request_id": str(request.id),
+        },
+        justification=change_summary,
     )
     return row
 
 
-async def approve_rule(
-    session: AsyncSession, *, workspace_id: UUID, actor: Principal, rule_id: UUID
-) -> ValidationRuleRow:
-    """`review` → `approved`, by someone other than the author (FR-50 step 3)."""
-    row = await load_rule(session, workspace_id=workspace_id, rule_id=rule_id)
-    await rbac.require_permission(
-        session,
-        workspace_id=workspace_id,
-        principal=actor,
-        permission=Permission.APPROVAL_DECIDE,
-    )
+#: What a request's status means for the rule behind it. `06` FR-355 returns the artifact
+#: to its pre-submission state, which for a rule is `draft` (`01` §4.5 step 1).
+_TARGET = {
+    ApprovalStatus.APPROVED: APPROVED,
+    ApprovalStatus.CHANGES_REQUESTED: DRAFT,
+    ApprovalStatus.REJECTED: DRAFT,
+    ApprovalStatus.WITHDRAWN: DRAFT,
+}
+
+
+async def apply_approval_decision(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    request: ApprovalRequestRow,
+) -> ValidationRuleRow | None:
+    """Carry a governance decision into the rule (FR-50 step 3, `06` FR-355).
+
+    `None` for a request about anything else, so `_carry_to_the_artifact` drives every
+    artifact type through one call. Same transaction as the decision: a rule left in
+    `review` after its request reached `approved` is one no Rule Set may run and no screen
+    can explain. The caller is already inside `approval_decision()`, so this does not
+    enter it again.
+
+    An approval re-checks the dry run (`_require_executed_dry_run`): the refusal rolls the
+    decision back with it, so an approver is told the evidence is missing and finds nothing
+    recorded against a rule that cannot run.
+    """
+    if request.artifact_type != "validation_rule":
+        return None
+
+    ref = ArtifactRef.model_validate(request.artifact_ref)
+    row = (
+        await session.execute(
+            select(ValidationRuleRow)
+            .where(
+                ValidationRuleRow.workspace_id == workspace_id,
+                ValidationRuleRow.slug == ref.slug,
+                ValidationRuleRow.version == ref.version,
+            )
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        # Tolerated as a Model's is: `POST /approval-requests` accepts any well-formed
+        # ref, and a request naming a rule that was never created must still be
+        # decidable rather than sitting open for ever (`06` FR-386).
+        return None
+
+    target = _TARGET.get(ApprovalStatus(request.status))
+    if target is None or row.status == target:
+        # A partial approval: the policy wants another approver and nothing has moved.
+        return row
     if row.status != REVIEW:
         raise PlatformError(
             "RULE_NOT_APPROVED",
-            f"Only a rule in review can be approved; this one is {row.status!r}",
+            f"Only a rule in review can be decided; this one is {row.status!r}",
             409,
-            "`01` §4.5 step 3.",
-        )
-    if row.authored_by == actor.id:
-        raise PlatformError(
-            "SUBMITTER_CANNOT_APPROVE",
-            "A rule cannot be approved by its author",
-            409,
-            "`01` §4.5 step 3 and FR-353. A rule decides whether data may be modelled "
-            "on; one person deciding both what it says and that it is right is not a "
-            "review.",
+            f"{ref} is {row.status} and the decision would move it to {target}. "
+            "`01` §4.5 steps 3 and 4.",
         )
 
-    # ALLOWANCE (PL-1303 Acceptance 7): temporary, removed by the validation-rule fix slice
-    # (WK-1178), which routes rule approval through `submit`/`decide`.
-    async with approvals.approval_decision(session):
-        row.status = APPROVED
+    if target == APPROVED:
+        await _require_executed_dry_run(session, workspace_id=workspace_id, row=row)
         row.approved_by = actor.id
-        await session.flush()
+    row.status = target
+    await session.flush()
+
+    after: dict[str, Any] = {"status": target, "approval_request_id": str(request.id)}
+    if target == APPROVED:
+        after["approved_by"] = str(actor.id)
     await audit.record(
         session,
         workspace_id=workspace_id,
         actor=actor,
         source=JobSource.API,
-        action="validation_rule.approved",
-        entity_ref=f"validation_rule:{row.slug}@{row.version}",
+        action=f"validation_rule.{target}",
+        entity_ref=str(ref),
         before={"status": REVIEW},
-        after={"status": APPROVED, "approved_by": str(actor.id)},
+        after=after,
     )
     return row
 
 
-async def rule_set_for(
+async def open_request_for(
+    session: AsyncSession, *, workspace_id: UUID, row: ValidationRuleRow
+) -> UUID:
+    """The id of the open approval request on this rule, for the approve route's client.
+
+    A rule in `review` with no open request (a reset one, `PL-1408` Task 7) has no path
+    through the approve route: it is refused, and the refusal names the way back.
+    """
+    request_id = (
+        await session.execute(
+            select(ApprovalRequestRow.id).where(
+                ApprovalRequestRow.workspace_id == workspace_id,
+                ApprovalRequestRow.artifact_ref
+                == str(ArtifactRef(type="validation_rule", slug=row.slug, version=row.version)),
+                ApprovalRequestRow.status == ApprovalStatus.REVIEW.value,
+            )
+            .order_by(ApprovalRequestRow.submitted_at)
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if request_id is None:
+        raise PlatformError(
+            "RULE_NOT_APPROVED",
+            "This rule has no open approval request",
+            409,
+            f"validation_rule:{row.slug}@{row.version} is in review with no open request "
+            "to decide. File one with `POST /api/v1/approval-requests` naming it, then "
+            "decide that request. `01` §4.5 step 3.",
+        )
+    return request_id
+
+
+async def _latest_rule_set_row(
     session: AsyncSession, *, workspace_id: UUID, dataset_id: UUID, slug: str
-) -> ValidationRuleSet:
-    """The dataset's current rule set (FR-51)."""
+) -> ValidationRuleSetRow:
     row = (
         await session.execute(
             select(ValidationRuleSetRow)
@@ -470,7 +624,103 @@ async def rule_set_for(
             f"Dataset {slug!r} has no Validation Rule Set. One must be defined before the "
             "version can be validated (FR-45).",
         )
-    return await _to_rule_set(session, row, workspace_id=workspace_id)
+    return row
+
+
+async def rule_set_for(
+    session: AsyncSession, *, workspace_id: UUID, dataset_id: UUID, slug: str
+) -> ValidationRuleSet:
+    """The dataset's current rule set, as stored (FR-51).
+
+    A read: it shows a member in `review` so a user can see what to fix, and refuses only
+    a member with no rule row. What a *run* may use is `rule_set_to_run`'s.
+    """
+    row = await _latest_rule_set_row(
+        session, workspace_id=workspace_id, dataset_id=dataset_id, slug=slug
+    )
+    return await _to_rule_set(session, row, workspace_id=workspace_id, dataset_slug=slug)
+
+
+async def rule_set_to_run(
+    session: AsyncSession, *, workspace_id: UUID, dataset_id: UUID, slug: str
+) -> ValidationRuleSet:
+    """The dataset's current rule set, refused unless every member exists and is approved.
+
+    Every member, enabled or not, as the set's write checks (FD-1414, RL-1407
+    (#1070 @24ea2130)): a rule that is not `approved` must not execute (`01` FR-50), and
+    skipping it would let a version validate without a check its set declares. Raised
+    before the run, so a refused job writes nothing.
+    """
+    row = await _latest_rule_set_row(
+        session, workspace_id=workspace_id, dataset_id=dataset_id, slug=slug
+    )
+    by_id = await _rules_by_id(
+        session, workspace_id=workspace_id, rule_ids=[m.rule_id for m in _members(row)]
+    )
+    _require_runnable_members(
+        [m.rule_id for m in _members(row)], by_id, dataset_slug=slug, approved=True
+    )
+    return await _to_rule_set(session, row, workspace_id=workspace_id, dataset_slug=slug)
+
+
+async def _rules_by_id(
+    session: AsyncSession, *, workspace_id: UUID, rule_ids: Sequence[UUID]
+) -> dict[UUID, ValidationRuleRow]:
+    rules = (
+        await session.execute(
+            select(ValidationRuleRow).where(
+                ValidationRuleRow.workspace_id == workspace_id,
+                ValidationRuleRow.id.in_(rule_ids),
+            )
+        )
+    ).scalars().all()
+    return {rule.id: rule for rule in rules}
+
+
+def _require_runnable_members(
+    rule_ids: Sequence[UUID],
+    by_id: dict[UUID, ValidationRuleRow],
+    *,
+    dataset_slug: str,
+    approved: bool,
+) -> None:
+    """One predicate for the set's write, the run and the read (FD-1414).
+
+    A member with no rule row is `NOT_FOUND` everywhere; a member that is not `approved` is
+    `RULE_NOT_APPROVED` where `approved` is asked for (the write and the run, not the
+    read). The texts are the maintainer's condition 1 on RL-1407 (#1070 @24ea2130), verbatim:
+    each names every offender and the way back.
+    """
+    missing = sorted({str(rule_id) for rule_id in rule_ids if rule_id not in by_id})
+    if missing:
+        raise PlatformError(
+            "NOT_FOUND",
+            "The rule set names rules that do not exist",
+            404,
+            f"Unknown rule id(s): {', '.join(missing)}. A rule set runs only rules that "
+            "exist (`01` FR-50). The way back: replace the rule set without them "
+            f"(PUT /api/v1/datasets/{dataset_slug}/rule-set).",
+        )
+    if not approved:
+        return
+    unapproved = sorted(
+        (by_id[rule_id] for rule_id in set(rule_ids) if by_id[rule_id].status != APPROVED),
+        key=lambda rule: (rule.slug, rule.version),
+    )
+    if unapproved:
+        members = ", ".join(f"{r.id} ({r.slug}@{r.version}, {r.status})" for r in unapproved)
+        raise PlatformError(
+            "RULE_NOT_APPROVED",
+            "Every rule in a rule set must be approved",
+            409,
+            f"Not approved: {members}. A rule set runs only approved rules (`01` FR-50). "
+            "The way back, for each rule: attach a new dry run "
+            "(POST /api/v1/validation-rules/{id}/dry-run), then submit an approval request "
+            "(POST /api/v1/validation-rules/{id}/submit for a draft rule, "
+            "POST /api/v1/approval-requests for a rule in review), and have an approver "
+            "decide it. Or replace the rule set without it "
+            f"(PUT /api/v1/datasets/{dataset_slug}/rule-set).",
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -509,23 +759,26 @@ def _members(row: ValidationRuleSetRow) -> list[RuleSetMember]:
 
 
 async def _to_rule_set(
-    session: AsyncSession, row: ValidationRuleSetRow, *, workspace_id: UUID
+    session: AsyncSession,
+    row: ValidationRuleSetRow,
+    *,
+    workspace_id: UUID,
+    dataset_slug: str,
 ) -> ValidationRuleSet:
     """Resolve the stored rule ids into the rules they name.
 
     The set stores ids rather than copies. A copy would let the set and the rule disagree
-    about a rule's severity, and the report cites both.
+    about a rule's severity, and the report cites both. A member with no rule row is
+    refused, not dropped: showing a smaller set than the one stored is a silent change to
+    what a report will be a report of (FD-1414).
     """
     members = _members(row)
-    rules = (
-        await session.execute(
-            select(ValidationRuleRow).where(
-                ValidationRuleRow.workspace_id == workspace_id,
-                ValidationRuleRow.id.in_([m.rule_id for m in members]),
-            )
-        )
-    ).scalars().all()
-    by_id = {rule.id: rule for rule in rules}
+    by_id = await _rules_by_id(
+        session, workspace_id=workspace_id, rule_ids=[m.rule_id for m in members]
+    )
+    _require_runnable_members(
+        [m.rule_id for m in members], by_id, dataset_slug=dataset_slug, approved=False
+    )
     entries = tuple(
         RuleSetEntry(
             rule=to_schema(by_id[member.rule_id]),
@@ -533,7 +786,6 @@ async def _to_rule_set(
             severity_override=member.severity_override,
         )
         for member in members
-        if member.rule_id in by_id
     )
     return ValidationRuleSet(
         id=row.id,
@@ -571,35 +823,8 @@ async def replace_rule_set(
     )
 
     rule_ids = [member.rule_id for member in members]
-    rules = (
-        await session.execute(
-            select(ValidationRuleRow).where(
-                ValidationRuleRow.workspace_id == workspace_id,
-                ValidationRuleRow.id.in_(rule_ids),
-            )
-        )
-    ).scalars().all()
-    by_id = {rule.id: rule for rule in rules}
-    found = set(by_id)
-    missing = [str(rule_id) for rule_id in rule_ids if rule_id not in found]
-    if missing:
-        raise PlatformError(
-            "NOT_FOUND",
-            "The rule set names rules that do not exist",
-            404,
-            f"Unknown rule id(s): {', '.join(missing)}.",
-        )
-
-    unapproved = sorted(f"{rule.slug}@{rule.version}" for rule in rules if rule.status != APPROVED)
-    if unapproved:
-        raise PlatformError(
-            "RULE_NOT_APPROVED",
-            "Every rule in a rule set must be approved",
-            409,
-            f"Not approved: {', '.join(unapproved)}. A rule set is what a version is "
-            "validated against, so a draft rule in one would gate modelling on something "
-            "nobody reviewed (FR-50).",
-        )
+    by_id = await _rules_by_id(session, workspace_id=workspace_id, rule_ids=rule_ids)
+    _require_runnable_members(rule_ids, by_id, dataset_slug=slug, approved=True)
 
     # `01` §4.3: an override may only *raise*. `RuleSetEntry` enforces it too, but that
     # would surface here as a 500 — the caller asked for something the platform refuses,
@@ -684,4 +909,4 @@ async def replace_rule_set(
             },
         },
     )
-    return await _to_rule_set(session, row, workspace_id=workspace_id)
+    return await _to_rule_set(session, row, workspace_id=workspace_id, dataset_slug=slug)
