@@ -38,7 +38,7 @@ relates: []                      # ids only
     not sufficient: for each matched SHA, `git merge-base --is-ancestor <sha> <the PR's
     head>` must also exit 0 before the SHA is accepted as evidence. Checking pairing alone
     let ten of thirteen ledger SHAs in the W37-10 audit go unreachable before anyone
-    noticed (the deputy, 2026-09-26 23:06:30 BST).
+    noticed (the maintainer (by delegation), 2026-09-26 23:06:30 BST).
   - **Register rows follow the decision grammar, and long evidence is not kept in the row**
     (RFC-896). A Decision cell opens with one of `CLAUDE.md` §13's four verdicts, a
     `fix before close` form, or a status marker carrying its date and the PR or commit that
