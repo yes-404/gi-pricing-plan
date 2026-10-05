@@ -21,10 +21,9 @@ relates: [FR-240, FR-230, FR-88, FR-359, FR-20, OQ-609, RL-1263, RL-1329, RL-136
 - **Filed under a working id the lead reserved.** `RL 9633` in this draft, and `RL-9633` in
   the texts below, stand for this ruling's minted id. `FD 9639`, `FD 9659`, `FD 9697` and `FD 9995` in
   the texts are working ids, re-pointed to their minted ids in the same mint PR as each
-  finding (the deputy's 14:26:28 BST entry, item 3). Nothing else is a placeholder except
+  finding (the maintainer's (by delegation) 14:26:28 BST entry, item 3). Nothing else is a placeholder except
   `<SL 9647 date>` (§"The spec texts").
-- **The decisions are not this record's.** They are the maintainer's, by delegation (the
-  deputy), in `~/gi-pricing-plan.local/channel/to-lead.md`, cited below by entry header and
+- **The decisions are not this record's.** They are the maintainer's (by delegation), in `~/gi-pricing-plan.local/channel/to-lead.md`, cited below by entry header and
   quoted verbatim. This record carries them as a dated artifact (`CLAUDE.md` §12) and makes
   PL 9649's activation need 2 true. It decides nothing beyond them.
 - **Inputs, read at the heads named:** PL 9649, draft #1152, branch `pl-9649-fr240-fix`
@@ -178,7 +177,7 @@ and `<SL 9647 date>` is that commit's date. Each find string below was counted w
 1. **The marker.** "*(Amended 2026-10-05, FD …)*" → "*(Amended <SL 9647 date>, `RL-9633`,
    FD …)*", and T4's "*(registered 2026-10-05, FD 9697: …" → "*(registered <SL 9647 date>,
    `RL-9633`, FD 9697: …". A spec amendment cites the governed record that rules it and is
-   dated by the commit that applies it, as RL 9642 (#1148) and RL 9710 (#1128), both unminted, do; the deputy's entries
+   dated by the commit that applies it, as RL 9642 (#1148) and RL 9710 (#1128), both unminted, do; the maintainer's (by delegation) entries
    live in a local channel file a spec reader cannot open, and this record quotes them.
 2. **The layout.** The proposals are blockquotes across lines. T1, T2 and the seed route
    addition go into table cells, and T4 into a running paragraph, so each is one physical
