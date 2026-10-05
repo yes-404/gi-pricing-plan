@@ -116,12 +116,16 @@ Vite, Vitest with happy-dom, `@vue-flow/core` 1.48.2 (MIT, the version RS-1269 m
 3. **Lanes A and C both touch `03`**: option (b), run both, decided by the deputy in the
    `to-lead.md` entry stamped **2026-10-05 13:00:09 BST**, item 8, as the lead relayed it.
    See *Write set, and its contention*.
+4. **DP-S2-3**: option (a), decided by the deputy in the `to-lead.md` entry stamped
+   **2026-10-05 13:03:23 BST**, item 10, as the lead relayed it: *a "no algorithm pinned"
+   state plus an empty canvas, saved through the typed POST, with no re-pinning*. Option (c)
+   is refused for S2, because `examples/fremtpl2/seed.py` is SL-1409's, and seeding a real
+   algorithm is exit-demo work after SL-1409 merges.
 
 ## Status
 
-`draft`. DP-S2-1 and DP-S2-2 are decided (above). **DP-S2-3 is open** and is with the lead
-for the deputy. It does not change any backend task, and Task 10 carries both of its
-outcomes. The plan moves to `active` only through a separate activation PR, after every
+`draft`. Every decision point is decided: DP-S2-1, DP-S2-2, DP-S2-3 and DP-L (above). The
+plan moves to `active` only through a separate activation PR, after every
 activation need below holds.
 
 ### Activation needs, in order
@@ -136,7 +140,7 @@ activation need below holds.
    unminted record is a stop (RL 9766, *Spec changes*, last paragraph). If a minted text
    differs from the head cited above, the minted text governs and the dispatch record names
    each difference.
-3. **DP-S2-3 decided** by a dated line.
+3. **DP-S2-3 decided**: met, option (a), by the deputy (2026-10-05 13:03:23 BST, item 10).
 4. **The lane A/C conditions written into both dispatch records** (DP-L, below): each side's
    hunks and anchors, the rows between them, merge-tree rc 0 on the second merge, and gates
    that never run at the same time.
@@ -218,7 +222,10 @@ Each item is checked by a command run from the repository root on the slice's me
    - the generated-type client is called with the slug and version from the URL
      (RL 9766 *Acceptance* 6);
    - the algorithm is read through the version's `algorithm_ref`;
-   - one node renders per step, each carrying its `step_id` and type.
+   - one node renders per step, each carrying its `step_id` and type;
+   - a version whose `algorithm_ref` is `None` shows the "pins no algorithm" status text and
+     an empty canvas whose save body has the version's `slug` and `version` 1, and makes
+     no algorithm read (DP-S2-3 (a)).
 
    Command: `pnpm --dir frontend test -- RatingDesignView`.
 8. **Graph derivation.** `frontend/src/components/dag/__tests__/graph.test.ts` covers:
@@ -426,7 +433,7 @@ touches none of them. It edits `docs/specs/03-rating-engine.md` and `00-overview
 under its DP-3 (b) or DP-5**. If either is ruled in, the shared `03` section is named at both
 dispatches, and the pair serialises unless the sections differ.
 
-**FD-1416 (filed as FD 9752)**: the four `to_dict` approval routes' responses are held. S2
+**FD 9752 (working id; #1066 mints it as FD 1416, unmerged at `caa4e411`)**: the four `to_dict` approval routes' responses are held. S2
 reads none of them and does not touch `approvals.py`, so the hold does not apply. S7 in the
 brief is lane A's WK-673 S7. Its leaf plan has not been pushed, but its row (`roadmap.md`:828)
 and `PL-1267` Slice 7 (`:587-600`) name no approval route, so it does not touch them either
@@ -486,7 +493,7 @@ designer view out into an S2b under (a′); the backend half then merges first.
 |---|---|---|---|---|---|
 | **DP-S2-1** | What type does `POST /rating-algorithms` take, now that S2 types it under FD-1366 rule (ii)? A `RatingAlgorithm` body runs the shape's validator before the handler, so a cycle or an unresolved reference would come back as a generic 422 `VALIDATION_FAILED` (`errors.py` `_handle_validation_error`, `:460-475`), not as `RATING_GRAPH_CYCLIC` or `RATING_GRAPH_UNRESOLVED_REF` (`platform/rating_algorithms.py:32-73`) | (a) `RatingAlgorithmDraft`, validated into `RatingAlgorithm` by the handler's existing path; (b) `RatingAlgorithm`, accepting the code change; (c) `RatingAlgorithm` with a request-validation hook that maps the two graph errors back | (a) | was yes | **Decided (a)**, the deputy, 2026-10-05 12:59:02 BST, with four conditions: (1) the type comes from a **minted** ruling, RL 9767, or a DM's minted adoption of the limb (Activation need 1); (2) broken-input reds asserted by code (Acceptance 1); (3) the guard entry, the contract and `generate:api`, all in one commit (Acceptance 2 and 5); (4) the moved limb recorded both ways (Hand-off item 1) |
 | **DP-S2-2** | The 201 response's type (today `dict[str, Any]`, `{id, slug, version}`) | (i) a new `RatingAlgorithmSaved {id, slug, version}`; (ii) the saved `RatingAlgorithm` | (i) | no | **Decided (i)**, the deputy, 2026-10-05 12:59:02 BST: the same wire, typed. The `03:895` §5.1 row stands unchanged |
-| **DP-S2-3** | A Rating Version whose `algorithm_ref` is `None`. That includes the only version the freMTPL2 seed writes (Task 0.10). What does the designer show? | (a) a "no algorithm pinned" state, plus an empty canvas pre-filled with the version's slug and algorithm version 1; save creates it, and a 409 is shown; nothing re-pins the version; (b) the state only, with no authoring; (c) seed an algorithm and its `algorithm_ref` (touches `examples/fremtpl2/seed.py`, SL-1409's path, and the G2 demo work) | **(a)**: the smallest change that makes the view usable, with no new route, and re-pinning stays out | **yes, before activation** (Task 10 Step 3 holds both) | open: sent to the lead on 2026-10-05, before 13:04 BST |
+| **DP-S2-3** | A Rating Version whose `algorithm_ref` is `None`. That includes the only version the freMTPL2 seed writes (Task 0.10). What does the designer show? | (a) a "no algorithm pinned" state, plus an empty canvas pre-filled with the version's slug and algorithm version 1; save creates it, and a 409 is shown; nothing re-pins the version; (b) the state only, with no authoring; (c) seed an algorithm and its `algorithm_ref` (touches `examples/fremtpl2/seed.py`, SL-1409's path, and the G2 demo work) | **(a)**: the smallest change that makes the view usable, with no new route, and re-pinning stays out | was yes | **Decided (a)**, the deputy, 2026-10-05 13:03:23 BST, item 10. (c) is refused for S2: `seed.py` is SL-1409's, and seeding a real algorithm is exit-demo work after SL-1409 merges |
 | **DP-L** | Lanes A and C both edit `03` §5.1 | (a) serialise; (b) run both, with dispatch records naming the hunks; (c) S2 without its rows (forbidden by `CLAUDE.md` §2) | (b) | was yes | **Decided (b)**, the deputy, 2026-10-05 13:00:09 BST, item 8, with four conditions (see *Contention*) |
 
 **Choices this plan makes itself** (no spec leaves them open, or a ruling already covers them):
@@ -514,7 +521,7 @@ designer view out into an S2b under (a′); the backend half then merges first.
   ids, and diff each minted text against the head this plan cites
   (`git diff 39bd865b <mint> -- docs/rulings/`, and the same for `96fa35bf`). A difference
   in a text S2 applies is named in the ledger, and the minted text governs.
-- [ ] **Step 3:** Read the DP-S2-3 resolution and the lane A dispatch record's hunks. Re-read
+- [ ] **Step 3:** Read the lane A dispatch record's hunks. Re-read
   `origin/pl-9716-wk673-s7-leaf` or its merged plan, and confirm that SL-1391's `03` edits are
   only those in the contention table. A further `03` §5.1 edit is a stop, reported to the
   lead.
@@ -1263,12 +1270,16 @@ export function parseRef(ref: string): { type: string; slug: string; version: nu
      so that `@vue-flow` stays in the lazy chunk even if another view imports the view;
   5. save with an idempotency key from `crypto.randomUUID()`, regenerated after each
      response.
-- [ ] **Step 3: DP-S2-3.** Apply its resolution. Under (a), when `algorithm_ref` is `None`,
-  show `role="status"` text, "This Rating Version pins no algorithm yet. Saving creates
-  `<slug>@1`; pinning it to the version is not part of this view.", and start from an empty
-  draft with `slug` = the version's slug, `version` = 1, and empty lists. Under (b), show
-  the same status text without the last sentence and render no designer. Under (c), stop and
-  report: the plan does not cover the seed edit. A test pins whichever applies.
+- [ ] **Step 3: DP-S2-3 (a)** (decided, 13:03:23 BST). When `algorithm_ref` is `None`:
+  - show `role="status"` text: "This Rating Version pins no algorithm yet. Saving creates
+    `<slug>@1`; pinning it to the version is not part of this view.";
+  - start from an empty draft with `slug` = the version's slug, `version` = 1, and empty
+    lists;
+  - make no `getRatingAlgorithm` call.
+
+  The save goes through the typed POST, and a 409 for an existing `<slug>@1` is shown as in
+  Step 1. Nothing re-pins the version. `examples/fremtpl2/seed.py` is not touched. A test
+  pins this (Acceptance 7).
 - [ ] **Step 4: The route**, after `rating-version` (`router/index.ts:240`):
 
 ```ts
@@ -1369,6 +1380,7 @@ export function parseRef(ref: string): { type: string; slug: string; version: nu
   - DP-S2-1 conditions 1–4: Activation need 1; Acceptance 1, 2 and 5; Task 2 Step 4;
     Task 5 Step 4; Hand-off 1;
   - DP-S2-2: Task 1; Task 2 Step 3; Acceptance 2;
+  - DP-S2-3 (a): *The decisions*, item 4; Task 10 Step 3; Acceptance 7;
   - DP-L: *Contention*; Activation need 4; Task 12 Step 1; Acceptance 16;
   - F2 conditions 1–5: Acceptance 5, 10, 13, 14 and 15; Tasks 5, 6, 9 and 11.
 - **Literals verified at `caa4e411`:** the route paths, handler names and lines

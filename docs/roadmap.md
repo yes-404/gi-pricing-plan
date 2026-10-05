@@ -1089,6 +1089,8 @@ first slice. **Backend first:**
 - the Rating Version's `model_reference_mode` shown read-only (FR-223);
 - a keyboard node navigator, checked against WCAG 2.2 AA;
 - save from the view, and the FR-25 link from `RatingVersionView`;
+- for a version that pins no algorithm, a "no algorithm pinned" state and an empty canvas
+  that saves `<slug>@1`, with no re-pinning (DP-S2-3 (a), the deputy, 2026-10-05 13:03:23 BST);
 - the bundle delta and the dev-build pan and zoom re-measure (F2 conditions 3 and 5).
 
 S2 shows no graph validation of its own: FR-24's designer exception stays with S3. **Lane:**
@@ -1101,7 +1103,6 @@ the third build lane's candidate.
 
 **Gate:** the leaf plan's Activation needs, in a separate activation PR:
 - RL 9767, RL 9766 and RL 9753 minted (#1055, #1067);
-- DP-S2-3 decided;
 - the lane A/C conditions in both dispatch records;
 - Task 0 re-run;
 - the maintainer's agreement and the lead's go.
