@@ -67,6 +67,7 @@ from model_schema import (  # noqa: E402
     SamplingSpec,
     TemplateParameter,
     UnseenLevelBehaviour,
+    YDomain,
     new_uuid7,
 )
 from pricing_core.data.profile import one_way  # noqa: E402
@@ -75,13 +76,19 @@ from pricing_core.modelling.diagnostics import (  # noqa: E402
     compute_diagnostics,
     compute_gbm_diagnostics,
 )
+from pricing_core.modelling.expression_objective import (  # noqa: E402
+    compile_expression_objective,
+)
 from pricing_core.modelling.gbm import fit_gbm  # noqa: E402
 from pricing_core.modelling.glm import fit_glm  # noqa: E402
 from pricing_core.modelling.groupings import (  # noqa: E402
     grouping_evidence,
     propose_grouping,
 )
-from pricing_core.modelling.objectives import certify_objective  # noqa: E402
+from pricing_core.modelling.objectives import (  # noqa: E402
+    certify_objective,
+    make_xgb_objective,
+)
 
 #: The scale the requirements are written at, and the one this machine cannot reach.
 TARGET_ROWS = 5_000_000
@@ -392,6 +399,92 @@ def bench_gbm(rows: int, factors: int, rounds: int) -> float:
     _gbm_passes(computed, diag_slot[0], slot[0], fit)
     _artifact_size(computed, fit)
     return slot[0]
+
+
+#: NFR-476's second limb: "a custom `expression` objective adds no more than 25 % overhead
+#: versus the equivalent builtin". The verdict is the ledger's (RL-1328 DP-S2-6), not this
+#: script's: a ratio within 5 points of the bound on this shared machine claims none.
+EXPRESSION_OVERHEAD_LIMIT = 1.25
+#: The expression that is Poisson's deviance up to a constant in `f`, so both arms fit one model.
+EXPRESSION_POISSON = "w * (exp(f) - y * f)"
+
+
+def _numeric_design(frame: pl.DataFrame) -> np.ndarray:
+    """The rating columns as one float32 matrix: a categorical's level index, a number as is.
+
+    Both arms of the expression limb boost over this one matrix, so the ratio compares the
+    objective and nothing else (no factor resolution, no artifact serialisation).
+    """
+    columns = [
+        pl.col(c).str.slice(1).cast(pl.Float32) if c.startswith("cat_")
+        else pl.col(c).cast(pl.Float32)
+        for c in frame.columns
+        if c.startswith(("cat_", "num_"))
+    ]
+    return frame.select(columns).to_numpy()
+
+
+def _load_average() -> str:
+    with open("/proc/loadavg") as handle:
+        return handle.read().split()[0]
+
+
+def bench_expression_limb(rows: int, factors: int, rounds: int, pairs: int) -> list[float]:
+    """NFR-476's expression limb: N paired fits, builtin `count:poisson` against an
+    `expression` objective, over one DMatrix (RL-1328 DP-S2-6).
+
+    Each pair runs the builtin first and the expression second, and records both wall-clocks,
+    the ratio, and the one-minute load average at the start and end of the pair. Nothing is
+    asserted: the median, the spread and the verdict are the ledger's.
+    """
+    import xgboost as xgb
+
+    print(
+        f"\nNFR-476 expression limb — {rows:,} rows x {factors} factors x {rounds} trees, "
+        f"{pairs} paired runs, limit {EXPRESSION_OVERHEAD_LIMIT:.2f}x"
+    )
+    frame = synthesise(rows, factors)
+    x = _numeric_design(frame)
+    y = frame["claim_count"].cast(pl.Float64).to_numpy()
+    margin = np.log(frame["exposure_years"].to_numpy())
+    fns = compile_expression_objective(
+        ref="custom_objective:bench-poisson-expression@1",
+        loss=EXPRESSION_POISSON,
+        parameters={},
+        y_domain=YDomain(min_inclusive=0.0),
+        hessian_strategy=HessianStrategy.CLIP_TO_MIN,
+        hessian_min=1e-6,
+    )
+    shared = {"max_depth": 6, "eta": 0.1, "tree_method": "hist", "seed": 20260930}
+    ratios: list[float] = []
+    for pair in range(1, pairs + 1):
+        load_start = _load_average()
+        dtrain = xgb.DMatrix(x, label=y, base_margin=margin)
+        with timed(f"NFR-476 builtin count:poisson, pair {pair}", quiet=True) as builtin:
+            xgb.train(
+                {**shared, "objective": "count:poisson", "base_score": 1.0},
+                dtrain, num_boost_round=rounds,
+            )
+        dtrain = xgb.DMatrix(x, label=y, base_margin=margin)
+        with timed(f"NFR-476 expression, pair {pair}", quiet=True) as expression:
+            xgb.train(
+                {**shared, "base_score": 0.0},
+                dtrain, num_boost_round=rounds, obj=make_xgb_objective(fns),
+            )
+        ratios.append(expression[0] / builtin[0])
+        print(
+            f"  pair {pair}: builtin {builtin[0]:8.2f} s  expression {expression[0]:8.2f} s  "
+            f"ratio {ratios[-1]:.3f}  load {load_start} -> {_load_average()}"
+        )
+    ordered = sorted(ratios)
+    median = ordered[len(ordered) // 2] if len(ordered) % 2 else (
+        0.5 * (ordered[len(ordered) // 2 - 1] + ordered[len(ordered) // 2])
+    )
+    print(
+        f"  median ratio {median:.3f}, spread [{ordered[0]:.3f}, {ordered[-1]:.3f}] over "
+        f"{len(ratios)} pairs, against {EXPRESSION_OVERHEAD_LIMIT:.2f}"
+    )
+    return ratios
 
 
 def _gbm_passes(computed: object, diagnostics: float, wall: float, fit: object) -> None:
@@ -717,7 +810,7 @@ def main() -> int:
         "--only",
         choices=(
             "all", "proposals", "breakdown", "glm", "gbm", "diagnostics", "certify",
-            "curve",
+            "curve", "expression",
         ),
         default="all",
         help="Run one phase in a fresh process. Peak RSS is a process high-water mark and "
@@ -736,6 +829,10 @@ def main() -> int:
         help="Comma-separated row counts for --only curve",
     )
     parser.add_argument("--no-gbm", action="store_true", help="curve: GLM only")
+    parser.add_argument(
+        "--pairs", type=int, default=3,
+        help="expression: paired builtin/expression fits (NFR-476 asks for N >= 3)",
+    )
     parser.add_argument(
         "--skip-type-iii",
         action="store_true",
@@ -759,6 +856,8 @@ def main() -> int:
         bench_diagnostics(args.rows, args.factors, type_iii=not args.skip_type_iii)
     if args.only in ("all", "certify"):
         bench_certify()
+    if args.only == "expression":
+        bench_expression_limb(args.rows, args.factors, args.rounds, args.pairs)
     if args.only == "curve":
         bench_curve(
             [int(s) for s in args.scales.split(",")],

@@ -7,6 +7,7 @@ import { computed } from "vue";
 import VChart from "vue-echarts";
 
 import type { GbmEvalPoint } from "@/api/diagnostics";
+import type { Column } from "@/chart-table";
 import ChartFigure from "@/components/ChartFigure.vue";
 
 use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
@@ -62,11 +63,11 @@ const option = computed(() => ({
   series: series.value,
 }));
 
-const columns = ["Iteration", "Train", "Holdout"] as const;
-
-const rows = computed(() =>
-  props.evalCurve.map((point) => [point.iteration, point.train ?? null, point.holdout ?? null]),
-);
+const columns: readonly Column<GbmEvalPoint>[] = [
+  { key: "iteration", label: "Iteration", value: (p) => p.iteration },
+  { key: "train", label: "Train", value: (p) => p.train ?? null },
+  { key: "holdout", label: "Holdout", value: (p) => p.holdout ?? null },
+];
 </script>
 
 <template>
@@ -74,7 +75,7 @@ const rows = computed(() =>
     title="Evaluation curve"
     :caption="`${metric} per boosting iteration. Where holdout turns and train keeps falling is where the model began fitting noise.`"
     :columns="columns"
-    :rows="rows"
+    :rows="evalCurve"
   >
     <VChart
       class="h-80 w-full"

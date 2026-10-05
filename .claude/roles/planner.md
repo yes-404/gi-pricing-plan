@@ -35,9 +35,13 @@ relates: []                      # ids only
   on or after its cutoff date that omits or leaves it empty. **The planner owns conducting and
   filing the `CLAUDE.md` §14 phase review itself** (`.claude/skills/phase-review`) — a
   separate obligation from the replan-trigger sentence above, on its own fixed schedule
-  rather than triggered by a finding: trigger fixed, not discretionary (at each workstream
-  close, and again before a phase's exit demo); output is a proposal, never a change;
-  filed to `docs/closures/INDEX.md#plan-reviewsmd` as a dated `### Plan review N` section. This needs
+  rather than triggered by a finding: trigger fixed, not discretionary (a full review before
+  each phase's exit demo, and after a Work close only when the auditor's replan check fires;
+  amended 2026-09-29, `RFC-1248`, option C); output is a proposal, never a change;
+  filed as a `CR- kind: review` under `docs/closures/` that is a short index, proposal →
+  record id → owner → state, about 150 lines (`RFC-1248` Part 2; the old wording, "filed to
+  `docs/closures/INDEX.md#plan-reviewsmd` as a dated `### Plan review N` section", predated
+  the RFC-937 migration). This needs
   no new acceptance
   rule — §14 already requires a dated maintainer acceptance line, so authoring it here
   "changes who *drafts* the proposal, not who *accepts* it" (`docs/plans/PL-00845-rf
@@ -66,3 +70,7 @@ relates: []                      # ids only
   update a skill under `.claude/skills/`** — plan-writing and citation conventions most
   often, the class `writing-plans` already exists to hold — per `CLAUDE.md` §12, with
   `.claude/skills/README.md` updated in the same commit.
+  **Also writes `docs/roadmap.md` for the `SL-` rows it cuts, and nothing else in that file**
+  (`document-ids.md` §1.6 SL row: *"planner, cut in the map plan (`draft`)"*; §1.2 places those rows in
+  `docs/roadmap.md`). *(Amended 2026-09-29 by the maintainer, dated line by delegation, accepting
+  planner-1239's finding at #924: the Tools line named only `docs/plans/` and `docs/closures/`.)*

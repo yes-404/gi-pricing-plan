@@ -38,7 +38,6 @@ from model_schema.regression import (
     cases_log_sha256,
 )
 from model_schema.scoring import QuoteContext, ScoringResult
-from pricing_core.money import reconcile_ladder
 from pricing_core.rating.runtime import CompiledBundle
 from pricing_core.rating.score import _score_context_sync
 
@@ -107,7 +106,11 @@ def make_scorer(
         key = prepared.model_dump_json()
         if key not in cache:
             try:
-                cache[key] = _score_context_sync(bundle, prepared, rating_version_ref)
+                # trace=True: the `ladder_reconciles` property reads the scoring-time verdict
+                # (with its independent inputs), never a rebuild from the ladder it checks.
+                cache[key] = _score_context_sync(
+                    bundle, prepared, rating_version_ref, trace=True
+                )
             except NotImplementedError:
                 raise
             except (ValueError, RuntimeError):
@@ -296,11 +299,11 @@ def case_holds(
             scored.outputs.get(name) is not None for name in outputs
         )
     if isinstance(check, LadderReconciles):
-        steps: list[tuple[str, int]] = [
-            (rung.rung, rung.value_minor) for rung in scored.premium_ladder
-        ]
-        risk = next((value for rung, value in steps if rung == "risk_premium"), None)
-        return reconcile_ladder(risk if risk is not None else 0, steps) if steps else True
+        # FR-261: the scoring-time verdict, computed from the engine's own values and the
+        # algorithm (`RL-1329` §5), never rebuilt here from the ladder it would check.
+        if not scored.premium_ladder:
+            return True
+        return scored.trace is not None and scored.trace.ladder_reconciled
     assert isinstance(check, PremiumBounded)
     premium = payable_minor(scored)
     if premium is None:

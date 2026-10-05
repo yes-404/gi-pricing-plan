@@ -132,6 +132,31 @@
         "title": "AeCell",
         "type": "object"
       },
+      "AlgorithmOutput": {
+        "additionalProperties": false,
+        "description": "A declared output (FR-214): name, type, required flag.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "required": {
+            "default": true,
+            "title": "Required",
+            "type": "boolean"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "AlgorithmOutput",
+        "type": "object"
+      },
       "Applicability": {
         "additionalProperties": false,
         "description": "Where an objective may be used (FR-153).\n\nA Model Spec pairing an objective with a response outside `responses`, a backend outside\n`backends`, or no offset where one is required, is refused **at spec validation** —\nbefore any compute is spent, and with a `SpecProblem` naming which of the three it was.",
@@ -231,6 +256,15 @@
             },
             "title": "Evidence",
             "type": "array"
+          },
+          "skippable_predecessors": {
+            "default": [],
+            "description": "Predecessor Environment slugs a deployment into this entry's environment may skip (`03` FR-429, RL-1296). Empty by default; valid only on a `deployment` entry that names an environment.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Skippable Predecessors",
+            "type": "array"
           }
         },
         "required": [
@@ -253,6 +287,55 @@
         ],
         "title": "ApprovalStatus",
         "type": "string"
+      },
+      "ApprovalSubmission": {
+        "additionalProperties": false,
+        "description": "The body of `POST /api/v1/approval-requests` (`06` §5.1): an artifact put forward.\n\nMoved here from the API module (WK-674 Slice 2, `PL-1392` Acceptance 16, DP-S2-6 (c)) so the\nrequest body is a published shape rather than a class the backend defines. The route's 2xx\nstays untyped until `FD-1335` Part B (owner FD 9752).",
+        "properties": {
+          "artifact_ref": {
+            "description": "Canonical `{type}:{slug}@{version}` (ID-3).",
+            "title": "Artifact Ref",
+            "type": "string"
+          },
+          "change_summary": {
+            "minLength": 1,
+            "title": "Change Summary",
+            "type": "string"
+          },
+          "environment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment"
+          }
+        },
+        "required": [
+          "artifact_ref",
+          "change_summary"
+        ],
+        "title": "ApprovalSubmission",
+        "type": "object"
+      },
+      "ApprovalWithdrawal": {
+        "additionalProperties": false,
+        "description": "The body of `POST /api/v1/approval-requests/{request_id}/withdraw` (`06` §5.1, FR-357).\n\n`reason` only. Whether the artifact is live is the server's to derive from the owning\nmodule's rows (`PL-1392` Task 6, C11): a field the client could set was a client asserting\n\"not live\". Moved here from the API module for `ApprovalSubmission`'s reason; the route's\n2xx stays untyped until `FD-1335` Part B (owner FD 9752).",
+        "properties": {
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ApprovalWithdrawal",
+        "type": "object"
       },
       "ApproximatedModel": {
         "additionalProperties": false,
@@ -282,7 +365,7 @@
           "model:motor-ad-frequency@7",
           "rating_version:motor-gb@27"
         ],
-        "pattern": "^(banding|custom_metric|custom_objective|dataset|dataset_version|dossier|factor|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}@[1-9][0-9]*$",
+        "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
         "title": "ArtifactRef",
         "type": "string"
       },
@@ -953,6 +1036,26 @@
           }
         },
         "title": "BuildTransparency",
+        "type": "object"
+      },
+      "BulkOperationResult": {
+        "additionalProperties": false,
+        "description": "The outcome of a bulk operation (04 §4.4): what changed and what it created.",
+        "properties": {
+          "changed_cells": {
+            "minimum": 0.0,
+            "title": "Changed Cells",
+            "type": "integer"
+          },
+          "new_version": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          }
+        },
+        "required": [
+          "changed_cells",
+          "new_version"
+        ],
+        "title": "BulkOperationResult",
         "type": "object"
       },
       "BundleMetadata": {
@@ -3272,6 +3375,251 @@
         "title": "DemoWorkstream",
         "type": "object"
       },
+      "Deployment": {
+        "additionalProperties": false,
+        "description": "One approved Rating Version bound to one Environment at a point in time (`03` §4.12).",
+        "properties": {
+          "bundle_hash": {
+            "description": "The Rating Version's compiled Bundle hash (FR-239).",
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Bundle Hash",
+            "type": "string"
+          },
+          "deployed_at": {
+            "format": "date-time",
+            "title": "Deployed At",
+            "type": "string"
+          },
+          "deployed_by": {
+            "format": "uuid",
+            "title": "Deployed By",
+            "type": "string"
+          },
+          "deployment_request_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The approved Deployment Request executed; null only for a target with no `deployment` policy entry (RL-1301 A.5)."
+          },
+          "environment": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Environment",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "workspace_id": {
+            "format": "uuid",
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "workspace_id",
+          "environment",
+          "rating_version_ref",
+          "bundle_hash",
+          "deployed_by",
+          "deployed_at",
+          "reason"
+        ],
+        "title": "Deployment",
+        "type": "object"
+      },
+      "DeploymentCreate": {
+        "additionalProperties": false,
+        "description": "The body of `POST /api/v1/environments/{env}/deployments`.\n\nNo `skip`: a skip is made at the request and pinned in its evidence (RL-1301 A.5).",
+        "properties": {
+          "deployment_request_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rating_version_ref",
+          "reason"
+        ],
+        "title": "DeploymentCreate",
+        "type": "object"
+      },
+      "DeploymentRequest": {
+        "additionalProperties": false,
+        "description": "The artifact that precedes a gated deploy (`03` §4.12, RL-1301 A).",
+        "properties": {
+          "approval_request_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Request Id"
+          },
+          "change_summary": {
+            "title": "Change Summary",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "environment": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Environment",
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/DeploymentRequestEvidence"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "ref": {
+            "$ref": "#/components/schemas/ArtifactRef",
+            "description": "`deployment:<environment slug>@<n>`."
+          },
+          "status": {
+            "$ref": "#/components/schemas/DeploymentRequestStatus"
+          },
+          "submitted_by": {
+            "format": "uuid",
+            "title": "Submitted By",
+            "type": "string"
+          },
+          "workspace_id": {
+            "format": "uuid",
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "workspace_id",
+          "ref",
+          "environment",
+          "rating_version_ref",
+          "change_summary",
+          "status",
+          "evidence",
+          "submitted_by",
+          "created_at"
+        ],
+        "title": "DeploymentRequest",
+        "type": "object"
+      },
+      "DeploymentRequestCreate": {
+        "additionalProperties": false,
+        "description": "The body of `POST /api/v1/environments/{env}/deployment-requests`.",
+        "properties": {
+          "change_summary": {
+            "minLength": 1,
+            "title": "Change Summary",
+            "type": "string"
+          },
+          "rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "skip": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PromotionSkip"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "rating_version_ref",
+          "change_summary"
+        ],
+        "title": "DeploymentRequestCreate",
+        "type": "object"
+      },
+      "DeploymentRequestEvidence": {
+        "additionalProperties": false,
+        "description": "The two evidence items pinned once at submission (`06` FR-356, FR-364's floor).",
+        "properties": {
+          "rating_version_approval": {
+            "description": "The decided approval request of the pinned Rating Version.",
+            "format": "uuid",
+            "title": "Rating Version Approval",
+            "type": "string"
+          },
+          "uat_deployment": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "$ref": "#/components/schemas/PromotionSkip"
+              }
+            ],
+            "description": "The predecessor item: the id of the successful Deployment of that Rating Version in the predecessor Environment, or a recorded `PromotionSkip`.",
+            "title": "Uat Deployment"
+          }
+        },
+        "required": [
+          "rating_version_approval",
+          "uat_deployment"
+        ],
+        "title": "DeploymentRequestEvidence",
+        "type": "object"
+      },
+      "DeploymentRequestStatus": {
+        "description": "A Deployment Request's states (`PL-1392` Task 3); `executed` is the deploy route's.",
+        "enum": [
+          "draft",
+          "review",
+          "approved",
+          "rejected",
+          "withdrawn",
+          "executed"
+        ],
+        "title": "DeploymentRequestStatus",
+        "type": "string"
+      },
       "DeriveRequest": {
         "additionalProperties": false,
         "properties": {
@@ -3970,6 +4318,152 @@
         "title": "EbmTerm",
         "type": "object"
       },
+      "Environment": {
+        "additionalProperties": false,
+        "description": "A named place a Rating Version is deployed to (`07` §4.2, FR-428).",
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "live_deployments": {
+            "default": [],
+            "description": "Derived from the Deployment rows, never stored.",
+            "items": {
+              "$ref": "#/components/schemas/LiveDeployment"
+            },
+            "title": "Live Deployments",
+            "type": "array"
+          },
+          "name": {
+            "description": "The display name; the only renamable part.",
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "promotion_order": {
+            "minimum": 1.0,
+            "title": "Promotion Order",
+            "type": "integer"
+          },
+          "requires_prior_environment": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The predecessor Environment's slug, read by FR-429.",
+            "title": "Requires Prior Environment"
+          },
+          "retired_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set when retired; the row and its slug are kept.",
+            "title": "Retired At"
+          },
+          "slug": {
+            "description": "Immutable (RL-1301 A.6); what every reference names.",
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "promotion_order"
+        ],
+        "title": "Environment",
+        "type": "object"
+      },
+      "EnvironmentCreate": {
+        "additionalProperties": false,
+        "description": "The body of `POST /api/v1/environments` (`07` §5.1).",
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "promotion_order": {
+            "minimum": 1.0,
+            "title": "Promotion Order",
+            "type": "integer"
+          },
+          "requires_prior_environment": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requires Prior Environment"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "promotion_order"
+        ],
+        "title": "EnvironmentCreate",
+        "type": "object"
+      },
+      "EnvironmentUpdate": {
+        "additionalProperties": false,
+        "description": "The body of `PATCH /api/v1/environments/{slug}`: `name` and `description` only.\n\n`extra=\"forbid\"` is what refuses a body naming `slug` (RL-1301 A.6).",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "EnvironmentUpdate",
+        "type": "object"
+      },
       "ExcludedPeril": {
         "additionalProperties": false,
         "description": "A peril present in the data and deliberately not modelled (FR-190).\n\nThe reason is required and non-blank. \"Every peril is either modelled or explicitly\nexcluded with a reason\" is the requirement; an exclusion with an empty reason satisfies\nits letter and none of its purpose.",
@@ -4304,6 +4798,55 @@
           "message"
         ],
         "title": "FieldError",
+        "type": "object"
+      },
+      "FloorAndCapOperation": {
+        "additionalProperties": false,
+        "properties": {
+          "applied_to": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "kind": {
+            "const": "floor_and_cap",
+            "title": "Kind",
+            "type": "string"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/FloorAndCapParameters"
+          },
+          "result": {
+            "$ref": "#/components/schemas/BulkOperationResult"
+          }
+        },
+        "required": [
+          "applied_to",
+          "result",
+          "kind",
+          "parameters"
+        ],
+        "title": "FloorAndCapOperation",
+        "type": "object"
+      },
+      "FloorAndCapParameters": {
+        "additionalProperties": false,
+        "description": "`floor_and_cap`'s parameters (04 §4.4): the clamp bounds, decimal strings.",
+        "properties": {
+          "cap": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cap",
+            "type": "string"
+          },
+          "floor": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Floor",
+            "type": "string"
+          }
+        },
+        "required": [
+          "floor",
+          "cap"
+        ],
+        "title": "FloorAndCapParameters",
         "type": "object"
       },
       "GbmDiagnostics": {
@@ -6165,6 +6708,37 @@
         "title": "Histogram",
         "type": "object"
       },
+      "ImportVerdict": {
+        "additionalProperties": false,
+        "description": "The source identity of a version created by import (03 §4.2, 03 §5.2).\n\n`round_trip` is the strict verdict: the file parsed back to exactly the cells it was\nexported from, so an import can never silently drop or re-type a cell. `applied_to`\nnames the addressed baseline version (the import endpoint addresses `{slug}@{version}`),\nso the seed-lineage inheritance check (03 §4.2) is expressible at save time and\nauditable after.",
+        "properties": {
+          "applied_to": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "content_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Content Sha256",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "round_trip": {
+            "const": "passed",
+            "title": "Round Trip",
+            "type": "string"
+          }
+        },
+        "required": [
+          "filename",
+          "content_sha256",
+          "round_trip",
+          "applied_to"
+        ],
+        "title": "ImportVerdict",
+        "type": "object"
+      },
       "IntervalFor": {
         "additionalProperties": false,
         "description": "This model is one side of another model's prediction interval (FR-199).\n\n**On the spec, so it joins `spec_hash`** (FR-200). FR-137 set the precedent\nfor a Model that exists relative to another Model — `approximates_model_id` on the\napproximating Model's spec — and the reason is the same one: the pairing is part of\nwhat this model *is*. Two bounds identical but for the central model they bound would\notherwise share a digest, and FR-204 would hand the second caller the first\ncaller's model: an interval around a model nobody fitted, rendering identically to a\ncorrect one.\n\nThe central model is named by **id and version**. The id is what the lookup uses; the\nversion is what a human reads in a review, where `motor-ad-frequency@7` is recognisable\nand a UUID is not — the same argument `Prediction` carries for holding both.",
@@ -6279,6 +6853,18 @@
             "additionalProperties": true,
             "title": "Parameters",
             "type": "object"
+          },
+          "platform_build": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The platform version and build the Job ran on, `{version}+{build}`, recorded when the worker moves it to `running`; null while `queued` (FR-18).",
+            "title": "Platform Build"
           },
           "progress": {
             "anyOf": [
@@ -6926,6 +7512,32 @@
           "status"
         ],
         "title": "LineageModel",
+        "type": "object"
+      },
+      "LiveDeployment": {
+        "additionalProperties": false,
+        "description": "One entry of an Environment's derived `live_deployments` (`07` §4.2).",
+        "properties": {
+          "bundle_hash": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Bundle Hash",
+            "type": "string"
+          },
+          "deployed_at": {
+            "format": "date-time",
+            "title": "Deployed At",
+            "type": "string"
+          },
+          "rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          }
+        },
+        "required": [
+          "rating_version_ref",
+          "deployed_at",
+          "bundle_hash"
+        ],
+        "title": "LiveDeployment",
         "type": "object"
       },
       "LossTreatment": {
@@ -8199,6 +8811,78 @@
         "title": "Page[Dataset]",
         "type": "object"
       },
+      "Page_Deployment_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Deployment"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[Deployment]",
+        "type": "object"
+      },
+      "Page_Environment_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Environment"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[Environment]",
+        "type": "object"
+      },
       "Page_JobLogLine_": {
         "additionalProperties": false,
         "properties": {
@@ -8341,6 +9025,42 @@
           "total_estimate"
         ],
         "title": "Page[PerilStructure]",
+        "type": "object"
+      },
+      "Page_SubGraph_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SubGraph"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[SubGraph]",
         "type": "object"
       },
       "Page_TraceView_": {
@@ -9374,6 +10094,28 @@
         "title": "Progress",
         "type": "object"
       },
+      "PromotionSkip": {
+        "additionalProperties": false,
+        "description": "A recorded skip of a predecessor Environment (`03` §4.12, `07` FR-429, RL-1296).",
+        "properties": {
+          "reason": {
+            "description": "Why the order was skipped; never empty after trimming.",
+            "title": "Reason",
+            "type": "string"
+          },
+          "skipped_environment": {
+            "description": "The predecessor Environment's slug.",
+            "title": "Skipped Environment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "skipped_environment",
+          "reason"
+        ],
+        "title": "PromotionSkip",
+        "type": "object"
+      },
       "PropertyResult": {
         "additionalProperties": false,
         "description": "One property's outcome — 03 §4.9's `property_results[]` item.\n\nA failing property records how its shrink ended; a shrink stopped on a limit is\nreported as unminimised, never as a minimal counterexample (RS-1176 condition 5).",
@@ -9635,6 +10377,890 @@
           "changed_cells"
         ],
         "title": "RateTableDiff",
+        "type": "object"
+      },
+      "RateTableKey": {
+        "additionalProperties": false,
+        "description": "A key column declaration (FR-228): name, type, optional Factor or Banding binding.\n\n`factor_ref` pins the Factor version the key is bound to (`RL-1361`); `banding_ref`\npins a Banding with no Factor. A key carries at most one of them, and a key with\nneither is joined by its own name.",
+        "properties": {
+          "banding_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "factor_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/RateTableKeyType"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "RateTableKey",
+        "type": "object"
+      },
+      "RateTableKeyType": {
+        "description": "Valid types for a rate table key.",
+        "enum": [
+          "int",
+          "string",
+          "date",
+          "bool"
+        ],
+        "title": "RateTableKeyType",
+        "type": "string"
+      },
+      "RateTableStorageMode": {
+        "description": "Storage mode for rate table cells (FR-232, 03 §3.3).\n\n`rows` is the default for small tables (< 250k cells); `parquet` is used\nfor larger tables. Once written, the storage mode is immutable with the version.",
+        "enum": [
+          "rows",
+          "parquet"
+        ],
+        "title": "RateTableStorageMode",
+        "type": "string"
+      },
+      "RateTableValue": {
+        "additionalProperties": false,
+        "description": "A value column declaration (FR-228): name, type, unit, optional bounds.",
+        "properties": {
+          "max": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/RateTableValueType"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "unit"
+        ],
+        "title": "RateTableValue",
+        "type": "object"
+      },
+      "RateTableValueType": {
+        "description": "Valid types for a rate table value (FR-228, 03 §3.3).",
+        "enum": [
+          "relativity",
+          "money_minor",
+          "percentage",
+          "count"
+        ],
+        "title": "RateTableValueType",
+        "type": "string"
+      },
+      "RateTableVersion": {
+        "additionalProperties": false,
+        "description": "A Rate Table Version (FR-229, FR-232, 03 §4.2).\n\nAn immutable version of one rate table, in the §4.2 wire form: the definition\n(`keys`, `value`, `default_row`), the cells (`rows` for row storage, `cells` as a\nparquet BlobRef above the threshold), the seed origin, and the creation metadata.\nEditing produces a new version with a required change note. The storage mode is\nfixed when the version is written and immutable with it (FR-232), and a version\nis created by a seed, an operation or an import — never more than one.",
+        "properties": {
+          "cells": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlobRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "change_note": {
+            "title": "Change Note",
+            "type": "string"
+          },
+          "created_by_import": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImportVerdict"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_by_operation": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "floor_and_cap": "#/components/schemas/FloorAndCapOperation",
+                    "rebase_to_level": "#/components/schemas/RebaseToLevelOperation",
+                    "uplift_by_filter": "#/components/schemas/UpliftByFilterOperation",
+                    "uplift_table": "#/components/schemas/UpliftTableOperation"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/UpliftTableOperation"
+                  },
+                  {
+                    "$ref": "#/components/schemas/UpliftByFilterOperation"
+                  },
+                  {
+                    "$ref": "#/components/schemas/FloorAndCapOperation"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RebaseToLevelOperation"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By Operation"
+          },
+          "default_row": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Row"
+          },
+          "keys": {
+            "items": {
+              "$ref": "#/components/schemas/RateTableKey"
+            },
+            "title": "Keys",
+            "type": "array"
+          },
+          "rateable": {
+            "title": "Rateable",
+            "type": "boolean"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          },
+          "seeded_from": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SeededFrom"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "storage": {
+            "$ref": "#/components/schemas/RateTableStorageMode"
+          },
+          "value": {
+            "$ref": "#/components/schemas/RateTableValue"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "slug",
+          "version",
+          "rateable",
+          "storage",
+          "keys",
+          "value",
+          "change_note"
+        ],
+        "title": "RateTableVersion",
+        "type": "object"
+      },
+      "RatingConstraintStep": {
+        "additionalProperties": false,
+        "properties": {
+          "clamp_bounds": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clamp Bounds"
+          },
+          "condition": {
+            "title": "Condition",
+            "type": "string"
+          },
+          "consumes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Consumes"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "on_violation": {
+            "enum": [
+              "clamp",
+              "decline",
+              "error"
+            ],
+            "title": "On Violation",
+            "type": "string"
+          },
+          "produces": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Produces"
+          },
+          "reason_code": {
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "step_id": {
+            "minLength": 1,
+            "title": "Step Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "constraint",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "label",
+          "type",
+          "condition",
+          "on_violation",
+          "reason_code"
+        ],
+        "title": "RatingConstraintStep",
+        "type": "object"
+      },
+      "RatingExpressionStep": {
+        "additionalProperties": false,
+        "properties": {
+          "consumes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Consumes"
+          },
+          "expr": {
+            "title": "Expr",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "produces": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Produces"
+          },
+          "result_type": {
+            "title": "Result Type",
+            "type": "string"
+          },
+          "step_id": {
+            "minLength": 1,
+            "title": "Step Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "expression",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "label",
+          "type",
+          "expr",
+          "result_type"
+        ],
+        "title": "RatingExpressionStep",
+        "type": "object"
+      },
+      "RatingInputStep": {
+        "additionalProperties": false,
+        "properties": {
+          "consumes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Consumes"
+          },
+          "input_name": {
+            "title": "Input Name",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "on_missing": {
+            "enum": [
+              "error",
+              "default",
+              "null"
+            ],
+            "title": "On Missing",
+            "type": "string"
+          },
+          "produces": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Produces"
+          },
+          "step_id": {
+            "minLength": 1,
+            "title": "Step Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "input",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "label",
+          "type",
+          "input_name",
+          "on_missing"
+        ],
+        "title": "RatingInputStep",
+        "type": "object"
+      },
+      "RatingLookupStep": {
+        "additionalProperties": false,
+        "properties": {
+          "as_at": {
+            "title": "As At",
+            "type": "string"
+          },
+          "consumes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Consumes"
+          },
+          "key_expr": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Key Expr",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "on_miss": {
+            "enum": [
+              "error",
+              "default"
+            ],
+            "title": "On Miss",
+            "type": "string"
+          },
+          "produces": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Produces"
+          },
+          "reference_table_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "step_id": {
+            "minLength": 1,
+            "title": "Step Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "lookup",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "label",
+          "type",
+          "reference_table_ref",
+          "as_at",
+          "on_miss"
+        ],
+        "title": "RatingLookupStep",
+        "type": "object"
+      },
+      "RatingModelCallStep": {
+        "additionalProperties": false,
+        "properties": {
+          "consumes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Consumes"
+          },
+          "feature_map": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Feature Map",
+            "type": "object"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "exact",
+              "approximation"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "model_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "peril_structure_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "produces": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Produces"
+          },
+          "step_id": {
+            "minLength": 1,
+            "title": "Step Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "model_call",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "label",
+          "type",
+          "mode"
+        ],
+        "title": "RatingModelCallStep",
+        "type": "object"
+      },
+      "RatingOutputStep": {
+        "additionalProperties": false,
+        "properties": {
+          "consumes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Consumes"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "output_name": {
+            "title": "Output Name",
+            "type": "string"
+          },
+          "produces": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Produces"
+          },
+          "rounding": {
+            "$ref": "#/components/schemas/RoundSpec"
+          },
+          "step_id": {
+            "minLength": 1,
+            "title": "Step Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "output",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "label",
+          "type",
+          "output_name",
+          "rounding"
+        ],
+        "title": "RatingOutputStep",
+        "type": "object"
+      },
+      "RatingTableStep": {
+        "additionalProperties": false,
+        "properties": {
+          "consumes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Consumes"
+          },
+          "interpolation": {
+            "default": "none",
+            "enum": [
+              "none",
+              "linear"
+            ],
+            "title": "Interpolation",
+            "type": "string"
+          },
+          "key_expr": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Key Expr",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "on_miss": {
+            "default": "error",
+            "enum": [
+              "error",
+              "default"
+            ],
+            "title": "On Miss",
+            "type": "string"
+          },
+          "produces": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Produces"
+          },
+          "rate_table_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "step_id": {
+            "minLength": 1,
+            "title": "Step Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "table",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "label",
+          "type",
+          "rate_table_ref"
+        ],
+        "title": "RatingTableStep",
         "type": "object"
       },
       "RatingVersion": {
@@ -9948,6 +11574,54 @@
           "status"
         ],
         "title": "ReadinessReport",
+        "type": "object"
+      },
+      "RebaseToLevelOperation": {
+        "additionalProperties": false,
+        "properties": {
+          "applied_to": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "kind": {
+            "const": "rebase_to_level",
+            "title": "Kind",
+            "type": "string"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/RebaseToLevelParameters"
+          },
+          "result": {
+            "$ref": "#/components/schemas/BulkOperationResult"
+          }
+        },
+        "required": [
+          "applied_to",
+          "result",
+          "kind",
+          "parameters"
+        ],
+        "title": "RebaseToLevelOperation",
+        "type": "object"
+      },
+      "RebaseToLevelParameters": {
+        "additionalProperties": false,
+        "description": "`rebase_to_level`'s parameters (04 §4.4): the reference level that becomes 1.0.",
+        "properties": {
+          "base_level": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Base Level",
+            "type": "object"
+          }
+        },
+        "required": [
+          "base_level"
+        ],
+        "title": "RebaseToLevelParameters",
         "type": "object"
       },
       "ReconcileRequest": {
@@ -10994,6 +12668,33 @@
         "title": "RoleAssignmentView",
         "type": "object"
       },
+      "RoundSpec": {
+        "additionalProperties": false,
+        "description": "Explicit rounding for an `output` step (FR-226) — never implicit, never twice.",
+        "properties": {
+          "dp": {
+            "minimum": 0.0,
+            "title": "Dp",
+            "type": "integer"
+          },
+          "mode": {
+            "enum": [
+              "half_even",
+              "half_up",
+              "ceiling",
+              "floor"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "dp"
+        ],
+        "title": "RoundSpec",
+        "type": "object"
+      },
       "RuleCreate": {
         "additionalProperties": false,
         "properties": {
@@ -11421,6 +13122,51 @@
           "comparison"
         ],
         "title": "ScoreCompareRequest",
+        "type": "object"
+      },
+      "SeedFromModelRequest": {
+        "additionalProperties": false,
+        "description": "`POST /api/v1/rate-tables/{slug}/seed-from-model` body (FR-230, `03` §5.1).\n\nOne seed request names one Factor of an approved model (`RL-1361` section A);\n`factor` is the Factor's slug, a key of the model's relativities. Exactly three\nfields, and an unknown field is refused (`RL-1375` DP-3).",
+        "properties": {
+          "change_note": {
+            "title": "Change Note",
+            "type": "string"
+          },
+          "factor": {
+            "minLength": 1,
+            "title": "Factor",
+            "type": "string"
+          },
+          "model_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          }
+        },
+        "required": [
+          "model_ref",
+          "factor",
+          "change_note"
+        ],
+        "title": "SeedFromModelRequest",
+        "type": "object"
+      },
+      "SeededFrom": {
+        "additionalProperties": false,
+        "description": "The seed origin of a rate table version (03 §4.2, FR-230).\n\nThe pinned source model reference and the timestamp at which the relativities were\nimported, so \"how far have we moved from the technical rate?\" is answerable by\ndiffing against this origin.",
+        "properties": {
+          "model_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "seeded_at": {
+            "format": "date-time",
+            "title": "Seeded At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model_ref",
+          "seeded_at"
+        ],
+        "title": "SeededFrom",
         "type": "object"
       },
       "SemanticType": {
@@ -12019,36 +13765,111 @@
         "title": "SplitRequest",
         "type": "object"
       },
-      "SubmitApproval": {
+      "SubGraph": {
         "additionalProperties": false,
+        "description": "A stored, immutable Sub-graph Version (`sub_graph:<slug>@<version>`).",
         "properties": {
-          "artifact_ref": {
-            "description": "Canonical `{type}:{slug}@{version}` (ID-3).",
-            "title": "Artifact Ref",
-            "type": "string"
-          },
-          "change_summary": {
+          "change_note": {
             "minLength": 1,
-            "title": "Change Summary",
+            "title": "Change Note",
             "type": "string"
           },
-          "environment": {
-            "anyOf": [
-              {
-                "type": "string"
+          "inputs": {
+            "items": {
+              "$ref": "#/components/schemas/SubGraphInputPort"
+            },
+            "title": "Inputs",
+            "type": "array"
+          },
+          "outputs": {
+            "items": {
+              "$ref": "#/components/schemas/AlgorithmOutput"
+            },
+            "title": "Outputs",
+            "type": "array"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "constraint": "#/components/schemas/RatingConstraintStep",
+                  "expression": "#/components/schemas/RatingExpressionStep",
+                  "input": "#/components/schemas/RatingInputStep",
+                  "lookup": "#/components/schemas/RatingLookupStep",
+                  "model_call": "#/components/schemas/RatingModelCallStep",
+                  "output": "#/components/schemas/RatingOutputStep",
+                  "table": "#/components/schemas/RatingTableStep"
+                },
+                "propertyName": "type"
               },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Environment"
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/RatingInputStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RatingLookupStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RatingTableStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RatingExpressionStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RatingModelCallStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RatingConstraintStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RatingOutputStep"
+                }
+              ]
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
           }
         },
         "required": [
-          "artifact_ref",
-          "change_summary"
+          "inputs",
+          "outputs",
+          "steps",
+          "change_note",
+          "slug",
+          "version"
         ],
-        "title": "SubmitApproval",
+        "title": "SubGraph",
+        "type": "object"
+      },
+      "SubGraphInputPort": {
+        "additionalProperties": false,
+        "description": "A declared input of a fragment: a name and a result type (never float, FR-227).",
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "SubGraphInputPort",
         "type": "object"
       },
       "SubmitCustomMetric": {
@@ -12176,6 +13997,18 @@
             "pattern": "^sha256:[a-f0-9]{64}$",
             "title": "Bundle Hash",
             "type": "string"
+          },
+          "ladder_check_version": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ladder Check Version"
           },
           "ladder_reconciled": {
             "title": "Ladder Reconciled",
@@ -12749,6 +14582,103 @@
         "title": "UpdateSettings",
         "type": "object"
       },
+      "UpliftByFilterOperation": {
+        "additionalProperties": false,
+        "properties": {
+          "applied_to": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "kind": {
+            "const": "uplift_by_filter",
+            "title": "Kind",
+            "type": "string"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/UpliftByFilterParameters"
+          },
+          "result": {
+            "$ref": "#/components/schemas/BulkOperationResult"
+          }
+        },
+        "required": [
+          "applied_to",
+          "result",
+          "kind",
+          "parameters"
+        ],
+        "title": "UpliftByFilterOperation",
+        "type": "object"
+      },
+      "UpliftByFilterParameters": {
+        "additionalProperties": false,
+        "description": "`uplift_by_filter`'s parameters (04 §4.4): the percentage plus the key filter.",
+        "properties": {
+          "filter": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Filter",
+            "type": "object"
+          },
+          "percentage": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Percentage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "percentage",
+          "filter"
+        ],
+        "title": "UpliftByFilterParameters",
+        "type": "object"
+      },
+      "UpliftTableOperation": {
+        "additionalProperties": false,
+        "properties": {
+          "applied_to": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "kind": {
+            "const": "uplift_table",
+            "title": "Kind",
+            "type": "string"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/UpliftTableParameters"
+          },
+          "result": {
+            "$ref": "#/components/schemas/BulkOperationResult"
+          }
+        },
+        "required": [
+          "applied_to",
+          "result",
+          "kind",
+          "parameters"
+        ],
+        "title": "UpliftTableOperation",
+        "type": "object"
+      },
+      "UpliftTableParameters": {
+        "additionalProperties": false,
+        "description": "`uplift_table`'s parameters (04 §4.4): the percentage, applied to every cell.",
+        "properties": {
+          "percentage": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Percentage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "percentage"
+        ],
+        "title": "UpliftTableParameters",
+        "type": "object"
+      },
       "UploadUrlRequest": {
         "additionalProperties": false,
         "properties": {
@@ -13257,27 +15187,6 @@
         "title": "Weighting",
         "type": "string"
       },
-      "Withdraw": {
-        "additionalProperties": false,
-        "properties": {
-          "artifact_is_live": {
-            "default": false,
-            "description": "Supplied by the caller: liveness belongs to the owning module (`03` for a Rating Version), not to governance. Governance owns the rule.",
-            "title": "Artifact Is Live",
-            "type": "boolean"
-          },
-          "reason": {
-            "minLength": 1,
-            "title": "Reason",
-            "type": "string"
-          }
-        },
-        "required": [
-          "reason"
-        ],
-        "title": "Withdraw",
-        "type": "object"
-      },
       "WorkspaceMembership": {
         "additionalProperties": false,
         "description": "One workspace this principal may act in, named (FR-395, FR-396).",
@@ -13744,7 +15653,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SubmitApproval"
+                "$ref": "#/components/schemas/ApprovalSubmission"
               }
             }
           },
@@ -14099,6 +16008,7 @@
     },
     "/api/v1/approval-requests/{request_id}/withdraw": {
       "post": {
+        "description": "Withdraw a request before its artifact is deployed (FR-357).\n\nLiveness is the server's to derive, never the client's to assert (`PL-1392` Task 6): a\nRating Version with a Deployment row is live, and the request is refused 409\n`WITHDRAW_AFTER_DEPLOY_FORBIDDEN`. Governance owns the rule (`service.withdraw`); the\ndeployment state is `03`'s fact, read here from its rows.",
         "operationId": "withdraw_request_api_v1_approval_requests__request_id__withdraw_post",
         "parameters": [
           {
@@ -14134,7 +16044,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Withdraw"
+                "$ref": "#/components/schemas/ApprovalWithdrawal"
               }
             }
           },
@@ -20320,6 +22230,902 @@
         ]
       }
     },
+    "/api/v1/environments": {
+      "get": {
+        "description": "**200** with a page of Environments, retired ones included, in promotion order.",
+        "operationId": "list_environments_api_v1_environments_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_Environment_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "List environments",
+        "tags": [
+          "platform"
+        ]
+      },
+      "post": {
+        "description": "**201**. **409** if the slug exists, retired or not; **422** if the slug is outside\nthe reference grammar or the predecessor is not an existing Environment.",
+        "operationId": "create_environment_api_v1_environments_post",
+        "parameters": [
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnvironmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Environment"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Create an environment",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/environments/{env}/deployment-requests": {
+      "post": {
+        "description": "**201**. **403** without `deployment:promote` on this Environment; **404** for an unknown\nEnvironment or Rating Version; **409** `VALIDATION_FAILED` for a retired Environment or a\nversion that is not `approved`, **409** `BUNDLE_COMPILE_FAILED` for one never compiled;\n**422** for a non-Rating-Version reference, an Environment with no `deployment` policy\nentry, or incomplete evidence (`EVIDENCE_INCOMPLETE`).",
+        "operationId": "submit_deployment_request_api_v1_environments__env__deployment_requests_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "title": "Env",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeploymentRequestCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentRequest"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Submit a deployment request",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/environments/{env}/deployments": {
+      "get": {
+        "description": "**200**, newest first; needs `rating:read` (the history is `06` FR-382's evidence; the\nplan names no permission for it, and the choice is recorded in `LG-1405`).",
+        "operationId": "list_deployments_api_v1_environments__env__deployments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "title": "Env",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_Deployment_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Deployment history for an environment",
+        "tags": [
+          "platform"
+        ]
+      },
+      "post": {
+        "description": "**201**. **409** `DEPLOY_REQUIRES_APPROVAL` for a gated target without an approved,\nunexecuted request; **409** `PROMOTION_ORDER_VIOLATION`; the Rating Version and Environment\nrefusals of the request route; **422** for a non-Rating-Version reference.",
+        "operationId": "create_deployment_api_v1_environments__env__deployments_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "title": "Env",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeploymentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deployment"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Deploy an approved version",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/environments/{slug}": {
+      "patch": {
+        "description": "**200**. The body has `name` and `description` only: one naming `slug` is a **422**\n(`RL-1301` A.6).",
+        "operationId": "update_environment_api_v1_environments__slug__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnvironmentUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Environment"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Rename an environment",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/environments/{slug}/retire": {
+      "post": {
+        "description": "**200** with `retired_at` set. **409** while a Deployment is live in it, a policy\nentry names it, or an unrevoked Service Account key names it.",
+        "operationId": "retire_environment_api_v1_environments__slug__retire_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Environment"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Retire an environment",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
     "/api/v1/factors": {
       "get": {
         "description": "Filtered by Dataset (FR-87), or the workspace's factors when unfiltered.\n\n`?dataset_id=` and nothing else: an unrecognised parameter is a `422`, not a silently\nunfiltered list — see `DatasetFilter`.",
@@ -24414,7 +27220,7 @@
     },
     "/api/v1/rate-tables/{slug}/seed-from-model": {
       "post": {
-        "description": "**201** with the seeded version: its definition, rows, and `seeded_from` (FR-229).\n\nThe source model must be approved (PIN_NOT_APPROVED otherwise), and its relativities\nmust validate as a rate table (named `RATE_TABLE_*` codes, 03 §5.2). Storage is\ndecided against the workspace's cell-count threshold at creation and immutable with\nthe version (FR-232, DP2).",
+        "description": "**201** with the seeded version: its definition, rows, and `seeded_from` (FR-229).\n\nThe body is a `SeedFromModelRequest`: `model_ref`, `factor` (the Factor's slug, a key of\nthe model's relativities) and `change_note`; an unknown field is refused. One seed\nholds one Factor, bound by `factor_ref` to the Factor version the model pins (FR-230,\n`RL-1361`). The source model must be approved (PIN_NOT_APPROVED otherwise); a Factor id\nof the model that does not resolve is 404. A `factor` that names no relativity entry, a\nFactor outside the factor slug grammar, and a re-seed of a lineage bound to another\nFactor are 422 `VALIDATION_FAILED`; the relativities must validate as a rate table\n(named `RATE_TABLE_*` codes, 03 §5.2). Storage is decided against the workspace's\ncell-count threshold at creation and immutable with the version (FR-232, DP2).",
         "operationId": "seed_rate_table_from_model_api_v1_rate_tables__slug__seed_from_model_post",
         "parameters": [
           {
@@ -24449,9 +27255,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "additionalProperties": true,
-                "title": "Body",
-                "type": "object"
+                "$ref": "#/components/schemas/SeedFromModelRequest"
               }
             }
           },
@@ -24462,9 +27266,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Seed Rate Table From Model Api V1 Rate Tables  Slug  Seed From Model Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/RateTableVersion"
                 }
               }
             },
@@ -25714,7 +28516,7 @@
     },
     "/api/v1/rating-versions/{rating_version_id}/compile": {
       "post": {
-        "description": "**202** with a Job (`03` §5.1:514, FR-239/240, WK-671 Task 1.2).\n\nCompilation resolves the pinned algorithm, rate tables, reference tables, custom\nobjectives and model to their real content and persists the compiled Bundle as a\nblob — no longer a synchronous 200, since resolving real content can do real I/O.\nPolling the returned Job to completion yields a `JobResult(kind=\"blob\")` whose `ref`\nis the persisted Bundle's content-addressed sha256.",
+        "description": "**202** with a Job (`03` §5.1:514, FR-239/240, WK-671 Task 1.2).\n\nCompilation resolves the pinned algorithm, rate tables, reference tables, custom\nobjectives and model to their real content and persists the compiled Bundle as a\nblob — no longer a synchronous 200, since resolving real content can do real I/O.\nPolling the returned Job to completion yields a `JobResult(kind=\"blob\")` whose `ref`\nis the persisted Bundle's content-addressed sha256. **409** `RATING_VERSION_IMMUTABLE`,\nwith no Job, unless the version is `draft` (FR-239, RL-1379).",
         "operationId": "compile_rating_version_api_v1_rating_versions__rating_version_id__compile_post",
         "parameters": [
           {
@@ -25801,6 +28603,21 @@
               }
             },
             "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
           },
           "422": {
             "content": {
@@ -27544,6 +30361,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Internal server error"
           }
         },
         "summary": "Score one Quote Context against an explicit Rating Version",
@@ -27796,6 +30628,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Internal server error"
           }
         },
         "summary": "Score one Quote Context against two Rating Versions, with a step-level diff",
@@ -28682,6 +31529,515 @@
         "summary": "Preview a source without creating a version",
         "tags": [
           "datasets"
+        ]
+      }
+    },
+    "/api/v1/sub-graphs": {
+      "post": {
+        "description": "**201** with version 1. The body is a `SubGraphCreate` (03 §4.11); **409** if the\nslug exists, and a refusal carries the code of the rule it broke.",
+        "operationId": "create_sub_graph_api_v1_sub_graphs_post",
+        "parameters": [
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubGraph"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Create a Sub-graph",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/v1/sub-graphs/{slug}/versions": {
+      "get": {
+        "description": "**200** with a page of versions, oldest first.",
+        "operationId": "list_sub_graph_versions_api_v1_sub_graphs__slug__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_SubGraph_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "List a Sub-graph's versions",
+        "tags": [
+          "rating"
+        ]
+      },
+      "post": {
+        "description": "**201** with the next version (maximum plus one). The body is a `SubGraphBody`;\n**404** on an unknown slug.",
+        "operationId": "create_sub_graph_version_api_v1_sub_graphs__slug__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubGraph"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Write the next version of a Sub-graph",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/v1/sub-graphs/{slug}@{version}": {
+      "get": {
+        "description": "**200** with the version; another workspace's is a **404**.",
+        "operationId": "get_sub_graph_api_v1_sub_graphs__slug___version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubGraph"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Read one Sub-graph version",
+        "tags": [
+          "rating"
         ]
       }
     },

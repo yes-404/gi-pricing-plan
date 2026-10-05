@@ -10,13 +10,14 @@ number without the platform.
 """
 
 from pricing_core.modelling.ebm import EbmFitError, fit_ebm
-from pricing_core.money import ROUNDING_MODES, RoundingMode, apply_factor, reconcile_ladder
+from pricing_core.money import ROUNDING_MODES, RoundingMode, apply_factor
 from pricing_core.progress import (
     JobCancelled,
     NullProgress,
     ProgressCallback,
     ScaledProgress,
 )
+from pricing_core.rating.ladder import reconcile_ladder
 
 __all__ = [
     "ROUNDING_MODES",

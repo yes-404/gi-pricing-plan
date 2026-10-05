@@ -29,6 +29,7 @@ from sqlalchemy import (
     Identity,
     Index,
     Integer,
+    SmallInteger,
     String,
     Text,
     UniqueConstraint,
@@ -39,7 +40,20 @@ from sqlalchemy.dialects.postgresql import UUID as PgUUID  # noqa: N811
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
-from model_schema import JobKind, JobQueue, JobSource, JobStatus, new_uuid7
+from model_schema import (
+    ApprovalStatus,
+    DeploymentRequestStatus,
+    JobKind,
+    JobQueue,
+    JobSource,
+    JobStatus,
+    MetricStatus,
+    ModelStatus,
+    ObjectiveStatus,
+    PerilStructureStatus,
+    RatingVersionStatus,
+    new_uuid7,
+)
 
 __all__ = [
     "AcknowledgementRow",
@@ -52,7 +66,10 @@ __all__ = [
     "DatasetRow",
     "DatasetSplitRow",
     "DatasetVersionRow",
+    "DeploymentRequestRow",
+    "DeploymentRow",
     "DiagnosticsRow",
+    "EnvironmentRow",
     "IngestionRunRow",
     "JobLogRow",
     "JobRow",
@@ -66,9 +83,12 @@ __all__ = [
     "ServiceAccountRow",
     "SourceRow",
     "SubjectPurgeRow",
+    "TenantMarkerRow",
     "UserRow",
+    "ValidationRuleStatus",
     "WorkspaceMemberRow",
     "WorkspaceSettingRow",
+    "approval_guarded_tables",
 ]
 
 
@@ -87,6 +107,20 @@ def _pg_enum(python_enum: type[enum.Enum], name: str, *, create: bool = True) ->
     )
 
 
+class ValidationRuleStatus(enum.StrEnum):
+    """The vocabulary of `validation_rules` and `validation_rule_sets` (`01` §4.5).
+
+    They carried string constants, not an enum, so the approval guard (RL-1301 A.4.1) had
+    no vocabulary to read. It lives here, beside the columns that declare it, because
+    `platform/validation_rules.py` imports this module and cannot be imported back;
+    that module's `DRAFT`/`REVIEW`/`APPROVED` are these members' values.
+    """
+
+    DRAFT = "draft"
+    REVIEW = "review"
+    APPROVED = "approved"
+
+
 class JobRow(Base):
     """A Job (`07` §4.1). The lifecycle itself is enforced in the service layer."""
 
@@ -99,7 +133,10 @@ class JobRow(Base):
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
 
     kind: Mapped[JobKind] = mapped_column(_pg_enum(JobKind, "job_kind"), nullable=False)
-    status: Mapped[JobStatus] = mapped_column(_pg_enum(JobStatus, "job_status"), nullable=False)
+    status: Mapped[JobStatus] = mapped_column(
+        _pg_enum(JobStatus, "job_status"), nullable=False,
+        info={"approval_capable": False},
+    )
     queue: Mapped[JobQueue] = mapped_column(_pg_enum(JobQueue, "job_queue"), nullable=False)
     source: Mapped[JobSource] = mapped_column(_pg_enum(JobSource, "job_source"), nullable=False)
 
@@ -113,6 +150,10 @@ class JobRow(Base):
     retries: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
     trace_id: Mapped[str | None] = mapped_column(String(32))
+
+    # FR-18: `{version}+{build}` of the worker that ran the Job, written when it moves to
+    # `running`; null while `queued`.
+    platform_build: Mapped[str | None] = mapped_column(String(128))
 
     queued_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -245,7 +286,8 @@ class OutboxRow(Base):
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
     status: Mapped[OutboxStatus] = mapped_column(
-        _pg_enum(OutboxStatus, "outbox_status"), nullable=False, default=OutboxStatus.PENDING
+        _pg_enum(OutboxStatus, "outbox_status"), nullable=False, default=OutboxStatus.PENDING,
+        info={"approval_capable": False},
     )
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_error: Mapped[str | None] = mapped_column(Text)
@@ -626,7 +668,10 @@ class ApprovalRequestRow(Base):
     )
     change_summary: Mapped[str] = mapped_column(Text, nullable=False)
 
-    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False,
+        info={"status_vocabulary": ApprovalStatus},
+    )
     approvers_required: Mapped[int] = mapped_column(Integer, nullable=False)
 
     withdrawn_reason: Mapped[str | None] = mapped_column(Text)
@@ -779,7 +824,10 @@ class DatasetVersionRow(Base):
     dataset_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False,
+        info={"approval_capable": False},
+    )
     kind: Mapped[str] = mapped_column(String(32), nullable=False, default="ingested")
 
     tables: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
@@ -857,7 +905,10 @@ class IngestionRunRow(Base):
     dataset_version_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
     source_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
 
-    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False,
+        info={"approval_capable": False},
+    )
     idempotency_key: Mapped[str | None] = mapped_column(String(255))
 
     # FR-33: the same key with a *changed* source is a different ingestion, so the
@@ -932,7 +983,10 @@ class ReferenceTableVersionRow(Base):
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     reference_table_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False)
-    status: Mapped[str] = mapped_column(String(32), nullable=False, default="draft")
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="draft",
+        info={"approval_capable": False},
+    )
     source_note: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -1111,7 +1165,10 @@ class ValidationRuleRow(Base):
     severity: Mapped[str] = mapped_column(String(16), nullable=False)
     body: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
 
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft",
+        info={"status_vocabulary": ValidationRuleStatus},
+    )
     authored_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     approved_by: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
     dry_run_report_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
@@ -1186,7 +1243,10 @@ class ValidationRuleSetRow(Base):
 
     body: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     reference_dataset_version_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="approved")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="approved",
+        info={"status_vocabulary": ValidationRuleStatus},
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -1352,7 +1412,10 @@ class ModelRow(Base):
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     model_family_slug: Mapped[str] = mapped_column(String(64), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft",
+        info={"status_vocabulary": ModelStatus},
+    )
 
     dataset_version_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     spec: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
@@ -1572,7 +1635,10 @@ class PerilStructureRow(Base):
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     slug: Mapped[str] = mapped_column(String(64), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft",
+        info={"status_vocabulary": PerilStructureStatus},
+    )
 
     #: The `PerilComponent` list and the `ExcludedPeril` list, whole. Same reasoning as
     #: `models.spec`: the platform reads them back through the contract type, and a
@@ -1639,7 +1705,10 @@ class CustomObjectiveRow(Base):
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     slug: Mapped[str] = mapped_column(String(64), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft",
+        info={"status_vocabulary": ObjectiveStatus},
+    )
 
     #: `template` for the whole of Phase 1 (FR-150). Stored rather than assumed,
     #: because Phase 2's `expression` rows will live in this table beside these and a
@@ -1761,7 +1830,10 @@ class CustomMetricRow(Base):
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     slug: Mapped[str] = mapped_column(String(64), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft",
+        info={"status_vocabulary": MetricStatus},
+    )
 
     #: `template` for the whole of Phase 1, mirroring `CustomObjectiveRow.kind` (FR-155
     #: reuses FR-150's rule). Stored rather than assumed for the same reason: a Phase 2
@@ -1889,7 +1961,10 @@ class RatingVersionRow(Base):
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     slug: Mapped[str] = mapped_column(String(64), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False)
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft",
+        info={"status_vocabulary": RatingVersionStatus},
+    )
     dataset_version_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     #: The pinned approved Model, as the canonical `model:{slug}@{version}` string (ID-3).
     model_ref: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -2191,6 +2266,12 @@ class ScoringTraceRow(Base):
     sample_reason: Mapped[str] = mapped_column(String(16), nullable=False)
     #: Null for a batch-produced trace (see class docstring); set by the real-time path.
     environment: Mapped[str | None] = mapped_column(String(32))
+    #: The Deployment this trace was served under (`03` §4.12, PL-1392 Task 3). Nullable:
+    #: a trace written before Deployments existed, or for a batch Job, had none, and the
+    #: `environment` string above stays a string (never a foreign key) so it cannot dangle.
+    deployment_id: Mapped[UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("deployments.id")
+    )
     #: The blob body's digest — `app.platform.blobs.blob_key`/`BlobStore.read` resolve it.
     #: Null while `status == "pending"`; every other status requires it (Task 4B).
     blob_sha256: Mapped[str | None] = mapped_column(String(64))
@@ -2198,7 +2279,10 @@ class ScoringTraceRow(Base):
     #: `mismatch` (the re-score ran but did not reproduce the served result, or the
     #: pinned bundle no longer resolves). A row `write_trace` writes directly is always
     #: `complete`. Task 4B.
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="complete")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="complete",
+        info={"approval_capable": False},
+    )
     #: The `QuoteContext` the off-path Job re-scores from, as JSON — the access-controlled
     #: carrier RL-862 §8.4 requires in place of `JobRow.parameters`. `None` once a row
     #: is `complete`/`mismatch` and no longer needed (or for a `write_trace`-direct row,
@@ -2252,4 +2336,174 @@ class ScoringTraceRow(Base):
         # digest (the quote-input refusal, `07` §5.1 2026-09-28); unindexed, that is a
         # sequential scan of every trace (#868, the deputy's ruling of 18:55:39 BST).
         Index("ix_scoring_traces_blob_sha256", "blob_sha256"),
+    )
+
+
+class TenantMarkerRow(Base):
+    """The single-row marker binding this database to one tenant (`07` FR-436, ADR-710).
+
+    Written once, by the migration that creates it, from `Settings.tenant_id`. The
+    application reads it at startup and never writes it. The `smallint` key with
+    `CHECK (id = 1)` is what makes a second row impossible: the database refuses it.
+    """
+
+    __tablename__ = "tenant_marker"
+
+    id: Mapped[int] = mapped_column(SmallInteger, primary_key=True, autoincrement=False)
+    tenant_id: Mapped[str] = mapped_column(Text, nullable=False)
+
+    __table_args__ = (CheckConstraint("id = 1", name="single_row"),)
+
+
+def approval_guarded_tables() -> set[str]:
+    """Every table whose `status` column declares a vocabulary with an `APPROVED` member.
+
+    The approval guard's population (RL-1301 A.4.1): derived from the column metadata,
+    never listed, so a table that adds approval without declaring it cannot be missed.
+    `test_approval_guard.py` holds the declarations to account.
+    """
+    return {
+        table.name
+        for table in Base.metadata.tables.values()
+        if "status" in table.c
+        and hasattr(table.c["status"].info.get("status_vocabulary"), "APPROVED")
+    }
+
+
+class SubGraphVersionRow(Base):
+    """One immutable Sub-graph Version (03 §4.11, FR-217's artifact limb; WK-1250 Slice 1).
+
+    A version is written once and never changed (`00` FR-4): there is no `updated_at` and
+    no `parent_id`, and no code path updates a row. The validated `SubGraph` is stored as
+    JSON content, never a pickle. `change_note` is required on every version (RL-1309 DP-1).
+    """
+
+    __tablename__ = "sub_graph_versions"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    content: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    change_note: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    created_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id", "slug", "version", name="uq_sub_graph_versions_slug_version"
+        ),
+        Index("ix_sub_graph_versions_workspace", "workspace_id", "slug"),
+    )
+
+
+class EnvironmentRow(Base):
+    """A named place a Rating Version is deployed to (`07` §4.2, FR-428; WK-674 Slice 2).
+
+    **Deployment-wide, not per workspace** (ADR-710): there is no `workspace_id`. `slug` is
+    immutable and unique across **all** rows, retired included (RL-1301 A.6): a retired
+    Environment keeps its row and its slug, and a slug is never reissued. `name` is the only
+    renamable part. `requires_prior_environment` is the predecessor's slug, read by FR-429's
+    promotion-order predicate. There is no `live_deployments` column: it is derived from the
+    Deployment rows. The migration seeds `dev`, `uat` and `prod`.
+    """
+
+    __tablename__ = "environments"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    promotion_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    requires_prior_environment: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("environments.slug")
+    )
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("slug", name="uq_environments_slug"),
+        CheckConstraint("promotion_order >= 1", name="promotion_order_positive"),
+    )
+
+
+class DeploymentRequestRow(Base):
+    """The artifact that precedes a gated deploy (`03` §4.12, RL-1301 A; WK-674 Slice 2).
+
+    Its reference is `deployment:<environment slug>@<n>`, so `slug` holds the **Environment's
+    slug** and `version` is numbered per `(workspace_id, slug)`. `status` declares
+    `DeploymentRequestStatus`, which has an `APPROVED` member, so `approval_guarded_tables()`
+    derives this table into the approval guard's population, and the creating migration
+    installs `approval_guard()` on it with no `'flag'` argument: only a decided approval
+    request writes `approved` (RL-1301 A.4). `evidence` is the two items pinned once at
+    submission.
+    """
+
+    __tablename__ = "deployment_requests"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    environment_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("environments.id"), nullable=False
+    )
+    rating_version_ref: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default="draft",
+        info={"status_vocabulary": DeploymentRequestStatus},
+    )
+    approval_request_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    evidence: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    change_summary: Mapped[str] = mapped_column(Text, nullable=False)
+    submitted_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id", "slug", "version", name="uq_deployment_requests_slug_version"
+        ),
+        CheckConstraint(
+            "status IN ('draft', 'review', 'approved', 'rejected', 'withdrawn', 'executed')",
+            name="status_known",
+        ),
+        Index("ix_deployment_requests_environment", "environment_id"),
+    )
+
+
+class DeploymentRow(Base):
+    """One approved Rating Version bound to one Environment at a point in time (`03` §4.12).
+
+    **A record, not a Governed Artifact**: no status, never updated or deleted (`00` FR-4).
+    The migration grants the application role `SELECT` and `INSERT` only. The Deployment
+    Request it executed is null only for a target with no `deployment` policy entry
+    (RL-1301 A.5).
+    """
+
+    __tablename__ = "deployments"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    environment_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("environments.id"), nullable=False
+    )
+    rating_version_ref: Mapped[str] = mapped_column(String(100), nullable=False)
+    bundle_hash: Mapped[str] = mapped_column(String(71), nullable=False)
+    deployed_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    deployed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    deployment_request_id: Mapped[UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("deployment_requests.id")
+    )
+
+    __table_args__ = (
+        CheckConstraint("bundle_hash ~ '^sha256:[a-f0-9]{64}$'", name="bundle_hash_format"),
+        Index("ix_deployments_environment", "workspace_id", "environment_id", "deployed_at"),
     )

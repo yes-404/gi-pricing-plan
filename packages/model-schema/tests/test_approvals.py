@@ -9,8 +9,16 @@ question of what a submission requires — which is the defect OQ-639 existed to
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
-from model_schema import DEFAULT_POLICY, EVIDENCE_FLOOR, ApprovalPolicy, ApprovalPolicyEntry
+from model_schema import (
+    DEFAULT_POLICY,
+    EVIDENCE_FLOOR,
+    ApprovalPolicy,
+    ApprovalPolicyEntry,
+    PromotionSkip,
+    promotion_order_refusal,
+)
 
 
 @pytest.mark.req("FR-364")
@@ -141,3 +149,167 @@ def test_the_metric_floor_is_exactly_what_is_checkable() -> None:
     """
     assert EVIDENCE_FLOOR["custom_metric"] == ("metric_certificate",)
     assert DEFAULT_POLICY.effective_evidence("custom_metric") == ("metric_certificate",)
+
+
+@pytest.mark.req("FR-364")
+def test_the_default_policy_has_a_prod_deployment_entry() -> None:
+    """`06` §4.2 shows a `prod` `deployment` entry (`RL-886`); `DEFAULT_POLICY` must carry it.
+
+    Predicted red: `entry_for` returns `None` (premise b, no `deployment` entry), which is why
+    `submit` refused a Deployment Request with "no approval policy for this artifact type".
+    """
+    entry = DEFAULT_POLICY.entry_for("deployment", "prod")
+    assert entry is not None
+    assert entry.approvers_required == 1
+    assert entry.approver_roles == ("deployer",)
+    assert entry.environment == "prod"
+    assert entry.evidence == EVIDENCE_FLOOR["deployment"]
+
+
+def _entry_with_skip(**overrides: object) -> ApprovalPolicyEntry:
+    fields: dict[str, object] = {
+        "artifact_type": "deployment",
+        "environment": "prod",
+        "approvers_required": 1,
+        "approver_roles": ("deployer",),
+        "evidence": EVIDENCE_FLOOR["deployment"],
+        "skippable_predecessors": ("uat",),
+    }
+    fields.update(overrides)
+    return ApprovalPolicyEntry(**fields)  # type: ignore[arg-type]
+
+
+@pytest.mark.req("FR-429")
+def test_a_skippable_predecessor_is_refused_without_an_environment() -> None:
+    """RL-1296 item 5: the field is valid only on the environment-qualified entry.
+
+    Predicted red before the field exists: `extra="forbid"` rejects the unknown field
+    (a `ValidationError` naming `skippable_predecessors`). After the field is added without
+    the validator, the red becomes "no error raised".
+    """
+    with pytest.raises(ValidationError, match="skippable_predecessors"):
+        _entry_with_skip(environment=None)
+
+
+@pytest.mark.req("FR-429")
+def test_a_skippable_predecessor_is_refused_on_another_artifact_type() -> None:
+    """The same refusal for `artifact_type="rating_version"` (RL-1296 item 5)."""
+    with pytest.raises(ValidationError, match="skippable_predecessors"):
+        _entry_with_skip(artifact_type="rating_version", evidence=())
+
+
+@pytest.mark.req("FR-429")
+def test_a_qualified_deployment_entry_accepts_skippable_predecessors() -> None:
+    """Control: the one place the field is valid, so the validator does not over-refuse."""
+    assert _entry_with_skip().skippable_predecessors == ("uat",)
+    prod = DEFAULT_POLICY.entry_for("deployment", "prod")
+    assert prod is not None
+    assert prod.skippable_predecessors == ()
+
+
+def _prod_entry(*skippable: str) -> ApprovalPolicyEntry:
+    return _entry_with_skip(skippable_predecessors=tuple(skippable))
+
+
+_UAT_SKIP = PromotionSkip(skipped_environment="uat", reason="UAT frozen for the release")
+
+
+@pytest.mark.req("FR-429")
+@pytest.mark.parametrize(
+    ("label", "entry", "predecessor", "deployed", "skip", "refused"),
+    [
+        ("no predecessor", None, None, False, None, False),
+        ("predecessor deployed", None, "uat", True, None, False),
+        ("predecessor deployed, skip ignored", None, "uat", True, _UAT_SKIP, False),
+        ("not deployed, no skip", _prod_entry("uat"), "uat", False, None, True),
+        ("not deployed, skip permitted", _prod_entry("uat"), "uat", False, _UAT_SKIP, False),
+        ("skip, no entry", None, "uat", False, _UAT_SKIP, True),
+        ("skip, predecessor not listed", _prod_entry(), "uat", False, _UAT_SKIP, True),
+        (
+            "skip names another environment",
+            _prod_entry("uat"),
+            "uat",
+            False,
+            PromotionSkip(skipped_environment="dev", reason="x"),
+            True,
+        ),
+        (
+            "entry names another target",
+            _entry_with_skip(environment="uat"),
+            "uat",
+            False,
+            _UAT_SKIP,
+            True,
+        ),
+    ],
+)
+def test_the_promotion_order_predicate(
+    label: str,
+    entry: ApprovalPolicyEntry | None,
+    predecessor: str | None,
+    deployed: bool,
+    skip: PromotionSkip | None,
+    refused: bool,
+) -> None:
+    """`07` FR-429's one predicate, over a table (RL-1301 A.5): it reads only its arguments.
+
+    Predicted red before it exists: `ImportError` for `promotion_order_refusal`. Every
+    refusal names the target and the predecessor.
+    """
+    reason = promotion_order_refusal(
+        entry,
+        target="prod",
+        predecessor=predecessor,
+        predecessor_deployed=deployed,
+        skip=skip,
+    )
+    assert (reason is not None) is refused, label
+    if reason is not None:
+        assert "prod" in reason
+        assert predecessor is not None
+        assert predecessor in reason
+
+
+@pytest.mark.req("FR-429")
+def test_a_blank_skip_reason_is_refused() -> None:
+    """A skip whose reason is empty after trimming grants nothing (the reason is required)."""
+    with pytest.raises(ValidationError, match="reason"):
+        PromotionSkip(skipped_environment="uat", reason="   ")
+    blank = PromotionSkip.model_construct(skipped_environment="uat", reason="  ")
+    assert (
+        promotion_order_refusal(
+            _prod_entry("uat"),
+            target="prod",
+            predecessor="uat",
+            predecessor_deployed=False,
+            skip=blank,
+        )
+        is not None
+    )
+
+
+@pytest.mark.req("FR-429")
+def test_an_unqualified_entry_carrying_the_field_grants_no_skip() -> None:
+    """Hardening (auditor-plans F8): the predicate checks `entry.environment == target`.
+
+    `model_construct` bypasses the validator, so the entry is one the validator would have
+    refused; the predicate must still refuse the skip.
+    """
+    rogue = ApprovalPolicyEntry.model_construct(
+        artifact_type="deployment",
+        environment=None,
+        approvers_required=1,
+        approver_roles=("deployer",),
+        evidence=(),
+        skippable_predecessors=("uat",),
+    )
+    assert (
+        promotion_order_refusal(
+            rogue,
+            target="prod",
+            predecessor="uat",
+            predecessor_deployed=False,
+            skip=_UAT_SKIP,
+        )
+        is not None
+    )

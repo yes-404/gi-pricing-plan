@@ -7,11 +7,15 @@ description: Audit a workstream (WK-657, WK-658, …) before declaring it closed
 
 `CLAUDE.md` §13 is the standard. This is how to satisfy it.
 
-**This skill closes a workstream against §13; it does not by itself raise `CLAUDE.md`
-§14's phase review question.** That trigger is fixed, not discretionary — at each
-workstream close, and again before a phase's exit demo — and satisfying §13 here does
-not satisfy §14. Confirm with the planner whether a phase review (the
-[`phase-review`](../phase-review/SKILL.md) skill) is now due before signing off.
+**This skill closes a workstream against §13; `CLAUDE.md` §14's plan review is a separate
+question, and this close answers it with a replan check.** *(Amended 2026-09-29,
+`RFC-1248`, option C.)* The `CR- kind: work` carries a **Replan check** section: the five
+questions of [`phase-review`](../phase-review/SKILL.md) *When*, each answered yes or no in
+one line, plus `register-owed.py review`'s owed count. A **full** review runs only if the
+check fires (a phase boundary or Work scope moved, an exit criterion is at risk, a replan was
+decided, or a finding moves a slice or phase). The lead gives its verdict on the check, and
+"no trigger" is recorded, never assumed. A full review before a phase's exit demo is
+unchanged and always due. Satisfying §13 here does not satisfy §14.
 
 The failure this guards against is not "we forgot a task". It is a roadmap that reports
 progress the repository does not have — which is worse than no roadmap, because the next
@@ -695,9 +699,19 @@ mapping.
 **Binding plan-review conditions:** each dated acceptance conditioning this close, the
 artifact it demanded, and where that artifact now is. *None* is a valid answer only after
 looking.
+
+**Replan check (`RFC-1248`):** the five `phase-review` questions, one line each —
+1 completion · 2 omission · 3 skills and research · 4 drift · 5 shape — each **yes** or
+**no** with its reason; `register-owed.py review`'s owed count at this tree; and the result,
+**trigger** (naming which) or **no trigger**. The lead's verdict follows it.
 ```
 
 ## Verified
+
+2026-09-29 — **the §14 paragraph and the template's Replan check added by `RFC-1248`**
+(option C, adopted by the maintainer 2026-09-29, confirmed by the user). A Work close no
+longer makes a full plan review due by itself; it makes a replan check due, in this record.
+Not yet exercised at a real close.
 
 2026-09-28 — **§5c added: every workflow step that cites this close's requirements is read
 against the requirement's current text.** `00` FR-1188 (OQ-554, decided by delegation, option (b);

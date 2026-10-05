@@ -15,6 +15,7 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
+from backend.tests.approved_rows import add_approved
 from backend.tests.test_api_datasets import _headers
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -23,6 +24,7 @@ from sqlalchemy.exc import IntegrityError
 from app.config import Settings
 from app.db.models import ValidationRuleRow
 from app.db.session import Database
+from app.platform.approvals import approval_decision
 from model_schema import BUILTIN_RULES, new_uuid7
 
 
@@ -267,13 +269,16 @@ async def test_the_approval_exemption_reaches_builtin_rows_only(
     dry run (`01` §4.5 steps 2 and 3); only a row that came from the shipped catalogue is
     excused, and it is excused because it was reviewed in the specification instead.
     """
+    # The decision flag is what lets the write past `approval_guard()`, so the refusal this
+    # test is about is the CHECK's and not the trigger's.
     with pytest.raises(IntegrityError):
-        async with database.unit_of_work() as session:
+        async with database.unit_of_work() as session, approval_decision(session):
             session.add(_a_rule(workspace_id, status="approved"))
 
     async with database.unit_of_work() as session:
-        session.add(
-            _a_rule(workspace_id, status="approved", builtin=True, catalogue_id="VR-STR-1")
+        await add_approved(
+            session,
+            _a_rule(workspace_id, status="approved", builtin=True, catalogue_id="VR-STR-1"),
         )
 
 

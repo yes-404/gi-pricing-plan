@@ -91,10 +91,10 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         2, "a bulk operation's named refusal over a rate table; a rate table is not a quote input"),
     ("backend/src/app/platform/rate_tables.py", "bulk_operation", "str(exc)"): (
         1, "a rate-table bulk operation's parameter validation, echoed to the caller who sent it"),
-    ("backend/src/app/platform/rating_algorithms.py", "_parse_algorithm", "str(exc)"): (
-        2, "one read only to choose a code by keyword (`cycle`, `undefined value`); the other "
-        "RETURNS Pydantic's text of the submitter's own algorithm JSON to the submitter in the "
-        "422 body; not stored, not logged; an artifact definition, not a Quote Context"),
+    ("backend/src/app/platform/rating_algorithms.py", "graph_validation_error", "str(exc)"): (
+        1, "RETURNS Pydantic's text of the submitter's own algorithm or sub-graph JSON to the "
+        "submitter in the 422 body; not stored, not logged; an artifact definition, not a Quote "
+        "Context. The code is chosen by the typed error class, never by this text (FD-1326)"),
     ("backend/src/app/platform/rating_versions.py", "compile_rating_version", "str(exc)"): (
         1, "compile time: an artifact-level `ValueError` from `compile_bundle`; no quote is "
         "involved"),
@@ -115,9 +115,6 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         1, "a validation-rule catalogue lookup miss; Dataset Version path"),
     ("backend/src/app/api/demo.py", "get_guide", "{exc}"): (
         1, "the demo guide's own missing-source message: a path, no quote or dataset value"),
-    ("backend/src/app/api/rate_tables.py", "_seed_body", "str(exc)"): (
-        1, "rate-table seed validation echoing the caller's own request to the caller; a rate "
-        "table is not a quote input and the 422 is the request's own body"),
     ("backend/src/app/worker/data_handlers.py", "_materialise_split", "str(exc)"): (
         1, "`SplitError`, pricing-core's own message about a split definition; Dataset Version "
         "path, not a Quote Context"),
@@ -151,6 +148,10 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         1, "the allow-list itself: reached only for a `CodedError`, whose text is input-free"),
     ("packages/pricing-core/src/pricing_core/rating/compile.py", "_check_vocabulary", "{exc}"): (
         1, "compile time, artifact-level: no quote is involved"),
+    ("packages/pricing-core/src/pricing_core/rating/score.py", "_failing_node", "str(exc)"): (
+        1, "reads only the engine error's JSON `nodeId`; the text is neither stored nor logged, "
+        "and only a matched step's own id reaches the raised message: "
+        "test_rating_score.py::test_an_engine_error_text_never_reaches_the_raised_message"),
     ("packages/pricing-core/src/pricing_core/rating/score.py", "_score_batch_row",
      "error_message key"): (
         2, "test_scoring_handlers.py and test_quote_input_raise_sites.py (the error row and "

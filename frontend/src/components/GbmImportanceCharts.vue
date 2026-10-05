@@ -12,6 +12,7 @@ import type {
   PermutationImportance,
   PermutationOmission,
 } from "@/api/diagnostics";
+import type { Column } from "@/chart-table";
 import ChartFigure from "@/components/ChartFigure.vue";
 
 use([BarChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
@@ -49,14 +50,12 @@ const gainOption = computed(() => ({
   ],
 }));
 
-const gainRows = computed(() =>
-  props.importances.map((importance) => [
-    importance.feature,
-    importance.cover ?? null,
-    importance.frequency,
-    importance.gain,
-  ]),
-);
+const gainColumns: readonly Column<FeatureImportance>[] = [
+  { key: "feature", label: "Feature", value: (i) => i.feature },
+  { key: "cover", label: "Cover", value: (i) => i.cover ?? null },
+  { key: "frequency", label: "Frequency", value: (i) => i.frequency },
+  { key: "gain", label: "Gain", value: (i) => i.gain },
+];
 
 /**
  * Permutation importance, **on the holdout** (FR-174).
@@ -87,16 +86,14 @@ const permutationOption = computed(() => ({
   ],
 }));
 
-const permutationRows = computed(() =>
-  props.permutationImportances.map((importance) => [
-    importance.feature,
-    importance.baseline,
-    importance.permuted,
-    importance.repeats,
-    importance.seed,
-    importance.degradation,
-  ]),
-);
+const permutationColumns: readonly Column<PermutationImportance>[] = [
+  { key: "feature", label: "Feature", value: (i) => i.feature },
+  { key: "baseline", label: "Baseline", value: (i) => i.baseline },
+  { key: "permuted", label: "Permuted", value: (i) => i.permuted },
+  { key: "repeats", label: "Repeats", value: (i) => i.repeats },
+  { key: "seed", label: "Seed", value: (i) => i.seed },
+  { key: "degradation", label: "Degradation", value: (i) => i.degradation },
+];
 
 /**
  * Why a factor has no permutation importance, in words (FR-178). An unrecognised reason is
@@ -133,8 +130,8 @@ const sharedColumnNotes = computed(() =>
     <ChartFigure
       title="Feature importance"
       caption="Gain, with cover and frequency beside it. A property of the fitted booster — there is no train or holdout split to report."
-      :columns="['Feature', 'Cover', 'Frequency', 'Gain']"
-      :rows="gainRows"
+      :columns="gainColumns"
+      :rows="importances"
     >
       <VChart
         class="h-80 w-full"
@@ -146,8 +143,8 @@ const sharedColumnNotes = computed(() =>
     <ChartFigure
       title="Permutation importance (holdout)"
       caption="How much the holdout metric degrades when one feature is shuffled. Measured on the holdout by definition, so there is no train counterpart."
-      :columns="['Feature', 'Baseline', 'Permuted', 'Repeats', 'Seed', 'Degradation']"
-      :rows="permutationRows"
+      :columns="permutationColumns"
+      :rows="permutationImportances"
     >
       <VChart
         class="h-80 w-full"

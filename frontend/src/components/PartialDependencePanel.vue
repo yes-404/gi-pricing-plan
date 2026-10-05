@@ -6,6 +6,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import VChart from "vue-echarts";
 
 import type { PartialDependence } from "@/api/diagnostics";
+import type { Column } from "@/chart-table";
 import ChartFigure from "@/components/ChartFigure.vue";
 
 use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
@@ -44,9 +45,13 @@ function option(entry: PartialDependence) {
   };
 }
 
-function rows(entry: PartialDependence) {
-  return entry.points.map((point) => [point.value, point.mean_prediction, point.exposure_share]);
-}
+type Point = PartialDependence["points"][number];
+
+const columns: readonly Column<Point>[] = [
+  { key: "value", label: "Value", value: (point) => point.value },
+  { key: "mean-prediction", label: "Mean prediction", value: (point) => point.mean_prediction },
+  { key: "exposure-share", label: "Exposure share", value: (point) => point.exposure_share },
+];
 
 /**
  * FR-175's reasons, in words. The enum value is an identifier and says nothing to a
@@ -84,8 +89,8 @@ function explain(omission: NonNullable<PartialDependence["omitted"]>): string {
         v-if="entry.points.length"
         :title="entry.factor"
         caption="Mean prediction with the factor held at each value, exposure share beside it."
-        :columns="['Value', 'Mean prediction', 'Exposure share']"
-        :rows="rows(entry)"
+        :columns="columns"
+        :rows="entry.points"
       >
         <VChart
           class="h-64 w-full"

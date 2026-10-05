@@ -141,14 +141,18 @@ def test_the_real_repository_derives_a_guide() -> None:
 
 
 @pytest.mark.req("FR-408")
-def test_the_entrance_is_absent_where_development_identity_is(tmp_path: Path) -> None:
+def test_the_entrance_is_absent_where_development_identity_is(
+    tmp_path: Path, api_settings: Settings
+) -> None:
     """FR-408: one switch, and it is the refusal that already exists.
 
     `dev_auth_enabled` is `False` by default and refuses to start in a deployed
     environment. A page listing every route beside a pre-authenticated session is a genuine
     hole if it ever ships, and a second flag is one more thing that can be left on.
     """
-    settings = Settings(environment=Environment.LOCAL, version="test", dev_auth_enabled=False)
+    # The lifespan now checks the stores' tenant markers (FR-436), so the app needs a real
+    # database and bucket even to prove it refuses an unauthenticated caller.
+    settings = api_settings.model_copy(update={"dev_auth_enabled": False})
     with TestClient(create_app(settings), raise_server_exceptions=False) as client:
         refused = client.get("/api/v1/demo/guide")
         # 404, not 401: the surface does not exist here, and 401 would say "authenticate

@@ -5,7 +5,7 @@ title: Artifact B is stale and wrong a day after F58 and F91 were recorded resol
 status: active
 created: 2026-09-29
 owner: auditor
-tree: 2c2bbcdf3c91267f7d2b42159b1420e12ce1c634
+tree: 47d770e8fcbd2410fa101019ed8cf3aae69a1baa
 corrected_by: []
 relates: [WK-1178]
 ---
@@ -89,3 +89,26 @@ Proposed; the verdict is the lead's.
   confirms it is a watcher cycle that advances the mtime on two consecutive position moves,
   measured with `stat`, not by the watcher's report.
 - Owner: WK-1178, per the maintainer's entry "2026-09-29 16:34:39 BST · … FR-217 GUARD FAILS OPEN …; P9 recurrence check" (`to-lead.md`): "If the writer has stopped again, it is a recurrence: reopen the rows with a dated note, owner WK-1178." The fix is a durable in-repo derivation tool plus a durable trigger, since the 09-28 `derive.py` died with the deleted job dir.
+
+## Re-measurement, 2026-10-05 (before mint)
+
+Amended 2026-10-05 before mint: the measurement above is a point in time (2026-09-29, tree
+`2c2bbcdf`); this section re-measures at `origin/main` `47d770e8` and is why the front-matter
+`tree:` now names that commit. Run 2026-10-05T08:53Z (`date -u` in the same session):
+
+1. `stat -c '%y' ~/gi-pricing-plan.local/handover/runtime-state.json` → `2026-10-04
+   18:59:04 +0000`: the **mtime moved** after the 09-29 measurement.
+2. `position.written_at` in the same file, read with `python3 -c "import json;…"` →
+   `2026-09-29T21:36:41Z` (six days old), and `position.slice.value` is `''`. So the mtime
+   is not evidence of a position re-derivation: the content `written_at` did not move, which
+   is the gap between F91's mtime and `written_at` that this finding already names.
+3. `pgrep -af 'write_runtime_state|watcher-runtime-state'` → no match: no writer process.
+4. `watcher-runtime-state-cycle.sh` is not running.
+5. The writer itself resolves at main: `.claude/skills/watcher-runtime-state/scripts/write_runtime_state.py`
+   (present since `b551060a`, 2026-08-31). What the finding says is missing is the durable
+   *trigger* and the derivation of the position, not that script's existence.
+6. Register rows F58 and F91 still read "Resolved" at `origin/main` (rows opened by
+   "Artifact B has no live writer…" and "The RFC-895 runtime-state writer has not run…").
+
+The finding holds unchanged. Mint note: `PL-1277` cites this finding by its working id
+(`FD 9640`); at mint that plan, being frozen, is re-pointed by a dated delta, not edited.

@@ -3,7 +3,7 @@
     "id": "delivery-process-core",
     "version": "1.0.0",
     "derived_from": "docs/process/delivery-process.md",
-    "derived_from_digest": "sha256:4e60d0832dc1f4ad994c42e6e94ae9d4aa27229451c8fe34b398d61e4422acd0",
+    "derived_from_digest": "sha256:0b90853e7528ec29cb745bd73ce18ba3e9268904e22365b39d255566d4d2ab4a",
     "verified_against_tree": "0651c1e265648cbd3918adfc729ad965b83b1e0b",
     "authoritative": false,
     "note": "The markdown spec is authoritative. This file is the mechanical extract: state machine, guards, vocabularies, and runtime-state schema for hooks/watcher scripts. Regenerate or diff-check against the md on every spec change (RFC-895 script C4). Each block is the mechanically-checkable subset of the section it cites, not an exhaustive rendering -- a section may state more than its block records, and a block's silence is not the section's silence.",
@@ -122,7 +122,7 @@
       "work",
       "slice"
     ],
-    "children_execution": "strictly_sequential",
+    "children_execution": "sequential_within_a_work_max_2_build_slices_across_works",
     "source": "§4, §8"
   },
   "layers": {
@@ -221,7 +221,8 @@
         {
           "id": "process_children",
           "action": "invoke_child_flow_per_child",
-          "mode": "strictly_sequential"
+          "mode": "sequential_except_build_slices_across_works_max_2",
+          "amended": "2026-09-29, RL-1263 (§8)"
         },
         {
           "id": "audit",
@@ -368,7 +369,7 @@
       "source": "§7"
     },
     "parallelism": {
-      "rule": "no_two_children_of_same_layer_concurrently",
+      "rule": "no_two_children_of_same_layer_concurrently_except_build_slices_across_works",
       "protected_interest": "resource_contention_not_plan_stability",
       "plan_independence_is_not_an_exception": true,
       "carve_out": {
@@ -380,7 +381,70 @@
         "on_start": "announce_and_record_in_runtime_state",
         "prefer_existing_check": "ci_is_authoritative_full_gate_for_pushed_branches"
       },
-      "source": "§8"
+      "source": "§8",
+      "build_slices_across_works": {
+        "max_concurrent": 2,
+        "from_different_works": true,
+        "each_holds_gate_slot": true,
+        "no_shared_files": {
+          "forbidden": "both_change_same_existing_function_class_method_spec_section_or_policy_table",
+          "registry_exempt_append_only": {
+            "backend/src/app/db/models.py": "new_class_appended_no_edit_to_existing_class",
+            "backend/src/app/main.py": "router_registration_or_lifespan_hook_added_only",
+            "generated": [
+              "docs/contracts/openapi/generated.json",
+              "docs/contracts/schemas/generated/",
+              "docs/INDEX.md"
+            ],
+            "backend/migrations/versions/": "new_revision_file",
+            "not_exempt_hand_authored": [
+              "docs/contracts/openapi/gi-pricing.yaml",
+              "docs/contracts/schemas/*.json",
+              "docs/contracts/schemas/common/"
+            ],
+            "corrected": "2026-09-29, the maintainer's dated correction to the 22:57:52 registry list",
+            "backend/tests/test_contracts.py#ONE_SIDED_SLUGS": "key_disjoint_only_new_key_appended_or_one_slice_changes_one_existing_key_value_no_key_touched_by_both_dispatch_records_name_keys_second_merge_full_gate_incl_test_every_one_sided_slug_is_declared",
+            "amended": "2026-10-03 21:11:06 BST, the maintainer's dated amendment to RL-1263's registry list (option (b)): ONE_SIDED_SLUGS in backend/tests/test_contracts.py is exempt for key-disjoint edits"
+          },
+          "second_merge": [
+            "merge_main",
+            "repoint_down_revision_exactly_one_head",
+            "regenerate_generated_files",
+            "rerun_full_gate_on_merged_tree"
+          ],
+          "other_shared_path": "serialise_unless_dispatch_record_names_path_and_check",
+          "registry_list": "closed_amend_by_dated_line_only",
+          "ruled": "2026-09-29 22:57:52 BST, the maintainer by delegation (option c)"
+        },
+        "measurement_step_runs_alone": true,
+        "preparation_is_not_a_slice": [
+          "plans",
+          "rulings",
+          "rebases",
+          "mints",
+          "audits"
+        ],
+        "amended": "2026-09-29",
+        "ruling": "RL-1263",
+        "rl871_conditions": {
+          "i_two_independent_executors": "met",
+          "ii_no_measurement_in_flight": true,
+          "iii_coordination": {
+            "enforcing": "gate wrapper flock slots /tmp/slots/gate-1..2",
+            "record": "lead slot grant (slice, head SHA, BST) in eta.md In flight before each gate",
+            "runtime_state_announcement": "made, not relied on until #909's fix lands"
+          }
+        },
+        "contention_check": {
+          "pairs_measured": 3,
+          "record": "wall-clock, load, free -h at start and end",
+          "baseline": "max(#925 solo gate ~19 min, next solo run)",
+          "step_down_if": "any gate > 1.5x baseline or non-reproducible failure",
+          "reopen": "maintainer's dated line after re-measure",
+          "met_when": "all three pass; cite the three LG entries",
+          "confirmed": "2026-09-29 23:11:20 BST, the maintainer by delegation"
+        }
+      }
     },
     "human_checkpoints": {
       "at_close_of": [
