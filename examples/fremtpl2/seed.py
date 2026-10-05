@@ -272,26 +272,31 @@ async def run(rows: int | None) -> int:
         DatasetVersionRow,
         RoleAssignmentRow,
         RoleRow,
-        ValidationRuleRow,
+        UserRow,
+        ValidationReportRow,
     )
     from app.db.session import Database
+    from app.platform import approvals as approval_service
     from app.platform import datasets as dataset_service
     from app.platform import jobs as job_service
     from app.platform import profiles as profile_service
     from app.platform import rbac, workspaces
     from app.platform import validation as validation_service
-    from app.platform.approvals import approval_decision
+    from app.platform import validation_rules as rule_service
     from app.platform.blobs import BlobStore
     from app.worker.data_handlers import register_data_handlers
     from app.worker.tasks import execute_job
     from model_schema import (
         BUILTIN_RULES,
         ActorKind,
+        DecisionKind,
         JobKind,
         JobStatus,
         Principal,
         RuleOutcome,
         ScopeType,
+        Severity,
+        ValidationLayer,
         new_uuid7,
     )
 
@@ -308,7 +313,21 @@ async def run(rows: int | None) -> int:
     await blob_store.ensure_bucket()
 
     workspace_id = new_uuid7()
-    analyst = Principal(kind=ActorKind.USER, id=new_uuid7(), display="analyst@example.fr")
+    # FD 9717: `(issuer, subject)` is unique in `users`, and `ensure_member` looks a user up
+    # by id alone, so a fresh id on a re-run collides with the realm user the last run left
+    # behind. Reuse that user's id when there is one, so a second seed runs against a
+    # seeded database; mint one only the first time.
+    async with database.unit_of_work() as session:
+        existing_analyst_id = (
+            await session.execute(
+                select(UserRow.id).where(
+                    UserRow.issuer == REALM_ISSUER, UserRow.subject == REALM_SUBJECT
+                )
+            )
+        ).scalar_one_or_none()
+    analyst = Principal(
+        kind=ActorKind.USER, id=existing_analyst_id or new_uuid7(), display="analyst@example.fr"
+    )
     actuary = Principal(kind=ActorKind.USER, id=new_uuid7(), display="actuary@example.fr")
     # Principal.id is UUID | None at the type level -- "null only for `system`" (jobs.py) --
     # but both of these are ActorKind.USER with an id supplied at construction, and
@@ -394,9 +413,6 @@ async def run(rows: int | None) -> int:
 
     slug = f"fremtpl2-{new_uuid7().hex[-6:]}"
     async with database.unit_of_work() as session:
-        from sqlalchemy import func
-
-        from app.platform import validation_rules as rule_service
         from model_schema import DataDictionaryEntry, RecordGrain
 
         dataset = await dataset_service.create_dataset(
@@ -419,56 +435,25 @@ async def run(rows: int | None) -> int:
             session, workspace_id, authored_by=analyst.id
         )
 
-        rule_ids: list[str] = []
+        # DP-5 (RL-1407): the rules are authored through the platform's own path, so each
+        # has its `validation_rule.created` event (FR-353's author check reads it). They
+        # stay `draft` until the first version exists to dry-run them against (below).
+        rule_ids: list[tuple[str, UUID]] = []
         for rule in RULES:
             # Five of the nine configure a catalogue entry rather than inventing one, so
-            # `version=1` is already taken by the seeded definition. The next version is
-            # allocated the way `create_rule` allocates it — §4.5 step 4's ordinary "an
-            # edit is a new version", which is exactly what pointing a shipped rule at
-            # `policy_exposure` is.
-            version = 1 + (
-                await session.execute(
-                    select(func.coalesce(func.max(ValidationRuleRow.version), 0)).where(
-                        ValidationRuleRow.workspace_id == workspace_id,
-                        ValidationRuleRow.slug == rule["slug"],
-                    )
-                )
-            ).scalar_one()
-            row = ValidationRuleRow(
-                workspace_id=workspace_id, slug=rule["slug"], version=version,
-                layer=rule["layer"], check=rule["check"], severity=rule["severity"],
-                body={"target": rule["target"], "params": rule["params"], "scope": {},
-                      "tolerance": {}, "message": "", "rationale": ""},
-                status="approved", authored_by=analyst.id, approved_by=actuary.id,
-                dry_run_report_id=new_uuid7(),
-                # Workspace data, not a shipped row: it carries its own approver and its
-                # own dry run. `catalogue_id` records which shipped rule it configures, so
-                # the lineage survives the version bump; `builtin` stays false, because the
-                # approval exemption belongs to the reviewed definition and not to a
-                # workspace's configuration of it.
+            # `version=1` is already taken by the seeded definition; `create_rule` allocates
+            # the next version, which is `01` §4.5 step 4's "an edit is a new version" and
+            # exactly what pointing a shipped rule at `policy_exposure` is. `builtin` stays
+            # false: the approval exemption belongs to the reviewed definition and not to a
+            # workspace's configuration of it.
+            row = await rule_service.create_rule(
+                session, workspace_id=workspace_id, actor=analyst,
+                slug=rule["slug"], layer=ValidationLayer(rule["layer"]),
+                check=rule["check"], severity=Severity(rule["severity"]),
+                target=rule["target"], params=rule["params"],
                 catalogue_id=catalogue_id_by_slug.get(rule["slug"]),
             )
-            # ALLOWANCE (PL-1303 Acceptance 7): a legitimate seed writer, entered through the
-            # decision flag so `approval_guard()` still refuses every other writer.
-            async with approval_decision(session):
-                session.add(row)
-                await session.flush()
-            rule_ids.append(str(row.id))
-    # Through the service, not a direct insert: `replace_rule_set` is what points the
-    # dataset at its rule set (`01` §4.1's `validation_rule_set_id`), and a seed that
-    # bypassed it would produce a workspace the platform itself would not.
-    async with database.unit_of_work() as session:
-        from app.platform import validation_rules as rule_service
-
-        await rule_service.replace_rule_set(
-            session, workspace_id=workspace_id, actor=analyst, dataset_id=dataset_id,
-            slug=str(dataset_id),
-            members=[rule_service.RuleSetMember(rule_id=UUID(r)) for r in rule_ids],
-        )
-    print(
-        f"  dataset {slug} with {len(RULES)} approved rules across four layers, "
-        f"and `01` \u00a74.4's {len(BUILTIN_RULES)}-rule catalogue seeded\n"
-    )
+            rule_ids.append((rule["slug"], row.id))
 
     async def ingest(label: str, *, cleaned: bool) -> UUID:
         started = time.perf_counter()
@@ -534,6 +519,63 @@ async def run(rows: int | None) -> int:
 
     print("── version 1: the file as uploaded " + "─" * 40)
     first = await ingest("ingest", cleaned=False)
+
+    # DP-5 (RL-1407): the first version exists, so each rule is dry-run against it by the
+    # real `DATASET_VALIDATE` job, submitted with a change summary, and decided by the
+    # approver, as `model.py` does for the model. A rule whose dry run does not execute
+    # stops the seed: nothing here is approved without a report that says it ran.
+    for rule_slug, rule_id in rule_ids:
+        async with database.unit_of_work() as session:
+            job = await job_service.submit(
+                session, JobKind.DATASET_VALIDATE,
+                {"workspace_id": str(workspace_id),
+                 "actor": analyst.model_dump(mode="json"),
+                 "dataset_version_id": str(first), "dry_run_rule_id": str(rule_id)},
+                analyst, workspace_id=workspace_id,
+            )
+        status = await execute_job(database, job.id, blob_store)
+        if status is not JobStatus.SUCCEEDED:
+            raise SystemExit(f"dry run of {rule_slug}: job {status.value} — see job {job.id}")
+        async with database.session() as session:
+            rule_row = await rule_service.load_rule(
+                session, workspace_id=workspace_id, rule_id=rule_id
+            )
+            dry_report = (
+                None if rule_row.dry_run_report_id is None
+                else await session.get(ValidationReportRow, rule_row.dry_run_report_id)
+            )
+        if dry_report is None or dry_report.error_count > 0:
+            raise SystemExit(f"dry run of {rule_slug} did not execute — see job {job.id}")
+        async with database.unit_of_work() as session:
+            submitted = await rule_service.submit_for_review(
+                session, workspace_id=workspace_id, actor=analyst, rule_id=rule_id,
+                change_summary=f"{rule_slug}: a freMTPL2 demo rule, dry-run against version 1",
+            )
+            request_id = await rule_service.open_request_for(
+                session, workspace_id=workspace_id, row=submitted
+            )
+        async with database.unit_of_work() as session:
+            decided = await approval_service.decide(
+                session, workspace_id=workspace_id, request_id=request_id,
+                approver=approver, decision=DecisionKind.APPROVE,
+                comment=f"{rule_slug} approved for the demo",
+            )
+            await rule_service.apply_approval_decision(
+                session, workspace_id=workspace_id, actor=approver, request=decided
+            )
+    # Through the service, not a direct insert: `replace_rule_set` is what points the
+    # dataset at its rule set (`01` §4.1's `validation_rule_set_id`), and a seed that
+    # bypassed it would produce a workspace the platform itself would not.
+    async with database.unit_of_work() as session:
+        await rule_service.replace_rule_set(
+            session, workspace_id=workspace_id, actor=analyst, dataset_id=dataset_id,
+            slug=str(dataset_id),
+            members=[rule_service.RuleSetMember(rule_id=r) for _, r in rule_ids],
+        )
+    print(
+        f"  dataset {slug} with {len(RULES)} rules approved through the workflow across "
+        f"four layers, and `01` §4.4's {len(BUILTIN_RULES)}-rule catalogue seeded\n"
+    )
     first_report = await validate(first)
 
     # No manual transition: `dataset.validate` opens `validating` and closes it. This
