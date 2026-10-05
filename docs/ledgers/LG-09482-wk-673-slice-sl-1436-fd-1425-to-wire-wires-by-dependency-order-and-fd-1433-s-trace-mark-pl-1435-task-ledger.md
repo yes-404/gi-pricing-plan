@@ -142,3 +142,12 @@ travels through the `model_call` handler's `request.input` and back, which the e
 
 **This is a difference outside the FD-1425 fixtures, so it is a STOP for the maintainer (by delegation)** (RL-1423
 Condition B; Task 2c Step 4). Nothing was edited, no comparator was loosened. Reported to the lead.
+
+**Timing and the sweep-pause (stated honestly).** The head replay ran once, as one process (`OMP_NUM_THREADS=1 nice -n 19`,
+no pytest, no database), started just after the chain commit `47e09550` (commit stamp 22:48:35 UTC = 23:48:35 BST) and
+finished 22:49:58 UTC (23:49:58 BST): `head-compiled.jsonl` written 22:49:19 UTC, `head-fresh.jsonl` 22:49:58 UTC (file
+mtimes). The base recording had run earlier, finishing 22:42:19 UTC. **The head replay overlapped S7's held gate-1:** I did
+not read the slots immediately before starting it, and the maintainer's (by delegation) ruling that Task 2c's replay is a
+batch which waits for S7's release reached me after it had run. S7's gate may therefore have been contended during that
+window of about 80 seconds. The replay is a run, not a re-run: it is not repeated, and its result above stands. A re-run, if
+the maintainer rules one, waits for the release of gate-1.
