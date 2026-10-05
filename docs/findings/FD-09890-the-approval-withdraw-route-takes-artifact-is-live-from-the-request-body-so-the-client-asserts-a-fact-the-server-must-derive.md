@@ -10,11 +10,11 @@ corrected_by: []
 relates: [WK-674]
 ---
 
-# FD-9890 — The approval withdraw route takes artifact_is_live from the request body, so the client asserts a fact the server must derive
+# FD 9890 — The approval withdraw route takes artifact_is_live from the request body, so the client asserts a fact the server must derive
 
 ## Amendment before mint (2026-10-05)
 
-Amended 2026-10-05 before mint, at `47d770e8`: **the main defect is fixed** by `dfddfad8` (#1104, SL-1256, PL-1392 Task 6; ledgered in `LG-1405`). `withdraw_request` derives liveness server-side through `_is_deployed` (`backend/src/app/api/approvals.py:257`, called at `:299`); `artifact_is_live` is no longer a request-body field and remains only as the service's keyword argument (`backend/src/app/platform/approvals.py:491`); `backend/tests/test_api_approvals.py:565-576` shows a body carrying it refused 422. **Still open, owner WK-1178:** the class-sweep table below (the only enumerated record of client-asserted fields) and the LOW service-account residual — `ALLOWED_PERMISSIONS` (`backend/src/app/api/service_accounts.py:44`) and `_check_permissions` (`:141`) are unchanged at main, so a custom role with `admin:manage_service_accounts` and without `admin:manage_roles` can still mint a scoring service account. Every `file:line` cite in the sections below is to tree `65b334792e65`, before #1104 moved them; read them by symbol (`Withdraw`, `withdraw_request`, `platform.approvals.withdraw`), not line.
+Amended 2026-10-05 before mint, at `47d770e8`: **the main defect is fixed** by `dfddfad8` (#1104, SL-1256, PL-1392 Task 6; ledgered in `LG-1405`). `withdraw_request` derives liveness server-side through `_is_deployed` (`backend/src/app/api/approvals.py:257`, called at `:299`); `artifact_is_live` is no longer a request-body field and remains only as the service's keyword argument (`backend/src/app/platform/approvals.py:500`); `backend/tests/test_api_approvals.py:565-576` shows a body carrying it refused 422. **Still open, owner WK-1178:** the class-sweep table below (the only enumerated record of client-asserted fields) and the LOW service-account residual — `ALLOWED_PERMISSIONS` (`backend/src/app/api/service_accounts.py:44`) and `_check_permissions` (`:141`) are unchanged at main, so a custom role with `admin:manage_service_accounts` and without `admin:manage_roles` can still mint a scoring service account. Every `file:line` cite in the sections below is to tree `65b334792e65`, before #1104 moved them; read them by symbol (`Withdraw`, `withdraw_request`, `platform.approvals.withdraw`), not line.
 
 ## Finding
 
@@ -222,3 +222,17 @@ input: the same routes, for each type, must refuse a withdrawal of an approved r
 artifact is live, whatever the body says, including the three types with no decision hook.
 
 *Drafted under working id 9890.*
+
+Re-anchored 2026-10-05 at main `caa4e411`: the main defect is fixed at main, by `dfddfad8`
+(#1104; `git merge-base --is-ancestor dfddfad8 origin/main` exits 0). Read at that tree:
+`withdraw_request` (`backend/src/app/api/approvals.py`) opens its unit of work with
+`artifact_is_live = await _is_deployed(session, caller.workspace_id, request_id)` (`:299`) and
+passes it to `service.withdraw(..., artifact_is_live=artifact_is_live)`; `_is_deployed` (`:257`)
+returns true only for a `rating_version` request whose artifact has a `DeploymentRow`; the
+body model is `ApprovalWithdrawal` (`packages/model-schema/src/model_schema/approvals.py:370`; reason only, `extra="forbid"`), and
+`test_a_client_can_no_longer_assert_that_the_artifact_is_not_live`
+(`backend/tests/test_api_approvals.py:565-576`) refuses a body carrying `artifact_is_live` 422.
+`artifact_is_live` survives only as `service.withdraw`'s keyword argument
+(`backend/src/app/platform/approvals.py:500`; the cite read `:491` at `47d770e8`). The LOW
+residual is unchanged at main: `ALLOWED_PERMISSIONS` (`backend/src/app/api/service_accounts.py:44`)
+and `_check_permissions` (`:141`). `PL-1408` (line 510) still cites this finding by working id 9890.
