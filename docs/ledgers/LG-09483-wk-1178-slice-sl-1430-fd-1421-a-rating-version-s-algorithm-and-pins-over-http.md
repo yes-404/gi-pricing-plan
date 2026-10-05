@@ -110,3 +110,11 @@ Green: `pytest -q backend/tests/test_rating_version_create_pins.py`: `14 passed`
 `test_rating_version_compile.py`: `20 passed`. `ruff check` on the changed files is clean (one `I001` fixed; the new test file
 formatted). FR-223's `03:109` is NOT edited: RL 9758 mints first as RL-1438 (maintainer by delegation, relayed by the lead),
 then T1 is applied byte for byte from the minted record.
+
+### Task 0 Step 5 — the trial merge-tree with S7 (real, after the 03 edits)
+
+`git merge-tree --write-tree --name-only 19f8842f1a18743a78c0f97f4bb7b21c52e0d259 <this head c7f4956d>`: **exit code 1**,
+tree `986a8dc37468accb1349ee70810d86a7d017b867`. The only conflicted path is `docs/INDEX.md`, the generated index
+(regenerated, never hand-merged; neither branch's INDEX is final until its mint). `docs/specs/03-rating-engine.md`,
+`docs/contracts/openapi/generated.json` and `model_schema/rating.py` auto-merged. So the `03` §5.1 rows do not conflict:
+option (b) holds for the `03` text; the INDEX conflict is the exempt generated path.
