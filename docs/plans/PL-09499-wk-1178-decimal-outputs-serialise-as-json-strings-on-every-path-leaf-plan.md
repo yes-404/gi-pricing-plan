@@ -153,6 +153,50 @@ The entry headed "2026-10-05 18:20:40 BST — RL 9498 precision (1), the code: (
   refusal there gives every batch row `RATING_TYPE_MISMATCH`, and SL 9511's class-name check
   after the `try` never sees the value. Reported to the lead on 2026-10-05 before this delta.
 
+## Pre-mint delta 2 (2026-10-05): DP-3 and DP-4 ruled, and the conditions on the test changes
+
+The maintainer (by delegation), in `~/gi-pricing-plan.local/channel/to-lead.md`, relayed by the
+lead, verbatim. The entry headed "2026-10-05 18:25:42 BST — PL 9499 (#1213 @b342ae09): DP-3 = SL-1367 FIRST, CONFIRMED; DP-1 correction noted; the test inversions accepted with one condition":
+
+> DP-3: SL-1367 FIRST, CONFIRMED, for your reasons (it gates WK-675 S3's typed route and the 11/12 list; its ledger carries RL-1365's scripts that SL 9500 reuses; the client then shows SL 9500's narrowing). The roadmap SL-1409 row's order line gets a DATED correction at the next planner touch, citing this entry (the roadmap is a living doc, so the line is corrected in place with a date, not rewritten silently). PL-1364 DP-A3 is recorded as answered.
+> DP-1 marked RULED per RL 9498 (c), with 422 RATING_TYPE_MISMATCH per quote on /score AND /score/compare: noted, and the reds are rewritten.
+> dp per output (RoundSpec at rating.py:327) with round_to_text beside round_once: accepted. round_once's dp≠0 refusal stays untouched.
+> The two test changes not in the brief: ACCEPTED, with ONE CONDITION. test_score.py:1304-1320 (a planted float, expecting 200) becomes a 500. That is only right if the 500 is the NFR-499 "no value leaked" internal error (a planted float is an engine-invariant breach, not a caller or author fault). The rewritten test asserts INTERNAL_ERROR, the absence of the value in the body, and that the per-quote codes (including the new RATING_TYPE_MISMATCH) are NOT used for it. test_rating_ladder_exact.py:594 is inverted with a citation to RL-1343.
+> The NFR-502 STOP rule (HEAD's median p99 over base's by more than base's own 3-run range): accepted.
+> The false docstring at traces.py:148-151: fixed in the slice (a note, as for the models.py comment).
+
+The entry headed "2026-10-05 18:27:10 BST — RL 9498 STOP: (a) ADOPTED; my 18:20:40 "batch keeps the class name" is SUPERSEDED once SL 9500 lands":
+
+> (a). The batch path runs _build_outputs inside _score_batch_row's try (score.py:1096-1100), and _batch_error_code (:1006-1018) maps a coded "CODE: msg" ValueError to CODE. So with ONE producer (SL 9500's check in _build_outputs), batch rows code the fault RATING_TYPE_MISMATCH, the same as /score: FR-254 holds, and the codes agree. My 18:20:40 "NAMED, NOT CHANGED: batch keeps the class name" described the state BEFORE SL 9500 and is SUPERSEDED for after it; the RL quotes both entries.
+> Amendments, pre-mint, ONE DM commit: T2 and T3's batch clause = "until SL 9500 merges, batch codes it ValueError (SL 9511's _coerce_output_value, the class-name rule); after, RATING_TYPE_MISMATCH, from the single producer"; item 8 and the Acceptance to match. My 18:26:46 T1 fix ("T1 states ValueError") becomes the same time-bounded sentence in T1.
+> PL 9499 marks DP-4 ruled (a). SL 9500 RE-EXPECTS SL 9511's class-name red to RATING_TYPE_MISMATCH, citing this entry, with a batch red asserting the row's error_code is RATING_TYPE_MISMATCH and the run continues. PL 9509 marks its class-name red "until SL 9500".
+> (b) is refused (a path flag in the shared builder is the divergence FR-254 forbids).
+
+**What this delta changes, at every site it reaches** ([`README.md`](README.md) rule 5):
+- **DP-3 ruled (a): `SL-1367` first.** DP-3's row, activation need 5 (now unconditional), the
+  contention table's `SL-1367` row and Hand-off 3 are amended in place. **`PL-1364` DP-A3 is
+  answered by the 18:25:42 entry** (separate slices, Part A first). The `SL-1409` row's lane-B
+  order line in `docs/roadmap.md` gets a dated correction in this commit, citing the entry, with
+  the old order kept and marked superseded in place.
+- **DP-4 ruled (a).** Batch codes a non-integral `int`/`count` value `RATING_TYPE_MISMATCH`, from
+  the single producer, once this slice merges; until then SL 9511's `ValueError` stands. Item 27
+  now asserts `RATING_TYPE_MISMATCH` and that the run continues; **item 28** is added: this slice
+  re-expects SL 9511's class-name reds (PL 9509 items 6 and 13) to `RATING_TYPE_MISMATCH`, citing
+  the 18:27:10 entry. `RL 9498` is amended pre-mint by the decision-maker to say "until SL 9500
+  merges, … ValueError …; after, RATING_TYPE_MISMATCH"; this slice applies T3 as minted.
+- **Item 18 takes the condition.** The planted float (`_exact` → `None` under the `money_minor`
+  output `fee_minor`) is refused at `ScoringResult` construction (`RL-1343` rule 4). `RL-1343`
+  names no code for that refusal; the 18:25:42 entry fixes it as the NFR-499 internal error. So
+  item 18 asserts **500**, problem `code == "INTERNAL_ERROR"` (`backend/src/app/errors.py:572-580`,
+  fixed detail text), no `1234.5` and no input value in the body, and a `code` outside
+  `_PER_QUOTE_CODES` (so neither `RATING_TYPE_MISMATCH` nor any other per-quote code). This is
+  consistent with items 25–26: a non-integral `int`/`count` is the declared-type fault the
+  producer detects and codes (422); a float that reaches construction under any other type is an
+  engine-invariant breach (500).
+- **Accepted as planned:** the per-output `dp` with `round_to_text` beside `round_once` (whose
+  `dp != 0` refusal stays untouched); item 9's inversion citing `RL-1343`; the `NFR-502` stop rule;
+  the `traces.py:148-151` docstring fix (already in §"Write set" and Task 5 Step 2).
+
 ## Why this plan exists
 
 No plan discharged `RL-1343` at `fb178c36`:
@@ -170,7 +214,7 @@ No plan discharged `RL-1343` at `fb178c36`:
 
 ## Status
 
-`draft`. ~~**DP-1 is open, the maintainer's;**~~ *(pre-mint delta 1: DP-1 ruled by `RL 9498`.)* **DP-4 is open, the maintainer's; DP-3 is open, the lead's** (recommendations given);
+`draft`. ~~**DP-1 is open, the maintainer's;**~~ *(pre-mint delta 1: DP-1 ruled by `RL 9498`.)* ~~**DP-4 is open, the maintainer's; DP-3 is open, the lead's** (recommendations given);~~ *(pre-mint delta 2: DP-3 and DP-4 ruled (a); no decision point is open)*;
 DP-2 is not blocking. The plan
 moves to `active` only through a separate activation PR, after every activation need below holds.
 
@@ -196,7 +240,7 @@ moves to `active` only through a separate activation PR, after every activation 
    *(pre-mint delta 1)* **DP-3 decided by the lead; DP-4 ruled; and `RL 9498` (#1212, the `RL-`
    carrying T2 and T3) minted, its T3 reflecting DP-4's ruling** (§"Spec text owed"). DP-1 is
    ruled by `RL 9498`. This plan drafts no spec text.
-5. **Under DP-3 (a), `SL-1367` merged** (its ledger holds `RL-1365`'s scripts, which Task 6 reuses).
+5. **`SL-1367` merged** (its ledger holds `RL-1365`'s scripts, which Task 6 reuses). *(Pre-mint delta 2: DP-3 ruled (a), so this need is unconditional.)*
 6. **The maintainer's dispatch GO, a solo window for Task 6, and this plan made `active` by a
    dated line** in a separate activation PR. The dispatch record writes `RL 9620`'s (working id,
    #1162) same-Work lines for every WK-1178 slice in flight beside this one (§"Write set").
@@ -307,7 +351,10 @@ it green existed. A test that fails with the right status but another cause is a
     plant and its `req("FR-273")` marker; its expectation becomes: a 500 problem response whose
     body contains neither `1234.5` nor `premium_in`'s value (NFR-499). Its old expectation is run
     once after Task 2 and fails; recorded. Under DP-1 (b), the dispatch record restates the status
-    and code.
+    and code. *(Pre-mint delta 2, the 18:25:42 condition: the 500 is the NFR-499 internal error.
+    The test asserts status 500, `body["code"] == "INTERNAL_ERROR"`, `body["code"] not in
+    _PER_QUOTE_CODES` (imported from `app.api.score`, so the new `RATING_TYPE_MISMATCH` is
+    covered), and neither `1234.5` nor `premium_in`'s value anywhere in `response.text`.)*
 
 **Task 6 — `NFR-502` measured again (gate's own mode)**
 
@@ -369,13 +416,24 @@ integer part, with no tolerance (entry (2)).
     (`backend/tests/test_score_compare.py`, appended): the same algorithm on either side of
     `POST /api/v1/score/compare` answers **422** `RATING_TYPE_MISMATCH` (`RL 9498` item 9).
     **Red:** 200 with the number.
-27. **Batch, the same fault** (`P`, `-k integral_batch`): `score_batch` over two rows, one giving
+27. *(Amended in place, pre-mint delta 2: DP-4 ruled (a). The row's `error_code` is
+    `RATING_TYPE_MISMATCH`, and the run continues: the other row is `"quoted"` with `3` in its
+    `outputs_json`. Red: the class name (`ValueError`, after SL 9511) or the type refusal (before
+    it), by order; recorded.)* **Batch, the same fault** (`P`, `-k integral_batch`): `score_batch` over two rows, one giving
     `2.9999999999`, one giving `3.0`. The first is an `"error"` row whose `error_code` is **the
     code DP-4 rules** (under (a), `RATING_TYPE_MISMATCH`; under (b), the exception class name,
     as `RL 9498` item 8 states today); the second's `outputs_json` carries `3`. The other rows
     complete (FR-255). **Red:** depends on order: before SL 9511, the batch refusal of `int` at
     `:964-965`; after SL 9511, its `int` branch's class-name error (PL 9509 item 6) or, for the
     whole value, `3`. The dispatch record restates the expected red at the dispatch tree.
+28. *(Pre-mint delta 2, DP-4 (a), the 18:27:10 entry.)* **SL 9511's class-name reds re-expected.**
+    PL 9509's items 6 and 13 (`test_a_non_integral_value_for_an_integer_output_is_an_error_row`,
+    `test_a_near_integer_under_an_integral_type_is_an_error_row`, in
+    `test_rating_score_batch_outputs.py`) assert `error_code == "ValueError"`. This slice edits
+    each to `RATING_TYPE_MISMATCH`, with a comment citing the 18:27:10 entry, and each still
+    asserts the batch completes. Run after Task 3b Step 3 and before the edit, each FAILS on
+    `'RATING_TYPE_MISMATCH' == 'ValueError'`; recorded. If SL 9511 has not merged (contrary to
+    the recommended order), there is nothing to edit and item 27 alone carries the batch code.
 
 ## Global Constraints
 
@@ -503,14 +561,14 @@ Read at `fb178c36`. Nothing was executed.
 | `packages/pricing-core/tests/test_rating_decimal_outputs.py` | added: items 1–7, 11; 24, 27 *(pre-mint delta 1)* |
 | `packages/model-schema/tests/test_scoring_outputs.py` | added: item 10 |
 | `packages/pricing-core/tests/test_rating_score_batch.py` | edited: one assertion in the `:158` test (item 8) |
-| `packages/pricing-core/tests/test_rating_score_batch_outputs.py` | edited: PL 9509 item 7's expectations (item 8) |
+| `packages/pricing-core/tests/test_rating_score_batch_outputs.py` | edited: PL 9509 item 7's expectations (item 8); items 6 and 13's `error_code` (item 28, pre-mint delta 2) |
 | `packages/pricing-core/tests/test_rating_ladder_exact.py` | edited: the `:594-610` test (item 9) |
-| `backend/tests/test_score.py` | appended: item 16; item 25 *(pre-mint delta 1)*; edited: the `:1304-1320` test's expectation (item 18) |
+| `backend/tests/test_score.py` | appended: item 16; item 25 *(pre-mint delta 1)*; edited: the `:1304-1320` test's expectation (item 18; `INTERNAL_ERROR`, pre-mint delta 2) |
 | `backend/tests/test_score_compare.py` | appended: item 17; item 26 *(pre-mint delta 1)* |
 | `backend/src/app/api/score.py` *(pre-mint delta 1)* | edited: `_PER_QUOTE_CODES` (`:97-104`), one entry `RATING_TYPE_MISMATCH`, and its comment (`:92-96`) if it lists the codes |
 | `docs/specs/03-rating-engine.md` the FR-214 row (`:83`) | PL 9509's T2, from its `RL-`, **only if this slice merges before SL 9511** (Task 7) |
 | `docs/specs/03-rating-engine.md` the owned-code list (`:929`) *(pre-mint delta 1)* | `RL 9498`'s T3, always (Task 7) |
-| the slice's ledger `docs/ledgers/LG-<n>`; `docs/INDEX.md`; `docs/roadmap.md` (this slice's row) | added; regenerated; activation and closing lines |
+| the slice's ledger `docs/ledgers/LG-<n>`; `docs/INDEX.md`; `docs/roadmap.md` (this slice's row) | added; regenerated; activation and closing lines. *(Pre-mint delta 2: the `SL-1409` row's dated order correction is made in **this plan PR**, not by the slice.)* |
 
 **Contention.** See §"Contention table" below.
 
@@ -564,9 +622,9 @@ stored-data check (Task 0 Step 3).
 | DP | Question | Options | Recommendation | Owner | Blocks |
 |---|---|---|---|---|---|
 | **DP-1** | **What `/score` answers when a `float` reaches `outputs`** after rule 4: an `int`/`count` output over a fractional value (DP-1 (b) of PL 9509 makes it "that ROW's error" in batch but says nothing for `/score`), a compound output holding a float, or a planted float path (item 18) | **(a)** The construction-time `ValidationError` (a `ValueError`) is not a `CodedError`, so `_as_platform_error` returns `None` and the route answers the generic 500 (`errors.py:594`); batch makes it an error row with the class name. **(b)** `_build_outputs` checks each declared integral type before construction and raises a registered `CodedError` (for example `OUTPUT_TYPE_VIOLATION`), mapped to a named status, with a dated FR-214 clause and an `03` error-code row | **(a).** The case is an engine value that its own declared type does not admit: a defect, not a per-quote input fault, and OQ 9556 (#1200, decided A1 + B3) and PL 9521 close the producers that reach it at save. A 500 is how `/score` reports every other unrecognised failure (`api/score.py:316-318`), and (a) matches PL 9509 DP-3 as ruled (the class name). (b) adds a code and spec text for a case that should not occur, and a per-type check on the hot path. **RULED (pre-mint delta 1), against the recommendation, by `RL 9498` (the 18:20:06 and 18:20:40 entries): a non-integral `int`/`count` value refuses the quote with 422 `RATING_TYPE_MISMATCH`, an existing owned code added to `_PER_QUOTE_CODES`.** The residue (a float under another declared type; item 18's plant) stays the generic 500, `RL-1343` rule 4's own consequence | the maintainer (by delegation) | items 18, 24–27 |
-| **DP-4** *(pre-mint delta 1)* | **The batch `error_code` of a non-integral `int`/`count` value, now that `/score` refuses it with a coded error.** `RL 9498` item 8 and its T3 say batch keeps the exception class name. But the refusal must run in `_build_outputs` (before `ScoringResult` is built, which refuses the float, rule 4), batch reaches `_build_outputs` inside the row `try` (`_score_context_sync` → `build_scoring_result`, `score.py:1096-1100`), and `_batch_error_code` (`:1006-1018`) returns the code of any `"CODE: …"` error. So with one producer, batch rows carry `RATING_TYPE_MISMATCH` | **(a)** Amend `RL 9498` pre-mint: both paths code the fault `RATING_TYPE_MISMATCH`; T3's batch clause and item 8 change; SL 9511's class-name red holds until this slice merges, and is re-expected then. **(b)** Keep the class name in batch: the coded refusal is raised only on the `/score` path, which needs a path flag through the shared `build_scoring_result` | **(a).** One producer and one code per fault (FR-254: "never a separate 'batch implementation' that could diverge"); FR-255's "typed errors" are better served by the owned code than by a class name; (b) builds the divergence FR-254 forbids, to preserve a difference the ruling only "named, not changed" | the maintainer (by delegation) | item 27; T3's text; activation need 4 |
+| **DP-4** *(pre-mint delta 1)* | **The batch `error_code` of a non-integral `int`/`count` value, now that `/score` refuses it with a coded error.** `RL 9498` item 8 and its T3 say batch keeps the exception class name. But the refusal must run in `_build_outputs` (before `ScoringResult` is built, which refuses the float, rule 4), batch reaches `_build_outputs` inside the row `try` (`_score_context_sync` → `build_scoring_result`, `score.py:1096-1100`), and `_batch_error_code` (`:1006-1018`) returns the code of any `"CODE: …"` error. So with one producer, batch rows carry `RATING_TYPE_MISMATCH` | **(a)** Amend `RL 9498` pre-mint: both paths code the fault `RATING_TYPE_MISMATCH`; T3's batch clause and item 8 change; SL 9511's class-name red holds until this slice merges, and is re-expected then. **(b)** Keep the class name in batch: the coded refusal is raised only on the `/score` path, which needs a path flag through the shared `build_scoring_result` | **(a).** One producer and one code per fault (FR-254: "never a separate 'batch implementation' that could diverge"); FR-255's "typed errors" are better served by the owned code than by a class name; (b) builds the divergence FR-254 forbids, to preserve a difference the ruling only "named, not changed". **RULED (a), pre-mint delta 2** (the 18:27:10 entry; (b) refused) | the maintainer (by delegation) | items 27, 28; T3's text; activation need 4 |
 | DP-2 *(not blocking)* | **Does `NFR-502` gain a dated line with this slice's figure?** | **(a)** No: the figures go in the ledger only; `RL-1365`'s dated line, applied by `SL-1367`, is the requirement's record of the current figure. **(b)** Yes: an `RL-` with a line like `RL-1365`'s | **(a).** `RL-1343` §5 asks the slice to "re-measure NFR-502 and quote the figure", which the ledger does. Under DP-3 (a) `SL-1367`'s line already stands when this slice measures, and the ledger quotes the delta against it; under DP-3 (b) `SL-1367`'s line is measured on a tree that carries this change. Either way a second line one slice apart would quote a near-identical figure | the maintainer (by delegation) | none |
-| **DP-3** | **The order of this slice and `SL-1367` (FD-1335 Part A, `PL-1364`).** Two records disagree. The `SL-1409` row (`docs/roadmap.md:1435`, filed 2026-10-01) orders lane B "… → the `RL-1343` decimal fix → FD-1335 Part A". `PL-1364` DP-A3 (`:669`, the lead's, **open**) recommends (a) "the rule-4 slice follows on the next free lane", and its Hand-off (`:1082-1086`) is written for that order: "the contract already carries `$ref ScoringResult` … It re-measures `NFR-502` by this plan's Task 5 method, `RL-1365`'s scripts in this slice's ledger" | **(a)** `SL-1367` first, then this slice. **(b)** This slice first, then `SL-1367` (the `SL-1409` row's order). **(c)** Fold the two into one slice (`PL-1364` DP-A3 (b)) | **(a).** `SL-1367` gates WK-675 S6 and S7 (`FD-1335` item 1); this slice gates nothing on WK-675 (`RL-1343` §5). Under (a) this slice's `NFR-502` run reuses `RL-1365`'s scripts from `SL-1367`'s ledger, so the two figures are comparable (`RL-1365` §"Observed, not ruled"); and the frontend half regenerates a client in which `ScoringResult.outputs` first appears, so the ruled "breaking wire change" is visible in `schema.d.ts` rather than invisible. (b) leaves this slice to write the scripts and gives a frontend half with nothing to regenerate. (c) widens the WK-675 gating slice. Both are WK-1178 and touch `score.py`, so they are serial in every option. The plan's Tasks 6 and 8 are written to hold under (a) and (b) | lead (`PL-1364` DP-A3; `lead.md`) | activation need 4; Tasks 6, 8 |
+| **DP-3** | **The order of this slice and `SL-1367` (FD-1335 Part A, `PL-1364`).** Two records disagree. The `SL-1409` row (`docs/roadmap.md:1435`, filed 2026-10-01) orders lane B "… → the `RL-1343` decimal fix → FD-1335 Part A". `PL-1364` DP-A3 (`:669`, the lead's, **open**) recommends (a) "the rule-4 slice follows on the next free lane", and its Hand-off (`:1082-1086`) is written for that order: "the contract already carries `$ref ScoringResult` … It re-measures `NFR-502` by this plan's Task 5 method, `RL-1365`'s scripts in this slice's ledger" | **(a)** `SL-1367` first, then this slice. **(b)** This slice first, then `SL-1367` (the `SL-1409` row's order). **(c)** Fold the two into one slice (`PL-1364` DP-A3 (b)) | **(a).** `SL-1367` gates WK-675 S6 and S7 (`FD-1335` item 1); this slice gates nothing on WK-675 (`RL-1343` §5). Under (a) this slice's `NFR-502` run reuses `RL-1365`'s scripts from `SL-1367`'s ledger, so the two figures are comparable (`RL-1365` §"Observed, not ruled"); and the frontend half regenerates a client in which `ScoringResult.outputs` first appears, so the ruled "breaking wire change" is visible in `schema.d.ts` rather than invisible. (b) leaves this slice to write the scripts and gives a frontend half with nothing to regenerate. (c) widens the WK-675 gating slice. Both are WK-1178 and touch `score.py`, so they are serial in every option. The plan's Tasks 6 and 8 are written to hold under (a) and (b). **RULED (a), pre-mint delta 2** (the 18:25:42 entry): `SL-1367` first; `PL-1364` DP-A3 answered | lead (`PL-1364` DP-A3; `lead.md`) | activation need 5; Tasks 6, 8 |
 
 ## Contention table
 
@@ -588,7 +646,7 @@ slices and others) share no definition with this slice; `generated.json` is regi
 | SL 9511 | `test_rating_score_batch_outputs.py` | adds it (items 1–3, 5–8) | edits its item 7 (item 8 here) | **after SL 9511 only**; under the other order item 8 adds the two-path case to `P` instead |
 | *(pre-mint delta 1)* every open plan, for `api/score.py` `_PER_QUOTE_CODES` | read only: PL 9560 (#1196, `:528`, `:555`) and PL 9567 (#1193) cite it; none writes it | — | one entry added | **no shared write** (sweep of every open PR's plans for `_PER_QUOTE_CODES`, `03:929` and `RATING_TYPE_MISMATCH`, 2026-10-05 ~18:45 BST; the other hits name the code in compile-time contexts only) |
 | **SL 9561**, PL 9560 (#1196 @`68b2f860`; WK-1178) | `score.py`; `test_score.py`, `test_score_compare.py` | adds `_check_no_shadowed_produced_names`; edits `score_one`, `_score_context_sync`; appends reds | `_build_outputs`, `_coerce_output_value`; appends items 16–17 | different definitions; append-only → **ordered first** in lane B (activation need 2) |
-| **`SL-1367`**, `PL-1364` (minted, `draft`; WK-1178) | `test_contracts.py`; `test_score.py`, `test_score_compare.py`; generated contracts | appends the untyped-2xx guard and helpers; appends spy tests; replaces the docstring of `test_the_result_is_returned_without_outbound_validation`; documents the two 200s (`api/score.py` decorators); the `NFR-502` row | appends item 14's guard; appends items 16–17; edits the `:1304-1320` test; never edits `api/score.py` or the `:342` test | different definitions; **serial by Work** (`PL-1364` `:766-767`), order **DP-3**. **Timing: never the same window** (its Task 5 is `NFR-502` too) |
+| **`SL-1367`**, `PL-1364` (minted, `draft`; WK-1178) | `test_contracts.py`; `test_score.py`, `test_score_compare.py`; generated contracts | appends the untyped-2xx guard and helpers; appends spy tests; replaces the docstring of `test_the_result_is_returned_without_outbound_validation`; documents the two 200s (`api/score.py` decorators); the `NFR-502` row | appends item 14's guard; appends items 16–17; edits the `:1304-1320` test; edits `api/score.py` only at `_PER_QUOTE_CODES` (pre-mint delta 1), never its decorators or the `:342` test | different definitions; **serial by Work** (`PL-1364` `:766-767`), **`SL-1367` first** (DP-3 ruled (a), pre-mint delta 2). **Timing: never the same window** (its Task 5 is `NFR-502` too) |
 | **PL 9776**, F35 remedy (#1051 @`c7621ca2`; WK-1178) | `score.py`; `model_schema/scoring.py`; `test_score_compare.py`, `test_score.py` | `_build_trace`; `build_scoring_result` (which calls `_build_outputs`); `TraceStep`'s docstring; changes three `test_score_compare.py` tests, appends one | `_build_outputs`; `ScoringResult.outputs`; appends | different definitions, but its plan calls this slice same-Work **serial** (its `:938`); `build_scoring_result`'s call line to `_build_outputs` is unchanged by us. **Timing: its two `NFR-490` windows are not ours** |
 | **PL 9597**, A-2 (#1178 @`176a6a75`; WK-1178) | `score.py` | the module docstring item 2 (`:33-41`) | not the docstring | different text → **allowed one-sided**. **Timing: its `NFR-489` GLM run is never in our window** |
 | **PL 9609**, WK-1250 S3 (#1173 @`7c8736fd`; WK-1250) | `score.py`; `test_score.py` | `_check_purpose_mount`, its calls, `score_one`, `_score_context_sync`; appends route tests; reads `QuotePurpose` in `scoring.py` | as above | different definitions; append-only → **allowed one-sided**, the dispatch record naming each definition |
@@ -715,10 +773,10 @@ def round_to_text(value: Decimal, rounding: LadderRounding) -> str:
 - [ ] **Step 4: Item 25's second red.** Run item 25 now: it FAILS with **500** (the code is not yet
   per quote, `api/score.py:332`). Record. Add `RATING_TYPE_MISMATCH` to `_PER_QUOTE_CODES`
   (`:97-104`). Run items 24–26: PASS.
-- [ ] **Step 5: Item 27.** Run it; it asserts the code DP-4 ruled. Under (a), PL 9509's item 6
-  (`error_code == "ValueError"` for `driver_age * 1.1` under `int`) now reads
-  `RATING_TYPE_MISMATCH`: if SL 9511 has merged, edit that one expectation in
-  `test_rating_score_batch_outputs.py` and record it (§"Write set" already lists the file).
+- [ ] **Step 5: Items 27 and 28.** *(Pre-mint delta 2: DP-4 ruled (a).)* Run item 27: PASS with
+  `RATING_TYPE_MISMATCH`. Run PL 9509's items 6 and 13: each FAILS on the code (item 28's red);
+  record, then edit both expectations to `RATING_TYPE_MISMATCH` citing the 18:27:10 entry
+  (§"Write set" lists the file). Run again: PASS.
 - [ ] **Step 6: Commit** with Task 7 Step 0's T3: `fix(score): an int or count output is a JSON integer, a non-integral value refuses the quote (RL 9498)`.
 
 ### Task 4: The contract (items 13–15)
@@ -781,7 +839,7 @@ def round_to_text(value: Decimal, rounding: LadderRounding) -> str:
    separate activation PR.
 2. On merge, `FD-1333` is discharged, and so is FD 9513's `/score` residue for `relativity` and
    `percentage` (DP-2 (ii)). The auditor closes both and names this slice.
-3. **To the lead, on DP-3:** `PL-1364`'s Hand-off (`:1082-1086`) and the `SL-1409` row
+3. *(Pre-mint delta 2: DP-3 ruled (a); the `SL-1409` row's dated correction is in this PR.)* **To the lead, on DP-3:** `PL-1364`'s Hand-off (`:1082-1086`) and the `SL-1409` row
    (`docs/roadmap.md:1435`) give opposite orders; whichever is decided, the other record is the
    one corrected (the roadmap row by the lead; `PL-1364` by a delta or not at all, since its
    hand-off already assumes (a)). Under (b), `SL-1367`'s executor re-reads `scoring.schema.json`
@@ -812,3 +870,8 @@ def round_to_text(value: Decimal, rounding: LadderRounding) -> str:
    6) and in batch's check (item 11). The model-level refusal cannot see it, and item 10's control
    records that, so nobody later reads rule 4 as covering it.
 7. **Pre-mint delta 1 coverage:** entry (1): items 25, 26, Task 3b Steps 3–4, write set (`_PER_QUOTE_CODES`), T3 (Task 7 Step 0); "the red asserts the HTTP status AND the code": items 25 and 26 assert 422 and `RATING_TYPE_MISMATCH`, and a 500 is recorded as the intermediate red; entry (2) "3.0 → 3": item 24, and "2.9999999999 … refused": item 25; the batch code: DP-4 and item 27.
+8. **Pre-mint delta 2 coverage:** 18:25:42 entry: DP-3 (row, activation need 5, contention row,
+   Hand-off 3, the roadmap correction); "PL-1364 DP-A3 is recorded as answered": the delta and the
+   DP-3 row; the condition on `:1304-1320`: item 18 (`INTERNAL_ERROR`, no value, not a per-quote
+   code); `:594` inverted citing `RL-1343`: item 9; the stop rule and `round_to_text`: unchanged;
+   the docstring: Task 5 Step 2. 18:27:10 entry: DP-4's row, item 27, item 28, Task 3b Step 5.
