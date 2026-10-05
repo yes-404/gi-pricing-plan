@@ -7,7 +7,7 @@ created: 2026-10-05            # working id; the mint date will replace this (ch
 owner: auditor
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc
 corrected_by: []
-relates: [WK-1178, FR-221, FR-71, FD-1374]
+relates: [WK-673, FR-221, FR-71, FD-1374]
 ---
 
 # FD-9707 — `to_wire` translates a `lookup` step to an exact key match; `as_at` is never read
@@ -17,7 +17,7 @@ relates: [WK-1178, FR-221, FR-71, FD-1374]
 
 ## Finding
 
-**Proposed severity HIGH; the deputy sets it at the mint. Proposed owner WK-1178 (provisional).** A lookup over
+**Severity HIGH (the deputy's, 2026-10-05 13:11:05 BST, final unless an upstream filter covers every scoring path; none found, see §3). Owner WK-673; deadline before the P2 exit demo.** A lookup over
 effective-dated rows returns the first row whose key matches, whatever the quote's `as_at`. When a key has more
 than one row, a quote whose date falls in a later row's window is priced on an earlier row. That is a wrong rate
 on a rated quote, not a missing feature.
@@ -81,12 +81,36 @@ Output (`uv run python`, 2026-10-05):
 The first line is right. The second is wrong: `NEW` is in force on 2026-06-01. The same answer for both dates is the
 defect. Not committed as a test; the scratch script is the record.
 
-### 3. What this does not show
+### 3. No upstream filter on any scoring path (read, not run)
 
-Whether a shipped Reference Table Version holds two rows for one key. The existing lookup test
-(`test_rating_runtime.py::test_lookup_step_wire_translation_matches_by_key`) uses one row per key, so it passes.
-Exposure in a local database was not measured. The platform's own reference-data rule (`ReferenceRow`, half-open
-windows) allows such rows, so the case is the ordinary one for a rate change, not a corner.
+The out-of-force rows are not removed before the decision is built, on any of the three paths. All three evaluate
+one decision built once per bundle by `load_bundle` (`runtime.py:666`: `to_wire(bundle.graph, bundle.resolved_payloads)`,
+the only `to_wire` call in `backend/src` and `packages/*/src`), and a bundle is content-addressed, so it cannot
+hold a per-quote date.
+
+- The rows come from the resolver: `_Resolver.resolve`, `reference_table` branch (`backend/src/app/platform/rating_versions.py:515-523`),
+  calls `reference_service.rows_as_at(..., as_at=None, limit=_ALL_REFERENCE_ROWS)`. With `as_at=None` that function
+  does not filter (`reference.py:478-517`: the half-open window applies only `if as_at is not None`), so the bundle
+  carries every row of every window.
+- `POST /score`: `score_one` (`api/score.py:375`) → `bundle.decision.async_evaluate` (`score.py`, `score_one`).
+  Not covered.
+- `POST /score/compare`: two `score_one` calls (`api/score.py:447`). Not covered.
+- `POST /score/batch`: `_score_one_ref` → `score_batch` (`worker/scoring_handlers.py:231`) →
+  `_score_batch_row` → `bundle.decision.evaluate` (`score.py:1070`). Not covered.
+
+Covered paths: none. Not covered: all three. The quote's `effective_date` reaches the engine as a context key
+(`score.py:911`) and `as_at` names it, and nothing reads the pair.
+
+### 4. Exposure in the seed and golden quotes
+
+`grep -rn -i -E "effective_from|effective_to" examples/` prints nothing (rc 1). The freMTPL2 seed names one reference
+table, `fr-region`, only as a column's `reference_table` annotation (`examples/fremtpl2/seed.py:195`, the sole file
+naming it); it seeds no rows. Its rating version pins none: `examples/fremtpl2/model.py:323` has
+`"reference_tables": []`. The golden-quote and ladder tests (`test_rating_ladder_control.py`, `baseline_ladder.py`,
+`test_replay.py`, `test_rating_score.py`) hold zero `effective_from` (`grep -c`, 0 each). The only lookup rows in the
+tests with an `effective_from` are one row per key (`test_rating_runtime.py`, `test_rating_pin_membership.py:74,276`).
+So the seed and every golden quote are unaffected today. The defect is latent in the shipped examples and live for any
+Reference Table Version holding successive rows for one key. Local-database exposure was not measured.
 
 ## Disposition
 
