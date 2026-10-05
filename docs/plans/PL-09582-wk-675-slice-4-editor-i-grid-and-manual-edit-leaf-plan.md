@@ -111,6 +111,16 @@ plan: `PL-1286` S4 (`:306`).
 
 `draft`. It goes `active` only through its Activation needs, in a separate activation PR.
 
+*Dated note, 2026-10-05 (written 18:40:25 BST, pre-mint): P-texts of RL 9543 (working id)
+applied 2026-10-05. RL 9543 (working id; #1198 at `0e872448d7dde4d652ae15bafa097983909441bc`), §"The plan texts" lines 204–230, gives P1–P6 for this plan; each is
+applied byte for byte and nothing else changed. Counts (Python `str.count` over this file):
+every find string 1 before and 0 after, every new text 0 before and 1 after — P1 (after the
+DP-S4-4 row of the decision-point table; that anchor stays, by design), P2 (the write-set row replaced, and the
+`model_schema/__init__.py` row inserted after it; that anchor stays, by design), P3 (Acceptance
+7, appended), P4 (Acceptance 8), P5 (the test's assert), P6 (Task 3 Step 3, two finds). The
+rulings of activation need 2 are RL 9543 items 1–3; need 2 is met when RL 9543 mints. RL 9543
+item 4 (serialise with `SL-1391`) is need 4 already.*
+
 ### Activation needs, in order
 
 1. **RL 9753 minted** (#1067), so FR-<b> and T3–T5 have their minted ids.
@@ -154,11 +164,11 @@ carries `@pytest.mark.req("<FR>")` (backend) or names its FR in the `describe` t
 7. **Manual edit, confirm.** `-k manual_edit_confirm` passes: the same body with
    `confirm: true` answers 201; the new version is `base + 1`, carries the change note, and
    its cells equal the base's cells with the edited values. A second confirm against the same
-   base answers 409 (the existing `_persist_new_version` refusal).
+   base answers 409 (the existing `_persist_new_version` refusal). The new version carries `created_by_edit` `{applied_to: <the base>, edited_cells: <the number of edits>}`, and a seeded version carries none (red first, RL 9543 item 2).
 8. **Manual edit refusals (FR-229, FR-234).** `-k manual_edit_refusals` passes, one test per
    case: an empty or whitespace change note → 422; an edit whose key is not in the base → 422;
    a duplicated key in the edits → 422; a value out of the declared bounds → 422 whose located
-   errors (DP-S4-2) name that cell's key; a float-typed JSON value → 422 (FR-21); an unknown
+   errors are `FieldError`s with `field` `edits.<i>.<value name>` (RL 9543 item 3); an unknown-key edit → 422 with a `FieldError` coded `UNKNOWN_KEY`, never 500; a float-typed JSON value → 422 (FR-21); an unknown
    field → 422 (`extra="forbid"`).
 9. **Contract.** `uv run python scripts/generate-contracts.py --check` exits 0. In
    `docs/contracts/` the cells read's 200 is a `$ref` to `Page_RateTableCell_`, the
@@ -243,7 +253,8 @@ are S5's (`PL-1286` `:307`).
 | Path | Symbol | Change |
 |---|---|---|
 | `packages/model-schema/src/model_schema/rating.py` | `RateTable.default_row` (`:718`), `RateTableVersion.default_row` (`:918`), `RateTableVersion.rows` (`:919`) | retyped to `RateTableCell` |
-| same | new `RateTableCell`; the DP-S4-1 request and response types | added |
+| same | new `RateTableCell`, `RateTableManualEdit` and `ManualEdit`; `RateTableVersion.created_by_edit` and `_one_creation_path` widened (RL 9543) | added |
+| `packages/model-schema/src/model_schema/__init__.py` | the new types' exports (RL 9543 item 4) | changed |
 | `backend/src/app/api/rate_tables.py` | three new handlers | added |
 | `backend/src/app/platform/rate_tables.py` | `_wire_rows` (`:238`) retyped; new `cells_page`, `_cells_in_key_order`, `read_definition`, `manual_edit_preview`, `manual_edit_confirmed` | added beside `import_preview` (`:391`) and `import_confirmed` (`:419`) |
 | `packages/pricing-core/src/pricing_core/rate_tables/operations.py` | new `apply_cell_edits`; `validate_rate_table` (`:323`) reused unchanged | added |
@@ -291,6 +302,8 @@ slice.
 | **DP-S4-2** | How FR-234's failures reach the cell ("validation errors shown on the cell", `PL-1286` `:306`). Today `_validate_result` (`operations.py:483`) raises only the first issue, as text | (a) **A typed extension on the 422 problem:** `errors: list[RateTableIssue { code, message, key: RateTableCell \| null }]`, carrying every issue `validate_rate_table` returns, each located by its key columns; (b) the first issue only, parsed from `detail`; (c) the client re-validates bounds and coverage | **(a).** (b) parses prose and shows one error at a time. (c) defines FR-234 twice, which `CLAUDE.md` §2 forbids. RL 9767 (DP-6) rules the same shape of answer for the designer: every located issue, through the server's own checks | yes: the DM rules it, with the text |
 | **DP-S4-3** | S4 needs the Rating Version by `slug@version` (RL 9766) and its `pins.rate_tables` (RL 9753 item 3). S2 builds that read. `PL-1371` §3.3 lists S4 as depending on S1 and DP-4 only | (a) **S4 after S2 merges**, and consumes it; (b) S4 builds the read itself if it dispatches first | **(a).** PL-1371's own order is S2 then S4 (§5, week of 10 Oct). (b) would make two slices own one route. This is a sequencing fact; it narrows no scope | no: recorded for the lead's dispatch |
 | **DP-S4-4** | Split S4 under DP-4 (a′)? | (a) one slice; (b) a backend read-and-edit slice, then the view | **(a).** The view is the only consumer, and its tests are what prove the routes' shapes serve it. Re-open only if Task 0 measures the band above 2 days | no |
+
+**Ruled 2026-10-05 (RL 9543, working id):** DP-S4-1 (a), its 200 a bare `RateTableDiff` and a 409 for a base that is not the latest; DP-S4-1c (ii), `created_by_edit`; DP-S4-2 (d), every failure a `FieldError` in the problem's existing `errors`; DP-S4-3 and DP-S4-4 as recommended.
 
 ## Tasks
 
@@ -531,7 +544,7 @@ async def test_manual_edit_out_of_bounds_names_the_cell(client, table_ref) -> No
               "edits": [{"area": "A", "relativity": "-1"}]},
     )
     assert r.status_code == 422
-    assert {"area": "A", "relativity": "-1"} in [e["key"] for e in r.json()["errors"]]
+    assert [(e["field"], e["code"]) for e in r.json()["errors"]] == [("edits.0.relativity", "OUT_OF_BOUNDS")]
 ```
 
   Plus `manual_edit_confirm` (201, `base + 1`, cells equal base with the edit, a second
@@ -545,8 +558,8 @@ async def test_manual_edit_out_of_bounds_names_the_cell(client, table_ref) -> No
   of the would-be version, with nothing persisted; confirm builds the `RateTableVersion` at
   `base + 1` with the body's `change_note` and `seeded_from` inherited, calls
   `_guard_seed_lineage`, resolves the threshold, and calls `_persist_new_version`. FR-234
-  runs through `validate_rate_table` (`:323`); every issue goes into the DP-S4-2 extension,
-  located by key. The handler is typed `-> RateTableDiff` and sets 201 on confirm with a
+  runs through `validate_rate_table` (`:323`); every issue becomes one `FieldError` (RL 9543 item 3),
+  `field` `edits.<i>.<value name>`; `UNKNOWN_KEY` and `DUPLICATE_KEY` are collected the same way under `VALIDATION_FAILED` and never reach `_map_operation_error`, which would raise a 500 (`UNKNOWN_KEY` is not in `_KNOWN_CODES`); the confirmed version sets `created_by_edit`. The handler is typed `-> RateTableDiff` and sets 201 on confirm with a
   `RateTableVersion` body, declared in `responses=`. Apply the DM's `03` texts byte for byte.
 - [ ] **Step 4:** the tests pass; `generate-contracts.py --check` exits 0 after regeneration.
 - [ ] **Step 5:** commit `feat(rating): the manual-edit route, preview then confirm (FR-229, FR-234; F-W10-3)`.
