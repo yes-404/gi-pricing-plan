@@ -6,21 +6,21 @@ title: WK-1178 — NFR-489 remedy, the /score request path meets its p99 budget 
 status: draft                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-04
 owner: planner
-tree: 4eb1364428a2861fbc8014957e89924f631dd1ff
+tree: 47d770e8fcbd2410fa101019ed8cf3aae69a1baa
 phase: P2
 work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [SL-1259, SL-1409, PL-1408, PL-1371, RL-921, RL-882, RL-1379, RL-1263, LG-1405]
+relates: [FD-1411, SL-1259, SL-1409, PL-1408, PL-1371, RL-921, RL-882, RL-1379, RL-1263, LG-1405]
 ---
 
 # PL 9728 (working id) — WK-1178: the NFR-489 remedy, the `/score` request path meets its p99 budget, leaf plan
 
 Filed under working id 9728 (this plan) and slice working id 9727 (its `SL-` row under WK-1178 in
 [`../roadmap.md`](../roadmap.md), `draft`), both reserved by the lead. The lead mints both at the merge
-turn. The finding this plan remedies is FD 9729 (working id, #1111, branch `fd-9729-nfr489-score-path`,
-not on `main` at `4eb13644`).
+turn. The finding this plan remedies is **FD-1411** (HIGH; filed as working id 9729 and minted at #1111,
+`main` `47d770e8`).
 
 **Ordered by** the deputy's entry in `to-lead.md` headed *"2026-10-04 19:18:54 BST — NFR-489 ON MAIN
 (c08a48e5, uncontended): the FD is FILED NOW at severity HIGH, not in the batch; its remedy is pulled
@@ -35,7 +35,11 @@ Task 0 attributes; the fix is chosen from Task 0's evidence; a timing-free CI re
 unreachable budget is a decision point, not a silent re-baseline.
 
 Planned read-only: no code was run, no benchmark, no pytest. Every figure below is copied from a named
-record; every code fact is read at `origin/main` `4eb1364428a2861fbc8014957e89924f631dd1ff`.
+record; every code fact was read at `origin/main` `4eb1364428a2861fbc8014957e89924f631dd1ff` and is
+re-pinned to `47d770e8fcbd2410fa101019ed8cf3aae69a1baa` (2026-10-05): `git diff --name-only 4eb13644
+47d770e8 --` over activation need 4's eight source files plus `backend/src/app/config.py` and
+`scripts/demo.py` prints nothing, so every path:line below holds at `47d770e8`. The delta between the two
+trees is FD-1411's record and its register row (#1111).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended) or
 > executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for
@@ -52,12 +56,12 @@ record; every code fact is read at `origin/main` `4eb1364428a2861fbc8014957e8992
 `POST /api/v1/score` meets NFR-489 on one replica — p99 under 50 ms with one `exact` GBM call and
 under 15 ms without — at 25, 50, 100 and 200 rps offered, measured with `scripts/bench-rating.py
 --http`. The fix is chosen from a per-phase attribution of the served request (Task 0), not from the
-side measurement that first suggested it. This discharges the remedy half of FD 9729 (working id,
-HIGH); the NFR-489 verdict on the exit tree stays SL-1259's.
+side measurement that first suggested it. This discharges the remedy half of FD-1411
+(HIGH); the NFR-489 verdict on the exit tree stays SL-1259's.
 
 **Architecture:** two stages with a ruling between them. Stage 1 (Task 0) instruments a scratch copy
 of `main` and attributes every per-request millisecond and every stall of 100 ms or more to a phase.
-The decision-maker then rules DP-1 to DP-4 from that record. Stage 2 (Tasks 1 to 5) corrects the
+The decision-maker then rules DP-1 to DP-4 and DP-6 from that record. Stage 2 (Tasks 1 to 6) corrects the
 harness, adds timing-free CI guards red first, applies the ruled fix in the layer that owns each cost,
 and measures the acceptance sweep alone on the box.
 
@@ -73,23 +77,26 @@ FR-259, FR-268); [`00-overview.md`](../specs/00-overview.md) §9 (NFR-454);
 
 `draft`. DP-1 to DP-4 cannot be ruled before Task 0 runs, by the deputy's own order ("the fix is
 chosen FROM Task 0's evidence"). The plan therefore activates in two steps: Task 0 is dispatched on the
-activation needs below and commits nothing but its ledger; Tasks 1 to 5 start only after the
-decision-maker's ruling on DP-1 to DP-4 is merged. DP-5 goes to the maintainer only if it fires.
+activation needs below and commits nothing but its ledger; Tasks 1 to 6 start only after the
+decision-maker's ruling on DP-1 to DP-4 and DP-6 is merged. DP-5 goes to the maintainer only if it fires.
 
 ### Activation needs, in order
 
 1. **Lane B: dispatched after the FD-1356 fix (SL-1409, PL-1408) merges**, ahead of the other WK-1178
    items, under `PL-1371`'s G2 priority (the deputy's entry above, action 2).
-2. **FD 9729 (working id, #1111) minted**, so the ledger and the ruling cite a minted id.
+2. **FD-1411 minted** — met: #1111 merged it at `47d770e8`; the ledger and the ruling cite FD-1411.
 3. **An exclusive measurement window** under `RL-1263` ("a measurement runs alone"): no gate, no
    `migrate --verify`, no other benchmark on the box during Task 0's runs or Task 4's sweep. The
-   executor records `pgrep -c pytest` and `uptime` at the start and end of every pass.
+   executor records `pgrep -c pytest` and `uptime` at the start and end of every pass. "No other
+   work" includes `gate-runner`, `performance-engineer` runs other than this slice's own, and
+   `ci-watcher` agents polling from this box. Even uncontended, the box is the shared VM, so every
+   figure is diagnostic under G4 (Acceptance 2).
 4. **Re-read at dispatch** (`docs/plans/README.md` convention 4): `git diff --name-only
-   4eb13644 origin/main -- backend/src/app/api/score.py backend/src/app/api/deps.py
+   47d770e8 origin/main -- backend/src/app/api/score.py backend/src/app/api/deps.py
    backend/src/app/api/authz.py backend/src/app/auth/service.py backend/src/app/db/session.py
    backend/src/app/main.py backend/src/app/platform/bundle_slot.py scripts/bench-rating.py`. Any
    non-empty output: re-derive §"Where the time goes" for those files before Task 0.
-5. **Before Task 1 only:** the decision-maker's ruling on DP-1 to DP-4, merged; the lead's go.
+5. **Before Task 1 only:** the decision-maker's ruling on DP-1 to DP-4 and DP-6, merged; the lead's go.
 
 ## Acceptance Standard
 
@@ -98,7 +105,8 @@ the named test ran and failed **for the stated cause** before the code that turn
 ([`README.md`](README.md) rule 2); each red is recorded in the ledger with its printed failure line.
 
 1. **Attribution recorded (Task 0).** The ledger carries Task 0's phase table (p50, p99, max per
-   phase, both arms, 25 and 50 rps, three runs each) and a list of every event of 100 ms or more with
+   phase, both arms, 25 and 50 rps, three runs each), Step 4's sampling profile (its top frames by
+   self time, or the printed reason `py-spy` could not run), and a list of every event of 100 ms or more with
    the phase or mechanism it was attributed to, or "unattributed" with the instruments that saw
    nothing. **The exit demo's `/score` path is a measured path too:** the same table for Task 0
    Step 3b's default-live arm, and its one-line answer on whether it does the same per-request work
@@ -109,10 +117,21 @@ the named test ran and failed **for the stated cause** before the code that turn
    (NFR-454). Without a GBM call, p99 < 15 ms."* Command, on the slice's head, one rate per
    invocation, **three invocations per rate** at 25, 50, 100 and 200:
    `GIP_TEST_DATABASE_URL=<scratch DSN> timeout 1500 uv run python scripts/bench-rating.py --http --rates <R> --port 8000`
-   (plus `--workers <N>` only under DP-3 (b)). Pass: in **every** one of the 12 invocations, both
-   arms' HTTP rung prints p99 under its budget (50 ms with GBM, 15 ms without), issued rps equals
-   offered rps (no void rung), and errors are 0. The ledger records, per invocation: start and end
-   time (UTC and BST), `uptime` load at both ends, `pgrep -c pytest`, and the full rung lines.
+   (plus `--workers <N>` only under DP-3 (b)). **In budget** (the diagnostic reading, not a verdict):
+   in **every** one of the 12 invocations, both arms' HTTP rung prints p99 under its budget (50 ms
+   with GBM, 15 ms without), issued rps equals offered rps (no void rung), and errors are 0. Under
+   DP-6 (a) or (b), the default-live (exit-demo path) variant of each arm is measured in the same
+   invocations against that arm's budget. The ledger records, per invocation: start and end time (UTC
+   and BST), `uptime` load at both ends, `pgrep -c pytest`, and the full rung lines.
+   **G4's shared-VM caveat binds this item.** `docs/roadmap.md` §G4, amended 2026-09-29 by the
+   maintainer for NFR-489 among others: *"These verdicts are **measured, diagnostic** on the shared VM;
+   the verdict is **carried**, owner the maintainer, discharge event **a dedicated host available**.
+   No near-bound pass or fail is claimed from the shared VM."* This sweep runs on the shared VM
+   (e2-standard-8). Its result is therefore reported as **measured, diagnostic**: an in-budget table
+   is the slice's acceptance evidence that the remedy worked, not a PASS of NFR-489. The NFR-489
+   verdict stays carried per G4 and is SL-1259's on the exit tree. A table over budget is reported
+   as measured and goes to the lead (Task 4 Step 3); if the cause is the machine and not the code,
+   that is DP-5.
 3. **Component half unchanged.** The same invocations' component lines (`score_one` alone) still print
    PASS for both arms against 50 ms and 15 ms. A p99 that moves by more than run-to-run noise (the
    spread of the three runs) is reported, not explained away.
@@ -131,11 +150,18 @@ the named test ran and failed **for the stated cause** before the code that turn
    measurement window.
 8. **Write set:** `git diff --stat origin/main...HEAD` lists only §"Write set" paths; the ledger
    records it.
+9. **The exit demo's `/score` call (DP-6).** Under DP-6 (a): `uv run pytest -q
+   backend/tests/test_demo_command.py` passes, and Task 6's test was seen red by its stated cause.
+   Under DP-6 (b) or (c): the ledger quotes the ruling and the Hand-off item 4 line, naming the
+   owner of the scripted journey's `/score` step. Under DP-6 (a) or (b), Acceptance 2 includes the
+   default-live arm.
 
 ## Global Constraints
 
 - **Money and maths are untouched**: `ScoringResult` is byte-identical for the bench quote before
-  and after (Task 3 Step 5).
+  and after (Task 3 Step 5). This compares this slice's head with its own base only. It pins no
+  spelling: FD-1333 and FD-1337 will change how decimals serialise, and a later fix for them is not
+  bound by this comparison.
 - **RL-921 stands unless ruled otherwise**: no ref is served from the `ArtifactRef → content_hash`
   memo without a metadata read on the happy path (`bundle_slot.py`, the "Corrected 2026-08-30" and
   "Corrected 2026-10-04 (RL-1379)" paragraphs).
@@ -156,7 +182,7 @@ the named test ran and failed **for the stated cause** before the code that turn
 
 | Spec | Id | What this slice holds | Marker |
 |---|---|---|---|
-| `03` §9 | NFR-489 | the remedy, measured at 25, 50, 100, 200 rps (Acceptance 2); the verdict on the exit tree stays SL-1259's | none (an NFR is measured, not unit-tested) |
+| `03` §9 | NFR-489 | the remedy, measured at 25, 50, 100, 200 rps (Acceptance 2), diagnostic on the shared VM per G4; the verdict is carried per G4 and on the exit tree stays SL-1259's | none (an NFR is measured, not unit-tested) |
 | `00` §9 | NFR-454 | the platform-level twin of NFR-489; held by the same measurement | none |
 | `03` §9 | NFR-497 | preserved: the degraded read still serves a held bundle (Acceptance 5) | existing `:627` |
 | `03` §3 | FR-243 | preserved: `CompiledBundle` is held per worker and never serialised | existing |
@@ -170,7 +196,7 @@ The bench caller is a Service Account API key scoped to `uat` (`scripts/bench-ra
 `caller.environment` is set and every branch below runs. FastAPI resolves `require_caller` once per
 request (dependency caching), so the counts are per request.
 
-| Step | Path:line at `4eb13644` | Pool checkouts | Statements | Notes |
+| Step | Path:line at `4eb13644` = `47d770e8` | Pool checkouts | Statements | Notes |
 |---|---|---|---|---|
 | Authenticate the API key | `backend/src/app/api/deps.py:238-239` (`unit_of_work`) → `backend/src/app/auth/service.py:175` (SELECT key by prefix), `:186` (`session.get` ServiceAccount), `:226` (`key.last_used_at = now`, flush) | 1 | 3 + COMMIT | **a write on every request**, to one `api_keys` row shared by every request on that key |
 | Permission check | `backend/src/app/api/authz.py:62` (`database.session`) → `backend/src/app/platform/rbac.py:142` `effective_permissions`, SELECT at `:177` | 1 | 1 | runs even though the key's own `permissions` carry `score:execute` |
@@ -191,7 +217,7 @@ the version-row read (by design, RL-921), and every other step in the table, non
 bundle's.
 
 **The 78 ms "every request pays this" figure is the miss path, not the served path.** The baseline
-record and FD 9729 (working id) quote `_fetch_bundle` alone at mean 78.0 ms (GBM) and 33.9 ms (no
+record and FD-1411 quote `_fetch_bundle` alone at mean 78.0 ms (GBM) and 33.9 ms (no
 GBM), labelled by the harness "every request pays this" (`scripts/bench-rating.py:1075`). The harness
 builds **a fresh, empty `BundleSlot()` per call** (`:709-722`, its own comment: "a shared one would
 turn every call after the first into a hit"), so each call pays the blob read, the parse and
@@ -225,23 +251,26 @@ Not run (read-only planning). Task 0 is the first dispatched step.
 | `backend/src/app/api/deps.py` | edited: `require_caller` (`:201-247`) under DP-1 (a) | none found | none |
 | `backend/src/app/api/authz.py` | edited: `requires` (`:54-77`) under DP-1 (a)/(c) | none found | none |
 | `backend/src/app/auth/service.py` | edited: `authenticate_api_key` (`:163`), the `last_used_at` write, under DP-1 (b) | none found | none |
-| `backend/src/app/api/score.py` | edited: `score` (`:351-386`), `_serving_ref` (`:169-204`), `_fetch_bundle` (`:207-271`) session handling only, `_maybe_sample_trace` (`:464-530`) | **PL 9776** reads `score_compare`; **SL-1259** (WK-674 S5, `draft`) will edit the bundle path for FR-268 | this slice precedes SL-1259; `score_compare` is not edited here |
+| `backend/src/app/api/score.py` | edited: `score` (`:351-386`), `_serving_ref` (`:169-204`), `_fetch_bundle` (`:207-271`) session handling only, `_maybe_sample_trace` (`:464-530`) | **PL 9776** reads `score_compare`; **SL-1259** (WK-674 S5, `draft`) will edit the bundle path for FR-268; **FD-1333** (a `decimal` output served as a float) and **FD-1335** (the 200 response has no OpenAPI schema), both WK-1178-owned and unplanned, will edit this handler's response path and the contract | this slice precedes SL-1259; `score_compare` is not edited here. If a FD-1333 or FD-1335 fix is dispatched before or beside this slice, `score.py` is shared: the lead serialises the two under `RL-1263`, and the second to merge re-reads |
 | `backend/src/app/main.py` | edited: `create_app` lifespan, `gc.freeze()` only under DP-4 (a) | none found | none |
 | `backend/src/app/platform/bundle_slot.py` | **read only**, unless DP-2 (c) is ruled in | SL-1259 | a DP-2 (c) edit is a replan trigger to the lead |
 | `backend/tests/test_score_request_cost.py` | added | none | none |
+| `scripts/demo.py`, `backend/tests/test_demo_command.py` | edited under DP-6 (a) only (Task 6) | SL-1409 edited `scripts/demo.py` (merged); the plan for `PL-1371` §3.8 item 7 (unplanned) | under DP-6 (b)/(c) not touched |
 | `backend/tests/test_score.py` | read only; must stay green | PL 9776 cites its lines | none |
 | `docs/specs/03-rating-engine.md`, `docs/specs/00-overview.md` | edited only under DP-3 (b) or DP-5, with ruling text verbatim | **WK-690 S3** — see below | re-read at dispatch |
 | the slice's ledger `docs/ledgers/LG-<n>`; `docs/INDEX.md` | added; regenerated | every PR | registry |
 
 **Lane A (WK-690 S3, `SL-1273`) at `origin/sl-1273-custom-objective-expression` =
-`c1aab29cf70f576d8b13a2d2733bfa7903f8fe7a`.** `git diff --name-only origin/main
-origin/sl-1273-custom-objective-expression` lists 44 paths; the branch's own change set (`git diff
---name-only origin/main...origin/sl-1273-custom-objective-expression`) lists 32. The two-dot list's only
-overlap with the table above is `docs/specs/03-rating-engine.md`, and it is `main`'s side (the three-dot
-list does not contain it). **No overlap with S3's own change set**; S3 edits `backend/src/app/errors.py`,
-which this slice does not touch.
+`5af9d321f3ce4e6fab53dcd34e9289e20ae65884`** (committed 2026-10-05T08:43:48Z; read 2026-10-05 09:54 BST
+against `origin/main` `47d770e8`; the branch was `c1aab29c` when this plan was first drafted and moves).
+`git diff --name-only origin/main origin/sl-1273-custom-objective-expression` lists 35 paths; the
+branch's own change set (`git diff --name-only origin/main...origin/sl-1273-custom-objective-expression`)
+lists 33. Intersecting each list with the table above (and with `scripts/demo.py` and
+`backend/tests/test_demo_command.py`, DP-6) leaves only `docs/INDEX.md`, the exempt generated registry.
+**No overlap with S3's own change set**; S3 edits `backend/src/app/errors.py`, which this slice does not
+touch. Re-read at dispatch: the branch moves.
 
-**Open PRs read 2026-10-04 (`gh pr list --state open`):** #1111 (FD 9729, this plan's finding); #1051
+**Open PRs read 2026-10-04 (`gh pr list --state open`):** #1111 (FD-1411, this plan's finding; merged since, `47d770e8`); #1051
 (PL 9776, above); #1048 (OQ 9777, working id: does NFR-489 cover traced requests — **if ruled yes before
 dispatch, Acceptance 2 gains a traced arm and this plan is replanned**, not silently widened); #1060
 (rulings on PL 9776). None rules on this slice's subject.
@@ -254,6 +283,25 @@ dispatch, Acceptance 2 gains a traced arm and this plan is replanned**, not sile
   why Acceptance 3 compares three runs rather than one.
 - **F35** (NFR-490 measured failing): out of scope (PL 9776), named so a traced arm is not
   mistaken for this slice's.
+- **FD-1411** (HIGH, WK-674 / SL-1259): this plan's own finding. Its figures are quoted above; its
+  Disposition item 2 names this plan as the remedy, item 3 the discharge event (Hand-off 2).
+- **FD-1333** (a declared `decimal` output served on `/score` as a float, MEDIUM, WK-1178) and
+  **FD-1335** (the `/score` 200 response has no OpenAPI schema, MEDIUM, WK-1178): both edit
+  `score.py`'s response path (§"Write set", the contention), and Task 3 Step 5's byte-identity
+  must not be read as freezing the spelling FD-1333 will change.
+- **FD-1337** (`DecimalStr` and `Relativity` serialise in exponent form, which changes a content hash,
+  MEDIUM, WK-1178): the same reason — Task 3 Step 5 compares before and after this slice only.
+- **FD-1246** (a scoring trace omits the algorithm's `input` and `output` steps, low, WK-1178):
+  `_maybe_sample_trace` is in the write set; this slice moves its session handling only and does not
+  change what a trace contains.
+- **FD-1244** and **FD-1245** (`WF-699` steps D4 and E2, low, WK-1178): read before Task 6 under
+  DP-6 (a), which adds a step to the same journey.
+- **FD-1196** (the per-worktree test database name collides across worktrees sharing a leaf name,
+  WK-1178) and **FD-1218** (the shared template `gipricing` holds an abandoned test session and a
+  stale schema, WK-1178): Task 0 Step 1 and Task 4 Step 1 create the scratch database with
+  `createdb -T gipricing`. The executor names the scratch database uniquely (not after the worktree
+  leaf), checks the template's schema head against the tree's alembic head before copying it, and
+  records both in the ledger.
 - **NFR-502/501 (F-W9-1)**: `nthread=1` per model call and validate-inbound-never-outbound are
   constraints the fix must not undo.
 
@@ -265,7 +313,7 @@ two-half gate run.
 
 ## Decision points
 
-DP-1 to DP-4 are the decision-maker's, ruled from Task 0's record. DP-5 is the maintainer's. The
+DP-1 to DP-4 and DP-6 are the decision-maker's, ruled from Task 0's record. DP-5 is the maintainer's. The
 recommendations below are conditional on Task 0 confirming what reading suggests.
 
 | DP | Question | Options | Recommendation | Owner | Blocks |
@@ -274,7 +322,8 @@ recommendations below are conditional on Task 0 confirming what reading suggests
 | **DP-2** | Is any new cross-request cache admitted (credential, permission, setting, Deployment, ref → hash) | (a) none: request-scoped consolidation only; (b) a short TTL cache for the sampling rate and permissions, with a stated staleness window; (c) a happy-path ref → hash memo for **non-draft** refs, relying on RL-1379, superseding RL-921's refusal for that case | (a). A cached credential would let a revoked key score for the TTL (a security change); a cached permission likewise; (c) saves one indexed read and contradicts a ruling and F50's lesson. Revisit only if (a) misses the budget with Task 0's numbers | decision-maker (RL-921 is a ruling) | Task 3 |
 | **DP-3** | What "per replica" means for the measurement: worker count | (a) one process, as the harness runs today; (b) one replica = N `uvicorn` workers, N stated, with the harness given `--workers` | (a) is the basis of Acceptance 2. `NFR-489` and `NFR-454` say "per replica" and no spec defines it. If Task 0 shows (a) is unreachable because `score_one`'s CPU alone exceeds one event loop at 200 rps, the decision-maker raises (b) as a spec clarification, never a silent harness change | decision-maker; spec text by ruling | Task 1 Step 3, Acceptance 2 |
 | **DP-4** | The ~200–300 ms in-handler stall: what fixes it | (a) GC: `gc.freeze()` after startup, or raised thresholds; (b) a reconnect or pool wait: DP-1 (d); (c) synchronous I/O on the loop: move it off; (d) unattributed after three runs: STOP and report | chosen only from Task 0's attribution; never a guess. (d) is a permitted outcome | decision-maker | Task 3 |
-| **DP-5** | The budget is unreachable on this machine class (e2-standard-8) for a reason outside the code | (a) the maintainer amends or carries NFR-489 by a dated line; (b) the measurement moves to a defined reference machine | raised only if Task 0 or Task 4 shows it; the plan does not re-baseline | **maintainer** | Acceptance 2 |
+| **DP-6** | Where the scripted exit-demo journey's `/score` call on the G2 path is built and accepted (Task 0 Step 3b found that no exit-demo code calls `/score` today) | (a) **this slice**: Task 1 adds a default-live arm to `bench-rating.py` (it seeds a `uat` Deployment and omits the ref), Acceptance 2 measures it, and Task 6 adds the `/score` call to `scripts/demo.py` with a wiring test in `backend/tests/test_demo_command.py`; (b) **split**: this slice adds and measures the default-live arm (Task 1, Acceptance 2), and the scripted journey's `/score` step is built and accepted by the plan for `PL-1371` §3.8 item 7 ("Exit demo (b): the scripted `WF-699` journey", **unplanned**, WK-1178), which receives Acceptance 1's third-arm table and Acceptance 2's default-live readings as its input; (c) **all to item 7**: this slice measures only the bench path, and item 7's plan owns both the arm and the step | (b). Item 7 depends on WK-673 S6 and WK-674 S2, 3, 5 and 6 (`PL-1371` §3.8 row 7), so a journey step written here would precede the journey it belongs to; but the latency on the G2 path is this slice's subject, so the arm is measured here, not deferred. (c) leaves the exit-demo path unmeasured after this slice merges. (a) is right only if item 7 is planned into this slice by the lead | decision-maker; the lead routes (b)/(c) to item 7's planner | Task 1 Step 2b, Task 6, Acceptance 2, Acceptance 9 |
+| **DP-5** | The budget is unreachable on this machine class (e2-standard-8) for a reason outside the code | (a) the maintainer amends or carries NFR-489 by a dated line; (b) the measurement moves to a defined reference machine | raised only if Task 0 or Task 4 shows it; the plan does not re-baseline. G4 (amended 2026-09-29) already carries NFR-489's verdict to "a dedicated host available", so (b) is G4's discharge event; DP-5 asks only whether the code-side remedy is complete when the shared VM cannot show it | **maintainer** | Acceptance 2 |
 
 ## Tasks
 
@@ -340,16 +389,22 @@ class phase:
   rps, three times each, under the same Step 2 instruments and the same per-pass record. Step 5
   tabulates it as a third arm, "exit-demo path (default-live, Deployment hit)", and states in one
   line whether it does the same per-request work as the bench path, naming any phase that differs.
-- [ ] **Step 4: Optional sampling profile.** One 25 rps pass with the server under
-  `uvx py-spy record -o <scratch>/profile.svg -- <the uvicorn command>`. If `uvx` cannot fetch it, say
-  so; do not install it.
+- [ ] **Step 4: Sampling profile (required).** One 25 rps pass per arm with the server under
+  `uvx py-spy record -o <scratch>/profile-<arm>.svg -- <the uvicorn command>`, and the top frames by
+  self time in the ledger beside Step 5's phase table. The deputy's order names "plus a sampling
+  profiler" (§Self-review 1), so this step is not optional. **Its only exit:** `uvx` cannot fetch
+  `py-spy`, or it cannot attach on this box. Then the ledger says so, with the printed error, and Step 5
+  attributes from Step 2's instruments alone. Do not install it.
+  Task 0's figures are **attribution, not an NFR reading**: asyncio debug mode, the per-phase timers,
+  the pool listeners and `py-spy` all perturb latency. No Task 0 number is quoted as an NFR-489 result;
+  Task 4 runs the head un-instrumented.
 - [ ] **Step 5: Tabulate in the ledger.** Per arm and rate: p50, p99, max for each phase; checkouts
   and pool-wait p99; slot hits and misses (expect misses = 1 per process); GC counts and the longest
   pause per generation; every slow-callback line; every request of 100 ms or more with its dominant
   phase. Then state, in one line each: (i) the GBM-independent per-request cost and its top two
   phases; (ii) the stall's cause, or "unattributed"; (iii) whether one process can serve 200 rps given
   `score_one`'s share (DP-3, DP-5).
-- [ ] **Step 6: STOP.** Hand the ledger to the lead for the DP-1 to DP-4 ruling. Drop the scratch
+- [ ] **Step 6: STOP.** Hand the ledger to the lead for the DP-1 to DP-4 and DP-6 ruling. Drop the scratch
   database; remove the scratch worktree.
 
 ### Task 1: The harness says what it measures (Acceptance 6)
@@ -363,6 +418,12 @@ class phase:
   this figure is the miss path.
 - [ ] **Step 2:** Add a warm figure: the same loop with one `BundleSlot()` created before it and
   reused, printed as `_fetch_bundle alone, {label}, warm (slot hit: version row read only)`.
+- [ ] **Step 2b (DP-6 (a) or (b)):** a default-live arm in the HTTP sweep: `_seed` also writes a
+  Deployment of the seeded Rating Version to the key's environment (`uat`), and the arm's request body
+  omits `options.rating_version_ref`, so `_serving_ref` resolves the ref from the Deployment
+  (`backend/src/app/api/score.py:186`–`:204`) as the G2 path does. It is printed as its own rung per
+  arm, labelled "default-live (exit-demo path)". This is Task 0 Step 3b's scratch method made
+  permanent in the harness, so Task 4 measures it un-instrumented on the head.
 - [ ] **Step 3 (DP-3 (b) only):** `--workers N` passed through to `_serve`'s `uvicorn` argument list
   as `"--workers", str(N)`, default absent.
 - [ ] **Step 4:** `uv run python scripts/bench-rating.py --help` shows the flag (if added); one
@@ -434,13 +495,30 @@ def test_a_warm_score_request_stays_within_its_database_budget(client, scoring_h
 
 ### Task 4: The acceptance sweep, alone on the box (Acceptance 2, 3)
 
-- [ ] **Step 1:** Exclusive window confirmed (activation need 3). Scratch database as in Task 0.
+- [ ] **Step 1:** Exclusive window confirmed (activation need 3). Scratch database as in Task 0. The
+  server runs the head **un-instrumented**: none of Task 0's timers, listeners, debug mode or profiler.
 - [ ] **Step 2:** For R in 25, 50, 100, 200, three invocations each, in the order 25, 50, 100, 200,
   25, 50, 100, 200, 25, 50, 100, 200 (interleaved, so drift does not land on one rate). Record per
   invocation everything Acceptance 2 names.
 - [ ] **Step 3:** Table in the ledger: rate × run × arm with p50, p99, handler p99, issued rps,
-  errors, load start/end. Verdict per cell against the budget. Any OVER: stop, report to the lead; do
+  errors, load start/end. Reading per cell against the budget, labelled "measured, diagnostic (G4)";
+  never written as an NFR-489 PASS or FAIL. Any OVER: stop, report to the lead; do
   not tune and re-run inside the same window without a new go.
+
+### Task 6 (DP-6 (a) only): the scripted journey calls `/score` on the G2 path (Acceptance 9)
+
+**Files:** Modify `scripts/demo.py`; modify `backend/tests/test_demo_command.py`. Read FD-1244 and
+FD-1245 first (both `WF-699` step defects, WK-1178): this task adds a step to that journey and must not
+build on either defect.
+
+- [ ] **Step 1: Write the failing test.** In `test_demo_command.py`, a test that runs the demo
+  command's scripted journey against the test app and asserts that it issues one `POST
+  /api/v1/score` with **no** `options.rating_version_ref`, authenticated as a Service Account scoped
+  to the deployed environment (`07` FR-389/430, `WF-701` prerequisites), and that the response's
+  `served_by` names the live Deployment. Run it: expected FAIL because `scripts/demo.py` calls only
+  `GET /api/v1/demo/guide` and `GET /api/v1/models` (Task 0 Step 3b). Record the line.
+- [ ] **Step 2:** Add the call to `scripts/demo.py`, after the deployment step it depends on. Run the
+  test green. Commit.
 
 ### Task 5: The gate and the ledger
 
@@ -452,25 +530,38 @@ def test_a_warm_score_request_stays_within_its_database_budget(client, scoring_h
 ## Hand-off
 
 1. The lead mints PL 9728 and SL 9727 (working ids) at the merge turn and dispatches Task 0 only after
-   activation needs 1 to 4 hold; Tasks 1 to 5 after need 5.
-2. On merge, FD 9729's (working id) remedy event is met; its own discharge also needs SL-1259's
-   NFR-489 verdict on the exit tree (FD 9729 Disposition 3). The auditor closes it.
+   activation needs 1 to 4 hold; Tasks 1 to 6 after need 5 (Task 6 under DP-6 (a) only).
+2. On merge, FD-1411's remedy event is met; its own discharge also needs SL-1259's NFR-489 verdict
+   on the exit tree, or the maintainer amending or carrying NFR-489 by a dated line (FD-1411
+   §Disposition item 3). Under G4 that verdict is carried on the shared VM (Acceptance 2). The
+   auditor closes the row.
 3. If DP-3 (b) or DP-5 is ruled, the spec text and the measurement basis change for SL-1259 too; the
    lead routes that to SL-1259's planner.
+4. **The scripted journey's `/score` step (DP-6).** Under DP-6 (b) or (c), its owner is the plan for
+   `PL-1371` §3.8 item 7 ("Exit demo (b): the scripted `WF-699` journey", WK-1178, unplanned). The
+   lead routes the ruling, this slice's Acceptance 1 third-arm table and (under (b)) Acceptance 2's
+   default-live readings to that plan's planner. That plan's acceptance names the `/score` call on the
+   G2 path, a wiring test for it, and NFR-489's budgets on that path. Until it is planned, the
+   exit-demo `/score` risk is owned by WK-1178 through that item, not by this slice. Under DP-6 (a),
+   Task 6 discharges it here.
 
 ## Self-review
 
 1. **The deputy's order, clause by clause.** "Task 0 attributes the stalls … per-request phase timing
    (auth, bundle resolve/fetch, deserialise, score_one, trace sampling, response), plus a sampling
-   profiler": Task 0 Steps 2 and 4. "Candidates to test, not assume: synchronous blob/DB I/O inside the
+   profiler": Task 0 Steps 2 and 4 (Step 4 required; its only exit is `py-spy` unavailable, stated). "Candidates to test, not assume: synchronous blob/DB I/O inside the
    async handler, per-request bundle deserialisation, GC pauses, worker count": Step 2's slow-callback
    log, hit/miss counter, `gc.callbacks`; DP-3. "The fix is chosen FROM Task 0's evidence": Status;
    DP-1 to DP-4. "Acceptance … 25/50/100/200 rps per replica, uncontended, ≥3 runs per rate,
    per-pass times and load": Acceptance 2. "A regression guard that runs in CI": Acceptance 4, Task 2.
    "If … unreachable … a decision point, not a silent re-baseline": DP-5.
+1a. **The audit of 2026-10-05 (`audit-pl9728`), five corrections.** The profiler is required (Task 0
+   Step 4); the exit-demo `/score` call is DP-6, with Task 6 and Hand-off item 4; G4's caveat is in
+   Acceptance 2 and Tasks 0 and 4; FD-1411 is cited and the tree and S3 figures are re-pinned; the
+   register rows the audit listed are read below, with FD-1333/FD-1335's `score.py` contention named.
 2. **The bundle-cache hypothesis is tested, not built.** Reading shows the slot already hits on the
    served path (§"Where the time goes"); Task 0 Step 5 confirms it with a counter.
 3. **Placeholders.** The statement and checkout bounds in Task 2 are fixed by DP-1's ruling, stated as
    such; no other value is left open.
-4. **Ids.** Every `FR-`/`NFR-` cited is defined in `03`, `00` or `07`; FD 9729, PL 9776, OQ 9777 and
+4. **Ids.** Every `FR-`/`NFR-` cited is defined in `03`, `00` or `07`; FD-1411 is minted; PL 9776, OQ 9777 and
    this plan's own ids are written as working ids, never hyphenated.
