@@ -59,9 +59,9 @@ The decision, verbatim:
 |---|---|
 | **(b)** | **Taken.** One route NFR in `03` §9, the same budget on both storage paths: p95 ≤ 300 ms for every page after the first request for a key, at stated sizes, measured. Text T1 below |
 | **(e)** | **Taken**, as a testable property inside the same requirement: a page's time at 250 000 cells is within 2× of its time at 10 000 cells, at the same `limit`. Text T2 below |
-| **(a)** A page is a metadata read; NFR-457 and NFR-526 apply as written | **Not taken.** Its trade-off on file: no table size is stated, so the budget is not testable as written, and "metadata" is stretched to cover cell values. (b) keeps the same 300 ms figure and adds the sizes. The maintainer gave no reason beyond the trade-offs on file |
-| **(c)** Per-path budgets, looser on parquet | **Not taken.** Its trade-off on file: two figures to keep, and the parquet tables, the largest, would be the slowest to page with no stated reason beyond cost. The maintainer gave no reason beyond the trade-offs on file |
-| **(d)** No budget below R1 | **Not taken.** Its trade-off on file: a 1.9 s page would pass, paging below 2 s would be unbounded, and the measured parquet p99 of 1098 ms would be no defect. The maintainer gave no reason beyond the trade-offs on file |
+| **(a)** A page is a metadata read; NFR-457 and NFR-526 apply as written | **Not taken.** Its trade-off on file: no table size is stated, so the budget is not testable as written, and "metadata" is stretched to cover cell values. (b) keeps the same 300 ms figure and adds the sizes. The maintainer gave no reason beyond the trade-offs on file. **Why not taken:** the OQ 9486 row (`docs/open-questions.md:142`) says of (a): *"But no table size is stated, so the budget is not testable as written, and "metadata" is stretched to cover cell values."* (b) states the sizes, so the same 300 ms figure is testable without stretching "metadata". |
+| **(c)** Per-path budgets, looser on parquet | **Not taken.** Its trade-off on file: two figures to keep, and the parquet tables, the largest, would be the slowest to page with no stated reason beyond cost. The maintainer gave no reason beyond the trade-offs on file. **Why not taken:** the OQ 9486 row (`docs/open-questions.md:142`) says of (c): *"two figures to keep, and the parquet tables, the largest, are then the slowest to page with no stated reason beyond cost."* (b) is one figure for both paths, so no path is slower without a stated reason. |
+| **(d)** No budget below R1 | **Not taken.** Its trade-off on file: a 1.9 s page would pass, paging below 2 s would be unbounded, and the measured parquet p99 of 1098 ms would be no defect. The maintainer gave no reason beyond the trade-offs on file. **Why not taken:** the OQ 9486 row (`docs/open-questions.md:142`) says of (d): *"a 1.9 s page passes, the paging experience below 2 s is unbounded, and the parquet p99 of 1098 ms is then no defect."* (b) bounds the paging below 2 s, which (d) leaves unbounded. |
 
 R1 and NFR-457 still bound the route; this requirement is the budget below them. Which
 mechanism meets it (an artifact read, a cache of the diff and the cut per key, or another) is
@@ -75,6 +75,13 @@ the FD 9487 fix plan's to choose, and is not ruled here.
    the parquet path a 10 000-cell table is below FR-232's default threshold, so the measurement
    sets the workspace threshold so that both versions take the path measured, as the S7
    measurement of 20:45 BST raised it to keep 260 000 cells on rows.
+
+**Readings confirmed.** Both readings are confirmed by the maintainer (by delegation), in the
+entry headed *"2026-10-05 21:04:46 BST — RL 9485 (#1222 @3ec4dbef): both readings CONFIRMED;
+the 202 note accepted as written"*: *"Reading (1): "page time" in (e) is the page p95,
+measured as in (b). CONFIRMED."* and *"Reading (2): (e) holds on EACH storage path, with
+parquet at 10k measured with the threshold lowered so that the table takes that path.
+CONFIRMED."*
 
 ## The exact texts
 
