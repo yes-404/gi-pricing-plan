@@ -103,6 +103,16 @@ fail-closed, loud, and names its remedy (`RL-1404` D2). The cost is that an admi
 first deployment attempt instead of at the policy edit. It is not NONE because the state is permanent for the
 Environment (the field is immutable) and the only discovery point is a user trying to deploy.
 
+**The deputy's reason, recorded as a dated correction.** Amended 2026-10-05 before mint: the entry
+"2026-10-05 09:51:31 BST — CORRECTION (mine) to the R1 reason in \"2026-10-05 09:44:39 BST — DISPATCH GO: FD-1356 fix …\"" in
+`~/gi-pricing-plan.local/channel/to-lead.md` (a local file) says, quoted from it: "R1 = a gated policy entry with no
+predecessor Environment, accepted at policy save (from-lead-2026-10-04.md:87), NOT a retired Environment. Severity LOW
+re-confirmed", and gives the **Corrected reason**: "each deployment request to such a target is already refused 422
+EVIDENCE_INCOMPLETE, with a detail naming the remedy (RL-1404 D2). So the misconfiguration fails closed at use; refusing it
+at save time is an earlier-feedback improvement. FD 9721 carries this reason." Severity is therefore LOW, confirmed, not
+provisional. That is the same reason as the paragraph above: the target is not live-deployable by mistake, because the
+refusal is already in force at every request.
+
 **Owner: WK-674.**
 
 ## Disposition
