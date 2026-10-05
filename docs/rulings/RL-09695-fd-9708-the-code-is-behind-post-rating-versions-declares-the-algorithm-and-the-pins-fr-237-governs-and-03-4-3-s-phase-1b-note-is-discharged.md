@@ -1,7 +1,7 @@
 ---
 id: RL-9695
 family: ruling
-title: FD 9708 — the code is behind, not the spec — POST /rating-versions declares the algorithm and the pins, FR-237 governs, and 03 §4.3's Phase 1b note is discharged (PROPOSED)
+title: FD 9708 — the code is behind, not the spec — POST /rating-versions declares the algorithm and the pins, FR-237 governs, and 03 §4.3's Phase 1b note is discharged
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
 created: 2026-10-05            # working id; the mint date is set at the mint (check 31)
 owner: decision-maker
@@ -17,9 +17,12 @@ relates: [WK-669, WK-1178, CR-838, CR-1212, PL-1371, SL-1300, FD-1297, FR-223, F
 
 # RL 9695 (working id) — FD 9708: which side is wrong about Rating Version pins over HTTP
 
-**PROPOSED, awaiting the deputy.** The options below were drafted before any decision. The
-section headed "Ruled" holds the recommendation until the lead relays the deputy's ruling;
-it binds nothing until then.
+**Decided by the maintainer, by delegation (the deputy)**, in the entry headed
+*"2026-10-05 13:12:56 BST — DECISIONS 15 and 16; CORRECTION to my 13:03:23 item 11; a priority rule for HIGH G2 blockers"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 15, relayed to this session by the
+lead: *"RL 9695 (FD 9708): OPTION (a). POST /rating-versions takes algorithm_ref and pins,
+checked at compile, in a WK-1178 slice. FD 9708: HIGH, owner WK-1178, deadline before the P2
+exit demo (it blocks G2 over HTTP)."* The options below were drafted before that decision
+and sent as a DP; the section headed "Ruled" records it.
 
 ## How this was ruled
 
@@ -116,21 +119,23 @@ on FD 9995 as well as on this ruling. The exit-demo leaf should name both.
 
 ## Ruled
 
-**PROPOSED, awaiting the deputy.** Recommendation:
+**Decided by the maintainer, by delegation, 2026-10-05 13:12:56 BST (item 15).** The entry is
+cited by its header, *"2026-10-05 13:12:56 BST — DECISIONS 15 and 16; CORRECTION to my 13:03:23 item 11; a priority rule for HIGH G2 blockers"*. FD 9708's severity is **HIGH**, its owner **WK-1178**, its deadline
+**before the P2 exit demo**, by the same item. The same entry's priority rule applies: a HIGH
+finding that blocks G2 takes the first build lane that frees once its plan is active.
 
-| DP | Recommendation |
+| DP | Ruling |
 |---|---|
 | Which side | **The code is behind.** FR-237, `03` §5.1 and WF-699 C1 govern. `03` §4.3's Phase 1b note was discharged by W9-3, with no line recording it. FR-440 is a Phase 1b seed requirement and is not in conflict |
-| DP-1 | **(a)** `POST /api/v1/rating-versions` accepts optional `algorithm_ref`, `pins` and `model_reference_mode`, typed from `model_schema`. Their shape is checked at create (422 `VALIDATION_FAILED`); their resolvability and maturity are checked at compile (FR-240), as now |
-| Owner | **WK-1178**, a fix slice with its own leaf plan. It merges before PL-1371 §3.8 row 7 (exit demo (b), the scripted `WF-699` journey) needs C1. The seed moves to the route in the same slice, so no ORM write sets a pin outside tests and benches |
+| DP-1 | **(a)**, as recommended. `POST /api/v1/rating-versions` accepts optional `algorithm_ref`, `pins` and `model_reference_mode`, typed from `model_schema`. Their shape is checked at create (422 `VALIDATION_FAILED`); their resolvability and maturity are checked at compile (FR-240), as now |
+| Owner | **WK-1178**, a fix slice with its own leaf plan. It merges before PL-1371 §3.8 row 7 (exit demo (b), the scripted `WF-699` journey) needs C1. In the same slice the seed declares the algorithm and the pins through the create service, so nothing in `examples/` writes a pin to the ORM row after creation |
 
 ## The exact texts
 
 **T1 to T3 (option (a)) do not land in this PR.** They change behaviour, so each lands in one
 commit with the code it describes (`CLAUDE.md` §2), applied by the WK-1178 slice, as
 `RL-1407`'s texts were applied by SL-1409. `<date>` is that commit's date. Each find string
-has exactly one hit at `caa4e411`. T4 to T6 are given only so option (b) can be compared; they
-are void unless (b) is ruled.
+has exactly one hit at `caa4e411`.
 
 ### T1 — `03` §5.1, the create row (a). Find `` | Create a draft Rating Version with pins (FR-237) | `` and replace it with
 
@@ -157,27 +162,15 @@ are void unless (b) is ruled.
 
 WF-699 C1 needs no change under (a): it already says what the route does.
 
-### T4 — `03` §5.1, the create row (b only). Find `` | Create a draft Rating Version with pins (FR-237) | `` and replace it with
+### T4 to T6 — withdrawn
 
-```markdown
-| Create a draft Rating Version: `slug`, `dataset_version_id`, `model_ref` (the Phase 1b subset, FR-440). The algorithm and the pins (FR-237) are not set by any route in Phase 2. *(Amended <date>, RL 9695 (working id), FD 9708.)* |
-```
-
-### T5 — WF-699 C1 (b only). Find `` declares the algorithm version and every pin: rate tables, peril structure, reference tables. `` and replace it with
-
-```markdown
-creates the draft (`slug`, `dataset_version_id`, `model_ref`). In Phase 2 the algorithm version and every pin are written by the seed, not over HTTP. *(Amended <date>, RL 9695 (working id), FD 9708.)*
-```
-
-### T6 — `03` FR-237 (b only). Find `` and the input contract. Nothing is unpinned. | `` and insert before its final `` |``
-
-```markdown
- *(Amended <date>, RL 9695 (working id), FD 9708.)* In Phase 2 no route declares the pins; a later phase specifies one.
-```
+They were option (b)'s texts, given for comparison only (`03` §5.1's row, WF-699 C1 and
+FR-237, each saying no route declares the pins in Phase 2). Option (b) was not ruled, so they
+are void. Their text is in this PR's first commit, `68096376`.
 
 ## Acceptance — the violation that must become detectable
 
-For option (a). This record builds nothing. The WK-1178 slice carries these, each shown red on deliberately
+This record builds nothing. The WK-1178 slice carries these, each shown red on deliberately
 broken input:
 
 - *Violation: a pin cannot be declared over HTTP.* A test creates a Rating Version through
@@ -193,18 +186,20 @@ broken input:
 - *Violation: the DTO hand-writes a shape `model_schema` owns.* The request model's
   `algorithm_ref`, `pins` and `model_reference_mode` are the `model_schema` types, and
   `generate-contracts.py --check` is green.
-- *Violation: the seed pins outside HTTP.* After the slice, the predicate
-  `grep -rn "algorithm_ref\s*=\|\.pins\s*=" --include=*.py examples/ backend/src/` matches no
-  write.
+- *Violation: the seed pins after creation.* After the slice, the predicate
+  `grep -rn "algorithm_ref\s*=\|\.pins\s*=" --include=*.py examples/` matches no write to a
+  row; the seed passes both to the create service instead.
 
 ## What it obliges
 
-- **The deputy:** rule which side is wrong, and DP-1.
-- **The lead, at the mint:** mint this record, replacing working id 9695 everywhere this
-  commit writes it. If (a): file the WK-1178 slice row and name its planner. Add the slice and
-  FD 9995 to PL-1371 §3.8 row 7 (exit demo (b)) as prerequisites of C1. If (b): put the G2 and
-  P2-scope consequence to the maintainer, because it amends the 13:05:42 ruling.
-- **The WK-1178 slice (if (a)):** apply T1 to T3 verbatim in the commit that builds them,
+- **The lead, at the mint:** mint this record before FD 9708's plan, which cites it (the
+  deputy's order of 13:13:32 BST, item 5), replacing working id 9695 everywhere this commit
+  writes it. File the WK-1178 slice row. Add the slice and FD 9995 to PL-1371 §3.8 row 7
+  (exit demo (b)) as prerequisites of C1.
+- **FD 9708's planner:** the leaf plan cites this record for which side is wrong and for DP-1,
+  and carries T1 to T3 and the acceptance list above as its scope, rather than re-deciding
+  them.
+- **The WK-1178 slice:** apply T1 to T3 verbatim in the commit that builds them,
   with the acceptance tests above. Correct the handler docstring, which today claims pins it
   does not take.
 - **For the lead, not ruled here:** CR-838 recorded FR-237 *delivered* on evidence that did
@@ -213,4 +208,4 @@ broken input:
 
 ## Spec changes in this commit
 
-None. T1 to T3 are the WK-1178 slice's to apply; T4 to T6 apply only if (b) is ruled.
+None. T1 to T3 are the WK-1178 slice's to apply. T4 to T6 are withdrawn.
