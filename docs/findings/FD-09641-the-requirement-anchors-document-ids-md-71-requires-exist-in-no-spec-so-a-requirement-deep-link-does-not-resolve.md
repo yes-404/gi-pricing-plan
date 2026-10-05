@@ -28,7 +28,7 @@ relates: [WK-1178, RFC-937, FR-451]
 > emits `<a id="fr-<n>"></a>` before each definition and the migration adds one for every
 > existing clause. `INDEX.md` has one row per number for both.
 
-The same text is `RFC-00937-…md:65` (there with the example ids `fr-1187` and `wk-1201` in place of `<n>`).
+The same text is at line 65 of the RFC-937 file under `docs/rfcs/` (there with the example ids `fr-1187` and `wk-1201` in place of `<n>`).
 
 ### The measurement
 
