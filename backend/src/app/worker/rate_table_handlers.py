@@ -63,6 +63,41 @@ def _rate_table_diff(parameters: dict[str, Any], callback: ProgressCallback) -> 
     return JobResult(kind="blob", ref=sha256)
 
 
+def _rate_table_diff_cells(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
+    """`rate_table.diff_cells` — every changed cell, in order, stored as one blob (`RL-1418`).
+
+    One NDJSON object per cell. The blob's sha256 is the Job's `result.ref`, and the route
+    finds it again by the `key` the Job's parameters carry. The portfolio's checks run again
+    under the Job's workspace (`RL-1361` item 8), so an archived portfolio fails the Job with
+    `DATASET_NOT_VALIDATED`.
+    """
+    progress = _bridge(callback)
+    workspace_id = _workspace(parameters)
+    raw_against: str = parameters["against"]
+    against: str | int = int(raw_against) if raw_against.isdigit() else raw_against
+    raw_portfolio = parameters.get("portfolio")
+    portfolio = UUID(raw_portfolio) if raw_portfolio is not None else None
+    progress.update(0.05, "materialising cells")
+
+    async def work() -> str:
+        payload = await service.diff_cells_artifact(
+            progress.database,
+            workspace_id,
+            parameters["slug"],
+            int(parameters["version"]),
+            against,
+            blob_store=progress.blob_store,
+            portfolio_dataset_version_id=portfolio,
+        )
+        async with progress.database.unit_of_work() as session:
+            ref = await progress.blob_store.put(session, payload, "application/x-ndjson")
+            return ref.sha256
+
+    sha256 = progress.run_on_loop(work())
+    progress.update(1.0, "done")
+    return JobResult(kind="blob", ref=sha256)
+
+
 def register_rate_table_handlers() -> None:
     """Register the `rate_table.*` handlers.
 
@@ -71,6 +106,9 @@ def register_rate_table_handlers() -> None:
     twice — which a test importing this module for a type would do. The `dataset.*`
     and `model.*` handlers set the same precedent.
     """
-    for kind, handler in ((JobKind.RATE_TABLE_DIFF, _rate_table_diff),):
+    for kind, handler in (
+        (JobKind.RATE_TABLE_DIFF, _rate_table_diff),
+        (JobKind.RATE_TABLE_DIFF_CELLS, _rate_table_diff_cells),
+    ):
         if kind not in HANDLERS:
             register_handler(kind, handler)

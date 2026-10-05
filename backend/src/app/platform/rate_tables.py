@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import io
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Literal, cast
 from uuid import UUID
@@ -22,10 +23,12 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
+from app.api.pagination import COUNT_CAP, decode_int_cursor, encode_cursor
 from app.config import Settings
 from app.db.models import (
     BlobRow,
     DatasetVersionRow,
+    JobRow,
     RateTableCellRow,
     RateTableRow,
     RateTableVersionRow,
@@ -35,19 +38,20 @@ from app.errors import PlatformError
 from app.platform import datasets, transformations
 from app.platform import settings as settings_svc
 from app.platform.blobs import BlobStore, to_ref
-from app.platform.diff_cache import DiffCache, definition_hash, version_content_hash
+from app.platform.diff_cache import DiffCache, cells_key, definition_hash, version_content_hash
 from app.platform.modelling import (
     load_factor_by_ref,
     load_factors,
     load_model,
     to_model,
 )
-from model_schema import Banding, DatasetStatus, Factor, Grouping
+from model_schema import Banding, DatasetStatus, Factor, Grouping, JobKind, JobStatus
 from model_schema.rating import (
     FloorAndCapParameters,
     ImportPreview,
     RateTable,
     RateTableDiff,
+    RateTableDiffCell,
     RateTableKey,
     RateTableStorageMode,
     RateTableVersion,
@@ -61,6 +65,7 @@ from pricing_core.modelling import FactorResolutionError
 from pricing_core.rate_tables.operations import (
     check_model_approved,
     decide_storage_mode,
+    diff_cells,
     diff_vs_previous,
     diff_vs_seed,
     export_to_csv,
@@ -520,6 +525,199 @@ async def diff(
             assert cache is not None
             await cache.set(key, diff)
         return diff
+
+
+@dataclass(frozen=True, slots=True)
+class DiffCellsPage:
+    """One page of a diff's changed cells, and where the next one starts (`None` on the last)."""
+
+    items: list[RateTableDiffCell]
+    total_estimate: int
+    next_cursor: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class DiffCellsJobNeeded:
+    """A parquet pair whose cell artifact is not stored: the route answers 202 with a Job
+    carrying `key`, which names the artifact the Job writes."""
+
+    key: str
+
+
+async def _content_hash(session: Any, version_row: RateTableVersionRow, table: RateTable) -> str:
+    """A version's content address: a parquet version's stored blob, a rows version's cells
+    hashed. Versions are immutable, so either names the same cells for ever."""
+    if version_row.storage == "parquet":
+        return BlobRef.model_validate(version_row.cells).sha256
+    return version_content_hash(await _load_cells(session, version_row.id, table))
+
+
+async def _all_cells(
+    session: Any,
+    blob_store: BlobStore,
+    *,
+    workspace_id: UUID,
+    version_row: RateTableVersionRow,
+    baseline_row: RateTableVersionRow,
+    table: RateTable,
+    portfolio_dataset_version_id: UUID | None,
+) -> list[RateTableDiffCell]:
+    """Every changed cell, in `03` §4.2's order, weighted by the portfolio when one is named.
+
+    The weights come from `_portfolio_weights`, the map the summary uses, so the cells and the
+    aggregate mean cannot disagree (`RL-1418`).
+    """
+    current_cells = await _load_cells_of(session, version_row, table, blob_store)
+    baseline_cells = await _load_cells_of(session, baseline_row, table, blob_store)
+    weights = None
+    if portfolio_dataset_version_id is not None:
+        weighted = await _portfolio_weights(
+            session, blob_store, workspace_id=workspace_id,
+            version_id=portfolio_dataset_version_id, table=table, current_cells=current_cells,
+        )
+        weights = weighted.weights
+    return diff_cells(baseline_cells, current_cells, table.keys, table.value, weights=weights)
+
+
+async def _stored_cells(
+    session: Any, blob_store: BlobStore, *, workspace_id: UUID, key: str
+) -> bytes | None:
+    """The NDJSON artifact a succeeded `rate_table.diff_cells` Job wrote for exactly this key,
+    or `None`. A Job whose blob is gone does not count: the query is computed again, never
+    answered from another query's artifact."""
+    rows = await session.execute(
+        select(JobRow)
+        .where(
+            JobRow.workspace_id == workspace_id,
+            JobRow.kind == JobKind.RATE_TABLE_DIFF_CELLS,
+            JobRow.status == JobStatus.SUCCEEDED,
+            JobRow.parameters["key"].astext == key,
+        )
+        .order_by(JobRow.queued_at.desc())
+    )
+    for job in rows.scalars():
+        ref = (job.result or {}).get("ref")
+        blob = await session.get(BlobRow, ref) if ref else None
+        if blob is None:
+            continue
+        try:
+            return await blob_store.read(to_ref(blob))
+        except PlatformError:
+            continue
+    return None
+
+
+def _bad_cursor() -> PlatformError:
+    return PlatformError(
+        "VALIDATION_FAILED",
+        "Malformed cursor",
+        400,
+        "The cursor is not one this API issued. Omit it to start from the beginning.",
+    )
+
+
+def _page(
+    lines: Sequence[bytes] | Sequence[RateTableDiffCell], limit: int, cursor: str | None
+) -> DiffCellsPage:
+    """Cut one page at the cursor's position. A cursor is the position of the page's first
+    cell, so one this API issued is always within `1 .. total - 1`; any other is `400`."""
+    total = len(lines)
+    start = decode_int_cursor(cursor) if cursor is not None else 0
+    assert start is not None
+    if cursor is not None and not 0 < start < total:
+        raise _bad_cursor()
+    stop = start + limit
+    chunk = lines[start:stop]
+    items = [
+        RateTableDiffCell.model_validate_json(c) if isinstance(c, bytes) else c for c in chunk
+    ]
+    return DiffCellsPage(
+        items=items,
+        total_estimate=min(total, COUNT_CAP),
+        next_cursor=encode_cursor(stop) if stop < total else None,
+    )
+
+
+async def diff_cells_page(
+    database: Database,
+    workspace_id: UUID,
+    slug: str,
+    version: int,
+    against: str | int,
+    *,
+    blob_store: BlobStore,
+    portfolio_dataset_version_id: UUID | None = None,
+    limit: int,
+    cursor: str | None = None,
+) -> DiffCellsPage | DiffCellsJobNeeded:
+    """One cursor page of the diff's changed cells (FR-231, `RL-1418` T1).
+
+    The `against` resolution and the portfolio checks (scope, then status) run first, before
+    any cell is read and before any Job. A rows pair is computed and cut in place. A parquet
+    pair is answered from the artifact a `rate_table.diff_cells` Job stored for this exact
+    query, or reports that the Job is needed (FR-232).
+    """
+    async with database.unit_of_work() as session:
+        table_row = await _load_table(session, workspace_id, slug)
+        version_row = await _load_version(session, table_row.id, version, slug)
+        baseline_number = await _resolve_baseline(session, table_row.id, version, against)
+        baseline_row = await _load_version(session, table_row.id, baseline_number, slug)
+        if portfolio_dataset_version_id is not None:
+            await check_portfolio(
+                session, workspace_id=workspace_id, version_id=portfolio_dataset_version_id
+            )
+        table = RateTable.model_validate(version_row.definition)
+        if version_row.storage == "parquet" or baseline_row.storage == "parquet":
+            key = cells_key(
+                await _content_hash(session, version_row, table),
+                await _content_hash(session, baseline_row, table),
+                definition_hash(table),
+                portfolio_dataset_version_id,
+                workspace_id,
+            )
+            stored = await _stored_cells(session, blob_store, workspace_id=workspace_id, key=key)
+            if stored is None:
+                return DiffCellsJobNeeded(key=key)
+            return _page(stored.splitlines(), limit, cursor)
+        cells = await _all_cells(
+            session, blob_store, workspace_id=workspace_id, version_row=version_row,
+            baseline_row=baseline_row, table=table,
+            portfolio_dataset_version_id=portfolio_dataset_version_id,
+        )
+        return _page(cells, limit, cursor)
+
+
+async def diff_cells_artifact(
+    database: Database,
+    workspace_id: UUID,
+    slug: str,
+    version: int,
+    against: str | int,
+    *,
+    blob_store: BlobStore,
+    portfolio_dataset_version_id: UUID | None = None,
+) -> bytes:
+    """Every changed cell, in order, one JSON object per line: what the Job stores (FR-232).
+
+    The checks run again under the Job's workspace, because the portfolio can lose its
+    standing between submit and run (`RL-1361` item 8).
+    """
+    async with database.unit_of_work() as session:
+        table_row = await _load_table(session, workspace_id, slug)
+        version_row = await _load_version(session, table_row.id, version, slug)
+        baseline_number = await _resolve_baseline(session, table_row.id, version, against)
+        baseline_row = await _load_version(session, table_row.id, baseline_number, slug)
+        if portfolio_dataset_version_id is not None:
+            await check_portfolio(
+                session, workspace_id=workspace_id, version_id=portfolio_dataset_version_id
+            )
+        table = RateTable.model_validate(version_row.definition)
+        cells = await _all_cells(
+            session, blob_store, workspace_id=workspace_id, version_row=version_row,
+            baseline_row=baseline_row, table=table,
+            portfolio_dataset_version_id=portfolio_dataset_version_id,
+        )
+    return b"".join(cell.model_dump_json().encode() + b"\n" for cell in cells)
 
 
 async def export_csv(

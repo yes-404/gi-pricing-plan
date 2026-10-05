@@ -206,6 +206,50 @@ cells_change_and_weight`, `test_the_cells_are_in_key_order_by_code_point` (`"10"
 `test_the_weight_has_three_states`, `test_the_cells_agree_with_the_summary[False|True]` (the mean, -5, and the maximum,
 50, recomputed from the items). 57 passed with `test_rate_table_operations.py`; `ruff` and `mypy` clean.
 
+### Task 6 — part 2: the Job kind, the migration, the service, the route and the worker
+
+**The migration, and the plan deviation.** `PL-1419` says no migration (its "Not in scope": "Any migration: existing
+versions stay unbound"), and its write set lists none. `JobKind` is a native PostgreSQL enum, so the new kind needs one,
+and `RL-1418` requires a kind of its own (`rate_table.diff_cells`) rather than reuse of `rate_table.diff`. The lead ruled
+option A (dispatch record §(10)) and the maintainer (by delegation) upheld it, on three conditions (`to-lead.md`, "S7 Task 6:
+option A is UPHELD", after 18:14), quoted: (1) mirror `d5e6f7a8b9c0` exactly: `ADD VALUE IF NOT EXISTS`, the downgrade a
+commented `pass`, `down_revision` `e5b7d9f1a3c6`, no other DDL; (2) this ledger records the plan deviation, which §(10) is
+the delta to; (3) exactly one Alembic head, checked at the gate and by the maintainer at the merge ACK, and if another
+slice's migration lands on main first that is a stop and a rebase (re-point `down_revision`), never a merge migration. The
+file is `backend/migrations/versions/f3a7c1d9e2b4_rate_table_diff_cells_job_kind.py`. On the per-worktree database,
+`alembic upgrade head` ran `e5b7d9f1a3c6 -> f3a7c1d9e2b4`, and `alembic current` and `alembic heads` both printed
+`f3a7c1d9e2b4 (head)`.
+
+**Red**, `uv run pytest backend/tests/test_rate_table_diff_portfolio.py -q -k cells`, before the route existed: every route
+test answered `{"type":".../not-found","title":"Resource not found","status":404,"code":"NOT_FOUND","detail":"Not Found"}`.
+(The plan expected FastAPI's `404 Not Found` with no problem body; the app wraps it in a problem body, and `detail` is the
+tell that no route matched.) The pure tests' red was `ImportError` for `RateTableDiffCell` (part 1).
+
+**Green**: 35 passed in the file. The new tests: `test_diff_cells_gives_each_cells_change_and_weight_through_the_route`,
+`test_an_uplift_of_every_cell_is_served_in_full` (250 cells, `MAX_LIMIT` + 50, across pages, no key repeats),
+`test_the_pages_concatenate_in_key_order` (`"10"` before `"2"` before `"9"`, a repeated page the same bytes),
+`test_one_weights_map_feeds_summary_and_cells`, `test_a_resolution_error_reaches_the_422_with_its_count_and_example`,
+`test_a_bad_cursor_is_400_and_a_bad_limit_is_422` (a forged cursor, positions 0, 2 and 10000 on a two-cell diff, and
+`limit=MAX_LIMIT+1`), `test_the_cells_route_refuses_before_anything_else[rows|parquet]` (403, 404, 409, unknown `against`;
+no `JobRow`; a rating-only caller without `portfolio` gets 200 or 202), `test_a_parquet_cells_request_runs_one_job_then_pages`
+(202, `Location`, kind `rate_table.diff_cells`; after the Job, 200 pages equal to the rows twin's; another portfolio is a
+202; with the artifact's `BlobRow` deleted, a 202 again) and `test_a_cells_job_for_an_archived_portfolio_fails`
+(`DATASET_NOT_VALIDATED`).
+
+**Broken-input proofs** (a mutation, run, then reverted): `diff_cells_page` cutting `cells[:200]` fails the uplift test
+(`assert 200 == 250`); a weight read as `"0"` on a `removed` cell fails the weight-states test (`assert Decimal('9') is
+None`).
+
+**How the artifact is found.** A Job's parameters carry `key`, `cells_key(...)`: both versions' content addresses (a parquet
+version's stored blob sha256, a rows version's `version_content_hash`), the definition hash, and with a portfolio its id and
+the workspace. The Job writes one NDJSON blob and returns its sha256 as `result.ref`; the route finds the newest succeeded
+`rate_table.diff_cells` `JobRow` of the workspace with that `key` whose blob still exists, else it submits again. There is
+no cache or table dependency, because `DiffCache` fails open and a table would be a migration.
+
+**Open:** `backend/tests/test_contracts.py::test_job_status_and_kind_enums_agree_with_the_contract` fails
+(`Extra items in the left set: 'rate_table.diff_cells'`): the hand-authored `docs/contracts/schemas/job.schema.json` lists
+the Job kinds and is not in the write set. Reported to the lead as a stop.
+
 ## PRs
 
 Not yet opened (the PR is opened as a draft after Task 2 is committed and pushed).

@@ -28,6 +28,7 @@ from fastapi import (
 
 from app.api.authz import requires
 from app.api.deps import Caller, DatabaseDep, SettingsDep, job_identity
+from app.api.pagination import DEFAULT_LIMIT, MAX_LIMIT, Page
 from app.api.responses import problems
 from app.errors import PlatformError
 from app.platform import jobs as job_service
@@ -37,7 +38,12 @@ from app.platform.blobs import BlobStore
 from app.platform.diff_cache import DiffCache
 from model_schema import JobKind, Permission
 from model_schema.jobs import Job
-from model_schema.rating import RateTableDiff, RateTableVersion, SeedFromModelRequest
+from model_schema.rating import (
+    RateTableDiff,
+    RateTableDiffCell,
+    RateTableVersion,
+    SeedFromModelRequest,
+)
 
 __all__ = ["router"]
 
@@ -354,4 +360,82 @@ async def rate_table_diff(
         blob_store=blob_store,
         cache=cache,
         portfolio_dataset_version_id=portfolio,
+    )
+
+
+@router.get(
+    "/rate-tables/{slug}@{version}/diff/cells",
+    summary="The changed cells of a rate table diff, one cursor page at a time",
+    response_model=None,
+    responses={
+        **problems(400, 401, 403, 404, 409, 422),
+        200: {"model": Page[RateTableDiffCell]},
+        202: {"model": Job},
+    },
+)
+async def rate_table_diff_cells(
+    slug: str,
+    version: int,
+    caller: RatingReadDep,
+    database: DatabaseDep,
+    response: Response,
+    blob_store: BlobStoreDep,
+    against: str = Query(..., description="`previous`, `seed`, or a version number"),
+    portfolio: Annotated[
+        UUID | None,
+        Query(
+            description=(
+                "A `validated` portfolio Dataset Version whose exposure gives each cell its "
+                "weight (FR-231). Needs `dataset:read`; there is no default."
+            )
+        ),
+    ] = None,
+    limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
+    cursor: str | None = None,
+) -> Page[RateTableDiffCell] | Job:
+    """Every cell the diff counts as changed, in `03` §4.2's key order (FR-231, `RL-1418`).
+
+    **200** with one cursor page: a page bounds one response, not the cells. **202** with a
+    `rate_table.diff_cells` Job where either version is `storage: parquet` and this query's
+    cell artifact is not yet stored (FR-232); the Job writes every changed cell as one blob,
+    and the same request then answers 200 from it. `against` and `portfolio` are checked as on
+    the diff route, before any cell is read and before any Job. A cursor this API did not issue
+    is a **400**, a `limit` out of range a **422**.
+    """
+    baseline = _parse_against(against)
+    if portfolio is not None:
+        async with database.session() as session:
+            await rbac.require_permission(
+                session,
+                workspace_id=caller.workspace_id,
+                principal=caller.principal,
+                permission=Permission.DATASET_READ,
+                credential_permissions=caller.permissions,
+            )
+    answer = await service.diff_cells_page(
+        database, caller.workspace_id, slug, version, baseline,
+        blob_store=blob_store, portfolio_dataset_version_id=portfolio,
+        limit=limit, cursor=cursor,
+    )
+    if isinstance(answer, service.DiffCellsJobNeeded):
+        async with database.unit_of_work() as session:
+            job = await job_service.submit(
+                session,
+                JobKind.RATE_TABLE_DIFF_CELLS,
+                {
+                    **job_identity(caller),
+                    "slug": slug,
+                    "version": version,
+                    "against": against,
+                    "key": answer.key,
+                    **({"portfolio": str(portfolio)} if portfolio is not None else {}),
+                },
+                caller.principal,
+                workspace_id=caller.workspace_id,
+            )
+        response.status_code = status.HTTP_202_ACCEPTED
+        response.headers["Location"] = f"/api/v1/jobs/{job.id}"
+        return job
+    return Page[RateTableDiffCell](
+        items=answer.items, next_cursor=answer.next_cursor, total_estimate=answer.total_estimate
     )

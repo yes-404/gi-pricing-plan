@@ -32,7 +32,7 @@ from redis.exceptions import RedisError
 
 from model_schema.rating import RateTable, RateTableDiff
 
-__all__ = ["DiffCache", "definition_hash", "version_content_hash"]
+__all__ = ["DiffCache", "cells_key", "definition_hash", "version_content_hash"]
 
 _log = logging.getLogger(__name__)
 
@@ -74,6 +74,38 @@ def definition_hash(table: RateTable) -> str:
     ).hexdigest()
 
 
+def _entry_name(
+    kind: str,
+    current_hash: str,
+    baseline_hash: str,
+    definition_hash: str,
+    portfolio_dataset_version_id: UUID | None,
+    workspace_id: UUID | None,
+) -> str:
+    """The workspace joins the name only with a portfolio: an unweighted diff is a function of
+    the two versions and the definition alone, and a weighted one of a portfolio that is scoped
+    to a workspace (`RL-1361` item 5)."""
+    if portfolio_dataset_version_id is None:
+        portfolio = "none"
+    else:
+        portfolio = f"{portfolio_dataset_version_id}:{workspace_id}"
+    return f"rate_table:{kind}:{current_hash}:{baseline_hash}:{definition_hash}:{portfolio}"
+
+
+def cells_key(
+    current_hash: str,
+    baseline_hash: str,
+    definition_hash: str,
+    portfolio_dataset_version_id: UUID | None,
+    workspace_id: UUID | None,
+) -> str:
+    """The name of one query's stored cell artifact (`RL-1418` T1), keyed like the diff."""
+    return _entry_name(
+        "diff_cells", current_hash, baseline_hash, definition_hash,
+        portfolio_dataset_version_id, workspace_id,
+    )
+
+
 class DiffCache:
     """The DP3 read-path cache: `key` names the entry, `get`/`set` move the artifact.
 
@@ -100,14 +132,11 @@ class DiffCache:
         portfolio_dataset_version_id: UUID | None,
         workspace_id: UUID | None,
     ) -> str:
-        """The entry name. The workspace joins the key only with a portfolio: an unweighted
-        diff is a function of the two versions alone, and a weighted one of a portfolio
-        that is scoped to a workspace (`RL-1361` item 5)."""
-        if portfolio_dataset_version_id is None:
-            portfolio = "none"
-        else:
-            portfolio = f"{portfolio_dataset_version_id}:{workspace_id}"
-        return f"rate_table:diff:{current_hash}:{baseline_hash}:{definition_hash}:{portfolio}"
+        """The entry name (`_entry_name`)."""
+        return _entry_name(
+            "diff", current_hash, baseline_hash, definition_hash,
+            portfolio_dataset_version_id, workspace_id,
+        )
 
     async def get(self, key: str) -> RateTableDiff | None:
         try:

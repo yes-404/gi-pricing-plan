@@ -7175,6 +7175,7 @@
           "rating.compile",
           "rating.regression",
           "rate_table.diff",
+          "rate_table.diff_cells",
           "score.batch",
           "score.trace_produce",
           "dislocation.run",
@@ -9204,6 +9205,42 @@
         "title": "Page[PerilStructure]",
         "type": "object"
       },
+      "Page_RateTableDiffCell_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RateTableDiffCell"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[RateTableDiffCell]",
+        "type": "object"
+      },
       "Page_SubGraph_": {
         "additionalProperties": false,
         "properties": {
@@ -10579,6 +10616,94 @@
           "changed_cells"
         ],
         "title": "RateTableDiff",
+        "type": "object"
+      },
+      "RateTableDiffCell": {
+        "additionalProperties": false,
+        "description": "One changed cell of a rate table diff (03 §4.2, FR-231, `RL-1418` T2).\n\n`key` holds each declared key's name and the cell's stored value for it. `change` says\nwhether the cell was added, removed or changed. The values are decimal strings on the\nwire (R2), null on the side where the cell is absent. `abs_change` is\n`current_value - baseline_value` and `rel_change_pct` is that over `baseline_value` x 100;\neach is null unless both values are present, and the percentage also when the baseline is\nzero. `weight` is the cell's Σ exposure (FR-231): `\"0\"` for a current cell whose Σ is 0 or\nthat no portfolio row maps to, and null when no portfolio is named or the cell is\n`removed`, because rows map only to cells of the current version.",
+        "properties": {
+          "abs_change": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Abs Change"
+          },
+          "baseline_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Value"
+          },
+          "change": {
+            "enum": [
+              "added",
+              "removed",
+              "changed"
+            ],
+            "title": "Change",
+            "type": "string"
+          },
+          "current_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Value"
+          },
+          "key": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Key",
+            "type": "object"
+          },
+          "rel_change_pct": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rel Change Pct"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          }
+        },
+        "required": [
+          "key",
+          "change"
+        ],
+        "title": "RateTableDiffCell",
         "type": "object"
       },
       "RateTableKey": {
@@ -27891,6 +28016,224 @@
           }
         },
         "summary": "Cell diff of a rate table version against a baseline",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/v1/rate-tables/{slug}@{version}/diff/cells": {
+      "get": {
+        "description": "Every cell the diff counts as changed, in `03` §4.2's key order (FR-231, `RL-1418`).\n\n**200** with one cursor page: a page bounds one response, not the cells. **202** with a\n`rate_table.diff_cells` Job where either version is `storage: parquet` and this query's\ncell artifact is not yet stored (FR-232); the Job writes every changed cell as one blob,\nand the same request then answers 200 from it. `against` and `portfolio` are checked as on\nthe diff route, before any cell is read and before any Job. A cursor this API did not issue\nis a **400**, a `limit` out of range a **422**.",
+        "operationId": "rate_table_diff_cells_api_v1_rate_tables__slug___version__diff_cells_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "`previous`, `seed`, or a version number",
+            "in": "query",
+            "name": "against",
+            "required": true,
+            "schema": {
+              "description": "`previous`, `seed`, or a version number",
+              "title": "Against",
+              "type": "string"
+            }
+          },
+          {
+            "description": "A `validated` portfolio Dataset Version whose exposure gives each cell its weight (FR-231). Needs `dataset:read`; there is no default.",
+            "in": "query",
+            "name": "portfolio",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A `validated` portfolio Dataset Version whose exposure gives each cell its weight (FR-231). Needs `dataset:read`; there is no default.",
+              "title": "Portfolio"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_RateTableDiffCell_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Malformed request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "The changed cells of a rate table diff, one cursor page at a time",
         "tags": [
           "rating"
         ]

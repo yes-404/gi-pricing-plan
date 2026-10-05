@@ -40,6 +40,7 @@ from sqlalchemy import func, select, update
 
 from app.config import Settings
 from app.db.models import (
+    BlobRow,
     JobRow,
     RateTableRow,
     RateTableVersionRow,
@@ -827,3 +828,337 @@ async def test_a_dangling_ref_fails_the_job_with_not_found(
     assert row_job.error is not None
     assert row_job.error["code"] == "NOT_FOUND"
     assert "driver_age_band" in row_job.error["message"]
+
+
+# --- the paged cells route (RL-1418 T1, T2; Acceptance 18) -----------------------------------
+
+
+def _cells_url(slug: str, version: int = 2) -> str:
+    return f"/api/v1/rate-tables/{slug}@{version}/diff/cells"
+
+
+async def _uplifted_table(
+    database: Database, workspace_id: UUID, principal: Any, blob_store: BlobStore,
+    levels: list[str],
+) -> str:
+    """A seeded `driver_age_band` table of these levels (relativity 1.0 each), then a v2 that
+    uplifts every cell by 10%: every cell is a changed cell, the commonest bulk operation."""
+    family = f"mf-{uuid4().hex[:8]}"
+    await _seed_approved_model(
+        database, workspace_id, family, {"driver_age_band": [(lv, 1.0) for lv in levels]}
+    )
+    slug = f"tbl-{uuid4().hex[:8]}"
+    await svc.seed_from_model(
+        database, workspace_id, principal.id, Settings(), blob_store, slug=slug,
+        model_ref=ArtifactRef(type="model", slug=family, version=1),
+        factor="driver_age_band", change_note="seed",
+    )
+    await svc.bulk_operation(
+        database, workspace_id, principal.id, Settings(), blob_store, slug=slug, version=1,
+        kind="uplift_table", parameters={"percentage": "10"},
+    )
+    return slug
+
+
+def _all_pages(
+    api_client: TestClient, url: str, headers: dict[str, str], **params: str
+) -> list[Any]:
+    """Every item across pages at the default limit."""
+    items: list[Any] = []
+    cursor: str | None = None
+    while True:
+        query = dict(params)
+        if cursor is not None:
+            query["cursor"] = cursor
+        response = api_client.get(url, params=query, headers=headers)
+        assert response.status_code == 200, response.text
+        body = response.json()
+        items.extend(body["items"])
+        cursor = body["next_cursor"]
+        if cursor is None:
+            return items
+
+
+@pytest.mark.req("FR-231")
+async def test_diff_cells_gives_each_cells_change_and_weight_through_the_route(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    await grant("analyst")
+    actor = await _actuary(database, workspace_id)
+    portfolio = await validated_portfolio(database, blob_store, workspace_id, actor)
+    slug = await _identity_table(database, workspace_id, principal, blob_store)
+    analyst = _headers(principal.id, workspace_id)
+
+    response = api_client.get(
+        _cells_url(slug), params={"against": "previous", "portfolio": str(portfolio)},
+        headers=analyst,
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["next_cursor"] is None
+    assert body["total_estimate"] == 2
+    first, second = body["items"]
+    assert first["key"] == {"driver_age_band": "17-20"}
+    assert first["change"] == "changed"
+    assert Decimal(first["baseline_value"]) == D("1.92")
+    assert Decimal(first["current_value"]) == D("2.112")
+    assert Decimal(first["abs_change"]) == D("0.192")
+    assert Decimal(first["rel_change_pct"]) == D("10")
+    assert Decimal(first["weight"]) == D("1.5")
+    assert second["key"] == {"driver_age_band": "21-24"}
+    assert Decimal(second["abs_change"]) == D("-0.141")
+    assert Decimal(second["rel_change_pct"]) == D("-10")
+    assert Decimal(second["weight"]) == D("2")
+
+    # No portfolio: every weight is null.
+    plain = api_client.get(_cells_url(slug), params={"against": "previous"}, headers=analyst)
+    assert [item["weight"] for item in plain.json()["items"]] == [None, None]
+
+
+@pytest.mark.req("FR-231")
+async def test_an_uplift_of_every_cell_is_served_in_full(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    """More than `MAX_LIMIT` changed cells: the items number `changed_cells`, no key repeats."""
+    from app.api.pagination import MAX_LIMIT
+
+    await grant("analyst")
+    levels = [f"L{i:03d}" for i in range(MAX_LIMIT + 50)]
+    slug = await _uplifted_table(database, workspace_id, principal, blob_store, levels)
+    analyst = _headers(principal.id, workspace_id)
+
+    summary = api_client.get(
+        f"/api/v1/rate-tables/{slug}@2/diff", params={"against": "previous"}, headers=analyst
+    ).json()
+    assert summary["changed_cells"] == MAX_LIMIT + 50
+    items = _all_pages(
+        api_client, _cells_url(slug), analyst, against="previous", limit=str(MAX_LIMIT)
+    )
+    keys = [item["key"]["driver_age_band"] for item in items]
+    assert len(items) == summary["changed_cells"]
+    assert len(set(keys)) == len(keys)
+    assert keys == sorted(levels)
+
+
+@pytest.mark.req("FR-231")
+async def test_the_pages_concatenate_in_key_order(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    """Pages at `limit=1` concatenate to the full list; `"10"` sorts before `"9"`; a repeat of
+    a page is the same bytes."""
+    await grant("analyst")
+    slug = await _uplifted_table(database, workspace_id, principal, blob_store, ["9", "10", "2"])
+    analyst = _headers(principal.id, workspace_id)
+    pages = _all_pages(api_client, _cells_url(slug), analyst, against="previous", limit="1")
+    assert [item["key"]["driver_age_band"] for item in pages] == ["10", "2", "9"]
+
+    first = api_client.get(
+        _cells_url(slug), params={"against": "previous", "limit": "1"}, headers=analyst
+    )
+    cursor = first.json()["next_cursor"]
+    assert cursor is not None
+    again = [
+        api_client.get(
+            _cells_url(slug), params={"against": "previous", "limit": "1", "cursor": cursor},
+            headers=analyst,
+        ).content
+        for _ in range(2)
+    ]
+    assert again[0] == again[1]
+
+
+@pytest.mark.req("FR-231")
+async def test_one_weights_map_feeds_summary_and_cells(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    """The summary's mean and maximum, recomputed from the cells route's items, equal the
+    diff route's: both come from one weights map."""
+    await grant("analyst")
+    actor = await _actuary(database, workspace_id)
+    portfolio = await validated_portfolio(database, blob_store, workspace_id, actor)
+    slug = await _identity_table(database, workspace_id, principal, blob_store)
+    analyst = _headers(principal.id, workspace_id)
+    params = {"against": "previous", "portfolio": str(portfolio)}
+    summary = api_client.get(
+        f"/api/v1/rate-tables/{slug}@2/diff", params=params, headers=analyst
+    ).json()
+    items = _all_pages(api_client, _cells_url(slug), analyst, **params)
+
+    pairs = [
+        (Decimal(i["weight"]), Decimal(i["rel_change_pct"]))
+        for i in items
+        if i["weight"] is not None and Decimal(i["weight"]) != 0 and i["rel_change_pct"] is not None
+    ]
+    mean = sum((w * p for w, p in pairs), D(0)) / sum((w for w, _ in pairs), D(0))
+    assert Decimal(summary["exposure_weighted_mean_change_pct"]) == mean
+    assert Decimal(summary["max_abs_change_pct"]) == max(
+        abs(Decimal(i["rel_change_pct"])) for i in items if i["rel_change_pct"] is not None
+    )
+
+
+@pytest.mark.req("FR-231")
+async def test_a_resolution_error_reaches_the_422_with_its_count_and_example(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    await grant("analyst")
+    actor = await _actuary(database, workspace_id)
+    # age 5 is below the banding's first boundary (17) and the policy is `error`.
+    out_of_range = PORTFOLIO.replace(b"P1,q1,1.0,17-20,18,N1", b"P1,q1,1.0,17-20,5,N1")
+    portfolio = await validated_portfolio(database, blob_store, workspace_id, actor, out_of_range)
+    age_factor, _ = await _banding_factor(database, workspace_id, actor)
+    family = f"mf-{uuid4().hex[:8]}"
+    await _approved_model(
+        database, workspace_id, family, {"age_banded": age_factor}, {"age_banded": _AGE_LEVELS}
+    )
+    table = await _seed_two_versions(
+        database, workspace_id, principal, blob_store, factor="age_banded", family=family,
+        v2=b"age_banded,relativity\n17-20,2.1120\n21-24,1.2690\n25-29,1.1200\n",
+    )
+    response = api_client.get(
+        _cells_url(table), params={"against": "previous", "portfolio": str(portfolio)},
+        headers=_headers(principal.id, workspace_id),
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "VALIDATION_FAILED"
+    detail = response.json()["detail"]
+    assert "1" in detail
+    assert "5" in detail
+
+
+@pytest.mark.req("FR-231")
+async def test_a_bad_cursor_is_400_and_a_bad_limit_is_422(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    from app.api.pagination import MAX_LIMIT, encode_cursor
+
+    await grant("analyst")
+    slug = await _identity_table(database, workspace_id, principal, blob_store)
+    analyst = _headers(principal.id, workspace_id)
+    for cursor in ("not-a-cursor!", encode_cursor(2), encode_cursor(10_000), encode_cursor(0)):
+        response = api_client.get(
+            _cells_url(slug), params={"against": "previous", "cursor": cursor}, headers=analyst
+        )
+        assert response.status_code == 400, (cursor, response.text)
+        assert response.json()["code"] == "VALIDATION_FAILED"
+    too_big = api_client.get(
+        _cells_url(slug), params={"against": "previous", "limit": str(MAX_LIMIT + 1)},
+        headers=analyst,
+    )
+    assert too_big.status_code == 422
+    assert too_big.json()["code"] == "VALIDATION_FAILED"
+
+
+@pytest.mark.req("FR-231")
+@pytest.mark.req("FR-232")
+@pytest.mark.parametrize("storage", ["rows", "parquet"])
+async def test_the_cells_route_refuses_before_anything_else(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient, storage: str,
+) -> None:
+    await grant("analyst")
+    actor = await _actuary(database, workspace_id)
+    slug = (
+        await _parquet_table(database, workspace_id, principal, blob_store)
+        if storage == "parquet"
+        else await _identity_table(database, workspace_id, principal, blob_store)
+    )
+    draft_dataset = await _dataset(database, blob_store, workspace_id, actor)
+    draft = await ingest_portfolio(database, blob_store, workspace_id, actor, draft_dataset)
+    rating_only = await _rating_only_caller(database, workspace_id)
+    analyst = _headers(principal.id, workspace_id)
+
+    before = await _job_count(database)
+    for headers, params, status_code in (
+        (rating_only, {"portfolio": str(uuid4())}, 403),
+        (analyst, {"portfolio": str(uuid4())}, 404),
+        (analyst, {"portfolio": str(draft)}, 409),
+        (analyst, {"against": "9"}, 404),
+    ):
+        query = {"against": "previous", **params}
+        response = api_client.get(_cells_url(slug), params=query, headers=headers)
+        assert response.status_code == status_code, (params, response.text)
+    assert await _job_count(database) == before
+
+    plain = api_client.get(
+        _cells_url(slug), params={"against": "previous"}, headers=rating_only
+    )
+    assert plain.status_code == (202 if storage == "parquet" else 200), plain.text
+
+
+@pytest.mark.req("FR-231")
+@pytest.mark.req("FR-232")
+async def test_a_parquet_cells_request_runs_one_job_then_pages(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    await grant("analyst")
+    actor = await _actuary(database, workspace_id)
+    full = await validated_portfolio(database, blob_store, workspace_id, actor)
+    other = await validated_portfolio(
+        database, blob_store, workspace_id, actor, PORTFOLIO.replace(b"P2,q2,2.0,", b"P2,q2,0.5,")
+    )
+    parquet = await _parquet_table(database, workspace_id, principal, blob_store)
+    rows = await _identity_table(database, workspace_id, principal, blob_store)
+    analyst = _headers(principal.id, workspace_id)
+    params = {"against": "previous", "portfolio": str(full)}
+
+    accepted = api_client.get(_cells_url(parquet), params=params, headers=analyst)
+    assert accepted.status_code == 202, accepted.text
+    job = accepted.json()
+    assert job["kind"] == "rate_table.diff_cells"
+    assert accepted.headers["Location"] == f"/api/v1/jobs/{job['id']}"
+    assert await execute_job(database, UUID(job["id"]), blob_store) is JobStatus.SUCCEEDED
+
+    paged = api_client.get(_cells_url(parquet), params=params, headers=analyst)
+    assert paged.status_code == 200, paged.text
+    twin = api_client.get(_cells_url(rows), params=params, headers=analyst)
+    assert paged.json() == twin.json()
+    assert len(paged.json()["items"]) == 2
+
+    # Another query is never served this query's artifact: a different portfolio is a 202.
+    elsewhere = api_client.get(
+        _cells_url(parquet), params={**params, "portfolio": str(other)}, headers=analyst
+    )
+    assert elsewhere.status_code == 202, elsewhere.text
+
+    # With the stored artifact removed the request is a 202 again, never another page.
+    finished = await _job_row(database, UUID(job["id"]))
+    assert finished.result is not None
+    from sqlalchemy import delete
+
+    async with database.unit_of_work() as session:
+        await session.execute(delete(BlobRow).where(BlobRow.sha256 == finished.result["ref"]))
+    again = api_client.get(_cells_url(parquet), params=params, headers=analyst)
+    assert again.status_code == 202, again.text
+
+
+@pytest.mark.req("FR-232")
+async def test_a_cells_job_for_an_archived_portfolio_fails(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    await grant("analyst")
+    actor = await _actuary(database, workspace_id)
+    portfolio = await validated_portfolio(database, blob_store, workspace_id, actor)
+    parquet = await _parquet_table(database, workspace_id, principal, blob_store)
+    accepted = api_client.get(
+        _cells_url(parquet), params={"against": "previous", "portfolio": str(portfolio)},
+        headers=_headers(principal.id, workspace_id),
+    )
+    assert accepted.status_code == 202, accepted.text
+    async with database.unit_of_work() as session:
+        await dataset_service.archive_version(
+            session, workspace_id=workspace_id, actor=actor, version_id=portfolio,
+            reason="superseded",
+        )
+    job_id = UUID(accepted.json()["id"])
+    assert await execute_job(database, job_id, blob_store) is JobStatus.FAILED
+    row = await _job_row(database, job_id)
+    assert row.error is not None
+    assert row.error["code"] == "DATASET_NOT_VALIDATED"
