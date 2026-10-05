@@ -41,12 +41,17 @@ item changes.
    in place. Where the text is front matter, the H1 heading, or text the executor writes
    verbatim, a strike would be copied, so the text is replaced and listed here: the front-matter
    `title`; the H1; Task 1 Step 1's module docstring; Task 2 Step 3's replacement docstring
-   paragraph. The filename keeps its working-id slug until the mint.
+   paragraph; and the four commit messages the plan gives the executor (Task 1 Step 4, Task 2
+   Step 5, Task 4 Step 8, Task 5 Step 3), which the executor writes after FD-1420 has minted.
+   The filename keeps its working-id slug until the mint.
    **Left as written:** the verbatim quotes of dated entries in § "The decisions this plan rests
    on, quoted" (the **DP-1** item's item 20, the item 22 it quotes for DP-2, and the
    **Severity and order** item with its "Severity signals" quote), and the dated amendment
-   line in § "Spec text T1", which quotes the text the ruling adopts. The four commit messages the plan gives the executor (Task 1 Step 4, Task 2 Step 5,
-   Task 4 Step 8, Task 5 Step 3) also keep FD 9707, per the logged decision.
+   line in § "Spec text T1", which quotes the text the ruling adopts.
+   The commit messages were left as written at `b8b7d1bf`. The lead's correcting entry of
+   19:36:58 BST on 2026-10-05 in `mint-queue-2026-10-05.md` supersedes the 19:36:07 entry's
+   "commit-message text in the plan is listed and left" and re-points them. It names two of
+   the four; the lead applied it to all four, because the other two are the same class.
 3. **PL 9716 → PL-1419** (minted from #1127), struck in place in the write-set table's header.
 4. **`../roadmap.md`, the SL 9685 row:** its heading, its `title` and its first paragraph cite
    FD 9707. Each is a citation, not a quote, and each is re-pointed to FD-1420 the same way:
@@ -769,7 +774,7 @@ async def test_an_input_shadowing_effective_date_is_checked() -> None:
   any expected red, or a red with any other cause, is a stop: record it and tell the lead.
   Paste the summary line and each failure line in the ledger.
 
-- [ ] **Step 4: Commit the reds.** `test(pricing-core): FD 9707 reds — lookup ignores as_at
+- [ ] **Step 4: Commit the reds.** `test(pricing-core): FD-1420 reds — lookup ignores as_at
   (FR-221)`. The commit is red by design, and the ledger names its SHA.
 
 ### Task 2: The window, in the graph (DP-2 (a); Acceptance 1, 5)
@@ -842,7 +847,7 @@ def _as_at_window(row: Mapping[str, Any]) -> str:
   packages/pricing-core/tests/test_rating_lookup_as_at.py -k "prices or misses"`. Expected:
   every price and miss test passes. The DP-1 refusal tests stay red until Task 3.
 - [ ] **Step 5: Commit.** `fix(pricing-core): a lookup reads the row in force as at its date
-  (FD 9707, FR-221)`.
+  (FD-1420, FR-221)`.
 
 ### Task 3: DP-1, compile and run time; the registry; the four fixtures (Acceptance 3, 4, 8, 10)
 
@@ -1067,7 +1072,7 @@ order used. Its tests need Postgres and MinIO; a skipped run is not a red.
 - [ ] **Step 7: Run red at the base.** Run: `uv run pytest -q backend/tests/test_score_as_at.py`.
   Expected: Steps 2–4 and Step 5's midnight case fail with `the superseded row's rate
   returned`. The pins pass. Record the result in the ledger. After Tasks 2–3, all pass.
-- [ ] **Step 8: Commit** (red, if before Task 2). `test(backend): FD 9707 reds on /score,
+- [ ] **Step 8: Commit** (red, if before Task 2). `test(backend): FD-1420 reds on /score,
   /score/compare and batch (FR-221)`.
 
 ### Task 5: The spec text, verbatim from the ruling (activation need 2)
@@ -1080,7 +1085,7 @@ order used. Its tests need Postgres and MinIO; a skipped run is not a red.
 - [ ] **Step 2:** Run `python3 scripts/audit-docs.py`. Expected: exit 0, or only the
   working-id check 31 rows the lead expects.
 - [ ] **Step 3: Commit.** `docs(spec): FR-221 — as_at names effective_date or a date input;
-  the row in force is half-open (FD 9707)`.
+  the row in force is half-open (FD-1420)`.
 
 ### Task 6: The gate and the ledger
 
