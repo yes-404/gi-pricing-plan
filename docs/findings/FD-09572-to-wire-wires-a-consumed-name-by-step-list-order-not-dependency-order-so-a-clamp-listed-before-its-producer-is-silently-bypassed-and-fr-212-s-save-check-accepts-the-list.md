@@ -217,3 +217,18 @@ Open. Filed by the auditor, 2026-10-05. **Severity HIGH, owner WK-673 and the de
 **Placement** is not ruled here: "its own small WK-673 slice (or folded into the FD 9707 fix if that plan's write set already covers runtime.py's to_wire and the planner shows no scope creep). The planner proposes which." Owner of the fix plan: the planner.
 
 Event that next confirms or discharges it: the fix PR merging with all three tests red first on the unfixed tree.
+
+## Amendment (pre-mint), 2026-10-05 17:27 BST — the (c) premise measured on a correctly ordered algorithm: it FAILS at `score_one`
+
+Added by auditor-premise on the lead's order, from the maintainer's (by delegation) ruling entries of 17:25:07 and 17:25:23 BST (`to-lead.md`, a local channel file, cited by header) and the "UNMEASURED premise" note on remedy (c) above. **Severity stays HIGH.** Tree: `origin/main` at `4d3be141`, detached worktree, `OMP_NUM_THREADS=1 nice -n 10 uv run`, no suite. Scripts (local, sha256): `r1.py` `8dea0ff6e301fed1b72a1f4a593a01ba10113ba8ca0124233f6dbd04cce66c95`, `r2.py` `b3448450a1fe4c5b9622ec15555fda8a5d983c0b82e1ca9bbb7b624df2fb501c`, `r3.py` `0ee537bf93e6c07fb548fec520321dd32a460a50283e6dd799e595558e897fac`, `r4.py` `ae53159a1ec39c51c1350b6f623907d106ad7b711e784f482ae7aa6ea5ca580c`, `r5.py` `98aea5df46d7df8e5fe8bc2a16f5e90e1bc35b32104b49fbc2f731157b7837d6`; `r1`–`r5` are copies of the §2/§3 scripts with `main()` replaced.
+
+**Measured.**
+
+- **ZEN, ordered `[in, A, B, out]`:** ctx `{x:3}` → `{"__exact__premium": "350", "base": 300, "premium": 350, "x": 3}`; ctx `{x:3, base:7}` → the same result, 350; ctx `{x:3, base:7, premium:9}` → 350. The premise holds at ZEN level for a linear chain.
+- **`score_one`, score fixture in topological order, `min_premium_minor=5000`:** reference payable 5250. An extra input `instalment_loading_minor=777` gives **payable 777** (ladder `instalment_loading` 777, `payable_premium` 777). **Wrong; the correct price is 5250.** `office_premium_minor` (1, 777, 999999), `expense_factor`, `risk_premium_minor` and `payable_premium_minor` as extra keys leave 5250, and so do the `__exact__` names.
+- **Cause (to the extent measured):** `runtime.py:495-499` wires every interior step whose produced names no other interior step consumes, including a step that produces nothing (the decline constraints `s_decl_cap`, `s_decl_floor`), straight to the sink; they fan in beside `s_instalment` and, via `passThrough` (`runtime.py:428-432`), carry the raw caller key. Moving `s_instalment` before the decline steps gives 5250; listing them after it gives 777 again, so the merge at the fan-in depends on list order. The last-listed branch winning is inferred from three runs; zen-engine's merge code was not read. `score.py:911` and `:1067` relay `**ctx.inputs` unfiltered.
+- **Exposure in the gipricing DB:** one Rating Version, `fremtpl2-demo` v1 (`approved`, algorithm `demo-fixture-motor@1`), no `deployments` and no `deployment_requests` rows. That algorithm has one interior step and no fan-in, so it is not exposed by this mechanism by topology; not run.
+
+**Consequence for the ruled remedy.** Remedy (c)'s red test ("ctx `{x:3, base:7}` on the CORRECTLY ordered algorithm still gives 350") passes at ZEN level and does not catch this; a red test must run `score_one` with an extra key naming a produced name that sits on a fan-in branch. Remedy (a) alone does not close it: a stable topological order does not remove the raw key from the sibling branches, so (c) is a guard that is needed on an ordered algorithm, not a belt for the misordered case only. Ordered algorithms are exposed.
+
+**Not measured:** two terminal producers of the same name; zen-engine's merge rule in isolation; the HTTP path.
