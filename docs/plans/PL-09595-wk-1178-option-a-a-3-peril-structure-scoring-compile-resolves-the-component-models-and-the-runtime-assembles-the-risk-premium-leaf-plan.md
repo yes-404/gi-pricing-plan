@@ -80,7 +80,8 @@ delta changed, each marked in place, nothing deleted:
    offset column (RL 9571's P3: "The frequency GLM's `exposure_years` offset reaches B4 through
    its `feature_map`") is refused against the severity component, which declares no such
    offset, so A-4's ruled path could not save. A component ref resolving to no Model is left to
-   compile under (a) and (b) alike (R1).
+   compile under (a) and (b) alike (R1). *(Pre-mint delta 2 2026-10-05, DP-A3-7 ruled; see §"Pre-mint delta 2, 2026-10-05".)* **Ruled (a)** at 18:44:45 BST;
+   A-2's check has no completeness limb, so none applies here.
 5. **Serialisation with SL 9568 (PL 9567, WK-673; #1193 @`42d8be16`).** Its hand-off
    (`:235-243` at that head), and the maintainer's (by delegation) entry "2026-10-05 17:51:03
    BST — …", item 2, "Serialising A-1/A-2/A-3 with SL 9568 on _model_call_handler: agreed". So
@@ -92,6 +93,60 @@ delta changed, each marked in place, nothing deleted:
    **A-2** (#1178 @`176a6a75`) the order was already serial (activation need 4, a plan
    dependency); item 3 adds a second shared definition, A-2's save-path check, which changes
    nothing in that order.
+
+### Pre-mint delta 2, 2026-10-05
+
+Edited 2026-10-05 from 18:46:00 BST (`TZ=Europe/London date`), before this plan's mint, by the
+planner, on the lead's brief `~/gi-pricing-plan.local/handover/brief-planner-a3b-2026-10-05.md`.
+origin/main `116a0da6f63cd7733335d6c2c6975c219b4e0e3d` was already contained in this branch, so
+nothing was merged. Nothing is re-decided here. What this delta changed, each marked in place,
+nothing deleted:
+
+1. **DP-A3-7 is ruled (a), the union.** The maintainer's (by delegation) entry "2026-10-05
+   18:44:45 BST — DP-A3-7 = (a) the UNION, with a per-component COMPLETENESS limb; A-1's needs
+   put lane C on the G2 path" (`channel/to-lead.md`), item 1, verbatim:
+
+   > DP-A3-7: (a). For the "this key is not a feature" test, a feature_map entry passes if AT LEAST ONE component model accepts it (one map feeds every component; the frequency GLM's exposure_years OFFSET, RL 9571 P3, is not a severity feature, and (b) would refuse A-4's ruled demo path).
+   > PLUS a COMPLETENESS limb, if A-2's single check function has one (R1–R3: a model's own factors or feature_order must be mapped): it applies PER COMPONENT, so EVERY component's required inputs must be present in the one map. The union must not let a map that starves one component save; that would only fail at score time as MODEL_CALL_FAILED. The planner states, with file:line in PL 9597, whether A-2's function has a completeness limb. If it does, Acceptance 16 gains a red (a map missing one severity factor → 422). If it does not, say so; no new limb is invented in A-3.
+   > R4 now in PL 9595 as Acceptance 16: good catch; the platform/ write is accepted within A-3's estimate.
+
+   The entry is not yet in a minted RL; the ruling's record id is the lead's to name, and the
+   plan is re-pointed at it at the mint. Its last line settles delta 1 item 3's scope point:
+   the `backend/src/app/platform/` write is inside A-3's estimate.
+
+2. **The completeness limb: A-2's check has NONE.** Read in PL 9597 (#1178,
+   `pl-9597-a2-glm-model-call` @`176a6a756f863376515f3dd5ec0a4c29afbc14a7`,
+   its one file under `docs/plans/`, path elided because it carries the unminted id, which check 32
+   refuses):
+   - item 13, `:363-366`: the save "resolves each `model_call`'s `model_ref` to its Model and
+     the Model's Factors … and **refuses a value outside them**": a membership test on each
+     `feature_map` value;
+   - R2, `:379-380`: "the **accepted values** are the Model's Factor slugs plus the column its
+     spec declares as a `log_column` or `column` offset": membership again;
+   - R3, `:382-384`: a GBM "is checked the same way, against its Factors' slugs", or "against
+     `feature_order`" when it has no Factors: the same membership test;
+   - item 18, `:507-511`: the sub-graph save calls "the check item 13 adds", "one function";
+     it adds no limb.
+
+   No item asks that a model's Factors, offset column or `feature_order` all be mapped, and no
+   red test in PL 9597 posts a map that omits one. The code the check builds on adds none:
+   `create_algorithm` at origin/main `116a0da6`
+   (`backend/src/app/platform/rating_algorithms.py:94-125`) runs `_parse_algorithm` and
+   `_issues_to_error` and the duplicate `(slug, version)` refusal, with no `feature_map` check
+   at all. An unmapped Factor is refused only at score time, by `resolve_factors`'s missing
+   source column (`packages/pricing-core/src/pricing_core/modelling/factors.py:106`, FR-87,
+   PL 9597's Task 0 row 0.5), reaching the caller as `MODEL_CALL_FAILED`; an unmapped offset
+   column as `MODEL_CALL_FAILED` naming `MODEL_OFFSET_MISSING` (PL 9597 item 14, `:403-404`).
+
+   So, as the ruling says for that case, **no completeness limb is invented in A-3**, and
+   Acceptance 16 gains **no** "missing severity factor → 422" red. Acceptance 16's membership
+   test stands under (a) as written. If A-2's check gains a completeness limb before this
+   slice runs (Task 0 Step 3 reads A-2's merged function), the ruling's per-component clause
+   then binds, and the executor STOPS and reports rather than building it unplanned.
+
+3. **Marked in place:** delta 1 item 4 (DP-A3-7), activation need 5, and Acceptance 16. No
+   `SL-` row text names DP-A3-7 (`grep -n 'DP-A3-7' docs/roadmap.md` is empty), so
+   `docs/roadmap.md` is not touched.
 
 ## Goal
 
@@ -183,7 +238,7 @@ row's status flip and this plan's.
    slice predicts each component through the same per-kind dispatch, so a GLM component scores
    only after A-2. A-2 and this slice both edit `_model_call_handler` and `compile_bundle`;
    they serialise in any case.
-5. **The ruling on DP-A3-1 to DP-A3-6 merged and minted.** *(Pre-mint delta 2026-10-05, RL 9571; see §"Pre-mint delta, 2026-10-05". It is RL 9571 (#1188 @`cc5d0d61`); DP-A3-7's ruling is needed too.)* If the minted text differs from this
+5. **The ruling on DP-A3-1 to DP-A3-6 merged and minted.** *(Pre-mint delta 2026-10-05, RL 9571; see §"Pre-mint delta, 2026-10-05". It is RL 9571 (#1188 @`cc5d0d61`); DP-A3-7's ruling is needed too.)* *(Pre-mint delta 2 2026-10-05, DP-A3-7 ruled; see §"Pre-mint delta 2, 2026-10-05".)* DP-A3-7 was ruled (a) at 18:44:45 BST; the need is its record minted. If the minted text differs from this
    plan, the minted text governs, and the planner aligns the plan before its first merge.
 6. **The lane is free under `RL-1263` as amended by RL 9620 (working id, #1162):** no build
    slice that edits `compile_bundle` (PL 9610, PL 9609; PL 9649 once merged is history) or
@@ -288,7 +343,8 @@ suite outside Task 7.
     the value and the structure's ref; no row is written. The control: a map whose every value
     some component accepts, including the frequency component's offset column, answers `201`.
     **Red first:** after A-2's merge the same map saves `201`, because R4 skips the step; the
-    red is recorded in the ledger.
+    red is recorded in the ledger. *(Pre-mint delta 2 2026-10-05, DP-A3-7 ruled; see §"Pre-mint delta 2, 2026-10-05".)* DP-A3-7 is ruled (a); A-2's check
+    has no completeness limb, so no "missing factor" red is added here.
 
 ## Global Constraints
 
