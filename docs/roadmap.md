@@ -1436,6 +1436,24 @@ relates: [FD-1356, RL-1301, PL-1306, SL-1256, RL-1407, PL-1408]
 **Closed 2026-10-05** on the slice audit (LG-1417 §"Closing note"; local working copy: `handover/audit-sl1409-2026-10-05.md`) and its re-check, at the mint of ledger `LG-1417` (the executor's closing acts, `executor.md` mint step; `document-ids.md` §1.6).
 (Activated 2026-10-05 as the WK-1178 FD-1356 fix slice, on the maintainer's GO check, "2026-10-05 09:44:39 BST — DISPATCH GO: FD-1356 fix (SL-1409 / PL-1408) on lane B, option (b); executor-1409 starts once the `__all__` registry amendment merges (or once WK-690 S3 merges, if that comes first)"; dispatch record DISPATCH-WK-1178-SL1409-2026-10-04.)
 
+#### SL-9495 — WK-1178 slice — compile refuses a `model_call` whose `feature_map` misses the pinned model's required inputs
+
+```yaml
+id: SL-9495
+family: slice
+title: WK-1178 slice — compile refuses a model_call whose feature_map misses the pinned model's required inputs, per component for a Peril Structure (FR-240)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: ecbd1954d90b1faf0bd197174d720d90ad8f6c6d
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1371, RL-1263]
+```
+
+The maintainer's (by delegation) decision "2026-10-05 18:51:33 BST — Save-time completeness: DECIDED NOW as (b), completeness at COMPILE" (`channel/to-lead.md`), ruled as RL 9491 (working id). `compile_bundle` refuses a `model_call` step whose `feature_map` does not cover the pinned model's required Factors, or its `feature_order` when it has none, and for a `peril_structure_ref` step each component model's, with `MODEL_CALL_FEATURE_MAP_INVALID` (A-2's code, reused) naming the step and the missing features; the offset column is not a required input. Today such a version compiles and fails on every quote as `MODEL_CALL_FAILED`. Leaf plan PL 9494 (working id). It follows A-2 (SL 9598) and A-3 (SL 9596), and precedes A-4 (SL 9594); it serialises with PL 9578, PL 9610, PL 9609 and PL 9689 on `compile_bundle`.
+
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
