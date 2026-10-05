@@ -238,7 +238,7 @@ Classes as in PL 9591 §"Write set" (`docs/process/delivery-process.core.json`
 |---|---|---|---|---|
 | Slice 4's files (`dislocation_runs.py`, `dislocation_handlers.py`, `api/dislocation_runs.py`) | edits | **SL-1388** (PL 9591, WK-673) | plan dependency: consumes Slice 4's output | **SERIAL** (activation need 2) |
 | `dislocation.py`, `03` §4.6 | DP-S5-3, DP-S5-4 | **SL-1387** (PL 9689) | serial through Slice 4 | serial |
-| `03` §3.2 | FR-224 `:110` | **PL 9688** (the FD 9707 fix, **WK-673**, SL 9685): FR-221 `:107`; **PL 9683** (WK-1178) under its DP-1 (a): FR-223 `:109` | **yes**: one section, hunks one to three lines apart | **SERIALISES** with each (`forbidden`: the same spec section; the hunks are adjacent, so the option-(b) non-adjacency condition cannot hold). For PL 9688 (same Work) RL 9620 (a) fails, so the pair is serial |
+| `03` §3.2 | FR-224 `:110` | **PL 9688** (the FD 9707 fix, **WK-673**, SL 9685): FR-221 `:107`; **PL 9683** (WK-1178) under its DP-1 (a): FR-223 `:109`; **A-3** (PL 9595, WK-1178, #1174 head `7b3df510`): the `model_call` row `:100`; **A-2** (PL 9597, #1178 head `477265e4`): `03` only as its ruling words it | **yes**: one section; hunks one to ten lines apart | **SERIALISES** with each (`forbidden`: the same spec section; for PL 9688 and PL 9683 the hunks are adjacent; A-3's is ten lines away but in the same section, and no dated option extends the non-adjacency allowance to this pair). A-2 joins if its ruling's text lands in §3.2. For PL 9688 (same Work) RL 9620 (a) fails, so the pair is serial |
 | `03` §3.8 | FR-257 `:174` | none found | — | none |
 | `model_schema/approvals.py` | `ApprovalPolicyEntry`, `DEFAULT_POLICY` | **PL 9616** (the FD-1416 fix, WK-1178): `ApprovalRequest` (`:405-431`), and `ApprovalDecision` (`:394-402`) only under its DP-5/DP-1 | no (different classes) | **ALLOWED one-sided**, the dispatch record naming the path and the check `git diff -U0 origin/main...<branch> -- packages/model-schema/src/model_schema/approvals.py` (hunks: this slice inside `:125-164` and `:344-349`; PL 9616 inside `:394-431`); the second merges main and re-gates |
 | `model_schema/rating.py` | `RatingVersionEvidence` (`:119-132`) | PL 9683 (`RatingVersionCreate` after `:170`), PL 9610 (`Pins` `:65-78`, `SubGraphRef`, `AlgorithmDiff`), PL 9609, PL 9713 (`RatingAlgorithm`), PL 9716 (`RateTableDiff`) | no (different classes) | **ALLOWED one-sided**, named with the same `git diff -U0` check per pair |
@@ -249,7 +249,7 @@ Classes as in PL 9591 §"Write set" (`docs/process/delivery-process.core.json`
 
 **Same-Work pairs, RL 9620 condition 2, both ways.** With **SL-1388**: consumes its output →
 serial. With **SL-1390** (Slice 6): Slice 6 consumes this slice's gates → serial after it.
-With **PL 9688**: `03` §3.2 SERIALISES → serial. With **PL 9649**: (a) every shared path is
+With **PL 9688**: `03` §3.2 SERIALISES → serial. (A-2 and A-3 are WK-1178, not same-Work pairs; §3.2 serialises them by the file rule.) With **PL 9649**: (a) every shared path is
 one-sided or exempt, and (b) no plan dependency either way; they may run at once if the
 dispatch record names both.
 
@@ -478,7 +478,7 @@ P3 are DP-S5-2's open actuarial choice.
    `baseline_mode_override`, `abs_change_pct_quantiles`, `approximation_deviation` and
    `approximation_check` are spelled the same in Interfaces, Steps, Acceptance and the
    Appendix (grepped).
-4. **Rulings between sweep and filing.** Open PRs read at 17:01 BST: RL 9614 (#1167) keeps the
+4. **Rulings between sweep and filing.** Open PRs read at 17:01 BST, and A-1 to A-3 (#1177, #1178, #1174) read before 17:08:50 BST after the first push: RL 9614 (#1167) keeps the
    gate at the submit route (activation need 5); RL 9620 (#1162) is applied in §"Contention";
    PL 9616's `06` texts (RL 9607) are in other `06` sections. No open PR rules on FR-224,
    FR-257 or `06` §4.2's `rating_version` entry.
