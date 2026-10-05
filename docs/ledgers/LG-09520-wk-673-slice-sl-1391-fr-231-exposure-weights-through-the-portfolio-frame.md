@@ -80,7 +80,8 @@ client-visible error code, that code must be in 03's owned-code list with a mean
 and `FactorResolutionError` to `PlatformError("VALIDATION_FAILED", …, 422, <message>)` (PL-1419 Task 3 Step 3.5, Task 4 for
 the Job). `VALIDATION_FAILED` is a shared request-machinery code (`backend/src/app/errors.py:399-402`,
 `_GENERIC_ERROR_CODES`), so it is not in 03's module-owned list by design; 03's diff row (`03:932`) and cells row
-(`03:933`) already state "422 `VALIDATION_FAILED`" for these faults. No new code, no spec change. The D3 case
+(`03:933`) already state "422 `VALIDATION_FAILED`" for these faults. No new code, no spec change. At the maintainer's (by delegation) wording order, the Banding `error`-policy refusal and
+the out-of-range value are mapped under `03:932`'s "a resolution error". The D3 case
 (`apply_banding`'s `error` policy) raises `FactorResolutionError`, which T5's prose already lists; it is re-wrapped with
 its message kept, so it is not beyond T5.
 
