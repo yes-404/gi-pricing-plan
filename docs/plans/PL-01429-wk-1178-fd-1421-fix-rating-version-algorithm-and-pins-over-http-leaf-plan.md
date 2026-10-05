@@ -3,7 +3,7 @@ id: PL-1429
 family: plan
 kind: leaf
 title: WK-1178 — FD-1421 fix, POST /rating-versions declares the algorithm and the pins (FR-237, FR-240, FR-223, FR-440, FR-451): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: planner
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc
