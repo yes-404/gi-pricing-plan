@@ -245,7 +245,15 @@ def test_the_error_code_registry_matches_the_specs() -> None:
         start = spec.index(marker)
         # The declaration runs to the blank line that ends the paragraph.
         block = spec[start : spec.index("\n\n", start)]
-        declared = set(re.findall(r"`([A-Z][A-Z0-9_]{2,})`", block))
+        # A code annotated "(re-raised from `NN`)" is borrowed from its owning module and
+        # is that module's to register — the same carve-out `audit-docs.py` check 10 makes.
+        declared = {
+            code
+            for code, reraised in re.findall(
+                r"`([A-Z][A-Z0-9_]{2,})`(\s*\(re-raised from[^)]*\))?", block
+            )
+            if not reraised
+        }
         assert declared, filename
         assert declared == set(registry), (
             f"{filename}: spec-only {sorted(declared - set(registry))}, "
