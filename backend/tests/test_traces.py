@@ -524,3 +524,52 @@ async def test_deleting_a_pending_trace_does_not_try_to_release_a_missing_blob(
         await traces.delete_trace(session, pending.id)
     async with database.session() as session:
         assert await session.get(ScoringTraceRow, pending.id) is None
+
+
+# ----------------------------------------------------------------------------------------
+# WK-674 Slice 2, Task 6 (PL-1392 Acceptance 7; #974 F1) — the Deployment link survives
+# completion. `UPDATE` is revoked on `scoring_traces`, so completion deletes the pending
+# row and re-inserts the finished one: the re-insert has to copy the link.
+# ----------------------------------------------------------------------------------------
+
+
+@pytest.mark.req("FR-259")
+async def test_a_completed_trace_still_carries_the_deployment_it_was_written_with(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    from backend.tests.test_score import plant_deployment
+
+    deployment_id = await plant_deployment(
+        database, workspace_id, "uat", "rating_version:motor-gb@12"
+    )
+    summary = traces.summarise_result(_served_scoring_result())
+    async with database.unit_of_work() as session:
+        pending = await traces.write_pending_trace(
+            session,
+            workspace_id=workspace_id,
+            quote_id="quote-pending",
+            rating_version_ref="rating_version:motor-gb@12",
+            bundle_hash=_bundle_hash(),
+            sample_reason="rate",
+            environment="uat",
+            quote_context={"purpose": "new_business"},
+            served_summary=summary,
+            deployment_id=deployment_id,
+        )
+        pending_id = pending.id
+        assert pending.deployment_id == deployment_id
+    trace = _trace(
+        quote_id="quote-pending",
+        rating_version="rating_version:motor-gb@12",
+        bundle_hash=_bundle_hash(),
+    )
+    async with database.unit_of_work() as session:
+        completed = await traces.complete_pending_trace(
+            session, blob_store, pending_id, trace, reproduced_summary=summary
+        )
+    assert completed.status == "complete"
+    assert completed.deployment_id == deployment_id
+    async with database.session() as session:
+        refetched = await session.get(ScoringTraceRow, pending_id)
+        assert refetched is not None
+        assert refetched.deployment_id == deployment_id

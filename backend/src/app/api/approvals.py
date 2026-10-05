@@ -21,7 +21,7 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,11 +36,12 @@ from app.api.pagination import (
     encode_cursor,
 )
 from app.api.responses import problems
-from app.db.models import ApprovalDecisionRow, ApprovalRequestRow
+from app.db.models import ApprovalDecisionRow, ApprovalRequestRow, DeploymentRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals as service
 from app.platform import datasets as datasets_service
+from app.platform import deployments as deployments_service
 from app.platform import metrics as metrics_service
 from app.platform import modelling as modelling_service
 from app.platform import objectives as objectives_service
@@ -50,6 +51,8 @@ from app.platform import validation_rules as validation_rules_service
 from model_schema import (
     ApprovalPolicy,
     ApprovalStatus,
+    ApprovalSubmission,
+    ApprovalWithdrawal,
     ArtifactRef,
     DecisionKind,
     Permission,
@@ -72,30 +75,11 @@ def _database(request: Request) -> Database:
 DatabaseDep = Annotated[Database, Depends(_database)]
 
 
-class SubmitApproval(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    artifact_ref: str = Field(description="Canonical `{type}:{slug}@{version}` (ID-3).")
-    change_summary: str = Field(min_length=1)
-    environment: str | None = None
-
-
 class Decide(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     decision: DecisionKind
     comment: str | None = None
-
-
-class Withdraw(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    reason: str = Field(min_length=1)
-    artifact_is_live: bool = Field(
-        default=False,
-        description="Supplied by the caller: liveness belongs to the owning module (`03` "
-        "for a Rating Version), not to governance. Governance owns the rule.",
-    )
 
 
 async def _detail(database: Database, row: ApprovalRequestRow) -> dict[str, Any]:
@@ -119,7 +103,7 @@ async def _detail(database: Database, row: ApprovalRequestRow) -> dict[str, Any]
     responses=problems(401, 403, 404, 409, 422),
 )
 async def submit_for_approval(
-    body: SubmitApproval, caller: AnyCaller, database: DatabaseDep
+    body: ApprovalSubmission, caller: AnyCaller, database: DatabaseDep
 ) -> dict[str, Any]:
     """Anyone authenticated may submit; the policy decides who may approve.
 
@@ -270,22 +254,56 @@ async def decide_request(
         return service.to_dict(row, decisions)
 
 
+async def _is_deployed(session: AsyncSession, workspace_id: UUID, request_id: UUID) -> bool:
+    """Whether the request's artifact is a Rating Version with at least one Deployment.
+
+    An unknown request is not live: `service.withdraw` answers it 404 itself.
+    """
+    row = (
+        await session.execute(
+            select(ApprovalRequestRow.artifact_type, ApprovalRequestRow.artifact_ref).where(
+                ApprovalRequestRow.id == request_id,
+                ApprovalRequestRow.workspace_id == workspace_id,
+            )
+        )
+    ).one_or_none()
+    if row is None or row.artifact_type != "rating_version":
+        return False
+    deployment = await session.scalar(
+        select(DeploymentRow.id)
+        .where(
+            DeploymentRow.workspace_id == workspace_id,
+            DeploymentRow.rating_version_ref == row.artifact_ref,
+        )
+        .limit(1)
+    )
+    return deployment is not None
+
+
 @router.post(
     "/approval-requests/{request_id}/withdraw",
     summary="Withdraw before deployment (FR-357)",
     responses=problems(401, 403, 404, 409, 422),
 )
 async def withdraw_request(
-    request_id: UUID, body: Withdraw, caller: Decider, database: DatabaseDep
+    request_id: UUID, body: ApprovalWithdrawal, caller: Decider, database: DatabaseDep
 ) -> dict[str, Any]:
+    """Withdraw a request before its artifact is deployed (FR-357).
+
+    Liveness is the server's to derive, never the client's to assert (`PL-1392` Task 6): a
+    Rating Version with a Deployment row is live, and the request is refused 409
+    `WITHDRAW_AFTER_DEPLOY_FORBIDDEN`. Governance owns the rule (`service.withdraw`); the
+    deployment state is `03`'s fact, read here from its rows.
+    """
     async with database.unit_of_work() as session:
+        artifact_is_live = await _is_deployed(session, caller.workspace_id, request_id)
         row = await service.withdraw(
             session,
             workspace_id=caller.workspace_id,
             request_id=request_id,
             actor=caller.principal,
             reason=body.reason,
-            artifact_is_live=body.artifact_is_live,
+            artifact_is_live=artifact_is_live,
         )
         # A withdrawn request leaves the artifact where a rejected one does: back in its
         # pre-submission state. Without this the model would sit in `review` for ever with
@@ -467,6 +485,12 @@ async def _resolve_the_artifact(
         session, workspace_id=workspace_id, artifact_ref=artifact_ref
     ):
         return
+    # A Deployment Request: only one the deployment module wrote, in `review`, holding both
+    # floor items (`PL-1392` Task 5 step 6; `RL-1301` audit advisory A2).
+    if await deployments_service.resolve_artifact_ref(
+        session, workspace_id=workspace_id, artifact_ref=artifact_ref
+    ):
+        return
     raise PlatformError(
         # Registered in GOVERNANCE_ERROR_CODES and declared in `06` §5.1 on 2026-08-22.
         # Deliberately **not** `VALIDATION_FAILED`, which the malformed-reference branch
@@ -516,6 +540,12 @@ async def _carry_to_the_artifact(
             request=request,
         )
         await rating_versions_service.apply_approval_decision(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            request=request,
+        )
+        await deployments_service.apply_approval_decision(
             session,
             workspace_id=caller.workspace_id,
             actor=caller.principal,

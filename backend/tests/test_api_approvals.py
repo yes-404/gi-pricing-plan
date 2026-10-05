@@ -92,6 +92,10 @@ CREATION_ACTION = {
     "validation_rule": "validation_rule.created",
     "dataset_version": "dataset_version.created",
     "rating_version": "rating_version.created",
+    # Added 2026-10-04 (WK-674 Slice 2, `RL-1401`): the eighth type. A Deployment Request is
+    # created only by `platform.deployments`, so the generic parametrised tests over
+    # `APPROVABLE` do not reach it; `tests/test_deployments.py` does.
+    "deployment": "deployment_request.created",
 }
 
 
@@ -516,27 +520,82 @@ async def test_deciding_requires_the_permission(
     assert response.json()["code"] == "PERMISSION_DENIED"
 
 
-@pytest.mark.req("FR-357")
-def test_withdrawing_after_deployment_is_refused(
-    client: TestClient, submitter_headers, approver_headers
-) -> None:
+async def _a_deployed_rating_version_request(
+    client: TestClient, database: Database, workspace_id, submitter_headers
+) -> dict:
+    """A request for a Rating Version that has a Deployment, planted as a real row."""
+    from backend.tests.test_score import plant_deployment
+
+    await _create_artifact(database, workspace_id, "rating_version", "rv-deployed", 1)
     created = client.post(
         "/api/v1/approval-requests",
-        json={"artifact_ref": MODEL, "change_summary": "Refit."},
+        json={"artifact_ref": "rating_version:rv-deployed@1", "change_summary": "Ship."},
         headers=submitter_headers,
-    ).json()
-    client.post(
-        f"/api/v1/approval-requests/{created['id']}/decide",
-        json={"decision": "approve"},
-        headers=approver_headers,
+    )
+    assert created.status_code == 201, created.text
+    await plant_deployment(database, workspace_id, "dev", "rating_version:rv-deployed@1")
+    return created.json()
+
+
+@pytest.mark.req("FR-357")
+async def test_withdrawing_after_deployment_is_refused(
+    client: TestClient, database: Database, workspace_id, submitter_headers, approver_headers
+) -> None:
+    """The server derives liveness from the Deployment rows (RL-880; `PL-1392` Task 6): the body
+    says nothing about it, and a Rating Version with a Deployment is refused."""
+    created = await _a_deployed_rating_version_request(
+        client, database, workspace_id, submitter_headers
     )
     response = client.post(
         f"/api/v1/approval-requests/{created['id']}/withdraw",
-        json={"reason": "changed my mind", "artifact_is_live": True},
+        json={"reason": "changed my mind"},
         headers=approver_headers,
     )
-    assert response.status_code == 409
+    assert response.status_code == 409, response.text
     assert response.json()["code"] == "WITHDRAW_AFTER_DEPLOY_FORBIDDEN"
+    still = client.get(f"/api/v1/approval-requests/{created['id']}", headers=approver_headers)
+    assert still.json()["status"] == "review"
+
+
+@pytest.mark.req("FR-357")
+async def test_a_client_can_no_longer_assert_that_the_artifact_is_not_live(
+    client: TestClient, database: Database, workspace_id, submitter_headers, approver_headers
+) -> None:
+    """The field is gone and the body keeps `extra="forbid"` (`PL-1392` C11): a client still
+    sending `artifact_is_live: false` is refused 422 naming the field, and nothing withdraws."""
+    created = await _a_deployed_rating_version_request(
+        client, database, workspace_id, submitter_headers
+    )
+    response = client.post(
+        f"/api/v1/approval-requests/{created['id']}/withdraw",
+        json={"reason": "changed my mind", "artifact_is_live": False},
+        headers=approver_headers,
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "VALIDATION_FAILED"
+    assert "artifact_is_live" in response.text
+    still = client.get(f"/api/v1/approval-requests/{created['id']}", headers=approver_headers)
+    assert still.json()["status"] == "review"
+
+
+@pytest.mark.req("FR-357")
+async def test_a_rating_version_with_no_deployment_can_still_be_withdrawn(
+    client: TestClient, database: Database, workspace_id, submitter_headers, approver_headers
+) -> None:
+    """Positive control: the same request with no Deployment withdraws, so the refusal above is
+    the Deployment's and not a route that refuses every withdrawal of a Rating Version."""
+    await _create_artifact(database, workspace_id, "rating_version", "rv-undeployed", 1)
+    created = client.post(
+        "/api/v1/approval-requests",
+        json={"artifact_ref": "rating_version:rv-undeployed@1", "change_summary": "Ship."},
+        headers=submitter_headers,
+    ).json()
+    response = client.post(
+        f"/api/v1/approval-requests/{created['id']}/withdraw",
+        json={"reason": "changed my mind"},
+        headers=approver_headers,
+    )
+    assert response.status_code == 200, response.text
 
 
 @pytest.mark.req("FR-351")
@@ -895,11 +954,12 @@ async def test_a_version_with_no_creation_event_cannot_be_approved(
 
 @pytest.mark.req("FR-353")
 def test_the_check_knows_the_creation_action_of_every_approvable_type() -> None:
-    """The check's table and the create paths' actions are one mapping, over all seven."""
+    """The check's table and the create paths' actions are one mapping, over all eight
+    (`deployment` is `APPROVABLE`'s eighth in the policy, not its generic-route tests')."""
     from app.platform import approvals
 
     assert dict(approvals.CREATION_ACTIONS) == CREATION_ACTION
-    assert set(CREATION_ACTION) == set(APPROVABLE)
+    assert set(CREATION_ACTION) == set(APPROVABLE) | {"deployment"}
 
 
 # -- only a version in review can be put to a decision (`06` FR-351) --------------------
