@@ -17,7 +17,7 @@ relates: [WK-1178, FR-229, FR-233, FR-1186]
 
 ## Finding
 
-**Severity LOW, ruled; owner proposed: WK-1178 (provisional), for the deputy at the ACK; no deadline ruled.** Severity: the deputy's entry "2026-10-05 13:20:26 BST — DECISIONS 22–27; severity signals for the four gap findings" (`channel/to-lead.md`, local) says "FD 9700 (#1134) LOW and FD 9699 (#1135) LOW: as proposed." That entry names no owner and no deadline, so the owner stays the proposal above until the ACK. The claim as
+**Severity LOW, ruled; owner proposed: WK-1178 (provisional); ruled by the maintainer (by delegation) at the ACK; no deadline ruled.** Severity: the maintainer's (by delegation) entry "2026-10-05 13:20:26 BST — DECISIONS 22–27; severity signals for the four gap findings" (`channel/to-lead.md`, local) says "FD 9700 (#1134) LOW and FD 9699 (#1135) LOW: as proposed." That entry names no owner and no deadline, so the owner stays the proposal above until the ACK. The claim as
 drafted was "bulk takes no note". Verified, with one correction: a bulk operation does write a `change_note`, but the
 caller cannot supply it. The service builds it from the operation's own name and parameters. A new version made by a
 bulk uplift therefore records `uplift_table: percentage=0.10`, never why.
@@ -71,7 +71,7 @@ way to attach a reason. The HTTP route was not run: the test database does not e
 
 ## Disposition
 
-Open. Filed by the auditor, 2026-10-05; severity is the deputy's (13:20:26 BST entry above), the owner is a proposal for the deputy at the ACK, and the verdict is the lead's.
+Open. Filed by the auditor, 2026-10-05; severity is the maintainer's (by delegation) (13:20:26 BST entry above), the owner is a proposal ruled by the maintainer (by delegation) at the ACK, and the verdict is the lead's.
 
 Two readings of FR-229 are possible, and choosing between them is the spec's, not this record's: (a) the note must be
 the author's words on every path, so bulk gains a required `change_note` and the derived string becomes a prefix or is
