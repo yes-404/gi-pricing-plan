@@ -2,7 +2,7 @@
 id: RL-9654
 family: ruling
 title: The freeze rule reconciled with history before check 34 goes live — frozen from first merge, no dated appended note, status forward only, a per-event base CI never turns off, and the 42 pre-cut edits enumerated and not re-judged
-status: active                 # active → superseded | retired (§1.2a) — PROPOSED until the deputy's ACK for the maintainer
+status: active                 # active → superseded | retired (§1.2a) — PROPOSED until the ACK of the maintainer (by delegation)
 created: 2026-10-05
 owner: decision-maker
 tree: 99afcde215c0817c5ac4db55332ab7a69e4752a0
@@ -19,13 +19,12 @@ relates: [RFC-9653, FD-1282, FD-1323, WK-1170]
 
 *Working id 9654, with its RFC under working id 9653. Drafted 2026-10-05 by the
 decision-maker on the lead's brief (`~/gi-pricing-plan.local/handover/brief-dm-freeze-2026-10-05.md`,
-a local file). It rests on two deputy entries in `~/gi-pricing-plan.local/channel/to-lead.md` (a
+a local file). It rests on two entries by the maintainer (by delegation) in `~/gi-pricing-plan.local/channel/to-lead.md` (a
 local file): `2026-10-05 13:32:57 BST — 34: SPAWN the DM for the freeze-rule RFC + RL; my leaning
 stated, not ruled`, and `2026-10-05 13:43:31 BST — PL 9662 / SL 9655 (check_freeze fix, #1146
 @c35b67b7): conditions met; DP-3 = the spec; one guard on the "none" switch; DP-4 gets an owner`.
 The family is `process/`'s (`document-ids.md` §1.6, row "Reference — `process/`"), so this
-ruling is the maintainer's to accept. It stays **PROPOSED** until the deputy's ACK, given for the
-maintainer. Nothing below is applied in this PR: every amendment is a T-text.*
+ruling is the maintainer's to accept. It stays **PROPOSED** until the ACK of the maintainer (by delegation). Nothing below is applied in this PR: every amendment is a T-text.*
 
 *It is activation need **A1** of PL 9662 (planner-freeze, WK-1170; PR #1146 at
 `c35b67b712a9f8d86d968b3b816a888e9be7f121`). That plan's "What A1 must contain" list,
@@ -68,9 +67,9 @@ The tree is `origin/main` at drafting time (`git log -1 --format='%H %aI'`:
     `e9263283` (PL-1239's `slice:` and `relates:` at activation, `97b15726…`, already among the
     42) and 0 after it.
   - PL 9662's independent measurement, by the planner, agrees: *"42 historical edits in 31
-    merges, the last 22fe674b; CR-838:46 = 40739df0"* (quoted in the deputy's 13:43:31 entry).
+    merges, the last 22fe674b; CR-838:46 = 40739df0"* (quoted in the maintainer's (by delegation) 13:43:31 entry).
 - **The cut.** `e9263283177e5e1c1205ba48d0e41c2a1483f83c` (2026-09-30 14:36:42 +01:00) was
-  `origin/main`'s first-parent tip at the deputy's entry `2026-09-30 14:48:52 BST — DECISIONS:
+  `origin/main`'s first-parent tip at the maintainer's (by delegation) entry `2026-09-30 14:48:52 BST — DECISIONS:
   check 34 is vacuous on real trees …`. The next commit is `2118679b…`, at 14:58:07. That entry's
   item (3) says: *"plan activation = the `status:` flip only … activation facts … live in the
   dispatch record, quoted in the slice ledger's Task 0 … From now on, no prose is added to a plan
@@ -87,7 +86,7 @@ The tree is `origin/main` at drafting time (`git log -1 --format='%H %aI'`:
 
 ## Ruled
 
-**The deputy's leaning is adopted in substance.** No dated-note exemption, and nothing that
+**The maintainer's (by delegation) leaning is adopted in substance.** No dated-note exemption, and nothing that
 happened before the cut is re-judged. **No allowlist file** (¶7 gives the reason).
 
 1. **(i) Frozen from first merge, whatever the status.** A file of a frozen family (§1.2:
@@ -106,7 +105,7 @@ happened before the cut is re-judged. **No allowlist file** (¶7 gives the reaso
    the slice ledger's Task 0 (the 14:48:52 entry, item 3). A leaf plan's `slice:` and `relates:`
    are set at its mint. A later record that bears on the plan names it in its own `relates:`.
 
-   **DP-3 is decided: the spec is right** (the deputy's 13:43:31 entry, item 2, which this
+   **DP-3 is decided: the spec is right** (the maintainer's (by delegation) 13:43:31 entry, item 2, which this
    ruling records). `frozen_diff_is_permitted` must refuse any backward move, not only a move
    away from a terminal word. The slice adds a red test for `active → draft`.
 
@@ -138,7 +137,7 @@ happened before the cut is re-judged. **No allowlist file** (¶7 gives the reaso
    - on `push` to `main`, `github.event.before`, the previous `main` tip;
    - on a local run, when the variable is unset, the merge-base with `origin/main`.
 
-   **CI never runs the check off** (the deputy's 13:43:31 entry, item 1):
+   **CI never runs the check off** (the maintainer's (by delegation) 13:43:31 entry, item 1):
    - The workflow sets the base explicitly for each event.
    - The value `none` turns the comparison off and says so. It is for **local use only**: the
      run fails if the variable is `none` while `CI=true`.
@@ -216,10 +215,15 @@ appended and dated, quoting what it supersedes, never a silent rewrite."* with:
 > It is never an edit to the essay. A resolution or a progress fact goes in the register row,
 > which is living.
 
-At :72-:73, replace *"A record that changes after the fact must say it changed, with the
-correction dated."* with:
+At :72-:73, replace *"**Evidence is write-once.** A record that changes after the fact must
+say it changed, with the correction dated."* with:
 > **Evidence is write-once.** A record never changes after it merges. A correction is a new,
 > dated record that names it.
+
+*(Pre-mint note, 2026-10-05 15:58 BST, dm-finals2: the find string above now starts at
+`**Evidence is write-once.**`. Without it, the replacement repeated that phrase, which :72
+already opens with. No wording of the replacement changed. At `cdaaa573` the widened string
+has one hit.)*
 
 **T5: `docs/closures/README.md` :33.** Replace *"**Evidence is write-once**, and a correction
 after the fact is dated and says so."* with:
@@ -239,7 +243,7 @@ predicate's status clause (`:2169-:2171`). Both are code, and both belong to PL 
   ¶2.
 - **WK-1170 takes a backlog item: "ledgers' append-only rule is not mechanically checked."**
   This is DP-4, out of PL 9662's scope (ledgers stay outside `_FROZEN_FAMILIES`) but owned here,
-  per the deputy's 13:43:31 entry, item 4, so it is not left unowned (`CLAUDE.md` §14). The lead
+  per the maintainer's (by delegation) 13:43:31 entry, item 4, so it is not left unowned (`CLAUDE.md` §14). The lead
   enters it under WK-1170.
 - **The applying PR** (WK-1170, after the maintainer's acceptance) lands T1-T5, citing RFC 9653
   and this ruling, before or with check 34's comparison going live.

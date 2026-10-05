@@ -20,7 +20,7 @@ relates: [RL-9654, FD-1282, FD-1323, WK-1170]
 # RFC-9653 — Reconciling the freeze rule with history before check 34's merge-base comparison goes live
 
 *Working id 9653; drafted 2026-10-05 by the decision-maker on instruction (`document-ids.md`
-§1.6 RFC row: "any role drafts on instruction"), on the deputy's entry `2026-10-05 13:32:57
+§1.6 RFC row: "any role drafts on instruction"), on the maintainer's (by delegation) entry `2026-10-05 13:32:57
 BST — 34: SPAWN the DM for the freeze-rule RFC + RL; my leaning stated, not ruled`
 (`~/gi-pricing-plan.local/channel/to-lead.md`, a local file). Its ruling is RL 9654.*
 
@@ -177,10 +177,10 @@ prints nothing at `83ea509023d6d705d6f78fe74b7124fdf1375739`):
 
 Both were merged after the cut `e9263283…`, so they are not in the 42. They are defects of
 content as added, not post-merge edits, and check 34 has nothing to see in them. They are
-listed here, not corrected: no correcting record is filed (the deputy's ID audit, 2026-10-05
+listed here, not corrected: no correcting record is filed (the maintainer's (by delegation) ID audit, 2026-10-05
 14:15:12 BST, D3 and order 3), and `docs/INDEX.md` and each body resolve the minted id.
 
-## The deputy's leaning, tested
+## The maintainer's (by delegation) leaning, tested
 
 The leaning: grandfather the historical notes by an enumerated list (file and commit) that
 becomes check 34's allowlist, and add **no** dated-note exemption, so every later body change
@@ -195,13 +195,13 @@ leaves the frozen body unchanged:
   register row, which is living (§1.2: *"living row + frozen essay"*), and `status:` moves
   forward. §1.6's FD row (*"auditor sets `closed` in place citing the PR"*) is satisfied by the
   row and the header.
-- **V (5).** Already decided by the deputy's entry `2026-09-30 14:48:52 BST`, item (3): the
+- **V (5).** Already decided by the maintainer's (by delegation) entry `2026-09-30 14:48:52 BST`, item (3): the
   `status:` flip only, the facts in the dispatch record quoted in the ledger's Task 0. Row 37
   (PL-1239) also added `slice:` and `relates:` at activation; both can be set at mint, since the
   map plan cuts the `SL-` first (§1.6 SL row) and the later `RL-` carries the link in its own
   `relates:`.
 - **A (2).** CR-1050 and CR-1064 merged with *"Maintainer acceptance: _pending_"*. The
-  acceptance can land in the PR before merge (the deputy's ACK precedes the lead's merge), or
+  acceptance can land in the PR before merge (the ACK of the maintainer (by delegation) precedes the lead's merge), or
   after merge as a maintainer-authored `RL-` (§1.6 RL row: *"the maintainer may author one on
   scope or process"*) that `relates:` the record.
 - **M (2).** FD-1283 and FD-1284 cited a sibling plan by working id 9681 and were rewritten to
@@ -220,7 +220,7 @@ So the leaning's **substance stands**: no dated-note exemption form.
 Every one of the 42 is an ancestor of each of those bases, so the comparison never sees any of
 them. A list the check read would never match an entry. The planner's dry run says the same:
 *"last 20 merges: 0 reds, 3 status-only activations … 42 historical edits in 31 merges, the last
-22fe674b; CR-838:46 = 40739df0"* (quoted in the deputy's entry `2026-10-05 13:43:31 BST`).
+22fe674b; CR-838:46 = 40739df0"* (quoted in the maintainer's (by delegation) entry `2026-10-05 13:43:31 BST`).
 The enumeration is still needed, as the record of what was grandfathered, and this RFC's
 table is it. A copy of it in code would be the duplicate that RFC-756 records going stale.
 
@@ -237,7 +237,7 @@ table is it. A copy of it in code would be the duplicate that RFC-756 records go
 
 **Recommendation: B**, with no dated-note exemption, which is the leaning's substance and PL
 9662's DP-1 (a). The cut is `e9263283177e5e1c1205ba48d0e41c2a1483f83c`. It was `origin/main`
-when the deputy ruled at `2026-09-30 14:48:52 BST`, and it is FD-1323's measurement tree. No
+when the maintainer (by delegation) ruled at `2026-09-30 14:48:52 BST`, and it is FD-1323's measurement tree. No
 body edit after it needs grandfathering (0 rows). RL 9654 rules on all seven of PL 9662's
 A1 items:
 
