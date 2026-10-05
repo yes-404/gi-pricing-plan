@@ -81,7 +81,7 @@ committee and is normally the one nobody can answer.
 | D1 | Analyst | `POST /rating-versions/{id}/regression-runs` — golden quotes plus generated property assertions over the input contract. | `03` FR-260/261 |
 | D2 | Worker | 118 of 120 golden quotes reproduce exactly. Two fail: the minimum-premium change moved them. | `03` FR-260 |
 | D3 | Analyst | Confirms the two failures are intended, updates their expected values, and records why in the golden quote's note. **A golden quote is only updated deliberately.** | `03` FR-260 |
-| D4 | Worker | A property assertion fails: `monotone_in_age` breaks between 63 and 64 because two rate tables band age differently. Hypothesis shrinks it to a minimal counterexample. | `03` FR-261 |
+| D4 | Worker | A property assertion fails: `monotone_in_age` breaks between two adjacent grid ages, because two rate tables band age differently and the inverted band is wider than the grid spacing. Hypothesis shrinks the base context; the counterexample is that base context and the two grid ages (`grid: uniform+sampled`). An inversion narrower than the grid spacing may not be detected until `OQ-1224` lands. *(Amended 2026-10-05, `RL-9614` DP-1.)* | `03` FR-261 |
 | D5 | Pricing Actuary | Fixes the banding mismatch — a genuine defect that a golden-quote suite alone would have missed. | `03` FR-261 |
 | D6 | Analyst | `POST /dislocation-runs` against the current live version over the portfolio. | `03` FR-263 |
 | D7 | Worker → pricing-core | Re-rates 1.28 M policies under both bundles: change distribution, per-segment breakdown, largest movers, and **attribution** decomposing the change into peril-structure, rate-table, and minimum-premium effects. | `03` FR-263/264/266 |
@@ -93,7 +93,7 @@ committee and is normally the one nobody can answer.
 | # | Actor | Action | Refs |
 |---|---|---|---|
 | E1 | Pricing Actuary | Writes the change summary. It is drafted automatically from the structural and rate diffs and then edited — the actuary explains *why*, the platform states *what*. | `03` FR-242 |
-| E2 | Pricing Actuary | `POST /approval-requests`. Evidence completeness is checked at submission: structural diff, rate diffs, regression run, dislocation run, GIPP check where enabled, change summary. | `03` FR-257, `06` FR-352/363 |
+| E2 | Pricing Actuary | `POST /rating-versions/{id}/submit`, which moves the version from `draft` to `review` and opens its Approval Request. Evidence completeness is checked at submission: structural diff, rate diffs, regression run, dislocation run, GIPP check where enabled, change summary. *(Amended 2026-10-05, `RL-9614` DP-2.)* | `03` FR-257/260, `06` FR-352/363 |
 | E3 | Backend | Submission is rejected once — `EVIDENCE_INCOMPLETE`, the dislocation run predates the last rate table edit and is therefore stale. | `06` FR-356 |
 | E4 | Pricing Actuary | Re-runs dislocation, resubmits. | — |
 | E5 | Approver #1 | Reviews inline: structural diff, rate-table heat maps, dislocation histogram, attribution waterfall, GIPP distribution. Approves. | `06` FR-358 |

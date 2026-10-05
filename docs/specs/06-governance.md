@@ -555,7 +555,7 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 | `POST` | `/api/v1/role-assignments` | Assign a scoped role (FR-345) |
 | `POST` | `/api/v1/break-glass` | Time-boxed elevation with reason (FR-349) |
 | `GET`/`PUT` | `/api/v1/approval-policy` | Read / update the workspace policy (FR-354) |
-| `POST` | `/api/v1/approval-requests` | Submit an artifact; validates evidence and checklist (FR-352) |
+| `POST` | `/api/v1/approval-requests` | Submit an artifact; validates evidence and checklist (FR-352) *(Clarified 2026-10-05, `RL-9614` DP-2: a Rating Version is submitted through its own route, `POST /api/v1/rating-versions/{id}/submit` (`03` FR-260 (1)), which moves it to `review` and opens its request. This route refuses a Rating Version that is not in `review` with `APPROVAL_SUBJECT_NOT_IN_REVIEW` (FR-351).)* |
 | `GET` | `/api/v1/approval-requests?assigned_to=me&status=review` | Approvals inbox (FR-358) |
 | `GET` | `/api/v1/approval-requests/{id}` | Request with resolved evidence inline |
 | `POST` | `/api/v1/approval-requests/{id}/decide` | `approve` / `reject` / `request_changes` + comment (FR-353/355) |
