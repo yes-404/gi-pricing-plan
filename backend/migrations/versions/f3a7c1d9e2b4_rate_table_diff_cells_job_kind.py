@@ -1,8 +1,8 @@
 """jobs: register the `rate_table.diff_cells` JobKind value
 
 `03` §5.1/FR-231/FR-232 (`RL-1418`, WK-673 Slice 7). The paged diff-cells route answers 202
-with a `rate_table.diff_cells` Job where either version is `storage: parquet`, a kind of its
-own so that `rate_table.diff` and the artifact its summary route returns do not change.
+with a `rate_table.diff_cells` Job where the query's cell artifact is not yet stored, for either
+storage, a kind of its own so that `rate_table.diff` and its Job's artifact do not change.
 Without this value the Job's INSERT fails with `invalid input value for enum job_kind`, as
 `d5e6f7a8b9c0` found for `rate_table.diff` before it.
 

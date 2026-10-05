@@ -654,6 +654,46 @@ The chunk-bound test reads `BlobStore.read` through a counting wrapper: a page a
 cell, reads the manifest plus one or two chunks and never more; the diff route reads the manifest only. 65 tests in the file
 now; the existing `test_a_page_reads_the_manifest_and_at_most_two_chunks` stays.
 
+### Task 10 — the delta audit's findings, fixed (a test-only delta)
+
+**The ruling** (the maintainer, by delegation, `to-lead.md`, the entry headed "2026-10-06 00:21:53 BST — S7 delta audit: (i) FIX NOW, but
+a DELTA PROOF instead of a full re-gate, because the delta is test-only"): the delta audit of `386f4d54..00457925` (read-only,
+`auditor-s7delta`) found no blocker and verified independently that no production file of this slice changed since `19f8842f`
+(the one differing file, `packages/pricing-core/src/pricing_core/rating/score.py`, is main's, brought in by the merge). Fix now,
+as a test-only delta: F1 (a failed Job on the same key), F2 (the non-numeric banded column and the null exposure through the Job,
+and a docstring that over-claimed), F4 (the exact count wording; `test_error_sinks.py`'s stale citation and "422 body" wording),
+and the migration's docstring (the superseded "where either version is `storage: parquet`" wording); F3 no action.
+
+**What was written** (`backend/tests/test_rate_table_diff_portfolio.py`, `backend/tests/test_error_sinks.py`, and docstring
+lines 3 to 5 of `backend/migrations/versions/f3a7c1d9e2b4_rate_table_diff_cells_job_kind.py`, nothing else):
+- F1 `test_a_failed_job_on_the_same_key_leads_the_next_request_to_a_new_job`: Job A (a portfolio that maps to no cell) fails; the
+  SAME route's next request for the key answers 202 with a NEW Job id and adds one Job row; while that Job is in flight the other
+  route gets THAT Job; it fails too, and the other route's next request is a third Job; both failed Jobs stay readable by id.
+- F2 `test_a_non_numeric_banded_column_fails_the_job` (both routes: a Banding on `region`, a `banding_ref` key; the Job fails
+  `VALIDATION_FAILED` with `key 'driver_age_band': banded column 'region' is not numeric`, and the portfolio value `N1` never appears)
+  and a `null-exposure` case in the content-refusal test (exact wording `column 'exposure_years' has 1 null, NaN or infinite
+  row(s)`; the negative case now `has 1 negative row(s)`; zero-match `no portfolio row maps to a cell of the table`); that
+  test's docstring now lists what it pins and where the others are pinned (the Banding error policy by the resolution-error test).
+- F4 the resolution-error test matches the pricing-core message's own wording (`banding '<slug>': 1 value(s) of 'age' fall
+  below the banded range (boundary 17, e.g. 5)`), not a bare digit; `test_error_sinks.py`'s two entries cite the renamed test and say
+  the text feeds the Job's stored error message (and the legacy diff's 422).
+
+**Run** (outside any held slot, `OMP_NUM_THREADS=1`, `nice`; SL-1436's gate had ended): `test_rate_table_diff_portfolio.py` 70 passed
+in 75.69 s; `test_error_sinks.py` 4 passed; `ruff check backend` clean; `mypy` clean (227 files); one niced `audit-docs`: only check 31
+("between 1443 and 9520") and check 32 (`LG-1444` does not resolve), the pre-mint effects. The new tests passed on first run (they
+are pins: the code already carried the behaviour), including the null-exposure case through the ingest.
+
+**Mutation proofs**, each a single-file break run alone, then reverted, `git hash-object` before and after equal:
+
+| break | test | failing line | file's `hash-object`, before == after |
+|---|---|---|---|
+| a FAILED Job treated as in flight (`_find_artifact`) | `test_a_failed_job_on_the_same_key_leads_the_next_request_to_a_new_job` | `assert '01a10e7a-f17a-…' != '01a10e7a-f17a-…'` (the same id again) | `rate_tables.py` `b5727b21a9a361161f35e0bce1ecb0cfe0267947`, equal |
+| the non-numeric banded column check removed (`weights.py`) | `test_a_non_numeric_banded_column_fails_the_job` (both routes) | `assert 'JOB_HANDLER_FAILED' == 'VALIDATION_FAILED'` | `weights.py` `7a64d59c122c92cbb83705ead01a3d3fd314d062`, equal |
+| a null exposure not refused (`analysis.py`) | `test_a_portfolio_refusal_that_reads_the_content_is_the_jobs_validation_failed[null-exposure-diff, -cells]` | `assert <JobStatus.SUCCEEDED> is <JobStatus.FAILED>` | `analysis.py` `c00947c82e270cb62253d0a111143c0b430a5338`, equal |
+
+The delta proof's conditions (the maintainer's): `git diff --name-status 21096c36..HEAD` lists only tests and the one migration, and
+`git diff -U0` of the migration touches docstring lines only; full CI at the mint head is the backstop (outputs in the next entry).
+
 ## PRs
 
 #1206, a draft, `SL-1391: Slice 7: FR-231's exposure weights through the portfolio frame (F-W10-2)`, head branch

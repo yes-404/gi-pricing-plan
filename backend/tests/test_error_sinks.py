@@ -98,21 +98,25 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
     ("backend/src/app/platform/rate_tables.py", "bulk_operation", "str(exc)"): (
         1, "a rate-table bulk operation's parameter validation, echoed to the caller who sent it"),
     ("backend/src/app/platform/rate_tables.py", "_portfolio_weights", "str(exc)"): (
-        1, "RETURNS the text of a `PortfolioFrameError`, `WeightJoinError` or "
-        "`FactorResolutionError` to the caller in the 422 body; not stored, not logged. The input "
-        "is a portfolio Dataset Version, not a Quote Context. `WeightJoinError` names the key, "
-        "the column or the ref and never a value "
-        "(test_rate_table_weights.py::test_a_refusal_never_carries_a_portfolio_value); a "
+        1, "FEEDS the text of a `PortfolioFrameError`, `WeightJoinError` or "
+        "`FactorResolutionError` to the failure of the `rate_table.diff_cells` Job (stored as the "
+        "Job's error message; the weights are computed in the Job) and to the legacy `diff`'s "
+        "422 body. The input is a portfolio Dataset Version, not a Quote Context. "
+        "`WeightJoinError` names the key, the column or the ref and never a value "
+        "(test_rate_table_weights.py::test_a_refusal_never_carries_a_portfolio_value; "
+        "test_rate_table_diff_portfolio.py::"
+        "test_a_portfolio_refusal_that_reads_the_content_is_the_jobs_validation_failed); a "
         "`FactorResolutionError`'s message is carried with its count and example value by "
         "RL-1361 item 3 and RL-1418 T5 "
         "(test_rate_table_diff_portfolio.py::"
-        "test_a_resolution_error_reaches_the_422_with_its_count_and_example)"),
+        "test_a_resolution_error_reaches_the_failed_job_with_its_count_and_example)"),
     ("packages/pricing-core/src/pricing_core/rate_tables/weights.py", "_resolved_series",
      "str(exc)"): (
         1, "re-wraps a `FactorResolutionError` as a `WeightJoinError` with its message kept, as "
         "RL-1418 T5 and RL-1361 item 3 rule (the count and the example value); the input is a "
-        "portfolio Dataset Version, not a Quote Context (test_rate_table_diff_portfolio.py::"
-        "test_a_resolution_error_reaches_the_422_with_its_count_and_example)"),
+        "portfolio Dataset Version, not a Quote Context; the message reaches the Job's failure "
+        "(test_rate_table_diff_portfolio.py::"
+        "test_a_resolution_error_reaches_the_failed_job_with_its_count_and_example)"),
     ("backend/src/app/platform/rating_algorithms.py", "graph_validation_error", "str(exc)"): (
         1, "RETURNS Pydantic's text of the submitter's own algorithm or sub-graph JSON to the "
         "submitter in the 422 body; not stored, not logged; an artifact definition, not a Quote "

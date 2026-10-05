@@ -21,6 +21,7 @@ SOUTH 4.5.
 from __future__ import annotations
 
 import json
+import re
 from decimal import Decimal
 from typing import Any
 from uuid import UUID, uuid4
@@ -1057,8 +1058,12 @@ async def test_a_resolution_error_reaches_the_failed_job_with_its_count_and_exam
     row = await _job_row(database, job_id)
     assert row.error is not None
     assert row.error["code"] == "VALIDATION_FAILED"
-    assert "1" in row.error["message"]
-    assert "5" in row.error["message"]
+    # RL-1361 item 3's count and example value, in the pricing-core message's own wording.
+    assert re.search(
+        r"banding '[^']+': 1 value\(s\) of 'age' fall below the banded range "
+        r"\(boundary 17, e\.g\. 5\)",
+        row.error["message"],
+    ), row.error["message"]
 
 
 @pytest.mark.req("FR-231")
@@ -1506,27 +1511,31 @@ async def test_a_request_while_the_job_is_in_flight_gets_that_job_and_a_failed_j
     [
         ("zero-match", PORTFOLIO.replace(b",17-20,", b",SENTINEL-band-91c3,").replace(
             b",21-24,", b",SENTINEL-band-91c3,").replace(b",25-29,", b",SENTINEL-band-91c3,"),
-         "no portfolio row maps", "SENTINEL-band-91c3"),
+         "no portfolio row maps to a cell of the table", "SENTINEL-band-91c3"),
         ("column-absent", PORTFOLIO.replace(b"driver_age_band", b"another_column"),
          "driver_age_band", None),
         ("negative-exposure", PORTFOLIO.replace(b"P2,q2,2.0,", b"P2,q2,-2.0,"),
-         "exposure_years", None),
+         "column 'exposure_years' has 1 negative row(s)", None),
+        ("null-exposure", PORTFOLIO.replace(b"P2,q2,2.0,", b"P2,q2,,"),
+         "column 'exposure_years' has 1 null, NaN or infinite row(s)", None),
     ],
-    ids=["zero-match", "column-absent", "negative-exposure"],
+    ids=["zero-match", "column-absent", "negative-exposure", "null-exposure"],
 )
 async def test_a_portfolio_refusal_that_reads_the_content_is_the_jobs_validation_failed(
     database: Database, workspace_id, principal, blob_store: BlobStore, grant,
     api_client: TestClient, route: str, label: str, payload: bytes, names: str,
     never: str | None,
 ) -> None:
-    """RL-1361's content-dependent refusals (a missing column, a non-numeric banded column, a
-    negative or null exposure, a portfolio that maps to no cell, a Banding error policy) are the
-    Job's `VALIDATION_FAILED` now (the weights are computed in the Job, R1): the response is the
-    202, the Job's error names the key, the column or the count, and never a portfolio value
-    (NFR-499; the `FactorResolutionError` count and example are `RL-1361` item 3's)."""
+    """RL-1361's content-dependent refusals are the Job's `VALIDATION_FAILED` now (the weights are
+    computed in the Job, R1): the response is the 202, the Job's error names the key, the column
+    or the count, and never a portfolio value (NFR-499). Pinned here, on both routes: a portfolio
+    that maps to no cell, an absent column, a negative exposure and a null exposure. Pinned in
+    their own tests: a non-numeric banded column (`test_a_non_numeric_banded_column_fails_the_job`)
+    and a Banding `error` policy (`test_a_resolution_error_reaches_the_failed_job_with_its_count_
+    and_example`, `RL-1361` item 3's count and example value)."""
     await grant("analyst")
     actor = await _actuary(database, workspace_id)
-    if label == "negative-exposure":
+    if label in ("negative-exposure", "null-exposure"):
         dataset_id = await _dataset(database, blob_store, workspace_id, actor)
         portfolio = await ingest_portfolio(
             database, blob_store, workspace_id, actor, dataset_id, payload
@@ -1710,3 +1719,108 @@ async def test_an_existing_rate_table_diff_job_row_still_reads_back(
     got = api_client.get(f"/api/v1/jobs/{job_id}", headers=_headers(principal.id, workspace_id))
     assert got.status_code == 200, got.text
     assert got.json()["kind"] == "rate_table.diff"
+
+
+@pytest.mark.req("FR-231")
+@pytest.mark.req("FR-232")
+async def test_a_failed_job_on_the_same_key_leads_the_next_request_to_a_new_job(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    """A failed Job is not cached: the next request for the SAME key, on either route, answers 202
+    with a new Job id, and the failed Job stays readable by its id. The portfolio maps to no cell,
+    so the Job fails on its content and the key remains requestable (the portfolio is still
+    validated)."""
+    await grant("analyst")
+    actor = await _actuary(database, workspace_id)
+    mismatch = PORTFOLIO.replace(b",17-20,", b",SENTINEL-band-3f2a,").replace(
+        b",21-24,", b",SENTINEL-band-3f2a,").replace(b",25-29,", b",SENTINEL-band-3f2a,")
+    portfolio = await validated_portfolio(database, blob_store, workspace_id, actor, mismatch)
+    slug = await _identity_table(database, workspace_id, principal, blob_store)
+    analyst = _headers(principal.id, workspace_id)
+    params = {"against": "previous", "portfolio": str(portfolio)}
+
+    first = api_client.get(_cells_url(slug), params=params, headers=analyst)
+    assert first.status_code == 202, first.text
+    failed_id = UUID(first.json()["id"])
+    assert await execute_job(database, failed_id, blob_store) is JobStatus.FAILED
+
+    before = await _job_count(database)
+    # The SAME route (the one a regression in `_find_artifact` would hit first): a NEW Job.
+    same_route = api_client.get(_cells_url(slug), params=params, headers=analyst)
+    assert same_route.status_code == 202, same_route.text
+    assert same_route.json()["id"] != str(failed_id)
+    assert await _job_count(database) == before + 1  # one new Job
+    # While that new Job is in flight, the OTHER route gets THAT Job, not a third.
+    in_flight = api_client.get(_diff_url(slug), params=params, headers=analyst)
+    assert in_flight.json()["id"] == same_route.json()["id"]
+    assert await _job_count(database) == before + 1
+    # It fails too; the OTHER route's next request, the same key, is a NEW Job again.
+    second_failed_id = UUID(same_route.json()["id"])
+    assert await execute_job(database, second_failed_id, blob_store) is JobStatus.FAILED
+    other_route = api_client.get(_diff_url(slug), params=params, headers=analyst)
+    assert other_route.status_code == 202, other_route.text
+    assert other_route.json()["id"] not in (str(failed_id), str(second_failed_id))
+    assert await _job_count(database) == before + 2
+    for old_id in (failed_id, second_failed_id):  # the failed Jobs stay readable
+        assert (await _job_row(database, old_id)).error is not None
+
+
+@pytest.mark.req("FR-231")
+@pytest.mark.req("FR-232")
+@pytest.mark.parametrize("route", ["diff", "cells"])
+async def test_a_non_numeric_banded_column_fails_the_job(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient, route: str,
+) -> None:
+    """A `banding_ref` key whose Banding reads a column the portfolio holds as text is the Job's
+    `VALIDATION_FAILED`, naming the key and the column and never a portfolio value."""
+    await grant("analyst")
+    actor = await _actuary(database, workspace_id)
+    portfolio = await validated_portfolio(database, blob_store, workspace_id, actor)
+    slug = await _identity_table(database, workspace_id, principal, blob_store)
+    dataset_id = new_uuid7()
+    async with database.unit_of_work() as session:
+        await transformation_service.create_banding(
+            session, workspace_id=workspace_id, actor=actor,
+            banding=Banding(
+                id=uuid4(), slug=f"text-{uuid4().hex[:6]}", dataset_id=dataset_id, version=1,
+                column="region", method=BandingMethod.MANUAL,
+                boundaries=(0.0, 1.0, 2.0, 3.0), labels=("a", "b", "c"),
+            ),
+        )
+        stored = (await transformation_service.list_bandings(
+            session, workspace_id=workspace_id, dataset_id=dataset_id))[0]
+        row = await session.scalar(
+            select(RateTableRow).where(
+                RateTableRow.workspace_id == workspace_id, RateTableRow.slug == slug
+            )
+        )
+        assert row is not None
+        for version in (
+            await session.execute(
+                select(RateTableVersionRow).where(RateTableVersionRow.rate_table_id == row.id)
+            )
+        ).scalars():
+            definition = json.loads(json.dumps(version.definition))
+            for key in definition["keys"]:
+                key.pop("factor_ref", None)
+                key["banding_ref"] = f"banding:{stored.slug}@{stored.version}"
+            await session.execute(
+                update(RateTableVersionRow)
+                .where(RateTableVersionRow.id == version.id)
+                .values(definition=definition)
+            )
+    url = _diff_url(slug) if route == "diff" else _cells_url(slug)
+    accepted = api_client.get(
+        url, params={"against": "previous", "portfolio": str(portfolio)},
+        headers=_headers(principal.id, workspace_id),
+    )
+    assert accepted.status_code == 202, accepted.text
+    job_id = UUID(accepted.json()["id"])
+    assert await execute_job(database, job_id, blob_store) is JobStatus.FAILED
+    error = (await _job_row(database, job_id)).error
+    assert error is not None
+    assert error["code"] == "VALIDATION_FAILED"
+    assert "key 'driver_age_band': banded column 'region' is not numeric" in error["message"]
+    assert "N1" not in error["message"]  # no portfolio value
