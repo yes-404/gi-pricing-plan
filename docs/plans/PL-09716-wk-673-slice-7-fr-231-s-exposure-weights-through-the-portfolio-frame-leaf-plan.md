@@ -76,7 +76,7 @@ pytest. No frontend change: WK-675 Slice 5 consumes this.
 with its exact texts T3, T6 and T10), **RL 9710** (working id; dm-1358's ruling on this plan's
 DP-A, DP-B and DP-C: the cells route, its paging and ordering, the cell schema and its refusals,
 the `03` §5.2 entries for `diff_cells` and `exposure_weights`, and T11 re-anchored as a correction
-of `RL-1361`; draft PR #1128, read at head `b0c1237a`, texts T1–T5 and §"Correction of `RL-1361`
+of `RL-1361`; draft PR #1128, read at head `c89ffe74`, texts T1–T5 and §"Correction of `RL-1361`
 T11's anchor") and `RL-1375` DP-1 (a2). The finding is `FD-1358`. **The executor applies only RL
 9710's and RL-1361's texts.**
 
@@ -85,15 +85,17 @@ T11's anchor") and `RL-1375` DP-1 (a2). The finding is `FD-1358`. **The executor
 `draft`. **DP-A, DP-B and DP-C are decided** by the deputy, in the entries headed "2026-10-05
 12:58:22 BST" (DP-A (c), DP-B (a)) and "2026-10-05 13:00:09 BST" (DP-C (a); lanes A/C option (b))
 in `to-lead.md`, as the lead relayed them. Their exact texts are **RL 9710** (working id, draft
-PR #1128 at `b0c1237a`). Its T5 is the planner's DP-B proposal, adopted with four amendments.
+PR #1128 at `c89ffe74`). Its T5 is the planner's DP-B proposal, adopted with four amendments.
 RL 9710 is not yet merged or minted, so the plan stays `draft`.
 
-**One open item against RL 9710, sent to dm-1358 on 2026-10-05.** RL 9710 says `RateTableDiff` is
-"unchanged" (Ruled item 1, T1, T2) and "byte-identical" in the contract (its last acceptance
-bullet). The same commit applies `RL-1361` item 4 and T6, which add the two optional coverage
-fields to `RateTableDiff`. Read literally, the two rulings cannot both be met. This plan reads RL
-9710 as "unchanged by DP-A" (Acceptance 20). If RL 9710's minted text keeps the literal wording,
-that is a stop at dispatch. The plan moves to `active` only through a
+**The open item against RL 9710 is closed.** At `b0c1237a`, RL 9710 said `RateTableDiff` was
+"unchanged" and "byte-identical", while the same commit applies `RL-1361` item 4 and T6, which add
+two optional coverage fields to it. The planner reported this to dm-1358 on 2026-10-05. At
+`c89ffe74`, RL 9710 says it adds nothing to `RateTableDiff`, and that `RateTableDiff` changes in
+the Slice 7 commit only by `RL-1361` item 4, T6 and T10. Its last acceptance bullet now reads:
+"`RateTableDiff`'s schema differs from `caa4e411` only by `RL-1361` item 4's two optional
+coverage fields" (verified at `c89ffe74`: Ruled item 1 at `:107-108`, the obliges line at
+`:282`, the acceptance bullet at `:327-328`). The plan moves to `active` only through a
 separate activation PR, after every activation need below holds.
 
 ### Activation needs, in order
@@ -263,10 +265,11 @@ as printed. Test modules: `P` is `packages/pricing-core/tests/test_rate_table_we
       docs/contracts/openapi/generated.json` prints at least 1);
     - the `…/diff/cells` route, `RateTableDiffCell`, and `rate_table.diff_cells` in the
       `JobKind` enum.
-    `RateTableDiff`'s three existing properties are unchanged: the deputy's "no contract break".
-    In `git diff origin/main -- docs/contracts/`, `RateTableDiff` gains only `RL-1361` item 4's two
-    optional properties. This reads RL 9710's "byte-identical" as "unchanged by DP-A" (§"Status",
-    the open item).
+    RL 9710's acceptance at `c89ffe74`: `RateTableDiff`'s schema differs from `caa4e411` only by
+    `RL-1361` item 4's two optional coverage fields, `portfolio_exposure` and `matched_exposure`
+    (T6), and any other change to it fails. Checked with
+    `git diff origin/main -- docs/contracts/openapi/generated.json`, read inside the
+    `RateTableDiff` component.
 21. **Requirement markers.** `uv run python scripts/req-coverage.py` lists FR-231 and FR-232 with
     the new tests. Each test in 1–18 carries `@pytest.mark.req("FR-231")`, and the 202 tests also
     carry `req("FR-232")`.
@@ -512,9 +515,8 @@ exclusive.
 ### Task 0: Preconditions (no code)
 
 - [ ] **Step 1:** Confirm each activation need. Quote RL 9710's minted id and its text blocks into
-  the ledger, and list each place where the minted text differs from RL 9710 at `b0c1237a`, the
-  head this plan was aligned to. Confirm the open item in §"Status" (the "`RateTableDiff` is
-  unchanged" wording) was resolved; if it was not, stop and report to the lead.
+  the ledger, and list each place where the minted text differs from RL 9710 at `c89ffe74`, the
+  head this plan was aligned to.
 - [ ] **Step 2:** Re-run Task 0 Step 3's `grep -cF` over every find string, using the texts as
   minted. Any count that is not 1 is a stop.
 - [ ] **Step 3:** Re-run the contention commands (§"Task 0 at planning time", Step 4). Record the
