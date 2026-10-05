@@ -174,8 +174,9 @@ immediately before the blank line that precedes `### 3.4 Rating versions and bun
 ```
 
 **T4 — `03` §5.1, two rows (S4).** Insert both, in this order, immediately **before** the
-row that begins `| `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against=` |`
-(`:904`). Nothing is struck.
+row that begins `` | `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against= `` (`:904`),
+the find string ending before the path's closing backtick. Nothing is struck. *(Re-anchored
+2026-10-05 17:29 BST, before mint: see the last amendment.)*
 
 If RL 9907 (working id)'s `Permission` column has not landed in `03` §5.1 when a row is applied, the row is applied in its three-cell form:
 
@@ -349,3 +350,30 @@ lead's prep-wave brief of 2026-10-05, section M).
   and `RATING_READ` and `RATING_WRITE` are now `permissions.py:48-49`. Both names still
   exist. `06` §4.1's table starts at `:262`. The other cites the amendment above gives are
   unchanged at `809a3794`, including `03:317` and `03:123`.
+
+## Amendment, 2026-10-05 17:29 BST: T4's anchor re-set so it survives WK-673 Slice 7, before mint
+
+Placement only; T4's two rows, their order and every other text are unchanged (decision-maker
+`dm-675s4`, on the maintainer's (by delegation) entry "2026-10-05 17:26:46 BST — WK-675 S4 DP
+memo (handover/dp-memo-wk675-s4-2026-10-05.md) RULED", `channel/to-lead.md`, routed by the lead).
+That entry: "RL 9753 T4's anchor (#1067 :176-178, ending "diff?against=` |") WILL NOT MATCH
+once S7 applies RL-1361 T10 (the row becomes ".../diff?against=&portfolio="): re-anchor RL 9753
+PRE-MINT on the prefix without the closing backtick (grep -cF = 1 at main AND after RL-1418 T1)."
+
+- **Why.** WK-673 Slice 7 (`SL-1391`, leaf `PL-1419`) applies `RL-1361` T10, which **replaces**
+  the diff row with one beginning
+  `` | `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against=&portfolio=` | ``
+  (`RL-1361` T10), and `RL-1418` T1, which inserts the `…/diff/cells?against=&portfolio=…` row
+  immediately after it. S7 is ahead of WK-675 S4 (they serialise, S7 first). The old anchor,
+  ending `` diff?against=` | ``, then matches nothing.
+- **The new find string**, exact:
+  `` | `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against= ``
+  (from the leading pipe to `against=`, with no closing backtick).
+- **Counted** (`grep -cF`, or Python `str.count`, over `docs/specs/03-rating-engine.md`):
+  - at origin/main `4d3be141`: **1** (the `:904` row);
+  - on that file with `RL-1361` T10's replacement row and `RL-1418` T1's row applied: **1**
+    (the T10 row begins with it; the T1 row's path is `/diff/cells?against=`, which does not
+    contain it). The old anchor counts 1 at main and **0** after.
+- **Placement is unaffected by `RL-1418` T1.** T4 inserts *before* the diff row and T1 *after*
+  it, so in either merge order the two rows land above the diff row, and `diff/cells` below it.
+- The `:904` cite in the 15:29 BST amendment above stays as read at `809a3794`.
