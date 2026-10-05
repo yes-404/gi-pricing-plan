@@ -17,7 +17,7 @@ relates: [WK-1178, FR-240, FR-88, FR-230, FR-20]
 
 ## Finding
 
-**Severity HIGH (the deputy's, 2026-10-05 13:20:26 BST, decisions 22–27; final at the mint). Owner WK-673 (the deputy's ruling, 2026-10-05 13:38:03 BST, "Finding batch 1: FD 9697's owner = WK-673; FD 9659's limb-3 severity depends on one fact": the fix is in `compile_bundle` against FR-240, which WK-673 owns); deadline: none set by the deputy.** FR-240 requires that bundle compilation validates "no `control`-intent
+**Severity HIGH (the deputy's, 2026-10-05 13:20:26 BST, decisions 22–27; final at the mint). Owner WK-673 (the deputy's ruling, 2026-10-05 13:38:03 BST, "Finding batch 1: FD 9697's owner = WK-673; FD 9659's limb-3 severity depends on one fact": the fix is in `compile_bundle` against FR-240, which WK-673 owns); deadline: none set for this finding alone; the deputy's 2026-10-05 14:12:13 BST ruling puts it in ONE fix plan for the FR-240 family (with FD 9659), owner WK-673, red first, "a HIGH G2 blocker" (PL 9649, working id).** FR-240 requires that bundle compilation validates "no `control`-intent
 factor in a rateable path (`02` FR-88)", and `compile_bundle` does not. A rate table built from a `control` factor is
 accepted and compiles, so a price can depend on a factor the platform declared must not price. That is a mispricing
 class, not a test gap (the deputy's reasoning, 13:20:26 BST).
@@ -87,7 +87,7 @@ check: the resolver has to resolve the key's `factor_ref` and the compile has to
 
 ## Disposition
 
-Open. Filed by the auditor, 2026-10-05; severity and owner are proposals, and the verdict is the lead's.
+Open. Filed by the auditor, 2026-10-05. Severity HIGH (13:20:26 BST) and owner WK-673 (13:38:03 BST) are the deputy's; the fix is the FR-240 family plan, PL 9649 (working id).
 
 Remedy for the lead's verdict: refuse a `control` factor at seed (it cannot be rated on, FR-88) or at compile, or both.
 Red first: the reproduction above must end in a refusal. The custom-objective clauses are FD 9659's.
