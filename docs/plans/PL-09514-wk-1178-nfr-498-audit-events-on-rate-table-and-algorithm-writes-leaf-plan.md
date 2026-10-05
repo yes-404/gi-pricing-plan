@@ -236,6 +236,130 @@ The imports gain `audit`, `JobSource` and `Principal` (the import block,
 `before=baseline` and `_to_version` re-seed sources; every "DP-5 (a) only" and "DP-4 (b)"
 branch; and the sentence "If DP-2 or DP-3 is ruled another way …".
 
+## Delta 2, 2026-10-05 (after 18:12:58 BST, pre-mint): `_stored_version` accepted, with one STOP: no route response may move
+
+This plan is still an unmerged draft. This delta deletes no text, and it governs where it
+disagrees with the text below or with the first delta. Repository facts were read at
+`origin/main` `fb178c360f6fd5b2fdb7ae60eea924811a65492f`.
+
+### E1. The ruling, quoted
+
+The maintainer (by delegation), `~/gi-pricing-plan.local/channel/to-lead.md`, the entry headed
+"2026-10-05 18:12:58 BST — PL 9514 @1cabc274: the stored-wire-form constructor accepted as
+implementation, with one STOP; RL 9501 @1e6a59df: 03:343 IS amended (T-1d), not read around",
+quoted verbatim:
+
+> 1. DP-2's hash = version_content_hash (diff_cache.py:46-56), not BlobRef.sha256 (parquet bytes, absent for rows): ACCEPTED; key cells_digest.
+>    _stored_version(row, cells): ACCEPTED as implementing the ruled wire form, not a new DP. Read at origin/main: _to_version (rate_tables.py:612-640) is, BY ITS OWN DOCSTRING, a transformation input ("always presents rows … the in-memory claim is never stored"), so it is the wrong source for audit state, and a separate stored-form constructor is right. Its reds (a bulk on a bulk-made baseline, a bulk on a parquet baseline, events[1].before == events[0].after) are ACCEPTED.
+>    ONE STOP: routing _persist_new_version's RETURN through _stored_version must not change any route's RESPONSE. The proof is the unchanged suite PLUS one explicit comparison of a PARQUET-stored and an IMPORT-made version's HTTP response at the base and at the head (the existing suite may not cover those shapes). If any response moves, STOP to me: that is a wire change and possibly its own finding, not part of this slice.
+> 2. RL 9501, 03:343 ("the before/after cells and the actor belong to NFR-498's Audit Event, not here"): I do NOT read around it. Read literally, it places the CELLS in the event, while DP-2 carries a digest. So RL 9501 adds T-1d, a dated note at :343 saying the Audit Event carries the cells BY the immutable version's reference PLUS cells_digest (their canonical content hash), not inline, citing T-1b and DP-2. Its anchor counts 1, as for T-1a to T-1c. That keeps the spec saying what the code will do, with no silent reading.
+>    T-1a, T-1b and T-1c: ACCEPTED as drafted.
+
+So D2 (the hash), D3 (`_stored_version`) and D4's three D3 reds stand as written. The key is
+`cells_digest`.
+
+### E2. The routes that return a version, enumerated at `fb178c36`
+
+From `backend/src/app/api/rate_tables.py`, every route decorator (`@router.`) in the file:
+
+| Route | Decorator | Returns a version? | Body returned |
+|---|---|---|---|
+| `POST /rate-tables/{slug}/seed-from-model` | `:70-76` | **yes**, 201 | `response_model=RateTableVersion` (`:74`); `return version` (`:109`) |
+| `POST /rate-tables/{slug}@{version}/bulk-operation` | `:112-117` | **yes**, 201 | `created.model_dump(mode="json")` (`:156`) |
+| `POST /rate-tables/{slug}@{version}/import` with `confirm: true` | `:205-209` (`confirm`, `:219`) | **yes**, 201 (`:264`) | `created.model_dump(mode="json")` (`:265`) |
+| the same route with `confirm` false | `:205-209` | no: an `ImportPreview` (`:241-251`) | not routed through `_persist_new_version` |
+| `GET /rate-tables/{slug}@{version}/export/csv`, `/export/xlsx` | `:159-163`, `:180-184` | no: the cells as a file | not routed through it |
+| `GET /rate-tables/{slug}@{version}/diff` | `:268-277` | no: a `RateTableDiff` or a `Job` | not routed through it |
+
+**There is no version GET or list route at `fb178c36`**: no `@router.get` in the file returns a
+`RateTableVersion`, and no other module under `backend/src/app/api/` declares a
+`/rate-tables` route (`git grep -n 'rate-tables' fb178c36 -- backend/src/app/api` matches only
+this file and two prose lines in `api/traces.py:12`, `:21`). So the three version-returning
+routes are the comparison's set. **Task 0 Step 2 re-enumerates at the dispatch tree**: an open
+plan adds rate-table routes (WK-675 S4, PL 9582: `cells_page` and three handlers). Any route
+that returns a stored version at that tree joins the set, and the ledger names it.
+
+### E3. The STOP, as a task step: new Task 1b, before Task 2's reds
+
+**Task 1b: `_persist_new_version` returns the stored wire form; no route response moves.** It
+is its own commit, after Task 1's refactor commit and **before** Task 2's reds, so that every
+red lands on the new return path.
+
+- [ ] **Step 1:** Add `_stored_version` (D3's code). Change only `_persist_new_version`'s return
+  statement (`rate_tables.py:750-764`) to `return _stored_version(version_row, cells)`. No audit
+  call yet, and no other edit.
+- [ ] **Step 2:** Item 9's pytest command, unchanged, then `uv run mypy && uv run ruff check .`.
+  All pass, with no assertion edited.
+- [ ] **Step 3: The base-vs-head response comparison (item 13).** Make two worktrees: **BASE**
+  is the slice's base (the `origin/main` commit Task 0 recorded); **HEAD** is Step 1's tree. In
+  each, put the same **untracked** harness file at `backend/tests/test_zz_pl9514_response_compare.py`
+  (copied from the executor's own `mktemp -d`; it is never committed, and the ledger quotes it
+  in full). The harness mirrors `backend/tests/test_api_rate_tables.py`'s synchronous form at
+  `fb178c36`: the `api_client` and `workspace_id` fixtures, the `actuary` (`:41-45`) and
+  `admin_headers` (`:56-62`) header fixtures, `_seed_approved_model(workspace_id, family, _LEVELS)`
+  (`:160`), `_seed_body(family)` (`:205-210`) and `_set_threshold(api_client, admin_headers, 1)`
+  (`:848-857`), imported from that module. It drives the HTTP routes in E2 in this fixed order,
+  with fixed slugs and one fixed `family` (`"mf-pl9514cmp"`), never `_table_slug()`'s random
+  suffix:
+  1. seed `t-rows` (rows-stored, default threshold) → `R1`;
+  2. import-confirm a fixed CSV on `t-rows@1` → `R2` (**import-made**, rows-stored);
+  3. set `rate_tables.cell_threshold` to 1, then bulk `uplift_table` `{"percentage": "0.10"}` on
+     `t-rows@2` → `R3` (**parquet-stored**, bulk-made on an import-made baseline);
+  4. bulk the same on `t-rows@3` → `R4` (parquet, on a parquet baseline);
+  5. import-confirm the same CSV on `t-rows@3` → `R5` (**import-made and parquet-stored**);
+  6. seed a fresh `t-pq` with the threshold still 1 → `R6` (parquet-stored seed).
+
+  It writes each response's **raw body bytes** (`response.content`) and its status code to
+  `<scratch>/<BASE|HEAD>/R<n>.json`. The one value that varies between two runs is
+  `seeded_from.seeded_at`, which is `datetime.now(UTC)` (`rate_tables.py:144`). The harness pins
+  it by monkeypatching `app.platform.rate_tables.datetime` with a subclass whose `now()` returns
+  `datetime(2026, 10, 5, 12, 0, tzinfo=UTC)`, in both trees. Nothing is normalised after the
+  fact. Run it alone in each tree:
+  `OMP_NUM_THREADS=1 nice uv run pytest backend/tests/test_zz_pl9514_response_compare.py -q`
+  (check the slots first, Task 0 Step 3). Then `cmp` each `BASE/R<n>.json` with
+  `HEAD/R<n>.json`, and record the six `cmp` exit codes and the status codes in the ledger.
+  **Every one must be 0: byte for byte, every field.**
+  - **If any response differs: STOP to the maintainer (by delegation)**, through the lead,
+    quoting both bodies. It is a wire change, and possibly its own finding; it is not fixed in
+    this slice. Task 2 does not start.
+  - **Positive control:** in the HEAD tree only, change one byte of `_stored_version`'s
+    output (for example `change_note=version_row.change_note + " "`), rerun, and confirm `cmp`
+    reports a difference for `R1`–`R6`. Record it, then revert. A comparison that has never
+    shown a difference has not been tested (`CLAUDE.md` §13).
+  - Then delete the harness from both worktrees. `git status --short` in HEAD shows only
+    Step 1's edit. Remove the BASE worktree.
+- [ ] **Step 4:** Commit: `refactor(rating): _persist_new_version returns the stored wire form (NFR-498 prep; no response moves)`.
+
+Task 3 Step 1 (D3's code) then adds only the `audit.record` call and the callers' `before`; the
+return statement is already Task 1b's.
+
+### E4. Acceptance item 13 (added)
+
+13. **No route response moves (the 18:12:58 STOP).** The ledger holds Task 1b Step 3's six `cmp`
+    exit codes, all 0, for the responses of seed, import-confirm and bulk-operation (E2's set as
+    re-enumerated at the dispatch tree), at the slice's base and at Task 1b's commit. The set
+    covers a parquet-stored version (`R3`–`R6`) and import-made versions (`R2`, `R5`). It also holds
+    the positive control's non-zero `cmp`. Item 9's suite passes unedited at Task 1b's commit.
+    Any non-zero `cmp` outside the control is a STOP (E3), never a pass.
+
+### E5. T-1d (RL 9501): the spec text Task 5 applies
+
+RL 9501 adds **T-1d** at `03:343` (at `fb178c36` that line reads "belong to NFR-498's Audit Event,
+not here. This example's version was edited by"; the sentence is "the before/after cells and the
+actor belong to NFR-498's Audit Event, not here"). T-1d says that the Audit Event carries the cells
+**by the immutable version's reference plus `cells_digest`** (their canonical content hash), not
+inline, citing T-1b and DP-2. Task 5 applies T-1a to T-1d byte for byte from RL 9501. Item 1's
+`after` assertions are what T-1d describes: the `entity_ref` addresses the version, and
+`cells_digest` is its hash.
+
+### E6. What changes elsewhere
+
+- **Task 1** stays as written. **Task 1b** is new (E3). **Task 2** starts only after Task 1b's
+  comparison is all 0.
+- **Task 6 Step 2's ledger** gains Task 1b's harness, the six `cmp` codes and the control.
+- **The write set** does not change: the harness is untracked and never committed. Item 10's
+  `git diff --stat` therefore shows no `test_zz_*` file.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
 > or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`)
 > syntax for tracking. The executor also binds `python-test` (the `req` marker, negative
@@ -396,6 +520,7 @@ dispatch record says so.
 11. **The gate.** The full two-half gate (`CLAUDE.md` §11) passes on the merge tree through the
     gate-runner, and `python3 scripts/audit-docs.py` exits 0 after the mint.
 12. **The bound.** The merge commit's date is on or before 2026-11-04.
+13. *(Delta 2 of 2026-10-05, E4.)* **No route response moves.** Task 1b Step 3's six `cmp` exit codes are all 0 at the slice's base and at Task 1b's commit, and the positive control's `cmp` is non-zero. Any other non-zero `cmp` is a STOP to the maintainer (by delegation).
 
 ## Global Constraints
 
@@ -591,6 +716,8 @@ its position, so each call site changes one argument.
 - [ ] *(Delta of 2026-10-05, D5: Step 5b, the full gate, follows.)* **Step 5:** `uv run mypy && uv run ruff check .`, then item 9's pytest command. All pass,
   with no assertion edited.
 - [ ] **Step 6:** Commit: `refactor(rating): the rate-table and algorithm services take the acting Principal (NFR-498 prep)`.
+
+*(Delta 2 of 2026-10-05, E3: Task 1b, the stored-wire-form return and the base-vs-head response comparison, follows here as its own commit, before Task 2.)*
 
 ### Task 2: The reds (items 1–5, 7, 8; item 6 as a control)
 
@@ -808,6 +935,8 @@ def _audit_state(version: RateTableVersion) -> dict[str, Any]:
   can re-sequence lane B before the freeze.
 
 ### Task 5: The spec text, only from an `RL-` (DP-4)
+
+*(Delta 2 of 2026-10-05, E5: RL 9501 carries T-1a to T-1d; T-1d is at `03:343`.)*
 
 *(Delta of 2026-10-05, D5: unconditional; the `RL-` is RL 9501.)*
 
