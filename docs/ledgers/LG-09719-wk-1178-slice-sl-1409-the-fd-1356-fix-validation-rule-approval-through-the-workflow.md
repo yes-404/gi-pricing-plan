@@ -328,7 +328,29 @@ The test database is shared, so the assertions name the test's own rows and work
 
 **Doubt, for the lead (not a stop).** RL-1407 says the script "runs on the database named `gipricing`, always" and also asks for the style of `revalidate-artifacts.py` with its `GIP_DATABASE_URL` override; I kept the override (the style the ruling names), so the script writes whatever DSN it is given and defaults to `gipricing`. Step 4's executor passes no override.
 
-**Scratch databases:** created `scratch_sl1409_base`, `scratch_sl1409_after`; dropped at the end of the task (see the Step 3a entry).
+**Scratch databases:** created `scratch_sl1409_base`, `scratch_sl1409_after`; dropped at the end of the task (the Step 3a entry records the drop).
+
+### Task 7, Step 3a — the pre-flight, red first (2026-10-05, executor-1409-t7)
+
+`backend/tests/test_check_rule_sets_runnable.py` (new) and the wiring assertion in `backend/tests/test_demo_command.py`
+(`test_the_rule_set_pre_flight_runs_after_the_seed_record_and_before_the_api_starts`) were written first.
+
+- Red, `pytest -q backend/tests/test_check_rule_sets_runnable.py backend/tests/test_demo_command.py`: `4 failed, 13 passed`. Three failures are
+  `FileNotFoundError: [Errno 2] No such file or directory: '…/scripts/check-rule-sets-runnable.py'` (the script does not exist) and the wiring test fails at
+  `assert 'check-rule-sets-runnable.py' in 'def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int: …'` (the step is absent). Both are the plan's causes.
+- Green after `scripts/check-rule-sets-runnable.py` and the `run([...], step="pre-flight: the demo workspace's rule sets are runnable", env=env)` step in `scripts/demo.py`
+  (immediately after `record = read_seed_record()`, before the API command, outside the `if not skip_seed:` block): `17 passed, 1 warning in 3.60s`.
+  The script's literals are RL-1407 condition 2's: the stderr text for no rule set (`Workspace <workspace_id> has no rule set: the seed did not finish. Re-run the seed.`),
+  `rule sets runnable: <n>`, exit 1 on a `PlatformError` with the error's detail on stderr; it calls `rule_service.rule_set_to_run` per dataset that has a rule set, in a read-only session.
+  The test seam is `check(database, workspace_id, *, out, err)`, which returns the exit status.
+- `ruff check` (scripts, backend/tests, examples) and `mypy` (226 files) clean.
+- Real runs on the scratch databases (Step 4 takes the `gipricing` ones): on `scratch_sl1409_after` (the new seed) `rule sets runnable: 1`, rc 0;
+  on `scratch_sl1409_base` after the reset script (`reset=9`) the run printed `Not approved: 01a10bab-11bb-7466-8b4f-71ecfbee30b4 (claim-count-non-negative@2, review), …` (nine members, each `review`) and rc 1;
+  on a workspace id with no rule set `Workspace 01a10bab-0000-7000-8000-000000000000 has no rule set: the seed did not finish. Re-run the seed.`, rc 1.
+
+**Scratch databases:** `scratch_sl1409_base` and `scratch_sl1409_after` created, used and dropped (`dropdb` ok; a count of `pg_database` rows `like 'scratch_sl1409%'` afterwards prints 0).
+The temporary detached worktree `.claude/worktrees/sl-1409/.claude/worktrees/sl1409-base` was removed (`git worktree remove`). The two copied `.arff` files and the seed's `last-seed.json`
+stay in this worktree's gitignored `examples/fremtpl2/data/`; the root checkout's `data/` was never written. `git status` shows nothing under `data/`.
 
 ### The write set under the `__all__` amendment (Delta 4, #1118)
 
