@@ -1052,6 +1052,63 @@ Drafted as working id 9768; minted 2026-10-01 as SL-1369 (its leaf plan, drafted
 (Activated 2026-10-03 as WK-675 Slice 1, on the maintainer's GO check of 2026-10-01, "2026-10-01 11:04:02 BST — GO: WK-675 Slice 1 (SL-1369, PL-1368) on lane A, with ONE correction to the dispatch record (DP-4's label is (b), not (a)); this entry is PL-1368 activation need 1's dated maintainer agreement"; dispatch record DISPATCH-WK-675-SL1369-2026-10-01.)
 *(Closed 2026-10-03 on a clean slice audit (`audit-1369-2026-10-03.md`, range `origin/main...44bfbafe`, verdict CLEAN) and the dispatch record's Deltas 1 to 4; ledger `LG-1378`, minted from working id 9745. Precedent: `SL-1360` / `LG-1370`.)*
 
+#### SL 9711 (working id) — Slice 2: Designer I — canvas, inspector, load and save; RatingAlgorithm in the generated contract; the typed save route (FD-1366 rule (ii))
+
+```yaml
+id: SL-9711
+family: slice
+title: Slice 2: Designer I — canvas, inspector, load and save; RatingAlgorithm in the generated contract; the typed save route (FD-1366 rule (ii))
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 88d114fc44b9a77a57f29ca30bc3ee5d693085f8
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [PL-1286, PL-1371, RS-1269, FD-1366, RL-1263, SL-1369, SL-1391, SL-1409]
+```
+
+`PL-1286` S2 (`:304`), cut as a draft row for its leaf plan, PL 9713 (working id,
+`docs/plans/PL-09713-wk-675-slice-2-designer-i-canvas-inspector-load-and-save-leaf-plan.md`). The DAG designer's
+first slice. **Backend first:**
+- `RatingAlgorithmDraft` (RL 9767 item 1's type only), with `RatingAlgorithm` as its
+  subclass;
+- `POST /api/v1/rating-algorithms` typed with that body and a `RatingAlgorithmSaved` 201,
+  keeping every FR-212 save code. This is FD-1366 rule (ii), and the deputy decided
+  DP-S2-1 (a) and DP-S2-2 on 2026-10-05 at 12:59:02 BST;
+- `GET /api/v1/rating-algorithms/{slug}@{version}` (RL 9753 T1, T2) and
+  `GET /api/v1/rating-versions/{slug}@{version}` (RL 9766 T1, T2), each spec-first with the
+  decision-maker's texts byte for byte;
+- `RatingAlgorithm` in the generated contract (spike F2 condition 1).
+
+**Then the designer:**
+- `@vue-flow/core` 1.48.2 (MIT) in its own lazy chunk, with `03` §8 and `skills-map.md`
+  updated in the same commit;
+- typed nodes, and an inspector per step type: FR-213, FR-215, FR-220, FR-221, FR-222,
+  FR-225, FR-226, and `expression` as text under FR-244 with no function picker;
+- the Rating Version's `model_reference_mode` shown read-only (FR-223);
+- a keyboard node navigator, checked against WCAG 2.2 AA;
+- save from the view, and the FR-25 link from `RatingVersionView`;
+- the bundle delta and the dev-build pan and zoom re-measure (F2 conditions 3 and 5).
+
+S2 shows no graph validation of its own: FR-24's designer exception stays with S3. **Lane:**
+the third build lane's candidate.
+- It shares `03` §5.1 with lane A's `SL-1391`. The deputy decided to run both (2026-10-05
+  13:00:09 BST, item 8), with the hunks and anchors named in both dispatch records,
+  non-adjacent rows, merge-tree rc 0 and a re-gate on the second merge, and gates that never
+  overlap.
+- Against `SL-1409` it shares only exempt or `__all__` name-disjoint paths.
+
+**Gate:** the leaf plan's Activation needs, in a separate activation PR:
+- RL 9767, RL 9766 and RL 9753 minted (#1055, #1067);
+- DP-S2-3 decided;
+- the lane A/C conditions in both dispatch records;
+- Task 0 re-run;
+- the maintainer's agreement and the lead's go.
+
+*(Filed 2026-10-05 under working ids 9711 (this row) and 9713 (the plan), reserved by the lead.)*
+
+
 
 ### WK-690 — **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with**
 
