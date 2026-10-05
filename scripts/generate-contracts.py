@@ -154,6 +154,27 @@ GENERATED_SHAPES: dict[str, str] = {
     "sub-graph": "SubGraph",
     "sub-graph-create": "SubGraphCreate",
     "sub-graph-body": "SubGraphBody",
+    # Added 2026-10-03 (WK-1178 SL-1377, PL-1376, RL-1375 DP-3/DP-4). The seed route's
+    # request and its 201: first written form, with no hand-authored counterpart (the
+    # authored `rate-table.schema.json` is F27(c)'s, never compared).
+    "rate-table-version": "RateTableVersion",
+    "seed-from-model-request": "SeedFromModelRequest",
+    # Added 2026-10-03 (WK-674 Slice 2, PL-1392 C1). The Environment and Deployment shapes
+    # and the request bodies of the new routes: first written forms, with no hand-authored
+    # counterpart (`03` §4.12, `07` §4.2). A client that creates an Environment or deploys
+    # generates its request type from these.
+    "environment": "Environment",
+    "environment-create": "EnvironmentCreate",
+    "environment-update": "EnvironmentUpdate",
+    "deployment": "Deployment",
+    "deployment-create": "DeploymentCreate",
+    "deployment-request": "DeploymentRequest",
+    "deployment-request-create": "DeploymentRequestCreate",
+    # Added 2026-10-04 (WK-674 Slice 2, PL-1392 Task 5, Acceptance 16): the body of
+    # `POST /api/v1/approval-requests`, moved out of the API module.
+    "approval-submission": "ApprovalSubmission",
+    # Added 2026-10-04 (PL-1392 Task 6): the body of `.../withdraw`, moved out of the API module.
+    "approval-withdrawal": "ApprovalWithdrawal",
 }
 
 

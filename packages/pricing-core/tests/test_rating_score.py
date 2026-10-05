@@ -189,12 +189,16 @@ async def test_a_known_quote_prices_to_a_known_premium() -> None:
 
 @pytest.mark.req("NFR-496")
 async def test_the_ladder_reconciles_over_a_battery_of_generated_contexts() -> None:
-    """Not one example: driver age and channel vary, and every one of `reconcile_ladder`'s
-    own check *and* a from-scratch manual re-derivation (applying every recorded operation
-    to `risk_premium_minor` in order) must reproduce `payable_premium_minor` exactly —
-    the manual half is strictly stronger than `reconcile_ladder` itself, which only checks
-    the first rung and int-ness (`pricing_core/money.py`), not that an operation
-    reproduces its own rung."""
+    """Not one example: driver age and channel vary, and a from-scratch re-derivation
+    (`RL-1329` R4: apply every recorded operation, with no rounding, to the first rung's
+    unrounded value, then round once at `payable_premium`) must reproduce the payable
+    exactly. Replaces the old re-derivation, whose `round` branch *assigned*
+    `rung.value_minor` instead of replaying, and so passed over the 4 dp drift (FD-1336 F4;
+    its NFR-496 round weakness)."""
+    from decimal import Decimal, localcontext
+
+    from pricing_core.money import ROUNDING_MODES
+
     compiled = await _compiled()
     for age in (18, 25, 34, 50, 70, 99):
         for channel in ("direct", "broker"):
@@ -207,28 +211,40 @@ async def test_the_ladder_reconciles_over_a_battery_of_generated_contexts() -> N
             ladder = result.premium_ladder
             assert ladder, f"age={age} channel={channel}: empty ladder"
 
-            value = ladder[0].value_minor
-            for rung in ladder[1:]:
-                op = rung.operation
-                assert op is not None, f"{rung.rung}: no recorded operation"
-                if op.kind == "multiply":
-                    assert op.factor is not None
-                    from decimal import Decimal
-
-                    from pricing_core.money import apply_factor
-
-                    value = apply_factor(value, Decimal(op.factor), op.mode or "half_even")  # type: ignore[arg-type]
-                elif op.kind == "add":
-                    assert op.amount_minor is not None
-                    value += op.amount_minor
-                elif op.kind == "round":
-                    value = rung.value_minor
-                # "none": value carries forward unchanged.
-                assert value == rung.value_minor, (
-                    f"age={age} channel={channel} rung={rung.rung}: recorded operation "
-                    f"does not reproduce the recorded value ({value} != {rung.value_minor})"
-                )
-            assert value == result.outputs["payable_premium_minor"]
+            assert ladder[0].unrounded_minor is not None
+            value = ladder[0].unrounded_minor
+            with localcontext() as ctx100:
+                ctx100.prec = 100
+                for rung in ladder[1:]:
+                    op = rung.operation
+                    assert op is not None, f"{rung.rung}: no recorded operation"
+                    if op.kind == "multiply":
+                        assert op.factor is not None
+                        value = value * op.factor
+                    elif op.kind == "divide":
+                        assert op.divisor is not None
+                        value = value / op.divisor
+                    elif op.kind == "add":
+                        assert op.amount_unrounded_minor is not None
+                        value = value + op.amount_unrounded_minor
+                    elif op.kind == "round":
+                        # the replay ROUNDS here, once; it never assigns the recorded value
+                        assert op.mode is not None
+                        replayed = int(
+                            value.quantize(Decimal(1), rounding=ROUNDING_MODES[op.mode])
+                        )
+                        assert replayed == rung.value_minor, (
+                            f"age={age} channel={channel}: replay rounds to {replayed}, "
+                            f"recorded {rung.value_minor}"
+                        )
+                        assert replayed == result.outputs["payable_premium_minor"]
+                        continue
+                    assert rung.unrounded_minor is not None
+                    assert abs(value - rung.unrounded_minor) <= Decimal("1e-26") * abs(
+                        rung.unrounded_minor
+                    ), f"age={age} channel={channel} rung={rung.rung}: operation does not replay"
+            assert ladder[-1].operation is not None
+            assert ladder[-1].operation.kind == "round"
 
 
 # ---------------------------------------------------------------------------
@@ -259,20 +275,31 @@ async def test_two_firing_constraints_both_appear_in_decline_reasons() -> None:
 
 
 @pytest.mark.req("FR-256")
-async def test_a_clamp_overrides_the_ladder_and_is_recorded_on_the_constraints_rung() -> None:
+async def test_a_binding_clamp_is_attributed_to_the_constraints_rung() -> None:
+    """Replaces `test_a_clamp_overrides_the_ladder_and_is_recorded_on_the_constraints_rung`,
+    which asserted `office.value_minor == 999_999` and so fixed FD-1330's misattribution:
+    the clamp's effect was carried by the rung it overwrote, and `constraints` said `none`.
+    Now `office_premium` keeps its own pre-clamp value and x1.1, and `constraints` is the
+    clamp (`RL-1329` §2 step 5)."""
     compiled = await _compiled()
     ctx = _ctx(inputs={
         "driver_age": 34, "channel": "direct", "min_premium_minor": 999_999,
         "sanity_cap_minor": 999_999_999, "sanity_floor_minor": 0,
     })
-    result = await score_one(compiled, ctx)
+    result = await score_one(compiled, ctx, trace=True)
 
     assert result.outcome == "quoted"
     office = next(r for r in result.premium_ladder if r.rung == "office_premium")
-    assert office.value_minor == 999_999
+    assert office.value_minor != 999_999
     constraints = next(r for r in result.premium_ladder if r.rung == "constraints")
+    assert constraints.value_minor == 999_999
     assert constraints.operation is not None
+    assert constraints.operation.kind == "clamp"
+    assert constraints.operation.bound == "min"
+    assert constraints.operation.bound_unrounded_minor == 999_999
     assert constraints.operation.applied == ["MIN_PREMIUM_APPLIED"]
+    assert result.trace is not None
+    assert result.trace.ladder_reconciled is True
 
 
 @pytest.mark.req("FR-256")

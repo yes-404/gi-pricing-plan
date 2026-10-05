@@ -5,18 +5,18 @@ title: The quantile template certifies convexity violated, and no second Approve
 status: active
 created: 2026-10-01
 owner: auditor
-tree: 934e9a44b99705466e9e612eb245761dc8e33884
+tree: a978dc2297bc8bfcc1c4da09ded37cefdcf92156
 corrected_by: []
 relates: [WK-690, FR-152, FR-163, FR-354]
 ---
 
 # FD-9780 — The quantile template certifies convexity violated, and no second Approver is enforced
 
-**Working id 9780**, allocated by the lead and ordered by the maintainer on 2026-10-01: "the quantile template certifies convexity 'violated' (objectives.py:408-412, needing a second Approver) and nothing enforces it." Found by the decision-maker while ruling the DP-S3-4 question of PL 9789; its ruling, working id 9782, is draft PR #1040. The `tree:` is `origin/main^{tree}` at `101e32dc`.
+**Working id 9780**, allocated by the lead and ordered by the maintainer on 2026-10-01: "the quantile template certifies convexity 'violated' (objectives.py:408-412, needing a second Approver) and nothing enforces it." Found by the decision-maker while ruling the DP-S3-4 question of PL 9789; its ruling, `RL-1362` (working id 9782 when this was filed; the draft PR #1040 was closed unmerged, and the record reached main separately), is on main. The header `tree:` is `origin/main^{tree}` at `ef5dc6e7` (re-pinned 2026-10-05, see the amendment below); the evidence below was measured at `101e32dc` (tree `934e9a44b99705466e9e612eb245761dc8e33884`) unless it says otherwise.
 
 ## Finding
 
-**Severity: MEDIUM (provisional).** The maintainer's rule: "any approval already passed with a violated certificate raises it". **None was found** in this repository's reachable stores (Evidence 4), so it stays MEDIUM; the fixture-stamped rows of Evidence 4(c) are reported for the lead to rule on, not counted as approvals. **Owner WK-690**, fixed by Slice 3's DP-S3-4 (the DP-S3 ruling, working id 9782: `approvers_required` = policy + 1 when the latest certificate's convexity is `violated`, both kinds). The finding is that FR-152's "requires an additional Approver" is a numbered requirement with no enforcing code, and that one shipped template already meets the condition.
+**Severity: MEDIUM (provisional).** The maintainer's rule: "any approval already passed with a violated certificate raises it". **None was found** in this repository's reachable stores (Evidence 4), so it stays MEDIUM; the fixture-stamped rows of Evidence 4(c) are reported for the lead to rule on, not counted as approvals. **Owner WK-690**, fixed by Slice 3's DP-S3-4 (the DP-S3 ruling, `RL-1362`: `approvers_required` = policy + 1 when the latest certificate's convexity is `violated`, both kinds). The finding is that FR-152's "requires an additional Approver" is a numbered requirement with no enforcing code, and that one shipped template already meets the condition.
 
 ## Evidence
 
@@ -24,17 +24,17 @@ relates: [WK-690, FR-152, FR-163, FR-354]
 
 **2. The certificate says it.** `packages/pricing-core/src/pricing_core/modelling/objectives.py:408-412` (`_quantile_hess`): the pinball loss is piecewise linear, so its exact second derivative is negative on the under-prediction side, "why FR-152 exists, and why this template certifies `convexity: violated` and needs a declared strategy and a second Approver". `_convexity_check` (`:1278-1300`) emits `CheckStatus.VIOLATED` when any sampled hessian is negative, with the detail "FR-152 requires an additional Approver"; it is a prose string and nothing reads it back. `CertificateResult.outcome_of` (`packages/model-schema/src/model_schema/objectives.py:724-736`) maps `violated` to `certified_with_findings`, deliberately not `failed`.
 
-**3. Where the second Approver should be required, and is not.** The path is `platform/objectives.py` `submit_for_review` (`:558`) → `_require_evidence` (`:589`) → `approvals.submit` (`:591`) → `platform/approvals.py` `submit` (`:225`) → `decide` (`:330`).
+**3. Where the second Approver should be required, and is not.** The path is `platform/objectives.py` `submit_for_review` (`:558`) → `_require_evidence` (call `:589`) → `approvals.submit` (`:591`) → `platform/approvals.py` `submit` (`:240`, was `:225`) → `decide` (`:345`, was `:330`).
 - `_require_evidence` (`platform/objectives.py:830-`) checks only that `row.certificate_id is not None` for `objective_certificate`. It never loads the certificate payload.
-- `approvals.submit` takes no certificate input and stores `approvers_required=entry.approvers_required` (`approvals.py:286`), the policy entry's number alone.
-- The default entry is `packages/model-schema/src/model_schema/approvals.py:211-212`: `custom_objective`, `approvers_required=1`.
-- `decide` resolves the outcome with `_resolve_status(decision, approvals, row.approvers_required)` (`approvals.py:447`), and `_resolve_status` returns `APPROVED` once `approvals >= required` (`:588`).
+- `approvals.submit` takes no certificate input and stores `approvers_required=entry.approvers_required` (`approvals.py:301`, was `:286`), the policy entry's number alone.
+- The default entry is `packages/model-schema/src/model_schema/approvals.py:291-292` (was `:211-212`): `custom_objective`, `approvers_required=1`.
+- `decide` resolves the outcome with `_resolve_status(decision, approvals, row.approvers_required)` (`approvals.py:462`, was `:447`), and `_resolve_status` (def `:596`, was cited `:588`) returns `APPROVED` once `approvals >= required` (`:603`).
 - `git grep -n "convexity\|CheckStatus.VIOLATED\|\"violated\"" -- backend/src` returns two hits, both prose (`platform/metrics.py:6`, `platform/objectives.py:471`): no backend code reads a convexity status.
 
-So at the default policy a `violated` objective is approved by one non-author Approver. FR-163's own text says two. Consequence: the objective reaches `approved`, and a Model fitted under it becomes approvable (`FITTABLE_OBJECTIVE_STATUSES`, `model_schema/objectives.py:177`, lets a fit use `certified`, `review` or `approved`, and a model "cannot be approved until the objective is"). The quantile template is also the one FR-199's paired-quantile bounds must use (`platform/modelling.py:760`), so the interval bounds of a prediction rest on it.
+So at the default policy a `violated` objective is approved by one non-author Approver. FR-163's own text says two. Consequence: the objective reaches `approved`, and a Model fitted under it becomes approvable (`FITTABLE_OBJECTIVE_STATUSES`, `model_schema/objectives.py:177`, lets a fit use `certified`, `review` or `approved`, and a model "cannot be approved until the objective is"). The quantile template is also the one FR-199's paired-quantile bounds must use (`platform/modelling.py`, `_refuse_a_bound_that_is_not_a_quantile_fit` `:734`, the template refusal at `:760-:765`; was cited `:760`), so the interval bounds of a prediction rest on it.
 
 **4. Reach (this repository's reachable stores only; not any deployment, of which there is none).**
-(a) Committed code. Predicate: `git grep -nE "ObjectiveTemplate\.QUANTILE|template=\"quantile\"" -- backend/tests packages/*/tests` at `101e32dc`: 3 lines, all tests. `backend/tests/test_paired_quantile_models.py:97` builds the quantile objective and `mark_approved`s it with a stamped request of `approvers_required=1` (`backend/tests/approved_rows.py:48-64`); its docstring says the approval is stamped and does not drive the two-person path. It is called 7 times (`git grep -c "_approved_quantile(" -- backend/tests`). `packages/pricing-core/tests/test_gbm.py:1576` is a core-only fit. No seed, example or script uses the template: `git grep -il quantile -- examples scripts ':!*.md'` lists three bench scripts, all statistical percentiles.
+(a) Committed code. Predicate: `git grep -nE "ObjectiveTemplate\.QUANTILE|template=\"quantile\"" 101e32dc -- backend/tests packages/pricing-core/tests`: 3 lines, all tests. `backend/tests/test_paired_quantile_models.py:97` builds the quantile objective and `mark_approved`s it with a stamped request of `approvers_required=1` (`backend/tests/approved_rows.py` `decided_request`, `:47-64`, was `:48-64`); its docstring says the approval is stamped and does not drive the two-person path. It is called 7 times (`git grep -c "_approved_quantile(" -- backend/tests`). `packages/pricing-core/tests/test_gbm.py:1576` is a core-only fit. No seed, example or script uses the template: `git grep -il quantile -- examples scripts ':!*.md'` lists three bench scripts, all statistical percentiles.
 (b) Local Postgres, container `gi-pricing-postgres-1`, user `gipricing`, every database matching `gipricing%` (82 of them; 3 predate the objectives tables and error with "relation does not exist"). Script, run per database:
 `select count(*) from custom_objectives where template='quantile'`;
 objectives with a violated convexity check: `... exists (select 1 from objective_certificates c, jsonb_array_elements(c.payload->'checks') k where c.custom_objective_id=o.id and c.objective_version=o.version and k->>'name'='convexity' and k->>'status'='violated')`;
@@ -46,4 +46,22 @@ Result: 77 databases hold none. **Two hold 32 quantile objectives each** (`gipri
 
 ## Disposition
 
-**Owner WK-690, fixed by Slice 3's DP-S3-4** (the DP-S3 ruling, working id 9782, draft PR #1040): `submit_for_review` passes an increment of one to `approvals.submit` when the latest certificate's `convexity` check is `violated`, so `approvers_required` is policy + 1, for both kinds; FR-163 gets a dated clause correction. That ruling's own red-first step counts the violated fixtures at the base, and this finding's counts are the base for it. The finding stays open until Slice 3 merges with a test that approves a `violated` quantile objective with one approver and finds it still in `review`. Recheck then: re-run the Evidence 4 SQL scoped to custom objectives, and `git grep` the backend for a convexity read.
+**Owner WK-690, fixed by Slice 3's DP-S3-4** (the DP-S3 ruling, `RL-1362`; its draft PR #1040 was closed unmerged): `submit_for_review` passes an increment of one to `approvals.submit` when the latest certificate's `convexity` check is `violated`, so `approvers_required` is policy + 1, for both kinds; FR-163 gets a dated clause correction. That ruling's own red-first step counts the violated fixtures at the base, and this finding's counts are the base for it. The finding stays open until Slice 3 merges with a test that approves a `violated` quantile objective with one approver and finds it still in `review`. Recheck then: re-run the Evidence 4 SQL scoped to custom objectives, and `git grep` the backend for a convexity read.
+
+**Amended 2026-10-05 before mint: citations re-anchored, nothing decided and the scope not widened.** Re-read at `origin/main`
+`ef5dc6e7` (tree `a978dc2297bc8bfcc1c4da09ded37cefdcf92156`, now the header's `tree:`). The claim holds: `git grep -n "convexity\|CheckStatus.VIOLATED\|\"violated\"" origin/main -- backend/src`
+still prints exactly two prose hits (`platform/metrics.py:6`, `platform/objectives.py:471`), so no backend code reads a convexity
+status; `approvals.submit` still stores `approvers_required=entry.approvers_required` alone. Moved cites, each found by symbol:
+`submit` `:225` → `:240`; `decide` `:330` → `:345`; `approvers_required=entry.approvers_required` `:286` → `:301`; the
+`_resolve_status` call `:447` → `:462`; the `_resolve_status` def, cited `:588`, → `:596` (its return at `:603`); the default
+`custom_objective` policy entry `model_schema/approvals.py:211-212` → `:291-292`; `decided_request` `:48-64` → `:47-64`; the
+quantile-template refusal `platform/modelling.py:760` → inside `_refuse_a_bound_that_is_not_a_quantile_fit` (`:734`). Unmoved,
+re-read: `_quantile_hess` (`objectives.py:407`, its comment at `:411`), `_convexity_check` `:1278`, `CertificateResult.outcome_of`
+`:724`, `FITTABLE_OBJECTIVE_STATUSES` `:177`, `submit_for_review` `:558`, `_require_evidence` `:830`. Corrected predicate: Evidence 4(a)
+named the pathspec `packages/*/tests`, which matches nothing under git's wildcard rule (it prints 1 line, not 3); the runnable
+form `-- backend/tests packages/pricing-core/tests` prints the three lines the essay counts, at `101e32dc` and at `ef5dc6e7`
+alike (`test_paired_quantile_models.py:97`, `test_gbm.py:1576` and `:1577`). Working ids re-pointed: `RL-1362` (the ruling, working id 9782);
+`PL 9789` is `PL-1382` (minted 2026-10-03; `PL-1371` still reads "PL 9789 ... to mint", a frozen record). Evidence 4(b)-(d), the 82-database
+SQL, is a dated 2026-10-01 measurement and was **not re-run** (a gate slot is held). **Not done here, by order:** the maintainer's
+widening to six templates (asymmetric_squared, huber, pseudo_huber (violated only at δ=1), quantile, zero_inflated_poisson, focal_binomial)
+and S3's evidence wait for S3's merged ledger and are a mint-time item.

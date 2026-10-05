@@ -164,10 +164,16 @@ term must be added here before it is used in any other document.**
 | **Rate Table** | A versioned, typed table of rating factors/loadings keyed by one or more Factors. The unit an actuary edits when making a rate change. |
 | **Rating Version** | An **immutable deployable bundle**: rating algorithm + all rate tables + referenced model artifacts + reference table pins. Lifecycle `draft → review → approved → live → retired`. |
 | **Deployment** | The binding of a Rating Version to an Environment at a point in time. Recorded, reversible, audited. |
+| **Deployment Request** | The subject of a `deployment` approval request: its own artifact, owned by the deployment module, whose row pins its evidence (RL-1301 A.1). |
 | **Environment** | A named runtime target: `dev`, `uat`, `prod`. Each owns its own live Rating Version deployments and service-account scopes. |
 | **Scoring** | Evaluating a Rating Version for one or more risks. **Real-time** (single quote, target p99 < 50 ms) or **batch** (portfolio re-rate). |
 | **Trace** | The per-step record of a single scoring call: step id, every intermediate value, table row matched, model output, and per-step timing. The backbone of explainability and dispute resolution. |
 | **Dislocation** | The distribution of premium change between two Rating Versions over a fixed portfolio. |
+| **Shapley attribution** | The decomposition of a Dislocation Run's premium change into its declared changes by exact Shapley values, allocated to integer minor units by largest remainder (`03` FR-266). |
+| **Interaction residual** | Total change minus the sum of the isolated changes: the part no single change explains alone (`03` FR-266). |
+| **Change group** | A named set of derived changes that attribution treats as one; the groups partition the derived changes exactly, at most 6 (`03` §3.9). |
+| **Subset bundle** | An ephemeral, content-addressed bundle with a subset of the declared changes applied, compiled only to rate attribution; it has no Rating Version identity (`03` §3.9). |
+| **Portfolio frame** | The one-row-per-policy input a Dislocation Run rates, with its columns and stamping rules (`03` §4.8). |
 
 ### 2.4 Optimisation & monitoring layer
 
@@ -206,7 +212,7 @@ System-level requirements that no single module owns. Module codes are defined i
 
 | ID | Requirement |
 |---|---|
-| **FR-4** | Every Artifact is immutable once it leaves `draft`. Corrections create a new version with `parent_id` set; nothing is edited in place or hard-deleted. |
+| **FR-4** | Every Artifact is immutable once it leaves `draft`. Corrections create a new version with `parent_id` set; nothing is edited in place or hard-deleted. *(Amended 2026-10-04, RL-1379: an Artifact's compiled output is part of the Artifact for this rule, not derived metadata outside it. A Rating Version's Bundle summary and blob key are written only while the version is `draft` (`03` FR-239); a version that has left `draft` gets a new compiled output only as a new version.)* |
 | **FR-5** | Every Artifact is JSON-serialisable and round-trippable: export → import into a clean instance reproduces byte-identical scoring behaviour. Binary blobs (boosters, parquet) are referenced by content hash, never embedded as pickles. |
 | **FR-6** | Every number displayed in the UI is traceable to the Artifact and computation that produced it, via a stable `provenance` reference (`{entity_type, entity_id, version, produced_by_job_id}`). |
 | **FR-7** | Every state transition of a governed Artifact emits an Audit Event (see `06-governance.md`). Audit writes are in the same transaction as the state change. |
@@ -279,7 +285,7 @@ tenants would show two of these trees in two systems.
 |---|---|
 | **ID-1** | Every entity has a `uuid` primary key (`UUIDv7`, time-ordered) plus a human-readable `slug` unique within its parent scope. |
 | **ID-2** | Versioned entities carry `version: int` starting at 1, monotonically increasing per parent, and never reused — including after deletion of a draft. |
-| **ID-3** | The canonical external reference to any artifact is `{type}:{slug}@{version}` (e.g. `model:motor-ad-freq@7`, `rating_version:motor-gb@27`). This string form appears in traces, documentation, and the audit log. The version is always the ID-2 integer — the earlier `motor-gb@2026-04` example contradicted ID-2 and the reference pattern, and was corrected 2026-08-14 when generation compared the two. |
+| **ID-3** | The canonical external reference to any artifact is `{type}:{slug}@{version}` (e.g. `model:motor-ad-freq@7`, `rating_version:motor-gb@27`). This string form appears in traces, documentation, and the audit log. The version is always the ID-2 integer — the earlier `motor-gb@2026-04` example contradicted ID-2 and the reference pattern, and was corrected 2026-08-14 when generation compared the two. **Amended 2026-10-03 (`RL-1383`): a `factor` reference's slug may contain `_`.** For every other type the slug is `[a-z0-9][a-z0-9-]{1,62}`, the `slug` pattern of §4.3. For `factor` it is `[a-z0-9][a-z0-9_-]{1,62}`, because a Factor's slug is the name of its term in a design matrix, a feature list and a rate-table key (`02` §4.1), and `02`'s own example, `driver_age_banded`, contains one. A reference whose slug its type's pattern does not admit is refused, whether it is parsed from the string or built from its fields. |
 | **ID-4** | Content-addressed blobs (parquet, booster JSON, report PDFs) are stored at `blob/{sha256}` and referenced by hash + size + media type. Identical content is stored once. |
 | **ID-5** | Soft-delete only: entities gain `archived_at`; nothing is removed from the database. Physical purge is an Admin-only, audited, workspace-scoped operation used for GDPR erasure. |
 
@@ -305,6 +311,10 @@ Every persisted entity carries the envelope below (defined once in `model-schema
   "description": "string|null"
 }
 ```
+
+> **A Factor's slug, noted 2026-10-03 (`RL-1383`).** The `slug` pattern above holds for
+> every entity except a Factor, whose slug is `^[a-z0-9][a-z0-9_-]{1,62}$`: it may contain
+> `_`, because it names the Factor's term wherever the term appears (`02` §4.1, ID-3).
 
 ---
 
