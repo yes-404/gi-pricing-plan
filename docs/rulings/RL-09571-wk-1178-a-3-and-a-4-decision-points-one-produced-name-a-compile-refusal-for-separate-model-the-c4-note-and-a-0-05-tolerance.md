@@ -62,6 +62,17 @@ dm-a34 files the A-3/A-4 RL now (reserve the id); T2's anchor is re-derived afte
     5 noted; the model_call ROUNDING is fixed IN A-2 by declared result type, not worked
     around in A-3", verbatim: "A-3 composes frequency × severity on Decimals and rounds once,
     at the money step."
+- **The correction that governs items 2, 6 and 7.** It is in the entry "2026-10-05 17:12:40 BST — CORRECTION to my 17:02:50 rounding ruling: OPTION (B); A-2 gains the model-schema field; C4 stays (c); FR-249 carry text accepted"
+  (`channel/to-lead.md`). Its three relevant paragraphs, verbatim:
+
+```text
+RULING: OPTION (B). A model_call's output is ALWAYS an exact Decimal, never rounded at the model_call. ALL rounding stays on the output step, as FR-226 already says (no FR-226 amendment). RatingModelCallStep gains `result_type: RatingResultType` as a TYPE only (decimal | money_minor, for compile's FR-227 type checks; money_minor is a type label, not a rounding). Red first: a frequency GLM model_call returns the exact Decimal (~0.07, today 0); a money_minor-typed model_call feeding a non-money step is refused at compile as a type mismatch; the output step rounds once.
+C4: STAYS at my ruled fallback (c) (a superseded component version, refused at compile). S1 (the seed leaves the AD severity GLM in review, so C5 approves and recompiles inside the journey) is NOT taken: it adds about +0.25 day and moves an approval into the scripted journey for no G2 gain. The RL files (c).
+FR-249 carry text for RL 9571 / OQ 9570: ACCEPTED (owner WK-1178 now, re-decided at the Fri 9 Oct checkpoint; if no slice fits before 4 Nov it carries into P3, listed in the P2 closure; WK-675 S6 shows per-peril output as absent meanwhile).
+```
+
+  The 17:02:50 rounding sentence quoted above is **corrected** by this entry: a `model_call`'s
+  output is always an exact `Decimal`, and all rounding stays on the output step.
 - **The options memo** is `handover/dp-memo-a3-a4-2026-10-05.md` (local, dm-a34). Revision 1
   was written from 17:05:56 BST, which is the revision the entry rules. Revision 2 was
   written from 17:09:36 BST. This record carries the memo's texts and decides nothing
@@ -103,8 +114,11 @@ dm-a34 files the A-3/A-4 RL now (reserve the id); T2's anchor is re-derived afte
    `control`-factor checks. This is scope growth over the sizing memo's A-3 row, accepted
    at +0.25 executor-day. A-3 becomes about 1.25 / 1.75 / 2.5 executor-days; these are
    estimates.
-2. **FR-249 is carried as a new `03` question, `OQ-9570`: owner WK-1178, decided after G2.**
-   WK-675 S6's FR-249 limb is carried with it. S6's dispatch record records the carry when
+2. **FR-249 is carried as a new `03` question, `OQ-9570`, with the carry text accepted at
+   17:12:40.** The owner is WK-1178 now, and it is **re-decided at the Fri 2026-10-09
+   checkpoint**. If no slice fits before the Wed 2026-11-04 code freeze, it carries into Phase
+   3 and the P2 phase closure record lists it (CLAUDE.md §14). WK-675 S6 shows per-peril
+   output as absent meanwhile, and S6's FR-249 limb is carried with it. S6's dispatch record records the carry when
    S6 is planned, so S6 does not build a view that has no producer. This commit raises the
    question in `03` §10, in `docs/open-questions.md` and in `docs/roadmap.md` §10.
 3. **The reconciliation tolerance is 0.05 on |ratio − 1| (FR-190).** A-4's demo seed requests
@@ -136,12 +150,15 @@ dm-a34 files the A-3/A-4 RL now (reserve the id); T2's anchor is re-derived afte
    - This keeps C4 in the demo without breaking A-1's approval rule (PL 9599 DP-1 (a),
      accepted 17:02:50).
    - A-4 builds the beat under P-text P4's constraint.
-7. **DP-A3-5: (a), on the 17:02:50 rounding root.**
-   - The rounding itself is fixed in A-2: a `model_call`'s output follows its declared
-     result type.
+   - S1 (approving inside the journey) was offered and **not taken** (17:12:40).
+7. **DP-A3-5: (a), on the rounding root as corrected at 17:12:40 (option (B)).**
+   - A `model_call`'s output is always an exact `Decimal`, never rounded at the
+     `model_call`. All rounding stays on the output step (FR-226, unamended). A-2 adds
+     `RatingModelCallStep.result_type` as a type label only (`decimal` | `money_minor`), for
+     compile's FR-227 checks.
    - A-3 predicts each component at full precision. It composes `frequency × severity` per
      peril, or `burning_cost`, applies FR-189's treatment, and sums (FR-188), all on
-     `Decimal`. It rounds **once, at the money step**.
+     `Decimal`. Nothing is rounded until the output step's single declared rounding.
    - The severity GLM is fitted on `claim_amount_minor`, so it predicts an amount per claim
      in minor units, which enters the composition unrounded.
    - The frequency GLM's offset (`exposure_years`) comes from the quote through B4's
@@ -160,11 +177,8 @@ dm-a34 files the A-3/A-4 RL now (reserve the id); T2's anchor is re-derived afte
    - **Large loss: uncapped**, labelled in the plan and the script as a simplification (no
      large-loss loading).
 
-**Not decided here.** A-2's DP-5 (#1178 @`336fdf70`, added 2026-10-05, open) asks how the
-`model_call` step declares a result type and a rounding. `RatingModelCallStep` declares
-neither today, and FR-226 places rounding on `output` steps. Item 7 holds under either answer
-as long as the peril step's output stays exact until the output step's single rounding. If
-DP-5 is ruled otherwise, item 7 is re-read against that ruling.
+**Settled outside this record.** The `model_call` result-type mechanism is A-2's (#1178), as
+ruled at 17:12:40, option (B). Item 7 depends on it and restates nothing beyond it.
 
 ## The spec texts
 
@@ -183,7 +197,7 @@ code, per `CLAUDE.md` §2. **T5 is applied by A-4 (SL 9594 / PL 9593)** with its
 Replace with:
 
 ```text
-| `model_call` | Invokes a pinned Model or Peril Structure and yields its prediction(s). *(Amended <date>, <RL>: on a Peril Structure, an `exact` step yields the structure's risk premium (`02` FR-188), each peril's large-loss treatment applied before the sum (FR-189), composed on exact decimals and rounded once, at the money step. It declares exactly one produced name; a step that declares more is refused at compile with `BUNDLE_COMPILE_FAILED`, naming the step. A structure with a `separate_model` peril is refused at compile with `LOSS_TREATMENT_UNIMPLEMENTED`. Per-peril outputs (FR-249) are carried by `OQ-9570`.)* |
+| `model_call` | Invokes a pinned Model or Peril Structure and yields its prediction(s). *(Amended <date>, <RL>: on a Peril Structure, an `exact` step yields the structure's risk premium (`02` FR-188), each peril's large-loss treatment applied before the sum (FR-189), composed on exact decimals and never rounded at the step; the output step rounds once (FR-226). It declares exactly one produced name; a step that declares more is refused at compile with `BUNDLE_COMPILE_FAILED`, naming the step. A structure with a `separate_model` peril is refused at compile with `LOSS_TREATMENT_UNIMPLEMENTED`. Per-peril outputs (FR-249) are carried by `OQ-9570`.)* |
 ```
 
 **T2 — `03` FR-240, appended to the cell after PL 9649's T1 (item 1).** The find string is
@@ -218,7 +232,7 @@ since monitoring (`05`) and reinsurance analysis both need them. |
 Replace with:
 
 ```text
-since monitoring (`05`) and reinsurance analysis both need them. *(Carried <date>, <RL>: a Peril Structure `model_call` yields one produced name in P2. Per-peril components are `OQ-9570`'s, owner WK-1178, decided after G2; WK-675 S6's view of them is carried with it.)* |
+since monitoring (`05`) and reinsurance analysis both need them. *(Carried <date>, <RL>: a Peril Structure `model_call` yields one produced name in P2. Per-peril components are `OQ-9570`'s, owner WK-1178, re-decided at the 2026-10-09 checkpoint and carried into Phase 3 if no slice fits before the 2026-11-04 code freeze; WK-675 S6 shows them as absent meanwhile.)* |
 ```
 
 **T5 — `WF-699` row C4 (item 6).** Find:
@@ -252,7 +266,7 @@ plan at the head named.
 
 ```text
 
-**Ruled 2026-10-05 by <RL> (the maintainer's (by delegation) entry "2026-10-05 17:08:35 BST — A-3 / A-4 DP memo (handover/dp-memo-a3-a4-2026-10-05.md) RULED; the reconciliation TOLERANCE set").** DP-A3-1 (c), code `BUNDLE_COMPILE_FAILED`; DP-A3-2 (a), and Task 4 maps `assemble_risk_premium`'s `ModellingError` to `_model_call_failure`; DP-A3-3 (a), scope accepted, +0.25 executor-day; DP-A3-4 (a), C4 shown live by A-4 on a superseded component; DP-A3-5 (a), composed on `Decimal` and rounded once at the money step (the 17:02:50 ruling), the frequency offset through the `feature_map`; DP-A3-6 (a), recorded only, run only when no gate is running. The table below records what was weighed; where it differs, the ruling governs. Spec texts T1–T4 are the ruling's, verbatim.
+**Ruled 2026-10-05 by <RL> (the maintainer's (by delegation) entry "2026-10-05 17:08:35 BST — A-3 / A-4 DP memo (handover/dp-memo-a3-a4-2026-10-05.md) RULED; the reconciliation TOLERANCE set").** DP-A3-1 (c), code `BUNDLE_COMPILE_FAILED`; DP-A3-2 (a), and Task 4 maps `assemble_risk_premium`'s `ModellingError` to `_model_call_failure`; DP-A3-3 (a), scope accepted, +0.25 executor-day; DP-A3-4 (a), C4 shown live by A-4 on a superseded component; DP-A3-5 (a), composed on exact `Decimal` and rounded only at the output step (17:12:40, option (B)), the frequency offset through the `feature_map`; DP-A3-6 (a), recorded only, run only when no gate is running. The table below records what was weighed; where it differs, the ruling governs. Spec texts T1–T4 are the ruling's, verbatim.
 ```
 
 **P2 — PL 9595, its size.** Find:
@@ -295,7 +309,7 @@ Replace that sentence (through "then passes once approved.") with:
   and applies T1–T4 with its code. T2's anchor is re-derived after #1152 merges.
 - **A-4 (SL 9594 / PL 9593)** cites this record and `RL 9588`, applies P3 and P4 before its
   first merge, and applies T5 with its journey.
-- **`OQ-9570`** is ruled after G2, owner WK-1178. WK-675 S6's dispatch record carries its
+- **`OQ-9570`** is owned by WK-1178 and re-decided at the 2026-10-09 checkpoint (item 2). WK-675 S6's dispatch record carries its
   FR-249 limb.
 
 ## Acceptance — the violation that must become detectable
