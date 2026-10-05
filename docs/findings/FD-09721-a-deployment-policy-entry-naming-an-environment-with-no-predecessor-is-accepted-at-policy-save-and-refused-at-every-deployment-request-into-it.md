@@ -96,9 +96,9 @@ between "entry present" and "no predecessor to pin" is detected. `RL-1301` A.6 a
 `deployment` entry: the named Environment must exist, "a name no Environment has (`prd` for `prod`) would leave the real
 target ungated" (comment at `approvals.py:204-208`). A predecessor check is the same kind of check on the same line.
 
-## Severity (provisional, the deputy's to confirm)
+## Severity (the deputy's)
 
-**LOW (provisional, the deputy's to confirm).** Nothing is mispriced and nothing deploys that should not: the refusal is
+**LOW (the deputy's).** Nothing is mispriced and nothing deploys that should not: the refusal is
 fail-closed, loud, and names its remedy (`RL-1404` D2). The cost is that an administrator discovers the mistake at the
 first deployment attempt instead of at the policy edit. It is not NONE because the state is permanent for the
 Environment (the field is immutable) and the only discovery point is a user trying to deploy.
