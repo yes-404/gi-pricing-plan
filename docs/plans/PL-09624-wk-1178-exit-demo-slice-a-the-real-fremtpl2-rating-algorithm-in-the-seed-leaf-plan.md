@@ -126,10 +126,9 @@ plan, is the lead's to route at the mint. The roadmap anchor `:603` is the Exit 
 `809a3794` (`docs/roadmap.md`, the row whose first cell is `**Exit demo**`).
 
 **Activation need 3, ruled by the maintainer (by delegation)**, entry headed *"2026-10-05
-15:42:02 BST — Mint 1 (RL-[…]) noted; need 3 conditional; WK-674 S3 prep accepted; G2 vs
-WF-699's PERIL PATH: a scope question for the maintainer, SIZE it first"* (one id elided as `RL-[…]`: it is
-minted on #1128, not yet merged, so it does not resolve at this tree), its paragraph on need
-3, verbatim:
+15:42:02 BST — Mint 1 (RL-1418) noted; need 3 conditional; WK-674 S3 prep accepted; G2 vs
+WF-699's PERIL PATH: a scope question for the maintainer, SIZE it first"* (`RL-1418` merged
+as `137bc817`, #1128), its paragraph on need 3, verbatim:
 
 > NEED 3 (PL 9624): option (i) is ACCEPTED ONLY IF a3's committed test also does S1 step 1's extractor-vs-engine cross-check (the extractor's static reads against the engine's actual reads on the seed algorithm, both computed, compared, red on a planted mismatch). That cross-check is the instrument FD-1374's guard rests on, and the plan's own note admits (i) drops it. With it added, no RS is needed; PL-1371 §7's wording difference goes as a dispatch delta (PL-1371 is frozen). a1's band edges from the seed run, as an acceptance item: OK.
 
@@ -137,6 +136,21 @@ The same entry's closing line bounds this plan while the G2 peril-path scope que
 *"Until then, PL 9629 and PL 9624 continue for the shared parts (A1–A2, C–E with seeded
 tables)."* This slice is A1–A2's seeded tables and the algorithm over them, so it continues.
 The same local-entry caveat as above applies (RFC-777).
+
+**The scope question is now decided: Option A.** The maintainer's entry headed *"2026-10-05
+16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal
+Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record"*, item 1,
+verbatim:
+
+> 1. Four serial build slices under WK-1178, as sized: A-1 FD 9995 in full (the peril approval carry plus the _Resolver peril branch; it flips PL 9683's Acceptance 7); A-2 GLM via model_call (FD 9605); A-3 Peril Structure scoring (compile resolves and maturity-checks the component models; the runtime calls assemble_risk_premium, fixing the bare KeyError on payload["fit_result"] at runtime.py:540); A-4 the demo scope on PL 9624/PL 9629 (a severity GLM, the peril structure, reconcile, approve, the B4 model_call, the C1 pin). About 5 executor-days likely (3.5–8), a chain after PL 9683 and PL 9649.
+
+**This slice's scope does not change.** A-4 is cut as its own slice, SL 9594 / PL 9593
+(working ids, reserved), which follows this slice and slice (b). It is not an edit to this
+plan. A-4 needs A-1 to A-3 merged and the double-count ruling (item 4 of the same entry), and
+this slice needs neither. DP-a0 (no `model_call`) and DP-a2 (the base rate, labelled a
+simplification) still hold for this slice. A-4 adds the severity GLM and B4's `model_call` on
+top, in the form the double-count ruling decides. The same local-entry caveat applies
+(RFC-777).
 
 ## Status
 
@@ -749,3 +763,18 @@ set. Cites re-verified at `origin/main` `cdaaa573`: `authored.py` `EXPRESSION_FI
 `NON_EXPRESSION_FIELDS` and `authored_expression_fields` (by symbol); `zen-engine==0.53.0` in
 `packages/pricing-core/pyproject.toml`; `compile.py`'s `import zen`; PL 9776 §"Spike S1" step 1
 at #1051 @`ecbb82ab`.
+
+## Pre-mint note 3, 2026-10-05
+
+*Dated 2026-10-05 (`TZ=Europe/London date`: 2026-10-05 16:50:24 BST), before the mint of PL
+9624 (working id).* Edited in place on the unmerged draft #1161, on the lead's order (prep
+wave, section AM), to record the maintainer's Option A decision, entry 2026-10-05 16:43:31
+BST, item 1, and nothing else. What changed: in §"The decisions this plan rests on", the item
+quoted verbatim and one paragraph saying that A-4 is its own slice (SL 9594 / PL 9593,
+working ids), so this plan's scope does not change; the 15:42:02 BST entry's header now names
+`RL-1418` in place of the `RL-[…]` elision, because `RL-1418` merged as `137bc817` (#1128),
+which the maintainer (by delegation) cleared at 16:43:57 BST ("The RL-[…] elision restored at
+the mint: fine"). No scope, task, acceptance item, write set, owner or decision point changed.
+`origin/main` `137bc817` merged in. Between `cdaaa573` and `137bc817`, main changed only
+`docs/INDEX.md`, `RL-1361` (its `corrected_by` field) and the new `RL-1418`, so no line cite
+in this plan moved.
