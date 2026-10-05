@@ -193,6 +193,33 @@ string exactly 1 before; an insertion keeps its anchor, so its find string stays
 | Task 6 Step 2 | 1 → 1 | 0 → 1 |
 | self-review item 8 (new) | 1 → 1 | 0 → 1 |
 
+### Fourth pre-mint edit, 2026-10-05: the two test files the write set missed
+
+Edited 2026-10-05 from 19:01:25 BST (`TZ=Europe/London date`), before this plan's mint, by the
+planner, on the lead's (team-lead) message to the planner after the third pre-mint edit
+(head `619e2b8b`): "Task 4's Files name backend/tests/test_dislocation_runs.py and
+packages/model-schema/tests/test_dislocation.py, but the write set table lists neither."
+Both are real writes of Task 4 Step 1, so the write set gains them; Task 4 is unchanged.
+
+1. **`packages/model-schema/tests/test_dislocation.py`: appended.** The file exists at
+   `ecbd1954` (Slice 2, `PL-1403`). Task 4 Step 1 appends the `DislocationSpec` test (an
+   `exact` override with `baseline_ref != candidate_ref` refused). **Slice 3** (PL 9689, #1138,
+   head `e810b785`) also edits it: `_SLICE_3_FIELDS`, `_NULLABLE` and
+   `test_dislocation_run_fields_match_the_hand_authored_contract` (`:161` at `ecbd1954`; its
+   write-set row, Acceptance 17). Slice 4 (PL 9591, #1176, head `f229528f`) does not name it.
+   Shared with SL-1387, serial through Slice 4 (activation need 2), the same order as the
+   existing `dislocation.py` row: S3, then S4, then S5.
+2. **`backend/tests/test_dislocation_runs.py`: appended; created by Slice 4.** It is not on
+   `ecbd1954`. PL 9591 (#1176, head `f229528f`) creates it (its write set: "new", Acceptance
+   1–8; its `B`). Task 4 Step 1 appends the handler tests (the exact-mode run writes no
+   `rating_versions` row; the six quantile keys). **Shared with SL-1388**: Slice 4 creates it and
+   merges first; this slice appends after, on a tree where it exists (activation need 2).
+3. **Sweep.** Every open PR's added lines, read at 19:00 BST, were searched for both paths
+   (`gh pr diff <n> | grep '^+' | grep -c 'tests/test_dislocation\.py\|tests/test_dislocation_runs\.py'`):
+   #1181 (this plan), #1176 (PL 9591) and #1138 (PL 9689) only. On main, `docs/plans/` names
+   `test_dislocation.py` in `PL-1403` (Slice 2) and this plan only.
+4. **The contention table gains two rows**, both SERIAL through activation need 2; no new pair.
+
 ## Goal
 
 Make `submit_for_review` (`backend/src/app/platform/rating_versions.py:278`) enforce three
@@ -434,6 +461,8 @@ Classes as in PL 9591 §"Write set" (`docs/process/delivery-process.core.json`
 | `backend/tests/test_rating_version_dislocation_gate.py` | new | Acceptance 1–9; 17–19 (pre-mint 2026-10-05, T7; §"Third pre-mint edit") |
 | `backend/tests/test_rating_versions.py`, `backend/tests/conftest.py` or the module's fixture file | the shared fixture (Acceptance 10); Acceptance 14's test (pre-mint 2026-10-05) | edited |
 | `packages/model-schema/tests/test_approvals.py` | new tests | Acceptance 7 |
+| `packages/model-schema/tests/test_dislocation.py` | Task 4 Step 1's `DislocationSpec` test (pre-mint 2026-10-05, write-set gap; §"Fourth pre-mint edit") | appended; shared with SL-1387 (§"Contention") |
+| `backend/tests/test_dislocation_runs.py` (created by Slice 4, PL 9591) | Task 4 Step 1's handler tests (pre-mint 2026-10-05, write-set gap; §"Fourth pre-mint edit") | appended after Slice 4 creates it; shared with SL-1388 (§"Contention") |
 | `docs/ledgers/LG-<n>-…md`; `docs/INDEX.md` | added; regenerated | |
 
 **Not written:** `packages/pricing-core/`; `backend/src/app/platform/approvals.py`;
@@ -446,6 +475,8 @@ Classes as in PL 9591 §"Write set" (`docs/process/delivery-process.core.json`
 |---|---|---|---|---|
 | Slice 4's files (`dislocation_runs.py`, `dislocation_handlers.py`, `api/dislocation_runs.py`) | edits | **SL-1388** (PL 9591, WK-673) | plan dependency: consumes Slice 4's output | **SERIAL** (activation need 2) |
 | `dislocation.py`, `03` §4.6 | DP-S5-3, DP-S5-4 | **SL-1387** (PL 9689) | serial through Slice 4 | serial |
+| `packages/model-schema/tests/test_dislocation.py` | appends Task 4's `DislocationSpec` test | **SL-1387** (PL 9689, #1138): `_SLICE_3_FIELDS`, `_NULLABLE`, the field-match test (`:161`) | yes: one module | **SERIAL** through Slice 4 (activation need 2): S3, S4, then S5; a hunk of this slice inside Slice 3's symbols is named in the dispatch record (pre-mint 2026-10-05, write-set gap; §"Fourth pre-mint edit") |
+| `backend/tests/test_dislocation_runs.py` | appends Task 4's handler tests | **SL-1388** (PL 9591, #1176): **creates** it (Acceptance 1–8) | yes: Slice 4's new module | **SERIAL** (activation need 2): Slice 4 creates and merges first; this slice appends after (pre-mint 2026-10-05, write-set gap; §"Fourth pre-mint edit") |
 | `03` §3.2 | FR-224 `:110` | **PL 9688** (the FD 9707 fix, **WK-673**, SL 9685): FR-221 `:107`; **PL 9683** (WK-1178) under its DP-1 (a): FR-223 `:109`; **A-3** (PL 9595, WK-1178, #1174 head `7b3df510`): the `model_call` row `:100`; **A-2** (PL 9597, #1178 head `477265e4`): `03` only as its ruling words it | **yes**: one section; hunks one to ten lines apart | **SERIALISES** with each (`forbidden`: the same spec section; for PL 9688 and PL 9683 the hunks are adjacent; A-3's is ten lines away but in the same section, and no dated option extends the non-adjacency allowance to this pair). A-2 joins if its ruling's text lands in §3.2. For PL 9688 (same Work) RL 9620 (a) fails, so the pair is serial |
 | `03` §3.8 | FR-257 `:174` | none found | — | none |
 | `model_schema/approvals.py` | `ApprovalPolicyEntry`, `DEFAULT_POLICY` | **PL 9616** (the FD-1416 fix, WK-1178): `ApprovalRequest` (`:405-431`), and `ApprovalDecision` (`:394-402`) only under its DP-5/DP-1 | no (different classes) | **ALLOWED one-sided**, the dispatch record naming the path and the check `git diff -U0 origin/main...<branch> -- packages/model-schema/src/model_schema/approvals.py` (hunks: this slice inside `:125-164` and `:344-349`; PL 9616 inside `:394-431`); the second merges main and re-gates |
@@ -744,3 +775,6 @@ P3 are DP-S5-2's open actuarial choice.
    and a broken-variant red; their figures were run, not derived by hand. The write set gains
    no path. Task 4 Step 3's "quoted in both" is struck for T7's banded set. C1, DP-E1-6 (a)
    and the earlier deltas are unchanged.
+9. **Fourth pre-mint edit, 2026-10-05 (the write-set gap).** Task 4's two test files are in the
+   write set and the contention table: `test_dislocation.py` appended, shared with Slice 3;
+   `test_dislocation_runs.py` created by Slice 4, appended here after it. Task 4 is unchanged.
