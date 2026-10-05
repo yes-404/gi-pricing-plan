@@ -3,7 +3,7 @@
     "id": "delivery-process-core",
     "version": "1.0.0",
     "derived_from": "docs/process/delivery-process.md",
-    "derived_from_digest": "sha256:0b90853e7528ec29cb745bd73ce18ba3e9268904e22365b39d255566d4d2ab4a",
+    "derived_from_digest": "sha256:bdf6f1699284935026d5bfde1815051bd5c25bb6788b0202cd110c2b26dd22f3",
     "verified_against_tree": "0651c1e265648cbd3918adfc729ad965b83b1e0b",
     "authoritative": false,
     "note": "The markdown spec is authoritative. This file is the mechanical extract: state machine, guards, vocabularies, and runtime-state schema for hooks/watcher scripts. Regenerate or diff-check against the md on every spec change (RFC-895 script C4). Each block is the mechanically-checkable subset of the section it cites, not an exhaustive rendering -- a section may state more than its block records, and a block's silence is not the section's silence.",
@@ -122,7 +122,7 @@
       "work",
       "slice"
     ],
-    "children_execution": "sequential_within_a_work_max_2_build_slices_across_works",
+    "children_execution": "sequential_within_a_work_max_3_build_slices_same_work_pair_only_under_conditions",
     "source": "§4, §8"
   },
   "layers": {
@@ -221,8 +221,8 @@
         {
           "id": "process_children",
           "action": "invoke_child_flow_per_child",
-          "mode": "sequential_except_build_slices_across_works_max_2",
-          "amended": "2026-09-29, RL-1263 (§8)"
+          "mode": "sequential_except_build_slices_max_3_same_work_pair_only_under_conditions",
+          "amended": "2026-09-29, RL-1263 (§8); 2026-10-05, RL 9620 (working id) (§8)"
         },
         {
           "id": "audit",
@@ -369,7 +369,7 @@
       "source": "§7"
     },
     "parallelism": {
-      "rule": "no_two_children_of_same_layer_concurrently_except_build_slices_across_works",
+      "rule": "no_two_children_of_same_layer_concurrently_except_build_slices_max_3_same_work_pair_only_under_conditions",
       "protected_interest": "resource_contention_not_plan_stability",
       "plan_independence_is_not_an_exception": true,
       "carve_out": {
@@ -383,8 +383,18 @@
       },
       "source": "§8",
       "build_slices_across_works": {
-        "max_concurrent": 2,
-        "from_different_works": true,
+        "max_concurrent": 3,
+        "gate_slots": 2,
+        "third_build_waits_for_free_gate_slot": true,
+        "from_different_works": "required_unless_same_work_exception",
+        "same_work_exception": {
+          "allowed_only_when_dispatch_record_shows": [
+            "file_sets_resolved_by_existing_contention_rules_exempt_one_sided_name_disjoint_or_serialise",
+            "no_plan_dependency_neither_slice_consumes_the_others_output_named_both_ways"
+          ],
+          "otherwise": "serialise",
+          "amended": "2026-10-05 15:15:11 BST, the maintainer by delegation (option (i)); RL 9620 (working id) amends RL-1263"
+        },
         "each_holds_gate_slot": true,
         "no_shared_files": {
           "forbidden": "both_change_same_existing_function_class_method_spec_section_or_policy_table",
