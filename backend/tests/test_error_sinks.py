@@ -130,7 +130,9 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         2, "`EbmFitError`/`GbmFitError`/`GlmFitError`: named fit refusals; model path. And "
         "`NonFiniteDerivativeError`/`RoundBudgetExceededError` (FR-165): a fit job on a Dataset "
         "Version, never a quote input; the text names the round, the objective ref and a row "
-        "count or timings, and the offending y/f range is kept out of it (FD-1219, DP-S2-4)"),
+        "count or timings, and the offending y/f range is kept out of it (FD-1219, DP-S2-4); pinned "
+        "by pricing-core's test_objectives.py::test_nonfinite_aborts_an_expression_naming_the_"
+        "round_and_no_value"),
     ("backend/src/app/worker/model_handlers.py", "_fit", "{exc}"): (
         1, "`FactorResolutionError`: names a factor and a dataset version; model path"),
     ("backend/src/app/worker/model_handlers.py", "_reconcile", "str(exc)"): (
