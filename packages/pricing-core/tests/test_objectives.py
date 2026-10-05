@@ -21,6 +21,7 @@ import json
 import re
 import time
 from dataclasses import replace
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -35,8 +36,10 @@ from model_schema import (
     CertificateOutcome,
     CheckStatus,
     CustomObjective,
+    DerivedBlock,
     HessianStrategy,
     ObjectiveBackend,
+    ObjectiveKind,
     ObjectiveTemplate,
     ResponseKind,
     SamplingSpec,
@@ -1040,3 +1043,94 @@ def test_template_certificate_unchanged(template: ObjectiveTemplate) -> None:
         for figure in _MAX_RELATIVE_ERROR.findall(c.detail):
             bound = _TOLERANCE_PASS if c.status.value == "pass" else _TOLERANCE_WARN
             assert float(figure) <= bound, (c.name, figure, bound)
+
+
+# --- fit-time compilation of an `expression` objective (WK-690 S3 Task 6, RL-1362 DP-S3-1) ----
+
+
+def _expression_artifact(
+    *,
+    loss: str = _EXPRESSION_LOSS,
+    derived: Derived | None = None,
+    responses: frozenset[ResponseKind] = frozenset({ResponseKind.BURNING_COST}),
+    stored: bool = True,
+) -> CustomObjective:
+    """An `expression` artifact as the platform stores it: `derived` is the stored block.
+
+    `draft`: `compile_objective` reads no status; the fit gate is `gbm._compile_custom`'s.
+    """
+    text = derived or derive(loss)
+    block = DerivedBlock(
+        gradient=text.gradient,
+        hessian=text.hessian,
+        derivation_tool="sympy",
+        derivation_version=text.derivation_version,
+        derived_at=datetime(2026, 10, 4, tzinfo=UTC),
+    )
+    return CustomObjective(
+        id=uuid4(),
+        slug="test-expression",
+        version=1,
+        kind=ObjectiveKind.EXPRESSION,
+        bound_symbols=["y", "f", "w"],
+        parameters=[],
+        loss=loss,
+        derived=block if stored else None,
+        applicability=Applicability(
+            responses=responses,
+            backends=frozenset({ObjectiveBackend.XGBOOST, ObjectiveBackend.LIGHTGBM}),
+            offset_required=False,
+            y_domain=YDomain(min_inclusive=0.0),
+        ),
+    )
+
+
+def _grid() -> tuple[Any, Any, Any]:
+    rng = np.random.default_rng(_SEED)
+    return rng.uniform(0.5, 5.0, 50), rng.uniform(-1.0, 1.0, 50), rng.uniform(0.5, 2.0, 50)
+
+
+@pytest.mark.req("FR-144")
+def test_compile_dispatch_an_expression_objective_compiles() -> None:
+    fns = compile_objective(_expression_artifact())
+    reference = _expression_fns()
+    y, f, w = _grid()
+    assert fns.ref == "custom_objective:test-expression@1"
+    assert np.array_equal(fns.grad(y, f, w), reference.grad(y, f, w))
+    assert np.array_equal(fns.hess(y, f, w), reference.hess(y, f, w))
+
+
+@pytest.mark.req("FR-144")
+def test_compile_dispatch_uses_the_stored_derived_text_and_never_re_derives() -> None:
+    """RL-1362 DP-S3-1: the Approver read the stored text, so that text is what is compiled."""
+    fresh = derive(_EXPRESSION_LOSS)
+    stored = replace(fresh, hessian="3 * w * exp(f)")
+    assert stored.hessian != fresh.hessian
+    fns = compile_objective(_expression_artifact(derived=stored))
+    y, f, w = _grid()
+    assert np.allclose(fns.hess(y, f, w), np.maximum(3 * w * np.exp(f), 1e-6))
+    assert not np.allclose(fns.hess(y, f, w), _expression_fns().hess(y, f, w))
+
+
+@pytest.mark.req("FR-144")
+def test_compile_dispatch_refuses_an_underived_expression_objective_by_name() -> None:
+    with pytest.raises(ObjectiveError, match=r"test-expression@1.*no stored derivation") as refused:
+        compile_objective(_expression_artifact(stored=False))
+    assert refused.value.code == "VALIDATION_FAILED"
+    assert "/derive" in str(refused.value)
+
+
+@pytest.mark.req("FR-144")
+@pytest.mark.parametrize(
+    ("responses", "link"),
+    [
+        (frozenset({ResponseKind.BURNING_COST}), "exp"),
+        (frozenset({ResponseKind.CONVERSION}), "logistic"),
+    ],
+)
+def test_compile_dispatch_reads_the_link_through_inverse_link_for(
+    responses: frozenset[ResponseKind], link: str
+) -> None:
+    fns = compile_objective(_expression_artifact(responses=responses))
+    assert fns._expression is not None
+    assert fns._expression.inverse_link == link

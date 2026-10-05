@@ -10,12 +10,19 @@ corrected_by: []
 relates: [WK-674, FR-429, FR-364, RL-1301, RL-1401, RL-1404]
 ---
 
-# FD-9721 (working id) — a gated entry with no predecessor is refused late
+# FD 9721 (working id) — a gated entry with no predecessor is refused late
 
 **Filed** by auditor-fdc2 on 2026-10-05, from the lead's routing R1 (`~/gi-pricing-plan.local/channel/from-lead-2026-10-04.md`,
 line 87: "(R1) refusing a gated policy entry with no predecessor at policy save (instead of at every request): to the
 next FD batch, owner WK-674"). Every line number below was read at `origin/main` =
 `47d770e8fcbd2410fa101019ed8cf3aae69a1baa`, the `tree:` above. The id is a working id until the lead mints it.
+
+*Re-checked 2026-10-05 at main `caa4e411a9c07a389cf47092a923c7761b2b92dc`: every code, spec and test cite below
+still resolves at the same lines, and the defect still stands there. `set_policy` (`approvals.py:174`) still checks
+only that a `deployment` entry's Environment exists (`:209-215`), `submit_request` still refuses a predecessor-less
+gated target at `:264-279`, and `EnvironmentUpdate` still forbids `requires_prior_environment` (`extra="forbid"`).
+The deputy's corrected reason in "Severity (the deputy's)" was compared with the entry "2026-10-05 09:51:31 BST —
+CORRECTION (mine) …" in `to-lead.md` (line 16894 and its "Corrected reason" bullet, line 16895) and is verbatim.*
 
 ## Finding
 
