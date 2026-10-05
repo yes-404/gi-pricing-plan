@@ -254,9 +254,19 @@ pair of the same cells): `assert 202 == 200` (the second request submitted a sec
 request now loads both versions' cells to hash them, on every page request, which is the work FR-232 moves into a Job for
 the diff itself; if that proves slow on a 250k-cell table it is a finding for the lead, not a measured NFR here.
 
-**Open:** `backend/tests/test_contracts.py::test_job_status_and_kind_enums_agree_with_the_contract` fails
-(`Extra items in the left set: 'rate_table.diff_cells'`): the hand-authored `docs/contracts/schemas/job.schema.json` lists
-the Job kinds and is not in the write set. Reported to the lead as a stop.
+**The second plan deviation** (the lead's verdict, dispatch record §(11)): the hand-authored
+`docs/contracts/schemas/job.schema.json` lists every Job kind, and
+`backend/tests/test_contracts.py::test_job_status_and_kind_enums_agree_with_the_contract` failed with `Extra items in the
+left set: 'rate_table.diff_cells'`. The file is not in `PL-1419`'s write set, which names only `docs/contracts/schemas/
+generated/`. One line, `"rate_table.diff_cells",`, was added after `"rate_table.diff",` (line 41, the precedent), and nothing
+else in the file. `test_contracts.py` alone: 152 passed, 2 skipped; `generate-contracts.py --check` clean.
+
+**The twin-key question** (the lead's, answered): the key uses `version_content_hash` for both storages, not the parquet
+blob sha256. The cells artifact: `_content_hash`, `backend/src/app/platform/rate_tables.py:547-556`, which calls
+`version_content_hash(await _load_cells_of(...))`. The diff cache: `rate_tables.py:492-493`,
+`version_content_hash(current_cells)` and `version_content_hash(baseline_cells)`. Both are `diff_cache.py:48`. A rows version
+and its parquet twin find the same stored artifact, one Job: `test_a_rows_version_and_its_parquet_twin_find_the_same_cells_
+artifact` (red first, `assert 202 == 200`).
 
 ## PRs
 
