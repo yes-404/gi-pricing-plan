@@ -14,7 +14,7 @@ relates: [WK-690, LG-1412, FR-143, FR-146, FR-149, FR-151]
 
 ## Finding
 
-**Severity MEDIUM, owner WK-690, no deadline ruled.** The deputy's entry "2026-10-05 13:10:43 BST — Early
+**Severity MEDIUM, owner WK-690, no deadline ruled.** The maintainer's (by delegation) entry "2026-10-05 13:10:43 BST — Early
 severity signals for FD 9708 and FD 9709 (final at mint)" (`channel/to-lead.md`, local) says: "FD 9709 (#1129,
 pseudo_huber certifies `failed` at δ ≥ 100 on the default grid): MEDIUM, owner WK-690, as proposed. A false
 `failed` blocks a valid objective but misprices nothing. The draft states the δ at which it first fails,
@@ -173,4 +173,4 @@ is unusable in the range it exists for, on the default grid.
 ## Disposition
 
 Open. Filed by the auditor, 2026-10-05, on the lead's relay of `LG-1412`'s note; severity and
-owner are proposals. The verdict is the lead's; the severity is the deputy's at the mint.
+owner are proposals. The verdict is the lead's; the severity is the maintainer's (by delegation) at the mint.
