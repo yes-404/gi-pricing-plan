@@ -1119,7 +1119,7 @@ Minted as `SL-1272` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-
 id: SL-1273
 family: slice
 title: Slice 3: the `expression` kind through the platform, behind the flag, with `custom_objective:author` (FR-144, FR-146, FR-150, FR-152, FR-163, FR-207, FR-366, FR-367, FR-448, FR-449, NFR-480, NFR-484)
-status: active                 # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: dee49f781fd23f9df2e72161885c77fa17a6f1ab
@@ -1130,6 +1130,7 @@ relates: [PL-1268, PL-1382]
 ```
 
 `kind: expression` in `model-schema`, `/derive`, the flag made liftable with its default off (`RL-1265` DP-3), certification as a job, and the objective error codes registered. `custom_objective:author`: the `06` §4.1 row, the enum member and the route check land in one commit. `PL-1268` Slice 3. Starts after Slice 2 closes. **Gate:** `CR-1247` Proposal 1 (c) is delivered first. That means the decision-maker's `RL-` (or ADR) with the `06` amendment, and WK-1178's permission-parity check, both merged before the commit that adds `custom_objective:author`. *(Title completed 2026-09-30 on auditor-plans' F1 for #943: it now lists every id that `PL-1268`'s Core scope table assigns to this slice.)*
+**Closed 2026-10-05** on the slice audit (`handover/audit-sl1273-2026-10-04.md`, local) and its re-check of 2026-10-05, at the mint of ledger `LG-1412` (the executor's closing acts, `executor.md` mint step; `document-ids.md` §1.6).
 (Activated 2026-10-04 as WK-690 Slice 3, on the maintainer's GO check, "2026-10-04 16:54:04 BST — DISPATCH GO: WK-690 Slice 3 (SL-1273 / PL-1382) on lane A; executor-1273 starts after #1106 merges"; dispatch record DISPATCH-WK-690-SL1273-2026-10-03.)
 Minted as `SL-1273` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `08bd1c5a` (working id 9952 before the mint).
 

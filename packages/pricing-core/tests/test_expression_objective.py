@@ -164,3 +164,14 @@ def test_a_kernel_is_built_without_a_string_evaluator(monkeypatch: pytest.Monkey
         sympy_parser.parse_expr("y + 1")
     with pytest.raises(AssertionError, match="NFR-483"):
         builtins.compile("1 + 1", "<s>", "eval")
+
+
+@pytest.mark.req("FR-146")
+def test_certify_inverse_link_follows_the_applicability_responses() -> None:
+    """One function names the link for certification (and the fit): logit for a probability."""
+    from model_schema import ResponseKind
+    from pricing_core.modelling.expression_objective import inverse_link_for
+
+    assert inverse_link_for([ResponseKind.CONVERSION, ResponseKind.RETENTION]) == "logistic"
+    assert inverse_link_for([ResponseKind.CLAIM_SEVERITY, ResponseKind.BURNING_COST]) == "exp"
+    assert inverse_link_for([ResponseKind.CLAIM_COUNT]) == "exp"
