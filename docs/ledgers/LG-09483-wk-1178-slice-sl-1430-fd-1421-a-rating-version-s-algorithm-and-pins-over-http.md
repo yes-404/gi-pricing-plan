@@ -127,11 +127,16 @@ Red (Acceptance 12), recorded at Task 0 row 0.6 and re-read at the dispatch tree
 `create_approved_rating_version` saves the algorithm first and passes it and `Pins()` to the service; `_EMPTY_PINS` is
 removed (no other reader). `backend/tests/test_demo_rating_evidence.py::_draft` does the same.
 
-Green: `test_demo_rating_evidence.py`: `2 passed`; `examples/fremtpl2/test_seed.py`: `7 passed, 1 skipped` (the skip is
-`test_seed.py:136`, "run examples/fremtpl2/fetch.py first": it needs the freMTPL2 download, so `create_approved_rating_version`'s
-edit has **no test that runs in this environment**; it is exercised by `_draft`-equivalent calls only through the shared
-`save_demo_algorithm`). The Acceptance 13 clause "the seeded `fremtpl2-demo` version's `rating_version.created` event carries
-the algorithm ref" is therefore **not evidenced here**: delivered but untested, until the seed runs with the data.
+Green: `test_demo_rating_evidence.py`: `2 passed`. `examples/fremtpl2/test_seed.py`: first `7 passed, 1 skipped` (the skip,
+`test_seed.py:136`, needs the freMTPL2 download). The data directory (35 MB, ignored by `.gitignore:61`, never committed;
+the porcelain status stayed clean of it) was then copied from the shared checkout into the worktree's
+`examples/fremtpl2/data/`, and the file re-run: **`8 passed in 26.39s`**; `test_the_seed_reruns_against_a_seeded_database`
+took 23.91s. That test runs `seed.run` twice against a scratch database, so `create_approved_rating_version` ran end to end:
+the version is created with its algorithm and `Pins()` through the service, compiled by the `rating.compile` Job (which
+refuses a version with no stored algorithm), and approved. **Acceptance 13's pass clause is evidenced.** Its second clause,
+that the seeded version's `rating_version.created` event carries the algorithm ref, is not asserted by that test; the
+event's `after` content is asserted at the route by `test_the_creation_event_records_the_declared_pins`, and the seed calls
+the same service function.
 
 ## PRs
 
