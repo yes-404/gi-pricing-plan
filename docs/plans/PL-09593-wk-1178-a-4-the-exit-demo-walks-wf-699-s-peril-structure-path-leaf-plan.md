@@ -37,6 +37,37 @@ parallel by other planners in this wave.
 > [`README.md`](README.md)'s five unchecked conventions before the first step. The executor
 > is spawned from `.claude/roles/executor.md`, model sonnet.
 
+### Pre-mint delta, 2026-10-05
+
+Edited 2026-10-05 from 18:39:52 BST (`TZ=Europe/London date`), before this plan's mint, by the
+planner, on the lead's brief `~/gi-pricing-plan.local/handover/brief-capacity-fill-2026-10-05.md`
+Part C. origin/main `116a0da6f63cd7733335d6c2c6975c219b4e0e3d` was merged in first (only the
+generated `docs/INDEX.md` conflicted, and was regenerated). Nothing is re-decided here. What this
+delta changed, each marked in place, nothing deleted:
+
+1. **RL 9571's P3 and P4, applied byte for byte.** The authority is RL 9571 (working id,
+   unminted; #1188 @`cc5d0d61`), §"The plan texts (P-texts)" (`:258-301` of the record at that
+   head): P3 at `:284-289`, P4 at `:291-301`. `<RL>` inside a P-text is filled with `RL 9571`,
+   as the record's `:25-27` says ("`<date>` and `<RL>` inside the T- and P-texts, which the
+   applying slice fills"); it is re-pointed at the mint. P4 replaces its find string "through
+   'then passes once approved.'", which in this file is the sentence across two lines of
+   Acceptance 5 (the span below). Counts are exact-substring counts in this file (`grep -c -F`
+   semantics), read before and after the edit:
+
+   | P-text | Find string | Find before → after | New text before → after |
+   |---|---|---|---|
+   | P3 | the line `## Decision points` (an insertion after it; the line is kept) | 1 → 1 | 0 → 1 |
+   | P4 | `` `test_wf699_journey.py` asserts that a version pinning an **unapproved** `` | 1 → 0 | 0 → 1 |
+   | P4 span | the above, through "`PIN_NOT_APPROVED`, then passes once approved." | 1 → 0 | — |
+
+2. **Activation needs 1 and 7 are ruled, not yet minted:** need 1 by RL 9588 (#1179), need 7
+   by RL 9571 (#1188), each marked in its row. Both records stay needs until merged and minted;
+   RL 9571's §"What it obliges" has this plan cite both.
+3. **Serialisation.** This plan's write set has no path under `backend/src/` or `packages/`
+   (§"Write set", "Not written"), so it shares no path with SL 9568 (PL 9567, #1193;
+   `_model_call_handler`) or A-2 (#1178 @`176a6a75`). It follows both only through the chain:
+   A-2 by activation need 3, and SL 9568 through A-3 (need 4), which serialises with it.
+
 ## Goal
 
 The freMTPL2 demo walks `WF-699`'s **literal** Peril Structure path, so that G2 (*"`WF-699`
@@ -143,13 +174,13 @@ status flip and this plan's.
 
 | # | Need | Why | State at `137bc817` (2026-10-05 16:54 BST) |
 |---|---|---|---|
-| 1 | **DP-A4-1 ruled** (the double count; item 4) | Task 3's algorithm form and Task 4's expected premiums | memo by dm-doublecount, local (`handover/dp-memo-doublecount-2026-10-05.md`), not ruled |
+| 1 | **DP-A4-1 ruled** (the double count; item 4) | Task 3's algorithm form and Task 4's expected premiums | memo by dm-doublecount, local (`handover/dp-memo-doublecount-2026-10-05.md`), not ruled. *(Pre-mint delta 2026-10-05, RL 9571; see §"Pre-mint delta, 2026-10-05". Ruled (B1) by RL 9588, #1179, unminted.)* |
 | 2 | **A-1 merged** (SL 9600 / PL 9599, working ids): the peril approval carry and the `_Resolver` peril branch (FD 9995, working id, #980) | Task 2's approval moves the structure to `approved`; Task 3's C1 pin resolves at compile | plan in preparation. On `main`, `decide_request`'s fan-out has no peril branch: *"a Peril Structure and a Rating Version each gain one with the slice that builds them, and until then their requests decide without an artifact to move"* (`backend/src/app/api/approvals.py:537-538`, fan-out `:540-571`) |
 | 3 | **A-2 merged** (SL 9598 / PL 9597): GLM scoring through `model_call` (FD 9605, working id, #1172) | B4 scores GLM components | plan in preparation. On `main`, `_model_call_handler` refuses a GLM: the `else:` at `packages/pricing-core/src/pricing_core/rating/runtime.py:568-579`, *"predict_glm has no such fallback"* |
 | 4 | **A-3 merged** (SL 9596 / PL 9595): Peril Structure scoring | B4's `model_call` on `peril_structure_ref` | plan in preparation. On `main`, `handler` reads `payload["fit_result"]` (`runtime.py:539`), which a structure payload does not carry; `assemble_risk_premium` (`pricing_core/modelling/perils.py:104`) has one production caller, `_reconcile` (`backend/src/app/worker/model_handlers.py:1486`) |
 | 5 | **Exit-demo slice (a) merged** (SL 9626 / PL 9624, #1161) | the builder, banded factors and golden quotes this slice extends | draft |
 | 6 | **Exit-demo slice (b) merged** (SL 9625 / PL 9629, #1164) | the journey and its two `SKIPPED` lines this slice removes | draft |
-| 7 | DP-A4-2 and DP-A4-3 ruled | Tasks 1 and 2 | open |
+| 7 | DP-A4-2 and DP-A4-3 ruled | Tasks 1 and 2 | open. *(Pre-mint delta 2026-10-05, RL 9571; see §"Pre-mint delta, 2026-10-05". Ruled by RL 9571, #1188 @`cc5d0d61`, unminted.)* |
 | 8 | The lead's go, in an activation PR | — | — |
 
 PL 9683 (#1140) and PL 9649 (#1152) are not needs of this slice directly. A-1 to A-3 follow
@@ -207,8 +238,7 @@ failure line as printed. Item numbers are referred to by Tasks.
    `base × Π relativities`, not the structure's prediction.
 5. **C1 pins the structure, and compile refuses it unapproved** (FR-237, `WF-699` `:70`,
    C4). In the journey's C1 request, `pins` carries the structure's `ArtifactRef` and the
-   echo shows it. `test_wf699_journey.py` asserts that a version pinning an **unapproved**
-   copy of the structure fails compile with `PIN_NOT_APPROVED`, then passes once approved.
+   echo shows it. `test_wf699_journey.py` asserts C4 live by RL 9571 item 6: after a later version of a component model is approved (superseding the earlier one), a version pinning an `approved` structure composed over the superseded version fails compile with `PIN_NOT_APPROVED` naming the component. **That structure has its own slug**, not an earlier version of the demo structure's slug: approving a later version of a structure supersedes the earlier one (PL 9599 DP-2 (a)), and compile would then refuse the structure itself before reaching its components. The main path then pins the demo structure, composed over the current approved versions, and compiles.
    This is the journey's view of A-1's discharge test, not a second copy of it.
 6. **The two `SKIPPED` lines are gone.** `git grep -n -E 'SKIPPED (C1′|B4)' -- examples
    scripts backend/tests` prints nothing. The journey test asserts that B4 and C1′ are walked,
@@ -339,6 +369,8 @@ severity fit adds seed time on every demo run. Acceptance 7 measures it. On the 
 this slice is last: it starts only after A-3 merges and DP-A4-1 is ruled (item 5's fit risk).
 
 ## Decision points
+
+**Ruled 2026-10-05 by RL 9571.** DP-A4-1: `RL 9588` (B1). DP-A4-2 (c), the lead's, on the maintainer's (by delegation) 17:01:30 condition: the structure is approved through A-1's workflow service, never by SQL, and the journey's B4 `model_call` and C1 pin run over HTTP. DP-A4-3: the severity factors (a), the 7, the lead's; large loss **uncapped**, labelled in this plan and in the script as a simplification (no large-loss loading), the maintainer's. **Tolerance 0.05** on |ratio − 1|, requested by the seed. Task 0 Step 4's probe runs at the demo's full row count (and may also run at `--rows 20000`); the measured ratio is recorded verbatim in the ledger; if |ratio − 1| > 0.05, STOP to the maintainer with the ratio, never widened silently. The frequency GLM's `exposure_years` offset reaches B4 through its `feature_map`. WF-699 C4 is shown live under P4.
 
 | DP | Question | Options | Recommendation | Owner | Blocks |
 |---|---|---|---|---|---|
