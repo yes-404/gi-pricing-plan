@@ -154,6 +154,33 @@ none):
   **T2 is applied once, by whichever of SL 9511 and SL 9500 merges first.** The two serialise
   on `_coerce_output_value`. The second slice applies nothing, and its dispatch record says so.
 
+## Pre-mint delta 2 (2026-10-05): integrality, and `RL 9498` as the activation-need-4 `RL-`
+
+The maintainer (by delegation) ruled `RL 9498`'s (working id; #1212) second open question in
+`~/gi-pricing-plan.local/channel/to-lead.md`, in the entry headed
+"2026-10-05 18:20:06 BST — RL 9498 (#1212 @7e71b040): both open questions RULED as recommended, with one precision each".
+The lead relayed it. Its item (2), verbatim:
+
+> (2) Is a whole-valued float integral? YES. Integral means EXACT equality with its integer part (value == int(value)) with NO tolerance; it serialises as the integer (3.0 → 3). 2.9999999999 is NOT integral and is refused. T1 and T2 state it in those words, and each slice has one red for 3.0 → 3 and one for a near-integer refused.
+
+**What this delta changes, at every site it reaches** ([`README.md`](README.md) rule 5):
+- **Items 12 and 13 are added** (§"Acceptance Standard", after item 8), one red each way, and
+  Task 2 gains Step 3b. Items 5–8 are unchanged.
+- **The `int`/`count` branch sketch** (Task 2 Step 3) refused every non-`int`, so a whole-valued
+  `3.0` would be an error row. It now admits a `float` equal to its integer part and writes that
+  integer. Step 3b states the replacement.
+- **Activation need 4's `RL-` is `RL 9498`** (#1212, read at `c2c70690`). It carries T1 (`03:692`)
+  and T2 (FR-214), and also T3 (`03:929`), which is SL 9500's (PL 9499), not this slice's. This
+  slice applies T1 and, unless SL 9500 merged first, T2, byte for byte from the minted record.
+- **A note, not a change, for the batch code of a non-integral value.** `RL 9498` item 8 keeps
+  the exception class name in batch. PL 9499 (#1213) raises DP-4 against that clause: SL 9500's
+  producer refuses a non-integral `int`/`count` value with the coded `RATING_TYPE_MISMATCH` inside
+  `_build_outputs`, which batch reaches inside the row `try` (`score.py:1096-1100`), and
+  `_batch_error_code` (`:1006-1018`) returns the code. So once SL 9500 merges, the row's
+  `error_code` for item 6 and item 13 reads `RATING_TYPE_MISMATCH` unless DP-4 is ruled (b).
+  **This slice's reds stand as ruled (the class name)**; if SL 9500 merged first, the dispatch
+  record restates items 6 and 13 against DP-4's ruling.
+
 ## Status
 
 `draft`. ~~**DP-1 is open, the maintainer's.** DP-2 and DP-3 carry recommendations and are also
@@ -176,7 +203,7 @@ below holds.
 4. **The `RL-` carrying T1 (the `03:692` row) and T2 (FR-214's dated clause) is minted**
    (§"The spec text DP-1 (b) owes"). This plan drafts no spec text. *(Pre-mint delta 1: this
    need was conditional, "If DP-1 changes a spec text". DP-1 (b) does, so the need is now
-   unconditional and is kept.)*
+   unconditional and is kept.)* *(Pre-mint delta 2: that `RL-` is `RL 9498`, #1212.)*
 5. **The maintainer's dispatch GO, and this plan made `active` by a dated line** in a separate
    activation PR. The dispatch record writes `RL 9620`'s (working id, #1162) same-Work lines for
    every WK-1178 slice in flight beside this one (§"Write set").
@@ -256,6 +283,23 @@ restatement is needed.)*
    the set difference `{"int", "count", "relativity", "percentage"}` is printed. This item keeps
    the save-time vocabulary and the batch serialiser on one list, which is FD 9513's third
    fix need.
+
+**Integrality, one red each way (pre-mint delta 2; `uv run pytest packages/pricing-core/tests/test_rating_score_batch_outputs.py -q -k integral`)**
+
+12. `test_a_whole_valued_float_under_an_integral_type_is_its_integer_in_batch`, parametrised over
+    `int` and `count`. The expression gives the engine's `float` `3.0` (`3.0 + 0 * driver_age`, or
+    `driver_age / 6` at age 18 if the engine returns that as a float; Step 3b reads which).
+    `json.loads(outputs_json)["probe_out"] == 3`, its type is `int`, and the raw `outputs_json`
+    text holds `"probe_out": 3` with no `.`; `error_code is None`. **Red** (after Task 2 Step 3
+    as first sketched): an `"error"` row with `error_code == "ValueError"` (the `isinstance(value,
+    int)` refusal of `3.0`).
+13. `test_a_near_integer_under_an_integral_type_is_an_error_row`, parametrised over `int` and
+    `count`. The expression gives `2.9999999999`. That row is an `"error"` row with `error_code`
+    equal to the exception class name (`"ValueError"`, DP-3; `RL 9498` item 8), the batch
+    completes, and no float or string is written. **Red:** none against Task 2 Step 3 as first
+    sketched (it already refuses a float); so this item is red first only by the **break**: a
+    branch deciding integrality with a tolerance (`abs(value - round(value)) < 1e-9`) writes `3`
+    and the item fails. Record that run.
 
 **Unchanged and the gate**
 
@@ -811,6 +855,12 @@ def test_the_known_output_types_name_every_numeric_family_member() -> None:
   `_coerce_output_value` and of `_outputs_json` say which types are written how, and that the
   `RL-1343` slice replaces the second branch's conversion.
 
+- [ ] **Step 3b (pre-mint delta 2): integrality by exact equality.** Write items 12 and 13 and
+  run them against Step 3's branch: item 12 FAILS (`error_code == "ValueError"` for `3.0`);
+  record it. Replace the `int`/`count` branch's check with: `bool` refused; an `int` returned
+  unchanged; a `float` returned as `int(value)` only if `value == int(value)` (no tolerance, the
+  ruling's words), else `ValueError` naming the declared type and the value's type, never the
+  value. Run items 5–8, 12 and 13: PASS. Then the item 13 break (a tolerance) and restore.
 - [ ] **Step 4: Run items 5–8.** Expected: PASS.
 
 - [ ] **Step 5: The break for item 6.** Temporarily remove the `isinstance(value, int)` check;
@@ -893,3 +943,4 @@ git commit -m "fix(rating): batch writes int, count, relativity and percentage o
 6. **Type consistency:** `_batch_error_row` is defined in Task 1 Step 4 and used at both
    `except`s; `_probe_payload`, `_ProbeResolver` and `_probe_bundle` are defined and used in
    Task 2; `_coerce_output_value`'s signature is unchanged.
+7. **Pre-mint delta 2 coverage:** the ruling's "each slice has one red for 3.0 → 3 and one for a near-integer refused": items 12 and 13 (Task 2 Step 3b); "T1 and T2 state it": `RL 9498`'s texts, applied by Task 3; activation need 4 names `RL 9498`.
