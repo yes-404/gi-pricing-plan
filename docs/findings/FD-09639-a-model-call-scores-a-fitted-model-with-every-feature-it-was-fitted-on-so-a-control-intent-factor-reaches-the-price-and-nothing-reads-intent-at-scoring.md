@@ -7,14 +7,14 @@ created: 2026-10-05            # working id; the mint date will replace this (ch
 owner: auditor
 tree: 83ea509023d6d705d6f78fe74b7124fdf1375739
 corrected_by: []
-relates: [WK-673, WK-1178, FR-88, FR-240, FR-230, FD-9659, FD-9995]
+relates: [WK-673, WK-1178, FR-88, FR-240, FR-230]
 ---
 
 # FD-9639 — a `model_call` applies a model's `control` factor
 
 ## Finding
 
-**Severity: HIGH on the code trace; the measurement is PENDING.** Per the deputy's rule (below), APPLIED is HIGH and
+**Severity: HIGH — measured 2026-10-05 13:54 UTC (§Evidence): the premium input changes with the control value.** Per the deputy's rule (below), APPLIED is HIGH and
 neutralised-and-untested is LOW. **Owner: WK-673.** **Working id 9639**, minted at the records PR. The
 deputy's decision is the entry headed *"2026-10-05 14:21:22 BST — DECISIONS 35–38 (PL 9649, the FR-240
 family fix); file the model_call candidate; FD 9641 noted"*, "CANDIDATE (c)" (`to-lead.md`,
@@ -22,11 +22,10 @@ the lead's channel): *"does scoring apply the control factor's coefficient to th
 (e.g. at the base level)? … if scoring applies it, HIGH (a price depends on a factor declared not to
 price); if it is neutralised and only untested, LOW."*
 
-> **Measurement status, stated as such.** The reproduction in §Reproduction is a scratch script that is
-> written and **not yet run**: both gate slots were held when this was drafted (2026-10-05 13:22–13:44 UTC),
-> and the lead's standing rule bars a probe during a held gate. §What the code does is read from the source
-> at `83ea5090`. This record is amended in place with the output and the script's sha before the PR leaves
-> draft. Until then, **"applied" is the code reading, not a measurement.**
+> **Measurement status.** Drafted at 13:22–13:44 UTC with the script unrun (both gate slots were held, and the
+> lead's rule bars a probe during a held gate); **run 2026-10-05 13:54:02–13:54:13 UTC with both slots free and
+> `pgrep` empty**, and amended here. §What the code does is read from the source at `83ea5090`; §Reproduction
+> is measured.
 
 ## What the specs say
 
@@ -70,8 +69,24 @@ excludes it from `feature_map`. The scoring path is intent-blind.
 Scratch script (pricing-core only; it calls the same `predict_gbm(..., factors=(), nthread=1)` as the handler):
 `$CLAUDE_JOB_DIR/tmp/fd9639_repro.py`. It fits xgboost and lightgbm on 6 000 rows whose response depends on a
 `control`-intent factor (`year`, +0.25 per year in the linear predictor) beside a `risk` factor (`age`), then scores
-`age=40` at `year=2010` and `year=2020`. **Expected if applied: the two predictions differ by roughly
-`exp(2.5)`. Result: PENDING.** Sha, run time and output are added here when it runs.
+`age=40` at `year=2010` and `year=2020`. The script lives in the job's scratch directory, not the repository;
+its sha256 is `f647de417dbca8be8eae23dd636f468129d72497150b724025ce7bcfd9deab33`, run at tree `83ea5090` with
+`uv run python <script>` (`uv sync --all-packages` first), 2026-10-05 13:54:06–13:54:13 UTC. Output, verbatim:
+
+```
+xgboost feature_order: ('age', 'year')
+  control year=2010 -> prediction 0.172311
+  control year=2020 -> prediction 0.501202
+lightgbm feature_order: ('age', 'year')
+  control year=2010 -> prediction 0.171648
+  control year=2020 -> prediction 0.505089
+```
+
+**The prediction rises about 2.9x (xgboost) and 2.9x (lightgbm) when only the control value moves from 2010 to
+2020, `age` held at 40.** So scoring **APPLIES** the control factor. (The ratio is below the generating
+`exp(2.5)` because 40 shrunken depth-3 rounds do not fit the tail fully; the direction and size are not in
+doubt.) The call is `predict_gbm` as the handler makes it; the handler's full path through `load_bundle` was
+not run.
 
 ## Whether the seed or any golden quote has a control factor
 
@@ -83,7 +98,7 @@ control factor**; the defect is reachable by a user-authored model, and untested
 
 ## Disposition
 
-**Fix before close with an owner: WK-673**, red first. Deadline, if the measurement confirms APPLIED: before the
+**Fix before close with an owner: WK-673**, red first. Deadline, the measurement having confirmed APPLIED: before the
 P2 exit demo (the deputy's rule).
 
 Remedy shape (not a design; the deputy's decisions 36–38 are adjacent):
