@@ -551,6 +551,22 @@ the code, that the message names the column or the count, and that a sentinel po
 passed on first run, because the Job path already carried them, so they are pins. `test_a_resolution_error_reaches_the_failed_job_
 with_its_count_and_example` keeps `RL-1361` item 3's count and example. 49 tests pass in the file; `test_api_rate_tables.py` 46.
 
+**Hold A: the pre-S7 diff route, measured literally on `origin/main`** (FD 9487's evidence; the maintainer's 22:27:31 BST
+condition, whose branch-based proof failed because `_compute_diff` was rewritten unconditionally by this slice, so the branch's
+`svc.diff` is not main's path). A second detached worktree at `origin/main` `52c153cd1dcf7eb8a716559216a30b245dd6a7e2` (tree
+`4fe99da0472c47845330aec9e7731ba3b06afc53`), its own venv and database at Alembic head `e5b7d9f1a3c6`, in `gate-1`
+(2026-10-05 22:46:20 to 22:50:53 BST): START load 2.60/2.10/1.61, 18 660 MB free, `pgrep` empty; the lead's GO seen 22:47:02;
+load settled to 1.86 after 10 s; timing began 22:47:07; END 22:50:53 BST, load 1.70/1.98/1.69, 18 510 MB free, `pgrep` empty.
+`OMP_NUM_THREADS=1`, service level, no portfolio, no cache, N=10, a 250 000-cell ROWS pair seeded through main's own seed and uplift
+(rows asserted): `svc.diff` whole request p50 9286 ms, p99 9633 ms; SQL load of both versions p50 6696 / p99 7688 ms;
+`diff_vs_previous` alone p50 1825 / p99 1858 ms. The diff route on main breaches `07` §1.3 R1's 2 s by about 4.6x at 250k, which
+is FD 9487's limb (a breach on main, discharged by this slice moving the route onto the stored artifact). This slice's
+rewrite of `_compute_diff` (it now summarises `_diff_cells`' per-cell objects) makes that phase about 4.0 s against main's
+1.8 s, now inside the Job only, off the request path.
+
+**An unweighted query gets no ref 404** (the lead's answer, the maintainer's rule): it reads no `factor_ref` or `banding_ref`,
+and `RL-1361` T10 lists that 404 under the portfolio checks; `_refuse_dangling_refs` is a no-op without a portfolio.
+
 ## PRs
 
 #1206, a draft, `SL-1391: Slice 7: FR-231's exposure weights through the portfolio frame (F-W10-2)`, head branch
