@@ -116,8 +116,10 @@ Vite, Vitest with happy-dom, `@vue-flow/core` 1.48.2 (MIT, the version RS-1269 m
 3. **Lanes A and C both touch `03`**: option (b), run both, decided by the deputy in the
    `to-lead.md` entry stamped **2026-10-05 13:00:09 BST**, item 8, as the lead relayed it.
    See *Write set, and its contention*.
-4. **DP-S2-3**: option (a), decided by the deputy in the `to-lead.md` entry stamped
-   **2026-10-05 13:03:23 BST**, item 10, as the lead relayed it: *a "no algorithm pinned"
+4. **DP-S2-3**: option (a), decided by the deputy, item 10 of the `to-lead.md` entry
+   headed *"2026-10-05 13:03:23 BST — #1066 (… mint) at a202f030: NO ACK YET, one
+   false cite in the body; then decisions 10 and 11"* (elided at the finding id #1066 mints,
+   which does not resolve on `main` until it merges; check 32): *a "no algorithm pinned"
    state plus an empty canvas, saved through the typed POST, with no re-pinning*. Option (c)
    is refused for S2, because `examples/fremtpl2/seed.py` is SL-1409's, and seeding a real
    algorithm is exit-demo work after SL-1409 merges.
@@ -140,12 +142,11 @@ activation need below holds.
    unminted record is a stop (RL 9766, *Spec changes*, last paragraph). If a minted text
    differs from the head cited above, the minted text governs and the dispatch record names
    each difference.
-3. **DP-S2-3 decided**: met, option (a), by the deputy (2026-10-05 13:03:23 BST, item 10).
-4. **The lane A/C conditions written into both dispatch records** (DP-L, below): each side's
+3. **The lane A/C conditions written into both dispatch records** (DP-L, below): each side's
    hunks and anchors, the rows between them, merge-tree rc 0 on the second merge, and gates
    that never run at the same time.
-5. **Task 0 re-run at the dispatch tree**, with every row as expected or its delta named.
-6. **The maintainer's agreement** to this plan, as a dated line, and **the lead's go**,
+4. **Task 0 re-run at the dispatch tree**, with every row as expected or its delta named.
+5. **The maintainer's agreement** to this plan, as a dated line, and **the lead's go**,
    recorded in a separate activation PR. That PR sets this plan and SL 9711 `active`.
 
 ## Acceptance Standard
@@ -1380,8 +1381,8 @@ export function parseRef(ref: string): { type: string; slug: string; version: nu
   - DP-S2-1 conditions 1–4: Activation need 1; Acceptance 1, 2 and 5; Task 2 Step 4;
     Task 5 Step 4; Hand-off 1;
   - DP-S2-2: Task 1; Task 2 Step 3; Acceptance 2;
-  - DP-S2-3 (a): *The decisions*, item 4; Task 10 Step 3; Acceptance 7;
-  - DP-L: *Contention*; Activation need 4; Task 12 Step 1; Acceptance 16;
+  - DP-S2-3 (a): *The decisions*, item 4; Status; the DP table; Task 10 Step 3; Acceptance 7;
+  - DP-L: *Contention*; Activation need 3; Task 12 Step 1; Acceptance 16;
   - F2 conditions 1–5: Acceptance 5, 10, 13, 14 and 15; Tasks 5, 6, 9 and 11.
 - **Literals verified at `caa4e411`:** the route paths, handler names and lines
   (`rating_algorithms.py:28-73`, `models.py:1112-1160`), `create_algorithm` and
