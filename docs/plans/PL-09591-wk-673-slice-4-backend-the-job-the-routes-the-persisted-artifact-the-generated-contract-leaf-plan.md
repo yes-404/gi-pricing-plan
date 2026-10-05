@@ -40,7 +40,7 @@ FD 9707 fix, WK-673, #1145, head `2f3269c8`), PL 9683 (the FD 9708 fix, #1140, h
 `f18549bb`), PL 9616 (the FD-1416 fix, #1168, head `0b60c81b`), PL 9610 (WK-1250 S2, #1170,
 head `ca407ed9`), PL 9629 (the exit-demo plan, #1164, head `68dd997c`), RL 9620 (the RL-1263
 amendment, #1162, head `381254c3`), RL 9614 (FD-1244 and FD-1245, #1167, head `b71f0da2`),
-and the A-1 to A-3 plans (PL 9599, PL 9597, PL 9595; not pushed at 16:54 BST).
+and the A-1 to A-3 plans (PL 9599 #1177 head `5d5e5b8e`, PL 9597 #1178 head `477265e4`, PL 9595 #1174 head `7b3df510`; not pushed at 16:54 BST, read before 17:08:50 BST).
 
 ## Goal
 
@@ -217,7 +217,7 @@ convention 2). `B` is `backend/tests/test_dislocation_runs.py`.
 
 - **The Job's duration.** 2^K full-portfolio passes in one Job. Slice 3's ledger gives the
   measured rate; DP-S4-1 decides whether one Job is enough.
-- **`_Resolver` is edited by three in-flight plans** (PL 9649, PL 9610, and A-1, PL 9599).
+- **`_Resolver` is edited by five in-flight plans** (PL 9649, PL 9610, and A-1 to A-3: PL 9599, PL 9597, PL 9595).
   A move that lands between their edits conflicts with each. Task 3 is a pure move, re-read on
   the dispatch tree; §"Contention" serialises it.
 - **The authored contract may disagree with the generated one.** Slices 1–3 hand-edited it;
@@ -269,7 +269,7 @@ VCS-ignored); `06`; `approvals.py` (either); `docs/roadmap.md` (except the activ
 |---|---|---|---|---|
 | everything Slice 3 writes (`analysis.py`, `dislocation.py`, `03` §4.6, §5.1 codes, §5.2) | consumes | **SL-1387** (PL 9689, WK-673) | plan dependency: this slice consumes Slice 3's output | **SERIAL** (same Work, RL 9620 (b) fails) — activation need 2 |
 | `03` §5.1 | rows `:919-920` | **SL-1391** (PL 9716, WK-673): the diff row `:904`, a cells row after it, the owned-codes list | no (different rows) | serial anyway: Slice 7 precedes Slice 3, which precedes this slice |
-| `platform/rating_versions.py` `_Resolver` | moved (DP-S4-4) | **PL 9649** (the FR-240 family fix, **WK-673**, SL 9647): a `factor` branch in `_Resolver.resolve`; **PL 9610** (WK-1250 S2, SL-1340): a `sub_graph` branch; **A-1** (PL 9599, WK-1178, not pushed): the peril branch (the maintainer's entry "2026-10-05 16:43:31 BST", item 1) | **yes**: the same class | **SERIALISES** with each. For PL 9649 (same Work): RL 9620 (a) fails on this class, so the pair is serial whatever (b) says. Order: whichever merges second merges main and re-applies its change to the class where it then lives; the move is mechanical, so this slice prefers to merge **after** all three, re-reading the class on the dispatch tree (Task 0 Step 3) |
+| `platform/rating_versions.py` `_Resolver` | moved (DP-S4-4) | **PL 9649** (the FR-240 family fix, **WK-673**, SL 9647): a `factor` branch in `_Resolver.resolve`; **PL 9610** (WK-1250 S2, SL-1340): a `sub_graph` branch; **A-1** (PL 9599, WK-1178): a `peril_structure` branch (the maintainer's entry "2026-10-05 16:43:31 BST", item 1); **A-2** (PL 9597): the `model` branch (`:464-485`); **A-3** (PL 9595): `_Resolver.resolve` (its write set) | **yes**: the same class | **SERIALISES** with each. For PL 9649 (same Work): RL 9620 (a) fails on this class, so the pair is serial whatever (b) says. Order: whichever merges second merges main and re-applies its change to the class where it then lives; the move is mechanical, so this slice prefers to merge **after** all five, re-reading the class on the dispatch tree (Task 0 Step 3) |
 | `backend/src/app/errors.py` `RATING_ERROR_CODES` | one name appended | **PL 9649** (WK-673): appends `CONTROL_FACTOR_IN_RATEABLE_PATH`; **PL 9683** (WK-1178) under its DP-1 (a): `MODEL_REFERENCE_MODE_INCONSISTENT`; **PL 9776** (WK-1178) conditionally | the same `frozenset` literal's tail | **other shared path**: allowed only if the dispatch record names the path and the check `git diff -U0 origin/main...<branch> -- backend/src/app/errors.py` showing one added line per slice and different names; the second to merge merges main and re-gates. For PL 9649 (same Work) RL 9620 (b) also needs "no plan dependency": neither consumes the other's output (this slice calls `compile_bundle` through `attribute`, which PL 9649 changes for control-intent factors, but no test here depends on that behaviour) — the dispatch record names that both ways |
 | `scripts/generate-contracts.py` `GENERATED_SHAPES` | one key appended | **PL 9683** (`rating-version-create`), **PL 9616** (`approval-request`) | the same dict's tail | **other shared path**: the dispatch record names the path and the check (one added key each, different keys); the second merges main, regenerates, re-gates |
 | `backend/tests/test_contracts.py` | `COMPARED_SLUGS` + one; `ONE_SIDED_SLUGS` − `"dislocation-run"` | **PL 9683** (+ one `ONE_SIDED_SLUGS` key), **PL 9616** (edits `ONE_SIDED_SLUGS["approval-request"]`, a new `SHIPPED_NOT_COMPARED`), **PL 9713** (conditional) | `ONE_SIDED_SLUGS`: key-disjoint (exempt); `COMPARED_SLUGS`: no other plan edits it | exempt (keys named in the dispatch record); `COMPARED_SLUGS` one-sided |
@@ -341,7 +341,7 @@ slice may not move `draft → active` while any blocking row is open.
   git diff --name-only origin/main...origin/<each active slice branch>
   git grep -n "class _Resolver\|class WorkspaceResolver" -- backend/src/app/platform/rating_versions.py
   ```
-  Record whether PL 9649, PL 9610 and A-1 have merged. If any of them is **active and
+  Record whether PL 9649, PL 9610 and A-1 to A-3 (PL 9599, PL 9597, PL 9595) have merged. If any of them is **active and
   unmerged**, stop: Task 3's move SERIALISES with it (§"Contention").
 - [ ] **Step 4:** Read Slice 3's merged surface and copy into the ledger, with line numbers:
   the signatures of `derive_changes`, `attribute`, `estimate_attribution_ratings`, the
@@ -597,8 +597,9 @@ row is dropped.
 4. **Rulings between sweep and filing.** `gh pr list --state open` read at 16:54 BST: RL 9614
    (#1167) keeps FR-257's gate at the submit route (not this slice's); RL 9620 (#1162) is the
    same-Work rule applied above; no open PR rules on FR-263, FR-265 or `03` §5.1's dislocation
-   rows. The maintainer's entry "2026-10-05 16:43:31 BST" (Option A) adds A-1's `_Resolver`
-   peril branch, which §"Contention" serialises.
+   rows. The maintainer's entry "2026-10-05 16:43:31 BST" (Option A) adds A-1 to A-3; read
+   before 17:08:50 BST on their branches, A-1, A-2 and A-3 each edit `_Resolver`, which
+   §"Contention" serialises.
 5. **Found, outside this slice, for the lead.** PL 9629's need 5 attributes WF-699 E1
    ("change summary drafted from the structural and rate diffs", `03` FR-242's draft) to
    Slice 5; `SL-1389` and `PL-1267` Slice 5 do not scope it. Reported, not changed here.
