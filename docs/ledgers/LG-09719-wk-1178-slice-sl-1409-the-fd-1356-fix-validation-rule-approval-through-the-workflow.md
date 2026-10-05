@@ -249,6 +249,24 @@ Code: `submitRule(ruleId, body)` takes `ValidationRuleSubmission` (generated, `s
 
 Green: the three files above `Test Files  26 passed (26) / Tests  119 passed (119)`; full frontend `pnpm test` `97 passed / 615 passed`; `lint`, `type-check`, `build` exit 0. Files: `frontend/src/api/rules.ts`, `frontend/src/components/RuleBuilder.vue`, `frontend/src/views/RuleSetView.vue`, `frontend/src/components/__tests__/RuleBuilder.test.ts`, `frontend/src/views/__tests__/RuleSetView.test.ts`, this ledger.
 
+### Task 6 — the spec texts, verbatim from RL-1407 (2026-10-05, executor-1409-t6)
+
+Reading applied: PL-1408 Task 6 says "one commit with the code they describe". The code is already committed in Tasks 2–5 (`3a431bcb`, `c65a25fd`, `ec475a0a`), so this commit carries the six texts, the regenerated `docs/INDEX.md` and this entry. `<Task 6 date>` = 2026-10-05; `RL-<minted id>` = `RL-1407`. The texts were extracted by script from the minted record's §"The spec texts" (the fenced `text` blocks), not retyped; no wording of the executor's own.
+
+Anchors, re-found by anchor text on the branch head `ec475a0a` (the plan's line numbers are stale for `06`; `01` still matched):
+- text 1: after `> WK-677). This is the module's own step in the module's own terms, which is what §4.5 states.` (`01:927`), as a `>` line and the paragraph;
+- text 2: `01:935` `` `REJECT_RATE_EXCEEDED`, `DERIVATION_NOT_MATERIALISED`. `` replaced;
+- text 3: the `| **FR-351** |` row (`06:92`), end of the second cell. WK-674 S2 had not appended to it: the cell ended `…does not move the version's row.`, so text 3 follows that;
+- text 4: the `| **Validation Rule** |` row in FR-363's table (`06:114`), after `` (`01` FR-50) ``;
+- text 5: `01:523`, the end of §4.5 step 4;
+- text 6: the `| **FR-50** |` row (`01:112`), after `` feeding an `approved` Model. ``.
+
+Step 2: `git diff ec475a0a -- docs/specs/01-data-management.md docs/specs/06-governance.md` shows 4 appended rows or lines, 1 replaced line (text 2) and the 2 added lines (text 1). Each of the 4 removed lines that are appended-to starts, byte for byte, the line that replaces it (checked by script); no other line changed.
+
+`python3 scripts/audit-docs.py`: first run failed check 31 (expected, LG 9719 working id) and check 39 (`docs/INDEX.md` stale, as the FR-50 and FR-351 rows are indexed). `python3 scripts/doc-index.py` regenerated it (two rows changed). Second run: `FAILED (1): check 31: gap in the full allocation between 1411 and 9719` only; check 10 passes.
+
+Files: `docs/specs/01-data-management.md`, `docs/specs/06-governance.md`, `docs/INDEX.md`, this ledger. No test was run.
+
 ### The write set under the `__all__` amendment (Delta 4, #1118)
 
 Names this slice appends to `packages/model-schema/src/model_schema/__init__.py`, appended only, each with its import
