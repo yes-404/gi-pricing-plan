@@ -593,6 +593,11 @@ page p95 at 250k within 2x of 10k: rows 32.3 against 32.8 (0.98x), parquet 33.1 
 own previous-run setup (the pair build and the 678 000-row portfolio ingest), with `pgrep` empty throughout. The timings are of the
 later pages only and are far under the limits; the lookup limb is re-run in hold C with the settle immediately before timing.
 
+**The maintainer's acceptance of hold B** (by delegation, `to-lead.md`, the entry headed "2026-10-05 23:01:40 BST — S7 hold B
+ACCEPTED: RL 9485's acceptance and R1 PASS; no veto on the load deviation; the lookup re-run as granted"): RL 9485's acceptance
+passes, and there is no veto on the load deviation, in these words: "load only slows a measurement, so passing about 8x under
+the limit is conservative".
+
 **Hold C: the lookup alone** (`gate-1`, 23:01:35 to 23:02:57 BST, the same head and tree). START load 1.50/1.81/1.77, 19 713 MB free,
 `pgrep` empty; GO seen 23:01:50; the settle ran after the run's own setup and printed `TIMING START load1=1.39 after 0s settle`.
 Rows 250 000, unweighted, 10 001 `diff_cells` Jobs in the workspace (10 000 of other keys), N=100: **the artifact lookup alone
@@ -600,7 +605,11 @@ Rows 250 000, unweighted, 10 001 `diff_cells` Jobs in the workspace (10 000 of o
 page p50 24.9 / p95 30.3 / p99 31.9 / max 31.9 ms; the later diff request 17.8 / 23.0 / 25.1 / 25.3 ms. END 23:02:57 BST, load
 1.28/1.68/1.72, 19 626 MB free, `pgrep` empty. The first run's lookup-alone phase had crashed (a harness error of mine, passing
 the `(key, row)` return as the key); only the harness changed, no product code. No limb fails: the lookup is 16.3 ms at p99, the
-worst page p95 is 37.0 ms. The lookup filters `JobRow.parameters["key"]` without an index; at 10 001 Jobs it costs 13 ms, so no
+worst page p95 is 37.0 ms. The lookup p95 is 15.1 ms.
+**The harness bug and its fix, for hold C:** in hold B the lookup-alone phase crashed in every run with `TypeError: expected str,
+got tuple`: after `_cells_key_for` came to return `(key, row)` (the dangling-ref check needs the version's row), my scratch
+harness passed that tuple to the lookup as the key. The fix was one line (unpack it: `key, _ = …`), plus a settle wait after the
+run's own setup that prints the load at timing start. No product code changed, and the harness is scratch, not in the repository. The lookup filters `JobRow.parameters["key"]` without an index; at 10 001 Jobs it costs 13 ms, so no
 migration is proposed.
 
 ## PRs
