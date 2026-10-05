@@ -102,7 +102,10 @@ The trace test's invariant (no completed trace carries a price built on the plan
 **The ruling on T2's working id.** The maintainer (by delegation), entry "2026-10-05 19:33:23 BST" in
 `channel/to-lead.md` (a local channel file, cited by its header), ruled OPTION A: apply T2 with "FD-1425" in place of
 "FD 9572", everything else byte for byte; under GO condition (3), as `RL-1423` lines 243-244 define it ("the mint
-replaces it with the minted `FD-` id"), that is byte for byte. Option B (the literal working id) is refused.
+replaces it with the minted `FD-` id"), that is byte for byte. Option B (the literal working id) is refused. The entry's text, verbatim
+(`to-lead.md`, line 18694 at this date):
+
+> Read at origin/main: RL-1423 :243-244 directs that "FD 9572" in both texts is the finding's working id, which the mint replaces with the minted FD- id. So applying T2 with FD-1425 in place of "FD 9572" IS byte for byte under GO condition (3), as the RL itself defines it. OPTION A, ruled. LG 9496 records the substitution, citing RL-1423 :243-244 and this entry, with the grep -cF counts before and after: the substituted T2 counts 1 in 03 after the apply, and "FD 9572" counts 0 in 03. Option B is refused (it plants a dead id).
 
 **T2 applied.** The replacement is `RL-1423` line 240 with that one substitution. `grep -cF` on
 `docs/specs/03-rating-engine.md`, before and after:
@@ -144,6 +147,71 @@ the two runs above, and the file was restored and diffed before they were repeat
 
 The trace test also asserts the failed Job's recorded error carries `INPUT_CONTRACT_VIOLATION` (added at this task).
 
+### Task 3 — the gate
+
+**Granted** by the lead for head `c8bc3a7c510430df801f542255d5fe2d5fcb8c56` (PR #1219) on gate-1, after S7's release. One
+slot hold covered both halves (the dev-commands wrapper verbatim plus `LOKY_MAX_CPU_COUNT=4`, `timeout` inside the body,
+foreground). The run was in a clean detached checkout of that SHA, `.claude/worktrees/sl-1427-gate`; `uv sync
+--all-packages` ran there. The test database `gipricing_sl-1427-gate_48539ffa` was made from the template and migrated:
+`alembic current` printed `e5b7d9f1a3c6 (head)` and `alembic heads` printed `e5b7d9f1a3c6 (head)`, exactly one head.
+**The gated tree is `ae41f80acef299dfec069c8becf66c978493e716`.**
+
+**The slip.** The lead's "GATE START" message was sent before the slot was taken: my first launch attempt was refused by
+the shell guard, so the message preceded the real start by about a minute. The gate's own first stamp is the start
+(2026-10-05 18:45:50 UTC, 19:45:50 BST). Nothing else ran in that gap.
+
+**Half 1** (Python and docs, the seven stages in parallel). Start 18:45:50 UTC: load average 1.88, free 19330 MB. End
+19:11:59 UTC: load average 1.55, free 19028 MB.
+
+| stage | result | exit |
+|---|---|---|
+| ruff | pass | 0 |
+| mypy | pass | 0 |
+| import_linter | pass | 0 |
+| audit_docs | FAIL | 1 |
+| req_coverage | pass | 0 |
+| contracts (`--check`) | pass | 0 |
+| pytest | FAIL | 1 |
+
+`audit_docs` failed on check 31 only: `check 31: gap in the full allocation between 1427 and 9496` (`FAILED (1)`), the
+expected working-id gap before the mint (PL-1426 Acceptance 10). pytest: `13 failed, 4942 passed, 4 skipped in 1548.15s`.
+All 13 failures are driven by that gap, each an assert that `audit-docs.py` exits 0 or that the allocation is
+contiguous (the logs are in `/tmp/tmp.2Q0p5brI0p`, a local scratch directory not in the repository). The 13 names:
+
+1. `tests/test_audit_docs_finding_citations.py::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`
+2. `tests/test_audit_docs_ids.py::test_the_real_tree_passes_all_ten_checks`
+3. `tests/test_audit_docs_ids.py::test_doc_id_check_exits_0_on_the_real_tree` (`[noncontiguous] docs/INDEX.md has a gap`)
+4. `tests/test_audit_docs_process_core_digest.py::test_an_unrelated_file_edit_is_the_negative_control_and_stays_green`
+5. `tests/test_audit_docs_process_core_digest.py::test_the_committed_digest_currently_matches_the_committed_spec`
+6. `tests/test_audit_docs_w37_11_ceiling.py::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`
+7. `tests/test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity` (`[(1427, 9496)]`)
+8. `tests/test_register_lint.py::test_check_29_is_wired_into_the_docs_gate`
+9. `tests/test_register_lint.py::test_check_29_note_carries_the_residue_line`
+10. `tests/test_register_lint.py::test_phase1b_residue_count_matches_check_29s_own_count`
+11. `tests/test_register_owed.py::test_check_29_wiring_is_undisturbed`
+12. `tests/test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit`
+13. `tests/test_repository_invariants.py::test_journey_citations_are_audited_in_ci`
+
+The lead compared the colour-stripped set with the allowed check-31-driven set (identical by `diff`) and checked the rc
+files. No new test and no `test_rating_score` test is among the 13.
+
+**Half 2** (frontend). Start 19:11:59 UTC: load average 1.55, free 19051 MB. End 19:12:58 UTC: load average 4.40, free
+18922 MB.
+
+| frontend stage | exit |
+|---|---|
+| `pnpm --dir frontend install --frozen-lockfile` | 0 |
+| `generate:api` | 0 |
+| `lint` | 0 |
+| `type-check` | 0 |
+| `test` (97 files, 615 tests, no type errors) | 0 |
+| `build` | 0 |
+
+`uv run python scripts/req-coverage.py` exited 0 (the `req_coverage` stage). The four backend path reds and the core
+module passed inside the pytest stage (none is among the 13). The gate's overall rc was 1, the expected pre-mint shape.
+The 17:25:07 HOLD is not touched by this record: it lifts only as the first section of this ledger says.
+
 ## PRs
 
-Not opened yet.
+#1219, draft, opened 2026-10-05 from branch `sl-1427-guard-c-quote-input-never-overrides-produced-value`. It is not
+merged by the executor.
