@@ -1052,6 +1052,131 @@ Drafted as working id 9768; minted 2026-10-01 as SL-1369 (its leaf plan, drafted
 (Activated 2026-10-03 as WK-675 Slice 1, on the maintainer's GO check of 2026-10-01, "2026-10-01 11:04:02 BST — GO: WK-675 Slice 1 (SL-1369, PL-1368) on lane A, with ONE correction to the dispatch record (DP-4's label is (b), not (a)); this entry is PL-1368 activation need 1's dated maintainer agreement"; dispatch record DISPATCH-WK-675-SL1369-2026-10-01.)
 *(Closed 2026-10-03 on a clean slice audit (`audit-1369-2026-10-03.md`, range `origin/main...44bfbafe`, verdict CLEAN) and the dispatch record's Deltas 1 to 4; ledger `LG-1378`, minted from working id 9745. Precedent: `SL-1360` / `LG-1370`.)*
 
+#### SL 9583 (working id) — Slice 4: Editor I — the rate table grid and manual edit; RL 9753's definition and cell-page reads; the manual-edit route (F-W10-3)
+
+```yaml
+id: SL-9583
+family: slice
+title: Slice 4: Editor I — the rate table grid and manual edit; RL 9753's definition and cell-page reads; the manual-edit route (F-W10-3)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 9489405370a1ce06c2b985ad88c7d471438febb1
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [PL-1286, PL-1371, RL-1184, RL-1263, FD-1366, SL-1369, SL-1391, SL-1367]
+```
+
+`PL-1286` S4 (`:306`), cut as a draft row for its leaf plan, PL 9582 (working id,
+`docs/plans/PL-09582-wk-675-slice-4-editor-i-grid-and-manual-edit-leaf-plan.md`). The rate
+table editor's first slice. **Backend first, spec first:**
+- RL 9753 (working id, #1067)'s two reads, `GET /api/v1/rate-tables/{slug}@{version}` and
+  `.../cells`, with `RateTableCell` and the cells sorted by key in one place for both
+  storages, never a Job (FR-232);
+- the manual-edit route `POST /api/v1/rate-tables/{slug}/versions` (register F-W10-3),
+  typed in both directions, preview then confirm, as the import route does (`RL-1184` E5).
+
+**Then the view:** `@tanstack/vue-table` 9.2.6 (MIT), with `skills-map.md` and `03` §8 in the
+same commit; the typed grid (FR-228), paged by the server cursor; inline exact-decimal
+editing (FR-10, FR-21); the change note (FR-229), the confirmation diff (FR-231) and FR-234's
+errors on the cell; no approval state (FR-1186); the FR-25 link from the Rating Version's
+pinned tables (RL 9753 item 3). **Holds:** the leaf plan's DP-S4-1 (the manual-edit types)
+and DP-S4-2 (FR-234's located errors) go to the decision-maker. S4 consumes S2's Rating
+Version read (RL 9766), so it runs after S2 (DP-S4-3). It serialises with `SL-1391` on the
+rate-table route and service files.
+
+**Gate:** the leaf plan's Activation needs, in a separate activation PR: RL 9753 minted;
+DP-S4-1 and DP-S4-2 ruled; S2 merged; `SL-1391` not running; Task 0 re-run; the maintainer's
+agreement and the lead's go.
+
+*(Filed 2026-10-05 under working ids 9583 (this row) and 9582 (the plan), reserved by the lead.)*
+
+#### SL 9581 (working id) — Slice 3: Designer II — live validation through the validate route (DP-6), and the structural diff overlay
+
+```yaml
+id: SL-9581
+family: slice
+title: Slice 3: Designer II — live validation through the validate route (DP-6), and the structural diff overlay
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 9489405370a1ce06c2b985ad88c7d471438febb1
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [PL-1286, PL-1371, RL-1263, SL-1387]
+```
+
+`PL-1286` S3 (`:305`), cut as a draft row for its leaf plan, PL 9578 (working id; the plan's
+own PR). DP-6's discharge as RL 9767 (working id, #1055) rules it: the numbered FR and the
+validate-only route, with errors on the node before save (FR-212, FR-223, FR-227), including
+`expression` steps' grammar (FR-244) and closed inputs (FR-246); and the structural diff
+overlay (FR-219). It carries FD 9759 (`PL-1371` §8 (iii)). **Holds:** after S2 (SL 9711); RL
+9767 minted. **Serialised outright** with WK-673 S3 (`SL-1387`), WK-1250 S2 and WK-1250 S3
+on `compile.py` / `compile_bundle` (`PL-1371` §5 rule 4).
+
+**Gate:** the leaf plan's Activation needs, in a separate activation PR, including the
+maintainer's agreement and the lead's go.
+
+*(Filed 2026-10-05 under working ids 9581 (this row) and 9578 (the plan), reserved by the lead.)*
+
+#### SL 9577 (working id) — Slice 13: Jobs — the filterable list, live over the SSE stream (`FD-1284`, option D)
+
+```yaml
+id: SL-9577
+family: slice
+title: Slice 13: Jobs — the filterable list, live over the SSE stream (FD-1284, option D)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 9489405370a1ce06c2b985ad88c7d471438febb1
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [PL-1286, PL-1371, FD-1284, RL-1263]
+```
+
+`PL-1286` S13 (`:316`), cut as a draft row for its leaf plan, PL 9576 (working id; the plan's
+own PR). `07` §5.3's `/jobs` view (`07:390`): kind, status, progress bars, submitter and
+duration, live over `GET /api/v1/jobs` and `/jobs/{id}/events`; the FR-25 link from the entry;
+the `reachability.test.ts` exception for `/models/:slug/backtests/:backtestId` removed and its
+FR-24 comment corrected. New functions in `frontend/src/api/jobs.ts`; no backend change.
+**Order:** after S4 (order only, `PL-1371` §3.3); a conditional cut under `PL-1371` §8 C2,
+brought to the maintainer when its trigger fires.
+
+**Gate:** the leaf plan's Activation needs, in a separate activation PR, including the
+maintainer's agreement and the lead's go.
+
+*(Filed 2026-10-05 under working ids 9577 (this row) and 9576 (the plan), reserved by the lead.)*
+
+#### SL 9575 (working id) — Slice 14: Job detail — parameters, stages, logs with trace_id, result link, cancel (`FD-1284`, option D)
+
+```yaml
+id: SL-9575
+family: slice
+title: Slice 14: Job detail — parameters, stages, logs with trace_id, result link, cancel (FD-1284, option D)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 9489405370a1ce06c2b985ad88c7d471438febb1
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [PL-1286, PL-1371, FD-1284, RL-1263]
+```
+
+`PL-1286` S14 (`:317`), cut as a draft row for its leaf plan, PL 9574 (working id; the plan's
+own PR). `07` §5.3's `/jobs/:id` view (`07:391`): parameters, progress stages, logs with
+`trace_id` (FR-402's UI limb, `GET /jobs/{id}/logs`), the result link, the cancel action
+(FR-401, `POST /jobs/{id}/cancel`) and error detail; the logs render nothing FR-402 excludes.
+**Order:** after S13, whose view it extends; a conditional cut with S13 under `PL-1371` §8 C2.
+
+**Gate:** the leaf plan's Activation needs, in a separate activation PR, including the
+maintainer's agreement and the lead's go.
+
+*(Filed 2026-10-05 under working ids 9575 (this row) and 9574 (the plan), reserved by the lead.)*
+
 
 ### WK-690 — **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with**
 
