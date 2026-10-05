@@ -419,8 +419,20 @@ quoted above. Each is red first.*
     - **Red first (the type):** `test_a_money_minor_model_call_feeding_a_non_money_output_is_refused`:
       a `model_call` declared `money_minor` whose produced name feeds an `output` declared
       `relativity` is refused with `RATING_TYPE_MISMATCH`, by `validate_algorithm`
-      (`compile.py:366`) and by the bundle-time check. The control: declared `decimal`, the
-      same graph saves. At the base the step cannot declare the field (`extra="forbid"`), and
+      (`compile.py:366`) and by the bundle-time check. The control: a `model_call` declared
+      `decimal` feeding an `output` declared **`decimal`** saves. *(Dated note, 2026-10-05,
+      written 17:56:21 BST, pre-mint: the control was "declared `decimal`, the same graph saves",
+      that is, a `decimal` `model_call` into a `relativity` output. OQ 9556's decision
+      (17:42:06 BST, B3) refuses `decimal` → `relativity`, so that control would fail under
+      PL 9521, the FD 9549 fix. The maintainer (by delegation) adopted this pre-mint change in
+      the entry headed *"2026-10-05 17:49:25 BST — PL 9521 #1202 @15698eae: A-2's control
+      changed PRE-MINT (yes); the /score vs batch coercion: (c) conditional, PLUS one check that
+      decides whether it is a SEPARATE finding"*, item 1, verbatim:*
+
+      > 1. A-2's control: the PRE-MINT CHANGE is ADOPTED and supersedes the second-merger flip in my 17:47:06 item 4 for this control. #1178 item 15's control becomes a decimal model_call into a DECIMAL output (legal under B3), which still proves the rule is model_call-scoped. PL 9521 drops its flip line for this control and names the change instead. The same planner does both pre-mint.
+
+      *The control still shows that the refusal comes from the `money_minor` declaration and not
+      from the `model_call` itself: a `decimal` `model_call` into a legal output saves.)* At the base the step cannot declare the field (`extra="forbid"`), and
       a `money_minor` producer feeding `relativity` passes anyway, because `_compatible`
       treats every `_NUMERIC` type as interchangeable (`compile.py:57`, `:124`). The change:
       `producer_types` (`:95`) types a `model_call`'s produced names by its `result_type`,
