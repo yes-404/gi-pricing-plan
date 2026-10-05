@@ -22,7 +22,7 @@ from uuid import UUID
 import polars as pl
 
 from app.data.ingestion import PARQUET_MEDIA_TYPE, ingest_upload
-from app.db.models import BlobRow, DatasetVersionRow
+from app.db.models import BlobRow, DatasetRow, DatasetVersionRow
 from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.platform import datasets as dataset_service
@@ -244,11 +244,14 @@ def _validate(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
                     entries=(RuleSetEntry(rule=rule_service.to_schema(rule)),),
                 )
             else:
-                rule_set = await rule_service.rule_set_for(
+                # The dataset's own slug, not its id: the refusal text tells the user
+                # to `PUT /datasets/<slug>/rule-set`, and a route takes the slug.
+                dataset = await session.get(DatasetRow, version.dataset_id)
+                rule_set = await rule_service.rule_set_to_run(
                     session,
                     workspace_id=workspace_id,
                     dataset_id=version.dataset_id,
-                    slug=str(version.dataset_id),
+                    slug=dataset.slug if dataset is not None else str(version.dataset_id),
                 )
 
             reference_profile = None

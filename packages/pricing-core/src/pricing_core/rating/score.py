@@ -433,6 +433,28 @@ def _check_billing_surface(ctx: QuoteContext) -> None:
         )
 
 
+def _check_no_shadowed_produced_names(
+    algorithm: RatingAlgorithm, inputs: Mapping[str, Any]
+) -> None:
+    """FR-213 (FD-1425): an undeclared quote input never names a value a step produces. The
+    declared inputs are subtracted first, so a declared input that a clamp re-produces in
+    place is a legitimate key (the maintainer's (by delegation) 17:22:47 DP-2)."""
+    declared = {field.name for field in algorithm.input_contract}
+    produced = {
+        str(name)
+        for step in algorithm.steps
+        if step.type not in ("input", "output")
+        for name in _as_list(step.produces)
+    }
+    shadowing = sorted((produced - declared) & inputs.keys())
+    if shadowing:
+        _raise_named(
+            "INPUT_CONTRACT_VIOLATION",
+            f"inputs {shadowing} name values the algorithm produces (FR-213); a quote input "
+            "never stands in for a produced value",
+        )
+
+
 # ---------------------------------------------------------------------------
 # FR-255 categories 2/3/5, and RL-875's decline representation.
 # ---------------------------------------------------------------------------
@@ -897,6 +919,7 @@ async def score_one(
     _validate_inputs(algorithm, ctx.inputs)
     _check_purpose_mount(algorithm, ctx)
     _check_billing_surface(ctx)
+    _check_no_shadowed_produced_names(algorithm, ctx.inputs)
 
     rating_version_ref = ctx.options.rating_version_ref if ctx.options is not None else None
     if rating_version_ref is None:
@@ -1062,6 +1085,7 @@ def _score_context_sync(
     _validate_inputs(algorithm, ctx.inputs)
     _check_purpose_mount(algorithm, ctx)
     _check_billing_surface(ctx)
+    _check_no_shadowed_produced_names(algorithm, ctx.inputs)
 
     context = {
         "effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **ctx.inputs

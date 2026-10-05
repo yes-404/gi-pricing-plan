@@ -62,6 +62,8 @@ _CASES: dict[str, tuple[dict[str, Any], tuple[str, ...], tuple[str, ...]]] = {
 _INPUT_FREE = {
     ("rating/score.py", "_check_purpose_mount"): 1,  # `purpose` is a closed set of literals
     ("rating/score.py", "_check_billing_surface"): 1,  # names the constant billing-surface keys
+    # FR-213's refusal: names the declared step outputs the inputs collide with, never a value
+    ("rating/score.py", "_check_no_shadowed_produced_names"): 1,
     ("rating/score.py", "_check_lookup_misses"): 2,  # step ids only
     ("rating/score.py", "_reraise_engine_failure"): 1,  # engine error is reduced to its type name
     # RL-1346's refusal: clause, rung names and minor-unit differences from `ladder_violations`
