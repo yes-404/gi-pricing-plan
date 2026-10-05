@@ -45,6 +45,13 @@ relates: [FR-240, FR-230, FR-88, FR-359, FR-20, OQ-609, RL-1263, RL-1329, RL-136
 - **Updated for Ruled 9, 2026-10-05.** Input: the decision entry quoted in Ruled 9, and the
   draft `~/gi-pricing-plan.local/handover/OQ-draft-control-in-scoring-2026-10-05.md` it decides.
   `origin/main` was `809a3794`; Ruled 1 to 8, the texts and the locators are unchanged.
+- **Pre-mint correction, 2026-10-05.** "What it obliges", the rateable-path item, said the
+  plan's Acceptance did not list a `rateable: false` case and the dispatch record would add
+  it. That was stale: PL 9649 Acceptance 5 at `2b5bf12d` (#1152) already has it as a red-first
+  parametrised case. The item now says so. The maintainer (by delegation) set this fix in the
+  entry "2026-10-05 15:15:11 BST — F2 (RL-1263's "from different Works"): OPTION (i), amend
+  RL-1263 by a dated RL, with conditions; F1, F3 and the stale RL 9633 sentence as you set
+  them". No ruling changes.
 - **Brief:** the lead's spawn message to this decision-maker, 2026-10-05.
 
 ## Locators — read at `83ea5090`
@@ -338,8 +345,9 @@ at the slice's base for its stated cause. In particular:
 - **The rateable path (DP-3, DP-4):** a pinned rate table with a key bound to a
   `control`-intent Factor is refused at compile with `CONTROL_FACTOR_IN_RATEABLE_PATH`,
   naming the table, the key and the Factor, red first (Acceptance 5, 7). DP-4's "whatever its
-  `rateable`" needs the case of a table with `rateable: false`, which the plan's Acceptance
-  does not yet list and the dispatch record adds.
+  `rateable`" needs the case of a table with `rateable: false`: PL 9649 Acceptance 5
+  (@`2b5bf12d`) parametrises the test over `rateable` `[True]` and `[False]`, with `[False]`
+  red first by the same cause.
 - **The model_call case (Ruled 8):** a bundle whose `model_call` step pins a GBM model with a
   `control`-intent Factor in its `feature_order` is refused at compile with
   `CONTROL_FACTOR_IN_RATEABLE_PATH`, naming the model, the feature and the Factor, red first
