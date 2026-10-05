@@ -12,7 +12,7 @@ relates: [WK-1178, SL-1409, PL-1408, RL-1407, FD-1356]
 
 # FD-9717 — the demo's `last-seed.json` names a workspace that `gipricing` does not hold
 
-**Filed** by auditor-fd9717 on the lead's order of 2026-10-05, severity set by the deputy (2026-10-05 11:57:33 BST,
+**Filed** by auditor-fd9717 on the lead's order of 2026-10-05, severity set by the maintainer (by delegation) (2026-10-05 11:57:33 BST,
 `to-lead.md`). Working id 9717 (reserved in the lead's `eta.md`). `tree:` is `origin/main` at filing.
 Times below are UTC (BST is UTC+1). **Every query was read-only** (`docker exec gi-pricing-postgres-1 psql -U gipricing
 -d gipricing -Atc '<select>'`); nothing was written to any database. SL-1409 Task 7b was migrating and seeding
@@ -20,7 +20,7 @@ Times below are UTC (BST is UTC+1). **Every query was read-only** (`docker exec 
 
 ## Finding
 
-**Severity MEDIUM** (the deputy's). **Owner of the remedy: WK-1178.** It does not block SL-1409.
+**Severity MEDIUM** (the maintainer's (by delegation)). **Owner of the remedy: WK-1178.** It does not block SL-1409.
 
 The exit demo reads its login membership from `examples/fremtpl2/data/last-seed.json` (`scripts/demo.py:47`,
 `read_seed_record`). That record names a workspace that is not in the database `scripts/demo.py` serves from, and
@@ -104,7 +104,7 @@ absent" from "workspace present, no rule set", and its text blames an unfinished
 its refusal, a `--skip-seed` re-run fails identically, since the remedy is to run without `--skip-seed`, which the text
 does not say. The existence check is therefore covered on the branch only incidentally and is not on `main`.
 
-### 4. `ensure_member`'s idempotence claim does not hold for a seed re-run (scope added by the deputy, decision of 2026-10-05 12:00:44 BST)
+### 4. `ensure_member`'s idempotence claim does not hold for a seed re-run (scope added by the maintainer (by delegation), decision of 2026-10-05 12:00:44 BST)
 
 Read at `origin/main` `5ff49c6d425f537c7fed19d1212035f18e067b68`.
 
@@ -145,4 +145,4 @@ an absent workspace and show the refusal text on each.
 LG 9719) rewrote `last-seed.json`, and the demo record now names a present workspace,
 `01a10bbe-3a03-740c-8d4b-a6af38d2dd4b`. The finding stands as the record of the gap: on `main` no check verifies that the
 recorded workspace exists, and the pre-flight's refusal for an absent workspace still carries the misleading "the seed
-did not finish" message. Severity is unchanged (MEDIUM, the deputy's).
+did not finish" message. Severity is unchanged (MEDIUM, the maintainer's (by delegation)).
