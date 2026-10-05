@@ -240,11 +240,19 @@ no `JobRow`; a rating-only caller without `portfolio` gets 200 or 202), `test_a_
 (`assert 200 == 250`); a weight read as `"0"` on a `removed` cell fails the weight-states test (`assert Decimal('9') is
 None`).
 
-**How the artifact is found.** A Job's parameters carry `key`, `cells_key(...)`: both versions' content addresses (a parquet
-version's stored blob sha256, a rows version's `version_content_hash`), the definition hash, and with a portfolio its id and
-the workspace. The Job writes one NDJSON blob and returns its sha256 as `result.ref`; the route finds the newest succeeded
-`rate_table.diff_cells` `JobRow` of the workspace with that `key` whose blob still exists, else it submits again. There is
-no cache or table dependency, because `DiffCache` fails open and a table would be a migration.
+**How the artifact is found** (the lead accepted it as implementation). A Job's parameters carry `key`, `cells_key(...)`:
+`version_content_hash` of both versions' cells (the one `diff` keys its cache by, `RL-1361` item 5), the definition hash,
+and with a portfolio its id and the workspace. The Job writes one NDJSON blob and returns its sha256 as `result.ref`; the
+route finds the newest succeeded `rate_table.diff_cells` `JobRow` of the workspace with that `key` whose blob still exists,
+else it submits again. There is no cache or table dependency, because `DiffCache` fails open and a table would be a
+migration. **The lead's correction:** my first version keyed a parquet version by its stored blob sha256, which differs
+from `version_content_hash` of the same cells and so split a rows version from its parquet twin, against FR-232. Red,
+`test_a_rows_version_and_its_parquet_twin_find_the_same_cells_artifact` (a (rows, parquet) pair and a (parquet, parquet)
+pair of the same cells): `assert 202 == 200` (the second request submitted a second Job). Green after the key used
+`version_content_hash` for both storages (36 passed in the file). The diff cache's own key was already
+`version_content_hash(current_cells)` for both, so Task 3 needed no ruling. **A cost to know:** the cells route's parquet
+request now loads both versions' cells to hash them, on every page request, which is the work FR-232 moves into a Job for
+the diff itself; if that proves slow on a 250k-cell table it is a finding for the lead, not a measured NFR here.
 
 **Open:** `backend/tests/test_contracts.py::test_job_status_and_kind_enums_agree_with_the_contract` fails
 (`Extra items in the left set: 'rate_table.diff_cells'`): the hand-authored `docs/contracts/schemas/job.schema.json` lists

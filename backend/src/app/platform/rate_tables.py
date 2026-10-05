@@ -544,12 +544,16 @@ class DiffCellsJobNeeded:
     key: str
 
 
-async def _content_hash(session: Any, version_row: RateTableVersionRow, table: RateTable) -> str:
-    """A version's content address: a parquet version's stored blob, a rows version's cells
-    hashed. Versions are immutable, so either names the same cells for ever."""
-    if version_row.storage == "parquet":
-        return BlobRef.model_validate(version_row.cells).sha256
-    return version_content_hash(await _load_cells(session, version_row.id, table))
+async def _content_hash(
+    session: Any, blob_store: BlobStore, version_row: RateTableVersionRow, table: RateTable
+) -> str:
+    """A version's content hash, the one `diff` keys its cache by (`RL-1361` item 5).
+
+    `version_content_hash` over the cells, whichever storage keeps them, so a rows version and
+    its parquet twin hash identically (FR-232): the cells artifact and the diff share one
+    identity, and storage never changes which artifact answers a query.
+    """
+    return version_content_hash(await _load_cells_of(session, version_row, table, blob_store))
 
 
 async def _all_cells(
@@ -669,8 +673,8 @@ async def diff_cells_page(
         table = RateTable.model_validate(version_row.definition)
         if version_row.storage == "parquet" or baseline_row.storage == "parquet":
             key = cells_key(
-                await _content_hash(session, version_row, table),
-                await _content_hash(session, baseline_row, table),
+                await _content_hash(session, blob_store, version_row, table),
+                await _content_hash(session, blob_store, baseline_row, table),
                 definition_hash(table),
                 portfolio_dataset_version_id,
                 workspace_id,

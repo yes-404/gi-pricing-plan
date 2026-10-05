@@ -1162,3 +1162,50 @@ async def test_a_cells_job_for_an_archived_portfolio_fails(
     row = await _job_row(database, job_id)
     assert row.error is not None
     assert row.error["code"] == "DATASET_NOT_VALIDATED"
+
+
+@pytest.mark.req("FR-232")
+async def test_a_rows_version_and_its_parquet_twin_find_the_same_cells_artifact(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    """FR-232: storage never changes what a diff contains, so the cells artifact is keyed by
+    the cells (`version_content_hash`), not by how a version happens to be stored. Two tables
+    with the same cells and definition, one pair (rows, parquet) and one (parquet, parquet),
+    share one stored artifact: the second request is a 200, not a second Job."""
+    await grant("analyst")
+    analyst = _headers(principal.id, workspace_id)
+
+    async def table(v1_parquet: bool) -> str:
+        await _set_threshold(database, workspace_id, 1 if v1_parquet else 250_000)
+        family = f"mf-{uuid4().hex[:8]}"
+        await _seed_approved_model(
+            database, workspace_id, family, {"driver_age_band": _AGE_LEVELS}
+        )
+        slug = f"tbl-{uuid4().hex[:8]}"
+        await svc.seed_from_model(
+            database, workspace_id, principal.id, Settings(), blob_store, slug=slug,
+            model_ref=ArtifactRef(type="model", slug=family, version=1),
+            factor="driver_age_band", change_note="seed",
+        )
+        await _set_threshold(database, workspace_id, 1)
+        await svc.import_confirmed(
+            database, workspace_id, principal.id, Settings(), blob_store, slug=slug,
+            version=1, filename="v2.csv",
+            content=b"driver_age_band,relativity\n17-20,2.1120\n21-24,1.2690\n25-29,1.1200\n",
+        )
+        await _set_threshold(database, workspace_id, 250_000)
+        return slug
+
+    mixed = await table(v1_parquet=False)
+    both = await table(v1_parquet=True)
+    params = {"against": "previous"}
+
+    first = api_client.get(_cells_url(mixed), params=params, headers=analyst)
+    assert first.status_code == 202, first.text
+    assert await execute_job(database, UUID(first.json()["id"]), blob_store) is JobStatus.SUCCEEDED
+    before = await _job_count(database)
+    twin = api_client.get(_cells_url(both), params=params, headers=analyst)
+    assert twin.status_code == 200, twin.text
+    assert await _job_count(database) == before
+    assert twin.json() == api_client.get(_cells_url(mixed), params=params, headers=analyst).json()
