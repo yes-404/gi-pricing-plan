@@ -11,6 +11,12 @@ dependencies = [
     # `hypothesis.statistics.collector`, which is internal API; the forced-limit test keeps
     # it honest. A runtime dependency: `run_regression` lives in this package (03 §8).
     "hypothesis==6.165.7",
+    # RL-1289 (OQ-1266): SymPy derives the `expression` objective's gradient and hessian
+    # (02 FR-144), and the certificate records its version from `sympy.__version__`.
+    # Pinned exactly, because an upgrade can change the canonical derived text a reviewer
+    # approved (02 §4.6). Its one runtime dependency is mpmath. No web, database or queue
+    # client, so the import-linter contract holds (ADR-703).
+    "sympy==1.14.0",
     # ADR-707: Polars for dataframes. No web, database or queue client — the
     # import-linter contract enforces that, and `01` §5.2 requires these functions to be
     # callable without the platform.

@@ -1889,14 +1889,14 @@ def _expression(
     can write a rule without learning a second language, and neither can reach the
     interpreter.
     """
-    from pricing_core.data.expressions import compile_expression
+    from pricing_core.data.expressions import GrammarProfile, compile_expression
 
     frame = _table(tables, rule)
     expression = rule.params.get("expr") or rule.params.get("expression")
     if not expression:
         return CheckOutcome(skipped=True, skip_reason="no expression declared")
 
-    predicate = compile_expression(str(expression))
+    predicate = compile_expression(str(expression), profile=GrammarProfile.CHECK)
     expect = bool(rule.params.get("expect", True))
     offending = frame.filter(predicate.not_() if expect else predicate)
     return CheckOutcome(

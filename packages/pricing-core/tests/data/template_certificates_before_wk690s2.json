@@ -1,0 +1,650 @@
+{
+ "asymmetric_poisson": {
+  "checks": [
+   {
+    "detail": "max relative error 8.98e-10 over 1,000 sampled (y,f,w) points, 0 of 1,000 excluded within h of the asymmetry, exp(f) = y; h=0.0001, Richardson-extrapolated, tolerance floored at the finite-difference noise of each point (FR-147/149)",
+    "name": "analytic_vs_numeric_gradient",
+    "status": "pass"
+   },
+   {
+    "detail": "max relative error 3.91e-12 against the numeric derivative of the analytic gradient over the same 1,000 points; h=0.0001, Richardson-extrapolated (FR-149)",
+    "name": "analytic_vs_numeric_hessian",
+    "status": "pass"
+   },
+   {
+    "detail": "no NaN/inf for y ∈ [0, 5], f ∈ [-2, 2], w ∈ [0.1, 3]",
+    "name": "finiteness",
+    "status": "pass"
+   },
+   {
+    "detail": "hessian ≥ 0 at every one of 1,000 sampled points",
+    "name": "convexity",
+    "status": "pass"
+   },
+   {
+    "detail": "gradient and hessian are discontinuous at the asymmetry, exp(f) = y; 0 of 1,000 sampled points fell within h of it and were excluded from the derivative comparison (FR-147/148). A discontinuous hessian affects boosting stability",
+    "name": "branch_discontinuity",
+    "status": "warn"
+   },
+   {
+    "detail": "every stationary point of the analytic gradient is a genuine minimum of the loss, over 21 of 32 sampled y; max |f* - log y| = 2.22e-16; 11 of 32 sampled y had no interior minimum. A non-zero deviation is expected wherever the template deliberately targets something other than the mean (quantile, the asymmetric pair, capped_gamma above its cap); a y with no interior minimum is a property of the sampled f range, not of the objective",
+    "name": "minimum_at_truth",
+    "status": "pass"
+   },
+   {
+    "detail": "loss increases with |f - f*| in both directions at steps of 0.05, 0.2, 0.5, 1, 2",
+    "name": "monotone_loss",
+    "status": "pass"
+   },
+   {
+    "detail": "gradient magnitude spans 3.8 orders over the sampled domain (0.00817 to 50.2)",
+    "name": "scale_behaviour",
+    "status": "pass"
+   },
+   {
+    "detail": "recovered a relativity of 1.515 against a true 1.5 (1.0%) on Poisson counts, log-exposure offset, n=20,000; 80 rounds, <t>s",
+    "name": "smoke_fit",
+    "status": "pass"
+   }
+  ],
+  "library_versions_keys": [
+   "numpy",
+   "xgboost"
+  ],
+  "overall": "certified_with_findings"
+ },
+ "asymmetric_squared": {
+  "checks": [
+   {
+    "detail": "max relative error 3.58e-12 over 1,000 sampled (y,f,w) points, 0 of 1,000 excluded within h of the asymmetry, exp(f) = y; h=0.0001, Richardson-extrapolated, tolerance floored at the finite-difference noise of each point (FR-147/149)",
+    "name": "analytic_vs_numeric_gradient",
+    "status": "pass"
+   },
+   {
+    "detail": "max relative error 3.37e-12 against the numeric derivative of the analytic gradient over the same 1,000 points; h=0.0001, Richardson-extrapolated (FR-149)",
+    "name": "analytic_vs_numeric_hessian",
+    "status": "pass"
+   },
+   {
+    "detail": "no NaN/inf for y ∈ [1, 1e+06], f ∈ [8, 14], w ∈ [0.1, 3]",
+    "name": "finiteness",
+    "status": "pass"
+   },
+   {
+    "detail": "hessian < 0 at 55.0% of this sampling grid. The share is strongly dependent on y_range/f_range and is only meaningful alongside the sampling block. Mitigated by hessian_strategy=gauss_newton, hessian_min=1e-06; FR-152 requires an additional Approver",
+    "name": "convexity",
+    "status": "violated"
+   },
+   {
+    "detail": "gradient and hessian are discontinuous at the asymmetry, exp(f) = y; 0 of 1,000 sampled points fell within h of it and were excluded from the derivative comparison (FR-147/148). A discontinuous hessian affects boosting stability",
+    "name": "branch_discontinuity",
+    "status": "warn"
+   },
+   {
+    "detail": "every stationary point of the analytic gradient is a genuine minimum of the loss, over 24 of 32 sampled y; max |f* - log y| = 1.78e-15; 8 of 32 sampled y had no interior minimum. A non-zero deviation is expected wherever the template deliberately targets something other than the mean (quantile, the asymmetric pair, capped_gamma above its cap); a y with no interior minimum is a property of the sampled f range, not of the objective",
+    "name": "minimum_at_truth",
+    "status": "pass"
+   },
+   {
+    "detail": "loss increases with |f - f*| in both directions at steps of 0.05, 0.2, 0.5, 1, 2",
+    "name": "monotone_loss",
+    "status": "pass"
+   },
+   {
+    "detail": "gradient magnitude spans 6.6 orders over the sampled domain (1.42e+06 to 5.66e+12) — a range this wide makes a single learning rate a compromise across the book; consider a log-scale variant or a narrower y_domain",
+    "name": "scale_behaviour",
+    "status": "warn"
+   },
+   {
+    "detail": "recovered a relativity of 1.499 against a true 1.5 (0.1%) on gamma severity, mean 1500 x relativity, n=20,000; 80 rounds, <t>s",
+    "name": "smoke_fit",
+    "status": "pass"
+   }
+  ],
+  "library_versions_keys": [
+   "numpy",
+   "xgboost"
+  ],
+  "overall": "certified_with_findings"
+ },
+ "capped_gamma": {
+  "checks": [
+   {
+    "detail": "max relative error 0 over 1,000 sampled (y,f,w) points, 0 of 1,000 excluded within h of the cap, y = cap — a branch in y, not in f; h=0.0001, Richardson-extrapolated, tolerance floored at the finite-difference noise of each point (FR-147/149)",
+    "name": "analytic_vs_numeric_gradient",
+    "status": "pass"
+   },
+   {
+    "detail": "max relative error 4.83e-12 against the numeric derivative of the analytic gradient over the same 1,000 points; h=0.0001, Richardson-extrapolated (FR-149)",
+    "name": "analytic_vs_numeric_hessian",
+    "status": "pass"
+   },
+   {
+    "detail": "no NaN/inf for y ∈ [1, 1e+06], f ∈ [8, 14], w ∈ [0.1, 3]",
+    "name": "finiteness",
+    "status": "pass"
+   },
+   {
+    "detail": "hessian ≥ 0 at every one of 1,000 sampled points",
+    "name": "convexity",
+    "status": "pass"
+   },
+   {
+    "detail": "the loss changes form at the cap, y = cap — a branch in y, not in f; 29.3% of the sampled y lie above it. A central difference in f never straddles this branch, so no point was excluded (FR-147), but the two sides have different curvature and an approver must see that (FR-148)",
+    "name": "branch_discontinuity",
+    "status": "warn"
+   },
+   {
+    "detail": "every stationary point of the analytic gradient is a genuine minimum of the loss, over 25 of 32 sampled y; max |f* - log y| = 0.676; 7 of 32 sampled y had no interior minimum. A non-zero deviation is expected wherever the template deliberately targets something other than the mean (quantile, the asymmetric pair, capped_gamma above its cap); a y with no interior minimum is a property of the sampled f range, not of the objective",
+    "name": "minimum_at_truth",
+    "status": "pass"
+   },
+   {
+    "detail": "loss increases with |f - f*| in both directions at steps of 0.05, 0.2, 0.5, 1, 2",
+    "name": "monotone_loss",
+    "status": "pass"
+   },
+   {
+    "detail": "gradient magnitude spans 5.3 orders over the sampled domain (0.00148 to 290)",
+    "name": "scale_behaviour",
+    "status": "pass"
+   },
+   {
+    "detail": "recovered a relativity of 1.504 against a true 1.5 (0.3%) on gamma severity, mean 1500 x relativity, n=20,000; 80 rounds, <t>s",
+    "name": "smoke_fit",
+    "status": "pass"
+   }
+  ],
+  "library_versions_keys": [
+   "numpy",
+   "xgboost"
+  ],
+  "overall": "certified_with_findings"
+ },
+ "focal_binomial": {
+  "checks": [
+   {
+    "detail": "max relative error 8.52e-11 over 1,000 sampled (y,f,w) points, no branch boundary to exclude near; h=0.0001, Richardson-extrapolated, tolerance floored at the finite-difference noise of each point (FR-147/149)",
+    "name": "analytic_vs_numeric_gradient",
+    "status": "pass"
+   },
+   {
+    "detail": "max relative error 6.06e-11 against the numeric derivative of the analytic gradient over the same 1,000 points; h=0.0001, Richardson-extrapolated (FR-149)",
+    "name": "analytic_vs_numeric_hessian",
+    "status": "pass"
+   },
+   {
+    "detail": "no NaN/inf for y ∈ [0, 1], f ∈ [-4, 4], w ∈ [0.1, 3]",
+    "name": "finiteness",
+    "status": "pass"
+   },
+   {
+    "detail": "hessian < 0 at 24.3% of this sampling grid. The share is strongly dependent on y_range/f_range and is only meaningful alongside the sampling block. Mitigated by hessian_strategy=clip_to_min, hessian_min=1e-06; FR-152 requires an additional Approver",
+    "name": "convexity",
+    "status": "violated"
+   },
+   {
+    "detail": "the loss is a single smooth expression; gradient and hessian are continuous over the whole sampled domain",
+    "name": "branch_discontinuity",
+    "status": "pass"
+   },
+   {
+    "detail": "every stationary point of the analytic gradient is a genuine minimum of the loss, over 26 of 32 sampled y; max |f* - log y| = 6.84; 6 of 32 sampled y had no interior minimum. A non-zero deviation is expected wherever the template deliberately targets something other than the mean (quantile, the asymmetric pair, capped_gamma above its cap); a y with no interior minimum is a property of the sampled f range, not of the objective",
+    "name": "minimum_at_truth",
+    "status": "pass"
+   },
+   {
+    "detail": "loss increases with |f - f*| in both directions at steps of 0.05, 0.2, 0.5, 1, 2",
+    "name": "monotone_loss",
+    "status": "pass"
+   },
+   {
+    "detail": "gradient magnitude spans 6.3 orders over the sampled domain (1.74e-06 to 3.34) — a range this wide makes a single learning rate a compromise across the book; consider a log-scale variant or a narrower y_domain",
+    "name": "scale_behaviour",
+    "status": "warn"
+   },
+   {
+    "detail": "recovered a relativity of 1.206 against a true 1.5 (19.6%) on Bernoulli outcomes, 8% base rate, n=20,000; 80 rounds, <t>s",
+    "name": "smoke_fit",
+    "status": "pass"
+   }
+  ],
+  "library_versions_keys": [
+   "numpy",
+   "xgboost"
+  ],
+  "overall": "certified_with_findings"
+ },
+ "gamma": {
+  "checks": [
+   {
+    "detail": "max relative error 0 over 1,000 sampled (y,f,w) points, no branch boundary to exclude near; h=0.0001, Richardson-extrapolated, tolerance floored at the finite-difference noise of each point (FR-147/149)",
+    "name": "analytic_vs_numeric_gradient",
+    "status": "pass"
+   },
+   {
+    "detail": "max relative error 3.55e-12 against the numeric derivative of the analytic gradient over the same 1,000 points; h=0.0001, Richardson-extrapolated (FR-149)",
+    "name": "analytic_vs_numeric_hessian",
+    "status": "pass"
+   },
+   {
+    "detail": "no NaN/inf for y ∈ [1, 1e+06], f ∈ [8, 14], w ∈ [0.1, 3]",
+    "name": "finiteness",
+    "status": "pass"
+   },
+   {
+    "detail": "hessian ≥ 0 at every one of 1,000 sampled points",
+    "name": "convexity",
+    "status": "pass"
+   },
+   {
+    "detail": "the loss is a single smooth expression; gradient and hessian are continuous over the whole sampled domain",
+    "name": "branch_discontinuity",
+    "status": "pass"
+   },
+   {
+    "detail": "every stationary point of the analytic gradient is a genuine minimum of the loss, over 24 of 32 sampled y; max |f* - log y| = 1.78e-15; 8 of 32 sampled y had no interior minimum. A non-zero deviation is expected wherever the template deliberately targets something other than the mean (quantile, the asymmetric pair, capped_gamma above its cap); a y with no interior minimum is a property of the sampled f range, not of the objective",
+    "name": "minimum_at_truth",
+    "status": "pass"
+   },
+   {
+    "detail": "loss increases with |f - f*| in both directions at steps of 0.05, 0.2, 0.5, 1, 2",
+    "name": "monotone_loss",
+    "status": "pass"
+   },
+   {
+    "detail": "gradient magnitude spans 5.4 orders over the sampled domain (0.00198 to 495)",
+    "name": "scale_behaviour",
+    "status": "pass"
+   },
+   {
+    "detail": "recovered a relativity of 1.504 against a true 1.5 (0.3%) on gamma severity, mean 1500 x relativity, n=20,000; 80 rounds, <t>s",
+    "name": "smoke_fit",
+    "status": "pass"
+   }
+  ],
+  "library_versions_keys": [
+   "numpy",
+   "xgboost"
+  ],
+  "overall": "certified"
+ },
+ "huber": {
+  "checks": [
+   {
+    "detail": "max relative error 3.58e-12 over 1,000 sampled (y,f,w) points, 0 of 1,000 excluded within h of the quadratic/linear switch, |y - exp(f)| = delta; h=0.0001, Richardson-extrapolated, tolerance floored at the finite-difference noise of each point (FR-147/149)",
+    "name": "analytic_vs_numeric_gradient",
+    "status": "pass"
+   },
+   {
+    "detail": "max relative error 3.37e-12 against the numeric derivative of the analytic gradient over the same 1,000 points; h=0.0001, Richardson-extrapolated (FR-149)",
+    "name": "analytic_vs_numeric_hessian",
+    "status": "pass"
+   },
+   {
+    "detail": "no NaN/inf for y ∈ [1, 1e+06], f ∈ [8, 14], w ∈ [0.1, 3]",
+    "name": "finiteness",
+    "status": "pass"
+   },
+   {
+    "detail": "hessian < 0 at 58.1% of this sampling grid. The share is strongly dependent on y_range/f_range and is only meaningful alongside the sampling block. Mitigated by hessian_strategy=clip_to_min, hessian_min=1e-06; FR-152 requires an additional Approver",
+    "name": "convexity",
+    "status": "violated"
+   },
+   {
+    "detail": "gradient and hessian are discontinuous at the quadratic/linear switch, |y - exp(f)| = delta; 0 of 1,000 sampled points fell within h of it and were excluded from the derivative comparison (FR-147/148). A discontinuous hessian affects boosting stability",
+    "name": "branch_discontinuity",
+    "status": "warn"
+   },
+   {
+    "detail": "every stationary point of the analytic gradient is a genuine minimum of the loss, over 24 of 32 sampled y; max |f* - log y| = 1.78e-15; 8 of 32 sampled y had no interior minimum. A non-zero deviation is expected wherever the template deliberately targets something other than the mean (quantile, the asymmetric pair, capped_gamma above its cap); a y with no interior minimum is a property of the sampled f range, not of the objective",
+    "name": "minimum_at_truth",
+    "status": "pass"
+   },
+   {
+    "detail": "loss increases with |f - f*| in both directions at steps of 0.05, 0.2, 0.5, 1, 2",
+    "name": "monotone_loss",
+    "status": "pass"
+   },
+   {
+    "detail": "gradient magnitude spans 6.0 orders over the sampled domain (3.56e+05 to 3.61e+11) — a range this wide makes a single learning rate a compromise across the book; consider a log-scale variant or a narrower y_domain",
+    "name": "scale_behaviour",
+    "status": "warn"
+   },
+   {
+    "detail": "recovered a relativity of 1.504 against a true 1.5 (0.3%) on gamma severity, mean 1500 x relativity, n=20,000; 80 rounds, <t>s",
+    "name": "smoke_fit",
+    "status": "pass"
+   }
+  ],
+  "library_versions_keys": [
+   "numpy",
+   "xgboost"
+  ],
+  "overall": "certified_with_findings"
+ },
+ "poisson": {
+  "checks": [
+   {
+    "detail": "max relative error 4.68e-10 over 1,000 sampled (y,f,w) points, no branch boundary to exclude near; h=0.0001, Richardson-extrapolated, tolerance floored at the finite-difference noise of each point (FR-147/149)",
+    "name": "analytic_vs_numeric_gradient",
+    "status": "pass"
+   },
+   {
+    "detail": "max relative error 3.91e-12 against the numeric derivative of the analytic gradient over the same 1,000 points; h=0.0001, Richardson-extrapolated (FR-149)",
+    "name": "analytic_vs_numeric_hessian",
+    "status": "pass"
+   },
+   {
+    "detail": "no NaN/inf for y ∈ [0, 5], f ∈ [-2, 2], w ∈ [0.1, 3]",
+    "name": "finiteness",
+    "status": "pass"
+   },
+   {
+    "detail": "hessian ≥ 0 at every one of 1,000 sampled points",
+    "name": "convexity",
+    "status": "pass"
+   },
+   {
+    "detail": "the loss is a single smooth expression; gradient and hessian are continuous over the whole sampled domain",
+    "name": "branch_discontinuity",
+    "status": "pass"
+   },
+   {
+    "detail": "every stationary point of the analytic gradient is a genuine minimum of the loss, over 21 of 32 sampled y; max |f* - log y| = 2.22e-16; 11 of 32 sampled y had no interior minimum. A non-zero deviation is expected wherever the template deliberately targets something other than the mean (quantile, the asymmetric pair, capped_gamma above its cap); a y with no interior minimum is a property of the sampled f range, not of the objective",
+    "name": "minimum_at_truth",
+    "status": "pass"
+   },
+   {
+    "detail": "loss increases with |f - f*| in both directions at steps of 0.05, 0.2, 0.5, 1, 2",
+    "name": "monotone_loss",
+    "status": "pass"
+   },
+   {
+    "detail": "gradient magnitude spans 3.7 orders over the sampled domain (0.0038 to 18.6)",
+    "name": "scale_behaviour",
+    "status": "pass"
+   },
+   {
+    "detail": "recovered a relativity of 1.578 against a true 1.5 (5.2%) on Poisson counts, log-exposure offset, n=20,000; 80 rounds, <t>s",
+    "name": "smoke_fit",
+    "status": "pass"
+   }
+  ],
+  "library_versions_keys": [
+   "numpy",
+   "xgboost"
+  ],
+  "overall": "certified"
+ },
+ "pseudo_huber": {
+  "checks": [
+   {
+    "detail": "max relative error 9.89e-09 over 1,000 sampled (y,f,w) points, no branch boundary to exclude near; h=0.0001, Richardson-extrapolated, tolerance floored at the finite-difference noise of each point (FR-147/149)",
+    "name": "analytic_vs_numeric_gradient",
+    "status": "pass"
+   },
+   {
+    "detail": "max relative error 3.37e-12 against the numeric derivative of the analytic gradient over the same 1,000 points; h=0.0001, Richardson-extrapolated (FR-149)",
+    "name": "analytic_vs_numeric_hessian",
+    "status": "pass"
+   },
+   {
+    "detail": "no NaN/inf for y ∈ [1, 1e+06], f ∈ [8, 14], w ∈ [0.1, 3]",
+    "name": "finiteness",
+    "status": "pass"
+   },
+   {
+    "detail": "hessian < 0 at 57.5% of this sampling grid. The share is strongly dependent on y_range/f_range and is only meaningful alongside the sampling block. Mitigated by hessian_strategy=clip_to_min, hessian_min=1e-06; FR-152 requires an additional Approver",
+    "name": "convexity",
+    "status": "violated"
+   },
+   {
+    "detail": "the loss is a single smooth expression; gradient and hessian are continuous over the whole sampled domain",
+    "name": "branch_discontinuity",
+    "status": "pass"
+   },
+   {
+    "detail": "every stationary point of the analytic gradient is a genuine minimum of the loss, over 24 of 32 sampled y; max |f* - log y| = 1.78e-15; 8 of 32 sampled y had no interior minimum. A non-zero deviation is expected wherever the template deliberately targets something other than the mean (quantile, the asymmetric pair, capped_gamma above its cap); a y with no interior minimum is a property of the sampled f range, not of the objective",
+    "name": "minimum_at_truth",
+    "status": "pass"
+   },
+   {
+    "detail": "loss increases with |f - f*| in both directions at steps of 0.05, 0.2, 0.5, 1, 2",
+    "name": "monotone_loss",
+    "status": "pass"
+   },
+   {
+    "detail": "gradient magnitude spans 6.0 orders over the sampled domain (3.56e+05 to 3.46e+11)",
+    "name": "scale_behaviour",
+    "status": "pass"
+   },
+   {
+    "detail": "recovered a relativity of 1.504 against a true 1.5 (0.3%) on gamma severity, mean 1500 x relativity, n=20,000; 80 rounds, <t>s",
+    "name": "smoke_fit",
+    "status": "pass"
+   }
+  ],
+  "library_versions_keys": [
+   "numpy",
+   "xgboost"
+  ],
+  "overall": "certified_with_findings"
+ },
+ "quantile": {
+  "checks": [
+   {
+    "detail": "max relative error 3.36e-12 over 1,000 sampled (y,f,w) points, 0 of 1,000 excluded within h of the pinball kink, exp(f) = y; h=0.0001, Richardson-extrapolated, tolerance floored at the finite-difference noise of each point (FR-147/149)",
+    "name": "analytic_vs_numeric_gradient",
+    "status": "pass"
+   },
+   {
+    "detail": "max relative error 0 against the numeric derivative of the analytic gradient over the same 1,000 points; h=0.0001, Richardson-extrapolated (FR-149)",
+    "name": "analytic_vs_numeric_hessian",
+    "status": "pass"
+   },
+   {
+    "detail": "no NaN/inf for y ∈ [1, 1e+06], f ∈ [8, 14], w ∈ [0.1, 3]",
+    "name": "finiteness",
+    "status": "pass"
+   },
+   {
+    "detail": "hessian < 0 at 63.6% of this sampling grid. The share is strongly dependent on y_range/f_range and is only meaningful alongside the sampling block. Mitigated by hessian_strategy=abs, hessian_min=1e-06; FR-152 requires an additional Approver",
+    "name": "convexity",
+    "status": "violated"
+   },
+   {
+    "detail": "gradient and hessian are discontinuous at the pinball kink, exp(f) = y; 0 of 1,000 sampled points fell within h of it and were excluded from the derivative comparison (FR-147/148). A discontinuous hessian affects boosting stability",
+    "name": "branch_discontinuity",
+    "status": "warn"
+   },
+   {
+    "detail": "every stationary point of the analytic gradient is a genuine minimum of the loss, over 24 of 32 sampled y; max |f* - log y| = 1.78e-15; 8 of 32 sampled y had no interior minimum. A non-zero deviation is expected wherever the template deliberately targets something other than the mean (quantile, the asymmetric pair, capped_gamma above its cap); a y with no interior minimum is a property of the sampled f range, not of the objective",
+    "name": "minimum_at_truth",
+    "status": "pass"
+   },
+   {
+    "detail": "loss increases with |f - f*| in both directions at steps of 0.05, 0.2, 0.5, 1, 2",
+    "name": "monotone_loss",
+    "status": "pass"
+   },
+   {
+    "detail": "gradient magnitude spans 4.1 orders over the sampled domain (89.4 to 1.1e+06)",
+    "name": "scale_behaviour",
+    "status": "pass"
+   },
+   {
+    "detail": "recovered a relativity of 1.508 against a true 1.5 (0.5%) on gamma severity, mean 1500 x relativity, n=20,000; 80 rounds, <t>s",
+    "name": "smoke_fit",
+    "status": "pass"
+   }
+  ],
+  "library_versions_keys": [
+   "numpy",
+   "xgboost"
+  ],
+  "overall": "certified_with_findings"
+ },
+ "spliced_severity": {
+  "checks": [
+   {
+    "detail": "max relative error 0 over 1,000 sampled (y,f,w) points, 0 of 1,000 excluded within h of the splice, y = threshold — a branch in y, not in f; h=0.0001, Richardson-extrapolated, tolerance floored at the finite-difference noise of each point (FR-147/149)",
+    "name": "analytic_vs_numeric_gradient",
+    "status": "pass"
+   },
+   {
+    "detail": "max relative error 3.55e-12 against the numeric derivative of the analytic gradient over the same 1,000 points; h=0.0001, Richardson-extrapolated (FR-149)",
+    "name": "analytic_vs_numeric_hessian",
+    "status": "pass"
+   },
+   {
+    "detail": "no NaN/inf for y ∈ [1, 1e+06], f ∈ [8, 14], w ∈ [0.1, 3]",
+    "name": "finiteness",
+    "status": "pass"
+   },
+   {
+    "detail": "hessian ≥ 0 at every one of 1,000 sampled points",
+    "name": "convexity",
+    "status": "pass"
+   },
+   {
+    "detail": "the loss changes form at the splice, y = threshold — a branch in y, not in f; 43.8% of the sampled y lie above it. A central difference in f never straddles this branch, so no point was excluded (FR-147), but the two sides have different curvature and an approver must see that (FR-148)",
+    "name": "branch_discontinuity",
+    "status": "warn"
+   },
+   {
+    "detail": "every stationary point of the analytic gradient is a genuine minimum of the loss, over 12 of 32 sampled y; max |f* - log y| = 1.78e-15; 20 of 32 sampled y had no interior minimum. A non-zero deviation is expected wherever the template deliberately targets something other than the mean (quantile, the asymmetric pair, capped_gamma above its cap); a y with no interior minimum is a property of the sampled f range, not of the objective",
+    "name": "minimum_at_truth",
+    "status": "pass"
+   },
+   {
+    "detail": "loss increases with |f - f*| in both directions at steps of 0.05, 0.2, 0.5, 1, 2",
+    "name": "monotone_loss",
+    "status": "pass"
+   },
+   {
+    "detail": "gradient magnitude spans 4.7 orders over the sampled domain (0.00308 to 163)",
+    "name": "scale_behaviour",
+    "status": "pass"
+   },
+   {
+    "detail": "recovered a relativity of 1.504 against a true 1.5 (0.3%) on gamma severity, mean 1500 x relativity, n=20,000; 80 rounds, <t>s",
+    "name": "smoke_fit",
+    "status": "pass"
+   }
+  ],
+  "library_versions_keys": [
+   "numpy",
+   "xgboost"
+  ],
+  "overall": "certified_with_findings"
+ },
+ "tweedie": {
+  "checks": [
+   {
+    "detail": "max relative error 0 over 1,000 sampled (y,f,w) points, no branch boundary to exclude near; h=0.0001, Richardson-extrapolated, tolerance floored at the finite-difference noise of each point (FR-147/149)",
+    "name": "analytic_vs_numeric_gradient",
+    "status": "pass"
+   },
+   {
+    "detail": "max relative error 3.21e-12 against the numeric derivative of the analytic gradient over the same 1,000 points; h=0.0001, Richardson-extrapolated (FR-149)",
+    "name": "analytic_vs_numeric_hessian",
+    "status": "pass"
+   },
+   {
+    "detail": "no NaN/inf for y ∈ [1, 1e+06], f ∈ [-2, 2], w ∈ [0.1, 3]",
+    "name": "finiteness",
+    "status": "pass"
+   },
+   {
+    "detail": "hessian ≥ 0 at every one of 1,000 sampled points",
+    "name": "convexity",
+    "status": "pass"
+   },
+   {
+    "detail": "the loss is a single smooth expression; gradient and hessian are continuous over the whole sampled domain",
+    "name": "branch_discontinuity",
+    "status": "pass"
+   },
+   {
+    "detail": "every stationary point of the analytic gradient is a genuine minimum of the loss, over 4 of 32 sampled y; max |f* - log y| = 1.8e-16; 28 of 32 sampled y had no interior minimum. A non-zero deviation is expected wherever the template deliberately targets something other than the mean (quantile, the asymmetric pair, capped_gamma above its cap); a y with no interior minimum is a property of the sampled f range, not of the objective",
+    "name": "minimum_at_truth",
+    "status": "pass"
+   },
+   {
+    "detail": "loss increases with |f - f*| in both directions at steps of 0.05, 0.2, 0.5, 1, 2",
+    "name": "monotone_loss",
+    "status": "pass"
+   },
+   {
+    "detail": "gradient magnitude spans 9.3 orders over the sampled domain (0.00291 to 5.64e+06) — a range this wide makes a single learning rate a compromise across the book; consider a log-scale variant or a narrower y_domain",
+    "name": "scale_behaviour",
+    "status": "warn"
+   },
+   {
+    "detail": "recovered a relativity of 1.58 against a true 1.5 (5.3%) on compound Poisson-gamma, log-exposure offset, n=20,000; 80 rounds, <t>s",
+    "name": "smoke_fit",
+    "status": "pass"
+   }
+  ],
+  "library_versions_keys": [
+   "numpy",
+   "xgboost"
+  ],
+  "overall": "certified_with_findings"
+ },
+ "zero_inflated_poisson": {
+  "checks": [
+   {
+    "detail": "max relative error 5.01e-11 over 1,000 sampled (y,f,w) points, 0 of 1,000 excluded within h of the zero-inflation branch, y = 0 — a branch in y, not in f; h=0.0001, Richardson-extrapolated, tolerance floored at the finite-difference noise of each point (FR-147/149)",
+    "name": "analytic_vs_numeric_gradient",
+    "status": "pass"
+   },
+   {
+    "detail": "max relative error 3.51e-12 against the numeric derivative of the analytic gradient over the same 1,000 points; h=0.0001, Richardson-extrapolated (FR-149)",
+    "name": "analytic_vs_numeric_hessian",
+    "status": "pass"
+   },
+   {
+    "detail": "no NaN/inf for y ∈ [0, 5], f ∈ [-2, 2], w ∈ [0.1, 3]",
+    "name": "finiteness",
+    "status": "pass"
+   },
+   {
+    "detail": "hessian < 0 at 3.7% of this sampling grid. The share is strongly dependent on y_range/f_range and is only meaningful alongside the sampling block. Mitigated by hessian_strategy=clip_to_min, hessian_min=1e-06; FR-152 requires an additional Approver",
+    "name": "convexity",
+    "status": "violated"
+   },
+   {
+    "detail": "the loss changes form at the zero-inflation branch, y = 0 — a branch in y, not in f; 89.9% of the sampled y lie above it. A central difference in f never straddles this branch, so no point was excluded (FR-147), but the two sides have different curvature and an approver must see that (FR-148)",
+    "name": "branch_discontinuity",
+    "status": "warn"
+   },
+   {
+    "detail": "every stationary point of the analytic gradient is a genuine minimum of the loss, over 18 of 32 sampled y; max |f* - log y| = 2.22e-16; 14 of 32 sampled y had no interior minimum. A non-zero deviation is expected wherever the template deliberately targets something other than the mean (quantile, the asymmetric pair, capped_gamma above its cap); a y with no interior minimum is a property of the sampled f range, not of the objective",
+    "name": "minimum_at_truth",
+    "status": "pass"
+   },
+   {
+    "detail": "loss increases with |f - f*| in both directions at steps of 0.05, 0.2, 0.5, 1, 2",
+    "name": "monotone_loss",
+    "status": "pass"
+   },
+   {
+    "detail": "gradient magnitude spans 3.8 orders over the sampled domain (0.00322 to 18.6)",
+    "name": "scale_behaviour",
+    "status": "pass"
+   },
+   {
+    "detail": "recovered a relativity of 1.579 against a true 1.5 (5.3%) on Poisson counts, log-exposure offset, n=20,000; 80 rounds, <t>s",
+    "name": "smoke_fit",
+    "status": "pass"
+   }
+  ],
+  "library_versions_keys": [
+   "numpy",
+   "xgboost"
+  ],
+  "overall": "certified_with_findings"
+ }
+}

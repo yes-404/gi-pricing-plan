@@ -5,7 +5,8 @@
   "description": "Premium change between two Rating Versions over a fixed portfolio. A persisted, citable artifact, not a transient screen (03 FR-263, FR-264, FR-265, FR-266, §4.6).",
   "type": "object",
   "required": ["baseline_ref", "candidate_ref", "portfolio_dataset_version_id",
-               "policy_count", "exposure_years", "totals", "distribution"],
+               "policy_count", "exposure_years", "totals", "outcomes", "distribution"],
+  "dependentRequired": {"attribution": ["derived_changes", "change_groups", "attribution_summary"]},
   "properties": {
     "baseline_ref": {"$ref": "common/artifact-ref.schema.json"},
     "candidate_ref": {"$ref": "common/artifact-ref.schema.json"},
@@ -19,7 +20,21 @@
       "properties": {
         "baseline_premium_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
         "candidate_premium_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
-        "change_pct": {"type": "number"}
+        "change_pct": {"type": ["number", "null"]}
+      }
+    },
+    "outcomes": {
+      "type": "object",
+      "description": "Every policy counted once by its two outcomes; the first five sum to policy_count. zero_baseline and negative_baseline count the quoted-both policies with a baseline payable premium of 0 and below 0; neither is in a band or a mover (03 §4.6).",
+      "required": ["quoted_both", "quoted_to_declined", "declined_to_quoted", "declined_both", "error", "zero_baseline", "negative_baseline"],
+      "properties": {
+        "quoted_both": {"type": "integer", "minimum": 0},
+        "quoted_to_declined": {"type": "integer", "minimum": 0},
+        "declined_to_quoted": {"type": "integer", "minimum": 0},
+        "declined_both": {"type": "integer", "minimum": 0},
+        "error": {"type": "integer", "minimum": 0},
+        "zero_baseline": {"type": "integer", "minimum": 0},
+        "negative_baseline": {"type": "integer", "minimum": 0}
       }
     },
     "distribution": {
@@ -30,8 +45,8 @@
         "properties": {
           "band": {"type": "string"},
           "policies": {"type": "integer", "minimum": 0},
-          "exposure_share": {"type": "number", "minimum": 0, "maximum": 1},
-          "mean_change_pct": {"type": "number"}
+          "exposure_share": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+          "mean_change_pct": {"type": ["number", "null"]}
         }
       }
     },
@@ -43,10 +58,10 @@
         "required": ["factor", "level", "policies", "mean_change_pct"],
         "properties": {
           "factor": {"type": "string"},
-          "level": {"type": "string"},
+          "level": {"type": ["string", "null"]},
           "policies": {"type": "integer", "minimum": 0},
-          "mean_change_pct": {"type": "number"},
-          "exposure_share": {"type": "number", "minimum": 0, "maximum": 1}
+          "mean_change_pct": {"type": ["number", "null"]},
+          "exposure_share": {"type": ["number", "null"], "minimum": 0, "maximum": 1}
         }
       }
     },
@@ -56,20 +71,67 @@
       "items": {
         "type": "object",
         "required": ["rung", "contribution_pct"],
-        "properties": {"rung": {"type": "string"}, "contribution_pct": {"type": "number"}}
+        "properties": {"rung": {"type": "string"}, "contribution_pct": {"type": ["number", "null"]}}
       }
     },
     "attribution": {
       "type": "array",
-      "description": "Each change applied in isolation and cumulatively, decomposing the movement into its causes (FR-266).",
+      "description": "Per change group: the Shapley part of record and the isolated and cumulative views, in integer minor units (FR-266 as amended, FR-1397).",
       "items": {
         "type": "object",
-        "required": ["change", "mean_change_pct"],
+        "required": ["group", "shapley_minor", "isolated_minor", "cumulative_minor", "mean_change_pct"],
         "properties": {
-          "change": {"type": "string"},
+          "group": {"type": "string"},
+          "shapley_minor": {"anyOf": [{"$ref": "common/money.schema.json#/$defs/MoneyMinor"}, {"type": "null"}]},
+          "isolated_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+          "cumulative_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
           "mean_change_pct": {"type": "number"},
           "cumulative_change_pct": {"type": "number"}
         }
+      }
+    },
+    "derived_changes": {
+      "type": "array",
+      "description": "The changes derived from baseline and candidate at step granularity (FR-1399).",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "description"],
+        "properties": {
+          "id": {"type": "string"},
+          "kind": {"enum": ["pin", "step_added", "step_removed", "step_changed", "table_repointed"]},
+          "description": {"type": "string"}
+        }
+      }
+    },
+    "change_groups": {
+      "type": "array", "maxItems": 6,
+      "description": "The analyst's groups, partitioning derived_changes exactly (FR-1399). Their order is the declared change order.",
+      "items": {
+        "type": "object",
+        "required": ["name", "changes"],
+        "properties": {
+          "name": {"type": "string"},
+          "changes": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+        }
+      }
+    },
+    "attribution_summary": {
+      "type": "object",
+      "description": "Method, totals, S and R, and the subset bundles compiled (FR-266 as amended, FR-1397, FR-1398).",
+      "required": ["method", "total_change_minor", "residual_minor", "order_sensitivity_lower_bound",
+                   "residual_share", "orders_sampled", "subset_bundle_count", "subset_bundle_hashes",
+                   "subset_valuation", "replay_fell_back"],
+      "properties": {
+        "method": {"enum": ["shapley", "order_dependent"]},
+        "total_change_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+        "residual_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+        "order_sensitivity_lower_bound": {"anyOf": [{"$ref": "common/money.schema.json#/$defs/Decimal"}, {"type": "null"}]},
+        "residual_share": {"anyOf": [{"$ref": "common/money.schema.json#/$defs/Decimal"}, {"type": "null"}]},
+        "orders_sampled": {"type": ["integer", "null"], "minimum": 2},
+        "subset_bundle_count": {"type": "integer", "minimum": 0},
+        "subset_bundle_hashes": {"type": "array", "items": {"type": "string"}},
+        "subset_valuation": {"enum": ["rerate", "ladder_replay"]},
+        "replay_fell_back": {"type": "boolean"}
       }
     },
     "largest_movers_blob": {"type": ["string", "null"],
@@ -81,8 +143,8 @@
         "required": ["code", "count"],
         "properties": {
           "code": {"type": "string"},
-          "count": {"type": "integer", "minimum": 0},
-          "sample": {"type": "array", "items": {"type": "object"}}
+          "count": {"type": "integer", "minimum": 1},
+          "sample": {"type": "array", "maxItems": 10, "items": {"type": "object", "required": ["quote_id"], "properties": {"quote_id": {"type": "string"}}, "additionalProperties": false}}
         }
       }
     }

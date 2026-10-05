@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field, GetJsonSchemaHandler, model_serializer, m
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
-__all__ = ["ARTIFACT_TYPES", "ArtifactRef", "BlobRef", "ModelRef", "Slug"]
+__all__ = ["ARTIFACT_TYPES", "ArtifactRef", "BlobRef", "ModelRef", "Slug", "slug_is_admitted"]
 
 #: Every artifact type that may appear in a reference. Extending this is a spec change:
 #: `docs/contracts/schemas/common/artifact-ref.schema.json` carries the same list.
@@ -27,16 +27,35 @@ ARTIFACT_TYPES: Final[frozenset[str]] = frozenset(
         # Added 2026-09-28 (WK-672 Slice 2, PL-1189): a reference only — never approvable,
         # never resolvable by the approval route (03 §4.7).
         "regression_suite",
+        # Added 2026-10-03 (WK-674 Slice 2, RL-1301 A.1): a Deployment Request, owned by
+        # `03` §4.12 and approvable (`deployment:<environment slug>@<n>`).
+        "deployment",
     }
 )
 
 _SLUG = r"[a-z0-9][a-z0-9-]{1,62}"
+#: The slug grammar of the `factor` type, and of no other (RL-1383 Ruled item 1): a Factor's
+#: slug is the name of its term in a design matrix, a feature list and a rate-table key, and
+#: those names follow the dataset's columns, so it may contain `_`.
+_FACTOR_SLUG = r"[a-z0-9][a-z0-9_-]{1,62}"
+_SLUG_RE: Final[re.Pattern[str]] = re.compile(_SLUG)
+_FACTOR_SLUG_RE: Final[re.Pattern[str]] = re.compile(_FACTOR_SLUG)
 # Versions start at 1 (ID-2), so `@0` is a malformed reference rather than a valid
 # reference to an invalid version — rejecting it here keeps the error message consistent
 # with every other malformed form.
+#
+# The shape is matched with the widest slug alphabet and the type's own grammar is applied
+# after (`slug_is_admitted`), so the parser accepts exactly what `REF_PATTERN` accepts.
 _REF_RE: Final[re.Pattern[str]] = re.compile(
-    rf"^(?P<type>[a-z_]+):(?P<slug>{_SLUG})@(?P<version>[1-9][0-9]*)$"
+    rf"^(?P<type>[a-z_]+):(?P<slug>{_FACTOR_SLUG})@(?P<version>[1-9][0-9]*)$"
 )
+
+
+def slug_is_admitted(artifact_type: str, slug: str) -> bool:
+    """Whether `slug` fully matches the slug grammar of `artifact_type` (RL-1383)."""
+    grammar = _FACTOR_SLUG_RE if artifact_type == "factor" else _SLUG_RE
+    return grammar.fullmatch(slug) is not None
+
 
 Slug = Annotated[str, Field(pattern=rf"^{_SLUG}$")]
 
@@ -49,7 +68,8 @@ ModelRef = Annotated[str, Field(pattern=rf"^model:{_SLUG}@[1-9][0-9]*$")]
 #: parser uses, so the schema and the parser cannot disagree — the contract previously
 #: carried a hand-copied pattern that admitted `@0`, which the parser rejected.
 REF_PATTERN: Final[str] = (
-    rf"^({'|'.join(sorted(ARTIFACT_TYPES))}):{_SLUG}@[1-9][0-9]*$"
+    rf"^(({'|'.join(sorted(ARTIFACT_TYPES - {'factor'}))}):{_SLUG}"
+    rf"|factor:{_FACTOR_SLUG})@[1-9][0-9]*$"
 )
 
 
@@ -90,12 +110,35 @@ class ArtifactRef(BaseModel, frozen=True):
                     f"unknown artifact type {match['type']!r}; extending the set is a "
                     "spec change"
                 )
+            if not slug_is_admitted(match["type"], match["slug"]):
+                raise ValueError(
+                    f"{value!r} is not a valid artifact reference: the slug is outside "
+                    f"the {match['type']!r} slug grammar"
+                )
             return {
                 "type": match["type"],
                 "slug": match["slug"],
                 "version": int(match["version"]),
             }
         return value
+
+    @model_validator(mode="after")
+    def _a_built_reference_is_re_readable(self) -> Self:
+        """RL-1383 Ruled item 2: a field-built reference is validated like a parsed one.
+
+        `ArtifactRef(type=..., slug=..., version=...)` skips the string parser, so without
+        this a reference that could be built could not be re-read from its own dump.
+        """
+        if self.type not in ARTIFACT_TYPES:
+            raise ValueError(
+                f"unknown artifact type {self.type!r}; extending the set is a spec change"
+            )
+        if not slug_is_admitted(self.type, self.slug):
+            raise ValueError(
+                f"{str(self)!r} is not a valid artifact reference: the slug is outside "
+                f"the {self.type!r} slug grammar"
+            )
+        return self
 
     @model_serializer
     def _render_canonical(self) -> str:
@@ -135,6 +178,11 @@ class ArtifactRef(BaseModel, frozen=True):
         kind = match["type"]
         if kind not in ARTIFACT_TYPES:
             raise ValueError(f"unknown artifact type {kind!r}; extending the set is a spec change")
+        if not slug_is_admitted(kind, match["slug"]):
+            raise ValueError(
+                f"{raw!r} is not a valid artifact reference: the slug is outside "
+                f"the {kind!r} slug grammar"
+            )
         return cls(type=kind, slug=match["slug"], version=int(match["version"]))
 
 

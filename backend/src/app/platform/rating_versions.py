@@ -128,14 +128,42 @@ async def load_rating_version(
     *,
     workspace_id: UUID,
     rating_version_id: UUID,
+    for_update: bool = False,
 ) -> RatingVersionRow:
-    """The row, scoped to the workspace so a cross-workspace id reads as 404."""
-    row = await session.get(RatingVersionRow, rating_version_id)
+    """The row, scoped to the workspace so a cross-workspace id reads as 404.
+
+    `for_update` takes the row lock (`with_for_update()`, as `apply_approval_decision` does),
+    so `compile_rating_version` and `submit_for_review` of one version serialise (RL-1379).
+    `populate_existing` makes a row already in the session's identity map reread under the lock.
+    """
+    row = await session.get(
+        RatingVersionRow,
+        rating_version_id,
+        with_for_update=for_update,
+        populate_existing=for_update,
+    )
     if row is None or row.workspace_id != workspace_id:
         raise PlatformError(
             "NOT_FOUND", "Rating version not found", 404, f"No rating version {rating_version_id}."
         )
     return row
+
+
+def require_compilable(row: RatingVersionRow) -> None:
+    """Refuse a compile unless the version is `draft` (`03` FR-239, `00` FR-4; RL-1379).
+
+    A version that has left `draft` gets a new compiled output only as a new version. Called
+    by the compile route (a synchronous 409, no Job) and by `compile_rating_version` (the
+    Job ends `failed` when the status changed after submission): one guard, two callers.
+    """
+    if RatingVersionStatus(row.status) is not RatingVersionStatus.DRAFT:
+        raise PlatformError(
+            "RATING_VERSION_IMMUTABLE",
+            "Rating version is immutable",
+            409,
+            f"Rating version {row.slug}@{row.version} is {row.status}; only a draft rating "
+            "version can be compiled (03 FR-239, 00 FR-4). Create a new version to compile again.",
+        )
 
 
 async def resolve_rating_version_ref(
@@ -273,7 +301,7 @@ async def submit_for_review(
         permission=Permission.RATING_SUBMIT,
     )
     row = await load_rating_version(
-        session, workspace_id=workspace_id, rating_version_id=rating_version_id
+        session, workspace_id=workspace_id, rating_version_id=rating_version_id, for_update=True
     )
     if RatingVersionStatus(row.status) is not RatingVersionStatus.DRAFT:
         raise PlatformError(
@@ -409,8 +437,9 @@ async def compile_rating_version(
     blob. `row.bundle` keeps carrying just the summary metadata it always has.
     """
     row = await load_rating_version(
-        session, workspace_id=workspace_id, rating_version_id=rating_version_id
+        session, workspace_id=workspace_id, rating_version_id=rating_version_id, for_update=True
     )
+    require_compilable(row)
     schema = to_schema(row)
 
     class _Resolver:

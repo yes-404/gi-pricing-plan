@@ -2661,6 +2661,25 @@ _CONTRACT_ARTIFACT_PATHS: Final = (
     "docs/contracts/schemas/generated/regression-run.schema.json",
     # 2026-09-29, PL-1213
     "docs/contracts/schemas/generated/score-comparison.schema.json",
+    # 2026-10-01, PL-1325 (WK-1250 Slice 1)
+    "docs/contracts/schemas/generated/sub-graph.schema.json",
+    "docs/contracts/schemas/generated/sub-graph-create.schema.json",
+    "docs/contracts/schemas/generated/sub-graph-body.schema.json",
+    # 2026-10-03, FD-1357 fix (RL-1375 DP-4)
+    "docs/contracts/schemas/generated/rate-table-version.schema.json",
+    "docs/contracts/schemas/generated/seed-from-model-request.schema.json",
+    # 2026-10-03, PL-1392 (WK-674 Slice 2)
+    "docs/contracts/schemas/generated/environment.schema.json",
+    "docs/contracts/schemas/generated/environment-create.schema.json",
+    "docs/contracts/schemas/generated/environment-update.schema.json",
+    "docs/contracts/schemas/generated/deployment.schema.json",
+    "docs/contracts/schemas/generated/deployment-create.schema.json",
+    "docs/contracts/schemas/generated/deployment-request.schema.json",
+    "docs/contracts/schemas/generated/deployment-request-create.schema.json",
+    # 2026-10-04, PL-1392 Task 5 (WK-674 Slice 2)
+    "docs/contracts/schemas/generated/approval-submission.schema.json",
+    # 2026-10-04, PL-1392 Task 6 (WK-674 Slice 2)
+    "docs/contracts/schemas/generated/approval-withdrawal.schema.json",
     "docs/contracts/schemas/generated/problem-detail.schema.json",
     "docs/contracts/schemas/generated/profile.schema.json",
     "docs/contracts/schemas/generated/transparency-artifact.schema.json",

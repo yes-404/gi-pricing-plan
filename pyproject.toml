@@ -157,6 +157,13 @@ ignore_missing_imports = true
 module = ["interpret.*"]
 ignore_missing_imports = true
 
+# sympy 1.14.0 ships no `py.typed` marker (RL-1289's pin), the same shape as the two above.
+# Only `pricing_core.data.expression_sympy` imports it, and it builds SymPy objects from a
+# validated `ast` tree, so the untyped surface is that one module's.
+[[tool.mypy.overrides]]
+module = ["sympy.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = [
     "packages/model-schema/tests",

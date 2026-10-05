@@ -402,7 +402,9 @@
               "docs/contracts/schemas/*.json",
               "docs/contracts/schemas/common/"
             ],
-            "corrected": "2026-09-29, the maintainer's dated correction to the 22:57:52 registry list"
+            "corrected": "2026-09-29, the maintainer's dated correction to the 22:57:52 registry list",
+            "backend/tests/test_contracts.py#ONE_SIDED_SLUGS": "key_disjoint_only_new_key_appended_or_one_slice_changes_one_existing_key_value_no_key_touched_by_both_dispatch_records_name_keys_second_merge_full_gate_incl_test_every_one_sided_slug_is_declared",
+            "amended": "2026-10-03 21:11:06 BST, the maintainer's dated amendment to RL-1263's registry list (option (b)): ONE_SIDED_SLUGS in backend/tests/test_contracts.py is exempt for key-disjoint edits"
           },
           "second_merge": [
             "merge_main",

@@ -39,6 +39,7 @@ relates: []                      # ids only
   - **Appends its `LG-` per task and per PR**, setting it `active` — the slice ledger is
     grown, never rewritten in place (§1.6 LG row: *"executor, appends per task and per PR
     (`active`)"*).
+  - **As the mint step, when the lead's brief makes it one after the slice audit** (the SL-1377 order: slice audit → mint → minted-head gate), the executor performs §1.6's closing acts on the auditor's behalf in the mint commit: the `LG-` front matter `status: closed`, the roadmap `SL-` row `status: closed` with its dated line, then `docs/INDEX.md` regenerated and `audit-docs` green. *(Added 2026-10-04, on the deputy's direction, after LG-1400 and WK-674 Slice 2's ledger (not yet merged when this was written, so not cited by id) were each minted `active`.)*
   - **Owns `RS-` `spike`/`measurement`** via `library-spike` and sets it `active` on filing;
     it is closed only by citing the `FR-`/`ADR-`/`RFC-` target the decision-maker created
     from it (§1.6 RS `spike`/`measurement` row). **Owns the journey tests** — the executor
