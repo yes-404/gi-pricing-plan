@@ -396,6 +396,22 @@ is the second to merge on `errors.py` and re-gates. `mark_approved` is now `appr
 | `packages/pricing-core/tests/test_rating_compile_fr240.py` | added (new module) | — | — | — | — | — | — | none |
 | `backend/tests/test_fr240_governance.py` | added (new module) | — | — | — | — | — | — | none. It imports `backend/tests/approved_rows.py::mark_approved`, which SL-1409 edits (`_EVIDENCE`, `_FLAG_ONLY`); read only here |
 
+*Dated note, 2026-10-05 (pre-mint): **the FR-240 anchor rule.** This slice's T1 (RL 9633's,
+#1155 @`95590c87`, on the FR-240 row `:137`) and RL 9491's FR-240 T-text (#1214 @`b900e008`,
+applied by SL 9495 / PL 9494, working ids, #1216) append with the **same** find string,
+`The message names the step and the rung.)* |`, so whichever applies second counts 0. **SL
+9647 and SL 9495 serialise on the FR-240 row.** The slice that applies second appends its
+text at the end of FR-240's second cell, after the last amendment then present; it re-counts
+its find string at its own base; any count other than 1 is a STOP to the maintainer. Accepted
+by the maintainer (by delegation) in the entry "2026-10-05 18:58:28 BST — S7 gate 1: (a)
+_SINKS entries ADOPTED; the re-gate plan CONFIRMED, with an explicit allowed-failure set; the
+measurement re-run in the slot" (`channel/to-lead.md`), item 4, verbatim: "RL 9491 #1214
+@b900e008 and the FR-240 anchor collision with RL 9633 T1: the rule (append after the last
+amendment then present, re-counted at its own base, ≠1 is a STOP to me) is ACCEPTED, and it
+is named in BOTH RL 9491 and PL 9649's contention." SL 9495 follows this slice (PL 9494's
+activation need 2), so this slice is expected to apply first. Its own count is still taken
+at its own base.*
+
 **Read, not edited:** `backend/src/app/platform/modelling.py::load_factors` (`:284`, the spec's
 Factors by id in spec order, plus interaction operands; already called this way by
 `rate_tables.py:134-136`), `pricing_core/rating/runtime.py::_model_call_handler` (`:512`; DP-7
