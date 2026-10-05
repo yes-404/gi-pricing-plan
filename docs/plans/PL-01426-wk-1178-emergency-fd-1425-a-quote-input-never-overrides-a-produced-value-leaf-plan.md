@@ -3,7 +3,7 @@ id: PL-1426
 family: plan
 kind: leaf
 title: WK-1178 emergency — FD-1425, guard (c) at the entry, a quote input never overrides a produced value (FR-213): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: planner
 tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6

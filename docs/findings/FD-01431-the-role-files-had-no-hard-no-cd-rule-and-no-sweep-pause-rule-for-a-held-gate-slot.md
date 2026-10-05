@@ -1,18 +1,18 @@
 ---
-id: FD-9490
+id: FD-1431
 family: finding
 title: The role files had no hard no-cd rule and no sweep-pause rule for a held gate slot
 status: active
-created: 2026-10-05            # working id; the mint date will replace this (check 31)
+created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: auditor
 tree: c3e7d6c7e2e3c293f64a045a0b931227c581a50a
 corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9490 — a role file proved insufficient twice in one day (`document-ids.md` §1.6, "Reference — charters")
+# FD-1431 — a role file proved insufficient twice in one day (`document-ids.md` §1.6, "Reference — charters")
 
-**Filed** by auditor-rolefd on the lead's brief of 2026-10-05, working id 9490 (reserved in the lead's `eta.md`), from
+**Filed** by auditor-rolefd on the lead's brief of 2026-10-05, working id 9490 (reserved in the lead's `eta.md`; minted as FD-1431), from
 the maintainer's (by delegation) ruling (b) in `to-lead.md`, entry headed *"2026-10-05 19:23:32 BST — LATE LOG of
 messages sent without an entry, and a ruling on role-file amendments"*. `tree:` is `origin/main` at filing
 (`c3e7d6c7e2e3c293f64a045a0b931227c581a50a`); every fact below was re-read at it, or at the record named.
@@ -89,7 +89,7 @@ and a ruling on role-file amendments"*:
 
 The sweep-pause rule, item (vi) of the same entry:
 
-> (vi) Sent between 19:05:50 and this entry, the SWEEP RULE: the sweep result and its checklist file are noted. #1145's FD-9888 → FD-1317 is an INFERENCE: verify it in INDEX and in FD-1317's own title before the re-point; if it does not match, STOP. The overlap disclosure is accepted: gate 1's result stands because contention can only cause spurious failures, not a false pass, and every gate-1 failure is explained; it is superseded by the re-gate anyway. RULE FROM NOW ON: any sweep or batch of checks PAUSES for the WHOLE of any held gate slot, not only for a measurement.
+> (vi) Sent between 19:05:50 and this entry, the SWEEP RULE: the sweep result and its checklist file are noted. #1145's FD 9888 [hyphen in the original, written with a space here: check 32 resolves hyphenated ids only and this one is an unminted working id] → FD-1317 is an INFERENCE: verify it in INDEX and in FD-1317's own title before the re-point; if it does not match, STOP. The overlap disclosure is accepted: gate 1's result stands because contention can only cause spurious failures, not a false pass, and every gate-1 failure is explained; it is superseded by the re-gate anyway. RULE FROM NOW ON: any sweep or batch of checks PAUSES for the WHOLE of any held gate slot, not only for a measurement.
 
 The no-`cd` order, from the entry headed *"2026-10-05 18:54:06 BST — RL 9566 T7 (#1191 @bb70663b): case (a) accepted; T7's three choices ACCEPTED; the recurring cd: fix the role files"*, PROCESS paragraph:
 

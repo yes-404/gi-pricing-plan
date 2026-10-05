@@ -1442,7 +1442,7 @@ relates: [FD-1356, RL-1301, PL-1306, SL-1256, RL-1407, PL-1408]
 id: SL-1427
 family: slice
 title: WK-1178 emergency fix slice — FD-1425: guard (c), a quote input never overrides a produced value
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6
@@ -1452,7 +1452,26 @@ corrected_by: []
 relates: [FD-1374, RL-1263, SL-1391]
 ```
 
-The emergency fix for FD-1425 (HIGH), on the maintainer's (by delegation) rulings of 2026-10-05 ("17:25:07 BST — URGENT RULING …", narrowed by "17:27:55 BST — FD 9572 CAUSE …" item 1 and "17:30:02 BST — Rulings: T2 routing …" items 1–2). Through `score_one`, on a **correctly ordered** algorithm, a caller's undeclared input named like a produced value overrides it: `instalment_loading_minor=777` quotes payable 777 against 5250. Scope: **guard (c) alone** at the entry (`score.py:911` and `:1067`): an undeclared input key naming any produced value is refused with `INPUT_CONTRACT_VIOLATION`, the declared inputs subtracted, with RL-1423's T2 (FR-213) in the same commit. Red first: the (3f) case; every produced name; one case per path (`/score`, `/score/compare`, trace reproduction, batch); the ordered no-key 5250 and the bundle hash unchanged; the in-place clamp of a declared input still allowed. The root, `to_wire`'s sink fan-in (R-b), is PL 9567's; a no-caller-key misprice, if auditor-fanin finds one, is a second emergency slice after this one. Leaf plan PL-1426 (`draft`; filed 2026-10-05). **First in lane B**, beside SL-1391 (WK-673) under RL-1263's different-Works rule; the FD 9707 fix (PL 9688) and the wiring fix (PL 9567) follow it, rebased. **Activation needs:** RL-1423 minted first; auditor-fanin reported; FD-1425 and this plan minted (at once, ahead of everything but batch 1's merge); the plan made `active` by a dated line; the maintainer's (by delegation) GO, then the activation PR. Its merge lifts the 17:25:07 hold. *(Row cut 2026-10-05 by the planner; working ids 9561 and 9560 reserved by the lead; narrowed to (c) alone after 17:32:18 BST, pre-mint.)*
+The emergency fix for FD-1425 (HIGH), on the maintainer's (by delegation) rulings of 2026-10-05 ("17:25:07 BST — URGENT RULING …", narrowed by "17:27:55 BST — FD 9572 CAUSE …" item 1 and "17:30:02 BST — Rulings: T2 routing …" items 1–2). Through `score_one`, on a **correctly ordered** algorithm, a caller's undeclared input named like a produced value overrides it: `instalment_loading_minor=777` quotes payable 777 against 5250. Scope: **guard (c) alone** at the entry (`score.py:911` and `:1067`): an undeclared input key naming any produced value is refused with `INPUT_CONTRACT_VIOLATION`, the declared inputs subtracted, with RL-1423's T2 (FR-213) in the same commit. Red first: the (3f) case; every produced name; one case per path (`/score`, `/score/compare`, trace reproduction, batch); the ordered no-key 5250 and the bundle hash unchanged; the in-place clamp of a declared input still allowed. The root, `to_wire`'s sink fan-in (R-b), is PL 9567's; a no-caller-key misprice, if auditor-fanin finds one, is a second emergency slice after this one. Leaf plan PL-1426 (`draft`; filed 2026-10-05). **First in lane B**, beside SL-1391 (WK-673) under RL-1263's different-Works rule; the FD 9707 fix (PL 9688) and the wiring fix (PL 9567) follow it, rebased. **Activation needs:** RL-1423 minted first; auditor-fanin reported; FD-1425 and this plan minted (at once, ahead of everything but batch 1's merge); the plan made `active` by a dated line; the maintainer's (by delegation) GO, then the activation PR. ~~Its merge lifts the 17:25:07 hold.~~ *(Corrected 2026-10-05 at activation: the hold lifts ONLY by the maintainer's (by delegation) dated entry after the merge read-back, GO condition (4), "2026-10-05 18:51:16 BST — DISPATCH GO: WK-1178 EMERGENCY SL-1427 (PL-1426) on LANE B, FIRST".)* *(Row cut 2026-10-05 by the planner; working ids 9561 and 9560 reserved by the lead; narrowed to (c) alone after 17:32:18 BST, pre-mint.)*
+(Activated 2026-10-05 as the WK-1178 emergency slice, on the maintainer's (by delegation) GO, "2026-10-05 18:51:16 BST — DISPATCH GO: WK-1178 EMERGENCY SL-1427 (PL-1426) on LANE B, FIRST"; dispatch record DISPATCH-WK-1178-SL1427-2026-10-05.)
+
+#### SL-1430 — WK-1178 fix slice — FD-1421: POST /rating-versions declares the algorithm and the pins
+
+```yaml
+id: SL-1430
+family: slice
+title: WK-1178 fix slice — FD-1421, POST /rating-versions declares the algorithm and the pins
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: caa4e411a9c07a389cf47092a923c7761b2b92dc
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [SL-1300, FD-1297, CR-838, PL-1371, SL-1409, SL-1391, RL-1263, FR-237]
+```
+
+The fix for FD-1421 (HIGH, the maintainer (by delegation), 2026-10-05 13:12:56 BST; on G2's path): `POST /api/v1/rating-versions` takes `algorithm_ref`, `pins` and `model_reference_mode`, typed by a new `model-schema` `RatingVersionCreate` that replaces the route-local class, and published under `docs/contracts/schemas/generated/`. A ref of the wrong type is 422 at create, and so is a model-reference-mode mismatch with an algorithm that resolves (FR-223, RL 9758 item 2); resolvability and maturity stay with compile (FR-240), so an unknown, unapproved or peril-structure pin is refused there (the last is FD 9995's tripwire). A version created over HTTP compiles, red first. The demo seed declares its algorithm and pins at create and stops writing them on the row. RL-1428) decides option (a), and its T1 to T3 are applied byte for byte. Leaf plan PL-1429 (`draft`). **Activation needs:** FD-1421 and RL-1428 minted; PL-1429's DP-1 (RL 9758 item 2's mode check at create, where `algorithm_ref` resolves), DP-2 (RL-1428's seed predicate) and DP-3 (the type check on the request only), decided (a) by the maintainer (by delegation), 2026-10-05 13:20:26 BST, items 25–27 (met); the plan active; the lane: first in lane C, with WK-675 S2 after it (the maintainer (by delegation), 2026-10-05 13:29:05 BST, applying the 13:12:56 BST priority rule); DP-4 and DP-5 accepted (a) with conditions (13:29:05 BST, item 33; met); the trial merge with SL-1391 recorded (item 32); the dispatch GO. *(Filed 2026-10-05 under SL-1430 (this row) and PL-1429 (the plan), reserved by the lead.)*
 
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
