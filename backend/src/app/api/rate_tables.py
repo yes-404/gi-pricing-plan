@@ -12,6 +12,7 @@ platform, not in pricing-core (DP1, DP3).
 from __future__ import annotations
 
 from typing import Annotated, Any
+from uuid import UUID
 
 from fastapi import (
     APIRouter,
@@ -31,6 +32,7 @@ from app.api.responses import problems
 from app.errors import PlatformError
 from app.platform import jobs as job_service
 from app.platform import rate_tables as service
+from app.platform import rbac
 from app.platform.blobs import BlobStore
 from app.platform.diff_cache import DiffCache
 from model_schema import JobKind, Permission
@@ -270,7 +272,7 @@ async def import_rate_table(
     summary="Cell diff of a rate table version against a baseline",
     response_model=None,
     responses={
-        **problems(401, 403, 404, 422),
+        **problems(401, 403, 404, 409, 422),
         200: {"model": RateTableDiff},
         202: {"model": Job},
     },
@@ -284,6 +286,15 @@ async def rate_table_diff(
     response: Response,
     blob_store: BlobStoreDep,
     against: str = Query(..., description="`previous`, `seed`, or a version number"),
+    portfolio: Annotated[
+        UUID | None,
+        Query(
+            description=(
+                "A `validated` portfolio Dataset Version whose exposure weights the diff "
+                "(FR-231). Needs `dataset:read`; there is no default."
+            )
+        ),
+    ] = None,
 ) -> RateTableDiff | Job:
     """**200** with the diff (FR-231); **202** with a Job where either version is
     `storage: parquet` (FR-232) — the same artifact, only latency and status
@@ -294,11 +305,27 @@ async def rate_table_diff(
     a blob; `result.ref` is its sha256, fetchable from `/blobs/{sha256}`. The 200 read
     path is compute-on-read behind the DP3 cache (rulings 2026-08-28): a hit serves
     the stored artifact, a miss computes and stores — the key covers the versions'
-    content hashes and the portfolio identity, never a date.
+    content hashes, the definition and the portfolio identity, never a date.
+
+    With `portfolio` the cells are weighted by its exposure (`RL-1361`). The caller needs
+    `dataset:read` for that, checked here and not route-wide, so a rating-only caller still
+    gets an unweighted diff; the refusal is the same **403** for any id, so a refusal never
+    says whether the portfolio exists. The portfolio's scope and status are then checked
+    before the cache is read and before any Job is created.
     """
     baseline = _parse_against(against)
+    if portfolio is not None:
+        async with database.session() as session:
+            await rbac.require_permission(
+                session,
+                workspace_id=caller.workspace_id,
+                principal=caller.principal,
+                permission=Permission.DATASET_READ,
+                credential_permissions=caller.permissions,
+            )
     if await service.diff_needs_job(
-        database, caller.workspace_id, slug, version, baseline
+        database, caller.workspace_id, slug, version, baseline,
+        portfolio_dataset_version_id=portfolio,
     ):
         async with database.unit_of_work() as session:
             job = await job_service.submit(
@@ -309,6 +336,7 @@ async def rate_table_diff(
                     "slug": slug,
                     "version": version,
                     "against": against,
+                    **({"portfolio": str(portfolio)} if portfolio is not None else {}),
                 },
                 caller.principal,
                 workspace_id=caller.workspace_id,
@@ -325,4 +353,5 @@ async def rate_table_diff(
         baseline,
         blob_store=blob_store,
         cache=cache,
+        portfolio_dataset_version_id=portfolio,
     )

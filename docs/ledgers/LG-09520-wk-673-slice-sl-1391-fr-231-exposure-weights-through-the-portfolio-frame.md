@@ -147,6 +147,36 @@ Targeted runs (one file each, `OMP_NUM_THREADS=1 nice -n 10`): `test_diff_cache.
 `test_rate_tables_service.py` 13; `test_worker_rate_tables.py` 3; `test_api_rate_tables.py` 46. `ruff check` and `mypy`
 clean.
 
+### Task 4 — the route and the worker (Acceptance 10 and 17)
+
+**Red**, the five new route and Job tests in `backend/tests/test_rate_table_diff_portfolio.py`, before the route and
+worker changed:
+
+- `test_portfolio_needs_dataset_read_and_hides_existence`: `assert [200, 200] == [403, 403]` (the route ignored
+  `portfolio`, so a rating-only caller was served where `dataset:read` is required);
+- `test_a_refused_portfolio_creates_no_job`: `assert 202 == 403` (a refused portfolio reached the Job);
+- the three Job tests first failed `JOB_HANDLER_NOT_REGISTERED`, a defect of the test file (the handlers are not
+  registered in the test process; an autouse `register_rate_table_handlers()` fixture, as `test_worker_rate_tables.py`
+  has, was added). With the route changed and the worker handler **not** changed, the three failed for their stated
+  cause: `test_the_job_result_equals_the_200_figure` `assert RateTableDiff(…exposure=None) == RateTableDiff(…
+  matched_exposure=Decimal('7.500000'))` (the Job ignored `portfolio`); `test_a_portfolio_archived_before_the_worker_runs_
+  fails_the_job` and `test_a_dangling_ref_fails_the_job_with_not_found` each `assert <JobStatus.SUCCEEDED> is
+  <JobStatus.FAILED>` (the Job computed an unweighted diff instead of re-running the checks).
+
+**Green**: 25 passed in the file. The route takes `portfolio: UUID | None`; with it, `rbac.require_permission(…
+Permission.DATASET_READ …)` runs in the handler with no version load (so the same 403 for any id), then
+`diff_needs_job(…, portfolio_dataset_version_id=…)` runs `check_portfolio`, so a refused portfolio writes no `JobRow`
+(`test_a_refused_portfolio_creates_no_job` counts them for the 403, the 404 and the 409, and shows a rating-only caller
+without `portfolio` gets its 202 and its Job). The Job's parameters carry `"portfolio"`; the worker reads it and calls
+`service.diff`, which re-runs `check_portfolio` under the Job's workspace: an archived portfolio fails the Job with
+`DATASET_NOT_VALIDATED`, a dangling ref with `NOT_FOUND`, and the result blob equals the 200 figure on the rows-stored
+twin. The route's `responses` gain 409. A rating-only caller needs a stored custom role, because every built-in role
+that holds `rating:read` also holds `dataset:read` (`READ_PERMISSIONS`); the test stores one.
+
+Also: `docs/contracts/openapi/generated.json` regenerated for the `portfolio` parameter and the 409 (`--check` clean);
+`test_api_rate_tables.py` 46 passed, `test_worker_rate_tables.py` 3, `test_api_authorisation_sweep.py` 9,
+`test_contracts.py` 152 passed and 2 skipped; `ruff`, `mypy` clean.
+
 ## PRs
 
 Not yet opened (the PR is opened as a draft after Task 2 is committed and pushed).

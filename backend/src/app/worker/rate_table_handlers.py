@@ -11,6 +11,7 @@ result in the codebase, and the reason `GET /blobs/{sha256}` exists.
 from __future__ import annotations
 
 from typing import Any
+from uuid import UUID
 
 from app.platform import rate_tables as service
 from app.worker.data_handlers import _bridge, _workspace
@@ -28,11 +29,18 @@ def _rate_table_diff(parameters: dict[str, Any], callback: ProgressCallback) -> 
     number as a string — and is re-parsed here, deterministically on immutable
     versions. The `job_id` the runner injects is not needed: the diff is a pure read
     and stamps no artifact.
+
+    A `portfolio` parameter names the weighting Dataset Version. The service re-runs its
+    checks under the Job's workspace, because the portfolio can lose its standing (be
+    archived) between submit and run (`RL-1361` item 8): the Job then fails with the same
+    code the 409 would have been.
     """
     progress = _bridge(callback)
     workspace_id = _workspace(parameters)
     raw_against: str = parameters["against"]
     against: str | int = int(raw_against) if raw_against.isdigit() else raw_against
+    raw_portfolio = parameters.get("portfolio")
+    portfolio = UUID(raw_portfolio) if raw_portfolio is not None else None
     progress.update(0.05, "materialising cells")
 
     async def work() -> str:
@@ -43,6 +51,7 @@ def _rate_table_diff(parameters: dict[str, Any], callback: ProgressCallback) -> 
             int(parameters["version"]),
             against,
             blob_store=progress.blob_store,
+            portfolio_dataset_version_id=portfolio,
         )
         payload = diff.model_dump_json().encode()
         async with progress.database.unit_of_work() as session:

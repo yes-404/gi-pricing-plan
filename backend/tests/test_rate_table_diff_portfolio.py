@@ -26,13 +26,27 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
+from backend.tests.test_api_datasets import _headers
 from backend.tests.test_data_jobs import _validate
 from backend.tests.test_model_jobs import _actuary, _dataset
-from backend.tests.test_rate_tables_service import _fit_result, _glm_spec, _seed_approved_model
-from sqlalchemy import select, update
+from backend.tests.test_rate_tables_service import (
+    _fit_result,
+    _glm_spec,
+    _seed_approved_model,
+    _set_threshold,
+)
+from fastapi.testclient import TestClient
+from sqlalchemy import func, select, update
 
 from app.config import Settings
-from app.db.models import RateTableRow, RateTableVersionRow
+from app.db.models import (
+    JobRow,
+    RateTableRow,
+    RateTableVersionRow,
+    RoleAssignmentRow,
+    RoleRow,
+    WorkspaceMemberRow,
+)
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import datasets as dataset_service
@@ -76,6 +90,13 @@ _RECIPE = [
         "params": {"columns": {"exposure_years": "float", "age": "int"}},
     }
 ]
+
+
+@pytest.fixture(autouse=True)
+def _handlers() -> None:
+    from app.worker.rate_table_handlers import register_rate_table_handlers
+
+    register_rate_table_handlers()
 
 
 class _FakeClient:
@@ -572,3 +593,237 @@ async def test_two_portfolios_are_two_cached_figures(
     assert first.portfolio_exposure == D("7.5")
     assert second.portfolio_exposure == D("6.0")
     assert second.exposure_weighted_mean_change_pct != first.exposure_weighted_mean_change_pct
+
+
+# --- the route, the Job and the worker (Acceptance 10 and 17) -------------------------------
+
+
+async def _rating_only_caller(database: Database, workspace_id: UUID) -> dict[str, str]:
+    """A caller with `rating:read` and nothing else: no built-in role is that narrow, so a
+    custom role is stored for it."""
+    from model_schema import ScopeType
+
+    caller = uuid4()
+    async with database.unit_of_work() as session:
+        role = RoleRow(
+            workspace_id=workspace_id, slug=f"rating-only-{uuid4().hex[:6]}",
+            description="rating:read only", permissions=["rating:read"], builtin=False,
+        )
+        session.add(role)
+        await session.flush()
+        session.add(
+            RoleAssignmentRow(
+                workspace_id=workspace_id, principal_kind="user", principal_id=caller,
+                role_id=role.id, scope_type=ScopeType.WORKSPACE.value,
+            )
+        )
+        session.add(WorkspaceMemberRow(user_id=caller, workspace_id=workspace_id))
+    return _headers(caller, workspace_id)
+
+
+async def _job_count(database: Database) -> int:
+    async with database.session() as session:
+        return (await session.execute(select(func.count()).select_from(JobRow))).scalar_one()
+
+
+@pytest.mark.req("FR-231")
+async def test_portfolio_needs_dataset_read_and_hides_existence(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    await grant("analyst")
+    actor = await _actuary(database, workspace_id)
+    portfolio = await validated_portfolio(database, blob_store, workspace_id, actor)
+    slug = await _identity_table(database, workspace_id, principal, blob_store)
+    rating_only = await _rating_only_caller(database, workspace_id)
+    url = f"/api/v1/rate-tables/{slug}@2/diff"
+
+    # Without `portfolio` the narrow caller succeeds: `dataset:read` is not route-wide.
+    plain = api_client.get(url, params={"against": "previous"}, headers=rating_only)
+    assert plain.status_code == 200, plain.text
+    assert plain.json()["portfolio_exposure"] is None
+
+    # With `portfolio`, an existing id and a nonexistent one are refused identically.
+    refused = [
+        api_client.get(
+            url, params={"against": "previous", "portfolio": str(ref)}, headers=rating_only
+        )
+        for ref in (portfolio, uuid4())
+    ]
+    assert [r.status_code for r in refused] == [403, 403]
+    assert refused[0].json()["code"] == refused[1].json()["code"]
+    assert refused[0].json()["detail"] == refused[1].json()["detail"]
+
+    # A caller who holds `dataset:read` is served the weighted figure.
+    analyst = _headers(principal.id, workspace_id)
+    weighted = api_client.get(
+        url, params={"against": "previous", "portfolio": str(portfolio)}, headers=analyst
+    )
+    assert weighted.status_code == 200, weighted.text
+    body = weighted.json()
+    assert body["changed_cells"] == 2
+    assert Decimal(body["matched_exposure"]) == D("7.5")
+    mean = Decimal(body["exposure_weighted_mean_change_pct"])
+    assert mean.quantize(D("0.000001")) == D("-1.428571")
+
+
+async def _parquet_table(
+    database: Database, workspace_id: UUID, principal: Any, blob_store: BlobStore
+) -> str:
+    """The identity table with both versions stored as parquet (threshold 1 cell)."""
+    await _set_threshold(database, workspace_id, 1)
+    slug = await _identity_table(database, workspace_id, principal, blob_store)
+    await _set_threshold(database, workspace_id, 250_000)
+    return slug
+
+
+async def _job_row(database: Database, job_id: Any) -> JobRow:
+    async with database.session() as session:
+        row = await session.get(JobRow, job_id)
+    assert row is not None
+    return row
+
+
+@pytest.mark.req("FR-231")
+@pytest.mark.req("FR-232")
+async def test_a_refused_portfolio_creates_no_job(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    await grant("analyst")
+    actor = await _actuary(database, workspace_id)
+    slug = await _parquet_table(database, workspace_id, principal, blob_store)
+    draft_dataset = await _dataset(database, blob_store, workspace_id, actor)
+    draft = await ingest_portfolio(database, blob_store, workspace_id, actor, draft_dataset)
+    rating_only = await _rating_only_caller(database, workspace_id)
+    analyst = _headers(principal.id, workspace_id)
+    url = f"/api/v1/rate-tables/{slug}@2/diff"
+
+    before = await _job_count(database)
+    cases = [
+        (rating_only, uuid4(), 403),
+        (analyst, uuid4(), 404),
+        (analyst, draft, 409),
+    ]
+    for headers, ref, status_code in cases:
+        response = api_client.get(
+            url, params={"against": "previous", "portfolio": str(ref)}, headers=headers
+        )
+        assert response.status_code == status_code, response.text
+    assert await _job_count(database) == before
+
+    # A rating-only caller without `portfolio` is accepted, and the Job exists.
+    plain = api_client.get(url, params={"against": "previous"}, headers=rating_only)
+    assert plain.status_code == 202, plain.text
+    assert await _job_count(database) == before + 1
+
+
+@pytest.mark.req("FR-231")
+@pytest.mark.req("FR-232")
+async def test_the_job_result_equals_the_200_figure(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    await grant("analyst")
+    actor = await _actuary(database, workspace_id)
+    portfolio = await validated_portfolio(database, blob_store, workspace_id, actor)
+    parquet = await _parquet_table(database, workspace_id, principal, blob_store)
+    rows = await _identity_table(database, workspace_id, principal, blob_store)
+    analyst = _headers(principal.id, workspace_id)
+
+    accepted = api_client.get(
+        f"/api/v1/rate-tables/{parquet}@2/diff",
+        params={"against": "previous", "portfolio": str(portfolio)}, headers=analyst,
+    )
+    assert accepted.status_code == 202, accepted.text
+    job = accepted.json()
+    assert accepted.headers["Location"] == f"/api/v1/jobs/{job['id']}"
+    assert await execute_job(database, UUID(job["id"]), blob_store) is JobStatus.SUCCEEDED
+    finished = await _job_row(database, UUID(job["id"]))
+    assert finished.result is not None
+    from app.db.models import BlobRow
+    from app.platform.blobs import to_ref
+
+    async with database.session() as session:
+        blob = await session.get(BlobRow, finished.result["ref"])
+    assert blob is not None
+    stored = await blob_store.read(to_ref(blob))
+    from_job = RateTableDiff.model_validate_json(stored)
+
+    twin = api_client.get(
+        f"/api/v1/rate-tables/{rows}@2/diff",
+        params={"against": "previous", "portfolio": str(portfolio)}, headers=analyst,
+    )
+    assert twin.status_code == 200, twin.text
+    assert from_job == RateTableDiff.model_validate(twin.json())
+    assert from_job.matched_exposure == D("7.5")
+
+
+@pytest.mark.req("FR-232")
+async def test_a_portfolio_archived_before_the_worker_runs_fails_the_job(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    await grant("analyst")
+    actor = await _actuary(database, workspace_id)
+    portfolio = await validated_portfolio(database, blob_store, workspace_id, actor)
+    slug = await _parquet_table(database, workspace_id, principal, blob_store)
+    accepted = api_client.get(
+        f"/api/v1/rate-tables/{slug}@2/diff",
+        params={"against": "previous", "portfolio": str(portfolio)},
+        headers=_headers(principal.id, workspace_id),
+    )
+    assert accepted.status_code == 202, accepted.text
+    async with database.unit_of_work() as session:
+        await dataset_service.archive_version(
+            session, workspace_id=workspace_id, actor=actor, version_id=portfolio,
+            reason="superseded",
+        )
+    job_id = UUID(accepted.json()["id"])
+    assert await execute_job(database, job_id, blob_store) is JobStatus.FAILED
+    row = await _job_row(database, job_id)
+    assert row.error is not None
+    assert row.error["code"] == "DATASET_NOT_VALIDATED"
+
+
+@pytest.mark.req("FR-232")
+async def test_a_dangling_ref_fails_the_job_with_not_found(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    await grant("analyst")
+    actor = await _actuary(database, workspace_id)
+    portfolio = await validated_portfolio(database, blob_store, workspace_id, actor)
+    slug = await _parquet_table(database, workspace_id, principal, blob_store)
+    async with database.unit_of_work() as session:
+        row = await session.scalar(
+            select(RateTableRow).where(
+                RateTableRow.workspace_id == workspace_id, RateTableRow.slug == slug
+            )
+        )
+        assert row is not None
+        for version in (
+            await session.execute(
+                select(RateTableVersionRow).where(RateTableVersionRow.rate_table_id == row.id)
+            )
+        ).scalars():
+            definition = json.loads(json.dumps(version.definition))
+            for key in definition["keys"]:
+                key["factor_ref"] = "factor:nowhere@7"
+            await session.execute(
+                update(RateTableVersionRow)
+                .where(RateTableVersionRow.id == version.id)
+                .values(definition=definition)
+            )
+    accepted = api_client.get(
+        f"/api/v1/rate-tables/{slug}@2/diff",
+        params={"against": "previous", "portfolio": str(portfolio)},
+        headers=_headers(principal.id, workspace_id),
+    )
+    assert accepted.status_code == 202, accepted.text
+    job_id = UUID(accepted.json()["id"])
+    assert await execute_job(database, job_id, blob_store) is JobStatus.FAILED
+    row_job = await _job_row(database, job_id)
+    assert row_job.error is not None
+    assert row_job.error["code"] == "NOT_FOUND"
+    assert "driver_age_band" in row_job.error["message"]
