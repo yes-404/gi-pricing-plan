@@ -68,6 +68,23 @@ delta changed, each marked in place, nothing deleted:
    `_model_call_handler`) or A-2 (#1178 @`176a6a75`). It follows both only through the chain:
    A-2 by activation need 3, and SL 9568 through A-3 (need 4), which serialises with it.
 
+### Pre-mint delta 2, 2026-10-05
+
+Edited 2026-10-05 from 19:08:28 BST (`TZ=Europe/London date`), before this plan's mint, by the
+planner, on the lead's brief `~/gi-pricing-plan.local/handover/brief-pl9494-ruled-2026-10-05.md`
+Part A item 2. Nothing is re-decided here; one need is added, marked in place, nothing deleted.
+The authority is the maintainer's (by delegation) entry in
+`~/gi-pricing-plan.local/channel/to-lead.md` headed *"2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2"*, items 1 and 2, read in full by
+this planner. Verbatim:
+
+> 1. ORDER: A-2 → A-3 → SL 9495 → A-4, ACCEPTED (the per-component limb needs A-3's _resolve_peril_components; it still satisfies after A-2 and before A-4). The need "PL 9649 merged" (ResolvedArtifact.factors): accepted.
+
+> 2. A-4 (PL 9593 #1175) gains the need "SL 9495 merged": YES, a pre-mint planner edit.
+
+1. **Activation need 4a, "SL 9495 merged"** (PL 9494, working ids, #1216, the compile
+   completeness check), added to §"Activation needs" after need 4, and named in Task 0
+   Step 1.
+
 ## Goal
 
 The freMTPL2 demo walks `WF-699`'s **literal** Peril Structure path, so that G2 (*"`WF-699`
@@ -178,6 +195,7 @@ status flip and this plan's.
 | 2 | **A-1 merged** (SL 9600 / PL 9599, working ids): the peril approval carry and the `_Resolver` peril branch (FD 9995, working id, #980) | Task 2's approval moves the structure to `approved`; Task 3's C1 pin resolves at compile | plan in preparation. On `main`, `decide_request`'s fan-out has no peril branch: *"a Peril Structure and a Rating Version each gain one with the slice that builds them, and until then their requests decide without an artifact to move"* (`backend/src/app/api/approvals.py:537-538`, fan-out `:540-571`) |
 | 3 | **A-2 merged** (SL 9598 / PL 9597): GLM scoring through `model_call` (FD 9605, working id, #1172) | B4 scores GLM components | plan in preparation. On `main`, `_model_call_handler` refuses a GLM: the `else:` at `packages/pricing-core/src/pricing_core/rating/runtime.py:568-579`, *"predict_glm has no such fallback"* |
 | 4 | **A-3 merged** (SL 9596 / PL 9595): Peril Structure scoring | B4's `model_call` on `peril_structure_ref` | plan in preparation. On `main`, `handler` reads `payload["fit_result"]` (`runtime.py:539`), which a structure payload does not carry; `assemble_risk_premium` (`pricing_core/modelling/perils.py:104`) has one production caller, `_reconcile` (`backend/src/app/worker/model_handlers.py:1486`) |
+| 4a | **SL 9495 merged** (PL 9494, working ids, #1216): compile refuses a `model_call` whose `feature_map` misses an input its pinned model needs, per component for a Peril Structure *(added 2026-10-05, pre-mint delta 2; the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 2)* | the order is A-2 → A-3 → SL 9495 → A-4 (the same entry, item 1). B4's `model_call` on the structure is compiled under that check, so its `feature_map` must cover every component's inputs | plan `draft`, #1216, unminted |
 | 5 | **Exit-demo slice (a) merged** (SL 9626 / PL 9624, #1161) | the builder, banded factors and golden quotes this slice extends | draft |
 | 6 | **Exit-demo slice (b) merged** (SL 9625 / PL 9629, #1164) | the journey and its two `SKIPPED` lines this slice removes | draft |
 | 7 | DP-A4-2 and DP-A4-3 ruled | Tasks 1 and 2 | open. *(Pre-mint delta 2026-10-05, RL 9571; see §"Pre-mint delta, 2026-10-05". Ruled by RL 9571, #1188 @`cc5d0d61`, unminted.)* |
@@ -382,8 +400,9 @@ this slice is last: it starts only after A-3 merges and DP-A4-1 is ruled (item 5
 
 ### Task 0: Preconditions (no code)
 
-- [ ] **Step 1.** Confirm each activation need holds at `origin/main`: A-1, A-2, A-3, slice
-  (a) and slice (b) merged; DP-A4-1 to DP-A4-3 ruled. If any is unmet, STOP.
+- [ ] **Step 1.** Confirm each activation need holds at `origin/main`: A-1, A-2, A-3, SL 9495
+  *(added 2026-10-05, pre-mint delta 2)*, slice (a) and slice (b) merged; DP-A4-1 to DP-A4-3
+  ruled. If any is unmet, STOP.
 - [ ] **Step 2.** Re-check P1 to P5 at the dispatch tree, by symbol. Record any moved line in
   the ledger.
 - [ ] **Step 3.** Find where slice (b) prints the two `SKIPPED` lines:
