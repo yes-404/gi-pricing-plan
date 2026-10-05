@@ -39,6 +39,7 @@ __all__ = [
     "ValidationReport",
     "ValidationRule",
     "ValidationRuleSet",
+    "ValidationRuleSubmission",
     "builtin_rule",
 ]
 
@@ -141,6 +142,14 @@ class RuleSetEntry(BaseModel):
     @property
     def effective_severity(self) -> Severity:
         return self.severity_override or self.rule.severity
+
+
+class ValidationRuleSubmission(BaseModel):
+    """The body of `POST /validation-rules/{id}/submit` (`06` FR-352: a change summary)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    change_summary: str = Field(min_length=1)
 
 
 class ValidationRuleSet(BaseModel):

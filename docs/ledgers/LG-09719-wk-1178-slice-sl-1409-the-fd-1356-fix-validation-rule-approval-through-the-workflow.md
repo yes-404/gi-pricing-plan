@@ -151,6 +151,74 @@ Deviation: per plan Task 1 Step 3 ("Do not commit yet. Task 3 turns these green;
 together") the test edit is left uncommitted in the worktree; only this entry is committed.
 Test-database warning (per-worktree DB absent) is unrelated to these two static tests.
 
+### Tasks 2 and 3 — the tests red first, then the service and the carry (2026-10-05, executor-1409-t23)
+
+One executor for both, one commit with Task 1's edit (lead's Delta 6; PL-1408 Task 1 Step 3 and Task 3 Step 8).
+Per-worktree test database created first (`gipricing_sl-1409_8f3bb0b4`, `createdb -T gipricing`, `alembic upgrade head`).
+
+**Check 32 fix (Delta 6).** The DP-0 export quote of `drop-and-rerun.md` sat in a `~~~~text` fence, which `audit-docs.py`
+does not read as a fence (`_FENCE_LINE_RE` matches a leading ```` ``` ```` only), so the plan citation inside it read as a live one.
+The pair of fence lines around that one quote is now ```` ```text ````; no byte inside it changed (`sed -n` of the block
+`diff`s identical to `fd1356-dp0-export-2026-10-01/drop-and-rerun.md`, sha256 `948404e2…493e5`; `sha256sum -c SHA256SUMS`
+there: 6 of 6 OK). `audit-docs` then reports check 31 alone.
+
+**Task 2, red run, before any Task 3 code** (`uv run pytest -q backend/tests/test_validation_rule_approval.py
+backend/tests/test_api_approvals.py backend/tests/test_api_datasets.py`): `21 failed, 125 passed, 3 warnings in 121.59s`.
+Each failure, with its cause:
+
+| test | failure line | cause |
+|---|---|---|
+| `test_a_decision_moves_the_version_as_fr_355_says_and_records_it_truly[validation_rule-approve]` | `assert 'review' == 'approved'` | the carry has no `validation_rule` branch; the status stays `review` |
+| `…[validation_rule-reject]`, `…[validation_rule-request_changes]` | `assert 'review' == 'draft'` | same |
+| `test_an_error_dry_run_is_refused_at_submit[missing_column\|unknown_check\|missing_table]` (3) | `assert 200 == 422` | submit does not read the report: an `error` dry run reaches `review` |
+| `test_an_error_dry_run_is_refused_at_approve[…]` (3) | `assert 200 == 422` | the generic decide has no evidence check: it answers 200 |
+| `test_the_generic_submit_refuses_an_error_dry_run` | `assert 201 == 422` | the resolver checks the status only |
+| `test_a_dry_run_report_that_cannot_be_read_is_refused` | `assert 200 == 422` | a dangling `dry_run_report_id` is accepted |
+| `test_one_approval_under_a_quorum_of_two_leaves_the_rule_in_review` | `assert 'approved' == 'review'` | the direct route approves on one call, with no quorum |
+| `test_an_approver_without_a_policy_role_is_refused` | `assert 200 == 403` | the direct route checks no policy role |
+| `test_the_module_submit_creates_the_request` | `assert 200 == 422` | the submit has no body and files no request |
+| `test_the_approve_route_decides_through_the_workflow`, `test_the_carry_records_the_request_it_carried`, `test_a_fail_dry_run_is_still_approvable` | `ValueError: not enough values to unpack (expected 1, got 0)` on `_requests(...)` | the submit files **0 requests** (the plan's "approved with 0 requests"). The third is the plan's control: it cannot pass on the base tree, because it decides the request the base submit never files |
+| `test_an_approved_rules_dry_run_cannot_be_replaced` | `assert <JobStatus.SUCCEEDED> is not <JobStatus.SUCCEEDED>` | `attach_dry_run` replaces an approved rule's report; the job succeeds (the plan's red) |
+| `test_a_rule_set_run_refuses_a_member_with_no_rule` | `assert 200 == 404` | `GET …/rule-set` silently drops the member |
+| `test_the_submitter_and_the_author_cannot_decide` | `assert 409 == 403` | the direct route answers 409 |
+| `test_a_rule_walks_draft_to_approved_and_never_by_its_author` (`test_api_datasets.py`) | `assert 409 == 403` | same |
+
+Passed on the base tree: `test_a_fail_dry_run_is_still_approvable` is NOT among them (above); the controls
+`test_the_read_shows_a_member_in_review` and the `first_of_two` rows did pass.
+
+**Task 3, green.** `uv run pytest -q backend/tests/test_approval_guard_static.py backend/tests/test_validation_rule_approval.py
+backend/tests/test_api_approvals.py backend/tests/test_api_datasets.py backend/tests/test_approval_guard.py
+backend/tests/test_approval_guard_allowance.py backend/tests/test_validation_reports.py backend/tests/test_data_jobs.py
+backend/tests/test_api_validation_rules.py`: `212 passed, 4 warnings in 142.33s`. Task 1's two static tests are among them
+and green. `ruff check backend packages scripts`: all checks passed. `mypy`: no issues in 226 source files. `lint-imports`: 4 kept, 0 broken.
+`audit-docs`: check 31 alone. `generate-contracts.py --check`: **FAILS** (`docs/contracts/openapi/generated.json`), see Deviation 1.
+
+Recorded facts: the dry-run job that the immutability refusal fails records `error.code == "RULE_VERSION_IMMUTABLE"`
+(asserted). The dataset-slug in the refusal text is the dataset's own slug: `data_handlers._validate` now reads the
+`DatasetRow` for it (it passed `str(dataset_id)` as the `slug` before, which the text's `PUT /datasets/<slug>/rule-set` cannot use).
+`approved_rows.py` was not edited: `mark_approved` already covers `ValidationRuleRow`.
+
+**Files touched** (against PL-1408 :472-506): `backend/src/app/platform/validation_rules.py`, `backend/src/app/api/approvals.py`
+(`decide_and_carry`; the `validation_rule` carry call), `backend/src/app/worker/data_handlers.py`, `backend/src/app/errors.py`,
+`backend/src/app/api/validation.py`, `packages/model-schema/src/model_schema/validation.py` (all in the write set); tests:
+`backend/tests/dry_run_reports.py` and `test_validation_rule_approval.py` (new), `test_api_approvals.py`, `test_api_datasets.py`,
+`test_approval_guard_static.py` (Task 1), `test_approval_guard_allowance.py`. `approvals.py` (platform) read only. No `to_dict` route touched.
+
+**Deviations, for the lead.**
+1. **Task 3 cannot leave the two rule routes alone.** Step 6 deletes `approve_rule` and Step 2 changes `submit_for_review`'s
+   signature; both are called by `api/validation.py` (Task 4's file). Left alone, `mypy` fails and the routes 500, and none of
+   Task 2's route-driven tests can go green. So this commit also carries **Task 4 Step 2 (the class) and Step 3 (the thin client)**
+   only: `ValidationRuleSubmission` in `model_schema/validation.py` (its module `__all__`), imported by the route from
+   `model_schema.validation`; the approve route calls `open_request_for` then `decide_and_carry`. **Not done (Task 4's):** the
+   `model_schema/__init__.py` `__all__` appends (`ValidationRuleSubmission`, `Decide`), moving `Decide`, regenerating `docs/contracts/`
+   (so the contracts `--check` is red at this head), and Task 4 Step 1's two new tests. Task 4's red-first case for the submit body
+   is therefore already green; its other case (decide's body) is untouched.
+2. **`backend/tests/test_approval_guard.py`** is outside the write set, but the plan's Step 8 runs `test_approval_guard*.py` green
+   and `test_the_carry_walker_reaches_the_five_artifact_tables` now fails by design: the carry writes `validation_rules`. Its
+   expected set gains `"validation_rules"` (as `deployment_requests` joined it); the test's name is kept because a frozen
+   record cites it.
+3. `test_a_fail_dry_run_is_still_approvable` is red on the base tree (table above), not a passing control.
+
 ### The write set under the `__all__` amendment (Delta 4, #1118)
 
 Names this slice appends to `packages/model-schema/src/model_schema/__init__.py`, appended only, each with its import
@@ -211,13 +279,13 @@ Timing: first event 20:27:56.27Z is 13 s after the stop line; last 20:27:58.04Z 
 
 #### `drop-and-rerun.md`
 
-~~~~text
+```text
 # DP-0 step 2/3 record (auditor-dp0)
 - Connections 0 at 2026-10-01 10:41:04 BST; `DROP DATABASE "gipricing_w37-6-run2-gate-1789676768";` ran 10:41:04–10:41:05 BST; `\l` and pg_database show 0 rows for it.
 - Task 0 re-run (script copied verbatim from PL-09762 Task 0 Step 1 at origin/fd1356-fix-leaf-plan), 10:41:08–10:41:19 BST, exit 0, last line:
   TOTAL route_approved=0 self_approved=0 user_approved_no_approved_request=314   (databases=80 with_tables=77 without_table_or_error=3)
 - user_approved_no_approved_request fell 329 -> 314 (the dropped DB held 15).
-~~~~
+```
 
 #### `SHA256SUMS`
 
