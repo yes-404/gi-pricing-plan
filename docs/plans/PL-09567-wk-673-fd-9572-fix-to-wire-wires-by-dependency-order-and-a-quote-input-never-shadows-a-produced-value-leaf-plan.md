@@ -258,6 +258,79 @@ So the two slices have a plan dependency under RL 9620 (b), and they cannot run 
   is met by the 17:39:08 entry, and RL 9562 minted (already a need) carries it as Amendment
   N2. No new activation need is added.
 
+## Delta 5, 2026-10-05 (after 17:51:03 BST, pre-mint): the trace question; a mismatch is marked where it is read
+
+The maintainer's (by delegation) entry "2026-10-05 17:51:03 BST — RL 9519 noted; PL 9567 delta 4
+accepted with one question on traces; DP-F35-7 = (a) with two conditions", item 2, verbatim:
+
+> 2. PL 9567 #1193 @504db2f7 delta 4: condition B's named golden set and the byte-for-byte method (old bundle vs fresh compile, equal hash; ScoringResult, errors and the raw engine dict) are ACCEPTED. Serialising A-1/A-2/A-3 with SL 9568 on _model_call_handler: agreed.
+>    ONE QUESTION, answered in the plan pre-mint: trace_handlers.py:90 checks only the hash and :98 RE-SCORES. So a pending trace of a pre-fix quote re-scores on the chain and can show a price that differs from the quote the customer got, where FD 9572 bit. The plan states what the trace does then (does it compare against the stored quote result and say so, or silently show the new value?). If it is silent, a red in SL 9568: a re-scored trace whose result differs from the stored quote is MARKED as differing, never presented as the quote's trace. No new route; an existing field or error if one fits, else spec first.
+
+**1. The answer, read in full at `origin/main` `5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a`.** The
+worker compares and marks. The read route does not show the mark.
+
+- **The worker compares.** `backend/src/app/worker/trace_handlers.py:90-96` refuses a bundle whose
+  `content_hash` differs from `row.bundle_hash` (the row completes `mismatch`, no body). `:98`
+  re-scores with `trace=True`. `:99` computes `reproduced_summary =
+  traces_service.summarise_result(result)`. `:101-107` passes it to `complete_pending_trace`.
+- **The comparator.** `backend/src/app/platform/traces.py:143-156`, `summarise_result`, dumps the
+  four fields of `_SUMMARY_FIELDS` (`:64`): `outcome`, `decline_reasons`, `premium_ladder`,
+  `outputs`. The serving route stores the same summary of the served result as
+  `served_summary` (`write_pending_trace`, `:159-202`; the column at `:197`).
+- **The mark.** `complete_pending_trace` (`traces.py:205-278`) sets
+  `status = "complete" if reproduced_summary == row.served_summary else "mismatch"` (`:257`). It
+  writes the body either way (`:252-256`). The column is `ScoringTraceRow.status`
+  (`backend/src/app/db/models.py:2289-2296`: "`mismatch` (the re-score ran but did not reproduce
+  the served result, or the pinned bundle no longer resolves)").
+- **The read route drops the mark.** `GET /api/v1/traces` (`backend/src/app/api/traces.py`) admits
+  every row that has a body: `_filtered` (`:119-142`) tests `environment IS NOT NULL` (`:132`) and
+  `blob_sha256 IS NOT NULL` (`:134`), never `status`. `TraceView` (`:100-116`) has no `status`
+  field, and `_view` (`:145-157`) builds the item from the body alone. So a `mismatch` row with a
+  body (the re-score ran and differed) is listed exactly as a `complete` one is.
+
+**So:** after SL 9568, a pending trace of a pre-fix quote where FD 9572's stale copy decided the
+price re-scores to a different summary. The row lands `mismatch`. The reader of
+`GET /api/v1/traces` sees it as the quote's trace, with no mark. The worker is not silent; the
+read surface is. The ruling's "If it is silent" branch applies, at the read surface.
+
+**2. The mechanism: the existing `status` value `mismatch`, carried onto the read route.** The
+field exists (`db/models.py:2290-2296`) and is set by the existing comparator (`traces.py:257`).
+It is not in `model-schema`, not in `backend/src/app/errors.py` (the trace codes there are
+`TRACE_RETENTION_FLOOR` and `TRACE_NOT_PENDING`, `:375`, `:382`; neither means "did not
+reproduce"), and not in `03` §5.1 (the route's row, `03:924`, says "Sampled production traces
+(FR-259)"; the generated `TraceView`, `docs/contracts/openapi/generated.json:14306`, has no
+`status`). Adding a field to a route's response is a contract change, so **a spec text is owed
+first** (`CLAUDE.md` §0). No new route.
+
+**T-M1, owed by an RL (the decision-maker's; the lead routes it, for example as an amendment
+of RL 9562).** The planner names what it must say and does not draft it: `03`'s
+`GET /api/v1/traces` row (§5.1) or FR-259 states that each item carries the row's reproduction
+status, `complete` or `mismatch`, and that a `mismatch` item is a re-score that did not reproduce
+the served result, never presented as that quote's trace. Whether `mismatch` items stay listed
+(marked) or are also filterable is the RL's. The ruling's word is "MARKED", so this plan does not
+offer exclusion.
+
+**3. The red: Task 2d, below.** It runs after Task 2c, so SL 9568's chain is in place.
+
+**4. One mechanism for both slices.** PL 9776's condition (i) (DP-F35-7 (a): if R3 finds
+trace ≠ serve, the trace is refused or marked and the served result stands) uses the same
+comparator (`summarise_result`'s four fields, `traces.py:257`) and the same mark (`status`
+`mismatch`, surfaced by T-M1). PL 9776's delta of 2026-10-05 (after 17:51:03 BST) cites this item.
+
+**5. What this delta changes in the plan:**
+- **Task 2d**, added after Task 2c.
+- **The Acceptance Standard** gains items 12 and 13.
+- **The write set** gains three paths, listed in a note under the table. The table's own text
+  stays as it was.
+- **Activation needs:** one need is added: the RL that adopts T-M1 is minted before activation
+  (as RL 9562 is for T1).
+- **Contention:** no open PR touches `backend/src/app/api/traces.py`,
+  `backend/src/app/platform/traces.py`, `backend/src/app/worker/trace_handlers.py` or
+  `backend/tests/test_traces.py` (`gh pr list --state open --limit 200 --json number,title,files`,
+  95 open PRs, filtered on those four paths; none matched, 2026-10-05). PL 9776 reads the first
+  three and edits none of them, and its delta of the same date consumes T-M1's field: a plan
+  dependency that the existing order (this slice first) already covers.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
 > or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax
 > for tracking. Also bound: `python-test` (the `req` markers, the negative tests),
@@ -330,6 +403,15 @@ Each item is a command a fresh reviewer can run from the worktree root, after `u
     and `uv run pytest packages/pricing-core/tests/test_testing.py
     packages/pricing-core/tests/test_replay.py packages/pricing-core/tests/test_testing_determinism.py -q`
     passes with no assert edited. Any difference is a STOP for the maintainer (by delegation).
+12. *(Added 2026-10-05 by Delta 5, the 17:51:03 entry's item 2.)* Task 2d's red:
+    `uv run pytest backend/tests/test_traces_api.py::test_a_reproduction_that_differs_from_the_served_quote_is_marked -q`
+    passes at the head; the ledger records it failing at the base with `None == 'complete'`, and
+    failing once on the broken `_view` of Task 2d Step 5 with `'complete' == 'mismatch'`.
+    `backend/tests/test_traces_api.py` and `backend/tests/test_traces.py` pass with no assert
+    edited.
+13. *(Added 2026-10-05 by Delta 5.)* `uv run python scripts/generate-contracts.py --check` exits 0,
+    `git diff origin/main...HEAD -- docs/contracts/` adds only `TraceView`'s new field, and `03`'s
+    diff for T-M1 is byte-equal to the adopting RL's text.
 
 ## Global Constraints
 
@@ -513,6 +595,16 @@ lines add to it:
   the two never run at once. **PL 9567 lands first** (the 17:39:08 entry, item 2).
 - **Task 2c** adds no repository file: its script and outputs live in the ledger and the
   executor's scratch directory.
+
+**Delta 5 (2026-10-05) to this table.** These rows are added; the table above stays as read:
+- **`backend/src/app/api/traces.py`:** edited, `TraceView` (one field) and `_view` (one
+  argument). No open PR edits it (Delta 5 item 5). PL 9776 reads it only.
+- **`backend/tests/test_traces_api.py`:** appended, one test. No open PR edits it.
+- **`docs/specs/03-rating-engine.md`:** T-M1 at the place its RL names (the
+  `GET /api/v1/traces` row in §5.1, `03:924`, or FR-259's row). That row is distinct from
+  FR-212's; PL-1419 edits §5.1 too, so the dispatch record names the row and runs a trial
+  `git merge-tree` between the heads.
+- **`docs/contracts/openapi/generated.json`:** regenerated (registry, `generated`).
 
 ---
 
@@ -1247,6 +1339,109 @@ identical result is the expected outcome on every case.
   the difference in the ledger, with the algorithm, the context and both lines, and reports
   it to the lead.
 
+### Task 2d: A trace that did not reproduce is marked where it is read (added by Delta 5)
+
+**Blocked until the RL adopting T-M1 is minted.** The field name and values below are this
+plan's reading of T-M1. Where the RL's text differs, the RL wins and the dispatch record names
+each difference.
+
+**Files:**
+- Modify: `backend/src/app/api/traces.py`: `TraceView` (`:100-116`) gains one field, and `_view`
+  (`:145-157`) sets it from `row.status`. `_filtered` is not changed: a `mismatch` row stays
+  listed, marked.
+- Modify: `docs/specs/03-rating-engine.md`: T-M1, byte for byte as the RL adopts it, at the
+  place the RL names.
+- Modify (append): `backend/tests/test_traces_api.py`.
+- Regenerate: `docs/contracts/openapi/generated.json` (`uv run python
+  scripts/generate-contracts.py`).
+
+- [ ] **Step 1: The red, appended to `test_traces_api.py`.** It mirrors that module's own
+  helpers (`_write_real_time`, `_write_pending`, `_trace`, `_bundle_hash`; `:82-181` at
+  `5fe56b87`) and `test_traces.py`'s mismatch case (`:441-466`). Check each name against the
+  shipped module first, and mirror the shipped form.
+
+```python
+@pytest.mark.req("FR-259")
+async def test_a_reproduction_that_differs_from_the_served_quote_is_marked(
+    client: TestClient,
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id,
+    reader_headers,
+) -> None:
+    """PL 9567 Delta 5 (T-M1): a re-score that did not reproduce the served result is
+    listed marked `mismatch`, never as the quote's trace. `traces.py:257` already sets the
+    row's status; this is the read route carrying it."""
+    await _write_real_time(
+        database, blob_store, workspace_id,
+        quote_id="quote-complete", rating_version="rating_version:motor-gb@1",
+    )
+    await _write_pending(
+        database, workspace_id,
+        quote_id="quote-differs", rating_version="rating_version:motor-gb@1",
+    )
+    async with database.unit_of_work() as session:
+        pending = (
+            await session.execute(
+                select(ScoringTraceRow).where(ScoringTraceRow.quote_id == "quote-differs")
+            )
+        ).scalar_one()
+        await traces_service.complete_pending_trace(
+            session,
+            blob_store,
+            pending.id,
+            _trace(
+                quote_id="quote-differs",
+                rating_version=pending.rating_version_ref,
+                bundle_hash=pending.bundle_hash,
+            ),
+            # `_write_pending` stores `{"outcome": "declined"}` as the served summary.
+            reproduced_summary={"outcome": "quoted"},
+        )
+
+    response = client.get("/api/v1/traces", headers=reader_headers)
+    assert response.status_code == 200, response.text
+    by_quote = {item["quote_id"]: item for item in response.json()["items"]}
+    assert set(by_quote) == {"quote-complete", "quote-differs"}
+    assert by_quote["quote-complete"].get("status") == "complete"
+    assert by_quote["quote-differs"].get("status") == "mismatch", by_quote["quote-differs"].keys()
+```
+
+  Add `from sqlalchemy import select` and `from app.db.models import ScoringTraceRow` the way
+  the module's neighbours import them.
+
+- [ ] **Step 2: Run it at the slice's base, alone:** `OMP_NUM_THREADS=1 nice uv run pytest
+  backend/tests/test_traces_api.py::test_a_reproduction_that_differs_from_the_served_quote_is_marked -q`
+  (the DB stack up; if it is down, record that and do not mock). Expected: FAIL at
+  `assert by_quote["quote-complete"].get("status") == "complete"` with `None == 'complete'`:
+  the route lists both rows and carries no mark. Any other cause is a plan defect: stop. Record
+  the tail in the ledger.
+
+- [ ] **Step 3: Apply T-M1 and the field.** Apply T-M1 to `03` byte for byte. In `TraceView`,
+  add the field after `environment`, typed as T-M1 names its values (for example
+  `status: Literal["complete", "mismatch"]`, with a `#:` comment citing `03` and the RL). In
+  `_view`, pass `status=row.status`. Regenerate the contracts. A `pending` row never reaches
+  `_view` (`_filtered`, `:134`), so the type does not need `pending`.
+
+- [ ] **Step 4: Run.** The new test, then `backend/tests/test_traces_api.py` and
+  `backend/tests/test_traces.py`, one file at a time. Expected: PASS, no existing assert
+  edited. Then `uv run python scripts/generate-contracts.py --check` (exit 0) and
+  `git diff -- docs/contracts/`: only `TraceView` gains the field.
+
+- [ ] **Step 5: Prove the test reads the mark.** In the working tree, change `_view` to pass
+  `status="complete"` for every row. Run the new test. Expected: FAIL at the `quote-differs`
+  assert, `'complete' == 'mismatch'`. Record the line in the ledger, then revert; `git diff` of
+  `traces.py` shows only Step 3's change.
+
+- [ ] **Step 6: Commit:** `fix(traces): GET /api/v1/traces marks a trace that did not reproduce
+  the served quote (FD 9572; T-M1)`, with `03`, the route, the test and the regenerated contract
+  in one commit.
+
+**What Task 2d does not change.** The comparator and the mark (`trace_handlers.py:98-107`,
+`traces.py:257`) are not edited: they already compare and mark (Delta 5 item 1). Their existing
+tests (`test_traces.py:415`, `:441`, `:469`; `test_score.py`'s capture tests) are the evidence
+for that half, and Task 4's full gate runs them.
+
 ### Task 3: A quote input never shadows a produced value
 
 **Withdrawn 2026-10-05 by the Delta above: (c) is PL 9560's. The executor does not run this
@@ -1413,3 +1608,12 @@ git commit -m "fix(rating): refuse a quote input that names a produced value (FD
   `:72`, `:78-79`; `scripts/bench-score-batch.py:71`; `scripts/bench-compiled-for.py:73`;
   `test_rating_score.py:46`, `:137`. The ruling's `compile.py:635-641` and this plan's `:634-643`
   read the same lines: `to_jdm` is at `:634` and the `Bundle` at `:636-643`.
+- **Delta 5 (2026-10-05).** Every cite it adds was read at `5fe56b87`:
+  `backend/src/app/worker/trace_handlers.py:90-96`, `:98`, `:99`, `:101-107`;
+  `backend/src/app/platform/traces.py:64`, `:143-156`, `:159-202`, `:197`, `:205-278`, `:252-256`,
+  `:257`; `backend/src/app/db/models.py:2289-2296`; `backend/src/app/api/traces.py:100-116`,
+  `:119-142`, `:132`, `:134`, `:145-157`; `backend/src/app/errors.py:375`, `:382`; `03:924`;
+  `docs/contracts/openapi/generated.json:14306`; `backend/tests/test_traces_api.py:82-181`;
+  `backend/tests/test_traces.py:415`, `:441-466`, `:469`. The trace answer rests on the bodies of
+  `_score_trace_produce`, `summarise_result`, `write_pending_trace`, `complete_pending_trace`,
+  `_filtered` and `_view`, read in full; `read_trace` (`traces.py:281-292`) reads the body only.
