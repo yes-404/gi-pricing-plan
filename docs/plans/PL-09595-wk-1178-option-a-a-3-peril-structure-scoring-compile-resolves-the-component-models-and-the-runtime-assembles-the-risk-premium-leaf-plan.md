@@ -34,6 +34,65 @@ head is named.
 > `git-hygiene`. Read [`README.md`](README.md)'s five unchecked conventions before the first
 > step. The executor is spawned from `.claude/roles/executor.md`.
 
+### Pre-mint delta, 2026-10-05
+
+Edited 2026-10-05 from 18:39:52 BST (`TZ=Europe/London date`), before this plan's mint, by the
+planner, on the lead's brief `~/gi-pricing-plan.local/handover/brief-capacity-fill-2026-10-05.md`
+Part C. origin/main `116a0da6f63cd7733335d6c2c6975c219b4e0e3d` was merged in first (only the
+generated `docs/INDEX.md` conflicted, and was regenerated). Nothing is re-decided here. What this
+delta changed, each marked in place, nothing deleted:
+
+1. **RL 9571's P1 and P2, applied byte for byte.** The authority is RL 9571 (working id,
+   unminted; #1188 @`cc5d0d61`), §"The plan texts (P-texts)" (`:258-301` of the record at that
+   head): P1 at `:265-270`, P2 at `:272-282`. `<RL>` inside a P-text is filled with `RL 9571`,
+   as the record's `:25-27` says ("`<date>` and `<RL>` inside the T- and P-texts, which the
+   applying slice fills"); it is re-pointed at the mint. Counts are exact-substring counts in
+   this file (`grep -c -F` semantics), read before and after the edit:
+
+   | P-text | Find string | Find before → after | New text before → after |
+   |---|---|---|---|
+   | P1 | the line `## Decision points` (an insertion after it; the line is kept) | 1 → 1 | 0 → 1 |
+   | P2 | `Medium: about one and a half executor days (sizing memo §2, A-3: 1 / 1.5 / 2).` | 1 → 0 | 0 → 1 |
+
+2. **Activation need 5 names the ruling:** RL 9571 (#1188), and also DP-A3-7 below.
+3. **A-2's R4 hands A-3 a check (with a red).** The maintainer's (by delegation) entry
+   "2026-10-05 17:27:55 BST — FD 9572 CAUSE: …; A-2 readings" (`channel/to-lead.md`), its A-2
+   line, verbatim in the part that binds this plan:
+
+   > R4 (peril_structure_ref steps are not checked): ACCEPTED for A-2, and A-3 checks a structure's component models' feature maps (add it to A-3's plan).
+
+   A-2 (PL 9597, #1178 @`176a6a75`) builds the check as "one function, called from both save
+   paths" (`POST /api/v1/rating-algorithms` and `POST /api/v1/sub-graphs`), refusing with
+   `422 MODEL_CALL_FEATURE_MAP_INVALID` under its readings R1 to R3 (its Task text read at that
+   head, `:360-390`). This slice extends **that function** to a `peril_structure_ref` step, so
+   both save paths gain it at once. New **Acceptance 16** and **DP-A3-7**, both below. The
+   write set gains the file that defines A-2's function (`backend/src/app/platform/
+   rating_algorithms.py` in PL 9597; Task 0 Step 3 records its name and file at A-2's merge),
+   and its tests go in `backend/tests/test_rating_peril_scoring_api.py`, already in the write
+   set. The size is not re-estimated here: this is a scope point for the lead, and a write into
+   `backend/src/app/platform/` the plan had listed as not written.
+4. **DP-A3-7 (open; owner the decision-maker).** One `feature_map` feeds every component of the
+   structure, but A-2's check compares a map with one Model. Which set is a value checked
+   against? (a) **the union**: a value is accepted if at least one component model accepts it
+   (its Factor slugs, its declared offset column under R2, or its `feature_order` under R3);
+   a value no component accepts is refused. (b) **every component**: a value must be accepted
+   by each component. **Recommendation (a).** Under (b) the frequency GLM's `exposure_years`
+   offset column (RL 9571's P3: "The frequency GLM's `exposure_years` offset reaches B4 through
+   its `feature_map`") is refused against the severity component, which declares no such
+   offset, so A-4's ruled path could not save. A component ref resolving to no Model is left to
+   compile under (a) and (b) alike (R1).
+5. **Serialisation with SL 9568 (PL 9567, WK-673; #1193 @`42d8be16`).** Its hand-off
+   (`:235-243` at that head), and the maintainer's (by delegation) entry "2026-10-05 17:51:03
+   BST — …", item 2, "Serialising A-1/A-2/A-3 with SL 9568 on _model_call_handler: agreed". So
+   this slice and SL 9568 **serialise** on `_model_call_handler`; the one that merges second
+   rebases and re-runs `test_rating_wire_order.py` and SL 9568's Task 2c replay script. The
+   hand-off binds this slice's peril branch, verbatim: "A branch that any of them adds must
+   return through that same expression, or through `_model_call_failure`, and must not return
+   `{"output": {produced names only}}`" (the expression is `{**context, **produced}`). With
+   **A-2** (#1178 @`176a6a75`) the order was already serial (activation need 4, a plan
+   dependency); item 3 adds a second shared definition, A-2's save-path check, which changes
+   nothing in that order.
+
 ## Goal
 
 A Rating Version whose `model_call` step names a Peril Structure compiles and scores. At compile,
@@ -124,7 +183,7 @@ row's status flip and this plan's.
    slice predicts each component through the same per-kind dispatch, so a GLM component scores
    only after A-2. A-2 and this slice both edit `_model_call_handler` and `compile_bundle`;
    they serialise in any case.
-5. **The ruling on DP-A3-1 to DP-A3-6 merged and minted.** If the minted text differs from this
+5. **The ruling on DP-A3-1 to DP-A3-6 merged and minted.** *(Pre-mint delta 2026-10-05, RL 9571; see §"Pre-mint delta, 2026-10-05". It is RL 9571 (#1188 @`cc5d0d61`); DP-A3-7's ruling is needed too.)* If the minted text differs from this
    plan, the minted text governs, and the planner aligns the plan before its first merge.
 6. **The lane is free under `RL-1263` as amended by RL 9620 (working id, #1162):** no build
    slice that edits `compile_bundle` (PL 9610, PL 9609; PL 9649 once merged is history) or
@@ -221,6 +280,15 @@ suite outside Task 7.
     the gate-runner, in a held gate slot; each command's rc and the tree are recorded.
 15. **`git diff --stat origin/main...HEAD`** lists only §"Write set"'s paths; the ledger
     records it.
+16. **A peril `model_call`'s `feature_map` is checked against its component models (red
+    first).** *(Pre-mint delta 2026-10-05, RL 9571; see §"Pre-mint delta, 2026-10-05".)* Saving an algorithm (`POST /api/v1/rating-algorithms`)
+    and a sub-graph (`POST /api/v1/sub-graphs`) whose `peril_structure_ref` step maps a value
+    that no component model accepts (under DP-A3-7 (a); A-2's R2 and R3 define "accepts")
+    answers `422` with `code == "MODEL_CALL_FEATURE_MAP_INVALID"`, the detail naming the step,
+    the value and the structure's ref; no row is written. The control: a map whose every value
+    some component accepts, including the frequency component's offset column, answers `201`.
+    **Red first:** after A-2's merge the same map saves `201`, because R4 skips the step; the
+    red is recorded in the ledger.
 
 ## Global Constraints
 
@@ -308,7 +376,8 @@ file. Rows marked *(DP-n x)* exist only under that option.
 | `packages/pricing-core/src/pricing_core/rating/runtime.py` | edited: `_model_call_handler` (`:512-583`), a `peril_structure_ref` branch before the `fit_result` read; `_load_boosters` (`:586-621`), loading each GBM component's booster under the component's ref; added: `_score_peril_structure` | **A-2** edits `_model_call_handler`'s `else:` branch (`:568-579`) and its tests; **PL 9776** (#1051 @`ecbb82ab`) edits `to_wire`, three node builders, `CompiledBundle` and `load_bundle`; **PL 9610**, **PL 9609** edit `load_bundle` / `CompiledBundle`; **PL 9688** (#1145 @`2f3269c8`) edits `_decision_table_node` | A-2: **serial** (activation need 4). The others edit different definitions in the same file: `other_shared_path`, so they serialise unless the dispatch record names the path and the check that no definition is shared. This slice edits neither `load_bundle` nor `CompiledBundle` |
 | `packages/pricing-core/tests/test_rating_peril_scoring.py` | added (new module) | none | none |
 | `packages/pricing-core/tests/test_rating_runtime.py`, `test_rating_compile_bundle.py` | **read only**: fixtures imported (`_train_tiny_booster`, `_gbm_model_payload`, `_glm_model_payload`; `FakeResolver`, `valid_algorithm_payload`, `_version`) | A-2 flips `test_rating_runtime.py:377` | none: no existing test is edited here |
-| `backend/tests/test_rating_peril_scoring_api.py` | added (new module, Task 5) | none | none |
+| `backend/tests/test_rating_peril_scoring_api.py` | added (new module, Task 5); Acceptance 16's tests *(Pre-mint delta 2026-10-05, RL 9571; see §"Pre-mint delta, 2026-10-05".)* | none | none |
+| the file defining A-2's save-path feature-map check (`backend/src/app/platform/rating_algorithms.py` in PL 9597) *(Pre-mint delta 2026-10-05, RL 9571; see §"Pre-mint delta, 2026-10-05".)* | edited: that function gains a `peril_structure_ref` branch (Acceptance 16) | **A-2** (PL 9597, #1178) adds it | plan dependency: serial after A-2 (activation need 4) |
 | `scripts/bench-rating.py` *(DP-A3-6 a)* | edited: `main` (`:882`), one flag; added: a peril fixture builder | **PL 9728** (#1113 @`3ad98fe2`) edits `scripts/bench-rating.py` | different definitions: `other_shared_path`; the second to merge re-reads |
 | `docs/specs/03-rating-engine.md` (texts T1–T3 under the ruling) | edited: FR-240 cell (`:137`), the `model_call` row (`:100`), the owned-code list (`:933`) | **PL 9649** appends T1/T5 to the FR-240 cell and T4 to the owned list; PL 9688, PL 9683, PL 9716, PL 9689 edit other `03` rows | **serial with PL 9649** on the FR-240 cell and the owned list (it is an activation need); others: distinct rows, the second to merge re-reads |
 | the slice's ledger `docs/ledgers/LG-<n>`; `docs/INDEX.md` | added; regenerated | every PR | registry |
@@ -334,11 +403,13 @@ Step 3 re-reads both as merged.
 
 ### Size
 
-Medium: about one and a half executor days (sizing memo §2, A-3: 1 / 1.5 / 2). Five build tasks
+Medium: about one and three-quarter executor days (sizing memo §2, A-3: 1 / 1.5 / 2, plus DP-A3-3's +0.25 accepted by RL 9571: 1.25 / 1.75 / 2.5, estimates). Five build tasks
 after the preconditions, no migration, no frontend. One full two-half gate. Under DP-A3-6 (a)
 one bench run in a quiet window.
 
 ## Decision points
+
+**Ruled 2026-10-05 by RL 9571 (the maintainer's (by delegation) entry "2026-10-05 17:08:35 BST — A-3 / A-4 DP memo (handover/dp-memo-a3-a4-2026-10-05.md) RULED; the reconciliation TOLERANCE set").** DP-A3-1 (c), code `BUNDLE_COMPILE_FAILED`; DP-A3-2 (a), and Task 4 maps `assemble_risk_premium`'s `ModellingError` to `_model_call_failure`; DP-A3-3 (a), scope accepted, +0.25 executor-day; DP-A3-4 (a), C4 shown live by A-4 on a superseded component; DP-A3-5 (a), composed on exact `Decimal` and rounded only at the output step (17:12:40, option (B)), the frequency offset through the `feature_map`; DP-A3-6 (a), recorded only, run only when no gate is running. The table below records what was weighed; where it differs, the ruling governs. Spec texts T1–T4 are the ruling's, verbatim.
 
 Each is open. The owner is a decision-maker; the ruling's working id is reserved by the lead.
 Every option below was weighed against the code at `137bc817`.
