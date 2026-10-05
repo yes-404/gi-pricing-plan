@@ -189,12 +189,16 @@ async def test_a_known_quote_prices_to_a_known_premium() -> None:
 
 @pytest.mark.req("NFR-496")
 async def test_the_ladder_reconciles_over_a_battery_of_generated_contexts() -> None:
-    """Not one example: driver age and channel vary, and every one of `reconcile_ladder`'s
-    own check *and* a from-scratch manual re-derivation (applying every recorded operation
-    to `risk_premium_minor` in order) must reproduce `payable_premium_minor` exactly —
-    the manual half is strictly stronger than `reconcile_ladder` itself, which only checks
-    the first rung and int-ness (`pricing_core/money.py`), not that an operation
-    reproduces its own rung."""
+    """Not one example: driver age and channel vary, and a from-scratch re-derivation
+    (`RL-1329` R4: apply every recorded operation, with no rounding, to the first rung's
+    unrounded value, then round once at `payable_premium`) must reproduce the payable
+    exactly. Replaces the old re-derivation, whose `round` branch *assigned*
+    `rung.value_minor` instead of replaying, and so passed over the 4 dp drift (FD-1336 F4;
+    its NFR-496 round weakness)."""
+    from decimal import Decimal, localcontext
+
+    from pricing_core.money import ROUNDING_MODES
+
     compiled = await _compiled()
     for age in (18, 25, 34, 50, 70, 99):
         for channel in ("direct", "broker"):
@@ -207,28 +211,40 @@ async def test_the_ladder_reconciles_over_a_battery_of_generated_contexts() -> N
             ladder = result.premium_ladder
             assert ladder, f"age={age} channel={channel}: empty ladder"
 
-            value = ladder[0].value_minor
-            for rung in ladder[1:]:
-                op = rung.operation
-                assert op is not None, f"{rung.rung}: no recorded operation"
-                if op.kind == "multiply":
-                    assert op.factor is not None
-                    from decimal import Decimal
-
-                    from pricing_core.money import apply_factor
-
-                    value = apply_factor(value, Decimal(op.factor), op.mode or "half_even")  # type: ignore[arg-type]
-                elif op.kind == "add":
-                    assert op.amount_minor is not None
-                    value += op.amount_minor
-                elif op.kind == "round":
-                    value = rung.value_minor
-                # "none": value carries forward unchanged.
-                assert value == rung.value_minor, (
-                    f"age={age} channel={channel} rung={rung.rung}: recorded operation "
-                    f"does not reproduce the recorded value ({value} != {rung.value_minor})"
-                )
-            assert value == result.outputs["payable_premium_minor"]
+            assert ladder[0].unrounded_minor is not None
+            value = ladder[0].unrounded_minor
+            with localcontext() as ctx100:
+                ctx100.prec = 100
+                for rung in ladder[1:]:
+                    op = rung.operation
+                    assert op is not None, f"{rung.rung}: no recorded operation"
+                    if op.kind == "multiply":
+                        assert op.factor is not None
+                        value = value * op.factor
+                    elif op.kind == "divide":
+                        assert op.divisor is not None
+                        value = value / op.divisor
+                    elif op.kind == "add":
+                        assert op.amount_unrounded_minor is not None
+                        value = value + op.amount_unrounded_minor
+                    elif op.kind == "round":
+                        # the replay ROUNDS here, once; it never assigns the recorded value
+                        assert op.mode is not None
+                        replayed = int(
+                            value.quantize(Decimal(1), rounding=ROUNDING_MODES[op.mode])
+                        )
+                        assert replayed == rung.value_minor, (
+                            f"age={age} channel={channel}: replay rounds to {replayed}, "
+                            f"recorded {rung.value_minor}"
+                        )
+                        assert replayed == result.outputs["payable_premium_minor"]
+                        continue
+                    assert rung.unrounded_minor is not None
+                    assert abs(value - rung.unrounded_minor) <= Decimal("1e-26") * abs(
+                        rung.unrounded_minor
+                    ), f"age={age} channel={channel} rung={rung.rung}: operation does not replay"
+            assert ladder[-1].operation is not None
+            assert ladder[-1].operation.kind == "round"
 
 
 # ---------------------------------------------------------------------------
@@ -259,20 +275,31 @@ async def test_two_firing_constraints_both_appear_in_decline_reasons() -> None:
 
 
 @pytest.mark.req("FR-256")
-async def test_a_clamp_overrides_the_ladder_and_is_recorded_on_the_constraints_rung() -> None:
+async def test_a_binding_clamp_is_attributed_to_the_constraints_rung() -> None:
+    """Replaces `test_a_clamp_overrides_the_ladder_and_is_recorded_on_the_constraints_rung`,
+    which asserted `office.value_minor == 999_999` and so fixed FD-1330's misattribution:
+    the clamp's effect was carried by the rung it overwrote, and `constraints` said `none`.
+    Now `office_premium` keeps its own pre-clamp value and x1.1, and `constraints` is the
+    clamp (`RL-1329` §2 step 5)."""
     compiled = await _compiled()
     ctx = _ctx(inputs={
         "driver_age": 34, "channel": "direct", "min_premium_minor": 999_999,
         "sanity_cap_minor": 999_999_999, "sanity_floor_minor": 0,
     })
-    result = await score_one(compiled, ctx)
+    result = await score_one(compiled, ctx, trace=True)
 
     assert result.outcome == "quoted"
     office = next(r for r in result.premium_ladder if r.rung == "office_premium")
-    assert office.value_minor == 999_999
+    assert office.value_minor != 999_999
     constraints = next(r for r in result.premium_ladder if r.rung == "constraints")
+    assert constraints.value_minor == 999_999
     assert constraints.operation is not None
+    assert constraints.operation.kind == "clamp"
+    assert constraints.operation.bound == "min"
+    assert constraints.operation.bound_unrounded_minor == 999_999
     assert constraints.operation.applied == ["MIN_PREMIUM_APPLIED"]
+    assert result.trace is not None
+    assert result.trace.ladder_reconciled is True
 
 
 @pytest.mark.req("FR-256")
@@ -717,3 +744,143 @@ async def test_concurrent_scoring_against_one_shared_bundle_does_not_cross_talk(
         assert concurrent.model_copy(update={"timing_ms": {}}) == sequential.model_copy(
             update={"timing_ms": {}}
         ), f"age={age}: concurrent scoring diverged from sequential — cross-talk"
+
+
+# ---------------------------------------------------------------------------
+# WK-1178 code slice (PL-1314, RL-1313 DP-G4, FD-1317): a division in a decline condition or a
+# clamp bound is refused at save; a residual evaluation failure has its own code.
+# ---------------------------------------------------------------------------
+
+
+def _with_step(step_id: str, **fields: Any) -> dict[str, Any]:
+    payload = _algorithm_payload()
+    for step in payload["steps"]:
+        if step["step_id"] == step_id:
+            step.update(fields)
+    return payload
+
+
+async def _compile_with(payload: dict[str, Any]) -> CompiledBundle:
+    resolver = _FakeResolver()
+    resolver._payloads["rating_algorithm:score-fixture@1"] = payload
+    return load_bundle(await compile_bundle(_version(), resolver))
+
+
+#: FD-1317 D2: a `??` "guard" on a decline condition that fails open when the divisor is 0.
+_D2_CONDITION = "((office_premium_minor / sanity_floor_minor) ?? 0) <= 2"
+#: FD-1317 E3/E4: a `??` "guard" on a clamp bound that silently loses the cap at divisor 0.
+_E4_BOUND = "(sanity_cap_minor / sanity_floor_minor) ?? 999999999999"
+
+
+@pytest.mark.req("FR-274")
+@pytest.mark.parametrize(("step_id", "fields"), [
+    pytest.param("s_decl_cap", {"condition": _D2_CONDITION}, id="D2_decline_condition"),
+    pytest.param("s_clamp", {"clamp_bounds": {"min": "min_premium_minor", "max": _E4_BOUND}},
+                 id="E4_clamp_bound"),
+])
+async def test_a_masked_division_in_a_condition_or_bound_is_refused_at_compile(
+    step_id: str, fields: dict[str, Any]
+) -> None:
+    with pytest.raises(ValueError, match=r"^EXPRESSION_UNGUARDED_DIVISION:"):
+        await _compile_with(_with_step(step_id, **fields))
+
+
+def _hand_compiled(payload: dict[str, Any]) -> CompiledBundle:
+    """A bundle built without `compile_bundle`, since after this slice these cannot be saved."""
+    from model_schema.rating import RatingAlgorithm
+    from pricing_core.rating.compile import Bundle, bundle_hash, to_jdm
+
+    resolver = _FakeResolver()
+    algorithm = RatingAlgorithm.model_validate(payload)
+    pins = _version().pins
+    assert pins is not None
+    graph = to_jdm(algorithm)
+    payloads = {"rating_algorithm:score-fixture@1": payload,
+                **{str(ref): resolver._payloads[str(ref)]
+                   for ref in (*pins.rate_tables, *pins.models)}}
+    return load_bundle(Bundle(
+        algorithm_ref="rating_algorithm:score-fixture@1", graph=graph, resolved_payloads=payloads,
+        pins=pins, content_hash=bundle_hash(graph, pins),
+        compiled_at=datetime(2026, 8, 29, 12, 0, 0),
+    ))
+
+
+_ZERO_FLOOR = {
+    "driver_age": 34, "channel": "direct", "min_premium_minor": 0,
+    "sanity_cap_minor": 999_999_999, "sanity_floor_minor": 0,
+}
+
+
+@pytest.mark.req("FR-255")
+@pytest.mark.parametrize(("step_id", "fields"), [
+    pytest.param("s_decl_cap", {"condition": "office_premium_minor / sanity_floor_minor <= 2"},
+                 id="A2_decline_condition"),
+    pytest.param("s_clamp", {"clamp_bounds": {"min": "min_premium_minor",
+                                              "max": "sanity_cap_minor / sanity_floor_minor"}},
+                 id="C1_clamp_bound"),
+])
+async def test_a_residual_evaluation_failure_is_not_a_table_miss(
+    step_id: str, fields: dict[str, Any]
+) -> None:
+    """RL-1313 DP-G4: these steps consume `office_premium_minor`, not a table's output."""
+    compiled = _hand_compiled(_with_step(step_id, **fields))
+    with pytest.raises(ValueError, match=r"^RATING_EVALUATION_FAILED:"):
+        await score_one(compiled, _ctx(inputs=_ZERO_FLOOR))
+
+
+@pytest.mark.req("FR-255")
+async def test_the_stated_residual_still_reports_the_miss_code() -> None:
+    """RL-1313 DP-G4's stated limit, pinned so a change to it is visible: a failing step that
+    itself directly consumes an `on_miss="error"` output reports the miss code (the engine's
+    error has the same shape as a genuine miss). FD working id 9888 owns the fix."""
+    payload = _with_step(
+        "s_office",
+        expr="risk_premium_minor * expense_factor * (1 / (expense_factor - expense_factor))",
+    )
+    compiled = _hand_compiled(payload)
+    with pytest.raises(ValueError, match=r"^RATE_TABLE_MISS:"):
+        await score_one(compiled, _ctx())
+
+
+@pytest.mark.req("FR-255")
+@pytest.mark.parametrize("engine_error", [
+    "boom",
+    '{"type":"NodeError","source":"x"}',
+    '{"type":"NodeError","source":"x","nodeId":"not_a_step"}',
+    '{"type":"NodeError","source":"x","nodeId":"s_out_payable"}',
+])
+def test_no_engine_failure_escapes_as_a_bare_runtime_error(engine_error: str) -> None:
+    """RL-1313 DP-G4: a missing or unparseable `nodeId` also takes the new code."""
+    from model_schema.rating import RatingAlgorithm
+    from pricing_core.rating.score import _reraise_engine_failure
+
+    algorithm = RatingAlgorithm.model_validate(_algorithm_payload())
+    with pytest.raises(ValueError, match=r"^RATING_EVALUATION_FAILED:"):
+        _reraise_engine_failure(algorithm, RuntimeError(engine_error))
+
+
+@pytest.mark.req("FR-255")
+def test_an_engine_failure_with_no_table_or_lookup_to_blame_is_coded() -> None:
+    """The former bare `raise exc` fallthrough: no `on_miss="error"` step exists at all."""
+    from model_schema.rating import RatingAlgorithm
+    from pricing_core.rating.score import _reraise_engine_failure
+
+    algorithm = RatingAlgorithm.model_validate(_with_step("s_expense", on_miss="default"))
+    with pytest.raises(ValueError, match=r"^RATING_EVALUATION_FAILED:"):
+        _reraise_engine_failure(algorithm, RuntimeError("boom"))
+
+
+@pytest.mark.req("NFR-499")
+def test_an_engine_error_text_never_reaches_the_raised_message() -> None:
+    """The sentinel for `_failing_node`'s read of the engine error (`test_error_sinks.py`): the
+    engine's text can carry anything, and only a matched step's own id may be named."""
+    from model_schema.rating import RatingAlgorithm
+    from pricing_core.rating.score import _reraise_engine_failure
+
+    sentinel = "SENTINEL-quote-input-d7e3c518"
+    algorithm = RatingAlgorithm.model_validate(_algorithm_payload())
+    for nodeid in ("s_decl_cap", sentinel):
+        engine_error = f'{{"type":"NodeError","source":"{sentinel}","nodeId":"{nodeid}"}}'
+        with pytest.raises(ValueError, match=r"^RATING_EVALUATION_FAILED:") as raised:
+            _reraise_engine_failure(algorithm, RuntimeError(engine_error))
+        assert sentinel not in str(raised.value)

@@ -37,7 +37,7 @@ named here rather than shipped silently; see the PR description for the recommen
 from __future__ import annotations
 
 import json
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -47,12 +47,25 @@ import zen
 from model_schema.modelling import GbmFitResult
 from model_schema.rating import RatingAlgorithm, RatingModelCallStep
 from pricing_core.modelling.gbm import load_gbm_booster, predict_gbm
-from pricing_core.rating.compile import Bundle, JdmGraph
+from pricing_core.rating.compile import Bundle, JdmGraph, check_step_refs_pinned
+from pricing_core.safe_error import CodedError
 
-__all__ = ["MODEL_CALL_ERROR_KEY", "CompiledBundle", "load_bundle", "to_wire"]
+__all__ = [
+    "MODEL_CALL_ERROR_KEY",
+    "CompiledBundle",
+    "clamp_keys",
+    "exact_key",
+    "exact_read_names",
+    "load_bundle",
+    "to_wire",
+]
 
 _INPUT_ID = "input"
 _OUTPUT_ID = "output"
+#: The generated node that reads every reported name through `string()` (`RL-1329` §2), and
+#: the result-key prefix of what it writes.
+_EXACT_ID = "__exact_reads"
+EXACT_PREFIX = "__exact__"
 
 #: Reserved key a `model_call` handler uses to report a failure through normal engine data
 #: flow rather than an exception (WK-671 Task 1.4, resolving the finding below). `$`-prefixed
@@ -260,6 +273,11 @@ def _decision_table_node(
     }
 
 
+def clamp_keys(step_id: str) -> tuple[str, str, str]:
+    """`(before, min, max)` result keys a clamp step's node writes (`RL-1329` §2 step 5)."""
+    return f"{step_id}__before", f"{step_id}__min", f"{step_id}__max"
+
+
 def _constraint_node(step_id: str, node: dict[str, Any]) -> dict[str, Any]:
     """A `constraint` step becomes an `expressionNode` (WK-671 Task 1.4, RL-875).
 
@@ -306,6 +324,20 @@ def _constraint_node(step_id: str, node: dict[str, Any]) -> dict[str, Any]:
                 f"constraint step {step_id!r} declares on_violation='clamp' but no "
                 "clamp_bounds — nothing to clamp towards."
             )
+        before_key, min_key, max_key = clamp_keys(step_id)
+        # Exact reads, ahead of the clamp expression that overwrites the name in place
+        # (`RL-1329` §2 step 5): the value before the clamp, and each bound present.
+        expressions.append(
+            {"id": f"{step_id}_b", "key": before_key, "value": f"string({consumed[0]})"}
+        )
+        if "min" in bounds:
+            expressions.append(
+                {"id": f"{step_id}_n", "key": min_key, "value": f"string({bounds['min']})"}
+            )
+        if "max" in bounds:
+            expressions.append(
+                {"id": f"{step_id}_x", "key": max_key, "value": f"string({bounds['max']})"}
+            )
         value_expr = str(consumed[0])
         if "min" in bounds:
             value_expr = f"({value_expr} < ({bounds['min']}) ? ({bounds['min']}) : {value_expr})"
@@ -319,6 +351,43 @@ def _constraint_node(step_id: str, node: dict[str, Any]) -> dict[str, Any]:
         "name": step_id,
         "position": {"x": 0, "y": 0},
         "content": {"expressions": expressions, "passThrough": True},
+    }
+
+
+def exact_key(name: str) -> str:
+    """The result key under which the engine's exact `string()` value of `name` arrives."""
+    return f"{EXACT_PREFIX}{name}"
+
+
+def exact_read_names(graph: JdmGraph) -> list[str]:
+    """The names an `output` step reports — the source of every ladder rung and declared
+    output — in declaration order, each once (`RL-1329` §2 step 1)."""
+    names: dict[str, None] = {}
+    for node in graph.nodes.values():
+        if node["type"] == "output":
+            consumed = _as_list(node.get("consumes") or [])
+            if consumed:
+                names[str(consumed[0])] = None
+    return list(names)
+
+
+def _exact_read_node(names: Sequence[str]) -> dict[str, Any]:
+    """One generated node, after every step, that reads each reported name through the
+    engine's `string()`: the exact decimal, never the float that crosses the binding
+    (`RL-1329` §1 departure 1, FR-273's string limb). Generated text, so RL-1312's
+    authored-string check does not read it."""
+    return {
+        "id": _EXACT_ID,
+        "type": "expressionNode",
+        "name": _EXACT_ID,
+        "position": {"x": 0, "y": 0},
+        "content": {
+            "expressions": [
+                {"id": f"{_EXACT_ID}_{index}", "key": exact_key(name), "value": f"string({name})"}
+                for index, name in enumerate(names)
+            ],
+            "passThrough": True,
+        },
     }
 
 
@@ -422,10 +491,17 @@ def to_wire(graph: JdmGraph, payloads: Mapping[str, Any] | None = None) -> dict[
         for name in _as_list(node["produces"]):
             produced_by[str(name)] = step_id
 
+    exact_names = exact_read_names(graph)
+    sink_id = _EXACT_ID if exact_names else _OUTPUT_ID
     for step_id in interior_ids:
         produced_names = {str(n) for n in _as_list(graph.nodes[step_id]["produces"])}
         if not produced_names & consumed_by_someone:
-            edges.append(_edge(step_id, _OUTPUT_ID))
+            edges.append(_edge(step_id, sink_id))
+    if exact_names:
+        if not interior_ids:
+            edges.append(_edge(_INPUT_ID, _EXACT_ID))
+        wire_nodes.append(_exact_read_node(exact_names))
+        edges.append(_edge(_EXACT_ID, _OUTPUT_ID))
 
     wire_nodes.append(
         {"id": _OUTPUT_ID, "type": "outputNode", "name": "Response", "position": {"x": 0, "y": 0}}
@@ -530,6 +606,11 @@ def _load_boosters(
         ref_str = str(ref)
         if ref_str in boosters:
             continue
+        if ref_str not in payloads:
+            raise CodedError(
+                f"RATING_VERSION_UNPINNED: model_call step {step.step_id!r} names {ref_str}, "
+                "which the bundle does not carry (FR-237)"
+            )
         fit_result = payloads[ref_str].get("fit_result", {})
         model_type = fit_result.get("model_type")
         if model_type in ("xgboost", "lightgbm"):
@@ -574,8 +655,12 @@ def load_bundle(bundle: Bundle) -> CompiledBundle:
     Performs no I/O: every pinned artifact's content already travels *inside* `bundle`
     (RL-873) — `resolved_payloads`, never a blob reference — so nothing here reaches a
     database, a blob store, or the network (NFR-491).
+
+    Refuses with `RATING_VERSION_UNPINNED` a bundle whose step ref is not pinned at its exact
+    version, so a bundle compiled before that check existed cannot price silently (FR-237).
     """
     algorithm = RatingAlgorithm.model_validate(bundle.resolved_payloads[bundle.algorithm_ref])
+    check_step_refs_pinned(algorithm, bundle.pins)
     boosters = _load_boosters(algorithm, bundle.resolved_payloads)
     handler = _model_call_handler(algorithm, bundle.resolved_payloads, boosters)
     wire = to_wire(bundle.graph, bundle.resolved_payloads)

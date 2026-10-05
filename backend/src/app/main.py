@@ -25,6 +25,8 @@ from app.api import (
     dataset_versions,
     datasets,
     demo,
+    deployments,
+    environments,
     health,
     jobs,
     me,
@@ -36,6 +38,7 @@ from app.api import (
     regression_suites,
     score,
     service_accounts,
+    sub_graphs,
     traces,
     validation,
 )
@@ -125,6 +128,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health.router)
     app.include_router(jobs.router, prefix=API_PREFIX)
     app.include_router(service_accounts.router, prefix=API_PREFIX)
+    app.include_router(environments.router, prefix=API_PREFIX)
+    app.include_router(deployments.router, prefix=API_PREFIX)
     app.include_router(settings_api.router, prefix=API_PREFIX)
     app.include_router(me.router, prefix=API_PREFIX)
     app.include_router(audit.router, prefix=API_PREFIX)
@@ -134,6 +139,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(demo.router, prefix=API_PREFIX)
     app.include_router(models.router, prefix=API_PREFIX)
     app.include_router(rating_algorithms.router, prefix=API_PREFIX)
+    app.include_router(sub_graphs.router, prefix=API_PREFIX)
     app.include_router(rate_tables.router, prefix=API_PREFIX)
     app.include_router(regression_suites.router, prefix=API_PREFIX)
     app.include_router(peril_structures.router, prefix=API_PREFIX)

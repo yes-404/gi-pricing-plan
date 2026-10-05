@@ -5,7 +5,7 @@ title: A genuine table or lookup miss and another evaluation failure in the same
 status: active
 created: 2026-09-30
 owner: auditor
-tree: 9f63d0feee524815e7e0c68c99a53ac3f80e6c37
+tree: 47d770e8fcbd2410fa101019ed8cf3aae69a1baa
 corrected_by: []
 relates: [WK-1178]
 ---
@@ -15,18 +15,18 @@ relates: [WK-1178]
 ## Finding
 
 **Severity: low.** When `async_evaluate()` fails, `_reraise_engine_failure`
-(`packages/pricing-core/src/pricing_core/rating/score.py:469-498`) cannot tell **why**. The engine
+(`packages/pricing-core/src/pricing_core/rating/score.py:481`, found by symbol at `origin/main` `47d770e8`) cannot tell **why**. The engine
 reports a genuine `on_miss='error'` table or lookup miss and any other failure in the same step
 (for example a null division) as the **same** `NodeError` shape, so the function infers the cause.
 **This record is the residual only.** #968 (FD working id 9885) and #970 (RL working id 9982) are
 fixing the broader case, in which the function names a table or lookup miss for a failure at a
 step that consumes no such output whenever the algorithm has any `on_miss='error'` step: after
-#970's DP-G4 fix the every-step scan (`:484-497`) is removed. What remains is the case where the
+#970's DP-G4 fix the every-step scan is removed (RL-1313 DP-G4; landed as RL-1313 in mint batch #994, `fa9a73c2`; #968-#970 closed unmerged). What remains is the case where the
 failing step **itself directly consumes an `on_miss='error'` output**: a genuine miss and another
 evaluation failure in that step are indistinguishable, and the failure is **reported as a miss**
-(`RATE_TABLE_MISS` or `REFERENCE_LOOKUP_MISS`). The docstring says so itself (`:469-483`): *"it is honest about
-being an inference: a correctness gap for a later slice to close by making the wire translation
-itself fail gracefully"*.
+(`RATE_TABLE_MISS` or `REFERENCE_LOOKUP_MISS`). The docstring says so itself (the paragraph headed "The stated limit", `score.py:481-`): *"A failing step that itself directly consumes such an output, and fails for another reason,
+still reports the miss code: the engine's error has the same shape in both cases."* The residual is pinned by
+`test_the_stated_residual_still_reports_the_miss_code` (`packages/pricing-core/tests/test_rating_score.py:832`).
 
 **Impact: a misdiagnosis, never a silent price.** Both paths raise a typed error and no quote is
 returned. An operator sees a rate-table problem that did not happen.
@@ -58,7 +58,7 @@ code names a rate-table miss regardless. The same shape was measured by #970's p
 id 9982), by the medium decision-maker, with a real `score_one` on the score fixture: a genuine
 miss (table row removed) and a null-division failure in the same step give the same shape.
 
-**Cause, by code reading.** `:484-497` set `has_table_miss` and `has_lookup_miss` by scanning
+**Cause, by code reading (historical: the scan is gone at main).** The removed `:484-497` block set `has_table_miss` and `has_lookup_miss` by scanning
 **every** step of the algorithm for `on_miss == "error"`, not by asking which step failed or what
 it consumed. So the code is chosen from the algorithm's shape, not from the failure. This is
 broader than the case the maintainer accepted below (a failing step that directly consumes an
@@ -76,9 +76,11 @@ never a silent price), and record it as a LOW FD with an owner, not a backlog no
 not directly consume an `on_miss='error'` output; this record is the residual that narrowing
 leaves.
 
-**Fix path:** the wire-level change named in `score.py:469-483`'s own docstring, making the wire
+**Fix path:** the wire-level change named in the `_reraise_engine_failure` docstring (`score.py:481-`), making the wire
 translation itself fail gracefully so the failing step and its cause are known, not inferred.
 Event that discharges it: that change merges, proven on this table: case 2 must not raise
 `RATE_TABLE_MISS`, and case 1 must still raise it.
 
 *Drafted under working id 9888.*
+
+Amended 2026-10-05 before mint: line cites re-pointed by symbol to `origin/main` `47d770e8` (`_reraise_engine_failure` at `score.py:481`); the every-step scan the old `:469-498` / `:484-497` cites named was removed by RL-1313 DP-G4 (landed as RL-1313 in mint batch #994, `fa9a73c2`; #968-#970 closed unmerged), leaving only the residual above, which `test_the_stated_residual_still_reports_the_miss_code` pins. `PL-1314` cites this finding by working id (its lines 105, 336, 487) and is re-pointed at mint per its own line 487.
