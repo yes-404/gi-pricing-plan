@@ -67,3 +67,46 @@ backend/tests/test_rating_version_create_pins.py`): **13 failed, 1 passed**.
   `test_a_peril_structure_pin_is_stored_and_compile_reports_no_resolver`,
   `test_the_creation_event_records_the_declared_pins`: `assert 422 == 201` on the create (a `VALIDATION_FAILED` 422 on
   `algorithm_ref` and `pins`).
+
+### Task 5 (RL-1428's three texts) — MINT-ARTIFACT CORRECTION
+
+RL-1428 lines 150 and 166 (T2 and T3), and line 143's text (T1), carry "RL-1428), FD-1421.)": the mint replaced the
+working id "RL 9695 (working id)" with "RL-1428)" and left the closing ")" of the old parenthesis. The maintainer (by
+delegation) ruled, in the `to-lead.md` entry headed `2026-10-05 22:44:21 BST — RL-1428's T-texts: the stray ")" is a MINT ARTIFACT; apply with it removed`, that the ONE stray ")" is removed
+when the texts land: "(… <date>, RL-1428, FD-1421.)", with `<date>` the commit date (2026-10-05). Everything else is
+byte for byte. RL-1428 itself stays unedited.
+
+The three find strings each occurred once in `docs/specs/03-rating-engine.md` before the edit (a script asserted it).
+After the edit, by `grep -cF` over that file: the stray form `RL-1428), FD-1421.)` **0**; `*(Amended 2026-10-05,
+RL-1428, FD-1421.)*` **2** (T1 at §5.1's create row, T3 at FR-237); `*(Discharged 2026-10-05, RL-1428, FD-1421.)*` **1**
+(T2 at §4.3's note).
+
+### Task 2 — the typed request
+
+`RatingVersionCreate` is added after `RatingVersion` in `model_schema/rating.py` with `_PIN_TYPES` (DP-3 (a)); exported in
+`__init__.py`; `GENERATED_SHAPES` and `ONE_SIDED_SLUGS` each gain `rating-version-create`. **Slug narrowing:** `slug` is
+`Slug` (as `RatingVersion.slug`), where the route-local class used `str`; a slug the old body took and the stored shape
+refuses would already have failed `to_schema` on read, so the boundary now refuses what could never be read back.
+
+**Step 4 red, recorded out of order.** The `ONE_SIDED_SLUGS` entry was written before the run, because gate-1 was held
+(S7) and no run was allowed. When the slots freed, the entry was reverted and `uv run pytest -q backend/tests/test_contracts.py
+-k one_sided` printed: `AssertionError: a schema present on exactly one side must declare that in ONE_SIDED_SLUGS (OQ-649
+(b)): ['rating-version-create']`, `FAILED …::test_every_one_sided_slug_is_declared`, `1 failed, 153 deselected`. The entry
+was restored; `generate-contracts.py` wrote `rating-version-create.schema.json` and `openapi/generated.json`;
+`generate-contracts.py --check`: `46 generated contracts match the models`; `pytest -q backend/tests/test_contracts.py`:
+`152 passed, 2 skipped`.
+
+### Task 3 — the service and the route
+
+Service takes `algorithm_ref`, `pins`, `model_reference_mode`; stores them; the audit `after` carries them. The FR-223
+check runs when `algorithm_ref` resolves (DP-1 (a)), after `flush()` and before `audit.record` (it reads the stored row via
+`to_schema`; the caller's unit of work rolls the row back on the 422). `MODEL_REFERENCE_MODE_INCONSISTENT` is appended to
+`RATING_ERROR_CODES`, the only change to that set, as the corrected STOP (ii) allows. `03:929-936` is untouched. Route-local
+`RatingVersionCreate` removed; the handler docstring now says the algorithm and pins are declared and the shape checked here.
+`grep -rn RatingVersionCreate backend/src` prints the import and the handler annotation. Per Task 5, RL-1428's T1-T3 land in
+this commit.
+
+Green: `pytest -q backend/tests/test_rating_version_create_pins.py`: `14 passed`; `test_rating_versions.py`: `43 passed`;
+`test_rating_version_compile.py`: `20 passed`. `ruff check` on the changed files is clean (one `I001` fixed; the new test file
+formatted). FR-223's `03:109` is NOT edited: RL 9758 mints first as RL-1438 (maintainer by delegation, relayed by the lead),
+then T1 is applied byte for byte from the minted record.

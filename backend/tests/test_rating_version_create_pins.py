@@ -45,7 +45,9 @@ def _body(slug: str = "pinned-rv", **extra: object) -> dict:
 
 
 def _algorithm(api_client, headers) -> str:
-    created = api_client.post("/api/v1/rating-algorithms", json=_minimal_algorithm(), headers=headers)
+    created = api_client.post(
+        "/api/v1/rating-algorithms", json=_minimal_algorithm(), headers=headers
+    )
     assert created.status_code == 201, created.text
     return "rating_algorithm:minimal@1"
 
@@ -53,9 +55,13 @@ def _algorithm(api_client, headers) -> str:
 def _rows_with_slug(database, slug: str) -> int:
     async def _count() -> int:
         async with database.session() as session:
-            return (await session.execute(
-                select(func.count()).select_from(RatingVersionRow).where(RatingVersionRow.slug == slug)
-            )).scalar_one()
+            return (
+                await session.execute(
+                    select(func.count())
+                    .select_from(RatingVersionRow)
+                    .where(RatingVersionRow.slug == slug)
+                )
+            ).scalar_one()
 
     return _LOOP().run_until_complete(_count())
 
@@ -80,10 +86,14 @@ def test_a_version_created_with_its_algorithm_and_pins_compiles_over_http(
     pins = {**_empty_pins(), "reference_tables": [table]}
 
     created = api_client.post(
-        "/api/v1/rating-versions", json=_body(algorithm_ref=algorithm_ref, pins=pins), headers=headers
+        "/api/v1/rating-versions",
+        json=_body(algorithm_ref=algorithm_ref, pins=pins),
+        headers=headers,
     )
     assert created.status_code == 201, created.text
-    version = api_client.get(f"/api/v1/rating-versions/{created.json()['id']}", headers=headers).json()
+    version = api_client.get(
+        f"/api/v1/rating-versions/{created.json()['id']}", headers=headers
+    ).json()
     assert version["algorithm_ref"] == algorithm_ref
     assert version["pins"] == pins
 
@@ -167,19 +177,24 @@ def test_an_unapproved_model_pin_is_refused_at_compile_and_compiles_after_approv
     _LOOP().run_until_complete(grant("analyst"))
     headers = _headers(principal, workspace_id)
     algorithm_ref = _algorithm(api_client, headers)
-    model_id, fit_status = _LOOP().run_until_complete(_fitted_gbm(database, blob_store, workspace_id))
+    model_id, fit_status = _LOOP().run_until_complete(
+        _fitted_gbm(database, blob_store, workspace_id)
+    )
     assert fit_status is JobStatus.SUCCEEDED
 
     async def _ref() -> str:
         async with database.session() as session:
             row = await session.get(ModelRow, model_id)
-            assert row is not None and row.status != "approved", row and row.status
+            assert row is not None
+            assert row.status != "approved", row.status
             return f"model:{row.model_family_slug}@{row.version}"
 
     model_ref = _LOOP().run_until_complete(_ref())
     created = api_client.post(
         "/api/v1/rating-versions",
-        json=_body("c4-rv", algorithm_ref=algorithm_ref, pins={**_empty_pins(), "models": [model_ref]}),
+        json=_body(
+            "c4-rv", algorithm_ref=algorithm_ref, pins={**_empty_pins(), "models": [model_ref]}
+        ),
         headers=headers,
     )
     assert created.status_code == 201, created.text
@@ -242,8 +257,12 @@ def test_a_mode_mismatch_is_refused_at_create(
 
     refused = api_client.post(
         "/api/v1/rating-versions",
-        json=_body("mode-rv", algorithm_ref="rating_algorithm:motor-gb@1",
-                   pins=_empty_pins(), model_reference_mode="approximation"),
+        json=_body(
+            "mode-rv",
+            algorithm_ref="rating_algorithm:motor-gb@1",
+            pins=_empty_pins(),
+            model_reference_mode="approximation",
+        ),
         headers=headers,
     )
     assert refused.status_code == 422, refused.text
@@ -253,8 +272,12 @@ def test_a_mode_mismatch_is_refused_at_create(
 
     accepted = api_client.post(
         "/api/v1/rating-versions",
-        json=_body("mode-rv", algorithm_ref="rating_algorithm:motor-gb@1",
-                   pins=_empty_pins(), model_reference_mode="exact"),
+        json=_body(
+            "mode-rv",
+            algorithm_ref="rating_algorithm:motor-gb@1",
+            pins=_empty_pins(),
+            model_reference_mode="exact",
+        ),
         headers=headers,
     )
     assert accepted.status_code == 201, accepted.text
@@ -299,12 +322,14 @@ def test_the_creation_event_records_the_declared_pins(
 
     async def _after() -> dict:
         async with database.session() as session:
-            return (await session.execute(
-                select(AuditEventRow.after).where(
-                    AuditEventRow.action == "rating_version.created",
-                    AuditEventRow.entity_ref == "rating_version:audited-rv@1",
+            return (
+                await session.execute(
+                    select(AuditEventRow.after).where(
+                        AuditEventRow.action == "rating_version.created",
+                        AuditEventRow.entity_ref == "rating_version:audited-rv@1",
+                    )
                 )
-            )).scalar_one()
+            ).scalar_one()
 
     after = _LOOP().run_until_complete(_after())
     assert after["algorithm_ref"] == algorithm_ref

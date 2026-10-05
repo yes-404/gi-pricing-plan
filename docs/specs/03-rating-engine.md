@@ -131,7 +131,7 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 
 | ID | Requirement |
 |---|---|
-| **FR-237** | A **Rating Version** pins: one Rating Algorithm version, an exact Rate Table Version per referenced table, an exact Model/Peril Structure version per `model_call`, an exact Reference Table Version per `lookup`, and the input contract. Nothing is unpinned. |
+| **FR-237** | A **Rating Version** pins: one Rating Algorithm version, an exact Rate Table Version per referenced table, an exact Model/Peril Structure version per `model_call`, an exact Reference Table Version per `lookup`, and the input contract. Nothing is unpinned. *(Amended 2026-10-05, RL-1428, FD-1421.)* The algorithm version and the pins are declared when the Rating Version is created (`POST /api/v1/rating-versions`, §5.1) and are checked at compile (FR-240). Where `algorithm_ref` resolves in the workspace, the create route also checks FR-223's model-reference-mode consistency and refuses a mismatch with **422** `MODEL_REFERENCE_MODE_INCONSISTENT`, as RL 9758 (working id) item 2 binds every route that writes a version's `algorithm_ref` or `model_reference_mode`. An `algorithm_ref` that does not resolve is stored and left to compile, which refuses it. |
 | **FR-238** | Lifecycle is `draft → review → approved → live → retired`. Only `approved` versions can be deployed; `live` is a property of a Deployment, and the same Rating Version can be `live` in `uat` and not in `prod`. |
 | **FR-239** | A Rating Version compiles to a self-contained **Bundle** with a content hash. The bundle is sufficient to score with no database access (NFR-491) and is what gets cached and distributed. *(Amended 2026-10-04, RL-1379, on FD-1393: a compile runs only while the Rating Version is `draft`. A compile requested for a version in any other status — `review`, `approved`, `live`, `retired` — is refused with `RATING_VERSION_IMMUTABLE` (409), synchronously by the route when the status is already non-draft and by the `rating.compile` Job, which ends `failed` with that code, when the status changed after submission; the version's Bundle summary and blob key are unchanged. A version in `review` is recompiled only after the decision path returns it to `draft` (`06` FR-355), which resubmits it through FR-257's gate; an `approved` or later version is never recompiled, and a new compiled output is a new version (`00` FR-4).)* |
 | **FR-240** | Bundle compilation validates the whole structure: DAG acyclic and fully connected, all references resolvable and at a sufficient maturity (FR-20), all types compatible, all constraints satisfiable, no `control`-intent factor in a rateable path (`02` FR-88), no unapproved custom objective transitively reachable. *(Amended 2026-09-30, `RL-1329`: saving an algorithm and compiling a bundle also refuse, with `LADDER_CLAMP_UNPLACEABLE` (422), a `clamp` constraint that the Premium Ladder cannot place; the check is one of the algorithm checks that `validate_algorithm` runs at both points. That is a clamp whose produced name is the source of a ladder rung other than the last rung present before `constraints` (FR-247), or whose produced name is a rung's source but differs from the name it consumes. The ladder records a binding clamp on the `constraints` rung (FR-248), so a clamp anywhere else would break the ladder's chain on every quote on which it binds. The message names the step and the rung.)* |
@@ -434,6 +434,12 @@ submit gate (FR-260) and never edited after.
 > blocks, `model_reference_mode`, and deployment stay Phase 2 (FR-440). The
 > `RatingVersion` model in `model-schema` carries only the Phase 1b subset; a Phase 2
 > build widens the shape with the full contract.
+>
+> *(Discharged 2026-10-05, RL-1428, FD-1421.)* This note scoped Phase 1b only. W9-3
+> (#293) widened `RatingVersion` with `algorithm_ref`, `pins` and `model_reference_mode`
+> (CR-838), and `POST /api/v1/rating-versions` declares them (§5.1, FR-237). The note's
+> statement that `model-schema` carries only the Phase 1b subset is no longer true and does
+> not govern.
 
 ### 4.4 `QuoteContext` and `ScoringResult`
 
@@ -905,7 +911,7 @@ An Environment may be gated by a `deployment` entry in the Approval Policy (`06`
 | `GET` | `/api/v1/rate-tables/{slug}@{version}/export/csv` | Export cells to CSV (FR-235) |
 | `GET` | `/api/v1/rate-tables/{slug}@{version}/export/xlsx` | Export cells to XLSX (FR-235) |
 | `POST` | `/api/v1/rate-tables/{slug}@{version}/import` | Import CSV/XLSX → returns a diff vs the addressed version for confirmation; `confirm: true` re-computes the diff and creates the version (FR-235) |
-| `POST` | `/api/v1/rating-versions` | Create a draft Rating Version with pins (FR-237) |
+| `POST` | `/api/v1/rating-versions` | Create a draft Rating Version with pins (FR-237). The body takes `slug`, `dataset_version_id`, `model_ref` and, optionally, `algorithm_ref` (a `rating_algorithm` ref), `pins` (§4.3's `Pins`) and `model_reference_mode`; a ref of the wrong type in any of them is **422** `VALIDATION_FAILED`. Resolvability and maturity are checked at compile (FR-240), and a version created without `algorithm_ref` or `pins` is refused there with `RATING_VERSION_UNPINNED`. *(Amended 2026-10-05, RL-1428, FD-1421.)* |
 | `POST` | `/api/v1/rating-versions/{id}/compile` | **202** Compile + validate the bundle (FR-240); **409** `RATING_VERSION_IMMUTABLE` unless the version is `draft` (FR-239) |
 | `POST` | `/api/v1/rating-versions/{id}/submit` | Submit for approval; evidence completeness checked (FR-257); golden quotes re-scored and the suite pinned (FR-260). **Amended 2026-09-28** (`PL-1189`) |
 | `POST` | `/api/v1/regression-suites/{slug}/versions` | Create a new Regression Suite version; `rating:write`; **201** (FR-260). **Added 2026-09-28** (`PL-1189`) |
