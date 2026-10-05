@@ -151,3 +151,36 @@ not read the slots immediately before starting it, and the maintainer's (by dele
 batch which waits for S7's release reached me after it had run. S7's gate may therefore have been contended during that
 window of about 80 seconds. The replay is a run, not a re-run: it is not repeated, and its result above stands. A re-run, if
 the maintainer rules one, waits for the release of gate-1.
+
+### The two conditions on ruling (A) — run after S7's gate end (00:15:47 BST; both slots read free before each run)
+
+**(1) The cause, one single-file experiment** (`echo_experiment.py`, scratch directory; one process, `OMP_NUM_THREADS=1 nice -n 19`):
+the same float, bench-rating-gbm context 0's `f0`, through (i) an expression node only, and (ii) a `customNode` whose handler
+returns `request.input` UNCHANGED. Echoes, verbatim:
+
+```
+input         : 0.08487199515892163
+(i)  expression: 0.08487199515892163
+(ii) handler in : 0.08487199515892163
+(ii) handler out: 0.0848719951589216
+```
+
+The expression path keeps all 17 digits. The handler **receives** the exact value and the value it **returns** unchanged comes back
+cut to 15 significant digits: **(ii) alone truncates**, on the handler's return path into the engine. So (A) stands.
+
+**(2) The downstream-reader check.** Predicate: every committed algorithm step with `"type": "model_call"`
+(`grep -rnE "\"type\": *\"model_call\"|type: *model_call|'type': *'model_call'" examples scripts packages backend docs/contracts
+--include=*.py --include=*.json --include=*.yaml --include=*.yml -l`, plus `git ls-files | grep -E "\.(json|ya?ml)$" | xargs grep -lE
+"\"model_call\""`; and `grep -rnE "RatingModelCallStep\(" --include=*.py packages backend examples scripts`, non-`src/` hits none), then
+the steps after it that read a float. Hits: `scripts/bench-rating.py` (`s_risk`, steps listed after it), `packages/pricing-core/tests/
+test_rating_score.py:66` (`s_risk`), `test_rating_runtime.py:121`; copies of one shape at `test_rating_compile.py:38, :86`,
+`test_rating_compile_bundle.py:49`, `backend/tests/test_rating_algorithms.py:40, :88`, `model-schema/tests/test_rating_algorithm.py:53`,
+`test_rating_version.py:105`, which are compiled or saved, never scored through the handler. `examples/` has no `model_call` step
+(`grep -rln "model_call" examples` prints nothing). In every scored case the steps after `s_risk` read only `risk_premium_minor`
+(an `int`), `driver_age` (an `int`), and `expense_factor` (a rate-table float produced BEFORE the model call, `1.1` and `1.25`,
+`test_rating_runtime.py:94-95`: both exact in 15 significant digits) — and, in `bench-rating.py`, `v000`.. (produced after). **No
+committed step reads a float input after a `model_call`:** `f0`..`f7` are consumed only by `s_risk` itself.
+
+**Limit (C), for this ledger and the PR body.** An algorithm that, after a `model_call`, reads a float (an input, or a value
+produced before the call) carrying more than 15 significant digits would see it cut to 15 digits at the 1e-15 level; none is
+committed. A LOW finding (WK-673) by an auditor follows, recording the mechanism proved in (1).
