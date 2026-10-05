@@ -175,14 +175,14 @@ async def test_a_parameter_outside_the_templates_range_is_refused_before_the_row
 
 
 @pytest.mark.req("FR-150")
-async def test_an_expression_objective_is_refused_by_name_whether_the_flag_is_on_or_off(
+async def test_an_expression_objective_is_refused_by_name_while_the_flag_is_off(
     database: Database, workspace_id, api_settings
 ) -> None:
-    """The flag being **on** must still refuse (FR-150).
+    """Refused while the flag is unset or `false`, accepted while it is `true` (FR-150).
 
-    A feature flag that admitted the kind would persist an artifact nothing can certify or
-    fit — the derivation, the compilation target and the review path are not built, and no
-    setting builds them. The message differs; the answer does not.
+    Three flag cases against `refuse_expression_kind`: an unset key resolves to the
+    definition's default (`False`) and refuses; an explicit `false` refuses; `true` returns.
+    The set-true case is the one that failed before the flag became liftable.
     """
     from app.platform import settings as settings_service
 
@@ -198,16 +198,24 @@ async def test_an_expression_objective_is_refused_by_name_whether_the_flag_is_on
         # FR-395: the settings row now references a workspace row.
         await workspaces.ensure_workspace(session, workspace_id=workspace_id)
         await settings_service.set_workspace_setting(
-            session, workspace_id, "features.expression_objectives_enabled", True
+            session, workspace_id, "features.expression_objectives_enabled", False
         )
     async with database.session() as session:
-        with pytest.raises(PlatformError) as on:
+        with pytest.raises(PlatformError) as explicit_off:
             await service.refuse_expression_kind(
                 session, settings=api_settings, workspace_id=workspace_id
             )
-    assert on.value.code == "OBJECTIVE_KIND_NOT_ENABLED"
-    assert on.value.status_code == 409
-    assert (on.value.detail or "") != (off.value.detail or "")
+    assert explicit_off.value.code == "OBJECTIVE_KIND_NOT_ENABLED"
+    assert explicit_off.value.status_code == 409
+
+    async with database.unit_of_work() as session:
+        await settings_service.set_workspace_setting(
+            session, workspace_id, "features.expression_objectives_enabled", True
+        )
+    async with database.session() as session:
+        await service.refuse_expression_kind(
+            session, settings=api_settings, workspace_id=workspace_id
+        )
 
 
 # -- the definition cannot move ------------------------------------------------------------
@@ -439,7 +447,9 @@ async def test_submission_without_a_certificate_is_refused(
                 session, workspace_id=workspace_id, actor=actor,
                 objective_id=row.id, change_summary="please",
             )
-    assert refused.value.status_code == 409  # `draft → review` is not a transition at all
+    assert refused.value.status_code == 409
+    # `draft → review` is not a transition; RL-1362 DP-S3-3 names the missing certificate.
+    assert refused.value.code == "OBJECTIVE_NOT_CERTIFIED"
 
 
 @pytest.mark.req("FR-163")
@@ -644,8 +654,8 @@ async def test_deriving_without_model_fit_is_refused(
 
 
 @pytest.mark.req("FR-150")
-async def test_deriving_refuses_by_name_rather_than_pretending_the_concept_is_unknown(
-    api_client: TestClient, workspace_id, principal, grant
+async def test_deriving_refuses_by_name_while_the_flag_is_off(
+    api_client: TestClient, database: Database, workspace_id
 ) -> None:
     """The arm the old test could never reach. Granting `model:fit` is what makes this a test
     of FR-150 rather than of RBAC.
@@ -659,11 +669,12 @@ async def test_deriving_refuses_by_name_rather_than_pretending_the_concept_is_un
     at. A route that looked the objective up first would answer 404 here and hide the
     capability question behind a missing row.
     """
-    await grant("analyst")
+    # RL-1362 DP-S3-2: derive needs `custom_objective:author` as well as `model:fit`.
+    headers = await _principal_holding(
+        database, workspace_id, {"custom_objective:author", "model:fit", "model:read"}
+    )
     response = api_client.post(
-        f"/api/v1/custom-objectives/{new_uuid7()}/derive",
-        json={},
-        headers=_headers(principal.id, workspace_id),
+        f"/api/v1/custom-objectives/{new_uuid7()}/derive", json={}, headers=headers
     )
     assert response.status_code == 409, response.text
     assert response.json()["code"] == "OBJECTIVE_KIND_NOT_ENABLED"
@@ -706,3 +717,132 @@ async def test_a_money_parameter_survives_the_route_as_an_integer(
     body = response.json()
     assert body["params"]["cap"] == 250000
     assert isinstance(body["params"]["cap"], int)
+
+
+# -- `custom_objective:author` (FR-367, RL-1362 DP-S3-2) -------------------------------------
+
+
+async def _principal_holding(
+    database: Database, workspace_id, permissions: set[str]
+) -> dict[str, str]:
+    """A caller whose only role is a custom one carrying exactly `permissions`.
+
+    The `auditor` grant supplies the workspace and the membership and is the read-only
+    baseline; the custom role then adds the permissions under test. No built-in role holds
+    `custom_objective:author` (FR-367), so a custom role is the only way to give it.
+    """
+    from app.db.models import RoleAssignmentRow, RoleRow
+    from model_schema import ScopeType
+
+    who = await _principal_with(database, workspace_id, "auditor")
+    async with database.unit_of_work() as session:
+        role = RoleRow(
+            workspace_id=workspace_id,
+            slug=f"custom-{who.id}",
+            permissions=sorted(permissions),
+            builtin=False,
+        )
+        session.add(role)
+        await session.flush()
+        session.add(
+            RoleAssignmentRow(
+                workspace_id=workspace_id,
+                principal_kind="user",
+                principal_id=who.id,
+                role_id=role.id,
+                scope_type=ScopeType.WORKSPACE.value,
+            )
+        )
+    return _headers(who.id, workspace_id)
+
+
+@pytest.mark.req("FR-367")
+async def test_creating_an_expression_objective_without_author_is_403(
+    api_client: TestClient, workspace_id, principal, grant
+) -> None:
+    """`model:fit` alone is not enough for `kind: expression`: 403 whatever the flag.
+
+    The permit is `test_creating_an_expression_objective_is_refused_by_name` in
+    `test_custom_objectives_api.py`: the same role, route and body, which reaches the 409
+    refusal. Here the code asserted is the 403's, so a caller that reaches the flag check
+    fails this test.
+    """
+    await grant("analyst")
+    response = api_client.post(
+        "/api/v1/custom-objectives",
+        json={"slug": "expr-no-author", "kind": "expression"},
+        headers=_headers(principal.id, workspace_id),
+    )
+    assert response.status_code == 403, response.text
+    assert response.json()["code"] == "PERMISSION_DENIED"
+
+
+@pytest.mark.req("FR-367")
+async def test_deriving_without_author_is_403(
+    api_client: TestClient, workspace_id, principal, grant
+) -> None:
+    await grant("analyst")
+    response = api_client.post(
+        f"/api/v1/custom-objectives/{new_uuid7()}/derive",
+        json={},
+        headers=_headers(principal.id, workspace_id),
+    )
+    assert response.status_code == 403, response.text
+    assert response.json()["code"] == "PERMISSION_DENIED"
+
+
+@pytest.mark.req("FR-367")
+async def test_author_without_model_fit_is_refused_on_create_and_derive(
+    api_client: TestClient, database: Database, workspace_id
+) -> None:
+    """The control that guards the conjunction (RL-1362 DP-S3-2): author never substitutes
+    for `model:fit`. It is green at the base, because both routes already carry `model:fit`
+    as a route dependency, and it stays green with the author check added."""
+    headers = await _principal_holding(
+        database, workspace_id, {"custom_objective:author", "model:read"}
+    )
+    created = api_client.post(
+        "/api/v1/custom-objectives",
+        json={"slug": "expr-author-only", "kind": "expression"},
+        headers=headers,
+    )
+    derived = api_client.post(
+        f"/api/v1/custom-objectives/{new_uuid7()}/derive", json={}, headers=headers
+    )
+    for response in (created, derived):
+        assert response.status_code == 403, response.text
+        assert response.json()["code"] == "PERMISSION_DENIED"
+
+
+@pytest.mark.req("FR-367")
+async def test_author_with_model_fit_reaches_the_flag_refusal(
+    api_client: TestClient, database: Database, workspace_id
+) -> None:
+    """Both held: past the permission checks, the flag (unset here) refuses."""
+    headers = await _principal_holding(
+        database, workspace_id, {"custom_objective:author", "model:fit", "model:read"}
+    )
+    created = api_client.post(
+        "/api/v1/custom-objectives",
+        json={"slug": "expr-both", "kind": "expression"},
+        headers=headers,
+    )
+    derived = api_client.post(
+        f"/api/v1/custom-objectives/{new_uuid7()}/derive", json={}, headers=headers
+    )
+    for response in (created, derived):
+        assert response.status_code == 409, response.text
+        assert response.json()["code"] == "OBJECTIVE_KIND_NOT_ENABLED"
+
+
+@pytest.mark.req("FR-367")
+async def test_template_create_with_model_fit_alone_is_201(
+    api_client: TestClient, workspace_id, principal, grant
+) -> None:
+    await grant("analyst")
+    response = api_client.post(
+        "/api/v1/custom-objectives",
+        json={"slug": "template-fit-only", "template": "poisson"},
+        headers=_headers(principal.id, workspace_id),
+    )
+    assert response.status_code == 201, response.text
