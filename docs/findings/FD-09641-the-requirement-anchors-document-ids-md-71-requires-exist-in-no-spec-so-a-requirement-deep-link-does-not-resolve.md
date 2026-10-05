@@ -12,10 +12,9 @@ relates: [WK-1178, RFC-937, FR-451]
 
 # FD-9641 — `document-ids.md` line 71 requires `<a id="fr-<n>">` anchors that no spec carries
 
-**Filed under working id 9641.** Raised by the deputy's ID AUDIT of 2026-10-05 14:15:12 BST
-(`~/gi-pricing-plan.local/channel/to-lead.md`, local, not in the repo). The `tree:` is
-`origin/main` at `83ea5090`; every locator below was read at that tree. **Proposed severity
-LOW, proposed owner WK-1178**; the lead gives the verdict.
+**Filed under working id 9641.** Raised by the maintainer (by delegation)'s ID AUDIT of 2026-10-05 14:15:12 BST
+(`~/gi-pricing-plan.local/channel/to-lead.md`, local, not in the repo, entry headed "2026-10-05 14:15:12 BST — ID AUDIT …"). The `tree:` is
+`origin/main` at `83ea5090`; every locator below was read at that tree. **Severity LOW and owner WK-1178**, ruled by the maintainer (by delegation) in that entry ("FD 9641 (LOW, WK-1178 …)") and again in the entry headed "2026-10-05 14:21:22 BST — DECISIONS 35–38 …; FD 9641 noted" ("LOW as proposed"); the remedy choice goes to WK-1178's backlog and is not ruled; the lead gives the verdict at the mint.
 
 ## Finding
 
@@ -29,7 +28,7 @@ LOW, proposed owner WK-1178**; the lead gives the verdict.
 > emits `<a id="fr-<n>"></a>` before each definition and the migration adds one for every
 > existing clause. `INDEX.md` has one row per number for both.
 
-The same text is `RFC-00937-…md:65`.
+The same text is `RFC-00937-…md:65` (there with the example ids `fr-1187` and `wk-1201` in place of `<n>`).
 
 ### The measurement
 
@@ -77,6 +76,8 @@ links.
 
 ## Disposition
 
+Re-read at `origin/main` 809a3794, 2026-10-05: `document-ids.md:71`, RFC-937 `:65`, `docs/roadmap.md:198`, the 0-anchor measurement (rc 1) and the `spec-change` skill's lack of `a id=` or `anchor` all hold unchanged.
+
 ### Remedy, proposed, no pick
 
 - **A. Honour the rule.** `spec-change` emits `<a id="fr-<n>"></a>` before each new
@@ -92,4 +93,4 @@ A is the larger change: it touches every spec row and needs a migration. B chang
 paragraph and leaves deep links unavailable. The choice is the lead's; if it is a design
 choice between the two, `CLAUDE.md` §0 sends it to `docs/open-questions.md`.
 
-**Disposition (proposed):** `fix before close with an owner: WK-1178 (provisional)`, proposed by the auditor on 2026-10-05; the lead gives the verdict. The remedy choice above is not made here.
+**Disposition:** `fix before close with an owner: WK-1178`, severity and owner ruled as above; the lead gives the verdict at the mint. The remedy choice above is not made here.
