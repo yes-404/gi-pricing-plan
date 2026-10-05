@@ -20,7 +20,7 @@ relates: [CR-838, WK-669, WK-1178, FR-237]
 ## How this was ruled
 
 - **This record rules nothing new.** The decision that CR-838 needs a correcting record is
-  the maintainer's, by delegation (the deputy), in
+  the maintainer's, by delegation, in
   `~/gi-pricing-plan.local/channel/to-lead.md`, the entry headed *"2026-10-05 13:15:53 BST —
   DECISIONS 17–21 (PL 9689 DP-S3-2/3/6; FD 9707 DP-1; RL 9695 follow-ups)"*, item 21(ii):
   *"CR-838 marks FR-237 delivered without the create route: YES, a correcting record is needed
@@ -34,7 +34,7 @@ relates: [CR-838, WK-669, WK-1178, FR-237]
   *"decision-maker; the maintainer may author one on scope or process"*. Its **CR** row gives
   the closure's author as the auditor, its acceptance (*"maintainer accepts a Work or Phase
   close"*), and no correction path (`—`). So the RL family is this role's to write, but what
-  it corrects is a maintainer-accepted close. Per the same item 21(ii), **the deputy accepts
+  it corrects is a maintainer-accepted close. Per the same item 21(ii), **the maintainer (by delegation) accepts
   this record at its ACK**; it binds nothing before then.
 - **The form** follows RL 9718 (#1119, `corrects: RL-1401`): a correcting record whose
   `corrects:` names the frozen file, and the frozen file's body is never edited.
@@ -61,7 +61,7 @@ and its slice row, `:33`: W9-3 (#293) delivered *"FR-237 (pins)"*, evidenced by 
 | At that tree no route created a Rating Version at all: `class RatingVersionCreate` does not exist there | `git grep -n 'class RatingVersionCreate' 3a4958a -- backend` prints nothing |
 | The create route came two days after the close, without pins: `RatingVersionCreate` takes `slug`, `dataset_version_id` and `model_ref` only, under `extra="forbid"` | first added by `0d942b3e` (2026-08-29T17:01:09+01:00, #371, *"wire POST /rating-versions and /submit routes"*); at `caa4e411`, `backend/src/app/api/models.py:271-276` |
 | No HTTP route sets `algorithm_ref` or `pins` today; the demo seed writes them to the ORM row | FD 9708 (#1130, working id), its tables; `examples/fremtpl2/model.py:396-397` at `caa4e411` |
-| The spec governs and the code is behind: `POST /rating-versions` is to accept `algorithm_ref` and the pins, checked at compile, in a WK-1178 slice | RL 9695 (#1133, working id), decided by the deputy at 13:12:56 BST, item 15 |
+| The spec governs and the code is behind: `POST /rating-versions` is to accept `algorithm_ref` and the pins, checked at compile, in a WK-1178 slice | RL 9695 (#1133, working id), decided by the maintainer (by delegation) at 13:12:56 BST, item 15 |
 
 So the evidence CR-838 cited — FR-237's markers, the widened shape, and compile reading the
 pins — proves that a Rating Version *can hold* pins and that compile *uses* them. It does not
@@ -81,7 +81,7 @@ The correction:
 > every other verdict in CR-838 are unaffected by this correction.
 
 The verdict for this limb is **deferred with an owner** (`CLAUDE.md` §13's four verdicts):
-owner WK-1178, the FD 9708 fix slice, deadline before the P2 exit demo (the deputy's
+owner WK-1178, the FD 9708 fix slice, deadline before the P2 exit demo (the maintainer's (by delegation)
 13:12:56 BST entry, item 15). WK-669 stays closed; the owed work is WK-1178's, not a reopen.
 
 ## What it obliges
@@ -112,3 +112,8 @@ CR-838 already carries a body edit: a blockquote headed *"Dated correction, 2026
 auditor), on the maintainer's decision"* at `:46`, about FR-217. It predates the RL 9718 form
 and is not touched here. Whether it needs a correcting record of its own is not this
 record's question.
+
+*(Pre-mint note, 2026-10-05 15:58 BST, dm-finals2: the maintainer (by delegation) routed this in
+the entry headed "2026-10-05 13:24:03 BST — RL 9668 (#1137) noted for its ACK; DP-S3-1 addendum
+ACCEPTED; CR-838:46 is a data point for FD-1282", item 2: not ruled, not edited, and added to
+FD-1282's register row as a second observed case. That row merged in `c37bf921` (#1139).)*
