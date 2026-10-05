@@ -134,3 +134,30 @@ Every command was run read-only at `origin/main` `4d3be1414ad4dacdaa0c14ef49fb21
 - `git grep -n 'RateTableVersionRow(\|RatingAlgorithmRow(' origin/main -- backend/src` (excluding `select` and `class`) → `platform/rate_tables.py:699` and `platform/rating_algorithms.py:123`: one writer each.
 - `git grep -n 'NFR-498' origin/main -- docs` → read at every hit; the record hits are `CR-925:153`, `CR-927:113`, `CR-1212:120` and `:141`, `PL-1237:298`.
 - Not measured: whether a test pins the absence; no test was run.
+
+### Disposition — ruled 2026-10-05 17:45:06 BST (pre-mint)
+
+**Source:** the maintainer (by delegation), `~/gi-pricing-plan.local/channel/to-lead.md`, entry "2026-10-05 17:45:06 BST —
+FD 9529 (NFR-498, #1201 @be1fba43): MEDIUM and carry-forward to WK-1178 accepted, with a P2 landing bound; CR-1212
+correcting RL yes; A-2 does not absorb". Quoted verbatim, items 1 to 4:
+
+> 1. Your decision is ACCEPTED: MEDIUM; carry forward, owner WK-1178; the 13 verdict is "deferred with an owner". ADDED BOUND: the fix lands BEFORE THE P2 CODE FREEZE (Wed 4 Nov). An unaudited rate-table or algorithm change is exactly what the exit demo's governance story claims cannot happen, so this is not a P3 carry. The register's Decision cell carries the bound; the P2 phase closure record lists it.
+> 2. The fix slice: red-first per class (seed_from_model, import_confirmed, bulk_operation, create_algorithm), with before/after state asserted. Its read-first list also covers the sub-graph create and version paths (api/sub_graphs.py), since they are algorithm edits too: in or out with a reason, not silently. It runs after the emergency slice and serialises against A-2 on rating_algorithms.py, named both ways.
+> 3. CR-1212: YES, a correcting RL (corrects: CR-1212; CR-1212 gains corrected_by:), filed by a DM when a seat frees, citing FD 9529.
+> 4. A-2 does NOT absorb the audit event. Agreed.
+
+**Severity** MEDIUM; the §13 verdict on NFR-498's rate-table, bulk-operation and algorithm-edit limbs is **deferred with an
+owner: WK-1178**. **Bound:** the fix lands before the P2 code freeze (Wed 4 Nov 2026), and the P2 closure record lists it.
+
+**Where each limb goes (working ids; the mint date replaces them, check 31):**
+
+- **SL 9515 / PL 9514**, under WK-1178: the fix. Red first per class (`seed_from_model`, `import_confirmed`,
+  `bulk_operation`, `create_algorithm`), before and after state asserted; read-first includes `api/sub_graphs.py`
+  (in or out with a reason). Runs after the emergency slice and serialises against A-2 on `rating_algorithms.py`, named
+  both ways.
+- **RL 9519**: the correcting record for `CR-1212:120` (`corrects: CR-1212`; `CR-1212` gains `corrected_by:`), filed by a
+  decision-maker.
+- A-2 does not absorb the audit event.
+
+Event that next confirms or discharges the row: a merged SL 9515 with the four classes recording an Audit Event, before the
+P2 code freeze.
