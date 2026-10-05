@@ -10,12 +10,21 @@ corrected_by: []
 relates: [WK-690, FR-157, FR-364]
 ---
 
-# FD-9722 (working id) — a custom metric's `certificate_id` is never resolved before submission
+# FD 9722 (working id) — a custom metric's `certificate_id` is never resolved before submission
 
 **Filed** by auditor-fdc2 on 2026-10-05, from the S3 slice audit's item A1
 (`~/gi-pricing-plan.local/handover/audit-sl1273-2026-10-04.md`, section "A1") and the S3 dispatch record's
 Delta 11. Every line number below was re-read at `origin/main` = `47d770e8fcbd2410fa101019ed8cf3aae69a1baa`,
 which is the `tree:` above; none is copied from the audit. The id is a working id until the lead mints it.
+
+*Re-anchored 2026-10-05 at main `caa4e411a9c07a389cf47092a923c7761b2b92dc`. The metric defect still stands there:
+`metrics.py:794` is unchanged and `submit` (`:485`) still never loads the row `certificate_id` names. Moved cites:
+`models.py` `:1857-1860` → `:1868-1871` and `:1900-1903` → `:1910-1914`. **The objective twin changed:** S3
+(#1122) merged, and `submit_for_review` now resolves the pointer after `_require_evidence`
+(`objectives.py:726-741`, same workspace and same objective, `VALIDATION_FAILED` 409); `_require_evidence`'s own
+null test is now at `objectives.py:1022`. Where the body below says the objective twin is "unclosed" or "S3's
+branch", that was true at `47d770e8` and is not true at `caa4e411`. The metric half, which this finding claims,
+has no counterpart in S3 at main. `test_custom_metrics_api.py:133` and `:122` are unchanged.*
 
 ## Finding
 
@@ -27,7 +36,7 @@ backend/src/app/platform/metrics.py:794:    verifiable = {"metric_certificate": 
 ```
 
 It never loads the row `certificate_id` names. `custom_metrics.certificate_id` is a bare UUID column with no
-foreign key (`backend/src/app/db/models.py:1857-1860`, the comment there says so and gives the reason). So a metric
+foreign key (`backend/src/app/db/models.py:1868-1871`, the comment there says so and gives the reason). So a metric
 whose `certificate_id` is any non-null UUID, with no `metric_certificates` row behind it, satisfies the evidence kind
 the Approval Policy requires and is submitted for review.
 
@@ -76,7 +85,7 @@ read-by-metric-id (`:352-357`, "the latest rather than the one `certificate_id` 
 and `record_certificate` (`:438-448`). `submit` (`:485-545`) contains no read of it.
 
 The database does constrain the pair `status` / `certificate_id`
-(`models.py:1900-1903`: `status IN ('draft', 'deprecated') OR certificate_id IS NOT NULL`, named
+(`models.py:1910-1914`: `status IN ('draft', 'deprecated') OR certificate_id IS NOT NULL`, named
 `certified_metric_has_a_certificate`). It constrains presence, not that the id resolves. The `_require_evidence`
 docstring (`metrics.py` docstring of `_require_evidence`, the paragraph beginning "What was never at risk") relies on this CHECK for "what was never at risk" and says an uncertified metric
 cannot be submitted; that sentence is true and does not address a certified-looking metric with a dangling id.
@@ -121,7 +130,7 @@ In `_require_evidence`, resolve `row.certificate_id` to a `MetricCertificateRow`
 `custom_metric_id == row.id` before counting the evidence kind verifiable; a missing, cross-workspace or
 other-metric pointer is refused 409 `VALIDATION_FAILED` (the code S3 uses for the objective). Red test first, through
 `submit`, with a hand-written random id and with a certificate row of another metric. A foreign key is not proposed:
-the model comment at `models.py:1857-1860` records why the column is not one.
+the model comment at `models.py:1868-1871` records why the column is not one.
 
 ## What this finding does NOT claim
 

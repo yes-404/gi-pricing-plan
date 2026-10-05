@@ -80,6 +80,12 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         1, "`FactorResolutionError`: names a factor and a dataset version; model path"),
     ("backend/src/app/platform/objectives.py", "_validated", "{exc}"): (
         1, "a custom objective's own declaration error; no Quote Context"),
+    ("backend/src/app/platform/objectives.py", "_require_the_grammar", "str(exc)"): (
+        1, "`ExpressionError`: the grammar refusal of an author's own loss text, positioned by "
+        "line and column; a custom objective's declaration error (FR-145), no Quote Context"),
+    ("backend/src/app/platform/objectives.py", "derive_objective", "str(exc)"): (
+        2, "`ExpressionError` on an author's own loss text, as the problem detail and its "
+        "`loss` field error; a custom objective's declaration error (FR-145), no Quote Context"),
     ("backend/src/app/platform/prediction.py", "_unscoreable", "str(exc)"): (
         1, "`ModellingError`/`PredictionError`: named refusal of a model prediction; a "
         "Fitted Model scored on caller rows, synchronous, returned to the caller who sent"
@@ -121,7 +127,12 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
     ("backend/src/app/worker/model_handlers.py", "_compare", "str(exc)"): (
         1, "`ModellingError`: pricing-core's named modelling refusal; model path, not a quote"),
     ("backend/src/app/worker/model_handlers.py", "_fit", "str(exc)"): (
-        1, "`EbmFitError`/`GbmFitError`/`GlmFitError`: named fit refusals; model path"),
+        2, "`EbmFitError`/`GbmFitError`/`GlmFitError`: named fit refusals; model path. And "
+        "`NonFiniteDerivativeError`/`RoundBudgetExceededError` (FR-165): a fit job on a Dataset "
+        "Version, never a quote input; the text names the round, the objective ref and a row "
+        "count or timings, and the offending y/f range is kept out of it (FD-1219, "
+        "DP-S2-4); pinned by pricing-core's test_objectives.py::"
+        "test_nonfinite_aborts_an_expression_naming_the_round_and_no_value"),
     ("backend/src/app/worker/model_handlers.py", "_fit", "{exc}"): (
         1, "`FactorResolutionError`: names a factor and a dataset version; model path"),
     ("backend/src/app/worker/model_handlers.py", "_reconcile", "str(exc)"): (
