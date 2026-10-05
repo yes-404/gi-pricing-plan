@@ -1,5 +1,5 @@
 ---
-id: RFC-RFCWID
+id: RFC-9653
 family: proposal
 kind: process
 title: Reconciling the freeze rule with history before check 34's merge-base comparison goes live
@@ -17,12 +17,12 @@ corrects: ~
 relates: [RL-9654, FD-1282, FD-1323, WK-1170]
 ---
 
-# RFC-RFCWID — Reconciling the freeze rule with history before check 34's merge-base comparison goes live
+# RFC-9653 — Reconciling the freeze rule with history before check 34's merge-base comparison goes live
 
-*Working id RFCWID; drafted 2026-10-05 by the decision-maker on instruction (`document-ids.md`
+*Working id 9653; drafted 2026-10-05 by the decision-maker on instruction (`document-ids.md`
 §1.6 RFC row: "any role drafts on instruction"), on the deputy's entry `2026-10-05 13:32:57
 BST — 34: SPAWN the DM for the freeze-rule RFC + RL; my leaning stated, not ruled`
-(`~/gi-pricing-plan.local/channel/to-lead.md`, a local file). Its ruling is RL-9654.*
+(`~/gi-pricing-plan.local/channel/to-lead.md`, a local file). Its ruling is RL 9654.*
 
 ## Problem
 
@@ -89,6 +89,19 @@ through §1.4's layout. Runs at `99afcde215c0817c5ac4db55332ab7a69e4752a0`:
 |---|---|
 | `71f5a2208c7a92bad486ae128775a4a42c7ebc63..99afcde2…` (since the W37-6 migration) | **42** — FD 17, PL 15, CR 5, RL 4, RFC 1 |
 | `e9263283177e5e1c1205ba48d0e41c2a1483f83c..99afcde2…` (since the cut) | **0** |
+
+Per family, the 42 split as follows. All are at or before the cut
+`e9263283177e5e1c1205ba48d0e41c2a1483f83c`, and none is after it:
+
+| Family | Directory | Body edits before the cut | After the cut |
+|---|---|---|---|
+| Finding (`FD`) | `docs/findings/` | 17 | 0 |
+| Plan (`PL`) | `docs/plans/` | 15 | 0 |
+| Closure (`CR`) | `docs/closures/` | 5 | 0 |
+| Ruling (`RL`) | `docs/rulings/` | 4 | 0 |
+| Proposal (`RFC`) | `docs/rfcs/` | 1 | 0 |
+| Decision (`ADR`), Research (`RS`) | `docs/adrs/`, `docs/research/` | 0 | 0 |
+| **Total** | | **42, in 31 merges** | **0** |
 
 A second predicate — header fields other than `status:`, `superseded_by:`, `corrected_by:`
 changed on the same files and range — prints one row before the cut (`97b15726…`, PL-1239:
@@ -181,38 +194,57 @@ leaves the frozen body unchanged:
 
 So the leaning's **substance stands**: no dated-note exemption form.
 
-**2. Does check 34 need the allowlist?** Not as a file. §1.11 row 34 compares against the
-merge-base. Each of the 42 is an ancestor of every future merge-base, so that comparison never
-sees one: a list it read would never match. A list matters only if check 34 also reads history
-— and then the list equals "every body edit before the cut", a set the check derives from one
-constant. Two copies of one set is the duplication RFC-756 records going stale.
+**2. Does check 34 need the allowlist?** Not as a file. PL 9662 (#1146 at
+`c35b67b712a9f8d86d968b3b816a888e9be7f121`) fixes the base per event:
+- on a pull request, the merge-base with `github.event.pull_request.base.sha`;
+- on a push to `main`, `github.event.before`;
+- locally, the merge-base with `origin/main`.
+
+Every one of the 42 is an ancestor of each of those bases, so the comparison never sees any of
+them. A list the check read would never match an entry. The planner's dry run says the same:
+*"last 20 merges: 0 reds, 3 status-only activations … 42 historical edits in 31 merges, the last
+22fe674b; CR-838:46 = 40739df0"* (quoted in the deputy's entry `2026-10-05 13:43:31 BST`).
+The enumeration is still needed, as the record of what was grandfathered, and this RFC's
+table is it. A copy of it in code would be the duplicate that RFC-756 records going stale.
 
 ## Options
 
 | Option | What grandfathers history | What a later body edit meets | Cost | Weakness |
 |---|---|---|---|---|
-| **A — the leaning as relayed** | a data file of 42 (commit, file) pairs, read by check 34 | refusal | a file, its parser, a guard that it cannot grow | under a merge-base comparison the file is never consulted; under a history leg it duplicates a derivable set; it can still be appended to in a reviewed diff |
-| **B — cut commit (recommended)** | one constant, `e9263283177e5e1c1205ba48d0e41c2a1483f83c`: no comparison reads at or before it; the 42 enumerated in this RFC | refusal | one constant; this table | the enumeration lives in a record, not in the check — by design |
-| **C — a dated-note exemption form** | a recognised appended-note shape | admitted if it copies the shape | a parser for the shape | any rewrite can wear the shape; the check cannot tell a correction from a change |
-| **D — merge-base only, nothing said** | the scope of the comparison | refusal on a PR | none | the grandfathering is accidental and unrecorded; a push to `main` or an edit merged with the gate red is never seen |
+| **A — the leaning as relayed** | a data file of 42 (commit, file) pairs, read by check 34 | refusal | a file, its parser, and a guard that it cannot grow | under a per-change base the file is never consulted, so it cannot be proven red. It copies this table. It can still be appended to in a reviewed diff |
+| **B — per-change base, enumerated record (recommended)** | the base rule itself, because no base reaches back past the change under audit. The 42 are enumerated here, all at or before the cut `e9263283177e5e1c1205ba48d0e41c2a1483f83c` | refusal | this table | the enumeration lives in a frozen record, not in the check, by design |
+| **C — a dated-note exemption form** (PL 9662's DP-1 (b) and (c)) | a recognised appended-note shape | admitted if it copies the shape | a parser for the shape | any rewrite can wear the shape, so the check cannot tell a correction from a change |
+| **D — base rule only, nothing recorded** | as B | refusal | none | the grandfathering is accidental and unrecorded, and nothing names the 42 |
 
 ## Proposal
 
-**Recommendation: B**, with no dated-note exemption (the leaning's substance). The cut is
-`e9263283177e5e1c1205ba48d0e41c2a1483f83c` — `origin/main` when the deputy ruled at
-`2026-09-30 14:48:52 BST`, and FD-1323's measurement tree. Nothing after it needs
-grandfathering (0 rows). RL-9654 rules it, with the T-texts for `document-ids.md` :158, §1.5
-and §1.11 row 34, `docs/findings/README.md` and `docs/closures/README.md`.
+**Recommendation: B**, with no dated-note exemption, which is the leaning's substance and PL
+9662's DP-1 (a). The cut is `e9263283177e5e1c1205ba48d0e41c2a1483f83c`. It was `origin/main`
+when the deputy ruled at `2026-09-30 14:48:52 BST`, and it is FD-1323's measurement tree. No
+body edit after it needs grandfathering (0 rows). RL 9654 rules on all seven of PL 9662's
+A1 items:
 
-Recommended to PL 9662, for the planner to decide: a **history leg** that runs
-`frozen_diff_is_permitted` on each first-parent commit in `<cut>..HEAD`, beside the merge-base
-leg. The merge-base leg is empty on a push to `main`, so only a history leg sees an edit that
-reached `main` with the gate red or bypassed. Cost, measured here: the predicate above took
-4.2 s over every first-parent commit since `71f5a220`; `docs.yml:45` already checks out with
-`fetch-depth: 0`.
+| A1 item | RL 9654 |
+|---|---|
+| (i) a file is frozen from its first merge, whatever its status, and :158 is reworded | ¶1, T1 |
+| (ii) what may change after the freeze, with `status:` forward only (DP-3 decided: the spec) | ¶2, T2 |
+| (iii) DP-1: no dated appended note | ¶3, T4, T5 |
+| (iv) the correcting-record form | ¶4 |
+| (v) the base per event, and CI never runs the check off | ¶5, T3 |
+| (vi) a deleted frozen file is a violation | ¶6, T3 |
+| (vii) history is not re-judged | ¶7 |
+
+It also owns DP-4, a WK-1170 backlog item: ledgers' append-only rule is not mechanically
+checked.
 
 ## Deliverable
 
-RL-9654 applied by WK-1170 (PL 9662 names RL-9654 as its precondition): T1-T5 landed, and
-check 34 live with the cut as the lower bound of every range it reads, proven red on a body
-line appended to a merged closure and on a `slice:` change to a merged plan.
+RL 9654 is applied by WK-1170, and PL 9662 names it as activation need A1. T1-T5 land. Check
+34 runs live against ¶5's base, and is proven red on:
+- a body line appended to a merged closure;
+- a `slice:` change to a merged plan;
+- `active → draft`;
+- a deleted frozen file;
+- `none` under `CI=true`.
+
+A normal run prints no row for any of the 42.
