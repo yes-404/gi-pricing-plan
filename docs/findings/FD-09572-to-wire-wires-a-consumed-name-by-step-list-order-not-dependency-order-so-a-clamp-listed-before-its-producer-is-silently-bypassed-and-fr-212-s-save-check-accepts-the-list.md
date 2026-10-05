@@ -16,7 +16,7 @@ relates: [WK-673, WK-1178, FR-212, FR-243]
 
 ## Finding
 
-**Severity: HIGH (proposed by the auditor); owner: WK-673; deadline: before the Phase 2 exit demo (the maintainer's proposal in the 17:01:30 entry). Ruled by the maintainer (by delegation) at the ACK.** Severity is HIGH because the reproduction below shows a **silent wrong price with no error and no extra request key**: a `constraint` clamp (the minimum-premium floor) listed before the step that produces the value it clamps is wired to the raw input, so the floor is never applied. The quote returns `quoted`, 1507 where the topologically ordered list returns 5250. (CLAUDE.md §2: a diverged shape in a pricing platform is a mispricing; §7: the rating path's correctness defaults are numbered requirements.)
+**Severity: HIGH (proposed by the auditor); owner: WK-673; deadline: before the Phase 2 exit demo (the maintainer's proposal in the 17:01:30 entry). Ruled by the maintainer (by delegation), 2026-10-05 17:06:26 BST entry (see Disposition); HIGH final per its condition, confirmed at the ACK.** Severity is HIGH because the reproduction below shows a **silent wrong price with no error and no extra request key**: a `constraint` clamp (the minimum-premium floor) listed before the step that produces the value it clamps is wired to the raw input, so the floor is never applied. The quote returns `quoted`, 1507 where the topologically ordered list returns 5250. (CLAUDE.md §2: a diverged shape in a pricing platform is a mispricing; §7: the rating path's correctness defaults are numbered requirements.)
 
 `runtime.py` `to_wire` builds `produced_by` incrementally, in `graph.nodes` order, which is the algorithm's `steps` list order (`to_jdm` is `for step in algo.steps`). A name consumed by a step listed before its producer therefore resolves to the `inputNode`, not to the producer. Nothing earlier reorders or refuses such a list, so the defect is reachable from any saved algorithm.
 
@@ -203,14 +203,17 @@ Reading it:
 
 ## Disposition
 
-Open. Filed by the auditor, 2026-10-05. Severity and owner are the auditor's proposal; the maintainer (by delegation) rules at the ACK.
+Open. Filed by the auditor, 2026-10-05. **Severity HIGH, owner WK-673 and the deadline before the Phase 2 exit demo are ruled by the maintainer (by delegation)** in the entry headed "2026-10-05 17:06:26 BST — FD 9572 (to_wire wires by LIST order): reproduced; severity waits on (1)/(2); the FIX RULED now; RL 9588 / RL 9586 noted" (`to-lead.md`, a local channel file, so cited by its header). That entry set the severity as provisional HIGH, "final when (1) … and (2) … are answered. HIGH if either gives a silent wrong price on a reachable path; MEDIUM only if every reachable misorder raises." Evidence §3 answers both: (1) extra `ctx.inputs` keys reach ZEN, and (2) the clamp chain gives a silent wrong price with no extra key, so the condition for HIGH is met. The final HIGH is the maintainer's (by delegation) to confirm at the ACK.
 
-**Remedy options (the choice is the decision-maker's, not the auditor's):**
+**Remedy: RULED** (same entry, "THE FIX, RULED (root, not symptom): FR-212 makes a Rating Algorithm a DAG, so LIST ORDER CARRIES NO MEANING and must never decide wiring."):
 
-1. **Order in `to_wire`**: take `interior_ids` in a stable topological order (Kahn's, ties by list position) before the incremental `produced_by` pass. The clamp chain stays correct because the first producer precedes the re-producer. Smallest change; the saved list order then stops mattering.
-2. **Refuse at save**: add a `RatingAlgorithm` validator that rejects a step listed before a producer it consumes. This changes an already-accepted shape and needs a spec amendment to FR-212 (the 03 §4.1 text).
-3. Both: the validator for authoring clarity, the ordering as the runtime's own guarantee.
+- **(a)** `to_wire` (and `to_jdm`, if it emits edges by order) wires every consumed name to its PRODUCER by name through the graph, over a STABLE topological order computed from the dependency edges: Kahn's algorithm with list order as the tie-break, so an already-ordered list is unchanged and every existing bundle hash is stable. A test asserts the hash of a topologically listed algorithm is unchanged. (Reading at this tree: `to_jdm` emits no edges, only `produces`/`consumes` lists in `steps` order; the ordering belongs where `to_wire` iterates `interior_ids`.)
+- **(b)** No save-time refusal of a misordered list: authors may list steps in any order.
+- **(c)** Separately, a quote input must never shadow a produced value. Evidence §1 shows extra `ctx.inputs` keys reach ZEN, so a context key that names a step's produced value is refused (`VALIDATION_FAILED`, naming the key) or dropped per the `input_contract`. It has its own red test: ctx `{x:3, base:7}` on the CORRECTLY ordered algorithm still gives 350, never 57.
+- The WK-1250 S2 inliner uses the same topological order (the entry: "RL 9586's P5 … ACCEPTED, as it is the same rule").
 
-Required red test, whichever is chosen: the four-step algorithm of script 1 in list order `[in, B, A, out]` scoring to 350, and script 2's C1 scoring to 5250. A reordered list must price the same as the topological one.
+**Red first:** script 1's `[in, B, A, out]` scoring 350; script 2's clamp case C1 scoring 5250; and the shadowing case above.
 
-Event that next confirms or discharges it: the fix PR merging with both tests red first on the unfixed tree.
+**Placement** is not ruled here: "its own small WK-673 slice (or folded into the FD 9707 fix if that plan's write set already covers runtime.py's to_wire and the planner shows no scope creep). The planner proposes which." Owner of the fix plan: the planner.
+
+Event that next confirms or discharges it: the fix PR merging with all three tests red first on the unfixed tree.
