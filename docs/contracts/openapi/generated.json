@@ -3260,6 +3260,7 @@
       },
       "Decide": {
         "additionalProperties": false,
+        "description": "The body of `POST /approval-requests/{id}/decide`.",
         "properties": {
           "comment": {
             "anyOf": [
@@ -15202,6 +15203,22 @@
           "empty_layers"
         ],
         "title": "ValidationRuleSet",
+        "type": "object"
+      },
+      "ValidationRuleSubmission": {
+        "additionalProperties": false,
+        "description": "The body of `POST /validation-rules/{id}/submit` (`06` FR-352: a change summary).",
+        "properties": {
+          "change_summary": {
+            "minLength": 1,
+            "title": "Change Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "change_summary"
+        ],
+        "title": "ValidationRuleSubmission",
         "type": "object"
       },
       "VersionCreate": {
@@ -32920,7 +32937,7 @@
     },
     "/api/v1/validation-rules/{rule_id}/approve": {
       "post": {
-        "description": "FR-50 step 3: `review` → `approved`, by someone other than the author.\n\nThe separation is the control, and it is enforced in three places rather than trusted\nhere: this route requires `approval:decide`, the service refuses when the approver is\nthe author, and the table's check constraint refuses an approved row whose approver\nmatches. A rule decides whether data may be modelled on — one person deciding both what\nit says and that it is right is not a review.\n\nApproval **policies** — quorum, escalation, evidence bundles — are `06`'s (WK-677). This is\nthe module's own step, in the terms `01` §4.5 states it.",
+        "description": "FR-50 step 3: `review` → `approved`, as a client of the approval workflow.\n\nThis route writes nothing itself: it finds the rule's open approval request and\ndecides it through `decide_and_carry`, the path `POST /approval-requests/{id}/decide`\ntakes. So the submitter and author checks, the policy's roles and quorum, and the\ndry-run evidence are the workflow's, not a second copy here (FD-1356).",
         "operationId": "approve_rule_api_v1_validation_rules__rule_id__approve_post",
         "parameters": [
           {
@@ -33200,7 +33217,7 @@
     },
     "/api/v1/validation-rules/{rule_id}/submit": {
       "post": {
-        "description": "FR-50 step 3: `draft` → `review`, and only with a dry run attached.",
+        "description": "FR-50 step 3: `draft` → `review`, filing the approval request (`06` FR-352).\n\nOnly with a dry run attached that executed, and only with a change summary.",
         "operationId": "submit_rule_api_v1_validation_rules__rule_id__submit_post",
         "parameters": [
           {
@@ -33232,6 +33249,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidationRuleSubmission"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
