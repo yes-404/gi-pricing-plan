@@ -64,12 +64,12 @@ placed at Before Phase 3" note). The decision-maker's role file does not tell it
 
 ## Disposition
 
-Open. Filed by the auditor, 2026-10-05; severity LOW and owner WK-1170 ruled as above. The gate row for each OQ is proposed below and ruled at the ACK.
+Open. Filed by the auditor, 2026-10-05; severity LOW and owner WK-1170 ruled as above. The gate row for each OQ is confirmed by the maintainer (by delegation) in the entry headed "2026-10-05 15:33:14 BST — Prep finals noted; FD 9619's gates CONFIRMED; the 3 free slots named" (`to-lead.md`): OQ-1316 → "Before Phase 3" ("its recommendation (c) does not block P2"); OQ-1373 → "Before the P2 exit demo" ("it gates NFR-500's re-measurement").
 
-**Remedy, proposed (two parts, the second is the cure for the class):**
+**Remedy (two parts, the second is the cure for the class):**
 
 1. **Add the two rows** to `docs/roadmap.md` §10, in one gate row each, in the compact id form, with no `OQ-` id in any
-   explanatory italics (the skill's warning). Which gate each belongs to is proposed in §Proposed gate rows below.
+   explanatory italics (the skill's warning). Which gate each belongs to is confirmed in §Gate rows below.
    Recount each touched row's `N (M open)` with the skill's second script.
 2. **Add the check to `audit-docs.py`**: the coverage script's three assertions (`missing`, `extra`, `duplicated`) with the eight
    recorded ids as a named exemption set, plus the count recount. `.claude/skills/docs-audit/SKILL.md` and
@@ -79,9 +79,9 @@ Open. Filed by the auditor, 2026-10-05; severity LOW and owner WK-1170 ruled as 
 Event that next confirms or discharges it: the remedy PR merging, and the script printing `none` for `missing` beyond the
 eight recorded ids.
 
-## Proposed gate rows
+## Gate rows (proposed by the auditor, confirmed by the maintainer)
 
-The maintainer's 15:28:26 entry says the auditor proposes, for each OQ, the gate of the Work that owns its decision (a decided OQ gets a decided row), and that the maintainer confirms at the ACK. **Both are proposals: ruled by the maintainer (by delegation) at the ACK. This PR adds no row to `docs/roadmap.md`.** Both OQs are owned by WK-1178 (`docs/open-questions.md` :138 and :141); the §10 table has no WK-1178 row, so the proposal picks the existing row whose trigger matches what each answer changes.
+The maintainer's 15:28:26 entry says the auditor proposes, for each OQ, the gate of the Work that owns its decision (a decided OQ gets a decided row), and that the maintainer confirms at the ACK. **Both were proposals; both are confirmed in the 15:33:14 entry named in Disposition. This PR adds no row to `docs/roadmap.md`: the rows are the remedy PR's, owner WK-1170.** Both OQs are owned by WK-1178 (`docs/open-questions.md` :138 and :141); the §10 table has no WK-1178 row, so the proposal picks the existing row whose trigger matches what each answer changes.
 
 | OQ | Proposed gate row | Reason |
 |---|---|---|
@@ -89,3 +89,5 @@ The maintainer's 15:28:26 entry says the auditor proposes, for each OQ, the gate
 | OQ-1373 | **Before the P2 exit demo** | NFR-500 is measured failing (516.07 GB/year against 200 GB), the F35 plan (WK-1178, Phase 2 work) re-measures it under whichever reading is ruled (its DP-F35-3), and the plan cannot state its acceptance until the reading is ruled. That is a Phase 2 exit input, the same shape as the two findings already on that row. The alternative is **Before Phase 3**, the row OQ-1229 (also WK-1178, "answer changes what its tests must prove before the Phase 2 exit") was placed on; the proposal prefers the earlier row because this budget is measured failing now. |
 
 When the rows are added, recount each touched row's `N (M open)` with the `docs-audit` skill's second script (the skill's warning stands: no `OQ-` id in explanatory italics).
+
+**Re-verified at `origin/main` 137bc817** (2026-10-05 16:59:18 BST): the `docs-audit` gate-table script, run verbatim, prints the same `missing` list (`OQ-1316`, `OQ-1373` and the eight recorded ids), `extra: none`, `duplicated: none`; `docs/open-questions.md` :138 and :141 still hold the two OQ rows; `docs/roadmap.md` :924 is still the only mention of either id; `git log origin/main -S'OQ-1316' -- docs/roadmap.md` still prints only `f689c782`, and `git show --stat 6891b30e -- docs/roadmap.md` is still empty. `tree:` above stays 809a3794 (the filing tree); the result at the later tree is this line.
