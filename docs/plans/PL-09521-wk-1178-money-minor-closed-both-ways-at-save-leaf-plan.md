@@ -97,6 +97,42 @@ and the tasks. The sweep now runs **before** the reds (Task 1), and a hit is a S
 maintainer (by delegation), never an automatic fallback. The real-time `/score` coercion is
 read first (Task 0 Step 3), with a red if it differs from batch (item 11).
 
+**Dated note, 2026-10-05 (written 17:50:39 BST, pre-mint): DP-1, the FD 9549-fix RL, A-2's
+control and the `/score` check.** Two entries, each read in full by this planner. From the
+entry headed *"2026-10-05 17:47:06 BST — PL 9521 DP-1: (a) refuse decimal→money_minor at a sub-graph port, flip test_rating_compile.py:389, ON A MECHANISM CONDITION; one RL yes; lane B order agreed"*, items 2 to 4, verbatim:
+
+> 2. DP-1: (a) ADOPTED. A port that carries an exact decimal into a money_minor slot is pre-rounding money crossing a boundary, which is exactly what the rule closes. I APPROVE flipping packages/pricing-core/tests/test_rating_compile.py:389 (in test_a_compatible_fragment_output_port_raises_no_issue, :386-389) to assert the refusal. The string case at :388 stays as a passing assertion in a test renamed for what it proves; the decimal→money_minor case moves to a NEW red test named for the refusal. Both changes cite this entry.
+>    CONDITION, the mechanism must exist: (a) is only buildable if a fragment author CAN produce a money_minor value inside a fragment from a decimal (an expression step with result_type money_minor and an explicit rounding, or a ladder/round operation usable in a fragment). I did not find one: the grep at origin/main shows rounding only in ladder.py (round_once :91) and runtime.py's provisional round at :521-567. The planner verifies, with file:line, that such a path exists AND is admitted in a fragment. If none exists, that is a STOP to me BEFORE the RL is drafted: (a) would make every decimal-money sub-graph unbuildable, and the choice reopens between (a) plus a rounding step in scope, or (c).
+> 
+> 3. ONE RL for the FD 9549 fix (DP-1, FR-227's dated T-text with money_minor closed both ways at save, A1, B3), before PL 9521 mints: YES. Reserve the id; a DM drafts it after the mechanism check in item 2.
+> 4. Contention and lane B order: AGREED (emergency SL 9561 → FD 9707 fix → PL 9521, with PL 9728 before PL 9521 if ready). A-2's decimal model_call→relativity control becomes B3-refused: whichever of A-2 and PL 9521 merges SECOND flips it, citing OQ 9556's decision; both plans name it.
+
+From the entry headed *"2026-10-05 17:49:25 BST — PL 9521 #1202 @15698eae: A-2's control changed PRE-MINT (yes); the /score vs batch coercion: (c) conditional, PLUS one check that decides whether it is a SEPARATE finding"*, items 1 and 2, verbatim:
+
+> 1. A-2's control: the PRE-MINT CHANGE is ADOPTED and supersedes the second-merger flip in my 17:47:06 item 4 for this control. #1178 item 15's control becomes a decimal model_call into a DECIMAL output (legal under B3), which still proves the rule is model_call-scoped. PL 9521 drops its flip line for this control and names the change instead. The same planner does both pre-mint.
+> 2. Real-time vs batch: the planner's own reading (real-time _build_outputs does not call _coerce_output_value; batch does) is a divergence that does NOT depend on a refused pair. It may already show for an ALLOWED pair (A3–A7, e.g. int or count→decimal, served as an int on /score and as a decimal in batch). So BEFORE choosing:
+>    CHECK, read-only, in PL 9521's Task 1 beside the sweep: score ONE allowed widening (an int or count step into a declared decimal output) through /score's real-time path and through batch, and compare the served JSON values and types.
+>    - If they DIFFER for an allowed pair: it is NOT FD 9549's residue. It is a SEPARATE finding (option (b)): an auditor files it with a proposed severity, owner WK-1178; its fix edits score.py and serialises after SL 9561. PL 9521 stays small.
+>    - If they AGREE for allowed pairs AND the sweep finds no stored refused pair: (c), recorded in FD 9549 as a residue, owner WK-1178.
+>    - If the sweep finds a stored refused pair: STOP to me (file:line), as already ruled. I then choose between (a) and (b).
+>    The red test_score_and_batch_serve_a_pre_fix_pair_alike is NOT added to PL 9521 under (c); it belongs to whichever slice owns the fix.
+
+**DP-1's condition is NOT met, and it stays open.** This planner checked at `5fe56b87` and
+reported a STOP to the lead (17:50 BST). No path exists for a fragment author to round
+`decimal` → `money_minor` inside a fragment:
+- a fragment has no `output` step, so it has no `RoundSpec`
+  (`model_schema/sub_graphs.py:67-68`);
+- `RatingExpressionStep` has only `expr` and `result_type` (`model_schema/rating.py:293-296`),
+  and `_expression_node` passes `expr` verbatim (`runtime.py:163-176`);
+- FR-244's allow-list has `FUNCTIONS = ("min", "max", "abs", "number")`, "there is no rounding
+  function" (`pricing_core/rating/vocabulary.py:31`), and `%` is refused.
+
+So `P:389` is **not** flipped, and D9 waits on the maintainer's choice "between (a) plus a
+rounding step in scope, or (c)" (17:47:06 item 2). **A-2's control:** the pre-mint change is
+adopted (17:49:25 item 1), so this plan names it and drops the second-merger flip. **The
+`/score` check:** item 11 becomes the read-only check of 17:49:25 item 2, and its red is not
+added to this plan.
+
 ## Status
 
 `draft`. **DP-1 is open** (§"Decision points"). It is the maintainer's (by delegation),
@@ -116,8 +152,12 @@ activation PR, after every activation need below holds.
 4. **The emergency slice merged** (SL 9561 / PL 9560, #1196). The ruling's item 3 places this
    slice after it. Lane B's order is: the emergency slice (c) → the FD 9707 fix (PL 9688,
    #1145) → this slice, unless PL 9728 (#1113) is ready first. The lead sequences that.
-5. **If an `RL-` carries FR-227 text** (a T-text recording the closed rule), that `RL-` is
-   merged, and Task 4 applies its text byte for byte. This plan drafts no spec text.
+5. **The FD 9549-fix `RL-` merged** (working id given at its filing; 17:47:06 item 3: "ONE
+   RL for the FD 9549 fix (DP-1, FR-227's dated T-text with money_minor closed both ways at
+   save, A1, B3), before PL 9521 mints: YES"). A decision-maker drafts it after DP-1's
+   mechanism question is answered. Task 5 applies its FR-227 text byte for byte. This plan
+   drafts no spec text. *(Dated note, 2026-10-05: this need was conditional, "If an `RL-`
+   carries FR-227 text"; it is now required.)*
 6. **The lane and the dispatch GO.** The dispatch record writes `RL 9620`'s same-Work lines
    (a) and (b) for every WK-1178 slice in flight beside this one (§"Write set").
 
@@ -215,7 +255,12 @@ today's behaviour, and item 11 is new. All are rewritten to the 17:42:06 BST dec
    show one issue, not two (§"Hand-off").
 6. **Widening is kept: the allowed set passes on every path (P).**
    `test_a_widening_pair_is_allowed` is parametrised over A3–A7 and run on all three paths,
-   with A1 and A2 as well. Each passes. This is the control that keeps the refused set from
+   with A1 and A2 as well. *(Added 2026-10-05, OQ 9556 A1's control:)*
+   `test_an_explicit_money_minor_expression_step_admits_an_int_input` (P): an `int` input feeds
+   an `expression` step declared `money_minor` (OQ 9556 A1: "Money enters a computation
+   through an EXPLICIT money_minor-typed expression step"), which feeds a `money_minor` output.
+   It saves with no `RATING_TYPE_MISMATCH`, on the algorithm path. The same `int` input wired
+   straight to the output is D10. Each passes. This is the control that keeps the refused set from
    over-reaching. A refused-set test that passes A3–A7 by accident would show here. It is green
    at the base, and it must stay green after the change.
 7. **The sweep, run BEFORE the reds: no committed algorithm, fixture or seed uses a refused
@@ -248,23 +293,28 @@ today's behaviour, and item 11 is new. All are rewritten to the 17:42:06 BST dec
    holding the one gate slot (`RL 9620` as corrected at 15:27:25 BST). The ledger records each
    rc and the tree.
 10. **The write set.** `git diff --stat origin/main...HEAD` names only §"Write set"'s paths.
-11. *(Added 2026-10-05, pre-mint, from the 17:42:06 BST decision: "The real-time /score output
-    coercion (not checked) is in PL 9521's read-first list, with a red if it serves a refused
-    pair differently from batch".)* **Real-time and batch serve a refused pair alike, or a red
-    says otherwise.** Read first (Task 0 Step 3): the real-time path builds `outputs` in
-    `_build_outputs` (`packages/pricing-core/src/pricing_core/rating/score.py:729`) and does not
-    call `_coerce_output_value`. The batch path serialises them through `_outputs_json`
-    (`:991-1002`), which calls `_coerce_output_value` (`:950`) by the declared type. For each
-    refused class (out of `money_minor`, into `money_minor`, a refused non-money pair), the
-    executor reads what each path serves for an algorithm that carries the pair. Such an
-    algorithm is one stored or compiled before this fix: built with
-    `RatingAlgorithm.model_validate`, with no `validate_algorithm`. If the two paths serve it
-    differently, `test_score_and_batch_serve_a_pre_fix_pair_alike` (in
-    `packages/pricing-core/tests/test_rating_score.py`, appended) is written red: one quote
-    through `score_one` and through the batch scorer, asserting the same served value, and
-    red by the difference. **Its green is not scoped by this plan.** Aligning the paths edits
-    `score.py`, outside §"Write set", so a red here is a STOP to the lead, who scopes it. If
-    no class differs, the ledger records each reading and no test is added.
+11. **The real-time vs batch check, read-only, in Task 1 beside the sweep** (17:49:25 BST item
+    2). *(Dated note, 2026-10-05: this item was a conditional red for a refused pair. It is
+    rewritten to the 17:49:25 order, and `test_score_and_batch_serve_a_pre_fix_pair_alike` is
+    not added to this plan.)* Score **one allowed widening**, an `int` or `count` step into a
+    declared `decimal` output (A3 or A4), through `/score`'s real-time path (`_build_outputs`,
+    `packages/pricing-core/src/pricing_core/rating/score.py:729`, which does not call
+    `_coerce_output_value`) and through batch (`_outputs_json`, `:991-1002`, which does, at
+    `:1002`). Compare the served JSON values and types, and record both in the ledger. Then:
+    - **if they differ for an allowed pair,** it is a separate finding (17:49:25 item 2, option
+      (b)): the slice reports it to the lead for an auditor to file, and it continues;
+    - **if they agree, and the sweep found no stored refused pair,** it is (c): recorded as
+      FD 9549's residue, owner WK-1178;
+    - **if the sweep found a stored refused pair,** it is a STOP (item 7).
+
+    *A planning-time reading, for the check to confirm, not to replace:* batch's
+    `_coerce_output_value` (`:950`) refuses any declared type outside `_KNOWN_OUTPUT_TYPES =
+    frozenset({"money_minor", "decimal", "bool", "string", "date"})` (`:947`), raising
+    `"score_batch: cannot serialise a declared output type …"` (`:965-966`). It serialises
+    `decimal` as a string (`:973-975`). The real-time path does neither. So an output declared
+    `int` (A7, `count` → `int`) is refused by batch and served by `/score`, and an `int` or
+    `count` value into `decimal` (A3, A4) is likely served as a number on `/score` and as a
+    string in batch. That points to option (b).
 
 ## Global Constraints
 
@@ -323,8 +373,7 @@ Read at `4d3be141` by this planner; no code was run.
 | `packages/pricing-core/src/pricing_core/rating/compile.py` | edited: `_compatible` (`:124-129`) gains a keyword-only `at_output_step: bool` with no default, and the closed rule; its comment (`:127-128`) is replaced. `output_type_issues` (`:132-155`) takes and passes `at_output_step`. `_check_result_types` (`:158-170`) passes `True`. `fragment_output_type_issues` (`:173-199`) passes `False`. `_NUMERIC` and `ALGORITHM_CHECKS` are not edited. |
 | `packages/pricing-core/tests/test_rating_compile.py` | appended: items 1–3, 5, 6. Edited only under DP-1 (a): the second assertion of `test_a_compatible_fragment_output_port_raises_no_issue` (`:389`) |
 | `backend/tests/test_sub_graphs_api.py` | appended: item 4 |
-| `packages/pricing-core/tests/test_rating_score.py` | appended **only if** item 11's red is due (Task 0 Step 3). Its green, in `score.py`, is outside this write set and is the lead's to scope *(added 2026-10-05)* |
-| `packages/pricing-core/src/pricing_core/rating/score.py` | **read only**: `_build_outputs` (`:729`), `_coerce_output_value` (`:950`), `_outputs_json` (`:991-1002`) (item 11) |
+| `packages/pricing-core/src/pricing_core/rating/score.py` | **read only**: `_KNOWN_OUTPUT_TYPES` (`:947`), `_coerce_output_value` (`:950`), `_build_outputs` (`:729`), `_outputs_json` (`:991-1002`) (item 11's check). A fix found by the check is a separate finding's slice, never this one |
 | the slice's ledger `docs/ledgers/LG-<n>`; `docs/INDEX.md` | added; regenerated |
 | `docs/specs/03-rating-engine.md` FR-227 row (`:113`) | only if an `RL-` carries text (activation need 5) |
 
@@ -336,7 +385,7 @@ Read at `4d3be141` by this planner; no code was run.
 
 | Other slice (Work; source read) | Shared path | Them | Us | Class → consequence |
 |---|---|---|---|---|
-| **A-2**, PL 9597 (#1178 @`04f99c1f`; WK-1178) | `compile.py` `producer_types`, `_check_result_types` / `output_type_issues`; `test_rating_compile.py` (via its item 15) | types a `model_call` producer by `result_type`; refuses a `money_minor` `model_call` into a non-money output, for `model_call` producers only, `_compatible` untouched | `_compatible`; `output_type_issues`'s and `_check_result_types`'s flag | **same functions → SERIALISE.** The overlap: both refuse `money_minor` → `relativity` for a `model_call` producer. Whichever lands **second** leaves one refusal (item 5). If this slice is second, it removes A-2's `model_call`-only refusal branch, because the general rule now covers it through `producer_types`, and A-2's tests stay green unedited. If A-2 is second, its dispatch record drops that branch and keeps only the `producer_types` typing. **A-2's control conflicts with OQ 9556 B3** *(dated note, 2026-10-05)*. A-2 item 15's control says "declared `decimal`, the same graph saves", for a `decimal` `model_call` into a `relativity` output. That pair is D13, which B3 refuses. If both merge as written, A-2's control fails under this slice's rule. The fix is pre-mint, in A-2's own plan: its control becomes a legal pair, for example a `decimal` `model_call` into a `decimal` output. This plan does not edit A-2's tests, and the conflict is reported to the lead |
+| **A-2**, PL 9597 (#1178 @`04f99c1f`; WK-1178) | `compile.py` `producer_types`, `_check_result_types` / `output_type_issues`; `test_rating_compile.py` (via its item 15) | types a `model_call` producer by `result_type`; refuses a `money_minor` `model_call` into a non-money output, for `model_call` producers only, `_compatible` untouched | `_compatible`; `output_type_issues`'s and `_check_result_types`'s flag | **same functions → SERIALISE.** The overlap: both refuse `money_minor` → `relativity` for a `model_call` producer. Whichever lands **second** leaves one refusal (item 5). If this slice is second, it removes A-2's `model_call`-only refusal branch, because the general rule now covers it through `producer_types`, and A-2's tests stay green unedited. If A-2 is second, its dispatch record drops that branch and keeps only the `producer_types` typing. **A-2's control is changed pre-mint** *(dated note, 2026-10-05; 17:49:25 BST item 1, which supersedes the second-merger flip of 17:47:06 item 4 for this control)*. #1178 item 15's control becomes a `decimal` `model_call` into a **`decimal`** output, legal under B3, in A-2's own plan before its mint. This plan names the change and flips nothing. Its earlier control (a `decimal` `model_call` into `relativity`) is D13 under B3 |
 | **The FD 9707 fix**, PL 9688 (#1145 @`2f3269c8`; WK-673), and RL 9642 (#1148, its ruling) | `compile.py` | adds `_check_lookup_as_at`; appends one entry to `ALGORITHM_CHECKS` (`:359-363`) | `_compatible`, `output_type_issues`, `_check_result_types`, `fragment_output_type_issues`; not `ALGORITHM_CHECKS` | different definitions, one file → **ALLOWED one-sided** with the dispatch record naming each path and its check; lane B's order puts it first anyway. RL 9642 writes no code. PL 9688 uses `RATING_TYPE_MISMATCH` for a lookup input (its DP-4), at a different site |
 | **PL 9728**, the NFR-489 remedy (#1113 @`3ad98fe2`; WK-1178) | none written by both: it edits `scripts/bench-rating.py`, `backend/src/app/db/session.py`, `config.py`, `api/deps.py`, `api/authz.py`, `auth/service.py`, `api/score.py`, `main.py` | — | item 7's sweep **reads** `scripts/bench-rating.py:248-267` | **no shared write → concurrent allowed.** Same Work: `RL 9620` (a) and (b) are written ((b): neither consumes the other's output). If PL 9728 changes `bench-rating.py`'s algorithm, item 7's sweep reads it at the dispatch tree |
 | **PL 9610**, WK-1250 S2 (#1170; WK-1250) | `compile.py` `_compatible` (**called**) | adds a mount-port check that calls `producer_types` and `_compatible` (its plan `:581-583`) | changes `_compatible`'s signature (a required `at_output_step`) and its numeric rule | **a caller of an edited function → SERIALISE.** Whichever lands second updates the other's call: a mount port is not an output step, so it passes `at_output_step=False` |
@@ -349,16 +398,16 @@ each plan file on its branch.
 ### Size
 
 Small: about half an executor day, to three quarters with OQ 9556's 16 added directions and
-item 11's read. It is one pure function and three callers, about 60 parametrised cases (24
-refused directions and 7 allowed pairs, on three paths), one backend test, and a sweep script
-run twice. Item 11 may add one red, whose green is the lead's to scope. *(Dated note,
+item 11's check. It is one pure function and three callers, about 75 parametrised cases (24
+refused directions and 8 controls, on three paths), one backend test, a sweep script run
+twice, and one read-only scoring check. DP-1 may add D9's three reds. *(Dated note,
 2026-10-05: was "about 30 parametrised cases"; re-estimated, unmeasured.)*
 
 ## Decision points
 
 | DP | Question | Options | Recommendation | Owner | Blocks |
 |---|---|---|---|---|---|
-| **DP-1** | D9: `decimal` into a `money_minor` sub-graph **output port**. The ruling admits `decimal` → `money_minor` "AT AN OUTPUT STEP ONLY (FR-226's rounding point)". A port is not an output step, and it carries no rounding (0.5). The committed `test_a_compatible_fragment_output_port_raises_no_issue` (`P:386-389`) asserts that this pair passes today | (a) refuse at a port, as the ruling reads, and flip `P:389`'s second assertion, with the maintainer's (by delegation) approval, because the ruling's STOP covers a newly failing fixture; (b) admit it at a port, read as the parent's output step rounding it after inlining. No assertion flips, but a `decimal` value enters the parent as `money_minor` unrounded, and nothing guarantees an output step consumes it; (c) admit it at a port now, and check it at mount (PL 9610's mount-port check, `at_output_step=False`) | **(a).** It is the ruling's text, and the hazard FD 9549 names is a unit changing by declaration without a rounding point. Under (a), a sub-graph exposes the value as `decimal`, and the mounting algorithm's output step rounds it once (FR-226, option (B)). (b) leaves the gap open for sub-graphs. (c) moves the check to a slice that is not merged | the maintainer (by delegation) | item 3 (D9), item 7, activation need 3 |
+| **DP-1** | D9: `decimal` into a `money_minor` sub-graph **output port**. The ruling admits `decimal` → `money_minor` "AT AN OUTPUT STEP ONLY (FR-226's rounding point)". A port is not an output step, and it carries no rounding (0.5). The committed `test_a_compatible_fragment_output_port_raises_no_issue` (`P:386-389`) asserts that this pair passes today | (a) refuse at a port, as the ruling reads, and flip `P:389`'s second assertion, with the maintainer's (by delegation) approval, because the ruling's STOP covers a newly failing fixture; (b) admit it at a port, read as the parent's output step rounding it after inlining. No assertion flips, but a `decimal` value enters the parent as `money_minor` unrounded, and nothing guarantees an output step consumes it; (c) admit it at a port now, and check it at mount (PL 9610's mount-port check, `at_output_step=False`) | **(a).** It is the ruling's text, and the hazard FD 9549 names is a unit changing by declaration without a rounding point. Under (a), a sub-graph exposes the value as `decimal`, and the mounting algorithm's output step rounds it once (FR-226, option (B)). (b) leaves the gap open for sub-graphs. (c) moves the check to a slice that is not merged | the maintainer (by delegation) *(Dated note, 2026-10-05: ruled (a) at 17:47:06 BST, ON A MECHANISM CONDITION, which this planner found NOT met at `5fe56b87`: no rounding path exists in a fragment (`sub_graphs.py:67-68`; `rating.py:293-296`; `vocabulary.py:31`). STOP reported to the lead. DP-1 stays **open**, between "(a) plus a rounding step in scope, or (c)" (17:47:06 item 2).)* | item 3 (D9), item 7, activation need 3 |
 
 OQ 9556 is not a DP of this plan: it is recorded by a decision-maker and decided before the
 mint (activation need 2).
@@ -378,11 +427,9 @@ the order. The read-first step for `/score` is Task 0 Step 3.*
 - [ ] **Step 2:** Re-read the write set of every slice in flight against §"Write set". Give the
   lead the `RL 9620` (a)/(b) lines for each same-Work pair (A-2, PL 9728). Record which of A-2
   and this slice merged first, because item 5 and §"Hand-off" depend on it.
-- [ ] **Step 3: Read first, the real-time `/score` coercion (item 11).** Read `_build_outputs`
-  (`score.py:729`), `_coerce_output_value` (`:950`) and `_outputs_json` (`:991-1002`) at the
-  dispatch tree. For each refused class, record in the ledger what `/score` and batch would
-  serve for one value. If they differ, item 11's red is due, and its green is a STOP to the
-  lead.
+- [ ] **Step 3: Read first, the real-time `/score` coercion (item 11).** Read
+  `_KNOWN_OUTPUT_TYPES` (`score.py:947`), `_coerce_output_value` (`:950`), `_build_outputs`
+  (`:729`) and `_outputs_json` (`:991-1002`) at the dispatch tree, before Task 1's check.
 
 ### Task 1: The sweep, BEFORE any red (item 7)
 
@@ -399,6 +446,10 @@ the order. The read-first step for `/score` is Task 0 Step 3.*
     and records any it cannot call.
 
   Producer types come from `producer_types` (`compile.py:95`), as the check reads them.
+- [ ] **Step 1a: Item 11's check, beside the sweep (read-only).** Score one A3 or A4 case
+  through `/score`'s real-time path and through batch, and compare the served JSON values and
+  types. Record the outcome and its branch, (b), (c) or STOP, in the ledger. Under (b), report
+  to the lead for an auditor to file the finding, and continue.
 - [ ] **Step 2:** Run the script at the base and keep its output and the script inline in the
   ledger. **Any hit other than DP-1's known `P:389`, an `int` input into a `money_minor`
   output included, is a STOP to the maintainer (by delegation) with `file:line`. Nothing
@@ -414,8 +465,6 @@ the order. The read-first step for `/score` is Task 0 Step 3.*
   allowed set as the control, and D9 to DP-1's ruling. Run them, and record each red by its
   stated cause.
 - [ ] **Step 2:** Write item 4 (B); red (`201`).
-- [ ] **Step 3:** If Task 0 Step 3 found a difference, write item 11's red, then STOP to the
-  lead for its scope.
 - [ ] **Step 4: Commit** (red): `test: money_minor closed both ways, widening only, red first (FR-227, FR-226)`.
 
 ### Task 3: The rule (items 1–6, 8)
@@ -472,7 +521,7 @@ def _compatible(producer: str, declared: str, *, at_output_step: bool) -> bool:
 
 - [ ] **Step 1:** The full two-half gate through the gate-runner, holding the one gate slot.
   Record each rc and the tree.
-- [ ] **Step 2:** The `LG-` ledger: Task 0 Step 3's readings, the sweep's two outputs and its
+- [ ] **Step 2:** The `LG-` ledger: Task 0 Step 3's readings, item 11's check and its branch, the sweep's two outputs and its
   script, every red with its printed line, the `_compatible` callers with their flags, which
   of A-2 and this slice merged first, and `git diff --stat origin/main...HEAD` against
   §"Write set".
@@ -486,8 +535,9 @@ def _compatible(producer: str, declared: str, *, at_output_step: bool) -> bool:
 3. **To A-2's planner and executor (#1178):** if this slice merges first, A-2's dispatch
    record drops item 15's `model_call`-only refusal branch and keeps the `producer_types`
    typing, and A-2's item 15 tests stay as written. If A-2 merges first, this slice removes
-   the branch (Task 3 Step 3). Either way, A-2's control must first become a legal pair: its
-   `decimal` → `relativity` control is D13, refused by OQ 9556 B3.
+   the branch (Task 3 Step 3). A-2's control is changed in its own plan before its mint: a
+   `decimal` `model_call` into a `decimal` output (17:49:25 BST item 1). This plan flips nothing
+   of A-2's.
 4. **To PL 9610's executor:** `_compatible` now takes a required `at_output_step`. A mount
    port passes `False`.
 5. **OQ 9556:** its decision (17:42:06 BST) is written into the directions table, items 1–3,
@@ -510,13 +560,16 @@ def _compatible(producer: str, declared: str, *, at_output_step: bool) -> bool:
    - "FIRST task is red-first: one red per refused direction, plus a sweep": Task 1.
    - "If one does, STOP and report; do not loosen the rule": item 7, Tasks 1 and 4, DP-1.
    - OQ 9556's "sweep, BEFORE its red tasks … NOT an automatic A3 fallback": Task 1, item 7.
-     Its "/score output coercion … a red if it serves a refused pair differently from batch":
-     Task 0 Step 3, item 11.
+     Its "/score output coercion" is read first (Task 0 Step 3), and the check of 17:49:25 item
+     2 is item 11 and Task 1 Step 1a.
+   - 17:47:06 item 2, DP-1's mechanism condition: checked and NOT met; DP-1 stays open (the
+     dated note under the decisions).
 2. **Coverage of item 3** ("AFTER the emergency slice … you sequence it"): activation need 4
    and the contention table. The lead sequences.
-3. **Every open design choice has an owner:** DP-1 (the maintainer (by delegation)). OQ 9556 is
-   decided. Item 11's green, if a red is due, is the lead's to scope. No spec text is drafted
-   (Task 5).
+3. **Every open design choice has an owner:** DP-1 (the maintainer (by delegation); its
+   mechanism condition is not met, so it is open). OQ 9556 is decided. A divergence found by
+   item 11 goes to a separate finding (option (b)). No spec text is drafted: the FD 9549-fix
+   `RL-` carries FR-227's text (Task 5).
 4. **Repository literals read at `4d3be141`:** every line in §"Task 0 at planning time" and
    §"Write set". FD 9549 was read at `9c8a52c6`. Each other plan was read on its branch at
    the head named in the contention table.
