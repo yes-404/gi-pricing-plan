@@ -1281,6 +1281,24 @@ Minted 2026-09-28 by `CR-1167` Proposal 5.1 (plan review 14, accepted by delegat
 
 **2026-09-30:** also owns FD-1280's draft-RL guard and FD-1282's frozen-file enforcement, 2026-09-30, the maintainer's entry 06:00:41. *(Amended 2026-09-30 by the lead, on the maintainer's entries "2026-09-30 06:00:41 BST — MERGE-ACK #947 (FD-1280..1282, the F-W10-2 owner); DECISIONS on FD-1280 and FD-1282" and "2026-09-30 06:19:28 BST — MERGE-ACK #921 (FD-1283); WK-1170 confirmed as owner of the FD-1280/1282 checks", which gives this line's wording. PL-1276 takes them into its scope at activation.)*
 
+#### SL 9655 (working id) — WK-1170 slice — check 34 runs its merge-base comparison (FD-1282)
+
+```yaml
+id: SL-9655
+family: slice
+title: WK-1170 slice — check 34 runs its merge-base comparison (FD-1282)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 99afcde215c0817c5ac4db55332ab7a69e4752a0
+phase: P2
+work: WK-1170
+corrected_by: []
+relates: [FD-1282, FD-1323, PL-9662, PL-1276]
+```
+
+`check_freeze` calls `frozen_diff_is_permitted` on every frozen-family file that the change modifies, renames or deletes, compared with the merge-base of `AUDIT_DOCS_FREEZE_BASE`. In docs CI that is the PR's base commit on `pull_request`, and the previous main tip on `push`. It is red first on a body append to a frozen plan, a backward `status:` and a blanked `corrected_by:`. It stays green on a register row, a ledger append and a forward status. A dry run over the last 20 merged PRs, #986 and CR-838 comes before go-live. Leaf plan `PL 9662` (working id). **Activation needs:** the "(a) first" freeze-rule amendment merged (the maintainer's; not done at `99afcde2`), and the first build lane free after the FD 9707 and FD 9708 fixes (the deputy, "2026-10-05 13:24:56 BST — Freeze-check findings: FD-1323 closes as a duplicate; owner stays WK-1170; fix scheduled after FD 9707/9708").
+
 ### WK-1178 — P2 standing maintenance: hotfixes, dependency bumps and security findings
 
 ```yaml
