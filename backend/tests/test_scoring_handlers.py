@@ -510,3 +510,27 @@ async def test_a_malformed_effective_date_does_not_echo_its_value_into_the_error
     )
     assert sentinel not in json.dumps(output.to_dicts(), default=str)
     assert "effective_date" in output.filter(pl.col("outcome") == "error")["error_message"][0]
+
+
+@pytest.mark.req("FR-213")
+async def test_a_dataset_column_named_like_a_produced_value_is_refused_per_row(
+    api_client: TestClient, headers: dict[str, str], database: Database, blob_store: BlobStore,
+    workspace_id: UUID, principal: Principal, grant: Any,
+) -> None:
+    """FD-1425, batch: a dataset column named `payable` becomes a `ctx.inputs` key on every
+    row, and every row is refused. Per-row isolation (FR-255) keeps the Job running."""
+    await _compiled_version(
+        api_client, headers, database, blob_store, workspace_id, principal, grant
+    )
+    frame = _scoring_frame(4).with_columns(pl.lit(1).alias("payable"))
+    dataset_version_id = await _dataset_version(
+        database, blob_store, workspace_id, principal, frame
+    )
+    result, _ = await _run_handler(
+        database, blob_store, workspace_id, principal, _parameters(dataset_version_id)
+    )
+    summary = await _summary(database, blob_store, result)
+    ref_result = summary["results"][0]
+    assert ref_result["error_counts"] == {"INPUT_CONTRACT_VIOLATION": 4}
+    assert ref_result["outcome_counts"]["error"] == 4
+    assert "payable" in ref_result["error_samples"]["INPUT_CONTRACT_VIOLATION"][0]
