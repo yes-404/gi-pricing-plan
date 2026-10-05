@@ -64,7 +64,7 @@ auditor, or a regulator:
 | **Governed Artifact** | Any artifact with an approval-bearing lifecycle: Dataset Version, Validation Rule, Model, Custom Objective, Custom Metric, Peril Structure, ~~Rate Table Version~~, Rating Version, Optimisation Run (when cited as evidence). *(Rate Table Version struck 2026-09-28: it has no approval lifecycle and is governed through the Rating Version that pins it. See `03` FR-1186 and OQ-620.)* |
 | **Evidence Bundle** | The set of artifact references required for that artifact type (§3.3), resolved and pinned at submission time. |
 | **Approval Policy** | The workspace configuration stating, per artifact type and environment, how many approvers are needed, which roles may approve, and what evidence is required. |
-| **Approval Decision** | An approve / reject / request-changes act by an Approver, with a mandatory comment. |
+| **Approval Decision** | An approve / reject / request-changes act by an Approver, with a ~~mandatory comment~~ comment, mandatory when requesting changes (FR-355) *(amended 2026-10-05, `RL 9607` (working id) DP-5)*. |
 | **Attestation** | A periodic, recorded confirmation by a named role that a live artifact remains fit for purpose (annual model review). |
 
 ---
@@ -480,12 +480,22 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
   "flags": [],
   "status": "review",
   "decisions": [
-    {"approver_id": "uuid", "decision": "approved", "at": "2026-09-13T10:11:00Z",
+    {"approver_id": "uuid", "decision": "approve", "at": "2026-09-13T10:11:00Z",
      "comment": "Dislocation is within the agreed envelope; young-driver softening is supported by the refit and the GIPP evidence is clean."}
   ],
   "approvers_required": 2, "approvers_recorded": 1
 }
 ```
+
+*Amended 2026-10-05 (WK-1178), on `RL 9607` (working id) DP-1 and DP-4.* A decision's value is
+the act: `approve`, `reject` or `request_changes`, as §5.1's decide row and the glossary's
+Approval Decision entry write it. The request's `status` is the state that act produces
+(`approved`, `changes_requested`, `rejected`). The example wrote the participle `approved`
+as a decision value, which mixed the two value sets. The example illustrates FR-352's full submission. Its
+`expedited`, `evidence_bundle`, `checklist` and `flags` are not fields of the `ApprovalRequest`
+the API returns: FR-352's checklist and evidence limbs are WK-677's, and a Deployment Request's
+pinned evidence lives on the Deployment Request (`RL-1301` A.2). The example is not a key list.
+The authoritative shape is `model-schema`'s `ApprovalRequest` (ADR-704).
 
 ### 4.4 `Dossier` structure
 
@@ -637,7 +647,7 @@ async def generate(artifact: ArtifactRef, as_at: datetime | None) -> Dossier
 | View | Route | Contents |
 |---|---|---|
 | Approvals inbox | `/approvals` | Pending requests with artifact type, submitter, age, flags; evidence rendered inline (diffs, dislocation charts, diagnostics) so no context-gathering is needed |
-| Approval detail | `/approvals/:id` | Evidence bundle, checklist, flags, decision panel with mandatory comment, prior decisions and change requests |
+| Approval detail | `/approvals/:id` | Evidence bundle, checklist, flags, decision panel with ~~mandatory comment~~ a comment, mandatory when requesting changes (FR-355) *(amended 2026-10-05, `RL 9607` (working id) DP-5)*, prior decisions and change requests |
 | Audit explorer | `/audit` | Filterable timeline, entity-centric view, justification search, chain verification status, export |
 | Artifact history | `/artifacts/:ref/history` | Uniform version/transition timeline with diffs and actors |
 | Dependencies | `/artifacts/:ref/dependencies` | Blast-radius graph in both directions |
