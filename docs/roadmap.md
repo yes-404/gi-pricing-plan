@@ -1444,14 +1444,14 @@ title: WK-1178 fix slice — FD-1416, one ApprovalRequest shape, generated and t
 status: draft                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-05
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
-tree: 809a3794af6d3a6ba688663b0d9b59f951190680
+tree: cdaaa57345cb765f96034ce1ec2733c338f1c3cd
 phase: P2
 work: WK-1178
 corrected_by: []
 relates: [FD-1416, FD-1335, SL-1409, PL-1408, SL-1367, PL-1371]
 ```
 
-`FD-1416`'s fix (MEDIUM, deadline before the P2 exit demo): the `model-schema` `ApprovalRequest` becomes the one definition. A decision-maker rules each disagreeing field first, the decision enum first, which lifts `FD-1416`'s HOLD. The four `to_dict` routes (`GET …/{request_id}`, `POST /approval-requests`, `…/decide`, `…/withdraw`) return it as a typed 2xx, published by `$ref`, and leave `FD-1335` Part B's open-object list. The hand-authored `approval-request.schema.json` is retired ("generated wins"), and `06` §4.3's example is amended verbatim from the ruling. A guard fails when an authored-only `ONE_SIDED_SLUGS` slug has an uncompared `model-schema` class, proven on broken input. Leaf plan PL 9616 (working id). Starts after `SL-1409` merges (`approvals.py`); it serialises with PL 9683 (`GENERATED_SHAPES`), and PL 9629's journey (its activation need 13) waits for it.
+`FD-1416`'s fix (MEDIUM, deadline before the P2 exit demo): the `model-schema` `ApprovalRequest` becomes the one definition. A decision-maker rules each disagreeing field first, the decision enum first, which lifts `FD-1416`'s HOLD. The four `to_dict` routes (`GET …/{request_id}`, `POST /approval-requests`, `…/decide`, `…/withdraw`) return it as a typed 2xx, published by `$ref`, and leave `FD-1335` Part B's open-object list. The hand-authored `approval-request.schema.json` is retired ("generated wins"), and `06` §4.3's example is amended verbatim from the ruling. A guard fails when an authored-only `ONE_SIDED_SLUGS` slug has an uncompared `model-schema` class, proven on broken input. Leaf plan PL 9616 (working id). It follows `SL-1409` (`approvals.py`; merged at `cdaaa573`); it serialises with PL 9683 (`GENERATED_SHAPES`), and PL 9629's journey (its activation need 13) waits for it.
 
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half

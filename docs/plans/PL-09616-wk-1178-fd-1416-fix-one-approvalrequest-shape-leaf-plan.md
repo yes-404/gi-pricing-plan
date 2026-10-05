@@ -6,7 +6,7 @@ title: WK-1178 — the FD-1416 fix, one ApprovalRequest shape, generated and typ
 status: draft                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-05
 owner: planner
-tree: 809a3794af6d3a6ba688663b0d9b59f951190680
+tree: cdaaa57345cb765f96034ce1ec2733c338f1c3cd
 phase: P2
 work: WK-1178
 supersedes: []
@@ -109,11 +109,11 @@ activation need below holds; that PR carries the `SL-` row's status flip and thi
 
 ### Activation needs, in order
 
-1. **`SL-1409` merged** (#1157, `sl-1409-validation-rule-approval-through-the-workflow`, head
-   `912baf4a` when read). It moves `Decide` from `backend/src/app/api/approvals.py` into
-   `model_schema/approvals.py`, adds `decide_and_carry`, and rewrites `decide_request`'s handler;
-   this slice edits the same handler's return. **Serial: SL-1409 first** (`RL-1263` item 4; `PL-1371`
-   §5 rule 4: "WK-674 S2 / FD-1356 fix / WK-673 S5 / FD 9752 (`approvals.py`)").
+1. **`SL-1409` merged: MET** at `origin/main` `cdaaa573` (#1157, 2026-10-05). It moved `Decide`
+   from `backend/src/app/api/approvals.py` into `model_schema/approvals.py` (`:64`), added
+   `decide_and_carry`, and rewrote `decide_request`'s handler, whose return this slice edits. The
+   two were serial (`RL-1263` item 4; `PL-1371` §5 rule 4: "WK-674 S2 / FD-1356 fix / WK-673 S5 /
+   FD 9752 (`approvals.py`)"), and every cite below is read after that merge.
 2. **A decision-maker ruling on DP-1 to DP-6, DP-8, DP-9 and DP-10, merged and minted**, and the
    maintainer's (by delegation) dated line on DP-7. Where the ruling and this plan differ, the
    ruling wins and the planner aligns the plan before its first merge. The HOLD lifts at DP-1's
@@ -150,9 +150,9 @@ where it differs.
    2xx schema of each of the four routes is `{"$ref": "#/components/schemas/ApprovalRequest"}`
    (the list route: `Page`'s `items` is that `$ref`, DP-7 (a)).
    `test_the_approval_routes_publish_the_approval_request_ref` (same module). Red first: at
-   `809a3794`, `ApprovalRequest` has 0 hits in `generated.json`.
+   `cdaaa573`, `ApprovalRequest` has 0 hits in `generated.json`.
 4. **`FD-1335` Part B's list loses the four.** In `ROWS` of
-   `backend/tests/test_deployment_route_types.py` (`:61-64` at `809a3794`), the `POST
+   `backend/tests/test_deployment_route_types.py` (`:61-64` at `cdaaa573`), the `POST
    /api/v1/approval-requests` and `…/withdraw` rows change their `response` from `None` to
    `"ApprovalRequest"`; the guard's own run is the red first (on the base tree it fails naming
    the route as an open object). If `SL-1367` has merged, its untyped-2xx exception list loses the
@@ -225,15 +225,15 @@ describes what exists, and FR-352's checklist and evidence limbs stay with WK-67
 
 ### Task 0 at planning time (measured, not asserted)
 
-Read at `origin/main` `809a3794af6d3a6ba688663b0d9b59f951190680`, by reading the owning modules:
+Read at `origin/main` `cdaaa57345cb765f96034ce1ec2733c338f1c3cd` (after #1157), by reading the owning modules:
 
 - **S1, `to_dict`** (`backend/src/app/platform/approvals.py:672-697`): 12 keys; it emits
   `environment` and no `workspace_id`; `decision` is the stored string; `approvers_recorded` is
   counted from `approve` decisions. Unchanged since `FD-1416`'s mint tree `caa4e411`.
-- **S2, `ApprovalRequest`** (`packages/model-schema/src/model_schema/approvals.py:395-420`):
+- **S2, `ApprovalRequest`** (`packages/model-schema/src/model_schema/approvals.py:405-431`):
   `frozen=True`, `extra="forbid"`; requires `workspace_id`; no `environment`; the
-  `_recorded_matches_decisions` validator (`:412-420`). `DecisionKind` (`:57-60`) is `approve`,
-  `reject`, `request_changes`. Exported from `model_schema/__init__.py` (`:444`), so no `__all__`
+  `_recorded_matches_decisions` validator (`:423-431`). `DecisionKind` (`:58-61`) is `approve`,
+  `reject`, `request_changes`. Exported from `model_schema/__init__.py` (`:446`), so no `__all__`
   edit is needed.
 - **S3**, `docs/contracts/schemas/approval-request.schema.json`: `required` names
   `evidence_bundle` and `checklist`; `decisions[].decision` is
@@ -247,13 +247,14 @@ Read at `origin/main` `809a3794af6d3a6ba688663b0d9b59f951190680`, by reading the
   builds each item with `_detail`, which returns `service.to_dict`. `FD-1416` names four routes,
   and `FD-1335` Part B lists the same four (`FD-1335` lines `:141`, `:144-146`); the list route's
   items are an open object inside `Page`, which neither sweep reached. Raised as DP-7.
-- **The route set after `SL-1409`.** At #1157's head `912baf4a`, `service.to_dict` is still
-  called by `_detail`, `submit_for_approval`, `decide_request` and `withdraw_request`, and no
-  other module calls it (`git grep -n 'to_dict' -- backend/src scripts examples`, approval hits
-  only in `backend/src/app/api/approvals.py`).
+- **The route set after `SL-1409`.** `service.to_dict` is still called by `_detail`,
+  `submit_for_approval`, `decide_request` and `withdraw_request`
+  (`backend/src/app/api/approvals.py:89`, `:133`, `:244`, `:329`), and by nothing else:
+  `git grep -n 'to_dict' -- backend/src scripts examples`, filtered to approvals, prints those four
+  and the definition and `__all__` entry in `backend/src/app/platform/approvals.py` (`:672`, `:67`).
 - **No consumer.** `git grep -n -i 'approval-requests\|ApprovalRequest\b' origin/main -- frontend/src ':!frontend/src/api/generated'`
   prints nothing.
-- **The `FD-1335` "temporary exclusion list"** is, at `809a3794`, two `ROWS` entries with
+- **The `FD-1335` "temporary exclusion list"** is, at `cdaaa573`, two `ROWS` entries with
   `response=None` in `backend/tests/test_deployment_route_types.py` (`:61-64`; the rule `:42-44`),
   pinned by key set (`APPROVAL_REQUEST_KEYS`, `:550`;
   `test_the_two_changed_approval_routes_return_exactly_the_declared_keys`, `:605`). `SL-1367`
@@ -263,7 +264,7 @@ Read at `origin/main` `809a3794af6d3a6ba688663b0d9b59f951190680`, by reading the
 - **`workspace_id` precedent.** The Slice-2 typed responses carry it: `model_schema/deployments.py:105`
   and `:169`.
 - **The F27 class at this tree.** Authored-only keys of `ONE_SIDED_SLUGS` whose PascalCase class
-  exists in `model_schema`: `approval-request` (`ApprovalRequest`, `approvals.py:395`),
+  exists in `model_schema`: `approval-request` (`ApprovalRequest`, `approvals.py:405`),
   `dislocation-run` (`DislocationRun`, `dislocation.py:116`), `rate-table` (`RateTable`,
   `rating.py:702`), `rating-algorithm` (`RatingAlgorithm`, `rating.py:375`), `rating-version`
   (`RatingVersion`, `rating.py:138`). `dossier`, `gipp-check`, `monitoring` and
@@ -280,15 +281,15 @@ file. Rows marked *(DP-n x)* exist only under that option.
 
 | Path | Change | Other slices touching it | Consequence |
 |---|---|---|---|
-| `backend/src/app/platform/approvals.py` | edited: `to_dict` replaced by `to_approval_request(row, decisions) -> ApprovalRequest` (`:672-697`), and its `__all__` entry (`"to_dict"`, `:67`) | **SL-1409** (#1157) reads `decide`; none edits `to_dict` | serial behind SL-1409 for the module as a whole (activation need 1) |
-| `backend/src/app/api/approvals.py` | edited: the return of `_detail`, `submit_for_approval`, `decide_request`, `withdraw_request`, and `list_requests` *(DP-7 a)*; their response declarations (DP-10) | **SL-1409** (#1157) edits `decide_request`'s body and adds `decide_and_carry` | **serial: SL-1409 first** (activation need 1); this slice re-reads the file after #1157 merges |
-| `packages/model-schema/src/model_schema/approvals.py` | edited: `ApprovalRequest` (`:395-420`) gains `environment` *(DP-3 a)*; `ApprovalDecision` (`:384-392`) only if DP-5 or DP-1 changes it | **SL-1409** appends `Decide` | serial (SL-1409 first) |
+| `backend/src/app/platform/approvals.py` | edited: `to_dict` replaced by `to_approval_request(row, decisions) -> ApprovalRequest` (`:672-697`), and its `__all__` entry (`"to_dict"`, `:67`) | none in flight (`SL-1409` merged at `cdaaa573` and left `to_dict` as it was) | none |
+| `backend/src/app/api/approvals.py` | edited: the return of `_detail`, `submit_for_approval`, `decide_request`, `withdraw_request`, and `list_requests` *(DP-7 a)*; their response declarations (DP-10) | none in flight (`SL-1409`'s edits merged at `cdaaa573`) | none; Task 0 re-reads the file at dispatch |
+| `packages/model-schema/src/model_schema/approvals.py` | edited: `ApprovalRequest` (`:405-431`) gains `environment` *(DP-3 a)*; `ApprovalDecision` (`:394-402`) only if DP-5 or DP-1 changes it | none in flight (`SL-1409`'s `Decide`, `:64`, merged) | none |
 | `scripts/generate-contracts.py` | edited: `GENERATED_SHAPES` (`:38`) gains `"approval-request": "ApprovalRequest"` | **PL 9683** (working id, #1140; same Work, WK-1178) appends `"rating-version-create"` | **serial with PL 9683**: `GENERATED_SHAPES` is not on `RL-1263`'s registry list, so same-Work concurrency fails `RL 9620`'s condition (a) |
 | `docs/contracts/schemas/approval-request.schema.json` | **deleted** *(DP-8 a)* | **PL 9649** (working id, #1152) **reads** `:53-54` for the `custom_objective_not_approved` spelling (its Acceptance 9) | no shared write. If this slice merges first, PL 9649's executor re-anchors that citation to `ModelFlag`; the lead names it in both dispatch records |
 | `docs/contracts/schemas/generated/approval-request.schema.json`, `docs/contracts/openapi/generated.json` | added; regenerated | every contract-changing slice | registry: regenerate on the merge base, never hand-merge |
 | `backend/tests/test_contracts.py` | edited: the value of `ONE_SIDED_SLUGS["approval-request"]` (`:97`); added: `SHIPPED_NOT_COMPARED` and `test_no_authored_only_slug_hides_a_model_schema_class` *(DP-9 a)* | **PL 9683** appends key `rating-version-create`; **PL 9713** (working id, #1131) edits `UNTYPED_REQUEST_PENDING` only if `SL-1367` has landed | `ONE_SIDED_SLUGS`: key-disjoint, exempt under the 2026-10-03 21:11:06 amendment (one slice's change to one key's value). The two additions are new definitions; the lead's dispatch record names them under `RL-1263` `:100` |
 | `backend/tests/test_deployment_route_types.py` | edited: `ROWS` (`:61-64`, two `response` values); `APPROVAL_REQUEST_KEYS` (`:550`) if DP-2 adds `workspace_id`; the module docstring (`:9-13`) | none in flight | none |
-| `backend/tests/test_validation_rule_approval.py` (added by #1157) | edited: `test_the_decide_response_keeps_its_key_set` (`:804` at `912baf4a`), to the ruled key set | **SL-1409** adds it | serial (SL-1409 first) |
+| `backend/tests/test_validation_rule_approval.py` (added by #1157) | edited: `test_the_decide_response_keeps_its_key_set` (`:804`), to the ruled key set | none in flight | none |
 | `backend/tests/test_approval_request_shape.py` | added (Acceptance 1, 2, 3, 5) | none | none |
 | `backend/tests/test_contracts.py` SL-1367 lists | edited only if `SL-1367` has merged: the four approval 2xx removed | **PL 9713** removes `POST /rating-algorithms` from the request list under the same condition | different entries of one list: the lead's dispatch record names both entries, or the two serialise |
 | `docs/specs/06-governance.md` §4.3 (`:458-488`) | edited with the ruling's texts, verbatim (Task 6) | none in flight (the agent sweep of the nine plans found none writing `06`) | none |
@@ -306,7 +307,7 @@ same-Work concurrency only with (a) file sets resolved and (b) no plan dependenc
 
 | Plan | Work / slice | Shared paths with this slice | Plan dependency | Verdict |
 |---|---|---|---|---|
-| `PL-1408` / #1157 | WK-1178 / `SL-1409` (active) | `api/approvals.py` (`decide_request`), `model_schema/approvals.py`, `test_validation_rule_approval.py`, generated | none either way in the plan's sense; but both change `decide_request` | **serialise: SL-1409 first** (activation need 1) |
+| `PL-1408` / #1157 | WK-1178 / `SL-1409` | `api/approvals.py` (`decide_request`), `model_schema/approvals.py`, `test_validation_rule_approval.py`, generated | none either way; both change `decide_request` | **serialised, and resolved: #1157 merged at `cdaaa573` before this plan's first merge** (activation need 1, met) |
 | PL 9716 / #1127 | WK-673 / `SL-1391` | `generated.json` (registry) | none | **may run concurrently** (different Works; registry only) |
 | PL 9688 / #1145 | WK-673 / SL 9685 | none | none | **may run concurrently** |
 | PL 9689 / #1138 | WK-673 / `SL-1387` | `generated.json` (registry). It edits the hand-authored `dislocation-run.schema.json`, which DP-9 (a) lists as exempt; it writes neither `test_contracts.py` nor `generate-contracts.py` (its `:388-389`) | none | **may run concurrently** |
@@ -328,7 +329,7 @@ All ten are **OPEN**. The recommendation is the planner's; the owner rules.
 
 | DP | Question | Options | Recommendation | Owner | Blocks |
 |---|---|---|---|---|---|
-| **DP-1** | The decision enum (the HOLD's subject) | (a) the code's values `approve` / `reject` / `request_changes`: `DecisionKind`, the stored rows, the `Decide` body, and `06` §5.1 (`:561`) already use them; `06` §4.3's example (`:483`) is amended; (b) the contract's `approved` / `rejected` / `changes_requested`: a data migration of `approval_decisions.decision`, `DecisionKind`, every caller and test | **(a)**: the spec's interface table already agrees with the code, the values are verbs for a decision and `ApprovalStatus` keeps the participles for states, and (b) migrates governed records for no consumer (exposure 0, `FD-1416`'s ruling). Text: in `06`, the find string `"decision": "approved"` (`grep -cF` = 1 at `809a3794`) becomes `"decision": "approve"` | decision-maker | Tasks 1, 6; the HOLD |
+| **DP-1** | The decision enum (the HOLD's subject) | (a) the code's values `approve` / `reject` / `request_changes`: `DecisionKind`, the stored rows, the `Decide` body, `06` §5.1 (`:561`) and `06`'s glossary entry **Approval Decision** (`:67`, "An approve / reject / request-changes act") already use them; `06` §4.3's example (`:483`) is amended; (b) the contract's `approved` / `rejected` / `changes_requested`: a data migration of `approval_decisions.decision`, `DecisionKind`, every caller and test | **(a)**: the spec's interface table already agrees with the code, the values are verbs for a decision and `ApprovalStatus` keeps the participles for states, and (b) migrates governed records for no consumer (exposure 0, `FD-1416`'s ruling). Text: in `06`, the find string `"decision": "approved"` (`grep -cF` = 1 at `cdaaa573`) becomes `"decision": "approve"` | decision-maker | Tasks 1, 6; the HOLD |
 | **DP-2** | `workspace_id` on the wire | (a) emitted: the service adds it; (b) not emitted: S2 loses it, or a separate wire class | **(a)**: the row stores it, S2 requires it, and the Slice-2 typed responses carry it (`deployments.py:105`, `:169`) | decision-maker | Tasks 2, 3 |
 | **DP-3** | `environment` | (a) added to S2 as `environment: str \| None = None` (the deployment branch writes and reads it, `RL-1301`, `PL-1306`); (b) no longer emitted | **(a)**: it is real state of a deployment approval request; (b) hides it | decision-maker | Task 2 |
 | **DP-4** | `evidence_bundle`, `checklist`, `expedited`, `expedited_reason`, `flags`, `flag_overrides` (S3 only) | (a) not fields of the shape now; `06` §4.3 gains a dated note that the example illustrates FR-352's full submission, whose checklist and evidence limbs are WK-677's (the `### WK-677` section of `docs/roadmap.md`), and that evidence lives with the Deployment Request (`RL-1301` A.2); (b) added to S2 as optional and always `null` | **(a)**: a field nothing carries is a promise the API breaks; FR-352 is not built. Text anchor for the note: after the example's last line `"approvers_required": 2, "approvers_recorded": 1` (`grep -cF` = 1) and its closing fence, before `### 4.4 \`Dossier\` structure` (`grep -cF` = 1) | decision-maker | Tasks 2, 6 |
@@ -336,15 +337,15 @@ All ten are **OPEN**. The recommendation is the planner's; the owner rules.
 | **DP-6** | Withdrawal fields | (a) `withdrawn_reason` (S1, S2); the actor and time are on the withdraw's Audit Event; (b) S3's `withdrawn: {by, at, reason}`, which needs two new columns and a migration | **(a)**: no stored `by`/`at` exists, and the audit trail already records them | decision-maker | Task 2 |
 | **DP-7** | The list route `GET /api/v1/approval-requests`, whose items are S1 too and which neither `FD-1416` nor `FD-1335` Part B lists | (a) in scope: `Page[ApprovalRequest]`; (b) out: the list stays `Page[dict]` and a new finding owns it | **(a)**: the items come from the same `_detail`, so typing four routes and not the fifth leaves one shape in two forms | **the maintainer (by delegation)**: it widens the finding's scope | Tasks 1, 3 |
 | **DP-8** | The hand-authored file | (a) deleted; the slug becomes generated-only and `ONE_SIDED_SLUGS["approval-request"]`'s value changes to a reason citing `FD-1416`; (b) rewritten to the ruled shape and moved to `COMPARED_SLUGS`, so the comparison walkers run on it | **(a)**: the maintainer's discharge item (2) says "retired (\"generated wins\")"; nothing remains to drift; and (a) is a one-key value change, which the 2026-10-03 21:11:06 amendment exempts, while (b) removes the key and edits `COMPARED_SLUGS`, which is not exempt | decision-maker | Task 4 |
-| **DP-9** | The F27-class guard. Read literally ("fails when a listed slug has a `model-schema` class"), it would also fail on four other slugs at `809a3794`: `dislocation-run` (owned by `PL-1267`, WK-673 Slice 4), `rate-table`, `rating-algorithm`, `rating-version` (register F27) | (a) a named map `SHIPPED_NOT_COMPARED = {slug: owning record}` holding those four; the guard fails for any other authored-only slug with a class, and for a map entry whose slug no longer has one; (b) guard `approval-request` only (does not reach the class); (c) fix the four here (scope growth; collides with PL 9689 on `dislocation-run`) | **(a)**: it closes the class without taking the four, and each exemption names who owns it | decision-maker; the maintainer confirms it meets discharge item (3) | Task 5 |
+| **DP-9** | The F27-class guard. Read literally ("fails when a listed slug has a `model-schema` class"), it would also fail on four other slugs at `cdaaa573`: `dislocation-run` (owned by `PL-1267`, WK-673 Slice 4), `rate-table`, `rating-algorithm`, `rating-version` (register F27) | (a) a named map `SHIPPED_NOT_COMPARED = {slug: owning record}` holding those four; the guard fails for any other authored-only slug with a class, and for a map entry whose slug no longer has one; (b) guard `approval-request` only (does not reach the class); (c) fix the four here (scope growth; collides with PL 9689 on `dislocation-run`) | **(a)**: it closes the class without taking the four, and each exemption names who owns it | decision-maker; the maintainer confirms it meets discharge item (3) | Task 5 |
 | **DP-10** | How the 2xx is typed | (a) `response_model=ApprovalRequest`, the service returning the model, so FastAPI validates outbound; (b) `responses={2xx: {"model": ApprovalRequest}}` with the `dict` kept (the `SL-1367` form, chosen there for `/score`'s latency, NFR-502) | **(a)**: approvals are not a hot path, and (a) makes a drift fail at construction, where (b) only documents it | decision-maker | Task 3 |
 
 ## Tasks
 
 ### Task 0: Preconditions and containment (no code)
 
-- [ ] **Step 1:** Confirm activation needs 1–3: `git log --oneline origin/main` shows #1157's
-  squash; the ruling is minted (`docs/rulings/`); re-read every plan of §"Contention" at its
+- [ ] **Step 1:** Confirm activation needs 1–3: #1157's squash `cdaaa573` is an ancestor of
+  `origin/main`; the ruling is minted (`docs/rulings/`); re-read every plan of §"Contention" at its
   current head and record any change to its write set.
 - [ ] **Step 2:** Re-measure §"Task 0 at planning time" at the dispatch tree, by symbol:
   `to_dict`, `ApprovalRequest`, `ROWS`, `APPROVAL_REQUEST_KEYS`, `GENERATED_SHAPES`,
@@ -471,7 +472,7 @@ All ten are **OPEN**. The recommendation is the planner's; the owner rules.
 
   Run it: it fails naming `["approval-request"]` only. Record the line (proof (i)). The
   authored-only predicate is the file's own `_one_sided_slugs()` (`test_contracts.py:2640` at
-  `809a3794`), the one `test_every_one_sided_slug_is_declared` uses, so the two tests cannot
+  `cdaaa573`), the one `test_every_one_sided_slug_is_declared` uses, so the two tests cannot
   disagree on which slugs are authored-only.
 - [ ] **Step 2: Positive control (proof (ii)).** Remove `rate-table` from the map on a scratch
   edit; the test fails naming `rate-table`; restore. Record.
@@ -521,12 +522,11 @@ All ten are **OPEN**. The recommendation is the planner's; the owner rules.
 2. **Every design choice the finding leaves open is a DP with an owner**, and so are the three
    this plan found: the list route (DP-7), the four other F27-class slugs (DP-9) and the typing
    form (DP-10).
-3. **Repository literals checked at `809a3794`:** every line cite in §"Task 0 at planning time"
+3. **Repository literals checked at `cdaaa573`** (first read at `809a3794`, re-read after #1157 merged): every line cite in §"Task 0 at planning time"
    and §"Write set"; the `06` find strings (`grep -cF` = 1 each, recorded in DP-1 and DP-4);
-   `ApprovalRequest` exported (`__init__.py:444`); `Page` (`backend/src/app/api/pagination.py:48`).
-   #1157's lines are cited at its head `912baf4a`.
+   `ApprovalRequest` exported (`__init__.py:446`); `Page` (`backend/src/app/api/pagination.py:48`).
 4. **What was not executed.** No database was queried (Task 0 Step 3 does it). The Python samples
-   were **not** run: Task 3's depends on the ruling and on #1157's merged file; Task 5's reuses
+   were **not** run: Task 3's depends on the ruling; Task 5's reuses
    the file's own `_one_sided_slugs()` and was not executed either.
    A sample that does not run as written is a plan defect to report, not to work around.
 5. **Type consistency.** `to_approval_request(row, decisions)` is defined in Task 3 Step 2 and
