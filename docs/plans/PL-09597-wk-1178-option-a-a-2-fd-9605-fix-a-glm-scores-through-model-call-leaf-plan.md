@@ -101,10 +101,43 @@ by this planner. Verbatim:
 
 They are named here: items 2 and 3.
 
+**Dated note, 2026-10-05 (written 17:08:21 BST, pre-mint): DP-1 to DP-4 ruled.** Two entries
+in the same file, each read in full by this planner. From the entry headed *"2026-10-05
+17:02:50 BST — A-1/A-2 plans and batch 5 noted; the model_call ROUNDING is fixed IN A-2 by
+declared result type, not worked around in A-3"*, verbatim:
+
+> Verified at main: packages/pricing-core/src/pricing_core/rating/runtime.py:567 `value: int = round(prediction)`, whose docstring (:521-525) calls it "a documented, provisional convention (`round()` to the nearest whole unit, on the assumption the pinned model was itself fitted to predict on the money-minor scale already)", pending "Task 1.4's FR-250 golden test". Under Option A, B4's model_call scores frequency and severity models, so a frequency μ (~0.07) rounds to 0: the provisional assumption is FALSE for exactly the path G2 needs.
+
+> RULING: A-2 (#1178 PL 9597) settles it at the ROOT, not A-3 by composing before rounding (that would leave every other model_call wrong). A model_call's output follows its step's DECLARED result type (03 FR-227): \`decimal\` → an exact Decimal, no integer rounding; \`money_minor\` → the step's declared rounding (FR-226); any other declared type → refused at save as a type mismatch. Red first: a frequency GLM model_call declared \`decimal\` returns ~0.07 (today: 0). A golden test against predict_glm at full precision. The docstring's "provisional" note is removed, citing this entry. A-3 composes frequency × severity on Decimals and rounds once, at the money step. dm-doublecount and dm-a34 are told: B1's ratio and A-3's composition sit on Decimal model outputs. If the planner finds a G2-independent reason to defer this, it comes to me; otherwise it is in A-2.
+
+> A-2's DPs 1–4: send me the plan's recommendations in one line each; I rule them in the reply.
+
+> Flags (2) NFR-489 not 490 (right) and (3) the same-Work pairs (A-1 with PL 9616 and PL 9776; A-2 with PL 9776 and PL 9728), each written with RL 9620 lines at dispatch: noted.
+
+From the entry headed *"2026-10-05 17:03:45 BST — A-2 (#1178 PL 9597) DP-1..3 RULED (DP-4 at
+17:02:50)"*, verbatim:
+
+> DP-1: (a). The GLM's Factor, Banding and Grouping travel as their own resolved_payloads entries under their own refs (reusing PL 9649's ResolvedArtifact.factors); no new Bundle shape; the content hash covers them as pins, so a changed banding changes the bundle hash (a test asserts it).
+
+> DP-2: (b). The feature_map names Factor slugs (what predict_glm consumes); the Factor carries its source column and banding, so the raw quote value is banded inside predict_glm, never pre-banded by the caller. A red test: a feature_map naming a raw column instead of a Factor slug is refused at save, with its code.
+
+> DP-3: (a), with one precision. The source model's offset DEFINITION travels as a pinned payload, but the offset's VALUE for a quote comes from the quote context through the feature_map (e.g. exposure → log exposure), never from the fit data. A quote missing the offset input is refused with MODEL_CALL_FAILED (FR-255; the test A-2 already moves to a missing offset column). A golden test: the same quote at exposure 1.0 and 0.5 differs by exactly the offset.
+
+> A planner folds these and the DP-4 rounding ruling into #1177/#1178 now.
+
+DP-1 (a), DP-2 (b) and DP-3 (a) are this plan's recommendations, each with an addition
+(items 12 to 14). DP-4 is ruled **against** this plan's recommendation (a): the rounding is
+fixed in this slice, at the root (item 15). Two of the rulings rest on a mechanism that does
+not exist at `137bc817`: a `model_call` step declares no result type and no rounding, and
+save-time validation does not resolve a pin. This plan does not choose one. It records both
+as **DP-5**, open (§"Decision points").
+
 ## Status
 
-`draft`. **Four decision points are open** (§"Decision points"), each with a
-recommendation; they are the decision-maker's to rule. The plan moves to `active` only
+`draft`. **DP-1 to DP-4 are ruled** by the maintainer (by delegation) in the 17:02:50 and
+17:03:45 BST entries quoted above (dated note, 2026-10-05). **DP-5 is open**: the two
+mechanisms those rulings rest on, with options and a recommendation, for the maintainer (by
+delegation). The plan moves to `active` only
 through a separate activation PR, after every activation need below holds.
 
 ### Activation needs, in order
@@ -119,7 +152,11 @@ through a separate activation PR, after every activation need below holds.
    serialise whatever the order. Neither consumes the other's output, so the lead may swap
    them only by a dated decision.
 4. **The ruling on DP-1 to DP-4.** The approval to flip the two pinning tests is already
-   dated (the 16:43:57 BST entry, quoted above).
+   dated (the 16:43:57 BST entry, quoted above). *Dated note, 2026-10-05 (pre-mint):
+   **held**, by the 17:02:50 and 17:03:45 BST entries; no `RL-` is written. The dispatch
+   record cites both entries by their headers.*
+4a. **The ruling on DP-5** *(added 2026-10-05, pre-mint)*. Items 13 and 15 cannot be written
+   as tests until DP-5 names the field and the check site.
 5. **The lane and the dispatch GO**, under the maintainer's 13:12:56 BST priority rule.
    **Acceptance 9 measures NFR-489, so it runs alone** (`RL-1263` item 3, unchanged by
    `RL 9620`): no gate and no other measurement on the VM during it.
@@ -139,7 +176,10 @@ with the failure line as printed.
    pinned by a `model_call` step and compiled by `compile_bundle` through a fake resolver
    that carries its inputs as the backend does (DP-1). For three quote contexts,
    `score_one`'s step value equals the rounding DP-4 rules applied to `predict_glm(fit,
-   frame, factors, spec, bandings=…, groupings=…)` on the same one-row frame. Red first: at
+   frame, factors, spec, bandings=…, groupings=…)` on the same one-row frame. *(Dated note,
+   2026-10-05: DP-4 is ruled, so "the rounding DP-4 rules" is the step's declared result
+   type. With `decimal`, the value is the exact Decimal of the prediction, with no
+   rounding (item 15).)* Red first: at
    the base the score raises `MODEL_CALL_FAILED` naming "predict_glm has no such fallback".
 2. **The refusal test is flipped (`test_rating_runtime.py:377`).**
    `test_a_glm_model_call_is_refused_with_a_named_code` becomes
@@ -158,19 +198,25 @@ with the failure line as printed.
    `compile_bundle`, `resolved_payloads` holds `factor:<slug>@<v>`, `banding:<slug>@<v>` and
    `grouping:<slug>@<v>` for each input of the GLM, each validating as its `model_schema`
    class; a GBM pin adds none (`test_a_gbm_pin_carries_no_glm_inputs`). `bundle_hash` is
-   unchanged for the same pins and graph (`test_the_bundle_hash_ignores_the_carried_inputs`):
-   the inputs are fixed by the pinned model version. Red first: the keys are absent.
+   reproducible from the same pins and graph (FR-239,
+   `test_the_bundle_hash_is_reproducible_from_the_pins_and_the_graph`): the inputs are
+   fixed by the pinned model version. Red first: the keys are absent. *(Dated note,
+   2026-10-05: renamed from `test_the_bundle_hash_ignores_the_carried_inputs`. DP-1's
+   ruling says "the content hash covers them as pins", and item 12 asserts it.)*
 5. **The backend resolver fills them (end to end).**
    `test_a_rating_version_pinning_a_fitted_glm_compiles_and_scores` in
    `backend/tests/test_rating_glm_model_call.py` (new): a GLM fitted through the real Job,
    approved with `approved_rows.mark_approved`, pinned by a `model_call`, compiled through
    `_run_compile_job`; `POST /api/v1/score` returns 200 and the step's traced value equals
-   `POST /api/v1/models/{id}/predict`'s `expected` for the same row, under DP-4's rounding.
+   `POST /api/v1/models/{id}/predict`'s `expected` for the same row, under DP-4 as ruled
+   (the step's declared result type, item 15).
    Red first: `/score` answers the `MODEL_CALL_FAILED` problem.
 6. **A model-offset GLM** (DP-3). Under (a): `test_a_model_offset_glm_scores_with_its_source_model`,
    the source model's inputs carried too and the value equal to `/predict`'s. Under (b):
    `test_a_model_offset_glm_is_refused_at_compile` with the ruled code. Red first either
-   way.
+   way. *(Dated note, 2026-10-05: ruled (a); the (b) test is not written. The source model's
+   offset inputs come from the quote through the `feature_map`, never from the fit data,
+   item 14.)*
 7. **No database or network at score (NFR-491).** The existing NFR-491 test, if one guards
    `load_bundle` and `score_one` against I/O, passes unchanged with a GLM bundle; if none
    exists at the dispatch tree, item 1's test runs `score_one` with the resolver dropped
@@ -188,6 +234,62 @@ with the failure line as printed.
     gate slot. The ledger records each rc and the tree.
 11. **The write set.** `git diff --stat origin/main...HEAD` names only §"Write set"'s paths.
 
+*Items 12 to 15 were added 2026-10-05 (pre-mint), from the 17:02:50 and 17:03:45 BST rulings
+quoted above. Each is red first.*
+
+12. **A changed banding changes the bundle hash** (DP-1 (a), the 17:03:45 entry).
+    `test_a_changed_banding_changes_the_bundle_hash` (new pricing-core module): two GLMs
+    fitted with the same Factors except that one Factor's Banding is re-cut (`banding:<slug>@1`
+    and `@2`), each pinned by the same graph, compile to two Bundles. Their `content_hash`es
+    differ, and each Bundle carries only its own `banding:<slug>@<v>` key. *The planner's
+    reading, for the dispatch to confirm: the hash covers the inputs **through the model
+    pin**. A Model pins the Banding version it was fitted with (the `Banding` docstring,
+    `model_schema/modelling.py:347`, and `Factor.banding_id`, `:154`), so a re-cut banding is
+    a new Model version and a new pin. `bundle_hash` stays "reproducible from the pins and
+    the graph" (FR-239) and is not edited. If the ruling means the inputs enter the hash
+    beyond the pins, that is a `bundle_hash` and FR-239 change: STOP and report it.* Red
+    first: the second Bundle has no `banding:` key at the base.
+13. **A raw-column `feature_map` is refused at save, with its code** (DP-2 (b), the 17:03:45
+    entry). `test_a_feature_map_naming_a_raw_column_is_refused_at_save`: a `model_call` on a
+    GLM whose `feature_map` value names a raw column (a Factor's source column, not the
+    Factor's slug) is refused, and the response carries the code DP-5 (ii) rules. The
+    control: the same map naming the Factor's slug saves. *The spec's offset column is the
+    one non-Factor value the map may name, as DP-2's recommendation (b) says ("the offset
+    column is mapped under its own column name") and DP-3's precision needs ("exposure → log
+    exposure").* Red first: at the base the raw-column map saves.
+14. **The offset's value comes from the quote** (DP-3 (a) with the precision, the 17:03:45
+    entry). `test_the_offset_moves_the_glm_by_exactly_the_exposure` (new pricing-core module,
+    a GLM with a `log_column` exposure offset): the same quote at exposure 1.0 and at 0.5
+    differs by exactly the offset. The step is declared `decimal`, so both values are exact
+    Decimals (item 15), and the assertion is on the linear predictor:
+    `ln(value_1.0) − ln(value_0.5) == ln(1.0) − ln(0.5)`. *"Exactly" is read to float
+    precision (`math.isclose(rel_tol=1e-12)`), because `predict_glm` computes in float and
+    `(a + b) − (a + c)` is not bitwise `b − c`. If the maintainer meant bitwise, the dispatch
+    reports it.* A quote missing the offset input is refused with `MODEL_CALL_FAILED`
+    (FR-255): item 3, whose vehicle is that case. Red first: at the base the GLM is refused.
+15. **A `model_call`'s value follows its step's declared result type (FR-227, FR-226)**
+    (DP-4, the 17:02:50 entry, for every `model_call`, not only a GLM).
+    - **Red first:** `test_a_frequency_glm_declared_decimal_returns_its_unrounded_rate`: a
+      frequency GLM (Poisson, log link, mean about 0.07), its step declared `decimal`, scores
+      about 0.07. At the base it scores 0 (`round(prediction)`, `runtime.py:567`), or is
+      refused before that as a GLM. The red is recorded with whichever line prints.
+    - **Golden at full precision:**
+      `test_a_decimal_model_call_equals_predict_glm_at_full_precision`: the value is the exact
+      Decimal of `predict_glm`'s float on the same row (`Decimal(repr(x))`, FR-244's boundary
+      rule), with no quantize.
+    - **`money_minor`:** a step declared `money_minor` yields its prediction rounded once with
+      the step's declared rounding (FR-226).
+    - **Any other declared type** is refused at save with `RATING_TYPE_MISMATCH`
+      (`compile.py:146`, `output_type_issues`).
+    - **The docstring:** the "provisional convention" text (`runtime.py:521-525`) is removed,
+      and the handler's docstring cites the 17:02:50 entry by its header. Check:
+      `git grep -n "provisional convention" -- packages/pricing-core/src/pricing_core/rating/runtime.py`
+      prints nothing.
+    - The field, the rounding and the check site are DP-5 (i)'s. **How the exact Decimal
+      crosses back into the engine** (FR-273: the binding refuses a `Decimal` input and takes
+      a `str` as a string) is read at Task 0. If neither a number nor a string carries the
+      value exactly, STOP and report it.
+
 ## Global Constraints
 
 - **`pricing-core` stays importable standalone**, with no FastAPI, SQLAlchemy or Redis
@@ -199,7 +301,9 @@ with the failure line as printed.
   `FIT_RESULT_ADAPTER` (`model_schema/modelling.py:1965`, `:1972`).
 - **No pandas** (`CLAUDE.md` §3).
 - **Money is integer minor units** (`CLAUDE.md` §7); the `model_call` output convention is
-  DP-4's and is not changed silently.
+  DP-4's and is not changed silently. *(Dated note, 2026-10-05: DP-4 is ruled. The output
+  follows the step's declared result type, so `decimal` gives an exact Decimal and
+  `money_minor` gives one declared rounding, never two (FR-226, NFR-496). Item 15.)*
 - **Enforcement is proven on deliberately broken input** (`CLAUDE.md` §13): items 1–6 are red
   first.
 - **NFRs are measured, not asserted** (`CLAUDE.md` §13): item 9.
@@ -219,6 +323,8 @@ with the failure line as printed.
 | `03` | FR-255 | `MODEL_CALL_FAILED` stays typed and reasoned | existing marker on item 3 |
 | `03` | NFR-491 | Zero database or network access at score | `req("NFR-491")` on item 7 |
 | `03` | NFR-489 | The scoring p99 budget, measured for a GLM `model_call` | ledger only (item 9) |
+| `03` | FR-227 | A `model_call`'s value follows its declared result type, checked at save *(added 2026-10-05, DP-4 ruled)* | `req("FR-227")` on item 15 |
+| `03` | FR-226 | A `money_minor` `model_call` is rounded once, by its declared rounding *(added 2026-10-05, DP-4 ruled)* | `req("FR-226")` on item 15 |
 
 Out of scope, named so no reader assumes it: a Peril Structure's scoring (A-3, which
 calls this slice's GLM path for each component); `approximation` mode (FR-222's other half,
@@ -240,6 +346,9 @@ Read at `137bc817` by this planner; no code was run.
 | 0.7 | `ResolvedArtifact` is `status` + `payload` (`compile.py:434-440`); `compile_bundle` writes `payloads[str(ref)] = resolved.payload` per pin (`:624-631`) | `rating/compile.py` | DP-1 (a) adds the inputs there |
 | 0.8 | `_glm_model_payload` (`tests/test_rating_runtime.py:72-81`) has no `spec` and empty `coefficients` | test fixture | item 2 needs a real GLM dump |
 | 0.9 | The example `feature_map` is `{"driver_age": "age_years"}` (`test_rating_runtime.py`, step `s_risk`), a graph name to a feature slug | same | DP-2 |
+| 0.10 | *(Added 2026-10-05.)* `RatingModelCallStep` (`model_schema/rating.py:299`) has `model_ref`, `peril_structure_ref`, `mode` and `feature_map`, and no `result_type` or `rounding`. Only `RatingExpressionStep` declares `result_type` (`:296`), and only `RatingOutputStep` declares `rounding`. `03` §3's step table names the same fields for `model_call` (`03:100`). The hand-written contract admits `result_type` on every step (`docs/contracts/schemas/rating-algorithm.schema.json:50`), but the model is `extra="forbid"` | `packages/model-schema/` | DP-4's ruling has no field to read: **DP-5 (i)** |
+| 0.11 | *(Added 2026-10-05.)* Save-time validation is pure: `validate_algorithm` (`compile.py:366`) resolves no pin, and `producer_types` (`:95`) leaves a `model_call`'s output untyped because "save-time validation cannot resolve" the pinned artifacts ("checked at bundle time") | `rating/compile.py` | DP-2's "refused at save" cannot see the Model's Factor slugs there: **DP-5 (ii)** |
+| 0.12 | *(Added 2026-10-05.)* "A Model pins the Banding version it was fitted with" (`Banding`'s docstring, `model_schema/modelling.py:347`); a Factor pins its Banding by id (`Factor.banding_id`, `:154`) | `model_schema/modelling.py` | item 12: a re-cut banding is a new pin |
 
 ### Write set, and its contention (`RL-1263`, `RL 9620`)
 
@@ -258,6 +367,26 @@ Read at `137bc817` by this planner; no code was run.
 
 **Not written:** `packages/model-schema/` (every carried shape exists), `load_bundle`,
 `CompiledBundle`, `Bundle`, `bundle_hash`, any `frontend/src` file, any migration.
+
+*Dated note, 2026-10-05 (pre-mint): DP-4's ruling adds writes, and DP-5 decides some of
+them. Ruled now: `runtime.py` `_model_call_handler` (the value by declared type and its
+docstring); `compile.py` save-time typing of a `model_call` (`producer_types`,
+`validate_algorithm`, for items 13 and 15). If DP-5 (i) is ruled (a):
+`packages/model-schema/src/model_schema/rating.py` `RatingModelCallStep`, the regenerated
+`docs/contracts/` files (`generate-contracts.py`), `03` §3's step-table row (`03:100`), and
+every existing `model_call` fixture: at `137bc817`, the files under `tests/` among those
+`git grep -l '"model_call"\|type="model_call"' 137bc817 -- backend packages` lists (ten files;
+the other three are `model_schema/rating.py`, `model_schema/scoring.py` and `runtime.py`) are
+`backend/tests/test_rating_algorithms.py`,
+`packages/model-schema/tests/test_rating_algorithm.py`,
+`packages/model-schema/tests/test_rating_version.py`,
+`packages/pricing-core/tests/test_rating_compile.py`,
+`packages/pricing-core/tests/test_rating_compile_bundle.py`,
+`packages/pricing-core/tests/test_rating_runtime.py` and
+`packages/pricing-core/tests/test_rating_score.py`. If DP-5 (ii) is ruled (a), the backend
+algorithm-save route's module is added too. The contention table below was cut before these
+writes. Task 0 Step 2 re-reads it against them, and `model_schema/rating.py` against every
+in-flight plan.*
 
 **Contention.** Classes as in `docs/process/delivery-process.core.json`'s `no_shared_files`.
 **Snapshot: open PRs at `137bc817`, 2026-10-05 between 16:52 and 17:40 BST; each plan's write
@@ -289,7 +418,12 @@ fits a GLM through the real Job, so it needs Postgres and MinIO.
 
 ## Decision points
 
-None is decided. Each is the decision-maker's.
+*Dated note, 2026-10-05 (pre-mint):* **DP-1 to DP-4 are ruled** by the maintainer (by
+delegation) in the 17:02:50 and 17:03:45 BST entries quoted in §"The maintainer's decisions
+this plan rests on, quoted": DP-1 (a), DP-2 (b), DP-3 (a) with a precision, and DP-4 settled
+at the root, against this plan's (a). The rows below were written before the rulings and are
+kept as written. Items 12 to 15 carry what the rulings add. **DP-5 was added on the same
+date and is open.**
 
 | DP | Question | Options | Recommendation | Owner | Blocks |
 |---|---|---|---|---|---|
@@ -297,6 +431,7 @@ None is decided. Each is the decision-maker's.
 | **DP-2** | What `feature_map`'s values name for a GLM. `03` §4.1's `RatingAlgorithm` example shows `{"driver_age": "driver_age", …}` (`03:267`); the GBM path keys the frame by Factor slug (`feature_order`); `resolve_factors` reads each Factor's `source_columns` | (a) for a GLM the values name the frame's columns, i.e. the Factors' `source_columns` and the offset column; (b) the values are Factor slugs for both kinds, and the runtime renames each slug to its Factor's source column(s) | **(b)**: one meaning for one field across model kinds, and the author maps to the model's own vocabulary (its Factors), which the Model already names. (a) gives `feature_map` two meanings by model type. Under (b), an interaction Factor is fed through its operands' slugs, and the offset column is mapped under its own column name; a `03` dated note words it (Task 6) | decision-maker | Task 4 |
 | **DP-3** | A GLM whose spec has `offset.kind == "model"` (FR-116) | (a) carry the source model and its inputs too, and compute its `linear_predictor` per quote, as `/predict` does (`prediction.py:236-246`); (b) refuse at compile with a named code, and a dated note on FR-193 | **(a)**: FR-193 says *any* persisted Model scores, and the backend already resolves the source (`resolve_offset_model`, `modelling.py:950`). (b) narrows a requirement to fit a slice | decision-maker | Tasks 2, 3, item 6 |
 | **DP-4** | The value a GLM `model_call` yields. The GBM convention is `round(prediction)`, provisional, on the assumption the model predicts on the money-minor scale (0.2). A frequency GLM's `μ` (claims per unit exposure) rounds to 0 | (a) keep the convention for a GLM, unchanged; this slice's golden uses a GLM on the money-minor scale (a severity or burning-cost model) and the frequency case is A-3's and AN's (the double-count ruling); (b) emit the unrounded value for a `model_call` and round only at a `money_minor` boundary | **(a)** for this slice: changing the money convention is FR-250/NFR-496 scope, not FD 9605's. The plan records the hazard for A-3, which composes frequency × severity through `assemble_risk_premium` before any rounding | decision-maker | item 1's expected value |
+| **DP-5** *(added 2026-10-05, open)* | The two mechanisms the rulings rest on, which do not exist at `137bc817`. **(i)** DP-4 reads the `model_call` step's "DECLARED result type" and, for `money_minor`, "the step's declared rounding (FR-226)". The step declares neither (0.10). **(ii)** DP-2 refuses a raw-column `feature_map` "at save, with its code". Save-time validation does not resolve the pin that names the Factors (0.11), and no code is named | **(i)** (a) `RatingModelCallStep` gains a required `result_type: RatingResultType` and a `rounding: RoundSpec`, required when `money_minor` and refused otherwise. `03` §3's row names both, and every `model_call` fixture declares them. (b) The same, with `result_type` optional and defaulting to `money_minor` with half-even to the unit, which is today's behaviour. (c) No new field: a `model_call`'s value is always `decimal`, and only an `output` step rounds. **(ii)** (a) The backend's algorithm save resolves each `model_call`'s `model_ref` after `validate_algorithm`, and refuses with a new code added to `03`'s error catalogue. (b) The check runs at compile, the first point that resolves the pin, with a new code. (c) As (a) or (b), with the existing `VALIDATION_FAILED` | **(i) (a).** FR-227 already says "Every step declares its result type", and the contract already admits the field, so the gap is `model-schema`'s. (b) keeps a hidden default, the "provisional convention" the ruling removes. (c) drops the ruling's `money_minor` limb. **(ii) (a) with a new code.** It is the only option that is literally "at save". The step pins `model_ref` exactly, so the save can read the Model's Factor slugs. A named code follows FR-255's typing. (b) moves the refusal to compile. Both are the maintainer's (by delegation): each changes a shape or a catalogue | the maintainer (by delegation) | items 13, 15; activation need 4a |
 
 ## Tasks
 
@@ -324,6 +459,8 @@ None is decided. Each is the decision-maker's.
   re-assert the `:377` test, re-vehicle the `:428` test. Expected red: the sentinel is
   present; the message is the old refusal.
 - [ ] **Step 3:** Item 5 (backend). Expected red: `/score` answers `MODEL_CALL_FAILED`.
+- [ ] **Step 3a:** *(Added 2026-10-05.)* Items 12 to 15, each red by its stated cause. Items
+  13 and 15 are written in the shape DP-5 rules.
 - [ ] **Step 4:** Commit (red): `test: FD 9605 — a GLM model_call is refused at score (FR-222, FR-193)`.
 
 ### Task 2: The resolver carries the inputs (items 4, 5)
@@ -359,7 +496,11 @@ None is decided. Each is the decision-maker's.
   the carried `Factor`s), and the Bandings and Groupings keyed by id. A missing input is a
   load-time `ValueError` naming the ref (the Bundle is malformed, not the quote).
 - [ ] **Step 2:** Replace the `else:` refusal with a `glm` branch: the one-row frame under
-  DP-2's ruling, `predict_glm(...)`, the value under DP-4's ruling. Any `ModellingError` or
+  DP-2's ruling, `predict_glm(...)`, the value under DP-4's ruling. *(Dated note, 2026-10-05:
+  ruled. The frame's columns are each Factor's `source_columns`, taken from the quote values
+  that the `feature_map` maps to the Factor's slug; `predict_glm` bands them. The offset
+  column is taken from the quote, and the value follows the step's declared result type,
+  item 15. The same rule replaces `round(prediction)` in the GBM branch.)* Any `ModellingError` or
   `PredictionError` returns `_model_call_failure(step, <its code and message>)`. An unknown
   `model_type` keeps a named refusal.
 - [ ] **Step 3:** Correct the handler's docstring and `score.py`'s item 2. Run the pricing-core
@@ -380,7 +521,9 @@ None is decided. Each is the decision-maker's.
 
 - [ ] **Step 1:** Apply the ruling's text, if any (DP-2's `feature_map` meaning; DP-3 (b)'s
   note), under `spec-change`; run `python3 scripts/audit-docs.py`; commit. If none, the
-  ledger says so.
+  ledger says so. *(Dated note, 2026-10-05: the 17:02:50 and 17:03:45 BST entries carry no
+  spec text. DP-3 (b) was not taken. DP-5's ruling may carry text for `03` §3's
+  `model_call` row and the error catalogue. This planner writes none.)*
 
 ### Task 7: The gate and the ledger (items 10, 11)
 
@@ -398,7 +541,10 @@ None is decided. Each is the decision-maker's.
    auditor closes it.
 3. A-3 (PL 9595, working id) builds each component's prediction through this slice's GLM
    path, and inherits DP-4's hazard: a frequency component must not be rounded before it is
-   composed.
+   composed. *(Dated note, 2026-10-05: DP-4 is ruled at the root (the 17:02:50 entry), so
+   the hazard is removed here, not carried. A-3 composes frequency × severity on the
+   Decimal model outputs this slice yields, and rounds once, at the money step. B1's ratio
+   sits on the same Decimals.)*
 4. **For the lead:** the sizing memo names "NFR-490 p99" for this measurement; the scoring
    p99 budget is **NFR-489** (`03:1330`). NFR-490 is the tracing overhead (`03:1331`). This
    plan measures NFR-489.
@@ -413,7 +559,9 @@ None is decided. Each is the decision-maker's.
 2. **The second pinning test** (`test_rating_score.py:429`) is flipped, and FR-255 keeps a
    real vehicle (item 3), so the flip loses no coverage.
 3. **Every open design choice is a DP with an owner** (DP-1 to DP-4). No spec text is
-   written without a ruling (Task 6).
+   written without a ruling (Task 6). *(Dated note, 2026-10-05: DP-1 to DP-4 ruled; DP-5
+   added, open, for the two mechanisms the rulings need. Each anchor added on that date was
+   read at `137bc817`, which was still `origin/main`.)*
 4. **Repository literals read at `137bc817`:** every line in §"Task 0 at planning time" and
    §"Write set"; PL 9649's `ResolvedArtifact.factors` and Task 3b Step 3 read on its branch
    at `df8ba756`.
