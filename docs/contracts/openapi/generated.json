@@ -10519,7 +10519,7 @@
       },
       "RateTableDiff": {
         "additionalProperties": false,
-        "description": "A cell-level diff between two rate table versions (03 §4.2, FR-231).\n\n`changed_cells` is the number of cells whose value differs. The two percentages are\n`None` where there is nothing to compare (no cells, or no cell has a non-zero\nbaseline); percentages are Decimals, serialised as strings, never JSON floats (R2).",
+        "description": "A cell-level diff between two rate table versions (03 §4.2, FR-231).\n\n`changed_cells` is the number of cells whose value differs. The two percentages are\n`None` where there is nothing to compare (no cells, or no cell has a non-zero\nbaseline); percentages are Decimals, serialised as strings, never JSON floats (R2).\n\n`portfolio_exposure` and `matched_exposure` (`RL-1361` item 4) are the named portfolio's\ntotal exposure and the exposure that mapped to a cell of the current version. Both are\n`None` when no portfolio is named, which tells an unweighted diff from a weighted one\nwhose mean is `None` (no weight on a changed cell, or only zero-weight cells).",
         "properties": {
           "changed_cells": {
             "minimum": 0.0,
@@ -10538,6 +10538,18 @@
             ],
             "title": "Exposure Weighted Mean Change Pct"
           },
+          "matched_exposure": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Exposure"
+          },
           "max_abs_change_pct": {
             "anyOf": [
               {
@@ -10549,6 +10561,18 @@
               }
             ],
             "title": "Max Abs Change Pct"
+          },
+          "portfolio_exposure": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfolio Exposure"
           }
         },
         "required": [

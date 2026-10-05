@@ -738,6 +738,11 @@ class RateTableDiff(BaseModel):
     `changed_cells` is the number of cells whose value differs. The two percentages are
     `None` where there is nothing to compare (no cells, or no cell has a non-zero
     baseline); percentages are Decimals, serialised as strings, never JSON floats (R2).
+
+    `portfolio_exposure` and `matched_exposure` (`RL-1361` item 4) are the named portfolio's
+    total exposure and the exposure that mapped to a cell of the current version. Both are
+    `None` when no portfolio is named, which tells an unweighted diff from a weighted one
+    whose mean is `None` (no weight on a changed cell, or only zero-weight cells).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -745,6 +750,8 @@ class RateTableDiff(BaseModel):
     changed_cells: int = Field(ge=0)
     max_abs_change_pct: Decimal | None = None
     exposure_weighted_mean_change_pct: Decimal | None = None
+    portfolio_exposure: Decimal | None = None
+    matched_exposure: Decimal | None = None
 
 
 #: The key filter of 03 §5.2: exact-value match over the table's declared keys.

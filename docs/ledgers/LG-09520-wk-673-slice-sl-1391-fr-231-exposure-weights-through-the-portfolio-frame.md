@@ -100,6 +100,43 @@ with `decimal.InvalidOperation: [<class 'decimal.DivisionUndefined'>]` at `opera
 cell", `RL-1418` T5). The two differ only when every matched row has zero exposure, which then gives an empty
 `weights` and a `None` mean instead of a refusal.
 
+### Task 3 — the platform: loaders, checks, the service and the cache (Acceptance 8 to 16)
+
+The per-worktree test database was created per `dev-commands` (`gipricing_sl-1391_d5679908`, from the `gipricing`
+template); `alembic current` and `alembic heads` both printed `e5b7d9f1a3c6 (head)`.
+
+**Red**, `uv run pytest backend/tests/test_rate_table_diff_portfolio.py -q`:
+
+1. Before any code: collection error `ImportError: cannot import name 'definition_hash' from 'app.platform.diff_cache'`.
+2. With only `definition_hash` added (the rest unchanged), 20 failed, each for the stated cause:
+   - `AttributeError: 'RateTableDiff' object has no attribute 'portfolio_exposure'` (and `'matched_exposure'`): the
+     unweighted-says-so test, and the weighted tests' coverage asserts;
+   - `AssertionError: assert None is not None`: the weighted mean is `None`, because the service passes no weights
+     (`test_a_weighted_diff_matches_the_hand_computed_figures`, the banding and grouping test);
+   - `Failed: DID NOT RAISE PlatformError`: a draft, an archived, a foreign and a dangling-ref portfolio, and the
+     negative-exposure portfolio, are not checked (Acceptance 11 to 14);
+   - `TypeError: DiffCache.key() takes 4 positional arguments but 6 were given`: the two cache-key tests;
+   - `pydantic ValidationError` for `RateTable` in `test_a_definition_change_is_a_new_entry`: a defect in the test's own
+     table fixture (a one-letter slug, a ref with a one-letter slug, and the required `version`, `rateable` and
+     `storage` fields), fixed in the test, not a reading of the code.
+
+**Green**: 20 passed. `DiffCache.key(current_hash, baseline_hash, definition_hash, portfolio, workspace_id)`; the
+workspace is in the key only with a portfolio. `check_portfolio` runs before any cell is read and before the cache read,
+in both `diff` and `diff_needs_job`; `exposure_weights` and the loaders (`load_factor_by_ref`,
+`load_banding_by_ref`, `datasets.read_version`) are used through `_portfolio_weights`, which `PortfolioFrameError`,
+`WeightJoinError` and `FactorResolutionError` leave as `PlatformError("VALIDATION_FAILED", …, 422, <message>)`.
+`RateTableDiff` gained `portfolio_exposure` and `matched_exposure` here (Task 5 Step 1, which the plan lets come first,
+because Task 3 consumes them), and `docs/contracts/openapi/generated.json` was regenerated (`--check`: 45 match).
+
+**An existing test moved.** `test_diff_is_computed_on_miss_and_served_from_the_cache_on_hit` passed a random portfolio id
+and expected a computed diff, because the id was only a key part. A named portfolio must now exist and be validated
+(`RL-1361` item 7), so that tail now asserts the 404 and that the cache is not read; two portfolios being two entries is
+`test_two_portfolios_are_two_cached_figures`. `test_diff_cache.py`'s key test moved to the new signature.
+
+Targeted runs (one file each, `OMP_NUM_THREADS=1 nice -n 10`): `test_diff_cache.py` 6 passed;
+`test_rate_tables_service.py` 13; `test_worker_rate_tables.py` 3; `test_api_rate_tables.py` 46. `ruff check` and `mypy`
+clean.
+
 ## PRs
 
 Not yet opened (the PR is opened as a draft after Task 2 is committed and pushed).

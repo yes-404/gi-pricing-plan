@@ -24,16 +24,25 @@ from sqlalchemy.exc import IntegrityError
 
 from app.config import Settings
 from app.db.models import (
+    BlobRow,
+    DatasetVersionRow,
     RateTableCellRow,
     RateTableRow,
     RateTableVersionRow,
 )
 from app.db.session import Database
 from app.errors import PlatformError
+from app.platform import datasets, transformations
 from app.platform import settings as settings_svc
-from app.platform.blobs import BlobStore
-from app.platform.diff_cache import DiffCache, version_content_hash
-from app.platform.modelling import load_factors, load_model, to_model
+from app.platform.blobs import BlobStore, to_ref
+from app.platform.diff_cache import DiffCache, definition_hash, version_content_hash
+from app.platform.modelling import (
+    load_factor_by_ref,
+    load_factors,
+    load_model,
+    to_model,
+)
+from model_schema import Banding, DatasetStatus, Factor, Grouping
 from model_schema.rating import (
     FloorAndCapParameters,
     ImportPreview,
@@ -48,6 +57,7 @@ from model_schema.rating import (
     UpliftTableParameters,
 )
 from model_schema.refs import ArtifactRef, BlobRef
+from pricing_core.modelling import FactorResolutionError
 from pricing_core.rate_tables.operations import (
     check_model_approved,
     decide_storage_mode,
@@ -68,6 +78,12 @@ from pricing_core.rate_tables.operations import (
 from pricing_core.rate_tables.operations import (
     seed_from_model as seed_from_model_op,
 )
+from pricing_core.rate_tables.weights import (
+    PortfolioWeights,
+    WeightJoinError,
+    exposure_weights,
+)
+from pricing_core.rating.analysis import PortfolioFrameError, read_portfolio
 
 #: The plan's four named validation codes → 03 §5.2 module codes (RATE_TABLE_INCOMPLETE,
 #: RATE_TABLE_KEY_DUPLICATE). NULL_VALUE and OUT_OF_BOUNDS are completeness failures.
@@ -259,12 +275,127 @@ async def _load_table(
     return table_row
 
 
+async def check_portfolio(
+    session: Any, *, workspace_id: UUID, version_id: UUID
+) -> DatasetVersionRow:
+    """May this caller's workspace weight a diff by that portfolio? (`RL-1361` item 7.)
+
+    The version's scope first: another workspace's version, and a version that does not
+    exist, answer the same `404`, so the existence of a foreign id is not disclosed. Then its
+    status: only a `validated` version is a portfolio (`01` §1.3), `409`
+    `DATASET_NOT_VALIDATED` for a `draft` or `archived` one. Neither check takes a row lock.
+    """
+    row = await datasets.read_version(session, workspace_id=workspace_id, version_id=version_id)
+    if DatasetStatus(row.status) is not DatasetStatus.VALIDATED:
+        raise PlatformError(
+            "DATASET_NOT_VALIDATED",
+            "Dataset version is not validated",
+            409,
+            f"The portfolio has status {row.status!r}; a rate-table diff weighted by a "
+            "portfolio requires 'validated' (03 FR-231). There is no override.",
+        )
+    return row
+
+
+async def _portfolio_frame(
+    session: Any, blob_store: BlobStore, version_row: DatasetVersionRow
+) -> pl.LazyFrame:
+    """The portfolio's table, checked against §4.8's frame (DP-D: `tables[0]`, as fitting does)."""
+    if not version_row.tables:
+        raise PlatformError(
+            "VALIDATION_FAILED", "The portfolio has no table", 422,
+            f"Dataset version {version_row.id} holds no table.",
+        )
+    entry = version_row.tables[0]
+    blob = await session.get(BlobRow, entry["blob"]["sha256"])
+    if blob is None:
+        raise PlatformError(
+            "NOT_FOUND", "A table's blob is missing", 404,
+            f"Version {version_row.id} names a blob that is not in the store.",
+        )
+    frame = pl.read_parquet(io.BytesIO(await blob_store.read(to_ref(blob)))).lazy()
+    return read_portfolio(frame)
+
+
+async def _key_artifacts(
+    session: Any, workspace_id: UUID, keys: Sequence[RateTableKey]
+) -> tuple[dict[str, list[Factor]], dict[UUID, Banding], dict[UUID, Grouping]]:
+    """Everything the keys pin, loaded by ref: each Factor with its operands, each Banding,
+    and the Bandings and Groupings those Factors pin by id. A ref that resolves to nothing is
+    a `404` naming the key and the ref."""
+    factors: dict[str, list[Factor]] = {}
+    bandings: dict[UUID, Banding] = {}
+    for key in keys:
+        try:
+            if key.factor_ref is not None:
+                factors[str(key.factor_ref)] = await load_factor_by_ref(
+                    session, workspace_id=workspace_id, ref=key.factor_ref
+                )
+            elif key.banding_ref is not None:
+                banding = await transformations.load_banding_by_ref(
+                    session, workspace_id=workspace_id, ref=key.banding_ref
+                )
+                bandings[banding.id] = banding
+        except PlatformError as exc:
+            if exc.code != "NOT_FOUND":
+                raise
+            raise PlatformError(
+                "NOT_FOUND", exc.title, 404, f"Key {key.name!r}: {exc.detail}"
+            ) from exc
+    pinned = [factor for chain in factors.values() for factor in chain]
+    banding_ids = list(
+        dict.fromkeys(
+            f.banding_id for f in pinned if f.banding_id and f.banding_id not in bandings
+        )
+    )
+    grouping_ids = list(dict.fromkeys(f.grouping_id for f in pinned if f.grouping_id))
+    bandings.update(
+        await transformations.load_bandings(session, workspace_id=workspace_id, ids=banding_ids)
+    )
+    groupings = await transformations.load_groupings(
+        session, workspace_id=workspace_id, ids=grouping_ids
+    )
+    return factors, bandings, groupings
+
+
+async def _portfolio_weights(
+    session: Any,
+    blob_store: BlobStore,
+    *,
+    workspace_id: UUID,
+    version_id: UUID,
+    table: RateTable,
+    current_cells: Sequence[dict[str, str]],
+) -> PortfolioWeights:
+    """Σ exposure per cell of the current version, or the `422` that refuses the portfolio.
+
+    One path for the 200 diff, the cells route and both Jobs, so the aggregate mean and the
+    per-cell weights come from one map (`RL-1418`). The pure join raises `WeightJoinError`
+    (and `FactorResolutionError`, re-wrapped), the frame check `PortfolioFrameError`: each is
+    `VALIDATION_FAILED` on the wire (`03` §5.1, the diff row).
+    """
+    version_row = await check_portfolio(session, workspace_id=workspace_id, version_id=version_id)
+    factors, bandings, groupings = await _key_artifacts(session, workspace_id, table.keys)
+    try:
+        frame = await _portfolio_frame(session, blob_store, version_row)
+        return exposure_weights(
+            frame, table.keys, current_cells,
+            factors=factors, bandings=bandings, groupings=groupings,
+        )
+    except (PortfolioFrameError, WeightJoinError, FactorResolutionError) as exc:
+        raise PlatformError(
+            "VALIDATION_FAILED", "The portfolio cannot weight this rate table", 422, str(exc)
+        ) from exc
+
+
 async def diff_needs_job(
     database: Database,
     workspace_id: UUID,
     slug: str,
     version: int,
     against: str | int,
+    *,
+    portfolio_dataset_version_id: UUID | None = None,
 ) -> bool:
     """Whether the diff must answer 202 with a Job (03 §5.1, FR-232).
 
@@ -273,6 +404,9 @@ async def diff_needs_job(
     `diff` (a missing table or version, a baseless baseline) so the two forms cannot
     disagree about what exists. Versions are immutable, so a later resolution inside
     the worker arrives at the same baseline and the same cells.
+
+    A named portfolio is checked here too (`check_portfolio`), so a refused portfolio is
+    answered before any Job exists (`RL-1361` item 8).
     """
     async with database.unit_of_work() as session:
         table_row = await _load_table(session, workspace_id, slug)
@@ -283,6 +417,10 @@ async def diff_needs_job(
         baseline_row = await _load_version(
             session, table_row.id, baseline_number, slug
         )
+        if portfolio_dataset_version_id is not None:
+            await check_portfolio(
+                session, workspace_id=workspace_id, version_id=portfolio_dataset_version_id
+            )
         return (
             version_row.storage == "parquet" or baseline_row.storage == "parquet"
         )
@@ -304,8 +442,13 @@ async def diff(
     `against` names the baseline: `previous` (the prior version), `seed` (the version
     that seeded the table — the technical-rate origin, FR-230), or an explicit
     version number. Diffed on read (DP3: compute on read, nothing materialised at
-    version creation). Exposure weights are supplied by the caller at fetch time
-    (DP1); this slice passes none — the portfolio-dataset join is not yet built.
+    version creation). With `portfolio_dataset_version_id` the cells are weighted by that
+    `validated` portfolio's exposure (`exposure_weights`) and the two coverage figures are
+    set; without it the diff says so by leaving them `None` (FR-231, `RL-1361`).
+
+    The portfolio is checked first (scope, then status, `check_portfolio`), before any cell
+    is read and before the cache is consulted, so a cached entry can never answer for a
+    portfolio the caller may not name.
 
     One compute path for both storages (FR-232): a `parquet` version's cells are
     materialised from its blob the way every bounded table transform does; storage
@@ -314,8 +457,8 @@ async def diff(
 
     With `cache` (DP3 (b)) the read path is compute-on-read: a miss computes and
     stores, a hit serves the stored artifact. The key covers both versions' content
-    hashes and the portfolio identity, never a wall-clock date — an immutable pair
-    can only ever name one entry (`diff_cache`).
+    hashes, the current definition and the portfolio identity within its workspace, never
+    a wall-clock date — an immutable pair can only ever name one entry (`diff_cache`).
     """
     async with database.unit_of_work() as session:
         table_row = await _load_table(session, workspace_id, slug)
@@ -326,6 +469,10 @@ async def diff(
         baseline_row = await _load_version(
             session, table_row.id, baseline_number, slug
         )
+        if portfolio_dataset_version_id is not None:
+            await check_portfolio(
+                session, workspace_id=workspace_id, version_id=portfolio_dataset_version_id
+            )
 
         table = RateTable.model_validate(version_row.definition)
         current_cells = await _load_cells_of(
@@ -339,15 +486,36 @@ async def diff(
             key = cache.key(
                 version_content_hash(current_cells),
                 version_content_hash(baseline_cells),
+                definition_hash(table),
                 portfolio_dataset_version_id,
+                workspace_id,
             )
             cached = await cache.get(key)
             if cached is not None:
                 return cached
+        weighted: PortfolioWeights | None = None
+        if portfolio_dataset_version_id is not None:
+            weighted = await _portfolio_weights(
+                session, blob_store, workspace_id=workspace_id,
+                version_id=portfolio_dataset_version_id, table=table,
+                current_cells=current_cells,
+            )
+        weights = weighted.weights if weighted is not None else None
         if against == "seed":
-            diff = diff_vs_seed(baseline_cells, current_cells, table.keys, table.value)
+            diff = diff_vs_seed(
+                baseline_cells, current_cells, table.keys, table.value, weights=weights
+            )
         else:
-            diff = diff_vs_previous(baseline_cells, current_cells, table.keys, table.value)
+            diff = diff_vs_previous(
+                baseline_cells, current_cells, table.keys, table.value, weights=weights
+            )
+        if weighted is not None:
+            diff = diff.model_copy(
+                update={
+                    "portfolio_exposure": weighted.portfolio_exposure,
+                    "matched_exposure": weighted.matched_exposure,
+                }
+            )
         if key is not None:
             assert cache is not None
             await cache.set(key, diff)
