@@ -1,0 +1,110 @@
+{
+  "$defs": {
+    "ArtifactRef": {
+      "description": "Canonical artifact reference {type}:{slug}@{version} (ID-3).",
+      "examples": [
+        "model:motor-ad-frequency@7",
+        "rating_version:motor-gb@27"
+      ],
+      "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+      "title": "ArtifactRef",
+      "type": "string"
+    },
+    "LiveDeployment": {
+      "additionalProperties": false,
+      "description": "One entry of an Environment's derived `live_deployments` (`07` §4.2).",
+      "properties": {
+        "bundle_hash": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Bundle Hash",
+          "type": "string"
+        },
+        "deployed_at": {
+          "format": "date-time",
+          "title": "Deployed At",
+          "type": "string"
+        },
+        "rating_version_ref": {
+          "$ref": "#/$defs/ArtifactRef"
+        }
+      },
+      "required": [
+        "rating_version_ref",
+        "deployed_at",
+        "bundle_hash"
+      ],
+      "title": "LiveDeployment",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A named place a Rating Version is deployed to (`07` §4.2, FR-428).",
+  "properties": {
+    "description": {
+      "default": "",
+      "title": "Description",
+      "type": "string"
+    },
+    "live_deployments": {
+      "default": [],
+      "description": "Derived from the Deployment rows, never stored.",
+      "items": {
+        "$ref": "#/$defs/LiveDeployment"
+      },
+      "title": "Live Deployments",
+      "type": "array"
+    },
+    "name": {
+      "description": "The display name; the only renamable part.",
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "promotion_order": {
+      "minimum": 1,
+      "title": "Promotion Order",
+      "type": "integer"
+    },
+    "requires_prior_environment": {
+      "anyOf": [
+        {
+          "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The predecessor Environment's slug, read by FR-429.",
+      "title": "Requires Prior Environment"
+    },
+    "retired_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Set when retired; the row and its slug are kept.",
+      "title": "Retired At"
+    },
+    "slug": {
+      "description": "Immutable (RL-1301 A.6); what every reference names.",
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+      "title": "Slug",
+      "type": "string"
+    }
+  },
+  "required": [
+    "slug",
+    "name",
+    "promotion_order"
+  ],
+  "title": "Environment",
+  "type": "object"
+}

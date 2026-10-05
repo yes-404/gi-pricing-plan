@@ -1,7 +1,8 @@
-import { render, screen, within } from "@testing-library/vue";
+import { render, screen } from "@testing-library/vue";
 import { describe, expect, it, vi } from "vitest";
 
 import { partitions } from "@/api/diagnostics";
+import { cellUnder } from "@/test-tables";
 import { DIAGNOSTICS } from "@/views/__tests__/fixtures";
 
 import AeByFactorChart from "../AeByFactorChart.vue";
@@ -55,13 +56,15 @@ describe("AeByFactorChart", () => {
   it("carries exposure into the table, because an A/E on no exposure is noise", () => {
     renderChart();
     const table = screen.getByRole("table", { name: /a\/e by factor/i });
-    const row = within(table).getByRole("row", { name: /0-3/ });
-    expect(within(row).getAllByRole("cell").map((c) => c.textContent?.trim())).toEqual([
-      "vehicle_age · 0-3",
-      "1.034",
-      "12034.5",
-      "1.068",
-      "5010.75",
-    ]);
+    const expected: [string, string][] = [
+      ["Factor and level", "vehicle_age · 0-3"],
+      ["Train A/E", "1.034"],
+      ["Train exposure years", "12034.5"],
+      ["Holdout A/E", "1.068"],
+      ["Holdout exposure years", "5010.75"],
+    ];
+    for (const [label, value] of expected) {
+      expect(cellUnder(table, /0-3/, label).textContent?.trim()).toBe(value);
+    }
   });
 });

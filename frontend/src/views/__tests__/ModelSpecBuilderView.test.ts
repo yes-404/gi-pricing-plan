@@ -32,6 +32,13 @@ vi.mock("@/api/models", () => ({
 
 vi.mock("@/api/versions", () => ({ listSplits: async () => [] }));
 
+// ObjectivePicker lists custom objectives when it mounts (the GBM tab). Left unmocked, that
+// reached `fetch` and, through it, port 3000 (register row F39).
+vi.mock("@/api/objectives", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  listObjectives: async () => ({ items: [], truncated: false }),
+}));
+
 const OK = {
   ok: true,
   problems: [],

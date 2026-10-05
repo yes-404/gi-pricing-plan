@@ -14,6 +14,7 @@ import asyncio
 from uuid import UUID, uuid4
 
 import pytest
+from backend.tests.approved_rows import mark_approved
 from backend.tests.test_api_reference import _table as _seed_reference_table
 from backend.tests.test_custom_objectives_api import _advance, _create
 from backend.tests.test_model_jobs_gbm import _fitted_gbm
@@ -37,7 +38,7 @@ from app.platform.blobs import BlobStore, to_ref
 from app.platform.rating_versions import compile_rating_version
 from app.worker.rating_handlers import register_rating_handlers
 from app.worker.tasks import execute_job
-from model_schema import JobSource, JobStatus, ModelStatus, ObjectiveStatus
+from model_schema import JobSource, JobStatus, ObjectiveStatus
 from pricing_core.rating.compile import _APPROVED_OR_BETTER, Bundle
 
 
@@ -590,7 +591,7 @@ def test_the_compiled_bundle_survives_persistence(
         async with database.unit_of_work() as session:
             model_row = await session.get(ModelRow, model_id)
             assert model_row is not None
-            model_row.status = ModelStatus.APPROVED.value
+            await mark_approved(session, model_row)
             slug, version = model_row.model_family_slug, model_row.version
         return f"model:{slug}@{version}"
 
@@ -753,3 +754,180 @@ def test_a_compile_emits_an_audit_event_carrying_before_and_after_bundle_hashes(
         "different things — a hash certifies what it was computed over, and nothing else."
     )
     assert second.job_id == second_job.id
+
+
+# --- RL-1379: a Rating Version compiles only while `draft` (FR-239, 00 FR-4) -------------------
+
+
+def _version_with_bundle(database: Database, workspace_id: UUID, created_by: UUID) -> UUID:
+    """A compilable draft that has already been compiled once: `bundle` holds a hash and a key."""
+    row = asyncio.get_event_loop().run_until_complete(
+        _insert_version(
+            database, workspace_id, created_by,
+            algorithm_ref="rating_algorithm:minimal@1", pins=_empty_pins(),
+            slug=f"rv-{uuid4().hex[:8]}",
+        )
+    )
+    return row.id
+
+
+def _set_status(database: Database, rating_version_id: UUID, status: str) -> None:
+    async def _run() -> None:
+        async with database.unit_of_work() as session:
+            row = await session.get(RatingVersionRow, rating_version_id)
+            assert row is not None
+            if status == "approved":
+                await mark_approved(session, row)
+            else:
+                row.status = status
+                await session.flush()
+
+    asyncio.get_event_loop().run_until_complete(_run())
+
+
+def _row_bundle(database: Database, rating_version_id: UUID) -> dict | None:
+    async def _run() -> dict | None:
+        async with database.session() as session:
+            row = await session.get(RatingVersionRow, rating_version_id)
+        assert row is not None
+        return None if row.bundle is None else dict(row.bundle)
+
+    return asyncio.get_event_loop().run_until_complete(_run())
+
+
+def _compile_jobs(database: Database, workspace_id: UUID, rating_version_id: UUID) -> list[JobRow]:
+    async def _run() -> list[JobRow]:
+        async with database.session() as session:
+            rows = (
+                await session.execute(
+                    select(JobRow).where(
+                        JobRow.workspace_id == workspace_id, JobRow.kind == "rating.compile"
+                    )
+                )
+            ).scalars()
+            return [
+                r for r in rows if r.parameters.get("rating_version_id") == str(rating_version_id)
+            ]
+
+    return asyncio.get_event_loop().run_until_complete(_run())
+
+
+@pytest.fixture
+def compiled_version(api_client, workspace_id, principal, grant, database, blob_store):
+    """A draft that has compiled once, so `row.bundle` holds `content_hash` and `blob_sha256`."""
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    headers = _headers(principal, workspace_id)
+    created = api_client.post(
+        "/api/v1/rating-algorithms", json=_minimal_algorithm(), headers=headers
+    )
+    assert created.status_code == 201, created.text
+    rating_version_id = _version_with_bundle(database, workspace_id, principal.id)
+    job = _run_compile_job(api_client, headers, database, blob_store, rating_version_id)
+    assert job.status is JobStatus.SUCCEEDED, job.error
+    bundle = _row_bundle(database, rating_version_id)
+    assert bundle is not None
+    assert bundle["content_hash"]
+    assert bundle["blob_sha256"]
+    return rating_version_id
+
+
+_NON_DRAFT = ["review", "approved", "live", "retired", "approved+deployment"]
+
+
+@pytest.mark.req("FR-239")
+@pytest.mark.parametrize("status", _NON_DRAFT)
+def test_c1_the_route_refuses_to_compile_a_version_that_has_left_draft(
+    status, api_client, workspace_id, principal, grant, database, compiled_version
+) -> None:
+    """RL-1379 C1. Predicted red: 202 and a `rating.compile` Job, where 409 is ruled."""
+    headers = _headers(principal, workspace_id)
+    jobs_before = len(_compile_jobs(database, workspace_id, compiled_version))
+    events_before = len(_compile_audit_events(database, workspace_id))
+    _set_status(database, compiled_version, status.split("+")[0])
+    if status == "approved+deployment":
+        asyncio.get_event_loop().run_until_complete(grant("deployer"))
+        slug = asyncio.get_event_loop().run_until_complete(_slug_of(database, compiled_version))
+        deployed = api_client.post(
+            "/api/v1/environments/dev/deployments",
+            json={"rating_version_ref": f"rating_version:{slug}@1", "reason": "release"},
+            headers=headers,
+        )
+        assert deployed.status_code == 201, deployed.text
+    bundle_before = _row_bundle(database, compiled_version)
+
+    response = api_client.post(
+        f"/api/v1/rating-versions/{compiled_version}/compile", headers=headers
+    )
+
+    assert response.status_code == 409, response.text
+    assert response.json()["code"] == "RATING_VERSION_IMMUTABLE"
+    assert len(_compile_jobs(database, workspace_id, compiled_version)) == jobs_before
+    assert _row_bundle(database, compiled_version) == bundle_before
+    assert len(_compile_audit_events(database, workspace_id)) == events_before
+
+
+async def _slug_of(database: Database, rating_version_id: UUID) -> str:
+    async with database.session() as session:
+        row = await session.get(RatingVersionRow, rating_version_id)
+    assert row is not None
+    return row.slug
+
+
+@pytest.mark.req("FR-239")
+def test_c2_the_service_refuses_a_status_that_changed_after_submission(
+    api_client, workspace_id, principal, database, blob_store, compiled_version
+) -> None:
+    """RL-1379 C2. Predicted red: the Job succeeds and rewrites `bundle`."""
+    headers = _headers(principal, workspace_id)
+    bundle_before = _row_bundle(database, compiled_version)
+    events_before = len(_compile_audit_events(database, workspace_id))
+    submitted = api_client.post(
+        f"/api/v1/rating-versions/{compiled_version}/compile", headers=headers
+    )
+    assert submitted.status_code == 202, submitted.text
+    job_id = UUID(submitted.json()["id"])
+    _set_status(database, compiled_version, "approved")
+
+    async def _run() -> JobRow:
+        await execute_job(database, job_id, blob_store)
+        async with database.session() as session:
+            row = await session.get(JobRow, job_id)
+        assert row is not None
+        return row
+
+    job = asyncio.get_event_loop().run_until_complete(_run())
+
+    assert job.status is JobStatus.FAILED
+    assert job.error["code"] == "RATING_VERSION_IMMUTABLE"
+    assert job.error["retryable"] is False
+    assert _row_bundle(database, compiled_version) == bundle_before
+    assert len(_compile_audit_events(database, workspace_id)) == events_before
+
+
+@pytest.mark.req("FR-239")
+def test_c3_control_a_draft_version_still_compiles_twice(
+    api_client, workspace_id, principal, database, blob_store, compiled_version
+) -> None:
+    """RL-1379 C3: green before and after; the guard does not over-refuse a draft."""
+    headers = _headers(principal, workspace_id)
+    second = _run_compile_job(api_client, headers, database, blob_store, compiled_version)
+    assert second.status is JobStatus.SUCCEEDED, second.error
+
+
+@pytest.mark.req("FR-239")
+def test_c4_control_a_version_returned_to_draft_compiles_again(
+    api_client, workspace_id, principal, database, blob_store, compiled_version
+) -> None:
+    """RL-1379 C4: review → draft (what a `changes_requested` decision does, `_target_status`)
+    → compile returns 202. Green after the change; shows the recourse in `03` FR-239's text."""
+    headers = _headers(principal, workspace_id)
+    _set_status(database, compiled_version, "review")
+    assert (
+        api_client.post(
+            f"/api/v1/rating-versions/{compiled_version}/compile", headers=headers
+        ).status_code
+        == 409
+    )
+    _set_status(database, compiled_version, "draft")
+    job = _run_compile_job(api_client, headers, database, blob_store, compiled_version)
+    assert job.status is JobStatus.SUCCEEDED, job.error
