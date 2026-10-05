@@ -16,6 +16,12 @@ relates: [WK-1178, NFR-499, RL-917]
 red …" in `to-lead.md`. `tree:` is `origin/main` = `47d770e8fcbd2410fa101019ed8cf3aae69a1baa`, the tree every
 figure below was measured on. The id is a working id until the lead mints it.
 
+*Re-anchored 2026-10-05 at main `caa4e411a9c07a389cf47092a923c7761b2b92dc`: the line cites below moved and were
+re-read at that tree (name tuple `:187`/`:192` → `:198`/`:203`; `_sinks` `:167` → `:178`; the equality assert
+`:218` → `:230`; `test_the_census_sees_an_injected_sink` `:237` → `:248`; the glob `:31` → `:30`;
+`objectives.py:1559` → `:1604`). The defect still reproduces there: steps 2 and 3 were re-run (`problem` passes
+the census, `exc` fails it). The measurements in the steps below are those of `47d770e8`.*
+
 **Severity: MEDIUM (owner WK-1178).** The deputy set it MEDIUM "confirmed at filing if (1) reproduces; if
 (1) fails, LOW, with the proof attached". (1) reproduces (§Evidence, step 2), so MEDIUM stands. The severity is
 the deputy's and the maintainer's to confirm at the mint.
@@ -24,9 +30,9 @@ the deputy's and the maintainer's to confirm at the mint.
 
 `backend/tests/test_error_sinks.py` is the guard for NFR-499. It finds the places where an exception's text is
 stored or logged. It finds two of its seven sink kinds by the **variable name** of the exception, and the name
-list is fixed: `("exc", "e", "err")` at `test_error_sinks.py:187` (`str(<name>)`) and `:192` (`{<name>}` in an
+list is fixed: `("exc", "e", "err")` at `test_error_sinks.py:198` (`str(<name>)`) and `:203` (`{<name>}` in an
 f-string). A handler that binds the exception to any other name, and calls `str()` on it or interpolates it,
-is not counted. The test compares the census with `_SINKS` for equality (`:218`), so a sink the census does not
+is not counted. The test compares the census with `_SINKS` for equality (`:230`), so a sink the census does not
 see is never compared, and the test passes.
 
 Two failure modes follow, and only one of them has been seen.
@@ -67,8 +73,8 @@ $ grep -n '("exc", "e", "err")' backend/tests/test_error_sinks.py
 192:            and node.value.id in ("exc", "e", "err")
 ```
 
-`_sinks` (`:167`) reads a `str(...)` call whose first argument is a `Name` in that tuple (`:185-189`), and an
-f-string `FormattedValue` whose value is a `Name` in that tuple (`:190-194`). It never reads the `as` binding of
+`_sinks` (`:178`) reads a `str(...)` call whose first argument is a `Name` in that tuple (`:196-200`), and an
+f-string `FormattedValue` whose value is a `Name` in that tuple (`:201-205`). It never reads the `as` binding of
 an `ExceptHandler`. The other five sink kinds (`.exception(`, a call with `exc_info=`, `JobError(`, an
 assignment to `.last_error`, a dict key `"error_message"`) do not depend on the name.
 
@@ -86,7 +92,7 @@ this test touches no database.)
 ### 2. The false negative: a handler bound to the unlisted name `problem`
 
 Scratch file `backend/src/app/platform/_scratch_fd9726.py`, inside the first glob
-(`backend/src/app/**/*.py`, `test_error_sinks.py:31`):
+(`backend/src/app/**/*.py`, `test_error_sinks.py:30`):
 
 ```python
 import logging
@@ -149,10 +155,10 @@ $ grep -rnE "except .* as [a-z_]+:" backend/src/app packages/pricing-core/src --
 ```
 
 (The same grep with `as (exc|e|err):` counts 90 handlers.) The two are
-`packages/pricing-core/src/pricing_core/modelling/objectives.py:1559` (`as failure`) and
+`packages/pricing-core/src/pricing_core/modelling/objectives.py:1604` (`as failure`) and
 `packages/pricing-core/src/pricing_core/modelling/gbm.py:590` (`as error`). Read at `47d770e8`:
 
-- `objectives.py:1559-1566` interpolates `{failure}` into a `CertificateCheck.detail` string. This is the exact
+- `objectives.py:1604-1611` interpolates `{failure}` into a `CertificateCheck.detail` string. This is the exact
   false-negative shape, live on `main`. It is on the custom-objective certificate path, an artifact path with
   no Quote Context, so it is **not a quote-input leak**; it is the census missing a sink that a listed name
   would have made it count.
@@ -178,7 +184,7 @@ Proposed remedy, for WK-1178's plan to decide:
 
 1. **Identify an exception by binding, not by name.** In `_sinks`, track the `as <name>` of each enclosing
    `ast.ExceptHandler` and count `str(<name>)` and `{<name>}` only when `<name>` is bound by an enclosing
-   handler. The fixed tuple at `:187` and `:192` goes. This closes the false negative (step 2) and the false
+   handler. The fixed tuple at `:198` and `:203` goes. This closes the false negative (step 2) and the false
    positive (a variable named `e` that is not an exception is no longer counted, so the `e` → `edge` rename
    becomes unnecessary).
 2. **Widen the shapes** the same change can cheaply see: a bare handler-bound name as an argument of a logging
@@ -187,7 +193,7 @@ Proposed remedy, for WK-1178's plan to decide:
 3. **List the two sites** in step 5 in `_SINKS` with their reasons once the census sees them.
 4. **Prove it on broken input both ways** (CLAUDE.md §13): the step 2 handler must fail the census, and a
    non-exception variable named `e` must not. Both belong in `test_the_census_sees_an_injected_sink`
-   (`:237`), which today uses only listed names.
+   (`:248`), which today uses only listed names.
 
 ## Severity (proposed; the maintainer's)
 
