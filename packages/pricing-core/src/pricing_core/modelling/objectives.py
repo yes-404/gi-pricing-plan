@@ -57,11 +57,20 @@ from model_schema import (
     SamplingSpec,
     YDomain,
 )
-from pricing_core.modelling.errors import NonFiniteDerivativeError, ObjectiveError
+from pricing_core.modelling.errors import (
+    NonFiniteDerivativeError,
+    ObjectiveError,
+    RoundBudgetExceededError,
+)
 from pricing_core.progress import NullProgress, ProgressCallback
 
 __all__ = [
+    "DEFAULT_ROUND_BUDGET_S",
+    "BranchCondition",
+    "Denominator",
+    "ExpressionKernels",
     "ObjectiveFns",
+    "certify_compiled",
     "certify_objective",
     "compile_objective",
     "make_lgb_objective",
@@ -81,6 +90,10 @@ _Mask = npt.NDArray[np.bool_]
 #: *larger* step is strictly better — it moves the comparison away from the cancellation
 #: floor without paying for it in truncation.
 _STEP: Final = 1e-4
+
+#: DP-S2-3: the most wall-clock one boosting round's objective evaluation may take. A runaway
+#: guard for an author's objective (NFR-483), not the performance target, which is NFR-476's.
+DEFAULT_ROUND_BUDGET_S: Final = 30.0
 
 #: Where a Richardson-extrapolated central difference lands on a smooth loss. Anything
 #: above this and below `_TOLERANCE_WARN` is a finding rather than a failure: a genuinely
@@ -559,6 +572,48 @@ _TEMPLATES: Final[dict[ObjectiveTemplate, _Template]] = {
 # --------------------------------------------------------------------------------------
 
 
+_Kernel = Callable[[_Arr, _Arr, _Arr], _Arr]
+
+
+@dataclass(frozen=True)
+class BranchCondition:
+    """One `where()` condition of an expression objective, found in its text (FR-147/148).
+
+    `text` names it for a reader; `test` is its truth value, and `gap` is `lhs - rhs`, whose
+    sign change in `f` is where the condition flips.
+    """
+
+    text: str
+    test: Callable[[_Arr, _Arr, _Arr], _Mask]
+    gap: _Kernel
+
+
+@dataclass(frozen=True)
+class Denominator:
+    """One divisor in an expression objective's loss or derived text (§4.6, DP-S2-5)."""
+
+    text: str
+    value: _Kernel
+
+
+@dataclass(frozen=True)
+class ExpressionKernels:
+    """An `expression` objective's compiled kernels: `(y, f, w) -> array`, weight included.
+
+    The loss text carries its own `w` (§4.6's example is `w * …`), so unlike a template's
+    function a kernel's value is already weighted. `conditions` and `denominators` are read
+    from the loss and derived text at compile time, because certification *finds* the
+    branches and the divisors of an expression where a template declares them.
+    """
+
+    loss: _Kernel
+    grad: _Kernel
+    hess: _Kernel
+    inverse_link: Literal["exp", "logistic"]
+    conditions: tuple[BranchCondition, ...] = ()
+    denominators: tuple[Denominator, ...] = ()
+
+
 @dataclass(frozen=True)
 class ObjectiveFns:
     """A compiled Custom Objective: `.loss`, `.grad`, `.hess` over `(y, f, w)`.
@@ -571,12 +626,26 @@ class ObjectiveFns:
     """
 
     ref: str
-    template: ObjectiveTemplate
+    #: The template, or `None` for an `expression` objective, which carries `_expression`.
+    template: ObjectiveTemplate | None
     params: Mapping[str, float]
     hessian_strategy: HessianStrategy
     hessian_min: float
     y_domain: YDomain
-    _template: _Template
+    _template: _Template | None
+    _expression: ExpressionKernels | None = None
+
+    @property
+    def _tpl(self) -> _Template:
+        """The template's functions, for the paths that are template-only."""
+        if self._template is None:
+            raise ObjectiveError(
+                "OBJECTIVE_KIND_NOT_ENABLED",
+                f"objective {self.ref} is an expression objective; this path is "
+                "template-only.",
+                terms=[self.ref],
+            )
+        return self._template
 
     @property
     def inverse_link(self) -> Literal["exp", "logistic"]:
@@ -587,16 +656,24 @@ class ObjectiveFns:
         anything. `fit_gbm` copies it onto `GbmFitResult` so `predict_gbm` does not need
         the objective artifact to score.
         """
-        return self._template.inverse_link
+        if self._expression is not None:
+            return self._expression.inverse_link
+        return self._tpl.inverse_link
 
     def loss(self, y: _Arr, f: _Arr, w: _Arr) -> _Arr:
-        return w * self._template.loss(y, f, self.params)
+        if self._expression is not None:
+            return self._expression.loss(y, f, w)
+        return w * self._tpl.loss(y, f, self.params)
 
     def grad(self, y: _Arr, f: _Arr, w: _Arr) -> _Arr:
-        return w * self._template.grad(y, f, self.params)
+        if self._expression is not None:
+            return self._expression.grad(y, f, w)
+        return w * self._tpl.grad(y, f, self.params)
 
     def hess(self, y: _Arr, f: _Arr, w: _Arr) -> _Arr:
-        return w * self._template.hess(y, f, self.params)
+        if self._expression is not None:
+            return self._expression.hess(y, f, w)
+        return w * self._tpl.hess(y, f, self.params)
 
     def stabilise(self, y: _Arr, f: _Arr, w: _Arr) -> _Arr:
         """The hessian the booster is given — FR-152's declared strategy, applied.
@@ -607,8 +684,9 @@ class ObjectiveFns:
         at the call site without each backend re-implementing it.
         """
         if self.hessian_strategy is HessianStrategy.GAUSS_NEWTON:
-            gn = self._template.gauss_newton
+            gn = self._tpl.gauss_newton
             if gn is None:
+                assert self.template is not None  # a template has the `_tpl` above
                 raise ObjectiveError(
                     "OBJECTIVE_HESSIAN_STRATEGY_UNSUPPORTED",
                     f"objective {self.ref} declares hessian_strategy=gauss_newton, and "
@@ -698,29 +776,75 @@ def template_loss(template: ObjectiveTemplate) -> _Fn:
 def _finite_or_abort(
     fns: ObjectiveFns, g: _Arr, h: _Arr, y: _Arr, f: _Arr, round_index: int
 ) -> None:
-    """FR-165: abort naming the round and the offending input range."""
+    """FR-165: abort naming the round and the fields, never the values (DP-S2-4 (b)).
+
+    The text is kept by a job record, so it carries no `y` or `f`; the ranges that locate the
+    failure are attributes of the error.
+    """
     bad = ~(np.isfinite(g) & np.isfinite(h))
     if not bad.any():
         return
     y_bad, f_bad = y[bad], f[bad]
+    rows = int(bad.sum())
     raise NonFiniteDerivativeError(
         f"objective {fns.ref} produced a non-finite gradient or hessian on "
-        f"{int(bad.sum())} of {bad.size} rows at boosting round {round_index}. The "
-        f"offending inputs span y ∈ [{y_bad.min():.6g}, {y_bad.max():.6g}], "
-        f"f ∈ [{f_bad.min():.6g}, {f_bad.max():.6g}].",
+        f"{rows} of {bad.size} rows at boosting round {round_index}. The rows are "
+        "located by the fields y and f.",
         round_index=round_index,
+        rows=rows,
+        y_range=(float(y_bad.min()), float(y_bad.max())),
+        f_range=(float(f_bad.min()), float(f_bad.max())),
         terms=[fns.ref],
     )
 
 
-def make_xgb_objective(fns: ObjectiveFns) -> Callable[[_Arr, Any], tuple[_Arr, _Arr]]:
+def _evaluate_round(
+    fns: ObjectiveFns,
+    y: _Arr,
+    f: _Arr,
+    w: _Arr,
+    *,
+    round_index: int,
+    round_budget_s: float,
+) -> tuple[_Arr, _Arr]:
+    """One boosting round's gradient and stabilised hessian, within its budget (FR-165).
+
+    Both adapters pass through here, so the budget binds a template and an `expression`
+    objective alike. It times the objective's own evaluation (DP-S2-3 (a)) and is checked
+    after the call: a runaway kernel is bounded by its array length, not interrupted.
+    """
+    started = time.perf_counter()
+    g, h = fns.grad(y, f, w), fns.stabilise(y, f, w)
+    elapsed = time.perf_counter() - started
+    if elapsed > round_budget_s:
+        raise RoundBudgetExceededError(
+            f"objective {fns.ref} took {elapsed:.3g} s at boosting round {round_index}, "
+            f"over the per-round budget of {round_budget_s:.3g} s.",
+            round_index=round_index,
+            elapsed_s=elapsed,
+            budget_s=round_budget_s,
+        )
+    _finite_or_abort(fns, g, h, y, f, round_index)
+    return g, h
+
+
+def _positive_budget(round_budget_s: float) -> float:
+    if not round_budget_s > 0.0:
+        raise ValueError(f"round_budget_s must be positive, got {round_budget_s!r}")
+    return round_budget_s
+
+
+def make_xgb_objective(
+    fns: ObjectiveFns, *, round_budget_s: float = DEFAULT_ROUND_BUDGET_S
+) -> Callable[[_Arr, Any], tuple[_Arr, _Arr]]:
     """The `obj=` callable for `xgboost.train` (§5.2's sketch, FR-165).
 
     `base_margin` is not a parameter, unlike the sketch: XGBoost has already added it into
     `preds` by the time the objective is called, so accepting one would invite a caller to
     add it a second time — which under a log link doubles the exposure and looks like a
-    plausible fit.
+    plausible fit. `round_budget_s` is the per-round wall-clock budget (DP-S2-3).
     """
+    budget = _positive_budget(round_budget_s)
     counter = {"round": 0}
 
     def objective(preds: _Arr, dtrain: Any) -> tuple[_Arr, _Arr]:
@@ -728,15 +852,18 @@ def make_xgb_objective(fns: ObjectiveFns) -> Callable[[_Arr, Any], tuple[_Arr, _
         weight = np.asarray(dtrain.get_weight(), dtype=np.float64)
         w = weight if weight.size == y.size else np.ones_like(y)
         f = np.asarray(preds, dtype=np.float64)
-        g, h = fns.grad(y, f, w), fns.stabilise(y, f, w)
-        _finite_or_abort(fns, g, h, y, f, counter["round"])
+        g, h = _evaluate_round(
+            fns, y, f, w, round_index=counter["round"], round_budget_s=budget
+        )
         counter["round"] += 1
         return g, h
 
     return objective
 
 
-def make_lgb_objective(fns: ObjectiveFns) -> Callable[[_Arr, Any], tuple[_Arr, _Arr]]:
+def make_lgb_objective(
+    fns: ObjectiveFns, *, round_budget_s: float = DEFAULT_ROUND_BUDGET_S
+) -> Callable[[_Arr, Any], tuple[_Arr, _Arr]]:
     """The callable LightGBM's `params["objective"]` accepts.
 
     **`(preds, dataset)`, not §5.2's three-argument `(y_true, y_pred, weight)`** — that
@@ -758,14 +885,16 @@ def make_lgb_objective(fns: ObjectiveFns) -> Callable[[_Arr, Any], tuple[_Arr, _
     asymmetry is a *scoring*-time one only.
     """
     counter = {"round": 0}
+    budget = _positive_budget(round_budget_s)
 
     def objective(preds: _Arr, dataset: Any) -> tuple[_Arr, _Arr]:
         y = np.asarray(dataset.get_label(), dtype=np.float64)
         f = np.asarray(preds, dtype=np.float64)
         weight = dataset.get_weight()
         w = np.ones_like(y) if weight is None else np.asarray(weight, dtype=np.float64)
-        g, h = fns.grad(y, f, w), fns.stabilise(y, f, w)
-        _finite_or_abort(fns, g, h, y, f, counter["round"])
+        g, h = _evaluate_round(
+            fns, y, f, w, round_index=counter["round"], round_budget_s=budget
+        )
         counter["round"] += 1
         return g, h
 
@@ -791,11 +920,13 @@ _SMOKE_ORDER: Final = (
     ResponseKind.RETENTION,
 )
 _SMOKE_ROWS: Final = 20_000
+#: How many of an expression's `where()` conditions the grid is sampled at.
+_MAX_SAMPLED_CONDITIONS: Final = 16
 _SMOKE_ROUNDS: Final = 80
 _TRUE_RELATIVITY: Final = 1.5
 
 
-def _grid(objective: CustomObjective, sampling: SamplingSpec, fns: ObjectiveFns) -> tuple[
+def _grid(sampling: SamplingSpec, fns: ObjectiveFns) -> tuple[
     _Arr, _Arr, _Arr, tuple[float, float]
 ]:
     """The `(y, f, w)` points every check is evaluated on.
@@ -830,7 +961,7 @@ def _grid(objective: CustomObjective, sampling: SamplingSpec, fns: ObjectiveFns)
     if third and hi > 0.0:
         floor = max(lo, hi * 1e-9)
         y[:third] = np.exp(rng.uniform(math.log(floor), math.log(hi), third))
-    anchors = _TEMPLATES[objective.template].y_anchors if objective.template else None
+    anchors = fns._template.y_anchors if fns._template is not None else None
     if anchors is not None:
         values = np.array([v for v in anchors(fns.params) if lo <= v <= hi], dtype=float)
         if values.size:
@@ -845,7 +976,44 @@ def _grid(objective: CustomObjective, sampling: SamplingSpec, fns: ObjectiveFns)
     w_lo, w_hi = sampling.w_range
     w = np.exp(rng.uniform(math.log(max(w_lo, _EPS)), math.log(max(w_hi, _EPS)), n))
     w[0], w[1] = w_lo, w_hi
+    _sample_found_boundaries(fns, y, f, w, sampling)
     return y, f, w, (lo, hi)
+
+
+def _sample_found_boundaries(
+    fns: ObjectiveFns, y: _Arr, f: _Arr, w: _Arr, sampling: SamplingSpec
+) -> None:
+    """Put grid points on the boundaries an expression's `where()` conditions *found*.
+
+    A template declares where it branches and `_grid` samples at those anchors. An
+    expression's are found, and a uniform draw lands within `h` of a boundary with
+    probability `~1e-4` per point, so without this FR-147's exclusion would never fire and
+    the comparison near the kink would never be exercised. For each condition, a tenth of
+    the grid's tail (shared across conditions) is moved to the `f` where that condition
+    flips at its own `(y, w)`, located by bisection on a sign change of `lhs - rhs`.
+    Templates have no conditions, so their grid is untouched.
+    """
+    kernels = fns._expression
+    if kernels is None or not kernels.conditions:
+        return
+    conditions = kernels.conditions[:_MAX_SAMPLED_CONDITIONS]
+    take = max(y.size // (10 * len(conditions)), 1)
+    f_lo, f_hi = sampling.f_range
+    for index, condition in enumerate(conditions):
+        stop = y.size - take * index
+        part = slice(stop - take, stop)
+        ys, ws = y[part], w[part]
+        lo, hi = np.full(ys.size, f_lo), np.full(ys.size, f_hi)
+        with np.errstate(all="ignore"):
+            at_lo = condition.gap(ys, lo, ws)
+            crosses = np.isfinite(at_lo) & (
+                np.sign(at_lo) * np.sign(condition.gap(ys, hi, ws)) < 0.0
+            )
+            for _ in range(64):
+                mid = 0.5 * (lo + hi)
+                same_side = np.sign(condition.gap(ys, mid, ws)) == np.sign(at_lo)
+                lo, hi = np.where(same_side, mid, lo), np.where(same_side, hi, mid)
+        f[part] = np.where(crosses, 0.5 * (lo + hi), f[part])
 
 
 def _central(fn: Callable[[_Arr], _Arr], f: _Arr, h: float) -> _Arr:
@@ -904,25 +1072,50 @@ def _status_for(error: float) -> CheckStatus:
     return CheckStatus.FAILED
 
 
-def _branch_mask(fns: ObjectiveFns, y: _Arr, f: _Arr) -> tuple[_Mask, int]:
-    """FR-147: drop the points a central difference would straddle a kink at."""
-    boundaries = fns._template.f_boundaries
+def _branch_mask(fns: ObjectiveFns, y: _Arr, f: _Arr, w: _Arr) -> tuple[_Mask, int]:
+    """FR-147: drop the points a central difference would straddle a kink at.
+
+    Richardson evaluates as far as `h` either side, so the exclusion radius is `h` —
+    widened a little because the boundary itself is computed in floating point. A
+    template's boundaries are declared; an expression's are found: a point is near one
+    when a `where()` condition's truth value differs between `f - radius` and `f + radius`.
+    """
+    radius = _STEP * 1.5
+    if fns._expression is not None:
+        keep = np.ones_like(f, dtype=bool)
+        with np.errstate(all="ignore"):
+            for condition in fns._expression.conditions:
+                keep &= condition.test(y, f - radius, w) == condition.test(y, f + radius, w)
+        return keep, int((~keep).sum())
+    boundaries = fns._tpl.f_boundaries
     if boundaries is None:
         return np.ones_like(f, dtype=bool), 0
     keep = np.ones_like(f, dtype=bool)
-    # Richardson evaluates as far as `h` either side, so the exclusion radius is `h` —
-    # widened a little because the boundary itself is computed in floating point.
-    radius = _STEP * 1.5
     for edge in boundaries(y, fns.params):
         keep &= ~(np.abs(f - edge) <= radius)
     return keep, int((~keep).sum())
 
 
+def _branch_text(fns: ObjectiveFns) -> str | None:
+    """What the loss branches on, for a reader: a template's description, or the conditions
+    found in an expression's text (each one a place a dropped `DiracDelta` was, DP-S2-2)."""
+    if fns._expression is not None:
+        found = fns._expression.conditions
+        return "; ".join(c.text for c in found) if found else None
+    return fns._tpl.branch_description
+
+
 def _derivative_checks(
     fns: ObjectiveFns, y: _Arr, f: _Arr, w: _Arr
 ) -> tuple[CertificateCheck, CertificateCheck]:
-    """FR-151's `analytic_vs_numeric` pair — the check the 24 derivatives answer to."""
-    keep, excluded = _branch_mask(fns, y, f)
+    """FR-151's derivative pair — the check the 24 derivatives answer to.
+
+    `analytic_vs_numeric` for a template, `symbolic_vs_numeric` for an expression: the
+    comparison is the same Richardson-extrapolated one, and only the derivative it checks
+    (hand-written or SymPy-derived) differs, so only the names do.
+    """
+    kind = "symbolic" if fns._expression is not None else "analytic"
+    keep, excluded = _branch_mask(fns, y, f, w)
     loss, grad = fns.loss(y, f, w), fns.grad(y, f, w)
     finite = np.isfinite(loss) & np.isfinite(grad)
     mask = keep & finite
@@ -934,7 +1127,7 @@ def _derivative_checks(
 
     # FR-147 asks for the excluded count, and a count reported only when it is
     # non-zero is a count the reader cannot distinguish from an unreported one.
-    branch = fns._template.branch_description
+    branch = _branch_text(fns)
     where = (
         f", {excluded:,} of {y.size:,} excluded within h of {branch}"
         if branch is not None
@@ -942,7 +1135,7 @@ def _derivative_checks(
     )
     return (
         CertificateCheck(
-            name="analytic_vs_numeric_gradient",
+            name=f"{kind}_vs_numeric_gradient",
             status=_status_for(g_error),
             detail=(
                 f"max relative error {g_error:.3g} over {compared:,} sampled (y,f,w) "
@@ -951,11 +1144,11 @@ def _derivative_checks(
             ),
         ),
         CertificateCheck(
-            name="analytic_vs_numeric_hessian",
+            name=f"{kind}_vs_numeric_hessian",
             status=_status_for(h_error),
             detail=(
                 f"max relative error {h_error:.3g} against the numeric derivative of the "
-                f"analytic gradient over the same {compared:,} points; h={_STEP:g}, "
+                f"{kind} gradient over the same {compared:,} points; h={_STEP:g}, "
                 f"Richardson-extrapolated (FR-149)"
             ),
         ),
@@ -976,19 +1169,110 @@ def _finiteness_check(
         f"f ∈ [{sampling.f_range[0]:.6g}, {sampling.f_range[1]:.6g}], "
         f"w ∈ [{sampling.w_range[0]:.6g}, {sampling.w_range[1]:.6g}]"
     )
-    if not bad.any():
+    divisions = _denominator_findings(fns, y, sampling)
+    if not bad.any() and not divisions:
         return CertificateCheck(
             name="finiteness", status=CheckStatus.PASS, detail=f"no NaN/inf for {span}"
         )
-    return CertificateCheck(
-        name="finiteness",
-        status=CheckStatus.FAILED,
-        detail=(
+    parts: list[str] = []
+    if bad.any():
+        parts.append(
             f"{int(bad.sum()):,} of {bad.size:,} sampled points produced NaN or inf, at "
             f"y ∈ [{y[bad].min():.6g}, {y[bad].max():.6g}], "
             f"f ∈ [{f[bad].min():.6g}, {f[bad].max():.6g}], within {span}"
-        ),
+        )
+    parts.extend(divisions)
+    return CertificateCheck(
+        name="finiteness", status=CheckStatus.FAILED, detail="; ".join(parts)
     )
+
+
+#: DP-S2-5: a sweep of `f` per sampled `y`, at this resolution, for each denominator.
+_SWEEP_POINTS: Final = 2001
+_SWEEP_ROWS: Final = 32
+#: The most local minima of a denominator's magnitude refined, and the steps each gets.
+_MAX_REFINED: Final = 2048
+_REFINE_STEPS: Final = 40
+#: A denominator within this fraction of its own sweep's largest value is a zero.
+_ZERO_TOLERANCE: Final = 1e-9
+_GOLDEN: Final = (math.sqrt(5.0) - 1.0) / 2.0
+
+
+def _denominator_findings(fns: ObjectiveFns, y: _Arr, sampling: SamplingSpec) -> list[str]:
+    """§4.6 / DP-S2-5 (a): a divisor that can be zero over the sampled domain, by name.
+
+    Numeric, on the certificate's own grid, because `sympy.solve` has no time bound and is
+    incomplete for a transcendental denominator. Each divisor found in the loss and the
+    derived text is swept along `f` for a sample of `y`. It is a finding when it is exactly
+    zero, when it changes sign (by continuity a zero lies between the two points), or when
+    it has an interior local minimum in magnitude that a bounded golden-section refinement
+    drives to zero: a sign-change test cannot see the even-order zero of `(exp(f) - y) ** 2`,
+    which a grid step can straddle without a sign change.
+    """
+    kernels = fns._expression
+    if kernels is None or not kernels.denominators:
+        return []
+    rows = y[np.linspace(0, y.size - 1, min(_SWEEP_ROWS, y.size)).astype(int)]
+    f_lo, f_hi = sampling.f_range
+    w_mid = math.sqrt(max(sampling.w_range[0], _EPS) * max(sampling.w_range[1], _EPS))
+    sweep = np.linspace(f_lo, f_hi, _SWEEP_POINTS)
+    column = rows[:, None]
+    weight = np.full((1, 1), w_mid)
+    found: list[str] = []
+    with np.errstate(all="ignore"):
+        for denominator in kernels.denominators:
+            values = denominator.value(column, sweep[None, :] + 0.0 * column, weight)
+            magnitude = np.abs(values)
+            if bool((values == 0.0).any()):
+                found.append(
+                    f"the denominator {denominator.text} is exactly 0 on the sampled domain"
+                )
+                continue
+            signs = np.sign(values)
+            if bool((signs[:, :-1] * signs[:, 1:] < 0.0).any()):
+                found.append(
+                    f"the denominator {denominator.text} changes sign over "
+                    f"f ∈ [{f_lo:g}, {f_hi:g}], so it is 0 at some point between"
+                )
+                continue
+            if _refined_minimum_is_zero(denominator.value, rows, sweep, magnitude, w_mid):
+                found.append(
+                    f"the denominator {denominator.text} touches 0 without changing sign "
+                    f"(an even-order zero) over f ∈ [{f_lo:g}, {f_hi:g}]"
+                )
+    return found
+
+
+def _refined_minimum_is_zero(
+    value: _Kernel, rows: _Arr, sweep: _Arr, magnitude: _Arr, w_mid: float
+) -> bool:
+    """Refine each interior local minimum of `|d|` by golden section, in at most 40 steps."""
+    inner = magnitude[:, 1:-1]
+    is_minimum = (inner <= magnitude[:, :-2]) & (inner < magnitude[:, 2:])
+    row_index, column_index = np.nonzero(is_minimum)
+    if row_index.size == 0:
+        return False
+    keep = np.argsort(inner[row_index, column_index])[:_MAX_REFINED]
+    row_index, column_index = row_index[keep], column_index[keep] + 1
+    ys = rows[row_index]
+    scale = np.maximum(magnitude.max(axis=1)[row_index], 1.0)
+    ws = np.full(ys.size, w_mid)
+
+    def size_at(point: _Arr) -> _Arr:
+        return np.abs(value(ys, point, ws))
+
+    a, b = sweep[column_index - 1], sweep[column_index + 1]
+    c, d = b - _GOLDEN * (b - a), a + _GOLDEN * (b - a)
+    size_c, size_d = size_at(c), size_at(d)
+    for _ in range(_REFINE_STEPS):
+        left = size_c < size_d
+        a, b = np.where(left, a, c), np.where(left, d, b)
+        c_next = b - _GOLDEN * (b - a)
+        d_next = a + _GOLDEN * (b - a)
+        c, d = c_next, d_next
+        size_c, size_d = size_at(c), size_at(d)
+    smallest = np.minimum(size_c, size_d)
+    return bool((smallest <= _ZERO_TOLERANCE * scale).any())
 
 
 def _convexity_check(fns: ObjectiveFns, y: _Arr, f: _Arr, w: _Arr) -> CertificateCheck:
@@ -1021,16 +1305,22 @@ def _branch_check(fns: ObjectiveFns, y: _Arr, f: _Arr, w: _Arr) -> CertificateCh
     latter invalidates a central difference, but an approver reading "smooth" about
     `spliced_severity` would be reading the opposite of what the loss does at the splice.
     """
-    description = fns._template.branch_description
+    description = _branch_text(fns)
     if description is None:
+        what = (
+            "no branch boundary: neither the loss nor its derived text holds a where() "
+            "condition, so the gradient and hessian are continuous"
+            if fns._expression is not None
+            else "the loss is a single smooth expression; gradient and hessian are "
+            "continuous"
+        )
         return CertificateCheck(
             name="branch_discontinuity",
             status=CheckStatus.PASS,
-            detail="the loss is a single smooth expression; gradient and hessian are "
-            "continuous over the whole sampled domain",
+            detail=f"{what} over the whole sampled domain",
         )
-    _, excluded = _branch_mask(fns, y, f)
-    if fns._template.f_boundaries is not None:
+    _, excluded = _branch_mask(fns, y, f, w)
+    if fns._expression is not None or fns._tpl.f_boundaries is not None:
         return CertificateCheck(
             name="branch_discontinuity",
             status=CheckStatus.WARN,
@@ -1041,7 +1331,7 @@ def _branch_check(fns: ObjectiveFns, y: _Arr, f: _Arr, w: _Arr) -> CertificateCh
                 f"discontinuous hessian affects boosting stability"
             ),
         )
-    anchors = fns._template.y_anchors
+    anchors = fns._tpl.y_anchors
     edge = anchors(fns.params)[0] if anchors is not None else 0.0
     above = float((y > edge).mean())
     return CertificateCheck(
@@ -1219,7 +1509,7 @@ def _smoke_data(
 
 
 def _smoke_fit_check(
-    fns: ObjectiveFns, objective: CustomObjective, seed: int, versions: dict[str, str]
+    fns: ObjectiveFns, response: ResponseKind | None, seed: int, versions: dict[str, str]
 ) -> CertificateCheck:
     """Does the objective actually train a booster, and does the booster learn the truth?
 
@@ -1227,8 +1517,6 @@ def _smoke_fit_check(
     where a compiled objective that is mathematically perfect and numerically unusable
     shows up — a `quantile` left on `clip_to_min` diverges here and nowhere else.
     """
-    responses = objective.applicability.responses
-    response = next((r for r in _SMOKE_ORDER if r in responses), None)
     if response is None:  # pragma: no cover - every template names an applicable response
         return CertificateCheck(
             name="smoke_fit",
@@ -1323,15 +1611,37 @@ def certify_objective(
       reproducible, and a second one would let a caller record a certificate whose stated
       sampling does not reproduce it.
     """
+    responses = objective.applicability.responses
+    return certify_compiled(
+        compile_objective(objective),
+        sampling=sampling,
+        smoke_response=next((r for r in _SMOKE_ORDER if r in responses), None),
+        versions={"numpy": str(np.__version__)},
+        progress=progress,
+    )
+
+
+def certify_compiled(
+    fns: ObjectiveFns,
+    *,
+    sampling: SamplingSpec,
+    smoke_response: ResponseKind | None,
+    versions: dict[str, str],
+    progress: ProgressCallback | None = None,
+) -> CertificateResult:
+    """The battery over an already-compiled objective, template or expression.
+
+    One pipeline for both kinds, so the nine checks cannot drift apart: what differs is
+    `fns` (its derivative pair is named `analytic_` or `symbolic_`, and its branches are
+    declared or found) and the libraries the caller records in `versions`.
+    """
     report = progress or NullProgress()
-    fns = compile_objective(objective)
     report.check_cancelled()
     report.update(0.05, "sampling the (y, f, w) grid")
-    y, f, w, y_range = _grid(objective, sampling, fns)
-    versions: dict[str, str] = {"numpy": str(np.__version__)}
+    y, f, w, y_range = _grid(sampling, fns)
 
     with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
-        report.update(0.15, "comparing analytic and numeric derivatives")
+        report.update(0.15, "comparing derivatives with numeric ones")
         gradient_check, hessian_check = _derivative_checks(fns, y, f, w)
         report.check_cancelled()
         report.update(0.35, "checking finiteness, convexity and branches")
@@ -1348,7 +1658,7 @@ def certify_objective(
 
     report.check_cancelled()
     report.update(0.7, "smoke fit")
-    checks.append(_smoke_fit_check(fns, objective, sampling.seed, versions))
+    checks.append(_smoke_fit_check(fns, smoke_response, sampling.seed, versions))
     report.update(1.0, "certified")
 
     ordered = tuple(checks)

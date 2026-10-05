@@ -1,0 +1,65 @@
+{
+  "$defs": {
+    "ArtifactRef": {
+      "description": "Canonical artifact reference {type}:{slug}@{version} (ID-3).",
+      "examples": [
+        "model:motor-ad-frequency@7",
+        "rating_version:motor-gb@27"
+      ],
+      "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+      "title": "ArtifactRef",
+      "type": "string"
+    },
+    "PromotionSkip": {
+      "additionalProperties": false,
+      "description": "A recorded skip of a predecessor Environment (`03` §4.12, `07` FR-429, RL-1296).",
+      "properties": {
+        "reason": {
+          "description": "Why the order was skipped; never empty after trimming.",
+          "title": "Reason",
+          "type": "string"
+        },
+        "skipped_environment": {
+          "description": "The predecessor Environment's slug.",
+          "title": "Skipped Environment",
+          "type": "string"
+        }
+      },
+      "required": [
+        "skipped_environment",
+        "reason"
+      ],
+      "title": "PromotionSkip",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The body of `POST /api/v1/environments/{env}/deployment-requests`.",
+  "properties": {
+    "change_summary": {
+      "minLength": 1,
+      "title": "Change Summary",
+      "type": "string"
+    },
+    "rating_version_ref": {
+      "$ref": "#/$defs/ArtifactRef"
+    },
+    "skip": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PromotionSkip"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "rating_version_ref",
+    "change_summary"
+  ],
+  "title": "DeploymentRequestCreate",
+  "type": "object"
+}

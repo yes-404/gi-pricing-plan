@@ -64,12 +64,17 @@ _INPUT_FREE = {
     ("rating/score.py", "_check_billing_surface"): 1,  # names the constant billing-surface keys
     ("rating/score.py", "_check_lookup_misses"): 2,  # step ids only
     ("rating/score.py", "_reraise_engine_failure"): 1,  # engine error is reduced to its type name
+    # RL-1346's refusal: clause, rung names and minor-unit differences from `ladder_violations`
+    # (`test_the_ladder_refusal_never_carries_a_quote_input` drives it with a sentinel).
+    ("rating/score.py", "build_scoring_result"): 1,
     ("rating/score.py", "score_one"): 1,  # a fixed sentence about a missing rating_version_ref
     ("rating/score.py", "_raise_named"): 1,  # the constructor helper itself (`from None`)
     # The model-call sentinel re-raised as a coded error: its text is `MODEL_CALL_FAILED: ` plus a
     # static sentence built in `runtime.py`, never a model's or the engine's own error text.
     ("rating/score.py", "_check_model_call_sentinel"): 1,
+    ("rating/runtime.py", "_load_boosters"): 1,  # step id and ref string, no quote
     ("rating/runtime.py", "handler"): 2,  # `_model_call_failure`: step id and the pinned model_type
+    ("rating/compile.py", "check_step_refs_pinned"): 1,  # step id and ref string, no quote
     ("rating/compile.py", "compile_bundle"): 5,  # artifact-level (compile time), no quote
     ("rating/compile.py", "_raise_named"): 1,  # the constructor helper itself (`from None`)
 }
@@ -280,3 +285,46 @@ async def test_a_batch_error_row_is_byte_identical_to_the_pre_change_form_minus_
         "a message",
     )
 
+
+
+def _refusal_bundle_payload() -> Any:
+    from test_rating_ladder_exact import _clamp_variant
+
+    return _clamp_variant({"min": "min_premium_minor"}, "office_premium_minor >= 0")
+
+
+async def _assert_the_ladder_refusal_is_input_free() -> None:
+    """An authored R0 quote (the clamp binds, its condition says it does not) with a sentinel as
+    its `quote_id`, through `score_one` and `score_batch`: the code is there, the sentinel not."""
+    from test_rating_ladder_exact import _CLAMP_INPUTS, _compile_payload, _context
+
+    bundle = await _compile_payload(_refusal_bundle_payload())
+    ctx = _context(**_CLAMP_INPUTS).model_copy(update={"quote_id": _SENTINEL})
+    with pytest.raises(ValueError, match="LADDER_RECONCILIATION_FAILED") as caught:
+        await score_one(bundle, ctx)
+    assert _SENTINEL not in str(caught.value)
+    row = {
+        "quote_id": _SENTINEL, "purpose": "new_business", "effective_date": "2026-09-01",
+        "rating_version_ref": str(ctx.options.rating_version_ref),  # type: ignore[union-attr]
+        **_CLAMP_INPUTS,
+    }
+    out = score_batch(bundle, pl.DataFrame([row]).lazy()).collect().to_dicts()[0]
+    assert out["error_code"] == "LADDER_RECONCILIATION_FAILED"
+    assert _SENTINEL not in out["error_message"]
+
+
+@pytest.mark.req("NFR-499")
+async def test_the_ladder_refusal_never_carries_a_quote_input() -> None:
+    await _assert_the_ladder_refusal_is_input_free()
+
+
+@pytest.mark.req("NFR-499")
+async def test_the_ladder_refusal_check_fails_on_a_message_that_carries_an_input(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Red on broken input: a refusal message that carries a quote input fails the check above."""
+    from pricing_core.rating import score as score_module
+
+    monkeypatch.setattr(score_module, "ladder_violations", lambda *_: [f"R0: {_SENTINEL}"])
+    with pytest.raises(AssertionError):
+        await _assert_the_ladder_refusal_is_input_free()

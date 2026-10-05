@@ -29,6 +29,7 @@ __all__ = [
     "blob_objects",
     "job_duration_seconds",
     "job_queue_depth",
+    "ladder_reconciliation_failed",
     "observe_request",
     "render",
 ]
@@ -58,6 +59,14 @@ _request_seconds = Histogram(
     "HTTP request duration by route template and method.",
     ("route", "method"),
     buckets=_LATENCY_BUCKETS,
+    registry=REGISTRY,
+)
+
+ladder_reconciliation_failed = Counter(
+    "gip_ladder_reconciliation_failed_total",
+    "Quotes refused on POST /score because their Premium Ladder did not reconcile "
+    "(RL-1346, FR-248), by the caller's Environment ('' for a caller with none).",
+    ("environment",),
     registry=REGISTRY,
 )
 

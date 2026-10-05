@@ -694,6 +694,7 @@ async def _measure_fetch(
     from app.config import Environment, Settings
     from app.db.session import Database
     from app.platform.blobs import BlobStore
+    from app.platform.bundle_slot import BundleSlot
 
     settings = Settings(
         environment=Environment.LOCAL,
@@ -705,13 +706,20 @@ async def _measure_fetch(
     blob_store = BlobStore(settings)
     ws = UUID(workspace_id)
 
+    # A fresh, empty slot per call: `_fetch_bundle` checks the slot before the blob store,
+    # so a shared one would turn every call after the first into a hit and this would stop
+    # measuring the read the slot does not avoid.
     for _ in range(20):
-        await _fetch_bundle(database, blob_store, workspace_id=ws, ref=_RATING_VERSION_REF)
+        await _fetch_bundle(
+            database, blob_store, BundleSlot(), workspace_id=ws, ref=_RATING_VERSION_REF
+        )
     load_start = loadavg()
     samples: list[float] = []
     for _ in range(iterations):
         start = time.perf_counter()
-        await _fetch_bundle(database, blob_store, workspace_id=ws, ref=_RATING_VERSION_REF)
+        await _fetch_bundle(
+            database, blob_store, BundleSlot(), workspace_id=ws, ref=_RATING_VERSION_REF
+        )
         samples.append((time.perf_counter() - start) * 1000)
     load_end = loadavg()
     await database.dispose()

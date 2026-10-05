@@ -12,6 +12,10 @@ relates: [WK-674]
 
 # FD-9890 — The approval withdraw route takes artifact_is_live from the request body, so the client asserts a fact the server must derive
 
+## Amendment before mint (2026-10-05)
+
+Amended 2026-10-05 before mint, at `47d770e8`: **the main defect is fixed** by `dfddfad8` (#1104, SL-1256, PL-1392 Task 6; ledgered in `LG-1405`). `withdraw_request` derives liveness server-side through `_is_deployed` (`backend/src/app/api/approvals.py:257`, called at `:299`); `artifact_is_live` is no longer a request-body field and remains only as the service's keyword argument (`backend/src/app/platform/approvals.py:491`); `backend/tests/test_api_approvals.py:565-576` shows a body carrying it refused 422. **Still open, owner WK-1178:** the class-sweep table below (the only enumerated record of client-asserted fields) and the LOW service-account residual — `ALLOWED_PERMISSIONS` (`backend/src/app/api/service_accounts.py:44`) and `_check_permissions` (`:141`) are unchanged at main, so a custom role with `admin:manage_service_accounts` and without `admin:manage_roles` can still mint a scoring service account. Every `file:line` cite in the sections below is to tree `65b334792e65`, before #1104 moved them; read them by symbol (`Withdraw`, `withdraw_request`, `platform.approvals.withdraw`), not line.
+
 ## Finding
 
 **Severity: medium** (a latent trust-boundary defect; **not high**, because nothing can be "live" or

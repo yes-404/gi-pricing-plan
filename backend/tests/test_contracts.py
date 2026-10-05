@@ -74,6 +74,20 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "dataset-split": "first written form — the split artifact the spec builder reads",
     "model-comparison": "first written form — 02 §5.2 named the return type",
     "score-comparison": "first written form — 03 §4.10 (WK-672 Slice 4, FR-262)",
+    "sub-graph": "first written form — 03 §4.11 (WK-1250 Slice 1, FR-217)",
+    "sub-graph-create": "first written form — 03 §4.11 (WK-1250 Slice 1, FR-217)",
+    "sub-graph-body": "first written form — 03 §4.11 (WK-1250 Slice 1, FR-217)",
+    "rate-table-version": "first written form of the seed route's 201 (RL-1375 DP-4); the authored rate-table contract is F27(c)'s, never compared",  # noqa: E501 -- RL-1375 DP-4's string, verbatim
+    "seed-from-model-request": "first written form — 03 §5.1 seed row (RL-1375 DP-3, FR-230)",
+    "environment": "first written form — 07 §4.2 (WK-674 Slice 2, FR-428)",
+    "environment-create": "first written form — 07 §5.1 (WK-674 Slice 2, FR-428)",
+    "environment-update": "first written form — 07 §5.1 (WK-674 Slice 2, FR-428)",
+    "deployment": "first written form — 03 §4.12 (WK-674 Slice 2, FR-267)",
+    "deployment-create": "first written form — 03 §5.1 (WK-674 Slice 2, FR-267)",
+    "deployment-request": "first written form — 03 §4.12 (WK-674 Slice 2, FR-267, RL-1301 A)",
+    "deployment-request-create": "first written form — 03 §5.1 (WK-674 Slice 2, FR-267, RL-1301 A)",
+    "approval-submission": "first written form — 06 §5.1 (WK-674 Slice 2, PL-1392 Acceptance 16)",
+    "approval-withdrawal": "first written form — 06 §5.1 (WK-674 Slice 2, PL-1392 Task 6, FR-357)",
     "objective-usage": "first written form — FR-164 named the query",
     "oidc-auth-config": "first written form — FR-394 names the contents",
     "problem-detail": "first written form — the RFC 9457 problem shape",
@@ -81,7 +95,7 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     # authored-only — later-phase shapes, shared common/ defs, or (F27) shapes that
     # have since shipped in model-schema and are excluded by omission rather than by plan
     "approval-request": "later-phase — 06 governance",
-    "dislocation-run": "later-phase — 03 rating",
+    "dislocation-run": "03 §4.6 — hand-authored until WK-673 Slice 4 generates and compares it (PL-1267)",  # noqa: E501
     "dossier": "later-phase — 06 governance",
     "gipp-check": "later-phase — 06 governance",
     "monitoring": "later-phase — 05 monitoring",
@@ -354,6 +368,13 @@ def test_artifact_ref_pattern_matches_the_authored_contract() -> None:
         ("nonsense:motor-gb@1", False),        # not an artifact type
         ("model:Motor-GB@1", False),           # slugs are lowercase
         ("model:motor-gb", False),             # no version
+        # RL-1383: `_` is in the factor slug grammar and in no other type's.
+        ("factor:veh_brand@1", True),
+        ("factor:driver_age_banded@3", True),
+        ("model:motor_gb@1", False),
+        ("banding:driver_age@1", False),
+        ("factor:Veh_brand@1", False),
+        ("factor:x@1", False),
     ],
 )
 def test_authored_pattern_accepts_exactly_what_the_parser_accepts(

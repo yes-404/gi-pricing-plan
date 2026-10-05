@@ -143,7 +143,7 @@ from model_schema.regression import (  # noqa: E402
     RegressionSuite,
     suite_content_hash,
 )
-from model_schema.scoring import LadderRung, QuoteContext, ScoringResult  # noqa: E402
+from model_schema.scoring import LadderRung, QuoteContext, ScoringResult, Trace  # noqa: E402
 from pricing_core.rating.properties import case_holds  # noqa: E402
 from pricing_core.rating.testing import run_regression  # noqa: E402
 
@@ -177,7 +177,7 @@ def _prop(name: str, **check: Any) -> dict[str, Any]:
 
 
 def _result(premium: int | None, *, outputs: dict[str, object] | None = None,
-            rungs: list[tuple[str, int]] | None = None) -> ScoringResult:
+            rungs: list[tuple[str, int]] | None = None, reconciled: bool = True) -> ScoringResult:
     ladder = rungs if rungs is not None else (
         [("risk_premium", 1000), ("payable_premium", premium)] if premium is not None else []
     )
@@ -186,6 +186,9 @@ def _result(premium: int | None, *, outputs: dict[str, object] | None = None,
         rating_version_ref=_REF, bundle_hash="sha256:" + "0" * 64,
         premium_ladder=[LadderRung(rung=r, value_minor=v) for r, v in ladder],  # type: ignore[arg-type]
         outputs=outputs or {},
+        # the scoring-time verdict (`RL-1329` §5), which the FR-261 property reads
+        trace=Trace(rating_version_ref=_REF, bundle_hash="sha256:" + "0" * 64, steps=[],
+                    ladder_reconciled=reconciled),
     )
 
 
@@ -223,7 +226,9 @@ def test_property_no_null_output() -> None:
 def test_property_ladder_reconciles() -> None:
     assert _holds({"kind": "ladder_reconciles"}, lambda c: _result(5))
     off_ladder = [("office_premium", 999), ("risk_premium", 1000), ("payable_premium", 5)]
-    assert not _holds({"kind": "ladder_reconciles"}, lambda c: _result(5, rungs=off_ladder))
+    assert not _holds(
+        {"kind": "ladder_reconciles"}, lambda c: _result(5, rungs=off_ladder, reconciled=False)
+    )
 
 
 @pytest.mark.req("FR-261")
@@ -463,6 +468,7 @@ class _VariantResolver(_FakeResolver):
     def __init__(
         self, *, risk_expr: str, decline_all: bool = False,
         drop_steps: frozenset[str] = frozenset(), optional_output: str | None = None,
+        payable_from: str | None = None,
     ) -> None:
         super().__init__()
         key = "rating_algorithm:score-fixture@1"
@@ -475,6 +481,11 @@ class _VariantResolver(_FakeResolver):
             if s["step_id"] == "s_risk" else s
             for s in steps
         ]
+        if payable_from is not None:
+            steps = [
+                {**s, "consumes": [payable_from]} if s["step_id"] == "s_out_payable" else s
+                for s in steps
+            ]
         if decline_all:
             steps.append({
                 "step_id": "s_decl_all", "type": "constraint", "label": "Decline everything",
@@ -649,9 +660,13 @@ def test_run_no_null_output_fails_on_a_declared_output_nothing_produces() -> Non
 
 @pytest.mark.req("FR-261")
 @pytest.mark.req("FR-248")
-def test_run_ladder_reconciles_fails_when_the_ladder_has_no_risk_premium_rung() -> None:
+def test_run_ladder_reconciles_fails_when_the_payable_is_not_the_last_rung_priced() -> None:
+    """`RL-1329` §5: the anchor is the first rung present whatever its name, so a missing
+    `risk_premium` rung no longer fails. What fails is a payable source that differs from the
+    previous rung: a jump the ladder cannot explain as `round` (the scoring-time verdict
+    reads the engine's own values, not the ladder it would check)."""
     prop = _prop("ladder", kind="ladder_reconciles")
-    bad = _variant(risk_expr="driver_age + 60", drop_steps=frozenset({"s_out_risk"}))
+    bad = _variant(risk_expr="driver_age + 60", payable_from="risk_premium_minor")
     run, result, _ = _only_failure(bad, prop)
     assert (result.status, run.overall) == ("fail", "fail")
     assert _only_failure(_variant(risk_expr="driver_age + 60"), prop)[1].status == "pass"
