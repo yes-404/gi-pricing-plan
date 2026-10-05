@@ -17,7 +17,12 @@ routing in `to-lead.md` ("(e3) goes to the next FD batch, owner WK-1178, severit
 `origin/main` = `47d770e8fcbd2410fa101019ed8cf3aae69a1baa`, the tree every figure below was measured on. The id
 is a working id until the lead mints it.
 
-**Severity: LOW (the deputy's, `to-lead.md` "2026-10-05 09:44:39 BST — DISPATCH GO: FD-1356 fix …": "test hardening").**
+*Re-checked 2026-10-05 at main `caa4e411a9c07a389cf47092a923c7761b2b92dc`: `test_deployment_route_types.py` and
+`backend/src/app/api/environments.py` are byte-identical to `47d770e8` (`git diff --stat 47d770e8 origin/main` on
+both prints nothing), so every line cite below resolves unchanged, and the test still has no `__module__` check.
+PL-1392 Acceptance 14 is still at `:508` and LG-1405's run B at `:337-338` of its file.*
+
+**Severity: LOW (the deputy's, `to-lead.md` "2026-10-05 09:44:39 BST — DISPATCH GO: FD-1356 fix …"; the reason corrected in "2026-10-05 09:54:07 BST — FD 9720 NOT filed …", quoted under "Severity (the deputy's)").**
 
 ## Finding
 
@@ -125,7 +130,17 @@ FD-1366). Proposed remedy, for the plan to decide:
 
 ## Severity (the deputy's)
 
-**LOW**, set by the deputy on 2026-10-05: a contract-guard test gap; the AST half and ruff F811 still catch the
-realistic arrangements, so it is test hardening. This essay's earlier provisional MEDIUM is superseded. The
-point that the plan states a guarantee (two independent halves) the test does not deliver is the reason to
-harden it, not a reason for a higher severity.
+**LOW**, set by the deputy on 2026-10-05. This essay's earlier provisional MEDIUM is superseded.
+
+**The deputy's reason, recorded as a dated correction.** Amended 2026-10-05 before mint: the entry
+"2026-10-05 09:54:07 BST — FD 9720 NOT filed (its premise is false, verified by me); RL-1401 gets a DATED
+CORRECTION LINE (not a note only); e3 LOW stands, with the doubt recorded" in `~/gi-pricing-plan.local/channel/to-lead.md`
+(a local file) says of this finding, quoted from it: "**e3 (FD 9723): LOW stands, the reason corrected.** The AST
+half does not catch every arrangement (a same-named class with the import kept returns [] from `ast_problems`).
+But ruff F811 (redefinition), which runs in the gate's ruff stage, flags that arrangement. So the escape needs
+both halves of the route-types check AND ruff to miss. FD 9723 records the doubt, the one arrangement run, and the
+ruff dependency." The doubt is the AST half's miss in step 2, "import kept (shadowed): []". The one arrangement run
+is the `ruff check --select F811` run on the scratch file in step 2. The ruff dependency is that the kept-import
+variant is stopped by the gate's lint stage and not by this test, and that it was not established that F811 fires
+in every arrangement. The point that the plan states a guarantee (two independent halves) the test does not
+deliver is the reason to harden the test, not a reason for a higher severity.
