@@ -89,6 +89,20 @@ and DP-5 (a) are accepted, with conditions, by the deputy's entry headed *"2026-
 head cited here, the minted text wins and the dispatch record names each difference
 ([`README.md`](README.md) rule 4).
 
+**Pre-mint fix F1 (2026-10-05 15:21 BST)**, ordered by the maintainer (by delegation) in
+the entry headed *"2026-10-05 15:15:11 BST — F2 (RL-1263's "from different Works"): OPTION (i), amend RL-1263 by a dated RL, with conditions; F1, F3 and the stale RL 9633 sentence as you set them"* in `~/gi-pricing-plan.local/channel/to-lead.md`: *"F1: a pre-mint fix on #1140 (it is unmerged, so this is authoring)."*
+`MODEL_REFERENCE_MODE_INCONSISTENT` is already in `03` §5.1's owned-code list (`03:936`, read at
+`caa4e411` and at `origin/main` `809a3794`; there since `4a8729ee`, 2026-08-28), and the list
+continues after it. The add this plan gave Task 5 Step 2 would have listed the code twice. Row
+0.11, Acceptance 8 and 14, the write set, the S3 contention row, Task 3 Step 6 and Task 5 Step 2
+are corrected. The code is still registered in no code (`git grep MODEL_REFERENCE_MODE_INCONSISTENT
+origin/main -- backend/src packages`: 0 hits at `809a3794`), so the `errors.py` append (Task 3
+Step 5) and Task 5 Step 3's test stay. RL 9758 T1 on FR-223 (`:109`) is unchanged.
+**The owned-codes serialisation with WK-673 S3** (dispatch-record item 2) was stated for one
+reason: both slices append at the list's tail. With the add struck, this slice no longer
+appends to that list, so the stated reason no longer holds. The serialisation stands until the
+maintainer (by delegation) lifts it.
+
 ### Activation needs, in order
 
 1. **FD 9708 and RL 9695 minted.** An unminted RL 9695 is an activation need, not a plan defect
@@ -159,7 +173,8 @@ failure line as printed. Tests live in the new module
    `caa4e411`:** 422 `VALIDATION_FAILED`, `EXTRA_FORBIDDEN`. Plus
    `test_model_reference_mode_inconsistent_is_registered_and_owned`: the code is in
    `RATING_ERROR_CODES` (`backend/src/app/errors.py:305`) and in `03` §5.1's owned-code list
-   (RL 9758 *Acceptance* 3). Red at `caa4e411`: absent from both.
+   (RL 9758 *Acceptance* 3). Red at `caa4e411`: absent from `RATING_ERROR_CODES`; the owned-list
+   half already holds (`03:936`). *(Corrected 2026-10-05, pre-mint fix F1; see §"Status".)*
 9. **The request is the `model-schema` type** (RL 9695 *Acceptance* bullet 4; `CLAUDE.md` §2).
    `test_the_create_body_is_the_model_schema_type`: `app.api.models` defines no class named
    `RatingVersionCreate` of its own (`app.api.models.RatingVersionCreate is
@@ -185,8 +200,8 @@ failure line as printed. Tests live in the new module
 13. **The seed still works.** `uv run pytest -q backend/tests/test_demo_rating_evidence.py
     examples/fremtpl2/test_seed.py` passes, and the seeded `fremtpl2-demo` version's
     `rating_version.created` event carries the algorithm ref.
-14. **Spec and code agree.** RL 9695 T1, T2 and T3 (and, under DP-1 (a), RL 9758 T1 and the
-    owned-list text the DP-1 ruling gives) are applied byte for byte in the commit that makes
+14. **Spec and code agree.** RL 9695 T1, T2 and T3 (and, under DP-1 (a), RL 9758 T1; the
+    owned-code list already carries the code at `03:936` *(Corrected 2026-10-05, pre-mint fix F1; see §"Status".)*) are applied byte for byte in the commit that makes
     items 1–9 green; `python3 scripts/audit-docs.py` passes except check 31's expected working-id
     rows; the handler docstring no longer says "pins to a model" (RL 9695 *What it obliges*).
 15. **The two-half gate is green** on the merge tree (`.claude/skills/dev-commands`), and
@@ -254,7 +269,7 @@ Read at `caa4e411`:
 | 0.8 | A body error renders as 422 `VALIDATION_FAILED` with `errors[].code` = the Pydantic type upper-cased | `backend/src/app/errors.py:466-493` | `extra_forbidden` → `EXTRA_FORBIDDEN`; a validator's `ValueError` → `VALUE_ERROR` |
 | 0.9 | A failed compile Job carries the code in `JobRow.error["code"]` | `backend/src/app/worker/tasks.py:197-232`; `test_rating_version_compile.py:196` | as stated |
 | 0.10 | The three RL 9695 find strings occur once each | `grep -c` on `Create a draft Rating Version with pins (FR-237) \|`, `build widens the shape with the full contract.`, `and the input contract. Nothing is unpinned. \|` in `docs/specs/03-rating-engine.md` | 1, 1, 1 (`:908`, `:436`, `:134`) |
-| 0.11 | `MODEL_REFERENCE_MODE_INCONSISTENT` is registered nowhere | `grep -rn MODEL_REFERENCE_MODE_INCONSISTENT backend/src packages/*/src docs/specs/03-rating-engine.md` | only FR-223's prose at `03:109` |
+| 0.11 | `MODEL_REFERENCE_MODE_INCONSISTENT` is in `03` §5.1's owned-code list and registered in no code | `grep -rn MODEL_REFERENCE_MODE_INCONSISTENT backend/src packages/*/src docs/specs/03-rating-engine.md` | `03:109` (FR-223's prose) and `03:936` (the owned-code list, which continues after it); no hit under `backend/src` or `packages/*/src`. *(Corrected 2026-10-05, pre-mint fix F1; see §"Status".)* The result read "only FR-223's prose at `03:109`", which was wrong at `caa4e411` too |
 | 0.12 | The route is not a held approval route (FD 9752, working id; #1066, unmerged, would mint it as FD 1416) | the hold covers the four `to_dict` approval routes in `backend/src/app/api/approvals.py`; this route is in `api/models.py` and returns the typed `RatingVersion` | not held |
 | 0.13 | No test file is shared with WK-675 S2 | S2 adds tests to `backend/tests/test_rating_versions.py` (PL 9713 Task 4); this slice adds a new module | disjoint |
 
@@ -272,7 +287,7 @@ Read at `caa4e411`:
 | `scripts/generate-contracts.py` | `GENERATED_SHAPES` (`:38`): `"rating-version-create": "RatingVersionCreate"` appended |
 | `backend/tests/test_contracts.py` | `ONE_SIDED_SLUGS` (`:69`): one key appended |
 | `docs/contracts/openapi/generated.json`, `docs/contracts/schemas/generated/rating-version-create.schema.json` | regenerated / generated |
-| `docs/specs/03-rating-engine.md` | §5.1 create row (`:908`, RL 9695 T1); §4.3 note (after `:436`, T2); §3.4 FR-237 row (`:134`, T3); *(DP-1 a)* §3.x FR-223 row (`:109`, RL 9758 T1) and §5.1's owned-code list (the DP-1 ruling's text) |
+| `docs/specs/03-rating-engine.md` | §5.1 create row (`:908`, RL 9695 T1); §4.3 note (after `:436`, T2); §3.4 FR-237 row (`:134`, T3); *(DP-1 a)* §3.x FR-223 row (`:109`, RL 9758 T1). §5.1's owned-code list: no edit, the code is already at `:936` *(Corrected 2026-10-05, pre-mint fix F1; see §"Status".)* |
 | `examples/fremtpl2/model.py` | added: `save_demo_algorithm`; edited: `author_demo_rating_evidence` (`:366-`, drops the algorithm save and the two row writes), `create_approved_rating_version` (`:490-`, saves the algorithm first and passes it and `Pins()` to the service) |
 | `backend/tests/test_demo_rating_evidence.py` | edited: `_draft` (`:34-41`) passes the algorithm ref and `Pins()` |
 | `backend/tests/test_rating_version_create_pins.py` | added (new module) |
@@ -303,7 +318,7 @@ Read at `caa4e411`:
 | **PL 9728** / SL 9727 (lane B after SL-1409; #1113, §"Write set") | — | `score.py`, `db/session.py`, `config.py`, `api/deps.py`, `api/authz.py`, `auth/service.py`, `main.py` (DP-4 a), `scripts/bench-rating.py`, `scripts/demo.py` (DP-6 a); `03`/`00` only under its DP-3 (b) or DP-5 | — | disjoint, unless its DP-3 (b) or DP-5 lands text in `03` §3.4 or §5.1, which then serialises; both dispatch records name it |
 | **The FD 9707 fix**, PL 9688 / SL 9685 (working ids; **not on `origin` at the time of reading**) | unknown | FR-221's lookup `as_at` (pricing-core lookup evaluation, `/score`, `/score/compare`, batch, per its brief) | — | **not read**: the dispatch re-reads its write set. Expected disjoint from this slice's code; a `03` §3.4 or §5.1 text would serialise |
 | **FD 9759 limb 2's owner "S3"** (RL 9758, *What it obliges*) | `errors.py` `RATING_ERROR_CODES`; `03` FR-223 row (`:109`); §5.1 owned list | adds `MODEL_REFERENCE_MODE_INCONSISTENT` and RL 9758 T1 | the same, **under DP-1 (a)** | `forbidden` (same registry entry and same spec row) → **whichever merges first applies them, and the other re-reads and drops its copy**; both dispatch records name it (sent to the lead with DP-1) |
-| **WK-673 S3** (SL-1387; #1138 @ `f3603e7c`, as the lead relayed it; not read by this planner) | `docs/specs/03-rating-engine.md` §5.1's owned-code list (`:928` onward, *"Error codes owned by this module:"*) | appends `ATTRIBUTION_RECONCILIATION_FAILED` at the list's tail | appends `MODEL_REFERENCE_MODE_INCONSISTENT` at the same tail (DP-1, item 25) | one list, one tail → **SERIALISE**, by the deputy's entry headed *"2026-10-05 13:25:23 BST — 29: RL 9663 OK; 30: extend option (b) to S3 vs S2, with one serialisation; 31: close #986 OK"*, item 30: the second to merge merges `main` and re-appends its code at the tail. Dispatch-record item 2 |
+| **WK-673 S3** (SL-1387; #1138 @ `f3603e7c`, as the lead relayed it; not read by this planner) | `docs/specs/03-rating-engine.md` §5.1's owned-code list (`:928` onward, *"Error codes owned by this module:"*) | appends `ATTRIBUTION_RECONCILIATION_FAILED` at the list's tail | ~~appends `MODEL_REFERENCE_MODE_INCONSISTENT` at the same tail (DP-1, item 25)~~ no edit: the code is already at `:936` *(Corrected 2026-10-05, pre-mint fix F1; see §"Status".)* | one list, one tail → **SERIALISE**, by the deputy's entry headed *"2026-10-05 13:25:23 BST — 29: RL 9663 OK; 30: extend option (b) to S3 vs S2, with one serialisation; 31: close #986 OK"*, item 30: the second to merge merges `main` and re-appends its code at the tail. Dispatch-record item 2. *(Note 2026-10-05, pre-mint fix F1: this slice no longer appends to the list, so the stated reason no longer holds; the serialisation stands until the maintainer (by delegation) lifts it.)* |
 
 ### Dispatch-record items
 
@@ -318,7 +333,9 @@ required.
 2. **The `03` owned-codes tail** (the deputy's entry headed *"2026-10-05 13:25:23 BST — 29: RL 9663 OK; 30: extend option (b) to S3 vs S2, with one serialisation; 31: close #986 OK"*, item 30): this slice and WK-673 S3 (SL-1387) each append one
    code at the tail of `03` §5.1's owned-code list (`:928` onward). They serialise: the second to
    merge merges `main`, re-appends its code at the tail, re-runs the merge-tree check reading its
-   exit code, and re-gates.
+   exit code, and re-gates. *(Note 2026-10-05, pre-mint fix F1: this slice no longer appends to
+   the owned-code list, since the code is already at `03:936`, so the stated reason no longer
+   holds; the serialisation stands until the maintainer (by delegation) lifts it.)*
 3. **WK-675 S2 (PL 9713)**: serialised on `03` §5.1 (adjacent hunks at `:908`) and `03` §3.4
    (FR-237 `:134` against S2's insertion after FR-243 `:140`). Each side's hunks and anchors are
    listed.
@@ -879,8 +896,9 @@ class RatingVersionCreate(BaseModel):
 - [ ] **Step 5: Unless Task 0 Step 4 found it registered.** Append
   `"MODEL_REFERENCE_MODE_INCONSISTENT",` to `RATING_ERROR_CODES` under a comment
   `# FR-223 at the pin write (RL 9758 item 2) and at compile (limb 2).`
-- [ ] **Step 6:** Run the module: every test but the owned-list half of
-  `test_model_reference_mode_inconsistent_is_registered_and_owned` passes. Run
+- [ ] **Step 6:** Run the module: every test passes, including
+  `test_model_reference_mode_inconsistent_is_registered_and_owned` (its owned-list half holds at
+  `03:936`). *(Corrected 2026-10-05, pre-mint fix F1; see §"Status".)* Run
   `uv run pytest -q backend/tests/test_rating_versions.py backend/tests/test_rating_version_compile.py`:
   green (the old three-field body still creates).
 - [ ] **Step 7: Commit** `fix(rating): POST /rating-versions takes algorithm_ref, pins and model_reference_mode (FD 9708)`.
@@ -940,10 +958,10 @@ ledger.
 - [ ] **Step 1:** Apply RL 9695 T1 (§5.1 `:908`), T2 (after `:436`) and T3 (FR-237, `:134`)
   byte for byte from the **minted** record, with `<date>` the commit date and the working id
   replaced by the minted `RL-` id. A find string not found exactly once is a stop.
-- [ ] **Step 2: Unless Task 0 Step 4 found them landed:** RL 9758 T1 (FR-223,
-  `:109`) and the owned-list text the DP-1 ruling gives, byte for byte. The code goes at the
-  **tail** of the owned-code list; if WK-673 S3 merged first, merge `main` and re-append at the
-  new tail (dispatch-record item 2).
+- [ ] **Step 2: Unless Task 0 Step 4 found it landed:** RL 9758 T1 (FR-223,
+  `:109`), byte for byte. The code is already in the owned-code list at `03:936`: no edit.
+  *(Corrected 2026-10-05, pre-mint fix F1; see §"Status".)* The add at the list's tail is struck. Dispatch-record item 2's serialisation
+  with WK-673 S3 stands as ruled until the maintainer (by delegation) lifts it.
 - [ ] **Step 3:** `test_model_reference_mode_inconsistent_is_registered_and_owned` passes (DP-1 (a)).
 - [ ] **Step 4:** `python3 scripts/audit-docs.py` (check 31's working-id rows are expected until
   the mint) and `uv run python scripts/req-coverage.py`.
