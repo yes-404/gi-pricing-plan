@@ -126,6 +126,31 @@ Tasks cite the symbols above, not these line numbers.
 **Holds.** FD 9752: this slice changes no `to_dict` approval route's response and reads none anew (Task 0 read no
 response body). RETENTION: the export directory was read, not touched.
 
+### Task 1 — the allowance removal, red first (2026-10-05 10:0x UTC, executor-1409-t1)
+
+Edit: `backend/tests/test_approval_guard_static.py`, `ALLOWANCE_SITES`: the entry
+`("backend/src/app/platform/validation_rules.py", "approve_rule")` deleted; the comment above
+`replace_rule_set` rewritten to `# Temporary: pending OQ 9987 (working id), per RL-1301 A.4.5.`
+No other file touched. Step 1's old comment was the only validation-rule exemption in
+`backend/tests` (`git grep -n -i 'FD-1356\|9892\|validation-rule fix slice' -- backend/tests`
+returned only that comment).
+
+Red run, `uv run pytest -q backend/tests/test_approval_guard_static.py -k "sanctioned_and_allowance_sites or every_pinned_site"`:
+
+- `test_approval_decision_is_entered_only_at_the_sanctioned_and_allowance_sites`:
+  `AssertionError: assert ['backend/src...approve_rule'] == []`, "Left contains one more item:
+  'backend/src/app/platform/validation_rules.py::approve_rule'". Cause: `approve_rule` still
+  enters `approval_decision()` and is no longer pinned. The plan's expected list, matched.
+- `test_every_pinned_site_really_enters_the_context`:
+  `AssertionError: assert {('backend/sr...d.py', 'run')} == frozenset({('....p...`, "Extra items in
+  the left set: ('backend/src/app/platform/validation_rules.py', 'approve_rule')". Cause: same
+  site, entered but not pinned.
+- Totals: `2 failed, 15 deselected, 2 warnings in 1.95s`.
+
+Deviation: per plan Task 1 Step 3 ("Do not commit yet. Task 3 turns these green; the two commit
+together") the test edit is left uncommitted in the worktree; only this entry is committed.
+Test-database warning (per-worktree DB absent) is unrelated to these two static tests.
+
 ### The write set under the `__all__` amendment (Delta 4, #1118)
 
 Names this slice appends to `packages/model-schema/src/model_schema/__init__.py`, appended only, each with its import
