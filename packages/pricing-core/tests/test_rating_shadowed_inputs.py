@@ -76,3 +76,29 @@ _SCORE_FIXTURE_HASH = "sha256:86abdb81dc16d2075956aa11e05f2e9c87fe191d4a3397574e
 async def test_the_bundle_hash_is_unchanged() -> None:
     bundle = await compile_bundle(_version(), _FakeResolver())
     assert bundle.content_hash == _SCORE_FIXTURE_HASH
+
+
+_IN_X = {"step_id": "s_in", "type": "input", "label": "x", "input_name": "x",
+         "on_missing": "error", "produces": "x"}
+_CLAMP_X = {"step_id": "s_clamp_x", "type": "constraint", "label": "Cap x",
+            "condition": "x <= 10", "on_violation": "clamp", "clamp_bounds": {"max": "10"},
+            "reason_code": "X_CAPPED", "consumes": ["x"], "produces": ["x"]}
+_A = {"step_id": "s_a", "type": "expression", "label": "base = x*100", "expr": "x * 100",
+      "result_type": "money_minor", "consumes": ["x"], "produces": "base"}
+_OUT = {"step_id": "s_out", "type": "output", "label": "out", "output_name": "base_out",
+        "rounding": {"mode": "half_even", "dp": 0}, "consumes": ["base"]}
+
+
+@pytest.mark.req("FR-213")
+def test_a_declared_input_re_produced_in_place_is_not_a_shadow() -> None:
+    from model_schema.rating import RatingAlgorithm
+    from pricing_core.rating.score import _check_no_shadowed_produced_names
+
+    algorithm = RatingAlgorithm.model_validate({
+        "slug": "clamp-x", "version": 1,
+        "input_contract": [{"name": "x", "type": "int", "nullable": False, "min": 0, "max": 1000}],
+        "outputs": [{"name": "base_out", "type": "money_minor", "required": True}],
+        "steps": [_IN_X, _CLAMP_X, _A, _OUT], "sub_graphs": []})
+    _check_no_shadowed_produced_names(algorithm, {"x": 3})  # a declared input: no raise
+    with pytest.raises(ValueError, match=r"INPUT_CONTRACT_VIOLATION.*'base'"):
+        _check_no_shadowed_produced_names(algorithm, {"x": 3, "base": 7})

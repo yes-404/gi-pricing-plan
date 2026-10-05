@@ -96,3 +96,54 @@ The trace test's invariant (no completed trace carries a price built on the plan
 `status is FAILED` and `after.status == "pending"`. The plan's optional read of the failed Job's recorded error for
 `INPUT_CONTRACT_VIOLATION` is not yet in the test; it is added at Task 2, when the green run shows the shipped
 `execute_job` shape.
+
+### Task 2 — guard (c) and T2, in one commit
+
+**The ruling on T2's working id.** The maintainer (by delegation), entry "2026-10-05 19:33:23 BST" in
+`channel/to-lead.md` (a local channel file, cited by its header), ruled OPTION A: apply T2 with "FD-1425" in place of
+"FD 9572", everything else byte for byte; under GO condition (3), as `RL-1423` lines 243-244 define it ("the mint
+replaces it with the minted `FD-` id"), that is byte for byte. Option B (the literal working id) is refused.
+
+**T2 applied.** The replacement is `RL-1423` line 240 with that one substitution. `grep -cF` on
+`docs/specs/03-rating-engine.md`, before and after:
+
+| String | Before | After |
+|---|---|---|
+| the find string (`Scoring rejects a Quote Context violating the contract with a field-level error. \|`) | 1 | 0 |
+| the substituted T2 line, as in `RL-1423` line 240 with `FD-1425` for the working id | 0 | 1 |
+| `FD 9572` | 0 | 0 |
+
+The substituted line was also taken from `RL-1423` line 240 by `sed` (two-space indent dropped, working id replaced) and
+searched in the spec with `grep -cFf`: 1.
+
+**The DP-2 exception's red** (`test_a_declared_input_re_produced_in_place_is_not_a_shadow`), seen failing before the
+guard existed: `ImportError: cannot import name '_check_no_shadowed_produced_names' from 'pricing_core.rating.score'`
+(the function's name was held back for the run; restored at once).
+
+**Each call is load-bearing.** Run on `test_rating_shadowed_inputs.py` with one call removed at a time:
+
+- `score_one`'s call removed: `5 failed, 7 passed`; the five failures are the `score_one` cases (the 3f case and the
+  four per-name cases), each `Failed: DID NOT RAISE ValueError`; the batch cases pass.
+- `_score_context_sync`'s call removed: `4 failed, 8 passed`; the four failures are the batch cases, each
+  `assert 'quoted' == 'error'`; the `score_one` cases pass.
+- Both calls restored; `git diff HEAD` over `score.py` shows the function and both calls (24 added lines).
+
+(An earlier removal run also dropped both calls by a restore slip and printed `9 failed, 3 passed`; it is not one of
+the two runs above, and the file was restored and diffed before they were repeated.)
+
+**Green at the head of Task 2** (each run alone, `OMP_NUM_THREADS=1 nice -n 19`):
+
+| Run | Result |
+|---|---|
+| `test_rating_shadowed_inputs.py` + `test_quote_input_raise_sites.py` | `31 passed` |
+| `test_rating_score.py` (no assert edited) | `40 passed` |
+| `backend/tests/test_score.py::test_a_quote_input_naming_a_produced_value_is_refused_on_score` | `1 passed` |
+| `backend/tests/test_score.py::test_a_pending_trace_whose_context_names_a_produced_value_is_not_reproduced_as_a_price` | `1 passed` |
+| `backend/tests/test_score_compare.py::test_a_context_input_naming_a_produced_value_is_a_422_on_compare` | `1 passed` |
+| `backend/tests/test_scoring_handlers.py::test_a_dataset_column_named_like_a_produced_value_is_refused_per_row` | `1 passed` |
+
+The trace test also asserts the failed Job's recorded error carries `INPUT_CONTRACT_VIOLATION` (added at this task).
+
+## PRs
+
+Not opened yet.

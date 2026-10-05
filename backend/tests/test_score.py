@@ -1619,7 +1619,10 @@ def test_a_pending_trace_whose_context_names_a_produced_value_is_not_reproduced_
         status = await execute_job(database, job.id, blob_store)
         async with database.session() as session:
             after = await session.get(ScoringTraceRow, row.id)
+            failed = await session.get(JobRow, job.id)
         assert after is not None
+        assert failed is not None
+        assert "INPUT_CONTRACT_VIOLATION" in str(failed.error)
         return status, after
 
     status, after = _run(_plant_and_run())
