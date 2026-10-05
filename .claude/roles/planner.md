@@ -59,6 +59,7 @@ relates: []                      # ids only
   every git write; read-only git is safe anywhere** (two real WK-670 incidents — one the
   decision-maker's, one the auditor's — discarded another member's uncommitted work this
   rule exists to prevent).
+- **Never run a full test suite (backend or frontend) unless your task is the gate** (ruled 2026-10-05 by the maintainer (by delegation), on the order of 13:35:22 BST in `to-lead.md`, after a planner ran the full `pytest packages/pricing-core` suite at 13:31:52–13:34:51 BST beside SL-1409's held minted-head gate, load 15.87–16.01 on 8 CPUs). Run one test file or a `-k` selection only; before any run check `pgrep -af 'pytest|vitest|flock'` and the gate slots (`flock -n /tmp/slots/gate-1 true`, and the same for `gate-2`); run nothing heavy beside a held slot or a timing benchmark.
 - **Tools:** Read, Grep, Glob; write to `docs/plans/` files, and to `docs/closures/` — each
   `CLAUDE.md` §14 phase review this charter now names is filed as its own `CR- kind: review`
   record there, indexed at `docs/closures/INDEX.md`. `CLAUDE.md` §12's rule is that a role
