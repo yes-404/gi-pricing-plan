@@ -1,0 +1,216 @@
+---
+id: RL-9695
+family: ruling
+title: FD 9708 — the code is behind, not the spec — POST /rating-versions declares the algorithm and the pins, FR-237 governs, and 03 §4.3's Phase 1b note is discharged (PROPOSED)
+status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
+created: 2026-10-05            # working id; the mint date is set at the mint (check 31)
+owner: decision-maker
+tree: caa4e411a9c07a389cf47092a923c7761b2b92dc
+phase: P2
+work: WK-1178
+supersedes: []
+superseded_by: ~
+corrected_by: []
+corrects: ~
+relates: [WK-669, WK-1178, CR-838, CR-1212, PL-1371, SL-1300, FD-1297, FR-223, FR-237, FR-240, FR-440]
+---
+
+# RL 9695 (working id) — FD 9708: which side is wrong about Rating Version pins over HTTP
+
+**PROPOSED, awaiting the deputy.** The options below were drafted before any decision. The
+section headed "Ruled" holds the recommendation until the lead relays the deputy's ruling;
+it binds nothing until then.
+
+## How this was ruled
+
+**Written 2026-10-05, from 13:06 BST, at effort `medium`** (`echo "CLAUDE_EFFORT=$CLAUDE_EFFORT"`
+printed `CLAUDE_EFFORT=medium`), by the decision-maker session `dm-9708`, on the lead's brief
+`~/gi-pricing-plan.local/handover/brief-dm-9708-2026-10-05.md`. **Working id 9695 is the
+lead's allocation.** Every fact below was read at `origin/main`
+`caa4e411a9c07a389cf47092a923c7761b2b92dc`, re-checked at 13:12 BST. Unminted records
+(FD 9708, FD 9995, RL 9758, PL 9713) are cited in working-id form and kept out of
+`relates:` (check 32).
+
+**The question** (FD 9708, draft PR #1130, head `11f87e26`, section *Disposition*): *"which
+side is wrong. Either the spec's §5.1 row and WF-699 C1 describe Phase 2 and the code is
+behind …, or §4.3's Phase 1b note stands and §5.1 and WF-699 C1 should say the route creates
+the minimal version and pins are set by a route yet to be specified. A third option is a
+separate pin-setting route on a `draft` version."* The deputy filed it as spec-vs-code with
+sides unruled, on G2's path (`~/gi-pricing-plan.local/channel/to-lead.md`, entry headed
+*"2026-10-05 13:04:03 BST — DECISIONS: FR-1399 = (β); exit-demo C1 finding OK; …"*, item 13).
+
+## Verified first, at `caa4e411`
+
+| Fact | Where |
+|---|---|
+| FR-237, no dated amendment: *"A **Rating Version** pins: one Rating Algorithm version, an exact Rate Table Version per referenced table, an exact Model/Peril Structure version per `model_call`, an exact Reference Table Version per `lookup`, and the input contract. Nothing is unpinned."* | `docs/specs/03-rating-engine.md:134` |
+| §5.1, the `POST /api/v1/rating-versions` row: *"Create a draft Rating Version with pins (FR-237)"* | `03:908` |
+| WF-699 C1: *"`POST /rating-versions` — declares the algorithm version and every pin: rate tables, peril structure, reference tables."* C4–C5: the first compile fails `PIN_NOT_APPROVED`; the actuary waits for the model's approval and **recompiles** — the pins declared at C1 are not re-entered | `docs/workflows/WF-00699-approved-models-to-approved-rating-version.md:70`, `:73-74` |
+| §4.3's note: *"(Scoped 2026-08-27, W7-3 — OD1.) Phase 1b builds the **minimal subset** of this shape … Compile, score, rate tables, the `pins`/`evidence`/`bundle` blocks, `model_reference_mode`, and deployment stay Phase 2 (FR-440). The `RatingVersion` model in `model-schema` carries only the Phase 1b subset; a Phase 2 build widens the shape with the full contract."* No later dated line | `03:430-436` |
+| `07` FR-440 (appended 2026-08-27, W7-3 — OD1): the demo seed creates a **minimal Rating Version** …; *"The full `03` surface — compile, score, rate tables, deployment — stays Phase 2."* | `docs/specs/07-platform.md:156` |
+| FR-237 is in WK-669's scope: the row lists it under its pre-migration id, which `REDIRECTS.csv` maps to FR-237 (with FR-238 to FR-242); WK-669 is `status: closed` | `docs/REDIRECTS.csv:1189`; `docs/roadmap.md:620-632` |
+| WK-669's close records FR-237 **delivered**, *"marker-evidenced (22: 3 …)"*, via W9-3 (#293), which *"widened `RatingVersion` (spec-reconciled vs `03` §4.3)"* and added `POST /rating-versions/{id}/compile`. No create route is in its row | `docs/closures/CR-00838-work-item-record-wk-669-the-rating-contract-validation-and-bundle-compilation.md:33`, `:40` |
+| `model_schema.RatingVersion` **is already widened**: its docstring *"W9-3 widens the Phase 1b subset with the full contract: `algorithm_ref`, the exact `pins` (FR-237), `model_reference_mode` …"*; `algorithm_ref: ArtifactRef \| None = None`, `pins: Pins \| None = None`. `Pins` holds `rate_tables`, `models`, `reference_tables`, `custom_objectives` | `packages/model-schema/src/model_schema/rating.py:65-78`, `:138-170` |
+| `RatingVersionCreate` (`extra="forbid"`) has `slug`, `dataset_version_id`, `model_ref` only; the handler docstring says *"Create a draft rating version with pins to a model (FR-237)."* | `backend/src/app/api/models.py:271-276`, `:1160-1171` |
+| The seed sets the pins on the ORM row after the service creates it, and they are empty: `row.algorithm_ref = f"rating_algorithm:{DEMO_ALGORITHM_SLUG}@1"`, `row.pins = dict(_EMPTY_PINS)` | `examples/fremtpl2/model.py:396-397` |
+| FR-240: compilation validates *"all references resolvable and at a sufficient maturity (FR-20)"*; `RATING_VERSION_UNPINNED` is compile's refusal for a version with no `algorithm_ref`, no `pins`, or a step ref not pinned at its exact version | `03:137`; `03:967-970` |
+| Phase P2 is `status: active` | `docs/roadmap.md:556` |
+| G2: *"`WF-699` end to end on the freMTPL2 seed … a Rating Version compiled with pins … from one command to a served page, in Phase 1b's form."* Ruled 2026-10-05 13:05:42 BST (the maintainer, by delegation): one command runs WF-699 A–E and its deploy step **over HTTP** | `docs/roadmap.md:566`; `to-lead.md` entry of that header |
+
+Not verified, stated as pointers: RL 9758 (#1061, open) rules *when* FR-223 is checked on
+"version pin writes" — title read, not the diff. FD 9995 (#980, open, head `9074f155`) — the
+compile resolver has no peril-structure branch — read through FD 9708's account of it.
+
+## Which side is wrong
+
+**The code is behind. The spec is not inconsistent in what it requires now.**
+
+1. **§4.3's note and FR-440 are a deferral *to* Phase 2, not a carve-out *of* it.** Both
+   say what Phase 1b builds and that the rest "stay[s] Phase 2". P2 is the active phase. Read
+   in P2, the note requires the `pins` block, so it agrees with FR-237, §5.1 and WF-699 C1.
+   There is no second clause to choose between.
+2. **The note is stale, not governing.** Its sentence *"The `RatingVersion` model in
+   `model-schema` carries only the Phase 1b subset"* is false at `caa4e411` (`rating.py:138-170`):
+   W9-3 did the "Phase 2 build" for the stored shape and for compile, and CR-838 recorded FR-237
+   delivered. Nobody added the dated line saying the note was discharged.
+3. **What W9-3 left out is the HTTP write.** CR-838's evidence for FR-237 is markers on the
+   pinned shape and on compile. No row in it names the create route, so the "delivered"
+   verdict covered *a Rating Version that holds pins*, not *a client that can declare them*.
+   The request DTO kept its Phase 1b fields, and its docstring kept the claim. The seed
+   compensates by writing the ORM row directly.
+4. **WF-699 C4–C5 confirms the design intent:** pins are declared once, at C1, and validated at
+   compile (FR-240). A recompile after an approval re-reads the same declared pins. A create
+   route that stores the declaration and leaves the checks to compile is the shape the
+   journey already assumes.
+
+So: FR-237, §5.1 and WF-699 C1 govern. The note gets a dated line saying it was discharged.
+The code is behind, and the gap belongs to a closed Work (WK-669), so the fix goes to the
+standing maintenance Work, WK-1178, as SL-1300 (FD-1297's FR-237 fix) did.
+
+## DP-1 — how a client declares a Rating Version's algorithm and pins
+
+### Options
+
+| | (a) The create route takes them | (b) Pins stay off HTTP in P2 | (c) A separate pin route on a `draft` |
+|---|---|---|---|
+| **Rule** | `POST /rating-versions` accepts optional `algorithm_ref`, `pins` and `model_reference_mode`. The shape is checked at create (422). Resolvability and maturity stay with compile (FR-240). Absent fields leave today's behaviour: compile refuses `RATING_VERSION_UNPINNED` | The create route stays minimal. §5.1, FR-237 and WF-699 C1 get dated clarifications that the pins are set outside HTTP in P2. A route is specified in a later phase | Create stays minimal. A new `PUT /rating-versions/{id}/pins` sets `algorithm_ref`, `pins` and `model_reference_mode` on a `draft` only (`RATING_VERSION_IMMUTABLE`, 409, otherwise) |
+| **Which side was wrong** | The code (and CR-838's "delivered" reading of FR-237) | Nobody: the spec is amended to match the code | Both in part: §5.1's row is right that a client pins; WF-699 C1 gets a second step |
+| **Effect on G2** (ruled 13:05:42: WF-699 A–E over HTTP) | **Met.** C1 is one HTTP call, as written. The exit-demo script needs no ORM write | **Not met.** WF-699 C1 can only run as the seed's ORM write (`examples/fremtpl2/model.py:396-397`), which is not HTTP. G2 would need the 13:05:42 ruling amended to allow it, which is the maintainer's to decide | **Met** with two calls (create, then `PUT …/pins`). WF-699 C1 splits into C1a/C1b |
+| **Cost** | One WK-1178 fix slice: the DTO built from `model_schema` types (`ArtifactRef`, `Pins`, `ModelReferenceMode` — no hand-written shape), the service and row writes, the contract and generated client regenerated, negative tests. The spec change is small (T1–T3) | Spec only (T4–T6). But it moves FR-237's HTTP limb out of P2, which is a scope move for the maintainer (G1/G2), and it leaves the platform with no client-visible way to pin | A new route, a new FR, an audit event for a pin change, immutability rules, WF-699 rewritten. It also creates the re-pin route that the deputy's DP-S2-3 decision (PL 9713, entry of 12:59:02 BST, item 10: *"no re-pin (no route exists)"*) relied on being absent |
+| **Risk** | A version can be created with refs that do not resolve. That is today's state for the seed, and compile refuses it with a coded error | The demo's "over HTTP" is weakened at the step where pricing correctness is set | A mutable draft pin set is a second write path. RL 9758's FR-223 check point would then need to cover two writers |
+
+### Trade-offs
+
+(a) is the smallest change that makes the spec, the journey and G2 agree, and it adds no
+concept: the stored shape, compile's checks and the refusal codes already exist. Validation
+stays in one place (compile), so it cannot diverge between create and compile. (c) adds
+flexibility the journey does not use (C5 recompiles; it does not re-pin), at the cost of a
+second writer and of reversing an assumption the deputy has already ruled on. (b) is cheapest
+in this PR and most expensive for G2. It is also the silent "make the spec match the code"
+move that `CLAUDE.md` §0 warns against, because it would record that the spec was wrong when
+the evidence (WF-699 C4–C5, the widened `model_schema`, CR-838) says the code fell short.
+
+**Dependency, whichever option:** a `peril_structure` pin declared over HTTP still does not
+compile until FD 9995 (#980) is fixed. WF-699 C1 names "peril structure", so G2's demo depends
+on FD 9995 as well as on this ruling. The exit-demo leaf should name both.
+
+## Ruled
+
+**PROPOSED, awaiting the deputy.** Recommendation:
+
+| DP | Recommendation |
+|---|---|
+| Which side | **The code is behind.** FR-237, `03` §5.1 and WF-699 C1 govern. `03` §4.3's Phase 1b note was discharged by W9-3, with no line recording it. FR-440 is a Phase 1b seed requirement and is not in conflict |
+| DP-1 | **(a)** `POST /api/v1/rating-versions` accepts optional `algorithm_ref`, `pins` and `model_reference_mode`, typed from `model_schema`. Their shape is checked at create (422 `VALIDATION_FAILED`); their resolvability and maturity are checked at compile (FR-240), as now |
+| Owner | **WK-1178**, a fix slice with its own leaf plan. It merges before PL-1371 §3.8 row 7 (exit demo (b), the scripted `WF-699` journey) needs C1. The seed moves to the route in the same slice, so no ORM write sets a pin outside tests and benches |
+
+## The exact texts
+
+**T1 to T3 (option (a)) do not land in this PR.** They change behaviour, so each lands in one
+commit with the code it describes (`CLAUDE.md` §2), applied by the WK-1178 slice, as
+`RL-1407`'s texts were applied by SL-1409. `<date>` is that commit's date. Each find string
+has exactly one hit at `caa4e411`. T4 to T6 are given only so option (b) can be compared; they
+are void unless (b) is ruled.
+
+### T1 — `03` §5.1, the create row (a). Find `` | Create a draft Rating Version with pins (FR-237) | `` and replace it with
+
+```markdown
+| Create a draft Rating Version with pins (FR-237). The body takes `slug`, `dataset_version_id`, `model_ref` and, optionally, `algorithm_ref` (a `rating_algorithm` ref), `pins` (§4.3's `Pins`) and `model_reference_mode`; a ref of the wrong type in any of them is **422** `VALIDATION_FAILED`. Resolvability and maturity are checked at compile (FR-240), and a version created without `algorithm_ref` or `pins` is refused there with `RATING_VERSION_UNPINNED`. *(Amended <date>, RL 9695 (working id), FD 9708.)* |
+```
+
+### T2 — `03` §4.3's note (a). Find `` > build widens the shape with the full contract. `` and insert after it
+
+```markdown
+>
+> *(Discharged <date>, RL 9695 (working id), FD 9708.)* This note scoped Phase 1b only. W9-3
+> (#293) widened `RatingVersion` with `algorithm_ref`, `pins` and `model_reference_mode`
+> (CR-838), and `POST /api/v1/rating-versions` declares them (§5.1, FR-237). The note's
+> statement that `model-schema` carries only the Phase 1b subset is no longer true and does
+> not govern.
+```
+
+### T3 — `03` FR-237 (a). Find `` and the input contract. Nothing is unpinned. | `` and insert before its final `` |``
+
+```markdown
+ *(Amended <date>, RL 9695 (working id), FD 9708.)* The algorithm version and the pins are declared when the Rating Version is created (`POST /api/v1/rating-versions`, §5.1) and are checked at compile (FR-240). The create route stores them and does not resolve them.
+```
+
+WF-699 C1 needs no change under (a): it already says what the route does.
+
+### T4 — `03` §5.1, the create row (b only). Find `` | Create a draft Rating Version with pins (FR-237) | `` and replace it with
+
+```markdown
+| Create a draft Rating Version: `slug`, `dataset_version_id`, `model_ref` (the Phase 1b subset, FR-440). The algorithm and the pins (FR-237) are not set by any route in Phase 2. *(Amended <date>, RL 9695 (working id), FD 9708.)* |
+```
+
+### T5 — WF-699 C1 (b only). Find `` declares the algorithm version and every pin: rate tables, peril structure, reference tables. `` and replace it with
+
+```markdown
+creates the draft (`slug`, `dataset_version_id`, `model_ref`). In Phase 2 the algorithm version and every pin are written by the seed, not over HTTP. *(Amended <date>, RL 9695 (working id), FD 9708.)*
+```
+
+### T6 — `03` FR-237 (b only). Find `` and the input contract. Nothing is unpinned. | `` and insert before its final `` |``
+
+```markdown
+ *(Amended <date>, RL 9695 (working id), FD 9708.)* In Phase 2 no route declares the pins; a later phase specifies one.
+```
+
+## Acceptance — the violation that must become detectable
+
+For option (a). This record builds nothing. The WK-1178 slice carries these, each shown red on deliberately
+broken input:
+
+- *Violation: a pin cannot be declared over HTTP.* A test creates a Rating Version through
+  `POST /api/v1/rating-versions` with an `algorithm_ref` and a non-empty `pins`, then compiles
+  it through `POST …/compile` to `compiled`. Broken by dropping the fields from the DTO: the
+  create is 422.
+- *Violation: a malformed pin is stored.* A body whose `algorithm_ref` is not a
+  `rating_algorithm` ref, or whose `pins.rate_tables` holds a `model` ref, is 422
+  `VALIDATION_FAILED` and writes no row.
+- *Violation: the create route checks maturity in a second place.* A version that pins a model
+  in `review` is created (201) and refused at compile with `PIN_NOT_APPROVED`, which is
+  WF-699 C4. After that model is approved, a recompile succeeds without a new create (C5).
+- *Violation: the DTO hand-writes a shape `model_schema` owns.* The request model's
+  `algorithm_ref`, `pins` and `model_reference_mode` are the `model_schema` types, and
+  `generate-contracts.py --check` is green.
+- *Violation: the seed pins outside HTTP.* After the slice, the predicate
+  `grep -rn "algorithm_ref\s*=\|\.pins\s*=" --include=*.py examples/ backend/src/` matches no
+  write.
+
+## What it obliges
+
+- **The deputy:** rule which side is wrong, and DP-1.
+- **The lead, at the mint:** mint this record, replacing working id 9695 everywhere this
+  commit writes it. If (a): file the WK-1178 slice row and name its planner. Add the slice and
+  FD 9995 to PL-1371 §3.8 row 7 (exit demo (b)) as prerequisites of C1. If (b): put the G2 and
+  P2-scope consequence to the maintainer, because it amends the 13:05:42 ruling.
+- **The WK-1178 slice (if (a)):** apply T1 to T3 verbatim in the commit that builds them,
+  with the acceptance tests above. Correct the handler docstring, which today claims pins it
+  does not take.
+- **For the lead, not ruled here:** CR-838 recorded FR-237 *delivered* on evidence that did
+  not reach the create route. It is frozen, so it is not edited. Whether it needs a correcting
+  record or whether FD 9708 is the record enough is the lead's verdict (`CLAUDE.md` §13).
+
+## Spec changes in this commit
+
+None. T1 to T3 are the WK-1178 slice's to apply; T4 to T6 apply only if (b) is ruled.
