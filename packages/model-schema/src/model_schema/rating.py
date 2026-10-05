@@ -21,9 +21,11 @@ from pydantic import (
     ConfigDict,
     Field,
     TypeAdapter,
+    field_validator,
     model_validator,
 )
 
+from model_schema.graph_errors import GraphCycleError, GraphUnresolvedRefError
 from model_schema.refs import ArtifactRef, BlobRef, Slug
 from model_schema.regression import GoldenQuoteEvidence
 
@@ -415,7 +417,7 @@ class RatingAlgorithm(BaseModel):
             for name in _as_list(step.consumes):
                 producers = produced.get(name)
                 if not producers:
-                    raise ValueError(
+                    raise GraphUnresolvedRefError(
                         f"step {step.step_id!r} consumes undefined value {name!r} "
                         "(FR-212)"
                     )
@@ -436,7 +438,7 @@ class RatingAlgorithm(BaseModel):
                     if pending[other.step_id] == 0:
                         ready.append(other.step_id)
         if len(order) != len(steps):
-            raise ValueError("the rating DAG contains a cycle (FR-212)")
+            raise GraphCycleError("the rating DAG contains a cycle (FR-212)")
         position = {sid: i for i, sid in enumerate(order)}
         step_by_id = {s.step_id: s for s in steps}
 
@@ -659,13 +661,30 @@ class RateTableStorageMode(StrEnum):
 
 
 class RateTableKey(BaseModel):
-    """A key column declaration (FR-228): name, type, optional banding reference."""
+    """A key column declaration (FR-228): name, type, optional Factor or Banding binding.
+
+    `factor_ref` pins the Factor version the key is bound to (`RL-1361`); `banding_ref`
+    pins a Banding with no Factor. A key carries at most one of them, and a key with
+    neither is joined by its own name.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     name: str
     type: RateTableKeyType
     banding_ref: ArtifactRef | None = None
+    factor_ref: ArtifactRef | None = None
+
+    @model_validator(mode="after")
+    def _one_binding(self) -> RateTableKey:
+        """`RL-1361` Ruled item 9: `factor_ref` is of type `factor`, and never with a Banding."""
+        if self.factor_ref is not None and self.factor_ref.type != "factor":
+            raise ValueError("factor_ref must reference a factor artifact")
+        if self.factor_ref is not None and self.banding_ref is not None:
+            raise ValueError(
+                "a key carries at most one of factor_ref and banding_ref (FR-228)"
+            )
+        return self
 
 
 class RateTableValue(BaseModel):
@@ -845,6 +864,36 @@ class ImportPreview(BaseModel):
 
     diff: RateTableDiff
     created_by_import: ImportVerdict
+
+
+class SeedFromModelRequest(BaseModel):
+    """`POST /api/v1/rate-tables/{slug}/seed-from-model` body (FR-230, `03` §5.1).
+
+    One seed request names one Factor of an approved model (`RL-1361` section A);
+    `factor` is the Factor's slug, a key of the model's relativities. Exactly three
+    fields, and an unknown field is refused (`RL-1375` DP-3).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    model_ref: ArtifactRef
+    factor: str = Field(min_length=1)
+    change_note: str
+
+    @field_validator("model_ref")
+    @classmethod
+    def _model_ref_is_a_model(cls, value: ArtifactRef) -> ArtifactRef:
+        if value.type != "model":
+            raise ValueError("model_ref must reference a model artifact")
+        return value
+
+    @field_validator("change_note")
+    @classmethod
+    def _change_note_is_required(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("change_note is required and must be non-empty (FR-229)")
+        return stripped
 
 
 class RateTableVersion(BaseModel):

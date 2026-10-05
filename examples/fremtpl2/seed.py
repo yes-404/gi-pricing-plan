@@ -280,6 +280,7 @@ async def run(rows: int | None) -> int:
     from app.platform import profiles as profile_service
     from app.platform import rbac, workspaces
     from app.platform import validation as validation_service
+    from app.platform.approvals import approval_decision
     from app.platform.blobs import BlobStore
     from app.worker.data_handlers import register_data_handlers
     from app.worker.tasks import execute_job
@@ -447,8 +448,11 @@ async def run(rows: int | None) -> int:
                 # workspace's configuration of it.
                 catalogue_id=catalogue_id_by_slug.get(rule["slug"]),
             )
-            session.add(row)
-            await session.flush()
+            # ALLOWANCE (PL-1303 Acceptance 7): a legitimate seed writer, entered through the
+            # decision flag so `approval_guard()` still refuses every other writer.
+            async with approval_decision(session):
+                session.add(row)
+                await session.flush()
             rule_ids.append(str(row.id))
     # Through the service, not a direct insert: `replace_rule_set` is what points the
     # dataset at its rule set (`01` §4.1's `validation_rule_set_id`), and a seed that

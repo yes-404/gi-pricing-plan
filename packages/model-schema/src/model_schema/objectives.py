@@ -49,6 +49,7 @@ from model_schema.refs import Slug
 __all__ = [
     "FITTABLE_OBJECTIVE_STATUSES",
     "OBJECTIVE_CERTIFICATE_CHECKS",
+    "OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC",
     "TEMPLATE_APPLICABILITY",
     "TEMPLATE_PARAMETERS",
     "TERMINAL_OBJECTIVE_STATUSES",
@@ -621,6 +622,19 @@ OBJECTIVE_CERTIFICATE_CHECKS: Final[tuple[str, ...]] = (
     "smoke_fit",
 )
 
+#: The `expression` kind's battery (FR-151): the same nine, with `symbolic_vs_numeric_*` in
+#: place of `analytic_vs_numeric_*`, because what is compared with the numeric derivative is
+#: the SymPy-derived one rather than a hand-written one. A certificate carries exactly one
+#: of the two batteries, never a mixture.
+OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC: Final[tuple[str, ...]] = (
+    "symbolic_vs_numeric_gradient",
+    "symbolic_vs_numeric_hessian",
+    *OBJECTIVE_CERTIFICATE_CHECKS[2:],
+)
+
+
+_SYMBOLIC_PAIR: Final = frozenset(OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC[:2])
+
 
 def battery_is_exactly(
     checks: tuple[CertificateCheck, ...], required: tuple[str, ...], *, artifact: str
@@ -759,8 +773,13 @@ class ObjectiveCertificate(BaseModel):
         omitted because it had nothing to report is indistinguishable from one that was
         never run, and nine is what an approver is told they are reading.
         """
+        # Either battery, exactly: a result naming a symbolic check is held to the symbolic
+        # nine, so a mixture of the two pairs is refused as unexpected and missing names.
+        symbolic = any(check.name in _SYMBOLIC_PAIR for check in self.result.checks)
         battery_is_exactly(
-            self.result.checks, OBJECTIVE_CERTIFICATE_CHECKS, artifact="objective certificate"
+            self.result.checks,
+            OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC if symbolic else OBJECTIVE_CERTIFICATE_CHECKS,
+            artifact="objective certificate",
         )
         return self
 
