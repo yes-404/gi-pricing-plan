@@ -268,6 +268,57 @@ blob sha256. The cells artifact: `_content_hash`, `backend/src/app/platform/rate
 and its parquet twin find the same stored artifact, one Job: `test_a_rows_version_and_its_parquet_twin_find_the_same_cells_
 artifact` (red first, `assert 202 == 200`).
 
+### Task 7 — the gate and the cost measurement
+
+**Gate 1, head `c1f2ef177d3a7aed2a47ae8b100662b7d0c75dff`, tree `2618382e8508bed68996bcce4310fd39120d4859`**, slot `gate-1`
+(granted by the lead), a detached checkout of that SHA with empty porcelain, `uv sync --all-packages`, `alembic current`
+== `alembic heads` == `f3a7c1d9e2b4` (one head) before `pytest`. The `dev-commands` gate body verbatim with
+`LOKY_MAX_CPU_COUNT=4`. Start 2026-10-05 18:25:12 BST (load 1.86, 19.3G free); Python half done 18:54:40 (load 3.63);
+frontend half done 18:55:57 (load 8.72, 17.0G free).
+
+| stage | result |
+|---|---|
+| ruff | pass |
+| mypy | pass |
+| import_linter | pass |
+| audit_docs | **FAIL** exit 1: `check 31: gap in the full allocation between 1419 and 9520` (the working id, expected until the mint) |
+| req_coverage | pass |
+| contracts (`generate-contracts.py --check`) | pass |
+| pytest | **FAIL** exit 1: 14 failed, 4985 passed, 4 skipped (29:10) |
+| frontend install `--frozen-lockfile`, `generate:api`, lint, type-check, test, build | all pass |
+
+**The 14 pytest failures.** Thirteen are downstream of the one audit failure, check 31: each is a test that runs
+`audit-docs.py` or `doc-id.py` on the real tree and quotes its output (`tests/test_audit_docs_finding_citations.py`,
+`test_audit_docs_ids.py` x2, `test_audit_docs_process_core_digest.py` x2, `test_audit_docs_w37_11_ceiling.py`,
+`test_doc_index.py` (`the live allocation is not contiguous: [(1419, 9520)]`), `test_register_lint.py` x3,
+`test_register_owed.py`, `test_repository_invariants.py` x2); the audit log's only failure is check 31. That is inferred
+from the messages and is proved only by the minted-head gate. **One is a real red from this slice:**
+`backend/tests/test_error_sinks.py::test_every_failure_sink_on_a_quote_input_path_is_accounted_for` (NFR-499): the census
+finds two sinks that use an exception's text, `backend/src/app/platform/rate_tables.py` `_portfolio_weights` `str(exc)` and
+`packages/pricing-core/src/pricing_core/rate_tables/weights.py` `_resolved_series` `str(exc)`, neither listed in `_SINKS`
+(that file's own rule: "a sink in one that is not a quote-input path is listed in `_SINKS` with why"). Reported to the lead
+as a stop: `backend/tests/test_error_sinks.py` is outside the write set.
+
+**Cost measurement** (inside `gate-1`, 18:56:08 to 18:56:46 BST, load 7.2 at the start because the gate had just ended, so
+this is not a quiet-box figure), `OMP_NUM_THREADS=1`, service level (`diff_cells_page`, not HTTP), a parquet pair of 260 000
+cells (`(1, 'parquet')`, `(2, 'parquet')`), the cells Job having stored the artifact (Job 6.8 s, setup 5.3 s), N=10 pages at
+limit 50 and distinct cursors:
+
+| | p50 | p99 | max |
+|---|---|---|---|
+| whole page request | 1024 ms | 1204 ms | 1204 ms |
+| of which loading both versions' cells | 490 ms | 566 ms | 566 ms |
+| of which `version_content_hash` x2 | 442 ms | 552 ms | 552 ms |
+
+**Against the bound.** No NFR bounds the diff or cells route's latency (searched `03`, `00`, `07`, `02`). The only text is
+FR-232 (`03:123`): above the threshold (default 250 000 cells) "FR-231's diff and its exposure weighting become a Job
+returning the same artifact, and the API answers 202 rather than 200 for them … only the latency and the status code
+differ", and the cells row (`03:933`): "**202** with a `rate_table.diff_cells` Job … where either version is `storage:
+parquet` (FR-232) and the query's cell artifact is not yet stored … the same request then answers **200** with pages read
+from it". Whether FR-232 covers the cells page itself (so that the 200 read must not load both versions' cells) is a spec
+reading for the maintainer, not decided here. About 93% of the request is loading and hashing the two versions' cells
+(932 of 1024 ms at p50); no optimisation was made.
+
 ## PRs
 
 Not yet opened (the PR is opened as a draft after Task 2 is committed and pushed).
