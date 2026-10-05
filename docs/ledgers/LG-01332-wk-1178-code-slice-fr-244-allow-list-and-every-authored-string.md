@@ -2,7 +2,7 @@
 id: LG-1332
 family: ledger
 title: WK-1178 code slice (SL-1315) — FR-244's enforced allow-list and every authored rating string checked (FR-244, FR-274, FR-276, FR-255)
-status: active
+status: closed
 created: 2026-09-30
 owner: executor
 tree: 9953a37a99f84747d35107ce30a2b84326904972

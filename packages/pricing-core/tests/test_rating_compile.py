@@ -11,9 +11,56 @@ import pytest
 from model_schema.rating import RatingAlgorithm
 from pricing_core.rating.compile import assert_integer_minor_round_trip, validate_algorithm
 
+#: The pre-edit `valid_algorithm` body, verbatim (SL-1345, RL-1329 §2 step 5): its clamp is on the
+#: source of the payable's rung, so the placement check refuses it with LADDER_CLAMP_UNPLACEABLE.
+PRE_EDIT_VALID_ALGORITHM: dict = {
+    "slug": "motor-gb",
+    "version": 14,
+    "input_contract": [
+        {"name": "driver_age", "type": "int", "nullable": False, "min": 17, "max": 99},
+        {"name": "effective_date", "type": "date", "nullable": False},
+        {"name": "channel", "type": "enum", "domain": ["direct", "broker"], "nullable": False},
+    ],
+    "outputs": [
+        {"name": "payable_premium_minor", "type": "money_minor", "required": True},
+    ],
+    "steps": [
+        {"step_id": "s_in_age", "type": "input", "label": "Driver age",
+         "input_name": "driver_age", "on_missing": "error", "produces": "driver_age"},
+        {"step_id": "s_in_eff", "type": "input", "label": "Effective date",
+         "input_name": "effective_date", "on_missing": "error", "produces": "effective_date"},
+        {"step_id": "s_in_channel", "type": "input", "label": "Channel",
+         "input_name": "channel", "on_missing": "error", "produces": "channel"},
+        {"step_id": "s_area", "type": "lookup", "label": "Area",
+         "reference_table_ref": "reference_table:ons-postcode-directory@7",
+         "key_expr": ["channel"], "as_at": "effective_date", "on_miss": "error",
+         "consumes": ["channel", "effective_date"], "produces": "rating_area"},
+        {"step_id": "s_rp", "type": "model_call", "label": "Risk premium",
+         "model_ref": "model:motor-ad-frequency@7", "mode": "exact",
+         "feature_map": {"driver_age": "driver_age", "rating_area": "rating_area"},
+         "consumes": ["driver_age", "rating_area"],
+         "produces": ["risk_premium_minor", "peril_risk_premium"]},
+        {"step_id": "s_expense", "type": "table", "label": "Expense",
+         "rate_table_ref": "rate_table:motor-expense@3", "key_expr": ["channel"],
+         "on_miss": "default", "consumes": ["channel"], "produces": "expense_factor"},
+        {"step_id": "s_office", "type": "expression", "label": "Office premium",
+         "expr": "risk_premium_minor * expense_factor", "result_type": "money_minor",
+         "consumes": ["risk_premium_minor", "expense_factor"],
+         "produces": "office_premium_minor"},
+        {"step_id": "s_minprem", "type": "constraint", "label": "Min premium",
+         "condition": "office_premium_minor >= 100", "on_violation": "clamp",
+         "clamp_bounds": {"min": "100"}, "reason_code": "MIN_PREMIUM_APPLIED",
+         "consumes": ["office_premium_minor"], "produces": "office_premium_minor"},
+        {"step_id": "s_out", "type": "output", "label": "Payable premium",
+         "output_name": "payable_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
+         "consumes": ["office_premium_minor"]},
+    ],
+    "sub_graphs": [],
+}
+
 
 def valid_algorithm() -> dict:
-    """A consistent seven-step graph whose expressions compile against the engine."""
+    """A consistent twelve-step graph whose expressions compile against the engine."""
     return {
         "slug": "motor-gb",
         "version": 14,
@@ -52,9 +99,17 @@ def valid_algorithm() -> dict:
              "condition": "office_premium_minor >= 100", "on_violation": "clamp",
              "clamp_bounds": {"min": "100"}, "reason_code": "MIN_PREMIUM_APPLIED",
              "consumes": ["office_premium_minor"], "produces": "office_premium_minor"},
+            # The clamped name is the source of the last rung before `constraints`
+            # (`office_premium`), and the payable reads a later name: a placeable clamp.
+            {"step_id": "s_out_office", "type": "output", "label": "Office premium",
+             "output_name": "office_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
+             "consumes": ["office_premium_minor"]},
+            {"step_id": "s_payable", "type": "expression", "label": "Payable premium value",
+             "expr": "office_premium_minor * 1", "result_type": "money_minor",
+             "consumes": ["office_premium_minor"], "produces": "payable_value"},
             {"step_id": "s_out", "type": "output", "label": "Payable premium",
              "output_name": "payable_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
-             "consumes": ["office_premium_minor"]},
+             "consumes": ["payable_value"]},
         ],
         "sub_graphs": [],
     }
@@ -270,3 +325,96 @@ def test_the_guard_markers_hold_no_dead_or_masking_entry() -> None:
 
     for dead in ("?:", "coalesce(", "??", "!= null"):
         assert dead not in _GUARD_MARKERS
+
+
+# --- WK-1250 Slice 1: FR-227 over steps and declared outputs, and the fragment entry point ---
+
+
+@pytest.mark.req("FR-227")
+def test_an_algorithm_type_mismatch_reports_the_output_step() -> None:
+    """The refactor keeps the algorithm path's issue: the output step's id, `outputs`."""
+    data = valid_algorithm()
+    data["input_contract"].append({"name": "customer_name", "type": "string", "nullable": False})
+    data["outputs"].append({"name": "name_out", "type": "money_minor", "required": False})
+    data["steps"].append({
+        "step_id": "s_in_name", "type": "input", "label": "Name",
+        "input_name": "customer_name", "on_missing": "error", "produces": "customer_name",
+    })
+    data["steps"].append({
+        "step_id": "s_name_out", "type": "output", "label": "Name out",
+        "output_name": "name_out", "rounding": {"mode": "half_even", "dp": 0},
+        "consumes": "customer_name",
+    })
+    issues = _issues(RatingAlgorithm.model_validate(data), "RATING_TYPE_MISMATCH")
+    assert [(i.step_id, i.field) for i in issues] == [("s_name_out", "outputs")]
+
+
+def _fragment(output_type: str, result_type: str = "string") -> dict:
+    return {
+        "inputs": [{"name": "ncd_years", "type": "int"}],
+        "outputs": [{"name": "ncd_factor", "type": output_type, "required": True}],
+        "steps": [
+            {"step_id": "s_first", "type": "expression", "label": "first", "expr": "ncd_years",
+             "result_type": "int", "consumes": "ncd_years", "produces": "mid"},
+            {"step_id": "s_last", "type": "expression", "label": "last", "expr": "mid",
+             "result_type": result_type, "consumes": "mid", "produces": "ncd_factor"},
+        ],
+        "change_note": "n",
+    }
+
+
+def _fragment_issues(payload: dict) -> list:
+    from model_schema.sub_graphs import SubGraphBody
+    from pricing_core.rating.compile import fragment_output_type_issues
+
+    body = SubGraphBody.model_validate(payload)
+    return fragment_output_type_issues(body.steps, body.inputs, body.outputs)
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-227")
+def test_a_fragment_output_port_type_mismatch_names_the_producing_step() -> None:
+    issues = _fragment_issues(_fragment("money_minor"))
+    assert [(i.code, i.step_id, i.field) for i in issues] == [
+        ("RATING_TYPE_MISMATCH", "s_last", "outputs")
+    ]
+    assert "'ncd_factor'" in issues[0].message
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-227")
+def test_a_compatible_fragment_output_port_raises_no_issue() -> None:
+    assert _fragment_issues(_fragment("string")) == []
+    assert _fragment_issues(_fragment("money_minor", result_type="decimal")) == []
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-227")
+def test_an_input_port_type_is_a_known_producer_type() -> None:
+    payload = _fragment("money_minor")
+    payload["inputs"] = [{"name": "ncd_factor", "type": "string"}]
+    payload["steps"] = [
+        {"step_id": "s_clamp", "type": "constraint", "label": "cap", "condition": "ncd_factor > 0",
+         "on_violation": "clamp", "clamp_bounds": {"min": "0"}, "reason_code": "R",
+         "consumes": "ncd_factor", "produces": "ncd_factor"}
+    ]
+    issues = _fragment_issues(payload)
+    assert [(i.code, i.step_id) for i in issues] == [("RATING_TYPE_MISMATCH", "s_clamp")]
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-227")
+def test_a_table_produced_output_port_is_not_checked_at_create() -> None:
+    payload = _fragment("money_minor")
+    payload["steps"] = [
+        {"step_id": "s_tab", "type": "table", "label": "t", "rate_table_ref": "rate_table:ncd@2",
+         "key_expr": ["ncd_years"], "consumes": "ncd_years", "produces": "ncd_factor"}
+    ]
+    assert _fragment_issues(payload) == []
+
+
+@pytest.mark.req("FR-240")
+def test_the_pre_edit_valid_algorithm_is_refused_by_validate_algorithm() -> None:
+    """SL-1345: the old shape (a clamp on the payable's own source) stays refused."""
+    issues = validate_algorithm(RatingAlgorithm.model_validate(PRE_EDIT_VALID_ALGORITHM))
+    assert [i.code for i in issues] == ["LADDER_CLAMP_UNPLACEABLE"], issues

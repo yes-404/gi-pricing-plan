@@ -17,7 +17,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any, NoReturn, Protocol
@@ -26,19 +26,24 @@ import zen
 from pydantic import BaseModel, ConfigDict
 
 from model_schema.rating import (
+    AlgorithmOutput,
     Pins,
     RatingAlgorithm,
+    RatingConstraintStep,
     RatingExpressionStep,
     RatingInputStep,
     RatingLookupStep,
     RatingModelCallStep,
     RatingOutputStep,
+    RatingStep,
     RatingTableStep,
     RatingVersion,
     check_model_reference_mode,
 )
 from model_schema.refs import ArtifactRef
+from model_schema.sub_graphs import SubGraphInputPort
 from pricing_core.rating.authored import authored_expression_fields
+from pricing_core.rating.ladder import RUNG_ORDER, output_steps_by_name, rung_output_name
 from pricing_core.rating.vocabulary import check_allow_list
 from pricing_core.safe_error import CodedError
 
@@ -87,26 +92,33 @@ def assert_integer_minor_round_trip() -> None:
         )
 
 
-def _producer_types(algo: RatingAlgorithm) -> dict[str, str]:
+def producer_types(
+    steps: Sequence[RatingStep], typed_names: Mapping[str, str]
+) -> dict[str, str]:
     """The statically-known result type of each produced value.
 
-    `input` steps take their type from the input contract; `expression` steps from
-    their declared `result_type`. Lookup/table/model_call outputs depend on the pinned
-    artifacts, which save-time validation cannot resolve — those stay unknown here and
-    are checked at bundle time (W9-3).
+    `input` steps take their type from `typed_names`, keyed by the input's name (an
+    algorithm's input contract); `expression` steps from their declared `result_type`.
+    Lookup/table/model_call outputs depend on the pinned artifacts, which save-time
+    validation cannot resolve — those stay unknown here and are checked at bundle time
+    (W9-3). A later producer of a name overrides an earlier one.
     """
     types: dict[str, str] = {}
-    input_by_name = {field.name: field for field in algo.input_contract}
-    for step in algo.steps:
+    for step in steps:
         if isinstance(step, RatingInputStep):
-            contract = input_by_name.get(step.input_name)
-            if contract is not None:
+            declared = typed_names.get(step.input_name)
+            if declared is not None:
                 for name in _as_list(step.produces):
-                    types[name] = contract.type.value
+                    types[name] = declared
         elif isinstance(step, RatingExpressionStep):
             for name in _as_list(step.produces):
                 types[name] = step.result_type
     return types
+
+
+def _producer_types(algo: RatingAlgorithm) -> dict[str, str]:
+    """`producer_types` over an algorithm: its input contract types its input steps."""
+    return producer_types(algo.steps, {f.name: f.type.value for f in algo.input_contract})
 
 
 def _compatible(producer: str, declared: str) -> bool:
@@ -117,11 +129,36 @@ def _compatible(producer: str, declared: str) -> bool:
     return producer in _NUMERIC and declared in _NUMERIC
 
 
+def output_type_issues(
+    types: Mapping[str, str], outputs: Sequence[tuple[str, str, str, str]]
+) -> list[ValidationIssue]:
+    """FR-227: each declared output's type is compatible with its producing step's.
+
+    Each output is `(step_id to report, output name, declared type, name that feeds it)`.
+    An output whose feeding name has no statically-known type is not checked here.
+    """
+    issues: list[ValidationIssue] = []
+    for step_id, output_name, declared_type, fed_by in outputs:
+        producer_type = types.get(fed_by)
+        if producer_type is not None and not _compatible(producer_type, declared_type):
+            issues.append(
+                ValidationIssue(
+                    code="RATING_TYPE_MISMATCH",
+                    message=(
+                        f"output {output_name!r} is declared {declared_type!r} but "
+                        f"its producing step yields {producer_type!r} (FR-227)"
+                    ),
+                    step_id=step_id,
+                    field="outputs",
+                )
+            )
+    return issues
+
+
 def _check_result_types(algo: RatingAlgorithm) -> list[ValidationIssue]:
     """FR-227: every declared output's type is compatible with its producing step."""
-    issues: list[ValidationIssue] = []
-    types = _producer_types(algo)
     output_by_name = {output.name: output for output in algo.outputs}
+    outputs: list[tuple[str, str, str, str]] = []
     for step in algo.steps:
         if not isinstance(step, RatingOutputStep):
             continue
@@ -129,17 +166,92 @@ def _check_result_types(algo: RatingAlgorithm) -> list[ValidationIssue]:
         consumed = _as_list(step.consumes)
         if declared is None or not consumed:
             continue
-        producer_type = types.get(consumed[0])
-        if producer_type is not None and not _compatible(producer_type, declared.type):
+        outputs.append((step.step_id, step.output_name, declared.type, consumed[0]))
+    return output_type_issues(_producer_types(algo), outputs)
+
+
+def fragment_output_type_issues(
+    steps: Sequence[RatingStep],
+    input_ports: Sequence[SubGraphInputPort],
+    output_ports: Sequence[AlgorithmOutput],
+) -> list[ValidationIssue]:
+    """FR-227 at create for a Sub-graph: each output port against its producing step.
+
+    Known types are the input ports' declared types, overridden by `expression` steps'
+    `result_type` (the rule of `producer_types`). The step reported is the one whose type
+    was compared: the last `expression` step producing the port, else the last step
+    producing it. An output port no step produces is skipped: the shape refuses it.
+    """
+    types = {port.name: port.type for port in input_ports}
+    types.update(producer_types(steps, {}))
+    typed_by: dict[str, str] = {}
+    produced_by: dict[str, str] = {}
+    for step in steps:
+        for name in _as_list(step.produces):
+            produced_by[name] = step.step_id
+            if isinstance(step, RatingExpressionStep):
+                typed_by[name] = step.step_id
+    outputs = [
+        (typed_by.get(port.name) or produced_by[port.name], port.name, port.type, port.name)
+        for port in output_ports
+        if port.name in produced_by
+    ]
+    return output_type_issues(types, outputs)
+
+
+def _check_clamp_placement(algo: RatingAlgorithm) -> list[ValidationIssue]:
+    """FR-240 (`RL-1329` §2 step 5, W-c): a clamp the Premium Ladder cannot place is refused.
+
+    A clamp overwrites the name it produces in place, and the ladder states it once, on the
+    `constraints` rung, after `optimisation_adjustment` (FR-247). That is truthful only when
+    the clamp's produced name is the source of the **last rung present before
+    `constraints`**, and the clamp produces the name it consumes. A clamp on the source of
+    any other rung (an earlier rung whose later rungs consume the clamped value, or a rung
+    after `constraints`) cannot be stated at the `constraints` position without breaking the
+    chain; nor can a clamp that produces a rung's source under a different name from the one
+    it consumes. Both are decidable from the algorithm alone.
+
+    Reads only `on_violation`, `consumes` and `produces` of a constraint step and the output
+    steps' `output_name` and `consumes`, never `expr`, `condition`, `clamp_bounds` or
+    `key_expr` (#967's closure 3c (i)).
+    """
+    output_steps = output_steps_by_name(algo)
+    sources: dict[str, str] = {}
+    for rung in RUNG_ORDER:
+        output_step = output_steps.get(rung_output_name(rung))
+        consumed = _as_list(output_step.consumes) if output_step is not None else []
+        if rung != "constraints" and consumed:
+            sources[rung] = str(consumed[0])
+    before = [rung for rung in RUNG_ORDER[: RUNG_ORDER.index("constraints")] if rung in sources]
+    placeable = before[-1] if before else None
+    issues: list[ValidationIssue] = []
+    for step in algo.steps:
+        if not (isinstance(step, RatingConstraintStep) and step.on_violation == "clamp"):
+            continue
+        produced = [str(name) for name in _as_list(step.produces) if name]
+        if not produced:
+            continue
+        consumed_names = [str(name) for name in _as_list(step.consumes) if name]
+        for rung_name, source in sources.items():
+            if source != produced[0]:
+                continue
+            if rung_name != placeable:
+                reason = (
+                    f"rung {rung_name!r} is not the last rung before constraints ({placeable!r})"
+                )
+            elif not consumed_names or consumed_names[0] != produced[0]:
+                reason = f"it produces {produced[0]!r} but consumes {consumed_names[:1]!r}"
+            else:
+                continue
             issues.append(
                 ValidationIssue(
-                    code="RATING_TYPE_MISMATCH",
+                    code="LADDER_CLAMP_UNPLACEABLE",
                     message=(
-                        f"output {step.output_name!r} is declared {declared.type!r} but "
-                        f"its producing step yields {producer_type!r} (FR-227)"
+                        f"clamp step {step.step_id!r} cannot be placed on the premium "
+                        f"ladder: {reason} (FR-240, FR-247)"
                     ),
                     step_id=step.step_id,
-                    field="outputs",
+                    field="produces",
                 )
             )
     return issues
@@ -247,6 +359,7 @@ STRING_CHECKS: tuple[Callable[[str], tuple[str, str] | None], ...] = (
 ALGORITHM_CHECKS: tuple[Callable[[RatingAlgorithm], list[ValidationIssue]], ...] = (
     _check_result_types,
     _check_input_bound_scale,
+    _check_clamp_placement,
 )
 
 
@@ -542,6 +655,9 @@ __all__ = [
     "bundle_hash",
     "check_step_refs_pinned",
     "compile_bundle",
+    "fragment_output_type_issues",
+    "output_type_issues",
+    "producer_types",
     "to_jdm",
     "validate_algorithm",
 ]

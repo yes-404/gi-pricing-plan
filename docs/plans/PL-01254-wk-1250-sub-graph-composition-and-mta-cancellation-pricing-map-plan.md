@@ -3,7 +3,7 @@ id: PL-1254
 family: plan
 kind: map
 title: WK-1250 — Sub-graph composition and MTA/cancellation pricing (FR-217's inlining and pin, FR-218's authoring half): map plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-09-29
 owner: planner
 tree: f0c3d197f5d89863efc647a2d7c1a6994b74dd63

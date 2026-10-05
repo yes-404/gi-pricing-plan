@@ -2,7 +2,7 @@
 id: LG-1324
 family: ledger
 title: WK-674 Slice 2a — The approval guard (only the decision path writes approved), enforced by the database
-status: active
+status: closed
 created: 2026-09-30
 owner: executor
 tree: 22fe674b4a590c47095c6ba608fe974264581139

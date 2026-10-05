@@ -29,7 +29,7 @@ from app.auth.api_keys import generate_key
 from app.db.models import ApiKeyRow, ServiceAccountRow
 from app.db.session import Database
 from app.errors import PlatformError
-from app.platform import audit
+from app.platform import audit, environments
 from model_schema import JobSource
 from model_schema import Permission as Perm
 
@@ -125,6 +125,19 @@ def _view(account: ServiceAccountRow, keys: list[ApiKeyRow]) -> ServiceAccountVi
     )
 
 
+async def _check_environments(session: AsyncSession, requested: list[str]) -> None:
+    """Every granted environment must be an existing, non-retired Environment slug.
+
+    `RL-1301` A.6: a key minted from a name no Environment has (`prd` for `prod`) would be a
+    credential for a target that does not exist, and the check is made at creation and at
+    rotation, the two places a key is minted from `environments[0]`.
+    """
+    for slug in requested:
+        await environments.require_existing(
+            session, slug, subject="A Service Account's `environments`"
+        )
+
+
 def _check_permissions(requested: list[str]) -> None:
     unknown = set(requested) - ALLOWED_PERMISSIONS
     if unknown:
@@ -150,6 +163,7 @@ async def create_service_account(
     _check_permissions(body.permissions)
 
     async with database.unit_of_work() as session:
+        await _check_environments(session, body.environments)
         existing = (
             await session.execute(
                 select(ServiceAccountRow).where(
@@ -228,6 +242,7 @@ async def rotate_key(
     """
     async with database.unit_of_work() as session:
         account = await _load_scoped(session, account_id, caller)
+        await _check_environments(session, list(account.environments))
 
         current = (
             await session.execute(

@@ -180,7 +180,7 @@ The substrate every other module stands on:
 |---|---|
 | **FR-450** | The API implements `00` §5 exactly: `/api/v1`, cursor pagination, RFC 9457 problem responses with stable `code`s, `If-Match` optimistic concurrency, and `Idempotency-Key` support. |
 | **FR-451** | OpenAPI 3.1 is generated from the Pydantic models (ADR-704) and published at `/openapi.json`; the committed copy in `docs/contracts/openapi/` is regenerated in CI and a drift fails the build. |
-| **FR-452** | Rate limiting is applied per Principal and per environment, with scoring limits configured separately from management-API limits, and `429` responses carrying `Retry-After`. |
+| **FR-452** | Rate limiting is applied per Principal and per environment, with scoring limits configured separately from management-API limits, and `429` responses carrying `Retry-After`. **Amended 2026-09-30 (`RL-1347`, PL-1342 DP-S3-2): the scoring limit.** `POST /api/v1/score` counts requests in a shared Redis counter, one per (Environment, Principal) per fixed one-second window. The Environment is the one the presented key was verified for, and it is empty for a bearer caller. The counter is shared by every replica, so an in-process count does not meet this requirement (register F48). The limit is the Service Account's own `rate_limit_rps` when it is set. Otherwise it is the Setting `scoring.default_client_rate_limit_rps`, resolved by §3.8 with the caller's Environment and declared for workspace or Environment scope (FR-446; FR-431). That Setting is unset by default. With no limit, the request is admitted without a counter call. Over the limit, the request is refused with `429 RATE_LIMITED` and `Retry-After: 1`, after authentication and authorisation and before any scoring. If the counter is unavailable, the request is admitted (fail open), logged, and counted on `gip_rate_limit_unenforced_total` by Environment. `/score/batch` and `/score/compare` are not counted. The management-API limit is not delivered by this clause and has no owner yet. `RL-1347` lists it for the lead. |
 | **FR-453** | Webhooks (alert routing, deployment notifications) are signed with an HMAC over the payload, delivered with retries and exponential backoff, and their delivery status is observable. **Noted 2026-09-29 (`RL-1232` DP-4, the maintainer's answer Q848-1):** these webhooks are the channel `03` FR-272's deployment notification uses. No Work owns the deployment-notification limb yet; §10's `OQ-1233` asks which. *(Amended 2026-09-29, `RL-1252`: `OQ-1233` is decided (b). Both limbs, alert routing and deployment notifications, are WK-688's, in Phase 4. The sentence above saying no Work owns the deployment-notification limb is superseded.)* |
 
 ---
@@ -258,6 +258,12 @@ Failure shape:
 }
 ```
 
+> **Environment: three dated clarifications, 2026-10-03 (WK-674 Slice 2, `PL-1392`).** The example above is not rewritten.
+>
+> - **`live_deployments` is derived.** It is read from the Deployment rows of `03` §4.12 and is never stored a second time. The Deployment's shape is declared once, in `03`.
+> - **`slug` beside `name`** (`RL-1301` A.6). Every Environment has an immutable `slug` (the grammar of a reference slug; the seeds are `dev`, `uat` and `prod`) and a mutable display `name`. The slug is what the Approval Policy's `environment`, an approval request's `environment`, every `{env}` path parameter and every Environment reference name, and FR-428's rename changes the `name` only. A change of slug is refused, and a slug is never reissued, so a retired Environment keeps its row and its slug. Environments are deployment-wide, not per workspace (ADR-710).
+> - **`settings` is not in this slice's shape.** The `settings` object lands with WK-674 Slice 3 (`OQ-1235`, decided by `RL-1311`). `requires_prior_environment` is the predecessor that FR-429's predicate reads; the seeds carry `null`, `dev` and `uat`.
+
 ### 4.3 `ServiceAccount` / API key
 
 ```json
@@ -305,6 +311,8 @@ The key value itself appears exactly once, in the creation response (FR-389).
 | `GET` | `/api/v1/jobs/{id}/events` | SSE stream of progress updates |
 | `GET`/`POST` | `/api/v1/environments` | List / create environments |
 | `PUT` | `/api/v1/environments/{name}/settings` | Update environment settings (audited) |
+| `PATCH` | `/api/v1/environments/{slug}` | Change an environment's display name or description; the slug is immutable (`admin:manage_environments`) |
+| `POST` | `/api/v1/environments/{slug}/retire` | Retire an environment; refused 409 `VALIDATION_FAILED` while a Deployment is live in it, a `deployment` approval policy entry names it (for a workspace with no stored policy, `DEFAULT_POLICY`'s `prod` entry), or an unrevoked Service Account key names it; the row and its slug are kept *(amended 2026-10-04, WK-674 Slice 2: the unrevoked-key refusal named)* |
 | `POST` | `/api/v1/service-accounts` | Create a service account + key (key shown once) |
 | `POST` | `/api/v1/service-accounts/{id}/rotate` | Rotate with an overlap window |
 | `DELETE` | `/api/v1/service-accounts/{id}/keys/{prefix}` | Revoke |
@@ -453,7 +461,7 @@ the `ProgressCallback` protocol, defined in `pricing-core` and *implemented* her
 | **Pydantic v2** | Settings validation, request/response models, OpenAPI generation | `pydantic-settings` for typed configuration with sources |
 | **SQLAlchemy 2.x + Alembic** | Metadata persistence, migrations | Forward-compatible migrations for rolling deploys (FR-435); reversibility discipline |
 | **PostgreSQL 16** | All metadata, JSONB artifacts, audit, jobs | Connection pooling for async workloads, partitioning, PITR configuration |
-| **Celery + Redis** | Job execution, queue routing, cancellation | Queue routing by kind, revocation semantics, worker memory limits, result backends, and the **transactional outbox** pattern that FR-406 requires because Celery cannot enlist in the database transaction |
+| **Celery + Redis** | Job execution, queue routing, cancellation; the shared scoring rate-limit counter (FR-452, added 2026-09-30, `RL-1347`) | Queue routing by kind, revocation semantics, worker memory limits, result backends, and the **transactional outbox** pattern that FR-406 requires because Celery cannot enlist in the database transaction |
 | **MinIO / S3** | Content-addressed blobs, presigned multipart | Presigned URL security, lifecycle rules, versioning, reference-counted GC |
 | **OIDC (Keycloak or similar)** | User authentication | Authorisation code + PKCE for an SPA, token refresh, claim mapping, running a local provider in compose |
 | **OpenTelemetry** | Distributed tracing across API → queue → worker | Context propagation through Celery, span attributes, sampling |
