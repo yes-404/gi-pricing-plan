@@ -161,7 +161,11 @@ Insufficient in this file, corrected by procedure rather than brief (CLAUDE.md �
    approves; the merge stays the lead's (`CLAUDE.md` §12). An auditor's CLEAN is evidence for
    the ACK request, not an ACK. Teammates never merge, and never post an ACK or a status on
    GitHub. The id mint queue is the lead's: a PR mints at its turn, immediately before its ACK
-   request.
+   request. **After each mint commit, sweep each minted working id (space form) over the
+   living docs (specs, roadmap, open-questions, the findings register, INDEX, the docs
+   READMEs) and open PRs; re-point live hits in the same mint PR, or list each with its
+   follow-up PR; frozen records stay as written** (ruled 2026-10-05 by the maintainer (by
+   delegation), the ID audit of 14:26:28 BST, item 3, in `to-lead.md`).
 
 5. **20-minute progress line with three counters.** A progress line without concrete state 
    — "executors are working" vs. "E501 remaining = N, tests failing = M, audit-docs FAILED 
