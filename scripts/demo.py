@@ -233,6 +233,14 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
     # Read it here — after the seed, and in `--skip-seed` runs as the proof the
     # workspace this run reuses was seeded at all.
     record = read_seed_record()
+    # The seed, or a `--skip-seed` run's earlier seed, must have left rule sets every
+    # member of which is approved: a workspace reset by the FD-1356 data reset has none that
+    # run (RL-1407 condition 2). Read-only, and it needs the migrated database.
+    run(
+        ["uv", "run", "python", "scripts/check-rule-sets-runnable.py", record["workspace_id"]],
+        step="pre-flight: the demo workspace's rule sets are runnable",
+        env=env,
+    )
     api = [
         "uv", "run", "uvicorn", "app.main:create_app", "--factory",
         "--app-dir", "backend/src", "--port", str(API_PORT),

@@ -107,3 +107,66 @@ def test_the_dictionary_covers_every_column_the_seed_produces() -> None:
     assert set(RENAMES.values()) <= described
     for column, entry in DICTIONARY.items():
         assert entry["description"], f"{column} has an empty description"
+
+
+ARFF_DIR = Path(__file__).parent / "data"
+
+
+@pytest.mark.req("FR-398")
+def test_the_seed_reruns_against_a_seeded_database(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """FD 9717: the realm user's `(issuer, subject)` is unique, and the seed used to mint
+    a fresh analyst id on every run, so a second seed died on `uq_users_issuer_subject`.
+    The second run must reuse the first run's user, and `last-seed.json` must name it.
+
+    Needs the fetched ARFF files and the local Postgres/MinIO stack, so CI skips it. Runs
+    on a scratch database of its own and a scratch data directory, never the demo's."""
+    import asyncio
+    import json
+    import os
+    import subprocess
+    from uuid import uuid4
+
+    import seed
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    if not (ARFF_DIR / "freMTPL2freq.arff").exists():
+        pytest.skip("run examples/fremtpl2/fetch.py first")
+
+    name = f"scratch_sl1409c_{uuid4().hex[:8]}"
+    admin = "postgresql+asyncpg://gipricing:gipricing@localhost:5432/postgres"
+
+    async def admin_sql(statement: str) -> None:
+        engine = create_async_engine(admin, isolation_level="AUTOCOMMIT")
+        try:
+            async with engine.connect() as connection:
+                await connection.execute(text(statement))
+        finally:
+            await engine.dispose()
+
+    asyncio.run(admin_sql(f'CREATE DATABASE "{name}"'))
+    try:
+        url = f"postgresql+asyncpg://gipricing:gipricing@localhost:5432/{name}"
+        monkeypatch.setenv("GIP_DATABASE_URL", url)
+        subprocess.run(
+            ["uv", "run", "alembic", "upgrade", "head"],
+            cwd=Path(__file__).resolve().parents[2],
+            env=dict(os.environ),
+            check=True,
+            capture_output=True,
+        )
+        for arff in ARFF_DIR.glob("*.arff"):
+            (tmp_path / arff.name).symlink_to(arff.resolve())
+        monkeypatch.setattr(seed, "DATA_DIR", tmp_path)
+
+        assert asyncio.run(seed.run(2000)) == 0
+        first = json.loads((tmp_path / "last-seed.json").read_text(encoding="utf-8"))
+        assert asyncio.run(seed.run(2000)) == 0
+        second = json.loads((tmp_path / "last-seed.json").read_text(encoding="utf-8"))
+
+        assert second["workspace_id"] != first["workspace_id"]
+        assert second["analyst_id"] == first["analyst_id"]
+    finally:
+        asyncio.run(admin_sql(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
