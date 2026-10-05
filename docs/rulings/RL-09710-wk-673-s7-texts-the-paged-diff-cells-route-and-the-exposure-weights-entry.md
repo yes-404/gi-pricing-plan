@@ -149,8 +149,8 @@ blank line between them. Insert
 > `abs_change`, `current_value − baseline_value`, null unless both are present;
 > `rel_change_pct`, `(current_value − baseline_value) / baseline_value × 100`, null unless
 > both are present and the baseline is not zero; and `weight`, a decimal string: the
-> cell's Σ exposure as FR-231 states it, `"0"` for a cell of the current version that no
-> portfolio row maps to, and null when no portfolio is named or the cell is `removed`
+> cell's Σ exposure as FR-231 states it, `"0"` for a cell of the current version whose Σ is
+> 0, one that no portfolio row maps to included, and null when no portfolio is named or the cell is `removed`
 > (rows map only to cells of the current version). The set is exactly the cells
 > `changed_cells` counts, added and removed cells included. The order is ascending by key
 > tuple, the keys taken in declaration order and each value compared as its stored string
@@ -179,8 +179,51 @@ closing ` |`. Nothing is struck.
 **Clarified <Slice 7 date> (`RL-9710`): the weight behind each cell (FD-1358).** Each changed cell's baseline and current value, absolute and relative change and exposure weight are served by `GET /api/v1/rate-tables/{slug}@{version}/diff/cells` (§5.1), one cursor page at a time in §4.2's key order. Every changed cell is served: a page bounds one response, not the cells. `RateTableDiff`, on the diff route, stays the aggregate summary of the same cells.
 ```
 
-**T5 — `03` §5.2, `exposure_weights` (DP-B).** *Pending planner-1391's proposed text; this
-item is completed, and the adoption or amendment stated, before the PR leaves draft.*
+**T5 — `03` §5.2, `exposure_weights` (DP-B).** Proposed by planner-1391 by message to this
+role, 2026-10-05, and **adopted with four amendments**, each listed after the text. Two parts.
+
+*Part 1, the signature.* Placement: inside the §5.2 code block, inserted immediately before
+the block's closing fence (`03:1120` at `caa4e411`), after T3's `diff_cells` lines, with one
+blank line before it. Insert
+
+```text
+
+# pricing_core/rate_tables/weights.py                # added <Slice 7 date> (WK-673 Slice 7, RL-9710, RL-1361)
+def exposure_weights(portfolio: pl.LazyFrame, keys: Sequence[RateTableKey], cells: Cells, *,
+                     factors: Mapping[str, Sequence[Factor]],
+                     bandings: Mapping[UUID, Banding],
+                     groupings: Mapping[UUID, Grouping]) -> PortfolioWeights
+```
+
+*Part 2, the prose.* Placement: a new paragraph inserted after the paragraph that begins
+"*`analysis.py`'s public surface" (`03:1124` at `caa4e411`), whose last bytes are
+`§4.6 states their rules.*` (`grep -cF` gives 1). One blank line separates them. The paragraph
+is one physical line:
+
+```text
+*`weights.py`'s public surface (added <Slice 7 date>, WK-673 Slice 7, `RL-9710`, on `RL-1361` items 2 to 4).* `exposure_weights` computes FR-231's exposure weight per cell of a rate table version. `portfolio` is `read_portfolio`'s output, so §4.8's frame refusals have already run. `keys` and `cells` are the **current** version's. `factors` maps each `factor_ref` in `keys`, as its `factor:<slug>@<version>` string, to that Factor followed by any interaction operands. `bandings` and `groupings` hold, by id, every Banding a `banding_ref` names and every Banding or Grouping those Factors pin. The platform loads all three, because this function takes no database (ADR-703). Each key is resolved by exactly one branch of `RL-1361` item 2: `resolve_factors` for a `factor_ref`, `apply_banding` for a `banding_ref`, and the same-named column otherwise. The comparison with each cell's stored key string is made in the key's declared type. `PortfolioWeights` is a frozen dataclass with three fields. `weights` is a `dict[KeyTuple, Decimal]` mapping each cell's stored key tuple to Σ `exposure_years` over the rows that map to it, with any cell whose Σ is 0 omitted; it is a `Weights` and is passed unchanged as `weights` to `diff_vs_previous`, `diff_vs_seed` and `diff_cells`, so the aggregate mean and the per-cell weights come from one map. `portfolio_exposure` is Σ `exposure_years` over every row, and `matched_exposure` is that sum over the rows that map to a cell; these are §4.2's two coverage figures. `WeightJoinError` is a `ValueError` with `code = "VALIDATION_FAILED"`. It is raised for an absent column, a non-numeric banded column, a `FactorResolutionError`, and a portfolio whose rows map to no cell. Its own message names the key, the column or the ref, never a value; a `FactorResolutionError`'s message is carried as it is, with its count and example value (`RL-1361` item 3). The platform maps it to `VALIDATION_FAILED`.
+```
+
+*The amendments to the proposal:*
+
+1. `RL 9710` → `RL-9710` in both parts: the minted-id placeholder of this record.
+2. "to `diff_vs_previous` and `diff_vs_seed`" → "to `diff_vs_previous`, `diff_vs_seed` and
+   `diff_cells`, so the aggregate mean and the per-cell weights come from one map". The
+   proposal's covering message said this; the text did not.
+3. "and its message names the key, the column or the ref, never a value" with
+   "(its message kept)" on `FactorResolutionError` contradicted itself: `RL-1361` item 3
+   says that message "gives the count and the example value". The text now separates the
+   two.
+4. None to the types' home. `PortfolioWeights` and `WeightJoinError` live in
+   `pricing_core/rate_tables/weights.py`, as the proposal assumes: neither crosses the wire,
+   and the coverage figures reach it through `RateTableDiff`. That follows `CLAUDE.md` §2
+   ("nobody hand-writes a shape that already exists in `model-schema`"; these do not), as
+   `PortfolioFrameError` does in `analysis.py`.
+
+*A cell whose Σ is 0* is omitted from `weights`, so `diff_cells` reads it as `"0"` (T2), and
+`_compute_diff` never sees a zero weight from this source. The proposal offered null; T2
+keeps `"0"` so that, with a portfolio named, a cell's weight always says what the portfolio
+holds for it, and null keeps its two meanings only: no portfolio, or a `removed` cell.
 
 ## Correction of `RL-1361` T11's anchor (DP-C)
 
@@ -262,8 +305,12 @@ deliberately broken input.
   and without a portfolio. With `diff_cells` computed apart from `_compute_diff` and one
   zero-baseline rule changed, the test fails.
 - **The weight's three states.** Null with no portfolio; null on a `removed` cell with one;
-  `"0"` on a current cell no row maps to. With a missing weight read as `"0"` everywhere,
-  the test fails.
+  `"0"` on a current cell no row maps to, and on one whose mapped rows all have zero
+  exposure, which is also left out of the mean. With a missing weight read as `"0"`
+  everywhere, the test fails.
+- **One map.** `exposure_weights`' `weights` is the map both `diff_vs_*` and `diff_cells`
+  receive. A `FactorResolutionError` reaches the 422's detail with its count and example
+  value; `WeightJoinError`'s own messages carry no value.
 - **Cursor and limit.** A forged cursor and a cursor past the last cell each give 400
   `VALIDATION_FAILED`; `limit=MAX_LIMIT+1` gives 422.
 - **Portfolio refusals before anything else.** Each refusal of T1 is given on a rows table
