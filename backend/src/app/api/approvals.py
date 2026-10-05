@@ -21,7 +21,6 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, status
-from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -54,11 +53,12 @@ from model_schema import (
     ApprovalSubmission,
     ApprovalWithdrawal,
     ArtifactRef,
+    Decide,
     DecisionKind,
     Permission,
 )
 
-__all__ = ["router"]
+__all__ = ["decide_and_carry", "router"]
 
 router = APIRouter(tags=["governance"])
 
@@ -73,13 +73,6 @@ def _database(request: Request) -> Database:
 
 
 DatabaseDep = Annotated[Database, Depends(_database)]
-
-
-class Decide(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    decision: DecisionKind
-    comment: str | None = None
 
 
 async def _detail(database: Database, row: ApprovalRequestRow) -> dict[str, Any]:
@@ -232,16 +225,13 @@ async def decide_request(
     model is flagged rather than finding their approval recorded against nothing.
     """
     async with database.unit_of_work() as session:
-        row = await service.decide(
+        row = await decide_and_carry(
             session,
-            workspace_id=caller.workspace_id,
+            caller=caller,
             request_id=request_id,
-            approver=caller.principal,
             decision=body.decision,
             comment=body.comment,
-            evidence_authors=rating_versions_service.golden_quote_delta_authors,
         )
-        await _carry_to_the_artifact(session, caller=caller, request=row)
         decisions = list(
             (
                 await session.execute(
@@ -252,6 +242,33 @@ async def decide_request(
             ).scalars()
         )
         return service.to_dict(row, decisions)
+
+
+async def decide_and_carry(
+    session: Any,
+    *,
+    caller: Caller,
+    request_id: UUID,
+    decision: DecisionKind,
+    comment: str | None,
+) -> ApprovalRequestRow:
+    """Record the decision and carry it into the artifact, in the caller's transaction.
+
+    The one place a decision becomes an artifact transition: the decide route and the
+    validation-rule approve route (a client of this path, FD-1356, DP-1 (b)) both call it,
+    so a rule is approved by exactly the checks a model is, and by nothing else.
+    """
+    row = await service.decide(
+        session,
+        workspace_id=caller.workspace_id,
+        request_id=request_id,
+        approver=caller.principal,
+        decision=decision,
+        comment=comment,
+        evidence_authors=rating_versions_service.golden_quote_delta_authors,
+    )
+    await _carry_to_the_artifact(session, caller=caller, request=row)
+    return row
 
 
 async def _is_deployed(session: AsyncSession, workspace_id: UUID, request_id: UUID) -> bool:
@@ -534,6 +551,12 @@ async def _carry_to_the_artifact(
             request=request,
         )
         await metrics_service.apply_approval_decision(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            request=request,
+        )
+        await validation_rules_service.apply_approval_decision(
             session,
             workspace_id=caller.workspace_id,
             actor=caller.principal,
