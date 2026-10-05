@@ -7,7 +7,7 @@ created: 2026-10-05            # working id; the mint date will replace this (ch
 owner: auditor
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc
 corrected_by: []
-relates: [WK-1178, FR-227, FR-245, FR-212]
+relates: [WK-673, FR-227, FR-245, FR-212]
 ---
 
 # FD-9699 — the code `03` §5.1 publishes for a float is never produced
@@ -17,7 +17,7 @@ relates: [WK-1178, FR-227, FR-245, FR-212]
 
 ## Finding
 
-**Severity LOW, ruled by the maintainer (by delegation) in the entry headed *"2026-10-05 13:20:26 BST — DECISIONS 22–27; severity signals for the four gap findings"* (`to-lead.md`, a local channel file, so cited by its header): "as proposed". Owner: proposed: WK-1178 (provisional); ruled by the maintainer (by delegation) at the ACK.** The refusal
+**Severity LOW, ruled by the maintainer (by delegation) in the entry headed *"2026-10-05 13:20:26 BST — DECISIONS 22–27; severity signals for the four gap findings"* (`to-lead.md`, a local channel file, so cited by its header): "as proposed". Owner WK-673, ruled by the maintainer (by delegation) in the entry headed *"2026-10-05 15:19:09 BST — All four batches ACK-ready: noted; FD 9699 owner = WK-673; FD 9645 MEDIUM confirmed; the #1149 body incident; slot priorities"* (`to-lead.md`): "owner WK-673, not WK-1178. FR-227 (03 :113) and FR-245 (03 :147) are 03's, and the code is on 03's owned list (03 :929)."** The refusal
 happens, which is why the severity is low: a float result type never reaches a rating version. What is wrong is the
 code. `MONETARY_FLOAT_REFUSED` is in `RATING_ERROR_CODES` (`backend/src/app/errors.py:310`) and is listed among
 `03`'s error codes (`docs/specs/03-rating-engine.md:929`), and nothing raises it. A client that handles the
@@ -80,7 +80,7 @@ The HTTP route was not run: the per-worktree test database does not exist here. 
 
 ## Disposition
 
-Open. Filed by the auditor, 2026-10-05; severity and owner are proposals, and the verdict is the lead's.
+Open. Filed by the auditor, 2026-10-05; severity and owner are ruled (above); the verdict is the lead's.
 
 Two ways to close it, and choosing one is the spec's: raise the code (a typed signal like `GraphCycleError`, mapped in
 `graph_validation_error`, with a red-first test), or remove it from `RATING_ERROR_CODES` and `03:929` and say
