@@ -88,8 +88,15 @@ reachable by links and leaves `reachability.test.ts`'s exception list.
 
 ## Status
 
-`draft`. One decision point is open and blocks activation (DP-S13-1). The plan stays
+`draft`. DP-S13-1 is decided, (a′), in RL 9543 (working id). The plan stays
 `draft` until its **Activation needs** are met in a separate activation PR.
+
+*Dated note, 2026-10-05 (written 18:40:25 BST, pre-mint): P-texts of RL 9543 (working id)
+applied 2026-10-05. RL 9543 (working id; #1198 at `0e872448d7dde4d652ae15bafa097983909441bc`), §"The plan texts" lines 249–270, gives P11–P14 for this plan; each
+is applied byte for byte and nothing else changed. Counts (Python `str.count` over this file):
+every find string 1 before and 0 after, every new text 0 before and 1 after — P11 (Status),
+P12 (Acceptance 5, two finds), P13 (test case 5), P14 (`syncStreams`). DP-S13-1 is (a′), RL
+9543 item 9: at most two streams, none while the document is hidden.*
 
 ### Activation needs, in order
 
@@ -126,8 +133,8 @@ red output. A matching failure count with a different cause is a plan defect, no
    `<progress>` whose accessible text names the fraction and the stage (FR-400); a `stalled`
    Job shows the flag text "Stalled" (NFR-528); changing the status or kind filter re-reads
    page one with that filter; **Load more** passes `next_cursor` and appends.
-5. The same file shows the live behaviour DP-S13-1 rules. Under recommendation (a): at most
-   four streams are open at once, for the newest non-terminal rows; a `progress` event updates
+5. The same file shows the live behaviour DP-S13-1 rules, (a′) (RL 9543 item 9): at most
+   two streams are open at once, for the newest non-terminal rows, and none while the document is hidden (hidden aborts every stream; visible re-reads page one and re-opens them); a `progress` event updates
    that row only; a `done` event re-reads the current filter's first page; every stream's
    signal is aborted on unmount.
 6. The same file shows a succeeded `model.backtest` Job with `result.ref` `backtest:<id>`
@@ -541,7 +548,7 @@ describe("the jobs filter vocabularies", () => {
   2. `stalled: true` renders `Stalled` in that row;
   3. selecting status `failed` calls `listJobs` with `{ status: "failed" }` and no cursor;
   4. **Load more** calls `listJobs` with the page's `next_cursor` and the rows grow;
-  5. six running rows open exactly four `streamJobEvents` calls, for the four newest ids;
+  5. six running rows open exactly two `streamJobEvents` calls, for the two newest ids; a `visibilitychange` to hidden aborts both, and back to visible re-reads page one and re-opens two;
   6. a `progress` event for row 2 changes row 2's bar and no other row's;
   7. a `done` event calls `listJobs` again with the current filter and no cursor;
   8. unmount aborts every signal passed to `streamJobEvents`;
@@ -560,7 +567,7 @@ describe("the jobs filter vocabularies", () => {
   `type BacktestLink = { slug: string; backtestId: string } | { reason: string }`.
   - `load(reset)`: `listJobs({ ...filter, cursor: reset ? undefined : nextCursor })`; replace or
     append; then `syncStreams()` and `resolveBacktests()`.
-  - `syncStreams()` (DP-S13-1 (a)): the four newest rows whose status is not in `TERMINAL`
+  - `syncStreams()` (DP-S13-1 (a′), RL 9543): while `document.visibilityState` is `visible`, the two newest rows whose status is not in `TERMINAL`
     keep or get a stream; every other stream is aborted and removed. Each stream's loop applies
     a `progress` event to its row (`status`, `progress`, `trace_id`; `stalled` set `false` when
     `progress` changed), and on `done` applies it, then calls `load(true)`.
