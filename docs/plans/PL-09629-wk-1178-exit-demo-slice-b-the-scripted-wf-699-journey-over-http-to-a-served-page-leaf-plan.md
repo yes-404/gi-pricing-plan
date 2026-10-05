@@ -150,7 +150,10 @@ finding); FD 9619 noted"*, item D3 and the entry's closing line, verbatim:
 
 The entry is a local channel entry (RFC-777); it is quoted so the plan carries it. FR-267 at
 `03-rating-engine.md:198` is the correction this plan already made (§"The dependencies
-`PL-1371` §7 derived"). The `WF-701` A–D point is in Hand-off 3.
+`PL-1371` §7 derived"). The `WF-701` A–D point is in Hand-off 3. **D3's C1′ line is now
+decided.** The maintainer's Option A entry of 2026-10-05 16:43:31 BST makes FD 9995 HIGH and
+puts the peril pin on G2's journey. It is quoted, with what it means for this slice, in §"Does
+G2 pin a Peril Structure?".
 
 ## Status
 
@@ -286,7 +289,7 @@ at `cdaaa573`).
 | B8 | `output` rounding `half_even`, 0 dp | (in the saved algorithm) | |
 | B9 | money × float refused | `MONETARY_FLOAT_REFUSED` is registered (`errors.py:314` at `cdaaa573`) and raised nowhere (unowned gap U2, DP-b2) | DP-b2 |
 | C1 | `POST /rating-versions` declaring the algorithm and every pin | 201; `pins` echo the request | 10 |
-| C1′ | a Peril Structure pin | **not on G2's journey** (§"Does G2 pin a Peril Structure?"): the algorithm has no `model_call`, so FR-237 asks for no Peril Structure pin. The gap itself is FD 9995 (working id, #980; U3, DP-b2); the script prints it as `SKIPPED` with that reason | DP-b2 |
+| C1′ | a Peril Structure pin | **on G2's journey under Option A, built by SL 9594 (A-4), not this slice** (§"Does G2 pin a Peril Structure?"). This slice's algorithm has no `model_call`. The gap is FD 9995 (working id, #980; HIGH, a G2 blocker; U3, DP-b2). The script prints `SKIPPED C1′` naming FD 9995 and SL 9594, and SL 9594 removes that line | DP-b2 |
 | C2 | `POST /rating-versions/{id}/compile` → 202 + `rating.compile` Job | Job `succeeded` | |
 | C3 | compile validates the whole structure | — | 12 |
 | C4 | the version also pins the seed's GBM, which the journey submits but has not approved | Job `failed`, `PIN_NOT_APPROVED` | |
@@ -318,39 +321,47 @@ or ruling (activation needs 2–7 and 10–14; the Deploy row needs only `FD-141
 shape). **5** wait on a DP alone: D9 (skipped, Phase 4), A6, B9 and C1′ (the unowned gaps
 U1–U3, DP-b2) and B7 (DP-b3). E5 and E7 also have Phase 3 halves, skipped under DP-b2.
 
-### Does G2 pin a Peril Structure? **No** (stated for FD 9995's ACK, as D3 asks)
+### Does G2 pin a Peril Structure? **Yes, under Option A**, built by a follow-on slice, not this one
 
-D3: *"If PL 9629 confirms that G2's journey must pin a peril structure, FD 9995 is a G2
-blocker … If the journey needs no peril pin, it stays LOW. PL 9629 states which."* **This
-plan states: the journey needs no Peril Structure pin, so FD 9995 stays LOW.** The reasons, at
-`809a3794`:
+The maintainer has decided this question. Entry headed *"2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record"* (`channel/to-lead.md`),
+quoted verbatim from its opening paragraph to its item 6. The FD 9605 approval paragraph
+after item 6 is left out because it is not this plan's subject:
 
-1. **FR-237 ties the pin to a `model_call`.** *"A **Rating Version** pins: one Rating
-   Algorithm version, an exact Rate Table Version per referenced table, an exact Model/Peril
-   Structure version per `model_call`, an exact Reference Table Version per `lookup`, and the
-   input contract."* (`docs/specs/03-rating-engine.md`, the FR-237 row.) No `model_call`, no
-   Peril Structure pin.
-2. **G2's algorithm has no `model_call`.** Slice (a)'s DP-a0 is ruled (a), *"do NOT adopt S3's
-   model_call fixture (a GLM cannot be scored via model_call on main)"* (D2). The algorithm is
-   priced through the seeded rate tables (PL 9624 Goal). So B4's `model_call` clause is not
-   walked, and B4–B5's row already reads "the algorithm's `table`, `expression` and `output`
-   steps (slice (a))".
-3. **G2's own text names no Peril Structure.** It reads *"through approved models, a Rating
-   Version compiled with pins"* (`docs/roadmap.md`, the `**G2.**` bullet), and the seed creates
-   none (`git grep -n -i 'peril_structure' origin/main -- examples/` prints nothing; the seed's
-   models carry `peril="AD"`, `examples/fremtpl2/model.py:223`, `:237`).
+> THE MAINTAINER, asked live with the sizing memo's two options (handover/sizing-g2-peril-path-2026-10-05.md, read at cdaaa573): "A: build it in P2". So G2 (CR-1212 :62-69, "WF-699 end to end") stands as written, no amendment, and the exit demo walks WF-699's trigger (:19), precondition (:28), B4 (:59, a model_call referencing the Peril Structure) and C1 (:70, pinning it).
+> CONSEQUENCES, binding:
+> 1. Four serial build slices under WK-1178, as sized: A-1 FD 9995 in full (the peril approval carry plus the _Resolver peril branch; it flips PL 9683's Acceptance 7); A-2 GLM via model_call (FD 9605); A-3 Peril Structure scoring (compile resolves and maturity-checks the component models; the runtime calls assemble_risk_premium, fixing the bare KeyError on payload["fit_result"] at runtime.py:540); A-4 the demo scope on PL 9624/PL 9629 (a severity GLM, the peril structure, reconcile, approve, the B4 model_call, the C1 pin). About 5 executor-days likely (3.5–8), a chain after PL 9683 and PL 9649.
+> 2. SEVERITY: FD 9995 → HIGH, deadline before the P2 exit demo (now a G2 blocker). FD 9605 (#1172, the GLM model_call refusal) → HIGH, the same. Both take lanes under my 13:12:56 priority rule.
+> 3. Planning starts now: leaf plans for A-1..A-4, red first, with contention against the in-flight plans.
+> 4. The DOUBLE-COUNT design point (A1 seeds tables from the AD frequency model while B4's model_call scores a Peril Structure containing it, so the factor effects may count twice; WF-699 does not say how they combine) needs a DM's options and a recommendation, ruled BEFORE A-4's plan activates.
+> 5. RISK, recorded: the sizing fits before the 4 Nov code freeze only on "3 lanes every day" (about 2 days spare at best). The maintainer has said the VM may be shut down from when the weekly allowance runs out until the reset (10 Oct 01:59 UTC); lost days come out of that slack. The Friday 9 Oct checkpoint re-checks the fit with measured progress.
+> 6. G2 needs no governed amendment (Option B was not taken); RL 9623's G2-form ruling is unaffected.
 
-**The other reading, for the ACK.** `WF-699` itself assumes one: its Trigger is *"An approved
-Peril Structure exists and needs to become a price"* (`:19`), its preconditions list *"An
-`approved` Peril Structure with a passing reconciliation"* (`:28`), B4 adds a `model_call`
-*"referencing the Peril Structure"* (`:59`), and C1 declares *"every pin: rate tables, peril
-structure, reference tables"* (`:70`). If "end to end" is read as every `WF-699` row literally,
-G2 needs a Peril Structure, approved (which FD 9995 says has no path), and a `model_call` that
-scores a GLM (which P3 of PL 9624 says fails on `main`). That reading makes FD 9995 MEDIUM with
-a deadline before the P2 exit demo, and adds a GLM `model_call` fix to G2. **Recommendation:
-the FR-237 reading (no pin)**, with C1′ and B4's `model_call` clause shown as `SKIPPED` under
-DP-b2 with this reason and FD 9995's id, so the demo says what it does not show. Which reading
-"end to end" takes is the maintainer's (by delegation) at FD 9995's ACK, as D3 says.
+The entry is a local channel entry (RFC-777). It is quoted here so the plan carries it. It
+**supersedes** this section's earlier statement (*"the journey needs no Peril Structure pin,
+so FD 9995 stays LOW"*) and that statement's FR-237 reasoning. What it means for this slice:
+
+1. **FD 9995 (working id, #980) is HIGH, a G2 blocker, deadline before the P2 exit demo**
+   (item 2). Its fix is A-1 (SL 9600 / PL 9599, working ids, reserved).
+2. **G2 now walks `WF-699`'s literal path**: the trigger (`:19`), the precondition (`:28`),
+   B4's `model_call` *"referencing the Peril Structure"* (`:59`) and C1's peril-structure pin
+   (`:70`), all in `docs/workflows/WF-00699-approved-models-to-approved-rating-version.md` at
+   `137bc817`.
+3. **This slice's scope does not change.** A-4, the demo scope that walks B4 and C1′ (a
+   severity GLM, the Peril Structure, its reconciliation and approval, B4's `model_call`, the
+   C1 pin, the golden quotes and dislocation baseline regenerated, and the `SKIPPED` lines for
+   B4 and C1′ removed), is **its own slice**: SL 9594 / PL 9593 (working ids, reserved
+   conditionally for this choice). It is not an edit to this plan. A-4 needs A-1, A-2 and A-3
+   merged and the double-count ruling (item 4). Folded in here, those needs would block this
+   slice behind the whole chain. As a separate slice, this plan keeps no plan dependency on
+   the A chain, so it can run beside it, and the 3-lane fit (item 5) needs that.
+4. **So this slice still prints C1′ and B4's `model_call` clause as `SKIPPED`**, under DP-b2.
+   The reason string now names SL 9594 and FD 9995. **G2 is met only when SL 9594 merges**
+   (Hand-off 6). This slice alone is not G2.
+5. **A-4 waits on the double-count ruling.** Item 4: A1 seeds tables from the AD frequency
+   model, while B4's `model_call` scores a Peril Structure that contains that same model.
+   This needs a decision-maker's options and the maintainer's (by delegation) ruling *"BEFORE
+   A-4's plan activates"*. That ruling does not touch this slice: A1–A2 seeds the tables as
+   slice (a) builds them.
 
 ### Requirement coverage, each id individually
 
@@ -541,7 +552,7 @@ then into the `CR- kind: phase`, by command and tree, never pasted from memory.
 2. **Post-mint working-id sweep** (`brief-mint-draft-2026-10-05.md` item 7a): every working id
    this plan cites is re-pointed to its minted id where one exists at the mint tree: RL 9623,
    SL 9625, SL 9626, PL 9624, PL 9683, PL 9688, PL 9689, PL 9649, PL 9716, PL 9728, PL 9776,
-   FD 9717, FD 9995, PL 9616, SL 9615, RL 9614. Ids not yet minted are listed as such in the
+   FD 9717, FD 9995, PL 9616, SL 9615, RL 9614, SL 9600, PL 9599, SL 9594, PL 9593. Ids not yet minted are listed as such in the
    mint PR body.
 3. **For the lead, from DP-6:** the §12 exit row's `WF-701` A–D (switchover S5, shadow S6) is
    an exit obligation that no slice yet walks as a journey. **The maintainer (by delegation)
@@ -553,6 +564,12 @@ then into the `CR- kind: phase`, by command and tree, never pasted from memory.
    taken.
 5. When this slice merges, `FD-1209`'s `WF-699` half is discharged, and with slice (a) the
    whole finding. The auditor closes it.
+6. **G2 is not met by this slice alone** (Option A, the maintainer's entry of 2026-10-05
+   16:43:31 BST, quoted in §"Does G2 pin a Peril Structure?"). It is met when SL 9594 (A-4,
+   working id) merges on top of this slice. SL 9594 walks B4's `model_call` and C1's
+   peril-structure pin, and it removes this slice's two `SKIPPED` lines for them. The chain is
+   PL 9683 and PL 9649, then A-1, A-2, A-3, then A-4. A-4 also waits on the double-count
+   ruling (item 4 of that entry).
 
 ## Self-review
 
@@ -592,3 +609,20 @@ scope, task cut, write set or other decision point changed. Verified at `origin/
 at 15:38:18 BST: need 9 is met, and the `demo.py`, `approvals.py`, `errors.py` and
 `roadmap.md` line cites that moved are re-anchored beside their `809a3794` values. Needs 13
 and 14 still had no PR at 15:38:18 BST.
+
+## Pre-mint note 2, 2026-10-05
+
+*Dated 2026-10-05 (`TZ=Europe/London date`: 2026-10-05 16:50:24 BST), before the mint of PL
+9629 (working id).* Edited in place on the unmerged draft #1164, on the lead's order (prep
+wave, section AM), to record the maintainer's Option A decision, entry 2026-10-05 16:43:31
+BST, and nothing else. What changed: §"Does G2 pin a Peril Structure?" was replaced. Its
+answer was "No, FD 9995 stays LOW". It is now "Yes, under Option A", with the entry quoted
+verbatim from its opening paragraph to item 6. FD 9995 is HIGH, and A-4 is its own slice (SL
+9594 / PL 9593, working ids), not an edit to this plan. Also changed: the C1′ row's reason
+(`SKIPPED`, naming FD 9995 and SL 9594); a pointer after the D3 quote; Hand-off 2 (the four
+new working ids added to the sweep); and Hand-off 6 (new: G2 is met only when SL 9594 merges).
+No task, acceptance item, write set, activation need, owner or other decision point changed,
+and the decision-point table is kept as written. `origin/main` `137bc817` merged in. Between
+`cdaaa573` and `137bc817`, main changed only `docs/INDEX.md`, `RL-1361` and the new `RL-1418`,
+so no line cite moved. The `WF-699` cites `:19`, `:28`, `:59` and `:70` were re-read at
+`137bc817` and hold.
