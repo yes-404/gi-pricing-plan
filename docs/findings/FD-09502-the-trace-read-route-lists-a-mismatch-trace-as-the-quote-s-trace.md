@@ -90,7 +90,7 @@ is on the view.
    - non-determinism in the re-score path, were any to exist (not measured here; RL-862's premise says none does);
    - a worker whose version differs from the serving process.
    Form (a) arises when the Rating Version has moved on since serve (`trace_handlers.py:90`); it is already hidden by the null body.
-2. **Does one exist now?** A read-only count was run against every local database holding a `scoring_traces` table, with `default_transaction_read_only=on` set on the connection, on 2026-10-05: `select status, count(*) from scoring_traces group by 1` returned **0 rows** in `gipricing`, `gipricing_sl-1391_d5679908`, `w37-6-767-772-test-a1` and `w37-6-767-772-test-a2`. The table is empty everywhere reachable. So there is no seeded or demo mismatch row, and the defect has **not been exercised on a real row**; the claim is established by reading the code, and by the absence of a test (Evidence 3), not by an observed listing. (`gip:gip@localhost/gip`, `config.py`'s default DSN, refused the password and was not read.)
+2. **Does one exist now?** A read-only count was run against every local database holding a `scoring_traces` table, with `default_transaction_read_only=on` set on the connection, on 2026-10-05: `select status, count(*) from scoring_traces group by 1` returned **0 rows** in `gipricing`, `gipricing_sl-1391_d5679908`, `w37-6-767-772-test-a1` and `w37-6-767-772-test-a2`. The table is empty everywhere reachable. So there is no seeded or demo mismatch row, and the defect has **not been exercised on a real row**; the claim is established by reading the code, and by the absence of a test (Evidence 3), not by an observed listing. The `gip` database (`gip:gip@localhost/gip`, `config.py`'s default DSN) refused the password: it was **not counted**, and is not a 0.
 3. **Can one arise without the chain change?** Yes: any of the other causes above. The chain change is the likeliest to make mismatches routine rather than rare.
 
 ## Spec reading (a reading, not a ruling)
@@ -121,3 +121,7 @@ Open. Owner WK-1178. Discharged by SL 9568 Task 2d on `RL 9505`. Closed in place
 Per `docs/process/document-ids.md` §1.6; the maintainer may override. **MEDIUM; carry forward with an owner, WK-1178; discharged by SL 9568 Task 2d.** The spec rule comes first, via `RL 9505` (working id).
 
 **Condition:** within SL 9568, Task 2d (the route carries the status) lands **before, or in the same commit as, the chain change**, so that no chain-caused mismatch is ever listed as the quote's trace. This is the HIGH trigger named under "Severity (proposed)" above, discharged by ordering.
+
+### Disposition — accepted by the maintainer (by delegation), 2026-10-05
+
+The maintainer (by delegation) accepted the decision above in `to-lead.md`, entry headed "2026-10-05 18:07:10 BST — FD 9502 decision ACCEPTED with your ordering condition; …", item 2, quoted verbatim: "your decision is ACCEPTED: MEDIUM; WK-1178; discharged by SL 9568 Task 2d, ON THE CONDITION that Task 2d lands BEFORE or IN THE SAME COMMIT as the chain change. That ordering is a GATE CONDITION of SL 9568's close and of my ACK of its merge: I check the commit order. The refinement (form a is already hidden by the blob_sha256 filter at traces.py:134; only form b is listed) is accepted."
