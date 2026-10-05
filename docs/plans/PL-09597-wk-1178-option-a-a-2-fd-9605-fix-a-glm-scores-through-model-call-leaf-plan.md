@@ -383,9 +383,16 @@ quoted above. Each is red first.*
       a `money_minor` producer feeding `relativity` passes anyway, because `_compatible`
       treats every `_NUMERIC` type as interchangeable (`compile.py:57`, `:124`). The change:
       `producer_types` (`:95`) types a `model_call`'s produced names by its `result_type`,
-      and `_compatible` refuses `money_minor` into any type other than `decimal` or
-      `money_minor`. *The planner's reading: "a non-money step" is an `output` (or an
-      `expression` declared non-money) consuming it. FR-227's check today compares only an
+      and the FR-227 output check (`_check_result_types`, `:158`, through
+      `output_type_issues`, `:132`) refuses a `money_minor` value **produced by a
+      `model_call`** that feeds an `output` declared other than `decimal` or `money_minor`.
+      `_compatible` itself is not changed, so an `expression` producer keeps today's
+      behaviour. *(Dated note, 2026-10-05, 17:28:44 BST: this said "`_compatible` refuses
+      `money_minor` into any type other than …", which would also have retyped every
+      `expression` producer. That is wider than the ruling ("A-2 only types the
+      model_call", the 17:22:01 BST entry), and the expression case is reported to the lead
+      as a gap with its own owner.)* *The planner's reading, accepted at 17:22:01 BST:
+      "a non-money step" is an `output` consuming it. FR-227's check today compares only an
       `output`'s declared type with its producer, and an `expression` does not type its
       inputs. This slice adds no input typing to `expression`. If the ruling means that, it
       is a wider change: STOP and report it.*
@@ -529,7 +536,7 @@ file" above.*
 | `docs/contracts/openapi/generated.json`, `docs/contracts/schemas/generated/sub-graph-body.schema.json`, `sub-graph-create.schema.json`, `sub-graph.schema.json` | regenerated (item 17) |
 | `docs/contracts/schemas/rating-algorithm.schema.json` | read; edited only if the contract guard requires it (item 17) |
 | `frontend/src/api/generated/` | regenerated in the gate; VCS-ignored, not committed |
-| `packages/pricing-core/src/pricing_core/rating/compile.py` | edited: `producer_types` (`:95`), `_compatible` (`:124`) (item 15) |
+| `packages/pricing-core/src/pricing_core/rating/compile.py` | edited: `producer_types` (`:95`), `_check_result_types` (`:158`) / `output_type_issues` (`:132`), for a `model_call` producer only; `_compatible` (`:124`) is not edited (item 15; dated note, 17:28:44 BST) |
 | `packages/pricing-core/src/pricing_core/rating/runtime.py` | `_model_call_handler`: the GBM branch's `round()` too, and the docstring (item 15) |
 | `backend/tests/test_rating_algorithms.py` | appended: item 16's read-back test. The `motor-ad-frequency@7` fixtures are not edited |
 | `docs/specs/03-rating-engine.md` | FR-222 row (`:108`) and FR-227 row (`:113`), §3.2: one dated amendment each, text T1 and T2 (Task 6) |
