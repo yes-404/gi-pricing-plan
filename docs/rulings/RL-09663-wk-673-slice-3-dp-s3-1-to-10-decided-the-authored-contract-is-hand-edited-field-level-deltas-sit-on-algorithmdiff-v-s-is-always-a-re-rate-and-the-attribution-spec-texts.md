@@ -17,7 +17,7 @@ relates: [SL-1387, PL-1267, RL-1394, RL-1264, RL-1402, RL-1263, RS-1201, FR-219,
 
 # RL 9663 (working id) — WK-673 Slice 3: DP-S3-1 to DP-S3-10 decided, and the attribution spec texts
 
-**Decided by the maintainer, by delegation (the deputy)**, in four entries of
+**Decided by the maintainer, by delegation**, in four entries of
 `~/gi-pricing-plan.local/channel/to-lead.md`, each cited below by its header and item. **This
 record decides nothing.** It files those decisions as one ruling, as PL 9689's activation need
 3 asks, and adopts the plan's proposed texts P1–P6 as the texts Slice 3 applies.
@@ -25,7 +25,7 @@ record decides nothing.** It files those decisions as one ruling, as PL 9689's a
 ## How this was ruled
 
 **Written 2026-10-05, at effort `medium`**, by the decision-maker session `dm-s3`, on the
-lead's brief of 2026-10-05, which the deputy approved in item 29 of the entry headed
+lead's brief of 2026-10-05, which the maintainer (by delegation) approved in item 29 of the entry headed
 *"2026-10-05 13:25:23 BST — 29: RL 9663 OK; 30: extend option (b) to S3 vs S2, with one
 serialisation; 31: close #986 OK"*: *"dm-s3 (opus) on RL 9663, recording DP-S3-1..10 as
 decided (citing my entries by header) and adopting P1–P6 verbatim: OK. The spec texts are
@@ -35,7 +35,10 @@ Every fact was read at `origin/main` `caa4e411a9c07a389cf47092a923c7761b2b92dc`
 (`git rev-parse origin/main` after `git fetch`, 2026-10-05 13:26:44 BST). The plan was read at
 PL 9689's draft PR #1138, branch `pl-9689-wk673-s3-leaf`, head
 `f3603e7cd99373a79a563b432ac234bc805a962d`; its decision-point table is §"Decision points"
-and its texts are §"Appendix — proposed texts P1–P6". RL 9715 was read at draft PR #1126,
+and its texts are §"Appendix — proposed texts P1–P6". *Re-read 2026-10-05 15:08 BST at the
+plan's head `e810b7851f71c995b284da7121d2e6d51a145318`: P2, P4 and P6 are unchanged; P1, P3 and
+P5 were revised toward this record's texts. The comparisons below stay against `f3603e7c`, and
+this record's texts govern (§"What it obliges").* RL 9715 was read at draft PR #1126,
 branch `dm-9715-oq9739-subset-input-contract`, head
 `2ab3818a63387d3ce57e806b6e7679475b45b4dd`. Unminted records (PL 9689, RL 9715, RL 9710) are
 cited in working-id form and kept out of `relates:` (check 32).
@@ -60,7 +63,7 @@ after them where they share a row.
 | DP-S3-9 | **(a)** a `model_reference_mode` difference is refused up front | 13:20:26 item 23 |
 | DP-S3-10 | **(b)** re-rates on the first 20,000 policies for K = 3..6, one full-portfolio K = 3 run; every full-K figure is derived and labelled | 13:20:26 item 24 |
 
-The options are PL 9689's, at the head named above. Each section below quotes the deputy's
+The options are PL 9689's, at the head named above. Each section below quotes the maintainer's (by delegation)
 words verbatim.
 
 ### DP-S3-1 — the contract path: (a)
@@ -132,7 +135,9 @@ RL 9715's are: each lands in one commit with the code it describes (`CLAUDE.md` 
 `<date>` that commit's date. Each find string below has exactly one hit in
 `docs/specs/03-rating-engine.md` at `caa4e411` (`grep -cF -- '<find string>'` prints `1`), and again at
 this branch's base `99afcde215c0817c5ac4db55332ab7a69e4752a0` (#1066, which does not touch `03`),
-re-run 2026-10-05 after 13:29 BST.
+re-run 2026-10-05 after 13:29 BST, and again at `origin/main`
+`809a3794af6d3a6ba688663b0d9b59f951190680` at 15:08 BST, each at the line given (`03` changed
+between them only at `:136`, FR-239's finding id re-pointed, #1150).
 Where an earlier slice or RL 9715 appends at the same place first, the text goes after that
 append, and the dispatch record re-reads the anchor at its tree.
 
@@ -147,8 +152,8 @@ P5's text is planner-1387's, sent by the lead in that answer, adopted with one s
 
 Find **`Error codes owned by this module:`**; the list runs from there to its last entry. At
 `caa4e411` the last entry ends with find
-**`` `app.platform.rating_versions.require_compilable` is the only raiser)*. ``** (`:965`). RL 9710
-(working id) T11, Slice 7's, appends first, and the FD 9708 fix's
+**`` `app.platform.rating_versions.require_compilable` is the only raiser)*. ``** (`:965`). `RL-1361`
+T11, as RL 9710 (working id) re-anchors it (its DP-C) for Slice 7, appends first, and the FD 9708 fix's
 `MODEL_REFERENCE_MODE_INCONSISTENT` serialises with this append (item 30): P1 goes after
 whatever is the last entry at the dispatch tree.
 
