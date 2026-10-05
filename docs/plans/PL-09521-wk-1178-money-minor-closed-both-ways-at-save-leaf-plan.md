@@ -538,6 +538,20 @@ the order. The read-first step for `/score` is Task 0 Step 3.*
   through `/score`'s real-time path and through batch, and compare the served JSON values and
   types. Record the outcome and its branch, (b), (c) or STOP, in the ledger. Under (b), report
   to the lead for an auditor to file the finding, and continue.
+
+  *(Dated note, 2026-10-05, pre-mint, on the lead's instruction: this check's (b) outcome is
+  **already filed** as FD 9513 (working id; #1204, read at `0303d0bf`). The maintainer (by
+  delegation) accepted it in `~/gi-pricing-plan.local/channel/to-lead.md`, the entry headed
+  "2026-10-05 17:58:45 BST — FD 9513 (#1204 @0303d0bf): your decision ACCEPTED (MEDIUM, LATENT, WK-1178, its own fix slice after SL 9561); the row escape is the first red",
+  item 1, verbatim: "ACCEPTED: MEDIUM; LATENT; carry forward, owner WK-1178; its OWN fix slice
+  editing score.py AFTER SL 9561. Reserve the SL/PL ids; a planner drafts when a seat frees."
+  Its fix is SL 9511 / PL 9509 (working ids; #1210). FD 9513's probe measured this divergence:
+  a declared `decimal` output is a JSON number on `/score` (an integer for a whole value, a
+  float for a fractional one) and a JSON string in batch, and that decimal half stays with
+  `FD-1333` / `RL-1343` (the same entry, item 3). So Step 1a **cites FD 9513** rather than
+  discovering it. The executor still runs the read-only comparison, as a confirmation, and
+  records it in the ledger against FD 9513. **A new divergence beyond FD 9513's record is a
+  STOP**, reported to the lead.)*
 - [ ] **Step 2:** Run the script at the base and keep its output and the script inline in the
   ledger. **Any hit other than DP-1's known `P:389`, an `int` input into a `money_minor`
   output included, is a STOP to the maintainer (by delegation) with `file:line`. Nothing
