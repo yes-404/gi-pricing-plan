@@ -99,10 +99,22 @@ branch'"*, and the tripwire *"that fails if `_Resolver` resolves peril_structure
 `_carry_to_the_artifact` has no peril branch (or perils.py has no approved writer on the
 decision path)"*. Item 2 above raises its severity to HIGH; the owner stays WK-1178.
 
+**Dated note, 2026-10-05 (written 17:05:11 BST, pre-mint): DP-1 to DP-3 accepted.** From the
+same file, the entry headed *"2026-10-05 17:02:50 BST — A-1/A-2 plans and batch 5 noted; the
+model_call ROUNDING is fixed IN A-2 by declared result type, not worked around in A-3"*, read
+in full by this planner. Verbatim, its A-1 paragraph:
+
+> A-1 (#1177 PL 9599): its DPs at the plan's recommendations, DP-1 (a) FR-363 per-peril approvals enforced at approval, DP-2 (a) supersede the earlier approved version, DP-3 (b) a named interim refusal until A-3: ACCEPTED (no DM needed; each is a choice inside settled scope).
+
+The same entry rules that A-2 settles the `model_call` rounding at the root, and that A-3
+*"composes frequency × severity on Decimals and rounds once, at the money step"*. It does not
+change this slice's scope: DP-3 (b)'s interim branch refuses before any value is produced.
+
 ## Status
 
-`draft`. **Three decision points are open** (§"Decision points"), each with a
-recommendation; they are the decision-maker's to rule. The plan moves to `active` only
+`draft`. **The three decision points are ruled** (§"Decision points"): the maintainer (by
+delegation) accepted each at the plan's recommendation in the 17:02:50 BST entry quoted above,
+with no decision-maker ruling (dated note, 2026-10-05). The plan moves to `active` only
 through a separate activation PR, after every activation need below holds. That PR carries
 the `SL-` row's status flip and this plan's.
 
@@ -123,6 +135,10 @@ the `SL-` row's status flip and this plan's.
 4. **A ruling on DP-1 to DP-3** (a dated `RL-`, written by a decision-maker). Where the
    ruling and this plan differ, the ruling wins, and the dispatch record names each
    difference at every site it operates ([`README.md`](README.md) rule 5).
+   *Dated note, 2026-10-05 (pre-mint): **held.** The 17:02:50 BST entry accepted DP-1 (a),
+   DP-2 (a) and DP-3 (b) "(no DM needed; each is a choice inside settled scope)", so no
+   `RL-` is written. The ruling and this plan do not differ; the dispatch record cites the
+   entry by its header.*
 5. **The lane and the dispatch GO.** A HIGH G2 blocker takes the first build lane that frees
    once its plan is active (the maintainer's 13:12:56 BST priority rule, item 2 above). This
    slice is the first of the serial chain A-1 → A-2 → A-3 → A-4 (item 1). The lead's
@@ -327,7 +343,10 @@ exclusive.
 
 ## Decision points
 
-None is decided. Each is the decision-maker's.
+*Dated note, 2026-10-05 (pre-mint):* **all three are ruled**, each at its recommendation, by
+the maintainer (by delegation) in the 17:02:50 BST entry quoted in §"The maintainer's
+decisions this plan rests on, quoted". The Recommendation column is now the ruling. The text
+below was written before the ruling and is kept as written.
 
 | DP | Question | Options | Recommendation | Owner | Blocks |
 |---|---|---|---|---|---|
@@ -446,6 +465,11 @@ None is decided. Each is the decision-maker's.
 - [ ] **Step 1:** If the ruling carries a dated amendment to `06` §4.2's note (`:405-408`),
   apply it verbatim under `spec-change`, run `python3 scripts/audit-docs.py`, and commit.
   If the ruling carries none, this task is empty and the ledger says so.
+  *Dated note, 2026-10-05 (pre-mint): the 17:02:50 BST acceptance carries no text for the
+  note, though DP-1 (a)'s option says "the note gets a dated amendment". As written, this
+  task is empty, and `06` §4.2 keeps calling the per-peril half "unqueryable" (`06:407` at
+  `137bc817`) after this slice enforces it. Reported to the lead for a worded text before
+  activation; this planner writes none.*
 
 ### Task 6: The gate and the ledger (items 11, 12)
 
@@ -477,7 +501,8 @@ None is decided. Each is the decision-maker's.
 2. **Coverage of the maintainer's A-1 line** ("the peril approval carry plus the _Resolver
    peril branch; it flips PL 9683's Acceptance 7"): Task 3, Task 4, item 7.
 3. **Every open design choice is a DP with an owner** (DP-1 to DP-3). No spec text is
-   written without a ruling (Task 5).
+   written without a ruling (Task 5). *(Dated note, 2026-10-05: all three ruled at the
+   recommendation, 17:02:50 BST entry.)*
 4. **Repository literals read at `137bc817`:** every line in §"Task 0 at planning time" and
    §"Write set"; `_AFTER` and `_MOVE_ACTION` (`test_api_approvals.py:1044-1065`);
    `EXPECTED_GUARDED` (`test_approval_guard.py:28-38`); `objectives.apply_approval_decision`
