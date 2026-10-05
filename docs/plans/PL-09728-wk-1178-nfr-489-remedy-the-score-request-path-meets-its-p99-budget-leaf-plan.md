@@ -22,7 +22,7 @@ Filed under working id 9728 (this plan) and slice working id 9727 (its `SL-` row
 turn. The finding this plan remedies is **FD-1411** (HIGH; filed as working id 9729 and minted at #1111,
 `main` `47d770e8`).
 
-**Ordered by** the deputy's entry in `to-lead.md` headed *"2026-10-04 19:18:54 BST — NFR-489 ON MAIN
+**Ordered by** the maintainer's (by delegation) entry in `to-lead.md` headed *"2026-10-04 19:18:54 BST — NFR-489 ON MAIN
 (c08a48e5, uncontended): the FD is FILED NOW at severity HIGH, not in the batch; its remedy is pulled
 forward ahead of other WK-1178 items; the no-GBM anomaly is re-measured"*, action 2: *"a leaf plan for
 "the bundle is resolved once per deployed version per worker, not per request" (or whatever the
@@ -76,7 +76,7 @@ FR-259, FR-268); [`00-overview.md`](../specs/00-overview.md) §9 (NFR-454);
 
 ## Status
 
-`draft`. DP-1 to DP-4 cannot be ruled before Task 0 runs, by the deputy's own order ("the fix is
+`draft`. DP-1 to DP-4 cannot be ruled before Task 0 runs, by the maintainer's (by delegation) own order ("the fix is
 chosen FROM Task 0's evidence"). The plan therefore activates in two steps: Task 0 is dispatched on the
 activation needs below and commits nothing but its ledger; Tasks 1 to 6 start only after the
 decision-maker's ruling on DP-1 to DP-4 is merged. DP-6 is ruled (b) by the maintainer, by delegation
@@ -85,7 +85,10 @@ decision-maker's ruling on DP-1 to DP-4 is merged. DP-6 is ruled (b) by the main
 ### Activation needs, in order
 
 1. **Lane B: dispatched after the FD-1356 fix (SL-1409, PL-1408) merges**, ahead of the other WK-1178
-   items, under `PL-1371`'s G2 priority (the deputy's entry above, action 2).
+   items, under `PL-1371`'s G2 priority (the maintainer's (by delegation) entry above, action 2).
+   **Lane B's order since then** (pre-mint, 2026-10-05): the HIGH G2-blocking fixes go first. The
+   FD 9707 fix (working id) goes before this plan (`to-lead.md` entry headed *"2026-10-05 13:11:05 BST — FD 9707 (B3, as_at lookup ignores effective dating): HIGH, provisional on the upstream-filter check; its fix goes FIRST in lane B after SL-1409"*, item 3), and the FR-240 family
+   fix (PL 9649, working id) goes before this plan when it takes lane B (entry headed *"2026-10-05 14:28:35 BST — PL 9649 / SL 9647 (the FR-240 fix, #1152 @dc13400e): DP-5 OK; DP-6 scoped; lane placement"*). The dispatch record names the order that holds at dispatch.
 2. **FD-1411 minted** — met: #1111 merged it at `47d770e8`; the ledger and the ruling cite FD-1411.
 3. **An exclusive measurement window** under `RL-1263` ("a measurement runs alone"): no gate, no
    `migrate --verify`, no other benchmark on the box during Task 0's runs or Task 4's sweep. The
@@ -231,7 +234,7 @@ GBM), labelled by the harness "every request pays this" (`scripts/bench-rating.p
 builds **a fresh, empty `BundleSlot()` per call** (`:709-722`, its own comment: "a shared one would
 turn every call after the first into a hit"), so each call pays the blob read, the parse and
 `load_bundle`. Its docstring (`:678-688`) describes the pre-RL-921 code ("consults the slot only
-*after* `_fetch_bundle` has returned"), which `score.py:250-254` no longer is. The deputy's working
+*after* `_fetch_bundle` has returned"), which `score.py:250-254` no longer is. The maintainer's (by delegation) working
 hypothesis ("the BundleSlot memo is not effective across requests on this path") is therefore **not
 supported by reading**; Task 0 Step 3 confirms it empirically with a hit/miss counter. The ~200–300 ms
 outliers in those `_fetch_bundle` blocks ran **in the harness process, not the server**, so they are
@@ -279,7 +282,7 @@ lists 33. Intersecting each list with the table above (and with `scripts/demo.py
 **No overlap with S3's own change set**; S3 edits `backend/src/app/errors.py`, which this slice does not
 touch. Re-read at dispatch: the branch moves.
 
-**Open PRs read 2026-10-04 (`gh pr list --state open`):** #1111 (FD-1411, this plan's finding; merged since, `47d770e8`); #1051
+**Open PRs at `4eb13644`, 2026-10-04; working ids as then (`gh pr list --state open`):** #1111 (FD-1411, this plan's finding; merged since, `47d770e8`); #1051
 (PL 9776, above); #1048 (OQ 9777, working id: does NFR-489 cover traced requests — **decided (a), 2026-10-05:
 NFR-489 governs untraced requests, so Acceptance 2 is the untraced arms and no traced arm is added**,
 Acceptance 2); #1060
@@ -378,7 +381,7 @@ class phase:
   more, with its source.
 - [ ] **Step 3: Run.** `bench-rating.py --http --rates 25`, three times; then `--rates 50`, three times.
   Per pass record start and end (UTC and BST), `uptime`, `pgrep -c pytest`.
-- [ ] **Step 3b: The exit demo's `/score` path, measured beside it.** Added at the deputy's
+- [ ] **Step 3b: The exit demo's `/score` path, measured beside it.** Added at the maintainer's (by delegation)
   order, `to-lead.md` entry "2026-10-04 19:46:13 BST — #1111 (FD 9729, NFR-489) noted; mint it before
   the ACK; the demo-path disclosure stays and PL 9728 Task 0 traces the demo's /score calls". Fact,
   read at planning time on `2cd4896f`: **no exit-demo code calls `/score` today.** `scripts/demo.py`
@@ -402,7 +405,7 @@ class phase:
   line whether it does the same per-request work as the bench path, naming any phase that differs.
 - [ ] **Step 4: Sampling profile (required).** One 25 rps pass per arm with the server under
   `uvx py-spy record -o <scratch>/profile-<arm>.svg -- <the uvicorn command>`, and the top frames by
-  self time in the ledger beside Step 5's phase table. The deputy's order names "plus a sampling
+  self time in the ledger beside Step 5's phase table. The maintainer's (by delegation) order names "plus a sampling
   profiler" (§Self-review 1), so this step is not optional. **Its only exit:** `uvx` cannot fetch
   `py-spy`, or it cannot attach on this box. Then the ledger says so, with the printed error, and Step 5
   attributes from Step 2's instruments alone. Do not install it.
@@ -560,7 +563,7 @@ build on either defect.
 
 ## Self-review
 
-1. **The deputy's order, clause by clause.** "Task 0 attributes the stalls … per-request phase timing
+1. **The maintainer's (by delegation) order, clause by clause.** "Task 0 attributes the stalls … per-request phase timing
    (auth, bundle resolve/fetch, deserialise, score_one, trace sampling, response), plus a sampling
    profiler": Task 0 Steps 2 and 4 (Step 4 required; its only exit is `py-spy` unavailable, stated). "Candidates to test, not assume: synchronous blob/DB I/O inside the
    async handler, per-request bundle deserialisation, GC pauses, worker count": Step 2's slow-callback
@@ -578,6 +581,15 @@ build on either defect.
    activation need 5, the DP preamble and Task 0 Step 6 no longer wait on a DP-6 ruling. Working ids
    re-checked against `origin/main` `072c56e1`: PL 9776 (#1051) and OQ 9777 (#1048) are unminted, so
    none is re-pointed.
+1c. **Pre-mint check of 2026-10-05 15:26 BST, at `origin/main` `809a3794`.** No cited code path
+   changed since `47d770e8` (activation need 4's files, `config.py`, `scripts/demo.py`, the cited
+   tests); the `03` and `roadmap.md` lines cited are unmoved. PL 9776 (#1051) and OQ 9777 (#1048) are
+   still unminted. Lane B's order is recorded under activation need 1. The G2 ruling (`to-lead.md`
+   entry headed *"2026-10-05 13:05:42 BST — RULING (the maintainer, by delegation): G2's "in Phase 1b's form" = a scripted HTTP journey plus a served page; WK-675 is OFF G2's critical path"*)
+   changes no step here: the scripted journey stays with `PL-1371` §3.8 item 7, and DP-6 (b) stands.
+   Item 7's leaf plan (`PL-1371` Task 3, ordered 2026-10-05) carries DP-6's binding condition. This
+   plan does not cite that leaf by working id, because a record that cites another mints after it,
+   and this plan mints first.
 2. **The bundle-cache hypothesis is tested, not built.** Reading shows the slot already hits on the
    served path (§"Where the time goes"); Task 0 Step 5 confirms it with a counter.
 3. **Placeholders.** The statement and checkout bounds in Task 2 are fixed by DP-1's ruling, stated as
