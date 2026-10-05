@@ -1,8 +1,8 @@
 ---
-id: LG-9719
+id: LG-1417
 family: ledger
 title: WK-1178 slice SL-1409 — the FD-1356 fix, a validation rule is approved only through the approval workflow (PL-1408), Task 0 containment and preconditions
-status: active
+status: closed
 created: 2026-10-05
 owner: executor
 tree: bf33eea622e849672e02154b10026595b6e0ba5a
@@ -14,7 +14,7 @@ corrected_by: []
 relates: [RL-1407, RL-1263, FD-1356, WK-1178]
 ---
 
-# LG 9719 (working id) — WK-1178 slice SL-1409, the FD-1356 fix
+# LG-1417 — WK-1178 slice SL-1409, the FD-1356 fix
 
 Executed from `PL-1408` by `executor-1409`. `echo $CLAUDE_EFFORT` printed `medium`; the model is Sonnet 5.5
 (`claude-sonnet-5-5`). The executor charter's Model / effort line, verbatim: "`sonnet` (currently Sonnet 5); medium,
@@ -97,7 +97,7 @@ is Task 7's `down_revision`.
   `Response Submit For Approval Api V1 Approval Requests Post`. The `decide` body is the component `Decide`, but it
   is **defined in the API module** (`class Decide(BaseModel)` at `backend/src/app/api/approvals.py:78`), not in
   `model-schema`; its `200` is untyped as well. PL-1408 moves `Decide` to `model-schema` (the `__all__` names below).
-  Typing the `200` stays with FD 9752.
+  Typing the `200` stays with FD-1416.
 - **Temporary validation-rule exemptions** (`git grep -n -i 'FD-1356\|9892\|validation-rule fix slice' -- backend
   tests`): exactly two, both the allowance of `PL-1303` Acceptance 7, which Task 1 removes:
   `backend/tests/test_approval_guard_static.py` (the comment above the `approve_rule` entry in `ALLOWANCE_SITES`,
@@ -123,7 +123,7 @@ RL-1263 table covers it.)
 
 Tasks cite the symbols above, not these line numbers.
 
-**Holds.** FD 9752: this slice changes no `to_dict` approval route's response and reads none anew (Task 0 read no
+**Holds.** FD-1416: this slice changes no `to_dict` approval route's response and reads none anew (Task 0 read no
 response body). RETENTION: the export directory was read, not touched.
 
 ### Task 1 — the allowance removal, red first (2026-10-05 10:0x UTC, executor-1409-t1)
@@ -828,7 +828,7 @@ Reconciled file by file against PL-1408 §"Write set". 34 files: 30 in the write
 | `backend/tests/test_validation_rule_approval.py`, `backend/tests/dry_run_reports.py` | in | the two "added" rows |
 | `frontend/src/api/rules.ts`, `frontend/src/components/RuleBuilder.vue`, `frontend/src/views/RuleSetView.vue`, `frontend/src/components/__tests__/RuleBuilder.test.ts`, `frontend/src/views/__tests__/RuleSetView.test.ts` | in | the frontend row ("their tests") |
 | `docs/specs/01-data-management.md`, `docs/specs/06-governance.md` | in | the spec-texts row |
-| `docs/ledgers/LG-09719-…` | in | the ledger row |
+| `docs/ledgers/LG-1417-…` | in | the ledger row |
 | `docs/INDEX.md`, `docs/contracts/openapi/generated.json` | generated | the `docs/contracts/` row; `docs/INDEX.md` the registry row |
 | `backend/tests/test_approval_guard.py` | **named addition** | Delta 7 item 2 (the carry-walker's expected set gains `validation_rules`) |
 | `examples/fremtpl2/test_seed.py` | **named addition** | Delta 17 (the seed-twice test) |
@@ -886,6 +886,14 @@ Base head `f85be6724b26b90a9c0c6e93ec0160bd61cde076`. Both gate slots (`gate-1`,
 **C — the two ledger gaps.**
 - Acceptance 11's custom role is `decider`, holding only `approval:decide` (`RoleRow(workspace_id=workspace_id, slug="decider", permissions=["approval:decide"])`, `backend/tests/test_validation_rule_approval.py:509`, in `test_an_approver_without_a_policy_role_is_refused`).
 - DP-2 produced **only an OpenAPI component** (`ValidationRuleSubmission`), no new schema artifact: `git diff --name-only origin/main...HEAD -- docs/contracts/` prints one path, `docs/contracts/openapi/generated.json`.
+
+## Closing note
+
+This ledger is closed under the executor charter's mint-step clause (`.claude/roles/executor.md`, "As the mint step…", added 2026-10-04) and `docs/process/document-ids.md` §1.6's 2026-10-04 amendment to the SL and LG close cells: on 2026-10-05 the executor performed the closing acts in the mint commit on the auditor's behalf, after the slice audit — the front matter `status: closed`, the roadmap SL-1409 row `status: closed` with its dated line, `docs/INDEX.md` regenerated, `audit-docs` green. The audit it cites is `handover/audit-sl1409-2026-10-05.md`, with its "Re-check of fix 1/2" section (local, not in the repository). The working id `LG 9719` was minted as `LG-1417` at `python3 scripts/doc-id.py next` = 1417 on origin/main `99afcde215c0817c5ac4db55332ab7a69e4752a0`. The two lines of this ledger that quote `audit-docs` output naming `LG 9719` (the Task 0 and Task 8 entries) stay as quoted; they record what that run printed. The minted-head gate's record and the PR number are appended after the gate.
+
+### Correction to the Slice-audit fix 1/2 entry's finding C (2026-10-05, mint)
+
+Finding C above says DP-2 produced "only an OpenAPI component". That is imprecise, and this line corrects it without rewriting the entry. DP-2 produced **no new schema artifact**: `git diff --name-only origin/main...HEAD -- docs/contracts/` prints one path, `docs/contracts/openapi/generated.json`. What that file gains, measured with `git diff -U0 origin/main -- docs/contracts/openapi/generated.json` (five hunks): the `ValidationRuleSubmission` component; a `description` on the existing `Decide` component; the `/submit` route's `requestBody` (a `$ref` to `ValidationRuleSubmission`); and the rewritten route descriptions of `approve` and `submit`.
 
 ## PRs
 

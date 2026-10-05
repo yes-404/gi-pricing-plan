@@ -591,7 +591,7 @@ async def test_an_approved_rules_dry_run_cannot_be_replaced(
     author,
     grant,
 ) -> None:
-    """FD 9747: a dry run re-run on an `approved` rule would rewrite the evidence it was
+    """FD-1415: a dry run re-run on an `approved` rule would rewrite the evidence it was
     approved on. The refusal rolls the stored report back with the job."""
     version = await _a_version(database, blob_store, workspace_id, principal)
     created = _new_rule(client, author)
@@ -762,7 +762,7 @@ async def test_the_submitter_and_the_author_cannot_decide(
 
 
 # The key set of `service.to_dict` (`backend/src/app/platform/approvals.py`), read at the
-# dispatch tree. Decide's `200` stays `dict[str, Any]`; FD 9752 owns typing it.
+# dispatch tree. Decide's `200` stays `dict[str, Any]`; FD-1416 owns typing it.
 DECIDE_RESPONSE_KEYS = {
     "id",
     "artifact_ref",

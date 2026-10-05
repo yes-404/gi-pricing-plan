@@ -406,7 +406,7 @@ async def attach_dry_run(
     """Record that this rule executed against a real version (FR-50 step 2).
 
     Refused for an `approved` rule: its dry-run report is its approval evidence, and
-    `01` §4.5 step 4 makes an approved rule immutable (FD 9747, RL-1407 (#1070 @24ea2130)).
+    `01` §4.5 step 4 makes an approved rule immutable (FD-1415, RL-1407 (#1070 @24ea2130)).
     The worker stores the report and attaches it in one unit of work, so this refusal rolls
     the report back with it.
     """
@@ -646,7 +646,7 @@ async def rule_set_to_run(
 ) -> ValidationRuleSet:
     """The dataset's current rule set, refused unless every member exists and is approved.
 
-    Every member, enabled or not, as the set's write checks (FD 9748, RL-1407
+    Every member, enabled or not, as the set's write checks (FD-1414, RL-1407
     (#1070 @24ea2130)): a rule that is not `approved` must not execute (`01` FR-50), and
     skipping it would let a version validate without a check its set declares. Raised
     before the run, so a refused job writes nothing.
@@ -684,7 +684,7 @@ def _require_runnable_members(
     dataset_slug: str,
     approved: bool,
 ) -> None:
-    """One predicate for the set's write, the run and the read (FD 9748).
+    """One predicate for the set's write, the run and the read (FD-1414).
 
     A member with no rule row is `NOT_FOUND` everywhere; a member that is not `approved` is
     `RULE_NOT_APPROVED` where `approved` is asked for (the write and the run, not the
@@ -770,7 +770,7 @@ async def _to_rule_set(
     The set stores ids rather than copies. A copy would let the set and the rule disagree
     about a rule's severity, and the report cites both. A member with no rule row is
     refused, not dropped: showing a smaller set than the one stored is a silent change to
-    what a report will be a report of (FD 9748).
+    what a report will be a report of (FD-1414).
     """
     members = _members(row)
     by_id = await _rules_by_id(
