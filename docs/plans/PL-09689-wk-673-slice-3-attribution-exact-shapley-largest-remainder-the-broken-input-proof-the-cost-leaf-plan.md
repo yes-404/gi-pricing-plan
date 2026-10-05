@@ -36,7 +36,7 @@ instruction of 2026-10-05 12:51:33 BST, item 1). Drafted from 13:16:52 BST
 unchanged at 13:25 BST). Every locator below was read at that tree unless another tree or a
 branch head is named. Unminted records are cited by working id and kept out of `relates:`
 (check 32): RL 9715 (draft PR #1126, branch `dm-9715-oq9739-subset-input-contract`),
-PL 9716 (#1127), RL 9710 (#1128), PL 9713 (#1131), FD 9752 (#1066).
+PL 9716 (#1127), RL 9710 (#1128), PL 9713 (#1131), PL 9683 (the FD 9708 fix), RL 9663 (dm-s3). FD 9752 (#1066) was minted as FD-1416 at `99afcde2` after this plan's tree; this branch merged that commit (only `docs/findings/` and `docs/INDEX.md` changed, so every locator here reads the same).
 
 ## Goal
 
@@ -77,9 +77,9 @@ FR-1399 (`:189-192`), §4.6 (`:514-578`), §5.2 (`:1050-1058`, `:1122-1124`); RL
 DP-S3-4 and DP-S3-5 accepted (the deputy's entry of 2026-10-05 13:15:53 BST in `to-lead.md`, items 17–19); DP-S3-7 (a), DP-S3-10 (b), and DP-S3-8 and DP-S3-9 accepted
 (the deputy's entry of 2026-10-05 13:20:26 BST in `to-lead.md`, items 23–24). The lead's relay added one item within DP-S3-1 (a): the same hand edit widens the two
 attribution ratios, with a red-first test. Each row of §"Decision points" quotes its decision.
-**One thing is still open: the exact spec texts.** P5 (DP-S3-7's FR-1398 sentence) was sent to
-the lead on 2026-10-05 for a decision-maker to adopt as a T-text; P1–P4 and P6 go the same way.
-The plan stays `draft` until they are adopted, and moves to `active` only through a separate
+**One thing is still open: the exact spec texts.** RL 9663 (working id, dm-s3) adopts P1–P6
+as T-texts (the deputy's entry of 2026-10-05 13:25:23 BST in `to-lead.md`, items 29–30, item 29); P5 (DP-S3-7's FR-1398 sentence) was sent to the lead on 2026-10-05
+for it. The plan stays `draft` until RL 9663 is minted, and moves to `active` only through a separate
 activation PR.
 
 ### Activation needs, in order
@@ -90,9 +90,10 @@ activation PR.
    slice's tests (Acceptance 7–11). Where its minted text differs from what this plan assumes,
    the minted text governs and the dispatch record names each difference. An unminted RL 9715
    is a stop.
-3. **A decision-maker `RL-` records the deputy's decisions on DP-S3-1 to DP-S3-10 and adopts,
-   amends or rejects this plan's proposed texts P1–P6** (§Appendix; P5 is DP-S3-7's sentence,
-   which the lead routes). It is merged and minted. The executor applies the ruling's texts,
+3. **RL 9663 (working id; the decision-maker session dm-s3, being drafted)** records the
+   deputy's decisions on DP-S3-1 to DP-S3-10 and adopts P1–P6 as T-texts for this slice's code
+   commit (the deputy's entry of 2026-10-05 13:25:23 BST in `to-lead.md`, items 29–30, item 29). It is merged and minted. Where its minted texts differ from the
+   Appendix, they govern and the dispatch record names each difference. The executor applies the ruling's texts,
    never the Appendix.
 4. **`SL-1391` (WK-673 Slice 7) is closed.** `PL-1267`'s one-slice-at-a-time order is
    1 → 2 → 7 → 3 (`PL-1267` Sequencing; `PL-1371` §5 rule 1, `:302`, orders the G2 chain
@@ -103,14 +104,15 @@ activation PR.
    `:336-337`). At `caa4e411`, `SL-1340` (the pin and the inlining) and `SL-1341` are `draft`
    (roadmap `:1488`, `:1506`). Task 0 Step 3 re-checks.
 6. **The lane is free under `RL-1263`**, re-checked at dispatch (Task 0 Step 3), including the
-   `03` §5.1 overlap with WK-675 Slice 2 and the `backend/src/app/api/rating_algorithms.py`
-   overlap that DP-S3-2's condition adds (§"Write set"; the first needs a lead/deputy call).
+   conditions of the deputy's option (b) as extended to this slice against WK-675 Slice 2, and
+   the one serialisation with the FD 9708 fix on the `03` owned-codes tail (the deputy's entry of 2026-10-05 13:25:23 BST in `to-lead.md`, items 29–30, item 30;
+   §"Contention").
 7. **The maintainer's dispatch GO**, and the lead's go in a separate activation PR. Task 7's
    measurement needs the exclusive measurement slot (`delivery-process.core.json`
    `guards.parallelism.build_slices_across_works.measurement_step_runs_alone`).
 
 Not needs: OQ 9739 (decided by RL 9715; this plan cites the ruling, it does not carry the
-question); FD 9752 (#1066; this slice touches no approval route and no `to_dict` response).
+question); FD-1416 (this slice touches no approval route and no `to_dict` response).
 
 **A delta against frozen `PL-1267`, stated here and recorded by the lead in the dispatch
 record** (DP-S3-10 (b), the deputy's entry of 2026-10-05 13:20:26 BST in `to-lead.md`, items 23–24): `PL-1267` Acceptance 5 asks for N = 5 medians of the 2^K re-rates
@@ -339,8 +341,8 @@ Run by this plan's author on 2026-10-05 in `.claude/worktrees/pl-9689` at `caa4e
 - **Subset cost.** 2^K full `score_batch` passes per run. Tests use portfolios of ≤ 20 rows.
   Task 7 runs alone (activation need 7).
 - **WK-1250** changes `compile_bundle` and the trace; Acceptance 8 and 18 are the guards.
-- **The `03` §5.1 owned-codes list is a shared tail** with Slice 7 (serial) and WK-675 S2 (lane C);
-  see §"Write set".
+- **The `03` §5.1 owned-codes list is a single tail** shared with Slice 7 (serial by order) and
+  the FD 9708 fix (serialised by the deputy, item 30); see §"Contention".
 - **A spec find string can move** before dispatch (S7 lands first). The executor re-counts each
   find string (Task 0 Step 4); a count other than 1 is a stop, never a re-wording.
 
@@ -386,8 +388,10 @@ path and the check (`other_shared_path`: `serialise_unless_dispatch_record_names
 | Path | This slice | Other slice | Shared existing definition? | Class |
 |---|---|---|---|---|
 | `docs/specs/03-rating-engine.md` | §3.9 FR-1398/1399; §4.6; §5.1 owned-codes list; §5.2 | **SL-1391** (S7, PL 9716 at `origin/pl-9716-wk673-s7-leaf`): FR-231 `:122`, §4.2, §5.1 diff row and the owned-codes list (RL 9710 T11, `:965`), §5.2 | **yes**: §5.1 owned-codes list, §5.2 `analysis`/rate-table blocks | **SERIALISES** — and serial by `PL-1267`'s order; S3 starts after S7 closes, re-reading its anchors |
-| the same | as above | **WK-675 S2** (lane C, PL 9713, draft #1131 at `origin/pl-9713-wk675-s2-leaf`): §3.1, §3.4 after `:140`, §5.1 rows before `:897` and after `:908`, §8 `:1314` | §5.1 is one section: S2 inserts table rows, S3 appends to the owned-codes list (`:934-965`), 26+ lines apart | **SERIALISES as written** (`forbidden` names a "spec section"); **allowed only if the deputy extends the lanes A/C option (b)** of 2026-10-05 13:00:09 BST, given for S7, to S3 — a lead/deputy call, recorded in the dispatch record |
-| `packages/model-schema/src/model_schema/rating.py` | `AlgorithmDiff`, `diff_algorithms` (DP-S3-2 (a) only) | SL-1391: `RateTableDiff` (`:735-747`), new `RateTableDiffCell`. WK-675 S2: `RatingAlgorithm` (`:375`) split into `RatingAlgorithmDraft` + new `RatingAlgorithmSaved` | no (different classes) | vs S7: serial anyway. vs WK-675 S2: **ALLOWED one-sided** — the dispatch record names the path and the check `git diff -U0 origin/main...<branch> -- packages/model-schema/src/model_schema/rating.py` showing hunks only inside `:541-618` (S3) and `:375-…` (S2) |
+| the same | as above | **WK-675 S2** (lane C, PL 9713, draft #1131 at `origin/pl-9713-wk675-s2-leaf`): §3.1, §3.4 after `:140`, §5.1 rows before `:897` and after `:908`, §8 `:1314` | §5.1 is one section: S2 inserts table rows; S3 appends to the owned-codes list (from `:928`), more than twenty lines below S2's nearest hunk | **ALLOWED under the deputy's option (b), extended to S3** (the deputy's entry of 2026-10-05 13:25:23 BST in `to-lead.md`, items 29–30, item 30), on the 13:00:09 BST conditions: (1) each dispatch record lists its side's hunks and anchors; (2) the hunks are not adjacent, and the gap is measured on the dispatch tree and recorded; (3) the second to merge merges main, reads `git merge-tree`'s exit code, and re-gates; (4) the two gates never run at once |
+| the same | the owned-codes list's **single tail** (P1 appends `ATTRIBUTION_RECONCILIATION_FAILED` after the list's last entry) | **the FD 9708 fix** (WK-1178; PL 9683, draft, branch `origin/pl-9683-fd9708-rv-pins` at `f811e37d`): appends `MODEL_REFERENCE_MODE_INCONSISTENT` to the same list (its write set, the `03` row) | **yes**: one tail, both append | **SERIALISES** (the deputy's entry of 2026-10-05 13:25:23 BST in `to-lead.md`, items 29–30, item 30): the second to merge merges main and re-appends after the first's entry, then re-gates |
+| `packages/model-schema/src/model_schema/rating.py` | `AlgorithmDiff`, `diff_algorithms` | **the FD 9708 fix**: adds `RatingVersionCreate` after `RatingVersion` (`:138-170`), `RatingVersion` unchanged | no | **ALLOWED one-sided**, named in the dispatch record (hunks: S3 inside `:541-618`; the fix after `:170`) |
+| `packages/model-schema/src/model_schema/rating.py` | `AlgorithmDiff`, `diff_algorithms` (DP-S3-2 (a) only) | SL-1391: `RateTableDiff` (`:735-747`), new `RateTableDiffCell`. WK-675 S2: `RatingAlgorithm` (`:375`) split into `RatingAlgorithmDraft` + new `RatingAlgorithmSaved` | no (different classes) | vs S7: serial anyway. vs WK-675 S2: **ALLOWED by class** (the deputy's entry of 2026-10-05 13:25:23 BST in `to-lead.md`, items 29–30, item 30) — the dispatch record names the path and the check `git diff -U0 origin/main...<branch> -- packages/model-schema/src/model_schema/rating.py` showing hunks only inside `:541-618` (S3) and `:375-…` (S2) |
 | `backend/src/app/api/rating_algorithms.py` | `algorithm_diff` (`:53-69`), annotation only | **WK-675 S2**: `create_rating_algorithm` (`:28-50`) edited, new `get_rating_algorithm` added **after the diff route** | no (different functions); the S2 insertion is adjacent to `algorithm_diff`'s end | **ALLOWED one-sided** — the dispatch record names the path and the check (`git diff -U0` hunks: S3 inside `:53-69`, S2 inside `:28-50` plus an insertion after `:69`); the second to merge merges main, reads `git merge-tree`'s exit code, and re-gates |
 | `backend/tests/test_rating_algorithms.py` | one new test, appended | **WK-675 S2**: new tests (Acceptance 1–3) | no existing definition edited by either | **ALLOWED one-sided** (appends only), named in the dispatch record |
 | `docs/contracts/openapi/generated.json` | regenerated | **SL-1409** and **WK-675 S2** regenerate it | — | exempt (generated): regenerated on the merge base, never hand-merged |
@@ -397,10 +401,12 @@ path and the check (`other_shared_path`: `serialise_unless_dispatch_record_names
 **Result.** No path shared with `SL-1409` (in flight) except the exempt `docs/INDEX.md` and
 `generated.json`. With
 Slice 7 (same Work, run before this one): `03` and `model_schema/rating.py` — serial by order.
-With WK-675 S2: `03` §5.1 SERIALISES unless the deputy extends option (b); `rating.py`,
+With WK-675 S2: `03` §5.1 is allowed under the deputy's option (b), extended to this slice on
+its four conditions; `rating.py`,
 `backend/src/app/api/rating_algorithms.py` and `backend/tests/test_rating_algorithms.py` are
-ALLOWED one-sided, named in the dispatch record. **FD 9752 (#1066; the lead's brief names a minted id for it, elided here because it is not on main at
-`caa4e411`)** holds the four `to_dict` approval routes' responses: neither this slice nor Slice 7
+ALLOWED one-sided, named in the dispatch record. **One serialisation:** the `03` owned-codes
+list's single tail, with the FD 9708 fix (PL 9683); the second to merge re-appends. `rating.py`
+against the FD 9708 fix is ALLOWED one-sided. **FD 9752 (#1066), merged as FD-1416 at `99afcde2` after this plan's tree; this branch merged it** holds the four `to_dict` approval routes' responses: neither this slice nor Slice 7
 (PL 9716 §"Result": "No approval route or `approvals.py` is touched") touches them. Open PRs
 read 2026-10-05 at `caa4e411` (`gh pr list --state open`): RL 9715 (#1126), RL 9710 (#1128),
 PL 9716 (#1127), PL 9713 (#1131), RL 9695 (#1133: its ruling file and `INDEX.md` only, rules on
