@@ -142,8 +142,7 @@ the same service function.
 
 **`scripts/audit-docs.py` (outside PL-1429's write set; ruled).** `audit-docs` checks 30 and 35 failed on
 `docs/contracts/schemas/generated/rating-version-create.schema.json` ("not in the F83 exemption register"). The executor
-stopped and reported. The maintainer (by delegation) ruled, in the `to-lead.md` entry after 23:04 BST that the lead relayed (its
-exact header is not in the executor's message; the lead supplies it for the quote), to add ONE line pair in PL-1392's form and
+stopped and reported. The maintainer (by delegation) ruled, in the `to-lead.md` entry headed `2026-10-05 23:05:41 BST — SL-1430 STOP (write set): ONE dated line in audit-docs.py's F83 exemption list ALLOWED, by a dispatch delta; the seed-data evidence run ALLOWED on conditions`, to add ONE line pair in PL-1392's form and
 nothing else in that file: the comment `# 2026-10-05, PL-1429 (WK-1178 SL-1430)` and the path line, next to PL-1392's
 entries. The diff of that file against `origin/main` is exactly those two added lines. After it, `audit-docs` fails only
 check 32 (this ledger's own working id is not in `docs/INDEX.md`) and check 39 (`docs/INDEX.md` stale), both cleared by
