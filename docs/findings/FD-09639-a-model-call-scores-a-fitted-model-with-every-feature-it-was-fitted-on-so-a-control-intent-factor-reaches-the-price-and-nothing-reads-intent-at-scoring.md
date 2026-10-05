@@ -14,9 +14,9 @@ relates: [WK-673, WK-1178, FR-88, FR-240, FR-230]
 
 ## Finding
 
-**Severity: HIGH — measured 2026-10-05 13:54 UTC (§Evidence): the premium input changes with the control value.** Per the deputy's rule (below), APPLIED is HIGH and
-neutralised-and-untested is LOW. **Owner: WK-673.** **Working id 9639**, minted at the records PR. The
-deputy's decision is the entry headed *"2026-10-05 14:21:22 BST — DECISIONS 35–38 (PL 9649, the FR-240
+**Severity: HIGH — measured 2026-10-05 13:54 UTC (§Evidence): the premium input changes with the control value.** Per the maintainer's (by delegation) rule (below), APPLIED is HIGH and
+neutralised-and-untested is LOW. **Owner: WK-673.** **Confirmed HIGH, final**, by the maintainer (by delegation) in the entry headed *"2026-10-05 15:00:28 BST — FD 9639 HIGH CONFIRMED by measurement; owed items accepted; CAPACITY: 2 live of 8, so fill the slots"* (`to-lead.md`, the lead's channel). **Working id 9639**, minted at the records PR. The
+maintainer's (by delegation) decision is the entry headed *"2026-10-05 14:21:22 BST — DECISIONS 35–38 (PL 9649, the FR-240
 family fix); file the model_call candidate; FD 9641 noted"*, "CANDIDATE (c)" (`to-lead.md`,
 the lead's channel): *"does scoring apply the control factor's coefficient to the quote … or neutralise it
 (e.g. at the base level)? … if scoring applies it, HIGH (a price depends on a factor declared not to
@@ -99,9 +99,9 @@ control factor**; the defect is reachable by a user-authored model, and untested
 ## Disposition
 
 **Fix before close with an owner: WK-673**, red first. Deadline, the measurement having confirmed APPLIED: before the
-P2 exit demo (the deputy's rule).
+P2 exit demo (the maintainer's (by delegation) rule).
 
-Remedy shape (not a design; the deputy's decisions 36–38 are adjacent):
+Remedy shape (not a design; the maintainer's (by delegation) decisions 36–38 are adjacent):
 
 Either (a) refuse at compile a `model_call` whose pinned model's feature set contains a `control`-intent factor
 (`CONTROL_FACTOR_IN_RATEABLE_PATH`, as decision 37 does for rate tables), which needs the model's factor intents
