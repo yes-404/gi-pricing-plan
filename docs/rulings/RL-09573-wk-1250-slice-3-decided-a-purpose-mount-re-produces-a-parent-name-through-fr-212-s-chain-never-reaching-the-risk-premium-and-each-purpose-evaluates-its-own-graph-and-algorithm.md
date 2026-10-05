@@ -39,10 +39,13 @@ relates: [RL-1344, RL-1309, RL-1242, PL-1254, SL-1341, FR-212, FR-217, FR-218, F
   `relates:` (check 32).
 - **This record rules a plan's decision points and never edits the plan** (`document-ids.md`
   §1.6, PL row). Its texts for PL 9609 (P1 to P5) are applied by the planner as a pre-mint edit.
-- **Not ruled here:** the `to_wire` step-order question (`runtime.py` `to_wire` `:412`,
-  `:461-492`). The maintainer ordered it reproduced (same entry, its last item), and an auditor
-  is doing that. Limit 4 below depends on the inlined step order, which RL 9586's P5 proposes
-  for Slice 2.
+- **Not ruled by this record:** the `to_wire` step-order question (`runtime.py` `to_wire` `:412`,
+  `:461-492`). *(Dated clause, 2026-10-05 17:09 BST (by `date`), pre-mint, dm-finals2.)* It was
+  reproduced as FD 9572 (working id) and its fix ruled by the maintainer, by delegation, in the
+  entry headed *"2026-10-05 17:06:26 BST — FD 9572 (to_wire wires by LIST order): reproduced;
+  severity waits on (1)/(2); the FIX RULED now; RL 9588 / RL 9586 noted"*, which also accepted
+  RL 9586's P5 (*"The WK-1250 S2 inliner uses the same topological order (RL 9586's P5, the DM's
+  proposal: ACCEPTED, as it is the same rule)"*). Limit 4 below cites that ruling.
 
 ## Locators — read at `137bc817`
 
@@ -70,7 +73,7 @@ at this record's ACK; DP-S3-2 accepted (quoted above).**
 | **R1 — one risk price** | In a purpose graph, no step of a purpose mount may reach the `output` step whose `output_name` is `risk_premium_minor` (FR-218, *"One risk price"*). Refused at save with `VALIDATION_FAILED`, naming the mount and `risk_premium_minor`. Vacuous for an algorithm with no such output |
 | **Limit 2 — one re-producer per name** | A mount may re-produce `X` only where the parent has no other re-producer of `X`. Inside the fragment, only the step producing the output port mapped to `X` consumes the input port mapped to `X`. Either violation is a cycle, refused at save by FR-212 as it stands with `RATING_GRAPH_CYCLIC` |
 | **Limit 3 — author-placed `X`** | Where `X` sits is the author's choice. Every parent step downstream of `X` runs on the adjusted value; a minimum-premium clamp downstream of `X` clamps a refund. The mount and its `purposes` are in FR-219's diff (`RL-1344` acceptance 5) and in the trace |
-| **Limit 4 — order** | The re-producing step is evaluated after the parent's producer of `X` and before every downstream consumer. It depends on the inliner's step order (RL 9586 P5, proposed for Slice 2's ACK) |
+| **Limit 4 — order** | The re-producing step is evaluated after the parent's producer of `X` and before every downstream consumer. It holds by the stable topological order the maintainer, by delegation, ruled at 2026-10-05 17:06:26 BST for `to_wire` and for the Slice 2 inliner (RL 9586's P5, ACCEPTED; FD 9572, working id): *"wires every consumed name to its PRODUCER by name through the graph, over a STABLE topological order computed from the dependency edges (Kahn with list order as the tie-break …)"*. A re-producer depends on the earlier producer of `X`, and every downstream consumer depends on the re-producer, so that order puts each where (d) needs it |
 | **Codes (DP-S3-1)** | A step that runs for every purpose consuming a purpose-only name → `RATING_GRAPH_UNRESOLVED_REF` (PL 9609 acceptance 3; `RL-1344` acceptance 4). R1 → `VALIDATION_FAILED`. Limit 2 → `RATING_GRAPH_CYCLIC`. No new code |
 | **DP-S3-2** | **(a) one graph per purpose that has a mount.** `Bundle` gains `purpose_graphs: dict[str, JdmGraph]`, holding only the purposes some mount selects, so it is empty for a version with no purpose mount. `bundle_hash` covers it only when it is non-empty, so every existing `content_hash` is unchanged. Scoring chooses the graph by `ctx.purpose` and falls back to the base graph |
 | **DP-S3-2, condition 1** | `CompiledBundle` holds, per purpose graph, its **decision, algorithm and `model_call` handler**; boosters stay shared and keyed by ref. One selector returns the pair for `ctx.purpose`, and every read of `bundle.algorithm` or `bundle.decision` in the Locators' scoring rows goes through it. Red first: a cancellation mount containing a clamping `constraint` step, whose clamp appears in the cancellation quote's ladder |
