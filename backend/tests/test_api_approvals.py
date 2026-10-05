@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 import pytest_asyncio
+from backend.tests.dry_run_reports import stored_dry_run_report
 from fastapi.testclient import TestClient
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
@@ -230,19 +231,22 @@ async def _create_artifact(
                 )
             )
         elif artifact_type == "validation_rule":
-            session.add(
-                ValidationRuleRow(
-                    workspace_id=workspace_id,
-                    slug=slug,
-                    version=version,
-                    layer=ValidationLayer.STRUCTURAL.value,
-                    check="range",
-                    severity=Severity.FAIL.value,
-                    body={},
-                    authored_by=new_uuid7(),
-                    status=status,
-                )
+            rule = ValidationRuleRow(
+                workspace_id=workspace_id,
+                slug=slug,
+                version=version,
+                layer=ValidationLayer.STRUCTURAL.value,
+                check="range",
+                severity=Severity.FAIL.value,
+                body={},
+                authored_by=new_uuid7(),
+                status=status,
             )
+            session.add(rule)
+            if status != "draft":
+                # A rule past `draft` has a dry run that executed (PL-1408, DP-3): the
+                # approval reads the stored report, so a bare id is "cannot be read".
+                await stored_dry_run_report(session, workspace_id=workspace_id, rule=rule)
         elif artifact_type == "dataset_version":
             # The only one that takes two rows: the slug in the reference is the
             # **dataset's** and the version is the snapshot's, which is why
@@ -1043,7 +1047,8 @@ _AFTER = {
     "custom_metric": _moves("approved", "review", "certified"),
     "rating_version": _moves("approved", "review", "draft"),
     "peril_structure": dict.fromkeys(_OUTCOMES, "review"),
-    "validation_rule": dict.fromkeys(_OUTCOMES, "review"),
+    # FR-355: the pre-submission state of a rule is `draft` (`01` §4.5 step 1).
+    "validation_rule": _moves("approved", "review", "draft"),
     "dataset_version": dict.fromkeys(_OUTCOMES, "validated"),
 }
 
@@ -1055,6 +1060,7 @@ _MOVE_ACTION = {
     "rating_version": lambda to: (
         "rating_version.approved" if to == "approved" else "rating_version.returned_to_draft"
     ),
+    "validation_rule": lambda to: f"validation_rule.{to}",
 }
 
 
