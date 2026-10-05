@@ -113,14 +113,26 @@ From `~/gi-pricing-plan.local/channel/to-lead.md`, cited by entry header:
     filed as its own finding, owner WK-673. The lead's relay of about 14:22 BST names it FD 9639
     (working id, auditor-ctrl), outside this plan unless it returns HIGH.
 
+- **"2026-10-05 14:28:35 BST — PL 9649 / SL 9647 (the FR-240 fix, #1152 @dc13400e): DP-5 OK; DP-6
+  scoped; lane placement"**:
+  - Item 39, DP-5: *"(`deprecated` refused at compile too, OQ-609): OK, with a red test."*
+  - Item 40, DP-6 amended: *"Task 0 counts bad rows (a control-intent factor in a pinned table key;
+    an unapproved custom objective behind an approved model) in `gipricing` (the demo DB) and in the
+    slice's own per-worktree test DB ONLY, not "gipricing*". … If gipricing has any bad row, STOP
+    and report to me with the ids (no reset, no delete), as proposed."*
+  - LANE: *"it takes the first build lane free once its plan is active, ahead of any slice G2 does
+    not need. Concretely: after whichever of the FD 9707 fix (lane B) or the FD 9708 fix (lane C)
+    finishes first, it goes BEFORE PL 9728 (NFR-489, a G4 item) in lane B, or BEFORE WK-675 S2 (off
+    G2's path) in lane C. WK-673 S3 in lane A is NOT displaced."*
+
 The lead's brief adds (c) FD 9697's control-intent refusal at compile and at seed (DP-3), and (d)
 limb 2's negative test.
 
 ## Status
 
 `draft`. DP-1 to DP-4 are **decided** (the deputy, 14:21:22 BST, items 35–38, quoted above), and
-every site below applies them with their conditions. DP-5 and DP-6 are non-blocking; they went to
-the deputy for a ruling and keep this plan's recommendations until ruled. The plan moves to `active` only through a separate activation PR, once every
+every site below applies them with their conditions. DP-5 is decided as recommended (item 39) and DP-6 as
+amended (item 40, the 14:28:35 entry); every site applies both. The plan moves to `active` only through a separate activation PR, once every
 activation need below holds. That PR carries this plan's status flip and the `SL-` row's.
 
 ### Activation needs, in order
@@ -129,13 +141,15 @@ activation need below holds. That PR carries this plan's status flip and the `SL
    item 2).
 2. **A ruling record (`RL-`), written by a decision-maker who adopts texts T1 to T4**
    (§"Spec texts": FR-240, FR-230, the seed route row and the owned-code line in `03`, and `02` R4),
-   **and records DP-1 to DP-4 as decided at 14:21:22 BST and DP-5 and DP-6 as ruled**. A decision
+   **and records DP-1 to DP-4 as decided at 14:21:22 BST and DP-5 and DP-6 at 14:28:35 BST**. A decision
    lands as a dated artifact (`CLAUDE.md` §12), as for PL 9688. If its text differs from this plan, the
    ruling wins, and the dispatch record names each difference at every site it operates
    ([`README.md`](README.md) rule 5: narrative, Files, Steps, Acceptance).
 3. **This plan made `active`** by a dated line in the activation PR.
-4. **Lane.** A HIGH G2 blocker takes the first free build lane under the deputy's 13:12:56 BST
-   priority rule. It **serialises with the FD 9707 fix (PL 9688, #1145) on `compile.py`**, the one
+4. **Lane** (the 14:28:35 entry). A HIGH G2 blocker takes the first build lane free once this
+   plan is active, under the deputy's 13:12:56 BST priority rule: after whichever of the FD 9707
+   fix (lane B) or the FD 9708 fix (lane C) finishes first, it goes **before PL 9728** in lane B,
+   or **before WK-675 S2** in lane C. **WK-673 S3 in lane A is not displaced.** It **serialises with the FD 9707 fix (PL 9688, #1145) on `compile.py`**, the one
    code file both plans name (§"Write set"); the dispatch record names the order. It never runs
    concurrently with a slice that edits `compile_bundle`'s body.
 5. **The dispatch GO**, with Task 0 run at dispatch and its STOP conditions read.
@@ -204,8 +218,10 @@ code that turns it green. A failure with the right status and a different cause 
    already declares. `uv run python scripts/generate-contracts.py --check` exits 0 after the
    regeneration is committed, and `backend/tests/test_contracts.py` passes with the hand-authored
    `model.schema.json` `flags` enum extended to match.
-10. **Task 0's exposure counts are recorded** in the ledger with the query verbatim, and a non-zero
-    count stopped the slice to the lead before Task 2 (DP-6).
+10. **Task 0's exposure counts are recorded** in the ledger with the query verbatim, for the demo
+    database `gipricing` and the slice's own per-worktree test database only (DP-6 as amended, item
+    40). A bad row in `gipricing` stopped the slice to the lead with its ids before Task 2; nothing
+    was reset or deleted.
 11. **The whole gate is green, both halves**, per `dev-commands`: `uv run ruff check . && uv run
     mypy && uv run lint-imports && uv run pytest -q`, `python3 scripts/audit-docs.py`,
     `uv run python scripts/req-coverage.py`, `uv run python scripts/generate-contracts.py --check`,
@@ -308,8 +324,8 @@ are kept so a reader can see what was weighed; the decisions' text governs.
 | **DP-2** | What does "transitively reachable" reach, and with what code? | (a) one hop: each pinned model's own `spec.objective` when `kind == "custom"`, refused `PIN_NOT_APPROVED` naming model → objective; (b) a walk of every artifact ref in every resolved payload; (c) (a) plus a GBM's custom eval metrics | **(a).** It is every path that exists: a GLM has no custom objective (`02` FR-207's 2026-10-04 amendment moves `GlmSpec.custom_objective_ref` to Phase 3), and a peril structure cannot be resolved at compile today (§"Scope"). `PIN_NOT_APPROVED` because the same objective in the same state then gets the same code by either door, and FR-240's clause is a maturity clause (FR-20). Text T1 states the bound, as FD 9659's remedy asks | **DECIDED (a)**, item 36: T1 names the peril-structure gap with FD 9995 as owner; custom eval metrics excluded (no price) | Tasks 2, 6 |
 | **DP-3** | FD 9697 at seed? FR-240 names compile; FR-88 says a `control` factor *reaching a rate table* is an error | (a) refuse at seed **and** at compile, `CONTROL_FACTOR_IN_RATEABLE_PATH` 422, FR-230 amended (T2); (b) seed it with `rateable=false`; (c) compile only | **(a).** FR-88's words reach the table, not only the bundle, and a refusal at seed tells the author before any table exists. Compile stays the backstop for any table whose key binds a `control` Factor by another route | **DECIDED (a)**, item 37: the code is registered in this slice; T2 amends FR-230 | Tasks 3, 6 |
 | **DP-4** | What is a "rateable path" at compile? | (a) every pinned rate table's keys bound by `factor_ref`, whatever the table's `rateable` flag; (b) only tables with `rateable: true`; (c) also a `model_call` whose model fits a `control` factor | **(a)** in this slice. A pinned table is in the bundle by construction, and (b) would lean on FR-236's "rateable only" rule, which nothing here shows is enforced. (c) went to the lead as a candidate finding: FR-88's 2026-08-22 amendment gives `control` a free coefficient, so a `model_call` may score on it | **DECIDED (a)**, item 38 (*"the flag is declarative, so the check does not trust it"*). (c) is FD 9639 (working id), filed separately, outside this plan unless it returns HIGH | Tasks 3, 6 |
-| **DP-5** | Which objective statuses pass the transitive check, and which the flag? | (i) compile: the direct pin's `_APPROVED_OR_BETTER` (`compile.py:404`), so `deprecated` is refused; the flag: status ≠ `approved`; (ii) compile also admits `deprecated` | **(i).** `02` OQ-609 is decided (a): *"existing pins continue, new specs cannot select"*, and a compile is always of a `draft` version (FR-239), so it is new work. One set for both doors | planner; non-blocking; with the deputy for a ruling | Tasks 2, 4 |
-| **DP-6** | Rows already in the bad state (approved models over unapproved objectives; tables keyed on `control` factors) | (a) Task 0 counts them over every `gipricing*` database and STOPS to the lead on a non-zero count; no reset in this slice; (b) reset such models to `review` | **(a).** After the fix, compile refuses every such row's use (Tasks 2 and 3), so nothing new is priced on them. A reset is a data change whose need the count decides | planner; non-blocking; with the deputy for a ruling | Task 0 |
+| **DP-5** | Which objective statuses pass the transitive check, and which the flag? | (i) compile: the direct pin's `_APPROVED_OR_BETTER` (`compile.py:404`), so `deprecated` is refused; the flag: status ≠ `approved`; (ii) compile also admits `deprecated` | **(i).** `02` OQ-609 is decided (a): *"existing pins continue, new specs cannot select"*, and a compile is always of a `draft` version (FR-239), so it is new work. One set for both doors | **DECIDED (i)**, the deputy 14:28:35 BST item 39, with a red test (the `[deprecated]` case, Acceptance 3) | Tasks 2, 4 |
+| **DP-6** | Rows already in the bad state (approved models over unapproved objectives; tables keyed on `control` factors) | (a) Task 0 counts them over every `gipricing*` database and STOPS to the lead on a non-zero count; no reset in this slice; (b) reset such models to `review` | **(a).** After the fix, compile refuses every such row's use (Tasks 2 and 3), so nothing new is priced on them. A reset is a data change whose need the count decides | **DECIDED (a), AMENDED**, item 40: count in `gipricing` (the demo DB) and the slice's own test DB only, since the 92 `gipricing_%` databases are disposable scratch; a bad row in `gipricing` STOPS with its ids, no reset, no delete | Task 0 |
 
 ### Spec texts (proposed for the ruling; applied verbatim in Task 6)
 
@@ -363,11 +379,13 @@ seed route's 422 list (`:902`):
   objective (`spec->'objective'->>'kind'`, `->>'ref'`), `factors.body->>'intent'`, and a seeded
   `rate_table_versions.definition->'keys'` with its `factor_ref`. Write the two counts below against
   what the rows actually hold; if a shape differs, say so in the ledger.
-- [ ] **Step 4:** Over every `gipricing*` database on the compose server, count: (i) `models` with
+- [ ] **Step 4:** In **two databases only** (DP-6 as amended, item 40): `gipricing`, the demo
+  database, and the slice's own per-worktree test database. Not the other `gipricing_%`
+  databases, which are scratch from ended agents. In each, count: (i) `models` with
   `status = 'approved'` whose custom objective's `custom_objectives.status <> 'approved'`; (ii)
   `rate_table_versions` with a key whose `factor_ref` names a `factors` row with `intent =
-  'control'`. Record the query verbatim and the per-database and total counts. **STOP to the lead
-  if either total is non-zero** (DP-6).
+  'control'`. Record the query verbatim and each count. **If `gipricing` has any bad row, STOP and
+  report to the lead with the row ids. Reset nothing and delete nothing.**
 - [ ] **Step 5:** `gh pr list --state open` and a read of anything that rules on FR-240, R4,
   FR-230 or `compile.py` since this plan's tree ([`README.md`](README.md) rule 4). Name the commit
   read.
@@ -592,8 +610,9 @@ async def test_an_unapproved_objective_reached_through_a_pinned_model_is_refused
 - **Spec coverage.** (a) is Tasks 1 and 4; (b) Task 2; (c) Task 3; (d) Task 2 Steps 2 and 5. Every
   row of §"Requirement coverage" has a task. Every DP names the tasks it blocks.
 - **Ruling sites.** Each DP's recommendation appears in narrative (§"Decision points"), Files and
-  Steps (Tasks 1-6) and Acceptance (1-9). Items 35–38 were applied at all four, by grepping each
-  condition's subject (override, peril, FD 9995, metrics, registered, `rateable`) over the whole file.
+  Steps (Tasks 1-6) and Acceptance (1-9). Items 35–40 and the lane placement were applied at all
+  four, by grepping each condition's subject (override, peril, FD 9995, metrics, registered,
+  `rateable`, `gipricing`, `deprecated`, lane) over the whole file.
 - **Literals checked at `83ea5090`**, by grep, not recalled: the line numbers in §"Goal" and
   §"Write set"; the helpers `_version` `:69`, `FakeResolver` `:92`, `_resolver` `:107`
   (`test_rating_compile_bundle.py`); `_insert_version` `:86`, `_run_compile_job` `:113`
