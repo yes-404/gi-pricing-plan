@@ -449,3 +449,31 @@ Start head `876af8d0f083ef82599b46a103f685d9af75a77a`; worktree `sl-1273-fixes`.
 **A11 (item 5).** The quantile red's citation `:228` is `:280` (the line at head `876af8d0`). The two earlier `:228` citations of Task 7's count tests are left as written: they cite the file at the time.
 
 **A10 (item 7) is not in this entry.** The brief's amendment of 2026-10-05 09:37:26 BST moves it to a separate dispatch in a window the lead clears; Task 10's record above stays "provisional" per Delta 10.
+
+### A10 — the NFR-480 solo re-run, 2026-10-05 (slice audit A10; Delta 10; `PL-1382` Task 10)
+
+Entry date 2026-10-05, window 10:02:29–10:32:29 BST (30 minutes from the quiet-box probe); the runs below ended 10:03:42 BST. Worktree `sl-1273-fixes`, branch `sl-1273-custom-objective-expression`; start head `5af9d321f3ce4e6fab53dcd34e9289e20ae65884`; the bench change below is the head `2904d00f613d35e1943c3af888c81ff026202728` the runs used. The box held no other agent's work (the lead had ended every other agent).
+
+**Quiet-box probe, 2026-10-05 10:02:29 BST.** `uptime`: load average 1.10, 2.40, 2.68. `free -m`: 32 099 MB total, 21 134 free, 26 657 available. Both slots free (`free1`, `free2`). `pgrep -af 'pytest|bench|uvicorn|doc-id|audit-docs|ruff|mypy|vite|node .*vitest'` matched only the VS Code terminal shell (its path contains `workbench`) and the probe's own command line: no heavy process. Before the first run (10:03:21) load was 0.57.
+
+**Bench change (committed before timing).** `scripts/bench-expression-certify.py` prints, per run, `result.overall`, every check's `name` and `status`, and the `smoke_fit` check's `detail`. The grid constants stay mirrored: `_DEFAULT_POINTS` and `_DEFAULT_WEIGHTS` are module-private in `backend/src/app/platform/objectives.py`, and `y_range` and `f_range` are computed inside `default_sampling`, which takes a whole `CustomObjective`, so no single import supplies them. The printed grid is `{'n_points': 2000, 'seed': 20260818, 'y_range': (0.0, 1000000.0), 'f_range': (-5.0, 15.0), 'w_range': (0.01, 10.0)}`, equal to the earlier entry's.
+
+**Commands, verbatim** (foreground, one fresh process per run, nothing else between runs):
+`for n in 1 2 3 4 5; do echo "=== run $n start $(TZ=Europe/London date '+%T %Z') | $(uptime)"; timeout 600 uv --directory $W run python scripts/bench-expression-certify.py; echo "rc=$?"; echo "=== run $n end $(TZ=Europe/London date '+%T %Z') | $(uptime)"; done`
+with `W` the worktree path. Not run under a slot `flock` and without `LOKY_MAX_CPU_COUNT`: the box was otherwise idle and `flock -n` on both slots had succeeded.
+
+| Run | Start / end BST | Load avg (1 min) start → end | Certify call | `overall` | Counts |
+|---|---|---|---|---|---|
+| 1 (cold) | 10:03:21 / 10:03:28 | 0.57 → 0.64 | 2.104 s | `certified_with_findings` | yes |
+| 2 | 10:03:28 / 10:03:31 | 0.64 → 0.64 | 1.063 s | `certified_with_findings` | yes |
+| 3 | 10:03:31 / 10:03:35 | 0.64 → 0.67 | 1.345 s | `certified_with_findings` | yes |
+| 4 | 10:03:35 / 10:03:39 | 0.67 → 0.69 | 1.174 s | `certified_with_findings` | yes |
+| 5 | 10:03:39 / 10:03:42 | 0.69 → 1.36 | 1.127 s | `certified_with_findings` | yes |
+
+Statuses, identical in all five runs: `symbolic_vs_numeric_gradient` pass; `symbolic_vs_numeric_hessian` pass; `finiteness` pass; `convexity` violated; `branch_discontinuity` warn; `minimum_at_truth` pass; `monotone_loss` pass; `scale_behaviour` warn; `smoke_fit` pass. `smoke_fit` detail, runs 1–5: "recovered a relativity of 1.499 against a true 1.5 (0.1%) on gamma severity, mean 1500 x relativity, n=20,000; 80 rounds" with 0.5 s, 0.5 s, 0.7 s, 0.5 s, 0.3 s (the fit's own clock).
+
+**Counting rule.** The brief's rule names the certificate status "`certified` or `violated`". The code's `CertificateOutcome` (`packages/model-schema/src/model_schema/objectives.py`) has `certified`, `certified_with_findings` and `failed`; `violated` is a *check* status (here `convexity`, the finding the loss's `where()` asymmetry produces). I read the rule as: no check `failed`, `smoke_fit` `pass` or `warn` with rounds in its detail, `overall` not `failed`. All five runs meet it; none dropped.
+
+**Median 1.174 s of 5 counting runs; range 1.063–2.104 s.** NFR-480, `docs/specs/02-modelling.md` row: "Objective certification completes in < 3 min including the synthetic smoke fit." That row carries no dated amendment; the dated measurement note below the table (2026-08-22, WK-661) records a 180 s budget and a twelve-template result. **Verdict: met**, the slowest run being 2.104 s, about 1.2 % of 180 s. This is the Task 10 figure the earlier provisional entry (Delta 10) asked to have re-taken solo; it does not change that entry's order of magnitude.
+
+**What the timed span contains.** `scripts/bench-expression-certify.py` calls `certify_expression_objective` directly: no Job, no database, no HTTP (as this ledger already discloses). It passes no `derived`, so `derived is None` and `compile_expression_objective` (`packages/pricing-core/src/pricing_core/modelling/expression_objective.py`) runs `derive(loss, parameters=parameters.keys())` inside the timed span, that is, SymPy differentiation is timed. The first run is cold (SymPy and NumPy first use). One grid and one loss only; a larger `n_points` or a `where()`-heavier loss was not measured.
