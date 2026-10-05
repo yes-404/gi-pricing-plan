@@ -8,8 +8,10 @@ database, no Job — on §4.6's example loss (`asymmetric-burning-cost`) over th
 objective: `_DEFAULT_POINTS` 2 000, `DEFAULT_SEED`, `y_range` (0, 1e6), `f_range`
 (-5, ceil(log 1e6) + 1), `_DEFAULT_WEIGHTS` (0.01, 10). Those four are mirrored here rather
 than imported, because `default_sampling` takes a whole `CustomObjective`; a drift between the
-two is visible in the printed grid. The timed span is the whole call: compile, the nine
-checks and the smoke fit.
+two is visible in the printed grid; the grid constants are left mirrored because
+`_DEFAULT_POINTS` and `_DEFAULT_WEIGHTS` are module-private and `y_range`/`f_range` are computed
+inside `default_sampling`, so no single import supplies them. The timed span is the whole
+call: compile, the nine checks and the smoke fit.
 
 Not a CI gate and no verdict: it prints numbers, and a human reads them against 180 s.
 
@@ -23,7 +25,7 @@ import math
 import statistics
 import time
 
-from model_schema import HessianStrategy, SamplingSpec, YDomain
+from model_schema import CertificateResult, HessianStrategy, SamplingSpec, YDomain
 from pricing_core.modelling.expression_objective import certify_expression_objective
 
 LOSS = "w * where(exp(f) < y, w_under, w_over) * (y - exp(f)) ** 2"
@@ -38,7 +40,7 @@ SAMPLING = SamplingSpec(
 )
 
 
-def certify_once() -> tuple[float, object]:
+def certify_once() -> tuple[float, CertificateResult]:
     start = time.perf_counter()
     result = certify_expression_objective(
         ref="custom_objective:asymmetric-burning-cost@1",
@@ -62,7 +64,11 @@ def main() -> None:
     for i in range(runs):
         seconds, result = certify_once()
         times.append(seconds)
-        print(f"run {i + 1}: {seconds:.3f} s  ({type(result).__name__})")
+        print(f"run {i + 1}: {seconds:.3f} s  overall={result.overall.value}")
+        for check in result.checks:
+            print(f"  {check.name}: {check.status.value}")
+            if check.name == "smoke_fit":
+                print(f"    detail: {check.detail}")
     if runs > 1:
         median = statistics.median(times)
         print(f"median {median:.3f} s  min {min(times):.3f}  max {max(times):.3f}")
