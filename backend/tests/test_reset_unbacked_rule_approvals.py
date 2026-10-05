@@ -18,13 +18,32 @@ from uuid import UUID
 
 import pytest
 from backend.tests.approved_rows import decided_request
-from sqlalchemy import select
+from backend.tests.test_data_jobs import CLEAN, _ingest
+from backend.tests.test_validation_rule_approval import _dataset_with_set
+from sqlalchemy import func, select
 
-from app.db.models import AuditEventRow, ValidationRuleRow
+from app.db.models import (
+    AuditEventRow,
+    DatasetVersionRow,
+    JobRow,
+    ValidationReportRow,
+    ValidationRuleRow,
+)
 from app.db.session import Database
 from app.platform import audit
+from app.platform import jobs as job_service
 from app.platform.approvals import approval_decision
-from model_schema import Severity, ValidationLayer, new_uuid7
+from app.platform.blobs import BlobStore
+from app.worker.data_handlers import register_data_handlers
+from app.worker.tasks import execute_job
+from model_schema import (
+    JobKind,
+    JobStatus,
+    Principal,
+    Severity,
+    ValidationLayer,
+    new_uuid7,
+)
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "reset-unbacked-rule-approvals.py"
@@ -186,3 +205,81 @@ async def test_a_second_run_resets_none_of_these_and_writes_no_event(
     assert population["a"][0] not in second
     assert population["d"][0] not in second
     assert {k: len(await _events(database, population[k][0])) for k in "ad"} == before
+
+
+@pytest.mark.req("FR-50")
+async def test_a_rule_reset_by_dp6_does_not_execute_in_its_sets_next_run(
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id: UUID,
+    principal: Principal,
+    grant,
+) -> None:
+    """FD-1414, RL-1407 DP-6: the reset takes a rule out of its set's next run.
+
+    Held by the handler's call to `rule_set_to_run` rather than `rule_set_for`: the read
+    shows a member in `review`, only the run refuses it.
+    """
+    register_data_handlers()
+    await grant("analyst")
+    rule = _rule(workspace_id, f"a-{new_uuid7().hex[-8:]}")
+    rule.layer = ValidationLayer.ACTUARIAL_SANITY.value
+    rule.check = "range"
+    rule.body = {
+        **rule.body,
+        "target": {"table": "policy_exposure", "column": "exposure_years"},
+        "params": {"min_inclusive": 0, "key_columns": ["policy_id"]},
+    }
+    async with database.unit_of_work() as session:
+        async with approval_decision(session):
+            session.add(rule)
+            await session.flush()
+        rule_id = rule.id
+    slug, dataset_id = await _dataset_with_set(database, workspace_id, principal, [rule_id])
+    version = await _ingest(database, blob_store, workspace_id, principal, dataset_id, CLEAN)
+
+    async def _state() -> tuple[str, int]:
+        async with database.session() as session:
+            row = await session.get(DatasetVersionRow, version)
+            assert row is not None
+            reports = (
+                await session.execute(
+                    select(func.count())
+                    .select_from(ValidationReportRow)
+                    .where(ValidationReportRow.dataset_version_id == version)
+                )
+            ).scalar_one()
+            return row.status, reports
+
+    before = await _state()
+    await _load().reset(database)
+    assert (await _row(database, workspace_id, rule.slug)).status == "review"
+
+    async with database.unit_of_work() as session:
+        job = await job_service.submit(
+            session,
+            JobKind.DATASET_VALIDATE,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": principal.model_dump(mode="json"),
+                "dataset_version_id": str(version),
+            },
+            principal,
+            workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is not JobStatus.SUCCEEDED
+    async with database.session() as session:
+        stored = await session.get(JobRow, job.id)
+    assert stored is not None
+    assert stored.error is not None
+    assert stored.error["code"] == "RULE_NOT_APPROVED"
+    # RL-1407 (#1070 @24ea2130), the maintainer's condition 1, rendered for rule A.
+    assert stored.error["message"] == (
+        f"Not approved: {rule_id} ({rule.slug}@1, review). A rule set runs only approved "
+        "rules (`01` FR-50). The way back, for each rule: attach a new dry run "
+        "(POST /api/v1/validation-rules/{id}/dry-run), then submit an approval request "
+        "(POST /api/v1/validation-rules/{id}/submit for a draft rule, "
+        "POST /api/v1/approval-requests for a rule in review), and have an approver "
+        f"decide it. Or replace the rule set without it (PUT /api/v1/datasets/{slug}/rule-set)."
+    )
+    assert await _state() == before

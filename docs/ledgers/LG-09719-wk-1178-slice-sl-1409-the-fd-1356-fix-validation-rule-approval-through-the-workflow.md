@@ -853,6 +853,40 @@ Every file outside the write set is one of the two named additions or generated:
 
 `python3 scripts/audit-docs.py` after this entry: `FAILED (1): check 31: gap in the full allocation between 1413 and 9719`, the expected one (LG 9719 is a working id). No other check failed.
 
+### Slice-audit fix 1/2 (Delta 23) — findings A, B and C (2026-10-05 12:45 BST, executor-1409-t9)
+
+Base head `f85be6724b26b90a9c0c6e93ec0160bd61cde076`. Both gate slots (`gate-1`, `gate-2`) were free before the first run.
+
+**A — Acceptance 24.** `test_a_rule_reset_by_dp6_does_not_execute_in_its_sets_next_run`, in `backend/tests/test_reset_unbacked_rule_approvals.py`: an approved, non-built-in rule A with no request, in a dataset's rule set; the reset script; then `DATASET_VALIDATE` on an ingested version. It asserts the job is not `SUCCEEDED`, `error["code"] == "RULE_NOT_APPROVED"`, `error["message"]` **equal** to RL-1407's condition-1 text for rule A (`Not approved: <id> (<slug>@1, review). …`, read from the minted RL-1407 at `docs/rulings/`), and that the version's status and its `validation_reports` count are unchanged.
+- Red, by a scratch revert of `backend/src/app/worker/data_handlers.py:250` (`rule_service.rule_set_to_run(` to `rule_service.rule_set_for(`), backed up first:
+  ```text
+  >       assert await execute_job(database, job.id, blob_store) is not JobStatus.SUCCEEDED
+  E       AssertionError: assert <JobStatus.SUCCEEDED: 'succeeded'> is not <JobStatus.SUCCEEDED: 'succeeded'>
+  E        +  where <JobStatus.SUCCEEDED: 'succeeded'> = JobStatus.SUCCEEDED
+  backend/tests/test_reset_unbacked_rule_approvals.py:270: AssertionError
+  1 failed, 1 warning in 2.15s
+  ```
+  The report has a result for A on the reverted tree (a scratch print, itself reverted: `SCRATCH 1 ['01a10bdd-1861-7f91-8e51-325ee4c24873'] 01a10bdd-1861-7f91-8e51-325ee4c24873`: one report, its one result is rule A). The cause is the plan's.
+- A first run before this one failed for a different cause, a test-setup defect of mine: `PermissionDeniedError: This action requires dataset:write.` (no `grant("analyst")`). It was fixed in the test, and the red above was taken after the fix.
+- Restore: `cmp` of the backup against `data_handlers.py` exit 0; the diff of `backend/src` quiet, exit 0. Green: `backend/tests/test_reset_unbacked_rule_approvals.py` `5 passed, 1 warning in 2.66s`.
+
+**B — Acceptance 4, first clause.** `test_the_approve_route_decides_through_the_workflow` (`backend/tests/test_validation_rule_approval.py`, the module Acceptance 4 names) now also posts `/approve` to a `draft` rule and to the `approved` rule it just approved: each is 409, `code == "RULE_NOT_APPROVED"`, `title == "Only a rule in review can be approved; this one is '<status>'"`, status unchanged.
+- Red, by a scratch mutation of the guard in `backend/src/app/api/validation.py:381` (`if row.status != "review":` to `if False:`), backed up first. The status and code asserts still hold on that tree, because `open_request_for` raises the same 409 `RULE_NOT_APPROVED`; the title assert is what separates the two guards:
+  ```text
+  E           assert 'This rule ha...roval request' == "Only a rule ...ne is 'draft'"
+  E             - Only a rule in review can be approved; this one is 'draft'
+  E             + This rule has no open approval request
+  backend/tests/test_validation_rule_approval.py:471: AssertionError
+  1 failed, 1 warning in 3.06s
+  ```
+- Restore: `cmp` of the backup against `api/validation.py` exit 0; the diff of `backend/src` quiet, exit 0.
+
+**Green after both:** `backend/tests/test_reset_unbacked_rule_approvals.py` and `backend/tests/test_validation_rule_approval.py` together `26 passed, 2 warnings in 33.19s`. `ruff check` on the two files: `All checks passed!`. `mypy`: `Success: no issues found in 226 source files`.
+
+**C — the two ledger gaps.**
+- Acceptance 11's custom role is `decider`, holding only `approval:decide` (`RoleRow(workspace_id=workspace_id, slug="decider", permissions=["approval:decide"])`, `backend/tests/test_validation_rule_approval.py:509`, in `test_an_approver_without_a_policy_role_is_refused`).
+- DP-2 produced **only an OpenAPI component** (`ValidationRuleSubmission`), no new schema artifact: `git diff --name-only origin/main...HEAD -- docs/contracts/` prints one path, `docs/contracts/openapi/generated.json`.
+
 ## PRs
 
 Not yet opened (the lead decides when).

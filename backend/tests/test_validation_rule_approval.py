@@ -462,6 +462,20 @@ async def test_the_approve_route_decides_through_the_workflow(
     assert event.after["approval_request_id"] == str(request.id)
     assert row.approved_by == approver
 
+    # A rule not in `review` is refused before any request is looked for (Acceptance 4).
+    draft = _new_rule(client, author)
+    for rule_id, status in ((draft["id"], "draft"), (created["id"], "approved")):
+        refused = client.post(
+            f"/api/v1/validation-rules/{rule_id}/approve", headers=approver_headers
+        )
+        assert refused.status_code == 409, refused.text
+        assert refused.json()["code"] == "RULE_NOT_APPROVED"
+        assert (
+            refused.json()["title"]
+            == f"Only a rule in review can be approved; this one is {status!r}"
+        )
+        assert (await _row(database, rule_id)).status == status
+
     # A rule in `review` that has no open request has no path through this route.
     orphan = _new_rule(client, author)
     async with database.unit_of_work() as session:
