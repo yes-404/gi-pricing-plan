@@ -239,7 +239,15 @@ on the lead's brief of 2026-10-05 10:50 BST, which adopted the batch-2 triage).
   once. **T1's** FR-223 row is still `:109`, and its find string
   `(`02` OQ-575, decided 2026-08-17.) |` occurs exactly once.
 - **Currency.** At `ef5dc6e7`, `MODEL_REFERENCE_MODE_INCONSISTENT` is still emitted nowhere
-  in `backend/src` or `packages` (`git grep`, no hits), so the Evidence's premise holds.
+  in `backend/src` or `packages`, and it is not in `RATING_ERROR_CODES` (`git grep`, no
+  hits). The Evidence's code-path premise holds.
+- **Flagged, not changed: the owned-list half of the Evidence is false at its own tree.**
+  The Evidence says the code "is not in `03` §5.1's owned-code list (`03:816` has
+  `BUNDLE_COMPILE_FAILED` and no such code)". At `1dd5e264` the same paragraph's `:818`
+  ends `` `MODEL_REFERENCE_MODE_INCONSISTENT`, `` (listed since #302, `4a8729ee`), and
+  at `ef5dc6e7` it is `:936`. T2 as written would add a second occurrence to that list.
+  Changing T2 changes what this record rules, so it is not done in this citation pass. It
+  is raised to the lead for a decision before the mint.
 - **The Evidence section is a dated reading at `1dd5e264`** and resolves there. It is not
   rewritten. At `ef5dc6e7` its moved cites are: `03:816` → `:934` (above);
   `check_model_reference_mode` `model_schema/rating.py:172-183` → `:173-184`, its `mode`
