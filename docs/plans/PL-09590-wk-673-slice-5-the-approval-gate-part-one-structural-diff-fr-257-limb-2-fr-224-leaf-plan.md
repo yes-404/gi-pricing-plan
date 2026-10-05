@@ -141,6 +141,58 @@ strings are not repeated here, so the count stays true.
 | Task 6 Step 2 | 1 → 0 | 0 → 1 |
 | Appendix header | 1 → 1 | 0 → 1 |
 
+### Third pre-mint edit, 2026-10-05: RL 9566 T7 and its three reds
+
+Edited 2026-10-05 from 18:57:14 BST (`TZ=Europe/London date`), before this plan's mint, by the
+planner, on the lead's brief `~/gi-pricing-plan.local/handover/brief-t7-accept-2026-10-05.md`
+Part B. The authority is the maintainer (by delegation), `~/gi-pricing-plan.local/channel/to-lead.md`,
+entry "## 2026-10-05 18:54:06 BST — RL 9566 T7 (#1191 @bb70663b): case (a) accepted; T7's three
+choices ACCEPTED; the recurring cd: fix the role files". Its lines that bear on this plan,
+verbatim:
+
+> T7's three choices are ACCEPTED as the maintainer's (by delegation), each to be named in the RL as such:
+>  (1) NEAREST RANK at ⌈q × n⌉, with "1" = the max; exact on integers.
+>  (2) The decimal string rounded ONCE to 6 places TOWARD +∞: conservative for an upper-bound gate (the values are absolute changes, so non-negative).
+>  (3) n = 0: every value null, and FR-224's gate REFUSES the run (no vacuous pass).
+> Each gets a red in S5: a nearest-rank case where interpolation would differ; a value whose 7th place would round DOWN under half-even (proving +∞); an empty banded set refused.
+
+The text applied is **RL 9566's T7** (working id, #1191, read at head
+`bb70663b405dab9f219417f6789df68ffeef7934`, lines 276–291: `03` §4.6, inside "Bands and
+movers", find ``an empty band has `policies` 0. A **mover** is``, counted once at `ecbd1954`).
+Its §"What it obliges" (line 320 at that head) reads "Slice 5 (PL 9590) applies T3 to T5 and
+T7". Nothing is re-decided here. Each edit below is marked in place.
+
+1. **Three acceptance items, each red first with its exact fixture** (Acceptance 17, 18, 19).
+   Each is also shown red on a deliberately broken variant of the code that makes the other
+   choice, scratch-reverted, so the red proves the ruled choice and not only a missing field.
+   The figures were checked in the repository's environment (Python 3.12, `decimal`, Polars
+   1.44.2 as `uv.lock` pins it): on the absolute changes 1, 2, 3, 4,
+   `pl.Series.quantile(0.5, "linear")` is 2.5, Polars' default `quantile(0.5)` (interpolation
+   `nearest`) is 3.0, and nearest rank is 2; 100/3 quantized to 6 places is `33.333333` under
+   `ROUND_HALF_EVEN` and `33.333334` under `ROUND_CEILING`.
+2. **Task 4 owns them** (it computes `abs_change_pct_quantiles`); Acceptance 19's gate half is
+   Task 5's. Task 4 Step 3's quantile clause now follows T7: the banded set, not "quoted in
+   both", is what n counts.
+3. **Task 1 applies T7 with T3 to T5.** This answers the second pre-mint edit's item 6: a ruling
+   now supplies the §4.6 text, so the write-set row and Task 1's §4.6 mention stand.
+4. **The write set gains no path.** The three tests go in `G`, already new in §"Write set";
+   its row's Acceptance list gains 17–19. The contention is unchanged.
+
+**Counts, per edit**, by `str.count` on this file before and after the edit set (each find
+string exactly 1 before; an insertion keeps its anchor, so its find string stays 1).
+
+| Edit | Find string | New text |
+|---|---|---|
+| delta section (new) | 1 → 1 | 0 → 1 |
+| Acceptance 17–19 (new) | 1 → 1 | 0 → 1 |
+| write set `G` row | 1 → 0 | 0 → 1 |
+| Task 1 Step 1 | 1 → 0 | 0 → 1 |
+| Task 4 Step 1 | 1 → 1 | 0 → 1 |
+| Task 4 Step 3 | 1 → 0 | 0 → 1 |
+| Task 5 Step 1 | 1 → 0 | 0 → 1 |
+| Task 6 Step 2 | 1 → 1 | 0 → 1 |
+| self-review item 8 (new) | 1 → 1 | 0 → 1 |
+
 ## Goal
 
 Make `submit_for_review` (`backend/src/app/platform/rating_versions.py:278`) enforce three
@@ -265,6 +317,37 @@ the ledger quotes the red by its cause (README convention 2). `S` is
     observed `abs_change_pct_quantiles` (the six keys of item 9) of the slice's first Dislocation
     Run on freMTPL2 (`examples/fremtpl2/`), with the tree and the run's spec, for the
     maintainer's re-read at the next checkpoint.
+17. **The quantiles are nearest rank, never interpolated** (RL 9566 T7, choice (1); pre-mint 2026-10-05, T7; §"Third pre-mint edit").
+    `G::test_quantiles_are_nearest_rank_not_interpolated`, `@pytest.mark.req("FR-224")`.
+    Fixture: four policies, each quoted in both with baseline payable premium `10000` minor
+    units; candidate `9900`, `10200`, `9700`, `10400`. The changes are −1, +2, −3, +4 %, so the
+    banded set's absolute changes are 1, 2, 3, 4 (n = 4). Expected `abs_change_pct_quantiles`:
+    `"0.5"` → `"2.000000"` (rank ⌈0.5 × 4⌉ = 2), `"0.9"` → `"4.000000"` (rank ⌈3.6⌉ = 4), and
+    `"0.95"`, `"0.99"`, `"0.999"`, `"1"` → `"4.000000"`. Linear interpolation gives 2.5 and 3.7;
+    Polars' default `quantile` gives 3.0 at 0.5; a signed (not absolute) order gives −1 at 0.5.
+    Red first: the field is absent. Then red on a broken variant that takes
+    `pl.Series.quantile(q, "linear")`: `"2.500000" != "2.000000"`; scratch-reverted, both quoted.
+18. **Rounding is once, to 6 places, toward +∞** (RL 9566 T7, choice (2); pre-mint 2026-10-05, T7; §"Third pre-mint edit").
+    `G::test_quantiles_round_once_toward_positive_infinity`, `@pytest.mark.req("FR-224")`.
+    Fixture: two policies quoted in both: baseline `30000`, candidate `40000` (+100/3 %, exactly
+    33.333…, so the 7th place is 3 and half-even rounds it **down**); baseline `10000`,
+    candidate `11000` (+10 %, exact at 6 places). n = 2. Expected: `"0.5"` → `"10.000000"`
+    (rank 1; an exact value is not moved), and `"0.9"`, `"0.95"`, `"0.99"`, `"0.999"`, `"1"` →
+    `"33.333334"` (rank 2). Red first: the field is absent. Then red on a broken variant that
+    quantizes with `ROUND_HALF_EVEN`: `"33.333333" != "33.333334"`; scratch-reverted, both
+    quoted. A variant that adds `0.000001` unconditionally fails on `"10.000001"`.
+19. **An empty banded set has no figure, and FR-224's gate refuses it** (RL 9566 T7, choice
+    (3); pre-mint 2026-10-05, T7; §"Third pre-mint edit"). `G::test_an_empty_banded_set_has_null_quantiles_and_fr224_refuses`,
+    `@pytest.mark.req("FR-224")`. Fixture: two policies quoted in both, each with baseline
+    payable premium `0` (both counted in `zero_baseline`), candidate `5000`; the banded set is
+    empty (n = 0, `03` §4.6 "Outcomes, and the two sets"). Expected (run half, Task 4): the run
+    completes, and `abs_change_pct_quantiles` holds all six keys, each `null` (no key omitted).
+    Expected (gate half, Task 5): an `approximation`-mode version whose exact-mode baseline run
+    carries that map, under the default threshold, is refused as Acceptance 5's refusal is,
+    the detail naming the quantile and that the run has no figure; no Approval Request row
+    exists (Acceptance 9). Red first: the field is absent, then the submission succeeds. Then
+    red on a broken gate that reads `null` as 0: the submission is accepted; scratch-reverted,
+    both quoted.
 
 ## Global Constraints
 
@@ -348,7 +431,7 @@ Classes as in PL 9591 §"Write set" (`docs/process/delivery-process.core.json`
 | `backend/src/app/worker/dislocation_handlers.py` (Slice 4) | `_dislocation_run`: the exact-mode baseline (DP-S5-3) and the quantiles (DP-S5-4) | edited |
 | `backend/src/app/api/dislocation_runs.py` (Slice 4) | `POST`'s validation (DP-S5-3, DP-S5-5) | edited |
 | `docs/contracts/` generated files | regenerated | |
-| `backend/tests/test_rating_version_dislocation_gate.py` | new | Acceptance 1–9 |
+| `backend/tests/test_rating_version_dislocation_gate.py` | new | Acceptance 1–9; 17–19 (pre-mint 2026-10-05, T7; §"Third pre-mint edit") |
 | `backend/tests/test_rating_versions.py`, `backend/tests/conftest.py` or the module's fixture file | the shared fixture (Acceptance 10); Acceptance 14's test (pre-mint 2026-10-05) | edited |
 | `packages/model-schema/tests/test_approvals.py` | new tests | Acceptance 7 |
 | `docs/ledgers/LG-<n>-…md`; `docs/INDEX.md` | added; regenerated | |
@@ -445,7 +528,7 @@ adopts or amends the Appendix texts. The slice may not move `draft → active` w
 `docs/specs/06-governance.md` (§4.2).
 
 - [ ] **Step 1:** Apply the ruling's texts verbatim from the ledger copy (RL 9566's T3, T4 and T5,
-  not this plan's Appendix; pre-mint 2026-10-05; §"Second pre-mint edit"); re-count each find
+  and T7 for §4.6 (pre-mint 2026-10-05, T7; §"Third pre-mint edit"), not this plan's Appendix; pre-mint 2026-10-05; §"Second pre-mint edit"); re-count each find
   string with `grep -cF` (1 each).
 - [ ] **Step 2:** `python3 scripts/audit-docs.py` (only check 31 may fail while ids are working
   ids).
@@ -525,12 +608,15 @@ the approvers' judgement at review, not a check.
   field); the handler, given such a spec, persists a run whose baseline bundle hash differs
   from the candidate's and writes **no** `rating_versions` row; `abs_change_pct_quantiles`
   holds the six keys and `"1"` equals the largest absolute change; Acceptance 8.
+  Acceptance 17, 18 and 19's run half, each with its fixture (pre-mint 2026-10-05, T7; §"Third pre-mint edit").
 - [ ] **Step 2:** Run them. Expected: `ValidationError` for an unknown field on the first
   (`extra="forbid"`), proving the field is absent; the others fail on the missing field.
 - [ ] **Step 3:** Implement the two fields, the handler's ephemeral `exact` compile (an
   in-memory `RatingVersion` copy with `model_reference_mode="exact"`, compiled through
-  `WorkspaceResolver`, never persisted), the quantiles (Polars, from the policy frame, null
-  when no policy is quoted in both), and the pre-check at `POST`.
+  `WorkspaceResolver`, never persisted), the quantiles ~~(Polars, from the policy frame, null
+  when no policy is quoted in both)~~ (T7: over the banded set's absolute percentage changes, nearest rank ⌈q × n⌉ chosen exactly on
+  the integers, written as a decimal string rounded once to 6 places toward +∞, each `null`
+  when the banded set is empty; never Polars' interpolating `quantile`; pre-mint 2026-10-05, T7; §"Third pre-mint edit"), and the pre-check at `POST`.
 - [ ] **Step 4:** `uv run python scripts/generate-contracts.py`; run the tests (PASS) and
   `backend/tests/test_contracts.py` (the authored `dislocation-run.schema.json` gains the two
   fields by the governing path at this tree, which Slice 4 made generated-and-compared; a
@@ -550,7 +636,7 @@ the approvers' judgement at review, not a check.
 `dislocation_run_id`, `quantile`, `observed_abs_change_pct`, `max_abs_change_pct`,
 `fidelity_statements`.
 
-- [ ] **Step 1: Write the failing tests** — Acceptance 5, 6 and 7.
+- [ ] **Step 1: Write the failing tests** — Acceptance 5, 6 and 7, and Acceptance 19's gate half (pre-mint 2026-10-05, T7; §"Third pre-mint edit").
 - [ ] **Step 2:** Run them. Expected: `ValidationError` (unknown field) for Acceptance 7;
   Acceptance 5's refusal tests FAIL because the submission succeeds.
 - [ ] **Step 3:** Implement; the gate reads the threshold only from
@@ -590,7 +676,8 @@ and ledger cover it.
   test in `G`). Quote every rc and summary line with the tree.
 - [ ] **Step 2:** The ledger: Task 0's records, every red quoted by its cause, Acceptance
   1–13 ~~with evidence~~ and 14 (pre-mint 2026-10-05) ~~with evidence~~, 15 and 16 (RL 9566;
-  pre-mint 2026-10-05; §"Second pre-mint edit") with evidence, and `RL-1264`'s environment-variable violation discharged by name.
+  pre-mint 2026-10-05; §"Second pre-mint edit") with evidence, 17, 18 and 19 (pre-mint 2026-10-05, T7; §"Third pre-mint edit") with
+  evidence, each with its broken-variant red, and `RL-1264`'s environment-variable violation discharged by name.
 
 ## Hand-off
 
@@ -652,3 +739,8 @@ P3 are DP-S5-2's open actuarial choice.
    decision points carry their rulings. Acceptance 15 and 16 come from RL 9566's own text.
    The write set and the contention are unchanged. The §4.6 note's missing text is reported,
    not supplied. RL 9566 is cited by working id and kept out of `relates:` (check 32).
+8. **Third pre-mint edit, 2026-10-05 (RL 9566 T7).** Task 1 applies T7 with T3 to T5. Acceptance
+   17, 18 and 19 carry the three reds the 18:54:06 BST entry names, each with an exact fixture
+   and a broken-variant red; their figures were run, not derived by hand. The write set gains
+   no path. Task 4 Step 3's "quoted in both" is struck for T7's banded set. C1, DP-E1-6 (a)
+   and the earlier deltas are unchanged.
