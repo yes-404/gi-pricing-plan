@@ -78,6 +78,17 @@ in the deputy's numbering). The only custom-objective compile test is the approv
 (`backend/tests/test_rating_version_compile.py:536`). Deleting `*version.pins.custom_objectives`
 from `all_refs` (`compile.py:622`) would pass the suite (FD 9659 item 1).
 
+**Folded in on the deputy's 14:46:53 BST entry, item 2: a `control`-intent factor reaches a price
+through a `model_call`** (FD 9639, working id, draft PR #1156 at `ca152d5f`; HIGH provisional,
+latent today). `_model_call_handler` (`packages/pricing-core/src/pricing_core/rating/runtime.py:512`)
+scores a GBM pin through `predict_gbm(gbm_result, booster, frame, factors=(), nthread=1)` (`:565`)
+on every slug of `GbmFitResult.feature_order` (`model_schema/modelling.py:1671`), and nothing on
+that path reads `Factor.intent` (`:143`). `feature_order` holds Factor slugs (the design loop in
+`pricing_core/modelling/gbm.py:301-302` keys each column by `factor.slug`), while the pinned model's
+payload names its Factors only by id (`ModelSpecCommon.factors: tuple[UUID, ...]`, `:842`), so
+`compile_bundle` has nothing to read an intent from today. This slice takes the **safe minimum**:
+compile refuses such a `model_call` (DP-7). Neutralisation is not built here.
+
 ## The decisions this plan rests on, quoted
 
 From `~/gi-pricing-plan.local/channel/to-lead.md`, cited by entry header:
@@ -125,23 +136,43 @@ From `~/gi-pricing-plan.local/channel/to-lead.md`, cited by entry header:
     finishes first, it goes BEFORE PL 9728 (NFR-489, a G4 item) in lane B, or BEFORE WK-675 S2 (off
     G2's path) in lane C. WK-673 S3 in lane A is NOT displaced."*
 
+- **"2026-10-05 14:46:53 BST — FD 9639 (a control factor's coefficient reaches scoring): HIGH
+  provisional; PL 9649 takes the REFUSAL now; neutralisation is an open question first"**:
+  - Item 2: *"Scope: PL 9649 takes the SAFE MINIMUM now: compile_bundle refuses a model_call whose
+    pinned model's feature_order contains a `control`-intent factor, with
+    CONTROL_FACTOR_IN_RATEABLE_PATH, red first (the same code as decision 37). That stops any price
+    depending on a control factor today, and fits PL 9649's FR-240 T-text ("no control-intent factor
+    in a rateable path")."*
+  - Item 3: *"Neutralisation is NOT built in this slice: a DM drafts an OQ with options"*, (a)
+    refusal only, (b) neutralise at a declared reference value, (c) refuse unless the reference is
+    declared; *"the decision comes to me. If (b) or (c) is chosen, it is a spec change first (02
+    FR-88 and 03), then its own slice under WK-673, not part of PL 9649."*
+  - Item 4: *"PL 9649's planner folds in step 2 (a DP note citing this entry)"*. That is DP-7.
+
 The lead's brief adds (c) FD 9697's control-intent refusal at compile and at seed (DP-3), and (d)
-limb 2's negative test.
+limb 2's negative test. The lead's relay of RL 9633's report (working id, the ruling, below) adds
+a DP-4 test over a table with `rateable: false`: *"Acceptance 5 does not list one"*. Acceptance 5
+now does.
 
 ## Status
 
 `draft`. DP-1 to DP-4 are **decided** (the deputy, 14:21:22 BST, items 35–38, quoted above), and
 every site below applies them with their conditions. DP-5 is decided as recommended (item 39) and DP-6 as
-amended (item 40, the 14:28:35 entry); every site applies both. The plan moves to `active` only through a separate activation PR, once every
+amended (item 40, the 14:28:35 entry); every site applies both. DP-7 is decided (the 14:46:53
+entry, item 2) and applied at every site; its neutralisation half is an open question, not built. The plan moves to `active` only through a separate activation PR, once every
 activation need below holds. That PR carries this plan's status flip and the `SL-` row's.
 
 ### Activation needs, in order
 
 1. **FD 9697 and FD 9659 minted** (#1136, #1142; FD 9659 is first in batch 2, the 14:12:13 entry,
    item 2).
-2. **A ruling record (`RL-`), written by a decision-maker who adopts texts T1 to T4**
+2. **A ruling record (`RL-`), written by a decision-maker who adopts texts T1 to T5**
    (§"Spec texts": FR-240, FR-230, the seed route row and the owned-code line in `03`, and `02` R4),
-   **and records DP-1 to DP-4 as decided at 14:21:22 BST and DP-5 and DP-6 at 14:28:35 BST**. A decision
+   **and records DP-1 to DP-4 as decided at 14:21:22 BST, DP-5 and DP-6 at 14:28:35 BST, and DP-7
+   at 14:46:53 BST**. The ruling is RL 9633 (working id; `~/gi-pricing-plan.local/handover/eta.md`,
+   row "RL 9633", 5 Oct 14:32:29), drafted before DP-7: **it needs FR-240's T-text to name the
+   `model_call` case**, as T5 below or folded into T1, and records DP-7 as decided with
+   neutralisation left to the open question (DP-7). `dm-9639oq` updates it. A decision
    lands as a dated artifact (`CLAUDE.md` §12), as for PL 9688. If its text differs from this plan, the
    ruling wins, and the dispatch record names each difference at every site it operates
    ([`README.md`](README.md) rule 5: narrative, Files, Steps, Acceptance).
@@ -195,6 +226,9 @@ code that turns it green. A failure with the right status and a different cause 
    `test_a_pinned_table_keyed_on_a_control_factor_is_refused` fails at the base with `Failed: DID
    NOT RAISE` (FD 9697 §Evidence 1's `COMPILE ACCEPTED`), and after the fix raises `ValueError`
    matching `CONTROL_FACTOR_IN_RATEABLE_PATH`, naming the table, the key and the Factor ref.
+   It is parametrised over the table's `rateable` flag (`model_schema/rating.py:714`), `[True]` and
+   `[False]`, and **`[False]` is red first by the same cause**: DP-4 (a) refuses whatever the flag,
+   because *"the flag is declarative, so the check does not trust it"* (item 38).
    `test_a_table_keyed_on_a_risk_factor_compiles` is green at the base and after.
 6. **(c) Control intent at seed (DP-3 (a)), red first.**
    `test_seeding_from_a_control_factor_is_refused` fails at the base with `Failed: DID NOT RAISE`
@@ -232,6 +266,19 @@ code that turns it green. A failure with the right status and a different cause 
     pass unchanged (DP-2's reading rule, Task 2).
 12. **`git diff --stat origin/main...HEAD` names only the files of §"Write set"**, plus the ledger
     and `docs/INDEX.md`.
+13. **(e) Control intent through a `model_call` (DP-7), red first.** In
+    `test_rating_compile_fr240.py`, `test_a_model_call_over_a_gbm_fitted_on_a_control_factor_is_refused`:
+    a model payload whose `fit_result.feature_order` holds the slug of a Factor with
+    `intent=FactorIntent.CONTROL`, pinned by a `model_call` step, its Factors on the resolved
+    artifact (Task 3b Step 3). It fails at the base with `Failed: DID NOT RAISE`, and after the fix
+    raises `ValueError` matching `CONTROL_FACTOR_IN_RATEABLE_PATH`, naming the model ref, the feature
+    and the Factor ref. `test_a_model_call_over_risk_factors_compiles` is green at the base and
+    after. Through the compile Job, `test_fr240_governance.py::
+    test_a_compile_over_a_gbm_fitted_on_a_control_factor_fails_with_its_code` fits a GBM on a
+    `control` Factor through the real Job (the `_fitted_gbm` neighbour,
+    `backend/tests/test_model_jobs_gbm.py:88`), approves it with `mark_approved`, pins it by a
+    `model_call`, and ends in a `FAILED` Job with `error["code"] ==
+    "CONTROL_FACTOR_IN_RATEABLE_PATH"`; at the base the Job succeeded. Markers `FR-88`, `FR-240`.
 
 ## Global Constraints
 
@@ -248,11 +295,11 @@ code that turns it green. A failure with the right status and a different cause 
 
 | Spec | Id | What this slice holds | Marker |
 |---|---|---|---|
-| `03` | FR-240 | Clause "no unapproved custom objective transitively reachable" (DP-2), and clause "no `control`-intent factor in a rateable path" (DP-4), at compile | `req("FR-240")` on every new test |
+| `03` | FR-240 | Clause "no unapproved custom objective transitively reachable" (DP-2), and clause "no `control`-intent factor in a rateable path" (DP-4, and through a `model_call`, DP-7), at compile | `req("FR-240")` on every new test |
 | `00` | FR-20 | Maturity enforced at the transition: model approval (DP-1) and compile (DP-2) | on the approval and transitive tests |
 | `02` | R4 (§1, `:49-50`) | A Model using a Custom Objective reaches `approved` only if the objective is `approved` | covered by the FR-20 / FR-359 tests; R4 has no id of its own |
 | `06` | FR-359 | The unapproved-objective flag propagates into the approval surface and blocks `approved` | `req("FR-359")` on the approval tests |
-| `02` | FR-88 | A `control` factor reaching a rate table is a validation error in `03` | `req("FR-88")` on the seed and control-compile tests |
+| `02` | FR-88 | A `control` factor reaching a rate table is a validation error in `03`; *"Rating Versions may only use `risk` factors"*, so a `model_call` over one is refused too (DP-7) | `req("FR-88")` on the seed, control-compile and `model_call` tests |
 | `03` | FR-230 | Seeding refuses a `control` Factor (DP-3 (a), text T2) | `req("FR-230")` on the seed tests |
 | `02` | FR-163 | The objective lifecycle; `deprecated` is refused at compile (DP-5) | the `[deprecated]` case |
 | `02` | FR-205 | The existing flag and its refusal are unchanged; the message generalises | the existing test `test_model_lifecycle.py:547` passes unchanged |
@@ -263,8 +310,9 @@ is built for no flag today (`apply_approval_decision` raises for any flag, `mode
 though Acceptance 4 proves its outcome cannot reach compile (item 35); a peril structure's models, a
 **known gap named in T1 with FD 9995 (working id, #980) as its owner** (the compile resolver cannot
 resolve a `peril_structure`, its final `NOT_FOUND`, `backend/src/app/platform/rating_versions.py:550-555`;
-item 36); custom evaluation metrics, which do not reach a price (item 36); and DP-4 (c), FD 9639
-(working id), filed separately (the 14:21:22 entry).
+item 36); custom evaluation metrics, which do not reach a price (item 36); and **neutralising a `control`
+factor in a priced GBM** (holding it at a declared reference level), which goes to the maintainer
+as an open question first (the 14:46:53 entry, item 3; DP-7). This slice only refuses (DP-7).
 
 ### Task 0 at planning time
 
@@ -288,9 +336,9 @@ at `ae78023e`.
 
 | Path | This slice | SL-1409 (lane B, re-gating) | FD 9707 fix (PL 9688, #1145) | FD 9708 fix (PL 9683, #1140) | SL-1391 (PL 9716, #1127) | WK-675 S2 (PL 9713, #1131) | WK-673 S3 (PL 9689, #1138) | Class |
 |---|---|---|---|---|---|---|---|---|
-| `packages/pricing-core/src/pricing_core/rating/compile.py` | edited: `compile_bundle` (`:573`; two calls after the pin loop `:618-631`); added: `_check_reachable_objectives`, `_check_control_factor_keys` | — | added `_check_lookup_as_at`; edited `ALGORITHM_CHECKS` | — | — | — | reads `compile_bundle` (`:573`), not edited | **shared with PL 9688, distinct definitions**: serialises (the deputy, 14:12:13 item 3) unless the dispatch record names the path and the check (`other_shared_path`). PL 9776 (#1051) also edits `ALGORITHM_CHECKS`, not touched here |
+| `packages/pricing-core/src/pricing_core/rating/compile.py` | edited: `compile_bundle` (`:573`; three calls after the pin loop `:618-631`), `ResolvedArtifact` (`:434`, one field appended, DP-7); added: `_check_reachable_objectives`, `_check_control_factor_keys`, `_check_control_factor_model_calls` (DP-7) | — | added `_check_lookup_as_at`; edited `ALGORITHM_CHECKS` | — | — | — | reads `compile_bundle` (`:573`), not edited | **shared with PL 9688, distinct definitions**: serialises (the deputy, 14:12:13 item 3) unless the dispatch record names the path and the check (`other_shared_path`). PL 9776 (#1051) also edits `ALGORITHM_CHECKS`, not touched here |
 | `packages/pricing-core/src/pricing_core/rate_tables/operations.py` | edited: `seed_from_model` (`:172`, one refusal after `bound`, `:209`) *(DP-3 a)* | — | — | — | edited `_compute_diff`; added `diff_cells` | — | — | shared with SL-1391, distinct definitions: `other_shared_path` |
-| `backend/src/app/platform/rating_versions.py` | edited: `compile_rating_version`'s `_Resolver.resolve` (`:445-555`), one `factor` branch before the final `NOT_FOUND` | — | reads `rows_as_at` call only | edited `create_rating_version` (`:230-275`) | — | reads | — | shared with PL 9683, distinct definitions: `other_shared_path` |
+| `backend/src/app/platform/rating_versions.py` | edited: `compile_rating_version`'s `_Resolver.resolve` (`:445-555`), one `factor` branch before the final `NOT_FOUND`, and the `model` branch (`:464-485`) carries the model's Factors (DP-7); one import, `load_factors` | — | reads `rows_as_at` call only | edited `create_rating_version` (`:230-275`) | — | reads | — | shared with PL 9683, distinct definitions: `other_shared_path` |
 | `backend/src/app/platform/modelling.py` | edited: `flags_for` (`:1049-1066`), the `ARTIFACT_FLAGGED` detail in `apply_approval_decision` (`:1343-1351`) | — | — | — | added `load_factor_by_ref` | — | — | shared with SL-1391, distinct definitions: `other_shared_path` |
 | `packages/model-schema/src/model_schema/modelling.py` | edited: `ModelFlag` (`:1984-1992`), one member appended | — | — | — | — | — | — | none |
 | `backend/src/app/errors.py` | edited: `RATING_ERROR_CODES` (`:305`), `CONTROL_FACTOR_IN_RATEABLE_PATH` appended | edits `DATA_ERROR_CODES` | — | appends to `RATING_ERROR_CODES` *(DP-1 a)* | — | — | — | registry: append (`registry_exempt_append_only`); the second to merge re-gates |
@@ -302,7 +350,10 @@ at `ae78023e`.
 | `packages/pricing-core/tests/test_rating_compile_fr240.py` | added (new module) | — | — | — | — | — | — | none |
 | `backend/tests/test_fr240_governance.py` | added (new module) | — | — | — | — | — | — | none. It imports `backend/tests/approved_rows.py::mark_approved`, which SL-1409 edits (`_EVIDENCE`, `_FLAG_ONLY`); read only here |
 
-**Read, not edited:** `backend/src/app/api/approvals.py` (`_carry_to_the_artifact` calls
+**Read, not edited:** `backend/src/app/platform/modelling.py::load_factors` (`:284`, the spec's
+Factors by id in spec order, plus interaction operands; already called this way by
+`rate_tables.py:134-136`), `pricing_core/rating/runtime.py::_model_call_handler` (`:512`; DP-7
+refuses before a bundle exists, so scoring is not changed), `backend/src/app/api/approvals.py` (`_carry_to_the_artifact` calls
 `apply_approval_decision` at `:524`; SL-1409 edits that function, so this slice must not),
 `backend/src/app/platform/objectives.py` (`resolve_ref`, `:516`), `backend/src/app/platform/rate_tables.py`
 (`_map_operation_error` turns the seed's `CODE: detail` into a 422, `:83-92`).
@@ -323,9 +374,10 @@ are kept so a reader can see what was weighed; the decisions' text governs.
 | **DP-1** | Where does model approval refuse an unapproved objective, and with what code? | (a) a computed flag `custom_objective_not_approved` in `flags_for`, refused by the existing `ARTIFACT_FLAGGED` 409 at the decision; `ModelFlag` and `model.schema.json` gain the member; (b) a bare `OBJECTIVE_NOT_APPROVED` refusal inside `apply_approval_decision`; (c) (a), and refuse at submission too | **(a).** `06` FR-359 names *"unapproved custom objective (`02` R4)"* as a flag that propagates into the approval surface, and the approval-request contract already spells it `custom_objective_not_approved` (`approval-request.schema.json:53-54`). `flags_for` is computed, not stored (`modelling.py:1052-1060`), which is exactly right for a referent that moves. Submission already records the flags in its audit (`:1162-1180`), so (c) adds nothing but a forced serial review | **DECIDED (a)**, the deputy 14:21:22 BST item 35, with the condition that an override never reaches compile (Acceptance 4) | Tasks 1, 2, 4, 6 |
 | **DP-2** | What does "transitively reachable" reach, and with what code? | (a) one hop: each pinned model's own `spec.objective` when `kind == "custom"`, refused `PIN_NOT_APPROVED` naming model → objective; (b) a walk of every artifact ref in every resolved payload; (c) (a) plus a GBM's custom eval metrics | **(a).** It is every path that exists: a GLM has no custom objective (`02` FR-207's 2026-10-04 amendment moves `GlmSpec.custom_objective_ref` to Phase 3), and a peril structure cannot be resolved at compile today (§"Scope"). `PIN_NOT_APPROVED` because the same objective in the same state then gets the same code by either door, and FR-240's clause is a maturity clause (FR-20). Text T1 states the bound, as FD 9659's remedy asks | **DECIDED (a)**, item 36: T1 names the peril-structure gap with FD 9995 as owner; custom eval metrics excluded (no price) | Tasks 2, 6 |
 | **DP-3** | FD 9697 at seed? FR-240 names compile; FR-88 says a `control` factor *reaching a rate table* is an error | (a) refuse at seed **and** at compile, `CONTROL_FACTOR_IN_RATEABLE_PATH` 422, FR-230 amended (T2); (b) seed it with `rateable=false`; (c) compile only | **(a).** FR-88's words reach the table, not only the bundle, and a refusal at seed tells the author before any table exists. Compile stays the backstop for any table whose key binds a `control` Factor by another route | **DECIDED (a)**, item 37: the code is registered in this slice; T2 amends FR-230 | Tasks 3, 6 |
-| **DP-4** | What is a "rateable path" at compile? | (a) every pinned rate table's keys bound by `factor_ref`, whatever the table's `rateable` flag; (b) only tables with `rateable: true`; (c) also a `model_call` whose model fits a `control` factor | **(a)** in this slice. A pinned table is in the bundle by construction, and (b) would lean on FR-236's "rateable only" rule, which nothing here shows is enforced. (c) went to the lead as a candidate finding: FR-88's 2026-08-22 amendment gives `control` a free coefficient, so a `model_call` may score on it | **DECIDED (a)**, item 38 (*"the flag is declarative, so the check does not trust it"*). (c) is FD 9639 (working id), filed separately, outside this plan unless it returns HIGH | Tasks 3, 6 |
+| **DP-4** | What is a "rateable path" at compile? | (a) every pinned rate table's keys bound by `factor_ref`, whatever the table's `rateable` flag; (b) only tables with `rateable: true`; (c) also a `model_call` whose model fits a `control` factor | **(a)** in this slice. A pinned table is in the bundle by construction, and (b) would lean on FR-236's "rateable only" rule, which nothing here shows is enforced. (c) went to the lead as a candidate finding: FR-88's 2026-08-22 amendment gives `control` a free coefficient, so a `model_call` may score on it | **DECIDED (a)**, item 38 (*"the flag is declarative, so the check does not trust it"*); the `rateable: false` case is tested (Acceptance 5). (c) is FD 9639 (working id), filed separately, and returned HIGH provisional: its refusal is DP-7 | Tasks 3, 6 |
 | **DP-5** | Which objective statuses pass the transitive check, and which the flag? | (i) compile: the direct pin's `_APPROVED_OR_BETTER` (`compile.py:404`), so `deprecated` is refused; the flag: status ≠ `approved`; (ii) compile also admits `deprecated` | **(i).** `02` OQ-609 is decided (a): *"existing pins continue, new specs cannot select"*, and a compile is always of a `draft` version (FR-239), so it is new work. One set for both doors | **DECIDED (i)**, the deputy 14:28:35 BST item 39, with a red test (the `[deprecated]` case, Acceptance 3) | Tasks 2, 4 |
 | **DP-6** | Rows already in the bad state (approved models over unapproved objectives; tables keyed on `control` factors) | (a) Task 0 counts them over every `gipricing*` database and STOPS to the lead on a non-zero count; no reset in this slice; (b) reset such models to `review` | **(a).** After the fix, compile refuses every such row's use (Tasks 2 and 3), so nothing new is priced on them. A reset is a data change whose need the count decides | **DECIDED (a), AMENDED**, item 40: count in `gipricing` (the demo DB) and the slice's own test DB only, since the 92 `gipricing_%` databases are disposable scratch; a bad row in `gipricing` STOPS with its ids, no reset, no delete | Task 0 |
+| **DP-7** | FD 9639: a `model_call` over a GBM whose `feature_order` holds a `control`-intent factor | (a) refuse at compile, `CONTROL_FACTOR_IN_RATEABLE_PATH`, the code DP-3 registers; (b) neutralise at a reference value the model declares per `control` factor; (c) refuse unless that reference is declared | **(a) in this slice**, as the safe minimum: no price can depend on a `control` factor while (b) and (c) are open. (b) and (c) need a spec change first (`02` FR-88 and `03`) | **FD 9639's safe minimum, decided** (the deputy, 14:46:53 BST, item 2); **neutralisation NOT built** (an open question goes to the maintainer, item 3, drafted by `dm-9639oq`; if (b) or (c) is chosen, its own slice under WK-673) | Tasks 3b, 6 |
 
 ### Spec texts (proposed for the ruling; applied verbatim in Task 6)
 
@@ -361,11 +413,22 @@ seed route's 422 list (`:902`):
 > approval is caught there. An Admin override of the flag (FR-359) never reaches compilation:
 > FR-240's refusal is independent of approval state.
 
+**T5** (DP-7), a dated amendment appended to the FR-240 cell after T1; the ruling may fold it
+into T1:
+
+> *(Amended 2026-10-05, FD 9639.)* **A `control`-intent factor is also in a rateable path when a
+> pinned model scored by a `model_call` was fitted on it**: compilation refuses the version with
+> `CONTROL_FACTOR_IN_RATEABLE_PATH` (422), naming the model, the feature and the Factor, because
+> scoring applies every fitted feature's effect and `02` FR-88 lets Rating Versions use only
+> `risk` factors. Scoring at a declared reference level for a `control` factor is an open
+> question (FD 9639), not a permission.
+
 **T4**, a dated note after `CONTROL_FACTOR_IN_RATEABLE_PATH` in `03` §5.1's owned-code list
 (`03-rating-engine.md:933`):
 
-> *(registered 2026-10-05, FD 9697: **422** at `seed-from-model` (FR-230) and at bundle compile
-> (FR-240); the message names the table, the key and the Factor)*
+> *(registered 2026-10-05, FD 9697 and FD 9639: **422** at `seed-from-model` (FR-230) and at bundle
+> compile (FR-240); the message names the table, the key and the Factor, or the model, the feature
+> and the Factor)*
 
 ## Tasks
 
@@ -539,6 +602,48 @@ async def test_an_unapproved_objective_reached_through_a_pinned_model_is_refused
   reading rule as Task 2 Step 4: a payload with no `keys` binds no factor.
 - [ ] **Step 8:** Run both modules; green. Commit: `fix: seed and compile refuse a control-intent factor (FR-240, FR-88, FD 9697)`.
 
+### Task 3b: (e) control intent through a `model_call` (Acceptance 13; DP-7)
+
+Runs after Task 3, which registers the code and builds `_check_control_factor_keys`.
+
+**Files:**
+- Modify: `packages/pricing-core/tests/test_rating_compile_fr240.py`, `backend/tests/test_fr240_governance.py`
+- Modify: `packages/pricing-core/src/pricing_core/rating/compile.py`
+- Modify: `backend/src/app/platform/rating_versions.py`
+
+- [ ] **Step 1: Write the pricing-core red.** `test_a_model_call_over_a_gbm_fitted_on_a_control_factor_is_refused`:
+  start from `_resolver()` (`test_rating_compile_bundle.py:107`); give `model:motor-ad-frequency@7`
+  a payload with `fit_result: {"model_type": "xgboost", "feature_order": ["driver_age",
+  "year_of_account"], ...}` and a `factors` entry on its `ResolvedArtifact` (Step 3) holding a
+  `risk` `driver_age` Factor and a `control` `year_of_account` Factor (`_factor`,
+  `test_rate_table_operations.py:376`, with `intent=FactorIntent.CONTROL`). Expect `ValueError`
+  matching `CONTROL_FACTOR_IN_RATEABLE_PATH` naming `model:motor-ad-frequency@7`,
+  `year_of_account` and the Factor's `slug@version`. The control,
+  `test_a_model_call_over_risk_factors_compiles`, is the same with both Factors `risk`. Markers
+  `FR-88`, `FR-240`.
+- [ ] **Step 2: Write the backend red**, `test_a_compile_over_a_gbm_fitted_on_a_control_factor_fails_with_its_code`
+  (Acceptance 13). Run both; expected `Failed: DID NOT RAISE` and a `SUCCEEDED` Job. Commit (red):
+  `test: FD 9639 — a model_call over a control factor compiles (FR-240, FR-88)`.
+- [ ] **Step 3: Carry the Factors to compile.** `ResolvedArtifact` (`compile.py:434`) gains
+  `factors: tuple[Factor, ...] = ()` (`Factor` from `model_schema.modelling`, the shape's one
+  source; `pricing-core` already imports `model_schema`). The default keeps every existing
+  `FakeResolver` valid (Acceptance 11). In `_Resolver.resolve`'s `model` branch
+  (`rating_versions.py:464-485`), pass `factors=tuple(await load_factors(session,
+  workspace_id=workspace_id, factor_ids=list(model_obj.spec.factors)))`, as
+  `rate_tables.py:134-136` already does. The Bundle's payloads are not changed: the Factors are
+  read at compile and not carried into the Bundle. *(Why not a key in the model payload: the payload
+  is `Model.model_dump`, and a key added beside it is a second, hand-written shape inside a
+  Bundle (`CLAUDE.md` §2).)*
+- [ ] **Step 4: Compile check.** `_check_control_factor_model_calls(algorithm, version, resolved)`,
+  called after `_check_control_factor_keys`, where `resolved` is the `ResolvedArtifact` per ref the
+  pin loop already fetched (keep it beside `payloads`; never resolve a pin twice, the RL-859 note at
+  `compile.py:598-602`). For each `RatingModelCallStep` with a `model_ref`, read
+  `payload.get("fit_result", {}).get("feature_order", ())`, map each slug to the Factor with that
+  slug in `resolved.factors`, and refuse `CONTROL_FACTOR_IN_RATEABLE_PATH` on the first with
+  `intent is FactorIntent.CONTROL`. A payload with no `fit_result` or no `feature_order` binds no
+  factor (Task 2's reading rule). A `peril_structure_ref` step is FD 9995's known gap (T1).
+- [ ] **Step 5:** Run both modules; green. Commit: `fix: compile refuses a model_call over a control-intent factor (FR-240, FR-88, FD 9639)`.
+
 ### Task 4: (a) the flag (Acceptance 1, 2, 9)
 
 **Files:**
@@ -577,7 +682,7 @@ async def test_an_unapproved_objective_reached_through_a_pinned_model_is_refused
 - Modify: `docs/specs/03-rating-engine.md` (FR-230 `:121`, FR-240 `:137`, the seed route row `:902`, the owned-code list `:933`)
 - Modify: `docs/specs/02-modelling.md` (R4, `:49-50`)
 
-- [ ] **Step 1:** Apply the ruling's T1, T2, T3 and T4. Use the ruling's text where it differs from
+- [ ] **Step 1:** Apply the ruling's T1, T2, T3, T4 and T5. Use the ruling's text where it differs from
   §"Spec texts". Escape any `|` as `\|`.
 - [ ] **Step 2:** `python3 scripts/audit-docs.py`: exit 0, or only the working-id check 31 rows the
   lead expects. Check 10 must agree on `CONTROL_FACTOR_IN_RATEABLE_PATH` (Acceptance 7).
@@ -596,8 +701,10 @@ async def test_an_unapproved_objective_reached_through_a_pinned_model_is_refused
 1. **FD 9697's and FD 9659's register rows**, and clauses (5) and the transitive half of register
    row `FR-240 (F-W9-3)` (`docs/findings/register.md:61`), are discharged by the merge. The auditor
    writes those rows, not this slice.
-2. **DP-4 (c)**, a `model_call` over a model that fits a `control` factor, is FD 9639 (working id),
-   filed separately on the deputy's 14:21:22 BST entry; outside this plan unless it returns HIGH.
+2. **DP-4 (c)**, a `model_call` over a model that fits a `control` factor, is FD 9639 (working id,
+   #1156). This slice refuses it (DP-7). **Neutralisation is not built**: the open question
+   (`dm-9639oq`) goes to the maintainer, and a (b) or (c) answer is a spec change, then its own
+   slice under WK-673 (the 14:46:53 entry, item 3). FD 9639's register row is the auditor's.
 3. **FR-359's Admin override** is built for no flag. Whoever builds it re-points
    `test_an_overridden_flag_never_reaches_compile` at the real override instead of `mark_approved`;
    the assertion (compile refuses) does not change. That is a pre-existing spec-versus-code gap,
@@ -607,10 +714,10 @@ async def test_an_unapproved_objective_reached_through_a_pinned_model_is_refused
 
 ## Self-review
 
-- **Spec coverage.** (a) is Tasks 1 and 4; (b) Task 2; (c) Task 3; (d) Task 2 Steps 2 and 5. Every
+- **Spec coverage.** (a) is Tasks 1 and 4; (b) Task 2; (c) Task 3; (d) Task 2 Steps 2 and 5; (e) Task 3b. Every
   row of §"Requirement coverage" has a task. Every DP names the tasks it blocks.
 - **Ruling sites.** Each DP's recommendation appears in narrative (§"Decision points"), Files and
-  Steps (Tasks 1-6) and Acceptance (1-9). Items 35–40 and the lane placement were applied at all
+  Steps (Tasks 1-6, and 3b) and Acceptance (1-13). Items 35–40 and the lane placement were applied at all
   four, by grepping each condition's subject (override, peril, FD 9995, metrics, registered,
   `rateable`, `gipricing`, `deprecated`, lane) over the whole file.
 - **Literals checked at `83ea5090`**, by grep, not recalled: the line numbers in §"Goal" and
@@ -621,6 +728,12 @@ async def test_an_unapproved_objective_reached_through_a_pinned_model_is_refused
   `mark_approved` (`approved_rows.py:91`); `_fitted_gbm` (`test_model_jobs_gbm.py:88`); `_factor`
   `:376` and `_glm_model` `:48` (`test_rate_table_operations.py`); the codes at `errors.py` and
   `03:933`.
+- **DP-7's literals** were read by grep at `982ab531` (this plan's branch, whose code equals
+  `83ea5090`: the branch changes only this plan and `docs/roadmap.md`): `runtime.py:512`, `:565`;
+  `GbmFitResult.feature_order` `:1671`, `Factor.intent` `:143`, `ModelSpecCommon.factors` `:842`
+  (`model_schema/modelling.py`); `gbm.py:301-302`; `ResolvedArtifact` `compile.py:434`; the `model`
+  branch `rating_versions.py:464-485`; `load_factors` `modelling.py:284`; `rate_tables.py:134-136`;
+  `RateTable.rateable` `model_schema/rating.py:714`.
 - **Not run.** No sample here was executed by the planner. Task 2's sample is FD 9659 §Evidence 1's
   run reshaped into a test; Task 3's is FD 9697's. Task 1's harness is FD 9659 §3's.
 - **Placeholders.** None in the pricing-core samples. The backend tests are steps over named neighbours rather than full code, because
