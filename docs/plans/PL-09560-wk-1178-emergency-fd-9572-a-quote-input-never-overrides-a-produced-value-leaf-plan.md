@@ -2,7 +2,7 @@
 id: PL-9560
 family: plan
 kind: leaf
-title: WK-1178 emergency — FD 9572, a quote input never overrides a produced value (the root in score_one's path, and guard (c); FR-213): leaf plan
+title: WK-1178 emergency — FD 9572, guard (c) at the entry, a quote input never overrides a produced value (FR-213): leaf plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-05            # working id; the mint date will replace this (check 31)
 owner: planner
@@ -15,12 +15,21 @@ corrected_by: []
 relates: [FD-1374, RL-1263, SL-1391]
 ---
 
-# PL 9560 (working id) — WK-1178 emergency: a quote input never overrides a produced value, leaf plan
+# PL 9560 (working id) — WK-1178 emergency: guard (c), a quote input never overrides a produced value, leaf plan
 
 This is the leaf plan for working id 9560. Its slice is working id 9561, an `SL-` row under
 WK-1178 in [`../roadmap.md`](../roadmap.md) with status `draft`. The lead reserved both ids. The
 finding is FD 9572 (working id, draft PR #1183). Everything below was measured at `origin/main`
 `4d3be1414ad4dacdaa0c14ef49fb21853adbaed6` on 2026-10-05, unless a line says otherwise.
+
+**Narrowed 2026-10-05, after 17:32:18 BST, pre-mint, on the maintainer's (by delegation)
+17:27:55 and 17:30:02 BST entries (quoted under "Authority").** As first filed, this plan
+carried the root in `score_one`'s path as well. The cause trace placed that root in `to_wire`'s
+sink fan-in, and the 17:27:55 ruling sends it to PL 9560's sibling, PL 9567, as (R-b). This
+plan is now **guard (c) alone**, with T2 applied in the same commit (17:30:02 item 2). If
+auditor-fanin finds a wrong price with no caller key, (R-b) becomes a **second** emergency
+slice after this one; it does not join this plan (the lead's relay of the maintainer's
+correction to the 17:27:55 ruling).
 
 **No decision point is open.** The maintainer (by delegation) has already made every decision
 this plan carries, in the three entries quoted under "Authority". The plan adds none.
@@ -36,17 +45,13 @@ this plan carries, in the three entries quoted under "Authority". The plan adds 
 A caller can no longer set a price by sending an input named like a value the algorithm
 produces, on any path that scores a quote.
 
-**Architecture:** Two layers, in this order.
-1. **The root**, in `score_one`'s path, per auditor-premise's cause trace (Task 2). The
-   maintainer's (by delegation) addendum gives its likely shape: "if the output or ladder reads
-   a produced value from the merged context instead of the producing step's result, it reads
-   the step's result."
-2. **Guard (c)**, defence in depth, in the shared context merge (Task 3). `score_one` and
-   `_score_context_sync` refuse an undeclared input key that names any produced value, with
-   `INPUT_CONTRACT_VIOLATION`. The declared inputs are subtracted first.
-
-If the root needs a design choice, Task 2 stops and the choice goes to the maintainer (by
-delegation). Task 3 (guard (c)) then ships alone, first.
+**Architecture:** One guard, at the entry. `score_one` and `_score_context_sync` build the
+engine context as `{effective_date, purpose, **ctx.inputs}` (`score.py:910-912`, `:1066-1068`),
+which relays every raw key to the engine. A new pre-check refuses an undeclared input key that
+names any produced value, with `INPUT_CONTRACT_VIOLATION`; the declared inputs are subtracted
+first. With the entry closed, no stale copy of a produced value can come from a caller, so the
+caller exploit is closed on all four paths. The mechanism the copy rode, `to_wire`'s sink
+fan-in, is (R-b) in PL 9567.
 
 **Tech Stack:** Python 3.12, pricing-core, the ZEN binding, pytest; the backend's FastAPI test
 client for the four path tests. No new dependency.
@@ -65,23 +70,22 @@ full-suite run takes the one gate slot.
 2. **(3f)**: `test_the_3f_case_is_refused` raises `INPUT_CONTRACT_VIOLATION` naming
    `'instalment_loading_minor'`. At the base commit it quotes payable 777.
 3. **Every produced name**: `test_an_undeclared_key_naming_a_produced_value_is_refused` is
-   parametrised over every produced name of the score fixture. Each case is refused by name.
-   The ledger carries auditor-premise's per-name table beside the run and marks which names
-   were shadowed at the base commit.
-4. **The root** (Task 2, unless it went to the maintainer):
-   `test_the_root_holds_without_the_guard` gives payable 5250 for every name of the table that
-   was shadowed, with guard (c) patched out.
-5. **Unchanged**: `test_the_ordered_no_key_quote_is_unchanged` gives payable 5250 with
+   parametrised over every produced name of the score fixture, and each case is refused by name.
+   The ledger carries auditor-premise's per-name table beside the run. That table shows
+   `instalment_loading_minor` as the only name shadowed at the base commit, and (3f) is its red.
+4. **Unchanged**: `test_the_ordered_no_key_quote_is_unchanged` gives payable 5250 with
    `min_premium_minor` 5000 and no extra key, and `test_the_bundle_hash_is_unchanged` pins the
    fixture's hash recorded at the base commit.
-6. **Still allowed**: `test_a_declared_input_re_produced_in_place_is_not_a_shadow` passes.
-7. **One red per path**, each failing at the base commit and passing at the head:
+5. **Still allowed**: `test_a_declared_input_re_produced_in_place_is_not_a_shadow` passes.
+6. **One red per path**, each failing at the base commit and passing at the head:
    - `/score`: `backend/tests/test_score.py::test_a_quote_input_naming_a_produced_value_is_refused_on_score`
    - `/score/compare`: `backend/tests/test_score_compare.py::test_a_context_input_naming_a_produced_value_is_a_422_on_compare`
    - trace reproduction: `backend/tests/test_score.py::test_a_pending_trace_whose_context_names_a_produced_value_is_not_reproduced_as_a_price`
    - batch: `backend/tests/test_scoring_handlers.py::test_a_dataset_column_named_like_a_produced_value_is_refused_per_row`
 
    Run each one alone: `OMP_NUM_THREADS=1 nice uv run pytest <file>::<test> -q`.
+7. **T2**: the FR-213 row (`03` `:82`) carries RL 9562's T2 text byte-for-byte, in the same
+   commit as guard (c).
 8. `uv run pytest packages/pricing-core/tests/test_rating_score.py
    packages/pricing-core/tests/test_quote_input_raise_sites.py -q` passes, and no assert is
    edited.
@@ -134,7 +138,25 @@ code and the refusal rule from it, quoted:
 > DP-3: NOT decided here, per my order; the options stay recorded. (c) is exactly "an undeclared key naming a produced value"; FR-246's declared-inputs rule (FD-1374 / PL 9776) stays its own.
 > DP-4: an RL adopts T1 (FR-212: "list order carries no meaning") and T2 (FR-213) BEFORE activation, as an added activation need. Reserve the id; a DM files it, quoting my 17:06:26 and 17:10:08 entries and this one.
 
-**The FR-213 text (T2).** DP-4 ruled that a ruling adopts T2 before PL 9567 activates (RL 9562,
+**"2026-10-05 17:27:55 BST — FD 9572 CAUSE: the sink fan-in plus whole-context passThrough;
+RULING: (c) ALONE is the emergency slice; (R-b) is the root, in PL 9567; one more case to
+measure; A-2 readings"**, the cause and the ruling (its A-2 lines are omitted, being another
+plan's):
+
+> CAUSE (auditor-premise, read-only at 4d3be141; r3/r4/r5 sha256 0ee537bf…/ae53159a…/98aea5df…): runtime.py:495-499 (to_wire's sink rule wires every interior step whose produced names no other step consumes, INCLUDING produce-nothing steps such as the decline constraints, straight to the sink, so the sink has a fan-in) plus whole-context passThrough on every expressionNode (:174, :268, :353, :389; the docstring :428-432); at the fan-in the LAST-LISTED branch wins (inferred from 3 runs; zen's merge code not read); score.py:911/:1067 relay raw keys as the ENTRY point. The per-name table: only instalment_loading_minor (the last terminal producer) is shadowable in that fixture. Exposure: fremtpl2-demo@1 (never deployed) is a single path with no fan-in, so it is not exposed by this mechanism (inferred from topology). The HOLD stands regardless.
+> RULING:
+>  1. The EMERGENCY slice (SL 9561 / PL 9560) = guard (c) ALONE at the entry (score.py:911 and :1067): refuse an undeclared key naming any produced value, INPUT_CONTRACT_VIOLATION, declared inputs subtracted. It closes the CALLER exploit fully, and the hold lifts at its merge.
+>  2. (R-b) is the ROOT and goes into PL 9567 (the wiring slice), red first with the fan-in case: no side branch may carry a stale copy of a produced name into the sink (one ordered merge at the sink, or produced names stripped from the relayed context; the planner proposes, and if it changes every bundle's hash that is stated and approved by me).
+>  3. ONE MORE CASE TO MEASURE NOW (the same auditor, read-only, ≤20 min), because the same mechanism may misprice with NO caller key at all: an ORDERED algorithm in which a produce-nothing or terminal side branch forks BEFORE a step that RE-PRODUCES a name in place (a clamp), so the side branch carries the PRE-clamp value to the sink. If it is listed last, does the sink take the stale value? Run it through score_one with no extra key. If YES, that is an internal mispricing with no caller needed, (c) does NOT close it, and (R-b) moves INTO the emergency slice: report to me at once with the price. If NO (the clamp-in-place keeps every branch downstream, as in the fixture), (c) alone stands.
+>  4. FD 9572's essay gains the cause lines and the per-name table as a dated pre-mint amendment.
+
+**"2026-10-05 17:30:02 BST — Rulings: T2 routing (RL 9562 mints ahead of PL 9560); …"**,
+items 1 and 2:
+
+> 1. ROUTED 17:31: noted. A YES from auditor-fanin comes to me at once; PL 9560 does not mint until auditor-fanin has reported.
+> 2. #1195 RL 9562, T2: your RECOMMENDATION is adopted. RL 9562 owns T1 and T2's text and mints right after batch 1, AHEAD of PL 9560. PL 9560 applies T2 (FR-213 :82) in the same commit as guard (c), citing RL 9562, with no paraphrase. T1 stays with PL 9567 / SL 9568. DP-3 stays OPEN in RL 9562 and is named as open. The mint ACK for #1195 follows my checklist at its mint head (it is not given by this line).
+
+**The FR-213 text (T2), as first filed and now superseded by 17:30:02 item 2.** DP-4 ruled that a ruling adopts T2 before PL 9567 activates (RL 9562,
 working id). Guard (c) now ships here, so T2 belongs with this slice. This plan applies T2 in
 Task 3 Step 5 only if the dispatch record names RL 9562 as merged; otherwise T2 lands with
 PL 9567. The lead decides which at dispatch. That is a dispatch-order question, not a new
@@ -144,10 +166,11 @@ decision point on the fix.
 
 None open. Every decision this plan carries is the maintainer's (by delegation), quoted under
 "Authority": the code (17:22:47 DP-1 (a)), refuse by name with the declared inputs subtracted
-(DP-2 (a)), the scope, lane and Work (17:25:07 item 2), and the root plus guard (c) (17:25:23).
-DP-3 (FR-246's general rule) stays recorded in PL 9567, not here. A root fix that turns out to
-need a design choice goes to the maintainer (Task 2 Step 2); it does not become a decision
-point of this plan.
+(DP-2 (a)), the scope, lane and Work (17:25:07 item 2), guard (c) alone (17:27:55 item 1), and
+T2 in the same commit (17:30:02 item 2).
+DP-3 (FR-246's general rule) stays open in RL 9562 and PL 9567, not here. (R-b) is PL 9567's
+(17:27:55 item 2); a second emergency slice, if auditor-fanin answers YES, is the maintainer's
+to order.
 
 ## Verified facts (at `4d3be141`)
 
@@ -189,17 +212,26 @@ point of this plan.
 
 | Path | This slice | Beside S7 (SL-1391, PL-1419, lane A) | FD 9707 fix (PL 9688) | Wiring fix (PL 9567) | Class |
 |---|---|---|---|---|---|
-| `packages/pricing-core/src/pricing_core/rating/score.py` | added: `_check_no_shadowed_produced_names`; edited: `score_one` and `_score_context_sync` (one call each); the root's line(s), per Task 2 | not in its write set | `score_one`, `_score_context_sync` | `score_one`, `_score_context_sync` | **name-disjoint from S7.** PL 9688 and PL 9567 follow this slice and rebase onto it |
+| `packages/pricing-core/src/pricing_core/rating/score.py` | added: `_check_no_shadowed_produced_names`; edited: `score_one` and `_score_context_sync` (one call each) | not in its write set | `score_one`, `_score_context_sync` | `score_one`, `_score_context_sync` | **name-disjoint from S7.** PL 9688 and PL 9567 follow this slice and rebase onto it |
 | `packages/pricing-core/tests/test_rating_shadowed_inputs.py` | added | — | — | — | none |
 | `packages/pricing-core/tests/test_quote_input_raise_sites.py` | `_INPUT_FREE`: one entry added | — | one entry | one entry (dropped with (c), see its delta) | registry (append) |
 | `backend/tests/test_score.py`, `test_score_compare.py`, `test_scoring_handlers.py` | appended: the four path reds | — | adds its own `test_score_as_at.py` | the same four reds (dropped with (c)) | append-only |
-| `docs/specs/03-rating-engine.md` | T2 on the FR-213 row (`:82`), only under the "Authority" T2 note | the FR-231 row, §4.2, §5.1, §5.2 | the FR-221 row | T1 on the FR-212 row | distinct rows |
+| `docs/specs/03-rating-engine.md` | T2 on the FR-213 row (`:82`), RL 9562's text | the FR-231 row, §4.2, §5.1, §5.2 | the FR-221 row | T1 on the FR-212 row | distinct rows |
 | `docs/roadmap.md`, `docs/INDEX.md`, the ledger | the SL 9561 row; regenerated; added | — | — | — | registry / generated |
 
 RL-1263's different-Works rule covers S7 (WK-673) and this slice (WK-1178) running together.
 Neither consumes the other's output.
 
 ---
+
+## Activation needs
+
+- RL 9562 minted (it owns T2's text and mints right after batch 1, ahead of this plan;
+  17:30:02 item 2).
+- auditor-fanin has reported. This plan does not mint until then (17:30:02 item 1; 17:28:27).
+- FD 9572 and this plan minted, at once.
+- The plan made `active` by a dated line.
+- The maintainer's (by delegation) GO, then the activation PR, then the executor (17:26:16).
 
 ## Tasks
 
@@ -233,7 +265,6 @@ import polars as pl
 import pytest
 from test_rating_score import _FakeResolver, _ctx, _version
 
-import pricing_core.rating.score as score_module
 from pricing_core.rating.compile import compile_bundle
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
 from pricing_core.rating.score import score_batch, score_one
@@ -290,25 +321,6 @@ async def test_an_undeclared_key_naming_a_produced_value_is_refused_in_a_batch(
     assert f"'{name}'" in out["error_message"]
 
 
-#: The names auditor-premise's per-name table shows shadowed at the base commit; Task 1
-#: Step 2 fills this from the table, verbatim, and the ledger carries the table.
-_SHADOWED: list[str] = ["instalment_loading_minor"]
-
-
-@pytest.mark.req("FR-213")
-@pytest.mark.parametrize("name", _SHADOWED)
-async def test_the_root_holds_without_the_guard(
-    name: str, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Task 2's root fix, proven apart from guard (c): with the guard patched out, a shadowing
-    key still cannot move the price."""
-    monkeypatch.setattr(
-        score_module, "_check_no_shadowed_produced_names", lambda *_a, **_k: None, raising=False
-    )
-    result = await score_one(await _compiled(), _ctx(inputs={**_BASE_INPUTS, name: 777}))
-    assert result.outputs["payable_premium_minor"] == 5250
-
-
 #: Recorded at the slice's base commit in Task 1 Step 4, before any code change.
 _SCORE_FIXTURE_HASH = "<the 64-hex value Task 1 Step 4 prints>"
 
@@ -322,10 +334,11 @@ async def test_the_bundle_hash_is_unchanged() -> None:
   The ladder and output reads (`result.outputs[...]`) are FD 9572's script 2 reads, which ran
   at `137bc817`. If the shipped `ScoringResult` has moved, mirror the shipped form.
 
-- [ ] **Step 2: Fill `_SHADOWED` from auditor-premise's per-name table.** Copy every name the
-  table marks as shadowed at `4d3be141`, verbatim, and put the table in the ledger. If the
-  table names a shadowed name outside `_PRODUCED`, add it to `_PRODUCED` too. If the table has
-  not reached the executor, STOP and ask the lead for it: this step does not run on a guess.
+- [ ] **Step 2: Put auditor-premise's per-name table in the ledger** (r3/r4/r5, sha256
+  `0ee537bf…`, `ae53159a…`, `98aea5df…`, read-only at `4d3be141`; the 17:27:55 entry). It shows
+  `instalment_loading_minor` alone as shadowed in this fixture. `test_the_3f_case_is_refused`
+  is that name's red. Every other produced name is refused too, by the parametrised test,
+  because guard (c) refuses a name whether or not it shadows today.
 
 - [ ] **Step 3: The four path reds**, appended to the modules that hold each path's fixtures.
   No existing test is edited. Check every fixture and helper name against the shipped module
@@ -471,7 +484,6 @@ print(asyncio.run(compile_bundle(T._version(), T._FakeResolver())).content_hash)
   | `test_the_3f_case_is_refused` | FAIL | `DID NOT RAISE` (it quotes payable 777) |
   | `…_is_refused[<name>]`, each name | FAIL | `DID NOT RAISE` |
   | `…_is_refused_in_a_batch[<name>]`, each name | FAIL | `assert 'quoted' == 'error'` |
-  | `test_the_root_holds_without_the_guard[<name>]`, each shadowed name | FAIL | `assert 777 == 5250` for (3f); each other shadowed name fails with the price the table records |
   | `test_the_bundle_hash_is_unchanged` | PASS | — (a pin) |
   | `…_refused_on_score` (backend) | FAIL | `assert 200 == 422` |
   | `…_not_reproduced_as_a_price` (backend) | FAIL | `JobStatus.SUCCEEDED is JobStatus.FAILED` |
@@ -488,35 +500,7 @@ git add packages/pricing-core/tests/test_rating_shadowed_inputs.py backend/tests
 git commit -m "test(rating): FD 9572 emergency reds — an input overrides a produced value"
 ```
 
-### Task 2: The root, in `score_one`'s path
-
-**The root step follows auditor-premise's cause trace and is applied before (c).** The trace
-names the line(s) where a produced value is read from the merged context instead of from the
-producing step's result. At the time of filing it had not landed. The lead sends it to the
-executor, and the dispatch record names it.
-
-**Files:**
-- Modify: the line(s) the cause trace names. The trace is expected to point at
-  `packages/pricing-core/src/pricing_core/rating/score.py`, on the output or ladder read. If it
-  names any other file, STOP and report it: the write set above then changes, and the lead
-  re-checks contention before the edit.
-
-- [ ] **Step 1: Read the cause trace and classify the fix.** It is mechanical when the
-  producing step's own result is already available at the read site and only the read changes.
-  That is the addendum's example: the output or ladder "reads the step's result". It is a design
-  choice when the fix must decide something the spec leaves open, for example which of two
-  producers' values a rung reports, or a change to `ScoringResult`'s shape or to a contract.
-- [ ] **Step 2: If it is a design choice, STOP.** Report it to the lead with the trace for the
-  maintainer (by delegation), per the addendum ("If the root fix proves to need a design choice,
-  it comes to me, and (c) alone ships first"). Skip to Task 3. Acceptance item 4 is then
-  carried by the follow-up the maintainer names, and the ledger says so.
-- [ ] **Step 3: If it is mechanical, make the read take the producing step's result.** Then
-  run `test_the_root_holds_without_the_guard`: every case passes. Run
-  `test_rating_score.py`: every case passes with no assert edited.
-- [ ] **Step 4: Commit:** `fix(rating): <the read the trace names> reads the producing step's
-  result, not the merged context (FD 9572)`.
-
-### Task 3: Guard (c), in the shared merge
+### Task 2: Guard (c) and T2, in one commit
 
 **Files:**
 - Modify: `packages/pricing-core/src/pricing_core/rating/score.py`. Add a check after
@@ -525,7 +509,7 @@ executor, and the dispatch record names it.
 - Modify: `packages/pricing-core/tests/test_quote_input_raise_sites.py` (`_INPUT_FREE`).
 - Modify: `packages/pricing-core/tests/test_rating_shadowed_inputs.py` (append the in-place
   clamp test).
-- Modify, under the T2 note only: `docs/specs/03-rating-engine.md`, the FR-213 row (`:82`).
+- Modify: `docs/specs/03-rating-engine.md`, the FR-213 row (`:82`): RL 9562's T2.
 
 **Interfaces:**
 - Produces: `_check_no_shadowed_produced_names(algorithm: RatingAlgorithm, inputs:
@@ -600,9 +584,10 @@ def test_a_declared_input_re_produced_in_place_is_not_a_shadow() -> None:
   If `RatingAlgorithm.model_validate` refuses this algorithm, mirror the clamp shape of
   `test_rating_score.py`'s `s_clamp` and record the difference. Do not weaken the assert.
 
-- [ ] **Step 5: T2, under the "Authority" T2 note only.** Apply the text RL 9562 adopts,
-  byte-for-byte, at the end of the FR-213 row's last cell. Then run
-  `python3 scripts/audit-docs.py`: before the mint only check 31 may fail.
+- [ ] **Step 5: T2.** Apply RL 9562's T2 text byte-for-byte, with no paraphrase, at the end
+  of the FR-213 row's last cell (`03` `:82`), citing RL 9562 (17:30:02 item 2). Run
+  `python3 scripts/audit-docs.py`: before the mint only check 31 may fail. If RL 9562 is not
+  minted at dispatch, STOP: it is this plan's activation need.
 
 - [ ] **Step 6: Run, and prove each call is load-bearing.** Run the pricing-core module,
   `test_quote_input_raise_sites.py` and `test_rating_score.py`, then the four backend reds
@@ -613,10 +598,16 @@ def test_a_declared_input_re_produced_in_place_is_not_a_shadow() -> None:
 
   `git diff` must show both calls afterwards.
 
-- [ ] **Step 7: Commit:** `fix(rating): refuse an undeclared input naming a produced value
-  (FD 9572 (c))`.
+- [ ] **Step 7: Commit, guard (c) and T2 together** (17:30:02 item 2: "in the same commit"):
 
-### Task 4: The gate and the ledger
+```bash
+git add packages/pricing-core/src/pricing_core/rating/score.py \
+  packages/pricing-core/tests/test_quote_input_raise_sites.py \
+  packages/pricing-core/tests/test_rating_shadowed_inputs.py docs/specs/03-rating-engine.md
+git commit -m "fix(rating): refuse an undeclared input naming a produced value (FD 9572 (c); FR-213 T2, RL 9562)"
+```
+
+### Task 3: The gate and the ledger
 
 - [ ] **Step 1:** Before any full run, check `pgrep -af 'pytest|vitest|flock'` and the gate
   slot. Take the slot only on the lead's word.
@@ -626,8 +617,7 @@ def test_a_declared_input_re_produced_in_place_is_not_a_shadow() -> None:
 - [ ] **Step 4:** The ledger records these verbatim:
   - the per-name table;
   - Task 1 Step 4's base-commit runs;
-  - Task 2's classification and its run (or the STOP and its report);
-  - Task 3 Step 6's two removed-call runs;
+  - Task 2 Step 6's two removed-call runs;
   - the four backend reds passing at the head;
   - the gate table.
 - [ ] **Step 5:** The ledger states that the merge lifts the 17:25:07 hold. The lead records
@@ -635,31 +625,32 @@ def test_a_declared_input_re_produced_in_place_is_not_a_shadow() -> None:
 
 ## What this plan does not cover
 
-- **The wiring fix** (list order; FR-212) is PL 9567 (#1193). It follows this slice and is
-  rebased onto it. A dated delta on PL 9567 drops (c), because (c) is delivered here.
+- **The wiring fix** (list order; FR-212) and **(R-b)**, the sink fan-in root
+  (`runtime.py:495-499`), are PL 9567 (#1193). It follows this slice and is rebased onto it.
+  A dated delta on PL 9567 drops (c), because (c) is delivered here.
+- **A no-caller-key misprice**, if auditor-fanin finds one, is a second emergency slice after
+  this one (the maintainer's correction to 17:27:55 item 3), not this plan.
 - **FR-246's declared-inputs rule in general** (FD-1374, PL 9776) stays its own (the 17:22:47
   entry, DP-3).
 - **Dislocation** is not changed: it selects declared inputs only (RL-1394).
 - **FD 9572's essay amendment** (the ordered algorithm is exposed too) belongs to the auditor
   (the 17:25:07 entry, item 4).
 
-## Self-review (2026-10-05)
+## Self-review (2026-10-05; re-run after the narrowing)
 
 - **Ruling coverage:**
-  - The root is Task 2, or the maintainer if it needs a design choice.
-  - Guard (c) is Task 3.
+  - Guard (c) alone, at `score.py:911` and `:1067`, is Task 2, with
+    `INPUT_CONTRACT_VIOLATION` and the declared inputs subtracted.
+  - T2 lands in the same commit (Task 2 Steps 5 and 7).
   - Each red the ruling names is a named test:
-    - (3f): `test_the_3f_case_is_refused`;
+    - (3f), the one shadowed name: `test_the_3f_case_is_refused`;
+    - every produced name: the parametrised tests;
     - per path: the four backend tests;
-    - every shadowed name: Task 1 Step 2;
     - 5250 unchanged, and the hash unchanged: the two pins;
-    - the in-place clamp exception: Task 3 Step 4.
-  - The code is `INPUT_CONTRACT_VIOLATION`; refusal is by name, with the declared inputs
-    subtracted.
-- **Placeholders, each with how it gets its value:**
-  - `_SCORE_FIXTURE_HASH` is recorded by a command (Task 1 Step 4).
-  - `_SHADOWED` and the root's line(s) come from auditor-premise's trace (the lead's order),
-    and Task 1 Step 2 carries a STOP if the trace has not arrived.
+    - the in-place clamp exception: Task 2 Step 4.
+  - The root is not here; it is PL 9567's (R-b).
+- **Placeholders:** `_SCORE_FIXTURE_HASH` is recorded by a command (Task 1 Step 4). Nothing
+  else is left open.
 - **Literals checked at `4d3be141`:**
   - `test_rating_score.py`: `_FakeResolver` (`:103`), `_version` (`:118`), `_ctx` (`:143`),
     the produced names in `_algorithm_payload` (`:46`);
