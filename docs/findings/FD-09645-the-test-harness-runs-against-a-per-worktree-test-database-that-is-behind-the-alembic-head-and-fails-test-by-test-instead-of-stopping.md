@@ -7,7 +7,7 @@ created: 2026-10-05            # working id; the mint date will replace this (ch
 owner: auditor
 tree: 83ea509023d6d705d6f78fe74b7124fdf1375739
 corrected_by: []
-relates: [WK-1178, SL-1409, LG-1417]
+relates: [WK-1178, SL-1409]
 ---
 
 # FD-9645 — the test harness runs on a database behind the alembic head and fails test by test
@@ -27,7 +27,8 @@ looks like slice defects.
 
 ## Evidence
 
-SL-1409's minted-head gate at `7b3ee551` ended:
+SL-1409's minted-head gate at `7b3ee551` (recorded in SL-1409's ledger, working id LG 9719,
+minting as LG 1417; branch `sl-1409-validation-rule-approval-through-the-workflow`) ended:
 
 ```
 33129:124 failed, 4815 passed, 4 skipped, 86 warnings in 2017.92s (0:33:37)
@@ -72,6 +73,12 @@ session, not run it.
 
 **Until then:** every gate checklist gets the line "alembic current == heads on the
 worktree database" (`dev-commands` and the executor role file).
+
+## Disposition
+
+Owner **WK-1178**. **Proposed severity: MEDIUM** (the maintainer sets it). **Proposed
+decision:** fix before close with an owner: WK-1178, by the remedy above; the lead gives
+the verdict. Until the fix lands, the "alembic current == heads" gate-checklist line applies.
 
 ## Not this finding
 

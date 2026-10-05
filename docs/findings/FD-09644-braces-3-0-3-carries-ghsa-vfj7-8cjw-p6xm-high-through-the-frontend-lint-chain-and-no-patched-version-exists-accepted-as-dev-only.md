@@ -30,7 +30,7 @@ affected range is `introduced 0 … last_affected 3.0.3` with no fixed event (OS
 - **No untrusted input.** The patterns it expands are our own lint globs, from repository
   config. The attack needs an attacker-written glob in our lint config.
 
-## Evidence: no patched version exists
+## Evidence
 
 Measured 2026-10-05 with `curl -s https://registry.npmjs.org/braces`:
 
@@ -41,6 +41,12 @@ Measured 2026-10-05 with `curl -s https://registry.npmjs.org/braces`:
 (`dist-tags`, `time.modified`, the last three of `versions`.) The earlier proposal to
 override to `>=3.0.4` names a version that does not exist and is withdrawn. pnpm 11 also
 ignores `package.json` `pnpm.overrides`, so an override would not apply.
+
+## Disposition
+
+Owner **WK-1178**. **Severity: LOW** (the deputy's option (C)). **Decision: accepted until a
+patched `braces` publishes** (the deputy, 2026-10-05 13:36:07 BST); the lead gives the
+verdict. Event that closes it: Dependabot's security PR for a fixed `braces` merges.
 
 ## Watch and closure
 
