@@ -601,7 +601,7 @@ select count(*) from dataset_versions dv where dv.status='validated' and exists 
 
 The 15 are pre-fix workspaces' validated versions whose latest report used the 10 rules the reset has now returned to `review`: 10 distinct rules (`exposure-positive-3149b9`, `-f8d380`, `-729c73`, `-94f560`, `-ef38a8`, `-36f698`, `-e711ae`, `-ebc8bf`, `-16383b`, `-9cbc27`) in 9 workspaces, `01a0aece-e697-…`, `-ee07-…`, `-f3bc-…` (2 versions), `-fcbb-…` and `01a0aecf-047b-…`, `-0bc8-…` (2), `-18db-…` (2), `-2388-…` (3), `-3595-…` (2). The lead's verdict (2026-10-05): this is the ruling's stated end state, measured and not refused (RL-1407 §"FD 9748"); it is recorded and not fixed here, and it opens no new finding.
 
-**The 15 Dataset Versions (deputy's condition, added after the first commit of this entry).** Listed as `workspace_id|dataset_version_id` from the residual query above (`sl1409-d9.out`):
+**The 15 Dataset Versions (the maintainer's (by delegation) condition, added after the first commit of this entry).** Listed as `workspace_id|dataset_version_id` from the residual query above (`sl1409-d9.out`):
 
 ```text
 01a0aece-e697-72a9-a8bd-0f02d88399f1|01a0aece-e894-7746-b263-44f0451bf223
@@ -759,7 +759,7 @@ in that table); Task 1 `2 failed, 15 deselected, 2 warnings in 1.95s`. Green aft
   after database: `0` with `user_approved=9`.
 - **Reset, as the plan defines it** (DP-6 (b), the script's own output): `gipricing reset=10 workspaces=9 chain_verified=9`, then the second run `reset=0 workspaces=0 chain_verified=0`.
   Task 0's script after the reset ends `TOTAL route_approved=0 self_approved=0 user_approved_no_approved_request=314`.
-- **Residual (Acceptance 23): 15** Dataset Versions (before the seed and reset: 0). **D9 result** (the deputy's condition): `residual_dataset_versions=15
+- **Residual (Acceptance 23): 15** Dataset Versions (before the seed and reset: 0). **D9 result** (the maintainer's (by delegation) condition): `residual_dataset_versions=15
   approved_models_referencing=0 models_any_status_referencing=11 rating_versions_referencing=0 deployed_rating_versions_referencing=0 deployments_total=0`.
   Per the lead's Delta 21, the slice audit names the residual as accepted under RL-1407. The 15 ids and 9 workspace ids are listed in Step 4.
 
@@ -843,13 +843,13 @@ Every file outside the write set is one of the two named additions or generated:
 - **Delta 9:** Task 5 done. `act` reports through `explain`; the per-row label carries the rule slug; the "rejects unparseable parameters" test fills the summary. ACCEPTED.
 - **Delta 13:** Task 7 Steps 1–3a done. The lead's brief was wrong about the base tree (the base run used the merge base `bf33eea6`); the request id comes via `open_request_for`; the reset script keeps the `GIP_DATABASE_URL` override; the reset test asserts on its own rows only. ACCEPTED.
 - **Delta 15 (the PL-1408 premise correction; a delta, not a plan edit):** PL-1408 Task 7 and RL-1407 say the recovery seed keeps the demo's workspace runnable at every moment after the slice's code exists. That was false on 2026-10-05: the record's workspace was absent from `gipricing`, so there was nothing runnable to keep. Step 4.2 also omitted the demo's own `alembic upgrade head`. Binding for the resume: migrate first (upgrade only, revisions recorded), keep the abandoned partial seed (no deletes), full 678,013 rows with no slot held, and the finding goes to FD 9717 (MEDIUM, its own queue, not blocking this slice).
-- **Delta 16:** Step 4 second stop: the second seed failed on `uq_users_issuer_subject`, a defect on main (`ensure_member` looks up by user id only), not this slice's. Put to the deputy.
+- **Delta 16:** Step 4 second stop: the second seed failed on `uq_users_issuer_subject`, a defect on main (`ensure_member` looks up by user id only), not this slice's. Put to the maintainer (by delegation).
 - **Delta 17:** the seed resolves the analyst id from an existing realm user, else mints one; red first by a seed-twice test; inside the write set (`examples/fremtpl2/seed.py`); `examples/fremtpl2/test_seed.py` a **named write-set addition**; `platform/workspaces.py` not edited, its docstring defect is in FD 9717's scope. APPROVED.
 - **Delta 18:** Task 7c done (the seed-twice red quoted verbatim, green `8 passed`). ACCEPTED.
-- **Delta 19:** Step 4 resumed: full seed rc 0, the cond. 4 copy of the record, reset `reset=10`, residual `0` to `15`. The demo then died on a stale root venv (`sympy`); D1 `uv sync --all-packages` at the root authorised; D2 merge `origin/main` into the branch; D4 residual 15 recorded, no new FD; D5 the per-database before lines were not kept (a disclosed gap, the aggregate check instead); D6 the 608 breakdown quoted. No objection from the deputy; D7–D9 added.
+- **Delta 19:** Step 4 resumed: full seed rc 0, the cond. 4 copy of the record, reset `reset=10`, residual `0` to `15`. The demo then died on a stale root venv (`sympy`); D1 `uv sync --all-packages` at the root authorised; D2 merge `origin/main` into the branch; D4 residual 15 recorded, no new FD; D5 the per-database before lines were not kept (a disclosed gap, the aggregate check instead); D6 the 608 breakdown quoted. No objection from the maintainer (by delegation); D7–D9 added.
 - **Delta 20:** Step 4 done on merge `c156e7274e8d07bc0e9eb1112590c2a259e2db94` (branch plus `origin/main` `072c56e1`; INDEX regenerated, `__all__` merged cleanly with all four names). Lead found D7–D9 missing from the ledger and sent the entry back.
-- **Delta 21:** Task 7 complete. D7 (the root HEAD for the retry), D8 (the full ids), D9 (zero approved or deployed references) present. Per the deputy's condition, the slice audit names the residual of 15 as ACCEPTED under RL-1407. Next: the slice audit, then the mint, then Task 8 Step 1 at the minted head.
-- **Deltas 10, 11, 12, 14 (no deviation from the plan):** Delta 10 (Task 6) the lead's byte-check of the spec texts against RL-1407, ACCEPTED, with INDEX regenerated as the expected follow-on; Delta 11 split Task 7; Delta 12 the deputy's approval of the record handling, ARFF files symlinked as files; Delta 14 the first Step 4 stop (the missing migration). Listed for completeness.
+- **Delta 21:** Task 7 complete. D7 (the root HEAD for the retry), D8 (the full ids), D9 (zero approved or deployed references) present. Per the maintainer's (by delegation) condition, the slice audit names the residual of 15 as ACCEPTED under RL-1407. Next: the slice audit, then the mint, then Task 8 Step 1 at the minted head.
+- **Deltas 10, 11, 12, 14 (no deviation from the plan):** Delta 10 (Task 6) the lead's byte-check of the spec texts against RL-1407, ACCEPTED, with INDEX regenerated as the expected follow-on; Delta 11 split Task 7; Delta 12 the maintainer's (by delegation) approval of the record handling, ARFF files symlinked as files; Delta 14 the first Step 4 stop (the missing migration). Listed for completeness.
 
 `python3 scripts/audit-docs.py` after this entry: `FAILED (1): check 31: gap in the full allocation between 1413 and 9719`, the expected one (LG 9719 is a working id). No other check failed.
 
