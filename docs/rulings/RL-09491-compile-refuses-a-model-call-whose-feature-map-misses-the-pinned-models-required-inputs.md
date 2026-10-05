@@ -81,12 +81,22 @@ relates: [FR-240, FR-222, FR-87, FR-255]
    not taken"). The entry gives one reason for (b), and it is the reason the others lose:
    "the trade-off is clear and G2's peril path (A-3/A-4, the exit demo) is exactly where a
    short-mapped GBM would fail per quote after deploy". It also says where the check does
-   **not** go: "at compile, not at save". **The texts of (a), (c) and (d) were in
-   auditor-complete's OQ proposal, which was reported in a message and is not in any file
-   this record could read**; `handover/mint-queue-2026-10-05.md` (18:51:22 BST) records only
-   "an OQ proposal (rec (b) compile-time, an FR-240 amendment)". So the three are recorded by
-   letter, not by content. If their texts are later recovered, a correcting record adds them;
-   this record's body is not edited after its mint.
+   **not** go: "at compile, not at save". The options, verbatim from
+   auditor-complete's OQ proposal to the lead, 2026-10-05, preserved at
+   `~/gi-pricing-plan.local/handover/oq-proposal-model-call-completeness-2026-10-05.md`
+   (local handover; the maintainer decided on it), line 8:
+
+   > Options: (a) leave as is: membership at algorithm save; incomplete map surfaces at score as MODEL_CALL_FAILED (cheapest; failure arrives at the worst time: after deploy, per quote). (b) completeness at compile (FR-240 amendment: refuse with a named code, e.g. a 422 naming step + missing features); no new save-time resolution, uses the existing resolver; fails before approval/deploy. (c) completeness at Rating Version save/pin: earliest with pins in hand, but ties save of a draft to model resolution and may block iterative drafting. (d) (b) plus a warning at algorithm save.
+
+   Why each is not taken:
+   - **(a)** is the failure the entry decides against: a short map "would fail per quote
+     after deploy" (the entry); the proposal itself says (a)'s failure "arrives at the worst
+     time".
+   - **(c)** puts the check at a save, and the entry places it "at compile, not at save".
+     The proposal's own cost for (c) is that it "ties save of a draft to model resolution and
+     may block iterative drafting".
+   - **(d)** is (b) with an added save-time warning. The entry takes (b) alone and gives no
+     reason of its own for leaving out the warning; this record does not supply one.
 6. **No OQ is opened** (the entry: "no OQ"). FD 9497's reservation is released (the entry).
 
 ## The spec text
@@ -170,6 +180,5 @@ Each red is red first, at the base, before the code is written.
 - **The check function's shape**, and how much of A-2's function it reuses: the plan's.
 - **What happens to a committed algorithm that is already short-mapped.** The auditor
   reported none (liveness: none; not re-run here). If one is found, it is a finding, not this record's.
-- **The texts of options (a), (c) and (d)** (Ruled, item 5).
 - **Whether `MODEL_CALL_FAILED` stays reachable for a short map at score.** After this
   ruling, a compiled bundle cannot carry one; the runtime path is not changed by this record.
