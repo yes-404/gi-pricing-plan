@@ -90,10 +90,15 @@ activation PR.
    slice's tests (Acceptance 7–11). Where its minted text differs from what this plan assumes,
    the minted text governs and the dispatch record names each difference. An unminted RL 9715
    is a stop.
-3. **RL 9663 (working id; the decision-maker session dm-s3, being drafted)** records the
+3. **RL 9663 (working id; dm-s3; draft PR #1141, branch `dm-9663-wk673-s3-ruling`, head
+   `6604cb858edafa8d72d0c05d8864f398bbf12b60`, base `99afcde2`)** records the
    deputy's decisions on DP-S3-1 to DP-S3-10 and adopts P1–P6 as T-texts for this slice's code
-   commit (the deputy's entry of 2026-10-05 13:25:23 BST in `to-lead.md`, items 29–30, item 29). It is merged and minted. Where its minted texts differ from the
-   Appendix, they govern and the dispatch record names each difference. The executor applies the ruling's texts,
+   commit (the deputy's entry of 2026-10-05 13:25:23 BST in `to-lead.md`, items 29–30, item 29). It is merged and minted; it mints before this plan. Where its minted
+   texts differ from the Appendix, they govern and the dispatch record names each difference.
+   As dm-s3 reported it: P2, P4 and P6 verbatim; P1 widened to both raisers; P5 as sent, its
+   `<RL id>` written as RL 9663; **P3 carries named placeholders** (`<LEDGER_ID>`,
+   `<MEASURED_TREE>`, `<SET_1>` … `<SET_6>`), which the executor fills from Task 7's ledger
+   figures in the code commit and names in the ledger. The executor applies the ruling's texts,
    never the Appendix.
 4. **`SL-1391` (WK-673 Slice 7) is closed.** `PL-1267`'s one-slice-at-a-time order is
    1 → 2 → 7 → 3 (`PL-1267` Sequencing; `PL-1371` §5 rule 1, `:302`, orders the G2 chain
