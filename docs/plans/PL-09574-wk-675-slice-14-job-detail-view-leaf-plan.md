@@ -12,7 +12,7 @@ work: WK-675
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1286, PL-1371, FD-1284, FD-1335, PL-1364, RL-1263, PL-9576, PL-9582, PL-9713]
+relates: [PL-1286, PL-1371, FD-1284, FD-1335, PL-1364, RL-1263]
 ---
 
 # PL 9574 (working id) — WK-675 Slice 14: Job detail, the `/jobs/:id` view, leaf plan
