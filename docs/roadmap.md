@@ -827,6 +827,24 @@ relates: [PL-1267, RL-1361, RL-1375]
 
 The weight limb of FR-231: the rate-table diff shows the exposure weight behind each cell, from a portfolio Dataset Version. `03` §5.1's diff route gains the portfolio parameter and the refusal `RL-1361` settles (DP-5); the portfolio frame aggregated to Σ exposure per cell key in Polars and passed as `weights`, on the 202 path too; negative tests for an absent key column, an unweighted diff that says so, and a hand-computed weighted mean; register row `FR-231 (F-W10-2)` discharged on merge. `PL-1267` Slice 7. Starts after Slice 2 closes and runs before Slice 3, one slice at a time; unblocks WK-675 Slice 5. Per the maintainer's acceptance of `PL-1267` (the 17:53:43 BST entry above), condition 1: `RL-1375` DP-1 (a2) applies, so the FD-1357 slice `SL-1377` merges first and this slice never runs concurrently with it (shared `RateTableKey`, `operations.py`, the `rate_tables` routes); its leaf plan also carries FD-1358 (the per-cell weight display) as `RL-1361` §F placed it. Leaf plan PL-1419 (minted from working id 9716; `draft`; filed 2026-10-05). **Activation needs:** the plan made `active` by a dated line; RL-1418 (minted from working id 9710; dm-1358) merged and minted, carrying the exact texts of DP-A (FD-1358: a separate paged cells route), DP-B (`03` §5.2's pure `exposure_weights`) and DP-C (`RL-1361` T11 re-anchored), which the maintainer (by delegation) decided on 2026-10-05 (12:58:22 and 13:00:09 BST); lane C (WK-675 S2) may run beside it under the maintainer's (by delegation) option (b) on `03` §5.1; the maintainer's dispatch GO and the lead's go in a separate activation PR. *(Plan cite added 2026-10-05 by the planner; working id 9716 reserved by the lead.)*
 
+#### SL 9568 (working id) — WK-673 fix slice — FD 9572: `to_wire` wires each consumed name to its producer over a stable topological order, and a quote input never shadows a produced value
+
+```yaml
+id: SL-9568
+family: slice
+title: WK-673 fix slice — FD 9572: to_wire wires each consumed name to its producer over a stable topological order, and a quote input never shadows a produced value
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6
+phase: P2
+work: WK-673
+corrected_by: []
+relates: [FD-1374, RL-1263]
+```
+
+The fix for FD 9572 (working id; HIGH, final, owner WK-673, before the P2 exit demo, ruled by the maintainer (by delegation) on 2026-10-05). `to_wire` resolves each consumed name to the producer seen so far in **list** order, so a valid saved algorithm whose list order differs from its dependency order prices wrongly and silently: a clamp listed before its producer skips the minimum premium (1507 against 5250), and a caller-sent key named like a produced value sets the price (1050 against 1507). The ruled fix: (a) `to_wire` iterates the interior steps in a stable topological order (Kahn, list order as the tie-break), so an already-ordered list wires exactly as today; (b) no save-time refusal; (c) a context key naming a step's produced value is refused. Reds first: `[in, B, A, out]` → 350, the clamp case → 5250, the shadowing case. Leaf plan PL 9567 (working id; `draft`; filed 2026-10-05). **Serialises** with the FD 9707 fix (SL 9685, PL 9688: `score_one` and `_score_context_sync`; this slice goes first, the maintainer's (by delegation) tie-break) and with PL 9776 (WK-1178: `to_wire`). May run beside SL-1391 and the FR-240 fix (PL 9649), the dispatch record naming `03`'s distinct rows. **Activation needs:** FD 9572 minted; the plan's open decision points decided and the plan made `active` by a dated line; a free build lane (the maintainer's (by delegation) priority rule). *(Row cut 2026-10-05 by the planner; working ids 9568 and 9567 reserved by the lead.)*
+
 
 ### WK-674 — Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires**
 
