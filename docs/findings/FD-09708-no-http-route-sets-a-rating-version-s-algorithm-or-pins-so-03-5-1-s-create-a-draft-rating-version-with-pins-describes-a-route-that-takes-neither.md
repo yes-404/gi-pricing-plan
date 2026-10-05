@@ -84,8 +84,8 @@ Searched at the tree above, `origin/main`:
 
 Proposal only; the lead gives the verdict and the decision-maker rules which side is wrong.
 
-**Ruled: the code is behind (RL 9695, working id; the deputy's 2026-10-05 13:12:56 BST, decision 15, option (a)).** `POST /rating-versions` takes `algorithm_ref` and `pins`, checked at compile, in a WK-1178 slice. The two sides above stay as filed; the ruling picked the spec's.
+**Ruled: the code is behind (RL 9695, working id; the maintainer's (by delegation) 2026-10-05 13:12:56 BST, decision 15, option (a)).** `POST /rating-versions` takes `algorithm_ref` and `pins`, checked at compile, in a WK-1178 slice. The two sides above stay as filed; the ruling picked the spec's.
 
-**Severity: HIGH (the deputy's early signal of 2026-10-05 13:10:43 BST, confirmed at 13:12:56 BST; final at the mint).** Reason: G2 (`docs/roadmap.md:566`) requires "a Rating Version compiled with pins" over HTTP from one command, and no route can create one, so the exit criterion cannot be met as the code stands. The deputy's condition for MEDIUM (a supported HTTP path that already writes pins) does not hold: `git grep -nE '\.(algorithm_ref|pins)\s*=[^=]' caa4e411a9c07a389cf47092a923c7761b2b92dc -- backend/src` returns 0 lines. Nothing mis-prices; the severity is the exit-demo block.
+**Severity: HIGH (the maintainer's (by delegation) early signal of 2026-10-05 13:10:43 BST, confirmed at 13:12:56 BST; final at the mint).** Reason: G2 (`docs/roadmap.md:566`) requires "a Rating Version compiled with pins" over HTTP from one command, and no route can create one, so the exit criterion cannot be met as the code stands. The maintainer's (by delegation) condition for MEDIUM (a supported HTTP path that already writes pins) does not hold: `git grep -nE '\.(algorithm_ref|pins)\s*=[^=]' caa4e411a9c07a389cf47092a923c7761b2b92dc -- backend/src` returns 0 lines. Nothing mis-prices; the severity is the exit-demo block.
 
 **Owner: WK-1178** (RL 9695, decision 15; the proposed alternative WK-673 is not taken). **Deadline: before the P2 exit demo.**
