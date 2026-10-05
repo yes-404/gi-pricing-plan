@@ -39,6 +39,49 @@ family fix, WK-673, #1152), PL 9616 (the FD-1416 fix, #1168, head `0b60c81b`), P
 exit-demo plan, #1164, head `68dd997c`), RL 9614 (FD-1244 and FD-1245, #1167, head
 `b71f0da2`), RL 9607 (PL 9616's ruling), RL 9620 (the RL-1263 amendment, #1162).
 
+### Pre-mint edit, 2026-10-05
+
+Edited 2026-10-05 from 17:40:00 BST (`TZ=Europe/London date`), before this plan's mint, by the
+planner, on the ruling of the maintainer (by delegation) in
+`~/gi-pricing-plan.local/channel/to-lead.md`, entry "## 2026-10-05 17:34:57 BST — E1 DPs (dm-e1
+memo handover/dp-memo-e1-2026-10-05.md): all six ADOPTED as recommended; S1 yes; S2 yes; PL 9578
+noted". Its record is RL 9541 (working id, filed by dm-e1). Its lines that bear on this plan,
+verbatim:
+
+> DP-E1-6 (a): S5's submit_for_review WRITES row.change_summary, with a red test. Checked: docs/contracts/schemas/rating-version.schema.json:8 lists change_summary as required and :36 sets minLength 1.
+>   THE RESIDUE IS NAMED, NOT FIXED HERE: the schema requires the field on EVERY rating version, but a draft row carries null until submit, so (a) closes it only from submit onward. The RL records this as the F27 schema-vs-code gap that it is, and it is carried by F27's owner. It does not widen E1 or S5.
+> S1: YES. DP-E1-6 (a) goes into PL 9590's scope (#1181; submit_for_review is already in its write set; contention unchanged). It is a pre-mint edit and is named in PL 9590's dispatch.
+
+The evidence is dm-e1's memo `~/gi-pricing-plan.local/handover/dp-memo-e1-2026-10-05.md`
+§"DP-E1-6", at origin/main `4d3be141`; `backend/src/app/platform/rating_versions.py`,
+`packages/model-schema/src/model_schema/rating.py` and `backend/src/app/api/models.py` are
+byte-identical at `137bc817` and `4d3be141` (`git diff --stat 137bc817 4d3be141 -- <the three>`
+prints nothing), so the locators below hold at both. What this edit changed, each marked in
+place with a dated note, nothing deleted:
+
+1. **Scope gains one write** (§"Scope", premise m, new Task 7, new Acceptance 14):
+   `submit_for_review` assigns `row.change_summary = change_summary` beside the evidence write
+   (`:322-326`), so the version carries the summary it was submitted with (`03` FR-242, "Rating
+   Versions carry a required change summary"; `03` §4.3's example, `03:386`). A resubmission
+   overwrites it, as the evidence write already does.
+2. **The write set is unchanged.** The path and the symbol are already in §"Write set":
+   `backend/src/app/platform/rating_versions.py`, `submit_for_review` (`:278-338`), named at
+   this plan's premise a (`:183` before this edit), its write-set row (`:220` before this edit)
+   and Task 2's Files (`:323` before this edit). The test goes in `backend/tests/test_rating_versions.py`, already in
+   the write set for the shared fixture. No path, symbol or spec section is added.
+3. **The contention is unchanged**, including with E1 (SL 9565, PL 9564, #1194, both working
+   ids): E1 adds `draft_change_summary_for` to `rating_versions.py` (a different function), and
+   neither reads nor writes `RatingVersion.change_summary` (its Acceptance 14 only asserts its
+   own GET leaves the field unchanged). RL 9620 condition 2 still holds both ways: (a) every
+   shared path is one-sided or exempt; (b) neither slice consumes the other's output. Both
+   dispatch records name the pair (the 17:28:27 BST entry).
+4. **Out of scope, named: the F27 draft residue.** The hand-authored
+   `docs/contracts/schemas/rating-version.schema.json` requires `change_summary` (`:8`,
+   `minLength` 1 at `:36`) on every version, while a `draft` row carries null until submit.
+   This write closes that only from submit onward. The rest is register finding F27's
+   schema-vs-code gap (`docs/findings/register.md:69` at `4d3be141`), carried by F27's owner,
+   not this slice.
+
 ## Goal
 
 Make `submit_for_review` (`backend/src/app/platform/rating_versions.py:278`) enforce three
@@ -144,6 +187,13 @@ the ledger quotes the red by its cause (README convention 2). `S` is
     summary lines quoted.
 13. **The slice closes on the maintainer's MERGE-ACK and a clean audit** (`PL-1267`
     Acceptance 8).
+14. **The version carries the summary it was submitted with** *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)*
+    `S::test_submit_writes_the_change_summary_on_the_version`, `@pytest.mark.req("FR-242")`:
+    a submit with `change_summary="<text>"`, through the shared fixture (Acceptance 10),
+    answers with `change_summary == "<text>"`, and a later `GET /api/v1/rating-versions/{id}`
+    carries the same text. Red first: the submit response's `change_summary` is `None`
+    (`AssertionError` on `None == "<text>"`), because nothing writes the field (premise m). A
+    red for any other cause, a gate refusal included, is a fixture defect.
 
 ## Global Constraints
 
@@ -171,10 +221,13 @@ the ledger quotes the red by its cause (README convention 2). `S` is
 | FR-257 limb (2) | `03:174` | a Dislocation Run against the current live version over an agreed portfolio | 3 |
 | FR-224 | `03:110` | the `approximation`-mode gate, its threshold on the policy entry, FR-136 first | 4, 5 |
 | FR-136 (`02`) | `02:195` | its statement as the pre-check, surfaced, never the gate | 4 |
+| FR-242 (pre-mint 2026-10-05, DP-E1-6 (a)) | `03:139` | the version carries the submitted summary: `submit_for_review` writes `row.change_summary` | 7 |
 
 **Not in scope:** the floor wiring (`effective_evidence("rating_version")`), Slice 6;
 FR-257 limbs (1), (3), (4) (`PL-1267` Scope); FR-242's drafted change summary (see
-§"Needs this slice serves").
+§"Needs this slice serves"). *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* Also not in scope: the F27 draft residue (a
+`draft` row's `change_summary` is null while `rating-version.schema.json` requires it), which
+is F27's.
 
 ### Premises read at `137bc817`
 
@@ -192,6 +245,7 @@ FR-257 limbs (1), (3), (4) (`PL-1267` Scope); FR-242's drafted change summary (s
 | j | The fidelity statement is prose | `fidelity_statement(...) -> str` (`pricing_core/modelling/transparency.py:550`); its numbers (`r_squared`, `deviance_explained`) are on `GlmApproximation` | reproduces; DP-S5-5 |
 | k | The run's figures | `DislocationRun` (`model_schema/dislocation.py:116`) holds bands and totals, no per-policy quantile | reproduces; DP-S5-4 |
 | l | Settings' prefix | `Settings` (`backend/src/app/config.py:88`), `env_prefix="GIP_"` (`:96`) | reproduces; Acceptance 6 |
+| m | `RatingVersion.change_summary` is never written (pre-mint 2026-10-05, read at `4d3be141`) | the field `rating.py:168`, the column `RatingVersionRow.change_summary` (`backend/src/app/db/models.py:1997`); `create_rating_version` builds the row without it (`rating_versions.py:254-262`); `submit_for_review` passes it only to `approvals.submit` (`:327-333`); `to_schema` (`:120`) reads it, so `submit_rating_version` (`api/models.py:1222-1229`) answers `change_summary: null` | reproduces; DP-E1-6 (a), Task 7 |
 
 ### Risks
 
@@ -217,14 +271,14 @@ Classes as in PL 9591 §"Write set" (`docs/process/delivery-process.core.json`
 | `packages/model-schema/src/model_schema/approvals.py` | `ApprovalPolicyEntry` (`:125-164`), its validator; `DEFAULT_POLICY`'s `rating_version` entry (`:344-349`) | one field + its rule; the default |
 | `packages/model-schema/src/model_schema/rating.py` | `RatingVersionEvidence` (`:119-132`) | the FR-224 record (DP-S5-4) |
 | `packages/model-schema/src/model_schema/dislocation.py` | `DislocationSpec` (`:35`), `DislocationRun` (`:116`) | DP-S5-3 (a) and DP-S5-4 (b) fields |
-| `backend/src/app/platform/rating_versions.py` | `submit_for_review` (`:278-338`); new `_structural_diff_gate`, `_dislocation_gate`, `_approximation_gate`, `structural_diff_verified`, `dislocation_run_verified` | edited; added |
+| `backend/src/app/platform/rating_versions.py` | `submit_for_review` (`:278-338`) (pre-mint 2026-10-05: it also writes `row.change_summary`, DP-E1-6 (a); no new symbol); new `_structural_diff_gate`, `_dislocation_gate`, `_approximation_gate`, `structural_diff_verified`, `dislocation_run_verified` | edited; added |
 | `backend/src/app/platform/environments.py` | new public `live_rating_version_ref(session, *, workspace_id, environment_slug) -> str \| None`, beside `_live_by_environment` (`:67`) | added |
 | `backend/src/app/platform/dislocation_runs.py` (Slice 4) | new `latest_run_for(session, *, workspace_id, candidate_ref, candidate_bundle_hash, baseline_ref)` | added |
 | `backend/src/app/worker/dislocation_handlers.py` (Slice 4) | `_dislocation_run`: the exact-mode baseline (DP-S5-3) and the quantiles (DP-S5-4) | edited |
 | `backend/src/app/api/dislocation_runs.py` (Slice 4) | `POST`'s validation (DP-S5-3, DP-S5-5) | edited |
 | `docs/contracts/` generated files | regenerated | |
 | `backend/tests/test_rating_version_dislocation_gate.py` | new | Acceptance 1–9 |
-| `backend/tests/test_rating_versions.py`, `backend/tests/conftest.py` or the module's fixture file | the shared fixture (Acceptance 10) | edited |
+| `backend/tests/test_rating_versions.py`, `backend/tests/conftest.py` or the module's fixture file | the shared fixture (Acceptance 10); Acceptance 14's test (pre-mint 2026-10-05) | edited |
 | `packages/model-schema/tests/test_approvals.py` | new tests | Acceptance 7 |
 | `docs/ledgers/LG-<n>-…md`; `docs/INDEX.md` | added; regenerated | |
 
@@ -252,7 +306,12 @@ Classes as in PL 9591 §"Write set" (`docs/process/delivery-process.core.json`
 serial. With **SL-1390** (Slice 6): Slice 6 consumes this slice's gates → serial after it.
 With **PL 9688**: `03` §3.2 SERIALISES → serial. (A-2 and A-3 are WK-1178, not same-Work pairs; §3.2 serialises them by the file rule.) With **PL 9649**: (a) every shared path is
 one-sided or exempt, and (b) no plan dependency either way; they may run at once if the
-dispatch record names both.
+dispatch record names both. *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* With **E1** (SL 9565, PL 9564 #1194, working ids,
+filed after this plan): `rating_versions.py` one-sided (E1 adds `draft_change_summary_for`;
+this slice edits `submit_for_review`), `rating.py` one-sided (E1 adds classes after
+`RateTableDiff`), `api/models.py` E1 only, `03` §5.1 E1 only; (b) neither consumes the other's
+output, and DP-E1-6 (a)'s write changes neither: E1 never reads or writes
+`RatingVersion.change_summary`. They may run at once if both dispatch records name the pair.
 
 ### Size
 
@@ -273,6 +332,9 @@ diffs"** (`03` FR-242's draft). Neither `SL-1389`'s row nor `PL-1267` Slice 5 sc
 and FR-242 was verdicted delivered in WK-669 (`CR-838`) for its required summary; its
 drafting half is not this slice's. This plan does not add it (a scope change is the
 maintainer's); it is reported to the lead with PR #1176's report.
+*(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* The drafting is now its own slice, SL 9565 (PL 9564, #1194, working ids); PL
+9629's need 5 is re-pointed there by PL 9629's owner. This slice takes only DP-E1-6 (a), the
+version's `change_summary` written at submit (Task 7).
 
 ## Decision points
 
@@ -428,13 +490,31 @@ the approvers' judgement at review, not a check.
 - [ ] **Step 5:** Regenerate the contracts; run the tests (PASS).
 - [ ] **Step 6: Commit** `feat(rating): FR-224's approximation gate, its threshold on the policy entry (RL-1264 DP-3)`.
 
+### Task 7: The version's change summary, written at submit (DP-E1-6 (a))
+
+*(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* Numbered 7 so no task is renumbered; **run it before Task 6**, whose gate
+and ledger cover it.
+
+**Files:**
+- Modify: `backend/src/app/platform/rating_versions.py` (`submit_for_review`, the evidence
+  write at `:322-326`)
+- Test: `backend/tests/test_rating_versions.py`
+
+- [ ] **Step 1: Write the failing test** — Acceptance 14, through the shared fixture.
+- [ ] **Step 2:** Run it. Expected: FAIL, the submit response's `change_summary` is `None`.
+- [ ] **Step 3:** Implement: `row.change_summary = change_summary`, beside the `row.evidence`
+  write (`:322-326`), under the same "written at submit" comment. Nothing else changes: the
+  blank-summary refusal stays `approvals.submit`'s (`approvals.py:272-275`).
+- [ ] **Step 4:** Run (PASS); re-run `S` whole.
+- [ ] **Step 5: Commit** `fix(rating): a rating version carries its submitted change summary (FR-242, DP-E1-6)`.
+
 ### Task 6: The gate and the ledger
 
 - [ ] **Step 1:** The full two-half gate (`dev-commands`); `generate-contracts.py --check`;
   the four docs checks; `req-coverage.py` (FR-224, FR-257 and `06` FR-364 each listed with a
   test in `G`). Quote every rc and summary line with the tree.
 - [ ] **Step 2:** The ledger: Task 0's records, every red quoted by its cause, Acceptance
-  1–13 with evidence, and `RL-1264`'s environment-variable violation discharged by name.
+  1–13 ~~with evidence~~ and 14 (pre-mint 2026-10-05) with evidence, and `RL-1264`'s environment-variable violation discharged by name.
 
 ## Hand-off
 
@@ -485,3 +565,7 @@ P3 are DP-S5-2's open actuarial choice.
    FR-257 or `06` §4.2's `rating_version` entry.
 5. **A stale locator in a frozen record, noted, not edited.** `PL-1267`'s scope table places
    FR-224 in `03` §3.1; at `137bc817` it is in §3.2 (`:110`, after `### 3.2` at `:90`).
+6. **Pre-mint edit, 2026-10-05** *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* DP-E1-6 (a) adds one assignment, one test,
+   Task 7 and Acceptance 14; the write set and the contention are unchanged (§"Pre-mint
+   edit, 2026-10-05", items 2 and 3); the F27 draft residue is named out of scope. RL 9541 is
+   cited by working id and kept out of `relates:`.
