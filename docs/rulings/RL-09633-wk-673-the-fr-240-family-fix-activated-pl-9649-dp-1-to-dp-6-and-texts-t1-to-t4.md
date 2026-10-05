@@ -119,7 +119,8 @@ relates: [FR-240, FR-230, FR-88, FR-359, FR-20, OQ-609, RL-1263, RL-1329, RL-136
    goes BEFORE PL 9728 (NFR-489, a G4 item) in lane B, or BEFORE WK-675 S2 (off G2's path) in
    lane C. WK-673 S3 in lane A is NOT displaced (G2 needs "a dislocation run with
    attribution")."
-8. **The model_call case of DP-4 (c): refused now, neutralisation left open.** Entry
+8. **DP-7 (PL 9649 @`2b5bf12d`), the model_call case of DP-4 (c): refused now,
+   neutralisation left open.** Entry
    "2026-10-05 14:46:53 BST — FD 9639 (a control factor's coefficient reaches scoring): HIGH
    provisional; PL 9649 takes the REFUSAL now; neutralisation is an open question first",
    item 2:
@@ -135,7 +136,7 @@ relates: [FR-240, FR-230, FR-88, FR-359, FR-20, OQ-609, RL-1263, RL-1329, RL-136
 
 ## The spec texts
 
-Four texts, PL 9649 §"Spec texts" T1 to T4. Placement was read at `origin/main` `83ea5090`.
+Four texts, PL 9649 §"Spec texts" T1 to T4, with T5 folded into T1 (Ruled 8). Placement was read at `origin/main` `83ea5090`.
 They are applied by SL 9647 (PL 9649 Task 6), in one commit with the code (`CLAUDE.md` §2),
 and `<SL 9647 date>` is that commit's date. Each find string below was counted with
 `git show 83ea5090:<file> | grep -cF -- '<find string>'` and gives **1**.
@@ -156,8 +157,11 @@ No other byte of any proposal changed, except where a text below says so.
 
 **T1 — `03` FR-240, the transitive bound and the rateable path (DP-2, DP-4, DP-5, Ruled 8).**
 Proposed by PL 9649 §"Spec texts" T1 and **adopted verbatim** (common amendments only),
-**extended for Ruled 8**: the marker adds `FD 9639`, and the last sentence (from "A
-`control`-intent factor is also in a rateable path") is this record's, not the plan's.
+**extended for Ruled 8 by folding in PL 9649's T5** (branch `pl-9649-fr240-fix`
+@`2b5bf12d`, which offers "the ruling may fold it into T1"): the marker adds `FD 9639`, and
+the last two sentences (from "A `control`-intent factor is also in a rateable path") are T5's
+body verbatim. T5's own marker, "*(Amended 2026-10-05, FD 9639.)*", is dropped, as T1's
+marker now carries it. T5 is not applied separately.
 
 Placement: the FR-240 row (`docs/specs/03-rating-engine.md:137`). The text is **appended** to
 the end of the second cell, after the `RL-1329` amendment's closing `)*` and one space,
@@ -172,7 +176,7 @@ The message names the step and the rung.)* |
 Append
 
 ```text
-*(Amended <SL 9647 date>, `RL-9633`, FD 9659, FD 9697 and FD 9639.)* **"Transitively reachable" means through a pinned model**: a pinned model whose spec names a custom objective (a GBM's `spec.objective` with `kind: custom`) reaches that objective, and compilation refuses it with `PIN_NOT_APPROVED` unless it is approved or better, exactly as if it were pinned. The message names the model and the objective. A `deprecated` objective is refused, as a new specification may not select one (`02` OQ-609). The bound is one hop. **Known gap:** a peril structure's models are not reached, because a peril structure cannot be resolved at compile; FD 9995 owns that gap, and this clause reaches them when it is fixed. Custom evaluation metrics are not objectives and do not reach a price, so they are outside this clause. **A `control`-intent factor is in a rateable path when a pinned rate table has a key bound by `factor_ref` to it**, whatever the table's `rateable` flag; compilation refuses it with `CONTROL_FACTOR_IN_RATEABLE_PATH` (422), naming the table, the key and the Factor. **A `control`-intent factor is also in a rateable path when a `model_call` step's pinned model holds it in its `feature_order`**: scoring applies that factor's fitted effect to the price, so compilation refuses the step with `CONTROL_FACTOR_IN_RATEABLE_PATH` (422), naming the step, the model and the Factor. Scoring such a model with the factor held at a declared reference value is an open question, not this clause.
+*(Amended <SL 9647 date>, `RL-9633`, FD 9659, FD 9697 and FD 9639.)* **"Transitively reachable" means through a pinned model**: a pinned model whose spec names a custom objective (a GBM's `spec.objective` with `kind: custom`) reaches that objective, and compilation refuses it with `PIN_NOT_APPROVED` unless it is approved or better, exactly as if it were pinned. The message names the model and the objective. A `deprecated` objective is refused, as a new specification may not select one (`02` OQ-609). The bound is one hop. **Known gap:** a peril structure's models are not reached, because a peril structure cannot be resolved at compile; FD 9995 owns that gap, and this clause reaches them when it is fixed. Custom evaluation metrics are not objectives and do not reach a price, so they are outside this clause. **A `control`-intent factor is in a rateable path when a pinned rate table has a key bound by `factor_ref` to it**, whatever the table's `rateable` flag; compilation refuses it with `CONTROL_FACTOR_IN_RATEABLE_PATH` (422), naming the table, the key and the Factor. **A `control`-intent factor is also in a rateable path when a pinned model scored by a `model_call` was fitted on it**: compilation refuses the version with `CONTROL_FACTOR_IN_RATEABLE_PATH` (422), naming the model, the feature and the Factor, because scoring applies every fitted feature's effect and `02` FR-88 lets Rating Versions use only `risk` factors. Scoring at a declared reference level for a `control` factor is an open question (FD 9639), not a permission.
 ```
 
 **T2 — `03` FR-230 and the seed route, the refusal at seed (DP-3).** Proposed by PL 9649
@@ -233,7 +237,8 @@ Insert after that line
 
 **T4 — `03` §5.1's owned codes, the code's note (DP-3, DP-4, Ruled 8).** Proposed by PL 9649
 §"Spec texts" T4 and **adopted verbatim** (common amendments only), **extended for Ruled 8**:
-"and FD 9639" and the closing clause from "or for a `model_call` step" are this record's.
+"and FD 9639" and the closing clause from "or for a `model_call`" are this record's, naming
+what T5 names.
 
 Placement: the owned-codes paragraph (`03:933`), immediately after
 `` `CONTROL_FACTOR_IN_RATEABLE_PATH` `` and one space, before the `,` that precedes
@@ -248,7 +253,7 @@ Find string (1 hit; the text goes between its first backtick-closed code and the
 Insert
 
 ```text
-*(registered <SL 9647 date>, `RL-9633`, FD 9697 and FD 9639: **422** at `seed-from-model` (FR-230) and at bundle compile (FR-240); the message names the table, the key and the Factor, or for a `model_call` step the step, the model and the Factor)*
+*(registered <SL 9647 date>, `RL-9633`, FD 9697 and FD 9639: **422** at `seed-from-model` (FR-230) and at bundle compile (FR-240); the message names the table, the key and the Factor, or for a `model_call` the model, the feature and the Factor)*
 ```
 
 ## What it obliges
@@ -270,7 +275,7 @@ Insert
 - **The dispatch record** names the lane of Ruled 7 and the serialisation with the FD 9707
   fix (PL 9688) on `compile.py` that PL 9649 §"Write set" records (`RL-1263`).
 - **DP-4 (c)** is a separate finding, FD 9639, owner WK-673 (Ruled 4). This record covers
-  only its refusal (Ruled 8), which SL 9647 builds; PL 9649's planner adds the test. FD
+  only its refusal (Ruled 8, PL 9649's DP-7), which SL 9647 builds (Task 3b). FD
   9639's severity and closure are not this record's. Neutralisation is an open question the
   lead files; if it is decided (b) or (c), that is a spec change to `02` FR-88 and `03`
   first, then its own WK-673 slice, and T1's last sentence is amended then.
@@ -306,10 +311,10 @@ at the slice's base for its stated cause. In particular:
   does not yet list and the dispatch record adds.
 - **The model_call case (Ruled 8):** a bundle whose `model_call` step pins a GBM model with a
   `control`-intent Factor in its `feature_order` is refused at compile with
-  `CONTROL_FACTOR_IN_RATEABLE_PATH`, naming the step, the model and the Factor, red first
+  `CONTROL_FACTOR_IN_RATEABLE_PATH`, naming the model, the feature and the Factor, red first
   (the base compiles it); the same bundle over a model fitted on `risk` factors only
-  compiles. PL 9649's planner adds this test; until the plan lists it, the dispatch record
-  adds it.
+  compiles; and through the compile Job the version fails with that code (PL 9649
+  Acceptance 13 and Task 3b, @`2b5bf12d`).
 - **At seed (DP-3):** `POST /api/v1/rate-tables/{slug}/seed-from-model` naming a
   `control`-intent Factor gets 422 `CONTROL_FACTOR_IN_RATEABLE_PATH` where the base gave 201,
   red first (Acceptance 6).
