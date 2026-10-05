@@ -232,3 +232,11 @@ Added by auditor-premise on the lead's order, from the maintainer's (by delegati
 **Consequence for the ruled remedy.** Remedy (c)'s red test ("ctx `{x:3, base:7}` on the CORRECTLY ordered algorithm still gives 350") passes at ZEN level and does not catch this; a red test must run `score_one` with an extra key naming a produced name that sits on a fan-in branch. Remedy (a) alone does not close it: a stable topological order does not remove the raw key from the sibling branches, so (c) is a guard that is needed on an ordered algorithm, not a belt for the misordered case only. Ordered algorithms are exposed.
 
 **Not measured:** two terminal producers of the same name; zen-engine's merge rule in isolation; the HTTP path.
+
+## Amendment (pre-mint), 2026-10-05 — the no-caller-key fan-in case: no wrong price, `LADDER_RECONCILIATION_FAILED`
+
+Added by auditor-numeric on the lead's order, from the maintainer's (by delegation) ruling at 17:34:25 BST, item 1 (`to-lead.md`, a local channel file, cited by header): the fan-in auditor's limits go verbatim into this record's mint text. The result is the fan-in auditor's, from the local handover `trace-fd9572-premise-fanin-2026-10-05.md`, section "The no-caller-key fan-in case"; scripts (local, sha256): `fanin.py` `dc4958c076ff77380340f6f1a189dbd100c6cba7cfda8b359656b05ca34ec81f`, `fanin2.py` `758a08c784d83dede7b2959545c506046679582d372562ec2a20d1374af085a3`. I re-read none of it; it is quoted. No earlier section changes.
+
+**Measured (no caller key).** No wrong price. Decline side branches forked before the clamp give `LADDER_RECONCILIATION_FAILED` (clamp value 1435.5 is not its bound 5000; the replay rounds to 8814), and no price is returned. Every other order gives 5250. With `min_premium=0`, every order gives 1507. Because wiring is positional, a branch forked before the clamp is necessarily listed before `s_instalment`, so it cannot be the last edge into the sink. With the payable output reading X directly, compile refuses with `LADDER_CLAMP_UNPLACEABLE`.
+
+Limits: I tested one fixture and the decline-constraint kind of side branch. I did not test other produce-nothing step kinds, or a case with no ladder reconciliation.
