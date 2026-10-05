@@ -8,7 +8,7 @@
  * because "the fit path would have to choose, and two runs could choose differently".
  *
  * **GBM only.** `GlmSpec` has no `custom_objective_ref`; FR-207 records it "absent
- * entirely" with **WK-690** as owner — Phase 2, reassigned 2026-08-22 — and
+ * entirely" with **Phase 3** as owner — moved there on 2026-10-04, RL-1362 — and
  * `test_contracts.py` allowlists the divergence deliberately. A governed gap, not a §0
  * disagreement — and nothing here hints that custom
  * objectives are coming to the GLM arm, because that would assert a schedule no

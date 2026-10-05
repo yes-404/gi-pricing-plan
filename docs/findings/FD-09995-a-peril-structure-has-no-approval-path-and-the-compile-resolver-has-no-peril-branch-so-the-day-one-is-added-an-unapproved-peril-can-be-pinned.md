@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178, FR-237, FR-351, FR-386]
 ---
 
-# FD-9995 — A peril structure has no approval path and the compile resolver has no peril branch
+# FD 9995 — A peril structure has no approval path and the compile resolver has no peril branch
 
 ## Finding
 
@@ -30,7 +30,7 @@ nothing prices wrongly. **A latent dependency, not a live defect.** Two facts ho
 
 The two facts cancel today, but the guard is thin. **Today the missing resolver branch keeps every peril pin out of a compiled
 bundle.** When the resolver gains a `peril_structure` branch, `compile_bundle`'s maturity loop
-(`pricing_core/rating/compile.py:622-630`, the `all_refs` loop in `compile_bundle`; `_MATURITY_CHECK_EXEMPT = frozenset({"rate_table", "rating_algorithm"})` at `:431`) requires
+(`pricing_core/rating/compile.py:624-630`, the `all_refs` loop in `compile_bundle`; `_MATURITY_CHECK_EXEMPT = frozenset({"rate_table", "rating_algorithm"})` at `:431`) requires
 `approved`, `live` or `retired` (`_APPROVED_OR_BETTER`, `:404`) for a peril pin. With a planted resolver branch, `review` and `reconciled` rows then
 fail `PIN_NOT_APPROVED` at that loop, and **only a forced `approved` row compiles** (auditor-close1255's live check of the
 planted branch, which took the `approved` row from `NOT_FOUND` to success). So `NOT_FOUND` is not the only guard: the hazard is
@@ -111,3 +111,16 @@ Not yet decided. The proposal above is the auditor's; the lead adopts, amends or
 *Disclosure: drafted under working id 9995; minted at the merge, when the id is re-read against `origin/main`.*
 
 Amended 2026-10-05 before mint: the code cites above were re-pointed by symbol at `origin/main` `47d770e8` (`_MATURITY_CHECK_EXEMPT` was `:314`, now `compile.py:431`; `_APPROVED_OR_BETTER` `:287` → `:404`; the compile maturity loop `:466-480` → `:622-630`; `_Resolver.resolve` `:417` → `:446`; the stale "no backend table yet (Phase 2)" `NOT_FOUND` is still there at `rating_versions.py:550-556`; `PerilStructureRow` `:1577` → `:1618`; the approvals cites shifted by the lines above). Re-read and unchanged: `perils.py` writes only `DRAFT`/`RECONCILED`/`REVIEW` (`:124`, `:256`, `:338`); `api/approvals.py` has no peril branch in `_carry_to_the_artifact`; no tripwire test exists in `backend/tests` (`git grep -n -i peril -- backend/tests` filtered for "tripwire" or "resolver" is empty). The finding holds and is not covered by a later change.
+
+Re-anchored 2026-10-05 at main `caa4e411`: every claim above was re-read and still holds. The
+one cite that moved is the maturity loop in `compile_bundle`, now `compile.py:624-630` (the
+`all_refs` list is built at `:618`; was `:622-630` at `47d770e8`); `_MATURITY_CHECK_EXEMPT`
+`:431` and `_APPROVED_OR_BETTER` `:404` are unchanged. Unchanged at main: `perils.py` writes only
+`DRAFT`, `RECONCILED` and `REVIEW` (`:124`, `:256`, `:338`) and `PerilStructureStatus.APPROVED`
+is named in no backend writer (the `git grep` above finds only `model_schema/perils.py` and its
+test); `api/approvals.py`'s `_carry_to_the_artifact` (`:512`) has no peril branch and the
+`:520` comment stands; the `_Resolver.resolve` (`rating_versions.py:446`) ends in the "has no
+backend table yet (Phase 2)" `NOT_FOUND` (`:550-556`); the `PerilStructureRow` status `CHECK`
+is at `models.py:1671`; no backend test is a peril tripwire; `docs/roadmap.md` still names no
+P2 Work for a peril resolver or approval path (`grep -n -i peril docs/roadmap.md`: lines 350,
+410, 412, 496).

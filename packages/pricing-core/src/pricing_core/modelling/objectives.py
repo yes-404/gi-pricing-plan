@@ -52,6 +52,7 @@ from model_schema import (
     CheckStatus,
     CustomObjective,
     HessianStrategy,
+    ObjectiveKind,
     ObjectiveTemplate,
     ResponseKind,
     SamplingSpec,
@@ -735,11 +736,12 @@ def compile_objective(objective: CustomObjective) -> ObjectiveFns:
     stored artifact that silently gained §4.5's defaults would make a later change to a
     default rewrite the meaning of an approved objective.
     """
+    if objective.kind is ObjectiveKind.EXPRESSION:
+        return _compile_stored_expression(objective)
     if objective.template is None:  # pragma: no cover - the contract refuses this
         raise ObjectiveError(
             "OBJECTIVE_KIND_NOT_ENABLED",
-            f"objective {objective.slug}@{objective.version} is not a template objective. "
-            "Phase 1 compiles templates only (FR-150).",
+            f"objective {objective.slug}@{objective.version} names no template.",
             terms=[objective.slug],
         )
     template = _TEMPLATES[objective.template]
@@ -761,6 +763,49 @@ def compile_objective(objective: CustomObjective) -> ObjectiveFns:
         one = np.array([1.0])
         fns.stabilise(one, np.zeros(1), one)
     return fns
+
+
+def _compile_stored_expression(objective: CustomObjective) -> ObjectiveFns:
+    """An `expression` objective compiled from its **stored** `derived` block (`RL-1362` DP-S3-1).
+
+    The Approver read the stored text (FR-144), so that text is what the fit compiles:
+    `compile_expression_objective`'s `derived=None` path, which re-derives from `loss`, is
+    never taken from here. The inverse link is read through `inverse_link_for`, the function
+    certification uses, so the two cannot disagree.
+    """
+    # Imported here: `expression_objective` imports this module.
+    from pricing_core.modelling.expression_objective import (
+        Derived,
+        compile_expression_objective,
+        inverse_link_for,
+    )
+
+    ref = f"custom_objective:{objective.slug}@{objective.version}"
+    stored = objective.derived
+    if objective.loss is None or stored is None:
+        raise ObjectiveError(
+            "VALIDATION_FAILED",
+            f"objective {objective.slug}@{objective.version} has no stored derivation to "
+            "compile: an expression objective is fitted from the derivation an Approver "
+            "read, never re-derived (FR-144), and is derived on its draft at "
+            "POST /api/v1/custom-objectives/{id}/derive before it is certified.",
+            terms=[objective.slug],
+        )
+    return compile_expression_objective(
+        ref=ref,
+        loss=objective.loss,
+        parameters={p.name: p.default for p in objective.parameters or ()},
+        y_domain=objective.applicability.y_domain,
+        hessian_strategy=objective.hessian_strategy,
+        hessian_min=objective.hessian_min,
+        inverse_link=inverse_link_for(objective.applicability.responses),
+        derived=Derived(
+            gradient=stored.gradient,
+            hessian=stored.hessian,
+            derivation_tool=stored.derivation_tool,
+            derivation_version=stored.derivation_version,
+        ),
+    )
 
 
 def template_loss(template: ObjectiveTemplate) -> _Fn:
