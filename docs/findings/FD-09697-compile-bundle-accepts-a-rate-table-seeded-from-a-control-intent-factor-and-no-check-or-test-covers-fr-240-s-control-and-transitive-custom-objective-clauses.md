@@ -1,7 +1,7 @@
 ---
 id: FD-9697
 family: finding
-title: compile_bundle accepts a rate table seeded from a control-intent factor, and no check or test covers FR-240's control and transitive custom-objective clauses
+title: compile_bundle accepts a rate table seeded from a control-intent factor, so FR-240's "no control-intent factor in a rateable path" has no implementation
 status: active
 created: 2026-10-05            # working id; the mint date will replace this (check 31)
 owner: auditor
@@ -17,33 +17,32 @@ relates: [WK-1178, FR-240, FR-88, FR-230, FR-20]
 
 ## Finding
 
-**Proposed severity MEDIUM; the deputy sets it at the mint. Proposed owner WK-1178 (provisional).** FR-240 lists two
-clauses that `compile_bundle` does not implement, and a third that it implements only for a direct pin.
+**Severity HIGH (the deputy's, 2026-10-05 13:20:26 BST, decisions 22–27; final at the mint). Proposed owner WK-1178 (provisional); deadline: none set by the deputy.** FR-240 requires that bundle compilation validates "no `control`-intent
+factor in a rateable path (`02` FR-88)", and `compile_bundle` does not. A rate table built from a `control` factor is
+accepted and compiles, so a price can depend on a factor the platform declared must not price. That is a mispricing
+class, not a test gap (the deputy's reasoning, 13:20:26 BST).
 
 FR-240 (`docs/specs/03-rating-engine.md:137`): bundle compilation validates "… no `control`-intent factor in a
 rateable path (`02` FR-88), no unapproved custom objective transitively reachable." FR-88 (`02`): "Rating Versions
 may only use `risk` factors; a `control` factor reaching a rate table is a validation error in `03`."
 
-1. **`control` intent: no check anywhere on the path.** `compile_bundle`
-   (`packages/pricing-core/src/pricing_core/rating/compile.py:573-640`) resolves the algorithm and the rate-table,
-   model, reference-table and custom-objective pins and reads each one's status. It never resolves a Factor, and
-   `grep -n -i 'control\|intent' packages/pricing-core/src/pricing_core/rating/compile.py` finds nothing. The seed
-   path does not check it either: `seed_from_model` (`pricing_core/rate_tables/operations.py`, the Factor lookup
-   after `check_model_approved`) takes the bound Factor and never reads `intent`
-   (`grep -n intent packages/pricing-core/src/pricing_core/rate_tables/operations.py` finds nothing). So a table
-   built from a `control` factor is created `rateable=True` and compiles.
-2. **Unapproved custom objective, direct pin: implemented, untested.** The `all_refs` loop includes
-   `version.pins.custom_objectives` and raises `PIN_NOT_APPROVED` for a non-approved one. The only custom-objective
-   test of a compile is `test_a_version_pinning_an_approved_custom_objective_compiles`
-   (`backend/tests/test_rating_version_compile.py:536`), the approved case. No test pins an unapproved custom
-   objective, so deleting the objective from `all_refs` would pass the suite
-   (`grep -n 'def test.*custom_objective' backend/tests/test_rating_version_compile.py` lists that one test).
-3. **"Transitively reachable": not implemented.** Only a pin is checked. Nothing follows a model or a table to a custom
-   objective it was fitted with. The word is the spec's; the code stops at the pin.
+**Split, 2026-10-05.** This record first also held the untested unapproved-custom-objective limb and the "transitively
+reachable" limb of the same FR-240 sentence. Neither is the control-intent defect: the direct-pin refusal works
+(`PIN_NOT_APPROVED` fires), so what is missing there is a negative test and a ruling on "transitively". They moved, on
+the deputy's instruction of 2026-10-05 13:20:26 BST, to FD 9659 (LOW).
+
+**`control` intent: no check anywhere on the path.** `compile_bundle`
+(`packages/pricing-core/src/pricing_core/rating/compile.py:573-640`) resolves the algorithm and the rate-table,
+model, reference-table and custom-objective pin and reads each one's status. It never resolves a Factor, and
+`grep -n -i 'control\|intent' packages/pricing-core/src/pricing_core/rating/compile.py` finds nothing. The seed
+path does not check it either: `seed_from_model` (`pricing_core/rate_tables/operations.py`, the Factor lookup
+after `check_model_approved`) takes the bound Factor and never reads `intent`
+(`grep -n intent packages/pricing-core/src/pricing_core/rate_tables/operations.py` finds nothing). So a table
+built from a `control` factor is created `rateable=True` and compiles.
 
 ## Evidence
 
-### 1. Reproduction of clause 1, at `caa4e411a9c07a389cf47092a923c7761b2b92dc`, through pricing-core with no database
+### 1. Reproduction, at `caa4e411a9c07a389cf47092a923c7761b2b92dc`, through pricing-core with no database
 
 A scratch test, not committed, in `packages/pricing-core/tests/`. It makes a Factor with `intent=control`, seeds a rate
 table from it, puts that table's payload behind the rate-table pin of the existing `test_rating_compile_bundle.py`
@@ -90,6 +89,5 @@ check: the resolver has to resolve the key's `factor_ref` and the compile has to
 
 Open. Filed by the auditor, 2026-10-05; severity and owner are proposals, and the verdict is the lead's.
 
-Remedy for the lead's verdict: refuse a `control` factor at seed (it cannot be rated on, FR-88) or at compile, or both;
-say in FR-240 whether "transitively" means the pin or the fitted model's own objective; and give the unapproved
-custom-objective pin its negative test. Red first for each: the reproduction above must end in a refusal.
+Remedy for the lead's verdict: refuse a `control` factor at seed (it cannot be rated on, FR-88) or at compile, or both.
+Red first: the reproduction above must end in a refusal. The custom-objective clauses are FD 9659's.
