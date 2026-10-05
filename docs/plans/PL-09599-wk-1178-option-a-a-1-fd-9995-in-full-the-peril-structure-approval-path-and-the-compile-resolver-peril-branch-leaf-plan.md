@@ -64,8 +64,9 @@ needed for that refusal.
 `backend/tests/test_approval_guard.py` `EXPECTED_GUARDED`), pytest.
 
 **Spec, finding and decision:**
-- FD 9995 (working id; #980 @`9074f155`), `docs/findings/FD-09995-a-peril-structure-has-no-approval-path-and-the-compile-resolver-has-no-peril-branch-so-the-day-one-is-added-an-unapproved-peril-can-be-pinned.md`
-  on that branch, §"Disposition": *"It is discharged in full when a peril approval path and
+- FD 9995 (working id; #980 @`9074f155`), the finding file under `docs/findings/`
+  on that branch, whose name begins with the working id (`…09995-a-peril-structure-has-no-approval-path-…`; the full
+  name is not written here, because check 32 reads an id in it, and the id is not minted), §"Disposition": *"It is discharged in full when a peril approval path and
   the resolver branch land together and the tripwire is replaced by a positive test that an
   unapproved peril is refused at compile."* **That sentence is this slice's scope.**
 - [`../specs/02-modelling.md`](../specs/02-modelling.md) FR-190, FR-191 (`02:296-297`);
