@@ -152,3 +152,25 @@ leave the row handler (red first: a batch fixture declaring each of the four typ
 a raised exception); (3) `FD-1333`'s change and this one made in one place so `/score` and `outputs_json` stay one
 function of the declared type. Event that next confirms or discharges it: a merged change to `_coerce_output_value`
 and `_score_batch_row`, or a dated ruling that closes the output-type vocabulary at save time.
+
+## Disposition — ruled (pre-mint)
+
+**Ruled 2026-10-05 17:58:45 BST (recorded 16:59:48 UTC, the same day).** Source: the maintainer (by delegation),
+`~/gi-pricing-plan.local/channel/to-lead.md`, entry "2026-10-05 17:58:45 BST — FD 9513 (#1204 @0303d0bf): your decision ACCEPTED
+(MEDIUM, LATENT, WK-1178, its own fix slice after SL 9561); the row escape is the first red". Items 1 to 3, quoted verbatim:
+
+> 1. ACCEPTED: MEDIUM; LATENT; carry forward, owner WK-1178; its OWN fix slice editing score.py AFTER SL 9561. Reserve the SL/PL ids; a planner drafts when a seat frees.
+> 2. The fix plan's reds, in order: (1) the ROW ESCAPE first. ANY exception from _outputs_json (or anything else after the try) becomes that row's error row, and the run continues (FR-255). This does not depend on the type question, so it lands even if the type DP is still open. (2) the four types, with the JSON form of count, relativity and percentage as a DP for me in that plan (FR-254's "batch never diverges" is the reading; the plan proposes).
+> 3. The decimal half stays with FD-1333 / OQ-1334 / RL-1343, not re-filed. The new fact (a whole-valued decimal reaches /score as a JSON INTEGER, a fractional one as a float; FD-1333/RL-1343 say only "float") goes into FD 9513's text as a related observation, cited to FD-1333. Whichever plan discharges RL-1343's clause must cover BOTH forms; FD 9513's fix plan checks whether that plan exists and names it.
+
+**In those terms.** Severity **MEDIUM**, **LATENT**; **carry forward with an owner, WK-1178**; the fix is its own slice,
+**SL 9511 under PL 9509** (working ids), editing `score.py` after SL 9561. This **supersedes** the Disposition section's
+placement of the fix in PL 9521 Step 1a: PL 9521 cites this record and does not carry the fix. Reds, in order: **(1) the row
+escape first**, independent of the type question; **(2) the four types** (`int`, `count`, `relativity`, `percentage`), the JSON
+form of `count`, `relativity` and `percentage` being a decision point for the maintainer, proposed by the plan.
+
+**Related observation, cited to `FD-1333`: the decimal wire form depends on the value.** A whole-valued `decimal` output
+reaches `/score` as a JSON **integer** and a fractional one as a JSON **float** (the probe above: `driver_age * 1.5` gives
+`27`, an int; `driver_age * 1.1` gives `19.8`, a float). `FD-1333` and `RL-1343` say only "float". Whichever plan discharges
+`RL-1343`'s clause (the JSON string on every scoring path) must cover **both** forms. PL 9509 checks whether that plan exists
+and names it.
