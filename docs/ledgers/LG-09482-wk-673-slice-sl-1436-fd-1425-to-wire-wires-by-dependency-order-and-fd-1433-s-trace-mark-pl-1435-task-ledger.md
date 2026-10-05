@@ -189,3 +189,17 @@ committed. A LOW finding (WK-673) by an auditor follows, recording the mechanism
 
 None opened at this entry (2026-10-06, before the gate). The draft PR, `SL-1436: …`, opens from branch
 `sl-1436-fd-1425-to-wire-dependency-order` once the gate head is pushed; its number is appended here.
+
+### The trial merges before the gate (2026-10-06)
+
+`git merge-tree --write-tree <other head> a67f46ce465f9a17b4fea1f224714058ec0f3373` (this slice's head after the INDEX
+regeneration), each **exit 1**:
+- against S7 (`origin/sl-1391-fr-231-exposure-weights-portfolio-frame`, `21096c36998c7f91f8eb6ce1463ed026851e6258`): the
+  only `CONFLICT` is `docs/INDEX.md` (generated); `docs/specs/03-rating-engine.md` and `docs/contracts/openapi/generated.json`
+  auto-merge clean.
+- against SL-1430 (`origin/sl-1430-fd-1421-rating-version-algorithm-and-pins`, `260ead6640ed3a784426f38b0771206ec30ea8a1`):
+  the same single conflict, `docs/INDEX.md`; `03` and `generated.json` auto-merge clean.
+
+`docs/INDEX.md` is registry-exempt and regenerated (`python3 scripts/doc-index.py`) by whichever slice merges second, by a
+MERGE of main, never a rebase (the 22:52:50 BST exception's condition). The slice's `generated.json` is regenerated, never
+hand-merged, at that merge.
