@@ -1435,6 +1435,24 @@ relates: [FD-1356, RL-1301, PL-1306, SL-1256, RL-1407, PL-1408]
 **Closed 2026-10-05** on the slice audit (LG-1417 §"Closing note"; local working copy: `handover/audit-sl1409-2026-10-05.md`) and its re-check, at the mint of ledger `LG-1417` (the executor's closing acts, `executor.md` mint step; `document-ids.md` §1.6).
 (Activated 2026-10-05 as the WK-1178 FD-1356 fix slice, on the maintainer's GO check, "2026-10-05 09:44:39 BST — DISPATCH GO: FD-1356 fix (SL-1409 / PL-1408) on lane B, option (b); executor-1409 starts once the `__all__` registry amendment merges (or once WK-690 S3 merges, if that comes first)"; dispatch record DISPATCH-WK-1178-SL1409-2026-10-04.)
 
+#### SL-9596 — WK-1178 slice — Option A, A-3: Peril Structure scoring
+
+```yaml
+id: SL-9596
+family: slice
+title: WK-1178 slice — Option A, A-3, Peril Structure scoring (compile resolves and maturity-checks the component models; the runtime assembles the risk premium)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1371, CR-1212, RL-1263]
+```
+
+The third of Option A's four serial slices (the maintainer, "2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record", item 1). A `model_call` step naming a Peril Structure compiles and scores: `compile_bundle` resolves each component model of the pinned structure, refuses one below `approved` with `PIN_NOT_APPROVED` (FR-20, FR-240) and embeds its payload, so the Bundle stays self-contained (NFR-491); the handler predicts each component and calls `assemble_risk_premium` (FR-188, FR-189), replacing today's custom-node failure on `payload["fit_result"]`. Six decision points for a ruling (the outputs rule and FR-249, `separate_model`, PL 9649's peril gap, WF-699 C4's reachability, the component unit, a recorded latency). Leaf plan PL 9595 (working id). It follows PL 9683, PL 9649, A-1 (SL 9600) and A-2 (SL 9598); it serialises with PL 9610 and PL 9609 on `compile_bundle`; A-4 (the exit-demo scope) follows it.
+
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
