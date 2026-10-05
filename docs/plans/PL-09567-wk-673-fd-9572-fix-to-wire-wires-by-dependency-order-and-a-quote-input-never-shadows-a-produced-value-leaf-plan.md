@@ -175,6 +175,89 @@ The executor does not weaken a case to make it fail.
 `score_batch` in Task 1's sample module. Drop those imports, and keep any other import that
 `ruff` reports still in use.
 
+## Delta 4, 2026-10-05 (after 17:39:08 BST, pre-mint): DP-R1 ruled (i), with conditions A and B; PL 9567 lands before PL 9776
+
+The maintainer's (by delegation) entry "2026-10-05 17:39:08 BST — DP-R1 (PL 9567 #1193
+@dd254b6d): (i) the ordered chain, with TWO conditions; PL 9776 re-plans after it; NFR-498
+auditor yes", items 1 and 2, verbatim:
+
+> 1. DP-R1: (i) ADOPTED. It is the only option that removes the merge rather than relying on it. (ii) is subsumed by (c), and (iii) rests on an unread zen merge order.
+>    CONDITION A, hash scope stated, not glossed. Checked at origin/main: compile.py:635-641 hashes the JdmGraph from to_jdm (bundle_hash(graph, pins)); to_wire runs at SCORE time (runtime.py). So "hash unchanged" also means EVERY ALREADY-COMPILED bundle executes the NEW wiring under the SAME content_hash. That is the intended effect here (a correctness root), but it is a reproducibility fact: a replay of a pre-fix quote can differ where FD 9572's shadow bit. The PL states it in its own words, and FD 9572's mint text or RL records it.
+>    CONDITION B, proof that nothing else moves: a red-first Task 2b as you state (777 → 5250 at the engine), PLUS a golden replay: every committed algorithm and fixture (fremtpl2-demo@1, the bench algorithms, golden.py) scores IDENTICALLY before and after the chain, with the case set named in the PL. Any difference outside the FD 9572 fixtures is a STOP for me, as is the edge-set assertion turning red.
+>    The model_call handler passing the context through (runtime.py:581) is in scope; a hand-off line names it for A-2/A-3, which build on that handler.
+> 2. PL 9776 (#1051, unminted): (i) lands FIRST. PL 9776 re-plans its passThrough-off against the chain pre-mint, because it is an optimisation and (i) is a correctness root. Both plans name the dependency.
+
+The ruling record is RL 9562 (working id, #1195); its Amendment N2 records DP-R1.
+
+**1. DP-R1 is ruled: (i), the ordered chain over `_dependency_order`.** The interior has no
+fan-in. Task 2b is written for (i) and stays as Delta 2 and Delta 3 wrote it. The text of
+Delta 2 that calls DP-R1 open, and the Decision points note that calls it open, stay as
+written; this delta supersedes them.
+
+**2. Condition A: the hash scope, stated.** Read at `origin/main`
+`4d3be1414ad4dacdaa0c14ef49fb21853adbaed6`:
+- `compile_bundle` builds `graph = to_jdm(algorithm)` (`compile.py:634`) and returns a
+  `Bundle` whose `content_hash=bundle_hash(graph, pins)` (`compile.py:636-643`, the hash at
+  `:641`). `bundle_hash` (`compile.py:522-535`) dumps only `graph` and `pins`.
+- `to_wire` is called once, in `load_bundle` (`runtime.py:666`; `load_bundle` at `:646`), when
+  a `Bundle` is turned into a `CompiledBundle`. The wire is not stored and is not hashed.
+  `CompiledBundle.content_hash` is copied from `bundle.content_hash` (`runtime.py:673`).
+- The trace re-score path checks only that hash: `trace_handlers.py:90` refuses a bundle
+  whose `content_hash` differs from the pinned `row.bundle_hash`, and `:98` re-scores with
+  `trace=True`.
+
+**What this means, in this plan's words.** The fix changes no `content_hash`. It also means
+that every bundle compiled before the fix, stored or live, runs the chain at its next
+`load_bundle`, under the hash it had before. So "hash unchanged" does not mean "behaviour
+unchanged". A replay of a quote priced before the fix, through any path that loads the
+bundle again (the trace re-score at `trace_handlers.py:98`, a regression replay, an
+`evaluate_golden_quotes` run), can give a different result. That can happen only where FD
+9572's stale copy decided the price: a context that carried a produced name into a side
+branch that the sink fan-in took last. This is the intended effect, because the fix is a
+correctness root. It is also a reproducibility fact, and the maintainer (by delegation)
+requires it stated. **Hand-off to the lead:** the same fact goes into FD 9572's mint text or
+into RL 9562 (Amendment N2 records DP-R1). Which record carries it is the lead's routing, not
+this plan's.
+
+**3. Condition B: the golden replay, Task 2c (below).** Every committed algorithm in the case
+set scores identically before and after the chain. The case set is named in Task 2c. **Any
+difference outside the FD 9572 fixtures is a STOP for the maintainer (by delegation).** The
+edge-set STOP of Task 2b Step 4 stays. "The FD 9572 fixtures" means exactly the cases in
+`test_rating_wire_order.py` from Task 1 and Task 2b. No other algorithm or context is one.
+
+**4. The `model_call` handler is in scope.** Task 2b Step 2 makes `_model_call_handler`
+(`runtime.py:512`; its success return at `:581`) and `_model_call_failure` (`:94`) return the
+context they received plus their own keys. On the chain, a node that drops the context drops
+it for every later step. **To keep this in one place**, the handler builds its success output
+in one expression after the model branch has set `value`, so a branch added later (a GLM
+branch, a peril-structure branch) returns the context because it reuses that expression.
+
+**Hand-off to A-1, A-2 and A-3** (WK-1178; PL 9599, PL 9597 (#1178), PL 9595, all working
+ids): each one edits `_model_call_handler` (PL 9597's file-contention table). After this slice
+merges, the handler returns `{**context, **produced}` on success and on failure. A branch that
+any of them adds must return through that same expression, or through `_model_call_failure`,
+and must not return `{"output": {produced names only}}`. If it does, the next step on the chain
+loses the context, and the bench-rating GBM case of Task 2c (a `model_call` in the interior of
+the chain) shows it. **Order:** this slice and each of A-1, A-2 and A-3 serialise on
+`_model_call_handler`. The one that merges second rebases and re-runs
+`test_rating_wire_order.py` and Task 2c's replay script.
+
+**5. The dependency: PL 9567 lands before PL 9776.** This is the 17:39:08 entry's item 2. PL
+9776 (#1051, WK-1178) re-plans its `passThrough`-off against the chain by its own pre-mint
+delta, and it consumes this slice's output (the chain wire and the `model_call` pass-through).
+So the two slices have a plan dependency under RL 9620 (b), and they cannot run at once.
+
+**6. What this delta changes in the plan:**
+- **Task 2c**, added after Task 2b: the golden replay (Condition B).
+- **The Acceptance Standard** gains items 10 and 11.
+- **The write set** gains `_model_call_handler` and `_model_call_failure` in the `runtime.py`
+  row, and the contention table gains A-1, A-2 and A-3, and the dependency on PL 9776. Both
+  are recorded in a note under the table, so the table's own text stays as it was.
+- **The SL 9568 row** in `../roadmap.md` gains a Delta 4 note.
+- **Activation needs:** the Delta 2 need "DP-R1 decided by the maintainer (by delegation)"
+  is met by the 17:39:08 entry, and RL 9562 minted (already a need) carries it as Amendment
+  N2. No new activation need is added.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
 > or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax
 > for tracking. Also bound: `python-test` (the `req` markers, the negative tests),
@@ -235,6 +318,18 @@ Each item is a command a fresh reviewer can run from the worktree root, after `u
 
    Run: `uv run pytest <each file>::<each test> -q`, one file at a time, outside a gate window.
    *(Item added 2026-10-05, after 17:23:51 BST, on the 17:15:09 entry; the lead's order.)*
+
+10. *(Added 2026-10-05 by Delta 4.)* Task 2b's reds: `test_no_side_branch_carries_a_stale_copy_into_the_sink`
+    gives 5250, and the ledger records it failing at the base commit with `assert 777 == 5250`;
+    `test_the_r5_reorder_pair_prices_alike` and `test_no_ladder_side_branch_never_carries_the_pre_clamp_value`
+    pass at the head, each with its base-commit result recorded (a red with its price, or a pin).
+    Run: `uv run pytest packages/pricing-core/tests/test_rating_wire_order.py -q`.
+11. *(Added 2026-10-05 by Delta 4, DP-R1 Condition B.)* Task 2c's replay script, inline in the
+    ledger with its sha256, prints `equal N of N` for every algorithm of Task 2c's case set, on
+    both the already-compiled path and the fresh path, with an unchanged `content_hash` for each;
+    and `uv run pytest packages/pricing-core/tests/test_testing.py
+    packages/pricing-core/tests/test_replay.py packages/pricing-core/tests/test_testing_determinism.py -q`
+    passes with no assert edited. Any difference is a STOP for the maintainer (by delegation).
 
 ## Global Constraints
 
@@ -343,6 +438,10 @@ Dislocation is left as it is, because it already selects declared inputs only (R
 *(Delta 2, 2026-10-05: DP-R1, the (R-b) mechanism, is open; it is set out in the Delta 2
 section above and blocks Task 2b.)*
 
+*(Delta 4, 2026-10-05: DP-R1 is **ruled (i)**, the ordered chain, by the maintainer (by
+delegation) at 17:39:08 BST, with conditions A and B; RL 9562 records it as Amendment N2. See
+Delta 4.)*
+
 Three are open and block activation, so this plan stays `draft` until a dated decision line
 settles them. Each is the decision-maker's (`delivery-process.md` §3), not the planner's.
 
@@ -398,6 +497,22 @@ private here; whether S2 imports it or its own inliner restates it is S2's plan'
 name-disjoint in code, `03` distinct rows, no plan dependency, so both RL 9620 conditions can
 hold. Beside PL 9649: name-disjoint, no plan dependency. Beside PL 9688: **serialise**, this
 slice first. Beside PL 9776: **serialise** (`to_wire`).
+
+**Delta 4 (2026-10-05) to this table and the pairing.** The table above stays as read; these
+lines add to it:
+- **`runtime.py`, this slice:** also edited, by Task 2b: `_model_call_handler` (`:512`, its
+  success return `:581`), `_model_call_failure` (`:94`), the `to_wire` per-name edges
+  (`:461-492`) and sink loop (`:494-499`), deleted, and `to_wire`'s docstring paragraph
+  on wiring (`:422-435`).
+- **A-1 (PL 9599), A-2 (PL 9597, #1178 @`04f99c1f`), A-3 (PL 9595)**, all WK-1178: each edits
+  `_model_call_handler` (PL 9597's file-contention table). **Serialise** (the same existing
+  function); the one that merges second rebases and re-runs `test_rating_wire_order.py` and
+  Task 2c's replay. The hand-off is in Delta 4 item 4.
+- **PL 9776 (#1051):** besides `to_wire`, there is now a **plan dependency**: PL 9776 consumes
+  this slice's output (the chain and the `model_call` pass-through), so RL 9620 (b) fails and
+  the two never run at once. **PL 9567 lands first** (the 17:39:08 entry, item 2).
+- **Task 2c** adds no repository file: its script and outputs live in the ledger and the
+  executor's scratch directory.
 
 ---
 
@@ -1044,6 +1159,94 @@ async def test_no_ladder_side_branch_never_carries_the_pre_clamp_value(
 - [ ] **Step 5: Commit:** `fix(rating): to_wire wires one ordered path, so no branch carries
   a stale copy into the sink (FD 9572 R-b)`.
 
+### Task 2c: The golden replay — nothing else moves (DP-R1 Condition B; added by Delta 4)
+
+**Files:**
+- No repository file. The replay script goes inline in the slice's ledger with its sha256
+  prefix, as Spike S1's scripts do in PL 9776. Its two output files stay in the executor's own
+  `mktemp -d` directory. The ledger records their sha256 values and the comparison.
+
+**When:** Step 1 runs **at the slice's base commit, before Task 2's first code change**, at the
+same time as Task 1 Step 2's base run. Step 2 runs at the head after Task 2b Step 5. It is
+light: one process, `OMP_NUM_THREADS=1 nice`, no pytest, no database, and never beside a held
+gate slot or a timing run (`pgrep -af 'pytest|vitest|flock'` and both `flock -n` slot reads
+first).
+
+**The case set**, named by symbol at `4d3be141`. Each line is one algorithm:
+1. **fremtpl2-demo@1.** The Rating Version is `fremtpl2-demo` (`examples/fremtpl2/model.py:520`),
+   and its algorithm is `demo-fixture-motor@1` (`DEMO_ALGORITHM_SLUG`, `:317`), built by
+   `_demo_algorithm()` (`:327`): `s_in` → `s_expr` → `s_out`. Contexts: the demo golden quote's
+   own (`premium_in = DEMO_PREMIUM_IN`, `:320`, built in `author_demo_rating_evidence`, `:366`),
+   plus 20 seeded contexts over its `input_contract`.
+2. **bench-rating-gbm** and 3. **bench-rating-no-gbm**: `scripts/bench-rating.py`
+   `_algorithm_payload(with_gbm=…, n_expr=N_EXPR_STEPS)` (`:197`; `N_EXPR_STEPS = 187`, `:91`),
+   with the payloads of that script's `_FakeResolver` (`:274`). The booster is trained once at
+   base with `bench-trace-size.py`'s `TRAIN_ROWS` and `TRAIN_ROUNDS` (`:78-79`; `_train_booster`
+   is seeded, `bench-rating.py:132`), and the same bytes travel inside the stored bundle, so
+   base and head score the same booster. **bench-rating-gbm is the case that tests the
+   `model_call` pass-through:** today `s_expense` and `s_risk` both feed `s_v000`; on the chain,
+   `s_risk` (a `model_call`) sits in the interior, between `s_expense` and `s_v000`, so
+   `expense_factor` reaches `s_v000` only through the handler. 200 seeded contexts each.
+4. **The bench-trace-size sizes:** `bench-trace-size.py`'s `N_EXPR_VALUES` (`:72`: 5, 20, 50,
+   100 and `N_EXPR_STEPS`), each through the same `_algorithm_payload(with_gbm=True, …)`. 50
+   seeded contexts each.
+5. **bench-score-batch**: `scripts/bench-score-batch.py` `_algorithm_payload()` (`:71`), and
+   6. **bench-compiled-for**: `scripts/bench-compiled-for.py` `_algorithm_payload()` (`:73`).
+   Load each script with `importlib` (as `bench-trace-size.py:52-55` loads `bench-rating.py`) and
+   call only `_algorithm_payload()`, which needs no database. 20 seeded contexts each.
+7. **golden.py's cases.** `pricing_core/rating/golden.py` holds no case list of its own: it
+   re-scores the `GoldenQuote`s that a caller passes (`evaluate_golden_quotes`). The committed
+   golden quotes score `test_rating_score.py`'s fixture (`test_testing.py`: `_REF` motor-gb@27,
+   `_KNOWN_PREMIUM = 1_507`, `_golden(...)`). So the case set takes **that fixture**,
+   `_compiled()` and `_compiled(glm=True)` (`test_rating_score.py`), with 240 seeded contexts each
+   (the recipe of PL 9776's Spike S1 step 5: `driver_age` 17–99; both channels;
+   `min_premium_minor` 0 and above the office premium, so the clamp fires; `sanity_cap_minor` and
+   `sanity_floor_minor` set so that each decline fires on some quotes), plus every `_golden(...)`
+   context in `test_testing.py`. And Step 3 runs the golden test files unchanged.
+
+No context in the case set carries a key that is not in the algorithm's `input_contract`. So
+the FD 9572 shadow, which needs such a key or a misordered list, cannot occur in it, and an
+identical result is the expected outcome on every case.
+
+- [ ] **Step 1: At the base commit, record.** For each algorithm: `compile_bundle` it, and write
+  `Bundle.model_dump_json()` to the scratch directory. Then `load_bundle` that bundle and score
+  every context through `score_one`, once with `trace=False` and once with `trace=True`, and
+  through `decision.async_evaluate` (the raw engine result). Write one JSON line per (algorithm,
+  context, path):
+  - the served `ScoringResult` with `trace` and `timing_ms` blanked, re-dumped as canonical JSON
+    (`json.dumps(…, sort_keys=True, separators=(",", ":"))`), which is PL 9776's S1 comparator;
+  - for a quote that raises, the error code and message;
+  - the raw engine `result` dict, canonical JSON;
+  - the bundle's `content_hash`.
+
+  The trace is blanked because the chain changes what the engine records per node (a
+  `model_call` node's output now holds the context). That is not a price. The `trace=True`
+  served result must still be identical, which is R3.
+
+- [ ] **Step 2: At the head (after Task 2b), replay.** For each algorithm, do two things:
+  - **The already-compiled path (Condition A):** `load_bundle(Bundle.model_validate_json(<the
+    bytes saved at base>))` and score every context again, as in Step 1. This is a bundle
+    compiled before the fix, running the new wire under its old hash.
+  - **The fresh path:** `compile_bundle` at the head. Its `content_hash` must equal the one saved
+    at base, and every context scores as in Step 1.
+
+  Compare each line to the base line, byte for byte. Record in the ledger, per algorithm and
+  per path: `equal N of N`, the counts per outcome class (quoted, clamp-fired, declined, error),
+  and the sha256 of both output files. A class with a zero count is named as unproven.
+
+- [ ] **Step 3: The golden test files, unchanged.** One file at a time, outside a gate window:
+  `uv run pytest packages/pricing-core/tests/test_testing.py -q`, then `test_replay.py`, then
+  `test_testing_determinism.py`. Each passes with no assert edited.
+  `backend/tests/test_regression_runs.py` needs the database stack, so it runs in Task 4's full
+  gate.
+
+- [ ] **Step 4: STOP rule.** **Any difference** in Step 2 (a served result, an error, a raw
+  engine dict, or a `content_hash`), or a red in Step 3, **is a STOP for the maintainer (by
+  delegation)**. The case set has no FD 9572 fixture in it, so no difference here is expected
+  or allowed. The executor does not edit a case, a comparator or an expected value. It records
+  the difference in the ledger, with the algorithm, the context and both lines, and reports
+  it to the lead.
+
 ### Task 3: A quote input never shadows a produced value
 
 **Withdrawn 2026-10-05 by the Delta above: (c) is PL 9560's. The executor does not run this
@@ -1203,3 +1406,10 @@ git commit -m "fix(rating): refuse a quote input that names a produced value (FD
   (`graph_errors.py:11`); `_PER_QUOTE_CODES` (`api/score.py`); `_INPUT_FREE`
   (`test_quote_input_raise_sites.py:62`); the context sites (`score.py:910-912`,
   `:1066-1068`); `content_hash=bundle_hash(graph, pins)` (`compile.py:641`).
+- **Delta 4 (2026-10-05).** Every cite it adds was read at `4d3be141`: `compile.py:522-535`,
+  `:634`, `:636-643`, `:641`; `runtime.py:94`, `:512`, `:541`, `:581`, `:646`, `:666`, `:673`;
+  `trace_handlers.py:90`, `:98`; `examples/fremtpl2/model.py:317`, `:320`, `:327`, `:366`, `:520`;
+  `scripts/bench-rating.py:91`, `:132`, `:197`, `:274`; `scripts/bench-trace-size.py:52-55`,
+  `:72`, `:78-79`; `scripts/bench-score-batch.py:71`; `scripts/bench-compiled-for.py:73`;
+  `test_rating_score.py:46`, `:137`. The ruling's `compile.py:635-641` and this plan's `:634-643`
+  read the same lines: `to_jdm` is at `:634` and the `Bundle` at `:636-643`.
