@@ -1435,6 +1435,24 @@ relates: [FD-1356, RL-1301, PL-1306, SL-1256, RL-1407, PL-1408]
 **Closed 2026-10-05** on the slice audit (LG-1417 §"Closing note"; local working copy: `handover/audit-sl1409-2026-10-05.md`) and its re-check, at the mint of ledger `LG-1417` (the executor's closing acts, `executor.md` mint step; `document-ids.md` §1.6).
 (Activated 2026-10-05 as the WK-1178 FD-1356 fix slice, on the maintainer's GO check, "2026-10-05 09:44:39 BST — DISPATCH GO: FD-1356 fix (SL-1409 / PL-1408) on lane B, option (b); executor-1409 starts once the `__all__` registry amendment merges (or once WK-690 S3 merges, if that comes first)"; dispatch record DISPATCH-WK-1178-SL1409-2026-10-04.)
 
+#### SL 9561 (working id) — WK-1178 emergency fix slice — FD 9572: a quote input never overrides a produced value (the root in `score_one`'s path, and guard (c))
+
+```yaml
+id: SL-9561
+family: slice
+title: WK-1178 emergency fix slice — FD 9572: a quote input never overrides a produced value (the root in score_one's path, and guard (c))
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1374, RL-1263, SL-1391]
+```
+
+The emergency fix for FD 9572 (working id; HIGH), on the maintainer's (by delegation) urgent ruling of 2026-10-05 ("2026-10-05 17:25:07 BST — URGENT RULING …" and its "17:25:23 BST — ADDENDUM …"). Through `score_one`, on a **correctly ordered** algorithm, a caller's undeclared input named like a produced value overrides it: `instalment_loading_minor=777` quotes payable 777 against 5250. Scope: (1) the root in `score_one`'s path, per auditor-premise's cause trace; (2) guard (c): the shared context merge in `score.py` refuses an undeclared input key naming any produced value, with `INPUT_CONTRACT_VIOLATION`, the declared inputs subtracted. Red first: the (3f) case, one case per path (`/score`, `/score/compare`, trace reproduction, batch), every shadowed name of the per-name table, the ordered no-key 5250 and the bundle hash unchanged, and the in-place clamp of a declared input still allowed. If the root needs a design choice, it goes to the maintainer and (c) alone ships first. Leaf plan PL 9560 (working id; `draft`; filed 2026-10-05). **First in lane B**, beside SL-1391 (WK-673) under RL-1263's different-Works rule; the FD 9707 fix (PL 9688) and the wiring fix (PL 9567) follow it, rebased. **Activation needs:** FD 9572 and this plan minted (at once, ahead of everything but batch 1's merge); the plan made `active` by a dated line; the maintainer's (by delegation) GO. Its merge lifts the 17:25:07 hold. *(Row cut 2026-10-05 by the planner; working ids 9561 and 9560 reserved by the lead.)*
+
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 

@@ -1,0 +1,671 @@
+---
+id: PL-9560
+family: plan
+kind: leaf
+title: WK-1178 emergency — FD 9572, a quote input never overrides a produced value (the root in score_one's path, and guard (c); FR-213): leaf plan
+status: draft                  # draft → active → superseded | retired (§1.2a)
+created: 2026-10-05            # working id; the mint date will replace this (check 31)
+owner: planner
+tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6
+phase: P2
+work: WK-1178
+supersedes: []
+superseded_by: ~
+corrected_by: []
+relates: [FD-1374, RL-1263, SL-1391]
+---
+
+# PL 9560 (working id) — WK-1178 emergency: a quote input never overrides a produced value, leaf plan
+
+This is the leaf plan for working id 9560. Its slice is working id 9561, an `SL-` row under
+WK-1178 in [`../roadmap.md`](../roadmap.md) with status `draft`. The lead reserved both ids. The
+finding is FD 9572 (working id, draft PR #1183). Everything below was measured at `origin/main`
+`4d3be1414ad4dacdaa0c14ef49fb21853adbaed6` on 2026-10-05, unless a line says otherwise.
+
+**No decision point is open.** The maintainer (by delegation) has already made every decision
+this plan carries, in the three entries quoted under "Authority". The plan adds none.
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
+> or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax
+> for tracking. Also bound: `python-test` (the `req` markers, the negative tests),
+> `python-package` (pricing-core's boundaries) and `dev-commands` (the gate's traps). The
+> executor is a sonnet; one gate; the maintainer's (by delegation) ACK.
+
+## Goal
+
+A caller can no longer set a price by sending an input named like a value the algorithm
+produces, on any path that scores a quote.
+
+**Architecture:** Two layers, in this order.
+1. **The root**, in `score_one`'s path, per auditor-premise's cause trace (Task 2). The
+   maintainer's (by delegation) addendum gives its likely shape: "if the output or ladder reads
+   a produced value from the merged context instead of the producing step's result, it reads
+   the step's result."
+2. **Guard (c)**, defence in depth, in the shared context merge (Task 3). `score_one` and
+   `_score_context_sync` refuse an undeclared input key that names any produced value, with
+   `INPUT_CONTRACT_VIOLATION`. The declared inputs are subtracted first.
+
+If the root needs a design choice, Task 2 stops and the choice goes to the maintainer (by
+delegation). Task 3 (guard (c)) then ships alone, first.
+
+**Tech Stack:** Python 3.12, pricing-core, the ZEN binding, pytest; the backend's FastAPI test
+client for the four path tests. No new dependency.
+
+**Spec:** [`../specs/03-rating-engine.md`](../specs/03-rating-engine.md) §3 (FR-213, FR-255)
+and §5.2 (`score_one`). The finding is FD 9572 (#1183). The ruling is quoted under "Authority".
+
+## Acceptance Standard
+
+Run each item from the worktree root after `uv sync --all-packages` (`dev-commands`). A
+full-suite run takes the one gate slot.
+
+1. `uv run pytest packages/pricing-core/tests/test_rating_shadowed_inputs.py -q` passes. The
+   ledger records each red of Task 1 failing at the slice's base commit, for the cause Task 1
+   Step 4 names.
+2. **(3f)**: `test_the_3f_case_is_refused` raises `INPUT_CONTRACT_VIOLATION` naming
+   `'instalment_loading_minor'`. At the base commit it quotes payable 777.
+3. **Every produced name**: `test_an_undeclared_key_naming_a_produced_value_is_refused` is
+   parametrised over every produced name of the score fixture. Each case is refused by name.
+   The ledger carries auditor-premise's per-name table beside the run and marks which names
+   were shadowed at the base commit.
+4. **The root** (Task 2, unless it went to the maintainer):
+   `test_the_root_holds_without_the_guard` gives payable 5250 for every name of the table that
+   was shadowed, with guard (c) patched out.
+5. **Unchanged**: `test_the_ordered_no_key_quote_is_unchanged` gives payable 5250 with
+   `min_premium_minor` 5000 and no extra key, and `test_the_bundle_hash_is_unchanged` pins the
+   fixture's hash recorded at the base commit.
+6. **Still allowed**: `test_a_declared_input_re_produced_in_place_is_not_a_shadow` passes.
+7. **One red per path**, each failing at the base commit and passing at the head:
+   - `/score`: `backend/tests/test_score.py::test_a_quote_input_naming_a_produced_value_is_refused_on_score`
+   - `/score/compare`: `backend/tests/test_score_compare.py::test_a_context_input_naming_a_produced_value_is_a_422_on_compare`
+   - trace reproduction: `backend/tests/test_score.py::test_a_pending_trace_whose_context_names_a_produced_value_is_not_reproduced_as_a_price`
+   - batch: `backend/tests/test_scoring_handlers.py::test_a_dataset_column_named_like_a_produced_value_is_refused_per_row`
+
+   Run each one alone: `OMP_NUM_THREADS=1 nice uv run pytest <file>::<test> -q`.
+8. `uv run pytest packages/pricing-core/tests/test_rating_score.py
+   packages/pricing-core/tests/test_quote_input_raise_sites.py -q` passes, and no assert is
+   edited.
+9. The full gate (`CLAUDE.md` §11, both halves) passes on the slice head. The gate-runner runs
+   it in the one gate slot, and the ledger names the tree.
+10. `python3 scripts/audit-docs.py` fails only on check 31 until the mint, and is clean after it.
+
+## Global Constraints
+
+- Money is integer minor units, or `Decimal` in the rating path, never float (`CLAUDE.md` §7).
+- `pricing-core` takes no FastAPI/SQLAlchemy/Redis dependency (`CLAUDE.md` §2;
+  `.importlinter`'s `core-has-no-infrastructure`).
+- A coded error names the field and the constraint, never the value (NFR-499, RL-917).
+- `mypy --strict` and `ruff` cover `packages/`.
+- One full gate at a time on this VM. A measurement runs as `OMP_NUM_THREADS=1 nice`, and never
+  beside a held gate slot.
+
+---
+
+## Authority
+
+The maintainer's (by delegation) entries in `channel/to-lead.md` (a local channel file, cited by
+its header), quoted verbatim.
+
+**"2026-10-05 17:25:07 BST — URGENT RULING: FD 9572's premise FALSE; OPTION (iii): a HOLD now,
+and an EMERGENCY (c)-only slice FIRST in lane B (WK-1178); the wiring fix after"**:
+
+> FACT (auditor-premise at 4d3be141, script sha256 b3448450a1fe4c5b9622ec15555fda8a5d983c0b82e1ca9bbb7b624df2fb501c, through score_one): a CORRECTLY ORDERED algorithm with min_premium=5000 and an extra input instalment_loading_minor=777 quotes payable=777 (ladder: risk 1305, office 1436, constraints 5000, instalment_loading 777, payable 777), against 5250 without the key. A caller key naming a produced name OVERRIDES that step's output in correct order: the shadow is in the engine's context merge. My 17:22:47 premise ("the correct order still gives 350") is FALSE for this shape, and the STOP did its job.
+> EXPOSURE, my read at 17:24: gipricing `select count(*) from deployments` = 0; rating_versions = fremtpl2-demo@1, approved. So NO deployed version is serving, and no real quote is affected, but one approved version is one step from deployable, and the code path is open to any caller with score:execute (/score, /score/compare, trace reproduction, batch).
+> RULING (the maintainer, by delegation): OPTION (iii).
+>  1. HOLD, NOW, replacing the 17:10:08 interim hold (which did not cover this): NO Rating Version is DEPLOYED to any Environment, and no new Rating Version is approved, while /score (and compare, trace reproduce, batch) accepts an undeclared input key. This includes fremtpl2-demo@1. Record it in eta.md Holds and holds-2026-10-01.md, quoting this header; check it at every approval and deploy dispatch. It lifts at the emergency slice's merge.
+>  2. EMERGENCY SLICE, its own tiny slice under WK-1178 (the standing maintenance Work, so it may run beside S7 (WK-673) under RL-1263's different-Works rule NOW, without waiting for RL 9620), FIRST in LANE B (free now; the FD 9707 fix waits behind it):
+>    - scope = fix (c) ONLY: in the shared merge (score.py ~:911 score_one and ~:1067 _score_context_sync), refuse an UNDECLARED input key that names ANY produced value of the algorithm, with INPUT_CONTRACT_VIOLATION (per-quote 422, my 17:22:47 DP-1), declared inputs subtracted (DP-2: the in-place clamp of a declared input stays legal);
+>    - red first: the auditor's (3f) case gives 777 today and must be refused; plus a case per path (/score, /score/compare, trace reproduce, batch with a dataset column so named); the ordered no-extra-key case unchanged (5250); the bundle hash unchanged;
+>    - the minimal plan: a planner writes it NOW (a leaf plan plus its SL row, my rulings quoted as its authority; no new DPs: every decision is already made), minted at once, ahead of everything in the mint queue except the in-flight batch-1 merge; a sonnet executor; one gate; my ACK.
+>  3. The WIRING fix (PL 9567, list order) follows as planned, after the emergency slice, rebased on it; its (c) part is then already delivered, so PL 9567 drops (c) by a dated delta and keeps (a)/(b).
+>  4. FD 9572's essay gains this measured fact (an ordered algorithm is also exposed; the cause in the context merge) as a dated pre-mint amendment; the severity stays HIGH. The auditor finishes the cause trace (why base/premium are overridden by their producers in the [in,A,B,out] shape but instalment_loading is not: step kind or position), reported with the emergency slice's plan.
+
+**"2026-10-05 17:25:23 BST — ADDENDUM to my 17:25:07 urgent ruling: the emergency slice fixes
+the ROOT in score_one AND adds guard (c)"**:
+
+> The final measurement (r1.py 8dea0ff6…, r2.py b3448450…) shows the ZEN wiring of an ORDERED graph is correct (350 for every extra key), and the wrong price arises in score_one's path (the context merge, or how the output/ladder READ produced values): instalment_loading_minor=777 → payable 777 vs 5250; the clamp's own name is not shadowed. So the emergency slice's scope is BOTH: (1) the ROOT, once the auditor's per-name table and cause line(s) land, e.g. if the output or ladder reads a produced value from the merged context instead of the producing step's result, it reads the step's result; and (2) guard (c), refusing an undeclared key naming a produced value with INPUT_CONTRACT_VIOLATION, kept as defence in depth. The red tests include the per-name table's shadowed cases. My 17:25:07 HOLD, lane B placement, WK-1178 and the "no new DPs" plan stand. If the root fix proves to need a design choice, it comes to me, and (c) alone ships first.
+
+**"2026-10-05 17:22:47 BST — PL 9567 (the FD 9572 fix, #1193 @f4e4380b) DP-1..4 RULED;
+CORRECTION of my error code; the unmeasured premise kept as a STOP"**. This plan takes the
+code and the refusal rule from it, quoted:
+
+> DP-1: (a) INPUT_CONTRACT_VIOLATION, and a CORRECTION of my 17:06:26 / 17:10:08 "VALIDATION_FAILED". Verified: backend/src/app/api/score.py `_PER_QUOTE_CODES` (:97) does not hold VALIDATION_FAILED, and :332 sends any other code to the caller as a 500. A refused key must be a per-quote 422-class error, as the _check_billing_surface precedent does.
+> DP-2: (a) REFUSE, by name, never drop silently: a context key that names a PRODUCED value is refused, with the DECLARED inputs subtracted first. A clamp that re-produces a declared input in place is legitimate, so a declared input is never refused for sharing a name with its in-place clamp. A red test for that exception.
+> DP-3: NOT decided here, per my order; the options stay recorded. (c) is exactly "an undeclared key naming a produced value"; FR-246's declared-inputs rule (FD-1374 / PL 9776) stays its own.
+> DP-4: an RL adopts T1 (FR-212: "list order carries no meaning") and T2 (FR-213) BEFORE activation, as an added activation need. Reserve the id; a DM files it, quoting my 17:06:26 and 17:10:08 entries and this one.
+
+**The FR-213 text (T2).** DP-4 ruled that a ruling adopts T2 before PL 9567 activates (RL 9562,
+working id). Guard (c) now ships here, so T2 belongs with this slice. This plan applies T2 in
+Task 3 Step 5 only if the dispatch record names RL 9562 as merged; otherwise T2 lands with
+PL 9567. The lead decides which at dispatch. That is a dispatch-order question, not a new
+decision point on the fix.
+
+## Decision points
+
+None open. Every decision this plan carries is the maintainer's (by delegation), quoted under
+"Authority": the code (17:22:47 DP-1 (a)), refuse by name with the declared inputs subtracted
+(DP-2 (a)), the scope, lane and Work (17:25:07 item 2), and the root plus guard (c) (17:25:23).
+DP-3 (FR-246's general rule) stays recorded in PL 9567, not here. A root fix that turns out to
+need a design choice goes to the maintainer (Task 2 Step 2); it does not become a decision
+point of this plan.
+
+## Verified facts (at `4d3be141`)
+
+- **Two context builders, one shape each:**
+  `{"effective_date": ..., "purpose": ctx.purpose, **ctx.inputs}` in `score_one` (`score.py:876`;
+  the merge at `:910-912`) and in `_score_context_sync` (`:1045`; the merge at `:1066-1068`).
+  `score_batch` and `rating/testing.py`'s `evaluate_golden_quotes` reach the engine through
+  `_score_context_sync`. No other `decision.evaluate` or `decision.async_evaluate` call exists
+  under `packages/*/src` or `backend/src`
+  (`grep -rn 'decision.evaluate\|decision.async_evaluate' packages/*/src backend/src`).
+- **The four paths** come from the 17:15:09 entry (auditor-towire, at `137bc817`):
+  - `/score` (`api/score.py:350-375`);
+  - `/score/compare` (`:447`);
+  - trace reproduction (`worker/trace_handlers.py:98`, `score_one(compiled, ctx, trace=True)`
+    on `row.pending_quote_context`);
+  - batch (`scoring_handlers` → `_score_context_sync`; every dataset column but the four
+    reserved ones becomes `ctx.inputs`).
+
+  Dislocation is safe: it selects declared inputs only (RL-1394).
+- **`_validate_inputs`** (`score.py:333`) tolerates extra keys. The precedent for refusing a key
+  by name is `_check_billing_surface` (`score.py:425-433`):
+  `_raise_named("INPUT_CONTRACT_VIOLATION", ...)`, called in both paths right after
+  `_check_purpose_mount`.
+- **The raise-site census** in `packages/pricing-core/tests/test_quote_input_raise_sites.py`
+  (`_INPUT_FREE`, `:62-79`) fails when a `_raise_named` site is added without an entry.
+- **The score fixture** is `test_rating_score.py`'s `_algorithm_payload` (`:46`). Its declared
+  inputs are `driver_age`, `channel`, `min_premium_minor`, `sanity_cap_minor` and
+  `sanity_floor_minor`. Its produced names are `expense_factor` (`s_expense`),
+  `risk_premium_minor` (`s_risk`), `office_premium_minor` (`s_office`, re-produced by
+  `s_clamp`) and `instalment_loading_minor` (`s_instalment`). The two decline constraints
+  produce nothing.
+- **The backend fixture algorithm** is `_minimal_algorithm`
+  (`backend/tests/test_rating_version_compile.py:50`). Its one declared input is `premium_in`,
+  and `s_expr` produces `payable`.
+- **The bundle hash does not read the context:**
+  `compile_bundle` sets `content_hash=bundle_hash(graph, pins)` (`compile.py:641`).
+
+## Write set, and its contention
+
+| Path | This slice | Beside S7 (SL-1391, PL-1419, lane A) | FD 9707 fix (PL 9688) | Wiring fix (PL 9567) | Class |
+|---|---|---|---|---|---|
+| `packages/pricing-core/src/pricing_core/rating/score.py` | added: `_check_no_shadowed_produced_names`; edited: `score_one` and `_score_context_sync` (one call each); the root's line(s), per Task 2 | not in its write set | `score_one`, `_score_context_sync` | `score_one`, `_score_context_sync` | **name-disjoint from S7.** PL 9688 and PL 9567 follow this slice and rebase onto it |
+| `packages/pricing-core/tests/test_rating_shadowed_inputs.py` | added | — | — | — | none |
+| `packages/pricing-core/tests/test_quote_input_raise_sites.py` | `_INPUT_FREE`: one entry added | — | one entry | one entry (dropped with (c), see its delta) | registry (append) |
+| `backend/tests/test_score.py`, `test_score_compare.py`, `test_scoring_handlers.py` | appended: the four path reds | — | adds its own `test_score_as_at.py` | the same four reds (dropped with (c)) | append-only |
+| `docs/specs/03-rating-engine.md` | T2 on the FR-213 row (`:82`), only under the "Authority" T2 note | the FR-231 row, §4.2, §5.1, §5.2 | the FR-221 row | T1 on the FR-212 row | distinct rows |
+| `docs/roadmap.md`, `docs/INDEX.md`, the ledger | the SL 9561 row; regenerated; added | — | — | — | registry / generated |
+
+RL-1263's different-Works rule covers S7 (WK-673) and this slice (WK-1178) running together.
+Neither consumes the other's output.
+
+---
+
+## Tasks
+
+### Task 1: The reds
+
+**Files:**
+- Create: `packages/pricing-core/tests/test_rating_shadowed_inputs.py`
+- Modify (append only): `backend/tests/test_score.py`, `backend/tests/test_score_compare.py`,
+  `backend/tests/test_scoring_handlers.py`
+
+**Interfaces:**
+- Consumes: `compile_bundle` (`pricing_core.rating.compile`); `load_bundle`
+  (`pricing_core.rating.runtime`); `score_one`, `score_batch` (`pricing_core.rating.score`);
+  `_FakeResolver`, `_version`, `_ctx`, `_algorithm_payload` (`test_rating_score`).
+- Produces: the test names the Acceptance Standard cites.
+
+- [ ] **Step 1: The pricing-core module.** Mirror `test_rating_score.py`'s imports and markers
+  (async tests with no explicit asyncio marker, `@pytest.mark.req(...)`). Import its fixtures;
+  do not copy them.
+
+```python
+"""FD 9572 (the emergency slice): a quote input never overrides a produced value (FR-213).
+
+(3f) and the per-name cases are auditor-premise's measurements at 4d3be141."""
+
+from __future__ import annotations
+
+from typing import Any
+
+import polars as pl
+import pytest
+from test_rating_score import _FakeResolver, _ctx, _version
+
+import pricing_core.rating.score as score_module
+from pricing_core.rating.compile import compile_bundle
+from pricing_core.rating.runtime import CompiledBundle, load_bundle
+from pricing_core.rating.score import score_batch, score_one
+
+_BASE_INPUTS: dict[str, Any] = {
+    "driver_age": 34, "channel": "direct", "min_premium_minor": 5000,
+    "sanity_cap_minor": 999_999_999, "sanity_floor_minor": 0,
+}
+#: Every name a non-`input` step of the score fixture produces (`_algorithm_payload`).
+_PRODUCED = ["expense_factor", "risk_premium_minor", "office_premium_minor",
+             "instalment_loading_minor"]
+
+
+async def _compiled() -> CompiledBundle:
+    return load_bundle(await compile_bundle(_version(), _FakeResolver()))
+
+
+@pytest.mark.req("FR-213")
+async def test_the_ordered_no_key_quote_is_unchanged() -> None:
+    result = await score_one(await _compiled(), _ctx(inputs=dict(_BASE_INPUTS)))
+    assert result.outputs["payable_premium_minor"] == 5250
+
+
+@pytest.mark.req("FR-213")
+async def test_the_3f_case_is_refused() -> None:
+    """auditor-premise (3f): payable 777 against 5250, on the CORRECTLY ordered fixture."""
+    ctx = _ctx(inputs={**_BASE_INPUTS, "instalment_loading_minor": 777})
+    with pytest.raises(ValueError, match="INPUT_CONTRACT_VIOLATION.*'instalment_loading_minor'"):
+        await score_one(await _compiled(), ctx)
+
+
+@pytest.mark.req("FR-213")
+@pytest.mark.parametrize("name", _PRODUCED)
+async def test_an_undeclared_key_naming_a_produced_value_is_refused(name: str) -> None:
+    ctx = _ctx(inputs={**_BASE_INPUTS, name: 777})
+    with pytest.raises(ValueError, match=f"INPUT_CONTRACT_VIOLATION.*'{name}'"):
+        await score_one(await _compiled(), ctx)
+
+
+@pytest.mark.req("FR-213")
+@pytest.mark.parametrize("name", _PRODUCED)
+async def test_an_undeclared_key_naming_a_produced_value_is_refused_in_a_batch(
+    name: str,
+) -> None:
+    """The same refusal on `_score_context_sync`. The row's shape is
+    `test_quote_input_raise_sites.py`'s `_row` (`:221-228`)."""
+    options = _ctx(inputs=dict(_BASE_INPUTS)).options
+    assert options is not None and options.rating_version_ref is not None
+    row = {"quote_id": "Q1", "purpose": "new_business", "effective_date": "2026-09-01",
+           "rating_version_ref": str(options.rating_version_ref), **_BASE_INPUTS, name: 777}
+    out = score_batch(await _compiled(), pl.DataFrame([row]).lazy()).collect().to_dicts()[0]
+    assert out["outcome"] == "error"
+    assert out["error_code"] == "INPUT_CONTRACT_VIOLATION", out
+    assert f"'{name}'" in out["error_message"]
+
+
+#: The names auditor-premise's per-name table shows shadowed at the base commit; Task 1
+#: Step 2 fills this from the table, verbatim, and the ledger carries the table.
+_SHADOWED: list[str] = ["instalment_loading_minor"]
+
+
+@pytest.mark.req("FR-213")
+@pytest.mark.parametrize("name", _SHADOWED)
+async def test_the_root_holds_without_the_guard(
+    name: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Task 2's root fix, proven apart from guard (c): with the guard patched out, a shadowing
+    key still cannot move the price."""
+    monkeypatch.setattr(
+        score_module, "_check_no_shadowed_produced_names", lambda *_a, **_k: None, raising=False
+    )
+    result = await score_one(await _compiled(), _ctx(inputs={**_BASE_INPUTS, name: 777}))
+    assert result.outputs["payable_premium_minor"] == 5250
+
+
+#: Recorded at the slice's base commit in Task 1 Step 4, before any code change.
+_SCORE_FIXTURE_HASH = "<the 64-hex value Task 1 Step 4 prints>"
+
+
+@pytest.mark.req("FR-213")
+async def test_the_bundle_hash_is_unchanged() -> None:
+    bundle = await compile_bundle(_version(), _FakeResolver())
+    assert bundle.content_hash == _SCORE_FIXTURE_HASH
+```
+
+  The ladder and output reads (`result.outputs[...]`) are FD 9572's script 2 reads, which ran
+  at `137bc817`. If the shipped `ScoringResult` has moved, mirror the shipped form.
+
+- [ ] **Step 2: Fill `_SHADOWED` from auditor-premise's per-name table.** Copy every name the
+  table marks as shadowed at `4d3be141`, verbatim, and put the table in the ledger. If the
+  table names a shadowed name outside `_PRODUCED`, add it to `_PRODUCED` too. If the table has
+  not reached the executor, STOP and ask the lead for it: this step does not run on a guess.
+
+- [ ] **Step 3: The four path reds**, appended to the modules that hold each path's fixtures.
+  No existing test is edited. Check every fixture and helper name against the shipped module
+  before relying on the sample (`docs/plans/README.md` convention 1). In `test_score.py` these
+  are `compiled_version`, `scoring_headers`, `_quote`, `SCORED_REF`, `SCORE_URL`, `_rows_for`,
+  `_trace_produce_jobs`, `_set_trace_sample_rate` and `execute_job`. In `test_score_compare.py`
+  they are `two_versions`, `reader_headers`, `_body` and `COMPARE_URL`. In
+  `test_scoring_handlers.py` they are `_compiled_version`, `_scoring_frame`,
+  `_dataset_version`, `_parameters`, `_run_handler` and `_summary`. Add any missing import
+  (`sqlalchemy.update`, `JobStatus`, `ScoringTraceRow`, `register_trace_handlers`) the way that
+  module's neighbours import it.
+
+  `backend/tests/test_score.py`:
+
+```python
+@pytest.mark.req("FR-213")
+def test_a_quote_input_naming_a_produced_value_is_refused_on_score(
+    client: TestClient, scoring_headers: dict[str, str], compiled_version: Any
+) -> None:
+    """FD 9572, `/score`: `s_expr` produces `payable`; an input so named is refused by name."""
+    body = _quote({"rating_version_ref": SCORED_REF})
+    body["inputs"]["payable"] = 1
+    response = client.post(SCORE_URL, json=body, headers=scoring_headers)
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert "'payable'" in response.json()["detail"]
+
+
+@pytest.mark.req("FR-213")
+def test_a_pending_trace_whose_context_names_a_produced_value_is_not_reproduced_as_a_price(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    database: Any,
+    blob_store: Any,
+    workspace_id: Any,
+) -> None:
+    """FD 9572, trace reproduction (`trace_handlers.py:98`). After the fix `/score` refuses
+    such a context before a trace is pended, so the case is a row pended before the fix."""
+    register_trace_handlers()
+    _run(_set_trace_sample_rate(database, workspace_id, 1.0))
+    served = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
+    )
+    assert served.status_code == 200, served.text
+    (row,) = _run(_rows_for(database, workspace_id))
+    (job,) = _run(_trace_produce_jobs(database, workspace_id))
+    planted = dict(row.pending_quote_context)
+    planted["inputs"] = {**planted["inputs"], "payable": 1}
+
+    async def _plant_and_run() -> tuple[JobStatus, ScoringTraceRow]:
+        async with database.unit_of_work() as session:
+            await session.execute(
+                update(ScoringTraceRow)
+                .where(ScoringTraceRow.id == row.id)
+                .values(pending_quote_context=planted)
+            )
+        status = await execute_job(database, job.id, blob_store)
+        async with database.session() as session:
+            after = await session.get(ScoringTraceRow, row.id)
+        assert after is not None
+        return status, after
+
+    status, after = _run(_plant_and_run())
+    assert status is JobStatus.FAILED
+    assert after.status == "pending"
+```
+
+  **What the trace assert expects:** the Job fails on the refusal and completes nothing. No
+  ruling fixes the handler's behaviour on a refusal. If the shipped `execute_job` records it
+  differently, mirror the shipped form and record that in the ledger. The invariant that must
+  hold is that no completed trace carries a price built on the planted key. Also read the failed
+  Job's recorded error, the way this module's neighbours read a Job row, and assert that it
+  carries `INPUT_CONTRACT_VIOLATION`.
+
+  `backend/tests/test_score_compare.py`:
+
+```python
+@pytest.mark.req("FR-213")
+def test_a_context_input_naming_a_produced_value_is_a_422_on_compare(
+    client: TestClient, reader_headers: dict[str, str], two_versions: None
+) -> None:
+    """FD 9572, `/score/compare` (`api/score.py:447`)."""
+    body = _body()
+    body["context"]["inputs"]["payable"] = 1
+    response = client.post(COMPARE_URL, json=body, headers=reader_headers)
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert "'payable'" in response.json()["detail"]
+```
+
+  Check that both of `two_versions`' algorithms produce `payable`. If one does not, plant a
+  name that both produce, and say which in the ledger.
+
+  `backend/tests/test_scoring_handlers.py`:
+
+```python
+@pytest.mark.req("FR-213")
+async def test_a_dataset_column_named_like_a_produced_value_is_refused_per_row(
+    api_client: TestClient, headers: dict[str, str], database: Database, blob_store: BlobStore,
+    workspace_id: UUID, principal: Principal, grant: Any,
+) -> None:
+    """FD 9572, batch: a dataset column named `payable` becomes a `ctx.inputs` key on every
+    row, and every row is refused. Per-row isolation (FR-255) keeps the Job running."""
+    await _compiled_version(
+        api_client, headers, database, blob_store, workspace_id, principal, grant
+    )
+    frame = _scoring_frame(4).with_columns(pl.lit(1).alias("payable"))
+    dataset_version_id = await _dataset_version(
+        database, blob_store, workspace_id, principal, frame
+    )
+    result, _ = await _run_handler(
+        database, blob_store, workspace_id, principal, _parameters(dataset_version_id)
+    )
+    summary = await _summary(database, blob_store, result)
+    ref_result = summary["results"][0]
+    assert ref_result["error_counts"] == {"INPUT_CONTRACT_VIOLATION": 4}
+    assert ref_result["outcome_counts"]["error"] == 4
+    assert "payable" in ref_result["error_samples"]["INPUT_CONTRACT_VIOLATION"][0]
+```
+
+  These four tests need the database stack. If it is down, record that and do not substitute a
+  mock: the path is the thing under test.
+
+- [ ] **Step 4: Record the hash, then run at the base commit and read each failure's cause.**
+
+```bash
+OMP_NUM_THREADS=1 nice uv run python -c "
+import asyncio, sys; sys.path.insert(0, 'packages/pricing-core/tests')
+import test_rating_score as T
+from pricing_core.rating.compile import compile_bundle
+print(asyncio.run(compile_bundle(T._version(), T._FakeResolver())).content_hash)"
+```
+
+  Run it twice. If the two values differ, STOP: the hash assert would then be a plan defect.
+  Otherwise paste the value into `_SCORE_FIXTURE_HASH`. Then run the pricing-core module, and
+  then each backend red alone. Expected, by cause (a FAIL with a different reason is a plan
+  defect, and is reported):
+
+  | Test | At the base commit | The cause that must show |
+  |---|---|---|
+  | `test_the_ordered_no_key_quote_is_unchanged` | PASS | — (a pin) |
+  | `test_the_3f_case_is_refused` | FAIL | `DID NOT RAISE` (it quotes payable 777) |
+  | `…_is_refused[<name>]`, each name | FAIL | `DID NOT RAISE` |
+  | `…_is_refused_in_a_batch[<name>]`, each name | FAIL | `assert 'quoted' == 'error'` |
+  | `test_the_root_holds_without_the_guard[<name>]`, each shadowed name | FAIL | `assert 777 == 5250` for (3f); each other shadowed name fails with the price the table records |
+  | `test_the_bundle_hash_is_unchanged` | PASS | — (a pin) |
+  | `…_refused_on_score` (backend) | FAIL | `assert 200 == 422` |
+  | `…_not_reproduced_as_a_price` (backend) | FAIL | `JobStatus.SUCCEEDED is JobStatus.FAILED` |
+  | `…_is_a_422_on_compare` (backend) | FAIL | `assert 200 == 422` |
+  | `…_refused_per_row` (backend) | FAIL | `assert {} == {'INPUT_CONTRACT_VIOLATION': 4}` |
+
+  Record each run's tail verbatim in the ledger, with the commit.
+
+- [ ] **Step 5: Commit.**
+
+```bash
+git add packages/pricing-core/tests/test_rating_shadowed_inputs.py backend/tests/test_score.py \
+  backend/tests/test_score_compare.py backend/tests/test_scoring_handlers.py
+git commit -m "test(rating): FD 9572 emergency reds — an input overrides a produced value"
+```
+
+### Task 2: The root, in `score_one`'s path
+
+**The root step follows auditor-premise's cause trace and is applied before (c).** The trace
+names the line(s) where a produced value is read from the merged context instead of from the
+producing step's result. At the time of filing it had not landed. The lead sends it to the
+executor, and the dispatch record names it.
+
+**Files:**
+- Modify: the line(s) the cause trace names. The trace is expected to point at
+  `packages/pricing-core/src/pricing_core/rating/score.py`, on the output or ladder read. If it
+  names any other file, STOP and report it: the write set above then changes, and the lead
+  re-checks contention before the edit.
+
+- [ ] **Step 1: Read the cause trace and classify the fix.** It is mechanical when the
+  producing step's own result is already available at the read site and only the read changes.
+  That is the addendum's example: the output or ladder "reads the step's result". It is a design
+  choice when the fix must decide something the spec leaves open, for example which of two
+  producers' values a rung reports, or a change to `ScoringResult`'s shape or to a contract.
+- [ ] **Step 2: If it is a design choice, STOP.** Report it to the lead with the trace for the
+  maintainer (by delegation), per the addendum ("If the root fix proves to need a design choice,
+  it comes to me, and (c) alone ships first"). Skip to Task 3. Acceptance item 4 is then
+  carried by the follow-up the maintainer names, and the ledger says so.
+- [ ] **Step 3: If it is mechanical, make the read take the producing step's result.** Then
+  run `test_the_root_holds_without_the_guard`: every case passes. Run
+  `test_rating_score.py`: every case passes with no assert edited.
+- [ ] **Step 4: Commit:** `fix(rating): <the read the trace names> reads the producing step's
+  result, not the merged context (FD 9572)`.
+
+### Task 3: Guard (c), in the shared merge
+
+**Files:**
+- Modify: `packages/pricing-core/src/pricing_core/rating/score.py`. Add a check after
+  `_check_billing_surface` (`:425-433`), and call it once in `score_one` and once in
+  `_score_context_sync`, right after `_check_billing_surface(ctx)`.
+- Modify: `packages/pricing-core/tests/test_quote_input_raise_sites.py` (`_INPUT_FREE`).
+- Modify: `packages/pricing-core/tests/test_rating_shadowed_inputs.py` (append the in-place
+  clamp test).
+- Modify, under the T2 note only: `docs/specs/03-rating-engine.md`, the FR-213 row (`:82`).
+
+**Interfaces:**
+- Produces: `_check_no_shadowed_produced_names(algorithm: RatingAlgorithm, inputs:
+  Mapping[str, Any]) -> None`.
+
+- [ ] **Step 1: The check.**
+
+```python
+def _check_no_shadowed_produced_names(
+    algorithm: RatingAlgorithm, inputs: Mapping[str, Any]
+) -> None:
+    """FR-213 (FD 9572): an undeclared quote input never names a value a step produces. The
+    declared inputs are subtracted first, so a declared input that a clamp re-produces in
+    place is a legitimate key (the maintainer's (by delegation) 17:22:47 DP-2)."""
+    declared = {field.name for field in algorithm.input_contract}
+    produced = {
+        str(name)
+        for step in algorithm.steps
+        if step.type not in ("input", "output")
+        for name in _as_list(getattr(step, "produces", None) or [])
+    }
+    shadowing = sorted((produced - declared) & inputs.keys())
+    if shadowing:
+        _raise_named(
+            "INPUT_CONTRACT_VIOLATION",
+            f"inputs {shadowing} name values the algorithm produces (FR-213); a quote input "
+            "never stands in for a produced value",
+        )
+```
+
+  Check the sample against the shipped `model_schema.rating` step classes: `type` on every
+  class, and which classes carry `produces`. Mirror `score.py`'s own reads of `step.produces`
+  (`:456`, `:463`) rather than this sample.
+
+- [ ] **Step 2: Call it on both paths**, right after `_check_billing_surface(ctx)`:
+  `_check_no_shadowed_produced_names(algorithm, ctx.inputs)`.
+
+- [ ] **Step 3: Register the raise site.** Add this entry to `_INPUT_FREE`:
+  `("rating/score.py", "_check_no_shadowed_produced_names"): 1,  # names declared step outputs, never a value`.
+
+- [ ] **Step 4: Add the exception's red** (DP-2: "A red test for that exception") to
+  `test_rating_shadowed_inputs.py`. It calls the check directly and imports it inside the
+  test:
+
+```python
+_IN_X = {"step_id": "s_in", "type": "input", "label": "x", "input_name": "x",
+         "on_missing": "error", "produces": "x"}
+_CLAMP_X = {"step_id": "s_clamp_x", "type": "constraint", "label": "Cap x",
+            "condition": "x <= 10", "on_violation": "clamp", "clamp_bounds": {"max": "10"},
+            "reason_code": "X_CAPPED", "consumes": ["x"], "produces": ["x"]}
+_A = {"step_id": "s_a", "type": "expression", "label": "base = x*100", "expr": "x * 100",
+      "result_type": "money_minor", "consumes": ["x"], "produces": "base"}
+_OUT = {"step_id": "s_out", "type": "output", "label": "out", "output_name": "base_out",
+        "rounding": {"mode": "half_even", "dp": 0}, "consumes": ["base"]}
+
+
+@pytest.mark.req("FR-213")
+def test_a_declared_input_re_produced_in_place_is_not_a_shadow() -> None:
+    from model_schema.rating import RatingAlgorithm
+    from pricing_core.rating.score import _check_no_shadowed_produced_names
+
+    algorithm = RatingAlgorithm.model_validate({
+        "slug": "clamp-x", "version": 1,
+        "input_contract": [{"name": "x", "type": "int", "nullable": False, "min": 0, "max": 1000}],
+        "outputs": [{"name": "base_out", "type": "money_minor", "required": True}],
+        "steps": [_IN_X, _CLAMP_X, _A, _OUT], "sub_graphs": []})
+    _check_no_shadowed_produced_names(algorithm, {"x": 3})  # a declared input: no raise
+    with pytest.raises(ValueError, match="INPUT_CONTRACT_VIOLATION.*'base'"):
+        _check_no_shadowed_produced_names(algorithm, {"x": 3, "base": 7})
+```
+
+  If `RatingAlgorithm.model_validate` refuses this algorithm, mirror the clamp shape of
+  `test_rating_score.py`'s `s_clamp` and record the difference. Do not weaken the assert.
+
+- [ ] **Step 5: T2, under the "Authority" T2 note only.** Apply the text RL 9562 adopts,
+  byte-for-byte, at the end of the FR-213 row's last cell. Then run
+  `python3 scripts/audit-docs.py`: before the mint only check 31 may fail.
+
+- [ ] **Step 6: Run, and prove each call is load-bearing.** Run the pricing-core module,
+  `test_quote_input_raise_sites.py` and `test_rating_score.py`, then the four backend reds
+  one file at a time. Every test passes.
+  - Remove the call from `score_one`, run the module, and record that the `score_one` cases
+    fail with `DID NOT RAISE` while the batch cases pass. Restore the call.
+  - Do the same for `_score_context_sync`: the batch cases fail alone. Restore the call.
+
+  `git diff` must show both calls afterwards.
+
+- [ ] **Step 7: Commit:** `fix(rating): refuse an undeclared input naming a produced value
+  (FD 9572 (c))`.
+
+### Task 4: The gate and the ledger
+
+- [ ] **Step 1:** Before any full run, check `pgrep -af 'pytest|vitest|flock'` and the gate
+  slot. Take the slot only on the lead's word.
+- [ ] **Step 2:** The gate-runner runs `CLAUDE.md` §11, both halves, on the slice head. The
+  ledger names the tree, the exit code of each command, and any failing excerpt.
+- [ ] **Step 3:** `uv run python scripts/req-coverage.py` shows FR-213 carrying the new tests.
+- [ ] **Step 4:** The ledger records these verbatim:
+  - the per-name table;
+  - Task 1 Step 4's base-commit runs;
+  - Task 2's classification and its run (or the STOP and its report);
+  - Task 3 Step 6's two removed-call runs;
+  - the four backend reds passing at the head;
+  - the gate table.
+- [ ] **Step 5:** The ledger states that the merge lifts the 17:25:07 hold. The lead records
+  the lift in `eta.md` Holds and `holds-2026-10-01.md`.
+
+## What this plan does not cover
+
+- **The wiring fix** (list order; FR-212) is PL 9567 (#1193). It follows this slice and is
+  rebased onto it. A dated delta on PL 9567 drops (c), because (c) is delivered here.
+- **FR-246's declared-inputs rule in general** (FD-1374, PL 9776) stays its own (the 17:22:47
+  entry, DP-3).
+- **Dislocation** is not changed: it selects declared inputs only (RL-1394).
+- **FD 9572's essay amendment** (the ordered algorithm is exposed too) belongs to the auditor
+  (the 17:25:07 entry, item 4).
+
+## Self-review (2026-10-05)
+
+- **Ruling coverage:**
+  - The root is Task 2, or the maintainer if it needs a design choice.
+  - Guard (c) is Task 3.
+  - Each red the ruling names is a named test:
+    - (3f): `test_the_3f_case_is_refused`;
+    - per path: the four backend tests;
+    - every shadowed name: Task 1 Step 2;
+    - 5250 unchanged, and the hash unchanged: the two pins;
+    - the in-place clamp exception: Task 3 Step 4.
+  - The code is `INPUT_CONTRACT_VIOLATION`; refusal is by name, with the declared inputs
+    subtracted.
+- **Placeholders, each with how it gets its value:**
+  - `_SCORE_FIXTURE_HASH` is recorded by a command (Task 1 Step 4).
+  - `_SHADOWED` and the root's line(s) come from auditor-premise's trace (the lead's order),
+    and Task 1 Step 2 carries a STOP if the trace has not arrived.
+- **Literals checked at `4d3be141`:**
+  - `test_rating_score.py`: `_FakeResolver` (`:103`), `_version` (`:118`), `_ctx` (`:143`),
+    the produced names in `_algorithm_payload` (`:46`);
+  - `test_rating_version_compile.py`: `_minimal_algorithm` (`:50`);
+  - `test_scoring_handlers.py`: `_scoring_frame` (`:51`);
+  - `test_score.py`: `_quote` (`:123`), `SCORED_REF` (`:63`), `SCORE_URL` (`:59`);
+  - `test_score_compare.py`: `COMPARE_URL` (`:36`);
+  - `test_quote_input_raise_sites.py`: `_INPUT_FREE` (`:62`);
+  - `score.py`: `_check_billing_surface` (`:425`).
