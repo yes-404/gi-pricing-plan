@@ -229,7 +229,7 @@ on the lead's brief of 2026-10-05 10:50 BST, which adopted the batch-2 triage).
 - **Flagged, not changed: the owned-list half of the Evidence is false at its own tree.**
   The Evidence says the code "is not in `03` §5.1's owned-code list (`03:816` has
   `BUNDLE_COMPILE_FAILED` and no such code)". At `1dd5e264` the same paragraph's `:818`
-  ends `` `MODEL_REFERENCE_MODE_INCONSISTENT`, `` (listed since #302, `4a8729ee`), and
+  ends `` `MODEL_REFERENCE_MODE_INCONSISTENT`, `` (listed since #95, `a72cc1b2`), and
   at `ef5dc6e7` it is `:936`. T2 as written would add a second occurrence to that list.
   Changing T2 changes what this record rules, so it is not done in this citation pass. It
   is raised to the lead for a decision before the mint.
@@ -261,6 +261,8 @@ from this record's Evidence, verbatim:*
 T2 withdrawn. Its premise, that `MODEL_REFERENCE_MODE_INCONSISTENT` "is not in `03` §5.1's
 owned-code list", was false at this record's tree; the code has been in 03 §5.1's owned list
 (:936) since a72cc1b2. No other text depends on T2.
+
+Item 4's sentence 'The spec was also incomplete: that code is missing from `03` §5.1's owned-code list.' rests on the same false premise and is withdrawn with T2: the code has been in that list since #95 (`a72cc1b2`). Item 4 otherwise stands: the spec was wrong only about the check point, and the code only about the outcome.
 
 - **Applied.** T2's placement and its two text blocks are removed from *Spec changes this ruling requires*, and *What
   it obliges* reads "T1 lands in the same commit." T1 and the rest of the record stand.
