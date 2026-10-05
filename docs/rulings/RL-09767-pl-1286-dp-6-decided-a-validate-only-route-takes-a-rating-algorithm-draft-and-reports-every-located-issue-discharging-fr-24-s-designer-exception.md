@@ -2,7 +2,7 @@
 id: RL-9767
 family: ruling
 title: PL-1286 DP-6 decided — a validate-only route takes a RatingAlgorithmDraft and reports every located issue through the server's own checks, discharging FR-24's designer exception
-status: draft                  # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
+status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
 created: 2026-10-01
 owner: decision-maker
 tree: 8bd782acbbdde8e3b4195b5a0acb89183b5a0253
@@ -12,7 +12,7 @@ supersedes: []
 superseded_by: ~
 corrected_by: []
 corrects: ~
-relates: [PL-1286, FR-24, FR-212, FR-214, FR-219, FR-223, FR-227, FR-244, FR-246, FR-276, FD-1335, FD-1366]
+relates: [PL-1286, FR-24, FR-212, FR-214, FR-219, FR-223, FR-227, FR-244, FR-246, FR-276, FD-1335, FD-1366, FD-1374]
 ---
 
 # RL-9767 — PL-1286 DP-6 decided: a validate-only route takes a `RatingAlgorithmDraft` and reports every located issue through the server's own checks, discharging `00` FR-24's designer exception
@@ -179,7 +179,8 @@ No `dict[str, Any]` appears in the signature. The path does not clash: `POST
 
 - **The FR-223 code gap** (`MODEL_REFERENCE_MODE_INCONSISTENT` is specified and never
   emitted) is being filed separately as FD 9759 (working id).
-- **FR-246's declared-inputs rule** is unenforced (FD 9773, working id, open). The route
+- **FR-246's declared-inputs rule** is unenforced (`FD-1374`, open; FD 9773 (working id)
+  when ruled). The route
   reports what `validate_algorithm` checks, so when that rule is enforced there, the route
   reports it with no change here.
 - **How often the designer calls the route** (debounce, cancellation of stale calls) is S3's
@@ -189,7 +190,9 @@ No `dict[str, Any]` appears in the signature. The path does not clash: `POST
 
 These are applied by **Slice 3's spec-first step** under `.claude/skills/spec-change`, in the
 same commit as the route's code and tests (`CLAUDE.md` §2). They are not applied in this
-commit, and `PL-1286` is not edited. Placement was read at origin/main `1dd5e264`.
+commit, and `PL-1286` is not edited. Placement was read at origin/main `1dd5e264`, and
+re-read at main `ef5dc6e7` on 2026-10-05: each anchor below is found there exactly once,
+and each line hint is main's.
 
 Placeholders: `RL-<this>` is this record's minted id. `FR-<new>` is the requirement id minted
 for T1 when it is applied. `<date>` is the date of the applying commit. Nothing else in a
@@ -205,7 +208,7 @@ algorithms*. **Insert one new row immediately after the row that begins `| **FR-
 
 **T2 — `03` §5.1, one row.** Placement: the §5.1 table. **Insert this row immediately
 after the row that begins `| `GET` | `/api/v1/rating-algorithms/{slug}@{version}/diff?against=` |`**
-(`:780`). Nothing is struck.
+(`:896`). Nothing is struck.
 
 If RL 9907 (working id)'s `Permission` column has not landed in `03` §5.1 when this row is applied, the row is applied in its three-cell form:
 
@@ -235,7 +238,7 @@ origin/main:docs/specs/06-governance.md:279:> | `rating:write` | Writing Rating 
 
 **T3 — `03` §4.1, a dated note.** Placement: §4.1 `RatingAlgorithm`. **Insert one new
 paragraph, preceded by a blank line, immediately after the paragraph ending
-`and unreferenced by an `output` (FR-212).`** (`:280-282`), and before `### 4.2`. Nothing
+`and unreferenced by an `output` (FR-212).`** (`:287-289`), and before `### 4.2`. Nothing
 is struck.
 
 ```text
@@ -243,7 +246,7 @@ is struck.
 ```
 
 **T4 — `00` FR-24, a dated amendment.** Placement:
-`docs/specs/00-overview.md`, the FR-24 row (`:229`). The text is **appended** to the end of
+`docs/specs/00-overview.md`, the FR-24 row (`:235`). The text is **appended** to the end of
 the second cell, after `rests on the `02` §5.3 Peril structure library precedent alone.` and
 one space, before the closing ` |`. Nothing is struck.
 
@@ -366,3 +369,32 @@ re-check as the lead adopted it at 10:27 BST. The ruled option is unchanged.*
   ambiguous-producer block starts at `:444` (was `:445`).
 
 *2026-10-01 10:44 BST: "FD 9779 (working id)" is re-pointed to `FD-1366`, its minted id, and added to `relates:`. No other change (decision-maker `dm-675dp56`, on the lead's order).*
+
+## Amendment, 2026-10-05: citations re-read at main `ef5dc6e7`, before mint
+
+Citation and currency update only. Nothing ruled above changes (decision-maker `dm-amend-2`,
+on the lead's brief of 2026-10-05 10:50 BST, which adopted the batch-2 triage).
+
+- **FD 9773 (working id) is re-pointed to `FD-1374`**, its minted id (its own record names
+  working id 9773), and `FD-1374` is added to `relates:`. It is still `active`.
+- **T1 to T4 re-read at `ef5dc6e7`.** T1's FR-219 row is still `:88`, the last row of
+  §3.1. T2's `…/diff?against=` row moved `:780` → `:896`. T3's paragraph moved
+  `:280-282` → `:287-289` and still precedes `### 4.2` (`:291`). T4's FR-24 row moved
+  `:229` → `:235`, and its anchor sentence occurs once there. `03` §5.1's header is still
+  `| Method | Path | Purpose |`, so T2's three-cell form is the one that applies today.
+- **The Evidence section is a dated reading at `1dd5e264`** and resolves there. It is not
+  rewritten. At `ef5dc6e7` its moved cites are: `00` FR-24 `:229` → `:235`; `03` §5.3
+  `:1094` → `:1231` and `:1101-1104` → `:1238-1241`; §5.2's `validate_algorithm`
+  signature `:907` → `:1027`; `RatingAlgorithm` `model_schema/rating.py:374` → `:375`, its
+  validator `:400-470` and `:395-475` → `:396-476`, `:397-399` → `:398-400`;
+  `check_model_reference_mode` `rating.py:172` → `:173`; `errors.py:455-470` → `:460-475`.
+  `03:109` (FR-223), `compile.py:60-72`, `:366-392` and `:614`,
+  `api/rating_algorithms.py:28-50`, `graph_errors.py:11-16`, `sub_graphs.py:62-151` and
+  `rate_tables/operations.py:57` are unchanged.
+- **The pasted `06` permission rows** are verbatim output at `1dd5e264` and stay as
+  quoted. At `ef5dc6e7` they are `06-governance.md:280-281`, and both names still exist.
+- **`status:` is `active`, not `draft`.** `document-ids.md` §1.2a gives a ruling the subset
+  `active`, `superseded`, `retired`, and `audit-docs.py` check 33 refused `draft`. The
+  working-id rulings of batch 1 (#977, #979) carry `active` in the same form.
+- `tree:` stays `8bd782ac`, the tree of `1dd5e264` that the Evidence was read at, as
+  `RL-1407` keeps its own evidence tree. `created:` changes at the mint.

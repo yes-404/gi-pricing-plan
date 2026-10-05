@@ -2,7 +2,7 @@
 id: RL-9766
 family: ruling
 title: PL-1286 DP-5 decided — a Rating Version is addressed by slug@version and read by it; its id is the handle the action routes take
-status: draft                  # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
+status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
 created: 2026-10-01
 owner: decision-maker
 tree: 8bd782acbbdde8e3b4195b5a0acb89183b5a0253
@@ -130,7 +130,9 @@ No `dict[str, Any]` appears in either signature. No new model-schema type is nee
 
 These are applied by **Slice 2's spec-first step** under `.claude/skills/spec-change`, in the
 same commit as the route's code and tests (`CLAUDE.md` §2). They are not applied in this
-commit, and `PL-1286` is not edited. Placement was read at origin/main `1dd5e264`.
+commit, and `PL-1286` is not edited. Placement was read at origin/main `1dd5e264`, and
+re-read at main `ef5dc6e7` on 2026-10-05: each anchor below is found there exactly once,
+and each line hint is main's.
 
 Placeholders: `RL-<this>` is this record's minted id. `FR-<new>` is the requirement id
 minted for T1 when it is applied. `<date>` is the date of the applying commit. Nothing else
@@ -147,7 +149,7 @@ versions and bundles*. **Insert one new row immediately after the row that begin
 **T2 — `03` §5.1, two rows.** *(Amended 2026-10-01 10:28 BST: the by-id row is restored as
 the one exact text, and each row has a four-cell form. This supersedes the 10:23 BST
 one-row form.)* Placement: the §5.1 table. **Insert the `slug@version` row immediately after
-the row that begins `| `POST` | `/api/v1/rating-versions` |`** (`:792`), and the by-id row
+the row that begins `| `POST` | `/api/v1/rating-versions` |`** (`:908`), and the by-id row
 immediately after it, before the `compile` row. Nothing is struck.
 
 If RL 9907 (working id)'s `Permission` column has not landed in `03` §5.1 when a row is applied, the row is applied in its three-cell form:
@@ -263,3 +265,30 @@ forms of the by-id row now read "Built in Phase 1b (FR-440); records an existing
 lower-case phrase and its fixed date match RL 9907 byte for byte. `<date>` stays the
 applying commit's date. RL 9907's matching line is in its amendment of the same time
 (#977). No other text changes.
+
+## Amendment, 2026-10-05: citations re-read at main `ef5dc6e7`, before mint
+
+Citation and currency update only. Nothing ruled above changes (decision-maker `dm-amend-2`,
+on the lead's brief of 2026-10-05 10:50 BST, which adopted the batch-2 triage).
+
+- **T1 and T2 re-read at `ef5dc6e7`.** T1's FR-243 row is still `:140` and still the last
+  row of §3.4. T2's `POST /api/v1/rating-versions` row moved `:792` → `:908`, and the
+  `compile` row still follows it (`:909`). `03` §5.1's header is still
+  `| Method | Path | Purpose |`, so RL 9907 (working id)'s `Permission` column has not
+  landed and T2's three-cell form is the one that applies today.
+- **The Evidence section is a dated reading at `1dd5e264`** and resolves there
+  (`git show 1dd5e264:<path>`). It is not rewritten. At `ef5dc6e7` its moved cites are:
+  `03` §4.3 `:345-414` → `:369-438`; §5.1 `:777-801` → `:893-917` and `:780-799` →
+  `:896-915`; §5.3 `:1093-1099` → `:1230-1236`; `00` §5.6 `:405-408` → `:415-418`;
+  `06` §4.1's *Built and now specified* table `:260` → `:262`; `resolve_rating_version_ref`
+  `rating_versions.py:141` → `:169`; `RatingVersion` `model_schema/rating.py:137` → `:138`.
+  `load_rating_version` (`:126`), `models.py:1112-1135`, `:1138-1157` and `:1188`,
+  `router/index.ts:235-238` and `permissions.py:47-48` are unchanged.
+- **The pasted `06` permission rows** are verbatim output at `1dd5e264` and stay as
+  quoted. At `ef5dc6e7` they are `06-governance.md:280-281`. The `rating:read` row's
+  purpose cell has gained text, and both names still exist.
+- **`status:` is `active`, not `draft`.** `document-ids.md` §1.2a gives a ruling the subset
+  `active`, `superseded`, `retired`, and `audit-docs.py` check 33 refused `draft`. The
+  working-id rulings of batch 1 (#977, #979) carry `active` in the same form.
+- `tree:` stays `8bd782ac`, the tree of `1dd5e264` that the Evidence was read at, as
+  `RL-1407` keeps its own evidence tree. `created:` changes at the mint.
