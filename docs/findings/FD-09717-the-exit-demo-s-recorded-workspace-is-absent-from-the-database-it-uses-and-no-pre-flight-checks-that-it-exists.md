@@ -57,6 +57,11 @@ again at 10:59:13. I did not observe the earlier `d3b955a63d6a`; the lead's rela
 the #933 migration, from 2026-09-30 until SL-1409 Task 7b migrated it. By my first query Task 7b had already run
 (`max(created_at)` of `workspaces` was `2026-10-05 10:55:58 UTC`, so seeding was under way), so the relay is not
 confirmed or refuted by this record.
+**Added 2026-10-05 before mint (the before-revision, cited rather than observed).** LG 9719 (SL-1409's ledger, on branch
+`sl-1409-validation-rule-approval-through-the-workflow`, unmerged and unminted), in its entry for the Task 7b recovery
+(line "B1 — migrate first"), records `uv run alembic upgrade head` at 11:58:44–11:58:46 BST, rc 0, "Revision before
+`d3b955a63d6a`, after `c4a81f6d2e95`". That confirms the relay for the before-revision; this record still did not observe
+it. LG 9719 mints as LG 1417 when SL-1409 merges.
 
 ### 2. No pre-flight on `main` checks that the recorded workspace exists
 
@@ -111,6 +116,10 @@ Read at `origin/main` `5ff49c6d425f537c7fed19d1212035f18e067b68`.
 So a second seed against a seeded database looks up a new id, finds nothing, and inserts a second `(issuer, subject)` row: a unique violation, not a no-op. The docstring's idempotence holds for the same `user_id`, which a re-run never supplies. **The relay reports SL-1409 Task 7b hit this at 2026-10-05 11:59:10 BST on `gipricing`; I did not observe that failure and did not run the seed. The finding rests on the code above.**
 
 SL-1409 Task 7c works around it in `examples/fremtpl2/seed.py` only (dispatch Delta 17, 2026-10-05 12:01:08 BST): the seed resolves the analyst id from an existing `(REALM_ISSUER, REALM_SUBJECT)` user, else mints one. `ensure_member` and its docstring are untouched by that workaround, so any other caller still meets the mismatch.
+**Added 2026-10-05 before mint.** The workaround is commit `d9b069fc8aa6ff820e38a7432cba22abc64d71f2` on branch
+`sl-1409-validation-rule-approval-through-the-workflow` (SL-1409 Task 7c). It reuses the realm user's id in
+`examples/fremtpl2/seed.py`, so it fixes the seed path only. That branch is unmerged: this record does not claim the
+workaround is on `main`.
 
 ## Premise recorded by reference (not my ruling)
 
@@ -129,3 +138,11 @@ record and says to run `scripts/demo.py` without `--skip-seed`; and have `_verif
 an absent workspace and show the refusal text on each.
 
 **`ensure_member` (evidence 4), options, no pick.** (a) Look the user up by `(issuer, subject)`, and raise a typed error when the found row's id differs from `user_id`, so the id mismatch is refused where it arises. (b) Correct the docstring to say idempotence holds only for a repeated `user_id`. Severity stays MEDIUM. Remedy owner WK-1178.
+
+## State since filing
+
+**2026-10-05, after the filing.** The recorded workspace is no longer absent. SL-1409 Task 7b's recovery seed (12:07:32 BST,
+LG 9719) rewrote `last-seed.json`, and the demo record now names a present workspace,
+`01a10bbe-3a03-740c-8d4b-a6af38d2dd4b`. The finding stands as the record of the gap: on `main` no check verifies that the
+recorded workspace exists, and the pre-flight's refusal for an absent workspace still carries the misleading "the seed
+did not finish" message. Severity is unchanged (MEDIUM, the deputy's).
