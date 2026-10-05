@@ -1,10 +1,10 @@
 ---
-id: PL-9683
+id: PL-1429
 family: plan
 kind: leaf
-title: WK-1178 — FD 9708 fix, POST /rating-versions declares the algorithm and the pins (FR-237, FR-240, FR-223, FR-440, FR-451): leaf plan
+title: WK-1178 — FD-1421 fix, POST /rating-versions declares the algorithm and the pins (FR-237, FR-240, FR-223, FR-440, FR-451): leaf plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-05
+created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: planner
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc
 phase: P2
@@ -15,12 +15,12 @@ corrected_by: []
 relates: [SL-1300, FD-1297, CR-838, PL-1371, PL-1408, SL-1409, SL-1391, RL-1263, FR-223, FR-237, FR-240, FR-440]
 ---
 
-# PL 9683 (working id) — WK-1178: the FD 9708 fix, a Rating Version's algorithm and pins over HTTP, leaf plan
+# PL-1429 — WK-1178: the FD-1421 fix, a Rating Version's algorithm and pins over HTTP, leaf plan
 
-Filed under working id 9683 (this plan) and slice working id 9678 (its `SL-` row under WK-1178 in
+Filed under PL-1429 (this plan) and slice SL-1430 (its `SL-` row under WK-1178 in
 [`../roadmap.md`](../roadmap.md), `draft`), both reserved by the lead (`eta.md`, the rows of
-"5 Oct 13:14:56"). The lead mints both at the merge turn. The finding is **FD 9708** (working id,
-draft PR #1130, branch `fd-9708`, head `11f87e26`), and the ruling is **RL 9695** (working id,
+"5 Oct 13:14:56"). The lead mints both at the merge turn. The finding is **FD-1421** (working id,
+draft PR #1130, branch `fd-9708`, head `11f87e26`), and the ruling is **RL-1428** (working id,
 draft PR #1133, branch `dm-9695-rv-pins-http`, read first at head `68096376` and re-read at
 `614ad96b` (12:23:39Z), which records DP-1 and DP-2 below). Neither is minted, so both are
 cited unhyphenated and kept out of `relates:` (check 32).
@@ -28,7 +28,7 @@ cited unhyphenated and kept out of `relates:` (check 32).
 **Ordered by** the maintainer's (by delegation) entry in `~/gi-pricing-plan.local/channel/to-lead.md` of
 2026-10-05 13:12:56 BST, item 15, as the lead relayed it in the brief
 `~/gi-pricing-plan.local/handover/brief-plan-fd9708-2026-10-05.md`: *"RL 9695: OPTION (a).
-FD 9708 is HIGH, owner WK-1178, deadline before the exit demo. Spawn its planner now."* The
+FD-1421 is HIGH, owner WK-1178, deadline before the exit demo. Spawn its planner now."* The
 severity, owner and option are the maintainer's (by delegation). This plan did not read the channel entry itself.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
@@ -55,9 +55,9 @@ pinned.
 **Architecture:** the request body becomes a `model-schema` type, `RatingVersionCreate`, next
 to `RatingVersion` in `model_schema/rating.py`. It reuses `ArtifactRef`, `Pins` and
 `ModelReferenceMode`, so no shape is written twice (`CLAUDE.md` §2). Its validator refuses a ref
-of the wrong artifact type in `algorithm_ref` or in any `pins` list (422, RL 9695 T1). The
+of the wrong artifact type in `algorithm_ref` or in any `pins` list (422, RL-1428 T1). The
 service `create_rating_version` takes the three new fields and writes them on the row. It does
-not resolve them: resolvability and maturity stay with compile (FR-240, RL 9695 T3), with one
+not resolve them: resolvability and maturity stay with compile (FR-240, RL-1428 T3), with one
 exception that DP-1 decides, FR-223's mode check (RL 9758 item 2). The route-local class in
 `backend/src/app/api/models.py` is removed. The demo seed passes its algorithm and pins through
 the same service call, and stops writing them on the ORM row.
@@ -75,8 +75,8 @@ reads in `frontend/src/api/ratingVersions.ts` and a router link, at `caa4e411`).
 - [`../workflows/WF-00699-approved-models-to-approved-rating-version.md`](../workflows/WF-00699-approved-models-to-approved-rating-version.md)
   C1 (`:70`) and C4–C5 (`:73-74`);
 - [`../specs/07-platform.md`](../specs/07-platform.md) FR-440 (`:156`), FR-451, FR-403;
-- FD 9708 (working id), §"Evidence" and §"Disposition";
-- RL 9695 (working id) at `614ad96b`, §"Ruled", §"The exact texts" T1–T3, §"Acceptance";
+- FD-1421), §"Evidence" and §"Disposition";
+- RL-1428) at `614ad96b`, §"Ruled", §"The exact texts" T1–T3, §"Acceptance";
 - RL 9758 (working id, draft PR #1061, branch `dm-9758-fr223-check-point`), §"Ruled" item 2 and
   §"What it obliges", bullet *"Item 2's future route"*.
 
@@ -84,8 +84,8 @@ reads in `frontend/src/api/ratingVersions.ts` and a router link, at `caa4e411`).
 
 `draft`. **The three blocking decision points are decided**, each sent to the lead when found:
 DP-1 (a), DP-2 (a) and DP-3 (a), by the maintainer's (by delegation) entry headed *"2026-10-05 13:20:26 BST — DECISIONS 22–27; severity signals for the four gap findings"* in `~/gi-pricing-plan.local/channel/to-lead.md`, items 25, 26 and 27, read by this planner in that
-file. RL 9695 at `614ad96b` already carries DP-1's T3 amendment and DP-2's predicate. DP-4 (a)
-and DP-5 (a) are accepted, with conditions, by the maintainer's (by delegation) entry headed *"2026-10-05 13:29:05 BST — DECISIONS 32 and 33 (PL 9683, the FD 9708 fix)"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 33. RL 9695's texts govern at dispatch: where its minted text differs from the
+file. RL-1428 at `614ad96b` already carries DP-1's T3 amendment and DP-2's predicate. DP-4 (a)
+and DP-5 (a) are accepted, with conditions, by the maintainer's (by delegation) entry headed *"2026-10-05 13:29:05 BST — DECISIONS 32 and 33 (PL 9683, the FD 9708 fix)"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 33. RL-1428's texts govern at dispatch: where its minted text differs from the
 head cited here, the minted text wins and the dispatch record names each difference
 ([`README.md`](README.md) rule 4).
 
@@ -105,7 +105,7 @@ maintainer (by delegation) lifts it.
 
 ### Activation needs, in order
 
-1. **FD 9708 and RL 9695 minted.** An unminted RL 9695 is an activation need, not a plan defect
+1. **FD-1421 and RL-1428 minted.** An unminted RL-1428 is an activation need, not a plan defect
    (the brief).
 2. **DP-1 to DP-5 decided: met** (13:20:26 BST, items 25–27; 13:29:05 BST, item 33).
 3. **This plan `active`**, by the lead's activation PR, which flips this plan and the `SL-` row.
@@ -126,7 +126,7 @@ failure line as printed. Tests live in the new module
 `backend/tests/test_rating_version_create_pins.py`, run with
 `uv run pytest -q backend/tests/test_rating_version_create_pins.py`.
 
-1. **A version declared over HTTP compiles** (RL 9695 *Acceptance* bullet 1).
+1. **A version declared over HTTP compiles** (RL-1428 *Acceptance* bullet 1).
    `test_a_version_created_with_its_algorithm_and_pins_compiles_over_http`: `POST
    /api/v1/rating-versions` with `algorithm_ref` and a non-empty `pins` (one published reference
    table) answers 201, `GET .../{id}` returns both unchanged, and `POST .../{id}/compile` drives
@@ -137,7 +137,7 @@ failure line as printed. Tests live in the new module
 2. **The omitting body keeps today's behaviour** (control, green at `caa4e411` and after).
    `test_a_version_created_without_algorithm_or_pins_is_refused_at_compile`: 201, then the Job
    fails `RATING_VERSION_UNPINNED`.
-3. **A malformed algorithm ref is refused and writes nothing** (RL 9695 *Acceptance* bullet 2).
+3. **A malformed algorithm ref is refused and writes nothing** (RL-1428 *Acceptance* bullet 2).
    `test_an_algorithm_ref_of_another_type_is_refused`: `algorithm_ref` =
    `"model:motor-ad-frequency@7"` answers 422 `VALIDATION_FAILED`, with an `errors[]` entry on
    `algorithm_ref` whose code is `VALUE_ERROR`, and no `RatingVersionRow` with the request's slug
@@ -146,14 +146,14 @@ failure line as printed. Tests live in the new module
    parametrised over the four lists (`rate_tables` holding a `model` ref, `models` holding a
    `rate_table` ref, `reference_tables` holding a `rate_table` ref, `custom_objectives` holding a
    `model` ref): each is 422 `VALIDATION_FAILED`, `VALUE_ERROR` on `pins`, no row. **Red** as 3.
-5. **An unknown ref is stored and refused at compile** (the brief's "unknown ref"; RL 9695
+5. **An unknown ref is stored and refused at compile** (the brief's "unknown ref"; RL-1428
    T1 and T3: create does not resolve). `test_an_unknown_algorithm_is_refused_at_compile`:
    `algorithm_ref` = `"rating_algorithm:no-such-algorithm@1"` answers 201, and the Job fails
    `NOT_FOUND` (the resolver's refusal, `platform/rating_versions.py:456`). **Red at
    `caa4e411`:** 422 `EXTRA_FORBIDDEN`. Under DP-1 (a) this stays 201, because an algorithm that
    does not resolve cannot be mode-checked at create.
 6. **Maturity is checked at compile only, and a recompile re-reads the declared pins**
-   (RL 9695 *Acceptance* bullet 3; WF-699 C4–C5).
+   (RL-1428 *Acceptance* bullet 3; WF-699 C4–C5).
    `test_an_unapproved_model_pin_is_refused_at_compile_and_compiles_after_approval`: a fitted,
    **not approved** GBM in `pins.models` is created (201); the Job fails `PIN_NOT_APPROVED`;
    after `mark_approved` the same version recompiles to `succeeded`, and exactly one
@@ -175,7 +175,7 @@ failure line as printed. Tests live in the new module
    `RATING_ERROR_CODES` (`backend/src/app/errors.py:305`) and in `03` §5.1's owned-code list
    (RL 9758 *Acceptance* 3). Red at `caa4e411`: absent from `RATING_ERROR_CODES`; the owned-list
    half already holds (`03:936`). *(Corrected 2026-10-05, pre-mint fix F1; see §"Status".)*
-9. **The request is the `model-schema` type** (RL 9695 *Acceptance* bullet 4; `CLAUDE.md` §2).
+9. **The request is the `model-schema` type** (RL-1428 *Acceptance* bullet 4; `CLAUDE.md` §2).
    `test_the_create_body_is_the_model_schema_type`: `app.api.models` defines no class named
    `RatingVersionCreate` of its own (`app.api.models.RatingVersionCreate is
    model_schema.RatingVersionCreate`), and the OpenAPI component `RatingVersionCreate` has the
@@ -192,18 +192,18 @@ failure line as printed. Tests live in the new module
     Event's `after` holds `algorithm_ref`, `pins` and `model_reference_mode` as the request gave
     them. **Red at `caa4e411`:** `after` holds `status` and `model_ref` only
     (`platform/rating_versions.py:273`).
-12. **No code outside tests and benches writes a pin onto the row** (RL 9695 *Acceptance*
+12. **No code outside tests and benches writes a pin onto the row** (RL-1428 *Acceptance*
     bullet 5, in the form DP-2 recommends). `grep -rnE "\.(algorithm_ref|pins)\s*=[^=]"
     --include=*.py examples/ backend/src/` prints nothing. **Red at `caa4e411`:** it prints
-    `examples/fremtpl2/model.py:396` and `:397`. This is the predicate RL 9695 carries at
+    `examples/fremtpl2/model.py:396` and `:397`. This is the predicate RL-1428 carries at
     `614ad96b` (DP-2, item 26); the minted record's text governs.
 13. **The seed still works.** `uv run pytest -q backend/tests/test_demo_rating_evidence.py
     examples/fremtpl2/test_seed.py` passes, and the seeded `fremtpl2-demo` version's
     `rating_version.created` event carries the algorithm ref.
-14. **Spec and code agree.** RL 9695 T1, T2 and T3 (and, under DP-1 (a), RL 9758 T1; the
+14. **Spec and code agree.** RL-1428 T1, T2 and T3 (and, under DP-1 (a), RL 9758 T1; the
     owned-code list already carries the code at `03:936` *(Corrected 2026-10-05, pre-mint fix F1; see §"Status".)*) are applied byte for byte in the commit that makes
     items 1–9 green; `python3 scripts/audit-docs.py` passes except check 31's expected working-id
-    rows; the handler docstring no longer says "pins to a model" (RL 9695 *What it obliges*).
+    rows; the handler docstring no longer says "pins to a model" (RL-1428 *What it obliges*).
 15. **The two-half gate is green** on the merge tree (`.claude/skills/dev-commands`), and
     `uv run python scripts/req-coverage.py` lists FR-237 with the new markers.
 
@@ -214,14 +214,14 @@ failure line as printed. Tests live in the new module
   `ModelReferenceMode` (`model_schema/rating.py:65-78`, `:136`), and the request is a
   `model-schema` class.
 - **`pricing-core` is not touched.** Compile's checks and its refusal codes stay as they are
-  (RL 9695: "Validation stays in one place (compile)").
+  (RL-1428: "Validation stays in one place (compile)").
 - **Money and maths are untouched**; no pandas (`CLAUDE.md` §3).
 - **The stored shape does not change**: `Pins`, `RatingVersion` and `RatingVersionRow` keep
   their fields. No migration (the columns exist; `_insert_version` writes them today,
   `backend/tests/test_rating_version_compile.py:86-110`).
-- **No route is added**, and no pin is mutable after create: RL 9695 refused option (c), and
+- **No route is added**, and no pin is mutable after create: RL-1428 refused option (c), and
   the maintainer's (by delegation) DP-S2-3 decision (PL 9713, *"no re-pin (no route exists)"*) relies on it.
-- **Effective dates are not in the create body.** RL 9695 T1 lists the body's fields, and
+- **Effective dates are not in the create body.** RL-1428 T1 lists the body's fields, and
   `effective_from`/`effective_to` are not among them.
 - **No spec text is written by this slice unless a ruling carries it verbatim** (Task 5). Any
   executor wording is a stop.
@@ -243,13 +243,13 @@ failure line as printed. Tests live in the new module
 | `03` | FR-239 | A version created over HTTP compiles to a Bundle | `req("FR-239")` on Acceptance 1, 2 |
 | `03` | FR-223 | The pin write refuses a mode mismatch with 422 `MODEL_REFERENCE_MODE_INCONSISTENT` | `req("FR-223")` on Acceptance 8 |
 | `00` | FR-20 | Maturity is the compile-time gate, unchanged (Acceptance 6) | `req("FR-20")` on Acceptance 6 |
-| `07` | FR-440 | Not changed. §4.3's note scoping Phase 1b is discharged by RL 9695 T2; FR-440 stays a Phase 1b seed requirement | none (spec text only) |
+| `07` | FR-440 | Not changed. §4.3's note scoping Phase 1b is discharged by RL-1428 T2; FR-440 stays a Phase 1b seed requirement | none (spec text only) |
 | `07` | FR-451 | `RatingVersionCreate` is regenerated into `docs/contracts/` | Acceptance 10 (contract test) |
 
 Out of scope, named so no reader assumes it: FD 9995's resolver branch for `peril_structure`
 (#980; Acceptance 7 is its tripwire); FD 9759 limbs 2 and 3 (the compile-site
 `MODEL_REFERENCE_MODE_INCONSISTENT`, RL 9758, given to "S3"); the exit-demo script's C1 call
-(`PL-1371` §3.8 row 7, which names this slice and FD 9995 as prerequisites, per RL 9695
+(`PL-1371` §3.8 row 7, which names this slice and FD 9995 as prerequisites, per RL-1428
 *What it obliges*); `CR-838`'s FR-237 "delivered" line, which RL 9668 (working id, #1137) corrects to "partly
  delivered" (the maintainer's (by delegation) entry of 13:24:03 BST, item 1).
 
@@ -265,10 +265,10 @@ Read at `caa4e411`:
 | 0.4 | `Pins`' lists are bare `list[ArtifactRef]` | `model_schema/rating.py:65-78` | no per-list type constraint (DP-3) |
 | 0.5 | `pins.models` holds a `model_call`'s `model_ref` **or** `peril_structure_ref` | `packages/pricing-core/src/pricing_core/rating/compile.py` `check_step_refs_pinned` (around `:565`) | so the admitted types of `pins.models` are `model` and `peril_structure` |
 | 0.6 | The seed writes the pins on the row | `grep -rnE "\.(algorithm_ref\|pins)\s*=[^=]" --include=*.py examples/ backend/src/` | `examples/fremtpl2/model.py:396`, `:397` |
-| 0.7 | RL 9695's own predicate already matches | `grep -rn "algorithm_ref\s*=\|\.pins\s*=" --include=*.py examples/ backend/src/` | the two seed lines **and** `platform/rating_versions.py:110`, `:113` (`to_schema`'s keyword reads), so it cannot print nothing (DP-2) |
+| 0.7 | RL-1428's own predicate already matches | `grep -rn "algorithm_ref\s*=\|\.pins\s*=" --include=*.py examples/ backend/src/` | the two seed lines **and** `platform/rating_versions.py:110`, `:113` (`to_schema`'s keyword reads), so it cannot print nothing (DP-2) |
 | 0.8 | A body error renders as 422 `VALIDATION_FAILED` with `errors[].code` = the Pydantic type upper-cased | `backend/src/app/errors.py:466-493` | `extra_forbidden` → `EXTRA_FORBIDDEN`; a validator's `ValueError` → `VALUE_ERROR` |
 | 0.9 | A failed compile Job carries the code in `JobRow.error["code"]` | `backend/src/app/worker/tasks.py:197-232`; `test_rating_version_compile.py:196` | as stated |
-| 0.10 | The three RL 9695 find strings occur once each | `grep -c` on `Create a draft Rating Version with pins (FR-237) \|`, `build widens the shape with the full contract.`, `and the input contract. Nothing is unpinned. \|` in `docs/specs/03-rating-engine.md` | 1, 1, 1 (`:908`, `:436`, `:134`) |
+| 0.10 | The three RL-1428 find strings occur once each | `grep -c` on `Create a draft Rating Version with pins (FR-237) \|`, `build widens the shape with the full contract.`, `and the input contract. Nothing is unpinned. \|` in `docs/specs/03-rating-engine.md` | 1, 1, 1 (`:908`, `:436`, `:134`) |
 | 0.11 | `MODEL_REFERENCE_MODE_INCONSISTENT` is in `03` §5.1's owned-code list and registered in no code | `grep -rn MODEL_REFERENCE_MODE_INCONSISTENT backend/src packages/*/src docs/specs/03-rating-engine.md` | `03:109` (FR-223's prose) and `03:936` (the owned-code list, which continues after it); no hit under `backend/src` or `packages/*/src`. *(Corrected 2026-10-05, pre-mint fix F1; see §"Status".)* The result read "only FR-223's prose at `03:109`", which was wrong at `caa4e411` too |
 | 0.12 | The route is not a held approval route (FD 9752, working id; #1066, unmerged, would mint it as FD 1416) | the hold covers the four `to_dict` approval routes in `backend/src/app/api/approvals.py`; this route is in `api/models.py` and returns the typed `RatingVersion` | not held |
 | 0.13 | No test file is shared with WK-675 S2 | S2 adds tests to `backend/tests/test_rating_versions.py` (PL 9713 Task 4); this slice adds a new module | disjoint |
@@ -287,7 +287,7 @@ Read at `caa4e411`:
 | `scripts/generate-contracts.py` | `GENERATED_SHAPES` (`:38`): `"rating-version-create": "RatingVersionCreate"` appended |
 | `backend/tests/test_contracts.py` | `ONE_SIDED_SLUGS` (`:69`): one key appended |
 | `docs/contracts/openapi/generated.json`, `docs/contracts/schemas/generated/rating-version-create.schema.json` | regenerated / generated |
-| `docs/specs/03-rating-engine.md` | §5.1 create row (`:908`, RL 9695 T1); §4.3 note (after `:436`, T2); §3.4 FR-237 row (`:134`, T3); *(DP-1 a)* §3.x FR-223 row (`:109`, RL 9758 T1). §5.1's owned-code list: no edit, the code is already at `:936` *(Corrected 2026-10-05, pre-mint fix F1; see §"Status".)* |
+| `docs/specs/03-rating-engine.md` | §5.1 create row (`:908`, RL-1428 T1); §4.3 note (after `:436`, T2); §3.4 FR-237 row (`:134`, T3); *(DP-1 a)* §3.x FR-223 row (`:109`, RL 9758 T1). §5.1's owned-code list: no edit, the code is already at `:936` *(Corrected 2026-10-05, pre-mint fix F1; see §"Status".)* |
 | `examples/fremtpl2/model.py` | added: `save_demo_algorithm`; edited: `author_demo_rating_evidence` (`:366-`, drops the algorithm save and the two row writes), `create_approved_rating_version` (`:490-`, saves the algorithm first and passes it and `Pins()` to the service) |
 | `backend/tests/test_demo_rating_evidence.py` | edited: `_draft` (`:34-41`) passes the algorithm ref and `Pins()` |
 | `backend/tests/test_rating_version_create_pins.py` | added (new module) |
@@ -346,7 +346,7 @@ required.
    merge-tree check reading its exit code, re-applies its row and re-gates. The two gates never run at once.
 
 **Open PRs read** (`gh pr list --state open`, 2026-10-05, between 13:15 and 13:24 BST, `origin/main` `caa4e411`).
-On this slice's subject: #1130 (FD 9708), #1133 (RL 9695), #1061 (RL 9758: binds the pin write,
+On this slice's subject: #1130 (FD-1421), #1133 (RL-1428), #1061 (RL 9758: binds the pin write,
 DP-1), #980 (FD 9995: the peril resolver, Acceptance 7), #1131 (PL 9713), #1127 (PL 9716),
 #1113 (PL 9728). #1066 (FD 9752, working id: the approval-route hold): not this route (0.12). The others
 are findings, rulings and plans on other subjects, or dependency bumps.
@@ -361,14 +361,14 @@ measurement (it need not run exclusive). One full two-half gate (a gate slot und
 DP-1, DP-2 and DP-3 blocked activation; they were sent to the lead on 2026-10-05 between
 13:15 and 13:24 BST and are **decided** by the maintainer's (by delegation) entry headed *"2026-10-05 13:20:26 BST — DECISIONS 22–27; severity signals for the four gap findings"* in `~/gi-pricing-plan.local/channel/to-lead.md`, items 25–27. DP-4 and DP-5 do not block; the recommendation is applied unless ruled otherwise.
 Two choices the brief offered as examples are **not open**: pins are not mutable after create,
-and the effective dates are not in the create body; RL 9695 decides both (§"Global Constraints").
+and the effective dates are not in the create body; RL-1428 decides both (§"Global Constraints").
 
 | DP | Question | Options | Recommendation | Owner | Blocks |
 |---|---|---|---|---|---|
-| **DP-1** | RL 9758 item 2: *"Any route that writes a Rating Version's `algorithm_ref` or `model_reference_mode` refuses a mismatching write with **422** `MODEL_REFERENCE_MODE_INCONSISTENT` … this binds the slice that adds one."* This slice adds one. RL 9695 T3 says the create route *"stores them and does not resolve them"*. Both cannot hold | **(a)** check at create when `algorithm_ref` resolves in the workspace (load `RatingAlgorithmRow`, run `check_model_reference_mode`); an algorithm that does not resolve is stored and refused at compile (`NOT_FOUND`); this slice also registers the code and lands RL 9758 T1 plus an owned-list text, unless S3 merged them first. **(b)** RL 9758 item 2 is satisfied at compile only for this route (amend RL 9758); create checks nothing. **(c)** check at create and refuse an unresolvable algorithm at create too (422 or 404), amending T1/T3's "resolvability at compile" | **(a)**: it honours both rulings in their intent — RL 9758's check where the version and algorithm first meet, RL 9695's "no resolution at create" for everything else — and costs one query. (b) weakens a ruling already audited; (c) puts resolvability in two places, which RL 9695 rejected | **DECIDED, (a)**, item 25: *"Check MODEL_REFERENCE_MODE_INCONSISTENT at create when algorithm_ref resolves; an unresolvable ref stays compile's. … The slice that merges first registers the code and lands RL 9758 T1; both dispatch records name it; the second rebases and drops its copy, its ledger saying so."* RL 9695 T3 amended pre-mint (`614ad96b`) | Tasks 3, 5; Acceptance 8 |
-| **DP-2** | RL 9695 *Acceptance* bullet 5's predicate `grep -rn "algorithm_ref\s*=\|\.pins\s*=" --include=*.py examples/ backend/src/` matches at `caa4e411` beyond the seed (0.7) and would match this slice's own keyword arguments. It cannot print nothing | (a) replace it with `grep -rnE "\.(algorithm_ref\|pins)\s*=[^=]" --include=*.py examples/ backend/src/` (attribute assignment only; prints the two seed lines today); (b) keep the intent in prose and drop the predicate | **(a)**, corrected in RL 9695 before its mint | **DECIDED, (a)**, item 26; RL 9695 at `614ad96b` carries the predicate with its corpus and tree | Acceptance 12 |
-| **DP-3** | Where the wrong-type check (RL 9695 T1, *"a ref of the wrong type in any of them is **422**"*) lives. `Pins`' lists are bare `list[ArtifactRef]` (0.4) | (a) a validator on the new `RatingVersionCreate` only; (b) tighten `Pins` itself (per-list admitted types) | **(a)**: T1 scopes the check to the create body. (b) changes every stored row's read (`to_schema` runs `Pins.model_validate` on every list, get, create and submit) and the published `RatingVersion` contract, so one mis-typed bench or legacy row would fail every read of its workspace (the blast-radius argument `BundleMetadata.blob_sha256`'s docstring makes). Admitted types under (a): `algorithm_ref` `rating_algorithm`; `rate_tables` `rate_table`; `models` `model` or `peril_structure` (0.5); `reference_tables` `reference_table`; `custom_objectives` `custom_objective`; `model_ref` stays as today (no new rule) | **DECIDED, (a)**, item 27: *"a validator on the new RatingVersionCreate only. Tightening Pins would change every stored read and the contract."* | Task 2; Acceptance 3, 4 |
-| **DP-4** | RL 9695 *Ruled*: *"The seed moves to the route in the same slice."* The seed calls services and has no HTTP client (`examples/fremtpl2/model.py:17-31`) | (a) the seed passes `algorithm_ref` and `pins` to `rating_versions_service.create_rating_version`, the function the route calls; (b) the seed calls the route through an HTTP client | **(a)**: it removes the ORM write the ruling targets with no new dependency in `examples/`; the route itself is proven by Acceptance 1 | **DECIDED, (a)**, by the maintainer's (by delegation) entry headed *"2026-10-05 13:29:05 BST — DECISIONS 32 and 33 (PL 9683, the FD 9708 fix)"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 33, on a condition: the slice still proves the HTTP create route end to end, create with pins over HTTP then compile (Acceptance 1, which therefore may not be replaced by a service-level test), because G2 is over HTTP; and the exit-demo script creates its version through HTTP (`PL-1371` §3.8 row 7, §"Hand-off") | Task 4 |
+| **DP-1** | RL 9758 item 2: *"Any route that writes a Rating Version's `algorithm_ref` or `model_reference_mode` refuses a mismatching write with **422** `MODEL_REFERENCE_MODE_INCONSISTENT` … this binds the slice that adds one."* This slice adds one. RL-1428 T3 says the create route *"stores them and does not resolve them"*. Both cannot hold | **(a)** check at create when `algorithm_ref` resolves in the workspace (load `RatingAlgorithmRow`, run `check_model_reference_mode`); an algorithm that does not resolve is stored and refused at compile (`NOT_FOUND`); this slice also registers the code and lands RL 9758 T1 plus an owned-list text, unless S3 merged them first. **(b)** RL 9758 item 2 is satisfied at compile only for this route (amend RL 9758); create checks nothing. **(c)** check at create and refuse an unresolvable algorithm at create too (422 or 404), amending T1/T3's "resolvability at compile" | **(a)**: it honours both rulings in their intent — RL 9758's check where the version and algorithm first meet, RL-1428's "no resolution at create" for everything else — and costs one query. (b) weakens a ruling already audited; (c) puts resolvability in two places, which RL-1428 rejected | **DECIDED, (a)**, item 25: *"Check MODEL_REFERENCE_MODE_INCONSISTENT at create when algorithm_ref resolves; an unresolvable ref stays compile's. … The slice that merges first registers the code and lands RL 9758 T1; both dispatch records name it; the second rebases and drops its copy, its ledger saying so."* RL-1428 T3 amended pre-mint (`614ad96b`) | Tasks 3, 5; Acceptance 8 |
+| **DP-2** | RL-1428 *Acceptance* bullet 5's predicate `grep -rn "algorithm_ref\s*=\|\.pins\s*=" --include=*.py examples/ backend/src/` matches at `caa4e411` beyond the seed (0.7) and would match this slice's own keyword arguments. It cannot print nothing | (a) replace it with `grep -rnE "\.(algorithm_ref\|pins)\s*=[^=]" --include=*.py examples/ backend/src/` (attribute assignment only; prints the two seed lines today); (b) keep the intent in prose and drop the predicate | **(a)**, corrected in RL-1428 before its mint | **DECIDED, (a)**, item 26; RL-1428 at `614ad96b` carries the predicate with its corpus and tree | Acceptance 12 |
+| **DP-3** | Where the wrong-type check (RL-1428 T1, *"a ref of the wrong type in any of them is **422**"*) lives. `Pins`' lists are bare `list[ArtifactRef]` (0.4) | (a) a validator on the new `RatingVersionCreate` only; (b) tighten `Pins` itself (per-list admitted types) | **(a)**: T1 scopes the check to the create body. (b) changes every stored row's read (`to_schema` runs `Pins.model_validate` on every list, get, create and submit) and the published `RatingVersion` contract, so one mis-typed bench or legacy row would fail every read of its workspace (the blast-radius argument `BundleMetadata.blob_sha256`'s docstring makes). Admitted types under (a): `algorithm_ref` `rating_algorithm`; `rate_tables` `rate_table`; `models` `model` or `peril_structure` (0.5); `reference_tables` `reference_table`; `custom_objectives` `custom_objective`; `model_ref` stays as today (no new rule) | **DECIDED, (a)**, item 27: *"a validator on the new RatingVersionCreate only. Tightening Pins would change every stored read and the contract."* | Task 2; Acceptance 3, 4 |
+| **DP-4** | RL-1428 *Ruled*: *"The seed moves to the route in the same slice."* The seed calls services and has no HTTP client (`examples/fremtpl2/model.py:17-31`) | (a) the seed passes `algorithm_ref` and `pins` to `rating_versions_service.create_rating_version`, the function the route calls; (b) the seed calls the route through an HTTP client | **(a)**: it removes the ORM write the ruling targets with no new dependency in `examples/`; the route itself is proven by Acceptance 1 | **DECIDED, (a)**, by the maintainer's (by delegation) entry headed *"2026-10-05 13:29:05 BST — DECISIONS 32 and 33 (PL 9683, the FD 9708 fix)"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 33, on a condition: the slice still proves the HTTP create route end to end, create with pins over HTTP then compile (Acceptance 1, which therefore may not be replaced by a service-level test), because G2 is over HTTP; and the exit-demo script creates its version through HTTP (`PL-1371` §3.8 row 7, §"Hand-off") | Task 4 |
 | **DP-5** | Acceptance 7, the peril pin, while FD 9995 is open | (a) assert today's `NOT_FOUND` at compile, as FD 9995's tripwire, changed by FD 9995's fix; (b) a strict `xfail` asserting `succeeded`; (c) no peril test here | **(a)**: a strict assertion of today's behaviour that FD 9995's fix must visibly flip; (b) hides the failure mode in a marker; (c) loses the brief's case | **DECIDED, (a)**, by the maintainer's (by delegation) entry headed *"2026-10-05 13:29:05 BST — DECISIONS 32 and 33 (PL 9683, the FD 9708 fix)"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 33, on a condition: the test's name or docstring cites FD 9995 and says the assertion is expected to flip when FD 9995 is fixed, so nobody reads it as the intended behaviour (Task 1's docstring) | Acceptance 7 |
 
 ## Tasks
@@ -378,7 +378,7 @@ and the effective dates are not in the create body; RL 9695 decides both (§"Glo
 - [ ] **Step 1:** Record the dispatch tree: `git rev-parse origin/main` and `git log -1 --format='%H %aI' origin/main`.
 - [ ] **Step 2:** Re-run Task 0 at planning time rows 0.1–0.11 on the dispatch tree. Any row
   that differs is reported to the lead before Task 1; a moved line number alone is recorded.
-- [ ] **Step 3:** Read the minted RL 9695 and the DP ruling. List every difference from the head
+- [ ] **Step 3:** Read the minted RL-1428 and the DP ruling. List every difference from the head
   cited here (`614ad96b`) in the ledger, by `git diff`, not by headings ([`README.md`](README.md) rule 5).
 - [ ] **Step 4:** Re-read the write sets of WK-675 S2, SL-1391, WK-673 S3 (SL-1387), PL 9728,
   the FD 9707 fix and FD 9759's S3, at their current heads, and record any path added to the contention table.
@@ -415,7 +415,7 @@ Mirror the neighbouring tests in `test_rating_version_compile.py` (`:149-197`, `
 - [ ] **Step 1: Write the module.**
 
 ```python
-"""POST /api/v1/rating-versions declares the algorithm and the pins (FD 9708, RL 9695).
+"""POST /api/v1/rating-versions declares the algorithm and the pins (FD-1421, RL-1428).
 
 Create stores the declaration and checks only its shape (422); resolvability and maturity
 stay with compile (FR-240), so each refusal below is read from the compile Job.
@@ -621,7 +621,7 @@ def test_an_unapproved_model_pin_is_refused_at_compile_and_compiles_after_approv
 def test_a_peril_structure_pin_is_stored_and_compile_reports_no_resolver(
     api_client, workspace_id, principal, grant, database, blob_store
 ) -> None:
-    """FD 9995's tripwire (PL 9683 DP-5 (a)), NOT the intended behaviour.
+    """FD 9995's tripwire (PL-1429 DP-5 (a)), NOT the intended behaviour.
 
     A peril structure pin should compile; today the resolver has no `peril_structure` branch
     (FD 9995), so compile fails NOT_FOUND. This assertion is expected to flip to `succeeded`
@@ -651,7 +651,7 @@ def test_a_peril_structure_pin_is_stored_and_compile_reports_no_resolver(
 def test_a_mode_mismatch_is_refused_at_create(
     api_client, workspace_id, principal, grant, database
 ) -> None:
-    """RL 9758 item 2 at the pin write (PL 9683 DP-1 (a)): only a resolving algorithm is checked."""
+    """RL 9758 item 2 at the pin write (PL-1429 DP-1 (a)): only a resolving algorithm is checked."""
     _LOOP().run_until_complete(grant("analyst"))
     headers = _headers(principal, workspace_id)
     saved = api_client.post("/api/v1/rating-algorithms", json=valid_algorithm(), headers=headers)
@@ -752,7 +752,7 @@ Expected at the dispatch tree (before Tasks 2–5):
   sent: read the printed dict). A 422 with any other code, or a 201, is a plan defect: stop
   and report.
 
-- [ ] **Step 3: Commit** `test(rating): POST /rating-versions declares the algorithm and the pins, red (FD 9708)`.
+- [ ] **Step 3: Commit** `test(rating): POST /rating-versions declares the algorithm and the pins, red (FD-1421)`.
 
 ### Task 2: The typed request (Acceptance 3, 4, 9, 10)
 
@@ -772,7 +772,7 @@ Expected at the dispatch tree (before Tasks 2–5):
 - [ ] **Step 1: Add the class** (DP-3 (a), decided):
 
 ```python
-#: The artifact types each pin list admits (FR-237; RL 9695 T1). `models` holds a
+#: The artifact types each pin list admits (FR-237; RL-1428 T1). `models` holds a
 #: `model_call`'s `model_ref` or `peril_structure_ref` (`compile.check_step_refs_pinned`).
 _PIN_TYPES: Final[dict[str, frozenset[str]]] = {
     "rate_tables": frozenset({"rate_table"}),
@@ -783,7 +783,7 @@ _PIN_TYPES: Final[dict[str, frozenset[str]]] = {
 
 
 class RatingVersionCreate(BaseModel):
-    """The body of `POST /api/v1/rating-versions` (03 §5.1, FR-237; RL 9695).
+    """The body of `POST /api/v1/rating-versions` (03 §5.1, FR-237; RL-1428).
 
     Create stores the declared algorithm and pins and checks only their shape: a ref of the
     wrong type is refused here (422). Whether each ref resolves, and at what maturity, is
@@ -827,7 +827,7 @@ class RatingVersionCreate(BaseModel):
 - [ ] **Step 3:** Append to `GENERATED_SHAPES`, with the house comment form:
 
 ```python
-    # Added <date> (WK-1178, the FD 9708 fix, RL 9695): the body of `POST /rating-versions`,
+    # Added <date> (WK-1178, the FD-1421 fix, RL-1428): the body of `POST /rating-versions`,
     # moved out of the API module. First written form, no hand-authored counterpart.
     "rating-version-create": "RatingVersionCreate",
 ```
@@ -836,9 +836,9 @@ class RatingVersionCreate(BaseModel):
   `uv run pytest -q backend/tests/test_contracts.py -k one_sided`. Expected: fails naming
   `rating-version-create` as undeclared. Record it.
 - [ ] **Step 5:** Append to `ONE_SIDED_SLUGS`:
-  `"rating-version-create": "first written form — 03 §5.1 create row (RL 9695, FD 9708, FR-237)",`
+  `"rating-version-create": "first written form — 03 §5.1 create row (RL-1428, FD-1421, FR-237)",`
   then `uv run python scripts/generate-contracts.py --check` and the contract tests: green.
-- [ ] **Step 6: Commit** `feat(model-schema): RatingVersionCreate declares the algorithm and the pins (FD 9708)`.
+- [ ] **Step 6: Commit** `feat(model-schema): RatingVersionCreate declares the algorithm and the pins (FD-1421)`.
 
 ### Task 3: The service and the route (Acceptance 1–8, 11)
 
@@ -872,7 +872,7 @@ class RatingVersionCreate(BaseModel):
             )
         )
         # An algorithm that does not resolve is stored and refused at compile (FR-240,
-        # RL 9695 T3); one that resolves is mode-checked here (FR-223, RL 9758 item 2).
+        # RL-1428 T3); one that resolves is mode-checked here (FR-223, RL 9758 item 2).
         if algorithm_row is not None:
             _require_consistent_mode(model_reference_mode, RatingAlgorithm.model_validate(algorithm_row.content))
 ```
@@ -901,7 +901,7 @@ class RatingVersionCreate(BaseModel):
   `03:936`). *(Corrected 2026-10-05, pre-mint fix F1; see §"Status".)* Run
   `uv run pytest -q backend/tests/test_rating_versions.py backend/tests/test_rating_version_compile.py`:
   green (the old three-field body still creates).
-- [ ] **Step 7: Commit** `fix(rating): POST /rating-versions takes algorithm_ref, pins and model_reference_mode (FD 9708)`.
+- [ ] **Step 7: Commit** `fix(rating): POST /rating-versions takes algorithm_ref, pins and model_reference_mode (FD-1421)`.
 
 ### Task 4: The seed through the create path (DP-4 (a); Acceptance 12, 13)
 
@@ -944,7 +944,7 @@ async def save_demo_algorithm(
   `Pins()` to the service.
 - [ ] **Step 6:** Re-run the predicate: it prints nothing. Run
   `uv run pytest -q backend/tests/test_demo_rating_evidence.py examples/fremtpl2/test_seed.py`: green.
-- [ ] **Step 7: Commit** `refactor(seed): the demo rating version declares its algorithm and pins at create (FD 9708)`.
+- [ ] **Step 7: Commit** `refactor(seed): the demo rating version declares its algorithm and pins at create (FD-1421)`.
 
 ### Task 5: The spec texts, verbatim (Acceptance 14)
 
@@ -955,7 +955,7 @@ These land **in the commit that makes Acceptance 1–9 green**, not after it (`C
 squash Task 5 into Task 3's commit, or amend Task 3's commit before the PR, and say so in the
 ledger.
 
-- [ ] **Step 1:** Apply RL 9695 T1 (§5.1 `:908`), T2 (after `:436`) and T3 (FR-237, `:134`)
+- [ ] **Step 1:** Apply RL-1428 T1 (§5.1 `:908`), T2 (after `:436`) and T3 (FR-237, `:134`)
   byte for byte from the **minted** record, with `<date>` the commit date and the working id
   replaced by the minted `RL-` id. A find string not found exactly once is a stop.
 - [ ] **Step 2: Unless Task 0 Step 4 found it landed:** RL 9758 T1 (FR-223,
@@ -981,16 +981,16 @@ ledger.
 
 The slice is done when every Acceptance item holds on the merge tree and the slice audit is
 clean. Then the lead adds this slice and FD 9995 to `PL-1371` §3.8 row 7 as prerequisites of
-C1 (RL 9695 *What it obliges*), if that has not been done at the mint. The exit-demo script's
+C1 (RL-1428 *What it obliges*), if that has not been done at the mint. The exit-demo script's
 C1 call is that row's, not this slice's.
 
 ## Self-review
 
 1. **Spec coverage.** FR-237 → Tasks 1–3, 5; FR-240 and FR-20 → Acceptance 5, 6 (no code: compile
    unchanged); FR-239 → Acceptance 1, 2; FR-223 → DP-1, Acceptance 8; FR-440 → T2 only; FR-451 →
-   Task 2; RL 9695 T1–T3 → Task 5; RL 9695 *Acceptance* bullets 1–5 → Acceptance 1, 3–4, 6, 9, 12;
-   RL 9695's docstring obligation → Task 3 Step 3; RL 9758 item 2 → DP-1. WF-699 C1 needs no
-   text (RL 9695).
+   Task 2; RL-1428 T1–T3 → Task 5; RL-1428 *Acceptance* bullets 1–5 → Acceptance 1, 3–4, 6, 9, 12;
+   RL-1428's docstring obligation → Task 3 Step 3; RL 9758 item 2 → DP-1. WF-699 C1 needs no
+   text (RL-1428).
 2. **Placeholders.** `<date>`, `<n>` and the minted `RL-` id are filled at the commit or the mint,
    as the house form does; nothing else is deferred. DP-dependent steps say which option they
    belong to.

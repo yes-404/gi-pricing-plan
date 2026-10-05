@@ -1,9 +1,9 @@
 ---
-id: RL-9695
+id: RL-1428
 family: ruling
-title: FD 9708 — the code is behind, not the spec — POST /rating-versions declares the algorithm and the pins, FR-237 governs, and 03 §4.3's Phase 1b note is discharged
+title: FD-1421 — the code is behind, not the spec — POST /rating-versions declares the algorithm and the pins, FR-237 governs, and 03 §4.3's Phase 1b note is discharged
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
-created: 2026-10-05            # working id; the mint date is set at the mint (check 31)
+created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: decision-maker
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc
 phase: P2
@@ -15,12 +15,12 @@ corrects: ~
 relates: [WK-669, WK-1178, CR-838, CR-1212, PL-1371, SL-1300, FD-1297, FR-223, FR-237, FR-240, FR-440]
 ---
 
-# RL 9695 (working id) — FD 9708: which side is wrong about Rating Version pins over HTTP
+# RL-1428 — FD-1421: which side is wrong about Rating Version pins over HTTP
 
 **Decided by the maintainer, by delegation**, in the entry headed
 *"2026-10-05 13:12:56 BST — DECISIONS 15 and 16; CORRECTION to my 13:03:23 item 11; a priority rule for HIGH G2 blockers"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 15, relayed to this session by the
 lead: *"RL 9695 (FD 9708): OPTION (a). POST /rating-versions takes algorithm_ref and pins,
-checked at compile, in a WK-1178 slice. FD 9708: HIGH, owner WK-1178, deadline before the P2
+checked at compile, in a WK-1178 slice. FD-1421: HIGH, owner WK-1178, deadline before the P2
 exit demo (it blocks G2 over HTTP)."* The options below were drafted before that decision
 and sent as a DP; the section headed "Ruled" records it.
 
@@ -31,10 +31,10 @@ printed `CLAUDE_EFFORT=medium`), by the decision-maker session `dm-9708`, on the
 `~/gi-pricing-plan.local/handover/brief-dm-9708-2026-10-05.md`. **Working id 9695 is the
 lead's allocation.** Every fact below was read at `origin/main`
 `caa4e411a9c07a389cf47092a923c7761b2b92dc`, re-checked at 13:12 BST. Unminted records
-(FD 9708, FD 9995, RL 9758, PL 9713) are cited in working-id form and kept out of
+(FD-1421, FD 9995, RL 9758, PL 9713) are cited in working-id form and kept out of
 `relates:` (check 32).
 
-**The question** (FD 9708, draft PR #1130, head `11f87e26`, section *Disposition*): *"which
+**The question** (FD-1421, draft PR #1130, head `11f87e26`, section *Disposition*): *"which
 side is wrong. Either the spec's §5.1 row and WF-699 C1 describe Phase 2 and the code is
 behind …, or §4.3's Phase 1b note stands and §5.1 and WF-699 C1 should say the route creates
 the minimal version and pins are set by a route yet to be specified. A third option is a
@@ -62,7 +62,7 @@ sides unruled, on G2's path (`~/gi-pricing-plan.local/channel/to-lead.md`, entry
 
 Not verified, stated as pointers: RL 9758 (#1061, open) rules *when* FR-223 is checked on
 "version pin writes" — title read, not the diff. FD 9995 (#980, open, head `9074f155`) — the
-compile resolver has no peril-structure branch — read through FD 9708's account of it.
+compile resolver has no peril-structure branch — read through FD-1421's account of it.
 
 ## Which side is wrong
 
@@ -120,7 +120,7 @@ on FD 9995 as well as on this ruling. The exit-demo leaf should name both.
 ## Ruled
 
 **Decided by the maintainer, by delegation, 2026-10-05 13:12:56 BST (item 15).** The entry is
-cited by its header, *"2026-10-05 13:12:56 BST — DECISIONS 15 and 16; CORRECTION to my 13:03:23 item 11; a priority rule for HIGH G2 blockers"*. FD 9708's severity is **HIGH**, its owner **WK-1178**, its deadline
+cited by its header, *"2026-10-05 13:12:56 BST — DECISIONS 15 and 16; CORRECTION to my 13:03:23 item 11; a priority rule for HIGH G2 blockers"*. FD-1421's severity is **HIGH**, its owner **WK-1178**, its deadline
 **before the P2 exit demo**, by the same item. The same entry's priority rule applies: a HIGH
 finding that blocks G2 takes the first build lane that frees once its plan is active.
 
@@ -140,14 +140,14 @@ has exactly one hit at `caa4e411`.
 ### T1 — `03` §5.1, the create row (a). Find `` | Create a draft Rating Version with pins (FR-237) | `` and replace it with
 
 ```markdown
-| Create a draft Rating Version with pins (FR-237). The body takes `slug`, `dataset_version_id`, `model_ref` and, optionally, `algorithm_ref` (a `rating_algorithm` ref), `pins` (§4.3's `Pins`) and `model_reference_mode`; a ref of the wrong type in any of them is **422** `VALIDATION_FAILED`. Resolvability and maturity are checked at compile (FR-240), and a version created without `algorithm_ref` or `pins` is refused there with `RATING_VERSION_UNPINNED`. *(Amended <date>, RL 9695 (working id), FD 9708.)* |
+| Create a draft Rating Version with pins (FR-237). The body takes `slug`, `dataset_version_id`, `model_ref` and, optionally, `algorithm_ref` (a `rating_algorithm` ref), `pins` (§4.3's `Pins`) and `model_reference_mode`; a ref of the wrong type in any of them is **422** `VALIDATION_FAILED`. Resolvability and maturity are checked at compile (FR-240), and a version created without `algorithm_ref` or `pins` is refused there with `RATING_VERSION_UNPINNED`. *(Amended <date>, RL-1428), FD-1421.)* |
 ```
 
 ### T2 — `03` §4.3's note (a). Find `` > build widens the shape with the full contract. `` and insert after it
 
 ```markdown
 >
-> *(Discharged <date>, RL 9695 (working id), FD 9708.)* This note scoped Phase 1b only. W9-3
+> *(Discharged <date>, RL-1428), FD-1421.)* This note scoped Phase 1b only. W9-3
 > (#293) widened `RatingVersion` with `algorithm_ref`, `pins` and `model_reference_mode`
 > (CR-838), and `POST /api/v1/rating-versions` declares them (§5.1, FR-237). The note's
 > statement that `model-schema` carries only the Phase 1b subset is no longer true and does
@@ -157,16 +157,16 @@ has exactly one hit at `caa4e411`.
 ### T3 — `03` FR-237 (a). Find `` and the input contract. Nothing is unpinned. | `` and insert before its final `` |``
 
 *Amended 2026-10-05, before the mint, on the maintainer's (by delegation) entry headed *"2026-10-05 13:20:26 BST — DECISIONS 22–27; severity signals for the four gap findings"*, item 25
-(PL 9683 DP-1): "Check MODEL_REFERENCE_MODE_INCONSISTENT at create when algorithm_ref
+(PL-1429 DP-1): "Check MODEL_REFERENCE_MODE_INCONSISTENT at create when algorithm_ref
 resolves; an unresolvable ref stays compile's." The text first filed here ended "The create
 route stores them and does not resolve them."; it is replaced by the last two sentences
 below.*
 
 ```markdown
- *(Amended <date>, RL 9695 (working id), FD 9708.)* The algorithm version and the pins are declared when the Rating Version is created (`POST /api/v1/rating-versions`, §5.1) and are checked at compile (FR-240). Where `algorithm_ref` resolves in the workspace, the create route also checks FR-223's model-reference-mode consistency and refuses a mismatch with **422** `MODEL_REFERENCE_MODE_INCONSISTENT`, as RL 9758 (working id) item 2 binds every route that writes a version's `algorithm_ref` or `model_reference_mode`. An `algorithm_ref` that does not resolve is stored and left to compile, which refuses it.
+ *(Amended <date>, RL-1428), FD-1421.)* The algorithm version and the pins are declared when the Rating Version is created (`POST /api/v1/rating-versions`, §5.1) and are checked at compile (FR-240). Where `algorithm_ref` resolves in the workspace, the create route also checks FR-223's model-reference-mode consistency and refuses a mismatch with **422** `MODEL_REFERENCE_MODE_INCONSISTENT`, as RL 9758 (working id) item 2 binds every route that writes a version's `algorithm_ref` or `model_reference_mode`. An `algorithm_ref` that does not resolve is stored and left to compile, which refuses it.
 ```
 
-**Ordering with RL 9758** (the same item 25): the FD 9708 slice and the slice applying RL 9758
+**Ordering with RL 9758** (the same item 25): the FD-1421 slice and the slice applying RL 9758
 both need `MODEL_REFERENCE_MODE_INCONSISTENT` registered. **The first slice to merge registers
 the code and lands RL 9758 T1; the second drops its copy and says so.** Both dispatch records
 name this; the second slice rebases, and its ledger records the dropped copy.
@@ -204,7 +204,7 @@ broken input:
   post-create write, `examples/fremtpl2/model.py:396-397` (counted with
   `git grep -nE '\.(algorithm_ref|pins)\s*=[^=]' caa4e411 -- backend/src` and `-- examples`).
   So it is meetable, and it shows the write once one exists. *(Replaced 2026-10-05, before
-  the mint, on the same entry, item 26 (PL 9683 DP-2). The predicate first filed here,
+  the mint, on the same entry, item 26 (PL-1429 DP-2). The predicate first filed here,
   `grep -rn "algorithm_ref\s*=\|\.pins\s*=" --include=*.py examples/`, has an unanchored
   `algorithm_ref\s*=` that also matches a keyword argument or a `==`.)*
 - *Violation: a mode mismatch is accepted at create.* A create whose resolvable
@@ -215,7 +215,7 @@ broken input:
 
 ## What it obliges
 
-- **The lead, at the mint:** mint this record before FD 9708's plan, which cites it (the
+- **The lead, at the mint:** mint this record before FD-1421's plan, which cites it (the
   order of the maintainer, by delegation, in the entry headed
   *"2026-10-05 13:13:32 BST — PL 9716 noted; batching UNRELATED findings ≤3 per mint PR: APPROVED (a widening of my 10:47:03 rule); cite fix"*,
   item 5), replacing working id 9695 everywhere this commit writes it. File
@@ -225,7 +225,7 @@ broken input:
   entry headed *"2026-10-05 13:15:53 BST — DECISIONS 17–21 (PL 9689 DP-S3-2/3/6; FD 9707 DP-1; RL 9695 follow-ups)"*,
   item 21(i). The text first filed here said to add both to PL-1371
   §3.8 row 7.)*
-- **FD 9708's planner:** the leaf plan cites this record for which side is wrong and for DP-1,
+- **FD-1421's planner:** the leaf plan cites this record for which side is wrong and for DP-1,
   and carries T1 to T3 and the acceptance list above as its scope, rather than re-deciding
   them.
 - **The WK-1178 slice:** apply T1 to T3 verbatim in the commit that builds them,
@@ -233,7 +233,7 @@ broken input:
   does not take.
 - **A correcting record for CR-838:** CR-838 recorded FR-237 *delivered* on evidence that did
   not reach the create route. It is frozen, so its body is not edited. A correcting record
-  states the false "delivered", cites FD 9708 and has `corrects: CR-838`; CR-838 gains only
+  states the false "delivered", cites FD-1421 and has `corrects: CR-838`; CR-838 gains only
   an append to its `corrected_by:` (`docs/process/document-ids.md` :135-136; check 34). Before
   it is drafted, the lead checks `document-ids.md` §1.6 for which family and role may correct
   a CR; if that is the maintainer's, the maintainer accepts it at its ACK. *(Amended
