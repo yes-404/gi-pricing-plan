@@ -20,9 +20,9 @@ relates: [FR-227, FR-226, FR-248, FR-214, RL-1329, RL-1309]
 ## How this was ruled
 
 - **Filed under working id 9512, reserved by the lead.** The mint sweep (`PL-1419` D4's
-  practice) replaces every `RL 9512`, `FD 9549`, `OQ 9556`, `PL 9521` and `PL 9597` below with
+  practice) replaces every `RL 9512`, `FD 9549`, `OQ 9556`, `PL 9521`, `PL 9597`, `FD 9513`, `SL 9511` and `PL 9509` below with
   its minted id.
-- **The decisions are not this record's.** They are the maintainer's, by delegation, in seven
+- **The decisions are not this record's.** They are the maintainer's, by delegation, in eight
   entries in `~/gi-pricing-plan.local/channel/to-lead.md`, quoted verbatim under "The
   maintainer's entries" below. The 17:47:06 BST entry's item 3 orders this record: "ONE RL
   for the FD 9549 fix (DP-1, FR-227's dated T-text with money_minor closed both ways at
@@ -109,6 +109,17 @@ Its item 2 (the gap: a `money_minor`-declared expression saves over decimal oper
 unrounded; options (p), (q), (r)) is narrowed by the 17:54:12 entry below and is not quoted
 again here.
 
+**:18367 — "2026-10-05 17:52:50 BST — GO: confirm the /score vs batch output divergence NOW
+(read-only auditor); if confirmed, a SEPARATE FD (option (b)) now"**, its closing line:
+
+> PL 9521 Step 1a then CITES the FD instead of discovering it.
+
+**:18392 — "2026-10-05 17:58:45 BST — FD 9513 (#1204 @0303d0bf): your decision ACCEPTED
+(MEDIUM, LATENT, WK-1178, its own fix slice after SL 9561); the row escape is the first
+red"**, item 1:
+
+> 1. ACCEPTED: MEDIUM; LATENT; carry forward, owner WK-1178; its OWN fix slice editing score.py AFTER SL 9561. Reserve the SL/PL ids; a planner drafts when a seat frees.
+
 **:18375 — "2026-10-05 17:54:12 BST — The money_minor-declared expression DP: (r), CLOSED BY
 DEFINITION; my 17:50:43 "gap" is narrowed accordingly"** (the ruling after 17:53), in full:
 
@@ -133,14 +144,23 @@ All by the maintainer (by delegation), in the entries above. This record states 
    port carries money as `decimal`; only an output step makes `money_minor`. (a)'s refusal at
    the port stands, `test_rating_compile.py:389` flips, and the 17:47:06 mechanism condition
    is discharged by (ii). **(iii) is refused** — a second rounding point is what FR-226
-   excludes. **(i) is not adopted**: the 17:50:43 entry adopts (ii) alone; (i)'s own text is in
-   the planner's STOP report, which this record has not read and does not quote. → **T3.**
+   excludes. **(i) is not adopted**: the 17:50:43 entry adopts (ii) and refuses only (iii) by
+   name. (i) was "admit `decimal` → `money_minor` at a port; the parent's output step rounds
+   after inlining" — source: the planner's STOP report as relayed to the maintainer (by
+   delegation) before 17:50:43, in the lead's wording; this record has not read the report
+   itself. → **T3.**
 4. **A-2's control is changed pre-mint** (17:49:25 item 1). #1178 item 15's control becomes a
    `decimal` `model_call` into a **`decimal`** output, legal under B3. This supersedes the
    second-merger flip of 17:47:06 item 4 for that control; PL 9521 names the change and carries
    no flip line for it. The `/score` vs batch comparison is PL 9521's read-only Task 1 Step 1a,
    with the entry's three branches (differ → a separate finding (b); agree and no stored
-   refused pair → (c), a residue in FD 9549; a stored refused pair → STOP).
+   refused pair → (c), a residue in FD 9549; a stored refused pair → STOP). **The first branch
+   applies**: the 17:52:50 auditor confirmed a divergence, filed as FD 9513 (#1204), which the
+   maintainer (by delegation) accepted at 17:58:45 as its own finding with its own fix slice.
+   So PL 9521's Step 1a **cites FD 9513** instead of discovering the divergence (17:52:50:
+   "PL 9521 Step 1a then CITES the FD instead of discovering it"), and the `score.py` fix is
+   FD 9513's slice's — SL 9511 / PL 9509 (working ids, the lead's reservation) — not
+   PL 9521's.
 5. **The `money_minor`-declared expression DP (PL 9521 DP-2) is (r), closed by definition**
    (17:54:12). No OQ. The served half — a `money_minor` expression into a non-money output —
    is closed by item 1's OUT rule, with PL 9521's red D1. The unserved half — a fractional
@@ -239,16 +259,17 @@ so that a `grep -F` of the entry's quotation finds them in 03 after application.
   `decimal` output, changed before its mint.
 - **FD 9549 (#1197)**'s amendment states the served half as closed by the fix and the
   unserved half as by design under T4's definition.
+- **PL 9521's Task 1 Step 1a** cites FD 9513 (#1204, head `0303d0bf` when read) for the
+  `/score` vs batch divergence, and carries no `score.py` edit and no
+  `test_score_and_batch_serve_a_pre_fix_pair_alike` red; both belong to FD 9513's slice.
 
 ## What this record does not decide
 
 - **The refusal's error code.** The entries do not name one, and the texts do not either:
   a refused pair is refused by FR-227's existing save-time check, with whatever code that
   check gives at the applying tree.
-- **The `/score` vs batch outcome.** Which of 17:49:25 item 2's three branches applies is
-  decided by PL 9521's Task 1 Step 1a, or by the read-only auditor of the 17:52:50 BST entry
-  ("GO: confirm the /score vs batch output divergence NOW"), whose result this record has not
-  read.
+- **FD 9513's fix.** Its severity, reds and type DP are the 17:58:45 entry's and its own
+  plan's (PL 9509); this record only names the hand-off (Ruled, item 4).
 - **A new input type** (A4) and any run-time integrality check: neither is taken.
 - **The mint order** of this record against FD 9549 and PL 9521: the lead's.
 
