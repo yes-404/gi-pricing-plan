@@ -115,3 +115,9 @@ Task 2d, in `backend/src/app/api/traces.py`: the red first, a route test that wr
 ## Disposition
 
 Open. Owner WK-1178. Discharged by SL 9568 Task 2d on `RL 9505`. Closed in place by the auditor, citing the PR, when it merges and the re-audit has read the route against a `mismatch` row.
+
+### Disposition — the lead's decision (pre-mint), 2026-10-05 18:06 BST
+
+Per `docs/process/document-ids.md` §1.6; the maintainer may override. **MEDIUM; carry forward with an owner, WK-1178; discharged by SL 9568 Task 2d.** The spec rule comes first, via `RL 9505` (working id).
+
+**Condition:** within SL 9568, Task 2d (the route carries the status) lands **before, or in the same commit as, the chain change**, so that no chain-caused mismatch is ever listed as the quote's trace. This is the HIGH trigger named under "Severity (proposed)" above, discharged by ordering.
