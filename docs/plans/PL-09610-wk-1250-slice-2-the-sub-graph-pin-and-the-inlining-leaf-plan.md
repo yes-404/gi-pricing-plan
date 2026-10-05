@@ -72,17 +72,22 @@ the trace (acceptance 8).
 ## Status
 
 The status is the `status:` field in the header, and nothing else. **It stays `draft` while
-DP-S2-1, DP-S2-2 and DP-S2-3 below are open**; they are the decision-maker's (`document-ids.md`
-§1.6, PL row). Activation is that field's flip only. Its facts (the date, the dispatch, the gate
-slot) are recorded in the dispatch record and quoted in the ledger's Task 0, never added here.
+DP-S2-1 and DP-S2-2 below are open**; they are the decision-maker's (`document-ids.md` §1.6, PL
+row). Activation is that field's flip only. Its facts (the date, the dispatch, the gate slot) are
+recorded in the dispatch record and quoted in the ledger's Task 0, never added here.
 
 **Activation needs, in order** (each with its state at `cdaaa573`):
 1. **`SL-1339` closed.** **Met:** `closed` 2026-10-01 (`LG-1355`).
-2. **DP-S2-1 to DP-S2-3 ruled by an `RL-`.** Open.
-3. **The `TraceStep` ruling (FD-1246)**, unless DP-S2-3 rules (a). `PL-1254:176` and `:301`, and
-   `PL-1371:217`, make "the FD-1246 trace ruling" a dependency of this slice. No `RL-` rules on
-   FD-1246 at `cdaaa573`: `git grep -n 'FD-1246' cdaaa573 -- docs/rulings` prints only
-   `RL-1263`'s line, which states the dependency. **Open.**
+2. **DP-S2-1 and DP-S2-2 ruled by an `RL-`.** Open.
+3. **The `TraceStep` ruling (FD-1246) minted.** `PL-1254:176` and `:301`, and `PL-1371:217`,
+   make "the FD-1246 trace ruling" a dependency of this slice. **It exists, unminted:** RL 9771
+   (working id, #1060, branch `dm-f35-rulings` at `758336a1`, `status: draft`), DP-F35-2, *"Ruled
+   (b): yes"*, input and output steps are traced. It says: *"`SL-1340`'s inlined ports are then
+   traceable without a second ruling … `FD-1246`'s disposition, the decision-maker's ruling, is
+   this paragraph. Its delivery is PL 9776 Task 3."* Nothing rules on FD-1246 on `main`
+   (`git grep -n 'FD-1246' cdaaa573 -- docs/rulings` prints only `RL-1263`'s line, which states
+   the dependency). **Open until RL 9771 mints.** The order against PL 9776, which delivers it,
+   is **Sequencing for the lead** below.
 4. **`RL-1309` DP-1 item 3's condition** (`RL-1309:309-310`): *"Before Slice 2 is dispatched, both
    WK-673's plan and PL-1254 Task 2 carry this limb."* The maintainer then ruled that **a local
    file does not satisfy it; an in-repo record must carry the limb verbatim, citing `RL-1309`**:
@@ -150,9 +155,9 @@ run together**.
 
 | This slice's path | What it does there | Also changed by (in flight at `cdaaa573`) | Under option (c) |
 |---|---|---|---|
-| `packages/pricing-core/src/pricing_core/rating/compile.py` | `compile_bundle` (`:573-643`): G1, mount resolution, the inlined validation, `all_refs`; `_MATURITY_CHECK_EXEMPT` (`:431`) | PL 9649 (#1152; `compile_bundle` and `ResolvedArtifact` `:434`); the FD 9707 fix (PL 9688, #1145); WK-673 S3 (PL 9689, #1138: called, not edited, at its `:386-387`); WK-675 S3 (no leaf plan) | **Serialised outright** (`PL-1371:291-294`) |
+| `packages/pricing-core/src/pricing_core/rating/compile.py` | `compile_bundle` (`:573-643`): G1, mount resolution, the inlined validation, `all_refs`; `_MATURITY_CHECK_EXEMPT` (`:431`) | PL 9649 (#1152; `compile_bundle` and `ResolvedArtifact` `:434`); the FD 9707 fix (PL 9688, #1145); WK-673 S3 (PL 9689, #1138: called, not edited, at its `:386-387`); WK-675 S3 (no leaf plan); **PL 9776** (#1051) appends `_check_declared_reads` to `ALGORITHM_CHECKS` and its import block (its `:534`) | **Serialised outright** (`PL-1371:291-294`); PL 9776's append is in a different definition, and the dispatch record names it |
 | `packages/pricing-core/src/pricing_core/rating/inline.py` | **new**: the pure inliner (Task 3) | none | Not shared |
-| `packages/pricing-core/src/pricing_core/rating/runtime.py` | `load_bundle` (`:646`): it inlines with the same function (DP-S2-1) | PL 9689 calls it and does not edit it | An existing-definition edit. The dispatch record names it |
+| `packages/pricing-core/src/pricing_core/rating/runtime.py` | `load_bundle` (`:646`): it inlines with the same function (DP-S2-1) | **PL 9776** (#1051) edits `load_bundle` and `CompiledBundle`; the FD 9707 fix (PL 9688) edits `_decision_table_node`; PL 9689 calls it and does not edit it | **Serialises with PL 9776**: the same function. With PL 9688 it is a different definition, so the dispatch record names it |
 | `packages/model-schema/src/model_schema/rating.py` | `Pins` (`:65-78`) gains `sub_graphs`; `SubGraphRef` (`:342-352`) gains the port map; `RatingAlgorithm._graph_invariants` (`:394`) sees a mount as a node; `AlgorithmDiff` (`:541`) and `diff_algorithms` (`:571`) gain the sub-graph limb | **PL 9689** edits `AlgorithmDiff` and `diff_algorithms` (its DP-S3-2 (a)). **PL 9713** (WK-675 S2, #1131) moves `RatingAlgorithm`'s fields to a new `RatingAlgorithmDraft` (its write-set row for `rating.py:375`). PL 9683 adds `RatingVersionCreate` | **Serialises** with PL 9689 and PL 9713: the same existing classes. The second to merge re-derives these edits on the first's names (Task 0) |
 | `docs/specs/03-rating-engine.md` §4.1, §4.3, §4.11 and §5.2 | Task 1 | any slice editing those sections | **Serialises** (`RL-1263:89`), unless the dispatch record names the path with the check that no definition is edited by both |
 | `docs/contracts/schemas/rating-version.schema.json`, `rating-algorithm.schema.json` | hand-authored; `pins.sub_graphs` and the mount's port map (Task 2) | PL 9683 (`rating-version`), PL 9713 (`rating-algorithm`) if they edit them | **Not exempt** (`RL-1263:113`); serialises |
@@ -161,7 +166,7 @@ run together**.
 | `docs/INDEX.md`, `docs/contracts/schemas/generated/`, `docs/contracts/openapi/generated.json` | regenerated | any | **Exempt**, never hand-merged |
 
 **Not in this slice's set:** `score.py` (Slice 3 edits `_check_purpose_mount`), `TraceStep` and
-`model_schema/scoring.py` (see DP-S2-3), the sub-graph routes (`backend/src/app/api/sub_graphs.py`),
+`model_schema/scoring.py` (RL 9771's, delivered by PL 9776), the sub-graph routes (`backend/src/app/api/sub_graphs.py`),
 any `approvals.py`, `errors.py` (no new code: DP-S2-2), `conftest*.py`, `pyproject.toml` and
 `uv.lock`.
 
@@ -241,7 +246,7 @@ reason, is a plan defect. The executor reports it and does not work around it. E
    merged at this tree**, a second test asserts the limb in the **persisted** `structural_diff`
    evidence of a Rating Version whose only change is a sub-graph re-point (`RL-1309:651-653`).
    The ledger records which case held.
-8. **The trace (FR-258)**, per DP-S2-3's ruling. Red first, in `test_rating_score.py`. A traced
+8. **The trace (FR-258)**, in the order the lead sets with PL 9776 (**Sequencing for the lead**). Red first, in `test_rating_score.py`. A traced
    `score_one` on a version that mounts a fragment returns one `TraceStep` per inlined step. Each
    one's `step_id` is the namespaced id (`<mount_point>` + separator + fragment `step_id`), so it
    is attributable to its mount. Real-time and batch carry the same structure (FR-258's last
@@ -366,7 +371,25 @@ where it acts. `RL-1344` §4 rules what this slice does and does not carry for p
 |---|---|---|---|---|
 | **DP-S2-1** | Where does the **inlined** algorithm live, so that scoring, the engine's `model_call` boosters (`_load_boosters`, `_model_call_handler`, `runtime.py`) and the trace see the fragment's steps (premises g, h)? | (a) **Re-inline at load.** `resolved_payloads` already gets each pinned sub-graph's payload once `Pins.sub_graphs` joins `all_refs` (G4 (a); the loop writes `payloads[str(ref)]`, `compile.py:632`). `load_bundle` calls the **same** pure inliner as `compile_bundle`. `Bundle`'s shape is unchanged; (b) `Bundle` gains an `inlined_algorithm` field written at compile, and `load_bundle` reads it; (c) `compile_bundle` replaces the algorithm's entry in `resolved_payloads` with the inlined algorithm | **(a).** One function, two callers, so compile and load cannot disagree. No `Bundle` contract change. A bundle stored before this slice has no mounts, so re-inlining is the identity. (b) stores a second copy of what the payloads already determine, and the two can diverge. (c) makes `resolved_payloads[algorithm_ref]` stop being the artifact the ref names, which breaks the payload ↔ ref invariant `load_bundle`'s docstring relies on (RL-873) | Tasks 3 and 5 |
 | **DP-S2-2** | The port map's shape, the namespace separator, and the codes for the new refusals | **Shape:** (a) `inputs: dict[str, str]` (port → parent value) and `outputs: dict[str, str]` (port → parent name) on `SubGraphRef`, both `extra="forbid"`; (b) a list of `{port, name}` pairs. **Completeness:** every input port mapped exactly once; output ports mapped as a subset, at least one. **Separator:** `/`, with a compile refusal on any collision between a namespaced name and a parent name (premise k: no separator is reserved). **Codes:** an unmapped or undeclared port → `RATING_GRAPH_UNRESOLVED_REF`; an incompatible input type → `RATING_TYPE_MISMATCH`; a sub-graph not pinned → `RATING_VERSION_UNPINNED`; a nested mount → `VALIDATION_FAILED`; a `mount_point` clash or a namespacing collision → `VALIDATION_FAILED` | **Shape (a)**, since a dict cannot map one port twice. **Separator `/`** and **the codes as listed**: each reuses a code that `backend/src/app/errors.py:309-355` already registers, so `errors.py` is not edited. A new code would add a second meaning for one defect. An unmapped output port is legal: the parent does not consume it, and acceptance 3 refuses a consumer | Tasks 1–4 |
-| **DP-S2-3** | `PL-1254:176` says *"Slice 2's trace limb starts only after"* the decision-maker's `TraceStep` ruling (FD-1246), and none exists at `cdaaa573`. Under DP-S2-1 (a), the inlined steps reach the trace with **no `TraceStep` change**, because `_build_trace` (`score.py:781-819`) already emits one `TraceStep` per algorithm step and the namespaced `step_id` names the mount. Does this slice wait? | (a) **Deliver the inlined steps under today's `TraceStep`.** No change to `TraceStep` or `_build_trace`; acceptance 8 proves them, and whatever FD-1246's ruling later changes applies to inlined steps as to any step; (b) hold Task 7 (the trace) until the ruling, build the rest, and do not close the slice before it; (c) carve the trace limb into its own slice after the ruling | **(a)**, if the ruling confirms that no `TraceStep` field is needed for attribution. FD-1246 is about which steps the trace omits (the input and output steps), not about attribution. The map's stated reason for the wait is *"DP-3 (a)'s ports make inlined input and output nodes likely"* (`PL-1254:171-177`). Under Task 3's inliner, a port becomes a **rename** of a name, never a node: a fragment has no `input` or `output` steps (`03` §4.11, "No `input` or `output` steps"), and no wire node is added. So the case FD-1246 names does not arise from inlining. (b) holds a G2 dependency (PL 9629 B7) on a ruling that has no date. (c) adds a slice for a test. **This changes a dependency that `PL-1254` and `PL-1371:217` state, so it is the decision-maker's to rule and the lead's to sequence, not this plan's** | Task 7; activation need 3 |
+
+
+**Sequencing for the lead, with PL 9776 (not a decision point).** PL 9776 (working id, #1051, branch
+`wk1178-f35-leaf-plan` at `ecbb82ab`, `draft`) delivers RL 9771. It edits `_build_trace`,
+`CompiledBundle` and `load_bundle` (its write-set rows for `score.py` and `runtime.py`), and
+`compile.py`'s `ALGORITHM_CHECKS` (its `:534`). Its contention row for `SL-1340` (its `:541`)
+says: *"**serialise.** Recommended order: this slice first, so `SL-1340` builds on the ruled
+content. The lead decides."*
+- **(a) PL 9776 first** (its recommendation). Task 7 then asserts the inlined steps in RL 9771's
+  ruled trace content.
+- **(b) This slice first.** The inlined steps reach the trace under today's `TraceStep` with no
+  change to it: `_build_trace` (`score.py:781-819`) emits one entry per algorithm step, and under
+  DP-S2-1 (a) the inlined steps are algorithm steps whose namespaced `step_id` names the mount.
+  PL 9776 then traces them under its ruling (RL 9771: *"traceable without a second ruling"*).
+- **This plan recommends (a)**, unless G2's date needs PL 9629's B7 before PL 9776 can merge. In
+  that case, (b). A port here is a **rename**, never a node: a fragment has no `input` or `output`
+  steps (`03` §4.11). So the map's reason for the wait (*"DP-3 (a)'s ports make inlined input and
+  output nodes likely"*, `PL-1254:171-177`) does not arise, and either order is safe. **The order is
+  the lead's**, not this plan's.
 
 ---
 
@@ -382,7 +405,8 @@ where it acts. `RL-1344` §4 rules what this slice does and does not carry for p
   `Pins`, `diff_algorithms`, `03` §4 or §5.2, `compile.py`, `runtime.py` or `TraceStep`
   ([`README.md`](README.md) convention 4). Name the SHA read.
 - [ ] Confirm the resolutions **by record id**: `RL-1309` for its items; the `RL-` for DP-S2-1 to
-  DP-S2-3; FD-1246's ruling if DP-S2-3 is not (a). Stop if any differs from **Decision points**.
+  DP-S2-2; RL 9771 for FD-1246, once minted. Stop if any differs from **Decision points**.
+- [ ] **PL 9776.** Record whether it has merged. That decides which branch of Task 7 runs.
 - [ ] **PL 9649.** Confirm it has merged, and record the symbol and file of the transitive
   objective check (`_check_reachable_objectives` in its plan). If it has not merged, stop and
   report. The lead orders the two, and this slice does not build a copy.
@@ -603,15 +627,17 @@ term is used (grep first; `spec-change`).
 - [ ] **Step 4: Run** `uv run pytest backend/tests/test_rating_version_compile.py -q`; it passes.
 - [ ] **Step 5: Commit:** `feat(backend): the compile resolver resolves sub-graph pins; G2 and G4 (c) (RL-1309)`.
 
-### Task 7: The trace (FR-258) — per DP-S2-3
+### Task 7: The trace (FR-258) — in the lead's order with PL 9776
 
-- [ ] **Under DP-S2-3 (a):** add tests only, in `packages/pricing-core/tests/test_rating_score.py`
+- [ ] **If PL 9776 has not merged (order (b)):** add tests only, in `packages/pricing-core/tests/test_rating_score.py`
   (appended), using `_compiled` (`:137`) and `_ctx` (`:143`). A traced `score_one` on a mounted
   version carries each inlined step with its namespaced `step_id`; a batch trace mirrors it. Red
   first: they fail before Task 5's `load_bundle` step, because `_build_trace` skips the inlined
   nodes (premise h). Quote that red in the ledger, from a checkout of Task 4's commit.
-- [ ] **Under (b) or (c):** do what the ruling says, and nothing more. `TraceStep` is not edited
-  without that ruling.
+- [ ] **If PL 9776 has merged (order (a)):** the same tests, asserting the inlined steps in RL
+  9771's ruled content: what each step reads and declares, under its namespaced `step_id`. Mirror
+  PL 9776's own trace tests at the dispatch tree. **In either order, `TraceStep` and `_build_trace`
+  are not edited here.**
 - [ ] Commit: `test(pricing-core): inlined steps in the trace (FR-258)`.
 
 ### Task 8: `RL-1242` stays, stated
@@ -678,5 +704,5 @@ ladder and the payable, and how the inlined nodes are gated by `purpose` at eval
    and `sub_graph_mounts`. PL 9649's `_check_reachable_objectives` is that plan's name at
    `2b5bf12d`, and is re-read at dispatch.
 6. **Placeholders.** None. The open DP cells are the §1.7 form for open rows.
-7. **Open:** DP-S2-1, DP-S2-2 and DP-S2-3 for the decision-maker. Activation needs 3 and 4 for the
-   lead's routing.
+7. **Open:** DP-S2-1 and DP-S2-2 for the decision-maker. Activation need 3 (RL 9771's mint), need
+   4 (the WK-673 carrier) and the order against PL 9776 for the lead.
