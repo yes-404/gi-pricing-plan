@@ -28,7 +28,7 @@ decision-maker's to rule, field by field, and is not this finding's.
 
 The three shapes:
 
-- **S1 — what the API emits.** `to_dict` (`backend/src/app/platform/approvals.py:663-687`, `to_dict` at `origin/main` `caa4e411a9c07a389cf47092a923c7761b2b92dc`; `:663-687` at `ef5dc6e7`, `:648-673` at the filing tree), returned by four routes.
+- **S1 — what the API emits.** `to_dict` (`backend/src/app/platform/approvals.py:672-697`, `to_dict` at `origin/main` `caa4e411a9c07a389cf47092a923c7761b2b92dc`; `:663-687` at `ef5dc6e7`, `:648-673` at the filing tree), returned by four routes.
 - **S2 — the model.** `ApprovalRequest` (`packages/model-schema/src/model_schema/approvals.py:395`, `:275` at the filing tree; `frozen=True`,
   `extra="forbid"`) with `ApprovalDecision` (`:384`, `:264` at the filing tree).
 - **S3 — the hand-authored contract.** `docs/contracts/schemas/approval-request.schema.json`, with `06` §4.3's example
