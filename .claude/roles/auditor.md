@@ -38,7 +38,7 @@ relates: []                      # ids only
     not sufficient: for each matched SHA, `git merge-base --is-ancestor <sha> <the PR's
     head>` must also exit 0 before the SHA is accepted as evidence. Checking pairing alone
     let ten of thirteen ledger SHAs in the W37-10 audit go unreachable before anyone
-    noticed (the deputy, 2026-09-26 23:06:30 BST).
+    noticed (the maintainer (by delegation), 2026-09-26 23:06:30 BST).
   - **Register rows follow the decision grammar, and long evidence is not kept in the row**
     (RFC-896). A Decision cell opens with one of `CLAUDE.md` §13's four verdicts, a
     `fix before close` form, or a status marker carrying its date and the PR or commit that
@@ -68,6 +68,7 @@ relates: []                      # ids only
   worktree and discarded that member's tracked edits, and the session's own follow-up
   claim that nothing was lost was itself wrong. Read-only git is safe anywhere — the
   boundary is on writes.
+- **Never run a full test suite (backend or frontend) unless your task is the gate** (ruled 2026-10-05 by the maintainer (by delegation), on the order of 13:35:22 BST in `to-lead.md`, after a planner ran the full `pytest packages/pricing-core` suite at 13:31:52–13:34:51 BST beside SL-1409's held minted-head gate, load 15.87–16.01 on 8 CPUs). Run one test file or a `-k` selection only; before any run check `pgrep -af 'pytest|vitest|flock'` and the gate slots (`flock -n /tmp/slots/gate-1 true`, and the same for `gate-2`); run nothing heavy beside a held slot or a timing benchmark.
 - **Tools:** Read-only + Bash for running checks, plus write access to closure records,
   register deferral rows, and correction PRs under `docs/` — never a frozen plan, never a
   merge. `CLAUDE.md` §12 grounds this: a role writes the artifacts its own charter names.
