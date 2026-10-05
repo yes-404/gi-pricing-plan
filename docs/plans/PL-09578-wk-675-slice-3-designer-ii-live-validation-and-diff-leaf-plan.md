@@ -208,7 +208,7 @@ takes when applied. Items 1–11 are RL 9767's own acceptance items, in its numb
 11. **Contract** (RL 9767 acceptance 10). In `docs/contracts/openapi/generated.json`, the
     validate operation's request body and 200 response are `$ref`s to `RatingAlgorithmDraft`
     and `AlgorithmValidationReport`, and `uv run python scripts/generate-contracts.py --check`
-    exits 0.
+    exits 0. *(Checked at Task 4's commit, Step 5a; dated note, 2026-10-05.)*
 12. **Frontend, before save** (RL 9767 acceptance 11). A designer test whose name contains
     `FR-<new>` asserts that an unresolved reference is rendered on its node, and that no
     save call was made. **Broken input:** render issues only from a save refusal; the test
@@ -254,7 +254,11 @@ takes when applied. Items 1–11 are RL 9767's own acceptance items, in its numb
     `GET /api/v1/rating-algorithms/{slug}@{version}/diff` is a `$ref` to `AlgorithmDiff`. If
     `UNTYPED_2XX_PENDING_PART_B` exists in `backend/tests/test_contracts.py`, its entry for
     that route is removed in the same commit, and the guard is shown red with the entry kept.
-    Command: `uv run pytest backend/tests/test_contracts.py -q`.
+    Command: `uv run pytest backend/tests/test_contracts.py -q`. *(Dated note, 2026-10-05,
+    pre-mint, on the 17:30:02 BST entry's item 4: this holds in the slice's **first** commit
+    (Task 0A), before any frontend code consumes the route, with `generate-contracts --check`
+    exiting 0 at that commit. The ledger records that commit's SHA, its position (first) and
+    the `--check` rc.)*
 22. **The diff overlay** (FR-219). With a second version chosen, nodes in `added_steps` carry
     an "added" marker and nodes in `changed_steps` a "changed" marker, each as text and not
     colour alone; `removed_steps` and re-pointed tables are listed in the overlay panel.
@@ -445,6 +449,43 @@ leaf plan):
   `rating.py`, `ratingAlgorithms.ts`, `DagDesigner.vue`, `StepNode.vue`, `NodeNavigator.vue`.
   Record their exact prop and export names. If any differs from Task 6's *Consumes*, the
   merged code governs.
+
+### Task 0A: The diff route typed; the contract and the client (DP-S3-1) — the slice's FIRST commit
+
+*Dated note, 2026-10-05 (written 17:35:08 BST, pre-mint): this task was Task 5, and it now
+runs first, after Task 0 (which commits nothing) and before Task 1's `model-schema` commit.
+The other tasks keep their numbers. The move makes the plan meet, literally, the entry
+headed "2026-10-05 17:30:02 BST — Rulings: T2 routing (RL 9562 mints ahead of PL 9560); _NUMERIC FD go; WK-675 DP-S3-1 (a) with the FD-1335 reading; DP-S13-1 (a′)", item 4, whose dated line reads verbatim:*
+
+> The DATED LINE, by the maintainer (by delegation): "FD-1335 item 5 (:333-335, 'fixed before that slice dispatches') is read, for the consuming slice's OWN route only, as satisfied when that slice types the route in its FIRST commit, before any frontend code consumes the route, with generate-contracts --check green at that commit. The hold stays as written for every other route of the 12 and for any slice that does not type the route itself. Precedent: FD-1366 rule (ii)."
+
+*Why it can run first:*
+- *It depends only on `AlgorithmDiff`, already on main
+  (`packages/model-schema/src/model_schema/rating.py:541` at `4d3be141`), and on the existing
+  handler and service: `algorithm_diff` (`backend/src/app/api/rating_algorithms.py:53-68`)
+  and `diff_between` (`backend/src/app/platform/rating_algorithms.py:157`, returning
+  `diff_algorithms(base, current).model_dump()` at `:163`).*
+- *It uses nothing Tasks 1 to 4 add.*
+- *No frontend code consumes the route until Task 7 (`getAlgorithmDiff`).*
+- *`generate-contracts --check` is green at this commit (Step 2).*
+- *It types only this slice's own route: the validate route is new and typed at birth in
+  Task 4, so it is not one of `FD-1335`'s twelve.*
+- *Its contract check covers only the diff route. The validate route's check (Acceptance 11)
+  moves to Task 4 Step 5a, because that route does not exist yet.*
+
+- [ ] **Step 1 (if DP-S3-1 (a)):** `algorithm_diff` returns `AlgorithmDiff`, and
+  `diff_between` returns the `AlgorithmDiff` it builds instead of `.model_dump()`. If
+  `UNTYPED_2XX_PENDING_PART_B` exists, remove the diff entry and see its guard red with the
+  entry kept (Acceptance 21).
+- [ ] **Step 2:** `uv run python scripts/generate-contracts.py`, then `--check` exits 0;
+  `pnpm --dir frontend generate:api`. Check Acceptance 21 with:
+
+```bash
+python3 -c "import json;d=json.load(open('docs/contracts/openapi/generated.json'))['paths'];print(d['/api/v1/rating-algorithms/{slug}@{version}/diff']['get']['responses']['200']['content']['application/json']['schema'])"
+```
+
+  Expected: one `$ref`, to `AlgorithmDiff`.
+- [ ] **Step 3: Commit**, the slice's first: `feat(rating): type the algorithm diff response; regenerate the contract (FD-1335 item 5, DP-S3-1)`.
 
 ### Task 1: `ValidationIssue`, `AlgorithmValidationReport` and `graph_invariant_issues` (model-schema)
 
@@ -696,25 +737,26 @@ async def validate_rating_algorithm(
   The handler takes no `DatabaseDep`: it reads and writes nothing (Acceptance 8).
 - [ ] **Step 5: Green;** then Acceptance 7's unmodified suites. Broken input for Acceptance 1
   and 9 as stated there; record each red.
+- [ ] **Step 5a:** *(Added 2026-10-05, pre-mint; moved from the old Task 5 Step 2 when that
+  task became Task 0A.)* `uv run python scripts/generate-contracts.py`, then `--check` exits
+  0; `pnpm --dir frontend generate:api`. Check Acceptance 11 with:
+
+```bash
+python3 -c "import json;d=json.load(open('docs/contracts/openapi/generated.json'))['paths'];v=d['/api/v1/rating-algorithms/validate']['post'];print(v['requestBody']['content']['application/json']['schema'],v['responses']['200']['content']['application/json']['schema'])"
+```
+
+  Expected: two `$ref`s, to `RatingAlgorithmDraft` and `AlgorithmValidationReport`.
 - [ ] **Step 6: Commit** (one commit with Step 1's spec texts, `CLAUDE.md` §2)
   `feat(rating): POST /rating-algorithms/validate, discharging FR-24's designer exception (RL-<9767>)`.
 
-### Task 5: The diff route typed; the contract and the client (DP-S3-1)
+### Task 5: moved to Task 0A (dated pre-mint note)
 
-- [ ] **Step 1 (if DP-S3-1 (a)):** `algorithm_diff` returns `AlgorithmDiff`, and
-  `diff_between` returns the `AlgorithmDiff` it builds instead of `.model_dump()`. If
-  `UNTYPED_2XX_PENDING_PART_B` exists, remove the diff entry and see its guard red with the
-  entry kept (Acceptance 21).
-- [ ] **Step 2:** `uv run python scripts/generate-contracts.py`, then `--check` exits 0;
-  `pnpm --dir frontend generate:api`. Check Acceptance 11 and 21 with:
+*Dated note, 2026-10-05 (pre-mint): this task now runs first, as Task 0A (§"Task 0A"), on the
+entry headed "2026-10-05 17:30:02 BST — Rulings: T2 routing (RL 9562 mints ahead of PL 9560); _NUMERIC FD go; WK-675 DP-S3-1 (a) with the FD-1335 reading; DP-S13-1 (a′)", item 4. Its text moved there unchanged, except two things:*
+- *its check now covers only the diff route;*
+- *the validate route's contract check (Acceptance 11) moved to Task 4 Step 5a.*
 
-```bash
-python3 -c "import json;d=json.load(open('docs/contracts/openapi/generated.json'))['paths'];v=d['/api/v1/rating-algorithms/validate']['post'];print(v['requestBody']['content']['application/json']['schema'],v['responses']['200']['content']['application/json']['schema'],d['/api/v1/rating-algorithms/{slug}@{version}/diff']['get']['responses']['200']['content']['application/json']['schema'])"
-```
-
-  Expected: three `$ref`s, to `RatingAlgorithmDraft`, `AlgorithmValidationReport` and
-  `AlgorithmDiff`.
-- [ ] **Step 3: Commit** `feat(rating): type the algorithm diff response; regenerate the contract (FD-1335 item 5, DP-S3-1)`.
+*The number 5 is kept, not reused.*
 
 ### Task 6: Live validation in the designer (FR-<new>, FR-24)
 
@@ -837,7 +879,7 @@ export function getAlgorithmDiff(slug: string, version: number, against: number)
    `PL-1286` is the planner's file and is not edited here.
 2. **To the auditor at slice close:** FD 9759 limbs (2) and (3) are discharged here (limb (1)
    is RL 9758); its register row names the S3 PR. `FD-1335`'s diff-route entry is discharged
-   if DP-S3-1 is (a). FR-246 is **not** delivered by S3 (*Scope*): its verdict is "deferred
+   if DP-S3-1 is (a), by Task 0A, the slice's first commit (dated note, 2026-10-05). FR-246 is **not** delivered by S3 (*Scope*): its verdict is "deferred
    with an owner", `FD-1374`'s WK-1178 remedy.
 3. **To S9 (sub-graph mounting):** the validate route checks algorithms only; sub-graph
    validation keeps `SubGraphBody`'s own invariants (RL 9767 finding C).
@@ -860,7 +902,8 @@ export function getAlgorithmDiff(slug: string, version: number, against: number)
   - FD 9759 limbs (2) and (3), with the 10:30:00 amendment: decision 2; Tasks 2 and 3;
     Acceptance 16–20; Hand-off 2 and 4;
   - RL 9620: Global Constraints; *Contention*; Activation need 3; Task 9;
-  - `FD-1335` item 5: DP-S3-1; Task 5; Acceptance 21.
+  - `FD-1335` item 5: DP-S3-1; Task 0A (the first commit; was Task 5, dated note
+    2026-10-05); Acceptance 21.
 - **Literals verified at `137bc817`:** `ValidationIssue` (`compile.py:60-72`), its importers
   (`operations.py:57`, `platform/rating_algorithms.py:21`), `_graph_invariants`
   (`rating.py:395-476`), `_reachable` (`:479`), `_reaches_output` (`:499`),
