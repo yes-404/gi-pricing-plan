@@ -111,6 +111,22 @@ The same entry rules that A-2 settles the `model_call` rounding at the root, and
 *"composes frequency × severity on Decimals and rounds once, at the money step"*. It does not
 change this slice's scope: DP-3 (b)'s interim branch refuses before any value is produced.
 
+**Dated note, 2026-10-05 (written 17:14:12 BST, pre-mint): the component check's status set
+is corrected.** From the entry headed *"2026-10-05 17:08:35 BST — A-3 / A-4 DP memo
+(handover/dp-memo-a3-a4-2026-10-05.md) RULED; the reconciliation TOLERANCE set"*, read in
+full by this planner. Verbatim:
+
+> A-1 BUG (to planner-a12fold): `_require_approved_components` lists "approved, live or retired", but `live` and `retired` are not ModelStatus values (copied from compile's cross-type _APPROVED_OR_BETTER). Fix: use ModelStatus's own approved set, with a red test (a model in a non-existent status string never passes). Good catch.
+
+Verified at `4d3be141`: `ModelStatus` (`packages/model-schema/src/model_schema/modelling.py:1975`)
+is `draft`, `fitted`, `review`, `approved`, `superseded`, `archived`. It has no `live` or
+`retired`. The plan's list was compile's cross-type
+`_APPROVED_OR_BETTER = frozenset({"approved", "live", "retired"})`
+(`packages/pricing-core/src/pricing_core/rating/compile.py:404`). `ModelStatus`'s own
+approved set is `{ModelStatus.APPROVED}`: a `superseded` component is refused, as A-3's
+DP-A3-4 fallback (c) needs ("compile the structure pinned to the superseded version →
+refused"). Task 3 Step 2, DP-1's row and item 13 are corrected.
+
 ## Status
 
 `draft`. **The three decision points are ruled** (§"Decision points"): the maintainer (by
@@ -231,6 +247,17 @@ failure line as printed.
     records each rc and the tree.
 12. **The write set.** `git diff --stat origin/main...HEAD` names only §"Write set"'s paths,
     recorded in the ledger.
+13. *(Added 2026-10-05, pre-mint, from the 17:08:35 BST entry.)* **The component check uses
+    `ModelStatus`'s own approved set** (DP-1 (a)).
+    `test_the_component_check_accepts_only_model_status_approved` (in
+    `backend/tests/test_peril_structure_approval.py`), parametrised over every
+    `ModelStatus` member: a structure whose one component model has that status is approved
+    only for `APPROVED`; every other member, `superseded` included, gives `422
+    EVIDENCE_INCOMPLETE` naming the ref. A second assertion holds the accepted set inside
+    the enum: every status the check accepts is a `ModelStatus` value, so `live` and
+    `retired` can never pass. **Red first, by its cause:** written against the plan's old
+    list (`{"approved", "live", "retired"}`), the second assertion fails, because `live` and
+    `retired` are not `ModelStatus` values.
 
 ## Global Constraints
 
@@ -351,7 +378,7 @@ below was written before the ruling and is kept as written.
 
 | DP | Question | Options | Recommendation | Owner | Blocks |
 |---|---|---|---|---|---|
-| **DP-1** | `06` FR-363's Peril Structure evidence is *"Per-peril model approvals; reconciliation result within tolerance"* (`06:118`), and §4.2's note calls the first half *"unqueryable"* (`06:405-408`). With an approval path built, is it enforced? | (a) at the carry: approving refuses `422 EVIDENCE_INCOMPLETE`, naming each component model (`frequency_model`, `severity_model`, `burning_cost_model`, `excess_model`) not `approved`, `live` or `retired`; the note gets a dated amendment; (b) not at approval; A-3's compile check is the only gate | **(a)**: approval and compile are different gates (`06`'s evidence; `03`'s FR-20 maturity). Under (b), between this slice and A-3 a structure over an unapproved model compiles, the hazard FD 9995 names. (a) follows SL-1409's `_require_executed_dry_run` (a check at the carry that rolls the decision back) | decision-maker | Task 3, item 5, Task 5 |
+| **DP-1** | `06` FR-363's Peril Structure evidence is *"Per-peril model approvals; reconciliation result within tolerance"* (`06:118`), and §4.2's note calls the first half *"unqueryable"* (`06:405-408`). With an approval path built, is it enforced? | (a) at the carry: approving refuses `422 EVIDENCE_INCOMPLETE`, naming each component model (`frequency_model`, `severity_model`, `burning_cost_model`, `excess_model`) not `approved`, `live` or `retired` *(dated note, 2026-10-05: read "not `ModelStatus.APPROVED`", item 13)*; the note gets a dated amendment; (b) not at approval; A-3's compile check is the only gate | **(a)**: approval and compile are different gates (`06`'s evidence; `03`'s FR-20 maturity). Under (b), between this slice and A-3 a structure over an unapproved model compiles, the hazard FD 9995 names. (a) follows SL-1409's `_require_executed_dry_run` (a check at the carry that rolls the decision back) | decision-maker | Task 3, item 5, Task 5 |
 | **DP-2** | Approving `ps@n` while `ps@m` (m < n) is `approved` | (a) supersede every earlier approved version automatically, as `_supersede_earlier_versions` does for a Model; (b) leave both `approved` | **(a)**: the transition table mirrors the Model's "deliberately" (`model_schema/perils.py:108-110`), and two approved versions leave nothing to say which one a Rating Version means (`modelling.py:1397-1399`) | decision-maker | Task 3, item 4 |
 | **DP-3** | Between this slice and A-3, an approved Peril Structure compiles into a `model_call`, and its score fails as a generic engine error (0.9) | (a) leave it: fail-closed, A-3 replaces it within the chain; (b) one early `_model_call_failure` naming the ref and A-3, red first (item 10); (c) refuse at compile | **(b)**: FR-255 types every scoring error; one branch in `_model_call_handler`, which A-3 rewrites anyway. (c) edits `compile_bundle`, which `PL-1371` §5 rule 4 serialises outright | decision-maker | Task 4, item 10 |
 
@@ -383,7 +410,7 @@ below was written before the ruling and is kept as written.
   (`perils.create_structure`, `record_reconciliation`, `submit_for_review`), not by inserting
   rows, so the request is real. Component models come from the `_fitted_gbm` neighbour the
   backend tests already use, approved with `approved_rows.mark_approved` (a test-only write
-  under the guard, `backend/tests/approved_rows.py`). Write item 4's and item 5's tests.
+  under the guard, `backend/tests/approved_rows.py`). Write item 4's and item 5's tests, and item 13's *(added 2026-10-05)*.
   Expected red: `ps@2` stays `review`; decide returns `200`.
 - [ ] **Step 3:** Commit (red): `test: FD 9995 — a peril structure decision moves nothing (FR-191, FR-355)`.
 
@@ -412,7 +439,9 @@ below was written before the ruling and is kept as written.
   `VALID_PERIL_STRUCTURE_TRANSITIONS`; one audit event per move.
 - [ ] **Step 2:** *(DP-1 a)* `_require_approved_components(session, *, workspace_id, row)`
   before the move to `APPROVED`: for each peril in `to_structure(row).perils`, each set
-  component ref must load a Model whose status is `approved`, `live` or `retired`.
+  component ref must load a Model whose status is `ModelStatus.APPROVED`, compared by the
+  enum, never by a string list. *(Dated note, 2026-10-05: this said "`approved`, `live` or
+  `retired`", and `live` and `retired` are not `ModelStatus` values. Item 13.)*
   `_model_refs` (`perils.py:577`) lists `frequency_model`, `severity_model` and
   `burning_cost_model` only; the large-loss `excess_model`
   (`model_schema/perils.py:161`, on the peril's `large_loss`, `:229`) is read beside it,
