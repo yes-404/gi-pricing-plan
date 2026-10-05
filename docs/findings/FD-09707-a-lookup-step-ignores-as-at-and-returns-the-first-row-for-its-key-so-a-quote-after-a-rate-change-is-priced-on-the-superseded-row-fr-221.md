@@ -120,4 +120,4 @@ verified `vmError`), so the window test needs the date as a numeric ordinal or a
 decision is built. That is a design choice for `docs/open-questions.md`, not this record's. Red first: the
 reproduction above as a test, with the control that a single-row key still resolves.
 
-Open. Filed by the auditor, 2026-10-05; severity and owner are proposals, and the verdict is the lead's.
+Open. Filed by the auditor, 2026-10-05. Severity HIGH, owner WK-673 and the deadline (before the P2 exit demo) are the deputy's, 2026-10-05 13:11:05 BST (confirmed 13:20:26 BST); the fix is PL 9688 (working id).
