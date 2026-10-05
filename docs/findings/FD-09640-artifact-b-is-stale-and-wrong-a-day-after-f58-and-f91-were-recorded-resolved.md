@@ -10,12 +10,12 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9640 — Artifact B is stale and wrong a day after F58 and F91 were recorded resolved
+# FD 9640 — Artifact B is stale and wrong a day after F58 and F91 were recorded resolved
 
 ## Finding
 
 **Proposed by the auditor for the lead's verdict (plan review 16, P9): a recurrence of both F58 and F91.**
-FD-9640 is a working id, minted at the records PR. Read at `origin/main` `2c2bbcdf`, 2026-09-29.
+FD 9640 is a working id, minted at the records PR. Read at `origin/main` `2c2bbcdf`, 2026-09-29.
 
 ## Evidence
 
@@ -112,3 +112,13 @@ Amended 2026-10-05 before mint: the measurement above is a point in time (2026-0
 
 The finding holds unchanged. Mint note: `PL-1277` cites this finding by its working id
 (`FD 9640`); at mint that plan, being frozen, is re-pointed by a dated delta, not edited.
+
+Re-anchored 2026-10-05 at main `caa4e411`: re-measured 2026-10-05T11:54Z (`date -u` in the
+same session). (1) `stat -c '%y'` on `runtime-state.json` → `2026-10-05 11:37:37 +0000`, so
+the mtime moved again after item 1 above (`2026-10-04 18:59:04`). (2) `position.written_at`
+in the same file is still `2026-09-29T21:36:41Z` and `position.slice.value` is still `''`:
+the content was not re-derived, so the mtime remains no evidence of a position re-derivation.
+(3) `pgrep -af 'write_runtime_state|watcher-runtime-state'` → no match. (4) The writer
+`.claude/skills/watcher-runtime-state/scripts/write_runtime_state.py` is present at main.
+(5) F58 and F91 still read "Resolved" at `origin/main` `caa4e411` (`PL-1277` still cites this
+finding by working id `FD 9640`, unminted). The defect reproduces; the finding holds.

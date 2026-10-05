@@ -97,15 +97,106 @@ def test_a_template_objective_is_the_artifact_a_model_can_reference() -> None:
     assert objective.hessian_strategy is HessianStrategy.CLIP_TO_MIN
 
 
-@pytest.mark.req("FR-150")
-def test_an_expression_objective_cannot_be_constructed_in_phase_1() -> None:
-    """The second door behind the API's `OBJECTIVE_KIND_NOT_ENABLED`.
+SPEC_LOSS = "w * where(exp(f) < y, w_under, w_over) * (y - exp(f)) ** 2"
 
-    The artifact carries no `loss` field, so an `expression` objective persisted through
-    any other route would be one whose loss is nowhere written down.
-    """
-    with pytest.raises(pydantic.ValidationError, match="templates only"):
-        _objective(kind=ObjectiveKind.EXPRESSION)
+
+def _expression_fields(**overrides: object) -> dict[str, object]:
+    """`02` §4.6's example `expression` objective, as keyword arguments."""
+    fields: dict[str, object] = {
+        "kind": ObjectiveKind.EXPRESSION,
+        "bound_symbols": ["y", "f", "w"],
+        "parameters": [
+            {"name": "w_under", "type": "float", "default": 2.0, "min": 1.0, "max": 10.0},
+            {"name": "w_over", "type": "float", "default": 1.0, "min": 0.1, "max": 10.0},
+        ],
+        "loss": SPEC_LOSS,
+        "derived": {
+            "gradient": "where(y > exp(f), 2*w*w_under*(exp(f) - y)*exp(f), "
+            "2*w*w_over*(exp(f) - y)*exp(f))",
+            "hessian": "where(y > exp(f), 2*w*w_under*(2*exp(f) - y)*exp(f), "
+            "2*w*w_over*(2*exp(f) - y)*exp(f))",
+            "derivation_tool": "sympy",
+            "derivation_version": "1.14.0",
+            "derived_at": _datetime.datetime(2026, 8, 14, 11, 2, tzinfo=_datetime.UTC),
+        },
+        "applicability": Applicability(
+            responses=frozenset({ResponseKind.BURNING_COST, ResponseKind.CLAIM_SEVERITY}),
+            backends=frozenset({ObjectiveBackend.XGBOOST, ObjectiveBackend.LIGHTGBM}),
+            offset_required=False,
+            y_domain=YDomain(min_inclusive=0),
+        ),
+    }
+    fields.update(overrides)
+    return fields
+
+
+def _expression(**overrides: object) -> CustomObjective:
+    return CustomObjective(
+        id=new_uuid7(),
+        slug="asymmetric-burning-cost",
+        version=1,
+        **_expression_fields(**overrides),  # type: ignore[arg-type]
+    )
+
+
+@pytest.mark.req("FR-144")
+def test_the_spec_example_expression_objective_validates() -> None:
+    objective = _expression()
+    assert objective.kind is ObjectiveKind.EXPRESSION
+    assert objective.template is None
+    assert objective.loss == SPEC_LOSS
+    assert objective.derived is not None
+    assert objective.derived.derivation_version == "1.14.0"
+    assert [p.name for p in objective.parameters or ()] == ["w_under", "w_over"]
+
+
+@pytest.mark.req("FR-144")
+def test_an_expression_objective_may_be_a_draft_with_no_derived_block() -> None:
+    assert _expression(derived=None).derived is None
+
+
+@pytest.mark.req("FR-144")
+def test_a_template_objective_has_none_of_the_expression_fields() -> None:
+    template = _objective()
+    assert (template.bound_symbols, template.parameters, template.loss, template.derived) == (
+        None,
+        None,
+        None,
+        None,
+    )
+
+
+@pytest.mark.req("FR-144")
+def test_a_template_with_an_expression_loss_is_refused() -> None:
+    with pytest.raises(pydantic.ValidationError, match="a template objective carries no loss"):
+        _objective(loss=SPEC_LOSS)
+
+
+@pytest.mark.req("FR-144")
+def test_an_expression_with_a_template_is_refused() -> None:
+    with pytest.raises(pydantic.ValidationError, match="an expression objective names no template"):
+        _expression(template=ObjectiveTemplate.TWEEDIE)
+
+
+@pytest.mark.req("FR-144")
+def test_an_expression_with_a_derived_block_and_no_loss_is_refused() -> None:
+    with pytest.raises(
+        pydantic.ValidationError, match="an expression objective has no loss to derive from"
+    ):
+        _expression(loss=None)
+
+
+@pytest.mark.req("FR-145")
+def test_an_expression_loss_over_2000_characters_is_refused() -> None:
+    with pytest.raises(pydantic.ValidationError, match="at most 2000 characters"):
+        _expression(loss="y + " * 500 + "w")
+
+
+@pytest.mark.req("FR-144")
+def test_an_expression_parameter_default_outside_its_range_is_refused() -> None:
+    bad = [{"name": "w_under", "type": "float", "default": 20.0, "min": 1.0, "max": 10.0}]
+    with pytest.raises(pydantic.ValidationError, match="min <= default <= max"):
+        _expression(parameters=bad)
 
 
 @pytest.mark.req("FR-143")
