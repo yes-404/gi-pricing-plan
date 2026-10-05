@@ -143,6 +143,47 @@ verbatim:
 
 > #1177 A-1 @208be06b: Task 3 requires ModelStatus.APPROVED by enum (modelling.py:1975: draft, fitted, review, approved, superseded, archived), with a red test parametrised over EVERY member (only APPROVED passes; superseded refused, consistent with C4 (c)) that fails on the old {approved, live, retired}. Right. The 06:407 text comes from RL 9563.
 
+**Dated note, 2026-10-05 (written 18:39:33 BST, pre-mint): RL 9563 read against this plan,
+and the serialisation with SL 9568.** RL 9563 (working id; #1192 @`b4de15b6`) was read in
+full. Its §"Ruled" items 1–3 are DP-1 (a), DP-2 (a) and DP-3 (b) as this plan states them,
+with DP-1's accepted set `ModelStatus`'s own (Acceptance 13). Its T1 is applied by Task 5,
+which holds no text of its own, so the plan carries nothing that could differ from T1. Three
+things RL 9563 obliges are not yet written here, and are added by this note:
+
+1. **T1's two placeholders.** RL 9563 §"How this was ruled": "`<date>` and `<RL>` in T1 are
+   filled by the slice that applies it." So Task 5 applies T1 byte for byte except those two
+   tokens: `<date>` is the date of A-1's Task 5 commit, and `<RL>` is RL 9563's minted id.
+2. **Acceptance item 14 (RL 9563 §"Acceptance").** After this slice's Task 5,
+   `git grep -n 'per-peril approvals half is unqueryable' -- docs/specs` prints nothing. T1's
+   find string counts 1 in `docs/specs/06-governance.md` at `116a0da6` (line 407;
+   `grep -c -F`), so the check can turn.
+3. **Activation need 4's held note is overtaken by need 4b.** Need 4 says "no `RL-` is
+   written". RL 9563 is that `RL-`. It records the 17:02:50 BST acceptances and adds only
+   T1, so the ruling and this plan still do not differ.
+
+**SL 9568 (PL 9567, #1193 @`42d8be16`; WK-673) serialises with this slice on
+`_model_call_handler`.** PL 9567's Delta 4 item 4, "Hand-off to A-1, A-2 and A-3", verbatim
+in part: "After this slice merges, the handler returns `{**context, **produced}` on success
+and on failure. A branch that any of them adds must return through that same expression, or
+through `_model_call_failure`, and must not return `{"output": {produced names only}}`. …
+**Order:** this slice and each of A-1, A-2 and A-3 serialise on `_model_call_handler`. The
+one that merges second rebases and re-runs `test_rating_wire_order.py` and Task 2c's replay
+script." The maintainer (by delegation) agreed in the 17:51:03 BST entry, item 2, as PL 9567's
+Delta 5 quotes it: "Serialising A-1/A-2/A-3 with SL 9568 on
+_model_call_handler: agreed." For this plan:
+
+- **Contention.** The table under §"Write set" gains, by this note (its own text stays as
+  read): SL 9568, PL 9567 (#1193 @`42d8be16`; WK-673) | `runtime.py` `_model_call_handler`,
+  `_model_call_failure` | the success and failure returns become `{**context, **produced}` |
+  DP-3 (b)'s early refusal | same method → **SERIALISE**; the second to merge rebases and
+  re-runs `test_rating_wire_order.py` and PL 9567 Task 2c's replay script.
+- **DP-3 (b)'s branch already conforms.** Task 4 Step 3 returns through
+  `_model_call_failure`, the form PL 9567 allows. If SL 9568 merges first, the branch keeps
+  that form and returns what the new `_model_call_failure` returns.
+- **Task 6, if this slice merges second:** its ledger records the rebase onto SL 9568's merge,
+  and the rc of `test_rating_wire_order.py` and of PL 9567 Task 2c's replay script, each run
+  on its own (not the full suite).
+
 ## Status
 
 `draft`. **The three decision points are ruled** (§"Decision points"): the maintainer (by
