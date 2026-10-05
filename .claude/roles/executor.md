@@ -90,7 +90,7 @@ relates: []                      # ids only
 - **S-10** (ruled 05:52:14 BST): An executor ends its turn after every report it files and
   after every commit, so that the lead's messages are read before the next action; one turn
   spans one task, never a sequence of them.
-- **S-11** (ruled 2026-09-28 by the deputy, by delegation): A long command — a gate, a
+- **S-11** (ruled 2026-09-28 by the maintainer (by delegation)): A long command — a gate, a
   test run, a benchmark — runs in the **foreground** and carries a `timeout` (for example
   `timeout 3600 …` inside the slot wrapper's `-c` body). This **completes S-9, it does not
   reverse it**: S-9's foreground blocking call stays the rule and a background run stays
@@ -101,13 +101,13 @@ relates: []                      # ids only
   bounds how long the foreground call can hold the box. A lead stop can also arrive as a
   kill of that process **by PID**; when the call returns non-zero, or a message says it was
   killed, read the message before anything else.
-- **S-12** (ruled 2026-09-28 by the deputy, by delegation): **Never relaunch a killed
+- **S-12** (ruled 2026-09-28 by the maintainer (by delegation)): **Never relaunch a killed
   process detached** — no `setsid`, `nohup` or `disown`, and no `&` to survive the kill.
   An external kill of your process is a **lead stop**, not a fault to route around. End
   your turn, read your messages, and re-run only when the lead says to. Detaching puts a
   process outside the turn that S-9 and S-10 keep open, where no stop by PID reaches its
   parent.
-- **S-13** (ruled 2026-09-28 by the deputy, by delegation): A **full two-half gate** starts
+- **S-13** (ruled 2026-09-28 by the maintainer (by delegation)): A **full two-half gate** starts
   only after the lead's explicit "gate slot granted" for **that head**, and runs under the
   lead's slot `flock` (`/tmp/slots/gate-*`, `.claude/skills/dev-commands`). A new head —
   any commit, merge or rebase after the grant — needs a new grant. The four docs checks and
@@ -119,7 +119,7 @@ relates: []                      # ids only
     of 2026-09-28 22:21:21 BST (`to-deputy.md`) for the count; the deputy's entry of
     22:18:07 BST (`to-lead.md`) for the ruling. **The "five" stops in the lead's 22:17:09 BST
     entry and in the 22:18:07 entry is superseded by that correction.**
-- **S-14** (ruled 2026-09-28 by the deputy, by delegation): **A force-stopped gate leaves
+- **S-14** (ruled 2026-09-28 by the maintainer (by delegation)): **A force-stopped gate leaves
   database state**, because the run never reaches its teardown. The next gate uses a
   **recreated test database**: `dropdb` the worktree's database and recreate it from the
   template with the `createdb -T` block of `.claude/skills/dev-commands`, then
