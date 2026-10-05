@@ -7,6 +7,7 @@ import { computed } from "vue";
 import VChart from "vue-echarts";
 
 import type { PartitionCaption, PartitionDiagnostics } from "@/api/diagnostics";
+import type { Column } from "@/chart-table";
 import ChartFigure from "@/components/ChartFigure.vue";
 
 use([ScatterChart, LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
@@ -72,20 +73,28 @@ const bins = computed(() => {
   return seen.sort((a, b) => a - b);
 });
 
-const columns = computed(() => [
-  "Bin",
-  ...props.partitions.flatMap(([label]) => [`${label} predicted`, `${label} actual`]),
+/**
+ * Keys use the partition's index, never its caption: two partitions captioned alike must not
+ * produce a duplicate key.
+ */
+const columns = computed<readonly Column<number>[]>(() => [
+  { key: "bin", label: "Bin", value: (bin) => bin },
+  ...props.partitions.flatMap(([label, partition], index): Column<number>[] => {
+    const found = (bin: number) => partition.calibration.find((candidate) => candidate.bin === bin);
+    return [
+      {
+        key: `p${index}-predicted`,
+        label: `${label} predicted`,
+        value: (bin) => found(bin)?.predicted ?? null,
+      },
+      {
+        key: `p${index}-actual`,
+        label: `${label} actual`,
+        value: (bin) => found(bin)?.actual ?? null,
+      },
+    ];
+  }),
 ]);
-
-const rows = computed(() =>
-  bins.value.map((bin) => [
-    bin,
-    ...props.partitions.flatMap(([, partition]) => {
-      const found = partition.calibration.find((candidate) => candidate.bin === bin);
-      return [found?.predicted ?? null, found?.actual ?? null];
-    }),
-  ]),
-);
 </script>
 
 <template>
@@ -93,7 +102,7 @@ const rows = computed(() =>
     title="Calibration by decile"
     caption="Predicted against actual in each decile. Points on the dotted diagonal are calibrated."
     :columns="columns"
-    :rows="rows"
+    :rows="bins"
   >
     <VChart
       class="h-80 w-full"

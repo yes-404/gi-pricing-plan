@@ -13,7 +13,7 @@ relates: [WK-1178, WK-674, FD-1335, FD-1356, PL-1306, RL-1301, RL-878, ADR-704, 
 # FD-9752 — `ApprovalRequest` is defined three ways that disagree, and a hand-authored contract sits under `docs/contracts/`
 
 **Filed under working id 9752.** The id is minted by the lead at the merge turn. The `tree:` is `origin/main` at
-`1dd5e264`; every locator below was read at that tree. Raised by `PL 9765`'s DP-S2-6 (WK-674 Slice 2's superseding plan),
+`1dd5e264`; every locator below was read at that tree. Raised by `PL-1392`'s (working id `PL 9765` when filed) DP-S2-6 (WK-674 Slice 2's superseding plan),
 confirmed field by field by the auditor, and ordered by the maintainer's entry headed
 "2026-10-01 10:32:26 BST — #1062 DP-S2-6: option (c) ACCEPTED with three conditions; it narrows my item (3) for the 2 CHANGED routes' 2xx only; the three-shape disagreement becomes its own FD"
 (`to-lead.md`, a local channel file, so cited by its header).
@@ -28,11 +28,26 @@ decision-maker's to rule, field by field, and is not this finding's.
 
 The three shapes:
 
-- **S1 — what the API emits.** `to_dict` (`backend/src/app/platform/approvals.py:648-673`), returned by four routes.
-- **S2 — the model.** `ApprovalRequest` (`packages/model-schema/src/model_schema/approvals.py:275`; `frozen=True`,
-  `extra="forbid"`) with `ApprovalDecision` (`:264`).
+- **S1 — what the API emits.** `to_dict` (`backend/src/app/platform/approvals.py:663-687`, `to_dict` at `origin/main` `ef5dc6e7317281ac9d1840fa61861597e3c1b8b1`; `:648-673` at the filing tree), returned by four routes.
+- **S2 — the model.** `ApprovalRequest` (`packages/model-schema/src/model_schema/approvals.py:395`, `:275` at the filing tree; `frozen=True`,
+  `extra="forbid"`) with `ApprovalDecision` (`:384`, `:264` at the filing tree).
 - **S3 — the hand-authored contract.** `docs/contracts/schemas/approval-request.schema.json`, with `06` §4.3's example
-  (`06-governance.md:440-475`) as its prose twin.
+  (`06-governance.md` §4.3, heading `:447` and its JSON example `:449-477`; `:440-475` at the filing tree) as its prose twin.
+
+> **Amended 2026-10-05 before mint:** citations re-anchored, no HOLD text changed. **`PL 9765` is
+> `PL-1392`** (merged) and **`PL 9762` is `PL-1408`** (`status: draft`, activation PR #1112 open); a
+> working id inside a quoted maintainer entry (the "Maintainer's decision" section below) stays as
+> quoted. **#1104 (`dfddfad8`, `PL-1392`) landed as DP-S2-6 (c) planned:** `ApprovalSubmission` and
+> `ApprovalWithdrawal` (`model_schema/approvals.py:355`, `:370`) now type the two request bodies of
+> `submit_for_approval` and `withdraw_request`, and every 2xx of the four routes is still
+> `dict[str, Any]`, so the owed work here is unchanged; `decide_request`'s body is still the
+> hand-written `Decide` (`api/approvals.py:78`), typed by `PL-1408` DP-4 (a). **The three shapes still disagree at `origin/main`
+> `ef5dc6e7317281ac9d1840fa61861597e3c1b8b1`:** S1 `to_dict` `approvals.py:663` emits `environment` and no
+> `workspace_id`; S2 `ApprovalRequest` `:395`; S3 the hand-authored schema is byte-unchanged since the
+> filing tree; `ApprovalRequest` has 0 hits in `docs/contracts/openapi/generated.json`;
+> `backend/tests/test_contracts.py:97` still lists `"approval-request": "later-phase — 06 governance"`. Line
+> cites below are given at the filing tree with the current one beside them; the field table was
+> not re-measured (the fields of `ApprovalRequest`/`ApprovalDecision` are unchanged between the two trees).
 
 ### Field by field
 
@@ -62,13 +77,13 @@ The three shapes:
 | `expedited`, `expedited_reason`, `flags`, `flag_overrides` | – | – | present, optional |
 
 The row `ApprovalRequestRow` (`backend/src/app/db/models.py`) also stores
-`decided_at` (`:674`), which no shape emits.
+`decided_at` (`:678` at that tree; `:674` at the filing tree), which no shape emits.
 
 What follows from the table, each by reading it and none by inference:
 
 1. **S1 cannot validate against S2.** S1 lacks the required `workspace_id`, and carries `environment`, which `extra="forbid"`
    rejects. Declaring `ApprovalRequest` as a route's 2xx would make outbound validation fail on every call, or, with
-   validation off, would publish a shape the route does not emit. This is why `PL 9765`'s DP-S2-6 option (c) leaves the
+   validation off, would publish a shape the route does not emit. This is why `PL-1392`'s (working id `PL 9765` when filed) DP-S2-6 option (c) leaves the
    2xx of two routes alone.
 2. **The decision enum disagrees on its values, not only its presence.** The published contract and the spec example say
    `approved` / `rejected` / `changes_requested`. The code stores and emits `approve` / `reject` / `request_changes`. A
@@ -86,17 +101,17 @@ of 12 open-object 2xx responses (Evidence §1, the four `approval-requests` line
 
 | Route | Handler | `to_dict` call |
 |---|---|---|
-| `GET /api/v1/approval-requests/{request_id}` | `get_request`, through `_detail` | `:112` (in `_detail`) |
-| `POST /api/v1/approval-requests` | `submit_for_approval` | `:156` |
-| `POST /api/v1/approval-requests/{request_id}/decide` | `decide_request` | `:270` |
-| `POST /api/v1/approval-requests/{request_id}/withdraw` | `withdraw_request` | `:294` |
+| `GET /api/v1/approval-requests/{request_id}` | `get_request`, through `_detail` | `:96` (in `_detail`; `:112` at the filing tree) |
+| `POST /api/v1/approval-requests` | `submit_for_approval` | `:140` (`:156`) |
+| `POST /api/v1/approval-requests/{request_id}/decide` | `decide_request` | `:254` (`:270`) |
+| `POST /api/v1/approval-requests/{request_id}/withdraw` | `withdraw_request` | `:312` (`:294`) |
 
 Who types what, as accepted so far:
 
 - **`withdraw` and `POST /approval-requests`** are the 2 routes WK-674 Slice 2 changes. Slice 2 types their **request
-  bodies** and leaves their **2xx** untouched (`PL 9765`, DP-S2-6 option (c), accepted by the maintainer's 10:32:26 entry
+  bodies** and leaves their **2xx** untouched (`PL-1392` (working id `PL 9765` when filed), DP-S2-6 option (c), accepted by the maintainer's 10:32:26 entry
   above). Both 2xx therefore stay on `FD-1335`'s temporary exclusion list, and are owned **here**.
-- **`decide_request`** (`POST …/decide`): its body is typed in the FD-1356 fix slice (`PL 9762`, DP-4 (a)). Its 200 comes
+- **`decide_request`** (`POST …/decide`): its body is typed in the FD-1356 fix slice (`PL-1408` (working id `PL 9762` when filed), DP-4 (a)). Its 200 comes
   to this finding and `FD-1335` Part B, with a key-set characterisation test (the lead's addendum to this filing).
 - **`GET …/{request_id}`** was never anyone's delta. It stays with Part B.
 
@@ -153,13 +168,13 @@ The lead gives the verdict and the maintainer sets the severity.
 ## Evidence
 
 - Field table: read at `1dd5e264` from `backend/src/app/platform/approvals.py:648-673`,
-  `packages/model-schema/src/model_schema/approvals.py:264-295` and
+  `packages/model-schema/src/model_schema/approvals.py:264-295` (re-anchored 2026-10-05 at `ef5dc6e7317281ac9d1840fa61861597e3c1b8b1`: `:663-687` and `:384-411`, same fields) and
   `docs/contracts/schemas/approval-request.schema.json` (its `required` list and `properties`).
-- Spec twin: `docs/specs/06-governance.md:440-475` (`06` §4.3, `"decision": "approved"` at the example's decisions entry).
+- Spec twin: `docs/specs/06-governance.md:440-475` (`:447-477` at `ef5dc6e7`; `06` §4.3, `"decision": "approved"` at the example's decisions entry).
 - Provenance: `git log --follow --format='%h %aI %s' -- docs/contracts/schemas/approval-request.schema.json`.
 - `ONE_SIDED_SLUGS`: `backend/tests/test_contracts.py`, the `"approval-request"` entry.
 - `to_dict` call sites: `git grep -n 'service.to_dict' -- backend/src/app/api/approvals.py` prints four lines (`:112`, `:156`,
-  `:270`, `:294`).
+  `:270`, `:294` at the filing tree; `:96`, `:140`, `:254`, `:312` at `ef5dc6e7`).
 - **Not measured:** whether any client of the published contract exists today; the table is a statement about the three
   definitions, not about a consumer.
 

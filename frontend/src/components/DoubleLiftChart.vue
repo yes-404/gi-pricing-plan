@@ -7,6 +7,7 @@ import { computed } from "vue";
 import VChart from "vue-echarts";
 
 import type { DoubleLift } from "@/api/comparisons";
+import type { Column } from "@/chart-table";
 import ChartFigure from "@/components/ChartFigure.vue";
 
 use([BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
@@ -119,14 +120,7 @@ const option = computed(() => ({
  * which is what decides whether a divergence between the two models matters. This is the
  * superset the retrofit is licensed to table, not a smaller thing than the chart shows.
  */
-const columns = computed(() => [
-  "Bin (by prediction ratio)",
-  "Rows",
-  ...(exposureText.value ? ["Exposure"] : []),
-  "Actual",
-  "Baseline predicted",
-  "Challenger predicted",
-]);
+type Bin = DoubleLift["bins"][number];
 
 /**
  * Exposure reaches the table as the exact decimal **string** it was recorded as (FR-10).
@@ -134,16 +128,16 @@ const columns = computed(() => [
  * it; a table cell has no such excuse, and a trailing zero lost there is a value the reader
  * cannot tell apart from a rounded one. `AeByFactorChart` set this precedent.
  */
-const rows = computed(() =>
-  bins.value.map((b, i) => [
-    String(b.bin),
-    b.rows,
-    ...(exposureText.value ? [exposureText.value[i] ?? null] : []),
-    b.actual,
-    b.baseline_predicted,
-    b.challenger_predicted,
-  ]),
-);
+const columns = computed<readonly Column<Bin>[]>(() => [
+  { key: "bin", label: "Bin (by prediction ratio)", value: (b) => String(b.bin) },
+  { key: "rows", label: "Rows", value: (b) => b.rows },
+  ...(exposureText.value
+    ? [{ key: "exposure", label: "Exposure", value: (b: Bin) => b.exposure_years ?? null }]
+    : []),
+  { key: "actual", label: "Actual", value: (b) => b.actual },
+  { key: "baseline-predicted", label: "Baseline predicted", value: (b) => b.baseline_predicted },
+  { key: "challenger-predicted", label: "Challenger predicted", value: (b) => b.challenger_predicted },
+]);
 </script>
 
 <template>
@@ -151,7 +145,7 @@ const rows = computed(() =>
     :title="`Double lift: baseline against ${series.challenger_ref}`"
     :caption="`${series.weighting}-weighted, binned by the ratio of the two predictions.`"
     :columns="columns"
-    :rows="rows"
+    :rows="bins"
   >
     <VChart
       class="h-80 w-full"
