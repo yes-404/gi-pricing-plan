@@ -233,7 +233,7 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
    - **A WK-1178 slice: the column, filled on every row (157 after the split, plus the two added reads), and the pin.** WK-1178 is the
      standing maintenance Work that owns the authorisation sweep's gaps, and the lead cuts
      and dispatches it.
-   - **Its first commit is the spec change** (`spec-change`): the five columns, and the fold
+   - **Its first commit is the spec change** (`spec-change`): the seven columns, and the fold
      of `06`'s route table.
    - **Filling each built row's value is evidence, not copying.** Each value is read from
      the route's code, **and** from `06` §4.1's `Governs` text for that permission. Where the
@@ -241,7 +241,7 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
      settled by copying the code.
    - **Serialisation (`RL-1263`), stated in full on the maintainer's entry "11:28:39 BST —
      #977 (DP-S2-4 → a) and the #971 delta: accepted in substance, pending audits".** The
-     slice edits **every existing row** of `01`, `02`, `03`, `06` and `07` §5.1. So it
+     slice edits **every existing row** of the seven §5.1 tables: `01-data-management.md` §5.1 (`:845`), `02-modelling.md` §5.1 (`:1813`), `03-rating-engine.md` §5.1 (`:891`), `04-optimisation.md` §5.1 (`:302`, table header `:304`), `05-monitoring.md` §5.1 (`:276`, header `:278`), `06-governance.md` §5.1 (`:547`) and `07-platform.md` §5.1 (`:303`), headings at origin/main `072c56e1`. *(Restated 2026-10-05 before mint, on the Q1 clarification below and the entry headed "2026-10-05 10:11:16 BST — #977 (RL 9907) item 4: RESTATE …".)* So it
      serialises against **every slice holding any of those sections open**, and at this tree
      those are four:
      - **WK-674 Slice 2** (`03` and `07` §5.1);
@@ -254,7 +254,7 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
        catalogue inside `03` §5.1 (`03:772-776`).
 
      **Its code write-set joins the serialisation** (auditor-926-927's audit of
-     `142c4594`). Besides the five §5.1 tables, the slice edits:
+     `142c4594`). Besides the seven §5.1 tables, the slice edits:
      - `scripts/audit-docs.py`, `scope-audit.py`, `doc-index.py`, `doc-id.py`, `_docid.py`,
        `register-lint.py` and `graphify-docs-extract.py`;
      - `backend/src/app/demo/guide.py`;
@@ -268,7 +268,7 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
      population can grow before then.
 
      **The rule, not only the list:** the slice serialises against **every** slice holding
-     any of the five §5.1 sections, **or any file of its code write-set**, open **at its
+     any of the seven §5.1 sections, **or any file of its code write-set**, open **at its
      dispatch**. The lead's dispatch record
      (`RL-1263`) names them then. It is dispatched in the first gap in which none is in
      flight, and otherwise it yields.
@@ -509,7 +509,7 @@ delegation, from `~/gi-pricing-plan.local/channel/to-lead.md`, the entry headed
   (its first-commit bullet, its edit list and its open-PR rule), the Acceptance bullet on
   check 22, the 2026-10-01 10:18 amendment's predicate, and H1–H2 name five tables or five
   specs. They were written before this clarification; read them with `04` and `05`
-  included. The counts they give stay true for the five tables they counted.
+  included. The counts they give stay true for the five tables they counted. Item 4 is restated for all seven (2026-10-05).
 - **Re-verified at origin/main `47d770e8fcbd2410fa101019ed8cf3aae69a1baa`**, by
   `grep -n -E '^\| *Method *\| *Path' docs/specs/0*.md`: `04-optimisation.md:304` and
   `05-monitoring.md:278` are each `\| Method \| Path \| Purpose \|`, under `### 5.1 REST
