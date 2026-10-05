@@ -23,6 +23,63 @@ Filed under working id 9567 (this plan) and slice working id 9568 (its `SL-` row
 at `origin/main` `4d3be1414ad4dacdaa0c14ef49fb21853adbaed6` on 2026-10-05, unless a line says
 otherwise.
 
+## Delta, 2026-10-05 (after 17:30:13 BST, pre-mint): fix (c) moves to PL 9560; DP-1..DP-4 ruled
+
+This plan is still an unmerged draft. This delta records three rulings and what each removes
+from the plan. It does not rewrite the plan: each withdrawn part keeps its text and carries a
+pointer back here.
+
+1. **DP-1..DP-4 were ruled** by the maintainer (by delegation) in the entry headed
+   "2026-10-05 17:22:47 BST — PL 9567 (the FD 9572 fix, #1193 @f4e4380b) DP-1..4 RULED;
+   CORRECTION of my error code; the unmeasured premise kept as a STOP". The rulings:
+   - DP-1 (a): `INPUT_CONTRACT_VIOLATION`.
+   - DP-2 (a): refuse by name, with the declared inputs subtracted.
+   - DP-3: not decided ("(c) is exactly 'an undeclared key naming a produced value'; FR-246's
+     declared-inputs rule (FD-1374 / PL 9776) stays its own").
+   - DP-4 (a): "an RL adopts T1 (FR-212 …) and T2 (FR-213) BEFORE activation". That ruling is
+     RL 9562 (working id).
+2. **The STOP fired, and (c) moved.** The maintainer's (by delegation) entry "2026-10-05
+   17:25:07 BST — URGENT RULING: FD 9572's premise FALSE; OPTION (iii): a HOLD now, and an
+   EMERGENCY (c)-only slice FIRST in lane B (WK-1178); the wiring fix after", item 3, verbatim:
+   > The WIRING fix (PL 9567, list order) follows as planned, after the emergency slice, rebased on it; its (c) part is then already delivered, so PL 9567 drops (c) by a dated delta and keeps (a)/(b).
+
+   Fix (c) and its reds are now **PL 9560** (working id; SL 9561 under WK-1178; #1196). PL 9560
+   also fixes the root that auditor-premise found in `score_one`'s path.
+3. **The premise, answered.** The maintainer's (by delegation) addendum, "2026-10-05 17:25:23
+   BST — ADDENDUM to my 17:25:07 urgent ruling …", says: "the ZEN wiring of an ORDERED graph is
+   correct (350 for every extra key)". So `test_a_misordered_algorithm_prices_as_its_topological_twin[ctx1]`
+   (engine level, `{x: 3, base: 7}`) is expected to pass after Task 2. The shadow that was found
+   sits in `score_one`'s path, and it is PL 9560's.
+
+**What this removes from this plan:**
+- Task 3, in full (the check, its calls, its `_INPUT_FREE` entry, the in-place clamp test, T2).
+- Acceptance items 4 and 9.
+- Task 1's (c) tests: `test_a_quote_input_naming_a_produced_value_is_refused`,
+  `…_is_refused_in_a_batch`, and Step 1c's four backend reds.
+- The write-set rows for `test_quote_input_raise_sites.py` and the three backend test files.
+- The `score.py` row, so this plan no longer edits `score.py` at all.
+
+**What the plan keeps:** (a) and (b). That is Tasks 1 and 2 without the (c) tests, Task 4,
+the pins, and T1 (FR-212, adopted by RL 9562; applied in Task 2 as Step 6b below).
+
+**Contention, now:**
+- This plan's write set is `runtime.py` (`to_wire` and the new helper), its own test module,
+  the `03` FR-212 row, the roadmap row and the INDEX.
+- It no longer serialises with PL 9688 on `score_one` or `_score_context_sync`: its file set
+  is name-disjoint from PL 9688's (`_decision_table_node` in `runtime.py`).
+- It still serialises with PL 9776 on `to_wire`.
+
+**Activation needs, replacing those in the SL 9568 row:**
+- FD 9572 minted.
+- RL 9562 minted (it adopts T1) before this plan.
+- PL 9560 merged, and this slice rebased onto it.
+- This plan made `active` by a dated line.
+- A free build lane.
+
+**Task 2, Step 6b (added by this delta):** apply T1, byte-for-byte as RL 9562 adopts it, at
+the end of the FR-212 row's last cell (`03` `:81`). Then run `python3 scripts/audit-docs.py`:
+only check 31 may fail before the mint.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
 > or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax
 > for tracking. Also bound: `python-test` (the `req` markers, the negative tests),
@@ -61,7 +118,7 @@ Each item is a command a fresh reviewer can run from the worktree root, after `u
 3. `test_a_clamp_listed_before_its_producer_still_binds` gives `payable_premium_minor` 5250
    and a `constraints` rung of 5000 with `s_clamp` listed before `s_office` and
    `min_premium_minor` 5000.
-4. `test_a_quote_input_naming_a_produced_value_is_refused` raises `INPUT_CONTRACT_VIOLATION`
+4. *(Withdrawn 2026-10-05 by the Delta: (c) is PL 9560's.)* `test_a_quote_input_naming_a_produced_value_is_refused` raises `INPUT_CONTRACT_VIOLATION`
    naming the key, through `score_one` and through `score_batch` (DP-1 and DP-2 as
    recommended; if decided otherwise, the dated decision line names the replacement assert).
 5. `test_a_topologically_listed_algorithm_wires_exactly_as_listed` and
@@ -74,7 +131,7 @@ Each item is a command a fresh reviewer can run from the worktree root, after `u
 7. The full gate (`CLAUDE.md` §11, both halves) passes on the slice head, run by the
    gate-runner inside the one gate slot, and the ledger names the tree it ran on.
 8. `python3 scripts/audit-docs.py` fails only on check 31 until the mint, and is clean after.
-9. One red test **per reachable path** of fix (c), each recorded failing at the base commit
+9. *(Withdrawn 2026-10-05 by the Delta: the four path reds are PL 9560's.)* One red test **per reachable path** of fix (c), each recorded failing at the base commit
    for the cause Task 1 Step 2 names, and passing at the head (the 17:15:09 entry):
    - `/score`: `backend/tests/test_score.py::test_a_quote_input_naming_a_produced_value_is_refused_on_score`
    - `/score/compare`: `backend/tests/test_score_compare.py::test_a_context_input_naming_a_produced_value_is_a_422_on_compare`
@@ -386,7 +443,7 @@ async def test_a_clamp_listed_before_its_producer_still_binds() -> None:
     assert rungs["constraints"] == 5000
 
 
-# --- (c) a quote input never shadows a produced value ----------------------------------
+# --- (c) WITHDRAWN 2026-10-05 by the Delta (PL 9560's): do not add the tests in this block ---
 
 
 @pytest.mark.req("FR-213")
@@ -463,7 +520,7 @@ async def test_the_bundle_hash_is_unchanged() -> None:
     FD 9572's verbatim output for the topological run. If it differs at the base commit, STOP:
     the essay's premise moved, and the lead hears it before any code changes.
 
-- [ ] **Step 1c: The four per-path reds (the 17:15:09 entry).** Each is appended to the
+- [ ] **Step 1c: (Withdrawn 2026-10-05 by the Delta: PL 9560's; do not add.)** The four per-path reds (the 17:15:09 entry). Each is appended to the
   module that already holds that path's fixtures; none edits an existing test. The algorithm
   is `_minimal_algorithm` (`backend/tests/test_rating_version_compile.py:50`): its `s_expr`
   produces `payable`, and its one declared input is `premium_in`. Its list is topological, so
@@ -742,6 +799,9 @@ git commit -m "fix(rating): to_wire wires each consumed name over a stable topol
 ```
 
 ### Task 3: A quote input never shadows a produced value
+
+**Withdrawn 2026-10-05 by the Delta above: (c) is PL 9560's. The executor does not run this
+task.** Its text stays as filed.
 
 **Blocked until DP-1, DP-2, DP-3 and DP-4 are decided.** The code below is DP-1 (a), DP-2 (a)
 and DP-3 (a). A different decision rewrites this task before it starts.
