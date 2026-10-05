@@ -1436,6 +1436,24 @@ relates: [FD-1356, RL-1301, PL-1306, SL-1256, RL-1407, PL-1408]
 **Closed 2026-10-05** on the slice audit (LG-1417 §"Closing note"; local working copy: `handover/audit-sl1409-2026-10-05.md`) and its re-check, at the mint of ledger `LG-1417` (the executor's closing acts, `executor.md` mint step; `document-ids.md` §1.6).
 (Activated 2026-10-05 as the WK-1178 FD-1356 fix slice, on the maintainer's GO check, "2026-10-05 09:44:39 BST — DISPATCH GO: FD-1356 fix (SL-1409 / PL-1408) on lane B, option (b); executor-1409 starts once the `__all__` registry amendment merges (or once WK-690 S3 merges, if that comes first)"; dispatch record DISPATCH-WK-1178-SL1409-2026-10-04.)
 
+#### WK-1178 fix slice — batch scoring serialises every declared output type and never aborts on one row
+
+```yaml
+id: SL-9511
+family: slice
+title: WK-1178 fix slice — batch scoring serialises every declared output type and never aborts on one row
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1333, RL-1343, RL-923, RL-1263]
+```
+
+The FD 9513 fix (working id; MEDIUM, LATENT; owner WK-1178), on the maintainer's (by delegation) entry "2026-10-05 17:58:45 BST — FD 9513 (#1204 @0303d0bf): your decision ACCEPTED (MEDIUM, LATENT, WK-1178, its own fix slice after SL 9561); the row escape is the first red". Two reds, in order. **(1) The row escape first:** `_score_batch_row` (`score.py:1081`) runs `_ladder_json` (`:1122`) and `_outputs_json` (`:1123`) after its `try` (`:1096-1103`), so anything they raise ends the whole batch run and the Job (FR-255). Any exception there becomes that row's `"error"` row and the run continues; this does not wait for the type DP. **(2) The four declared types:** `_coerce_output_value` refuses `int`, `count`, `relativity` and `percentage` (`:947`, `:964-965`), which `/score` serves (FR-254). Their JSON form is the plan's DP-1, the maintainer's (recommended: `int`/`count` a JSON integer, `relativity`/`percentage` the `decimal` string form); DP-2 names the carrier of the `/score` half (recommended: the `RL-1343` slice, which has no plan yet and must cover a whole-valued `decimal`, a JSON integer on `/score` today, as well as a fractional one). Leaf plan PL 9509 (working id, `draft`). **Activation needs:** FD 9513 minted; SL 9561 (the emergency slice) merged; DP-1 ruled (Task 1 may go before it); the maintainer's GO; active by a dated line in a separate activation PR. *(Filed 2026-10-05 under working ids 9511 (this row) and 9509 (the plan), reserved by the lead.)*
+
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
