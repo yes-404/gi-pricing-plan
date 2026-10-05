@@ -37,6 +37,47 @@ WK-673, #1152), PL 9688 (the FD 9707 fix, WK-673, #1145), PL 9683 (the FD 9708 f
 PL 9629 (the exit-demo plan, #1164, head `68dd997c`), RL 9607 (PL 9616's ruling), RL 9614
 (#1167), RL 9620 (the RL-1263 amendment, #1162).
 
+### Pre-mint edit, 2026-10-05: RL 9566
+
+Edited 2026-10-05 from 18:40:26 BST (`TZ=Europe/London date`), before this plan's mint, by the
+planner, on the lead's brief `~/gi-pricing-plan.local/handover/brief-capacity-fill-2026-10-05.md`
+Part B. The authority is **RL 9566** (working id, #1191, head
+`7bbdd9c076e6e69f9824770a7dddf299bf65caa6`, filed, unminted). It rules DP-S6-1 (its §"Ruled",
+item 11, lines 160–164 at that head, the maintainer's (by delegation) entry item 7). It states
+what this slice owes (§"What it obliges", lines 285–297, the "Slice 6 (PL 9589)" bullet). RL
+9566 has **no text addressed to this plan**. Its text **T6** (lines 277–283) is the slice's to
+apply with the code. T6 is this plan's P1, amended for the owner. Nothing is re-decided here.
+Each edit below carries the RL 9566 item it applies and is marked in place.
+
+1. **DP-S6-1 is ruled (c).** `change_summary` is verified when the summary is non-blank.
+   `gipp_check_if_enabled` is verified while no workspace can enable GIPP. `rate_table_diffs`
+   **fails closed** until it is produced, refused with a reason naming the missing evidence kind.
+   **Owner: WK-673** (the rate-table diff is Slice 7's domain), named in this slice's dispatch
+   record.
+2. **Task 1 applies RL 9566's T6, not this plan's P1.** The Appendix is marked as ruled.
+3. **One acceptance item is added from RL 9566's own "Acceptance" bullet "DP-S6-1"**
+   (Acceptance 10). Acceptance 3 names its ruled kind. Tasks 2 and 3 cite them.
+4. **The write set, the contention and §"Not written" are unchanged.** Under (c) `EVIDENCE_FLOOR`
+   and `DEFAULT_POLICY` stay as they are.
+
+**Counts, per edit**, by `str.count` on this file before and after the edit set (each find
+string exactly 1 before; an insertion keeps its anchor, so its find string stays 1). The
+strings are not repeated here, so the count stays true.
+
+| Edit | Find string | New text |
+|---|---|---|
+| delta section (new) | 1 → 1 | 0 → 1 |
+| Status sentence | 1 → 0 | 0 → 1 |
+| need 3 | 1 → 1 | 0 → 1 |
+| DP-S6-1 cell | 1 → 0 | 0 → 1 |
+| Acceptance 3 | 1 → 0 | 0 → 1 |
+| Acceptance 10 (new) | 1 → 1 | 0 → 1 |
+| Task 1 Step 1 | 1 → 0 | 0 → 1 |
+| Task 2 Step 1 | 1 → 0 | 0 → 1 |
+| Task 3 Step 2 | 1 → 0 | 0 → 1 |
+| Hand-off owner | 1 → 1 | 0 → 1 |
+| Appendix header | 1 → 1 | 0 → 1 |
+
 ## Goal
 
 `submit_for_review` (`backend/src/app/platform/rating_versions.py:278`) checks
@@ -67,7 +108,8 @@ FR-257 (`:174`), FR-260 (`:177`).
 
 ## Status
 
-`draft`. **One decision point is open** (DP-S6-1), the decision-maker's and blocking. The
+`draft`. **DP-S6-1 is ruled (c) by RL 9566** (working id, #1191, unminted; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL 9566");
+until its mint it still blocks (activation need 3). The
 plan moves to `active` only through a separate activation PR.
 
 ### Activation needs, in order
@@ -77,7 +119,8 @@ plan moves to `active` only through a separate activation PR.
    consumes Slice 5's `structural_diff_verified`, `dislocation_run_verified` and its direct
    gates (PL 9590 Tasks 2–3). Where Slice 5's merged code differs from this plan, the merged
    code governs and the dispatch record names each difference.
-3. **A ruling on DP-S6-1** is merged and minted, adopting or amending P1.
+3. **A ruling on DP-S6-1** is merged and minted, adopting or amending P1. *(That ruling is RL 9566,
+   #1191: it amends P1 for the owner as its T6; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL 9566".)*
 4. **The lane is free under `RL-1263`** as RL 9620 amends it, with the same-Work conditions in
    the dispatch record.
 5. **The maintainer's dispatch GO**, and the lead's go in a separate activation PR.
@@ -98,7 +141,8 @@ the ledger quotes the red by its cause (README convention 2). `F` is the new
    pre-FR-364 policy would be; `set_policy` refuses it, so the test writes the row) still
    refuses a submission with no Dislocation Run.
 3. **A policy above the floor adds its kinds.** `F::test_a_policy_above_the_floor_adds_a_verifiable_kind`
-   per DP-S6-1's ruled map (for example `change_summary` under DP-S6-1 (a) or (c)).
+   per DP-S6-1's ruled map: `change_summary` with a non-blank summary, under DP-S6-1 (c) as RL 9566
+   item 11 rules it (pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL 9566").
 4. **An unverifiable kind is refused by name, never passed.** `F::test_a_policy_naming_an_unverifiable_kind_is_refused_by_name`:
    an entry adding `"telepathy_check"` refuses with `EVIDENCE_INCOMPLETE` whose `detail`
    names `telepathy_check` and says this build cannot verify it. Shown red on a deliberately
@@ -156,6 +200,12 @@ stays direct); FR-260's golden quotes (stay direct).
 | f | The change summary is already enforced | `approvals.submit`'s blank-change-summary guard (FR-352), named in the submit route's comment (`backend/src/app/api/models.py:1189-1193`) and tested by `test_a_blank_change_summary_cannot_submit_a_rating_version` (`backend/tests/test_rating_versions.py:350`); it runs after the evidence checks | reproduces; DP-S6-1 |
 | g | GIPP cannot be enabled yet | `04` FR-294 is WK-685, Phase 4 (PL 9629 step D9: "the demo runs with GIPP not enabled") | reproduces; DP-S6-1 |
 | h | The precedent for a workspace copying a kind "off the page" | `approvals.py`'s comment on the `model` entry: "a workspace copying the kind off the page got a fail-closed refusal for evidence it had" | reproduces; why DP-S6-1 matters |
+10. **`rate_table_diffs` fails closed by name** (RL 9566 item 11 and its "Acceptance" bullet
+    "DP-S6-1"; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL 9566"). `F::test_a_policy_naming_rate_table_diffs_is_refused_naming_the_kind`:
+    a policy whose `rating_version` entry names `rate_table_diffs` refuses submission with 422
+    `EVIDENCE_INCOMPLETE` whose `detail` names `rate_table_diffs`; the same policy without it and
+    with `change_summary` and a non-blank summary does not refuse. Shown red on a deliberately
+    broken map that verifies `rate_table_diffs` as met, scratch-reverted.
 
 ### Risks
 
@@ -206,7 +256,7 @@ policy copied from `06` §4.2 would refuse E2. Task 0 Step 3 checks what the dem
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-S6-1 | **What does the loop do with `rate_table_diffs`, `gipp_check_if_enabled` and `change_summary`**, which `06` §4.2's documented `rating_version` default names and the shipped `DEFAULT_POLICY` does not (premise c)? | (a) **Map all three**: `change_summary` → verified when the summary is non-blank, the same test `approvals.submit` applies later (premise f; FR-352); `gipp_check_if_enabled` → verified while no workspace can enable GIPP (premise g), with a dated note that the slice building `04` FR-294 replaces the verifier; `rate_table_diffs` → verified when the persisted structural diff (Slice 5) exists and the pin difference between baseline and candidate is recorded with it. (b) **Fail closed on all three** (FR-364's literal rule) and file the §4.2-versus-`DEFAULT_POLICY` disagreement as a finding; a workspace copying §4.2 is refused until it is resolved. (c) **Map `change_summary` and `gipp_check_if_enabled` as in (a); fail closed on `rate_table_diffs`** with a named owner (the slice that persists rate-table diffs as evidence) | **(c).** `change_summary` is already enforced and GIPP cannot be on, so refusing either would refuse evidence the version has (premise h, the same mistake the `model` entry's comment records). `rate_table_diffs` has no artifact: the structural diff covers re-pointed steps, not pin version changes (`rate_table:…@5→@6`, `06:469`), and verifying it from a blob that does not hold it would be asserting, not checking. (c) keeps FR-364's fail-closed rule where it bites and names the owner. Under (a) Slice 5's blob would need the pin diff added, a Slice 5 scope change | decision point | yes — Task 2 | open |
+| DP-S6-1 | **What does the loop do with `rate_table_diffs`, `gipp_check_if_enabled` and `change_summary`**, which `06` §4.2's documented `rating_version` default names and the shipped `DEFAULT_POLICY` does not (premise c)? | (a) **Map all three**: `change_summary` → verified when the summary is non-blank, the same test `approvals.submit` applies later (premise f; FR-352); `gipp_check_if_enabled` → verified while no workspace can enable GIPP (premise g), with a dated note that the slice building `04` FR-294 replaces the verifier; `rate_table_diffs` → verified when the persisted structural diff (Slice 5) exists and the pin difference between baseline and candidate is recorded with it. (b) **Fail closed on all three** (FR-364's literal rule) and file the §4.2-versus-`DEFAULT_POLICY` disagreement as a finding; a workspace copying §4.2 is refused until it is resolved. (c) **Map `change_summary` and `gipp_check_if_enabled` as in (a); fail closed on `rate_table_diffs`** with a named owner (the slice that persists rate-table diffs as evidence) | **(c).** `change_summary` is already enforced and GIPP cannot be on, so refusing either would refuse evidence the version has (premise h, the same mistake the `model` entry's comment records). `rate_table_diffs` has no artifact: the structural diff covers re-pointed steps, not pin version changes (`rate_table:…@5→@6`, `06:469`), and verifying it from a blob that does not hold it would be asserting, not checking. (c) keeps FR-364's fail-closed rule where it bites and names the owner. Under (a) Slice 5's blob would need the pin diff added, a Slice 5 scope change | decision point | yes — Task 2 | **ruled (c)**, the maintainer's, RL 9566 item 11: `rate_table_diffs` fails closed, naming the kind; owner WK-673, named in this slice's dispatch record (pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL 9566") |
 
 **Decided here (slice design, the planner's):** the verifiers raise their own refusal texts
 rather than collecting every missing kind into one message as `modelling.py:1247-1261` does.
@@ -233,7 +283,8 @@ unknown-kind refusal follows `modelling.py`'s wording.
 
 **Files:** `docs/specs/06-governance.md` (FR-364 `:145`).
 
-- [ ] **Step 1:** Apply P1 as the ruling adopts it, verbatim from the ledger copy;
+- [ ] **Step 1:** Apply RL 9566's T6 (P1 amended for the owner) verbatim from the ledger copy
+  (pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL 9566");
   `grep -cF` its anchor (1).
 - [ ] **Step 2:** `python3 scripts/audit-docs.py` (only check 31 may fail while ids are
   working ids).
@@ -271,7 +322,7 @@ for kind in policy.effective_evidence("rating_version"):
 `policy_for` is `async def policy_for(session: AsyncSession, workspace_id: UUID) -> ApprovalPolicy`
 (`platform/approvals.py:166`); `modelling.py:1230` calls it positionally. Mirror that call.
 
-- [ ] **Step 1: Write the failing tests** — Acceptance 1–4 and 7.
+- [ ] **Step 1: Write the failing tests** — Acceptance 1–4, 7 and 10 (RL 9566; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL 9566").
 - [ ] **Step 2:** Run them. Expected: Acceptance 2 and 4 FAIL because the submission
   **succeeds** (the direct checks ignore the policy); Acceptance 1 and 7 PASS already (the
   direct checks refuse the same kinds) — record that they pass on the old code, since they
@@ -289,16 +340,20 @@ for kind in policy.effective_evidence("rating_version"):
 - [ ] **Step 1:** The full two-half gate (`dev-commands`); the four docs checks;
   `req-coverage.py`. Quote every rc and summary line with the tree.
 - [ ] **Step 2:** The ledger: Task 0's records, every red quoted by its cause, Acceptance 1–9
-  with evidence, and `RL-881` premise e recorded as discharged for the auditor.
+  and 10 (RL 9566; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL 9566") with evidence, and `RL-881` premise e recorded as discharged for the auditor.
 
 ## Hand-off
 
 The executor works in its own worktree on a branch from origin/main after `SL-1389` merges.
-The slice closes on a clean audit and the lead's merge. It is WK-673's last build slice in
+The dispatch record names the owner of `rate_table_diffs`, WK-673, as RL 9566 item 11 requires
+(pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL 9566"). The slice closes on a clean audit and the lead's merge. It is WK-673's last build slice in
 `PL-1267`'s order; the Work then closes by `close-workstream`, accepted by the maintainer
 (`PL-1267` Acceptance 10).
 
 ## Appendix — proposed text (for the ruling to adopt, amend or reject)
+
+*(Ruled by RL 9566: P1 amended for the owner as its T6. Task 1 applies T6 from RL 9566, never the
+text below; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL 9566".)*
 
 ### P1 — `06` FR-364 (`:145`), appended at the row's end (DP-S6-1 (c))
 
@@ -325,3 +380,6 @@ The slice closes on a clean audit and the lead's merge. It is WK-673's last buil
    slice does not touch.
 5. **Spec and code disagree (premise c), and this plan does not pick a side silently.**
    DP-S6-1 puts it to the decision-maker (`CLAUDE.md` §0).
+6. **Pre-mint edit, 2026-10-05 (RL 9566).** DP-S6-1 carries its ruling, (c) with owner WK-673.
+   Acceptance 10 comes from RL 9566's own text. The write set and the contention are unchanged.
+   RL 9566 is cited by working id and kept out of `relates:` (check 32).
