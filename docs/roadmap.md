@@ -1436,6 +1436,42 @@ relates: [FD-1356, RL-1301, PL-1306, SL-1256, RL-1407, PL-1408]
 (Activated 2026-10-05 as the WK-1178 FD-1356 fix slice, on the maintainer's GO check, "2026-10-05 09:44:39 BST — DISPATCH GO: FD-1356 fix (SL-1409 / PL-1408) on lane B, option (b); executor-1409 starts once the `__all__` registry amendment merges (or once WK-690 S3 merges, if that comes first)"; dispatch record DISPATCH-WK-1178-SL1409-2026-10-04.)
 
 
+#### SL 9600 (working id) — WK-1178 fix slice — Option A A-1: FD 9995 in full, the Peril Structure approval path and the compile resolver's peril branch
+
+```yaml
+id: SL-9600
+family: slice
+title: WK-1178 fix slice — Option A A-1, FD 9995 in full, the Peril Structure approval path and the compile resolver's peril branch
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [RL-1263, PL-1371, CR-1212]
+```
+
+FD 9995's fix (HIGH, a G2 blocker before the P2 exit demo, by the maintainer's entry "2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record", item 2). `_carry_to_the_artifact` gains the Peril Structure call and `perils.py` gains `apply_approval_decision`, the only writer of `approved`, inside the approval guard's decision block: approval moves `review → approved`, a non-approval returns the structure to `reconciled`. The compile resolver gains a `peril_structure` branch, so `compile_bundle`'s existing maturity loop refuses a pin that is not approved (the positive test FD 9995's Disposition asks for), and the stale "has no backend table yet (Phase 2)" message goes. PL 9683's Acceptance 7, FD 9995's tripwire, is flipped in the commit that adds the branch. Open for the decision-maker: per-peril model approvals enforced at approval (DP-1, `06` FR-363), supersession of an earlier approved version (DP-2), and a named interim refusal for a Peril Structure `model_call` until A-3 (DP-3). Leaf plan PL 9599 (working id, `draft`). **Activation needs:** FD 9995 minted at HIGH; PL 9683's slice (the FD 9708 fix) and PL 9649's slice (the FR-240 family fix) merged, as the maintainer orders the chain; DP-1 to DP-3 ruled; the lead's go in an activation PR, with `RL 9620`'s same-Work conditions written for every WK-1178 slice beside it. First of the serial chain A-1 → A-2 → A-3 → A-4. *(Filed 2026-10-05 under working ids 9600 (this row) and 9599 (the plan), reserved by the lead.)*
+
+#### SL 9598 (working id) — WK-1178 fix slice — Option A A-2: FD 9605, a GLM scores through `model_call`
+
+```yaml
+id: SL-9598
+family: slice
+title: WK-1178 fix slice — Option A A-2, FD 9605, a GLM scores through model_call
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [RL-1263, PL-1371, CR-1212]
+```
+
+FD 9605's fix (HIGH, a G2 blocker before the P2 exit demo, the same entry, item 2). `03` FR-222's `exact` mode and `02` FR-193 say any persisted Model scores, but `_model_call_handler` refuses a GLM (`runtime.py:568-579`) because the Bundle does not carry the Factor, Banding and Grouping versions `predict_glm` needs. Compile carries them into `Bundle.resolved_payloads` (DP-1), and the runtime rebuilds them and calls `predict_glm` on the quote's row, with the offset the spec declares (DP-3). A golden test holds the `model_call` value equal to `predict_glm` on the same row. The two tests that pin the refusal (`test_rating_runtime.py:377`, `test_rating_score.py:429`) are flipped deliberately, on the maintainer's approval, and FR-255's `MODEL_CALL_FAILED` keeps a test through another real failure. NFR-489's p99 is measured for a GLM `model_call`. Open for the decision-maker: how the GLM's inputs travel in the Bundle (DP-1), what `feature_map` names for a GLM (DP-2), a model-offset GLM (DP-3), and the provisional money rounding of a `model_call` output (DP-4). Leaf plan PL 9597 (working id, `draft`, its own PR). **Activation needs:** FD 9605 minted at HIGH; PL 9649's slice merged (its `ResolvedArtifact.factors` and `model`-branch Factors are reused); A-1 (SL 9600) merged, as the maintainer orders the chain; DP-1 to DP-4 ruled; the lead's go in an activation PR. *(Filed 2026-10-05 under working ids 9598 (this row) and 9597 (the plan), reserved by the lead.)*
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
