@@ -118,3 +118,17 @@ tree `986a8dc37468accb1349ee70810d86a7d017b867`. The only conflicted path is `do
 (regenerated, never hand-merged; neither branch's INDEX is final until its mint). `docs/specs/03-rating-engine.md`,
 `docs/contracts/openapi/generated.json` and `model_schema/rating.py` auto-merged. So the `03` §5.1 rows do not conflict:
 option (b) holds for the `03` text; the INDEX conflict is the exempt generated path.
+
+### Task 4 — the seed through the create path (DP-4 (a))
+
+Red (Acceptance 12), recorded at Task 0 row 0.6 and re-read at the dispatch tree: `grep -rnE "\.(algorithm_ref|pins)\s*=[^=]"
+--include=*.py examples/ backend/src/` printed `examples/fremtpl2/model.py:396` and `:397`. After the edit it prints nothing
+(grep exit code 1). `save_demo_algorithm` is extracted; `author_demo_rating_evidence` drops the save and the two row writes;
+`create_approved_rating_version` saves the algorithm first and passes it and `Pins()` to the service; `_EMPTY_PINS` is
+removed (no other reader). `backend/tests/test_demo_rating_evidence.py::_draft` does the same.
+
+Green: `test_demo_rating_evidence.py`: `2 passed`; `examples/fremtpl2/test_seed.py`: `7 passed, 1 skipped` (the skip is
+`test_seed.py:136`, "run examples/fremtpl2/fetch.py first": it needs the freMTPL2 download, so `create_approved_rating_version`'s
+edit has **no test that runs in this environment**; it is exercised by `_draft`-equivalent calls only through the shared
+`save_demo_algorithm`). The Acceptance 13 clause "the seeded `fremtpl2-demo` version's `rating_version.created` event carries
+the algorithm ref" is therefore **not evidenced here**: delivered but untested, until the seed runs with the data.
