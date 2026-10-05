@@ -188,3 +188,18 @@ declare `money_minor` expressions over decimal operands on purpose: the exact-un
 the output step. So **(q) would break the spec's own worked example and those tests**, and **(p) would refuse what the
 ladder design relies on** unless it is scoped to a value that reaches a served output without passing an output step. FR-226
 ("never happens twice") and `OQ-1316` (is rounding offered anywhere but an output step) bear on all three options.
+
+**Pre-mint note — the DP is closed by definition (2026-10-05 16:56:21 UTC, after the maintainer's 17:54:12 BST ruling).** Source: the
+maintainer (by delegation), `~/gi-pricing-plan.local/channel/to-lead.md`, entry "2026-10-05 17:54:12 BST — The money_minor-declared
+expression DP: (r), CLOSED BY DEFINITION; my 17:50:43 "gap" is narrowed accordingly". Quoted verbatim:
+
+> RULING: (r) as a DEFINITION. The FD 9549-fix RL's FR-227 T-text states: "money_minor on an expression step is a unit (minor units) carrying an exact decimal that may be fractional; only an output step's rounding makes it an integer (FR-226, FR-248)." No OQ. (p) and (q) are recorded with their costs: (q) breaks 28 including the demo and 03's example; (p) contradicts FR-248.
+> My 17:50:43 item 2 is NARROWED, not withdrawn: the SERVED form (a money_minor expression → a non-money output, serving 49.5) is the defect, and it is CLOSED by 17:36:28's "OUT of money_minor only into money_minor" rule. PL 9521 adds the red proving it is refused at save (D1). FD 9549 @68a98d6a's amendment says so in those terms: the served half is closed by the fix, and the unserved half is by design under the definition.
+
+**In those terms.** The gap above is narrowed, not withdrawn. **The served half** (a `money_minor` expression feeding a
+non-money output, serving `49.5` in the probe) **is closed by the 17:36:28 BST OUT rule** ("OUT of `money_minor` only into
+`money_minor`"), with D1's red in PL 9521 proving the save-time refusal. **The unserved half** (a fractional value under a
+`money_minor` declaration on an expression that only reaches a `money_minor` output) **is by design**: FR-248 and `RL-1329`
+(`03-rating-engine.md:155`, `:483`; the §6 worked example `:272-274`). The record carrying the FR-227 definition is
+RL 9512 (working id, space form). Of the options listed above, **(p) and (q) are not taken**, and no OQ is raised.
+Severity stays MEDIUM, LATENT.
