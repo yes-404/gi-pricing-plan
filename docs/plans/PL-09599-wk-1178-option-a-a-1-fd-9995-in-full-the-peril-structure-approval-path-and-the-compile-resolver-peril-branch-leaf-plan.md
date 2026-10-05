@@ -137,6 +137,12 @@ full by this planner. Verbatim:
 So DP-1 (a)'s amendment is drafted by a decision-maker (dm-a34) and adopted in A-1's `RL-`,
 whose working id is given at its filing. Task 5 applies it, and activation need 4b requires it.
 
+**Dated note, 2026-10-05 (written 17:27:09 BST, pre-mint): A-1's ruling is RL 9563 (working
+id).** From the entry headed *"2026-10-05 17:22:01 BST — A-1/A-2 round 2: readings (1)–(4) ACCEPTED; one question on compile's numeric interchangeability"*, read in full by this planner, its A-1 line,
+verbatim:
+
+> #1177 A-1 @208be06b: Task 3 requires ModelStatus.APPROVED by enum (modelling.py:1975: draft, fitted, review, approved, superseded, archived), with a red test parametrised over EVERY member (only APPROVED passes; superseded refused, consistent with C4 (c)) that fails on the old {approved, live, retired}. Right. The 06:407 text comes from RL 9563.
+
 ## Status
 
 `draft`. **The three decision points are ruled** (§"Decision points"): the maintainer (by
@@ -166,10 +172,11 @@ the `SL-` row's status flip and this plan's.
    DP-2 (a) and DP-3 (b) "(no DM needed; each is a choice inside settled scope)", so no
    `RL-` is written. The ruling and this plan do not differ; the dispatch record cites the
    entry by its header.*
-4b. **A-1's ruling, carrying the `06:407` amendment text** *(added 2026-10-05, pre-mint, on
-   the 17:14:54 BST entry's item 6)*. A dated `RL-` adopting the decision-maker's drafted
-   amendment to `06` §4.2's note (`06:405-408`), working id given at its filing. DP-1 to DP-3
-   stay as accepted at 17:02:50; this ruling adds only the text.
+4b. **RL 9563 (working id) minted, before PL 9599** *(added 2026-10-05, pre-mint, on the
+   17:14:54 BST entry's item 6 and the 17:22:01 BST entry)*. It is A-1's ruling, adopting
+   dm-a34's drafted amendment to `06` §4.2's note (`06:405-408`). It mints before this plan
+   does, so the plan's Task 5 cites a minted id. DP-1 to DP-3 stay as accepted at 17:02:50;
+   the ruling adds only the text.
 5. **The lane and the dispatch GO.** A HIGH G2 blocker takes the first build lane that frees
    once its plan is active (the maintainer's 13:12:56 BST priority rule, item 2 above). This
    slice is the first of the serial chain A-1 → A-2 → A-3 → A-4 (item 1). The lead's
@@ -506,11 +513,11 @@ below was written before the ruling and is kept as written.
 
 ### Task 5: The spec text, verbatim from the ruling (DP-1 a only)
 
-- [ ] **Step 1:** Apply the `06:407` amendment text from A-1's `RL-` (working id given at its
-  filing; activation need 4b), byte for byte, to `06` §4.2's note (`:405-408`), under
-  `spec-change`. Run `python3 scripts/audit-docs.py` and commit. This plan holds no text: the
-  text is that `RL-`'s. If the `RL-` is not merged at dispatch, the slice does not start
-  (activation need 4b). *(Dated note, 2026-10-05: replaces this step's earlier "if the ruling
+- [ ] **Step 1:** Apply the `06:407` amendment text from RL 9563 (working id; the minted id
+  replaces it at the mint; activation need 4b), byte for byte, to `06` §4.2's note
+  (`:405-408`), under `spec-change`. Run `python3 scripts/audit-docs.py` and commit. This
+  plan holds no text: the text is RL 9563's. If RL 9563 is not merged at dispatch, the slice
+  does not start (activation need 4b). *(Dated note, 2026-10-05: replaces this step's earlier "if the ruling
   carries none, this task is empty", on the 17:14:54 BST entry's item 6: "Task 5 is not left
   empty, and a stale note must not contradict the code".)*
 
