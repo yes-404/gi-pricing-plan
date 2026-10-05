@@ -33,7 +33,7 @@ from app.errors import PlatformError
 from app.platform import settings as settings_svc
 from app.platform.blobs import BlobStore
 from app.platform.diff_cache import DiffCache, version_content_hash
-from app.platform.modelling import load_model, to_model
+from app.platform.modelling import load_factors, load_model, to_model
 from model_schema.rating import (
     FloorAndCapParameters,
     ImportPreview,
@@ -49,6 +49,7 @@ from model_schema.rating import (
 )
 from model_schema.refs import ArtifactRef, BlobRef
 from pricing_core.rate_tables.operations import (
+    check_model_approved,
     decide_storage_mode,
     diff_vs_previous,
     diff_vs_seed,
@@ -101,15 +102,22 @@ async def seed_from_model(
     *,
     slug: str,
     model_ref: ArtifactRef,
+    factor: str,
     change_note: str,
     rateable: bool = True,
 ) -> RateTableVersion:
-    """Seed a new rate table version from an approved model (FR-230, spec §5.1).
+    """Seed one Factor of an approved model into a rate table version (FR-230, `RL-1361`).
 
-    The seed is the origin of a lineage: it creates the table (version 1) or appends
-    the next version of an existing table, pins `seeded_from` so "how far from the
-    technical rate?" is answerable (FR-230), and its storage is decided against
-    the workspace threshold like every new version (FR-232, DP2).
+    One seed holds one Factor: the table has one key, bound by `factor_ref` to the Factor
+    version the model pins. The seed is the origin of a lineage: it creates the table
+    (version 1) or appends the next version of an existing one, pins `seeded_from` so "how
+    far from the technical rate?" is answerable (FR-230), and its storage is decided against
+    the workspace threshold like every new version (FR-232, DP2). A re-seed records its own
+    source model and starts a new seed origin (`RL-1375` DP-1).
+
+    **Refusal order.** Approval comes before the Factors are loaded (`RL-1376`), so a
+    non-approved model gives `PIN_NOT_APPROVED` whatever its Factor ids resolve to; an id
+    that resolves nowhere is then a 404 (`load_factors`), never an empty list.
     """
     async with database.unit_of_work() as session:
         model_row = await load_model(
@@ -120,8 +128,17 @@ async def seed_from_model(
         )
         model = to_model(model_row)
         try:
+            check_model_approved(model)
+        except ValueError as exc:
+            raise _map_operation_error(exc) from exc
+        factors = await load_factors(
+            session, workspace_id=workspace_id, factor_ids=list(model.spec.factors)
+        )
+        try:
             result = seed_from_model_op(
                 model,
+                factor=factor,
+                factors=factors,
                 table_slug=slug,
                 change_note=change_note,
                 seeded_at=datetime.now(UTC),
@@ -147,6 +164,7 @@ async def seed_from_model(
             await session.flush()
             version_number = 1
         else:
+            await _check_reseed_lineage(session, table_row, slug=slug, factor=factor)
             version_number = table_row.current_version + 1
 
         derived = RateTableVersion(
@@ -171,6 +189,42 @@ async def seed_from_model(
             threshold=threshold,
             blob_store=blob_store,
         )
+
+
+async def _check_reseed_lineage(
+    session: Any, table_row: RateTableRow, *, slug: str, factor: str
+) -> None:
+    """`RL-1375` DP-2: a seed into an existing table needs one key naming this Factor.
+
+    Accepted only when the current version has exactly one key and that key either carries
+    a `factor_ref` naming `factor`'s slug (at any version) or carries neither `factor_ref`
+    nor `banding_ref` and is named `factor` (every key seeded before `factor_ref` existed).
+    Anything else is a 422 `VALIDATION_FAILED` naming the table and its keys.
+    """
+    current = await _load_version(session, table_row.id, table_row.current_version, slug)
+    keys: list[dict[str, Any]] = list(current.definition.get("keys", []))
+    names = [str(key.get("name")) for key in keys]
+    if len(keys) == 1 and _key_takes_the_seed(keys[0], factor):
+        return
+    raise PlatformError(
+        "VALIDATION_FAILED",
+        "Request validation failed",
+        422,
+        f"rate table {slug!r} cannot take a seed of Factor {factor!r}: its current version "
+        f"@{table_row.current_version} has key(s) {names}; a seed into an existing table "
+        "needs exactly one key that is bound to that Factor or is an unbound key named "
+        "after it. Seed a new table slug instead.",
+    )
+
+
+def _key_takes_the_seed(key: dict[str, Any], factor: str) -> bool:
+    factor_ref = key.get("factor_ref")
+    if factor_ref is not None:
+        try:
+            return ArtifactRef.model_validate(factor_ref).slug == factor
+        except ValueError:
+            return False
+    return key.get("banding_ref") is None and key.get("name") == factor
 
 
 def _cells_for_rows(
@@ -431,18 +485,30 @@ async def _resolve_baseline(
             )
         return version - 1
     if against == "seed":
-        seed_number = cast(
-            int | None,
-            await session.scalar(
-                select(RateTableVersionRow.version_number)
-                .where(
-                    RateTableVersionRow.rate_table_id == rate_table_id,
-                    RateTableVersionRow.seeded_from.is_not(None),
-                )
-                .order_by(RateTableVersionRow.version_number)
-                .limit(1)
-            ),
+        # `RL-1375` DP-1 (a2): version N's seed origin is the lowest-numbered version of the
+        # same table whose `seeded_from` equals N's, the whole stored value (`model_ref` and
+        # `seeded_at`), so a re-seed starts its own origin and two seeds of one model stay
+        # distinct. A version with no `seeded_from` has no origin.
+        anchor = await session.scalar(
+            select(RateTableVersionRow.seeded_from).where(
+                RateTableVersionRow.rate_table_id == rate_table_id,
+                RateTableVersionRow.version_number == version,
+            )
         )
+        seed_number = None
+        if anchor is not None:
+            seed_number = cast(
+                int | None,
+                await session.scalar(
+                    select(RateTableVersionRow.version_number)
+                    .where(
+                        RateTableVersionRow.rate_table_id == rate_table_id,
+                        RateTableVersionRow.seeded_from == anchor,
+                    )
+                    .order_by(RateTableVersionRow.version_number)
+                    .limit(1)
+                ),
+            )
         if seed_number is None:
             raise PlatformError(
                 "RATE_TABLE_MISS",

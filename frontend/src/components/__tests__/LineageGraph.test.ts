@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/vue";
 import { describe, expect, it, vi } from "vitest";
 
+import { cellUnder } from "@/test-tables";
+
 import LineageGraph from "../LineageGraph.vue";
 
 vi.mock("vue-echarts", () => ({
@@ -36,6 +38,17 @@ describe("the lineage graph", () => {
     expect(table).toHaveTextContent("motor-freq-2026");
     expect(table).toHaveTextContent("approved");
     expect(table).toHaveTextContent("sample");
+  });
+
+  it("NFR-463: puts each lineage field under its own heading, read by label", () => {
+    render(LineageGraph, { props: { lineage: LINEAGE, version: 2 } });
+    const table = screen.getByRole("table", { name: "Lineage" });
+    expect(cellUnder(table, /^Built from/, "Operation")).toHaveTextContent("sample");
+    expect(cellUnder(table, /^Derived version/, "Name")).toHaveTextContent("v3");
+    expect(cellUnder(table, /^Derived version/, "Operation")).toHaveTextContent("split");
+    expect(cellUnder(table, /^Model/, "Name")).toHaveTextContent("motor-freq-2026");
+    expect(cellUnder(table, /^Model/, "Status")).toHaveTextContent("approved");
+    expect(cellUnder(table, /^Model/, "Operation")).toHaveTextContent("—");
   });
 
   it("renders a single node when nothing depends on the version", () => {

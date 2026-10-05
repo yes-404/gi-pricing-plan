@@ -115,9 +115,6 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         1, "a validation-rule catalogue lookup miss; Dataset Version path"),
     ("backend/src/app/api/demo.py", "get_guide", "{exc}"): (
         1, "the demo guide's own missing-source message: a path, no quote or dataset value"),
-    ("backend/src/app/api/rate_tables.py", "_seed_body", "str(exc)"): (
-        1, "rate-table seed validation echoing the caller's own request to the caller; a rate "
-        "table is not a quote input and the 422 is the request's own body"),
     ("backend/src/app/worker/data_handlers.py", "_materialise_split", "str(exc)"): (
         1, "`SplitError`, pricing-core's own message about a split definition; Dataset Version "
         "path, not a Quote Context"),

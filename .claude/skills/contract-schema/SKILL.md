@@ -118,6 +118,20 @@ to `grouping.schema.json` that way produced a 189-line diff for a 13-line change
 the edit in reflow and destroying the layout a reader relies on. Patch the text, then
 `json.loads` the result to prove it still parses.
 
+**A new generated schema is a new file the audit must be told about.** Registering its slug
+in `GENERATED_SHAPES` is not enough: the file under `docs/contracts/schemas/generated/` cannot
+carry a front-matter header, so checks 30 and 35 of `scripts/audit-docs.py` red on it by name
+until you (1) add its literal path to `_CONTRACT_ARTIFACT_PATHS` in that script (the generated
+block), with a dated comment line, and (2) bump the count assert in
+`tests/test_audit_docs_ids.py::test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_exempts`
+by the number of paths added (run that test **unmodified on your base first** and record the
+integer it asserts; a base other than the last one you saw is normal when another slice has
+registered files). Both edits are in the same commit as the schema, and `git add` the new
+files before running the audit: it reads the tracked tree, so an untracked file reports as a
+stale register entry. If another open slice also adds generated schemas, whichever merges
+second re-applies its entries on the merged tuple and re-bumps the count. Found by the
+FD-1357 fix (WK-1178 SL-1377), which added `rate-table-version` and `seed-from-model-request`.
+
 ## Verified
 
 2026-08-22 — W32-1, the contracts-and-drift-guard slice. The nullability paragraph above was
@@ -151,3 +165,9 @@ The generated/authored comparison found three real divergences on its first run.
 hypothetical: `custom-objective.schema.json` and `validation-rule.schema.json` were each
 written with two `allOf` keys, parsed cleanly under `json.load`, and would have silently
 dropped their `artifact-envelope` composition. A `object_pairs_hook` check caught both.
+
+2026-10-03 — WK-1178 SL-1377 (the FD-1357 fix): the "a new generated schema is a new file the
+audit must be told about" paragraph above was added (the registry step RL-1375 DP-4's
+amendments name). Verified against origin/main `cf074d20` plus this slice's tree, by running
+`python3 scripts/audit-docs.py` red (check 30 and 35 on both new files) and green after the
+register edit.

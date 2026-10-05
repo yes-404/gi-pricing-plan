@@ -24,6 +24,19 @@ superseded; severity stays MEDIUM.** The reason: DP-6 resets `gipricing`'s 10 ro
 the record would say `review` while the run says running. The earlier text is kept below and
 struck in place, not rewritten.
 
+> **Amended 2026-10-05 before mint:** working ids that have since minted, re-pointed. **`RL 9750` is
+> `RL-1407`** (`docs/rulings/RL-01407-…`, §"FD 9748 (working id)", merged as #1070); **`PL 9762` is
+> `PL-1408`** (`docs/plans/PL-01408-…`, Acceptance 23–25 and Step 3b, whose remedy is
+> `rule_service.rule_set_to_run`; `status: draft` at `origin/main`
+> `ef5dc6e7317281ac9d1840fa61861597e3c1b8b1`, activation PR #1112 open). The
+> working ids still written in this essay stand as the quotation of what was written then,
+> including inside the maintainer's entry headings quoted above. **Code cites re-checked at that
+> tree, none moved:** `rule_set_for` `validation_rules.py:450`, `_to_rule_set` `:511`,
+> `replace_rule_set` `:549` (refusal `:596-604`), `data_handlers.py:247` and the dry-run set
+> `:241-244`, `api/validation.py:395`, `enabled_entries` `model_schema/validation.py:160`,
+> `run_validation` `validate.py:2138` (the `:2150-2154` docstring and the `:2162-2165` loop).
+> The remedy is not built: the fix is `PL-1408` Step 3b. The finding's substance is unchanged.
+
 **Severity: MEDIUM, owner WK-1178, ~~deadline before the P2 exit demo~~ (superseded, see above).** All three are the
 maintainer's, set in the entry headed *"2026-10-01 11:07:12 BST — #1070 audit: observation (1) →
 its OWN FD (option ii), MEDIUM, deadline before the P2 exit demo; observation (2) → an FD,

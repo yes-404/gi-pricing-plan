@@ -1232,7 +1232,7 @@ async def submit_rating_version(
 @router.post(
     "/rating-versions/{rating_version_id}/compile",
     summary="Compile a rating version to a self-contained Bundle",
-    responses=problems(401, 403, 404, 422),
+    responses=problems(401, 403, 404, 409, 422),
 )
 async def compile_rating_version(
     rating_version_id: UUID,
@@ -1246,9 +1246,14 @@ async def compile_rating_version(
     objectives and model to their real content and persists the compiled Bundle as a
     blob — no longer a synchronous 200, since resolving real content can do real I/O.
     Polling the returned Job to completion yields a `JobResult(kind="blob")` whose `ref`
-    is the persisted Bundle's content-addressed sha256.
+    is the persisted Bundle's content-addressed sha256. **409** `RATING_VERSION_IMMUTABLE`,
+    with no Job, unless the version is `draft` (FR-239, RL-1379).
     """
     async with database.unit_of_work() as session:
+        row = await rating_versions_service.load_rating_version(
+            session, workspace_id=caller.workspace_id, rating_version_id=rating_version_id
+        )
+        rating_versions_service.require_compilable(row)
         job = await job_service.submit(
             session,
             JobKind.RATING_COMPILE,
