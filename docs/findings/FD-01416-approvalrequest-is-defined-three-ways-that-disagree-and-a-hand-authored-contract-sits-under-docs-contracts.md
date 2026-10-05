@@ -1,18 +1,18 @@
 ---
-id: FD-9752
+id: FD-1416
 family: finding
 title: ApprovalRequest is defined three ways that disagree, and a hand-authored contract sits under docs/contracts/
 status: active
-created: 2026-10-01
+created: 2026-10-05            # the mint date (check 31); filed 2026-10-01
 owner: auditor
 tree: 1dd5e264195677b4a13268b80ac8673c2c027135
 corrected_by: []
 relates: [WK-1178, WK-674, FD-1335, FD-1356, PL-1306, RL-1301, RL-878, ADR-704, FR-451, OQ-649]
 ---
 
-# FD-9752 — `ApprovalRequest` is defined three ways that disagree, and a hand-authored contract sits under `docs/contracts/`
+# FD-1416 — `ApprovalRequest` is defined three ways that disagree, and a hand-authored contract sits under `docs/contracts/`
 
-**Filed under working id 9752.** The id is minted by the lead at the merge turn. The `tree:` is `origin/main` at
+**Filed under working id 9752; minted `FD-1416` on 2026-10-05.** The `tree:` is `origin/main` at
 `1dd5e264`; every locator below was read at that tree. Raised by `PL-1392`'s (working id `PL 9765` when filed) DP-S2-6 (WK-674 Slice 2's superseding plan),
 confirmed field by field by the auditor, and ordered by the maintainer's entry headed
 "2026-10-01 10:32:26 BST — #1062 DP-S2-6: option (c) ACCEPTED with three conditions; it narrows my item (3) for the 2 CHANGED routes' 2xx only; the three-shape disagreement becomes its own FD"
@@ -28,11 +28,11 @@ decision-maker's to rule, field by field, and is not this finding's.
 
 The three shapes:
 
-- **S1 — what the API emits.** `to_dict` (`backend/src/app/platform/approvals.py:663-687`, `to_dict` at `origin/main` `ef5dc6e7317281ac9d1840fa61861597e3c1b8b1`; `:648-673` at the filing tree), returned by four routes.
+- **S1 — what the API emits.** `to_dict` (`backend/src/app/platform/approvals.py:663-687`, `to_dict` at `origin/main` `caa4e411a9c07a389cf47092a923c7761b2b92dc`; `:663-687` at `ef5dc6e7`, `:648-673` at the filing tree), returned by four routes.
 - **S2 — the model.** `ApprovalRequest` (`packages/model-schema/src/model_schema/approvals.py:395`, `:275` at the filing tree; `frozen=True`,
   `extra="forbid"`) with `ApprovalDecision` (`:384`, `:264` at the filing tree).
 - **S3 — the hand-authored contract.** `docs/contracts/schemas/approval-request.schema.json`, with `06` §4.3's example
-  (`06-governance.md` §4.3, heading `:447` and its JSON example `:449-477`; `:440-475` at the filing tree) as its prose twin.
+  (`06-governance.md` §4.3, heading `:458` and its JSON example `:460-488` at `caa4e411`; `:447` and `:449-477` at `ef5dc6e7`, `:440-475` at the filing tree) as its prose twin.
 
 > **Amended 2026-10-05 before mint:** citations re-anchored, no HOLD text changed. **`PL 9765` is
 > `PL-1392`** (merged) and **`PL 9762` is `PL-1408`** (`status: draft`, activation PR #1112 open); a
@@ -48,6 +48,16 @@ The three shapes:
 > `backend/tests/test_contracts.py:97` still lists `"approval-request": "later-phase — 06 governance"`. Line
 > cites below are given at the filing tree with the current one beside them; the field table was
 > not re-measured (the fields of `ApprovalRequest`/`ApprovalDecision` are unchanged between the two trees).
+>
+> **Re-anchored again at mint, 2026-10-05, at `origin/main` `caa4e411a9c07a389cf47092a923c7761b2b92dc`, by symbol; no HOLD text changed.**
+> `service.to_dict` is `backend/src/app/platform/approvals.py:672-697` (was `:663-687`; the body is unchanged: it still emits
+> `environment`, no `workspace_id`, and the stored decision values). The four call sites in `backend/src/app/api/approvals.py` are
+> still `:96`, `:140`, `:254`, `:312`; `Decide` is still `:78`. `ApprovalDecision` `:384`, `ApprovalRequest` `:395`,
+> `ApprovalSubmission` `:355` and `ApprovalWithdrawal` `:370` in `packages/model-schema/src/model_schema/approvals.py`, and
+> `ApprovalRequestRow.decided_at` (`backend/src/app/db/models.py:678`), `test_contracts.py:97` and the 0 hits of `ApprovalRequest` in
+> `docs/contracts/openapi/generated.json` are unchanged. `06` §4.3 moved to `:458` (example `:460-488`; it still writes
+> `"decision": "approved"`, at `:483`) because a paragraph was added above it for `RL-1362` DP-S3-4; that paragraph changes
+> `approvers_required` for a non-convex Custom Objective at submission and does not touch the decision enum or any field of the table below.
 
 ### Field by field
 
@@ -168,13 +178,13 @@ The lead gives the verdict and the maintainer sets the severity.
 ## Evidence
 
 - Field table: read at `1dd5e264` from `backend/src/app/platform/approvals.py:648-673`,
-  `packages/model-schema/src/model_schema/approvals.py:264-295` (re-anchored 2026-10-05 at `ef5dc6e7317281ac9d1840fa61861597e3c1b8b1`: `:663-687` and `:384-411`, same fields) and
+  `packages/model-schema/src/model_schema/approvals.py:264-295` (re-anchored 2026-10-05 at `ef5dc6e7317281ac9d1840fa61861597e3c1b8b1`: `:663-687` and `:384-411`, same fields; at `caa4e411` `to_dict` is `:672-697` and the model `:384-411`) and
   `docs/contracts/schemas/approval-request.schema.json` (its `required` list and `properties`).
-- Spec twin: `docs/specs/06-governance.md:440-475` (`:447-477` at `ef5dc6e7`; `06` §4.3, `"decision": "approved"` at the example's decisions entry).
+- Spec twin: `docs/specs/06-governance.md:440-475` (`:458-488` at `caa4e411`, `:447-477` at `ef5dc6e7`; `06` §4.3, `"decision": "approved"` at the example's decisions entry).
 - Provenance: `git log --follow --format='%h %aI %s' -- docs/contracts/schemas/approval-request.schema.json`.
 - `ONE_SIDED_SLUGS`: `backend/tests/test_contracts.py`, the `"approval-request"` entry.
 - `to_dict` call sites: `git grep -n 'service.to_dict' -- backend/src/app/api/approvals.py` prints four lines (`:112`, `:156`,
-  `:270`, `:294` at the filing tree; `:96`, `:140`, `:254`, `:312` at `ef5dc6e7`).
+  `:270`, `:294` at the filing tree; `:96`, `:140`, `:254`, `:312` at `ef5dc6e7` and at `caa4e411`).
 - **Not measured:** whether any client of the published contract exists today; the table is a statement about the three
   definitions, not about a consumer.
 
