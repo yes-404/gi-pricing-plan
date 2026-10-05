@@ -114,7 +114,7 @@ decision-maker rules it."
 
 ## Status
 
-`draft`. It has **five blocking decision points** (§"Decision points"). It turns `active` only
+`draft`. It was filed with **five blocking decision points** (§"Decision points"); four are decided, see the amendment of 2026-10-05 below. It turns `active` only
 when every activation need below is met, each shown by its command at a named `origin/main`
 SHA in the dispatch record.
 
@@ -143,6 +143,22 @@ slot), the corrected example's raw names (P5a), and the maintainer's two `03` ex
 Then the maintainer's widening: the ruled example is a complete valid algorithm, and it must
 pass `model_validate` in full, then compile (stub payloads), then the declared-reads check.
 Then the scoped re-check of `56460dd7` (F-1 to F-5 and the import merge).
+
+**Amended 2026-10-05 before mint** (planner-amend-2, on the lead's brief of 2026-10-05 and the
+triage it adopted; every item re-verified at `origin/main` `ef5dc6e7`): **DP-F35-1 (with
+(i)–(iv), (iii-a), (iii-b)), DP-F35-2 and DP-F35-3 are decided by RL 9771, and DP-F35-5 by
+RL 9770** (both working ids, PR #1060, not yet minted), each as this plan recommended; the
+§"Decision points" table's last column names the resolver. They stay activation need 2's
+until minted. DP-F35-4 (behind Spike S1) and DP-F35-6 (default (a)) stay open, so two
+decision points remain, one blocking. Working ids minted since are re-pointed: FD 9773 →
+`FD-1374` and OQ 9774 → `OQ-1373` (both #1077, 2026-10-03); a dated record above that
+quotes the working id keeps it as written. `03` line cites are re-anchored by id or heading
+to `ef5dc6e7` (§4.1's example is unchanged in content, +7 lines; §4.5's `s_minprem` entry
++24; NFR-489/490 +140), and `score.py` cites by symbol (`_build_trace`,
+`_check_purpose_mount`, `_check_model_call_sentinel`; `backend/src/app/api/score.py`'s `score`,
+`score_compare`, `_maybe_sample_trace`). Every other code and test cite stays a reading at
+`tree:` `19155b50`, as §"Premises" says; `tree:` and `created:` change at the mint. OQ 9777
+is not minted and keeps its working id.
 
 **SL.** WK-1178 is standing maintenance. The lead mints its slices at triage
 ([`document-ids.md`](../process/document-ids.md) §1.9). The proposed row text is in
@@ -180,22 +196,22 @@ unmet.** The lead's GO check starts here, before anything else.
    git show "$M":docs/specs/03-rating-engine.md | grep -E '^\| \*\*FR-258\*\*' | grep -cE '(Clarified|Amended) 2026-1[0-2]'
    git show "$M":docs/open-questions.md | grep -c 'sampled-trace schema'
    git show "$M":docs/specs/03-rating-engine.md | grep -E '^\| \*\*NFR-490\*\*' | grep -cE '(Clarified|Amended) 2026-1[0-2]'
-   P5FD='FD-<n>'   # FD 9773's minted id (working id 9773, the P5 sweep); the lead sets it
+   P5FD='FD-1374'  # the P5 sweep's finding (filed as working id 9773, minted 2026-10-03, #1077)
    git grep -l --all-match -w -e 'DP-F35-1' -e "$P5FD" "$M" -- docs/rulings/
    git grep -l --all-match -w -e 'DP-F35-1' -e 'FR-246' -e 's_minprem' "$M" -- docs/rulings/
    ```
-   Expected: `1`, `1` or more (OQ 9774's row, minted), `1` (DP-F35-5's dated clarification on
+   Expected: `1`, `1` or more (`OQ-1373`'s row), `1` (DP-F35-5's dated clarification on
    NFR-490's row, verbatim as ruled), and at least one path: the DP-F35-1 ruling cites the P5
-   sweep's governed record, **FD 9773**, by its minted id (DP-F35-1's precondition), and rules
-   FR-246's step-type scope and whether `consumes` is mandatory. `P5FD` is the one value the
-   lead fills in; with the placeholder left in, the command prints nothing and the need is
+   sweep's governed record, **FD-1374**, by its minted id (DP-F35-1's precondition), and rules
+   FR-246's step-type scope and whether `consumes` is mandatory. `P5FD` is set (amended
+   2026-10-05 before mint: `FD-1374` is on `main`); if the command prints nothing, the need is
    **unmet**. The last prints at least one path: the DP-F35-1 ruling carries FR-246's
    amendment and the corrected §4.1 example verbatim, and rules (iii-a) and (iii-b); Task 1A
    applies that text to `03` in its own commit, so `03` itself is not checked here. The
-   example's steps block is `03:252-274`. **Five evaluating steps** at `03:254-271` read names
-   and declare no `consumes`: `s_area`'s `key_expr` (`:254-257`), `s_rp`'s `feature_map`
-   (`:258`), `s_expense`'s `key_expr` (`:262`), `s_office`'s expression (`:265-267`) and
-   `s_minprem`'s condition and clamp bound (`:268-271`). **And `s_out` (`:272-274`) consumes
+   example's steps block is `03:259-281`. **Five evaluating steps** at `03:261-278` read names
+   and declare no `consumes`: `s_area`'s `key_expr` (`:261-264`), `s_rp`'s `feature_map`
+   (`:265`), `s_expense`'s `key_expr` (`:269`), `s_office`'s expression (`:272-274`) and
+   `s_minprem`'s condition and clamp bound (`:275-278`). **And `s_out` (`:279-281`) consumes
    `payable_premium_pre_round`, which no step produces**, so the example also fails the
    existing graph invariant (`RATING_GRAPH_UNRESOLVED_REF`, `rating.py:419`), besides P5a's
    other defects. **The ruled §4.1 example must pass `RatingAlgorithm.model_validate` in full, then compile
@@ -279,7 +295,7 @@ unless it names the base.
    on broken input instead: Task 2's violation control, and Task 4's R3 differential
    (Acceptance 6). The ledger quotes each red's printed line. A red with another cause is a
    plan defect, not a pass.
-2a. **FR-246 is enforced** (DP-F35-1 (ii); FD 9773): `uv run pytest -q
+2a. **FR-246 is enforced** (DP-F35-1 (ii); FD-1374): `uv run pytest -q
     packages/pricing-core/tests/test_rating_declared_reads.py` exits 0 and collects **6**
     tests: the two refusal tests and the extractor test, each seen red first (Task 1A Steps 2
     and 3); the control, proved on broken input (Task 1A Step 6); and the two `03` example
@@ -288,9 +304,9 @@ unless it names the base.
     then the declared-reads check: red against today's `03` on their named causes (Task 1A
     Step 3), green on the ruled complete example applied in the same commit (Step 8).
     **'Compiles' here means `compile_bundle` over stub payloads: the example is not hydrated
-    by `load_bundle`, not scored, and its `sub_graphs` mount is not read (`score.py:398-399`);
+    by `load_bundle`, not scored, and its `sub_graphs` mount is not read (`_check_purpose_mount`'s docstring, `score.py:400-401` at `ef5dc6e7`);
     a dangling `mount_point` (e.g. `s_ncd`, not a step) also passes.** The 12 backend files of
-    Step 7 pass; FD 9773's predicate prints
+    Step 7 pass; FD-1374's predicate prints
     0 undeclared reads over the merge tree (Task 1A Step 8).
 3. **Each `TraceStep` carries exactly the step's reference set and declared produces**
    (DP-F35-1 (b)). On the `test_rating_score.py` fixture (`_compiled()`), `s_clamp`'s
@@ -332,7 +348,7 @@ unless it names the base.
     evidence rules".
 12. **The write set holds:** `git diff --stat origin/main...HEAD` names only the paths in
     §"Write set". Under `docs/specs/` it names only `03`, and `03`'s diff touches only
-    FR-246's row, the §4.1 example (`03:252-274`) and, under (iii-a) (b), one owned-codes row,
+    FR-246's row, the §4.1 example (`03:259-281`) and, under (iii-a) (b), one owned-codes row,
     each byte-equal to the ruling's text (DP-F35-1 (iii)). Under `backend/src/` it names
     nothing, or under (iii-a) (b) only `backend/src/app/errors.py`, one `RATING_ERROR_CODES`
     entry.
@@ -387,8 +403,9 @@ these are current.
   "`passThrough` (rule 3) carries a node's entire received context forward … edges carry the
   whole merged dict".
 - **P2. `_build_trace` passes the engine's dicts through.** `consumed=dict(entry.get("input") or {})`
-  and `produced=dict(output)` (`score.py:726-727`, inside `_build_trace` at `:700-739`). F55
-  cites `:686-687`, which is stale.
+  and `produced=dict(output)` (`score.py:726-727`, inside `_build_trace` at `:700-739`, at
+  `19155b50`; at `ef5dc6e7` the same two lines are `:806-807`, inside `_build_trace` at
+  `:781-822`). F55 cites `:686-687`, which is stale.
 - **P3. The engine offers no slimmer trace.** `DecisionEvaluateOptions` has two keys,
   `max_depth` and `trace` (the installed `zen/__init__.pyi:5-7`, `zen-engine` 0.53.0, the
   version `uv.lock:2786-2787` pins). A smaller payload must come from the graph we hand it.
@@ -403,11 +420,11 @@ these are current.
   (`min_premium_minor`), `:80` `s_decl_cap` (`sanity_cap_minor`), `:83` `s_decl_floor`
   (`sanity_floor_minor`), and `packages/model-schema/tests/test_rating_algorithm.py:65`
   `s_minprem` (`min_premium_minor`). **None** in the seed (`examples/`) or the bench
-  structure. And `03`'s **own** §4.1 example (steps `03:252-274`) reads undeclared names in
-  **five evaluating steps** at `03:254-271` (`s_area`, `s_rp`, `s_expense`, `s_office`,
-  `s_minprem`), none declaring `consumes`; its `s_minprem` (`03:268`) reads
-  `office_premium_minor` and `min_premium_minor`, which §4.5's trace example (`03:477`)
-  records as `consumed`. Its `s_out` (`03:272-274`) also consumes `payable_premium_pre_round`,
+  structure. And `03`'s **own** §4.1 example (steps `03:259-281`) reads undeclared names in
+  **five evaluating steps** at `03:261-278` (`s_area`, `s_rp`, `s_expense`, `s_office`,
+  `s_minprem`), none declaring `consumes`; its `s_minprem` (`03:275`) reads
+  `office_premium_minor` and `min_premium_minor`, which §4.5's trace example (`03:501`)
+  records as `consumed`. Its `s_out` (`03:279-281`) also consumes `payable_premium_pre_round`,
   which no step produces, so the example fails FR-212's invariant as well. **The predicate:** for every non-`input`/`output` step, the names read by
   its `expr`, `condition`, `clamp_bounds` values and `key_expr` (string literals stripped;
   identifiers not followed by `(` and not preceded by `.` or `$`; minus `true`, `false`,
@@ -423,7 +440,8 @@ these are current.
   only, and all four under-declarers are constraint steps. P5's severity is the auditor's
   (held for the sweep's run on stored algorithms).
 - **P5a. The §4.1 example at `19155b50`** (the JSON block at `03:233-278`, steps
-  `03:252-274`), probed by `json.loads` of that block, `RatingAlgorithm.model_validate`
+  `03:252-274`; unchanged in content at `ef5dc6e7`, where they are `03:240-285` and
+  `03:259-281`, and the cites below are given at `ef5dc6e7`), probed by `json.loads` of that block, `RatingAlgorithm.model_validate`
   repeated with each reported defect removed, and the P5 tokenizer over each step:
   - **`RatingAlgorithm` refuses it**, first on FR-214: declared outputs `premium_ladder`,
     `peril_risk_premium` and `decline_reasons` have no output step; then FR-212: `s_out`
@@ -432,11 +450,11 @@ these are current.
     chain (because `s_minprem` does not declare that it consumes it). Its sub-graph mount
     (`sub_graph:ncd-ladder@4` at `s_ncd`) was not reached.
   - **Raw names with no producer:** `postcode_outcode` (`s_area`'s `key_expr`) is in the
-    `input_contract` (`03:240`) but no `input` step produces it; `distribution_channel`
+    `input_contract` (`03:247`) but no `input` step produces it; `distribution_channel`
     (`s_expense`), `commission_factor` and `profit_factor` (`s_office`) and
-    `min_premium_minor` (`s_minprem`) are in neither the `input_contract` (`03:237-244`) nor
-    any step's `produces`. Only `driver_age` has an `input` step (`s_input_age`, `03:252`).
-  - **`s_area`'s `as_at: "effective_date"`** is a read too. FD 9773's predicate does not read
+    `min_premium_minor` (`s_minprem`) are in neither the `input_contract` (`03:244-251`) nor
+    any step's `produces`. Only `driver_age` has an `input` step (`s_input_age`, `03:259`).
+  - **`s_area`'s `as_at: "effective_date"`** is a read too. FD-1374's predicate does not read
     `as_at` (a blind spot); this plan's `referenced_names` does (Task 1A Step 3).
   - So the decision-maker writes a complete valid algorithm (DP-F35-1 (ii)). **The corrected
     example adds**, at the decision-maker's choice of form: an `input` step
@@ -455,12 +473,14 @@ these are current.
 - **P8. `own_change` reads `consumed` until WK-675 delivers `RL-1261`.** `03` §4.10
   (`:735`, `:737-738`). With the full context, a step downstream of an edit lists as `changed`
   even when the values it reads did not move. With the reference set, it does not list at all.
-- **P9. `score/compare` traces both sides** (`backend/src/app/api/score.py:359-362`), so this
+- **P9. `score/compare` traces both sides** (`backend/src/app/api/score.py`'s `score_compare`, `:443-447` at `ef5dc6e7`; `:359-362` at
+  `19155b50`), so this
   is on a P2 deliverable's path (`CR-1247` Proposal 3, fact 2).
 - **P10. The 7 capture tests exist at the cited lines:** `backend/tests/test_score.py:775`,
   `:996`, `:1047`; `backend/tests/test_traces.py:407`, `:415`, `:441`, `:469`, each marked
   `req("FR-259")`. Both citations of the serving path hold: `score.py:310-319` (the
-  maintainer's) and `:379-441` (`_maybe_sample_trace`).
+  maintainer's) and `:379-441` (`_maybe_sample_trace`), at `19155b50`; at `ef5dc6e7` they are
+  `score`'s `:373-384` and `_maybe_sample_trace` from `:464`.
 - **P11. Changing `to_wire` does not change a bundle's hash.** `to_wire` runs inside
   `load_bundle` (`runtime.py:590`) over `bundle.graph`; `content_hash` is computed from the
   graph and pins (`compile.py`'s `bundle_hash`), so a pinned bundle re-scores under the new
@@ -484,7 +504,7 @@ these are current.
 | `packages/pricing-core/tests/data/trace_remedy_baseline.json` | **new**: the frozen base corpus (Task 1 Step 6) | — |
 | `packages/pricing-core/tests/test_rating_score.py` | `_algorithm_payload` (three `input` steps; `consumes` on `s_clamp`, `s_decl_cap`, `s_decl_floor`; Task 1A); `test_trace_true_returns_a_populated_trace_and_the_identical_premium`: the `isdisjoint` assertion on `input`/`output` steps inverts (DP-F35-2 (b)) | **yes**: that fixture and that test |
 | `backend/tests/test_score_compare.py` | the expectations of `test_compare_returns_both_traced_results_and_the_step_diff`, `test_exactly_one_step_is_the_own_change_at_the_http_layer` and `test_identical_refs_give_an_empty_diff` (Task 5's derivation); one appended test | **yes**: those three tests |
-| `docs/specs/03-rating-engine.md` | FR-246's row (§3.5) and the §4.1 example (`03:252-274`), verbatim from the DP-F35-1 ruling, in Task 1A's commit (the maintainer's executor carve-out); under (iii-a) (b), the new code's owned-codes row (§5.1) | **yes**: those rows and the example |
+| `docs/specs/03-rating-engine.md` | FR-246's row (§3.5) and the §4.1 example (`03:259-281`), verbatim from the DP-F35-1 ruling, in Task 1A's commit (the maintainer's executor carve-out); under (iii-a) (b), the new code's owned-codes row (§5.1) | **yes**: those rows and the example |
 | `backend/src/app/errors.py` | under (iii-a) (b) only: the new code in `RATING_ERROR_CODES` | **yes**: that frozenset |
 | `docs/ledgers/LG-<id>-….md` | new | none |
 | `docs/INDEX.md` | regenerated | registry-exempt |
@@ -527,11 +547,11 @@ not build concurrently, and the second merges `origin/main` first and re-runs it
 engine's share and ours (`:997-1028`). The budget is `BUDGET_TRACE_OVERHEAD` in that file, by
 symbol.
 
-**The statistic is DP-F35-5's ruling.** NFR-490 (`03:1191`) names none, so choosing one
+**The statistic is DP-F35-5's ruling: p99, by RL 9770 (working id, #1060), accepted by the maintainer 2026-10-01.** NFR-490 (`03:1331`) names none, so choosing one
 interprets the spec, and the decision-maker rules it. This plan is written for **p99**,
 the maintainer's lean, which holds only if NFR-489 states its scoring-latency budget at p99
-(the decision-maker verifies; `03:1190` reads "Real-time scoring p99 < 50 ms" at
-`19155b50`). p99 is also the statistic the harness prints, F35 measured and `#1045`'s bench
+(the decision-maker verifies; NFR-489's row, `03:1190` at `19155b50` and `03:1330` at
+`ef5dc6e7`, reads "Real-time scoring p99 < 50 ms"). p99 is also the statistic the harness prints, F35 measured and `#1045`'s bench
 line used. If the ruling names another statistic, the margin statement below uses it: a
 method difference, named in the dispatch record.
 
@@ -572,17 +592,17 @@ Proposal 11's question"). DP-F35-4 waits on Spike S1.
 
 | DP | Question | Options | Recommendation | Kind | Blocking? | Resolved by |
 |---|---|---|---|---|---|---|
-| **DP-F35-1** | **What does a `TraceStep` record per node?** (F35, F55; FR-258's "consumed values, produced value"; R3's "full Trace") | **(a)** Declared names: `consumed` = the values of the step's declared `consumes`; `produced` = its declared `produces` (F55's wording). **(b)** What the step reads: `consumed` = the values of every name the step references (declared `consumes` plus the names its `expr`, `condition`, `clamp_bounds`, `key_expr` or `feature_map` reads), as the step received them; `produced` = its declared `produces`. **(c)** The full accumulated context, as today. **(d)** (a) or (b) by default, and the full context only on an explicit caller option | **(b).** It is `03` §4.5's own example (P6). (a) silently drops a clamp bound or decline threshold the step used (P5), so a trace could not explain its own clamp. (c) leaves NFR-490 about 18× over and NFR-500 about 2.58× over. (d) turns `QuoteContextOptions.trace` from a bool into an enum, a contract change for a debugging aid no requirement names. Under (b), "full" in R3 reads as every step, which is FR-258's "every step" | decision point | **yes** | decision-maker (`RL-`). **Evidence record: FD 9773** (working id, PR #1053; the auditor's P5 sweep; MEDIUM, WK-1178, remedy via this plan). **Precondition (the maintainer, 2026-10-01): DP-F35-1 is not ruled before the auditor's sweep of undeclared reads (FR-246; P5) over every stored algorithm and seed is in the decision-maker's commission** |
-| DP-F35-1 (i) | Does `produced` keep the engine's internal keys (`<step>__violated`; `SL-1345`'s `__before`, `__min`, `__max`)? | (a) no: declared `produces` only; the `violation` field already records a clamp or decline. (b) yes | **(a)** | decision point | yes (with DP-F35-1) | decision-maker |
-| DP-F35-1 (ii) | **Refusal or ordering from reads; FR-246's step-type scope; whether `consumes` is mandatory** (FD 9773). Enforcement is **in this plan's scope** (the lead's instruction of 2026-10-01): Task 1A | **Mechanism:** (a) refuse an undeclared read at save time; (b) accept it and order and wire the graph from what each step reads. **Scope:** (a) every field a step evaluates, on every step type that has one: an `expression`'s `expr`, a `table`'s or `lookup`'s `key_expr`, a `model_call`'s `feature_map`, a `constraint`'s `condition` and `clamp_bounds` (`03`'s own §4.1 example under-declares in five evaluating steps, `03:254-271`, `s_area`'s `key_expr` among them); (b) `expression` only, as FR-246 is worded today. **Mandatory:** (a) yes: a step that reads a name declares it in `consumes`; (b) no: `consumes` stays advisory and only the trace uses the reference set. | **Mechanism (a), scope (a), mandatory (a).** (b) mechanism makes the declared graph a fiction the engine no longer follows, and a reviewer reading `consumes` would be misled. All four under-declarers in the code are constraint steps, and the spec's example adds `feature_map` and `key_expr` cases, so (b) scope would enforce nothing that exists. **The decision-maker writes a COMPLETE, VALID §4.1 algorithm (`03:252-274` and its `input_contract` and `outputs`):** an `input` step (and an `input_contract` entry) for every raw name a step reads, every declared output produced by an output step, `consumes` on every evaluating step, a producer for every consume; **all of P5a's defects fixed in one ruling** (accepted by the maintainer, 2026-10-01). It must pass **`RatingAlgorithm.model_validate` in full, then compile (`compile_bundle`, with stub payloads for its pinned refs, Task 1A), then the new declared-reads check** (the maintainer's widening, superseding "both the existing invariant and the new check"); (a) mandatory makes DP-F35-1's options (a) and (b) coincide for every algorithm that compiles; the code is (iii-a)'s question. **The undeclared reads also bear on M1 (DP-F35-4):** M1 wires edges from reference sets, so an undeclared read adds an edge the declared graph lacks, which can reorder evaluation or close a cycle that the engine refuses in `load_bundle` for a pinned bundle that hydrates today (P11: the content hash is unchanged). Task 1A's check stops new ones at save time; it does not reach a bundle already pinned: (iii-b) rules that, and Spike S1 step 6 lists those edges and cycles | decision point | yes (with DP-F35-1) | decision-maker, with verbatim `03` text (FR-246 and the corrected §4.1 example, `03:252-274`) |
-| DP-F35-1 (iii) | Who writes FR-258's dated clarification and the `TraceStep` reading into `03`? | (a) the ruling's own commit (the precedent `RL-1305` D4 set). (b) this slice | **(a).** It keeps `03` §3.8 and §4.5 out of this slice's write set (`SL-1345` also edits §4.5). **FR-246's amendment and the corrected §4.1 example are different:** they land in Task 1A's commit, beside the code that enforces them (the maintainer, 2026-10-01) | decision point | yes (with DP-F35-1) | decision-maker |
-| DP-F35-1 (iii-a) | **The error code an undeclared read is refused with** | (a) reuse `RATING_GRAPH_UNRESOLVED_REF` (FR-212's "consumes undefined value"). (b) a **new** code (for example `RATING_STEP_UNDECLARED_READ`), with its row in `03`'s owned-codes table (§5.1) and its entry in `RATING_ERROR_CODES` (`backend/src/app/errors.py`) | **(b).** **Undeclared is not unresolved:** an FR-212 refusal means no step produces the name; here a producer exists and the step simply did not declare the read. One code for both would make a caller's fix ambiguous. Cost: `03` §5.1 and `errors.py` join the write set (Task 1A, same commit), and Acceptance 12's `backend/src/` exclusion admits that one registry line | decision point | yes (with DP-F35-1) | decision-maker, with the code's verbatim `03` row |
-| DP-F35-1 (iii-b) | **The fate of a stored or pinned bundle that fails the new check** | (a) refused at reload (`load_bundle` runs the check). (b) grandfathered: a bundle compiled before the check loads and scores as it did, and the check binds at save and compile only (the FR-4 pattern: a rule binds forward). (c) migrated: re-compiled with the reads added to `consumes`, which is a new bundle and a new hash, so a new Rating Version through approval | **(b).** (a) can take a live, approved Rating Version out of service on a code change, which R1 (`03` §1.3: a live version is immutable) forbids in spirit. (c) is a governed re-approval per bundle, not a code task. Under (b), M1 must still hydrate such a bundle: Spike S1 step 6 is the evidence, and **"0 stored rows in the local databases" does not settle other installs**, so the ruling states the behaviour, not the count | decision point | yes (with DP-F35-1; S1 step 6 reads against it) | decision-maker |
-| DP-F35-1 (iv) | Does `Trace` carry a marker of which reading a persisted trace holds? | (a) no marker: the shape is unchanged; a trace carries `bundle_hash` and its row a timestamp; no reader of persisted `consumed` exists yet (`05`'s monitors are a later phase). (b) an integer field on `Trace`, after `Trace.ladder_check_version`'s precedent (`SL-1345`) | **(a).** If `05`'s input-drift monitor (FR-307) later reads `consumed`, its spec states what it needs then (`CLAUDE.md` §0: a later phase is a spec change) | decision point | yes (with DP-F35-1) | decision-maker |
-| **DP-F35-2** | **Are the `input` and `output` steps traced?** (FD-1246) | (a) FR-258 gains a dated clarification that they are not, and the code is unchanged. (b) the trace carries one entry per `input` step (`consumed` `{}`, `produced` its declared name and value, from the engine's `inputNode` entry) and per `output` step (`consumed` its declared name and value, from the `outputNode` entry), each with `elapsed_us` 0 because the engine evaluates them as one collapsed node | **(b).** FR-258 says "every step"; under DP-F35-1 (b) each such entry is a few bytes; and `SL-1340`'s inlined ports are then traceable without a second ruling. Cost: `score/compare`'s `unchanged` counts rise (Acceptance 7), and a test that pins today's omission inverts | decision point | **yes** | decision-maker (the same `RL-`) |
-| **DP-F35-3** | **What does NFR-500's "sampled-trace schema" name?** (`CR-1247` Proposal 11; F37) | (a) the `Trace` contract after this slice's trim, measured uncompressed. (b) the persisted encoding with a named compression. (c) both: the trimmed `Trace`, persisted with a named compression, the budget stated for the persisted bytes | **(a)**, as `CR-1247` recommended and the maintainer accepted. Raised as **OQ 9774** (working id; NFR-500's sampled-trace schema; owner this plan), ruled in the same sitting | design unknown → `OQ-`, then `RL-` | **yes** (Acceptance 9 reads against it) | decision-maker |
+| **DP-F35-1** | **What does a `TraceStep` record per node?** (F35, F55; FR-258's "consumed values, produced value"; R3's "full Trace") | **(a)** Declared names: `consumed` = the values of the step's declared `consumes`; `produced` = its declared `produces` (F55's wording). **(b)** What the step reads: `consumed` = the values of every name the step references (declared `consumes` plus the names its `expr`, `condition`, `clamp_bounds`, `key_expr` or `feature_map` reads), as the step received them; `produced` = its declared `produces`. **(c)** The full accumulated context, as today. **(d)** (a) or (b) by default, and the full context only on an explicit caller option | **(b).** It is `03` §4.5's own example (P6). (a) silently drops a clamp bound or decline threshold the step used (P5), so a trace could not explain its own clamp. (c) leaves NFR-490 about 18× over and NFR-500 about 2.58× over. (d) turns `QuoteContextOptions.trace` from a bool into an enum, a contract change for a debugging aid no requirement names. Under (b), "full" in R3 reads as every step, which is FR-258's "every step" | decision point | **yes** | **Decided (b)** by RL 9771 (working id, #1060, not yet minted). decision-maker (`RL-`). **Evidence record: FD-1374** (filed as working id 9773, PR #1053; the auditor's P5 sweep; MEDIUM, WK-1178, remedy via this plan). **Precondition (the maintainer, 2026-10-01): DP-F35-1 is not ruled before the auditor's sweep of undeclared reads (FR-246; P5) over every stored algorithm and seed is in the decision-maker's commission** |
+| DP-F35-1 (i) | Does `produced` keep the engine's internal keys (`<step>__violated`; `SL-1345`'s `__before`, `__min`, `__max`)? | (a) no: declared `produces` only; the `violation` field already records a clamp or decline. (b) yes | **(a)** | decision point | yes (with DP-F35-1) | **Decided (a)** by RL 9771 (working id, #1060, not yet minted). decision-maker |
+| DP-F35-1 (ii) | **Refusal or ordering from reads; FR-246's step-type scope; whether `consumes` is mandatory** (FD-1374). Enforcement is **in this plan's scope** (the lead's instruction of 2026-10-01): Task 1A | **Mechanism:** (a) refuse an undeclared read at save time; (b) accept it and order and wire the graph from what each step reads. **Scope:** (a) every field a step evaluates, on every step type that has one: an `expression`'s `expr`, a `table`'s or `lookup`'s `key_expr`, a `model_call`'s `feature_map`, a `constraint`'s `condition` and `clamp_bounds` (`03`'s own §4.1 example under-declares in five evaluating steps, `03:261-278`, `s_area`'s `key_expr` among them); (b) `expression` only, as FR-246 is worded today. **Mandatory:** (a) yes: a step that reads a name declares it in `consumes`; (b) no: `consumes` stays advisory and only the trace uses the reference set. | **Mechanism (a), scope (a), mandatory (a).** (b) mechanism makes the declared graph a fiction the engine no longer follows, and a reviewer reading `consumes` would be misled. All four under-declarers in the code are constraint steps, and the spec's example adds `feature_map` and `key_expr` cases, so (b) scope would enforce nothing that exists. **The decision-maker writes a COMPLETE, VALID §4.1 algorithm (`03:259-281` and its `input_contract` and `outputs`):** an `input` step (and an `input_contract` entry) for every raw name a step reads, every declared output produced by an output step, `consumes` on every evaluating step, a producer for every consume; **all of P5a's defects fixed in one ruling** (accepted by the maintainer, 2026-10-01). It must pass **`RatingAlgorithm.model_validate` in full, then compile (`compile_bundle`, with stub payloads for its pinned refs, Task 1A), then the new declared-reads check** (the maintainer's widening, superseding "both the existing invariant and the new check"); (a) mandatory makes DP-F35-1's options (a) and (b) coincide for every algorithm that compiles; the code is (iii-a)'s question. **The undeclared reads also bear on M1 (DP-F35-4):** M1 wires edges from reference sets, so an undeclared read adds an edge the declared graph lacks, which can reorder evaluation or close a cycle that the engine refuses in `load_bundle` for a pinned bundle that hydrates today (P11: the content hash is unchanged). Task 1A's check stops new ones at save time; it does not reach a bundle already pinned: (iii-b) rules that, and Spike S1 step 6 lists those edges and cycles | decision point | yes (with DP-F35-1) | **Decided: mechanism (a), scope (a) with `as_at` named, mandatory (a)** by RL 9771 (working id, #1060, not yet minted). decision-maker, with verbatim `03` text (FR-246 and the corrected §4.1 example, `03:259-281`) |
+| DP-F35-1 (iii) | Who writes FR-258's dated clarification and the `TraceStep` reading into `03`? | (a) the ruling's own commit (the precedent `RL-1305` D4 set). (b) this slice | **(a).** It keeps `03` §3.8 and §4.5 out of this slice's write set (`SL-1345` also edits §4.5). **FR-246's amendment and the corrected §4.1 example are different:** they land in Task 1A's commit, beside the code that enforces them (the maintainer, 2026-10-01) | decision point | yes (with DP-F35-1) | **Decided (a)**, split T1–T5 Task 1A, T6–T9 the ruling's mint PR, T10 Task 3, by RL 9771 (working id, #1060, not yet minted). decision-maker |
+| DP-F35-1 (iii-a) | **The error code an undeclared read is refused with** | (a) reuse `RATING_GRAPH_UNRESOLVED_REF` (FR-212's "consumes undefined value"). (b) a **new** code (for example `RATING_STEP_UNDECLARED_READ`), with its row in `03`'s owned-codes table (§5.1) and its entry in `RATING_ERROR_CODES` (`backend/src/app/errors.py`) | **(b).** **Undeclared is not unresolved:** an FR-212 refusal means no step produces the name; here a producer exists and the step simply did not declare the read. One code for both would make a caller's fix ambiguous. Cost: `03` §5.1 and `errors.py` join the write set (Task 1A, same commit), and Acceptance 12's `backend/src/` exclusion admits that one registry line | decision point | yes (with DP-F35-1) | **Decided (b), `RATING_STEP_UNDECLARED_READ`, 422** by RL 9771 (working id, #1060, not yet minted). decision-maker, with the code's verbatim `03` row |
+| DP-F35-1 (iii-b) | **The fate of a stored or pinned bundle that fails the new check** | (a) refused at reload (`load_bundle` runs the check). (b) grandfathered: a bundle compiled before the check loads and scores as it did, and the check binds at save and compile only (the FR-4 pattern: a rule binds forward). (c) migrated: re-compiled with the reads added to `consumes`, which is a new bundle and a new hash, so a new Rating Version through approval | **(b).** (a) can take a live, approved Rating Version out of service on a code change, which R1 (`03` §1.3: a live version is immutable) forbids in spirit. (c) is a governed re-approval per bundle, not a code task. Under (b), M1 must still hydrate such a bundle: Spike S1 step 6 is the evidence, and **"0 stored rows in the local databases" does not settle other installs**, so the ruling states the behaviour, not the count | decision point | yes (with DP-F35-1; S1 step 6 reads against it) | **Decided (b)**: saved versions refused at next compile, compiled bundles grandfathered at reload, by RL 9771 (working id, #1060, not yet minted). decision-maker |
+| DP-F35-1 (iv) | Does `Trace` carry a marker of which reading a persisted trace holds? | (a) no marker: the shape is unchanged; a trace carries `bundle_hash` and its row a timestamp; no reader of persisted `consumed` exists yet (`05`'s monitors are a later phase). (b) an integer field on `Trace`, after `Trace.ladder_check_version`'s precedent (`SL-1345`) | **(a).** If `05`'s input-drift monitor (FR-307) later reads `consumed`, its spec states what it needs then (`CLAUDE.md` §0: a later phase is a spec change) | decision point | yes (with DP-F35-1) | **Decided (a)** by RL 9771 (working id, #1060, not yet minted). decision-maker |
+| **DP-F35-2** | **Are the `input` and `output` steps traced?** (FD-1246) | (a) FR-258 gains a dated clarification that they are not, and the code is unchanged. (b) the trace carries one entry per `input` step (`consumed` `{}`, `produced` its declared name and value, from the engine's `inputNode` entry) and per `output` step (`consumed` its declared name and value, from the `outputNode` entry), each with `elapsed_us` 0 because the engine evaluates them as one collapsed node | **(b).** FR-258 says "every step"; under DP-F35-1 (b) each such entry is a few bytes; and `SL-1340`'s inlined ports are then traceable without a second ruling. Cost: `score/compare`'s `unchanged` counts rise (Acceptance 7), and a test that pins today's omission inverts | decision point | **yes** | **Decided (b)**, `elapsed_us` 0, by RL 9771 (working id, #1060, not yet minted). decision-maker (the same `RL-`) |
+| **DP-F35-3** | **What does NFR-500's "sampled-trace schema" name?** (`CR-1247` Proposal 11; F37) | (a) the `Trace` contract after this slice's trim, measured uncompressed. (b) the persisted encoding with a named compression. (c) both: the trimmed `Trace`, persisted with a named compression, the budget stated for the persisted bytes | **(a)**, as `CR-1247` recommended and the maintainer accepted. Raised as **OQ-1373** (filed as working id 9774; NFR-500's sampled-trace schema; owner this plan), ruled in the same sitting | design unknown → `OQ-`, then `RL-` | **yes** (Acceptance 9 reads against it) | **Decided (a)** by RL 9771 (working id, #1060, not yet minted), which closes `OQ-1373` (its T9). decision-maker |
 | **DP-F35-4** | **How is the engine made to carry less?** (P1, P3, P4) | **(M1)** One graph: `passThrough` off on every node; an edge from the producer of each name a step references (the `inputNode` for a raw input); every node whose output a later node does not overwrite wired to `outputNode`; `inputNode` wired to `outputNode`. **(M2)** No engine trace: score untraced and rebuild each entry from the result; `elapsed_us` and `matched` (FR-258) are lost or recomputed in Python. **(M3)** Trim in `_build_trace` only. **(M4)** Two graphs: today's for untraced calls and M1's for traced ones; R3 then compares two graphs on every traced call | **M1, if S1 shows equality on the whole corpus and no mixed producer**; else **M4**, which leaves the serving path untouched. **M3 (trim only) does NOT satisfy NFR-490** (P4: our share is 12–25 %); it fixes F55 and NFR-500 only, and taking it means NFR-490 stays red with the residual owned by the maintainer's dated line. M2 loses two FR-258 fields | decision point (on S1's facts) | **yes** | decision-maker, after S1 |
-| **DP-F35-5** | **Which statistic does NFR-490's "adds ≤ 20 %" name?** NFR-490 (`03:1191`) names none (`RL-862` Addendum: "NFR-490 names no statistic"), so choosing one interprets the spec | (a) p99. (b) the mean. (c) every quantile, as the harness's ratio ladder prints | **(a) p99, the maintainer's lean, IF NFR-489 (`03` §9's scoring-latency NFR) states its budget at p99**, which the decision-maker verifies (`03:1190` reads "Real-time scoring p99 < 50 ms" at `19155b50`). One statistic for the two budgets on one path keeps them comparable | spec interpretation → decision point | **yes** (Tasks 1 and 6 read against it) | **decision-maker**, in the same session as DP-F35-1 to -3, with **verbatim text and placement**: a dated clarification on NFR-490's row (`03` §9) |
+| **DP-F35-5** | **Which statistic does NFR-490's "adds ≤ 20 %" name?** NFR-490 (`03:1331`) names none (`RL-862` Addendum: "NFR-490 names no statistic"), so choosing one interprets the spec | (a) p99. (b) the mean. (c) every quantile, as the harness's ratio ladder prints | **(a) p99, the maintainer's lean, IF NFR-489 (`03` §9's scoring-latency NFR) states its budget at p99**, which the decision-maker verifies (NFR-489's row, `03:1190` at `19155b50` and `03:1330` at `ef5dc6e7`, reads "Real-time scoring p99 < 50 ms"). One statistic for the two budgets on one path keeps them comparable | spec interpretation → decision point | **yes** (Tasks 1 and 6 read against it) | **Decided (a) p99** by RL 9770 (working id, #1060, not yet minted); the maintainer's acceptance is dated in it (2026-10-01 10:30:00 BST). **decision-maker**, in the same session as DP-F35-1 to -3, with **verbatim text and placement**: a dated clarification on NFR-490's row (`03` §9) |
 | DP-F35-6 | Does a passing NFR-490 trigger `RL-862`'s override ("if #416's audit shows traced cost can be brought inside NFR-490's ceiling — in which case always-capture becomes affordable and the simpler design returns")? | (a) no: the off-path design stays; any reversion is a new ruling. (b) yes, in this slice | default **(a)**: this slice touches no serving-path backend file (Acceptance 12; at most the `errors.py` registry entry under DP-F35-1 (iii-a) (b)) | scope | no: **default (a) applies throughout**; named in §"Hand-off" | decision-maker, if raised |
 
 ## Spike S1 — the fact DP-F35-4 needs (an `RS-` of `kind: spike`, before activation)
@@ -600,7 +620,7 @@ names the SHA either way):
    of its declared `consumes`, with the extra names. Check the extractor against the engine:
    for each expression, `zen.evaluate_expression` (or `zen.compile_expression`, whichever the
    binding exposes) with the reference set alone in the context must succeed, and with one
-   name removed must fail. Report any expression where it does not. The fields are FD 9773's:
+   name removed must fail. Report any expression where it does not. The fields are FD-1374's:
    `expr`, `condition`, `clamp_bounds`, `key_expr` and `feature_map`. **Apply this step, and
    step 6, explicitly to every real multi-table algorithm in the corpus**: that is where
    undeclared reads (P5) and M1's reference-set wiring interact. At `19155b50` the corpus has
@@ -613,7 +633,8 @@ names the SHA either way):
    node whose output holds a key a later node also writes and a key no later node writes.
    The `inputNode` counts as the writer of every raw input name. A constraint node always
    writes its own `<step>__violated` key and a `model_call` node its `$model_call_error`
-   sentinel on failure (`runtime.py:62`, read at `score.py:442`), both outside the declared
+   sentinel on failure (`MODEL_CALL_ERROR_KEY`, `runtime.py:74` at `ef5dc6e7`, read in `_check_model_call_sentinel`,
+   `score.py:444`), both outside the declared
    `produces`; so **a clamp whose clamped name a later clamp re-produces is a mixed
    producer**, and so is a `model_call` whose produced name a later step re-produces (the clamp-in-place chain
    `packages/model-schema/tests/test_rating_algorithm.py:28` describes). A non-empty list goes
@@ -794,7 +815,7 @@ git add packages/pricing-core/tests/data/trace_remedy_baseline.json
 git commit -m "test(rating): freeze the base scoring corpus for the trace remedy's R3 check (WK-1178)"
 ```
 
-### Task 1A: FR-246 enforced, red first; the four under-declaring fixtures fixed (DP-F35-1 (ii), FD 9773)
+### Task 1A: FR-246 enforced, red first; the four under-declaring fixtures fixed (DP-F35-1 (ii), FD-1374)
 
 **Task 1A implements DP-F35-1 AS RULED. The design below is the RECOMMENDED branch; if the
 ruling differs, a dated delta in the dispatch record rewrites 1A before it starts.** The
@@ -802,13 +823,13 @@ branch points are DP-F35-1 (ii) (refusal or ordering from reads; scope; mandator
 `consumes`), (iii-a) (the error code) and (iii-b) (the fate of a stored or pinned bundle).
 
 **The ruled `03` text lands in this task's commit** (the maintainer's executor carve-out,
-2026-10-01): FR-246's amendment (`03` §3.5) and the corrected §4.1 example (`03:252-274`), and,
+2026-10-01): FR-246's amendment (`03` §3.5) and the corrected §4.1 example (`03:259-281`), and,
 under (iii-a) (b), the new code's owned-codes row. The executor applies the ruling's text
 **byte for byte**, writes nothing of its own into `03`, and the ledger records
 `git diff` of `03` beside the ruling's text.
 
 **Files:**
-- Modify: `docs/specs/03-rating-engine.md` (FR-246's row and the §4.1 example, `03:252-274`,
+- Modify: `docs/specs/03-rating-engine.md` (FR-246's row and the §4.1 example, `03:259-281`,
   verbatim from the ruling; under (iii-a) (b), also the code's owned-codes row)
 - Create: `packages/pricing-core/src/pricing_core/rating/references.py`
 - Create: `packages/pricing-core/tests/test_rating_declared_reads.py`
@@ -857,7 +878,7 @@ positive fixture most of the pricing-core suite scores through; the old shape su
   function exists yet).
 
 ```python
-"""PL 9776 Task 1A (FR-246, FD 9773): a step reads only names it declares."""
+"""PL 9776 Task 1A (FR-246, FD-1374): a step reads only names it declares."""
 
 from __future__ import annotations
 
@@ -897,7 +918,7 @@ def test_referenced_names_reads_every_field_a_step_evaluates() -> None:
 
 
 def _undeclared_clamp_payload() -> dict[str, object]:
-    """The named negative fixture: the scoring fixture with `s_clamp` as it was before FD 9773's
+    """The named negative fixture: the scoring fixture with `s_clamp` as it was before FD-1374's
     fix, reading `min_premium_minor` without declaring it."""
     payload = copy.deepcopy(_algorithm_payload())
     for step in payload["steps"]:  # type: ignore[union-attr]
@@ -1028,7 +1049,8 @@ def _as_list(value: Any) -> list[str]:
   stores the payload verbatim (`compile.py:556-571`) without parsing it. **What this does not
   cover:** hydration (`load_bundle`, where `to_wire` reads rate-table rows and boosters) needs
   real payloads for every pin and is not run on the example; and `compile_bundle` does not read
-  `sub_graphs` at `19155b50` (`score.py:398-399`), so the example's sub-graph mount is not
+  `sub_graphs` at `19155b50` (`score.py:398-399`; at `ef5dc6e7`, `_check_purpose_mount`'s
+  docstring, `:400-401`), so the example's sub-graph mount is not
   resolved. If `SL-1340` (the pin and inlining) has merged before Task 1A, `_StubResolver`
   serves the sub-graph ref as well and the dispatch record says so. If `RatingVersion`'s pins
   refuse the example's `peril_structure` ref under `models`, stop and report: the ruled
@@ -1040,7 +1062,7 @@ def _as_list(value: Any) -> list[str]:
   'pricing_core.rating.references'`. Any other cause is a plan defect.
 - [ ] **Step 3: Write `references.py`.** Use the form Spike S1 verified against the engine. If
   S1 found a binding call that lists an expression's variables, use that instead of the
-  tokenizer below, and the `RS-` records which. The tokenizer is the one FD 9773's sweep used.
+  tokenizer below, and the `RS-` records which. The tokenizer is the one FD-1374's sweep used.
 
 ```python
 """Which names a rating step reads (PL 9776; FR-246; DP-F35-1 (b)).
@@ -1089,7 +1111,7 @@ def referenced_names(node: Mapping[str, Any]) -> frozenset[str]:
     return frozenset(names)
 ```
 
-  `as_at` is read here although FD 9773's predicate does not read it (P5a). If Step 8's re-run
+  `as_at` is read here although FD-1374's predicate does not read it (P5a). If Step 8's re-run
   with `as_at` finds an under-declaring step beyond the four, **stop and report**: the write
   set widens.
 
@@ -1111,7 +1133,7 @@ _DECLARED_READ_STEP_TYPES = frozenset({"expression", "table", "lookup", "model_c
 
 
 def _check_declared_reads(algo: RatingAlgorithm) -> list[ValidationIssue]:
-    """FR-246: a step reads only names it declares in `consumes` (FD 9773; the DP-F35-1 ruling)."""
+    """FR-246: a step reads only names it declares in `consumes` (FD-1374; the DP-F35-1 ruling)."""
     issues: list[ValidationIssue] = []
     for step in algo.steps:
         if step.type not in _DECLARED_READ_STEP_TYPES:
@@ -1165,7 +1187,7 @@ def _check_declared_reads(algo: RatingAlgorithm) -> list[ValidationIssue]:
   `app.platform.regression_suites`, so it is **added by name**: 12 files); a route built from a
   variable; a fixture in `conftest.py` that compiles for a test that names none of these. A
   different count at the base is recorded with the new list. **Not deferred to the Task 7
-  gate:** Task 1A changes what compiles, and FD 9773's sweep could not evaluate 12 steps whose
+  gate:** Task 1A changes what compiles, and FD-1374's sweep could not evaluate 12 steps whose
   fields are not literals, so these files are the evidence. Run:
   `uv run pytest -q packages/pricing-core/tests/ packages/model-schema/tests/ <the 12 files>`.
   Expected: green apart from the two example tests (Step 8). The scoring results do not change (input steps collapse into the engine's
@@ -1176,14 +1198,14 @@ def _check_declared_reads(algo: RatingAlgorithm) -> list[ValidationIssue]:
   Run the two example tests: expected **green** (the ruled example passes both checks). A
   ruled example that still fails is a stop, reported to the lead; the executor does not edit
   the ruled text. Run `python3 scripts/audit-docs.py`: expected only check 31's working-id
-  line, or nothing once minted. Re-run FD 9773's predicate (P5) over the tree. Expected: 0 steps with an
+  line, or nothing once minted. Re-run FD-1374's predicate (P5) over the tree. Expected: 0 steps with an
   undeclared read. Record both in the ledger. Then commit the code, the fixtures and the `03`
   text as **one** commit, and run Task 1 Step 6.
 
 ```bash
 # (iii-a) (b) only: also `git add backend/src/app/errors.py`
 git add docs/specs/03-rating-engine.md packages/pricing-core/src/pricing_core/rating/references.py packages/pricing-core/src/pricing_core/rating/compile.py packages/pricing-core/tests/test_rating_declared_reads.py packages/pricing-core/tests/test_rating_score.py packages/model-schema/tests/test_rating_algorithm.py
-git commit -m "fix(rating): a step reads only names it declares — FR-246 enforced, fixtures fixed (WK-1178, FD 9773)"
+git commit -m "fix(rating): a step reads only names it declares — FR-246 enforced, fixtures fixed (WK-1178, FD-1374)"
 ```
 
 ### Task 2: The trace-shape tests, red at the base
@@ -1489,7 +1511,7 @@ async def test_the_remedy_changes_no_served_result() -> None:
     # name it produces. Constraint and model_call nodes are always wired: each writes a key
     # outside its declared `produces` that the tail reads from the result (a constraint's
     # `__violated`, read by `_apply_constraints`; a model_call's `$model_call_error`,
-    # `runtime.py:62`, read at `score.py:442`). Spike S1 step 2 showed either that the later
+    # `MODEL_CALL_ERROR_KEY`, read in `score.py`'s `_check_model_call_sentinel`). Spike S1 step 2 showed either that the later
     # writer wins at `outputNode`, or that the corpus has no mixed producer.
     edges.append(_edge(_INPUT_ID, _OUTPUT_ID))
     for step_id in interior_ids:
@@ -1654,7 +1676,7 @@ For **every** suite-level run, the full gate and each solo window, the ledger re
 | A pass inside one stdev | a pass booked on noise | the margin statement's reading column | recorded as a watch item; SL-1259 measures on the dedicated host |
 | A contended measurement | a slow figure booked as a pass or a fail | the slot reads, `uptime`, the `pgrep` line | discard and re-run in a new window |
 | The rulings differ from the recommendations | Tasks 2–5 test the wrong content | activation needs 2 and 4; Task 0 Step 2 | method-only difference: the dispatch record names it. Acceptance difference: a superseding `PL-` |
-| OQ 9774 (working id) is not minted or not ruled | DP-F35-3 cannot be ruled; Acceptance 9 has no reading | activation need 2's `grep -c 'sampled-trace schema'` | unmet; the lead raises it with the decision-maker |
+| OQ-1373 is not ruled (its ruling's mint closes it) | DP-F35-3 cannot be ruled; Acceptance 9 has no reading | activation need 2's `grep -c 'sampled-trace schema'` | unmet; the lead raises it with the decision-maker |
 | A rolling deploy mixes old-wire and new-wire workers | an off-path reproduction compares two wires (P11) | the reproduction check (`traces.py:198-272`) records `mismatch` | Acceptance 6 makes equality hold by test; a `mismatch` in production is a finding, not noise |
 | `SL-1340` or the `RL-1343` rule-4 slice reaches `_build_trace` or `TraceStep` first | a merge on the same function | Task 0 Step 4 | serialise; the second merges `main` and re-gates |
 | The DB stack is absent | mass fixture errors that look like failures | an `ERROR` at setup, not a `FAILED` assert | bring the stack up and re-run; an error at setup is never quoted as a red |
