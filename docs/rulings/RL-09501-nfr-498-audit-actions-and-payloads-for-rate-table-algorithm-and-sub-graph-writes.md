@@ -209,9 +209,9 @@ Insert
 > version was made: `rate_table_version.seeded` (FR-230), `rate_table_version.imported`
 > (FR-235) or `rate_table_version.bulk_operation` (FR-233). Its `entity_ref` is the new
 > version's `rate_table:<slug>@<version>` and its actor is the Principal who made the write.
-> Its `after` is the new version's wire form above without `rows`, with the content hash of
-> its cells: the canonical hash over the cells that the diff is cached under, the same for a
-> rows-stored version and its parquet twin (FR-232). Its `before` is, in the same form, the
+> Its `after` is the new version's wire form above without `rows`, plus the cells' canonical
+> content hash under the key `cells_digest`: the hash over the cells that the diff is cached
+> under, the same for a rows-stored version and its parquet twin (FR-232). Its `before` is, in the same form, the
 > version the new one was made from: the addressed baseline of an import or a bulk
 > operation, or the table's current version for a re-seed; it is `null` for a table's first
 > version. The cell values are not copied into the event: the version is immutable,
@@ -236,8 +236,10 @@ and one space. Insert
 - **This commit:** this record only. No spec, `model-schema` or code file is edited here.
 - **SL 9515 (PL 9514)** applies DP-1 to DP-5 in code and T-1a to T-1c in `03`, in one commit
   with the code (`CLAUDE.md` §2). Its reds are PL 9514's Acceptance Standard items 1 to 8,
-  with DP-2 now ruled (b): the `after` of a rate table version also carries the cells hash,
-  and items 1 to 4 assert it.
+  with DP-2 now ruled (b): the `after` of a rate table version also carries the cells hash
+  under `cells_digest`, and items 1 to 4 assert it. The key is PL 9514's proposal (#1207 at
+  `1cabc274`, which says T-1's name wins); T-1b adopts it on the lead's instruction, so the
+  plan and the spec text name one key.
 - **PL 9514's fold (the planner's file, not edited here)** marks DP-1 to DP-5 ruled, states
   which hash with file:line, and replaces activation need 3 with this record's mint. If the
   planner's reading of the hash differs from the one above, that is a STOP to the lead before
@@ -247,9 +249,6 @@ and one space. Insert
 
 ## What this record does not decide
 
-- **The key name of the cells hash in `after`.** T-1b says what the hash is, not the JSON key
-  that carries it, following `03:874`, which names payloads in prose. The plan names the key;
-  the test pins it.
 - **`03:343`'s sentence is not amended.** It assigns "the before/after cells" to the Audit
   Event; T-1b says that the event carries them as a hash, with the immutable version addressed
   by `entity_ref`. Read together they agree. A reader who takes `:343` to require the cell
@@ -274,7 +273,7 @@ code that turns it green (PL 9514 Task 2).
   gains no row with its action.* PL 9514 items 1, 2 and 3. Red at `fb178c36`.
 - *Violation: an import's or a bulk operation's event whose `before` is not the baseline
   version's state.* Items 2 and 3.
-- *Violation: a rate table event whose `after` carries `rows`, or lacks the cells hash, or
+- *Violation: a rate table event whose `after` carries `rows`, or lacks `cells_digest`, or
   carries a hash that differs between a rows-stored version and its parquet twin.* Items 1
   to 4, with item 4 for the parquet case. A hash taken from the `BlobRef` reds the rows case
   (no `BlobRef`) and the twin comparison.
