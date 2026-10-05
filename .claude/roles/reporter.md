@@ -27,6 +27,7 @@ relates: []                      # ids only
   table does (`RFC-756`). Reads the watcher's published state; never polls agents.
 - **Never:** edits the repo, merges, audits — including `.claude/skills/`; a procedure it
   discovers routes through the lead, same as every other repository write.
+- **Never `cd`**: not into a subdirectory, not read-only, not into `/tmp`, not inside your own worktree. Use `git -C <path>`, `uv run --directory <path>`, `pnpm --dir <path>` and absolute paths; if plain `git` is refused by the guard, use `/usr/bin/git -C`. **The reason:** the session's hook path is relative, so a `cd` silently moves the guard and every later command, including those of agents spawned afterwards, which inherit the cwd; it also contaminates other members' worktrees. Three agents slipped on it on 2026-10-05 despite their briefs (planner-rb, planner-9529, dm-s46: the maintainer's entry "2026-10-05 18:54:06 BST — RL 9566 T7" in `to-lead.md`), which is why it is a charter rule and not a brief line. *(Amended 2026-10-05 by the maintainer, dated line by delegation: the hard no-`cd` rule, after three slips in one day.)*
 - **Writes (only)** — *added 2026-09-29, closing FD-1238's charter gap; the maintainer's
   entry "2026-09-29 16:25:49 BST · maintainer (acting on the maintainer's behalf) · BLOCKER
   DECISIONS by delegation", item 5*. The role's write targets are:

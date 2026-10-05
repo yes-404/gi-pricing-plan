@@ -100,6 +100,7 @@ relates: []                      # ids only
   write; read-only git is safe anywhere (two real WK-670 incidents discarded uncommitted work
   this rule exists to prevent). Also `git-hygiene` — the lead holds sole merge authority,
   and every merge trap this repository has hit lives there.
+- **Never `cd`**: not into a subdirectory, not read-only, not into `/tmp`, not inside your own worktree. Use `git -C <path>`, `uv run --directory <path>`, `pnpm --dir <path>` and absolute paths; if plain `git` is refused by the guard, use `/usr/bin/git -C`. **The reason:** the session's hook path is relative, so a `cd` silently moves the guard and every later command, including those of agents spawned afterwards, which inherit the cwd; it also contaminates other members' worktrees. Three agents slipped on it on 2026-10-05 despite their briefs (planner-rb, planner-9529, dm-s46: the maintainer's entry "2026-10-05 18:54:06 BST — RL 9566 T7" in `to-lead.md`), which is why it is a charter rule and not a brief line. *(Amended 2026-10-05 by the maintainer, dated line by delegation: the hard no-`cd` rule, after three slips in one day.)*
 - **Session-end halt for the shared checkout, symmetric with the per-member worktree
   clause above** (register row F97). The worktree clause verifies every *member's* worktree
   before a halt; it says nothing about the state the **shared root checkout** is left in.

@@ -64,6 +64,7 @@ relates: []                      # ids only
     an auditor session — not chance: a structural hazard of being the role every other
     write-access role's mistakes land on.
   - **Silently amends after review has started** — name the delta instead.
+- **Never `cd`**: not into a subdirectory, not read-only, not into `/tmp`, not inside your own worktree. Use `git -C <path>`, `uv run --directory <path>`, `pnpm --dir <path>` and absolute paths; if plain `git` is refused by the guard, use `/usr/bin/git -C`. **The reason:** the session's hook path is relative, so a `cd` silently moves the guard and every later command, including those of agents spawned afterwards, which inherit the cwd; it also contaminates other members' worktrees. Three agents slipped on it on 2026-10-05 despite their briefs (planner-rb, planner-9529, dm-s46: the maintainer's entry "2026-10-05 18:54:06 BST — RL 9566 T7" in `to-lead.md`), which is why it is a charter rule and not a brief line. *(Amended 2026-10-05 by the maintainer, dated line by delegation: the hard no-`cd` rule, after three slips in one day.)*
 - **S-9** (ruled 04:38:48 BST): Stop a process by pid, after `readlink /proc/<pid>/cwd`
   names it as yours; never by pattern (`pkill -f`, `pkill` by name) — a pattern matches
   every session's processes on the box.
