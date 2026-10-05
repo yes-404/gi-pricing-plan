@@ -68,7 +68,7 @@ runs end to end on it"*; slice (a) discharges the algorithm half.
 `/api/v1` that walks the steps in `WF-699` §2's order. Each step is one function that returns
 the ids the next step needs and raises a named error carrying the step id (`"C1"`, `"D6"`, …)
 and the RFC 9457 problem when a call fails. `scripts/demo.py --journey wf-699` runs it against
-the live API after `_verify_journey_postconditions` (`scripts/demo.py:266`), then starts Vite
+the live API after `_verify_journey_postconditions` (`scripts/demo.py:274` at `cdaaa573`; `:266` at `809a3794`), then starts Vite
 and checks the served page for a 200. The journey test runs the same module against the app in
 process (`httpx.ASGITransport`) on a small seed. The algorithm is slice (a)'s
 `build_fremtpl2_algorithm`, so the demo has one freMTPL2 algorithm.
@@ -156,11 +156,11 @@ The entry is a local channel entry (RFC-777); it is quoted so the plan carries i
 
 `draft`. **DP-6 is ruled (a), WK-674 S2 only** (D3, above). **Four decision points are open**
 (DP-b1 to DP-b4), and every activation need
-except need 8 (WK-674 S2, met) is unmet, most of them other slices. The plan moves to `active` only through a
+except needs 8 (WK-674 S2) and 9 (`SL-1409`), both met, is unmet, most of them other slices. The plan moves to `active` only through a
 separate activation PR, after every need below holds. That PR carries the `SL-` row's status
 flip and this plan's.
 
-### Activation needs, in order, each with its state at `809a3794` (2026-10-05 15:2x BST)
+### Activation needs, in order, each with its state at `cdaaa573` (2026-10-05 15:38 BST)
 
 | # | Need | Why (the step it serves) | State now |
 |---|---|---|---|
@@ -172,12 +172,12 @@ flip and this plan's.
 | 6 | WK-673 S6 `SL-1390` merged (the floor wiring at approval) | E3, E9 | `draft` |
 | 7 | WK-673 S7 `SL-1391` merged (exposure weight per cell) | A3 | `draft`; leaf PL 9716 (working id), draft #1127 |
 | 8 | WK-674 S2 `SL-1256` closed | deploy `dev → uat → prod` (FR-429) | **met**: `closed` |
-| 9 | The FD-1356 fix `SL-1409` merged; its Task 0 query prints 0 | the demo DB's end state | `active` (lane B) |
+| 9 | The FD-1356 fix `SL-1409` merged; its Task 0 query prints 0 | the demo DB's end state | merged: `closed`, `cdaaa573` (#1157); the Task 0 query is re-run at dispatch (Task 0 Step 3) |
 | 10 | The FD 9708 fix (PL 9683, working id, #1140) merged | C1: `POST /rating-versions` with the algorithm and pins | plan draft; `RatingVersionCreate` is `slug`, `dataset_version_id`, `model_ref`, `extra="forbid"` (`backend/src/app/api/models.py:271-276`) |
 | 11 | The FD 9707 fix (PL 9688, working id, #1145) merged | B3: `lookup` as at the effective date | plan draft; `runtime.py:27-33`: *"exact key match only"* |
 | 12 | The FR-240 family fix (PL 9649, working id, #1152) merged | C3: compile validates everything at once | plan draft |
 | 13 | `FD-1416` fixed (FD 9752; one ApprovalRequest shape; WK-1178, deadline before the P2 exit demo) | E5, E6, E8: the script reads approval responses | planned as **PL 9616** (working id, the leaf plan) and **SL 9615** (working id, its row), reserved 2026-10-05 15:29:48 BST for planner-1416 on D3's order; no PR at 15:35 BST |
-| 14 | `FD-1244` and `FD-1245` ruled (§10 gate "Before the P2 exit demo", `docs/roadmap.md:1926`, "2 (2 open)") | D4; E2 | both `active`; their ruling is **RL 9614** (working id), reserved 2026-10-05 15:29:48 BST for dm-1244 on D3's order; no PR at 15:35 BST |
+| 14 | `FD-1244` and `FD-1245` ruled (§10 gate "Before the P2 exit demo", `docs/roadmap.md:1927` at `cdaaa573`, "2 (2 open)") | D4; E2 | both `active`; their ruling is **RL 9614** (working id), reserved 2026-10-05 15:29:48 BST for dm-1244 on D3's order; no PR at 15:35 BST |
 | 15 | FD 9717 (working id, #1125) minted, and DP-b4 ruled | the seed record's pre-flight | draft #1125 @`51335e75` |
 | 16 | DP-6 and DP-b1 to DP-b4 ruled | — | DP-6 **met** (D3); DP-b1 to DP-b4 open |
 | 17 | The lead's go | — | — |
@@ -268,7 +268,8 @@ Routes are under `/api/v1`. "Needs" is the activation need (by number) that make
 work over HTTP. A blank Needs cell means the step works on `main` today. The evidence for each
 `main` verdict is the draft exit-demo script's table (local, 2026-10-05), whose cites were
 re-checked at `809a3794` by a read-only sweep. Every cite held, except `model_schema/approvals.py:282`,
-which opens `DEFAULT_POLICY`; the Rating Version entry is at `:335-338`.
+which opens `DEFAULT_POLICY`; the Rating Version entry is at `:335-338` (`:292` and `:345-348`
+at `cdaaa573`).
 
 | Step | Route (and what the journey does) | Check | Needs |
 |---|---|---|---|
@@ -283,7 +284,7 @@ which opens `DEFAULT_POLICY`; the Rating Version entry is at `:335-338`.
 | B6 | one save with a dangling input | 422 `RATING_GRAPH_UNRESOLVED_REF` | |
 | B7 | mount `sub_graph:ncd-ladder@4` | inlined at compile | DP-b3 |
 | B8 | `output` rounding `half_even`, 0 dp | (in the saved algorithm) | |
-| B9 | money × float refused | `MONETARY_FLOAT_REFUSED` is registered (`errors.py:310`) and raised nowhere (unowned gap U2, DP-b2) | DP-b2 |
+| B9 | money × float refused | `MONETARY_FLOAT_REFUSED` is registered (`errors.py:314` at `cdaaa573`) and raised nowhere (unowned gap U2, DP-b2) | DP-b2 |
 | C1 | `POST /rating-versions` declaring the algorithm and every pin | 201; `pins` echo the request | 10 |
 | C1′ | a Peril Structure pin | **not on G2's journey** (§"Does G2 pin a Peril Structure?"): the algorithm has no `model_call`, so FR-237 asks for no Peril Structure pin. The gap itself is FD 9995 (working id, #980; U3, DP-b2); the script prints it as `SKIPPED` with that reason | DP-b2 |
 | C2 | `POST /rating-versions/{id}/compile` → 202 + `rating.compile` Job | Job `succeeded` | |
@@ -369,7 +370,7 @@ FR, because it proves the journey and not each requirement (`python-test`).
 |---|---|---|---|
 | `examples/fremtpl2/journey.py` | added (new module): `run_wf699_journey(client: httpx.Client, record: Mapping[str, str], *, log: Callable[[str], None]) -> JourneyResult`, one function per phase, `JourneyStepFailed` | none | none |
 | `backend/tests/test_wf699_journey.py` | added | none | none |
-| `scripts/demo.py` | edited: `main` (`:338-347`, the `--journey` flag), `demo` (`:203-`, the journey call after `_verify_journey_postconditions` at `:266`, and the served-page check after the frontend starts); added: the seed-record pre-flight *(DP-b4 a)* | **SL-1409** (`active`) adds a checked step after `read_seed_record()` (`PL-1408` Acceptance, condition 2); **PL 9728** (working id, #1113) edits it | **serial**: SL-1409 first (activation need 9); with PL 9728, whichever merges second re-reads `demo` |
+| `scripts/demo.py` | edited: `main` (`:346-355` at `cdaaa573`, the `--journey` flag), `demo` (`:203-`, the journey call after `_verify_journey_postconditions` at `:274`, and the served-page check after the frontend starts); added: the seed-record pre-flight *(DP-b4 a)* | **SL-1409** added a checked step after `read_seed_record()` (`PL-1408` Acceptance, condition 2), merged as `cdaaa573` (#1157); **PL 9728** (working id, #1113) edits it | **serial**: SL-1409 first (activation need 9, merged); with PL 9728, whichever merges second re-reads `demo` |
 | `backend/tests/test_demo_command.py` | edited: the `--journey` wiring assertion, and the pre-flight test *(DP-b4 a)* | **SL-1409** and **PL 9728** edit it | serial, as above |
 | `examples/fremtpl2/README.md` | edited: the one command and what it shows | slice (a) edits another paragraph | different paragraphs |
 | the slice's ledger `docs/ledgers/LG-<n>`; `docs/INDEX.md` | added; regenerated | every PR | registry |
@@ -396,7 +397,7 @@ two-half gate (a gate slot under `RL-1263`). No NFR is measured here; NFR-489 is
 
 | DP | Question | Options | Recommendation | Owner | Blocks |
 |---|---|---|---|---|---|
-| **DP-6** (`PL-1371` §9) | Does the journey call any WK-674 S3–S6 route? | (a) **no: S2 only.** Every deploy-step route is on `main` (`environments.py:list_environments` :45, `create_environment` :62; `deployments.py:submit_deployment_request` :49, `create_deployment` :74, `list_deployments` :96; `service_accounts.py:create_service_account` :159; `score.py:score` :351, live by `_serving_ref` :169). S3, S4 and S5 add no route (`PL-1237` Tasks 3–5), and S6 adds only the shadow PUT and a routing route (`PL-1237` Task 6, `:977-979`), which the journey does not call. FR-429 (`07:140`) requires order and evidence, not switchover. (b) **S2 + S5**: the demo also shows the atomic switchover and rollback (FR-268, FR-269), which `WF-701` A2 and C4 describe. (c) **S2, S3, S5, S6**, as `PL-1371` §3.8 row 7 lists ("WK-674 S2, 3, 5, 6") and the 09:59:49 entry repeats ("WK-674 S2/3/5/6") | **(a)** for G2. §3.8 row 7 and §7 disagree inside `PL-1371`; §7 is the later derivation and lifts S3–S6 as bare sequencing, and the route evidence agrees. **Separately, for the lead:** the §12 Phase 2 exit row (`docs/roadmap.md:2208`) binds "`WF-699` end to end, plus `WF-701` phases A–D, meeting NFR-489". `WF-701` A2 and C4 need S5's switchover, and B1 needs S6's shadow PUT (Phase B is optional: `WF-701`'s Phase B heading, line 48 of its file). That is an exit obligation beside G2, not this slice's: a proposal for the pre-exit-demo plan review | planner (`PL-1371` DP-6: "planner, at (b)'s leaf"); confirmed by the lead | activation need 16 |
+| **DP-6** (`PL-1371` §9) | Does the journey call any WK-674 S3–S6 route? | (a) **no: S2 only.** Every deploy-step route is on `main` (`environments.py:list_environments` :45, `create_environment` :62; `deployments.py:submit_deployment_request` :49, `create_deployment` :74, `list_deployments` :96; `service_accounts.py:create_service_account` :159; `score.py:score` :351, live by `_serving_ref` :169). S3, S4 and S5 add no route (`PL-1237` Tasks 3–5), and S6 adds only the shadow PUT and a routing route (`PL-1237` Task 6, `:977-979`), which the journey does not call. FR-429 (`07:140`) requires order and evidence, not switchover. (b) **S2 + S5**: the demo also shows the atomic switchover and rollback (FR-268, FR-269), which `WF-701` A2 and C4 describe. (c) **S2, S3, S5, S6**, as `PL-1371` §3.8 row 7 lists ("WK-674 S2, 3, 5, 6") and the 09:59:49 entry repeats ("WK-674 S2/3/5/6") | **(a)** for G2. §3.8 row 7 and §7 disagree inside `PL-1371`; §7 is the later derivation and lifts S3–S6 as bare sequencing, and the route evidence agrees. **Separately, for the lead:** the §12 Phase 2 exit row (`docs/roadmap.md:2209` at `cdaaa573`) binds "`WF-699` end to end, plus `WF-701` phases A–D, meeting NFR-489". `WF-701` A2 and C4 need S5's switchover, and B1 needs S6's shadow PUT (Phase B is optional: `WF-701`'s Phase B heading, line 48 of its file). That is an exit obligation beside G2, not this slice's: a proposal for the pre-exit-demo plan review | planner (`PL-1371` DP-6: "planner, at (b)'s leaf"); confirmed by the lead | activation need 16 |
 | **DP-b1** | Where does the ONE command live? | (a) `scripts/demo.py --journey wf-699`, which adds the journey to the existing demo path between the API start and the frontend. (b) a new `scripts/exit-demo.py` that calls `demo.py`'s pieces. (c) `--journey` on by default | **(a).** RL 9623 says "`scripts/demo.py`-style ONE command". One entry point keeps the Phase 1a/1b demo and G2 on one path, and `demo.py` already owns the environment check, compose, migrations, seed, API and Vite. (c) would slow every Phase 1 demo by the whole journey | the lead | Task 5 |
 | **DP-b2** | How does the script treat a step that `main` cannot do and no P2 slice owns: the later-phase halves (D9 → P4; E5's inline review → WK-678, P3; E7's Commentary Block → WK-680, P3) and the **unowned gaps** U1 (A6: bulk takes no change note; FR-229 says mandatory), U2 (B9: `MONETARY_FLOAT_REFUSED` raised nowhere), U3 (C1′: no Peril Structure pin; FD 9995, working id, #980)? | (a) the script runs the step's P2 half and prints `SKIPPED <step>: <reason>` for the rest; the journey test asserts the skip; the `CR- kind: phase` lists each skip. (b) G2 is not met until each is built. (c) as (a) for the later-phase halves; U1–U3 each go to the auditor for a finding with an owner before the demo | **(c).** G2 says "end to end" with no exception list. A later phase's capability is a spec matter, not P2 code (`CLAUDE.md` §0), so the skips are honest. U1–U3 are P2 behaviour the spec states and the code lacks, so they need an owner, not a skip. That is the auditor's to file and the lead's to route; this plan does not file them | the maintainer (by delegation): what "end to end" admits is G2's reading | Tasks 2–4, activation need 16 |
 | **DP-b3** | B7, the sub-graph mount, needs `compile_bundle` to read `sub_graphs` (`pricing_core/rating/score.py:401-403`), which WK-1250 S2/S3 (`SL-1340`, `SL-1341`, `draft`) build. `PL-1371` §7's dependency list does not name WK-1250 | (a) **add WK-1250 S2/S3 as activation needs**, so the journey mounts `ncd-ladder`. (b) skip B7 with its reason, as DP-b2 (a). (c) mount without inlining (the sub-graph is stored but not compiled) | **(a).** B7 is a `WF-699` step and FR-217 is P2 scope. `PL-1371` §5 places WK-1250 S2/S3 in the week of 24 Oct, before the code freeze, so it lengthens (b)'s chain without breaking it. **This is a dependency `PL-1371` §7 did not derive.** If the lead takes (a), `PL-1371`'s G2 list needs it at the next re-baseline (§8.1) | the lead (sequencing), with the maintainer (by delegation) if it moves the exit date | activation need 16 |
@@ -587,4 +588,7 @@ item D3 and its closing line, and nothing else. What changed: the ruling quoted 
 9995's ACK); a **Ruled** line after the decision-point table; Task 0 Step 2; Hand-off 2, 3 and
 4. The new working ids (PL 9616, SL 9615, RL 9614) are in the space form until they mint. No
 scope, task cut, write set or other decision point changed. Verified at `origin/main`
-`809a3794`.
+`809a3794`; then, after merging `origin/main` `cdaaa573` (#1157, `SL-1409`), re-verified there
+at 15:38:18 BST: need 9 is met, and the `demo.py`, `approvals.py`, `errors.py` and
+`roadmap.md` line cites that moved are re-anchored beside their `809a3794` values. Needs 13
+and 14 still had no PR at 15:38:18 BST.
