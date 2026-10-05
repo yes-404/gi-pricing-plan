@@ -3,7 +3,7 @@ id: PL-1419
 family: plan
 kind: leaf
 title: WK-673 Slice 7 — FR-231's exposure weights through the portfolio frame (F-W10-2, FD-1358): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-05
 owner: planner
 tree: 88d114fc44b9a77a57f29ca30bc3ee5d693085f8
