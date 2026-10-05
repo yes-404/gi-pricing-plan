@@ -510,6 +510,171 @@ Scratch databases: `scratch_sl1409c_<8 hex>`, created and dropped by the test it
 
 Files: `examples/fremtpl2/seed.py`, `examples/fremtpl2/test_seed.py`, this ledger.
 
+### Task 7, Step 4 — recovery, reset and the demo check on `gipricing` (2026-10-05, executor-1409-t7b then executor-1409-t7d)
+
+All times are BST from `date`. The earlier executor (t7b) did Step 4.1's before-counts, the backup, A1, A3 and B1–B3, then stopped twice; this entry quotes its outputs by reference to the lead's dispatch record (`DISPATCH-WK-1178-SL1409-2026-10-04.md`, Deltas 14–16, local, not in the repository) and to the job tmp files named below, which are also local. I (t7d) re-verified the state before writing anything and then ran B4 onwards.
+
+**The enforcement commits.** The rule approve route is a client of the approval workflow from `3a431bcb6afe605b0fafaa0589c307cc1ee5d680` (Tasks 1–3). Task 7a's seed and reset are `768ff6c3`, its pre-flight `df301c18d354d446606be11ed2b3251d37422560` (the amendment's A4 floor). Task 7c's seed fix is `d9b069fc8aa6ff820e38a7432cba22abc64d71f2`. Step 4 ran at `d9b069fc` for 4.2–4.5 and at the merge `c156e7274e8d07bc0e9eb1112590c2a259e2db94` (below) for 4.6–4.8.
+
+**Preconditions at the resume (12:05–12:06).** gipricing's `alembic_version` was `c4a81f6d2e95`, equal to `uv run alembic heads` there. The root's `last-seed.json` and `last-seed.json.bak-20261005` both hashed to `ffc32f4ac31e43270323da7e2227a08a322fddc6d67748378266cf5620be71f3`. The worktree's `examples/fremtpl2/data/` held the two ARFF symlinks and no `last-seed.json`. `flock -n /tmp/slots/gate-1 true` and the same for `gate-2` both succeeded. No benchmark or pytest process ran (`pgrep -af '[b]ench|[p]ytest'` printed nothing). `uptime` read `load average: 1.06, 1.37, 1.55`. `GIP_DATABASE_URL` was unset (`env | grep -c GIP_DATABASE_URL` printed 0).
+
+**4.1 Before (t7b, Delta 14).** gipricing `builtin_approved=532 user_approved=10 user_approved_no_approved_request=10`; follow-on script `TOTAL 5890/324/324` over 93 databases; the residual query (Acceptance 23, verbatim in `sl1409-residual.sh`) printed 0. **Gap, recorded:** the per-database before lines were not kept, so "every other database unchanged" rests on the aggregate check in 4.4.
+
+**Backup (condition 1, t7b).** `cp -p` of the root record to `last-seed.json.bak-20261005`; both hashed to `ffc32f4a…71f3`, re-read by me at 12:06.
+
+**B1 — migrate first (t7b, Delta 16).** From the worktree with demo.py's env (`GIP_DATABASE_URL=postgresql+asyncpg://gipricing:***@localhost:5432/gipricing`), `uv run alembic upgrade head`, 11:58:44–11:58:46, rc 0. Revision before `d3b955a63d6a`, after `c4a81f6d2e95`, equal to the branch's `alembic heads`; 8 revisions; upgrade only. This was needed because the first seed attempt (11:55:56–11:56:03, exit 1) failed with `column "platform_build" of relation "jobs" does not exist`, and `scripts/demo.py` runs `alembic upgrade head` before its seed where Step 4.2 did not.
+
+**B2 — the abandoned partial seed.** Workspace `01a10bb4-c446-7b56-bb64-6ce3ff94ea6f` is an **abandoned partial seed of 2026-10-05 11:55:56 BST**. It stays; nothing was deleted. Recount at 12:05 and again at 12:06 (`sl1409-recount.sh`): 38 built-in rules (`approved`) and 9 user rules (`draft`), 1 dataset, 0 dataset versions, 0 jobs, 0 rule sets. This corrects the first report's "47 built-ins".
+
+**Second stop (11:59:07–11:59:10).** The full seed exited 1 on `uq_users_issuer_subject`: the partial seed had created the realm user (issuer `http://localhost:8080/realms/gi-pricing`), and `examples/fremtpl2/seed.py` minted a fresh analyst id on every run. Task 7c (the section above) fixed this in `seed.py`, red first.
+
+**B3 / A1 — the data directory.** Before the recovery seed, `ls -la` of the worktree's `examples/fremtpl2/data/` showed two symlinks (`freMTPL2freq.arff`, `freMTPL2sev.arff`, each to the root's file) and no `last-seed.json`.
+
+**B4 — the full seed (4.2, conditions 2 and 3).** DSN `postgresql+asyncpg://gipricing:***@localhost:5432/gipricing` (demo.py's, as `GIP_DATABASE_URL`; `sl1409-seed-full.sh`), no `--rows` (all 678,013), `timeout 3000 uv run … python examples/fremtpl2/seed.py`. **Start 12:06:15, end 12:07:05, duration 50 s, exit code 0** (`sl1409-seed-full.out`: `seed exit code: 0`). New workspace `01a10bbe-3a03-740c-8d4b-a6af38d2dd4b`. Its `dataset_versions` count is 4 (2 `draft`, 1 `failed`, 1 `validated`; version 1 is refused with `VALIDATION_HAS_FAILURES`, version 2 holds 677,442 rows). The seed output says "9 rules approved through the workflow across four layers, and `01` §4.4's 38-rule catalogue". gipricing's workspace count went from 29 to 30.
+
+**A2 — the new record is this seed's.** The worktree's `last-seed.json` had mtime `2026-10-05 11:06:18 UTC` (12:06:18 BST), after the seed's 12:06:15 start. The workspace exists in gipricing: `select id, name, created_at from workspaces where id='01a10bbe-…'` printed `01a10bbe-3a03-740c-8d4b-a6af38d2dd4b|freMTPL2 demo|2026-10-05 11:06:18.690084+00`.
+
+**The analyst id.** After Task 7c the seed resolves the analyst to the existing realm user `01a10bb4-c446-7b66-b87c-dc1ae01246a3` (created by the abandoned partial seed). The new `last-seed.json`'s `analyst_id` equals it:
+
+```text
+{
+  "workspace_id": "01a10bbe-3a03-740c-8d4b-a6af38d2dd4b",
+  "analyst_id": "01a10bb4-c446-7b66-b87c-dc1ae01246a3",
+  "actuary_id": "01a10bbe-3a6c-7123-9f8d-1a3f989bd452"
+}
+```
+
+**The copy (condition 4), 12:07:32.** Old record, sha256 `ffc32f4ac31e43270323da7e2227a08a322fddc6d67748378266cf5620be71f3`:
+
+```text
+{
+  "workspace_id": "01a044dc-4e8f-7d58-a39e-1271642267c9",
+  "analyst_id": "01a044dc-4e8f-7b69-8aa5-46ad0aa445da",
+  "actuary_id": "01a044dc-4e8f-78f7-9a76-97638e69da6c"
+}
+```
+
+New record: sha256 `9b3aada8b5f0433cca4095589812935954bf7e05878d07392286f1e8ecf1807c`, identical in the worktree and the root after `cp`. **Id diff:** a new workspace was minted; the old `01a044dc-…` was not kept, because it was already absent from gipricing (Delta 14: `count(*)` 0; the earliest workspace is 2026-09-17), so there was nothing runnable to keep. The analyst id changed from `01a044dc-4e8f-7b69-8aa5-46ad0aa445da` to the realm user's; the actuary id changed to `01a10bbe-3a6c-7123-9f8d-1a3f989bd452`. **Premise correction (Delta 15):** PL-1408 Task 7 and RL-1407 say the recovery seed "keeps the workspace the demo uses runnable"; that was false on 2026-10-05, for the reason just given. **Rollback:** `cp -p /home/puzhenhao1989/gi-pricing-plan/examples/fremtpl2/data/last-seed.json.bak-20261005 /home/puzhenhao1989/gi-pricing-plan/examples/fremtpl2/data/last-seed.json`, then `sha256sum` it and expect `ffc32f4a…71f3`. The `.bak` still hashed to that value at 12:07:32.
+
+**4.3 Reset, 12:07:40–12:07:42, rc 0** (`GIP_DATABASE_URL` unset, so the script used its gipricing default; A3):
+
+```text
+gipricing reset=10 workspaces=9 chain_verified=9
+```
+
+**4.4 After, 12:07:51–12:08:17.** Follow-on script (`followon.sh`; `sl1409-after-followon.out`):
+
+```text
+gipricing builtin_approved=608 user_approved=9 user_approved_no_approved_request=0
+gipricing_agent-abcc22f1053f096f6_8287cba2 builtin_approved=532 user_approved=10 user_approved_no_approved_request=10
+gipricing_tree-s3 builtin_approved=532 user_approved=10 user_approved_no_approved_request=10
+gipricing_w37-6-run2-gate-1789690960 builtin_approved=532 user_approved=10 user_approved_no_approved_request=10
+gipricing_wt-d9d13-redo builtin_approved=1710 user_approved=101 user_approved_no_approved_request=101
+gipricing_wt-paths-d9-d13 builtin_approved=2052 user_approved=183 user_approved_no_approved_request=183
+databases=93 with_tables=90 without_table_or_error=3
+TOTAL builtin_approved=5966 user_approved=323 user_approved_with_no_approved_request=314
+```
+
+`gipricing` prints `user_approved_with_no_approved_request=0` (Acceptance 13). **`builtin_approved` 608 = 532 + 38 + 38**, the first the before figure, the second the abandoned partial seed `01a10bb4`, the third the new workspace `01a10bbe`. The per-workspace queries, each run read-only in the `gipricing` database:
+
+```text
+select '01a10bbe-3a03-740c-8d4b-a6af38d2dd4b builtin_approved='||count(*) from validation_rules where workspace_id='01a10bbe-3a03-740c-8d4b-a6af38d2dd4b' and builtin and status='approved'
+→ 01a10bbe-3a03-740c-8d4b-a6af38d2dd4b builtin_approved=38
+select '01a10bb4-c446-7b56-bb64-6ce3ff94ea6f builtin_approved='||count(*) from validation_rules where workspace_id='01a10bb4-c446-7b56-bb64-6ce3ff94ea6f' and builtin and status='approved'
+→ 01a10bb4-c446-7b56-bb64-6ce3ff94ea6f builtin_approved=38
+```
+
+The new workspace's 9 user rules are all `approved` (through the workflow); `01a10bb4`'s 9 are all `draft`. **Every other database unchanged, as an aggregate** (the per-database before lines are the gap above): the TOTAL minus gipricing is `5890−532, 324−10, 324−10` before and `5966−608, 323−9, 314−0` after, which is `5358/314/314` both times.
+
+Task 0's script (`task0.sh`, `sl1409-after-task0.out`), last line, after the reset:
+
+```text
+databases=93 with_tables=90 without_table_or_error=3
+TOTAL route_approved=0 self_approved=0 user_approved_no_approved_request=314
+```
+
+**The residual query (Acceptance 23), verbatim (`sl1409-residual.sh`), before 0, after 15.** Run in `BEGIN READ ONLY … ROLLBACK` on `gipricing`:
+
+```sql
+select count(*) from dataset_versions dv where dv.status='validated' and exists (select 1 from (select r.body from validation_reports r where r.dataset_version_id=dv.id and r.workspace_id=dv.workspace_id order by r.created_at desc limit 1) latest cross join lateral jsonb_array_elements(latest.body->'results') res join validation_rules v on v.id=(res->>'rule_id')::uuid where v.status<>'approved' and v.builtin is not true);
+```
+
+The 15 are pre-fix workspaces' validated versions whose latest report used the 10 rules the reset has now returned to `review`: 10 distinct rules (`exposure-positive-3149b9`, `-f8d380`, `-729c73`, `-94f560`, `-ef38a8`, `-36f698`, `-e711ae`, `-ebc8bf`, `-16383b`, `-9cbc27`) in 9 workspaces, `01a0aece-e697-…`, `-ee07-…`, `-f3bc-…` (2 versions), `-fcbb-…` and `01a0aecf-047b-…`, `-0bc8-…` (2), `-18db-…` (2), `-2388-…` (3), `-3595-…` (2). The lead's verdict (2026-10-05): this is the ruling's stated end state, measured and not refused (RL-1407 §"FD 9748"); it is recorded and not fixed here, and it opens no new finding.
+
+**4.5 Second reset, 12:08:44, rc 0:**
+
+```text
+gipricing reset=0 workspaces=0 chain_verified=0
+```
+
+**Condition 5 — the demo check from the root checkout.** Mode: `uv run --directory /home/puzhenhao1989/gi-pricing-plan python scripts/demo.py --skip-seed --no-frontend` (the lightest: no seed, no frontend; it reads `last-seed.json`, migrates, starts the API and queries `GET /api/v1/models?status=approved` as the record's analyst in the record's workspace). **First run, 12:09:02–12:11:27, exit 1.** The root is on main (`5ff49c6d`) and its demo ran `alembic upgrade head` on `gipricing`, moving it from `c4a81f6d2e95` to `e5b7d9f1a3c6` (WK-690 Slice 3's migration, which this branch lacked): `Running upgrade c4a81f6d2e95 -> e5b7d9f1a3c6, custom_objectives: store the expression arm`. The API then died on import, `ModuleNotFoundError: No module named 'sympy'`, because the root venv was stale; the demo also started the `gi-pricing-keycloak-1` container (part of the demo's `auth` profile), which stays up because the demo uses it. **Lead decision D1 authorised `uv sync --all-packages` in the root**, run 12:12:53 (rc 0): `+ mpmath==1.3.0`, `+ sympy==1.14.0`, `~ pricing-core==0.1.0`, `- pyjwt==2.13.0`, `+ pyjwt==2.14.0`. **Second run, 12:12:57–12:17:57** (killed by my `timeout -s INT 300` once the API was ready; `rc=124` is that timeout): the migrations step printed no `Running upgrade` line (a no-op), then `WF-698 demo subset: 1 approved model(s)` and `API ready`. That request used the root's new `last-seed.json`, so it resolved the new workspace `01a10bbe-3a03-740c-8d4b-a6af38d2dd4b`. No uvicorn process was left and port 8000 was free afterwards. The root's `scripts/demo.py` is main's and has no pre-flight step, so this check proves the record, not the pre-flight.
+
+**The merge (D2), committed 12:18:37.** gipricing was now one migration ahead of the branch, so `origin/main` (`072c56e1ba386a790160ac4d90ad667f611df67c`) was merged into the branch: `c156e7274e8d07bc0e9eb1112590c2a259e2db94`, parents `d9b069fc8aa6ff820e38a7432cba22abc64d71f2` and `072c56e1`. One conflict, `docs/INDEX.md`, resolved by `python3 scripts/doc-index.py` (then `--check`: `OK (byte-stable)`). `packages/model-schema/src/model_schema/__init__.py` merged cleanly and holds all four names (`Decide`, `ValidationRuleSubmission`, `DerivedBlock`, `ObjectiveParameter`), each in its import block and `__all__`. `uv run python scripts/generate-contracts.py --check`: `45 generated contracts match the models`. `uv run alembic heads` prints `e5b7d9f1a3c6 (head)`, equal to gipricing's `alembic_version`. Targeted tests after the merge, `pytest -q backend/tests/test_reset_unbacked_rule_approvals.py backend/tests/test_demo_command.py backend/tests/test_check_rule_sets_runnable.py examples/fremtpl2/test_seed.py`: `29 passed, 1 warning in 33.80s`. No full suite (Task 8 gates).
+
+**4.6 The demo check (Acceptance 22).** The query (`acc22.sql`, `BEGIN READ ONLY … ROLLBACK`, parameter `ws`) reads: `declared` = the members in the `rules` array of the workspace's latest rule set; `executed` = the distinct `rule_id` values in the `results` of the latest validation report of the workspace's `validated` dataset version; per member, `validation_rules.status` and whether `dry_run_report_id` resolves to a `validation_reports` row of the workspace, with its `error_count`; the two set differences. **On `gipricing`** (workspace `01a10bbe-3a03-740c-8d4b-a6af38d2dd4b`; `sl1409-acc22-gipricing.out`):
+
+```text
+rule_set=01a10bbe-4be0-7ffe-943f-0424451e2f9b@1 status=approved declared=9
+report=515c46c7-6fa0-478e-8f74-e5fda0d9944e executed=9
+f|approved|f|t|0|9
+declared_not_executed=0 executed_not_declared=0
+```
+
+The third row is `builtin|status|no_report_id|report_resolves|error_count|count`: 9 members, none built-in, all `approved`, each with a `dry_run_report_id` that resolves to a report with `error_count = 0`. **executed == declared (9 == 9).** **On a fresh database** (`scratch_sl1409_acc22`, `createdb` then `alembic upgrade head` at `e5b7d9f1a3c6`, then the seed from the merged tree with `--rows 50000`, 12:20:07–12:20:37, exit 0, workspace `01a10bca-eab0-744f-a0f2-ff56208d0901`; `sl1409-acc22-scratch.out`):
+
+```text
+rule_set=01a10bca-fb27-7cdd-9281-f816f1026b5c@1 status=approved declared=9
+report=831183bd-13cd-4da1-a176-22de2387972f executed=9
+f|approved|f|t|0|9
+declared_not_executed=0 executed_not_declared=0
+```
+
+**4.7 The pre-flight.** **Red, on a scratch database** (`scratch_sl1409_red`, a `createdb -T gipricing` clone taken after the reset, so it holds the reset workspaces). The worktree's `last-seed.json` named the pre-fix workspace `01a0aece-e697-72a9-a8bd-0f02d88399f1` for this run only, then was restored. `GIP_DATABASE_URL=…/scratch_sl1409_red uv run python scripts/demo.py --skip-seed --no-frontend`, 12:21:02–12:21:49, **exit 1**:
+
+```text
+── pre-flight: the demo workspace's rule sets are runnable ─────
+Not approved: 01a0aece-e765-7f90-9a60-43190d20e77d (exposure-positive-3149b9@1, review). A rule set runs only approved rules (`01` FR-50). The way back, for each rule: attach a new dry run (POST /api/v1/validation-rules/{id}/dry-run), then submit an approval request (POST /api/v1/validation-rules/{id}/submit for a draft rule, POST /api/v1/approval-requests for a rule in review), and have an approv…
+
+  pre-flight: the demo workspace's rule sets are runnable failed (uv run python scripts/check-rule-sets-runnable.py 01a0aece-e697-72a9-a8bd-0f02d88399f1 → 1).
+```
+
+(The printed detail is cut at 400 characters here; `sl1409-preflight-red.out` holds the whole line.) **Green, on `gipricing`** with the new record, from the worktree, 12:21:53–12:23:53 (killed by my `timeout -s INT 120` after the API was ready; `rc=124`):
+
+```text
+── pre-flight: the demo workspace's rule sets are runnable ─────
+rule sets runnable: 1
+── API on :8000 ────────────────────────────────────────────────
+  WF-698 demo subset: 1 approved model(s)
+```
+
+**4.8 The release note's pre-upgrade query** (RL-1407 §"The maintainer's three conditions", condition 3, the `sql` block, verbatim; `relnote.sql`), on `gipricing`, `BEGIN READ ONLY … ROLLBACK`. It prints **10 rows**, one per reset rule, each `review`, none in the new workspace (0 rows for `01a10bbe-…`). The ruling's pre-reset run printed 0 rows; the 10 are the reset's own result, the same 10 rules as the residual. First three rows (`sl1409-relnote-base.out` holds all ten):
+
+```text
+01a0aece-e697-72a9-a8bd-0f02d88399f1|01a0aece-e70a-7fa1-9ae7-580775b49327|1|01a0aece-e765-7f90-9a60-43190d20e77d|exposure-positive-3149b9|1|review
+01a0aece-ee07-7438-9cf0-fe9fa7484b9a|01a0aece-ee52-7b7e-99d0-2f3c363b15ee|1|01a0aece-ee91-70cb-9c01-6f92c5f008a9|exposure-positive-f8d380|1|review
+01a0aece-f3bc-7e4e-b95b-dc3c6e416f76|01a0aece-f40e-740b-824d-0cee66b16c0a|1|01a0aece-f459-721b-9f6a-80fa49aac3fb|exposure-positive-729c73|1|review
+```
+
+**The two controls, on the `rules`-form set** (the new workspace's rule set holds `body -> 'rules'`, not `rule_ids`), each in a rolled-back transaction, the query output filtered to the new workspace. One member moved to `review` (`UPDATE validation_rules SET status='review' WHERE id='01a10bbe-4c4a-707e-87b8-5bcc07ea757e'` → `UPDATE 1`):
+
+```text
+01a10bbe-3a03-740c-8d4b-a6af38d2dd4b|01a10bbe-4be0-7ffe-943f-0424451e2f9b|1|01a10bbe-4c4a-707e-87b8-5bcc07ea757e|columns-present|1|review
+```
+
+One stored set re-pointed at a missing id (`UPDATE validation_rule_sets SET body=jsonb_set(body,'{rules,0,rule_id}', to_jsonb('00000000-0000-7000-8000-000000000000'::text)) WHERE workspace_id='01a10bbe-…'` → `UPDATE 1`):
+
+```text
+01a10bbe-3a03-740c-8d4b-a6af38d2dd4b|01a10bbe-4be0-7ffe-943f-0424451e2f9b|1|00000000-0000-7000-8000-000000000000|||missing
+```
+
+Both rolled back (afterwards the rule reads `approved` and the set's first `rule_id` is `01a10bbe-4c4a-707e-87b8-5bcc07ea757e`). The ruling's two controls on the legacy `rule_ids` form were its own run and are not repeated; the 10 base rows above are that form's live `review` result.
+
+**Scratch databases.** Created: `scratch_sl1409_acc22` (12:20:02), `scratch_sl1409_red` (12:20:53). Dropped, both, after 4.8 (`dropped scratch_sl1409_acc22`, `dropped scratch_sl1409_red`); `select count(*) from pg_database where datname like 'scratch_sl1409%'` printed 0.
+
+**A5.** The worktree's two ARFF symlinks and `last-seed.json` were removed; `ls -la examples/fremtpl2/data/` then shows an empty directory and `git status --short` shows nothing under `data/`. The new record lives at the root's path.
+
+**State left.** gipricing at `e5b7d9f1a3c6`; workspaces `01a10bb4-c446-7b56-bb64-6ce3ff94ea6f` (abandoned partial seed) and `01a10bbe-3a03-740c-8d4b-a6af38d2dd4b` (the demo workspace); the root's venv synced; the keycloak container up.
+
 ## PRs
 
 Not yet opened (the lead decides when).
