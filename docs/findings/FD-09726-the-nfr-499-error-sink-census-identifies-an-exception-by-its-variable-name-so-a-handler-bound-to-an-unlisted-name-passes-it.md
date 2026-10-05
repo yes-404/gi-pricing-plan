@@ -172,7 +172,9 @@ reason (as `("backend/src/app/worker/model_handlers.py", "_fit", "str(exc)")` is
   the remedy's job.
 - It does not say the census should be replaced. The AST approach is right; the identification is what is wrong.
 
-## Disposition (proposed remedy; the plan and its decisions are WK-1178's)
+## Disposition
+
+Proposed remedy, for WK-1178's plan to decide:
 
 1. **Identify an exception by binding, not by name.** In `_sinks`, track the `as <name>` of each enclosing
    `ast.ExceptHandler` and count `str(<name>)` and `{<name>}` only when `<name>` is bound by an enclosing
