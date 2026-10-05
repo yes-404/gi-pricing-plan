@@ -16,6 +16,7 @@ from model_schema.approvals import (
     ApprovalStatus,
     ApprovalSubmission,
     ApprovalWithdrawal,
+    Decide,
     DecisionKind,
     PromotionSkip,
     promotion_order_refusal,
@@ -390,6 +391,7 @@ from model_schema.validation import (
     ValidationReport,
     ValidationRule,
     ValidationRuleSet,
+    ValidationRuleSubmission,
     builtin_rule,
 )
 
@@ -487,6 +489,7 @@ __all__ = [
     "DatasetStatus",
     "DatasetTable",
     "DatasetVersion",
+    "Decide",
     "DecimalStr",
     "DecisionKind",
     "DemoApiGroup",
@@ -732,6 +735,7 @@ __all__ = [
     "ValidationReport",
     "ValidationRule",
     "ValidationRuleSet",
+    "ValidationRuleSubmission",
     "VersionTotals",
     "WeightSpec",
     "Weighting",

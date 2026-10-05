@@ -745,3 +745,61 @@ async def test_the_submitter_and_the_author_cannot_decide(
     refused = client.post(f"/api/v1/validation-rules/{second['id']}/approve", headers=author)
     assert refused.status_code == 403, refused.text
     assert refused.json()["code"] == "AUTHOR_CANNOT_APPROVE"
+
+
+# The key set of `service.to_dict` (`backend/src/app/platform/approvals.py`), read at the
+# dispatch tree. Decide's `200` stays `dict[str, Any]`; FD 9752 owns typing it.
+DECIDE_RESPONSE_KEYS = {
+    "id",
+    "artifact_ref",
+    "artifact_type",
+    "environment",
+    "submitted_by",
+    "submitted_at",
+    "change_summary",
+    "status",
+    "approvers_required",
+    "approvers_recorded",
+    "decisions",
+    "withdrawn_reason",
+}
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/v1/approval-requests/{request_id}/decide",
+        "/api/v1/validation-rules/{rule_id}/submit",
+    ],
+)
+def test_every_body_this_slice_edits_is_a_model_schema_type(path: str) -> None:
+    import model_schema
+
+    document = create_app(
+        Settings(environment=Environment.LOCAL, version="0.1.0", log_level="ERROR")
+    ).openapi()
+    schema = document["paths"][path]["post"]["requestBody"]["content"]["application/json"][
+        "schema"
+    ]
+    name = schema["$ref"].rsplit("/", 1)[-1]
+    assert hasattr(model_schema, name), f"{name} is a route-local body, not a model_schema type"
+
+
+@pytest.mark.req("FR-351")
+async def test_the_decide_response_keeps_its_key_set(
+    client: TestClient,
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id,
+    principal,
+    author,
+    grant,
+) -> None:
+    created = await _submitted_rule(client, database, blob_store, workspace_id, principal, author)
+    _approver_id, approver_headers = await _approver(grant, workspace_id)
+    row = await _row(database, created["id"])
+    (request,) = await _requests(database, workspace_id, row)
+    decided = _decide(client, approver_headers, request.id)
+    assert decided.status_code == 200, decided.text
+    assert set(decided.json()) == DECIDE_RESPONSE_KEYS

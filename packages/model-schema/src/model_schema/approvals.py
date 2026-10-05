@@ -36,6 +36,7 @@ __all__ = [
     "ApprovalStatus",
     "ApprovalSubmission",
     "ApprovalWithdrawal",
+    "Decide",
     "DecisionKind",
     "PromotionSkip",
     "promotion_order_refusal",
@@ -58,6 +59,15 @@ class DecisionKind(enum.StrEnum):
     APPROVE = "approve"
     REJECT = "reject"
     REQUEST_CHANGES = "request_changes"
+
+
+class Decide(BaseModel):
+    """The body of `POST /approval-requests/{id}/decide`."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    decision: DecisionKind
+    comment: str | None = None
 
 
 #: `changes_requested` returns to `draft` (FR-355) so a resubmission is a new review

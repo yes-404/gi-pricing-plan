@@ -219,6 +219,28 @@ Recorded facts: the dry-run job that the immutability refusal fails records `err
    record cites it.
 3. `test_a_fail_dry_run_is_still_approvable` is red on the base tree (table above), not a passing control.
 
+### Task 4 — the routes typed, the contract regenerated (2026-10-05, executor-1409-t4)
+
+Base `3a431bcb6afe605b0fafaa0589c307cc1ee5d680` (Steps 2–3 were done there, Delta 7).
+Red first, the two new tests in `backend/tests/test_validation_rule_approval.py`:
+- `test_every_body_this_slice_edits_is_a_model_schema_type`, both parametrised paths red:
+  `AssertionError: Decide is a route-local body, not a model_schema type` (the plan's cause)
+  and `AssertionError: ValidationRuleSubmission is a route-local body, not a model_schema type`.
+  **Cause differs from the plan's "the submit has no body"**: Steps 2–3 were pulled forward
+  into Task 2+3's commit, so the body exists and is only unexported (`hasattr` is False).
+- `test_the_decide_response_keeps_its_key_set`: green on first run (it pins existing
+  behaviour); the plan's scratch proof: renaming `approvers_recorded` → `approvers_seen` in
+  `to_dict` made it fail (`1 failed`), reverted (`git checkout`).
+Green: `268 passed, 2 skipped` over `test_validation_rule_approval.py`, `test_contracts.py`,
+`test_api_approvals.py`; `generate-contracts.py --check` exit 0 ("45 generated contracts
+match the models"); `pnpm --dir frontend generate:api` and `type-check` exit 0; ruff check
+clean; mypy clean (226 files); lint-imports 4 kept.
+Files: `model_schema/approvals.py` (`Decide`, moved, name/fields/config kept),
+`model_schema/__init__.py` (import lines + `__all__`: `Decide`, `ValidationRuleSubmission`
+only), `backend/src/app/api/approvals.py` (route-local `Decide` and unused pydantic import
+removed), `docs/contracts/openapi/generated.json` (regenerated), the test file, this ledger.
+No `PL-1364` untyped-body guard entry was touched (none present). Decide's `200` unchanged.
+
 ### The write set under the `__all__` amendment (Delta 4, #1118)
 
 Names this slice appends to `packages/model-schema/src/model_schema/__init__.py`, appended only, each with its import

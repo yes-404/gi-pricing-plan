@@ -21,7 +21,6 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, status
-from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -54,6 +53,7 @@ from model_schema import (
     ApprovalSubmission,
     ApprovalWithdrawal,
     ArtifactRef,
+    Decide,
     DecisionKind,
     Permission,
 )
@@ -73,13 +73,6 @@ def _database(request: Request) -> Database:
 
 
 DatabaseDep = Annotated[Database, Depends(_database)]
-
-
-class Decide(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    decision: DecisionKind
-    comment: str | None = None
 
 
 async def _detail(database: Database, row: ApprovalRequestRow) -> dict[str, Any]:
