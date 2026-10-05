@@ -128,6 +128,20 @@ relates: [FR-240, FR-230, FR-88, FR-359, FR-20, OQ-609, RL-1263, RL-1329, RL-136
    goes BEFORE PL 9728 (NFR-489, a G4 item) in lane B, or BEFORE WK-675 S2 (off G2's path) in
    lane C. WK-673 S3 in lane A is NOT displaced (G2 needs "a dislocation run with
    attribution")."
+
+   **Superseded for the lane, 2026-10-05 16:02 BST (pre-mint, dm-finals2).** The quoted LANE
+   above is kept as the 14:28:35 record. It no longer places PL 9649. The maintainer (by
+   delegation) replaced it in the entry headed "2026-10-05 15:28:26 BST — Wave results: D1 =
+   (c); D2 PL 9624 DPs; D3 PL 9629 DP-6 + plan the 2 missing G2 items; C1′ is FD 9995 (no new
+   finding); FD 9619 noted", item D1, verbatim:
+   "D1 (PL 9649, the FR-240 fix): OPTION (c). It runs only beside a different Work's build, or
+   after S7/S3. Reason: both J3 and J6 collide on 03's owned-codes paragraph, which is ONE
+   definition edited by both, and that is a true serialise under RL-1263 :100, not adjacency.
+   Concretely: lane C after the FD 9708 fix, i.e. beside S7 only once S7's owned-codes append
+   has merged (the second re-appends), or after S7. (a) is refused: my 14:28:35 "rebased by the
+   second" noted merge order and did not license concurrent edits to one definition."
+   **PL 9649's lane is D1 (c).** Where PL 9649's activation need 2 says the ruling wins, this
+   ruling's lane is D1 (c), not the 14:28:35 LANE quoted above.
 8. **DP-7 (PL 9649 @`2b5bf12d`), the model_call case of DP-4 (c): refused now,
    neutralisation left open.** Entry
    "2026-10-05 14:46:53 BST — FD 9639 (a control factor's coefficient reaches scoring): HIGH
@@ -310,7 +324,7 @@ Insert
   acceptance below.
 - **DP-6's stop binds the executor:** a bad row in `gipricing` stops the slice with the ids,
   no reset and no delete (Ruled 6). The scratch `gipricing_%` databases are not counted.
-- **The dispatch record** names the lane of Ruled 7 and the serialisation with the FD 9707
+- **The dispatch record** names the lane of Ruled 7 as superseded by D1 (c) (dated clause in Ruled 7) and the serialisation with the FD 9707
   fix (PL 9688) on `compile.py` that PL 9649 §"Write set" records (`RL-1263`).
 - **DP-4 (c)** is a separate finding, FD 9639, owner WK-673 (Ruled 4). This record covers
   only its refusal (Ruled 8, PL 9649's DP-7), which SL 9647 builds (Task 3b). FD
