@@ -1,7 +1,7 @@
 ---
 id: RL-9668
 family: ruling
-title: CR-838 corrected — FR-237 was delivered for the pinned shape and for compile, not for declaring the pins when a Rating Version is created, which is owed to the FD 9708 fix in WK-1178
+title: CR-838 corrected — FR-237 was delivered for the pinned shape and for compile, not for declaring the pins when a Rating Version is created, which is owed to the FD 9708 fix in WK-1178; and FR-242 was not delivered for drafting the change summary, which is owed to a WK-673 slice
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
 created: 2026-10-05            # working id; the mint date is set at the mint (check 31)
 owner: decision-maker
@@ -12,10 +12,10 @@ supersedes: []
 superseded_by: ~
 corrected_by: []
 corrects: CR-838
-relates: [CR-838, WK-669, WK-1178, FR-237]
+relates: [CR-838, WK-669, WK-1178, FR-237, FR-242, WK-673]
 ---
 
-# RL 9668 (working id) — CR-838 corrected: FR-237 was not delivered for the create route
+# RL 9668 (working id) — CR-838 corrected: FR-237 was not delivered for the create route, nor FR-242 for the drafted summary
 
 ## How this was ruled
 
@@ -77,12 +77,52 @@ The correction:
 > (`algorithm_ref`, `pins`, `model_reference_mode`) and its use by `compile_bundle` (W9-3, #293).
 > **Not delivered:** declaring the algorithm version and the pins when a Rating Version is
 > created, which `03` §5.1's `POST /api/v1/rating-versions` row and `WF-699` step C1 require.
-> That limb is owed to the FD 9708 fix in WK-1178, as RL 9695 decided. FR-238 to FR-242 and
-> every other verdict in CR-838 are unaffected by this correction.
+> That limb is owed to the FD 9708 fix in WK-1178, as RL 9695 decided. FR-238 to FR-241 and
+> every other verdict in CR-838 are unaffected by this correction. *(Amended 2026-10-05
+> before the mint: this read "FR-238 to FR-242"; FR-242 is corrected in the next section.)*
 
 The verdict for this limb is **deferred with an owner** (`CLAUDE.md` §13's four verdicts):
 owner WK-1178, the FD 9708 fix slice, deadline before the P2 exit demo (the maintainer's (by delegation)
 13:12:56 BST entry, item 15). WK-669 stays closed; the owed work is WK-1178's, not a reopen.
+
+## FR-242 — the drafting limb (added 2026-10-05, 17:21 BST, before the mint)
+
+- **The decision is the maintainer's, by delegation:** `channel/to-lead.md`, the entry headed
+  *"2026-10-05 17:14:54 BST — FD 9572 placement accepted; WK-673 S4/S5/S6, A-1, A-2 and
+  CR-838 DECISIONS (1–8)"*, item 8, verbatim:
+  *"CR-838:40 records FR-242 "delivered" on marker evidence while its DRAFTING limb is
+  unbuilt (AlgorithmDiff.summary never drafts): YES, record it, but FOLD it into RL 9668
+  (#1137, unmerged, already `corrects: CR-838`, and `corrects:` is scalar, so a second
+  correcting RL for one CR is the wrong shape). A pre-mint edit adds the FR-242 limb with its
+  evidence and cites E1's new slice as the owner of the fix."*
+- **The false verdict** is the same row as FR-237's, CR-838 `:40` (quoted above): FR-242,
+  "delivered", "marker-evidenced".
+
+**What it missed.** FR-242 has two limbs: the summary is **required**, and it is **"generated
+as a draft from the structural and rate-table diffs and edited by the actuary"**.
+
+| Fact | Where |
+|---|---|
+| At CR-838's tree the requirement already had both limbs, under its pre-migration id | `git grep -n 'required \*\*change summary\*\*' 3a4958a -- docs/specs/03-rating-engine.md`: `:138`, the same row under its pre-migration id, "It is generated as a draft from the structural and rate-table diffs and edited by the actuary." At `4d3be141` the same text is FR-242, `:139` |
+| The **required** limb was built: the field and the submit guard | `RatingVersion.change_summary: str \| None` (`model_schema/rating.py:127` at `3a4958a`; `:168` at `4d3be141`); the guard raises `VALIDATION_FAILED` "A change summary is required" (`backend/src/app/platform/approvals.py:275` at `4d3be141`; PL-847 `:511-513` cites it at an earlier line) |
+| The **drafting** limb was not built, then or now | `AlgorithmDiff.summary` (`model_schema/rating.py:513` at `3a4958a`, `:554` at `4d3be141`) returns a count string ("2 step(s) added, …") and drafts nothing. Its only backend caller path is `diff_algorithms(...)`'s `.model_dump()` (`backend/src/app/platform/rating_algorithms.py:141` at `3a4958a`, `:163` at `4d3be141`), and a property is not dumped. `git grep -n -i -E 'draft.{0,30}change.summary\|change.summary.{0,30}draft' <tree> -- backend/src packages` prints nothing at either tree. No rate-table diff is summarised anywhere |
+| The plan had scoped it | PL-818 (WK-669) `:160`: "Add the change summary (FR-242): a required field, drafted from the diffs and edited by the actuary" |
+
+So the marker evidence proves the summary is required. It does not reach the draft, which the
+spec and WF-699 step E1 (`:95`, "drafted automatically from the structural and rate
+diffs and then edited") both need. "Delivered" was false for that limb at CR-838's own tree.
+
+**The correction:**
+
+> **FR-242 is partly delivered.** Delivered, at CR-838's tree: the required change summary
+> (the field and the submit guard). **Not delivered:** generating the summary as a draft from
+> the structural and rate-table diffs. That limb is owed to WK-673's E1 slice, SL 9565 with
+> leaf plan PL 9564 (working ids), which RL 9566 (working id, #1191) item 12 records as the
+> maintainer's (by delegation) decision of 17:14:54 BST, item 4.
+
+The verdict for this limb is **deferred with an owner** (`CLAUDE.md` §13's four verdicts):
+owner WK-673, the E1 slice; needed for G2 (WF-699 E1 in the P2 exit demo, the entry headed
+*"2026-10-05 17:07:00 BST"*, "G2 needs an owner"). WK-669 stays closed.
 
 ## What it obliges
 
@@ -92,6 +132,9 @@ owner WK-1178, the FD 9708 fix slice, deadline before the P2 exit demo (the main
   minted id>]`. That append is CR-838's only edit, in the same PR. **Owed at the mint.**
 - **The FD 9708 fix slice (WK-1178):** its ledger names this record as discharged when the
   create route accepts the pins, so the "deferred with an owner" verdict above closes.
+- **The E1 slice (WK-673, SL 9565; added 2026-10-05 before the mint):** its ledger names this
+  record as discharged for FR-242 when a Rating Version's change summary is drafted from the
+  structural and rate-table diffs, so the FR-242 verdict above closes.
 
 ## Acceptance — the violation that must become detectable
 
@@ -105,6 +148,10 @@ owner WK-1178, the FD 9708 fix slice, deadline before the P2 exit demo (the main
 - *Violation: FR-237's create limb is claimed delivered while the route takes no pins.* The
   FD 9708 slice's acceptance (RL 9695, its first violation) fails: a create carrying
   `algorithm_ref` and `pins` is refused 422.
+
+- *Violation (added 2026-10-05 before the mint): FR-242's drafting limb is claimed delivered
+  while nothing drafts.* The E1 slice's acceptance fails: a Rating Version with a structural
+  change and a re-pointed rate table gets no drafted summary naming both.
 
 ## Observed, not ruled (for the lead)
 
