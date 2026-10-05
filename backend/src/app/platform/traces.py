@@ -167,6 +167,7 @@ async def write_pending_trace(
     environment: str | None,
     quote_context: dict[str, Any],
     served_summary: dict[str, Any],
+    deployment_id: UUID | None = None,
 ) -> ScoringTraceRow:
     """Serve time (WK-671 Task 4B, RL-862): record a sampled outcome before any trace body
     exists — no `Trace` to serialise yet, so no blob write and no I/O beyond the insert.
@@ -177,6 +178,11 @@ async def write_pending_trace(
     a workspace member holding no scoring permission can already read. `served_summary` is
     `summarise_result`'s output for the result actually served, compared against the
     re-score's own summary by `complete_pending_trace`.
+
+    `deployment_id` is the Deployment that served the quote, resolved by the route once with
+    the ref and before scoring (`RL-1380`, #974): written here with the row and never
+    back-filled, because `UPDATE` is revoked on `scoring_traces`. `None` for a what-if quote
+    that no live Deployment served.
     """
     row = ScoringTraceRow(
         workspace_id=workspace_id,
@@ -185,6 +191,7 @@ async def write_pending_trace(
         bundle_hash=bundle_hash,
         sample_reason=sample_reason,
         environment=environment,
+        deployment_id=deployment_id,
         status="pending",
         pending_quote_context=quote_context,
         served_summary=served_summary,
@@ -257,6 +264,7 @@ async def complete_pending_trace(
         bundle_hash=row.bundle_hash,
         sample_reason=row.sample_reason,
         environment=row.environment,
+        deployment_id=row.deployment_id,
         status=status,
         pending_quote_context=None,
         served_summary=row.served_summary,

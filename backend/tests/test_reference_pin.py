@@ -13,6 +13,7 @@ from __future__ import annotations
 from uuid import UUID
 
 import pytest
+from backend.tests.approved_rows import add_approved
 from sqlalchemy import select
 
 from app.db.models import DatasetVersionRow, RoleAssignmentRow, RoleRow, ValidationRuleRow
@@ -143,8 +144,7 @@ async def _psi_rule(database: Database, workspace_id: UUID, actor: Principal) ->
             status="approved", authored_by=actor.id, approved_by=new_uuid7(),
             dry_run_report_id=new_uuid7(),
         )
-        session.add(rule)
-        await session.flush()
+        await add_approved(session, rule)
         return rule.id, slug
 
 

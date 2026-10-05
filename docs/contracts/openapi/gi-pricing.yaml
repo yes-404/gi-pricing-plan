@@ -235,7 +235,7 @@ paths:
     post:
       tags: [rating]
       summary: Seed a rate table from a model's relativities
-      description: FR-230. Records the source model so the diff-vs-technical-seed stays answerable.
+      description: FR-230. The body names the model (`model_ref`), one Factor (`factor`, required, the Factor's slug) and a `change_note`; one seeded table holds one Factor. Records the source model so the diff-vs-technical-seed stays answerable.
       parameters: [{$ref: '#/components/parameters/slug'}]
       responses:
         '201': {description: New rate table version created}

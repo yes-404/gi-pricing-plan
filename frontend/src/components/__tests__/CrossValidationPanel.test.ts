@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/vue";
 import { describe, expect, it, vi } from "vitest";
 
+import { cellUnder } from "@/test-tables";
 import { DIAGNOSTICS } from "@/views/__tests__/fixtures";
 
 import CrossValidationPanel from "../CrossValidationPanel.vue";
@@ -61,8 +62,7 @@ describe("CrossValidationPanel", () => {
   it("carries the std score into the path table, since a mean without it is not a choice", () => {
     render(CrossValidationPanel, { props: { crossValidation: CV } });
     const table = screen.getByRole("table", { name: /regularisation path/i });
-    const row = within(table).getByRole("row", { name: /^0\.01/ });
-    expect(within(row).getAllByRole("cell")[1]).toHaveTextContent("0.003");
+    expect(cellUnder(table, /^0\.01/, "Std score")).toHaveTextContent("0.003");
   });
 
   /**
