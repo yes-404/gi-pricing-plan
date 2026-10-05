@@ -354,6 +354,95 @@ verbatim:
    The other activation needs stay. RL 9562 is not held by T-M1.
 4. **Acceptance 12 and 13** read "the adopting RL" as RL 9505. No other acceptance changes.
 
+## Delta 7, 2026-10-05 (after 18:08:20 BST, pre-mint): RL 9505's readings; Task 2d runs the frontend half and corrects `models.py:2287`; the `score.py` row withdrawn in place
+
+The maintainer's (by delegation) entry "2026-10-05 18:08:20 BST — RL 9505 (#1209 @77e5cfe1,
+T-M1): placement and the three readings ACCEPTED", verbatim:
+
+> The placement in FR-259 (03:176) as the third dated clarification after RL-916's (one home; the 5.1 row :924 stays an index): ACCEPTED.
+> The DM's three readings are ACCEPTED as within my entries: (1) a mismatch STAYS LISTED, MARKED, with no status filter (that is what "marked, never shown as the quote's trace" meant; nothing is hidden); (2) TraceView gains a REQUIRED status and generated.json is regenerated, while model_schema Trace is unchanged (status is the row's, not the body's), both in SL 9568 Task 2d. The frontend client regenerates from the contract (CLAUDE.md 2): Task 2d runs the frontend half of the gate too. (3) ONE mechanism, shared with PL 9776 DP-F35-8 (c).
+> The stale models.py:2287 comment goes into Task 2d's scope: correct, as a note.
+> The mint ACK comes at its mint head.
+
+Repository facts below were read at `origin/main` `fb178c360f6fd5b2fdb7ae60eea924811a65492f`.
+
+**1. RL 9505's three accepted readings, which Task 2d implements:**
+- **(1) A mismatch stays listed, marked, with no status filter.** `_filtered`
+  (`backend/src/app/api/traces.py:119-142`) is not changed, and no query parameter is added.
+  Task 2d's red already asserts both rows are listed (`set(by_quote) == {…}`).
+- **(2) `TraceView` gains a REQUIRED `status`; `model_schema` `Trace` is unchanged** (the status
+  is the row's, not the body's). Step 3's field has **no default** (required in the generated
+  schema), and `generated.json` is regenerated. No file under `packages/model-schema/` is
+  written.
+- **(3) One mechanism, shared with PL 9776 DP-F35-8 (c):** the existing comparator and mark
+  (`traces.py:257`), carried onto the read route. Delta 5 item 4 already says so; RL 9505 is now
+  its citation.
+- **The placement:** T-M1 goes in FR-259 (`03:176`), as the third dated clarification after
+  RL-916's; the `03` §5.1 row (`:924`) stays an index and is not edited. Task 2d's "at the place
+  the RL names" is FR-259's row. Delta 5's write-set note naming `03:924` "or FR-259's row" now
+  reads FR-259's row only.
+
+**2. Task 2d runs the frontend half of the gate (reading (2)).** `TraceView` is part of the
+OpenAPI contract, and `frontend/src/api/generated` is generated from it (`CLAUDE.md` §2), so a
+new required field changes the generated client. New **Step 4b**, after Step 4's
+`generate-contracts.py --check`:
+
+```bash
+pnpm --dir frontend install --frozen-lockfile && pnpm --dir frontend generate:api
+pnpm --dir frontend lint && pnpm --dir frontend type-check
+pnpm --dir frontend test && pnpm --dir frontend build
+```
+
+Each must exit 0. The ledger records each rc and the tree. Before any run, check
+`pgrep -af 'pytest|vitest|flock'` and the gate slots (Task 4 Step 1); `test` and `build` are
+heavy, so they run in a held slot or through the gate-runner. Task 4's full two-half gate still
+runs at the slice head.
+
+- **Notes gain:** `frontend/src/api/generated` is **regenerated** by `generate:api` and is
+  VCS-ignored. It is never hand-edited and never committed, so it is not a write-set row.
+- **Read-first list gains: the frontend consumers of the traces list. There are none at
+  `fb178c36`.** `git grep -n -i 'api/v1/traces\|TraceView' fb178c36 -- frontend` prints nothing.
+  `git grep -n -i 'traces' fb178c36 -- frontend/src` matches only two prose comments about
+  display strings (`frontend/src/views/PerilStructureDetailView.vue:15` and its test `:58`), not
+  a call or a type. So no view or store reads the list today. The generated type changes, and
+  nothing consumes it. Step 4b's `type-check` proves that at the slice's own tree: if a consumer
+  lands before the slice, it fails there, and that is a STOP to the lead.
+
+**3. Task 2d corrects the stale comment at `backend/src/app/db/models.py:2287` (as a note).**
+At `fb178c36`, `:2286-2287` read: "The blob body's digest … Null while `status == "pending"`;
+every other status requires it (Task 4B)." That is false. `complete_pending_trace` with
+`trace is None` (condition (a), the bundle moved on: `worker/trace_handlers.py:90-96`) writes
+`status = "mismatch"` with `blob_sha256 = None` (`platform/traces.py:248-251`, written at `:271`).
+Its own docstring says so (`:226`: "row completes `"mismatch"` with no body"). New **Step 3b**:
+change only the `:2287` comment line(s) so that they say the digest is null while `pending`, and
+also on a `mismatch` row whose pinned bundle no longer resolved (no body was written); every
+`complete` row and every `mismatch` row that re-scored has it. It is a comment only: no column,
+type, default or migration changes. It is committed in Step 6's commit.
+- **Write set gains:** `backend/src/app/db/models.py`: edited, the `ScoringTraceRow.blob_sha256`
+  comment (`:2286-2287`) only. *Contention:* this is a comment inside an existing class. The
+  dispatch record re-runs the open-PR sweep for `db/models.py` writers that touch
+  `ScoringTraceRow` (its line numbers move often) and names any it finds.
+
+**4. The `score.py` write-set row contradicted Delta 1: it is withdrawn in place.** Delta 1 (the
+delta of 2026-10-05, after 17:30:13 BST) removed Task 3 and "The `score.py` row, so this plan no
+longer edits `score.py` at all", but the write-set table still listed a `score.py` edit. **No
+remaining task edits `score.py`**: Task 2 and Task 2b modify `runtime.py` and
+`test_rating_wire_order.py`; Task 2c adds no repository file; Task 2d modifies `api/traces.py`,
+`03`, `test_traces_api.py`, `generated.json` and (this delta) the `models.py` comment.
+`score.py` is only read (Task 2c's replay scores through it). The row is marked
+superseded in place. The rows Delta 1 also withdrew (`test_score.py`, `test_score_compare.py`,
+`test_scoring_handlers.py` and `test_quote_input_raise_sites.py`) are marked in place the same
+way.
+- **Contention notes that cite `score.py`, re-checked:** the table's PL 9688 class ("serialise
+  with PL 9688 … This slice goes first") and the pairing line ("Beside PL 9688: **serialise**,
+  this slice first") rested on `score_one` and `_score_context_sync`. With that row withdrawn,
+  this slice and PL 9688 share **no existing function**: `runtime.py` is name-disjoint
+  (`to_wire` and `_model_call_handler` here; `_decision_table_node` there), `03` rows are
+  distinct (FR-212 and FR-213, and FR-259 for T-M1; FR-221 there), and `_INPUT_FREE` is no longer
+  edited here. So the pair is **name-disjoint**, as Delta 1's "Contention, now" already says. Both
+  stale lines are marked in place. Delta 1's remaining contention lines, and the A-1/A-2/A-3,
+  PL 9776 and S7 notes, do not cite `score.py` and stand.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
 > or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax
 > for tracking. Also bound: `python-test` (the `req` markers, the negative tests),
@@ -581,12 +670,12 @@ branch at the head named in its header cell, on 2026-10-05.
 | Path | This slice | FD 9707 fix (PL 9688, #1145 @`2f3269c8`) | S7 (PL-1419, #1127 @`305ffca9`) | FR-240 fix (PL 9649, #1152 @`df8ba756`) | F35 remedy (PL 9776, #1051 @`ecbb82ab`, WK-1178) | Class |
 |---|---|---|---|---|---|---|
 | `packages/pricing-core/src/pricing_core/rating/runtime.py` | added: `_dependency_order`, `import heapq`, the `GraphCycleError` import; edited: `to_wire` (`:453-499`: the iteration order and the comment at `:463-473`) | `_decision_table_node`, module docstring, `_as_at_window` | — | reads `_model_call_handler` only | **`to_wire`** (reference edges, `outputNode` wiring), `_decision_table_node`, `_constraint_node`, docstring rule 3 | **serialise with PL 9776** (the same existing function). Name-disjoint with PL 9688 |
-| `packages/pricing-core/src/pricing_core/rating/score.py` | added: `_check_no_shadowed_produced_names`; edited: `score_one` (`:876`, one call), `_score_context_sync` (`:1045`, one call) | added `_check_as_at_values`; **`score_one` and `_score_context_sync`**, one call each | — | — | — | **serialise with PL 9688** (the same existing functions). This slice goes first (the 17:10:08 tie-break) |
+| `packages/pricing-core/src/pricing_core/rating/score.py` | *(Withdrawn by the delta of 2026-10-05, after 17:30:13 BST; `score.py` is now read-only for SL 9568 — Delta 7 item 4.)* ~~added: `_check_no_shadowed_produced_names`; edited: `score_one` (`:876`, one call), `_score_context_sync` (`:1045`, one call)~~ | added `_check_as_at_values`; **`score_one` and `_score_context_sync`**, one call each | — | — | — | ~~**serialise with PL 9688** (the same existing functions). This slice goes first (the 17:10:08 tie-break)~~ *(Delta 7 item 4: no shared path left here.)* |
 | `packages/pricing-core/tests/test_rating_wire_order.py` | added (new module) | — | — | — | — | none |
-| `backend/tests/test_score.py` | added (appended, no existing test edited): the `/score` and trace-reproduction reds | none. PL 9688 adds its own module `backend/tests/test_score_as_at.py` and does not edit this file | — | — | — | append-only; name-disjoint |
-| `backend/tests/test_score_compare.py` | added (appended): the `/score/compare` red | — | — | — | — | append-only |
-| `backend/tests/test_scoring_handlers.py` | added (appended): the batch red | — | — | — | — | append-only |
-| `packages/pricing-core/tests/test_quote_input_raise_sites.py` | edited: `_INPUT_FREE` (`:62-79`, one entry added) | one entry added | — | — | — | registry (append); the second to merge re-gates |
+| `backend/tests/test_score.py` | *(Withdrawn by the delta of 2026-10-05, after 17:30:13 BST; marked by Delta 7 item 4.)* ~~added (appended, no existing test edited): the `/score` and trace-reproduction reds~~ | none. PL 9688 adds its own module `backend/tests/test_score_as_at.py` and does not edit this file | — | — | — | ~~append-only; name-disjoint~~ *(Delta 7 item 4: no shared path left here.)* |
+| `backend/tests/test_score_compare.py` | *(Withdrawn by the delta of 2026-10-05, after 17:30:13 BST; marked by Delta 7 item 4.)* ~~added (appended): the `/score/compare` red~~ | — | — | — | — | ~~append-only~~ *(Delta 7 item 4: no shared path left here.)* |
+| `backend/tests/test_scoring_handlers.py` | *(Withdrawn by the delta of 2026-10-05, after 17:30:13 BST; marked by Delta 7 item 4.)* ~~added (appended): the batch red~~ | — | — | — | — | ~~append-only~~ *(Delta 7 item 4: no shared path left here.)* |
+| `packages/pricing-core/tests/test_quote_input_raise_sites.py` | *(Withdrawn by the delta of 2026-10-05, after 17:30:13 BST; marked by Delta 7 item 4.)* ~~edited: `_INPUT_FREE` (`:62-79`, one entry added)~~ | one entry added | — | — | — | ~~registry (append); the second to merge re-gates~~ *(Delta 7 item 4: no shared path left here.)* |
 | `docs/specs/03-rating-engine.md` | DP-4 (a) only: the FR-212 row (`:81`) and the FR-213 row (`:82`), a dated amendment each | the FR-221 row (`:107`) | the FR-231 row, §4.2, §5.1, §5.2 | adjacent `03` hunks (its T-texts) | — | shared file, distinct rows: the dispatch record names the path, the rows, and a trial `git merge-tree` rc between the heads |
 | `docs/roadmap.md` | added: the SL 9568 row (plan PR only) | adds the SL 9685 row at the same place | — | adds its SL row | — | registry (append, distinct rows); the second to merge re-reads |
 | `docs/INDEX.md`; the slice's ledger | regenerated; added | every PR | every PR | every PR | every PR | `generated` |
@@ -600,8 +689,8 @@ private here; whether S2 imports it or its own inliner restates it is S2's plan'
 
 **Pairing for the dispatch record.** Beside S7 (lane A, the same Work): file sets
 name-disjoint in code, `03` distinct rows, no plan dependency, so both RL 9620 conditions can
-hold. Beside PL 9649: name-disjoint, no plan dependency. Beside PL 9688: **serialise**, this
-slice first. Beside PL 9776: **serialise** (`to_wire`).
+hold. Beside PL 9649: name-disjoint, no plan dependency. ~~Beside PL 9688: **serialise**, this
+slice first.~~ *(Delta 7 item 4: name-disjoint with PL 9688 since Delta 1 withdrew the `score.py` edit.)* Beside PL 9776: **serialise** (`to_wire`).
 
 **Delta 4 (2026-10-05) to this table and the pairing.** The table above stays as read; these
 lines add to it:
@@ -1375,6 +1464,7 @@ each difference.
 - Modify: `docs/specs/03-rating-engine.md`: T-M1, byte for byte as the RL adopts it, at the
   place the RL names.
 - Modify (append): `backend/tests/test_traces_api.py`.
+- *(Delta 7 items 2 and 3: Step 3b corrects the `backend/src/app/db/models.py:2287` comment; Step 4b runs the frontend half of the gate; `frontend/src/api/generated` is regenerated, never committed; T-M1 goes in FR-259, `03:176`.)*
 - Regenerate: `docs/contracts/openapi/generated.json` (`uv run python
   scripts/generate-contracts.py`).
 
