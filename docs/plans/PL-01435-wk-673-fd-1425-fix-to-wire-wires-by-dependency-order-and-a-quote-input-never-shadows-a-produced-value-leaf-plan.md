@@ -3,7 +3,7 @@ id: PL-1435
 family: plan
 kind: leaf
 title: WK-673 — FD-1425 fix, to_wire wires each consumed name to its producer over a stable topological order, and a quote input never shadows a produced value (FR-212, FR-213): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: planner
 tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6
