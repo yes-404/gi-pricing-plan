@@ -45,7 +45,7 @@ FR-259's 100 % decline-and-error sampling (`CR-927` §10.3).
 The figure therefore lives in three closure records and one OQ, and in no row of the register as a finding of its own (F55's row mentions "~2.58×" only as the size of the overage its cause drives),
 which is where `CLAUDE.md` §13 and G4 look for a requirement's verdict. A closure record is
 frozen at its date; nothing re-reads it when the phase closes. (Re-confirmed at `cdaaa573`:
-`git grep -n -E '516\.07|2\.58' cdaaa573 -- docs/findings` returns no line, and
+`git grep -n -E '516\.07|2\.58' cdaaa573 -- docs/findings` returns one line, `register.md:96` (F55's "~2.58×"), and no line carries `516.07`; and
 `git log -S516.07 origin/main -- docs` touches only `dc451d50`, `ba658943`, `18831bda` and the
 W37-6 migration run `71f5a220`.)
 
@@ -90,5 +90,7 @@ The OQ-1373 decision rules the schema question; this finding is not a second rou
 ## Disposition
 
 Open. Filed by the auditor, 2026-10-05; severity MEDIUM, owner WK-1178 and the deadline are
-the maintainer's (by delegation), ruled in the entry named above. Resolution: fix, or a dated
+the maintainer's (by delegation), ruled in the entry named above and noted in the entry headed *"2026-10-05 15:44:00 BST — #1167 check: NO duplicate (accepted); the residual MUST be traced; the coverage test goes to PL 9616; FD 9608 noted"* ("FD 9608 (#1169 @3ded7319; MEDIUM, WK-1178, before the P2 close; my 15:37:35 quoted): noted, in the next batch. The evidence corrections (CR-926 :51, CR-927 :324 with verdict :344, CR-1247 :760; F55 :96's "~2.58×" in passing) are right."). Resolution: fix, or a dated
 maintainer acceptance, before the P2 close.
+
+**Re-verified at `origin/main` 137bc817** (2026-10-05 16:58:12 BST): `03-rating-engine.md` :1341 (NFR-500), :176 (FR-259), :1369 (OQ-1373); `w11-task-4d-nfr-rate-12.md:129-130`; `CR-926 :51`, `CR-927 :324` and `:344`, `CR-1247 :760`; `register.md` :79 (F37) and :96 (F55) all resolve as written, and `git grep -n -E '516\.07|2\.58' origin/main -- docs/findings` still returns the one line, `register.md:96`.
