@@ -629,6 +629,31 @@ superseded RL-1418 T1 clause `where either version is` + "`storage: parquet`" + 
 RL-1442's predicate for T1' and T3' (`git diff --no-index --word-diff=plain` of the row at `386f4d54` against each applied row)
 printed exactly the changes the record lists.
 
+**RL-1441's NFR row** (the lead allocated the ids, as the sole allocator: the requirement id `NFR-1443`, then this ledger's id
+`LG-1444`, because requirement ids and document ids are one sequence and `python3 scripts/doc-id.py next` printed 1443): T1 and T2
+(T2 is the sentence inside T1's row) appended byte for byte as the last row of `03` §9's table, after the `NFR-502` row, with
+`NFR-<next>` set to `NFR-1443` and `<date>` to 2026-10-05. `grep -cF` over `docs/specs/03-rating-engine.md`, before: `NFR-1443` 0,
+`Rate-table cells-diff paging` 0; after: `NFR-1443` 1, `Rate-table cells-diff paging` 1, `NFR-<next>` 0, `<date>` 0. The
+measured acceptance of that row is the Task 8 holds above: p95 at most 300 ms (rows 250 000 32.3 ms, parquet 1 000 000 37.0 ms),
+the 2x property per path (0.98x rows, 1.03x parquet), the figures before the fix (rows page p50 9604 ms at 260 000 cells on
+2026-10-05 20:45 BST).
+
+**The acceptance items of RL-1442 beyond the tests above**, each a pin that passed on first run (the behaviour was already coded)
+and each shown failing on a deliberate break, run singly (`OMP_NUM_THREADS=1 nice`), the file reverted and `git hash-object` equal
+before and after:
+
+| break | test | failing line | file's `hash-object`, before == after |
+|---|---|---|---|
+| an `against` spelling enters the key raw, not as the version it resolves to | `test_against_previous_seed_and_a_number_that_name_one_baseline_share_one_artifact` | `AssertionError: ('seed', '…@2/diff/cells', '{"id":…"status":"queued"…` (a second Job) | `rate_tables.py` `b5727b21a9a361161f35e0bce1ecb0cfe0267947`, equal |
+| the chunk size below `MAX_LIMIT` (the assertion removed) | `test_a_page_touches_at_most_two_chunks_for_every_legal_limit` (4 of 6) | `AssertionError: (4, 2)` (4 reads, not the manifest plus 2 chunks) | same, equal |
+| a RUNNING Job is not in flight | `test_a_request_while_the_job_is_running_gets_that_job` | `assert '<job id>' == '<other job id>'` | same, equal |
+| the diff route looks up another key than the cells route | `test_the_cells_job_serves_the_diff_and_the_reverse_one_job_per_key` | `AssertionError: {"id":…"kind":"rate_table.diff_cells","status":"queued"…` (the diff got a 202) | same, equal |
+| `rate_table.diff` removed from the job schema's kind enum | `test_an_existing_rate_table_diff_job_row_still_reads_back` | `assert 'rate_table.diff' in ['dataset.ingest', …]` | `docs/contracts/schemas/job.schema.json` `39be2f4c4fda8bc952b1eb2a7a35f6b913e7b6d2`, equal |
+
+The chunk-bound test reads `BlobStore.read` through a counting wrapper: a page at limit 1 or 2, or 200, starting at a chunk's last
+cell, reads the manifest plus one or two chunks and never more; the diff route reads the manifest only. 65 tests in the file
+now; the existing `test_a_page_reads_the_manifest_and_at_most_two_chunks` stays.
+
 ## PRs
 
 #1206, a draft, `SL-1391: Slice 7: FR-231's exposure weights through the portfolio frame (F-W10-2)`, head branch

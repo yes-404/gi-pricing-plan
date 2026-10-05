@@ -1556,3 +1556,157 @@ async def test_a_portfolio_refusal_that_reads_the_content_is_the_jobs_validation
     assert names in error["message"]
     if never is not None:
         assert never not in error["message"]
+
+
+# --- RL-1442's acceptance, the items not covered above --------------------------------------
+
+
+@pytest.mark.req("FR-231")
+@pytest.mark.req("FR-232")
+async def test_against_previous_seed_and_a_number_that_name_one_baseline_share_one_artifact(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    """`against` enters the key as the version it resolves to: v2's `previous`, its `seed` origin
+    and the explicit `1` are one baseline, so one Job and one artifact."""
+    await grant("analyst")
+    slug = await _identity_table(database, workspace_id, principal, blob_store)
+    analyst = _headers(principal.id, workspace_id)
+    first = api_client.get(_cells_url(slug), params={"against": "previous"}, headers=analyst)
+    assert first.status_code == 202, first.text
+    assert await execute_job(database, UUID(first.json()["id"]), blob_store) is JobStatus.SUCCEEDED
+    before = await _job_count(database)
+    for against in ("previous", "seed", "1"):
+        for url in (_cells_url(slug), _diff_url(slug)):
+            answer = api_client.get(url, params={"against": against}, headers=analyst)
+            assert answer.status_code == 200, (against, url, answer.text)
+    assert await _job_count(database) == before  # no second Job for any spelling of the baseline
+
+
+@pytest.mark.req("FR-231")
+@pytest.mark.req("FR-232")
+@pytest.mark.parametrize(
+    ("start", "limit", "max_chunks"),
+    [(999, 1, 1), (999, 2, 2), (999, 200, 2), (1999, 200, 2), (0, 200, 1), (800, 200, 1)],
+)
+async def test_a_page_touches_at_most_two_chunks_for_every_legal_limit(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient, monkeypatch: pytest.MonkeyPatch, start: int, limit: int,
+    max_chunks: int,
+) -> None:
+    """Pages at `limit` 1 and at `MAX_LIMIT`, starting at a chunk's last cell, read the manifest
+    and at most two chunks; the diff route reads the manifest and no chunk."""
+    await grant("analyst")
+    levels = [f"L{i:04d}" for i in range(2500)]
+    slug = await _uplifted_table(database, workspace_id, principal, blob_store, levels)
+    analyst = _headers(principal.id, workspace_id)
+    await _artifact(
+        database, blob_store, api_client, _cells_url(slug), analyst, against="previous"
+    )
+    reads: list[str] = []
+    original = BlobStore.read
+
+    async def counting(self: BlobStore, ref: Any) -> bytes:
+        reads.append(ref.sha256)
+        return await original(self, ref)
+
+    monkeypatch.setattr(BlobStore, "read", counting)
+    from app.api.pagination import encode_cursor
+
+    params = {"against": "previous", "limit": str(limit)}
+    if start:  # the first page has no cursor
+        params["cursor"] = encode_cursor(start)
+    page = api_client.get(_cells_url(slug), params=params, headers=analyst)
+    assert page.status_code == 200, page.text
+    keys = [i["key"]["driver_age_band"] for i in page.json()["items"]]
+    assert keys == levels[start:start + limit]
+    assert len(reads) == 1 + max_chunks, (len(reads), max_chunks)  # the manifest + the chunks
+    reads.clear()
+    assert api_client.get(
+        _diff_url(slug), params={"against": "previous"}, headers=analyst
+    ).status_code == 200
+    assert len(reads) == 1, reads  # the manifest only
+
+
+@pytest.mark.req("FR-232")
+async def test_a_request_while_the_job_is_running_gets_that_job(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    from datetime import UTC, datetime
+
+    await grant("analyst")
+    slug = await _identity_table(database, workspace_id, principal, blob_store)
+    analyst = _headers(principal.id, workspace_id)
+    first = api_client.get(_diff_url(slug), params={"against": "previous"}, headers=analyst)
+    assert first.status_code == 202, first.text
+    async with database.unit_of_work() as session:  # the worker has picked it up
+        await session.execute(
+            update(JobRow)
+            .where(JobRow.id == UUID(first.json()["id"]))
+            .values(status=JobStatus.RUNNING, started_at=datetime.now(UTC))
+        )
+    before = await _job_count(database)
+    for url in (_cells_url(slug), _diff_url(slug)):
+        again = api_client.get(url, params={"against": "previous"}, headers=analyst)
+        assert again.status_code == 202, again.text
+        assert again.json()["id"] == first.json()["id"]
+    assert await _job_count(database) == before
+
+
+@pytest.mark.req("FR-231")
+@pytest.mark.req("FR-232")
+async def test_the_cells_job_serves_the_diff_and_the_reverse_one_job_per_key(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    """A query's diff and its cells come from one Job, whichever route asked first."""
+    await grant("analyst")
+    slug = await _identity_table(database, workspace_id, principal, blob_store)
+    analyst = _headers(principal.id, workspace_id)
+    first = api_client.get(_cells_url(slug), params={"against": "previous"}, headers=analyst)
+    assert first.status_code == 202, first.text
+    assert await execute_job(database, UUID(first.json()["id"]), blob_store) is JobStatus.SUCCEEDED
+    before = await _job_count(database)
+    diff = api_client.get(_diff_url(slug), params={"against": "previous"}, headers=analyst)
+    assert diff.status_code == 200, diff.text
+    assert diff.json()["changed_cells"] == 2
+    assert await _job_count(database) == before
+
+
+@pytest.mark.req("FR-232")
+async def test_an_existing_rate_table_diff_job_row_still_reads_back(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    """The route no longer creates `rate_table.diff`, but the kind stays valid in the schema and
+    the enum, so an existing Job row of that kind validates and reads back."""
+    from datetime import UTC, datetime
+    from pathlib import Path
+
+    from app.db.models import JobRow as Row
+    from model_schema import JobQueue, JobSource
+
+    await grant("analyst")
+    schema = json.loads(
+        (Path(__file__).resolve().parents[2] / "docs/contracts/schemas/job.schema.json").read_text()
+    )
+    assert "rate_table.diff" in schema["properties"]["kind"]["enum"]
+    assert "rate_table.diff_cells" in schema["properties"]["kind"]["enum"]
+    assert JobKind("rate_table.diff") is JobKind.RATE_TABLE_DIFF
+
+    job_id = new_uuid7()
+    async with database.unit_of_work() as session:
+        session.add(
+            Row(
+                id=job_id, workspace_id=workspace_id, kind=JobKind.RATE_TABLE_DIFF,
+                status=JobStatus.SUCCEEDED, queue=JobQueue.COMPUTE, source=JobSource.API,
+                submitted_by={"kind": "user", "id": str(principal.id), "display": "x"},
+                parameters={"slug": "old", "version": 2, "against": "previous"},
+                result={"kind": "blob", "ref": "0" * 64},
+                started_at=datetime.now(UTC), finished_at=datetime.now(UTC),
+            )
+        )
+    got = api_client.get(f"/api/v1/jobs/{job_id}", headers=_headers(principal.id, workspace_id))
+    assert got.status_code == 200, got.text
+    assert got.json()["kind"] == "rate_table.diff"
