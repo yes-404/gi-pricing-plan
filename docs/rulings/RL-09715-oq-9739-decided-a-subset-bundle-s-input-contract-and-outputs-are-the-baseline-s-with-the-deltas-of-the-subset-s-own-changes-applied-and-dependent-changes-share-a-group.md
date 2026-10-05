@@ -1,8 +1,8 @@
 ---
 id: RL-9715
 family: ruling
-title: OQ 9739 — a subset bundle's input contract and outputs are the baseline's with the deltas of the subset's own changes applied, and changes that depend on each other must share a group (PROPOSED, awaiting the deputy)
-status: draft                  # active → superseded | retired (§1.2a) — set active at mint, after the deputy's decision
+title: OQ 9739 decided — a subset bundle's input contract and outputs are the baseline's with the deltas of the subset's own changes applied, a removed input and a changed type included, and changes that depend on each other must share a group, refused up front
+status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
 created: 2026-10-05
 owner: decision-maker
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc
@@ -15,13 +15,13 @@ corrects: ~
 relates: [RL-1394, RL-1402, RL-1361, RL-1375, RL-1264, PL-1403, PL-1267, LG-1400, SL-1387, FD-1374, FR-212, FR-213, FR-214, FR-219, FR-246, FR-266, FR-1397, FR-1398, FR-1399]
 ---
 
-# RL 9715 (working id) — OQ 9739: the proper subset bundle's `input_contract` and outputs
+# RL 9715 (working id) — OQ 9739 decided: the proper subset bundle's `input_contract` and outputs
 
-**PROPOSED — awaiting the deputy's decision (the maintainer's, by delegation).** Nothing
-below is ruled until the lead relays that decision. The record stays `status: draft`, as
-RL 9770 (working id) is held on PR #1060 (`origin/dm-f35-rulings`, read 2026-10-05: `status:
-draft # … set active at mint`) after the maintainer's acceptance of 2026-10-01 10:30:00 BST;
-it is set `active` at the mint.
+**Decided by the maintainer, by delegation (the deputy)**, in the entry headed *"2026-10-05
+12:58:22 BST — DECISIONS (the maintainer, by delegation): FD 9780; DP-A; OQ 9739; RL 9715
+DP-2; PL 9716 DP-B; the OQ 9739 row"* in `~/gi-pricing-plan.local/channel/to-lead.md`, items
+3, 4 and 6, relayed to this session by the lead. The options below were drafted before that
+decision and sent as DPs; the sections headed "Ruled" record it.
 
 ## How this was ruled
 
@@ -46,7 +46,7 @@ At `caa4e411`, `grep -rn 9739 docs/` matches only `PL-1403`, `LG-1400` and `RL-1
 **There is no row in `docs/open-questions.md` (§RATE) and none in `03` §10.** `RL-1394`
 itself does not name the working id; it proposed that the lead allocate one. So the question
 has been cited by number in three merged records while no OQ row exists for it. The texts
-below include both mirror rows, written once at the mint, already closed by this ruling
+below include both mirror rows, written in this commit, closed by this ruling
 (the decision-maker records an OQ and sets it `closed` citing the resolver, `document-ids.md`
 §1.6 OQ row).
 
@@ -127,7 +127,19 @@ candidate tightens `age`'s `max` from 99 to 90 with no step edit.
 | Every premium effect has an owner | no | no | **yes** | n/a |
 | Cost | none now | none now | FR-1399 amended, two `kind` values; `diff_algorithms` needs field-level deltas (today two booleans) | attribution lost |
 
-### PROPOSED: (c)
+### Ruled: (c) — the maintainer, by delegation, item 3 of the 12:58:22 BST entry
+
+The decision, verbatim: *"OPTION (c), the baseline's input_contract plus each delta whose
+change is in S. Decisive on the endpoints: v(∅) must be the baseline bundle and v(N) the
+candidate; (a) gives the candidate the baseline's contract at S=N, and (b) gives the baseline
+the candidate's at S=∅. "Delta" includes a removed input and a changed type, not only
+additions; the DM states that."* **So stated:** a delta is a field added, a field removed,
+or a field whose type or any other attribute changed, and the same for a declared output.
+A removed field travels with the change that removes the input step reading it, so a subset
+without that change keeps the field with its baseline definition.
+
+The drafted reasoning, kept:
+
 
 **Why.** (c) is not a new rule: it is FR-1398's *"with that subset's changes substituted"*
 applied to the two parts of the algorithm FR-1399 forgot, using the rule FR-1399 already
@@ -166,35 +178,42 @@ default run fails whenever the candidate adds a factor**.
   `BUNDLE_COMPILE_FAILED` (FR-1398 as written). Correct but late: after up to 2^K − 1
   compiles, with a message about a subset, not about which changes to group.
 
-### PROPOSED: (i)
+### Ruled: (i) — the maintainer, by delegation, item 4 of the 12:58:22 BST entry
+
+The decision, verbatim: *"OPTION (i). Refuse up front with VALIDATION_FAILED, before any
+subset is computed, naming each dependent pair (the consuming change and the producing
+change) and saying to group them. The player set K is never changed silently, which (ii)
+would do."*
+
+The drafted reasoning, kept:
+
 
 **Why.** It keeps the FR-1399 rule that the analyst's groups are the partition, refused
 with a named reason when wrong (its existing `VALIDATION_FAILED` check). It fails before
 any rating, so cost is bounded. (ii) is the friendlier default but changes what the
-attribution is *of* without the analyst choosing it. The deputy may prefer (ii) for the
-default run only; the texts below would change in one sentence.
+attribution is *of* without the analyst choosing it.
 
 ## Ruled
 
-**PROPOSED — awaiting the deputy's decision; nothing here binds until the lead relays it.**
+**Decided by the maintainer, by delegation, 2026-10-05 12:58:22 BST (items 3, 4, 6).**
 
-| DP | Proposed |
+| DP | Ruling |
 |---|---|
-| DP-1 (OQ 9739) | **(c)** a subset bundle's `input_contract` and `outputs` are the baseline's with the contract and output deltas of its own changes applied; each delta travels with the input or output step change that reads or writes it, else it is its own derived change (`input_field`, `output`) |
-| DP-2 | **(i)** changes that depend on each other must share a group; refused up front with `VALIDATION_FAILED`, naming them |
+| DP-1 (OQ 9739) | **(c)** a subset bundle's `input_contract` and `outputs` are the baseline's with the contract and output deltas of its own changes applied; each delta travels with the input or output step change that reads or writes it, else it is its own derived change (`input_field`, `output`); a delta includes a removed input and a changed type |
+| DP-2 | **(i)** changes that depend on each other must share a group; refused up front with `VALIDATION_FAILED`, before any subset, naming each dependent pair (the consuming change and the producing change) and saying to group them; K never changes silently |
 
-## Proposed texts (applied at the mint, after the decision)
+## The exact texts (applied in this commit)
 
-### P1 — `03` FR-1399, appended to the row before its closing note
+### P1 — `03` FR-1399, appended at the row's end
 
 ```markdown
-*(Amended <date>, WK-673 Slice 3, `RL-<n>`, deciding OQ-<n>.)* **The input contract and the outputs travel with the changes too.** Each field-level difference between the two input contracts (a field added, removed, or with any attribute changed) is part of the derived change to the input step that reads that field by `input_name`, on the side that declares it (the candidate for an added or changed field, the baseline for a removed one); each difference between the two output lists is part of the derived change to the output step that writes it by `output_name`. Where more than one derived change reads the field, it travels with the first in the derived order. A contract difference no derived change accounts for is its own derived change, of kind `input_field`, and an output difference no derived change accounts for is its own derived change, of kind `output`; both are numbered after the unaccounted pin differences, sorted by field or output name. **Changes that depend on each other must share a group.** Before any subset is compiled, the server checks every group: where a step in the subset holding that group alone consumes a name no step in that subset produces (FR-212), the run is refused with `VALIDATION_FAILED`, naming the changes that must share a group.
+*(Amended 2026-10-05, WK-673 Slice 3, RL 9715 (working id), deciding OQ 9739.)* **The input contract and the outputs travel with the changes too.** Each field-level difference between the two input contracts (a field added, a field removed, or a field whose type or any other attribute changed) is part of the derived change to the input step that reads that field by `input_name`, on the side that declares it (the candidate for an added or changed field, the baseline for a removed one); each difference between the two output lists is part of the derived change to the output step that writes it by `output_name`. Where more than one derived change reads the field, it travels with the first in the derived order. A contract difference no derived change accounts for is its own derived change, of kind `input_field`, and an output difference no derived change accounts for is its own derived change, of kind `output`; both are numbered after the unaccounted pin differences, sorted by field or output name. **Changes that depend on each other must share a group.** Before any subset is compiled, the server checks every group: where a step in the subset holding that group alone consumes a name no step in that subset produces (FR-212), the run is refused with `VALIDATION_FAILED`, before any subset is computed, naming each dependent pair, the change whose step consumes the name and the change whose step produces it, and saying to group them. The set of changes is never changed silently.
 ```
 
-### P2 — `03` FR-1398, the sentence after *"compiled by `compile_bundle` and hydrated by `load_bundle`"*
+### P2 — `03` FR-1398, appended at the row's end
 
 ```markdown
-*(Amended <date>, `RL-<n>`.)* A subset bundle's `input_contract` and `outputs` are the baseline's with the contract and output differences of the subset's own changes applied (FR-1399), so the subset of no changes is the baseline and the subset of every change is the candidate.
+*(Amended 2026-10-05, RL 9715 (working id).)* A subset bundle's `input_contract` and `outputs` are the baseline's with the contract and output differences of the subset's own changes applied (FR-1399), so the subset of no changes is the baseline and the subset of every change is the candidate.
 ```
 
 ### P3 — `docs/contracts/schemas/dislocation-run.schema.json:101`, the whole line
@@ -203,18 +222,24 @@ default run only; the texts below would change in one sentence.
           "kind": {"enum": ["pin", "step_added", "step_removed", "step_changed", "table_repointed", "input_field", "output"]},
 ```
 
-### P4 — OQ 9739's mirror rows, written once at the mint, closed
+### P4 — OQ 9739's mirror rows and its decision gate, closed
 
 `docs/open-questions.md`, §RATE, appended as the table's last row:
 
 ```markdown
-| ~~**OQ-<n>**~~ ✔ | ~~Which `input_contract` and `outputs` does a proper attribution subset bundle declare when the candidate's differ from the baseline's?~~ **DECIDED <date>: (c), by `RL-<n>`.** Raised 2026-10-03 by `RL-1394` ("Not ruled here") under working id 9739; first recorded as a row at this mint. | (a) the baseline's: projects new inputs away, fails FR-214 on a removed output, v(N) ≠ candidate. (b) the candidate's: the mirror image, v(∅) ≠ baseline. (c) the baseline's with each subset change's contract and output deltas applied; an unaccounted delta is its own change. (d) refuse attribution when either differs. | **Decided (c)**, with dependent changes required to share a group (`RL-<n>` DP-2). | decision-maker | Closed |
+| ~~**OQ 9739**~~ ✔ | ~~Which `input_contract` and `outputs` does a proper attribution subset bundle declare when the candidate's differ from the baseline's?~~ **DECIDED 2026-10-05: (c), the baseline's with each delta whose change is in the subset applied, a removed input and a changed type included; changes that depend on each other must share a group, refused up front, by RL 9715 (working id).** Raised 2026-10-03 by `RL-1394` ("Not ruled here") under working id 9739, allocated by the lead; it had no row until this one. FR-1399 derived no change for a contract or output difference (`model_schema/rating.py:617-618` reports them only as two booleans), so a subset's contract was undefined. | (a) **The baseline's:** projects a new input away (`analysis.py:152`), fails FR-214 on a removed output, and gives the candidate the baseline's contract at S = N. (b) **The candidate's:** the mirror image; the baseline gets the candidate's contract at S = ∅. (c) **The baseline's with each delta whose change is in S applied;** a delta no step change accounts for is its own change. (d) **Refuse attribution** when either differs. | **Decided (c)** (FR-1398, FR-1399 as amended): decisive at the endpoints, v(∅) is the baseline and v(N) the candidate. With it, dependent changes must share a group (RL 9715 DP-2, option (i)). | WK-673 Slice 3 (SL-1387) | decided 2026-10-05 (RL 9715 (working id); the maintainer by delegation, "2026-10-05 12:58:22 BST — DECISIONS (the maintainer, by delegation): FD 9780; DP-A; OQ 9739; RL 9715 DP-2; PL 9716 DP-B; the OQ 9739 row", items 3, 4 and 6; owner SL-1387, raised 2026-10-03, decided 2026-10-05) |
 ```
 
 `03` §10, appended as the table's last row:
 
 ```markdown
-| ~~**OQ-<n>**~~ ✔ | ~~Which `input_contract` and `outputs` does a proper attribution subset bundle declare?~~ **DECIDED <date>: (c), the baseline's with the deltas of the subset's own changes applied, by `RL-<n>`** (FR-1398, FR-1399 as amended). Raised by `RL-1394` under working id 9739. |
+| ~~**OQ 9739**~~ ✔ | ~~Which `input_contract` and `outputs` does a proper attribution subset bundle declare?~~ **DECIDED 2026-10-05: (c), the baseline's with each delta whose change is in the subset applied, a removed input and a changed type included; changes that depend on each other must share a group, refused up front, by RL 9715 (working id).** See FR-1398 and FR-1399's dated clauses. Raised 2026-10-03 by `RL-1394` under working id 9739. Mirrored in `docs/open-questions.md`. Status: **decided (c), the maintainer by delegation, "2026-10-05 12:58:22 BST — DECISIONS (the maintainer, by delegation): FD 9780; DP-A; OQ 9739; RL 9715 DP-2; PL 9716 DP-B; the OQ 9739 row", items 3, 4 and 6** (owner SL-1387, raised 2026-10-03, decided 2026-10-05). |
+```
+
+`docs/roadmap.md` §10, a row inserted directly before the row headed **Before WK-690 Slice 1**:
+
+```markdown
+| ~~**Before WK-673 Slice 3**~~ ✔ **all decided** — *added 2026-10-05 (the maintainer's item 6 of the 12:58:22 BST entry)* | ~~OQ 9739~~ ✔ *decided 2026-10-05 by RL 9715 (working id): option (c), a subset bundle's input contract and outputs are the baseline's with each delta whose change is in the subset applied, a removed input and a changed type included; with DP-2 (i), dependent changes share a group, refused up front. Raised 2026-10-03 by `RL-1394`; it gated SL-1387, which builds subset construction* | 1 (0 open) |
 ```
 
 ## Acceptance — the violation that must become detectable
@@ -233,9 +258,12 @@ This record builds nothing. Slice 3 carries these, each shown red on deliberatel
 
 ## What it obliges
 
-- **The deputy:** decide DP-1 and DP-2.
-- **The lead, at the mint:** allocate the OQ id, mint this record, and apply P1–P4 in one
-  commit with it.
+- **The lead, at the mint:** mint this record and OQ 9739, replacing both working ids in
+  every place this commit writes them.
 - **Slice 3 (SL-1387):** field-level contract and output deltas beside `diff_algorithms`'s
-  two booleans; the two new kinds in model-schema and the contract; the DP-2 check; the four
+  two booleans; the two new kinds in model-schema (this commit amends the hand-authored contract); the DP-2 check; the four
   tests above. Its leaf plan cites this record for OQ 9739 instead of carrying the question.
+
+## Spec changes in this commit
+
+P1 (`03` FR-1399), P2 (`03` FR-1398), P3 (`docs/contracts/schemas/dislocation-run.schema.json`, the `kind` enum) and P4 (OQ 9739 in `docs/open-questions.md` and `03` §10; the gate row in `docs/roadmap.md` §10), each verbatim as above. They are this ruling's disposition.
