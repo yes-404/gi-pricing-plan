@@ -127,7 +127,7 @@ finding that blocks G2 takes the first build lane that frees once its plan is ac
 | DP | Ruling |
 |---|---|
 | Which side | **The code is behind.** FR-237, `03` §5.1 and WF-699 C1 govern. `03` §4.3's Phase 1b note was discharged by W9-3, with no line recording it. FR-440 is a Phase 1b seed requirement and is not in conflict |
-| DP-1 | **(a)**, as recommended. `POST /api/v1/rating-versions` accepts optional `algorithm_ref`, `pins` and `model_reference_mode`, typed from `model_schema`. Their shape is checked at create (422 `VALIDATION_FAILED`); their resolvability and maturity are checked at compile (FR-240), as now |
+| DP-1 | **(a)**, as recommended, with T3 amended on item 25 of the 13:20:26 BST entry (FR-223's mode check at create where `algorithm_ref` resolves). `POST /api/v1/rating-versions` accepts optional `algorithm_ref`, `pins` and `model_reference_mode`, typed from `model_schema`. Their shape is checked at create (422 `VALIDATION_FAILED`); their resolvability and maturity are checked at compile (FR-240), as now |
 | Owner | **WK-1178**, a fix slice with its own leaf plan. It merges before PL-1371 §3.8 row 7 (exit demo (b), the scripted `WF-699` journey) needs C1. In the same slice the seed declares the algorithm and the pins through the create service, so nothing in `examples/` writes a pin to the ORM row after creation |
 
 ## The exact texts
@@ -156,9 +156,20 @@ has exactly one hit at `caa4e411`.
 
 ### T3 — `03` FR-237 (a). Find `` and the input contract. Nothing is unpinned. | `` and insert before its final `` |``
 
+*Amended 2026-10-05, before the mint, on the deputy's entry headed *"2026-10-05 13:20:26 BST — DECISIONS 22–27; severity signals for the four gap findings"*, item 25
+(PL 9683 DP-1): "Check MODEL_REFERENCE_MODE_INCONSISTENT at create when algorithm_ref
+resolves; an unresolvable ref stays compile's." The text first filed here ended "The create
+route stores them and does not resolve them."; it is replaced by the last two sentences
+below.*
+
 ```markdown
- *(Amended <date>, RL 9695 (working id), FD 9708.)* The algorithm version and the pins are declared when the Rating Version is created (`POST /api/v1/rating-versions`, §5.1) and are checked at compile (FR-240). The create route stores them and does not resolve them.
+ *(Amended <date>, RL 9695 (working id), FD 9708.)* The algorithm version and the pins are declared when the Rating Version is created (`POST /api/v1/rating-versions`, §5.1) and are checked at compile (FR-240). Where `algorithm_ref` resolves in the workspace, the create route also checks FR-223's model-reference-mode consistency and refuses a mismatch with **422** `MODEL_REFERENCE_MODE_INCONSISTENT`, as RL 9758 (working id) item 2 binds every route that writes a version's `algorithm_ref` or `model_reference_mode`. An `algorithm_ref` that does not resolve is stored and left to compile, which refuses it.
 ```
+
+**Ordering with RL 9758** (the same item 25): the FD 9708 slice and the slice applying RL 9758
+both need `MODEL_REFERENCE_MODE_INCONSISTENT` registered. **The first slice to merge registers
+the code and lands RL 9758 T1; the second drops its copy and says so.** Both dispatch records
+name this; the second slice rebases, and its ledger records the dropped copy.
 
 WF-699 C1 needs no change under (a): it already says what the route does.
 
@@ -186,9 +197,21 @@ broken input:
 - *Violation: the DTO hand-writes a shape `model_schema` owns.* The request model's
   `algorithm_ref`, `pins` and `model_reference_mode` are the `model_schema` types, and
   `generate-contracts.py --check` is green.
-- *Violation: the seed pins after creation.* After the slice, the predicate
-  `grep -rn "algorithm_ref\s*=\|\.pins\s*=" --include=*.py examples/` matches no write to a
-  row; the seed passes both to the create service instead.
+- *Violation: a pin is written to a row after creation.* After the slice, the predicate
+  `grep -rnE "\.(algorithm_ref|pins)\s*=[^=]"`, run over the corpus `examples/` and
+  `backend/src/`, matches no line; the seed passes both to the create service instead. At
+  `caa4e411` it matches **0** lines in `backend/src/` and **2** in `examples/`, both the seed's
+  post-create write, `examples/fremtpl2/model.py:396-397` (counted with
+  `git grep -nE '\.(algorithm_ref|pins)\s*=[^=]' caa4e411 -- backend/src` and `-- examples`).
+  So it is meetable, and it shows the write once one exists. *(Replaced 2026-10-05, before
+  the mint, on the same entry, item 26 (PL 9683 DP-2). The predicate first filed here,
+  `grep -rn "algorithm_ref\s*=\|\.pins\s*=" --include=*.py examples/`, has an unanchored
+  `algorithm_ref\s*=` that also matches a keyword argument or a `==`.)*
+- *Violation: a mode mismatch is accepted at create.* A create whose resolvable
+  `algorithm_ref` has a `model_call` step whose `mode` differs from the body's
+  `model_reference_mode` is 422 `MODEL_REFERENCE_MODE_INCONSISTENT` and writes no row; the same
+  body with an `algorithm_ref` that does not resolve is 201 and is refused at compile
+  (item 25).
 
 ## What it obliges
 
