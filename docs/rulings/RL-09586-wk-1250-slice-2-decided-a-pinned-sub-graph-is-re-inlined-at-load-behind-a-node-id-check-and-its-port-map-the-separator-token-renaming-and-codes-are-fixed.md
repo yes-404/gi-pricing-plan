@@ -37,9 +37,10 @@ relates: [RL-1309, RL-1344, PL-1254, SL-1340, FR-212, FR-217, FR-244, FR-258, FR
   `137bc817ef1fb40ea57e9053e0ad40b73bdff3a8`, by symbol with its line at that tree. PL 9610 is
   unminted, so it is cited in working-id form and kept out of `relates:` (check 32).
 - **This record rules a plan's decision points and never edits the plan** (`document-ids.md`
-  §1.6, PL row). Its texts for PL 9610 (P1 to P4) are applied by the planner as a pre-mint edit,
-  or carried by the dispatch record if the plan is minted first. P5 is **proposed by the DM, not
-  in the 16:54 ruling: for the ACK.**
+  §1.6, PL row). Its texts for PL 9610 (P1 to P5) are applied by the planner as a pre-mint edit,
+  or carried by the dispatch record if the plan is minted first. P5 was proposed by the DM outside
+  the 16:54 ruling, and the maintainer, by delegation, **accepted it at 2026-10-05 17:06:26 BST**
+  (the dated clause under P5).
 
 ## Locators — read at `137bc817`
 
@@ -113,23 +114,36 @@ Each find string has exactly one hit in PL 9610 at `ca407ed9`.
   `` | `packages/pricing-core/src/pricing_core/rating/vocabulary.py` | the shared tokenizer helper the inliner renames with (RL 9586) | the dispatch record checks in-flight plans for `vocabulary.py` | An existing-module edit. The dispatch record names it | ``
 - **P4 — Task 5, Step 4, C1.** Find `` `_load_boosters`. Update its docstring. `` and replace it with
   `` `_load_boosters`. Then C1 (RL 9586): refuse with `BUNDLE_COMPILE_FAILED` when the set of `bundle.graph` node ids differs from the set of the inlined algorithm's `step_id`s, naming the first difference, before the engine is built; red first, on a bundle whose graph has one node renamed. Update its docstring. ``
-- **P5 — PROPOSED BY THE DM, NOT IN THE 16:54 RULING: FOR THE ACK.** Task 3, Interfaces, the
-  inlined step order. Find
+- **P5 — Task 3, Interfaces, the inlined step order. Accepted 2026-10-05 17:06:26 BST** (the
+  dated clause below). Find
   `` has `sub_graphs == []` and the parent's steps followed by each mount's namespaced steps, in ``
   and replace that line and the next (`` mount order. It is a proposal name, recorded in the ledger if it differs. ``) with:
-  `` has `sub_graphs == []`, and its steps in a stable topological order: the parent's order, with each mount's namespaced steps inserted before the first step that consumes any of its outputs. It is a proposal name, recorded in the ledger if it differs. ``
+  `` has `sub_graphs == []`, and its steps in a stable topological order computed from the dependency edges: Kahn's algorithm with list order as the tie-break (the parent's steps, then each mount's namespaced steps), the rule the maintainer, by delegation, ruled for `to_wire` (RL 9586, P5). It is a proposal name, recorded in the ledger if it differs. ``
   with a red test that scores `03` §4.1's shape through `load_bundle` and asserts that the parent
   step consuming `ncd_factor` reads the fragment's value. **Why:** `to_wire` wires a consumed
   name to the producer seen so far in node order (Locators, last row). With the mount's steps
   appended after the parent's, a parent step consuming a mount output is wired to `inputNode`
   and does not read the fragment's value. This is by code reading at `137bc817`; nothing was
-  run. Whether `to_wire` should itself sort topologically, for an authored algorithm listed out
-  of dependency order, is **not ruled here**: it goes to the maintainer separately.
+  run here. The `to_wire` question itself is not this record's: it was reproduced as FD 9572
+  (working id) and ruled in the entry quoted below.
+
+  *(Dated clause, 2026-10-05 17:09 BST (by `date`), pre-mint, dm-finals2: **P5 ACCEPTED.**)* The
+  maintainer, by delegation, in the entry headed *"2026-10-05 17:06:26 BST — FD 9572 (to_wire
+  wires by LIST order): reproduced; severity waits on (1)/(2); the FIX RULED now; RL 9588 / RL
+  9586 noted"* in `~/gi-pricing-plan.local/channel/to-lead.md`, verbatim:
+
+  > (a) to_wire (and to_jdm, if it emits edges by order) wires every consumed name to its PRODUCER by name through the graph, over a STABLE topological order computed from the dependency edges (Kahn with list order as the tie-break, so an already-ordered list is unchanged and every existing bundle hash is stable; a test asserts the hash of a topologically listed algorithm is unchanged).
+
+  > Red first: [in, B, A, out] asserting 350; the clamp case from (2); the shadowing case. The WK-1250 S2 inliner uses the same topological order (RL 9586's P5, the DM's proposal: ACCEPTED, as it is the same rule).
+
+  P5's replacement text above was aligned to that rule in this clause's commit: it said *"the
+  parent's order, with each mount's namespaced steps inserted before the first step that consumes
+  any of its outputs"*, and now names Kahn's algorithm with list order as the tie-break. The red
+  test is unchanged.
 
 ## What it obliges
 
-- **PL 9610's planner** applies P1 to P4 as a pre-mint edit to #1170, and P5 only if the ACK
-  accepts it. The plan's DP-S2-1 and DP-S2-2 rows then cite this record. Activation need 2
+- **PL 9610's planner** applies P1 to P5 as a pre-mint edit to #1170. The plan's DP-S2-1 and DP-S2-2 rows then cite this record. Activation need 2
   ("DP-S2-1 and DP-S2-2 ruled by an `RL-`") is met at this record's mint.
 - **WK-1250 Slice 2 (`SL-1340`)** applies T1 and T2 verbatim in its Task 1 spec commit, with its
   code (`CLAUDE.md` §2).
