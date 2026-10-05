@@ -390,6 +390,62 @@ re-gate only if `git diff c1f2ef17..HEAD` touches nothing under `backend/src`, `
 the PR body. This delta is not that: the lead holds `test_error_sinks.py`'s `_SINKS` entries for the maintainer's ruling and
 expects a full re-gate.
 
+### Task 7 — gate 2, the re-gate at the delta head
+
+**Head `75928847e0fc4989d422c1ef3674ed8189ea44cd`, tree `fb95424587f8c845ebd172ec9707db8769a69188`** (detached checkout,
+`git status --porcelain` empty at the set-up, about 19:03 BST, and again at 19:44 BST; `alembic current` == `alembic heads` ==
+`f3a7c1d9e2b4`). Granted by the lead for `gate-1`. The delta against the gated `c1f2ef17` is `test_error_sinks.py` +16,
+`test_rate_table_diff_portfolio.py` +4 (marker lines) and this ledger; nothing under `backend/src`, `packages/*/src`,
+`frontend/src`, `backend/migrations` or `docs/contracts`. Stamps are `TZ=Europe/London` (BST); `uptime` prints UTC.
+
+**Python half** (the `dev-commands` gate body verbatim, `LOKY_MAX_CPU_COUNT=4`). The slot was held from 19:03:23 BST and the
+lead's START was honoured at 19:04:20 BST (uptime 18:04:20 UTC, load 4.79/4.57/4.11, 17 356 MB free). Logs and `.rc` files:
+`/tmp/tmp.RxXXLtJE37/` (scratch, not in the repository). Stage table:
+
+| stage | exit | result |
+|---|---|---|
+| ruff | 0 | pass |
+| mypy | 0 | pass |
+| import_linter | 0 | pass |
+| audit_docs | 1 | FAIL: `check 31: gap in the full allocation between 1419 and 9520` only |
+| req_coverage | 0 | pass |
+| contracts (`generate-contracts.py --check`) | 0 | pass |
+| pytest | 1 | FAIL: `13 failed, 4986 passed, 4 skipped, 87 warnings in 1669.22s (0:27:49)` |
+
+The 13 failures are exactly the allowed set (the working id's check 31 plus the same 13 tests that fail on that gap):
+`test_audit_docs_finding_citations.py::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`,
+`test_audit_docs_ids.py::test_the_real_tree_passes_all_ten_checks` and `::test_doc_id_check_exits_0_on_the_real_tree`,
+`test_audit_docs_process_core_digest.py::test_an_unrelated_file_edit_is_the_negative_control_and_stays_green` and
+`::test_the_committed_digest_currently_matches_the_committed_spec`,
+`test_audit_docs_w37_11_ceiling.py::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`,
+`test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity`,
+`test_register_lint.py::test_check_29_is_wired_into_the_docs_gate`, `::test_check_29_note_carries_the_residue_line` and
+`::test_phase1b_residue_count_matches_check_29s_own_count`, `test_register_owed.py::test_check_29_wiring_is_undisturbed`,
+`test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit` and
+`::test_journey_citations_are_audited_in_ci`. `backend/tests/test_error_sinks.py` passes: the 14th failure of gate 1 is gone.
+The lead verified the report against the logs.
+
+**Frontend half**, re-taken in a fresh hold at 19:42:39 BST on the same head: `pnpm --dir frontend install --frozen-lockfile`,
+`generate:api`, `lint`, `type-check`, `test` and `build` all pass (each command's exit code 0; wrapper logs
+`/tmp/tmp.mbfMWBTkto/fe2_*.log`, scratch). Finished 19:43:38 BST (uptime 18:43:38 UTC, load 6.55/2.99/2.58, 19 251 MB free).
+
+**The slot's history, stated as it happened.** The first hold ran the python half and was released at **19:32:26 BST, when
+the script exited**: a shell-quoting error in my chained command after the gate body (a stray `;` before `echo PYTHON_HALF_RC`)
+ended the held script before its frontend and measurement phases ran. That release was **not on purpose**, and the stage
+table had already printed. At 19:42:39 BST I took `gate-1` again with `flock -n` to run the frontend half, before the lead's
+order not to take a slot reached me. At 19:44:02 BST, on the maintainer's order (by delegation), I killed my own processes by
+pid (each pid's `/proc/<pid>/cwd` read as this worktree) and `flock -n /tmp/slots/gate-1 true` printed free (uptime 18:44:02
+UTC, load 4.44/2.78/2.52, 19 475 MB free). No measurement ran from this head and none is claimed.
+
+**Two stamps are missing, for the maintainer to judge:** the python half's end `uptime` and `free` (my chained `echo MID …;
+uptime` line never ran, because of the quoting error), and the frontend half's start `uptime` and `free` (not recorded at
+19:42:39 BST).
+
+**The order of the measurement.** The maintainer (by delegation) ordered, relayed by the lead: at `READY_FOR_MEASUREMENT` do
+not measure, release `gate-1`, and report from the log. S7 may mint and merge on that report plus CI. The cost measurement,
+parquet and a rows-stored baseline at limit 50 with N of at least 10, under the START / GO MEASURE protocol, runs later on the
+lead's grant, after SL 1427's gate, and is ledgered then. The 18:56 figures above stay INVALID.
+
 ## PRs
 
 #1206, a draft, `SL-1391: Slice 7: FR-231's exposure weights through the portfolio frame (F-W10-2)`, head branch
