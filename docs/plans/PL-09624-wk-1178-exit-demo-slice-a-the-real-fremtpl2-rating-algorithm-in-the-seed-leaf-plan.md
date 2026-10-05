@@ -125,13 +125,28 @@ quoted here so the plan carries it; the ruling's governed home, if one is needed
 plan, is the lead's to route at the mint. The roadmap anchor `:603` is the Exit demo row at
 `809a3794` (`docs/roadmap.md`, the row whose first cell is `**Exit demo**`).
 
+**Activation need 3, ruled by the maintainer (by delegation)**, entry headed *"2026-10-05
+15:42:02 BST — Mint 1 (RL-[…]) noted; need 3 conditional; WK-674 S3 prep accepted; G2 vs
+WF-699's PERIL PATH: a scope question for the maintainer, SIZE it first"* (one id elided as `RL-[…]`: it is
+minted on #1128, not yet merged, so it does not resolve at this tree), its paragraph on need
+3, verbatim:
+
+> NEED 3 (PL 9624): option (i) is ACCEPTED ONLY IF a3's committed test also does S1 step 1's extractor-vs-engine cross-check (the extractor's static reads against the engine's actual reads on the seed algorithm, both computed, compared, red on a planted mismatch). That cross-check is the instrument FD-1374's guard rests on, and the plan's own note admits (i) drops it. With it added, no RS is needed; PL-1371 §7's wording difference goes as a dispatch delta (PL-1371 is frozen). a1's band edges from the seed run, as an acceptance item: OK.
+
+The same entry's closing line bounds this plan while the G2 peril-path scope question is open:
+*"Until then, PL 9629 and PL 9624 continue for the shared parts (A1–A2, C–E with seeded
+tables)."* This slice is A1–A2's seeded tables and the algorithm over them, so it continues.
+The same local-entry caveat as above applies (RFC-777).
+
 ## Status
 
 `draft`. **DP-a0 to DP-a3 are ruled** (above): DP-a0 (a), DP-a1 (a) with its condition
-(Acceptance 11), DP-a2 (i) + (x) with its label (Acceptance 8, Task 1), DP-a3 (a). **One
-decision stays open: activation need 3**, which this plan proposes in §"Activation need 3:
-the proposal" and the maintainer (by delegation) rules at the plan's ACK. The tasks below
-are written for the ruled options and the proposed (i). The plan moves to `active` only
+(Acceptance 11), DP-a2 (i) + (x) with its label (Acceptance 8, Task 1), DP-a3 (a).
+**Activation need 3 is ruled (i), on a condition** (15:42:02 BST, quoted above): Acceptance 4's
+committed test also performs Spike S1 step 1's extractor-vs-engine cross-check. That
+condition is written into Acceptance 7 and Task 1 Step 1; whether the text meets it is the
+maintainer's (by delegation) check at the plan's ACK. The tasks below are written for the
+ruled options. The plan moves to `active` only
 through a separate activation PR, after every activation need below holds. That PR carries
 the `SL-` row's status flip and this plan's.
 
@@ -144,13 +159,17 @@ the `SL-` row's status flip and this plan's.
    is need 3.
 2. **DP-a0 to DP-a3 ruled.** **Met**: the maintainer (by delegation), entry 2026-10-05
    15:28:26 BST, item D2 (quoted above).
-3. **Activation need 3 ruled** at the plan's ACK: (i) or (ii) of §"Activation need 3: the
-   proposal". **Open; proposed (i).** The need as first written was *"PL 9776's Spike S1
-   filed"*. At `809a3794` none is filed: `git grep -n -E '9776|Spike S1' origin/main --
-   docs/research` finds no F35 spike, and PL 9776 is draft #1051 @`ecbb82ab`. The ruling's
-   rule is *"an acceptance criterion must not depend on an unfiled instrument"*. Under (i)
-   this slice needs no spike at all. Under (ii) the need reverts to "Spike S1 filed as an
-   `RS-` of `kind: spike`" and Acceptance 7 re-runs that `RS-`'s inline harness.
+3. **Activation need 3 ruled**: (i) or (ii) of §"Activation need 3: the proposal".
+   **Ruled (i), on the condition that the committed test also performs S1 step 1's
+   extractor-vs-engine cross-check** (15:42:02 BST, quoted above; Acceptance 7). **Met when
+   the maintainer (by delegation) confirms at the ACK that Acceptance 7 meets the condition.**
+   The need as first written was *"PL 9776's Spike S1 filed"*. At `809a3794` none is filed:
+   `git grep -n -E '9776|Spike S1' origin/main -- docs/research` finds no F35 spike, and PL
+   9776 is draft #1051 @`ecbb82ab`. The ruling's rule is *"an acceptance criterion must not
+   depend on an unfiled instrument"*. Under (i) this slice needs no spike at all (*"With it
+   added, no RS is needed"*). (ii), filing S1 as an `RS-` first, is the fallback only if the
+   cross-check proves impossible in a committed test; §"Activation need 3: the proposal" says
+   why it is not.
 4. **Serialisation on shared files** (§"Write set"): `SL-1409` (the FD-1356 fix, `active` on
    lane B) merged, because it edits `examples/fremtpl2/seed.py`. **That half is met:** `SL-1409`
    is `closed`, merged as `cdaaa573` (#1157). The FD 9708 fix (PL 9683,
@@ -177,11 +196,47 @@ no added cycle.
 | **(i)** | **Drop Acceptance 7's harness re-run.** Acceptance 4 (DP-a3's committed test, FD-1374's predicate verbatim) carries both claims. Claim (1) is Acceptance 4's assertion. Claim (6) follows from it: step 6's added edges are exactly the reads outside `consumes`, so 0 undeclared reads means 0 added edges, and with no added edge the graph is the declared one, which compiles as a DAG (FR-212; Acceptance 2's `rating.compile` Job). Acceptance 7 is rewritten to state that derivation and to assert it in the test (below) | No dependency on a draft plan's executor; the check is committed, runs on every gate and cannot vanish with a job dir (the reason DP-a3 (a) was ruled). PL 9776's own corpus rule (step 5: *"every multi-step algorithm that exists when S1 runs"*) takes this algorithm in automatically if S1 runs after this slice merges, so F35 loses nothing | Two parts of S1 step 1 are not reproduced: the cross-check of the extractor against the engine (*"with the reference set alone in the context must succeed, and with one name removed must fail"*), and Task 1A's `referenced_names` as the extractor. Acceptance 4 uses FD-1374's predicate, not Task 1A's code, which does not exist on `main` (P6). Step 3's equality (the M1 wire) is not part of this slice's claim, before or after |
 | (ii) | **File Spike S1 first** as an `RS-` of `kind: spike` (PL 9776 §"Spike S1"), then re-run its harness here, as Acceptance 7 first said | Keeps `PL-1371` §7's accepted wording, including the engine cross-check | Puts F35's spike, unscheduled and owned by another plan's executor, on G2's critical path. `PL-1371` §7 itself refused that chain the other way (*"S1 does **not** wait for G2"*, PL 9776 step 5) |
 
-**Recommendation: (i).** It holds every claim this slice makes about its own algorithm with a
-committed test, and leaves the engine cross-check where it belongs, in F35's spike, which
-re-reads this algorithm when it runs. **The departure from `PL-1371` §7's accepted acceptance
-wording** (*"PL 9776's Spike S1 harness re-run on the new algorithm"*) is stated here and is
-the maintainer's to accept at the ACK. `PL-1371` is frozen and is not edited.
+**Recommendation, as first proposed: (i).** It holds every claim this slice makes about its
+own algorithm with a committed test, and leaves the engine cross-check where it belongs, in
+F35's spike, which re-reads this algorithm when it runs. **The departure from `PL-1371` §7's
+accepted acceptance wording** (*"PL 9776's Spike S1 harness re-run on the new algorithm"*) is
+stated here and is the maintainer's to accept at the ACK. `PL-1371` is frozen and is not edited.
+
+**Ruled (15:42:02 BST): (i), only with the cross-check added.** The table and recommendation
+above are kept as written, so the ruling's reason stays readable: the "Against" cell of (i)
+is what the condition removes. Under the ruling, Acceptance 4's test module also performs S1
+step 1's extractor-vs-engine cross-check (Acceptance 7, Task 1 Step 1). The second gap in that
+cell stays: the extractor is FD-1374's predicate, not Task 1A's `referenced_names`, which does
+not exist on `main` (P6). `PL-1371` §7's wording difference goes to the dispatch record as a
+delta (Hand-off 5).
+
+**Why the cross-check fits a committed test** (the condition for (i); (ii) is the fallback only
+if it does not). S1 step 1's method is *"`zen.evaluate_expression` (or
+`zen.compile_expression`, whichever the binding exposes) with the reference set alone in the
+context must succeed, and with one name removed must fail"* (PL 9776 §"Spike S1" step 1,
+#1051 @`ecbb82ab`). Three facts, read at `cdaaa573`:
+
+- **The engine is in-process and already a dependency.** `zen-engine==0.53.0` is pinned in
+  `packages/pricing-core/pyproject.toml`, and `pricing_core/rating/compile.py` imports `zen`
+  and calls `zen.compile_expression`. The binding's stub (`zen/__init__.pyi`, 0.53.0)
+  declares `evaluate_expression(expression: str, context: Optional[ZenContext] = None) -> Any`.
+  No server, database or runtime beyond the test process is needed.
+- **The fields the engine evaluates are enumerated in code.** `pricing_core.rating.authored`
+  `EXPRESSION_FIELDS` names them (`key_expr` of `lookup` and `table`, `expr`, `condition`,
+  `clamp_bounds`), and `authored_expression_fields(algorithm)` returns every such string of
+  an algorithm with its step and field. A `lookup`'s `as_at` is in `NON_EXPRESSION_FIELDS`
+  (*"nothing evaluates it"*), so it has no engine side: the cross-check covers it by
+  FD-1374's predicate only, and says so. The `feature_map` keys belong to `model_call`,
+  which this algorithm has none of (DP-a0).
+- **"Must fail" needs one adjustment, measured, not assumed.** Probed on 2026-10-05 against
+  `zen-engine` 0.53.0 (a one-off `python -c` in an existing worktree venv; no test run):
+  `a + b` with `{"a": 1}` raises `RuntimeError` (`vmError`, *"Opcode Add: Unsupported
+  type"*), but the bare `a` with `{}` returns `None`, and `a > 1 ? x : y` with `{"a": 2,
+  "y": 1}` returns `None`. A missing name can evaluate to `null` without an error. So the
+  committed test reads "succeeds" as **"returns the same value as with the full context"** and
+  "fails" as **"raises, or returns a different value"**, and it chooses its contexts so that
+  every name is on the evaluated branch at least once (below). Otherwise a name read only in
+  an untaken branch, or returned bare, would pass the extractor unchecked.
 
 ## Acceptance Standard
 
@@ -235,15 +290,48 @@ failure line as printed.
    Red first: `expected_minor == DEMO_PREMIUM_IN * 2` (`test_demo_rating_evidence.py:73`)
    fails once the fixture is gone.
 7. **Spike S1's claims on this algorithm: no read outside `consumes`, no added edge, no
-   added cycle** (`PL-1371` §7; PL 9776 §"Spike S1" steps 1 and 6). **Under activation need 3
-   (i), proposed:** held by Acceptance 4's committed test, with no harness re-run.
-   `test_the_demo_algorithm_reads_only_what_it_declares` also asserts that the graph built
-   from each step's read set has the same edges as the graph built from its `consumes`
-   (0 added edges), which with Acceptance 2's compile is 0 added cycles. The ledger records
-   the derivation in one line beside Acceptance 4's output. **Under (ii):** the harness is
-   run verbatim from Spike S1's `RS-` (sha256 prefix checked) on the built algorithm. Step 1
-   must list 0 names outside `consumes` (agreeing with Acceptance 4), and step 6 must list 0
-   new edges and 0 cycles. Output in the ledger with the `RS-` id.
+   added cycle, and the extractor agrees with the engine** (`PL-1371` §7; PL 9776 §"Spike S1"
+   steps 1 and 6). **Under activation need 3 (i), ruled with its condition (15:42:02 BST):**
+   held by committed tests in `backend/tests/test_fremtpl2_algorithm.py`, with no harness
+   re-run and no `RS-`.
+   - **(a) Edges.** `test_the_demo_algorithm_reads_only_what_it_declares` also asserts that
+     the graph built from each step's read set has the same edges as the graph built from its
+     `consumes` (0 added edges), which with Acceptance 2's compile is 0 added cycles. The
+     ledger records the derivation in one line beside Acceptance 4's output.
+   - **(b) The extractor-vs-engine cross-check (S1 step 1; the ruling's condition).**
+     `test_the_reads_extractor_agrees_with_the_engine` computes **both sides** for every
+     string `pricing_core.rating.authored.authored_expression_fields` returns for the built
+     algorithm. **Extractor side:** the string's reference set by Acceptance 4's helper
+     (FD-1374's predicate). **Engine side:** `zen.evaluate_expression(text, ctx)` on (1) the
+     full context, (2) the context cut to the reference set alone, and (3) for each name in
+     the set, the cut context with that name removed. It asserts (2) equals (1): the engine
+     reads nothing outside the set. For each name it asserts (3) raises or differs from (1):
+     the engine reads every name the extractor claims. **Contexts:** every raw input takes its
+     value from each of Acceptance 3's three contexts, and each band ternary is also run once
+     per band, with a value inside it (the band values `test_band_expression_maps_each_edge`
+     uses). Every produced name takes one fixed non-null value of the type its producing step
+     declares. A (string, name) pair counts as checked if (3) holds under at least one
+     context. **A pair checked under no context is a failure** that names the string and the
+     name: ZEN returns `null` for a missing name in some positions (§"Activation need 3: the
+     proposal"), so "no error" alone is not "not read". A lookup's `as_at` is not evaluated
+     by the engine (`NON_EXPRESSION_FIELDS`), so it has no engine side; the test lists it as
+     "predicate only" and does not count it as checked. The test prints, per string, its
+     reference set and the engine verdict for each name. The ledger records that output.
+   - **(c) Red on a planted mismatch.** `test_the_cross_check_refuses_a_planted_mismatch` runs
+     the same comparison function on one real step's string from the built algorithm, twice.
+     Under-reported: a reference set with one real name removed must give exactly one
+     "engine reads outside the set" failure that names it. Over-reported: a reference set with
+     one name added that the string does not contain must give exactly one "extractor claims
+     a read the engine does not make" failure that names it. Both tests are recorded
+     red-then-green in the ledger, beside Acceptance 4's broken-input proof.
+
+   **Under (ii)** (the fallback, only if (b) proves impossible in a committed test): the
+   harness is run verbatim from Spike S1's `RS-` (sha256 prefix checked) on the built
+   algorithm. Step 1 must list 0 names outside `consumes` (agreeing with Acceptance 4), and
+   step 6 must list 0 new edges and 0 cycles. Output in the ledger with the `RS-` id. If the
+   executor finds (b) cannot be built (for example, an evaluated field whose text
+   `zen.evaluate_expression` cannot take alone), that is a STOP to the lead with the failing
+   string, not a quiet fall-back to (ii).
 8. **The demo still runs.** `uv run python scripts/demo.py --rows 20000` exits 0 on the slice
    head and prints its `/demo` URL. This is run once by the executor, alone on the box with no
    gate slot held, with the elapsed time recorded. The seed's printed line names the
@@ -381,7 +469,7 @@ failure line as printed.
 | `examples/fremtpl2/model.py` | edited: `_create_factor` (`:143-166`, takes a `FactorType` and an optional `banding_id`) *(DP-a1 a)*, `fit_demo_models` (`:194-`, creates the three Bandings first) *(DP-a1 a)*, `author_demo_rating_evidence` (`:366-`), `create_approved_rating_version` (`:490-`); removed: `_demo_algorithm` (`:327-348`), `DEMO_PREMIUM_IN`, `_EMPTY_PINS`; added: `seed_demo_rate_tables` | **PL 9683** (FD 9708 fix) edits `author_demo_rating_evidence` and `create_approved_rating_version` and adds `save_demo_algorithm`; **PL 9688** (FD 9707 fix) and **PL 9728** (NFR-489) read `:323`, `:334-343` and `:413`; PL 9776 reads `:327-330` | **serial with PL 9683**: whichever merges second rebases on it and re-reads both functions. This slice keeps PL 9683's route-based create if PL 9683 has merged. Reads by PL 9688, 9728 and 9776: none |
 | `examples/fremtpl2/seed.py` | edited: `run`'s order (`:609-623` at `809a3794`; `:651-665` at `cdaaa573`, after `SL-1409`): `seed_demo_rate_tables` after `compare_and_approve`, before `create_approved_rating_version` | **SL-1409** (`active`) edits `run`'s rule write (`:437-455`) and the order before the first `ingest` (`:536`) | **serial: SL-1409 first** (activation need 4), **met**: `SL-1409` merged as `cdaaa573` (#1157), so this slice re-reads `run` at its dispatch tree |
 | `backend/tests/test_demo_rating_evidence.py` | edited: `:37-39` (the made-up `model_ref`), `:51`, `:68-73` (fixture assertions); added: Acceptance 1, 2, 3, 5 and 6 tests | **PL 9683** edits it; **PL 9688** and PL 9776 name it in their acceptance runs | serial with PL 9683, as above |
-| `backend/tests/test_fremtpl2_algorithm.py` | added: the builder tests, Acceptance 4 (both tests) and the band-expression tests | none | none |
+| `backend/tests/test_fremtpl2_algorithm.py` | added: the builder tests, Acceptance 4 (both tests), Acceptance 7 (b) and (c) (the cross-check and its planted mismatch) and the band-expression tests | none | none |
 | `examples/fremtpl2/README.md` | edited: the seed's rating paragraph (the fixture becomes the real algorithm) | none found | none |
 | the slice's ledger `docs/ledgers/LG-<n>`; `docs/INDEX.md` | added; regenerated | every PR | registry |
 
@@ -437,7 +525,7 @@ between stay readable.
   `git grep -n -E 'FACTOR_SET|CONTINUOUS_FACTORS|CATEGORICAL_FACTORS|fit_demo_models|compare_and_approve' -- backend/tests examples scripts`.
   Each hit is in this slice's write set or is recorded as unaffected, with the reason.
 
-### Task 1: The builder, red first (Acceptance 3, 4, 5; DP-a0, DP-a1, DP-a2)
+### Task 1: The builder, red first (Acceptance 3, 4, 5, 7; DP-a0, DP-a1, DP-a2)
 
 **Files:** create `examples/fremtpl2/algorithm.py`, `backend/tests/test_fremtpl2_algorithm.py`.
 
@@ -486,10 +574,18 @@ The algorithm's steps, in order:
   `true false null and or not in`, over `expr`, `condition`, each `clamp_bounds` value, each
   `key_expr` entry, a `lookup`'s `as_at`, and the `feature_map` keys. Cite FD-1374 by id and
   section in the helper's docstring. Under activation need 3 (i), the first test also asserts
-  Acceptance 7's edge claim: the producer-to-step edges built from each step's read set equal
-  those built from its `consumes`.
+  Acceptance 7 (a)'s edge claim: the producer-to-step edges built from each step's read set
+  equal those built from its `consumes`. **The ruling's condition (Acceptance 7 (b), (c)):**
+  `test_the_reads_extractor_agrees_with_the_engine` and
+  `test_the_cross_check_refuses_a_planted_mismatch`. Both call one comparison function,
+  `_extractor_vs_engine(text, reference_set, contexts)`, which returns its failures as
+  (string, name, kind) records. It iterates
+  `pricing_core.rating.authored.authored_expression_fields`, never a hand-kept field list, and
+  calls `zen.evaluate_expression` directly. Cite PL 9776 §"Spike S1" step 1 (by its minted id
+  if minted at dispatch) and this plan's Acceptance 7 in its docstring, with the engine fact
+  that a missing name can evaluate to `null`.
 - [ ] **Step 2: Run them and see each fail by its cause** (`ModuleNotFoundError:
-  examples.fremtpl2.algorithm` is the cause for all five on the base tree). Record the line.
+  examples.fremtpl2.algorithm` is the cause for all seven on the base tree). Record the line.
 - [ ] **Step 3: Implement `algorithm.py`** as specified above.
 - [ ] **Step 4: Run the tests green.** `uv run pytest -q backend/tests/test_fremtpl2_algorithm.py`.
 - [ ] **Step 5: Commit** `feat(examples): the freMTPL2 rating algorithm builder (exit-demo (a), WK-1178)`.
@@ -540,8 +636,9 @@ once per Factor in the approved GLM's relativities, in `FACTOR_SET` order.
 ### Task 4: Spike S1's claims, the demo run, the gate and the ledger (Acceptance 7–11)
 
 - [ ] **Step 1:** Record activation need 3's ruling verbatim. Under (i): record Acceptance 4's
-  output with Acceptance 7's one-line derivation (0 undeclared reads, so 0 added edges and 0
-  added cycles). Under (ii): run Spike S1's harness from its `RS-`, verbatim, on the built
+  output with Acceptance 7 (a)'s one-line derivation (0 undeclared reads, so 0 added edges and
+  0 added cycles), and Acceptance 7 (b)'s per-string output with (c)'s red-then-green lines.
+  Under (ii): run Spike S1's harness from its `RS-`, verbatim, on the built
   algorithm (steps 1 and 6), checking its sha256 prefix first, and record the output.
 - [ ] **Step 2:** Check `pgrep -af 'pytest|vitest|flock'` and both gate slots
   (`flock -n /tmp/slots/gate-1 true`, the same for `gate-2`). Run nothing heavy beside a
@@ -569,14 +666,27 @@ once per Factor in the approved GLM's relativities, in `FACTOR_SET` order.
    stays with slice (b), and the auditor records the split.
 4. The `RL-1343` fix slice removes Acceptance 5's guard test in its own commit when it
    merges, or keeps it if the algorithm still declares no decimal output.
+5. **Dispatch delta for `PL-1371` §7's wording** (activation need 3, ruled (i) with its
+   condition, 15:42:02 BST: *"PL-1371 §7's wording difference goes as a dispatch delta
+   (PL-1371 is frozen)"*). The lead writes it into this slice's dispatch record, not into
+   `PL-1371`. Proposed text: *"Delta to `PL-1371` §7, exit demo (a), acceptance. Where §7
+   reads 'PL 9776's Spike S1 harness re-run on the new algorithm', this slice instead holds
+   Spike S1 steps 1 and 6's claims on its algorithm with committed tests (PL 9624 Acceptance 4
+   and 7): FD-1374's predicate as the extractor, 0 undeclared reads, 0 added edges and so 0
+   added cycles, and S1 step 1's extractor-vs-engine cross-check computed against
+   `zen.evaluate_expression`, red on a planted mismatch. No `RS-` is filed and no harness is
+   re-run. Not reproduced: Task 1A's `referenced_names` as the extractor (not on `main`), and
+   S1 step 3's equality, which was never this slice's claim. Ruled by the maintainer (by
+   delegation), 2026-10-05 15:42:02 BST."* Each working id in it is re-pointed at the mint
+   (Hand-off 1).
 
 ## Self-review
 
 1. **Coverage of `PL-1371` §7's (a) paragraph, clause by clause.** "the real freMTPL2 rating
    algorithm in the seed": Goal, Tasks 1–3, Acceptance 1–3. "Depends on the FD-1357 fix
    only": activation need 1, met; §3.8's two extra items are needs 2 and 3. "PL 9776's Spike
-   S1 harness re-run": Acceptance 7, Task 4 Step 1, with the departure proposed under
-   activation need 3 (i) and stated for the ACK. "every step's reads ⊆ its declared
+   S1 harness re-run": Acceptance 7 (a)–(c), Task 1 Step 1, Task 4 Step 1, with the departure
+   ruled under activation need 3 (i) on its condition, and Hand-off 5's dispatch delta. "every step's reads ⊆ its declared
    consumes … 0 undeclared reads": Acceptance 4, DP-a3. "declares no decimal output":
    Acceptance 5, activation need 5. "discharges FD-1209's algorithm half": Hand-off 3.
 2. **Every design choice the sources leave open is a DP with an owner** (DP-a0 to DP-a3),
@@ -592,7 +702,9 @@ once per Factor in the approved GLM's relativities, in `FACTOR_SET` order.
    were re-checked at this tree by a read-only sweep. One was wrong at both trees:
    `model_schema/approvals.py:282` opens `DEFAULT_POLICY`, and the Rating Version quorum is
    at `:335-338` (`:292` and `:345-348` at `cdaaa573`). This plan does not use it.
-4. **What was not executed.** No code or test was run (docs-only preparation wave). The
+4. **What was not executed.** No test was run (docs-only preparation wave). The one thing
+   executed is the `zen-engine` 0.53.0 probe behind Acceptance 7 (b)'s reading of "must fail"
+   (§"Activation need 3: the proposal"), a one-off `evaluate_expression` call, no test suite. The
    ternary-banding approach rests on the ternary being verified live (`runtime.py:298-301`)
    and is proven in Task 1 Step 1 (`test_band_expression_maps_each_edge`) before anything
    depends on it. If ZEN returns a non-string for a string-valued ternary, that test fails
@@ -617,3 +729,23 @@ or other decision point changed. Verified at `origin/main` `809a3794`; then, aft
 `origin/main` `cdaaa573` (#1157, `SL-1409`), re-verified there at 15:38:18 BST: activation
 need 4's `SL-1409` half is met, and the `seed.py` and `approvals.py` line cites that moved are
 re-anchored beside their `809a3794` values.
+
+## Pre-mint note 2, 2026-10-05
+
+*Dated 2026-10-05 (`TZ=Europe/London date`: 2026-10-05 15:46:19 BST), before the mint of PL 9624 (working
+id).* Edited in place on the unmerged draft #1161, on the lead's order (prep wave, section
+AB), to record the maintainer's (by delegation) ruling on activation need 3, entry 2026-10-05
+15:42:02 BST, and nothing else. What changed: the ruling quoted verbatim (§"The decisions
+this plan rests on"); §"Status" and activation need 3 (ruled (i) on its condition); §"Activation
+need 3: the proposal" (the ruling, and why the cross-check fits a committed test, with the
+`zen-engine` probe that changes "must fail" to "raises or returns a different value");
+Acceptance 7 (rewritten: (a) edges, (b) the extractor-vs-engine cross-check, (c) red on a
+planted mismatch; (ii) kept as the fallback, with a STOP if (b) cannot be built); Task 1's
+heading and Step 1 (two tests and one comparison function) and Step 2 (seven tests, not
+five); Task 4 Step 1; Hand-off 5 (new: the dispatch delta for `PL-1371` §7's wording); Self-review
+items 1 and 4; the `test_fremtpl2_algorithm.py` row of §"Write set" (names the two added tests; same file). No scope, write set, owner, other decision point or other acceptance item
+changed; the new tests live in `backend/tests/test_fremtpl2_algorithm.py`, already in the write
+set. Cites re-verified at `origin/main` `cdaaa573`: `authored.py` `EXPRESSION_FIELDS`,
+`NON_EXPRESSION_FIELDS` and `authored_expression_fields` (by symbol); `zen-engine==0.53.0` in
+`packages/pricing-core/pyproject.toml`; `compile.py`'s `import zen`; PL 9776 §"Spike S1" step 1
+at #1051 @`ecbb82ab`.
