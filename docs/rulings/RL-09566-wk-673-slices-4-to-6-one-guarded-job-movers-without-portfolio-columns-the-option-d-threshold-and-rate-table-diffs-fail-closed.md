@@ -40,6 +40,18 @@ relates: [PL-1267, RL-1264, RL-917, CR-927, WK-1178, FR-263, FR-224, FR-257, FR-
 - **The plans are read at their PR heads:** PL 9591 (#1176, `ac8221eca47df4f4af7d3c8cfde2be54187620b1`),
   PL 9590 (#1181, `7db4d646ab13d04e4ef985b7d6d710f894576ebb`), PL 9589 (#1184,
   `a34248f6c476dc5dd19c85d52c2e3e7fd8aa5e80`). This record edits none of them.
+- **T7 was added before the mint** on the maintainer's (by delegation) entry headed
+  *"2026-10-05 18:49:06 BST — PL 9595: no completeness limb accepted (none invented); the
+  score-time-only gap goes to a READ-ONLY check; PL 9590's 4.6 note: a DM reads it, then (a)
+  or (b)"*, item 2, verbatim: "PL 9590's 4.6 note: YES, have a DM read 03 4.6 against
+  DP-S5-3 and DP-S5-4 and answer which applies. If a ruling changes a behaviour 4.6 states,
+  then (a): RL 9566 gains the 4.6 T-text pre-mint (RL 9566 is unminted), applied by S5. If
+  4.6 states nothing the rulings change, then (b): the write-set row and Task 1's mention
+  are dropped from PL 9590 pre-mint." The decision-maker read `03` §4.6 (`:514`–`:578`) at
+  `ecbd1954` and found (a): §4.6 states what a `DislocationRun` holds and how each figure
+  is computed, and DP-S5-4 adds a figure it does not define, which T4 already cites as
+  "(§4.6)"; DP-S5-3 removes attribution from one kind of run, where §4.6 states
+  attribution's `method` as `shapley` or `order_dependent` with no third case.
 
 ## The decision entry, verbatim (items 1–4 and 7)
 
@@ -261,6 +273,23 @@ line, separated by one blank line:
 > **`approximation_deviation` and `dislocation_baseline_environment`, dated <Slice 5 date> (WK-673 Slice 5; `RL-1264` DP-3 (b); RL-<n>).** The `rating_version` entry carries FR-224's threshold, `{"quantile": 0.99, "max_abs_change_pct": 10}` by default, and the Environment whose live version is FR-257's baseline, `"prod"` by default. Both are refused on any other artifact type. An entry that leaves the threshold unset is governed by the default; a workspace sets its own value in its policy, and no value switches the gate off. Neither is a Setting (`07` FR-446 does not reach them). The default was ruled with these stated assumptions, not measured data: the per-policy deviation ln(approximation ÷ exact) is normal with mean 0; the premium deviation equals the model deviation; its spread is s × √(1 − R²) with s = 0.5 or 0.3. Under them it admits GLM approximations from R² ≈ 0.994 (s = 0.5) or 0.983 (s = 0.3). It is re-read against Slice 5's first observed quantiles.
 ```
 
+**T7 — `03` §4.6, inside the "Bands and movers" paragraph (`:572`) (DP-S5-3 (a), DP-S5-4
+(a); PL 9590's write set and Task 1, the dated §4.6 note).** Counted at `ecbd1954`, not
+`4d3be141`. Find (once): ``an empty band has `policies` 0. A **mover** is``. Replace it
+with:
+
+```markdown
+an empty band has `policies` 0. *(Added <Slice 5 date>, WK-673 Slice 5, RL-<n>.)* `abs_change_pct_quantiles`, FR-224's observed figure, maps each of the fixed set `"0.5"`, `"0.9"`, `"0.95"`, `"0.99"`, `"0.999"` and `"1"` to a quantile of the banded set's absolute percentage changes: with the n values in ascending order, quantile q is the value at rank ⌈q × n⌉ (nearest rank, so `"1"` is the largest), chosen exactly on the integers and written as a decimal string rounded once to 6 places toward +∞, so that the rounding never brings a figure under FR-224's bound that its exact value exceeds. With n = 0 every value is `null`, and FR-224's gate refuses a run with no figure. A run whose spec has `baseline_mode_override: "exact"` names one Rating Version as both baseline and candidate, and has no `attribution` and no `attribution_summary`. A **mover** is
+```
+
+Trial apply on `03` at `ecbd1954`: the find string counts 1 before and 0 after; the new
+text's ``FR-224's observed figure, maps each of the fixed set`` counts 0 before and 1 after.
+The §4.6 example is not changed by this text. Why these choices (technical, the
+decision-maker's): nearest rank picks one policy's actual change, so the figure is exact
+without interpolation; rounding toward +∞ is the safe side for an upper bound; the banded
+set is the one §4.6 already defines a per-policy percentage change over; and `attribution`
+and `attribution_summary` are already optional in `dislocation-run.schema.json`.
+
 **C1 — PL 9590 premise h, a correction for the planner to apply at the plan's next pre-mint
 edit (a citation fix, no scope).** The "At `137bc817`" cell reads "`slug`, `name`,
 `predecessor`, `retired_at`". At `4d3be141` (`deployments.py:55`) it should read:
@@ -288,7 +317,7 @@ Insert before its final ` |`:
 - **Slice 4 (PL 9591)** applies T1 and T2 with the code, writes D1 into its dispatch record,
   sets `visibility_timeout` (item 2) and does not register the movers column in
   `QUOTE_INPUT_BLOB_COLUMNS`.
-- **Slice 5 (PL 9590)** applies T3 to T5, and writes the observed quantiles of its first
+- **Slice 5 (PL 9590)** applies T3 to T5 and T7, and writes the observed quantiles of its first
   freMTPL2 run into its ledger (item 7). The planner applies C1 before the mint.
 - **Slice 6 (PL 9589)** applies T6 and names the `rate_table_diffs` owner slice in its
   dispatch record.
