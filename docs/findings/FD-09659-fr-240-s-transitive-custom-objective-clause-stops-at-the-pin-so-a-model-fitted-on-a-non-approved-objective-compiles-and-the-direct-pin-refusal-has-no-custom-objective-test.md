@@ -7,7 +7,7 @@ created: 2026-10-05            # working id; the mint date will replace this (ch
 owner: auditor
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc
 corrected_by: []
-relates: [WK-1178, FR-240, FR-20, FR-163, FD-9697]
+relates: [WK-1178, FR-240, FR-20, FR-163]
 ---
 
 # FD-9659 — FR-240's custom-objective clause: the pin is checked, the model's own objective is not
@@ -18,7 +18,7 @@ first drafted by auditor-gaps, from the exit-demo draft's gap row C3). Working i
 
 ## Finding
 
-**Severity HIGH; owner WK-673; deadline: before the P2 exit demo** (the deputy's rule of 2026-10-05 13:38:03 BST, "Finding batch 1: FD 9697's owner = WK-673; FD 9659's limb-3 severity depends on one fact": approval does not refuse an unapproved objective, measured below, so a priced bundle can rest on an objective that never passed review). **By limb:** the test gap (item 1 below; the deputy's "limb 2") is LOW, WK-673; the transitive clause (item 2 below; the deputy's "limb 3") is HIGH, WK-673. **The record's severity is the higher limb's.** The deputy rules at the mint.
+**Severity HIGH; owner WK-673; deadline: before the P2 exit demo** (the deputy's rule of 2026-10-05 13:38:03 BST, "Finding batch 1: FD 9697's owner = WK-673; FD 9659's limb-3 severity depends on one fact": approval does not refuse an unapproved objective, measured below, so a priced bundle can rest on an objective that never passed review). **By limb:** the test gap (item 1 below; the deputy's "limb 2") is LOW, WK-673; the transitive clause (item 2 below; the deputy's "limb 3") is HIGH, WK-673. **The record's severity is the higher limb's.** **Ruled** in the deputy's entry "2026-10-05 14:12:13 BST — FD 9659: HIGH confirmed, owner WK-673, before the exit demo; first in batch 2; ONE fix plan for the FR-240 family" (`channel/to-lead.md`, local): **HIGH, owner WK-673, deadline before the P2 exit demo**; of the two caveats (the review status set by SQL; the service layer, not HTTP) it says they "belong in the record as written. They do not lower it, because the gap is the missing check, which no route supplies." The record mints first in batch 2, and one fix plan covers the FR-240 family (this record and FD 9697): (a) model approval refuses a model whose custom objective is not approved, (b) `compile_bundle` checks the transitive reach, red first on each.
 
 FR-240 (`docs/specs/03-rating-engine.md:137`): bundle compilation validates "… no `control`-intent factor in a
 rateable path (`02` FR-88), no unapproved custom objective transitively reachable." This record is the second half.
@@ -36,7 +36,7 @@ The first half is FD 9697.
    model in the backend (`test_rating_version_compile.py:532`), so the mechanism has coverage and the custom-objective
    arm has none. Deleting `*version.pins.custom_objectives` from `all_refs` would pass the suite. This limb is a test gap.
 2. **"Transitively reachable": not implemented.** Only the pins are read. A model pin's payload carries its own fit
-   spec, and a GBM spec's `objective` may be `kind: custom` with a `ref` (`packages/model-schema/src/model_schema/modelling.py:1239-1271`,
+   spec, and a GBM spec's `objective` may be `kind: custom` with a `ref` (`packages/model-schema/src/model_schema/modelling.py:1238-1272`,
    `GbmFunctionRef`; `:1361` `objective: GbmFunctionRef`). Nothing in `compile_bundle` follows that ref. A fit may use
    an objective that is `certified`, `review` or `approved` (`FITTABLE_OBJECTIVE_STATUSES`,
    `packages/model-schema/src/model_schema/objectives.py:179`; enforced at `backend/src/app/platform/model_specs.py:361`),
@@ -135,7 +135,7 @@ the run shows nothing enforces that. A bypass needs no later status change.
 
 ## Disposition
 
-Open. Filed by the auditor, 2026-10-05; severity and owner follow the deputy's 2026-10-05 13:38:03 BST rule and the measurement in section 3, and the verdict is the lead's.
+Open. Filed by the auditor, 2026-10-05; severity and owner are the deputy's, ruled in the 2026-10-05 14:12:13 BST entry named above on the 13:38:03 BST rule and the measurement in section 3, and the verdict is the lead's.
 
 Remedy for the lead's verdict: say in FR-240 what "transitively" reaches; have the resolver or compile read each pinned
 model's objective ref and refuse one that is not approved or better; give the unapproved custom-objective pin its
