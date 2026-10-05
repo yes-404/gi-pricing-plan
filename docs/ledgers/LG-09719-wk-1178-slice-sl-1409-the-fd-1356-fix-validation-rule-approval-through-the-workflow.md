@@ -493,6 +493,23 @@ id,workspace_id,at,actor,source,action,entity_ref,before,after,justification,tra
 {"id":"01a0b10d-f8dd-759b-afc5-3abbf95b8c3b","workspace_id":"01a0b10d-f601-7f80-a811-d9f96b9ed567","at":"2026-09-17T20:27:58.036136+00:00","actor":{"id": "01a0b10d-f667-7f3d-98fc-d2ce538a3e60", "kind": "user", "display": "dev@localhost"},"source":"api","action":"validation_rule.approved","entity_ref":"validation_rule:rng-b73d354e@1","before":{"status": "review"},"after":{"status": "approved", "approved_by": "01a0b10d-f667-7f3d-98fc-d2ce538a3e60"},"justification":null,"trace_id":"2f6a8381d217e7f2310a3d751f6cc5e1","job_id":null,"prev_event_hash":"sha256:ebcf1df74c884f6f9fe90341418928fec4ba1825c8a671772a444fe85aadc32b","event_hash":"sha256:5028e1db6742d902ed37ac7ef507f2c79dea691a28190411d9f57ceebc044e7c","sequence":7}
 ~~~~
 
+### Task 7c (named deviation, Delta 16–17) — the seed re-runs against a seeded database (2026-10-05, executor-1409-t7c)
+
+The defect, verified in code: `platform/workspaces.py` `ensure_member` looks the user up by `user_id` alone, and `run` in `examples/fremtpl2/seed.py` minted a fresh analyst id every run while passing the realm's fixed `(REALM_ISSUER, REALM_SUBJECT)`. Not edited here: `workspaces.py` (outside the write set; its docstring goes to FD 9717).
+
+**Red first** (`test_the_seed_reruns_against_a_seeded_database`, two `seed.run(2000)` calls into one fresh scratch database, against the pre-fix seed), `pytest -q examples/fremtpl2/test_seed.py -k reruns`: `1 failed, 7 deselected in 20.15s`;
+`sqlalchemy.exc.IntegrityError` wrapping `asyncpg.exceptions.UniqueViolationError: duplicate key value violates unique constraint "uq_users_issuer_subject"`,
+`DETAIL:  Key (issuer, subject)=(http://localhost:8080/realms/gi-pricing, 84eea68e-a19e-46a0-9f35-a27cbd51c795) already exists.`
+
+**Fix** (`run` in `examples/fremtpl2/seed.py`): read the `users` row for `(REALM_ISSUER, REALM_SUBJECT)`; the analyst's id is that row's id, else a minted one. Every later use (grants, `ensure_member`, rule actions, `last-seed.json`'s `analyst_id`) reads `analyst.id`, so all use the resolved id.
+The test also asserts the second `last-seed.json` has a different `workspace_id` and the **same** `analyst_id` as the first. It runs on a scratch data directory (symlinks to the ARFFs; `DATA_DIR` monkeypatched), so no `last-seed.json` of this worktree or the root was touched, and skips when the ARFFs are absent.
+
+**Green:** `pytest -q examples/fremtpl2/test_seed.py`: `8 passed in 30.15s`. Task 7a's touched tests (`test_approval_guard_static.py`, `test_reset_unbacked_rule_approvals.py`, `test_check_rule_sets_runnable.py`, `test_demo_command.py`): `38 passed, 1 warning in 10.19s`. `ruff check examples/fremtpl2/` clean (one import-order fix applied to the new test); `mypy` over 226 source files: no issues.
+
+Scratch databases: `scratch_sl1409c_<8 hex>`, created and dropped by the test itself on every run (`DROP DATABASE … WITH (FORCE)` in `finally`); a query for `scratch_sl1409c%` after the last run returned no rows. No `gipricing*` database was written. Gate slots all four free (`flock -n`) before the first seed run.
+
+Files: `examples/fremtpl2/seed.py`, `examples/fremtpl2/test_seed.py`, this ledger.
+
 ## PRs
 
 Not yet opened (the lead decides when).

@@ -272,6 +272,7 @@ async def run(rows: int | None) -> int:
         DatasetVersionRow,
         RoleAssignmentRow,
         RoleRow,
+        UserRow,
         ValidationReportRow,
     )
     from app.db.session import Database
@@ -312,7 +313,21 @@ async def run(rows: int | None) -> int:
     await blob_store.ensure_bucket()
 
     workspace_id = new_uuid7()
-    analyst = Principal(kind=ActorKind.USER, id=new_uuid7(), display="analyst@example.fr")
+    # FD 9717: `(issuer, subject)` is unique in `users`, and `ensure_member` looks a user up
+    # by id alone, so a fresh id on a re-run collides with the realm user the last run left
+    # behind. Reuse that user's id when there is one, so a second seed runs against a
+    # seeded database; mint one only the first time.
+    async with database.unit_of_work() as session:
+        existing_analyst_id = (
+            await session.execute(
+                select(UserRow.id).where(
+                    UserRow.issuer == REALM_ISSUER, UserRow.subject == REALM_SUBJECT
+                )
+            )
+        ).scalar_one_or_none()
+    analyst = Principal(
+        kind=ActorKind.USER, id=existing_analyst_id or new_uuid7(), display="analyst@example.fr"
+    )
     actuary = Principal(kind=ActorKind.USER, id=new_uuid7(), display="actuary@example.fr")
     # Principal.id is UUID | None at the type level -- "null only for `system`" (jobs.py) --
     # but both of these are ActorKind.USER with an id supplied at construction, and
