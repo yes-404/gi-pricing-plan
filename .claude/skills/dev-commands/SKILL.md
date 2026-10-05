@@ -158,7 +158,7 @@ fi
 '
 got=0
 final=1
-for i in 1 2; do
+for i in 1; do
   flock -n -E 99 /tmp/slots/gate-$i -c "export GIP_GATE_SLOT=/tmp/slots/gate-$i; $gate_body"
   final=$?
   if [ "$final" -ne 99 ]; then got=1; break; fi
@@ -178,9 +178,9 @@ another stage's output, so there is no ordering to preserve — the old `&&` cha
 sequencing them for no reason beyond it being the obvious way to type a list.
 
 **The slot count did not change, and neither did the lock.** There is still one
-`flock` — two non-blocking attempts, then a single blocking wait on slot 1 — and it
-still wraps the whole body. The parallelism is *inside* the slot, so the box still runs at
-most two gates at once and the thread caps still hold each stage to 4. **Do not give
+`flock` — one non-blocking attempt on slot 1, then a single blocking wait on it — and it
+still wraps the whole body. The parallelism is *inside* the slot, so the box runs at
+most one full gate at once (`RL 9620`) and the thread caps still hold each stage to 4. **Do not give
 each stage its own `flock`**: that is seven locks where the budget assumed one, and it
 reinstates exactly the double-lock deadlock `GIP_GATE_SLOT` exists to prevent.
 
@@ -228,8 +228,8 @@ that.
 
 **`GIP_GATE_SLOT` is the announcement, not a second lock.** The repository-root
 `conftest.py` (W37-6) enforces the same budget for a *bare* `uv run pytest -q` — thread
-caps by `os.environ.setdefault` and a `flock` on the identical `/tmp/slots/gate-{1,2}`
-files this wrapper uses — because the wrapped form above was typed wrong three times in
+caps by `os.environ.setdefault` and a `flock` on the identical `/tmp/slots/gate-1`
+file this wrapper uses — because the wrapped form above was typed wrong three times in
 one day and a bare invocation should still be safe. `export GIP_GATE_SLOT=/tmp/slots/gate-$i`
 before the `&&`-chain is what stops that conftest hook from taking a *second* lock on a
 file its own ancestor process (this `flock`) already holds: `pytest_configure` checks the
@@ -267,13 +267,13 @@ tests (`--collect-only` never enters test setup, so the teardown never fires and
 lock). Record in the ledger when this fallback is used; it re-serialises the gates the
 process slots were widened to parallelise, so it is the exception.
 
-Same shape for `migrate --verify`, also two slots:
+Same shape for `migrate --verify`, also one slot (`RL 9620`):
 
 ```bash
 verify_body='POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 python3 scripts/doc-id.py migrate --verify <root>'
 got=0
 final=1
-for i in 1 2; do
+for i in 1; do
   flock -n -E 99 /tmp/slots/verify-$i -c "export GIP_VERIFY_SLOT=/tmp/slots/verify-$i; $verify_body"
   final=$?
   if [ "$final" -ne 99 ]; then got=1; break; fi
@@ -286,7 +286,7 @@ fi
 ```
 
 Same announcement shape as `GIP_GATE_SLOT` above: `scripts/_docverify.py`'s `verify()`
-checks `GIP_VERIFY_SLOT` first and skips its own `/tmp/slots/verify-{1,2}` lock when the
+checks `GIP_VERIFY_SLOT` first and skips its own `/tmp/slots/verify-1` lock when the
 wrapper has already announced one, so a correctly-wrapped `migrate --verify` run never
 double-locks against itself.
 
@@ -353,8 +353,8 @@ wrapper's own argv) must resolve to a `flock` process, and `/proc/<pid>/environ`
 the six thread-cap variables. A gate whose parent is `uv run pytest -q` directly is a
 violation, full stop — the dispatch brief's prose is not evidence it ran.
 
-**Concurrency budget on a shared box (multiple executors/worktrees at once): 2 gate slots,
-2 verify slots.** *(Was 3 gate slots until 2026-09-29, when the box was resized to 8 vCPU.)* Read load as **CPU demand**, not the load-average number alone: 150+
+**Concurrency budget on a shared box (multiple executors/worktrees at once): ONE full gate
+slot, one verify slot (`RL 9620`).** *(Was 3 gate slots until 2026-09-29, when the box was resized to 8 vCPU, then 2 until `RL 9620`: at most one concurrent full gate, up to three builds, a built slice waits for the gate; targeted single-file runs stay allowed outside a gate window.)* Read load as **CPU demand**, not the load-average number alone: 150+
 Python test threads plus Polars/DuckDB's `tokio-rt-worker`/`async-executor-` pools (sized to
 `nproc` by default, hence the cap above) make the load average count runnable/blocked
 threads, which inflates it well past actual CPU-seconds. The honest figure is
@@ -788,7 +788,7 @@ source produces, which is precisely the state `--check` exists to make impossibl
 ### Migration run — `migrate --verify` only, and the sweep's exclusion is by construction
 
 `migrate` itself is not re-run. `migrate --verify` is the surviving form, it spawns its own
-disposable snapshot (never a real checkout), and its slot wrapper is the two-slot block
+disposable snapshot (never a real checkout), and its slot wrapper is the one-slot block (`RL 9620`)
 above.
 
 **The venv is out of the sweep by construction, and no literal refusal guard exists — do
@@ -1060,7 +1060,8 @@ build log showing no actual build (wrong cwd), one tmpdir ls -i showing identica
 (collision). This section drafted by executor-h; verified by deputy as measured. Reference: 
 to-lead.md entries 10:55:17, 11:02:41, 11:48:50, 14:33:28 (maintainer instruction).
 
-Verified: 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
+Verified: 2026-10-05 against branch dm-9620-rl1263-amend at e1e85bd1 (gate and verify wrappers loop slot 1 only, the budget text says one slot, per `RL 9620` (working id); read against `conftest.py` :20, :31, which this record does not change)
+Prior: 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
 Prior: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
 
 2026-09-06 — the gate body's seven stages now run in parallel inside one slot, each
