@@ -60,6 +60,15 @@ append-only).
 > Task 1 (the row escape) is dispatchable before the DPs, but it edits score.py, so it still runs AFTER SL 9561 in lane B order.
 > Discrepancies: PL 9521 Step 1a citing FD 9513, and PL 9567's write-set table in delta 7: both pre-mint fixes, good.
 
+**Lines 18480-18484, the RL 9498 entry** (added by the pre-mint amendment below; the file had
+18 489 lines when read):
+
+> ## 2026-10-05 18:20:06 BST — RL 9498 (#1212 @7e71b040): both open questions RULED as recommended, with one precision each
+>
+> (1) /score with a NON-INTEGRAL int or count value: REFUSE THAT QUOTE in SL 9500, with an EXISTING per-quote code from 03's owned list, else spec first. PRECISION: the code must be in backend/src/app/api/score.py's _PER_QUOTE_CODES (:97 at my last read): an unknown code reaches the 500 branch (:332). SL 9500's red asserts the HTTP status AND the code, not just "refused". T2 names it. Both paths refuse, so FR-254 holds.
+> (2) Is a whole-valued float integral? YES. Integral means EXACT equality with its integer part (value == int(value)) with NO tolerance; it serialises as the integer (3.0 → 3). 2.9999999999 is NOT integral and is refused. T1 and T2 state it in those words, and each slice has one red for 3.0 → 3 and one for a near-integer refused.
+> The record is amended pre-mint; PL 9499 picks up (1). The ACK is at the mint head.
+
 ## Verified first, at `fb178c36`
 
 Each read at `fb178c360f6fd5b2fdb7ae60eea924811a65492f` (origin/main at drafting), in
@@ -105,11 +114,34 @@ Each read at `fb178c360f6fd5b2fdb7ae60eea924811a65492f` (origin/main at drafting
 5. **FR-214 gains a dated clause (T2)** naming the form of the four types on every scoring
    path and the two carriers.
 
+### Amended pre-mint, 2026-10-05 — the two open questions, ruled (the 18:20:06 entry)
+
+The two items this record left open are ruled by the maintainer (by delegation) in the
+18:20:06 BST entry quoted above. They leave §"What this record does not decide"; T1, T2,
+§"What it obliges" and the Acceptance are amended to carry them. Verified at `fb178c36`:
+`_PER_QUOTE_CODES` is `backend/src/app/api/score.py:97-104` and holds
+`INPUT_CONTRACT_VIOLATION`, `RATE_TABLE_MISS`, `REFERENCE_LOOKUP_MISS` and
+`MODEL_CALL_FAILED`; `:332` returns no per-quote problem for a code outside it, so the error
+reaches the caller as a 500 (the comment at `:92-96`); a per-quote refusal is
+`_PER_QUOTE_STATUS`, **422** (`:114`).
+
+6. **Integrality (entry (2)).** For `int` and `count`, a value is integral only by exact
+   equality with its integer part (`value == int(value)`), with no tolerance, and is served as
+   that integer (`3.0` → `3`). A near-integer (`2.9999999999`) is not integral and is refused.
+   T1 and T2 state it.
+7. **A non-integral `int` or `count` value on `/score` (entry (1)).** SL 9500 refuses that
+   quote with a per-quote code that is in `_PER_QUOTE_CODES`; its red asserts the HTTP status
+   and the code. T2 names the code. **Which code is pending** a second answer from the
+   maintainer (by delegation), relayed by the lead; it is written as the single placeholder
+   `<per-quote code: pending>` in T2 and below, and this record picks none. Both paths
+   refuse, so FR-254 holds.
+
 ## The spec texts
 
 Placement was read at `fb178c36`. `RL 9498` in a text is replaced by this ruling's minted id,
 and `FD 9513`, `SL 9511` and `SL 9500` by theirs, at the mint. Nothing else in a text is a
-placeholder. Each is applied byte for byte; a find string not found exactly once is a stop,
+placeholder, except T2's `<per-quote code: pending>` (amended pre-mint, item 7), which is
+filled with the maintainer's code before the mint. Each is applied byte for byte; a find string not found exactly once is a stop,
 reported to the lead.
 
 **T1 — 03:692, the `outputs_json` row. Applied by SL 9511 (PL 9509 Task 3).**
@@ -123,7 +155,7 @@ and refusing, not stringifying, anything else; `null` on an `"error"` row
 Replace with:
 
 ```text
-~~and refusing, not stringifying, anything else~~ **Amended 2026-10-05 (`RL 9498`, FD 9513): every declared type has one JSON form — `money_minor`, `int` and `count` a JSON integer; `decimal`, `relativity` and `percentage` a JSON string, FR-214's decimal string form (`RL-1343`); `bool` a JSON boolean; `string` and `date` a JSON string. A value that does not match its declared type, or a declared type not named here, makes that row an `"error"` row whose `error_code` is the exception's class name (FR-255); no value is ever stringified as a fallback**; `null` on an `"error"` row
+~~and refusing, not stringifying, anything else~~ **Amended 2026-10-05 (`RL 9498`, FD 9513): every declared type has one JSON form — `money_minor`, `int` and `count` a JSON integer, where an `int` or `count` value is integral only by exact equality with its integer part (`value == int(value)`), with no tolerance, and is written as that integer (`3.0` → `3`), and a near-integer (`2.9999999999`) is not integral; `decimal`, `relativity` and `percentage` a JSON string, FR-214's decimal string form (`RL-1343`); `bool` a JSON boolean; `string` and `date` a JSON string. A value that does not match its declared type, or a declared type not named here, makes that row an `"error"` row whose `error_code` is the exception's class name (FR-255); no value is ever stringified as a fallback**; `null` on an `"error"` row
 ```
 
 **T2 — 03:83, FR-214, a dated clause after `RL-1343`'s. Applied once, by whichever of SL 9511
@@ -141,11 +173,12 @@ It includes the row's closing ` |`, so the clause goes at the end of the FR-214 
 Replace with:
 
 ```text
-neither path applies the declared rounding (`FD-1333`).)* *(Amended 2026-10-05, `RL 9498` (FD 9513): a declared output of type `int` or `count` is served as a JSON integer on every scoring path, and in batch a value under it that is not integral makes that row an `"error"` row (FR-255). A declared output of type `relativity` or `percentage` takes the `decimal` form above on every scoring path. Delivered for `outputs_json` by WK-1178's SL 9511, and for `/score` and both results of `/score/compare` by WK-1178's SL 9500; until SL 9500 merges, `/score` serves the engine's number for `relativity` and `percentage` (`FD-1333`'s divergence).)* |
+neither path applies the declared rounding (`FD-1333`).)* *(Amended 2026-10-05, `RL 9498` (FD 9513): a declared output of type `int` or `count` is served as a JSON integer on every scoring path. A value under it is integral only by exact equality with its integer part (`value == int(value)`), with no tolerance, and is served as that integer (`3.0` → `3`); a near-integer (`2.9999999999`) is not integral and is refused — in batch it makes that row an `"error"` row (FR-255), and on `/score` it refuses that quote with **422** `<per-quote code: pending>`, a per-quote code. A declared output of type `relativity` or `percentage` takes the `decimal` form above on every scoring path. Delivered for `outputs_json` by WK-1178's SL 9511, and for `/score` and both results of `/score/compare` by WK-1178's SL 9500; until SL 9500 merges, `/score` serves the engine's number for `relativity` and `percentage` (`FD-1333`'s divergence).)* |
 ```
 
 **Trial apply.** Each text was applied with Python `str.replace(find, new, 1)` to a scratch
-copy of 03 at `fb178c36`, and both together. Counts, `grep -cF` on the scratch copy:
+copy of 03 at `fb178c36`, and both together; re-run with the pre-mint amendment's T1 and T2,
+with the same counts. Counts, `grep -cF` on the scratch copy:
 
 | Text | Find before | Find after | New text before | New text after |
 |---|---|---|---|---|
@@ -176,20 +209,24 @@ for name, pairs in (("T1", [(t1f, t1n)]), ("T2", [(t2f, t2n)]), ("both", [(t1f, 
 
 - **This commit:** this record only, and `docs/INDEX.md`. No spec or code file is edited here.
 - **SL 9511 (PL 9509)** applies T1 with its code, in one commit (`CLAUDE.md` §2), and applies
-  T2 unless SL 9500 merged first.
+  T2 unless SL 9500 merged first. In batch, an `int` or `count` value is integral only by
+  exact equality (item 6): one red for `3.0` → `3` in `outputs_json`, one for `2.9999999999`
+  making its row an `"error"` row.
 - **SL 9500 (PL 9499)** applies T2 if it merges first; otherwise it checks T2 is present. It
-  delivers the `/score` half for `relativity` and `percentage`.
+  delivers the `/score` half for `relativity` and `percentage`, and refuses on `/score` a
+  quote whose `int` or `count` value is not integral (item 7), adding the code to
+  `_PER_QUOTE_CODES` if it is not already there: one red for `3.0` → `3` on `/score`, one for
+  `2.9999999999` refused with **422** and `<per-quote code: pending>`, asserting both.
 - **FD 9513's register cell** names the residue for `relativity` and `percentage` on `/score`
   and its discharger SL 9500 (the 18:10:57 entry, DP-2).
 
 ## What this record does not decide
 
-- **A non-integral `int` or `count` value on `/score`.** The entry makes it "that ROW's error",
-  a batch notion. T2 states the refusal for batch only. What `/score` does with such a value
-  (today it serves the engine's number), and which slice changes it, is not named in either
-  entry. It is the lead's to route; this record does not pick.
-- **Whether a whole-valued float (`3.0`) is integral** for `int` and `count`. The executor's
-  red decides the implementation inside "not integral"; a choice that changes the wire is a stop.
+- **Which per-quote code** refuses a non-integral `int` or `count` value on `/score` (item 7):
+  pending the maintainer's second answer.
+- **`/score/compare`'s refusal of a non-integral value.** The entry names `/score`. Compare
+  maps a per-quote code through the same `_as_platform_error` (`api/score.py:449`), so the
+  code's addition reaches it, but neither T2 nor this record states compare's refusal.
 - **The vocabulary at save** (OQ 9556), the row escape (FD 9513 Task 1), and anything in
   `RL-1343`'s own scope beyond the two types DP-2 hands to SL 9500.
 
@@ -204,6 +241,13 @@ stringified instead of erroring its row.** Each is seen red before the code that
   `relativity` and `percentage` as exact decimal strings.
 - *Violation: an `int` or `count` value that is not integral is written.* It makes its row an
   `"error"` row with the exception's class name, and the run's other rows complete.
+- *Violation: integrality is decided with a tolerance, or a whole-valued float is not served as
+  an integer (item 6).* SL 9511: `3.0` reads back as `3` in `outputs_json`, and `2.9999999999`
+  makes its row an `"error"` row. SL 9500: `3.0` is served as `3` on `/score`, and
+  `2.9999999999` is refused. Each red before its code.
+- *Violation: `/score` serves a non-integral `int` or `count` value, or refuses it with a code
+  outside `_PER_QUOTE_CODES` (item 7).* SL 9500's red asserts the HTTP status **422** and the
+  code `<per-quote code: pending>`; a 500 is red.
 - *Violation: a declared type T1 does not name is stringified.* It makes its row an `"error"`
   row; no `default=str` fallback exists in the serialiser.
 - *Violation: `relativity` or `percentage` is a JSON number on `/score` after SL 9500.* SL 9500's
