@@ -50,6 +50,13 @@ async def _expression_objective(
     `stored_gradient` replaces the stored gradient text, which is how a stored block that
     differs from a fresh derivation is made: `derived` is write-once, so the row is inserted
     with it.
+
+    Fixture limit (audit A5 (c)): a stored gradient that fails certification leaves the
+    objective a `draft` with no `certificate_id`, so the `certified` state this fixture then
+    sets by SQL is **not reachable through the lifecycle**, and no `derive()` output could be
+    such a block. What it stands for is a block that certifies on its grid and overflows on
+    real data during boosting; the tests prove the fit's abort and its error code, not that
+    scenario end to end.
     """
     derived = derive(loss)
     block = {
