@@ -2,7 +2,7 @@
 id: PL-9688
 family: plan
 kind: leaf
-title: WK-673 — FD 9707 fix, a lookup step reads the row in force as at its declared date (FR-221, FR-69): leaf plan
+title: WK-673 — FD-1420 fix, a lookup step reads the row in force as at its declared date (FR-221, FR-69): leaf plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-05            # working id; the mint date will replace this (check 31)
 owner: planner
@@ -15,12 +15,42 @@ corrected_by: []
 relates: [FD-1374, RL-1313, RL-1263, SL-1409, PL-1408, PL-1403]
 ---
 
-# PL 9688 (working id) — WK-673: the FD 9707 fix, a lookup step reads the row in force as at its declared date, leaf plan
+# PL 9688 (working id) — WK-673: the FD-1420 fix, a lookup step reads the row in force as at its declared date, leaf plan
 
 Filed under working id 9688 (this plan) and slice working id 9685 (its `SL-` row under WK-673 in
-[`../roadmap.md`](../roadmap.md), `draft`). The lead reserved both. The finding is FD 9707
-(working id, draft PR #1132 at `9e51cbe8`). Everything below was measured at `origin/main`
+[`../roadmap.md`](../roadmap.md), `draft`). The lead reserved both. The finding is ~~FD 9707
+(working id, draft PR #1132 at `9e51cbe8`)~~ FD-1420 (minted from #1132; see the pre-mint delta below). Everything below was measured at `origin/main`
 `caa4e411a9c07a389cf47092a923c7761b2b92dc` on 2026-10-05, unless a line says otherwise.
+
+## Delta, 2026-10-05 (after 19:36:07 BST, pre-mint): working ids re-pointed to minted ids
+
+This plan is still an unmerged draft. This delta records one decision and every edit it makes.
+The decision is the lead's, logged at 19:36:07 BST on 2026-10-05 in `mint-queue-2026-10-05.md`,
+on the maintainer's (by delegation) instruction of about 19:34 BST to make the pre-mint fixes.
+The edits change citations only. No scope, task, decision point, write-set path or acceptance
+item changes.
+
+1. **The hyphen form of FD 9888 → the space form `FD 9888`** (§ "Write set, and its
+   contention", the open-PR table, row #972). The old text is replaced, not struck, because
+   the audit reads struck text and the hyphen form is what it refuses.
+   9888 is the working id of #972, which has not minted. PL-1314's residual note says so: "It is
+   recorded as the LOW finding #972 (FD working id 9888, owner WK-1178), cited as prose until it
+   mints." The hyphen form cited an unminted id (audit check 32). The id is **not** FD-1317:
+   FD-1317 is the finding that rating condition and `clamp_bounds` strings are never validated.
+2. **FD 9707 → FD-1420** (minted from #1132), at each citation. In prose, the old text is struck
+   in place. Where the text is front matter, the H1 heading, or text the executor writes
+   verbatim, a strike would be copied, so the text is replaced and listed here: the front-matter
+   `title`; the H1; Task 1 Step 1's module docstring; Task 2 Step 3's replacement docstring
+   paragraph. The filename keeps its working-id slug until the mint.
+   **Left as written:** the verbatim quotes of dated entries in § "The decisions this plan rests
+   on, quoted" (the **DP-1** item's item 20, the item 22 it quotes for DP-2, and the
+   **Severity and order** item with its "Severity signals" quote), and the dated amendment
+   line in § "Spec text T1", which quotes the text the ruling adopts. The four commit messages the plan gives the executor (Task 1 Step 4, Task 2 Step 5,
+   Task 4 Step 8, Task 5 Step 3) also keep FD 9707, per the logged decision.
+3. **PL 9716 → PL-1419** (minted from #1127), struck in place in the write-set table's header.
+4. **`../roadmap.md`, the SL 9685 row:** its heading, its `title` and its first paragraph cite
+   FD 9707. Each is a citation, not a quote, and each is re-pointed to FD-1420 the same way:
+   struck in the heading and the paragraph, replaced in the `title` field.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
 > or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`)
@@ -87,7 +117,7 @@ All three blocking decision points are decided, by the deputy, in
   order. The 13:20:26 entry's "Severity signals" adds: "FD 9707 (#1132): HIGH CONFIRMED (no
   upstream filter on /score, /compare or batch)".
 
-**Owner discrepancy, for the lead.** FD 9707's draft (#1132 @`9e51cbe8`, §Finding) proposes
+**Owner discrepancy, for the lead.** ~~FD 9707~~ FD-1420's draft (#1132 @`9e51cbe8`, §Finding) proposes
 owner WK-1178. The deputy's 13:11:05 entry, item 2, says WK-673. This plan and its slice row
 follow the deputy. The finding's mint reconciles its owner line.
 
@@ -100,7 +130,7 @@ status flip and the `SL-` row's.
 
 ### Activation needs, in order
 
-1. **FD 9707 minted** (#1132). It is in the deputy's first finding batch (13:13:32 BST entry,
+1. **~~FD 9707~~ FD-1420 minted** (#1132). It is in the deputy's first finding batch (13:13:32 BST entry,
    item 5).
 2. **A ruling record (`RL-`) carries DP-1 to DP-4 and text T1** (§"Spec text T1"), because a
    decision lands as a dated artifact (`CLAUDE.md` §12). The decision-maker writes it from the
@@ -178,7 +208,7 @@ printed.
    - `2026-01-01T00:30:00+01:00` and `2026-13-01` are refused `422` with `code ==
      "VALIDATION_FAILED"`.
 
-   The midnight-offset case is red first (`130000` at the base, by FD 9707's cause). The
+   The midnight-offset case is red first (`130000` at the base, by ~~FD 9707~~ FD-1420's cause). The
    other three are pins. If any pin fails at the base, **stop and bring it back to the lead**
    (DP-3's condition).
 8. **The registry follows RL-1313 DP-G5 (i).** `(RatingLookupStep, "as_at")` is in
@@ -232,7 +262,7 @@ printed.
 `zen-engine` 0.53.0, the planner ran a scratch decision table:
 `/home/puzhenhao1989/.claude/jobs/6cad77f9/tmp/spike.py`, scratch, not committed.
 
-- Key-only rules over OLD/NEW returned `OLD` at 2026-06-01. That is FD 9707.
+- Key-only rules over OLD/NEW returned `OLD` at 2026-06-01. That is ~~FD 9707~~ FD-1420.
 - The rule `date($) >= date('2025-01-01') and date($) < date('2026-01-01')` for OLD, with
   `date($) >= date('2026-01-01')` for NEW, gave:
   - `2024-12-31` → no match
@@ -395,7 +425,7 @@ edited by both." The JSON keys are under `guards.parallelism.build_slices_across
 `docs/process/delivery-process.core.json`: `no_shared_files` `:389`, `other_shared_path`
 `:417`, `generated` `:394`, `registry_exempt_append_only` `:391`.
 
-| Path | This slice | SL-1409 (lane B, in flight) | SL-1391 (lane A, PL 9716, #1127) | WK-675 S2 (lane C, PL 9713, #1131) | PL 9728 (#1113) | Class |
+| Path | This slice | SL-1409 (lane B, in flight) | SL-1391 (lane A, ~~PL 9716~~ PL-1419, #1127) | WK-675 S2 (lane C, PL 9713, #1131) | PL 9728 (#1113) | Class |
 |---|---|---|---|---|---|---|
 | `packages/pricing-core/src/pricing_core/rating/runtime.py` | edited: `_decision_table_node` (`lookup` branch, `:240-253`), module docstring (`:22-35`); added: `_as_at_window` | — | — | — | reads `CompiledBundle.content_hash` (`:673`) only | none |
 | `packages/pricing-core/src/pricing_core/rating/compile.py` | added: `_check_lookup_as_at`; edited: `ALGORITHM_CHECKS` (`:359-363`, one entry appended) | — | — | — | — | none |
@@ -435,9 +465,9 @@ slice's subject beyond what is quoted:**
 
 | PR | What it is | Relation to this slice |
 |---|---|---|
-| #1132 | FD 9707 itself | — |
+| #1132 | ~~FD 9707~~ FD-1420 itself | — |
 | #1051 / #1060 | PL 9776 and its ruling | above |
-| #972 | FD-9888 | its fix edits `_reraise_engine_failure`, not on this list |
+| #972 | FD 9888 | its fix edits `_reraise_engine_failure`, not on this list |
 | #1059 | FD 9759 | a sweep of bare `ValueError` raises in the check functions; no write set yet |
 | #1061 | RL 9758 | `test_rating_compile_bundle.py:234` only |
 | #1055 | RL 9767 | moves `ValidationIssue` out of `compile.py` and keeps the name importable; if it lands first, Task 3 Step 1 imports it from its new home |
@@ -463,7 +493,7 @@ see what was weighed. The decisions' text governs.
 | DP | Question | Options | Recommendation | Owner | Blocks |
 |---|---|---|---|---|---|
 | **DP-1** | What may `as_at` name, and how strict is its value? A `date` input is checked only to be a string (`score.py:366-369`); ZEN's `date()` converts an offset value to UTC and silently misses a malformed one (Task 0 run 1) | (a) `effective_date` or a declared `date` input, checked at compile, and at run time a strict `YYYY-MM-DD`; (b) any input, truncated to a date in the graph; (c) accept datetimes and compare in UTC | (a) | **DECIDED (a)** by the deputy, 13:15:53 BST item 20 | Tasks 1, 2, 3, 5 |
-| **DP-2** | The window mechanism (FD 9707's Disposition sends it to a DP) | (a) in-graph per-rule `date($)` tests; (b) a numeric-ordinal expression node feeding the table; (c) a host-side pre-filter (not possible: the decision is built once per bundle and cached, while `as_at` varies per quote) | (a) | **DECIDED (a)** by the deputy, 13:20:26 BST item 22, with conditions: open-ended window tested; overlap refused at save or compile with a named code and a test; boundary reds at `from` and `to` | Tasks 1, 2 |
+| **DP-2** | The window mechanism (~~FD 9707~~ FD-1420's Disposition sends it to a DP) | (a) in-graph per-rule `date($)` tests; (b) a numeric-ordinal expression node feeding the table; (c) a host-side pre-filter (not possible: the decision is built once per bundle and cached, while `as_at` varies per quote) | (a) | **DECIDED (a)** by the deputy, 13:20:26 BST item 22, with conditions: open-ended window tested; overlap refused at save or compile with a named code and a test; boundary reds at `from` and `to` | Tasks 1, 2 |
 | **DP-3** | Does DP-1's run-time refusal reach `QuoteContext.effective_date`? | (a) no, the strict check applies to `date` inputs named by `as_at` (here: to the merged-context value, §"A finding from planning"), and `/score`'s parsing is pinned; (b) make the field strict: a model-schema and contract change | (a) | **DECIDED (a)** by the deputy, 13:20:52 BST decision 28, with the pinning tests (Acceptance 7) and a stop if a pin fails | Tasks 3, 4 |
 | **DP-4** | DP-1's compile check: which codes, and where it runs | Codes: (i) `RATING_TYPE_MISMATCH` for a declared input of another type, and `RATING_GRAPH_UNRESOLVED_REF` for an undeclared name other than `effective_date`; (ii) one new code (a spec change to `03`'s owned codes, `:928-931`). Place: (p) appended to `ALGORITHM_CHECKS`, so it runs at save (`validate_algorithm`) and again at compile (`compile_bundle` re-runs it, `compile.py:573-583`); (q) in `compile_bundle` only | (i) and (p). Both codes are already `03`'s, with matching meanings (`03:844-845`). Running at save tells the author earliest, as FR-227's result-type check does at create. Every committed algorithm that names `effective_date` still saves: `backend/tests/test_rating_algorithms.py:38`, `:86`, `test_rating_compile.py:36`, `:84`, `test_rating_compile_bundle.py:47` | **planner; non-blocking.** The ruling of activation need 2 confirms or changes it | Task 3 |
 
@@ -538,7 +568,7 @@ echo "DATABASES=$n TOTAL lookup_algorithms=$tot_alg multi_row_keys=$tot_keys"
 - [ ] **Step 1: Write the module.** This code ran at the base as Run 2. Keep its literals.
 
 ```python
-"""FD 9707 (working id): a `lookup` step reads the row in force as at its declared date.
+"""FD-1420: a `lookup` step reads the row in force as at its declared date.
 
 FR-221 and `01` FR-69: the window is half-open, `[effective_from, effective_to)`. DP-1, DP-2
 and DP-3 are decided in PL 9688 (working id).
@@ -805,7 +835,7 @@ def _as_at_window(row: Mapping[str, Any]) -> str:
   > (verified live — `'b' > 'a'` raises `vmError: Opcode Compare: Unsupported type`), so both
   > sides go through `date()`. That function reads an offset as UTC, so the value it receives
   > must be a bare `YYYY-MM-DD`: `score.py`'s `_check_as_at_values` refuses anything else before
-  > the engine runs (FR-221; PL 9688 DP-1). FD 9707 (working id) recorded the exact-key
+  > the engine runs (FR-221; PL 9688 DP-1). FD-1420 recorded the exact-key
   > translation this replaces.
 
 - [ ] **Step 4: Run Task 1's module.** Run: `uv run pytest -q
@@ -1064,7 +1094,7 @@ order used. Its tests need Postgres and MinIO; a skipped run is not a red.
 
 ## Hand-off
 
-1. **FD 9707's register row** is discharged by the merge. The auditor writes that row, not
+1. **~~FD 9707~~ FD-1420's register row** is discharged by the merge. The auditor writes that row, not
    this slice.
 2. **For WK-675 S2 (PL 9713, #1131):** after T1, its inspector's `as_at` field should offer
    only `effective_date` and the algorithm's `date` inputs (PL 9713 `:242` cites FR-221). That
