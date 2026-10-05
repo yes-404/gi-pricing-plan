@@ -1,0 +1,46 @@
+{
+  "additionalProperties": false,
+  "description": "The body of `POST /api/v1/environments` (`07` §5.1).",
+  "properties": {
+    "description": {
+      "default": "",
+      "title": "Description",
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "promotion_order": {
+      "minimum": 1,
+      "title": "Promotion Order",
+      "type": "integer"
+    },
+    "requires_prior_environment": {
+      "anyOf": [
+        {
+          "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Requires Prior Environment"
+    },
+    "slug": {
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+      "title": "Slug",
+      "type": "string"
+    }
+  },
+  "required": [
+    "slug",
+    "name",
+    "promotion_order"
+  ],
+  "title": "EnvironmentCreate",
+  "type": "object"
+}

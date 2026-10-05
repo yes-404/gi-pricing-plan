@@ -7,11 +7,15 @@ import { computed } from "vue";
 import VChart from "vue-echarts";
 
 import type { CrossValidationDiagnostics } from "@/api/diagnostics";
+import type { Column } from "@/chart-table";
 import ChartFigure from "@/components/ChartFigure.vue";
 
 use([LineChart, ScatterChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 
 const props = defineProps<{ crossValidation: CrossValidationDiagnostics }>();
+
+type PathPoint = CrossValidationDiagnostics["path"][number];
+type FoldMetric = CrossValidationDiagnostics["fold_metrics"][number];
 
 /**
  * Cross-validation with declared fold construction and a persisted seed (FR-182).
@@ -63,14 +67,16 @@ const pathOption = computed(() => ({
  * comparison — so the artifact cannot carry a selection that is merely near a scanned point.
  * A tolerance here would be looser than the contract and could mark two adjacent alphas.
  */
-const pathRows = computed(() =>
-  props.crossValidation.path.map((point) => [
-    point.alpha,
-    point.std_score,
-    point.mean_score,
-    point.alpha === props.crossValidation.selected_alpha ? "Selected" : "—",
-  ]),
-);
+const pathColumns = computed<readonly Column<PathPoint>[]>(() => [
+  { key: "alpha", label: "Alpha", value: (point) => point.alpha },
+  { key: "std-score", label: "Std score", value: (point) => point.std_score },
+  { key: "mean-score", label: "Mean score", value: (point) => point.mean_score },
+  {
+    key: "choice",
+    label: "Choice",
+    value: (point) => (point.alpha === props.crossValidation.selected_alpha ? "Selected" : "—"),
+  },
+]);
 
 const foldOption = computed(() => ({
   tooltip: { trigger: "item" as const },
@@ -91,9 +97,11 @@ const foldOption = computed(() => ({
   ],
 }));
 
-const foldRows = computed(() =>
-  props.crossValidation.fold_metrics.map((fold) => [fold.fold, fold.rows, fold.score]),
-);
+const foldColumns: readonly Column<FoldMetric>[] = [
+  { key: "fold", label: "Fold", value: (fold) => fold.fold },
+  { key: "rows", label: "Rows", value: (fold) => fold.rows },
+  { key: "score", label: "Score", value: (fold) => fold.score },
+];
 
 const header = computed(() => [
   { name: "Method", value: props.crossValidation.method },
@@ -148,8 +156,8 @@ const header = computed(() => [
     <ChartFigure
       title="Regularisation path"
       caption="Mean score by alpha with a ±1 std band. An alpha whose neighbours sit inside the band was not really chosen."
-      :columns="['Alpha', 'Std score', 'Mean score', 'Choice']"
-      :rows="pathRows"
+      :columns="pathColumns"
+      :rows="crossValidation.path"
     >
       <VChart
         class="h-80 w-full"
@@ -161,8 +169,8 @@ const header = computed(() => [
     <ChartFigure
       title="Fold dispersion"
       caption="One point per fold, not their mean — FR-182 persists the dispersion because the spread is the reliability."
-      :columns="['Fold', 'Rows', 'Score']"
-      :rows="foldRows"
+      :columns="foldColumns"
+      :rows="crossValidation.fold_metrics"
     >
       <VChart
         class="h-64 w-full"

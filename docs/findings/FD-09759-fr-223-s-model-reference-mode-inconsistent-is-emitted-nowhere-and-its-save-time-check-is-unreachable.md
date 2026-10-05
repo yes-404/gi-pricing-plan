@@ -5,7 +5,7 @@ title: FR-223's MODEL_REFERENCE_MODE_INCONSISTENT is emitted nowhere, and its "c
 status: active
 created: 2026-10-01
 owner: auditor
-tree: 8bd782acbbdde8e3b4195b5a0acb89183b5a0253
+tree: a978dc2297bc8bfcc1c4da09ded37cefdcf92156
 corrected_by: []
 relates: [FR-223, FR-222, FR-240, WK-675, WK-1178]
 ---
@@ -44,11 +44,11 @@ All at `origin/main` `1dd5e264` (tree `8bd782acbbdde8e3b4195b5a0acb89183b5a0253`
 
 1. **The code is emitted nowhere.** `grep -rn MODEL_REFERENCE_MODE_INCONSISTENT packages/*/src backend/src frontend/src`
    prints nothing. Its only occurrences are in `docs/` (the spec and the plans quoting it).
-2. **The check raises a bare `ValueError`.** `check_model_reference_mode` (`packages/model-schema/src/model_schema/rating.py:172`)
+2. **The check raises a bare `ValueError`.** `check_model_reference_mode` (`packages/model-schema/src/model_schema/rating.py:173`)
    raises `ValueError(f"model_call step {step.step_id!r} declares mode ... (FR-223)")`, with no code prefix.
 3. **It is called only from compile.** `packages/pricing-core/src/pricing_core/rating/compile.py:614`, after `validate_algorithm`
    (`:611`) and the first-issue refusal.
-4. **The backend maps it to the wrong code.** `backend/src/app/platform/rating_versions.py:528-536`: any `ValueError` whose
+4. **The backend maps it to the wrong code.** `backend/src/app/platform/rating_versions.py:558-564` (as at `1dd5e264`: `:528-536`): any `ValueError` whose
    text does not start with an upper-case `CODE: ` falls to `BUNDLE_COMPILE_FAILED` (422).
 5. **"At save time" is unreachable.** Algorithm save (`POST /rating-algorithms`) has no Rating Version, and the check needs
    one (`version.model_reference_mode`). So the save-time limb of FR-223 cannot be implemented where the spec places it.
@@ -57,11 +57,11 @@ All at `origin/main` `1dd5e264` (tree `8bd782acbbdde8e3b4195b5a0acb89183b5a0253`
 
 The existing fixture of `packages/pricing-core/tests/test_rating_compile_bundle.py:234-239`
 (`test_a_mode_mismatch_is_refused_at_compile`): the version's mode is set to `approximation` against a `model_call` step in
-`exact` mode. Run through `compile_bundle`, then through the mapping of `rating_versions.py:531-534` copied verbatim:
+`exact` mode. Run through `compile_bundle`, then through the mapping of `rating_versions.py:560-563` (as at `1dd5e264`: `:531-534`) copied verbatim:
 
 ```
 exception text: model_call step 's_rp' declares mode 'exact', but the version declares 'approximation' (FR-223)
-code the API returns (rating_versions.py:531-534 logic): BUNDLE_COMPILE_FAILED
+code the API returns (rating_versions.py:560-563 logic): BUNDLE_COMPILE_FAILED
 ```
 
 The expected code is `MODEL_REFERENCE_MODE_INCONSISTENT`. The existing test asserts only `match="FR-223"` on the message, so it
@@ -83,3 +83,15 @@ route has no rating version, hence no `model_reference_mode` (RL 9758 and RL 976
 at compile AND in the validate route" above, which is kept as written.
 
 Filed 2026-10-01 as working id 9759.
+
+**Amended 2026-10-05 before mint: citations re-anchored, nothing decided.** Re-read at `origin/main` `ef5dc6e7` (tree
+`a978dc2297bc8bfcc1c4da09ded37cefdcf92156`, now the header's `tree:`). The finding holds unchanged: `git grep -n
+MODEL_REFERENCE_MODE_INCONSISTENT origin/main -- packages backend/src frontend/src` prints nothing; the check is still a bare
+`ValueError`, still called only from `compile_bundle` (`compile.py:573`) at `:614`, after `validate_algorithm` (`:611`); FR-223
+is at `03-rating-engine.md:109` and the code is listed among the owned codes at `:936`. Moved cites, found by symbol:
+`check_model_reference_mode` `rating.py:172` → `:173`; the mapping at `rating_versions.py:528-536` → `:558-564` (the
+`except ValueError` at `:559`, the generic-code fallback at `:563`). The fixture `test_a_mode_mismatch_is_refused_at_compile`
+is at `test_rating_compile_bundle.py:235` (the cite `:234-239` still spans it). Evidence 1-5 and the red reproduction were
+**not re-run** (a gate slot is held); the 2026-10-01 reproduction output above is a dated reading. `RL 9758`, `RL 9767`
+and `RL 9770` are still working ids on main (no minted record carries them), so they stay in working-id form; no other
+working id in this record has minted. Evidence's `1dd5e264` base sentence is historical and stays as written.

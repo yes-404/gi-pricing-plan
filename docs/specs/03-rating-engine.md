@@ -116,9 +116,9 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 
 | ID | Requirement |
 |---|---|
-| **FR-228** | A **Rate Table** is a typed table with declared key columns (each bound to a Factor or a banded input), a declared value column with a type and unit (`relativity`, `money_minor`, `percentage`, `count`), and an optional default row. |
+| **FR-228** | A **Rate Table** is a typed table with declared key columns (each bound to a Factor or a banded input), a declared value column with a type and unit (`relativity`, `money_minor`, `percentage`, `count`), and an optional default row. **Clarified 2026-10-03 (`RL-1361`): the binding is a declared field.** "Bound to a Factor" is `factor_ref`, a pinned `factor:<slug>@<version>`. "A banded input" is `banding_ref`, a pinned Banding with no Factor. A key carries at most one of them, and `model-schema` refuses a key that carries both. A key with neither is joined by its own name. A version written before `factor_ref` existed stays unbound (FR-4). |
 | **FR-229** | Rate Table Versions are immutable. Editing produces a new version with a required change note. The previous version stays referenceable by existing Rating Versions. |
-| **FR-230** | A rate table can be **seeded from a Model**: a GLM's relativity table (or a GBM's GLM-approximation relativities) is imported as a starting point, recording the source model reference. Subsequent manual edits are diffed against that seed, so "how far have we moved from the technical rate?" is always answerable. |
+| **FR-230** | A rate table can be **seeded from a Model**: a GLM's relativity table (or a GBM's GLM-approximation relativities) is imported as a starting point, recording the source model reference. Subsequent manual edits are diffed against that seed, so "how far have we moved from the technical rate?" is always answerable. **Clarified 2026-10-03 (`RL-1361` section A): a seed request names one Factor.** The request's required `factor` is the Factor's slug, a key of the model's relativities. The seeded table holds that Factor's relativities under one key, bound by `factor_ref` to the Factor version the model pins, so a model with K categorical factors seeds K tables. A continuous factor has no relativity table and is refused. A lineage holds one Factor: a re-seed that names another Factor's slug is refused, and a newer version of the same Factor is accepted. A hand-authored table may still have several keys (FR-228). |
 | **FR-231** | Rate table edits are diffable cell-by-cell against any prior version, with the diff showing absolute and relative change and the exposure weight behind each cell (from the portfolio dataset), so an actuary sees which edits matter. |
 | **FR-232** | **A Rate Table Version's cells are stored as PostgreSQL rows up to a workspace-configurable cell count (default 250 000) and spill to a content-addressed parquet blob above it, under one contract either way.** (OQ-616, decided 2026-08-18; **Phase 2**, with the rate-table slice.) Rows are the default because they are what makes the rest of this section cheap: FR-231's cell diff is a SQL join, its exposure weighting is a join to the portfolio dataset, and the editor pages without a job. Blobs exist because a vehicle × area table reaches millions of cells, where rows stop being free — and the tail must not dictate the design for the many small tables that are the common case. **The threshold is a stored property of the version, not a runtime decision**: `storage` is `rows \| parquet` on `RateTableVersion` (§4.2), fixed when the version is written and immutable with it, so a reader never has to ask which form a past version took and a change of threshold cannot silently re-home existing versions. **What degrades above the threshold is stated rather than discovered:** FR-231's diff and its exposure weighting become a Job returning the same artifact, and the API answers 202 rather than 200 for them (`07` FR-411's model). Everything a caller may *ask* is identical; only the latency and the status code differ. |
 | **FR-233** | Bulk operations are first-class and recorded as such: uplift a whole table by a percentage, uplift a subset by key filter, floor/cap values, and rebase to a chosen base level. Each records its parameters, not just the resulting cells. |
@@ -133,7 +133,7 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 |---|---|
 | **FR-237** | A **Rating Version** pins: one Rating Algorithm version, an exact Rate Table Version per referenced table, an exact Model/Peril Structure version per `model_call`, an exact Reference Table Version per `lookup`, and the input contract. Nothing is unpinned. |
 | **FR-238** | Lifecycle is `draft → review → approved → live → retired`. Only `approved` versions can be deployed; `live` is a property of a Deployment, and the same Rating Version can be `live` in `uat` and not in `prod`. |
-| **FR-239** | A Rating Version compiles to a self-contained **Bundle** with a content hash. The bundle is sufficient to score with no database access (NFR-491) and is what gets cached and distributed. |
+| **FR-239** | A Rating Version compiles to a self-contained **Bundle** with a content hash. The bundle is sufficient to score with no database access (NFR-491) and is what gets cached and distributed. *(Amended 2026-10-04, RL-1379, on FD 9754: a compile runs only while the Rating Version is `draft`. A compile requested for a version in any other status — `review`, `approved`, `live`, `retired` — is refused with `RATING_VERSION_IMMUTABLE` (409), synchronously by the route when the status is already non-draft and by the `rating.compile` Job, which ends `failed` with that code, when the status changed after submission; the version's Bundle summary and blob key are unchanged. A version in `review` is recompiled only after the decision path returns it to `draft` (`06` FR-355), which resubmits it through FR-257's gate; an `approved` or later version is never recompiled, and a new compiled output is a new version (`00` FR-4).)* |
 | **FR-240** | Bundle compilation validates the whole structure: DAG acyclic and fully connected, all references resolvable and at a sufficient maturity (FR-20), all types compatible, all constraints satisfiable, no `control`-intent factor in a rateable path (`02` FR-88), no unapproved custom objective transitively reachable. *(Amended 2026-09-30, `RL-1329`: saving an algorithm and compiling a bundle also refuse, with `LADDER_CLAMP_UNPLACEABLE` (422), a `clamp` constraint that the Premium Ladder cannot place; the check is one of the algorithm checks that `validate_algorithm` runs at both points. That is a clamp whose produced name is the source of a ladder rung other than the last rung present before `constraints` (FR-247), or whose produced name is a rung's source but differs from the name it consumes. The ladder records a binding clamp on the `constraints` rung (FR-248), so a clamp anywhere else would break the ladder's chain on every quote on which it binds. The message names the step and the rung.)* |
 | **FR-241** | A Rating Version declares its `effective_from` business date and optional `effective_to`, independent of when it is deployed. Scoring uses the version bound to the environment; the effective date is metadata for governance and monitoring, not a runtime selector — unless the deployment explicitly uses date-based routing (FR-247). |
 | **FR-242** | Rating Versions carry a required **change summary**: what changed versus the previous version, why, and expected impact. It is generated as a draft from the structural and rate-table diffs and edited by the actuary. |
@@ -186,7 +186,10 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 | **FR-263** | A **Dislocation Run** re-rates a fixed portfolio Dataset Version under a baseline and a candidate Rating Version and reports: the distribution of premium change (absolute and percentage), average change overall and by declared segment, the exposure/policy count in each change band, movers beyond configurable thresholds with drill-down to individual quotes, and total portfolio premium change. |
 | **FR-264** | Dislocation results are sliceable by any Factor available on the portfolio dataset, and by the ladder rung at which the change originated — answering "which part of the change caused this?", not merely "how much did it change?". |
 | **FR-265** | Dislocation output is a persisted, citable artifact referenced by the approval request, not a transient screen. |
-| **FR-266** | Where the candidate and baseline differ in more than one respect (new model *and* rate table edits), dislocation supports **attribution**: re-rating with each change applied in isolation and cumulatively, so the change is decomposed into its causes. |
+| **FR-266** | Where the candidate and baseline differ in more than one respect (new model *and* rate table edits), dislocation supports **attribution**: re-rating with each change applied in isolation and cumulatively, so the change is decomposed into its causes. *(Amended 2026-10-03, WK-673 Slice 1, on OQ-1187's decision (`RL-1184` F3), the deputy's F3 decision of 2026-09-28 12:10:21 BST as corrected at 13:57:02 BST (`RS-1201`), `RL-1264` and `RL-1394`.)* **The attribution of record is exact Shapley over the declared changes, for K ≤ 6.** For each policy, each change's Shapley value is computed exactly, as a rational with denominator K!, from v(S) for each of the 2^K subsets S of the declared changes, where v(S) is the policy's payable premium in integer minor units under the subset bundle for S (FR-1398), or a ladder replay proven equal to it under `RL-1264`'s feasibility rule. The K values are allocated to integer minor units by **largest remainder**, ties broken in the declared change order (FR-1399), so that the policy's parts sum exactly to its candidate minus baseline payable premium; plain rounding is forbidden. Portfolio figures are sums of the per-policy integer parts. The **isolated** figure (the change applied alone) and the declared-order **cumulative** figure are views beside the Shapley figure, never the attribution, and the **interaction residual**, total − Σ isolated, is its own line. **Above K = 6** the analyst groups the changes into at most 6 change groups (FR-1399) and Shapley runs over the groups; where the analyst does not group them, the isolated-plus-cumulative method with its residual line is shown with R and a lower bound on S (`RS-1201` defines both), labelled order-dependent and never presented as a decomposition. R is exact. The bound is the maximum over a declared number of orders, at least 2 and always including the declared order and its reverse; it is printed as "S ≥ x over n orders", never as S, and the run records n. Exactness holds on the integer minor units each rating returns through FR-273's boundary, not on a decimal carried through the engine (§3.11). |
+| **FR-1397** | **Attribution reconciles exactly on the rating path's own integers, on every run.** Every attribution part, the interaction-residual line and the total are integer minor units taken from the payable premium's `value_minor` as the rating path produces it (FR-273). Per policy and at portfolio level, the Shapley parts sum exactly to the total, and the isolated figures plus the residual line sum exactly to the total, as integers, with no float summed after rounding. The run checks both on every run and fails, naming the first policy that does not reconcile, rather than persist a result that does not. The check is proven on deliberately broken input: a plain-rounding allocation, on a policy where plain rounding does not sum to the total, and a Shapley value perturbed by one minor unit are each refused. *(Added 2026-10-03, WK-673 Slice 1: the deputy's F3 item 4, corrected 2026-09-28 13:57:02 BST; `RL-1394`.)* |
+| **FR-1398** | **Attribution runs on the ZEN engine through the ordinary compile path, and its subset bundles are ephemeral.** Each subset of the declared changes is a bundle built at step granularity from the baseline's pins and algorithm with that subset's changes substituted, compiled by `compile_bundle` and hydrated by `load_bundle`, so it passes the same validation as a real version (FR-240, FR-274, FR-275, FR-276) and is rated by the engine, never by a mirror of it. This holds for every subset bundle a run compiles, whether v(S) is read from it or it verifies a ladder replay (FR-266's amendment). A subset bundle is content-addressed and has **no Rating Version identity**: it is never a `rating_version` row, and it is never approvable, deployable or listed in any version list. It is cached per run by its content hash and discarded with the run's scratch. A subset that fails to compile fails the run with `BUNDLE_COMPILE_FAILED`, naming the subset; it is never skipped. The run artifact records how many subset bundles were compiled and their content hashes, and whether v(S) came from re-rating or from ladder replay (§4.6). *(Added 2026-10-03, WK-673 Slice 1: `RL-1264` DP-1 (a), with its conditions; `RL-1394`.)* |
+| **FR-1399** | **The declared changes are derived, and the analyst may group them.** The server derives the change list from the difference between baseline and candidate, at step granularity: each `step_id` the structural diff (FR-219) reports as added, removed, or present in both with any field changed is exactly one derived change, however many of its fields changed. Its kind is `step_added`, `step_removed`, `table_repointed` where the only changed field is the step's table or lookup reference, or `step_changed`. A pin difference (FR-237) that a derived step change accounts for, through that step's table, lookup or model reference, is part of that change, never a second one; a pin difference no step change accounts for is its own derived change, of kind `pin`. Derived changes are numbered `c1`, `c2`, … in the derived order: step changes sorted by `step_id`, then unaccounted pin differences sorted by their reference string. The analyst may merge derived changes into at most 6 named **change groups** in the `DislocationSpec`. The server checks that the groups partition the derived list exactly, every derived change in exactly one group, and refuses otherwise with `VALIDATION_FAILED`, naming each change left out or placed twice. With no groups given, each derived change is its own group, named by its id, and above 6 FR-266's above-six rule applies. The **declared change order** is the order of the groups as the analyst gives them, or with no groups the derived order. The derived list and the groups are both on the artifact (§4.6). *(Added 2026-10-03, WK-673 Slice 1: `RL-1264` DP-2 (c); `RL-1394`.)* |
 
 ### 3.10 Deployment
 
@@ -198,6 +201,10 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 | **FR-270** | Optional **date-based routing** allows an environment to hold multiple deployed versions selected by the quote's effective date, for pre-loading a future rate change. Overlapping date ranges are rejected at deployment time. |
 | **FR-271** | Optional **shadow scoring**: a proportion of live traffic is additionally scored against a candidate version, with results recorded but never returned to the caller — the pre-deployment safety net feeding `05-monitoring.md`. |
 | **FR-272** | Every deployment, rollback, and routing change emits an Audit Event and a notification to a configured channel. **Amended 2026-09-28 (`RL-1232` DP-4): the two halves are split by phase.** WK-674 emits the Audit Event in the same transaction as the change. That event is the durable deployment event `05` consumes (§7). WK-674 builds ~~no channel and~~ no second event store. ~~Delivering a notification to a configured channel, with the retry and failure-surfacing obligations of `05` FR-336, is `05`'s alert routing, owned by WK-688 (Phase 4). Until WK-688 delivers it, no channel is configured and none is claimed.~~ **Amended 2026-09-29 (`RL-1232` DP-4, the maintainer's answer Q848-1): the channel is `07` FR-453's signed deployment-notification webhooks.** Which Work delivers FR-453's deployment-notification limb is open (`07` §10, `OQ-1233`). Until it is decided and delivered, no channel is configured and none is claimed. *(Amended 2026-09-29, `RL-1252`: `OQ-1233` is decided (b). The notification limb is deferred to Phase 4, with WK-688 as its owner, and is delivered through FR-453's signed webhooks, which WK-688 builds for both limbs. The Audit Event limb stays WK-674's, in Phase 2. Until WK-688 delivers the notification, no channel is configured and none is claimed.)* |
+
+> **The Deployment contract, added 2026-10-03 (WK-674 Slice 2, `PL-1392`), for FR-267.** The Deployment's shape, its invariants (append-only, `approved` Rating Versions only, a `rating_version` reference only), the Deployment Request that gates a `prod` deployment (`RL-1301` A) and the audit actions this Work emits are §4.12. The requirement above is not reworded. `GET /api/v1/environments/{env}/deployments` (§5.1) is the history that `06` FR-382 reads.
+>
+> **The Audit Event limb for deploy, dated 2026-10-03 (WK-674 Slice 2, `PL-1392`), for FR-272.** Slice 2 delivers the Audit Event limb for a deployment only: `deployment.created`, written in the same transaction as the Deployment row (§4.12). The rollback event `deployment.rolled_back` is Slice 5's, and the routing and shadow events are Slice 6's; §4.12 names all four once. The notification limb stays WK-688's (`RL-1232` DP-4, as amended above).
 
 ### 3.11 Numeric precision at the engine boundary
 
@@ -289,13 +296,13 @@ and unreferenced by an `output` (FR-212).
   "version": 6,
   "rateable": true,
   "storage": "rows",
-  "keys": [{"name": "driver_age_band", "type": "string", "banding_ref": "banding:driver-age-actuarial-v2@2"}],
+  "keys": [{"name": "driver_age_banded", "type": "string", "factor_ref": "factor:driver_age_banded@3"}],
   "value": {"name": "relativity", "type": "relativity", "min": 0.2, "max": 5.0},
   "default_row": null,
   "rows": [
-    {"driver_age_band": "17-20", "relativity": "1.8400"},
-    {"driver_age_band": "21-24", "relativity": "1.4100"},
-    {"driver_age_band": "25-29", "relativity": "1.1200"}
+    {"driver_age_banded": "17-20", "relativity": "1.8400"},
+    {"driver_age_banded": "21-24", "relativity": "1.4100"},
+    {"driver_age_banded": "25-29", "relativity": "1.1200"}
   ],
   "seeded_from": {"model_ref": "model:motor-ad-frequency@7", "seeded_at": "2026-07-02T10:00:00Z"},
   "created_by_operation": null,
@@ -308,6 +315,11 @@ and unreferenced by an `output` (FR-212).
 ```
 
 Values are stored as decimal strings, never JSON floats (R2).
+
+> **`factor_ref` added 2026-10-03 (`RL-1361`, FR-228).** A key's `factor_ref`
+> pins the Factor version the key is bound to, and a key carries at most one of
+> `factor_ref` and `banding_ref`. A seeded table has one key, named after the Factor's slug
+> and bound by `factor_ref` (FR-230), and this example is one.
 
 > **`storage` added 2026-08-18 with FR-232** (OQ-616). `rows` or `parquet`, decided
 > against the workspace's cell-count threshold when the version is written and **immutable
@@ -332,7 +344,11 @@ Values are stored as decimal strings, never JSON floats (R2).
 > hand, so both are `null`.
 
 > **Seed lineage survives every derivation.** `seeded_from` is set only by
-> seed-from-model, on the first version of a lineage; every derived version — manual
+> seed-from-model, ~~on the first version of a lineage~~ on every version a seed creates:
+> the first version of a lineage, or a re-seed appended to it, which records its own
+> source model and starts a new seed origin (**amended 2026-10-03, `RL-1375` DP-1**).
+> `against=seed` on a version resolves to its seed origin: the lowest-numbered version of
+> the table whose `seeded_from` equals that version's. Every derived version — manual
 > edit, bulk operation, import — inherits the baseline's `seeded_from` unchanged, and a
 > version whose baseline had none carries none. This example's hand-edited version keeps
 > its `seeded_from`, and FR-230's "how far have we moved from the technical rate?"
@@ -341,6 +357,14 @@ Values are stored as decimal strings, never JSON floats (R2).
 > the resolved baseline — `BulkOperation.applied_to` or `created_by_import.applied_to` —
 > and a derived version may not invent or drop the anchor. `created_by_operation` and
 > `created_by_import` remain mutually exclusive.
+
+> **Re-seeding an existing table (added 2026-10-03, `RL-1375` DP-2, FR-230).** A seed
+> into an existing table is accepted only when its current version has exactly one key,
+> and that key either carries a `factor_ref` naming the named Factor's slug, at any
+> version, or carries neither `factor_ref` nor `banding_ref` and is named after that slug,
+> as every key seeded before `factor_ref` existed is. The new version's key is bound by
+> `factor_ref`. Any other existing table refuses the seed with **422**
+> `VALIDATION_FAILED`, naming the table and its keys; seed a new table slug instead.
 
 ### 4.3 `RatingVersion`
 
@@ -489,32 +513,69 @@ breakdown — `docs/rulings/RL-00931-correct-the-example-do-not-build-the-breakd
 
 ### 4.6 `DislocationRun`
 
+*(Amended 2026-10-03, WK-673 Slice 1, `RL-1394`: reconciled with `dislocation-run.schema.json` (`job_id`, `by_ladder_rung` and `errors` added to the example) and extended with FR-266's attribution as amended, FR-1397, FR-1398 and FR-1399. Money is integer minor units. `mean_change_pct` and `cumulative_change_pct` on an `attribution` item are derived views: `shapley_minor` (or, under `order_dependent`, `isolated_minor`) and `cumulative_minor` as a percentage of `totals.baseline_premium_minor`. `method` is `shapley` or `order_dependent`; `shapley_minor` is null only under `order_dependent`, and `order_sensitivity_lower_bound`, `residual_share` and `orders_sampled` are non-null only under it. S and R are decimal strings. `subset_valuation` is `rerate` or `ladder_replay`, and `replay_fell_back` is true where a replay mismatch fell the run back to re-rates (`RL-1264`); Slice 3 may amend these two with a dated note if it does not adopt replay.)*
+
 ```json
 {
   "baseline_ref": "rating_version:motor-gb@26",
   "candidate_ref": "rating_version:motor-gb@27",
   "portfolio_dataset_version_id": "uuid",
-  "policy_count": 1_284_902, "exposure_years": "1240118.4",
+  "job_id": "uuid",
+  "policy_count": 1_284_902, "exposure_years": "1240118.400000",
   "totals": {"baseline_premium_minor": 41_882_100_00, "candidate_premium_minor": 42_698_300_00,
              "change_pct": 1.95},
+  "outcomes": {"quoted_both": 1_284_902, "quoted_to_declined": 0, "declined_to_quoted": 0,
+               "declined_both": 0, "error": 0, "zero_baseline": 0, "negative_baseline": 0},
   "distribution": [
     {"band": "< -10%", "policies": 41_204, "exposure_share": 0.031, "mean_change_pct": -14.2},
     {"band": "-10% to -5%", "policies": 118_402, "exposure_share": 0.092, "mean_change_pct": -7.1},
     {"band": "-5% to 0%", "policies": 402_118, "exposure_share": 0.314, "mean_change_pct": -2.2},
     {"band": "0% to +5%", "policies": 511_402, "exposure_share": 0.398, "mean_change_pct": 2.6},
     {"band": "+5% to +10%", "policies": 174_882, "exposure_share": 0.136, "mean_change_pct": 7.0},
-    {"band": "> +10%", "policies": 36_894, "exposure_share": 0.029, "mean_change_pct": 14.8}
+    {"band": "≥ +10%", "policies": 36_894, "exposure_share": 0.029, "mean_change_pct": 14.8}
   ],
   "by_segment": [{"factor": "driver_age_band", "level": "17-20",
                   "policies": 22_104, "mean_change_pct": -6.4, "exposure_share": 0.017}],
-  "attribution": [
-    {"change": "peril_structure:motor-gb-2026h2@1 → @2", "mean_change_pct": 1.42},
-    {"change": "rate_table:motor-driver-age-relativity@5 → @6", "mean_change_pct": -0.31},
-    {"change": "min_premium 26000 → 28000", "mean_change_pct": 0.84}
+  "by_ladder_rung": [{"rung": "risk_premium", "contribution_pct": 1.11},
+                     {"rung": "constraints", "contribution_pct": 0.84}],
+  "derived_changes": [
+    {"id": "c1", "kind": "step_changed", "description": "s_model: peril_structure:motor-gb-2026h2@1 → @2"},
+    {"id": "c2", "kind": "table_repointed", "description": "s_age: rate_table:motor-driver-age-relativity@5 → @6"},
+    {"id": "c3", "kind": "step_changed", "description": "s_minprem: min_premium 26000 → 28000"}
   ],
-  "largest_movers_blob": "blob:sha256:…"
+  "change_groups": [{"name": "models", "changes": ["c1"]}, {"name": "age curve", "changes": ["c2"]},
+                    {"name": "minimum premium", "changes": ["c3"]}],
+  "attribution": [
+    {"group": "models", "shapley_minor": 594_700_00, "isolated_minor": 571_000_00,
+     "cumulative_minor": 571_000_00, "mean_change_pct": 1.42, "cumulative_change_pct": 1.36},
+    {"group": "age curve", "shapley_minor": -129_800_00, "isolated_minor": -131_200_00,
+     "cumulative_minor": -128_100_00, "mean_change_pct": -0.31, "cumulative_change_pct": -0.31},
+    {"group": "minimum premium", "shapley_minor": 351_300_00, "isolated_minor": 322_400_00,
+     "cumulative_minor": 373_300_00, "mean_change_pct": 0.84, "cumulative_change_pct": 0.89}
+  ],
+  "attribution_summary": {"method": "shapley", "total_change_minor": 816_200_00,
+                          "residual_minor": 54_000_00, "order_sensitivity_lower_bound": null,
+                          "residual_share": null, "orders_sampled": null,
+                          "subset_bundle_count": 8, "subset_bundle_hashes": ["sha256:…"],
+                          "subset_valuation": "rerate", "replay_fell_back": false},
+  "largest_movers_blob": "blob:sha256:…",
+  "errors": []
 }
 ```
+
+*(Amended 2026-10-04, WK-673 Slice 2, `RL-1402`: the run's arithmetic, for FR-263 and FR-264. The example's top band label, its `exposure_years`, `by_ladder_rung` and `errors` were changed and `outcomes` added to match.)*
+
+**Outcomes, and the two sets.** `policy_count` counts every portfolio row. `outcomes` counts each policy once by its two outcomes: `quoted_both`, `quoted_to_declined`, `declined_to_quoted`, `declined_both` and `error` (an `"error"` row in either pass), which sum to `policy_count`; `zero_baseline`, the quoted-both policies whose baseline payable premium is 0; and `negative_baseline`, those whose baseline payable premium is below 0. The **compared set** is the quoted-both policies. The **banded set** is the compared policies whose baseline payable premium is above 0: the compared set less its `zero_baseline` and `negative_baseline` policies, so Σ `distribution[].policies` = `quoted_both` − `zero_baseline` − `negative_baseline`. A negative baseline is a value a Rating Version can return, not an error (no-negative-premium is a Regression Suite property, not a runtime bound): it stays in the compared set and enters no band and no mover. `errors` has one item for each error code with at least one policy, in code order: an `error` policy is counted once, under its baseline pass's `error_code` where that pass errored and otherwise under its candidate pass's, so the counts sum to `outcomes.error`; `sample` holds up to 10 of those policies as `{"quote_id": …}`, the first 10 by `quote_id`.
+
+**Money and ratios.** Every money figure is a sum over the compared set of the `payable_premium` rung's `value_minor`, as integers (FR-1397's arithmetic, NFR-496). A policy's change is its candidate minus its baseline payable premium. A mean or total change in percent over a group is the group's Σ change ÷ Σ baseline × 100, computed as an exact rational of the integers and rounded once to 2 decimal places, half-even. An `exposure_share` is the group's Σ `exposure_years` ÷ the Σ over the set the group is part of, rounded once to 6 places, half-even. A ratio whose denominator is 0 is `null`. `exposure_years` is the exact decimal sum over every policy, rounded once to 6 places, half-even. `totals`, `by_segment` and `by_ladder_rung` cover the compared set.
+
+**Bands and movers** cover the banded set, because they need a per-policy percentage change, (candidate − baseline) ÷ baseline × 100, exactly. `band_edges_pct` (required; decimals; at least one; strictly increasing) cuts it into half-open bands `[lo, hi)`, labelled "< e₀%", "eᵢ% to eᵢ₊₁%" and "≥ eₙ%", each edge printed as its plain decimal string with no exponent and no trailing zeros, with "+" before a positive edge. Every band is listed, in edge order; an empty band has `policies` 0. A **mover** is a banded policy whose percentage change has an absolute value of at least `mover_threshold_pct` (required; a positive decimal), decided exactly on the integers. Movers are ordered by the absolute percentage change, largest first, then by the absolute change in minor units, largest first, then by `quote_id` in code-point order.
+
+**Rungs.** A compared policy's **originating rung** is the first rung, in the ladder's fixed order (FR-247, FR-252), that differs between its two ladders: present in one ladder only, or with a different `value_minor`, or with a different `unrounded_minor` compared as decimal values. A policy with no differing rung has a change of 0. `by_ladder_rung` has one row for each rung that originates at least one compared policy's change, in ladder order; its `contribution_pct` is those policies' Σ change ÷ the compared set's Σ baseline × 100. The integer sums of change by originating rung add up exactly to `candidate_premium_minor − baseline_premium_minor`.
+
+**Segments.** Each name in `segments` (distinct) is a portfolio column of a string, categorical, integer, boolean or date dtype; any other dtype, or an absent column, is refused with `VALIDATION_FAILED` naming the column. `by_segment` has one row per segment and level, in `segments` order, then by level in the value's own order (strings by code point, integers by value, `false` before `true`, dates by date), with the null level last. The level is the value as a string (an integer in decimal, a date in ISO form, a boolean as `true` or `false`), or `null`: null values form one level and are never dropped.
+
+**`exposure_years` as read.** §4.8's "decimal" is how the column is read: an integer or decimal dtype exactly; a float dtype row by row as the decimal of the value rounded to 6 places (FR-62's rule); a NaN or infinite value is refused with the nulls; any other dtype is refused with `VALIDATION_FAILED` naming the column and its dtype.
 
 ### 4.7 `RegressionSuite` and `GoldenQuote`
 
@@ -580,7 +641,7 @@ and this is the first of the four `pl.LazyFrame`-taking/returning signatures §5
 publishes (`score_batch`'s `frame`, `dislocate`'s `portfolio`, `attribute`'s `portfolio`,
 `score_batch`'s own return) to become real — `dislocate` and `attribute` are unbuilt. This
 subsection is written so it can hold the portfolio frame's schema when WK-673 designs it; it
-does not design that schema now.
+does not design that schema now. *(Superseded in part 2026-10-03: the portfolio frame's schema is designed in "The portfolio frame (WK-673)" below, `RL-1394`.)*
 
 **Not a `model-schema` artifact.** No document under `docs/contracts/` defines a tabular
 row schema, and Polars column layouts have no generator, no `scripts/generate-contracts.py
@@ -644,6 +705,22 @@ chunked transform has to provide regardless of which task is charged with the re
 id. The threshold policy that decides whether the *run* aborts, and the per-category
 counting and sampling FR-255 also names, are Task 3B's, reading `error_code` off this
 column.
+
+#### The portfolio frame (WK-673, added 2026-10-03)
+
+*(Added 2026-10-03, WK-673 Slice 1, PL-1395; the ruling `RL-1394`; `RL-1361` §E for pass-through.)* `dislocate`'s and `attribute`'s `portfolio` is one row per policy of a portfolio Dataset Version.
+
+| Column | Type | Rule |
+|---|---|---|
+| `quote_id` | string | required, non-null and unique: the policy's identity, the key on which the baseline and candidate passes are joined, and the drill-down key for movers |
+| `exposure_years` | decimal | required, non-null and never negative; zero allowed; never read as 0 when null (`RL-1361` §E). The weight for exposure shares (FR-263) and for FR-231's per-cell weights |
+| each name in either bundle's `input_contract` | as declared | the algorithm inputs |
+
+**A portfolio that breaks this schema is refused before any rating, with `VALIDATION_FAILED`,** naming the column and the count of offending rows: a missing, null or duplicated `quote_id`; a missing, null or negative `exposure_years`; a column named `purpose`, `effective_date` or `rating_version_ref`. A fault in one row's algorithm inputs is not a frame refusal: it is that row's own error, as below.
+
+**`purpose`, `effective_date` and `rating_version_ref` are stamped, never read from the portfolio.** `DislocationSpec.purpose` (`new_business` or `renewal`) and `DislocationSpec.as_at` (an ISO date) are written into every row of every pass as `purpose` and `effective_date`. The baseline pass and the candidate pass stamp their own Rating Version's `rating_version_ref`, as this subsection requires of every `score_batch` frame. An attribution subset pass stamps the **baseline's** `rating_version_ref`, because a subset bundle has no Rating Version (`03` §3.9) and `score_batch` requires a reference on every row; its output rows are scratch inputs to attribution, never persisted or returned as scoring results, and the subset is identified by their `bundle_hash`, never by that reference. A `mid_term_adjustment`, `cancellation` or `what_if` row therefore cannot occur in a run; when FR-217's inlining is built, admitting the first two is a change to this subsection (FR-218).
+
+**Every other column passes through the reader** and stays available for slicing by any Factor (FR-264), for exposure weighting, for drill-down, and for resolving a Factor's source columns (FR-231, `RL-1361`). **It never reaches the engine.** Each scoring pass — the baseline, the candidate and every attribution subset — rates a frame of the stamped columns, `quote_id`, and exactly the names in **that pass's own bundle's** `input_contract`; the other columns are joined back to the scored rows by `quote_id`. A name a bundle declares but the portfolio lacks is FR-213's missing input, written as an `"error"` row with `INPUT_CONTRACT_VIOLATION`, as `score_batch` already does. `score_batch`'s own tolerance of extra columns (above) is unchanged: this projection is `dislocate`'s and `attribute`'s, because forwarding an undeclared column lets an undeclared read resolve from the book (`FD-1374`) and lets a column with a billing name refuse every row (FR-252), so a run's result would depend on columns no contract names.
 
 ### 4.9 `RegressionRun`
 
@@ -768,6 +845,45 @@ A Sub-graph Version is a stored, immutable fragment of a Rating Algorithm, addre
 - **Result types at create** (FR-227; `RL-1309` DP-S1-4). An output port whose declared type is incompatible with its producing step's result type is refused with `RATING_TYPE_MISMATCH`, naming the producing step and the port. Only producers whose type is known at save are checked: an `expression` step's `result_type` and an input port's declared type. An output produced by a `table`, `lookup` or `model_call` step is not checked at create, as for an algorithm today; its type is known only against the pinned artifact, at compile.
 - **Versions are immutable** (`00` FR-4). The server numbers versions: the current maximum plus one. There is no update and no delete. Every write records an Audit Event `sub_graph.created` with `entity_ref` `sub_graph:<slug>@<version>`, in the same transaction (`06` FR-368).
 
+### 4.12 `Deployment`
+
+*(Added 2026-10-03, WK-674 Slice 2, `PL-1392`; FR-267, and FR-272's Audit Event limb for deploy. The Deployment Request follows `RL-1301` A, the promotion skip `RL-1296`, the Environment's immutable slug `RL-1301` A.6. The shapes are `model-schema`'s: `Deployment`, `DeploymentRequest` and `PromotionSkip`, generated as `deployment.schema.json` and `deployment-request.schema.json`. The Environment is `07` §4.2's, declared once there.)*
+
+A Deployment binds one `approved` Rating Version to one Environment at a point in time. It is a record, not a Governed Artifact: it has no status and no approval lifecycle of its own. Approval attaches to the **Deployment Request** that precedes it, below.
+
+```json
+{
+  "id": "6f1c0e52-8a43-4d3b-9b0e-2f6a7c1d9e10",
+  "workspace_id": "0c6e8f0a-5d21-4b7e-8d62-1a9b3c4d5e6f",
+  "environment": "prod",
+  "rating_version_ref": "rating_version:motor-gb@27",
+  "bundle_hash": "sha256:9f2c…",
+  "deployed_by": "3b8e4d7a-1c52-4f09-a6d3-7e5b2c8f1a04",
+  "deployed_at": "2026-10-01T06:00:00Z",
+  "reason": "Annual rate review, effective 1 November",
+  "deployment_request_ref": "deployment:prod@3"
+}
+```
+
+- **`environment` is the Environment's slug** (`07` §4.2), which a rename cannot change (`RL-1301` A.6). `bundle_hash` is the Rating Version's compiled Bundle hash at the time of the deploy (FR-239). `deployment_request_ref` is the approved Deployment Request this Deployment executed, and is `null` only for a target that has no `deployment` entry in the Approval Policy (`06` §4.2; `RL-1301` A.5).
+- **Append-only.** A Deployment is never updated in place and never deleted (`00` FR-4). The live Deployment of an Environment is derived from these rows, never stored a second time (`07` §4.2).
+- **`approved` Rating Versions only** (FR-238). A request to deploy a version in any other status is refused.
+- **Compiled Rating Versions only** (FR-239; `RL-1401`). A version whose `bundle` metadata is absent, or has no `content_hash`, has no Bundle hash to record and is refused with 409 `BUNDLE_COMPILE_FAILED`, at Deployment Request submission and at deploy. It cannot be compiled once it has left `draft` (`RL-1379`). The way forward is a new draft version.
+- **Not into a retired Environment** (`07` FR-428; `RL-1301` A.6; `RL-1401`). A deploy or a Deployment Request whose target Environment is retired is refused with 409 `VALIDATION_FAILED`, naming the slug and when it was retired. The refusal comes after the permission check and before the Rating Version is read. An unknown slug is 404 `NOT_FOUND`. A request approved before its target was retired is refused when it is executed.
+- **A Rating Version is the only deployable subject.** A `sub_graph` reference, or any reference whose type is not `rating_version`, is refused. A Sub-graph reaches a deployment only inside the Rating Version that pins it (§4.11).
+- **Audit actions this Work emits**, each named here once so that no later slice appends to the catalogue. **The deployment request:** `deployment_request.created` (WK-674 Slice 2: a Deployment Request is written and submitted; `before` `null`, `after` the request with its pins and its pinned evidence; `entity_ref` exactly the request's reference `deployment:<environment slug>@<n>`; the submitting Principal as actor; in the same transaction as the row and its approval request). Its actor is the request's Author for `06` FR-353, as amended 2026-10-03 (`RL-1401`). **FR-272's four:** `deployment.created` (WK-674 Slice 2: a Deployment row is written, `before` the previous live Deployment of the Environment or `null`, `after` this one, in the same transaction as the row); `deployment.rolled_back` (Slice 5, FR-269); `deployment.routing_changed` and `deployment.shadow_configured` (Slice 6, FR-270 and FR-271). The `entity_ref` of each of FR-272's four names the Deployment or the Environment it changes. **The Environment (WK-674 Slice 2, added 2026-10-04):** `environment.created` (`before` `null`, `after` the Environment), `environment.updated` and `environment.retired` (`before` and `after` the Environment); the `entity_ref` of each is `environment:<slug>`.
+
+#### Deployment Request
+
+An Environment may be gated by a `deployment` entry in the Approval Policy (`06` §4.2; `prod` by default). A deploy into a gated Environment names an **approved Deployment Request**. A Deployment Request is an artifact owned by this module (`RL-1301` A.1, DP-S2-2).
+
+- **Reference form** `deployment:<environment slug>@<n>`, for example `deployment:prod@3`: the third request into `prod`. The slug is the target Environment's immutable slug, so a reference never changes its meaning; the version is monotone per Environment (`00` ID-2). `deployment` is a member of the artifact reference types (`ARTIFACT_TYPES` in `model-schema`; `docs/contracts/schemas/common/artifact-ref.schema.json` carries the same list), and an approval request for a Deployment Request carries `artifact_type: "deployment"`.
+- **Pins.** The request pins the approved Rating Version it deploys and the target Environment's identity. It is the subject of the `deployment` approval request, whose `environment` is the Environment's slug.
+- **Two pinned evidence items**, written once at submission and never updated (FR-356, `00` FR-4), the floor of `06` FR-364: `rating_version_approval`, the decided approval request of the pinned Rating Version; and `uat_deployment`, the predecessor item, which is **either** the id of the successful Deployment of that Rating Version in the predecessor Environment, **or** a `PromotionSkip` (`skipped_environment`, and a `reason` that is not empty after trimming). A skip is valid only where the target's environment-qualified `deployment` entry lists the skipped Environment (`RL-1296`; `07` FR-429). **A gated target with no predecessor** — an Environment whose `requires_prior_environment` is `null` and which a `deployment` entry names — has no predecessor item to pin, so every Deployment Request into it is refused with 422 `EVIDENCE_INCOMPLETE` (`07` FR-429; `06` FR-364: the floor kind is never removed). The refusal names the remedy: remove the entry, which makes the target ungated (`RL-1301` A.5), because `requires_prior_environment` cannot be changed after creation. *(Added 2026-10-04, `RL-1404`.)*
+- **The deploy route executes only an approved request.** It re-evaluates `07` FR-429's one predicate from the request's **pinned** evidence and never re-reads a changeable source. A request is executed once. A target with no `deployment` entry needs no request: the predicate then reads the predecessor's successful Deployment directly, and no skip is possible (`RL-1301` A.5). A deploy into such a target that names a `deployment_request_ref` is refused with 422 `VALIDATION_FAILED`, naming the Environment, and writes nothing: the Deployment would otherwise record a request it did not execute. *(Added 2026-10-04, `RL-1404`.)*
+- **Submission** is `POST /api/v1/environments/{env}/deployment-requests` (§5.1), which writes the request and submits it through the generic approval path in one transaction. The Deployer permission (`deployment:promote`) is checked with the target Environment as the resource (`06` FR-345).
+
+
 ---
 
 ## 5. Interfaces
@@ -783,14 +899,14 @@ A Sub-graph Version is a stored, immutable fragment of a Rating Algorithm, addre
 | `GET` | `/api/v1/sub-graphs/{slug}@{version}` | Read one Sub-graph version; requires `rating:read`; **404** `NOT_FOUND` on an unknown version or another workspace's (FR-217). **Added 2026-10-01** (`PL-1325`) |
 | `GET` | `/api/v1/sub-graphs/{slug}/versions` | List a Sub-graph's versions, cursor-paginated; requires `rating:read` (FR-217). **Added 2026-10-01** (`PL-1325`) |
 | `POST` | `/api/v1/rate-tables/{slug}/versions` | New Rate Table Version from manual cell edits, with a required change note (FR-229). This is the manual-editing path, and it follows the import route below: the request names the base version and carries the edited cells, and the response is a cell diff against that base for confirmation (FR-231). `confirm: true` re-computes the diff and creates the version. **Amended 2026-09-28** (`RL-1184` E5): this row named no request shape, and no route implements it (register F-W10-3). Owner: WK-675's editor slice. |
-| `POST` | `/api/v1/rate-tables/{slug}/seed-from-model` | Seed from a model's relativities (FR-230) |
+| `POST` | `/api/v1/rate-tables/{slug}/seed-from-model` | **201** Seed one Factor's relativities from a model (FR-230). The body is `{"model_ref", "factor", "change_note"}`; `factor` is required and is the Factor's slug, a key of the model's `relativities`. The seeded table has one key, bound by `factor_ref` to the Factor version the model pins. **422** `VALIDATION_FAILED` for a `factor` that names no relativity entry of the model (a continuous factor included), for a named entry with no pinned Factor of its slug, for two pinned Factors with that slug, and for a re-seed of a lineage bound to another Factor's slug; **404** `NOT_FOUND` for a pinned Factor id that does not resolve in the caller's workspace (`load_factors`) (**amended 2026-10-03, `RL-1361` sections A and D**) |
 | `POST` | `/api/v1/rate-tables/{slug}@{version}/bulk-operation` | Uplift / floor / cap / rebase on that version's cells → new version, operation + parameters recorded (FR-233) |
 | `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against=` | **200** Cell-level diff with exposure weights (FR-231); **202** with a Job where either version is `storage: parquet` (FR-232) |
 | `GET` | `/api/v1/rate-tables/{slug}@{version}/export/csv` | Export cells to CSV (FR-235) |
 | `GET` | `/api/v1/rate-tables/{slug}@{version}/export/xlsx` | Export cells to XLSX (FR-235) |
 | `POST` | `/api/v1/rate-tables/{slug}@{version}/import` | Import CSV/XLSX → returns a diff vs the addressed version for confirmation; `confirm: true` re-computes the diff and creates the version (FR-235) |
 | `POST` | `/api/v1/rating-versions` | Create a draft Rating Version with pins (FR-237) |
-| `POST` | `/api/v1/rating-versions/{id}/compile` | **202** Compile + validate the bundle (FR-240) |
+| `POST` | `/api/v1/rating-versions/{id}/compile` | **202** Compile + validate the bundle (FR-240); **409** `RATING_VERSION_IMMUTABLE` unless the version is `draft` (FR-239) |
 | `POST` | `/api/v1/rating-versions/{id}/submit` | Submit for approval; evidence completeness checked (FR-257); golden quotes re-scored and the suite pinned (FR-260). **Amended 2026-09-28** (`PL-1189`) |
 | `POST` | `/api/v1/regression-suites/{slug}/versions` | Create a new Regression Suite version; `rating:write`; **201** (FR-260). **Added 2026-09-28** (`PL-1189`) |
 | `GET` | `/api/v1/regression-suites/{slug}@{version}` | Read a Regression Suite version; `rating:read`; access-controlled per NFR-499 (FR-260). **Added 2026-09-28** (`PL-1189`) |
@@ -802,10 +918,12 @@ A Sub-graph Version is a stored, immutable fragment of a Rating Algorithm, addre
 | `GET` | `/api/v1/rating-versions/{id}/regression-runs/{run_id}/cases` | Read the run's case log (its generated cases and counterexamples); `rating:read`; the only route that reads this blob, which `GET /api/v1/blobs/{sha256}` refuses (`FR-1221`, NFR-499). **Deliberately unpaginated:** the log holds at most `generation.cases` contexts, and `RegressionGeneration.cases` is capped at 10 000, so the response is bounded by that cap (about 10 000 Quote Contexts plus one counterexample per failing property). **Added 2026-09-28** (`PL-1205`) |
 | `POST` | `/api/v1/dislocation-runs` | **202** Baseline vs candidate over a portfolio (FR-263) |
 | `GET` | `/api/v1/dislocation-runs/{id}` | Dislocation artifact |
-| `POST` | `/api/v1/environments/{env}/deployments` | Deploy an approved version (FR-267) |
+| `POST` | `/api/v1/environments/{env}/deployments` | Deploy an approved version (FR-267) *(Refusals added 2026-10-03, `RL-1401`: 409 `VALIDATION_FAILED` when the Environment is retired; 409 `BUNDLE_COMPILE_FAILED` when the Rating Version has no compiled bundle; §4.12.)* |
 | `POST` | `/api/v1/environments/{env}/deployments/rollback` | Roll back (FR-269) |
 | `PUT` | `/api/v1/environments/{env}/shadow` | Configure shadow scoring (FR-271) |
 | `GET` | `/api/v1/traces?rating_version=&from=&to=` | Sampled production traces (FR-259) |
+| `GET` | `/api/v1/environments/{env}/deployments` | Deployment history for an environment (FR-267; read by `06` FR-382) |
+| `POST` | `/api/v1/environments/{env}/deployment-requests` | Submit a deployment request for approval (FR-267, FR-429) *(Refusals added 2026-10-03, `RL-1401`: 409 `VALIDATION_FAILED` when the Environment is retired; 409 `BUNDLE_COMPILE_FAILED` when the Rating Version has no compiled bundle; §4.12.)* |
 
 **Error codes owned by this module:** `RATING_GRAPH_CYCLIC`, `RATING_GRAPH_UNRESOLVED_REF`,
 `RATING_TYPE_MISMATCH`, `MONETARY_FLOAT_REFUSED`, `EXPRESSION_NON_DETERMINISTIC`,
@@ -842,7 +960,9 @@ serving request: a sampled real-time outcome is first persisted `pending`, and a
 off-path Job re-scores the pinned bundle and fills in the body. This code is refused when
 that completion is attempted against a row that is not `pending` — already completed, or
 never a pending row — so a re-delivered Job stops rather than re-running the re-score and
-orphaning a blob. `app.platform.traces.complete_pending_trace` is the only raiser)*.
+orphaning a blob. `app.platform.traces.complete_pending_trace` is the only raiser)*,
+`RATING_VERSION_IMMUTABLE`
+*(added 2026-10-04, RL-1379, WK-674 Slice 2 — **409**. FR-239: a compile of a Rating Version whose status is not `draft`. `POST /api/v1/rating-versions/{id}/compile` refuses it synchronously and creates no Job; a `rating.compile` Job whose version left `draft` after submission ends `failed` with this code. `app.platform.rating_versions.require_compilable` is the only raiser)*.
 
 > **`RATING_VERSION_UNPINNED` (meaning added 2026-09-30, on FD-1297, FR-237).** The Rating
 > Version cannot be compiled, or a compiled bundle cannot be loaded: it has no `algorithm_ref`,
@@ -929,7 +1049,17 @@ def score_batch(bundle: CompiledBundle, frame: pl.LazyFrame, *,
 # pricing_core/rating/analysis.py
 def dislocate(baseline: CompiledBundle, candidate: CompiledBundle,
               portfolio: pl.LazyFrame, spec: DislocationSpec) -> DislocationRun
-def attribute(changes: Sequence[BundleDelta], portfolio: pl.LazyFrame) -> list[Attribution]
+def read_portfolio(portfolio: pl.LazyFrame, *,                     # added 2026-10-04 (WK-673 S2, RL-1402): §4.8's
+                   segments: Sequence[str] = ()) -> pl.LazyFrame    # reader; refuses at the call; Slice 7 reuses it
+def dislocation_frame(baseline: CompiledBundle, candidate: CompiledBundle,
+                      portfolio: pl.LazyFrame, spec: DislocationSpec) -> pl.DataFrame   # one row per policy
+def select_movers(frame: pl.DataFrame, spec: DislocationSpec) -> pl.DataFrame          # FR-263's movers, in §4.6's order
+def summarise_dislocation(frame: pl.DataFrame, spec: DislocationSpec) -> DislocationRun  # dislocate = this ∘ dislocation_frame
+async def derive_changes(baseline: RatingVersion, candidate: RatingVersion,    # added 2026-10-03 (WK-673 S1, FR-1399)
+                         resolver: ArtifactResolver) -> list[BundleDelta]
+async def attribute(baseline: RatingVersion, candidate: RatingVersion,         # amended 2026-10-03 (WK-673 S1,
+                    portfolio: pl.LazyFrame, spec: DislocationSpec,            # RL-1264 premise: the old form took
+                    resolver: ArtifactResolver) -> Attribution                 # no baseline and could not compile subsets)
 
 # pricing_core/rating/testing.py
 def run_regression(bundle: CompiledBundle, suite: RegressionSuite,
@@ -973,8 +1103,11 @@ def import_confirmed(version: RateTableVersion, content: bytes, *, filename: str
 # CellRow = dict[str, str] and Cells = Sequence[CellRow] are this module's aliases
 def check_model_approved(model: Model) -> None
 def extract_relativity_table(model: Model, *, value_name: str = "relativity") -> list[CellRow]
-def seed_from_model(model: Model, *, table_slug: str, change_note: str, seeded_at: datetime,
-                    rateable: bool = True, value_name: str = "relativity") -> SeedResult
+# `factor` and `factors` added 2026-10-03 (RL-1361 section D): the platform loads the
+# model's Factors and passes them in; the pure function binds the one key to `factor`'s Factor
+def seed_from_model(model: Model, *, factor: str, factors: Sequence[Factor], table_slug: str,
+                    change_note: str, seeded_at: datetime, rateable: bool = True,
+                    value_name: str = "relativity") -> SeedResult
 def validate_rate_table(cells: Cells, keys: Sequence[RateTableKey], value: RateTableValue, *,
                         key_domains: Mapping[str, frozenset[str]],
                         default_row: CellRow | None = None) -> list[ValidationIssue]
@@ -985,6 +1118,10 @@ def diff_vs_seed(seed_cells: Cells, current_cells: Cells,
                  keys: Sequence[RateTableKey], value: RateTableValue, *,
                  weights: Weights | None = None) -> RateTableDiff
 ```
+
+*`DislocationSpec` (added 2026-10-03, `RL-1394`): `baseline_ref`, `candidate_ref`, `portfolio_dataset_version_id`, `purpose`, `as_at` (§4.8's portfolio frame), `segments` (the Factors FR-263 averages by), `band_edges_pct`, `mover_threshold_pct` (FR-263), and optional `change_groups` (FR-1399). `BundleDelta`: one derived change, `id`, `kind`, `description`, as §4.6's `derived_changes` item. `Attribution`: §4.6's `derived_changes`, `change_groups`, `attribution` and `attribution_summary` together. All three are defined in `model-schema` by the slice that first returns them (WK-673 Slices 2 and 3) and match §4.6 field for field.*
+
+*`analysis.py`'s public surface (added 2026-10-04, WK-673 Slice 2, `RL-1402`).* `read_portfolio` checks §4.8's frame and each name in `segments` (present, of a dtype §4.6 admits) when it is called, not when its result is collected, and returns the frame with every column kept and `exposure_years` read as §4.6 states. `PortfolioFrameError` is a `ValueError` with `code = "VALIDATION_FAILED"`, raised for any such fault, and by `dislocation_frame` for a portfolio column named as one of its own columns; its message names the column and the count, or the column and its dtype, and never a value; the platform maps it to `VALIDATION_FAILED`. `dislocation_frame` calls `read_portfolio(portfolio, segments=spec.segments)` before any rating and returns one row per policy, sorted by `quote_id`: `quote_id`; `baseline_outcome`, `candidate_outcome`; `baseline_minor`, `candidate_minor`, the `payable_premium` rung's `value_minor` as an integer, null unless that pass quoted; `change_minor`, `candidate_minor − baseline_minor`, null unless both passes quoted; `baseline_error_code`, `candidate_error_code`; `origin_rung` (§4.6), null unless both passes quoted and a rung differs; then every portfolio column, in the portfolio's order. `select_movers` returns the frame's rows for FR-263's movers, in §4.6's mover order; Slice 4 writes them to `largest_movers_blob`. `dislocate(b, c, p, s)` is exactly `summarise_dislocation(dislocation_frame(b, c, p, s), s)`. `band_edges_pct` and `mover_threshold_pct` keep the names `RL-1394` gave them; §4.6 states their rules.*
 
 > *(Corrected 2026-09-28, RL-1172 — the decision-maker ruled the spec was wrong on F59 and
 > on all four limbs of F60, and the code right.)* The block above had omitted nine live
@@ -1229,3 +1366,4 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | **OQ-1316** | **Is rounding offered inside a rating algorithm anywhere other than an `output` step's declared rounding (FR-226), and if so where, with what mode, and how is it recorded so the ladder reconciles (FR-248) and nothing rounds twice (NFR-496)?** Raised 2026-09-30 by the decision-maker in `RL-1312`, which keeps `round`, `floor` and `ceil` out of FR-244's P2 allow-list meanwhile. Mirrored in `docs/open-questions.md`. Status: **open** (owner WK-1178, raised 2026-09-30). *(Cross-reference added 2026-09-30, on the maintainer's instruction: if this question is decided (a), rounding recorded as its own rung, `RL-1329`'s R0 ("`round` appears only on the last rung") must be amended by that ruling; `RL-1329` says so itself.)* |
 | **OQ-1321** | **OPEN** — **Should a `lookup` step's output be typed from its reference table's declared column type?** A lookup's output is always a string (`runtime.py:239-240`), and `RL-1322` (correcting `RL-1312`) adds `number(x)` to FR-244 so that it can be used in arithmetic. A non-numeric value then fails at scoring. FR-227's result type is not declared on a lookup. Raised 2026-09-30 by the decision-maker (`RL-1322`). Mirrored in `docs/open-questions.md`. Status: **open** (owner WK-1178). |
 | ~~**OQ-1334**~~ ✔ | ~~Should `/score` serve a declared `decimal` output as a JSON string, as batch scoring does, instead of the float JSON number it serves today?~~ **DECIDED 2026-09-30: (a), a JSON string on every scoring path, the engine's exact value rounded once by its output step; a `decimal` output may carry money; owner WK-1178, after WK-674 Slice 3 merges, by `RL-1343`.** See FR-214's dated clause. Mirrored in `docs/open-questions.md`. Status: **decided** (owner WK-1178, delivery after WK-674 Slice 3 merges, raised 2026-09-30, decided 2026-09-30). |
+| **OQ-1373** | **What does NFR-500's "sampled-trace schema" name?** Raised 2026-10-01 (working id 9774, allocated by the lead), as the OQ that `CR-1247` Proposal 11's accepted clause requires. NFR-500 (`:1201`) budgets trace storage "with the sampled-trace schema" and names no schema; it is measured failing, about 2.58×. Options: (a) the `Trace` contract after the F55/F35 trim, measured uncompressed; (b) the persisted encoding with a named compression; (c) both: the trimmed `Trace`, persisted with a named compression, the budget stated for the persisted bytes. Recommendation (the planner's): **(a)**. Owner: the F35 plan (`PL 9776` (working id), WK-1178), ruled by the decision-maker with its `TraceStep` ruling. Mirrored in `docs/open-questions.md`. Status: **open** (raised 2026-10-01). |
