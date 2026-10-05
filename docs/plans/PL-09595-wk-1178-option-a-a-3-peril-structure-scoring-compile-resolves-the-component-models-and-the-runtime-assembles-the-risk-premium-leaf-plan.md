@@ -134,9 +134,14 @@ nothing deleted:
    (`backend/src/app/platform/rating_algorithms.py:94-125`) runs `_parse_algorithm` and
    `_issues_to_error` and the duplicate `(slug, version)` refusal, with no `feature_map` check
    at all. An unmapped Factor is refused only at score time, by `resolve_factors`'s missing
-   source column (`packages/pricing-core/src/pricing_core/modelling/factors.py:106`, FR-87,
+   source column (`packages/pricing-core/src/pricing_core/modelling/factors.py:170-172`, FR-87,
    PL 9597's Task 0 row 0.5), reaching the caller as `MODEL_CALL_FAILED`; an unmapped offset
    column as `MODEL_CALL_FAILED` naming `MODEL_OFFSET_MISSING` (PL 9597 item 14, `:403-404`).
+   *(Dated note, 2026-10-05 18:48:53 BST: this cited `factors.py:106`, copied from PL 9597's
+   row 0.5 unchecked. At origin/main `ecbd1954d90b1faf0bd197174d720d90ad8f6c6d` (the file is
+   unchanged since `116a0da6`), `def resolve_factors` is `:105`; the refusal is `:170-172`, the
+   `missing = [c for c in factor.source_columns if c not in frame.columns]` test and its
+   `raise FactorResolutionError(`.)*
 
    So, as the ruling says for that case, **no completeness limb is invented in A-3**, and
    Acceptance 16 gains **no** "missing severity factor → 422" red. Acceptance 16's membership
