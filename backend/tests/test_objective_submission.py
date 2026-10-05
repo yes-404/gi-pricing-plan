@@ -53,6 +53,7 @@ from model_schema import (
     ObjectiveStatus,
     ObjectiveTemplate,
     Principal,
+    new_uuid7,
 )
 
 register_model_handlers()
@@ -264,6 +265,78 @@ async def test_submitting_with_a_certificate_id_that_names_no_row_is_validation_
     assert refused.value.status_code == 409
     assert refused.value.code == "VALIDATION_FAILED"
     assert str(dangling) in (refused.value.detail or "")
+
+
+async def _latest_certificate_id(database: Database, objective_id: UUID) -> UUID:
+    async with database.session() as session:
+        return (await session.get(CustomObjectiveRow, objective_id)).certificate_id  # type: ignore[union-attr,return-value]
+
+
+async def _submit_pointing_at(
+    database: Database, workspace_id, actor: Principal, row: CustomObjectiveRow, pointer: UUID
+) -> PlatformError:
+    from sqlalchemy import update
+
+    async with database.unit_of_work() as session:
+        await session.execute(
+            update(CustomObjectiveRow)
+            .where(CustomObjectiveRow.id == row.id)
+            .values(certificate_id=pointer)
+        )
+    async with database.unit_of_work() as session:
+        with pytest.raises(PlatformError) as refused:
+            await service.submit_for_review(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                objective_id=row.id,
+                change_summary="please",
+            )
+    return refused.value
+
+
+@pytest.mark.req("FR-146")
+@pytest.mark.req("FR-163")
+async def test_submitting_with_another_objectives_certificate_is_validation_failed(
+    database: Database, blob_store, workspace_id
+) -> None:
+    """A certificate that exists in this workspace but certifies a different objective is no
+    evidence for this one (`RL-1362` S5's fail-open class, audit A7)."""
+    actor = await _actuary(database, workspace_id)
+    row = await _certified(database, blob_store, workspace_id, actor)
+    other = await _certified(database, blob_store, workspace_id, actor)
+    foreign = await _latest_certificate_id(database, other.id)
+    refused = await _submit_pointing_at(database, workspace_id, actor, row, foreign)
+    assert refused.status_code == 409
+    assert refused.code == "VALIDATION_FAILED"
+    assert str(foreign) in (refused.detail or "")
+
+
+@pytest.mark.req("FR-146")
+@pytest.mark.req("FR-163")
+async def test_submitting_with_a_certificate_stored_in_another_workspace_is_validation_failed(
+    database: Database, blob_store, workspace_id
+) -> None:
+    """A certificate stored in another workspace is refused as if absent (tenancy)."""
+    actor = await _actuary(database, workspace_id)
+    row = await _certified(database, blob_store, workspace_id, actor)
+    # Same objective id and version, so only the workspace clause can refuse it.
+    async with database.unit_of_work() as session:
+        genuine = await session.get(ObjectiveCertificateRow, row.certificate_id)
+        assert genuine is not None
+        foreign_row = ObjectiveCertificateRow(
+            workspace_id=new_uuid7(),
+            custom_objective_id=row.id,
+            objective_version=genuine.objective_version,
+            payload=genuine.payload,
+        )
+        session.add(foreign_row)
+        await session.flush()
+        foreign = foreign_row.id
+    refused = await _submit_pointing_at(database, workspace_id, actor, row, foreign)
+    assert refused.status_code == 409
+    assert refused.code == "VALIDATION_FAILED"
+    assert str(foreign) in (refused.detail or "")
 
 
 # -- the extra Approver -------------------------------------------------------------------

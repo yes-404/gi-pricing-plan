@@ -724,9 +724,15 @@ async def submit_for_review(
     await _require_evidence(session, workspace_id=workspace_id, row=row)
     # WK-690 S3 Delta 7 (g): `certificate_id` is a bare pointer (no foreign key), and
     # `_require_evidence` only checks it is set. A pointer to no certificate row is no
-    # evidence, and would otherwise read below as "no `violated` finding".
+    # evidence, and would otherwise read below as "no `violated` finding". It must also be
+    # this objective's own certificate, in this workspace: another objective's, or another
+    # workspace's, is no evidence for this one (audit A7).
     pointed = await session.get(ObjectiveCertificateRow, row.certificate_id)
-    if pointed is None or pointed.workspace_id != workspace_id:
+    if (
+        pointed is None
+        or pointed.workspace_id != workspace_id
+        or pointed.custom_objective_id != row.id
+    ):
         raise PlatformError(
             "VALIDATION_FAILED",
             "The objective's certificate does not exist",
