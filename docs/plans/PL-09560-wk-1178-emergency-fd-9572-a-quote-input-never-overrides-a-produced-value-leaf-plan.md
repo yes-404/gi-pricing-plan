@@ -156,6 +156,26 @@ items 1 and 2:
 > 1. ROUTED 17:31: noted. A YES from auditor-fanin comes to me at once; PL 9560 does not mint until auditor-fanin has reported.
 > 2. #1195 RL 9562, T2: your RECOMMENDATION is adopted. RL 9562 owns T1 and T2's text and mints right after batch 1, AHEAD of PL 9560. PL 9560 applies T2 (FR-213 :82) in the same commit as guard (c), citing RL 9562, with no paraphrase. T1 stays with PL 9567 / SL 9568. DP-3 stays OPEN in RL 9562 and is named as open. The mint ACK for #1195 follows my checklist at its mint head (it is not given by this line).
 
+**"2026-10-05 17:34:25 BST — FD 9572 fan-in measurement accepted: (c) ALONE stands; A-2
+create_sub_graph_version IN"**, items 1 and 2, verbatim (added after 17:37:04 BST):
+
+> 1. auditor-fanin (fanin.py dc4958c0…, fanin2.py 758a08c7…, at 4d3be141): no wrong price. A decline side branch forked BEFORE the clamp makes the engine REFUSE with LADDER_RECONCILIATION_FAILED; every other order gives 5250, or 1507 with min_premium=0. ACCEPTED. PL 9560 = guard (c) + T2 and mints after RL 9562. The stated LIMITS (one fixture, decline branches only, no case without ladder reconciliation) go VERBATIM into FD 9572's mint text and into PL 9567's (R-b) red set as the cases it must cover: a produce-nothing side branch, and an algorithm with no ladder reconciliation. So (R-b) closes what this measurement could not reach, and the HOLD on deploy/approve stands until (c) merges (it is not lifted by this measurement).
+> 2. #1196: "root in score_one" withdrawn in place, T2 added. Yes. #1193 (R-b) red-first plus the mechanism DP: noted; I rule it when it arrives with its hash impact. #1195's pre-mint T2 edit (dm-9562b): my mint ACK reads that head.
+
+**auditor-fanin's result**, from the trace file `handover/trace-fd9572-premise-fanin-2026-10-05.md`
+(a local handover file; fanin.py sha256 `dc4958c0…`, fanin2.py `758a08c7…`, at `4d3be141`),
+verbatim:
+
+> **NO wrong price.** Decline side branches forked BEFORE the clamp → `LADDER_RECONCILIATION_FAILED` (R3: clamp value 1435.5 is not its bound 5000; R4: the replay rounds to 8814 …), and no price is returned. Every other order → 5250. With min_premium=0, all orders → 1507. Because wiring is positional, a branch forked before the clamp is necessarily listed before s_instalment, so it cannot be the last edge into the sink. With the payable output reading X directly, compile refuses with LADDER_CLAMP_UNPLACEABLE.
+> **Limits:** one fixture; decline-constraint side branches only; a case with no ladder reconciliation was not tested. So (c) ALONE stands (item 3's NO branch). (R-b)'s red in PL 9567 must still cover the fan-in case.
+
+So 17:27:55 item 3 answered NO and (c) alone stands. The limits named there are covered in
+PL 9567's (R-b) reds, per 17:34:25 item 1.
+
+**DP-3 is open**, and named as open: FR-246's general declared-inputs rule (FD-1374, PL 9776)
+stays its own, in RL 9562 and PL 9567 (17:22:47 DP-3; 17:30:02 item 2). Guard (c) is exactly
+"an undeclared key naming a produced value", and no more.
+
 **The FR-213 text (T2), as first filed and now superseded by 17:30:02 item 2.** DP-4 ruled that a ruling adopts T2 before PL 9567 activates (RL 9562,
 working id). Guard (c) now ships here, so T2 belongs with this slice. This plan applies T2 in
 Task 3 Step 5 only if the dispatch record names RL 9562 as merged; otherwise T2 lands with
@@ -500,7 +520,15 @@ git add packages/pricing-core/tests/test_rating_shadowed_inputs.py backend/tests
 git commit -m "test(rating): FD 9572 emergency reds — an input overrides a produced value"
 ```
 
-### Task 2: Guard (c) and T2, in one commit
+### Task 2 as first filed — "The root, in `score_one`'s path": WITHDRAWN
+
+*(Withdrawn 2026-10-05, pre-mint, after 17:32:18 BST, on 17:27:55 item 1: the cause is not in
+`score_one`'s path. It is `to_wire`'s sink fan-in (`runtime.py:495-499`) together with
+whole-context `passThrough`, and it is PL 9567's (R-b). The withdrawn task's text, the
+`_SHADOWED` list and the "guard (c) patched out → 5250" root test are at this plan's first
+filed commit, `ff813792ad81d7cde2d8d79c099fb7b14beec08c`. The executor does not run them.)*
+
+### Task 2: Guard (c) and T2, in one commit (was Task 3 as first filed)
 
 **Files:**
 - Modify: `packages/pricing-core/src/pricing_core/rating/score.py`. Add a check after
@@ -607,7 +635,7 @@ git add packages/pricing-core/src/pricing_core/rating/score.py \
 git commit -m "fix(rating): refuse an undeclared input naming a produced value (FD 9572 (c); FR-213 T2, RL 9562)"
 ```
 
-### Task 3: The gate and the ledger
+### Task 3: The gate and the ledger (was Task 4 as first filed)
 
 - [ ] **Step 1:** Before any full run, check `pgrep -af 'pytest|vitest|flock'` and the gate
   slot. Take the slot only on the lead's word.
