@@ -11,7 +11,7 @@ work: WK-673
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [FR-240, FR-230, FR-88, FR-359, FR-20, OQ-609, RL-1263, RL-1329, RL-1361]   # at the mint, add FD 9697's, FD 9659's, FD 9639's, PL 9649's and SL 9647's minted ids
+relates: [FR-240, FR-230, FR-88, FR-359, FR-20, OQ-609, RL-1263, RL-1329, RL-1361]   # at the mint, add FD 9697's, FD 9659's, FD 9639's, PL 9649's, SL 9647's and OQ 9630's minted ids
 ---
 
 # RL 9633 (working id) — WK-673: the FR-240 family fix activated, PL 9649 DP-1 to DP-6 and texts T1 to T4
@@ -43,6 +43,9 @@ relates: [FR-240, FR-230, FR-88, FR-359, FR-20, OQ-609, RL-1263, RL-1329, RL-136
   `packages/pricing-core/src/pricing_core/modelling/gbm.py:1290-1297` requires every slug of
   `result.feature_order` on the frame (`SCORING_FEATURES_MISMATCH`); `grep -n intent
   packages/pricing-core/src/pricing_core/rating/*.py` prints nothing.
+- **Updated for Ruled 9, 2026-10-05.** Input: the decision entry quoted in Ruled 9, and the
+  draft `~/gi-pricing-plan.local/handover/OQ-draft-control-in-scoring-2026-10-05.md` it decides.
+  `origin/main` was `809a3794`; Ruled 1 to 8, the texts and the locators are unchanged.
 - **Brief:** the lead's spawn message to this decision-maker, 2026-10-05.
 
 ## Locators — read at `83ea5090`
@@ -133,6 +136,35 @@ relates: [FR-240, FR-230, FR-88, FR-359, FR-20, OQ-609, RL-1263, RL-1329, RL-136
    for the lead to file, and "If (b) or (c) is chosen, it is a spec change first (02 FR-88
    and 03), then its own slice under WK-673, not part of PL 9649."
    T1 and T4 below carry this item.
+9. **OQ 9630 (the model_call case, how a control-fitted model is scored), as decided (option
+   (c)), with both conditions.** Entry "2026-10-05 14:54:40 BST — READ-BACK VERIFIED #1144; OQ
+   (control factor in scoring) DECIDED: option (c) with the DM's two conditions; file it as a
+   decided row":
+   "OPTION (c). A model fitted with a `control`-intent factor may be scored in a priced Rating
+   Version only if a versioned artifact DECLARES the reference value at which each control
+   factor is HELD. Otherwise compile refuses it, with RL 9633 Ruled 8's refusal as the
+   default. Both of the DM's conditions are part of the decision:
+    (1) the spec says the factor is "held at" the declared reference, never "removed" (a GBM's
+   interactions with it remain, so removal would be false);
+    (2) every held factor and its value appear in the quote's explanation and in the
+   transparency artifact ([02 FR-132]), so the price shows what it was held at."
+   One change to the quote: the entry cites the Transparency Artifact requirement by its
+   pre-W37-6 scoped id, which check 36 refuses, so `[02 FR-132]` replaces it with the id
+   `docs/REDIRECTS.csv` row 707 maps it to (`02-modelling.md:191` at `809a3794`).
+   - **Ruled 8's refusal stays the default until the declared-reference capability lands.**
+     Same entry: "Until it lands, Ruled 8's refusal holds." Nothing in Ruled 8, T1 or T4
+     changes, and SL 9647 builds Ruled 8 as written; (c) adds only the "unless declared"
+     branch, later.
+   - **A spec change first, then its own slice.** Same entry: "Consequences: a spec change
+     FIRST (02 FR-88 and 03 FR-240, dated amendments, a DM's T-texts), then its own WK-673
+     slice." This record writes no T-text for it; FR-88 and FR-240 are not amended by this
+     item.
+   - **Not a G2 blocker.** Same entry: "It is NOT a G2 blocker (the seed and goldens use risk
+     factors only), so it sits in WK-673's queue after the HIGH fixes, owner WK-673."
+   - **FD 9639's severity is not set here.** Same entry: "FD 9639's measurement still fixes
+     its own severity at its mint, independently of this."
+   The question is filed as a decided row, OQ 9630 (working id), in `docs/open-questions.md`
+   and its `02` §10 mirror, in its own PR, citing this record.
 
 ## The spec texts
 
