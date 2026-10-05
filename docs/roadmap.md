@@ -815,7 +815,7 @@ relates: [PL-1267]
 id: SL-1391
 family: slice
 title: Slice 7: FR-231's exposure weights through the portfolio frame (F-W10-2)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-03
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: d672f991bdc59008e09cf3f464cd7cffe5699553
@@ -825,7 +825,8 @@ corrected_by: []
 relates: [PL-1267, RL-1361, RL-1375]
 ```
 
-The weight limb of FR-231: the rate-table diff shows the exposure weight behind each cell, from a portfolio Dataset Version. `03` §5.1's diff route gains the portfolio parameter and the refusal `RL-1361` settles (DP-5); the portfolio frame aggregated to Σ exposure per cell key in Polars and passed as `weights`, on the 202 path too; negative tests for an absent key column, an unweighted diff that says so, and a hand-computed weighted mean; register row `FR-231 (F-W10-2)` discharged on merge. `PL-1267` Slice 7. Starts after Slice 2 closes and runs before Slice 3, one slice at a time; unblocks WK-675 Slice 5. Per the maintainer's acceptance of `PL-1267` (the 17:53:43 BST entry above), condition 1: `RL-1375` DP-1 (a2) applies, so the FD-1357 slice `SL-1377` merges first and this slice never runs concurrently with it (shared `RateTableKey`, `operations.py`, the `rate_tables` routes); its leaf plan also carries FD-1358 (the per-cell weight display) as `RL-1361` §F placed it.
+The weight limb of FR-231: the rate-table diff shows the exposure weight behind each cell, from a portfolio Dataset Version. `03` §5.1's diff route gains the portfolio parameter and the refusal `RL-1361` settles (DP-5); the portfolio frame aggregated to Σ exposure per cell key in Polars and passed as `weights`, on the 202 path too; negative tests for an absent key column, an unweighted diff that says so, and a hand-computed weighted mean; register row `FR-231 (F-W10-2)` discharged on merge. `PL-1267` Slice 7. Starts after Slice 2 closes and runs before Slice 3, one slice at a time; unblocks WK-675 Slice 5. Per the maintainer's acceptance of `PL-1267` (the 17:53:43 BST entry above), condition 1: `RL-1375` DP-1 (a2) applies, so the FD-1357 slice `SL-1377` merges first and this slice never runs concurrently with it (shared `RateTableKey`, `operations.py`, the `rate_tables` routes); its leaf plan also carries FD-1358 (the per-cell weight display) as `RL-1361` §F placed it. Leaf plan PL-1419 (minted from working id 9716; `draft`; filed 2026-10-05). **Activation needs:** the plan made `active` by a dated line; RL-1418 (minted from working id 9710; dm-1358) merged and minted, carrying the exact texts of DP-A (FD-1358: a separate paged cells route), DP-B (`03` §5.2's pure `exposure_weights`) and DP-C (`RL-1361` T11 re-anchored), which the maintainer (by delegation) decided on 2026-10-05 (12:58:22 and 13:00:09 BST); lane C (WK-675 S2) may run beside it under the maintainer's (by delegation) option (b) on `03` §5.1; the maintainer's dispatch GO and the lead's go in a separate activation PR. *(Plan cite added 2026-10-05 by the planner; working id 9716 reserved by the lead.)*
+(Activated 2026-10-05 as WK-673 Slice 7, on the maintainer's GO check, "2026-10-05 17:17:37 BST — DISPATCH GO: WK-673 Slice 7 (SL-1391 / PL-1419) on LANE A"; dispatch record DISPATCH-WK-673-SL1391-2026-10-05.)
 
 #### SL 9647 (working id) — WK-673 fix slice — the FR-240 family: model approval and compile refuse an unapproved custom objective or a control-intent factor
 
