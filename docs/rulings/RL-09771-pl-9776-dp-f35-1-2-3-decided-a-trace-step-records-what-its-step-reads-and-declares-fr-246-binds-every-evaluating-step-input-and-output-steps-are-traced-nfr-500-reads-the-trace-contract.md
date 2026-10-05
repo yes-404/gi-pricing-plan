@@ -12,7 +12,7 @@ supersedes: []
 superseded_by: ~
 corrected_by: []
 corrects: ~
-relates: [FD-1246, RL-862, RL-863, CR-1247, CR-926, RL-1329, RL-1343, RL-1309, FR-212, FR-214, FR-215, FR-240, FR-246, FR-247, FR-258, NFR-490, NFR-500, WK-1178, WK-1250]
+relates: [FD-1246, RL-862, RL-863, CR-1247, CR-926, RL-1329, RL-1343, RL-1309, FR-212, FR-214, FR-215, FR-240, FR-246, FR-247, FR-258, NFR-490, NFR-500, WK-1178, WK-1250, FD-1374, FD-1381, OQ-1373]
 ---
 
 # RL 9771 (working id) — PL 9776 DP-F35-1, DP-F35-2 and DP-F35-3 decided
@@ -23,7 +23,11 @@ FD 9773 (working id; FR-246 unenforced, draft PR #1053, head `a7d2c99d`); FD 977
 id; spec examples never validated, draft PR #1054); OQ 9774 (working id; NFR-500's
 "sampled-trace schema", draft PR #1052, head `d248f7d3`); OQ 9777 (working id; PR #1048);
 RL 9770 (working id; DP-F35-5, this ruling's sibling). DP-F35-4 (the engine mechanism) is
-**not** ruled here: it is ruled later, on Spike S1's evidence.
+**not** ruled here: it is ruled later, on Spike S1's evidence. *(2026-10-05, before mint:
+FD 9773, FD 9772 and OQ 9774 have since minted as `FD-1374`, `FD-1381` and `OQ-1373`. Every
+mention of them below, and the placeholders `{FD 9773}` and `{OQ 9774}`, resolve to those
+ids. The GO's amendments quoted under "How this was ruled" keep the working ids as
+quoted. PL 9776, OQ 9777 and RL 9770 are still working ids.)*
 
 ## How this was ruled
 
@@ -281,7 +285,7 @@ exists yet: `05`'s monitors are a later phase. If FR-307's input-drift monitor l
 | `purpose` in the contract, read by no step | Removed. A quote's purpose is the Quote Context's own field (`03:419`, read by `_check_purpose_mount`, `score.py:395`), not an algorithm input. Listing it would require every quote to repeat it in `inputs`. |
 | `mount_point: "s_ncd"` names no step | The mount is removed (`"sub_graphs": []`). A mount's port map and inlining are WK-1250 Slice 2's (`SL-1340`; `03` §4.11's header), so no mount the example could carry has a specified meaning yet. `s_ncd` is the step id **inside** §4.11's `ncd-ladder` fragment. |
 
-**T2, verbatim.** It replaces `03:233-278`, the whole fence from its ```` ```json ```` line
+**T2, verbatim.** It replaces `03:233-278` (`:240-285` at `ef5dc6e7`), the whole fence from its ```` ```json ```` line
 to its closing ```` ``` ```` line (94 lines; sha256 of the text, with a final newline,
 `6a35964d410f9b6c…`):
 
@@ -382,7 +386,7 @@ to its closing ```` ``` ```` line (94 lines; sha256 of the text, with a final ne
 ```
 ````
 
-**T3, verbatim.** It replaces the three lines `03:280-282` (the paragraph beginning
+**T3, verbatim.** It replaces the three lines `03:280-282` (`:287-289` at `ef5dc6e7`) (the paragraph beginning
 `**Invariants** — DAG acyclic`):
 
 ```text
@@ -533,7 +537,8 @@ T2 and T3 are above. The rest follow.
 
 ### T4 — the owned code, at `03:818` (Task 1A's commit)
 
-On line `03:818`, replace the one occurrence of
+On the line of `03` §5.1's owned-code list that ends with it (`03:936` at `ef5dc6e7`;
+`03:818` at `1dd5e264`), replace the one occurrence of
 `` `MODEL_REFERENCE_MODE_INCONSISTENT`, `` with:
 
 ```text
@@ -557,10 +562,10 @@ Immediately after the line `        "LADDER_CLAMP_UNPLACEABLE",` in `RATING_ERRO
 
 ### T7 — §4.5's trace example and its note (this record's mint PR)
 
-1. On line `03:472`, replace the one occurrence of `"as_at": "2026-10-20"` with
+1. On line `03:496` (`03:472` at `1dd5e264`), replace the one occurrence of `"as_at": "2026-10-20"` with
    `"effective_date": "2026-10-20"`. The `consumed` entry is keyed by the name the step reads.
    `s_area`'s `as_at` names `effective_date`.
-2. After line `03:488` (the paragraph beginning `*(Added 2026-10-01, `PL-1348` (SL-1345)`),
+2. After line `03:512` (`03:488` at `1dd5e264`) (the paragraph beginning `*(Added 2026-10-01, `PL-1348` (SL-1345)`),
    insert one blank line and then this paragraph:
 
 ```text
@@ -735,6 +740,42 @@ corrected, and the table row is annotated, above.
 byte-identical. T2's `effective_date` input step and contract entry stay. That is a valid
 and complete reading, and the correction only changes the reason given for it. The §4.4
 mismatch is recorded above for FD 9772 (working id).
+
+## Amendment, 2026-10-05: citations re-read at main `ef5dc6e7`, before mint
+
+Citation and currency update only. Nothing ruled above changes (decision-maker `dm-amend-2`,
+on the lead's brief of 2026-10-05 10:50 BST, which adopted the batch-2 triage).
+
+- **Minted working ids.** FD 9773 = `FD-1374`, FD 9772 = `FD-1381`, OQ 9774 = `OQ-1373`
+  (each record names its working id). They are resolved once, in the dated sentence under
+  *Records cited by working id*, and added to `relates:`. T9's precondition, "after OQ 9774
+  is minted", is met: both `OQ-1373` mirror rows exist at `ef5dc6e7`
+  (`docs/open-questions.md:141`, `03:1369`), and their question sentence is T9's find text.
+- **The T-section anchors re-read at `ef5dc6e7`.** The rows T1, T6 and T8 replace (FR-246,
+  FR-258, NFR-500) are byte-identical to `1dd5e264`. FR-246 is still `03:148` and FR-258
+  `03:175`; NFR-500 moved `:1204` → `:1341`. The §4.1 fence and Invariants note (T2, T3)
+  and the §4.5 example (T7) are byte-identical, offset by +7 and +24: `03:233-278` →
+  `:240-285`, `:280-282` → `:287-289`, `:472` → `:496`, `:488` → `:512`. T4's find text
+  occurs once, at `03:936` (`:818` before). T5's `"LADDER_CLAMP_UNPLACEABLE",` line is
+  `errors.py:321`. The headings and the placement table above keep their `1dd5e264`
+  lines; the bodies now give both.
+- **Read across, not changed:** RL 9767 (working id, #1055) T3 inserts a paragraph after the
+  one *ending* `and unreferenced by an `output` (FR-212).`. This record's T3 replaces that
+  paragraph, and its text keeps the sentence but not at the end. Whichever T3 is applied
+  second may not find its anchor. Raised to the lead.
+- **The *Verified first* table and the other dated sections are readings at `1dd5e264`** and
+  resolve there. Moved since, for the path-qualified cites: NFR-489/490 `03:1193-1194` →
+  `:1330-1331`; §4.4's example `:419` → `:443`, `:422-423` → `:446-447`; §4.5 `:477-478` →
+  `:501-502`; `rating.py:375-382` → `:376-383`, `:393-475` → `:394-476`;
+  `rating_versions.py:395` → `:423`, `:528-538` → `:557-567`; `api/score.py:221-227` →
+  `:265-271`; `api/models.py:1237-1261` → `:1237-1266`; `traces.py:246` → `:253`;
+  `bench-rating.py:970-973` → `:978-981`. `compile.py:611`, `score.py:781` and `:910-912`,
+  `runtime.py:646` and `:662`, `traces.py:121`, `rating_algorithms.py:76-90` and `:106`, and
+  `bench-rating.py:77` and `:488-492` are unchanged. Bare continuation cites (`:N` after a
+  path) were not each re-mapped.
+- `tree:` stays `1dd5e264`, the tree the record was verified at. `status:` stays `draft`,
+  because this record makes setting it `active` a step of its own mint PR (*What it
+  obliges*). `created:` changes at the mint.
 
 ## Appendix — the scripts, verbatim
 

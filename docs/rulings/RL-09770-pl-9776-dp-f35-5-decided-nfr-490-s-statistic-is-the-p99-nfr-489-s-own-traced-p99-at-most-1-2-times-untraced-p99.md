@@ -80,7 +80,7 @@ those, and this ruling only fixes the statistic they read.
 **Placeholders**, and only these: `{DATE}` is the date the text is applied (`YYYY-MM-DD`).
 `{RL 9770}` is this record's minted id, written `RL-<n>`.
 
-**NFR-490**, replacing the whole row at `03:1194`. It is applied in this record's mint PR,
+**NFR-490**, replacing the whole row at `03:1194` (`03:1331` at `ef5dc6e7`). It is applied in this record's mint PR,
 which PL 9776 activation need 2 checks for (`grep -cE '(Clarified|Amended) 2026-1[0-2]'` on
 NFR-490's row):
 
@@ -125,3 +125,18 @@ and 6 read p99 provisionally, and the text above is not applied.
 *(Recorded by the decision-maker on the lead's relay. This session did not read the channel
 file. The status stays `draft`; the mint PR applies the NFR-490 row and sets this record
 `active`.)*
+
+## Amendment, 2026-10-05: citations re-read at main `ef5dc6e7`, before mint
+
+Citation and currency update only. Nothing ruled above changes (decision-maker `dm-amend-2`,
+on the lead's brief of 2026-10-05 10:50 BST, which adopted the batch-2 triage).
+
+- **The NFR-490 row moved `03:1194` → `:1331`** and is byte-identical to `1dd5e264`.
+  NFR-489, which this record reads, moved `03:1193` → `:1330` and is unchanged, so the
+  premise "NFR-489 states its budget at p99" holds. The `03:1190` inside the lead's relay
+  (*How this was ruled*) is a quotation and stays as quoted.
+- **Moved code cites:** `bench-rating.py:970-973` → `:978-981`, `:990` → `:998`.
+  `bench-rating.py:77` and `:488-492` are unchanged.
+- `tree:` stays `1dd5e264`. `status:` stays `draft`, as the acceptance note above records:
+  the mint PR applies the row and sets the record `active`. PL 9776 and RL 9771 are still
+  working ids.
