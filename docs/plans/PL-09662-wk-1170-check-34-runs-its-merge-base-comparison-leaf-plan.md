@@ -78,7 +78,7 @@ and [`../findings/FD-01323-check-34-is-vacuous-on-real-trees-a-frozen-family-fil
    added to a plan already on main"*; *"(a) also amends `document-ids.md` :158's 'active on
    freeze' wording to agree with :69"*; and (b) is *"red on a body edit to an active plan, a
    closure and a draft plan, and on a blanked `corrected_by:` back-link."*
-3. **The deputy, 2026-10-05** (`to-lead.md` "2026-10-05 13:24:56 BST — Freeze-check
+3. **The maintainer (by delegation), 2026-10-05** (`to-lead.md` "2026-10-05 13:24:56 BST — Freeze-check
    findings: FD-1323 closes as a duplicate; owner stays WK-1170; fix scheduled after FD
    9707/9708"): *"It runs after the '(a) first' freeze-rule amendment and goes to the first
    build lane free after FD 9707 and FD 9708."* Three points, quoted whole:
@@ -109,6 +109,35 @@ plan before dispatch. Frozen from its first merge to main, whatever its `status:
 | A1 | **The "(a) first" freeze-rule amendment is merged.** | **Not done.** Searched with `git grep -ln "FD-1282\|FD-1323" -- docs .github scripts`: the hits are the two essays, `docs/INDEX.md`, `docs/findings/register.md` and `docs/roadmap.md` (the WK-1170 2026-09-30 line). There is no `RFC-` or `RL-` for it. `git log origin/main -- docs/process/document-ids.md` shows no change after `a380aa7a` (2026-09-29) except `0c5fcb5c` (#1103, ledger mint), and neither touches the freeze rule. No open PR carries it (`gh pr list --state open`, read 2026-10-05 13:3x BST). | **The maintainer.** `document-ids.md` §1.6, row "Reference — `process/`": *"maintainer; amendments arrive as `RFC-` + `RL-`"*. Any role drafts on instruction (RFC row). |
 | A2 | A build lane is free after the FD 9707 fix (PL 9688) and the FD 9708 fix (PL 9683), and a gate slot is granted. | Lanes per RL-1263; see **Contention** below. | The lead. |
 | A3 | DP-1 resolved by A1's ruling, and DP-2 to DP-5 confirmed or overridden. | Open. | A1's resolver; then the lead (DP-2 to DP-5). |
+
+**Pre-mint check of 2026-10-05 15:57 BST, at `origin/main` `cdaaa57345cb765f96034ce1ec2733c338f1c3cd`.**
+The table above is as filed at `99afcde2`. Since then:
+
+- **A1** is drafted but not merged: RFC 9653 + RL 9654 (working ids), draft PR #1147, branch
+  `dm-9654-freeze-reconcile`. `document-ids.md` and `findings/README.md` are unchanged at
+  `cdaaa573`, so A1 is still **not done**.
+- **A3** was answered by the `to-lead.md` entry headed *"2026-10-05 13:43:31 BST — PL 9662 / SL 9655
+  (check_freeze fix, #1146 @c35b67b7): conditions met; DP-3 = the spec; one guard on the "none"
+  switch; DP-4 gets an owner"*. Its item 3: *"DP-2 (a deleted frozen file is red) and DP-5 (a
+  standalone slice): OK at their defaults."* Its item 2 decides DP-3 inside A1 (RL 9654). Its item
+  5 places the lane: *"Its build lane follows my 13:12:56 priority rule (after the HIGH G2
+  blockers)."*
+- **Owed at this plan's dispatch, not edited here:** a dispatch-record delta carrying the entry's
+  items 1 and 2, verbatim:
+  > 1. The "none" value (visible-off): ACCEPTED for local use only, with a guard. CI must never run the check off. The workflow sets the base explicitly; a test or CI step fails if AUDIT_DOCS_FREEZE_BASE is "none" while `CI=true`; and every run prints the base sha it compared against, so a log shows what was checked. An unresolvable base stays a loud fail.
+  > 2. DP-3 (the predicate refuses only a move away from a terminal status; §1.2a and row 34 say forward-only): THE SPEC is right. The check enforces forward-only status moves. It is decided inside A1 (RL 9654), and the slice implements it with a red test for a backwards move between non-terminal states (e.g. active → draft).
+
+  Item 4's owner for DP-4 (*"ledgers' append-only rule is not mechanically checked"*, a WK-1170
+  backlog item) is A1's or the slice ledger's, not this plan's.
+- **Cites re-checked at `cdaaa573`.** Every file this plan cites is byte-unchanged since
+  `99afcde2`, except `docs/findings/register.md`. Its FD-1282 row (`:215`) gained a 2026-10-05
+  note (#1139) and no line moved. Four cites were imprecise at filing, and are corrected in place:
+  `check_freeze` ends at `:2424`; `frozen_diff_is_permitted` ends at `:2192`, with the new code
+  inserted above `_inverse_token_pattern`'s decorator (`:2195`); the `doc-id verify` block is
+  `docs.yml:120-138`, including its exit-1 tail; and Task 3 Step 1's end string is *"live over
+  whatever is in scope."* (`grep -cF` = 1). P3's window is as measured at `99afcde2`. The 8
+  first-parent merges since then modify no frozen-family file. The dry run (Task 5) re-measures
+  at its own tree.
 
 **What A1 must contain**, so that this plan can enforce it without going red on lawful work.
 Items (i) to (iv) come from the two decisions quoted above. Items (v) to (vii) are what this
@@ -145,7 +174,7 @@ plan needs to be correct.
   pre-ruling body edits measured below (PL-1299's activation among them, which the maintainer
   accepted on 2026-09-30) stay as they are, and nothing reds them.
 
-**ETA.** Planning: this draft, 2026-10-05. Build: the deputy's estimate is *"M, ≈4–6 h"*, plus
+**ETA.** Planning: this draft, 2026-10-05. Build: the maintainer's (by delegation) estimate is *"M, ≈4–6 h"*, plus
 the dry run and one gate. It starts when A1 merges and A2's lane opens. The date depends on
 A1, which has no owner action at `99afcde2`.
 
@@ -249,7 +278,7 @@ Each item can be run by a fresh reviewer. "rc" means the process exit code, read
 
 ### Measured premises (at `99afcde215c0817c5ac4db55332ab7a69e4752a0`)
 
-**P1 — the check is vacuous today.** `check_freeze` (`scripts/audit-docs.py:2382-2430`)
+**P1 — the check is vacuous today.** `check_freeze` (`scripts/audit-docs.py:2382-2424`)
 never calls the predicate. `grep -n frozen_diff_is_permitted scripts/audit-docs.py` gives the
 definition and docstring mentions only. `grep -n "sys.argv\|subprocess" scripts/audit-docs.py`
 prints nothing, so the script takes no base ref and runs no git.
@@ -277,7 +306,7 @@ refuses only a move *away from* a terminal word (`:2169-2171`). `active → draf
     17, plan 15, closure 5, ruling 4, proposal 1. The newest red is `22fe674b`
     (2026-09-30, PL-1299's activation, accepted by decision 2). **No red after the
     maintainer's 2026-09-30 14:48:52 direction.**
-  - CR-838 is red at `40739df0` (2026-09-29, FD-1241), which is the deputy's "CR-838:46".
+  - CR-838 is red at `40739df0` (2026-09-29, FD-1241), which is the maintainer's (by delegation) "CR-838:46".
 - This count is body changes, not violations: none was classified, and A1's ruling on DP-1
   decides which of them the rule allowed.
 
@@ -298,7 +327,7 @@ Kind, blocking status and resolver per RFC-937 §1.7.
 | DP-2 | Is deleting a frozen-family file a check-34 violation? | (a) Yes: `D` of a file whose base header is a frozen family fails. (b) No: another check's concern. | **(a).** §1.6's FD row says *"never removed"*. A deleted record breaks every citation to it, and P3 finds no deletion of a merged frozen file. | design unknown | no. Default (a) until A1 or the lead says otherwise. | the lead at dispatch |
 | DP-3 | The predicate refuses only a move away from a terminal status. §1.2a and §1.11 row 34 say "forward only". Which is right? | (a) The spec. The predicate gains a rank (`draft` 0, `active` 1, `closed`/`retired`/`superseded` 2) and refuses a lower rank. (b) The code. The spec is amended to "never from a terminal word". | **(a).** The spec says it twice, and decision 3 point 3 requires *"a status moved backwards"* to fail. This is a code-vs-spec question, so it is the decision-maker's to rule (`delivery-process.md` §3). The planner only recommends. | spec-vs-code | no. Default (a), which decision 3 already requires. | the decision-maker at dispatch, or A1 |
 | DP-4 | Should check 34 also enforce append-only on ledgers (body and `plans:`)? | (a) Not in this slice. Ledgers stay outside the comparison, as `_FROZEN_FAMILIES` has them today. (b) Add ledgers with an append-only body variant. | **(a).** Neither finding asks for it, and decision 3 wants a ledger append green. §1.11 row 34's *"ledgers only — an append to `plans:`"* stays unenforced. The executor lists that in the ledger as a residual, for the auditor to file or not. | scope | no. Default (a). | the lead at dispatch |
-| DP-5 | This slice and PL-1276, WK-1170's `draft` map plan, whose 2026-09-30 roadmap line says it *"takes them into its scope at activation"* | (a) A standalone slice under WK-1170, `relates: [PL-1276]`. PL-1276 is frozen and not edited. Its successor or its dispatch delta records this slice as already cut. (b) Hold this slice until PL-1276 is activated or superseded. | **(a).** The deputy's 13:24:56 entry schedules the fix on its own lane. PL-1276 is frozen (#986 was closed for editing it). | scope | no. Default (a). | the lead |
+| DP-5 | This slice and PL-1276, WK-1170's `draft` map plan, whose 2026-09-30 roadmap line says it *"takes them into its scope at activation"* | (a) A standalone slice under WK-1170, `relates: [PL-1276]`. PL-1276 is frozen and not edited. Its successor or its dispatch delta records this slice as already cut. (b) Hold this slice until PL-1276 is activated or superseded. | **(a).** The maintainer's (by delegation) 13:24:56 entry schedules the fix on its own lane. PL-1276 is frozen (#986 was closed for editing it). | scope | no. Default (a). | the lead |
 
 ## Contention (RL-1263) and write set
 
@@ -322,6 +351,11 @@ Kind, blocking status and resolver per RFC-937 §1.7.
 - The slice ledger under `docs/ledgers/`, the `SL-` row's status (the lead's), and
   `docs/INDEX.md` (regenerated).
 
+*Snapshot: open PRs at `99afcde215c0817c5ac4db55332ab7a69e4752a0`, 2026-10-05; working ids as then.*
+*Pre-mint check of 2026-10-05 15:57 BST, at `cdaaa573`:* SL-1409 has merged (`cdaaa573`, #1157);
+its row's "None" holds. PL 9688 is now draft PR #1145 (`2f3269c8`). The same grep finds only two
+`audit-docs.py` runs (its gate list and one Step 2). **None.**
+
 **Against the six slices named for this lane** (each plan read for my write set with
 `grep -E 'audit-docs\.py|\.github/workflows|tests/test_audit_docs|document-ids\.md|findings/README|_docid\.py|check_freeze'`):
 
@@ -339,7 +373,7 @@ Shared paths: `docs/roadmap.md` (different rows; the lead writes row status) and
 shared with any of the six**, so the slice may run beside any one of them.
 
 **Behaviour, not files: one cross-lane effect at go-live.** From the merge on, any PR whose
-diff edits a frozen body goes red in docs CI. That is the purpose, and the deputy's interim
+diff edits a frozen body goes red in docs CI. That is the purpose, and the maintainer's (by delegation) interim
 ACK diff becomes the check. A branch cut before the merge is judged only on its own diff, so
 there is nothing to rebase for. **Serialise with WK-1170's other `audit-docs.py` work.** The
 register rows for FD-1280 and FD-1282 say *"serialised on `audit-docs.py`"*. At `99afcde2`
@@ -619,7 +653,7 @@ def test_merge_base_not_tip_is_the_comparison_point(
     audit: types.ModuleType, repo: pathlib.Path
 ) -> None:
     """A base branch that moved on after the fork must not make its own later edits
-    look like this change's (the deputy's point 1: the merge-base, not the base tip)."""
+    look like this change's (the maintainer's (by delegation) point 1: the merge-base, not the base tip)."""
     _git(repo, "checkout", "--quiet", "-b", "pr")
     _git(repo, "checkout", "--quiet", "main")
     _write(repo, PL_PATH, PLAN.format(status="active"))
@@ -661,8 +695,8 @@ git commit -m "test(audit-docs): check 34's merge-base comparison, red first (PL
 **Files:**
 - Modify: `scripts/audit-docs.py`:
   - the imports at `:112-128` (add `import os`, `import subprocess`);
-  - `frozen_diff_is_permitted` (`:2142-2190`);
-  - the new code goes directly after it, before `_inverse_token_pattern`.
+  - `frozen_diff_is_permitted` (`:2142-2192`);
+  - the new code goes directly after it, before the `@functools.lru_cache(maxsize=8)` decorator of `_inverse_token_pattern` (`:2195-2196`).
 
 **Interfaces:**
 - Produces: `_STATUS_RANK: Final[dict[str, int]]`, `FreezeBaseError(Exception)`,
@@ -806,11 +840,11 @@ def freeze_violations(base: str) -> tuple[str, int, list[str]]:
 
 **Files:**
 - Modify: `scripts/audit-docs.py`:
-  - `check_freeze` (`:2382-2430`);
+  - `check_freeze` (`:2382-2424`);
   - the module docstring, item 34 (`:81-84`).
 
-- [ ] **Step 1:** Replace the docstring's second paragraph (*"No in-scope file is ever a
-  frozen-family instance during S1 … is live over whatever is in scope."*) with one that
+- [ ] **Step 1:** Replace the docstring's second paragraph (`:2387-2392`, from *"No in-scope file is ever a
+  frozen-family instance during S1"* to *"live over whatever is in scope."*) with one that
   says three things. The merge-base comparison runs on every invocation against
   `AUDIT_DOCS_FREEZE_BASE` (default `origin/main`; `none` turns it off, visibly). It covers
   the files the change under audit modifies, renames or deletes. The pair cross-check runs
@@ -870,7 +904,7 @@ def freeze_violations(base: str) -> tuple[str, int, list[str]]:
   `fetch-depth: 0`. At `99afcde2`, those are `docs.yml:45` and `python.yml:144`. A new runner
   without it is a stop: report it to the lead.
 - [ ] **Step 2:** Replace the step with the version below. Keep the comment block, and add a
-  three-line comment naming the per-event ref and the deputy's point 1. Pass the value
+  three-line comment naming the per-event ref and the maintainer's (by delegation) point 1. Pass the value
   through `env:`, never inline in `run:`. The value is a SHA either way, and `env:` is the
   hardening pattern the 2026-09-28 security review set for workflow expressions.
 
@@ -913,7 +947,7 @@ def freeze_violations(base: str) -> tuple[str, int, list[str]]:
 - [ ] **Step 2:** The targets:
   - `git log --first-parent --format=%H -20 origin/main` at the slice's base;
   - #986's head;
-  - `40739df0` (CR-838's body edit, the deputy's "CR-838:46").
+  - `40739df0` (CR-838's body edit, the maintainer's (by delegation) "CR-838:46").
 - [ ] **Step 3:** In the ledger, record per target: the SHA, the PR number, the compared
   count and every message. Expected: #986 gives one message for PL-1276 (`the body
   changed`), and `40739df0` gives one for CR-838. For the 20, P3 measured 0 reds over
@@ -924,7 +958,7 @@ def freeze_violations(base: str) -> tuple[str, int, list[str]]:
 ### Task 6: `migrate --verify` is unchanged
 
 - [ ] **Step 1:** In the granted gate slot, never during another lane's gate (`dev-commands`),
-  run the docs.yml `doc-id verify` command block verbatim (`docs.yml:120-133`). Run it once on
+  run the docs.yml `doc-id verify` command block verbatim (`docs.yml:120-138`). Run it once on
   the slice's base and once on the slice head, with `RUNNER_TEMP` set to two scratch
   directories. Save both outputs and `diff` them.
 - [ ] **Step 2:** If the diff is empty, record that and stop: the snapshots run their own
@@ -961,7 +995,7 @@ def freeze_violations(base: str) -> tuple[str, int, list[str]]:
 
 Executor → slice audit (the auditor, against this plan's Acceptance Standard and the range
 `origin/main...<slice branch>`) → the lead's merge. After the merge, the auditor closes FD-1282
-in place, citing the PR. FD-1323 closes as a duplicate at the next batch (the deputy's
+in place, citing the PR. FD-1323 closes as a duplicate at the next batch (the maintainer's (by delegation)
 13:24:56 item (b)), and nothing in this slice writes it.
 
 ## Self-review
