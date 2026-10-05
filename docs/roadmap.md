@@ -1436,6 +1436,24 @@ relates: [FD-1356, RL-1301, PL-1306, SL-1256, RL-1407, PL-1408]
 **Closed 2026-10-05** on the slice audit (LG-1417 §"Closing note"; local working copy: `handover/audit-sl1409-2026-10-05.md`) and its re-check, at the mint of ledger `LG-1417` (the executor's closing acts, `executor.md` mint step; `document-ids.md` §1.6).
 (Activated 2026-10-05 as the WK-1178 FD-1356 fix slice, on the maintainer's GO check, "2026-10-05 09:44:39 BST — DISPATCH GO: FD-1356 fix (SL-1409 / PL-1408) on lane B, option (b); executor-1409 starts once the `__all__` registry amendment merges (or once WK-690 S3 merges, if that comes first)"; dispatch record DISPATCH-WK-1178-SL1409-2026-10-04.)
 
+#### WK-1178 fix slice — NFR-498 Audit Events on rate table version and rating algorithm writes
+
+```yaml
+id: SL-9515
+family: slice
+title: WK-1178 fix slice — NFR-498 Audit Events on rate table version and rating algorithm writes
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [RL-1263, CR-1212, SL-1391]
+```
+
+The FD 9529 fix (working id; MEDIUM; owner WK-1178), on the maintainer's (by delegation) entry "2026-10-05 17:45:06 BST — FD 9529 (NFR-498, #1201 @be1fba43): MEDIUM and carry-forward to WK-1178 accepted, with a P2 landing bound; CR-1212 correcting RL yes; A-2 does not absorb". `seed_from_model`, `import_confirmed` and `bulk_operation` (`backend/src/app/platform/rate_tables.py:96`, `:419`, `:796`, all persisting through `_persist_new_version`, `:670`) and `create_algorithm` (`platform/rating_algorithms.py:94`) each emit one Audit Event with before and after state, in the write's transaction (`03` NFR-498, `06` FR-368 and R2). Each class is red first, with `before` and `after` asserted by value. The sub-graph create and version paths (`api/sub_graphs.py`) are read first and ruled in or out with a reason (DP-5). **BOUND: merged before the P2 code freeze, Wed 4 Nov 2026** (item 1 of that entry; the P2 phase closure record lists it). Leaf plan PL 9514 (working id; `draft`). **Activation needs:** FD 9529 minted; RL 9519 (working id; corrects `CR-1212`) minted; DP-1 to DP-5 ruled by an `RL-`, with T-1's `03` text if DP-4 is (a); the emergency slice (SL 9561) merged; serialised against A-2 (PL 9597) on `create_algorithm`, A-2 first unless the lead orders otherwise, named both ways; the lead's GO; active by a dated line in a separate activation PR. Filed under working ids 9515 (this row) and 9514 (the plan), reserved by the lead; both are minted at the plan PR's merge turn.
+
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
