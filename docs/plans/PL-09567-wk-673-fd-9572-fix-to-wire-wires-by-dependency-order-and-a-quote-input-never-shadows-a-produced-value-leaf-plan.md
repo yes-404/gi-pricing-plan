@@ -74,6 +74,15 @@ Each item is a command a fresh reviewer can run from the worktree root, after `u
 7. The full gate (`CLAUDE.md` §11, both halves) passes on the slice head, run by the
    gate-runner inside the one gate slot, and the ledger names the tree it ran on.
 8. `python3 scripts/audit-docs.py` fails only on check 31 until the mint, and is clean after.
+9. One red test **per reachable path** of fix (c), each recorded failing at the base commit
+   for the cause Task 1 Step 2 names, and passing at the head (the 17:15:09 entry):
+   - `/score`: `backend/tests/test_score.py::test_a_quote_input_naming_a_produced_value_is_refused_on_score`
+   - `/score/compare`: `backend/tests/test_score_compare.py::test_a_context_input_naming_a_produced_value_is_a_422_on_compare`
+   - trace reproduction: `backend/tests/test_score.py::test_a_pending_trace_whose_context_names_a_produced_value_is_not_reproduced_as_a_price`
+   - batch: `backend/tests/test_scoring_handlers.py::test_a_dataset_column_named_like_a_produced_value_is_refused_per_row`
+
+   Run: `uv run pytest <each file>::<each test> -q`, one file at a time, outside a gate window.
+   *(Item added 2026-10-05, after 17:23:51 BST, on the 17:15:09 entry; the lead's order.)*
 
 ## Global Constraints
 
@@ -117,6 +126,16 @@ table) edits `_decision_table_node`, the `runtime.py` docstring and `_as_at_wind
 `runtime.py`, never `to_wire`, so the ruling's fold condition is not met. PL 9688 also says of
 an input carrying a produced or stamped name: "Whether an input may carry a stamped name at all
 is FD-1374's class … **This plan does not decide it.**" Folding (c) in would reverse that.
+
+**Added 2026-10-05, after 17:23:51 BST: "2026-10-05 17:15:09 BST — FD 9572 exposure: NONE
+today; fix (c) placement confirmed"**, the exposure scan and the per-path reds, quoted verbatim:
+
+> auditor-towire, read-only at 137bc817: gipricing holds 1 rating_algorithms row (demo-fixture-motor@1, list = topological); a static scan of 28 literal step lists (20 evaluable) plus a dynamic run of every named builder found none misordered (2 deliberate cycle fixtures); no step list in JSON/YAML/SQL/TS. Caveat: inline-assembled test-body algorithms not run. So no live mispricing; the interim hold stays until the fix merges. Extra-key reach: REACHABLE on /score (api/score.py:350-375), /score/compare (:447), trace reproduction (trace_handlers.py:98) and BATCH (every dataset column but four becomes ctx.inputs, set by the dataset owner); SAFE on dislocation (analysis.py _score_pass, RL-1394). The {**ctx.inputs} merge sits at score.py ~:911 (score_one) and ~:1067 (_score_context_sync), so fix (c) goes in that shared code and covers all four paths, with a red test per path (score, compare, trace reproduce, batch). #1183 final at 89ad846d.
+
+So: no stored algorithm is misordered today (auditor-towire's scan at `137bc817`), and the
+interim hold stays until this slice merges. Fix (c) sits where Task 3 already puts it, the two
+context builders in `score.py`, and Task 1 Step 1c adds the four per-path reds.
+Dislocation is left as it is, because it already selects declared inputs only (RL-1394).
 
 ## Verified facts (at `4d3be141`)
 
@@ -205,6 +224,9 @@ branch at the head named in its header cell, on 2026-10-05.
 | `packages/pricing-core/src/pricing_core/rating/runtime.py` | added: `_dependency_order`, `import heapq`, the `GraphCycleError` import; edited: `to_wire` (`:453-499`: the iteration order and the comment at `:463-473`) | `_decision_table_node`, module docstring, `_as_at_window` | — | reads `_model_call_handler` only | **`to_wire`** (reference edges, `outputNode` wiring), `_decision_table_node`, `_constraint_node`, docstring rule 3 | **serialise with PL 9776** (the same existing function). Name-disjoint with PL 9688 |
 | `packages/pricing-core/src/pricing_core/rating/score.py` | added: `_check_no_shadowed_produced_names`; edited: `score_one` (`:876`, one call), `_score_context_sync` (`:1045`, one call) | added `_check_as_at_values`; **`score_one` and `_score_context_sync`**, one call each | — | — | — | **serialise with PL 9688** (the same existing functions). This slice goes first (the 17:10:08 tie-break) |
 | `packages/pricing-core/tests/test_rating_wire_order.py` | added (new module) | — | — | — | — | none |
+| `backend/tests/test_score.py` | added (appended, no existing test edited): the `/score` and trace-reproduction reds | none. PL 9688 adds its own module `backend/tests/test_score_as_at.py` and does not edit this file | — | — | — | append-only; name-disjoint |
+| `backend/tests/test_score_compare.py` | added (appended): the `/score/compare` red | — | — | — | — | append-only |
+| `backend/tests/test_scoring_handlers.py` | added (appended): the batch red | — | — | — | — | append-only |
 | `packages/pricing-core/tests/test_quote_input_raise_sites.py` | edited: `_INPUT_FREE` (`:62-79`, one entry added) | one entry added | — | — | — | registry (append); the second to merge re-gates |
 | `docs/specs/03-rating-engine.md` | DP-4 (a) only: the FR-212 row (`:81`) and the FR-213 row (`:82`), a dated amendment each | the FR-221 row (`:107`) | the FR-231 row, §4.2, §5.1, §5.2 | adjacent `03` hunks (its T-texts) | — | shared file, distinct rows: the dispatch record names the path, the rows, and a trial `git merge-tree` rc between the heads |
 | `docs/roadmap.md` | added: the SL 9568 row (plan PR only) | adds the SL 9685 row at the same place | — | adds its SL row | — | registry (append, distinct rows); the second to merge re-reads |
@@ -441,6 +463,134 @@ async def test_the_bundle_hash_is_unchanged() -> None:
     FD 9572's verbatim output for the topological run. If it differs at the base commit, STOP:
     the essay's premise moved, and the lead hears it before any code changes.
 
+- [ ] **Step 1c: The four per-path reds (the 17:15:09 entry).** Each is appended to the
+  module that already holds that path's fixtures; none edits an existing test. The algorithm
+  is `_minimal_algorithm` (`backend/tests/test_rating_version_compile.py:50`): its `s_expr`
+  produces `payable`, and its one declared input is `premium_in`. Its list is topological, so
+  these four are reds for (c) alone. Before relying on a sample, check each fixture and
+  helper name against the shipped module (`docs/plans/README.md` convention 1): `compiled_version`,
+  `scoring_headers`, `_quote`, `SCORED_REF`, `SCORE_URL`, `_rows_for`, `_trace_produce_jobs`,
+  `_set_trace_sample_rate`, `execute_job` (`test_score.py`); `two_versions`, `reader_headers`,
+  `_body`, `COMPARE_URL` (`test_score_compare.py`); `_compiled_version`, `_scoring_frame`,
+  `_dataset_version`, `_parameters`, `_run_handler`, `_summary` (`test_scoring_handlers.py`).
+  Add any missing import (`sqlalchemy.update`, `JobStatus`, `ScoringTraceRow`) the way the
+  module's neighbours import it.
+
+  In `backend/tests/test_score.py`:
+
+```python
+@pytest.mark.req("FR-213")
+def test_a_quote_input_naming_a_produced_value_is_refused_on_score(
+    client: TestClient, scoring_headers: dict[str, str], compiled_version: Any
+) -> None:
+    """FD 9572 (c), `/score` (`api/score.py:350-375`): `s_expr` produces `payable`, so an
+    input named `payable` is refused, by name, and never relayed to the engine."""
+    body = _quote({"rating_version_ref": SCORED_REF})
+    body["inputs"]["payable"] = 1
+    response = client.post(SCORE_URL, json=body, headers=scoring_headers)
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert "'payable'" in response.json()["detail"]
+
+
+@pytest.mark.req("FR-213")
+def test_a_pending_trace_whose_context_names_a_produced_value_is_not_reproduced_as_a_price(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    database: Any,
+    blob_store: Any,
+    workspace_id: Any,
+) -> None:
+    """FD 9572 (c), trace reproduction (`trace_handlers.py:98`). After the fix `/score`
+    refuses such a context before any trace is pended, so the case is a row pended before
+    the fix: a served quote's pending context with `payable` planted in its inputs."""
+    register_trace_handlers()
+    _run(_set_trace_sample_rate(database, workspace_id, 1.0))
+    served = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
+    )
+    assert served.status_code == 200, served.text
+    (row,) = _run(_rows_for(database, workspace_id))
+    (job,) = _run(_trace_produce_jobs(database, workspace_id))
+    planted = dict(row.pending_quote_context)
+    planted["inputs"] = {**planted["inputs"], "payable": 1}
+
+    async def _plant_and_run() -> tuple[JobStatus, ScoringTraceRow]:
+        async with database.unit_of_work() as session:
+            await session.execute(
+                update(ScoringTraceRow)
+                .where(ScoringTraceRow.id == row.id)
+                .values(pending_quote_context=planted)
+            )
+        status = await execute_job(database, job.id, blob_store)
+        async with database.session() as session:
+            after = await session.get(ScoringTraceRow, row.id)
+        assert after is not None
+        return status, after
+
+    status, after = _run(_plant_and_run())
+    assert status is JobStatus.FAILED
+    assert after.status == "pending"
+```
+
+  The trace assert states the behaviour this plan expects: the Job fails on the refusal and
+  completes nothing. The ruling does not fix the handler's response to a refusal. If the shipped
+  `execute_job` records the failure differently, mirror the shipped form and record it in the
+  ledger. What must hold is that no completed trace carries a price built on the planted key.
+  Also read the failed Job's recorded error the way `test_score.py`'s neighbours read a Job
+  row, and assert it carries `INPUT_CONTRACT_VIOLATION`.
+
+  In `backend/tests/test_score_compare.py`:
+
+```python
+@pytest.mark.req("FR-213")
+def test_a_context_input_naming_a_produced_value_is_a_422_on_compare(
+    client: TestClient, reader_headers: dict[str, str], two_versions: None
+) -> None:
+    """FD 9572 (c), `/score/compare` (`api/score.py:447`)."""
+    body = _body()
+    body["context"]["inputs"]["payable"] = 1
+    response = client.post(COMPARE_URL, json=body, headers=reader_headers)
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert "'payable'" in response.json()["detail"]
+```
+
+  Check that both of `two_versions`' algorithms still produce `payable` (`_with_adjustment`
+  keeps `s_expr`). If one does not, plant a name that both produce, and say which in the ledger.
+
+  In `backend/tests/test_scoring_handlers.py`:
+
+```python
+@pytest.mark.req("FR-213")
+async def test_a_dataset_column_named_like_a_produced_value_is_refused_per_row(
+    api_client: TestClient, headers: dict[str, str], database: Database, blob_store: BlobStore,
+    workspace_id: UUID, principal: Principal, grant: Any,
+) -> None:
+    """FD 9572 (c), batch (`scoring_handlers` → `_score_context_sync`): every dataset column
+    but the reserved four becomes `ctx.inputs`, so a column named `payable` is refused on
+    every row. Per-row isolation (FR-255) keeps the Job itself running."""
+    await _compiled_version(
+        api_client, headers, database, blob_store, workspace_id, principal, grant
+    )
+    frame = _scoring_frame(4).with_columns(pl.lit(1).alias("payable"))
+    dataset_version_id = await _dataset_version(
+        database, blob_store, workspace_id, principal, frame
+    )
+    result, _ = await _run_handler(
+        database, blob_store, workspace_id, principal, _parameters(dataset_version_id)
+    )
+    summary = await _summary(database, blob_store, result)
+    ref_result = summary["results"][0]
+    assert ref_result["error_counts"] == {"INPUT_CONTRACT_VIOLATION": 4}
+    assert ref_result["outcome_counts"]["error"] == 4
+    assert "payable" in ref_result["error_samples"]["INPUT_CONTRACT_VIOLATION"][0]
+```
+
+  These need the database stack. Run each one alone. If the stack is down, record that and do
+  not substitute a mock: the path is the thing under test.
+
 - [ ] **Step 2: Record the hash, then run the module at the base commit and read each
   failure's cause.**
 
@@ -471,13 +621,21 @@ OMP_NUM_THREADS=1 nice uv run pytest packages/pricing-core/tests/test_rating_wir
   | `…_is_refused_in_a_batch` | FAIL | `assert 'quoted' == 'error'` |
   | `…_wires_exactly_as_listed` | PASS | — (a pin; Task 2 Step 5 proves it can fail) |
   | `…_bundle_hash_is_unchanged` | PASS | — (a pin; Task 2 Step 5 proves it can fail) |
+  | `…_refused_on_score` (backend) | FAIL | `assert 200 == 422` |
+  | `…_not_reproduced_as_a_price` (backend) | FAIL | `JobStatus.SUCCEEDED is JobStatus.FAILED` |
+  | `…_is_a_422_on_compare` (backend) | FAIL | `assert 200 == 422` |
+  | `…_refused_per_row` (backend) | FAIL | `assert {} == {'INPUT_CONTRACT_VIOLATION': 4}`, every row quoted |
+
+  Run the four backend reds one file at a time:
+  `OMP_NUM_THREADS=1 nice uv run pytest backend/tests/<file>::<test> -q`.
 
   Record the run's tail verbatim in the ledger, with the commit.
 
 - [ ] **Step 3: Commit.**
 
 ```bash
-git add packages/pricing-core/tests/test_rating_wire_order.py
+git add packages/pricing-core/tests/test_rating_wire_order.py backend/tests/test_score.py \
+  backend/tests/test_score_compare.py backend/tests/test_scoring_handlers.py
 git commit -m "test(rating): FD 9572 reds — wiring by list order, a clamp bypassed, a shadowing input"
 ```
 
@@ -673,7 +831,8 @@ def test_a_declared_input_re_produced_in_place_is_not_a_shadow() -> None:
 - [ ] **Step 5: Run.** `OMP_NUM_THREADS=1 nice uv run pytest
   packages/pricing-core/tests/test_rating_wire_order.py
   packages/pricing-core/tests/test_quote_input_raise_sites.py
-  packages/pricing-core/tests/test_rating_score.py -q`. Expected: all PASS. Then remove the
+  packages/pricing-core/tests/test_rating_score.py -q`, then the four backend reds of Task 1
+  Step 1c one file at a time. Expected: all PASS. Then remove the
   call from `score_one` only, run `test_rating_wire_order.py`, and record that
   `…_is_refused[False]` and `[True]` FAIL with `DID NOT RAISE` while the batch case passes;
   restore it. The same for `_score_context_sync`, the batch case failing alone. `git diff`
@@ -700,15 +859,19 @@ git commit -m "fix(rating): refuse a quote input that names a produced value (FD
   ledger names the tree, the per-command exit codes, and the failing excerpt if any.
 - [ ] **Step 3:** `uv run python scripts/req-coverage.py` shows FR-212 and FR-213 carrying the
   new tests.
-- [ ] **Step 4:** The ledger records, verbatim: Task 1 Step 2's base-commit run, Task 2
-  Step 5's two broken-pin runs, Task 3 Step 5's two removed-call runs, and the gate table.
+- [ ] **Step 4:** The ledger records, verbatim: Task 1 Step 2's base-commit run (the four
+  backend reds included), Task 2 Step 5's two broken-pin runs, Task 3 Step 5's two
+  removed-call runs, the four backend reds passing at the head, and the gate table.
 - [ ] **Step 5:** FD 9572's discharge line ("the fix PR merging with all three tests red first
   on the unfixed tree") is answered in the ledger by the commit of Task 1 Step 2's run.
 
 ## What this plan does not cover
 
 - **The exposure scan** of stored algorithms for a misordered list (the 17:10:08 entry, item
-  3) is an auditor's, read-only, separate from this slice.
+  3) was an auditor's, read-only, separate from this slice. It found none misordered (the
+  17:15:09 entry, quoted under "Sources").
+- **Dislocation** (`analysis.py` `_score_pass`) is not changed: it selects declared inputs
+  only (RL-1394; the 17:15:09 entry).
 - **The interim approval guard** (item 4: no new Rating Version approved or deployed in
   `gipricing` unless its list order equals its topological order) is a manual check the team
   performs until this slice merges. This slice removes the need for it; it does not build it.
