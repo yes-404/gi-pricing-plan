@@ -132,3 +132,28 @@ def test_a_held_port_is_refused_before_anything_starts() -> None:
 
     # ...and the negative: the same port, once released, is not refused.
     demo_script.require_free(port, step="the API")
+
+
+@pytest.mark.req("FR-50")
+def test_the_rule_set_pre_flight_runs_after_the_seed_record_and_before_the_api_starts() -> None:
+    """RL-1407 condition 2 (Acceptance 26): on every path, `--skip-seed` included.
+
+    The orchestration is not run, as above; the source order is what is asserted. The
+    pre-flight reads the database, so it cannot precede the migrations step, and it must
+    precede the API command so a workspace with an unrunnable rule set is refused before
+    anything is served.
+    """
+    import inspect
+
+    source = inspect.getsource(demo_script.demo)
+    step = '"pre-flight: the demo workspace\'s rule sets are runnable"'
+    assert "check-rule-sets-runnable.py" in source
+    assert step in source
+    record = source.index("record = read_seed_record()")
+    pre_flight = source.index("check-rule-sets-runnable.py")
+    api = source.index('"uvicorn"')
+    assert record < pre_flight < api
+    assert source.index('"migrations"') < pre_flight
+    # Not inside the `if not skip_seed:` block: the seed is skipped on `--skip-seed`.
+    assert source.index("if not skip_seed:") < record
+    assert source[record:pre_flight].count("if not skip_seed") == 0
