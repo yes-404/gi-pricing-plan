@@ -17,7 +17,7 @@ relates: [WK-1178, FR-240, FR-88, FR-230, FR-20]
 
 ## Finding
 
-**Severity HIGH (the deputy's, 2026-10-05 13:20:26 BST, decisions 22–27; final at the mint). Proposed owner WK-1178 (provisional); deadline: none set by the deputy.** FR-240 requires that bundle compilation validates "no `control`-intent
+**Severity HIGH (the deputy's, 2026-10-05 13:20:26 BST, decisions 22–27; final at the mint). Owner WK-673 (the deputy's ruling, 2026-10-05 13:38:03 BST, "Finding batch 1: FD 9697's owner = WK-673; FD 9659's limb-3 severity depends on one fact": the fix is in `compile_bundle` against FR-240, which WK-673 owns); deadline: none set by the deputy.** FR-240 requires that bundle compilation validates "no `control`-intent
 factor in a rateable path (`02` FR-88)", and `compile_bundle` does not. A rate table built from a `control` factor is
 accepted and compiles, so a price can depend on a factor the platform declared must not price. That is a mispricing
 class, not a test gap (the deputy's reasoning, 13:20:26 BST).
