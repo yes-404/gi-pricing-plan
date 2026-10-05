@@ -134,6 +134,16 @@ relates: [FR-212, FR-213, FR-246, FR-255, FD-1374]
 >
 > 2. #1195 RL 9562, T2: your RECOMMENDATION is adopted. RL 9562 owns T1 and T2's text and mints right after batch 1, AHEAD of PL 9560. PL 9560 applies T2 (FR-213 :82) in the same commit as guard (c), citing RL 9562, with no paraphrase. T1 stays with PL 9567 / SL 9568. DP-3 stays OPEN in RL 9562 and is named as open. The mint ACK for #1195 follows my checklist at its mint head (it is not given by this line).
 
+### 2026-10-05 17:39:08 BST (items 1 and 2)
+
+> ## 2026-10-05 17:39:08 BST — DP-R1 (PL 9567 #1193 @dd254b6d): (i) the ordered chain, with TWO conditions; PL 9776 re-plans after it; NFR-498 auditor yes
+>
+> 1. DP-R1: (i) ADOPTED. It is the only option that removes the merge rather than relying on it. (ii) is subsumed by (c), and (iii) rests on an unread zen merge order.
+>    CONDITION A, hash scope stated, not glossed. Checked at origin/main: compile.py:635-641 hashes the JdmGraph from to_jdm (bundle_hash(graph, pins)); to_wire runs at SCORE time (runtime.py). So "hash unchanged" also means EVERY ALREADY-COMPILED bundle executes the NEW wiring under the SAME content_hash. That is the intended effect here (a correctness root), but it is a reproducibility fact: a replay of a pre-fix quote can differ where FD 9572's shadow bit. The PL states it in its own words, and FD 9572's mint text or RL records it.
+>    CONDITION B, proof that nothing else moves: a red-first Task 2b as you state (777 → 5250 at the engine), PLUS a golden replay: every committed algorithm and fixture (fremtpl2-demo@1, the bench algorithms, golden.py) scores IDENTICALLY before and after the chain, with the case set named in the PL. Any difference outside the FD 9572 fixtures is a STOP for me, as is the edge-set assertion turning red.
+>    The model_call handler passing the context through (runtime.py:581) is in scope; a hand-off line names it for A-2/A-3, which build on that handler.
+> 2. PL 9776 (#1051, unminted): (i) lands FIRST. PL 9776 re-plans its passThrough-off against the chain pre-mint, because it is an optimisation and (i) is a correctness root. Both plans name the dependency.
+
 ## Locators — read at `4d3be141`
 
 | Locator | Where | What it holds |
@@ -255,7 +265,8 @@ row's last cell at `4d3be141`, with `grep -cF` = 1 on `docs/specs/03-rating-engi
 
 ## Acceptance — the violation that must become detectable
 
-Each is red first in the slice that delivers fix (c) (1–3) or applies the text (4):
+Each is red first in the slice that delivers fix (c) (1–3) or applies the text (4); 5 and 6
+are DP-R1's two conditions (Amendment N2), for PL 9567 / SL 9568:
 1. *A shadowing key is refused with a code outside `_PER_QUOTE_CODES`.* The refusal test
    asserts `INPUT_CONTRACT_VIOLATION`, naming the key, on `score_one` and on
    `_score_context_sync`; a `VALIDATION_FAILED` (a 500 at the API) fails it.
@@ -267,6 +278,19 @@ Each is red first in the slice that delivers fix (c) (1–3) or applies the text
 4. *T1 or T2 differs from this record.* `grep -cF` of each replacement line above on
    `docs/specs/03-rating-engine.md` is 1 after the commit that applies it: T2's at SL 9561's
    guard (c) commit, T1's at SL 9568's.
+
+5. *The hash scope is glossed* (Condition A). PL 9567 at its mint head states, in its own
+   words, that `content_hash = bundle_hash(graph, pins)` (`compile.py:641`) hashes the graph
+   `to_jdm` builds (`:634`), while `to_wire` runs when a bundle is loaded for scoring
+   (`runtime.py:666`, in `load_bundle` at `:646`), so every already-compiled bundle executes the
+   new wiring under the same `content_hash`, and a replay of a pre-fix quote can differ where
+   FD 9572's shadow bit. A plan that says only "hash unchanged" fails this item.
+6. *Something other than FD 9572 moves* (Condition B). Task 2b is red first (777 at the base
+   commit, 5250 at the engine after the chain), and a golden replay over the case set PL 9567
+   names scores every committed algorithm and fixture (fremtpl2-demo@1, the bench algorithms,
+   `golden.py`) identically before and after the chain. Any difference outside the FD 9572
+   fixtures, or the edge-set assertion turning red, is a STOP for the maintainer, not a fix
+   for the executor.
 
 ## The premise — MEASURED: false
 
@@ -300,6 +324,52 @@ by PL 9560 / SL 9561 in the same commit as guard (c). This record mints right af
 before PL 9560, and PL 9560 cites it. The emergency slice is guard (c) ALONE (the 17:27:55
 entry, item 1). DP-3 stays open. The edits are in §"How this was ruled", §DP-4, §"What it
 obliges", §"Acceptance" item 4 and §"The premise"; the T1 and T2 texts are unchanged.
+
+## Amendment N2, 2026-10-05 — DP-R1 ruled (pre-mint)
+
+Written 2026-10-05 17:40 BST (by `date`), by the decision-maker session `dm-9562c`, on the
+lead's order. PL 9567 (#1193, head `9af36bdc24c53da82cfa9d15d761c0995e6ad3da` when read),
+§"Delta 2", set out DP-R1, the mechanism for (R-b), the sink fan-in (the 17:27:55 BST entry,
+item 2): (i) one ordered path, (ii) strip produced names from the relayed context, (iii) an
+ordered merge at the sink. The record as filed did not name DP-R1. The maintainer, by
+delegation, ruled it in the 17:39:08 BST entry, items 1 and 2 (quoted in full under "The
+maintainer's entries" above):
+
+> 1. DP-R1: (i) ADOPTED. It is the only option that removes the merge rather than relying on it. (ii) is subsumed by (c), and (iii) rests on an unread zen merge order.
+
+So:
+
+- **DP-R1 = (i), the ordered chain.** `to_wire` chains the interior steps over
+  `_dependency_order` (PL 9567 Task 2), so no node has more than one incoming edge and there is
+  no fan-in at the sink.
+- **Condition A, the hash scope.** Read at `origin/main`
+  `4d3be1414ad4dacdaa0c14ef49fb21853adbaed6`: `compile.py:634` is `graph = to_jdm(algorithm)`,
+  and `:635-641` build the `Bundle` with `content_hash=bundle_hash(graph, pins)` at `:641`.
+  `to_wire` is called only at `runtime.py:666`, in `load_bundle` (`:646`), when a bundle is
+  loaded for scoring (`git grep -n "to_wire(" origin/main -- packages backend`, tests and the
+  definition excluded: one hit). So the chain leaves every `content_hash` unchanged, and **every
+  already-compiled bundle executes the new wiring under the same `content_hash`**: a replay of
+  a pre-fix quote can differ where FD 9572's shadow bit. This is the intended effect (a
+  correctness root), and this record states it as a reproducibility fact. PL 9567 states it in
+  its own words (Acceptance item 5).
+- **Condition B, nothing else moves.** Task 2b red first (777 → 5250 at the engine), plus a
+  golden replay: every committed algorithm and fixture (fremtpl2-demo@1, the bench algorithms,
+  `golden.py`) scores identically before and after the chain, over the case set PL 9567 names.
+  Any difference outside the FD 9572 fixtures is a STOP for the maintainer, as is the edge-set
+  assertion turning red (Acceptance item 6).
+- **The `model_call` handler is in scope.** At `4d3be141`, `_model_call_handler`
+  (`runtime.py:512`) returns only the produced names (`:581`,
+  `return {"output": {str(name): value for name in _as_list(step.produces)}}`), which a chain
+  would turn into a dropped context. Making it pass the context through is PL 9567's, and the
+  plan carries a hand-off line naming it for A-2 and A-3, which build on that handler.
+- **PL 9776 (#1051, unminted) follows.** (i) lands first; PL 9776 re-plans its
+  `passThrough`-off against the chain before its mint, because it is an optimisation and (i) is
+  a correctness root. Both plans name the dependency.
+- **DP-3 stays open.** The 17:39:08 entry does not rule it.
+
+The edits are this section, the 17:39:08 BST quote, and §"Acceptance" (its lead sentence and
+items 5 and 6). No sentence of the record as filed called DP-R1 open or undecided, so none
+changed for that. T1, T2 and DP-1, DP-2 and DP-4 are unchanged.
 
 ## What this record does not decide
 
