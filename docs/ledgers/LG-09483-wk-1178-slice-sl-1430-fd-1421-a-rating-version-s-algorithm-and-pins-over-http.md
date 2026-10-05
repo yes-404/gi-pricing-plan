@@ -138,6 +138,23 @@ that the seeded version's `rating_version.created` event carries the algorithm r
 event's `after` content is asserted at the route by `test_the_creation_event_records_the_declared_pins`, and the seed calls
 the same service function.
 
+### Pre-gate: the F83 exemption line pair, and the seed-data run
+
+**`scripts/audit-docs.py` (outside PL-1429's write set; ruled).** `audit-docs` checks 30 and 35 failed on
+`docs/contracts/schemas/generated/rating-version-create.schema.json` ("not in the F83 exemption register"). The executor
+stopped and reported. The maintainer (by delegation) ruled, in the `to-lead.md` entry after 23:04 BST that the lead relayed (its
+exact header is not in the executor's message; the lead supplies it for the quote), to add ONE line pair in PL-1392's form and
+nothing else in that file: the comment `# 2026-10-05, PL-1429 (WK-1178 SL-1430)` and the path line, next to PL-1392's
+entries. The diff of that file against `origin/main` is exactly those two added lines. After it, `audit-docs` fails only
+check 32 (this ledger's own working id is not in `docs/INDEX.md`) and check 39 (`docs/INDEX.md` stale), both cleared by
+`doc-index` in Task 6; checks 30 and 35 are green.
+
+**The Acceptance 13 seed-data run (ruled allowed).** Command: copy the shared checkout's `examples/fremtpl2/data/` into this
+worktree's `examples/fremtpl2/data/`, then `OMP_NUM_THREADS=1 nice -n 19 uv run pytest -q examples/fremtpl2/test_seed.py`, one file,
+outside any held gate, both slots checked first. Provenance: freMTPL2, the public dataset `examples/` carries; the directory is
+ignored by `.gitignore:61` and is not committed. Result: `8 passed in 26.39s`. **CI cannot run it**: CI has no copy of the data,
+so `test_seed.py:136` skips there, and the seed path's evidence is this local run only.
+
 ## PRs
 
 None opened yet. The branch `sl-1430-fd-1421-rating-version-algorithm-and-pins` is pushed; the PR is opened as a draft and is not merged by the executor.
