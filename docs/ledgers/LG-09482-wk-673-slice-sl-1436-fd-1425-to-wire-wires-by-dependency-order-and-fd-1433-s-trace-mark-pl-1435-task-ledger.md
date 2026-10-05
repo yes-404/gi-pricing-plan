@@ -86,3 +86,40 @@ bench-score-batch and bench-compiled-for (20 each), score-fixture and score-fixt
 `score` classes at base: quoted 809, clamp 91, declined 53, error 244. **Unproven class:** `score-fixture-glm` errors
 on every context with `MODEL_CALL_FAILED` (a GLM pin has no factors in the bundle, by design at the base), so that
 case proves only that the error is unchanged.
+
+### The production-handler census (before the chain commit; the maintainer's (by delegation) ruling (A))
+
+Pattern, verbatim, run at the worktree root on the tree above:
+
+`grep -rnE "customHandler|custom_handler|ZenEngine\(|zen\.ZenEngine|create_decision|\"customNode\"|def handler\(" packages/*/src backend/src --include=*.py`
+
+and `grep -rnE "^import zen|^from zen|import zen" packages/*/src backend/src --include=*.py`. Code hits (prose hits in
+docstrings omitted): exactly **one** engine is built, `runtime.py:697` (`zen.ZenEngine({"customHandler": handler})`,
+in `load_bundle`), and exactly **one** handler exists, `handler` at `runtime.py:556` inside `_model_call_handler`
+(`customNode` is emitted only at `runtime.py:409`). Its three returns: the two failure returns (`:561`, `:594`) go
+through `_model_call_failure` (`:138`: `{**context, <zeros>, MODEL_CALL_ERROR_KEY}`), and the one success return
+(`:610`) is `{**context, <produced>}`: **all three pass the context through; none drops it.** The other importer,
+`compile.py:25`, uses only `zen.compile_expression` (`:320`), a validator, no engine. The only context-dropping handler
+in the repository was the test stand-in at `test_rating_runtime.py:345-346`, fixed by the one-line edit below.
+
+**The one test line (ruling (A)).** `test_rating_runtime.py:346` now returns `{"output": {**request.input,
+"risk_premium_minor": 5000}}`; the assert at `:351` is untouched; `git diff -U0` of the file shows that line alone.
+Before it, `test_to_wire_translates_a_constraint_step` failed with `NodeError` on `s_office` (the stand-in dropped
+`expense_factor`); after it the file passes (11 passed).
+
+**Hand-off to A-1, A-2 and A-3 (WK-1178; PL 9599, PL 9597, PL 9595; `_model_call_handler`).** After this slice merges, the
+handler returns `{**context, **produced}` on success and `{**context, <zeros>, MODEL_CALL_ERROR_KEY}` on failure. A
+branch any of them adds (a GLM branch, a peril-structure branch) returns through that same success expression or through
+`_model_call_failure`, never `{"output": {produced names only}}`: on the ordered chain the next step would lose the
+context. The one that merges second rebases (merges main) and re-runs `test_rating_wire_order.py` and Task 2c's replay.
+
+### Task 2 / 2b — the chain commit, with T1
+
+T1 is applied to the FR-212 row of `03` in the same commit as the code (`CLAUDE.md` §2), `FD-1425` substituted for the
+RL-1423 working id "FD 9572" as ruled (the 19:33:23 BST entry; RL-1423 lines 243-244). After it: `grep -cF` of the
+substituted text prints **1**, and `grep -cF 'FD 9572'` over `docs/specs/03-rating-engine.md` prints **0**. At head with
+the chain: `test_rating_wire_order.py` 14 passed (the eight base reds all green); pin proofs, each reverted after: a FIFO
+in place of the heap fails `test_a_topologically_listed_algorithm_wires_exactly_as_listed` with
+`assert ['s_a', 's_d', 's_b'] == ['s_a', 's_b', 's_d']`; the last hex digit of `_SCORE_FIXTURE_HASH` changed fails
+`test_the_bundle_hash_is_unchanged` naming both values. `test_rating_score.py` 40 passed, `test_rating_ladder_exact.py`
+26 passed, `test_rating_runtime.py` 11 passed (after the one-line stand-in fix above), no assert edited.
