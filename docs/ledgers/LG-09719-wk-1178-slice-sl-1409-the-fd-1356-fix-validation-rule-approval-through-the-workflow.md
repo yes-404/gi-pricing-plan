@@ -716,6 +716,143 @@ Both rolled back (afterwards the rule reads `approved` and the set's first `rule
 
 **State left.** gipricing at `e5b7d9f1a3c6`; workspaces `01a10bb4-c446-7b56-bb64-6ce3ff94ea6f` (abandoned partial seed) and `01a10bbe-3a03-740c-8d4b-a6af38d2dd4b` (the demo workspace); the root's venv synced; the keycloak container up.
 
+### Task 8 Step 2 — the slice summary (2026-10-05 12:29 BST, executor-1409-t8a)
+
+Compiled at branch head `649916941322d42b1b8935a2e98e61ec4cd4a1ec` against `origin/main`
+`072c56e1ba386a790160ac4d90ad667f611df67c` (`git fetch origin` first, then `git rev-parse origin/main`). It cites the entries above
+and does not copy them. **Task 8 Step 1, the full gate, is not run here**: it runs once, at the minted head, after the slice audit
+(the order of the lead's brief). No test and no gate was run for this entry.
+
+**1. Task 0's run.** Section "Task 0": containment, 2026-10-05 10:57:54 to 10:58:15 BST, exit code 0, last line
+`TOTAL route_approved=0 self_approved=0 user_approved_no_approved_request=373`. The DP-0 export's `sha256sum -c` printed OK for six of six.
+
+**2. The reds of Acceptance 2–10 and 15.** Each red was recorded before the code that turned it green. The printed lines are in the
+sections named; the rows below name the Acceptance, the printed line and the anchor.
+
+| Acc. | Test (base tree) | Printed line | Cause (ledger) | Anchor |
+|---|---|---|---|---|
+| 2 | `test_one_approval_under_a_quorum_of_two_leaves_the_rule_in_review` | `assert 'approved' == 'review'` | the direct route approves on one call | Tasks 2 and 3, red table |
+| 2 | `test_an_approver_without_a_policy_role_is_refused` | `assert 200 == 403` | the direct route checks no policy role | same |
+| 2 | `…first_of_two` rows of `test_a_decision_moves_the_version…` | none: they passed on the base tree | the plan expected them red; recorded as controls | same, "Passed on the base tree" |
+| 3 | `…records_it_truly[validation_rule-approve]` | `assert 'review' == 'approved'` | the carry has no `validation_rule` branch | same |
+| 3 | `…[validation_rule-reject]`, `[…-request_changes]` | `assert 'review' == 'draft'` | same | same |
+| 4 | `test_the_approve_route_decides_through_the_workflow` | `ValueError: not enough values to unpack (expected 1, got 0)` | the submit files 0 requests | same |
+| 4 | `test_the_carry_records_the_request_it_carried` | same line | same | same |
+| 5 | `test_an_error_dry_run_is_refused_at_submit` (3 cases) | `assert 200 == 422` | submit does not read the report | same |
+| 6 | `test_an_error_dry_run_is_refused_at_approve` (3 cases) | `assert 200 == 422` | the generic decide has no evidence check | same |
+| 7 | `test_a_fail_dry_run_is_still_approvable` | `ValueError: not enough values to unpack (expected 1, got 0)` | **red on the base tree, not the plan's "passes on the base tree"**: the base submit files no request (a plan defect, Delta 7 item 3) | same, Deviation 3 |
+| 8 | `test_the_generic_submit_refuses_an_error_dry_run` | `assert 201 == 422` | the resolver checks the status only | same |
+| 9 | `test_a_dry_run_report_that_cannot_be_read_is_refused` | `assert 200 == 422` | a dangling report id is accepted | same |
+| 10 | `test_approval_decision_is_entered_only_at_the_sanctioned_and_allowance_sites` | `AssertionError: assert ['backend/src...approve_rule'] == []` | `approve_rule` still enters `approval_decision()`, no longer pinned | Task 1 |
+| 10 | `test_every_pinned_site_really_enters_the_context` | `AssertionError: assert {('backend/sr...d.py', 'run')} == frozenset({('....p...` | same site, entered and not pinned | Task 1 |
+| 15 | `test_every_body_this_slice_edits_is_a_model_schema_type` (both paths) | `AssertionError: Decide is a route-local body, not a model_schema type`; `AssertionError: ValidationRuleSubmission is a route-local body, not a model_schema type` | the bodies were not `model-schema` exports (cause differs from the plan's "no body": Delta 7 item 1) | Task 4 |
+| 15 | `test_the_decide_response_keeps_its_key_set` | green on first run (it characterises existing behaviour; PL-1408 DP-4); a scratch rename in `to_dict` failed it (`1 failed`), reverted | planned | Task 4 |
+
+Totals of the red runs: Tasks 2 and 3 `21 failed, 125 passed, 3 warnings in 121.59s` (also carries the Acceptance 11, 12, 19 and 25 reds, listed
+in that table); Task 1 `2 failed, 15 deselected, 2 warnings in 1.95s`. Green after Task 3: `212 passed, 4 warnings in 142.33s`; after Task 4:
+`268 passed, 2 skipped`. The reds of Acceptance 13, 14, 21 and 26 are in the Task 7 entries and are not part of this list.
+
+**3. Task 7's three counts, and the residual.** The follow-on script's predicate is FD-1356's (`user_approved_no_approved_request`).
+- **Before:** `gipricing` `user_approved_no_approved_request=10` (`builtin_approved=532 user_approved=10`); all databases `TOTAL 5890/324/324` over 93 databases
+  (Task 7, Step 4, "4.1"). On the scratch base database of the seed run (Acceptance 21): `9`.
+- **After:** `gipricing` `user_approved_with_no_approved_request=0`; `TOTAL 5966/323/314` (Step 4, "4.4"). `builtin_approved` 608 = 532 + 38 + 38. On the scratch
+  after database: `0` with `user_approved=9`.
+- **Reset, as the plan defines it** (DP-6 (b), the script's own output): `gipricing reset=10 workspaces=9 chain_verified=9`, then the second run `reset=0 workspaces=0 chain_verified=0`.
+  Task 0's script after the reset ends `TOTAL route_approved=0 self_approved=0 user_approved_no_approved_request=314`.
+- **Residual (Acceptance 23): 15** Dataset Versions (before the seed and reset: 0). **D9 result** (the deputy's condition): `residual_dataset_versions=15
+  approved_models_referencing=0 models_any_status_referencing=11 rating_versions_referencing=0 deployed_rating_versions_referencing=0 deployments_total=0`.
+  Per the lead's Delta 21, the slice audit names the residual as accepted under RL-1407. The 15 ids and 9 workspace ids are listed in Step 4.
+
+**4. Acceptance 18: the write-set reconciliation.** `git diff --stat origin/main...HEAD` at head `649916941322d42b1b8935a2e98e61ec4cd4a1ec`, with
+`origin/main` = `072c56e1ba386a790160ac4d90ad667f611df67c`, verbatim (this entry's own commit then adds its lines to the ledger row):
+
+```text
+ backend/src/app/api/approvals.py                   |  51 +-
+ backend/src/app/api/validation.py                  |  49 +-
+ backend/src/app/errors.py                          |   4 +
+ backend/src/app/platform/validation_rules.py       | 405 ++++++---
+ backend/src/app/worker/data_handlers.py            |   9 +-
+ backend/tests/approved_rows.py                     |   7 +-
+ backend/tests/dry_run_reports.py                   |  78 ++
+ backend/tests/test_api_approvals.py                |  32 +-
+ backend/tests/test_api_datasets.py                 |  23 +-
+ backend/tests/test_approval_guard.py               |   4 +-
+ backend/tests/test_approval_guard_allowance.py     |  23 +-
+ backend/tests/test_approval_guard_static.py        |   4 +-
+ backend/tests/test_check_rule_sets_runnable.py     | 155 ++++
+ backend/tests/test_demo_command.py                 |  25 +
+ .../tests/test_reset_unbacked_rule_approvals.py    | 188 +++++
+ backend/tests/test_validation_rule_approval.py     | 805 +++++++++++++++++++++
+ docs/INDEX.md                                      |   7 +-
+ docs/contracts/openapi/generated.json              |  31 +-
+ ...alidation-rule-approval-through-the-workflow.md | 721 ++++++++++++++++++
+ docs/specs/01-data-management.md                   |   8 +-
+ docs/specs/06-governance.md                        |   4 +-
+ examples/fremtpl2/seed.py                          | 146 ++--
+ examples/fremtpl2/test_seed.py                     |  63 ++
+ frontend/src/api/rules.ts                          |  11 +-
+ frontend/src/components/RuleBuilder.vue            |  13 +-
+ .../src/components/__tests__/RuleBuilder.test.ts   |  17 +-
+ frontend/src/views/RuleSetView.vue                 |  37 +-
+ frontend/src/views/__tests__/RuleSetView.test.ts   |  26 +
+ packages/model-schema/src/model_schema/__init__.py |   4 +
+ .../model-schema/src/model_schema/approvals.py     |  10 +
+ .../model-schema/src/model_schema/validation.py    |   9 +
+ scripts/check-rule-sets-runnable.py                | 102 +++
+ scripts/demo.py                                    |   8 +
+ scripts/reset-unbacked-rule-approvals.py           | 140 ++++
+ 34 files changed, 2966 insertions(+), 253 deletions(-)
+```
+
+Reconciled file by file against PL-1408 §"Write set". 34 files: 30 in the write set (the ledger included), 2 generated, 2 named additions, none outside.
+
+| File | Verdict | Write-set row |
+|---|---|---|
+| `backend/src/app/platform/validation_rules.py` | in | its own row (edited and added functions) |
+| `backend/src/app/api/approvals.py` | in | its own row (`decide_and_carry`, `Decide` removed) |
+| `backend/src/app/worker/data_handlers.py` | in | its own row |
+| `backend/src/app/errors.py` | in | its own row (`RULE_VERSION_IMMUTABLE`) |
+| `backend/src/app/api/validation.py` | in | its own row |
+| `packages/model-schema/src/model_schema/validation.py` | in | the `validation.py` / `__init__.py` row |
+| `packages/model-schema/src/model_schema/approvals.py` | in | the `approvals.py` / `__init__.py` row (`Decide`) |
+| `packages/model-schema/src/model_schema/__init__.py` | in | both rows (`ValidationRuleSubmission`, `Decide`) |
+| `scripts/check-rule-sets-runnable.py`, `backend/tests/test_check_rule_sets_runnable.py` | in | the condition 2 row |
+| `scripts/demo.py`, `backend/tests/test_demo_command.py` | in | the demo row |
+| `scripts/reset-unbacked-rule-approvals.py`, `backend/tests/test_reset_unbacked_rule_approvals.py` | in | the two DP-6 (b) rows |
+| `examples/fremtpl2/seed.py` | in | the seed row |
+| `backend/tests/test_approval_guard_static.py` | in | its row (`ALLOWANCE_SITES`) |
+| `backend/tests/test_approval_guard_allowance.py` | in | its row |
+| `backend/tests/approved_rows.py` | in | its row |
+| `backend/tests/test_api_approvals.py` | in | its row |
+| `backend/tests/test_api_datasets.py` | in | its row |
+| `backend/tests/test_validation_rule_approval.py`, `backend/tests/dry_run_reports.py` | in | the two "added" rows |
+| `frontend/src/api/rules.ts`, `frontend/src/components/RuleBuilder.vue`, `frontend/src/views/RuleSetView.vue`, `frontend/src/components/__tests__/RuleBuilder.test.ts`, `frontend/src/views/__tests__/RuleSetView.test.ts` | in | the frontend row ("their tests") |
+| `docs/specs/01-data-management.md`, `docs/specs/06-governance.md` | in | the spec-texts row |
+| `docs/ledgers/LG-09719-…` | in | the ledger row |
+| `docs/INDEX.md`, `docs/contracts/openapi/generated.json` | generated | the `docs/contracts/` row; `docs/INDEX.md` the registry row |
+| `backend/tests/test_approval_guard.py` | **named addition** | Delta 7 item 2 (the carry-walker's expected set gains `validation_rules`) |
+| `examples/fremtpl2/test_seed.py` | **named addition** | Delta 17 (the seed-twice test) |
+
+Not in the diff, as the plan requires: `backend/src/app/platform/approvals.py` (read only) and `backend/tests/test_contracts.py` (conditional on an untyped-body guard that is not on main).
+Every file outside the write set is one of the two named additions or generated: 30 + 2 + 2 = 34. Nothing else is outside it, so there is no STOP.
+
+**5. Named deviations and lead verdicts, by Delta number** (the dispatch record is local and not in the repository; the verdicts are quoted from it by Delta).
+- **Delta 6:** Task 1's test edit left uncommitted (plan Task 1 Step 3); Tasks 2 and 3 go to one executor. Check 32 red inside the DP-0 quote, fixed by fencing it as `text`, byte-identical (6 of 6 `sha256sum`). ACCEPTED.
+- **Delta 7:** Tasks 2 and 3 done. (1) Task 4 Steps 2–3 pulled forward (`ValidationRuleSubmission`, the thin-client approve route); `generate-contracts --check` red at that head until Task 4: ACCEPTED. (2) `backend/tests/test_approval_guard.py` outside the write set, a named forced expectation change: ACCEPTED. (3) Plan defect: `test_a_fail_dry_run_is_still_approvable` cannot pass on base: recorded. (4) `data_handlers._validate` passes the dataset slug in the refusal text: recorded.
+- **Delta 8:** Task 4 done. The body-type test's cause differs from the plan's (Steps 2–3 pulled forward); the decide key-set test is planned and passed first run, its failure proved by a scratch rename, reverted. ACCEPTED.
+- **Delta 9:** Task 5 done. `act` reports through `explain`; the per-row label carries the rule slug; the "rejects unparseable parameters" test fills the summary. ACCEPTED.
+- **Delta 13:** Task 7 Steps 1–3a done. The lead's brief was wrong about the base tree (the base run used the merge base `bf33eea6`); the request id comes via `open_request_for`; the reset script keeps the `GIP_DATABASE_URL` override; the reset test asserts on its own rows only. ACCEPTED.
+- **Delta 15 (the PL-1408 premise correction; a delta, not a plan edit):** PL-1408 Task 7 and RL-1407 say the recovery seed keeps the demo's workspace runnable at every moment after the slice's code exists. That was false on 2026-10-05: the record's workspace was absent from `gipricing`, so there was nothing runnable to keep. Step 4.2 also omitted the demo's own `alembic upgrade head`. Binding for the resume: migrate first (upgrade only, revisions recorded), keep the abandoned partial seed (no deletes), full 678,013 rows with no slot held, and the finding goes to FD 9717 (MEDIUM, its own queue, not blocking this slice).
+- **Delta 16:** Step 4 second stop: the second seed failed on `uq_users_issuer_subject`, a defect on main (`ensure_member` looks up by user id only), not this slice's. Put to the deputy.
+- **Delta 17:** the seed resolves the analyst id from an existing realm user, else mints one; red first by a seed-twice test; inside the write set (`examples/fremtpl2/seed.py`); `examples/fremtpl2/test_seed.py` a **named write-set addition**; `platform/workspaces.py` not edited, its docstring defect is in FD 9717's scope. APPROVED.
+- **Delta 18:** Task 7c done (the seed-twice red quoted verbatim, green `8 passed`). ACCEPTED.
+- **Delta 19:** Step 4 resumed: full seed rc 0, the cond. 4 copy of the record, reset `reset=10`, residual `0` to `15`. The demo then died on a stale root venv (`sympy`); D1 `uv sync --all-packages` at the root authorised; D2 merge `origin/main` into the branch; D4 residual 15 recorded, no new FD; D5 the per-database before lines were not kept (a disclosed gap, the aggregate check instead); D6 the 608 breakdown quoted. No objection from the deputy; D7–D9 added.
+- **Delta 20:** Step 4 done on merge `c156e7274e8d07bc0e9eb1112590c2a259e2db94` (branch plus `origin/main` `072c56e1`; INDEX regenerated, `__all__` merged cleanly with all four names). Lead found D7–D9 missing from the ledger and sent the entry back.
+- **Delta 21:** Task 7 complete. D7 (the root HEAD for the retry), D8 (the full ids), D9 (zero approved or deployed references) present. Per the deputy's condition, the slice audit names the residual of 15 as ACCEPTED under RL-1407. Next: the slice audit, then the mint, then Task 8 Step 1 at the minted head.
+- **Deltas 10, 11, 12, 14 (no deviation from the plan):** Delta 10 (Task 6) the lead's byte-check of the spec texts against RL-1407, ACCEPTED, with INDEX regenerated as the expected follow-on; Delta 11 split Task 7; Delta 12 the deputy's approval of the record handling, ARFF files symlinked as files; Delta 14 the first Step 4 stop (the missing migration). Listed for completeness.
+
+`python3 scripts/audit-docs.py` after this entry: `FAILED (1): check 31: gap in the full allocation between 1413 and 9719`, the expected one (LG 9719 is a working id). No other check failed.
+
 ## PRs
 
 Not yet opened (the lead decides when).
