@@ -80,6 +80,50 @@ the pins, and T1 (FR-212, adopted by RL 9562; applied in Task 2 as Step 6b below
 the end of the FR-212 row's last cell (`03` `:81`). Then run `python3 scripts/audit-docs.py`:
 only check 31 may fail before the mint.
 
+## Delta 2, 2026-10-05 (after 17:35:05 BST, pre-mint): (R-b), the sink fan-in, is this plan's root
+
+The maintainer's (by delegation) entry "2026-10-05 17:27:55 BST — FD 9572 CAUSE: the sink
+fan-in plus whole-context passThrough; RULING: (c) ALONE is the emergency slice; (R-b) is the
+root, in PL 9567; one more case to measure; A-2 readings", item 2, verbatim:
+
+> 2. (R-b) is the ROOT and goes into PL 9567 (the wiring slice), red first with the fan-in case: no side branch may carry a stale copy of a produced name into the sink (one ordered merge at the sink, or produced names stripped from the relayed context; the planner proposes, and if it changes every bundle's hash that is stated and approved by me).
+
+**The cause**, from the same entry (auditor-premise, read-only at `4d3be141`):
+- The sink rule (`runtime.py:495-499`) wires every interior step whose produced names no other
+  step consumes to the sink. That includes produce-nothing steps such as the decline
+  constraints, so the sink has a fan-in.
+- Every node carries the whole context forward (`passThrough`: `:174`, `:268`, `:353`, `:389`;
+  the docstring at `:428-432`). So each branch reaching the sink holds a full copy of the
+  context as that branch last saw it.
+- At the fan-in, the last-listed branch wins. This was inferred from three runs; zen's merge
+  code was not read.
+
+**The mechanism: DP-R1, for the maintainer (by delegation).** Item 2 leaves the choice to the
+planner and requires approval of any bundle-hash change.
+
+| Option | What it does | Bundle hash | Cost and risk |
+|---|---|---|---|
+| **(i) One ordered path** | `to_wire` wires the interior steps as a single chain over the stable topological order of Task 2 (`_dependency_order`): input → the first step → … → the last step → the sink (or `__exact_reads` → output). Every node then has exactly one incoming edge. The dependency edges and the sink fan-in are gone, so no merge happens anywhere, and each name's final producer writes it after every earlier copy. The `model_call` handler (`_model_call_handler`, `runtime.py:512`) must pass the context through: today it returns only `{"output": {produced names}}` (`:581`), which a chain would turn into a dropped context. | **Unchanged.** `content_hash = bundle_hash(graph, pins)` (`compile.py:641`) hashes the `JdmGraph`, never the wire. | The wire changes for every algorithm with a branch; a purely linear one (`[in, A, B, out]`) wires exactly as today. It relies on whole-context `passThrough`, which **PL 9776 (#1051, F35 remedy) turns off** for `_constraint_node` and `_decision_table_node` (its plan `:503`). The two cannot both land as written. |
+| (ii) Strip produced names from the relayed context | `inputNode` relays only the declared inputs. | Unchanged | It closes only caller copies, which guard (c) (PL 9560) already refuses at the entry. It cannot remove an internal stale copy (a branch that forks before an in-place clamp), which is the case auditor-fanin is measuring. |
+| (iii) An ordered merge at the sink | Keep the DAG and order the sink's incoming edges so that the final producers merge last. | Unchanged | It rests on zen's fan-in merge order, which was inferred from three runs and never read. A dependency on unread engine behaviour is the class of defect this finding is. |
+
+**Recommendation: (i).** It is the only option that does not depend on how zen merges a
+fan-in, because it leaves no fan-in to merge. It keeps every bundle hash. It also subsumes
+Task 2's per-name edge resolution: in a chain, list order is irrelevant once the topological
+order is used, which is the FR-212 rule (a) states. **Its conflict with PL 9776 is the
+maintainer's to settle**:
+- PL 9776's `passThrough`-off is a cost remedy (its P1, "the engine copies the whole context
+  into each node");
+- (i) needs `passThrough` on every node;
+- whichever lands second must be re-planned.
+
+**What this adds:** Task 2b below (red first). Its activation need is DP-R1 decided by a dated
+line. Under (ii) or (iii), Task 2b is rewritten before dispatch.
+
+**If auditor-fanin answers YES** (a misprice with no caller key), (R-b) becomes a second
+emergency slice after PL 9560, by the maintainer's correction to item 3 of the 17:27:55 entry.
+Task 2b then moves out of this plan by a further delta.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
 > or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax
 > for tracking. Also bound: `python-test` (the `req` markers, the negative tests),
@@ -244,6 +288,9 @@ Dislocation is left as it is, because it already selects declared inputs only (R
   (350, 57, 1507, 5250, 1050) are copied from that essay's verbatim output.
 
 ## Decision points
+
+*(Delta 2, 2026-10-05: DP-R1, the (R-b) mechanism, is open; it is set out in the Delta 2
+section above and blocks Task 2b.)*
 
 Three are open and block activation, so this plan stays `draft` until a dated decision line
 settles them. Each is the decision-maker's (`delivery-process.md` §3), not the planner's.
@@ -797,6 +844,78 @@ def _dependency_order(graph: JdmGraph, interior_ids: Sequence[str]) -> list[str]
 git add packages/pricing-core/src/pricing_core/rating/runtime.py
 git commit -m "fix(rating): to_wire wires each consumed name over a stable topological order (FD 9572)"
 ```
+
+### Task 2b: (R-b) — one ordered path to the sink (DP-R1 (i); added by Delta 2)
+
+**Files:**
+- Modify: `packages/pricing-core/src/pricing_core/rating/runtime.py`:
+  - `to_wire`: replace the per-name edges (`:461-492`) and the sink loop (`:494-499`);
+  - `_model_call_handler`: its success return (`:581`) and `_model_call_failure` (`:94`) pass
+    the context through;
+  - the module docstring's wiring rules.
+- Modify: `packages/pricing-core/tests/test_rating_wire_order.py` (append).
+
+- [ ] **Step 1: The red, appended to `test_rating_wire_order.py`.** It is engine-level, so it
+  holds whatever guard (c) does at the entry. A raw context key named like a produced value
+  must not reach the result through a side branch.
+
+```python
+@pytest.mark.req("FR-212")
+async def test_no_side_branch_carries_a_stale_copy_into_the_sink() -> None:
+    """(R-b): the score fixture, correctly ordered, evaluated at the engine with a raw
+    `instalment_loading_minor` (the auditor's (3f) name). Through the sink fan-in the last
+    branch's stale copy won; on one ordered path the producer's value is the last write."""
+    compiled = await _score_fixture()
+    context = {"effective_date": "2026-09-01", "purpose": "new_business",
+               **_BASE_INPUTS, "min_premium_minor": 5000, "instalment_loading_minor": 777}
+    out = await compiled.decision.async_evaluate(context)
+    assert out["result"]["instalment_loading_minor"] == 5250
+```
+
+  At the base commit it must FAIL with `assert 777 == 5250`. If it fails for another reason,
+  or passes, STOP and report it: the cause trace's premise has then moved. If auditor-fanin's
+  no-key case is still in this plan, append it too, with the price it measured as the
+  base-commit failure.
+
+- [ ] **Step 2: Pass the context through `model_call`.** In `_model_call_handler`, return
+  `{"output": {**context, **{str(name): value for name in _as_list(step.produces)}}}`. Here
+  `context` is the `$nodes`-free copy the handler already builds (`:541`). Do the same for
+  `_model_call_failure`'s output. Then run `test_rating_runtime.py` and `test_rating_score.py`:
+  they must pass with no assert edited.
+
+- [ ] **Step 3: One ordered path.** In `to_wire`, after `interior_ids = _dependency_order(...)`,
+  build the edges as a chain and delete the per-name edges and the sink loop:
+
+```python
+    previous = _INPUT_ID
+    for step_id in interior_ids:
+        edges.append(_edge(previous, step_id))
+        previous = step_id
+    # (the wire-node construction per step stays as it is)
+    exact_names = exact_read_names(graph)
+    if exact_names:
+        wire_nodes.append(_exact_read_node(exact_names))
+        edges.append(_edge(previous, _EXACT_ID))
+        edges.append(_edge(_EXACT_ID, _OUTPUT_ID))
+    else:
+        edges.append(_edge(previous, _OUTPUT_ID))
+```
+
+  Keep the per-step `wire_nodes.append(...)` dispatch exactly as it is. Read the shipped loop
+  before editing: the sample shows the edges only. Rewrite the docstring's wiring rules
+  (`:428-432`) to say that the interior steps form one path in topological order, so no merge
+  happens. Delete the comment that justified the incremental `produced_by`: with no per-name
+  edges, `produced_by` has no reader and goes too.
+
+- [ ] **Step 4: Run.** Run `test_rating_wire_order.py`: the new red passes and every Task 1
+  test still passes. `[in, A, B, out]`'s edge literal is unchanged, because a linear algorithm
+  is already one path. Then run `test_rating_runtime.py`, `test_rating_score.py` and
+  `test_rating_ladder_exact.py` with no assert edited. **If any test asserts a specific edge
+  set and now fails, STOP:** list it in the ledger and report it. Editing that assert is the
+  maintainer's to approve with DP-R1, not the executor's.
+
+- [ ] **Step 5: Commit:** `fix(rating): to_wire wires one ordered path, so no branch carries
+  a stale copy into the sink (FD 9572 R-b)`.
 
 ### Task 3: A quote input never shadows a produced value
 
