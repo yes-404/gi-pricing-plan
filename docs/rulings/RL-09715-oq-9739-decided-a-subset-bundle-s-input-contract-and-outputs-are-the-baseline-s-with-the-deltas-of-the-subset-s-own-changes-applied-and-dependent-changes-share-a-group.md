@@ -17,7 +17,7 @@ relates: [RL-1394, RL-1402, RL-1361, RL-1375, RL-1264, PL-1403, PL-1267, LG-1400
 
 # RL 9715 (working id) — OQ 9739 decided: the proper subset bundle's `input_contract` and outputs
 
-**Decided by the maintainer, by delegation (the deputy)**, in the entry headed *"2026-10-05
+**Decided by the maintainer, by delegation**, in the entry headed *"2026-10-05
 12:58:22 BST — DECISIONS (the maintainer, by delegation): FD 9780; DP-A; OQ 9739; RL 9715
 DP-2; PL 9716 DP-B; the OQ 9739 row"* in `~/gi-pricing-plan.local/channel/to-lead.md`, items
 3, 4 and 6, relayed to this session by the lead. The options below were drafted before that
@@ -27,7 +27,7 @@ decision and sent as DPs; the sections headed "Ruled" record it.
 
 **Written 2026-10-05, at effort `medium`**, by the decision-maker session `dm-9739`, on the
 lead's brief `~/gi-pricing-plan.local/handover/brief-dm-9739-2026-10-05.md`, written on the
-deputy's instruction of 2026-10-05 12:51:33 BST, item 1. **Working id 9715 is the lead's
+instruction of the maintainer (by delegation) of 2026-10-05 12:51:33 BST, item 1. **Working id 9715 is the lead's
 allocation.** All facts were read at `origin/main`
 `caa4e411a9c07a389cf47092a923c7761b2b92dc`, 2026-10-05, 12:54–13:40 BST. Unminted records
 (OQ 9739, RL 9770, RL 9771) are cited in working-id form and kept out of `relates:` (check 32).
@@ -194,7 +194,7 @@ attribution is *of* without the analyst choosing it.
 
 ## DP-3 — how FR-1399 derives a contract or output delta
 
-**Raised by the deputy**, in the entry headed *"2026-10-05 13:01:30 BST — DECISIONS: #976 FD
+**Raised by the maintainer (by delegation)**, in the entry headed *"2026-10-05 13:01:30 BST — DECISIONS: #976 FD
 9890 = (a); RL 9715 must define the contract/outputs change, not assume it"*
 (`~/gi-pricing-plan.local/channel/to-lead.md`), item 3: (c) is undefined for a delta FR-1399
 derives no change for, so RL 9715 must also amend FR-1399, *"so that an input_contract or
@@ -225,7 +225,7 @@ S3, not as a spec edit in the ruling PR."*
 
 ### Worked examples, one per case
 
-**Case 1 — one reader (the deputy's change set, item 11 of the 13:03:23 BST entry).** The
+**Case 1 — one reader (the maintainer's (by delegation) change set, item 11 of the 13:03:23 BST entry).** The
 candidate adds the input field `ncd` (`int`, 0–9), an input step `in_ncd` with `input_name:
 ncd` producing `ncd`, and a table step `t_ncd` consuming `ncd` against a new rate table.
 
@@ -271,6 +271,10 @@ candidate (DP-1).
 **T1 to T3 do not land in this PR.** They change behaviour, so each lands in one commit with
 the code it describes (`CLAUDE.md` §2), applied by WK-673 Slice 3 (SL-1387), as `RL-1407`'s
 texts were applied by SL-1409. Each find string below has exactly one hit at `caa4e411`; T2 goes directly after T1.
+*(Pre-mint note, 2026-10-05 15:58 BST, dm-finals2: re-counted at `origin/main` `cdaaa573`,
+T1's and T3's find strings have one hit each. No file this record cites at a line changed
+between `caa4e411` and `cdaaa573` except `03`, and its one changed line is :136. :192 is still
+FR-1399.)*
 P4 lands here.
 
 ### T1 — `03` FR-1399, the DP-2 clause. Append at the row's end; find `` DP-2 (c); `RL-1394`.)* | `` and insert before its final `` |``
@@ -294,7 +298,7 @@ P4 lands here.
 ### T4 — withdrawn
 
 The `dislocation-run.schema.json` `kind` enum edit is withdrawn: `docs/contracts/` is generated
-and never hand-edited (the deputy, item 11 of the entry headed *2026-10-05 13:03:23 BST — #1066 (FD-… mint) at a202f030: NO ACK YET, one false cite in the body; then decisions 10 and 11* (one finding id elided: it is not minted at `caa4e411`, so it cannot resolve in `docs/INDEX.md`, check 32)).
+and never hand-edited (the maintainer (by delegation), item 11 of the entry headed *2026-10-05 13:03:23 BST — #1066 (FD-… mint) at a202f030: NO ACK YET, one false cite in the body; then decisions 10 and 11* (one finding id elided: it is not minted at `caa4e411`, so it cannot resolve in `docs/INDEX.md`, check 32)).
 S3 adds `input_field` and `output` to the derived-change kind in `model-schema`, and the
 contract receives them by the path that governs it at S3's tree. At `caa4e411`
 `backend/tests/test_contracts.py:98` records this contract as *"hand-authored until WK-673
