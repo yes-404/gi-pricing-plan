@@ -760,6 +760,7 @@ async def test_the_job_result_equals_the_200_figure(
     assert from_job.matched_exposure == D("7.5")
 
 
+@pytest.mark.req("FR-231")
 @pytest.mark.req("FR-232")
 async def test_a_portfolio_archived_before_the_worker_runs_fails_the_job(
     database: Database, workspace_id, principal, blob_store: BlobStore, grant,
@@ -787,6 +788,7 @@ async def test_a_portfolio_archived_before_the_worker_runs_fails_the_job(
     assert row.error["code"] == "DATASET_NOT_VALIDATED"
 
 
+@pytest.mark.req("FR-231")
 @pytest.mark.req("FR-232")
 async def test_a_dangling_ref_fails_the_job_with_not_found(
     database: Database, workspace_id, principal, blob_store: BlobStore, grant,
@@ -1138,6 +1140,7 @@ async def test_a_parquet_cells_request_runs_one_job_then_pages(
     assert again.status_code == 202, again.text
 
 
+@pytest.mark.req("FR-231")
 @pytest.mark.req("FR-232")
 async def test_a_cells_job_for_an_archived_portfolio_fails(
     database: Database, workspace_id, principal, blob_store: BlobStore, grant,
@@ -1164,6 +1167,7 @@ async def test_a_cells_job_for_an_archived_portfolio_fails(
     assert row.error["code"] == "DATASET_NOT_VALIDATED"
 
 
+@pytest.mark.req("FR-231")
 @pytest.mark.req("FR-232")
 async def test_a_rows_version_and_its_parquet_twin_find_the_same_cells_artifact(
     database: Database, workspace_id, principal, blob_store: BlobStore, grant,

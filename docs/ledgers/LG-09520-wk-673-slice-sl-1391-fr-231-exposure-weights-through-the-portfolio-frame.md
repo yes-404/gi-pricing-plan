@@ -299,8 +299,9 @@ finds two sinks that use an exception's text, `backend/src/app/platform/rate_tab
 (that file's own rule: "a sink in one that is not a quote-input path is listed in `_SINKS` with why"). Reported to the lead
 as a stop: `backend/tests/test_error_sinks.py` is outside the write set.
 
-**Cost measurement** (inside `gate-1`, 18:56:08 to 18:56:46 BST, load 7.2 at the start because the gate had just ended, so
-this is not a quiet-box figure), `OMP_NUM_THREADS=1`, service level (`diff_cells_page`, not HTTP), a parquet pair of 260 000
+**Cost measurement, INVALID and not used** (inside `gate-1`, 18:56:08 to 18:56:46 BST, load 7.2 at the start because the
+gate had just ended; no rows-stored baseline; run without the START / GO MEASURE protocol, so the lead's sweep was not
+paused; the figures are kept only as information), `OMP_NUM_THREADS=1`, service level (`diff_cells_page`, not HTTP), a parquet pair of 260 000
 cells (`(1, 'parquet')`, `(2, 'parquet')`), the cells Job having stored the artifact (Job 6.8 s, setup 5.3 s), N=10 pages at
 limit 50 and distinct cursors:
 
@@ -319,6 +320,77 @@ from it". Whether FR-232 covers the cells page itself (so that the 200 read must
 reading for the maintainer, not decided here. About 93% of the request is loading and hashing the two versions' cells
 (932 of 1024 ms at p50); no optimisation was made.
 
+### Task 7 (continued) — audit-prep record
+
+**The ruling on the `_SINKS` stop** (the maintainer, by delegation, `to-lead.md`, after 19:00, relayed by the lead): option (a)
+adopted, both sinks listed in `test_error_sinks.py`'s `_SINKS` (count 1 each), each citing `RL-1361` item 3 and `RL-1418` T5
+by id; option (b), routing them through the safe-exception helpers, refused. Done in the delta commit; `test_error_sinks.py`
+alone: 4 passed. The delta commit is on top of `059599df`: the two `_SINKS` entries, the four `req("FR-231")` markers, and this
+ledger. The re-gate follows at the new head, in `gate-1`, with the lead's allowance: exactly check 31's "1419 and 9520" line,
+and the same 13 named tests failing on that gap; anything else is a stop.
+
+**The third plan deviation.** `docs/contracts/schemas/generated/job.schema.json` gained one line (`"rate_table.diff_cells"`,
+regenerated from the new `JobKind`). It is allowed by class (generated, exempt), but `PL-1419` `:445` says that directory is
+"unchanged unless `RateTableDiff` is registered as a slug", a premise this slice falsified. The three deviations from the
+plan's write set are therefore: the migration `backend/migrations/versions/f3a7c1d9e2b4_…` (the lead's §(10), the
+maintainer's three conditions), the hand-authored `docs/contracts/schemas/job.schema.json` (§(11), `docs/contracts/README.md:17`
+marks `schemas/` as hand-authored, so the enum line is the documented path), and this generated line.
+
+**Acceptance 23, the write set.** `git diff --stat origin/main...HEAD` at the gated head lists 23 paths: those of the plan's
+§"Write set", plus exactly the three deviations above.
+
+**Acceptance 19, the texts byte for byte.** Each text was copied by script out of `RL-1361` (T3, T6, T10) and `RL-1418`
+(T1 to T5, and T11 at the corrected anchor) (Task 1), and every find string occurred once before and the text once after.
+
+**Acceptance 21.** `uv run python scripts/req-coverage.py` lists `FR-231` and `FR-232` against the new files. Every test in
+`test_rate_table_weights.py` and `test_rate_table_diff_portfolio.py` carries `req("FR-231")`, and the 202 and Job tests
+also carry `req("FR-232")`. At the gated head three Job tests and the twin test carried `FR-232` only; `FR-231` was added
+(marker lines only).
+
+**Mutation proofs** (the plan's "with X removed the test fails", each a single-file targeted run, `OMP_NUM_THREADS=1 nice`,
+the file reverted and proven reverted: `git status --porcelain` clean, and `git hash-object <file>` equal to `git rev-parse
+HEAD:<file>`; the driver is a scratch script). Every proof below is the failing line as printed.
+
+| Acc | the break | the test that fails | the failing line | `hash-object` == `HEAD:file` after the revert |
+|---|---|---|---|---|
+| 2 | a `factor_ref` key joined by its same-named column | `test_a_factor_ref_key_weights_through_each_factor_type[identity, banding, grouping, interaction]` (4) | `WeightJoinError: key 'area_k': portfolio column 'area_k' is absent` | `weights.py` `7a64d59c122c92cbb83705ead01a3d3fd314d062`, equal |
+| 3 | a `banding_ref` key joined on the raw column | `test_a_banding_ref_key_weights_through_apply_banding` | `WeightJoinError: no portfolio row maps to a cell of the table (keys 'age_band')` | same, equal |
+| 4 | keys compared as raw strings (both sides) | `test_keys_compare_in_their_declared_type` | `WeightJoinError: no portfolio row maps to a cell of the table (keys 'ncd', 'garaged')` | same, equal |
+| 6 | the zero-match refusal removed | `test_refusals_name_the_key_or_the_column[no-match]` | `Failed: DID NOT RAISE WeightJoinError` | same, equal |
+| 8 | seeding does not set `factor_ref` | `test_seeded_banding_and_grouping_tables_are_weighted` | `WeightJoinError: key 'age_banded': portfolio column 'age_banded' is absent` | `operations.py` `ca48456091748f31cd85e83ce3ce0f1b278df7ed`, equal |
+| 11 | the portfolio checks moved after the cache read | `test_a_foreign_portfolio_is_404_on_a_warm_cache` | `Failed: DID NOT RAISE PlatformError` | `rate_tables.py` `e1a2bdbe4a39e030a9ae0096515da60cf31d5a5a`, equal |
+| 15 | the frame reader keeps only the declared columns | `test_the_frame_passes_through_undeclared_columns` | `FactorResolutionError: factor 'age_banded' needs ['age'], which this dataset version does not have (FR-87)` | same, equal |
+| 16 | the portfolio id removed from the cache key | `test_two_portfolios_are_two_entries`, `test_two_portfolios_are_two_cached_figures` | `assert 'rate_table:diff:c:b:d:<uuid>' != 'rate_table:diff:c:b:d:<uuid>'`; `assert 1 == 2` | `diff_cache.py` `128110066e7fa68fe231181c8ae508078cdf2884`, equal |
+| 16 | the workspace removed from the cache key | `test_two_workspaces_are_two_entries_with_a_portfolio` | the same `!=` assertion | same, equal |
+| 16 | the definition hash removed from the cache key | `test_a_definition_change_is_a_new_entry` (8 of 8 params) | `assert 'rate_table:diff:c:b:none' != 'rate_table:diff:c:b:none'` | same, equal |
+| 18 | the zero-baseline rule changed (a zero baseline reads a 0 percentage) | `test_the_cells_agree_with_the_summary[True]` | `assert Decimal('-2.222222222222222222222222222') == Decimal('-5')` | `operations.py` same as above, equal |
+
+Acc 18's "with a cap introduced" and the weight-states proofs are recorded under Task 6 (`assert 200 == 250`, `assert
+Decimal('9') is None`). Acc 18's "separate computation" is not a break one can run: the summary is computed from the cells'
+own pass, so a separate computation is the thing the design removes; the zero-baseline mutation above shows the test is
+sensitive to that rule on the shared pass. **Acceptance 10 and 17** each name a break (`dataset:read` route-wide; the handler
+check removed; the worker's re-check removed); the worker's was run (Task 4: the Job tests failed with the worker unchanged);
+the other two are covered by the Task 4 reds (`[200, 200] == [403, 403]`, `202 == 403`).
+
+**Acceptance 15's red.** `test_the_frame_passes_through_undeclared_columns` was one of the 20 reds at Task 3
+(`AttributeError: 'RateTableDiff' object has no attribute 'matched_exposure'`: the fields did not exist yet); it is not
+a pin. The mutation above is its own proof.
+
+**The cost measurement, the maintainer's ruling and the protocol** (relayed by the lead): the maintainer (by delegation)
+ruled that "FR-232's 'only the latency and the status code differ' PERMITS a slower page, and no NFR bounds these routes,
+so it is NOT an S7 defect and does NOT block S7; S7 ships as built, with the numbers in the ledger". The filing rule is the
+maintainer's, not a requirement: a parquet p50 within 3x the rows baseline is no finding; over 3x, or any p99 over 1 s, the
+lead files an FD (WK-1178) and an OQ for the missing latency NFR. **The 18:56 measurement above does not count:** it ran at
+load 7.2 right after the gate, without the rows-stored baseline, and without the START / GO MEASURE protocol (the lead's
+sweep was not paused). It is kept as information only. The re-run, with the protocol, is in the same slot as the re-gate.
+
+**The delta proof's conditions** (the maintainer, by delegation, after 18:40, relayed by the lead): a delta stands in for a
+re-gate only if `git diff c1f2ef17..HEAD` touches nothing under `backend/src`, `packages/*/src`, `frontend/src`,
+`backend/migrations` or `docs/contracts`, every changed test-file line is a req-marker line, and the rest is the ledger and
+the PR body. This delta is not that: the lead holds `test_error_sinks.py`'s `_SINKS` entries for the maintainer's ruling and
+expects a full re-gate.
+
 ## PRs
 
-Not yet opened (the PR is opened as a draft after Task 2 is committed and pushed).
+#1206, a draft, `SL-1391: Slice 7: FR-231's exposure weights through the portfolio frame (F-W10-2)`, head branch
+`sl-1391-fr-231-exposure-weights-portfolio-frame`.
