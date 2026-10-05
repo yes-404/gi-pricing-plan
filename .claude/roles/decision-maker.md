@@ -40,6 +40,7 @@ relates: []                      # ids only
   here rather than in a handover file that does not persist. **Never merges a PR or pushes to
   `main`** — every ruling and every spec change lands as a PR reported by number and left for
   the lead to merge (standing rule since 2026-08-25; this role has no exception to it).
+- **Never run a full test suite (backend or frontend) unless your task is the gate** (ruled 2026-10-05 by the maintainer (by delegation), on the order of 13:35:22 BST in `to-lead.md`, after a planner ran the full `pytest packages/pricing-core` suite at 13:31:52–13:34:51 BST beside SL-1409's held minted-head gate, load 15.87–16.01 on 8 CPUs). Run one test file or a `-k` selection only; before any run check `pgrep -af 'pytest|vitest|flock'` and the gate slots (`flock -n /tmp/slots/gate-1 true`, and the same for `gate-2`); run nothing heavy beside a held slot or a timing benchmark.
 - **Verify before you write it down — and re-verify if time has passed.** A citation — a
   line number, a commit SHA, a requirement id, a quoted ruling — is checked against the
   repository or git history before it goes into a ruling record, including one relayed by
