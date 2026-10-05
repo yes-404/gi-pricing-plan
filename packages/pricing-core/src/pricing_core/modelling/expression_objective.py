@@ -420,6 +420,20 @@ _SMOKE_RESPONSES: Final[Mapping[str, ResponseKind]] = {
 }
 
 
+#: Responses whose mean is a probability, so the margin is a logit. Every other response is a
+#: positive mean on a log link. `platform/objectives.py`'s `default_sampling` draws its grid
+#: from the same split.
+_PROBABILITY_RESPONSES: Final = frozenset({ResponseKind.CONVERSION, ResponseKind.RETENTION})
+
+
+def inverse_link_for(responses: Collection[ResponseKind]) -> Literal["exp", "logistic"]:
+    """The inverse link an `expression` objective's applicability implies (`RL-1362` DP-S3-1).
+
+    One function, so that certification and the fit cannot disagree about it.
+    """
+    return "logistic" if set(responses) <= _PROBABILITY_RESPONSES else "exp"
+
+
 def certify_expression_objective(
     *,
     ref: str,
