@@ -39,7 +39,7 @@ relates: []                      # ids only
   - **Appends its `LG-` per task and per PR**, setting it `active` — the slice ledger is
     grown, never rewritten in place (§1.6 LG row: *"executor, appends per task and per PR
     (`active`)"*).
-  - **As the mint step, when the lead's brief makes it one after the slice audit** (the SL-1377 order: slice audit → mint → minted-head gate), the executor performs §1.6's closing acts on the auditor's behalf in the mint commit: the `LG-` front matter `status: closed`, the roadmap `SL-` row `status: closed` with its dated line, then `docs/INDEX.md` regenerated and `audit-docs` green. *(Added 2026-10-04, on the deputy's direction, after LG-1400 and WK-674 Slice 2's ledger (not yet merged when this was written, so not cited by id) were each minted `active`.)*
+  - **As the mint step, when the lead's brief makes it one after the slice audit** (the SL-1377 order: slice audit → mint → minted-head gate), the executor performs §1.6's closing acts on the auditor's behalf in the mint commit: the `LG-` front matter `status: closed`, the roadmap `SL-` row `status: closed` with its dated line, then `docs/INDEX.md` regenerated and `audit-docs` green. *(Added 2026-10-04, on the maintainer's (by delegation) direction, after LG-1400 and WK-674 Slice 2's ledger (not yet merged when this was written, so not cited by id) were each minted `active`.)*
   - **Owns `RS-` `spike`/`measurement`** via `library-spike` and sets it `active` on filing;
     it is closed only by citing the `FR-`/`ADR-`/`RFC-` target the decision-maker created
     from it (§1.6 RS `spike`/`measurement` row). **Owns the journey tests** — the executor
@@ -116,7 +116,7 @@ relates: []                      # ids only
     #883 (three times) and WK-672 Slice 3's T7 (three times) — **plus one wrong-process
     kill** (an executor's permitted targeted test) and one relaunch under `setsid` after
     such a stop. Sources, all local and not in the repository: the lead's correction entry
-    of 2026-09-28 22:21:21 BST (`to-deputy.md`) for the count; the deputy's entry of
+    of 2026-09-28 22:21:21 BST (`to-deputy.md`, archive, until 2026-09-29) for the count; the maintainer's (by delegation) entry of
     22:18:07 BST (`to-lead.md`) for the ruling. **The "five" stops in the lead's 22:17:09 BST
     entry and in the 22:18:07 entry is superseded by that correction.**
 - **S-14** (ruled 2026-09-28 by the maintainer (by delegation)): **A force-stopped gate leaves
@@ -129,9 +129,9 @@ relates: []                      # ids only
   - **Grounds, 2026-09-28:** #883's gate at `1602cb07` (22:43:25–23:00:27) failed two
     tests in `test_api_datasets.py` with `IntegrityError … uq_users_issuer_subject`. The
     users count was 0 after that gate's teardown, and the file passed 31 of 31 in
-    isolation. The lead's entry of 23:02:03 BST (`to-deputy.md`) gives the cause as the
+    isolation. The lead's entry of 23:02:03 BST (`to-deputy.md`, archive, until 2026-09-29) gives the cause as the
     three earlier #883 gates it killed, and calls it strong evidence, not yet proven by a
-    re-run; the deputy's entry of 23:02:24 BST (`to-lead.md`) records the same cause and
+    re-run; the maintainer's (by delegation) entry of 23:02:24 BST (`to-lead.md`) records the same cause and
     asks for this line. Both entries are local and not in the repository.
 - **Tools:** full read/write + Bash, scoped to the current slice's worktree. Not affected by
   Part A2: `docs/plans/PL-00845-rfc-840-rfc-841-adoption-reconciliation-and-rulings-2026-08-29.md` (lines 356–357)
@@ -159,7 +159,7 @@ do not guess at a fix or carry it silently. Follow this form:
 min), option B: retire the tests (not allowed), option C: materialise pre-migration tree
 (45 min). Recommend C because the tests assert on specific real content and
 high-fidelity mocking violates Ruling 67. Standing by.
-[deputy note: "Ruling 67" here resolved to no ruling on mocking; the repo's Ruling 67 is
+[the maintainer's note (by delegation): "Ruling 67" here resolved to no ruling on mocking; the repo's Ruling 67 is
 RL-988, DP-2]
 ```
 
