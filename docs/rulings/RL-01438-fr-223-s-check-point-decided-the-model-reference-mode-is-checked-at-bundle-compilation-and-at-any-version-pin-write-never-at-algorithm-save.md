@@ -1,9 +1,9 @@
 ---
-id: RL-9758
+id: RL-1438
 family: ruling
 title: FR-223's check point decided — the model reference mode is checked at bundle compilation and at any route that writes a version's pins, never at algorithm save; the spec's "save time" was wrong, and so was the code's error code
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-01
+created: 2026-10-05            # original date 2026-10-01, set at the draft; minted 2026-10-05
 owner: decision-maker
 tree: 8bd782acbbdde8e3b4195b5a0acb89183b5a0253
 phase: P2
@@ -15,7 +15,7 @@ corrects: ~
 relates: [FR-222, FR-223, FR-227, FR-237, FR-239, FR-240, FR-403, PL-1286]
 ---
 
-# RL-9758 — FR-223's check point decided: the model reference mode is checked at bundle compilation and at any route that writes a version's pins, never at algorithm save
+# RL-1438 — FR-223's check point decided: the model reference mode is checked at bundle compilation and at any route that writes a version's pins, never at algorithm save
 
 ## How this was ruled
 
@@ -31,7 +31,7 @@ channel entry itself.
 **Working id 9758**, allocated by the lead. It is minted at its merge turn, and every
 `RL-<this>` below is then its minted id.
 
-**It discharges limb (1) of FD 9759 (working id; LOW; filed by auditor-1055):** where the
+**It discharges limb (1) of FD-1437 (LOW; filed by auditor-1055):** where the
 check runs, and which code each site returns. Limbs (2) and (3) are obligations, not ruled
 here (see *What it obliges*).
 
@@ -143,7 +143,7 @@ The executor applies each text above byte-for-byte; authorship stays with the de
 ## What it obliges
 
 - **This commit:** this record only. No spec is edited.
-- **FD 9759 (working id), limb (2): the typed error, red first.** Build owned by S3, as the
+- **FD-1437, limb (2): the typed error, red first.** Build owned by S3, as the
   lead relayed it.
   - `check_model_reference_mode`'s mismatch reaches compilation's caller as
     `MODEL_REFERENCE_MODE_INCONSISTENT`, not as a bare `ValueError` that falls back to
@@ -153,7 +153,7 @@ The executor applies each text above byte-for-byte; authorship stays with the de
   - Red first: a compile test with an `approximation` version pinning an `exact`
     `model_call` asserts the Job's error code. On main it reads `BUNDLE_COMPILE_FAILED`.
   - How the error is typed is the build's to design. This record does not rule its code.
-  - *(Added 2026-10-01 10:30 BST, auditor-1061 F1.)* FD 9759 (working id) limb (2)'s
+  - *(Added 2026-10-01 10:30 BST, auditor-1061 F1.)* FD-1437 limb (2)'s
     validate-route clause falls away by item 3. The validate route has no Rating Version,
     and so no `model_reference_mode`; RL 9767 (working id) item 7 agrees. Limb (2) is
     discharged by the compile-site typed error alone. The maintainer accepted this on
@@ -161,7 +161,7 @@ The executor applies each text above byte-for-byte; authorship stays with the de
     ACCEPTANCE: RL 9770 (NFR-490's statistic = p99) as the spec interpretation; FD 9759
     limb (2) discharged at the compile site alone; #1060 audit noted", as the lead relayed
     it. That supersedes the maintainer's earlier "at compile AND in the validate route".
-- **FD 9759 (working id), limb (3): the bare-`ValueError` sweep.** Build owned by S3. The
+- **FD-1437, limb (3): the bare-`ValueError` sweep.** Build owned by S3. The
   build finds the other bare `ValueError`s that reach `compile_rating_version`'s fallback
   (`rating_versions.py:530-536`), and either names them or records why
   `BUNDLE_COMPILE_FAILED` is right for each. Not ruled here.
@@ -202,7 +202,7 @@ refused under the wrong code or not refused at all.**
 `f70593b5`, as the lead adopted it at 10:29 BST. The ruling is unchanged.*
 
 - **F1** *(folded in at 10:30 BST, on the maintainer's answer of 10:30:00 BST, relayed by the
-  lead).* FD 9759 (working id) limb (2) is discharged at the compile site alone. The
+  lead).* FD-1437 limb (2) is discharged at the compile site alone. The
   validate-route clause falls away by item 3. The new bullet is in *What it obliges*.
 
 - **F2.** Item 4 and Acceptance 3 cited audit-docs check 10, which cannot see a missing
@@ -246,8 +246,8 @@ on the lead's brief of 2026-10-05 10:50 BST, which adopted the batch-2 triage).
   `active`, `superseded`, `retired`, and `audit-docs.py` check 33 refused `draft`. The
   working-id rulings of batch 1 (#977, #979) carry `active` in the same form.
 - `tree:` stays `8bd782ac`, the tree of `1dd5e264` that the Evidence was read at, as
-  `RL-1407` keeps its own evidence tree. `created:` changes at the mint. RL 9767, RL 9770
-  and FD 9759 are still working ids (#1055, #1060, #1059) and are cited as such.
+  `RL-1407` keeps its own evidence tree. `created:` changes at the mint. RL 9767 and RL 9770
+  are still working ids (#1055, #1060) and are cited as such; FD-1437 is minted as FD-1437 in the same PR.
 
 ## Pre-mint correction, 2026-10-05 (the maintainer, by delegation)
 

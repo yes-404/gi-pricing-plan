@@ -1,16 +1,16 @@
 ---
-id: FD-9759
+id: FD-1437
 family: finding
 title: FR-223's MODEL_REFERENCE_MODE_INCONSISTENT is emitted nowhere, and its "checked at save time" is unreachable
 status: active
-created: 2026-10-01
+created: 2026-10-05            # original date 2026-10-01, set at the draft; minted 2026-10-05
 owner: auditor
 tree: a978dc2297bc8bfcc1c4da09ded37cefdcf92156
 corrected_by: []
 relates: [FR-223, FR-222, FR-240, WK-675, WK-1178]
 ---
 
-# FD-9759 — FR-223's named code is never emitted, and its save-time check cannot run
+# FD-1437 — FR-223's named code is never emitted, and its save-time check cannot run
 
 ## Finding
 
@@ -20,7 +20,7 @@ relates: [FR-223, FR-222, FR-240, WK-675, WK-1178]
 > Discharge, all of: (1) a DM rules FR-223's check point (compile + the RL 9767 validate route vs 'save'), verbatim text, recording which side was wrong; (2) a typed error mapped to MODEL_REFERENCE_MODE_INCONSISTENT at compile AND in the validate route, red first; (3) a listed, counted sweep of bare ValueError raises in ALGORITHM_CHECKS / compile_bundle so no other check maps to the generic code.
 > Owner: the WK-675 slice that builds RL 9767's validate route (S3's leaf), NOT WK-1178. If S3 is cut to P3 Saturday, it re-homes to WK-1178 by a dated line.
 
-RL 9767 (working id) rules that route; RL 9758 (working id) is the FR-223 ruling. This replaces the auditor's earlier proposal,
+RL 9767 (working id) rules that route; RL-1438 is the FR-223 ruling. This replaces the auditor's earlier proposal,
 kept below as struck text (append-only):
 
 > ~~**Severity: proposed: LOW-MEDIUM; severity is the maintainer's.** Reasoning: a version whose steps disagree with its
@@ -79,10 +79,10 @@ compile and in the validate route, red first, asserting the code and not only th
 **Limb (2) amended 2026-10-01 10:30 BST** by the maintainer, `to-lead.md` entry headed "2026-10-01 10:30:00 BST — ACCEPTANCE:
 RL 9770 (NFR-490's statistic = p99) as the spec interpretation; FD 9759 limb (2) discharged at the compile site alone; #1060
 audit noted": limb (2) is discharged by the compile-site typed error alone; the validate-route clause falls away, because that
-route has no rating version, hence no `model_reference_mode` (RL 9758 and RL 9767 (working ids) agree). This supersedes "...
+route has no rating version, hence no `model_reference_mode` (RL-1438 and RL 9767 (working ids) agree). This supersedes "...
 at compile AND in the validate route" above, which is kept as written.
 
-Filed 2026-10-01 as working id 9759.
+Filed 2026-10-01 as working id 9759; minted as FD-1437.
 
 **Amended 2026-10-05 before mint: citations re-anchored, nothing decided.** Re-read at `origin/main` `ef5dc6e7` (tree
 `a978dc2297bc8bfcc1c4da09ded37cefdcf92156`, now the header's `tree:`). The finding holds unchanged: `git grep -n
@@ -92,6 +92,6 @@ is at `03-rating-engine.md:109` and the code is listed among the owned codes at 
 `check_model_reference_mode` `rating.py:172` → `:173`; the mapping at `rating_versions.py:528-536` → `:558-564` (the
 `except ValueError` at `:559`, the generic-code fallback at `:563`). The fixture `test_a_mode_mismatch_is_refused_at_compile`
 is at `test_rating_compile_bundle.py:235` (the cite `:234-239` still spans it). Evidence 1-5 and the red reproduction were
-**not re-run** (a gate slot is held); the 2026-10-01 reproduction output above is a dated reading. `RL 9758`, `RL 9767`
-and `RL 9770` are still working ids on main (no minted record carries them), so they stay in working-id form; no other
+**not re-run** (a gate slot is held); the 2026-10-01 reproduction output above is a dated reading. `RL-1438` is minted as RL-1438 in the same PR as this record;
+`RL 9767` and `RL 9770` are still working ids on main (no minted record carries them), so they stay in working-id form; no other
 working id in this record has minted. Evidence's `1dd5e264` base sentence is historical and stays as written.
