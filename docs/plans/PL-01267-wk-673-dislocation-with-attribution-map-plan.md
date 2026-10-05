@@ -3,7 +3,7 @@ id: PL-1267
 family: plan
 kind: map
 title: WK-673 — Dislocation with attribution: map plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-09-29
 owner: planner
 tree: 19c395acad594d1b193da197461bec85201d2248

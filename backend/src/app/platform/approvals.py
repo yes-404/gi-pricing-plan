@@ -41,7 +41,7 @@ from app.db.models import (
     RoleRow,
 )
 from app.errors import PlatformError
-from app.platform import audit, rbac
+from app.platform import audit, environments, rbac
 from model_schema import (
     DEFAULT_POLICY,
     VALID_APPROVAL_TRANSITIONS,
@@ -112,6 +112,10 @@ CREATION_ACTIONS: Final[Mapping[str, str]] = {
     "validation_rule": "validation_rule.created",
     "dataset_version": "dataset_version.created",
     "rating_version": "rating_version.created",
+    # A Deployment Request's Author is its submitter (`06` FR-353 as amended 2026-10-03,
+    # `RL-1401`): `platform.deployments` records this event with the request's own
+    # reference in the transaction that writes and submits it.
+    "deployment": "deployment_request.created",
 }
 
 
@@ -197,6 +201,17 @@ async def set_policy(
             "would say less than the platform requires — which is the reader of the policy "
             "being misled rather than a gate being opened.",
         )
+    # `RL-1301` A.6: a `deployment` entry names an Environment by its slug, and a name no
+    # Environment has (`prd` for `prod`) would leave the real target ungated. "Existing"
+    # means non-retired (auditor-plans N3). `07` sits left of `06` in DEP-1's order, so this
+    # read is permitted.
+    for entry in policy.policies:
+        if entry.artifact_type == "deployment" and entry.environment is not None:
+            await environments.require_existing(
+                session,
+                entry.environment,
+                subject="An approval policy `deployment` entry",
+            )
     before = await policy_for(session, workspace_id)
 
     row = await session.get(ApprovalPolicyRow, workspace_id)

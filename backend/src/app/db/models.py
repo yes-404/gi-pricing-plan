@@ -42,6 +42,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from model_schema import (
     ApprovalStatus,
+    DeploymentRequestStatus,
     JobKind,
     JobQueue,
     JobSource,
@@ -65,7 +66,10 @@ __all__ = [
     "DatasetRow",
     "DatasetSplitRow",
     "DatasetVersionRow",
+    "DeploymentRequestRow",
+    "DeploymentRow",
     "DiagnosticsRow",
+    "EnvironmentRow",
     "IngestionRunRow",
     "JobLogRow",
     "JobRow",
@@ -2262,6 +2266,12 @@ class ScoringTraceRow(Base):
     sample_reason: Mapped[str] = mapped_column(String(16), nullable=False)
     #: Null for a batch-produced trace (see class docstring); set by the real-time path.
     environment: Mapped[str | None] = mapped_column(String(32))
+    #: The Deployment this trace was served under (`03` §4.12, PL-1392 Task 3). Nullable:
+    #: a trace written before Deployments existed, or for a batch Job, had none, and the
+    #: `environment` string above stays a string (never a foreign key) so it cannot dangle.
+    deployment_id: Mapped[UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("deployments.id")
+    )
     #: The blob body's digest — `app.platform.blobs.blob_key`/`BlobStore.read` resolve it.
     #: Null while `status == "pending"`; every other status requires it (Task 4B).
     blob_sha256: Mapped[str | None] = mapped_column(String(64))
@@ -2386,4 +2396,114 @@ class SubGraphVersionRow(Base):
             "workspace_id", "slug", "version", name="uq_sub_graph_versions_slug_version"
         ),
         Index("ix_sub_graph_versions_workspace", "workspace_id", "slug"),
+    )
+
+
+class EnvironmentRow(Base):
+    """A named place a Rating Version is deployed to (`07` §4.2, FR-428; WK-674 Slice 2).
+
+    **Deployment-wide, not per workspace** (ADR-710): there is no `workspace_id`. `slug` is
+    immutable and unique across **all** rows, retired included (RL-1301 A.6): a retired
+    Environment keeps its row and its slug, and a slug is never reissued. `name` is the only
+    renamable part. `requires_prior_environment` is the predecessor's slug, read by FR-429's
+    promotion-order predicate. There is no `live_deployments` column: it is derived from the
+    Deployment rows. The migration seeds `dev`, `uat` and `prod`.
+    """
+
+    __tablename__ = "environments"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    promotion_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    requires_prior_environment: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("environments.slug")
+    )
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("slug", name="uq_environments_slug"),
+        CheckConstraint("promotion_order >= 1", name="promotion_order_positive"),
+    )
+
+
+class DeploymentRequestRow(Base):
+    """The artifact that precedes a gated deploy (`03` §4.12, RL-1301 A; WK-674 Slice 2).
+
+    Its reference is `deployment:<environment slug>@<n>`, so `slug` holds the **Environment's
+    slug** and `version` is numbered per `(workspace_id, slug)`. `status` declares
+    `DeploymentRequestStatus`, which has an `APPROVED` member, so `approval_guarded_tables()`
+    derives this table into the approval guard's population, and the creating migration
+    installs `approval_guard()` on it with no `'flag'` argument: only a decided approval
+    request writes `approved` (RL-1301 A.4). `evidence` is the two items pinned once at
+    submission.
+    """
+
+    __tablename__ = "deployment_requests"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    environment_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("environments.id"), nullable=False
+    )
+    rating_version_ref: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default="draft",
+        info={"status_vocabulary": DeploymentRequestStatus},
+    )
+    approval_request_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    evidence: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    change_summary: Mapped[str] = mapped_column(Text, nullable=False)
+    submitted_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id", "slug", "version", name="uq_deployment_requests_slug_version"
+        ),
+        CheckConstraint(
+            "status IN ('draft', 'review', 'approved', 'rejected', 'withdrawn', 'executed')",
+            name="status_known",
+        ),
+        Index("ix_deployment_requests_environment", "environment_id"),
+    )
+
+
+class DeploymentRow(Base):
+    """One approved Rating Version bound to one Environment at a point in time (`03` §4.12).
+
+    **A record, not a Governed Artifact**: no status, never updated or deleted (`00` FR-4).
+    The migration grants the application role `SELECT` and `INSERT` only. The Deployment
+    Request it executed is null only for a target with no `deployment` policy entry
+    (RL-1301 A.5).
+    """
+
+    __tablename__ = "deployments"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    environment_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("environments.id"), nullable=False
+    )
+    rating_version_ref: Mapped[str] = mapped_column(String(100), nullable=False)
+    bundle_hash: Mapped[str] = mapped_column(String(71), nullable=False)
+    deployed_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    deployed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    deployment_request_id: Mapped[UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("deployment_requests.id")
+    )
+
+    __table_args__ = (
+        CheckConstraint("bundle_hash ~ '^sha256:[a-f0-9]{64}$'", name="bundle_hash_format"),
+        Index("ix_deployments_environment", "workspace_id", "environment_id", "deployed_at"),
     )

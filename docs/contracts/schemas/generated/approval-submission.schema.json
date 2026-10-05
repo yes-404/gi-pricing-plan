@@ -1,0 +1,34 @@
+{
+  "additionalProperties": false,
+  "description": "The body of `POST /api/v1/approval-requests` (`06` §5.1): an artifact put forward.\n\nMoved here from the API module (WK-674 Slice 2, `PL-1392` Acceptance 16, DP-S2-6 (c)) so the\nrequest body is a published shape rather than a class the backend defines. The route's 2xx\nstays untyped until `FD-1335` Part B (owner FD 9752).",
+  "properties": {
+    "artifact_ref": {
+      "description": "Canonical `{type}:{slug}@{version}` (ID-3).",
+      "title": "Artifact Ref",
+      "type": "string"
+    },
+    "change_summary": {
+      "minLength": 1,
+      "title": "Change Summary",
+      "type": "string"
+    },
+    "environment": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Environment"
+    }
+  },
+  "required": [
+    "artifact_ref",
+    "change_summary"
+  ],
+  "title": "ApprovalSubmission",
+  "type": "object"
+}
