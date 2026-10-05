@@ -398,3 +398,19 @@ on the lead's brief of 2026-10-05 10:50 BST, which adopted the batch-2 triage).
   working-id rulings of batch 1 (#977, #979) carry `active` in the same form.
 - `tree:` stays `8bd782ac`, the tree of `1dd5e264` that the Evidence was read at, as
   `RL-1407` keeps its own evidence tree. `created:` changes at the mint.
+
+## Amendment, 2026-10-05 15:29 BST: citations re-read at main `809a3794`, before mint
+
+Citation update only. Nothing ruled above changes (decision-maker `dm-premint2`, on the
+lead's prep-wave brief of 2026-10-05, section M).
+
+- **T1 to T4 re-read at `809a3794`.** Each anchor is found exactly once, at the line the
+  amendment above gives: `| **FR-219** |` at `03:88`, the `…/diff?against=` row at `:896`,
+  T3's paragraph ending `and unreferenced by an `output` (FR-212).` at `:287-289` (before
+  `### 4.2` at `:291`), and T4's anchor sentence in the FR-24 row at `00:235`. `03` §5.1's
+  header is still `| Method | Path | Purpose |`, so T2's three-cell form still applies.
+- **Moved since `ef5dc6e7`:** `_handle_validation_error`, the Evidence's `errors.py:455-470`,
+  is now `errors.py:468-483` (eight lines were inserted at `:191`); the pasted `06`
+  permission rows are now `06-governance.md:281-282`, and `RATING_READ` and `RATING_WRITE`
+  are now `permissions.py:48-49`. Both names still exist. `06` §4.1's table starts at
+  `:262`. The other cites the amendment above gives are unchanged at `809a3794`.

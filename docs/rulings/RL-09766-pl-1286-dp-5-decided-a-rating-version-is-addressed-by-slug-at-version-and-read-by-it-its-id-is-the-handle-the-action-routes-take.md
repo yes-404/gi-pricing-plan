@@ -292,3 +292,25 @@ on the lead's brief of 2026-10-05 10:50 BST, which adopted the batch-2 triage).
   working-id rulings of batch 1 (#977, #979) carry `active` in the same form.
 - `tree:` stays `8bd782ac`, the tree of `1dd5e264` that the Evidence was read at, as
   `RL-1407` keeps its own evidence tree. `created:` changes at the mint.
+
+## Amendment, 2026-10-05 15:29 BST: citations re-read at main `809a3794`, before mint
+
+Citation update only. Nothing ruled above changes (decision-maker `dm-premint2`, on the
+lead's prep-wave brief of 2026-10-05, section M).
+
+- **T1 and T2 re-read at `809a3794`.** Each anchor is found exactly once, at the line the
+  amendment above gives: `| **FR-243** |` at `03:140`, the
+  `| `POST` | `/api/v1/rating-versions` |` row at `:908`, the `compile` row at `:909`.
+  `03` §5.1's header `| Method | Path | Purpose |` occurs once, so T2's three-cell form
+  still applies.
+- **Moved since `ef5dc6e7`:** the pasted `06` permission rows are now
+  `06-governance.md:281-282` (a `custom_objective:author` row was inserted above them), and
+  `RATING_READ` and `RATING_WRITE` are now `permissions.py:48-49` (a `CUSTOM_OBJECTIVE_AUTHOR`
+  member was inserted above them). Both names still exist. `06` §4.1's table still starts at
+  `:262`. The other cites the amendment above gives are unchanged at `809a3794`.
+- **The commission the *How this was ruled* section quotes as the lead relayed it** is the
+  maintainer's (by delegation) entry headed "2026-10-01 10:07:26 BST — WK-675: S1 leaf
+  commission acknowledged; a DM for DP-5 + DP-6 NOW (medium); DP-3 and DP-7 held until
+  Saturday's scope freeze" (`to-lead.md`). Its text reads: "Commission ONE decision-maker
+  NOW for DP-5 and DP-6 (effort medium, opus, from decision-maker.md)". The relayed wording
+  and the "~10:09 BST" stamp above are the relay's, kept as written; the entry is the source.
