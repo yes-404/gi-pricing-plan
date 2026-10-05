@@ -165,6 +165,8 @@ happened before the cut is re-judged. **No allowlist file** (¶7 gives the reaso
      is a violation, not a candidate for the list.
    - A deliberate audit run with an older base (for example `AUDIT_DOCS_FREEZE_BASE=71f5a220…`)
      will print the 42. That is a manual reading against RFC 9653's table, not the gate.
+   - RL-1362's and RL-1379's working plan ids in title and slug stand as merged, listed in RFC
+     9653's *Known historical defects*. They are content as added, after the cut, and not edits.
 
 ## T-texts (none applied in this PR)
 

@@ -163,6 +163,23 @@ Totals: C 21, R 11, V 5, A 2, M 2, L 1. The examples the brief names: CR-838 is 
 nothing: the file was added by `5638f69120e0f4d9c958dc1bf4a07f589b42f080` (2026-09-29) with its *"Lead's decision,
 2026-09-29"* paragraph (FD-1282 cites it) already in it — not a post-merge edit, and nothing for check 34 to see.
 
+### Known historical defects
+
+Two frozen rulings carry a working plan id in their title, and one also in its filename slug.
+Each was in the file as added, and neither file has a later edit
+(`git log origin/main --diff-filter=M -- 'docs/rulings/RL-01362*' 'docs/rulings/RL-01379*'`
+prints nothing at `83ea509023d6d705d6f78fe74b7124fdf1375739`):
+
+| Record | Added by | Working id in | Minted as |
+|---|---|---|---|
+| RL-1362 | `c535b19d8821acbc887467245bc1f0d9301fa860` (2026-10-01) | `title:` *"PL 9789 DP-S3-1 to DP-S3-5 decided …"*; slug `pl-9789-…` | PL-1382 |
+| RL-1379 | `95bcf1a97012c37a5faa92783bb03f0e65de55cd` (2026-10-03) | `title:` *"PL 9765 DP-S2-7 decided …"*; slug `pl-9765-…` | PL-1392 |
+
+Both were merged after the cut `e9263283…`, so they are not in the 42. They are defects of
+content as added, not post-merge edits, and check 34 has nothing to see in them. They are
+listed here, not corrected: no correcting record is filed (the deputy's ID audit, 2026-10-05
+14:15:12 BST, D3 and order 3), and `docs/INDEX.md` and each body resolve the minted id.
+
 ## The deputy's leaning, tested
 
 The leaning: grandfather the historical notes by an enumerated list (file and commit) that
