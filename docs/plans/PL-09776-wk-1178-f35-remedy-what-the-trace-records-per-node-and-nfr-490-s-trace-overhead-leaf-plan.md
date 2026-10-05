@@ -348,10 +348,14 @@ unless it names the base.
     evidence rules".
 12. **The write set holds:** `git diff --stat origin/main...HEAD` names only the paths in
     §"Write set". Under `docs/specs/` it names only `03`, and `03`'s diff touches only
-    FR-246's row, the §4.1 example (`03:259-281`) and, under (iii-a) (b), one owned-codes row,
+    FR-246's row, the §4.1 example's whole JSON block and the **Invariants** note after it
+    (§4.1, `03:240-289` at `ef5dc6e7`) and, under (iii-a) (b), one owned-codes row,
     each byte-equal to the ruling's text (DP-F35-1 (iii)). Under `backend/src/` it names
     nothing, or under (iii-a) (b) only `backend/src/app/errors.py`, one `RATING_ERROR_CODES`
-    entry.
+    entry. *(Amended 2026-10-05 before mint, on the lead's decision of 2026-10-05: the range
+    was the example's steps, `03:252-274` as filed; RL 9771 (working id, #1060) §(iii) replaces
+    the whole fence (its T2) and the Invariants note (its T3), whose old text contradicts the
+    corrected example, so this criterion, §"Write set" and Task 1A's Modify line name both.)*
 
 ## Global Constraints
 
@@ -504,7 +508,7 @@ these are current.
 | `packages/pricing-core/tests/data/trace_remedy_baseline.json` | **new**: the frozen base corpus (Task 1 Step 6) | — |
 | `packages/pricing-core/tests/test_rating_score.py` | `_algorithm_payload` (three `input` steps; `consumes` on `s_clamp`, `s_decl_cap`, `s_decl_floor`; Task 1A); `test_trace_true_returns_a_populated_trace_and_the_identical_premium`: the `isdisjoint` assertion on `input`/`output` steps inverts (DP-F35-2 (b)) | **yes**: that fixture and that test |
 | `backend/tests/test_score_compare.py` | the expectations of `test_compare_returns_both_traced_results_and_the_step_diff`, `test_exactly_one_step_is_the_own_change_at_the_http_layer` and `test_identical_refs_give_an_empty_diff` (Task 5's derivation); one appended test | **yes**: those three tests |
-| `docs/specs/03-rating-engine.md` | FR-246's row (§3.5) and the §4.1 example (`03:259-281`), verbatim from the DP-F35-1 ruling, in Task 1A's commit (the maintainer's executor carve-out); under (iii-a) (b), the new code's owned-codes row (§5.1) | **yes**: those rows and the example |
+| `docs/specs/03-rating-engine.md` | FR-246's row (§3.5) and the §4.1 example's JSON block and Invariants note (§4.1, `03:240-289` at `ef5dc6e7`; RL 9771 §(iii) T2 and T3, amended 2026-10-05), verbatim from the DP-F35-1 ruling, in Task 1A's commit (the maintainer's executor carve-out); under (iii-a) (b), the new code's owned-codes row (§5.1) | **yes**: those rows and the example |
 | `backend/src/app/errors.py` | under (iii-a) (b) only: the new code in `RATING_ERROR_CODES` | **yes**: that frozenset |
 | `docs/ledgers/LG-<id>-….md` | new | none |
 | `docs/INDEX.md` | regenerated | registry-exempt |
@@ -823,13 +827,13 @@ branch points are DP-F35-1 (ii) (refusal or ordering from reads; scope; mandator
 `consumes`), (iii-a) (the error code) and (iii-b) (the fate of a stored or pinned bundle).
 
 **The ruled `03` text lands in this task's commit** (the maintainer's executor carve-out,
-2026-10-01): FR-246's amendment (`03` §3.5) and the corrected §4.1 example (`03:259-281`), and,
+2026-10-01): FR-246's amendment (`03` §3.5) and the corrected §4.1 example with its Invariants note (§4.1, `03:240-289` at `ef5dc6e7`; RL 9771 §(iii) T2, T3), and,
 under (iii-a) (b), the new code's owned-codes row. The executor applies the ruling's text
 **byte for byte**, writes nothing of its own into `03`, and the ledger records
 `git diff` of `03` beside the ruling's text.
 
 **Files:**
-- Modify: `docs/specs/03-rating-engine.md` (FR-246's row and the §4.1 example, `03:259-281`,
+- Modify: `docs/specs/03-rating-engine.md` (FR-246's row and the §4.1 example's JSON block and Invariants note, `03:240-289` at `ef5dc6e7`,
   verbatim from the ruling; under (iii-a) (b), also the code's owned-codes row)
 - Create: `packages/pricing-core/src/pricing_core/rating/references.py`
 - Create: `packages/pricing-core/tests/test_rating_declared_reads.py`
