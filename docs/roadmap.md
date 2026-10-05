@@ -1436,6 +1436,24 @@ relates: [FD-1356, RL-1301, PL-1306, SL-1256, RL-1407, PL-1408]
 **Closed 2026-10-05** on the slice audit (LG-1417 §"Closing note"; local working copy: `handover/audit-sl1409-2026-10-05.md`) and its re-check, at the mint of ledger `LG-1417` (the executor's closing acts, `executor.md` mint step; `document-ids.md` §1.6).
 (Activated 2026-10-05 as the WK-1178 FD-1356 fix slice, on the maintainer's GO check, "2026-10-05 09:44:39 BST — DISPATCH GO: FD-1356 fix (SL-1409 / PL-1408) on lane B, option (b); executor-1409 starts once the `__all__` registry amendment merges (or once WK-690 S3 merges, if that comes first)"; dispatch record DISPATCH-WK-1178-SL1409-2026-10-04.)
 
+#### WK-1178 fix slice — a declared decimal output is served as an exact JSON string on every scoring path
+
+```yaml
+id: SL-9500
+family: slice
+title: WK-1178 fix slice — a declared decimal output is served as an exact JSON string on every scoring path
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: fb178c360f6fd5b2fdb7ae60eea924811a65492f
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [RL-1343, FD-1333, RL-1329, RL-1365, SL-1367]
+```
+
+`RL-1343`'s discharge (`OQ-1334` decided (a); `FD-1333`), on the maintainer's (by delegation) entry "2026-10-05 18:10:57 BST — PL 9509 (#1210 @dc4f9c50) DPs RULED: DP-1 (b), DP-2 (ii), DP-3 the class name; the RL-1343 leaf plan is reserved NOW". `_build_outputs` (`score.py:729-758`) serves every declared `decimal`, `relativity` and `percentage` output as the engine's exact `string()` read, rounded once with its output step's `RoundSpec` and written positionally with exactly `dp` digits, on `/score`, both results of `/score/compare`, batch `outputs_json` and the sampled trace summary. **Both forms are red first:** a whole-valued `decimal`, a JSON integer on `/score` today (27 → `"27.00"` at dp 2), which `RL-1343` rule 4's float refusal cannot catch, and a fractional one, a float today (19.8 → `"19.80"`). `ScoringResult` refuses a float anywhere in `outputs`; batch checks the producer's string and converts nothing; the hand-authored and generated contracts admit no non-integer number there, held by a new guard; `NFR-502` is re-measured by `RL-1365`'s method in a solo window; a breaking wire change, so the frontend half of the gate runs. Leaf plan PL 9499 (working id, `draft`): DP-1 (the `/score` answer to a refused float) is the maintainer's, DP-3 (the order against `SL-1367`) the lead's. **Activation needs:** SL 9561 merged; serialised with SL 9511 on `_coerce_output_value` (either order; planned for SL 9511 first); DP-1 ruled and DP-3 decided; the `RL-` carrying PL 9509's FR-214 T2 minted; under DP-3 (a) `SL-1367` merged; the maintainer's GO and a solo window; active by a dated line in a separate activation PR. *(Filed 2026-10-05 under working ids 9500 (this row) and 9499 (the plan), reserved by the lead.)*
+
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
