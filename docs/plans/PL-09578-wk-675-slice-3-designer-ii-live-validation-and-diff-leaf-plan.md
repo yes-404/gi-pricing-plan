@@ -371,10 +371,11 @@ Classes are those of `docs/process/delivery-process.core.json`
 |---|---|---|
 | `pricing_core/rating/compile.py` (import block, `compile_bundle`) | WK-673 S3 (`SL-1387`), WK-1250 S2 (`SL-1340`), WK-1250 S3 (`SL-1341`) | **SERIALISES outright** (`PL-1371` §5 rule 4; decision 4) |
 | `model_schema/rating.py` `RatingAlgorithm` | WK-1250 S2/S3 if either edits it (re-read their leaf plans PL 9610, #1170, and PL 9609, #1173, at dispatch); WK-673 S5 (`SL-1389`) if it edits `diff_algorithms` | `forbidden` if the same class or function: **SERIALISES** |
+| `model_schema/rating.py`, other classes | WK-673 S7 (`SL-1391`, `PL-1419`, merged to main at `4d3be141` after this plan's evidence tree): `RateTableDiff` (`PL-1419` write set) and a new `RateTableDiffCell` | different classes from S3's (`RatingAlgorithm`, `ValidationIssue`, the report): not `forbidden`; the dispatch record names the classes, and the second to merge re-gates |
 | `03` §3.1 (T1) | WK-1250 S3 (FR-218); WK-673 S5 (§3.1 as needed) | **SERIALISES** with whichever shares the section (`PL-1286` `:397`) |
 | `03` §3.2 (FR-223's cell) | none named at `137bc817` | exclusive; re-read at dispatch |
 | `03` §4.1 (T3) | WK-1250 S2/S3 if either adds §4.1 prose | re-read at dispatch |
-| `03` §5.1 (T2) | WK-674 S2 and S6; WK-1250 S1 (closed); WK-673 S4 and S7; WK-675 S4 (DP-4 rows) | **SERIALISES** (`PL-1286` `:396`) unless a dispatch record names both hunks, as DP-L did for S2 |
+| `03` §5.1 (T2) | WK-674 S2 and S6; WK-1250 S1 (closed); WK-673 S4 and S7 (`PL-1419`); WK-675 S4 (DP-4 rows) | **SERIALISES** (`PL-1286` `:396`) unless a dispatch record names both hunks, as DP-L did for S2 |
 | `00` FR-24's cell (T4) | none named | exclusive |
 | `backend/src/app/errors.py` `RATING_ERROR_CODES` | any slice adding a rating code | `forbidden` (same existing object): serialise if both add |
 | `backend/src/app/api/rating_algorithms.py`, `platform/rating_algorithms.py` | none in flight at `137bc817` (S2 edits them, and S2 precedes S3) | exclusive |
