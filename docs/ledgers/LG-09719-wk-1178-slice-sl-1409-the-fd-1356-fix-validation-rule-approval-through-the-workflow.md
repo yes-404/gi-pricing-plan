@@ -601,6 +601,47 @@ select count(*) from dataset_versions dv where dv.status='validated' and exists 
 
 The 15 are pre-fix workspaces' validated versions whose latest report used the 10 rules the reset has now returned to `review`: 10 distinct rules (`exposure-positive-3149b9`, `-f8d380`, `-729c73`, `-94f560`, `-ef38a8`, `-36f698`, `-e711ae`, `-ebc8bf`, `-16383b`, `-9cbc27`) in 9 workspaces, `01a0aece-e697-…`, `-ee07-…`, `-f3bc-…` (2 versions), `-fcbb-…` and `01a0aecf-047b-…`, `-0bc8-…` (2), `-18db-…` (2), `-2388-…` (3), `-3595-…` (2). The lead's verdict (2026-10-05): this is the ruling's stated end state, measured and not refused (RL-1407 §"FD 9748"); it is recorded and not fixed here, and it opens no new finding.
 
+**The 15 Dataset Versions (deputy's condition, added after the first commit of this entry).** Listed as `workspace_id|dataset_version_id` from the residual query above (`sl1409-d9.out`):
+
+```text
+01a0aece-e697-72a9-a8bd-0f02d88399f1|01a0aece-e894-7746-b263-44f0451bf223
+01a0aece-ee07-7438-9cf0-fe9fa7484b9a|01a0aece-ef52-702f-bb6b-4ac0e01939a2
+01a0aece-f3bc-7e4e-b95b-dc3c6e416f76|01a0aece-f522-79e8-b3a3-264df5ad7e7f
+01a0aece-f3bc-7e4e-b95b-dc3c6e416f76|01a0aece-fa5b-7365-bbf3-fc83c6b5bb70
+01a0aece-fcbb-79a0-abfe-8ade478d5d91|01a0aece-fe22-7b58-b03c-6f81b77085d9
+01a0aecf-047b-7dea-951a-98f796313e87|01a0aecf-061b-7103-943f-209fb246eadc
+01a0aecf-0bc8-7cd5-a955-ed07b42b7053|01a0aecf-0dab-752b-9d22-8e4a2cfa1e0f
+01a0aecf-0bc8-7cd5-a955-ed07b42b7053|01a0aecf-154e-7677-8d0e-ded36445a715
+01a0aecf-18db-7a38-8dcb-7ef28288f4dd|01a0aecf-1a8f-7831-80c0-24f67dbd865c
+01a0aecf-18db-7a38-8dcb-7ef28288f4dd|01a0aecf-20ca-7d7c-8aaa-4b171cd62c6f
+01a0aecf-2388-7b85-bdf8-8b50647e2c9d|01a0aecf-24f4-754a-8064-a5d815f0d107
+01a0aecf-2388-7b85-bdf8-8b50647e2c9d|01a0aecf-2b26-7153-8f32-964dd59251fc
+01a0aecf-2388-7b85-bdf8-8b50647e2c9d|01a0aecf-3243-7fc2-bda0-5c6be1a33a26
+01a0aecf-3595-7494-9ffa-6e4f22e9bd65|01a0aecf-3765-7c00-b41f-84c2f2307515
+01a0aecf-3595-7494-9ffa-6e4f22e9bd65|01a0aecf-3c31-7844-a07e-c98bb27bf924
+```
+
+**Are any referenced by an approved model or a deployed rating version?** Read from `backend/src/app/db/models.py`: `ModelRow` (`models.dataset_version_id`, `models.status`), `RatingVersionRow` (`rating_versions.dataset_version_id`) and `DeploymentRow` (`deployments.environment_id`, `deployments.rating_version_ref`, which holds `<rating version slug>@<version>`, e.g. `fremtpl2-demo@1`). Run on `gipricing`, `BEGIN READ ONLY … ROLLBACK`, run after the ledger's first commit. The query (`d9.sql`; the second statement prints the list above):
+
+```sql
+WITH residual_dv AS (
+  SELECT dv.id, dv.workspace_id FROM dataset_versions dv WHERE dv.status='validated' AND EXISTS (SELECT 1 FROM (SELECT r.body FROM validation_reports r WHERE r.dataset_version_id=dv.id AND r.workspace_id=dv.workspace_id ORDER BY r.created_at DESC LIMIT 1) latest CROSS JOIN LATERAL jsonb_array_elements(latest.body->'results') res JOIN validation_rules v ON v.id=(res->>'rule_id')::uuid WHERE v.status<>'approved' AND v.builtin IS NOT TRUE))
+SELECT 'residual_dataset_versions='||(SELECT count(*) FROM residual_dv)
+ ||' approved_models_referencing='||(SELECT count(*) FROM models m JOIN residual_dv d ON d.id=m.dataset_version_id AND d.workspace_id=m.workspace_id WHERE m.status='approved')
+ ||' models_any_status_referencing='||(SELECT count(*) FROM models m JOIN residual_dv d ON d.id=m.dataset_version_id AND d.workspace_id=m.workspace_id)
+ ||' rating_versions_referencing='||(SELECT count(*) FROM rating_versions rv JOIN residual_dv d ON d.id=rv.dataset_version_id AND d.workspace_id=rv.workspace_id)
+ ||' deployed_rating_versions_referencing='||(SELECT count(*) FROM deployments dp JOIN environments e ON e.id=dp.environment_id JOIN rating_versions rv ON dp.rating_version_ref=rv.slug||'@'||rv.version AND dp.workspace_id=rv.workspace_id JOIN residual_dv d ON d.id=rv.dataset_version_id AND d.workspace_id=rv.workspace_id)
+ ||' deployments_total='||(SELECT count(*) FROM deployments);
+```
+
+```text
+residual_dataset_versions=15 approved_models_referencing=0 models_any_status_referencing=11 rating_versions_referencing=0 deployed_rating_versions_referencing=0 deployments_total=0
+```
+
+**None of the 15 is referenced by an approved model or by a rating version deployed in an Environment** (0 and 0; `gipricing` holds no deployment at all). 11 `models` rows in other statuses reference some of them (not asked, recorded).
+
+**The root checkout's HEAD for the condition 5 retry.** The root's reflog (`git -C /home/puzhenhao1989/gi-pricing-plan reflog`) shows `5ff49c6d` until a fast-forward to `072c56e1ba386a790160ac4d90ad667f611df67c` at 12:10:45 BST, and `rev-parse HEAD` printed `072c56e1ba386a790160ac4d90ad667f611df67c` afterwards. So the first (failed) run began at `5ff49c6d`, and the retry (12:12:57–12:17:57) ran at `072c56e1ba386a790160ac4d90ad667f611df67c`. The first run's 12:09:02 start and its `Running upgrade` line are as stated above; the root moved to `072c56e1` while that run was still in progress.
+
 **4.5 Second reset, 12:08:44, rc 0:**
 
 ```text
