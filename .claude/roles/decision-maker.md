@@ -63,6 +63,13 @@ relates: []                      # ids only
   citation-verification traps most often, the kind `adr-write` and `git-hygiene` already
   exist to hold — per `CLAUDE.md` §12, with `.claude/skills/README.md` updated in the
   same commit.
+  **Also writes `docs/roadmap.md` §10's decision-gate row for an `OQ-` its record adds or
+  decides, in the same commit as the OQ row, and nothing else in that file**
+  (`.claude/skills/spec-change`: *"A new `OQ-` also goes into `docs/roadmap.md` §10's
+  decision-gate table, in the same commit"*, and the check is run *"whenever you add or decide
+  a question"*). *(Amended 2026-10-05 by the maintainer, dated line by delegation, accepting
+  the lead's charter-gap ruling on OQ 9630: the Tools line did not name the roadmap, so a
+  record adding a decided OQ row had no charter to write its gate row.)*
 - **Mandatory skills:** `.claude/skills/spec-change` before any `docs/specs/` edit;
   `.claude/skills/git-hygiene` for every branch, commit, and PR this role opens — the
   stranded-push and `gh pr edit` traps it documents were both hit by this role's own PRs
