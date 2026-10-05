@@ -22,7 +22,7 @@ Executed from `PL-1429` by `executor-sl1430` (Sonnet 5.5). Branch
 later. The dispatch record is the lead's local file
 `gi-pricing-plan.local/handover/DISPATCH-WK-1178-SL1430-2026-10-05.md`; it is not in the repository. Stamps are BST.
 
-FD-1425 is OPEN (its wiring limb is SL-1436's). Nothing in this slice bears on an approval.
+FD-1425 is OPEN (its wiring limb is a later slice's). Nothing in this slice bears on an approval.
 
 ## Tasks
 
@@ -37,7 +37,7 @@ createdb -U gipricing -T gipricing …` and migrated with `alembic upgrade head`
 Row 0.10: the three find strings occur once each (`03:908`, `:436`, `:134`). Row 0.11:
 `MODEL_REFERENCE_MODE_INCONSISTENT` is at `03:109` and `03:936` and in no code, so Task 3 Step 5 and Task 5 Step 3 apply.
 
-**RL-1428 against its draft** (`RL-9695` at `614ad96b`, by `git diff` of the two blobs): id substitutions, the three
+**RL-1428 against its draft** (`RL 9695` (working id) at `614ad96b`, by `git diff` of the two blobs): id substitutions, the three
 amendments the plan names, and the CR-838 correcting-record bullet. The T1–T3 find and replace strings are unchanged.
 RL-1428 lines 150 and 166 carry `<date>` and an unbalanced ")" in "RL-1428), FD-1421.)". The lead sent it to the
 maintainer (by delegation); **T-texts are not applied until the lead relays the ruling.**
@@ -71,7 +71,7 @@ backend/tests/test_rating_version_create_pins.py`): **13 failed, 1 passed**.
 ### Task 5 (RL-1428's three texts) — MINT-ARTIFACT CORRECTION
 
 RL-1428 lines 150 and 166 (T2 and T3), and line 143's text (T1), carry "RL-1428), FD-1421.)": the mint replaced the
-working id "RL 9695 (working id)" with "RL-1428)" and left the closing ")" of the old parenthesis. The maintainer (by
+working id "RL 9695" with "RL-1428)" and left the closing ")" of the old parenthesis. The maintainer (by
 delegation) ruled, in the `to-lead.md` entry headed `2026-10-05 22:44:21 BST — RL-1428's T-texts: the stray ")" is a MINT ARTIFACT; apply with it removed`, that the ONE stray ")" is removed
 when the texts land: "(… <date>, RL-1428, FD-1421.)", with `<date>` the commit date (2026-10-05). Everything else is
 byte for byte. RL-1428 itself stays unedited.
@@ -108,7 +108,7 @@ this commit.
 
 Green: `pytest -q backend/tests/test_rating_version_create_pins.py`: `14 passed`; `test_rating_versions.py`: `43 passed`;
 `test_rating_version_compile.py`: `20 passed`. `ruff check` on the changed files is clean (one `I001` fixed; the new test file
-formatted). FR-223's `03:109` is NOT edited: RL 9758 mints first as RL-1438 (maintainer by delegation, relayed by the lead),
+formatted). FR-223's `03:109` is NOT edited: RL 9758 (working id) mints first (maintainer by delegation, relayed by the lead),
 then T1 is applied byte for byte from the minted record.
 
 ### Task 0 Step 5 — the trial merge-tree with S7 (real, after the 03 edits)
@@ -132,3 +132,7 @@ Green: `test_demo_rating_evidence.py`: `2 passed`; `examples/fremtpl2/test_seed.
 edit has **no test that runs in this environment**; it is exercised by `_draft`-equivalent calls only through the shared
 `save_demo_algorithm`). The Acceptance 13 clause "the seeded `fremtpl2-demo` version's `rating_version.created` event carries
 the algorithm ref" is therefore **not evidenced here**: delivered but untested, until the seed runs with the data.
+
+## PRs
+
+None opened yet. The branch `sl-1430-fd-1421-rating-version-algorithm-and-pins` is pushed; the PR is opened as a draft and is not merged by the executor.
