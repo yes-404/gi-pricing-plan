@@ -675,6 +675,32 @@ Slice 3 (`SL-1341`, PL 9609, working id) starts after this slice closes. It cons
 `RL-1344` §3 leaves Slice 3 a decision point of its own: how a purpose mount's outputs reach the
 ladder and the payable, and how the inlined nodes are gated by `purpose` at evaluation.
 
+**Owed to PL 9521 (working id; #1202, the FD 9549 fix, WK-1178): the mounted red, and
+`_compatible`.** *(Dated note, 2026-10-05, written 18:00:25 BST, pre-mint, by planner-a12fold
+on the lead's order. From the maintainer's (by delegation) entry headed "2026-10-05 17:58:03 BST — PL 9521 @148892d6 and A-2 @176a6a75 noted; the mounted-case dependency (item 12 (c)) ACCEPTED, named in both plans",
+verbatim:)*
+
+> The A-control arithmetic was checked: 1234.4 × 1.1 = 1357.84, which rounds once to 1358; rounding first gives 1234 × 1.1 = 1357.4 → 1357. The control distinguishes the two. Good.
+
+> Item 12 (c), the mounted case (a decimal port → the parent's output step rounds once): ACCEPTED as "owed by whichever of SL-1340 (PL 9610) and PL 9521 merges SECOND". PL 9610 gets the hand-off line at its next fold, and PL 9521 names it. Neither closes its slice without either building the mounted red or citing the other's merged test.
+
+- **The mounted red.** `test_a_mounted_decimal_port_rounds_once_at_the_parent_output`: a
+  fragment computes a money value as `decimal` into a `decimal` output port. A parent
+  algorithm mounts it, and the port feeds the parent's `output` step declared `money_minor`
+  with `rounding {"mode": "half_even", "dp": 0}`. With `1234.4 × 1.1 = 1357.84`, the served
+  value is **1358**: one rounding, at the output step. Rounding first would give
+  `1234 × 1.1 = 1357.4 → 1357`, and the test asserts that the two differ before it asserts
+  `1358`. It is PL 9521's item 12 (c). **Whichever of this slice and PL 9521 merges second
+  builds it.** Neither closes its slice without either building it or citing the other's
+  merged test.
+- **`_compatible`.** PL 9521 changes `_compatible` (`compile.py:124`) to a closed numeric
+  rule, with a required keyword-only `at_output_step`. This slice's mount-port check calls
+  `_compatible` (Task 5 Step 3, this plan's `:581-583`). The two **serialise** (PL 9521's contention
+  table). Whichever lands second updates the other's call. A mount port is not an output
+  step, so it passes `at_output_step=False`. A `decimal` value into a `money_minor` port is
+  then refused (PL 9521 D9; "a sub-graph port carries money as decimal", the maintainer's
+  entry of 17:50:43 BST).
+
 ## Self-review
 
 1. **Against `RL-1309`'s Slice 2 obligations** (`:607-612`, under *What it obliges* at `:582`) and its *Acceptance* (`:627-653`):
