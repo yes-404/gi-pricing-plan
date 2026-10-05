@@ -1,8 +1,8 @@
 ---
-id: LG-9496
+id: LG-1432
 family: ledger
 title: WK-1178 slice SL-1427 — FD-1425 guard (c), a quote input never overrides a produced value (FR-213, PL-1426)
-status: active
+status: closed
 created: 2026-10-05
 owner: executor
 tree: 4f9c19c2f397b6b9be592b4ea92595ea225d5397
@@ -210,6 +210,33 @@ files. No new test and no `test_rating_score` test is among the 13.
 `uv run python scripts/req-coverage.py` exited 0 (the `req_coverage` stage). The four backend path reds and the core
 module passed inside the pytest stage (none is among the 13). The gate's overall rc was 1, the expected pre-mint shape.
 The 17:25:07 HOLD is not touched by this record: it lifts only as the first section of this ledger says.
+
+### The slice audit and the mint (2026-10-05)
+
+**The slice audit.** An auditor audited head `f3fcf8670af3eff65920fc88b73ca98fe4718b9e` and found it CLEAN: acceptance
+criteria 1-10 of PL-1426 delivered, and GO condition (3) held (T2 applied in the same commit as guard (c),
+`c8bc3a7c510430df801f542255d5fe2d5fcb8c56`, before any later commit). Two low notes: P1, the `docs/INDEX.md` conflict
+with `origin/main`, is fixed at the mint by a merge of `origin/main` (never a rebase, which would orphan the SHAs this
+ledger cites) and `doc-index`; P2, the `test_score.py` assert on the failed Job's error was added in the guard commit
+without an observed red, which the Task 2 entry above already says. The lead adopted the slice audit 2026-10-05.
+
+**The mint.** The working id `LG 9496` was minted as `LG-1432` at `python3 scripts/doc-id.py next` = 1432 on
+`origin/main` `0e4f1f1bbacc51f20d105a0f004d3ed446bab9d0` (#1218, FD-1431, merged first). The ledger is closed under the
+executor charter's mint-step clause (`.claude/roles/executor.md`, "As the mint step…") and `docs/process/document-ids.md`
+§1.6's 2026-10-04 amendment to the SL and LG close cells: the executor performed the closing acts in the mint commit on
+the auditor's behalf, after the slice audit: this ledger's front matter `status: closed`, the roadmap `SL-1427` row
+`status: closed` with its dated line, `docs/INDEX.md` regenerated, `audit-docs` green. The one quotation of the working id
+above (the 19:33:23 BST entry, "LG 9496 records the substitution") and the two `9496` figures in the gate's `check 31`
+text stay as quoted: they record what was written and printed.
+
+**The 17:25:07 deploy/approve HOLD does NOT lift at this merge.** It lifts only by the maintainer's (by delegation)
+dated entry after the merge read-back (GO condition (4)); the roadmap and the register cite that entry.
+
+**Merge of `origin/main`.** `origin/main` was merged into the branch at the mint (`c9420c1c`, parents `f3fcf867` and
+`0e4f1f1b`). The one conflict was `docs/INDEX.md`; it was resolved by taking main's file and regenerating it with
+`python3 scripts/doc-index.py`. **No local gate was run on the minted head**; PR CI on it is the integration evidence,
+the maintainer's backstop before the ACK. The gated tree stays `ae41f80acef299dfec069c8becf66c978493e716`
+(head `c8bc3a7c`).
 
 ## PRs
 
