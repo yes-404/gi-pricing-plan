@@ -335,3 +335,25 @@ def test_a_match_with_no_changed_cell_is_a_none_mean_not_a_refusal() -> None:
     diff = diff_vs_previous(cells, changed, keys, value, weights=weights.weights)
     assert diff.changed_cells == 1
     assert diff.exposure_weighted_mean_change_pct is None
+
+
+@pytest.mark.req("FR-231")
+def test_rows_that_map_with_zero_exposure_are_no_weight_not_a_refusal() -> None:
+    """Rows map but every matched row has zero exposure: defined, and it never divides.
+
+    No row-to-cell mapping is missing, so there is no refusal (T5: "a portfolio whose rows
+    map to no cell"). Every cell's sum is 0, so `weights` is empty, the coverage figures say
+    0 matched of 0 total, and the diff's weighted mean is `None`, as for "no changed cell".
+    """
+    keys = [_key("region")]
+    value = RateTableValue(name="relativity", type="relativity", unit="x")  # type: ignore[arg-type]
+    frame = _portfolio(region=["N", "S"], exposure_years=[D("0"), D("0")])
+    cells = [{"region": "N", "relativity": "1.0"}, {"region": "S", "relativity": "1.0"}]
+    result = exposure_weights(frame, keys, cells, factors={}, bandings={}, groupings={})
+    assert result == PortfolioWeights(
+        weights={}, portfolio_exposure=D("0"), matched_exposure=D("0")
+    )
+    changed = [{"region": "N", "relativity": "1.1"}, {"region": "S", "relativity": "1.0"}]
+    diff = diff_vs_previous(cells, changed, keys, value, weights=result.weights)
+    assert diff.changed_cells == 1
+    assert diff.exposure_weighted_mean_change_pct is None

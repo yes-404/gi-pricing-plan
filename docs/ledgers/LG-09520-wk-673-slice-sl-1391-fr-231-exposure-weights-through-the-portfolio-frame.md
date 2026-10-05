@@ -100,6 +100,16 @@ with `decimal.InvalidOperation: [<class 'decimal.DivisionUndefined'>]` at `opera
 cell", `RL-1418` T5). The two differ only when every matched row has zero exposure, which then gives an empty
 `weights` and a `None` mean instead of a refusal.
 
+**The lead's verdict** (2026-10-05, on this choice): follow `RL-1418` T5's own words, "the applied spec text governs
+over the plan's prose", and the departure is from `PL-1419` Task 2 Step 3 ("`matched_exposure == 0` raises
+`WeightJoinError`", plan `:618`). One condition: the case it opens must be defined and must not reach a division.
+`test_rows_that_map_with_zero_exposure_are_no_weight_not_a_refusal` pins it: every matched row has zero exposure, so
+`weights` is empty, the coverage is `matched_exposure` 0 of `portfolio_exposure` 0, there is no refusal, the diff's
+weighted mean is `None` and there is no `InvalidOperation`. It passed on first run, with no red, because the
+omit-a-zero-sum rule (`RL-1361` T3: "a cell whose Σ is 0 carries no weight") already defined the case; it is a
+regression pin, and I checked `03` for any text that says otherwise for zero total exposure (`grep -n` over the
+spec for "zero-exposure", "Σ is 0", "zero exposure", "all-zero"): only the FR-231 row's Σ-is-0 clause, which agrees.
+
 ### Task 3 — the platform: loaders, checks, the service and the cache (Acceptance 8 to 16)
 
 The per-worktree test database was created per `dev-commands` (`gipricing_sl-1391_d5679908`, from the `gipricing`
