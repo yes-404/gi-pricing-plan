@@ -135,9 +135,18 @@ Vite, Vitest with happy-dom, `@vue-flow/core` (added by S2), and the generated c
 
 ## Status
 
-`draft`. DP-S3-1 and DP-S3-2 (below) are open and are the maintainer's (by delegation). The
+`draft`. DP-S3-1 and DP-S3-2 (below) are decided by the maintainer (by delegation), recorded in RL 9543 (working id): DP-S3-1 (a), DP-S3-2 (a). The
 plan moves to `active` only through a separate activation PR, after every activation need
 below holds.
+
+*Dated note, 2026-10-05 (written 18:40:25 BST, pre-mint): P-texts of RL 9543 (working id)
+applied 2026-10-05. RL 9543 (working id; #1198 at `0e872448d7dde4d652ae15bafa097983909441bc`), §"The plan texts" lines 232–247 and its "Amendment, 2026-10-05 17:42
+BST" (lines 323–340), gives P7 and P8 for this plan; P9 and P10 are discharged by that
+amendment and are not applied. Counts (Python `str.count` over this file): P7 (Status) and P8
+(activation need 4, appended) each find 1 before and 0 after, new text 0 before and 1 after.
+P8 carries the `PL-1364` guard dependency of RL 9543 item 7: `backend/tests/test_contracts.py`'s
+pending list holds 11 entries if S3 dispatches before `SL-1367`, and the second of the two to
+dispatch carries the delta.*
 
 ### Activation needs, in order
 
@@ -148,7 +157,7 @@ below holds.
 3. **S2 (SL 9711, PL 9713) merged.** S3 consumes S2's output: `RatingAlgorithmDraft`, the
    designer components and `ratingAlgorithms.ts`. So under RL 9620 condition (b), S2 and S3
    never run at the same time.
-4. **DP-S3-1 and DP-S3-2 decided**, each by a dated line.
+4. **DP-S3-1 and DP-S3-2 decided**, each by a dated line. Decided (RL 9543). The dispatch record names `backend/tests/test_contracts.py` as shared with `SL-1367`; whichever of S3 and `SL-1367` dispatches second carries the pending-list delta (11 entries if S3 is first; RL 9543 item 7).
 5. **No slice editing `compile.py` in flight** (decision 4; `PL-1371` §5 rule 4): WK-673 S3
    (`SL-1387`), WK-1250 S2 (`SL-1340`) and WK-1250 S3 (`SL-1341`), and any other slice whose
    dispatch record names `pricing_core/rating/compile.py`.
