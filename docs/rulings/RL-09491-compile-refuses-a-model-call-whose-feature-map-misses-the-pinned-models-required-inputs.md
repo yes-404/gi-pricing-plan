@@ -112,7 +112,7 @@ the end of the row's existing `RL-1329` amendment:
 - Trial apply, run at filing on a copy of `03` at `ecbd1954`: the anchor's count went
   **1 → 0**, and the T-text's count went **0 → 1**.
 
-The T-text, byte for byte (one line in the file). `<SL 9495 date>` is the date of the
+**Replaced pre-mint, 2026-10-05: apply the amended T-text in "Amendment 2026-10-05 (pre-mint)" below, not the one in this section.** The T-text, byte for byte (one line in the file). `<SL 9495 date>` is the date of the
 commit that applies it, and `RL-9491` is re-pointed to the minted id at this record's mint
 (the convention RL 9633, #1155, sets out in its "Amendments common to all four", item 1: a
 spec amendment cites the governed record that rules it, because a spec reader cannot open
@@ -196,3 +196,77 @@ Each red is red first, at the base, before the code is written.
   reported none (liveness: none; not re-run here). If one is found, it is a finding, not this record's.
 - **Whether `MODEL_CALL_FAILED` stays reachable for a short map at score.** After this
   ruling, a compiled bundle cannot carry one; the runtime path is not changed by this record.
+
+## Amendment 2026-10-05 (pre-mint) — DP-1, R-a and the order
+
+Made by the decision-maker on 2026-10-05, before mint, on the maintainer's (by delegation)
+entry below in `~/gi-pricing-plan.local/channel/to-lead.md`, which rules PL 9494's (#1216)
+decision point DP-1 and reading R-a, and the slice order. The entry, verbatim:
+
+> ## 2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2
+>
+> 1. ORDER: A-2 → A-3 → SL 9495 → A-4, ACCEPTED (the per-component limb needs A-3's _resolve_peril_components; it still satisfies after A-2 and before A-4). The need "PL 9649 merged" (ResolvedArtifact.factors): accepted.
+> 2. A-4 (PL 9593 #1175) gains the need "SL 9495 merged": YES, a pre-mint planner edit.
+> 3. DP-1: ONE public pricing-core helper defines "a model's required inputs" (its Factors, or fit_result.feature_order when it has none). It is BORN IN A-2, which merges first: A-2's plan (PL 9597, unminted) gains a pre-mint task that creates the helper in pricing-core and has its own save check call it. SL 9495 then REUSES it with no second definition. If A-2 has already merged without it when SL 9495 starts, SL 9495 extracts it from A-2's function as a no-behaviour-change refactor commit before its reds. Either way, one definition, and a test proves both call sites use it (one helper, two callers, by grep in the test or an import assertion).
+> 4. R-a: ACCEPTED. An empty map is never complete for a model with inputs. The GBM empty-map fallback (runtime.py:553-555) becomes unreachable through compile and is NOT removed in this slice; the plan names it as dead-through-compile, for a later cleanup decision.
+> 5. Reds (i)–(vi) plus the end-to-end resolver red: accepted. The contention table is accepted as stated.
+> 6. PL 9597 @c8d88382's membership-only note: noted. PL 9590 @d60dea9e's serial S3 → S4 → S5 on the two test files: noted.
+> 7. S7's re-gate on 75928847, on your START after PAUSED is confirmed: noted.
+
+It changes this record in four places. Where it and the body above disagree, this amendment
+holds.
+
+1. **DP-1 — one helper for "a model's required inputs"** (entry, item 3). One public
+   `pricing-core` helper returns a model's required inputs: the slugs of its Factors, or its
+   `fit_result.feature_order` when it has no Factors. It is **born in A-2**: PL 9597 (#1178)
+   gains a pre-mint task that creates it, and A-2's own save check calls it. SL 9495's compile
+   check **reuses** it; there is no second definition. **Fallback:** if A-2 has already merged
+   without the helper when SL 9495 starts, SL 9495 extracts it from A-2's function as a
+   no-behaviour-change refactor commit, before its reds. The helper's name and its file are
+   PL 9597's to state (the planner's edit); this record does not fix them. This replaces the
+   limb of "What this record does not decide" that left "how much of A-2's function it reuses"
+   to the plan, and the obligation's "reusing A-2's check function where it can": the reuse is
+   now required.
+2. **R-a — an empty map is refused at compile** (entry, item 4: "An empty map is never
+   complete for a model with inputs"). Compile refuses a `model_call` whose `feature_map` is
+   `{}` when the pinned Model (or, for a peril structure, any component) has a required
+   input. The GBM empty-map fallback in `packages/pricing-core/src/pricing_core/rating/runtime.py`
+   (`:553`–`:555` at `ecbd1954`: `frame = pl.DataFrame([feature_row]) if feature_row else
+   pl.DataFrame({slug: [context.get(slug)] for slug in gbm_result.feature_order})`) becomes
+   **dead-through-compile**: unreachable through `compile_bundle`, and **not removed** in
+   SL 9495. Its removal is a later cleanup decision, not this record's. This replaces the last
+   bullet of "What this record does not decide" for the empty map: the runtime path is still
+   not changed, and the fallback is named as dead-through-compile.
+3. **The order: A-2 → A-3 → SL 9495 → A-4** (entry, item 1). SL 9495 starts after A-3 has
+   merged as well as A-2, because its per-component limb needs A-3's
+   `_resolve_peril_components` (entry, item 1). This replaces "What it obliges"'s order line,
+   which named A-2 only. A-4 (PL 9593, #1175) gains the activation need "SL 9495 merged"
+   (entry, item 2); that edit is the planner's.
+4. **The T-text states the empty-map refusal.** The T-text in "The spec text" said "does not
+   map every Factor"; with the runtime fallback a reader could take `{}` as an identity map.
+   The amended T-text adds one sentence after "when the Model has no Factors.": "An empty
+   `feature_map` maps none of them, so it is refused whenever the Model has a required input."
+   Nothing else in it changes. The anchor and the serialisation rules above are unchanged.
+   - Trial apply, run 2026-10-05 on a copy of `docs/specs/03-rating-engine.md` at
+     `ecbd1954` (origin/main at this amendment): the anchor
+     `The message names the step and the rung.)* |` went **1 → 0**, and the amended T-text
+     went **0 → 1** (`grep -cF` both).
+
+The amended T-text, byte for byte (one line in the file):
+
+```
+ *(Amended <SL 9495 date>, `RL-9491`: "all references resolvable" also covers a `model_call` step's inputs. Compiling a bundle refuses, with `MODEL_CALL_FEATURE_MAP_INVALID`, a `model_call` step whose `feature_map` does not map every Factor of its pinned Model, or every entry of the Model's `feature_order` when the Model has no Factors. An empty `feature_map` maps none of them, so it is refused whenever the Model has a required input. The pinned Model is resolved with the resolver that compilation already uses, so the refusal comes before approval and deployment. For a `peril_structure_ref`, the check applies to each component Model, and the one `feature_map` must map the required inputs of every component. The message names the step and the missing features, and for a peril structure the component. A save checks only that each mapped name is one the Model accepts (FR-222); this compile check is the completeness check. An offset column is not a Factor, and this check does not require it.)*
+```
+
+**Acceptance, added.** These join "Acceptance — the violation that must become detectable":
+
+6. **The empty-map red.** A GBM `model_call` with `feature_map == {}` whose pinned Model has
+   a `feature_order` is refused at compile with `MODEL_CALL_FEATURE_MAP_INVALID`, the message
+   naming the step and every missing feature. At `ecbd1954` it compiles (red first:
+   `DID NOT RAISE`).
+7. **The both-callers test.** A test proves that A-2's save check and SL 9495's compile check
+   both use the one helper of item 1, and that no second definition exists: by a grep in the
+   test or an import assertion (entry, item 3: "one helper, two callers").
+
+The entry's item 5 (reds (i)–(vi), the end-to-end resolver red, and PL 9494's contention
+table) is accepted there and is PL 9494's; this record adds nothing to it.
