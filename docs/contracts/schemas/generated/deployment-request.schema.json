@@ -1,0 +1,153 @@
+{
+  "$defs": {
+    "ArtifactRef": {
+      "description": "Canonical artifact reference {type}:{slug}@{version} (ID-3).",
+      "examples": [
+        "model:motor-ad-frequency@7",
+        "rating_version:motor-gb@27"
+      ],
+      "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+      "title": "ArtifactRef",
+      "type": "string"
+    },
+    "DeploymentRequestEvidence": {
+      "additionalProperties": false,
+      "description": "The two evidence items pinned once at submission (`06` FR-356, FR-364's floor).",
+      "properties": {
+        "rating_version_approval": {
+          "description": "The decided approval request of the pinned Rating Version.",
+          "format": "uuid",
+          "title": "Rating Version Approval",
+          "type": "string"
+        },
+        "uat_deployment": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/PromotionSkip"
+            }
+          ],
+          "description": "The predecessor item: the id of the successful Deployment of that Rating Version in the predecessor Environment, or a recorded `PromotionSkip`.",
+          "title": "Uat Deployment"
+        }
+      },
+      "required": [
+        "rating_version_approval",
+        "uat_deployment"
+      ],
+      "title": "DeploymentRequestEvidence",
+      "type": "object"
+    },
+    "DeploymentRequestStatus": {
+      "description": "A Deployment Request's states (`PL-1392` Task 3); `executed` is the deploy route's.",
+      "enum": [
+        "draft",
+        "review",
+        "approved",
+        "rejected",
+        "withdrawn",
+        "executed"
+      ],
+      "title": "DeploymentRequestStatus",
+      "type": "string"
+    },
+    "PromotionSkip": {
+      "additionalProperties": false,
+      "description": "A recorded skip of a predecessor Environment (`03` §4.12, `07` FR-429, RL-1296).",
+      "properties": {
+        "reason": {
+          "description": "Why the order was skipped; never empty after trimming.",
+          "title": "Reason",
+          "type": "string"
+        },
+        "skipped_environment": {
+          "description": "The predecessor Environment's slug.",
+          "title": "Skipped Environment",
+          "type": "string"
+        }
+      },
+      "required": [
+        "skipped_environment",
+        "reason"
+      ],
+      "title": "PromotionSkip",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The artifact that precedes a gated deploy (`03` §4.12, RL-1301 A).",
+  "properties": {
+    "approval_request_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Approval Request Id"
+    },
+    "change_summary": {
+      "title": "Change Summary",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "environment": {
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+      "title": "Environment",
+      "type": "string"
+    },
+    "evidence": {
+      "$ref": "#/$defs/DeploymentRequestEvidence"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "rating_version_ref": {
+      "$ref": "#/$defs/ArtifactRef"
+    },
+    "ref": {
+      "$ref": "#/$defs/ArtifactRef",
+      "description": "`deployment:<environment slug>@<n>`."
+    },
+    "status": {
+      "$ref": "#/$defs/DeploymentRequestStatus"
+    },
+    "submitted_by": {
+      "format": "uuid",
+      "title": "Submitted By",
+      "type": "string"
+    },
+    "workspace_id": {
+      "format": "uuid",
+      "title": "Workspace Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "workspace_id",
+    "ref",
+    "environment",
+    "rating_version_ref",
+    "change_summary",
+    "status",
+    "evidence",
+    "submitted_by",
+    "created_at"
+  ],
+  "title": "DeploymentRequest",
+  "type": "object"
+}

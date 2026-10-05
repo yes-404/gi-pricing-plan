@@ -28,7 +28,7 @@ from zipfile import BadZipFile
 from openpyxl import Workbook, load_workbook  # type: ignore[import-untyped]
 from openpyxl.utils.exceptions import InvalidFileException  # type: ignore[import-untyped]
 
-from model_schema.modelling import GlmFitResult, Model, RelativityLevel
+from model_schema.modelling import Factor, GlmFitResult, Model, RelativityLevel
 from model_schema.rating import (
     BulkOperation,
     BulkOperationResult,
@@ -53,7 +53,7 @@ from model_schema.rating import (
     UpliftTableOperation,
     UpliftTableParameters,
 )
-from model_schema.refs import ArtifactRef
+from model_schema.refs import ArtifactRef, slug_is_admitted
 from pricing_core.rating.compile import ValidationIssue
 
 _APPROVED_OR_BETTER = frozenset({"approved", "live", "retired"})
@@ -140,48 +140,82 @@ def _glm_relativities(
 
 
 def extract_relativity_table(
-    model: Model, *, value_name: str = "relativity"
+    model: Model, *, value_name: str = "relativity", factor: str | None = None
 ) -> list[CellRow]:
     """The model's factor relativities as cell rows (FR-230).
 
-    Levels without a relativity (non-log links) are skipped: they have nothing to
-    seed, and seeding 1.0 there would fabricate a technical rate. Values are
+    With `factor`, only that relativity entry's rows (`RL-1361` section A: a seed holds
+    one Factor). Levels without a relativity (non-log links) are skipped: they have
+    nothing to seed, and seeding 1.0 there would fabricate a technical rate. Values are
     rendered as decimal strings, never JSON floats (R2).
     """
     rows: list[CellRow] = []
-    for factor, levels in _glm_relativities(model).items():
+    for entry, levels in _glm_relativities(model).items():
+        if factor is not None and entry != factor:
+            continue
         for level in levels:
             if level.relativity is None:
                 continue
-            rows.append({factor: level.level, value_name: str(Decimal(str(level.relativity)))})
+            rows.append({entry: level.level, value_name: str(Decimal(str(level.relativity)))})
     return rows
 
 
-def _key_domains_of(model: Model) -> dict[str, frozenset[str]]:
-    """One domain per factor: the levels that carry a seeded relativity."""
+def _key_domains_of(model: Model, *, factor: str) -> dict[str, frozenset[str]]:
+    """The named factor's domain: the levels that carry a seeded relativity."""
     return {
-        factor: frozenset(level.level for level in levels if level.relativity is not None)
-        for factor, levels in _glm_relativities(model).items()
+        entry: frozenset(level.level for level in levels if level.relativity is not None)
+        for entry, levels in _glm_relativities(model).items()
+        if entry == factor
     }
 
 
 def seed_from_model(
     model: Model,
     *,
+    factor: str,
+    factors: Sequence[Factor],
     table_slug: str,
     change_note: str,
     seeded_at: datetime,
     rateable: bool = True,
     value_name: str = "relativity",
 ) -> SeedResult:
-    """Seed a rate table from an approved model (FR-230, plan §Slice W10-2 T1).
+    """Seed a rate table from one Factor of an approved model (FR-230, `RL-1361`).
 
-    Builds the table definition from the model's factor relativities, validates the
-    extracted cells (T3's check runs before the version persists), and pins the seed
-    origin so "how far from the technical rate?" is answerable.
+    One seed holds one Factor: the table has one key, named after `factor` and bound by
+    `factor_ref` to the pinned Factor version whose slug is `factor`. The platform loads
+    the model's Factors and passes them in (`RL-1361` section D; `pricing-core` takes no
+    database). Validates the extracted cells (T3's check runs before the version
+    persists), and pins the seed origin so "how far from the technical rate?" is
+    answerable. Refusals are plain-prose `ValueError`s, which the API maps to 422
+    `VALIDATION_FAILED`; none starts with an `UPPER_SNAKE: ` prefix.
     """
     check_model_approved(model)
-    cells = tuple(extract_relativity_table(model, value_name=value_name))
+    if factor not in _glm_relativities(model):
+        raise ValueError(
+            f"factor {factor!r} names no relativity entry of model "
+            f"{model.model_family_slug}@{model.version}"
+        )
+    pinned = [candidate for candidate in factors if candidate.slug == factor]
+    if not pinned:
+        raise ValueError(
+            f"relativity entry {factor!r} has no pinned Factor with slug {factor!r} "
+            f"among the factors of model {model.model_family_slug}@{model.version}"
+        )
+    if len(pinned) > 1:
+        raise ValueError(
+            f"{len(pinned)} pinned Factors with slug {factor!r}; a relativity entry "
+            "binds to exactly one"
+        )
+    bound = pinned[0]
+    if not slug_is_admitted("factor", bound.slug):
+        # `Factor.slug` is an unconstrained `str` (FD-1384); a reference to it could not be
+        # re-read, so refuse by name here rather than 500 on a later read (RL-1383 item 3).
+        raise ValueError(
+            f"the pinned Factor slug {bound.slug!r} is outside the factor slug grammar "
+            "([a-z0-9][a-z0-9_-]{1,62}); it cannot be referenced"
+        )
+    cells = tuple(extract_relativity_table(model, value_name=value_name, factor=factor))
     if not cells:
         raise ValueError(
             f"NO_RELATIVITIES: model {model.model_family_slug}@{model.version} "
@@ -189,8 +223,12 @@ def seed_from_model(
         )
 
     keys = [
-        RateTableKey(name=factor, type=RateTableKeyType.STRING, banding_ref=None)
-        for factor in _glm_relativities(model)
+        RateTableKey(
+            name=factor,
+            type=RateTableKeyType.STRING,
+            banding_ref=None,
+            factor_ref=ArtifactRef(type="factor", slug=bound.slug, version=bound.version),
+        )
     ]
     value = RateTableValue(
         name=value_name,
@@ -199,7 +237,9 @@ def seed_from_model(
         min=None,
         max=None,
     )
-    issues = validate_rate_table(cells, keys, value, key_domains=_key_domains_of(model))
+    issues = validate_rate_table(
+        cells, keys, value, key_domains=_key_domains_of(model, factor=factor)
+    )
     if issues:
         raise ValueError(f"{issues[0].code}: {issues[0].message}")
 
@@ -221,6 +261,20 @@ def seed_from_model(
     return SeedResult(table=table, cells=cells, seeded_from=seeded_from)
 
 
+def _row_key(row: CellRow, key_names: Sequence[str], index: int | None = None) -> KeyTuple:
+    """A row's key tuple, or a named refusal when the row lacks a declared key.
+
+    FD-1357's hardening (`PL-1376` DP-6 (a)): a row shape that does not carry every
+    declared key is a `ValueError` naming the key, never a `KeyError`. The message is
+    plain prose, because `_map_operation_error` reads an `UPPER_SNAKE: ` prefix as a code.
+    """
+    for key in key_names:
+        if key not in row:
+            where = f"row {index}" if index is not None else "a row"
+            raise ValueError(f"{where} lacks declared key {key!r}")
+    return tuple(row[key] for key in key_names)
+
+
 def _value_issue(
     row: CellRow, value: RateTableValue, key_names: Sequence[str]
 ) -> ValidationIssue | None:
@@ -229,7 +283,7 @@ def _value_issue(
     Shared by save-time validation and by the bulk operations' result check (03 §5.2:
     each operation validates the result before persisting).
     """
-    key_values = tuple(row[key] for key in key_names)
+    key_values = _row_key(row, key_names)
     raw = row.get(value.name)
     if raw is None or raw == "":
         return ValidationIssue(
@@ -285,8 +339,8 @@ def validate_rate_table(
     key_names = [key.name for key in keys]
 
     seen: set[KeyTuple] = set()
-    for row in cells:
-        key_values = tuple(row[key] for key in key_names)
+    for index, row in enumerate(cells):
+        key_values = _row_key(row, key_names, index)
         if key_values in seen:
             issues.append(
                 ValidationIssue(
@@ -324,7 +378,8 @@ def _index_rows(
 ) -> dict[KeyTuple, Decimal]:
     """Map each row's key to its value. Callers hand validated cells (unique keys)."""
     return {
-        tuple(row[key] for key in key_names): Decimal(row[value_name]) for row in cells
+        _row_key(row, key_names, index): Decimal(row[value_name])
+        for index, row in enumerate(cells)
     }
 
 

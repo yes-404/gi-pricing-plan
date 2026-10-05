@@ -20,6 +20,7 @@ import pytest
 from backend.tests.approved_rows import add_approved
 from backend.tests.test_api_rate_tables import (
     _LEVELS,
+    _ensure_factor,
     _fit_result,
     _glm_spec,
     _table_slug,
@@ -58,6 +59,9 @@ async def _seed_approved_model(
     from uuid import uuid4
 
     async with database.unit_of_work() as session:
+        pinned = [await _ensure_factor(session, workspace_id, slug, 1) for slug in relativities]
+        spec = _glm_spec(family, new_uuid7())
+        spec["factors"] = [str(factor_id) for factor_id in pinned]
         await add_approved(
             session,
             ModelRow(
@@ -66,7 +70,7 @@ async def _seed_approved_model(
                 version=1,
                 status=ModelStatus.APPROVED.value,
                 dataset_version_id=new_uuid7(),
-                spec=_glm_spec(family, new_uuid7()),
+                spec=spec,
                 spec_hash=f"v3:sha256:{uuid4().hex}{uuid4().hex}",
                 fit_result=_fit_result(relativities),
                 diagnostics_id=uuid4(),
@@ -86,6 +90,7 @@ async def _seed(
         blob_store,
         slug=slug,
         model_ref=ArtifactRef(type="model", slug=family, version=1),
+        factor="driver_age_band",
         change_note="Seeded for the W10-3C service tests",
     )
 

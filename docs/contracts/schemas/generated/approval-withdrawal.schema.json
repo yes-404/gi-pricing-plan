@@ -1,0 +1,16 @@
+{
+  "additionalProperties": false,
+  "description": "The body of `POST /api/v1/approval-requests/{request_id}/withdraw` (`06` §5.1, FR-357).\n\n`reason` only. Whether the artifact is live is the server's to derive from the owning\nmodule's rows (`PL-1392` Task 6, C11): a field the client could set was a client asserting\n\"not live\". Moved here from the API module for `ApprovalSubmission`'s reason; the route's\n2xx stays untyped until `FD-1335` Part B (owner FD 9752).",
+  "properties": {
+    "reason": {
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    }
+  },
+  "required": [
+    "reason"
+  ],
+  "title": "ApprovalWithdrawal",
+  "type": "object"
+}
