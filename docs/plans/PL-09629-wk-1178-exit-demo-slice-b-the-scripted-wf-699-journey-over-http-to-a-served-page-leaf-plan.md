@@ -171,7 +171,7 @@ flip and this plan's.
 | 2 | Exit-demo slice (a) merged (SL 9626, PL 9624, working ids) | A1–A2's tables, B's algorithm | draft #1161, plan `draft` (DP-a0 to DP-a3 ruled 2026-10-05 15:28:26 BST, item D2; its activation need 3 ruled at its ACK) |
 | 3 | WK-673 S3 `SL-1387` merged (attribution) | D7, D8 | `draft`; leaf PL 9689 (working id), draft #1138 |
 | 4 | WK-673 S4 `SL-1388` merged (`POST /dislocation-runs` and its Job) | D6, E4 | `draft`; no route and no `DISLOCATION_RUN` worker on `main` |
-| 5 | WK-673 S5 `SL-1389` merged (change summary from diffs; the evidence gate) | E1, E3 | `draft` |
+| 5 | ~~WK-673 S5 `SL-1389` merged (change summary from diffs; the evidence gate)~~ *(Pre-mint note 3, 2026-10-05.)* **SL 9565** (working id; PL 9564, #1194) merged, for E1: FR-242's drafted change summary, `GET /api/v1/rating-versions/{id}/change-summary-draft`. WK-673 S5 `SL-1389` merged, for E3: the evidence gate | E1 (SL 9565), E3 (`SL-1389`) | SL 9565: plan draft #1194 @`c25d1c88`; `SL-1389`: `draft` |
 | 6 | WK-673 S6 `SL-1390` merged (the floor wiring at approval) | E3, E9 | `draft` |
 | 7 | WK-673 S7 `SL-1391` merged (exposure weight per cell) | A3 | `draft`; leaf PL 9716 (working id), draft #1127 |
 | 8 | WK-674 S2 `SL-1256` closed | deploy `dev → uat → prod` (FR-429) | **met**: `closed` |
@@ -626,3 +626,22 @@ and the decision-point table is kept as written. `origin/main` `137bc817` merged
 `cdaaa573` and `137bc817`, main changed only `docs/INDEX.md`, `RL-1361` and the new `RL-1418`,
 so no line cite moved. The `WF-699` cites `:19`, `:28`, `:59` and `:70` were re-read at
 `137bc817` and hold.
+
+## Pre-mint note 3, 2026-10-05
+
+*Dated 2026-10-05 (`TZ=Europe/London date`: 2026-10-05 18:40:22 BST), before the mint of PL
+9629 (working id).* Edited in place on the unmerged draft #1164, on the lead's order (capacity
+fill, Part D item 2), and nothing else. What changed: activation need 5's row, its old text
+struck through and kept. Need 5 read "WK-673 S5 `SL-1389` merged (change summary from diffs;
+the evidence gate)", serving E1 and E3. E1's drafted change summary is not S5's: the
+maintainer (by delegation) gave it its own WK-673 slice in the entry headed "2026-10-05
+17:14:54 BST — FD 9572 placement accepted; WK-673 S4/S5/S6, A-1, A-2 and CR-838 DECISIONS
+(1–8)", item 4, as PL 9564 (#1194 @`c25d1c88`) quotes it: "4. E1 OWNER: its OWN small WK-673
+slice beside S5 (it needs only diff_algorithms, the rate-table diff and _baseline, all on
+main; off the critical path). ACCEPTED; the planner cuts the row and leaf." That slice is SL
+9565 (working id), and its leaf is PL 9564 (working id). So need 5 now names SL 9565 for E1.
+It keeps `SL-1389` for E3, the evidence gate, which PL 9564 does not take. The E1 row of
+§"The steps" and FR-242's coverage cell still cite need 5, which is right for both. No task,
+acceptance item, write set, owner or decision point changed. `origin/main` `116a0da6` merged
+in; between `137bc817` and `116a0da6`, the only file main changed that this plan cites by line is
+`docs/roadmap.md`, and both of those cites (`:1927`, `:2209`) name `cdaaa573`, so none moved.
