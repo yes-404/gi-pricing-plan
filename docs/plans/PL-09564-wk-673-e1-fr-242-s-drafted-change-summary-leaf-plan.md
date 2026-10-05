@@ -46,6 +46,55 @@ FR-242 correction.** The evidence is dm-s45's memo
 `~/gi-pricing-plan.local/handover/dp-memo-wk673-s4-s5-2026-10-05.md` §"E1 — the owner gap",
 re-verified here at `4d3be141` (§"Premises").
 
+### Pre-mint edit, 2026-10-05
+
+Edited 2026-10-05 from 17:36:55 BST (`TZ=Europe/London date`), before this plan's mint, by the
+planner, on the ruling of the maintainer (by delegation) in
+`~/gi-pricing-plan.local/channel/to-lead.md`, entry "## 2026-10-05 17:34:57 BST — E1 DPs (dm-e1
+memo handover/dp-memo-e1-2026-10-05.md): all six ADOPTED as recommended; S1 yes; S2 yes; PL 9578
+noted". Its record is RL 9541 (working id, filed by dm-e1). Its lines that bear on this plan,
+verbatim:
+
+> DP-E1-1 (a): the GET …/change-summary-draft route, read-only, plus T2, one clause on RATING_VERSION_UNPINNED's meaning note (03:967-970). Checked at origin/main: it is raised only in pricing_core (compile.py:547-591, runtime.py:611/659) and has no synchronous route.
+> DP-E1-2 (a), DP-E1-3 (a), DP-E1-4 (a) app/platform/change_summary.py.
+> DP-E1-5: the shape as proposed, plus structural_diff = None when the baseline has no algorithm_ref (its acceptance case). The names from_ref/to_ref are KEPT; no rename.
+> DP-E1-6 (a): S5's submit_for_review WRITES row.change_summary, with a red test. Checked: docs/contracts/schemas/rating-version.schema.json:8 lists change_summary as required and :36 sets minLength 1.
+>   THE RESIDUE IS NAMED, NOT FIXED HERE: the schema requires the field on EVERY rating version, but a draft row carries null until submit, so (a) closes it only from submit onward. The RL records this as the F27 schema-vs-code gap that it is, and it is carried by F27's owner. It does not widen E1 or S5.
+> S1: YES. DP-E1-6 (a) goes into PL 9590's scope (#1181; submit_for_review is already in its write set; contention unchanged). It is a pre-mint edit and is named in PL 9590's dispatch.
+> PL 9564's missing blob_store kwarg: the planner fixes it pre-mint (as at api/models.py:1203).
+
+The recommendations it adopts, with their evidence at `4d3be141`, are dm-e1's memo
+`~/gi-pricing-plan.local/handover/dp-memo-e1-2026-10-05.md`. What this edit changed, each
+marked in place with a dated note and with the text it replaces struck through, never deleted:
+
+1. **DP-E1-1..5 are ruled** (§"Decision points"): (a), (a), (a), (a), and DP-E1-5 as proposed
+   with `structural_diff: None` also when the baseline has no `algorithm_ref` (new Acceptance
+   20); `from_ref`/`to_ref` kept.
+2. **T2, a second spec text** (Appendix P2): one clause after `RATING_VERSION_UNPINNED`'s
+   meaning note (`03:967-970`), found by its last line, which `grep -cF` matches once at
+   `4d3be141`. Task 1 applies T1 and T2; new Acceptance 21 checks T2. T1's find string is the
+   submit row's opening cells, never the bare submit path, which matches 2 lines (`:177` and
+   `:910`). T2 is in the same `03` §5.1 as T1 (the note sits under `### 5.1 REST API`, `:891`,
+   with no heading between), so the contention is unchanged.
+3. **The `blob_store` fix.** `rate_tables.diff` takes `blob_store: BlobStore` as a required
+   keyword (`backend/src/app/platform/rate_tables.py:291-300`). The service takes a
+   `blob_store`, and the route takes `blob_store: score_api.BlobStoreDep` as
+   `submit_rating_version` does (`backend/src/app/api/models.py:1203`), passing `cache=None`.
+4. **Acceptance 12's 409 is this slice's own.** `errors.py:321` is only the code's registry
+   entry; the 409 status comes from the `PlatformError("RATING_VERSION_UNPINNED", …,
+   status_code=409, …)` this slice raises (`PlatformError.__init__`, `errors.py:425-432`). No
+   existing mapping supplies it: today the code is raised only inside pricing-core, in the
+   compile Job.
+5. **P6 is now owned.** DP-E1-6 (a) is in PL 9590's scope (#1181, `SL-1389`): its
+   `submit_for_review` writes `row.change_summary`. This slice still neither reads nor writes
+   that field, and Acceptance 14 is unchanged. **The F27 draft residue is F27's, not E1's:**
+   the hand-authored `rating-version.schema.json` requires `change_summary` (`:8`, `:36`) on
+   every version, while a draft carries null until submit; that is register finding F27's
+   schema-vs-code gap (`docs/findings/register.md:69` at `4d3be141`), carried by F27's owner.
+6. **Two citations of WF-699 E1 are re-written as links** (Goal and §"Scope"): each wrote the
+   padded file id outside a link target, which `scripts/audit-docs.py` check 32 reds (RFC-937
+   §1.1 rule 2). The cited place, `:95`, is unchanged.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
 > or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`)
 > syntax for tracking. The executor also binds `python-test` (the `req` marker, negative
@@ -61,7 +110,7 @@ re-verified here at `4d3be141` (§"Premises").
 A Pricing Actuary asks the platform for a **drafted** change summary for a Rating Version, and
 gets one built from the version's diffs against "the previous version" (`03` FR-242, `:139`:
 *"It is generated as a draft from the structural and rate-table diffs and edited by the
-actuary."*). This is WF-699 E1 (`WF-00699…:95`: *"Writes the change summary. It is drafted
+actuary."*). This is WF-699 E1 ([`:95`](../workflows/WF-00699-approved-models-to-approved-rating-version.md): *"Writes the change summary. It is drafted
 automatically from the structural and rate diffs and then edited — the actuary explains *why*,
 the platform states *what*."*), as one HTTP beat:
 
@@ -79,7 +128,8 @@ as `change_summary` on the existing submit route, which this slice does not chan
   over the two versions' `RatingAlgorithm`s;
 - each rate-table diff is `app.platform.rate_tables.diff` (`backend/src/app/platform/rate_tables.py:291`)
   with `against=<the baseline's pinned version number>`, on pins paired by slug
-  (`Pins.rate_tables`, `rating.py:65-78`). A pair either side of which is `storage: parquet`
+  (`Pins.rate_tables`, `rating.py:65-78`), and with `blob_store=` the route's
+  `score_api.BlobStoreDep` and `cache=None` *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* A pair either side of which is `storage: parquet`
   (`diff_needs_job`, `:262-288`) is named and **not** computed (DP-E1-2 (a)).
 
 The drafting is a pure function in a new backend module, `app/platform/change_summary.py`
@@ -87,15 +137,18 @@ The drafting is a pure function in a new backend module, `app/platform/change_su
 
 ## Status
 
-`draft`. Five decision points are open (§"Decision points"); each has a recommendation. A
-decision-maker rules them in an RL, which carries the exact `03` §5.1 row text (Appendix P1).
+`draft`. ~~Five decision points are open (§"Decision points"); each has a recommendation. A
+decision-maker rules them in an RL, which carries the exact `03` §5.1 row text (Appendix P1).~~
+*(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* The five decision points are ruled, each as recommended, at 17:34:57 BST; the
+RL that records them is RL 9541 (working id), carrying T1 (Appendix P1) and T2 (Appendix P2).
 The plan moves to `active` only through a separate activation PR, after every activation need
 below holds.
 
 ### Activation needs, in order
 
 1. **This plan is merged, minted, and made `active` by a dated line.**
-2. **The DP ruling is merged and minted**, carrying DP-E1-1..5 and the §5.1 row's exact text.
+2. **The DP ruling is merged and minted**, carrying DP-E1-1..5 and the §5.1 row's exact text
+   (RL 9541, working id; its texts are T1 and T2, Appendices P1 and P2 *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)*).
    Where the minted text differs from Appendix P1, the minted text governs, and the dispatch
    record names each difference. An unminted ruling is a stop.
 3. **The lane is free** under `RL-1263` as amended by RL 9620 (working id; #1162, unmerged at
@@ -150,7 +203,9 @@ database); `H` is `backend/tests/test_rating_version_change_summary_route.py` (n
     earlier versions, approved out of number order: the later-approved one is the baseline
     (`_baseline`'s rule).
 12. `test_a_version_without_an_algorithm_or_pins_is_refused`. 409 `RATING_VERSION_UNPINNED`
-    (`errors.py:321`), the detail naming the missing field (DP-E1-1 (a)).
+    (`errors.py:321`), the detail naming the missing field (DP-E1-1 (a)). *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)*
+    `errors.py:321` is the registry entry only: the 409 is the status of this slice's own
+    `PlatformError` (`status_code=409`); no existing mapping supplies it.
 13. `test_another_workspaces_version_is_404` and `test_rating_read_is_required` (403 without
     `rating:read`).
 14. `test_the_route_writes_nothing`. The version row (status, `change_summary`, `evidence`)
@@ -168,6 +223,17 @@ database); `H` is `backend/tests/test_rating_version_change_summary_route.py` (n
     marker-evidenced by at least items 1, 10 and 14.
 19. The two-half gate (`dev-commands`) passes once, in a held gate slot.
 
+**Added pre-mint** *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)*
+
+20. (`D`) `test_a_baseline_without_an_algorithm_has_no_structural_diff`. A baseline whose
+    `algorithm_ref` is null (a Phase-1b-era approved version; `RatingVersion.algorithm_ref:
+    ArtifactRef | None`) yields `structural_diff: null`, the baseline still named in
+    `baseline`, and a `text` that says the baseline has no algorithm (DP-E1-5 as ruled). Red:
+    `ModuleNotFoundError` for `app.platform.change_summary`, as item 1.
+21. `grep -cF 'refuses with **409** and this code when the version has no' docs/specs/03-rating-engine.md`
+    prints `1`, and the clause is the ruling's T2 byte for byte (Appendix P2 as ruled), in the
+    `RATING_VERSION_UNPINNED` meaning note.
+
 ## Global Constraints
 
 - **Money is integer minor units, or Decimal in the rating path — never float** (`CLAUDE.md` §7).
@@ -179,7 +245,8 @@ database); `H` is `backend/tests/test_rating_version_change_summary_route.py` (n
 - **RFC 9457 problems on every refusal**, published in the route's `responses`
   (`fastapi-service`).
 - **The submit route and `submit_for_review` are not touched.** They are `SL-1389`'s write set
-  (§"Contention").
+  (§"Contention"). *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* DP-E1-6 (a) puts the `row.change_summary` write there, in
+  PL 9590; this slice does not depend on it.
 
 ## Scope
 
@@ -190,12 +257,14 @@ database); `H` is `backend/tests/test_rating_version_change_summary_route.py` (n
   main and is not changed.
 - `03` **FR-219** (`:88`) is consumed (its diff), not changed.
 - `03` **FR-231** (`:122`) is consumed unweighted; its weight limb is `SL-1391`'s.
-- WF-699 **E1** (`WF-00699…:95`), as one HTTP beat.
+- WF-699 **E1** ([`:95`](../workflows/WF-00699-approved-models-to-approved-rating-version.md)), as one HTTP beat.
 
 Not in scope: the frontend editing view (`03` §5.3; G2 is a scripted HTTP journey per RL 9623,
 working id, #1160); the expected-impact figure (it comes from a Dislocation Run, `SL-1388`'s
 artifact, which is a plan dependency DP-E1-3 (b) would create); `RatingVersion.change_summary`
-being written at submit (see §"Premises" P6, raised to the lead, not taken).
+being written at submit (see §"Premises" P6, ~~raised to the lead, not taken~~). *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)*
+It is ruled into PL 9590's scope (DP-E1-6 (a), S1). The residue that a `draft` row carries null
+while `rating-version.schema.json` requires the field is F27's, not this slice's.
 
 ### Premises read at `4d3be141`
 
@@ -208,7 +277,8 @@ being written at submit (see §"Premises" P6, raised to the lead, not taken).
   edited.
 - **P3.** `rate_tables.diff` (`platform/rate_tables.py:291`) takes `against: str | int`; an
   explicit version number is accepted (`_resolve_baseline`). It opens its own unit of work, so
-  the service takes the `Database`, not a session.
+  the service takes the `Database`, not a session. *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* It also takes `blob_store:
+  BlobStore` as a required keyword (`:291-300`), so the service takes one too, from the route.
 - **P4.** A table step's `rate_table_ref` must be in `pins.rate_tables` (`compile.py:545-552`),
   so pairing pins by slug covers every table the algorithm reads.
 - **P5.** The rating-version routes live in `backend/src/app/api/models.py` (submit `:1188`,
@@ -221,11 +291,16 @@ being written at submit (see §"Premises" P6, raised to the lead, not taken).
   `approvals.submit` only (`:327-333`). FR-242's "Rating Versions carry a required change
   summary" therefore lives on the Approval Request, not the version. Writing it at submit would
   edit `submit_for_review`, `SL-1389`'s function. Reported to the lead as evidence for RL 9668's
-  FR-242 limb; not in this scope.
+  FR-242 limb; not in this scope. *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* Ruled: DP-E1-6 (a), in PL 9590.
 - **P7.** Over HTTP no route yet sets a version's algorithm or pins (FD 9708, working id; its
   fix is PL 9683, #1140). This slice's tests seed them through the service, as
   `backend/tests/test_rating_version_compile.py` does. G2's journey needs PL 9683 as well; that
   is PL 9629's (#1164) dependency, not this slice's.
+- **P8 (added pre-mint, 2026-10-05).** No synchronous route answers 409
+  `RATING_VERSION_UNPINNED` today. `git grep -n RATING_VERSION_UNPINNED 4d3be141 -- backend/src`
+  prints only the registry, `backend/src/app/errors.py:321`; the code is raised in pricing-core
+  (`compile.py:538` `_raise_named`), inside the compile Job. This slice's refusal is a third
+  use, which is why T2 extends the meaning note.
 
 ### Risks
 
@@ -246,10 +321,10 @@ Classes as in `PL-1419` §"Write set" (`docs/process/delivery-process.core.json`
 | Path | Symbol or region | Change |
 |---|---|---|
 | `backend/src/app/platform/change_summary.py` | `draft_change_summary(...) -> ChangeSummaryDraft`, pure | new file |
-| `backend/src/app/platform/rating_versions.py` | new `draft_change_summary_for(database, *, workspace_id, rating_version_id) -> ChangeSummaryDraft`, after `_baseline` | added; no existing definition edited |
-| `backend/src/app/api/models.py` | new handler `GET /rating-versions/{rating_version_id}/change-summary-draft`, after the submit handler (`:1188-1229`) | added |
+| `backend/src/app/platform/rating_versions.py` | new ~~`draft_change_summary_for(database, *, workspace_id, rating_version_id) -> ChangeSummaryDraft`~~ `draft_change_summary_for(database, *, blob_store, workspace_id, rating_version_id) -> ChangeSummaryDraft` (pre-mint 2026-10-05: `blob_store`), after `_baseline` | added; no existing definition edited |
+| `backend/src/app/api/models.py` | new handler `GET /rating-versions/{rating_version_id}/change-summary-draft`, after the submit handler (`:1188-1229`), taking `blob_store: score_api.BlobStoreDep` as `:1203` (pre-mint 2026-10-05) | added |
 | `packages/model-schema/src/model_schema/rating.py` | new `ChangeSummaryDraft`, `RateTableChange`, after `RateTableDiff` (`:735-747`) | added classes; no existing class edited |
-| `docs/specs/03-rating-engine.md` | §5.1: one row after the submit row (`:910`) | the ruled text |
+| `docs/specs/03-rating-engine.md` | §5.1: one row after the submit row (`:910`) (T1); one clause after `RATING_VERSION_UNPINNED`'s meaning note (`:967-970`) (T2, pre-mint 2026-10-05) | the ruled texts |
 | `docs/contracts/openapi/generated.json` | regenerated | |
 | `backend/tests/test_change_summary_draft.py`, `backend/tests/test_rating_version_change_summary_route.py` | new | Acceptance 1–15 |
 | `docs/ledgers/LG-<n>-…md`; `docs/INDEX.md` | added; regenerated | |
@@ -267,7 +342,7 @@ the frontend.
 | `platform/rating_versions.py` | adds one function | **SL-1389** (PL 9590 #1181, **WK-673**): `submit_for_review` and new private gates; PL 9683 (WK-1178): `create_rating_version`; PL 9649, PL 9610: `_Resolver` | no | **ALLOWED one-sided**, named in the dispatch record with `git diff -U0 origin/main...<branch> -- backend/src/app/platform/rating_versions.py` |
 | `model_schema/rating.py` | adds two classes after `RateTableDiff` | **SL-1391** (PL-1419): edits `RateTableDiff` (`:735-747`) and adds `RateTableDiffCell`; SL-1389: `RatingVersionEvidence`; PL 9683, PL 9610, PL 9713 (other classes) | no; **adjacent to SL-1391's edit** | **ALLOWED one-sided**; the second to merge merges main, re-reads `git merge-tree`'s exit code, and re-gates. If SL-1391 merges first, `RateTableChange.diff` carries its two new optional fields with no change here |
 | `api/models.py` | adds one handler | PL 9683: the create handler; WK-675 S2 (PL 9713 #1131): `GET /rating-versions/{slug}@{version}` (RL 9766 T2, working id) | no | **ALLOWED one-sided**, named with the same `git diff -U0` check |
-| `03` §5.1 | one row after `:910` | **SL-1391**: T10 replaces `:904`, RL-1418 T1 inserts after it; **WK-675 S2**: RL 9766 T2 inserts after `:908`; **PL 9683**: RL 9695 T1 replaces `:908` | yes: one section; nearest hunk two rows away (`:908`) | **SERIALISES** with each by the file rule (`forbidden`: the same spec section). The lanes A/C option (b) of "2026-10-05 13:00:09 BST" names SL-1391 and WK-675 S2 only. **Either** this slice applies its row after those merge, **or** the maintainer dates an option for it. Not this plan's call: raised to the lead |
+| `03` §5.1 | one row after `:910`; T2 after `:970` (pre-mint 2026-10-05: the same section, so no new pair) | **SL-1391**: T10 replaces `:904`, RL-1418 T1 inserts after it; **WK-675 S2**: RL 9766 T2 inserts after `:908`; **PL 9683**: RL 9695 T1 replaces `:908` | yes: one section; nearest hunk two rows away (`:908`) | **SERIALISES** with each by the file rule (`forbidden`: the same spec section). The lanes A/C option (b) of "2026-10-05 13:00:09 BST" names SL-1391 and WK-675 S2 only. **Either** this slice applies its row after those merge, **or** the maintainer dates an option for it. Not this plan's call: raised to the lead |
 | `generated.json`, `docs/INDEX.md` | regenerated | every shape-changing slice | — | exempt (generated) |
 
 **Same-Work pairs, RL 9620 condition 2, both ways.**
@@ -291,7 +366,9 @@ row, two test modules and one gate.
 
 ## Decision points
 
-For the decision-maker to rule; the planner recommends, it does not pick.
+For the decision-maker to rule; the planner recommends, it does not pick. *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)*
+**Ruled at 17:34:57 BST, all as recommended** (RL 9541, working id); each DP below carries
+its ruled option, and DP-E1-1 and DP-E1-5 carry the ruling's additions.
 
 - **DP-E1-1: the HTTP shape of the draft.**
   (a) `GET /api/v1/rating-versions/{id}/change-summary-draft`, `rating:read`, read-only,
@@ -306,6 +383,8 @@ For the decision-maker to rule; the planner recommends, it does not pick.
   FR-242 and E1 both require.
   **Recommendation: (a).** It is the smallest surface that is FR-242 and E1 as written, and it
   writes nothing, so it has no audit or concurrency obligations.
+  **Ruled: (a), plus T2** *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)*: one clause on `RATING_VERSION_UNPINNED`'s meaning
+  note (`03:967-970`), Appendix P2.
 - **DP-E1-2: a rate-table pair with a `storage: parquet` side.**
   (a) The entry is returned with `pending: true`, no `diff`, and the `text` names the diff route
   to run; the call stays 200 and creates no Job.
@@ -314,6 +393,7 @@ For the decision-maker to rule; the planner recommends, it does not pick.
   **Recommendation: (a).** (c) defeats FR-232's reason for the Job; (b) adds a Job kind for a
   text. Reading the DP3 diff cache instead would call `DiffCache.key`, whose signature SL-1391
   changes, creating a dependency on S7.
+  **Ruled: (a)** *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)*.
 - **DP-E1-3: why and expected impact.**
   (a) The `text` ends with empty `Why:` and `Expected impact:` labels; the actuary writes them.
   (b) As (a), and submit refuses a summary that still equals the draft (edits `submit_for_review`,
@@ -322,17 +402,22 @@ For the decision-maker to rule; the planner recommends, it does not pick.
   plan dependency).
   **Recommendation: (a).** E1 says the actuary explains *why*. (b) and (c) can follow as their
   own decisions once S4 and S5 have merged.
+  **Ruled: (a)** *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)*.
 - **DP-E1-4: where the pure drafting lives.**
   (a) A backend module, `app/platform/change_summary.py`, with no `03` §5.2 entry.
   (b) `pricing-core`, with an `03` §5.2 signature, in the section `SL-1391` also edits (RL-1418
   T3 and T5, before and after the fence at `:1120`), so the two serialise.
   **Recommendation: (a).** The draft is prose over existing diffs, not rating mathematics, and
   (a) keeps the slice out of §5.2.
+  **Ruled: (a), `app/platform/change_summary.py`** *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)*.
 - **DP-E1-5: the `ChangeSummaryDraft` shape.** Proposed: `baseline: ArtifactRef | None`;
   `structural_diff: AlgorithmDiff | None`; `rate_tables: list[RateTableChange]`, each
   `{slug, from_ref: ArtifactRef | None, to_ref: ArtifactRef | None, diff: RateTableDiff | None,
   pending: bool}`; `text: str`. `frozen=True, extra="forbid"`, as the neighbouring classes.
   **Recommendation: as proposed**, or the ruling's amendment.
+  **Ruled: as proposed, plus `structural_diff: None` when the baseline has no
+  `algorithm_ref`** (as well as when there is no baseline; the `text` says which), Acceptance
+  20. **`from_ref`/`to_ref` are kept; no rename** *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)*.
 
 ## Tasks
 
@@ -351,10 +436,14 @@ For the decision-maker to rule; the planner recommends, it does not pick.
 
 - [ ] Apply the ruled §5.1 row (Appendix P1 as ruled) after the submit row, byte for byte, in
   the three- or four-cell form the ruling gives. `python3 scripts/audit-docs.py`.
+- [ ] *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* Find T1's anchor with `` grep -cF '| `POST` | `/api/v1/rating-versions/{id}/submit` | Submit for approval;' ``
+  (`1` at `4d3be141`), never the bare submit path (`2`). Apply T2 (Appendix P2 as ruled) as
+  the line after `` > matching pin list (`rate_tables`, `reference_tables`, `models`) at that exact version. ``
+  (`grep -cF` = `1` at `4d3be141`). Acceptance 21.
 
 ### Task 2: The shape and the pure draft (Acceptance 1–9)
 
-- [ ] Write `D`'s nine tests; run; record each red (item 1's `ModuleNotFoundError` first).
+- [ ] Write `D`'s nine tests ~~;~~ and item 20's (pre-mint 2026-10-05: ten); run; record each red (item 1's `ModuleNotFoundError` first).
 - [ ] Add `ChangeSummaryDraft` and `RateTableChange` to `model_schema/rating.py` after
   `RateTableDiff`.
 - [ ] Write `app/platform/change_summary.py`: `draft_change_summary(baseline, structural_diff,
@@ -370,9 +459,14 @@ For the decision-maker to rule; the planner recommends, it does not pick.
   (`load_rating_version`), refuse a missing `algorithm_ref`/`pins` with `RATING_VERSION_UNPINNED`,
   call `_baseline`, load both algorithms, `diff_algorithms`, pair `pins.rate_tables` by slug,
   `diff_needs_job` then `rate_tables.diff(..., against=<baseline version number>)` per changed
-  pair, and call the pure draft. It writes nothing.
+  pair, and call the pure draft. It writes nothing. *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* It takes `blob_store` and
+  calls `rate_tables.diff(..., blob_store=blob_store, cache=None)`; the refusal is
+  `PlatformError("RATING_VERSION_UNPINNED", …, status_code=409, detail=<the missing field>)`;
+  a baseline with no `algorithm_ref` gives `structural_diff=None` (Acceptance 20).
 - [ ] Add the handler in `api/models.py` after the submit handler, `requires(Perm.RATING_READ)`,
-  `responses=problems(401, 403, 404, 409, 422)`, `response_model=ChangeSummaryDraft`.
+  `responses=problems(401, 403, 404, 409, 422)`, `response_model=ChangeSummaryDraft`, with a
+  `blob_store: score_api.BlobStoreDep` parameter passed to the service (as `:1203`; pre-mint
+  2026-10-05).
 - [ ] Green.
 
 ### Task 4: Contract, gate and ledger (Acceptance 16–19)
@@ -386,7 +480,8 @@ For the decision-maker to rule; the planner recommends, it does not pick.
 
 The ledger names: the dispatch tree; each DP as ruled and each difference from this plan; each
 red with its printed line; the gate result with its tree; and, for the lead, P6 (the version's
-`change_summary` is never written) if no record has taken it by then.
+`change_summary` is never written) if no record has taken it by then. *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* P6 is
+taken: DP-E1-6 (a), in PL 9590. The ledger does not report it; the F27 draft residue is F27's.
 
 ## Appendix — proposed text (for the ruling to adopt, amend or reject)
 
@@ -400,6 +495,16 @@ Three-cell form (if RL 9907's, working id, `Permission` column has not landed):
 
 Four-cell form: the same, with `rating:read` as the fourth cell.
 
+### P2 — `03` §5.1, T2: one clause after `RATING_VERSION_UNPINNED`'s meaning note (`:967-970`)
+
+*(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* DP-E1-1 as ruled, the text from dm-e1's memo. Inserted as the line immediately
+after `` > matching pin list (`rate_tables`, `reference_tables`, `models`) at that exact version. ``
+(`grep -cF` = `1` at `4d3be141`):
+
+```
+> *(Use added <apply date>, PL 9564, working id, FR-242):* `GET /api/v1/rating-versions/{id}/change-summary-draft` refuses with **409** and this code when the version has no `algorithm_ref` or no `pins`, because there is nothing to diff.
+```
+
 ## Self-review
 
 - Every requirement id is listed singly (FR-242, FR-219, FR-231); no range.
@@ -408,3 +513,7 @@ Four-cell form: the same, with `rating:read` as the fourth cell.
 - No ruling, severity, owner or scope is changed here: the owner is item 4's; the §5.1
   contention and P6 are raised to the lead, not decided.
 - Nothing is minted: SL 9565 and PL 9564 are working ids.
+- *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* Every ruled change is marked in place; no text was deleted. The ruling's
+  locators were re-read at `4d3be141` (`rate_tables.py:291-300`, `api/models.py:1203`,
+  `errors.py:321` and `:425-432`, `03:967-970`); RL 9541 is cited by working id and kept out
+  of `relates:`.
