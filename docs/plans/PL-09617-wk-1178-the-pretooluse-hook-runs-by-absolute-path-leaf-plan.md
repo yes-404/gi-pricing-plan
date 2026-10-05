@@ -67,6 +67,32 @@ commit, red first; §"Known gap in the dev-commands skill" added; the Goal, Acti
 Acceptance 8–9, §"What happens today", the Write set, Task 5 Step 1 and Self-review item 5 amended to
 match. #1162's revert is `381254c3`.)*
 
+**Reframed by** the entry headed *"2026-10-05 16:47:09 BST — CORRECTION to my 16:46:42 hypothesis: the
+\`if\` filter is BEST-EFFORT by design; the absolute path is the fix"*, verbatim: *"A docs check (the
+official hooks reference) says: \`if\` uses permission-rule syntax and is evaluated BEFORE the hook
+process spawns, for PreToolUse among others, BUT "matching is best-effort: when Claude Code cannot
+determine which commands Bash will execute (e.g., in dynamic cases), it runs the hook regardless". So my
+16:46:42 working hypothesis ("teammate sessions ignore \`if\`") is WITHDRAWN as the likely cause. The
+probable mechanism: after a \`cd\` into a subdirectory, any Bash call that Claude Code cannot parse
+statically (pipes, $(…), heredocs, compound or dynamic forms, which teammates use heavily) runs the hook
+anyway, and the relative path exits 2 (blocking). My own next call was a simple \`cd … && pwd\`, parsed
+and skipped. This is DOCUMENTED behaviour, not a reported bug: nothing in the docs or changelog reports
+\`if\` being ignored.
+Consequences for PL 9617 (#1165): (1) the absolute path is THE fix, and the docs' own pattern is
+\`"$CLAUDE_PROJECT_DIR"/…\`; (2) whether CLAUDE_PROJECT_DIR is set in TEAMMATE sessions is
+UNDOCUMENTED, so the plan's \`git rev-parse --show-toplevel\` fallback (DP-1) is required, not optional;
+(3) Task 0's probe is reframed: show a non-parseable command from a subdirectory cwd running the hook
+(red before the fix, green after). No "Claude Code bug" note in the skill: the best-effort semantics are
+documented, and the skill should say so with the link."* The page's own wording, read by the planner at
+16:48 BST the same day, differs from the entry's quoted phrase but says the same thing; it is quoted
+below (§"What the Claude Code documentation says"). *(Pre-mint edit, 2026-10-05 16:49:10 BST, by the
+planner, on that entry: the docs list gains the best-effort and absolute-path sentences, and its exit-2
+quote is corrected to the page's text; §"What happens today" explains the locks by the documented
+best-effort match; DP-1's fallback is required (no "(a) is enough" exit); Task 0 Step 4 is the red
+probe and Task 3 and Acceptance 5 its green half, both with a non-parseable command; Task 5 Step 1, the
+Write set row for the skill, Hand-off item 3 amended and Self-review item 6 added to match. No other text
+changed.)*
+
 Planned read-only: no test, no hook and no Claude Code session was run to produce this plan. Every
 repository fact below was read at `origin/main` `809a3794af6d3a6ba688663b0d9b59f951190680`
 (2026-10-05).
@@ -75,9 +101,21 @@ repository fact below was read at `origin/main` `809a3794af6d3a6ba688663b0d9b59f
 
 - [Hooks reference](https://code.claude.com/docs/en/hooks.md): `${CLAUDE_PROJECT_DIR}` is the
   "Project root". Path placeholders "are substituted in hook commands and available as environment
-  variables on spawned processes". On exit codes: "Exit 2: Blocking error; action is prevented.
-  Other codes: Non-blocking error". It documents `"if"` as an "Optional permission rule" filter. It
-  does not say which version added `if`.
+  variables on spawned processes". On exit codes: "Exit 2 means a blocking error. On events that can
+  block, exit 2 blocks whether or not you print JSON" (§"Exit code 2"; corrected 16:49 BST: the
+  sentence first quoted here is not on the page as read at 16:48 BST). It documents `"if"` as an
+  "Optional permission rule" filter. It does not say which version added `if`.
+- Same page, [§"How `if` patterns match Bash commands"](https://code.claude.com/docs/en/hooks#bash-if-matching),
+  read 2026-10-05 16:48 BST: "When Claude Code can't determine which commands the Bash input runs, it
+  runs your hook regardless of the pattern. Because the `if` filter is best-effort, use the permission
+  system rather than a hook to enforce a hard allow or deny." Its table adds that a pattern naming more
+  than the command name runs the hook "anyway on `$()`, backticks, or `$VAR`". So `if` is a
+  best-effort filter **by documented design**, not a reported defect.
+- Same page, [§"Reference scripts by path"](https://code.claude.com/docs/en/hooks#reference-scripts-by-path):
+  the placeholders "reference hook scripts relative to the project or plugin root, regardless of the
+  working directory when the hook runs". §"Security best practices": "**Use absolute paths**: specify
+  full paths for scripts. … In shell form, wrap it in double quotes"; the page's shell-form example is
+  `node "${CLAUDE_PLUGIN_ROOT}"/scripts/format.js --fix`. That is the form DP-1 (c) takes.
 - [Worktrees](https://code.claude.com/docs/en/worktrees.md): "`${CLAUDE_PROJECT_DIR}` stays put: it
   still points at the project root where the session started", and "`cwd` follows Claude … it moves
   again when Claude runs `cd`".
@@ -148,8 +186,10 @@ the named test ran and failed **for the stated cause** before the change that tu
    run against a scratch copy carrying `python3 scripts/hooks/retry_cap_hook.py hook`, failing.
 4. **The existing hook suite is unchanged and green:** `uv run pytest -q tests/test_retry_cap_hook.py`.
 5. **A live check in a real session (Task 3).** The ledger records, with `date` output, one session
-   in which `cd docs` is run and the next Bash call (`pwd`) succeeds. The executor runs it in a
-   throwaway session, not its own.
+   in which `cd docs` is run and the next Bash call, a **non-parseable** one (`echo "$(pwd)" | cat`),
+   succeeds; and Task 0 Step 4's red for the same call on `main`'s settings. A parseable call (`pwd`)
+   does not count: the best-effort `if` filter skips it before and after the fix. The executor runs
+   both in a throwaway session, not its own.
 6. **The two-half gate** (`CLAUDE.md` §11) passes on the head, through the gate-runner.
 7. **Write set:** `git diff --stat origin/main...HEAD` lists only §"Write set" paths.
 8. **One gate slot, red first (Task 4).** Two tests in `tests/test_root_conftest.py`, both seen red on
@@ -206,10 +246,15 @@ platform requirement").
   `cd` back included. This matches both recorded locks (2026-09-30 14:54:23 BST and
   2026-10-05, the 15:24:59 BST entry).
 - `.claude/settings.json:10` carries `"if": "Bash(python3 scripts/hooks/retry_cap_hook.py record*)"`.
-  If that filter were applied, a non-`record` command would never run the hook, and neither lock could
-  have happened. **The locks show the hook ran for non-`record` commands.** Task 0 records why
-  (whether the installed build, `claude --version` 2.1.289 on this VM at planning time, honours
-  `if`). The answer does not change the fix: a `record` call after a `cd` would still be blocked.
+  **The locks show the hook ran for non-`record` commands.** That is the documented behaviour, not a
+  defect: the filter is best-effort, and a Bash call Claude Code cannot parse statically (a pipe,
+  `$(…)`, a heredoc, a compound or dynamic form) runs the hook regardless of the pattern (the hooks
+  reference, §"How `if` patterns match Bash commands", above). After a `cd`, every such call runs the
+  hook, and the relative path exits 2. A plain parseable call (`pwd`) is matched and skipped, which is
+  why a lock can look intermittent. *(Reframed 2026-10-05 16:49:10 BST on the 16:47:09 BST entry; the
+  earlier text read the locks as a question of whether the installed build, `claude --version` 2.1.289
+  at planning time, honours `if`.)* Either way the fix is the same: a `record` call after a `cd` would
+  also be blocked.
 - **Other hooks.** `git ls-files '.claude/settings*'` lists only `.claude/settings.json`; it holds this
   one hook. `.claude/settings.local.json` (untracked) holds no hooks. The only other hook commands in
   the tree are in `.claude/skills/planning-with-files/SKILL.md:10`, `:15`, `:20`, `:24`, `:29`. Four
@@ -257,7 +302,7 @@ two gates may run at once. `RL 9620` (working id) allows one full gate at a time
 | `scripts/hooks/retry_cap_hook.py` | **read only**, unless DP-2 (c) | none in flight | a DP-2 (c) edit is re-checked at dispatch |
 | `conftest.py` (repository root) | edited: `:70` `_SLOT_COUNT` 2 → 1; the docstring's slot wording (`:19-24`) (Task 4) | none in flight (below) | none |
 | `tests/test_root_conftest.py` | `:255`, `:270-311` (rewritten in place) and `:314-325` (Task 4) | none in flight | none |
-| `.claude/skills/dev-commands/SKILL.md` | the gate loop `:161` and the gate-slot text `:180-183`, `:229-233`, `:356`, `Verified` refreshed (Task 4); the `if` record only if Task 0 Step 4 finds it (Task 5 Step 1). Never the verify wrapper `:276`, `:289` | none in flight (#1162 reverted its fold, `381254c3`) | none |
+| `.claude/skills/dev-commands/SKILL.md` | the gate loop `:161` and the gate-slot text `:180-183`, `:229-233`, `:356`, `Verified` refreshed (Task 4); a note of the `if` filter's documented best-effort semantics, with the link (Task 5 Step 1). Never the verify wrapper `:276`, `:289` | none in flight (#1162 reverted its fold, `381254c3`) | none |
 | the slice's ledger `docs/ledgers/LG-<n>`; `docs/INDEX.md` | added; regenerated | every PR | registry, exempt |
 
 **In-flight branches read 2026-10-05.** Every `refs/remotes/origin/*` branch with commits ahead of
@@ -279,7 +324,7 @@ the 63 open PRs at `origin/main` `cdaaa573`, after #1162's revert `381254c3`: no
 
 | DP | Question | Options | Recommendation |
 |---|---|---|---|
-| DP-1 | What anchors the path? | (a) `python3 "$CLAUDE_PROJECT_DIR"/scripts/hooks/retry_cap_hook.py hook`, as the backlog entry names. (b) `python3 "$(git rev-parse --show-toplevel)"/scripts/hooks/retry_cap_hook.py hook`: the checkout the cwd is in. Fails if the cwd is outside any repository (`cd /tmp`), the same lock again. (c) (a) with (b) as a fallback: `"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}"`. | **(c)**. (a) is the form the docs give for project hook scripts, and the form this repository already uses (`planning-with-files`). But the docs do not say that a teammate's or a subagent's hook process gets the variable, and this team runs mostly as teammates. The fallback costs one expansion and covers that gap. If Task 0 shows the variable is set in every process kind, (a) is enough, and the ruling can say so. Under (c) the test (Acceptance 1) also runs one case with `CLAUDE_PROJECT_DIR` unset. |
+| DP-1 | What anchors the path? | (a) `python3 "$CLAUDE_PROJECT_DIR"/scripts/hooks/retry_cap_hook.py hook`, as the backlog entry names. (b) `python3 "$(git rev-parse --show-toplevel)"/scripts/hooks/retry_cap_hook.py hook`: the checkout the cwd is in. Fails if the cwd is outside any repository (`cd /tmp`), the same lock again. (c) (a) with (b) as a fallback: `"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}"`. | **(c)**. (a) is the form the docs give for project hook scripts, and the form this repository already uses (`planning-with-files`). But the docs do not say that a teammate's or a subagent's hook process gets the variable, and this team runs mostly as teammates. The fallback costs one expansion and covers that gap. **The fallback is required, not optional** (the 16:47:09 BST entry, consequence (2)): a Task 0 reading that the variable is set in every process kind today does not remove it, because the docs do not promise it for teammates. Under (c) the test (Acceptance 1) also runs one case with `CLAUDE_PROJECT_DIR` unset. |
 | DP-2 | **Which copy runs in a worktree?** Today the relative path resolves in the cwd, so a session working in `.claude/worktrees/<x>` runs **that worktree's** `retry_cap_hook.py`. The docs say `CLAUDE_PROJECT_DIR` "stays put" at "the project root where the session started", so a session started in the root checkout that then enters a worktree runs the **root checkout's** copy under DP-1 (a). A teammate whose process *starts* in a worktree may get the worktree as its project root (not documented; Task 0 Step 3). The root checkout is not kept on `main` (it was on `main` at `809a3794` when read today, but it has been pinned to old branches before). | (a) Accept it: the root checkout's copy runs. The script changes rarely (last changed by `71f5a220`, 2026-09-17), and both copies read the same state file (`DEFAULT_STATE_FILE` is under `~`, `:77`). (b) Anchor on the cwd's checkout first (`git rev-parse --show-toplevel`), and use `CLAUDE_PROJECT_DIR` only when that fails: the worktree's copy runs, as today, but a `cd /tmp` would then fall back. (c) Keep (a)'s command, and have the script hand off to the cwd's checkout's copy when one exists (edits the script). | **(a)**, recorded in the ledger. The hook's behaviour is one decision function; a copy that differs between checkouts is a slice changing the hook, and that slice's executor tests by absolute path (`tests/test_retry_cap_hook.py:31`), which is not affected. (b) puts the old dependence on the cwd back in, the defect this slice removes. (c) adds code for a case with no recorded failure. Task 0 records which directory `CLAUDE_PROJECT_DIR` holds in each kind of worktree session; where it is the worktree, DP-2 does not arise for that kind, and the ledger says so. |
 
 **Accepted.** The entry headed *"2026-10-05 15:33:57 BST — #1162 amended (noted); ROUTING (a) and (b)
@@ -299,12 +344,17 @@ answer goes to the lead (Task 0 Step 5).
 - [ ] **Step 2.** The same from a teammate process and from an in-session subagent (DP-1).
 - [ ] **Step 3.** The same in a worktree session (`EnterWorktree`, and a teammate spawned with a
   worktree cwd) (DP-2).
-- [ ] **Step 4.** Run one non-`record` Bash call and check whether the scratch hook carrying the same
-  `if` filter as `:10` fired. Record the answer and the version (`claude --version`). Remove the scratch
-  hook; `git -C <root> status --porcelain .claude/` prints nothing tracked.
+- [ ] **Step 4. The red probe** (the 16:47:09 BST entry, consequence (3)). Remove the scratch hook
+  first; `git -C <root> status --porcelain .claude/` prints nothing tracked. Then, in a throwaway
+  session on `main`'s `.claude/settings.json`, run `cd docs`, then one **non-parseable** Bash call, for
+  example `echo "$(pwd)" | cat`. **Expected red:** the call is refused, the hook having run despite the
+  `if` filter and exited 2 (`can't open file … scripts/hooks/retry_cap_hook.py`). Record both outputs,
+  `date` and `claude --version`. A parseable call (`pwd`) is not the probe: it is matched and skipped,
+  so it passes on `main` too. Free the throwaway session from outside it (it is locked by design).
 - [ ] **Step 5.** Send the table to the lead before Task 1 if any answer differs from the
-  recommendation's premise (DP-1: the variable is set everywhere; DP-2: it holds the root checkout).
-  A different answer changes the ruled option, not the task list.
+  recommendation's premise (DP-1: the variable is set everywhere; DP-2: it holds the root checkout),
+  or if Step 4 is not red by its cause. DP-1's `git rev-parse` fallback stays in every case. A
+  different answer changes the ruled option, not the task list.
 
 ### Task 1: The registration test, red first (Acceptance 1, 2, 3)
 
@@ -336,8 +386,11 @@ answer goes to the lead (Task 0 Step 5).
 
 ### Task 3: The live check (Acceptance 5)
 
-- [ ] **Step 1.** A throwaway session on the slice's branch runs `cd docs`, then `pwd`. Record both
-  outputs and `date`. Under DP-2 (a), also record which copy ran (Task 0 Step 3's answer).
+- [ ] **Step 1. The green half of Task 0 Step 4's probe.** A throwaway session on the slice's branch
+  runs `cd docs`, then the same non-parseable call as Task 0 Step 4 (`echo "$(pwd)" | cat`), then
+  `pwd`. Record the outputs and `date`. The non-parseable call must succeed: a `pwd` alone proves
+  nothing, because the `if` filter skips it on `main` too. Under DP-2 (a), also record which copy ran
+  (Task 0 Step 3's answer).
 
 ### Task 4: One gate slot — the skill's gate loop, `conftest.py` and the test together, red first (Acceptance 8, 9)
 
@@ -377,10 +430,13 @@ numbers are at `cdaaa573`.
 - [ ] **Step 1.** No skill states the `cd` trap at `809a3794` (`grep -rn -i -E 'hook path is
   relative|never .?cd' .claude` prints nothing), so no skill is edited for it. The trap lives in briefs
   and in memory, and lifting it there is the lead's (Hand-off item 2). **Beside Task 4's gate-slot edit,
-  one more skill edit:** if Task 0 Step 4 finds that the installed build does not honour `.claude/settings.json:10`'s `if` (or matches it
-  differently), record that, with `claude --version`, in the ledger and in
-  `.claude/skills/dev-commands/SKILL.md` as Claude Code behaviour, with its `Verified` date refreshed
-  (Hand-off item 3).
+  one more skill edit:** `.claude/skills/dev-commands/SKILL.md` and the ledger record the **documented**
+  semantics of `.claude/settings.json:10`'s `if`, with the link
+  (<https://code.claude.com/docs/en/hooks#bash-if-matching>): the filter is best-effort, and a Bash
+  call Claude Code cannot parse statically runs the hook regardless of the pattern. So the hook
+  command must work from any cwd, which this slice's absolute path gives. They record it as documented
+  behaviour, never as a Claude Code bug, with Task 0 Step 4's red and `claude --version`, and the
+  skill's `Verified` date refreshed (Hand-off item 3).
 - [ ] **Step 2.** The two-half gate through the gate-runner, then the ledger.
 
 ## Hand-off
@@ -389,9 +445,15 @@ numbers are at `cdaaa573`.
    needs 1 to 3.
 2. On merge, the "never `cd`" line that every brief carries since the 15:24:59 BST entry can be lifted.
    That is the maintainer's (by delegation) call, on the ledger's Acceptance 5 line.
-3. If Task 0 finds that `if` is not honoured by the installed build, it is Claude Code's behaviour: the
-   ledger and the dev-commands skill record it (Task 5 Step 1), and it is not ours to fix. It does not
-   block this slice. *(Pre-mint edit 2026-10-05, on the 15:33:57 BST entry: "Task 0 measures it. If it
+3. The `if` filter is best-effort **by documented design** (the hooks reference,
+   [§"How `if` patterns match Bash commands"](https://code.claude.com/docs/en/hooks#bash-if-matching)):
+   a Bash call Claude Code cannot parse statically runs the hook regardless of the pattern. It is not a
+   reported bug, and nothing is raised against Claude Code. The ledger and the dev-commands skill state
+   the documented semantics with the link (Task 5 Step 1). The absolute path is the fix; the filter is
+   not relied on to keep the hook from running. *(Pre-mint edit 2026-10-05 16:49:10 BST, on the
+   16:47:09 BST entry: this item said "If Task 0 finds that \`if\` is not honoured by the installed
+   build, it is Claude Code's behaviour … it is not ours to fix", and that reading is withdrawn.)*
+   *(Earlier pre-mint edit 2026-10-05, on the 15:33:57 BST entry: "Task 0 measures it. If it
    is a Claude Code behaviour, record it in the plan and the dev-commands skill; it is not ours to fix."
    The earlier text routed it to WK-1178 as a separate item.)*
 
@@ -417,3 +479,11 @@ numbers are at `cdaaa573`.
    untouched": Task 4 Step 3 and Acceptance 9's `verify-` count. "recording the skill's known gap":
    §"Known gap in the dev-commands skill". The `conftest.py` change is one constant; the blocking-wait
    path it falls to (`:122-133`) is unchanged.
+6. **Against the 16:47:09 BST entry, consequence by consequence.** (1) "the absolute path is THE fix":
+   Goal and Task 2, unchanged; the docs' shell form, quoted, is in §"What the Claude Code documentation
+   says". (2) "the plan's \`git rev-parse --show-toplevel\` fallback (DP-1) is required, not optional":
+   DP-1's recommendation and Task 0 Step 5. (3) "show a non-parseable command from a subdirectory cwd
+   running the hook (red before the fix, green after)": Task 0 Step 4 (red), Task 3 Step 1 (green),
+   Acceptance 5. "No "Claude Code bug" note in the skill … the skill should say so with the link":
+   Task 5 Step 1, the Write set row and Hand-off item 3. The withdrawn "teammates ignore \`if\`"
+   reading appears nowhere as a premise.
