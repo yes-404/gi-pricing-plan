@@ -184,3 +184,8 @@ committed step reads a float input after a `model_call`:** `f0`..`f7` are consum
 **Limit (C), for this ledger and the PR body.** An algorithm that, after a `model_call`, reads a float (an input, or a value
 produced before the call) carrying more than 15 significant digits would see it cut to 15 digits at the 1e-15 level; none is
 committed. A LOW finding (WK-673) by an auditor follows, recording the mechanism proved in (1).
+
+## PRs
+
+None opened at this entry (2026-10-06, before the gate). The draft PR, `SL-1436: …`, opens from branch
+`sl-1436-fd-1425-to-wire-dependency-order` once the gate head is pushed; its number is appended here.
