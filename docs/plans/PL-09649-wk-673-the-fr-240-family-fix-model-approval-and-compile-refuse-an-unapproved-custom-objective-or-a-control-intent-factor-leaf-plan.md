@@ -95,22 +95,42 @@ From `~/gi-pricing-plan.local/channel/to-lead.md`, cited by entry header:
   each. … it is a HIGH G2 blocker under my 13:12:56 priority rule, and it serialises with the FD
   9707 fix only where the plans name shared files."*
 
-The lead's brief adds (c) FD 9697's control-intent refusal at compile, and at seed if the spec says
-so, and (d) limb 2's negative test. (c)'s seed half is DP-3.
+- **"2026-10-05 14:21:22 BST — DECISIONS 35–38 (PL 9649, the FR-240 family fix); file the
+  model_call candidate; FD 9641 noted"** decides DP-1 to DP-4, each as recommended, with conditions:
+  - Item 35, DP-1 (a): *"CONDITION: the override must NOT reach compile. FR-240's compile refusal
+    is absolute and independent of approval state, so a red-first test: flag → Admin override with
+    justification → the model approved → compile_bundle still REFUSES. ModelFlag, model.schema.json
+    and the contracts are regenerated in the same commit."*
+  - Item 36, DP-2 (a): *"FR-240's T-text states the bound verbatim, and states the exclusion: peril
+    structures, unresolvable at compile until FD 9995 is fixed, are named as a known gap with FD
+    9995 as its owner, not silently out of scope. Custom evaluation metrics are excluded: they do
+    not reach a price."*
+  - Item 37, DP-3 (a): *"Refuse at SEED and at COMPILE with CONTROL_FACTOR_IN_RATEABLE_PATH (422,
+    03-owned, registered in this slice), plus a dated FR-230 amendment as a T-text."*
+  - Item 38, DP-4 (a): *"every pinned rate table's key factor_ref, whatever its `rateable`. The flag
+    is declarative, so the check does not trust it."*
+  - The candidate DP-4 (c), a `model_call` over a model fitted with a `control` factor, is to be
+    filed as its own finding, owner WK-673. The lead's relay of about 14:22 BST names it FD 9639
+    (working id, auditor-ctrl), outside this plan unless it returns HIGH.
+
+The lead's brief adds (c) FD 9697's control-intent refusal at compile and at seed (DP-3), and (d)
+limb 2's negative test.
 
 ## Status
 
-`draft`. DP-1 to DP-4 are blocking and went to the lead on 2026-10-05 at about 14:25 BST, one
-message each. DP-5 and DP-6 are non-blocking and keep their recommendations unless a ruling says
-otherwise. The plan moves to `active` only through a separate activation PR, once every
+`draft`. DP-1 to DP-4 are **decided** (the deputy, 14:21:22 BST, items 35–38, quoted above), and
+every site below applies them with their conditions. DP-5 and DP-6 are non-blocking; they went to
+the deputy for a ruling and keep this plan's recommendations until ruled. The plan moves to `active` only through a separate activation PR, once every
 activation need below holds. That PR carries this plan's status flip and the `SL-` row's.
 
 ### Activation needs, in order
 
 1. **FD 9697 and FD 9659 minted** (#1136, #1142; FD 9659 is first in batch 2, the 14:12:13 entry,
    item 2).
-2. **A ruling record (`RL-`) carries DP-1 to DP-6 and texts T1 to T3** (§"Spec texts"), because a
-   decision lands as a dated artifact (`CLAUDE.md` §12). If its text differs from this plan, the
+2. **A ruling record (`RL-`), written by a decision-maker who adopts texts T1 to T4**
+   (§"Spec texts": FR-240, FR-230, the seed route row and the owned-code line in `03`, and `02` R4),
+   **and records DP-1 to DP-4 as decided at 14:21:22 BST and DP-5 and DP-6 as ruled**. A decision
+   lands as a dated artifact (`CLAUDE.md` §12), as for PL 9688. If its text differs from this plan, the
    ruling wins, and the dispatch record names each difference at every site it operates
    ([`README.md`](README.md) rule 5: narrative, Files, Steps, Acceptance).
 3. **This plan made `active`** by a dated line in the activation PR.
@@ -128,7 +148,7 @@ code that turns it green. A failure with the right status and a different cause 
 ([`README.md`](README.md) rule 2). The ledger records each red with its failure line as printed.
 
 1. **(a) The root, red first.** `uv run pytest -q backend/tests/test_fr240_governance.py -k
-   approval` passes against Postgres and MinIO (a skip is not a pass). At the base,
+   approv` passes against Postgres and MinIO (a skip is not a pass). At the base,
    `test_a_model_whose_custom_objective_is_in_review_cannot_be_approved` failed with `Failed: DID
    NOT RAISE` (the approval went through, FD 9659 §3's cause). After the fix,
    `apply_approval_decision` raises `PlatformError` with `code == "ARTIFACT_FLAGGED"`, status 409,
@@ -146,10 +166,17 @@ code that turns it green. A failure with the right status and a different cause 
    message names the model ref, the objective ref and its status.
    `test_an_approved_objective_reached_through_a_pinned_model_compiles` and
    `test_a_builtin_objective_needs_no_resolution` are green at the base and after.
-4. **(b) Transitive, through the compile Job, red first.** In `test_fr240_governance.py`,
-   `test_a_version_over_an_approved_model_with_an_unapproved_objective_fails_to_compile` fails at
-   the base with `AssertionError` on `job_row.status is JobStatus.FAILED` (the Job succeeded).
-   After the fix the Job is `FAILED` with `job_row.error["code"] == "PIN_NOT_APPROVED"`.
+4. **(b) Transitive, through the compile Job, red first; DP-1's condition (an override never
+   reaches compile).** In `test_fr240_governance.py`, `test_an_overridden_flag_never_reaches_compile`
+   runs the chain *flag → override → approved → compile*: the model carries
+   `custom_objective_not_approved` (`flags_for`), it is then written `approved` the way an Admin
+   override would leave it, and a version pinning only that model is compiled. It fails at the
+   base with `AssertionError` on `job_row.status is JobStatus.FAILED` (the Job succeeded). After
+   the fix the Job is `FAILED` with `job_row.error["code"] == "PIN_NOT_APPROVED"`. **FR-359's Admin
+   override is not built** for any flag (`modelling.py:1339-1351` raises for every flag, with no
+   override branch), so the test reaches `approved` with `backend/tests/approved_rows.py::mark_approved`,
+   the one way an `approved` row over a flagged model can exist today; the test's docstring says
+   so. The same test is the pre-fix approval case.
 5. **(c) Control intent at compile, red first.** In `test_rating_compile_fr240.py`,
    `test_a_pinned_table_keyed_on_a_control_factor_is_refused` fails at the base with `Failed: DID
    NOT RAISE` (FD 9697 §Evidence 1's `COMPILE ACCEPTED`), and after the fix raises `ValueError`
@@ -216,9 +243,12 @@ code that turns it green. A failure with the right status and a different cause 
 
 **Out of scope, stated so nothing is silently dropped:** FR-240's other clauses (register row
 `FR-240 (F-W9-3)`, `docs/findings/register.md:61`, clauses (1)-(4)); FR-359's Admin override, which
-is built for no flag today (`apply_approval_decision` raises for any flag, `modelling.py:1338-1351`);
-a peril structure's models (the compile resolver cannot resolve a `peril_structure`, its final
-`NOT_FOUND`, `backend/src/app/platform/rating_versions.py:550-555`; FD 9995 (working id), #980); and DP-4 (c).
+is built for no flag today (`apply_approval_decision` raises for any flag, `modelling.py:1339-1351`),
+though Acceptance 4 proves its outcome cannot reach compile (item 35); a peril structure's models, a
+**known gap named in T1 with FD 9995 (working id, #980) as its owner** (the compile resolver cannot
+resolve a `peril_structure`, its final `NOT_FOUND`, `backend/src/app/platform/rating_versions.py:550-555`;
+item 36); custom evaluation metrics, which do not reach a price (item 36); and DP-4 (c), FD 9639
+(working id), filed separately (the 14:21:22 entry).
 
 ### Task 0 at planning time
 
@@ -250,7 +280,7 @@ at `ae78023e`.
 | `backend/src/app/errors.py` | edited: `RATING_ERROR_CODES` (`:305`), `CONTROL_FACTOR_IN_RATEABLE_PATH` appended | edits `DATA_ERROR_CODES` | — | appends to `RATING_ERROR_CODES` *(DP-1 a)* | — | — | — | registry: append (`registry_exempt_append_only`); the second to merge re-gates |
 | `docs/contracts/schemas/model.schema.json` (hand-authored) | edited: `flags` (`:175-178`), the enum and a dated note | — | — | — | — | — | — | none |
 | `docs/contracts/` generated files; `docs/INDEX.md`; the ledger | regenerated; added | regenerates `openapi/generated.json` | every PR | every PR | every PR | every PR | every PR | `generated` |
-| `docs/specs/03-rating-engine.md` | edited: FR-230 row (`:121`, T2), FR-240 row (`:137`, T1), the seed route row (`:902`, T2's refusal) | — | FR-221 row (`:107`) | FR-223 row, §5.1 owned list | FR-231 (`:122`), §4.2, §5.1 diff row (`:904`) and a row after it | rows after FR-243 (`:140`), §5.1 before `:897` and after `:908` | FR-1398/1399, §4.6, §5.1 owned list, §5.2 | **shared file, distinct rows**, but three edits are **adjacent hunks**: `:121` beside SL-1391's `:122`; `:137` within three lines of S2's insertion after `:140`; `:902` beside SL-1391's `:904`. Adjacent hunks conflict like one hunk (the deputy, 14:11:28 BST, "Lesson for the batch rule"), so the second to merge rebases once and re-reads |
+| `docs/specs/03-rating-engine.md` | edited: FR-230 row (`:121`, T2), FR-240 row (`:137`, T1), the seed route row (`:902`, T2's refusal), the owned-code list (`:933`, T4) | — | FR-221 row (`:107`) | FR-223 row, §5.1 owned list | FR-231 (`:122`), §4.2, §5.1 diff row (`:904`) and a row after it | rows after FR-243 (`:140`), §5.1 before `:897` and after `:908` | FR-1398/1399, §4.6, §5.1 owned list, §5.2 | **shared file, distinct rows**, but three edits are **adjacent hunks**: `:121` beside SL-1391's `:122`; `:137` within three lines of S2's insertion after `:140`; `:902` beside SL-1391's `:904`. Adjacent hunks conflict like one hunk (the deputy, 14:11:28 BST, "Lesson for the batch rule"), so the second to merge rebases once and re-reads |
 | `docs/specs/02-modelling.md` | edited: R4 (`:49-50`), a dated note (T3) | — | — | — | — | — | — | none found |
 | `docs/roadmap.md` | added: the SL 9647 row at the end of WK-673 (plan PR only) | — | inserts SL 9685 at the same place | its own row | edits SL-1391's row (`:812`) | its own row | its own row | registry (append, distinct rows); adjacent to PL 9688's insertion, so the second to merge re-reads |
 | `packages/pricing-core/tests/test_rating_compile_fr240.py` | added (new module) | — | — | — | — | — | — | none |
@@ -269,17 +299,17 @@ and MinIO; the slice takes no NFR measurement and need not run exclusive.
 
 ## Decision points
 
-DP-1 to DP-4 are blocking and went to the lead as found. The options are kept so a reader can see
-what was weighed.
+DP-1 to DP-4 were blocking, went to the lead as found, and are decided (items 35–38). The options
+are kept so a reader can see what was weighed; the decisions' text governs.
 
 | DP | Question | Options | Recommendation | Owner | Blocks |
 |---|---|---|---|---|---|
-| **DP-1** | Where does model approval refuse an unapproved objective, and with what code? | (a) a computed flag `custom_objective_not_approved` in `flags_for`, refused by the existing `ARTIFACT_FLAGGED` 409 at the decision; `ModelFlag` and `model.schema.json` gain the member; (b) a bare `OBJECTIVE_NOT_APPROVED` refusal inside `apply_approval_decision`; (c) (a), and refuse at submission too | **(a).** `06` FR-359 names *"unapproved custom objective (`02` R4)"* as a flag that propagates into the approval surface, and the approval-request contract already spells it `custom_objective_not_approved` (`approval-request.schema.json:53-54`). `flags_for` is computed, not stored (`modelling.py:1052-1060`), which is exactly right for a referent that moves. Submission already records the flags in its audit (`:1162-1180`), so (c) adds nothing but a forced serial review | lead; decision-maker writes the RL | Tasks 1, 4, 6 |
-| **DP-2** | What does "transitively reachable" reach, and with what code? | (a) one hop: each pinned model's own `spec.objective` when `kind == "custom"`, refused `PIN_NOT_APPROVED` naming model → objective; (b) a walk of every artifact ref in every resolved payload; (c) (a) plus a GBM's custom eval metrics | **(a).** It is every path that exists: a GLM has no custom objective (`02` FR-207's 2026-10-04 amendment moves `GlmSpec.custom_objective_ref` to Phase 3), and a peril structure cannot be resolved at compile today (§"Scope"). `PIN_NOT_APPROVED` because the same objective in the same state then gets the same code by either door, and FR-240's clause is a maturity clause (FR-20). Text T1 states the bound, as FD 9659's remedy asks | lead | Tasks 2, 6 |
-| **DP-3** | FD 9697 at seed? FR-240 names compile; FR-88 says a `control` factor *reaching a rate table* is an error | (a) refuse at seed **and** at compile, `CONTROL_FACTOR_IN_RATEABLE_PATH` 422, FR-230 amended (T2); (b) seed it with `rateable=false`; (c) compile only | **(a).** FR-88's words reach the table, not only the bundle, and a refusal at seed tells the author before any table exists. Compile stays the backstop for any table whose key binds a `control` Factor by another route | lead | Tasks 3, 6 |
-| **DP-4** | What is a "rateable path" at compile? | (a) every pinned rate table's keys bound by `factor_ref`, whatever the table's `rateable` flag; (b) only tables with `rateable: true`; (c) also a `model_call` whose model fits a `control` factor | **(a)** in this slice. A pinned table is in the bundle by construction, and (b) would lean on FR-236's "rateable only" rule, which nothing here shows is enforced. **(c) is raised to the lead as a candidate finding, not dropped**: FR-88's 2026-08-22 amendment gives `control` a free coefficient, so a `model_call` may score on it; whether scoring holds it at base was not measured | lead | Tasks 2, 6 |
-| **DP-5** | Which objective statuses pass the transitive check, and which the flag? | (i) compile: the direct pin's `_APPROVED_OR_BETTER` (`compile.py:404`), so `deprecated` is refused; the flag: status ≠ `approved`; (ii) compile also admits `deprecated` | **(i).** `02` OQ-609 is decided (a): *"existing pins continue, new specs cannot select"*, and a compile is always of a `draft` version (FR-239), so it is new work. One set for both doors | planner; non-blocking | Tasks 2, 4 |
-| **DP-6** | Rows already in the bad state (approved models over unapproved objectives; tables keyed on `control` factors) | (a) Task 0 counts them over every `gipricing*` database and STOPS to the lead on a non-zero count; no reset in this slice; (b) reset such models to `review` | **(a).** After the fix, compile refuses every such row's use (Tasks 2 and 3), so nothing new is priced on them. A reset is a data change whose need the count decides | planner; non-blocking | Task 0 |
+| **DP-1** | Where does model approval refuse an unapproved objective, and with what code? | (a) a computed flag `custom_objective_not_approved` in `flags_for`, refused by the existing `ARTIFACT_FLAGGED` 409 at the decision; `ModelFlag` and `model.schema.json` gain the member; (b) a bare `OBJECTIVE_NOT_APPROVED` refusal inside `apply_approval_decision`; (c) (a), and refuse at submission too | **(a).** `06` FR-359 names *"unapproved custom objective (`02` R4)"* as a flag that propagates into the approval surface, and the approval-request contract already spells it `custom_objective_not_approved` (`approval-request.schema.json:53-54`). `flags_for` is computed, not stored (`modelling.py:1052-1060`), which is exactly right for a referent that moves. Submission already records the flags in its audit (`:1162-1180`), so (c) adds nothing but a forced serial review | **DECIDED (a)**, the deputy 14:21:22 BST item 35, with the condition that an override never reaches compile (Acceptance 4) | Tasks 1, 2, 4, 6 |
+| **DP-2** | What does "transitively reachable" reach, and with what code? | (a) one hop: each pinned model's own `spec.objective` when `kind == "custom"`, refused `PIN_NOT_APPROVED` naming model → objective; (b) a walk of every artifact ref in every resolved payload; (c) (a) plus a GBM's custom eval metrics | **(a).** It is every path that exists: a GLM has no custom objective (`02` FR-207's 2026-10-04 amendment moves `GlmSpec.custom_objective_ref` to Phase 3), and a peril structure cannot be resolved at compile today (§"Scope"). `PIN_NOT_APPROVED` because the same objective in the same state then gets the same code by either door, and FR-240's clause is a maturity clause (FR-20). Text T1 states the bound, as FD 9659's remedy asks | **DECIDED (a)**, item 36: T1 names the peril-structure gap with FD 9995 as owner; custom eval metrics excluded (no price) | Tasks 2, 6 |
+| **DP-3** | FD 9697 at seed? FR-240 names compile; FR-88 says a `control` factor *reaching a rate table* is an error | (a) refuse at seed **and** at compile, `CONTROL_FACTOR_IN_RATEABLE_PATH` 422, FR-230 amended (T2); (b) seed it with `rateable=false`; (c) compile only | **(a).** FR-88's words reach the table, not only the bundle, and a refusal at seed tells the author before any table exists. Compile stays the backstop for any table whose key binds a `control` Factor by another route | **DECIDED (a)**, item 37: the code is registered in this slice; T2 amends FR-230 | Tasks 3, 6 |
+| **DP-4** | What is a "rateable path" at compile? | (a) every pinned rate table's keys bound by `factor_ref`, whatever the table's `rateable` flag; (b) only tables with `rateable: true`; (c) also a `model_call` whose model fits a `control` factor | **(a)** in this slice. A pinned table is in the bundle by construction, and (b) would lean on FR-236's "rateable only" rule, which nothing here shows is enforced. (c) went to the lead as a candidate finding: FR-88's 2026-08-22 amendment gives `control` a free coefficient, so a `model_call` may score on it | **DECIDED (a)**, item 38 (*"the flag is declarative, so the check does not trust it"*). (c) is FD 9639 (working id), filed separately, outside this plan unless it returns HIGH | Tasks 3, 6 |
+| **DP-5** | Which objective statuses pass the transitive check, and which the flag? | (i) compile: the direct pin's `_APPROVED_OR_BETTER` (`compile.py:404`), so `deprecated` is refused; the flag: status ≠ `approved`; (ii) compile also admits `deprecated` | **(i).** `02` OQ-609 is decided (a): *"existing pins continue, new specs cannot select"*, and a compile is always of a `draft` version (FR-239), so it is new work. One set for both doors | planner; non-blocking; with the deputy for a ruling | Tasks 2, 4 |
+| **DP-6** | Rows already in the bad state (approved models over unapproved objectives; tables keyed on `control` factors) | (a) Task 0 counts them over every `gipricing*` database and STOPS to the lead on a non-zero count; no reset in this slice; (b) reset such models to `review` | **(a).** After the fix, compile refuses every such row's use (Tasks 2 and 3), so nothing new is priced on them. A reset is a data change whose need the count decides | planner; non-blocking; with the deputy for a ruling | Task 0 |
 
 ### Spec texts (proposed for the ruling; applied verbatim in Task 6)
 
@@ -290,8 +320,11 @@ what was weighed.
 > model**: a pinned model whose spec names a custom objective (a GBM's `spec.objective` with `kind:
 > custom`) reaches that objective, and compilation refuses it with `PIN_NOT_APPROVED` unless it is
 > approved or better, exactly as if it were pinned. The message names the model and the objective.
-> A `deprecated` objective is refused, as a new specification may not select one (`02` OQ-609). A
-> peril structure is not resolvable at compile and is outside this clause until it is. **A
+> A `deprecated` objective is refused, as a new specification may not select one (`02` OQ-609).
+> The bound is one hop. **Known gap:** a peril structure's models are not reached, because a peril
+> structure cannot be resolved at compile; FD 9995 owns that gap, and this clause reaches them when
+> it is fixed. Custom evaluation metrics are not objectives and do not reach a price, so they are
+> outside this clause. **A
 > `control`-intent factor is in a rateable path when a pinned rate table has a key bound by
 > `factor_ref` to it**, whatever the table's `rateable` flag; compilation refuses it with
 > `CONTROL_FACTOR_IN_RATEABLE_PATH` (422), naming the table, the key and the Factor.
@@ -309,7 +342,14 @@ seed route's 422 list (`:902`):
 > `custom_objective_not_approved`: a model whose GBM `spec.objective` names a custom objective that
 > is not `approved` carries it, and `06` FR-359 refuses `approved` with `ARTIFACT_FLAGGED` (409).
 > Compilation re-checks the objective (`03` FR-240), so an objective deprecated after the model's
-> approval is caught there.
+> approval is caught there. An Admin override of the flag (FR-359) never reaches compilation:
+> FR-240's refusal is independent of approval state.
+
+**T4**, a dated note after `CONTROL_FACTOR_IN_RATEABLE_PATH` in `03` §5.1's owned-code list
+(`03-rating-engine.md:933`):
+
+> *(registered 2026-10-05, FD 9697: **422** at `seed-from-model` (FR-230) and at bundle compile
+> (FR-240); the message names the table, the key and the Factor)*
 
 ## Tasks
 
@@ -406,15 +446,17 @@ async def test_an_unapproved_objective_reached_through_a_pinned_model_is_refused
   `test_a_version_pinning_an_unapproved_custom_objective_fails_to_compile` (parametrised
   `certified`, `review`; `_create`, `_advance`, `_insert_version`, `_run_compile_job`; expects
   `FAILED` and `PIN_NOT_APPROVED`), and
-  `test_a_version_over_an_approved_model_with_an_unapproved_objective_fails_to_compile`: fit the
-  GBM as in Task 1, write it `approved` with `backend/tests/approved_rows.py::mark_approved` (the
-  state a pre-fix approval left), pin only the model, compile, expect `FAILED` and
-  `PIN_NOT_APPROVED`. The algorithm must call the model, so take the algorithm the neighbouring
+  `test_an_overridden_flag_never_reaches_compile` (Acceptance 4; DP-1's condition): fit the GBM
+  as in Task 1 on a `review` objective, write it `approved` with
+  `backend/tests/approved_rows.py::mark_approved` (the state an Admin override, or a pre-fix
+  approval, leaves; the override itself is unbuilt), pin only the model, compile, expect `FAILED`
+  and `PIN_NOT_APPROVED`. Task 4 Step 5 adds, before the `mark_approved`, the assert that
+  `flags_for` returns `custom_objective_not_approved`, completing the chain once the member exists. The algorithm must call the model, so take the algorithm the neighbouring
   GBM compile test uses (`test_the_compiled_bundle_survives_persistence`, `:574`), not
   `_minimal_algorithm()`.
 - [ ] **Step 3:** Run the pricing-core module, then `-k compile` on the backend module. Expected:
-  the three parametrised cases `Failed: DID NOT RAISE`; the transitive backend test fails on the
-  `FAILED` assert (the Job succeeded); the direct-pin backend cases pass (by design, Acceptance 8).
+  the three parametrised cases `Failed: DID NOT RAISE`; the override test fails on the `FAILED`
+  assert (the Job succeeded); the direct-pin backend cases pass (by design, Acceptance 8).
   Commit (red): `test: FD 9659 — the transitive objective compiles (FR-240)`.
 - [ ] **Step 4: Implement** `_check_reachable_objectives(version, payloads, resolver)` in
   `compile.py`, called from `compile_bundle` after the pin loop. For each `ref` in
@@ -500,7 +542,9 @@ async def test_an_unapproved_objective_reached_through_a_pinned_model_is_refused
 - [ ] **Step 4:** `model.schema.json` `flags.items.enum` gains `custom_objective_not_approved`, and
   its description a dated note (R4, FD 9659). Run `uv run python scripts/generate-contracts.py`,
   then `--check`; run `uv run pytest -q backend/tests/test_contracts.py`.
-- [ ] **Step 5:** Task 1's three tests green. Commit: `fix(modelling): a model over an unapproved custom objective is flagged and cannot be approved (R4, FR-359, FD 9659)`.
+- [ ] **Step 5:** Add the flag assert to `test_an_overridden_flag_never_reaches_compile` (Task 2
+  Step 2). Task 1's three tests and that test green. **Steps 1 to 4 land in this one commit**: the
+  `ModelFlag` member, `model.schema.json` and the regenerated contracts together (item 35). Commit: `fix(modelling): a model over an unapproved custom objective is flagged and cannot be approved (R4, FR-359, FD 9659)`.
 
 ### Task 5: The frontend half
 
@@ -512,10 +556,10 @@ async def test_an_unapproved_objective_reached_through_a_pinned_model_is_refused
 ### Task 6: The spec texts, verbatim from the ruling
 
 **Files:**
-- Modify: `docs/specs/03-rating-engine.md` (FR-230 `:121`, FR-240 `:137`, the seed route row `:902`)
+- Modify: `docs/specs/03-rating-engine.md` (FR-230 `:121`, FR-240 `:137`, the seed route row `:902`, the owned-code list `:933`)
 - Modify: `docs/specs/02-modelling.md` (R4, `:49-50`)
 
-- [ ] **Step 1:** Apply the ruling's T1, T2 and T3. Use the ruling's text where it differs from
+- [ ] **Step 1:** Apply the ruling's T1, T2, T3 and T4. Use the ruling's text where it differs from
   §"Spec texts". Escape any `|` as `\|`.
 - [ ] **Step 2:** `python3 scripts/audit-docs.py`: exit 0, or only the working-id check 31 rows the
   lead expects. Check 10 must agree on `CONTROL_FACTOR_IN_RATEABLE_PATH` (Acceptance 7).
@@ -534,9 +578,11 @@ async def test_an_unapproved_objective_reached_through_a_pinned_model_is_refused
 1. **FD 9697's and FD 9659's register rows**, and clauses (5) and the transitive half of register
    row `FR-240 (F-W9-3)` (`docs/findings/register.md:61`), are discharged by the merge. The auditor
    writes those rows, not this slice.
-2. **DP-4 (c)**, a `model_call` over a model that fits a `control` factor, is with the lead as a
-   candidate finding.
-3. **FR-359's Admin override** is built for no flag. That is a pre-existing spec-versus-code gap,
+2. **DP-4 (c)**, a `model_call` over a model that fits a `control` factor, is FD 9639 (working id),
+   filed separately on the deputy's 14:21:22 BST entry; outside this plan unless it returns HIGH.
+3. **FR-359's Admin override** is built for no flag. Whoever builds it re-points
+   `test_an_overridden_flag_never_reaches_compile` at the real override instead of `mark_approved`;
+   the assertion (compile refuses) does not change. That is a pre-existing spec-versus-code gap,
    not widened here; the lead decides whether it is a finding.
 4. **For SL-1391 (PL 9716):** if this slice merges first, its `load_factor_by_ref` can replace
    Task 3 Step 6's inline select. That is a note for its dispatch, not an edit to it.
@@ -546,7 +592,8 @@ async def test_an_unapproved_objective_reached_through_a_pinned_model_is_refused
 - **Spec coverage.** (a) is Tasks 1 and 4; (b) Task 2; (c) Task 3; (d) Task 2 Steps 2 and 5. Every
   row of §"Requirement coverage" has a task. Every DP names the tasks it blocks.
 - **Ruling sites.** Each DP's recommendation appears in narrative (§"Decision points"), Files and
-  Steps (Tasks 1-6) and Acceptance (1-9). A ruling that differs must be applied at all four.
+  Steps (Tasks 1-6) and Acceptance (1-9). Items 35–38 were applied at all four, by grepping each
+  condition's subject (override, peril, FD 9995, metrics, registered, `rateable`) over the whole file.
 - **Literals checked at `83ea5090`**, by grep, not recalled: the line numbers in §"Goal" and
   §"Write set"; the helpers `_version` `:69`, `FakeResolver` `:92`, `_resolver` `:107`
   (`test_rating_compile_bundle.py`); `_insert_version` `:86`, `_run_compile_job` `:113`
