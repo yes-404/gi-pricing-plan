@@ -183,13 +183,22 @@ covers (a closed append-only registry list) and RL-871 §7's three conditions ar
 RL-1263, not restated here.
 
 *(Amended 2026-10-05 by the maintainer, dated line by delegation: at most 3 build slices at
-once; gate slots stay 2, so a third build waits for a free slot to gate. Two slices from the
+once; at most ONE full gate runs at a time on this VM, and a built slice waits for it
+(corrected 2026-10-05 15:27:25 BST from "gate slots stay 2"); targeted single-file test runs
+stay allowed outside the gate window, never beside a gate or a benchmark. Two slices from the
 same Work may run at once only when the dispatch record shows (a) their file sets resolved by
 the existing contention rules (exempt, one-sided, name-disjoint or serialise) and (b) no plan
 dependency: neither slice consumes the other's output, named both ways. Otherwise they
 serialise.)* The ruling is RL 9620 (working id), which amends RL-1263. A measurement step
 still runs alone. Condition (b) is an extra bar on a same-Work pair, not a ground for it:
-the gate slots, not plan-independence, still bound the contention.
+the single gate, not plan-independence, still bounds the contention.
+
+*(Amended 2026-10-05 by the maintainer, dated line by delegation, on the 15:27:25 BST entry:
+the registry list's exempt paths include two dated amendments, `ONE_SIDED_SLUGS` in
+`backend/tests/test_contracts.py` for key-disjoint edits (2026-10-03 21:11:06 BST, #1093) and
+`__all__` in a package `__init__.py` for name-disjoint appends (2026-10-05 09:44:39 BST,
+#1118).)* RL 9620 (working id) records both verbatim; their conditions are there, not
+restated here.
 
 **The interest §8 protects is resource contention, not plan stability.** Two children can be
 perfectly plan-independent and running them concurrently still breaches this rule, so an
