@@ -72,6 +72,45 @@ nothing) nor in `backend/src/app/errors.py`. A-2 (PL 9597, #1178 @`176a6a75`) ap
 adds the code to neither: it raises the same string through `_raise_named`, and the backend's
 compile mapping turns it into a 422 `PlatformError` carrying that code.
 
+## Pre-mint delta, 2026-10-05: DP-1, R-a and the order ruled
+
+Edited 2026-10-05 from 19:11:37 BST (`TZ=Europe/London date`), before this plan's mint, by the
+planner, on the lead's brief `~/gi-pricing-plan.local/handover/brief-pl9494-ruled-2026-10-05.md`
+Part A item 3. It is built on `6de2535f` and keeps that commit's FR-240 anchor note (§"Write
+set") as written. Nothing is re-decided here. Each change is marked in place, and nothing is
+deleted. The authority is the maintainer's (by delegation) entry in
+`~/gi-pricing-plan.local/channel/to-lead.md` headed *"2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2"*, items 1 to 5, read in full by
+this planner. Verbatim:
+
+> 1. ORDER: A-2 → A-3 → SL 9495 → A-4, ACCEPTED (the per-component limb needs A-3's _resolve_peril_components; it still satisfies after A-2 and before A-4). The need "PL 9649 merged" (ResolvedArtifact.factors): accepted.
+> 2. A-4 (PL 9593 #1175) gains the need "SL 9495 merged": YES, a pre-mint planner edit.
+> 3. DP-1: ONE public pricing-core helper defines "a model's required inputs" (its Factors, or fit_result.feature_order when it has none). It is BORN IN A-2, which merges first: A-2's plan (PL 9597, unminted) gains a pre-mint task that creates the helper in pricing-core and has its own save check call it. SL 9495 then REUSES it with no second definition. If A-2 has already merged without it when SL 9495 starts, SL 9495 extracts it from A-2's function as a no-behaviour-change refactor commit before its reds. Either way, one definition, and a test proves both call sites use it (one helper, two callers, by grep in the test or an import assertion).
+> 4. R-a: ACCEPTED. An empty map is never complete for a model with inputs. The GBM empty-map fallback (runtime.py:553-555) becomes unreachable through compile and is NOT removed in this slice; the plan names it as dead-through-compile, for a later cleanup decision.
+> 5. Reds (i)–(vi) plus the end-to-end resolver red: accepted. The contention table is accepted as stated.
+
+What this delta changed:
+
+1. **DP-1 ruled: reuse A-2's helper.** A-2 (PL 9597 #1178 @`65edaa74`, Task 1b, items 20
+   and 21) creates `required_model_inputs(factors: Sequence[Factor], feature_order:
+   Sequence[str]) -> tuple[str, ...]` in `packages/pricing-core/src/pricing_core/modelling/factors.py`,
+   after `rateable` (`:323-329` at `ecbd1954`). This slice imports it into `rating/compile.py`
+   and defines no second one. The signature takes Factors and `feature_order`, not a
+   `ResolvedArtifact`, because the backend save has no `ResolvedArtifact`. Task 2's sketch is
+   re-pointed (its dated note). **Fallback:** if A-2 has merged without the helper, Task 0a
+   extracts it from A-2's save check in a no-behaviour-change refactor commit, before Task
+   1's reds.
+2. **Both callers, one helper: Acceptance 13** (new), with its red.
+3. **R-a accepted.** Acceptance 6 is no longer held; the empty-map red stands. The GBM
+   empty-map fallback in `_model_call_handler` (`packages/pricing-core/src/pricing_core/rating/runtime.py:553-555`
+   at `ecbd1954`, the `else pl.DataFrame({slug: [context.get(slug)] for slug in
+   gbm_result.feature_order})` arm) is named **DEAD-THROUGH-COMPILE**. It is not removed in
+   this slice (`runtime.py` stays under "Not written"); its removal is a later cleanup
+   decision, and the ledger records it.
+4. **The order A-2 → A-3 → SL 9495 → A-4 is confirmed** (needs 3 to 5). A-4's need is
+   carried: PL 9593 #1175 @`133fc13a` gained activation need 4a, "SL 9495 merged".
+5. **Write set:** `compile.py`'s row is re-pointed (import, not add), and
+   `backend/tests/test_rating_algorithms.py` is appended for Acceptance 13.
+
 ## Status
 
 `draft`. It moves to `active` only through a separate activation PR, by a dated line, after
@@ -98,11 +137,14 @@ every activation need below holds.
    ("after A-2 … before A-4's demo path") and adds A-3 between them, because A-3 is already
    ahead of A-4 (PL 9593 activation need 4). The alternative, SL 9495 between A-2 and A-3
    with A-3 taking the per-component limb, splits one ruled check over two slices and edits
-   A-3's frozen-at-merge plan; not proposed.
+   A-3's frozen-at-merge plan; not proposed. *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 1: the order is
+   **accepted**.)*
 5. **Before A-4's dispatch.** A-4 (SL 9594 / PL 9593) does not yet name this slice as a need.
    *Proposal for the lead:* A-4's activation needs gain "SL 9495 merged", so the exit demo's
    B4 `model_call` compiles against the completeness check, as the ruling intends (G2's peril
    path is "exactly where a short-mapped GBM would fail per quote after deploy").
+   *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 2: **accepted and carried.** PL 9593 #1175 @`133fc13a` names it as
+   activation need 4a.)*
 6. **The lane and the dispatch GO**; `active` by a dated line.
 
 ## Acceptance Standard
@@ -152,7 +194,9 @@ failure line as printed. The pricing-core tests are in
    decision-maker)*. `test_an_empty_feature_map_is_refused_when_the_model_has_inputs`: the
    GBM of item 2 with `feature_map == {}` is refused, naming both features. Red first:
    `DID NOT RAISE`. If R-a is ruled the other way, this item is replaced by the ruled
-   behaviour before the plan is activated.
+   behaviour before the plan is activated. *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 4: **R-a accepted; this red
+   stands, and it is no longer held.** The GBM empty-map fallback (`runtime.py:553-555` at
+   `ecbd1954`) is DEAD-THROUGH-COMPILE and is not removed here.)*
 7. **The real resolver path refuses it (end to end).**
    `test_a_glm_version_missing_a_factor_mapping_fails_to_compile` appended to
    `backend/tests/test_rating_glm_model_call.py` (A-2's new module): a GLM fitted and
@@ -183,6 +227,22 @@ failure line as printed. The pricing-core tests are in
     `model_call` literal in these files carries a `feature_map` (`git grep` for
     `"type": "model_call"` against `feature_map` per file, §"Task 0 at planning time").
 12. **The gate.** The full two-half gate passes on the merge tree, run once, holding a slot.
+13. *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 3.)* **Both callers use the one helper.** Two tests:
+    - `test_the_compile_check_calls_the_one_required_inputs_helper`, in
+      `packages/pricing-core/tests/test_rating_compile_completeness.py`,
+      `req("FR-240")`. A spy, patched over `pricing_core.rating.compile.required_model_inputs`,
+      wraps the real helper. Acceptance 4's complete GLM control compiles, and the spy records
+      exactly one call, whose result is the GLM's Factor slugs.
+    - `test_both_feature_map_checks_use_the_one_required_inputs_helper`, appended to
+      `backend/tests/test_rating_algorithms.py` beside A-2's item 21, `req("FR-240")`. This is
+      an import assertion: `app.platform.rating_algorithms.required_model_inputs` and
+      `pricing_core.rating.compile.required_model_inputs` are both the same object as
+      `pricing_core.modelling.factors.required_model_inputs`.
+
+    A-2's `test_required_model_inputs_is_defined_once` (PL 9597 item 21) stays green: exactly
+    one `def required_model_inputs(` remains under `packages/*/src` and `backend/src`.
+    **Red first:** at the base both tests fail with `AttributeError: module
+    'pricing_core.rating.compile' has no attribute 'required_model_inputs'`.
 
 ## Global Constraints
 
@@ -217,14 +277,18 @@ failure line as printed. The pricing-core tests are in
   literal has an empty map (`git grep -n -E 'feature_map"?: *\{\}' origin/main` prints
   nothing at `ecbd1954`), so nothing in the repository relies on the fallback. The fallback
   code is then unreachable through `compile_bundle`; this slice does not remove it (no
-  ruling asks), and the ledger says so.
+  ruling asks), and the ledger says so. *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 4: **accepted.** The fallback is
+  named DEAD-THROUGH-COMPILE, for a later cleanup decision.)*
 - **(R-b) What "required" reads.** A model's required inputs are the slugs of
   `ResolvedArtifact.factors` when it is non-empty; otherwise
   `payload["fit_result"]["feature_order"]` when present; otherwise none. This is the ruling's
   "required Factors (or its feature_order where it has none)", and A-2's R3 reads the same
   pair for membership. A payload with neither (an intercept-only GLM; the stub payload in
   `test_rating_compile_bundle.py:107-121`, which has no `fit_result`) has no required input
-  and passes. *Recommendation: as written.*
+  and passes. *Recommendation: as written.* *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 3: this pair is computed by
+  A-2's `required_model_inputs`, called with `ResolvedArtifact.factors` and the payload's
+  `fit_result.feature_order`. The "neither" case returns `()`, as PL 9597 item 20's third
+  test asserts.)*
 
 ### Task 0 at planning time (read, not run)
 
@@ -249,6 +313,9 @@ At `ecbd1954` (origin/main, read 2026-10-05 18:40–18:56 BST):
 | `backend/tests/test_rating_glm_model_call.py` | appended (Acceptance 7; A-2's module) |
 | existing test fixtures | only if Acceptance 11 finds an incomplete map; each named in the ledger |
 | `docs/specs/03-rating-engine.md` | the FR-240 row (`:137`): RL 9491's T-text, verbatim |
+| `packages/pricing-core/src/pricing_core/rating/compile.py` | *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 3; it supersedes the first row's "added: `required_model_inputs`".)* `required_model_inputs` is **imported** from `pricing_core.modelling.factors`, not defined; added: `check_model_call_coverage` only, and only it enters `__all__` |
+| `backend/tests/test_rating_algorithms.py` | appended *(same delta)*: Acceptance 13's import assertion |
+| `packages/pricing-core/src/pricing_core/modelling/factors.py`, `backend/src/app/platform/rating_algorithms.py` | *(same delta)* **only under Task 0a** (A-2 merged without the helper): the helper is extracted into `factors.py`, and A-2's save check calls it, with no behaviour change |
 | the slice's ledger `docs/ledgers/LG-<n>`; `docs/INDEX.md` | added; regenerated |
 
 **Not written:** `backend/src/app/errors.py`, `03` §5.1's owned-codes list (A-2's),
@@ -303,6 +370,9 @@ backend test appended to a module that already builds a persisted GLM, one spec 
   - *Recommendation: (b).* A definition written twice diverges (`CLAUDE.md` §2), and the two
     checks are the ruling's "one fault, one code". If A-2's merged function does not compute
     the pair (Task 0 Step 2 reads it), (a) is moot and (b) applies trivially.
+  - *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 3: **ruled, beyond (b).** The one helper is **born in A-2** (PL 9597 Task
+    1b) in `pricing_core/modelling/factors.py`, and this slice reuses it. If A-2 merged
+    without it, Task 0a extracts it first. Acceptance 13 proves both callers.)*
 
 ## Tasks
 
@@ -316,9 +386,31 @@ backend test appended to a module that already builds a persisted GLM, one spec 
   "_resolve_peril_components" -- packages/pricing-core/src` shows A-3's function.
 - [ ] **Step 2:** Read A-2's merged save check in `backend/src/app/platform/rating_algorithms.py`
   and A-3's `_resolve_peril_components`: record in the ledger its return type and the key of
-  its dict, and whether A-2's function computes R3's pair (DP-1).
+  its dict, and whether A-2's function computes R3's pair (DP-1). *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 3: run
+  `git grep -n "def required_model_inputs(" -- packages backend/src`. One hit in
+  `pricing_core/modelling/factors.py` means skip Task 0a. No hit means run Task 0a before
+  Task 1. Any other count is a STOP to the lead.)*
 - [ ] **Step 3:** Re-read `compile_bundle` at the merge base and record where PL 9649 keeps
   the resolved model artifacts after the pin loop. Reuse that mapping; do not resolve again.
+
+### Task 0a: Extract the helper, only if A-2 merged without it
+
+*(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 3.)* This task runs only when Task 0 Step 2's grep prints no hit, and it lands
+**before** Task 1's reds.
+
+**Files:** Modify `packages/pricing-core/src/pricing_core/modelling/factors.py`,
+`backend/src/app/platform/rating_algorithms.py`.
+
+- [ ] **Step 1:** Add PL 9597 Task 1b Step 3's `required_model_inputs` to `factors.py`, after
+  `rateable`, and add it to `__all__`. Its body is the "Factors, else `feature_order`"
+  choice, moved out of A-2's save check unchanged.
+- [ ] **Step 2:** In A-2's save check, replace that inline choice with
+  `required_model_inputs(factors, getattr(model.fit_result, "feature_order", ()))`, imported
+  at module level.
+- [ ] **Step 3:** Run A-2's items 13, 18 and 19 (`backend/tests/test_rating_algorithms.py`,
+  then `backend/tests/test_sub_graphs_api.py`, one file per run). All pass, unchanged, with
+  no test edited. Commit: `refactor: extract required_model_inputs into pricing-core, no
+  behaviour change (PL 9494 DP-1)`.
 
 ### Task 1: The reds (Acceptance 1–3, 6)
 
@@ -412,11 +504,30 @@ def check_model_call_coverage(
 
   Adapt `structure` and `targets` to A-3's merged return type (Task 0 Step 2); if A-3
   already validated the structure, reuse that value rather than validating twice.
+
+  *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 3: **the sketch's own `def required_model_inputs(resolved)` is not
+  written.** `compile.py` adds `from pricing_core.modelling.factors import
+  required_model_inputs`, and the loop's call becomes:
+
+```python
+            artifact = resolved[ref]
+            fit_result = artifact.payload.get("fit_result") or {}
+            required = required_model_inputs(
+                artifact.factors, fit_result.get("feature_order") or ()
+            )
+            missing = [s for s in required if s not in mapped]
+```
+
+  Only `check_model_call_coverage` enters `__all__`. Write Acceptance 13's two tests with
+  Task 1's reds.)*
 - [ ] **Step 2:** In `compile_bundle`, after the pin loop and A-3's component resolution,
   build the `resolved` mapping from the artifacts already in hand (Task 0 Step 3) and call
   `check_model_call_coverage(algorithm, resolved)`. Add one docstring sentence and both names
   to `__all__`.
-- [ ] **Step 3:** Run the new module: all green. Under DP-1 (b), point A-2's backend function
+- [ ] **Step 3:** Run the new module: all green. *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 3: A-2's function already
+  calls the helper, from PL 9597 Task 1b or this plan's Task 0a. The sentence "Under DP-1 (b),
+  point A-2's backend function at `required_model_inputs`" is void. The runs stay, plus
+  Acceptance 13's backend test.)* Under DP-1 (b), point A-2's backend function
   at `required_model_inputs` and run `backend/tests/test_rating_algorithms.py` and
   `backend/tests/test_sub_graphs_api.py` (one file per run). Commit: `feat: compile refuses
   a model_call whose feature_map misses its pinned model's inputs (FR-240)`.
@@ -455,6 +566,10 @@ def check_model_call_coverage(
 2. The lead's proposal (need 5): A-4's activation needs gain "SL 9495 merged".
 3. When this slice merges, PL 9597's pre-mint note ("its feature_map check is
    membership-only") is discharged by the code it points to.
+4. *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", items 2 and 4.)* Item 2 is done: PL 9593 #1175 @`133fc13a`, need 4a.
+   **For a later cleanup decision:** the GBM empty-map fallback (`runtime.py:553-555` at
+   `ecbd1954`) is DEAD-THROUGH-COMPILE once this slice merges. It is kept, and the ledger
+   names it.
 
 ## Self-review
 
@@ -476,3 +591,10 @@ def check_model_call_coverage(
    Step 1); both are re-read at Task 0, merged.
 5. **What was not executed.** No test or code was run. The sketches are against names quoted
    above; each red is seen failing before its code.
+6. *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2".)* **Type consistency, after DP-1.** `required_model_inputs(factors,
+   feature_order)` is the signature in PL 9597 Task 1b (#1178 @`65edaa74`), in this plan's
+   Task 0a and Task 2 note, and in Acceptance 13. Self-review 3's "named the same in Task 2"
+   holds for the name. The sketch's `ResolvedArtifact` parameter is superseded by the Task 2
+   note. `runtime.py:553-555` was read at `ecbd1954` (`git show
+   ecbd1954:packages/pricing-core/src/pricing_core/rating/runtime.py`, lines 553-555, the
+   `else` arm of `frame = …`).
