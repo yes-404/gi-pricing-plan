@@ -84,8 +84,8 @@ Searched at the tree above, `origin/main`:
 
 Proposal only; the lead gives the verdict and the decision-maker rules which side is wrong.
 
-**Severity: MEDIUM, proposed; the deputy rules it at the mint.** Reason: it blocks the exit demo's scripted HTTP form at the first step of WF-699's compile phase and leaves §5.1 describing an unbuilt route, but nothing mis-prices and the seed and tests cover compile. It is not LOW because G2 depends on it.
+**Ruled: the code is behind (RL 9695, working id; the deputy's 2026-10-05 13:12:56 BST, decision 15, option (a)).** `POST /rating-versions` takes `algorithm_ref` and `pins`, checked at compile, in a WK-1178 slice. The two sides above stay as filed; the ruling picked the spec's.
 
-**Owner: WK-1178 (proposed).** Reason: the create route is a closed Work's surface, WK-673's slices cover dislocation and not creation, and WK-1178 already holds the neighbouring FR-237 fix (SL-1300) and FD 9995. Alternative: WK-673, if the ruling is that the dislocation baseline and candidate versions need declared pins, since FR-1399 derives `pin` changes from them.
+**Severity: HIGH (the deputy's early signal of 2026-10-05 13:10:43 BST, confirmed at 13:12:56 BST; final at the mint).** Reason: G2 (`docs/roadmap.md:566`) requires "a Rating Version compiled with pins" over HTTP from one command, and no route can create one, so the exit criterion cannot be met as the code stands. The deputy's condition for MEDIUM (a supported HTTP path that already writes pins) does not hold: `git grep -nE '\.(algorithm_ref|pins)\s*=[^=]' caa4e411a9c07a389cf47092a923c7761b2b92dc -- backend/src` returns 0 lines. Nothing mis-prices; the severity is the exit-demo block.
 
-**Decision for a decision-maker (not this finding):** which side is wrong. Either the spec's §5.1 row and WF-699 C1 describe Phase 2 and the code is behind (the route widens, with a pin-validation and an approved-artifact check per FR-240), or §4.3's Phase 1b note stands and §5.1 and WF-699 C1 should say the route creates the minimal version and pins are set by a route yet to be specified. A third option is a separate pin-setting route on a `draft` version.
+**Owner: WK-1178** (RL 9695, decision 15; the proposed alternative WK-673 is not taken). **Deadline: before the P2 exit demo.**
