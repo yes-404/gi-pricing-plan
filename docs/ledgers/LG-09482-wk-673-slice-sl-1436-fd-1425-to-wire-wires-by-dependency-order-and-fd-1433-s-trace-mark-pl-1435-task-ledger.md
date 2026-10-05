@@ -123,3 +123,22 @@ in place of the heap fails `test_a_topologically_listed_algorithm_wires_exactly_
 `assert ['s_a', 's_d', 's_b'] == ['s_a', 's_b', 's_d']`; the last hex digit of `_SCORE_FIXTURE_HASH` changed fails
 `test_the_bundle_hash_is_unchanged` naming both values. `test_rating_score.py` 40 passed, `test_rating_ladder_exact.py`
 26 passed, `test_rating_runtime.py` 11 passed (after the one-line stand-in fix above), no assert edited.
+
+### Task 2c, Steps 2 and 4 — the head replay: a DIFFERENCE, so a STOP (RL-1423 conditions A and B)
+
+At head `47e09550`, `replay.py` (sha256 prefix `b43d213cdd4bae7c`), the already-compiled path and the fresh path agree
+with each other (both output files sha256 `8c1cec7b09f15a050130a479c66fd4152bf4f22841fdba66084ecefdd3c3ac4c`) and
+every `content_hash` equals the base's. Per case, `equal N of N` over (hash line, then `score`, `score_trace`, `raw` per
+context): fremtpl2-demo@1 64/64; bench-rating-no-gbm 601/601; bench-score-batch 61/61; bench-compiled-for 61/61;
+score-fixture 730/730 (quoted 98, clamp 91, declined 53, error 1); score-fixture-glm 730/730 (all 243 error, unproven
+beyond "the error is unchanged"); **bench-rating-gbm 401/601 and bench-trace-size n = 5, 20, 50, 100, 187 each 101/151.**
+
+**All 450 differing lines are `raw` lines of the `model_call` cases** (200 + 5 x 50); **no `score` or `score_trace`
+line differs anywhere**, so every served `ScoringResult` is identical, and every `content_hash` is identical. The
+difference is the raw engine dict's echo of the quote's own float inputs `f0`..`f7`: the head value is the base
+value cut to 15 significant digits (`0.08487199515892163` becomes `0.0848719951589216`; maximum relative difference
+measured `1.17e-15`; no other key differs). The cause is read from the diff, not proven: on the chain the context
+travels through the `model_call` handler's `request.input` and back, which the engine re-serialises.
+
+**This is a difference outside the FD-1425 fixtures, so it is a STOP for the maintainer (by delegation)** (RL-1423
+Condition B; Task 2c Step 4). Nothing was edited, no comparator was loosened. Reported to the lead.
