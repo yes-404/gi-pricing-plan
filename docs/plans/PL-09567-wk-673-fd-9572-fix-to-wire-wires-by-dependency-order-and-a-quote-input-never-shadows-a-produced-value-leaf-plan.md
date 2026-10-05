@@ -303,7 +303,7 @@ reproduce"), and not in `03` §5.1 (the route's row, `03:924`, says "Sampled pro
 first** (`CLAUDE.md` §0). No new route.
 
 **T-M1, owed by an RL (the decision-maker's; the lead routes it, for example as an amendment
-of RL 9562).** The planner names what it must say and does not draft it: `03`'s
+of RL 9562; *superseded by Delta 6: a new RL, RL 9505*).** The planner names what it must say and does not draft it: `03`'s
 `GET /api/v1/traces` row (§5.1) or FR-259 states that each item carries the row's reproduction
 status, `complete` or `mismatch`, and that a `mismatch` item is a re-score that did not reproduce
 the served result, never presented as that quote's trace. Whether `mismatch` items stay listed
@@ -330,6 +330,29 @@ comparator (`summarise_result`'s four fields, `traces.py:257`) and the same mark
   95 open PRs, filtered on those four paths; none matched, 2026-10-05). PL 9776 reads the first
   three and edits none of them, and its delta of the same date consumes T-M1's field: a plan
   dependency that the existing order (this slice first) already covers.
+
+## Delta 6, 2026-10-05 (after 18:01:45 BST, pre-mint): FD 9502 and RL 9505 named; T-M1 is its own RL
+
+The maintainer's (by delegation) entry "2026-10-05 18:01:45 BST — Trace mismatch: a NEW small RL
+for T-M1 AND an FD (it is live on main today); DP-F35-8 = (c); the U measurement accepted", item 1,
+verbatim:
+
+> 1. TRACE: planner-rb2's reading is accepted (the worker marks status "mismatch" at traces.py:257, but api/traces.py _filtered :119-142, TraceView :100-116 and _view :145-157 drop it). This is a DEFECT ON MAIN TODAY, independent of FD 9572: any mismatch (from any cause) is already listed as the quote's trace. So:
+>    (a) an FD, filed by an auditor when a seat frees, with a proposed severity and owner WK-1178, and liveness (are there any mismatch rows in a seeded or demo database, and can one arise without the chain change). Its fix is SL 9568's Task 2d (the red plus the field), so the FD names SL 9568 as its discharger.
+>    (b) a NEW small RL adopting T-M1 (spec first; the 03 §5.1 row for GET /api/v1/traces or FR-259, as the DM finds the right anchor), NOT an RL 9562 amendment: RL 9562 must not be held, because it gates the emergency PL 9560. PL 9567's new activation need = that RL minted. Agreed.
+
+**What this delta changes in the plan:**
+1. **The defect is FD 9502** (working id; filed by an auditor; proposed owner WK-1178). It is
+   live on `main` today, whatever the cause of a mismatch, and is independent of FD 9572. **Its
+   discharger is this slice's Task 2d.** Task 2d's test docstring, its commit message and the
+   ledger cite FD 9502 by its minted id.
+2. **T-M1 is adopted by a new RL, RL 9505** (working id; the decision-maker drafts it), **not**
+   by an amendment of RL 9562. Delta 5's "for example as an amendment of RL 9562" is superseded
+   by this item; its text stays. The RL's anchor (`03` §5.1's `GET /api/v1/traces` row or FR-259)
+   is the decision-maker's. Task 2d applies RL 9505's text byte for byte, and cites RL 9505.
+3. **Activation need, replacing Delta 5's "the RL that adopts T-M1 is minted":** RL 9505 minted.
+   The other activation needs stay. RL 9562 is not held by T-M1.
+4. **Acceptance 12 and 13** read "the adopting RL" as RL 9505. No other acceptance changes.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
 > or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax
@@ -1341,7 +1364,7 @@ identical result is the expected outcome on every case.
 
 ### Task 2d: A trace that did not reproduce is marked where it is read (added by Delta 5)
 
-**Blocked until the RL adopting T-M1 is minted.** The field name and values below are this
+**Blocked until the RL adopting T-M1 is minted** (*Delta 6: RL 9505; this task discharges FD 9502*). The field name and values below are this
 plan's reading of T-M1. Where the RL's text differs, the RL wins and the dispatch record names
 each difference.
 
@@ -1434,7 +1457,7 @@ async def test_a_reproduction_that_differs_from_the_served_quote_is_marked(
   `traces.py` shows only Step 3's change.
 
 - [ ] **Step 6: Commit:** `fix(traces): GET /api/v1/traces marks a trace that did not reproduce
-  the served quote (FD 9572; T-M1)`, with `03`, the route, the test and the regenerated contract
+  the served quote (FD 9572; T-M1)`, with `03`, *(Delta 6: the message cites FD 9502 and RL 9505 by their minted ids)* the route, the test and the regenerated contract
   in one commit.
 
 **What Task 2d does not change.** The comparator and the mark (`trace_handlers.py:98-107`,
