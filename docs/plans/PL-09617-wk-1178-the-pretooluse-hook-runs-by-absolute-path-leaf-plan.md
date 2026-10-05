@@ -48,6 +48,25 @@ planner, on that entry: Task 4 added, and the gate task renumbered 4 → 5; the 
 needs 1 and 3, Acceptance 8–9, the Write set, the Decision points, Hand-off item 3 and Self-review item 5
 amended to match. No other text changed.)*
 
+**Corrected by** the entry headed *"2026-10-05 15:37:35 BST — CORRECTION to my 15:33:57 routing (a):
+REVERSED; the skill, conftest and test move together into PL 9617; NFR-500 finding MEDIUM; WK-1250"*,
+verbatim: *"CORRECTION: my 15:33:57 item (a) ("fold the dev-commands skill change into #1162") was wrong.
+Verified at main: tests/test_root_conftest.py:317-323 asserts that the skill's \`for i in … ; do\n
+flock -n -E 99 /tmp/slots/gate-$i\` loop names the same budget as conftest.py's \`_SLOT_COUNT\` ("both
+must name the same budget"). The skill alone would turn #1162's python CI red. The three files change
+together."* and *"DECIDED: (1) #1162 gets a plain REVERT commit of the skill fold (no force-push), so
+the skill is back to main's text, including the migrate --verify wrapper (:276, :289), which RL 9620
+:201 keeps at 2 verify slots: the executor's cut of it went past the ruling. (2) PL 9617's slice (#1165,
+WK-1178) changes the skill's GATE loop, conftest \`_SLOT_COUNT\` 2→1 and test_root_conftest together, red
+first; the gate slot only, verify untouched. (3) Until it lands, the one-gate rule holds by the lead's
+dispatch (RL 9620's obligation 5). CLAUDE.md §12's "fix a wrong skill in the same session" is met by
+recording the skill's known gap in #1165's plan, now, with the fix in the slice that can make it
+consistently."* *(Pre-mint edit, 2026-10-05 15:42:01 BST, by the planner, on that entry: Task 4 now
+changes the skill's gate loop and gate-slot text, `conftest.py` and `tests/test_root_conftest.py` in one
+commit, red first; §"Known gap in the dev-commands skill" added; the Goal, Activation needs 2 and 3,
+Acceptance 8–9, §"What happens today", the Write set, Task 5 Step 1 and Self-review item 5 amended to
+match. #1162's revert is `381254c3`.)*
+
 Planned read-only: no test, no hook and no Claude Code session was run to produce this plan. Every
 repository fact below was read at `origin/main` `809a3794af6d3a6ba688663b0d9b59f951190680`
 (2026-10-05).
@@ -81,8 +100,9 @@ whatever the session's working directory is. A `cd` into a subdirectory no longe
 Bash call. A repository test runs the **registered** command string from a subdirectory and fails if
 the path depends on the working directory.
 
-A bare `uv run pytest -q` takes the gate-1 lock only, so at most one full gate runs on the box (`RL
-9620`, working id). A second bare run waits for gate-1; it never takes gate-2 (Task 4).
+A bare `uv run pytest -q` and the dev-commands gate wrapper both take the gate-1 lock only, so at most
+one full gate runs on the box (`RL 9620`, working id). A second gate waits for gate-1; it never takes
+gate-2. The `migrate --verify` wrapper keeps its 2 verify slots (Task 4).
 
 ## Status
 
@@ -98,14 +118,14 @@ A bare `uv run pytest -q` takes the gate-1 lock only, so at most one full gate r
 2. **A lane.** It is a small slice: one JSON line and one test file. The write set (§"Write set") is
    disjoint from every in-flight branch at `809a3794`, so it can run beside any other build under
    `RL-1263` (exempt / no shared path). It is a WK-1178 build, so the lead checks the same-Work rule in
-   force at dispatch. *Since Task 4:* the write set adds `conftest.py` and `tests/test_root_conftest.py`
-   (no open PR touches them) and, conditionally, the dev-commands skill, which #1162 touches; the slice
-   runs after #1162 merges (§"Write set").
+   force at dispatch. *Since Task 4:* the write set adds `conftest.py`, `tests/test_root_conftest.py`
+   and `.claude/skills/dev-commands/SKILL.md`; no open PR touches any of them (§"Write set", re-read
+   15:42 BST).
 3. **Re-read at dispatch** (`docs/plans/README.md` convention 4): `git diff --name-only 809a3794
    origin/main -- .claude/settings.json scripts/hooks/retry_cap_hook.py tests/test_retry_cap_hook.py`.
    Any non-empty output: re-derive §"What happens today" before Task 1. For Task 4, the same with
-   `conftest.py tests/test_root_conftest.py .claude/skills/dev-commands/SKILL.md`; any output other
-   than #1162's skill change (§"Write set") re-derives Task 4 before its Step 1.
+   `conftest.py tests/test_root_conftest.py .claude/skills/dev-commands/SKILL.md`; any output
+   re-derives Task 4's line numbers before its Step 1.
 
 ## Acceptance Standard
 
@@ -132,17 +152,22 @@ the named test ran and failed **for the stated cause** before the change that tu
    throwaway session, not its own.
 6. **The two-half gate** (`CLAUDE.md` §11) passes on the head, through the gate-runner.
 7. **Write set:** `git diff --stat origin/main...HEAD` lists only §"Write set" paths.
-8. **A second bare pytest waits for gate-1 (Task 4).** `uv run pytest -q tests/test_root_conftest.py
-   -k a_second_bare_run_waits_for_gate_1` passes. The test uses the module's own `_SLOT_COUNT` (it
-   does not monkeypatch it), holds `gate-1` in a `tmp_path` slot directory, and asserts that
-   `_acquire_pytest_gate_slot()` printed `acquired after waiting`, never named `gate-2`, and left no
-   `gate-2` file. **Seen red on `main`'s `conftest.py` by its cause:** stderr carries `gate slot
-   …/gate-2 acquired, proceeding` (`_SLOT_COUNT = 2`, `conftest.py:70`), and the `acquired after
-   waiting` assert fails. A red for any other cause does not count.
-9. **The root-conftest suite is green, and the budget agrees with the wrapper:** `uv run pytest -q
-   tests/test_root_conftest.py` passes, including `test_slot_count_matches_the_dev_commands_gate_wrapper`
-   with its expected count changed from 2 to 1. Proven on broken input: the ledger records the new test
-   failing by Acceptance 8's cause with `_SLOT_COUNT` put back to 2 in a scratch edit.
+8. **One gate slot, red first (Task 4).** Two tests in `tests/test_root_conftest.py`, both seen red on
+   `main`'s skill and `conftest.py` **by their cause** before either file changes; a red for any other
+   cause does not count:
+   - `test_slot_count_matches_the_dev_commands_gate_wrapper` (`:314-325`), expecting one gate slot.
+     Red: its assert fails with `_SLOT_COUNT` and the wrapper loop both at 2.
+   - `test_a_second_bare_run_waits_for_gate_1_and_never_takes_gate_2` (the `:270-311` test, rewritten
+     in place). It uses the module's own `_SLOT_COUNT`, holds `gate-1`, and asserts that
+     `_acquire_pytest_gate_slot()` printed `acquired after waiting`, never named `gate-2`, and left no
+     `gate-2` file. Red: stderr carries `gate slot …/gate-2 acquired, proceeding` (`conftest.py:70`,
+     `_SLOT_COUNT = 2`).
+9. **Green, in one commit, gate only:** on the slice's head, `uv run pytest -q
+   tests/test_root_conftest.py` passes. `git show --stat <the Task 4 commit>` lists the skill,
+   `conftest.py` and `tests/test_root_conftest.py` together. The skill's `migrate --verify` wrapper and
+   its verify-slot text are unchanged: `git diff origin/main...HEAD -- .claude/skills/dev-commands/SKILL.md
+   | grep -c 'verify-'` prints `0`. Proven on broken input: the ledger records the rewritten test failing
+   by Acceptance 8's cause with `_SLOT_COUNT` put back to 2 in a scratch edit.
 
 ## Global Constraints
 
@@ -206,10 +231,22 @@ platform requirement").
   only when all are busy blocks on `gate-1` (`:111-133`). So today a second bare run takes `gate-2` and
   two full gates run at once, against `RL 9620`'s one. `tests/test_root_conftest.py`'s
   `test_slot_count_matches_the_dev_commands_gate_wrapper` reads the wrapper's `for i in … ; do` loop in
-  `.claude/skills/dev-commands/SKILL.md` and asserts `_SLOT_COUNT == len(loop) == 2`. #1162 (branch
-  `dm-9620-rl1263-amend`, read at `144fd161` 2026-10-05 15:36 BST) changes that loop to `for i in 1`,
-  so **once #1162 merges, that test is red on `main` until Task 4 lands**. Which goes first is the
-  lead's call (reported 2026-10-05); Task 4 is written to land on a `main` that carries #1162.
+  `.claude/skills/dev-commands/SKILL.md` and asserts `_SLOT_COUNT == len(loop) == 2` (`:314-325`). So
+  the skill's gate loop, `_SLOT_COUNT` and that test can change only together (the 15:37:35 BST
+  entry). In the skill at `cdaaa573`: the gate loop is `for i in 1 2; do` (`:161`); the gate-slot text
+  is `:180-183` ("two non-blocking attempts … at most two gates at once"), `:229-233` (conftest locks
+  "`/tmp/slots/gate-{1,2}`") and `:356` ("2 gate slots, 2 verify slots"). The `migrate --verify`
+  wrapper (`:276`, `:289`) is out of scope: `RL 9620` keeps 2 verify slots.
+
+### Known gap in the dev-commands skill (recorded 2026-10-05, `CLAUDE.md` §12)
+
+**Until this slice lands, `.claude/skills/dev-commands/SKILL.md` is wrong on one point:** its gate
+wrapper (`:161`) still offers 2 gate slots, and its text (`:180-183`, `:229-233`, `:356`) still says
+two gates may run at once. `RL 9620` (working id) allows one full gate at a time. Until Task 4 merges,
+**the one-gate rule holds by the lead's dispatch** (`RL 9620`'s obligation 5), not by the wrapper or by
+`conftest.py`. The skill is not edited alone: `tests/test_root_conftest.py:314-325` ties its loop to
+`conftest.py`'s `_SLOT_COUNT`, so a skill-only edit reds the Python suite. This record meets `CLAUDE.md`
+§12's "fixed in the same session" rule, per the 15:37:35 BST entry's DECIDED (3).
 
 ### Write set, and its contention (`RL-1263`)
 
@@ -219,8 +256,8 @@ platform requirement").
 | `tests/test_hook_registration.py` | added | none | none |
 | `scripts/hooks/retry_cap_hook.py` | **read only**, unless DP-2 (c) | none in flight | a DP-2 (c) edit is re-checked at dispatch |
 | `conftest.py` (repository root) | edited: `:70` `_SLOT_COUNT` 2 → 1; the docstring's slot wording (`:19-24`) (Task 4) | none in flight (below) | none |
-| `tests/test_root_conftest.py` | one test added; `test_slot_count_matches_the_dev_commands_gate_wrapper`'s count 2 → 1 (Task 4) | none in flight | none |
-| `.claude/skills/dev-commands/SKILL.md` | only if Task 0 Step 4 finds the `if` behaviour (Task 5 Step 1) | #1162 (`dm-9620-rl1263-amend`), open | serial: the slice bases on a `main` carrying #1162, and Task 4 needs its loop (§"What happens today") |
+| `tests/test_root_conftest.py` | `:255`, `:270-311` (rewritten in place) and `:314-325` (Task 4) | none in flight | none |
+| `.claude/skills/dev-commands/SKILL.md` | the gate loop `:161` and the gate-slot text `:180-183`, `:229-233`, `:356`, `Verified` refreshed (Task 4); the `if` record only if Task 0 Step 4 finds it (Task 5 Step 1). Never the verify wrapper `:276`, `:289` | none in flight (#1162 reverted its fold, `381254c3`) | none |
 | the slice's ledger `docs/ledgers/LG-<n>`; `docs/INDEX.md` | added; regenerated | every PR | registry, exempt |
 
 **In-flight branches read 2026-10-05.** Every `refs/remotes/origin/*` branch with commits ahead of
@@ -235,7 +272,8 @@ confirms the brief. Re-read at dispatch (activation need 3).
 `git diff --name-only origin/main...origin/<branch>` at `origin/main` `809a3794`, filtered on
 `^conftest\.py$|^tests/test_root_conftest\.py$|^\.claude/skills/dev-commands/|^\.claude/settings|^scripts/hooks/|^tests/test_(retry_cap_hook|hook_registration)\.py$`.
 One match: #1162 `dm-9620-rl1263-amend`, `.claude/skills/dev-commands/SKILL.md`. No open PR touches
-`conftest.py` or `tests/test_root_conftest.py`.
+`conftest.py` or `tests/test_root_conftest.py`. **Re-read 2026-10-05 15:42:01 BST**, the same filter over
+the 63 open PRs at `origin/main` `cdaaa573`, after #1162's revert `381254c3`: no match.
 
 ## Decision points
 
@@ -301,37 +339,45 @@ answer goes to the lead (Task 0 Step 5).
 - [ ] **Step 1.** A throwaway session on the slice's branch runs `cd docs`, then `pwd`. Record both
   outputs and `date`. Under DP-2 (a), also record which copy ran (Task 0 Step 3's answer).
 
-### Task 4: The bare-pytest lock takes gate-1 only, red first (Acceptance 8, 9)
+### Task 4: One gate slot — the skill's gate loop, `conftest.py` and the test together, red first (Acceptance 8, 9)
 
-**Files:** edit `conftest.py` (repository root); edit `tests/test_root_conftest.py`. Base: a `main`
-that carries #1162's `for i in 1` loop in the dev-commands skill (§"Write set").
+**Files, all in ONE commit:** edit `.claude/skills/dev-commands/SKILL.md` (gate only); edit
+`conftest.py` (repository root); edit `tests/test_root_conftest.py`. Never the skill's `migrate
+--verify` wrapper (`:276`, `:289`) or its verify-slot words: `RL 9620` keeps 2 verify slots. Line
+numbers are at `cdaaa573`.
 
-- [ ] **Step 1.** Add `test_a_second_bare_run_waits_for_gate_1_and_never_takes_gate_2` to
-  `tests/test_root_conftest.py`, in the shape of `test_a_full_slot_set_falls_through_to_the_blocking_wait_path`:
-  monkeypatch `_SLOT_DIR` to `tmp_path / "slots"` and **not** `_SLOT_COUNT`; hold `gate-1` with a real
-  `LOCK_EX | LOCK_NB` flock on a separate open file; release it from a `threading.Timer` after 0.3 s;
-  call `_acquire_pytest_gate_slot()`, then `_release_pytest_gate_slot()`. Assert stderr contains
-  `acquired after waiting` and does not contain `gate-2`, and `(slot_dir / "gate-2").exists()` is
-  false.
-- [ ] **Step 2.** `uv run pytest -q tests/test_root_conftest.py -k a_second_bare_run_waits_for_gate_1`
-  on `main`'s `conftest.py`. **Expected:** it fails by Acceptance 8's cause (`gate-2 acquired,
-  proceeding`). Record the failure line in the ledger.
-- [ ] **Step 3.** In `conftest.py`, set `_SLOT_COUNT = 1` (`:70`; its comment cites `RL 9620` by its
-  minted id), and change the docstring's `/tmp/slots/gate-{1,2}` and "the same two slots" (`:19-24`) to
-  the one slot. Keep the wait message's format: `test_a_full_slot_set_falls_through_to_the_blocking_wait_path`
-  sets its own count of 2 and asserts `all 2 gate slots are busy`.
-- [ ] **Step 4.** In `test_slot_count_matches_the_dev_commands_gate_wrapper`, change the expected count
-  2 → 1 and its docstring's `for i in 1 2 …` to `for i in 1`. Run `uv run pytest -q
-  tests/test_root_conftest.py`: all pass.
-- [ ] **Step 5.** Broken-input proof (Acceptance 9): put `_SLOT_COUNT = 2` back in a scratch edit, run
-  Step 2's command, see it fail by the same cause, record the line, and revert.
+- [ ] **Step 1. The tests first.** In `tests/test_root_conftest.py`:
+  - `test_slot_count_matches_the_dev_commands_gate_wrapper` (`:314-325`): expect one gate slot
+    (`== 1`), and change its docstring's `for i in 1 2 …` to `for i in 1`.
+  - Rewrite `test_a_full_slot_set_falls_through_to_the_blocking_wait_path` (`:270-311`) in place as
+    `test_a_second_bare_run_waits_for_gate_1_and_never_takes_gate_2`: drop the `_SLOT_COUNT`
+    monkeypatch (`:286`); hold only `gate-1` with a real `LOCK_EX | LOCK_NB` flock on a separate open
+    file (`:287-293` held both); keep the `threading.Timer` release after 0.3 s; call
+    `_acquire_pytest_gate_slot()`, then `_release_pytest_gate_slot()`. Assert stderr contains
+    `acquired after waiting` and does not contain `gate-2`, and `(slot_dir / "gate-2").exists()` is
+    false. The wait-message assert uses `conftest_module._SLOT_COUNT`, not a literal.
+  - `test_acquire_holds_a_real_exclusive_flock_and_release_frees_it`: drop its `_SLOT_COUNT`
+    monkeypatch (`:255`), now the module's own value.
+- [ ] **Step 2. Red, by cause.** `uv run pytest -q tests/test_root_conftest.py` on `main`'s skill and
+  `conftest.py`. **Expected:** exactly the two tests of Acceptance 8 fail, each by its stated cause.
+  Record both failure lines in the ledger. The red is not committed alone.
+- [ ] **Step 3. The skill, gate only.** `:161` `for i in 1 2; do` → `for i in 1; do` (keep the wrapper
+  shape: one non-blocking attempt, then the blocking wait on `gate-1`). The gate-slot text: `:180-183`
+  (one non-blocking attempt; at most one gate at once, `RL 9620`), `:229-233` (`/tmp/slots/gate-1`),
+  `:356` ("1 gate slot, 2 verify slots", citing `RL 9620`). Refresh `Verified` (`:1063`) with the tree.
+- [ ] **Step 4. `conftest.py`.** `_SLOT_COUNT = 1` (`:70`; its comment cites `RL 9620` by its minted
+  id); the docstring's `/tmp/slots/gate-{1,2}` and "the same two slots" (`:19-24`) name the one slot.
+  The wait message's format is unchanged.
+- [ ] **Step 5. Green.** `uv run pytest -q tests/test_root_conftest.py`: all pass. Then the broken-input
+  proof (Acceptance 9): `_SLOT_COUNT = 2` in a scratch edit, the rewritten test fails by its cause,
+  record the line, revert. Commit Steps 1, 3 and 4 as one commit.
 
 ### Task 5: The gate and the ledger (Acceptance 6, 7)
 
 - [ ] **Step 1.** No skill states the `cd` trap at `809a3794` (`grep -rn -i -E 'hook path is
   relative|never .?cd' .claude` prints nothing), so no skill is edited for it. The trap lives in briefs
-  and in memory, and lifting it there is the lead's (Hand-off item 2). **The one skill edit:** if Task 0
-  Step 4 finds that the installed build does not honour `.claude/settings.json:10`'s `if` (or matches it
+  and in memory, and lifting it there is the lead's (Hand-off item 2). **Beside Task 4's gate-slot edit,
+  one more skill edit:** if Task 0 Step 4 finds that the installed build does not honour `.claude/settings.json:10`'s `if` (or matches it
   differently), record that, with `claude --version`, in the ledger and in
   `.claude/skills/dev-commands/SKILL.md` as Claude Code behaviour, with its `Verified` date refreshed
   (Hand-off item 3).
@@ -364,8 +410,10 @@ that carries #1162's `for i in 1` loop in the dev-commands skill (§"Write set")
 3. **Placeholders.** The command form is fixed by DP-1's ruling, stated as such. No other value is open.
 4. **Ids.** No `FR-`/`NFR-` id is cited. `RL-920`, `RL-1263` and `F61` are on `main`. This plan's own
    ids are written as working ids, never hyphenated in prose.
-5. **The added task, against routing (b).** "the bare-pytest lock takes gate-1 only": Task 4 Step 3.
-   "red first (a test showing a second bare pytest waits)": Task 4 Steps 1–2, Acceptance 8, red by its
-   cause. The coupling test that #1162 turns red: §"What happens today", Task 4 Step 4. The
-   `conftest.py` change is one constant; the blocking-wait path it falls to (`:122-133`) is unchanged
-   and already tested.
+5. **The added task, against routing (b) and the 15:37:35 BST DECIDED (2)–(3).** "the bare-pytest lock
+   takes gate-1 only": Task 4 Step 4. "red first (a test showing a second bare pytest waits)": Task 4
+   Steps 1–2, Acceptance 8, red by its cause. "changes the skill's GATE loop, conftest `_SLOT_COUNT`
+   2→1 and test_root_conftest together": Task 4, one commit, Acceptance 9. "the gate slot only, verify
+   untouched": Task 4 Step 3 and Acceptance 9's `verify-` count. "recording the skill's known gap":
+   §"Known gap in the dev-commands skill". The `conftest.py` change is one constant; the blocking-wait
+   path it falls to (`:122-133`) is unchanged.
