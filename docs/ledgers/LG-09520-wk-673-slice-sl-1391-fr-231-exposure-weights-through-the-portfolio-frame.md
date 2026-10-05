@@ -507,6 +507,38 @@ The contract is regenerated (the route's description). 38 passed in the file; `r
 The 03 texts wait for the minted RL; the later-page p99 < 300 ms and the 250 000-cell first-request-202 measurement need the
 slot and wait for it.
 
+### Task 8 (continued) — the diff route on the same artifact, chunks and a manifest, the in-flight rule
+
+**The rulings applied** (the maintainer, by delegation, relayed by the lead; the dispatch record's §(12) quotes them): "2026-10-05
+22:27:31 BST — S7: the write set ACCEPTED; the diff-route measurement on the branch ACCEPTED with the diff proof; the diff
+route goes INTO S7, option (a)"; "2026-10-05 22:32:19 BST — S7 / RL 9484: all four asks ACCEPTED, with one precision each; the
+literal-main measurement decision upheld" (chunks and a manifest, with a page touching at most two chunks for every legal limit;
+the test-file widening; the in-flight rule; the 1M harness); "2026-10-05 22:31:11 BST — S7 flags: (1) async portfolio refusals
+ACCEPTED, stated in RL 9484; (2) the unindexed lookup measured at a STATED Job count". The 03 texts wait for the minted RL.
+
+**Red** (`backend/tests/test_rate_table_diff_portfolio.py`, before the code): `test_a_diff_answers_202_first_then_200_from_the_
+same_artifact` answered 200 on the first diff (computed in the request); `test_a_later_diff_loads_no_cells` a 500 (the diff
+reached the monkeypatched cell loader); `test_a_page_reads_the_manifest_and_at_most_two_chunks` `json.decoder.JSONDecodeError:
+Extra data` (the artifact was one NDJSON blob, not a manifest). The in-flight test passed on its first run (written with
+the code); its break (the in-flight reuse removed) fails it with `assert '<job id>' == '<other job id>'`; `rate_tables.py`
+before and after the break: `8f83d8a15222f3d954062e4e1c3a143d8c3e1129`, equal.
+
+**Green.** The artifact is `CELLS_CHUNK` (1000, at least `MAX_LIMIT`) cells per chunk blob, NDJSON, plus one manifest
+(`chunk_size`, `total`, `chunks`, and `summary`: the `RateTableDiff` with its coverage figures); the Job's `result.ref` is the
+manifest. A cells page reads the manifest and the one or two chunks it lies in; the diff route reads the manifest only.
+`diff_summary` (`operations.py`) derives the summary from the cells (one pass, shared with `_compute_diff`). Both routes use one
+Job (`rate_table.diff_cells`) and one key: a first request for a key answers 202; a request while that Job is queued or
+running answers 202 with THAT Job (no second); a failed Job is not cached, so the next request starts a new one; a succeeded
+Job with its manifest answers 200. `rate_table.diff` stays valid in the enum and the schemas for old rows; this route no longer
+creates it, and its worker handler and `diff()` remain. 41 tests pass in the file; `test_api_rate_tables.py` (46) was updated
+to run a Job when a diff answers 202 (`_diff_ready`; the parquet 202 test now expects kind `rate_table.diff_cells`);
+`test_worker_rate_tables.py` 3, `test_rate_tables_service.py` 13, `test_diff_cache.py` 6, `test_contracts.py` 152 (+2 skipped),
+the pricing-core rate-table tests 57; `ruff`, `mypy` and `generate-contracts --check` clean.
+
+**What the diff-route proof will say.** `_compute_diff` was rewritten unconditionally by this slice (it now summarises
+`_diff_cells`' per-cell objects), so `svc.diff(…, portfolio None)` on this branch is not main's path. The lead upheld the
+literal-`origin/main` measurement for FD 9487's evidence.
+
 ## PRs
 
 #1206, a draft, `SL-1391: Slice 7: FR-231's exposure weights through the portfolio frame (F-W10-2)`, head branch

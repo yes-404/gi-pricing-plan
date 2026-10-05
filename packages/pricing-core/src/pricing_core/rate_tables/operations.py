@@ -445,23 +445,16 @@ def diff_cells(
     return _diff_cells(baseline_cells, current_cells, keys, value, weights)
 
 
-def _compute_diff(
-    baseline: Cells,
-    current: Cells,
-    keys: Sequence[RateTableKey],
-    value: RateTableValue,
-    weights: Weights | None,
-) -> RateTableDiff:
-    """The shared core of diff_vs_previous and diff_vs_seed (FR-231).
+def diff_summary(cells: Sequence[RateTableDiffCell]) -> RateTableDiff:
+    """The summary of a diff, derived from its changed cells (FR-231, `RL-1418` T2).
 
-    Summarises `_diff_cells`. Percentage statistics cover cells comparable in both
-    directions with a non-zero baseline, so a cell born from or into zero never
-    fabricates an infinite change. The exposure-weighted mean covers the comparable
-    cells that carry a weight; a zero weight carries none, like an absent one, so a mean
-    over cells whose total weight is 0 is undefined (`None`), not a division by zero
-    (`RL-1361` item 6). DP1: weights are supplied at fetch time.
+    Percentage statistics cover cells comparable in both directions with a non-zero
+    baseline, so a cell born from or into zero never fabricates an infinite change. The
+    exposure-weighted mean covers the comparable cells that carry a weight; a zero weight
+    carries none, like an absent one, so a mean over cells whose total weight is 0 is
+    undefined (`None`), not a division by zero (`RL-1361` item 6). The coverage figures are
+    the caller's: they are not in the cells.
     """
-    cells = _diff_cells(baseline, current, keys, value, weights)
     comparable = [c.rel_change_pct for c in cells if c.rel_change_pct is not None]
     weighted = [
         (c.weight, c.rel_change_pct)
@@ -483,6 +476,19 @@ def _compute_diff(
         max_abs_change_pct=max_abs,
         exposure_weighted_mean_change_pct=mean,
     )
+
+
+def _compute_diff(
+    baseline: Cells,
+    current: Cells,
+    keys: Sequence[RateTableKey],
+    value: RateTableValue,
+    weights: Weights | None,
+) -> RateTableDiff:
+    """The shared core of diff_vs_previous and diff_vs_seed (FR-231): `diff_summary` over
+    `_diff_cells`, so the summary and the cells cannot disagree. DP1: weights are supplied
+    at fetch time."""
+    return diff_summary(_diff_cells(baseline, current, keys, value, weights))
 
 
 def diff_vs_previous(

@@ -35,7 +35,6 @@ from app.platform import jobs as job_service
 from app.platform import rate_tables as service
 from app.platform import rbac
 from app.platform.blobs import BlobStore
-from app.platform.diff_cache import DiffCache
 from model_schema import JobKind, Permission
 from model_schema.jobs import Job
 from model_schema.rating import (
@@ -273,6 +272,41 @@ async def import_rate_table(
     return created.model_dump(mode="json")
 
 
+async def _cells_job_response(
+    needed: service.DiffCellsJobNeeded,
+    caller: Caller,
+    database: Any,
+    response: Response,
+    *,
+    slug: str,
+    version: int,
+    against: str,
+    portfolio: UUID | None,
+) -> Job:
+    """202 with the `rate_table.diff_cells` Job that builds this query's artifact: the one in
+    flight if there is one, else a new one carrying the artifact's `key`."""
+    job = needed.in_flight
+    if job is None:
+        async with database.unit_of_work() as session:
+            job = await job_service.submit(
+                session,
+                JobKind.RATE_TABLE_DIFF_CELLS,
+                {
+                    **job_identity(caller),
+                    "slug": slug,
+                    "version": version,
+                    "against": against,
+                    "key": needed.key,
+                    **({"portfolio": str(portfolio)} if portfolio is not None else {}),
+                },
+                caller.principal,
+                workspace_id=caller.workspace_id,
+            )
+    response.status_code = status.HTTP_202_ACCEPTED
+    response.headers["Location"] = f"/api/v1/jobs/{job.id}"
+    return job
+
+
 @router.get(
     "/rate-tables/{slug}@{version}/diff",
     summary="Cell diff of a rate table version against a baseline",
@@ -288,7 +322,6 @@ async def rate_table_diff(
     version: int,
     caller: RatingReadDep,
     database: DatabaseDep,
-    settings: SettingsDep,
     response: Response,
     blob_store: BlobStoreDep,
     against: str = Query(..., description="`previous`, `seed`, or a version number"),
@@ -302,22 +335,18 @@ async def rate_table_diff(
         ),
     ] = None,
 ) -> RateTableDiff | Job:
-    """**200** with the diff (FR-231); **202** with a Job where either version is
-    `storage: parquet` (FR-232) — the same artifact, only latency and status
-    differ.
+    """**200** with the diff summary (FR-231) read from the stored artifact; **202** with a
+    `rate_table.diff_cells` Job where this query's artifact is not yet stored, for either
+    storage (FR-232, R1: an operation that can exceed 2 s returns 202). The Job is the one the
+    cells route uses: one artifact serves both, found by the identity of the two versions and
+    of the portfolio, so a later request loads no cell.
 
-    The baseline resolves to the previous version, the seed version, or an explicit
-    version number. The Job runs on the compute queue and stores the diff artifact as
-    a blob; `result.ref` is its sha256, fetchable from `/blobs/{sha256}`. The 200 read
-    path is compute-on-read behind the DP3 cache (rulings 2026-08-28): a hit serves
-    the stored artifact, a miss computes and stores — the key covers the versions'
-    content hashes, the definition and the portfolio identity, never a date.
-
-    With `portfolio` the cells are weighted by its exposure (`RL-1361`). The caller needs
-    `dataset:read` for that, checked here and not route-wide, so a rating-only caller still
-    gets an unweighted diff; the refusal is the same **403** for any id, so a refusal never
-    says whether the portfolio exists. The portfolio's scope and status are then checked
-    before the cache is read and before any Job is created.
+    The baseline resolves to the previous version, the seed version, or an explicit version
+    number. With `portfolio` the cells are weighted by its exposure (`RL-1361`): the caller needs
+    `dataset:read` for that, checked here and not route-wide, so a rating-only caller still gets
+    an unweighted diff; the refusal is the same **403** for any id, so it never says whether the
+    portfolio exists. Its scope and status are then checked before any Job is created. A refusal
+    that depends on the portfolio's content is the Job's failure, with the same code.
     """
     baseline = _parse_against(against)
     if portfolio is not None:
@@ -329,38 +358,16 @@ async def rate_table_diff(
                 permission=Permission.DATASET_READ,
                 credential_permissions=caller.permissions,
             )
-    if await service.diff_needs_job(
+    answer = await service.diff_from_artifact(
         database, caller.workspace_id, slug, version, baseline,
-        portfolio_dataset_version_id=portfolio,
-    ):
-        async with database.unit_of_work() as session:
-            job = await job_service.submit(
-                session,
-                JobKind.RATE_TABLE_DIFF,
-                {
-                    **job_identity(caller),
-                    "slug": slug,
-                    "version": version,
-                    "against": against,
-                    **({"portfolio": str(portfolio)} if portfolio is not None else {}),
-                },
-                caller.principal,
-                workspace_id=caller.workspace_id,
-            )
-        response.status_code = status.HTTP_202_ACCEPTED
-        response.headers["Location"] = f"/api/v1/jobs/{job.id}"
-        return job
-    cache = DiffCache.from_url(settings.redis_url.get_secret_value())
-    return await service.diff(
-        database,
-        caller.workspace_id,
-        slug,
-        version,
-        baseline,
-        blob_store=blob_store,
-        cache=cache,
-        portfolio_dataset_version_id=portfolio,
+        blob_store=blob_store, portfolio_dataset_version_id=portfolio,
     )
+    if isinstance(answer, service.DiffCellsJobNeeded):
+        return await _cells_job_response(
+            answer, caller, database, response,
+            slug=slug, version=version, against=against, portfolio=portfolio,
+        )
+    return answer
 
 
 @router.get(
@@ -419,24 +426,10 @@ async def rate_table_diff_cells(
         limit=limit, cursor=cursor,
     )
     if isinstance(answer, service.DiffCellsJobNeeded):
-        async with database.unit_of_work() as session:
-            job = await job_service.submit(
-                session,
-                JobKind.RATE_TABLE_DIFF_CELLS,
-                {
-                    **job_identity(caller),
-                    "slug": slug,
-                    "version": version,
-                    "against": against,
-                    "key": answer.key,
-                    **({"portfolio": str(portfolio)} if portfolio is not None else {}),
-                },
-                caller.principal,
-                workspace_id=caller.workspace_id,
-            )
-        response.status_code = status.HTTP_202_ACCEPTED
-        response.headers["Location"] = f"/api/v1/jobs/{job.id}"
-        return job
+        return await _cells_job_response(
+            answer, caller, database, response,
+            slug=slug, version=version, against=against, portfolio=portfolio,
+        )
     return Page[RateTableDiffCell](
         items=answer.items, next_cursor=answer.next_cursor, total_estimate=answer.total_estimate
     )

@@ -12,6 +12,7 @@ mapped onto the module's API error codes (03 §5.2): the four validation codes b
 from __future__ import annotations
 
 import io
+import json
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -23,7 +24,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from app.api.pagination import COUNT_CAP, decode_int_cursor, encode_cursor
+from app.api.pagination import COUNT_CAP, MAX_LIMIT, decode_int_cursor, encode_cursor
 from app.config import Settings
 from app.db.models import (
     BlobRow,
@@ -36,6 +37,7 @@ from app.db.models import (
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import datasets, transformations
+from app.platform import jobs as job_service
 from app.platform import settings as settings_svc
 from app.platform.blobs import BlobStore, to_ref
 from app.platform.diff_cache import DiffCache, cells_key, definition_hash, version_content_hash
@@ -46,6 +48,7 @@ from app.platform.modelling import (
     to_model,
 )
 from model_schema import Banding, DatasetStatus, Factor, Grouping, JobKind, JobStatus
+from model_schema.jobs import Job
 from model_schema.rating import (
     FloorAndCapParameters,
     ImportPreview,
@@ -66,6 +69,7 @@ from pricing_core.rate_tables.operations import (
     check_model_approved,
     decide_storage_mode,
     diff_cells,
+    diff_summary,
     diff_vs_previous,
     diff_vs_seed,
     export_to_csv,
@@ -527,6 +531,13 @@ async def diff(
         return diff
 
 
+#: Cells per chunk blob of a stored cells artifact. At least the route's `MAX_LIMIT`, so a page of
+#: any legal limit touches at most two chunks (the cells-page latency NFR, R1): a page costs
+#: O(page), never O(table).
+CELLS_CHUNK = 1000
+assert CELLS_CHUNK >= MAX_LIMIT
+
+
 @dataclass(frozen=True, slots=True)
 class DiffCellsPage:
     """One page of a diff's changed cells, and where the next one starts (`None` on the last)."""
@@ -538,10 +549,13 @@ class DiffCellsPage:
 
 @dataclass(frozen=True, slots=True)
 class DiffCellsJobNeeded:
-    """A parquet pair whose cell artifact is not stored: the route answers 202 with a Job
-    carrying `key`, which names the artifact the Job writes."""
+    """No stored artifact for this query. `in_flight` is the queued or running
+    `rate_table.diff_cells` Job for the same key, if any: the route answers 202 with THAT Job
+    rather than starting a second. Otherwise it submits one carrying `key`, which names the
+    artifact the Job writes (a failed Job is not cached: the next request starts a new one)."""
 
     key: str
+    in_flight: Job | None = None
 
 
 async def _all_cells(
@@ -553,50 +567,58 @@ async def _all_cells(
     baseline_row: RateTableVersionRow,
     table: RateTable,
     portfolio_dataset_version_id: UUID | None,
-) -> list[RateTableDiffCell]:
-    """Every changed cell, in `03` §4.2's order, weighted by the portfolio when one is named.
+) -> tuple[list[RateTableDiffCell], PortfolioWeights | None]:
+    """Every changed cell, in `03` §4.2's order, weighted by the portfolio when one is named,
+    and the portfolio's coverage.
 
     The weights come from `_portfolio_weights`, the map the summary uses, so the cells and the
     aggregate mean cannot disagree (`RL-1418`).
     """
     current_cells = await _load_cells_of(session, version_row, table, blob_store)
     baseline_cells = await _load_cells_of(session, baseline_row, table, blob_store)
-    weights = None
+    weighted: PortfolioWeights | None = None
     if portfolio_dataset_version_id is not None:
         weighted = await _portfolio_weights(
             session, blob_store, workspace_id=workspace_id,
             version_id=portfolio_dataset_version_id, table=table, current_cells=current_cells,
         )
-        weights = weighted.weights
-    return diff_cells(baseline_cells, current_cells, table.keys, table.value, weights=weights)
+    cells = diff_cells(
+        baseline_cells, current_cells, table.keys, table.value,
+        weights=weighted.weights if weighted is not None else None,
+    )
+    return cells, weighted
 
 
-async def _stored_cells(
+async def _find_artifact(
     session: Any, blob_store: BlobStore, *, workspace_id: UUID, key: str
-) -> bytes | None:
-    """The NDJSON artifact a succeeded `rate_table.diff_cells` Job wrote for exactly this key,
-    or `None`. A Job whose blob is gone does not count: the query is computed again, never
-    answered from another query's artifact."""
+) -> tuple[dict[str, Any] | None, Job | None]:
+    """The manifest a succeeded `rate_table.diff_cells` Job stored for exactly this key, else the
+    Job in flight for it. A Job whose manifest blob is gone does not count: the query is built
+    again, never answered from another query's artifact."""
     rows = await session.execute(
         select(JobRow)
         .where(
             JobRow.workspace_id == workspace_id,
             JobRow.kind == JobKind.RATE_TABLE_DIFF_CELLS,
-            JobRow.status == JobStatus.SUCCEEDED,
             JobRow.parameters["key"].astext == key,
         )
         .order_by(JobRow.queued_at.desc())
     )
+    in_flight: Job | None = None
     for job in rows.scalars():
-        ref = (job.result or {}).get("ref")
-        blob = await session.get(BlobRow, ref) if ref else None
-        if blob is None:
-            continue
-        try:
-            return await blob_store.read(to_ref(blob))
-        except PlatformError:
-            continue
-    return None
+        if job.status in (JobStatus.QUEUED, JobStatus.RUNNING):
+            in_flight = in_flight or job_service.to_schema(job)
+        elif job.status is JobStatus.SUCCEEDED:
+            ref = (job.result or {}).get("ref")
+            blob = await session.get(BlobRow, ref) if ref else None
+            if blob is None:
+                continue
+            try:
+                manifest: dict[str, Any] = json.loads(await blob_store.read(to_ref(blob)))
+            except PlatformError:
+                continue
+            return manifest, None
+    return None, in_flight
 
 
 def _bad_cursor() -> PlatformError:
@@ -608,25 +630,47 @@ def _bad_cursor() -> PlatformError:
     )
 
 
-def _page(
-    lines: Sequence[bytes] | Sequence[RateTableDiffCell], limit: int, cursor: str | None
-) -> DiffCellsPage:
-    """Cut one page at the cursor's position. A cursor is the position of the page's first
-    cell, so one this API issued is always within `1 .. total - 1`; any other is `400`."""
-    total = len(lines)
-    start = decode_int_cursor(cursor) if cursor is not None else 0
-    assert start is not None
-    if cursor is not None and not 0 < start < total:
-        raise _bad_cursor()
-    stop = start + limit
-    chunk = lines[start:stop]
-    items = [
-        RateTableDiffCell.model_validate_json(c) if isinstance(c, bytes) else c for c in chunk
-    ]
-    return DiffCellsPage(
-        items=items,
-        total_estimate=min(total, COUNT_CAP),
-        next_cursor=encode_cursor(stop) if stop < total else None,
+async def _read_cells(
+    session: Any, blob_store: BlobStore, manifest: dict[str, Any], start: int, stop: int
+) -> list[RateTableDiffCell] | None:
+    """Cells `start` to `stop` of the artifact, reading only the chunks they lie in. `None` if
+    a chunk is gone, which makes the artifact absent."""
+    size: int = manifest["chunk_size"]
+    items: list[RateTableDiffCell] = []
+    for index in range(start // size, (stop - 1) // size + 1):
+        blob = await session.get(BlobRow, manifest["chunks"][index])
+        if blob is None:
+            return None
+        try:
+            lines = (await blob_store.read(to_ref(blob))).splitlines()
+        except PlatformError:
+            return None
+        low = max(start - index * size, 0)
+        high = min(stop - index * size, len(lines))
+        items.extend(RateTableDiffCell.model_validate_json(line) for line in lines[low:high])
+    return items
+
+
+async def _cells_key_for(
+    session: Any,
+    workspace_id: UUID,
+    slug: str,
+    version: int,
+    against: str | int,
+    portfolio_dataset_version_id: UUID | None,
+) -> str:
+    """Resolve the versions and check the portfolio, before any Job, and name the query's
+    artifact by identity (`cells_key`): nothing is read from a cell."""
+    table_row = await _load_table(session, workspace_id, slug)
+    version_row = await _load_version(session, table_row.id, version, slug)
+    baseline_number = await _resolve_baseline(session, table_row.id, version, against)
+    await _load_version(session, table_row.id, baseline_number, slug)  # a 404 if it is gone
+    if portfolio_dataset_version_id is not None:
+        await check_portfolio(
+            session, workspace_id=workspace_id, version_id=portfolio_dataset_version_id
+        )
+    return cells_key(
+        slug, version_row.version_number, baseline_number, portfolio_dataset_version_id
     )
 
 
@@ -642,34 +686,41 @@ async def diff_cells_page(
     limit: int,
     cursor: str | None = None,
 ) -> DiffCellsPage | DiffCellsJobNeeded:
-    """One cursor page of the diff's changed cells (FR-231, `RL-1418` T1).
+    """One cursor page of the diff's changed cells (FR-231, `RL-1418` T1 as amended).
 
     The `against` resolution and the portfolio checks (scope, then status) run first, before
     any Job. Every pair, whatever its storage, is answered from the artifact a
     `rate_table.diff_cells` Job stored for this exact query, found by version identity without
     loading a cell, or this reports that the Job is needed. So the first request for a
-    (versions, portfolio) key is a 202 and a later page reads only its slice (R1, `07` §1.3:
-    an operation that can exceed 2 s returns 202 with a Job).
+    (versions, portfolio) key is a 202 and a later page reads the manifest and the one or two
+    chunks it lies in (R1, `07` §1.3: an operation that can exceed 2 s returns 202 with a Job).
     """
     async with database.unit_of_work() as session:
-        table_row = await _load_table(session, workspace_id, slug)
-        version_row = await _load_version(session, table_row.id, version, slug)
-        baseline_number = await _resolve_baseline(session, table_row.id, version, against)
-        await _load_version(session, table_row.id, baseline_number, slug)  # a 404 if it is gone
-        if portfolio_dataset_version_id is not None:
-            await check_portfolio(
-                session, workspace_id=workspace_id, version_id=portfolio_dataset_version_id
-            )
-        key = cells_key(
-            slug, version_row.version_number, baseline_number, portfolio_dataset_version_id
+        key = await _cells_key_for(
+            session, workspace_id, slug, version, against, portfolio_dataset_version_id
         )
-        stored = await _stored_cells(session, blob_store, workspace_id=workspace_id, key=key)
-        if stored is None:
+        manifest, in_flight = await _find_artifact(
+            session, blob_store, workspace_id=workspace_id, key=key
+        )
+        if manifest is None:
+            return DiffCellsJobNeeded(key=key, in_flight=in_flight)
+        total: int = manifest["total"]
+        start = decode_int_cursor(cursor) if cursor is not None else 0
+        assert start is not None
+        if cursor is not None and not 0 < start < total:
+            raise _bad_cursor()
+        stop = min(start + limit, total)
+        items = await _read_cells(session, blob_store, manifest, start, stop) if total else []
+        if items is None:
             return DiffCellsJobNeeded(key=key)
-        return _page(stored.splitlines(), limit, cursor)
+        return DiffCellsPage(
+            items=items,
+            total_estimate=min(total, COUNT_CAP),
+            next_cursor=encode_cursor(stop) if stop < total else None,
+        )
 
 
-async def diff_cells_artifact(
+async def diff_from_artifact(
     database: Database,
     workspace_id: UUID,
     slug: str,
@@ -678,11 +729,38 @@ async def diff_cells_artifact(
     *,
     blob_store: BlobStore,
     portfolio_dataset_version_id: UUID | None = None,
-) -> bytes:
-    """Every changed cell, in order, one JSON object per line: what the Job stores (FR-232).
+) -> RateTableDiff | DiffCellsJobNeeded:
+    """The diff summary (FR-231), read from the manifest of the same artifact the cells route
+    serves: the first request for a key is the Job (rows pairs too), later ones are 200 with
+    the summary and the coverage figures the artifact carries and no cell read (R1)."""
+    async with database.unit_of_work() as session:
+        key = await _cells_key_for(
+            session, workspace_id, slug, version, against, portfolio_dataset_version_id
+        )
+        manifest, in_flight = await _find_artifact(
+            session, blob_store, workspace_id=workspace_id, key=key
+        )
+        if manifest is None:
+            return DiffCellsJobNeeded(key=key, in_flight=in_flight)
+        return RateTableDiff.model_validate(manifest["summary"])
 
-    The checks run again under the Job's workspace, because the portfolio can lose its
-    standing between submit and run (`RL-1361` item 8).
+
+async def build_cells_artifact(
+    database: Database,
+    workspace_id: UUID,
+    slug: str,
+    version: int,
+    against: str | int,
+    *,
+    blob_store: BlobStore,
+    portfolio_dataset_version_id: UUID | None = None,
+) -> str:
+    """Compute every changed cell and store the artifact; returns the manifest's sha256 (FR-232).
+
+    The cells are written in order as chunk blobs of `CELLS_CHUNK` cells, one JSON object per
+    line, and a small manifest names them and carries the diff's summary and coverage figures.
+    The checks run again under the Job's workspace, because the portfolio can lose its standing
+    between submit and run (`RL-1361` item 8).
     """
     async with database.unit_of_work() as session:
         table_row = await _load_table(session, workspace_id, slug)
@@ -694,12 +772,33 @@ async def diff_cells_artifact(
                 session, workspace_id=workspace_id, version_id=portfolio_dataset_version_id
             )
         table = RateTable.model_validate(version_row.definition)
-        cells = await _all_cells(
+        cells, weighted = await _all_cells(
             session, blob_store, workspace_id=workspace_id, version_row=version_row,
             baseline_row=baseline_row, table=table,
             portfolio_dataset_version_id=portfolio_dataset_version_id,
         )
-    return b"".join(cell.model_dump_json().encode() + b"\n" for cell in cells)
+        summary = diff_summary(cells)
+        if weighted is not None:
+            summary = summary.model_copy(
+                update={
+                    "portfolio_exposure": weighted.portfolio_exposure,
+                    "matched_exposure": weighted.matched_exposure,
+                }
+            )
+        chunks: list[str] = []
+        for start in range(0, len(cells), CELLS_CHUNK):
+            payload = b"".join(
+                cell.model_dump_json().encode() + b"\n" for cell in cells[start:start + CELLS_CHUNK]
+            )
+            chunks.append((await blob_store.put(session, payload, "application/x-ndjson")).sha256)
+        manifest = {
+            "chunk_size": CELLS_CHUNK,
+            "total": len(cells),
+            "chunks": chunks,
+            "summary": json.loads(summary.model_dump_json()),
+        }
+        ref = await blob_store.put(session, json.dumps(manifest).encode(), "application/json")
+        return ref.sha256
 
 
 async def export_csv(

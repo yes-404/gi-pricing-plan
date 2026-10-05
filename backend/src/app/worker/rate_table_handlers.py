@@ -64,12 +64,12 @@ def _rate_table_diff(parameters: dict[str, Any], callback: ProgressCallback) -> 
 
 
 def _rate_table_diff_cells(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
-    """`rate_table.diff_cells` — every changed cell, in order, stored as one blob (`RL-1418`).
+    """`rate_table.diff_cells` — every changed cell, in order, stored as chunk blobs and a manifest.
 
-    One NDJSON object per cell. The blob's sha256 is the Job's `result.ref`, and the route
-    finds it again by the `key` the Job's parameters carry. The portfolio's checks run again
-    under the Job's workspace (`RL-1361` item 8), so an archived portfolio fails the Job with
-    `DATASET_NOT_VALIDATED`.
+    The manifest's sha256 is the Job's `result.ref`, and the routes find it again by the `key`
+    the Job's parameters carry. It serves the cells route and the diff route alike. The
+    portfolio's checks run again under the Job's workspace (`RL-1361` item 8), so an archived
+    portfolio fails the Job with `DATASET_NOT_VALIDATED`.
     """
     progress = _bridge(callback)
     workspace_id = _workspace(parameters)
@@ -80,7 +80,7 @@ def _rate_table_diff_cells(parameters: dict[str, Any], callback: ProgressCallbac
     progress.update(0.05, "materialising cells")
 
     async def work() -> str:
-        payload = await service.diff_cells_artifact(
+        return await service.build_cells_artifact(
             progress.database,
             workspace_id,
             parameters["slug"],
@@ -89,9 +89,6 @@ def _rate_table_diff_cells(parameters: dict[str, Any], callback: ProgressCallbac
             blob_store=progress.blob_store,
             portfolio_dataset_version_id=portfolio,
         )
-        async with progress.database.unit_of_work() as session:
-            ref = await progress.blob_store.put(session, payload, "application/x-ndjson")
-            return ref.sha256
 
     sha256 = progress.run_on_loop(work())
     progress.update(1.0, "done")

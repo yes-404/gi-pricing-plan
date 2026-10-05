@@ -640,8 +640,9 @@ async def test_portfolio_needs_dataset_read_and_hides_existence(
     url = f"/api/v1/rate-tables/{slug}@2/diff"
 
     # Without `portfolio` the narrow caller succeeds: `dataset:read` is not route-wide.
-    plain = api_client.get(url, params={"against": "previous"}, headers=rating_only)
-    assert plain.status_code == 200, plain.text
+    plain = await _artifact(
+        database, blob_store, api_client, url, rating_only, against="previous"
+    )
     assert plain.json()["portfolio_exposure"] is None
 
     # With `portfolio`, an existing id and a nonexistent one are refused identically.
@@ -657,10 +658,10 @@ async def test_portfolio_needs_dataset_read_and_hides_existence(
 
     # A caller who holds `dataset:read` is served the weighted figure.
     analyst = _headers(principal.id, workspace_id)
-    weighted = api_client.get(
-        url, params={"against": "previous", "portfolio": str(portfolio)}, headers=analyst
+    weighted = await _artifact(
+        database, blob_store, api_client, url, analyst,
+        against="previous", portfolio=str(portfolio),
     )
-    assert weighted.status_code == 200, weighted.text
     body = weighted.json()
     assert body["changed_cells"] == 2
     assert Decimal(body["matched_exposure"]) == D("7.5")
@@ -748,14 +749,13 @@ async def test_the_job_result_equals_the_200_figure(
     async with database.session() as session:
         blob = await session.get(BlobRow, finished.result["ref"])
     assert blob is not None
-    stored = await blob_store.read(to_ref(blob))
-    from_job = RateTableDiff.model_validate_json(stored)
+    manifest = json.loads(await blob_store.read(to_ref(blob)))
+    from_job = RateTableDiff.model_validate(manifest["summary"])
 
-    twin = api_client.get(
-        f"/api/v1/rate-tables/{rows}@2/diff",
-        params={"against": "previous", "portfolio": str(portfolio)}, headers=analyst,
+    twin = await _artifact(
+        database, blob_store, api_client, f"/api/v1/rate-tables/{rows}@2/diff", analyst,
+        against="previous", portfolio=str(portfolio),
     )
-    assert twin.status_code == 200, twin.text
     assert from_job == RateTableDiff.model_validate(twin.json())
     assert from_job.matched_exposure == D("7.5")
 
@@ -932,8 +932,11 @@ async def test_an_uplift_of_every_cell_is_served_in_full(
     slug = await _uplifted_table(database, workspace_id, principal, blob_store, levels)
     analyst = _headers(principal.id, workspace_id)
 
-    summary = api_client.get(
-        f"/api/v1/rate-tables/{slug}@2/diff", params={"against": "previous"}, headers=analyst
+    summary = (
+        await _artifact(
+            database, blob_store, api_client, f"/api/v1/rate-tables/{slug}@2/diff", analyst,
+            against="previous",
+        )
     ).json()
     assert summary["changed_cells"] == MAX_LIMIT + 50
     await _artifact(
@@ -992,10 +995,12 @@ async def test_one_weights_map_feeds_summary_and_cells(
     slug = await _identity_table(database, workspace_id, principal, blob_store)
     analyst = _headers(principal.id, workspace_id)
     params = {"against": "previous", "portfolio": str(portfolio)}
-    summary = api_client.get(
-        f"/api/v1/rate-tables/{slug}@2/diff", params=params, headers=analyst
+    summary = (
+        await _artifact(
+            database, blob_store, api_client, f"/api/v1/rate-tables/{slug}@2/diff", analyst,
+            **params,
+        )
     ).json()
-    await _artifact(database, blob_store, api_client, _cells_url(slug), analyst, **params)
     items = _all_pages(api_client, _cells_url(slug), analyst, **params)
 
     pairs = [
@@ -1301,3 +1306,181 @@ async def test_the_artifact_is_keyed_by_version_identity_so_twins_do_not_share(
         ).json()
     assert keys[rows_pair] != keys[parquet_pair]
     assert pages[rows_pair] == pages[parquet_pair]  # identical content
+
+
+# --- the DIFF route on the same artifact (the maintainer's ruling "2026-10-05 22:27:31 BST") ---
+
+
+def _diff_url(slug: str, version: int = 2) -> str:
+    return f"/api/v1/rate-tables/{slug}@{version}/diff"
+
+
+@pytest.mark.req("FR-231")
+@pytest.mark.req("FR-232")
+async def test_a_diff_answers_202_first_then_200_from_the_same_artifact(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    """R1 on the summary route: the first diff request for a (versions, portfolio) key is a 202
+    with the SAME `rate_table.diff_cells` Job (rows pairs too); later requests are 200 from the
+    stored artifact, summary and coverage figures included, with no Job and no cell read."""
+    await grant("analyst")
+    actor = await _actuary(database, workspace_id)
+    portfolio = await validated_portfolio(database, blob_store, workspace_id, actor)
+    slug = await _identity_table(database, workspace_id, principal, blob_store)
+    analyst = _headers(principal.id, workspace_id)
+    params = {"against": "previous", "portfolio": str(portfolio)}
+
+    first = api_client.get(_diff_url(slug), params=params, headers=analyst)
+    assert first.status_code == 202, first.text
+    assert first.json()["kind"] == "rate_table.diff_cells"
+    assert first.headers["Location"] == f"/api/v1/jobs/{first.json()['id']}"
+    assert await execute_job(database, UUID(first.json()["id"]), blob_store) is JobStatus.SUCCEEDED
+
+    before = await _job_count(database)
+    later = api_client.get(_diff_url(slug), params=params, headers=analyst)
+    assert later.status_code == 200, later.text
+    body = later.json()
+    assert body["changed_cells"] == 2
+    assert Decimal(body["max_abs_change_pct"]) == D("10")
+    mean = Decimal(body["exposure_weighted_mean_change_pct"])
+    assert mean.quantize(D("0.000001")) == D("-1.428571")
+    assert Decimal(body["portfolio_exposure"]) == D("7.5")
+    assert Decimal(body["matched_exposure"]) == D("7.5")
+    assert await _job_count(database) == before
+
+    # The cells route finds the SAME artifact: no second Job for the same key.
+    cells = api_client.get(_cells_url(slug), params=params, headers=analyst)
+    assert cells.status_code == 200, cells.text
+    assert await _job_count(database) == before
+
+
+@pytest.mark.req("FR-231")
+async def test_a_later_diff_loads_no_cells(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.platform import rate_tables as service
+
+    await grant("analyst")
+    slug = await _identity_table(database, workspace_id, principal, blob_store)
+    analyst = _headers(principal.id, workspace_id)
+    await _artifact(
+        database, blob_store, api_client, _diff_url(slug), analyst, against="previous"
+    )
+
+    def _boom(*args: Any, **kwargs: Any) -> Any:
+        raise AssertionError("a diff request loaded cells")
+
+    monkeypatch.setattr(service, "_load_cells", _boom)
+    monkeypatch.setattr(service, "_load_cells_of", _boom)
+    later = api_client.get(_diff_url(slug), params={"against": "previous"}, headers=analyst)
+    assert later.status_code == 200, later.text
+    assert later.json()["changed_cells"] == 2
+
+
+@pytest.mark.req("FR-231")
+@pytest.mark.req("FR-232")
+async def test_a_page_reads_the_manifest_and_at_most_two_chunks(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The artifact is chunked (a page of at most MAX_LIMIT cells touches one or two chunks)
+    plus one small manifest, so a page costs O(page), not O(table): R1 at 250k and 1M cells."""
+    await grant("analyst")
+    levels = [f"L{i:04d}" for i in range(2500)]
+    slug = await _uplifted_table(database, workspace_id, principal, blob_store, levels)
+    analyst = _headers(principal.id, workspace_id)
+    await _artifact(
+        database, blob_store, api_client, _cells_url(slug), analyst, against="previous"
+    )
+
+    async with database.session() as session:
+        job = (
+            await session.execute(
+                select(JobRow)
+                .where(
+                    JobRow.workspace_id == workspace_id,
+                    JobRow.kind == JobKind.RATE_TABLE_DIFF_CELLS,
+                )
+                .order_by(JobRow.queued_at.desc())
+            )
+        ).scalars().first()
+        assert job is not None
+        assert job.result is not None
+        blob = await session.get(BlobRow, job.result["ref"])
+    import json as _json
+
+    from app.platform.blobs import to_ref
+
+    assert blob is not None
+    manifest = _json.loads(await blob_store.read(to_ref(blob)))
+    assert manifest["total"] == 2500
+    assert manifest["chunk_size"] == 1000
+    assert len(manifest["chunks"]) == 3
+    assert manifest["summary"]["changed_cells"] == 2500
+
+    reads: list[str] = []
+    original = BlobStore.read
+
+    async def counting(self: BlobStore, ref: Any) -> bytes:
+        reads.append(ref.sha256)
+        return await original(self, ref)
+
+    monkeypatch.setattr(BlobStore, "read", counting)
+    from app.api.pagination import encode_cursor
+
+    # A page spanning the chunk boundary at 1000: cells 900..1099.
+    page = api_client.get(
+        _cells_url(slug),
+        params={"against": "previous", "limit": "200", "cursor": encode_cursor(900)},
+        headers=analyst,
+    )
+    assert page.status_code == 200, page.text
+    assert [i["key"]["driver_age_band"] for i in page.json()["items"]] == levels[900:1100]
+    assert len(reads) <= 3, reads  # the manifest and two chunks, never the whole artifact
+    summary = api_client.get(_diff_url(slug), params={"against": "previous"}, headers=analyst)
+    assert summary.json()["changed_cells"] == 2500
+    assert len(reads) <= 4, reads  # the diff reads the manifest only
+
+
+@pytest.mark.req("FR-232")
+async def test_a_request_while_the_job_is_in_flight_gets_that_job_and_a_failed_job_is_not_cached(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    """In flight (queued or running): the same Job, never a second. Failed: not cached, the next
+    request starts a new Job and the failed one stays readable. Succeeded with its artifact: 200."""
+    await grant("analyst")
+    actor = await _actuary(database, workspace_id)
+    portfolio = await validated_portfolio(database, blob_store, workspace_id, actor)
+    slug = await _identity_table(database, workspace_id, principal, blob_store)
+    analyst = _headers(principal.id, workspace_id)
+    params = {"against": "previous", "portfolio": str(portfolio)}
+
+    first = api_client.get(_cells_url(slug), params=params, headers=analyst)
+    assert first.status_code == 202, first.text
+    before = await _job_count(database)
+    again = api_client.get(_diff_url(slug), params=params, headers=analyst)  # the diff route too
+    assert again.status_code == 202, again.text
+    assert again.json()["id"] == first.json()["id"]
+    assert again.headers["Location"] == first.headers["Location"]
+    assert await _job_count(database) == before  # no second Job
+
+    # The portfolio is archived before the worker runs: the Job fails, and failure is not cached.
+    async with database.unit_of_work() as session:
+        await dataset_service.archive_version(
+            session, workspace_id=workspace_id, actor=actor, version_id=portfolio,
+            reason="superseded",
+        )
+    failed_id = UUID(first.json()["id"])
+    assert await execute_job(database, failed_id, blob_store) is JobStatus.FAILED
+    other = await validated_portfolio(database, blob_store, workspace_id, actor)
+    params["portfolio"] = str(other)  # a different key: its own artifact
+    fresh = api_client.get(_cells_url(slug), params=params, headers=analyst)
+    assert fresh.status_code == 202
+    assert fresh.json()["id"] != failed_id
+
+    # Same key as the failed one is unreachable now (the portfolio is archived: a 409 before
+    # any Job); the failed Job stays readable.
+    assert (await _job_row(database, failed_id)).error is not None
