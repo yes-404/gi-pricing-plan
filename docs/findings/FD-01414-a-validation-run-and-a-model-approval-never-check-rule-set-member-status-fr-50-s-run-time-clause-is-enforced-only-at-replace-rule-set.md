@@ -1,16 +1,16 @@
 ---
-id: FD-9748
+id: FD-1414
 family: finding
 title: A validation run and a model approval never check Rule Set member status; FR-50's run-time clause is enforced only at replace_rule_set
 status: active
-created: 2026-10-01
+created: 2026-10-05            # the mint date (check 31); filed 2026-10-01
 owner: auditor
 tree: 49cd25be441382aebc1cc9c9ff325bd73fd81bc1
 corrected_by: []
 relates: [WK-1178, FD-1356, FR-50, FR-45, FR-48, FR-51]
 ---
 
-# FD-9748 — A validation run and a model approval never check Rule Set member status (FR-50)
+# FD-1414 — A validation run and a model approval never check Rule Set member status (FR-50)
 
 ## Finding
 
