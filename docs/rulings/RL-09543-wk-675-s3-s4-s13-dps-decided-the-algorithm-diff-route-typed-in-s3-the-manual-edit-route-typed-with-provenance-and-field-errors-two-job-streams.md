@@ -238,8 +238,10 @@ Each find string is counted with `grep -cF` over the plan file at the PR head na
   ```text
   `draft`. DP-S3-1 and DP-S3-2 (below) are open and are the maintainer's (by delegation). The
   ```
-  replace with
-  ``` `draft`. DP-S3-1 and DP-S3-2 (below) are decided by the maintainer (by delegation), recorded in RL 9543 (working id): DP-S3-1 (a), DP-S3-2 (a). The```.
+  replace with (the fenced line, byte for byte)
+  ```text
+  `draft`. DP-S3-1 and DP-S3-2 (below) are decided by the maintainer (by delegation), recorded in RL 9543 (working id): DP-S3-1 (a), DP-S3-2 (a). The
+  ```
 - **P8, Activation need 4.** Find `4. **DP-S3-1 and DP-S3-2 decided**, each by a dated line.`;
   append
   `` Decided (RL 9543). The dispatch record names `backend/tests/test_contracts.py` as shared with `SL-1367`; whichever of S3 and `SL-1367` dispatches second carries the pending-list delta (11 entries if S3 is first; RL 9543 item 7).``
@@ -257,8 +259,10 @@ Each find string is counted with `grep -cF` over the plan file at the PR head na
   ```text
   `draft`. One decision point is open and blocks activation (DP-S13-1). The plan stays
   ```
-  replace with
-  ``` `draft`. DP-S13-1 is decided, (a′), in RL 9543 (working id). The plan stays```.
+  replace with (the fenced line, byte for byte)
+  ```text
+  `draft`. DP-S13-1 is decided, (a′), in RL 9543 (working id). The plan stays
+  ```
 - **P12, Acceptance 5.** Find
   `5. The same file shows the live behaviour DP-S13-1 rules. Under recommendation (a): at most`;
   replace with
@@ -346,7 +350,7 @@ plan file at `c5d1d03a`:
 So the planner applies P7 and P8 only. PL 9582 (`800d3a70`) and PL 9576 (`06fb5ca3`) are
 unchanged at their heads (ls-remote at 17:42 BST), so P1–P6 and P11–P14 stand as counted.
 
-## Pre-mint note, 2026-10-05 18:45 BST: P2, P7 and P11's find strings re-quoted as fenced lines
+## Pre-mint note, 2026-10-05 18:45 BST: P2, P7 and P11's find strings re-quoted as fenced lines (extended 18:47 BST: P7 and P11's replace strings)
 
 Presentation only; nothing ruled or applied changes (decision-maker, on the maintainer's (by
 delegation) entry of 2026-10-05 18:43:10 BST in the lead's channel: "P2, P7 and P11's find
@@ -362,3 +366,8 @@ two-space list indentation every continuation line in this list carries. Counted
 `c5d1d03acdb292e34ff30ebaf58ff87ab3f918d3`, P11 in PL 9576 at
 `06fb5ca3745e12379d0763cdfe63359155c9acce`. The planner applied them in this reading (PL 9582
 #1187 at `3b15a829`, PL 9578 #1186 at `aea4b634`, PL 9576 #1185 at `0857c5e1`).
+
+**Extended 2026-10-05 18:47 BST** (on the lead's order): P7 and P11's replace strings carried
+the same leading-only space and are fenced the same way, so a reader re-deriving the plans gets
+the applied bytes, which have no leading space. Counted with Python `str.count` on the applied
+plan, each is **1**: P7 in PL 9578 at `aea4b634`, P11 in PL 9576 at `0857c5e1`.
