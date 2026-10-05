@@ -658,9 +658,10 @@ async def _cells_key_for(
     version: int,
     against: str | int,
     portfolio_dataset_version_id: UUID | None,
-) -> str:
+) -> tuple[str, RateTableVersionRow]:
     """Resolve the versions and check the portfolio, before any Job, and name the query's
-    artifact by identity (`cells_key`): nothing is read from a cell."""
+    artifact by identity (`cells_key`): nothing is read from a cell. Also returns the
+    current version's row, for `_refuse_dangling_refs`."""
     table_row = await _load_table(session, workspace_id, slug)
     version_row = await _load_version(session, table_row.id, version, slug)
     baseline_number = await _resolve_baseline(session, table_row.id, version, against)
@@ -669,9 +670,23 @@ async def _cells_key_for(
         await check_portfolio(
             session, workspace_id=workspace_id, version_id=portfolio_dataset_version_id
         )
-    return cells_key(
+    key = cells_key(
         slug, version_row.version_number, baseline_number, portfolio_dataset_version_id
     )
+    return key, version_row
+
+
+async def _refuse_dangling_refs(
+    session: Any, workspace_id: UUID, version_row: RateTableVersionRow, portfolio: UUID | None
+) -> None:
+    """A `factor_ref` or `banding_ref` that resolves to nothing is a `404` naming the key and the
+    ref, synchronously and before any Job, on both routes and both storages (the maintainer's
+    ruling; `RL-1361`'s "the Job fails with NOT_FOUND" for a parquet pair is superseded). Only a
+    portfolio-weighted query reads the refs; a query that finds its artifact never reaches this."""
+    if portfolio is None:
+        return
+    table = RateTable.model_validate(version_row.definition)
+    await _key_artifacts(session, workspace_id, table.keys)
 
 
 async def diff_cells_page(
@@ -696,13 +711,17 @@ async def diff_cells_page(
     chunks it lies in (R1, `07` §1.3: an operation that can exceed 2 s returns 202 with a Job).
     """
     async with database.unit_of_work() as session:
-        key = await _cells_key_for(
+        key, version_row = await _cells_key_for(
             session, workspace_id, slug, version, against, portfolio_dataset_version_id
         )
         manifest, in_flight = await _find_artifact(
             session, blob_store, workspace_id=workspace_id, key=key
         )
         if manifest is None:
+            if in_flight is None:
+                await _refuse_dangling_refs(
+                    session, workspace_id, version_row, portfolio_dataset_version_id
+                )
             return DiffCellsJobNeeded(key=key, in_flight=in_flight)
         total: int = manifest["total"]
         start = decode_int_cursor(cursor) if cursor is not None else 0
@@ -734,13 +753,17 @@ async def diff_from_artifact(
     serves: the first request for a key is the Job (rows pairs too), later ones are 200 with
     the summary and the coverage figures the artifact carries and no cell read (R1)."""
     async with database.unit_of_work() as session:
-        key = await _cells_key_for(
+        key, version_row = await _cells_key_for(
             session, workspace_id, slug, version, against, portfolio_dataset_version_id
         )
         manifest, in_flight = await _find_artifact(
             session, blob_store, workspace_id=workspace_id, key=key
         )
         if manifest is None:
+            if in_flight is None:
+                await _refuse_dangling_refs(
+                    session, workspace_id, version_row, portfolio_dataset_version_id
+                )
             return DiffCellsJobNeeded(key=key, in_flight=in_flight)
         return RateTableDiff.model_validate(manifest["summary"])
 

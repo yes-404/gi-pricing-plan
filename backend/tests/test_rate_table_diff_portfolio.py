@@ -790,14 +790,25 @@ async def test_a_portfolio_archived_before_the_worker_runs_fails_the_job(
 
 @pytest.mark.req("FR-231")
 @pytest.mark.req("FR-232")
-async def test_a_dangling_ref_fails_the_job_with_not_found(
+@pytest.mark.parametrize("route", ["diff", "cells"])
+@pytest.mark.parametrize("storage", ["rows", "parquet"])
+@pytest.mark.parametrize("kind", ["factor_ref", "banding_ref"])
+async def test_a_dangling_ref_is_a_synchronous_404_before_any_job(
     database: Database, workspace_id, principal, blob_store: BlobStore, grant,
-    api_client: TestClient,
+    api_client: TestClient, route: str, storage: str, kind: str,
 ) -> None:
+    """The maintainer's ruling ("S7: the ref 404 is synchronous"): an unresolved `factor_ref` or
+    `banding_ref` is a `404` naming the key and the ref BEFORE any Job, on both routes and both
+    storages; RL-1361's parquet "the Job fails with NOT_FOUND" clause is superseded."""
     await grant("analyst")
     actor = await _actuary(database, workspace_id)
     portfolio = await validated_portfolio(database, blob_store, workspace_id, actor)
-    slug = await _parquet_table(database, workspace_id, principal, blob_store)
+    slug = (
+        await _parquet_table(database, workspace_id, principal, blob_store)
+        if storage == "parquet"
+        else await _identity_table(database, workspace_id, principal, blob_store)
+    )
+    dangling = "factor:nowhere@7" if kind == "factor_ref" else "banding:nowhere@7"
     async with database.unit_of_work() as session:
         row = await session.scalar(
             select(RateTableRow).where(
@@ -812,24 +823,25 @@ async def test_a_dangling_ref_fails_the_job_with_not_found(
         ).scalars():
             definition = json.loads(json.dumps(version.definition))
             for key in definition["keys"]:
-                key["factor_ref"] = "factor:nowhere@7"
+                key.pop("factor_ref", None)
+                key[kind] = dangling
             await session.execute(
                 update(RateTableVersionRow)
                 .where(RateTableVersionRow.id == version.id)
                 .values(definition=definition)
             )
-    accepted = api_client.get(
-        f"/api/v1/rate-tables/{slug}@2/diff",
-        params={"against": "previous", "portfolio": str(portfolio)},
+    url = _diff_url(slug) if route == "diff" else _cells_url(slug)
+    before = await _job_count(database)
+    response = api_client.get(
+        url, params={"against": "previous", "portfolio": str(portfolio)},
         headers=_headers(principal.id, workspace_id),
     )
-    assert accepted.status_code == 202, accepted.text
-    job_id = UUID(accepted.json()["id"])
-    assert await execute_job(database, job_id, blob_store) is JobStatus.FAILED
-    row_job = await _job_row(database, job_id)
-    assert row_job.error is not None
-    assert row_job.error["code"] == "NOT_FOUND"
-    assert "driver_age_band" in row_job.error["message"]
+    assert response.status_code == 404, response.text
+    assert response.json()["code"] == "NOT_FOUND"
+    assert "driver_age_band" in response.json()["detail"]
+    assert dangling in response.json()["detail"]
+    assert await _job_count(database) == before  # no Job was created
+
 
 
 # --- the paged cells route (RL-1418 T1, T2; Acceptance 18) -----------------------------------
@@ -1484,3 +1496,63 @@ async def test_a_request_while_the_job_is_in_flight_gets_that_job_and_a_failed_j
     # Same key as the failed one is unreachable now (the portfolio is archived: a 409 before
     # any Job); the failed Job stays readable.
     assert (await _job_row(database, failed_id)).error is not None
+
+
+@pytest.mark.req("FR-231")
+@pytest.mark.req("FR-232")
+@pytest.mark.parametrize("route", ["diff", "cells"])
+@pytest.mark.parametrize(
+    ("label", "payload", "names", "never"),
+    [
+        ("zero-match", PORTFOLIO.replace(b",17-20,", b",SENTINEL-band-91c3,").replace(
+            b",21-24,", b",SENTINEL-band-91c3,").replace(b",25-29,", b",SENTINEL-band-91c3,"),
+         "no portfolio row maps", "SENTINEL-band-91c3"),
+        ("column-absent", PORTFOLIO.replace(b"driver_age_band", b"another_column"),
+         "driver_age_band", None),
+        ("negative-exposure", PORTFOLIO.replace(b"P2,q2,2.0,", b"P2,q2,-2.0,"),
+         "exposure_years", None),
+    ],
+    ids=["zero-match", "column-absent", "negative-exposure"],
+)
+async def test_a_portfolio_refusal_that_reads_the_content_is_the_jobs_validation_failed(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient, route: str, label: str, payload: bytes, names: str,
+    never: str | None,
+) -> None:
+    """RL-1361's content-dependent refusals (a missing column, a non-numeric banded column, a
+    negative or null exposure, a portfolio that maps to no cell, a Banding error policy) are the
+    Job's `VALIDATION_FAILED` now (the weights are computed in the Job, R1): the response is the
+    202, the Job's error names the key, the column or the count, and never a portfolio value
+    (NFR-499; the `FactorResolutionError` count and example are `RL-1361` item 3's)."""
+    await grant("analyst")
+    actor = await _actuary(database, workspace_id)
+    if label == "negative-exposure":
+        dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+        portfolio = await ingest_portfolio(
+            database, blob_store, workspace_id, actor, dataset_id, payload
+        )
+        from app.db.models import DatasetVersionRow
+
+        async with database.unit_of_work() as session:  # the exposure rule refuses it at validation
+            await session.execute(
+                update(DatasetVersionRow)
+                .where(DatasetVersionRow.id == portfolio)
+                .values(status="validated", validation_report_id=uuid4())
+            )
+    else:
+        portfolio = await validated_portfolio(database, blob_store, workspace_id, actor, payload)
+    slug = await _identity_table(database, workspace_id, principal, blob_store)
+    url = _diff_url(slug) if route == "diff" else _cells_url(slug)
+    accepted = api_client.get(
+        url, params={"against": "previous", "portfolio": str(portfolio)},
+        headers=_headers(principal.id, workspace_id),
+    )
+    assert accepted.status_code == 202, accepted.text
+    job_id = UUID(accepted.json()["id"])
+    assert await execute_job(database, job_id, blob_store) is JobStatus.FAILED
+    error = (await _job_row(database, job_id)).error
+    assert error is not None
+    assert error["code"] == "VALIDATION_FAILED"
+    assert names in error["message"]
+    if never is not None:
+        assert never not in error["message"]

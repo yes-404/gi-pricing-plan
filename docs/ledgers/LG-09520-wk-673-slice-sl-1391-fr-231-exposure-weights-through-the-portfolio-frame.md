@@ -539,6 +539,18 @@ the pricing-core rate-table tests 57; `ruff`, `mypy` and `generate-contracts --c
 `_diff_cells`' per-cell objects), so `svc.diff(…, portfolio None)` on this branch is not main's path. The lead upheld the
 literal-`origin/main` measurement for FD 9487's evidence.
 
+**The ref 404 is synchronous** (the maintainer, by delegation, relayed by the lead): an unresolved `factor_ref` or `banding_ref`
+is a `404` naming the key and the ref BEFORE any Job, on both routes and both storages, and `RL 9484` supersedes `RL-1361`'s
+parquet "the Job fails with NOT_FOUND" clause. Red: `test_a_dangling_ref_is_a_synchronous_404_before_any_job` (route x
+storage x ref kind, 8 cases) answered 202 and created a Job in each. Green: `_refuse_dangling_refs` runs
+`_key_artifacts` when a portfolio-weighted query has no artifact and no Job in flight, before the Job is submitted
+(a query that finds its artifact, or its Job, never reaches it; an unweighted query reads no ref). The other content-dependent
+refusals (a missing column, a negative exposure, a portfolio that maps to no cell, a Banding error policy) are the Job's
+`VALIDATION_FAILED`: `test_a_portfolio_refusal_that_reads_the_content_is_the_jobs_validation_failed` (both routes) asserts
+the code, that the message names the column or the count, and that a sentinel portfolio value never appears (NFR-499); these
+passed on first run, because the Job path already carried them, so they are pins. `test_a_resolution_error_reaches_the_failed_job_
+with_its_count_and_example` keeps `RL-1361` item 3's count and example. 49 tests pass in the file; `test_api_rate_tables.py` 46.
+
 ## PRs
 
 #1206, a draft, `SL-1391: Slice 7: FR-231's exposure weights through the portfolio frame (F-W10-2)`, head branch
