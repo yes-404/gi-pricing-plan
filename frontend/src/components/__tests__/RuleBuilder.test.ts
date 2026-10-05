@@ -27,7 +27,7 @@ const SEED: ValidationRule = {
 };
 
 let calls: string[] = [];
-/** POST bodies, in arrival order. Guarded on `init.body` because `submit` posts none. */
+/** POST bodies, in arrival order. Guarded on `init.body` (`submit` now posts the change summary). */
 let postedBodies: Record<string, unknown>[] = [];
 
 function stub(jobStatuses: string[] = ["succeeded"]): void {
@@ -69,6 +69,7 @@ afterEach(() => vi.unstubAllGlobals());
 async function fill(): Promise<void> {
   await userEvent.type(await screen.findByLabelText("Slug"), "driv-age");
   await userEvent.type(screen.getByLabelText("Column"), "driv_age");
+  await userEvent.type(screen.getByLabelText("Change summary"), "Floor the driver age at 18");
   await userEvent.clear(screen.getByLabelText("Parameters (JSON)"));
   await userEvent.type(screen.getByLabelText("Parameters (JSON)"), '{{"min_inclusive": 18}');
 }
@@ -87,6 +88,18 @@ describe("the rule builder", () => {
       "POST /validation-rules/rule-1/dry-run",
       "POST /validation-rules/rule-1/submit",
     ]);
+  });
+
+  it("posts the change summary with the submission and is disabled without one (FR-352)", async () => {
+    render(RuleBuilder, { props: { slug: "fremtpl2" } });
+    await fill();
+    const button = screen.getByRole("button", { name: /Author, dry-run and submit/ });
+    await userEvent.clear(screen.getByLabelText("Change summary"));
+    expect(button).toBeDisabled();
+    await userEvent.type(screen.getByLabelText("Change summary"), "Floor the driver age at 18");
+    await userEvent.click(button);
+    expect(await screen.findByText(/Submitted for approval/)).toBeInTheDocument();
+    expect(postedBodies.at(-1)).toEqual({ change_summary: "Floor the driver age at 18" });
   });
 
   it("does not submit a rule whose dry run failed", async () => {
@@ -116,6 +129,7 @@ describe("the rule builder", () => {
     await userEvent.type(await screen.findByLabelText("Slug"), "driv-age");
     await userEvent.clear(screen.getByLabelText("Parameters (JSON)"));
     await userEvent.type(screen.getByLabelText("Parameters (JSON)"), "min=18");
+    await userEvent.type(screen.getByLabelText("Change summary"), "Floor the driver age");
     await userEvent.click(screen.getByRole("button", { name: /Author, dry-run and submit/ }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/valid JSON/);
@@ -151,6 +165,7 @@ describe("the rule builder", () => {
     // The defect this guards is invisible on screen: the form renders identically whether
     // or not the field reaches the wire. Assert the posted body, never the rendering.
     render(RuleBuilder, { props: { slug: "fremtpl2", seed: SEED } });
+    await userEvent.type(await screen.findByLabelText("Change summary"), "Version the range");
     await userEvent.click(
       await screen.findByRole("button", { name: /Author, dry-run and submit/ }),
     );

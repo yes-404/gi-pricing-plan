@@ -1,7 +1,7 @@
 """The allowance sites write `approved` through the flag, and only while they enter it.
 
 WK-674 Slice 2a, PL-1303 Acceptance 7; RL-1301 A.4.5. Each site is run for real
-(`validation_rules.seed_builtin_rules`, `replace_rule_set`, `approve_rule`); with its entry
+(`validation_rules.seed_builtin_rules`, `replace_rule_set`); with its entry
 removed — `approval_decision()` made a no-op — the same write is refused by the database.
 `examples/fremtpl2/seed.py` imports the name directly and is held by the static literal in
 `test_approval_guard_static.py`.
@@ -153,24 +153,3 @@ async def test_replace_rule_set_writes_approved_only_through_its_entry(
             )
 
     _expect(await _outcome(work), is_entered, "replace_rule_set")
-
-
-@pytest.mark.req("FR-351")
-async def test_approve_rule_writes_approved_only_through_its_entry(
-    database: Database, workspace_id: Any, entered: Any
-) -> None:
-    approver = await _principal_with_role(database, workspace_id, "approver")
-    async with database.unit_of_work() as session:
-        rule = _rule(workspace_id, new_uuid7(), status="review", dry_run_report_id=new_uuid7())
-        session.add(rule)
-        await session.flush()
-        rule_id = rule.id
-    is_entered = entered()
-
-    async def work() -> None:
-        async with database.unit_of_work() as session:
-            await rule_service.approve_rule(
-                session, workspace_id=workspace_id, actor=approver, rule_id=rule_id
-            )
-
-    _expect(await _outcome(work), is_entered, "approve_rule")
