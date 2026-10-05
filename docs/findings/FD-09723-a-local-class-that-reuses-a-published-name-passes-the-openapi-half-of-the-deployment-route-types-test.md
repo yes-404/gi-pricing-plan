@@ -17,7 +17,7 @@ routing in `to-lead.md` ("(e3) goes to the next FD batch, owner WK-1178, severit
 `origin/main` = `47d770e8fcbd2410fa101019ed8cf3aae69a1baa`, the tree every figure below was measured on. The id
 is a working id until the lead mints it.
 
-**Severity: MEDIUM (provisional, the deputy's to confirm).**
+**Severity: LOW (the deputy's, `to-lead.md` "2026-10-05 09:44:39 BST — DISPATCH GO: FD-1356 fix …": "test hardening").**
 
 ## Finding
 
@@ -123,9 +123,9 @@ FD-1366). Proposed remedy, for the plan to decide:
 3. PL-1392 Acceptance 14's red-first sentence stays as filed: a filed plan is frozen at its date (CLAUDE.md §2), so the
    correction is a record (this finding and LG-1405's run B), not an edit of the plan.
 
-## Severity (proposed; provisional, the deputy's to confirm)
+## Severity (the deputy's)
 
-**MEDIUM (provisional).** A security-neutral test gap in a contract guard; the AST half and ruff F811 still
-catch the realistic arrangements, which argues for LOW. It is put at MEDIUM provisionally because the plan states
-a guarantee (two independent halves) that the test does not deliver, and the rule it enforces (CLAUDE.md §2) is
-one the repository treats as architecture. The deputy decides.
+**LOW**, set by the deputy on 2026-10-05: a contract-guard test gap; the AST half and ruff F811 still catch the
+realistic arrangements, so it is test hardening. This essay's earlier provisional MEDIUM is superseded. The
+point that the plan states a guarantee (two independent halves) the test does not deliver is the reason to
+harden it, not a reason for a higher severity.
