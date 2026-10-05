@@ -468,6 +468,45 @@ not measure, release `gate-1`, and report from the log. S7 may mint and merge on
 parquet and a rows-stored baseline at limit 50 with N of at least 10, under the START / GO MEASURE protocol, runs later on the
 lead's grant, after SL 1427's gate, and is ledgered then. The 18:56 figures above stay INVALID.
 
+### Task 8 — R1: every cells page from the stored artifact (the maintainer's ruling, option (A), inside this slice)
+
+**The measurement that raised it** (a quiet `gate-1` hold, 22:12:36 to 22:23:33 BST, head `386f4d54`, tree
+`1511ac46a4f5298a01cb65820bdcf559639b0046`, `OMP_NUM_THREADS=1`, service level, N=10 pages at limit 50, storage asserted
+rows at the default threshold): a rows pair's cells page, p50 / p99 in ms: 250 000 cells unweighted 9639 / 9848 (SQL load of
+both versions 5469 / 5710, `version_content_hash` x2 382 / 414, `diff_cells` 3971 / 4188); 250 000 weighted (a 678 000-row
+portfolio) 12241 / 12434 (the portfolio read and join alone 1568 / 1611); 100 000 unweighted 4104 / 4265. `07` §1.3 R1: "Any
+operation that can exceed 2 s returns `202` with a Job"; the worst p99 at 250k was 12 434 ms. These figures are the red for the
+latency limb of this task. State at the start 22:12:36 BST: load 0.77/0.80/0.62, 20 100 MB free, `pgrep` empty; at the end
+22:23:33 BST: load 1.54/1.59/1.17, 19 521 MB free, `pgrep` empty. (An earlier run at 18:56 BST and the 20:45 BST parquet / rows
+pair at 260 000 cells are recorded above; the 18:56 run is invalid.)
+
+**The ruling** (the maintainer, by delegation, `to-lead.md`, the entry headed "2026-10-05 22:25:03 BST — S7 R1 STOP: (C)
+REFUSED (it does not comply); (A) with the IDENTITY key, INSIDE S7, by an RL first; FD 9487 widened to the diff route"): (C) is
+refused, because the pages after its Job would still reload and hash every cell; (A) inside this slice: every cells page for a
+version pair is served from the stored artifact, the first request for a (versions, portfolio) key answers 202 with a Job,
+rows pairs too, and later pages read only their NDJSON slice; **the key is immutable version identity** (`slug@version` on each
+side and the portfolio Dataset Version id), found without loading or hashing a cell; no migration; the content-hash twin
+sharing is reversed, and the twin test is rewritten to assert distinct keys and identical content; spec first, by one RL (working
+id RL 9484) that amends `RL-1418` T1 / `03:933` and FR-232's "editor pages without a job"; FD 9487 widened to the diff route.
+This is the fifth plan deviation, recorded in the dispatch record's §(12).
+
+**Red** (`backend/tests/test_rate_table_diff_portfolio.py`, before the change): `test_a_rows_pair_answers_202_first_then_pages_
+from_its_artifact` failed with the first request answering 200 (the page computed in the request);
+`test_a_later_page_loads_no_cells` failed with a 500 `INTERNAL_ERROR` (the page reached the monkeypatched cell loader that
+raises `a cells page loaded cells`); `test_the_artifact_is_keyed_by_version_identity_so_twins_do_not_share` failed with 200 where
+202 was expected.
+
+**Green**: `cells_key(slug, current_version, baseline_version, portfolio)` is the identity key
+(`rate_table:diff_cells:<slug>@<v>:<slug>@<b>:<portfolio|none>`); `diff_cells_page` no longer branches on storage or hashes
+anything: it resolves the versions (and the portfolio checks), looks up the stored artifact by that key, and answers a page
+from it or reports that the Job is needed. The Job is unchanged (it carries the key and writes the NDJSON blob). The existing
+cells-route tests were updated to build the artifact first (a 202, the Job run, then pages); `test_a_resolution_error_reaches_
+the_failed_job_with_its_count_and_example` replaces the 422 test, because the weights are now computed in the Job: the refusal
+(`VALIDATION_FAILED`, with the count and example value `RL-1361` item 3 requires) is the Job's failure, not the response's.
+The contract is regenerated (the route's description). 38 passed in the file; `ruff`, `mypy`, `generate-contracts --check` clean.
+The 03 texts wait for the minted RL; the later-page p99 < 300 ms and the 250 000-cell first-request-202 measurement need the
+slot and wait for it.
+
 ## PRs
 
 #1206, a draft, `SL-1391: Slice 7: FR-231's exposure weights through the portfolio frame (F-W10-2)`, head branch

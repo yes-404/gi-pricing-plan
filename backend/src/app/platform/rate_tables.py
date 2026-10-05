@@ -544,18 +544,6 @@ class DiffCellsJobNeeded:
     key: str
 
 
-async def _content_hash(
-    session: Any, blob_store: BlobStore, version_row: RateTableVersionRow, table: RateTable
-) -> str:
-    """A version's content hash, the one `diff` keys its cache by (`RL-1361` item 5).
-
-    `version_content_hash` over the cells, whichever storage keeps them, so a rows version and
-    its parquet twin hash identically (FR-232): the cells artifact and the diff share one
-    identity, and storage never changes which artifact answers a query.
-    """
-    return version_content_hash(await _load_cells_of(session, version_row, table, blob_store))
-
-
 async def _all_cells(
     session: Any,
     blob_store: BlobStore,
@@ -657,38 +645,28 @@ async def diff_cells_page(
     """One cursor page of the diff's changed cells (FR-231, `RL-1418` T1).
 
     The `against` resolution and the portfolio checks (scope, then status) run first, before
-    any cell is read and before any Job. A rows pair is computed and cut in place. A parquet
-    pair is answered from the artifact a `rate_table.diff_cells` Job stored for this exact
-    query, or reports that the Job is needed (FR-232).
+    any Job. Every pair, whatever its storage, is answered from the artifact a
+    `rate_table.diff_cells` Job stored for this exact query, found by version identity without
+    loading a cell, or this reports that the Job is needed. So the first request for a
+    (versions, portfolio) key is a 202 and a later page reads only its slice (R1, `07` §1.3:
+    an operation that can exceed 2 s returns 202 with a Job).
     """
     async with database.unit_of_work() as session:
         table_row = await _load_table(session, workspace_id, slug)
         version_row = await _load_version(session, table_row.id, version, slug)
         baseline_number = await _resolve_baseline(session, table_row.id, version, against)
-        baseline_row = await _load_version(session, table_row.id, baseline_number, slug)
+        await _load_version(session, table_row.id, baseline_number, slug)  # a 404 if it is gone
         if portfolio_dataset_version_id is not None:
             await check_portfolio(
                 session, workspace_id=workspace_id, version_id=portfolio_dataset_version_id
             )
-        table = RateTable.model_validate(version_row.definition)
-        if version_row.storage == "parquet" or baseline_row.storage == "parquet":
-            key = cells_key(
-                await _content_hash(session, blob_store, version_row, table),
-                await _content_hash(session, blob_store, baseline_row, table),
-                definition_hash(table),
-                portfolio_dataset_version_id,
-                workspace_id,
-            )
-            stored = await _stored_cells(session, blob_store, workspace_id=workspace_id, key=key)
-            if stored is None:
-                return DiffCellsJobNeeded(key=key)
-            return _page(stored.splitlines(), limit, cursor)
-        cells = await _all_cells(
-            session, blob_store, workspace_id=workspace_id, version_row=version_row,
-            baseline_row=baseline_row, table=table,
-            portfolio_dataset_version_id=portfolio_dataset_version_id,
+        key = cells_key(
+            slug, version_row.version_number, baseline_number, portfolio_dataset_version_id
         )
-        return _page(cells, limit, cursor)
+        stored = await _stored_cells(session, blob_store, workspace_id=workspace_id, key=key)
+        if stored is None:
+            return DiffCellsJobNeeded(key=key)
+        return _page(stored.splitlines(), limit, cursor)
 
 
 async def diff_cells_artifact(

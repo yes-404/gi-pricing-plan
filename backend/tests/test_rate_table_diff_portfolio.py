@@ -892,11 +892,10 @@ async def test_diff_cells_gives_each_cells_change_and_weight_through_the_route(
     slug = await _identity_table(database, workspace_id, principal, blob_store)
     analyst = _headers(principal.id, workspace_id)
 
-    response = api_client.get(
-        _cells_url(slug), params={"against": "previous", "portfolio": str(portfolio)},
-        headers=analyst,
+    response = await _artifact(
+        database, blob_store, api_client, _cells_url(slug), analyst,
+        against="previous", portfolio=str(portfolio),
     )
-    assert response.status_code == 200, response.text
     body = response.json()
     assert body["next_cursor"] is None
     assert body["total_estimate"] == 2
@@ -914,7 +913,9 @@ async def test_diff_cells_gives_each_cells_change_and_weight_through_the_route(
     assert Decimal(second["weight"]) == D("2")
 
     # No portfolio: every weight is null.
-    plain = api_client.get(_cells_url(slug), params={"against": "previous"}, headers=analyst)
+    plain = await _artifact(
+        database, blob_store, api_client, _cells_url(slug), analyst, against="previous"
+    )
     assert [item["weight"] for item in plain.json()["items"]] == [None, None]
 
 
@@ -935,6 +936,9 @@ async def test_an_uplift_of_every_cell_is_served_in_full(
         f"/api/v1/rate-tables/{slug}@2/diff", params={"against": "previous"}, headers=analyst
     ).json()
     assert summary["changed_cells"] == MAX_LIMIT + 50
+    await _artifact(
+        database, blob_store, api_client, _cells_url(slug), analyst, against="previous"
+    )
     items = _all_pages(
         api_client, _cells_url(slug), analyst, against="previous", limit=str(MAX_LIMIT)
     )
@@ -954,6 +958,9 @@ async def test_the_pages_concatenate_in_key_order(
     await grant("analyst")
     slug = await _uplifted_table(database, workspace_id, principal, blob_store, ["9", "10", "2"])
     analyst = _headers(principal.id, workspace_id)
+    await _artifact(
+        database, blob_store, api_client, _cells_url(slug), analyst, against="previous"
+    )
     pages = _all_pages(api_client, _cells_url(slug), analyst, against="previous", limit="1")
     assert [item["key"]["driver_age_band"] for item in pages] == ["10", "2", "9"]
 
@@ -988,6 +995,7 @@ async def test_one_weights_map_feeds_summary_and_cells(
     summary = api_client.get(
         f"/api/v1/rate-tables/{slug}@2/diff", params=params, headers=analyst
     ).json()
+    await _artifact(database, blob_store, api_client, _cells_url(slug), analyst, **params)
     items = _all_pages(api_client, _cells_url(slug), analyst, **params)
 
     pairs = [
@@ -1003,7 +1011,7 @@ async def test_one_weights_map_feeds_summary_and_cells(
 
 
 @pytest.mark.req("FR-231")
-async def test_a_resolution_error_reaches_the_422_with_its_count_and_example(
+async def test_a_resolution_error_reaches_the_failed_job_with_its_count_and_example(
     database: Database, workspace_id, principal, blob_store: BlobStore, grant,
     api_client: TestClient,
 ) -> None:
@@ -1021,15 +1029,19 @@ async def test_a_resolution_error_reaches_the_422_with_its_count_and_example(
         database, workspace_id, principal, blob_store, factor="age_banded", family=family,
         v2=b"age_banded,relativity\n17-20,2.1120\n21-24,1.2690\n25-29,1.1200\n",
     )
-    response = api_client.get(
+    accepted = api_client.get(
         _cells_url(table), params={"against": "previous", "portfolio": str(portfolio)},
         headers=_headers(principal.id, workspace_id),
     )
-    assert response.status_code == 422, response.text
-    assert response.json()["code"] == "VALIDATION_FAILED"
-    detail = response.json()["detail"]
-    assert "1" in detail
-    assert "5" in detail
+    # The weights are computed in the Job, not in the request (R1): the refusal is its failure.
+    assert accepted.status_code == 202, accepted.text
+    job_id = UUID(accepted.json()["id"])
+    assert await execute_job(database, job_id, blob_store) is JobStatus.FAILED
+    row = await _job_row(database, job_id)
+    assert row.error is not None
+    assert row.error["code"] == "VALIDATION_FAILED"
+    assert "1" in row.error["message"]
+    assert "5" in row.error["message"]
 
 
 @pytest.mark.req("FR-231")
@@ -1042,6 +1054,9 @@ async def test_a_bad_cursor_is_400_and_a_bad_limit_is_422(
     await grant("analyst")
     slug = await _identity_table(database, workspace_id, principal, blob_store)
     analyst = _headers(principal.id, workspace_id)
+    await _artifact(
+        database, blob_store, api_client, _cells_url(slug), analyst, against="previous"
+    )
     for cursor in ("not-a-cursor!", encode_cursor(2), encode_cursor(10_000), encode_cursor(0)):
         response = api_client.get(
             _cells_url(slug), params={"against": "previous", "cursor": cursor}, headers=analyst
@@ -1090,7 +1105,7 @@ async def test_the_cells_route_refuses_before_anything_else(
     plain = api_client.get(
         _cells_url(slug), params={"against": "previous"}, headers=rating_only
     )
-    assert plain.status_code == (202 if storage == "parquet" else 200), plain.text
+    assert plain.status_code == 202, plain.text  # rows pairs too (R1)
 
 
 @pytest.mark.req("FR-231")
@@ -1119,7 +1134,7 @@ async def test_a_parquet_cells_request_runs_one_job_then_pages(
 
     paged = api_client.get(_cells_url(parquet), params=params, headers=analyst)
     assert paged.status_code == 200, paged.text
-    twin = api_client.get(_cells_url(rows), params=params, headers=analyst)
+    twin = await _artifact(database, blob_store, api_client, _cells_url(rows), analyst, **params)
     assert paged.json() == twin.json()
     assert len(paged.json()["items"]) == 2
 
@@ -1167,21 +1182,93 @@ async def test_a_cells_job_for_an_archived_portfolio_fails(
     assert row.error["code"] == "DATASET_NOT_VALIDATED"
 
 
+# --- (A): every cells page is served from the stored artifact, keyed by version identity -----
+# (the maintainer's ruling "2026-10-05 22:25:03 BST — S7 R1 STOP", dispatch §(12); R1 of 07 §1.3:
+# an operation that can exceed 2 s answers 202 with a Job)
+
+
+async def _artifact(
+    database: Database, blob_store: BlobStore, api_client: TestClient, url: str,
+    headers: dict[str, str], **params: str,
+) -> Any:
+    """The first 200 for this query: a 202 runs its Job to the end, then asks again."""
+    response = api_client.get(url, params=params, headers=headers)
+    if response.status_code == 202:
+        job_id = UUID(response.json()["id"])
+        assert await execute_job(database, job_id, blob_store) is JobStatus.SUCCEEDED
+        response = api_client.get(url, params=params, headers=headers)
+    assert response.status_code == 200, response.text
+    return response
+
+
 @pytest.mark.req("FR-231")
 @pytest.mark.req("FR-232")
-async def test_a_rows_version_and_its_parquet_twin_find_the_same_cells_artifact(
+async def test_a_rows_pair_answers_202_first_then_pages_from_its_artifact(
     database: Database, workspace_id, principal, blob_store: BlobStore, grant,
     api_client: TestClient,
 ) -> None:
-    """FR-232: storage never changes what a diff contains, so the cells artifact is keyed by
-    the cells (`version_content_hash`), not by how a version happens to be stored. Two tables
-    with the same cells and definition, one pair (rows, parquet) and one (parquet, parquet),
-    share one stored artifact: the second request is a 200, not a second Job."""
+    """R1: a rows pair is not served by computing every cell in the request. The first request
+    for a (versions, portfolio) key is a 202 with a `rate_table.diff_cells` Job, rows pairs too;
+    later pages read only their slice of the stored artifact."""
+    await grant("analyst")
+    slug = await _identity_table(database, workspace_id, principal, blob_store)
+    analyst = _headers(principal.id, workspace_id)
+    params = {"against": "previous"}
+
+    first = api_client.get(_cells_url(slug), params=params, headers=analyst)
+    assert first.status_code == 202, first.text
+    assert first.json()["kind"] == "rate_table.diff_cells"
+    assert first.headers["Location"] == f"/api/v1/jobs/{first.json()['id']}"
+    assert await execute_job(database, UUID(first.json()["id"]), blob_store) is JobStatus.SUCCEEDED
+
+    before = await _job_count(database)
+    page = api_client.get(_cells_url(slug), params=params, headers=analyst)
+    assert page.status_code == 200, page.text
+    assert [i["key"]["driver_age_band"] for i in page.json()["items"]] == ["17-20", "21-24"]
+    assert await _job_count(database) == before  # later pages create no Job
+
+
+@pytest.mark.req("FR-231")
+@pytest.mark.req("FR-232")
+async def test_a_later_page_loads_no_cells(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The artifact is found by identity, never by loading or hashing cells: with every cell
+    loader made to fail, a page still answers from the stored artifact."""
+    from app.platform import rate_tables as service
+
+    await grant("analyst")
+    slug = await _uplifted_table(
+        database, workspace_id, principal, blob_store, [f"L{i:03d}" for i in range(120)]
+    )
+    analyst = _headers(principal.id, workspace_id)
+    url = _cells_url(slug)
+    await _artifact(database, blob_store, api_client, url, analyst, against="previous")
+
+    def _boom(*args: Any, **kwargs: Any) -> Any:
+        raise AssertionError("a cells page loaded cells")
+
+    monkeypatch.setattr(service, "_load_cells", _boom)
+    monkeypatch.setattr(service, "_load_cells_of", _boom)
+    page = api_client.get(url, params={"against": "previous", "limit": "50"}, headers=analyst)
+    assert page.status_code == 200, page.text
+    assert len(page.json()["items"]) == 50
+
+
+@pytest.mark.req("FR-232")
+async def test_the_artifact_is_keyed_by_version_identity_so_twins_do_not_share(
+    database: Database, workspace_id, principal, blob_store: BlobStore, grant,
+    api_client: TestClient,
+) -> None:
+    """Twins (the same cells, one pair stored as rows and one as parquet, in two tables) are two
+    keys and so two Jobs, and each artifact has identical content: sharing is not a property
+    the key has (the identity key is not a content address)."""
     await grant("analyst")
     analyst = _headers(principal.id, workspace_id)
 
-    async def table(v1_parquet: bool) -> str:
-        await _set_threshold(database, workspace_id, 1 if v1_parquet else 250_000)
+    async def table(parquet: bool) -> str:
+        await _set_threshold(database, workspace_id, 1 if parquet else 250_000)
         family = f"mf-{uuid4().hex[:8]}"
         await _seed_approved_model(
             database, workspace_id, family, {"driver_age_band": _AGE_LEVELS}
@@ -1192,7 +1279,6 @@ async def test_a_rows_version_and_its_parquet_twin_find_the_same_cells_artifact(
             model_ref=ArtifactRef(type="model", slug=family, version=1),
             factor="driver_age_band", change_note="seed",
         )
-        await _set_threshold(database, workspace_id, 1)
         await svc.import_confirmed(
             database, workspace_id, principal.id, Settings(), blob_store, slug=slug,
             version=1, filename="v2.csv",
@@ -1201,15 +1287,17 @@ async def test_a_rows_version_and_its_parquet_twin_find_the_same_cells_artifact(
         await _set_threshold(database, workspace_id, 250_000)
         return slug
 
-    mixed = await table(v1_parquet=False)
-    both = await table(v1_parquet=True)
-    params = {"against": "previous"}
-
-    first = api_client.get(_cells_url(mixed), params=params, headers=analyst)
-    assert first.status_code == 202, first.text
-    assert await execute_job(database, UUID(first.json()["id"]), blob_store) is JobStatus.SUCCEEDED
-    before = await _job_count(database)
-    twin = api_client.get(_cells_url(both), params=params, headers=analyst)
-    assert twin.status_code == 200, twin.text
-    assert await _job_count(database) == before
-    assert twin.json() == api_client.get(_cells_url(mixed), params=params, headers=analyst).json()
+    rows_pair, parquet_pair = await table(False), await table(True)
+    pages = {}
+    keys = {}
+    for slug in (rows_pair, parquet_pair):
+        first = api_client.get(_cells_url(slug), params={"against": "previous"}, headers=analyst)
+        assert first.status_code == 202, (slug, first.text)  # no sharing: each pair builds its own
+        job_id = UUID(first.json()["id"])
+        assert await execute_job(database, job_id, blob_store) is JobStatus.SUCCEEDED
+        keys[slug] = (await _job_row(database, job_id)).parameters["key"]
+        pages[slug] = api_client.get(
+            _cells_url(slug), params={"against": "previous"}, headers=analyst
+        ).json()
+    assert keys[rows_pair] != keys[parquet_pair]
+    assert pages[rows_pair] == pages[parquet_pair]  # identical content

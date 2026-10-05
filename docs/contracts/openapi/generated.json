@@ -28023,7 +28023,7 @@
     },
     "/api/v1/rate-tables/{slug}@{version}/diff/cells": {
       "get": {
-        "description": "Every cell the diff counts as changed, in `03` §4.2's key order (FR-231, `RL-1418`).\n\n**200** with one cursor page: a page bounds one response, not the cells. **202** with a\n`rate_table.diff_cells` Job where either version is `storage: parquet` and this query's\ncell artifact is not yet stored (FR-232); the Job writes every changed cell as one blob,\nand the same request then answers 200 from it. `against` and `portfolio` are checked as on\nthe diff route, before any cell is read and before any Job. A cursor this API did not issue\nis a **400**, a `limit` out of range a **422**.",
+        "description": "Every cell the diff counts as changed, in `03` §4.2's key order (FR-231, `RL-1418`).\n\n**200** with one cursor page: a page bounds one response, not the cells. **202** with a\n`rate_table.diff_cells` Job, for either storage, where this query's cell artifact is not yet\nstored (R1: an operation that can exceed 2 s returns 202); the Job writes every changed cell\nas one blob, and the same request then answers 200 from it, reading only its slice. The\nartifact is found by the identity of the two versions and of the portfolio, without loading\na cell. `against` and `portfolio` are checked as on the diff route, before any Job. A cursor\nthis API did not issue is a **400**, a `limit` out of range a **422**.",
         "operationId": "rate_table_diff_cells_api_v1_rate_tables__slug___version__diff_cells_get",
         "parameters": [
           {

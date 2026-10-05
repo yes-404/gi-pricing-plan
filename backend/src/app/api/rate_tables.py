@@ -396,11 +396,12 @@ async def rate_table_diff_cells(
     """Every cell the diff counts as changed, in `03` §4.2's key order (FR-231, `RL-1418`).
 
     **200** with one cursor page: a page bounds one response, not the cells. **202** with a
-    `rate_table.diff_cells` Job where either version is `storage: parquet` and this query's
-    cell artifact is not yet stored (FR-232); the Job writes every changed cell as one blob,
-    and the same request then answers 200 from it. `against` and `portfolio` are checked as on
-    the diff route, before any cell is read and before any Job. A cursor this API did not issue
-    is a **400**, a `limit` out of range a **422**.
+    `rate_table.diff_cells` Job, for either storage, where this query's cell artifact is not yet
+    stored (R1: an operation that can exceed 2 s returns 202); the Job writes every changed cell
+    as one blob, and the same request then answers 200 from it, reading only its slice. The
+    artifact is found by the identity of the two versions and of the portfolio, without loading
+    a cell. `against` and `portfolio` are checked as on the diff route, before any Job. A cursor
+    this API did not issue is a **400**, a `limit` out of range a **422**.
     """
     baseline = _parse_against(against)
     if portfolio is not None:
