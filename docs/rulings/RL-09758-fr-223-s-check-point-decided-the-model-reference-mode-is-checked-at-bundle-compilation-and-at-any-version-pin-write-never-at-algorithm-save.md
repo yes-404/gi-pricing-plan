@@ -2,7 +2,7 @@
 id: RL-9758
 family: ruling
 title: FR-223's check point decided — the model reference mode is checked at bundle compilation and at any route that writes a version's pins, never at algorithm save; the spec's "save time" was wrong, and so was the code's error code
-status: draft                  # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
+status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
 created: 2026-10-01
 owner: decision-maker
 tree: 8bd782acbbdde8e3b4195b5a0acb89183b5a0253
@@ -120,7 +120,8 @@ and 2xx response under that rule.
 
 These are applied by **the slice that builds limb (2)** under `.claude/skills/spec-change`,
 in the same commit as the code that emits the code (`CLAUDE.md` §2). They are not applied in
-this commit. Placement was read at origin/main `1dd5e264`. Placeholders: `RL-<this>` is this
+this commit. Placement was read at origin/main `1dd5e264`, and re-read at main `ef5dc6e7` on
+2026-10-05: each find string below is found there exactly once. Placeholders: `RL-<this>` is this
 record's minted id, and `<date>` is the date of the applying commit. Nothing else in a text
 is a placeholder.
 
@@ -137,7 +138,9 @@ The text ends with ` |`, which replaces the cell's existing closing ` |`. So the
 string is `(`02` OQ-575, decided 2026-08-17.) |`, and it is replaced with
 `(`02` OQ-575, decided 2026-08-17.) ` followed by the block above.
 
-**T2 — `03` §5.1, the owned-code list.** Placement: `docs/specs/03-rating-engine.md:816`.
+**T2 — `03` §5.1, the owned-code list.** Placement: `docs/specs/03-rating-engine.md`, §5.1's
+paragraph that begins `**Error codes owned by this module:**` (`:928` at `ef5dc6e7`); the find
+string is on its `:934` (`:816` at `1dd5e264`).
 Replace the exact string
 
 ```text
@@ -224,3 +227,31 @@ refused under the wrong code or not refused at all.**
 - **F3.** Acceptance 1 now says how the red test is built when no route writes the mode:
   it sets the mode on the row or the schema directly, or tightens pricing-core's
   `test_rating_compile_bundle.py:234`.
+
+## Amendment, 2026-10-05: citations re-read at main `ef5dc6e7`, before mint
+
+Citation and currency update only. Nothing ruled above changes (decision-maker `dm-amend-2`,
+on the lead's brief of 2026-10-05 10:50 BST, which adopted the batch-2 triage).
+
+- **T2 is re-anchored by the paragraph, not the line.** The owned-code list moved
+  `03:816` → `:934`, inside the §5.1 paragraph that begins
+  `**Error codes owned by this module:**` (`:928`). T2's find string occurs there exactly
+  once. **T1's** FR-223 row is still `:109`, and its find string
+  `(`02` OQ-575, decided 2026-08-17.) |` occurs exactly once.
+- **Currency.** At `ef5dc6e7`, `MODEL_REFERENCE_MODE_INCONSISTENT` is still emitted nowhere
+  in `backend/src` or `packages` (`git grep`, no hits), so the Evidence's premise holds.
+- **The Evidence section is a dated reading at `1dd5e264`** and resolves there. It is not
+  rewritten. At `ef5dc6e7` its moved cites are: `03:816` → `:934` (above);
+  `check_model_reference_mode` `model_schema/rating.py:172-183` → `:173-184`, its `mode`
+  field `:302` → `:303`; `create_rating_version` `rating_versions.py:202-209` → `:230-237`,
+  `compile_rating_version` `:395` → `:423`, its `except ValueError` `:530-536` →
+  `:559-565`; the rating code registry `errors.py:300-315` → `:300-320`. FR-223 `03:109`,
+  `to_schema`'s read `rating_versions.py:110-115`, `compile.py:614`,
+  `rating_handlers.py:61`, `jobs.py:53`, `tasks.py:197`, `errors.py:297`,
+  `api/rating_algorithms.py:28` and `test_rating_compile_bundle.py:234` are unchanged.
+- **`status:` is `active`, not `draft`.** `document-ids.md` §1.2a gives a ruling the subset
+  `active`, `superseded`, `retired`, and `audit-docs.py` check 33 refused `draft`. The
+  working-id rulings of batch 1 (#977, #979) carry `active` in the same form.
+- `tree:` stays `8bd782ac`, the tree of `1dd5e264` that the Evidence was read at, as
+  `RL-1407` keeps its own evidence tree. `created:` changes at the mint. RL 9767, RL 9770
+  and FD 9759 are still working ids (#1055, #1060, #1059) and are cited as such.
