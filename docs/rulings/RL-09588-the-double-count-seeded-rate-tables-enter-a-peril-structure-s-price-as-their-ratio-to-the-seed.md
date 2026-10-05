@@ -75,6 +75,24 @@ git grep -n -i -E 'duplicate|same slug|one version per|by_slug' origin/main -- p
    version and its seed origin, both in `pins.rate_tables`) and one `expression` step. No new
    slice. An unedited table contributes exactly 1; an edited row moves the price by
    edited / seed (17-20: model × 1.84 / 1.92).
+   **The arithmetic is on Decimals, rounded once at the money step** *(added 2026-10-05
+   before the mint, on the maintainer's (by delegation) entry "2026-10-05 17:02:50 BST —
+   A-1/A-2 plans and batch 5 noted; the model_call ROUNDING is fixed IN A-2 by declared
+   result type, not worked around in A-3", `channel/to-lead.md`)*. At `137bc817`,
+   `pricing_core/rating/runtime.py:567` reads `value: int = round(prediction)`, which would
+   round a frequency prediction (about 0.07) to 0 before any ratio applied. That entry
+   rules it fixed at the root by A-2 (PL 9597, #1178), verbatim:
+
+```text
+RULING: A-2 (#1178 PL 9597) settles it at the ROOT, not A-3 by composing before rounding (that would leave every other model_call wrong). A model_call's output follows its step's DECLARED result type (03 FR-227): \`decimal\` → an exact Decimal, no integer rounding; \`money_minor\` → the step's declared rounding (FR-226); any other declared type → refused at save as a type mismatch. Red first: a frequency GLM model_call declared \`decimal\` returns ~0.07 (today: 0). A golden test against predict_glm at full precision. The docstring's "provisional" note is removed, citing this entry. A-3 composes frequency × severity on Decimals and rounds once, at the money step. dm-doublecount and dm-a34 are told: B1's ratio and A-3's composition sit on Decimal model outputs. If the planner finds a G2-independent reason to defer this, it comes to me; otherwise it is in A-2.
+```
+
+   So B1's composition is: the `model_call` output, declared `decimal`, is an exact
+   Decimal; the seed ratios (edited / seed, each cell a decimal string, FR-228) multiply it
+   as Decimals; and the product is rounded **once**, at the step that declares
+   `money_minor` with FR-226's rounding. No integer rounding happens before the ratios
+   apply. B1 therefore depends on A-2's change landing first; A-4 (PL 9593) states the
+   dependency.
 2. **Options A, C and D are refused**, for the reasons the decision gives: A breaks FR-247
    (a refit could never move the price; D7/D8 die); C is wrong for a GBM or a severity model;
    D is a silent mispricing.
@@ -166,7 +184,9 @@ The violation: **a seeded table's source-model effect entering the price twice, 
 that is not the model's.** A-4 shows each failing on deliberately broken input.
 
 - With every seeded table unedited, the `risk_premium_minor` output equals the Peril
-  Structure's own prediction for the row (the ratio product is exactly 1). With the ratio
+  Structure's own Decimal prediction for the row, rounded once with the money step's
+  declared rounding (the ratio product is exactly 1). With an integer rounding inserted
+  before the ratios, a frequency-scale test row fails. With the ratio
   replaced by the absolute pinned cell, the test fails.
 - With A3's edit (17-20: 1.92 → 1.84), the 17-20 row's risk premium equals the prediction
   × 1.84 / 1.92 and every other row equals the prediction.
