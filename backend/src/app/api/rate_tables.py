@@ -35,8 +35,7 @@ from app.platform.blobs import BlobStore
 from app.platform.diff_cache import DiffCache
 from model_schema import JobKind, Permission
 from model_schema.jobs import Job
-from model_schema.rating import RateTableDiff
-from model_schema.refs import ArtifactRef
+from model_schema.rating import RateTableDiff, RateTableVersion, SeedFromModelRequest
 
 __all__ = ["router"]
 
@@ -52,47 +51,6 @@ def _blob_store(request: Request) -> BlobStore:
 
 
 BlobStoreDep = Annotated[BlobStore, Depends(_blob_store)]
-
-
-def _seed_body(body: dict[str, Any]) -> tuple[ArtifactRef, str]:
-    """Validate the seed request body, returning the canonical model ref and change note.
-
-    The body is the raw JSON from 03 §4.2: `model_ref` is the canonical wire form
-    `model:slug@version` (ID-3), and `change_note` is required (FR-229).
-    """
-    raw_ref = body.get("model_ref")
-    if not isinstance(raw_ref, str):
-        raise PlatformError(
-            "VALIDATION_FAILED",
-            "Request validation failed",
-            422,
-            detail="model_ref must be the canonical artifact reference `model:slug@version`",
-        )
-    try:
-        ref = ArtifactRef.parse(raw_ref)
-    except ValueError as exc:
-        raise PlatformError(
-            "VALIDATION_FAILED",
-            "Request validation failed",
-            422,
-            detail=str(exc),
-        ) from exc
-    if ref.type != "model":
-        raise PlatformError(
-            "VALIDATION_FAILED",
-            "Request validation failed",
-            422,
-            detail="model_ref must reference a model artifact",
-        )
-    change_note = body.get("change_note")
-    if not isinstance(change_note, str) or not change_note.strip():
-        raise PlatformError(
-            "VALIDATION_FAILED",
-            "Request validation failed",
-            422,
-            detail="change_note is required and must be non-empty (FR-229)",
-        )
-    return ref, change_note.strip()
 
 
 def _parse_against(raw: str) -> str | int:
@@ -113,25 +71,30 @@ def _parse_against(raw: str) -> str | int:
     "/rate-tables/{slug}/seed-from-model",
     summary="Seed a rate table version from an approved model",
     status_code=status.HTTP_201_CREATED,
+    response_model=RateTableVersion,
     responses=problems(401, 403, 404, 409, 422),
 )
 async def seed_rate_table_from_model(
     slug: str,
-    body: dict[str, Any],
+    body: SeedFromModelRequest,
     caller: RatingWriteDep,
     database: DatabaseDep,
     settings: SettingsDep,
     blob_store: BlobStoreDep,
-) -> dict[str, Any]:
+) -> RateTableVersion:
     """**201** with the seeded version: its definition, rows, and `seeded_from` (FR-229).
 
-    The source model must be approved (PIN_NOT_APPROVED otherwise), and its relativities
-    must validate as a rate table (named `RATE_TABLE_*` codes, 03 §5.2). Storage is
-    decided against the workspace's cell-count threshold at creation and immutable with
-    the version (FR-232, DP2).
+    The body is a `SeedFromModelRequest`: `model_ref`, `factor` (the Factor's slug, a key of
+    the model's relativities) and `change_note`; an unknown field is refused. One seed
+    holds one Factor, bound by `factor_ref` to the Factor version the model pins (FR-230,
+    `RL-1361`). The source model must be approved (PIN_NOT_APPROVED otherwise); a Factor id
+    of the model that does not resolve is 404. A `factor` that names no relativity entry, a
+    Factor outside the factor slug grammar, and a re-seed of a lineage bound to another
+    Factor are 422 `VALIDATION_FAILED`; the relativities must validate as a rate table
+    (named `RATE_TABLE_*` codes, 03 §5.2). Storage is decided against the workspace's
+    cell-count threshold at creation and immutable with the version (FR-232, DP2).
     """
     assert caller.principal.id is not None
-    model_ref, change_note = _seed_body(body)
     version = await service.seed_from_model(
         database,
         caller.workspace_id,
@@ -139,10 +102,11 @@ async def seed_rate_table_from_model(
         settings,
         blob_store,
         slug=slug,
-        model_ref=model_ref,
-        change_note=change_note,
+        model_ref=body.model_ref,
+        factor=body.factor,
+        change_note=body.change_note,
     )
-    return version.model_dump(mode="json")
+    return version
 
 
 @router.post(

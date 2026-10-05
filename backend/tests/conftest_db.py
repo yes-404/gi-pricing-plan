@@ -345,7 +345,29 @@ def principal() -> Principal:
 #: re-enable. It needs superuser, which the compose and CI `gipricing` role has.
 #: `tenant_marker` is kept with `alembic_version`: it is the deployment's identity, written by
 #: a migration and never by a test, and every app startup refuses without it (FR-436).
-_EMPTY_THE_DATABASE = """
+#:
+#: **`environments` is truncated with the rest and its three seeds are put back** (WK-674
+#: Slice 2, PL-1392 Task 3): the migration seeds `dev`, `uat` and `prod`, every test that
+#: deploys or scores through a Deployment reads one of them, and nothing else re-creates them
+#: once a session has emptied the table. The tuple is the migration's own `SEEDS`, pinned equal
+#: by `test_migration_deployments.py`. The re-seed is skipped on a database one revision short
+#: of the table, so a stale template (FD-1218) still reports its own problem.
+ENVIRONMENT_SEEDS: tuple[tuple[str, str, int, str | None], ...] = (
+    ("dev", "Development", 1, None),
+    ("uat", "User acceptance", 2, "dev"),
+    ("prod", "Production", 3, "uat"),
+)
+
+
+def _environment_seed_values() -> str:
+    return ", ".join(
+        f"(gen_random_uuid(), '{slug}', '{name}', {order}, "
+        f"{'NULL' if prior is None else repr(prior)})"
+        for slug, name, order, prior in ENVIRONMENT_SEEDS
+    )
+
+
+_EMPTY_THE_DATABASE = f"""
 DO $$
 DECLARE stmt text;
 BEGIN
@@ -357,6 +379,10 @@ BEGIN
     FROM pg_tables
    WHERE schemaname = 'public' AND tablename NOT IN ('alembic_version', 'tenant_marker');
   EXECUTE stmt;
+  IF to_regclass('public.environments') IS NOT NULL THEN
+    INSERT INTO environments (id, slug, name, promotion_order, requires_prior_environment)
+    VALUES {_environment_seed_values()};
+  END IF;
 END $$;
 """
 

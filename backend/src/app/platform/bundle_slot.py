@@ -52,6 +52,11 @@ the shortcut RL-921 refuses. The hot-path shortcut RL-921 §2 does authorise
 hash against `get(content_hash)`, never `hash_for(ref)` — see that function's own
 docstring.
 
+**Corrected 2026-10-04 (RL-1379):** a compile is now refused unless the version is
+`draft`, so a non-draft ref's hash no longer moves; a draft ref's still does, and draft
+versions are scoreable (`03` §5.1, `/score/compare`), so the degradation-only rule above
+stands.
+
 **What this deliberately does not have: refresh, poll, pub/sub, or an environment
 pointer.** All four are WK-674's (RL-882 clause 4, and RL-876 before it). A slot that
 acquires any of them has overridden the ruling.
