@@ -12,16 +12,16 @@ relates: [WK-1178]
 
 # FD-9644 — `braces` 3.0.3 (GHSA-vfj7-8cjw-p6xm), dev-only, accepted until a patched version publishes
 
-**Working id 9644; the mint replaces it.** Ordered by the deputy's entry headed
+**Working id 9644; the mint replaces it.** Ordered by the maintainer's (by delegation) entry headed
 "2026-10-05 13:36:07 BST — braces: no patched release exists; OPTION (C), accepted dev-only risk; Dependabot itself is the watch"
 (`to-lead.md`, a local channel file, so cited by its header).
 
 ## Finding
 
-**Severity: LOW** (the deputy's option (C)); **owner WK-1178**; **decision: accepted until a
+**Severity: LOW** (the maintainer's (by delegation) option (C)); **owner WK-1178**; **decision: accepted until a
 patched `braces` publishes.** `braces` 3.0.3 has GHSA-vfj7-8cjw-p6xm (advisory severity HIGH,
 a stack-exhaustion denial of service through deeply nested patterns). The advisory's
-affected range is `introduced 0 … last_affected 3.0.3` with no fixed event (OSV, per the deputy's entry).
+affected range is `introduced 0 … last_affected 3.0.3` with no fixed event (OSV, per the maintainer's (by delegation) entry).
 
 ## Why LOW
 
@@ -44,8 +44,8 @@ ignores `package.json` `pnpm.overrides`, so an override would not apply.
 
 ## Disposition
 
-Owner **WK-1178**. **Severity: LOW** (the deputy's option (C)). **Decision: accepted until a
-patched `braces` publishes** (the deputy, 2026-10-05 13:36:07 BST); the lead gives the
+Owner **WK-1178**. **Severity: LOW** (the maintainer's (by delegation) option (C)). **Decision: accepted until a
+patched `braces` publishes** (the maintainer (by delegation), 2026-10-05 13:36:07 BST); the lead gives the
 verdict. Event that closes it: Dependabot's security PR for a fixed `braces` merges.
 
 ## Watch and closure

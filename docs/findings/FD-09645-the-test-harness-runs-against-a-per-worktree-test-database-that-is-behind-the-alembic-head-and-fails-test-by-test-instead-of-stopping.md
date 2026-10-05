@@ -14,7 +14,7 @@ relates: [WK-1178, SL-1409]
 
 **Working id 9645; the mint replaces it.** Every locator below was read at `origin/main`
 `83ea5090`, except the gate log, which is a run artefact (`~/.claude/jobs/6cad77f9/tmp/gatelogs/p.txt`, a local file, so cited by path).
-Ordered by the deputy's entry headed
+Ordered by the maintainer's (by delegation) entry headed
 "2026-10-05 14:09:21 BST — SL-1409 gate RED (124 failed): probable cause is the per-worktree TEST DB one migration behind the branch head; verify, upgrade, re-run (not a slice fix); unfreeze main now", item 4
 (`to-lead.md`, a local channel file, so cited by its header).
 
@@ -39,7 +39,7 @@ E   asyncpg.exceptions.UndefinedColumnError: column "bound_symbols" of relation 
 ```
 (the second line is `:263` of the same log; `bound_symbols` occurs on 514 lines of it.)
 
-The deputy's 14:10:08 BST entry grouped the 124: **121 are this fault**, 3 are real slice
+The maintainer's (by delegation) 14:10:08 BST entry grouped the 124: **121 are this fault**, 3 are real slice
 defects. The per-worktree database `gipricing_sl-1409_8f3bb0b4` stood at `c4a81f6d2e95`;
 the branch heads at `e5b7d9f1a3c6` (`backend/migrations/versions/e5b7d9f1a3c6_custom_objective_expression_storage.py`,
 `down_revision "c4a81f6d2e95"`). The branch gained that migration when it merged main
