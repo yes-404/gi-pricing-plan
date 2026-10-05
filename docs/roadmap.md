@@ -1434,6 +1434,42 @@ relates: [FD-1356, RL-1301, PL-1306, SL-1256, RL-1407, PL-1408]
 `FD-1356`'s fix (HIGH): rule approval goes through `approvals.submit` and `approvals.decide`, `_carry_to_the_artifact` gains the validation-rule branch, and the direct approve route becomes a thin client of the decide path or is removed (DP-1). A quorum of 2 leaves the rule in `review` after one approval. A dry-run whose outcome is `error` is refused at submit and at approve, one red-first case per cause (missing column, unknown check, missing table), and a `fail` outcome stays accepted. `RL-1301` A.4.5's temporary `approve_rule` allowance is removed red first. Rule approvals that no approval request backs are reset to `review`, with the count recorded (follow-on 2). Task 0 is the maintainer's containment query over every `gipricing*` database, with a STOP on a non-zero result; it printed 5 at planning time. The maintainer decided DP-0 as (c): export the rows, drop the scratch database, re-run. The re-run printed 0 on 2026-10-01, to be re-confirmed at dispatch. The remedies of FD-1415 (an approved rule's dry run cannot be replaced) and FD-1414 (a Rule Set runs only approved, existing members) also ride in this slice, as the maintainer decided. RL-1407 rules the plan's decision points and these remedies. Leaf plan PL-1408 (`active`). **Activation needs:** WK-674 S2 (`SL-1256`) merged (the maintainer, 2026-10-01 ~10:10 BST, order (b) S2 → this fix); lane B order `SL-1360` → the FD-1357 fix → this slice → the `RL-1343` decimal fix → FD-1335 Part A; the plan's decision points ruled; the maintainer's agreement and the lead's go in a separate activation PR. *(Filed 2026-10-01 under working ids 9761 (this row) and 9762 (the plan), reserved by the lead. Minted 2026-10-04 as SL-1409; its plan is PL-1408 and its ruling RL-1407.)*
 (Activated 2026-10-05 as the WK-1178 FD-1356 fix slice, on the maintainer's GO check, "2026-10-05 09:44:39 BST — DISPATCH GO: FD-1356 fix (SL-1409 / PL-1408) on lane B, option (b); executor-1409 starts once the `__all__` registry amendment merges (or once WK-690 S3 merges, if that comes first)"; dispatch record DISPATCH-WK-1178-SL1409-2026-10-04.)
 
+#### SL-9626 — WK-1178 exit-demo slice (a) — the real freMTPL2 rating algorithm in the seed
+
+```yaml
+id: SL-9626
+family: slice
+title: WK-1178 exit-demo slice (a) — the real freMTPL2 rating algorithm in the seed
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 809a3794af6d3a6ba688663b0d9b59f951190680
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1371, FD-1209, FD-1357, SL-1377, FD-1374, RL-1343, RL-1361]
+```
+
+The Exit demo row's first scope item, "the real freMTPL2 rating algorithm in the seed": the seed's Rating Version is priced from the approved freMTPL2 GLM through its seeded rate tables, replacing the `demo-fixture-motor` algorithm (`payable = premium_in * 2`, `examples/fremtpl2/model.py:_demo_algorithm`). One algorithm definition serves the seed and exit-demo slice (b). Every declared output is `money_minor` (no decimal output until the `RL-1343` fix merges). Acceptance includes "every step's reads ⊆ its declared consumes" (FD-1374's interim guard) and the re-run of PL 9776's Spike S1 harness on the algorithm. It discharges FD-1209's algorithm half. PL-1371 §3.8 row 6 and §7; WK-1178 by `PL-1371` DP-1 (a). Leaf plan PL 9624 (working id), `draft`: three decision points are open (how the three continuous factors are rated, the base rate, and how the reads check is instrumented). **Activation needs:** the FD-1357 fix (`SL-1377`) closed, which it is; PL 9624's decision points ruled; PL 9776's Spike S1 filed; the lead's go. *(Cut 2026-10-05 by the planner under `PL-1371` Task 3, on the lead's order, under working id 9626, reserved by the lead.)*
+
+#### SL-9625 — WK-1178 exit-demo slice (b) — the scripted `WF-699` journey over HTTP, ending in a served page
+
+```yaml
+id: SL-9625
+family: slice
+title: WK-1178 exit-demo slice (b) — the scripted WF-699 journey over HTTP, ending in a served page
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 809a3794af6d3a6ba688663b0d9b59f951190680
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1371, FD-1209, FD-1244, FD-1245, FD-1356, FD-1411, FD-1416, SL-1256, SL-1390, SL-1409]
+```
+
+The Exit demo row's journey: ONE command runs `WF-699` Phases A to E and its deploy step over HTTP on the freMTPL2 seed, with A1–A2 (seed-from-model) on every rateable factor of the 7-factor GLM, and ends with the frontend serving a 200 page, plus the journey test that cites `WF-699` by id. The form of G2 is the maintainer's ruling, by delegation, recorded as RL 9623 (working id), which mints before this slice's plan. PL-1371 §3.8 row 7 and §7; WK-1178 by `PL-1371` DP-1 (a). Leaf plan PL 9629 (working id), `draft`. **Activation needs:** exit-demo slice (a) (SL 9626, working id) merged; WK-673 S3–S6 (`SL-1387`–`SL-1390`) and S7 (`SL-1391`) merged; WK-674 S2 (`SL-1256`) closed, which it is; the FD-1356 fix (`SL-1409`) merged; the FD 9708 fix (PL 9683), the FD 9707 fix (PL 9688) and the FR-240 family fix (PL 9649) merged; FD-1416 fixed; FD 9717 (working id, #1125) minted with an owner for the seed record's pre-flight; FD-1244 and FD-1245 ruled; PL 9629's DP-6 ruled; the lead's go. The journey's `/score` step is the one PL 9728's acceptance covers (FD-1411). *(Cut 2026-10-05 by the planner under `PL-1371` Task 3, on the lead's order, under working id 9625, reserved by the lead.)*
+
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
