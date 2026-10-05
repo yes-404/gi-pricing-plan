@@ -827,6 +827,23 @@ relates: [PL-1267, RL-1361, RL-1375]
 
 The weight limb of FR-231: the rate-table diff shows the exposure weight behind each cell, from a portfolio Dataset Version. `03` §5.1's diff route gains the portfolio parameter and the refusal `RL-1361` settles (DP-5); the portfolio frame aggregated to Σ exposure per cell key in Polars and passed as `weights`, on the 202 path too; negative tests for an absent key column, an unweighted diff that says so, and a hand-computed weighted mean; register row `FR-231 (F-W10-2)` discharged on merge. `PL-1267` Slice 7. Starts after Slice 2 closes and runs before Slice 3, one slice at a time; unblocks WK-675 Slice 5. Per the maintainer's acceptance of `PL-1267` (the 17:53:43 BST entry above), condition 1: `RL-1375` DP-1 (a2) applies, so the FD-1357 slice `SL-1377` merges first and this slice never runs concurrently with it (shared `RateTableKey`, `operations.py`, the `rate_tables` routes); its leaf plan also carries FD-1358 (the per-cell weight display) as `RL-1361` §F placed it.
 
+#### SL 9647 (working id) — WK-673 fix slice — the FR-240 family: model approval and compile refuse an unapproved custom objective or a control-intent factor
+
+```yaml
+id: SL-9647
+family: slice
+title: WK-673 fix slice — the FR-240 family: model approval and compile refuse an unapproved custom objective or a control-intent factor
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 83ea509023d6d705d6f78fe74b7124fdf1375739
+phase: P2
+work: WK-673
+corrected_by: []
+relates: [RL-1263, SL-1409, PL-1408]
+```
+
+The fix for FD 9697 and FD 9659 (working ids; HIGH, a G2 blocker before the P2 exit demo, the deputy 2026-10-05 13:38:03 and 14:12:13 BST). (a) The root: model approval refuses a model whose custom objective is not `approved` (`02` R4, `06` FR-359), as a computed flag `custom_objective_not_approved` refused by `ARTIFACT_FLAGGED` (DP-1). (b) `compile_bundle` follows each pinned model's own custom objective and refuses one not approved or better with `PIN_NOT_APPROVED` (FR-240's "transitively reachable", DP-2), so an objective deprecated after its model's approval is caught. (c) Seed and compile refuse a `control`-intent Factor with `CONTROL_FACTOR_IN_RATEABLE_PATH`, registered by this slice (FR-88, DP-3, DP-4). (d) The direct custom-objective pin refusal gains its negative test, proven on broken input. Each is red first, by its cause. Leaf plan PL 9649 (working id, `draft`). **Activation needs:** FD 9697 and FD 9659 minted; a ruling record carrying DP-1 to DP-6 and texts T1 to T3; the plan made `active` by a dated line; the first free build lane under the deputy's 13:12:56 BST priority rule, serialised with the FD 9707 fix (PL 9688) on `compile.py`; Task 0's exposure counts read at dispatch; the dispatch GO. *(Filed 2026-10-05 under working ids 9647 (this row) and 9649 (the plan), reserved by the lead.)*
 
 ### WK-674 — Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires**
 
