@@ -1,0 +1,486 @@
+---
+id: PL-9590
+family: plan
+kind: leaf
+title: WK-673 Slice 5 — the approval gate, part one, structural_diff, FR-257 limb (2), FR-224: leaf plan
+status: draft                  # draft → active → superseded | retired (§1.2a)
+created: 2026-10-05
+owner: planner
+tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8
+phase: P2
+work: WK-673
+slice: SL-1389
+supersedes: []
+superseded_by: ~
+corrected_by: []
+relates: [SL-1389, PL-1267, PL-1371, RL-1184, RL-1263, RL-1264, RL-881, SL-1256, SL-1388, SL-1390]
+---
+
+# PL 9590 (working id) — WK-673 Slice 5: the approval gate, part one — `structural_diff`, FR-257 limb (2), FR-224: leaf plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
+> or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`)
+> syntax for tracking. The executor is spawned from `.claude/roles/executor.md` and also
+> binds `test-driven-development` (every task is red first), `python-package` and
+> `contract-schema` (Tasks 2 and 5: `model-schema` shape changes), `python-test`
+> (requirement markers that name the limb, negative tests), `spec-change` (Task 1),
+> `fastapi-service`, `dev-commands` (the two-half gate) and `git-hygiene`. Read
+> [`README.md`](README.md)'s five unchecked conventions before the first step.
+
+Filed under working id **9590**, reserved by the lead and named in the lead's brief
+`~/gi-pricing-plan.local/handover/brief-prep-wave-2026-10-05.md`, section AQ (written for
+planner-673s46). Drafted from 17:01:31 BST (`TZ=Europe/London date`) on 2026-10-05 against
+origin/main `137bc817ef1fb40ea57e9053e0ad40b73bdff3a8`. Every locator below was read at that
+tree unless another tree or a branch head is named. Unminted records are cited by working id
+and kept out of `relates:` (check 32): PL 9591 (WK-673 Slice 4, draft #1176, head
+`ac8221ec`), PL 9689 (Slice 3, #1138), PL 9688 (the FD 9707 fix, WK-673, #1145, head
+`2f3269c8`), PL 9683 (the FD 9708 fix, WK-1178, #1140, head `f18549bb`), PL 9649 (the FR-240
+family fix, WK-673, #1152), PL 9616 (the FD-1416 fix, #1168, head `0b60c81b`), PL 9629 (the
+exit-demo plan, #1164, head `68dd997c`), RL 9614 (FD-1244 and FD-1245, #1167, head
+`b71f0da2`), RL 9607 (PL 9616's ruling), RL 9620 (the RL-1263 amendment, #1162).
+
+## Goal
+
+Make `submit_for_review` (`backend/src/app/platform/rating_versions.py:278`) enforce three
+more things before it opens the Approval Request: **`structural_diff`** — FR-219's diff
+computed at submission, persisted as a content-addressed blob into
+`RatingVersionEvidence.structural_diff_blob`, with a verifier for the kind (`06` FR-364's
+2026-09-28 amendment, `RL-1184` E4); **FR-257 limb (2)** — a Dislocation Run (Slice 4's row)
+whose candidate is this version at its current bundle hash and whose baseline is the current
+live version, refused with `EVIDENCE_INCOMPLETE` otherwise; and **FR-224** — for an
+`approximation`-mode version, a Dislocation Run whose baseline is the same version in `exact`
+mode, inside the threshold on the `rating_version` `ApprovalPolicyEntry` (`RL-1264` DP-3 (b)),
+never read from Settings, with FR-136's fidelity statement as the cheap pre-check.
+
+**Architecture.** The gate stays a sequence of direct checks in `submit_for_review`, after
+`_regression_run_gate` (`:317`) and before `approvals.submit` (`:327`), each writing its
+evidence id into `row.evidence` as `:322-326` does. Slice 6 replaces the direct checks with
+the `effective_evidence` floor loop; this slice writes each check as a function Slice 6's
+`verifiable` map can call. The threshold is a `model-schema` field, generated to
+`docs/contracts/`.
+
+**Tech stack.** Python 3.12, Pydantic v2, SQLAlchemy 2 async, Polars. No new dependency.
+
+**Spec.** [`03-rating-engine.md`](../specs/03-rating-engine.md) FR-219 (`:88`), FR-223 and
+FR-224 (`:109-110`, in §3.2, not §3.1 as `PL-1267`'s scope table says), FR-238 (`:135`),
+FR-257 (`:174`), §4.6 (`:514`); [`02-modelling.md`](../specs/02-modelling.md) FR-136
+(`:195`); [`06-governance.md`](../specs/06-governance.md) FR-364 (`:145`, the 2026-09-28
+amendment) and §4.2 (`:344`); `RL-1264` (DP-3 (b), and its negative test).
+
+## Status
+
+`draft`. **Five decision points are open** (§"Decision points"), each the decision-maker's
+and blocking. The plan moves to `active` only through a separate activation PR, after every
+need below holds.
+
+### Activation needs, in order
+
+1. **This plan is merged, minted and made `active` by a dated line.**
+2. **`SL-1388` (Slice 4) is closed.** This slice reads its `DislocationRunRow` and
+   `fetch_run`, edits its `dislocation.run` handler (DP-S5-4) and its `POST` validation
+   (DP-S5-3), and uses its `WorkspaceResolver` (PL 9591 Task 3). Where Slice 4's merged code
+   differs from this plan, the merged code governs and the dispatch record names each
+   difference.
+3. **`SL-1256` (WK-674 Slice 2) is closed** — met at `137bc817` (`docs/roadmap.md`, the
+   `SL-1256` row, `status: closed`). Premise j of `PL-1267`: nothing is `live` without its
+   Deployment record.
+4. **A ruling on DP-S5-1 to DP-S5-5** is merged and minted, adopting or amending the texts
+   in §"Appendix". An unminted ruling is a stop.
+5. **RL 9614 (working id, #1167) is minted.** Its DP-2 (a) keeps FR-257's gate at
+   `POST /rating-versions/{id}/submit` (FD-1245); this slice builds there. If the minted text
+   moves the gate, the slice follows it (`PL-1267` Slice 5).
+6. **The lane is free under `RL-1263`** as RL 9620 amends it, with the same-Work conditions
+   in the dispatch record (§"Contention").
+7. **The maintainer's dispatch GO**, and the lead's go in a separate activation PR.
+
+## Acceptance Standard
+
+Each item is a named test or command a fresh reviewer can re-run, in the executor's own
+worktree, against `origin/main...HEAD`. Every test is shown red before its code exists, and
+the ledger quotes the red by its cause (README convention 2). `S` is
+`backend/tests/test_rating_versions.py`; `G` is the new `backend/tests/test_rating_version_dislocation_gate.py`;
+`M` is `packages/model-schema/tests/test_approvals.py`.
+
+1. **`structural_diff` is persisted at submission.** `G::test_submission_persists_the_structural_diff_as_a_blob`:
+   after a successful submit, `row.evidence["structural_diff_blob"]` names a stored blob whose
+   bytes are `AlgorithmDiff.model_dump_json()` of the ruled baseline's algorithm against this
+   version's (DP-S5-1), and `structural_diff_verified(row)` returns `True`.
+2. **FR-257 limb (2) refuses**, each a named test with `@pytest.mark.req("FR-257")` and a
+   docstring naming limb (2) only (the register row's requirement):
+   `G::test_limb_2_refuses_with_no_dislocation_run`,
+   `G::test_limb_2_refuses_a_run_on_a_stale_candidate_bundle_hash`,
+   `G::test_limb_2_refuses_a_run_whose_baseline_is_not_the_current_live_version`. Each answers
+   422 `EVIDENCE_INCOMPLETE` whose `detail` names the limb and the reason; a 422 with another
+   code or reason is a plan defect.
+3. **FR-257 limb (2) accepts the right run** and records it:
+   `G::test_limb_2_accepts_a_run_against_the_live_version_and_records_it`:
+   `row.evidence["dislocation_run_id"]` equals the run's id.
+4. **The first-version case** follows DP-S5-1's ruling:
+   `G::test_limb_2_with_nothing_live_<ruled behaviour>`.
+5. **FR-224 refuses above the threshold**, naming the quantile and the observed deviation
+   (`03:110`): `G::test_fr224_refuses_an_approximation_version_above_the_threshold`;
+   `G::test_fr224_refuses_an_approximation_version_with_no_exact_baseline_run`; and
+   `G::test_fr224_accepts_inside_the_threshold_and_records_the_figures`. An `exact`-mode version
+   is untouched: `G::test_fr224_does_not_apply_to_an_exact_mode_version`.
+6. **The threshold is never read from Settings** (`RL-1264`'s named violation, this slice's):
+   `G::test_fr224_threshold_ignores_environment_variables`: with
+   `GIP_APPROVAL_DEVIATION_THRESHOLD` and every `GIP_`-prefixed variable a Settings field
+   could map to set to a permissive value, a version above the policy's threshold is still
+   refused. Shown red on a deliberately broken gate that reads the threshold from
+   `load_settings()` (`backend/src/app/config.py:270`), scratch-reverted.
+7. **The threshold field is validated.** `M::test_the_deviation_threshold_is_only_on_rating_version_entries`
+   and `M::test_the_deviation_threshold_bounds` (the ruled shape, DP-S5-2).
+8. **FR-136's pre-check runs first** (DP-S5-5): `G::test_fr136_precheck_refuses_before_any_run`
+   (the ruled refusal, at the ruled place).
+9. **Every new refusal surfaces before `approvals.submit`**: no Approval Request row exists after
+   any refusal in items 2, 4–6 and 8 (asserted in each test).
+10. **The existing gate is unchanged.** `uv run pytest backend/tests/test_rating_versions.py
+    backend/tests/test_regression_runs.py -q` passes, with existing submit tests given the
+    evidence they now need through one shared fixture (named in the ledger), not by weakening
+    any assertion.
+11. **Contracts.** `uv run python scripts/generate-contracts.py --check` exits 0;
+    `uv run pytest backend/tests/test_contracts.py -q` passes.
+12. **The two-half gate** passes on the slice head, and the four docs checks with their rc and
+    summary lines quoted.
+13. **The slice closes on the maintainer's MERGE-ACK and a clean audit** (`PL-1267`
+    Acceptance 8).
+
+## Global Constraints
+
+- **Money is integer minor units** (`CLAUDE.md` §7). The deviation is a **percentage** (a
+  derived view, `PL-1267` Global Constraints), compared to a percentage threshold; no money
+  figure is a float.
+- **The threshold lives on the `rating_version` `ApprovalPolicyEntry`, never in Settings**
+  (`RL-1264` DP-3 (b)): no code path from `load_settings()`, `workspace_settings` or an
+  environment variable reaches it.
+- **Nobody hand-writes a shape `model-schema` owns** (`CLAUDE.md` §2): the field, the
+  evidence additions and any `DislocationSpec` change are `model-schema` changes, generated.
+- **`submit_for_review`'s refusals fail closed** (R4): a check that cannot decide refuses.
+- **Requirement markers name the limb** for FR-257 (`PL-1267` Acceptance 2).
+- **No new permission.** The existing `rating:submit` check (`rating_versions.py:297`) governs
+  every new check (`PL-1267` Global Constraints).
+
+## Scope
+
+### Requirement coverage, each id individually
+
+| Id | Where | What this slice builds | Task |
+|---|---|---|---|
+| FR-364 (`06`) | `06:145`, 2026-09-28 amendment | `structural_diff` persisted at submission and its verifier | 2 |
+| FR-219 | `03:88` | the diff "attached to the approval request" (as evidence) | 2 |
+| FR-257 limb (2) | `03:174` | a Dislocation Run against the current live version over an agreed portfolio | 3 |
+| FR-224 | `03:110` | the `approximation`-mode gate, its threshold on the policy entry, FR-136 first | 4, 5 |
+| FR-136 (`02`) | `02:195` | its statement as the pre-check, surfaced, never the gate | 4 |
+
+**Not in scope:** the floor wiring (`effective_evidence("rating_version")`), Slice 6;
+FR-257 limbs (1), (3), (4) (`PL-1267` Scope); FR-242's drafted change summary (see
+§"Needs this slice serves").
+
+### Premises read at `137bc817`
+
+| # | Premise | At `137bc817` | Status |
+|---|---|---|---|
+| a | The submit sequence | `submit_for_review` (`rating_versions.py:278`): permission `:297`, load `:303`, `DRAFT` only `:306-312`, `_golden_quote_gate` `:314`, `_regression_run_gate` `:317`, evidence written `:322-326`, `approvals.submit` `:327`, status `REVIEW` `:334-335` | reproduces |
+| b | The refusal helper | `_evidence_incomplete(ref, why)` (`:687-689`): `PlatformError("EVIDENCE_INCOMPLETE", "Required evidence is missing", 422, f"{ref}: {why}.")` | reproduces |
+| c | The evidence fields exist | `RatingVersionEvidence` (`model_schema/rating.py:119`): `dislocation_run_id: UUID \| None` (`:125`), `structural_diff_blob: str \| None` (`:127`) | reproduces |
+| d | The diff | `diff_algorithms(old, new) -> AlgorithmDiff` (`model_schema/rating.py:571`); Slice 3 adds `input_contract_deltas` and `output_deltas` (PL 9689 DP-S3-2 (a)) | reproduces |
+| e | No threshold field | `ApprovalPolicyEntry` (`model_schema/approvals.py:125`): `artifact_type`, `approvers_required`, `approver_roles`, `environment`, `evidence`, `skippable_predecessors` (validator `:147`) | reproduces (`RL-1264` premise note) |
+| f | No public live resolution | `_live_by_environment` (`backend/src/app/platform/environments.py:67`) is private; `DeploymentRow.rating_version_ref` (`db/models.py:2490`) | reproduces; Task 3 adds a public reader |
+| g | `live` is per Environment | FR-238 (`03:135`): "the same Rating Version can be `live` in `uat` and not in `prod`"; FR-257 does not name an Environment | reproduces; DP-S5-1 |
+| h | No production marker on an Environment | `Environment` (`model_schema/deployments.py:55`): `slug`, `name`, `predecessor`, `retired_at`; `DEFAULT_POLICY`'s `deployment` entry names `environment="prod"` (`approvals.py:354-360`) | reproduces; DP-S5-1 |
+| i | The mode | `ModelReferenceMode = Literal["exact", "approximation"]` (`rating.py:135`); `RatingVersion.model_reference_mode` (`:164`); Slice 3 refuses a mode difference inside `derive_changes` (PL 9689 DP-S3-9 (a)) | reproduces; `attribute` is not used for FR-224's run (DP-S5-3) |
+| j | The fidelity statement is prose | `fidelity_statement(...) -> str` (`pricing_core/modelling/transparency.py:550`); its numbers (`r_squared`, `deviance_explained`) are on `GlmApproximation` | reproduces; DP-S5-5 |
+| k | The run's figures | `DislocationRun` (`model_schema/dislocation.py:116`) holds bands and totals, no per-policy quantile | reproduces; DP-S5-4 |
+| l | Settings' prefix | `Settings` (`backend/src/app/config.py:88`), `env_prefix="GIP_"` (`:96`) | reproduces; Acceptance 6 |
+
+### Risks
+
+- **Existing submit tests lack the new evidence.** Every test that submits a version now
+  needs a Dislocation Run and a live version or the DP-S5-1 fallback. One shared fixture,
+  added in Task 3, supplies them (Acceptance 10).
+- **The exit-demo journey depends on the ruled first-version behaviour.** PL 9629's E3 ("the
+  first submission is refused: the dislocation run is stale") and E4 need a run against a
+  baseline. If nothing is live in the demo's `prod` at E2, DP-S5-1's ruling decides what the
+  demo must seed.
+
+## Write set, and its contention (`RL-1263`, RL 9620)
+
+Classes as in PL 9591 §"Write set" (`docs/process/delivery-process.core.json`
+`guards.parallelism.build_slices_across_works.no_shared_files`).
+
+### By file and symbol, at `137bc817`
+
+| Path | Symbol or region | Change |
+|---|---|---|
+| `docs/specs/03-rating-engine.md` | FR-224 row `:110` (§3.2); FR-257 row `:174` (§3.8); §4.6 (a dated note, DP-S5-3 and DP-S5-4) | the ruled texts |
+| `docs/specs/06-governance.md` | §4.2 (`:344-…`): the threshold field's dated note; the `rating_version` entry's example | the ruled texts |
+| `packages/model-schema/src/model_schema/approvals.py` | `ApprovalPolicyEntry` (`:125-164`), its validator; `DEFAULT_POLICY`'s `rating_version` entry (`:344-349`) | one field + its rule; the default |
+| `packages/model-schema/src/model_schema/rating.py` | `RatingVersionEvidence` (`:119-132`) | the FR-224 record (DP-S5-4) |
+| `packages/model-schema/src/model_schema/dislocation.py` | `DislocationSpec` (`:35`), `DislocationRun` (`:116`) | DP-S5-3 (a) and DP-S5-4 (b) fields |
+| `backend/src/app/platform/rating_versions.py` | `submit_for_review` (`:278-338`); new `_structural_diff_gate`, `_dislocation_gate`, `_approximation_gate`, `structural_diff_verified`, `dislocation_run_verified` | edited; added |
+| `backend/src/app/platform/environments.py` | new public `live_rating_version_ref(session, *, workspace_id, environment_slug) -> str \| None`, beside `_live_by_environment` (`:67`) | added |
+| `backend/src/app/platform/dislocation_runs.py` (Slice 4) | new `latest_run_for(session, *, workspace_id, candidate_ref, candidate_bundle_hash, baseline_ref)` | added |
+| `backend/src/app/worker/dislocation_handlers.py` (Slice 4) | `_dislocation_run`: the exact-mode baseline (DP-S5-3) and the quantiles (DP-S5-4) | edited |
+| `backend/src/app/api/dislocation_runs.py` (Slice 4) | `POST`'s validation (DP-S5-3, DP-S5-5) | edited |
+| `docs/contracts/` generated files | regenerated | |
+| `backend/tests/test_rating_version_dislocation_gate.py` | new | Acceptance 1–9 |
+| `backend/tests/test_rating_versions.py`, `backend/tests/conftest.py` or the module's fixture file | the shared fixture (Acceptance 10) | edited |
+| `packages/model-schema/tests/test_approvals.py` | new tests | Acceptance 7 |
+| `docs/ledgers/LG-<n>-…md`; `docs/INDEX.md` | added; regenerated | |
+
+**Not written:** `packages/pricing-core/`; `backend/src/app/platform/approvals.py`;
+`backend/src/app/errors.py` (`EVIDENCE_INCOMPLETE` exists, `:285`); `_regression_run_gate`
+(Slice 6 moves its call); permissions.
+
+### Contention
+
+| Path | This slice | Other slice | Shared existing definition? | Class |
+|---|---|---|---|---|
+| Slice 4's files (`dislocation_runs.py`, `dislocation_handlers.py`, `api/dislocation_runs.py`) | edits | **SL-1388** (PL 9591, WK-673) | plan dependency: consumes Slice 4's output | **SERIAL** (activation need 2) |
+| `dislocation.py`, `03` §4.6 | DP-S5-3, DP-S5-4 | **SL-1387** (PL 9689) | serial through Slice 4 | serial |
+| `03` §3.2 | FR-224 `:110` | **PL 9688** (the FD 9707 fix, **WK-673**, SL 9685): FR-221 `:107`; **PL 9683** (WK-1178) under its DP-1 (a): FR-223 `:109` | **yes**: one section, hunks one to three lines apart | **SERIALISES** with each (`forbidden`: the same spec section; the hunks are adjacent, so the option-(b) non-adjacency condition cannot hold). For PL 9688 (same Work) RL 9620 (a) fails, so the pair is serial |
+| `03` §3.8 | FR-257 `:174` | none found | — | none |
+| `model_schema/approvals.py` | `ApprovalPolicyEntry`, `DEFAULT_POLICY` | **PL 9616** (the FD-1416 fix, WK-1178): `ApprovalRequest` (`:405-431`), and `ApprovalDecision` (`:394-402`) only under its DP-5/DP-1 | no (different classes) | **ALLOWED one-sided**, the dispatch record naming the path and the check `git diff -U0 origin/main...<branch> -- packages/model-schema/src/model_schema/approvals.py` (hunks: this slice inside `:125-164` and `:344-349`; PL 9616 inside `:394-431`); the second merges main and re-gates |
+| `model_schema/rating.py` | `RatingVersionEvidence` (`:119-132`) | PL 9683 (`RatingVersionCreate` after `:170`), PL 9610 (`Pins` `:65-78`, `SubGraphRef`, `AlgorithmDiff`), PL 9609, PL 9713 (`RatingAlgorithm`), PL 9716 (`RateTableDiff`) | no (different classes) | **ALLOWED one-sided**, named with the same `git diff -U0` check per pair |
+| `platform/rating_versions.py` | `submit_for_review` and new private gates | **PL 9649** (WK-673): `_Resolver` (moved by Slice 4); **PL 9683**: `create_rating_version` (`:230-275`); **PL 9610**: `_Resolver` | no (different functions) | **ALLOWED one-sided**, named in the dispatch record with the `git diff -U0` check; for PL 9649 (same Work) RL 9620 (b) holds (neither consumes the other's output: this slice reads no compile behaviour PL 9649 changes) and is named both ways |
+| `06` §4.2 | the threshold note, the example | **RL 9607** (PL 9616's ruling): `06` `:67`, `:483`, `:640`; **RL 9614** T3: `06` §5.1 `:558` | no (other sections) | none |
+| `backend/tests/test_rating_versions.py` | the shared fixture used by existing submit tests | **PL 9683** adds tests to its create path; **PL 9616** asserts on approval responses | possibly the same module | **other shared path**: appends only, named in the dispatch record |
+| generated files, `docs/INDEX.md` | regenerated | every shape-changing slice | — | exempt |
+
+**Same-Work pairs, RL 9620 condition 2, both ways.** With **SL-1388**: consumes its output →
+serial. With **SL-1390** (Slice 6): Slice 6 consumes this slice's gates → serial after it.
+With **PL 9688**: `03` §3.2 SERIALISES → serial. With **PL 9649**: (a) every shared path is
+one-sided or exempt, and (b) no plan dependency either way; they may run at once if the
+dispatch record names both.
+
+### Size
+
+About two executor days: three gates, two `model-schema` shape changes, one handler and one
+route edit, and the fixture work for the existing submit tests.
+
+## Needs this slice serves (PL 9629 #1164, its step table)
+
+| Need | Step | What this slice provides |
+|---|---|---|
+| G2, PL 9629 activation need 5 | E3 the first submission is refused: the dislocation run is stale → 422 `EVIDENCE_INCOMPLETE` | Task 3 (limb (2)'s stale-hash refusal) |
+| G2, need 5 | E4 re-run dislocation, resubmit → accepted | Task 3 |
+| G2, need 5 (with need 6) | E9 the evidence ids on the decision | Tasks 2, 3 (the ids written to `row.evidence`) |
+| G1 | WK-673 resolved | this slice |
+
+**PL 9629's need 5 also names E1, "change summary drafted from the structural and rate
+diffs"** (`03` FR-242's draft). Neither `SL-1389`'s row nor `PL-1267` Slice 5 scopes FR-242,
+and FR-242 was verdicted delivered in WK-669 (`CR-838`) for its required summary; its
+drafting half is not this slice's. This plan does not add it (a scope change is the
+maintainer's); it is reported to the lead with PR #1176's report.
+
+## Decision points
+
+Rows of kind "decision point" are the decision-maker's, resolved in one ruling that also
+adopts or amends the Appendix texts. The slice may not move `draft → active` while any is open.
+
+| # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
+|---|---|---|---|---|---|---|
+| DP-S5-1 | **Which version is "the current live version" (FR-257), and what when nothing is live?** `live` is per Environment (premise g) and no Environment is marked production (premise h). The structural diff (FR-219, "between two algorithm versions") needs a baseline too | (a) A new `dislocation_baseline_environment` field on the `rating_version` policy entry, default `"prod"` (the slug `DEFAULT_POLICY`'s `deployment` entry already uses); the live version there is the baseline; **with nothing live there**, the most recently approved other version of the same algorithm (`_baseline`, `rating_versions.py:704`, the golden-quote precedent) is the baseline; with neither (a first version), limb (2) is satisfied by recording `"no_baseline": "first_version"` on the evidence and the structural diff is taken against an empty algorithm. (b) Literally the Environment with slug `prod`; nothing live → refused. (c) The last Environment in the predecessor chain; nothing live → refused | **(a).** (b) and (c) refuse every first version for ever: nothing can be live before it is approved and deployed. (a)'s fallback reuses the approved-baseline rule the golden-quote gate already applies, and records the first-version case rather than hiding it. FR-257 gains a dated clarification (P1). The structural diff uses the same baseline, so the approver reads one comparison | decision point | yes — Tasks 2, 3 | open |
+| DP-S5-2 | **The threshold's shape and default** (FR-224: "a maximum absolute percentage deviation at a declared portfolio quantile") | (a) `approximation_deviation: {quantile: Decimal, max_abs_change_pct: Decimal} \| None` on `ApprovalPolicyEntry`, allowed only on `rating_version` entries, `0 < quantile ≤ 1`, `max_abs_change_pct ≥ 0`; `DEFAULT_POLICY` sets `{quantile: 0.99, max_abs_change_pct: 1.0}`; an entry with `None` refuses every `approximation`-mode submission (fail closed). (b) as (a) with no default (every workspace must declare one). (c) two flat fields | **(a)**, and the default figures are an **actuarial choice the ruling must state or replace**: 1 % at the 99th percentile is offered as a starting point, not derived. `None` fails closed so a workspace cannot opt out by omission | decision point | yes — Task 5 | open |
+| DP-S5-3 | **How is FR-224's "same version in `exact` mode" run produced?** `DislocationSpec` names two refs; `attribute` refuses a mode difference (premise i) | (a) `DislocationSpec` gains `baseline_mode_override: Literal["exact"] \| None`, valid only when `baseline_ref == candidate_ref`; the handler compiles an ephemeral `exact`-mode bundle of the same version through `WorkspaceResolver` (FR-1398's ephemeral rules: never a row); attribution is not run for such a spec. (b) The analyst creates a real second Rating Version in `exact` mode with identical pins; the gate checks the baseline's `algorithm_ref` and `pins` equal the candidate's and its mode is `exact`. (c) Submission runs it synchronously | **(a)**, as `PL-1267` Slice 5 says ("built by DP-1's mechanism with `model_reference_mode` set to `exact`"). (b) needs no shape change but leaves an `exact` twin in every version list. (c) puts a portfolio pass on a request thread | decision point | yes — Task 4 | open |
+| DP-S5-4 | **Where does the observed deviation live?** The run has bands, not a per-policy quantile (premise k) | (a) `DislocationRun` gains `abs_change_pct_quantiles: dict[str, float]` for a fixed set (`"0.5"`, `"0.9"`, `"0.95"`, `"0.99"`, `"0.999"`, `"1"`), computed by the handler from the policy frame; the policy's `quantile` must be one of them (validated at `PUT /approval-policy`). (b) the handler persists the per-policy change frame as a quote-input blob and the gate computes any quantile at submission. (c) the gate re-runs the comparison | **(a).** The figure is on the citable artifact the approver reads (FR-265), the gate reads one number, and no per-policy frame is kept. (b) adds a second quote-input blob for one number | decision point | yes — Tasks 4, 5 | open |
+| DP-S5-5 | **What does FR-136's pre-check refuse, and where?** "The cheap pre-check that runs first … a plainly poor surrogate is refused before a portfolio run is spent" (`03:110`); the statement is prose (premise j) | (a) At `POST /dislocation-runs` with `baseline_mode_override`, and again at submission: every model the version references in `approximation` mode has a transparency artifact **with a GLM approximation** (the statement is not the "No GLM approximation was built" case), else 422 `EVIDENCE_INCOMPLETE` naming the model; the statement is copied onto the evidence for the approver. (b) (a) plus an `r_squared` floor on the policy entry. (c) No refusal; surface only | **(a).** A model with no approximation cannot be rated in `approximation` mode at all (FR-133), so refusing it before the run is the "plainly poor" case with no new threshold. (b) adds a second actuarial figure with no spec basis | decision point | yes — Task 4 | open |
+
+## Tasks
+
+### Task 0: Preconditions (no code)
+
+**Files:** the slice ledger `docs/ledgers/LG-<working id>-….md` (the executor's).
+
+- [ ] **Step 1:** Confirm each activation need at the dispatch tree
+  (`git -C <worktree> log -1 --format='%H %aI' origin/main`; `SL-1388` and `SL-1256`
+  `closed`; the DP ruling and RL 9614 resolve by minted id; this plan `active`).
+- [ ] **Step 2:** `uv sync --all-packages`.
+- [ ] **Step 3:** Contention, re-run and recorded, as PL 9591 Task 0 Step 3, plus
+  `git diff -U0 origin/main...origin/<branch> -- docs/specs/03-rating-engine.md` for any
+  active slice: a hunk inside §3.2 (`:90-114` at `137bc817`) is a stop.
+- [ ] **Step 4:** Copy the ruling's texts and Slice 4's merged signatures (`DislocationRunRow`,
+  `fetch_run`, `WorkspaceResolver`, the handler's steps) into the ledger with line numbers.
+- [ ] **Step 5:** Baseline `uv run pytest backend/tests/test_rating_versions.py
+  backend/tests/test_dislocation_runs.py packages/model-schema/tests/test_approvals.py -q` and
+  the four docs checks; record rc and the summary lines.
+
+### Task 1: Spec — the ruled texts
+
+**Files:** `docs/specs/03-rating-engine.md` (FR-224 `:110`, FR-257 `:174`, §4.6);
+`docs/specs/06-governance.md` (§4.2).
+
+- [ ] **Step 1:** Apply the ruling's texts verbatim from the ledger copy; re-count each find
+  string with `grep -cF` (1 each).
+- [ ] **Step 2:** `python3 scripts/audit-docs.py` (only check 31 may fail while ids are working
+  ids).
+- [ ] **Step 3: Commit** `docs(specs): FR-224's threshold, FR-257's baseline, §4.2's field (SL-1389)`.
+
+### Task 2: `structural_diff` persisted, with its verifier (FR-364 E4)
+
+**Files:**
+- Modify: `backend/src/app/platform/rating_versions.py` (`submit_for_review`; new `_structural_diff_gate`, `structural_diff_verified`)
+- Test: `backend/tests/test_rating_version_dislocation_gate.py` (new)
+
+**Interfaces:**
+- Produces: `async def _structural_diff_gate(session, *, workspace_id: UUID, row: RatingVersionRow, baseline: RatingVersionRow | None, blob_store: BlobStore) -> str`
+  (the blob's sha256), computing `diff_algorithms(baseline_algorithm or <empty>, candidate_algorithm)`
+  and storing `model_dump_json()` bytes as `application/json`.
+- Produces: `def structural_diff_verified(row: RatingVersionRow) -> bool` — the evidence names a
+  blob digest (Slice 6's `verifiable` entry).
+- Consumes: the baseline from Task 3's `_dislocation_baseline` (Task 3 is written first if the
+  executor prefers; the two share it).
+
+`submit_for_review` takes no `BlobStore` today. Pass one in from the route (as the compile and
+regression routes obtain theirs; mirror `models.py`'s `submit_rating_version`, `:1198`, route at `:1189`), and
+make it keyword-only with no default: a caller that forgets it fails at once (fail closed).
+
+- [ ] **Step 1: Write the failing test** — Acceptance 1.
+- [ ] **Step 2:** Run it. Expected: FAIL on `row.evidence["structural_diff_blob"]`, a
+  `KeyError` (nothing writes it). A failure earlier in the submit (another gate refusing) is a
+  fixture defect: give the version its regression run as `test_rating_versions.py` does.
+- [ ] **Step 3:** Implement; write the digest into `row.evidence` beside the existing keys
+  (`:322-326`).
+- [ ] **Step 4:** Run (PASS).
+- [ ] **Step 5: Commit** `feat(rating): persist FR-219's structural diff at submission (06 FR-364 E4)`.
+
+### Task 3: FR-257 limb (2)
+
+**Files:**
+- Modify: `backend/src/app/platform/environments.py` (new `live_rating_version_ref`)
+- Modify: `backend/src/app/platform/dislocation_runs.py` (new `latest_run_for`)
+- Modify: `backend/src/app/platform/rating_versions.py` (new `_dislocation_baseline`, `_dislocation_gate`, `dislocation_run_verified`)
+- Modify: the existing submit tests' shared fixture (Acceptance 10)
+- Test: `backend/tests/test_rating_version_dislocation_gate.py`
+
+**Interfaces:**
+- Produces: `async def live_rating_version_ref(session, *, workspace_id: UUID, environment_slug: str) -> str | None`
+  (from `_live_by_environment`, `environments.py:67`).
+- Produces: `async def _dislocation_baseline(session, *, workspace_id, row, policy) -> tuple[str | None, str]`
+  — the baseline ref and the reason (`"live:<env>"`, `"approved"`, `"first_version"`), per DP-S5-1.
+- Produces: `async def _dislocation_gate(...) -> UUID | None` — the run id, or `None` only in the
+  first-version case, refusing with `_evidence_incomplete(ref, "FR-257 limb (2): …")` otherwise.
+- Produces: `def dislocation_run_verified(row) -> bool` (Slice 6's `verifiable` entry).
+
+The check, in order: the latest run (`latest_run_for`) whose `candidate_ref` is this version,
+whose `candidate_bundle_hash` equals the version's compiled bundle hash, and whose
+`baseline_ref` equals the baseline; refuse naming which of the three failed (no run; stale hash;
+wrong baseline). The run's portfolio is recorded on the evidence; "an agreed portfolio" is
+the approvers' judgement at review, not a check.
+
+- [ ] **Step 1: Write the failing tests** — Acceptance 2, 3, 4 and 9 (for limb (2)).
+- [ ] **Step 2:** Run them. Expected: the three refusal tests FAIL because the submission
+  **succeeds** (201/200, the request opened); the acceptance test FAILS on
+  `row.evidence["dislocation_run_id"]` (`KeyError`). Any other first failure is a plan defect.
+- [ ] **Step 3:** Implement; insert the call after `_regression_run_gate` (`:317`).
+- [ ] **Step 4:** Give the existing submit tests their evidence through one shared fixture;
+  run Acceptance 10 (PASS, no assertion weakened; the ledger lists every test the fixture now
+  serves).
+- [ ] **Step 5: Commit** `feat(rating): FR-257 limb (2), a Dislocation Run against the live version`.
+
+### Task 4: FR-224's run and its pre-check (DP-S5-3, DP-S5-4, DP-S5-5)
+
+**Files:**
+- Modify: `packages/model-schema/src/model_schema/dislocation.py` (`DislocationSpec.baseline_mode_override`; `DislocationRun.abs_change_pct_quantiles`)
+- Modify: `backend/src/app/worker/dislocation_handlers.py`, `backend/src/app/api/dislocation_runs.py`
+- Test: `packages/model-schema/tests/test_dislocation.py`; `backend/tests/test_dislocation_runs.py`; `backend/tests/test_rating_version_dislocation_gate.py`
+
+- [ ] **Step 1: Write the failing tests** — a spec with `baseline_mode_override="exact"` and
+  `baseline_ref != candidate_ref` refused by `DislocationSpec` (`ValidationError` naming the
+  field); the handler, given such a spec, persists a run whose baseline bundle hash differs
+  from the candidate's and writes **no** `rating_versions` row; `abs_change_pct_quantiles`
+  holds the six keys and `"1"` equals the largest absolute change; Acceptance 8.
+- [ ] **Step 2:** Run them. Expected: `ValidationError` for an unknown field on the first
+  (`extra="forbid"`), proving the field is absent; the others fail on the missing field.
+- [ ] **Step 3:** Implement the two fields, the handler's ephemeral `exact` compile (an
+  in-memory `RatingVersion` copy with `model_reference_mode="exact"`, compiled through
+  `WorkspaceResolver`, never persisted), the quantiles (Polars, from the policy frame, null
+  when no policy is quoted in both), and the pre-check at `POST`.
+- [ ] **Step 4:** `uv run python scripts/generate-contracts.py`; run the tests (PASS) and
+  `backend/tests/test_contracts.py` (the authored `dislocation-run.schema.json` gains the two
+  fields by the governing path at this tree, which Slice 4 made generated-and-compared; a
+  disagreement is a stop).
+- [ ] **Step 5: Commit** `feat(dislocation): FR-224's exact-mode baseline run and its quantiles`.
+
+### Task 5: FR-224's gate and the threshold field (DP-S5-2)
+
+**Files:**
+- Modify: `packages/model-schema/src/model_schema/approvals.py` (`ApprovalPolicyEntry`, its validator, `DEFAULT_POLICY`)
+- Modify: `packages/model-schema/src/model_schema/rating.py` (`RatingVersionEvidence`: `approximation_check`)
+- Modify: `backend/src/app/platform/rating_versions.py` (new `_approximation_gate`)
+- Test: `packages/model-schema/tests/test_approvals.py`; `backend/tests/test_rating_version_dislocation_gate.py`
+
+**Interfaces:** Produces `ApprovalPolicyEntry.approximation_deviation` (DP-S5-2's shape) and
+`RatingVersionEvidence.approximation_check: ApproximationCheck | None` with
+`dislocation_run_id`, `quantile`, `observed_abs_change_pct`, `max_abs_change_pct`,
+`fidelity_statements`.
+
+- [ ] **Step 1: Write the failing tests** — Acceptance 5, 6 and 7.
+- [ ] **Step 2:** Run them. Expected: `ValidationError` (unknown field) for Acceptance 7;
+  Acceptance 5's refusal tests FAIL because the submission succeeds.
+- [ ] **Step 3:** Implement; the gate reads the threshold only from
+  `(await approvals.policy_for(session, workspace_id))` (`platform/approvals.py:166`), the
+  `rating_version` entry; it runs only when `row.model_reference_mode == "approximation"`.
+  The refusal's `why` names the quantile, the observed figure and the threshold.
+- [ ] **Step 4:** Acceptance 6's broken-input proof: make the gate read the threshold from
+  `load_settings()`; the test must fail naming the accepted submission; revert; quote both.
+- [ ] **Step 5:** Regenerate the contracts; run the tests (PASS).
+- [ ] **Step 6: Commit** `feat(rating): FR-224's approximation gate, its threshold on the policy entry (RL-1264 DP-3)`.
+
+### Task 6: The gate and the ledger
+
+- [ ] **Step 1:** The full two-half gate (`dev-commands`); `generate-contracts.py --check`;
+  the four docs checks; `req-coverage.py` (FR-224, FR-257 and `06` FR-364 each listed with a
+  test in `G`). Quote every rc and summary line with the tree.
+- [ ] **Step 2:** The ledger: Task 0's records, every red quoted by its cause, Acceptance
+  1–13 with evidence, and `RL-1264`'s environment-variable violation discharged by name.
+
+## Hand-off
+
+The executor works in its own worktree on a branch from origin/main after `SL-1388` merges.
+The slice closes on a clean audit and the lead's merge. **Slice 6 (`SL-1390`) inherits:**
+`structural_diff_verified`, `dislocation_run_verified` and the direct gates it replaces with
+the `effective_evidence("rating_version")` loop; the existing `_regression_run_gate` call
+(`:317`) it also folds in.
+
+## Appendix — proposed texts (for the ruling to adopt, amend or reject)
+
+### P1 — `03` FR-257 (`:174`), appended at the row's end (DP-S5-1 (a))
+
+```markdown
+*(Clarified <date>, WK-673 Slice 5, RL-<n>.)* "The current live version" is the Rating Version live in the Environment the `rating_version` approval policy entry names in `dislocation_baseline_environment` (default `prod`, `06` §4.2). With nothing live there, the baseline is the most recently approved other version of the same algorithm; with neither, the version is the algorithm's first, limb (2) records `first_version` on the evidence, and no run is required. The run must name this version at its current bundle hash as its candidate and the baseline as its baseline; a run on an earlier bundle hash is stale and refused with `EVIDENCE_INCOMPLETE`.
+```
+
+### P2 — `03` FR-224 (`:110`), appended at the row's end (DP-S5-2 to DP-S5-5)
+
+```markdown
+*(Decided <date>, WK-673 Slice 5, `RL-1264` DP-3 (b), RL-<n>.)* The threshold is `approximation_deviation` on the `rating_version` `ApprovalPolicyEntry` (`06` §4.2), a `quantile` and a `max_abs_change_pct`; it is never read from Settings or an environment variable. The exact-mode baseline is a Dislocation Run whose spec names the version as both baseline and candidate with `baseline_mode_override: "exact"`; its baseline bundle is ephemeral (FR-1398). The observed figure is the run's `abs_change_pct_quantiles` at the declared quantile (§4.6). The pre-check refuses, before a run and again at submission, a version referencing in `approximation` mode a model whose transparency artifact has no GLM approximation (`02` FR-133, FR-136), naming the model.
+```
+
+### P3 — `06` §4.2, a dated note after the `skippable_predecessors` note (DP-S5-1, DP-S5-2)
+
+```markdown
+> **`approximation_deviation` and `dislocation_baseline_environment`, dated <date> (WK-673 Slice 5; `RL-1264` DP-3 (b); RL-<n>).** The `rating_version` entry carries FR-224's threshold, `{"quantile": 0.99, "max_abs_change_pct": 1.0}` by default, and the Environment whose live version is FR-257's baseline, `"prod"` by default. Both are refused on any other artifact type. An entry with no threshold refuses every `approximation`-mode submission. Neither is a Setting (`07` FR-446 does not reach them).
+```
+
+`<date>` is the code commit's date and `RL-<n>` the ruling's minted id. The default figures in
+P3 are DP-S5-2's open actuarial choice.
+
+## Self-review
+
+1. **Spec coverage.** `06` FR-364's E4 amendment and FR-219 → Task 2. FR-257 limb (2) →
+   Task 3. FR-224 → Tasks 4, 5. FR-136 → Task 4 (DP-S5-5). `RL-1264`'s environment-variable
+   violation → Task 5 Step 4. `PL-1267` Acceptance 7's four cases → Acceptance 2 (three) and 5.
+2. **Placeholder scan.** `<date>`, `RL-<n>`, `LG-<n>` are fixed at the code commit, the mint
+   and the executor's ledger. Acceptance 4's `<ruled behaviour>` is DP-S5-1's outcome.
+3. **Type consistency.** `structural_diff_verified`, `dislocation_run_verified`,
+   `_dislocation_baseline`, `live_rating_version_ref`, `latest_run_for`,
+   `baseline_mode_override`, `abs_change_pct_quantiles`, `approximation_deviation` and
+   `approximation_check` are spelled the same in Interfaces, Steps, Acceptance and the
+   Appendix (grepped).
+4. **Rulings between sweep and filing.** Open PRs read at 17:01 BST: RL 9614 (#1167) keeps the
+   gate at the submit route (activation need 5); RL 9620 (#1162) is applied in §"Contention";
+   PL 9616's `06` texts (RL 9607) are in other `06` sections. No open PR rules on FR-224,
+   FR-257 or `06` §4.2's `rating_version` entry.
+5. **A stale locator in a frozen record, noted, not edited.** `PL-1267`'s scope table places
+   FR-224 in `03` §3.1; at `137bc817` it is in §3.2 (`:110`, after `### 3.2` at `:90`).
