@@ -304,6 +304,28 @@ Read at `caa4e411`:
 | **PL 9728** / SL 9727 (lane B after SL-1409; #1113, §"Write set") | — | `score.py`, `db/session.py`, `config.py`, `api/deps.py`, `api/authz.py`, `auth/service.py`, `main.py` (DP-4 a), `scripts/bench-rating.py`, `scripts/demo.py` (DP-6 a); `03`/`00` only under its DP-3 (b) or DP-5 | — | disjoint, unless its DP-3 (b) or DP-5 lands text in `03` §3.4 or §5.1, which then serialises; both dispatch records name it |
 | **The FD 9707 fix**, PL 9688 / SL 9685 (working ids; **not on `origin` at the time of reading**) | unknown | FR-221's lookup `as_at` (pricing-core lookup evaluation, `/score`, `/score/compare`, batch, per its brief) | — | **not read**: the dispatch re-reads its write set. Expected disjoint from this slice's code; a `03` §3.4 or §5.1 text would serialise |
 | **FD 9759 limb 2's owner "S3"** (RL 9758, *What it obliges*) | `errors.py` `RATING_ERROR_CODES`; `03` FR-223 row (`:109`); §5.1 owned list | adds `MODEL_REFERENCE_MODE_INCONSISTENT` and RL 9758 T1 | the same, **under DP-1 (a)** | `forbidden` (same registry entry and same spec row) → **whichever merges first applies them, and the other re-reads and drops its copy**; both dispatch records name it (sent to the lead with DP-1) |
+| **WK-673 S3**, PL 9689 (working id; #1138 @ `f3603e7c`, as the lead relayed it; not read by this planner) | `docs/specs/03-rating-engine.md` §5.1's owned-code list (`:928` onward, *"Error codes owned by this module:"*) | appends `ATTRIBUTION_RECONCILIATION_FAILED` at the list's tail | appends `MODEL_REFERENCE_MODE_INCONSISTENT` at the same tail (DP-1, item 25) | one list, one tail → **SERIALISE**, by the deputy's entry headed *"2026-10-05 13:25:23 BST — 29: RL 9663 OK; 30: extend option (b) to S3 vs S2, with one serialisation; 31: close #986 OK"*, item 30: the second to merge merges `main` and re-appends its code at the tail. Dispatch-record item 2 |
+
+### Dispatch-record items
+
+Each item is named in this slice's dispatch record and in the other slice's, as the deputy
+required.
+
+1. **`MODEL_REFERENCE_MODE_INCONSISTENT` and RL 9758 T1** (DP-1, the deputy's entry headed
+   *"2026-10-05 13:20:26 BST — DECISIONS 22–27; severity signals for the four gap findings"*,
+   item 25): the first of this slice and the RL 9758 slice (FD 9759 limb 2, "S3") to merge
+   registers the code in `RATING_ERROR_CODES` and lands RL 9758 T1. The second rebases, drops
+   its copy, and its ledger says so.
+2. **The `03` owned-codes tail** (the deputy's entry headed *"2026-10-05 13:25:23 BST — 29: RL 9663 OK; 30: extend option (b) to S3 vs S2, with one serialisation; 31: close #986 OK"*, item 30): this slice and WK-673 S3 (PL 9689) each append one
+   code at the tail of `03` §5.1's owned-code list (`:928` onward). They serialise: the second to
+   merge merges `main`, re-appends its code at the tail, re-runs the merge-tree check reading its
+   exit code, and re-gates.
+3. **WK-675 S2 (PL 9713)**: serialised on `03` §5.1 (adjacent hunks at `:908`) and `03` §3.4
+   (FR-237 `:134` against S2's insertion after FR-243 `:140`). Each side's hunks and anchors are
+   listed.
+4. **SL-1391 (PL 9716)**: `03` §5.1 `:904` against `:908`. If the dispatch extends the deputy's
+   option (b) to this pair, it lists both sides' hunks and the re-measured gap (`:905-907` at
+   `caa4e411`); otherwise the pair serialises.
 
 **Open PRs read** (`gh pr list --state open`, 2026-10-05, between 13:15 and 13:24 BST, `origin/main` `caa4e411`).
 On this slice's subject: #1130 (FD 9708), #1133 (RL 9695), #1061 (RL 9758: binds the pin write,
@@ -340,8 +362,8 @@ and the effective dates are not in the create body; RL 9695 decides both (§"Glo
   that differs is reported to the lead before Task 1; a moved line number alone is recorded.
 - [ ] **Step 3:** Read the minted RL 9695 and the DP ruling. List every difference from the head
   cited here (`614ad96b`) in the ledger, by `git diff`, not by headings ([`README.md`](README.md) rule 5).
-- [ ] **Step 4:** Re-read the write sets of WK-675 S2, SL-1391, PL 9728, the FD 9707 fix and
-  FD 9759's S3, at their current heads, and record any path added to the contention table.
+- [ ] **Step 4:** Re-read the write sets of WK-675 S2, SL-1391, WK-673 S3 (PL 9689), PL 9728,
+  the FD 9707 fix and FD 9759's S3, at their current heads, and record any path added to the contention table.
   Under DP-1 (a), record whether `MODEL_REFERENCE_MODE_INCONSISTENT` is already in
   `RATING_ERROR_CODES` on the dispatch tree; if it is, Task 3 Step 5 and Task 5 Step 3 are
   skipped and the ledger says so.
@@ -908,7 +930,9 @@ ledger.
   byte for byte from the **minted** record, with `<date>` the commit date and the working id
   replaced by the minted `RL-` id. A find string not found exactly once is a stop.
 - [ ] **Step 2: Unless Task 0 Step 4 found them landed:** RL 9758 T1 (FR-223,
-  `:109`) and the owned-list text the DP-1 ruling gives, byte for byte.
+  `:109`) and the owned-list text the DP-1 ruling gives, byte for byte. The code goes at the
+  **tail** of the owned-code list; if WK-673 S3 merged first, merge `main` and re-append at the
+  new tail (dispatch-record item 2).
 - [ ] **Step 3:** `test_model_reference_mode_inconsistent_is_registered_and_owned` passes (DP-1 (a)).
 - [ ] **Step 4:** `python3 scripts/audit-docs.py` (check 31's working-id rows are expected until
   the mint) and `uv run python scripts/req-coverage.py`.
