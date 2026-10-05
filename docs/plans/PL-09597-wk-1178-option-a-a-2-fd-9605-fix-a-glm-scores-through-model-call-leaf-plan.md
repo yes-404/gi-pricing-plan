@@ -154,6 +154,17 @@ and its Readings line, verbatim:
 
 > Readings: (1) Task 6 drafts the FR-222/FR-227 T-texts: ACCEPTED, and I accept or amend the wording at the ACK. (2) A validator refuses any result_type other than decimal | money_minor on a model_call: ACCEPTED. (3) "Feeding a non-money step" = a non-money OUTPUT step (the only consumer FR-227 types today); typing expression INPUTS is wider and a STOP: ACCEPTED, the narrower reading is what I meant for A-2. (4) +0.5 executor-day (unmeasured): noted for the 9 Oct fit check.
 
+**Dated note, 2026-10-05 (written 17:29:39 BST, pre-mint): item 13's readings R1 to R5 are
+ruled.** From the entry headed *"2026-10-05 17:27:55 BST — FD 9572 CAUSE: the sink fan-in plus
+whole-context passThrough; RULING: (c) ALONE is the emergency slice; (R-b) is the root, in
+PL 9567; one more case to measure; A-2 readings"*, read in full by this planner, its A-2 line,
+verbatim:
+
+> A-2 (#1178 @c3982ed6; MODEL_CALL_FEATURE_MAP_INVALID, 422, free on main): R1 (an unresolvable model_ref is left to compile): ACCEPTED. R2 (the OFFSET column is accepted beside the Factor slugs): ACCEPTED, as DP-3 needs. R3 (a GBM is checked against its Factors, or its feature_order when it has none): ACCEPTED. R4 (peril_structure_ref steps are not checked): ACCEPTED for A-2, and A-3 checks a structure's component models' feature maps (add it to A-3's plan). R5, the GAP: POST /api/v1/sub-graphs (sub_graphs.py:104) also saves model_call steps, so the SAME check applies there, via the same function, with its own red test, in A-2.
+
+So R1 to R4 stand as written, and R5 brings `POST /api/v1/sub-graphs` into this slice
+(item 18).
+
 So T1 and T2 (and T3, added since) are applied with the wording the lead accepts or amends at
 the ACK; item 15's validator and its narrower reading stand; the +0.5 day is the lead's. The
 entry's question on `_NUMERIC` is answered to the lead separately. A-2 types only the
@@ -327,8 +338,9 @@ quoted above. Each is red first.*
     them. `validate_algorithm` stays pure (the ruling). The code is registered in
     `RATING_ERROR_CODES` (`backend/src/app/errors.py:309`) and appended to `03` §5.1's
     owned-codes list (T3). **Red first:** at the base the raw-column map saves `201`.
-    *Readings for the ACK. The ruling does not decide these, and each is the plan's; a
-    different answer is a STOP:*
+    *Readings R1 to R5, ruled at 17:27:55 BST (dated note, 2026-10-05): R1 to R4 accepted
+    as written; R5 in scope (item 18). The check is one function, called from both save
+    paths.*
     - **(R1) A `model_ref` that resolves to no Model at save** is not refused by this check.
       The compile resolver and its maturity check refuse it later (FR-237, FR-20).
       Reason: today an algorithm saves before its models exist, and the module's own
@@ -344,10 +356,11 @@ quoted above. Each is red first.*
       against `feature_order`.
     - **(R4) A `peril_structure_ref` step** is not checked here: it has no single Model, and
       A-3 owns its scoring.
-    - **(R5) Only the ruled route.** `POST /api/v1/sub-graphs` (`create_sub_graph`,
+    - **(R5) The sub-graph save.** `POST /api/v1/sub-graphs` (`create_sub_graph`,
       `platform/sub_graphs.py:104`) also saves `model_call` steps (a `SubGraphBody` carries
-      `RatingModelCallStep`). The ruling names the algorithm save, so the sub-graph route is
-      not changed, and this is reported to the lead as a gap.
+      `RatingModelCallStep`). *(Dated note, 2026-10-05: first written as "not changed …
+      reported to the lead as a gap". Ruled at 17:27:55 BST: "the SAME check applies there,
+      via the same function, with its own red test, in A-2". Item 18.)*
 14. **The offset's value comes from the quote** (DP-3 (a) with the precision, the 17:03:45
     entry). `test_the_offset_moves_the_glm_by_exactly_the_exposure` (new pricing-core module,
     a GLM with a `log_column` exposure offset): the same quote at exposure 1.0 and at 0.5
@@ -443,6 +456,24 @@ quoted above. Each is red first.*
     `docs/contracts/schemas/rating-algorithm.schema.json` already admits `result_type` on
     every step (`:50`). It is edited only if `backend/tests/test_contracts.py`'s guard
     requires it (`contract-guard`), and the ledger says which.
+18. *(Added 2026-10-05, pre-mint, on the 17:27:55 BST ruling of R5.)* **The sub-graph save
+    refuses a raw-column `feature_map` with the same code.**
+    `test_a_sub_graph_whose_model_call_names_a_raw_column_is_refused` in
+    `backend/tests/test_sub_graphs_api.py`: a GLM is fitted and persisted, and a
+    `SubGraphCreate` whose `model_call` pins it with a `feature_map` value naming a raw column
+    is posted to `POST /api/v1/sub-graphs`. It answers `422` with `code ==
+    "MODEL_CALL_FEATURE_MAP_INVALID"`, the detail names the step, the value and the Model's
+    ref, and no row is written. The control: the same map naming the Factor's slug answers
+    `201`. **Red first:** at the base the raw-column map saves `201`. **One function:** the
+    check item 13 adds is one function, defined once in
+    `backend/src/app/platform/rating_algorithms.py` beside `create_algorithm`, taking the
+    session, the workspace and the steps. `create_algorithm` and `create_sub_graph` both call
+    it inside their unit of work, before the row is written. R1 to R4 hold for both callers.
+    *Not ruled, reported to the lead:* `POST /api/v1/sub-graphs/{slug}/versions`
+    (`create_version`, `platform/sub_graphs.py:127`) also saves a `SubGraphBody` with
+    `model_call` steps. R5 names only `create_sub_graph`, so `create_version` is not
+    changed unless the lead rules it in. If it is ruled in, it calls the same function with
+    its own red test.
 
 ## Global Constraints
 
@@ -543,6 +574,8 @@ file" above.*
 | `backend/src/app/platform/rating_algorithms.py` | edited: `create_algorithm` (`:94`) gains the `feature_map` check after `_issues_to_error` (item 13; DP-5 (ii) (a)) |
 | `backend/src/app/errors.py` | edited: `RATING_ERROR_CODES` (`:309`), `MODEL_CALL_FEATURE_MAP_INVALID` appended |
 | `backend/tests/test_rating_algorithms.py` | appended: item 13's test and control, and item 16's read-back |
+| `backend/src/app/platform/sub_graphs.py` | edited: `create_sub_graph` (`:104`) calls item 13's check (item 18; R5, 17:27:55 BST). `create_version` (`:127`) is not edited unless ruled in |
+| `backend/tests/test_sub_graphs_api.py` | appended: item 18's test and control |
 | `docs/specs/03-rating-engine.md` §5.1 | the owned-codes list (`:928` onward), T3 appended at its tail |
 
 **Contention.** Classes as in `docs/process/delivery-process.core.json`'s `no_shared_files`.
@@ -580,6 +613,7 @@ write-set rows.*
 | **PL 9689**, WK-673 S3 (#1138) | `model_schema/rating.py` | `AlgorithmDiff` | `RatingModelCallStep` | already serialised on `compile_bundle` |
 | **The owned-codes tail and `RATING_ERROR_CODES`** *(added 2026-10-05, DP-5 (ii) (a))*: PL 9649 (#1152, `CONTROL_FACTOR_IN_RATEABLE_PATH`), PL 9683 (#1140, `MODEL_REFERENCE_MODE_INCONSISTENT`), PL 9578 (#1186, WK-675 S3, the same code), PL 9591 (#1176, `ATTRIBUTION_RECONCILIATION_FAILED`), PL 9689 (#1138, the list's tail), PL 9595 (#1174, `:933`) | `03` §5.1 owned-codes list; `errors.py` `RATING_ERROR_CODES` | one code appended each | `MODEL_CALL_FEATURE_MAP_INVALID` appended | the same existing object's tail → **SERIALISE**, as the 17:14:54 entry says ("it serialises on the owned-codes tail per my rules"); PL 9649 and PL 9683 already precede A-2 |
 | **`create_algorithm`** *(added 2026-10-05)* | `backend/src/app/platform/rating_algorithms.py` | read in each plan file's write set (the same sweep as above): no open plan edits it | edited | none found; the dispatch re-reads it |
+| **`create_sub_graph`** *(added 2026-10-05, 17:29:39 BST)* | `backend/src/app/platform/sub_graphs.py` | PL 9610 (#1170) cites the resolver (`:202-213`) as a fact and edits no function here; no other open plan names the file in a write-set row | edited | none found; the dispatch re-reads it (WK-1250 S2 and S3 are near this module) |
 | **PL 9616**, FD-1416 fix (#1168; WK-1178) and **PL 9591**, WK-673 S4 (#1176) | `scripts/generate-contracts.py`; generated contracts | `GENERATED_SHAPES` keys; regenerated | not edited (`RatingModelCallStep` is in no `GENERATED_SHAPES` key; it reaches `generated.json` through referenced shapes); regenerated | generated files exempt (regenerate on the merge base); PL 9616 same Work → `RL 9620` (a)/(b) written |
 
 Every other open plan (#1127 PL 9716, #1131 PL 9713, #1140 PL 9683, #1146 PL 9662, #1161 PL
@@ -644,7 +678,8 @@ date. Its part (i) is settled by the 17:12:40 BST correction (option (B), item 1
 - [ ] **Step 3:** Item 5 (backend). Expected red: `/score` answers `MODEL_CALL_FAILED`.
 - [ ] **Step 3a:** *(Added 2026-10-05.)* Items 12 to 16, each red by its stated cause. Item
   13 is written to DP-5 (ii) (a), with the code T1 and T3 name, in
-  `backend/tests/test_rating_algorithms.py` (Postgres and MinIO, for the fitted GLM). Item 15's field test and item 16 go in
+  `backend/tests/test_rating_algorithms.py` (Postgres and MinIO, for the fitted GLM). Item
+  18 is written in `backend/tests/test_sub_graphs_api.py` *(added 2026-10-05, R5)*. Item 15's field test and item 16 go in
   `packages/model-schema/tests/test_rating_algorithm.py`; item 16's read-back goes in
   `backend/tests/test_rating_algorithms.py`, beside the `motor-ad-frequency@7` fixtures,
   which are not edited (they only validate).
@@ -726,9 +761,10 @@ date. Its part (i) is settled by the 17:12:40 BST correction (option (B), item 1
     prediction as an exact decimal, and it is never rounded at the step. `money_minor` is a
     type for FR-227's checks, not a rounding; every rounding is an `output` step's (FR-226).
     Amended 2026-10-05, the entry headed `2026-10-05 17:14:54 BST — FD 9572 placement
-    accepted; …`, item 5: at save, the algorithm's `model_ref` is resolved, and a
-    `feature_map` value that is not one of that Model's Factor slugs [or the column its spec
-    declares as the offset, if the ACK adopts reading R2] is refused with
+    accepted; …`, item 5, and the entry headed `2026-10-05 17:27:55 BST — FD 9572 CAUSE: …`
+    (R2, R5): when a Rating Algorithm or a Sub-graph is created, each `model_call`'s
+    `model_ref` is resolved, and a `feature_map` value that is neither one of that Model's
+    Factor slugs nor the column its spec declares as the offset is refused with
     `MODEL_CALL_FEATURE_MAP_INVALID` (422).)*
   - **T2, appended to FR-227's row (`03:113`):** *(Amended 2026-10-05, the same entry: a
     `model_call` step's `result_type` types the names it produces for this check. A
@@ -736,9 +772,10 @@ date. Its part (i) is settled by the 17:12:40 BST correction (option (B), item 1
     `decimal` or `money_minor` is refused with `RATING_TYPE_MISMATCH`.)*
   - **T3, appended at the tail of §5.1's owned-codes list (`03:928` onward):**
     `MODEL_CALL_FEATURE_MAP_INVALID` *(added 2026-10-05, WK-1178 A-2 — **422** at
-    `POST /api/v1/rating-algorithms`: a `model_call`'s `feature_map` names something other
-    than its Model's Factor slugs (FR-222, amended); the entry headed `2026-10-05 17:14:54
-    BST — FD 9572 placement accepted; …`, item 5)*. The tail is serialised (§"Write set").
+    `POST /api/v1/rating-algorithms` and `POST /api/v1/sub-graphs`: a `model_call`'s
+    `feature_map` names something other than its Model's Factor slugs or its offset column
+    (FR-222, amended); the entries headed `2026-10-05 17:14:54 BST — FD 9572 placement
+    accepted; …`, item 5, and `2026-10-05 17:27:55 BST — FD 9572 CAUSE: …`)*. The tail is serialised (§"Write set").
 
 ### Task 7: The gate and the ledger (items 10, 11)
 
