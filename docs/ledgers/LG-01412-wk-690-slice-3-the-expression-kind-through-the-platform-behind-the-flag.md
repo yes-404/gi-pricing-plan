@@ -1,11 +1,11 @@
 ---
-id: LG-9731
+id: LG-1412
 family: ledger
 title: WK-690 slice SL-1273 — the expression kind through the platform, behind the flag, with custom_objective:author (PL-1382, RL-1362)
-status: active
+status: closed
 created: 2026-10-04
 owner: executor
-tree: 663433e4c38578239ca5abf15a716bef929e82cc
+tree: 47d770e8fcbd2410fa101019ed8cf3aae69a1baa
 phase: P2
 work: WK-690
 slice: SL-1273
@@ -14,11 +14,11 @@ corrected_by: []
 relates: [RL-1362, RL-1265, RL-1305, RL-1263, FD-1349, PL-1268, FR-144, FR-145, FR-150, FR-207]
 ---
 
-# LG 9731 (working id) — WK-690 slice SL-1273, the expression kind through the platform
+# LG-1412 — WK-690 slice SL-1273, the expression kind through the platform
 
 Executed from `PL-1382` by `executor-1273` (sonnet; `echo $CLAUDE_EFFORT` printed `medium`). Branch
-`sl-1273-custom-objective-expression`. Stamps are BST (`TZ=Europe/London date`). The ledger's working id is `9731`,
-reserved by the lead 2026-10-04 17:15:20 BST (dispatch Delta 1); it is renumbered at the mint. This ledger covers
+`sl-1273-custom-objective-expression`. Stamps are BST (`TZ=Europe/London date`). The ledger's working id was `9731`,
+reserved by the lead 2026-10-04 17:15:20 BST (dispatch Delta 1); it was minted as `LG-1412` on 2026-10-05. This ledger covers
 **Tasks 0 and 1** (the first executor turn); later tasks are appended.
 
 The executor charter's Model / effort line, verbatim: "`sonnet` (currently Sonnet 5); medium, inherited from the
@@ -381,7 +381,7 @@ made through the API. (5) The overflow row is a `draft` after its failing certif
 
 ## FD 9780 — the quantile template certifies convexity `violated` and no second Approver is enforced
 
-Broken input (the base, which is the finding): a `quantile` template certified through the real Job, submitted at policy 1. `test_a_violated_objective_needs_two_approvers_at_policy_one[template]` fails red at `:280` (`assert 1 == 2`: the row holds 1, so one approval would approve it) and is green after the change: the row and the audit `after` hold 2, one approval leaves the objective in `review`, a second approves it. The same test for an `expression` objective (§4.6's example, which certifies `violated` through the real Job), the policy-2 pair (3 stored; two approvals leave `review`, a third approves), `DEFAULT_POLICY` (2) and policy 5 (6, and `ApprovalRequest` validates) are red at base and green after; the controls (a `pass` certificate at policy 1 stores 1 and one approval approves; an `approved` objective's resubmission stays `VALIDATION_FAILED`; a `validation_rule` stores the entry's count; an `escalation` key is refused `extra_forbidden`) are green at both.
+Broken input (the base, which is the finding): a `quantile` template certified through the real Job, submitted at policy 1. `test_a_violated_objective_needs_two_approvers_at_policy_one[template]` fails red at `backend/tests/test_objective_submission.py:353` at head `5af9d321` (`assert required == 2`; was `:228`, then `:280` at `876af8d0`) (`assert 1 == 2`: the row holds 1, so one approval would approve it) and is green after the change: the row and the audit `after` hold 2, one approval leaves the objective in `review`, a second approves it. The same test for an `expression` objective (§4.6's example, which certifies `violated` through the real Job), the policy-2 pair (3 stored; two approvals leave `review`, a third approves), `DEFAULT_POLICY` (2) and policy 5 (6, and `ApprovalRequest` validates) are red at base and green after; the controls (a `pass` certificate at policy 1 stores 1 and one approval approves; an `approved` objective's resubmission stays `VALIDATION_FAILED`; a `validation_rule` stores the entry's count; an `escalation` key is refused `extra_forbidden`) are green at both.
 
 **Template reach, counted at base** (the command is FD 9780's Evidence 4(a) predicate, `git grep -nE 'ObjectiveTemplate\.QUANTILE|template="quantile"' -- backend/tests packages/*/tests`): 3 lines (1 backend fixture, `test_paired_quantile_models.py:97`, called by `_approved_quantile(` 7 times, plus 2 lines of one core-only fit at `test_gbm.py:1576-1577`). **A wider measurement**, `certify_objective` over each of the 12 templates with `test_objectives.py`'s `_objective` and `_sampling(n_points=1000)`: **6 of 12 certify `convexity: violated`** (`asymmetric_squared`, `huber`, `pseudo_huber`, `quantile`, `zero_inflated_poisson`, `focal_binomial`), not only the quantile; the other 6 pass. So the release note's template reach is six templates, a wider reach than FD 9780's text (quantile only) and than `RL-1362`'s "live instance" reading. **A point for the lead and the FD's mint.**
 
@@ -446,7 +446,7 @@ Start head `876af8d0f083ef82599b46a103f685d9af75a77a`; worktree `sl-1273-fixes`.
 
 **A6 (item 4).** The two re-indented blocks are gone. `model_handlers.py`: `certify = _certify_expression if objective.kind == "expression" else certify_objective`, then one call, so the original `certify_objective(...)` lines are not re-indented (`git diff --numstat` against the merge-base: 48/1 plain and 48/1 with `-w`). `test_custom_objectives.py`: the flag test is written without nested helpers, keeping the original blocks at their indentation (157/17 plain, 156/16 with `-w`; the one-line difference is how `diff` aligns a changed block, no line differs by indentation alone).
 
-**A11 (item 5).** The quantile red's citation `:228` is `:280` (the line at head `876af8d0`). The two earlier `:228` citations of Task 7's count tests are left as written: they cite the file at the time.
+**A11 (item 5).** The quantile red's citation `:228` is `:280` (the line at head `876af8d0`). **Re-cited at the mint, 2026-10-05** (the audit's re-check found `:280` stale at `5af9d321`): the red's `assert required == 2` is `backend/tests/test_objective_submission.py:353` at `5af9d321` (found by text, and the same line at the mint tree). The two earlier `:228` citations of Task 7's count tests are left as written: they cite the file at the time.
 
 **A10 (item 7) is not in this entry.** The brief's amendment of 2026-10-05 09:37:26 BST moves it to a separate dispatch in a window the lead clears; Task 10's record above stays "provisional" per Delta 10.
 
@@ -477,3 +477,7 @@ Statuses, identical in all five runs: `symbolic_vs_numeric_gradient` pass; `symb
 **Median 1.174 s of 5 counting runs; range 1.063–2.104 s.** NFR-480, `docs/specs/02-modelling.md` row: "Objective certification completes in < 3 min including the synthetic smoke fit." That row carries no dated amendment; the dated measurement note below the table (2026-08-22, WK-661) records a 180 s budget and a twelve-template result. **Verdict: met**, the slowest run being 2.104 s, about 1.2 % of 180 s. This is the Task 10 figure the earlier provisional entry (Delta 10) asked to have re-taken solo; it does not change that entry's order of magnitude.
 
 **What the timed span contains.** `scripts/bench-expression-certify.py` calls `certify_expression_objective` directly: no Job, no database, no HTTP (as this ledger already discloses). It passes no `derived`, so `derived is None` and `compile_expression_objective` (`packages/pricing-core/src/pricing_core/modelling/expression_objective.py`) runs `derive(loss, parameters=parameters.keys())` inside the timed span, that is, SymPy differentiation is timed. The first run is cold (SymPy and NumPy first use). One grid and one loss only; a larger `n_points` or a `where()`-heavier loss was not measured.
+
+## Closing note
+
+This ledger is closed under the executor charter's mint-step clause (`.claude/roles/executor.md`, "As the mint step…", added 2026-10-04) and `docs/process/document-ids.md` §1.6's 2026-10-04 amendment to the SL and LG close cells: on 2026-10-05 the executor performed the closing acts in the mint commit on the auditor's behalf, after the slice audit — the front matter `status: closed`, the roadmap SL-1273 row `status: closed` with its dated line, `docs/INDEX.md` regenerated, `audit-docs` green. The audit it cites is `handover/audit-sl1273-2026-10-04.md`, with its "Re-check 2026-10-05" section (local, not in the repository). The minted-head gate's record and the PR number are appended after the gate.
