@@ -445,3 +445,49 @@ side-by-side re-check, as the lead relayed it at 10:35 BST. Nothing ruled above 
 - **G3: the list is extended.** Item 4's list of known §5.1 holders (`:251`, `:283-284`:
   WK-675 Slices 2, 4 and 10) is extended by the 10:28 BST amendment to include WK-675
   Slice 3.
+
+## Amended 2026-10-05 before mint: currency at origin/main `47d770e8`
+
+*By the decision-maker session `dm-amend` (effort `medium`), on the lead's brief of
+2026-10-05 09:55 BST. Citation and currency only: nothing ruled above is changed. Every
+fact below was re-read at origin/main `47d770e8fcbd2410fa101019ed8cf3aae69a1baa`. The
+`tree:` field stays `65b33479`, because the figures and line cites in the body above ("at
+this tree") were measured there and stay true there; this section carries their values at
+`47d770e8`.*
+
+- **H1: the five §5.1 table headers have moved.** Each is still `\| Method \| Path \|
+  Purpose \|`, found by `grep -n -E '^\| *Method *\| *Path' docs/specs/0*.md`:
+  `01-data-management.md:847` (unchanged), `02-modelling.md:1815` (was `:1759`),
+  `03-rating-engine.md:893` (was `:742`), `06-governance.md:538` (was `:494`) and
+  `07-platform.md:305` (was `:299`). No §5.1 table has a `Permission` column, and no file
+  under `docs/contracts/` contains `x-permission`.
+- **H2: row counts.** With F-A2's predicate (the lines from `### 5.1` up to the next
+  `##`/`###` heading that match ``^\| `?(GET|POST|PUT|PATCH|DELETE)``):
+
+  | Spec | §5.1 heading line | Rows | Multi-method rows |
+  |---|---|---|---|
+  | `01` | `:845` | 39 | 1 |
+  | `02` | `:1813` | 44 | 0 |
+  | `03` | `:891` | 32 | 0 |
+  | `06` | `:536` | 23 | 2 |
+  | `07` | `:303` | 22 | 2 |
+  | **Total** | | **160** (152 at `65b33479`; 156 at `1dd5e264`) | **5** |
+
+  The population is re-derived at dispatch (item 4), so this records movement and rules
+  nothing. `06`'s blockquoted `| Route | Requires |` table is now at `06:558`.
+- **H3: the three parsers are unchanged.** `_ENDPOINT_ROW` is at `scripts/audit-docs.py:299`,
+  `_ENDPOINT` at `scripts/scope-audit.py:68` and `_SPEC_ENDPOINT` at
+  `backend/src/app/demo/guide.py:64`; each still captures the path cell with `([^|]+)`.
+  `scripts/table_rows.py` does not exist yet. `PERMISSION_ATTRIBUTE` is defined at
+  `backend/src/app/api/authz.py:41`.
+- **H4: the flattened sweep has landed.** Item 3's "with the included routers flattened"
+  now exists on `main`: `_flattened_operations` (`backend/tests/test_api_authorisation_sweep.py:108`)
+  descends each include's `original_router`, merged by `dfddfad8` (#1104, SL-1256). The pin
+  this record rules (the spec-declared permission compared with the route's) is not part of
+  #1104 and is still undone.
+- **H5: `04` and `05` also have §5.1 tables.** `04-optimisation.md:304` and
+  `05-monitoring.md:278` are `\| Method \| Path \| Purpose \|` headers, with 10 and 16 rows
+  by H2's predicate. Both tables already existed at `65b33479` (same lines). This record
+  names five tables (item 1) and does not say whether these two are in or out of scope.
+  **That is a scope question, not a citation fix, and it is not decided here**; it is
+  raised to the lead.
