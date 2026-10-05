@@ -1434,6 +1434,24 @@ relates: [FD-1356, RL-1301, PL-1306, SL-1256, RL-1407, PL-1408]
 `FD-1356`'s fix (HIGH): rule approval goes through `approvals.submit` and `approvals.decide`, `_carry_to_the_artifact` gains the validation-rule branch, and the direct approve route becomes a thin client of the decide path or is removed (DP-1). A quorum of 2 leaves the rule in `review` after one approval. A dry-run whose outcome is `error` is refused at submit and at approve, one red-first case per cause (missing column, unknown check, missing table), and a `fail` outcome stays accepted. `RL-1301` A.4.5's temporary `approve_rule` allowance is removed red first. Rule approvals that no approval request backs are reset to `review`, with the count recorded (follow-on 2). Task 0 is the maintainer's containment query over every `gipricing*` database, with a STOP on a non-zero result; it printed 5 at planning time. The maintainer decided DP-0 as (c): export the rows, drop the scratch database, re-run. The re-run printed 0 on 2026-10-01, to be re-confirmed at dispatch. The remedies of FD-1415 (an approved rule's dry run cannot be replaced) and FD-1414 (a Rule Set runs only approved, existing members) also ride in this slice, as the maintainer decided. RL-1407 rules the plan's decision points and these remedies. Leaf plan PL-1408 (`active`). **Activation needs:** WK-674 S2 (`SL-1256`) merged (the maintainer, 2026-10-01 ~10:10 BST, order (b) S2 → this fix); lane B order `SL-1360` → the FD-1357 fix → this slice → the `RL-1343` decimal fix → FD-1335 Part A; the plan's decision points ruled; the maintainer's agreement and the lead's go in a separate activation PR. *(Filed 2026-10-01 under working ids 9761 (this row) and 9762 (the plan), reserved by the lead. Minted 2026-10-04 as SL-1409; its plan is PL-1408 and its ruling RL-1407.)*
 (Activated 2026-10-05 as the WK-1178 FD-1356 fix slice, on the maintainer's GO check, "2026-10-05 09:44:39 BST — DISPATCH GO: FD-1356 fix (SL-1409 / PL-1408) on lane B, option (b); executor-1409 starts once the `__all__` registry amendment merges (or once WK-690 S3 merges, if that comes first)"; dispatch record DISPATCH-WK-1178-SL1409-2026-10-04.)
 
+#### SL-9615 — WK-1178 fix slice — FD-1416: one ApprovalRequest shape, generated and typed on every approval route
+
+```yaml
+id: SL-9615
+family: slice
+title: WK-1178 fix slice — FD-1416, one ApprovalRequest shape, generated and typed on every approval route
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 809a3794af6d3a6ba688663b0d9b59f951190680
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1416, FD-1335, SL-1409, PL-1408, SL-1367, PL-1371]
+```
+
+`FD-1416`'s fix (MEDIUM, deadline before the P2 exit demo): the `model-schema` `ApprovalRequest` becomes the one definition. A decision-maker rules each disagreeing field first, the decision enum first, which lifts `FD-1416`'s HOLD. The four `to_dict` routes (`GET …/{request_id}`, `POST /approval-requests`, `…/decide`, `…/withdraw`) return it as a typed 2xx, published by `$ref`, and leave `FD-1335` Part B's open-object list. The hand-authored `approval-request.schema.json` is retired ("generated wins"), and `06` §4.3's example is amended verbatim from the ruling. A guard fails when an authored-only `ONE_SIDED_SLUGS` slug has an uncompared `model-schema` class, proven on broken input. Leaf plan PL 9616 (working id). Starts after `SL-1409` merges (`approvals.py`); it serialises with PL 9683 (`GENERATED_SHAPES`), and PL 9629's journey (its activation need 13) waits for it.
+
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
