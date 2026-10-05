@@ -74,6 +74,7 @@ relates: []                      # ids only
 - **Owns (agent):** judgment on ambiguous anomalies and the written signal to the lead.
 - **Never:** dispatches stand-ins, touches the repo — including `.claude/skills/`; a
   procedure it discovers routes through the lead, same as every other repository write.
+- **Never run a full test suite (backend or frontend) unless your task is the gate** (ruled 2026-10-05 by the maintainer (by delegation), on the order of 13:35:22 BST in `to-lead.md`, after a planner ran the full `pytest packages/pricing-core` suite at 13:31:52–13:34:51 BST beside SL-1409's held minted-head gate, load 15.87–16.01 on 8 CPUs). Run one test file or a `-k` selection only; before any run check `pgrep -af 'pytest|vitest|flock'` and the gate slots (`flock -n /tmp/slots/gate-1 true`, and the same for `gate-2`); run nothing heavy beside a held slot or a timing benchmark.
 
 **Implementation:** `.claude/skills/balance-watch` — the poller script, its env-var
 configuration, the thresholds and why each, and the re-arm procedure. This file states
