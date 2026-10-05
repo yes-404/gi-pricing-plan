@@ -567,6 +567,42 @@ rewrite of `_compute_diff` (it now summarises `_diff_cells`' per-cell objects) m
 **An unweighted query gets no ref 404** (the lead's answer, the maintainer's rule): it reads no `factor_ref` or `banding_ref`,
 and `RL-1361` T10 lists that 404 under the portfolio checks; `_refuse_dangling_refs` is a no-op without a portfolio.
 
+**Hold B: the combined measurement of the new path** (`gate-1`, 2026-10-05 22:55:37 to 23:00:31 BST; head `503bc7fb934101a438298cbf65a373c5703af073`,
+the pushed `19f8842f` code plus the docs-only ledger commit; tree `ab3ff3f94f8dbd27f161e4c12a8eafb79aeb7c75`). START load
+1.23/1.70/1.66, 18 325 MB free, `pgrep` empty; the lead's GO seen 22:55:52; load settled to 1.66 after 5 s; END 23:00:31 BST, load
+1.70/1.97/1.82, 19 844 MB free, `pgrep` empty. `OMP_NUM_THREADS=1`, service level (not HTTP), limit 50, N=100 later cells pages (cursors
+cycling through the artifact) and N=100 later diff requests, 10 000 completed `diff_cells` Jobs of other keys seeded in each workspace
+(10 001 counting the run's own), every pair read through the service path and asserted for storage and cell count. In every run
+the first cells request and the first diff request answered 202 (asserted in the harness). p50 / p95 / p99 / max in ms:
+
+| run | Job | later cells page | later diff request |
+|---|---|---|---|
+| rows 250 000 | 14.2 s | 28.7 / 32.3 / 33.1 / 33.6 | 19.3 / 22.7 / 23.2 / 23.2 |
+| rows 250 000, weighted (678 000-row portfolio) | 28.3 s | 28.8 / 35.8 / 39.1 / 41.8 | 21.8 / 25.8 / 27.3 / 29.8 |
+| rows 10 000 | 0.6 s | 26.9 / 32.8 / 33.8 / 33.9 | 19.9 / 22.8 / 23.4 / 23.5 |
+| parquet 250 000 | 11.5 s | 29.6 / 33.1 / 33.7 / 34.5 | 20.5 / 23.6 / 24.4 / 24.6 |
+| parquet 10 000 | 0.4 s | 27.5 / 32.0 / 33.1 / 33.9 | 19.3 / 22.9 / 24.0 / 24.5 |
+| parquet 1 000 000 | 42.9 s | 30.3 / 37.0 / 40.5 / 40.7 | 23.1 / 26.6 / 27.6 / 29.4 |
+
+**Decision lines.** The page p95 at most 300 ms: rows 250k 32.3 ms, rows 250k weighted 35.8 ms and parquet 1M 37.0 ms. The
+page p95 at 250k within 2x of 10k: rows 32.3 against 32.8 (0.98x), parquet 33.1 against 32.0 (1.03x). The page p95 with the
+10 000 other Jobs present: at most 37.0 ms in all six. First cells and first diff both 202: all six.
+
+**The settle deviation, ledgered.** The load-below-2.0 settle ran once, at the start of the hold. The later runs began at load
+1.91 (rows 250k weighted), 2.72 (rows 10k), 2.45 (parquet 250k), 2.08 (parquet 10k) and 2.00 (parquet 1M), caused by the harness's
+own previous-run setup (the pair build and the 678 000-row portfolio ingest), with `pgrep` empty throughout. The timings are of the
+later pages only and are far under the limits; the lookup limb is re-run in hold C with the settle immediately before timing.
+
+**Hold C: the lookup alone** (`gate-1`, 23:01:35 to 23:02:57 BST, the same head and tree). START load 1.50/1.81/1.77, 19 713 MB free,
+`pgrep` empty; GO seen 23:01:50; the settle ran after the run's own setup and printed `TIMING START load1=1.39 after 0s settle`.
+Rows 250 000, unweighted, 10 001 `diff_cells` Jobs in the workspace (10 000 of other keys), N=100: **the artifact lookup alone
+(the JSON-key query and the manifest read) p50 13.3, p95 15.1, p99 16.3, max 16.7 ms**, against the 50 ms limit; the later cells
+page p50 24.9 / p95 30.3 / p99 31.9 / max 31.9 ms; the later diff request 17.8 / 23.0 / 25.1 / 25.3 ms. END 23:02:57 BST, load
+1.28/1.68/1.72, 19 626 MB free, `pgrep` empty. The first run's lookup-alone phase had crashed (a harness error of mine, passing
+the `(key, row)` return as the key); only the harness changed, no product code. No limb fails: the lookup is 16.3 ms at p99, the
+worst page p95 is 37.0 ms. The lookup filters `JobRow.parameters["key"]` without an index; at 10 001 Jobs it costs 13 ms, so no
+migration is proposed.
+
 ## PRs
 
 #1206, a draft, `SL-1391: Slice 7: FR-231's exposure weights through the portfolio frame (F-W10-2)`, head branch
