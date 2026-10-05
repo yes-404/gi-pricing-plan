@@ -10,84 +10,123 @@ corrected_by: []
 relates: [WK-1178, WK-673, FR-231, FR-232, NFR-457, FD-1358, RL-1418, SL-1391]
 ---
 
-# The cells-diff page recomputes its whole input on every request: p99 1098 ms on the parquet path and 9995 ms on the rows path, at 260 000 cells
+# The cells-diff page recomputes its whole input on every request: the rows page took p50 9604 ms at 260 000 cells against R1's 2 s, and the parquet page p99 1098 ms
 
 **Filed** by auditor-cost on the lead's brief of 2026-10-05, working id 9487 (the companion open question is OQ 9486, working
-id), from the maintainer's (by delegation) filing rule in `to-lead.md`, entry headed "2026-10-05 18:25:08 BST — S7 cells-page
-cost: my SPEC READING now, and the decision rule for the numbers" (a local channel file, so cited by its header). The rule,
-verbatim: *"If it exceeds 3x, or any page's p99 exceeds 1 s: an FD (a proposed severity, owner WK-1178) naming two gaps: (a)
-the cost, whose fix is to find the artifact without reloading (the content hashes recorded at the first request, on the
-version or in the Job parameters); (b) the ABSENCE of a latency NFR for these routes, as an OQ for me (owner WK-673). The fix
-is a small follow-on slice, not S7 scope."* and *"The 3x and 1 s are MY decision thresholds for filing, not a requirement"*:
-the 3x and the 1 s are filing thresholds, not requirements, and this finding is filed on the second, not on a breach of a
-numbered NFR. This finding is gap (a). Gap (b) is OQ 9486.
+id), from three entries of the maintainer (by delegation) in `to-lead.md` (a local channel file, so each is cited by its header):
+
+1. The filing rule, entry headed "2026-10-05 18:25:08 BST — S7 cells-page cost: my SPEC READING now, and the decision rule for
+   the numbers": *"If it exceeds 3x, or any page's p99 exceeds 1 s: an FD (a proposed severity, owner WK-1178) naming two gaps:
+   (a) the cost…; (b) the ABSENCE of a latency NFR for these routes, as an OQ for me (owner WK-673)."* and *"The 3x and 1 s are MY
+   decision thresholds for filing, not a requirement."* **Its reading that no NFR bounds the route is SUPERSEDED by entry 3**; the
+   filing rule itself was applied to the clean numbers and fired on the p99 limb.
+2. The acceptance, entry headed "2026-10-05 20:51:44 BST — S7 measurement ACCEPTED; FD 9487 must lead with the ROWS path, the
+   larger cost": *"the ROWS-stored page (p50 9604 / p99 9995 ms, about 3.7 s of diff+cut RECOMPUTED ON EVERY PAGE, plus 5.5 s of SQL
+   load) is TEN TIMES the parquet page. Rows storage is the NORMAL path for every table up to FR-232's 250k default, so a
+   near-threshold rows table pays about 9 s per page TODAY. The parquet reload is the smaller limb."*
+3. The correction, entry headed "2026-10-05 20:53:32 BST — CORRECTION to my 18:25:08 reading: R1 bounds the cells route; a
+   sub-threshold ROWS measurement is now an S7 MERGE CONDITION": *"That rested on an NFR-rows-only search. It is WRONG, and
+   SUPERSEDED: 07 1.3 R1 (:36-37: "Everything slow is a Job. Any operation that can exceed 2 s returns 202 with a Job …") and 00
+   NFR-457 (:534) bound EVERY operation, these routes included."* and *"MERGE CONDITION for S7 (#1206): measure the ROWS-stored
+   cells page AT THE THRESHOLD, 250 000 cells … plus 100k for the curve. If p99 is at or under 2 s at 250k: S7 mints and merges.
+   FD 9487 then covers the parquet limb and anything over the threshold … If p99 is over 2 s at 250k: R1 is BREACHED by S7's own
+   new route. STOP to me BEFORE the mint."*
 
 ## Finding
 
-**Severity: MEDIUM (proposed by the auditor; the lead gives the verdict); owner WK-1178.** At S7's branch head
-`386f4d5485f6efa3fe2d9b05842d4f752d5d989d` (SL-1391, PR #1206, not merged at filing), a request for one page of the diff's
-changed cells (`GET …/diff/cells`, `03` §5.1, row added by `RL-1418`) costs the same whatever the page: it reloads and
-re-derives everything the page is cut from. Measured at the service level (`diff_cells_page`, not HTTP) over 260 000 cells,
-N = 10 pages, limit 50, `OMP_NUM_THREADS=1`:
+**Two limbs, the rows path first. Severity: HIGH, provisional, LATENT in the data that exists today (proposed by the auditor; the
+lead gives the verdict); owner WK-1178.** The reasons are under Disposition. At S7's branch head
+`386f4d5485f6efa3fe2d9b05842d4f752d5d989d` (SL-1391, PR #1206, not merged at filing), one page of the diff's changed cells
+(`GET …/diff/cells`, `03` §5.1, row added by `RL-1418`, `03:933` at that head) costs the same whatever the page: the service
+reloads and re-derives everything the page is cut from. Measured at the service level (`diff_cells_page`, not HTTP), 260 000
+cells, N = 10 pages, limit 50, `OMP_NUM_THREADS=1`:
 
 | Storage | whole page p50 | whole page p99 | loading both versions' cells p50 / p99 | `version_content_hash` ×2 p50 / p99 |
 |---|---|---|---|---|
+| **rows** (workspace threshold raised above 260 000 for the measurement) | **9604 ms** | **9995 ms** | 5544 / 5871 ms | 388 / 416 ms |
 | parquet (the default above 250 000 cells, FR-232) | 948 ms | 1098 ms | 421 / 445 ms | 428 / 455 ms |
-| rows (workspace threshold raised above 260 000 for the measurement) | 9604 ms | 9995 ms | 5544 / 5871 ms | 388 / 416 ms |
 
-The filing rule's two limbs: the parquet p50 is 0.10× the rows p50 (948 / 9604), so the 3× limb **does not** fire; **any p99 over
-1 s is met**, by both (parquet 1098 ms, rows 9995 ms). Two readings to hold against the numbers: (i) **N = 10, so the p99 is the
-maximum** (`measure_cells.py` `pct`: index `round(0.99 × 9)` = 9); it says the worst of ten pages, not a tail estimate; (ii) the
-rows figure is at 260 000 cells only because the threshold was raised for the measurement. A rows table can hold up to 250 000
-cells at the default, with no setting changed; its page cost at that size was **not measured** (the load is SQL, so a linear
-guess is a guess).
+### Limb 1 (first): the rows page recomputes the whole diff on every page, and nothing bounds it below 2 s
 
-**What dominates.** On the parquet path, loading plus hashing both versions is 421 + 428 = 849 ms of the 948 ms p50, about 90 %
-(the parts were timed in a separate loop from the whole requests, so the 90 % is a sum of components, not an in-request
-profile; the remaining ~100 ms is unattributed: the stored-artifact read, `splitlines` over 260 000 lines and the cut). The
-code says why at the head above, `backend/src/app/platform/rate_tables.py:645` (`diff_cells_page`): for a parquet pair each
-request calls `_content_hash` for both versions (each loads the version's cells and hashes them), builds the cache key from the
-two hashes, then reads the stored artifact and cuts one page; there is nothing between requests that keeps the hashes. On the
-rows path each request calls `_all_cells`, which recomputes the whole diff and weights before `_page` cuts 50 of them: load
-from SQL 5.5 s, hash 0.4 s, and the remaining ~3.7 s is `diff_cells` plus the cut. This finding does not propose a design for
-either; the maintainer's rule names the direction (find the artifact without reloading) and a plan owns the choice.
+`diff_cells_page` (`backend/src/app/platform/rate_tables.py:645` at the head above) answers a rows pair by calling `_all_cells`,
+which loads both versions from SQL, diffs them and weights them, and then `_page` cuts 50 of the result. Nothing is kept between
+pages: the SQL load is 5.5 s, the hash 0.4 s and the remaining ~3.7 s is `diff_cells` plus the cut, on **every** page request. The
+rows page is **ten times the parquet page** (9604 / 948 ms) and rows is the **normal** storage for every table up to FR-232's 250 000
+default, so the route as specified answers a rows table with a synchronous `200` (`03:933`: the `202` is only for a version with
+`storage: parquet`).
 
-## Requirement context: is any latency budget on this route? (searched, not assumed)
+**Does the text of R1 find a breach?** The text, verbatim, `07` §1.3 (`docs/specs/07-platform.md:36-37`): *"R1 — Everything slow
+is a Job. Any operation that can exceed 2 s returns `202` with a Job, has progress, is cancellable, and persists its result (FR-13,
+NFR-457)."* and `00` NFR-457 (`docs/specs/00-overview.md:534`): *"Interactive UI: p95 < 300 ms for metadata reads; any operation
+exceeding 2 s becomes a Job with progress."* R1 is conditioned on an operation that *can* exceed 2 s, not on one that does at a
+default size. On the measurement, a rows page **can** exceed 2 s (9.6 s at 260 000 cells), and the route answers it with `200`.
+On R1's text the rows route is therefore **not compliant** where a rows table can reach that size, and it can: the threshold is a
+workspace-configurable setting (FR-232), and the measurement raised it. **What is not established is the size at or under the
+default.** The rows page at 250 000 and at 100 000 cells is **unmeasured**; the 260 000 figure is above FR-232's default, taken
+with the threshold raised, and the cost is not assumed to be linear. Entry 3 names exactly those runs as an S7 merge
+condition (p99 at or under 2 s at 250 000 means S7 merges; over means a STOP before the mint), so this limb is **updated with the
+250 000 and 100 000 figures when they exist**; until then the finding states the 260 000 figure with this caveat. The verdict
+that this is a breach, and of what, is the lead's and the maintainer's.
 
-Searched at `a5657fa4520739f182cbea79e0057afeed991ac1` (`origin/main`) and again over the three specs at S7's head
-`386f4d54…` (the route's own row, `03:933`, exists only there):
+### Limb 2: the parquet page reloads and hashes both versions on every page
+
+On the parquet path the page costs p50 948 / p99 1098 ms. Loading plus hashing both versions is 421 + 428 = 849 ms of the 948 ms p50,
+about 90 % (the parts were timed in a separate loop from the whole requests, so the 90 % is a sum of components, not an in-request
+profile; the remaining ~100 ms is unattributed: the stored-artifact read, `splitlines` over 260 000 lines and the cut). In code,
+each request calls `_content_hash` for both versions (each loads the cells and hashes them), builds the artifact key from the two
+hashes, then reads the stored artifact and cuts one page; nothing between requests keeps the hashes. This limb is under R1's 2 s
+at 260 000 cells (p99 1.1 s) and over the maintainer's 1 s filing threshold; the maintainer's rule names the direction
+(*"find the artifact without reloading"*) and a plan owns the design. This finding proposes none.
+
+**Two readings to hold against the numbers:** (i) N = 10, so each p99 is the maximum (`measure_cells.py` `pct`: index
+`round(0.99 × 9)` = 9); it names the worst of ten pages, not a tail estimate; (ii) the filing rule's 3× limb does not fire
+(parquet p50 is 0.10× rows); the 1 s limb does, for both paths.
+
+## Liveness: how large are the rate tables that exist? (read, with the predicate)
+
+The question: is any committed or seeded rate table anywhere near 250 000 cells? **None found.** The reads, at
+`a5657fa4520739f182cbea79e0057afeed991ac1`:
+
+```
+git ls-files examples            # six files: fremtpl2/{README.md,arff.py,fetch.py,model.py,seed.py,test_seed.py}
+grep -n -i -E 'rate.?table|seed_from|relativit' examples/fremtpl2/seed.py   # no hit: the seed writes no rate table
+grep -rn -i -E 'seed.from.model|seed_from_model|/rate-tables' --include=*.py --include=*.sh --include=*.md --include=*.json -l backend/src scripts examples frontend/src
+```
+
+The third read names only the service, its route, the contract generator and the audit script, **not** `backend/src/app/demo`,
+`scripts/` seed code or `examples/`: the demo and the example seed create no rate table. Fixtures and benches: `scripts/bench-rating.py`
+`_rate_table_payload` (line 181) is a two-row table (`channel`: `direct`, `broker`); the rate-table tests set the workspace
+threshold to 2 or 1000 cells (`_set_threshold` in `backend/tests/test_rate_tables_service.py`, `test_api_rate_tables.py`,
+`test_worker_rate_tables.py`) and `packages/pricing-core/tests/test_rate_table_bulk_ops.py:126` decides storage at thresholds of
+100 000 and 300 000 as bare integers, with no table of that size built. **So no committed or seeded table is within three orders of
+magnitude of 250 000; the exposure is a user's own table** (a multi-factor seed, `FD-1357`'s fix, or an import) near the threshold's
+top. This read did not enumerate every test fixture's cell count: it is a search for any large table, and a large fixture
+under a name the predicates miss is possible.
+
+## Requirement context (searched across the NFR rows and the hard rules)
+
+The earlier search, over the NFR rows alone, found no budget and missed R1. Run again at `a5657fa4…` over both forms:
 
 ```
 grep -n -E '^\| \*\*NFR-[0-9]+\*\*' docs/specs/0[0-7]-*.md | grep -i -E 'diff|cells|page|pagina|cursor|list'
-grep -n -E '^\| \*\*NFR-' <03|00|07 at 386f4d54> | grep -i -E 'diff|cells|page|pagina|latency|p99|p95|[0-9] ?s\b'
+grep -n -i -E 'exceed(s|ing)? 2 ?s|slow is a Job|longer than 2 ?s|[^0-9]2 s[^a-z]' docs/specs/0[0-7]-*.md
+grep -n -E '^> \*\*R[0-9]+ ' docs/specs/*.md
 ```
 
-All 83 NFR rows of `00` to `07` were in the first predicate's corpus (`grep -c -E '^\| \*\*NFR-[0-9]+\*\*'` per file: 11, 10, 14, 14, 7,
-8, 8, 11). **No NFR row names the diff route, the cells route or a rate-table page.** The rows that touch a latency or a page, and
-what each covers:
-
-- **NFR-457** (`00`): *"Interactive UI: p95 < 300 ms for metadata reads; any operation exceeding 2 s becomes a Job with
-  progress."* The second clause names no route. It is the one general clause a reader could apply: the parquet page (p99
-  1.1 s) is under 2 s; the **rows page (9.6 s) is over 2 s and is a synchronous 200**, which FR-232 prescribes for a rows
-  pair ("the editor pages without a job"). Whether a changed-cells page is an "operation" that NFR-457 reaches, or a read the
-  first clause's "metadata" excludes, is a reading the text does not settle: it is raised in OQ 9486 and not decided here.
-- **NFR-526** (`07`): API metadata reads p95 < 300 ms (NFR-457); a cells page is not obviously "metadata".
-- **NFR-471** (`01`): the validation report summary < 500 ms; **NFR-520** (`06`): a filtered audit page < 2 s. These are the
-  repository's two precedents for a budget on a paged read; neither covers a rate table.
-- **NFR-489 to NFR-502** (`03`): scoring, tracing, bundle, batch and deployment budgets; none names a rate-table read.
-
-FR-232 states that above the threshold only "the latency and the status code differ", so a slower page is permitted by its text;
-the maintainer's (by delegation) reading of 2026-10-05 18:25:08 BST is that the per-page reload is not an S7 defect. Nothing
-here contradicts that reading: this finding concerns a cost nothing bounds, and the entry's gap (b) asks for the budget
-as a question (OQ 9486).
+The first over all 83 NFR rows of `00` to `07` names no rate-table route. The second finds four lines: the two bounds above
+(`07:36`, `00:534`), `06` NFR-520 (a filtered audit page < 2 s) and one line in `02` that is a measured table, not a requirement.
+The third lists every hard rule; the only one on latency is `07` R1. **NFR-526** (`07:482`): *"API metadata reads p95 < 300 ms
+(NFR-457); the scoring path is specified separately in `03` (NFR-489)."* NFR-471 (`01`, summary < 500 ms) and NFR-520 (`06`) are the
+two precedents for a budget on a paged read; none is a rate-table budget. FR-232 says above the threshold "only the latency and
+the status code differ", which says what a parquet version answers, and does not say a rows version may exceed R1.
 
 ## Evidence
 
-The measurement protocol and raw output are kept in the lead's local handover directory
-`handover/s7-measurement-2026-10-05/` (`measure2.out`, `measure_cells.py`, `run_measure.sh`, `measure_inner.sh`), so the raw
-output is quoted here, not cited by path alone. Run 2026-10-05 20:45:27 to 20:49:46 BST at the head above (tree
-`1511ac46a4f5298a01cb65820bdcf559639b0046`), one gate-1 hold, no check process running, load 1.01 at start, 0.92 at the GO, 1.29
-at the end. The raw output follows, verbatim except that the `setup` timing lines, the memory table and the empty `pgrep` blocks are omitted:
+Run 2026-10-05 20:45:27 to 20:49:46 BST at the head above (tree `1511ac46a4f5298a01cb65820bdcf559639b0046`), one gate-1 hold,
+no check process running, load 1.01 at start, 0.92 at the GO, 1.29 at the end. The protocol and the raw output are kept in the
+lead's local handover directory `handover/s7-measurement-2026-10-05/` (`measure2.out`, `measure_cells.py`, `run_measure.sh`,
+`measure_inner.sh`); the raw output is quoted here, verbatim except that the `setup` timing lines, the memory table and the empty
+`pgrep` blocks are omitted:
 
 ```
 === PARQUET 20:45:46 load1=0.92
@@ -106,13 +145,19 @@ page request (whole): n=10 p50=9604ms p99=9995ms max=9995ms
   of which version_content_hash x2: n=10 p50=388ms p99=416ms max=416ms
 ```
 
-The rows block began at load 1.84 (the first line above carries it). An earlier run (18:56 BST: p50
-1024 ms, p99 1204 ms) is recorded as **invalid** (load 7.2, no rows baseline) and is not used; this run is consistent with it.
+The rows block began at load 1.84 (the first line above carries it). An earlier run (18:56 BST: parquet p50 1024 ms, p99 1204 ms)
+is recorded as **invalid** (load 7.2, no rows baseline) and is not used; this run is consistent with it.
 
 ## Disposition
 
-**Carry forward with an owner: WK-1178**, a small follow-on slice, not S7 scope (the maintainer's rule). Severity MEDIUM
-because no numbered budget is breached by the parquet path, the page is correct, and the rows path's 10 s needs a table near the
-threshold's top; it **rises to HIGH if the lead reads NFR-457 as binding the rows page** (a 9.6 s synchronous 200 against a
-"becomes a Job above 2 s" clause), which is the question OQ 9486 puts. The acceptance a fix plan would carry is not set
-here: it needs the budget OQ 9486 asks for. Companion: OQ 9486 (working id), the latency budget these routes should carry.
+**Carry forward with an owner: WK-1178**, a follow-on slice (the maintainer's rule), **except** that entry 3 makes the rows page
+at 250 000 and 100 000 cells a **merge condition on S7 (#1206)**, which is the measurement this finding is waiting for.
+
+**Severity HIGH, provisional, LATENT today.** HIGH because the breached text is a numbered **hard rule** (`07` R1) and the route
+is **new in S7**, so S7's own spec row answers a rows page `200` where R1 says an operation that can exceed 2 s returns `202`; the
+rows path is the **normal** storage, 10× the parquet page, and 3.7 s of it is recomputed per page. LATENT because no committed or
+seeded table is near the threshold (Liveness), and because the size at or under 250 000 cells is unmeasured: **if the 250 000-cell
+rows p99 is at or under 2 s the rows limb falls to MEDIUM or below and the finding rests on the parquet limb** (entry 3 says the
+same, and says severity is then proposed from the clean numbers). The parquet limb alone, at p99 1.1 s against R1's 2 s and a
+1 s filing threshold, is MEDIUM. The acceptance a fix plan would carry is not set here: it needs the budget OQ 9486 asks for.
+Companion: OQ 9486 (working id), the latency budget these routes should carry, for both paths.
