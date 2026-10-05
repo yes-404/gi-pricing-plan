@@ -2,7 +2,7 @@
 id: RL-9753
 family: ruling
 title: PL-1286 DP-4's texts — the algorithm read by slug@version (S2), and a rate table version's definition and cell-page reads (S4); a version's table list is its pins, not a route
-status: draft                  # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
+status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
 created: 2026-10-01
 owner: decision-maker
 tree: 8bd782acbbdde8e3b4195b5a0acb89183b5a0253
@@ -136,7 +136,8 @@ not type it.
 
 **S2 applies T1 and T2. S4 applies T3, T4 and T5.** Each slice applies them with
 `.claude/skills/spec-change`, in the same commit as its code (`CLAUDE.md` §2). Placement was
-read at origin/main `1dd5e264`. Placeholders: `RL-<this>` is this record's minted id.
+read at origin/main `1dd5e264`, and re-read at main `ef5dc6e7` on 2026-10-05: each anchor
+below is found there exactly once, and each line hint is main's. Placeholders: `RL-<this>` is this record's minted id.
 `FR-<a>` and `FR-<b>` are the requirement ids minted for T1 and T3 when they are applied.
 `<date>` is the date of the applying commit. Nothing else is a placeholder.
 
@@ -150,7 +151,7 @@ precedes `### 3.2 Rating step types`. That is the last row whichever of this tex
 ```
 
 **T2 — `03` §5.1, one row (S2).** Insert immediately **before** the row that begins
-`| `POST` | `/api/v1/sub-graphs` |` (`:781`). Nothing is struck.
+`| `POST` | `/api/v1/sub-graphs` |` (`:897`). Nothing is struck.
 
 If RL 9907 (working id)'s `Permission` column has not landed in `03` §5.1 when a row is applied, the row is applied in its three-cell form:
 
@@ -174,7 +175,7 @@ immediately before the blank line that precedes `### 3.4 Rating versions and bun
 
 **T4 — `03` §5.1, two rows (S4).** Insert both, in this order, immediately **before** the
 row that begins `| `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against=` |`
-(`:788`). Nothing is struck.
+(`:904`). Nothing is struck.
 
 If RL 9907 (working id)'s `Permission` column has not landed in `03` §5.1 when a row is applied, the row is applied in its three-cell form:
 
@@ -203,8 +204,11 @@ origin/main:docs/specs/06-governance.md:279:> | `rating:write` | Writing Rating 
 ```
 
 **T5 — `03` §4.2, a dated note (S4).** Insert one new paragraph, followed by a blank line,
-immediately before the line `### 4.3 `RatingVersion`` (`:345`), after the blockquote that
-ends `remain mutually exclusive.`. Nothing is struck.
+immediately before the line `### 4.3 `RatingVersion`` (`:369`), after the blockquote that
+ends `remain mutually exclusive.`. Nothing is struck. *(Re-read 2026-10-05 at `ef5dc6e7`:
+`RL-1375`'s re-seeding blockquote (`:361-367`) now sits between that blockquote and
+`### 4.3`. The anchor is still the `### 4.3` line, so the paragraph goes after both
+blockquotes.)*
 
 ```text
 *(Added <date>, `RL-<this>`.)* **`RateTableCell`** is one row in the form `rows` uses above: an object whose members are the table's key columns and its value column, each value a string (a key level or a decimal string). A Rate Table Version's `rows` and `default_row` are typed as `RateTableCell`, and the cells read (§5.1, FR-<b>) returns pages of it. The definition read returns a `RateTable`, which carries every field above except `rows`, `cells`, `change_note`, `seeded_from`, `created_by_operation`, `created_by_import`, `diff_vs_previous` and `diff_vs_seed`.
@@ -293,3 +297,37 @@ broken input.
   in FD-1366's sense, and `RateTable.default_row`'s `dict[str, Any]` is removed.
 - **FD 9779 (working id) is re-pointed to `FD-1366`** (three places) and added to
   `relates:`.
+
+## Amendment, 2026-10-05: citations re-read at main `ef5dc6e7`, before mint
+
+Citation and currency update only. Nothing ruled above changes (decision-maker `dm-amend-2`,
+on the lead's brief of 2026-10-05 10:50 BST, which adopted the batch-2 triage).
+
+- **T1 to T5 re-read at `ef5dc6e7`.** T1: §3.1's last row is still FR-219 (`:88`), before
+  `### 3.2` (`:90`). T2's `POST /api/v1/sub-graphs` row moved `:781` → `:897`. T3: FR-1186
+  is still `:128`, the last row of §3.3. T4's `rate-tables/{slug}@{version}/diff` row moved
+  `:788` → `:904`. T5's `### 4.3` line moved `:345` → `:369`, and `RL-1375`'s blockquote
+  now precedes it (noted at T5). `03` §5.1's header is still `| Method | Path | Purpose |`,
+  so RL 9907 (working id)'s `Permission` column has not landed and the three-cell forms are
+  the ones that apply today.
+- **The Evidence, *Ruled* and 10:43 BST amendment sections are dated readings at
+  `1dd5e264`** and resolve there (`git show 1dd5e264:<path>`). They are not rewritten. At
+  `ef5dc6e7` their moved cites are: `03` §4.2 "Values are stored as decimal strings"
+  `03:310` → `:317`, and its `diff_vs_previous`/`diff_vs_seed` example `:304-306` →
+  `:311-313`; `_load_table` `rate_tables.py:189-205` → `:243-259`, `_load_version`
+  `:462-481` → `:528-547`, `_load_cells` `:484-499` → `:550-565` (its select `:487-492` →
+  `:553-558`), `_load_cells_of` `:533-543` → `:599-609`, `_wire_rows` `:184-186` →
+  `:238-240`; `RatingAlgorithm` `model_schema/rating.py:374` → `:375`, `Pins.rate_tables` `:74` → `:75`,
+  `RateTable` `:684-700` → `:702-718`, `RateTableVersion` `:851-900` → `:899-948`;
+  `db/models.py:2084` → `:2088`. FR-232 is still `03:123`, and
+  `platform/rating_algorithms.py:135-163`, `api/rating_algorithms.py:28`,
+  `pagination.py:48-61`, `:82-88` and `:91`, `api/sub_graphs.py:83-97` and
+  `rate_tables/operations.py:81` are unchanged.
+- **The pasted `06` permission rows** are verbatim output at `1dd5e264` and stay as
+  quoted. At `ef5dc6e7` they are `06-governance.md:280-281`, and both names still exist.
+- **`status:` is `active`, not `draft`.** `document-ids.md` §1.2a gives a ruling the subset
+  `active`, `superseded`, `retired`, and `audit-docs.py` check 33 refused `draft`. The
+  working-id rulings of batch 1 (#977, #979) carry `active` in the same form.
+- `tree:` stays `8bd782ac`, the tree of `1dd5e264` that the Evidence was read at, as
+  `RL-1407` keeps its own evidence tree. `created:` changes at the mint. RL 9766, RL 9767
+  and RL 9907 are still working ids (#1055, #977) and are cited as such.
