@@ -319,6 +319,9 @@ The slice closes on a clean audit and the lead's merge. It is WK-673's last buil
    and the gate names match PL 9590's Interfaces (grepped against #1181 at `7db4d646`).
 4. **Rulings between sweep and filing.** Open PRs read at 17:05 BST: none rules on FR-364 or on
    `06` §4.2's `rating_version` entry; RL 9607's `06` texts and RL 9614's T3 are in other
-   sections.
+   sections. A-1 to A-4 (#1177, #1178, #1174, #1175), read before 17:08:50 BST: none edits
+   `rating_versions.submit_for_review` (A-1's and A-4's `submit_for_review` is
+   `platform/perils.py`'s) or FR-364; A-1's DP-1 (a) edits `06` §4.2's floor note, which this
+   slice does not touch.
 5. **Spec and code disagree (premise c), and this plan does not pick a side silently.**
    DP-S6-1 puts it to the decision-maker (`CLAUDE.md` §0).
