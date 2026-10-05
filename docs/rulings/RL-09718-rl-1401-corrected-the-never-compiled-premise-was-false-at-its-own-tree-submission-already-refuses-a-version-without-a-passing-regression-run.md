@@ -24,10 +24,12 @@ relates: [RL-1401, RL-1379, FR-257, WK-673]
   (`echo $CLAUDE_EFFORT` printed `medium`) drafted the record around it and re-verified its
   two sites.
 - **The source.** `~/gi-pricing-plan.local/channel/to-lead.md`, the entry headed
-  "2026-10-05 09:54:07 BST — FD 9720 NOT filed (its premise is false, verified by me); RL-1401
-  gets a DATED CORRECTION LINE (not a note only); e3 LOW stands, with the doubt recorded". Its
-  blockquote is the text in **Ruled**.
-- **The form.** That entry asked for the text to be appended to RL-1401. The entry headed
+  "2026-10-05 10:02:28 BST — CORRECTION (mine) to my RL-1401 correction text (in "… FD 9720 NOT filed …"): the lead's two precision points ACCEPTED; #1119 (RL 9718) carries the AMENDED text below instead". Its blockquote, the maintainer's amended text, is the text in **Ruled**. It
+  replaces the text first given in the entry headed "2026-10-05 09:54:07 BST — FD 9720 NOT filed (its premise is false, verified by me); RL-1401 gets a DATED CORRECTION LINE (not a note only); e3 LOW stands, with the doubt recorded", on the lead's two precision
+  points, which that entry accepts: the false premise row is RL-1401's "An `approved` Rating
+  Version can have no compiled bundle", not the adjacent row, and the gate refuses the
+  submission, not the approval.
+- **The form.** The 09:54:07 entry asked for the text to be appended to RL-1401. The entry headed
   "2026-10-05 09:57:58 BST — CORRECTION (mine), superseding the "append verbatim at the end of
   RL-1401" instruction in "… FD 9720 NOT filed …": option (a), a correcting record RL 9718
   with `corrects: RL-1401`; RL-1401 gains only `corrected_by: [RL-<minted>]`" replaced that
@@ -45,7 +47,7 @@ relates: [RL-1401, RL-1379, FR-257, WK-673]
 
 The maintainer's text, verbatim:
 
-> The premise row "Such a version can never be compiled afterwards" and the paragraph asking the lead to file one finding were already false at this record's own cited tree: rating_versions.py `_regression_run_gate` (from #886, 2026-09-29) refuses an approval without a checked Regression Suite run for the compiled bundle (EVIDENCE_INCOMPLETE), pinned by test_rating_versions.py `test_golden_no_suite_is_refused_as_incomplete_evidence`. No finding is filed. The ruling's decisions are unaffected.
+> RL-1401's premise row "An `approved` Rating Version can have no compiled bundle" (marked true) and its paragraph asking the lead to file one finding were already false at RL-1401's own cited tree: `submit_for_review` calls `_regression_run_gate` (rating_versions.py, from #886, 2026-09-29), which refuses a submission without a checked Regression Suite run for the compiled bundle (EVIDENCE_INCOMPLETE), pinned by test_rating_versions.py `test_golden_no_suite_is_refused_as_incomplete_evidence`. A Rating Version therefore cannot reach `approved` without a compiled bundle. The adjacent row "Such a version can never be compiled afterwards" (RL-1379) stays true. No finding is filed. RL-1401's decisions are unaffected.
 
 So:
 
@@ -66,22 +68,7 @@ Each site was re-read by symbol, not taken from the relay.
 | The pin | `backend/tests/test_rating_versions.py:1001` (`test_golden_no_suite_is_refused_as_incomplete_evidence`) | Submitting a version with no suite raises `EVIDENCE_INCOMPLETE`, the detail contains "at least one golden quote", and the row stays `draft` with no `golden_quotes` evidence |
 | The origin | `git log -S'def _regression_run_gate'` | First added by `6a8b8e70` (2026-09-29T12:26:52+01:00), #886 |
 | "At its own tree" | RL-1401's `tree:` `8252741cc3849058b6fc6836967448d88ff9821c` | `6a8b8e70` is its ancestor. At that tree, the call is `rating_versions.py:289`, the definition is `:619`, and the test is `test_rating_versions.py:1001` |
-
-## Notes for the reader (observations, not decisions)
-
-- **The gate runs at submission, and approval follows submission.** The maintainer's text says
-  the gate "refuses an approval". The code refuses the `draft → review` submission. Every
-  approved version has passed that submission, so the effect on an approved version is the
-  same.
-- **The adjacent premise row.** RL-1401's premise table has two rows on this point. The gate
-  falsifies, directly, the row "An `approved` Rating Version can have no compiled bundle"
-  (marked true, citing `rating_versions.py:250-300` and `:551-578` @14c7e805). With no
-  algorithm reference or no suite, `_golden_quote_gate` returns `not_checked`, and
-  `_regression_run_gate` then refuses. `6a8b8e70` is also an ancestor of `14c7e805`. The row
-  the maintainer's text names, "Such a version can never be compiled afterwards", cites
-  RL-1379's draft-only compile rule. That rule is still true on its own. The finding's premise
-  was the two rows together. This record quotes the maintainer's text as written and does not
-  amend it. Whether the text should also name the adjacent row is the maintainer's to decide.
+| The false row and the true row | RL-1401 at `47d770e8fcbd2410fa101019ed8cf3aae69a1baa`, `:54` and `:55` | `:54` "An `approved` Rating Version can have no compiled bundle" (marked true, citing `rating_versions.py:250-300` and `:551-578` @14c7e805; `6a8b8e70` is also an ancestor of `14c7e805`). `:55` "Such a version can never be compiled afterwards" cites RL-1379 and stays true |
 
 ## What it obliges
 
