@@ -181,6 +181,39 @@ The lead relayed it. Its item (2), verbatim:
   **This slice's reds stand as ruled (the class name)**; if SL 9500 merged first, the dispatch
   record restates items 6 and 13 against DP-4's ruling.
 
+## Pre-mint delta 3 (2026-10-05): the exact-equality check replaces `isinstance`; the class name holds until SL 9500
+
+The maintainer (by delegation), in `~/gi-pricing-plan.local/channel/to-lead.md`, relayed by the
+lead, verbatim. The entry headed "2026-10-05 18:26:46 BST — RL 9498 @c2c70690: accepted, with ONE pre-mint fix in T1; the isinstance catch is good":
+
+> T2 and the new T3 at 03:929: accepted as drafted.
+> T1: my 18:20:40 entry said "if the plan's batch side raises a dedicated exception class for it, the class name is stated in T1". PL 9509 raises NO dedicated class and ASSERTS ValueError. So T1 STATES ValueError, in a phrase like "the row's error_code is ValueError (FR-255's class-name rule)", rather than leaving it to SL 9511. Otherwise the spec is silent on a code the tests pin, and a later class change would move the wire without a spec change. One sentence, pre-mint.
+> PL 9509 Task 3 item 6's "isinstance(value, int)" break would have refused 3.0 against the exact-equality ruling: a good catch. Its fix in planner-1343's delta must also turn the break into a red for 3.0 → 3 (the mutation that proves the exact-equality code, not isinstance, is what runs).
+
+The entry headed "2026-10-05 18:27:10 BST — RL 9498 STOP: (a) ADOPTED; my 18:20:40 "batch keeps the class name" is SUPERSEDED once SL 9500 lands":
+
+> (a). The batch path runs _build_outputs inside _score_batch_row's try (score.py:1096-1100), and _batch_error_code (:1006-1018) maps a coded "CODE: msg" ValueError to CODE. So with ONE producer (SL 9500's check in _build_outputs), batch rows code the fault RATING_TYPE_MISMATCH, the same as /score: FR-254 holds, and the codes agree. My 18:20:40 "NAMED, NOT CHANGED: batch keeps the class name" described the state BEFORE SL 9500 and is SUPERSEDED for after it; the RL quotes both entries.
+> Amendments, pre-mint, ONE DM commit: T2 and T3's batch clause = "until SL 9500 merges, batch codes it ValueError (SL 9511's _coerce_output_value, the class-name rule); after, RATING_TYPE_MISMATCH, from the single producer"; item 8 and the Acceptance to match. My 18:26:46 T1 fix ("T1 states ValueError") becomes the same time-bounded sentence in T1.
+> PL 9499 marks DP-4 ruled (a). SL 9500 RE-EXPECTS SL 9511's class-name red to RATING_TYPE_MISMATCH, citing this entry, with a batch red asserting the row's error_code is RATING_TYPE_MISMATCH and the run continues. PL 9509 marks its class-name red "until SL 9500".
+> (b) is refused (a path flag in the shared builder is the divergence FR-254 forbids).
+
+**What this delta changes, at every site it reaches** ([`README.md`](README.md) rule 5):
+- **Item 6 and Task 2 Step 5** (marked in place): the `int`/`count` check is
+  `value == int(value)` with no tolerance, and the integer is written (`RL 9498`, #1212 @`c2c70690`,
+  T1/T2). Item 6's break removes **that** check. A second break is added, the one the 18:26:46
+  entry asks for: reverting the check to `isinstance(value, int)` turns item 12 (`3.0` → `3`) red,
+  which proves the exact-equality code is what runs.
+- **The Task 2 Step 3 sketch** is marked superseded in place by Step 3b's branch, written out.
+- **Items 6 and 13's code is time-bounded** (the 18:27:10 entry, DP-4 (a) of PL 9499):
+  `error_code == "ValueError"` **until SL 9500 merges**; after it, `RATING_TYPE_MISMATCH`, from the
+  single producer. SL 9500 (PL 9499, #1213, its item 28) re-expects both; this slice asserts
+  `ValueError`, and if SL 9500 merged first, the dispatch record restates both items with
+  `RATING_TYPE_MISMATCH`.
+- **T1 states the code** (the 18:26:46 entry): `RL 9498`'s T1 names `ValueError`, time-bounded
+  as the 18:27:10 entry words it, rather than leaving the class to SL 9511. This slice applies T1
+  as minted. (`RL 9498` @`c2c70690` item 8 said T1 "leaves the exact class to SL 9511"; the
+  18:26:46 entry replaces that, and the decision-maker amends the record pre-mint.)
+
 ## Status
 
 `draft`. ~~**DP-1 is open, the maintainer's.** DP-2 and DP-3 carry recommendations and are also
@@ -266,8 +299,13 @@ restatement is needed.)*
    age 18). Batch gives an `"error"` row with `error_code == "ValueError"` for that row, and the
    batch completes. It never writes a float or a string. **Red:** the same `"error"` row, but
    from the type refusal (`:964-965`) rather than from the value check. So this item is red
-   first only by the **break** below; record it. **Break:** an `int` branch that returns the
-   value without the `isinstance(value, int)` check writes `19.8`, and the item fails. (FD 9513
+   first only by the **break** below; record it. ~~**Break:** an `int` branch that returns the
+   value without the `isinstance(value, int)` check writes `19.8`, and the item fails.~~
+   *(Pre-mint delta 3: the check is exact equality, `value == int(value)`, no tolerance, writing
+   the integer (`RL 9498` T1/T2). **Break:** removing **that** check writes `19.8`, and the item
+   fails. **Second break:** reverting the check to `isinstance(value, int)` refuses `3.0`, and
+   item 12 fails. The code is `"ValueError"` **until SL 9500 merges**, then
+   `RATING_TYPE_MISMATCH` (the 18:27:10 entry).)* (FD 9513
    recorded `/score` serving this value as a JSON float. That is the divergence `RL-1343` rule 4
    closes on `/score`. See §"RL-1343's discharge".)
 7. `test_a_fractional_declared_output_is_a_decimal_string_in_batch`, parametrised over
@@ -295,7 +333,8 @@ restatement is needed.)*
     int)` refusal of `3.0`).
 13. `test_a_near_integer_under_an_integral_type_is_an_error_row`, parametrised over `int` and
     `count`. The expression gives `2.9999999999`. That row is an `"error"` row with `error_code`
-    equal to the exception class name (`"ValueError"`, DP-3; `RL 9498` item 8), the batch
+    equal to the exception class name (`"ValueError"`, DP-3; `RL 9498` item 8; *until SL 9500
+    merges, then `RATING_TYPE_MISMATCH`, pre-mint delta 3*), the batch
     completes, and no float or string is written. **Red:** none against Task 2 Step 3 as first
     sketched (it already refuses a float); so this item is red first only by the **break**: a
     branch deciding integrality with a tolerance (`abs(value - round(value)) < 1e-9`) writes `3`
@@ -850,6 +889,21 @@ def test_the_known_output_types_name_every_numeric_family_member() -> None:
         return str(as_decimal)
 ```
 
+  *(Pre-mint delta 3: the `int`/`count` branch above is superseded by Step 3b's, which reads:*
+
+```python
+    if declared_type in ("int", "count"):
+        # FD 9513, DP-1 (b); RL 9498: integral by exact equality, no tolerance; 3.0 -> 3.
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or value != int(value):
+            raise ValueError(
+                f"score_batch: a {declared_type} output must be integral, got {type(value).__name__}"
+            )
+        return int(value)
+```
+
+  *A non-finite float makes `int(value)` raise `OverflowError` or `ValueError`; the executor puts
+  `math.isfinite` before the comparison so the error is the `ValueError` above.)*
+
   The second branch replaces the existing `decimal` branch (`:972-974`), whose body is
   unchanged; it now names the two types DP-1 (b) writes in the `decimal` form. The docstring of
   `_coerce_output_value` and of `_outputs_json` say which types are written how, and that the
@@ -863,9 +917,12 @@ def test_the_known_output_types_name_every_numeric_family_member() -> None:
   value. Run items 5–8, 12 and 13: PASS. Then the item 13 break (a tolerance) and restore.
 - [ ] **Step 4: Run items 5–8.** Expected: PASS.
 
-- [ ] **Step 5: The break for item 6.** Temporarily remove the `isinstance(value, int)` check;
+- [ ] **Step 5: The break for item 6.** ~~Temporarily remove the `isinstance(value, int)` check;
   item 6 fails because `outputs_json` is written (`19.8`) and `outcome` is `"quoted"`. Record
-  it and restore.
+  it and restore.~~ *(Pre-mint delta 3:)* Temporarily remove the `value == int(value)` check;
+  item 6 fails because `outputs_json` is written (`19.8`) and `outcome` is `"quoted"`. Record it
+  and restore. Then temporarily replace the check with `isinstance(value, int)`; item 12 fails
+  (`3.0` refused). Record it and restore.
 
 - [ ] **Step 6: Commit.**
 
@@ -944,3 +1001,6 @@ git commit -m "fix(rating): batch writes int, count, relativity and percentage o
    `except`s; `_probe_payload`, `_ProbeResolver` and `_probe_bundle` are defined and used in
    Task 2; `_coerce_output_value`'s signature is unchanged.
 7. **Pre-mint delta 2 coverage:** the ruling's "each slice has one red for 3.0 → 3 and one for a near-integer refused": items 12 and 13 (Task 2 Step 3b); "T1 and T2 state it": `RL 9498`'s texts, applied by Task 3; activation need 4 names `RL 9498`.
+8. **Pre-mint delta 3 coverage:** the 18:26:46 entry: T1 states `ValueError` (delta 3, last
+   bullet); the `isinstance` break replaced and turned into a red for `3.0` → `3` (item 6's second
+   break, Step 5). The 18:27:10 entry: items 6 and 13 marked "until SL 9500".
