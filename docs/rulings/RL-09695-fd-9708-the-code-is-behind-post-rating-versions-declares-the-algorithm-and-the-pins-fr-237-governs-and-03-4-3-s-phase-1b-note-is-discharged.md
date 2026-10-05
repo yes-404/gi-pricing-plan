@@ -17,7 +17,7 @@ relates: [WK-669, WK-1178, CR-838, CR-1212, PL-1371, SL-1300, FD-1297, FR-223, F
 
 # RL 9695 (working id) — FD 9708: which side is wrong about Rating Version pins over HTTP
 
-**Decided by the maintainer, by delegation (the deputy)**, in the entry headed
+**Decided by the maintainer, by delegation**, in the entry headed
 *"2026-10-05 13:12:56 BST — DECISIONS 15 and 16; CORRECTION to my 13:03:23 item 11; a priority rule for HIGH G2 blockers"* in `~/gi-pricing-plan.local/channel/to-lead.md`, item 15, relayed to this session by the
 lead: *"RL 9695 (FD 9708): OPTION (a). POST /rating-versions takes algorithm_ref and pins,
 checked at compile, in a WK-1178 slice. FD 9708: HIGH, owner WK-1178, deadline before the P2
@@ -38,7 +38,7 @@ lead's allocation.** Every fact below was read at `origin/main`
 side is wrong. Either the spec's §5.1 row and WF-699 C1 describe Phase 2 and the code is
 behind …, or §4.3's Phase 1b note stands and §5.1 and WF-699 C1 should say the route creates
 the minimal version and pins are set by a route yet to be specified. A third option is a
-separate pin-setting route on a `draft` version."* The deputy filed it as spec-vs-code with
+separate pin-setting route on a `draft` version."* The maintainer, by delegation, filed it as spec-vs-code with
 sides unruled, on G2's path (`~/gi-pricing-plan.local/channel/to-lead.md`, entry headed
 *"2026-10-05 13:04:03 BST — DECISIONS: FR-1399 = (β); exit-demo C1 finding OK; …"*, item 13).
 
@@ -99,7 +99,7 @@ standing maintenance Work, WK-1178, as SL-1300 (FD-1297's FR-237 fix) did.
 | **Rule** | `POST /rating-versions` accepts optional `algorithm_ref`, `pins` and `model_reference_mode`. The shape is checked at create (422). Resolvability and maturity stay with compile (FR-240). Absent fields leave today's behaviour: compile refuses `RATING_VERSION_UNPINNED` | The create route stays minimal. §5.1, FR-237 and WF-699 C1 get dated clarifications that the pins are set outside HTTP in P2. A route is specified in a later phase | Create stays minimal. A new `PUT /rating-versions/{id}/pins` sets `algorithm_ref`, `pins` and `model_reference_mode` on a `draft` only (`RATING_VERSION_IMMUTABLE`, 409, otherwise) |
 | **Which side was wrong** | The code (and CR-838's "delivered" reading of FR-237) | Nobody: the spec is amended to match the code | Both in part: §5.1's row is right that a client pins; WF-699 C1 gets a second step |
 | **Effect on G2** (ruled 13:05:42: WF-699 A–E over HTTP) | **Met.** C1 is one HTTP call, as written. The exit-demo script needs no ORM write | **Not met.** WF-699 C1 can only run as the seed's ORM write (`examples/fremtpl2/model.py:396-397`), which is not HTTP. G2 would need the 13:05:42 ruling amended to allow it, which is the maintainer's to decide | **Met** with two calls (create, then `PUT …/pins`). WF-699 C1 splits into C1a/C1b |
-| **Cost** | One WK-1178 fix slice: the DTO built from `model_schema` types (`ArtifactRef`, `Pins`, `ModelReferenceMode` — no hand-written shape), the service and row writes, the contract and generated client regenerated, negative tests. The spec change is small (T1–T3) | Spec only (T4–T6). But it moves FR-237's HTTP limb out of P2, which is a scope move for the maintainer (G1/G2), and it leaves the platform with no client-visible way to pin | A new route, a new FR, an audit event for a pin change, immutability rules, WF-699 rewritten. It also creates the re-pin route that the deputy's DP-S2-3 decision (PL 9713, entry of 12:59:02 BST, item 10: *"no re-pin (no route exists)"*) relied on being absent |
+| **Cost** | One WK-1178 fix slice: the DTO built from `model_schema` types (`ArtifactRef`, `Pins`, `ModelReferenceMode` — no hand-written shape), the service and row writes, the contract and generated client regenerated, negative tests. The spec change is small (T1–T3) | Spec only (T4–T6). But it moves FR-237's HTTP limb out of P2, which is a scope move for the maintainer (G1/G2), and it leaves the platform with no client-visible way to pin | A new route, a new FR, an audit event for a pin change, immutability rules, WF-699 rewritten. It also creates the re-pin route that the DP-S2-3 decision of the maintainer, by delegation (PL 9713, entry headed *"2026-10-05 13:03:23 BST — #1066 (FD-1416 mint) at a202f030: NO ACK YET, one false cite in the body; then decisions 10 and 11"*, item 10: *"no re-pin (no route exists)"*) relied on being absent |
 | **Risk** | A version can be created with refs that do not resolve. That is today's state for the seed, and compile refuses it with a coded error | The demo's "over HTTP" is weakened at the step where pricing correctness is set | A mutable draft pin set is a second write path. RL 9758's FR-223 check point would then need to cover two writers |
 
 ### Trade-offs
@@ -108,7 +108,7 @@ standing maintenance Work, WK-1178, as SL-1300 (FD-1297's FR-237 fix) did.
 concept: the stored shape, compile's checks and the refusal codes already exist. Validation
 stays in one place (compile), so it cannot diverge between create and compile. (c) adds
 flexibility the journey does not use (C5 recompiles; it does not re-pin), at the cost of a
-second writer and of reversing an assumption the deputy has already ruled on. (b) is cheapest
+second writer and of reversing an assumption the maintainer, by delegation, has already ruled on. (b) is cheapest
 in this PR and most expensive for G2. It is also the silent "make the spec match the code"
 move that `CLAUDE.md` §0 warns against, because it would record that the spec was wrong when
 the evidence (WF-699 C4–C5, the widened `model_schema`, CR-838) says the code fell short.
@@ -156,7 +156,7 @@ has exactly one hit at `caa4e411`.
 
 ### T3 — `03` FR-237 (a). Find `` and the input contract. Nothing is unpinned. | `` and insert before its final `` |``
 
-*Amended 2026-10-05, before the mint, on the deputy's entry headed *"2026-10-05 13:20:26 BST — DECISIONS 22–27; severity signals for the four gap findings"*, item 25
+*Amended 2026-10-05, before the mint, on the maintainer's (by delegation) entry headed *"2026-10-05 13:20:26 BST — DECISIONS 22–27; severity signals for the four gap findings"*, item 25
 (PL 9683 DP-1): "Check MODEL_REFERENCE_MODE_INCONSISTENT at create when algorithm_ref
 resolves; an unresolvable ref stays compile's." The text first filed here ended "The create
 route stores them and does not resolve them."; it is replaced by the last two sentences
@@ -216,18 +216,29 @@ broken input:
 ## What it obliges
 
 - **The lead, at the mint:** mint this record before FD 9708's plan, which cites it (the
-  deputy's order of 13:13:32 BST, item 5), replacing working id 9695 everywhere this commit
-  writes it. File the WK-1178 slice row. Add the slice and FD 9995 to PL-1371 §3.8 row 7
-  (exit demo (b)) as prerequisites of C1.
+  order of the maintainer, by delegation, in the entry headed
+  *"2026-10-05 13:13:32 BST — PL 9716 noted; batching UNRELATED findings ≤3 per mint PR: APPROVED (a widening of my 10:47:03 rule); cite fix"*,
+  item 5), replacing working id 9695 everywhere this commit writes it. File
+  the WK-1178 slice row. **PL-1371 is frozen, so its §3.8 row 7 is not edited:** record the
+  slice and FD 9995 as prerequisites of C1 in a dispatch-record delta against PL-1371, and the
+  exit-demo plan names both when it is filed. *(Amended 2026-10-05, before the mint, on the
+  entry headed *"2026-10-05 13:15:53 BST — DECISIONS 17–21 (PL 9689 DP-S3-2/3/6; FD 9707 DP-1; RL 9695 follow-ups)"*,
+  item 21(i). The text first filed here said to add both to PL-1371
+  §3.8 row 7.)*
 - **FD 9708's planner:** the leaf plan cites this record for which side is wrong and for DP-1,
   and carries T1 to T3 and the acceptance list above as its scope, rather than re-deciding
   them.
 - **The WK-1178 slice:** apply T1 to T3 verbatim in the commit that builds them,
   with the acceptance tests above. Correct the handler docstring, which today claims pins it
   does not take.
-- **For the lead, not ruled here:** CR-838 recorded FR-237 *delivered* on evidence that did
-  not reach the create route. It is frozen, so it is not edited. Whether it needs a correcting
-  record or whether FD 9708 is the record enough is the lead's verdict (`CLAUDE.md` §13).
+- **A correcting record for CR-838:** CR-838 recorded FR-237 *delivered* on evidence that did
+  not reach the create route. It is frozen, so its body is not edited. A correcting record
+  states the false "delivered", cites FD 9708 and has `corrects: CR-838`; CR-838 gains only
+  an append to its `corrected_by:` (`docs/process/document-ids.md` :135-136; check 34). Before
+  it is drafted, the lead checks `document-ids.md` §1.6 for which family and role may correct
+  a CR; if that is the maintainer's, the maintainer accepts it at its ACK. *(Amended
+  2026-10-05, before the mint, on the same entry's item 21(ii). The text first filed here left
+  whether a correcting record was needed to the lead's verdict.)*
 
 ## Spec changes in this commit
 
