@@ -491,3 +491,32 @@ this tree") were measured there and stay true there; this section carries their 
   names five tables (item 1) and does not say whether these two are in or out of scope.
   **That is a scope question, not a citation fix, and it is not decided here**; it is
   raised to the lead.
+
+## Clarified 2026-10-05 before mint: `04` and `05` §5.1 are in scope (H5's question)
+
+*By the decision-maker session `dm-premint` (effort `medium`), on the lead's brief of
+2026-10-05 10:08 BST. This section rules nothing: it records the maintainer's ruling, by
+delegation, from `~/gi-pricing-plan.local/channel/to-lead.md`, the entry headed
+"2026-10-05 09:59:49 BST — A10 early ACCEPTED (start when dm-9718 reports, about 10:10, solo 30 min); RL 9907 Q1 RULED "in scope"; PL 9728 DP-6 RULED (b) with a binding condition. Both ruled by me (the maintainer, by delegation), so no DM is needed". Its RL 9907 bullet, verbatim:*
+
+- **RL 9907 Q1 (#977, pre-merge), RULED: the 04 (:304, 10 rows) and 05 (:278, 16 rows) §5.1 tables are IN SCOPE.** Reason: item 5's own text ("fails on any §5.1 row") governs. A permission test that skips two modules' tables passes vacuously, the class FD 9988 files. Item 1's list of five tables is read as examples, not an exhaustive set. Recorded as a dated clarification section in #977 before its mint, citing this header; the ruling's other substance is unchanged.
+
+- **What it settles.** H5's question is closed: `04-optimisation.md` §5.1 (header `:304`) and
+  `05-monitoring.md` §5.1 (header `:278`) are covered. Item 5's "fails on any §5.1 row"
+  governs, and item 1's list of five tables (`01`, `02`, `03`, `06`, `07`) is read as
+  examples, not an exhaustive set. The ruling's other substance is unchanged.
+- **Where "five" appears above.** The presence table, item 1, item 2's cost bullet, item 4
+  (its first-commit bullet, its edit list and its open-PR rule), the Acceptance bullet on
+  check 22, the 2026-10-01 10:18 amendment's predicate, and H1–H2 name five tables or five
+  specs. They were written before this clarification; read them with `04` and `05`
+  included. The counts they give stay true for the five tables they counted.
+- **Re-verified at origin/main `47d770e8fcbd2410fa101019ed8cf3aae69a1baa`**, by
+  `grep -n -E '^\| *Method *\| *Path' docs/specs/0*.md`: `04-optimisation.md:304` and
+  `05-monitoring.md:278` are each `\| Method \| Path \| Purpose \|`, under `### 5.1 REST
+  API` at `04:302` and `05:276`.
+- **Row count, seven tables.** By H2's predicate, verbatim (the lines from `### 5.1` up to
+  the next `##`/`###` heading that match ``^\| `?(GET|POST|PUT|PATCH|DELETE)``): `04` has
+  10 rows (5 `GET`, 5 `POST`) and `05` has 16 (8 `GET`, 8 `POST`), with no multi-method
+  row in either. With H2's 160 for the five tables, the seven §5.1 tables hold **186**
+  rows at `47d770e8`, 5 of them multi-method. As H2 says, the population is re-derived at
+  dispatch (item 4); this records it and rules nothing.
