@@ -109,9 +109,16 @@ Vite, Vitest with happy-dom, `@vue-flow/core` (added by S2), and the generated c
    ACCEPTANCE: RL 9770 (NFR-490's statistic = p99) as the spec interpretation; FD 9759 limb (2)
    discharged at the compile site alone; #1060 audit noted": *"limb (2) is discharged by the
    compile-site typed error alone; the validate-route clause falls away"*. The lead's holds
-   register still reads "at compile AND in the validate route" under *WK-675 S3
-   dispatch-record lines*; that line predates the 10:30:00 entry, and this plan follows the
-   entry.
+   register, under *WK-675 S3 dispatch-record lines*, now reads the same: "(2) a typed error
+   → MODEL_REFERENCE_MODE_INCONSISTENT at the compile site alone, red first", corrected at
+   2026-10-05 17:22:00 BST and citing the 10:30:00 entry. The register and this plan agree.
+   *(Dated note, 2026-10-05, written 17:32:47 BST, pre-mint: this said the register "still
+   reads 'at compile AND in the validate route' … that line predates the 10:30:00 entry, and
+   this plan follows the entry". The register was corrected at 17:22:00, and the fix is
+   ordered by the entry headed "2026-10-05 17:30:02 BST — Rulings: T2 routing (RL 9562 mints
+   ahead of PL 9560); _NUMERIC FD go; WK-675 DP-S3-1 (a) with the FD-1335 reading;
+   DP-S13-1 (a′)", item 6: "PL 9578 :111-113 stale "compile AND validate": the planner fixes
+   it pre-mint. Yes.")*
 3. **RL 9758 (working id), Ruled, item 3:** *"Algorithm save (`POST
    /api/v1/rating-algorithms`) and RL 9767 (working id)'s validate route do not check
    FR-223."*
@@ -834,10 +841,12 @@ export function getAlgorithmDiff(slug: string, version: number, against: number)
    with an owner", `FD-1374`'s WK-1178 remedy.
 3. **To S9 (sub-graph mounting):** the validate route checks algorithms only; sub-graph
    validation keeps `SubGraphBody`'s own invariants (RL 9767 finding C).
-4. **To the lead, a record line:** the holds register's *WK-675 S3 dispatch-record lines*
-   still say "at compile AND in the validate route" for FD 9759 limb (2); the maintainer's
-   entry of 2026-10-01 10:30:00 BST superseded it. S3's dispatch record should quote the
-   10:30:00 entry.
+4. **To the lead, a record line:** S3's dispatch record quotes the maintainer's entry of
+   2026-10-01 10:30:00 BST for FD 9759 limb (2) (at the compile site alone). The holds
+   register's *WK-675 S3 dispatch-record lines* already agree, corrected at 2026-10-05
+   17:22:00 BST. *(Dated note, 2026-10-05, pre-mint: this item said the register "still
+   say[s] 'at compile AND in the validate route'". It no longer does. The fix is the same
+   one, ordered at 17:30:02 BST item 6.)*
 
 ## Self-review
 
