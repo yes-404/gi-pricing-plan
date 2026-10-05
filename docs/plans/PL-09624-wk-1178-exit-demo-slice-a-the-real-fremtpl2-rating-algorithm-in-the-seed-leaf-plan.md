@@ -47,7 +47,9 @@ written first.
 The freMTPL2 demo seed's Rating Version is priced from the approved freMTPL2 GLM. Its tables
 are seeded from that model with `seed_from_model`, one table per rateable Factor (`03`
 FR-230, `RL-1361` section A). Its algorithm multiplies a base premium by the seeded
-relativities and rounds once to the penny (FR-226). The Rating Version pins that algorithm
+relativities and rounds once to the penny (FR-226). The base premium is **a simplification
+(a frequency GLM × mean severity; no severity model)**, DP-a2's ruled label, so nobody reads
+it as a modelled pure premium. The Rating Version pins that algorithm
 version and every seeded Rate Table Version (FR-237). It replaces the demo fixture
 `demo-fixture-motor`, whose docstring says *"`payable = premium_in * 2`. **Not priced from the
 GLM**"* (`examples/fremtpl2/model.py:_demo_algorithm`, `:327-330`). One builder module
@@ -106,14 +108,32 @@ Exit-demo slice (a) acceptance line, "every step's reads ⊆ its declared consum
 running the sweep on the new algorithm with 0 undeclared reads. Until enforcement lands, that
 line is the only guard."*
 
+**DP-a0 to DP-a3 and activation need 3, ruled by the maintainer (by delegation)**, entry
+headed *"2026-10-05 15:28:26 BST — Wave results: D1 = (c); D2 PL 9624 DPs; D3 PL 9629 DP-6 +
+plan the 2 missing G2 items; C1′ is FD 9995 (no new finding); FD 9619 noted"*, item D2,
+verbatim:
+
+> D2 (leaf (a) PL 9624):
+>  - DP-a0: do NOT adopt S3's model_call fixture (a GLM cannot be scored via model_call on main). AGREED.
+>  - DP-a1: band the 3 continuous factors (driv_age, veh_age, veh_power) and refit, keeping SEVEN factors, so G2's "7-factor freMTPL2 GLM" (the maintainer's 2026-10-01 08:01:45 entry, roadmap :603) still holds. Condition: the plan records the band edges and their source, and the refit's fit statistics beside the current model's (deviance, AIC, the factor list), so the change is visible, not silent. AGREED.
+>  - DP-a2: the base rate = exp(intercept) × the mean freMTPL2sev claim cost. AGREED, labelled in the plan and the demo script as a simplification (a frequency GLM × mean severity; no severity model), so nobody reads it as a modelled pure premium.
+>  - DP-a3: FD-1374's lost sweep rebuilt as a committed test from FD-1374's verbatim predicate. AGREED.
+>  - Activation need 3 (PL 9776's Spike S1 is NOT filed, yet leaf (a)'s acceptance re-runs its harness): an acceptance criterion must not depend on an unfiled instrument. The planner either drops that clause, replacing it with DP-a3's committed test where that covers the same claim, or files the spike as a research record (RS) first. The planner proposes which; I rule at the plan's ACK.
+
+The entry is a local channel entry, which a repository reader cannot resolve (RFC-777). It is
+quoted here so the plan carries it; the ruling's governed home, if one is needed beyond this
+plan, is the lead's to route at the mint. The roadmap anchor `:603` is the Exit demo row at
+`809a3794` (`docs/roadmap.md`, the row whose first cell is `**Exit demo**`).
+
 ## Status
 
-`draft`. **Three decision points block activation** (DP-a1, DP-a2, DP-a3), and DP-a0 is
-recommended but not yet confirmed (§"Decision points"). Each changes what the executor
-builds, so none is picked silently. The tasks below are written for the recommended options,
-and each alternative states what it changes. The plan moves to `active` only through a
-separate activation PR, after every activation need below holds. That PR carries the `SL-`
-row's status flip and this plan's.
+`draft`. **DP-a0 to DP-a3 are ruled** (above): DP-a0 (a), DP-a1 (a) with its condition
+(Acceptance 11), DP-a2 (i) + (x) with its label (Acceptance 8, Task 1), DP-a3 (a). **One
+decision stays open: activation need 3**, which this plan proposes in §"Activation need 3:
+the proposal" and the maintainer (by delegation) rules at the plan's ACK. The tasks below
+are written for the ruled options and the proposed (i). The plan moves to `active` only
+through a separate activation PR, after every activation need below holds. That PR carries
+the `SL-` row's status flip and this plan's.
 
 ### Activation needs, in order
 
@@ -122,14 +142,15 @@ row's status flip and this plan's.
    dependency `PL-1371` §7 names ("Depends on the FD-1357 fix only"). §3.8 row 6 lists two
    more, "Spike S1 of PL 9776 filed; FD 9773 minted". FD 9773 is minted (`FD-1374`). Spike S1
    is need 3.
-2. **DP-a0 to DP-a3 ruled** by the decision-maker, or by the maintainer where the row says so.
-3. **PL 9776's Spike S1 filed** as an `RS-` of `kind: spike`. At `809a3794` none is filed:
-   `git grep -n -E '9776|Spike S1' origin/main -- docs/research` finds no F35 spike. PL 9776
-   is draft #1051 @`ecbb82ab`. Its §"Spike S1" says *"It commits no code: its scripts go
-   inline in the `RS-`"*, so the harness Acceptance 7 re-runs is the inline script of that
-   `RS-`. If the lead dispatches this slice before S1 is filed, Acceptance 7 moves to a
-   dated follow-on with the S1 executor as owner, by the lead's dated line. It is never
-   dropped silently.
+2. **DP-a0 to DP-a3 ruled.** **Met**: the maintainer (by delegation), entry 2026-10-05
+   15:28:26 BST, item D2 (quoted above).
+3. **Activation need 3 ruled** at the plan's ACK: (i) or (ii) of §"Activation need 3: the
+   proposal". **Open; proposed (i).** The need as first written was *"PL 9776's Spike S1
+   filed"*. At `809a3794` none is filed: `git grep -n -E '9776|Spike S1' origin/main --
+   docs/research` finds no F35 spike, and PL 9776 is draft #1051 @`ecbb82ab`. The ruling's
+   rule is *"an acceptance criterion must not depend on an unfiled instrument"*. Under (i)
+   this slice needs no spike at all. Under (ii) the need reverts to "Spike S1 filed as an
+   `RS-` of `kind: spike`" and Acceptance 7 re-runs that `RS-`'s inline harness.
 4. **Serialisation on shared files** (§"Write set"): `SL-1409` (the FD-1356 fix, `active` on
    lane B) merged, because it edits `examples/fremtpl2/seed.py`. The FD 9708 fix (PL 9683,
    working id, #1140) merged first if it is active first, because it edits the same two
@@ -139,6 +160,27 @@ row's status flip and this plan's.
    build lane that frees once its plan is active"*.
 5. **The lead's go**, in a separate activation PR, with a dispatch record that states
    *"declares no decimal output"* while the `RL-1343` fix is unmerged (`PL-1371` §7).
+
+### Activation need 3: the proposal (the maintainer (by delegation) rules at the ACK)
+
+**What Acceptance 7 claimed.** PL 9776 §"Spike S1" step 5 (#1051 @`ecbb82ab`) says the re-run
+on G2's algorithm *"includes steps 1 and 6 (reference sets, added edges and cycles), not only
+step 3's equality"*. Step 1 lists *"every step whose set is not a subset of its declared
+`consumes`, with the extra names"*. Step 6 lists *"every step whose reference set adds an edge
+beyond its declared `consumes`"* and *"every added edge that closes a cycle"*. So this slice's
+claim is: the built algorithm has (1) no read outside `consumes`, and (6) no added edge and so
+no added cycle.
+
+| Option | What it does | For | Against |
+|---|---|---|---|
+| **(i)** | **Drop Acceptance 7's harness re-run.** Acceptance 4 (DP-a3's committed test, FD-1374's predicate verbatim) carries both claims. Claim (1) is Acceptance 4's assertion. Claim (6) follows from it: step 6's added edges are exactly the reads outside `consumes`, so 0 undeclared reads means 0 added edges, and with no added edge the graph is the declared one, which compiles as a DAG (FR-212; Acceptance 2's `rating.compile` Job). Acceptance 7 is rewritten to state that derivation and to assert it in the test (below) | No dependency on a draft plan's executor; the check is committed, runs on every gate and cannot vanish with a job dir (the reason DP-a3 (a) was ruled). PL 9776's own corpus rule (step 5: *"every multi-step algorithm that exists when S1 runs"*) takes this algorithm in automatically if S1 runs after this slice merges, so F35 loses nothing | Two parts of S1 step 1 are not reproduced: the cross-check of the extractor against the engine (*"with the reference set alone in the context must succeed, and with one name removed must fail"*), and Task 1A's `referenced_names` as the extractor. Acceptance 4 uses FD-1374's predicate, not Task 1A's code, which does not exist on `main` (P6). Step 3's equality (the M1 wire) is not part of this slice's claim, before or after |
+| (ii) | **File Spike S1 first** as an `RS-` of `kind: spike` (PL 9776 §"Spike S1"), then re-run its harness here, as Acceptance 7 first said | Keeps `PL-1371` §7's accepted wording, including the engine cross-check | Puts F35's spike, unscheduled and owned by another plan's executor, on G2's critical path. `PL-1371` §7 itself refused that chain the other way (*"S1 does **not** wait for G2"*, PL 9776 step 5) |
+
+**Recommendation: (i).** It holds every claim this slice makes about its own algorithm with a
+committed test, and leaves the engine cross-check where it belongs, in F35's spike, which
+re-reads this algorithm when it runs. **The departure from `PL-1371` §7's accepted acceptance
+wording** (*"PL 9776's Spike S1 harness re-run on the new algorithm"*) is stated here and is
+the maintainer's to accept at the ACK. `PL-1371` is frozen and is not edited.
 
 ## Acceptance Standard
 
@@ -191,21 +233,45 @@ failure line as printed.
    `succeeded`. Test: the existing `test_demo_rating_evidence.py` assertions, rewritten.
    Red first: `expected_minor == DEMO_PREMIUM_IN * 2` (`test_demo_rating_evidence.py:73`)
    fails once the fixture is gone.
-7. **PL 9776's Spike S1 harness, re-run on this algorithm** (`PL-1371` §7; PL 9776
-   §"Spike S1" step 5: *"The same harness re-runs later on G2's real freMTPL2 algorithm"*,
-   including steps 1 and 6). The harness is run verbatim from its `RS-` (sha256 prefix
-   checked) on the built algorithm. Step 1 must list 0 names outside `consumes` (agreeing with
-   Acceptance 4), and step 6 must list 0 new edges and 0 cycles. Output in the ledger with
-   the `RS-` id. Activation need 3 governs if S1 is unfiled.
+7. **Spike S1's claims on this algorithm: no read outside `consumes`, no added edge, no
+   added cycle** (`PL-1371` §7; PL 9776 §"Spike S1" steps 1 and 6). **Under activation need 3
+   (i), proposed:** held by Acceptance 4's committed test, with no harness re-run.
+   `test_the_demo_algorithm_reads_only_what_it_declares` also asserts that the graph built
+   from each step's read set has the same edges as the graph built from its `consumes`
+   (0 added edges), which with Acceptance 2's compile is 0 added cycles. The ledger records
+   the derivation in one line beside Acceptance 4's output. **Under (ii):** the harness is
+   run verbatim from Spike S1's `RS-` (sha256 prefix checked) on the built algorithm. Step 1
+   must list 0 names outside `consumes` (agreeing with Acceptance 4), and step 6 must list 0
+   new edges and 0 cycles. Output in the ledger with the `RS-` id.
 8. **The demo still runs.** `uv run python scripts/demo.py --rows 20000` exits 0 on the slice
    head and prints its `/demo` URL. This is run once by the executor, alone on the box with no
    gate slot held, with the elapsed time recorded. The seed's printed line names the
-   algorithm slug and "priced from the GLM", not "demo fixture".
+   algorithm slug and "priced from the GLM", not "demo fixture", and labels the base premium
+   *"a simplification (frequency GLM × mean severity; no severity model)"* (DP-a2's ruled
+   label), as the base step's `note` and the algorithm's change note also do.
 9. **The gate.** Both halves green on the slice head (`dev-commands`), through the
    gate-runner holding a slot (`RL-1263`). `generate-contracts.py --check` rc 0 (no contract
    changes are expected). `audit-docs.py` red only on check 31 before the mint and clean
    after.
 10. **Scope held.** `git diff --stat origin/main...HEAD` touches only §"Write set"'s paths.
+11. **The refit is visible, not silent** (DP-a1's ruled condition). The slice records, in
+    its ledger and its PR body, both of the following.
+    - (a) **The band edges and their source**, per banded factor (`driv_age`, `veh_age`,
+      `veh_power`). The source is fixed by this plan: `transform_service.propose_banding_for_version`
+      (`backend/src/app/platform/transformations.py`), method quantile, 5 bands, on the seed's
+      validated freMTPL2 dataset version (Task 2 Step 1). The edges and labels are the saved
+      Banding's own, read back from its artifact with its id and version. They cannot be
+      written into this plan before the build, because they are an output of that call on the
+      seeded data, and no code is run in a preparation wave.
+    - (b) **The refit's fit statistics beside the current model's**, as one table with two
+      columns (base tree, slice head): deviance and AIC
+      (`model_schema.diagnostics.GlmDiagnostics` fields `deviance` and `aic`; Poisson has a
+      closed-form likelihood, so `aic` is not `None`), and the factor list with each factor's
+      `FactorType`. Both columns are computed by the same code on the same seeded rows (the
+      `--rows` value is recorded), the base-tree column on `809a3794` or the dispatch tree.
+    Check: the ledger table exists with both columns non-empty and seven factors in each; the
+    seed's printed model line names the seven factors. No test asserts the figures (they are
+    data, not behaviour), so this item has no red-first step.
 
 ## Global Constraints
 
@@ -345,6 +411,13 @@ One full two-half gate (a gate slot under `RL-1263`). No NFR is measured.
 | **DP-a2** | Where does the base premium come from, and where is it held (P4, P5)? | Source: (i) `exp(intercept)` × the mean claim cost from freMTPL2sev (Σ `claim_amount_minor` ÷ Σ `claim_count` over the seed's dataset version), in `Decimal`, rounded to whole minor units; (ii) a stated constant. Holding: (x) an integer literal in one `expression` step (`base_premium_minor = <n>`), versioned and approved with the algorithm, with the derivation written in the step's `note` and the change note; (y) a rate table, which needs a create route that does not exist (P5), so a spec change and a route | **(i) + (x).** (i) is derived from the same data as the fit, and is reproducible from the seed's inputs. (x) needs no new surface. A literal is not a global: FR-246 forbids *"globals, no environment, no time-of-day"*, not constants. (y) is scope growth into `03` §5.1 for a demo | decision-maker | Task 1 |
 | **DP-a3** | How is "every step's reads ⊆ its declared consumes" shown, now the sweep script is gone (P6)? | (a) a **committed test** (Acceptance 4) implementing FD-1374's predicate verbatim, with its own broken-input test. (b) wait for PL 9776 Task 1A's save-time check and rely on it. (c) re-create the sweep script locally and record its output | **(a).** A committed test cannot vanish with a job dir, runs on every gate, and is the "running the sweep" `PL-1371` §7 asks for in a form a reader can re-run. (b) ties G2 to F35's timing. (c) repeats the loss | decision-maker | Task 3 |
 
+**Ruled** (the maintainer (by delegation), 2026-10-05 15:28:26 BST, item D2, quoted in
+§"The decisions this plan rests on"): **DP-a0 (a)**; **DP-a1 (a)**, on the condition that
+the band edges and their source and the refit's fit statistics beside the current model's are
+recorded (Acceptance 11); **DP-a2 (i) + (x)**, labelled a simplification (Goal, Acceptance 8,
+Task 1); **DP-a3 (a)**. The table above is kept as written, so the options the ruling chose
+between stay readable.
+
 ## Tasks
 
 ### Task 0: Preconditions (no code)
@@ -387,7 +460,9 @@ The algorithm's steps, in order:
 2. One `expression` step per banded factor, `expr = band_expression(...)`, `result_type:
    "string"`, `consumes: [<column>]`, `produces: <factor slug>`.
 3. One `expression` step, `base`, `expr = "<base_minor>"`, `result_type: "money_minor"`,
-   `consumes: []`, `produces: "base_premium_minor"`, `note` = DP-a2's derivation.
+   `consumes: []`, `produces: "base_premium_minor"`, `note` = DP-a2's derivation, opening
+   with its ruled label, "a simplification (frequency GLM × mean severity; no severity
+   model)".
 4. One `table` step per seeded Factor, `rate_table_ref` = its ref, `key_expr: [<factor slug>]`,
    `on_miss: "error"`, `consumes: [<factor slug>]`, `produces: "rel_<factor slug>"`.
 5. One `expression` step, `premium`,
@@ -409,7 +484,9 @@ The algorithm's steps, in order:
   `[A-Za-z_]\w*` not preceded by `.`, `$` or a word character and not followed by `(`, minus
   `true false null and or not in`, over `expr`, `condition`, each `clamp_bounds` value, each
   `key_expr` entry, a `lookup`'s `as_at`, and the `feature_map` keys. Cite FD-1374 by id and
-  section in the helper's docstring.
+  section in the helper's docstring. Under activation need 3 (i), the first test also asserts
+  Acceptance 7's edge claim: the producer-to-step edges built from each step's read set equal
+  those built from its `consumes`.
 - [ ] **Step 2: Run them and see each fail by its cause** (`ModuleNotFoundError:
   examples.fremtpl2.algorithm` is the cause for all five on the base tree). Record the line.
 - [ ] **Step 3: Implement `algorithm.py`** as specified above.
@@ -459,11 +536,12 @@ once per Factor in the approved GLM's relativities, in `FACTOR_SET` order.
   `test_fremtpl2_algorithm.py`), then commit
   `feat(examples): golden quotes priced independently from the GLM (exit-demo (a))`.
 
-### Task 4: Spike S1 re-run, the demo run, the gate and the ledger (Acceptance 7–10)
+### Task 4: Spike S1's claims, the demo run, the gate and the ledger (Acceptance 7–11)
 
-- [ ] **Step 1:** Run PL 9776's Spike S1 harness from its `RS-`, verbatim, on the built
-  algorithm (steps 1 and 6), checking its sha256 prefix first. Record the output. If S1 is
-  unfiled, record the lead's dated line moving it (activation need 3).
+- [ ] **Step 1:** Record activation need 3's ruling verbatim. Under (i): record Acceptance 4's
+  output with Acceptance 7's one-line derivation (0 undeclared reads, so 0 added edges and 0
+  added cycles). Under (ii): run Spike S1's harness from its `RS-`, verbatim, on the built
+  algorithm (steps 1 and 6), checking its sha256 prefix first, and record the output.
 - [ ] **Step 2:** Check `pgrep -af 'pytest|vitest|flock'` and both gate slots
   (`flock -n /tmp/slots/gate-1 true`, the same for `gate-2`). Run nothing heavy beside a
   held slot. Then run `uv run python scripts/demo.py --rows 20000` once (Acceptance 8) and
@@ -471,9 +549,10 @@ once per Factor in the approved GLM's relativities, in `FACTOR_SET` order.
 - [ ] **Step 3:** The full two-half gate through the gate-runner, which holds a gate slot
   under `RL-1263` (Acceptance 9). Record each rc and the tree.
 - [ ] **Step 4:** In the slice's `LG-` ledger: every red with its printed line; the DP
-  rulings quoted; the Bandings' boundaries and labels; the base premium's derivation with its
-  inputs; the Spike S1 output; `git diff --stat origin/main...HEAD` against §"Write set"
-  (Acceptance 10).
+  rulings quoted; the Bandings' boundaries and labels with their source (Acceptance 11 (a));
+  the fit-statistics table, base tree beside slice head (Acceptance 11 (b)); the base premium's
+  derivation with its inputs and its label; Acceptance 7's record; `git diff --stat
+  origin/main...HEAD` against §"Write set" (Acceptance 10).
 
 ## Hand-off
 
@@ -495,7 +574,8 @@ once per Factor in the approved GLM's relativities, in `FACTOR_SET` order.
 1. **Coverage of `PL-1371` §7's (a) paragraph, clause by clause.** "the real freMTPL2 rating
    algorithm in the seed": Goal, Tasks 1–3, Acceptance 1–3. "Depends on the FD-1357 fix
    only": activation need 1, met; §3.8's two extra items are needs 2 and 3. "PL 9776's Spike
-   S1 harness re-run": Acceptance 7, Task 4 Step 1. "every step's reads ⊆ its declared
+   S1 harness re-run": Acceptance 7, Task 4 Step 1, with the departure proposed under
+   activation need 3 (i) and stated for the ACK. "every step's reads ⊆ its declared
    consumes … 0 undeclared reads": Acceptance 4, DP-a3. "declares no decimal output":
    Acceptance 5, activation need 5. "discharges FD-1209's algorithm half": Hand-off 3.
 2. **Every design choice the sources leave open is a DP with an owner** (DP-a0 to DP-a3),
@@ -520,3 +600,16 @@ once per Factor in the approved GLM's relativities, in `FACTOR_SET` order.
    `seed_demo_rate_tables` (tables), Task 2 Step 1 (bandings), `base_premium_minor` (base)
    and the seeded levels (domains), and are consumed with those names in Task 2 Step 3 and in
    slice (b).
+
+## Pre-mint note, 2026-10-05
+
+*Dated 2026-10-05 (`TZ=Europe/London date`: 2026-10-05 15:32:20 BST), before the mint of PL
+9624 (working id).* Edited in place on the unmerged draft #1161, on the lead's order (prep
+wave, section S), to record the maintainer's (by delegation) ruling of 2026-10-05 15:28:26 BST,
+item D2, and nothing else. What changed: the ruling quoted verbatim (§"The decisions this plan
+rests on"); §"Status" and activation needs 2 and 3; §"Activation need 3: the proposal"
+(new: options (i) and (ii), recommendation (i), for the ruling at the ACK); Acceptance 7
+(rewritten for (i), with (ii) kept); Acceptance 8 and Task 1's base step (DP-a2's label);
+Acceptance 11 (new: DP-a1's condition); the Goal (the label); a **Ruled** line after the
+decision-point table; Task 4 Steps 1 and 4; Self-review item 1. No scope, task cut, write set
+or other decision point changed. Verified at `origin/main` `809a3794`.
