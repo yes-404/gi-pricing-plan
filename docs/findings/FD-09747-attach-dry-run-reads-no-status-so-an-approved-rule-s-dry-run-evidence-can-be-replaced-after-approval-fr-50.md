@@ -22,6 +22,18 @@ remedy RIDES in the FD-1356 fix slice; F1–F4 adopted"* (lead's channel, `to-le
 id 9747**, minted at the records PR. Raised as an observation by the decision-maker `dm-1356` in
 RL 9750 (#1070, "Observed, not ruled") and confirmed by auditor-1070.
 
+> **Amended 2026-10-05 before mint:** working ids that have since minted, re-pointed. **`RL 9750` is
+> `RL-1407`** (`docs/rulings/RL-01407-…`, merged as #1070; its §"FD 9747 (working id)" rules the remedy
+> as a refusal with the new code `RULE_VERSION_IMMUTABLE` (409), which settles the error-code question
+> left to `dm-1356` in §Disposition below); **`PL 9762` is `PL-1408`** (`docs/plans/PL-01408-…`,
+> Acceptance 19, Step 3a; `status: draft` at that tree, activation PR #1112 open); **`FD 9754` is
+> `FD-1393`**. The working ids still written in this essay stand as what was written then. **Code
+> cites re-checked at `origin/main` `ef5dc6e7317281ac9d1840fa61861597e3c1b8b1`:** `attach_dry_run`
+> `validation_rules.py:352-363` and `01-data-management.md:520-523` unchanged; the handler's
+> `store_report` then `attach_dry_run` calls are now `data_handlers.py:289-293` (the call at `:293`);
+> `seed.py:443` unchanged; the two `models.py` cites moved and are re-pointed by symbol below.
+> The remedy is not built (`PL-1408` Step 3a). The finding's substance is unchanged.
+
 **FR-4** (`docs/specs/00-overview.md`, "Every Artifact is immutable once it leaves `draft`") and
 `01` §4.5 step 4 (`docs/specs/01-data-management.md:523`): *"`approved` rules are immutable; edits
 create a new rule version needing re-approval."* Step 2 (`:520-521`): the dry-run result is the
@@ -43,8 +55,8 @@ approval stands, the approver's `approval_requests`/decision rows stand, and the
 approver judged is no longer the evidence the rule row points at.
 
 **Nothing at the database stops it.** The `validation_rules` CHECK
-(`backend/src/app/db/models.py:1201-1205`) requires only `dry_run_report_id IS NOT NULL` for an
-approved non-built-in row; `dry_run_report_id` has no foreign key (`models.py:1170`). The
+(`backend/src/app/db/models.py`, `ValidationRuleRow`'s `approved_rule_dry_run_and_separate_approver` `CheckConstraint`, `:1205-1209` at `origin/main` `ef5dc6e7317281ac9d1840fa61861597e3c1b8b1`) requires only `dry_run_report_id IS NOT NULL` for an
+approved non-built-in row; `dry_run_report_id` has no foreign key (`models.py`, the `dry_run_report_id` column, `:1174` at that tree). The
 RL-1301 approval trigger fires on `NEW.status = 'approved'`; an update of this column on a row
 already backed by an approved request meets its evidence condition, so I expect it passes. **I
 did not run it.**

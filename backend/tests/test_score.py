@@ -1319,3 +1319,256 @@ def test_the_float_path_fails_the_route_level_fee_assert(
     assert '"fee_minor":1234.5' in response.text
     with pytest.raises(AssertionError):
         _assert_the_route_serves_the_fee_as_a_json_integer(response)
+
+
+# --------------------------------------------------------------------------------------
+# WK-674 Slice 2, Task 6 (PL-1392 Acceptance 6, 7) — default-live scoring and the trace's
+# link to the Deployment that served the quote (RL-880, RL-888, RL-916, RL-1380).
+# --------------------------------------------------------------------------------------
+
+LIVE_REF = "rating_version:live-rv@3"
+OTHER_VERSION_REF = "rating_version:live-rv@4"
+OTHER_SLUG_REF = "rating_version:another-rv@3"
+
+
+async def plant_deployment(
+    database: Any, workspace_id: Any, environment: str, ref: str, *, deployed_by: Any = None
+) -> UUID:
+    """One Deployment row of `ref` in `environment`, written the way the deploy route writes
+    it (never updated, never deleted). Returns its id."""
+    from app.db.models import DeploymentRow, EnvironmentRow
+    from model_schema import new_uuid7
+
+    async with database.unit_of_work() as session:
+        env_id = (
+            await session.execute(
+                select(EnvironmentRow.id).where(EnvironmentRow.slug == environment)
+            )
+        ).scalar_one()
+        row = DeploymentRow(
+            workspace_id=workspace_id,
+            environment_id=env_id,
+            rating_version_ref=ref,
+            bundle_hash="sha256:" + "a" * 64,
+            deployed_by=deployed_by or new_uuid7(),
+            reason="test",
+        )
+        session.add(row)
+        await session.flush()
+        return row.id
+
+
+@pytest.fixture
+def refs_scored(monkeypatch: pytest.MonkeyPatch) -> list[ArtifactRef]:
+    """Resolution replaced by a held bundle, recording the ref `_compiled_for` was given."""
+    seen: list[ArtifactRef] = []
+
+    async def _compiled_for(*_args: Any, ref: ArtifactRef, **_kwargs: Any) -> Any:
+        seen.append(ref)
+        return _compiled("hash-scored")
+
+    async def _score_one(*_args: Any, **_kwargs: Any) -> ScoringResult:
+        return _scored(rating_version_ref=seen[-1])
+
+    monkeypatch.setattr(score_module, "_compiled_for", _compiled_for)
+    monkeypatch.setattr(score_module, "score_one", _score_one)
+    return seen
+
+
+@pytest.mark.req("FR-250")
+def test_a_quote_with_no_ref_is_scored_against_the_environments_live_deployment(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    refs_scored: list[ArtifactRef],
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """Acceptance 6, case 1: an API-key caller scoped to `uat`, posting no ref, is scored
+    against the Rating Version of `uat`'s live Deployment (RL-880; FR-250's default path)."""
+    _run(plant_deployment(database, workspace_id, "uat", "rating_version:live-rv@2"))
+    _run(plant_deployment(database, workspace_id, "uat", LIVE_REF))
+    # Another environment's Deployment does not leak into `uat`.
+    _run(plant_deployment(database, workspace_id, "dev", OTHER_SLUG_REF))
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": None}), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    assert [str(r) for r in refs_scored] == [LIVE_REF]
+
+
+@pytest.mark.req("FR-250")
+def test_an_environment_with_no_deployment_still_refuses_a_quote_with_no_ref(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    refs_scored: list[ArtifactRef],
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """Acceptance 6, case 2: `uat` has no Deployment (`dev` has one, and is not `uat`)."""
+    _run(plant_deployment(database, workspace_id, "dev", LIVE_REF))
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": None}), headers=scoring_headers
+    )
+
+    assert response.status_code == 409, response.text
+    assert response.json()["code"] == "NO_LIVE_RATING_VERSION"
+    assert refs_scored == []
+
+
+@pytest.mark.req("FR-250")
+def test_a_caller_with_no_environment_and_no_ref_is_refused_even_when_deployments_exist(
+    database: Any, workspace_id: Any, principal: Any
+) -> None:
+    """Acceptance 6, case 3: a bearer caller carries no environment, so there is no
+    environment whose live Deployment could answer. Called on the helper directly: no
+    credential produces this `Caller` over HTTP (the `score:execute` note above)."""
+    for environment in ("dev", "uat", "prod"):
+        _run(plant_deployment(database, workspace_id, environment, LIVE_REF))
+    caller = Caller(
+        principal=principal,
+        workspace_id=workspace_id,
+        environments=frozenset({"uat"}),
+        environment=None,
+        permissions=frozenset({"score:execute"}),
+    )
+    ctx = QuoteContext.model_validate(_quote({"rating_version_ref": None}))
+
+    with pytest.raises(score_module.PlatformError) as refused:
+        _run(score_module._serving_ref(database, caller, ctx))
+
+    assert refused.value.code == "NO_LIVE_RATING_VERSION"
+    assert refused.value.status_code == 409
+
+
+def _sample_everything(database: Any, workspace_id: Any) -> None:
+    _run(_set_trace_sample_rate(database, workspace_id, 1.0))
+
+
+@pytest.mark.req("FR-259")
+def test_a_default_live_trace_carries_the_deployment_that_served_it(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    refs_scored: list[ArtifactRef],
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """Acceptance 7: RL-888, RL-916, RL-1380 — the sampled trace of a default-live quote names
+    the serving Deployment, and the `environment` string is written as before."""
+    _run(plant_deployment(database, workspace_id, "uat", "rating_version:live-rv@2"))
+    live_id = _run(plant_deployment(database, workspace_id, "uat", LIVE_REF))
+    _sample_everything(database, workspace_id)
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": None}), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    (row,) = _run(_rows_for(database, workspace_id))
+    assert row.deployment_id == live_id
+    assert row.environment == "uat"
+
+
+@pytest.mark.req("FR-259")
+def test_an_explicit_ref_equal_to_the_live_version_carries_its_deployment(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    refs_scored: list[ArtifactRef],
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """RL-1380 (a): type, slug and version all equal the live Deployment's."""
+    live_id = _run(plant_deployment(database, workspace_id, "uat", LIVE_REF))
+    _sample_everything(database, workspace_id)
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": LIVE_REF}), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    (row,) = _run(_rows_for(database, workspace_id))
+    assert row.deployment_id == live_id
+
+
+@pytest.mark.req("FR-259")
+@pytest.mark.parametrize("explicit", [OTHER_VERSION_REF, OTHER_SLUG_REF], ids=["version", "slug"])
+def test_an_explicit_ref_to_a_version_that_is_not_live_carries_no_deployment(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    refs_scored: list[ArtifactRef],
+    database: Any,
+    workspace_id: Any,
+    explicit: str,
+) -> None:
+    """A what-if quote against another version, or another slug's same number, is not
+    attributed to a Deployment that did not serve it."""
+    _run(plant_deployment(database, workspace_id, "uat", LIVE_REF))
+    _sample_everything(database, workspace_id)
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": explicit}), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    (row,) = _run(_rows_for(database, workspace_id))
+    assert row.deployment_id is None
+    assert row.environment == "uat"
+
+
+@pytest.mark.req("FR-259")
+def test_an_explicit_ref_in_an_environment_with_no_live_deployment_carries_none(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    refs_scored: list[ArtifactRef],
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    _run(plant_deployment(database, workspace_id, "dev", LIVE_REF))  # not `uat`
+    _sample_everything(database, workspace_id)
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": LIVE_REF}), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    (row,) = _run(_rows_for(database, workspace_id))
+    assert row.deployment_id is None
+
+
+@pytest.mark.req("FR-268")
+def test_a_deployment_recorded_mid_request_does_not_relink_the_trace(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """The switchover case (RL-1380: resolved once, with the ref, and never re-read): a new
+    Deployment lands after the quote's Deployment was resolved and before the trace is written.
+    The trace names the Deployment that served the quote, not the newer live one."""
+    served_id = _run(plant_deployment(database, workspace_id, "uat", LIVE_REF))
+    _sample_everything(database, workspace_id)
+    seen: list[ArtifactRef] = []
+    app_database = client.app.state.database  # type: ignore[attr-defined]
+
+    async def _compiled_for(*_args: Any, ref: ArtifactRef, **_kwargs: Any) -> Any:
+        seen.append(ref)
+        await plant_deployment(app_database, workspace_id, "uat", OTHER_VERSION_REF)
+        return _compiled("hash-scored")
+
+    async def _score_one(*_args: Any, **_kwargs: Any) -> ScoringResult:
+        return _scored(rating_version_ref=seen[-1])
+
+    monkeypatch.setattr(score_module, "_compiled_for", _compiled_for)
+    monkeypatch.setattr(score_module, "score_one", _score_one)
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": None}), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    assert [str(r) for r in seen] == [LIVE_REF]
+    (row,) = _run(_rows_for(database, workspace_id))
+    assert row.deployment_id == served_id
