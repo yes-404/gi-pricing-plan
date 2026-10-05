@@ -78,3 +78,41 @@ defect (HIGH), whose fix slice is WK-1178's too. The two are not folded together
 None yet. The acceptance belongs to the ruling that decides `OQ-9987`. Under (a), for
 example: a new Rule Set version that removes a member is not run by validation until an
 approval request for it is approved.
+
+## Amended 2026-10-05 before mint: currency at origin/main `47d770e8`
+
+*By the decision-maker session `dm-amend` (effort `medium`), on the lead's brief of
+2026-10-05 09:55 BST. Citation and currency only: the question raised, its options and its
+recommendation are unchanged. Every fact below was re-read at origin/main
+`47d770e8fcbd2410fa101019ed8cf3aae69a1baa`, each code cite found by its symbol first. The
+`tree:` field stays `65b33479`, because the table above is headed as verified there and its
+cites are true there; this section carries their locations at `47d770e8`.*
+
+- **J1: the premises still hold, at moved lines.**
+  - `06-governance.md:64` still lists Validation Rule, but not Rule Set. `06` §3.3 is now
+    `:105-149`. `EVIDENCE_FLOOR` is `packages/model-schema/src/model_schema/approvals.py:105-112`
+    and still has `validation_rule` and no rule-set key.
+  - `replace_rule_set` is `backend/src/app/platform/validation_rules.py:549` (was `:538`).
+    It still creates the new set version with `status=APPROVED` at `:654` (was `:643`). The
+    column default `"approved"` is `backend/src/app/db/models.py:1247` (was `:1195`), on
+    `ValidationRuleSetRow` (`:1227`).
+  - `PUT /datasets/{slug}/rule-set` (`WriteDatasets`) is `backend/src/app/api/validation.py:400-432`
+    (was `:400-417`). The service's own `require_permission(… DATASET_WRITE …)` is
+    `validation_rules.py:565-571` (was `:554-560`).
+  - The unapproved-member refusal (409 `RULE_NOT_APPROVED`) is `validation_rules.py:593-602`
+    (was `:582-591`). The lowered-severity refusal follows, from `:604` (was "after `:593`").
+  - `rule_set_for` is `validation_rules.py:450` (was `:439`), still
+    `order_by(ValidationRuleSetRow.version.desc())` (`:461`) with no status filter. The worker
+    calls it at `backend/src/app/worker/data_handlers.py:247` and passes it on at `:272`
+    (both unchanged).
+- **J2: a related ruling has landed since this was raised, and decides nothing here.**
+  `RL-1407` (merged by `c08a48e5`, #1109) rules FD 9748 (working id)'s remedy: **a rule set
+  runs only approved, existing members**, delivered by `SL-1409` (PL-1408). That check is
+  ruled, but it is **not yet in the code** at `47d770e8`: `rule_set_for` has no status
+  filter. It closes a different gap from this question. It stops an unapproved member from
+  running; it does not review a change of composition (a removed member, a re-pointed
+  Reference Dataset Version). Whether it changes the weight of option (b) or (c) is for the
+  ruling that decides `OQ-9987`. It is not re-weighed here.
+- **J3: who depends on this.** `PL-1408` names this question at `:508`, `:610`, `:703` and
+  `:1212`; its `replace_rule_set` allowance is temporary "pending OQ 9987 (working id)"
+  (`:703`).
