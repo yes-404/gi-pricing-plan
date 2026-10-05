@@ -297,7 +297,7 @@ DP-F35-8's ruling then needs a superseding `PL-` is the lead's, by the same rule
 
 | DP | Question | Options | Recommendation | Kind | Blocking? | Resolved by |
 |---|---|---|---|---|---|---|
-| **DP-F35-8** | **Where does R3's comparison run, so that the served price always comes from the chain (condition (i))?** | **(a) Inline in every traced call.** `score_one(trace=True)` scores the chain (the served result) and the traced wire (the trace), compares the two with `summarise_result`'s four fields, and returns the chain's result. On a difference the trace is marked or refused. Costs: two evaluations per traced call, so the inline traced overhead is at least the traced wire's time over U (about +100 % or more), and NFR-490 cannot pass on that path by construction; the comparator moves into `pricing-core` (the backend's `summarise_result` then calls it, so there is still one comparator); and the mark needs a field on `Trace` or `ScoringResult`, a spec text owed first (`03` §4.5), because no existing field or code fits. **(c) Only the off-path producer uses the traced wire.** `score.trace_produce` (`trace_handlers.py:98`) scores the traced wire where it is admitted (else the chain, trimmed); its result is compared with the stored `served_summary` at `traces.py:257` and marked `mismatch` there, unchanged; T-M1 carries the mark to the reader. `score_one(trace=True)`, which `/score` and `/score/compare` call inline, stays on the chain with Task 3's trim, so its result is the chain's by construction. Costs: the inline traced paths get no relief beyond the trim; `trace_handlers.py` gains one changed call (`backend/src/` joins the write set by one line); and NFR-490's instrument (`bench-rating.py`'s `trace=True` block, `:968-971`) measures the inline path, so the relief on the producer needs its own line in Task 6, and which line NFR-490's verdict reads is SL-1259's, by the decision-maker's reading. *(Excluded: the traced wire's result served on any path. Condition (i) forbids it.)* | **(c).** It meets condition (i) with no second evaluation, and it uses the one comparator and the one mark that already exist (`traces.py:257`; PL 9567's T-M1). Under (a), the traced wire would buy NFR-490 nothing on the inline path, because the comparison itself doubles the cost, so (a) costs more than DP-F35-7 (c) (trim only) on that path. The sampled stream that FR-259 persists and NFR-500 sizes is the producer's | decision point | **yes** (Task 4R) | decision-maker; **open** |
+| **DP-F35-8** | **Where does R3's comparison run, so that the served price always comes from the chain (condition (i))?** | **(a) Inline in every traced call.** `score_one(trace=True)` scores the chain (the served result) and the traced wire (the trace), compares the two with `summarise_result`'s four fields, and returns the chain's result. On a difference the trace is marked or refused. Costs: two evaluations per traced call, so the inline traced overhead is at least the traced wire's time over U (about +100 % or more), and NFR-490 cannot pass on that path by construction; the comparator moves into `pricing-core` (the backend's `summarise_result` then calls it, so there is still one comparator); and the mark needs a field on `Trace` or `ScoringResult`, a spec text owed first (`03` §4.5), because no existing field or code fits. **(c) Only the off-path producer uses the traced wire.** `score.trace_produce` (`trace_handlers.py:98`) scores the traced wire where it is admitted (else the chain, trimmed); its result is compared with the stored `served_summary` at `traces.py:257` and marked `mismatch` there, unchanged; T-M1 carries the mark to the reader. `score_one(trace=True)`, which `/score` and `/score/compare` call inline, stays on the chain with Task 3's trim, so its result is the chain's by construction. Costs: the inline traced paths get no relief beyond the trim; `trace_handlers.py` gains one changed call (`backend/src/` joins the write set by one line); and NFR-490's instrument (`bench-rating.py`'s `trace=True` block, `:968-971`) measures the inline path, so the relief on the producer needs its own line in Task 6, and which line NFR-490's verdict reads is SL-1259's, by the decision-maker's reading. *(Excluded: the traced wire's result served on any path. Condition (i) forbids it.)* | **(c).** It meets condition (i) with no second evaluation, and it uses the one comparator and the one mark that already exist (`traces.py:257`; PL 9567's T-M1). Under (a), the traced wire would buy NFR-490 nothing on the inline path, because the comparison itself doubles the cost, so (a) costs more than DP-F35-7 (c) (trim only) on that path. The sampled stream that FR-259 persists and NFR-500 sizes is the producer's | decision point | **yes** (Task 4R) | decision-maker; **open** *(**Ruled (c)** 2026-10-05 by the maintainer (by delegation), 18:01:45 BST, item 2; see Delta 3.)* |
 
 ### Task 1B: NFR-490's premise, measured (condition (ii); added by Delta 2)
 
@@ -333,7 +333,8 @@ ledger says which.
 allowance over U. So, with s_U the sample standard deviation of U over C's five runs:
 - **Holds:** |median U_P − median U_C| < s_U, and |median U_H − median U_C| < s_U.
 - **Moved:** a difference ≥ s_U and < 0.20 × median U_C. The premise is false; the ledger
-  records the numbers and the lead decides whether Task 6's reading stands.
+  records the numbers and the lead decides whether Task 6's reading stands. *(Delta 3: this band
+  is the maintainer's (by delegation) call, not the lead's.)*
 - **STOP for the maintainer (by delegation):** a difference ≥ 0.20 × median U_C. A U move of the
   whole allowance would by itself decide NFR-490's ratio.
 
@@ -342,7 +343,7 @@ does. **This task books no NFR-490 verdict**; that stays SL-1259's.
 
 ### Task 4R: The traced-only wire, admitted by a compile check; served from the chain (DP-F35-7 (a); added by Delta 2)
 
-**Written for DP-F35-8 (c).** Under DP-F35-8 (a), Steps 4 and 6 are rewritten before dispatch
+**Written for DP-F35-8 (c)** (*ruled (c), Delta 3*). Under DP-F35-8 (a), Steps 4 and 6 are rewritten before dispatch
 (the inline two-evaluation comparison, and a `03` §4.5 text for the mark), and the dispatch
 record names each change.
 
@@ -462,6 +463,31 @@ trim. Which of the two lines NFR-490's verdict reads is SL-1259's (the decision-
 - **Contention:** A-1 (PL 9599), A-2 (PL 9597, #1178), A-3 (PL 9595), WK-1178:
   `_model_call_handler`, serialise (the same Work runs one slice at a time anyway). PL 9567 /
   SL 9568: plan dependency (need 10), and this slice consumes T-M1's field (Task 4R Step 6).
+
+## Delta 3, 2026-10-05 (after 18:01:45 BST, pre-mint): DP-F35-8 ruled (c); Task 1B accepted
+
+The maintainer's (by delegation) entry "2026-10-05 18:01:45 BST — Trace mismatch: a NEW small RL
+for T-M1 AND an FD (it is live on main today); DP-F35-8 = (c); the U measurement accepted", items
+2 and 3, verbatim:
+
+> 2. DP-F35-8 = (c). Only the off-path producer (trace_handlers.py:98) uses the traced wire, via reproduce_traced; traces.py:257's existing comparison marks a mismatch. Inline traced calls (/score options.trace, /score/compare) stay on the chain with trim only. It is ONE mechanism shared with item 1, as required, and NFR-490 stays passable on the inline path. The second "producer path" timing line in Task 6 is accepted.
+> 3. Condition (ii), PL 9776 Task 1B: ACCEPTED as written (U = p99 of bench-rating.py :953's trace=False GBM block; trees P, C and H; 5 interleaved runs each; the gate's mode inside a held slot with the wrapper on your grant; machine state at both ends; to_wire edges on P and C; the bands: holds below s_U, moved from s_U to 0.20·U_C (my call), STOP at or above 0.20·U_C against NFR-490 03:1331 and BUDGET_TRACE_OVERHEAD :77).
+>    DP-F35-8 as a pre-mint delta: correct.
+
+**What this delta changes in the plan:**
+1. **DP-F35-8 is ruled (c).** Only the off-path producer (`trace_handlers.py:98`) uses the traced
+   wire, through `reproduce_traced`; `traces.py:257`'s existing comparison marks a mismatch;
+   inline traced calls (`/score` with `options.trace`, `/score/compare`) stay on the chain with
+   Task 3's trim only. **Task 4R stands as written for (c).** Its note on DP-F35-8 (a) no longer
+   applies. The DP-F35-8 row carries a pointer here.
+2. **Activation need 11 is discharged** by this entry.
+3. **Task 6's second, "producer path" timing line is accepted** (item 2).
+4. **Task 1B is accepted as written**, bands included. **The "moved" band (s_U ≤ |ΔU| <
+   0.20 × U_C) is the maintainer's (by delegation) call**, not the lead's (item 3: "my call").
+   Task 1B's "the lead decides" for that band is superseded by this item; its text stays.
+5. **The mark the reader sees** is PL 9567's Task 2d field, adopted by RL 9505 (working id; a new
+   RL, per item 1 of the same entry) and discharging FD 9502 (working id). Task 4R Step 6's
+   backend test reads that field. Where Delta 2 says "T-M1", read "T-M1 as RL 9505 adopts it".
 
 ## Status
 
@@ -635,7 +661,7 @@ unmet.** The lead's GO check starts here, before anything else.
 
 11. **DP-F35-8 is ruled** *(added 2026-10-05 by Delta 2)*: where R3's comparison runs. Shown by
     the dated ruling line or record the lead names in the dispatch record. Without it, Task 4R
-    does not start.
+    does not start. *(Discharged 2026-10-05 by Delta 3: DP-F35-8 ruled (c) at 18:01:45 BST.)*
 
 ### Build-start conditions (Task 0, after activation; not activation needs)
 
