@@ -70,6 +70,35 @@ occurred once before it was applied. After: each applied text occurs once; the o
 `<Slice 7 date>` and `9710` occur 0 times in the file. `RL-1418`'s own-id placeholder was already its minted id in the
 text.
 
+### Task 2 — the pure join, red first (Acceptance 1 to 7)
+
+**The maintainer's condition on D3** (by delegation, relayed by the lead): "if WeightJoinError reaches the WIRE as a
+client-visible error code, that code must be in 03's owned-code list with a meaning, or the slice's spec commit adds it
+(spec first, CLAUDE.md §0). If it maps to an existing listed code, no spec change, and the ledger names the mapping."
+**The mapping:** `WeightJoinError.code` is `VALIDATION_FAILED`, as `PortfolioFrameError`'s is
+(`packages/pricing-core/src/pricing_core/rating/analysis.py:60-64`). The platform `diff` service maps it, `PortfolioFrameError`
+and `FactorResolutionError` to `PlatformError("VALIDATION_FAILED", …, 422, <message>)` (PL-1419 Task 3 Step 3.5, Task 4 for
+the Job). `VALIDATION_FAILED` is a shared request-machinery code (`backend/src/app/errors.py:399-402`,
+`_GENERIC_ERROR_CODES`), so it is not in 03's module-owned list by design; 03's diff row (`03:932`) and cells row
+(`03:933`) already state "422 `VALIDATION_FAILED`" for these faults. No new code, no spec change. The D3 case
+(`apply_banding`'s `error` policy) raises `FactorResolutionError`, which T5's prose already lists; it is re-wrapped with
+its message kept, so it is not beyond T5.
+
+**Red**, `uv run pytest packages/pricing-core/tests/test_rate_table_weights.py -q -x`, before `weights.py` existed:
+`E   ModuleNotFoundError: No module named 'pricing_core.rate_tables.weights'` (collection error, 1 error). With
+`weights.py` written and `_compute_diff` unchanged, 17 passed and `test_a_zero_exposure_cell_carries_no_weight` failed
+with `decimal.InvalidOperation: [<class 'decimal.DivisionUndefined'>]` at `operations.py:427`
+(`sum(...) / total_weight`), the cause Acceptance 5 names.
+
+**Green**: the zero-weight guard in `_compute_diff` (a weight equal to 0 is skipped like an absent one). 18 passed;
+`test_rate_table_operations.py` 33 passed; `ruff check packages/pricing-core`, `mypy` (227 files) and `lint-imports`
+(4 kept, 0 broken) clean.
+
+**Choice beyond the plan's wording.** `PL-1419` Task 2 Step 3 raises when `matched_exposure == 0`; the refusal is on
+**no row mapping to a cell** (the join is empty), which is the spec's own words ("a portfolio whose rows map to no
+cell", `RL-1418` T5). The two differ only when every matched row has zero exposure, which then gives an empty
+`weights` and a `None` mean instead of a refusal.
+
 ## PRs
 
-Not yet opened (the PR is opened as a draft after Task 1 is committed and pushed).
+Not yet opened (the PR is opened as a draft after Task 2 is committed and pushed).

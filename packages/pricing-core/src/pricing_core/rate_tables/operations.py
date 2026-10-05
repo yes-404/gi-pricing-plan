@@ -415,7 +415,9 @@ def _compute_diff(
         comparable.append(pct)
         if weights is not None:
             raw_weight = weights.get(key)
-            if raw_weight is not None:
+            # A zero weight carries no weight, like an absent one: a mean over cells
+            # whose total weight is 0 is undefined, not 0 (FR-231, `RL-1361` item 6).
+            if raw_weight is not None and Decimal(str(raw_weight)) != 0:
                 weighted.append((Decimal(str(raw_weight)), pct))
 
     max_abs = max(abs(pct) for pct in comparable) if comparable else None
