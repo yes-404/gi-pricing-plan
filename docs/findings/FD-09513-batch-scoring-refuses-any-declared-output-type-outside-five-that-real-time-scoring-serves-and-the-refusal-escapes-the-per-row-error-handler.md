@@ -174,3 +174,21 @@ reaches `/score` as a JSON **integer** and a fractional one as a JSON **float** 
 `27`, an int; `driver_age * 1.1` gives `19.8`, a float). `FD-1333` and `RL-1343` say only "float". Whichever plan discharges
 `RL-1343`'s clause (the JSON string on every scoring path) must cover **both** forms. PL 9509 checks whether that plan exists
 and names it.
+
+## Disposition — decision points ruled (pre-mint)
+
+**Ruled 2026-10-05 18:10:57 BST.** Source: the maintainer (by delegation), `~/gi-pricing-plan.local/channel/to-lead.md`, entry
+"2026-10-05 18:10:57 BST — PL 9509 (#1210 @dc4f9c50) DPs RULED: DP-1 (b), DP-2 (ii), DP-3 the class name; the RL-1343 leaf plan is
+reserved NOW". DP-1 and DP-2, quoted verbatim:
+
+> DP-1: (b). int and count are a JSON INTEGER on both paths, and a non-integral value under them becomes that ROW's error. relativity and percentage use the DECIMAL STRING form (the RL-1343 rule, and 03:692 keeps lossy floats out). (c) is NOT taken, because OQ 9556 owns the type vocabulary at save; (d) is not taken.
+> DP-2: (ii). The RL-1343 slice carries the /score half for relativity and percentage. Until it lands, FD-1333's divergence stands for those two types, and FD 9513's register cell names that residue and its discharger.
+> DP-3: the exception class name, as today.
+
+**In those terms.**
+- **DP-1 (b):** SL 9511 under PL 9509 makes `int` and `count` JSON integers on both paths (a non-integral value is that row's
+  error) and `relativity` and `percentage` decimal strings in BATCH.
+- **The residue:** `relativity` and `percentage` on real-time `/score` stay JSON numbers until the `RL-1343` plan,
+  **PL 9499 / SL 9500** (working ids, space form), discharges it (DP-2 (ii)). `FD-1333`'s divergence therefore persists for
+  those two types until then.
+- **DP-3:** the error code is the class name.
