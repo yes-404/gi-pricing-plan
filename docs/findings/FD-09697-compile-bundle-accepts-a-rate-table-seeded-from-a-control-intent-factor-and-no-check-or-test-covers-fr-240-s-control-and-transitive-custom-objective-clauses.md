@@ -17,10 +17,10 @@ relates: [WK-1178, FR-240, FR-88, FR-230, FR-20]
 
 ## Finding
 
-**Severity HIGH (the deputy's, 2026-10-05 13:20:26 BST, decisions 22–27; final at the mint). Owner WK-673 (the deputy's ruling, 2026-10-05 13:38:03 BST, "Finding batch 1: FD 9697's owner = WK-673; FD 9659's limb-3 severity depends on one fact": the fix is in `compile_bundle` against FR-240, which WK-673 owns); deadline: none set for this finding alone; the deputy's 2026-10-05 14:12:13 BST ruling puts it in ONE fix plan for the FR-240 family (with FD 9659), owner WK-673, red first, "a HIGH G2 blocker" (PL 9649, working id).** FR-240 requires that bundle compilation validates "no `control`-intent
+**Severity HIGH (the maintainer's (by delegation), 2026-10-05 13:20:26 BST, decisions 22–27; final at the mint). Owner WK-673 (the maintainer's (by delegation) ruling, 2026-10-05 13:38:03 BST, "Finding batch 1: FD 9697's owner = WK-673; FD 9659's limb-3 severity depends on one fact": the fix is in `compile_bundle` against FR-240, which WK-673 owns); deadline: none set for this finding alone; the maintainer's (by delegation) 2026-10-05 14:12:13 BST ruling puts it in ONE fix plan for the FR-240 family (with FD 9659), owner WK-673, red first, "a HIGH G2 blocker" (PL 9649, working id).** FR-240 requires that bundle compilation validates "no `control`-intent
 factor in a rateable path (`02` FR-88)", and `compile_bundle` does not. A rate table built from a `control` factor is
 accepted and compiles, so a price can depend on a factor the platform declared must not price. That is a mispricing
-class, not a test gap (the deputy's reasoning, 13:20:26 BST).
+class, not a test gap (the maintainer's (by delegation) reasoning, 13:20:26 BST).
 
 FR-240 (`docs/specs/03-rating-engine.md:137`): bundle compilation validates "… no `control`-intent factor in a
 rateable path (`02` FR-88), no unapproved custom objective transitively reachable." FR-88 (`02`): "Rating Versions
@@ -29,7 +29,7 @@ may only use `risk` factors; a `control` factor reaching a rate table is a valid
 **Split, 2026-10-05.** This record first also held the untested unapproved-custom-objective limb and the "transitively
 reachable" limb of the same FR-240 sentence. Neither is the control-intent defect: the direct-pin refusal works
 (`PIN_NOT_APPROVED` fires), so what is missing there is a negative test and a ruling on "transitively". They moved, on
-the deputy's instruction of 2026-10-05 13:20:26 BST, to FD 9659 (LOW).
+the maintainer's (by delegation) instruction of 2026-10-05 13:20:26 BST, to FD 9659 (LOW).
 
 **`control` intent: no check anywhere on the path.** `compile_bundle`
 (`packages/pricing-core/src/pricing_core/rating/compile.py:573-640`) resolves the algorithm and the rate-table,
@@ -87,7 +87,7 @@ check: the resolver has to resolve the key's `factor_ref` and the compile has to
 
 ## Disposition
 
-Open. Filed by the auditor, 2026-10-05. Severity HIGH (13:20:26 BST) and owner WK-673 (13:38:03 BST) are the deputy's; the fix is the FR-240 family plan, PL 9649 (working id).
+Open. Filed by the auditor, 2026-10-05. Severity HIGH (13:20:26 BST) and owner WK-673 (13:38:03 BST) are the maintainer's (by delegation); the fix is the FR-240 family plan, PL 9649 (working id).
 
 Remedy for the lead's verdict: refuse a `control` factor at seed (it cannot be rated on, FR-88) or at compile, or both.
 Red first: the reproduction above must end in a refusal. The custom-objective clauses are FD 9659's.
