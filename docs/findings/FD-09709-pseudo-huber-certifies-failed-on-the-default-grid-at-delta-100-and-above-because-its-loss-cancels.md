@@ -14,8 +14,19 @@ relates: [WK-690, LG-1412, FR-143, FR-146, FR-149, FR-151]
 
 ## Finding
 
-**Severity: MEDIUM, proposed; the deputy's at the mint. Owner proposed: WK-690** (the template
-catalogue is `pricing-core`'s, `objectives.py`; the platform grid is `platform/objectives.py`).
+**Severity MEDIUM, owner WK-690, no deadline ruled.** The deputy's entry "2026-10-05 13:10:43 BST — Early
+severity signals for FD 9708 and FD 9709 (final at mint)" (`channel/to-lead.md`, local) says: "FD 9709 (#1129,
+pseudo_huber certifies `failed` at δ ≥ 100 on the default grid): MEDIUM, owner WK-690, as proposed. A false
+`failed` blocks a valid objective but misprices nothing. The draft states the δ at which it first fails,
+measured, and the reproduce command." The entry is an early signal, final at the mint. The template catalogue is
+`pricing-core`'s (`objectives.py`); the platform grid is `platform/objectives.py`.
+
+**First failing δ, measured: 63** (an integer: `delta` is money in minor units and the schema refuses a
+non-integer, `CLAUDE.md` §7). The failure is **not monotone in δ**. Every integer δ from 1 to 100, on the default
+grid at the tree named under Evidence 3, gives `failed` at 63, 64, 73, 74, 78, 83, 84, 86, 87, 89, 93, 94, 97, 99
+and 100, and not `failed` at the other 85 values; the gradient check is `pass` at δ = 1 and `warn` at every other
+δ that does not fail. A bisect would have said 99 and was therefore wrong; the scan is what the table below
+samples. Reproduce command: Evidence 3.
 
 `LG-1412`'s note flags the symptom and names no check and no cause. Quoted from
 `docs/ledgers/LG-01412-wk-690-slice-3-the-expression-kind-through-the-platform-behind-the-flag.md`,
@@ -74,7 +85,7 @@ where the difference shows. A smaller residue remains with the stable form (delt
 `02-modelling.md` §4.7 (`:1114-1117`): *"`overall` ∈ `certified` | `certified_with_findings` |
 `failed`. A `failed` certificate blocks submission entirely."* The dated amendments fix the
 meaning: a `violated` check yields `certified_with_findings` and **never** `failed` (Amendment to
-FR-152, 2026-08-25, `:232-238`); `CheckStatus` is `pass | warn | violated | failed` and
+FR-152, 2026-08-25, `:236-238`); `CheckStatus` is `pass | warn | violated | failed` and
 `overall` is derived by `CertificateResult.outcome_of`, any `failed` ⇒ `failed`
 (`:1147-1152`). So `failed` is **not** "the certification could not complete": all nine checks
 ran. One of them, derivative agreement (FR-151), exceeded `_TOLERANCE_WARN`.
@@ -129,8 +140,35 @@ is unusable in the range it exists for, on the default grid.
    same with `_sampling(T.PSEUDO_HUBER)` gives the second set of figures.
 2. The stable-form comparison: `r²/(s+1)` Richardson-differenced on the same grid
    (`h = 1e-4`) against `_pseudo_huber_grad`; figures above.
-3. Code: `objectives.py:372-374`, `:1079-1109`, `:1153-1200`, `:103-104`;
-   `platform/objectives.py:588-614` (`default_sampling`), `:655-657`, `:707-714`.
+3. **First failing δ and the reproduce command.** Saved as `repro.py` anywhere, run from the repository root
+   (`uv run python repro.py`; about 5 s per δ on one thread, so pin `OMP_NUM_THREADS=1` on a shared box). It
+   prints, for each integer δ asked, whether `overall` is `failed` and the gradient check's status. The scan of
+   1..100 is `for d in range(1, 101): print(d, *run(d)[:2])`. Run at `origin/main`
+   `809a3794af6d3a6ba688663b0d9b59f951190680` (the sources of `objectives.py` and `platform/objectives.py` are
+   unchanged since `caa4e411`, `git diff --stat caa4e411 origin/main` on both is empty), 2026-10-05.
+
+   ```python
+   from uuid import uuid4
+
+   from app.platform.objectives import default_sampling
+   from model_schema import (TEMPLATE_APPLICABILITY, CertificateOutcome, CustomObjective,
+                             HessianStrategy, ObjectiveTemplate)
+   from pricing_core.modelling import certify_objective
+
+   T = ObjectiveTemplate.PSEUDO_HUBER
+
+
+   def run(delta):
+       o = CustomObjective(id=uuid4(), slug="repro-pseudo-huber", version=1, template=T,
+                           params={"delta": delta}, applicability=TEMPLATE_APPLICABILITY[T],
+                           hessian_strategy=HessianStrategy.CLIP_TO_MIN)
+       r = certify_objective(o, sampling=default_sampling(o))
+       g = next(c for c in r.checks if c.name == "analytic_vs_numeric_gradient")
+       return r.overall is CertificateOutcome.FAILED, g.status.value, g.detail
+   ```
+
+4. Code: `objectives.py:372-374`, `:1079-1109`, `:1153-1200`, `:103-104`;
+   `platform/objectives.py:588-619` (`default_sampling`), `:655-657`, `:707-714`.
 
 ## Disposition
 
