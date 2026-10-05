@@ -1435,6 +1435,24 @@ relates: [FD-1356, RL-1301, PL-1306, SL-1256, RL-1407, PL-1408]
 (Activated 2026-10-05 as the WK-1178 FD-1356 fix slice, on the maintainer's GO check, "2026-10-05 09:44:39 BST — DISPATCH GO: FD-1356 fix (SL-1409 / PL-1408) on lane B, option (b); executor-1409 starts once the `__all__` registry amendment merges (or once WK-690 S3 merges, if that comes first)"; dispatch record DISPATCH-WK-1178-SL1409-2026-10-04.)
 
 
+#### SL 9618 (working id) — WK-1178 slice — the PreToolUse hook runs by absolute path, so a changed working directory cannot block every Bash call
+
+```yaml
+id: SL-9618
+family: slice
+title: WK-1178 slice — the PreToolUse hook runs by absolute path, so a changed working directory cannot block every Bash call
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 809a3794af6d3a6ba688663b0d9b59f951190680
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [RL-920, RL-1263]
+```
+
+`.claude/settings.json:9` registers the retry-cap hook as `python3 scripts/hooks/retry_cap_hook.py hook`, a path relative to the session's working directory. After a `cd` into a subdirectory, `python3` exits 2, the blocking exit for a `PreToolUse` hook, and every later Bash call is refused, `cd` back included. This has locked a session twice (the `to-lead.md` entries headed "2026-09-30 14:54:23 BST — shell restored; one WK-1178 backlog item (the hook path)" and "2026-10-05 15:24:59 BST — … the cd-lock hook fix moves up", item 4). The fix anchors the path on `$CLAUDE_PROJECT_DIR`, with a `git rev-parse --show-toplevel` fallback (DP-1), and accepts that a worktree session runs the root checkout's copy of the script (DP-2). A new test reads the registered command from `settings.json` and runs it from `docs/`, red first on `main`. The hook's decision logic, its `if` filter and its fail-closed behaviour are unchanged. Task 0 measures what the docs leave open: the variable in teammate and subagent hooks, and in worktree sessions. Leaf plan PL 9617 (working id, `draft`). **Activation needs:** the decision-maker's ruling on DP-1 and DP-2; the lead's go and a dispatch record; no in-flight branch touches its write set at planning time (`809a3794`). *(Filed 2026-10-05 under working ids 9618 (this row) and 9617 (the plan), reserved by the lead.)*
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
