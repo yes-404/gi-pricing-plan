@@ -12,6 +12,10 @@ relates: [WK-1178]
 
 # FD-9894 — The spec table-row parsers split cells on every pipe, so a cell holding an escaped pipe is cut short and a declared endpoint is invisible to the checkers
 
+## Amendment before mint (2026-10-05)
+
+Amended 2026-10-05 before mint, re-measured at `47d770e8` (`origin/main`): **the finding holds, undone.** The three `([^|]+)` parsers are unchanged (`_ENDPOINT` in `scripts/scope-audit.py:68`, `_ENDPOINT_ROW` in `scripts/audit-docs.py:299`, `_SPEC_ENDPOINT` in `backend/src/app/demo/guide.py:64`); no `table_rows.py` exists. The spec cites below moved: `06:539` is now `docs/specs/06-governance.md:583` (`/api/v1/dossiers/{id}?format=html\|pdf\|bundle`) and `06:543` is now `:587` (`/api/v1/artifacts/{ref}/dependencies?direction=up\|down`); `01:873` is unchanged; the purpose-cell rows are `01:866` and `02-modelling.md:1840` (formerly `02:1784`). The register now holds three rows with an escaped pipe, not two (`docs/findings/register.md:197`, `:213`, `:222`), and `python3 scripts/doc-index.py --phase P2` still raises `parsed 208 of 211 data row(s)`. The test lookbehind splits cited as `tests/test_audit_docs_ids.py:2413` and `:2462` are now the `re.split(r"(?<!\\)\|", line)` uses at `:2427` and `:2476`. The fix is the `table_rows.py` slice of RL 9907 (working id, unminted), owner the WK-1178 slice that carries it; PL-1276's sweep (#986) owns the earlier unowned recommendation `CR-823` item (c). Every other cite below is to tree `2e427bd1bf6535b6b1fda356527b342e99b2f4bd`'s merge base `daa7f5f8` and is read by symbol.
+
 ## Finding
 
 **Severity: MEDIUM** (raised from low by the maintainer, `to-lead.md` "2026-09-30 11:46:58 BST —
