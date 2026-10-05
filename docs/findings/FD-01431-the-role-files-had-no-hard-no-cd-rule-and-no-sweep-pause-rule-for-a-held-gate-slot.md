@@ -58,8 +58,8 @@ The harm, in the maintainer's words (same entry): *"the hook path is relative, a
 ### 2. The overlap
 
 The handover log records the sweep's condition and the conflict. Entry "2026-10-05 18:43:56 BST": auditor-mintready
-(sonnet) spawned for a read-only mint-readiness sweep over the queue; entry "18:44:46 BST": "The deputy's condition:
-auditor-mintready sequential + nice, PAUSED during S7's measurement … overlap → re-run." Entry "18:58:23 BST": S7 gate 1
+(sonnet) spawned for a read-only mint-readiness sweep over the queue; entry "18:44:46 BST": "[the maintainer's (by delegation)]
+condition [word elided per the records rule]: auditor-mintready sequential + nice, PAUSED during S7's measurement … overlap → re-run." Entry "18:58:23 BST": S7 gate 1
 at `c1f2ef17` ran and its measurement was INVALID (load 7.2). The brief gives the sweep as 55 PRs, `audit-docs` plus
 `merge-tree` per PR, un-niced, overlapping S7's gate 1 from 18:25 to 18:56 BST. **The log does not state the 55, the
 "un-niced" or the 18:25–18:56 window in those words**; they rest on the lead's brief and on the maintainer's
@@ -72,8 +72,9 @@ does not depend on them: the maintainer ruled that the rule was missing.
 
 - `809a3794` 2026-10-05T14:54:04+01:00 `docs(roles): planner, decision-maker, auditor and watcher never run a full
   suite or anything heavy beside a held gate slot (#1144)`.
-- `a5e6781f` 2026-10-05T14:51:50+01:00 `docs(roles): post-mint working-id sweep in lead.md; "by the deputy" →
-  maintainer (by delegation) in executor.md (#1154)`.
+- `a5e6781f` 2026-10-05T14:51:50+01:00 #1154: [its subject adds a post-mint working-id sweep to lead.md and changes a
+  narrative title for the maintainer's delegate to "maintainer (by delegation)" in executor.md; the subject's own
+  wording is not quoted, because it carries a word elided per the records rule].
 
 Both amended role files and neither has an `FD-`. They are **not retro-filed** (ruling (b)). They are named because the
 gap was found by that comparison.
