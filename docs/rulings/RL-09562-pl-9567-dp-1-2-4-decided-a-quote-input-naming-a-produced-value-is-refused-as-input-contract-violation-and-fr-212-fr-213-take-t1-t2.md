@@ -33,12 +33,16 @@ relates: [FR-212, FR-213, FR-246, FR-255, FD-1374]
   "RL 9562's re-scope (non-blocking): noted"). DP-1 and DP-2 as ruled at 17:22:47 are restated
   for the emergency slice in the 17:25:07 entry's item 2; this record carries them unchanged and
   names where each now applies (§"What it obliges").
+- **Two later entries place T2, and are quoted verbatim too:** 17:27:55 BST (the cause;
+  the emergency slice is guard (c) ALONE and (R-b), the root, goes into PL 9567) and item 2
+  of 17:30:02 BST (T2 is applied by PL 9560, and this record mints ahead of it). Amendment N1
+  records the pre-mint edit they caused.
 - **The decision points** are PL 9567's (working id, #1193, branch
   `pl-9567-fd9572-to-wire-order` at `f4e4380b6f35ae1809d70bb22027a9205e22c096`),
   §"Decision points". PL 9567, SL 9568 and FD 9572 are unminted, so each is cited in
-  working-id form and kept out of `relates:` (check 32). **This record mints before PL 9567 only. It does not
-  block the emergency slice (SL 9561 / PL 9560): that plan quotes the maintainer's entries
-  directly** (the lead's re-scope order to `dm-9572rl`, 2026-10-05, received after 17:28 BST).
+  working-id form and kept out of `relates:` (check 32). **This record mints right after
+  batch 1, ahead of PL 9560 and PL 9567, and PL 9560 cites it** (the 17:30:02 BST entry,
+  item 2; Amendment N1).
 - **Written 2026-10-05 17:24–17:29 BST (by `date`)**, by the decision-maker session `dm-9572rl`, on
   the lead's order (brief `brief-prep-wave-2026-10-05.md` §BG). Every fact below was read at
   `origin/main` `4d3be1414ad4dacdaa0c14ef49fb21853adbaed6`, by symbol with its line at that tree.
@@ -111,6 +115,25 @@ relates: [FR-212, FR-213, FR-246, FR-255, FD-1374]
 >
 > The lead's "GO … after its plan mints and activates" is corrected to the 17:17:37 order: my DISPATCH GO comes after PL 9560 is MINTED (draft), before its activation PR, which quotes the GO header. PL 9560 mints right after batch 1, ahead of the rest of the queue. The hold, the scope (root + guard (c)), PL 9567's (c) delta and RL 9562's re-scope (non-blocking): noted.
 
+### 2026-10-05 17:27:55 BST
+
+> ## 2026-10-05 17:27:55 BST — FD 9572 CAUSE: the sink fan-in plus whole-context passThrough; RULING: (c) ALONE is the emergency slice; (R-b) is the root, in PL 9567; one more case to measure; A-2 readings
+>
+> CAUSE (auditor-premise, read-only at 4d3be141; r3/r4/r5 sha256 0ee537bf…/ae53159a…/98aea5df…): runtime.py:495-499 (to_wire's sink rule wires every interior step whose produced names no other step consumes, INCLUDING produce-nothing steps such as the decline constraints, straight to the sink, so the sink has a fan-in) plus whole-context passThrough on every expressionNode (:174, :268, :353, :389; the docstring :428-432); at the fan-in the LAST-LISTED branch wins (inferred from 3 runs; zen's merge code not read); score.py:911/:1067 relay raw keys as the ENTRY point. The per-name table: only instalment_loading_minor (the last terminal producer) is shadowable in that fixture. Exposure: fremtpl2-demo@1 (never deployed) is a single path with no fan-in, so it is not exposed by this mechanism (inferred from topology). The HOLD stands regardless.
+> RULING:
+>  1. The EMERGENCY slice (SL 9561 / PL 9560) = guard (c) ALONE at the entry (score.py:911 and :1067): refuse an undeclared key naming any produced value, INPUT_CONTRACT_VIOLATION, declared inputs subtracted. It closes the CALLER exploit fully, and the hold lifts at its merge.
+>  2. (R-b) is the ROOT and goes into PL 9567 (the wiring slice), red first with the fan-in case: no side branch may carry a stale copy of a produced name into the sink (one ordered merge at the sink, or produced names stripped from the relayed context; the planner proposes, and if it changes every bundle's hash that is stated and approved by me).
+>  3. ONE MORE CASE TO MEASURE NOW (the same auditor, read-only, ≤20 min), because the same mechanism may misprice with NO caller key at all: an ORDERED algorithm in which a produce-nothing or terminal side branch forks BEFORE a step that RE-PRODUCES a name in place (a clamp), so the side branch carries the PRE-clamp value to the sink. If it is listed last, does the sink take the stale value? Run it through score_one with no extra key. If YES, that is an internal mispricing with no caller needed, (c) does NOT close it, and (R-b) moves INTO the emergency slice: report to me at once with the price. If NO (the clamp-in-place keeps every branch downstream, as in the fixture), (c) alone stands.
+>  4. FD 9572's essay gains the cause lines and the per-name table as a dated pre-mint amendment.
+> A-2 (#1178 @c3982ed6; MODEL_CALL_FEATURE_MAP_INVALID, 422, free on main): R1 (an unresolvable model_ref is left to compile): ACCEPTED. R2 (the OFFSET column is accepted beside the Factor slugs): ACCEPTED, as DP-3 needs. R3 (a GBM is checked against its Factors, or its feature_order when it has none): ACCEPTED. R4 (peril_structure_ref steps are not checked): ACCEPTED for A-2, and A-3 checks a structure's component models' feature maps (add it to A-3's plan). R5, the GAP: POST /api/v1/sub-graphs (sub_graphs.py:104) also saves model_call steps, so the SAME check applies there, via the same function, with its own red test, in A-2.
+> #1177 A-1 @224e2deb (Task 5 applies RL 9563's 06:407 text byte for byte; activation need 4b): noted.
+
+### 2026-10-05 17:30:02 BST (item 2)
+
+> ## 2026-10-05 17:30:02 BST — Rulings: T2 routing (RL 9562 mints ahead of PL 9560); _NUMERIC FD go; WK-675 DP-S3-1 (a) with the FD-1335 reading; DP-S13-1 (a′)
+>
+> 2. #1195 RL 9562, T2: your RECOMMENDATION is adopted. RL 9562 owns T1 and T2's text and mints right after batch 1, AHEAD of PL 9560. PL 9560 applies T2 (FR-213 :82) in the same commit as guard (c), citing RL 9562, with no paraphrase. T1 stays with PL 9567 / SL 9568. DP-3 stays OPEN in RL 9562 and is named as open. The mint ACK for #1195 follows my checklist at its mint head (it is not given by this line).
+
 ## Locators — read at `4d3be141`
 
 | Locator | Where | What it holds |
@@ -169,9 +192,13 @@ before it starts". Task 3 stays blocked on DP-3 until it is decided.
 T1 and T2 are adopted **verbatim from PL 9567** (#1193 at `f4e4380b`, §"Decision points",
 the paragraphs headed "T1 (DP-4 (a))" and "T2 (DP-4 (a))"), each joined onto one line as a
 table cell requires. This adoption is an **added activation need** of PL 9567: the plan is
-not activated until this record is merged.
+not activated until this record is merged. **T1 is applied by PL 9567 / SL 9568; T2 is applied
+by PL 9560 / SL 9561, in the same commit as guard (c)** (`CLAUDE.md` §2: spec and code in one
+commit). This record mints right after batch 1, before PL 9560, and PL 9560 cites it
+(the 17:30:02 BST entry, item 2; Amendment N1).
 
-PL 9567 Task 3 Step 4 applies each text "byte-for-byte as the adopting ruling states them,
+Each text is applied byte for byte by its slice above. PL 9567 Task 3 Step 4, as written at
+`f4e4380b`, applies each text "byte-for-byte as the adopting ruling states them,
 each appended at the end of its row's last cell". Each find string below is the end of that
 row's last cell at `4d3be141`, with `grep -cF` = 1 on `docs/specs/03-rating-engine.md`.
 
@@ -215,20 +242,16 @@ row's last cell at `4d3be141`, with `grep -cF` = 1 on `docs/specs/03-rating-engi
   to #1193, or carried by the dispatch record if the plan is minted first), adds this record's
   merge as an activation need (DP-4), and keeps DP-3 open. PL 9567 drops (c) by a dated delta
   and keeps (a)/(b) (the 17:25:07 entry, item 3); its Task 3 is then (c)'s and leaves with it.
-- **The emergency slice (SL 9561 / PL 9560, WK-1178)**, which delivers fix (c) and the root
-  (the 17:25:07 entry, item 2, and the 17:25:23 addendum), refuses with
+- **The emergency slice (SL 9561 / PL 9560, WK-1178)**, which delivers guard (c) ALONE (the
+  17:27:55 entry, item 1; the root, (R-b), goes into PL 9567, item 2), refuses with
   `INPUT_CONTRACT_VIOLATION`, never `VALIDATION_FAILED` (DP-1), declared inputs subtracted
-  (DP-2), with DP-2's exception test.
+  (DP-2), with DP-2's exception test. It applies **T2** verbatim, in the same commit as
+  guard (c), citing this record, with no paraphrase (the 17:30:02 entry, item 2).
 - **T1** (FR-212, list order) is the wiring fix's text and is applied by PL 9567's slice
   (SL 9568) verbatim, in the same commit as its code (`CLAUDE.md` §2).
-- **T2** (FR-213, a quote input naming a produced value) is adopted **for PL 9567** with T1,
-  per the lead's re-scope order ("for PL 9567 (wiring): DP-4's T1/T2 adoption and DP-3
-  (open)"). No maintainer entry quoted here names the slice that applies T2. PL 9567's (c)
-  delta (17:25:07, item 3) removes the Task 3 that applied it, so the delta must keep a step
-  that applies T2. Fix (c)'s code lands first, in the emergency slice, so FR-213 gains its text
-  only when PL 9567's slice merges. Whether T2 should instead go with the emergency slice's
-  code commit (`CLAUDE.md` §2: spec and code in one commit) is a scope question. This record
-  does not decide it; it is reported to the lead.
+- **T2** (FR-213, a quote input naming a produced value) is guard (c)'s text and is applied by
+  the emergency slice (SL 9561 / PL 9560), in the same commit as guard (c) (`CLAUDE.md` §2),
+  not by PL 9567 (the 17:30:02 entry, item 2; Amendment N1).
 
 ## Acceptance — the violation that must become detectable
 
@@ -242,7 +265,8 @@ Each is red first in the slice that delivers fix (c) (1–3) or applies the text
    exception's red test (input `x`, a constraint consuming and producing `x`) fails if it
    raises.
 4. *T1 or T2 differs from this record.* `grep -cF` of each replacement line above on
-   `docs/specs/03-rating-engine.md` after Task 3 Step 4 is 1.
+   `docs/specs/03-rating-engine.md` is 1 after the commit that applies it: T2's at SL 9561's
+   guard (c) commit, T1's at SL 9568's.
 
 ## The premise — MEASURED: false
 
@@ -254,11 +278,28 @@ has been measured, and the STOP did its job (the 17:25:07 entry, quoted above):
   the key (auditor-premise at `4d3be141`, script sha256
   `b3448450a1fe4c5b9622ec15555fda8a5d983c0b82e1ca9bbb7b624df2fb501c`, as the entry states it).
 - **The ZEN wiring of an ordered graph is correct** (350 for every extra key); the wrong price
-  arises in `score_one`'s path (the 17:25:23 addendum). The cause trace is the auditor's, still
-  open at filing.
+  arises in `score_one`'s path (the 17:25:23 addendum). The cause trace was the auditor's, still
+  open at filing; it is in the 17:27:55 entry (quoted above).
 - **What follows is the maintainer's, not this record's:** the HOLD (17:25:07 item 1), the
-  emergency slice (item 2 and the addendum), PL 9567's (c) delta (item 3) and FD 9572's essay
+  emergency slice (item 2 and the addendum, narrowed to guard (c) ALONE by the 17:27:55
+  entry, item 1), PL 9567's (c) delta (item 3) and FD 9572's essay
   amendment (item 4). This record quotes them and changes none.
+
+## Amendment N1, 2026-10-05 — T2's placement (pre-mint)
+
+Written 2026-10-05 17:34 BST (by `date`), by the decision-maker session `dm-9562b`, on the
+lead's order. The record as first filed left one question open for the lead: "Whether T2
+should instead go with the emergency slice's code commit (`CLAUDE.md` §2: spec and code in
+one commit) is a scope question. This record does not decide it; it is reported to the
+lead." The maintainer, by delegation, closed it in the 17:30:02 BST entry, item 2:
+
+> 2. #1195 RL 9562, T2: your RECOMMENDATION is adopted. RL 9562 owns T1 and T2's text and mints right after batch 1, AHEAD of PL 9560. PL 9560 applies T2 (FR-213 :82) in the same commit as guard (c), citing RL 9562, with no paraphrase. T1 stays with PL 9567 / SL 9568. DP-3 stays OPEN in RL 9562 and is named as open. The mint ACK for #1195 follows my checklist at its mint head (it is not given by this line).
+
+So: DP-4 adopts T1 (FR-212) and T2 (FR-213). T1 is applied by PL 9567 / SL 9568; T2 is applied
+by PL 9560 / SL 9561 in the same commit as guard (c). This record mints right after batch 1,
+before PL 9560, and PL 9560 cites it. The emergency slice is guard (c) ALONE (the 17:27:55
+entry, item 1). DP-3 stays open. The edits are in §"How this was ruled", §DP-4, §"What it
+obliges", §"Acceptance" item 4 and §"The premise"; the T1 and T2 texts are unchanged.
 
 ## What this record does not decide
 
