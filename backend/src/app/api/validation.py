@@ -23,6 +23,7 @@ from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 
+from app.api.approvals import decide_and_carry
 from app.api.authz import requires
 from app.api.deps import Caller, job_identity, require_caller
 from app.api.pagination import (
@@ -36,11 +37,13 @@ from app.api.pagination import (
 from app.api.responses import problems
 from app.db.models import ValidationRuleRow
 from app.db.session import Database
+from app.errors import PlatformError
 from app.platform import datasets as dataset_service
 from app.platform import jobs as job_service
 from app.platform import validation as service
 from app.platform import validation_rules as rule_service
 from model_schema import (
+    DecisionKind,
     Job,
     JobKind,
     Severity,
@@ -50,6 +53,7 @@ from model_schema import (
     ValidationRuleSet,
 )
 from model_schema import Permission as Perm
+from model_schema.validation import ValidationRuleSubmission
 
 __all__ = ["router"]
 
@@ -338,15 +342,19 @@ async def dry_run(
     responses=problems(401, 403, 404, 409, 422),
 )
 async def submit_rule(
-    rule_id: UUID, caller: WriteDatasets, database: DatabaseDep
+    rule_id: UUID, body: ValidationRuleSubmission, caller: WriteDatasets, database: DatabaseDep
 ) -> ValidationRule:
-    """FR-50 step 3: `draft` → `review`, and only with a dry run attached."""
+    """FR-50 step 3: `draft` → `review`, filing the approval request (`06` FR-352).
+
+    Only with a dry run attached that executed, and only with a change summary.
+    """
     async with database.unit_of_work() as session:
         row = await rule_service.submit_for_review(
             session,
             workspace_id=caller.workspace_id,
             actor=caller.principal,
             rule_id=rule_id,
+            change_summary=body.change_summary,
         )
         return rule_service.to_schema(row)
 
@@ -359,24 +367,35 @@ async def submit_rule(
 async def approve_rule(
     rule_id: UUID, caller: DecideApprovals, database: DatabaseDep
 ) -> ValidationRule:
-    """FR-50 step 3: `review` → `approved`, by someone other than the author.
+    """FR-50 step 3: `review` → `approved`, as a client of the approval workflow.
 
-    The separation is the control, and it is enforced in three places rather than trusted
-    here: this route requires `approval:decide`, the service refuses when the approver is
-    the author, and the table's check constraint refuses an approved row whose approver
-    matches. A rule decides whether data may be modelled on — one person deciding both what
-    it says and that it is right is not a review.
-
-    Approval **policies** — quorum, escalation, evidence bundles — are `06`'s (WK-677). This is
-    the module's own step, in the terms `01` §4.5 states it.
+    This route writes nothing itself: it finds the rule's open approval request and
+    decides it through `decide_and_carry`, the path `POST /approval-requests/{id}/decide`
+    takes. So the submitter and author checks, the policy's roles and quorum, and the
+    dry-run evidence are the workflow's, not a second copy here (FD-1356).
     """
     async with database.unit_of_work() as session:
-        row = await rule_service.approve_rule(
-            session,
-            workspace_id=caller.workspace_id,
-            actor=caller.principal,
-            rule_id=rule_id,
+        row = await rule_service.load_rule(
+            session, workspace_id=caller.workspace_id, rule_id=rule_id
         )
+        if row.status != "review":
+            raise PlatformError(
+                "RULE_NOT_APPROVED",
+                f"Only a rule in review can be approved; this one is {row.status!r}",
+                409,
+                "`01` §4.5 step 3.",
+            )
+        request_id = await rule_service.open_request_for(
+            session, workspace_id=caller.workspace_id, row=row
+        )
+        await decide_and_carry(
+            session,
+            caller=caller,
+            request_id=request_id,
+            decision=DecisionKind.APPROVE,
+            comment=None,
+        )
+        await session.refresh(row)
         return rule_service.to_schema(row)
 
 
