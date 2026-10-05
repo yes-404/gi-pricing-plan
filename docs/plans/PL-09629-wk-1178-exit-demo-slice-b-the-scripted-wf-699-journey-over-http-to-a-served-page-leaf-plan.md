@@ -135,9 +135,27 @@ path, and PL 9728's acceptance covers that path."* So this slice calls `/score` 
 (step S1 below). NFR-489 is measured by PL 9728 and `SL-1259`, not here. The "S2/3/5/6" in the
 09:59:49 entry is DP-6's subject, below.
 
+**DP-6, the dependencies, the two missing G2 needs and the Peril Structure question**, ruled by
+the maintainer (by delegation), entry headed *"2026-10-05 15:28:26 BST — Wave results: D1 =
+(c); D2 PL 9624 DPs; D3 PL 9629 DP-6 + plan the 2 missing G2 items; C1′ is FD 9995 (no new
+finding); FD 9619 noted"*, item D3 and the entry's closing line, verbatim:
+
+> D3 (leaf (b) PL 9629):
+>  - DP-6: WK-674 S2 only, as the evidence supports. AGREED.
+>  - The dependencies PL-1371 §7 omits (S7, WK-1250 S2/S3, the FD 9707 and FR-240 fixes) are named in PL 9629: right.
+>  - YES, plan the two G2 needs with NO plan as the NEXT prep items: the FD-1416 fix (ApprovalRequest defined three ways; HOLD on reading its responses) and the FD-1244 and FD-1245 rulings (WF-699 D4 vs FR-261; E2 vs FR-257). One planner, one DM; docs only.
+>  - C1′ (a Peril Structure cannot be pinned) is NOT new: it is FD 9995 (#980, "a peril structure has no approval path and the compile resolver has no peril branch", LOW, fail-closed). If PL 9629 confirms that G2's journey must pin a peril structure, FD 9995 is a G2 blocker: at its ACK it gets "deadline before the P2 exit demo" and MEDIUM (fail-closed, but it blocks an exit criterion). If the journey needs no peril pin, it stays LOW. PL 9629 states which.
+>
+> Also noted: PL-1371 §7's "FR-267 at 03:195" is :198 (frozen; the leaf is right); the §12 exit row's WF-701 A–D needs WK-674 S5/S6, put to the pre-exit-demo plan review (CLAUDE.md §14).
+
+The entry is a local channel entry (RFC-777); it is quoted so the plan carries it. FR-267 at
+`03-rating-engine.md:198` is the correction this plan already made (§"The dependencies
+`PL-1371` §7 derived"). The `WF-701` A–D point is in Hand-off 3.
+
 ## Status
 
-`draft`. **Five decision points are open** (DP-6, DP-b1 to DP-b4), and every activation need
+`draft`. **DP-6 is ruled (a), WK-674 S2 only** (D3, above). **Four decision points are open**
+(DP-b1 to DP-b4), and every activation need
 except need 8 (WK-674 S2, met) is unmet, most of them other slices. The plan moves to `active` only through a
 separate activation PR, after every need below holds. That PR carries the `SL-` row's status
 flip and this plan's.
@@ -147,7 +165,7 @@ flip and this plan's.
 | # | Need | Why (the step it serves) | State now |
 |---|---|---|---|
 | 1 | RL 9623 minted | the form of G2 this plan builds | draft #1160 @`295a483a`, unminted |
-| 2 | Exit-demo slice (a) merged (SL 9626, PL 9624, working ids) | A1–A2's tables, B's algorithm | draft #1161, plan `draft` (DP-a0 to DP-a3 open) |
+| 2 | Exit-demo slice (a) merged (SL 9626, PL 9624, working ids) | A1–A2's tables, B's algorithm | draft #1161, plan `draft` (DP-a0 to DP-a3 ruled 2026-10-05 15:28:26 BST, item D2; its activation need 3 ruled at its ACK) |
 | 3 | WK-673 S3 `SL-1387` merged (attribution) | D7, D8 | `draft`; leaf PL 9689 (working id), draft #1138 |
 | 4 | WK-673 S4 `SL-1388` merged (`POST /dislocation-runs` and its Job) | D6, E4 | `draft`; no route and no `DISLOCATION_RUN` worker on `main` |
 | 5 | WK-673 S5 `SL-1389` merged (change summary from diffs; the evidence gate) | E1, E3 | `draft` |
@@ -158,10 +176,10 @@ flip and this plan's.
 | 10 | The FD 9708 fix (PL 9683, working id, #1140) merged | C1: `POST /rating-versions` with the algorithm and pins | plan draft; `RatingVersionCreate` is `slug`, `dataset_version_id`, `model_ref`, `extra="forbid"` (`backend/src/app/api/models.py:271-276`) |
 | 11 | The FD 9707 fix (PL 9688, working id, #1145) merged | B3: `lookup` as at the effective date | plan draft; `runtime.py:27-33`: *"exact key match only"* |
 | 12 | The FR-240 family fix (PL 9649, working id, #1152) merged | C3: compile validates everything at once | plan draft |
-| 13 | `FD-1416` fixed (FD 9752; one ApprovalRequest shape; WK-1178, deadline before the P2 exit demo) | E5, E6, E8: the script reads approval responses | **no plan** on `main` or in an open PR (`git grep -n 'FD-1416' origin/main -- docs/plans` and `gh pr list --state open`: none) |
-| 14 | `FD-1244` and `FD-1245` ruled (§10 gate "Before the P2 exit demo", `docs/roadmap.md:1926`, "2 (2 open)") | D4; E2 | both `active`, deferred to the decision-maker; no open ruling PR |
+| 13 | `FD-1416` fixed (FD 9752; one ApprovalRequest shape; WK-1178, deadline before the P2 exit demo) | E5, E6, E8: the script reads approval responses | planned as **PL 9616** (working id, the leaf plan) and **SL 9615** (working id, its row), reserved 2026-10-05 15:29:48 BST for planner-1416 on D3's order; no PR at 15:35 BST |
+| 14 | `FD-1244` and `FD-1245` ruled (§10 gate "Before the P2 exit demo", `docs/roadmap.md:1926`, "2 (2 open)") | D4; E2 | both `active`; their ruling is **RL 9614** (working id), reserved 2026-10-05 15:29:48 BST for dm-1244 on D3's order; no PR at 15:35 BST |
 | 15 | FD 9717 (working id, #1125) minted, and DP-b4 ruled | the seed record's pre-flight | draft #1125 @`51335e75` |
-| 16 | DP-6 and DP-b1 to DP-b4 ruled | — | open |
+| 16 | DP-6 and DP-b1 to DP-b4 ruled | — | DP-6 **met** (D3); DP-b1 to DP-b4 open |
 | 17 | The lead's go | — | — |
 
 PL 9728 (working id, #1113, NFR-489's remedy) is **not** an activation need: the 09:59:49
@@ -267,7 +285,7 @@ which opens `DEFAULT_POLICY`; the Rating Version entry is at `:335-338`.
 | B8 | `output` rounding `half_even`, 0 dp | (in the saved algorithm) | |
 | B9 | money × float refused | `MONETARY_FLOAT_REFUSED` is registered (`errors.py:310`) and raised nowhere (unowned gap U2, DP-b2) | DP-b2 |
 | C1 | `POST /rating-versions` declaring the algorithm and every pin | 201; `pins` echo the request | 10 |
-| C1′ | a Peril Structure pin | the compile resolver has no `peril_structure` branch (FD 9995, working id, #980; unowned gap U3, DP-b2) | DP-b2 |
+| C1′ | a Peril Structure pin | **not on G2's journey** (§"Does G2 pin a Peril Structure?"): the algorithm has no `model_call`, so FR-237 asks for no Peril Structure pin. The gap itself is FD 9995 (working id, #980; U3, DP-b2); the script prints it as `SKIPPED` with that reason | DP-b2 |
 | C2 | `POST /rating-versions/{id}/compile` → 202 + `rating.compile` Job | Job `succeeded` | |
 | C3 | compile validates the whole structure | — | 12 |
 | C4 | the version also pins the seed's GBM, which the journey submits but has not approved | Job `failed`, `PIN_NOT_APPROVED` | |
@@ -298,6 +316,40 @@ which opens `DEFAULT_POLICY`; the Rating Version entry is at `:335-338`.
 or ruling (activation needs 2–7 and 10–14; the Deploy row needs only `FD-1416`'s response
 shape). **5** wait on a DP alone: D9 (skipped, Phase 4), A6, B9 and C1′ (the unowned gaps
 U1–U3, DP-b2) and B7 (DP-b3). E5 and E7 also have Phase 3 halves, skipped under DP-b2.
+
+### Does G2 pin a Peril Structure? **No** (stated for FD 9995's ACK, as D3 asks)
+
+D3: *"If PL 9629 confirms that G2's journey must pin a peril structure, FD 9995 is a G2
+blocker … If the journey needs no peril pin, it stays LOW. PL 9629 states which."* **This
+plan states: the journey needs no Peril Structure pin, so FD 9995 stays LOW.** The reasons, at
+`809a3794`:
+
+1. **FR-237 ties the pin to a `model_call`.** *"A **Rating Version** pins: one Rating
+   Algorithm version, an exact Rate Table Version per referenced table, an exact Model/Peril
+   Structure version per `model_call`, an exact Reference Table Version per `lookup`, and the
+   input contract."* (`docs/specs/03-rating-engine.md`, the FR-237 row.) No `model_call`, no
+   Peril Structure pin.
+2. **G2's algorithm has no `model_call`.** Slice (a)'s DP-a0 is ruled (a), *"do NOT adopt S3's
+   model_call fixture (a GLM cannot be scored via model_call on main)"* (D2). The algorithm is
+   priced through the seeded rate tables (PL 9624 Goal). So B4's `model_call` clause is not
+   walked, and B4–B5's row already reads "the algorithm's `table`, `expression` and `output`
+   steps (slice (a))".
+3. **G2's own text names no Peril Structure.** It reads *"through approved models, a Rating
+   Version compiled with pins"* (`docs/roadmap.md`, the `**G2.**` bullet), and the seed creates
+   none (`git grep -n -i 'peril_structure' origin/main -- examples/` prints nothing; the seed's
+   models carry `peril="AD"`, `examples/fremtpl2/model.py:223`, `:237`).
+
+**The other reading, for the ACK.** `WF-699` itself assumes one: its Trigger is *"An approved
+Peril Structure exists and needs to become a price"* (`:19`), its preconditions list *"An
+`approved` Peril Structure with a passing reconciliation"* (`:28`), B4 adds a `model_call`
+*"referencing the Peril Structure"* (`:59`), and C1 declares *"every pin: rate tables, peril
+structure, reference tables"* (`:70`). If "end to end" is read as every `WF-699` row literally,
+G2 needs a Peril Structure, approved (which FD 9995 says has no path), and a `model_call` that
+scores a GLM (which P3 of PL 9624 says fails on `main`). That reading makes FD 9995 MEDIUM with
+a deadline before the P2 exit demo, and adds a GLM `model_call` fix to G2. **Recommendation:
+the FR-237 reading (no pin)**, with C1′ and B4's `model_call` clause shown as `SKIPPED` under
+DP-b2 with this reason and FD 9995's id, so the demo says what it does not show. Which reading
+"end to end" takes is the maintainer's (by delegation) at FD 9995's ACK, as D3 says.
 
 ### Requirement coverage, each id individually
 
@@ -350,6 +402,11 @@ two-half gate (a gate slot under `RL-1263`). No NFR is measured here; NFR-489 is
 | **DP-b3** | B7, the sub-graph mount, needs `compile_bundle` to read `sub_graphs` (`pricing_core/rating/score.py:401-403`), which WK-1250 S2/S3 (`SL-1340`, `SL-1341`, `draft`) build. `PL-1371` §7's dependency list does not name WK-1250 | (a) **add WK-1250 S2/S3 as activation needs**, so the journey mounts `ncd-ladder`. (b) skip B7 with its reason, as DP-b2 (a). (c) mount without inlining (the sub-graph is stored but not compiled) | **(a).** B7 is a `WF-699` step and FR-217 is P2 scope. `PL-1371` §5 places WK-1250 S2/S3 in the week of 24 Oct, before the code freeze, so it lengthens (b)'s chain without breaking it. **This is a dependency `PL-1371` §7 did not derive.** If the lead takes (a), `PL-1371`'s G2 list needs it at the next re-baseline (§8.1) | the lead (sequencing), with the maintainer (by delegation) if it moves the exit date | activation need 16 |
 | **DP-b4** | FD 9717's gap (the seed record is trusted without checking the database) sits on this slice's path. Who fixes it? | (a) **this slice**: `scripts/demo.py` checks the record's workspace and analyst exist before the journey (Acceptance 7). (b) a separate WK-1178 fix slice. (c) the rehearsal checklist's manual check only | **(a).** It is a few lines on the one command this slice owns, and FD 9717 is already WK-1178's. (c) is the check-by-hand the finding says is missing. The owner and slice are settled at FD 9717's ACK, as severity and owner always are | the maintainer (by delegation), at FD 9717's ACK | Task 5 |
 
+**Ruled:** **DP-6 (a), WK-674 S2 only** (the maintainer (by delegation), 2026-10-05 15:28:26
+BST, D3: *"DP-6: WK-674 S2 only, as the evidence supports. AGREED."*). DP-b2's U3 is not a new
+gap for the auditor: it is FD 9995 (working id, #980), per D3's C1′ line. DP-b1 to DP-b4 stay
+open. The table above is kept as written.
+
 ## Tasks
 
 ### Task 0: Preconditions (no code)
@@ -358,7 +415,8 @@ two-half gate (a gate slot under `RL-1263`). No NFR is measured here; NFR-489 is
   branch; `uv sync --all-packages`; `alembic current` equals `alembic heads` before any pytest.
 - [ ] **Step 2:** Re-derive every activation need's state at the dispatch tree and record it
   in the ledger, with the command. Quote each DP's ruling verbatim, and FD-1244's and
-  FD-1245's rulings (they decide D4 and E2).
+  FD-1245's rulings (they decide D4 and E2; RL 9614, working id, until it mints), and
+  activation need 13's fix (PL 9616 and SL 9615, working ids, until they mint).
 - [ ] **Step 3:** Re-run `PL-1408` Task 0's script verbatim (FD-1356 containment, `PL-1371`
   §7: "FD-1356's Task 0 query is re-run before the demo"). Its last line must read
   `TOTAL route_approved=0`. Anything else is a STOP to the lead.
@@ -482,12 +540,15 @@ then into the `CR- kind: phase`, by command and tree, never pasted from memory.
 2. **Post-mint working-id sweep** (`brief-mint-draft-2026-10-05.md` item 7a): every working id
    this plan cites is re-pointed to its minted id where one exists at the mint tree: RL 9623,
    SL 9625, SL 9626, PL 9624, PL 9683, PL 9688, PL 9689, PL 9649, PL 9716, PL 9728, PL 9776,
-   FD 9717, FD 9995. Ids not yet minted are listed as such in the mint PR body.
+   FD 9717, FD 9995, PL 9616, SL 9615, RL 9614. Ids not yet minted are listed as such in the
+   mint PR body.
 3. **For the lead, from DP-6:** the §12 exit row's `WF-701` A–D (switchover S5, shadow S6) is
-   an exit obligation that no slice yet walks as a journey. This is a proposal for the
-   pre-exit-demo plan review (`CLAUDE.md` §14), not this slice's scope.
-4. **For the lead, from DP-b2 (c) and DP-b3:** U1, U2 and U3 to the auditor for findings with
-   owners. WK-1250 S2/S3 go into `PL-1371`'s G2 list at the next re-baseline if DP-b3 (a) is
+   an exit obligation that no slice yet walks as a journey. **The maintainer (by delegation)
+   put it to the pre-exit-demo plan review** (`CLAUDE.md` §14), entry 2026-10-05 15:28:26 BST,
+   closing line: *"the §12 exit row's WF-701 A–D needs WK-674 S5/S6, put to the pre-exit-demo
+   plan review (CLAUDE.md §14)"*. It is not this slice's scope.
+4. **For the lead, from DP-b2 (c) and DP-b3:** U1 and U2 to the auditor for findings with
+   owners. U3 needs none: it is FD 9995 (working id, #980), per D3. WK-1250 S2/S3 go into `PL-1371`'s G2 list at the next re-baseline if DP-b3 (a) is
    taken.
 5. When this slice merges, `FD-1209`'s `WF-699` half is discharged, and with slice (a) the
    whole finding. The auditor closes it.
@@ -514,3 +575,16 @@ then into the `CR- kind: phase`, by command and tree, never pasted from memory.
    verdicts rest on the read-only sweep at `809a3794`, re-run at dispatch by Task 0 Step 4.
 6. **Type consistency.** `run_wf699_journey`, `JourneyResult` and `JourneyStepFailed` are
    defined in Task 2 Step 1 and consumed with those names in Task 1 and Task 5.
+
+## Pre-mint note, 2026-10-05
+
+*Dated 2026-10-05 (`TZ=Europe/London date`: 2026-10-05 15:35:05 BST), before the mint of PL
+9629 (working id).* Edited in place on the unmerged draft #1164, on the lead's order (prep
+wave, section S), to record the maintainer's (by delegation) ruling of 2026-10-05 15:28:26 BST,
+item D3 and its closing line, and nothing else. What changed: the ruling quoted verbatim;
+§"Status"; activation needs 2, 13, 14 and 16; the C1′ row; §"Does G2 pin a Peril Structure?"
+(new: the statement D3 asks for, no pin, with the other reading and a recommendation for FD
+9995's ACK); a **Ruled** line after the decision-point table; Task 0 Step 2; Hand-off 2, 3 and
+4. The new working ids (PL 9616, SL 9615, RL 9614) are in the space form until they mint. No
+scope, task cut, write set or other decision point changed. Verified at `origin/main`
+`809a3794`.
