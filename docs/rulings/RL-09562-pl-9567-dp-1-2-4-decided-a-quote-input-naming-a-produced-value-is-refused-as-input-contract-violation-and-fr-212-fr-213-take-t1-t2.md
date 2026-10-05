@@ -36,8 +36,10 @@ relates: [FR-212, FR-213, FR-246, FR-255, FD-1374]
 - **The decision points** are PL 9567's (working id, #1193, branch
   `pl-9567-fd9572-to-wire-order` at `f4e4380b6f35ae1809d70bb22027a9205e22c096`),
   §"Decision points". PL 9567, SL 9568 and FD 9572 are unminted, so each is cited in
-  working-id form and kept out of `relates:` (check 32). **This record mints before PL 9567.**
-- **Written 2026-10-05 17:24–17:27 BST (by `date`)**, by the decision-maker session `dm-9572rl`, on
+  working-id form and kept out of `relates:` (check 32). **This record mints before PL 9567 only. It does not
+  block the emergency slice (SL 9561 / PL 9560): that plan quotes the maintainer's entries
+  directly** (the lead's re-scope order to `dm-9572rl`, 2026-10-05, received after 17:28 BST).
+- **Written 2026-10-05 17:24–17:29 BST (by `date`)**, by the decision-maker session `dm-9572rl`, on
   the lead's order (brief `brief-prep-wave-2026-10-05.md` §BG). Every fact below was read at
   `origin/main` `4d3be1414ad4dacdaa0c14ef49fb21853adbaed6`, by symbol with its line at that tree.
 - **This record rules a plan's decision points and never edits the plan** (`document-ids.md`
@@ -219,12 +221,14 @@ row's last cell at `4d3be141`, with `grep -cF` = 1 on `docs/specs/03-rating-engi
   (DP-2), with DP-2's exception test.
 - **T1** (FR-212, list order) is the wiring fix's text and is applied by PL 9567's slice
   (SL 9568) verbatim, in the same commit as its code (`CLAUDE.md` §2).
-- **T2** (FR-213, a quote input naming a produced value) is fix (c)'s text. **Which slice
-  applies it is not ruled** in any entry quoted here: PL 9567 adopted it for its Task 3, which
-  the 17:25:07 delta removes, and the emergency slice's plan is to carry "no new DPs". This
-  record does not choose; it is put to the lead (the 17:26:16 entry notes this record's
-  re-scope as non-blocking). Until it is answered, T2 is adopted here and applied by whichever
-  slice delivers fix (c).
+- **T2** (FR-213, a quote input naming a produced value) is adopted **for PL 9567** with T1,
+  per the lead's re-scope order ("for PL 9567 (wiring): DP-4's T1/T2 adoption and DP-3
+  (open)"). No maintainer entry quoted here names the slice that applies T2. PL 9567's (c)
+  delta (17:25:07, item 3) removes the Task 3 that applied it, so the delta must keep a step
+  that applies T2. Fix (c)'s code lands first, in the emergency slice, so FR-213 gains its text
+  only when PL 9567's slice merges. Whether T2 should instead go with the emergency slice's
+  code commit (`CLAUDE.md` §2: spec and code in one commit) is a scope question. This record
+  does not decide it; it is reported to the lead.
 
 ## Acceptance — the violation that must become detectable
 
