@@ -46,8 +46,9 @@ chain. Its lane-load table (`:302`) gives lane A's week of 3–9 Oct as "WK-673 
 `validated` portfolio Dataset Version. Each portfolio row maps to at most one cell of the current
 version, through each key's binding (`RL-1361` Ruled item 2). A cell's weight is Σ `exposure_years`
 over the rows that map to it. That weight feeds `exposure_weighted_mean_change_pct`. The diff also
-reports `portfolio_exposure` and `matched_exposure`. Under DP-A, it also reports each changed
-cell's change and weight (FD-1358). The 202 path computes the same figures. Every refusal that
+reports `portfolio_exposure` and `matched_exposure`. A separate, paged cells route lists each
+changed cell's change and weight (DP-A (c), FD-1358). `RateTableDiff` stays the aggregate summary.
+The 202 path computes the same figures. Every refusal that
 `RL-1361` rules is in place before the cache is read and before any Job is created.
 
 **Architecture.** The join is pure Polars in pricing-core (DP-B (a)):
@@ -59,7 +60,8 @@ platform (`backend/src/app/platform/rate_tables.py`) does five things before it 
 - it loads the frame;
 - it loads every artifact a key pins, by its ref;
 - it widens the cache key (`RL-1361` item 5).
-- it passes the weights to the existing `diff_vs_previous` and `diff_vs_seed`.
+- it passes the weights to the existing `diff_vs_previous` and `diff_vs_seed`, and to RL 9710's
+  `diff_cells` for the cells route.
 The route checks first, then submits the Job or answers 200. The worker calls the same service
 path.
 
@@ -68,27 +70,33 @@ pytest. No frontend change: WK-675 Slice 5 consumes this.
 
 **Spec:** [`../specs/03-rating-engine.md`](../specs/03-rating-engine.md) FR-231, FR-232, FR-228,
 §4.2, §4.8 ("The portfolio frame"), §5.1 and §5.2. The rulings are `RL-1361` (DP-5, option (e),
-with its exact texts T3, T6, T10 and T11) and `RL-1375` DP-1 (a2). The finding is `FD-1358`.
+with its exact texts T3, T6 and T10), **RL 9710** (working id; dm-1358's ruling on this plan's
+DP-A, DP-B and DP-C: the cells route, its paging and ordering, the cell schema and its refusals,
+the `03` §5.2 entries for `diff_cells` and `exposure_weights`, and T11 re-anchored as a correction
+of `RL-1361`) and `RL-1375` DP-1 (a2). The finding is `FD-1358`. **The executor applies only RL
+9710's and RL-1361's texts.**
 
 ## Status
 
-`draft`. **Three decision points block activation:** DP-A, DP-B and DP-C (§"Decision
-points"). Each was sent to the lead on 2026-10-05 as it was found. Each needs exact text or a
-decision from the decision-maker or the maintainer. The plan moves to `active` only through a
+`draft`. **DP-A, DP-B and DP-C are decided** by the deputy, in the entries headed "2026-10-05
+12:58:22 BST" (DP-A (c), DP-B (a)) and "2026-10-05 13:00:09 BST" (DP-C (a); lanes A/C option (b))
+in `to-lead.md`, as the lead relayed them. Their exact texts are **RL 9710** (working id), which
+dm-1358 is drafting; the planner sent the DP-B §5.2 text to dm-1358 on 2026-10-05 for it to adopt
+or amend. RL 9710 is not yet merged or minted, so the plan stays `draft`. The plan moves to `active` only through a
 separate activation PR, after every activation need below holds.
 
 ### Activation needs, in order
 
 1. **This plan is merged, minted, and made `active` by a dated line.**
-2. **DP-A, DP-B and DP-C are decided.** Each decision carries the exact spec text that the
-   decided option needs:
-   - DP-A: FR-231 and `03` §4.2/§5.2 for the per-cell shape;
-   - DP-B: the `03` §5.2 entry for `exposure_weights`;
-   - DP-C: T11's corrected anchor.
+2. **RL 9710 (working id) is merged and minted.** DP-A, DP-B and DP-C are decided (§"Status");
+   RL 9710 carries their exact texts:
+   - DP-A (c): the paged cells route in `03` §5.1, its paging and ordering, the cell schema, the
+     refusals, and `diff_cells` in `03` §5.2;
+   - DP-B (a): the `03` §5.2 entry for `exposure_weights`;
+   - DP-C (a): T11's placement, re-anchored as a correction of `RL-1361`, payload unchanged.
 
-   The text comes in a ruling (or a correcting `RL-`) that is merged on `main`. If a minted text
-   differs from what this plan assumes, the minted text governs, and the dispatch record names
-   each difference.
+   Where RL 9710's minted text differs from what this plan assumes, the minted text governs, and
+   the dispatch record names each difference. An unminted RL 9710 is a stop.
 3. **`SL-1377` (FD-1357's fix) is merged.** Met: closed, roadmap `:1405`. `factor_ref` is on
    `RateTableKey` (`model_schema/rating.py:676`), and T1/T5 are applied (`03:119`, `:319`). This
    is `PL-1267`'s acceptance condition 1. The maintainer's acceptance of PL-1267 (17:53:43 BST,
@@ -190,19 +198,37 @@ as printed. Test modules: `P` is `packages/pricing-core/tests/test_rate_table_we
       fails;
     - `test_a_dangling_ref_fails_the_job_with_not_found`.
 
-**FD-1358 (only under DP-A (b); `B` and `P`)**
+**FD-1358: the paged cells route (DP-A (c), RL 9710; `B` and `P`)**
 
-18. `test_a_two_cell_change_returns_each_cells_change_and_weight`. The response lists each changed
-    cell's key tuple, baseline and current value, absolute change, relative change and weight.
-    The weight is `null` without a portfolio. The weights sum to the cells' share of
-    `matched_exposure`. Red at `caa4e411`: `RateTableDiff` has three fields only (Task 0 Step 2).
+18. The cells route, as RL 9710 defines its path, page shape, ordering and refusals. Each test is
+    red first; at `caa4e411` every route-level one fails because no such route is registered
+    (`api/rate_tables.py` has only `rate_table_diff` for diffs).
+    - `test_diff_cells_lists_each_changed_cell_with_change_and_weight` (pure, `P`): a two-cell
+      change gives each changed cell's fields as RL 9710's cell schema names them, with
+      hand-computed absolute and relative changes and weights. The weight is `null` without
+      weights and for a zero-Σ cell (not 0).
+    - `test_the_cells_pages_cover_every_changed_cell_once_in_the_ruled_order` (`B`): a table whose
+      changed cells span at least three pages is walked by cursor; the union equals the full
+      changed set, with no repeat, in RL 9710's order. With the order key dropped from the
+      cursor, a page repeats or skips a cell, and the test fails.
+    - `test_an_uplift_of_every_cell_pages_without_truncation` (`B`): a bulk `uplift` of a table
+      larger than one page, then the cells route walks all of it (the deputy's reason for (c)).
+    - `test_the_cells_weights_agree_with_the_summary` (`B`): with a portfolio, Σ of the paged
+      weights over the comparable changed cells reproduces the summary's
+      `exposure_weighted_mean_change_pct` by the same formula. Both come from one `Weights` map.
+    - `test_the_cells_route_refuses_as_ruled` (`B`), parametrised over every refusal RL 9710's
+      route row lists, including the portfolio refusals it shares with the diff route (403 for
+      any id, 404, 409, 422) and their order before any cache or Job.
+    - Under FR-232: whatever RL 9710 rules for a `parquet` version (200 page, or 202 Job) is
+      tested by name, as RL 9710 words it.
 
 **Spec, contract, gate, record**
 
 19. **The spec texts are byte for byte.**
-    - Each of T3, T6, T10 and the DP-C-corrected T11, with `<Slice 7 date>` set to the commit
-      date, is applied verbatim, and so is DP-A's and DP-B's text. Every find string occurs
-      exactly once before it is applied.
+    - Each of `RL-1361` T3, T6 and T10, and every RL 9710 text (T11 as RL 9710 re-anchors it,
+      the cells route row, the cell schema, the §5.2 entries for `diff_cells` and
+      `exposure_weights`), with each date placeholder set to the commit date, is applied
+      verbatim. Every find string occurs exactly once before it is applied.
     - Checked with `git diff origin/main...HEAD -- docs/specs/03-rating-engine.md` against the
       ruling's text blocks. Any wording that differs is a stop (`RL-1361` §"The exact texts").
     - `python3 scripts/audit-docs.py` exits 0.
@@ -210,7 +236,10 @@ as printed. Test modules: `P` is `packages/pricing-core/tests/test_rate_table_we
     tree. `docs/contracts/openapi/generated.json` shows:
     - the `portfolio` query parameter on the diff route;
     - the new `RateTableDiff` properties (`grep -c '"matched_exposure"'
-      docs/contracts/openapi/generated.json` prints at least 1).
+      docs/contracts/openapi/generated.json` prints at least 1);
+    - the cells route and its cell and page schemas, under the names RL 9710 gives them.
+    `RateTableDiff`'s three existing properties are unchanged (the deputy: "no contract
+    break"): `git diff origin/main -- docs/contracts/` shows only additions inside it.
 21. **Requirement markers.** `uv run python scripts/req-coverage.py` lists FR-231 and FR-232 with
     the new tests. Each test in 1–18 carries `@pytest.mark.req("FR-231")`, and the 202 tests also
     carry `req("FR-232")`.
@@ -230,10 +259,11 @@ as printed. Test modules: `P` is `packages/pricing-core/tests/test_rate_table_we
   raised from pricing-core: the platform maps `WeightJoinError` and `FactorResolutionError` to
   `PlatformError("VALIDATION_FAILED", …, 422, …)`.
 - **Nobody hand-writes a shape that already exists in `model-schema`** (`CLAUDE.md` §2). The two
-  coverage fields, and under DP-A (b) the per-cell row, are `model-schema` types in
-  `model_schema/rating.py`. The contract is regenerated, never hand-edited.
+  coverage fields, the diff cell and its page (RL 9710) are `model-schema` types in
+  `model_schema/rating.py`, unless RL 9710 reuses an existing page type. The contract is regenerated, never hand-edited.
 - **No spec text is written by the executor.** Every `docs/specs/` byte comes from a ruling's text
-  block (`RL-1361` §"The exact texts", last paragraph). A find string not found exactly once is a
+  block: `RL-1361` §"The exact texts" (T3, T6, T10) or RL 9710 (everything else, T11's placement
+  included). A find string not found exactly once is a
   stop, reported to the lead.
 - **Enforcement is proven on deliberately broken input** (`CLAUDE.md` §13). Acceptance 2–6, 8, 10,
   11 and 15–17 each name the break that turns them red.
@@ -247,14 +277,14 @@ as printed. Test modules: `P` is `packages/pricing-core/tests/test_rate_table_we
 
 | Spec | Id | What this slice holds | Marker |
 |---|---|---|---|
-| `03` | FR-231 | The weight limb: Σ exposure per cell from a named portfolio, the weighted mean, the coverage figures, and the refusals (T3, T10); under DP-A (b), the per-cell change and weight | `req("FR-231")` on Acceptance 1–18 |
+| `03` | FR-231 | The weight limb: Σ exposure per cell from a named portfolio, the weighted mean, the coverage figures, and the refusals (T3, T10); the paged per-cell change and weight (RL 9710, DP-A (c)) | `req("FR-231")` on Acceptance 1–18 |
 | `03` | FR-232 | The 202 path carries `portfolio`, and the Job computes the same figures (T10; `RL-1361` item 8) | `req("FR-232")` on Acceptance 17 |
 | `03` | FR-228 | Read only. The binding (`factor_ref`, `banding_ref`, or by name) decides the join. T1 is already applied (`03:119`) | none new |
-| `07` | FR-451 | `RateTableDiff` and the route parameter are regenerated into `docs/contracts/` | Acceptance 20 |
+| `07` | FR-451 | `RateTableDiff`, the route parameter and the cells route are regenerated into `docs/contracts/` | Acceptance 20 |
 | `03` | NFR-495, NFR-496 | **Not applied.** Both are about premiums and the ladder. The diff produces no premium. The WK-673 row applies them to "this Work's artifacts", which are the Dislocation Run and the Attribution | — |
 
 **Findings and register rows.**
-- `FD-1358` (MEDIUM, owner WK-673). This slice closes it under DP-A's decided option.
+- `FD-1358` (MEDIUM, owner WK-673). This slice closes it with RL 9710's paged cells route (DP-A (c)); FR-231's "each cell" is then delivered for every cell count FR-232 allows.
 - The register row `FR-231 (F-W10-2)` (`docs/findings/register.md`) is discharged on merge by the
   auditor (`PL-1267` Slice 7).
 - FD 9752 (working id; minted as FD 1416 in open PR #1066) holds the four `to_dict` approval routes' responses. **This slice
@@ -352,7 +382,7 @@ git diff --name-only origin/main...origin/sl-1409-validation-rule-approval-throu
 ### Write set, and its contention (`RL-1263`)
 
 "Edited" means that an existing definition changes. "Added" means a new definition in an existing
-file, or a new file. Rows marked *(DP-A b)* exist only under that option.
+file, or a new file. Names in a row marked *(RL 9710)* are RL 9710's to fix; the plan's are placeholders until it is minted.
 
 **Classes**, cited by key in `docs/process/delivery-process.core.json`
 `guards.parallelism.build_slices_across_works.no_shared_files`:
@@ -369,17 +399,17 @@ on 2026-10-05, with `git diff --name-only origin/main...origin/sl-1409-…`. It 
 | Path | Change | Other slice touching it | Class |
 |---|---|---|---|
 | `packages/pricing-core/src/pricing_core/rate_tables/weights.py` | added: `exposure_weights`, `PortfolioWeights`, `WeightJoinError` (DP-B (a)). The directory has no `__init__.py` at `caa4e411` (`ls` prints `operations.py` only), so no package export changes | none | none |
-| `packages/pricing-core/src/pricing_core/rate_tables/operations.py` | edited: `_compute_diff` (`:386-435`), which ignores a zero weight; *(DP-A b)* builds the per-cell rows | none in flight. WK-675 S4/S5 (not dispatched) read it | none |
-| `packages/model-schema/src/model_schema/rating.py` | edited: `RateTableDiff` (`:735-747`) gains `portfolio_exposure` and `matched_exposure` (`Decimal \| None`); *(DP-A b)* added: `RateTableDiffCell`, and `RateTableDiff.cells` | none. `SL-1409` edits `model_schema/approvals.py` and `validation.py` only | none |
-| `packages/model-schema/src/model_schema/__init__.py` | *(DP-A b)* `RateTableDiffCell` appended, only if `rating`'s names are exported there (at `caa4e411`, `RateTableDiff` is not: `grep -n RateTableDiff` prints nothing) | **`SL-1409`** edits this file | `__all__` name-disjoint (if touched) |
-| `backend/src/app/platform/rate_tables.py` | edited: `diff` (`:291-349`) and `diff_needs_job` (`:262-288`), each with a `portfolio_dataset_version_id` and the checks; added: `check_portfolio`, `_portfolio_frame`, `_key_artifacts` | none in flight (`SL-1377` closed) | none |
+| `packages/pricing-core/src/pricing_core/rate_tables/operations.py` | edited: `_compute_diff` (`:386-435`), which ignores a zero weight; added *(RL 9710)*: `diff_cells(...) -> list[RateTableDiffCell]`, placed after `diff_vs_seed`, taking `weights: Weights \| None` | none in flight. WK-675 S4/S5 (not dispatched) read it | none |
+| `packages/model-schema/src/model_schema/rating.py` | edited: `RateTableDiff` (`:735-747`) gains `portfolio_exposure` and `matched_exposure` (`Decimal \| None`); added *(RL 9710)*: `RateTableDiffCell` and, unless RL 9710 reuses an existing one, its page type. `RateTableDiff`'s three existing fields are unchanged | none. `SL-1409` edits `model_schema/approvals.py` and `validation.py` only | none |
+| `packages/model-schema/src/model_schema/__init__.py` | *(RL 9710)* the new names appended, only if `rating`'s names are exported there (at `caa4e411`, `RateTableDiff` is not: `grep -n RateTableDiff` prints nothing) | **`SL-1409`** edits this file | `__all__` name-disjoint (if touched) |
+| `backend/src/app/platform/rate_tables.py` | edited: `diff` (`:291-349`) and `diff_needs_job` (`:262-288`), each with a `portfolio_dataset_version_id` and the checks; added: `check_portfolio`, `_portfolio_frame`, `_key_artifacts`, and *(RL 9710)* the cells page service (`diff_cells_page`) | none in flight (`SL-1377` closed) | none |
 | `backend/src/app/platform/diff_cache.py` | edited: `DiffCache.key` (`:77-88`) gains `definition_hash` and `workspace_id`; added: `definition_hash` | none | none |
 | `backend/src/app/platform/modelling.py` | added: `load_factor_by_ref` | none. `SL-1409` does not touch it | none |
 | `backend/src/app/platform/transformations.py` | added: `load_banding_by_ref` | none | none |
 | `backend/src/app/platform/datasets.py` | added: `read_version` (the lock-free twin of `load_version`, P7) | none. `SL-1409` does not touch it | none |
-| `backend/src/app/api/rate_tables.py` | edited: `rate_table_diff` (`:278-321`), which gains the `portfolio` query and the checks before the cache read and the Job; its `responses` gain 409 | none | none |
+| `backend/src/app/api/rate_tables.py` | edited: `rate_table_diff` (`:278-321`), which gains the `portfolio` query and the checks before the cache read and the Job; its `responses` gain 409; added *(RL 9710)*: the cells route handler | none. WK-675 S2's routes are in other modules (rating algorithms and rating versions) | none |
 | `backend/src/app/worker/rate_table_handlers.py` | edited: `_rate_table_diff` (`:24-54`), which passes `portfolio` | none | none |
-| `docs/specs/03-rating-engine.md` | edited: FR-231 row (T3), §4.2 (T6), §5.1 diff row (T10), owned codes (T11 as DP-C corrects it), and DP-A's and DP-B's texts | none in flight. `SL-1409` edits `01` and `06` only | none |
+| `docs/specs/03-rating-engine.md` | edited: FR-231 row (T3, `:122`), §4.2 (T6, `:312-322`), §5.1 diff row (T10, `:904`) and RL 9710's cells route row, the owned codes (T11 as RL 9710 re-anchors it, `:965`), and §5.2 (RL 9710's `diff_cells` and `exposure_weights`, before the fence at `:1120`; the prose after `:1124`) | **WK-675 S2 (lane C)** inserts two `03` §5.1 rows: RL 9753 T2 before the `POST /api/v1/sub-graphs` row (`:897`) and RL 9766 T2 after the `POST /api/v1/rating-versions` row (`:908`). `SL-1409` edits `01` and `06` only | **shared, allowed under the deputy's lanes A/C option (b)** (below) |
 | `docs/contracts/openapi/generated.json` | regenerated | **`SL-1409`** regenerates it | exempt (generated) |
 | `docs/contracts/schemas/generated/` | unchanged unless `RateTableDiff` is registered as a slug (it is not at `caa4e411`) | — | exempt (generated) |
 | `packages/pricing-core/tests/test_rate_table_weights.py` | added | none | none |
@@ -388,10 +418,31 @@ on 2026-10-05, with `git diff --name-only origin/main...origin/sl-1409-…`. It 
 | `backend/tests/test_api_rate_tables.py`, `backend/tests/test_worker_rate_tables.py` | edited only where a call to `service.diff` or `DiffCache.key` changes signature | none | none |
 | the slice's ledger `docs/ledgers/LG-<n>`; `docs/INDEX.md` | added; regenerated | every PR | exempt (generated) for `INDEX.md` |
 
+**Lanes A/C share `03` §5.1: option (b)**, the deputy's decision of "2026-10-05 13:00:09 BST" in
+`to-lead.md`, as the lead relayed it. Both slices may run. Its four conditions, each the
+dispatch's to check:
+1. **The dispatch records list each side's hunks and anchors.** This slice's `03` hunks are listed
+   in the row above, at `caa4e411`. WK-675 S2's are RL 9753 T2 (insert before `:897`) and RL 9766
+   T2 (insert after `:908`), read from drafts #1067 (`dm-9753-dp4-texts` at `96fa35bf`) and #1055
+   (`dm-675dp56-rulings` at `39bd865b`).
+2. **S2's new rows are not adjacent to S7's diff row.** At `caa4e411`, S7's T10 replaces `:904`.
+   S2's nearest hunk is the insertion after `:908`, with `:905-907` (the two export rows and the
+   import row) unchanged between them. RL 9753 T2's insertion before `:897` is seven rows away.
+   **RL 9710's cells route row must not be placed after `:907`.** If RL 9710 places it directly
+   after the diff row (`:904`), the unchanged gap is still `:905-907`. The executor re-measures
+   this gap on the dispatch tree (Task 0 Step 3) and records it.
+3. **The second to merge merges `main`, re-runs `git merge-tree`** (reading its exit code, not its
+   first line), **and re-gates.**
+4. **The two gates never overlap.**
+
 **Result.**
 - No path SERIALISES against `SL-1409`.
-- Two paths are shared, and both are exempt: `generated.json` (always), and
-  `model_schema/__init__.py` (only under DP-A (b), and only if touched).
+- Two paths are shared with `SL-1409`, and both are exempt: `generated.json` (always), and
+  `model_schema/__init__.py` (only if RL 9710's names are exported there).
+- One path is shared with WK-675 S2 (lane C), `docs/specs/03-rating-engine.md` §5.1, and is allowed
+  under the deputy's option (b) above. PL 9713 (S2's leaf plan) was not on `origin` when this was
+  read. Task 0 Step 3 re-reads its write set for any other shared path (`backend/src/app/api/`
+  modules, `model_schema/rating.py`, `generated.json`).
 - `SL-1409` adds no name that this slice adds. The dispatch record names the `__all__` names if
   `__init__.py` is touched (the key's own condition), and the second to merge re-gates.
 - `backend/src/app/errors.py` (a `SL-1409` path) is **not** touched: `DATASET_NOT_VALIDATED`,
@@ -411,8 +462,8 @@ PL 9713 (WK-675 S2's leaf, being planned, not pushed) and RL 9715 (S3's unblocke
 
 ### Size
 
-About one executor day. There are five tasks after the preconditions, and a sixth under DP-A
-(b). There are two new test modules, with real dataset versions, a seeded GLM and a parquet Job.
+About one and a half executor days. There are six tasks after the preconditions; Task 6 adds the
+paged cells route (DP-A (c)). There are two new test modules, with real dataset versions, a seeded GLM and a parquet Job.
 One full two-half gate run is needed. There is no NFR measurement, so the slice need not run
 exclusive.
 
@@ -420,9 +471,9 @@ exclusive.
 
 | DP | Question | Options | Recommendation | Owner | Blocks |
 |---|---|---|---|---|---|
-| **DP-A** | **FD-1358.** FR-231 promises "the exposure weight behind each cell". `RateTableDiff` is aggregate only (P2), and T6 adds two more aggregates. WK-675 S5 needs per-cell data: `PL-1286` `:307` gives it "diff shading" and "the exposure-weight column", and `:290-292` say it "ships with the weights". FD-1358's Disposition gives two closes and "the lead's or maintainer's" choice | (a) amend FR-231: aggregates only, and a per-cell view is a later requirement. (b) `RateTableDiff.cells`: one `RateTableDiffCell` per **changed** cell (key tuple, baseline, current, absolute and relative change, weight or `null`); the Job artifact carries the same list. (c) a separate paged `…/diff/cells` resource | **(b), changed cells only.** FR-231's own purpose is "so an actuary sees which edits matter". The list is bounded by the edit, not by the table. The parquet case is already a Job artifact. Sub-option, if a hard bound is wanted: cap the inline list at N with `cells_truncated`, and keep the full list in the Job artifact (N would be a further decision). (a) leaves WK-675 S5 without its data. (c) adds a route, pagination and its own 202 rule | decision-maker (text); lead/maintainer (choice) | Tasks 1, 5, 6 |
-| **DP-B** | Where the join lives, and its `03` §5.2 text. RL-1361's texts cover FR-231, §4.2 and §5.1, not §5.2, and every public pricing-core function is listed in §5.2 (`03:1023`; `read_portfolio` `:1052`) | (a) a pure `exposure_weights` in `pricing_core/rate_tables/weights.py`, with a dated §5.2 entry; (b) a private helper in the platform, with no §5.2 change | **(a).** The join is pure Polars over two pricing-core functions (ADR-703's split). Every `RL-1361` acceptance case then becomes a DB-free unit test. The planner can draft the §5.2 wording for the decision-maker to adopt | decision-maker (text) | Tasks 1, 2 |
-| **DP-C** | T11's find string has 0 hits (Task 0 Step 3). `RL-1361` makes that "a stop … the executor does not re-word it" | (a) a correcting `RL-` re-anchors T11 on `` `app.platform.rating_versions.require_compilable` is the only raiser)*. ``, with the payload unchanged; (b) the dispatch record names the delta on the maintainer's line | **(a).** The payload stays byte-identical, the authorship stays with the decision-maker, and a frozen `RL-` is never edited. One `RL-` can carry DP-A, DP-B and DP-C | decision-maker | Task 1 |
+| **DP-A** | **FD-1358.** FR-231 promises "the exposure weight behind each cell". `RateTableDiff` is aggregate only (P2), and T6 adds two more aggregates. WK-675 S5 needs per-cell data (`PL-1286` `:307`, `:290-292`) | (a) amend FR-231: aggregates only. (b) `RateTableDiff.cells`, a list of changed cells, optionally capped. (c) a separate paged cells resource | the plan recommended (b) | **DECIDED, (c)**, by the deputy, "2026-10-05 12:58:22 BST" (`to-lead.md`): "FR-231 says each cell, FR-232 allows 250k+ cells, and uplift_table changes every cell, so a capped list truncates on the commonest bulk op"; `RateTableDiff` stays the aggregate summary, with no contract break. Texts: RL 9710 (working id, dm-1358): the route in `03` §5.1 with its paging and ordering, the cell schema, the refusals, and `diff_cells` in §5.2. Applied in Task 6; Acceptance 18 | Tasks 1, 5, 6 |
+| **DP-B** | Where the join lives, and its `03` §5.2 text. RL-1361's texts cover FR-231, §4.2 and §5.1, not §5.2, and every public pricing-core function is listed in §5.2 (`03:1023`; `read_portfolio` `:1052`) | (a) a pure `exposure_weights` in `pricing_core/rate_tables/weights.py`, with a dated §5.2 entry; (b) a private helper in the platform | the plan recommended (a) | **DECIDED, (a)**, by the deputy, same entry. The planner drafted the §5.2 text (a signature block before the fence at `:1120`, after RL 9710's `diff_cells`, and a prose paragraph after `:1124`) and sent it to dm-1358 on 2026-10-05; RL 9710 adopts or amends it, and RL 9710's text governs. `PortfolioWeights.weights` is a `dict[KeyTuple, Decimal]`, so it is a `Weights` (`operations.py:88`) and is passed unchanged to `diff_vs_previous`, `diff_vs_seed` and `diff_cells` | Tasks 1, 2 |
+| **DP-C** | T11's find string has 0 hits (Task 0 Step 3). `RL-1361` makes that "a stop … the executor does not re-word it" | (a) a correcting record re-anchors T11 on `` `app.platform.rating_versions.require_compilable` is the only raiser)*. ``, with the payload unchanged; (b) the dispatch record names the delta | the plan recommended (a) | **DECIDED, (a)**, by the deputy, "2026-10-05 13:00:09 BST": RL 9710 carries the re-anchor as a correction of `RL-1361`, payload byte-identical. The executor applies T11 at RL 9710's placement and never re-words it | Task 1 |
 | DP-D *(not blocking)* | A portfolio Dataset Version with more than one table (P6) | (a) `tables[0]`, as fitting and banding proposal do; (b) refuse more than one table with 422 (a refusal T10 does not list, so it needs text) | **(a)**, recorded in the ledger. If it proves wrong, it is one function (`_portfolio_frame`) | lead | none |
 | DP-E *(not blocking)* | A rows-stored table with a large portfolio stays on the synchronous 200 path, because `RL-1361` item 8 lets storage, not portfolio size, choose 202 | (a) as ruled; (b) a portfolio row threshold also routes to 202 (a spec change) | **(a)**. The ledger records the wall-clock of one weighted 200 diff on the freMTPL2 seed (about 678k rows) as information, not as an NFR verdict. A slow figure is a finding for the lead | lead | none |
 
@@ -430,12 +481,18 @@ exclusive.
 
 ### Task 0: Preconditions (no code)
 
-- [ ] **Step 1:** Confirm each activation need. Quote the minted ruling ids for DP-A, DP-B and
-  DP-C, and their text blocks, into the ledger.
+- [ ] **Step 1:** Confirm each activation need. Quote RL 9710's minted id and its text blocks into
+  the ledger, and list each place where RL 9710 differs from this plan's assumptions (the cells
+  route's path, page type, ordering, FR-232 behaviour, `diff_cells`'s and `exposure_weights`'s
+  signatures).
 - [ ] **Step 2:** Re-run Task 0 Step 3's `grep -cF` over every find string, using the texts as
   minted. Any count that is not 1 is a stop.
 - [ ] **Step 3:** Re-run the contention commands (§"Task 0 at planning time", Step 4). Record the
   output and each class in the ledger. A new SERIALISES path is a stop, reported to the lead.
+  For lane C (WK-675 S2), list both sides' `03` §5.1 hunks and anchors on the dispatch tree, and
+  the number of unchanged rows between S7's nearest hunk and S2's (it was 3 at `caa4e411`:
+  `:905-907`). Zero, meaning adjacent, is a stop: the deputy's option (b) requires the rows not to
+  be adjacent.
 - [ ] **Step 4:** `uv sync --all-packages`, then `uv run pytest packages/pricing-core/tests/test_rate_table_operations.py backend/tests/test_diff_cache.py -q`
   green on the base. Record the counts.
 
@@ -443,13 +500,15 @@ exclusive.
 
 **Files:** `docs/specs/03-rating-engine.md`.
 
-- [ ] **Step 1:** Apply T3 (`03:122`), T6 (`:312-313`, and the insert after `:322`), T10
-  (`:904`), and T11 as DP-C corrects it, byte for byte. Set `<Slice 7 date>` to today's date
-  (`date +%F`).
-- [ ] **Step 2:** Apply DP-A's text and DP-B's §5.2 text, byte for byte.
+- [ ] **Step 1:** Apply `RL-1361` T3 (`03:122`), T6 (`:312-313`, and the insert after `:322`) and
+  T10 (`:904`), byte for byte. Set `<Slice 7 date>` to today's date (`date +%F`).
+- [ ] **Step 2:** Apply every RL 9710 text, byte for byte, at RL 9710's placements: T11 as
+  re-anchored, the cells route row, the cell schema, and the §5.2 entries for `diff_cells` and
+  `exposure_weights`. Set each date placeholder as RL 9710 says.
 - [ ] **Step 3:** `python3 scripts/audit-docs.py`. It exits 0, or with check 31 only while a
   working id stands.
-- [ ] **Step 4:** Commit: `docs(specs): 03 FR-231 weights, the diff route's portfolio (RL-1361 T3, T6, T10, T11)`.
+- [ ] **Step 4:** Commit: `docs(specs): 03 FR-231 weights and the paged diff cells (RL-1361 T3, T6, T10; RL 9710)`.
+  Write RL 9710's minted id in the message; a working id in a commit message cannot be corrected.
 
 ### Task 2: The pure join, red first (Acceptance 1–7)
 
@@ -484,7 +543,7 @@ def exposure_weights(
 ) -> PortfolioWeights: ...
 ```
 
-DP-B's minted text governs the name and the signature. If it differs, follow the text and record
+RL 9710's minted §5.2 text (DP-B) governs the name and the signature. If it differs, follow the text and record
 the difference.
 
 - [ ] **Step 1: Write the failing tests** (Acceptance 1–7), each with `@pytest.mark.req("FR-231")`.
@@ -626,23 +685,44 @@ async def load_banding_by_ref(session, *, workspace_id: UUID, ref: ArtifactRef) 
   meaning. This is done before Task 3's implementation step if the executor prefers, because
   Task 3 consumes the fields.
 - [ ] **Step 2:** `uv run python scripts/generate-contracts.py`, then `--check`, which exits 0.
-  Inspect `git diff docs/contracts/` (the `portfolio` parameter and the two properties only, plus
-  DP-A (b)'s shape if decided).
+  Inspect `git diff docs/contracts/`. It shows the `portfolio` parameter and the two properties,
+  and after Task 6 the cells route and its schemas. Nothing is removed or changed in
+  `RateTableDiff`'s existing properties.
 - [ ] **Step 3:** Commit: `feat(model-schema): RateTableDiff coverage figures; contracts regenerated (FR-231, FR-451)`.
 
-### Task 6: The per-cell diff (DP-A (b) only; Acceptance 18)
+### Task 6: The paged cells route (DP-A (c), RL 9710; Acceptance 18)
 
-**Files:** `model_schema/rating.py` (`RateTableDiffCell`, `RateTableDiff.cells`);
-`operations.py` (`_compute_diff` builds one row per changed key); the tests in `P` and `B`;
-the contract regenerated.
+**Files:**
+- Modify: `packages/pricing-core/src/pricing_core/rate_tables/operations.py` (add `diff_cells`)
+- Modify: `packages/model-schema/src/model_schema/rating.py` (add `RateTableDiffCell`, and the
+  page type unless RL 9710 reuses one)
+- Modify: `backend/src/app/platform/rate_tables.py` (add `diff_cells_page`)
+- Modify: `backend/src/app/api/rate_tables.py` (add the cells route handler)
+- Regenerate: `docs/contracts/openapi/generated.json`
+- Test: `P` and `B`
 
-- [ ] **Step 1:** Write `test_a_two_cell_change_returns_each_cells_change_and_weight`. Run it.
-  Expected: it fails on the missing `cells` attribute.
-- [ ] **Step 2:** Implement the shape as DP-A's minted text defines it. Every field is a `Decimal`
-  or a string, and the relative change is `None` where the baseline is 0 or absent (as
-  `_compute_diff` already treats them). Regenerate the contract.
-- [ ] **Step 3:** Run `P`, `B` and `--check`. Commit:
-  `feat(rate-tables): per-cell change and weight in RateTableDiff (FR-231, FD-1358)`.
+**Interfaces.**
+- Consumes: `check_portfolio`, `_portfolio_frame`, `_key_artifacts` and `exposure_weights` (Tasks 2
+  and 3). The cells route takes the same `against` and `portfolio` as the diff route, and runs
+  `RL-1361` item 7's checks before anything else, in the same order.
+- Produces: `diff_cells(baseline_cells, current_cells, keys, value, *, weights: Weights | None = None) -> list[RateTableDiffCell]`
+  (dm-1358's stated signature; RL 9710's text governs). Its rows use the same changed set and the
+  same comparable rule as `_compute_diff`, so the summary and the cells cannot disagree about
+  which cells changed.
+
+- [ ] **Step 1: Write the failing tests** (Acceptance 18), each with `req("FR-231")`, and
+  `req("FR-232")` on the parquet case. Fix every path, field and code from RL 9710's text, never
+  from this plan's wording.
+- [ ] **Step 2:** Run them. Expected: the pure test fails with `ImportError` for `diff_cells`; the
+  route tests get FastAPI's `404 Not Found` with no problem body, because no route is registered.
+  Record each.
+- [ ] **Step 3: Implement** in the order RL 9710 rules: the checks, then the baseline resolution
+  (as `diff`), then the cells, then the weights when a portfolio is named, then `diff_cells`, then
+  the page cut in RL 9710's order. The cursor encodes the position in that order; the versions
+  are immutable, so a cursor stays valid. If RL 9710 caches pages, the cache key carries every
+  component of Task 3's key plus the cursor.
+- [ ] **Step 4:** Regenerate the contract and run `--check`. Run `P` and `B` in full.
+- [ ] **Step 5:** Commit: `feat(rate-tables): the paged diff cells route with per-cell weights (FR-231, FD-1358)`.
 
 ### Task 7: The gate and the ledger
 
@@ -661,9 +741,10 @@ the contract regenerated.
 1. The lead mints this plan at the merge turn. The lead dispatches only after §"Activation needs"
    hold, in a separate activation PR, which flips `SL-1391` and this plan to `active`.
 2. On merge, the auditor discharges the register row `FR-231 (F-W10-2)` and closes `FD-1358`
-   under DP-A's decided option.
+   (DP-A (c): the paged cells route).
 3. WK-675 Slice 5 (`PL-1286` `:307`) is unblocked. Its leaf plan reads this slice's merged
-   `RateTableDiff`, not this plan's description of it.
+   `RateTableDiff` and cells route, not this plan's description of them. Its diff shading and
+   exposure-weight column page through the cells route.
 4. WK-673 Slice 3 (`SL-1387`) follows, in `PL-1267`'s order.
 
 ## Self-review
@@ -679,17 +760,25 @@ the contract regenerated.
    - "register row discharged on merge": Hand-off 2;
    - "RL-1375 DP-1 (a2) applies": P9 and Task 3 Step 1;
    - "never runs concurrently with SL-1377": activation need 3;
-   - "carries FD-1358": DP-A, Task 6.
+   - "carries FD-1358": DP-A (c), Task 6, Acceptance 18.
 2. **Coverage of `RL-1361`'s Acceptance** (`:775-857`). Every bullet maps to Acceptance 1–17.
    The seeding bullets were `SL-1377`'s and are closed there.
-3. **Every open choice is a DP** (A–E). No spec text is written without a ruling (Task 1).
+3. **Every open choice is a DP** (A–E). A, B and C are decided by the deputy, with texts in RL
+   9710. No spec text is written without a ruling (Task 1). **The decisions are applied at every
+   site** ([`README.md`](README.md) rule 5): narrative
+   (Goal, Status, the DP table), Files (§"Write set", Tasks 1, 5 and 6), Steps (Task 0 Steps 1
+   and 3, Task 1 Steps 1 and 2, Task 6), and Acceptance (18, 19, 20). No site still describes
+   DP-A option (b).
 4. **Repository literals checked at `caa4e411`:** every line range in §"Write set" and in P1–P9.
    The `RateTableDiff` fields and the zero-weight red were run (Task 0 Step 2). The T-text find
    strings were counted (Task 0 Step 3).
-5. **What was not executed:** the test sketches. They depend on DP-B's minted signature and on
+5. **What was not executed:** the test sketches. They depend on RL 9710's minted texts and on
    fixture helpers whose signatures the executor reads first. A sketch that does not run as
    written is a plan defect to report, not to work around.
 6. **Type consistency:**
    - `exposure_weights` and `PortfolioWeights` are defined in Task 2 and consumed in Task 3;
    - `DiffCache.key`'s five-argument form is defined in Task 3 and used in Acceptance 16;
-   - `check_portfolio` is defined in Task 3 and called in Task 3 Step 3 and Task 4 Step 3.
+   - `check_portfolio` is defined in Task 3 and called in Task 3 Step 3, Task 4 Step 3 and
+     Task 6 Step 3;
+   - `diff_cells` is defined in Task 6 and consumes Task 2's `PortfolioWeights.weights` as its
+     `weights`.
