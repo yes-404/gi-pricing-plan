@@ -792,6 +792,33 @@ async def load_banding_by_ref(session, *, workspace_id: UUID, ref: ArtifactRef) 
    exposure-weight column page through the cells route.
 4. WK-673 Slice 3 (`SL-1387`) follows, in `PL-1267`'s order.
 
+## The RL-1309 carrier (added 2026-10-05, before the mint)
+
+`RL-1309` `:309-310` (the DP-1 item 3 condition) requires an in-repo WK-673 record that carries
+the sub-graph limb: `WK-1250` Slice 2's dispatch is gated on it (the maintainer's, by delegation,
+ruling of "2026-09-30 14:47:19 BST — RL-1309:309-311's gate: NO, a local delta file doesn't
+satisfy it; an IN-REPO carrier is needed", `channel/to-lead.md`, which names a WK-673 slice leaf
+plan or ledger as the carrier). The maintainer's (by delegation) direction of "2026-10-05 16:43:57
+BST — MERGE-ACK #1128 (RL-1418) …; answers to the queued items", WK-1250 item 2, puts the carrier
+in this plan, in a normal commit before the mint: *"The RL-1309 carrier: a short dated note
+quoting RL-1309 :309-310 verbatim, added to PL 9716 (#1127) in a NORMAL pre-mint commit (not
+inside the mint commit), so its ACK's normalised diff shows it as reviewed content."* Both
+entries are local and not in the repository.
+
+`RL-1309` `:309-310`, verbatim, at `origin/main` `137bc817ef1fb40ea57e9053e0ad40b73bdff3a8`:
+
+```text
+   - **The maintainer's condition.** Before Slice 2 is dispatched, both WK-673's plan and
+     PL-1254 Task 2 carry this limb. The first is the lead's to route, the second the
+```
+
+The two lines end mid-sentence in the source; the sentence closes on `:311`, "planner's.", which
+the maintainer's ruling above names (`:309-311`). **The limb they refer to** is the `RL-1309` DP-1
+item 3 bullet list at `:296-311`: `WK-1250` Slice 2 widens `AlgorithmDiff` and `diff_algorithms` to
+cover sub-graph mounts and pins, and **WK-673 persists the whole diff the computation returns**
+as the `structural_diff` evidence blob, never a hand-picked subset (`RL-1309` `:300-303`).
+This section is a carrier only: it adds no task and changes no acceptance item.
+
 ## Self-review
 
 1. **Coverage of the `SL-1391` row** (roadmap `:828`), clause by clause:
