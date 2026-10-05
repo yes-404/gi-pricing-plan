@@ -13,18 +13,13 @@ relates: [WK-1178, WK-673, FR-193, FR-222, FR-223, FR-243]
 # FD-9605 — a `model_call` that pins a GLM is refused at score (`runtime.py:568-579`)
 
 **Filed** by auditor-glm on the lead's order of 2026-10-05, working id 9605 (reserved in the lead's
-`eta.md`), from the maintainer's (by delegation) approval in the entry after 15:48 BST in `to-lead.md` (a
-local channel file, so cited by its description, "model_call refusal"; **I could not find that entry's
-text in the channel file at 15:49 BST, so its header is not quoted here and the lead supplies it before the
-ACK**). The evidence is the sizing memo `~/gi-pricing-plan.local/handover/sizing-g2-peril-path-2026-10-05.md`
+`eta.md`), from the maintainer's (by delegation) approval, which is on the record in the entry `## 2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record` in `to-lead.md` (a local channel file): "(i) APPROVED: reserve an id and file the finding for the GLM model_call refusal (runtime.py:568-579; an implementation gap from #406 24b537df, contradicting 03 FR-222 'exact invokes the model itself' and 02 FR-193). Severity proposed at its mint." That entry says it was sent after 15:47:15 BST and is superseded on severity by its item 2 (HIGH). The evidence is the sizing memo `~/gi-pricing-plan.local/handover/sizing-g2-peril-path-2026-10-05.md`
 §F5, **every fact of which was re-read below, not trusted**. `tree:` is `origin/main` at filing; every
 read ran at that tree.
 
 ## Finding
 
-**Severity: proposed MEDIUM at least; higher if Option A (the literal Peril Structure path in P2) is
-chosen; ruled by the maintainer (by delegation) at the mint.** **Owner: proposed WK-1178; ruled by the
-maintainer (by delegation) at the mint** (reasons below).
+**Severity: HIGH. Owner: WK-1178. Deadline: before the P2 exit demo.** Ruled by the maintainer (by delegation) in the entry `## 2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record`, item 2 ("FD 9995 → HIGH, deadline before the P2 exit demo (now a G2 blocker). FD 9605 (#1172, the GLM model_call refusal) → HIGH, the same."), and answered for #1172 in the entry `## 2026-10-05 16:43:57 BST — MERGE-ACK #1128 (RL-1418) at f43d793464064ea462b7e65208c9a983313c1391, expected tree 9489405370a1ce06c2b985ad88c7d471438febb1; answers to the queued items` ("severity HIGH, owner WK-1178, before the P2 exit demo (Option A)"). The reason: G2 takes Option A, so WF-699's B4 `model_call` over a Peril Structure of GLMs is built in P2.
 
 A Rating Version whose `model_call` step pins a **GLM** compiles, then **refuses every quote**. The
 branch is `_model_call_handler`'s `else:` (`packages/pricing-core/src/pricing_core/rating/runtime.py:568-579`,
@@ -59,10 +54,10 @@ the rating runtime.
 2. **It blocks WF-699's literal path.** WF-699 B4 (`docs/workflows/WF-00699-approved-models-to-approved-rating-version.md:59`)
    adds a `model_call` that references the Peril Structure, whose components are GLMs on the demo's data
    (`examples/fremtpl2/model.py` fits a frequency GLM and a frequency GBM). That is why the sizing memo
-   prices this as slice A-2 of Option A, and why the severity rises if Option A is chosen.
+   prices this as slice A-2 of Option A, and why Option A makes this HIGH.
 3. **The refusal is pinned by tests, so a fix must change them deliberately:**
    `packages/pricing-core/tests/test_rating_runtime.py:377` (`test_a_glm_model_call_is_refused_with_a_named_code`)
-   and `packages/pricing-core/tests/test_rating_score.py:429`.
+   and `packages/pricing-core/tests/test_rating_score.py:428` (`test_a_model_call_failure_is_refused_with_the_real_message`).
 
 ## Evidence
 
@@ -93,30 +88,28 @@ FD-1297), none about a GLM refusal. The only mention outside `docs/` is the lead
 (`to-lead.md:17795`, read: "DP-a0: do NOT adopt S3's model_call fixture (a GLM cannot be scored via model_call
 on main). AGREED.") — a decision to avoid it, not a record of it.
 
-## Owner (proposed)
+## Owner (ruled)
 
 `runtime.py` and `compile.py` were built under **WK-669** (the bundle) and **WK-671** (scoring), both
 **closed** (`docs/roadmap.md:620`, `:650`). A defect in closed Work's code goes to the standing item
 for work that "belongs to no other Work" (**WK-1178**, `docs/roadmap.md:1284`; its `SL-1300` fixes `compile_bundle`
-at the same seam). **If Option A is chosen, the fix is also a WK-673 exit-demo dependency; the owner then
-stays WK-1178 and the slice is cited from the exit-demo plan.** *Proposed: WK-1178; ruled by the maintainer
-(by delegation) at the mint.*
+at the same seam). **Option A was chosen (16:43:31 entry), so the fix is also a G2 exit-demo dependency; the owner stays WK-1178, as slice A-2.** *Ruled: WK-1178 (see Finding).*
 
 ## Disposition
 
-Open. Filed by the auditor, 2026-10-05. Severity and owner above are proposals.
+Open. Filed by the auditor, 2026-10-05. Severity, owner and deadline are ruled (Finding, above).
 
-**Remedy, proposed (the maintainer chooses; two ways to close the contradiction):**
+**Remedy: (a) is the one taken** (slice A-2 of Option A, which "flips the two pinning tests deliberately" in the 16:43:57 entry; (b) is recorded as the road not taken):
 
 - **(a) Build it.** Compile embeds each pinned GLM's `Factor`, `Banding` and `Grouping` versions in
   `Bundle.resolved_payloads`; the runtime rebuilds them and calls `predict_glm`. Red first: a golden test
-  that the `model_call` value equals `predict_glm` on the same row; `test_rating_runtime.py:377` flips.
+  that the `model_call` value equals `predict_glm` on the same row; `test_rating_runtime.py:377` and `test_rating_score.py:428` flip.
   The sizing memo cuts this as one slice ("A-2", likely 1 executor-day), and it can reuse PL 9649's
   `factor` resolver branch only after that plan merges.
 - **(b) Narrow the spec.** `03` FR-222 and `02` FR-193 gain a dated amendment saying `exact` scores a GBM
   only, and a Rating Version that pins a GLM through `model_call` is refused **at save**, not at score, with a
   named code. That makes the refusal a requirement rather than a gap.
 
-Event that next confirms or discharges it: the maintainer's severity and owner at the mint, then a merged
-fix under (a) or (b); the discharge test is `test_a_glm_model_call_is_refused_with_a_named_code` flipped
-(a) or a save-time refusal test (b).
+Event that next confirms or discharges it: the merged A-2; the discharge tests are `test_a_glm_model_call_is_refused_with_a_named_code` and `test_a_model_call_failure_is_refused_with_the_real_message` flipped.
+
+**Re-verified at `origin/main` 137bc817** (2026-10-05 16:56:36 BST): every `runtime.py`, `predict.py`, test, spec, roadmap and WF-699 locator above resolves as written, except `test_rating_score.py:429`, now cited as `:428` (the test's `def`).
