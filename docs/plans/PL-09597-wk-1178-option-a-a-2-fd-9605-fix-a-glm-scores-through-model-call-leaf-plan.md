@@ -128,17 +128,53 @@ From the entry headed *"2026-10-05 17:03:45 BST — A-2 (#1178 PL 9597) DP-1..3 
 
 DP-1 (a), DP-2 (b) and DP-3 (a) are this plan's recommendations, each with an addition
 (items 12 to 14). DP-4 is ruled **against** this plan's recommendation (a): the rounding is
-fixed in this slice, at the root (item 15). Two of the rulings rest on a mechanism that does
-not exist at `137bc817`: a `model_call` step declares no result type and no rounding, and
-save-time validation does not resolve a pin. This plan does not choose one. It records both
-as **DP-5**, open (§"Decision points").
+fixed in this slice, at the root (item 15).
+
+**Dated note, 2026-10-05 (written 17:16:07 BST, pre-mint): DP-4 corrected to option (B).**
+The 17:02:50 ruling's `money_minor` limb named a rounding that a `model_call` step cannot
+declare. The maintainer (by delegation) corrected it in the entry headed *"2026-10-05
+17:12:40 BST — CORRECTION to my 17:02:50 rounding ruling: OPTION (B); A-2 gains the
+model-schema field; C4 stays (c); FR-249 carry text accepted"*, read in full by this
+planner. Verbatim, its first three paragraphs:
+
+> Verified at main (packages/model-schema/src/model_schema/rating.py): RatingExpressionStep (:293) declares `result_type: RatingResultType` (:296); RatingModelCallStep (:299) has NO result_type; only RatingOutputStep (:324) has `rounding: RoundSpec` (:327). 03 FR-226 (:112): "`output` steps declare rounding explicitly … Rounding is never implicit and never happens twice." My 17:02:50 "money_minor → the step's declared rounding (FR-226)" named a rounding a model_call cannot declare: WRONG mechanism, corrected here.
+
+> RULING: OPTION (B). A model_call's output is ALWAYS an exact Decimal, never rounded at the model_call. ALL rounding stays on the output step, as FR-226 already says (no FR-226 amendment). RatingModelCallStep gains `result_type: RatingResultType` as a TYPE only (decimal | money_minor, for compile's FR-227 type checks; money_minor is a type label, not a rounding). Red first: a frequency GLM model_call returns the exact Decimal (~0.07, today 0); a money_minor-typed model_call feeding a non-money step is refused at compile as a type mismatch; the output step rounds once.
+
+> CONSEQUENCE for A-2 (#1178): it now includes a MODEL-SCHEMA change, RatingModelCallStep.result_type. By CLAUDE.md §2 that lands in ONE commit with docs/contracts regenerated (FR-451, the drift check), the frontend client regenerated (`pnpm --dir frontend generate:api` in its gate), the 03 FR-222/FR-227 T-text naming the field, and its tests. Default for existing stored algorithms: `decimal` (a stored model_call without the field loads as decimal, and a migration test proves it), so no stored algorithm changes meaning. skills-map.md changes only if a tech dependency changes (none expected; the planner confirms). planner-a12fold: release DP-4's hold and write it as (B).
+
+**Item 15 is written to this correction, not to the 17:02:50 text.** The correction settles
+DP-5 (i). DP-5 (ii) (where and with which code DP-2's raw-column refusal fires) is still open.
+
+**The offset reaches the model through B4's `feature_map`.** From the entry headed
+*"2026-10-05 17:08:35 BST — A-3 / A-4 DP memo (handover/dp-memo-a3-a4-2026-10-05.md) RULED;
+the reconciliation TOLERANCE set"*, item 7, verbatim:
+
+> 7. DP-A3-5: (a). The frequency GLM's offset (exposure_years) comes through B4's feature_map, else MODEL_OFFSET_MISSING: consistent with my A-2 DP-3 (17:03:45).
+
+**No live rounding case.** From the entry headed *"2026-10-05 17:07:00 BST — Rounding: LATENT
+(no live case), carried by A-2; WK-673 S4/S5: start the DM memo NOW; E1's owner gap"*, its
+first paragraph, verbatim:
+
+> ROUNDING (auditor-mc, read-only at origin/main): NO live case. examples/ and golden.py have 0 model_call; the freMTPL2 demo algorithm (examples/fremtpl2/model.py:317-343) is s_in → s_expr → s_out; model_calls exist only in fixtures (scripts/bench-rating.py:235 `bench-freq`, a synthetic target; backend/tests/test_rating_algorithms.py:40,88; the pricing-core test boosters); a pinned GLM fails closed. LATENT, carried by A-2's declared-result-type fix; no finding. One loose end for A-2's plan: trace whether test_rating_algorithms.py's `motor-ad-frequency@7` (a frequency model on a risk_premium_minor output) SCORES or only validates; if it scores, A-2 re-declares that fixture's output type as part of its red-first change. RL 9588's composition (a Decimal prediction × edited/seed ratios, rounded once at the money_minor step; B1 after A-2): right.
+
+Traced by this planner at `4d3be141`: `backend/tests/test_rating_algorithms.py`'s
+`motor-ad-frequency@7` step (in `PRE_EDIT_VALID_ALGORITHM`, `:40-44`, and `valid_algorithm()`,
+`:88-92`) **only validates**. Every test in the module calls
+`POST /api/v1/rating-algorithms` (save) or `GET /api/v1/rating-algorithms/motor-gb@2/diff`;
+none compiles, pins or scores. `git show 4d3be141:backend/tests/test_rating_algorithms.py |
+grep -c -E 'score|compile_bundle|rating-versions|load_bundle|predict'` prints 0. So the
+red-first change does not re-declare it. Under (B) the fixture omits `result_type` and loads as
+`decimal`, and its save tests (`test_a_valid_algorithm_saves` and the others) pass unchanged.
+That is item 16's backend evidence. The step feeds `s_office`, an `expression`, and no
+`output` directly, so item 15's type refusal does not reach it.
 
 ## Status
 
 `draft`. **DP-1 to DP-4 are ruled** by the maintainer (by delegation) in the 17:02:50 and
-17:03:45 BST entries quoted above (dated note, 2026-10-05). **DP-5 is open**: the two
-mechanisms those rulings rest on, with options and a recommendation, for the maintainer (by
-delegation). The plan moves to `active` only
+17:03:45 BST entries quoted above, and DP-4 is corrected to option (B) at 17:12:40 BST (dated
+notes, 2026-10-05). **DP-5 (i) is settled by that correction. DP-5 (ii) is open**: where, and
+with which code, DP-2's raw-column refusal fires. The plan moves to `active` only
 through a separate activation PR, after every activation need below holds.
 
 ### Activation needs, in order
@@ -156,8 +192,9 @@ through a separate activation PR, after every activation need below holds.
    dated (the 16:43:57 BST entry, quoted above). *Dated note, 2026-10-05 (pre-mint):
    **held**, by the 17:02:50 and 17:03:45 BST entries; no `RL-` is written. The dispatch
    record cites both entries by their headers.*
-4a. **The ruling on DP-5** *(added 2026-10-05, pre-mint)*. Items 13 and 15 cannot be written
-   as tests until DP-5 names the field and the check site.
+4a. **The ruling on DP-5 (ii)** *(added 2026-10-05, pre-mint)*. Item 13 cannot be written as
+   a test until DP-5 (ii) names the check site and the code. DP-5 (i) is settled (17:12:40
+   BST, option (B)). Item 15 needs nothing more.
 5. **The lane and the dispatch GO**, under the maintainer's 13:12:56 BST priority rule.
    **Acceptance 9 measures NFR-489, so it runs alone** (`RL-1263` item 3, unchanged by
    `RL 9620`): no gate and no other measurement on the VM during it.
@@ -261,35 +298,91 @@ quoted above. Each is red first.*
 14. **The offset's value comes from the quote** (DP-3 (a) with the precision, the 17:03:45
     entry). `test_the_offset_moves_the_glm_by_exactly_the_exposure` (new pricing-core module,
     a GLM with a `log_column` exposure offset): the same quote at exposure 1.0 and at 0.5
-    differs by exactly the offset. The step is declared `decimal`, so both values are exact
-    Decimals (item 15), and the assertion is on the linear predictor:
+    differs by exactly the offset. The offset column (for the frequency GLM, `exposure_years`)
+    reaches the model only through the step's `feature_map`, as B4's `model_call` will feed
+    it (17:08:35 BST item 7, consistent with DP-A3-5 (a)); the test's map names it. The step
+    is `decimal`, so both values are exact Decimals (item 15), and the assertion is on the
+    linear predictor:
     `ln(value_1.0) − ln(value_0.5) == ln(1.0) − ln(0.5)`. *"Exactly" is read to float
     precision (`math.isclose(rel_tol=1e-12)`), because `predict_glm` computes in float and
     `(a + b) − (a + c)` is not bitwise `b − c`. If the maintainer meant bitwise, the dispatch
-    reports it.* A quote missing the offset input is refused with `MODEL_CALL_FAILED`
-    (FR-255): item 3, whose vehicle is that case. Red first: at the base the GLM is refused.
-15. **A `model_call`'s value follows its step's declared result type (FR-227, FR-226)**
-    (DP-4, the 17:02:50 entry, for every `model_call`, not only a GLM).
-    - **Red first:** `test_a_frequency_glm_declared_decimal_returns_its_unrounded_rate`: a
-      frequency GLM (Poisson, log link, mean about 0.07), its step declared `decimal`, scores
-      about 0.07. At the base it scores 0 (`round(prediction)`, `runtime.py:567`), or is
-      refused before that as a GLM. The red is recorded with whichever line prints.
+    reports it.* A quote missing the offset input, or a `feature_map` that does not map the
+    offset column, is refused with `MODEL_CALL_FAILED` naming `MODEL_OFFSET_MISSING`
+    (FR-255; `_offset`, `modelling/predict.py:144-195`): item 3, whose vehicle is that case.
+    Red first: at the base the GLM is refused.
+15. **A `model_call`'s value is always an exact Decimal; `result_type` is a type only; the
+    output step rounds once** (DP-4 as corrected to option (B), the 17:12:40 BST entry, for
+    every `model_call`, GBM included, not only a GLM; FR-222, FR-227, FR-226).
+    - **Red first (the value):** `test_a_frequency_glm_model_call_returns_its_exact_rate`: a
+      frequency GLM (Poisson, log link, mean about 0.07) scores about 0.07, never 0. At the
+      base it scores 0 (`round(prediction)`, `runtime.py:567`), or is refused before that as
+      a GLM. The red is recorded with whichever line prints.
     - **Golden at full precision:**
-      `test_a_decimal_model_call_equals_predict_glm_at_full_precision`: the value is the exact
-      Decimal of `predict_glm`'s float on the same row (`Decimal(repr(x))`, FR-244's boundary
-      rule), with no quantize.
-    - **`money_minor`:** a step declared `money_minor` yields its prediction rounded once with
-      the step's declared rounding (FR-226).
-    - **Any other declared type** is refused at save with `RATING_TYPE_MISMATCH`
-      (`compile.py:146`, `output_type_issues`).
+      `test_a_model_call_equals_predict_glm_at_full_precision`: the handler's value is the
+      exact Decimal of `predict_glm`'s float on the same row (`Decimal(repr(x))`, FR-244's
+      boundary rule), with no quantize and no `round()`, whichever `result_type` the step
+      declares.
+    - **Red first (the type):** `test_a_money_minor_model_call_feeding_a_non_money_output_is_refused`:
+      a `model_call` declared `money_minor` whose produced name feeds an `output` declared
+      `relativity` is refused with `RATING_TYPE_MISMATCH`, by `validate_algorithm`
+      (`compile.py:366`) and by the bundle-time check. The control: declared `decimal`, the
+      same graph saves. At the base the step cannot declare the field (`extra="forbid"`), and
+      a `money_minor` producer feeding `relativity` passes anyway, because `_compatible`
+      treats every `_NUMERIC` type as interchangeable (`compile.py:57`, `:124`). The change:
+      `producer_types` (`:95`) types a `model_call`'s produced names by its `result_type`,
+      and `_compatible` refuses `money_minor` into any type other than `decimal` or
+      `money_minor`. *The planner's reading: "a non-money step" is an `output` (or an
+      `expression` declared non-money) consuming it. FR-227's check today compares only an
+      `output`'s declared type with its producer, and an `expression` does not type its
+      inputs. This slice adds no input typing to `expression`. If the ruling means that, it
+      is a wider change: STOP and report it.*
+    - **Red first (the single rounding):** `test_the_output_step_rounds_a_model_call_once`:
+      a `money_minor` `model_call` (a severity GLM) feeds an `expression` that multiplies it
+      by a non-integer factor, declared `money_minor`, which feeds an `output` declared
+      `money_minor` with `rounding {"mode": "half_even", "dp": 0}`. The served output equals
+      `(Decimal(repr(prediction)) × factor)` quantized once, half-even. At the base the handler
+      has already rounded, so the base rounds twice. The test first asserts that, for its
+      chosen prediction and factor, rounding twice and rounding once differ, so it cannot
+      pass vacuously. For example, 1234.4 × 1.1 gives 1358 rounded once and 1357 rounded
+      twice. The ledger records the values.
+    - **The field (`model-schema`):** `RatingModelCallStep` (`model_schema/rating.py:299`)
+      gains `result_type: RatingResultType = "decimal"`. It accepts `decimal` or
+      `money_minor` and refuses any other value at validation, naming FR-227. *The planner's
+      reading of the ruling's parenthetical "(decimal | money_minor, …)". No `rounding` field
+      is added; FR-226 is unchanged.*
     - **The docstring:** the "provisional convention" text (`runtime.py:521-525`) is removed,
-      and the handler's docstring cites the 17:02:50 entry by its header. Check:
+      and the handler's docstring cites the 17:12:40 BST entry by its header. Check:
       `git grep -n "provisional convention" -- packages/pricing-core/src/pricing_core/rating/runtime.py`
       prints nothing.
-    - The field, the rounding and the check site are DP-5 (i)'s. **How the exact Decimal
-      crosses back into the engine** (FR-273: the binding refuses a `Decimal` input and takes
-      a `str` as a string) is read at Task 0. If neither a number nor a string carries the
-      value exactly, STOP and report it.
+    - **How the exact value crosses back into the engine** (FR-273: the binding refuses a
+      `Decimal` input and takes a `str` as a string; FR-244: outputs return as floats and
+      `_round_minor` reads them with `Decimal(repr(x))`) is read at Task 0. The handler
+      returns the unrounded value in the form the binding carries as a number. If no form
+      carries it exactly, STOP and report it.
+    - Existing tests that assert a GBM `model_call`'s integer value (the old `round()`) change
+      under the ruling. Each is listed in the ledger with its old and new assertion.
+16. **A stored algorithm without the field still means what it meant** (17:12:40 BST:
+    "a stored model_call without the field loads as decimal, and a migration test proves
+    it").
+    `test_a_stored_model_call_without_result_type_loads_as_decimal` (in
+    `packages/model-schema/tests/test_rating_algorithm.py`): a `RatingAlgorithm` payload
+    written before the field (a `model_call` step with no `result_type`) validates, and its
+    step's `result_type == "decimal"`. In `backend/tests/test_rating_algorithms.py`, a row
+    stored with the old payload is read back through the service and its step is `decimal`.
+    No Alembic migration is written, because the algorithm is stored as its JSON payload and
+    the default is the model's. The test is that proof. **Red first:** at the base
+    `RatingModelCallStep` has no `result_type`, so the read-back assertion fails with
+    `AttributeError`.
+17. **The contracts and the client are regenerated in the same commit as the field**
+    (`CLAUDE.md` §2; FR-451). `uv run python scripts/generate-contracts.py --check` exits 0.
+    The regenerated files are the ones `git grep -l RatingModelCallStep -- docs/contracts`
+    lists at `4d3be141`: `docs/contracts/openapi/generated.json` and
+    `docs/contracts/schemas/generated/sub-graph-body.schema.json`, `sub-graph-create.schema.json`
+    and `sub-graph.schema.json`. `pnpm --dir frontend generate:api`, `type-check` and `build`
+    pass; `frontend/src/api/generated` is VCS-ignored and not committed. The hand-written
+    `docs/contracts/schemas/rating-algorithm.schema.json` already admits `result_type` on
+    every step (`:50`). It is edited only if `backend/tests/test_contracts.py`'s guard
+    requires it (`contract-guard`), and the ledger says which.
 
 ## Global Constraints
 
@@ -302,9 +395,12 @@ quoted above. Each is red first.*
   `FIT_RESULT_ADAPTER` (`model_schema/modelling.py:1965`, `:1972`).
 - **No pandas** (`CLAUDE.md` §3).
 - **Money is integer minor units** (`CLAUDE.md` §7); the `model_call` output convention is
-  DP-4's and is not changed silently. *(Dated note, 2026-10-05: DP-4 is ruled. The output
-  follows the step's declared result type, so `decimal` gives an exact Decimal and
-  `money_minor` gives one declared rounding, never two (FR-226, NFR-496). Item 15.)*
+  DP-4's and is not changed silently. *(Dated note, 2026-10-05: DP-4 is ruled, corrected to
+  option (B) at 17:12:40 BST. A `model_call`'s value is always an exact Decimal, and only an
+  `output` step rounds, once (FR-226 unchanged, NFR-496). Item 15.)*
+- **A `model-schema` shape changes in one commit** *(added 2026-10-05)* (`CLAUDE.md` §2): the
+  field, the regenerated `docs/contracts/`, the `03` texts and the tests land together
+  (items 15 to 17). `docs/skills-map.md` is not edited, because no tech dependency changes.
 - **Enforcement is proven on deliberately broken input** (`CLAUDE.md` §13): items 1–6 are red
   first.
 - **NFRs are measured, not asserted** (`CLAUDE.md` §13): item 9.
@@ -324,8 +420,8 @@ quoted above. Each is red first.*
 | `03` | FR-255 | `MODEL_CALL_FAILED` stays typed and reasoned | existing marker on item 3 |
 | `03` | NFR-491 | Zero database or network access at score | `req("NFR-491")` on item 7 |
 | `03` | NFR-489 | The scoring p99 budget, measured for a GLM `model_call` | ledger only (item 9) |
-| `03` | FR-227 | A `model_call`'s value follows its declared result type, checked at save *(added 2026-10-05, DP-4 ruled)* | `req("FR-227")` on item 15 |
-| `03` | FR-226 | A `money_minor` `model_call` is rounded once, by its declared rounding *(added 2026-10-05, DP-4 ruled)* | `req("FR-226")` on item 15 |
+| `03` | FR-227 | A `model_call` declares `result_type` (`decimal` default, or `money_minor`), and a `money_minor` one feeding a non-money output is refused *(added 2026-10-05, DP-4 as corrected)* | `req("FR-227")` on items 15, 16 |
+| `03` | FR-226 | A `model_call` is never rounded; the `output` step rounds once *(added 2026-10-05, DP-4 as corrected)* | `req("FR-226")` on item 15 |
 
 Out of scope, named so no reader assumes it: a Peril Structure's scoring (A-3, which
 calls this slice's GLM path for each component); `approximation` mode (FR-222's other half,
@@ -369,25 +465,22 @@ Read at `137bc817` by this planner; no code was run.
 **Not written:** `packages/model-schema/` (every carried shape exists), `load_bundle`,
 `CompiledBundle`, `Bundle`, `bundle_hash`, any `frontend/src` file, any migration.
 
-*Dated note, 2026-10-05 (pre-mint): DP-4's ruling adds writes, and DP-5 decides some of
-them. Ruled now: `runtime.py` `_model_call_handler` (the value by declared type and its
-docstring); `compile.py` save-time typing of a `model_call` (`producer_types`,
-`validate_algorithm`, for items 13 and 15). If DP-5 (i) is ruled (a):
-`packages/model-schema/src/model_schema/rating.py` `RatingModelCallStep`, the regenerated
-`docs/contracts/` files (`generate-contracts.py`), `03` §3's step-table row (`03:100`), and
-every existing `model_call` fixture: at `137bc817`, the files under `tests/` among those
-`git grep -l '"model_call"\|type="model_call"' 137bc817 -- backend packages` lists (ten files;
-the other three are `model_schema/rating.py`, `model_schema/scoring.py` and `runtime.py`) are
-`backend/tests/test_rating_algorithms.py`,
-`packages/model-schema/tests/test_rating_algorithm.py`,
-`packages/model-schema/tests/test_rating_version.py`,
-`packages/pricing-core/tests/test_rating_compile.py`,
-`packages/pricing-core/tests/test_rating_compile_bundle.py`,
-`packages/pricing-core/tests/test_rating_runtime.py` and
-`packages/pricing-core/tests/test_rating_score.py`. If DP-5 (ii) is ruled (a), the backend
-algorithm-save route's module is added too. The contention table below was cut before these
-writes. Task 0 Step 2 re-reads it against them, and `model_schema/rating.py` against every
-in-flight plan.*
+*Dated note, 2026-10-05 (pre-mint; corrected 17:16:07 BST to DP-4 option (B)): the rulings
+add writes. They supersede "Not written: `packages/model-schema/`" and "any `frontend/src`
+file" above.*
+
+| Path | Change *(added 2026-10-05)* |
+|---|---|
+| `packages/model-schema/src/model_schema/rating.py` | edited: `RatingModelCallStep` (`:299`) gains `result_type` (item 15) |
+| `packages/model-schema/tests/test_rating_algorithm.py` | appended: item 16's model test, and item 15's field refusal |
+| `docs/contracts/openapi/generated.json`, `docs/contracts/schemas/generated/sub-graph-body.schema.json`, `sub-graph-create.schema.json`, `sub-graph.schema.json` | regenerated (item 17) |
+| `docs/contracts/schemas/rating-algorithm.schema.json` | read; edited only if the contract guard requires it (item 17) |
+| `frontend/src/api/generated/` | regenerated in the gate; VCS-ignored, not committed |
+| `packages/pricing-core/src/pricing_core/rating/compile.py` | edited: `producer_types` (`:95`), `_compatible` (`:124`) (item 15) |
+| `packages/pricing-core/src/pricing_core/rating/runtime.py` | `_model_call_handler`: the GBM branch's `round()` too, and the docstring (item 15) |
+| `backend/tests/test_rating_algorithms.py` | appended: item 16's read-back test. The `motor-ad-frequency@7` fixtures are not edited |
+| `docs/specs/03-rating-engine.md` | FR-222 row (`:108`) and FR-227 row (`:113`), §3.2: one dated amendment each, text T1 and T2 (Task 6) |
+| the backend algorithm-save module | only if DP-5 (ii) is ruled (a) |
 
 **Contention.** Classes as in `docs/process/delivery-process.core.json`'s `no_shared_files`.
 **Snapshot: open PRs at `137bc817`, 2026-10-05 between 16:52 and 17:40 BST; each plan's write
@@ -407,6 +500,23 @@ joins that set, as the sizing memo says.
 | **PL 9776**, F35 (#1051 @`ecbb82ab`; WK-1178) | `runtime.py`; `score.py`; `compile.py`; `test_rating_score.py` | `to_wire`, `_expression_node`, `_decision_table_node`, `_constraint_node`, `CompiledBundle`, `load_bundle`; `_build_trace`, `build_scoring_result`; `ALGORITHM_CHECKS`; `_algorithm_payload` and one trace test | `_model_call_handler`; docstring item 2; `ResolvedArtifact`, the pin loop; `:428`, `_compiled` | name-disjoint → ALLOWED one-sided with the dispatch record; **same Work**, so `RL 9620` (a) and (b) are written ((b): neither consumes the other's output) |
 | **PL 9728**, the NFR-489 remedy (#1113 @`3ad98fe2`; WK-1178) | `scripts/bench-rating.py` | its `--http` full-path mode | a GLM component scenario | same file; **same Work** → the dispatch record names the definitions; if both edit the fixture builder, **SERIALISE** |
 
+*Rows added 2026-10-05 (17:16:07 BST, pre-mint) for the writes the rulings add. Each was
+read from the plan file on its branch (open PRs listed at 17:15 BST), grepped for
+`model_schema/rating.py`, `docs/contracts`, `generate-contracts` and `03-rating-engine` in its
+write-set rows.*
+
+| Other slice (Work; source) | Shared path | Them | Us | Class → consequence |
+|---|---|---|---|---|
+| **PL 9688**, FD 9707 fix (#1145; WK-673) | `03` §3.2 | FR-221 row (`:107`), a dated amendment | FR-222 (`:108`), FR-227 (`:113`) | adjacent rows of one section; the maintainer serialised the same adjacency for S5 (17:07:00 BST) → **SERIALISE** |
+| **PL 9683**, FD 9708 fix (#1140; WK-1178) | `03` §3.2; `model_schema/rating.py` | FR-223 row (`:109`); `RatingVersionCreate` | FR-222, FR-227; `RatingModelCallStep` | already ahead of A-2 through A-1 (activation need 3) → no concurrency |
+| **PL 9590**, WK-673 S5 (#1181) | `03` §3.2; `model_schema/rating.py`; `docs/contracts/` generated | FR-224 row (`:110`); `RatingVersionEvidence`; regenerated | FR-222, FR-227; `RatingModelCallStep`; regenerated | §3.2 adjacency → **SERIALISE**; the classes differ; generated files are regenerated, never hand-merged |
+| **PL 9595**, A-3 (#1174; WK-1178) | `03` §3 step table (`:100`) | the `model_call` row | not edited (T1/T2 are on `:108`/`:113`) | **plan dependency**: A-3 consumes this slice, and its `:100` text must name the field this slice adds |
+| **PL 9610**, WK-1250 S2 (#1170) | `model_schema/rating.py`; `rating-algorithm.schema.json` | `Pins`, `SubGraphRef`, `_graph_invariants`, `AlgorithmDiff`; the mount's port map | `RatingModelCallStep`; the hand-written schema only if the guard needs it | different classes → ALLOWED one-sided with the dispatch record; the hand-written schema, if both edit it → **SERIALISE** (already serialised on `compile_bundle`) |
+| **PL 9609**, WK-1250 S3 (#1173) | `model_schema/rating.py`; `rating-algorithm.schema.json` | `SubGraphRef.purposes`; `purposes` on the mount | as above | as above |
+| **PL 9713**, WK-675 S2 (#1131) | `model_schema/rating.py`; `rating-algorithm.schema.json` | `RatingAlgorithm` | as above | different classes → ALLOWED one-sided with the dispatch record; the hand-written schema → **SERIALISE** if both edit it |
+| **PL 9689**, WK-673 S3 (#1138) | `model_schema/rating.py` | `AlgorithmDiff` | `RatingModelCallStep` | already serialised on `compile_bundle` |
+| **PL 9616**, FD-1416 fix (#1168; WK-1178) and **PL 9591**, WK-673 S4 (#1176) | `scripts/generate-contracts.py`; generated contracts | `GENERATED_SHAPES` keys; regenerated | not edited (`RatingModelCallStep` is in no `GENERATED_SHAPES` key; it reaches `generated.json` through referenced shapes); regenerated | generated files exempt (regenerate on the merge base); PL 9616 same Work → `RL 9620` (a)/(b) written |
+
 Every other open plan (#1127 PL 9716, #1131 PL 9713, #1140 PL 9683, #1146 PL 9662, #1161 PL
 9624, #1164 PL 9629, #1165 PL 9617, #1168 PL 9616) names none of this write set (each plan
 file read from its branch at the snapshot above, grepped for every path in the table).
@@ -417,14 +527,21 @@ Medium: about one and a half executor days (the sizing memo's A-2 row, 1 / 1.5 /
 tasks after Task 0, one exclusive measurement, one full two-half gate run. The backend test
 fits a GLM through the real Job, so it needs Postgres and MinIO.
 
+*Dated note, 2026-10-05 (pre-mint): the 17:03:45 and 17:12:40 BST rulings add items 12 to 17,
+including a `model-schema` field with regenerated contracts and the frontend client. The
+estimate above predates them and is **not** re-sized here. The planner's estimate of the
+increment is about +0.5 executor-day, unmeasured, for the lead and the Friday 9 Oct fit
+check.*
+
 ## Decision points
 
 *Dated note, 2026-10-05 (pre-mint):* **DP-1 to DP-4 are ruled** by the maintainer (by
 delegation) in the 17:02:50 and 17:03:45 BST entries quoted in §"The maintainer's decisions
 this plan rests on, quoted": DP-1 (a), DP-2 (b), DP-3 (a) with a precision, and DP-4 settled
 at the root, against this plan's (a). The rows below were written before the rulings and are
-kept as written. Items 12 to 15 carry what the rulings add. **DP-5 was added on the same
-date and is open.**
+kept as written. Items 12 to 17 carry what the rulings add. **DP-5 was added on the same
+date. Its part (i) is settled by the 17:12:40 BST correction (option (B), item 15); part
+(ii) is open.**
 
 | DP | Question | Options | Recommendation | Owner | Blocks |
 |---|---|---|---|---|---|
@@ -432,7 +549,7 @@ date and is open.**
 | **DP-2** | What `feature_map`'s values name for a GLM. `03` §4.1's `RatingAlgorithm` example shows `{"driver_age": "driver_age", …}` (`03:267`); the GBM path keys the frame by Factor slug (`feature_order`); `resolve_factors` reads each Factor's `source_columns` | (a) for a GLM the values name the frame's columns, i.e. the Factors' `source_columns` and the offset column; (b) the values are Factor slugs for both kinds, and the runtime renames each slug to its Factor's source column(s) | **(b)**: one meaning for one field across model kinds, and the author maps to the model's own vocabulary (its Factors), which the Model already names. (a) gives `feature_map` two meanings by model type. Under (b), an interaction Factor is fed through its operands' slugs, and the offset column is mapped under its own column name; a `03` dated note words it (Task 6) | decision-maker | Task 4 |
 | **DP-3** | A GLM whose spec has `offset.kind == "model"` (FR-116) | (a) carry the source model and its inputs too, and compute its `linear_predictor` per quote, as `/predict` does (`prediction.py:236-246`); (b) refuse at compile with a named code, and a dated note on FR-193 | **(a)**: FR-193 says *any* persisted Model scores, and the backend already resolves the source (`resolve_offset_model`, `modelling.py:950`). (b) narrows a requirement to fit a slice | decision-maker | Tasks 2, 3, item 6 |
 | **DP-4** | The value a GLM `model_call` yields. The GBM convention is `round(prediction)`, provisional, on the assumption the model predicts on the money-minor scale (0.2). A frequency GLM's `μ` (claims per unit exposure) rounds to 0 | (a) keep the convention for a GLM, unchanged; this slice's golden uses a GLM on the money-minor scale (a severity or burning-cost model) and the frequency case is A-3's and AN's (the double-count ruling); (b) emit the unrounded value for a `model_call` and round only at a `money_minor` boundary | **(a)** for this slice: changing the money convention is FR-250/NFR-496 scope, not FD 9605's. The plan records the hazard for A-3, which composes frequency × severity through `assemble_risk_premium` before any rounding | decision-maker | item 1's expected value |
-| **DP-5** *(added 2026-10-05, open)* | The two mechanisms the rulings rest on, which do not exist at `137bc817`. **(i)** DP-4 reads the `model_call` step's "DECLARED result type" and, for `money_minor`, "the step's declared rounding (FR-226)". The step declares neither (0.10). **(ii)** DP-2 refuses a raw-column `feature_map` "at save, with its code". Save-time validation does not resolve the pin that names the Factors (0.11), and no code is named | **(i)** (a) `RatingModelCallStep` gains a required `result_type: RatingResultType` and a `rounding: RoundSpec`, required when `money_minor` and refused otherwise. `03` §3's row names both, and every `model_call` fixture declares them. (b) The same, with `result_type` optional and defaulting to `money_minor` with half-even to the unit, which is today's behaviour. (c) No new field: a `model_call`'s value is always `decimal`, and only an `output` step rounds. **(ii)** (a) The backend's algorithm save resolves each `model_call`'s `model_ref` after `validate_algorithm`, and refuses with a new code added to `03`'s error catalogue. (b) The check runs at compile, the first point that resolves the pin, with a new code. (c) As (a) or (b), with the existing `VALIDATION_FAILED` | **(i) (a).** FR-227 already says "Every step declares its result type", and the contract already admits the field, so the gap is `model-schema`'s. (b) keeps a hidden default, the "provisional convention" the ruling removes. (c) drops the ruling's `money_minor` limb. **(ii) (a) with a new code.** It is the only option that is literally "at save". The step pins `model_ref` exactly, so the save can read the Model's Factor slugs. A named code follows FR-255's typing. (b) moves the refusal to compile. Both are the maintainer's (by delegation): each changes a shape or a catalogue | the maintainer (by delegation) | items 13, 15; activation need 4a |
+| **DP-5** *(added 2026-10-05, open)* | The two mechanisms the rulings rest on, which do not exist at `137bc817`. **(i)** DP-4 reads the `model_call` step's "DECLARED result type" and, for `money_minor`, "the step's declared rounding (FR-226)". The step declares neither (0.10). **(ii)** DP-2 refuses a raw-column `feature_map` "at save, with its code". Save-time validation does not resolve the pin that names the Factors (0.11), and no code is named | **(i)** (a) `RatingModelCallStep` gains a required `result_type: RatingResultType` and a `rounding: RoundSpec`, required when `money_minor` and refused otherwise. `03` §3's row names both, and every `model_call` fixture declares them. (b) The same, with `result_type` optional and defaulting to `money_minor` with half-even to the unit, which is today's behaviour. (c) No new field: a `model_call`'s value is always `decimal`, and only an `output` step rounds. **(ii)** (a) The backend's algorithm save resolves each `model_call`'s `model_ref` after `validate_algorithm`, and refuses with a new code added to `03`'s error catalogue. (b) The check runs at compile, the first point that resolves the pin, with a new code. (c) As (a) or (b), with the existing `VALIDATION_FAILED` | **(i) (a).** FR-227 already says "Every step declares its result type", and the contract already admits the field, so the gap is `model-schema`'s. (b) keeps a hidden default, the "provisional convention" the ruling removes. (c) drops the ruling's `money_minor` limb. **(ii) (a) with a new code.** It is the only option that is literally "at save". The step pins `model_ref` exactly, so the save can read the Model's Factor slugs. A named code follows FR-255's typing. (b) moves the refusal to compile. Both are the maintainer's (by delegation): each changes a shape or a catalogue | the maintainer (by delegation). *(Dated note, 2026-10-05: **(i) settled** at 17:12:40 BST as the lead's option (B), "model_call output always exact, rounding only at the output step", with a type-only `result_type`. That is none of (a) to (c) above, and items 15 to 17 carry it. **(ii) open.**)* | item 13; activation need 4a |
 
 ## Tasks
 
@@ -460,8 +577,16 @@ date and is open.**
   re-assert the `:377` test, re-vehicle the `:428` test. Expected red: the sentinel is
   present; the message is the old refusal.
 - [ ] **Step 3:** Item 5 (backend). Expected red: `/score` answers `MODEL_CALL_FAILED`.
-- [ ] **Step 3a:** *(Added 2026-10-05.)* Items 12 to 15, each red by its stated cause. Items
-  13 and 15 are written in the shape DP-5 rules.
+- [ ] **Step 3a:** *(Added 2026-10-05.)* Items 12 to 16, each red by its stated cause. Item
+  13 is written in the shape DP-5 (ii) rules. Item 15's field test and item 16 go in
+  `packages/model-schema/tests/test_rating_algorithm.py`; item 16's read-back goes in
+  `backend/tests/test_rating_algorithms.py`, beside the `motor-ad-frequency@7` fixtures,
+  which are not edited (they only validate).
+- [ ] **Step 3b:** *(Added 2026-10-05.)* One commit for the shape (items 15 to 17,
+  `CLAUDE.md` §2): `RatingModelCallStep.result_type`; `uv run python
+  scripts/generate-contracts.py`; `pnpm --dir frontend install --frozen-lockfile && pnpm
+  --dir frontend generate:api`; Task 6's T1 and T2; item 16 green. Commit: `feat:
+  model_call declares a type-only result_type, decimal by default (FR-227; FD 9605)`.
 - [ ] **Step 4:** Commit (red): `test: FD 9605 — a GLM model_call is refused at score (FR-222, FR-193)`.
 
 ### Task 2: The resolver carries the inputs (items 4, 5)
@@ -500,8 +625,9 @@ date and is open.**
   DP-2's ruling, `predict_glm(...)`, the value under DP-4's ruling. *(Dated note, 2026-10-05:
   ruled. The frame's columns are each Factor's `source_columns`, taken from the quote values
   that the `feature_map` maps to the Factor's slug; `predict_glm` bands them. The offset
-  column is taken from the quote, and the value follows the step's declared result type,
-  item 15. The same rule replaces `round(prediction)` in the GBM branch.)* Any `ModellingError` or
+  column is taken from the quote through the `feature_map`, and the value is the exact
+  Decimal, never rounded, item 15 (option (B)). The same rule replaces
+  `round(prediction)` in the GBM branch.)* Any `ModellingError` or
   `PredictionError` returns `_model_call_failure(step, <its code and message>)`. An unknown
   `model_type` keeps a named refusal.
 - [ ] **Step 3:** Correct the handler's docstring and `score.py`'s item 2. Run the pricing-core
@@ -522,9 +648,23 @@ date and is open.**
 
 - [ ] **Step 1:** Apply the ruling's text, if any (DP-2's `feature_map` meaning; DP-3 (b)'s
   note), under `spec-change`; run `python3 scripts/audit-docs.py`; commit. If none, the
-  ledger says so. *(Dated note, 2026-10-05: the 17:02:50 and 17:03:45 BST entries carry no
-  spec text. DP-3 (b) was not taken. DP-5's ruling may carry text for `03` §3's
-  `model_call` row and the error catalogue. This planner writes none.)*
+  ledger says so. *(Dated note, 2026-10-05: DP-3 (b) was not taken. The 17:12:40 BST
+  correction orders "the 03 FR-222/FR-227 T-text naming the field" and gives no wording.
+  This planner **drafts** T1 and T2 below. They are proposals, applied byte for byte only
+  once the lead's ACK or a ruling accepts them. If they are amended, the amended text is
+  applied.)*
+  - **T1, appended to FR-222's row (`03:108`):** *(Amended 2026-10-05, the maintainer's (by
+    delegation) entry headed `2026-10-05 17:12:40 BST — CORRECTION to my 17:02:50 rounding
+    ruling: OPTION (B); …`: a `model_call` step also declares `result_type`, `decimal` or
+    `money_minor`, and a step stored without it is `decimal`. Its value is the model's
+    prediction as an exact decimal, and it is never rounded at the step. `money_minor` is a
+    type for FR-227's checks, not a rounding; every rounding is an `output` step's (FR-226).)*
+  - **T2, appended to FR-227's row (`03:113`):** *(Amended 2026-10-05, the same entry: a
+    `model_call` step's `result_type` types the names it produces for this check. A
+    `money_minor` `model_call` whose value feeds an output declared with a type other than
+    `decimal` or `money_minor` is refused with `RATING_TYPE_MISMATCH`.)*
+  - DP-5 (ii)'s ruling may add a code to the error catalogue; it is applied from that
+    ruling's text.
 
 ### Task 7: The gate and the ledger (items 10, 11)
 
@@ -560,9 +700,11 @@ date and is open.**
 2. **The second pinning test** (`test_rating_score.py:429`) is flipped, and FR-255 keeps a
    real vehicle (item 3), so the flip loses no coverage.
 3. **Every open design choice is a DP with an owner** (DP-1 to DP-4). No spec text is
-   written without a ruling (Task 6). *(Dated note, 2026-10-05: DP-1 to DP-4 ruled; DP-5
-   added, open, for the two mechanisms the rulings need. Each anchor added on that date was
-   read at `137bc817`, which was still `origin/main`.)*
+   written without a ruling (Task 6). *(Dated note, 2026-10-05: DP-1 to DP-4 ruled, DP-4
+   corrected to option (B) at 17:12:40 BST; DP-5 added, its part (i) settled by that
+   correction and part (ii) open. Task 6's T1 and T2 are drafts for acceptance. The anchors
+   added at 17:08:21 were read at `137bc817`, and those added at 17:16:07 at `4d3be141`
+   (`origin/main` after #1127, which touched only `docs/`).)*
 4. **Repository literals read at `137bc817`:** every line in §"Task 0 at planning time" and
    §"Write set"; PL 9649's `ResolvedArtifact.factors` and Task 3b Step 3 read on its branch
    at `df8ba756`.
