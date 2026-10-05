@@ -5,7 +5,7 @@ title: A peril structure has no approval path and the compile resolver has no pe
 status: active
 created: 2026-09-30
 owner: auditor
-tree: 65b334792e65e1dd93ce4c94f3d6cbc0d3b37f0b
+tree: 47d770e8fcbd2410fa101019ed8cf3aae69a1baa
 corrected_by: []
 relates: [WK-1178, FR-237, FR-351, FR-386]
 ---
@@ -19,19 +19,19 @@ perils: LOW FD with a named owner and a tripwire" (`~/gi-pricing-plan.local/chan
 nothing prices wrongly. **A latent dependency, not a live defect.** Two facts hold at `9f63d0fe` and `65b33479`:
 
 1. **Nothing writes `approved` for a peril structure.** `platform/perils.py` writes only `DRAFT` (`:124`),
-   `RECONCILED` (`:256`) and `REVIEW` (`:338`); no other backend code sets `PerilStructureStatus.APPROVED`, and
+   `RECONCILED` (`:256`) and `REVIEW` (`:338`) (re-read at `47d770e8`: unchanged); no other backend code sets `PerilStructureStatus.APPROVED`, and
    `api/approvals.py`'s `_carry_to_the_artifact` has no perils call. Yet **Peril Structure is a Governed Artifact**
    (`06-governance.md:64`).
 2. **The compile resolver has no peril branch.** `_Resolver.resolve` in `backend/src/app/platform/rating_versions.py`
-   (`:417`) handles rating_algorithm, model, rate_table, reference_table and custom_objective and then raises
-   `NOT_FOUND` (`:521-525`) "has no backend table yet (Phase 2); a compile cannot embed it." **That message is stale:** the table exists
-   (`PerilStructureRow`, `backend/src/app/db/models.py:1577`); it should be corrected when the branch lands. So a rating version pinning
-   `peril_structure:<slug>@<n>` in `pins.models` (`03:355`) cannot compile, whatever the row's status.
+   (`:446`, re-pointed by symbol at `47d770e8`) handles rating_algorithm, model, rate_table, reference_table and custom_objective and then raises
+   `NOT_FOUND` (the `raise PlatformError("NOT_FOUND", …)` ending the method, `:550-556`) "has no backend table yet (Phase 2); a compile cannot embed it." **That message is stale:** the table exists
+   (`PerilStructureRow`, `backend/src/app/db/models.py:1618`); it should be corrected when the branch lands. So a rating version pinning
+   `peril_structure:<slug>@<n>` in `pins.models` (`03-rating-engine.md:377-379`, the pins example) cannot compile, whatever the row's status.
 
 The two facts cancel today, but the guard is thin. **Today the missing resolver branch keeps every peril pin out of a compiled
 bundle.** When the resolver gains a `peril_structure` branch, `compile_bundle`'s maturity loop
-(`pricing_core/rating/compile.py:466-480`; `_MATURITY_CHECK_EXEMPT = {"rate_table", "rating_algorithm"}` at `:314`) requires
-`approved`, `live` or `retired` (`:287`) for a peril pin. With a planted resolver branch, `review` and `reconciled` rows then
+(`pricing_core/rating/compile.py:622-630`, the `all_refs` loop in `compile_bundle`; `_MATURITY_CHECK_EXEMPT = frozenset({"rate_table", "rating_algorithm"})` at `:431`) requires
+`approved`, `live` or `retired` (`_APPROVED_OR_BETTER`, `:404`) for a peril pin. With a planted resolver branch, `review` and `reconciled` rows then
 fail `PIN_NOT_APPROVED` at that loop, and **only a forced `approved` row compiles** (auditor-close1255's live check of the
 planted branch, which took the `approved` row from `NOT_FOUND` to success). So `NOT_FOUND` is not the only guard: the hazard is
 the resolver branch **plus** an `approved` written by hand or by a path outside the workflow, and with no approval path the only
@@ -57,7 +57,7 @@ compile RV pinning peril_structure:ps@3 (row status=approved) -> failed NOT_FOUN
 All three fail, including the forced `approved` row. No score was run: compile fails first.
 
 **Maturity loop (read from source, not run).** `peril_structure` is not in `_MATURITY_CHECK_EXEMPT`
-(`compile.py:314`); `_APPROVED_OR_BETTER = frozenset({"approved", "live", "retired"})` (`:287`). A resolver that
+(`compile.py:431`); `_APPROVED_OR_BETTER = frozenset({"approved", "live", "retired"})` (`:404`). A resolver that
 returned a peril would be refused with `PIN_NOT_APPROVED` unless its status was one of those.
 
 **Writers of `approved`.** Predicates, at `9f63d0fe`:
@@ -65,12 +65,12 @@ returned a peril would be refused with `PIN_NOT_APPROVED` unless its status was 
 - `git grep -n "PerilStructureStatus\.\(APPROVED\|SUPERSEDED\)" -- backend packages examples scripts` finds only
   `packages/model-schema/src/model_schema/perils.py:128-131`, `:421` (the transition table) and
   `packages/model-schema/tests/test_perils.py:409-410`. No backend writer.
-- `git grep -n "peril" -- backend/src/app/api/approvals.py` finds `:47` (import), `:327` (a comment) and `:454`
-  (the submit-time resolver `perils_service.resolve_artifact_ref`). `_carry_to_the_artifact` (`:~500-525`) calls
-  modelling, objectives, metrics and rating_versions only.
+- `git grep -n "peril" -- backend/src/app/api/approvals.py` finds `:48` (import), `:345` (a comment) and `:472`
+  (the submit-time resolver `perils_service.resolve_artifact_ref`; **a reference check, not a carry**, as at the earlier tree). `_carry_to_the_artifact` (`approvals.py:512`) calls
+  modelling, objectives, metrics and rating_versions only; the `:520` comment says a Peril Structure gains a lifecycle "with the slice that builds" it.
 - `git grep -n "peril_structures" -- backend/alembic examples scripts`, filtered for `status`, `approved` or
   `insert`, finds nothing.
-- The database `CHECK` (`backend/src/app/db/models.py` ~`:1610`) allows `approved`, so a manual `UPDATE` can set it,
+- The database `CHECK` (`backend/src/app/db/models.py:1671`, the `PerilStructureRow` status `CHECK`) allows `approved`, so a manual `UPDATE` can set it,
   as the test's direct insert did.
 
 ## Disposition
@@ -109,3 +109,5 @@ Not yet decided. The proposal above is the auditor's; the lead adopts, amends or
 11:25:33 BST has already agreed a LOW FD, the owner rule and the tripwire acceptance.
 
 *Disclosure: drafted under working id 9995; minted at the merge, when the id is re-read against `origin/main`.*
+
+Amended 2026-10-05 before mint: the code cites above were re-pointed by symbol at `origin/main` `47d770e8` (`_MATURITY_CHECK_EXEMPT` was `:314`, now `compile.py:431`; `_APPROVED_OR_BETTER` `:287` → `:404`; the compile maturity loop `:466-480` → `:622-630`; `_Resolver.resolve` `:417` → `:446`; the stale "no backend table yet (Phase 2)" `NOT_FOUND` is still there at `rating_versions.py:550-556`; `PerilStructureRow` `:1577` → `:1618`; the approvals cites shifted by the lines above). Re-read and unchanged: `perils.py` writes only `DRAFT`/`RECONCILED`/`REVIEW` (`:124`, `:256`, `:338`); `api/approvals.py` has no peril branch in `_carry_to_the_artifact`; no tripwire test exists in `backend/tests` (`git grep -n -i peril -- backend/tests` filtered for "tripwire" or "resolver" is empty). The finding holds and is not covered by a later change.

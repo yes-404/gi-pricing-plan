@@ -86,21 +86,21 @@ ever produces the first one directly. So:
   that rung's own value in place — see `runtime._constraint_node`), annotated with every
   firing clamp's `reason_code` in `operation.applied`, matching `03:412`'s worked example
   (`{"kind": "none", "applied": []}` when nothing fired).
-- **The operation `kind` per rung is a fixed table** (`_MULTIPLY_RUNGS`, `_ADD_RUNGS`
-  below), matching `03:404-414`'s own worked example: expense/commission/profit/
-  optimisation/instalment loadings are relativities (`multiply`); IPT and fees is a flat
-  amount (`add`); the terminal rung is the algorithm's own declared rounding (`round`). A
-  rung whose raw value is unchanged from the previous present rung is `none` — a
-  checkpoint, not a computation (`office_premium` and `constraints`, ordinarily) — *unless*
-  its value differs, in which case it degrades to `multiply` so a simpler algorithm that
-  skips the named loading rungs still reconciles correctly.
-- **The recorded `factor`/`amount_minor` is derived from the ratio or delta between
-  consecutive present rungs, quantized to 4 decimal places, and then *reapplied* via
-  `pricing_core.money.apply_factor`/addition to produce `value_minor`.** This is
-  deliberate and important: `value_minor` is the *output* of applying the recorded
-  operation, never an independently-sourced number the operation is asked to explain after
-  the fact — so the ladder reconciles **by construction**, to the penny, and not merely
-  according to `reconcile_ladder`'s own (shallow — first-rung and int-ness only) check.
+- **Each rung records the engine's exact value and the operation it really applied
+  (`RL-1329`).** `unrounded_minor` is the engine's own exact decimal for the rung's source,
+  read across the binding with `string()` (`to_wire`), never the float (FR-273). `value_minor`
+  is that value rounded once with the rung's own `RoundSpec`, never computed from another
+  rung's rounded value. The operation is recovered from the two unrounded values
+  (`ladder.recover_operation`): the exact factor, else the exact divisor, else a short
+  terminating operand within the engine's precision, else an exact added amount. A rung whose
+  value is unchanged is `none` (a checkpoint, such as `office_premium`), and `payable_premium`,
+  when it is not first, is `round`. A binding clamp is a `clamp` operation on `constraints`,
+  and the rung before it carries the value before the clamp.
+- **The ladder is checked, on every scored quote, in every Environment, and never sampled.**
+  `reconcile_ladder` (`RL-1329` §5, R0 to R4) takes its inputs from the evaluated result and
+  the algorithm, never from the ladder it checks, and replays the recorded operations on the
+  unrounded chain with one rounding at the payable. `build_scoring_result` refuses a quote
+  whose ladder does not reconcile with `LADDER_RECONCILIATION_FAILED` (`RL-1346`).
 
 **`on_violation="error"` is deliberately left undesigned, matching `runtime.to_wire`'s own
 precedent.** `03-rating-engine.md`'s constraint-step table row names three modes but
@@ -187,8 +187,8 @@ import re
 import time
 from collections.abc import Mapping, Sequence
 from datetime import date, datetime
-from decimal import Decimal
-from typing import Any, NoReturn
+from decimal import Decimal, InvalidOperation
+from typing import Any, Literal, NoReturn
 
 import polars as pl
 
@@ -197,14 +197,13 @@ from model_schema.rating import (
     RatingConstraintStep,
     RatingInputType,
     RatingLookupStep,
-    RatingOutputStep,
     RatingTableStep,
 )
 from model_schema.refs import ArtifactRef
 from model_schema.scoring import (
     LadderOperation,
+    LadderRounding,
     LadderRung,
-    LadderRungName,
     QuoteContext,
     QuoteContextOptions,
     ScoringOutcome,
@@ -212,42 +211,37 @@ from model_schema.scoring import (
     Trace,
     TraceStep,
 )
-from pricing_core.money import ROUNDING_MODES, RoundingMode, apply_factor, reconcile_ladder
 from pricing_core.progress import ProgressCallback
-from pricing_core.rating.runtime import MODEL_CALL_ERROR_KEY, CompiledBundle
+from pricing_core.rating.ladder import (
+    RUNG_ORDER,
+    ClampReading,
+    LadderInputs,
+    binding_side,
+    ladder_violations,
+    output_steps_by_name,
+    reconcile_ladder,
+    recover_operation,
+    round_once,
+    rung_output_name,
+)
+from pricing_core.rating.runtime import (
+    MODEL_CALL_ERROR_KEY,
+    CompiledBundle,
+    clamp_keys,
+    exact_key,
+)
 from pricing_core.safe_error import CodedError, safe_error_detail
 
 __all__ = ["build_scoring_result", "score_batch", "score_one"]
 
-#: FR-247/252's fixed rung sequence — `scoring.schema.json`'s own `LadderRung.rung`
-#: enum order, which post-dates and supersedes FR-247's prose order by adding
-#: `instalment_loading` (FR-252). The ladder's order is fixed by the platform; it is
-#: never derived from an algorithm's own step order.
-_RUNG_ORDER: tuple[LadderRungName, ...] = (
-    "risk_premium",
-    "expense_loading",
-    "commission",
-    "profit_loading",
-    "office_premium",
-    "optimisation_adjustment",
-    "constraints",
-    "instalment_loading",
-    "ipt_and_fees",
-    "payable_premium",
-)
-
-#: See the module docstring's "Ladder construction" note for why these two sets exist and
-#: what a rung outside them defaults to.
+#: The rungs that are relativities: an unchanged value on one of them is recorded as x1, on any
+#: other rung as `none` (see `_build_ladder`).
 _MULTIPLY_RUNGS = frozenset(
     {
         "expense_loading", "commission", "profit_loading",
         "optimisation_adjustment", "instalment_loading",
     }
 )
-_ADD_RUNGS = frozenset({"ipt_and_fees"})
-
-_DEFAULT_ROUND_MODE: RoundingMode = "half_even"
-_DEFAULT_ROUND_DP = 0
 
 #: FR-252's second refusal: a `QuoteContext` asking for a payment schedule, an APR
 #: figure or a credit-agreement term is refused, never answered approximately. `03` names
@@ -304,6 +298,14 @@ _SCORING_RESULT_TO_BATCH_COLUMN: dict[str, str] = {
 #: this is always `None`) and `timing_ms` (per-call wall-clock timing that means nothing
 #: aggregated across a chunk, and `score_batch` does not set it the way `score_one` does).
 _SCORING_RESULT_BATCH_EXCLUDED_FIELDS = frozenset({"trace", "timing_ms"})
+
+
+#: `Trace.ladder_check_version` of a trace this code builds: `RL-1329` §5's predicate over
+#: `RL-1329`'s ladder shape (absent or 1 is the shallow pre-ruling check).
+_LADDER_CHECK_VERSION = 2
+
+#: `RL-1346`: what a ladder that does not reconcile raises.
+_LADDER_REFUSAL_CODE = "LADDER_RECONCILIATION_FAILED"
 
 
 def _raise_named(code: str, message: str) -> NoReturn:
@@ -466,36 +468,67 @@ def _check_lookup_misses(algorithm: RatingAlgorithm, result: Mapping[str, Any]) 
                     )
 
 
+def _failing_node(exc: RuntimeError) -> str | None:
+    """The `nodeId` the engine's JSON error carries (the failing step's id), if it has one."""
+    try:
+        detail = json.loads(str(exc))
+    except ValueError:
+        return None
+    node = detail.get("nodeId") if isinstance(detail, dict) else None
+    return node if isinstance(node, str) else None
+
+
 def _reraise_engine_failure(algorithm: RatingAlgorithm, exc: RuntimeError) -> NoReturn:
     """A finding, not merely a fallback: a `table`/`lookup` miss whose `produces` name is
-    then referenced by a downstream `expression` step crashes `async_evaluate()` itself
-    (the engine's own "undefined variable" `NodeError`) **before any `result` is
-    returned**, so `_check_lookup_misses`'s ordinary post-evaluation presence check never
-    gets to run — verified live, reproduced by this module's own test suite. `model_call`
-    failures no longer reach here at all (they are sentinelled — see the module
-    docstring), so by the time this is called the cause is, with high confidence, exactly
-    this: an unguarded on_miss='error' table/lookup step. This is reported as the
-    corresponding typed code with the original engine error preserved in the message
-    (rather than a bare re-raise of an untyped `RuntimeError`, which would violate
-    FR-255's "typed" requirement), and it is honest about being an inference: a
-    correctness gap for a later slice to close by making the wire translation itself
-    fail gracefully, not by parsing engine error strings more cleverly.
+    then referenced by a downstream step crashes `async_evaluate()` itself (the engine's
+    own "undefined variable" `NodeError`) **before any `result` is returned**, so
+    `_check_lookup_misses`'s ordinary post-evaluation presence check never gets to run —
+    verified live, reproduced by this module's own test suite. `model_call` failures no
+    longer reach here at all (they are sentinelled — see the module docstring).
+
+    **Which code (RL-1313 DP-G4).** The engine's error is JSON and its `nodeId` is the
+    failing step's id, for an expression, a condition and a clamp bound alike. A miss code is
+    reported only when that step *directly consumes* the output of an `on_miss="error"`
+    `table` (`RATE_TABLE_MISS`) or `lookup` (`REFERENCE_LOOKUP_MISS`) step. Any other
+    engine failure — including one whose `nodeId` is missing or unparseable, and the former
+    bare re-raise — is `RATING_EVALUATION_FAILED`, so no untyped `RuntimeError` escapes
+    (FR-255).
+
+    **The stated limit, pinned by `test_the_stated_residual_still_reports_the_miss_code`.**
+    A failing step that itself directly consumes such an output, and fails for another reason,
+    still reports the miss code: the engine's error has the same shape in both cases. That is
+    a wrong diagnosis on a refused quote, never a silent price. Closing it needs the
+    wire-level change that would make the translation itself fail gracefully, which is outside
+    this function.
     """
-    has_table_miss = any(
-        isinstance(s, RatingTableStep) and s.on_miss == "error" for s in algorithm.steps
-    )
-    has_lookup_miss = any(
-        isinstance(s, RatingLookupStep) and s.on_miss == "error" for s in algorithm.steps
-    )
-    if has_table_miss or has_lookup_miss:
-        code = "RATE_TABLE_MISS" if has_table_miss else "REFERENCE_LOOKUP_MISS"
-        _raise_named(
-            code,
-            "the engine failed evaluating a downstream step, most likely because an "
-            f"on_miss='error' step found no matching row and a later expression "
-            f"referenced its output (FR-255); the engine error was a {type(exc).__name__}",
+    node = _failing_node(exc)
+    step = next((s for s in algorithm.steps if s.step_id == node), None)
+    consumed = set(_as_list(step.consumes)) if step is not None else set()
+
+    tables = [s for s in algorithm.steps if isinstance(s, RatingTableStep) and s.on_miss == "error"]
+    lookups = [
+        s for s in algorithm.steps if isinstance(s, RatingLookupStep) and s.on_miss == "error"
+    ]
+
+    def consumes_output_of(steps: Sequence[RatingTableStep | RatingLookupStep]) -> bool:
+        return any(consumed & set(_as_list(s.produces)) for s in steps)
+
+    if consumes_output_of(tables):
+        code = "RATE_TABLE_MISS"
+    elif consumes_output_of(lookups):
+        code = "REFERENCE_LOOKUP_MISS"
+    else:
+        code = "RATING_EVALUATION_FAILED"
+    _raise_named(
+        code,
+        f"the engine failed evaluating step {step.step_id if step else None!r} (FR-255); "
+        + (
+            "an on_miss='error' step it consumes most likely found no matching row"
+            if code != "RATING_EVALUATION_FAILED"
+            else "the failure is not a table or lookup miss"
         )
-    raise exc
+        + f"; the engine error was a {type(exc).__name__}",
+    )
 
 
 def _apply_constraints(
@@ -532,48 +565,65 @@ def _apply_constraints(
 # ---------------------------------------------------------------------------
 
 
-def _round_minor(raw: float, mode: RoundingMode) -> int:
-    """`Decimal(repr(raw))`, never `Decimal(raw)` — the latter exposes the float's exact
-    binary expansion (`Decimal(1.15)` is `1.1499999999999999...`), which is not what
-    FR-273's "integer minor unit" crossing means. `repr()` is Python's own
-    shortest-round-trip form, which is what the engine's float64 arithmetic actually meant
-    to produce (Task 1.3 measured the cross-implementation noise at ~2e-13 relative,
-    utterly negligible against one minor unit)."""
-    return int(Decimal(repr(raw)).quantize(Decimal(1), rounding=ROUNDING_MODES[mode]))
+def _exact(result: Mapping[str, Any], name: str) -> Decimal | None:
+    """The engine's exact decimal for `name`, read through the `string()` node `to_wire`
+    generates (`RL-1329` §2 step 1) — never the float in `result[name]`, which has already
+    lost digits and whose conversion differs from the engine's own."""
+    raw = result.get(exact_key(name))
+    if raw is None:
+        return None
+    try:
+        return Decimal(str(raw))
+    except InvalidOperation:  # `string(null)` is the text "null": a null output, not a number
+        return None
 
 
-def _output_steps_by_name(algorithm: RatingAlgorithm) -> dict[str, RatingOutputStep]:
-    return {
-        step.output_name: step for step in algorithm.steps if isinstance(step, RatingOutputStep)
-    }
-
-
-def _build_ladder(
+def _clamp_readings(
     algorithm: RatingAlgorithm, result: Mapping[str, Any], clamp_reason_codes: Sequence[str]
-) -> tuple[list[LadderRung], dict[str, int]]:
-    """Returns `(rungs, value_minor_by_rung)` — the second lets `_build_outputs` reuse a
-    rung's already-rounded value rather than re-deriving it from `result`."""
-    output_steps = _output_steps_by_name(algorithm)
-    rungs: list[LadderRung] = []
-    by_rung: dict[str, int] = {}
-    prev_minor: int | None = None
-
-    for rung in _RUNG_ORDER:
-        if rung == "constraints":
-            if prev_minor is None:
-                continue
-            rungs.append(
-                LadderRung(
-                    rung="constraints",
-                    value_minor=prev_minor,
-                    operation=LadderOperation(kind="none", applied=list(clamp_reason_codes)),
-                )
-            )
-            by_rung["constraints"] = prev_minor
+) -> list[ClampReading]:
+    """What every clamp step read from the engine (`before`, each bound present), in step
+    order, with whether the disposition lists its reason code."""
+    readings: list[ClampReading] = []
+    for step in algorithm.steps:
+        if not (
+            isinstance(step, RatingConstraintStep)
+            and step.on_violation == "clamp"
+            and _as_list(step.produces)
+        ):
             continue
+        before_key, min_key, max_key = clamp_keys(step.step_id)
+        before = result.get(before_key)
+        if before is None:
+            continue
+        minimum = result.get(min_key)
+        maximum = result.get(max_key)
+        readings.append(
+            ClampReading(
+                step_id=step.step_id,
+                reason_code=step.reason_code,
+                source=str(_as_list(step.produces)[0]),
+                before=Decimal(str(before)),
+                minimum=None if minimum is None else Decimal(str(minimum)),
+                maximum=None if maximum is None else Decimal(str(maximum)),
+                in_disposition=step.reason_code in clamp_reason_codes,
+            )
+        )
+    return readings
 
-        step = output_steps.get(f"{rung}_minor")
-        if step is None:
+
+def _ladder_inputs(
+    algorithm: RatingAlgorithm, result: Mapping[str, Any], clamp_reason_codes: Sequence[str]
+) -> LadderInputs:
+    """The reconciliation's independent inputs (`RL-1329` §5): `E(rung)` and `D(rung)` for
+    every rung an output step declares, and what each clamp read — all from the evaluated
+    result and the algorithm, never from the ladder being checked (`FD-1336` limb 1)."""
+    output_steps = output_steps_by_name(algorithm)
+    exact: dict[str, Decimal] = {}
+    rounding: dict[str, LadderRounding] = {}
+    sources: dict[str, str] = {}
+    for rung in RUNG_ORDER:
+        step = output_steps.get(rung_output_name(rung))
+        if rung == "constraints" or step is None:
             continue
         if step.rounding.dp != 0:
             raise NotImplementedError(
@@ -586,63 +636,125 @@ def _build_ladder(
             raise NotImplementedError(
                 f"output step {step.step_id!r} (rung {rung!r}) consumes nothing to report"
             )
-        source_key = str(source[0])
-        if source_key not in result:
+        value = _exact(result, str(source[0]))
+        if value is None:
             continue
-        raw = float(result[source_key])
-        mode: RoundingMode = step.rounding.mode
+        exact[rung] = value
+        rounding[rung] = LadderRounding(mode=step.rounding.mode, dp=0)
+        sources[rung] = str(source[0])
 
-        if prev_minor is None:
-            value_minor = _round_minor(raw, mode)
-            operation = None
-        elif rung == "payable_premium":
-            value_minor = _round_minor(raw, mode)
-            operation = LadderOperation(kind="round", mode=mode, dp=_DEFAULT_ROUND_DP)
-        elif prev_minor == 0:
-            value_minor = _round_minor(raw, mode)
-            operation = LadderOperation(kind="add", amount_minor=value_minor - prev_minor)
-        elif rung in _ADD_RUNGS:
-            target = _round_minor(raw, mode)
-            amount = target - prev_minor
-            value_minor = prev_minor + amount
-            operation = LadderOperation(kind="add", amount_minor=amount)
-        elif rung in _MULTIPLY_RUNGS or _round_minor(raw, mode) != prev_minor:
-            factor = (Decimal(repr(raw)) / Decimal(prev_minor)).quantize(Decimal("0.0001"))
-            value_minor = apply_factor(prev_minor, factor, mode)
-            operation = LadderOperation(
-                kind="multiply", factor=str(factor), mode=mode, dp=_DEFAULT_ROUND_DP
-            )
+    constraints_at = RUNG_ORDER.index("constraints")
+    before_constraints = [r for r in RUNG_ORDER[:constraints_at] if r in exact]
+    clamp_source = sources[before_constraints[-1]] if before_constraints else None
+    readings = _clamp_readings(algorithm, result, clamp_reason_codes)
+    binding_first = next(
+        (r for r in readings if binding_side(r) is not None and r.source == clamp_source), None
+    )
+    constraints_exact: Decimal | None = None
+    if readings and clamp_source is not None:
+        constraints_exact = _exact(result, clamp_source)
+        if binding_first is not None:
+            # the clamped rung carries the value before the first binding clamp (§2 step 5)
+            exact[before_constraints[-1]] = binding_first.before
+    return LadderInputs(
+        exact=exact,
+        rounding=rounding,
+        constraints_exact=constraints_exact,
+        clamp_source=clamp_source,
+        clamps=readings,
+    )
+
+
+def _build_ladder(
+    inputs: LadderInputs, clamp_reason_codes: Sequence[str]
+) -> list[LadderRung]:
+    """The Premium Ladder (`RL-1329` §2): each rung carries the engine's exact unrounded
+    value, the operation it applied (recovered from two unrounded values), and its own
+    value rounded **once**. A displayed value is never computed from another rung's."""
+    rungs: list[LadderRung] = []
+    prev: Decimal | None = None
+    prev_rounding: LadderRounding | None = None
+    binding: list[tuple[Literal["min", "max"], Decimal]] = []
+    for reading in inputs.clamps:
+        found = binding_side(reading)
+        if found is not None and reading.source == inputs.clamp_source:
+            binding.append(found)
+
+    for rung in RUNG_ORDER:
+        if rung == "constraints":
+            if prev is None or prev_rounding is None:
+                continue
+            if binding:
+                side, bound = binding[-1]
+                assert inputs.constraints_exact is not None
+                current = inputs.constraints_exact
+                operation = LadderOperation(
+                    kind="clamp",
+                    bound=side,
+                    bound_unrounded_minor=bound,
+                    applied=list(clamp_reason_codes),
+                )
+            else:
+                current = prev
+                operation = LadderOperation(kind="none", applied=list(clamp_reason_codes))
+            rounding = prev_rounding
         else:
-            value_minor = prev_minor
-            operation = LadderOperation(kind="none")
+            if rung not in inputs.exact:
+                continue
+            current = inputs.exact[rung]
+            rounding = inputs.rounding[rung]
+            if prev is None:
+                operation = None
+            elif rung == "payable_premium":
+                operation = LadderOperation(kind="round", mode=rounding.mode, dp=rounding.dp)
+            elif rung == "ipt_and_fees":
+                operation = recover_operation(prev, current, force_add=True)
+            elif current == prev and rung not in _MULTIPLY_RUNGS:
+                operation = LadderOperation(kind="none")
+            else:
+                operation = recover_operation(prev, current)
+        rungs.append(
+            LadderRung(
+                rung=rung,
+                value_minor=round_once(current, rounding),
+                unrounded_minor=current,
+                rounding=rounding,
+                operation=operation,
+            )
+        )
+        prev, prev_rounding = current, rounding
+    return rungs
 
-        rungs.append(LadderRung(rung=rung, value_minor=value_minor, operation=operation))
-        by_rung[rung] = value_minor
-        prev_minor = value_minor
 
-    return rungs, by_rung
+def _build_outputs(algorithm: RatingAlgorithm, result: Mapping[str, Any]) -> dict[str, Any]:
+    """`ScoringResult.outputs` — one entry per `AlgorithmOutput`.
 
-
-def _build_outputs(
-    algorithm: RatingAlgorithm, result: Mapping[str, Any], by_rung: Mapping[str, int]
-) -> dict[str, Any]:
-    """`ScoringResult.outputs` — one entry per `AlgorithmOutput`. A name that is also a
-    ladder rung (`f"{rung}_minor"`) reuses the ladder's own once-rounded value, so the two
-    structures never disagree by a rounding difference; anything else is read straight
-    from the evaluated `result` via its output step's `consumes` name."""
-    output_steps = _output_steps_by_name(algorithm)
+    A rung output (`f"{rung}_minor"`) and any other `money_minor` output is served as the
+    engine's exact `string()` value of its output step's own source, after every step has
+    run, rounded once with that step's own `RoundSpec`: an integer, never the float and
+    never a second rounding (`RL-1329` §4, C2 and S6). So where no clamp binds it equals
+    its ladder rung's `value_minor`, and where a clamp binds on it it is the post-clamp
+    value (the bound), as it always was. Anything else — a `decimal` output, for one
+    (`RL-1343`) — is read straight from the evaluated `result`, unchanged.
+    """
+    output_steps = output_steps_by_name(algorithm)
     outputs: dict[str, Any] = {}
     for declared in algorithm.outputs:
         step = output_steps.get(declared.name)
         if step is None:
             continue
-        rung_name = declared.name.removesuffix("_minor")
-        if rung_name in by_rung:
-            outputs[declared.name] = by_rung[rung_name]
-            continue
         source = _as_list(step.consumes)
-        if source and str(source[0]) in result:
-            outputs[declared.name] = result[str(source[0])]
+        if not source:
+            continue
+        name = str(source[0])
+        is_rung = declared.name.removesuffix("_minor") in RUNG_ORDER
+        exact = _exact(result, name) if (is_rung or declared.type == "money_minor") else None
+        if exact is not None:
+            outputs[declared.name] = round_once(
+                exact, LadderRounding(mode=step.rounding.mode, dp=step.rounding.dp)
+            )
+        elif name in result:
+            outputs[declared.name] = result[name]
     return outputs
 
 
@@ -672,7 +784,6 @@ def _build_trace(
     rating_version_ref: ArtifactRef,
     bundle_hash: str,
     quote_id: str | None,
-    ladder_reconciled: bool,
 ) -> Trace:
     step_meta = {step.step_id: step for step in algorithm.steps}
     entries = sorted(engine_trace.values(), key=lambda entry: entry.get("order", 0))
@@ -704,7 +815,10 @@ def _build_trace(
         bundle_hash=bundle_hash,
         quote_id=quote_id,
         steps=steps,
-        ladder_reconciled=ladder_reconciled,
+        # Every trace is built after the check passed (`build_scoring_result` refuses a ladder
+        # that does not reconcile): the verdict is always true, by FR-248's full check.
+        ladder_reconciled=True,
+        ladder_check_version=_LADDER_CHECK_VERSION,
     )
 
 
@@ -730,18 +844,20 @@ def build_scoring_result(
     _check_lookup_misses(bundle.algorithm, result)
     decline_reasons, clamp_reason_codes = _apply_constraints(bundle.algorithm, result)
 
-    ladder, by_rung = _build_ladder(bundle.algorithm, result, clamp_reason_codes)
-    outputs = _build_outputs(bundle.algorithm, result, by_rung)
-
-    ladder_steps: list[tuple[str, int]] = [(rung.rung, rung.value_minor) for rung in ladder]
-    risk_premium_minor = ladder_steps[0][1] if ladder_steps else 0
-    ladder_reconciled = reconcile_ladder(risk_premium_minor, ladder_steps)
+    ladder_inputs = _ladder_inputs(bundle.algorithm, result, clamp_reason_codes)
+    ladder = _build_ladder(ladder_inputs, clamp_reason_codes)
+    outputs = _build_outputs(bundle.algorithm, result)
+    if not reconcile_ladder(ladder, ladder_inputs):
+        # RL-1346: a quote whose ladder does not reconcile is not served, on every path and in
+        # every Environment, whatever the trace-sampling rate. The one raise site. The message
+        # holds clause, rung names and derived minor-unit differences, and no quote input.
+        _raise_named(_LADDER_REFUSAL_CODE, "; ".join(ladder_violations(ladder, ladder_inputs)))
 
     trace_obj: Trace | None = None
     if engine_trace is not None:
         trace_obj = _build_trace(
             bundle.algorithm, engine_trace, rating_version_ref, bundle.content_hash,
-            ctx.quote_id, ladder_reconciled,
+            ctx.quote_id,
         )
 
     outcome: ScoringOutcome = "declined" if decline_reasons else "quoted"
@@ -927,7 +1043,11 @@ def _row_to_ctx(row: Mapping[str, Any]) -> QuoteContext:
 
 
 def _score_context_sync(
-    bundle: CompiledBundle, ctx: QuoteContext, rating_version_ref: ArtifactRef
+    bundle: CompiledBundle,
+    ctx: QuoteContext,
+    rating_version_ref: ArtifactRef,
+    *,
+    trace: bool = False,
 ) -> ScoringResult:
     """Score one context on the synchronous `evaluate()` path (RL-868): `score_one`'s own
     pre-checks, one engine call, and the shared `build_scoring_result` tail (RL-858).
@@ -947,11 +1067,15 @@ def _score_context_sync(
         "effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **ctx.inputs
     }
     try:
-        out = bundle.decision.evaluate(context)
+        out = bundle.decision.evaluate(context, {"trace": trace}) if trace else (
+            bundle.decision.evaluate(context)
+        )
     except RuntimeError as exc:
         _reraise_engine_failure(algorithm, exc)
 
-    return build_scoring_result(bundle, ctx, rating_version_ref, out["result"], None)
+    return build_scoring_result(
+        bundle, ctx, rating_version_ref, out["result"], out.get("trace") if trace else None
+    )
 
 
 def _score_batch_row(bundle: CompiledBundle, row: Mapping[str, Any]) -> dict[str, Any]:

@@ -108,9 +108,14 @@ def _census() -> dict[_Key, frozenset[str]]:
 #: input-free). A quote-input code's message states a count, a threshold or a ref, never a value.
 _SITES: dict[_Key, tuple[frozenset[str], str]] = {
     ("backend/src/app/api/score.py", "_as_platform_error", _DYNAMIC): (
-        frozenset({"_PER_QUOTE_STATUS", "code.replace('_', ' ').title()", "detail or None"}),
+        frozenset({
+            "_PER_QUOTE_STATUS", "code.replace('_', ' ').title()", "detail or None",
+            "_LADDER_REFUSAL_STATUS", "detail", "_LADDER_REFUSAL_NOTE",
+        }),
         "reached only for a `CodedError` (by class): its detail is the input-free coded message, "
-        "and the title is the code",
+        "and the title is the code. The `LADDER_RECONCILIATION_FAILED` branch (RL-1346) adds a "
+        "fixed status and a fixed sentence to `build_scoring_result`'s clause, rung names and "
+        "minor-unit differences",
     ),
     ("backend/src/app/api/score.py", "_naming_side", _DYNAMIC): (
         frozenset({"detail", "problem.status_code", "problem.title"}),
@@ -149,7 +154,7 @@ _SITES: dict[_Key, tuple[frozenset[str], str]] = {
         frozenset({"slug"}),
         "an artifact slug; not a per-quote miss",
     ),
-    ("backend/src/app/platform/rating_algorithms.py", "_issues_to_error", _DYNAMIC): (
+    ("backend/src/app/platform/rating_algorithms.py", "raise_first_issue", _DYNAMIC): (
         frozenset({"issue.code.replace('_', ' ').title()", "issue.message"}),
         "save-time graph-validation issues about an algorithm's own nodes; no quote is involved",
     ),

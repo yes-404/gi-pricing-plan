@@ -21,7 +21,7 @@ from datetime import datetime
 from typing import Final
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from model_schema.refs import ArtifactRef
 
@@ -34,7 +34,11 @@ __all__ = [
     "ApprovalPolicyEntry",
     "ApprovalRequest",
     "ApprovalStatus",
+    "ApprovalSubmission",
+    "ApprovalWithdrawal",
     "DecisionKind",
+    "PromotionSkip",
+    "promotion_order_refusal",
 ]
 
 
@@ -120,6 +124,33 @@ class ApprovalPolicyEntry(BaseModel):
         default=None, description="Rating Version deployments differ per target environment."
     )
     evidence: tuple[str, ...] = ()
+    skippable_predecessors: tuple[str, ...] = Field(
+        default=(),
+        description=(
+            "Predecessor Environment slugs a deployment into this entry's environment may "
+            "skip (`03` FR-429, RL-1296). Empty by default; valid only on a `deployment` "
+            "entry that names an environment."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _skip_permission_is_only_on_a_qualified_deployment_entry(
+        self,
+    ) -> ApprovalPolicyEntry:
+        """RL-1296 item 5: the skip permission has one home, and it is not the fallback.
+
+        An unqualified entry applies to every environment, so a skip listed there would
+        let any target skip its predecessor; the field is refused unless the entry is the
+        `deployment` entry of one named environment.
+        """
+        if self.skippable_predecessors and (
+            self.artifact_type != "deployment" or self.environment is None
+        ):
+            raise ValueError(
+                "skippable_predecessors is valid only on a `deployment` entry that names an "
+                "environment (`06` §4.2, RL-1296)"
+            )
+        return self
 
 
 class ApprovalPolicy(BaseModel):
@@ -198,6 +229,55 @@ class ApprovalPolicy(BaseModel):
         return below
 
 
+class PromotionSkip(BaseModel):
+    """A recorded skip of a predecessor Environment (`03` §4.12, `07` FR-429, RL-1296)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    skipped_environment: str = Field(description="The predecessor Environment's slug.")
+    reason: str = Field(description="Why the order was skipped; never empty after trimming.")
+
+    @field_validator("reason")
+    @classmethod
+    def _reason_is_not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("a promotion skip needs a reason that is not empty after trimming")
+        return value
+
+
+def promotion_order_refusal(
+    entry: ApprovalPolicyEntry | None,
+    *,
+    target: str,
+    predecessor: str | None,
+    predecessor_deployed: bool,
+    skip: PromotionSkip | None,
+) -> str | None:
+    """`07` FR-429's one predicate: `None` when the order holds, otherwise why not.
+
+    Satisfied when the target has no predecessor or the predecessor is deployed. Otherwise it
+    is satisfied only by a skip that names the predecessor, carries a reason, and rests on an
+    `entry` that names this `target` and lists the predecessor in `skippable_predecessors`.
+    The `entry.environment == target` test is hardening (auditor-plans F8): an unqualified
+    entry that somehow carried the field grants nothing. It reads only its arguments, so `06`
+    receives deployment facts from its caller and imports nothing from `03` (DEP-1).
+    """
+    if predecessor is None or predecessor_deployed:
+        return None
+    where = f"{target!r} requires a successful deployment to {predecessor!r} first"
+    if skip is None:
+        return f"{where}, and no skip was given"
+    if skip.skipped_environment != predecessor:
+        return f"{where}; the skip names {skip.skipped_environment!r}, not {predecessor!r}"
+    if not skip.reason.strip():
+        return f"{where}; the skip of {predecessor!r} has no reason"
+    if entry is None or entry.environment != target:
+        return f"{where}; no deployment policy entry for {target!r} permits a skip"
+    if predecessor not in entry.skippable_predecessors:
+        return f"{where}; the policy for {target!r} does not permit skipping {predecessor!r}"
+    return None
+
+
 #: The defaults `06` §4.2 documents. A workspace may edit them; it starts here.
 DEFAULT_POLICY: Final[ApprovalPolicy] = ApprovalPolicy(
     policies=(
@@ -257,8 +337,48 @@ DEFAULT_POLICY: Final[ApprovalPolicy] = ApprovalPolicy(
             approver_roles=("approver",),
             evidence=("structural_diff", "regression_run", "dislocation_run"),
         ),
+        # Added 2026-10-03 (WK-674 Slice 2, RL-886). `06` §4.2 shows this entry and §3.3's
+        # floor names `deployment`, but the code had no entry, so `submit` refused a
+        # Deployment Request with "no approval policy for this artifact type". The
+        # `environment` is an Environment's slug (`07` §4.2).
+        ApprovalPolicyEntry(
+            artifact_type="deployment",
+            environment="prod",
+            approvers_required=1,
+            approver_roles=("deployer",),
+            evidence=("rating_version_approval", "uat_deployment"),
+        ),
     )
 )
+
+
+class ApprovalSubmission(BaseModel):
+    """The body of `POST /api/v1/approval-requests` (`06` §5.1): an artifact put forward.
+
+    Moved here from the API module (WK-674 Slice 2, `PL-1392` Acceptance 16, DP-S2-6 (c)) so the
+    request body is a published shape rather than a class the backend defines. The route's 2xx
+    stays untyped until `FD-1335` Part B (owner FD 9752).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    artifact_ref: str = Field(description="Canonical `{type}:{slug}@{version}` (ID-3).")
+    change_summary: str = Field(min_length=1)
+    environment: str | None = None
+
+
+class ApprovalWithdrawal(BaseModel):
+    """The body of `POST /api/v1/approval-requests/{request_id}/withdraw` (`06` §5.1, FR-357).
+
+    `reason` only. Whether the artifact is live is the server's to derive from the owning
+    module's rows (`PL-1392` Task 6, C11): a field the client could set was a client asserting
+    "not live". Moved here from the API module for `ApprovalSubmission`'s reason; the route's
+    2xx stays untyped until `FD-1335` Part B (owner FD 9752).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    reason: str = Field(min_length=1)
 
 
 class ApprovalDecision(BaseModel):

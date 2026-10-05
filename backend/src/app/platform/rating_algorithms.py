@@ -16,48 +16,65 @@ from sqlalchemy import select
 from app.db.models import RatingAlgorithmRow
 from app.db.session import Database
 from app.errors import PlatformError
+from model_schema import GraphCycleError, GraphUnresolvedRefError
 from model_schema.rating import RatingAlgorithm, diff_algorithms
-from pricing_core.rating.compile import validate_algorithm
+from pricing_core.rating.compile import ValidationIssue, validate_algorithm
 
-__all__ = ["create_algorithm", "diff_between", "get_algorithm"]
+__all__ = [
+    "create_algorithm",
+    "diff_between",
+    "get_algorithm",
+    "graph_validation_error",
+    "raise_first_issue",
+]
+
+
+def graph_validation_error(exc: ValidationError, *, artifact: str) -> PlatformError:
+    """Map a shape refusal to its named code, rather than Pydantic's generic 422.
+
+    The shapes enforce the graph invariants (FR-212) in their own validators and raise a
+    typed signal (`GraphCycleError`, `GraphUnresolvedRefError`); the code is chosen by that
+    class, in `exc.errors()`, and never by the message text, which echoes the input.
+    `artifact` names the thing in the two strings that say what it is ("rating algorithm",
+    "sub-graph"); every other string is fixed. One mapping for both artifacts, never a copy.
+    """
+    raised = [
+        error["ctx"]["error"]
+        for error in exc.errors()
+        if error["type"] == "value_error" and "error" in error.get("ctx", {})
+    ]
+    if any(isinstance(error, GraphCycleError) for error in raised):
+        return PlatformError(
+            "RATING_GRAPH_CYCLIC",
+            "Rating graph is cyclic",
+            422,
+            f"A {artifact} is a directed acyclic graph (FR-212).",
+        )
+    if any(isinstance(error, GraphUnresolvedRefError) for error in raised):
+        return PlatformError(
+            "RATING_GRAPH_UNRESOLVED_REF",
+            "Rating graph references an undefined value",
+            422,
+            "Every consumed value is produced by a step (FR-212).",
+        )
+    return PlatformError(
+        "VALIDATION_FAILED",
+        f"{artifact.capitalize()} is invalid",
+        422,
+        str(exc),
+    )
 
 
 def _parse_algorithm(content: dict[str, Any]) -> RatingAlgorithm:
-    """Parse the submitted JSON, mapping a shape-invariant refusal to its named code.
-
-    The `RatingAlgorithm` shape enforces the graph invariants (FR-212) in its own
-    validator; a cyclic graph or an unresolved reference is refused here with the code
-    the spec's §5.1 names, rather than leaking Pydantic's generic 422.
-    """
+    """Parse the submitted JSON, mapping a shape-invariant refusal to its named code."""
     try:
         return RatingAlgorithm.model_validate(content)
     except ValidationError as exc:
-        text = str(exc).lower()
-        if "cycle" in text:
-            raise PlatformError(
-                "RATING_GRAPH_CYCLIC",
-                "Rating graph is cyclic",
-                422,
-                "A rating algorithm is a directed acyclic graph (FR-212).",
-            ) from exc
-        if "undefined value" in text:
-            raise PlatformError(
-                "RATING_GRAPH_UNRESOLVED_REF",
-                "Rating graph references an undefined value",
-                422,
-                "Every consumed value is produced by a step (FR-212).",
-            ) from exc
-        raise PlatformError(
-            "VALIDATION_FAILED",
-            "Rating algorithm is invalid",
-            422,
-            str(exc),
-        ) from exc
+        raise graph_validation_error(exc, artifact="rating algorithm") from exc
 
 
-def _issues_to_error(algorithm: RatingAlgorithm) -> None:
-    """Refuse an algorithm whose deeper checks fail, naming the first issue."""
-    issues = validate_algorithm(algorithm)
+def raise_first_issue(issues: list[ValidationIssue]) -> None:
+    """Refuse on the first validation issue, with its own code; return on an empty list."""
     if not issues:
         return
     issue = issues[0]
@@ -67,6 +84,11 @@ def _issues_to_error(algorithm: RatingAlgorithm) -> None:
         422,
         issue.message,
     )
+
+
+def _issues_to_error(algorithm: RatingAlgorithm) -> None:
+    """Refuse an algorithm whose deeper checks fail, naming the first issue."""
+    raise_first_issue(validate_algorithm(algorithm))
 
 
 async def create_algorithm(

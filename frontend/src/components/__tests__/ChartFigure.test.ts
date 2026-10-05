@@ -1,24 +1,51 @@
 import { render, screen, within } from "@testing-library/vue";
-import { describe, expect, it } from "vitest";
+import type { Component } from "vue";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { Column } from "@/chart-table";
 import { cellUnder } from "@/test-tables";
 
 import ChartFigure from "../ChartFigure.vue";
 
-const COLUMNS = ["Bin", "Predicted", "Actual"] as const;
-const ROWS = [
-  [1, 0.021, 0.023],
-  [2, 0.049, null],
-] as const;
+/**
+ * `render()` infers a generic component's `T` as `unknown`, so it would refuse correctly typed
+ * columns. Type checking of the generic is the `__typecheck__` fixtures' job. This file checks
+ * what renders.
+ */
+const Figure: Component = ChartFigure;
 
-function renderFigure() {
-  return render(ChartFigure, {
-    props: { title: "Lift by decile", columns: COLUMNS, rows: ROWS },
+interface Bin {
+  readonly label: string | null;
+  readonly predicted: number;
+  readonly actual: number | null;
+}
+
+const ROWS: readonly Bin[] = [
+  { label: "Decile 1", predicted: 0.021, actual: 0.023 },
+  { label: "Decile 2", predicted: 0.049, actual: null },
+];
+
+const COLUMNS: readonly Column<Bin>[] = [
+  { key: "bin", label: "Bin", value: (r) => r.label },
+  { key: "predicted", label: "Predicted", value: (r) => r.predicted },
+  { key: "actual", label: "Actual", value: (r) => r.actual },
+];
+
+function renderFigure(
+  columns: readonly Column<Bin>[] = COLUMNS,
+  rows: readonly Bin[] = ROWS,
+) {
+  return render(Figure, {
+    props: { title: "Lift by decile", columns, rows },
     slots: { default: "<div data-testid='chart' />" },
   });
 }
 
-describe("ChartFigure", () => {
+function table(): HTMLElement {
+  return screen.getByRole("table", { name: /lift by decile/i });
+}
+
+describe("ChartFigure (NFR-463)", () => {
   it("renders the chart it was given", () => {
     renderFigure();
     expect(screen.getByTestId("chart")).toBeInTheDocument();
@@ -26,112 +53,88 @@ describe("ChartFigure", () => {
 
   it("gives the table the figure's own name, so a screen reader can tell two apart", () => {
     renderFigure();
-    expect(screen.getByRole("table", { name: /lift by decile/i })).toBeInTheDocument();
+    expect(table()).toBeInTheDocument();
   });
 
-  it("renders one header cell per column and one row per datum", () => {
+  it("renders one header per column, labelled by the descriptor's label, and one row per datum", () => {
     renderFigure();
-    const table = screen.getByRole("table", { name: /lift by decile/i });
-    expect(within(table).getAllByRole("columnheader")).toHaveLength(COLUMNS.length);
-    expect(within(table).getAllByRole("row")).toHaveLength(ROWS.length + 1);
+    const headers = within(table()).getAllByRole("columnheader").map((h) => h.textContent?.trim());
+    expect(headers).toEqual(["Bin", "Predicted", "Actual"]);
+    expect(within(table()).getAllByRole("row")).toHaveLength(ROWS.length + 1);
   });
 
-  it("writes a missing value as an em dash rather than as a zero", () => {
+  it("NFR-463: names each row by its first column, rendered as a row header", () => {
     renderFigure();
-    const table = screen.getByRole("table", { name: /lift by decile/i });
-    const cells = within(within(table).getAllByRole("row")[2] as HTMLElement).getAllByRole("cell");
-    expect(cells[2]).toHaveTextContent("—");
-    expect(cells[2]).not.toHaveTextContent("0");
+    const rowHeaders = within(table()).getAllByRole("rowheader");
+    expect(rowHeaders).toHaveLength(ROWS.length);
+    expect(rowHeaders.map((h) => h.textContent?.trim())).toEqual(["Decile 1", "Decile 2"]);
   });
 
-  it("renders the table for a chart with no data at all, so the emptiness is readable", () => {
-    render(ChartFigure, {
-      props: { title: "Lift by decile", columns: COLUMNS, rows: [] },
-      slots: { default: "<div data-testid='chart' />" },
-    });
-    const table = screen.getByRole("table", { name: /lift by decile/i });
-    expect(within(table).getAllByRole("row")).toHaveLength(1);
-    expect(screen.getByText(/no rows/i)).toBeInTheDocument();
+  it("NFR-463: reads every cell from its own column's accessor", () => {
+    renderFigure();
+    expect(cellUnder(table(), /Decile 1/, "Predicted")).toHaveTextContent("0.021");
+    expect(cellUnder(table(), /Decile 1/, "Actual")).toHaveTextContent("0.023");
+    expect(cellUnder(table(), /Decile 2/, "Predicted")).toHaveTextContent("0.049");
   });
 
-  describe("refuses a row that does not fit its headers", () => {
-    // The guard is dev-only and would otherwise never print a failure in this repository,
-    // which CLAUDE.md §13 says is the same as never having been tested. Each case below is
-    // deliberately broken input, and each asserts the message, not merely that something
-    // threw — the message is the whole value of the guard to a caller transcribing nine
-    // tables by hand.
-    function renderRows(rows: readonly (readonly (string | number | null)[])[]) {
-      return () =>
-        render(ChartFigure, {
-          props: { title: "Lift by decile", columns: COLUMNS, rows },
-          slots: { default: "<div data-testid='chart' />" },
-        });
-    }
+  it("NFR-463: a reordered columns prop moves each value with its heading", () => {
+    // The case the positional shape got wrong: the headers moved and the values stayed.
+    // With descriptors, a value travels with its own column.
+    renderFigure([COLUMNS[0]!, COLUMNS[2]!, COLUMNS[1]!]);
+    expect(cellUnder(table(), /Decile 1/, "Predicted")).toHaveTextContent("0.021");
+    expect(cellUnder(table(), /Decile 1/, "Actual")).toHaveTextContent("0.023");
+  });
 
-    it("throws when a row is short, which would leave a header standing over nothing", () => {
-      expect(renderRows([[1, 0.021]])).toThrow(
-        /row 0 has 2 cells but there are 3 columns \(Bin \| Predicted \| Actual\)/,
-      );
+  it("writes a missing value as an em dash rather than as a zero, in a cell and in a row header", () => {
+    renderFigure(COLUMNS, [...ROWS, { label: null, predicted: 0.06, actual: 0.07 }]);
+    expect(cellUnder(table(), /Decile 2/, "Actual")).toHaveTextContent("—");
+    expect(cellUnder(table(), /Decile 2/, "Actual")).not.toHaveTextContent("0");
+    const rowHeaders = within(table()).getAllByRole("rowheader");
+    expect(rowHeaders[2]).toHaveTextContent("—");
+  });
+
+  it("renders the table for a chart with no data, and says so without naming a module", () => {
+    renderFigure(COLUMNS, []);
+    expect(within(table()).getAllByRole("row")).toHaveLength(1);
+    expect(screen.getByText("No rows — this figure has no data to show.")).toBeInTheDocument();
+  });
+
+  describe("NFR-463: refuses two columns that share a key, in every build", () => {
+    // RL-1307 item 5 (i): `key` is the Vue key and must be unique within one figure. Two
+    // equal keys would let Vue patch one column's cells with the other's. The refusal must
+    // not depend on a dev build: RL-1307 retired the arity guard because it was dev-only, so
+    // the second case runs with DEV stubbed false, and a DEV gate fails it.
+    afterEach(() => {
+      vi.unstubAllEnvs();
     });
 
-    it("throws when a row is long, which would put a value under no header at all", () => {
-      expect(renderRows([[1, 0.021, 0.023, 0.5]])).toThrow(/row 0 has 4 cells but there are 3/);
-    });
+    const duplicate: readonly Column<Bin>[] = [
+      COLUMNS[0]!,
+      COLUMNS[1]!,
+      { key: "predicted", label: "Actual", value: (r) => r.actual },
+    ];
 
-    it("names which row, because a caller finding out that one of nine is wrong learns little", () => {
-      expect(renderRows([[1, 0.021, 0.023], [2, 0.049, null], [3, 0.06]])).toThrow(
-        /row 2 has 2 cells/,
+    it.each([
+      ["as built", undefined],
+      ["with DEV false, as in production", false],
+    ] as const)("refuses two columns that share a key, %s", (_name, dev) => {
+      if (dev !== undefined) vi.stubEnv("DEV", dev);
+      renderFigure(duplicate);
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        'Table unavailable: two columns in "Lift by decile" share the key "predicted" (bin | predicted | predicted).',
       );
+      expect(screen.queryByRole("table")).toBeNull();
+      expect(screen.getByTestId("chart")).toBeInTheDocument();
     });
   });
 
-  describe("a value that sits under the wrong header", () => {
-    // The other half of the same defect, and the half the arity guard is blind to by
-    // construction: every row here is exactly three cells wide. `columns` and `rows` are
-    // independent props, so the two can be permuted against each other from either side.
-    const LABELLED = [["Decile 1", 0.021, 0.023]] as const;
-
-    function table(
-      columns: readonly string[],
-      rows: readonly (readonly (string | number | null)[])[],
-    ) {
-      render(ChartFigure, {
-        props: { title: "Lift by decile", columns, rows },
-        slots: { default: "<div data-testid='chart' />" },
-      });
-      return screen.getByRole("table", { name: /lift by decile/i });
-    }
-
-    it("reads each cell by the header above it when the pair is correct", () => {
-      const figure = table(COLUMNS, LABELLED);
-      expect(cellUnder(figure, /Decile 1/, "Predicted")).toHaveTextContent("0.021");
-      expect(cellUnder(figure, /Decile 1/, "Actual")).toHaveTextContent("0.023");
-    });
-
-    it("catches a row whose values are swapped under unchanged headers", () => {
-      const figure = table(COLUMNS, [["Decile 1", 0.023, 0.021]]);
-      // The arity guard did not fire — three cells, three columns — and the render succeeded.
-      expect(within(figure).getAllByRole("row")).toHaveLength(2);
-      expect(cellUnder(figure, /Decile 1/, "Predicted")).toHaveTextContent("0.023");
-    });
-
-    it("catches a reordered `columns` prop that a positional read agrees with", () => {
-      // This is the case that makes the helper worth having rather than a longer way to
-      // write an index. The rows are untouched and the headers moved, so cell 1 still holds
-      // 0.021 and every positional assertion in this repository passes — while the table now
-      // publishes the predicted value as the actual one. Only an assertion phrased in terms
-      // of the pairing sees it.
-      const figure = table(["Bin", "Actual", "Predicted"], LABELLED);
-      const row = within(figure).getAllByRole("row")[1] as HTMLElement;
-      expect(within(row).getAllByRole("cell")[1]).toHaveTextContent("0.021");
-      expect(cellUnder(figure, /Decile 1/, "Predicted")).toHaveTextContent("0.023");
-    });
-
-    it("says what the table does have when asked for a header it does not", () => {
-      const figure = table(COLUMNS, LABELLED);
-      expect(() => cellUnder(figure, /Decile 1/, "Exposure")).toThrow(
-        /No column headed "Exposure". This table has: Bin \| Predicted \| Actual/,
-      );
-    });
+  it("accepts two columns with the same label under different keys", () => {
+    // The (b′) half of RL-1307 item 3: a label is display text, so equal labels are allowed.
+    renderFigure([
+      COLUMNS[0]!,
+      { key: "a", label: "Rate", value: (r) => r.predicted },
+      { key: "b", label: "Rate", value: (r) => r.actual },
+    ]);
+    expect(within(table()).getAllByRole("columnheader")).toHaveLength(3);
   });
 });

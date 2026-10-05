@@ -1,0 +1,794 @@
+{
+  "$defs": {
+    "AlgorithmOutput": {
+      "additionalProperties": false,
+      "description": "A declared output (FR-214): name, type, required flag.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "type"
+      ],
+      "title": "AlgorithmOutput",
+      "type": "object"
+    },
+    "ArtifactRef": {
+      "description": "Canonical artifact reference {type}:{slug}@{version} (ID-3).",
+      "examples": [
+        "model:motor-ad-frequency@7",
+        "rating_version:motor-gb@27"
+      ],
+      "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+      "title": "ArtifactRef",
+      "type": "string"
+    },
+    "RatingConstraintStep": {
+      "additionalProperties": false,
+      "properties": {
+        "clamp_bounds": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Clamp Bounds"
+        },
+        "condition": {
+          "title": "Condition",
+          "type": "string"
+        },
+        "consumes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Consumes"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "on_violation": {
+          "enum": [
+            "clamp",
+            "decline",
+            "error"
+          ],
+          "title": "On Violation",
+          "type": "string"
+        },
+        "produces": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Produces"
+        },
+        "reason_code": {
+          "title": "Reason Code",
+          "type": "string"
+        },
+        "step_id": {
+          "minLength": 1,
+          "title": "Step Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "constraint",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "step_id",
+        "label",
+        "type",
+        "condition",
+        "on_violation",
+        "reason_code"
+      ],
+      "title": "RatingConstraintStep",
+      "type": "object"
+    },
+    "RatingExpressionStep": {
+      "additionalProperties": false,
+      "properties": {
+        "consumes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Consumes"
+        },
+        "expr": {
+          "title": "Expr",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "produces": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Produces"
+        },
+        "result_type": {
+          "title": "Result Type",
+          "type": "string"
+        },
+        "step_id": {
+          "minLength": 1,
+          "title": "Step Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "expression",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "step_id",
+        "label",
+        "type",
+        "expr",
+        "result_type"
+      ],
+      "title": "RatingExpressionStep",
+      "type": "object"
+    },
+    "RatingInputStep": {
+      "additionalProperties": false,
+      "properties": {
+        "consumes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Consumes"
+        },
+        "input_name": {
+          "title": "Input Name",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "on_missing": {
+          "enum": [
+            "error",
+            "default",
+            "null"
+          ],
+          "title": "On Missing",
+          "type": "string"
+        },
+        "produces": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Produces"
+        },
+        "step_id": {
+          "minLength": 1,
+          "title": "Step Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "input",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "step_id",
+        "label",
+        "type",
+        "input_name",
+        "on_missing"
+      ],
+      "title": "RatingInputStep",
+      "type": "object"
+    },
+    "RatingLookupStep": {
+      "additionalProperties": false,
+      "properties": {
+        "as_at": {
+          "title": "As At",
+          "type": "string"
+        },
+        "consumes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Consumes"
+        },
+        "key_expr": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Key Expr",
+          "type": "array"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "on_miss": {
+          "enum": [
+            "error",
+            "default"
+          ],
+          "title": "On Miss",
+          "type": "string"
+        },
+        "produces": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Produces"
+        },
+        "reference_table_ref": {
+          "$ref": "#/$defs/ArtifactRef"
+        },
+        "step_id": {
+          "minLength": 1,
+          "title": "Step Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "lookup",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "step_id",
+        "label",
+        "type",
+        "reference_table_ref",
+        "as_at",
+        "on_miss"
+      ],
+      "title": "RatingLookupStep",
+      "type": "object"
+    },
+    "RatingModelCallStep": {
+      "additionalProperties": false,
+      "properties": {
+        "consumes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Consumes"
+        },
+        "feature_map": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Feature Map",
+          "type": "object"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "mode": {
+          "enum": [
+            "exact",
+            "approximation"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "model_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "peril_structure_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "produces": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Produces"
+        },
+        "step_id": {
+          "minLength": 1,
+          "title": "Step Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "model_call",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "step_id",
+        "label",
+        "type",
+        "mode"
+      ],
+      "title": "RatingModelCallStep",
+      "type": "object"
+    },
+    "RatingOutputStep": {
+      "additionalProperties": false,
+      "properties": {
+        "consumes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Consumes"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "output_name": {
+          "title": "Output Name",
+          "type": "string"
+        },
+        "produces": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Produces"
+        },
+        "rounding": {
+          "$ref": "#/$defs/RoundSpec"
+        },
+        "step_id": {
+          "minLength": 1,
+          "title": "Step Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "output",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "step_id",
+        "label",
+        "type",
+        "output_name",
+        "rounding"
+      ],
+      "title": "RatingOutputStep",
+      "type": "object"
+    },
+    "RatingTableStep": {
+      "additionalProperties": false,
+      "properties": {
+        "consumes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Consumes"
+        },
+        "interpolation": {
+          "default": "none",
+          "enum": [
+            "none",
+            "linear"
+          ],
+          "title": "Interpolation",
+          "type": "string"
+        },
+        "key_expr": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Key Expr",
+          "type": "array"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "on_miss": {
+          "default": "error",
+          "enum": [
+            "error",
+            "default"
+          ],
+          "title": "On Miss",
+          "type": "string"
+        },
+        "produces": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Produces"
+        },
+        "rate_table_ref": {
+          "$ref": "#/$defs/ArtifactRef"
+        },
+        "step_id": {
+          "minLength": 1,
+          "title": "Step Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "table",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "step_id",
+        "label",
+        "type",
+        "rate_table_ref"
+      ],
+      "title": "RatingTableStep",
+      "type": "object"
+    },
+    "RoundSpec": {
+      "additionalProperties": false,
+      "description": "Explicit rounding for an `output` step (FR-226) — never implicit, never twice.",
+      "properties": {
+        "dp": {
+          "minimum": 0,
+          "title": "Dp",
+          "type": "integer"
+        },
+        "mode": {
+          "enum": [
+            "half_even",
+            "half_up",
+            "ceiling",
+            "floor"
+          ],
+          "title": "Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode",
+        "dp"
+      ],
+      "title": "RoundSpec",
+      "type": "object"
+    },
+    "SubGraphInputPort": {
+      "additionalProperties": false,
+      "description": "A declared input of a fragment: a name and a result type (never float, FR-227).",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "type"
+      ],
+      "title": "SubGraphInputPort",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A stored, immutable Sub-graph Version (`sub_graph:<slug>@<version>`).",
+  "properties": {
+    "change_note": {
+      "minLength": 1,
+      "title": "Change Note",
+      "type": "string"
+    },
+    "inputs": {
+      "items": {
+        "$ref": "#/$defs/SubGraphInputPort"
+      },
+      "title": "Inputs",
+      "type": "array"
+    },
+    "outputs": {
+      "items": {
+        "$ref": "#/$defs/AlgorithmOutput"
+      },
+      "title": "Outputs",
+      "type": "array"
+    },
+    "slug": {
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+      "title": "Slug",
+      "type": "string"
+    },
+    "steps": {
+      "items": {
+        "discriminator": {
+          "mapping": {
+            "constraint": "#/$defs/RatingConstraintStep",
+            "expression": "#/$defs/RatingExpressionStep",
+            "input": "#/$defs/RatingInputStep",
+            "lookup": "#/$defs/RatingLookupStep",
+            "model_call": "#/$defs/RatingModelCallStep",
+            "output": "#/$defs/RatingOutputStep",
+            "table": "#/$defs/RatingTableStep"
+          },
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/RatingInputStep"
+          },
+          {
+            "$ref": "#/$defs/RatingLookupStep"
+          },
+          {
+            "$ref": "#/$defs/RatingTableStep"
+          },
+          {
+            "$ref": "#/$defs/RatingExpressionStep"
+          },
+          {
+            "$ref": "#/$defs/RatingModelCallStep"
+          },
+          {
+            "$ref": "#/$defs/RatingConstraintStep"
+          },
+          {
+            "$ref": "#/$defs/RatingOutputStep"
+          }
+        ]
+      },
+      "title": "Steps",
+      "type": "array"
+    },
+    "version": {
+      "minimum": 1,
+      "title": "Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "inputs",
+    "outputs",
+    "steps",
+    "change_note",
+    "slug",
+    "version"
+  ],
+  "title": "SubGraph",
+  "type": "object"
+}

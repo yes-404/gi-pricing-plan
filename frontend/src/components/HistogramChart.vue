@@ -7,6 +7,7 @@ import { computed } from "vue";
 import VChart from "vue-echarts";
 
 import type { Histogram } from "@/api/profiles";
+import type { Column } from "@/chart-table";
 import ChartFigure from "@/components/ChartFigure.vue";
 
 use([BarChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
@@ -80,31 +81,41 @@ const option = computed(() => ({
   ],
 }));
 
-/**
- * The chart's accessible equivalent (NFR-463).
- *
- * The Exposure column is dropped rather than dashed when the profile weighted nothing,
- * matching the chart, which drops the series and the second axis in the same case. A column
- * of em dashes would say the histogram has an exposure of nothing, which is a different
- * claim from its having no exposure at all. This is the reactive case `ChartFigure`'s arity
- * guard exists to cover: `columns` and `rows` both narrow, and they must narrow together.
- */
-const columns = computed(() =>
-  exposure.value.length ? ["Bin", "Rows", "Exposure"] : ["Bin", "Rows"],
-);
+interface HistogramRow {
+  label: string;
+  count: number | null;
+  exposure: string | number | null;
+}
 
 /**
  * Exposure is passed through as the exact decimal **string** it is stored as (FR-10).
  * The chart widens it to a float because a coordinate is one either way; the table has no
  * such excuse, and `AeByFactorChart` set this precedent for the same reason.
  */
-const rows = computed(() =>
-  labels.value.map((label, i) => [
+const rows = computed<readonly HistogramRow[]>(() =>
+  labels.value.map((label, i) => ({
     label,
-    counts.value[i] ?? null,
-    ...(exposure.value.length ? [exposure.value[i] ?? null] : []),
-  ]),
+    count: counts.value[i] ?? null,
+    exposure: exposure.value[i] ?? null,
+  })),
 );
+
+/**
+ * The chart's accessible equivalent (NFR-463).
+ *
+ * The Exposure column is dropped rather than dashed when the profile weighted nothing,
+ * matching the chart, which drops the series and the second axis in the same case. A column
+ * of em dashes would say the histogram has an exposure of nothing, which is a different
+ * claim from its having no exposure at all. The column is conditional on the data, and since each column carries
+ * its own accessor there is nothing that has to narrow with it.
+ */
+const columns = computed<readonly Column<HistogramRow>[]>(() => [
+  { key: "bin", label: "Bin", value: (r) => r.label },
+  { key: "rows", label: "Rows", value: (r) => r.count },
+  ...(exposure.value.length
+    ? [{ key: "exposure", label: "Exposure", value: (r: HistogramRow) => r.exposure }]
+    : []),
+]);
 </script>
 
 <template>
