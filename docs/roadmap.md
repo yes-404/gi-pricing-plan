@@ -807,7 +807,7 @@ corrected_by: []
 relates: [PL-1267]
 ```
 
-`submit_for_review` checks `policy.effective_evidence("rating_version")` against a verifiable map (`structural_diff`, `regression_run`, `dislocation_run`), replacing the direct limb checks, limb (1)'s `_regression_run_gate` call included; a workspace policy naming a kind nothing can verify is refused by name (`06` FR-364). `PL-1267` Slice 6. Starts after Slice 5 closes, and so transitively after `SL-1256`.
+`submit_for_review` checks `policy.effective_evidence("rating_version")` against a verifiable map (`structural_diff`, `regression_run`, `dislocation_run`), replacing the direct limb checks, limb (1)'s `_regression_run_gate` call included; a workspace policy naming a kind nothing can verify is refused by name (`06` FR-364). `PL-1267` Slice 6. Starts after Slice 5 closes, and so transitively after `SL-1256`. Leaf plan PL 9589 (working id, `draft`; filed 2026-10-05). **Activation needs:** the plan made `active` by a dated line; `SL-1389` closed; a ruling on its DP-S6-1 (the `06` §4.2 kinds `rate_table_diffs`, `gipp_check_if_enabled` and `change_summary`, which the shipped `DEFAULT_POLICY` omits) merged and minted; the lane free under `RL-1263` as amended, with the same-Work conditions in the dispatch record; the maintainer's dispatch GO and the lead's go in a separate activation PR. *(Plan cite added 2026-10-05 by the planner; working id 9589 reserved by the lead.)*
 
 #### SL-1391 — Slice 7: FR-231's exposure weights through the portfolio frame (F-W10-2)
 
