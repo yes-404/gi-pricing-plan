@@ -102,3 +102,19 @@ discharge below.
 and the pick lands as a merged artifact (a ruling, or the test of option 2). The next event that confirms or retires it: the first algorithm
 committed or seeded with a float input, or a float produced before a `model_call`, read by a step after that call, which the sweep in §3
 (re-run at that tree) finds.
+
+## Maintainer's disposition (2026-10-06 00:51:59 BST)
+
+Decided by the maintainer (by delegation) in `to-lead.md` (a local channel file, cited by its header), the entry headed "2026-10-06 00:51:59 BST — FD 9480 (#1229 @c9f1f51e): the refuted guard noted; disposition (1)+(2), with a re-check at A-4". Verbatim: *"DISPOSITION, decided now so the FD mints with it: (1) ACCEPT and DISCLOSE (it is already in LG 9482 and the PR), PLUS (2) a CHARACTERISATION TEST pinning the 15-significant-digit echo at the handler boundary, so that any engine upgrade that changes it shows up as a red rather than a silent shift. Owner WK-673; the test is carried by the next WK-673 slice that touches runtime.py, or a WK-1178 maintenance slice, whichever comes first; named in the register row. (3), (4) and (5) are recorded as not taken now, with their reasons from the essay."* This is the pick the Disposition section above waits for; the finding stays open until the test merges.
+
+| Option | Taken? | Reason (from the table above) |
+|---|---|---|
+| 1 Accept and disclose | **Taken** | Zero code; names the bound. The limit is already in the SL-1436 ledger and the PR. |
+| 2 Characterisation test | **Taken** | One test, no behaviour change; a zen upgrade that changes the cut shows as a red. It pins a defect rather than removing it. |
+| 3 Python-side overlay on `score_one`'s raw result | Not taken now | It does not reach a downstream step inside the engine, and it adds a second place that knows which names are inputs. |
+| 4 Save-time check | Not taken now | A spec change for a case with no committed instance; the most code of the four. |
+| 5 Engine-side option | Not taken now | Not investigated; needs a `library-spike`, and a pin change is a tech-dependency change. |
+
+**Carrier of the test:** the next WK-673 slice that touches `packages/pricing-core/src/pricing_core/rating/runtime.py`, or a WK-1178 maintenance slice, whichever comes first.
+
+**Forward check at A-4.** The downstream-reader check (no committed step reads a float input after a `model_call`) is repeated for the G2 demo algorithm when A-4's plan is folded. A float input read after a `model_call` in the demo's frequency × severity path (for example exposure) is a STOP to the maintainer at A-4's planning, not at its gate.
