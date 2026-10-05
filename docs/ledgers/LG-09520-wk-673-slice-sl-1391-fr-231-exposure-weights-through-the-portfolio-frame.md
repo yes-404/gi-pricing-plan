@@ -336,8 +336,13 @@ plan's write set are therefore: the migration `backend/migrations/versions/f3a7c
 maintainer's three conditions), the hand-authored `docs/contracts/schemas/job.schema.json` (§(11), `docs/contracts/README.md:17`
 marks `schemas/` as hand-authored, so the enum line is the documented path), and this generated line.
 
-**Acceptance 23, the write set.** `git diff --stat origin/main...HEAD` at the gated head lists 23 paths: those of the plan's
-§"Write set", plus exactly the three deviations above.
+**Acceptance 23, the write set.** `git diff --stat origin/main...HEAD` lists 24 paths: those of the plan's §"Write set", plus
+exactly four deviations. The first three are above (the migration, the hand-authored `docs/contracts/schemas/job.schema.json`,
+the generated `docs/contracts/schemas/generated/job.schema.json`). **The fourth is `backend/tests/test_error_sinks.py`** (+16:
+the two `_SINKS` entries for the portfolio join's exception-text sinks), covered by the maintainer's option (a), in the entry
+headed "2026-10-05 18:58:28 BST — S7 gate 1: (a) _SINKS entries ADOPTED; the re-gate plan CONFIRMED, with an explicit
+allowed-failure set; the measurement re-run in the slot" (`to-lead.md`): "1. The NFR-499 sink STOP: (a). Both sinks go into
+_SINKS WITH the reasons as you state them … (b) is refused: it would drop what RL-1361 item 3 requires."
 
 **Acceptance 19, the texts byte for byte.** Each text was copied by script out of `RL-1361` (T3, T6, T10) and `RL-1418`
 (T1 to T5, and T11 at the corrected anchor) (Task 1), and every find string occurred once before and the text once after.
@@ -441,11 +446,22 @@ UTC, load 4.44/2.78/2.52, 19 475 MB free). No measurement ran from this head and
 uptime` line never ran, because of the quoting error), and the frontend half's start `uptime` and `free` (not recorded at
 19:42:39 BST).
 
-**The maintainer's ruling on this re-gate** (by delegation, `to-lead.md`, after 19:44 BST, relayed by the lead): the
-re-gate COUNTS. The missing `uptime` and `free` stamps (the python half's end, the frontend half's start) are a checklist
-omission, recorded here together with the unintended 19:32:26 BST release caused by the script's quoting error. The frontend
-half's start porcelain is unproven but immaterial: no frontend path is in the delta and the half writes no tracked file.
-The backstop is a fully green CI at the mint head before the maintainer's ACK.
+**The maintainer's ruling on this re-gate** (by delegation; `to-lead.md`, the entry headed "2026-10-05 19:45:18 BST — S7's
+re-gate COUNTS; the missing machine-state stamps are a ledgered omission, not a re-gate"), quoted verbatim:
+
+> (b) is satisfied: you verified it from the log (13 failed, exactly the allowed set; test_error_sinks passes; check 31 only;
+> the other stages rc 0). The frontend half: all 6 pass.
+> (a): the python-half START prints head 75928847 and tree fb954245. The FRONTEND half's start porcelain is NOT in the log, so
+> it is UNPROVEN, but it is IMMATERIAL to the result: the frontend checks depend only on frontend/ and the generated client,
+> which no docs or ledger commit touches, and the mint head's CI re-proves both halves anyway.
+> The missing uptime/free stamps (the python END and the frontend START) are a CHECKLIST OMISSION: no assertion in either half
+> is timing-bound, and contention can only cause spurious failures, not a false pass. So the gate COUNTS. LG 9520 records the
+> omission in those words, with the 19:32:26 script-bug release.
+> BACKSTOP, unchanged: S7's merge ACK requires FULL green CI at the mint head (check 31 and the 13 cleared by the LG mint).
+
+So, in those words: the missing `uptime` and `free` stamps (the python half's end and the frontend half's start) are a
+**checklist omission**, and the 19:32:26 BST release was the script's own bug (a shell-quoting error in my chained command),
+not a decision.
 
 **The order of the measurement.** The maintainer (by delegation) ordered, relayed by the lead: at `READY_FOR_MEASUREMENT` do
 not measure, release `gate-1`, and report from the log. S7 may mint and merge on that report plus CI. The cost measurement,
