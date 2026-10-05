@@ -165,6 +165,34 @@ verbatim:
 So R1 to R4 stand as written, and R5 brings `POST /api/v1/sub-graphs` into this slice
 (item 18).
 
+**Dated note, 2026-10-05 (written 17:36:25 BST, pre-mint): the sub-graph version route is in.**
+From the entry headed *"2026-10-05 17:34:25 BST — FD 9572 fan-in measurement accepted: (c)
+ALONE stands; A-2 create_sub_graph_version IN"*, item 3, read in full by this planner,
+verbatim:
+
+> 3. A-2 #1178 @7114be2e: create_sub_graph_version (backend/src/app/api/sub_graphs.py:53-60 at origin/main; your :127 is the service-side line) is IN, through the SAME item-18 function, with its own red test. The reason is R5's: every save path that writes a model_call step gets the check. I checked origin/main: the router has exactly two POSTs, create_sub_graph :38/45 and create_sub_graph_version :53/60. The planner confirms that create_algorithm's version path (if it is a separate route) is covered too.
+
+Item 19 carries it.
+
+**Every save path that writes a `model_call` step, confirmed at `4d3be141`:**
+- **Rating algorithms: one path, `create_algorithm`.** The router has one write,
+  `@router.post("/rating-algorithms")` → `create_rating_algorithm`
+  (`backend/src/app/api/rating_algorithms.py:28-34`), calling `service.create_algorithm`
+  (`:47`). A new **version** of an algorithm is the same route: the body carries `slug` and
+  `version`, and `create_algorithm` (`backend/src/app/platform/rating_algorithms.py:94`)
+  refuses an existing `(slug, version)` with 409 (`:107-121`).
+  `RatingAlgorithmRow(` is constructed only at `platform/rating_algorithms.py:123`. Every
+  other `RatingAlgorithmRow` use in `backend/src` is a `select` (`rating_versions.py:450-452`,
+  `regression_suites.py:109-112`, `rating_algorithms.py:111-113` and `:142-144`), and
+  `git grep -n -E 'update\(RatingAlgorithmRow|insert\(RatingAlgorithmRow' 4d3be141 --
+  backend/src scripts examples` prints nothing. **So the algorithm version path is item 13's
+  path, covered by the same function. There is no separate version route.**
+- **Sub-graphs: two paths, both in.** The router has two POSTs: `create_sub_graph` (`:38`/`:45`)
+  and `create_sub_graph_version` (`:53`/`:60`, `"/{slug}/versions"`). Each reaches `_write`
+  (`backend/src/app/platform/sub_graphs.py:59`) through its service, `create_sub_graph`
+  (`:104`, `_write` at `:122`) or `create_version` (`:127`, `_write` at `:140`). No other
+  caller of `_write` exists.
+
 So T1 and T2 (and T3, added since) are applied with the wording the lead accepts or amends at
 the ACK; item 15's validator and its narrower reading stand; the +0.5 day is the lead's. The
 entry's question on `_NUMERIC` is answered to the lead separately. A-2 types only the
@@ -469,11 +497,20 @@ quoted above. Each is red first.*
     `backend/src/app/platform/rating_algorithms.py` beside `create_algorithm`, taking the
     session, the workspace and the steps. `create_algorithm` and `create_sub_graph` both call
     it inside their unit of work, before the row is written. R1 to R4 hold for both callers.
-    *Not ruled, reported to the lead:* `POST /api/v1/sub-graphs/{slug}/versions`
-    (`create_version`, `platform/sub_graphs.py:127`) also saves a `SubGraphBody` with
-    `model_call` steps. R5 names only `create_sub_graph`, so `create_version` is not
-    changed unless the lead rules it in. If it is ruled in, it calls the same function with
-    its own red test.
+    *(Dated note, 2026-10-05: this said `create_version` was "not ruled, reported to the
+    lead". It was ruled in at 17:34:25 BST, item 3: item 19.)*
+19. *(Added 2026-10-05, pre-mint, on the 17:34:25 BST entry's item 3.)* **The sub-graph
+    version save refuses a raw-column `feature_map` with the same code.**
+    `test_a_sub_graph_version_whose_model_call_names_a_raw_column_is_refused` in
+    `backend/tests/test_sub_graphs_api.py`: a sub-graph's version 1 exists, a GLM is fitted
+    and persisted, and a `SubGraphBody` whose `model_call` pins it with a `feature_map` value
+    naming a raw column is posted to `POST /api/v1/sub-graphs/{slug}/versions`
+    (`create_sub_graph_version`, `api/sub_graphs.py:53-60`). It answers `422` with `code ==
+    "MODEL_CALL_FEATURE_MAP_INVALID"`, the detail names the step, the value and the Model's
+    ref, and no version 2 is written. The control: the Factor-slug map answers `201` with
+    version 2. **Red first:** at the base the raw-column map writes version 2. `create_version`
+    (`platform/sub_graphs.py:127`) calls item 13's one function inside its unit of work,
+    before `_write` (`:140`). R1 to R4 hold.
 
 ## Global Constraints
 
@@ -574,8 +611,8 @@ file" above.*
 | `backend/src/app/platform/rating_algorithms.py` | edited: `create_algorithm` (`:94`) gains the `feature_map` check after `_issues_to_error` (item 13; DP-5 (ii) (a)) |
 | `backend/src/app/errors.py` | edited: `RATING_ERROR_CODES` (`:309`), `MODEL_CALL_FEATURE_MAP_INVALID` appended |
 | `backend/tests/test_rating_algorithms.py` | appended: item 13's test and control, and item 16's read-back |
-| `backend/src/app/platform/sub_graphs.py` | edited: `create_sub_graph` (`:104`) calls item 13's check (item 18; R5, 17:27:55 BST). `create_version` (`:127`) is not edited unless ruled in |
-| `backend/tests/test_sub_graphs_api.py` | appended: item 18's test and control |
+| `backend/src/app/platform/sub_graphs.py` | edited: `create_sub_graph` (`:104`) and `create_version` (`:127`) each call item 13's check before `_write` (items 18 and 19; R5, 17:27:55 BST; 17:34:25 BST item 3) |
+| `backend/tests/test_sub_graphs_api.py` | appended: items 18's and 19's tests and controls |
 | `docs/specs/03-rating-engine.md` §5.1 | the owned-codes list (`:928` onward), T3 appended at its tail |
 
 **Contention.** Classes as in `docs/process/delivery-process.core.json`'s `no_shared_files`.
@@ -679,7 +716,8 @@ date. Its part (i) is settled by the 17:12:40 BST correction (option (B), item 1
 - [ ] **Step 3a:** *(Added 2026-10-05.)* Items 12 to 16, each red by its stated cause. Item
   13 is written to DP-5 (ii) (a), with the code T1 and T3 name, in
   `backend/tests/test_rating_algorithms.py` (Postgres and MinIO, for the fitted GLM). Item
-  18 is written in `backend/tests/test_sub_graphs_api.py` *(added 2026-10-05, R5)*. Item 15's field test and item 16 go in
+  18 is written in `backend/tests/test_sub_graphs_api.py` *(added 2026-10-05, R5)*, and item 19
+  beside it *(added 2026-10-05, 17:34:25 BST item 3)*. Item 15's field test and item 16 go in
   `packages/model-schema/tests/test_rating_algorithm.py`; item 16's read-back goes in
   `backend/tests/test_rating_algorithms.py`, beside the `motor-ad-frequency@7` fixtures,
   which are not edited (they only validate).
@@ -762,7 +800,9 @@ date. Its part (i) is settled by the 17:12:40 BST correction (option (B), item 1
     type for FR-227's checks, not a rounding; every rounding is an `output` step's (FR-226).
     Amended 2026-10-05, the entry headed `2026-10-05 17:14:54 BST — FD 9572 placement
     accepted; …`, item 5, and the entry headed `2026-10-05 17:27:55 BST — FD 9572 CAUSE: …`
-    (R2, R5): when a Rating Algorithm or a Sub-graph is created, each `model_call`'s
+    (R2, R5), and the entry headed `2026-10-05 17:34:25 BST — FD 9572 fan-in measurement
+    accepted: …`, item 3: when a Rating Algorithm, a Sub-graph or a Sub-graph version is
+    created, each `model_call`'s
     `model_ref` is resolved, and a `feature_map` value that is neither one of that Model's
     Factor slugs nor the column its spec declares as the offset is refused with
     `MODEL_CALL_FEATURE_MAP_INVALID` (422).)*
@@ -772,10 +812,12 @@ date. Its part (i) is settled by the 17:12:40 BST correction (option (B), item 1
     `decimal` or `money_minor` is refused with `RATING_TYPE_MISMATCH`.)*
   - **T3, appended at the tail of §5.1's owned-codes list (`03:928` onward):**
     `MODEL_CALL_FEATURE_MAP_INVALID` *(added 2026-10-05, WK-1178 A-2 — **422** at
-    `POST /api/v1/rating-algorithms` and `POST /api/v1/sub-graphs`: a `model_call`'s
+    `POST /api/v1/rating-algorithms`, `POST /api/v1/sub-graphs` and
+    `POST /api/v1/sub-graphs/{slug}/versions`: a `model_call`'s
     `feature_map` names something other than its Model's Factor slugs or its offset column
     (FR-222, amended); the entries headed `2026-10-05 17:14:54 BST — FD 9572 placement
-    accepted; …`, item 5, and `2026-10-05 17:27:55 BST — FD 9572 CAUSE: …`)*. The tail is serialised (§"Write set").
+    accepted; …`, item 5, `2026-10-05 17:27:55 BST — FD 9572 CAUSE: …` and `2026-10-05
+    17:34:25 BST — FD 9572 fan-in measurement accepted: …`, item 3)*. The tail is serialised (§"Write set").
 
 ### Task 7: The gate and the ledger (items 10, 11)
 
