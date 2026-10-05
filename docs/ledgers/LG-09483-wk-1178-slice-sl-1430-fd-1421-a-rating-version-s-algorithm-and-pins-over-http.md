@@ -108,8 +108,7 @@ this commit.
 
 Green: `pytest -q backend/tests/test_rating_version_create_pins.py`: `14 passed`; `test_rating_versions.py`: `43 passed`;
 `test_rating_version_compile.py`: `20 passed`. `ruff check` on the changed files is clean (one `I001` fixed; the new test file
-formatted). FR-223's `03:109` is NOT edited: RL 9758 (working id) mints first (maintainer by delegation, relayed by the lead),
-then T1 is applied byte for byte from the minted record.
+formatted). FR-223's `03:109` is not edited in this commit; RL-1438's T1 lands later (below).
 
 ### Task 0 Step 5 — the trial merge-tree with S7 (real, after the 03 edits)
 
@@ -153,6 +152,15 @@ worktree's `examples/fremtpl2/data/`, then `OMP_NUM_THREADS=1 nice -n 19 uv run 
 outside any held gate, both slots checked first. Provenance: freMTPL2, the public dataset `examples/` carries; the directory is
 ignored by `.gitignore:61` and is not committed. Result: `8 passed in 26.39s`. **CI cannot run it**: CI has no copy of the data,
 so `test_seed.py:136` skips there, and the seed path's evidence is this local run only.
+
+### RL-1438's T1 on FR-223 (`03:109`), after the mint
+
+RL 9758 (working id) minted as RL-1438 with #1061 (main `289690ccefabfa0ba87a40ccdefffc741f7cea4b`); this branch merged `origin/main`
+(no rebase). T1 is applied byte for byte from the minted record's text block, with its two placeholders resolved as the
+record says: `<date>` = the commit date, 2026-10-05, and `RL-<this>` = `RL-1438`. Find string `(`02` OQ-575, decided
+2026-08-17.) |`: `grep -cF` **1** before, **0** after (it is replaced by the same text plus the amendment, ending ` |`).
+After: `**Amended 2026-10-05 (`RL-1438`): the check runs where` **1**; `RL-<this>` in `03` **0**. FD-1437's S3 re-reads FR-223
+and does not re-apply it (the lead's ruling).
 
 ## PRs
 
