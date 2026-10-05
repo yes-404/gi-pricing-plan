@@ -2,7 +2,7 @@
 id: FD-1431
 family: finding
 title: The role files had no hard no-cd rule and no sweep-pause rule for a held gate slot
-status: active
+status: closed
 created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: auditor
 tree: c3e7d6c7e2e3c293f64a045a0b931227c581a50a
@@ -103,3 +103,14 @@ The no-`cd` order, from the entry headed *"2026-10-05 18:54:06 BST — RL 9566 T
 and the sweep-pause bullet to `auditor.md`, drafted by delegation for the maintainer's merge-ACK (ruling (a)). #1215
 cites this finding. The amendment is the maintainer's; this finding does not make it. When #1215 merges, the auditor sets
 this row `closed` in place citing the PR (`document-ids.md` §1.6, FD row).
+
+## Resolution
+
+**Resolved 2026-10-05 by #1215, squash commit `4fcf378a03eb5839ee35081c2553c7967f4175b2`** (merged 2026-10-05 21:56:22 BST on
+the maintainer's merge-ACK, entry headed *"2026-10-05 21:56:08 BST — MERGE-ACK #1215 (role files: no-cd, sweep-pause and
+barred-word rules; FD-1431) @bbf3319b04dd3d573d8c7f8ed13a8ee3c2d5ceb2"*, `to-lead.md`). Read at `4fcf378a`:
+
+- `git show --stat 4fcf378a` lists exactly the seven files `.claude/roles/{auditor,decision-maker,executor,lead,planner,reporter,watcher}.md`.
+- Each of the seven, at `4fcf378a`, carries the no-`cd` bullet (one line matching `Never \`cd\``) and the sweep-pause bullet
+  (one line matching `PAUSES for the WHOLE`). This record read the bullets' presence by `git show 4fcf378a:<file> | grep -c`, and did not
+  judge their wording.
