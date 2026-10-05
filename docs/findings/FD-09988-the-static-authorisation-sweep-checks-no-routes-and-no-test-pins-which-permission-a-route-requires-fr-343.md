@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-674, SL-1256, FR-343, FR-396, FR-397]
 ---
 
-# FD-9988 — The static authorisation sweep checks no routes, and no test pins which permission a route requires
+# FD 9988 — The static authorisation sweep checks no routes, and no test pins which permission a route requires
 
 ## Amendment before mint (2026-10-05)
 
@@ -300,3 +300,20 @@ Not yet decided. The proposal above is the auditor's; the lead adopts, amends or
 three entries above have already set the severity rule, the owner and the acceptance.
 
 *Disclosure: drafted under working id 9988; minted at the merge, when the id is re-read against `origin/main`.*
+
+Re-anchored 2026-10-05 at main `caa4e411`: the open claim, limb 2, still holds, and limbs 1
+and 3 stay fixed. `backend/tests/test_api_authorisation_sweep.py` is unchanged since `dfddfad8`:
+`_flattened_operations` (`:108`, descends `original_router`), `_declares_a_permission` and
+`_unguarded_operations` (`:131`, `:140`) test only that *a* permission is declared, and
+`test_every_operation_declares_the_permission_it_enforces` (`:441`) asserts only that no
+operation is unguarded, so swapping `Permission.AUDIT_READ` for `Permission.JOB_READ` is still
+not pinned. `tests/test_permission_parity.py` (`#1049`, `d8537220`) compares `06` §4.1 with
+`model_schema.Permission` and not which route requires which; no §5.1 table has a `Permission`
+column (the seven `| Method | Path | Purpose |` headers, `01` to `07`), and `x-permission` appears
+0 times in `docs/contracts/openapi/generated.json`. Moved since `47d770e8`: the `/api/v1/audit`
+rows of `06` §5.1 are now `docs/specs/06-governance.md:589-592` (four rows, the query, verify,
+anchor and export routes; read `:578-579` as the first two). Unchanged: FR-343 at
+`docs/specs/06-governance.md:79`; `switch_workspace`'s `WORKSPACE_SCOPE_DENIED` membership check
+(`backend/src/app/api/me.py:248-251`); `create_rule`'s permission checks
+(`backend/src/app/platform/validation_rules.py:204`, `:211`). `RL 9907` is still a working id
+(unminted), so it stays unhyphenated here; `PL-1408` (line 510) cites this finding by working id 9988.
