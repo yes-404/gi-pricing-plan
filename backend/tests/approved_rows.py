@@ -1,11 +1,11 @@
 """Writing `approved` rows in a test the way the decision path leaves them.
 
 `approval_guard()` (WK-674 Slice 2a) refuses an `approved` row with no evidence. A fixture
-that needs one therefore writes the evidence **first**: for the five evidence-only tables a
+that needs one therefore writes the evidence **first**: for the six evidence-only tables a
 decided `approval_requests` row for the row's ref, under `approval_decision()` (the flag is
 what `approval_requests` itself accepts), **flushed explicitly** as `approvals.decide` does at
 its flush, and only then the artifact row. The flush is explicit so the order never depends
-on the ORM's table sort. For a validation table, or `approval_requests` itself, the flag
+on the ORM's table sort. For a rule set, or `approval_requests` itself, the flag
 suffices and there is no evidence to write (`RL-1301` A.4.2).
 
 This module creates the evidence; it never names the flag or the trigger DDL.
@@ -40,8 +40,9 @@ _EVIDENCE: dict[type[Any], tuple[str, str]] = {
     CustomObjectiveRow: ("custom_objective", "slug"),
     PerilStructureRow: ("peril_structure", "slug"),
     RatingVersionRow: ("rating_version", "slug"),
+    ValidationRuleRow: ("validation_rule", "slug"),
 }
-_FLAG_ONLY = (ValidationRuleRow, ValidationRuleSetRow, ApprovalRequestRow)
+_FLAG_ONLY = (ValidationRuleSetRow, ApprovalRequestRow)
 
 
 async def decided_request(

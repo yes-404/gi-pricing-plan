@@ -267,6 +267,69 @@ Step 2: `git diff ec475a0a -- docs/specs/01-data-management.md docs/specs/06-gov
 
 Files: `docs/specs/01-data-management.md`, `docs/specs/06-governance.md`, `docs/INDEX.md`, this ledger. No test was run.
 
+### Task 7, Steps 1–3 — the fixtures, the seed through the workflow, the reset script (2026-10-05, executor-1409-t7)
+
+Scratch databases only; nothing was written to any `gipricing*` database, and `examples/fremtpl2/data/` of the root checkout
+was only read (the two `.arff` files were **copied** into this worktree's gitignored `examples/fremtpl2/data/`;
+`git check-ignore -v` names `.gitignore:61`). Created and dropped: `scratch_sl1409_base`, `scratch_sl1409_after` (see the end of the entry).
+
+**Step 1 — the fixtures (Acceptance 14).** `ValidationRuleRow` moved into `_EVIDENCE` as `("validation_rule", "slug")` and out of
+`_FLAG_ONLY` in `backend/tests/approved_rows.py`; the docstring's first paragraph reads "six evidence-only tables" and names a rule set,
+not "a validation table", as flag-only. `pytest -q backend/tests/test_data_jobs.py backend/tests/test_reference_pin.py backend/tests/test_wf01_journey.py`: `8 passed, 1 warning in 14.94s`.
+
+**Step 2 — the seed, red first (DP-5, Acceptance 21).**
+
+1. The `("examples/fremtpl2/seed.py", "run")` entry is out of `ALLOWANCE_SITES`. Red, `pytest -q backend/tests/test_approval_guard_static.py`: `4 failed, 13 passed`.
+   Each failure names exactly `examples/fremtpl2/seed.py::run`, the cause the plan states (the file still enters `approval_decision()` at `run`, now unpinned):
+   - `test_approval_decision_is_entered_only_at_the_sanctioned_and_allowance_sites`: `Left contains one more item: 'examples/fremtpl2/seed.py::run'`
+   - `test_every_pinned_site_really_enters_the_context`: `Extra items in the left set: ('examples/fremtpl2/seed.py', 'run')`
+   - `test_a_planted_new_entry_site_is_refused` and `test_a_planted_second_function_in_an_allowed_file_is_refused`: `Left contains one more item: 'examples/fremtpl2/seed.py::run'`
+2. `run` in `examples/fremtpl2/seed.py` now authors each rule with `rule_service.create_rule(..., actor=analyst, catalogue_id=catalogue_id_by_slug.get(slug))`
+   (no `ValidationRuleRow` insert, no hand-recorded event, no `approval_decision` import).
+3. The first version is ingested **before** the rule set is bound. Each rule is dry-run with the real `DATASET_VALIDATE` job and `dry_run_rule_id`, as the analyst;
+   the seed stops (`SystemExit`, naming the rule) if the job does not succeed or the stored report has `error_count > 0`.
+4. `submit_for_review(..., actor=analyst, change_summary=f"{rule_slug}: a freMTPL2 demo rule, dry-run against version 1")`, then, in one `unit_of_work`,
+   `approval_service.decide(..., approver=approver, decision=DecisionKind.APPROVE, comment=...)` and `rule_service.apply_approval_decision(..., actor=approver, request=decided)`
+   (the request id comes from `rule_service.open_request_for`, because `submit_for_review` returns the rule row, not the request: **the plan's "as `model.py:296-308` does" differs only there**).
+   No `approval_decision()` block.
+5. Then `replace_rule_set` and the unchanged `validate(first)`.
+6. **No stop.** The reorder did not change what the seed demonstrates: base and after print the same `validate(first)` and `validate(second)` reports (the diff of the `validation:`, `fail`, `warn`, `skipped`, `promotion`, `version N is` lines is empty), and `ingest` did not refuse a dataset with no rule set.
+
+Seed runs, `--rows 50000` (a sample; `seed.py --rows` is the script's own option), both rc 0, load average before each run 1.30 and 3.80 (`uptime`), gate slots 1 and 2 free (`flock -n`):
+
+| Run | Tree | Seed.py | Database | Started (BST) | rc |
+|---|---|---|---|---|---|
+| before | detached worktree at `bf33eea6` (the merge base with `origin/main`, the slice's base tree), own `uv sync --all-packages`, removed after | that tree's | `scratch_sl1409_base` | 2026-10-05 11:45:12 | 0 |
+| after | this worktree | this tree's | `scratch_sl1409_after` | 2026-10-05 11:45:46 | 0 |
+
+**Which base I used, and why it differs from the lead's wording.** The lead's point 3 said "`ec475a0a`'s parent tree". That parent is `c65a25fd`, which already holds the enforcement, so a seed run on it would not be the base the plan means ("the same run at the base tree prints the seed's rule count"). I used the merge base `bf33eea6` with its own backend (the run needed the base `validation_rules.py`, because the base seed passes a fabricated `dry_run_report_id`).
+
+FD-1356's follow-on script, restricted to the scratch database (its per-database query, verbatim, with `datname` fixed to the named database):
+
+```text
+scratch_sl1409_base builtin_approved=38 user_approved=9 user_approved_no_approved_request=9
+scratch_sl1409_after builtin_approved=38 user_approved=9 user_approved_no_approved_request=0
+```
+
+The base line prints the seed's rule count (9) for `user_approved_no_approved_request` (the plan's red), the after line prints 0 with `user_approved` equal to the seed's rule count 9.
+
+`git grep -nE '(^|[^_])approval_decision\b' -- examples/` prints nothing (exit 1 from `git grep`, no match).
+
+`ruff check` (examples, scripts, backend/tests) and `mypy` (226 files) are clean.
+
+**Step 3 — the reset script, red first (DP-6 (b), Acceptance 13).** `backend/tests/test_reset_unbacked_rule_approvals.py` written first (A, B, C in one workspace as A and C, and B built-in; D in a second workspace).
+The test database is shared, so the assertions name the test's own rows and workspaces: the script's `reset(database)` returns the rows reset per workspace.
+
+- Red (script absent): `4 failed`, each `FileNotFoundError: [Errno 2] No such file or directory: '…/scripts/reset-unbacked-rule-approvals.py'`. The cause is the plan's ("the script does not exist").
+- Green with `scripts/reset-unbacked-rule-approvals.py`: `4 passed, 1 warning in 2.00s`. The literals are RL-1407 DP-6's: population as FD-1356's predicate (NOT EXISTS with the same workspace, `artifact_type`, ref, `approved`), `FOR UPDATE` (`with_for_update(of=ValidationRuleRow)`), per row `status = 'review'` and `approved_by = NULL`, then `audit.record(... actor=Principal(kind=ActorKind.SYSTEM, display="fd-1356-reset"), source=JobSource.SYSTEM, action="validation_rule.approval_reset", entity_ref=f"validation_rule:{row.slug}@{row.version}", before={"status": "approved", "approved_by": str(approved_by)}, after={"status": "review", "approved_by": None}, justification=...)`; `<RL-<minted id>>` is `RL-1407`; one `unit_of_work`; `audit.verify_chain` for every workspace written, inside it.
+- Broken-input red 1 (the `NOT EXISTS` clause removed in a scratch edit): `1 failed, 3 passed`, `FAILED …::test_the_reset_leaves_a_built_in_and_a_backed_approval_alone` with `AssertionError: c was reset` / `assert 'review' == 'approved'` (C, the backed approval, is reset). Reverted (`cp` of the saved file; the green re-run `4 passed`).
+- Broken-input red 2 (the `audit.record` call removed): `2 failed, 2 passed`: `…::test_the_reset_returns_an_unbacked_approval_to_review_with_one_event_each` (`AssertionError: a` / `assert 0 == 1` / `where 0 = len([])`) and `…::test_the_chain_of_every_workspace_written_still_verifies`. Reverted, `4 passed`.
+- The script's own output, run on the scratch database `scratch_sl1409_base` (nine unbacked rules, one workspace; the DSN override is `GIP_DATABASE_URL`): first run `scratch_sl1409_base reset=9 workspaces=1 chain_verified=1`, rc 0; second run `scratch_sl1409_base reset=0 workspaces=0 chain_verified=0`, rc 0.
+
+**Doubt, for the lead (not a stop).** RL-1407 says the script "runs on the database named `gipricing`, always" and also asks for the style of `revalidate-artifacts.py` with its `GIP_DATABASE_URL` override; I kept the override (the style the ruling names), so the script writes whatever DSN it is given and defaults to `gipricing`. Step 4's executor passes no override.
+
+**Scratch databases:** created `scratch_sl1409_base`, `scratch_sl1409_after`; dropped at the end of the task (see the Step 3a entry).
+
 ### The write set under the `__all__` amendment (Delta 4, #1118)
 
 Names this slice appends to `packages/model-schema/src/model_schema/__init__.py`, appended only, each with its import

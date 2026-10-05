@@ -40,7 +40,6 @@ ALLOWANCE_SITES = frozenset(
         ("backend/src/app/platform/validation_rules.py", "replace_rule_set"),
         # Legitimate seed writers.
         ("backend/src/app/platform/validation_rules.py", "seed_builtin_rules"),
-        ("examples/fremtpl2/seed.py", "run"),
     }
 )
 
