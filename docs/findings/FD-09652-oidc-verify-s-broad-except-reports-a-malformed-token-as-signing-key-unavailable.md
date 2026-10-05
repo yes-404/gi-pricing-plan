@@ -13,7 +13,7 @@ relates: [WK-1178]
 # FD-9652 — `OidcVerifier.verify`'s broad `except` reports a malformed token as "signing key unavailable"
 
 **Working id 9652** (unminted; the lead is the sole allocator). **Severity: LOW; owner WK-1178.**
-Ordered by the deputy's decision 2 in the entry headed *"2026-10-05 13:32:27 BST — #1123 check
+Ruled by the maintainer (by delegation), decision 2 in the entry headed *"2026-10-05 13:32:27 BST — #1123 check
 result accepted; CORRECTION to my 13:28:14 and 13:30:39 pyjwt impact claim; hardening finding YES
 (LOW); RL 9663 noted"* (`to-lead.md`, a local channel file, so cited by its header). The `tree:` is
 `origin/main` at `99afcde2`; the code below was read there by the auditor.
@@ -47,7 +47,7 @@ because pyjwt parses the payload before `jwt.decode` runs, and the broad `except
 it throws. A narrower catch added later, or a pyjwt that stops parsing there, would let the error
 escape as a 500.
 
-**Not a 500, not a bypass.** The deputy's decision 2 corrects an earlier claim of a possible 500
+**Not a 500, not a bypass.** That entry corrects an earlier claim of a possible 500
 and of an "REACHABLE" advisory: at `99afcde2` the outcome is a 401 on both pyjwt versions. This
 finding is the misleading reason and the accidental dependence, nothing more.
 
@@ -72,10 +72,12 @@ advisory; it does not fix this.
 
 ## Disposition
 
-**Proposed, not decided** (the lead gives the verdict): fix before close with owner WK-1178. Remedy:
+**Ruled** (decision 2 above: "YES, file it, LOW, owner WK-1178"; the lead gives the verdict at the mint): fix before close with owner WK-1178. Remedy (as that decision states it):
 
 In `verify`, catch the decode and recursion class (`jwt.exceptions.DecodeError`, `RecursionError`)
 separately from the JWKS-fetch and unknown-`kid` class, with its own reason (for example
 "malformed token") and its own log line, leaving the broad catch's reason for the genuine
 key-resolution failures. Pin it with a test: a deeply nested token gets a 401 and that reason,
 red first. The remedy is not built.
+
+**Re-read at `origin/main` 809a3794, 2026-10-05:** the code above is unchanged, at `oidc.py:99-107` (the `try` at :99, the `except Exception` at :101, the raise at :107); no test in `backend/tests/test_auth_oidc.py` names `RecursionError`, a nested token or "signing key unavailable"; `uv.lock` now resolves pyjwt 2.15.0 (#1123 merged), so the 2.15.0 column of the table is the one that applies on main. The reproduction itself was not re-run (docs only, no test run). The pyjwt 2.14.0 `jwks_client.py:280` cite was not re-read (2.14.0 is no longer installed).
