@@ -138,21 +138,6 @@ The text ends with ` |`, which replaces the cell's existing closing ` |`. So the
 string is `(`02` OQ-575, decided 2026-08-17.) |`, and it is replaced with
 `(`02` OQ-575, decided 2026-08-17.) ` followed by the block above.
 
-**T2 — `03` §5.1, the owned-code list.** Placement: `docs/specs/03-rating-engine.md`, §5.1's
-paragraph that begins `**Error codes owned by this module:**` (`:928` at `ef5dc6e7`); the find
-string is on its `:934` (`:816` at `1dd5e264`).
-Replace the exact string
-
-```text
-`BUNDLE_COMPILE_FAILED`, `EVIDENCE_INCOMPLETE` (re-raised from `06`),
-```
-
-with
-
-```text
-`BUNDLE_COMPILE_FAILED`, `MODEL_REFERENCE_MODE_INCONSISTENT` *(added <date>, `RL-<this>`: FR-223's mode check; it fails the `rating.compile` Job, and answers **422** at any route that writes a Rating Version's `algorithm_ref` or `model_reference_mode`)*, `EVIDENCE_INCOMPLETE` (re-raised from `06`),
-```
-
 The executor applies each text above byte-for-byte; authorship stays with the decision-maker (document-ids §1.6 FR row; CLAUDE.md §2 one-commit rule; the RL-1296 precedent). Any executor wording is a stop. If a find string is not found exactly once, that is a stop too, reported to the lead; the executor does not re-word it.
 
 ## What it obliges
@@ -164,7 +149,7 @@ The executor applies each text above byte-for-byte; authorship stays with the de
     `MODEL_REFERENCE_MODE_INCONSISTENT`, not as a bare `ValueError` that falls back to
     `BUNDLE_COMPILE_FAILED`.
   - The code is added to `backend/src/app/errors.py`'s rating registry.
-  - T1 and T2 land in the same commit.
+  - T1 lands in the same commit.
   - Red first: a compile test with an `approximation` version pinning an `exact`
     `model_call` asserts the Job's error code. On main it reads `BUNDLE_COMPILE_FAILED`.
   - How the error is typed is the build's to design. This record does not rule its code.
@@ -263,3 +248,25 @@ on the lead's brief of 2026-10-05 10:50 BST, which adopted the batch-2 triage).
 - `tree:` stays `8bd782ac`, the tree of `1dd5e264` that the Evidence was read at, as
   `RL-1407` keeps its own evidence tree. `created:` changes at the mint. RL 9767, RL 9770
   and FD 9759 are still working ids (#1055, #1060, #1059) and are cited as such.
+
+## Pre-mint correction, 2026-10-05 (the maintainer, by delegation)
+
+*Recorded by the decision-maker session `dm-premint-3` (effort `medium`), on the lead's brief
+of 2026-10-05 12:16:21 BST. This section rules nothing: it records the maintainer's ruling, by
+delegation, from `~/gi-pricing-plan.local/channel/to-lead.md`, the entry headed
+"2026-10-05 11:02:39 BST — RL 9758 (#1061, unminted): DROP T2 with a dated pre-mint note; no
+re-ruling (the maintainer, by delegation)". Its given text, with the elided premise filled
+from this record's Evidence, verbatim:*
+
+T2 withdrawn. Its premise, that `MODEL_REFERENCE_MODE_INCONSISTENT` "is not in `03` §5.1's
+owned-code list", was false at this record's tree; the code has been in 03 §5.1's owned list
+(:936) since a72cc1b2. No other text depends on T2.
+
+- **Applied.** T2's placement and its two text blocks are removed from *Spec changes this ruling requires*, and *What
+  it obliges* reads "T1 lands in the same commit." T1 and the rest of the record stand.
+- **Verified at origin/main `072c56e1ba386a790160ac4d90ad667f611df67c`.** In
+  `docs/specs/03-rating-engine.md`, the paragraph that begins
+  `**Error codes owned by this module:**` is `:928`, and `:936` ends
+  `` `MODEL_REFERENCE_MODE_INCONSISTENT`, ``. At this record's tree `8bd782ac` (commit
+  `1dd5e264`) the same entry is `:818`. `git log origin/main -S'MODEL_REFERENCE_MODE_INCONSISTENT'
+  -- docs/specs/03-rating-engine.md` names one commit, `a72cc1b2` (2026-08-17, #95).
