@@ -15,6 +15,7 @@ from uuid import UUID
 import pytest
 import pytest_asyncio
 from backend.tests.blob_fixtures import dataset_blob, digest
+from backend.tests.dry_run_reports import stored_dry_run_report
 from fastapi.testclient import TestClient
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
@@ -640,18 +641,26 @@ def test_a_rule_walks_draft_to_approved_and_never_by_its_author(
 
     # Step 2: no dry run, no submission. An approver reading JSON cannot tell whether a
     # rule selects three rows or three million.
-    refused = client.post(f"/api/v1/validation-rules/{rule_id}/submit", headers=headers)
+    refused = client.post(
+        f"/api/v1/validation-rules/{rule_id}/submit",
+        json={"change_summary": "first cut"},
+        headers=headers,
+    )
     assert refused.status_code == 409
     assert refused.json()["code"] == "RULE_NOT_APPROVED"
 
     async def attach_dry_run() -> None:
         async with database.unit_of_work() as session:
             row = await session.get(ValidationRuleRow, UUID(rule_id))
-            row.dry_run_report_id = new_uuid7()
+            await stored_dry_run_report(session, workspace_id=workspace_id, rule=row)
 
     asyncio.get_event_loop().run_until_complete(attach_dry_run())
 
-    submitted = client.post(f"/api/v1/validation-rules/{rule_id}/submit", headers=headers)
+    submitted = client.post(
+        f"/api/v1/validation-rules/{rule_id}/submit",
+        json={"change_summary": "first cut"},
+        headers=headers,
+    )
     assert submitted.status_code == 200, submitted.text
     assert submitted.json()["status"] == "review"
 
@@ -660,7 +669,7 @@ def test_a_rule_walks_draft_to_approved_and_never_by_its_author(
     self_approved = client.post(
         f"/api/v1/validation-rules/{rule_id}/approve", headers=headers
     )
-    assert self_approved.status_code == 409
+    assert self_approved.status_code == 403
     assert self_approved.json()["code"] == "SUBMITTER_CANNOT_APPROVE"
 
     approver = new_uuid7()
@@ -697,11 +706,13 @@ def _approved_rule(client, headers, approver_headers, database, **over) -> str:
     async def attach() -> None:
         async with database.unit_of_work() as session:
             row = await session.get(ValidationRuleRow, UUID(rule_id))
-            row.dry_run_report_id = new_uuid7()
+            await stored_dry_run_report(session, workspace_id=row.workspace_id, rule=row)
 
     asyncio.get_event_loop().run_until_complete(attach())
     assert client.post(
-        f"/api/v1/validation-rules/{rule_id}/submit", headers=headers
+        f"/api/v1/validation-rules/{rule_id}/submit",
+        json={"change_summary": "first cut"},
+        headers=headers,
     ).status_code == 200
     assert client.post(
         f"/api/v1/validation-rules/{rule_id}/approve", headers=approver_headers
