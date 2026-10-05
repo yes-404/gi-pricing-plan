@@ -19,7 +19,7 @@ relates: [WK-1170, WK-1178, OQ-1316, OQ-1373]
 
 ## Finding
 
-**Severity: proposed: LOW; owner: proposed: WK-1170; ruled by the maintainer (by delegation) at the ACK.** Two open
+**Severity: LOW; owner: WK-1170 — both ruled by the maintainer (by delegation), 2026-10-05 15:28:26 BST, entry headed "Wave results: D1 = (c); D2 PL 9624 DPs; D3 PL 9629 DP-6 + plan the 2 missing G2 items; C1′ is FD 9995 (no new finding); FD 9619 noted" (`to-lead.md`, a local channel file, so cited by its header) ("LOW, owner WK-1170, CONFIRMED").** Two open
 questions are mirrored in `docs/open-questions.md` and in `03` §10 and are in no row of `docs/roadmap.md` §10's decision-gate
 table, so the plan does not show when they must be answered. `.claude/skills/spec-change/SKILL.md` already requires the row
 ("A new `OQ-` also goes into `docs/roadmap.md` §10's decision-gate table, in the same commit") and says in the same place
@@ -64,19 +64,28 @@ placed at Before Phase 3" note). The decision-maker's role file does not tell it
 
 ## Disposition
 
-Open. Filed by the auditor, 2026-10-05; severity and owner are proposals. The maintainer (by delegation) rules both at the ACK.
+Open. Filed by the auditor, 2026-10-05; severity LOW and owner WK-1170 ruled as above. The gate row for each OQ is proposed below and ruled at the ACK.
 
 **Remedy, proposed (two parts, the second is the cure for the class):**
 
 1. **Add the two rows** to `docs/roadmap.md` §10, in one gate row each, in the compact id form, with no `OQ-` id in any
-   explanatory italics (the skill's warning). Which gate each belongs to (OQ-1316 gates the ladder's rounding rung, the
-   SL-1345 carve-out; OQ-1373 gates NFR-500's measurement and the F35 plan) is for the maintainer; this finding does not choose it.
+   explanatory italics (the skill's warning). Which gate each belongs to is proposed in §Proposed gate rows below.
    Recount each touched row's `N (M open)` with the skill's second script.
 2. **Add the check to `audit-docs.py`**: the coverage script's three assertions (`missing`, `extra`, `duplicated`) with the eight
    recorded ids as a named exemption set, plus the count recount. `.claude/skills/docs-audit/SKILL.md` and
    `.claude/skills/spec-change/SKILL.md` both say today that the script does not do it; when the check lands, both sentences change
-   in the same commit. Owner WK-1170 (the create-read-retire audit, which already owns FD-1280's and FD-1282's audit-docs guards) is the
-   proposal; the alternative is WK-1178.
+   in the same commit. Owner WK-1170 (the create-read-retire audit, which already owns FD-1280's and FD-1282's audit-docs guards) is ruled.
 
 Event that next confirms or discharges it: the remedy PR merging, and the script printing `none` for `missing` beyond the
 eight recorded ids.
+
+## Proposed gate rows
+
+The maintainer's 15:28:26 entry says the auditor proposes, for each OQ, the gate of the Work that owns its decision (a decided OQ gets a decided row), and that the maintainer confirms at the ACK. **Both are proposals: ruled by the maintainer (by delegation) at the ACK. This PR adds no row to `docs/roadmap.md`.** Both OQs are owned by WK-1178 (`docs/open-questions.md` :138 and :141); the §10 table has no WK-1178 row, so the proposal picks the existing row whose trigger matches what each answer changes.
+
+| OQ | Proposed gate row | Reason |
+|---|---|---|
+| OQ-1316 | **Before Phase 3** | The OQ's own recommendation is "(c) now, then (a) when a concrete requirement for intermediate rounding appears": (c) is today's rule, so P2 does not block on the answer, and `round`, `floor` and `ceil` stay off the P2 allow-list meanwhile. This is the row where OQ-1321 (same Work, same RL-1312 lineage, an option (a) recommended post-P2) was placed on 2026-09-30. |
+| OQ-1373 | **Before the P2 exit demo** | NFR-500 is measured failing (516.07 GB/year against 200 GB), the F35 plan (WK-1178, Phase 2 work) re-measures it under whichever reading is ruled (its DP-F35-3), and the plan cannot state its acceptance until the reading is ruled. That is a Phase 2 exit input, the same shape as the two findings already on that row. The alternative is **Before Phase 3**, the row OQ-1229 (also WK-1178, "answer changes what its tests must prove before the Phase 2 exit") was placed on; the proposal prefers the earlier row because this budget is measured failing now. |
+
+When the rows are added, recount each touched row's `N (M open)` with the `docs-audit` skill's second script (the skill's warning stands: no `OQ-` id in explanatory italics).
