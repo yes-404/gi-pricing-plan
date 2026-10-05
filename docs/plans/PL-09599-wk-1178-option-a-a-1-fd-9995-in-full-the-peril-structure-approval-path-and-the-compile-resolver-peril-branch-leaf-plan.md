@@ -127,6 +127,16 @@ approved set is `{ModelStatus.APPROVED}`: a `superseded` component is refused, a
 DP-A3-4 fallback (c) needs ("compile the structure pinned to the superseded version →
 refused"). Task 3 Step 2, DP-1's row and item 13 are corrected.
 
+**Dated note, 2026-10-05 (written 17:22:22 BST, pre-mint): the `06` §4.2 note gets a worded
+amendment, through A-1's ruling.** From the entry headed *"2026-10-05 17:14:54 BST — FD 9572
+placement accepted; WK-673 S4/S5/S6, A-1, A-2 and CR-838 DECISIONS (1–8)"*, item 6, read in
+full by this planner. Verbatim:
+
+> 6. A-1 DP-1's 06 §4.2 note: YES, worded text. A DM drafts the dated amendment to 06:407 ("the per-peril approvals half is unqueryable" becomes the enforced rule A-1 builds), adopted in A-1's ruling. Task 5 is not left empty, and a stale note must not contradict the code.
+
+So DP-1 (a)'s amendment is drafted by a decision-maker (dm-a34) and adopted in A-1's `RL-`,
+whose working id is given at its filing. Task 5 applies it, and activation need 4b requires it.
+
 ## Status
 
 `draft`. **The three decision points are ruled** (§"Decision points"): the maintainer (by
@@ -156,6 +166,10 @@ the `SL-` row's status flip and this plan's.
    DP-2 (a) and DP-3 (b) "(no DM needed; each is a choice inside settled scope)", so no
    `RL-` is written. The ruling and this plan do not differ; the dispatch record cites the
    entry by its header.*
+4b. **A-1's ruling, carrying the `06:407` amendment text** *(added 2026-10-05, pre-mint, on
+   the 17:14:54 BST entry's item 6)*. A dated `RL-` adopting the decision-maker's drafted
+   amendment to `06` §4.2's note (`06:405-408`), working id given at its filing. DP-1 to DP-3
+   stay as accepted at 17:02:50; this ruling adds only the text.
 5. **The lane and the dispatch GO.** A HIGH G2 blocker takes the first build lane that frees
    once its plan is active (the maintainer's 13:12:56 BST priority rule, item 2 above). This
    slice is the first of the serial chain A-1 → A-2 → A-3 → A-4 (item 1). The lead's
@@ -492,14 +506,13 @@ below was written before the ruling and is kept as written.
 
 ### Task 5: The spec text, verbatim from the ruling (DP-1 a only)
 
-- [ ] **Step 1:** If the ruling carries a dated amendment to `06` §4.2's note (`:405-408`),
-  apply it verbatim under `spec-change`, run `python3 scripts/audit-docs.py`, and commit.
-  If the ruling carries none, this task is empty and the ledger says so.
-  *Dated note, 2026-10-05 (pre-mint): the 17:02:50 BST acceptance carries no text for the
-  note, though DP-1 (a)'s option says "the note gets a dated amendment". As written, this
-  task is empty, and `06` §4.2 keeps calling the per-peril half "unqueryable" (`06:407` at
-  `137bc817`) after this slice enforces it. Reported to the lead for a worded text before
-  activation; this planner writes none.*
+- [ ] **Step 1:** Apply the `06:407` amendment text from A-1's `RL-` (working id given at its
+  filing; activation need 4b), byte for byte, to `06` §4.2's note (`:405-408`), under
+  `spec-change`. Run `python3 scripts/audit-docs.py` and commit. This plan holds no text: the
+  text is that `RL-`'s. If the `RL-` is not merged at dispatch, the slice does not start
+  (activation need 4b). *(Dated note, 2026-10-05: replaces this step's earlier "if the ruling
+  carries none, this task is empty", on the 17:14:54 BST entry's item 6: "Task 5 is not left
+  empty, and a stale note must not contradict the code".)*
 
 ### Task 6: The gate and the ledger (items 11, 12)
 
