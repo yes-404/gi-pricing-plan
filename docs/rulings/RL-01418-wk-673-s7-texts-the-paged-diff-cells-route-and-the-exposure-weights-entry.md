@@ -1,5 +1,5 @@
 ---
-id: RL-9710
+id: RL-1418
 family: ruling
 title: WK-673 Slice 7 spec texts — FD-1358's per-cell weight is served by a separate cursor-paged diff-cells route over every changed cell, and exposure_weights is a pure pricing-core function with a dated 03 §5.2 entry
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
@@ -11,16 +11,16 @@ work: WK-673
 supersedes: []
 superseded_by: ~
 corrected_by: []
-corrects: [RL-1361]
+corrects: RL-1361
 relates: [FD-1358, RL-1361, PL-1267, PL-1286, FR-231, FR-232, FR-450]
 ---
 
-# RL 9710 (working id) — WK-673 Slice 7 spec texts: the paged diff-cells route and the exposure_weights entry
+# RL-1418 — WK-673 Slice 7 spec texts: the paged diff-cells route and the exposure_weights entry
 
 ## How this was ruled
 
-- **Filed under working id 9710, allocated by the lead.** The id is replaced at the mint.
-  In the texts below, `RL-9710` stands for this ruling's minted id.
+- **Filed under working id 9710, allocated by the lead; minted as `RL-1418` on 2026-10-05.**
+  In the texts below, `RL-1418` is this ruling's minted id.
 - **The decisions are not this record's.** They are the maintainer's, by delegation, in the
   entry "2026-10-05 12:58:22 BST — DECISIONS (the maintainer, by delegation): FD 9780; DP-A;
   OQ 9739; RL 9715 DP-2; PL 9716 DP-B; the OQ 9739 row" (`channel/to-lead.md`), items 2 and 5:
@@ -127,7 +127,7 @@ FR-231 clarification says only how each cell is served.
 ## The spec texts
 
 Each item gives the file, the place, who applies it, and the exact bytes. Placement was read
-at `origin/main` `caa4e411`. The placeholders are `RL-9710` (this ruling's minted id) and
+at `origin/main` `caa4e411`. The placeholders are `RL-1418` (this ruling's minted id, in place of the working-id form `RL-1418` drafted) and
 `<Slice 7 date>` (the date of the WK-673 Slice 7 commit that applies the item). Nothing else
 in a text is a placeholder. All five are applied by Slice 7, in one commit with the code
 (`CLAUDE.md` §2).
@@ -137,7 +137,7 @@ in a text is a placeholder. All five are applied by Slice 7, in one commit with 
 replaces; insert after T10's replacement if T10 is applied first). Insert
 
 ```text
-| `GET` | `/api/v1/rate-tables/{slug}@{version}/diff/cells?against=&portfolio=&limit=&cursor=` | **200** One cursor page of the diff's changed cells (FR-231), `Page[RateTableDiffCell]` (§4.2): every cell the diff's `changed_cells` counts, ordered by key tuple (§4.2), with each cell's baseline and current value, absolute and relative change, and its exposure weight when `portfolio` names a `validated` portfolio Dataset Version, weighted as the diff row states. The pages together hold every changed cell: a page bounds one response, not the cells. Requires `rating:read`. `limit` is 1 to `MAX_LIMIT`, default `DEFAULT_LIMIT` (`00` §5.2); `next_cursor` is null on the last page; `total_estimate` is the diff's `changed_cells`, counted up to `COUNT_CAP`. **202** with a `rate_table.diff_cells` Job and a `Location` header where either version is `storage: parquet` (FR-232) and the query's cell artifact is not yet stored: the Job writes every changed cell, in order, as one content-addressed blob keyed like the diff's cache by both versions' content hashes and the portfolio's identity, and the same request then answers **200** with pages read from it; an artifact that cannot be found is computed again, never served from another query. `against` and `portfolio` are checked as on the diff row, before any cell is read and before any Job: **404** `NOT_FOUND` for an unknown table, version or `against`; with `portfolio`, **403** without `dataset:read`, the same for any id, **404** `NOT_FOUND` for a portfolio that is missing or in another workspace, **409** `DATASET_NOT_VALIDATED` for a `draft` or `archived` portfolio, **404** `NOT_FOUND` for a `factor_ref` or `banding_ref` that does not resolve, and **422** `VALIDATION_FAILED` for the diff row's portfolio faults. **400** `VALIDATION_FAILED` for a cursor this API did not issue or one past the last cell; **422** `VALIDATION_FAILED` for a `limit` out of range. A Job fails with the same codes. This route adds no field to `RateTableDiff` and changes nothing on the diff row. (**added <Slice 7 date>, `RL-9710`, FD-1358**) |
+| `GET` | `/api/v1/rate-tables/{slug}@{version}/diff/cells?against=&portfolio=&limit=&cursor=` | **200** One cursor page of the diff's changed cells (FR-231), `Page[RateTableDiffCell]` (§4.2): every cell the diff's `changed_cells` counts, ordered by key tuple (§4.2), with each cell's baseline and current value, absolute and relative change, and its exposure weight when `portfolio` names a `validated` portfolio Dataset Version, weighted as the diff row states. The pages together hold every changed cell: a page bounds one response, not the cells. Requires `rating:read`. `limit` is 1 to `MAX_LIMIT`, default `DEFAULT_LIMIT` (`00` §5.2); `next_cursor` is null on the last page; `total_estimate` is the diff's `changed_cells`, counted up to `COUNT_CAP`. **202** with a `rate_table.diff_cells` Job and a `Location` header where either version is `storage: parquet` (FR-232) and the query's cell artifact is not yet stored: the Job writes every changed cell, in order, as one content-addressed blob keyed like the diff's cache by both versions' content hashes and the portfolio's identity, and the same request then answers **200** with pages read from it; an artifact that cannot be found is computed again, never served from another query. `against` and `portfolio` are checked as on the diff row, before any cell is read and before any Job: **404** `NOT_FOUND` for an unknown table, version or `against`; with `portfolio`, **403** without `dataset:read`, the same for any id, **404** `NOT_FOUND` for a portfolio that is missing or in another workspace, **409** `DATASET_NOT_VALIDATED` for a `draft` or `archived` portfolio, **404** `NOT_FOUND` for a `factor_ref` or `banding_ref` that does not resolve, and **422** `VALIDATION_FAILED` for the diff row's portfolio faults. **400** `VALIDATION_FAILED` for a cursor this API did not issue or one past the last cell; **422** `VALIDATION_FAILED` for a `limit` out of range. A Job fails with the same codes. This route adds no field to `RateTableDiff` and changes nothing on the diff row. (**added <Slice 7 date>, `RL-1418`, FD-1358**) |
 ```
 
 **T2 — `03` §4.2, the cell shape and its order (DP-A items 2 and 3).** Placement: a
@@ -145,7 +145,7 @@ blockquote paragraph **inserted after** `RL-1361` T6's "Coverage added" paragrap
 blank line between them. Insert
 
 ```text
-> **Per-cell diff added <Slice 7 date> (`RL-9710`, FR-231, FD-1358).** The diff's changed
+> **Per-cell diff added <Slice 7 date> (`RL-1418`, FR-231, FD-1358).** The diff's changed
 > cells are served one page at a time by `GET …/diff/cells` (§5.1), as `RateTableDiffCell`
 > items in `model-schema`: `key`, an object holding each declared key's name and the cell's
 > stored value for it; `change`, one of `added`, `removed`, `changed`; `baseline_value` and
@@ -170,7 +170,7 @@ blank line between them. Insert
 `diff_vs_seed` signature (`03:1117-1119` at `caa4e411`), before the closing fence. Insert
 
 ```text
-def diff_cells(baseline_cells: Cells, current_cells: Cells,            # added <Slice 7 date> (RL-9710, FD-1358):
+def diff_cells(baseline_cells: Cells, current_cells: Cells,            # added <Slice 7 date> (RL-1418, FD-1358):
                keys: Sequence[RateTableKey], value: RateTableValue, *,  # every changed cell in §4.2's order,
                weights: Weights | None = None) -> list[RateTableDiffCell]  # the set diff_vs_* count
 ```
@@ -181,7 +181,7 @@ The text is **appended** to the end of the second cell, after `RL-1361` T3's tex
 closing ` |`. Nothing is struck.
 
 ```text
-**Clarified <Slice 7 date> (`RL-9710`): the weight behind each cell (FD-1358).** Each changed cell's baseline and current value, absolute and relative change and exposure weight are served by `GET /api/v1/rate-tables/{slug}@{version}/diff/cells` (§5.1), one cursor page at a time in §4.2's key order. Every changed cell is served: a page bounds one response, not the cells. `RateTableDiff`, on the diff route, stays the aggregate summary of the same cells.
+**Clarified <Slice 7 date> (`RL-1418`): the weight behind each cell (FD-1358).** Each changed cell's baseline and current value, absolute and relative change and exposure weight are served by `GET /api/v1/rate-tables/{slug}@{version}/diff/cells` (§5.1), one cursor page at a time in §4.2's key order. Every changed cell is served: a page bounds one response, not the cells. `RateTableDiff`, on the diff route, stays the aggregate summary of the same cells.
 ```
 
 **T5 — `03` §5.2, `exposure_weights` (DP-B).** Proposed by planner-1391 by message to this
@@ -193,7 +193,7 @@ blank line before it. Insert
 
 ```text
 
-# pricing_core/rate_tables/weights.py                # added <Slice 7 date> (WK-673 Slice 7, RL-9710, RL-1361)
+# pricing_core/rate_tables/weights.py                # added <Slice 7 date> (WK-673 Slice 7, RL-1418, RL-1361)
 def exposure_weights(portfolio: pl.LazyFrame, keys: Sequence[RateTableKey], cells: Cells, *,
                      factors: Mapping[str, Sequence[Factor]],
                      bandings: Mapping[UUID, Banding],
@@ -206,12 +206,12 @@ def exposure_weights(portfolio: pl.LazyFrame, keys: Sequence[RateTableKey], cell
 is one physical line:
 
 ```text
-*`weights.py`'s public surface (added <Slice 7 date>, WK-673 Slice 7, `RL-9710`, on `RL-1361` items 2 to 4).* `exposure_weights` computes FR-231's exposure weight per cell of a rate table version. `portfolio` is `read_portfolio`'s output, so §4.8's frame refusals have already run. `keys` and `cells` are the **current** version's. `factors` maps each `factor_ref` in `keys`, as its `factor:<slug>@<version>` string, to that Factor followed by any interaction operands. `bandings` and `groupings` hold, by id, every Banding a `banding_ref` names and every Banding or Grouping those Factors pin. The platform loads all three, because this function takes no database (ADR-703). Each key is resolved by exactly one branch of `RL-1361` item 2: `resolve_factors` for a `factor_ref`, `apply_banding` for a `banding_ref`, and the same-named column otherwise. The comparison with each cell's stored key string is made in the key's declared type. `PortfolioWeights` is a frozen dataclass with three fields. `weights` is a `dict[KeyTuple, Decimal]` mapping each cell's stored key tuple to Σ `exposure_years` over the rows that map to it, with any cell whose Σ is 0 omitted; it is a `Weights` and is passed unchanged as `weights` to `diff_vs_previous`, `diff_vs_seed` and `diff_cells`, so the aggregate mean and the per-cell weights come from one map. `portfolio_exposure` is Σ `exposure_years` over every row, and `matched_exposure` is that sum over the rows that map to a cell; these are §4.2's two coverage figures. `WeightJoinError` is a `ValueError` with `code = "VALIDATION_FAILED"`. It is raised for an absent column, a non-numeric banded column, a `FactorResolutionError`, and a portfolio whose rows map to no cell. Its own message names the key, the column or the ref, never a value; a `FactorResolutionError`'s message is carried as it is, with its count and example value (`RL-1361` item 3). The platform maps it to `VALIDATION_FAILED`.
+*`weights.py`'s public surface (added <Slice 7 date>, WK-673 Slice 7, `RL-1418`, on `RL-1361` items 2 to 4).* `exposure_weights` computes FR-231's exposure weight per cell of a rate table version. `portfolio` is `read_portfolio`'s output, so §4.8's frame refusals have already run. `keys` and `cells` are the **current** version's. `factors` maps each `factor_ref` in `keys`, as its `factor:<slug>@<version>` string, to that Factor followed by any interaction operands. `bandings` and `groupings` hold, by id, every Banding a `banding_ref` names and every Banding or Grouping those Factors pin. The platform loads all three, because this function takes no database (ADR-703). Each key is resolved by exactly one branch of `RL-1361` item 2: `resolve_factors` for a `factor_ref`, `apply_banding` for a `banding_ref`, and the same-named column otherwise. The comparison with each cell's stored key string is made in the key's declared type. `PortfolioWeights` is a frozen dataclass with three fields. `weights` is a `dict[KeyTuple, Decimal]` mapping each cell's stored key tuple to Σ `exposure_years` over the rows that map to it, with any cell whose Σ is 0 omitted; it is a `Weights` and is passed unchanged as `weights` to `diff_vs_previous`, `diff_vs_seed` and `diff_cells`, so the aggregate mean and the per-cell weights come from one map. `portfolio_exposure` is Σ `exposure_years` over every row, and `matched_exposure` is that sum over the rows that map to a cell; these are §4.2's two coverage figures. `WeightJoinError` is a `ValueError` with `code = "VALIDATION_FAILED"`. It is raised for an absent column, a non-numeric banded column, a `FactorResolutionError`, and a portfolio whose rows map to no cell. Its own message names the key, the column or the ref, never a value; a `FactorResolutionError`'s message is carried as it is, with its count and example value (`RL-1361` item 3). The platform maps it to `VALIDATION_FAILED`.
 ```
 
 *The amendments to the proposal:*
 
-1. `RL 9710` → `RL-9710` in both parts: the minted-id placeholder of this record.
+1. `RL 9710` → `RL-1418` in both parts: the minted-id placeholder of this record (as drafted under its working id).
 2. "to `diff_vs_previous` and `diff_vs_seed`" → "to `diff_vs_previous`, `diff_vs_seed` and
    `diff_cells`, so the aggregate mean and the per-cell weights come from one map". The
    proposal's covering message said this; the text did not.
@@ -269,7 +269,7 @@ between submit and run; the detail names the diff)*.
 - **The payload is unchanged.** Only the first line, the anchor, differs. The payload is
   every line of the replacement after the first. Its five lines are byte-identical to
   `RL-1361` T11's. Predicate, run at `caa4e411` from the repository root:
-  `diff <(awk '/^\*\*T11/{f=1} f&&/^with$/{g=1;next} g&&/^```text$/{h=1;n=0;next} h&&/^```$/{exit} h{n++; if(n>1)print}' docs/rulings/RL-01361-*.md) <(awk '/^- \*\*The corrected T11/{f=1} f&&/^with$/{g=1;next} g&&/^```text$/{h=1;n=0;next} h&&/^```$/{exit} h{n++; if(n>1)print}' docs/rulings/RL-09710-*.md) | wc -l`
+  `diff <(awk '/^\*\*T11/{f=1} f&&/^with$/{g=1;next} g&&/^```text$/{h=1;n=0;next} h&&/^```$/{exit} h{n++; if(n>1)print}' docs/rulings/RL-01361-*.md) <(awk '/^- \*\*The corrected T11/{f=1} f&&/^with$/{g=1;next} g&&/^```text$/{h=1;n=0;next} h&&/^```$/{exit} h{n++; if(n>1)print}' docs/rulings/RL-01418-*.md) | wc -l`
   printed **0**; the same predicate with one byte of the third payload line changed printed
   **4**. The `<Slice 7 date>` and `RL-1361` in the payload keep `RL-1361`'s
   meaning: this is `RL-1361`'s text, re-anchored, not a text of this record.
