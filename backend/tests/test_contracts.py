@@ -547,9 +547,9 @@ MODEL_ONLY_UNRECONCILED: Final[dict[str, frozenset[str]]] = {
 #:
 #: * `model.custom_objective_ref` / `model-spec`'s `custom_objective_ref` — FR-207,
 #:   which gives the two *different* verdicts: the `GlmSpec` field is *"absent entirely"*
-#:   and the `Model` one *"declared and unbuilt"*. **Both are owned by WK-690** — Phase 2,
-#:   reassigned 2026-08-22 and confirmed 2026-08-25 to reach the pair rather than the
-#:   `Model` half alone. They cannot be split: `Model.custom_objective_ref` would record
+#:   and the `Model` one *"declared and unbuilt"*. **Both are owned by Phase 3**, a
+#:   separate, unspecified capability, moved there together on 2026-10-04
+#:   (RL-1362 DP-S3-5). They cannot be split: `Model.custom_objective_ref` would record
 #:   what `GlmSpec.custom_objective_ref` declares, and a GBM names its objective through
 #:   `spec.objective` instead, which is what `02` R4 is enforced off.
 #:   `ObjectiveBackend.glm` exists so an author can narrow applicability to a backend
@@ -566,17 +566,14 @@ MODEL_ONLY_UNRECONCILED: Final[dict[str, frozenset[str]]] = {
 #:   `Model`. The deciding fact is cardinality: `ix_transparency_model` is not unique, so a
 #:   single id here could name only one of the artifacts a model accumulates. It stays in
 #:   the contract as a documented dead property, never as a gap to fill.
-#: * `custom-objective`'s `if kind == "expression"` branch — `loss`, `derived`,
-#:   `bound_symbols`, `parameters`. `ObjectiveKind.EXPRESSION` is Phase 2 behind
-#:   `expression_objectives_enabled` (`objectives.py:75-81`) and `CustomObjective` **refuses
-#:   to be constructed with it** (`objectives.py:8-12`), so the shape is not merely absent —
-#:   it is refused by name (OQ-573).
+#: * `custom-objective`'s `if kind == "expression"` branch was listed here (`loss`, `derived`,
+#:   `bound_symbols`, `parameters`) until WK-690 Slice 3 built the `expression` arm of
+#:   `CustomObjective` (FR-144); it is now compared like any built field.
 #:
 #: The `if kind == "template"` branch is *not* here: `template` and `params` are built, and
 #: the flattening above now sees them where the retired `CONDITIONAL_FIELDS` exemption used
 #: to assert them by hand.
 DECLARED_AND_UNBUILT: Final[dict[str, frozenset[str]]] = {
-    "custom-objective": frozenset({"loss", "derived", "bound_symbols", "parameters"}),
     "model": frozenset({"custom_objective_ref", "transparency_artifact_id"}),
     "model-spec": frozenset({"custom_objective_ref", "filter"}),
 }
@@ -2898,3 +2895,51 @@ def test_problem_responses_advertise_the_rfc_9457_media_type() -> None:
 @pytest.mark.req("FR-450")
 def test_the_settings_endpoints_are_published() -> None:
     assert "/api/v1/settings" in _load(OPENAPI)["paths"]
+
+
+def _certificate_check_name_drift(authored: Iterable[str], code: Iterable[str]) -> set[str]:
+    """The names on exactly one side of the certificate check-name comparison."""
+    return set(authored) ^ set(code)
+
+
+def _authored_certificate_check_names() -> list[str]:
+    schema = _load(AUTHORED / "objective-certificate.schema.json")
+    checks = schema["properties"]["result"]["properties"]["checks"]
+    return list(checks["items"]["properties"]["name"]["enum"])
+
+
+@pytest.mark.req("FR-146")
+def test_the_certificate_check_name_enum_is_the_code_vocabulary() -> None:
+    """FD-1349: `CertificateCheck.name` is a bare `str` in the generated schema, so no
+    walker reaches the authored `result.checks[].name` enum. The code's vocabulary is the
+    union of `OBJECTIVE_CERTIFICATE_CHECKS` and `OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC` —
+    the numeric and the symbolic battery share nine names, so the union is eleven. A name
+    on one side only is published vocabulary the emitter never produces, or the reverse."""
+    from model_schema import (
+        OBJECTIVE_CERTIFICATE_CHECKS,
+        OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC,
+    )
+
+    code = {*OBJECTIVE_CERTIFICATE_CHECKS, *OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC}
+    authored = _authored_certificate_check_names()
+    assert not _certificate_check_name_drift(authored, code), (
+        f"authored enum vs code vocabulary differ on: "
+        f"{sorted(_certificate_check_name_drift(authored, code))}"
+    )
+    assert len(authored) == len(set(authored)), "the enum repeats a name"
+
+
+def test_the_certificate_check_name_comparison_reaches_the_enum_and_can_fail() -> None:
+    """Meta-guard for the comparison above: it names two paths it must reach (both
+    symbolic names, in the authored enum and in the code union), and shows the drift
+    function reports a broken input rather than passing on two empty sets."""
+    from model_schema import OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC
+
+    authored = _authored_certificate_check_names()
+    assert len(authored) == 11
+    for name in ("symbolic_vs_numeric_gradient", "symbolic_vs_numeric_hessian", "smoke_fit"):
+        assert name in authored
+        assert name in OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC
+    broken = ["BOGUS" if name == "convexity" else name for name in authored]
+    assert _certificate_check_name_drift(broken, authored) == {"BOGUS", "convexity"}
+    assert _certificate_check_name_drift([], []) == set()
