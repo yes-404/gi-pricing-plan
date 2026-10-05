@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9894 — The spec table-row parsers split cells on every pipe, so a cell holding an escaped pipe is cut short and a declared endpoint is invisible to the checkers
+# FD 9894 — The spec table-row parsers split cells on every pipe, so a cell holding an escaped pipe is cut short and a declared endpoint is invisible to the checkers
 
 ## Amendment before mint (2026-10-05)
 
@@ -338,3 +338,19 @@ lands before the P2 exit review**. **It is carried by #977's slice** (the lead's
 with the migration of `doc-index.py:1061` and is proven by the red-first case above.
 
 *Drafted under working id 9894.*
+
+Re-anchored 2026-10-05 at main `caa4e411`: re-run of the reproduction above (the
+`scope-audit.py` script, escaped pipe respelled) prints `DATA printed 39 true 40, published
+printed 39 published true 40` and `GOV printed 23 true 25, published printed 13 published true
+13`; the hidden GOV pairs `('GET', '/api/v1/artifacts/{}/dependencies')` and `('GET',
+'/api/v1/dossiers/{}')` are published `[False, False]` and the hidden DATA pair
+`('GET', '/api/v1/dataset-versions/{}/lineage')` `[True]`: **the finding reproduces undone**. The
+three `([^|]+)` parsers are unchanged (`scripts/scope-audit.py:68`, `scripts/audit-docs.py:299`,
+`backend/src/app/demo/guide.py:64`) and `scripts/table_rows.py` does not exist. Cites that moved
+since `47d770e8`: `06:583` is now `docs/specs/06-governance.md:594` (the dossiers row) and `06:587`
+is now `:598` (the dependencies row); the lineage route in
+`docs/contracts/openapi/generated.json` is at `:19792` (was `:17717`); the register's three rows
+with an escaped pipe are still `docs/findings/register.md:197`, `:213` and `:222` at `main`;
+`python3 scripts/doc-index.py --phase P2` still raises `parsed 211 of 214 data row(s)` in this
+tree, which carries this record's own row; `tests/test_audit_docs_ids.py:2427` and `:2476` are
+unchanged. `RL 9907` is still a working id (unminted), so it stays unhyphenated here.
