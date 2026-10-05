@@ -109,7 +109,7 @@ used here unchanged. Additional terms owned by this module:
 | **FR-47** | An Acknowledgement is scoped to `(dataset_version_id, rule_id, report_id)`. It does not carry forward to the next version or the next report — each version's warnings are acknowledged on their own evidence. The UI **may pre-fill** the justification from the last acknowledgement of the same rule, but the act itself is always explicit and separately audited: fatigue is a UI problem, and a standing acknowledgement that goes stale hides the change it was meant to surface (OQ-564, decided 2026-08-14). |
 | **FR-48** | Rules execute independently; one rule's `error` does not prevent others from running. A rule that exceeds its time budget is recorded as `error` with reason `timeout`, and blocks validation (an unrun rule is never treated as a pass). |
 | **FR-49** | Every non-pass outcome persists: rule id and version, severity, affected row count, affected exposure, the measured value vs the threshold, and an Offending Sample of up to 100 primary keys. |
-| **FR-50** | Users can define **custom Validation Rules** declaratively (§4.5). A custom rule is an Artifact with its own `draft → review → approved` lifecycle; only `approved` rules may run in a Rule Set used for a Dataset feeding an `approved` Model. |
+| **FR-50** | Users can define **custom Validation Rules** declaratively (§4.5). A custom rule is an Artifact with its own `draft → review → approved` lifecycle; only `approved` rules may run in a Rule Set used for a Dataset feeding an `approved` Model. *(Amended 2026-10-05, `RL-1407`: enforced where a Rule Set is written and again where it runs. A validation run of a Dataset Version refuses its Rule Set, and writes no report, if any member is not `approved` (`RULE_NOT_APPROVED`, 409) or names no rule (`NOT_FOUND`, 404). Nothing is skipped silently. Every rule-set run is covered, which includes every Rule Set used for a Dataset feeding an `approved` Model. A dry run (§4.5 step 2) runs only the rule under review and is not a rule-set run.)* |
 | **FR-51** | A Rule Set is versioned. A Validation Report records the exact `rule_set_version` and each `rule_version` it executed, so an old report remains interpretable after rules change. |
 | **FR-52** | *(appended 2026-08-15, found by driving the exit demo)* A `validating` version whose report contains `fail`s transitions to **`failed`**, not left in `validating`. `validating` is a transient state — a version resting in it reads as "still running" on every screen that shows a status, and `FAILED → VALIDATING` exists precisely so a failed version can be re-validated once the data or the rule set is corrected. A version already `validated` and re-validated to a failing report goes to **`draft`** instead, which is FR-53 — it *was* good, and the report reference is cleared with the status. **Delivered 2026-08-15** (OQ-562, decided). |
 | **FR-53** | Validation is re-runnable on a `validated` version (e.g. after a rule set update). If the new report contains `fail`s, the version transitions **back** to `draft` and every Model fitted on it is flagged `dataset_invalidated` — models are not deleted, but the flag is surfaced on the model, on any Rating Version referencing it, and to the Approver. |
@@ -520,7 +520,7 @@ key is one target with several columns.
 2. **Dry-run required** — the rule must execute successfully against at least one existing
    Dataset Version, and the dry-run result is attached to the approval request.
 3. Submitted → `review` → approved by an Approver (never the author).
-4. `approved` rules are immutable; edits create a new rule version needing re-approval.
+4. `approved` rules are immutable; edits create a new rule version needing re-approval. *(Amended 2026-10-05, `RL-1407`: the dry-run report is an approved rule's approval evidence, so it is immutable too. Attaching a new dry-run report to an `approved` rule is refused with `RULE_VERSION_IMMUTABLE` (409); a `draft` or `review` rule's dry run attaches as before.)*
 5. The `sql` check carries extra controls (**OQ-559, decided 2026-08-14**):
 
    - **Authored by an Admin only** — not by an Analyst or Actuary as in step 1. The
@@ -925,6 +925,8 @@ required this since Phase 0, and the response was the only documented `01` respo
 >
 > Approval **policies** — quorum, escalation, evidence bundles — remain `06`'s (FR-351, FR-352, FR-353, FR-354, FR-355, FR-356, FR-357, FR-358, FR-359, FR-361, FR-363,
 > WK-677). This is the module's own step in the module's own terms, which is what §4.5 states.
+>
+> **Amended 2026-10-05, `RL-1407` DP-1, DP-2 and DP-3 (WK-1178, the `FD-1356` fix).** The last sentence above is superseded: the approve route is no longer the module's own step. It is a client of `06`'s decision path. It finds the rule's open approval request and records an `approve` decision on it, as `POST /api/v1/approval-requests/{id}/decide` does, so the workspace's Approval Policy (`06` FR-354: approver count, approver roles, evidence) and the separation of duties (`06` FR-353) apply, and the rule reaches `approved` only when its request does (`06` FR-355). A self-approval is refused with `06`'s `SUBMITTER_CANNOT_APPROVE` or `AUTHOR_CANNOT_APPROVE` (`403`), no longer `409`. A rule not in `review`, and a rule in `review` with no open approval request, are each refused with `RULE_NOT_APPROVED` (`409`); the second is put to a decision by submitting a request through `POST /api/v1/approval-requests` (`06` §5.1). `POST /validation-rules/{id}/submit` creates the request (§4.5 steps 2 and 3), and its body carries the change summary `06` FR-352 requires. Both submission routes and both approval routes refuse a rule whose attached dry-run report cannot be read in the workspace, or records an `error` outcome, with `06`'s `EVIDENCE_INCOMPLETE` (`422`): §4.5 step 2 requires a dry run that executed. A `fail` outcome is a run that executed, and is accepted.
 
 **Error codes owned by this module:** `DATASET_NOT_VALIDATED`, `DATASET_VERSION_IMMUTABLE`,
 `SCHEMA_INFERENCE_CONFLICT`, `COLUMN_NAME_COLLISION`, `DIRECT_IDENTIFIER_PRESENT`,
@@ -932,7 +934,7 @@ required this since Phase 0, and the response was the only documented `01` respo
 `RULE_NOT_APPROVED`, `RULE_SEVERITY_DOWNGRADE_FORBIDDEN`, `RULE_TIMEOUT`,
 `ACKNOWLEDGEMENT_ALREADY_RECORDED`,
 `REFERENCE_INTERVAL_OVERLAP`, `REFERENCE_VERSION_NOT_PINNED`, `SOURCE_UNREACHABLE`,
-`REJECT_RATE_EXCEEDED`, `DERIVATION_NOT_MATERIALISED`.
+`REJECT_RATE_EXCEEDED`, `DERIVATION_NOT_MATERIALISED`, `RULE_VERSION_IMMUTABLE`, `EVIDENCE_INCOMPLETE` (re-raised from `06`).
 
 ### 5.2 `pricing-core` interfaces
 
