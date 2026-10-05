@@ -99,6 +99,19 @@ absent" from "workspace present, no rule set", and its text blames an unfinished
 its refusal, a `--skip-seed` re-run fails identically, since the remedy is to run without `--skip-seed`, which the text
 does not say. The existence check is therefore covered on the branch only incidentally and is not on `main`.
 
+### 4. `ensure_member`'s idempotence claim does not hold for a seed re-run (scope added by the deputy, decision of 2026-10-05 12:00:44 BST)
+
+Read at `origin/main` `5ff49c6d425f537c7fed19d1212035f18e067b68`.
+
+- `backend/src/app/platform/workspaces.py` `ensure_member` (`:48`) states, in its docstring (`:74-76`): "Idempotent ... a seed is re-run against an existing database routinely, and both `uq_workspace_members_user_workspace` and `uq_users_issuer_subject` make a second blind insert an error rather than a no-op."
+- Its user lookup is `session.get(UserRow, user_id)` (`:78`): **keyed on the id only**. If no row has that id it adds `UserRow(id=user_id, issuer=issuer, subject=subject)` (`:80`).
+- `examples/fremtpl2/seed.py` mints a fresh analyst id on every run, `Principal(... id=new_uuid7() ...)` (`:311`), and passes the same `REALM_ISSUER` and `REALM_SUBJECT` to `ensure_member` (`:359-364`).
+- `uq_users_issuer_subject` is `UniqueConstraint("issuer", "subject")` on `users` (`backend/src/app/db/models.py:417`).
+
+So a second seed against a seeded database looks up a new id, finds nothing, and inserts a second `(issuer, subject)` row: a unique violation, not a no-op. The docstring's idempotence holds for the same `user_id`, which a re-run never supplies. **The relay reports SL-1409 Task 7b hit this at 2026-10-05 11:59:10 BST on `gipricing`; I did not observe that failure and did not run the seed. The finding rests on the code above.**
+
+SL-1409 Task 7c works around it in `examples/fremtpl2/seed.py` only (dispatch Delta 17, 2026-10-05 12:01:08 BST): the seed resolves the analyst id from an existing `(REALM_ISSUER, REALM_SUBJECT)` user, else mints one. `ensure_member` and its docstring are untouched by that workaround, so any other caller still meets the mismatch.
+
 ## Premise recorded by reference (not my ruling)
 
 PL-1408 Task 7 and RL-1407 rely on the recovery "keeps the workspace the demo uses runnable". The lead corrected this
@@ -114,3 +127,5 @@ Owner WK-1178. Make the existence of the recorded workspace and its analyst memb
 record and says to run `scripts/demo.py` without `--skip-seed`; and have `_verify_journey_postconditions` turn an
 `HTTPError` into a `DemoRefusedError`. Acceptance: run both paths against a scratch database with the record pointing at
 an absent workspace and show the refusal text on each.
+
+**`ensure_member` (evidence 4), options, no pick.** (a) Look the user up by `(issuer, subject)`, and raise a typed error when the found row's id differs from `user_id`, so the id mismatch is refused where it arises. (b) Correct the docstring to say idempotence holds only for a repeated `user_id`. Severity stays MEDIUM. Remedy owner WK-1178.
