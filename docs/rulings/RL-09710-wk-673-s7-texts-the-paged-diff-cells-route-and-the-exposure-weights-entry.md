@@ -104,8 +104,9 @@ differ"; a separate kind breaks neither.
 
 1. **DP-A, as decided (option (c)).** FR-231's per-cell change and weight are served by a
    separate route, `GET /api/v1/rate-tables/{slug}@{version}/diff/cells`, cursor-paged over
-   every changed cell in a total key order, as `RateTableDiffCell` items. `RateTableDiff`
-   and the diff route are unchanged. Parquet-stored versions answer 202 with a
+   every changed cell in a total key order, as `RateTableDiffCell` items. This record
+   changes neither `RateTableDiff` nor the diff route; both change in the same Slice 7
+   commit only by `RL-1361`'s texts (item 4, T6, T10). Parquet-stored versions answer 202 with a
    `rate_table.diff_cells` Job, then 200 pages from its stored artifact (FR-232). The texts
    are T1–T4.
 2. **DP-B, as decided (option (a)).** `exposure_weights(...) -> PortfolioWeights` is a pure
@@ -133,7 +134,7 @@ in a text is a placeholder. All five are applied by Slice 7, in one commit with 
 replaces; insert after T10's replacement if T10 is applied first). Insert
 
 ```text
-| `GET` | `/api/v1/rate-tables/{slug}@{version}/diff/cells?against=&portfolio=&limit=&cursor=` | **200** One cursor page of the diff's changed cells (FR-231), `Page[RateTableDiffCell]` (§4.2): every cell the diff's `changed_cells` counts, ordered by key tuple (§4.2), with each cell's baseline and current value, absolute and relative change, and its exposure weight when `portfolio` names a `validated` portfolio Dataset Version, weighted as the diff row states. The pages together hold every changed cell: a page bounds one response, not the cells. Requires `rating:read`. `limit` is 1 to `MAX_LIMIT`, default `DEFAULT_LIMIT` (`00` §5.2); `next_cursor` is null on the last page; `total_estimate` is the diff's `changed_cells`, counted up to `COUNT_CAP`. **202** with a `rate_table.diff_cells` Job and a `Location` header where either version is `storage: parquet` (FR-232) and the query's cell artifact is not yet stored: the Job writes every changed cell, in order, as one content-addressed blob keyed like the diff's cache by both versions' content hashes and the portfolio's identity, and the same request then answers **200** with pages read from it; an artifact that cannot be found is computed again, never served from another query. `against` and `portfolio` are checked as on the diff row, before any cell is read and before any Job: **404** `NOT_FOUND` for an unknown table, version or `against`; with `portfolio`, **403** without `dataset:read`, the same for any id, **404** `NOT_FOUND` for a portfolio that is missing or in another workspace, **409** `DATASET_NOT_VALIDATED` for a `draft` or `archived` portfolio, **404** `NOT_FOUND` for a `factor_ref` or `banding_ref` that does not resolve, and **422** `VALIDATION_FAILED` for the diff row's portfolio faults. **400** `VALIDATION_FAILED` for a cursor this API did not issue or one past the last cell; **422** `VALIDATION_FAILED` for a `limit` out of range. A Job fails with the same codes. `RateTableDiff` on the diff row is unchanged. (**added <Slice 7 date>, `RL-9710`, FD-1358**) |
+| `GET` | `/api/v1/rate-tables/{slug}@{version}/diff/cells?against=&portfolio=&limit=&cursor=` | **200** One cursor page of the diff's changed cells (FR-231), `Page[RateTableDiffCell]` (§4.2): every cell the diff's `changed_cells` counts, ordered by key tuple (§4.2), with each cell's baseline and current value, absolute and relative change, and its exposure weight when `portfolio` names a `validated` portfolio Dataset Version, weighted as the diff row states. The pages together hold every changed cell: a page bounds one response, not the cells. Requires `rating:read`. `limit` is 1 to `MAX_LIMIT`, default `DEFAULT_LIMIT` (`00` §5.2); `next_cursor` is null on the last page; `total_estimate` is the diff's `changed_cells`, counted up to `COUNT_CAP`. **202** with a `rate_table.diff_cells` Job and a `Location` header where either version is `storage: parquet` (FR-232) and the query's cell artifact is not yet stored: the Job writes every changed cell, in order, as one content-addressed blob keyed like the diff's cache by both versions' content hashes and the portfolio's identity, and the same request then answers **200** with pages read from it; an artifact that cannot be found is computed again, never served from another query. `against` and `portfolio` are checked as on the diff row, before any cell is read and before any Job: **404** `NOT_FOUND` for an unknown table, version or `against`; with `portfolio`, **403** without `dataset:read`, the same for any id, **404** `NOT_FOUND` for a portfolio that is missing or in another workspace, **409** `DATASET_NOT_VALIDATED` for a `draft` or `archived` portfolio, **404** `NOT_FOUND` for a `factor_ref` or `banding_ref` that does not resolve, and **422** `VALIDATION_FAILED` for the diff row's portfolio faults. **400** `VALIDATION_FAILED` for a cursor this API did not issue or one past the last cell; **422** `VALIDATION_FAILED` for a `limit` out of range. A Job fails with the same codes. This route adds no field to `RateTableDiff` and changes nothing on the diff row. (**added <Slice 7 date>, `RL-9710`, FD-1358**) |
 ```
 
 **T2 — `03` §4.2, the cell shape and its order (DP-A items 2 and 3).** Placement: a
@@ -158,7 +159,8 @@ blank line between them. Insert
 > total and every page is reproducible. The items agree with the summary:
 > `max_abs_change_pct` is the largest `|rel_change_pct|`, and
 > `exposure_weighted_mean_change_pct` is Σ(`weight` × `rel_change_pct`) / Σ `weight` over
-> the items where both are present and `weight` is not zero. `RateTableDiff` is unchanged.
+> the items where both are present and `weight` is not zero. The per-cell view adds no field
+> to `RateTableDiff`.
 ```
 
 **T3 — `03` §5.2, `diff_cells` (DP-A item 3, the pure core of T1).** Placement: after the
@@ -277,7 +279,8 @@ between submit and run; the detail names the diff)*.
   `JobKind.RATE_TABLE_DIFF_CELLS = "rate_table.diff_cells"` in `model_schema/jobs.py`;
   `diff_cells` in `pricing_core/rate_tables/operations.py`, sharing `_compute_diff`'s pass so
   that the summary and the cells cannot disagree; the route; the worker handler; and the
-  regenerated `docs/contracts/` (FR-451). `RateTableDiff`'s contract does not change.
+  regenerated `docs/contracts/` (FR-451). This record adds nothing to `RateTableDiff`'s contract; in the same commit it gains only
+  `RL-1361` item 4's two coverage fields.
 - **FD-1358** is closed by that commit when the acceptance below is met. The verdict is the
   lead's.
 - **PL-1286 S5 (WK-675)** reads the per-cell weight from this route. That plan is frozen and
@@ -321,7 +324,10 @@ deliberately broken input.
   rows-stored twin's. With the stored artifact removed, the request gives 202 again, never
   another query's page. A portfolio archived between submit and run fails the Job with
   `DATASET_NOT_VALIDATED`.
-- **No contract break.** `docs/contracts/` is regenerated with `RateTableDiff` byte-identical
-  and `RateTableDiffCell` added.
+- **No contract break.** `docs/contracts/` is regenerated with `RateTableDiffCell` added, and
+  `RateTableDiff`'s schema differs from `caa4e411` only by `RL-1361` item 4's two optional
+  coverage fields, `portfolio_exposure` and `matched_exposure` (T6). Any other change to it
+  fails the test. *(Amended 2026-10-05 before the mint, on planner-1391's finding: the text
+  said "byte-identical", which the same commit's `RL-1361` item 4 cannot meet.)*
 
 Drafted as working id 9710.
