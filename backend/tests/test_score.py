@@ -1155,3 +1155,420 @@ def test_a_trace_sampling_failure_logs_no_quote_input(
     assert "ValueError" in caplog.text
     assert sentinel not in caplog.text
 
+
+
+# --------------------------------------------------------------------------------------
+# RL-1346 (DP-S3-1): a ladder that does not reconcile is refused on /score, logged and counted.
+# --------------------------------------------------------------------------------------
+
+_LADDER_SENTINEL = "SENTINEL-quote-input-8a1f66"
+
+
+def _plant_a_ladder_one_unit_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The real builder's ladder with its last rung one minor unit off (a test-only mutation)."""
+    from pricing_core.rating import score as core_score
+
+    real = core_score._build_ladder
+
+    def off_by_one(inputs: Any, codes: Any) -> Any:
+        ladder = real(inputs, codes)
+        ladder[-1] = ladder[-1].model_copy(update={"value_minor": ladder[-1].value_minor + 1})
+        return ladder
+
+    monkeypatch.setattr(core_score, "_build_ladder", off_by_one)
+
+
+def _ladder_refusals(environment: str) -> float:
+    from app.observability.metrics import REGISTRY
+
+    value = REGISTRY.get_sample_value(
+        "gip_ladder_reconciliation_failed_total", {"environment": environment}
+    )
+    return value or 0.0
+
+
+@pytest.mark.req("FR-248")
+@pytest.mark.parametrize("rate", [None, 0.0])
+def test_a_ladder_that_does_not_reconcile_is_a_500_with_its_code_logged_and_counted(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    database: Any,
+    workspace_id: Any,
+    rate: float | None,
+) -> None:
+    """Acceptance 3 and 4 of RL-1346: the quote is refused in `uat`, whatever the trace-sampling
+    rate, with an RFC 9457 body carrying the code and no quote input."""
+    body = {**_quote({"rating_version_ref": SCORED_REF}), "quote_id": _LADDER_SENTINEL}
+    assert client.post(SCORE_URL, json=body, headers=scoring_headers).status_code == 200  # control
+    if rate is not None:
+        _run(_set_trace_sample_rate(database, workspace_id, rate))
+    _plant_a_ladder_one_unit_off(monkeypatch)
+    before = _ladder_refusals("uat")
+
+    with caplog.at_level(logging.INFO):
+        response = client.post(SCORE_URL, json=body, headers=scoring_headers)
+
+    assert response.status_code == 500, response.text
+    assert response.json()["code"] == "LADDER_RECONCILIATION_FAILED"
+    assert "Retry-After" not in response.headers
+    assert _LADDER_SENTINEL not in response.text
+    assert _ladder_refusals("uat") == before + 1
+    errors = [r for r in caplog.records if r.levelno == logging.ERROR]
+    assert any("LADDER_RECONCILIATION_FAILED" in r.getMessage() for r in errors)
+    assert _LADDER_SENTINEL not in caplog.text
+
+
+@pytest.mark.req("FR-248")
+def test_a_correct_ladder_is_served_and_not_counted(
+    client: TestClient, scoring_headers: dict[str, str], compiled_version: Any
+) -> None:
+    before = _ladder_refusals("uat")
+    body = {**_quote({"rating_version_ref": SCORED_REF, "trace": True})}
+    response = client.post(SCORE_URL, json=body, headers=scoring_headers)
+    assert response.status_code == 200, response.text
+    assert response.json()["trace"]["ladder_reconciled"] is True
+    assert response.json()["trace"]["ladder_check_version"] == 2
+    assert _ladder_refusals("uat") == before
+
+
+# --------------------------------------------------------------------------------------
+# PL-1348 Acceptance 7 (RL-1329 §4, R2): a declared non-rung `money_minor` output is a JSON integer.
+# --------------------------------------------------------------------------------------
+
+
+def _fee_algorithm() -> dict[str, Any]:
+    """`_minimal_algorithm` plus `fee_minor`, a non-rung `money_minor` output whose source is, in
+    the engine, exactly `premium_in + 0.5000000000000000001` (1234.5000000000000001 at 1234)."""
+    algorithm = _minimal_algorithm()
+    algorithm["outputs"].append({"name": "fee_minor", "type": "money_minor", "required": True})
+    algorithm["steps"] += [
+        {"step_id": "s_fee", "type": "expression", "label": "Fee",
+         "expr": "premium_in + 0.5000000000000000001", "result_type": "money_minor",
+         "consumes": ["premium_in"], "produces": "fee_value"},
+        {"step_id": "s_out_fee", "type": "output", "label": "Fee out", "output_name": "fee_minor",
+         "rounding": {"mode": "half_even", "dp": 0}, "consumes": ["fee_value"]},
+    ]
+    return algorithm
+
+
+@pytest.fixture
+def compiled_fee_version(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    database: Any,
+    blob_store: Any,
+    principal: Any,
+    workspace_id: Any,
+) -> Any:
+    register_rating_handlers()
+    created = client.post("/api/v1/rating-algorithms", json=_fee_algorithm(), headers=admin_headers)
+    assert created.status_code in (200, 201), created.text
+    row = asyncio.get_event_loop().run_until_complete(
+        _insert_version(
+            database, workspace_id, principal.id,
+            algorithm_ref="rating_algorithm:minimal@1", pins=_empty_pins(),
+        )
+    )
+    job = _run_compile_job(client, admin_headers, database, blob_store, row.id)
+    assert job.status is JobStatus.SUCCEEDED, job.error
+    return row
+
+
+def _assert_the_route_serves_the_fee_as_a_json_integer(response: Any) -> None:
+    import json
+    import re
+
+    assert response.status_code == 200, response.text
+    served = json.loads(response.text)["outputs"]["fee_minor"]
+    assert type(served) is int, (type(served), response.text)
+    assert served == 1235  # the exact string rounded once; the float 1234.5 would give 1234
+    raw = re.search(r'"fee_minor"\s*:\s*(-?[0-9.eE+]+)', response.text)
+    assert raw is not None
+    assert "." not in raw.group(1)
+    assert "e" not in raw.group(1).lower()
+
+
+@pytest.mark.req("FR-273")
+def test_a_non_rung_money_minor_output_is_a_json_integer_on_score(
+    client: TestClient, scoring_headers: dict[str, str], compiled_fee_version: Any
+) -> None:
+    body = {**_quote({"rating_version_ref": SCORED_REF}), "inputs": {"premium_in": 1234}}
+    _assert_the_route_serves_the_fee_as_a_json_integer(
+        client.post(SCORE_URL, json=body, headers=scoring_headers)
+    )
+
+
+@pytest.mark.req("FR-273")
+def test_the_float_path_fails_the_route_level_fee_assert(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_fee_version: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Red first, by planting the float path (`_build_outputs` reads `result[name]`): the body
+    carries `1234.5`, and the same assert fails."""
+    from pricing_core.rating import score as core_score
+
+    monkeypatch.setattr(core_score, "_exact", lambda result, name: None)
+    body = {**_quote({"rating_version_ref": SCORED_REF}), "inputs": {"premium_in": 1234}}
+    response = client.post(SCORE_URL, json=body, headers=scoring_headers)
+    assert response.status_code == 200, response.text
+    assert '"fee_minor":1234.5' in response.text
+    with pytest.raises(AssertionError):
+        _assert_the_route_serves_the_fee_as_a_json_integer(response)
+
+
+# --------------------------------------------------------------------------------------
+# WK-674 Slice 2, Task 6 (PL-1392 Acceptance 6, 7) — default-live scoring and the trace's
+# link to the Deployment that served the quote (RL-880, RL-888, RL-916, RL-1380).
+# --------------------------------------------------------------------------------------
+
+LIVE_REF = "rating_version:live-rv@3"
+OTHER_VERSION_REF = "rating_version:live-rv@4"
+OTHER_SLUG_REF = "rating_version:another-rv@3"
+
+
+async def plant_deployment(
+    database: Any, workspace_id: Any, environment: str, ref: str, *, deployed_by: Any = None
+) -> UUID:
+    """One Deployment row of `ref` in `environment`, written the way the deploy route writes
+    it (never updated, never deleted). Returns its id."""
+    from app.db.models import DeploymentRow, EnvironmentRow
+    from model_schema import new_uuid7
+
+    async with database.unit_of_work() as session:
+        env_id = (
+            await session.execute(
+                select(EnvironmentRow.id).where(EnvironmentRow.slug == environment)
+            )
+        ).scalar_one()
+        row = DeploymentRow(
+            workspace_id=workspace_id,
+            environment_id=env_id,
+            rating_version_ref=ref,
+            bundle_hash="sha256:" + "a" * 64,
+            deployed_by=deployed_by or new_uuid7(),
+            reason="test",
+        )
+        session.add(row)
+        await session.flush()
+        return row.id
+
+
+@pytest.fixture
+def refs_scored(monkeypatch: pytest.MonkeyPatch) -> list[ArtifactRef]:
+    """Resolution replaced by a held bundle, recording the ref `_compiled_for` was given."""
+    seen: list[ArtifactRef] = []
+
+    async def _compiled_for(*_args: Any, ref: ArtifactRef, **_kwargs: Any) -> Any:
+        seen.append(ref)
+        return _compiled("hash-scored")
+
+    async def _score_one(*_args: Any, **_kwargs: Any) -> ScoringResult:
+        return _scored(rating_version_ref=seen[-1])
+
+    monkeypatch.setattr(score_module, "_compiled_for", _compiled_for)
+    monkeypatch.setattr(score_module, "score_one", _score_one)
+    return seen
+
+
+@pytest.mark.req("FR-250")
+def test_a_quote_with_no_ref_is_scored_against_the_environments_live_deployment(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    refs_scored: list[ArtifactRef],
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """Acceptance 6, case 1: an API-key caller scoped to `uat`, posting no ref, is scored
+    against the Rating Version of `uat`'s live Deployment (RL-880; FR-250's default path)."""
+    _run(plant_deployment(database, workspace_id, "uat", "rating_version:live-rv@2"))
+    _run(plant_deployment(database, workspace_id, "uat", LIVE_REF))
+    # Another environment's Deployment does not leak into `uat`.
+    _run(plant_deployment(database, workspace_id, "dev", OTHER_SLUG_REF))
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": None}), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    assert [str(r) for r in refs_scored] == [LIVE_REF]
+
+
+@pytest.mark.req("FR-250")
+def test_an_environment_with_no_deployment_still_refuses_a_quote_with_no_ref(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    refs_scored: list[ArtifactRef],
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """Acceptance 6, case 2: `uat` has no Deployment (`dev` has one, and is not `uat`)."""
+    _run(plant_deployment(database, workspace_id, "dev", LIVE_REF))
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": None}), headers=scoring_headers
+    )
+
+    assert response.status_code == 409, response.text
+    assert response.json()["code"] == "NO_LIVE_RATING_VERSION"
+    assert refs_scored == []
+
+
+@pytest.mark.req("FR-250")
+def test_a_caller_with_no_environment_and_no_ref_is_refused_even_when_deployments_exist(
+    database: Any, workspace_id: Any, principal: Any
+) -> None:
+    """Acceptance 6, case 3: a bearer caller carries no environment, so there is no
+    environment whose live Deployment could answer. Called on the helper directly: no
+    credential produces this `Caller` over HTTP (the `score:execute` note above)."""
+    for environment in ("dev", "uat", "prod"):
+        _run(plant_deployment(database, workspace_id, environment, LIVE_REF))
+    caller = Caller(
+        principal=principal,
+        workspace_id=workspace_id,
+        environments=frozenset({"uat"}),
+        environment=None,
+        permissions=frozenset({"score:execute"}),
+    )
+    ctx = QuoteContext.model_validate(_quote({"rating_version_ref": None}))
+
+    with pytest.raises(score_module.PlatformError) as refused:
+        _run(score_module._serving_ref(database, caller, ctx))
+
+    assert refused.value.code == "NO_LIVE_RATING_VERSION"
+    assert refused.value.status_code == 409
+
+
+def _sample_everything(database: Any, workspace_id: Any) -> None:
+    _run(_set_trace_sample_rate(database, workspace_id, 1.0))
+
+
+@pytest.mark.req("FR-259")
+def test_a_default_live_trace_carries_the_deployment_that_served_it(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    refs_scored: list[ArtifactRef],
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """Acceptance 7: RL-888, RL-916, RL-1380 — the sampled trace of a default-live quote names
+    the serving Deployment, and the `environment` string is written as before."""
+    _run(plant_deployment(database, workspace_id, "uat", "rating_version:live-rv@2"))
+    live_id = _run(plant_deployment(database, workspace_id, "uat", LIVE_REF))
+    _sample_everything(database, workspace_id)
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": None}), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    (row,) = _run(_rows_for(database, workspace_id))
+    assert row.deployment_id == live_id
+    assert row.environment == "uat"
+
+
+@pytest.mark.req("FR-259")
+def test_an_explicit_ref_equal_to_the_live_version_carries_its_deployment(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    refs_scored: list[ArtifactRef],
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """RL-1380 (a): type, slug and version all equal the live Deployment's."""
+    live_id = _run(plant_deployment(database, workspace_id, "uat", LIVE_REF))
+    _sample_everything(database, workspace_id)
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": LIVE_REF}), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    (row,) = _run(_rows_for(database, workspace_id))
+    assert row.deployment_id == live_id
+
+
+@pytest.mark.req("FR-259")
+@pytest.mark.parametrize("explicit", [OTHER_VERSION_REF, OTHER_SLUG_REF], ids=["version", "slug"])
+def test_an_explicit_ref_to_a_version_that_is_not_live_carries_no_deployment(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    refs_scored: list[ArtifactRef],
+    database: Any,
+    workspace_id: Any,
+    explicit: str,
+) -> None:
+    """A what-if quote against another version, or another slug's same number, is not
+    attributed to a Deployment that did not serve it."""
+    _run(plant_deployment(database, workspace_id, "uat", LIVE_REF))
+    _sample_everything(database, workspace_id)
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": explicit}), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    (row,) = _run(_rows_for(database, workspace_id))
+    assert row.deployment_id is None
+    assert row.environment == "uat"
+
+
+@pytest.mark.req("FR-259")
+def test_an_explicit_ref_in_an_environment_with_no_live_deployment_carries_none(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    refs_scored: list[ArtifactRef],
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    _run(plant_deployment(database, workspace_id, "dev", LIVE_REF))  # not `uat`
+    _sample_everything(database, workspace_id)
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": LIVE_REF}), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    (row,) = _run(_rows_for(database, workspace_id))
+    assert row.deployment_id is None
+
+
+@pytest.mark.req("FR-268")
+def test_a_deployment_recorded_mid_request_does_not_relink_the_trace(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """The switchover case (RL-1380: resolved once, with the ref, and never re-read): a new
+    Deployment lands after the quote's Deployment was resolved and before the trace is written.
+    The trace names the Deployment that served the quote, not the newer live one."""
+    served_id = _run(plant_deployment(database, workspace_id, "uat", LIVE_REF))
+    _sample_everything(database, workspace_id)
+    seen: list[ArtifactRef] = []
+    app_database = client.app.state.database  # type: ignore[attr-defined]
+
+    async def _compiled_for(*_args: Any, ref: ArtifactRef, **_kwargs: Any) -> Any:
+        seen.append(ref)
+        await plant_deployment(app_database, workspace_id, "uat", OTHER_VERSION_REF)
+        return _compiled("hash-scored")
+
+    async def _score_one(*_args: Any, **_kwargs: Any) -> ScoringResult:
+        return _scored(rating_version_ref=seen[-1])
+
+    monkeypatch.setattr(score_module, "_compiled_for", _compiled_for)
+    monkeypatch.setattr(score_module, "score_one", _score_one)
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": None}), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    assert [str(r) for r in seen] == [LIVE_REF]
+    (row,) = _run(_rows_for(database, workspace_id))
+    assert row.deployment_id == served_id

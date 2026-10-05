@@ -3,7 +3,7 @@ id: PL-1359
 family: plan
 kind: leaf
 title: WK-1178 — The permission-parity check on RL-1305 (CR-1247 Proposal 1 (c)), superseding PL-1279: leaf plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-01
 owner: planner
 tree: 101e32dc5baf8edeb986063b680ccec31e5ba724

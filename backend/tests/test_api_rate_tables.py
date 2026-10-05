@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import io
+from collections.abc import Awaitable, Callable
 from uuid import UUID, uuid4
 
 import pytest
@@ -23,15 +24,18 @@ from backend.tests.test_api_datasets import _headers
 from fastapi.testclient import TestClient
 from openpyxl import load_workbook
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
 from app.db.models import (
+    FactorRow,
     ModelRow,
     RateTableRow,
     RateTableVersionRow,
 )
 from app.db.session import Database
 from model_schema import GlmSpec, ModelStatus, OffsetSpec, new_uuid7
+from model_schema.modelling import Factor, FactorType
 
 
 @pytest.fixture
@@ -86,50 +90,107 @@ def _fit_result(relativities: dict[str, list[float]]) -> dict[str, object]:
     }
 
 
-def _insert_rows(rows: list[object]) -> None:
-    """Insert rows on a loop of our own (`TestClient` is blocking, so an async fixture
-    cannot be requested from the synchronous tests below)."""
+def _run_with_database(work: Callable[[AsyncSession], Awaitable[None]]) -> None:
+    """Run `work(session)` in one unit of work on a loop of our own (`TestClient` is
+    blocking, so an async fixture cannot be requested from the synchronous tests below)."""
     from backend.tests.conftest_db import test_database_url
 
-    async def _insert(database: Database) -> None:
+    async def _run(database: Database) -> None:
         async with database.unit_of_work() as session:
-            for row in rows:
-                if getattr(row, "status", None) == "approved":
-                    await add_approved(session, row)
-                else:
-                    session.add(row)
+            await work(session)
             await session.flush()
 
     loop = asyncio.new_event_loop()
     try:
         database = Database(Settings(database_url=test_database_url()))
         try:
-            loop.run_until_complete(_insert(database))
+            loop.run_until_complete(_run(database))
         finally:
             loop.run_until_complete(database.dispose())
     finally:
         loop.close()
 
 
+def _insert_rows(rows: list[object]) -> None:
+    """Insert rows (an approved row goes through `add_approved`)."""
+
+    async def _insert(session: AsyncSession) -> None:
+        for row in rows:
+            if getattr(row, "status", None) == "approved":
+                await add_approved(session, row)
+            else:
+                session.add(row)
+
+    _run_with_database(_insert)
+
+
+async def _ensure_factor(
+    session: AsyncSession, workspace_id: UUID, slug: str, version: int
+) -> UUID:
+    """The Factor row `slug@version` of the workspace, created once and then reused."""
+    existing = await session.scalar(
+        select(FactorRow).where(
+            FactorRow.workspace_id == workspace_id,
+            FactorRow.slug == slug,
+            FactorRow.version == version,
+        )
+    )
+    if existing is not None:
+        return existing.id
+    factor = Factor(
+        id=new_uuid7(),
+        slug=slug,
+        dataset_id=new_uuid7(),
+        version=version,
+        type=FactorType.IDENTITY,
+        source_columns=(slug,),
+    )
+    row = FactorRow(
+        workspace_id=workspace_id,
+        dataset_id=factor.dataset_id,
+        slug=slug,
+        version=version,
+        body=factor.model_dump(mode="json", exclude={"id", "version", "dataset_id"}),
+    )
+    session.add(row)
+    await session.flush()
+    return row.id
+
+
 def _seed_approved_model(
-    workspace_id: UUID, family: str, relativities: dict[str, list[tuple[str, float]]]
+    workspace_id: UUID,
+    family: str,
+    relativities: dict[str, list[tuple[str, float]]],
+    *,
+    factor_versions: dict[str, int] | None = None,
 ) -> None:
-    """An approved ModelRow whose fit carries the given relativities."""
-    _insert_rows(
-        [
+    """An approved ModelRow whose fit carries the given relativities, and whose spec pins
+    one Factor row per relativity entry (FR-230, `RL-1361` section D). `factor_versions`
+    names the Factor version a model pins (default 1)."""
+
+    async def _insert(session: AsyncSession) -> None:
+        pinned = [
+            await _ensure_factor(session, workspace_id, slug, (factor_versions or {}).get(slug, 1))
+            for slug in relativities
+        ]
+        spec = _glm_spec(family, new_uuid7())
+        spec["factors"] = [str(factor_id) for factor_id in pinned]
+        await add_approved(
+            session,
             ModelRow(
                 workspace_id=workspace_id,
                 model_family_slug=family,
                 version=1,
                 status=ModelStatus.APPROVED.value,
                 dataset_version_id=new_uuid7(),
-                spec=_glm_spec(family, new_uuid7()),
+                spec=spec,
                 spec_hash=f"v3:sha256:{uuid4().hex}{uuid4().hex}",
                 fit_result=_fit_result(relativities),
                 diagnostics_id=uuid4(),
-            )
-        ]
-    )
+            ),
+        )
+
+    _run_with_database(_insert)
 
 
 _LEVELS: dict[str, list[tuple[str, float]]] = {
@@ -141,8 +202,12 @@ _LEVELS: dict[str, list[tuple[str, float]]] = {
 }
 
 
-def _seed_body(family: str, change_note: str = "Seeded for the W10-2 tests") -> dict[str, object]:
-    return {"model_ref": f"model:{family}@1", "change_note": change_note}
+def _seed_body(
+    family: str,
+    change_note: str = "Seeded for the W10-2 tests",
+    factor: str = "driver_age_band",
+) -> dict[str, object]:
+    return {"model_ref": f"model:{family}@1", "factor": factor, "change_note": change_note}
 
 
 def _table_slug() -> str:
@@ -226,24 +291,27 @@ def test_diff_vs_seed_compares_against_the_origin_not_the_previous_version(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
     """With three versions, `against=seed` answers v3-vs-v1 where
-    `against=previous` answers v3-vs-v2."""
+    `against=previous` answers v3-vs-v2.
+
+    Versions 2 and 3 are **derived** (bulk operations), not re-seeds: under RL-1375 DP-1
+    (a2) a re-seed starts its own seed origin, so only a derived version diffs back to v1.
+    """
     slug = _table_slug()
-    softened = {"driver_age_band": [("17-20", 1.84), ("21-24", 1.41), ("25-29", 1.12)]}
-    softened_again = {
-        "driver_age_band": [("17-20", 1.84), ("21-24", 1.50), ("25-29", 1.12)]
-    }
-    for family, relativities in (
-        (f"mf-{uuid4().hex[:8]}", _LEVELS),
-        (f"mf-{uuid4().hex[:8]}", softened),
-        (f"mf-{uuid4().hex[:8]}", softened_again),
+    family = f"mf-{uuid4().hex[:8]}"
+    _seed_approved_model(workspace_id, family, _LEVELS)
+    created = _seed(api_client, actuary, slug, family, "driver_age_band")
+    assert created.status_code == 201, created.text
+    # v1 = 1.92 / 1.41 / 1.12 -> v2 = 1.84 / 1.41 / 1.20 -> v3 = 1.84 / 1.50 / 1.20
+    for number, parameters in (
+        (1, {"floor": "1.20", "cap": "1.84"}),
+        (2, {"floor": "1.20", "cap": "1.50"}),
     ):
-        _seed_approved_model(workspace_id, family, relativities)
-        created = api_client.post(
-            f"/api/v1/rate-tables/{slug}/seed-from-model",
-            json=_seed_body(family),
+        derived = api_client.post(
+            f"/api/v1/rate-tables/{slug}@{number}/bulk-operation",
+            json=_bulk_body("floor_and_cap", parameters),
             headers=actuary,
         )
-        assert created.status_code == 201, created.text
+        assert derived.status_code == 201, derived.text
 
     vs_previous = api_client.get(
         f"/api/v1/rate-tables/{slug}@3/diff",
@@ -251,7 +319,7 @@ def test_diff_vs_seed_compares_against_the_origin_not_the_previous_version(
         headers=actuary,
     )
     assert vs_previous.status_code == 200, vs_previous.text
-    assert vs_previous.json()["changed_cells"] == 1  # 21-24 only
+    assert vs_previous.json()["changed_cells"] == 1  # 1.84 -> 1.50
 
     vs_seed = api_client.get(
         f"/api/v1/rate-tables/{slug}@3/diff",
@@ -259,7 +327,7 @@ def test_diff_vs_seed_compares_against_the_origin_not_the_previous_version(
         headers=actuary,
     )
     assert vs_seed.status_code == 200, vs_seed.text
-    assert vs_seed.json()["changed_cells"] == 2  # 17-20 and 21-24, from the origin
+    assert vs_seed.json()["changed_cells"] == 2  # 17-20 and 25-29, from the origin
 
 
 @pytest.mark.req("FR-231")
@@ -1080,3 +1148,391 @@ def test_import_diffs_against_a_parquet_baseline(
 
     assert response.status_code == 200, response.text
     assert response.json()["diff"]["changed_cells"] == 1
+
+
+# --- WK-1178 SL-1377 (PL-1376, RL-1361, RL-1375, RL-1383, FD-1357): one seeded table per Factor --
+
+_TWO_FACTORS: dict[str, list[tuple[str, float]]] = {
+    "driver_age_band": [("17-20", 1.92), ("21-24", 1.41), ("25-29", 1.12)],
+    "region": [("north", 1.30), ("south", 0.90)],
+}
+
+
+def _seed(
+    api_client: TestClient, actuary, slug: str, family: str, factor: str, note: str = "seed"
+):  # type: ignore[no-untyped-def]
+    return api_client.post(
+        f"/api/v1/rate-tables/{slug}/seed-from-model",
+        json=_seed_body(family, change_note=note, factor=factor),
+        headers=actuary,
+    )
+
+
+def _insert_table(
+    workspace_id: UUID, slug: str, keys: list[dict[str, object]]
+) -> None:
+    """A one-version table inserted directly (no seed origin), with the given key
+    declarations: the shapes RL-1375 DP-2 must refuse or accept."""
+    table_row = RateTableRow(
+        workspace_id=workspace_id, slug=slug, current_version=1, created_by=uuid4()
+    )
+    _insert_rows([table_row])
+    _insert_rows(
+        [
+            RateTableVersionRow(
+                workspace_id=workspace_id,
+                rate_table_id=table_row.id,
+                version_number=1,
+                storage="rows",
+                definition={
+                    "slug": slug,
+                    "version": 1,
+                    "rateable": True,
+                    "storage": "rows",
+                    "keys": keys,
+                    "value": {
+                        "name": "relativity",
+                        "type": "relativity",
+                        "unit": "factor",
+                        "min": None,
+                        "max": None,
+                    },
+                    "default_row": None,
+                },
+                change_note="direct insert",
+                created_by=uuid4(),
+            )
+        ]
+    )
+
+
+@pytest.mark.req("FR-230")
+def test_a_two_factor_model_seeds_one_table_per_factor(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """The FD-1357 red: a two-factor model used to answer 500 (`KeyError`)."""
+    family = f"mf-{uuid4().hex[:8]}"
+    _seed_approved_model(workspace_id, family, _TWO_FACTORS)
+    age_slug, region_slug = _table_slug(), _table_slug()
+
+    age = _seed(api_client, actuary, age_slug, family, "driver_age_band")
+    region = _seed(api_client, actuary, region_slug, family, "region")
+
+    assert age.status_code == 201, age.text
+    assert region.status_code == 201, region.text
+    assert [key["name"] for key in age.json()["keys"]] == ["driver_age_band"]
+    assert {row["driver_age_band"] for row in age.json()["rows"]} == {"17-20", "21-24", "25-29"}
+    assert [key["name"] for key in region.json()["keys"]] == ["region"]
+    assert {row["region"] for row in region.json()["rows"]} == {"north", "south"}
+    assert age.json()["keys"][0]["factor_ref"] == "factor:driver_age_band@1"
+    assert region.json()["keys"][0]["factor_ref"] == "factor:region@1"
+
+
+@pytest.mark.req("FR-230")
+def test_a_factor_that_names_no_relativity_entry_is_a_422(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """3(a) and 3(b): a continuous factor has no relativity entry, so it is this refusal."""
+    family = f"mf-{uuid4().hex[:8]}"
+    _seed_approved_model(workspace_id, family, _TWO_FACTORS)
+    ok = _seed(api_client, actuary, _table_slug(), family, "region")  # positive control
+    assert ok.status_code == 201, ok.text
+    for factor in ("driver_age", "vehicle_age"):
+        response = _seed(api_client, actuary, _table_slug(), family, factor)
+        assert response.status_code == 422, response.text
+        assert response.json()["code"] == "VALIDATION_FAILED"
+        assert factor in response.text
+
+
+@pytest.mark.req("FR-230")
+def test_a_model_factor_id_that_resolves_nowhere_is_a_404(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """3(f): `load_factors` raises, and the seed never falls back to an empty list."""
+    family = f"mf-{uuid4().hex[:8]}"
+    _seed_approved_model(workspace_id, family, {"region": _TWO_FACTORS["region"]})
+    ok = _seed(api_client, actuary, _table_slug(), family, "region")  # positive control
+    assert ok.status_code == 201, ok.text
+
+    dangling = f"mf-{uuid4().hex[:8]}"
+    _insert_rows(
+        [
+            ModelRow(
+                workspace_id=workspace_id,
+                model_family_slug=dangling,
+                version=1,
+                status=ModelStatus.APPROVED.value,
+                dataset_version_id=new_uuid7(),
+                spec={**_glm_spec(dangling, new_uuid7()), "factors": [str(uuid4())]},
+                spec_hash=f"v3:sha256:{uuid4().hex}{uuid4().hex}",
+                fit_result=_fit_result({"region": _TWO_FACTORS["region"]}),
+                diagnostics_id=uuid4(),
+            )
+        ]
+    )
+    response = _seed(api_client, actuary, _table_slug(), dangling, "region")
+    assert response.status_code == 404, response.text
+    assert response.json()["code"] == "NOT_FOUND"
+
+
+@pytest.mark.req("FR-230")
+def test_approval_is_checked_before_the_factors_are_loaded(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """The refusal order (PL-1376 Task 3): a non-approved model whose spec pins an id that
+    resolves nowhere is 422 `PIN_NOT_APPROVED`, not 404."""
+    family = f"mf-{uuid4().hex[:8]}"
+    _insert_rows(
+        [
+            ModelRow(
+                workspace_id=workspace_id,
+                model_family_slug=family,
+                version=1,
+                status=ModelStatus.FITTED.value,
+                dataset_version_id=new_uuid7(),
+                spec={**_glm_spec(family, new_uuid7()), "factors": [str(uuid4())]},
+                spec_hash=f"v3:sha256:{uuid4().hex}{uuid4().hex}",
+                fit_result=_fit_result(_LEVELS),
+                diagnostics_id=uuid4(),
+            )
+        ]
+    )
+    response = _seed(api_client, actuary, _table_slug(), family, "driver_age_band")
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "PIN_NOT_APPROVED"
+
+
+@pytest.mark.req("FR-230")
+@pytest.mark.parametrize(
+    "keys",
+    [
+        # a one-key table bound by `factor_ref` to another Factor's slug
+        [{"name": "region", "type": "string", "factor_ref": "factor:region@1"}],
+        # a one-key unbound table with another name
+        [{"name": "region", "type": "string", "banding_ref": None}],
+        # a one-key table bound by `banding_ref`
+        [
+            {
+                "name": "driver_age_band",
+                "type": "string",
+                "banding_ref": "banding:driver-age-actuarial-v2@2",
+            }
+        ],
+        # a two-key table, unbound
+        [
+            {"name": "driver_age_band", "type": "string", "banding_ref": None},
+            {"name": "region", "type": "string", "banding_ref": None},
+        ],
+    ],
+    ids=["bound-to-other-factor", "unbound-other-name", "banding-ref", "two-keys"],
+)
+def test_a_seed_into_a_table_the_rule_refuses_is_a_422_naming_it(
+    api_client: TestClient, workspace_id, actuary, keys: list[dict[str, object]]
+) -> None:
+    """RL-1375 DP-2: a seed of `driver_age_band` into an existing table is accepted only
+    for one key bound to that Factor or an unbound one named after it."""
+    family = f"mf-{uuid4().hex[:8]}"
+    _seed_approved_model(workspace_id, family, _TWO_FACTORS)
+    slug = _table_slug()
+    _insert_table(workspace_id, slug, keys)
+
+    response = _seed(api_client, actuary, slug, family, "driver_age_band")
+
+    assert response.status_code == 422, response.text
+    body = response.json()
+    assert body["code"] == "VALIDATION_FAILED"
+    assert slug in body["detail"]
+    assert all(key["name"] in body["detail"] for key in keys)
+
+
+@pytest.mark.req("FR-230")
+@pytest.mark.parametrize(
+    "key",
+    [
+        {"name": "driver_age_band", "type": "string", "banding_ref": None},
+        {"name": "driver_age_band", "type": "string", "factor_ref": "factor:driver_age_band@7"},
+    ],
+    ids=["unbound-same-name", "bound-to-same-slug"],
+)
+def test_a_seed_into_a_table_the_rule_accepts_binds_the_key(
+    api_client: TestClient, workspace_id, actuary, key: dict[str, object]
+) -> None:
+    """RL-1375 DP-2 (e'): the new version's one key carries `factor_ref` to the pinned
+    Factor version (here 1), in both accepted shapes."""
+    family = f"mf-{uuid4().hex[:8]}"
+    _seed_approved_model(workspace_id, family, _TWO_FACTORS)
+    slug = _table_slug()
+    _insert_table(workspace_id, slug, [key])
+
+    response = _seed(api_client, actuary, slug, family, "driver_age_band")
+
+    assert response.status_code == 201, response.text
+    assert response.json()["version"] == 2
+    assert [k["name"] for k in response.json()["keys"]] == ["driver_age_band"]
+    assert response.json()["keys"][0]["factor_ref"] == "factor:driver_age_band@1"
+
+
+@pytest.mark.req("FR-230")
+def test_a_reseed_with_a_newer_version_of_the_same_factor_is_accepted(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """RL-1361 section A; and RL-1383's Acceptance 19 (an underscore slug re-seeds): model
+    v2 pins version 2 of the Factor that v1 pinned at version 1."""
+    slug = _table_slug()
+    first, second = f"mf-{uuid4().hex[:8]}", f"mf-{uuid4().hex[:8]}"
+    _seed_approved_model(workspace_id, first, _TWO_FACTORS)
+    _seed_approved_model(workspace_id, second, _TWO_FACTORS, factor_versions={"driver_age_band": 2})
+
+    one = _seed(api_client, actuary, slug, first, "driver_age_band")
+    assert one.status_code == 201, one.text
+    assert one.json()["keys"][0]["factor_ref"] == "factor:driver_age_band@1"
+    exported = api_client.get(f"/api/v1/rate-tables/{slug}@1/export/csv", headers=actuary)
+    assert exported.status_code == 200, exported.text  # re-reads the stored definition
+
+    two = _seed(api_client, actuary, slug, second, "driver_age_band")
+    assert two.status_code == 201, two.text
+    assert two.json()["version"] == 2
+    assert two.json()["keys"][0]["factor_ref"] == "factor:driver_age_band@2"
+
+
+@pytest.mark.req("FR-230")
+def test_a_factor_outside_the_factor_slug_grammar_is_a_422_naming_the_slug(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """RL-1383 Ruled item 3 (Acceptance 19): `Region` is a slug `Factor` accepts today
+    (FD-1384) and a reference cannot hold; the seed refuses it by name, never a 500."""
+    family = f"mf-{uuid4().hex[:8]}"
+    ok_family = f"mf-{uuid4().hex[:8]}"
+    _seed_approved_model(workspace_id, ok_family, {"veh_brand": [("a", 1.1), ("b", 0.9)]})
+    ok = _seed(api_client, actuary, _table_slug(), ok_family, "veh_brand")  # positive control
+    assert ok.status_code == 201, ok.text
+    assert ok.json()["keys"][0]["factor_ref"] == "factor:veh_brand@1"
+
+    _seed_approved_model(workspace_id, family, {"Region": [("n", 1.1), ("s", 0.9)]})
+    response = _seed(api_client, actuary, _table_slug(), family, "Region")
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "VALIDATION_FAILED"
+    assert "Region" in response.json()["detail"]
+
+
+@pytest.mark.req("FR-230")
+@pytest.mark.req("FR-451")
+def test_the_seed_route_publishes_a_typed_request_and_201(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """Acceptance 6 and 7: both shapes are generated `model-schema` components."""
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    document = json.loads((root / "docs/contracts/openapi/generated.json").read_text())
+    operation = document["paths"]["/api/v1/rate-tables/{slug}/seed-from-model"]["post"]
+    request_schema = operation["requestBody"]["content"]["application/json"]["schema"]
+    assert request_schema == {"$ref": "#/components/schemas/SeedFromModelRequest"}
+    created = operation["responses"]["201"]["content"]["application/json"]["schema"]
+    assert created == {"$ref": "#/components/schemas/RateTableVersion"}
+    generated = root / "docs/contracts/schemas/generated"
+    assert (generated / "seed-from-model-request.schema.json").is_file()
+    assert (generated / "rate-table-version.schema.json").is_file()
+
+    family = f"mf-{uuid4().hex[:8]}"
+    _seed_approved_model(workspace_id, family, _TWO_FACTORS)
+    ok = _seed(api_client, actuary, _table_slug(), family, "region")  # positive control
+    assert ok.status_code == 201, ok.text
+    no_factor = api_client.post(
+        f"/api/v1/rate-tables/{_table_slug()}/seed-from-model",
+        json={"model_ref": f"model:{family}@1", "change_note": "seed"},
+        headers=actuary,
+    )
+    assert no_factor.status_code == 422, no_factor.text
+    assert no_factor.json()["code"] == "VALIDATION_FAILED"
+    assert any("factor" in str(error) for error in no_factor.json()["errors"])
+
+
+@pytest.mark.req("FR-230")
+@pytest.mark.req("FR-229")
+@pytest.mark.parametrize(
+    "patch",
+    [
+        {"change_note": "   "},
+        {"model_ref": "rating_algorithm:motor-rating@1"},
+        {"factor": ""},
+        {"rateable": True},
+    ],
+    ids=["blank-note", "non-model-ref", "empty-factor", "unknown-field"],
+)
+def test_the_seed_request_refusals_are_422_with_a_field_error(
+    api_client: TestClient, workspace_id, actuary, patch: dict[str, object]
+) -> None:
+    """6b: each of the request's own refusals is 422 `VALIDATION_FAILED`."""
+    family = f"mf-{uuid4().hex[:8]}"
+    _seed_approved_model(workspace_id, family, _TWO_FACTORS)
+    body = {"model_ref": f"model:{family}@1", "factor": "region", "change_note": "seed"}
+    ok = api_client.post(
+        f"/api/v1/rate-tables/{_table_slug()}/seed-from-model", json=body, headers=actuary
+    )
+    assert ok.status_code == 201, ok.text  # positive control
+    response = api_client.post(
+        f"/api/v1/rate-tables/{_table_slug()}/seed-from-model",
+        json={**body, **patch},
+        headers=actuary,
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "VALIDATION_FAILED"
+    assert response.json()["errors"]
+
+
+@pytest.mark.req("FR-230")
+@pytest.mark.req("FR-231")
+def test_against_seed_resolves_to_the_versions_own_seed_origin(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """RL-1375 DP-1 (a2): seed v1 (model A), derive v2, re-seed v3 (model B), derive v4.
+    `against=seed` on `@4` is v3 and on `@2` is v1; v3's `seeded_from` names model B."""
+    slug = _table_slug()
+    model_a, model_b = f"mf-{uuid4().hex[:8]}", f"mf-{uuid4().hex[:8]}"
+    _seed_approved_model(workspace_id, model_a, _LEVELS)
+    softened = {"driver_age_band": [("17-20", 1.84), ("21-24", 1.41), ("25-29", 1.12)]}
+    _seed_approved_model(workspace_id, model_b, softened)
+
+    assert _seed(api_client, actuary, slug, model_a, "driver_age_band").status_code == 201
+    derive_2 = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/bulk-operation",
+        json=_bulk_body("floor_and_cap", {"floor": "1.20", "cap": "1.84"}),
+        headers=actuary,
+    )
+    assert derive_2.status_code == 201, derive_2.text
+    reseed = _seed(api_client, actuary, slug, model_b, "driver_age_band")
+    assert reseed.status_code == 201, reseed.text
+    assert reseed.json()["version"] == 3
+    assert reseed.json()["seeded_from"]["model_ref"] == f"model:{model_b}@1"
+    derive_4 = api_client.post(
+        f"/api/v1/rate-tables/{slug}@3/bulk-operation",
+        json=_bulk_body("floor_and_cap", {"floor": "1.20", "cap": "1.50"}),
+        headers=actuary,
+    )
+    assert derive_4.status_code == 201, derive_4.text
+    assert derive_4.json()["version"] == 4
+
+    # `@4` against its seed origin (v3, 1.84/1.41/1.12) differs in 17-20 and 25-29 only;
+    # against the first seed (v1) every cell it left alone would also differ from v1's.
+    vs_origin = api_client.get(
+        f"/api/v1/rate-tables/{slug}@4/diff", params={"against": "seed"}, headers=actuary
+    )
+    assert vs_origin.status_code == 200, vs_origin.text
+    vs_v3 = api_client.get(
+        f"/api/v1/rate-tables/{slug}@4/diff", params={"against": "3"}, headers=actuary
+    )
+    assert vs_origin.json()["changed_cells"] == vs_v3.json()["changed_cells"]
+    vs_v1 = api_client.get(
+        f"/api/v1/rate-tables/{slug}@4/diff", params={"against": "1"}, headers=actuary
+    )
+    assert vs_origin.json() != vs_v1.json()
+    on_v2 = api_client.get(
+        f"/api/v1/rate-tables/{slug}@2/diff", params={"against": "seed"}, headers=actuary
+    )
+    on_v2_vs_v1 = api_client.get(
+        f"/api/v1/rate-tables/{slug}@2/diff", params={"against": "1"}, headers=actuary
+    )
+    assert on_v2.status_code == 200, on_v2.text
+    assert on_v2.json()["changed_cells"] == on_v2_vs_v1.json()["changed_cells"]
