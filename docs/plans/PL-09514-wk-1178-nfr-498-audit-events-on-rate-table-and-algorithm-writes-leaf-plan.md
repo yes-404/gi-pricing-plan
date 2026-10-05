@@ -24,6 +24,218 @@ is FD 9529 (working id; #1201, branch `fd-9529-nfr498-rate-table-audit`, read at
 (working id; #1203, branch `dm-9519-cr1212-nfr498`, read at `df4f5a53`). Nothing here is
 minted. Every repository line number was read at `origin/main` `5fe56b87`, the `tree:` above.
 
+## Delta, 2026-10-05 (after 18:04:32 BST, pre-mint): DP-1..DP-5 ruled; DP-2's hash named; Task 1 gated; A-2 first
+
+This plan is still an unmerged draft. This delta records the ruling and what it changes. It
+deletes no text: each part it changes keeps its words and gains a pointer back here. Where the
+delta and the text below disagree, **the delta governs**. Repository facts in this delta were
+re-read at `origin/main` `fb178c360f6fd5b2fdb7ae60eea924811a65492f`;
+`git diff --stat 5fe56b87 fb178c36 -- backend packages examples scripts docs/specs/03-rating-engine.md`
+prints nothing, so every line number in §"Task 0 at planning time" still holds.
+
+### D1. The ruling, quoted
+
+The maintainer (by delegation), `~/gi-pricing-plan.local/channel/to-lead.md`, the entry headed
+"2026-10-05 18:04:32 BST — PL 9514 (#1207 @a2d2e050) DPs 1–5 RULED; Task 1's Principal
+threading accepted", quoted verbatim:
+
+> DP-1: the SINGLE WRITER (_persist_new_version, rate_tables.py :670). The caller passes the action and the baseline. One site cannot miss a caller.
+> DP-2: the wire form WITHOUT rows, PLUS a cells content digest (your rec, the tamper-evident minimum). Use the EXISTING hash, no new hashing: rate_tables.py already imports version_content_hash from app.platform.diff_cache (:35, used at :340-341), and RateTableVersion carries cells: BlobRef (model_schema/rating.py:899ff). The digest is version_content_hash over the version's cells, or the BlobRef's own content address if that is the same value (the planner states which, with file:line). For algorithms and sub-graphs, the stored content.
+> DP-3: the DISTINCT actions: rate_table_version.seeded, .imported and .bulk_operation, and rating_algorithm.created.
+> DP-4: YES. T-1 is a dated 03 note naming the actions (precedents 03:846 and :874), carried by ONE RL that also records DP-1 to DP-5. NFR-498's text is unchanged. Reserve the id; a DM files it.
+> DP-5: (a). create_sub_graph's after gains the full content (steps included), and create_version gains a before (N−1). A steps-less after is a summary, not the state NFR-498 names.
+> Task 1, threading Principal through the four services with NO behaviour change (about 25 call-site args): ACCEPTED as a refactor commit BEFORE the reds, with the full suite green at that commit in the gate.
+> CONTENTION: as tabled, with A-2 FIRST. The one shared test with S7 (test_diff_cache.py): whichever merges second rebases it, named in both. The bound of 4 Nov holds.
+> planner-9529's cd into its own worktree: noted; stopping it is fine.
+
+The `RL-` that DP-4 names is **RL 9501** (working id, reserved by the lead; branch
+`dm-9501-pl9514-audit-actions`). It records DP-1 to DP-5 and carries T-1.
+
+So: **DP-1 (a)**, **DP-2 (a) plus a cells digest** (the plan's (b) with the existing hash, not a
+new `cells_sha256`), **DP-3 (a)**, **DP-4 (a)**, **DP-5 (a)**. Every "if DP-n is ruled …" branch
+below that names another option is void.
+
+### D2. DP-2: which hash — `version_content_hash`, because the two are different values
+
+Read at `fb178c36`:
+
+- `version_content_hash(cells)` (`backend/src/app/platform/diff_cache.py:46-56`) is
+  `sha256` over `json.dumps(sorted(cells, …), sort_keys=True, separators=(",", ":"))`: the
+  **cells themselves**, canonical, row order ignored. Its docstring (`:47-52`): "a rows-stored
+  version and its parquet twin hash identically (FR-232's same-artifact guarantee)".
+  `rate_tables.py` imports it (`:35`) and the diff keys its cache on it (`:340-341`).
+- The BlobRef's content address is `BlobRef.sha256` (`packages/model-schema/src/model_schema/refs.py:189-197`).
+  `BlobStore.put` sets it to `hashlib.sha256(body).hexdigest()` over the **stored body**
+  (`backend/src/app/platform/blobs.py:158`, returned at `:189`). For a rate table that body is
+  the **parquet file bytes** from `_cells_to_parquet` (`rate_tables.py:578-591`, called at
+  `:742-747`). A rows-stored version has **no** BlobRef at all (`cells=blob_ref` stays `None`,
+  `:734`, `:759`).
+
+They are therefore **not** the same value: one hashes canonical JSON of the cells and exists for
+every version; the other hashes a parquet encoding and exists only above the threshold. Per the
+ruling, the digest is **`version_content_hash` over the version's cells**. The parquet
+version's `cells` BlobRef stays in the dumped wire form as well (it is a field of the wire form),
+so a parquet version's state carries both.
+
+The digest key in the payload is **`cells_digest`** (this plan's proposal). T-1 is the spec for
+what `before` and `after` carry, so **RL 9501's T-1 names the key**; if it names another, T-1's
+name replaces `cells_digest` everywhere below, and the dispatch record says so.
+
+### D3. A correction found while folding DP-2: `before` is the **stored** wire form, not `_to_version`'s
+
+The plan's Task 3 Step 1 builds a baseline's `before` from `_to_version` (`table` at `:442`,
+`baseline` at `:827`, and `_to_version(...)` for a re-seed). At `fb178c36`, `_to_version`
+(`rate_tables.py:612-640`) is **not** the stored wire form. Its docstring (`:615-622`) says it is
+the transformation input, "cells materialised inline … so the in-memory claim is never stored":
+
+- it always sets `storage=RateTableStorageMode.ROWS` and `rows=…` (`:629`, `:633`), even for a
+  parquet-stored version, and passes no `cells` BlobRef;
+- it passes no `created_by_operation` and no `created_by_import` (`:625-640`).
+
+So a baseline that is parquet-stored, or was itself made by an import or a bulk operation,
+would have a `before` that differs from that same version's own earlier `after`. The chain
+would then record two different states for one immutable version. Acceptance items 1–3 do not
+catch it, because their baselines are rows-stored seeds.
+
+**The fix is one constructor of the stored wire form.** There is none today: the only
+`RateTableVersion(` constructors in `backend/src` are `rate_tables.py:170`, `:447`, `:625` and
+`:750` (`git grep -n 'RateTableVersion(' fb178c36 -- backend/src`). Task 3 Step 1 becomes:
+
+```python
+def _stored_version(
+    version_row: RateTableVersionRow, cells: list[dict[str, str]]
+) -> RateTableVersion:
+    """The version's §4.2 wire form as stored (FR-232): inline rows when rows-stored,
+    the parquet BlobRef otherwise, with its provenance fields."""
+    return RateTableVersion.model_validate(
+        version_row.definition
+        | {
+            "storage": version_row.storage,
+            "rows": _wire_rows(cells) if version_row.storage == "rows" else None,
+            "cells": version_row.cells,
+            "change_note": version_row.change_note,
+            "seeded_from": version_row.seeded_from,
+            "created_by_operation": version_row.created_by_operation,
+            "created_by_import": version_row.created_by_import,
+        }
+    )
+
+
+def _audit_state(version: RateTableVersion, cells: Sequence[dict[str, str]]) -> dict[str, Any]:
+    """NFR-498's state of one version (RL 9501, DP-2): the wire form without inline
+    rows, plus the cells' content digest — the diff cache's existing hash."""
+    return version.model_dump(mode="json", exclude={"rows"}) | {
+        "cells_digest": version_content_hash(cells)
+    }
+```
+
+`model_validate` over the row's stored JSON is used because `created_by_operation` is the
+`BulkOperation` discriminated union (`Annotated[...]`, `model_schema/rating.py:828`), which
+has no `.model_validate` of its own. `definition` is `RateTable(...).model_dump()`
+(`rate_tables.py:690-698`), whose seven fields (`rating.py:712-718`) are all
+`RateTableVersion` fields, so `extra="forbid"` accepts the merge. Whether the re-validated
+form equals what `_persist_new_version` returns today is exactly what item 9's unchanged
+suite checks once the return is routed through it (below).
+
+- `_persist_new_version` takes `actor: Principal, action: str, before: dict[str, Any] | None`
+  (the baseline's **state**, already computed by the caller: "The caller passes the action and
+  the baseline"). Its return statement (`:750-764`) becomes `created = _stored_version(version_row, cells)`;
+  it records with `after=_audit_state(created, cells)` and `before=before`, then returns
+  `created`. Item 9's unchanged suite proves the return value did not move.
+- `seed_from_model`: `before=None` for a new table. For a re-seed, read the current version
+  before `version_number` is computed:
+  `prior = await _load_version(session, table_row.id, table_row.current_version, slug)`,
+  `prior_cells = await _load_cells_of(session, prior, RateTable.model_validate(prior.definition), blob_store)`,
+  `before = _audit_state(_stored_version(prior, prior_cells), prior_cells)`.
+- `import_confirmed`: `cells = cast(list[dict[str, str]], table.rows)` (`_to_version`
+  materialises them), `before = _audit_state(_stored_version(version_row, cells), cells)`.
+- `bulk_operation`: the same, over `baseline_row` and `baseline.rows`.
+
+The imports gain `audit`, `JobSource` and `Principal` (the import block,
+`rate_tables.py:12-70` at `fb178c36`).
+
+### D4. The Acceptance Standard, as amended by this delta
+
+- **"The state"** (the paragraph at "The state" of a rate table version) is now
+  `_audit_state(_stored_version(row, cells), cells)`: the stored wire form without `rows`,
+  plus `cells_digest`. The test module's `_state(version, cells)` is
+  `version.model_dump(mode="json", exclude={"rows"}) | {"cells_digest": version_content_hash(cells)}`,
+  importing `version_content_hash` from `app.platform.diff_cache`; for a rows-stored version
+  `cells` is `version.rows`.
+- **Item 1 gains:** `events[1].before == events[0].after` (one immutable version, one state,
+  wherever it is read), and `events[0].after["cells_digest"] == version_content_hash(first.rows)`.
+- **Item 3 gains (D3's red):** a bulk operation whose **baseline was itself made by a bulk
+  operation** (`@1` seed → `@2` uplift → `@3` uplift on `@2`) records the `@3` event with
+  `before == <the @2 event's after>`, so `before["created_by_operation"]` is not null. Red
+  first with item 3. A `_to_version`-built `before` fails it by the missing
+  `created_by_operation`.
+- **Item 4 gains:** a parquet version's state carries both `after["cells"]` (the BlobRef) and
+  `after["cells_digest"]`, and the digest equals `version_content_hash` over the cells read back
+  from the blob (`blob_store.read` then `rate_tables._cells_from_parquet`). A second bulk
+  operation on that parquet version records `before == <the parquet version's after>`, with
+  `before["storage"] == "parquet"`. A `_to_version`-built `before` fails it by `"rows"`.
+- **Item 7 is unconditional (DP-5 (a)) and is two reds:**
+  - **7a.** `create_sub_graph` leaves a `sub_graph.created` event with `before is None` and
+    `after == <the stored row's content>`, so `after["steps"]` is present and equals the
+    posted steps. Red first: at the base `after` has no `"steps"` key
+    (`platform/sub_graphs.py:95-99`).
+  - **7b.** `create_version` leaves a `sub_graph.created` event for `@2` whose `before` equals
+    `@1`'s stored content (`steps` included) and whose `after` equals `@2`'s. Red first: at
+    the base the event has no `before` (`:88-100`).
+  - `backend/tests/test_sub_graphs_service.py:71-73` still passes **unedited**, because
+    `content` is `body.model_dump(mode="json")` (`sub_graphs.py:74`), which keeps
+    `change_note`, `inputs` and `outputs`.
+- **Item 9 is now gated (Task 1's ruling):** at Task 1's commit, the **full** two-half gate
+  (`CLAUDE.md` §11) passes through the gate-runner, in a held gate slot, and the ledger records
+  each rc and the tree. Item 9's selection stays the quick check before it.
+- **Item 11** is unchanged (the gate again on the merge tree).
+- **Every red's STOP (self-review 7) now covers the digest too:** if `cells_digest` of a
+  re-read version differs from its earlier `after`, that is the canonical-form STOP, reported
+  to the lead before any change to the hash.
+
+### D5. Tasks, as amended
+
+- **Task 1** (the refactor) **is its own commit, before Task 2's reds, with no behaviour
+  change.** New **Step 5b**: run the full gate through the gate-runner at that commit (check
+  the slots first, Task 0 Step 3) and record each rc and the tree in the ledger. No red is
+  written until it is green. Step 6's commit message stays.
+- **Task 2** adds the tests of D4 (items 1, 3 and 4's new assertions; 7a and 7b) to the module.
+  Its expected failures (Step 2) gain: 7a fails on the missing `"steps"` key; 7b on
+  `before is None`.
+- **Task 3 Step 1** is D3's code, which replaces the `_audit_state` sketch and the callers'
+  `before=table` / `before=baseline` lines. **Step 3** (sub-graphs) is unconditional: `_write`
+  gains `before: dict[str, Any] | None` and records `before=before, after=row.content`;
+  `create_sub_graph` passes `before=None`; `create_version` reads
+  `previous = await _row(session, workspace_id, slug, latest)` (`sub_graphs.py:150`) after the
+  `latest is None` check and passes `before=previous.content`.
+- **Task 5** is unconditional: apply RL 9501's T-1 byte for byte under `spec-change`.
+
+### D6. Contention, as ruled
+
+- **A-2 (PL 9597) first.** Activation need 5's order is ruled, no longer recommended.
+- **The one test shared with S7** (`SL-1391` / `PL-1419`):
+  `backend/tests/test_diff_cache.py::test_diff_is_computed_on_miss_and_served_from_the_cache_on_hit`
+  (`:129`, its `seed_from_model` call at `:153`). **Whichever of SL 9515 and `SL-1391` merges
+  second rebases that test** onto the first's version and re-runs the full gate on the merged
+  tree. PL-1419 names it too (the lead's dispatch of S7).
+- The 4 November bound holds (unchanged).
+
+### D7. Activation needs, replacing need 3 and fixing need 5
+
+1. FD 9529 minted (unchanged).
+2. RL 9519 minted (unchanged).
+3. **RL 9501 minted.** It rules DP-1 to DP-5 and carries T-1. This replaces "DP-1 to DP-5
+   ruled".
+4. The emergency slice (SL 9561) merged (unchanged).
+5. **A-2 (PL 9597) merged first**, and this slice re-reads `create_algorithm` and
+   `create_version` at dispatch.
+6. The lead's GO (unchanged), naming D6's shared test.
+7. Active by a dated line (unchanged).
+
+**What this delta removes:** DP-2's no-digest form (a) as written; the `before=table`,
+`before=baseline` and `_to_version` re-seed sources; every "DP-5 (a) only" and "DP-4 (b)"
+branch; and the sentence "If DP-2 or DP-3 is ruled another way …".
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
 > or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`)
 > syntax for tracking. The executor also binds `python-test` (the `req` marker, negative
@@ -93,7 +305,7 @@ quoted verbatim:
 
 ## Status
 
-`draft`. **DP-1 to DP-5 are open** (§"Decision points"). They are the decision-maker's; the
+*(Delta of 2026-10-05, D1: DP-1 to DP-5 are now ruled; this sentence is history.)* `draft`. **DP-1 to DP-5 are open** (§"Decision points"). They are the decision-maker's; the
 planner does not rule them. DP-5 is the sub-graph in/out question of item 2. The plan moves to
 `active` only through a separate activation PR, after every activation need below holds.
 
@@ -102,11 +314,11 @@ planner does not rule them. DP-5 is the sub-graph in/out question of item 2. The
 1. **FD 9529 minted** (#1201). Its register row's Decision cell carries the bound.
 2. **RL 9519 minted** (#1203): `corrects: CR-1212`, and `CR-1212` gains `corrected_by:`
    (item 3).
-3. **DP-1 to DP-5 ruled** by a decision-maker's `RL-`. If DP-4 is ruled (a), that `RL-`
+3. *(Delta of 2026-10-05, D7: replaced by "RL 9501 minted".)* **DP-1 to DP-5 ruled** by a decision-maker's `RL-`. If DP-4 is ruled (a), that `RL-`
    carries T-1's text (§"Decision points"), and Task 5 applies it byte for byte.
 4. **The emergency slice merged** (SL 9561 / PL 9560, #1196 @`68b2f860`). Item 2: "It runs
    after the emergency slice".
-5. **The A-2 order** (item 2: "serialises against A-2 on rating_algorithms.py, named both
+5. *(Delta of 2026-10-05, D6, D7: A-2 first is ruled.)* **The A-2 order** (item 2: "serialises against A-2 on rating_algorithms.py, named both
    ways"). A-2 is PL 9597 (#1178, read at `176a6a75`). Both slices edit `create_algorithm`
    (`platform/rating_algorithms.py:94`), and under DP-5 (a) both edit `create_version`
    (`platform/sub_graphs.py:127`). The recommended order is **A-2 first**: A-2 is further
@@ -132,7 +344,7 @@ slice's test file is edited). Every test in it carries `@pytest.mark.req("NFR-49
 the tests in items 1–3 and 5 also carry `@pytest.mark.req("FR-368")`. Command for items 1–8:
 `uv run pytest backend/tests/test_nfr498_audit_events.py -q`.
 
-"The state" of a rate table version means `_audit_state(v)`, which is
+*(Delta of 2026-10-05, D4: the state is now the stored wire form plus `cells_digest`.)* "The state" of a rate table version means `_audit_state(v)`, which is
 `v.model_dump(mode="json", exclude={"rows"})` of its `RateTableVersion` wire form (DP-2 (a)).
 "The content" of an algorithm or a sub-graph version means its stored `content`. If DP-2 or
 DP-3 is ruled another way, the ruled form replaces these names in every item below, and the
@@ -165,7 +377,7 @@ dispatch record says so.
 6. **A refused write leaves no event (control; it passes at the base too, and it must still
    pass after).** A second `create_algorithm` with the same slug and version answers 409. A
    `bulk_operation` with invalid parameters answers 422. Neither adds an event of its action.
-7. **Sub-graph, under DP-5 (a) only; red first.** `create_version` on a sub-graph leaves a
+7. *(Delta of 2026-10-05, D4: unconditional, split into 7a and 7b.)* **Sub-graph, under DP-5 (a) only; red first.** `create_version` on a sub-graph leaves a
    `sub_graph.created` event whose `before` is version 1's content and whose `after` is
    version 2's content, including `steps`. Version 1's event keeps `before is None`, and its
    `after` now includes `steps`. The existing assertions at
@@ -174,7 +386,7 @@ dispatch record says so.
 8. **The chain verifies.** After items 1–5 have run in one workspace,
    `audit.verify_chain(session, workspace_id)` returns the number of events written, and it
    raises nothing (FR-372).
-9. **No behaviour change from the signature move (Task 1).**
+9. *(Delta of 2026-10-05, D4, D5: the full gate at Task 1's commit.)* **No behaviour change from the signature move (Task 1).**
    `uv run pytest backend/tests/test_rate_tables_service.py backend/tests/test_diff_cache.py backend/tests/test_worker_rate_tables.py backend/tests/test_api_rate_tables.py backend/tests/test_rating_algorithms.py backend/tests/test_rating_versions.py backend/tests/test_regression_suites.py backend/tests/test_sub_graphs_service.py backend/tests/test_sub_graphs_api.py -q`
    passes at the end of Task 1 and again at the end of Task 3. The only edits to those files
    are the call-site argument (`principal.id` → `principal`, or the local equivalent).
@@ -328,7 +540,7 @@ The executor and one reviewer can handle it, and no spike is needed.
 
 ## Decision points
 
-Each DP is the decision-maker's to rule (`delivery-process.md` §3). The planner recommends.
+*(Delta of 2026-10-05, D1: every DP below is ruled; the table is kept as the record of the options.)* Each DP is the decision-maker's to rule (`delivery-process.md` §3). The planner recommends.
 
 | DP | Question | Options | Recommendation |
 |---|---|---|---|
@@ -376,7 +588,7 @@ its position, so each call site changes one argument.
   of its id: `principal`, `gate.analyst`, `analyst`. In the benches, use
   `Principal(kind=ActorKind.USER, id=created_by, display="bench")`, built from the existing
   `created_by = new_uuid7()` (`:98`), which stays for the rating version row at `:105`.
-- [ ] **Step 5:** `uv run mypy && uv run ruff check .`, then item 9's pytest command. All pass,
+- [ ] *(Delta of 2026-10-05, D5: Step 5b, the full gate, follows.)* **Step 5:** `uv run mypy && uv run ruff check .`, then item 9's pytest command. All pass,
   with no assertion edited.
 - [ ] **Step 6:** Commit: `refactor(rating): the rate-table and algorithm services take the acting Principal (NFR-498 prep)`.
 
@@ -507,7 +719,7 @@ async def test_a_seed_records_its_version_with_before_and_after(
 `backend/src/app/platform/rating_algorithms.py`, and `backend/src/app/platform/sub_graphs.py`
 under DP-5 (a).
 
-- [ ] **Step 1: Rate tables (DP-1 (a), DP-2 (a), DP-3 (a)).** In `rate_tables.py`:
+- [ ] *(Delta of 2026-10-05, D3, D5: the `before` source and `_audit_state` below are replaced by D3's code.)* **Step 1: Rate tables (DP-1 (a), DP-2 (a), DP-3 (a)).** In `rate_tables.py`:
 
 ```python
 from app.platform import audit
@@ -580,7 +792,7 @@ def _audit_state(version: RateTableVersion) -> dict[str, Any]:
 
   `before` is the highest-numbered existing version of the slug, because algorithm versions
   are numbered by the client (`:110-113`), not by the server.
-- [ ] **Step 3: Sub-graphs (DP-5 (a) only).** `_write` gains
+- [ ] *(Delta of 2026-10-05, D5: unconditional.)* **Step 3: Sub-graphs (DP-5 (a) only).** `_write` gains
   `before: dict[str, Any] | None`, and its `audit.record` passes `before=before,
   after=row.content`. `create_sub_graph` passes `before=None`. In `create_version`,
   `previous = await _row(session, workspace_id, slug, latest)` follows the `latest is None`
@@ -596,6 +808,8 @@ def _audit_state(version: RateTableVersion) -> dict[str, Any]:
   can re-sequence lane B before the freeze.
 
 ### Task 5: The spec text, only from an `RL-` (DP-4)
+
+*(Delta of 2026-10-05, D5: unconditional; the `RL-` is RL 9501.)*
 
 - [ ] **Step 1:** If DP-4 is ruled (a), apply T-1 byte for byte from the ruling under
   `spec-change`, run `python3 scripts/audit-docs.py`, and commit
@@ -621,7 +835,7 @@ def _audit_state(version: RateTableVersion) -> dict[str, Any]:
 3. **To A-2's planner (#1178):** this plan names the serialisation on `create_algorithm`
    (`platform/rating_algorithms.py:94`) and, under DP-5 (a), on `create_version`
    (`platform/sub_graphs.py:127`). A-2's write set gains the reverse row at its next fold.
-4. **To S7's executor (`SL-1391`):** `platform/rate_tables.py`, `api/rate_tables.py`,
+4. *(Delta of 2026-10-05, D6: the shared test is named; the second merger rebases it.)* **To S7's executor (`SL-1391`):** `platform/rate_tables.py`, `api/rate_tables.py`,
    `test_diff_cache.py` and `test_worker_rate_tables.py` are shared paths, and their
    functions differ, except possibly one test in `test_diff_cache.py`. Whichever slice
    merges second re-runs the full gate on the merged tree.
