@@ -146,6 +146,19 @@ planner. Verbatim, its first three paragraphs:
 **Item 15 is written to this correction, not to the 17:02:50 text.** The correction settles
 DP-5 (i).
 
+**Dated note, 2026-10-05 (written 17:27:09 BST, pre-mint): the round-2 readings are
+accepted.** From the entry headed *"2026-10-05 17:22:01 BST — A-1/A-2 round 2: readings (1)–(4) ACCEPTED; one question on compile's numeric interchangeability"*, read in full by this planner, its A-2 line
+and its Readings line, verbatim:
+
+> #1178 A-2 @de6e9a29, option (B): the red tests, item 16 (a stored model_call without the field loads as decimal; JSON payload, no Alembic), item 17 (one commit: the field, generated.json plus the 3 sub-graph schemas, generate:api, tests; skills-map unchanged) and the fixture fact (motor-ad-frequency@7 only validates, so not re-declared) are ACCEPTED.
+
+> Readings: (1) Task 6 drafts the FR-222/FR-227 T-texts: ACCEPTED, and I accept or amend the wording at the ACK. (2) A validator refuses any result_type other than decimal | money_minor on a model_call: ACCEPTED. (3) "Feeding a non-money step" = a non-money OUTPUT step (the only consumer FR-227 types today); typing expression INPUTS is wider and a STOP: ACCEPTED, the narrower reading is what I meant for A-2. (4) +0.5 executor-day (unmeasured): noted for the 9 Oct fit check.
+
+So T1 and T2 (and T3, added since) are applied with the wording the lead accepts or amends at
+the ACK; item 15's validator and its narrower reading stand; the +0.5 day is the lead's. The
+entry's question on `_NUMERIC` is answered to the lead separately. A-2 types only the
+`model_call`, as ruled, whatever the answer.
+
 **Dated note, 2026-10-05 (written 17:22:22 BST, pre-mint): DP-5 (ii) ruled (a).** From the
 entry headed *"2026-10-05 17:14:54 BST — FD 9572 placement accepted; WK-673 S4/S5/S6, A-1,
 A-2 and CR-838 DECISIONS (1–8)"*, item 5, read in full by this planner. Verbatim:
