@@ -82,6 +82,65 @@ place with a dated note, nothing deleted:
    schema-vs-code gap (`docs/findings/register.md:69` at `4d3be141`), carried by F27's owner,
    not this slice.
 
+### Second pre-mint edit, 2026-10-05: RL 9566
+
+Edited 2026-10-05 from 18:40:26 BST (`TZ=Europe/London date`), before this plan's mint, by the
+planner, on the lead's brief `~/gi-pricing-plan.local/handover/brief-capacity-fill-2026-10-05.md`
+Part B. The authority is **RL 9566** (working id, #1191, head
+`7bbdd9c076e6e69f9824770a7dddf299bf65caa6`, filed, unminted). It rules this plan's DP-S5-1 to
+DP-S5-5 (its §"Ruled", items 6 to 10, lines 120–159 at that head) and states what this slice
+owes (§"What it obliges", lines 285–297). Its one text addressed to the planner is **C1**
+(lines 264–273: "The planner applies C1 before the mint"). Its texts **T3, T4 and T5** (lines
+239–262) are the slice's to apply with the code: T3 adopts this plan's P1 unchanged; T4 and T5
+amend P2 and P3 for the ruled default and the unset rule. Nothing is re-decided here. Each edit
+below carries the RL 9566 item it applies and is marked in place.
+
+1. **C1, applied byte for byte.** Premise h's evidence cell now lists `Environment`'s fields
+   as read at `4d3be141` (`model_schema/deployments.py:55`; re-read for this edit, the class
+   holds exactly those seven fields). DP-S5-1 option (c) now reads "the Environment with the
+   highest `promotion_order`". The conclusion is unchanged.
+2. **The five decision points are ruled** (§"Status", activation need 4 and §"Decision
+   points"). DP-S5-1 (a), item 6. DP-S5-2 (a) amended, item 7: the default is the maintainer's
+   option D, `{quantile: 0.99, max_abs_change_pct: 10}`, and **an entry that leaves the field
+   unset is governed by the default, not refused**. This replaces the "`None` fails closed"
+   reading of (a). No value switches the gate off. DP-S5-3 (a), item 8. DP-S5-4 (a), item 9.
+   DP-S5-5 (a), item 10. Need 4 still waits on RL 9566's mint.
+3. **Task 1 applies RL 9566's T3, T4 and T5, never this plan's Appendix.** The Appendix is
+   marked as ruled.
+4. **Two acceptance items are added from RL 9566's own text.** Acceptance 15 is its
+   "Acceptance" bullet "The threshold (DP-S5-2)". Acceptance 16 is item 7's condition (ii): the
+   ledger records the observed quantiles of the slice's first freMTPL2 run. Task 5 Step 3 and
+   Task 6 Step 2 name them.
+5. **The write set is unchanged.** `DEFAULT_POLICY`'s `rating_version` entry is already in it
+   (§"Write set", the `approvals.py` row); the default's value changes, and the path and symbol
+   do not. The contention is unchanged.
+6. **Found, not decided: §4.6's dated note has no ruled text.** §"Write set" and Task 1's Files
+   name a dated `03` §4.6 note for DP-S5-3 and DP-S5-4. RL 9566 gives T3 to T5 only, and T4 cites
+   §4.6 for the observed figure. Under this plan's own rule ("the ruled texts"), Task 1 writes
+   no §4.6 text unless a ruling supplies one. This is reported to the lead.
+
+**Counts, per edit**, by `str.count` on this file before and after the edit set (each find
+string exactly 1 before; an insertion keeps its anchor, so its find string stays 1). The
+strings are not repeated here, so the count stays true.
+
+| Edit | Find string | New text |
+|---|---|---|
+| delta section (new) | 1 → 1 | 0 → 1 |
+| C1 premise h | 1 → 0 | 0 → 1 |
+| Status sentence | 1 → 0 | 0 → 1 |
+| need 4 | 1 → 1 | 0 → 1 |
+| DP-S5-1 cell | 1 → 0 | 0 → 1 |
+| DP-S5-2 cell | 1 → 0 | 0 → 1 |
+| DP-S5-3 cell | 1 → 0 | 0 → 1 |
+| DP-S5-4 cell | 1 → 0 | 0 → 1 |
+| DP-S5-5 cell | 1 → 0 | 0 → 1 |
+| C1 DP-S5-1 (c) | 1 → 0 | 0 → 1 |
+| Task 1 Step 1 | 1 → 0 | 0 → 1 |
+| Acceptance 15, 16 (new) | 1 → 1 | 0 → 1 |
+| Task 5 Step 3 | 1 → 1 | 0 → 1 |
+| Task 6 Step 2 | 1 → 0 | 0 → 1 |
+| Appendix header | 1 → 1 | 0 → 1 |
+
 ## Goal
 
 Make `submit_for_review` (`backend/src/app/platform/rating_versions.py:278`) enforce three
@@ -112,8 +171,8 @@ amendment) and §4.2 (`:344`); `RL-1264` (DP-3 (b), and its negative test).
 
 ## Status
 
-`draft`. **Five decision points are open** (§"Decision points"), each the decision-maker's
-and blocking. The plan moves to `active` only through a separate activation PR, after every
+`draft`. **The five decision points are ruled by RL 9566** (working id, #1191, unminted; pre-mint 2026-10-05; §"Second pre-mint edit"); until its mint they still block
+(activation need 4). The plan moves to `active` only through a separate activation PR, after every
 need below holds.
 
 ### Activation needs, in order
@@ -128,7 +187,8 @@ need below holds.
    `SL-1256` row, `status: closed`). Premise j of `PL-1267`: nothing is `live` without its
    Deployment record.
 4. **A ruling on DP-S5-1 to DP-S5-5** is merged and minted, adopting or amending the texts
-   in §"Appendix". An unminted ruling is a stop.
+   in §"Appendix". An unminted ruling is a stop. *(That ruling is RL 9566, #1191: it adopts P1 as
+   its T3 and amends P2 and P3 as its T4 and T5; pre-mint 2026-10-05; §"Second pre-mint edit".)*
 5. **RL 9614 (working id, #1167) is minted.** Its DP-2 (a) keeps FR-257's gate at
    `POST /rating-versions/{id}/submit` (FD-1245); this slice builds there. If the minted text
    moves the gate, the slice follows it (`PL-1267` Slice 5).
@@ -194,6 +254,17 @@ the ledger quotes the red by its cause (README convention 2). `S` is
     carries the same text. Red first: the submit response's `change_summary` is `None`
     (`AssertionError` on `None == "<text>"`), because nothing writes the field (premise m). A
     red for any other cause, a gate refusal included, is a fixture defect.
+15. **An unset threshold is governed by the default** (RL 9566 item 7 and its "Acceptance" bullet
+    "The threshold (DP-S5-2)"; pre-mint 2026-10-05; §"Second pre-mint edit").
+    `G::test_fr224_an_unset_threshold_is_governed_by_the_default`: with the `rating_version`
+    entry's `approximation_deviation` unset, a run whose observed 0.99 quantile is above 10 % is
+    refused at submission and one at or below is accepted; a workspace entry of
+    `{quantile: 0.99, max_abs_change_pct: 5}` refuses the second run too. Shown red on a
+    deliberately broken gate that reads an unset entry as "no gate", scratch-reverted.
+16. **The default is re-readable** (RL 9566 item 7, condition (ii); pre-mint 2026-10-05; §"Second pre-mint edit"). The ledger records the
+    observed `abs_change_pct_quantiles` (the six keys of item 9) of the slice's first Dislocation
+    Run on freMTPL2 (`examples/fremtpl2/`), with the tree and the run's spec, for the
+    maintainer's re-read at the next checkpoint.
 
 ## Global Constraints
 
@@ -240,7 +311,7 @@ is F27's.
 | e | No threshold field | `ApprovalPolicyEntry` (`model_schema/approvals.py:125`): `artifact_type`, `approvers_required`, `approver_roles`, `environment`, `evidence`, `skippable_predecessors` (validator `:147`) | reproduces (`RL-1264` premise note) |
 | f | No public live resolution | `_live_by_environment` (`backend/src/app/platform/environments.py:67`) is private; `DeploymentRow.rating_version_ref` (`db/models.py:2490`) | reproduces; Task 3 adds a public reader |
 | g | `live` is per Environment | FR-238 (`03:135`): "the same Rating Version can be `live` in `uat` and not in `prod`"; FR-257 does not name an Environment | reproduces; DP-S5-1 |
-| h | No production marker on an Environment | `Environment` (`model_schema/deployments.py:55`): `slug`, `name`, `predecessor`, `retired_at`; `DEFAULT_POLICY`'s `deployment` entry names `environment="prod"` (`approvals.py:354-360`) | reproduces; DP-S5-1 |
+| h | No production marker on an Environment | `Environment` (`model_schema/deployments.py:55`): `slug`, `name`, `description`, `promotion_order`, `requires_prior_environment`, `retired_at`, `live_deployments`; no production marker *(RL 9566 C1, read at `4d3be141`; pre-mint 2026-10-05; §"Second pre-mint edit".)*; `DEFAULT_POLICY`'s `deployment` entry names `environment="prod"` (`approvals.py:354-360`) | reproduces; DP-S5-1 |
 | i | The mode | `ModelReferenceMode = Literal["exact", "approximation"]` (`rating.py:135`); `RatingVersion.model_reference_mode` (`:164`); Slice 3 refuses a mode difference inside `derive_changes` (PL 9689 DP-S3-9 (a)) | reproduces; `attribute` is not used for FR-224's run (DP-S5-3) |
 | j | The fidelity statement is prose | `fidelity_statement(...) -> str` (`pricing_core/modelling/transparency.py:550`); its numbers (`r_squared`, `deviance_explained`) are on `GlmApproximation` | reproduces; DP-S5-5 |
 | k | The run's figures | `DislocationRun` (`model_schema/dislocation.py:116`) holds bands and totals, no per-policy quantile | reproduces; DP-S5-4 |
@@ -343,11 +414,11 @@ adopts or amends the Appendix texts. The slice may not move `draft → active` w
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-S5-1 | **Which version is "the current live version" (FR-257), and what when nothing is live?** `live` is per Environment (premise g) and no Environment is marked production (premise h). The structural diff (FR-219, "between two algorithm versions") needs a baseline too | (a) A new `dislocation_baseline_environment` field on the `rating_version` policy entry, default `"prod"` (the slug `DEFAULT_POLICY`'s `deployment` entry already uses); the live version there is the baseline; **with nothing live there**, the most recently approved other version of the same algorithm (`_baseline`, `rating_versions.py:704`, the golden-quote precedent) is the baseline; with neither (a first version), limb (2) is satisfied by recording `"no_baseline": "first_version"` on the evidence and the structural diff is taken against an empty algorithm. (b) Literally the Environment with slug `prod`; nothing live → refused. (c) The last Environment in the predecessor chain; nothing live → refused | **(a).** (b) and (c) refuse every first version for ever: nothing can be live before it is approved and deployed. (a)'s fallback reuses the approved-baseline rule the golden-quote gate already applies, and records the first-version case rather than hiding it. FR-257 gains a dated clarification (P1). The structural diff uses the same baseline, so the approver reads one comparison | decision point | yes — Tasks 2, 3 | open |
-| DP-S5-2 | **The threshold's shape and default** (FR-224: "a maximum absolute percentage deviation at a declared portfolio quantile") | (a) `approximation_deviation: {quantile: Decimal, max_abs_change_pct: Decimal} \| None` on `ApprovalPolicyEntry`, allowed only on `rating_version` entries, `0 < quantile ≤ 1`, `max_abs_change_pct ≥ 0`; `DEFAULT_POLICY` sets `{quantile: 0.99, max_abs_change_pct: 1.0}`; an entry with `None` refuses every `approximation`-mode submission (fail closed). (b) as (a) with no default (every workspace must declare one). (c) two flat fields | **(a)**, and the default figures are an **actuarial choice the ruling must state or replace**: 1 % at the 99th percentile is offered as a starting point, not derived. `None` fails closed so a workspace cannot opt out by omission | decision point | yes — Task 5 | open |
-| DP-S5-3 | **How is FR-224's "same version in `exact` mode" run produced?** `DislocationSpec` names two refs; `attribute` refuses a mode difference (premise i) | (a) `DislocationSpec` gains `baseline_mode_override: Literal["exact"] \| None`, valid only when `baseline_ref == candidate_ref`; the handler compiles an ephemeral `exact`-mode bundle of the same version through `WorkspaceResolver` (FR-1398's ephemeral rules: never a row); attribution is not run for such a spec. (b) The analyst creates a real second Rating Version in `exact` mode with identical pins; the gate checks the baseline's `algorithm_ref` and `pins` equal the candidate's and its mode is `exact`. (c) Submission runs it synchronously | **(a)**, as `PL-1267` Slice 5 says ("built by DP-1's mechanism with `model_reference_mode` set to `exact`"). (b) needs no shape change but leaves an `exact` twin in every version list. (c) puts a portfolio pass on a request thread | decision point | yes — Task 4 | open |
-| DP-S5-4 | **Where does the observed deviation live?** The run has bands, not a per-policy quantile (premise k) | (a) `DislocationRun` gains `abs_change_pct_quantiles: dict[str, float]` for a fixed set (`"0.5"`, `"0.9"`, `"0.95"`, `"0.99"`, `"0.999"`, `"1"`), computed by the handler from the policy frame; the policy's `quantile` must be one of them (validated at `PUT /approval-policy`). (b) the handler persists the per-policy change frame as a quote-input blob and the gate computes any quantile at submission. (c) the gate re-runs the comparison | **(a).** The figure is on the citable artifact the approver reads (FR-265), the gate reads one number, and no per-policy frame is kept. (b) adds a second quote-input blob for one number | decision point | yes — Tasks 4, 5 | open |
-| DP-S5-5 | **What does FR-136's pre-check refuse, and where?** "The cheap pre-check that runs first … a plainly poor surrogate is refused before a portfolio run is spent" (`03:110`); the statement is prose (premise j) | (a) At `POST /dislocation-runs` with `baseline_mode_override`, and again at submission: every model the version references in `approximation` mode has a transparency artifact **with a GLM approximation** (the statement is not the "No GLM approximation was built" case), else 422 `EVIDENCE_INCOMPLETE` naming the model; the statement is copied onto the evidence for the approver. (b) (a) plus an `r_squared` floor on the policy entry. (c) No refusal; surface only | **(a).** A model with no approximation cannot be rated in `approximation` mode at all (FR-133), so refusing it before the run is the "plainly poor" case with no new threshold. (b) adds a second actuarial figure with no spec basis | decision point | yes — Task 4 | open |
+| DP-S5-1 | **Which version is "the current live version" (FR-257), and what when nothing is live?** `live` is per Environment (premise g) and no Environment is marked production (premise h). The structural diff (FR-219, "between two algorithm versions") needs a baseline too | (a) A new `dislocation_baseline_environment` field on the `rating_version` policy entry, default `"prod"` (the slug `DEFAULT_POLICY`'s `deployment` entry already uses); the live version there is the baseline; **with nothing live there**, the most recently approved other version of the same algorithm (`_baseline`, `rating_versions.py:704`, the golden-quote precedent) is the baseline; with neither (a first version), limb (2) is satisfied by recording `"no_baseline": "first_version"` on the evidence and the structural diff is taken against an empty algorithm. (b) Literally the Environment with slug `prod`; nothing live → refused. (c) The Environment with the highest `promotion_order` *(RL 9566 C1; pre-mint 2026-10-05; §"Second pre-mint edit".)*; nothing live → refused | **(a).** (b) and (c) refuse every first version for ever: nothing can be live before it is approved and deployed. (a)'s fallback reuses the approved-baseline rule the golden-quote gate already applies, and records the first-version case rather than hiding it. FR-257 gains a dated clarification (P1). The structural diff uses the same baseline, so the approver reads one comparison | decision point | yes — Tasks 2, 3 | **ruled (a)**, RL 9566 item 6 (pre-mint 2026-10-05; §"Second pre-mint edit") |
+| DP-S5-2 | **The threshold's shape and default** (FR-224: "a maximum absolute percentage deviation at a declared portfolio quantile") | (a) `approximation_deviation: {quantile: Decimal, max_abs_change_pct: Decimal} \| None` on `ApprovalPolicyEntry`, allowed only on `rating_version` entries, `0 < quantile ≤ 1`, `max_abs_change_pct ≥ 0`; `DEFAULT_POLICY` sets `{quantile: 0.99, max_abs_change_pct: 1.0}`; an entry with `None` refuses every `approximation`-mode submission (fail closed). (b) as (a) with no default (every workspace must declare one). (c) two flat fields | **(a)**, and the default figures are an **actuarial choice the ruling must state or replace**: 1 % at the 99th percentile is offered as a starting point, not derived. `None` fails closed so a workspace cannot opt out by omission | decision point | yes — Task 5 | **ruled (a), amended**, RL 9566 item 7: default `{quantile: 0.99, max_abs_change_pct: 10}` (the maintainer's option D); an entry left unset is governed by the default, not refused; no value switches the gate off (pre-mint 2026-10-05; §"Second pre-mint edit") |
+| DP-S5-3 | **How is FR-224's "same version in `exact` mode" run produced?** `DislocationSpec` names two refs; `attribute` refuses a mode difference (premise i) | (a) `DislocationSpec` gains `baseline_mode_override: Literal["exact"] \| None`, valid only when `baseline_ref == candidate_ref`; the handler compiles an ephemeral `exact`-mode bundle of the same version through `WorkspaceResolver` (FR-1398's ephemeral rules: never a row); attribution is not run for such a spec. (b) The analyst creates a real second Rating Version in `exact` mode with identical pins; the gate checks the baseline's `algorithm_ref` and `pins` equal the candidate's and its mode is `exact`. (c) Submission runs it synchronously | **(a)**, as `PL-1267` Slice 5 says ("built by DP-1's mechanism with `model_reference_mode` set to `exact`"). (b) needs no shape change but leaves an `exact` twin in every version list. (c) puts a portfolio pass on a request thread | decision point | yes — Task 4 | **ruled (a)**, RL 9566 item 8 (pre-mint 2026-10-05; §"Second pre-mint edit") |
+| DP-S5-4 | **Where does the observed deviation live?** The run has bands, not a per-policy quantile (premise k) | (a) `DislocationRun` gains `abs_change_pct_quantiles: dict[str, float]` for a fixed set (`"0.5"`, `"0.9"`, `"0.95"`, `"0.99"`, `"0.999"`, `"1"`), computed by the handler from the policy frame; the policy's `quantile` must be one of them (validated at `PUT /approval-policy`). (b) the handler persists the per-policy change frame as a quote-input blob and the gate computes any quantile at submission. (c) the gate re-runs the comparison | **(a).** The figure is on the citable artifact the approver reads (FR-265), the gate reads one number, and no per-policy frame is kept. (b) adds a second quote-input blob for one number | decision point | yes — Tasks 4, 5 | **ruled (a)**, RL 9566 item 9 (pre-mint 2026-10-05; §"Second pre-mint edit") |
+| DP-S5-5 | **What does FR-136's pre-check refuse, and where?** "The cheap pre-check that runs first … a plainly poor surrogate is refused before a portfolio run is spent" (`03:110`); the statement is prose (premise j) | (a) At `POST /dislocation-runs` with `baseline_mode_override`, and again at submission: every model the version references in `approximation` mode has a transparency artifact **with a GLM approximation** (the statement is not the "No GLM approximation was built" case), else 422 `EVIDENCE_INCOMPLETE` naming the model; the statement is copied onto the evidence for the approver. (b) (a) plus an `r_squared` floor on the policy entry. (c) No refusal; surface only | **(a).** A model with no approximation cannot be rated in `approximation` mode at all (FR-133), so refusing it before the run is the "plainly poor" case with no new threshold. (b) adds a second actuarial figure with no spec basis | decision point | yes — Task 4 | **ruled (a)**, RL 9566 item 10 (pre-mint 2026-10-05; §"Second pre-mint edit") |
 
 ## Tasks
 
@@ -373,7 +444,8 @@ adopts or amends the Appendix texts. The slice may not move `draft → active` w
 **Files:** `docs/specs/03-rating-engine.md` (FR-224 `:110`, FR-257 `:174`, §4.6);
 `docs/specs/06-governance.md` (§4.2).
 
-- [ ] **Step 1:** Apply the ruling's texts verbatim from the ledger copy; re-count each find
+- [ ] **Step 1:** Apply the ruling's texts verbatim from the ledger copy (RL 9566's T3, T4 and T5,
+  not this plan's Appendix; pre-mint 2026-10-05; §"Second pre-mint edit"); re-count each find
   string with `grep -cF` (1 each).
 - [ ] **Step 2:** `python3 scripts/audit-docs.py` (only check 31 may fail while ids are working
   ids).
@@ -484,6 +556,9 @@ the approvers' judgement at review, not a check.
 - [ ] **Step 3:** Implement; the gate reads the threshold only from
   `(await approvals.policy_for(session, workspace_id))` (`platform/approvals.py:166`), the
   `rating_version` entry; it runs only when `row.model_reference_mode == "approximation"`.
+  `DEFAULT_POLICY`'s `rating_version` entry carries `{quantile: 0.99, max_abs_change_pct: 10}`;
+  an entry that leaves the field unset is governed by that default, never refused and never
+  ungated (Acceptance 15; RL 9566 item 7; pre-mint 2026-10-05; §"Second pre-mint edit").
   The refusal's `why` names the quantile, the observed figure and the threshold.
 - [ ] **Step 4:** Acceptance 6's broken-input proof: make the gate read the threshold from
   `load_settings()`; the test must fail naming the accepted submission; revert; quote both.
@@ -514,7 +589,8 @@ and ledger cover it.
   the four docs checks; `req-coverage.py` (FR-224, FR-257 and `06` FR-364 each listed with a
   test in `G`). Quote every rc and summary line with the tree.
 - [ ] **Step 2:** The ledger: Task 0's records, every red quoted by its cause, Acceptance
-  1–13 ~~with evidence~~ and 14 (pre-mint 2026-10-05) with evidence, and `RL-1264`'s environment-variable violation discharged by name.
+  1–13 ~~with evidence~~ and 14 (pre-mint 2026-10-05) ~~with evidence~~, 15 and 16 (RL 9566;
+  pre-mint 2026-10-05; §"Second pre-mint edit") with evidence, and `RL-1264`'s environment-variable violation discharged by name.
 
 ## Hand-off
 
@@ -525,6 +601,9 @@ the `effective_evidence("rating_version")` loop; the existing `_regression_run_g
 (`:317`) it also folds in.
 
 ## Appendix — proposed texts (for the ruling to adopt, amend or reject)
+
+*(Ruled by RL 9566: P1 adopted unchanged as its T3, P2 amended as its T4, P3 amended as its T5.
+Task 1 applies T3 to T5 from RL 9566, never the texts below; pre-mint 2026-10-05; §"Second pre-mint edit".)*
 
 ### P1 — `03` FR-257 (`:174`), appended at the row's end (DP-S5-1 (a))
 
@@ -569,3 +648,7 @@ P3 are DP-S5-2's open actuarial choice.
    Task 7 and Acceptance 14; the write set and the contention are unchanged (§"Pre-mint
    edit, 2026-10-05", items 2 and 3); the F27 draft residue is named out of scope. RL 9541 is
    cited by working id and kept out of `relates:`.
+7. **Second pre-mint edit, 2026-10-05 (RL 9566).** C1 is applied byte for byte. The five
+   decision points carry their rulings. Acceptance 15 and 16 come from RL 9566's own text.
+   The write set and the contention are unchanged. The §4.6 note's missing text is reported,
+   not supplied. RL 9566 is cited by working id and kept out of `relates:` (check 32).
