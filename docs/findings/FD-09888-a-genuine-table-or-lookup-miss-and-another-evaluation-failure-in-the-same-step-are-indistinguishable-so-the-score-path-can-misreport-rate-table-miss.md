@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9888 — A genuine table or lookup miss and another evaluation failure in the same step are indistinguishable, so the score path can misreport RATE_TABLE_MISS
+# FD 9888 — A genuine table or lookup miss and another evaluation failure in the same step are indistinguishable, so the score path can misreport RATE_TABLE_MISS
 
 ## Finding
 
@@ -84,3 +84,13 @@ Event that discharges it: that change merges, proven on this table: case 2 must 
 *Drafted under working id 9888.*
 
 Amended 2026-10-05 before mint: line cites re-pointed by symbol to `origin/main` `47d770e8` (`_reraise_engine_failure` at `score.py:481`); the every-step scan the old `:469-498` / `:484-497` cites named was removed by RL-1313 DP-G4 (landed as RL-1313 in mint batch #994, `fa9a73c2`; #968-#970 closed unmerged), leaving only the residual above, which `test_the_stated_residual_still_reports_the_miss_code` pins. `PL-1314` cites this finding by working id (its lines 105, 336, 487) and is re-pointed at mint per its own line 487.
+
+Re-anchored 2026-10-05 at main `caa4e411`: the residual still reproduces by code reading.
+`_reraise_engine_failure` is at `score.py:481`, "The stated limit" paragraph at `:497`, and its
+step lookup picks the miss code from `consumed & produces` only (`:504-525`), so a failing step
+that directly consumes an `on_miss='error'` output and fails for another reason still reports
+the miss code. `test_the_stated_residual_still_reports_the_miss_code` is at
+`test_rating_score.py:832`. `score.py`'s last change on main is `1dd5e264` (#1045), after
+`47d770e8`'s read of this tree, and does not touch that function. `RL-1313` DP-G4 is present at
+main (`docs/rulings/RL-01313-…`, "DP-G4 — (a)+(i), with a stated limit"); `PL-1314` still cites
+this finding by working id 9888 (its lines 105, 336, 487).
