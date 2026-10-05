@@ -33,7 +33,7 @@ from backend.tests.test_rating_version_compile import (
     _run_compile_job,
 )
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.api import score as score_module
 from app.api.deps import DEV_PRINCIPAL_HEADER, Caller
@@ -1572,3 +1572,56 @@ def test_a_deployment_recorded_mid_request_does_not_relink_the_trace(
     assert [str(r) for r in seen] == [LIVE_REF]
     (row,) = _run(_rows_for(database, workspace_id))
     assert row.deployment_id == served_id
+
+
+@pytest.mark.req("FR-213")
+def test_a_quote_input_naming_a_produced_value_is_refused_on_score(
+    client: TestClient, scoring_headers: dict[str, str], compiled_version: Any
+) -> None:
+    """FD-1425, `/score`: `s_expr` produces `payable`; an input so named is refused by name."""
+    body = _quote({"rating_version_ref": SCORED_REF})
+    body["inputs"]["payable"] = 1
+    response = client.post(SCORE_URL, json=body, headers=scoring_headers)
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert "'payable'" in response.json()["detail"]
+
+
+@pytest.mark.req("FR-213")
+def test_a_pending_trace_whose_context_names_a_produced_value_is_not_reproduced_as_a_price(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    database: Any,
+    blob_store: Any,
+    workspace_id: Any,
+) -> None:
+    """FD-1425, trace reproduction (`trace_handlers.py:98`). After the fix `/score` refuses
+    such a context before a trace is pended, so the case is a row pended before the fix."""
+    register_trace_handlers()
+    _run(_set_trace_sample_rate(database, workspace_id, 1.0))
+    served = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
+    )
+    assert served.status_code == 200, served.text
+    (row,) = _run(_rows_for(database, workspace_id))
+    (job,) = _run(_trace_produce_jobs(database, workspace_id))
+    planted = dict(row.pending_quote_context)
+    planted["inputs"] = {**planted["inputs"], "payable": 1}
+
+    async def _plant_and_run() -> tuple[JobStatus, ScoringTraceRow]:
+        async with database.unit_of_work() as session:
+            await session.execute(
+                update(ScoringTraceRow)
+                .where(ScoringTraceRow.id == row.id)
+                .values(pending_quote_context=planted)
+            )
+        status = await execute_job(database, job.id, blob_store)
+        async with database.session() as session:
+            after = await session.get(ScoringTraceRow, row.id)
+        assert after is not None
+        return status, after
+
+    status, after = _run(_plant_and_run())
+    assert status is JobStatus.FAILED
+    assert after.status == "pending"
