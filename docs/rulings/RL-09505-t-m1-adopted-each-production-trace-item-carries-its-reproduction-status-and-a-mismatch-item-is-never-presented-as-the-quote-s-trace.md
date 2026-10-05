@@ -74,7 +74,7 @@ worktree.
   (`RL-890`, `RL-916`) and says nothing of reproduction. `grep -n` for `` `mismatch` `` in `03`
   finds nothing.
 - **The same mark serves `PL 9776`.** #1051, head `c7621ca2e500ef63f9538353541035a778134959`
-  when read, `docs/plans/PL-09776-wk-1178-f35-remedy-what-the-trace-records-per-node-and-nfr-490-s-trace-overhead-leaf-plan.md:300`,
+  when read, `PL 9776`'s file under `docs/plans/` (slug `wk-1178-f35-remedy-what-the-trace-records-per-node-and-nfr-490-s-trace-overhead-leaf-plan`) `:300`,
   DP-F35-8 option (c): the off-path producer's result "is compared with the stored
   `served_summary` at `traces.py:257` and marked `mismatch` there, unchanged; T-M1 carries the
   mark to the reader." The 18:01:45 BST entry's item 2 adopts (c) as "ONE mechanism shared with
