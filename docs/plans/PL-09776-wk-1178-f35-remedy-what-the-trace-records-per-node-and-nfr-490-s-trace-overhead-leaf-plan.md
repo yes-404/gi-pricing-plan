@@ -207,6 +207,262 @@ is filed, by §"Status"'s rule on rulings that differ from a recommendation.
 - **File contention:** a row for SL 9568 is appended (plan dependency, and `to_wire` and
   `_model_call_handler`).
 
+## Delta 2, 2026-10-05 (after 17:51:03 BST, pre-mint): DP-F35-7 ruled (a), with two conditions; Task 4 rewritten
+
+This plan is still an unmerged draft. This delta deletes no text: each part it changes keeps its
+text and carries a pointer back here. Every code cite below was read at `origin/main`
+`5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a`.
+
+**The ruling.** The maintainer's (by delegation) entry "2026-10-05 17:51:03 BST — RL 9519 noted;
+PL 9567 delta 4 accepted with one question on traces; DP-F35-7 = (a) with two conditions", item 3,
+verbatim:
+
+> 3. DP-F35-7: (a) ADOPTED, the traced-only wire admitted by a compile check, with trimming otherwise and R3 comparing every traced result. Two conditions:
+>    - The SERVED price always comes from the serving chain, never from the traced wire. If R3 finds trace ≠ serve, the trace is refused or marked (an existing code, or spec first) and the served result stands. Its red is in the plan.
+>    - NFR-490: the premise ("the bench is a near-chain; U does not move") is UNMEASURED, so it is MEASURED in the slice under the gate's own mode (OMP_NUM_THREADS=1 nice, inside a held slot, no concurrent heavy work), as CLAUDE.md 13 requires. It is not asserted in the plan.
+>    Activation need 10 (SL 9568 merged plus DP-F35-7 ruled): the ruled half is discharged by this entry.
+
+**1. DP-F35-7 is ruled (a).** A traced-only wire, admitted only where a compile check shows that
+no name reaches `outputNode` by two edges; otherwise the trace is the chain's, trimmed in
+`_build_trace` only (Task 3). R3 compares every traced result with the chain's. The DP-F35-7 row
+in §"Decision points" carries a pointer here. DP-F35-4's row stays as written; DP-F35-7 restated
+it for the chain and is now ruled, so DP-F35-4 is answered by DP-F35-7 (a) and is no longer an
+activation need on its own (need 4, below).
+
+**2. Activation need 10.** Its "DP-F35-7 ruled" half is **discharged** by the 17:51:03 entry
+(the entry says so). Its "SL 9568 merged" half stays, with the same command. Need 4 (DP-F35-4
+ruled and minted) is discharged with it: DP-F35-7 (a) is DP-F35-4 restated for the chain.
+
+**3. Condition (i): the served price always comes from the chain. One mechanism, shared with
+PL 9567.** PL 9567's Delta 5 (#1193, after 17:51:03 BST) answered the trace question at
+`5fe56b87`:
+- the off-path re-score compares its result with the stored served result:
+  `backend/src/app/worker/trace_handlers.py:98-107` computes `summarise_result(result)`
+  (`backend/src/app/platform/traces.py:143-156`, the four fields of `_SUMMARY_FIELDS`, `:64`:
+  `outcome`, `decline_reasons`, `premium_ladder`, `outputs`), and `complete_pending_trace` sets
+  `status = "complete" if reproduced_summary == row.served_summary else "mismatch"`
+  (`traces.py:257`), keeping the body either way;
+- the mark is the existing `ScoringTraceRow.status` value `mismatch`
+  (`backend/src/app/db/models.py:2289-2296`);
+- `GET /api/v1/traces` does not carry it today (`backend/src/app/api/traces.py` `TraceView`,
+  `:100-116`), so PL 9567 Task 2d carries it, after **T-M1**, a spec text owed first by an RL.
+
+**This slice uses the same comparator and the same mark.** No existing code in
+`backend/src/app/errors.py` means "the trace did not reproduce" (the trace codes are
+`TRACE_RETENTION_FLOOR` and `TRACE_NOT_PENDING`, `:375`, `:382`), and no `model-schema` field marks
+a trace (`Trace`, `packages/model-schema/src/model_schema/scoring.py:187-201`, has none). So the
+mark is `status` `mismatch`, read through T-M1's field. This slice does not add a second mark.
+
+**Where the comparison runs is a question the ruling leaves open: DP-F35-8, below, open and
+blocking Task 4.** It matters because of condition (i). A traced call that is served to its
+caller must be served from the chain. Three paths ask for a trace at `5fe56b87`:
+- `/score` with `options.trace` true, inline (`backend/src/app/api/score.py:374-375`);
+- `/score/compare`, inline, both sides (`score.py:444-447`);
+- the off-path producer, `score.trace_produce` (`trace_handlers.py:98`), which serves nothing:
+  the served result was stored as `served_summary` when `/score` served the quote.
+
+On an inline path, the served result and the traced wire's result are two evaluations. So a
+traced call that also uses the traced wire costs at least U (the chain) plus the traced wire's
+own time. Its overhead over U is then at least the traced wire's time over U, which is about
++100 % or more. NFR-490's budget is ≤ 20 %. On the off-path producer, the served result already
+exists, so the traced wire is the only evaluation, and `traces.py:257` is the comparison.
+
+**4. Condition (ii): NFR-490's premise is measured, Task 1B below.** "The bench is a near-chain;
+U does not move" (this plan's Delta, item 4) is measured in the slice, in the gate's own mode:
+`OMP_NUM_THREADS=1 nice`, inside a held gate slot, with no other heavy work running. The
+method and the threshold are in Task 1B. Nothing in this plan asserts the premise.
+
+**5. Task 4 is rewritten as Task 4R**, below, for DP-F35-7 (a) and DP-F35-8's recommendation.
+Task 4's text stays, marked superseded. Under DP-F35-8 (a), Task 4R Steps 4 and 6 are rewritten
+before dispatch, as Task 4R says.
+
+**6. Is this a superseding `PL-`?** §"Status" says that a ruling which changes a Task's
+**acceptance** is a superseding `PL-`. This plan is still an unminted draft, and the brief for
+this delta (the lead's, on the 17:51:03 entry) is a pre-mint delta. So this is a dated pre-mint
+delta: Acceptance 5 and 6 carry pointers to Task 4R, and Acceptance 13–16 are added. Whether
+DP-F35-8's ruling then needs a superseding `PL-` is the lead's, by the same rule.
+
+**7. What this delta changes in the plan:**
+- **Activation needs:** need 4 and need 10's ruled half discharged; need 11 added (DP-F35-8
+  ruled). T-M1's field lands in SL 9568 (PL 9567 Task 2d), so need 10 covers it.
+- **Decision points:** DP-F35-7's row is marked ruled; DP-F35-8 is appended, open and blocking.
+- **Tasks:** Task 1B added (condition (ii)); Task 4 superseded by Task 4R.
+- **Acceptance:** items 5 and 6 point to Task 4R; items 13–16 added.
+- **Write set:** a note under the table names Task 4R's paths. The `runtime.py` row and the
+  Delta's note on it stay.
+- **File contention:** A-1, A-2 and A-3 (`_model_call_handler`) are added in a note, and
+  `trace_handlers.py` under DP-F35-8 (c).
+
+### DP-F35-8 (added by Delta 2; open; blocking Task 4R)
+
+| DP | Question | Options | Recommendation | Kind | Blocking? | Resolved by |
+|---|---|---|---|---|---|---|
+| **DP-F35-8** | **Where does R3's comparison run, so that the served price always comes from the chain (condition (i))?** | **(a) Inline in every traced call.** `score_one(trace=True)` scores the chain (the served result) and the traced wire (the trace), compares the two with `summarise_result`'s four fields, and returns the chain's result. On a difference the trace is marked or refused. Costs: two evaluations per traced call, so the inline traced overhead is at least the traced wire's time over U (about +100 % or more), and NFR-490 cannot pass on that path by construction; the comparator moves into `pricing-core` (the backend's `summarise_result` then calls it, so there is still one comparator); and the mark needs a field on `Trace` or `ScoringResult`, a spec text owed first (`03` §4.5), because no existing field or code fits. **(c) Only the off-path producer uses the traced wire.** `score.trace_produce` (`trace_handlers.py:98`) scores the traced wire where it is admitted (else the chain, trimmed); its result is compared with the stored `served_summary` at `traces.py:257` and marked `mismatch` there, unchanged; T-M1 carries the mark to the reader. `score_one(trace=True)`, which `/score` and `/score/compare` call inline, stays on the chain with Task 3's trim, so its result is the chain's by construction. Costs: the inline traced paths get no relief beyond the trim; `trace_handlers.py` gains one changed call (`backend/src/` joins the write set by one line); and NFR-490's instrument (`bench-rating.py`'s `trace=True` block, `:968-971`) measures the inline path, so the relief on the producer needs its own line in Task 6, and which line NFR-490's verdict reads is SL-1259's, by the decision-maker's reading. *(Excluded: the traced wire's result served on any path. Condition (i) forbids it.)* | **(c).** It meets condition (i) with no second evaluation, and it uses the one comparator and the one mark that already exist (`traces.py:257`; PL 9567's T-M1). Under (a), the traced wire would buy NFR-490 nothing on the inline path, because the comparison itself doubles the cost, so (a) costs more than DP-F35-7 (c) (trim only) on that path. The sampled stream that FR-259 persists and NFR-500 sizes is the producer's | decision point | **yes** (Task 4R) | decision-maker; **open** |
+
+### Task 1B: NFR-490's premise, measured (condition (ii); added by Delta 2)
+
+**What is measured.** The untraced figure U: the p99 of `scripts/bench-rating.py`'s "NFR-489
+with GBM … trace=False" block (`:953` at `5fe56b87`), on the 200-step structure with one `exact`
+GBM call. **NFR-490's own text** (`03:1331` at `5fe56b87`): "Tracing adds ≤ 20 % to scoring
+latency and never changes the result (R3)." Its budget is relative to U: the allowance is
+`BUDGET_TRACE_OVERHEAD` × U (`bench-rating.py:77`, 0.20). So a move in U moves the allowance.
+
+**Three trees**, each a clean detached checkout, SHAs named in the ledger:
+- **P (pre-chain):** the first parent of SL 9568's squash on `main`;
+- **C (chain):** SL 9568's squash, this slice's base;
+- **H:** this slice's HEAD after Task 4R.
+
+**The near-chain half.** On C, record `to_wire`'s edge list for the bench structure
+(`_algorithm_payload(with_gbm=True, n_expr=N_EXPR_STEPS)`, `bench-rating.py:197`): one path,
+`input` → `s_expense` → `s_risk` → `s_v000` → … → `s_v186` → the sink, as the Delta's item 4
+predicts. Record the same list on P. This measures structure, not time, and runs outside the
+window.
+
+**The mode, every timing run.** Inside a gate slot this measurement holds itself, taken through
+the dev-commands slot wrapper (`.claude/skills/dev-commands/SKILL.md`), on the lead's grant, dated
+in the dispatch record. No other gate, suite, benchmark or `migrate --verify` runs: the
+`pgrep -af 'pytest|vitest|bench-|migrate --verify' | grep -v pgrep` line, `uptime`, `free -h` and
+both `flock -n /tmp/slots/gate-{1,2} true; echo $?` reads at both ends of the window. Each run is
+`OMP_NUM_THREADS=1 nice uv run python scripts/bench-rating.py`, default arguments, unmodified.
+
+**Runs.** Five per tree, interleaved P, C, H, P, C, H, … (15 runs), in one window. The C and H
+runs are the same runs as Task 6's base and HEAD timing runs where the windows coincide; the
+ledger says which.
+
+**The threshold.** NFR-490's text names no tolerance for U itself. It gives one figure, the 20 %
+allowance over U. So, with s_U the sample standard deviation of U over C's five runs:
+- **Holds:** |median U_P − median U_C| < s_U, and |median U_H − median U_C| < s_U.
+- **Moved:** a difference ≥ s_U and < 0.20 × median U_C. The premise is false; the ledger
+  records the numbers and the lead decides whether Task 6's reading stands.
+- **STOP for the maintainer (by delegation):** a difference ≥ 0.20 × median U_C. A U move of the
+  whole allowance would by itself decide NFR-490's ratio.
+
+The same table also records median T and the overhead per tree, as §"How NFR-490 is measured"
+does. **This task books no NFR-490 verdict**; that stays SL-1259's.
+
+### Task 4R: The traced-only wire, admitted by a compile check; served from the chain (DP-F35-7 (a); added by Delta 2)
+
+**Written for DP-F35-8 (c).** Under DP-F35-8 (a), Steps 4 and 6 are rewritten before dispatch
+(the inline two-evaluation comparison, and a `03` §4.5 text for the mark), and the dispatch
+record names each change.
+
+**Files:**
+- Modify: `packages/pricing-core/src/pricing_core/rating/runtime.py`: a new
+  `_traced_wire_admitted(graph) -> bool`; a new `to_traced_wire(graph, payloads)`; the three node
+  builders take a `pass_through: bool` argument (default `True`, so `to_wire` is unchanged);
+  `_model_call_handler` (`:512`) gains the traced-wire mode (produced names only);
+  `CompiledBundle` (`:625`) gains `traced_decision: Any | None = None`; `load_bundle` (`:646`)
+  builds it when admitted. `to_wire` (`:412`), SL 9568's chain, is **not** edited.
+- Modify: `packages/pricing-core/src/pricing_core/rating/score.py`: a new
+  `reproduce_traced(compiled, ctx) -> ScoringResult`.
+- Modify: `backend/src/app/worker/trace_handlers.py:98`: one call, `score_one(compiled, ctx,
+  trace=True)` → `reproduce_traced(compiled, ctx)`.
+- Test: `packages/pricing-core/tests/test_rating_trace_minimal.py` (append), and
+  `backend/tests/test_score.py` (append one test).
+
+- [ ] **Step 1: The admission check, red first.** Append:
+  - `test_a_clamp_that_re_produces_a_declared_input_is_not_admitted`: an algorithm whose clamp
+    consumes and re-produces a declared input (PL 9567 Task 2b's `_NL_CLAMP` shape, with `base`
+    an input) gives `_traced_wire_admitted(...) is False`: `inputNode` and the clamp both reach
+    `outputNode` with that name.
+  - `test_the_scoring_fixture_is_admitted`: `_compiled()` gives `True`, and
+    `compiled.traced_decision is not None`. If it gives `False`, STOP and report the name that
+    reaches `outputNode` twice: either the count is wrong, or the fixture has a double writer
+    (two `model_call` nodes both write `MODEL_CALL_ERROR_KEY`, `runtime.py:74`, so an algorithm
+    with two of them is never admitted; record it).
+  Red: `ImportError` on `_traced_wire_admitted`. The check counts, per name, every edge into
+  `outputNode` that can carry it: `inputNode` for every context key (the declared inputs,
+  `effective_date`, `purpose`); each wired interior node for its declared `produces`; each
+  constraint for `<step_id>__violated`; each `model_call` for `MODEL_CALL_ERROR_KEY`. Admitted iff
+  every count is at most 1.
+- [ ] **Step 2: The traced wire.** `to_traced_wire` is Task 4's Step 3 sample (reference edges
+  from `referenced_names`, `passThrough` off, the not-overwritten nodes and every constraint and
+  `model_call` node wired to `outputNode`, `inputNode` wired to `outputNode`), built only for an
+  admitted graph, over `_dependency_order` (SL 9568). The traced `model_call` node returns its
+  produced names only (and the sentinel on failure), through the same single return expression
+  SL 9568 introduced, with a mode argument. **Serialise with A-1, A-2 and A-3** on
+  `_model_call_handler` (PL 9567 Delta 4 item 4).
+- [ ] **Step 3: The payload bound, on the traced wire.** Task 4 Step 1's
+  `test_engine_entry_input_is_bounded_by_its_references`, evaluating `compiled.traced_decision`
+  in place of `compiled.decision`. Red before Step 2 (`traced_decision` is `None`: skip is not a
+  pass; the test asserts it is set first).
+- [ ] **Step 4: `reproduce_traced`** (DP-F35-8 (c)). It scores `compiled.traced_decision` with
+  the engine trace on, when it is set, and otherwise calls `score_one(compiled, ctx, trace=True)`
+  (the chain, trimmed). It builds the `ScoringResult` through `build_scoring_result`, as
+  `score_one` does. It is never called by a serving route: `grep -rn reproduce_traced
+  backend/src` prints `trace_handlers.py` only. Change `trace_handlers.py:98` to call it. Its
+  result goes to `summarise_result` and `complete_pending_trace` unchanged, so `traces.py:257`
+  is the comparison and `mismatch` is the mark.
+- [ ] **Step 5: R3 over every traced result.** Task 4 Step 2's
+  `test_the_remedy_changes_no_served_result` gains a second loop: over the frozen corpus, every
+  admitted bundle's `reproduce_traced` result, with `trace` and `timing_ms` blanked, equals the
+  corpus result. The first loop (the served `score_one` results) stays. Task 4 Step 5's
+  broken-input proof runs against `to_traced_wire`: constraint nodes left off the `outputNode`
+  wiring, the second loop fails naming a quote whose `outcome` moved; quote the line.
+- [ ] **Step 6: Condition (i)'s reds.**
+  - **The chain serves** (pricing-core, appended): `test_a_traced_call_is_served_from_the_chain`.
+    It replaces `compiled.traced_decision` with a broken traced wire (Step 5's constraint-less
+    wire) and asserts that `score_one(compiled, ctx, trace=True)`'s result, `trace` and
+    `timing_ms` blanked, equals the untraced result on a context where a decline fires. It is a
+    guard, so it is proved on broken input: make `score_one` evaluate `traced_decision` when it is
+    set; expect FAIL naming `declined` → `quoted`; revert.
+  - **A differing trace is marked, the served result stands** (backend, appended to
+    `backend/tests/test_score.py`, mirroring its capture tests `test_a_sampled_trace_is_completed_by_the_off_path_job`
+    and the planted-row form of PL 9567's withdrawn Step 1c):
+    `test_a_traced_wire_that_does_not_reproduce_the_served_quote_is_marked_mismatch`. Serve a
+    declining quote through `/score` at sample rate 1.0; keep the response body; inject a broken
+    `traced_decision` (Step 5's wire) into the compiled bundle the handler resolves; run the
+    `score.trace_produce` Job. Assert: the row's `status == "mismatch"`; the `/score` response
+    body is unchanged (the served result stands); and `GET /api/v1/traces` lists the item with
+    T-M1's field `mismatch` (PL 9567 Task 2d). Red before Step 4: the handler re-scores the chain,
+    so the row is `complete` (`'complete' == 'mismatch'`). How the test injects the broken wire
+    (a fixture over `BundleSlot`, or a monkeypatch of `_compiled_for` in `trace_handlers`) is the
+    executor's, mirroring the module's shipped fixtures; record the form in the ledger.
+- [ ] **Step 7: The admission count.** The ledger lists every algorithm of Task 6 Step 4, Spike
+  S1's corpus and PL 9567 Task 2c's case set with admitted yes or no, and for each no, the name
+  that reaches `outputNode` twice. An algorithm not admitted gets no NFR-490 relief.
+- [ ] **Step 8: Run** `uv run pytest -q packages/pricing-core/tests/test_rating_trace_minimal.py
+  packages/pricing-core/tests/test_rating_score.py packages/pricing-core/tests/test_rating_wire_order.py`,
+  then the backend test alone, then `backend/tests/test_traces.py`, `test_traces_api.py` and
+  Task 0 Step 1's 7 tests. Expected: green, no assert edited. A red in `test_rating_wire_order.py`
+  or PL 9567 Task 2c's replay is a STOP: the chain moved.
+
+```bash
+git add packages/pricing-core/src/pricing_core/rating/runtime.py packages/pricing-core/src/pricing_core/rating/score.py backend/src/app/worker/trace_handlers.py packages/pricing-core/tests/test_rating_trace_minimal.py backend/tests/test_score.py
+git commit -m "perf(rating): a traced-only wire where nothing merges at the sink; the chain still serves (WK-1178, F35, NFR-490)"
+```
+
+**Task 6 under Task 4R.** Task 6 Step 2's runs also time `reproduce_traced` on the 200-step
+structure (a second traced line, labelled "producer path", beside the script's own `trace=True`
+line, from a script pasted in the ledger with its sha256 prefix). Task 6 Step 3's stop rule reads
+the producer line, because under DP-F35-8 (c) the inline `trace=True` line moves only by Task 3's
+trim. Which of the two lines NFR-490's verdict reads is SL-1259's (the decision-maker's reading).
+
+### Acceptance items added by Delta 2
+
+13. **The admission check** (Task 4R Steps 1 and 7): both tests seen red first and green at HEAD;
+    the ledger lists the admission count.
+14. **Condition (i)** (Task 4R Step 6): `test_a_traced_call_is_served_from_the_chain` passes and
+    failed once on its broken input; the backend test was red with `'complete' == 'mismatch'` and
+    is green at HEAD, with the `/score` body unchanged and the route item marked `mismatch`.
+15. **R3 over every traced result** (Task 4R Step 5): both loops pass; the broken traced wire
+    fails the second loop; the line is quoted.
+16. **Condition (ii)** (Task 1B): the ledger holds the 15-run table (P, C, H), the window record
+    and the near-chain edge lists, and reads the premise as holds, moved or STOP by Task 1B's
+    threshold.
+
+### Write set and contention added by Delta 2
+
+- `runtime.py`: Task 4R's functions above. `to_wire` is not edited (SL 9568's).
+- `score.py`: `reproduce_traced`, new.
+- `backend/src/app/worker/trace_handlers.py`: one call, under DP-F35-8 (c). Acceptance 12's
+  "under `backend/src/` it names nothing" gains this line as an exception. No open PR touches
+  the file (PL 9567 Delta 5 item 5's `gh pr list` filter, 95 open PRs, 2026-10-05).
+- `backend/tests/test_score.py`: one appended test.
+- **Contention:** A-1 (PL 9599), A-2 (PL 9597, #1178), A-3 (PL 9595), WK-1178:
+  `_model_call_handler`, serialise (the same Work runs one slice at a time anyway). PL 9567 /
+  SL 9568: plan dependency (need 10), and this slice consumes T-M1's field (Task 4R Step 6).
+
 ## Status
 
 `draft`. It was filed with **five blocking decision points** (§"Decision points"); four are decided, see the amendment of 2026-10-05 below. It turns `active` only
@@ -329,6 +585,8 @@ unmet.** The lead's GO check starts here, before anything else.
    ```
    Expected: one path whose 5-digit id is below `09000`. **Where the ruling's wire rule and
    Task 4's sample differ, the ruling wins**, and the dispatch record names each difference.
+   *(Discharged 2026-10-05 by Delta 2: DP-F35-7 (a), ruled by the maintainer (by delegation) at
+   17:51:03 BST, is DP-F35-4 restated for the chain.)*
 5. **`SL-1360` has merged** (the permission-parity check, `PL-1359`; first on WK-1178 by the
    maintainer's lane order):
    ```bash
@@ -371,7 +629,13 @@ unmet.** The lead's GO check starts here, before anything else.
     ```
     Expected: `MET`. Without it, **unmet**. And **DP-F35-7 is ruled and minted**:
     `git grep -l -e 'DP-F35-7' "$M" -- docs/rulings/` prints one path whose 5-digit id is below
-    `09000`.
+    `09000`. *(Delta 2, 2026-10-05: the "DP-F35-7 ruled" half is **discharged** by the
+    maintainer's (by delegation) 17:51:03 BST entry, item 3, which says so. The "SL 9568 merged"
+    half stays.)*
+
+11. **DP-F35-8 is ruled** *(added 2026-10-05 by Delta 2)*: where R3's comparison runs. Shown by
+    the dated ruling line or record the lead names in the dispatch record. Without it, Task 4R
+    does not start.
 
 ### Build-start conditions (Task 0, after activation; not activation needs)
 
@@ -418,11 +682,11 @@ unless it names the base.
    and `s_office`'s is exactly `{"risk_premium_minor", "expense_factor"}`.
 4. **The `input` and `output` steps are traced** (DP-F35-2 (b)). Every `step_id` of the
    fixture's algorithm appears once in `trace.steps`.
-5. **The engine's per-node payload is bounded** (DP-F35-4 (M1)).
+5. *(Delta 2, 2026-10-05: read against Task 4R Step 3, on `compiled.traced_decision`.)* **The engine's per-node payload is bounded** (DP-F35-4 (M1)).
    `test_engine_entry_input_is_bounded_by_its_references` asserts, for every interior entry,
    that the entry's `input` keys are a subset of the step's reference set plus the request
    context's keys. It is red at the base (the `passThrough` context) and green at HEAD.
-6. **The result did not change** (R3; NFR-490's second limb):
+6. *(Delta 2, 2026-10-05: the differential gains Task 4R Step 5's second loop, and the broken-input proof runs on `to_traced_wire`.)* **The result did not change** (R3; NFR-490's second limb):
    - `packages/pricing-core/tests/test_rating_score.py::test_trace_true_returns_a_populated_trace_and_the_identical_premium`
      passes (traced equals untraced);
    - `test_the_remedy_changes_no_served_result` passes: over the frozen base corpus (Task 1
@@ -715,7 +979,7 @@ Proposal 11's question"). DP-F35-4 waits on Spike S1. *(The Delta of 2026-10-05,
 | **DP-F35-4** | **How is the engine made to carry less?** (P1, P3, P4) | **(M1)** One graph: `passThrough` off on every node; an edge from the producer of each name a step references (the `inputNode` for a raw input); every node whose output a later node does not overwrite wired to `outputNode`; `inputNode` wired to `outputNode`. **(M2)** No engine trace: score untraced and rebuild each entry from the result; `elapsed_us` and `matched` (FR-258) are lost or recomputed in Python. **(M3)** Trim in `_build_trace` only. **(M4)** Two graphs: today's for untraced calls and M1's for traced ones; R3 then compares two graphs on every traced call | **M1, if S1 shows equality on the whole corpus and no mixed producer**; else **M4**, which leaves the serving path untouched. **M3 (trim only) does NOT satisfy NFR-490** (P4: our share is 12–25 %); it fixes F55 and NFR-500 only, and taking it means NFR-490 stays red with the residual owned by the maintainer's dated line. M2 loses two FR-258 fields | decision point (on S1's facts) | **yes** | decision-maker, after S1 |
 | **DP-F35-5** | **Which statistic does NFR-490's "adds ≤ 20 %" name?** NFR-490 (`03:1331`) names none (`RL-862` Addendum: "NFR-490 names no statistic"), so choosing one interprets the spec | (a) p99. (b) the mean. (c) every quantile, as the harness's ratio ladder prints | **(a) p99, the maintainer's lean, IF NFR-489 (`03` §9's scoring-latency NFR) states its budget at p99**, which the decision-maker verifies (NFR-489's row, `03:1190` at `19155b50` and `03:1330` at `ef5dc6e7`, reads "Real-time scoring p99 < 50 ms"). One statistic for the two budgets on one path keeps them comparable | spec interpretation → decision point | **yes** (Tasks 1 and 6 read against it) | **Decided (a) p99** by RL 9770 (working id, #1060, not yet minted); the maintainer's acceptance is dated in it (2026-10-01 10:30:00 BST). **decision-maker**, in the same session as DP-F35-1 to -3, with **verbatim text and placement**: a dated clarification on NFR-490's row (`03` §9) |
 | DP-F35-6 | Does a passing NFR-490 trigger `RL-862`'s override ("if #416's audit shows traced cost can be brought inside NFR-490's ceiling — in which case always-capture becomes affordable and the simpler design returns")? | (a) no: the off-path design stays; any reversion is a new ruling. (b) yes, in this slice | default **(a)**: this slice touches no serving-path backend file (Acceptance 12; at most the `errors.py` registry entry under DP-F35-1 (iii-a) (b)) | scope | no: **default (a) applies throughout**; named in §"Hand-off" | decision-maker, if raised |
-| **DP-F35-7** *(added 2026-10-05 by the Delta after 17:39:08 BST; DP-F35-4 restated for the chain)* | **On the ordered chain (PL 9567, DP-R1 (i)), how does a traced call carry less?** The serving chain needs `passThrough` on every node (the Delta, item 3), and M1 as written re-creates the fan-in DP-R1 (i) removed | **(a) Two graphs, the traced one admitted only where nothing merges.** Untraced serving stays on the chain, unchanged. A traced call scores on a second wire: `passThrough` off, reference edges, and the not-overwritten nodes wired to `outputNode`, as in Task 4 Step 3. That wire is built only when a compile-time check shows that **no name reaches `outputNode` by two edges**. The check counts `inputNode` as the writer of every context key, and counts each constraint's `<step>__violated` and the `model_call` error key. An algorithm that fails the check (for example, a clamp that re-produces a declared input) is traced on the chain with the `_build_trace` trim only, and the ledger counts those algorithms. R3 compares each traced result with the chain's. **(b) M2 on the chain:** no engine trace; each entry is rebuilt from the result, and FR-258's `elapsed_us` and `matched` are lost or recomputed in Python. **(c) M3 on the chain:** trim in `_build_trace` only; NFR-490 stays red, and the residual is owned by the maintainer's dated line. *(Excluded: the chain with `passThrough` off and each node re-emitting every earlier name as an expression. That is `passThrough` under another name, with the same payload.)* | **(a).** Every price stays on the chain, so the correctness root is not touched. The traced graph relies on no merge order, because no name arrives at the sink twice, and a union of disjoint dicts does not depend on order. Its costs: `load_bundle` builds two wires per bundle; the traced `model_call` node needs the handler to return only its produced names, which adds a mode to `_model_call_handler` (shared with A-1, A-2 and A-3, so serialise); and an algorithm that fails the check gets no NFR-490 relief. (b) loses two FR-258 fields. (c) does not remedy NFR-490 (P4) | decision point (on Spike S1's facts, re-read against the chain) | **yes** | decision-maker, after S1; **open** |
+| **DP-F35-7** *(added 2026-10-05 by the Delta after 17:39:08 BST; DP-F35-4 restated for the chain)* | **On the ordered chain (PL 9567, DP-R1 (i)), how does a traced call carry less?** The serving chain needs `passThrough` on every node (the Delta, item 3), and M1 as written re-creates the fan-in DP-R1 (i) removed | **(a) Two graphs, the traced one admitted only where nothing merges.** Untraced serving stays on the chain, unchanged. A traced call scores on a second wire: `passThrough` off, reference edges, and the not-overwritten nodes wired to `outputNode`, as in Task 4 Step 3. That wire is built only when a compile-time check shows that **no name reaches `outputNode` by two edges**. The check counts `inputNode` as the writer of every context key, and counts each constraint's `<step>__violated` and the `model_call` error key. An algorithm that fails the check (for example, a clamp that re-produces a declared input) is traced on the chain with the `_build_trace` trim only, and the ledger counts those algorithms. R3 compares each traced result with the chain's. **(b) M2 on the chain:** no engine trace; each entry is rebuilt from the result, and FR-258's `elapsed_us` and `matched` are lost or recomputed in Python. **(c) M3 on the chain:** trim in `_build_trace` only; NFR-490 stays red, and the residual is owned by the maintainer's dated line. *(Excluded: the chain with `passThrough` off and each node re-emitting every earlier name as an expression. That is `passThrough` under another name, with the same payload.)* | **(a).** Every price stays on the chain, so the correctness root is not touched. The traced graph relies on no merge order, because no name arrives at the sink twice, and a union of disjoint dicts does not depend on order. Its costs: `load_bundle` builds two wires per bundle; the traced `model_call` node needs the handler to return only its produced names, which adds a mode to `_model_call_handler` (shared with A-1, A-2 and A-3, so serialise); and an algorithm that fails the check gets no NFR-490 relief. (b) loses two FR-258 fields. (c) does not remedy NFR-490 (P4) | decision point (on Spike S1's facts, re-read against the chain) | **yes** | decision-maker, after S1; **open** *(**Ruled (a)** 2026-10-05 by the maintainer (by delegation), 17:51:03 BST, item 3, with two conditions; see Delta 2. DP-F35-8 follows from condition (i).)* |
 
 ## Spike S1 — the fact DP-F35-4 needs (an `RS-` of `kind: spike`, before activation)
 
@@ -1544,6 +1808,8 @@ git commit -m "fix(rating): a trace step records what its step read and declared
 
 ### Task 4: What the engine carries (DP-F35-4 (M1)), with R3 held
 
+*(**Superseded 2026-10-05 by Delta 2's Task 4R**, written for DP-F35-7 (a). The text below stays as filed; Task 4R reuses its Step 1, Step 2, Step 3 sample and Step 5 by reference.)*
+
 *(The Delta of 2026-10-05, after 17:39:08 BST: this task is written for M1 on today's wire. On SL 9568's chain it waits for DP-F35-7, and it is rewritten, or the plan superseded, once DP-F35-7 is ruled.)*
 
 **Files:**
@@ -1875,5 +2141,11 @@ about 25 minutes and 50 minutes (five runs per tree), and one full gate (a gate 
 6. **Not executed.** Unlike `PL-1359`, these samples were not assembled and run: Task 3's
    samples depend on DP-F35-1's ruling, and Task 4's wire rule on Spike S1. Each sample that
    names a fixture literal says to mirror the fixture, and each predicted red names its cause.
+7. **Delta 2 (2026-10-05).** Every cite it adds was read at `5fe56b87`:
+   `trace_handlers.py:98-107`; `traces.py:64`, `:143-156`, `:257`; `db/models.py:2289-2296`;
+   `api/traces.py:100-116`; `errors.py:375`, `:382`; `scoring.py:187-201`;
+   `backend/src/app/api/score.py:374-375`, `:444-447`; `runtime.py:74`, `:412`, `:512`, `:625`,
+   `:646`; `bench-rating.py:77`, `:197`, `:953`, `:968-971`; `03:1331`. DP-F35-8 is a consequence
+   of condition (i) that the ruling leaves open; the planner recommends and does not pick.
 
 Drafted as working id 9776, allocated by the lead.
