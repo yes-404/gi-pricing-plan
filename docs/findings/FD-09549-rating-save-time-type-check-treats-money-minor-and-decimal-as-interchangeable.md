@@ -133,3 +133,58 @@ Item 3 of the ruling: the fix is reserved under WK-1178 after the emergency slic
   algorithm or fixture newly fails; if one does, STOP and report rather than loosen the rule.
 
 Event that next confirms or discharges the row: a merged SL 9522 making `_compatible` refuse the directions above.
+
+## Amendment — the unrounded money_minor expression (pre-mint, 2026-10-05)
+
+**Source:** the maintainer (by delegation), `~/gi-pricing-plan.local/channel/to-lead.md`, entry "2026-10-05 17:50:43 BST —
+DP-1 STOP answered: (ii) ADOPTED (sub-graph ports carry money as decimal; only an output step makes money_minor); ONE MORE
+GAP the STOP exposes, added to FD 9549 pre-mint and to PL 9521 as a DP", item 2. Quoted verbatim:
+
+> 2. THE GAP THE STOP EXPOSES (planner-a12fold's own fact): an expression step DECLARED money_minor over decimal operands SAVES (expression inputs are untyped, compile.py:95-116) and runs UNROUNDED (runtime.py _expression_node :163-176 never rounds by result_type). I checked origin/main: assert_integer_minor_round_trip (compile.py:79) is a STARTUP self-check over constants, not a runtime check on values, so nothing refuses a fractional money_minor value at run time. This also qualifies my 17:42:06 A1 wording: an "explicit money_minor expression step" is a DECLARATION, not a rounding. A1 stands (int→money_minor refused at save), but the declared step can still carry fractions.
+>    So: (i) FD 9549's text gains this PRE-MINT (it is unminted, batch 2) as part of the same mislabel class: a money_minor declaration on an expression is unchecked; (ii) PL 9521 carries it as a DP with options for me, not a silent pick, for example (p) a run-time integrality refusal of a non-integer value under a money_minor declaration (an error code: an existing one or spec first), (q) refuse result_type money_minor on expression steps entirely (money_minor then exists only at inputs passed through and at output steps; check the committed algorithms first), or (r) defer to an OQ with the gap named. The planner checks the committed algorithms for money_minor-declared expressions BEFORE recommending, because (q) breaks any that exist.
+
+**Same class as this finding:** a value labelled `money_minor` that is not integer minor units. **Carried by** PL 9521
+(#1202) as an open DP: **(p)** a run-time integrality refusal, **(q)** refuse `money_minor` on expression steps, **(r)** an
+OQ naming the gap. This record picks none of them.
+
+**Verified at `origin/main` 5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a** (paths under
+`packages/pricing-core/src/pricing_core/rating/`):
+
+- `compile.py:95-116` `producer_types(steps, typed_names)`: an `expression` step's type is its declared `result_type`
+  (`:113-115`); nothing compares that declaration with the step's operands. No second check exists.
+- `runtime.py:163-176` `_expression_node(step_id, node)`: builds the `expressionNode` with `"value": node["expr"]` verbatim
+  and `passThrough: True`; `result_type` is not read.
+- `compile.py:79` `assert_integer_minor_round_trip()`: asserts `int(float(v)) == v` over four constants. It takes no
+  argument and checks no run-time value (FR-273 startup self-check).
+- `score.py:729-762` `_build_outputs`: a `money_minor` **output** is rounded once at its output step (`:751-755`), so the
+  declaration is harmless **at a `money_minor` output**. Every other reader of the step's value (a `decimal` output
+  `:756-757`, a downstream expression, the trace) sees the unrounded value.
+
+**Probe** (proves the gap). Tree: this worktree at the merge of `fd-9549-numeric` and `origin/main` 5fe56b87; root `.venv`
+`uv run` with `OMP_NUM_THREADS=1 nice -n 10`; the script lived in a `mktemp -d` outside the repository and reused the
+committed fixture `test_rating_score_batch._decimal_output_algorithm_payload` (`driver_age * 1.5`, output `age_factor`
+declared `decimal`), varying only `s_age_factor.result_type`; `driver_age` 33; `validate_algorithm` then `score_one`:
+
+```
+decimal -> validate issues: [] | outputs: {'age_factor': 49.5}
+money_minor -> validate issues: [] | outputs: {'age_factor': 49.5}
+```
+
+A step declared `money_minor` saves with no issue and serves `49.5`: not integer minor units. The `decimal` row is the
+control (same value, honestly labelled). The served form here is the engine's float, which FR-214's amendment (`RL-1343`,
+WK-1178) replaces with a string; the unrounded value is the same either way.
+
+**Liveness: not live.** `git grep -n -E '"result_type": "money_minor"|result_type="money_minor"' 5fe56b87 -- . ':!*/tests/*'
+':!docs/plans' ':!docs/findings' ':!docs/rulings' ':!docs/ledgers'` names only `examples/fremtpl2/model.py:341`
+(`premium_in * 2`, an `int` operand), `scripts/bench-compiled-for.py:85` and `scripts/bench-score-batch.py:84` (same shape),
+`scripts/bench-rating.py:248,254` (decimal operands, `* 1.0001`; a benchmark, served nowhere) and the spec example below.
+So no committed algorithm that is served carries a fractional value under a `money_minor` declaration. **Severity stays
+MEDIUM, LATENT.**
+
+**A fact the DP must weigh (not a pick).** `docs/specs/03-rating-engine.md:272-274` (§6 example) declares
+`office_premium_minor` as a `money_minor` expression over `expense_factor * commission_factor * profit_factor`, which are
+decimal factors. And `packages/pricing-core/tests/test_rating_ladder_exact.py:244,540,563` and `test_rating_score.py:90`
+declare `money_minor` expressions over decimal operands on purpose: the exact-unrounded rungs of `RL-1329`, rounded once at
+the output step. So **(q) would break the spec's own worked example and those tests**, and **(p) would refuse what the
+ladder design relies on** unless it is scoped to a value that reaches a served output without passing an output step. FR-226
+("never happens twice") and `OQ-1316` (is rounding offered anywhere but an output step) bear on all three options.
