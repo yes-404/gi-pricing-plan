@@ -38,6 +38,16 @@ has now cost a session twice. The WK-1178 backlog item "hook absolute path" move
 planner can cut it when a slot frees, and until then every brief carries "never `cd` into a subdirectory;
 use -C, --dir or absolute paths"."*
 
+**Widened by** the entry headed *"2026-10-05 15:33:57 BST — #1162 amended (noted); ROUTING (a) and (b)
+ACCEPTED; the \`__all__\` wording; FILL the slots"*, routing item (b), verbatim: *"(b) ACCEPTED: the
+repository-root conftest.py (:20, :31; a bare pytest locks gate-{1,2}) goes into PL 9617's hook slice
+(#1165, WK-1178) as one added task: the bare-pytest lock takes gate-1 only, red first (a test showing a
+second bare pytest waits)."* The same entry accepts DP-1 and DP-2 (§"Decision points", "Accepted") and
+routes the `if`-filter side finding (Hand-off item 3). *(Pre-mint edit, 2026-10-05 15:37:00 BST, by the
+planner, on that entry: Task 4 added, and the gate task renumbered 4 → 5; the Goal, Status, Activation
+needs 1 and 3, Acceptance 8–9, the Write set, the Decision points, Hand-off item 3 and Self-review item 5
+amended to match. No other text changed.)*
+
 Planned read-only: no test, no hook and no Claude Code session was run to produce this plan. Every
 repository fact below was read at `origin/main` `809a3794af6d3a6ba688663b0d9b59f951190680`
 (2026-10-05).
@@ -71,22 +81,31 @@ whatever the session's working directory is. A `cd` into a subdirectory no longe
 Bash call. A repository test runs the **registered** command string from a subdirectory and fails if
 the path depends on the working directory.
 
+A bare `uv run pytest -q` takes the gate-1 lock only, so at most one full gate runs on the box (`RL
+9620`, working id). A second bare run waits for gate-1; it never takes gate-2 (Task 4).
+
 ## Status
 
-`draft`. DP-1 and DP-2 are open, and the decision-maker rules them. Both have a recommendation that the
-facts below support. No task starts before the ruling and the lead's go.
+`draft`. DP-1 and DP-2 are accepted as recommended (the 15:33:57 BST entry; §"Decision points",
+"Accepted"). No task starts before the lead's go and the dispatch record.
 
 ### Activation needs, in order
 
 1. **The decision-maker's ruling on DP-1 and DP-2, merged**, and the lead's go, with a dispatch record in the form SL-1409's row
-   cites (`DISPATCH-WK-1178-SL1409-2026-10-04`).
+   cites (`DISPATCH-WK-1178-SL1409-2026-10-04`). *The ruling half is met:* the maintainer (by
+   delegation) accepted DP-1 and DP-2 in the 15:33:57 BST entry. The lead's go and the dispatch record
+   remain.
 2. **A lane.** It is a small slice: one JSON line and one test file. The write set (§"Write set") is
    disjoint from every in-flight branch at `809a3794`, so it can run beside any other build under
    `RL-1263` (exempt / no shared path). It is a WK-1178 build, so the lead checks the same-Work rule in
-   force at dispatch.
+   force at dispatch. *Since Task 4:* the write set adds `conftest.py` and `tests/test_root_conftest.py`
+   (no open PR touches them) and, conditionally, the dev-commands skill, which #1162 touches; the slice
+   runs after #1162 merges (§"Write set").
 3. **Re-read at dispatch** (`docs/plans/README.md` convention 4): `git diff --name-only 809a3794
    origin/main -- .claude/settings.json scripts/hooks/retry_cap_hook.py tests/test_retry_cap_hook.py`.
-   Any non-empty output: re-derive §"What happens today" before Task 1.
+   Any non-empty output: re-derive §"What happens today" before Task 1. For Task 4, the same with
+   `conftest.py tests/test_root_conftest.py .claude/skills/dev-commands/SKILL.md`; any output other
+   than #1162's skill change (§"Write set") re-derives Task 4 before its Step 1.
 
 ## Acceptance Standard
 
@@ -113,6 +132,17 @@ the named test ran and failed **for the stated cause** before the change that tu
    throwaway session, not its own.
 6. **The two-half gate** (`CLAUDE.md` §11) passes on the head, through the gate-runner.
 7. **Write set:** `git diff --stat origin/main...HEAD` lists only §"Write set" paths.
+8. **A second bare pytest waits for gate-1 (Task 4).** `uv run pytest -q tests/test_root_conftest.py
+   -k a_second_bare_run_waits_for_gate_1` passes. The test uses the module's own `_SLOT_COUNT` (it
+   does not monkeypatch it), holds `gate-1` in a `tmp_path` slot directory, and asserts that
+   `_acquire_pytest_gate_slot()` printed `acquired after waiting`, never named `gate-2`, and left no
+   `gate-2` file. **Seen red on `main`'s `conftest.py` by its cause:** stderr carries `gate slot
+   …/gate-2 acquired, proceeding` (`_SLOT_COUNT = 2`, `conftest.py:70`), and the `acquired after
+   waiting` assert fails. A red for any other cause does not count.
+9. **The root-conftest suite is green, and the budget agrees with the wrapper:** `uv run pytest -q
+   tests/test_root_conftest.py` passes, including `test_slot_count_matches_the_dev_commands_gate_wrapper`
+   with its expected count changed from 2 to 1. Proven on broken input: the ledger records the new test
+   failing by Acceptance 8's cause with `_SLOT_COUNT` put back to 2 in a scratch edit.
 
 ## Global Constraints
 
@@ -170,6 +200,16 @@ platform requirement").
   its absolute path (`SCRIPT = ROOT / "scripts" / "hooks" / "retry_cap_hook.py"`, `:31`) with
   `cwd=ROOT`. It never reads `.claude/settings.json`, so it cannot see the registered command. That is
   why this defect passed the gate.
+- **The bare-pytest lock (Task 4).** The repository-root `conftest.py` locks, for a bare run, the same
+  `/tmp/slots/gate-{1,2}` files as the dev-commands wrapper (module docstring, `:19-24`). `_SLOT_COUNT =
+  2` (`:70`). `_acquire_pytest_gate_slot` tries `gate-1` to `gate-<_SLOT_COUNT>` without blocking, and
+  only when all are busy blocks on `gate-1` (`:111-133`). So today a second bare run takes `gate-2` and
+  two full gates run at once, against `RL 9620`'s one. `tests/test_root_conftest.py`'s
+  `test_slot_count_matches_the_dev_commands_gate_wrapper` reads the wrapper's `for i in … ; do` loop in
+  `.claude/skills/dev-commands/SKILL.md` and asserts `_SLOT_COUNT == len(loop) == 2`. #1162 (branch
+  `dm-9620-rl1263-amend`, read at `144fd161` 2026-10-05 15:36 BST) changes that loop to `for i in 1`,
+  so **once #1162 merges, that test is red on `main` until Task 4 lands**. Which goes first is the
+  lead's call (reported 2026-10-05); Task 4 is written to land on a `main` that carries #1162.
 
 ### Write set, and its contention (`RL-1263`)
 
@@ -178,6 +218,9 @@ platform requirement").
 | `.claude/settings.json` | edited: `:9`, the command string, per DP-1 | none in flight (below) | none |
 | `tests/test_hook_registration.py` | added | none | none |
 | `scripts/hooks/retry_cap_hook.py` | **read only**, unless DP-2 (c) | none in flight | a DP-2 (c) edit is re-checked at dispatch |
+| `conftest.py` (repository root) | edited: `:70` `_SLOT_COUNT` 2 → 1; the docstring's slot wording (`:19-24`) (Task 4) | none in flight (below) | none |
+| `tests/test_root_conftest.py` | one test added; `test_slot_count_matches_the_dev_commands_gate_wrapper`'s count 2 → 1 (Task 4) | none in flight | none |
+| `.claude/skills/dev-commands/SKILL.md` | only if Task 0 Step 4 finds the `if` behaviour (Task 5 Step 1) | #1162 (`dm-9620-rl1263-amend`), open | serial: the slice bases on a `main` carrying #1162, and Task 4 needs its loop (§"What happens today") |
 | the slice's ledger `docs/ledgers/LG-<n>`; `docs/INDEX.md` | added; regenerated | every PR | registry, exempt |
 
 **In-flight branches read 2026-10-05.** Every `refs/remotes/origin/*` branch with commits ahead of
@@ -188,12 +231,24 @@ Two branches match: `sl-1377-fd-1357-multi-factor-seed` (`.claude/skills/README.
 **closed**). Neither is in flight. **No in-flight branch touches `.claude/settings.json`**, which
 confirms the brief. Re-read at dispatch (activation need 3).
 
+**Re-read 2026-10-05 15:36 BST for Task 4's paths.** Each of the 61 open PRs' head branches,
+`git diff --name-only origin/main...origin/<branch>` at `origin/main` `809a3794`, filtered on
+`^conftest\.py$|^tests/test_root_conftest\.py$|^\.claude/skills/dev-commands/|^\.claude/settings|^scripts/hooks/|^tests/test_(retry_cap_hook|hook_registration)\.py$`.
+One match: #1162 `dm-9620-rl1263-amend`, `.claude/skills/dev-commands/SKILL.md`. No open PR touches
+`conftest.py` or `tests/test_root_conftest.py`.
+
 ## Decision points
 
 | DP | Question | Options | Recommendation |
 |---|---|---|---|
 | DP-1 | What anchors the path? | (a) `python3 "$CLAUDE_PROJECT_DIR"/scripts/hooks/retry_cap_hook.py hook`, as the backlog entry names. (b) `python3 "$(git rev-parse --show-toplevel)"/scripts/hooks/retry_cap_hook.py hook`: the checkout the cwd is in. Fails if the cwd is outside any repository (`cd /tmp`), the same lock again. (c) (a) with (b) as a fallback: `"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}"`. | **(c)**. (a) is the form the docs give for project hook scripts, and the form this repository already uses (`planning-with-files`). But the docs do not say that a teammate's or a subagent's hook process gets the variable, and this team runs mostly as teammates. The fallback costs one expansion and covers that gap. If Task 0 shows the variable is set in every process kind, (a) is enough, and the ruling can say so. Under (c) the test (Acceptance 1) also runs one case with `CLAUDE_PROJECT_DIR` unset. |
 | DP-2 | **Which copy runs in a worktree?** Today the relative path resolves in the cwd, so a session working in `.claude/worktrees/<x>` runs **that worktree's** `retry_cap_hook.py`. The docs say `CLAUDE_PROJECT_DIR` "stays put" at "the project root where the session started", so a session started in the root checkout that then enters a worktree runs the **root checkout's** copy under DP-1 (a). A teammate whose process *starts* in a worktree may get the worktree as its project root (not documented; Task 0 Step 3). The root checkout is not kept on `main` (it was on `main` at `809a3794` when read today, but it has been pinned to old branches before). | (a) Accept it: the root checkout's copy runs. The script changes rarely (last changed by `71f5a220`, 2026-09-17), and both copies read the same state file (`DEFAULT_STATE_FILE` is under `~`, `:77`). (b) Anchor on the cwd's checkout first (`git rev-parse --show-toplevel`), and use `CLAUDE_PROJECT_DIR` only when that fails: the worktree's copy runs, as today, but a `cd /tmp` would then fall back. (c) Keep (a)'s command, and have the script hand off to the cwd's checkout's copy when one exists (edits the script). | **(a)**, recorded in the ledger. The hook's behaviour is one decision function; a copy that differs between checkouts is a slice changing the hook, and that slice's executor tests by absolute path (`tests/test_retry_cap_hook.py:31`), which is not affected. (b) puts the old dependence on the cwd back in, the defect this slice removes. (c) adds code for a case with no recorded failure. Task 0 records which directory `CLAUDE_PROJECT_DIR` holds in each kind of worktree session; where it is the worktree, DP-2 does not arise for that kind, and the ledger says so. |
+
+**Accepted.** The entry headed *"2026-10-05 15:33:57 BST — #1162 amended (noted); ROUTING (a) and (b)
+ACCEPTED; …"*, verbatim: *"#1165 PL 9617 @fa5f4dfb: DP-1 ($CLAUDE_PROJECT_DIR with a \`git rev-parse
+--show-toplevel\` fallback) and DP-2 (the root checkout's script in worktrees) are accepted as
+recommended."* So DP-1 is **(c)** and DP-2 is **(a)**. Task 0 still measures both premises; a different
+answer goes to the lead (Task 0 Step 5).
 
 ## Tasks
 
@@ -246,11 +301,40 @@ confirms the brief. Re-read at dispatch (activation need 3).
 - [ ] **Step 1.** A throwaway session on the slice's branch runs `cd docs`, then `pwd`. Record both
   outputs and `date`. Under DP-2 (a), also record which copy ran (Task 0 Step 3's answer).
 
-### Task 4: The gate and the ledger (Acceptance 6, 7)
+### Task 4: The bare-pytest lock takes gate-1 only, red first (Acceptance 8, 9)
+
+**Files:** edit `conftest.py` (repository root); edit `tests/test_root_conftest.py`. Base: a `main`
+that carries #1162's `for i in 1` loop in the dev-commands skill (§"Write set").
+
+- [ ] **Step 1.** Add `test_a_second_bare_run_waits_for_gate_1_and_never_takes_gate_2` to
+  `tests/test_root_conftest.py`, in the shape of `test_a_full_slot_set_falls_through_to_the_blocking_wait_path`:
+  monkeypatch `_SLOT_DIR` to `tmp_path / "slots"` and **not** `_SLOT_COUNT`; hold `gate-1` with a real
+  `LOCK_EX | LOCK_NB` flock on a separate open file; release it from a `threading.Timer` after 0.3 s;
+  call `_acquire_pytest_gate_slot()`, then `_release_pytest_gate_slot()`. Assert stderr contains
+  `acquired after waiting` and does not contain `gate-2`, and `(slot_dir / "gate-2").exists()` is
+  false.
+- [ ] **Step 2.** `uv run pytest -q tests/test_root_conftest.py -k a_second_bare_run_waits_for_gate_1`
+  on `main`'s `conftest.py`. **Expected:** it fails by Acceptance 8's cause (`gate-2 acquired,
+  proceeding`). Record the failure line in the ledger.
+- [ ] **Step 3.** In `conftest.py`, set `_SLOT_COUNT = 1` (`:70`; its comment cites `RL 9620` by its
+  minted id), and change the docstring's `/tmp/slots/gate-{1,2}` and "the same two slots" (`:19-24`) to
+  the one slot. Keep the wait message's format: `test_a_full_slot_set_falls_through_to_the_blocking_wait_path`
+  sets its own count of 2 and asserts `all 2 gate slots are busy`.
+- [ ] **Step 4.** In `test_slot_count_matches_the_dev_commands_gate_wrapper`, change the expected count
+  2 → 1 and its docstring's `for i in 1 2 …` to `for i in 1`. Run `uv run pytest -q
+  tests/test_root_conftest.py`: all pass.
+- [ ] **Step 5.** Broken-input proof (Acceptance 9): put `_SLOT_COUNT = 2` back in a scratch edit, run
+  Step 2's command, see it fail by the same cause, record the line, and revert.
+
+### Task 5: The gate and the ledger (Acceptance 6, 7)
 
 - [ ] **Step 1.** No skill states the `cd` trap at `809a3794` (`grep -rn -i -E 'hook path is
-  relative|never .?cd' .claude` prints nothing), so no skill is edited. The trap lives in briefs and in
-  memory, and lifting it there is the lead's (Hand-off item 2).
+  relative|never .?cd' .claude` prints nothing), so no skill is edited for it. The trap lives in briefs
+  and in memory, and lifting it there is the lead's (Hand-off item 2). **The one skill edit:** if Task 0
+  Step 4 finds that the installed build does not honour `.claude/settings.json:10`'s `if` (or matches it
+  differently), record that, with `claude --version`, in the ledger and in
+  `.claude/skills/dev-commands/SKILL.md` as Claude Code behaviour, with its `Verified` date refreshed
+  (Hand-off item 3).
 - [ ] **Step 2.** The two-half gate through the gate-runner, then the ledger.
 
 ## Hand-off
@@ -259,8 +343,11 @@ confirms the brief. Re-read at dispatch (activation need 3).
    needs 1 to 3.
 2. On merge, the "never `cd`" line that every brief carries since the 15:24:59 BST entry can be lifted.
    That is the maintainer's (by delegation) call, on the ledger's Acceptance 5 line.
-3. If Task 0 finds that `if` is not honoured by the installed build, the lead routes it to WK-1178 as a
-   separate item. It does not block this slice.
+3. If Task 0 finds that `if` is not honoured by the installed build, it is Claude Code's behaviour: the
+   ledger and the dev-commands skill record it (Task 5 Step 1), and it is not ours to fix. It does not
+   block this slice. *(Pre-mint edit 2026-10-05, on the 15:33:57 BST entry: "Task 0 measures it. If it
+   is a Claude Code behaviour, record it in the plan and the dev-commands skill; it is not ours to fix."
+   The earlier text routed it to WK-1178 as a separate item.)*
 
 ## Self-review
 
@@ -277,3 +364,8 @@ confirms the brief. Re-read at dispatch (activation need 3).
 3. **Placeholders.** The command form is fixed by DP-1's ruling, stated as such. No other value is open.
 4. **Ids.** No `FR-`/`NFR-` id is cited. `RL-920`, `RL-1263` and `F61` are on `main`. This plan's own
    ids are written as working ids, never hyphenated in prose.
+5. **The added task, against routing (b).** "the bare-pytest lock takes gate-1 only": Task 4 Step 3.
+   "red first (a test showing a second bare pytest waits)": Task 4 Steps 1–2, Acceptance 8, red by its
+   cause. The coupling test that #1162 turns red: §"What happens today", Task 4 Step 4. The
+   `conftest.py` change is one constant; the blocking-wait path it falls to (`:122-133`) is unchanged
+   and already tested.
