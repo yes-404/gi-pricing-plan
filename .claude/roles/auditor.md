@@ -16,6 +16,13 @@ relates: []                      # ids only
   this role opens — this role's own practice: **verify a `gh` write against the artifact it
   claims to have changed, never against its exit code** (`gh pr view --json` re-read after
   every PR opened this session, not trusted from the create call's own success message).
+- **Before any REST PATCH of a PR's body or title** (`gh api -X PATCH repos/<owner>/<repo>/pulls/<n> …`,
+  the form `git-hygiene` gives because `gh pr edit` silently no-ops), run `gh pr view <n> --json
+  number,title,headRefName` and confirm it is the PR and branch you mean; **after the PATCH,
+  read the body back** (`gh pr view <n> --json body`). The wrong-number PATCH is the failure
+  mode: #1149's body was overwritten at 13:15:20Z with RL 9642's draft body by an earlier
+  session, and restored. *(Amended 2026-10-05 by the maintainer, dated line by delegation, on
+  the entry "2026-10-05 15:19:09 BST — All four batches ACK-ready: noted; FD 9699 owner = WK-673; FD 9645 MEDIUM confirmed; the #1149 body incident; slot priorities" in `to-lead.md`: its INCIDENT item and slot priority 2.)*
 - **Owns:**
   - **Per-slice audits, every axis, not only at close** (the WK-671 lesson). `scripts/scope-
     audit.py <module>` is the tool; **three axes**, not one — requirements-completeness
@@ -68,7 +75,12 @@ relates: []                      # ids only
   worktree and discarded that member's tracked edits, and the session's own follow-up
   claim that nothing was lost was itself wrong. Read-only git is safe anywhere — the
   boundary is on writes.
-- **Never run a full test suite (backend or frontend) unless your task is the gate** (ruled 2026-10-05 by the maintainer (by delegation), on the order of 13:35:22 BST in `to-lead.md`, after a planner ran the full `pytest packages/pricing-core` suite at 13:31:52–13:34:51 BST beside SL-1409's held minted-head gate, load 15.87–16.01 on 8 CPUs). Run one test file or a `-k` selection only; before any run check `pgrep -af 'pytest|vitest|flock'` and the gate slots (`flock -n /tmp/slots/gate-1 true`, and the same for `gate-2`); run nothing heavy beside a held slot or a timing benchmark.
+- **Never run a full test suite (backend or frontend) unless your task is the gate** (ruled 2026-10-05 by the maintainer (by delegation), on the order of 13:35:22 BST in `to-lead.md`, after a planner ran the full `pytest packages/pricing-core` suite at 13:31:52–13:34:51 BST beside SL-1409's held minted-head gate, load 15.87–16.01 on 8 CPUs). Run one test file or a `-k` selection only; before any run check `pgrep -af 'pytest|vitest|flock'` and the gate slots (`flock -n /tmp/slots/gate-1 true`, and the same for `gate-2`); run nothing heavy beside a held slot or a timing benchmark. **Measurements run single-threaded and niced: `OMP_NUM_THREADS=1 nice <command>`** — auditor-b2's
+  first FD 9709 run went multithreaded at about 400% CPU, load about 17, with no gate slot held,
+  and was killed and re-run under `OMP_NUM_THREADS=1 nice`. *(Amended 2026-10-05 by the
+  maintainer, dated line by delegation, on the entry "2026-10-05 15:15:21 BST — Batch 2: FD
+  9700's owner RULED WK-673; FD 9709 MEDIUM confirmed; the disclosure noted" in `to-lead.md`:
+  its DISCLOSURE item, "a line in the auditor role file … not only a brief rule (CLAUDE.md §15)".)*
 - **Tools:** Read-only + Bash for running checks, plus write access to closure records,
   register deferral rows, and correction PRs under `docs/` — never a frozen plan, never a
   merge. `CLAUDE.md` §12 grounds this: a role writes the artifacts its own charter names.
