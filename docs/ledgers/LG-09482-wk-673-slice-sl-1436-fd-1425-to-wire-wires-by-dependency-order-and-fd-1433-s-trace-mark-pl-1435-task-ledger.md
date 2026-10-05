@@ -183,7 +183,7 @@ committed step reads a float input after a `model_call`:** `f0`..`f7` are consum
 
 **Limit (C), for this ledger and the PR body.** An algorithm that, after a `model_call`, reads a float (an input, or a value
 produced before the call) carrying more than 15 significant digits would see it cut to 15 digits at the 1e-15 level; none is
-committed. A LOW finding (WK-673) by an auditor follows, recording the mechanism proved in (1).
+committed. The LOW finding is filed as FD 9480 (working id), draft #1229, by auditor-floatecho. Its disposition: (1) accept and disclose, and (2) a characterisation test carried by a later slice.
 
 ### The gate (2026-10-06, gate-1, one hold, head `e0e2ff2085c370c5b4e011acd84cfd1f632c8cf5`, tree `24595ee9483b0ef2cec32962972752116a7100a8`)
 
@@ -211,6 +211,294 @@ The 13 failed tests, each failing through audit-docs's check 31 or the `docs/IND
 `::test_phase1b_residue_count_matches_check_29s_own_count`, `test_register_owed.py::test_check_29_wiring_is_undisturbed`,
 `test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit`,
 `::test_journey_citations_are_audited_in_ci`. The set was not compared with a recorded known set by the executor; the lead compares it.
+
+### The trial merges (F-A: restored; a commit of this ledger had dropped the section)
+
+At the gate, `git merge-tree --write-tree <other head> a67f46ce465f9a17b4fea1f224714058ec0f3373` (this slice's head after the INDEX
+regeneration), each **exit 1**:
+- against S7 (`origin/sl-1391-fr-231-exposure-weights-portfolio-frame`, `21096c36998c7f91f8eb6ce1463ed026851e6258`): the only
+  `CONFLICT` is `docs/INDEX.md` (generated); `docs/specs/03-rating-engine.md` and `docs/contracts/openapi/generated.json`
+  auto-merge clean.
+- against SL-1430 (`origin/sl-1430-fd-1421-rating-version-algorithm-and-pins`, `260ead6640ed3a784426f38b0771206ec30ea8a1`): the
+  same single conflict, `docs/INDEX.md`; `03` and `generated.json` auto-merge clean.
+
+The slice auditor's re-run at this slice's head `669d55260931d0412e8d175627d789ce025d3d95` (as the lead relayed it): against
+`origin/main` `8f5a8987c3467fa9961f02b2cfd5ceeb2d31411d` rc 0; against S7 `21096c36` rc 1, INDEX-only; against SL-1430 `260ead66` rc 1,
+INDEX-only.
+
+My own fresh run, 2026-10-06, `git merge-tree --write-tree 89fcb092811e3964d9e2af8d262019a396c21994
+669d55260931d0412e8d175627d789ce025d3d95` (S7's new head against this slice's head): **exit 1**, the only `CONFLICT` is
+`docs/INDEX.md` (generated); `03` and `generated.json` auto-merge clean.
+
+`docs/INDEX.md` is registry-exempt and regenerated (`python3 scripts/doc-index.py`) by whichever slice merges second, by a MERGE of
+main, never a rebase (the 22:52:50 BST exception's condition); `generated.json` is regenerated, never hand-merged.
+
+### Acceptance 11 — the replay script inline, the basis for the difference, and the deviation (F-B)
+
+The script, `replay.py`, sha256 `b43d213cdd4bae7c3b6d100933ba85875421ae15925a5eccde56832ecf71cfea` (recomputed 2026-10-06; the earlier entries gave its 16-hex prefix `b43d213cdd4bae7c`):
+
+```python
+"""PL-1435 Task 2c: golden replay, DP-R1 Condition B. Modes: record (base) / replay (head).
+
+record DIR : build every case, write cases.json (version, payloads, contexts), one bundle file
+             per case, and base.jsonl (one canonical line per case/context/path).
+replay DIR : rebuild the lines from (a) the stored bundles loaded again, (b) a fresh
+             compile_bundle from the stored version + payloads; compare each to base.jsonl.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import importlib.util
+import json
+import random
+import sys
+from datetime import date, datetime
+from pathlib import Path
+from typing import Any
+
+ROOT = Path("/home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/sl-1436")
+sys.path.insert(0, str(ROOT / "packages/pricing-core/tests"))
+sys.path.insert(0, str(ROOT / "scripts"))
+
+from model_schema.rating import RatingVersion  # noqa: E402
+from model_schema.refs import ArtifactRef  # noqa: E402
+from model_schema.scoring import QuoteContext, QuoteContextOptions  # noqa: E402
+from pricing_core.rating.compile import Bundle, ResolvedArtifact, compile_bundle  # noqa: E402
+from pricing_core.rating.runtime import load_bundle  # noqa: E402
+from pricing_core.rating.score import score_one  # noqa: E402
+
+
+def _load(name: str, path: Path) -> Any:
+    spec = importlib.util.spec_from_file_location(name, path)
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def canon(obj: Any) -> str:
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), default=repr)
+
+
+class DictResolver:
+    def __init__(self, payloads: dict[str, dict[str, Any]]) -> None:
+        self.payloads = payloads
+
+    async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+        return ResolvedArtifact(status="approved", payload=self.payloads[str(ref)])
+
+
+def _plain_version(slug: str, algo_slug: str) -> RatingVersion:
+    from uuid import uuid4
+
+    return RatingVersion.model_validate({
+        "id": str(uuid4()), "workspace_id": str(uuid4()), "slug": slug, "version": 1,
+        "status": "draft", "dataset_version_id": str(uuid4()), "model_ref": "model:none@1",
+        "created_at": "2026-08-29T12:00:00Z", "created_by": str(uuid4()),
+        "updated_at": "2026-08-29T12:00:00Z",
+        "algorithm_ref": f"rating_algorithm:{algo_slug}@1",
+        "pins": {"rate_tables": [], "models": [], "reference_tables": [],
+                 "custom_objectives": []},
+        "model_reference_mode": "exact"})
+
+
+def _bench_ctxs(n: int, seed: int, features: list[str]) -> list[dict[str, Any]]:
+    rng = random.Random(seed)
+    out = []
+    for _ in range(n):
+        d: dict[str, Any] = {"driver_age": rng.randint(17, 99),
+                             "channel": rng.choice(["direct", "broker"])}
+        d.update({f: rng.uniform(0.0, 1.0) for f in features})
+        out.append(d)
+    return out
+
+
+def _int_ctxs(n: int, seed: int, hi: int, first: list[int] | None = None) -> list[dict[str, Any]]:
+    rng = random.Random(seed)
+    vals = list(first or []) + [rng.randint(0, hi) for _ in range(n)]
+    return [{"premium_in": v} for v in vals]
+
+
+def _fixture_ctxs(n: int, seed: int) -> list[dict[str, Any]]:
+    rng = random.Random(seed)
+    out = []
+    for _ in range(n):
+        decl = rng.random()
+        out.append({
+            "driver_age": rng.randint(17, 99), "channel": rng.choice(["direct", "broker"]),
+            "min_premium_minor": rng.choice([0, 0, 5000, 100_000]),
+            "sanity_cap_minor": rng.choice([999_999_999, 999_999_999, 1, 3000]) if decl < .3
+            else 999_999_999,
+            "sanity_floor_minor": rng.choice([0, 0, 999_999_999]) if decl > .7 else 0,
+        })
+    return out
+
+
+async def build_cases() -> list[dict[str, Any]]:
+    import test_rating_score as T  # noqa: N812
+
+    br = _load("_bench_rating", ROOT / "scripts/bench-rating.py")
+    ts = _load("_bench_trace_size", ROOT / "scripts/bench-trace-size.py")
+    sb = _load("_bench_score_batch", ROOT / "scripts/bench-score-batch.py")
+    cf = _load("_bench_compiled_for", ROOT / "scripts/bench-compiled-for.py")
+    demo = _load("_demo_model", ROOT / "examples/fremtpl2/model.py")
+    cases: list[dict[str, Any]] = []
+
+    def add(name: str, version: RatingVersion, payloads: dict[str, Any],
+            ctxs: list[dict[str, Any]], ref: str) -> None:
+        cases.append({"name": name, "version": version, "payloads": payloads,
+                      "contexts": ctxs, "ref": ref})
+
+    # 1 demo
+    algo = demo._demo_algorithm()
+    add("fremtpl2-demo@1", _plain_version("fremtpl2-demo", algo["slug"]),
+        {f"rating_algorithm:{algo['slug']}@1": algo},
+        _int_ctxs(20, 1, 1_000_000, [demo.DEMO_PREMIUM_IN]), "rating_version:fremtpl2-demo@1")
+    # 2, 3 bench-rating
+    rounds, rows = ts.TRAIN_ROUNDS, ts.TRAIN_ROWS
+    feats = br.FEATURE_ORDER
+    for gbm in (True, False):
+        r = br._FakeResolver(with_gbm=gbm, n_expr=br.N_EXPR_STEPS, rounds=rounds, rows=rows)
+        v = br._version(with_gbm=gbm)
+        add(f"bench-rating-{'gbm' if gbm else 'no-gbm'}", v, r._payloads,
+            _bench_ctxs(200, 2, feats), f"rating_version:{v.slug}@1")
+    # 4 trace-size
+    for n in ts.N_EXPR_VALUES:
+        r = br._FakeResolver(with_gbm=True, n_expr=n, rounds=rounds, rows=rows)
+        v = br._version(with_gbm=True)
+        add(f"bench-trace-size-n{n}", v, r._payloads, _bench_ctxs(50, 3, feats),
+            f"rating_version:{v.slug}@1")
+    # 5, 6
+    for nm, mod in (("bench-score-batch", sb), ("bench-compiled-for", cf)):
+        a = mod._algorithm_payload()
+        add(nm, _plain_version(nm, a["slug"]), {f"rating_algorithm:{a['slug']}@1": a},
+            _int_ctxs(20, 4, 100_000), f"rating_version:{nm}@1")
+    # 7 score fixture
+    extra = [
+        {"driver_age": 34, "channel": "direct", "min_premium_minor": 0,
+         "sanity_cap_minor": 999_999_999, "sanity_floor_minor": 0},
+        {"driver_age": 34, "channel": "direct", "min_premium_minor": 0,
+         "sanity_cap_minor": 1, "sanity_floor_minor": 999_999_999},
+        {"channel": "direct", "min_premium_minor": 0,
+         "sanity_cap_minor": 999_999_999, "sanity_floor_minor": 0},
+    ]
+    for glm in (False, True):
+        r = T._FakeResolver(glm=glm)
+        v = T._version(glm=glm)
+        add(f"score-fixture{'-glm' if glm else ''}", v, r._payloads,
+            extra + _fixture_ctxs(240, 5), "rating_version:score-fixture@1")
+    return cases
+
+
+def _qctx(inputs: dict[str, Any], ref: str) -> QuoteContext:
+    return QuoteContext.model_validate({
+        "purpose": "new_business", "quoted_at": datetime(2026, 8, 29, 12, 0, 0),
+        "effective_date": date(2026, 9, 1), "inputs": inputs,
+        "options": QuoteContextOptions(rating_version_ref=ArtifactRef.model_validate(ref))})
+
+
+def _classify(res: Any) -> str:
+    if isinstance(res, str):
+        return "error"
+    if res.outcome != "quoted":
+        return "declined"
+    rungs = {r.rung: r.value_minor for r in res.premium_ladder}
+    if "constraints" in rungs and "office_premium" in rungs and \
+            rungs["constraints"] != rungs["office_premium"]:
+        return "clamp"
+    return "quoted"
+
+
+async def lines_for(case: dict[str, Any], compiled: Any, content_hash: str) -> list[tuple[str, str, str]]:
+    out: list[tuple[str, str, str]] = [(f"{case['name']}|hash", "", content_hash)]
+    for i, inputs in enumerate(case["contexts"]):
+        ctx = _qctx(inputs, case["ref"])
+        for path, trace in (("score", False), ("score_trace", True)):
+            try:
+                res = await score_one(compiled, ctx, trace=trace)
+                d = res.model_copy(update={"trace": None, "timing_ms": {}}).model_dump(mode="json")
+                out.append((f"{case['name']}|{i}|{path}", _classify(res), canon(d)))
+            except Exception as exc:  # noqa: BLE001
+                out.append((f"{case['name']}|{i}|{path}", "error", f"{type(exc).__name__}: {exc}"))
+        engine_ctx = {"effective_date": "2026-09-01", "purpose": "new_business", **inputs}
+        try:
+            raw = await compiled.decision.async_evaluate(engine_ctx)
+            out.append((f"{case['name']}|{i}|raw", "", canon(raw["result"])))
+        except Exception as exc:  # noqa: BLE001
+            out.append((f"{case['name']}|{i}|raw", "", f"{type(exc).__name__}: {exc}"))
+    return out
+
+
+def write(path: Path, lines: list[tuple[str, str, str]]) -> str:
+    text = "".join(canon(list(t)) + "\n" for t in lines)
+    path.write_text(text)
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+async def record(d: Path) -> None:
+    cases = await build_cases()
+    meta = []
+    lines: list[tuple[str, str, str]] = []
+    for c in cases:
+        bundle = await compile_bundle(c["version"], DictResolver(c["payloads"]))
+        (d / f"bundle-{c['name']}.json").write_text(bundle.model_dump_json())
+        lines += await lines_for(c, load_bundle(bundle), bundle.content_hash)
+        meta.append({"name": c["name"], "version": c["version"].model_dump(mode="json"),
+                     "payloads": c["payloads"], "contexts": c["contexts"], "ref": c["ref"]})
+    (d / "cases.json").write_text(canon(meta))
+    print("base.jsonl sha256", write(d / "base.jsonl", lines), "lines", len(lines))
+
+
+async def replay(d: Path) -> None:
+    meta = json.loads((d / "cases.json").read_text())
+    base = [json.loads(x) for x in (d / "base.jsonl").read_text().splitlines()]
+    for mode in ("compiled", "fresh"):
+        lines: list[tuple[str, str, str]] = []
+        for c in meta:
+            c = {**c, "version": RatingVersion.model_validate(c["version"])}
+            if mode == "compiled":
+                bundle = Bundle.model_validate_json((d / f"bundle-{c['name']}.json").read_text())
+            else:
+                bundle = await compile_bundle(c["version"], DictResolver(c["payloads"]))
+            lines += await lines_for(c, load_bundle(bundle), bundle.content_hash)
+        digest = write(d / f"head-{mode}.jsonl", lines)
+        per: dict[str, list[int]] = {}
+        diffs = []
+        for b, h in zip(base, lines, strict=True):
+            case = b[0].split("|")[0]
+            tot = per.setdefault(case, [0, 0])
+            tot[0] += 1
+            if b == list(h):
+                tot[1] += 1
+            else:
+                diffs.append((b, h))
+        print(f"== {mode} head sha256 {digest}")
+        for case, (n, eq) in per.items():
+            classes: dict[str, int] = {}
+            for b in base:
+                if b[0].startswith(case + "|") and b[0].endswith("|score"):
+                    classes[b[1]] = classes.get(b[1], 0) + 1
+            print(f"{case}: equal {eq} of {n}; score classes {classes}")
+        print("DIFFS", len(diffs))
+        for b, h in diffs[:3]:
+            print("BASE", b, "\nHEAD", list(h))
+
+
+if __name__ == "__main__":
+    mode, dirname = sys.argv[1], Path(sys.argv[2])
+    asyncio.run(record(dirname) if mode == "record" else replay(dirname))
+```
+
+**Deviation from "equal N of N".** Acceptance 11 asks for `equal N of N` on every algorithm. It is not met: `bench-rating-gbm` is
+equal 401 of 601 and each `bench-trace-size` n = 5, 20, 50, 100, 187 is equal 101 of 151 (450 differing lines, all `raw` lines of
+the `model_call` cases, none in `score` or `score_trace`). The basis for accepting it is the maintainer's (by delegation) ruling (A),
+the entry headed "2026-10-05 23:51:14 BST — RL-1423 Condition B STOP (SL-1436 replay): (A) ACCEPTED ON CONDITIONS (the cause PROVEN
+first); a LOW FD; the overlap disclosure accepted" in `to-lead.md`, whose decision, verbatim: "DECISION: (A), ACCEPT, as the
+consequence of the context passing through the handler (RL-1423 N2), ON TWO CONDITIONS before SL-1436's mint:" — the two conditions are
+the cause experiment and the downstream-reader check above, both run.
 
 ## PRs
 
