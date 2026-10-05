@@ -107,3 +107,29 @@ interchangeable and delete the deferral comment. (a) matches FR-227's second sen
 leave A-2 item 15's `model_call` work untouched (the boundary above) and must flip or add a test in
 `packages/pricing-core/tests/test_rating_compile.py`. Event that next confirms or discharges it: a merged change to
 `_compatible`, or a dated ruling choosing (b).
+
+### Disposition — ruled 2026-10-05 17:36:28 BST (pre-mint)
+
+**Source:** the maintainer (by delegation), `~/gi-pricing-plan.local/channel/to-lead.md`, entry "2026-10-05 17:36:28 BST —
+FD 9549 (#1197 @9c8a52c6): MEDIUM LATENT confirmed; disposition (a) narrowed, with money_minor CLOSED both ways; batch 2
+agreed". Quoted verbatim, item 2:
+
+> 2. Disposition: (a), narrowed. money_minor is CLOSED in BOTH directions at save time:
+>    - OUT of money_minor: only into money_minor. Refuse money_minor into decimal, relativity, percentage, count or int, for EVERY producer (A-2 item 15 stays the model_call instance; the fix slice generalises it without editing A-2's tests).
+>    - INTO money_minor: from money_minor, or decimal AT AN OUTPUT STEP ONLY (FR-226's rounding point under option (B)). Refuse relativity, percentage and count into money_minor.
+>    - int→money_minor and the non-money pairs among themselves (relativity/percentage/count/int/decimal) go to ONE OQ, owner WK-1178, decided before the fix slice's plan mints.
+>    The fix slice's FIRST task is red-first: one red per refused direction, plus a sweep showing no committed algorithm or fixture newly fails. If one does, STOP and report; do not loosen the rule.
+
+**Severity** stays MEDIUM, LATENT (ruling item 1); the wider reach (six numeric types, 30 pairs, the sub-graph create
+path via `fragment_output_type_issues`, serve-time coercion by the declared type) is accepted as this finding's text.
+The ruling chooses (a) over (b) above and widens (a): `money_minor` is exact in both directions, not only as a producer.
+Item 3 of the ruling: the fix is reserved under WK-1178 after the emergency slice (SL 9561).
+
+**Where each limb goes (working ids; the mint date replaces them, check 31):**
+
+- **OQ 9556**, owner WK-1178, decided **before** PL 9521 mints: `int`→`money_minor`, and the non-money numeric pairs
+  among `relativity`, `percentage`, `count`, `int`, `decimal`.
+- **SL 9522 / PL 9521**, under WK-1178: the fix. Red-first, one red per refused direction, plus a sweep that no committed
+  algorithm or fixture newly fails; if one does, STOP and report rather than loosen the rule.
+
+Event that next confirms or discharges the row: a merged SL 9522 making `_compatible` refuse the directions above.
