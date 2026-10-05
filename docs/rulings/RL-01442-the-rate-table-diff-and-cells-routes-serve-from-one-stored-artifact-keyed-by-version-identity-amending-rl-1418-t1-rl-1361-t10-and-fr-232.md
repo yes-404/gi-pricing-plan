@@ -1,9 +1,9 @@
 ---
-id: RL-9484
+id: RL-1442
 family: ruling
 title: The rate-table diff and cells routes serve from one stored artifact, keyed by immutable version identity; the first request for a key may answer 202 on either storage (amends RL-1418 T1, RL-1361 T10 and FR-232)
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-05            # working id; the mint date is set at the mint (check 31)
+created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: decision-maker
 tree: b6dd96fdf9ad74a5fbb4593ac7b041dbabc9446e
 phase: P2
@@ -32,8 +32,8 @@ route"*** (`:18852`), verbatim:
 > - SPEC FIRST: ONE RL (a DM) amending RL-1418 T1 / 03:933 (the 202 condition becomes "where the query's cell artifact is not yet stored", for EITHER storage) and FR-232's "the editor pages without a job" (a dated amendment saying the FIRST request for a pair may answer 202; later pages do not). It cites R1, this entry, and the measurement file.
 > - S7 records it as a plan deviation (a dispatch-record delta, since PL-1419 is frozen), with the write set extended to the artifact-keying code and its tests. It runs red-first: a 250k rows pair's FIRST request answers 202, and a later page at 250k has p99 under 300 ms (RL 9485's NFR, measured in the same protocol). It then RE-GATES.
 
-Its other lines (the measurement accepted, the expected cost, FD 9487's widening, the lane B
-batch) are not quoted; the next entry overtakes the FD 9487 line.
+Its other lines (the measurement accepted, the expected cost, FD-1439's widening, the lane B
+batch) are not quoted; the next entry overtakes the FD-1439 line.
 
 **The entry headed *"2026-10-05 22:27:31 BST — S7: the write set ACCEPTED; the diff-route
 measurement on the branch ACCEPTED with the diff proof; the diff route goes INTO S7, option
@@ -72,8 +72,8 @@ Its ask 4 and its measurement decision bind S7's ledger, not a spec text, and ar
 
 The entry headed *"2026-10-05 22:26:27 BST — No veto: S7 may write reds and code while RL
 9484 is drafted"* (`:18865`) binds how the texts are applied: *"The 03 and FR-232 T-texts are
-applied ONLY from the MINTED RL 9484, byte for byte, in the same commit as the code they
-govern or a later one, never before the RL mints. S7 merges only after that. If RL 9484's
+applied ONLY from the MINTED RL-1442, byte for byte, in the same commit as the code they
+govern or a later one, never before the RL mints. S7 merges only after that. If RL-1442's
 drafting changes any T-text the reds assume, the reds follow the RL, not the reverse."*
 
 ## How this was ruled
@@ -84,8 +84,8 @@ from 22:36 BST** on the brief's section "REVISION ORDER, 22:32:35 BST", and comp
 22:38 BST on the 22:36:21 entry, by the
 decision-maker session `dm-rl9484`, on the lead's brief
 `~/gi-pricing-plan.local/handover/brief-dm-rl9484-2026-10-05.md`. **Working id 9484 is the
-lead's allocation.** Unminted records (RL 9485, OQ 9486, FD 9487) are cited in working-id
-form and kept out of `relates:` (check 32). The mint replaces each with its minted id.
+lead's allocation.** Records then unminted (RL-1441, OQ-1440, FD-1439) were cited in working-id
+form and kept out of `relates:` (check 32); the mint replaced each with its minted id (RL-1441, OQ-1440, FD-1439).
 
 **Why `corrects:` names RL-1418 only.** `corrects:` holds one id, and the audit requires
 each `corrected_by:` entry to be a record whose `corrects:` names that file
@@ -112,8 +112,8 @@ question the entry leaves to an auditor, filed only if a second case arises.
 | The RL-1418 acceptance clauses changed (item 7 below): *"A `FactorResolutionError` reaches the 422's detail with its count and example value; `WeightJoinError`'s own messages carry no value."* and *"**Portfolio refusals before anything else.** Each refusal of T1 is given on a rows table and on a parquet table, and the parquet case writes **no Job row**."* | `docs/rulings/RL-01418-*.md:318-319` and `:322-323` at `b6dd96fd` |
 | The RL-1361 acceptance clauses changed (items 7 and 11 below): under **Refusals**, `:812-823`; under **The 202 path**, the dangling-ref clause, `:860-861` | `docs/rulings/RL-01361-*.md` at `b6dd96fd` |
 | The measurement: rows storage at the default threshold, 250 000 cells with a portfolio, page p50 12241 ms, p99 12434 ms (n=10); without a portfolio p99 9848 ms; 100 000 cells p99 4265 ms. Head `386f4d54`, tree `1511ac46`, 22:12:36–22:23:33 BST | `~/gi-pricing-plan.local/handover/s7-measurement-2026-10-05/rows2.out`, sha256 `360b730703491e92b3ecfcca7aba5617868a855ccf7e05b849cf207f3237fc9b`, lines 9–33 |
-| RL 9485's NFR: every page after the first request for a key, p95 ≤ 300 ms at `DEFAULT_LIMIT`, measured at n ≥ 100 at 250 000 cells (rows) and 1 000 000 (parquet); the first request for a key may answer 202 | RL 9485 (working id) T1, PR #1222 head `a3a90cbd`, open |
-| FD 9487 (working id), the finding | PR #1223 head `8fc404a7`, open |
+| RL-1441's NFR: every page after the first request for a key, p95 ≤ 300 ms at `DEFAULT_LIMIT`, measured at n ≥ 100 at 250 000 cells (rows) and 1 000 000 (parquet); the first request for a key may answer 202 | RL-1441 T1, PR #1222 head `a3a90cbd`, open |
+| FD-1439, the finding | PR #1223 head `8fc404a7`, open |
 
 **Not verified here:** executor-s7's local commit `0ca852d8`, relayed by the lead as the
 source of the async refusals. It is not on GitHub; the 22:31:11 entry is the authority this
@@ -173,13 +173,13 @@ record rests on.
      Each refusal there that *"gives 422"* now fails the Job with `VALIDATION_FAILED` on the
      diff route, with the same naming. RL-1361 carries no back-reference (see "Why
      `corrects:` names RL-1418 only").
-8. **The budget.** S7 applies RL 9485 (working id) T1 and T2 and meets its measured
+8. **The budget.** S7 applies RL-1441 T1 and T2 and meets its measured
    acceptance (22:28:33): p95 ≤ 300 ms for every request after the first for a key, n ≥ 100,
    a quiet box, at 250 000 cells rows and 1 000 000 parquet, plus the 2× property against
    10 000 on each path. S7's reds, from the entries: a first 250 000-cell rows request is
    202 on each route, and a later request has p99 under 300 ms in the protocol of
    `rows2.out` (n=10, `limit` 50, `OMP_NUM_THREADS=1`, state at both ends).
-9. **FD 9487 (working id)** is the finding. **S7 discharges both its limbs**: the cells
+9. **FD-1439** is the finding. **S7 discharges both its limbs**: the cells
    route and the diff route.
 10. **The in-flight rule, three states of the key's latest Job.** Queued or running: a
     request answers **202** with that Job and its `Location`, and no second Job is made.
@@ -197,9 +197,9 @@ record rests on.
 ## The exact texts
 
 **Applied by S7 (SL-1391), from the minted record only**, byte for byte, in one commit with
-the code they govern or a later one (the 22:26:27 entry). The placeholders are
-`<Slice 7 date>` (the date of that commit) and `RL 9484` (the mint replaces it, in all three
-texts and their backticks, with the minted `RL-` id). Nothing else is a placeholder.
+the code they govern or a later one (the 22:26:27 entry). The only placeholder
+left is `<Slice 7 date>` (the date of that commit); the `RL-1442` placeholder in the three
+texts and their backticks was replaced at the mint with this record's id, `RL-1442`. Nothing else is a placeholder.
 
 ### T1' — `03` §5.1, the cells row (amends RL-1418 T1)
 
@@ -208,7 +208,7 @@ Placement: the row of `03` §5.1 that begins
 `386f4d54`; one row matches). The whole row is **replaced** by
 
 ```text
-| `GET` | `/api/v1/rate-tables/{slug}@{version}/diff/cells?against=&portfolio=&limit=&cursor=` | **200** One cursor page of the diff's changed cells (FR-231), `Page[RateTableDiffCell]` (§4.2), read from the query's stored cell artifact: every cell the diff's `changed_cells` counts, ordered by key tuple (§4.2), with each cell's baseline and current value, absolute and relative change, and its exposure weight when `portfolio` names a `validated` portfolio Dataset Version, weighted as the diff row states. The pages together hold every changed cell: a page bounds one response, not the cells. Requires `rating:read`. `limit` is 1 to `MAX_LIMIT`, default `DEFAULT_LIMIT` (`00` §5.2); `next_cursor` is null on the last page; `total_estimate` is the diff's `changed_cells`, counted up to `COUNT_CAP`. **202** with a `rate_table.diff_cells` Job and a `Location` header where the query's cell artifact is not yet stored, whatever `storage` either version has (FR-232, `07` §1.3 R1): the Job writes every changed cell, in order, as content-addressed chunk blobs of a fixed cell count no smaller than `MAX_LIMIT`, and one manifest holding the chunks' sha256s in order, the total, and the query's `RateTableDiff` with both coverage figures; the same request then answers **200** with pages read from them. A page reads the manifest and the chunks its cursor range spans, at most two for every legal `limit`. While the key's Job is queued or running, a request answers **202** with that Job and its `Location`, never a second Job; after it fails, the next request answers **202** with a new Job, and the failed Job stays readable by its id; after it succeeds, with its artifact present, **200**. The artifact is keyed by the query's immutable identity, the table `slug` and the `version` of each side, `against` taken as the version it resolves to, and the `portfolio` Dataset Version's id (or no portfolio), so a page finds it without loading or hashing any cell; two versions with identical cells do not share an artifact. An artifact that cannot be found is computed again, never served from another query. `against` and `portfolio` are checked as on the diff row, before any cell is read and before any Job, whatever `storage` either version has: **404** `NOT_FOUND` for an unknown table, version or `against`; with `portfolio`, **403** without `dataset:read`, the same for any id, **404** `NOT_FOUND` for a portfolio that is missing or in another workspace, **409** `DATASET_NOT_VALIDATED` for a `draft` or `archived` portfolio, and **404** `NOT_FOUND` for a `factor_ref` or `banding_ref` that does not resolve. The diff row's portfolio faults that depend on the portfolio's content are the Job's failure, `VALIDATION_FAILED`, never the first response. **400** `VALIDATION_FAILED` for a cursor this API did not issue or one past the last cell; **422** `VALIDATION_FAILED` for a `limit` out of range. A Job fails with the same codes. This route adds no field to `RateTableDiff`. (**added 2026-10-05, `RL-1418`, FD-1358; the 202 condition, the artifact, the key, the Job in flight, the ref 404 and the content faults amended <Slice 7 date>, `RL 9484`, FD 9487**) |
+| `GET` | `/api/v1/rate-tables/{slug}@{version}/diff/cells?against=&portfolio=&limit=&cursor=` | **200** One cursor page of the diff's changed cells (FR-231), `Page[RateTableDiffCell]` (§4.2), read from the query's stored cell artifact: every cell the diff's `changed_cells` counts, ordered by key tuple (§4.2), with each cell's baseline and current value, absolute and relative change, and its exposure weight when `portfolio` names a `validated` portfolio Dataset Version, weighted as the diff row states. The pages together hold every changed cell: a page bounds one response, not the cells. Requires `rating:read`. `limit` is 1 to `MAX_LIMIT`, default `DEFAULT_LIMIT` (`00` §5.2); `next_cursor` is null on the last page; `total_estimate` is the diff's `changed_cells`, counted up to `COUNT_CAP`. **202** with a `rate_table.diff_cells` Job and a `Location` header where the query's cell artifact is not yet stored, whatever `storage` either version has (FR-232, `07` §1.3 R1): the Job writes every changed cell, in order, as content-addressed chunk blobs of a fixed cell count no smaller than `MAX_LIMIT`, and one manifest holding the chunks' sha256s in order, the total, and the query's `RateTableDiff` with both coverage figures; the same request then answers **200** with pages read from them. A page reads the manifest and the chunks its cursor range spans, at most two for every legal `limit`. While the key's Job is queued or running, a request answers **202** with that Job and its `Location`, never a second Job; after it fails, the next request answers **202** with a new Job, and the failed Job stays readable by its id; after it succeeds, with its artifact present, **200**. The artifact is keyed by the query's immutable identity, the table `slug` and the `version` of each side, `against` taken as the version it resolves to, and the `portfolio` Dataset Version's id (or no portfolio), so a page finds it without loading or hashing any cell; two versions with identical cells do not share an artifact. An artifact that cannot be found is computed again, never served from another query. `against` and `portfolio` are checked as on the diff row, before any cell is read and before any Job, whatever `storage` either version has: **404** `NOT_FOUND` for an unknown table, version or `against`; with `portfolio`, **403** without `dataset:read`, the same for any id, **404** `NOT_FOUND` for a portfolio that is missing or in another workspace, **409** `DATASET_NOT_VALIDATED` for a `draft` or `archived` portfolio, and **404** `NOT_FOUND` for a `factor_ref` or `banding_ref` that does not resolve. The diff row's portfolio faults that depend on the portfolio's content are the Job's failure, `VALIDATION_FAILED`, never the first response. **400** `VALIDATION_FAILED` for a cursor this API did not issue or one past the last cell; **422** `VALIDATION_FAILED` for a `limit` out of range. A Job fails with the same codes. This route adds no field to `RateTableDiff`. (**added 2026-10-05, `RL-1418`, FD-1358; the 202 condition, the artifact, the key, the Job in flight, the ref 404 and the content faults amended <Slice 7 date>, `RL-1442`, FD-1439**) |
 ```
 
 *What changes against the row at `386f4d54`*, and nothing else:
@@ -229,7 +229,7 @@ Placement: the row of `03` §5.1 that begins
   the sentence on content faults;
 - ` and changes nothing on the diff row` is removed, since T3' changes that row;
 - the marker gains `; the 202 condition, the artifact, the key, the Job in flight, the ref
-  404 and the content faults amended <Slice 7 date>, `RL 9484`, FD 9487`.
+  404 and the content faults amended <Slice 7 date>, `RL-1442`, FD-1439`.
 
 ### T3' — `03` §5.1, the diff row (amends RL-1361 T10)
 
@@ -239,7 +239,7 @@ RL-1361 T10's text; `03:904` at `b6dd96fd`, before T10; one row matches in each)
 row is **replaced** by
 
 ```text
-| `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against=&portfolio=` | **200** Cell-level diff (FR-231), exposure-weighted when `portfolio` names a `validated` portfolio Dataset Version, with §4.2's coverage figures, read from the manifest of the query's stored cell artifact, the one the diff/cells row below pages, and no chunk; **202** with that row's `rate_table.diff_cells` Job and a `Location` header where the artifact is not yet stored, whatever `storage` either version has (FR-232, `07` §1.3 R1), the Job's parameters carrying `portfolio`; the same request then answers **200** from the manifest. The artifact is keyed, and a request during the key's Job answered, as on the diff/cells row, so a query's diff and its cells come from one Job. The 202's Job kind was `rate_table.diff` until <Slice 7 date>, a wire change: `rate_table.diff` stays a valid kind in `job.schema.json` and `JobKind` for existing Job rows, and this route no longer creates it. With `portfolio`, these are checked before the artifact is looked up and before any Job: **403** without `dataset:read`, the same for any id; **404** `NOT_FOUND` for a portfolio that is missing or in another workspace; **409** `DATASET_NOT_VALIDATED` for a `draft` or `archived` portfolio. **404** `NOT_FOUND` for a `factor_ref` or `banding_ref` that does not resolve, naming the key and the ref, also before any Job, whatever `storage` either version has, since resolving a ref reads no cell. A fault that depends on the portfolio's content is the Job's failure, never the first response: `VALIDATION_FAILED` naming the key, the column or the ref for an absent column, a non-numeric banded column, a resolution error, a null or negative exposure, or a portfolio that maps to no cell. A Job fails with the same codes (**amended 2026-10-05, `RL-1361`; the 202 condition, the artifact, the Job kind, the ref 404 and the content faults amended <Slice 7 date>, `RL 9484`, FD 9487**) |
+| `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against=&portfolio=` | **200** Cell-level diff (FR-231), exposure-weighted when `portfolio` names a `validated` portfolio Dataset Version, with §4.2's coverage figures, read from the manifest of the query's stored cell artifact, the one the diff/cells row below pages, and no chunk; **202** with that row's `rate_table.diff_cells` Job and a `Location` header where the artifact is not yet stored, whatever `storage` either version has (FR-232, `07` §1.3 R1), the Job's parameters carrying `portfolio`; the same request then answers **200** from the manifest. The artifact is keyed, and a request during the key's Job answered, as on the diff/cells row, so a query's diff and its cells come from one Job. The 202's Job kind was `rate_table.diff` until <Slice 7 date>, a wire change: `rate_table.diff` stays a valid kind in `job.schema.json` and `JobKind` for existing Job rows, and this route no longer creates it. With `portfolio`, these are checked before the artifact is looked up and before any Job: **403** without `dataset:read`, the same for any id; **404** `NOT_FOUND` for a portfolio that is missing or in another workspace; **409** `DATASET_NOT_VALIDATED` for a `draft` or `archived` portfolio. **404** `NOT_FOUND` for a `factor_ref` or `banding_ref` that does not resolve, naming the key and the ref, also before any Job, whatever `storage` either version has, since resolving a ref reads no cell. A fault that depends on the portfolio's content is the Job's failure, never the first response: `VALIDATION_FAILED` naming the key, the column or the ref for an absent column, a non-numeric banded column, a resolution error, a null or negative exposure, or a portfolio that maps to no cell. A Job fails with the same codes (**amended 2026-10-05, `RL-1361`; the 202 condition, the artifact, the Job kind, the ref 404 and the content faults amended <Slice 7 date>, `RL-1442`, FD-1439**) |
 ```
 
 *What changes against the row at `386f4d54`*, and nothing else:
@@ -253,7 +253,7 @@ row is **replaced** by
 - ``the ref; **422** `VALIDATION_FAILED` naming the key`` becomes
   ``the ref. A fault that depends on the portfolio's content is the Job's failure, never the first response: `VALIDATION_FAILED` naming the key``;
 - the marker gains `; the 202 condition, the artifact, the Job kind, the ref 404 and the
-  content faults amended <Slice 7 date>, `RL 9484`, FD 9487`.
+  content faults amended <Slice 7 date>, `RL-1442`, FD-1439`.
 
 **Predicate for T1' and T3'**, run from the repository root: `git diff --no-index
 --word-diff=plain` of `git show 386f4d54:docs/specs/03-rating-engine.md | sed -n 933p` (T1')
@@ -266,7 +266,7 @@ Placement: the FR-232 row (`03:123` at `b6dd96fd` and at `386f4d54`). The text i
 differ.` and one space, before the closing ` |`. Nothing is struck.
 
 ```text
-**Amended <Slice 7 date> (`RL 9484`, FD 9487): the first request for a diff may answer 202, on either storage.** "The editor pages without a job" holds for every request to FR-231's diff and to its per-cell diff (`GET …/diff` and `GET …/diff/cells`, §5.1) after the first request for a key, the two versions and the `portfolio`: that first request may answer **202** with one `rate_table.diff_cells` Job, whatever `storage` either version has, because a weighted diff at the threshold exceeds `07` §1.3 R1's 2 s; later requests are read from the key's stored artifact and answer **200** without a Job.
+**Amended <Slice 7 date> (`RL-1442`, FD-1439): the first request for a diff may answer 202, on either storage.** "The editor pages without a job" holds for every request to FR-231's diff and to its per-cell diff (`GET …/diff` and `GET …/diff/cells`, §5.1) after the first request for a key, the two versions and the `portfolio`: that first request may answer **202** with one `rate_table.diff_cells` Job, whatever `storage` either version has, because a weighted diff at the threshold exceeds `07` §1.3 R1's 2 s; later requests are read from the key's stored artifact and answer **200** without a Job.
 ```
 
 ## Acceptance — the violation that must become detectable
@@ -307,7 +307,7 @@ in ruled item 7, RL-1418's "The 202 path" and the twin case; their other items s
   `banding_ref` each answer 404 `NOT_FOUND` on both routes, for a rows pair and a parquet
   pair, and no Job row is written. With the ref check moved into the Job, the parquet case
   fails (ruled item 11).
-- **The budget.** RL 9485's measured acceptance and the entries' p99 reds (ruled item 8).
+- **The budget.** RL-1441's measured acceptance and the entries' p99 reds (ruled item 8).
   The lookup is measured with 10 000 seeded Jobs of other keys; the seeded count and the
   lookup's own time go in S7's ledger (ruled item 5).
 - **No cross-query serving.** With the stored artifact removed, the request answers 202
@@ -319,11 +319,11 @@ in ruled item 7, RL-1418's "The 202 path" and the twin case; their other items s
 - **S7 (SL-1391, #1206)**: records this as a plan deviation by a dispatch-record delta
   (PL-1419 is frozen and is not edited), with its write set extended to the artifact-keying
   code and its tests; runs red first; applies T1', T2' and T3' from the minted record, and
-  RL 9485's T1 and T2; re-gates.
-- **At the mint**: RL-1418's `corrected_by` gains this record's id; `RL 9484`, `RL 9485`,
-  `OQ 9486` and `FD 9487` are replaced by their minted ids. The mint order is the 22:28:33
-  entry's: FD 9487, then OQ 9486 with RL 9485, then this record, then S7.
-- **FD 9487** names S7 as the discharger of both limbs (22:28:33). That is its own record's
+  RL-1441's T1 and T2; re-gates.
+- **At the mint**: RL-1418's `corrected_by` gained this record's id; the working ids of this record and of its
+  three companions were replaced by their minted ids (RL-1442, RL-1441, OQ-1440, FD-1439). The mint order is the 22:28:33
+  entry's: FD-1439, then OQ-1440 with RL-1441, then this record, then S7.
+- **FD-1439** names S7 as the discharger of both limbs (22:28:33). That is its own record's
   text, not this one's.
 
-Drafted as working id 9484.
+Drafted as working id 9484; minted as RL-1442.

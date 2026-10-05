@@ -1,9 +1,9 @@
 ---
-id: FD-9487
+id: FD-1439
 family: finding
 title: The rate-table cells-diff page's p99 exceeds 1 s at 260 000 cells
 status: active
-created: 2026-10-05            # working id; the mint date will replace this (check 31)
+created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: auditor
 tree: a5657fa4520739f182cbea79e0057afeed991ac1
 corrected_by: []
@@ -12,8 +12,7 @@ relates: [WK-1178, WK-673, FR-231, FR-232, NFR-457, FD-1358, RL-1418, SL-1391]
 
 # The cells-diff page recomputes its whole input on every request: the rows page took p50 9604 ms at 260 000 cells against R1's 2 s, and the parquet page p99 1098 ms
 
-**Filed** by auditor-cost on the lead's brief of 2026-10-05, working id 9487 (the companion open question is OQ 9486, working
-id), from three entries of the maintainer (by delegation) in `to-lead.md` (a local channel file, so each is cited by its header):
+**Filed** by auditor-cost on the lead's brief of 2026-10-05, working id 9487, minted as FD-1439 (the companion open question is OQ-1440, minted as OQ-1440), from three entries of the maintainer (by delegation) in `to-lead.md` (a local channel file, so each is cited by its header):
 
 1. The filing rule, entry headed "2026-10-05 18:25:08 BST — S7 cells-page cost: my SPEC READING now, and the decision rule for
    the numbers": *"If it exceeds 3x, or any page's p99 exceeds 1 s: an FD (a proposed severity, owner WK-1178) naming two gaps:
@@ -29,7 +28,7 @@ id), from three entries of the maintainer (by delegation) in `to-lead.md` (a loc
    SUPERSEDED: 07 1.3 R1 (:36-37: "Everything slow is a Job. Any operation that can exceed 2 s returns 202 with a Job …") and 00
    NFR-457 (:534) bound EVERY operation, these routes included."* and *"MERGE CONDITION for S7 (#1206): measure the ROWS-stored
    cells page AT THE THRESHOLD, 250 000 cells … plus 100k for the curve. If p99 is at or under 2 s at 250k: S7 mints and merges.
-   FD 9487 then covers the parquet limb and anything over the threshold … If p99 is over 2 s at 250k: R1 is BREACHED by S7's own
+   FD-1439 then covers the parquet limb and anything over the threshold … If p99 is over 2 s at 250k: R1 is BREACHED by S7's own
    new route. STOP to me BEFORE the mint."*
 
 ## Finding
@@ -65,7 +64,7 @@ workspace-configurable setting (FR-232), and the measurement raised it. **What i
 default.** The rows page at 250 000 and at 100 000 cells is **unmeasured**; the 260 000 figure is above FR-232's default, taken
 with the threshold raised, and the cost is not assumed to be linear. Entry 3 names exactly those runs as an S7 merge
 condition (p99 at or under 2 s at 250 000 means S7 merges; over means a STOP before the mint), so this limb is **updated with the
-250 000 and 100 000 figures when they exist**; until then the finding states the 260 000 figure with this caveat. The verdict
+250 000 and 100 000 figures when they exist**; until then the finding states the 260 000 figure with this caveat. *(Updated 2026-10-05, pre-mint: the figures exist; see the Amendment at the end.)* The verdict
 that this is a breach, and of what, is the lead's and the maintainer's.
 
 ### Limb 2: the parquet page reloads and hashes both versions on every page
@@ -150,6 +149,8 @@ is recorded as **invalid** (load 7.2, no rows baseline) and is not used; this ru
 
 ## Disposition
 
+*(Amended 2026-10-05, pre-mint, on the 22:25:03, 22:27:31 and 22:28:33 BST entries: discharged by S7 (SL-1391, WK-673) for both limbs, via RL-1442; severity HIGH, the conditional rule fired; see the Amendment at the end. The text below is as filed.)*
+
 **Carry forward with an owner: WK-1178**, a follow-on slice (the maintainer's rule), **except** that entry 3 makes the rows page
 at 250 000 and 100 000 cells a **merge condition on S7 (#1206)**, which is the measurement this finding is waiting for.
 
@@ -159,5 +160,37 @@ rows path is the **normal** storage, 10× the parquet page, and 3.7 s of it is r
 seeded table is near the threshold (Liveness), and because the size at or under 250 000 cells is unmeasured: **if the 250 000-cell
 rows p99 is at or under 2 s the rows limb falls to MEDIUM or below and the finding rests on the parquet limb** (entry 3 says the
 same, and says severity is then proposed from the clean numbers). The parquet limb alone, at p99 1.1 s against R1's 2 s and a
-1 s filing threshold, is MEDIUM. The acceptance a fix plan would carry is not set here: it needs the budget OQ 9486 asks for.
-Companion: OQ 9486 (working id), the latency budget these routes should carry, for both paths.
+1 s filing threshold, is MEDIUM. The acceptance a fix plan would carry is not set here: it needs the budget OQ-1440 asks for.
+Companion: OQ-1440, the latency budget these routes should carry, for both paths.
+
+## Amendment, 2026-10-05 (after 22:28:33 BST), pre-mint: HIGH, widened to the diff route, discharged by S7 for both limbs
+
+Three entries of the maintainer (by delegation) in `to-lead.md` (a local channel file, cited by its header) change this finding.
+
+**1. The merge-condition measurement exists, and R1 is breached at the default size.** The entry "2026-10-05 22:25:03 BST — S7 R1 STOP: (C) REFUSED (it does not comply); (A) with the IDENTITY key, INSIDE S7, by an RL first; FD 9487 widened to the diff route" accepts the measurement (rows at the default threshold; one quiet hold; raw output saved) and rules, verbatim:
+
+> FD 9487: HIGH (by its conditional rule). Widen its scope: the DIFF route itself (FR-231, the pre-S7 route that S7 extends with weighting) also computes the full diff synchronously for a rows pair (diff_cells about 4 s at 250k). That is a breach ON MAIN today, not S7's. The FD records it with a measurement of the diff route at 250k in the same protocol, and its fix is FD 9487's fix slice under RL 9485 (or S7 if the same artifact path covers it at no extra write set; executor-s7 says which).
+
+The runs, at S7's branch head `386f4d5485f6efa3fe2d9b05842d4f752d5d989d` (tree `1511ac46a4f5298a01cb65820bdcf559639b0046`), service level, N = 10 pages, limit 50, one gate-1 hold, 2026-10-05 22:12:36 to 22:23:33 BST, load 0.77 at start and 1.54 at end; raw output in the lead's local handover directory `handover/s7-measurement-2026-10-05/rows2.out`. The rows storage is at the default workspace threshold, so these are the sizes at and under FR-232's default that the finding above called unmeasured. Each p99 is the maximum of ten pages.
+
+| Rows pair | cells | whole page p50 | whole page p99 | loading both versions p50 / p99 | `version_content_hash` x2 p50 / p99 | `diff_cells` alone p50 / p99 |
+|---|---|---|---|---|---|---|
+| unweighted | 250 000 | 9639 ms | 9848 ms | 5469 / 5710 ms | 382 / 414 ms | 3971 / 4188 ms |
+| weighted (portfolio of 678 000 rows) | 250 000 | 12241 ms | **12434 ms** | 5680 / 5874 ms | 384 / 405 ms | 3822 / 3980 ms |
+| unweighted | 100 000 | 4104 ms | 4265 ms | 2540 / 2744 ms | 150 / 153 ms | 1531 / 1661 ms |
+
+The weighted run also times the portfolio read plus the `exposure_weights` join alone: p50 1568 / p99 1611 ms. The 260 000-cell figures above (rows p50 9604 / p99 9995 ms) agree with the 250 000-cell ones, so the cost is not far from linear in this range. **Severity is HIGH, and the conditional rule fired:** the rows page p99 at 250 000 cells is 12 434 ms (weighted) and 9848 ms (unweighted), against R1's 2 s, and 4265 ms even at 100 000 cells. The finding is no longer LATENT in the sense used above only for lack of a measurement; it stays latent in the data that exists (Liveness above is unchanged).
+
+**2. Widened to the diff route.** The diff route itself (FR-231, `GET …/diff`) also computes the full diff synchronously for a rows pair. Measured at the literal `origin/main` head `52c153cd1dcf7eb8a716559216a30b245dd6a7e2` (tree `4fe99da0472c47845330aec9e7731ba3b06afc53`), one gate-1 hold, 2026-10-05 22:46:20 to 22:50:53 BST, load 2.60 at the start (1.86 when it settled) and 1.70 at the end, so not as quiet as the runs above; a 250 000-cell rows pair, unweighted, no cache; raw output in `handover/s7-measurement-2026-10-05/holdA.out`:
+
+| Route | whole request p50 | whole request p99 | SQL load of both versions p50 / p99 | `diff_vs_previous` alone p50 / p99 |
+|---|---|---|---|---|
+| diff on `origin/main`, 250 000-cell rows pair | 9286 ms | **9633 ms** | 6696 / 7688 ms | 1825 / 1858 ms |
+
+That is a breach on `main` today, not S7's, as the entry says: p99 9633 ms against R1's 2 s on a pair at FR-232's default size. The `diff_cells` computation alone is about 4 s on S7's branch (the table above).
+
+**3. The discharger is S7 (SL-1391), for both limbs, via RL-1442.** The entry "2026-10-05 22:27:31 BST — S7: the write set ACCEPTED; the diff-route measurement on the branch ACCEPTED with the diff proof; the diff route goes INTO S7, option (a)", item 3, ends, verbatim:
+
+> So RL 9484's brief EXTENDS to amend 03:904 (RL-1361 T10's diff row): a first diff request for a pair, rows or parquet, whose artifact is not yet stored answers 202 with the same Job; later requests answer 200 from it. RL 9484 covers 03:904, 03:933 and FR-232 together. S7's reds add: a first 250k rows diff request is 202, and a later diff request has p99 under 300 ms. FD 9487's diff-route limb is then DISCHARGED BY S7, named in the FD.
+
+and the entry "2026-10-05 22:28:33 BST — S7 cost chain: CONFIRMED; the four-record batch mint AGREED" confirms, verbatim: *"no limb stays outside S7"* and *"FD 9487 names S7 as the discharger of both limbs (HIGH, with the 250k figures)."* This finding names it: **S7 (SL-1391, WK-673) discharges both limbs, the cells page (rows and parquet) and the diff route, by serving every page from one stored artifact keyed by immutable version identity (RL-1442), and meets the budget of RL-1441 (OQ-1440's decision).** The Disposition above ("a follow-on slice in WK-1178") is superseded in place by this.

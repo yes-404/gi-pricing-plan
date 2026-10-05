@@ -1,9 +1,9 @@
 ---
-id: RL-9485
+id: RL-1441
 family: ruling
 title: The rate-table cells-diff page carries 300 ms p95 after the first request, at stated sizes, and a page cost bounded by its limit; options (a), (c) and (d) not taken
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-05            # working id; the mint date is set at the mint (check 31)
+created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: decision-maker
 tree: a5657fa4520739f182cbea79e0057afeed991ac1
 phase: P2
@@ -17,10 +17,10 @@ relates: [WK-673, WK-1178, FR-231, FR-232, NFR-457, NFR-526]
 
 # Ruling — the rate-table cells-diff page's latency budget
 
-**Filed under working id 9485, allocated by the lead, the only allocator.** It rules on
-OQ 9486 (working id; the `docs/open-questions.md` row and its `03` §10 mirror, raised on
-draft PR #1222) and is applied by the fix slice of FD 9487 (working id; draft PR #1223,
-head `8fc404a7`), in WK-1178. Unminted records are cited in working-id form and kept out of
+**Filed under working id 9485 (minted as RL-1441), allocated by the lead, the only allocator.** It rules on
+OQ-1440 (the `docs/open-questions.md` row and its `03` §10 mirror, raised on
+draft PR #1222) and is applied by SL-1391 (WK-673 Slice 7, #1206), which discharges FD-1439 (PR #1223,
+head `8fc404a7`) (*amended pre-mint, see the Amendment at the end*). Unminted records are cited in working-id form and kept out of
 `relates:` (check 32).
 
 ## How this was ruled
@@ -59,13 +59,13 @@ The decision, verbatim:
 |---|---|
 | **(b)** | **Taken.** One route NFR in `03` §9, the same budget on both storage paths: p95 ≤ 300 ms for every page after the first request for a key, at stated sizes, measured. Text T1 below |
 | **(e)** | **Taken**, as a testable property inside the same requirement: a page's time at 250 000 cells is within 2× of its time at 10 000 cells, at the same `limit`. Text T2 below |
-| **(a)** A page is a metadata read; NFR-457 and NFR-526 apply as written | **Not taken.** (b) keeps the same 300 ms figure and adds the sizes. The maintainer gave no reason beyond the trade-offs on file. **Why not taken:** the OQ 9486 row (`docs/open-questions.md:142`) says of (a): *"But no table size is stated, so the budget is not testable as written, and "metadata" is stretched to cover cell values."* (b) states the sizes, so the same 300 ms figure is testable without stretching "metadata". |
-| **(c)** Per-path budgets, looser on parquet | **Not taken.** The maintainer gave no reason beyond the trade-offs on file. **Why not taken:** the OQ 9486 row (`docs/open-questions.md:142`) says of (c): *"two figures to keep, and the parquet tables, the largest, are then the slowest to page with no stated reason beyond cost."* (b) is one figure for both paths, so no path is slower without a stated reason. |
-| **(d)** No budget below R1 | **Not taken.** The maintainer gave no reason beyond the trade-offs on file. **Why not taken:** the OQ 9486 row (`docs/open-questions.md:142`) says of (d): *"a 1.9 s page passes, the paging experience below 2 s is unbounded, and the parquet p99 of 1098 ms is then no defect."* (b) bounds the paging below 2 s, which (d) leaves unbounded. |
+| **(a)** A page is a metadata read; NFR-457 and NFR-526 apply as written | **Not taken.** (b) keeps the same 300 ms figure and adds the sizes. The maintainer gave no reason beyond the trade-offs on file. **Why not taken:** the OQ-1440 row (`docs/open-questions.md:142`) says of (a): *"But no table size is stated, so the budget is not testable as written, and "metadata" is stretched to cover cell values."* (b) states the sizes, so the same 300 ms figure is testable without stretching "metadata". |
+| **(c)** Per-path budgets, looser on parquet | **Not taken.** The maintainer gave no reason beyond the trade-offs on file. **Why not taken:** the OQ-1440 row (`docs/open-questions.md:142`) says of (c): *"two figures to keep, and the parquet tables, the largest, are then the slowest to page with no stated reason beyond cost."* (b) is one figure for both paths, so no path is slower without a stated reason. |
+| **(d)** No budget below R1 | **Not taken.** The maintainer gave no reason beyond the trade-offs on file. **Why not taken:** the OQ-1440 row (`docs/open-questions.md:142`) says of (d): *"a 1.9 s page passes, the paging experience below 2 s is unbounded, and the parquet p99 of 1098 ms is then no defect."* (b) bounds the paging below 2 s, which (d) leaves unbounded. |
 
 R1 and NFR-457 still bound the route; this requirement is the budget below them. Which
 mechanism meets it (an artifact read, a cache of the diff and the cut per key, or another) is
-the FD 9487 fix plan's to choose, and is not ruled here.
+the FD-1439 fix plan's to choose, and is not ruled here.
 
 **Two readings this record makes, stated so that the lead can reverse either at the ACK:**
 
@@ -87,15 +87,14 @@ CONFIRMED."*
 
 **T1 and T2 do not land in this PR.** The requirement is measured, not asserted (`CLAUDE.md`
 §13), so it lands in one commit with the code that meets it and the measurement that shows
-it (`CLAUDE.md` §2), applied by FD 9487's fix slice in WK-1178, byte for byte. `<date>` is
+it (`CLAUDE.md` §2), applied by SL-1391 (S7, WK-673), byte for byte. `<date>` is
 that commit's date.
 
 **The requirement id.** `NFR-<next>` is a placeholder. The fix slice replaces it, in T1 and
 everywhere it cites the requirement, with the id `python3 scripts/doc-id.py next` gives at
 that slice's mint (requirement ids are on the single global sequence, `CLAUDE.md` §5). This
 record does not allocate it: an id allocated now would be held by an unmerged draft that
-`next` cannot see. The mint also replaces `RL 9485 (working id)`, `OQ-9486` and
-`FD 9487 (working id)` with their minted ids.
+`next` cannot see. At the mint, the working ids of this record, the open question and the finding in T1 and T2 were replaced with their minted ids (RL-1441, OQ-1440, FD-1439).
 
 ### T1 — `03` §9: append as the table's last row
 
@@ -106,7 +105,7 @@ by position, not by a find string, so that another ruling appending to the same 
 not collide with this one.
 
 ```markdown
-| **NFR-<next>** | Rate-table cells-diff paging (`GET /api/v1/rate-tables/{slug}@{version}/diff/cells`, FR-231, FR-232), below `07` §1.3 R1 and NFR-457. **Budget:** every page after the first request for a key (the two versions and the `portfolio`) answers with **p95 ≤ 300 ms** at `limit` = `DEFAULT_LIMIT`, on both storage paths; the first request for a key may answer **202** with a Job under R1. **Measured, not asserted:** n ≥ 100 pages, on a quiet box, at **250 000 cells** with both versions `storage: rows` and at **1 000 000 cells** with both versions `storage: parquet`; each figure states its size, `limit`, percentile and n. **A page's cost is bounded by its `limit`, not by the table's cell count:** on each storage path, the page p95 at 250 000 cells is within **2×** of the page p95 at 10 000 cells at the same `limit`, both measured as above, with the workspace threshold (FR-232) set so that both versions take the path measured. *(Added <date>, RL 9485 (working id), deciding OQ-9486; FD 9487 (working id).)* |
+| **NFR-<next>** | Rate-table cells-diff paging (`GET /api/v1/rate-tables/{slug}@{version}/diff/cells`, FR-231, FR-232), below `07` §1.3 R1 and NFR-457. **Budget:** every page after the first request for a key (the two versions and the `portfolio`) answers with **p95 ≤ 300 ms** at `limit` = `DEFAULT_LIMIT`, on both storage paths; the first request for a key may answer **202** with a Job under R1. **Measured, not asserted:** n ≥ 100 pages, on a quiet box, at **250 000 cells** with both versions `storage: rows` and at **1 000 000 cells** with both versions `storage: parquet`; each figure states its size, `limit`, percentile and n. **A page's cost is bounded by its `limit`, not by the table's cell count:** on each storage path, the page p95 at 250 000 cells is within **2×** of the page p95 at 10 000 cells at the same `limit`, both measured as above, with the workspace threshold (FR-232) set so that both versions take the path measured. *(Added <date>, RL-1441, deciding OQ-1440; FD-1439.)* |
 ```
 
 ### T2 — the (e) property
@@ -122,12 +121,12 @@ alone:
 
 ## Acceptance — the violation that must become detectable
 
-This record builds nothing. FD 9487's fix slice carries these:
+This record builds nothing. SL-1391 (S7) carries these:
 
 - *Violation: a page after the first is over budget.* The measurement of T1 at both sizes,
   run on a quiet box (the gate slots free, no other heavy process), with its raw figures in the
   slice's ledger. At #1206's head `386f4d54` the rows page measured p50 9604 ms and the
-  parquet page p50 948 ms at 260 000 cells, n=10, `limit` 50 (OQ 9486's row), so the figure
+  parquet page p50 948 ms at 260 000 cells, n=10, `limit` 50 (OQ-1440's row), so the figure
   before the fix fails T1, which shows the measurement can print a failure.
 - *Violation: a page's cost grows with the table.* The (e) ratio, p95 at 250 000 over p95
   at 10 000, on each path. Before the fix it is expected to exceed 2× on both paths, since each
@@ -139,18 +138,26 @@ This record builds nothing. FD 9487's fix slice carries these:
 
 ## What it obliges
 
-- **FD 9487's planner:** the fix plan cites this record for the budget and carries T1 and
+- **FD-1439's planner:** the fix plan cites this record for the budget and carries T1 and
   the acceptance list above as its scope, rather than re-deciding them. If its design answers
   the first rows-path request with 202, that changes the cells route's §5.1 row and FR-232's
   *"the editor pages without a job"*, and the plan names that as a spec change needing its
   own ruling. This record does not pre-decide it.
-- **FD 9487's fix slice (WK-1178):** apply T1 verbatim, with the id its mint gives, in the
+- **SL-1391 (S7, WK-673):** apply T1 and T2 verbatim, with the id its mint gives, in the
   commit that meets it, with the measurement.
-- **The lead, at the mint:** mint this record before the FD 9487 fix plan, which cites it,
+- **The lead, at the mint:** mint this record before the FD-1439 fix plan, which cites it,
   and replace working id 9485 everywhere this commit writes it.
 
 ## Spec changes in this commit
 
-None to a requirement. OQ 9486 is marked decided in both places, `docs/open-questions.md` and
+None to a requirement. OQ-1440 is marked decided in both places, `docs/open-questions.md` and
 `03` §10, citing this record and the 20:58:27 BST entry; the `docs/roadmap.md` §10 gate row
-"Before the FD 9487 fix plan mints" records it decided. T1 and T2 are the fix slice's to apply.
+"Before the FD-1439 fix plan mints" records it decided. T1 and T2 are SL-1391's to apply.
+
+## Amendment, 2026-10-05 (after 22:28:33 BST), pre-mint: the applier is SL-1391 (S7)
+
+On the maintainer's (by delegation) entry "2026-10-05 22:28:33 BST — S7 cost chain: CONFIRMED; the four-record batch mint AGREED", verbatim:
+
+> All of it is confirmed: no limb stays outside S7; S7 applies RL 9485 T1/T2 and must MEET its measured acceptance (p95 at or under 300 ms after the first request per key, n at least 100, quiet box, 250k rows AND 1M parquet, plus the 2x property against 10k on each path); RL 9485 "applied by" is re-pointed to SL-1391 pre-mint; FD 9487 names S7 as the discharger of both limbs (HIGH, with the 250k figures).
+
+So "applied by" now reads SL-1391 (WK-673 Slice 7, #1206) in place of "the fix slice of FD-1439 in WK-1178", in the header paragraph, the T1/T2 landing paragraph, the Acceptance lead-in, the obligations list and the spec-changes note. SL-1391 meets the acceptance above: p95 at or under 300 ms after the first request for a key, n of at least 100, on a quiet box, at 250 000 cells on rows and 1 000 000 on parquet, and the 2x property of (e), page p95 at 250 000 cells within 2x of that at 10 000, on each path. The text above is otherwise as filed; T1 and T2 are unchanged.
