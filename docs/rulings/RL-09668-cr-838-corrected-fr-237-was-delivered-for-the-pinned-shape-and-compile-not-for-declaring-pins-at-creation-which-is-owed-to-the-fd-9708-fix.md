@@ -108,6 +108,14 @@ as a draft from the structural and rate-table diffs and edited by the actuary"**
 | The **drafting** limb was not built, then or now | `AlgorithmDiff.summary` (`model_schema/rating.py:513` at `3a4958a`, `:554` at `4d3be141`) returns a count string ("2 step(s) added, …") and drafts nothing. Its only backend caller path is `diff_algorithms(...)`'s `.model_dump()` (`backend/src/app/platform/rating_algorithms.py:141` at `3a4958a`, `:163` at `4d3be141`), and a property is not dumped. `git grep -n -i -E 'draft.{0,30}change.summary\|change.summary.{0,30}draft' <tree> -- backend/src packages` prints nothing at either tree. No rate-table diff is summarised anywhere |
 | The plan had scoped it | PL-818 (WK-669) `:160`: "Add the change summary (FR-242): a required field, drafted from the diffs and edited by the actuary" |
 
+*(Pre-mint note, 2026-10-05 17:36:36 BST, dm-e1, on the maintainer's (by delegation) entry
+"2026-10-05 17:34:57 BST — E1 DPs …: all six ADOPTED as recommended; S1 yes; S2 yes; PL 9578
+noted", S2: the row above is corrected in one sentence. **The "field" is only declared:
+nothing writes `RatingVersion.change_summary` at `4d3be141` (`create_rating_version` builds the
+row at `rating_versions.py:254-262` without it, and `submit_for_review` passes the summary only
+to `approvals.submit`, `:327-333`), so the required limb is enforced on the Approval Request,
+by the guard at `backend/src/app/platform/approvals.py:272-275`, not on the version.**)*
+
 So the marker evidence proves the summary is required. It does not reach the draft, which the
 spec and WF-699 step E1 (`:95`, "drafted automatically from the structural and rate
 diffs and then edited") both need. "Delivered" was false for that limb at CR-838's own tree.
