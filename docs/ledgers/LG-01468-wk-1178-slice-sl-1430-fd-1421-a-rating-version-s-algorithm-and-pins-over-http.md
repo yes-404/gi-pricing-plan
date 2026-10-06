@@ -237,7 +237,9 @@ are dated 2026-10-06. The working id this record carried before the mint is repl
 sentence; it remains only inside the verbatim gate outputs of the gate section (`between 1444 and 9483`, `the unminted working id 9483`,
 `[(1444, 9483)]`), which are quotations of tool output. `origin/main` was `a9ef677747a98a156c1d4e8b8ae9d2b43c4e3ee5`, the merge-base of the audited head, when the mint began; it then
 moved to `c6886bda9ce1c200a921d490530a79cbfb3ca820` (#1230, the B1 mint: docs-only, `git diff --name-status a9ef6777..c6886bda` lists only
-`docs/` paths), which the mint merged into the branch (merge-tree rc 1, the one conflict `docs/INDEX.md`, regenerated). The register is unchanged by this mint: `FD-1421`'s row
+`docs/` paths), which the mint merged into the branch (merge-tree rc 1, the one conflict `docs/INDEX.md`, regenerated). It moved again to `f871ee8dad8d670e3576b626546ecf40e37d8569` (the chain mint, with a dependency bump and a skill update,
+`uv.lock` and `.claude/skills/` among its paths), which the mint merged the same way on the lead's ruling (merge-tree rc 1, the one conflict `docs/INDEX.md`, regenerated).
+The `docs/`-only reading of condition (a) therefore applies to this branch's own delta, `343ef9bb` to the merge of `c6886bda`; the two later merges of `main` bring non-docs paths that are `main`'s own. The register is unchanged by this mint: `FD-1421`'s row
 names its own event, "the WK-1178 slice merges … and `03:908` and `RatingVersionCreate` agree", after which the auditor sets it
 closed; `FD-1437` stays with WK-675 S3's leaf, since this slice applied only RL-1438's create-time refusal (item 2), not the
 compile-site code or the sweep of bare `ValueError` raises.
