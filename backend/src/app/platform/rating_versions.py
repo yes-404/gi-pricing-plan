@@ -47,13 +47,16 @@ from model_schema import (
     GoldenQuoteDelta,
     GoldenQuoteNotChecked,
     JobSource,
+    ModelReferenceMode,
     Permission,
     Pins,
     Principal,
+    RatingAlgorithm,
     RatingVersion,
     RatingVersionEvidence,
     RatingVersionStatus,
     RegressionSuiteContent,
+    check_model_reference_mode,
     context_hash,
 )
 from pricing_core.rating.compile import Bundle, ResolvedArtifact, compile_bundle
@@ -235,14 +238,31 @@ async def create_rating_version(
     slug: str,
     dataset_version_id: UUID,
     model_ref: ArtifactRef,
+    algorithm_ref: ArtifactRef | None = None,
+    pins: Pins | None = None,
+    model_reference_mode: ModelReferenceMode = "exact",
 ) -> RatingVersionRow:
-    """Create a draft rating version pinned to the approved model (`FR-440`)."""
+    """Create a draft rating version declaring its algorithm and pins (`FR-237`).
+
+    The declaration is stored, not resolved: whether each ref exists, and at what
+    maturity, is compile's (`FR-240`). An algorithm that does resolve is mode-checked
+    here, because the version and the algorithm first meet at this write (`FR-223`).
+    """
     await rbac.require_permission(
         session,
         workspace_id=workspace_id,
         principal=actor,
         permission=Permission.RATING_WRITE,
     )
+    algorithm_row = None
+    if algorithm_ref is not None:
+        algorithm_row = await session.scalar(
+            select(RatingAlgorithmRow).where(
+                RatingAlgorithmRow.workspace_id == workspace_id,
+                RatingAlgorithmRow.slug == algorithm_ref.slug,
+                RatingAlgorithmRow.version == algorithm_ref.version,
+            )
+        )
     next_version = 1 + (
         await session.execute(
             select(func.coalesce(func.max(RatingVersionRow.version), 0)).where(
@@ -258,10 +278,25 @@ async def create_rating_version(
         status=RatingVersionStatus.DRAFT.value,
         dataset_version_id=dataset_version_id,
         model_ref=str(model_ref),
+        algorithm_ref=str(algorithm_ref) if algorithm_ref is not None else None,
+        pins=pins.model_dump(mode="json") if pins is not None else None,
+        model_reference_mode=model_reference_mode,
         created_by=actor.id,
     )
     session.add(row)
     await session.flush()
+    if algorithm_row is not None:
+        try:
+            check_model_reference_mode(
+                to_schema(row), RatingAlgorithm.model_validate(algorithm_row.content)
+            )
+        except ValueError as exc:
+            raise PlatformError(
+                "MODEL_REFERENCE_MODE_INCONSISTENT",
+                "Model reference mode inconsistent",
+                422,
+                str(exc),
+            ) from exc
     await audit.record(
         session,
         workspace_id=workspace_id,
@@ -270,7 +305,13 @@ async def create_rating_version(
         action="rating_version.created",
         entity_ref=f"rating_version:{slug}@{next_version}",
         before={},
-        after={"status": RatingVersionStatus.DRAFT.value, "model_ref": str(model_ref)},
+        after={
+            "status": RatingVersionStatus.DRAFT.value,
+            "model_ref": str(model_ref),
+            "algorithm_ref": str(algorithm_ref) if algorithm_ref is not None else None,
+            "pins": pins.model_dump(mode="json") if pins is not None else None,
+            "model_reference_mode": model_reference_mode,
+        },
     )
     return row
 

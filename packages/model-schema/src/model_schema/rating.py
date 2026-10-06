@@ -170,6 +170,54 @@ class RatingVersion(BaseModel):
     approval_request_id: UUID | None = None
 
 
+#: The artifact types each pin list admits (FR-237; RL-1428 T1). `models` holds a
+#: `model_call`'s `model_ref` or `peril_structure_ref` (`compile.check_step_refs_pinned`).
+_PIN_TYPES: Final[dict[str, frozenset[str]]] = {
+    "rate_tables": frozenset({"rate_table"}),
+    "models": frozenset({"model", "peril_structure"}),
+    "reference_tables": frozenset({"reference_table"}),
+    "custom_objectives": frozenset({"custom_objective"}),
+}
+
+
+class RatingVersionCreate(BaseModel):
+    """The body of `POST /api/v1/rating-versions` (03 §5.1, FR-237; RL-1428).
+
+    Create stores the declared algorithm and pins and checks only their shape: a ref of the
+    wrong type is refused here (422). Whether each ref resolves, and at what maturity, is
+    compile's (FR-240), so a version created without them is refused there with
+    `RATING_VERSION_UNPINNED`.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    slug: Slug
+    dataset_version_id: UUID
+    model_ref: ArtifactRef
+    algorithm_ref: ArtifactRef | None = None
+    pins: Pins | None = None
+    model_reference_mode: ModelReferenceMode = "exact"
+
+    @field_validator("algorithm_ref")
+    @classmethod
+    def _an_algorithm(cls, ref: ArtifactRef | None) -> ArtifactRef | None:
+        if ref is not None and ref.type != "rating_algorithm":
+            raise ValueError(f"{ref} is not a rating_algorithm reference")
+        return ref
+
+    @field_validator("pins")
+    @classmethod
+    def _each_list_holds_its_own_type(cls, pins: Pins | None) -> Pins | None:
+        for name, admitted in _PIN_TYPES.items():
+            for ref in getattr(pins, name, ()):
+                if ref.type not in admitted:
+                    raise ValueError(
+                        f"pins.{name} holds {ref}, which is not a "
+                        f"{' or '.join(sorted(admitted))} reference"
+                    )
+        return pins
+
+
 def check_model_reference_mode(version: RatingVersion, algorithm: RatingAlgorithm) -> None:
     """FR-223: every `model_call` step's `mode` equals the version's declared mode.
 

@@ -1,0 +1,105 @@
+{
+  "$defs": {
+    "ArtifactRef": {
+      "description": "Canonical artifact reference {type}:{slug}@{version} (ID-3).",
+      "examples": [
+        "model:motor-ad-frequency@7",
+        "rating_version:motor-gb@27"
+      ],
+      "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+      "title": "ArtifactRef",
+      "type": "string"
+    },
+    "Pins": {
+      "additionalProperties": false,
+      "description": "The exact artifact pins of a Rating Version (03 §4.3, FR-237).\n\nNothing is unpinned: every rate table a `table` step references, every model or peril\nstructure a `model_call` references, every reference table a `lookup` references, and\nevery custom objective reachable from a `model_call` is pinned by exact version.",
+      "properties": {
+        "custom_objectives": {
+          "items": {
+            "$ref": "#/$defs/ArtifactRef"
+          },
+          "title": "Custom Objectives",
+          "type": "array"
+        },
+        "models": {
+          "items": {
+            "$ref": "#/$defs/ArtifactRef"
+          },
+          "title": "Models",
+          "type": "array"
+        },
+        "rate_tables": {
+          "items": {
+            "$ref": "#/$defs/ArtifactRef"
+          },
+          "title": "Rate Tables",
+          "type": "array"
+        },
+        "reference_tables": {
+          "items": {
+            "$ref": "#/$defs/ArtifactRef"
+          },
+          "title": "Reference Tables",
+          "type": "array"
+        }
+      },
+      "title": "Pins",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The body of `POST /api/v1/rating-versions` (03 §5.1, FR-237; RL-1428).\n\nCreate stores the declared algorithm and pins and checks only their shape: a ref of the\nwrong type is refused here (422). Whether each ref resolves, and at what maturity, is\ncompile's (FR-240), so a version created without them is refused there with\n`RATING_VERSION_UNPINNED`.",
+  "properties": {
+    "algorithm_ref": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ArtifactRef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "dataset_version_id": {
+      "format": "uuid",
+      "title": "Dataset Version Id",
+      "type": "string"
+    },
+    "model_ref": {
+      "$ref": "#/$defs/ArtifactRef"
+    },
+    "model_reference_mode": {
+      "default": "exact",
+      "enum": [
+        "exact",
+        "approximation"
+      ],
+      "title": "Model Reference Mode",
+      "type": "string"
+    },
+    "pins": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Pins"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "slug": {
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+      "title": "Slug",
+      "type": "string"
+    }
+  },
+  "required": [
+    "slug",
+    "dataset_version_id",
+    "model_ref"
+  ],
+  "title": "RatingVersionCreate",
+  "type": "object"
+}

@@ -99,6 +99,7 @@ from model_schema import (
     MonotonicDirection,
     Prediction,
     RatingVersion,
+    RatingVersionCreate,
     RegressionRun,
     SpecValidation,
     TransparencyArtifact,
@@ -266,14 +267,6 @@ class ModelCreate(BaseModel):
 
     spec: ModelSpec
     change_reason: str | None = None
-
-
-class RatingVersionCreate(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    slug: str
-    dataset_version_id: UUID
-    model_ref: ArtifactRef
 
 
 class RatingVersionSubmit(BaseModel):
@@ -1168,10 +1161,11 @@ async def create_rating_version(
     caller: Annotated[Caller, Depends(requires(Perm.RATING_WRITE))],
     database: DatabaseDep,
 ) -> RatingVersion:
-    """Create a draft rating version with pins to a model (FR-237).
+    """Create a draft rating version, declaring its algorithm and pins (FR-237).
 
-    The draft version is editable until submitted for approval. It pins an approved
-    model for rating use.
+    Their shape is checked here (422); whether they resolve, and at what maturity, is
+    checked at compile (FR-240). A declared mode that the algorithm's `model_call` steps
+    contradict is 422 `MODEL_REFERENCE_MODE_INCONSISTENT` (FR-223).
     """
     async with database.unit_of_work() as session:
         row = await rating_versions_service.create_rating_version(
@@ -1181,6 +1175,9 @@ async def create_rating_version(
             slug=body.slug,
             dataset_version_id=body.dataset_version_id,
             model_ref=body.model_ref,
+            algorithm_ref=body.algorithm_ref,
+            pins=body.pins,
+            model_reference_mode=body.model_reference_mode,
         )
         return rating_versions_service.to_schema(row)
 

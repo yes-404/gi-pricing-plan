@@ -2126,7 +2126,10 @@ def test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_e
     # 80 became 81 (WK-674 Slice 2, PL-1392 Task 6, 2026-10-04; measured at the branch merged
     # with main 7e2ee2ba, where the count was 80): the generated `approval-withdrawal` schema,
     # registered for F83's reason.
-    assert len(non_markdown) == 81, len(non_markdown)
+    # 81 became 82 (WK-1178 SL-1430, PL-1429, 2026-10-06; the maintainer's (by delegation) entry
+    # "2026-10-05 23:05:41 BST — SL-1430 STOP (write set)"): the generated `rating-version-create`
+    # schema, registered for F83's reason.
+    assert len(non_markdown) == 82, len(non_markdown)
     assert set(non_markdown) <= rels
 
     # Named individually, so the proof is "one of the 63" and not "63 of something".

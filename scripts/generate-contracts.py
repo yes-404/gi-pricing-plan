@@ -175,6 +175,9 @@ GENERATED_SHAPES: dict[str, str] = {
     "approval-submission": "ApprovalSubmission",
     # Added 2026-10-04 (PL-1392 Task 6): the body of `.../withdraw`, moved out of the API module.
     "approval-withdrawal": "ApprovalWithdrawal",
+    # Added 2026-10-05 (WK-1178, the FD-1421 fix, RL-1428): the body of `POST /rating-versions`,
+    # moved out of the API module. First written form, no hand-authored counterpart.
+    "rating-version-create": "RatingVersionCreate",
 }
 
 
