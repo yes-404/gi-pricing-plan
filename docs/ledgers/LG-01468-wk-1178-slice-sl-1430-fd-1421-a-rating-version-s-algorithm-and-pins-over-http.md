@@ -1,8 +1,8 @@
 ---
-id: LG-9483
+id: LG-1468
 family: ledger
 title: WK-1178 slice SL-1430 — FD-1421, a Rating Version's algorithm and pins over HTTP (PL-1429), task ledger
-status: active
+status: closed
 created: 2026-10-05
 owner: executor
 tree: 52c153cd1dcf7eb8a716559216a30b245dd6a7e2
@@ -18,8 +18,8 @@ relates: [RL-1428, RL-1263, FD-1421, FD-1425, FR-237, FR-223, WK-1178]
 
 Executed from `PL-1429` by `executor-sl1430` (Sonnet 5.5). Branch
 `sl-1430-fd-1421-rating-version-algorithm-and-pins`, worktree `.claude/worktrees/sl-1430`, from `origin/main`
-`52c153cd1dcf7eb8a716559216a30b245dd6a7e2` (#1220, the activation). This record is under working id LG 9483 and mints
-later. The dispatch record is the lead's local file
+`52c153cd1dcf7eb8a716559216a30b245dd6a7e2` (#1220, the activation). This record carried a working id and was minted as LG-1468
+on 2026-10-06. The dispatch record is the lead's local file
 `gi-pricing-plan.local/handover/DISPATCH-WK-1178-SL1430-2026-10-05.md`; it is not in the repository. Stamps are BST.
 
 FD-1425 is OPEN (its wiring limb is a later slice's). Nothing in this slice bears on an approval.
@@ -208,7 +208,7 @@ grant), single `flock -n` run, both halves; gate-2 free at every snapshot. The f
 **Load and memory.** Python half 00:49:19 → 01:22:25 UTC: load 1.46 → 1.40; used 14975 → 15561 MB, free 11859 → 11023 MB.
 Frontend half 01:22:26 → 01:23:54 UTC: load 1.40 → 6.81 (the build's tail); used 15560 → 15690 MB.
 
-**The 13 pytest failures** are the unminted working-id state (LG 9483 not in the allocation, main's allocation ends at 1444), each
+**The 13 pytest failures** are the unminted working-id state (this record's working id was not in the allocation, main's allocation ended at 1444), each
 message reading `requirement numbering: 0 module-scoped id(s)…` or `live allocation is not contiguous: [(1444, 9483)]`: `test_audit_docs_ids`
 ×2, `test_doc_index` ×1, `test_register_lint` ×3, `test_register_owed` ×1, `test_repository_invariants` ×2,
 `test_audit_docs_process_core_digest` ×2, `test_audit_docs_w37_11_ceiling` ×1, `test_audit_docs_finding_citations` ×1. The lead
@@ -225,3 +225,42 @@ merged: `merge-tree origin/main(a9ef6777) HEAD` before the merge, rc 1, tree `0e
 ## PRs
 
 #1227, a draft. The branch `sl-1430-fd-1421-rating-version-algorithm-and-pins` is pushed; the PR is not merged by the executor.
+
+## Closing note (2026-10-06)
+
+This ledger is closed under the executor charter's mint-step clause (`.claude/roles/executor.md`, "As the mint step…", added
+2026-10-04) and `docs/process/document-ids.md` §1.6's 2026-10-04 amendment to the SL and LG close cells: on 2026-10-06 the executor
+performed the closing acts in the mint commit on the auditor's behalf, after the slice audit — the front matter `status: closed`,
+the roadmap `SL-1430` row `status: closed` with its dated line, `docs/INDEX.md` regenerated, `audit-docs` run. `created:` and `tree:`
+stay as filed. The working id this record carried before the mint is replaced by `LG-1468` in the record's `id:` and its provenance
+sentence; it remains only inside the verbatim gate outputs of the gate section (`between 1444 and 9483`, `the unminted working id 9483`,
+`[(1444, 9483)]`), which are quotations of tool output. `origin/main` was `a9ef677747a98a156c1d4e8b8ae9d2b43c4e3ee5` at the mint,
+the merge-base of the audited head, so no merge of `main` entered the branch. The register is unchanged by this mint: `FD-1421`'s row
+names its own event, "the WK-1178 slice merges … and `03:908` and `RatingVersionCreate` agree", after which the auditor sets it
+closed; `FD-1437` stays with WK-675 S3's leaf, since this slice applied only RL-1438's create-time refusal (item 2), not the
+compile-site code or the sweep of bare `ValueError` raises.
+
+### The slice audit, quoted (local, not in the repository: `handover/audit-sl1430-2026-10-06.md`)
+
+Verdict summary, verbatim: "No blocking finding. Two LOW observations, both accept. Proposed: **clean slice audit, subject to the
+lead's merge**." Audited head `f4dc6f2837f967adbeb3e08094c49a14c96fd90e`, range `origin/main...f4dc6f28`. The findings, verbatim
+openings: "**L1 (LOW; accept, or defer to a note)** — Acceptance 13's second clause … is asserted by no test." and "**L2 (LOW;
+accept)** — the 13 gate failures are matched to the known check-31 set by file and count, not by node id; the raw pytest log is not in
+the repo."
+
+### The lead's verdicts (local: `channel/from-lead-2026-10-06.md`, the entry "2026-10-06 02:28:24 BST")
+
+Verbatim: "**L1 ACCEPT** — Acceptance 13's second clause (the seeded version's created event carries the algorithm ref) has no own test;
+the ledger discloses it and rests on the route-level creation-event test (the seed calls the same service function). **L2 ACCEPT** —
+the 13 matched by file and count, not node id; the minted-head run clears them. The "refs" disclosure ACCEPTED (your 01:48:42 amended
+item 9). The ValueError→code mapping also catching a corrupt stored algorithm's ValidationError: noted, judged unreachable, no action."
+
+### The minted-head gate is WAIVED
+
+Under the maintainer's (by delegation) ruling, entry header verbatim (`to-lead.md`): "2026-10-06 02:28:42 BST — The minted-head gate
+(executor.md :42, the SL-1377 order): WAIVED for a DOCS-ONLY mint delta, on conditions; a LOW FD to amend the charter". Its
+conditions, verbatim: "(a) git diff --name-status <the gated head>..<the mint head> lists ONLY docs/ paths (INDEX, the register, the
+roadmap, the ledger, and the minted record files); (b) CI at the mint head is FULL green, with the python job's pytest totals line READ
+from the job log (not just the step status), showing 0 failed; (c) the slice's own full local gate ran at the gated head with only the
+known check-31 set failing, as recorded in its ledger." The gated head is `343ef9bb3bee01b67a2c1de827a1b1e18fd0b34b`; condition (a)'s
+name-status is in the PR body, and (b) is the lead's to read at the merge ACK.
