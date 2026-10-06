@@ -124,7 +124,7 @@ All three blocking decision points are decided, by the maintainer (by delegation
   order. The 13:20:26 entry's "Severity signals" adds: "FD-1420 (#1132): HIGH CONFIRMED (no
   upstream filter on /score, /compare or batch)".
 
-**Owner discrepancy, for the lead.** FD-1420's draft (#1132 @`9e51cbe8`, §Finding) proposes
+**Owner discrepancy, for the lead.** ~~FD 9707~~ FD-1420's draft (#1132 @`9e51cbe8`, §Finding) proposes
 owner WK-1178. The maintainer's (by delegation) 13:11:05 entry, item 2, says WK-673. This plan and its slice row
 follow the maintainer (by delegation). The finding's mint reconciles its owner line.
 
@@ -137,7 +137,7 @@ status flip and the `SL-` row's.
 
 ### Activation needs, in order
 
-1. **FD-1420 minted** (#1132). It is in the maintainer's (by delegation) first finding batch (13:13:32 BST entry,
+1. **~~FD 9707~~ FD-1420 minted** (#1132). It is in the maintainer's (by delegation) first finding batch (13:13:32 BST entry,
    item 5).
 2. **A ruling record (`RL-`) carries DP-1 to DP-4 and text T1** (§"Spec text T1"), because a
    decision lands as a dated artifact (`CLAUDE.md` §12). The decision-maker writes it from the
@@ -215,7 +215,7 @@ printed.
    - `2026-01-01T00:30:00+01:00` and `2026-13-01` are refused `422` with `code ==
      "VALIDATION_FAILED"`.
 
-   The midnight-offset case is red first (`130000` at the base, by FD-1420's cause). The
+   The midnight-offset case is red first (`130000` at the base, by ~~FD 9707~~ FD-1420's cause). The
    other three are pins. If any pin fails at the base, **stop and bring it back to the lead**
    (DP-3's condition).
 8. **The registry follows RL-1313 DP-G5 (i).** `(RatingLookupStep, "as_at")` is in
@@ -269,7 +269,7 @@ printed.
 `zen-engine` 0.53.0, the planner ran a scratch decision table:
 `/home/puzhenhao1989/.claude/jobs/6cad77f9/tmp/spike.py`, scratch, not committed.
 
-- Key-only rules over OLD/NEW returned `OLD` at 2026-06-01. That is FD-1420.
+- Key-only rules over OLD/NEW returned `OLD` at 2026-06-01. That is ~~FD 9707~~ FD-1420.
 - The rule `date($) >= date('2025-01-01') and date($) < date('2026-01-01')` for OLD, with
   `date($) >= date('2026-01-01')` for NEW, gave:
   - `2024-12-31` → no match
@@ -472,7 +472,7 @@ slice's subject beyond what is quoted:**
 
 | PR | What it is | Relation to this slice |
 |---|---|---|
-| #1132 | FD-1420 itself | — |
+| #1132 | ~~FD 9707~~ FD-1420 itself | — |
 | #1051 / #1060 | PL 9776 and its ruling | above |
 | #972 | FD 9888 | its fix edits `_reraise_engine_failure`, not on this list |
 | #1059 | FD-1437 | a sweep of bare `ValueError` raises in the check functions; no write set yet |
@@ -500,7 +500,7 @@ see what was weighed. The decisions' text governs.
 | DP | Question | Options | Recommendation | Owner | Blocks |
 |---|---|---|---|---|---|
 | **DP-1** | What may `as_at` name, and how strict is its value? A `date` input is checked only to be a string (`score.py:366-369`); ZEN's `date()` converts an offset value to UTC and silently misses a malformed one (Task 0 run 1) | (a) `effective_date` or a declared `date` input, checked at compile, and at run time a strict `YYYY-MM-DD`; (b) any input, truncated to a date in the graph; (c) accept datetimes and compare in UTC | (a) | **DECIDED (a)** by the maintainer (by delegation), 13:15:53 BST item 20 | Tasks 1, 2, 3, 5 |
-| **DP-2** | The window mechanism (FD-1420's Disposition sends it to a DP) | (a) in-graph per-rule `date($)` tests; (b) a numeric-ordinal expression node feeding the table; (c) a host-side pre-filter (not possible: the decision is built once per bundle and cached, while `as_at` varies per quote) | (a) | **DECIDED (a)** by the maintainer (by delegation), 13:20:26 BST item 22, with conditions: open-ended window tested; overlap refused at save or compile with a named code and a test; boundary reds at `from` and `to` | Tasks 1, 2 |
+| **DP-2** | The window mechanism (~~FD 9707~~ FD-1420's Disposition sends it to a DP) | (a) in-graph per-rule `date($)` tests; (b) a numeric-ordinal expression node feeding the table; (c) a host-side pre-filter (not possible: the decision is built once per bundle and cached, while `as_at` varies per quote) | (a) | **DECIDED (a)** by the maintainer (by delegation), 13:20:26 BST item 22, with conditions: open-ended window tested; overlap refused at save or compile with a named code and a test; boundary reds at `from` and `to` | Tasks 1, 2 |
 | **DP-3** | Does DP-1's run-time refusal reach `QuoteContext.effective_date`? | (a) no, the strict check applies to `date` inputs named by `as_at` (here: to the merged-context value, §"A finding from planning"), and `/score`'s parsing is pinned; (b) make the field strict: a model-schema and contract change | (a) | **DECIDED (a)** by the maintainer (by delegation), 13:20:52 BST decision 28, with the pinning tests (Acceptance 7) and a stop if a pin fails | Tasks 3, 4 |
 | **DP-4** | DP-1's compile check: which codes, and where it runs | Codes: (i) `RATING_TYPE_MISMATCH` for a declared input of another type, and `RATING_GRAPH_UNRESOLVED_REF` for an undeclared name other than `effective_date`; (ii) one new code (a spec change to `03`'s owned codes, `:928-931`). Place: (p) appended to `ALGORITHM_CHECKS`, so it runs at save (`validate_algorithm`) and again at compile (`compile_bundle` re-runs it, `compile.py:573-583`); (q) in `compile_bundle` only | (i) and (p). Both codes are already `03`'s, with matching meanings (`03:844-845`). Running at save tells the author earliest, as FR-227's result-type check does at create. Every committed algorithm that names `effective_date` still saves: `backend/tests/test_rating_algorithms.py:38`, `:86`, `test_rating_compile.py:36`, `:84`, `test_rating_compile_bundle.py:47` | **planner; non-blocking.** The ruling of activation need 2 confirms or changes it | Task 3 |
 
@@ -1101,7 +1101,7 @@ order used. Its tests need Postgres and MinIO; a skipped run is not a red.
 
 ## Hand-off
 
-1. **FD-1420's register row** is discharged by the merge. The auditor writes that row, not
+1. **~~FD 9707~~ FD-1420's register row** is discharged by the merge. The auditor writes that row, not
    this slice.
 2. **For WK-675 S2 (PL 9713, #1131):** after T1, its inspector's `as_at` field should offer
    only `effective_date` and the algorithm's `date` inputs (PL 9713 `:242` cites FR-221). That
