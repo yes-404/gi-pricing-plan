@@ -391,6 +391,41 @@ database at all.
 So: **bring the stack up before the gate, and if the suite is red, check `docker ps` before
 diagnosing anything.**
 
+### Running a check beside a gate: a probe that gates, not one that prints
+
+The sweep-pause rule in every command-running role file (`.claude/roles/*.md`, the bullet
+beginning "A sweep or batch of checks … PAUSES for the WHOLE of any held gate slot") needs a
+probe whose result **stops** the check. Two incidents on 2026-10-06 show the difference: a
+chain ran `audit-docs` in the same command as a slot probe that printed `HELD1` — the probe
+reported, it did not gate (`channel/from-lead-2026-10-06.md`, entry "01:51:00 BST"); and a
+sweep ran beside a held gate-1 (same file, entry "01:41:35 BST"). **A probe whose result is
+only printed is not a control.**
+
+```bash
+held=
+for s in /tmp/slots/gate-1 /tmp/slots/gate-2; do
+  flock -n -E 75 "$s" true; rc=$?
+  [ "$rc" -eq 0 ] || held="$held ${s##*/}(rc=$rc)"
+done
+[ -z "$held" ] || { echo "SLOT HELD:$held — check not run" >&2; exit 75; }
+python3 /abs/path/to/scripts/audit-docs.py   # or any batch of checks
+```
+
+- **`-E 75`** makes "busy" a distinct code, so it reads apart from any other `flock` failure
+  (the `-E 99`/`-E 98` reasoning in the slot wrappers above; `flock -- cmd` is a different
+  trap and exits 69 here).
+- **Any nonzero refuses**, not only 75: an error is not a free slot.
+- **The refusal exits**, so the check after it cannot run. Printing and carrying on is the
+  defect.
+- **Never `cd` inside the wrapper**: pass absolute paths or `--directory` to the checks.
+
+**Residual, named:** a gate can take a slot between the probe and the check. The pattern
+bounds the overlap; it does not remove it. For a long check, re-probe between stages.
+
+Verified: 2026-10-06 on this box against main a9ef6777. Held: gate-1 held by another
+session's gate → `SLOT HELD: gate-1(rc=75) — check not run`, exit 75, check not run. Free
+case: same loop over scratch lock files → check ran. See the PR body for output.
+
 ### `mypy`'s `files` list, and why it cannot be one flat list covering everything
 
 Since 2026-08-30 the bare `uv run mypy` above also covers the repo-level `tests/` root, the
@@ -1060,7 +1095,7 @@ build log showing no actual build (wrong cwd), one tmpdir ls -i showing identica
 (collision). This section drafted by executor-h; verified by deputy as measured. Reference: 
 to-lead.md entries 10:55:17, 11:02:41, 11:48:50, 14:33:28 (maintainer instruction).
 
-Verified: 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
+Verified: 2026-10-06 against main a9ef6777 (new section: a slot probe that gates a check); previously 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
 Prior: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
 
 2026-09-06 — the gate body's seven stages now run in parallel inside one slot, each
