@@ -162,6 +162,30 @@ record says: `<date>` = the commit date, 2026-10-05, and `RL-<this>` = `RL-1438`
 After: `**Amended 2026-10-05 (`RL-1438`): the check runs where` **1**; `RL-<this>` in `03` **0**. FD-1437's S3 re-reads FR-223
 and does not re-apply it (the lead's ruling).
 
+### The gate-1 failure at 260ead66 and the (B') fix (2026-10-06)
+
+**Failed gate (evidence, not the gate).** Full gate at `260ead6640ed3a784426f38b0771206ec30ea8a1` (tree
+`077077b6d9118173201bffd7f90fb798a1f8ccab`), gate-1, 00:08:43–00:39:45 UTC: ruff, mypy, lint-imports, req-coverage and
+`generate-contracts --check` exit 0; `audit-docs` exit 1 (check 31, the unminted working id 9483); pytest exit 1, `15 failed,
+4955 passed, 3 skipped`; frontend half all 0 (vitest 97 files, 615 tests). Of the 15: 13 are the unminted-id state; two are real
+reds outside the mint state: `test_error_sinks.py::test_every_failure_sink_on_a_quote_input_path_is_accounted_for` (an unlisted
+`str(exc)` sink in `create_rating_version`) and `test_audit_docs_ids.py::test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_exempts` (`82 == 81`, from the F83 exemption line).
+
+**The false premise.** The 01:42:13 BST delta item 1 said to wrap the FR-223 detail with `safe_exception` "as compile_rating_version
+does". It does not (its sink is a row-only `_SINKS` entry), and a wrap reduces the plain `ValueError` detail to `ValueError`,
+breaking `test_a_mode_mismatch_is_refused_at_create` at the `"s_rp" in detail` assertion. The maintainer (by delegation) re-ruled to
+(B') in `to-lead.md` "2026-10-06 01:44:23 BST — SL-1430: RE-RULED (i)–(iii) to (B')".
+
+**(B') applied.** No change to `rating_versions.py`. One `_SINKS` row in `backend/tests/test_error_sinks.py` for
+`create_rating_version` / `str(exc)`, in compile's form. `tests/test_audit_docs_ids.py`: 81 → 82 with a dated comment (f05fd208).
+Sentinel `test_the_mode_refusal_detail_names_the_step_and_modes_and_nothing_from_the_pins` (NFR-499): the detail names the step
+and both modes, and a marker planted in `pins.rate_tables` is absent from the response. The detail text,
+`check_model_reference_mode`, names the step id and the two modes; it does **not** name a model ref, so the sentinel asserts the step
+and the modes, not the refs. **Red, honestly:** with no code change to make the sentinel red, it passed on first run (19 passed with
+the sinks file). Its force was shown by mutation: appending `repr(pins)` to the detail at `rating_versions.py:298` made it fail with
+`assert 'marker-zq9x4' not in …`, and the file was restored by `git checkout` (porcelain showed only the two test files). The
+`_SINKS` red is the failed gate's own census failure above.
+
 ## PRs
 
-None opened yet. The branch `sl-1430-fd-1421-rating-version-algorithm-and-pins` is pushed; the PR is opened as a draft and is not merged by the executor.
+#1227, a draft. The branch `sl-1430-fd-1421-rating-version-algorithm-and-pins` is pushed; the PR is not merged by the executor.

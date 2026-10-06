@@ -101,6 +101,9 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         1, "RETURNS Pydantic's text of the submitter's own algorithm or sub-graph JSON to the "
         "submitter in the 422 body; not stored, not logged; an artifact definition, not a Quote "
         "Context. The code is chosen by the typed error class, never by this text (FD-1326)"),
+    ("backend/src/app/platform/rating_versions.py", "create_rating_version", "str(exc)"): (
+        1, "create time: an artifact-level refusal (FR-223 MODEL_REFERENCE_MODE_INCONSISTENT) "
+        "naming the step, the refs and the mode; no quote is involved"),
     ("backend/src/app/platform/rating_versions.py", "compile_rating_version", "str(exc)"): (
         1, "compile time: an artifact-level `ValueError` from `compile_bundle`; no quote is "
         "involved"),

@@ -283,6 +283,40 @@ def test_a_mode_mismatch_is_refused_at_create(
     assert accepted.status_code == 201, accepted.text
 
 
+@pytest.mark.req("NFR-499")
+def test_the_mode_refusal_detail_names_the_step_and_modes_and_nothing_from_the_pins(
+    api_client, workspace_id, principal, grant, database
+) -> None:
+    """RL-1438 / the 2026-10-06 01:44:23 BST re-ruling (B'): the FR-223 refusal's `str(exc)` is an
+    artifact-level text. It names the step and the two declared modes, and carries no other part of
+    the request body: a marker planted in an unrelated pin field is absent from the detail."""
+    _LOOP().run_until_complete(grant("analyst"))
+    headers = _headers(principal, workspace_id)
+    saved = api_client.post("/api/v1/rating-algorithms", json=valid_algorithm(), headers=headers)
+    assert saved.status_code == 201, saved.text
+    marker = "marker-zq9x4"
+    pins = {**_empty_pins(), "rate_tables": [f"rate_table:{marker}@1"]}
+
+    refused = api_client.post(
+        "/api/v1/rating-versions",
+        json=_body(
+            "mode-sentinel-rv",
+            algorithm_ref="rating_algorithm:motor-gb@1",
+            pins=pins,
+            model_reference_mode="approximation",
+        ),
+        headers=headers,
+    )
+    assert refused.status_code == 422, refused.text
+    body = refused.json()
+    assert body["code"] == "MODEL_REFERENCE_MODE_INCONSISTENT"
+    assert "s_rp" in body["detail"]
+    assert "exact" in body["detail"]
+    assert "approximation" in body["detail"]
+    assert marker not in refused.text
+    assert _rows_with_slug(database, "mode-sentinel-rv") == 0
+
+
 @pytest.mark.req("FR-223")
 def test_model_reference_mode_inconsistent_is_registered_and_owned() -> None:
     """RL 9758 Acceptance 3. It holds whichever slice registered the code first."""
