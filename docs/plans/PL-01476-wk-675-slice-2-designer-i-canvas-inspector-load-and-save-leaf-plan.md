@@ -152,8 +152,8 @@ activation need below holds.
 **Lane C's order since filing** (pre-mint, 2026-10-05). WK-675 is off G2's critical path
 (`to-lead.md` entry headed *"2026-10-05 13:05:42 BST — RULING (the maintainer, by delegation): G2's "in Phase 1b's form" = a scripted HTTP journey plus a served page; WK-675 is OFF G2's critical path"*),
 so a HIGH G2-blocking fix whose plan is active takes lane C before this slice: the FD-1421 fix
-(PL-1429, working id) first (entry headed *"2026-10-05 13:12:56 BST — DECISIONS 15 and 16; CORRECTION to my 13:03:23 item 11; a priority rule for HIGH G2 blockers"*),
-and the FR-240 family fix (PL-1471, working id) if lane C frees first (entry headed
+(PL-1429) first (entry headed *"2026-10-05 13:12:56 BST — DECISIONS 15 and 16; CORRECTION to my 13:03:23 item 11; a priority rule for HIGH G2 blockers"*),
+and the FR-240 family fix (PL-1471) if lane C frees first (entry headed
 *"2026-10-05 14:28:35 BST — PL 9649 / SL 9647 (the FR-240 fix, #1152 @dc13400e): DP-5 OK; DP-6 scoped; lane placement"*).
 No activation need changes. The dispatch record names the order that holds at dispatch.
 

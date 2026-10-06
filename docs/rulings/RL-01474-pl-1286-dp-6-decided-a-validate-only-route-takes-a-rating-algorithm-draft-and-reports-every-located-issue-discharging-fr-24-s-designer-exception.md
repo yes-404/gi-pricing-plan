@@ -155,7 +155,7 @@ plan going `active`.
 6. **`rating:write`.** The route exists for authoring, and only an author can save what it
    validates. It writes nothing, persists nothing and records no audit event.
 7. **FR-223 is out of the route.** It needs the Rating Version, and its code is emitted
-   nowhere today (Evidence; FD-1437, working id). *(Reworded 2026-10-01 10:23 BST, on the
+   nowhere today (Evidence; FD-1437). *(Reworded 2026-10-01 10:23 BST, on the
    lead's note.)* The reasoning: S2 shows a `model_call` step's mode read-only from the
    version (`PL-1286` S2), so the designer should not introduce a mismatch while editing.
    This is an inference, not a guarantee. A mismatch arises where a version pins an
