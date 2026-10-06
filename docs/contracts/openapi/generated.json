@@ -7175,6 +7175,7 @@
           "rating.compile",
           "rating.regression",
           "rate_table.diff",
+          "rate_table.diff_cells",
           "score.batch",
           "score.trace_produce",
           "dislocation.run",
@@ -9204,6 +9205,42 @@
         "title": "Page[PerilStructure]",
         "type": "object"
       },
+      "Page_RateTableDiffCell_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RateTableDiffCell"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[RateTableDiffCell]",
+        "type": "object"
+      },
       "Page_SubGraph_": {
         "additionalProperties": false,
         "properties": {
@@ -10519,7 +10556,7 @@
       },
       "RateTableDiff": {
         "additionalProperties": false,
-        "description": "A cell-level diff between two rate table versions (03 §4.2, FR-231).\n\n`changed_cells` is the number of cells whose value differs. The two percentages are\n`None` where there is nothing to compare (no cells, or no cell has a non-zero\nbaseline); percentages are Decimals, serialised as strings, never JSON floats (R2).",
+        "description": "A cell-level diff between two rate table versions (03 §4.2, FR-231).\n\n`changed_cells` is the number of cells whose value differs. The two percentages are\n`None` where there is nothing to compare (no cells, or no cell has a non-zero\nbaseline); percentages are Decimals, serialised as strings, never JSON floats (R2).\n\n`portfolio_exposure` and `matched_exposure` (`RL-1361` item 4) are the named portfolio's\ntotal exposure and the exposure that mapped to a cell of the current version. Both are\n`None` when no portfolio is named, which tells an unweighted diff from a weighted one\nwhose mean is `None` (no weight on a changed cell, or only zero-weight cells).",
         "properties": {
           "changed_cells": {
             "minimum": 0.0,
@@ -10538,6 +10575,18 @@
             ],
             "title": "Exposure Weighted Mean Change Pct"
           },
+          "matched_exposure": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Exposure"
+          },
           "max_abs_change_pct": {
             "anyOf": [
               {
@@ -10549,12 +10598,112 @@
               }
             ],
             "title": "Max Abs Change Pct"
+          },
+          "portfolio_exposure": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Portfolio Exposure"
           }
         },
         "required": [
           "changed_cells"
         ],
         "title": "RateTableDiff",
+        "type": "object"
+      },
+      "RateTableDiffCell": {
+        "additionalProperties": false,
+        "description": "One changed cell of a rate table diff (03 §4.2, FR-231, `RL-1418` T2).\n\n`key` holds each declared key's name and the cell's stored value for it. `change` says\nwhether the cell was added, removed or changed. The values are decimal strings on the\nwire (R2), null on the side where the cell is absent. `abs_change` is\n`current_value - baseline_value` and `rel_change_pct` is that over `baseline_value` x 100;\neach is null unless both values are present, and the percentage also when the baseline is\nzero. `weight` is the cell's Σ exposure (FR-231): `\"0\"` for a current cell whose Σ is 0 or\nthat no portfolio row maps to, and null when no portfolio is named or the cell is\n`removed`, because rows map only to cells of the current version.",
+        "properties": {
+          "abs_change": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Abs Change"
+          },
+          "baseline_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Value"
+          },
+          "change": {
+            "enum": [
+              "added",
+              "removed",
+              "changed"
+            ],
+            "title": "Change",
+            "type": "string"
+          },
+          "current_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Value"
+          },
+          "key": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Key",
+            "type": "object"
+          },
+          "rel_change_pct": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rel Change Pct"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          }
+        },
+        "required": [
+          "key",
+          "change"
+        ],
+        "title": "RateTableDiffCell",
         "type": "object"
       },
       "RateTableKey": {
@@ -27708,7 +27857,7 @@
     },
     "/api/v1/rate-tables/{slug}@{version}/diff": {
       "get": {
-        "description": "**200** with the diff (FR-231); **202** with a Job where either version is\n`storage: parquet` (FR-232) — the same artifact, only latency and status\ndiffer.\n\nThe baseline resolves to the previous version, the seed version, or an explicit\nversion number. The Job runs on the compute queue and stores the diff artifact as\na blob; `result.ref` is its sha256, fetchable from `/blobs/{sha256}`. The 200 read\npath is compute-on-read behind the DP3 cache (rulings 2026-08-28): a hit serves\nthe stored artifact, a miss computes and stores — the key covers the versions'\ncontent hashes and the portfolio identity, never a date.",
+        "description": "**200** with the diff summary (FR-231) read from the stored artifact; **202** with a\n`rate_table.diff_cells` Job where this query's artifact is not yet stored, for either\nstorage (FR-232, R1: an operation that can exceed 2 s returns 202). The Job is the one the\ncells route uses: one artifact serves both, found by the identity of the two versions and\nof the portfolio, so a later request loads no cell.\n\nThe baseline resolves to the previous version, the seed version, or an explicit version\nnumber. With `portfolio` the cells are weighted by its exposure (`RL-1361`): the caller needs\n`dataset:read` for that, checked here and not route-wide, so a rating-only caller still gets\nan unweighted diff; the refusal is the same **403** for any id, so it never says whether the\nportfolio exists. Its scope and status are then checked before any Job is created. A refusal\nthat depends on the portfolio's content is the Job's failure, with the same code.",
         "operationId": "rate_table_diff_api_v1_rate_tables__slug___version__diff_get",
         "parameters": [
           {
@@ -27738,6 +27887,25 @@
               "description": "`previous`, `seed`, or a version number",
               "title": "Against",
               "type": "string"
+            }
+          },
+          {
+            "description": "A `validated` portfolio Dataset Version whose exposure weights the diff (FR-231). Needs `dataset:read`; there is no default.",
+            "in": "query",
+            "name": "portfolio",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A `validated` portfolio Dataset Version whose exposure weights the diff (FR-231). Needs `dataset:read`; there is no default.",
+              "title": "Portfolio"
             }
           },
           {
@@ -27825,6 +27993,21 @@
             },
             "description": "Not found"
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -27842,6 +28025,224 @@
           }
         },
         "summary": "Cell diff of a rate table version against a baseline",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/v1/rate-tables/{slug}@{version}/diff/cells": {
+      "get": {
+        "description": "Every cell the diff counts as changed, in `03` §4.2's key order (FR-231, `RL-1418`).\n\n**200** with one cursor page: a page bounds one response, not the cells. **202** with a\n`rate_table.diff_cells` Job, for either storage, where this query's cell artifact is not yet\nstored (R1: an operation that can exceed 2 s returns 202); the Job writes every changed cell\nas one blob, and the same request then answers 200 from it, reading only its slice. The\nartifact is found by the identity of the two versions and of the portfolio, without loading\na cell. `against` and `portfolio` are checked as on the diff route, before any Job. A cursor\nthis API did not issue is a **400**, a `limit` out of range a **422**.",
+        "operationId": "rate_table_diff_cells_api_v1_rate_tables__slug___version__diff_cells_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "`previous`, `seed`, or a version number",
+            "in": "query",
+            "name": "against",
+            "required": true,
+            "schema": {
+              "description": "`previous`, `seed`, or a version number",
+              "title": "Against",
+              "type": "string"
+            }
+          },
+          {
+            "description": "A `validated` portfolio Dataset Version whose exposure gives each cell its weight (FR-231). Needs `dataset:read`; there is no default.",
+            "in": "query",
+            "name": "portfolio",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A `validated` portfolio Dataset Version whose exposure gives each cell its weight (FR-231). Needs `dataset:read`; there is no default.",
+              "title": "Portfolio"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_RateTableDiffCell_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Malformed request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "The changed cells of a rate table diff, one cursor page at a time",
         "tags": [
           "rating"
         ]
