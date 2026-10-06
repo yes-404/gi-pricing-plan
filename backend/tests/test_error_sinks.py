@@ -123,7 +123,7 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         "Context. The code is chosen by the typed error class, never by this text (FD-1326)"),
     ("backend/src/app/platform/rating_versions.py", "create_rating_version", "str(exc)"): (
         1, "create time: an artifact-level refusal (FR-223 MODEL_REFERENCE_MODE_INCONSISTENT) "
-        "naming the step, the refs and the mode; no quote is involved"),
+        "naming the step and the two declared modes; no quote is involved"),
     ("backend/src/app/platform/rating_versions.py", "compile_rating_version", "str(exc)"): (
         1, "compile time: an artifact-level `ValueError` from `compile_bundle`; no quote is "
         "involved"),
