@@ -128,7 +128,7 @@ Append
 
 *The amendments to the proposal:*
 
-1. "*(Amended 2026-10-05, FD 9707; DP-1 to DP-3 decided by the deputy.)*" →
+1. "*(Amended 2026-10-05, FD 9707; DP-1 to DP-3 decided by [the maintainer (by delegation)].)*" → [Elision: the word our records bar for the maintainer's delegate stood in this quoted text and is elided, per the records rule.]
    "*(Amended <SL 9685 date>, `RL-9642`, FD 9707.)*". A spec amendment cites the governed
    record that rules it, as RL 9710's (working id, #1128) texts do; the maintainer's (by delegation) entries live in a local
    channel file a spec reader cannot open, and this record quotes them. The date is the

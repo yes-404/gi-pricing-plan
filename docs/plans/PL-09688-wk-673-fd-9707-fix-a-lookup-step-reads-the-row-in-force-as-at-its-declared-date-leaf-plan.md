@@ -89,12 +89,12 @@ by `effective_from` (`backend/src/app/platform/reference.py:521`). So **on every
 more than one row, every quote is priced on the oldest row.** `lookup_as_at`
 (`packages/pricing-core/src/pricing_core/data/reference.py:27`) implements the right rule,
 but no scoring code calls it. All three paths evaluate the same `CompiledBundle.decision`,
-built by `load_bundle` → `to_wire` (`runtime.py:646`), and the deputy confirmed that no
+built by `load_bundle` → `to_wire` (`runtime.py:646`), and the maintainer (by delegation) confirmed that no
 upstream filter exists on any path (the entry quoted under DP-1 to DP-3, "Severity signals").
 
 ## The decisions this plan rests on, quoted
 
-All three blocking decision points are decided, by the deputy, in
+All three blocking decision points are decided, by the maintainer (by delegation), in
 `~/gi-pricing-plan.local/channel/to-lead.md`. Each is cited by its entry header:
 
 - **DP-1**, entry "2026-10-05 13:15:53 BST — DECISIONS 17–21 (PL 9689 DP-S3-2/3/6; FD 9707
@@ -123,8 +123,8 @@ All three blocking decision points are decided, by the deputy, in
   upstream filter on /score, /compare or batch)".
 
 **Owner discrepancy, for the lead.** ~~FD 9707~~ FD-1420's draft (#1132 @`9e51cbe8`, §Finding) proposes
-owner WK-1178. The deputy's 13:11:05 entry, item 2, says WK-673. This plan and its slice row
-follow the deputy. The finding's mint reconciles its owner line.
+owner WK-1178. The maintainer's (by delegation) 13:11:05 entry, item 2, says WK-673. This plan and its slice row
+follow the maintainer (by delegation). The finding's mint reconciles its owner line.
 
 ## Status
 
@@ -135,7 +135,7 @@ status flip and the `SL-` row's.
 
 ### Activation needs, in order
 
-1. **~~FD 9707~~ FD-1420 minted** (#1132). It is in the deputy's first finding batch (13:13:32 BST entry,
+1. **~~FD 9707~~ FD-1420 minted** (#1132). It is in the maintainer's (by delegation) first finding batch (13:13:32 BST entry,
    item 5).
 2. **A ruling record (`RL-`) carries DP-1 to DP-4 and text T1** (§"Spec text T1"), because a
    decision lands as a dated artifact (`CLAUDE.md` §12). The decision-maker writes it from the
@@ -144,7 +144,7 @@ status flip and the `SL-` row's.
 3. **This plan made `active`** by a dated line in the activation PR.
 4. **Lane.** It runs in lane B, after `SL-1409` merges. It goes **before PL 9728** (#1113, the
    NFR-489 remedy) if this plan is active first. If PL 9728 is dispatch-ready and this plan is
-   not, PL 9728 goes first and this fix takes the next free build lane. The deputy's priority
+   not, PL 9728 goes first and this fix takes the next free build lane. The maintainer's (by delegation) priority
    rule (13:12:56 BST entry) also lets this fix, as a HIGH G2 blocker, take the first build
    lane that frees once it is active. **It never runs concurrently with PL 9776** (#1051, the
    F35 remedy): both edit `_decision_table_node`, the `runtime.py` docstring and
@@ -491,15 +491,15 @@ measurement, so it need not run exclusive.
 
 ## Decision points
 
-DP-1 to DP-3 were blocking, and each went to the lead as soon as it was found. The deputy
+DP-1 to DP-3 were blocking, and each went to the lead as soon as it was found. The maintainer (by delegation)
 decided all three (quoted above). DP-4 is non-blocking. The options are kept so a reader can
 see what was weighed. The decisions' text governs.
 
 | DP | Question | Options | Recommendation | Owner | Blocks |
 |---|---|---|---|---|---|
-| **DP-1** | What may `as_at` name, and how strict is its value? A `date` input is checked only to be a string (`score.py:366-369`); ZEN's `date()` converts an offset value to UTC and silently misses a malformed one (Task 0 run 1) | (a) `effective_date` or a declared `date` input, checked at compile, and at run time a strict `YYYY-MM-DD`; (b) any input, truncated to a date in the graph; (c) accept datetimes and compare in UTC | (a) | **DECIDED (a)** by the deputy, 13:15:53 BST item 20 | Tasks 1, 2, 3, 5 |
-| **DP-2** | The window mechanism (~~FD 9707~~ FD-1420's Disposition sends it to a DP) | (a) in-graph per-rule `date($)` tests; (b) a numeric-ordinal expression node feeding the table; (c) a host-side pre-filter (not possible: the decision is built once per bundle and cached, while `as_at` varies per quote) | (a) | **DECIDED (a)** by the deputy, 13:20:26 BST item 22, with conditions: open-ended window tested; overlap refused at save or compile with a named code and a test; boundary reds at `from` and `to` | Tasks 1, 2 |
-| **DP-3** | Does DP-1's run-time refusal reach `QuoteContext.effective_date`? | (a) no, the strict check applies to `date` inputs named by `as_at` (here: to the merged-context value, §"A finding from planning"), and `/score`'s parsing is pinned; (b) make the field strict: a model-schema and contract change | (a) | **DECIDED (a)** by the deputy, 13:20:52 BST decision 28, with the pinning tests (Acceptance 7) and a stop if a pin fails | Tasks 3, 4 |
+| **DP-1** | What may `as_at` name, and how strict is its value? A `date` input is checked only to be a string (`score.py:366-369`); ZEN's `date()` converts an offset value to UTC and silently misses a malformed one (Task 0 run 1) | (a) `effective_date` or a declared `date` input, checked at compile, and at run time a strict `YYYY-MM-DD`; (b) any input, truncated to a date in the graph; (c) accept datetimes and compare in UTC | (a) | **DECIDED (a)** by the maintainer (by delegation), 13:15:53 BST item 20 | Tasks 1, 2, 3, 5 |
+| **DP-2** | The window mechanism (~~FD 9707~~ FD-1420's Disposition sends it to a DP) | (a) in-graph per-rule `date($)` tests; (b) a numeric-ordinal expression node feeding the table; (c) a host-side pre-filter (not possible: the decision is built once per bundle and cached, while `as_at` varies per quote) | (a) | **DECIDED (a)** by the maintainer (by delegation), 13:20:26 BST item 22, with conditions: open-ended window tested; overlap refused at save or compile with a named code and a test; boundary reds at `from` and `to` | Tasks 1, 2 |
+| **DP-3** | Does DP-1's run-time refusal reach `QuoteContext.effective_date`? | (a) no, the strict check applies to `date` inputs named by `as_at` (here: to the merged-context value, §"A finding from planning"), and `/score`'s parsing is pinned; (b) make the field strict: a model-schema and contract change | (a) | **DECIDED (a)** by the maintainer (by delegation), 13:20:52 BST decision 28, with the pinning tests (Acceptance 7) and a stop if a pin fails | Tasks 3, 4 |
 | **DP-4** | DP-1's compile check: which codes, and where it runs | Codes: (i) `RATING_TYPE_MISMATCH` for a declared input of another type, and `RATING_GRAPH_UNRESOLVED_REF` for an undeclared name other than `effective_date`; (ii) one new code (a spec change to `03`'s owned codes, `:928-931`). Place: (p) appended to `ALGORITHM_CHECKS`, so it runs at save (`validate_algorithm`) and again at compile (`compile_bundle` re-runs it, `compile.py:573-583`); (q) in `compile_bundle` only | (i) and (p). Both codes are already `03`'s, with matching meanings (`03:844-845`). Running at save tells the author earliest, as FR-227's result-type check does at create. Every committed algorithm that names `effective_date` still saves: `backend/tests/test_rating_algorithms.py:38`, `:86`, `test_rating_compile.py:36`, `:84`, `test_rating_compile_bundle.py:47` | **planner; non-blocking.** The ruling of activation need 2 confirms or changes it | Task 3 |
 
 ### Spec text T1 (proposed for the ruling; applied verbatim in Task 5)
@@ -507,7 +507,7 @@ see what was weighed. The decisions' text governs.
 A dated amendment appended to the FR-221 row's cell (`docs/specs/03-rating-engine.md:107`),
 after its existing sentence:
 
-> *(Amended 2026-10-05, FD 9707; DP-1 to DP-3 decided by the deputy.)* **`as_at` names
+> *(Amended 2026-10-05, FD 9707; DP-1 to DP-3 decided by [the maintainer (by delegation)].)* **`as_at` names
 > `effective_date` — the quote's stamped date — or a declared `date` input, and nothing else.**
 > Anything else is refused when the algorithm is validated: a declared input of another type
 > with `RATING_TYPE_MISMATCH`, and an undeclared name with `RATING_GRAPH_UNRESOLVED_REF`. **The
