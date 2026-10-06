@@ -856,7 +856,7 @@ The fix for FD-1425 (HIGH, final, owner WK-673, before the P2 exit demo, ruled b
 id: SL-1448
 family: slice
 title: WK-673 fix slice — FD-1420: a lookup step reads the row in force as at its declared date
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-06            # original date 2026-10-05, set at the draft; minted 2026-10-06
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc
@@ -867,6 +867,8 @@ relates: [FD-1374, RL-1313, RL-1263, SL-1409]
 ```
 
 The fix for ~~FD 9707 (working id;~~ FD-1420 (HIGH, confirmed by the maintainer (by delegation) on 2026-10-05). A `lookup` step's `to_wire` translation matches the key only, under `hitPolicy: first`. `rows_as_at` orders rows by key and then `effective_from`, so every key with more than one row is priced on its oldest row. That is a mispricing on `/score`, `/score/compare` and the batch path. The fix adds a half-open `[effective_from, effective_to)` window per rule, inside the graph (DP-2 (a)). `as_at` may name only `effective_date` or a declared `date` input. That is checked at compile, and at run time the value must be a strict `YYYY-MM-DD` date (DP-1 (a)). `QuoteContext.effective_date` is unchanged, and tests pin how it parses (DP-3 (a)). Each path is red first, by its cause: the superseded row's rate is returned. No golden quote, freMTPL2 seed, or local `gipricing*` database (93 measured) holds a lookup step, so no recorded price moves. Leaf plan PL-1447 (`draft`). **Activation needs:** FD-1420 minted; a ruling record carrying DP-1 to DP-3 and the FR-221 text; the plan made `active` by a dated line; lane B after `SL-1409` merges, ahead of PL-1454 if this plan is active first, or else the next free build lane (the maintainer (by delegation), 2026-10-05 13:11:05 BST); never concurrent with PL 9776 (#1051), which edits the same `_decision_table_node` and `ALGORITHM_CHECKS` (RL-1263); the dispatch GO. *(Filed 2026-10-05 under working ids 9685 (this row) and 9688 (the plan), reserved by the lead.)*
+
+(Activated 2026-10-06 as the FD-1420 fix slice, in lane A, on the maintainer's (by delegation) GO, "2026-10-06 01:53:50 BST — DISPATCH GO (CONDITIONAL): the FD 9707 fix (PL-1447 / SL-1448) on LANE A; B2 AGREED; and the idle-lane question", its conditions met per "2026-10-06 04:57:57 BST — #1227 read-back verified; ALL THREE LANES FREE: lane A activation now (conditional GO conditions met), and GO requests for lanes B and C asked (sent seconds before this entry)"; every other activation need met at 5351f116: FD-1420 and RL-1446 minted in #1230 (c6886bda), SL-1436 merged first in #1228 (2b83e089), SL-1430 merged in #1227 (5351f116); the lane is the GO's, lane A, where PL-1447 activation need 4 named lane B.)
 
 
 ### WK-674 — Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires**
