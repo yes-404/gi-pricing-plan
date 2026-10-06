@@ -3,7 +3,7 @@
     "id": "delivery-process-core",
     "version": "1.0.0",
     "derived_from": "docs/process/delivery-process.md",
-    "derived_from_digest": "sha256:0b90853e7528ec29cb745bd73ce18ba3e9268904e22365b39d255566d4d2ab4a",
+    "derived_from_digest": "sha256:5af6c6d85d881fb5b24ed2f397c750ca9b6ae48b94fc0106e3cc5215040136e0",
     "verified_against_tree": "0651c1e265648cbd3918adfc729ad965b83b1e0b",
     "authoritative": false,
     "note": "The markdown spec is authoritative. This file is the mechanical extract: state machine, guards, vocabularies, and runtime-state schema for hooks/watcher scripts. Regenerate or diff-check against the md on every spec change (RFC-895 script C4). Each block is the mechanically-checkable subset of the section it cites, not an exhaustive rendering -- a section may state more than its block records, and a block's silence is not the section's silence.",
@@ -122,7 +122,7 @@
       "work",
       "slice"
     ],
-    "children_execution": "sequential_within_a_work_max_2_build_slices_across_works",
+    "children_execution": "sequential_within_a_work_max_3_build_slices_same_work_pair_only_under_conditions",
     "source": "§4, §8"
   },
   "layers": {
@@ -221,8 +221,8 @@
         {
           "id": "process_children",
           "action": "invoke_child_flow_per_child",
-          "mode": "sequential_except_build_slices_across_works_max_2",
-          "amended": "2026-09-29, RL-1263 (§8)"
+          "mode": "sequential_except_build_slices_max_3_same_work_pair_only_under_conditions",
+          "amended": "2026-09-29, RL-1263 (§8); 2026-10-05, RL 9620 (working id) (§8)"
         },
         {
           "id": "audit",
@@ -369,7 +369,7 @@
       "source": "§7"
     },
     "parallelism": {
-      "rule": "no_two_children_of_same_layer_concurrently_except_build_slices_across_works",
+      "rule": "no_two_children_of_same_layer_concurrently_except_build_slices_max_3_same_work_pair_only_under_conditions",
       "protected_interest": "resource_contention_not_plan_stability",
       "plan_independence_is_not_an_exception": true,
       "carve_out": {
@@ -383,8 +383,20 @@
       },
       "source": "§8",
       "build_slices_across_works": {
-        "max_concurrent": 2,
-        "from_different_works": true,
+        "max_concurrent": 3,
+        "gate_slots": 1,
+        "built_slice_waits_for_the_single_gate": true,
+        "targeted_single_file_runs_outside_gate_window": "allowed_never_beside_a_gate_or_benchmark",
+        "gate_slots_corrected": "2026-10-05 15:27:25 BST, the maintainer by delegation: at most one full gate at a time, superseding 15:15:11's 'gate slots stay 2'; RL 9620 (working id)",
+        "from_different_works": "required_unless_same_work_exception",
+        "same_work_exception": {
+          "allowed_only_when_dispatch_record_shows": [
+            "file_sets_resolved_by_existing_contention_rules_exempt_one_sided_name_disjoint_or_serialise",
+            "no_plan_dependency_neither_slice_consumes_the_others_output_named_both_ways"
+          ],
+          "otherwise": "serialise",
+          "amended": "2026-10-05 15:15:11 BST, the maintainer by delegation (option (i)); RL 9620 (working id) amends RL-1263"
+        },
         "each_holds_gate_slot": true,
         "no_shared_files": {
           "forbidden": "both_change_same_existing_function_class_method_spec_section_or_policy_table",
@@ -406,7 +418,8 @@
             "backend/tests/test_contracts.py#ONE_SIDED_SLUGS": "key_disjoint_only_new_key_appended_or_one_slice_changes_one_existing_key_value_no_key_touched_by_both_dispatch_records_name_keys_second_merge_full_gate_incl_test_every_one_sided_slug_is_declared",
             "amended": "2026-10-03 21:11:06 BST, the maintainer's dated amendment to RL-1263's registry list (option (b)): ONE_SIDED_SLUGS in backend/tests/test_contracts.py is exempt for key-disjoint edits",
             "packages/*/src/*/__init__.py#__all__": "names_appended_only_to_the_import_block_and___all___no_name_added_or_removed_by_both_concurrent_slices_dispatch_records_name_names_second_merge_re_gates",
-            "amended_2026-10-05": "2026-10-05 09:44:39 BST, the maintainer's DISPATCH GO for the FD-1356 fix (SL-1409 / PL-1408), option (b): `__all__` in a package `__init__.py` is exempt for name-disjoint appends (with the import lines that bring each name in)"
+            "amended_2026-10-05": "2026-10-05 09:44:39 BST, the maintainer's DISPATCH GO for the FD-1356 fix (SL-1409 / PL-1408), option (b): `__all__` in a package `__init__.py` is exempt for name-disjoint appends (with the import lines that bring each name in)",
+            "amendments_recorded_in": "RL 9620 (working id), both verbatim, and delivery-process.md §8's 2026-10-05 dated line"
           },
           "second_merge": [
             "merge_main",

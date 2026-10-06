@@ -52,6 +52,8 @@ Project
 
 *(Amended 2026-09-29 by the maintainer, dated line by delegation: "one at a time" above is now
 qualified by §8's amendment. Up to 2 build slices, from different Works, may run at once; RL-1263
+(working id).)* *(Amended 2026-10-05 by the maintainer, dated line by delegation: up to 3
+build slices may run at once, and two from the same Work only under §8's conditions; RL 9620
 (working id).)*
 
 One template, applied recursively three times (§5), plus a leaf-level variant at Slice
@@ -96,7 +98,8 @@ declared in the phase's own milestone section and checked by `phase-close.md` (r
 5. **Process children, one at a time** — invoke the next layer's flow for each child,
    strictly sequentially at this level (see §8 for the read-only fan-out carve-out). *(Amended 2026-09-29: "strictly
 sequentially" is qualified by §8's amendment, which allows up to 2 build slices from different
-Works; RL-1263.)*
+Works; RL-1263.)* *(Amended 2026-10-05: up to 3 build slices, and two from the same Work only
+under §8's conditions; RL 9620 (working id).)*
 6. **Audit** — auditor reviews the completed children against this layer's plan: no
    missing requirements, every gate actually achieved, watching specifically for drift at
    this layer's own level (a Phase audit checks work-level drift, not implementation
@@ -178,6 +181,24 @@ Plan-independence is still not an exception (RL-871). "Preparation" means plans,
 rebases, mints and audits. It is not a slice and runs alongside. What "no shared files"
 covers (a closed append-only registry list) and RL-871 §7's three conditions are defined in
 RL-1263, not restated here.
+
+*(Amended 2026-10-05 by the maintainer, dated line by delegation: at most 3 build slices at
+once; at most ONE full gate runs at a time on this VM, and a built slice waits for it
+(corrected 2026-10-05 15:27:25 BST from "gate slots stay 2"); targeted single-file test runs
+stay allowed outside the gate window, never beside a gate or a benchmark. Two slices from the
+same Work may run at once only when the dispatch record shows (a) their file sets resolved by
+the existing contention rules (exempt, one-sided, name-disjoint or serialise) and (b) no plan
+dependency: neither slice consumes the other's output, named both ways. Otherwise they
+serialise.)* The ruling is RL 9620 (working id), which amends RL-1263. A measurement step
+still runs alone. Condition (b) is an extra bar on a same-Work pair, not a ground for it:
+the single gate, not plan-independence, still bounds the contention.
+
+*(Amended 2026-10-05 by the maintainer, dated line by delegation, on the 15:27:25 BST entry:
+the registry list's exempt paths include two dated amendments, `ONE_SIDED_SLUGS` in
+`backend/tests/test_contracts.py` for key-disjoint edits (2026-10-03 21:11:06 BST, #1093) and
+`__all__` in a package `__init__.py` for name-disjoint appends (2026-10-05 09:44:39 BST,
+#1118).)* RL 9620 (working id) records both verbatim; their conditions are there, not
+restated here.
 
 **The interest §8 protects is resource contention, not plan stability.** Two children can be
 perfectly plan-independent and running them concurrently still breaches this rule, so an
