@@ -186,6 +186,42 @@ the sinks file). Its force was shown by mutation: appending `repr(pins)` to the 
 `assert 'marker-zq9x4' not in …`, and the file was restored by `git checkout` (porcelain showed only the two test files). The
 `_SINKS` red is the failed gate's own census failure above.
 
+### The full gate at 343ef9bb (2026-10-06) — ACCEPTED by the lead
+
+**Tree.** Head `343ef9bb3bee01b67a2c1de827a1b1e18fd0b34b`, tree `bd69616d74b47404f01810fa6334e187c52e17ae`: the (B') commit
+on `56acb6fb830c66a745acc58bdd73c6f94e300a68`, which merged `origin/main` `a9ef677747a98a156c1d4e8b8ae9d2b43c4e3ee5` (a merge, no rebase;
+`docs/INDEX.md` was the one conflict, regenerated with `scripts/doc-index.py`; `alembic heads` = 1, `f3a7c1d9e2b4`). Test DB
+`gipricing_sl-1430_db8a5a62`, migrated to head before the run. **Slot:** gate-1 (granted by the lead, 01:48:42 BST wording ruling then
+grant), single `flock -n` run, both halves; gate-2 free at every snapshot. The failed run at `260ead66` (above) is evidence, not this gate.
+
+| stage | exit |
+|---|---|
+| ruff | 0 |
+| mypy | 0 |
+| lint-imports | 0 |
+| audit-docs | 1 (one FAILED line: check 31, gap between 1444 and 9483) |
+| req-coverage | 0 |
+| generate-contracts --check | 0 |
+| pytest | 1 — `13 failed, 5052 passed, 3 skipped, 92 warnings in 1969.47s (0:32:49)` |
+| frontend install / generate:api / lint / type-check / test / build | 0 / 0 / 0 / 0 / 0 / 0 — vitest `97 passed` files, `615 passed` tests |
+
+**Load and memory.** Python half 00:49:19 → 01:22:25 UTC: load 1.46 → 1.40; used 14975 → 15561 MB, free 11859 → 11023 MB.
+Frontend half 01:22:26 → 01:23:54 UTC: load 1.40 → 6.81 (the build's tail); used 15560 → 15690 MB.
+
+**The 13 pytest failures** are the unminted working-id state (LG 9483 not in the allocation, main's allocation ends at 1444), each
+message reading `requirement numbering: 0 module-scoped id(s)…` or `live allocation is not contiguous: [(1444, 9483)]`: `test_audit_docs_ids`
+×2, `test_doc_index` ×1, `test_register_lint` ×3, `test_register_owed` ×1, `test_repository_invariants` ×2,
+`test_audit_docs_process_core_digest` ×2, `test_audit_docs_w37_11_ceiling` ×1, `test_audit_docs_finding_citations` ×1. The lead
+matched them by file to the known check-31 set and accepted the gate. That they clear at the mint is expected, not proven here.
+**Both earlier real reds are cleared:** `test_error_sinks` census (passes) and `test_widening_the_scope…` (`82`, passes).
+
+**Trial merge-trees** (`git merge-tree --write-tree`, at the pre-fix head `260ead66`): against `origin/main` `8f5a8987`: rc 1, tree
+`59a66bce7abfdda84948a0746e963b3b762e248e`; against S7 `origin/sl-1391-…` `89fcb092`: rc 1, tree
+`2752bbdec5582831fd328b4481fd471df81243d9`; against SL-1436 `origin/sl-1436-…` `a0ad36be`: rc 1, tree
+`8a73d06e8af880747e6d4241f1df4df808dab134`. The only conflicted path in each: `docs/INDEX.md` (generated, exempt). S7 has since
+merged: `merge-tree origin/main(a9ef6777) HEAD` before the merge, rc 1, tree `0e648dade8109e1ecb0590b3ecf567a7167f6e09`, conflict
+`docs/INDEX.md` only.
+
 ## PRs
 
 #1227, a draft. The branch `sl-1430-fd-1421-rating-version-algorithm-and-pins` is pushed; the PR is not merged by the executor.
