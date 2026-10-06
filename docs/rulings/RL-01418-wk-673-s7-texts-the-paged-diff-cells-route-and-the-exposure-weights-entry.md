@@ -10,7 +10,7 @@ phase: P2
 work: WK-673
 supersedes: []
 superseded_by: ~
-corrected_by: []
+corrected_by: [RL-1442]
 corrects: RL-1361
 relates: [FD-1358, RL-1361, PL-1267, PL-1286, FR-231, FR-232, FR-450]
 ---

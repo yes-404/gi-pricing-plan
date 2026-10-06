@@ -2,7 +2,7 @@
 id: FD-1431
 family: finding
 title: The role files had no hard no-cd rule and no sweep-pause rule for a held gate slot
-status: active
+status: closed
 created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: auditor
 tree: c3e7d6c7e2e3c293f64a045a0b931227c581a50a

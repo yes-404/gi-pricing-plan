@@ -39,6 +39,7 @@ from model_schema.rating import (
     KeyFilter,
     RateTable,
     RateTableDiff,
+    RateTableDiffCell,
     RateTableKey,
     RateTableKeyType,
     RateTableStorageMode,
@@ -383,41 +384,83 @@ def _index_rows(
     }
 
 
-def _compute_diff(
+def _diff_cells(
     baseline: Cells,
     current: Cells,
     keys: Sequence[RateTableKey],
     value: RateTableValue,
     weights: Weights | None,
-) -> RateTableDiff:
-    """The shared core of diff_vs_previous and diff_vs_seed (FR-231).
+) -> list[RateTableDiffCell]:
+    """Every changed cell, in key order: the one pass `diff_cells` and the summary share.
 
-    A cell counts as changed when its value differs from the baseline; an added or
-    removed key counts. Percentage statistics cover cells comparable in both
-    directions with a non-zero baseline, so a cell born from or into zero never
-    fabricates an infinite change. The exposure-weighted mean covers the comparable
-    cells that carry a weight (DP1: weights at fetch time).
+    A cell counts as changed when its value differs from the baseline; an added or removed
+    key counts. The order is ascending by key tuple, the keys in declaration order and each
+    value compared as its stored string by code point (`03` §4.2). With `weights`, a cell of
+    the current version reads its Σ or `0`, a `removed` cell none (rows map only to the
+    current version); without them every weight is `None`.
     """
     key_names = [key.name for key in keys]
     before = _index_rows(baseline, key_names, value.name)
     after = _index_rows(current, key_names, value.name)
 
-    changed = sorted(
-        key for key in before.keys() | after.keys() if before.get(key) != after.get(key)
-    )
-    comparable: list[Decimal] = []
-    weighted: list[tuple[Decimal, Decimal]] = []
-    for key in changed:
+    cells: list[RateTableDiffCell] = []
+    for key in sorted(k for k in before.keys() | after.keys() if before.get(k) != after.get(k)):
         old, new = before.get(key), after.get(key)
-        if old is None or new is None or old == 0:
-            continue
-        pct = (new - old) / old * 100
-        comparable.append(pct)
-        if weights is not None:
+        abs_change = rel_change_pct = None
+        if old is not None and new is not None:
+            abs_change = new - old
+            if old != 0:
+                rel_change_pct = abs_change / old * 100
+        weight: Decimal | None = None
+        if weights is not None and new is not None:
             raw_weight = weights.get(key)
-            if raw_weight is not None:
-                weighted.append((Decimal(str(raw_weight)), pct))
+            weight = Decimal(str(raw_weight)) if raw_weight is not None else Decimal(0)
+        cells.append(
+            RateTableDiffCell(
+                key=dict(zip(key_names, key, strict=True)),
+                change="added" if old is None else "removed" if new is None else "changed",
+                baseline_value=old,
+                current_value=new,
+                abs_change=abs_change,
+                rel_change_pct=rel_change_pct,
+                weight=weight,
+            )
+        )
+    return cells
 
+
+def diff_cells(
+    baseline_cells: Cells,
+    current_cells: Cells,
+    keys: Sequence[RateTableKey],
+    value: RateTableValue,
+    *,
+    weights: Weights | None = None,
+) -> list[RateTableDiffCell]:
+    """Every changed cell of a diff, in `03` §4.2's key order (FR-231, `RL-1418` T3).
+
+    The set is exactly what `diff_vs_previous` and `diff_vs_seed` count as `changed_cells`,
+    and the summary is computed from these items, so the two cannot disagree.
+    """
+    return _diff_cells(baseline_cells, current_cells, keys, value, weights)
+
+
+def diff_summary(cells: Sequence[RateTableDiffCell]) -> RateTableDiff:
+    """The summary of a diff, derived from its changed cells (FR-231, `RL-1418` T2).
+
+    Percentage statistics cover cells comparable in both directions with a non-zero
+    baseline, so a cell born from or into zero never fabricates an infinite change. The
+    exposure-weighted mean covers the comparable cells that carry a weight; a zero weight
+    carries none, like an absent one, so a mean over cells whose total weight is 0 is
+    undefined (`None`), not a division by zero (`RL-1361` item 6). The coverage figures are
+    the caller's: they are not in the cells.
+    """
+    comparable = [c.rel_change_pct for c in cells if c.rel_change_pct is not None]
+    weighted = [
+        (c.weight, c.rel_change_pct)
+        for c in cells
+        if c.weight is not None and c.weight != 0 and c.rel_change_pct is not None
+    ]
     max_abs = max(abs(pct) for pct in comparable) if comparable else None
     if weighted:
         # An explicit Decimal start keeps the sum Decimal — `sum` starts at int 0,
@@ -429,10 +472,23 @@ def _compute_diff(
     else:
         mean = None
     return RateTableDiff(
-        changed_cells=len(changed),
+        changed_cells=len(cells),
         max_abs_change_pct=max_abs,
         exposure_weighted_mean_change_pct=mean,
     )
+
+
+def _compute_diff(
+    baseline: Cells,
+    current: Cells,
+    keys: Sequence[RateTableKey],
+    value: RateTableValue,
+    weights: Weights | None,
+) -> RateTableDiff:
+    """The shared core of diff_vs_previous and diff_vs_seed (FR-231): `diff_summary` over
+    `_diff_cells`, so the summary and the cells cannot disagree. DP1: weights are supplied
+    at fetch time."""
+    return diff_summary(_diff_cells(baseline, current, keys, value, weights))
 
 
 def diff_vs_previous(
