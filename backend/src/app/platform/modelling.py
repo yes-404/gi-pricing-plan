@@ -72,6 +72,7 @@ __all__ = [
     "create_factor",
     "flags_for",
     "list_factors",
+    "load_factor_by_ref",
     "load_factors",
     "load_interval_models",
     "load_model",
@@ -341,6 +342,31 @@ async def load_factors(
     deduped = list(dict.fromkeys(operand_ids))
     operands = await _load(deduped, "interaction operands")
     return ordered + [to_factor(operands[fid]) for fid in deduped]
+
+
+async def load_factor_by_ref(
+    session: AsyncSession, *, workspace_id: UUID, ref: ArtifactRef
+) -> list[Factor]:
+    """The Factor a `factor:<slug>@<version>` ref pins, **followed by the operands it crosses**.
+
+    A rate table key carries a ref, not an id (`RL-1361`), so this finds the row by its slug
+    and version and then goes through `load_factors`, which brings the interaction operands a
+    cross needs. A ref that names no Factor of this workspace is a `404` naming the ref, never
+    an empty list: `resolve_factors` would otherwise report a dangling reference as a
+    resolution failure.
+    """
+    factor_id = await session.scalar(
+        select(FactorRow.id).where(
+            FactorRow.workspace_id == workspace_id,
+            FactorRow.slug == ref.slug,
+            FactorRow.version == ref.version,
+        )
+    )
+    if factor_id is None:
+        raise PlatformError(
+            "NOT_FOUND", "Factor not found", 404, f"No factor {ref} in this workspace."
+        )
+    return await load_factors(session, workspace_id=workspace_id, factor_ids=[factor_id])
 
 
 async def reserve_model(
