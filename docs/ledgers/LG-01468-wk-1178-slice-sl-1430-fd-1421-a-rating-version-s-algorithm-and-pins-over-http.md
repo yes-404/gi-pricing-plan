@@ -234,8 +234,9 @@ performed the closing acts in the mint commit on the auditor's behalf, after the
 the roadmap `SL-1430` row `status: closed` with its dated line, `docs/INDEX.md` regenerated, `audit-docs` run. `created:` and `tree:`
 stay as filed. The working id this record carried before the mint is replaced by `LG-1468` in the record's `id:` and its provenance
 sentence; it remains only inside the verbatim gate outputs of the gate section (`between 1444 and 9483`, `the unminted working id 9483`,
-`[(1444, 9483)]`), which are quotations of tool output. `origin/main` was `a9ef677747a98a156c1d4e8b8ae9d2b43c4e3ee5` at the mint,
-the merge-base of the audited head, so no merge of `main` entered the branch. The register is unchanged by this mint: `FD-1421`'s row
+`[(1444, 9483)]`), which are quotations of tool output. `origin/main` was `a9ef677747a98a156c1d4e8b8ae9d2b43c4e3ee5`, the merge-base of the audited head, when the mint began; it then
+moved to `c6886bda9ce1c200a921d490530a79cbfb3ca820` (#1230, the B1 mint: docs-only, `git diff --name-status a9ef6777..c6886bda` lists only
+`docs/` paths), which the mint merged into the branch (merge-tree rc 1, the one conflict `docs/INDEX.md`, regenerated). The register is unchanged by this mint: `FD-1421`'s row
 names its own event, "the WK-1178 slice merges … and `03:908` and `RatingVersionCreate` agree", after which the auditor sets it
 closed; `FD-1437` stays with WK-675 S3's leaf, since this slice applied only RL-1438's create-time refusal (item 2), not the
 compile-site code or the sweep of bare `ValueError` raises.
