@@ -81,7 +81,7 @@ delta changed, each marked in place, nothing deleted:
    its `feature_map`") is refused against the severity component, which declares no such
    offset, so A-4's ruled path could not save. A component ref resolving to no Model is left to
    compile under (a) and (b) alike (R1). *(Pre-mint delta 2 2026-10-05, DP-A3-7 ruled; see §"Pre-mint delta 2, 2026-10-05".)* **Ruled (a)** at 18:44:45 BST;
-   A-2's check has no completeness limb, so none applies here.
+   A-2's check has no completeness limb, so none applies here. *(Pre-mint delta 3 2026-10-06, records named; see §"Pre-mint delta 3, 2026-10-06".)* The union's record is RL 9571 (working id, #1188); the per-component completeness limb's is RL 9491 (working id, #1214), built by SL 9495, not here.
 5. **Serialisation with SL 9568 (PL 9567, WK-673; #1193 @`42d8be16`).** Its hand-off
    (`:235-243` at that head), and the maintainer's (by delegation) entry "2026-10-05 17:51:03
    BST — …", item 2, "Serialising A-1/A-2/A-3 with SL 9568 on _model_call_handler: agreed". So
@@ -111,7 +111,7 @@ nothing deleted:
    > R4 now in PL 9595 as Acceptance 16: good catch; the platform/ write is accepted within A-3's estimate.
 
    The entry is not yet in a minted RL; the ruling's record id is the lead's to name, and the
-   plan is re-pointed at it at the mint. Its last line settles delta 1 item 3's scope point:
+   plan is re-pointed at it at the mint. *(Pre-mint delta 3 2026-10-06, records named; see §"Pre-mint delta 3, 2026-10-06".)* The lead named RL 9571 (#1188) for the union half; the completeness limb is RL 9491's. Its last line settles delta 1 item 3's scope point:
    the `backend/src/app/platform/` write is inside A-3's estimate.
 
 2. **The completeness limb: A-2's check has NONE.** Read in PL 9597 (#1178,
@@ -147,11 +147,72 @@ nothing deleted:
    Acceptance 16 gains **no** "missing severity factor → 422" red. Acceptance 16's membership
    test stands under (a) as written. If A-2's check gains a completeness limb before this
    slice runs (Task 0 Step 3 reads A-2's merged function), the ruling's per-component clause
-   then binds, and the executor STOPS and reports rather than building it unplanned.
+   then binds, and the executor STOPS and reports rather than building it unplanned. *(Pre-mint delta 3 2026-10-06, this STOP re-scoped; see §"Pre-mint delta 3, 2026-10-06".)* The per-component limb is at compile, SL 9495's (RL 9491); A-2's `required_model_inputs` helper is not a trigger. Only a save-time refusal of an unmapped required input in A-2's merged check is.
 
 3. **Marked in place:** delta 1 item 4 (DP-A3-7), activation need 5, and Acceptance 16. No
    `SL-` row text names DP-A3-7 (`grep -n 'DP-A3-7' docs/roadmap.md` is empty), so
    `docs/roadmap.md` is not touched.
+
+### Pre-mint delta 3, 2026-10-06
+
+Edited 2026-10-06 from 01:17:02 BST (`TZ=Europe/London date`), before this plan's mint, by the
+planner, on the lead's brief `~/gi-pricing-plan.local/handover/brief-planner-a3-delta3-2026-10-06.md`,
+items (i) and (ii) of `~/gi-pricing-plan.local/handover/a2a3-readiness-2026-10-06.md`. Read at
+this branch's head `2404ac86aaba6e1211d0779d7d20bcfeb9c4742e`; nothing was merged. Nothing is
+re-decided here. What this delta changed, each marked in place, nothing deleted:
+
+1. **The completeness limb, per component included, is SL 9495's at compile, never A-3's.**
+   Delta 2 item 2 was written before two entries in `channel/to-lead.md`. The first, headed
+   "2026-10-05 18:51:33 BST — Save-time completeness: DECIDED NOW as (b), completeness at
+   COMPILE; no OQ; an RL with the FR-240 T-text; A-2's code reused", verbatim in part:
+
+   > (b): compile_bundle refuses a model_call step whose feature_map does not cover the PINNED model's required Factors (or its feature_order where it has none), using the existing resolver, before approval or deploy. Per component for a peril_structure_ref (17:44 DP-A3-7's per-component limb now has its home, at compile, not at save).
+
+   and, from its RECORDS line: "plus a note in PL 9597 (A-2) that its membership check is
+   explicitly NOT a completeness check. The build is a small WK-1178 slice after A-2 (the same
+   function family) and before A-4's demo path." Its record is RL 9491 (working id, #1214
+   @`6a33fca2`), item 2, "This is the home of the per-component limb of DP-A3-7 (the 18:44:45
+   BST entry, item 1)"; its build is SL 9495 (PL 9494, working ids, #1216 @`b11f610b`).
+
+   The second, headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change,
+   A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", items 1 and 3, verbatim:
+
+   > 1. ORDER: A-2 → A-3 → SL 9495 → A-4, ACCEPTED (the per-component limb needs A-3's _resolve_peril_components; it still satisfies after A-2 and before A-4). The need "PL 9649 merged" (ResolvedArtifact.factors): accepted.
+
+   > 3. DP-1: ONE public pricing-core helper defines "a model's required inputs" (its Factors, or fit_result.feature_order when it has none). It is BORN IN A-2, which merges first: A-2's plan (PL 9597, unminted) gains a pre-mint task that creates the helper in pricing-core and has its own save check call it. SL 9495 then REUSES it with no second definition. If A-2 has already merged without it when SL 9495 starts, SL 9495 extracts it from A-2's function as a no-behaviour-change refactor commit before its reds. Either way, one definition, and a test proves both call sites use it (one helper, two callers, by grep in the test or an import assertion).
+
+   So delta 2 item 2's conditional STOP is **re-scoped** as follows. Its other sentences stand.
+   - **Not a trigger:** A-2's merged save check defining or calling `required_model_inputs`
+     (`pricing_core.modelling.factors`, PL 9597 Task 1b). Under item 3 above the save check
+     calls the helper, and the helper is not a completeness limb. Nor is the absence of any
+     compile-time completeness check when this slice runs: SL 9495 runs after A-3 (item 1
+     above).
+   - **Still a trigger, and only this:** Task 0 Step 3 finds that A-2's merged save check
+     **refuses** a `feature_map` because one of a model's required inputs is **not mapped**.
+     That is a completeness refusal at save. The 18:51:33 entry homes it at compile, not at
+     save, and its RECORDS line says A-2's check is "explicitly NOT a completeness check". The
+     executor then STOPS and reports to the lead. It does not extend that refusal to the
+     peril branch, and it does not remove it.
+   - **Never built in A-3:** a completeness check of any kind, per component or not, at save
+     or at compile. It is SL 9495's (RL 9491 item 2).
+
+2. **SL 9495 consumes `_resolve_peril_components`.** PL 9494 (#1216 @`b11f610b`) Task 0 Step 1
+   (`:381-386` at that head) greps for it under `packages/pricing-core/src`. Its Step 2
+   (`:387-389`) records "its return type and the key of its dict". So Task 2 Step 1 keeps the
+   name `_resolve_peril_components` and the return type `dict[str, ResolvedArtifact]`
+   (§"Self-review" item 5). A change to either is a STOP to the lead before commit.
+
+3. **DP-A3-7's records, named.** The lead's entry "2026-10-06 01:15:49 BST — The G2 records:
+   ONE batch of seven, not two", verbatim in part: "DP-A3-7's union half goes into RL 9571 #1188
+   with no new PR." So the record of DP-A3-7 (a), the union, is **RL 9571** (working id,
+   #1188). The record of its completeness limb is **RL 9491** (item 1 above). At
+   `cc5d0d61c8c3229074bc93d876bd869f8fe6ac9e` (#1188's head, read 2026-10-06 01:17 BST) RL 9571
+   does not yet carry DP-A3-7 (`git grep -c DP-A3-7` over its `docs/` files: no hit). Activation
+   need 5's alignment clause covers the minted text. RL 9491 is SL 9495's need, not this
+   slice's. The working → minted re-points are the minter's, at the mint.
+
+4. **Marked in place:** delta 1 item 4, delta 2 items 1 and 2, activation need 5, and
+   Acceptance 16. No `SL-` row text changes, so `docs/roadmap.md` is not touched.
 
 ## Goal
 
@@ -243,7 +304,7 @@ row's status flip and this plan's.
    slice predicts each component through the same per-kind dispatch, so a GLM component scores
    only after A-2. A-2 and this slice both edit `_model_call_handler` and `compile_bundle`;
    they serialise in any case.
-5. **The ruling on DP-A3-1 to DP-A3-6 merged and minted.** *(Pre-mint delta 2026-10-05, RL 9571; see §"Pre-mint delta, 2026-10-05". It is RL 9571 (#1188 @`cc5d0d61`); DP-A3-7's ruling is needed too.)* *(Pre-mint delta 2 2026-10-05, DP-A3-7 ruled; see §"Pre-mint delta 2, 2026-10-05".)* DP-A3-7 was ruled (a) at 18:44:45 BST; the need is its record minted. If the minted text differs from this
+5. **The ruling on DP-A3-1 to DP-A3-6 merged and minted.** *(Pre-mint delta 2026-10-05, RL 9571; see §"Pre-mint delta, 2026-10-05". It is RL 9571 (#1188 @`cc5d0d61`); DP-A3-7's ruling is needed too.)* *(Pre-mint delta 2 2026-10-05, DP-A3-7 ruled; see §"Pre-mint delta 2, 2026-10-05".)* DP-A3-7 was ruled (a) at 18:44:45 BST; the need is its record minted. *(Pre-mint delta 3 2026-10-06, records named; see §"Pre-mint delta 3, 2026-10-06".)* That record is RL 9571 (#1188), which carries the union half; RL 9491 (the completeness limb) is SL 9495's need, not this slice's. If the minted text differs from this
    plan, the minted text governs, and the planner aligns the plan before its first merge.
 6. **The lane is free under `RL-1263` as amended by RL 9620 (working id, #1162):** no build
    slice that edits `compile_bundle` (PL 9610, PL 9609; PL 9649 once merged is history) or
@@ -349,7 +410,7 @@ suite outside Task 7.
     some component accepts, including the frequency component's offset column, answers `201`.
     **Red first:** after A-2's merge the same map saves `201`, because R4 skips the step; the
     red is recorded in the ledger. *(Pre-mint delta 2 2026-10-05, DP-A3-7 ruled; see §"Pre-mint delta 2, 2026-10-05".)* DP-A3-7 is ruled (a); A-2's check
-    has no completeness limb, so no "missing factor" red is added here.
+    has no completeness limb, so no "missing factor" red is added here. *(Pre-mint delta 3 2026-10-06, completeness re-homed; see §"Pre-mint delta 3, 2026-10-06".)* A map that misses a component's required input still saves `201` at this slice's merge; its `422` at compile is SL 9495's (RL 9491 item 2).
 
 ## Global Constraints
 
