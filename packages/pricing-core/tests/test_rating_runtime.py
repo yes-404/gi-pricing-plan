@@ -343,7 +343,7 @@ def test_to_wire_translates_a_constraint_step() -> None:
     import zen
 
     def handler(request: Any) -> dict[str, Any]:
-        return {"output": {"risk_premium_minor": 5000}}
+        return {"output": {**request.input, "risk_premium_minor": 5000}}
 
     decision = zen.ZenEngine({"customHandler": handler}).create_decision(json.dumps(wire))
     decision.validate()

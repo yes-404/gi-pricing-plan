@@ -14493,6 +14493,14 @@
             "title": "Sample Reason",
             "type": "string"
           },
+          "status": {
+            "enum": [
+              "complete",
+              "mismatch"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
           "trace": {
             "$ref": "#/components/schemas/Trace"
           }
@@ -14504,6 +14512,7 @@
           "bundle_hash",
           "sample_reason",
           "environment",
+          "status",
           "created_at",
           "trace"
         ],
