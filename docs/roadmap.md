@@ -1502,7 +1502,7 @@ The emergency fix for FD-1425 (HIGH), on the maintainer's (by delegation) ruling
 id: SL-1430
 family: slice
 title: WK-1178 fix slice — FD-1421, POST /rating-versions declares the algorithm and the pins
-status: active                 # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc
@@ -1513,6 +1513,8 @@ relates: [SL-1300, FD-1297, CR-838, PL-1371, SL-1409, SL-1391, RL-1263, FR-237]
 ```
 
 The fix for FD-1421 (HIGH, the maintainer (by delegation), 2026-10-05 13:12:56 BST; on G2's path): `POST /api/v1/rating-versions` takes `algorithm_ref`, `pins` and `model_reference_mode`, typed by a new `model-schema` `RatingVersionCreate` that replaces the route-local class, and published under `docs/contracts/schemas/generated/`. A ref of the wrong type is 422 at create, and so is a model-reference-mode mismatch with an algorithm that resolves (FR-223, RL-1438 item 2); resolvability and maturity stay with compile (FR-240), so an unknown, unapproved or peril-structure pin is refused there (the last is FD 9995's tripwire). A version created over HTTP compiles, red first. The demo seed declares its algorithm and pins at create and stops writing them on the row. RL-1428) decides option (a), and its T1 to T3 are applied byte for byte. Leaf plan PL-1429 (`draft`). **Activation needs:** FD-1421 and RL-1428 minted; PL-1429's DP-1 (RL-1438 item 2's mode check at create, where `algorithm_ref` resolves), DP-2 (RL-1428's seed predicate) and DP-3 (the type check on the request only), decided (a) by the maintainer (by delegation), 2026-10-05 13:20:26 BST, items 25–27 (met); the plan active; the lane: first in lane C, with WK-675 S2 after it (the maintainer (by delegation), 2026-10-05 13:29:05 BST, applying the 13:12:56 BST priority rule); DP-4 and DP-5 accepted (a) with conditions (13:29:05 BST, item 33; met); the trial merge with SL-1391 recorded (item 32); the dispatch GO. *(Filed 2026-10-05 under SL-1430 (this row) and PL-1429 (the plan), reserved by the lead.)*
+**Closed 2026-10-06** on the slice audit (`handover/audit-sl1430-2026-10-06.md`, local; L1 and L2 accepted), at the mint of ledger `LG-1468` (the executor's closing acts, `executor.md` mint step; `document-ids.md` §1.6). FD-1421 is closed by the auditor after the merge, as its register row says.
+
 (Activated 2026-10-05 as the FD-1421 fix slice, first in lane C, on the maintainer's (by delegation) GO, "2026-10-05 19:58:58 BST — DISPATCH GO: WK-1178 SL-1430 (PL-1429, the FD-1421 fix) on LANE C", as corrected by "2026-10-05 19:59:43 BST — CORRECTION to my 19:58:58 GO: the errors.py append is NOT struck; the STOP condition is amended as you propose"; dispatch record DISPATCH-WK-1178-SL1430-2026-10-05.)
 
 #### SL-1455 — WK-1178 fix slice — NFR-489: the /score request path meets its p99 budget at 25 to 200 rps

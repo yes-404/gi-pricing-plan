@@ -11754,7 +11754,18 @@
       },
       "RatingVersionCreate": {
         "additionalProperties": false,
+        "description": "The body of `POST /api/v1/rating-versions` (03 §5.1, FR-237; RL-1428).\n\nCreate stores the declared algorithm and pins and checks only their shape: a ref of the\nwrong type is refused here (422). Whether each ref resolves, and at what maturity, is\ncompile's (FR-240), so a version created without them is refused there with\n`RATING_VERSION_UNPINNED`.",
         "properties": {
+          "algorithm_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "dataset_version_id": {
             "format": "uuid",
             "title": "Dataset Version Id",
@@ -11763,7 +11774,27 @@
           "model_ref": {
             "$ref": "#/components/schemas/ArtifactRef"
           },
+          "model_reference_mode": {
+            "default": "exact",
+            "enum": [
+              "exact",
+              "approximation"
+            ],
+            "title": "Model Reference Mode",
+            "type": "string"
+          },
+          "pins": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pins"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
             "title": "Slug",
             "type": "string"
           }
@@ -28926,7 +28957,7 @@
         ]
       },
       "post": {
-        "description": "Create a draft rating version with pins to a model (FR-237).\n\nThe draft version is editable until submitted for approval. It pins an approved\nmodel for rating use.",
+        "description": "Create a draft rating version, declaring its algorithm and pins (FR-237).\n\nTheir shape is checked here (422); whether they resolve, and at what maturity, is\nchecked at compile (FR-240). A declared mode that the algorithm's `model_call` steps\ncontradict is 422 `MODEL_REFERENCE_MODE_INCONSISTENT` (FR-223).",
         "operationId": "create_rating_version_api_v1_rating_versions_post",
         "parameters": [
           {
