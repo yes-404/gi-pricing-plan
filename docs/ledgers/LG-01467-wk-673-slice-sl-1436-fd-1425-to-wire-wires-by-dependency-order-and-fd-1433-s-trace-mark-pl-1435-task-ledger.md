@@ -1,8 +1,8 @@
 ---
-id: LG-9482
+id: LG-1467
 family: ledger
 title: WK-673 slice SL-1436 — FD-1425's wiring limb, to_wire wires by dependency order, and FD-1433's trace mark (PL-1435), task ledger
-status: active
+status: closed
 created: 2026-10-05
 owner: executor
 tree: 23af6997161789887d26f2868a6022a0738e44e6
@@ -196,7 +196,7 @@ cap; the wait was on the flock's pid (cwd read as this worktree). Python half 00
 | stage | result |
 |---|---|
 | ruff, mypy, import_linter, req_coverage, contracts | pass (exit 0) |
-| audit_docs | FAIL (exit 1): only `check 31: gap in the full allocation between 1442 and 9482` (LG 9482 pre-mint) |
+| audit_docs | FAIL (exit 1): only `check 31: gap in the full allocation between 1442 and 9482` (the ledger, then still unminted under working id 9482, now LG-1467) |
 | pytest | FAIL (exit 1): `13 failed, 4957 passed, 4 skipped, 86 warnings in 1636.90s (0:27:16)` |
 | pnpm install --frozen-lockfile, generate:api, lint, type-check, test, build | all rc 0 |
 
@@ -504,3 +504,24 @@ the cause experiment and the downstream-reader check above, both run.
 
 #1228, draft, opened 2026-10-06 from branch `sl-1436-fd-1425-to-wire-dependency-order` (gate head `e0e2ff20`; the
 ledger commits after it are docs only). Not merged; the merge is the lead's.
+
+## Closing note (2026-10-06, the mint; `document-ids.md` §1.6's closing acts, performed by the executor per `executor.md`)
+
+Minted as `LG-1467` (working id 9482); status `closed`; the roadmap `SL-1436` row `closed`. Basis: the slice audit
+(`gi-pricing-plan.local/handover/audit-sl1436-2026-10-06.md`, local, not in the repository, head audited `669d5526`,
+range `origin/main...669d5526`) and Acceptance 11's three-file test, run at the merge head `8a6fb56b9b04fe69ba9ce95b81dc38ecf18ac9a6`
+(`origin/main` `a9ef6777` merged in; `git merge-tree --write-tree` rc 1, conflict in `docs/INDEX.md` only, regenerated):
+
+```text
+OMP_NUM_THREADS=1 nice -n 10 uv run pytest packages/pricing-core/tests/test_testing.py packages/pricing-core/tests/test_replay.py packages/pricing-core/tests/test_testing_determinism.py -q
+49 passed in 43.30s
+```
+
+Both slots (`/tmp/slots/gate-1`, `gate-2`) read free by the probe immediately before the run; no assert edited.
+
+The audit's findings, by id, quoted from its proposed-findings list:
+
+- **F-A** — "Commit 318a16ce rewrote the end of LG 9482 and deleted \"The trial merges before the gate\" section." **Restored at `a0ad36be`** (section "The trial merges", above).
+- **F-B** — "Acceptance 11 is not met as written (LOW, documentary)." The replay script is inline above with its sha256 `b43d213cdd4bae7c3b6d100933ba85875421ae15925a5eccde56832ecf71cfea`; the 450 differing lines are accepted by the 23:51:14 ruling (A); the three-file test's totals are the 49 passed above.
+- **F-C** — "the LOW finding the ruling asks an auditor to file" (the zen custom-node return path cuts floats to 15 significant digits) became **FD 9480, PR #1229**.
+- **F-D** — "Ledger front matter `tree:` is the base 23af6997, not the head" (informational); and "the ledger itself says the executor did not compare the 13 failures with a known set": **compared by the lead — identical, by test name, to the known check-31 set recorded at LG-1444 :289-293.**
