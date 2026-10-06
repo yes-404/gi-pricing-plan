@@ -111,7 +111,7 @@ nothing deleted:
    > R4 now in PL 9595 as Acceptance 16: good catch; the platform/ write is accepted within A-3's estimate.
 
    The entry is not yet in a minted RL; the ruling's record id is the lead's to name, and the
-   plan is re-pointed at it at the mint. *(Pre-mint delta 3 2026-10-06, records named; see §"Pre-mint delta 3, 2026-10-06".)* The lead named RL 9571 (#1188) for the union half; the completeness limb is RL 9491's. Its last line settles delta 1 item 3's scope point:
+   plan is re-pointed at it at the mint. *(Pre-mint delta 3 2026-10-06, records named; see §"Pre-mint delta 3, 2026-10-06".)* RL 9571 (#1188) is named for the union half (the 2026-10-06 01:15:49 BST entry); the completeness limb is RL 9491's. Its last line settles delta 1 item 3's scope point:
    the `backend/src/app/platform/` write is inside A-3's estimate.
 
 2. **The completeness limb: A-2's check has NONE.** Read in PL 9597 (#1178,
@@ -202,7 +202,7 @@ re-decided here. What this delta changed, each marked in place, nothing deleted:
    name `_resolve_peril_components` and the return type `dict[str, ResolvedArtifact]`
    (§"Self-review" item 5). A change to either is a STOP to the lead before commit.
 
-3. **DP-A3-7's records, named.** The lead's entry "2026-10-06 01:15:49 BST — The G2 records:
+3. **DP-A3-7's records, named.** The maintainer's (by delegation) entry "2026-10-06 01:15:49 BST — The G2 records:
    ONE batch of seven, not two", verbatim in part: "DP-A3-7's union half goes into RL 9571 #1188
    with no new PR." So the record of DP-A3-7 (a), the union, is **RL 9571** (working id,
    #1188). The record of its completeness limb is **RL 9491** (item 1 above). At
