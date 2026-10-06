@@ -1,9 +1,9 @@
 ---
-id: RL-9767
+id: RL-1474
 family: ruling
 title: PL-1286 DP-6 decided — a validate-only route takes a RatingAlgorithmDraft and reports every located issue through the server's own checks, discharging FR-24's designer exception
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-01
+created: 2026-10-06            # original date 2026-10-01, set at the draft; minted 2026-10-06
 owner: decision-maker
 tree: 8bd782acbbdde8e3b4195b5a0acb89183b5a0253
 phase: P2
@@ -15,12 +15,14 @@ corrects: ~
 relates: [PL-1286, FR-24, FR-212, FR-214, FR-219, FR-223, FR-227, FR-244, FR-246, FR-276, FD-1335, FD-1366, FD-1374]
 ---
 
-# RL-9767 — PL-1286 DP-6 decided: a validate-only route takes a `RatingAlgorithmDraft` and reports every located issue through the server's own checks, discharging `00` FR-24's designer exception
+# RL-1474 — PL-1286 DP-6 decided: a validate-only route takes a `RatingAlgorithmDraft` and reports every located issue through the server's own checks, discharging `00` FR-24's designer exception
+
+*(Minted 2026-10-06 as RL-1474 from working id 9767, in the B2+B3 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
 
 ## How this was ruled
 
 **Ruled 2026-10-01 10:12 BST at effort `medium`** by the decision-maker session
-`dm-675dp56`, on the same commission as RL 9766 (working id), which rules DP-5. That record's
+`dm-675dp56`, on the same commission as RL-1473, which rules DP-5. That record's
 *How this was ruled* section gives the effort check and the commission. **Working id 9767**,
 allocated by the lead. It is minted at its merge turn, and every `RL-<this>` placeholder
 below is then this record's minted id.
@@ -153,7 +155,7 @@ plan going `active`.
 6. **`rating:write`.** The route exists for authoring, and only an author can save what it
    validates. It writes nothing, persists nothing and records no audit event.
 7. **FR-223 is out of the route.** It needs the Rating Version, and its code is emitted
-   nowhere today (Evidence; FD 9759, working id). *(Reworded 2026-10-01 10:23 BST, on the
+   nowhere today (Evidence; FD-1437, working id). *(Reworded 2026-10-01 10:23 BST, on the
    lead's note.)* The reasoning: S2 shows a `model_call` step's mode read-only from the
    version (`PL-1286` S2), so the designer should not introduce a mismatch while editing.
    This is an inference, not a guarantee. A mismatch arises where a version pins an
@@ -178,8 +180,8 @@ No `dict[str, Any]` appears in the signature. The path does not clash: `POST
 **Not decided here.**
 
 - **The FR-223 code gap** (`MODEL_REFERENCE_MODE_INCONSISTENT` is specified and never
-  emitted) is being filed separately as FD 9759 (working id).
-- **FR-246's declared-inputs rule** is unenforced (`FD-1374`, open; FD 9773 (working id)
+  emitted) is being filed separately as FD-1437.
+- **FR-246's declared-inputs rule** is unenforced (`FD-1374`, open; FD-1374
   when ruled). The route
   reports what `validate_algorithm` checks, so when that rule is enforced there, the route
   reports it with no change here.
@@ -329,7 +331,7 @@ that validation and save apply differently.** Each backend test carries
 ## Amendment, 2026-10-01 10:23 BST: auditor-1055's findings A, B and C, and the FR-223 wording
 
 *By the decision-maker session `dm-675dp56` (effort `medium`), on the lead's adoption of
-auditor-1055's three LOW findings on `03d838a8`. This is one dated pass, folded with RL 9766
+auditor-1055's three LOW findings on `03d838a8`. This is one dated pass, folded with RL-1473
 (working id)'s T2 amendment. The ruled option is unchanged: (a), with the
 `RatingAlgorithmDraft` body.*
 
@@ -349,7 +351,7 @@ auditor-1055's three LOW findings on `03d838a8`. This is one dated pass, folded 
   names it (item 2, *What it obliges*, T3).
 - **FR-223 (item 7).** "The designer cannot author a mismatch" is reworded as reasoning: it
   is an inference, because a mismatch arises where a version pins an algorithm. The code gap
-  is cited as FD 9759 (working id).
+  is cited as FD-1437.
 
 T1 and T3 above are rewritten in full. The byte-for-byte sentence stands unchanged. T2 and
 T4 are unchanged.
@@ -375,7 +377,7 @@ re-check as the lead adopted it at 10:27 BST. The ruled option is unchanged.*
 Citation and currency update only. Nothing ruled above changes (decision-maker `dm-amend-2`,
 on the lead's brief of 2026-10-05 10:50 BST, which adopted the batch-2 triage).
 
-- **FD 9773 (working id) is re-pointed to `FD-1374`**, its minted id (its own record names
+- **FD-1374 is re-pointed to `FD-1374`**, its minted id (its own record names
   working id 9773), and `FD-1374` is added to `relates:`. It is still `active`.
 - **T1 to T4 re-read at `ef5dc6e7`.** T1's FR-219 row is still `:88`, the last row of
   §3.1. T2's `…/diff?against=` row moved `:780` → `:896`. T3's paragraph moved

@@ -1,10 +1,10 @@
 ---
-id: PL-9713
+id: PL-1476
 family: plan
 kind: leaf
 title: WK-675 Slice 2 — Designer I, canvas, inspector, load and save (FR-212, FR-213, FR-214, FR-215, FR-220, FR-221, FR-222, FR-223, FR-225, FR-226, FR-244): leaf plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-05
+created: 2026-10-06            # original date 2026-10-05, set at the draft; minted 2026-10-06
 owner: planner
 tree: 88d114fc44b9a77a57f29ca30bc3ee5d693085f8
 phase: P2
@@ -15,7 +15,9 @@ corrected_by: []
 relates: [PL-1286, PL-1368, SL-1369, PL-1371, RS-1269, FD-1366, RL-1263, PL-1364, SL-1367, SL-1391, SL-1409, PL-1408]
 ---
 
-# PL 9713 (working id) — WK-675 Slice 2: Designer I, canvas, inspector, load and save, leaf plan
+# PL-1476 — WK-675 Slice 2: Designer I, canvas, inspector, load and save, leaf plan
+
+*(Minted 2026-10-06 as PL-1476 from working id 9713, in the B2+B3 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
 
 This plan is filed under working id 9713. Its `SL-` row under WK-675 in
 [`../roadmap.md`](../roadmap.md) is slice working id 9711, `draft`. The lead reserved both
@@ -54,8 +56,8 @@ a new algorithm version through a typed `POST /api/v1/rating-algorithms`. `Ratin
 reaches the generated OpenAPI first, before any designer code (spike F2, condition 1).
 
 **Architecture.** The backend change is small and comes first:
-- two reads by `slug@version`: the algorithm (RL 9753 item 1) and the Rating Version
-  (RL 9766);
+- two reads by `slug@version`: the algorithm (RL-1475 item 1) and the Rating Version
+  (RL-1473);
 - a typed save, whose body is `RatingAlgorithmDraft`, a new model-schema type. The handler
   validates it into `RatingAlgorithm` through the existing `graph_validation_error` path, so
   every FR-212 save code is unchanged (DP-S2-1);
@@ -96,8 +98,8 @@ Vite, Vitest with happy-dom, `@vue-flow/core` 1.48.2 (MIT, the version RS-1269 m
 - `RS-1269` (`docs/research/RS-01269-wk-675-vue-flow-designer-at-200-steps.md`): the F2
   decision and its 12:25:21 BST amendment (`:311-353`), the harness (`:126-152`) and the
   bundle method (`:280-293`);
-- the rulings, all unminted, with their working ids: RL 9766 (DP-5; #1055 @`39bd865b`);
-  RL 9767 (DP-6; #1055, the same head); RL 9753 (DP-4's texts; #1067 @`96fa35bf`); RL 9758
+- the rulings, all unminted, with their working ids: RL-1473 (DP-5; #1055 @`39bd865b`);
+  RL-1474 (DP-6; #1055, the same head); RL-1475 (DP-4's texts; #1067 @`96fa35bf`); RL-1438
   (FR-223's check point; #1061). Each was read to its last dated amendment at those heads;
 - `FD-1366` (`docs/findings/FD-01366-untyped-json-request-bodies-publish-open-objects-fd-1335-s-request-side-twin.md`),
   *Disposition* (`:70-80`), rule (ii).
@@ -130,14 +132,14 @@ activation need below holds.
 
 ### Activation needs, in order
 
-1. **RL 9767 (working id, #1055) minted.** It is the ruling that defines
+1. **RL-1474 (#1055) minted.** It is the ruling that defines
    `RatingAlgorithmDraft`. DP-S2-1 condition 1 requires that limb to sit in a **minted**
-   ruling before the executor touches the route. Either RL 9767 mints, or a decision-maker
+   ruling before the executor touches the route. Either RL-1474 mints, or a decision-maker
    adopts the limb in a minted record. #1055 is in the mint queue after SL-1409, #1048 and
    #1113 (the lead, 2026-10-05).
-2. **RL 9766 (working id, #1055) and RL 9753 (working id, #1067) minted.** S2 applies RL 9766
-   T1 and T2 and RL 9753 T1 and T2 byte for byte, and each text cites `RL-<this>`. An
-   unminted record is a stop (RL 9766, *Spec changes*, last paragraph). If a minted text
+2. **RL-1473 (#1055) and RL-1475 (#1067) minted.** S2 applies RL-1473
+   T1 and T2 and RL-1475 T1 and T2 byte for byte, and each text cites `RL-<this>`. An
+   unminted record is a stop (RL-1473, *Spec changes*, last paragraph). If a minted text
    differs from the head cited above, the minted text governs and the dispatch record names
    each difference.
 3. **The lane A/C conditions written into both dispatch records** (DP-L, below): each side's
@@ -145,13 +147,13 @@ activation need below holds.
    that never run at the same time.
 4. **Task 0 re-run at the dispatch tree**, with every row as expected or its delta named.
 5. **The maintainer's agreement** to this plan, as a dated line, and **the lead's go**,
-   recorded in a separate activation PR. That PR sets this plan and SL 9711 `active`.
+   recorded in a separate activation PR. That PR sets this plan and SL-1477 `active`.
 
 **Lane C's order since filing** (pre-mint, 2026-10-05). WK-675 is off G2's critical path
 (`to-lead.md` entry headed *"2026-10-05 13:05:42 BST — RULING (the maintainer, by delegation): G2's "in Phase 1b's form" = a scripted HTTP journey plus a served page; WK-675 is OFF G2's critical path"*),
-so a HIGH G2-blocking fix whose plan is active takes lane C before this slice: the FD 9708 fix
-(PL 9683, working id) first (entry headed *"2026-10-05 13:12:56 BST — DECISIONS 15 and 16; CORRECTION to my 13:03:23 item 11; a priority rule for HIGH G2 blockers"*),
-and the FR-240 family fix (PL 9649, working id) if lane C frees first (entry headed
+so a HIGH G2-blocking fix whose plan is active takes lane C before this slice: the FD-1421 fix
+(PL-1429, working id) first (entry headed *"2026-10-05 13:12:56 BST — DECISIONS 15 and 16; CORRECTION to my 13:03:23 item 11; a priority rule for HIGH G2 blockers"*),
+and the FR-240 family fix (PL-1471, working id) if lane C frees first (entry headed
 *"2026-10-05 14:28:35 BST — PL 9649 / SL 9647 (the FR-240 fix, #1152 @dc13400e): DP-5 OK; DP-6 scoped; lane placement"*).
 No activation need changes. The dispatch record names the order that holds at dispatch.
 
@@ -191,14 +193,14 @@ Each item is checked by a command run from the repository root on the slice's me
    guard), the `POST /rating-algorithms` entry is gone from it in the same commit, and the
    guard's "a typed route still listed fails" check is green. If it does not exist, the
    ledger says so.
-3. **The algorithm read** (RL 9753, *Acceptance* 1). Under `test_rating_algorithms.py`, with
+3. **The algorithm read** (RL-1475, *Acceptance* 1). Under `test_rating_algorithms.py`, with
    `@pytest.mark.req("FR-<a>")`:
    - a saved algorithm reads back equal to what was saved;
    - an unknown version, and another workspace's version, each answer 404 `NOT_FOUND`;
    - a principal without `rating:read` gets 403;
    - the 200 response is a `$ref` to `RatingAlgorithm`.
-4. **The Rating Version read by `slug@version`** (RL 9766, *Acceptance* 1–5). Under
-   `backend/tests/test_rating_versions.py`, with `@pytest.mark.req("FR-<new>")`, RL 9766's
+4. **The Rating Version read by `slug@version`** (RL-1473, *Acceptance* 1–5). Under
+   `backend/tests/test_rating_versions.py`, with `@pytest.mark.req("FR-<new>")`, RL-1473's
    id:
    - **order:** by pair answers 200 and by id still answers 200. Broken input: by-id
      registered first gives 422;
@@ -215,7 +217,7 @@ Each item is checked by a command run from the repository root on the slice's me
    `generated.json` `components.schemas`, and each is absent on `main`:
    `python3 -c "import json;s=json.load(open('docs/contracts/openapi/generated.json'))['components']['schemas'];print([k in s for k in ('RatingAlgorithm','RatingAlgorithmDraft','RatingAlgorithmSaved')])"`
    prints `[True, True, True]`.
-6. **The spec texts are applied byte for byte.** RL 9766 T1 and T2 and RL 9753 T1 and T2 are
+6. **The spec texts are applied byte for byte.** RL-1473 T1 and T2 and RL-1475 T1 and T2 are
    in `03`, each found exactly once:
    - `grep -c 'Read one Rating Algorithm version (FR-' docs/specs/03-rating-engine.md`
      prints 1;
@@ -227,7 +229,7 @@ Each item is checked by a command run from the repository root on the slice's me
 7. **The designer loads and renders** (FR-212, FR-215, FR-<a>, FR-<new>).
    `frontend/src/views/__tests__/RatingDesignView.test.ts` asserts each of these:
    - the generated-type client is called with the slug and version from the URL
-     (RL 9766 *Acceptance* 6);
+     (RL-1473 *Acceptance* 6);
    - the algorithm is read through the version's `algorithm_ref`;
    - one node renders per step, each carrying its `step_id` and type;
    - a version whose `algorithm_ref` is `None` shows the "pins no algorithm" status text and
@@ -300,12 +302,12 @@ Each item is checked by a command run from the repository root on the slice's me
   spike's hand-written local type is not carried over (F2 condition 1).
 - **Nobody hand-writes a shape that already exists in `model-schema`** (`CLAUDE.md` §2).
   `RatingAlgorithmDraft` holds the field set once, and `RatingAlgorithm` is its subclass
-  (RL 9767 item 1).
+  (RL-1474 item 1).
 - **Money is integer minor units, or a decimal string; never a float** (`00` FR-10, FR-21).
   Every decimal in the inspector is edited and sent as a string: an input contract's
   `min`/`max`, a `clamp_bounds` value, a rounding `dp` (an integer).
 - **WCAG 2.2 AA** (`00` NFR-463). A keyboard path reaches every node (F2 condition 2).
-- **No rule is re-implemented in the frontend** (RL 9767, Ruled, item 2 and *What it
+- **No rule is re-implemented in the frontend** (RL-1474, Ruled, item 2 and *What it
   obliges*). S2 shows no graph validation of its own: no cycle check and no reference check.
   On-node live validation is S3's, and `00` FR-24's DAG designer exception stays binding and
   undischarged until S3.
@@ -329,26 +331,26 @@ Each item is checked by a command run from the repository root on the slice's me
 | FR-220 | the `table` step's rate table is chosen from the version's `pins.rate_tables`; the key expressions, including a banding reference, are text |
 | FR-221 | the `lookup` step's `as_at` is a required, explicit field, with no default of "now" |
 | FR-222 | the `model_call` step's model or peril-structure reference, and its feature map |
-| FR-223 | the version's `model_reference_mode` is shown read-only on each `model_call` step; a new step takes it; a loaded step that differs is flagged. The check itself is compilation's (RL 9758), not S2's |
+| FR-223 | the version's `model_reference_mode` is shown read-only on each `model_call` step; a new step takes it; a loaded step that differs is flagged. The check itself is compilation's (RL-1438), not S2's |
 | FR-225 | the `constraint` step's `reason_code` is required |
 | FR-226 | the `output` step's rounding mode and `dp` are required |
 | FR-244 | the `expression` step's `expr` is edited as text; no picker |
-| FR-237 | the version is read by its `slug@version` (RL 9766) and its pins are read from it (RL 9753 item 3) |
-| FR-440 | the by-id read's §5.1 row (RL 9766 T2), unless RL 9907's WK-1178 slice applied it first |
-| FR-24 | **not discharged here**: the designer's on-node live validation is S3's (RL 9767) |
+| FR-237 | the version is read by its `slug@version` (RL-1473) and its pins are read from it (RL-1475 item 3) |
+| FR-440 | the by-id read's §5.1 row (RL-1473 T2), unless RL 9907's WK-1178 slice applied it first |
+| FR-24 | **not discharged here**: the designer's on-node live validation is S3's (RL-1474) |
 | FR-25 | the new route is reachable from `RatingVersionView` (Acceptance 12) |
 | NFR-463 | the keyboard navigator and the WCAG 2.2 AA check (Acceptance 10); S2 adds no chart |
 | FR-10 | decimals as strings in the inspector |
 | FR-21 | the same |
 
-The new FRs that RL 9753 T1 and RL 9766 T1 create take their ids when S2 applies them. This
+The new FRs that RL-1475 T1 and RL-1473 T1 create take their ids when S2 applies them. This
 plan cites them as `FR-<a>` (the algorithm read) and `FR-<new>` (the version address).
 
 **Out of S2, named so nothing is assumed:**
 - FR-219's diff overlay, FR-227's type errors and DP-6's validate route are S3's;
 - sub-graph mounting (FR-217, FR-218) is S9's: `sub_graphs` is carried through a save
   unchanged;
-- re-pinning a Rating Version to a saved algorithm has no route. RL 9758 item 2 binds the
+- re-pinning a Rating Version to a saved algorithm has no route. RL-1438 item 2 binds the
   slice that adds one;
 - the rate table editor is S4's.
 
@@ -387,7 +389,7 @@ ledger before Task 1.
 | `backend/tests/test_rating_algorithms.py` | new tests | Acceptance 1–3 |
 | `backend/tests/test_rating_versions.py` | new tests | Acceptance 4 |
 | `backend/tests/test_contracts.py` | `UNTYPED_REQUEST_PENDING`, only if SL-1367 has landed | the `POST /rating-algorithms` entry removed |
-| `docs/specs/03-rating-engine.md` | §3.1 (end, before `### 3.2`); §3.4 (after FR-243, `:140`); §5.1 (before `:897`, and after `:908`); §8's Vue Flow row (`:1314`) | RL 9753 T1 and T2 and RL 9766 T1 and T2 verbatim; one §8 cell edited (Task 6) |
+| `docs/specs/03-rating-engine.md` | §3.1 (end, before `### 3.2`); §3.4 (after FR-243, `:140`); §5.1 (before `:897`, and after `:908`); §8's Vue Flow row (`:1314`) | RL-1475 T1 and T2 and RL-1473 T1 and T2 verbatim; one §8 cell edited (Task 6) |
 | `docs/skills-map.md` | the Vue Flow row (`:121`) | package, version and licence added |
 | `docs/contracts/openapi/generated.json` | generated | regenerated |
 | `frontend/package.json`, `frontend/pnpm-lock.yaml` | dependencies | `@vue-flow/core` `1.48.2` |
@@ -404,7 +406,7 @@ ledger before Task 1.
 **No `GENERATED_SHAPES` slug is added.** The three shapes reach `generated.json` through the
 routes, and no client needs a standalone schema file. `scripts/generate-contracts.py` and
 `ONE_SIDED_SLUGS` are not touched, so `PL-1286`'s row on `GENERATED_SHAPES` (`:402`) reads
-"exempt" for S2. RL 9767 leaves this choice to the leaf plan (*What it obliges*).
+"exempt" for S2. RL-1474 leaves this choice to the leaf plan (*What it obliges*).
 
 ### Write set, and its contention (`RL-1263`)
 
@@ -432,7 +434,7 @@ Every other SL-1409 path is disjoint from S2. That includes `backend/src/app/err
 `packages/model-schema/src/model_schema/approvals.py` and `validation.py`, and the `frontend/`
 rule files. S2 edits none of them, and adds no error code.
 
-**Against lane B's next slice, PL 9728 / SL 9727** (working ids, #1113 @`a80f8d7d`,
+**Against lane B's next slice, PL-1454 / SL-1455** (working ids, #1113 @`a80f8d7d`,
 §"Write set, and its contention" read at that head): it edits `score.py`, `db/session.py`,
 `config.py`, `api/deps.py`, `api/authz.py`, `auth/service.py`, `main.py` (only under its
 DP-4 (a)), `scripts/bench-rating.py` and `scripts/demo.py` (only under its DP-6 (a)). S2
@@ -453,7 +455,7 @@ comparison is re-read at dispatch.
 
 | Shared path | SL-1391 | S2 | Class |
 |---|---|---|---|
-| `docs/specs/03-rating-engine.md` §5.1 | edits the existing row `GET /api/v1/rate-tables/{slug}@{version}/diff?against=` (`:904`): the portfolio parameter and its refusal | adds RL 9753 T2's row before `:897`, and RL 9766 T2's two rows after `:908` | **SERIALISES** under `forbidden` (same spec section) → **run both by DP-L (b)**, under `other_shared_path` |
+| `docs/specs/03-rating-engine.md` §5.1 | edits the existing row `GET /api/v1/rate-tables/{slug}@{version}/diff?against=` (`:904`): the portfolio parameter and its refusal | adds RL-1475 T2's row before `:897`, and RL-1473 T2's two rows after `:908` | **SERIALISES** under `forbidden` (same spec section) → **run both by DP-L (b)**, under `other_shared_path` |
 | `docs/specs/03-rating-engine.md` §3 | FR-231's dated clarification, §3.3 | new FRs at the end of §3.1 and after FR-243 in §3.4 | different subsections; named in both dispatch records under DP-L |
 | `backend/src/app/api/rate_tables.py`, `platform/rate_tables.py` | edited | not touched | disjoint |
 | `docs/contracts/openapi/generated.json`, `docs/INDEX.md` | regenerated | regenerated | exempt |
@@ -462,13 +464,13 @@ comparison is re-read at dispatch.
 **DP-L, the lane A/C row adjacency** (the maintainer's (by delegation) decision, item 8). Neither of S2's insertion
 points is adjacent to SL-1391's edited row. Each has unchanged rows between it and that row at
 `caa4e411`:
-- **RL 9753 T2** inserts between `:896` (`rating-algorithms/{slug}@{version}/diff`) and `:897`
+- **RL-1475 T2** inserts between `:896` (`rating-algorithms/{slug}@{version}/diff`) and `:897`
   (`POST /api/v1/sub-graphs`). Seven unchanged rows, `:897`–`:903`, separate it from `:904`.
   They are `POST /sub-graphs`, `POST /sub-graphs/{slug}/versions`,
   `GET /sub-graphs/{slug}@{version}`, `GET /sub-graphs/{slug}/versions`,
   `POST /rate-tables/{slug}/versions`, `POST /rate-tables/{slug}/seed-from-model` and
   `POST /rate-tables/{slug}@{version}/bulk-operation`.
-- **RL 9766 T2** inserts between `:908` (`POST /api/v1/rating-versions`) and `:909`
+- **RL-1473 T2** inserts between `:908` (`POST /api/v1/rating-versions`) and `:909`
   (`POST /api/v1/rating-versions/{id}/compile`). Four unchanged lines, `:905`–`:908`,
   separate it from `:904`. They are the CSV export, the XLSX export, the import and
   `POST /rating-versions`.
@@ -482,7 +484,7 @@ Both dispatch records list each side's hunks and these anchors. The second slice
 
 **The two gates never run at the same time.**
 
-`frontend/src/router/index.ts` `routes` is not edited by SL-1391, SL-1409 or PL 9728 (none
+`frontend/src/router/index.ts` `routes` is not edited by SL-1391, SL-1409 or PL-1454 (none
 names a frontend route), so S2 holds it exclusively.
 
 ### Size
@@ -498,7 +500,7 @@ designer view out into an S2b under (a′); the backend half then merges first.
 
 | DP | Question | Options | Recommendation | Blocking? | Resolved by |
 |---|---|---|---|---|---|
-| **DP-S2-1** | What type does `POST /rating-algorithms` take, now that S2 types it under FD-1366 rule (ii)? A `RatingAlgorithm` body runs the shape's validator before the handler, so a cycle or an unresolved reference would come back as a generic 422 `VALIDATION_FAILED` (`errors.py` `_handle_validation_error`, `:460-475`), not as `RATING_GRAPH_CYCLIC` or `RATING_GRAPH_UNRESOLVED_REF` (`platform/rating_algorithms.py:32-73`) | (a) `RatingAlgorithmDraft`, validated into `RatingAlgorithm` by the handler's existing path; (b) `RatingAlgorithm`, accepting the code change; (c) `RatingAlgorithm` with a request-validation hook that maps the two graph errors back | (a) | was yes | **Decided (a)**, the maintainer (by delegation), 2026-10-05 12:59:02 BST, with four conditions: (1) the type comes from a **minted** ruling, RL 9767, or a DM's minted adoption of the limb (Activation need 1); (2) broken-input reds asserted by code (Acceptance 1); (3) the guard entry, the contract and `generate:api`, all in one commit (Acceptance 2 and 5); (4) the moved limb recorded both ways (Hand-off item 1) |
+| **DP-S2-1** | What type does `POST /rating-algorithms` take, now that S2 types it under FD-1366 rule (ii)? A `RatingAlgorithm` body runs the shape's validator before the handler, so a cycle or an unresolved reference would come back as a generic 422 `VALIDATION_FAILED` (`errors.py` `_handle_validation_error`, `:460-475`), not as `RATING_GRAPH_CYCLIC` or `RATING_GRAPH_UNRESOLVED_REF` (`platform/rating_algorithms.py:32-73`) | (a) `RatingAlgorithmDraft`, validated into `RatingAlgorithm` by the handler's existing path; (b) `RatingAlgorithm`, accepting the code change; (c) `RatingAlgorithm` with a request-validation hook that maps the two graph errors back | (a) | was yes | **Decided (a)**, the maintainer (by delegation), 2026-10-05 12:59:02 BST, with four conditions: (1) the type comes from a **minted** ruling, RL-1474, or a DM's minted adoption of the limb (Activation need 1); (2) broken-input reds asserted by code (Acceptance 1); (3) the guard entry, the contract and `generate:api`, all in one commit (Acceptance 2 and 5); (4) the moved limb recorded both ways (Hand-off item 1) |
 | **DP-S2-2** | The 201 response's type (today `dict[str, Any]`, `{id, slug, version}`) | (i) a new `RatingAlgorithmSaved {id, slug, version}`; (ii) the saved `RatingAlgorithm` | (i) | no | **Decided (i)**, the maintainer (by delegation), 2026-10-05 12:59:02 BST: the same wire, typed. The `03:895` §5.1 row stands unchanged |
 | **DP-S2-3** | A Rating Version whose `algorithm_ref` is `None`. That includes the only version the freMTPL2 seed writes (Task 0.10). What does the designer show? | (a) a "no algorithm pinned" state, plus an empty canvas pre-filled with the version's slug and algorithm version 1; save creates it, and a 409 is shown; nothing re-pins the version; (b) the state only, with no authoring; (c) seed an algorithm and its `algorithm_ref` (touches `examples/fremtpl2/seed.py`, SL-1409's path, and the G2 demo work) | **(a)**: the smallest change that makes the view usable, with no new route, and re-pinning stays out | was yes | **Decided (a)**, the maintainer (by delegation), 2026-10-05 13:03:23 BST, item 10. (c) is refused for S2: `seed.py` is SL-1409's, and seeding a real algorithm is exit-demo work after SL-1409 merges |
 | **DP-L** | Lanes A and C both edit `03` §5.1 | (a) serialise; (b) run both, with dispatch records naming the hunks; (c) S2 without its rows (forbidden by `CLAUDE.md` §2) | (b) | was yes | **Decided (b)**, the maintainer (by delegation), 2026-10-05 13:00:09 BST, item 8, with four conditions (see *Contention*) |
@@ -506,12 +508,12 @@ designer view out into an S2b under (a′); the backend half then merges first.
 **Choices this plan makes itself** (no spec leaves them open, or a ruling already covers them):
 - **The save's version number.** The form is pre-filled with the loaded algorithm's version
   plus one, and the actuary may change it. The server already refuses an existing
-  `slug@version` with 409 (`create_algorithm`, `:110-121`), and the view shows it. RL 9753
+  `slug@version` with 409 (`create_algorithm`, `:110-121`), and the view shows it. RL-1475
   T1's text, *"edits it into a new algorithm version, never in place"*, is met by
   construction.
 - **The canvas edits no edge.** Edges are derived from `consumes` and `produces`. Connecting
   by drag needs `isValidConnection` to say whether a connection is valid, which is FR-212's
-  check and S3's to serve (RL 9767). Building it here would define the check twice.
+  check and S3's to serve (RL-1474). Building it here would define the check twice.
 - **Persisted content is the dump of the typed body**, `model_dump(mode="json",
   exclude_unset=True)`, so what is stored is what the client sent, normalised only by the
   shape's own serialisers (an `ArtifactRef` to its canonical string). Acceptance 3's
@@ -524,7 +526,7 @@ designer view out into an S2b under (a′); the backend half then merges first.
 
 - [ ] **Step 1:** Re-run every row of *Task 0 at planning time* at the dispatch tree. Record
   each command and its output in the ledger.
-- [ ] **Step 2:** Confirm that RL 9767, RL 9766 and RL 9753 are minted. Record their minted
+- [ ] **Step 2:** Confirm that RL-1474, RL-1473 and RL-1475 are minted. Record their minted
   ids, and diff each minted text against the head this plan cites
   (`git diff 39bd865b <mint> -- docs/rulings/`, and the same for `96fa35bf`). A difference
   in a text S2 applies is named in the ledger, and the minted text governs.
@@ -556,7 +558,7 @@ designer view out into an S2b under (a′); the backend half then merges first.
 - [ ] **Step 1: Write the failing tests**
 
 ```python
-"""RatingAlgorithmDraft is RatingAlgorithm's field set without its invariants (RL 9767 item 1)."""
+"""RatingAlgorithmDraft is RatingAlgorithm's field set without its invariants (RL-1474 item 1)."""
 
 from __future__ import annotations
 
@@ -630,7 +632,7 @@ convention 3).
 
 ```python
 class RatingAlgorithmDraft(BaseModel):
-    """A Rating Algorithm's field set, without its graph invariants (03 §4.1; RL 9767 item 1).
+    """A Rating Algorithm's field set, without its graph invariants (03 §4.1; RL-1474 item 1).
 
     The body of `POST /rating-algorithms` (WK-675 S2) and of S3's validate route: a graph
     that breaks an invariant reaches the handler, which validates it into `RatingAlgorithm`
@@ -776,7 +778,7 @@ async def create_rating_algorithm(
 - [ ] **Step 6: Commit.** This commit holds Task 2, Task 5's contract regeneration and the
   guard-entry removal together (DP-S2-1 condition 3). Commit after Task 5.
 
-### Task 3: The algorithm read by `slug@version` (RL 9753 T1, T2)
+### Task 3: The algorithm read by `slug@version` (RL-1475 T1, T2)
 
 **Files:**
 - Modify: `docs/specs/03-rating-engine.md` (§3.1 end; §5.1 before `:897`)
@@ -789,7 +791,7 @@ async def create_rating_algorithm(
 - Produces: `GET /api/v1/rating-algorithms/{slug}@{version}`, which returns 200
   `RatingAlgorithm`.
 
-- [ ] **Step 1: Spec first.** Apply RL 9753 T1 (the last row of §3.1, on the line before the
+- [ ] **Step 1: Spec first.** Apply RL-1475 T1 (the last row of §3.1, on the line before the
   blank line preceding `### 3.2 Rating step types`) and T2 (immediately before the row that
   begins `| `POST` | `/api/v1/sub-graphs` |`) **byte for byte, from the minted record**. Fill
   `RL-<this>`, `FR-<a>` (the next integer from `python3 scripts/doc-id.py next`, the single
@@ -797,7 +799,7 @@ async def create_rating_algorithm(
   allocator) and `<date>`, and change nothing else.
   If an anchor is not found exactly once, stop and report to the lead. Run
   `python3 scripts/audit-docs.py`.
-- [ ] **Step 2: Write the failing tests** (RL 9753 *Acceptance* 1):
+- [ ] **Step 2: Write the failing tests** (RL-1475 *Acceptance* 1):
 
 ```python
 @pytest.mark.req("FR-<a>")
@@ -861,7 +863,7 @@ async def get_rating_algorithm(
   handler. The contract test fails with the wrong `$ref`. Record it, and revert.
 - [ ] **Step 6: Commit** `feat(rating): GET /rating-algorithms/{slug}@{version} (FR-<a>, RL-<9753>)`.
 
-### Task 4: The Rating Version read by `slug@version` (RL 9766 T1, T2)
+### Task 4: The Rating Version read by `slug@version` (RL-1473 T1, T2)
 
 **Files:**
 - Modify: `docs/specs/03-rating-engine.md` (§3.4 after FR-243, `:140`; §5.1 after `:908`)
@@ -873,11 +875,11 @@ async def get_rating_algorithm(
   (`platform/rating_versions.py:169`) and `rating_versions_service.to_schema(row)` (`:93`).
 - Produces: `GET /api/v1/rating-versions/{slug}@{version}`, which returns 200 `RatingVersion`.
 
-- [ ] **Step 1: Spec first.** Apply RL 9766 T1 (after the row that begins `| **FR-243** |`)
+- [ ] **Step 1: Spec first.** Apply RL-1473 T1 (after the row that begins `| **FR-243** |`)
   and T2 (after the row that begins `| `POST` | `/api/v1/rating-versions` |`), byte for byte
   from the minted record, in the three-cell or four-cell form that Task 0 Step 4 found.
   Apply the by-id row only if Task 0 Step 4 printed 0. Run `python3 scripts/audit-docs.py`.
-- [ ] **Step 2: Write the failing tests** (RL 9766 *Acceptance* 1–5):
+- [ ] **Step 2: Write the failing tests** (RL-1473 *Acceptance* 1–5):
 
 ```python
 @pytest.mark.req("FR-<new>")
@@ -928,7 +930,7 @@ def test_the_rating_version_read_publishes_rating_version(app) -> None:
   `test_an_unknown_rating_version_id_is_a_404_over_http` (`:235`) and the module's existing
   no-grant test.
 - [ ] **Step 3: Run to see them fail by cause.** `/rating-versions/fremtpl2-demo@1` answers
-  **422** from the by-id handler (`uuid_parsing` on `rating_version_id`). That is RL 9766's
+  **422** from the by-id handler (`uuid_parsing` on `rating_version_id`). That is RL-1473's
   proved routing trap, so a 404 here is a different cause and a plan defect.
 - [ ] **Step 4: Implement**, registered before `get_rating_version`:
 
@@ -1054,7 +1056,7 @@ export function saveRatingAlgorithm(
 
 ```ts
 // appended to frontend/src/api/ratingVersions.ts
-/** The version its own `slug@version` names (RL 9766): the address the §5.3 routes use. */
+/** The version its own `slug@version` names (RL-1473): the address the §5.3 routes use. */
 export function getRatingVersionByRef(slug: string, version: number): Promise<RatingVersion> {
   return request<RatingVersion>(`/rating-versions/${encodeURIComponent(slug)}@${version}`);
 }
@@ -1259,7 +1261,7 @@ export function parseRef(ref: string): { type: string; slug: string; version: nu
   `@/api/ratingAlgorithms` as `RatingVersionView.test.ts:6-10` does, and stub
   `DagDesigner`'s `VueFlow`. Assert each of these:
   - `getRatingVersionByRef` is called with `("fremtpl2-demo", 1)` from props `slug` and
-    `version` (RL 9766 *Acceptance* 6, test named `FR-<new>: …`);
+    `version` (RL-1473 *Acceptance* 6, test named `FR-<new>: …`);
   - `getRatingAlgorithm` is called with the parsed `algorithm_ref` (`FR-<a>: …`);
   - one node per step is rendered;
   - save calls `saveRatingAlgorithm` with the draft and the version field (pre-filled to the
@@ -1355,21 +1357,21 @@ export function parseRef(ref: string): { type: string; slug: string; version: nu
 ## Hand-off
 
 1. **To S3's leaf plan, or its dispatch record if S3's plan is frozen first** (DP-S2-1
-   condition 4): *"`RatingAlgorithmDraft` (RL 9767 item 1's type limb) was built in WK-675
-   S2 (PL 9713), with `RatingAlgorithm` as its subclass and the save route typed by it. S3
-   does not re-add it. S3 still owns RL 9767 items 2–7 (the breach-returning invariant
+   condition 4): *"`RatingAlgorithmDraft` (RL-1474 item 1's type limb) was built in WK-675
+   S2 (PL-1476), with `RatingAlgorithm` as its subclass and the save route typed by it. S3
+   does not re-add it. S3 still owns RL-1474 items 2–7 (the breach-returning invariant
    function, `ValidationIssue`'s move, `AlgorithmValidationReport`, and the validate route)
    and T1–T4, including T3's §4.1 paragraph that names the type. Until S3 applies T3, the
    type is published in the contract with no §4.1 prose. S2's own plan records this."* The
    lead copies this line into S3's dispatch record at S3's dispatch. The planner writes it
    into S3's leaf plan when that is drafted.
-2. **To the lead, for `PL-1286`:** DP-4's and DP-5's *Resolved by* cells cite RL 9753 and
-   RL 9766 once minted. `PL-1286` is the planner's file, and it is not edited here.
+2. **To the lead, for `PL-1286`:** DP-4's and DP-5's *Resolved by* cells cite RL-1475 and
+   RL-1473 once minted. `PL-1286` is the planner's file, and it is not edited here.
 3. **To the auditor at slice close:** FD-1366's `POST /rating-algorithms` entry is
    discharged by rule (ii) in this slice. The finding's register row names the S2 PR.
 4. **To S4 onwards:** a view at `/rating/:slug/v/:version/…` resolves the pair through
-   `getRatingVersionByRef` and acts by `id`, with no second lookup (RL 9766, *What it
-   obliges*). S4 reads the version's tables from `pins.rate_tables` (RL 9753 item 3).
+   `getRatingVersionByRef` and acts by `id`, with no second lookup (RL-1473, *What it
+   obliges*). S4 reads the version's tables from `pins.rate_tables` (RL-1475 item 3).
 5. **To the lead, a record defect, not an edit:** `PL-1368` (S1's leaf plan) still reads
    `status: active`, while SL-1369 is `closed`.
 
@@ -1378,12 +1380,12 @@ export function parseRef(ref: string): { type: string; slug: string; version: nu
 - **Ruling coverage, by site class** (`README.md` convention 5). The rulings and decisions
   were found by diffing the ruling files against `origin/main`, not by listing headings. Each
   appears in the narrative, Files, Steps and Acceptance:
-  - RL 9753 item 1, T1 and T2: *Architecture*; Task 3's Files; Task 3 Steps 1–5;
+  - RL-1475 item 1, T1 and T2: *Architecture*; Task 3's Files; Task 3 Steps 1–5;
     Acceptance 3 and 6;
-  - RL 9766 T1 and T2 and Acceptance 1–6: *Architecture*; Task 4's Files; Task 4 Steps 1–5;
+  - RL-1473 T1 and T2 and Acceptance 1–6: *Architecture*; Task 4's Files; Task 4 Steps 1–5;
     Task 10 Step 1; Acceptance 4, 6 and 7;
-  - RL 9767 item 1, as a type only: Task 1; Hand-off 1; Global Constraints;
-  - RL 9758: FR-223's row in *Scope*; Task 8 Step 1;
+  - RL-1474 item 1, as a type only: Task 1; Hand-off 1; Global Constraints;
+  - RL-1438: FR-223's row in *Scope*; Task 8 Step 1;
   - DP-S2-1 conditions 1–4: Activation need 1; Acceptance 1, 2 and 5; Task 2 Step 4;
     Task 5 Step 4; Hand-off 1;
   - DP-S2-2: Task 1; Task 2 Step 3; Acceptance 2;
@@ -1414,14 +1416,14 @@ export function parseRef(ref: string): { type: string; slug: string; version: nu
   the step that fills it. No other placeholder remains.
 - **Rulings re-checked before the PR:** open PRs at `072c56e1`, 2026-10-05 12:15 BST; working ids as
   then (`gh pr list --state open`, 34 open). It was re-read for this plan's subject: #1055 @`39bd865b`, #1067 @`96fa35bf`,
-  #1061 (RL 9758) and #1059 (FD 9759). FD 9759's limbs (2) and (3) are S3's (RL 9758, *What
+  #1061 (RL-1438) and #1059 (FD-1437). FD-1437's limbs (2) and (3) are S3's (RL-1438, *What
   it obliges*). #1113 @`a80f8d7d` is lane B. Nothing else rules on the designer, the save
   route or the two reads.
 - **Pre-mint check of 2026-10-05 15:26 BST, at `origin/main` `809a3794`.** No backend,
   frontend, package or script file changed since `caa4e411`, so every code line above holds.
   In `03` only line 136 changed, in place; every `03` line cited is unmoved, and each anchor
   that Tasks 3 and 4 name is found once (`grep -cF` = 1). #1055 is still at `39bd865b` and
-  #1067 at `96fa35bf`, both unminted. FD 9752 minted as FD-1416 (#1066), so its paragraph and
+  #1067 at `96fa35bf`, both unminted. FD-1416 minted as FD-1416 (#1066), so its paragraph and
   *The decisions* item 4's header are re-pointed. Lane C's order is recorded under the
   activation needs. The G2 ruling changes no task: S2 was never a G2 prerequisite, and item 4
   already leaves the seeded algorithm to the exit demo.

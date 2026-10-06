@@ -1,9 +1,9 @@
 ---
-id: RL-9753
+id: RL-1475
 family: ruling
 title: PL-1286 DP-4's texts — the algorithm read by slug@version (S2), and a rate table version's definition and cell-page reads (S4); a version's table list is its pins, not a route
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-01
+created: 2026-10-06            # original date 2026-10-01, set at the draft; minted 2026-10-06
 owner: decision-maker
 tree: 8bd782acbbdde8e3b4195b5a0acb89183b5a0253
 phase: P2
@@ -15,7 +15,9 @@ corrects: ~
 relates: [PL-1286, FR-212, FR-228, FR-229, FR-232, FR-237, FD-1283, FD-1366]
 ---
 
-# RL-9753 — PL-1286 DP-4's texts: the algorithm read by `slug@version` (S2), and a rate table version's definition and cell-page reads (S4); a version's table list is its pins, not a route
+# RL-1475 — PL-1286 DP-4's texts: the algorithm read by `slug@version` (S2), and a rate table version's definition and cell-page reads (S4); a version's table list is its pins, not a route
+
+*(Minted 2026-10-06 as RL-1475 from working id 9753, in the B2+B3 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
 
 ## How this was ruled
 
@@ -48,7 +50,7 @@ and DP-7 (`OQ-1285`).
     condition 1 is S2's).
   - The routes beside it: `POST /rating-algorithms` and
     `GET /rating-algorithms/{slug}@{version}/diff` (`backend/src/app/api/rating_algorithms.py:28`,
-    `:53`). RL 9767 (working id) adds `POST /rating-algorithms/validate`. None clashes with
+    `:53`). RL-1474 adds `POST /rating-algorithms/validate`. None clashes with
     a `GET` on `{slug}@{version}`: the diff route has a further segment, and `validate`
     is a `POST` with no `@`.
 - **Rate table reads.**
@@ -72,10 +74,10 @@ and DP-7 (`OQ-1285`).
     `VALIDATION_FAILED` (`:82-88`).
   - FR-232 (`03:123`) already says that "the editor pages without a job".
 - **A version's table list.** `RatingVersion.pins.rate_tables: list[ArtifactRef]`
-  (`rating.py:74`, `Pins`). RL 9766 (working id)'s `GET /rating-versions/{slug}@{version}`
+  (`rating.py:74`, `Pins`). RL-1473's `GET /rating-versions/{slug}@{version}`
   returns the `RatingVersion`, so the list arrives with it.
-- **No duplicate row.** The rows below are new paths. RL 9766 (working id) T2 adds the two
-  `rating-versions` reads. RL 9767 (working id) T2 adds `POST /rating-algorithms/validate`.
+- **No duplicate row.** The rows below are new paths. RL-1473 T2 adds the two
+  `rating-versions` reads. RL-1474 T2 adds `POST /rating-algorithms/validate`.
   RL 9907 (working id) item 3 describes only the two `rating-versions` reads, and item 1
   adds a column, not rows. None of them names `GET /rating-algorithms/{slug}@{version}`
   or any `rate-tables` read. `07` §5.1 needs no row: every route here is a `03` route.
@@ -103,7 +105,7 @@ and DP-7 (`OQ-1285`).
      "Values are stored as decimal strings" (`03:310`). So the arm is dropped, not
      carried.)*
 3. **No route for a version's table list.** It is `pins.rate_tables` on the Rating Version,
-   which RL 9766's read returns. A list route would be a second source for the same fact.
+   which RL-1473's read returns. A list route would be a second source for the same fact.
    The editor reads each table's definition through item 2.
 
 **Why `RateTableCell` is an open-keyed object.** A table's columns are data, declared per
@@ -245,7 +247,7 @@ The executor applies each text above byte-for-byte; authorship stays with the de
     `str`, the retyping would reject stored data. S4 measures that against the
     test database's seeded tables before retyping, and stops and reports if there is one.
 - **Contention** (`PL-1286` *Sequencing*): T1 is in §3.1, T3 in §3.3, T2 and T4 in §5.1,
-  and T5 in §4.2. Each serialises as that table says. T1 and RL 9767 T1 both land at the
+  and T5 in §4.2. Each serialises as that table says. T1 and RL-1474 T1 both land at the
   end of §3.1, and the anchor above makes their order irrelevant.
 
 ## Acceptance — the violation that must become detectable
@@ -296,7 +298,7 @@ broken input.
   `diff_vs_seed` (`03:304-306`).
 - **Accepted line:** a typed-value map whose keys are data (FR-228) is not an "open object"
   in FD-1366's sense, and `RateTable.default_row`'s `dict[str, Any]` is removed.
-- **FD 9779 (working id) is re-pointed to `FD-1366`** (three places) and added to
+- **FD-1366 is re-pointed to `FD-1366`** (three places) and added to
   `relates:`.
 
 ## Amendment, 2026-10-05: citations re-read at main `ef5dc6e7`, before mint
@@ -330,7 +332,7 @@ on the lead's brief of 2026-10-05 10:50 BST, which adopted the batch-2 triage).
   `active`, `superseded`, `retired`, and `audit-docs.py` check 33 refused `draft`. The
   working-id rulings of batch 1 (#977, #979) carry `active` in the same form.
 - `tree:` stays `8bd782ac`, the tree of `1dd5e264` that the Evidence was read at, as
-  `RL-1407` keeps its own evidence tree. `created:` changes at the mint. RL 9766, RL 9767
+  `RL-1407` keeps its own evidence tree. `created:` changes at the mint. RL-1473, RL-1474
   and RL 9907 are still working ids (#1055, #977) and are cited as such.
 
 ## Amendment, 2026-10-05 15:29 BST: citations re-read at main `809a3794`, before mint
@@ -356,8 +358,8 @@ lead's prep-wave brief of 2026-10-05, section M).
 Placement only; T4's two rows, their order and every other text are unchanged (decision-maker
 `dm-675s4`, on the maintainer's (by delegation) entry "2026-10-05 17:26:46 BST — WK-675 S4 DP
 memo (handover/dp-memo-wk675-s4-2026-10-05.md) RULED", `channel/to-lead.md`, routed by the lead).
-That entry: "RL 9753 T4's anchor (#1067 :176-178, ending "diff?against=` |") WILL NOT MATCH
-once S7 applies RL-1361 T10 (the row becomes ".../diff?against=&portfolio="): re-anchor RL 9753
+That entry: "RL-1475 T4's anchor (#1067 :176-178, ending "diff?against=` |") WILL NOT MATCH
+once S7 applies RL-1361 T10 (the row becomes ".../diff?against=&portfolio="): re-anchor RL-1475
 PRE-MINT on the prefix without the closing backtick (grep -cF = 1 at main AND after RL-1418 T1)."
 
 - **Why.** WK-673 Slice 7 (`SL-1391`, leaf `PL-1419`) applies `RL-1361` T10, which **replaces**

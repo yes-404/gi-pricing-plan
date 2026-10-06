@@ -1,18 +1,20 @@
 ---
-id: FD-9659
+id: FD-1469
 family: finding
 title: FR-240's transitive custom-objective clause stops at the pin, so a model fitted on a non-approved objective compiles, and the direct-pin refusal has no custom-objective test
 status: active
-created: 2026-10-05            # working id; the mint date will replace this (check 31)
+created: 2026-10-06            # original date 2026-10-05, set at the draft; minted 2026-10-06
 owner: auditor
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc
 corrected_by: []
 relates: [WK-1178, FR-240, FR-20, FR-163]
 ---
 
-# FD-9659 — FR-240's custom-objective clause: the pin is checked, the model's own objective is not
+# FD-1469 — FR-240's custom-objective clause: the pin is checked, the model's own objective is not
 
-**Filed** by auditor-batch1 on the lead's order of 2026-10-05, split out of FD 9697 (limbs 2 and 3 of that record as
+*Disclosure: drafted under working id 9659; minted as FD-1469 on 2026-10-06, in the B2 batch mint PR.*
+
+**Filed** by auditor-batch1 on the lead's order of 2026-10-05, split out of FD-1422 (limbs 2 and 3 of that record as
 first drafted by auditor-gaps, from the exit-demo draft's gap row C3). Working id 9659, reserved by the lead.
 `tree:` is `origin/main` at filing; every reproduction below ran at that tree.
 
@@ -22,7 +24,7 @@ first drafted by auditor-gaps, from the exit-demo draft's gap row C3). Working i
 
 FR-240 (`docs/specs/03-rating-engine.md:137`): bundle compilation validates "… no `control`-intent factor in a
 rateable path (`02` FR-88), no unapproved custom objective transitively reachable." This record is the second half.
-The first half is FD 9697.
+The first half is FD-1422.
 
 1. **Direct pin: implemented, untested for a custom objective.** `compile_bundle`'s `all_refs` loop
    (`packages/pricing-core/src/pricing_core/rating/compile.py:618-631`) includes `version.pins.custom_objectives` and

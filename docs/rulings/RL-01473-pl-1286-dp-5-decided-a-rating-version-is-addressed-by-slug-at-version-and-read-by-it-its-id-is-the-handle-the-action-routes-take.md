@@ -1,9 +1,9 @@
 ---
-id: RL-9766
+id: RL-1473
 family: ruling
 title: PL-1286 DP-5 decided — a Rating Version is addressed by slug@version and read by it; its id is the handle the action routes take
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-01
+created: 2026-10-06            # original date 2026-10-01, set at the draft; minted 2026-10-06
 owner: decision-maker
 tree: 8bd782acbbdde8e3b4195b5a0acb89183b5a0253
 phase: P2
@@ -15,7 +15,9 @@ corrects: ~
 relates: [PL-1286, FR-237, FR-238, FR-24, FR-25, FR-440]
 ---
 
-# RL-9766 — PL-1286 DP-5 decided: a Rating Version is addressed by `slug@version` and read by it; its `id` is the handle the action routes take
+# RL-1473 — PL-1286 DP-5 decided: a Rating Version is addressed by `slug@version` and read by it; its `id` is the handle the action routes take
+
+*(Minted 2026-10-06 as RL-1473 from working id 9766, in the B2+B3 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
 
 ## How this was ruled
 
@@ -28,7 +30,7 @@ decision-maker.md) for DP-5 + DP-6"). This session did not read the channel entr
 
 **Working id 9766**, allocated by the lead. It is minted at its merge turn, and every
 `RL-<this>` placeholder below is then this record's minted id. The sibling record for DP-6 is
-RL 9767 (working id), on the same branch.
+RL-1474, on the same branch.
 
 **Evidence tree.** Everything below was read at origin/main `1dd5e264` (tree `8bd782ac`),
 fetched 2026-10-01 10:08 and re-fetched 10:12 BST, unchanged.
