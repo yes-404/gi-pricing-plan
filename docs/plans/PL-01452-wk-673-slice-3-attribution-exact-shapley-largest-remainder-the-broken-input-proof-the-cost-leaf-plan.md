@@ -1,10 +1,10 @@
 ---
-id: PL-9689
+id: PL-1452
 family: plan
 kind: leaf
 title: WK-673 Slice 3 — attribution, exact Shapley, largest remainder, the broken-input proof, the cost: leaf plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-05
+created: 2026-10-06            # original date 2026-10-05, set at the draft; minted 2026-10-06
 owner: planner
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc
 phase: P2
@@ -16,7 +16,9 @@ corrected_by: []
 relates: [SL-1387, PL-1267, PL-1371, PL-1403, PL-1408, LG-1400, LG-1406, RL-1264, RL-1394, RL-1402, RL-1263, RS-1201, SL-1386, SL-1391, SL-1409]
 ---
 
-# PL 9689 (working id) — WK-673 Slice 3: attribution — exact Shapley, largest remainder, the broken-input proof, the cost: leaf plan
+# PL-1452 — WK-673 Slice 3: attribution — exact Shapley, largest remainder, the broken-input proof, the cost: leaf plan
+
+*(Minted 2026-10-06 as PL-1452 from working id 9689, in the B1 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
 > or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`)
@@ -35,17 +37,17 @@ instruction of 2026-10-05 12:51:33 BST, item 1). Drafted from 13:16:52 BST
 `caa4e411a9c07a389cf47092a923c7761b2b92dc` (`git rev-parse origin/main` after `git fetch`,
 unchanged at 13:25 BST). Every locator below was read at that tree unless another tree or a
 branch head is named. Unminted records are cited by working id and kept out of `relates:`
-(check 32): RL 9715 (draft PR #1126, branch `dm-9715-oq9739-subset-input-contract`),
-PL 9716 (#1127), RL 9710 (#1128), PL 9713 (#1131), PL 9683 (the FD 9708 fix), RL 9663 (dm-s3). FD 9752 (#1066) was minted as FD-1416 at `99afcde2` after this plan's tree; this branch merged that commit (only `docs/findings/` and `docs/INDEX.md` changed, so every locator here reads the same).
+(check 32): RL-1449 (draft PR #1126, branch `dm-9715-oq9739-subset-input-contract`),
+PL-1419 (#1127), RL-1418 (#1128), PL 9713 (#1131), PL-1429 (the FD-1421 fix), RL-1451 (dm-s3). FD-1416 (#1066) was minted as FD-1416 at `99afcde2` after this plan's tree; this branch merged that commit (only `docs/findings/` and `docs/INDEX.md` changed, so every locator here reads the same).
 
 ## Goal
 
 Build `derive_changes` and `attribute` (`03` §5.2) in `pricing_core/rating/analysis.py`: the
 declared changes derived from baseline and candidate at step granularity, with the input
-contract and the outputs derived too (FR-1399 as RL 9715 amends it); the analyst's groups
+contract and the outputs derived too (FR-1399 as RL-1449 amends it); the analyst's groups
 checked for a partition and for dependence, both refused before any subset is compiled; the
 2^K subset bundles built from the baseline with each subset's changes substituted, compiled by
-`compile_bundle` and rated by `score_batch` on ZEN (FR-1398 as RL 9715 amends it); exact
+`compile_bundle` and rated by `score_batch` on ZEN (FR-1398 as RL-1449 amends it); exact
 Shapley per policy as an integer over K!, allocated to integer minor units by largest
 remainder with ties in declared order; the isolated and cumulative views and the residual line;
 the labelled above-six fallback with R and a lower bound on S (FR-266); the reconciliation
@@ -66,7 +68,7 @@ DP-S1-1 (b)).
 arithmetic, the ZEN engine through `score_batch`. No new dependency.
 
 **Spec.** [`03-rating-engine.md`](../specs/03-rating-engine.md) FR-266, FR-1397, FR-1398,
-FR-1399 (`:189-192`), §4.6 (`:514-578`), §5.2 (`:1050-1058`, `:1122-1124`); RL 9715's T1–T3
+FR-1399 (`:189-192`), §4.6 (`:514-578`), §5.2 (`:1050-1058`, `:1122-1124`); RL-1449's T1–T3
 (applied by Task 1); `RL-1264` (feasibility rule, `:96-110`); `RL-1394` DP-S1-5, DP-S1-6 and
 "What it obliges" (`:618-640`).
 
@@ -77,26 +79,26 @@ FR-1399 (`:189-192`), §4.6 (`:514-578`), §5.2 (`:1050-1058`, `:1122-1124`); RL
 DP-S3-4 and DP-S3-5 accepted (the maintainer's (by delegation) entry of 2026-10-05 13:15:53 BST in `to-lead.md`, items 17–19); DP-S3-7 (a), DP-S3-10 (b), and DP-S3-8 and DP-S3-9 accepted
 (the maintainer's (by delegation) entry of 2026-10-05 13:20:26 BST in `to-lead.md`, items 23–24). The lead's relay added one item within DP-S3-1 (a): the same hand edit widens the two
 attribution ratios, with a red-first test. Each row of §"Decision points" quotes its decision.
-**One thing is still open: the exact spec texts.** RL 9663 (working id, dm-s3) adopts P1–P6
+**One thing is still open: the exact spec texts.** RL-1451 (dm-s3) adopts P1–P6
 as T-texts (the maintainer's (by delegation) entry of 2026-10-05 13:25:23 BST in `to-lead.md`, items 29–30, item 29); P5 (DP-S3-7's FR-1398 sentence) was sent to the lead on 2026-10-05
-for it. The plan stays `draft` until RL 9663 is minted, and moves to `active` only through a separate
+for it. The plan stays `draft` until RL-1451 is minted, and moves to `active` only through a separate
 activation PR.
 
 ### Activation needs, in order
 
 1. **This plan is merged, minted, and made `active` by a dated line.**
-2. **RL 9715 (working id) is merged and minted** (PR #1126). Its T1–T3 are this slice's to apply
+2. **RL-1449 is merged and minted** (PR #1126). Its T1–T3 are this slice's to apply
    verbatim (Task 1), with `<date>` its commit date, and its five acceptance violations are this
    slice's tests (Acceptance 7–11). Where its minted text differs from what this plan assumes,
-   the minted text governs and the dispatch record names each difference. An unminted RL 9715
+   the minted text governs and the dispatch record names each difference. An unminted RL-1449
    is a stop.
-3. **RL 9663 (working id; dm-s3; draft PR #1141, branch `dm-9663-wk673-s3-ruling`, head
+3. **RL-1451 (dm-s3; draft PR #1141, branch `dm-9663-wk673-s3-ruling`, head
    `6604cb858edafa8d72d0c05d8864f398bbf12b60`, base `99afcde2`)** records the
    maintainer's (by delegation) decisions on DP-S3-1 to DP-S3-10 and adopts P1–P6 as T-texts for this slice's code
    commit (the maintainer's (by delegation) entry of 2026-10-05 13:25:23 BST in `to-lead.md`, items 29–30, item 29). It is merged and minted; it mints before this plan. Where its minted
    texts differ from the Appendix, they govern and the dispatch record names each difference.
    As dm-s3 reported it: P2, P4 and P6 verbatim; P1 widened to both raisers; P5 as sent, its
-   `<RL id>` written as RL 9663; **P3 carries named placeholders** (`<LEDGER_ID>`,
+   `<RL id>` written as RL-1451; **P3 carries named placeholders** (`<LEDGER_ID>`,
    `<MEASURED_TREE>`, `<SET_1>` … `<SET_6>`), which the executor fills from Task 7's ledger
    figures in the code commit and names in the ledger. The executor applies the ruling's texts,
    never the Appendix.
@@ -110,13 +112,13 @@ activation PR.
    (roadmap `:1488`, `:1506`). Task 0 Step 3 re-checks.
 6. **The lane is free under `RL-1263`**, re-checked at dispatch (Task 0 Step 3), including the
    conditions of the maintainer's (by delegation) option (b) as extended to this slice against WK-675 Slice 2, and
-   the one serialisation with the FD 9708 fix on the `03` owned-codes tail (the maintainer's (by delegation) entry of 2026-10-05 13:25:23 BST in `to-lead.md`, items 29–30, item 30;
+   the one serialisation with the FD-1421 fix on the `03` owned-codes tail (the maintainer's (by delegation) entry of 2026-10-05 13:25:23 BST in `to-lead.md`, items 29–30, item 30;
    §"Contention").
 7. **The maintainer's dispatch GO**, and the lead's go in a separate activation PR. Task 7's
    measurement needs the exclusive measurement slot (`delivery-process.core.json`
    `guards.parallelism.build_slices_across_works.measurement_step_runs_alone`).
 
-Not needs: OQ 9739 (decided by RL 9715; this plan cites the ruling, it does not carry the
+Not needs: OQ-1450 (decided by RL-1449; this plan cites the ruling, it does not carry the
 question); FD-1416 (this slice touches no approval route and no `to_dict` response).
 
 **A delta against frozen `PL-1267`, stated here and recorded by the lead in the dispatch
@@ -163,19 +165,19 @@ convention 2). `T` below is `packages/pricing-core/tests/test_rating_attribution
    isolated = v({g}) − v(∅), cumulative in declared order, residual = total − Σ isolated, all
    integers, per policy and summed; `T::test_attribution_portfolio_figures_are_sums_of_policy_parts`
    (NFR-496 applied to this artifact).
-7. **RL 9715 violation 1 (DP-1 (c))**: `T::test_subset_contract_carries_the_field_its_own_change_adds`
+7. **RL-1449 violation 1 (DP-1 (c))**: `T::test_subset_contract_carries_the_field_its_own_change_adds`
    — the worked case (`ncd` added with `in_ncd`, `rate` edited to consume it, grouped together):
    the subset holding the group declares `ncd`, and the frame `score_batch` receives carries the
    column (S2's `_Spy`); broken by building the subset from the baseline's contract.
-8. **RL 9715 violation 2**: `T::test_empty_and_full_subsets_hash_equal_baseline_and_candidate` —
+8. **RL-1449 violation 2**: `T::test_empty_and_full_subsets_hash_equal_baseline_and_candidate` —
    the subset bundles for ∅ and for every change have `content_hash` equal to
    `compile_bundle(baseline)` and `compile_bundle(candidate)`.
-9. **RL 9715 violation 3 (DP-3 (β), case 2)**: `T::test_contract_change_with_no_reader_is_one_input_field_change`
+9. **RL-1449 violation 3 (DP-3 (β), case 2)**: `T::test_contract_change_with_no_reader_is_one_input_field_change`
    — only `age`'s `max` 99 → 90: one change, kind `input_field`.
-10. **RL 9715 violation 4 (DP-2 (i))**: `T::test_dependent_changes_ungrouped_are_refused_before_any_compile`
+10. **RL-1449 violation 4 (DP-2 (i))**: `T::test_dependent_changes_ungrouped_are_refused_before_any_compile`
     — `in_ncd` and `t_ncd` ungrouped: `VALIDATION_FAILED` naming the pair (consumer, producer),
     zero `compile_bundle` calls.
-11. **RL 9715 violation 5 (DP-3 case 3)**: `T::test_delta_with_two_readers_is_its_own_change_and_refused_ungrouped`
+11. **RL-1449 violation 5 (DP-3 case 3)**: `T::test_delta_with_two_readers_is_its_own_change_and_refused_ungrouped`
     — `vehicle_age` `int → decimal` read by `in_vage` and `in_vage_band`: three changes, the
     third `input_field`; grouping c1 without c3 refused naming (c1, c3); broken by attaching the
     delta to the first reader.
@@ -323,12 +325,12 @@ FR-364 (Slices 5, 6); FR-231 (Slice 7). Backend registration of the new code in
   `examples/fremtpl2/fetch.py` (checksummed) into the git-ignored `examples/fremtpl2/data/`.
 - P9. NFR-493's only recorded throughput is 5,093,947 risks/hour/worker (`CR-927` §10.4, an older
   tree, 300,000 rows); it is a planning estimate here, not a measurement (DP-S3-10).
-- P10. RL 9715's find strings, counted with `grep -cF` on `docs/specs/03-rating-engine.md`:
+- P10. RL-1449's find strings, counted with `grep -cF` on `docs/specs/03-rating-engine.md`:
   T1/T2's ``DP-2 (c); `RL-1394`.)* |`` → 1 hit, line 192; T3's
   ``DP-1 (a), with its conditions; `RL-1394`.)* |`` → 1 hit, line 191. §4.6's
   "Slice 3 may amend these two with a dated note if it does not adopt replay.)*" → line 516.
   The §5.1 owned-codes list ends with ``require_compilable` is the only raiser)*.`` → 1 hit
-  (`:965`); **Slice 7's RL 9710 T11 appends there first**, so this slice's P1 anchor is re-read
+  (`:965`); **Slice 7's RL-1418 T11 appends there first**, so this slice's P1 anchor is re-read
   at dispatch after S7 merges.
 
 ### Task 0 at planning time (measured, not asserted)
@@ -347,7 +349,7 @@ Run by this plan's author on 2026-10-05 in `.claude/worktrees/pl-9689` at `caa4e
   Task 7 runs alone (activation need 7).
 - **WK-1250** changes `compile_bundle` and the trace; Acceptance 8 and 18 are the guards.
 - **The `03` §5.1 owned-codes list is a single tail** shared with Slice 7 (serial by order) and
-  the FD 9708 fix (serialised by the maintainer (by delegation), item 30); see §"Contention".
+  the FD-1421 fix (serialised by the maintainer (by delegation), item 30); see §"Contention".
 - **A spec find string can move** before dispatch (S7 lands first). The executor re-counts each
   find string (Task 0 Step 4); a count other than 1 is a stop, never a re-wording.
 
@@ -366,7 +368,7 @@ path and the check (`other_shared_path`: `serialise_unless_dispatch_record_names
 
 | Path | Symbol or region | Change |
 |---|---|---|
-| `docs/specs/03-rating-engine.md` | FR-1398 row (`:191`, T3); FR-1399 row (`:192`, T1 then T2); §4.6 dated notes after `:516` (P2, P3); §5.1 owned-codes list end (P1, after S7's T11); §5.2 `analysis.py` block and the prose after `:1124` (P4) | RL 9715 T1–T3 verbatim; the ruling's texts for P1–P4 and P6 |
+| `docs/specs/03-rating-engine.md` | FR-1398 row (`:191`, T3); FR-1399 row (`:192`, T1 then T2); §4.6 dated notes after `:516` (P2, P3); §5.1 owned-codes list end (P1, after S7's T11); §5.2 `analysis.py` block and the prose after `:1124` (P4) | RL-1449 T1–T3 verbatim; the ruling's texts for P1–P4 and P6 |
 | `docs/contracts/schemas/dislocation-run.schema.json` | `derived_changes.items.properties.kind.enum` (`:101`); `attribution.items` `mean_change_pct`, `cumulative_change_pct` (`:88-89`) | two kinds appended; two ratios number-or-null (DP-S3-1 (a)) |
 | `packages/model-schema/src/model_schema/rating.py` | `AlgorithmDiff` (`:541-568`), `diff_algorithms` (`:571-618`); new `InterfaceDelta` | two list fields and their computation (DP-S3-2 (a)); `summary` unchanged |
 | `backend/src/app/platform/rating_algorithms.py` | `diff_between` (`:157-163`) | returns `AlgorithmDiff`, not `.model_dump()` (DP-S3-2's condition) |
@@ -385,17 +387,17 @@ path and the check (`other_shared_path`: `serialise_unless_dispatch_record_names
 
 **Not written:** any other `backend/` file (no new route; Slice 4); `frontend/` (the generated client is VCS-ignored); `examples/fremtpl2/seed.py`; `model_schema/__init__.py` (`AlgorithmDiff` is exported at `:278`/`:436` already; `InterfaceDelta` is reached through it and not exported);
 `score.py`, `compile.py`, `runtime.py` (called, not edited); `docs/open-questions.md` and `03`
-§10 (OQ 9739's rows are RL 9715's P4); `docs/roadmap.md`; `PL-1267`; `scripts/generate-contracts.py`;
+§10 (OQ-1450's rows are RL-1449's P4); `docs/roadmap.md`; `PL-1267`; `scripts/generate-contracts.py`;
 `backend/tests/test_contracts.py`.
 
 ### Contention
 
 | Path | This slice | Other slice | Shared existing definition? | Class |
 |---|---|---|---|---|
-| `docs/specs/03-rating-engine.md` | §3.9 FR-1398/1399; §4.6; §5.1 owned-codes list; §5.2 | **SL-1391** (S7, PL 9716 at `origin/pl-9716-wk673-s7-leaf`): FR-231 `:122`, §4.2, §5.1 diff row and the owned-codes list (RL 9710 T11, `:965`), §5.2 | **yes**: §5.1 owned-codes list, §5.2 `analysis`/rate-table blocks | **SERIALISES** — and serial by `PL-1267`'s order; S3 starts after S7 closes, re-reading its anchors |
+| `docs/specs/03-rating-engine.md` | §3.9 FR-1398/1399; §4.6; §5.1 owned-codes list; §5.2 | **SL-1391** (S7, PL-1419 at `origin/pl-9716-wk673-s7-leaf`): FR-231 `:122`, §4.2, §5.1 diff row and the owned-codes list (RL-1418 T11, `:965`), §5.2 | **yes**: §5.1 owned-codes list, §5.2 `analysis`/rate-table blocks | **SERIALISES** — and serial by `PL-1267`'s order; S3 starts after S7 closes, re-reading its anchors |
 | the same | as above | **WK-675 S2** (lane C, PL 9713, draft #1131 at `origin/pl-9713-wk675-s2-leaf`): §3.1, §3.4 after `:140`, §5.1 rows before `:897` and after `:908`, §8 `:1314` | §5.1 is one section: S2 inserts table rows; S3 appends to the owned-codes list (from `:928`), more than twenty lines below S2's nearest hunk | **ALLOWED under the maintainer's (by delegation) option (b), extended to S3** (the maintainer's (by delegation) entry of 2026-10-05 13:25:23 BST in `to-lead.md`, items 29–30, item 30), on the 13:00:09 BST conditions: (1) each dispatch record lists its side's hunks and anchors; (2) the hunks are not adjacent, and the gap is measured on the dispatch tree and recorded; (3) the second to merge merges main, reads `git merge-tree`'s exit code, and re-gates; (4) the two gates never run at once |
-| the same | the owned-codes list's **single tail** (P1 appends `ATTRIBUTION_RECONCILIATION_FAILED` after the list's last entry) | **the FD 9708 fix** (WK-1178; PL 9683, draft, branch `origin/pl-9683-fd9708-rv-pins` at `f811e37d`): appends `MODEL_REFERENCE_MODE_INCONSISTENT` to the same list (its write set, the `03` row) | **yes**: one tail, both append | **SERIALISES** (the maintainer's (by delegation) entry of 2026-10-05 13:25:23 BST in `to-lead.md`, items 29–30, item 30): the second to merge merges main and re-appends after the first's entry, then re-gates |
-| `packages/model-schema/src/model_schema/rating.py` | `AlgorithmDiff`, `diff_algorithms` | **the FD 9708 fix**: adds `RatingVersionCreate` after `RatingVersion` (`:138-170`), `RatingVersion` unchanged | no | **ALLOWED one-sided**, named in the dispatch record (hunks: S3 inside `:541-618`; the fix after `:170`) |
+| the same | the owned-codes list's **single tail** (P1 appends `ATTRIBUTION_RECONCILIATION_FAILED` after the list's last entry) | **the FD-1421 fix** (WK-1178; PL-1429, draft, branch `origin/pl-9683-fd9708-rv-pins` at `f811e37d`): appends `MODEL_REFERENCE_MODE_INCONSISTENT` to the same list (its write set, the `03` row) | **yes**: one tail, both append | **SERIALISES** (the maintainer's (by delegation) entry of 2026-10-05 13:25:23 BST in `to-lead.md`, items 29–30, item 30): the second to merge merges main and re-appends after the first's entry, then re-gates |
+| `packages/model-schema/src/model_schema/rating.py` | `AlgorithmDiff`, `diff_algorithms` | **the FD-1421 fix**: adds `RatingVersionCreate` after `RatingVersion` (`:138-170`), `RatingVersion` unchanged | no | **ALLOWED one-sided**, named in the dispatch record (hunks: S3 inside `:541-618`; the fix after `:170`) |
 | `packages/model-schema/src/model_schema/rating.py` | `AlgorithmDiff`, `diff_algorithms` (DP-S3-2 (a) only) | SL-1391: `RateTableDiff` (`:735-747`), new `RateTableDiffCell`. WK-675 S2: `RatingAlgorithm` (`:375`) split into `RatingAlgorithmDraft` + new `RatingAlgorithmSaved` | no (different classes) | vs S7: serial anyway. vs WK-675 S2: **ALLOWED by class** (the maintainer's (by delegation) entry of 2026-10-05 13:25:23 BST in `to-lead.md`, items 29–30, item 30) — the dispatch record names the path and the check `git diff -U0 origin/main...<branch> -- packages/model-schema/src/model_schema/rating.py` showing hunks only inside `:541-618` (S3) and `:375-…` (S2) |
 | `backend/src/app/api/rating_algorithms.py` | `algorithm_diff` (`:53-69`), annotation only | **WK-675 S2**: `create_rating_algorithm` (`:28-50`) edited, new `get_rating_algorithm` added **after the diff route** | no (different functions); the S2 insertion is adjacent to `algorithm_diff`'s end | **ALLOWED one-sided** — the dispatch record names the path and the check (`git diff -U0` hunks: S3 inside `:53-69`, S2 inside `:28-50` plus an insertion after `:69`); the second to merge merges main, reads `git merge-tree`'s exit code, and re-gates |
 | `backend/tests/test_rating_algorithms.py` | one new test, appended | **WK-675 S2**: new tests (Acceptance 1–3) | no existing definition edited by either | **ALLOWED one-sided** (appends only), named in the dispatch record |
@@ -410,11 +412,11 @@ With WK-675 S2: `03` §5.1 is allowed under the maintainer's (by delegation) opt
 its four conditions; `rating.py`,
 `backend/src/app/api/rating_algorithms.py` and `backend/tests/test_rating_algorithms.py` are
 ALLOWED one-sided, named in the dispatch record. **One serialisation:** the `03` owned-codes
-list's single tail, with the FD 9708 fix (PL 9683); the second to merge re-appends. `rating.py`
-against the FD 9708 fix is ALLOWED one-sided. **FD 9752 (#1066), merged as FD-1416 at `99afcde2` after this plan's tree; this branch merged it** holds the four `to_dict` approval routes' responses: neither this slice nor Slice 7
-(PL 9716 §"Result": "No approval route or `approvals.py` is touched") touches them. Open PRs
-read 2026-10-05 at `caa4e411` (`gh pr list --state open`): RL 9715 (#1126), RL 9710 (#1128),
-PL 9716 (#1127), PL 9713 (#1131), RL 9695 (#1133: its ruling file and `INDEX.md` only, rules on
+list's single tail, with the FD-1421 fix (PL-1429); the second to merge re-appends. `rating.py`
+against the FD-1421 fix is ALLOWED one-sided. **FD-1416 (#1066), merged as FD-1416 at `99afcde2` after this plan's tree; this branch merged it** holds the four `to_dict` approval routes' responses: neither this slice nor Slice 7
+(PL-1419 §"Result": "No approval route or `approvals.py` is touched") touches them. Open PRs
+read 2026-10-05 at `caa4e411` (`gh pr list --state open`): RL-1449 (#1126), RL-1418 (#1128),
+PL-1419 (#1127), PL 9713 (#1131), RL-1428 (#1133: its ruling file and `INDEX.md` only, rules on
 FR-237's `POST /rating-versions`, not on `compile_bundle`), and findings PRs; none other rules
 on FR-266, FR-1397–1399 or §4.6.
 
@@ -435,15 +437,15 @@ plan's proposals as sent.
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-S3-1 | **How do RL 9715's kinds `input_field` and `output` reach `dislocation-run.schema.json`? And the two attribution ratios:** §4.6 makes a zero-denominator ratio null (`:570`), but the schema types `attribution.items.mean_change_pct` and `cumulative_change_pct` as `number` only (`:88-89`); S2 widened six ratios the same way (`RL-1402` S5). RL 9715 T4 withdrew the hand edit ("generated and never hand-edited") and says the contract gets them "by the path that governs it at S3's tree"; at that tree the file is hand-authored (`test_contracts.py:98`; core.json `not_exempt_hand_authored`), and S1 (#1094) and S2 (#1107, `f68db62a`) both hand-edited it | (a) hand-edit the authored file: the enum (`:101`) and the two ratios widened to number-or-null, as S1 and S2 did; S4 still replaces it by generation (`PL-1267` Acceptance 6). (b) pull S4's generation forward: register `DislocationRun` in `generate-contracts.py`, regenerate, move the slug to `COMPARED_SLUGS` — a scope move from `SL-1388`, i.e. a replan (the lead's call). (c) leave the contract unchanged until S4; model-schema's literal and the authored enum disagree for one slice | **(a).** It is the governing path at this tree, it matches the S1/S2 precedent, and it keeps `PL-1267`'s cut. `CLAUDE.md` §2's rule binds generated files; this one is registered hand-authored. (c) second | decision point | yes — Tasks 1, 2 | **DECIDED (a)** (the maintainer (by delegation), 2026-10-05 13:12:56 BST, item 16): the hand edit in the CODE commit, the enum and the attribution items it types; the `test_contracts.py:98` marker stays, Slice 4 generates later, and the ledger names the edit. The same entry corrects the earlier "docs/contracts is generated" reason for this file. **Within (a), per the lead's relay:** `mean_change_pct` and `cumulative_change_pct` widened to number-or-null, with a red-first test that a zero-denominator item validates against the contract (Task 2) |
-| DP-S3-2 | **Where do the field-level contract and output deltas live?** RL 9715: "beside `diff_algorithms`'s two booleans" | (a) two list fields on `AlgorithmDiff`, `input_contract_deltas` and `output_deltas` (`list[InterfaceDelta]`, `InterfaceDelta = {name, change: added\|removed\|changed}`), computed by `diff_algorithms`; the FR-219 diff route's 200 body gains two keys (`test_rating_algorithms.py:215` reads only `repointed_tables`). (b) a sibling pure function `diff_interfaces(old, new)` in `model_schema/rating.py`; `AlgorithmDiff` unchanged. (c) private to `analysis.py` | **(a).** FR-1399 derives "from the structural diff (FR-219)", so one diff holds every difference the derivation reads; the booleans stay for the approval summary (RL 9715 "What it costs") | decision point | yes — Tasks 2, 3 | **DECIDED (a)** (the maintainer (by delegation), 2026-10-05 13:15:53 BST, item 17), **with a condition**: the FR-219 route's 200 is a changed JSON route, so the slice types it as `AlgorithmDiff` in the same commit (the WK-1178 template line), regenerates the contracts, and pins the existing keys with a test (Task 2, Steps 5–7) |
+| DP-S3-1 | **How do RL-1449's kinds `input_field` and `output` reach `dislocation-run.schema.json`? And the two attribution ratios:** §4.6 makes a zero-denominator ratio null (`:570`), but the schema types `attribution.items.mean_change_pct` and `cumulative_change_pct` as `number` only (`:88-89`); S2 widened six ratios the same way (`RL-1402` S5). RL-1449 T4 withdrew the hand edit ("generated and never hand-edited") and says the contract gets them "by the path that governs it at S3's tree"; at that tree the file is hand-authored (`test_contracts.py:98`; core.json `not_exempt_hand_authored`), and S1 (#1094) and S2 (#1107, `f68db62a`) both hand-edited it | (a) hand-edit the authored file: the enum (`:101`) and the two ratios widened to number-or-null, as S1 and S2 did; S4 still replaces it by generation (`PL-1267` Acceptance 6). (b) pull S4's generation forward: register `DislocationRun` in `generate-contracts.py`, regenerate, move the slug to `COMPARED_SLUGS` — a scope move from `SL-1388`, i.e. a replan (the lead's call). (c) leave the contract unchanged until S4; model-schema's literal and the authored enum disagree for one slice | **(a).** It is the governing path at this tree, it matches the S1/S2 precedent, and it keeps `PL-1267`'s cut. `CLAUDE.md` §2's rule binds generated files; this one is registered hand-authored. (c) second | decision point | yes — Tasks 1, 2 | **DECIDED (a)** (the maintainer (by delegation), 2026-10-05 13:12:56 BST, item 16): the hand edit in the CODE commit, the enum and the attribution items it types; the `test_contracts.py:98` marker stays, Slice 4 generates later, and the ledger names the edit. The same entry corrects the earlier "docs/contracts is generated" reason for this file. **Within (a), per the lead's relay:** `mean_change_pct` and `cumulative_change_pct` widened to number-or-null, with a red-first test that a zero-denominator item validates against the contract (Task 2) |
+| DP-S3-2 | **Where do the field-level contract and output deltas live?** RL-1449: "beside `diff_algorithms`'s two booleans" | (a) two list fields on `AlgorithmDiff`, `input_contract_deltas` and `output_deltas` (`list[InterfaceDelta]`, `InterfaceDelta = {name, change: added\|removed\|changed}`), computed by `diff_algorithms`; the FR-219 diff route's 200 body gains two keys (`test_rating_algorithms.py:215` reads only `repointed_tables`). (b) a sibling pure function `diff_interfaces(old, new)` in `model_schema/rating.py`; `AlgorithmDiff` unchanged. (c) private to `analysis.py` | **(a).** FR-1399 derives "from the structural diff (FR-219)", so one diff holds every difference the derivation reads; the booleans stay for the approval summary (RL-1449 "What it costs") | decision point | yes — Tasks 2, 3 | **DECIDED (a)** (the maintainer (by delegation), 2026-10-05 13:15:53 BST, item 17), **with a condition**: the FR-219 route's 200 is a changed JSON route, so the slice types it as `AlgorithmDiff` in the same commit (the WK-1178 template line), regenerates the contracts, and pins the existing keys with a test (Task 2, Steps 5–7) |
 | DP-S3-3 | **Ladder replay** (`RL-1264` feasibility item 2: "evaluate ladder replay as the primary route where the declared changes are step-aligned") | (a) build replay for the aligned case (each group's steps feed a distinct rung, ≤ 1 group on `risk_premium`), proven equal to re-rates on the full portfolio at K ≤ 3 and a declared sample at K = 4–6, falling back on mismatch, recorded. (b) re-rates only in production; replay **evaluated** by a measurement harness over the six F3 change sets (which are aligned; replay vs re-rate where they are), results in the ledger; `subset_valuation` always `rerate`, `replay_fell_back` always `false`, and §4.6 gets the dated note `RL-1394` already permits (P3). (c) Task 7 measures first and the executor stops and routes the figure before building either | **(b).** P7: the commonest rate change (two factor edits, as §4.6's own example) is not aligned, so replay helps only changes outside `risk_premium`; P9 puts K = 4 re-rates near two worker-hours. If (a) is ruled, Task 6 gains a replay sub-task and its negative test moves onto the production path | decision point | yes — Tasks 6, 7 | **DECIDED (b)** (the maintainer (by delegation), 2026-10-05 13:15:53 BST, item 18): re-rates only; `RL-1394` T1 `:342` makes replay optional ("may"). The harness **measures** replay on the six F3 sets (aligned or not, agreement in minor units, wall time) into the ledger and the §4.6 note (P3). Runs record `rerate`. The ≈ 2 worker-hours is an estimate; the ledger gives the measured figure |
 | DP-S3-4 | **The reconciliation failure code** (`RL-1394` DP-S1-6: "Slice 3 registers one in `03` §5.1") | (a) `ATTRIBUTION_RECONCILIATION_FAILED`. (b) `ATTRIBUTION_FAILED`, also covering DP-S3-7 | **(a)**, one meaning per code (`RL-1394` DP-S1-6's reason for refusing `LADDER_RECONCILIATION_FAILED`); text P1 | decision point | no | **ACCEPTED (a)** (the maintainer (by delegation), 2026-10-05 13:15:53 BST). P1 is worded to cover DP-S3-7's raiser too |
 | DP-S3-5 | **The S-bound order count n, and the precision of S and R** (`RL-1394` DP-S1-5: "Slice 3 fixes it from its cost measurement, with a floor of 2") | (a) n = 2 (declared and reverse); S and R as exact `Fraction`s rounded once to 6 places, half-even (S2's share convention, `analysis.py` `_SHARE_PLACES`), null when D = 0 (§4.6's zero-denominator rule). (b) n = 2 + a fixed number of seeded random orders | **(a).** Each extra order costs up to K − 2 more prefix passes over the portfolio; Task 7 reports the cost per order, and a later amendment can raise n. Text P2 | decision point | no | **ACCEPTED (a), n = 2** (the maintainer (by delegation), 2026-10-05 13:15:53 BST) |
 | DP-S3-6 | **Which ZEN algorithm the measurement and the F3 carried items run on** (P8) | (a) a measurement-only freMTPL2 algorithm reproducing RS-1201's `rate()` (a `model_call` on a declarative GLM artifact, severity, an age table, expense load, min premium, cap) and its six change sets, in a fixture module and the script. (b) as (a) with the frequency model as a precomputed relativity table (loses set member 0's model swap). (c) cost measured on the smallest faithful algorithm; the six-set rerun and the 690/976 question carried to the G2 exit-demo slice with an owner | **(a).** The carried items are this Work's (`PL-1267` Slice 3, "The F3 carried items"); member 0 is in four of the six sets; the fixture also serves Slice 4 | decision point | yes — Task 7 | **DECIDED (a)** (the maintainer (by delegation), 2026-10-05 13:15:53 BST, item 19): a measurement-only ZEN algorithm as a **declarative JSON fixture** (never code, never a pickle), named so the exit-demo slice can adopt it; no `seed.py` edit (Task 7) |
 | DP-S3-7 | **A compared policy not `quoted` in some intermediate subset** (v(S) undefined; FR-1398 "never skipped") | (a) fail the run naming the first such `quote_id` and the subset's change ids, with DP-S3-4's code family. (b) attribute over the policies quoted in every subset; count the rest in a new `attribution_summary.unattributed_policies` (§4.6 + contract). (c) v(S) = 0 — invents a premium | **(a)**: rare, governance-safe, no new field; (b) is the later amendment. Text P5 | decision point | yes — Task 6 | **DECIDED (a)** (the maintainer (by delegation), 2026-10-05 13:20:26 BST, item 23): fail the run, naming the first such `quote_id` and the subset's change ids, with `ATTRIBUTION_RECONCILIATION_FAILED`; never skipped. The FR-1398 sentence (P5) is a T-text for a decision-maker to adopt; sent to the lead 2026-10-05 |
 | DP-S3-8 | **How an ephemeral subset is fed to `compile_bundle`** (P4) | (a) an in-memory `RatingVersion` copied from the baseline with the subset's `pins` and `algorithm_ref = rating_algorithm:<baseline algorithm slug>-subset-<K-bit mask>@1`, compiled through `_SubsetResolver`, which serves that one ref (status: the lower maturity of the two source algorithms) and delegates every other ref. (b) bypass `compile_bundle`, building the `Bundle` directly | **(a).** (b) breaks FR-1398 ("compiled by `compile_bundle`"). `bundle_hash` ignores the ref, so Acceptance 8 holds | decision point | no | **ACCEPTED (a)** (the maintainer (by delegation), 2026-10-05 13:20:26 BST) |
-| DP-S3-9 | **A version-level difference FR-1399 derives no change for** — `model_reference_mode` (`rating.py:164`); mixed subsets would fail `check_model_reference_mode` at compile | (a) `derive_changes` refuses up front with `VALIDATION_FAILED` naming the field. (b) let the subset fail `BUNDLE_COMPILE_FAILED` | **(a)**, RL 9715 DP-2 (i)'s principle (by name, before any compile). Text P6 | decision point | no | **ACCEPTED (a)** (the maintainer (by delegation), 2026-10-05 13:20:26 BST) |
+| DP-S3-9 | **A version-level difference FR-1399 derives no change for** — `model_reference_mode` (`rating.py:164`); mixed subsets would fail `check_model_reference_mode` at compile | (a) `derive_changes` refuses up front with `VALIDATION_FAILED` naming the field. (b) let the subset fail `BUNDLE_COMPILE_FAILED` | **(a)**, RL-1449 DP-2 (i)'s principle (by name, before any compile). Text P6 | decision point | no | **ACCEPTED (a)** (the maintainer (by delegation), 2026-10-05 13:20:26 BST) |
 | DP-S3-10 | **The measurement's size.** `PL-1267` Acceptance 5 on the full portfolio for every K is ≈ 5 × (8+16+32+64) × 678,013 ≈ 407M ratings, ≈ 80 exclusive worker-hours at P9's rate | (a) as written. (b) `score_batch` rate N = 5 on the full portfolio; 2^K re-rates N = 5 for K = 3..6 on the first 20,000 policies by `quote_id`; one full-portfolio K = 3 run as the linearity check; full-portfolio cost per K reported as **derived** and labelled. (c) as (b) with N = 3 | **(b)**: re-rates are 2^K independent passes, linear in passes × policies, and the full K = 3 run tests that on the real portfolio | decision point | yes — Task 7 | **DECIDED (b)** (the maintainer (by delegation), 2026-10-05 13:20:26 BST, item 24): full-portfolio figures are labelled DERIVED with the formula and inputs; **no NFR verdict from a derived figure**; the ledger carries the measured times. Acceptance 5's change is a dispatch-record delta against frozen `PL-1267`, the lead's at dispatch (§"Status") |
 
 ## Tasks
@@ -453,7 +455,7 @@ plan's proposals as sent.
 **Files:** the slice ledger `docs/ledgers/LG-<working id>-….md` (the executor's).
 
 - [ ] **Step 1:** Confirm each activation need at the dispatch tree:
-  `git -C <worktree> log -1 --format='%H %aI' origin/main`; RL 9715 and the DP ruling resolve
+  `git -C <worktree> log -1 --format='%H %aI' origin/main`; RL-1449 and the DP ruling resolve
   (`grep -l '^id: RL-<n>' docs/rulings/*.md`); this plan is `active`; `SL-1391` is `closed` and
   `SL-1387` `active` in `docs/roadmap.md`.
 - [ ] **Step 2:** `uv sync --all-packages`; `uv run python examples/fremtpl2/fetch.py` (checksummed;
@@ -468,7 +470,7 @@ plan's proposals as sent.
   Record any WK-1250 slice (`SL-1340`, `SL-1341`) that is `active`: if one edits `compile.py` or
   the trace, stop (activation need 5). Record whether WK-675 S2 is in flight and the maintainer's (by delegation)
   call on `03` §5.1.
-- [ ] **Step 4:** Copy RL 9715's T1–T3 and the ruling's texts into the ledger with their minted
+- [ ] **Step 4:** Copy RL-1449's T1–T3 and the ruling's texts into the ledger with their minted
   ids and line ranges; re-count every find string with `grep -cF` on the dispatch tree (each must
   be 1). Every later step applies the ledger copy, never this plan's Appendix.
 - [ ] **Step 5:** Baseline `uv run pytest packages/pricing-core/tests/test_rating_dislocation.py packages/model-schema/tests/test_dislocation.py packages/model-schema/tests/test_rating_algorithm.py -q`
@@ -870,7 +872,7 @@ def estimate_attribution_ratings(k: int, policies: int, *,       # added <date> 
 *`attribute` (added <date>, WK-673 Slice 3).* It reads the portfolio with `read_portfolio`, derives the changes (FR-1399), checks the groups and their dependence before compiling anything, and rates each subset bundle with `score_batch` over the compared set's policies, each pass given only its subset's declared inputs. `AttributionError` is a `ValueError` with `code`: `VALIDATION_FAILED` (partition, dependence, a version-level difference), `BUNDLE_COMPILE_FAILED` (a subset, named by its change ids) or `ATTRIBUTION_RECONCILIATION_FAILED`. `estimate_attribution_ratings` returns the rating count the run will perform, 2^K × policies, or under the above-six rule (3K − 2) × policies, so a caller can show it before launch.
 ```
 
-### P5 — `03` FR-1398, appended at the row's end after RL 9715's T3 (DP-S3-7 (a); sent to the lead 2026-10-05)
+### P5 — `03` FR-1398, appended at the row's end after RL-1449's T3 (DP-S3-7 (a); sent to the lead 2026-10-05)
 
 ```markdown
 *(Amended <date>, WK-673 Slice 3, <RL id>, DP-S3-7 (a).)* **A compared policy is attributed only from its own premium under every subset.** Where a policy quoted in both the baseline and the candidate pass (the compared set, §4.6) is not quoted under some other subset bundle, so that its v(S) is undefined, the run fails with `ATTRIBUTION_RECONCILIATION_FAILED`, naming the first such `quote_id` in `quote_id` order and the ids of the changes in that subset; the policy is never dropped from the attribution and its v(S) is never assumed.
@@ -886,7 +888,7 @@ def estimate_attribution_ratings(k: int, policies: int, *,       # added <date> 
 
 1. **Spec coverage.** FR-266 → Tasks 5, 6 (Acceptance 4, 6, 12); FR-1397 → Task 5 (5, 6);
    FR-1398 + T3 → Task 4 (3, 7, 8), Task 6 (14); FR-1399 + T1, T2 → Tasks 3, 4 (1, 2, 9, 10, 11);
-   RL 9715's five violations → Acceptance 7–11; `LG-1400`'s two Slice 3 tests → Acceptance 2, 3,
+   RL-1449's five violations → Acceptance 7–11; `LG-1400`'s two Slice 3 tests → Acceptance 2, 3,
    by name; `RL-1394`'s two Slice 3 violations → Acceptance 1 (table re-point), 13; `RL-1264`'s
    replay check → 18; the feasibility rule → Task 7 and Acceptance 19; the F3 items → 20;
    NFR-495/496 → 15, 6. The estimated rating count → `estimate_attribution_ratings`.

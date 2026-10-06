@@ -1,10 +1,10 @@
 ---
-id: PL-9688
+id: PL-1447
 family: plan
 kind: leaf
 title: WK-673 — FD-1420 fix, a lookup step reads the row in force as at its declared date (FR-221, FR-69): leaf plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-05            # working id; the mint date will replace this (check 31)
+created: 2026-10-06            # original date 2026-10-05, set at the draft; minted 2026-10-06
 owner: planner
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc
 phase: P2
@@ -15,7 +15,9 @@ corrected_by: []
 relates: [FD-1374, RL-1313, RL-1263, SL-1409, PL-1408, PL-1403]
 ---
 
-# PL 9688 (working id) — WK-673: the FD-1420 fix, a lookup step reads the row in force as at its declared date, leaf plan
+# PL-1447 — WK-673: the FD-1420 fix, a lookup step reads the row in force as at its declared date, leaf plan
+
+*(Minted 2026-10-06 as PL-1447 from working id 9688, in the B1 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
 
 Filed under working id 9688 (this plan) and slice working id 9685 (its `SL-` row under WK-673 in
 [`../roadmap.md`](../roadmap.md), `draft`). The lead reserved both. The finding is ~~FD 9707
@@ -53,7 +55,7 @@ item changes.
    "commit-message text in the plan is listed and left" and re-points them. It names two of
    the four; the lead applied it to all four, because the other two are the same class.
 3. **PL 9716 → PL-1419** (minted from #1127), struck in place in the write-set table's header.
-4. **`../roadmap.md`, the SL 9685 row:** its heading, its `title` and its first paragraph cite
+4. **`../roadmap.md`, the SL-1448 row:** its heading, its `title` and its first paragraph cite
    FD 9707. Each is a citation, not a quote, and each is re-pointed to FD-1420 the same way:
    struck in the heading and the paragraph, replaced in the `title` field.
 
@@ -97,32 +99,32 @@ upstream filter exists on any path (the entry quoted under DP-1 to DP-3, "Severi
 All three blocking decision points are decided, by the maintainer (by delegation), in
 `~/gi-pricing-plan.local/channel/to-lead.md`. Each is cited by its entry header:
 
-- **DP-1**, entry "2026-10-05 13:15:53 BST — DECISIONS 17–21 (PL 9689 DP-S3-2/3/6; FD 9707
-  DP-1; RL 9695 follow-ups)", item 20: "FD 9707 DP-1: OPTION (a). `as_at` may name only
+- **DP-1**, entry "2026-10-05 13:15:53 BST — DECISIONS 17–21 (PL-1452 DP-S3-2/3/6; FD-1420
+  DP-1; RL-1428 follow-ups)", item 20: "FD-1420 DP-1: OPTION (a). `as_at` may name only
   `effective_date` or a declared `date` input. It is checked at compile (the named input's type
   is date, else refused naming it) AND at run time (the value is a strict ISO calendar date
   YYYY-MM-DD; an offset or datetime string, or a malformed one, is refused, never silently
   missed). Red first: the offset-string and malformed cases are tests."
 - **DP-2**, entry "2026-10-05 13:20:26 BST — DECISIONS 22–27; severity signals for the four gap
-  findings", item 22: "PL 9688 DP-2 (FD 9707's window): OPTION (a), in-graph per-rule
+  findings", item 22: "PL-1447 DP-2 (FD-1420's window): OPTION (a), in-graph per-rule
   `date($) >= date(from) and date($) < date(to)` (spiked on zen 0.53.0). Conditions: an
   open-ended window (no `to`) is handled and tested; overlapping windows for one key are REFUSED
   at table save or bundle compile (else "first match wins" returns by another door), with a
   named code and a test; boundary tests at `from` and at `to` (half-open), red first."
-- **DP-3**, entry "2026-10-05 13:20:52 BST — DECISION 28 (PL 9688 DP-3): OPTION (a), with a
+- **DP-3**, entry "2026-10-05 13:20:52 BST — DECISION 28 (PL-1447 DP-3): OPTION (a), with a
   pinning test": "DP-1's strict run-time check applies to `date` inputs named by `as_at`;
   QuoteContext.effective_date is NOT changed (no model-schema or contract change). Condition:
   the slice adds tests that PIN today's parsing of effective_date on /score: a plain YYYY-MM-DD
   is accepted; a midnight datetime with an offset yields its local calendar date (the row chosen
   is that date's); a non-midnight datetime and a malformed value are refused 422. If any of
   those does not behave as the lead describes, stop and bring it back: then (b) is reopened."
-- **Severity and order**: entry "2026-10-05 13:11:05 BST — FD 9707 (B3, as_at lookup ignores
+- **Severity and order**: entry "2026-10-05 13:11:05 BST — FD-1420 (B3, as_at lookup ignores
   effective dating): HIGH, provisional on the upstream-filter check; its fix goes FIRST in lane
   B after SL-1409". Items 2 and 3 say: owner WK-673, deadline before the P2 exit demo, and lane
-  order. The 13:20:26 entry's "Severity signals" adds: "FD 9707 (#1132): HIGH CONFIRMED (no
+  order. The 13:20:26 entry's "Severity signals" adds: "FD-1420 (#1132): HIGH CONFIRMED (no
   upstream filter on /score, /compare or batch)".
 
-**Owner discrepancy, for the lead.** ~~FD 9707~~ FD-1420's draft (#1132 @`9e51cbe8`, §Finding) proposes
+**Owner discrepancy, for the lead.** FD-1420's draft (#1132 @`9e51cbe8`, §Finding) proposes
 owner WK-1178. The maintainer's (by delegation) 13:11:05 entry, item 2, says WK-673. This plan and its slice row
 follow the maintainer (by delegation). The finding's mint reconciles its owner line.
 
@@ -135,16 +137,16 @@ status flip and the `SL-` row's.
 
 ### Activation needs, in order
 
-1. **~~FD 9707~~ FD-1420 minted** (#1132). It is in the maintainer's (by delegation) first finding batch (13:13:32 BST entry,
+1. **FD-1420 minted** (#1132). It is in the maintainer's (by delegation) first finding batch (13:13:32 BST entry,
    item 5).
 2. **A ruling record (`RL-`) carries DP-1 to DP-4 and text T1** (§"Spec text T1"), because a
    decision lands as a dated artifact (`CLAUDE.md` §12). The decision-maker writes it from the
    three entries quoted above. If its text differs from this plan, the ruling wins, and the
    dispatch record names each difference.
 3. **This plan made `active`** by a dated line in the activation PR.
-4. **Lane.** It runs in lane B, after `SL-1409` merges. It goes **before PL 9728** (#1113, the
-   NFR-489 remedy) if this plan is active first. If PL 9728 is dispatch-ready and this plan is
-   not, PL 9728 goes first and this fix takes the next free build lane. The maintainer's (by delegation) priority
+4. **Lane.** It runs in lane B, after `SL-1409` merges. It goes **before PL-1454** (#1113, the
+   NFR-489 remedy) if this plan is active first. If PL-1454 is dispatch-ready and this plan is
+   not, PL-1454 goes first and this fix takes the next free build lane. The maintainer's (by delegation) priority
    rule (13:12:56 BST entry) also lets this fix, as a HIGH G2 blocker, take the first build
    lane that frees once it is active. **It never runs concurrently with PL 9776** (#1051, the
    F35 remedy): both edit `_decision_table_node`, the `runtime.py` docstring and
@@ -213,7 +215,7 @@ printed.
    - `2026-01-01T00:30:00+01:00` and `2026-13-01` are refused `422` with `code ==
      "VALIDATION_FAILED"`.
 
-   The midnight-offset case is red first (`130000` at the base, by ~~FD 9707~~ FD-1420's cause). The
+   The midnight-offset case is red first (`130000` at the base, by FD-1420's cause). The
    other three are pins. If any pin fails at the base, **stop and bring it back to the lead**
    (DP-3's condition).
 8. **The registry follows RL-1313 DP-G5 (i).** `(RatingLookupStep, "as_at")` is in
@@ -267,7 +269,7 @@ printed.
 `zen-engine` 0.53.0, the planner ran a scratch decision table:
 `/home/puzhenhao1989/.claude/jobs/6cad77f9/tmp/spike.py`, scratch, not committed.
 
-- Key-only rules over OLD/NEW returned `OLD` at 2026-06-01. That is ~~FD 9707~~ FD-1420.
+- Key-only rules over OLD/NEW returned `OLD` at 2026-06-01. That is FD-1420.
 - The rule `date($) >= date('2025-01-01') and date($) < date('2026-01-01')` for OLD, with
   `date($) >= date('2026-01-01')` for NEW, gave:
   - `2024-12-31` → no match
@@ -376,9 +378,9 @@ matching key last, 400 evaluations after 50 warm-ups, three runs.
 | windowed | 3.3–4.4 ms | 8.3–11.9 ms |
 
 The two cannot be told apart at this noise level. NFR-489's harness (`scripts/bench-rating.py`
-`:309`, `:635`) pins no reference table, so this slice does not move PL 9728's measurement.
+`:309`, `:635`) pins no reference table, so this slice does not move PL-1454's measurement.
 `CompiledBundle.content_hash` is `Bundle.content_hash` (`runtime.py:673`), not a hash of the
-wire graph, so PL 9728's steady-state key is unchanged too.
+wire graph, so PL-1454's steady-state key is unchanged too.
 
 **Run 5: exposure over every local database.** At 2026-10-05 12:20:47 UTC (13:20:47 BST), on
 the compose server `gi-pricing-postgres-1`, the planner ran the script of Task 0 Step 1. Its
@@ -430,7 +432,7 @@ edited by both." The JSON keys are under `guards.parallelism.build_slices_across
 `docs/process/delivery-process.core.json`: `no_shared_files` `:389`, `other_shared_path`
 `:417`, `generated` `:394`, `registry_exempt_append_only` `:391`.
 
-| Path | This slice | SL-1409 (lane B, in flight) | SL-1391 (lane A, ~~PL 9716~~ PL-1419, #1127) | WK-675 S2 (lane C, PL 9713, #1131) | PL 9728 (#1113) | Class |
+| Path | This slice | SL-1409 (lane B, in flight) | SL-1391 (lane A, ~~PL 9716~~ PL-1419, #1127) | WK-675 S2 (lane C, PL 9713, #1131) | PL-1454 (#1113) | Class |
 |---|---|---|---|---|---|---|
 | `packages/pricing-core/src/pricing_core/rating/runtime.py` | edited: `_decision_table_node` (`lookup` branch, `:240-253`), module docstring (`:22-35`); added: `_as_at_window` | — | — | — | reads `CompiledBundle.content_hash` (`:673`) only | none |
 | `packages/pricing-core/src/pricing_core/rating/compile.py` | added: `_check_lookup_as_at`; edited: `ALGORITHM_CHECKS` (`:359-363`, one entry appended) | — | — | — | — | none |
@@ -442,9 +444,9 @@ edited by both." The JSON keys are under `guards.parallelism.build_slices_across
 | `packages/pricing-core/tests/test_rating_pin_membership.py` | edited: `_lookup_algo` (`:58-68`, `as_at` `:62`), `_veh_algo` (`:228-`, `as_at` `:232`) | — | — | — | — | none |
 | `packages/pricing-core/tests/test_rating_authored_fields.py` | edited: `test_every_non_expression_field_carries_a_reason` (`:187-190`), `test_the_enumerator_yields_every_authored_string_with_its_field` (`:103-116`) | — | — | — | — | none |
 | `packages/pricing-core/tests/test_quote_input_raise_sites.py` | edited: `_INPUT_FREE` (`:62-79`, one entry added) | — | — | — | — | none found; any slice adding a pricing-core raise site edits the same dict (registry: append; the second to merge re-gates) |
-| `backend/tests/test_score_as_at.py` | added (new module) | — | — | — | — | none. PL 9728 reads `backend/tests/test_score.py`, which "must stay green" (its plan `:267-268`); this slice does not edit it |
+| `backend/tests/test_score_as_at.py` | added (new module) | — | — | — | — | none. PL-1454 reads `backend/tests/test_score.py`, which "must stay green" (its plan `:267-268`); this slice does not edit it |
 | `docs/specs/03-rating-engine.md` | edited: the FR-221 row (`:107`, §3.2), a dated amendment appended to the row (text T1) | — | §3.3 (FR-231 `:122`), §4.2, §5.1, §5.2 | §3.1, §3.4 (after FR-243), §5.1, §8 | only under its DP-3 (b) or DP-5 | **shared file, distinct sections**: allowed only if the dispatch record names the path and the check that no section is edited by both (RL-1263; `other_shared_path`). PL 9713 `:242` cites FR-221 ("a `lookup` step's `as_at` is a required, explicit field"). T1 keeps that clause and narrows the values, so S2's inspector should offer only `effective_date` and `date` inputs. That is a note for S2's dispatch, not an edit to S2 |
-| `docs/roadmap.md` | added: the SL 9685 row (plan PR only) | — | #1127 edits the SL-1391 row (`:828`) | #1131 inserts after `:1054` | #1113 inserts after `:1436` | registry (append, distinct rows); the second to merge re-reads |
+| `docs/roadmap.md` | added: the SL-1448 row (plan PR only) | — | #1127 edits the SL-1391 row (`:828`) | #1131 inserts after `:1054` | #1113 inserts after `:1436` | registry (append, distinct rows); the second to merge re-reads |
 | `docs/INDEX.md`; the slice's ledger | regenerated; added | every PR | every PR | every PR | every PR | `generated` |
 
 **A fifth plan writes the same definitions: PL 9776 (working id, `draft`, #1051, the F35
@@ -470,14 +472,14 @@ slice's subject beyond what is quoted:**
 
 | PR | What it is | Relation to this slice |
 |---|---|---|
-| #1132 | ~~FD 9707~~ FD-1420 itself | — |
+| #1132 | FD-1420 itself | — |
 | #1051 / #1060 | PL 9776 and its ruling | above |
 | #972 | FD 9888 | its fix edits `_reraise_engine_failure`, not on this list |
-| #1059 | FD 9759 | a sweep of bare `ValueError` raises in the check functions; no write set yet |
-| #1061 | RL 9758 | `test_rating_compile_bundle.py:234` only |
+| #1059 | FD-1437 | a sweep of bare `ValueError` raises in the check functions; no write set yet |
+| #1061 | RL-1438 | `test_rating_compile_bundle.py:234` only |
 | #1055 | RL 9767 | moves `ValidationIssue` out of `compile.py` and keeps the name importable; if it lands first, Task 3 Step 1 imports it from its new home |
-| #1126 | RL 9715 | appends an OQ row to `03` after `:1369` |
-| #1048 | OQ 9777 | edits the NFR-489 row (`03:1330`) |
+| #1126 | RL-1449 | appends an OQ row to `03` after `:1369` |
+| #1048 | OQ-1453 | edits the NFR-489 row (`03:1330`) |
 
 No open PR changes a file under `packages/` (`gh pr list --state open --limit 80 --json
 number,headRefName,files`), except the dependabot PRs, which touch `uv.lock` only. The
@@ -498,7 +500,7 @@ see what was weighed. The decisions' text governs.
 | DP | Question | Options | Recommendation | Owner | Blocks |
 |---|---|---|---|---|---|
 | **DP-1** | What may `as_at` name, and how strict is its value? A `date` input is checked only to be a string (`score.py:366-369`); ZEN's `date()` converts an offset value to UTC and silently misses a malformed one (Task 0 run 1) | (a) `effective_date` or a declared `date` input, checked at compile, and at run time a strict `YYYY-MM-DD`; (b) any input, truncated to a date in the graph; (c) accept datetimes and compare in UTC | (a) | **DECIDED (a)** by the maintainer (by delegation), 13:15:53 BST item 20 | Tasks 1, 2, 3, 5 |
-| **DP-2** | The window mechanism (~~FD 9707~~ FD-1420's Disposition sends it to a DP) | (a) in-graph per-rule `date($)` tests; (b) a numeric-ordinal expression node feeding the table; (c) a host-side pre-filter (not possible: the decision is built once per bundle and cached, while `as_at` varies per quote) | (a) | **DECIDED (a)** by the maintainer (by delegation), 13:20:26 BST item 22, with conditions: open-ended window tested; overlap refused at save or compile with a named code and a test; boundary reds at `from` and `to` | Tasks 1, 2 |
+| **DP-2** | The window mechanism (FD-1420's Disposition sends it to a DP) | (a) in-graph per-rule `date($)` tests; (b) a numeric-ordinal expression node feeding the table; (c) a host-side pre-filter (not possible: the decision is built once per bundle and cached, while `as_at` varies per quote) | (a) | **DECIDED (a)** by the maintainer (by delegation), 13:20:26 BST item 22, with conditions: open-ended window tested; overlap refused at save or compile with a named code and a test; boundary reds at `from` and `to` | Tasks 1, 2 |
 | **DP-3** | Does DP-1's run-time refusal reach `QuoteContext.effective_date`? | (a) no, the strict check applies to `date` inputs named by `as_at` (here: to the merged-context value, §"A finding from planning"), and `/score`'s parsing is pinned; (b) make the field strict: a model-schema and contract change | (a) | **DECIDED (a)** by the maintainer (by delegation), 13:20:52 BST decision 28, with the pinning tests (Acceptance 7) and a stop if a pin fails | Tasks 3, 4 |
 | **DP-4** | DP-1's compile check: which codes, and where it runs | Codes: (i) `RATING_TYPE_MISMATCH` for a declared input of another type, and `RATING_GRAPH_UNRESOLVED_REF` for an undeclared name other than `effective_date`; (ii) one new code (a spec change to `03`'s owned codes, `:928-931`). Place: (p) appended to `ALGORITHM_CHECKS`, so it runs at save (`validate_algorithm`) and again at compile (`compile_bundle` re-runs it, `compile.py:573-583`); (q) in `compile_bundle` only | (i) and (p). Both codes are already `03`'s, with matching meanings (`03:844-845`). Running at save tells the author earliest, as FR-227's result-type check does at create. Every committed algorithm that names `effective_date` still saves: `backend/tests/test_rating_algorithms.py:38`, `:86`, `test_rating_compile.py:36`, `:84`, `test_rating_compile_bundle.py:47` | **planner; non-blocking.** The ruling of activation need 2 confirms or changes it | Task 3 |
 
@@ -530,7 +532,7 @@ after its existing sentence:
 
 ```bash
 #!/bin/bash
-# PL 9688 Task 0: lookup-step exposure over every gipricing* database on the compose server.
+# PL-1447 Task 0: lookup-step exposure over every gipricing* database on the compose server.
 # Per DB: rating algorithms holding a lookup step; reference-table keys with more than one row.
 C=gi-pricing-postgres-1
 q() { docker exec "$C" psql -U gipricing -d "$1" -Atc "$2" 2>/dev/null; }
@@ -576,7 +578,7 @@ echo "DATABASES=$n TOTAL lookup_algorithms=$tot_alg multi_row_keys=$tot_keys"
 """FD-1420: a `lookup` step reads the row in force as at its declared date.
 
 FR-221 and `01` FR-69: the window is half-open, `[effective_from, effective_to)`. DP-1, DP-2
-and DP-3 are decided in PL 9688 (working id).
+and DP-3 are decided in PL-1447.
 """
 
 from __future__ import annotations
@@ -797,7 +799,7 @@ def _as_at_window(row: Mapping[str, Any]) -> str:
 
     `01` FR-69's half-open `[effective_from, effective_to)`; an absent `effective_to` is
     open-ended. ZEN refuses `<` between strings, so both sides go through `date()` (verified
-    on zen-engine 0.53.0, PL 9688 Task 0 run 1). The bounds are re-rendered through
+    on zen-engine 0.53.0, PL-1447 Task 0 run 1). The bounds are re-rendered through
     `date.fromisoformat`, so a malformed row raises here, at load, never inside the graph.
     """
     lower = date.fromisoformat(str(row["effective_from"])).isoformat()
@@ -885,7 +887,7 @@ STAMPED_DATE = "effective_date"
 
 
 def _check_lookup_as_at(algo: RatingAlgorithm) -> list[ValidationIssue]:
-    """FR-221 (PL 9688 DP-1): a lookup's `as_at` names `effective_date` or a declared `date`
+    """FR-221 (PL-1447 DP-1): a lookup's `as_at` names `effective_date` or a declared `date`
     input. A declared `effective_date` must itself be date-typed, because a declared input
     replaces the stamped date in the engine context. Read through the enumerator (FR-274)."""
     declared = {field.name: field.type for field in algo.input_contract}
@@ -927,7 +929,7 @@ _ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 
 def _check_as_at_values(algorithm: RatingAlgorithm, context: Mapping[str, Any]) -> None:
-    """FR-221 (PL 9688 DP-1, DP-3): the value each lookup's `as_at` reads, in the context the
+    """FR-221 (PL-1447 DP-1, DP-3): the value each lookup's `as_at` reads, in the context the
     engine is about to receive, is a strict `YYYY-MM-DD` calendar date. ZEN's `date()` reads an
     offset as UTC and turns a malformed value into a miss, so neither may reach it. Reading
     the merged context also covers an input that shadows the stamped `effective_date`."""
@@ -1099,7 +1101,7 @@ order used. Its tests need Postgres and MinIO; a skipped run is not a red.
 
 ## Hand-off
 
-1. **~~FD 9707~~ FD-1420's register row** is discharged by the merge. The auditor writes that row, not
+1. **FD-1420's register row** is discharged by the merge. The auditor writes that row, not
    this slice.
 2. **For WK-675 S2 (PL 9713, #1131):** after T1, its inspector's `as_at` field should offer
    only `effective_date` and the algorithm's `date` inputs (PL 9713 `:242` cites FR-221). That

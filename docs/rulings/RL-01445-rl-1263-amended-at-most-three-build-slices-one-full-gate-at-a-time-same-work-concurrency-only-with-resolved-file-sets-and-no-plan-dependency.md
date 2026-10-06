@@ -1,9 +1,9 @@
 ---
-id: RL-9620
+id: RL-1445
 family: ruling
 title: RL-1263 amended — at most three build slices, one full gate at a time; two slices from the same Work run at once only when the dispatch record shows their file sets resolved and no plan dependency either way (process, the maintainer's ruling by delegation, recorded)
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
-created: 2026-10-05              # the mint date (check 31); ruled 2026-10-05
+created: 2026-10-06            # original date 2026-10-05, set at the draft; minted 2026-10-06
 owner: maintainer               # a process ruling, recorded on the maintainer's behalf, as RL-1263 is (§1.6 RL row)
 tree: 809a3794af6d3a6ba688663b0d9b59f951190680
 phase: P2
@@ -15,13 +15,15 @@ corrects: RL-1263
 relates: [RL-1263, RL-871, CR-1212]
 ---
 
-# RL 9620 (working id) — RL-1263 amended: at most three build slices, one full gate at a time; same-Work concurrency only under two named conditions
+# RL-1445 — RL-1263 amended: at most three build slices, one full gate at a time; same-Work concurrency only under two named conditions
+
+*(Minted 2026-10-06 as RL-1445 from working id 9620, in the B1 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
 
 ## How this was ruled
 
-- **Filed under a working id the lead reserved.** `RL 9620` in this draft stands for this
-  record's minted id (`~/gi-pricing-plan.local/handover/eta.md`, the `RL 9620` row). It mints
-  **before** the lane GOs that need it: the maintainer's entry names lane B's FD 9707 fix
+- **Filed under a working id the lead reserved.** `RL-1445` in this draft stands for this
+  record's minted id (`~/gi-pricing-plan.local/handover/eta.md`, the `RL-1445` row). It mints
+  **before** the lane GOs that need it: the maintainer's entry names lane B's FD-1420 fix
   beside S7, and later PL 9649.
 - **The mint turn's one header change.** In the minting commit, `RL-1263`'s header gains this
   record's minted id in `corrected_by:` (the append check 34 allows), as `RL-1361` gained
@@ -80,8 +82,8 @@ questions and is not part of this record.
 
 *(Clause added 2026-10-05, on #1162 before the mint, on the maintainer's entry below. The
 15:15:11 BST quote above is not edited; its item 1's "GATE SLOTS stay 2" is superseded by
-this entry.)* Quoted whole from the entry "2026-10-05 15:27:25 BST — RL 9620 (#1162): Q1
-SETTLED, ONE full gate at a time (CORRECTION to my 15:15:11 item 1); Q2 folded into RL 9620"
+this entry.)* Quoted whole from the entry "2026-10-05 15:27:25 BST — RL-1445 (#1162): Q1
+SETTLED, ONE full gate at a time (CORRECTION to my 15:15:11 item 1); Q2 folded into RL-1445"
 in `~/gi-pricing-plan.local/channel/to-lead.md`:
 
 > Q1, and a CORRECTION: my 15:15:11 item 1 said "GATE SLOTS stay 2". That contradicts my own 13:00:09 (and later) "Gates never run at the same time" and my 12:55:05 "never two at once", and today's evidence: two pytest runs together put load at 15.87–16.01 on 8 CPUs (13:31–13:35) and risk load-sensitive timeouts. SETTLED: on this VM, AT MOST ONE full gate runs at a time; build slices up to 3; a built slice waits for the single gate. RL 9620 and core.json say "1 concurrent full gate" (gate_slots 1, or the field's equivalent), quoting this entry as superseding 15:15:11's "stay 2". Targeted single-file test runs by executors stay allowed outside the gate window as before (never beside a gate or benchmark).

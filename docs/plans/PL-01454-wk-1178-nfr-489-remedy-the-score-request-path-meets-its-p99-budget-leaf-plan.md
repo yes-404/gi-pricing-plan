@@ -1,10 +1,10 @@
 ---
-id: PL-9728
+id: PL-1454
 family: plan
 kind: leaf
 title: WK-1178 — NFR-489 remedy, the /score request path meets its p99 budget at 25 to 200 rps (NFR-489, NFR-454, NFR-497, FR-243, FR-259): leaf plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-04
+created: 2026-10-06            # original date 2026-10-04, set at the draft; minted 2026-10-06
 owner: planner
 tree: 47d770e8fcbd2410fa101019ed8cf3aae69a1baa
 phase: P2
@@ -15,7 +15,9 @@ corrected_by: []
 relates: [FD-1411, SL-1259, SL-1409, PL-1408, PL-1371, RL-921, RL-882, RL-1379, RL-1263, LG-1405]
 ---
 
-# PL 9728 (working id) — WK-1178: the NFR-489 remedy, the `/score` request path meets its p99 budget, leaf plan
+# PL-1454 — WK-1178: the NFR-489 remedy, the `/score` request path meets its p99 budget, leaf plan
+
+*(Minted 2026-10-06 as PL-1454 from working id 9728, in the B1 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
 
 Filed under working id 9728 (this plan) and slice working id 9727 (its `SL-` row under WK-1178 in
 [`../roadmap.md`](../roadmap.md), `draft`), both reserved by the lead. The lead mints both at the merge
@@ -30,7 +32,7 @@ measurement shows), planned NOW, read-only beside lane A. It is dispatched on la
 the FD-1356 fix**, ahead of the other WK-1178 items, under PL-1371's G2 priority."* **Amended by** the
 entry headed *"2026-10-04 19:42:49 BST — NFR-489 re-run accepted (the no-GBM 1017 ms does not reproduce;
 200–300 ms in-handler stalls in both arms; all six runs over budget): severity HIGH stands; the remedy
-plan MUST attribute the stalls before choosing a fix"*, whose PL 9728 bullets this plan implements:
+plan MUST attribute the stalls before choosing a fix"*, whose PL-1454 bullets this plan implements:
 Task 0 attributes; the fix is chosen from Task 0's evidence; a timing-free CI regression guard; an
 unreachable budget is a decision point, not a silent re-baseline.
 
@@ -87,7 +89,7 @@ decision-maker's ruling on DP-1 to DP-4 is merged. DP-6 is ruled (b) by the main
 1. **Lane B: dispatched after the FD-1356 fix (SL-1409, PL-1408) merges**, ahead of the other WK-1178
    items, under `PL-1371`'s G2 priority (the maintainer's (by delegation) entry above, action 2).
    **Lane B's order since then** (pre-mint, 2026-10-05): the HIGH G2-blocking fixes go first. The
-   FD 9707 fix (working id) goes before this plan (`to-lead.md` entry headed *"2026-10-05 13:11:05 BST — FD 9707 (B3, as_at lookup ignores effective dating): HIGH, provisional on the upstream-filter check; its fix goes FIRST in lane B after SL-1409"*, item 3), and the FR-240 family
+   FD-1420 fix (working id) goes before this plan (`to-lead.md` entry headed *"2026-10-05 13:11:05 BST — FD-1420 (B3, as_at lookup ignores effective dating): HIGH, provisional on the upstream-filter check; its fix goes FIRST in lane B after SL-1409"*, item 3), and the FR-240 family
    fix (PL 9649, working id) goes before this plan when it takes lane B (entry headed *"2026-10-05 14:28:35 BST — PL 9649 / SL 9647 (the FR-240 fix, #1152 @dc13400e): DP-5 OK; DP-6 scoped; lane placement"*). The dispatch record names the order that holds at dispatch.
 2. **FD-1411 minted** — met: #1111 merged it at `47d770e8`; the ledger and the ruling cite FD-1411.
 3. **An exclusive measurement window** under `RL-1263` ("a measurement runs alone"): no gate, no
@@ -128,8 +130,8 @@ the named test ran and failed **for the stated cause** before the code that turn
    with GBM, 15 ms without), issued rps equals offered rps (no void rung), and errors are 0. DP-6 is
    ruled (b), so the default-live (exit-demo path) variant of each arm is measured in the same
    invocations against that arm's budget.
-   **Untraced only (OQ 9777, working id, decided (a)).** `to-lead.md` entry headed
-   *"2026-10-05 10:47:03 BST — OQ 9777 (#1048) DECIDED (a); the combined mint order ACCEPTED; pairing coupled records in one mint PR ACCEPTED (max 3 records per PR)"*: *"NFR-489's p99 ceiling (< 50 ms with one GBM call, < 15 ms without) governs UNTRACED real-time requests. A traced request (a caller-requested FR-258 inline trace) is bounded by NFR-490 instead (tracing adds ≤ 20 % to scoring latency)."* Its consequence for this plan, verbatim: *"Acceptance 2 measures the untraced default-live arm against NFR-489; any traced arm is checked against NFR-490's ratio."* Every arm
+   **Untraced only (OQ-1453, working id, decided (a)).** `to-lead.md` entry headed
+   *"2026-10-05 10:47:03 BST — OQ-1453 (#1048) DECIDED (a); the combined mint order ACCEPTED; pairing coupled records in one mint PR ACCEPTED (max 3 records per PR)"*: *"NFR-489's p99 ceiling (< 50 ms with one GBM call, < 15 ms without) governs UNTRACED real-time requests. A traced request (a caller-requested FR-258 inline trace) is bounded by NFR-490 instead (tracing adds ≤ 20 % to scoring latency)."* Its consequence for this plan, verbatim: *"Acceptance 2 measures the untraced default-live arm against NFR-489; any traced arm is checked against NFR-490's ratio."* Every arm
    above is untraced: the HTTP sweep's body is `_ctx()` (`scripts/bench-rating.py:1084`), whose
    `QuoteContextOptions` sets only `rating_version_ref` (`:347`), and `trace` defaults to `False`
    (`packages/model-schema/src/model_schema/scoring.py:93`). This slice adds no traced arm; a traced
@@ -283,7 +285,7 @@ lists 33. Intersecting each list with the table above (and with `scripts/demo.py
 touch. Re-read at dispatch: the branch moves.
 
 **Open PRs at `4eb13644`, 2026-10-04; working ids as then (`gh pr list --state open`):** #1111 (FD-1411, this plan's finding; merged since, `47d770e8`); #1051
-(PL 9776, above); #1048 (OQ 9777, working id: does NFR-489 cover traced requests — **decided (a), 2026-10-05:
+(PL 9776, above); #1048 (OQ-1453, working id: does NFR-489 cover traced requests — **decided (a), 2026-10-05:
 NFR-489 governs untraced requests, so Acceptance 2 is the untraced arms and no traced arm is added**,
 Acceptance 2); #1060
 (rulings on PL 9776). None rules on this slice's subject.
@@ -336,7 +338,7 @@ recommendations below are conditional on Task 0 confirming what reading suggests
 | **DP-2** | Is any new cross-request cache admitted (credential, permission, setting, Deployment, ref → hash) | (a) none: request-scoped consolidation only; (b) a short TTL cache for the sampling rate and permissions, with a stated staleness window; (c) a happy-path ref → hash memo for **non-draft** refs, relying on RL-1379, superseding RL-921's refusal for that case | (a). A cached credential would let a revoked key score for the TTL (a security change); a cached permission likewise; (c) saves one indexed read and contradicts a ruling and F50's lesson. Revisit only if (a) misses the budget with Task 0's numbers | decision-maker (RL-921 is a ruling) | Task 3 | open: ruled from Task 0's record |
 | **DP-3** | What "per replica" means for the measurement: worker count | (a) one process, as the harness runs today; (b) one replica = N `uvicorn` workers, N stated, with the harness given `--workers` | (a) is the basis of Acceptance 2. `NFR-489` and `NFR-454` say "per replica" and no spec defines it. If Task 0 shows (a) is unreachable because `score_one`'s CPU alone exceeds one event loop at 200 rps, the decision-maker raises (b) as a spec clarification, never a silent harness change | decision-maker; spec text by ruling | Task 1 Step 3, Acceptance 2 | open: ruled from Task 0's record |
 | **DP-4** | The ~200–300 ms in-handler stall: what fixes it | (a) GC: `gc.freeze()` after startup, or raised thresholds; (b) a reconnect or pool wait: DP-1 (d); (c) synchronous I/O on the loop: move it off; (d) unattributed after three runs: STOP and report | chosen only from Task 0's attribution; never a guess. (d) is a permitted outcome | decision-maker | Task 3 | open: ruled from Task 0's record |
-| **DP-6** | Where the scripted exit-demo journey's `/score` call on the G2 path is built and accepted (Task 0 Step 3b found that no exit-demo code calls `/score` today) | (a) **this slice**: Task 1 adds a default-live arm to `bench-rating.py` (it seeds a `uat` Deployment and omits the ref), Acceptance 2 measures it, and Task 6 adds the `/score` call to `scripts/demo.py` with a wiring test in `backend/tests/test_demo_command.py`; (b) **split**: this slice adds and measures the default-live arm (Task 1, Acceptance 2), and the scripted journey's `/score` step is built and accepted by the plan for `PL-1371` §3.8 item 7 ("Exit demo (b): the scripted `WF-699` journey", **unplanned**, WK-1178), which receives Acceptance 1's third-arm table and Acceptance 2's default-live readings as its input; (c) **all to item 7**: this slice measures only the bench path, and item 7's plan owns both the arm and the step | (b). Item 7 depends on WK-673 S6 and WK-674 S2, 3, 5 and 6 (`PL-1371` §3.8 row 7), so a journey step written here would precede the journey it belongs to; but the latency on the G2 path is this slice's subject, so the arm is measured here, not deferred. (c) leaves the exit-demo path unmeasured after this slice merges. (a) is right only if item 7 is planned into this slice by the lead | decision-maker; the lead routes (b)/(c) to item 7's planner | Task 1 Step 2b, Task 6, Acceptance 2, Acceptance 9 | **(b)**, the maintainer by delegation: `to-lead.md` entry headed *"2026-10-05 09:59:49 BST — A10 early ACCEPTED (start when dm-9718 reports, about 10:10, solo 30 min); RL 9907 Q1 RULED "in scope"; PL 9728 DP-6 RULED (b) with a binding condition. Both ruled by me (the maintainer, by delegation), so no DM is needed"*. **Binding condition, verbatim:** *"item 7's record names NFR-489 (p99 < 50 ms with GBM, < 15 ms without, per replica) as an ACCEPTANCE of the demo's own /score call on the G2 path, measured uncontended, ≥3 runs. So the demo path cannot fall between the two owners."* Carried in Hand-off item 4. Task 6 is therefore not executed |
+| **DP-6** | Where the scripted exit-demo journey's `/score` call on the G2 path is built and accepted (Task 0 Step 3b found that no exit-demo code calls `/score` today) | (a) **this slice**: Task 1 adds a default-live arm to `bench-rating.py` (it seeds a `uat` Deployment and omits the ref), Acceptance 2 measures it, and Task 6 adds the `/score` call to `scripts/demo.py` with a wiring test in `backend/tests/test_demo_command.py`; (b) **split**: this slice adds and measures the default-live arm (Task 1, Acceptance 2), and the scripted journey's `/score` step is built and accepted by the plan for `PL-1371` §3.8 item 7 ("Exit demo (b): the scripted `WF-699` journey", **unplanned**, WK-1178), which receives Acceptance 1's third-arm table and Acceptance 2's default-live readings as its input; (c) **all to item 7**: this slice measures only the bench path, and item 7's plan owns both the arm and the step | (b). Item 7 depends on WK-673 S6 and WK-674 S2, 3, 5 and 6 (`PL-1371` §3.8 row 7), so a journey step written here would precede the journey it belongs to; but the latency on the G2 path is this slice's subject, so the arm is measured here, not deferred. (c) leaves the exit-demo path unmeasured after this slice merges. (a) is right only if item 7 is planned into this slice by the lead | decision-maker; the lead routes (b)/(c) to item 7's planner | Task 1 Step 2b, Task 6, Acceptance 2, Acceptance 9 | **(b)**, the maintainer by delegation: `to-lead.md` entry headed *"2026-10-05 09:59:49 BST — A10 early ACCEPTED (start when dm-9718 reports, about 10:10, solo 30 min); RL 9907 Q1 RULED "in scope"; PL-1454 DP-6 RULED (b) with a binding condition. Both ruled by me (the maintainer, by delegation), so no DM is needed"*. **Binding condition, verbatim:** *"item 7's record names NFR-489 (p99 < 50 ms with GBM, < 15 ms without, per replica) as an ACCEPTANCE of the demo's own /score call on the G2 path, measured uncontended, ≥3 runs. So the demo path cannot fall between the two owners."* Carried in Hand-off item 4. Task 6 is therefore not executed |
 | **DP-5** | The budget is unreachable on this machine class (e2-standard-8) for a reason outside the code | (a) the maintainer amends or carries NFR-489 by a dated line; (b) the measurement moves to a defined reference machine | raised only if Task 0 or Task 4 shows it; the plan does not re-baseline. G4 (amended 2026-09-29) already carries NFR-489's verdict to "a dedicated host available", so (b) is G4's discharge event; DP-5 asks only whether the code-side remedy is complete when the shared VM cannot show it | **maintainer** | Acceptance 2 | not raised |
 
 ## Tasks
@@ -382,8 +384,8 @@ class phase:
 - [ ] **Step 3: Run.** `bench-rating.py --http --rates 25`, three times; then `--rates 50`, three times.
   Per pass record start and end (UTC and BST), `uptime`, `pgrep -c pytest`.
 - [ ] **Step 3b: The exit demo's `/score` path, measured beside it.** Added at the maintainer's (by delegation)
-  order, `to-lead.md` entry "2026-10-04 19:46:13 BST — #1111 (FD 9729, NFR-489) noted; mint it before
-  the ACK; the demo-path disclosure stays and PL 9728 Task 0 traces the demo's /score calls". Fact,
+  order, `to-lead.md` entry "2026-10-04 19:46:13 BST — #1111 (FD-1411, NFR-489) noted; mint it before
+  the ACK; the demo-path disclosure stays and PL-1454 Task 0 traces the demo's /score calls". Fact,
   read at planning time on `2cd4896f`: **no exit-demo code calls `/score` today.** `scripts/demo.py`
   calls only `GET /api/v1/demo/guide` (`:265`) and `GET /api/v1/models` (`:308`);
   `examples/fremtpl2/model.py:413` scores the golden quote in-process with `score_one`, not over
@@ -543,7 +545,7 @@ build on either defect.
 
 ## Hand-off
 
-1. The lead mints PL 9728 and SL 9727 (working ids) at the merge turn and dispatches Task 0 only after
+1. The lead mints PL-1454 and SL-1455 at the merge turn and dispatches Task 0 only after
    activation needs 1 to 4 hold; Tasks 1 to 6 after need 5 (Task 6 under DP-6 (a) only).
 2. On merge, FD-1411's remedy event is met; its own discharge also needs SL-1259's NFR-489 verdict
    on the exit tree, or the maintainer amending or carrying NFR-489 by a dated line (FD-1411
@@ -556,7 +558,7 @@ build on either defect.
    lead routes the ruling, this slice's Acceptance 1 third-arm table and (under (b)) Acceptance 2's
    default-live readings to that plan's planner. That plan's acceptance names the `/score` call on the
    G2 path, a wiring test for it, and NFR-489's budgets on that path. **DP-6 is ruled (b)**, with this
-   binding condition (`to-lead.md` entry headed *"2026-10-05 09:59:49 BST — A10 early ACCEPTED (start when dm-9718 reports, about 10:10, solo 30 min); RL 9907 Q1 RULED "in scope"; PL 9728 DP-6 RULED (b) with a binding condition. Both ruled by me (the maintainer, by delegation), so no DM is needed"*), verbatim: *"item 7's record names NFR-489 (p99 < 50 ms with GBM, < 15 ms without, per replica) as an ACCEPTANCE of the demo's own /score call on the G2 path, measured uncontended, ≥3 runs. So the demo path cannot fall between the two owners."* The lead's
+   binding condition (`to-lead.md` entry headed *"2026-10-05 09:59:49 BST — A10 early ACCEPTED (start when dm-9718 reports, about 10:10, solo 30 min); RL 9907 Q1 RULED "in scope"; PL-1454 DP-6 RULED (b) with a binding condition. Both ruled by me (the maintainer, by delegation), so no DM is needed"*), verbatim: *"item 7's record names NFR-489 (p99 < 50 ms with GBM, < 15 ms without, per replica) as an ACCEPTANCE of the demo's own /score call on the G2 path, measured uncontended, ≥3 runs. So the demo path cannot fall between the two owners."* The lead's
    dispatch-record delta for `PL-1371` §3.8 item 7 carries it to that plan's planner. Until it is planned, the
    exit-demo `/score` risk is owned by WK-1178 through that item, not by this slice. Under DP-6 (a),
    Task 6 discharges it here.
@@ -576,14 +578,14 @@ build on either defect.
    Acceptance 2 and Tasks 0 and 4; FD-1411 is cited and the tree and S3 figures are re-pinned; the
    register rows the audit listed are read below, with FD-1333/FD-1335's `score.py` contention named.
 1b. **Pre-mint edits of 2026-10-05, on the maintainer's rulings by delegation.** DP-6 carries its
-   resolver, the entry headed *"2026-10-05 09:59:49 BST — A10 early ACCEPTED (start when dm-9718 reports, about 10:10, solo 30 min); RL 9907 Q1 RULED "in scope"; PL 9728 DP-6 RULED (b) with a binding condition. Both ruled by me (the maintainer, by delegation), so no DM is needed"*, and its binding condition verbatim (DP-6 row, Hand-off item 4);
-   Acceptance 2 is the untraced arms against NFR-489, on the entry headed *"2026-10-05 10:47:03 BST — OQ 9777 (#1048) DECIDED (a); the combined mint order ACCEPTED; pairing coupled records in one mint PR ACCEPTED (max 3 records per PR)"*; the Status,
+   resolver, the entry headed *"2026-10-05 09:59:49 BST — A10 early ACCEPTED (start when dm-9718 reports, about 10:10, solo 30 min); RL 9907 Q1 RULED "in scope"; PL-1454 DP-6 RULED (b) with a binding condition. Both ruled by me (the maintainer, by delegation), so no DM is needed"*, and its binding condition verbatim (DP-6 row, Hand-off item 4);
+   Acceptance 2 is the untraced arms against NFR-489, on the entry headed *"2026-10-05 10:47:03 BST — OQ-1453 (#1048) DECIDED (a); the combined mint order ACCEPTED; pairing coupled records in one mint PR ACCEPTED (max 3 records per PR)"*; the Status,
    activation need 5, the DP preamble and Task 0 Step 6 no longer wait on a DP-6 ruling. Working ids
-   re-checked against `origin/main` `072c56e1`: PL 9776 (#1051) and OQ 9777 (#1048) are unminted, so
+   re-checked against `origin/main` `072c56e1`: PL 9776 (#1051) and OQ-1453 (#1048) are unminted, so
    none is re-pointed.
 1c. **Pre-mint check of 2026-10-05 15:26 BST, at `origin/main` `809a3794`.** No cited code path
    changed since `47d770e8` (activation need 4's files, `config.py`, `scripts/demo.py`, the cited
-   tests); the `03` and `roadmap.md` lines cited are unmoved. PL 9776 (#1051) and OQ 9777 (#1048) are
+   tests); the `03` and `roadmap.md` lines cited are unmoved. PL 9776 (#1051) and OQ-1453 (#1048) are
    still unminted. Lane B's order is recorded under activation need 1. The G2 ruling (`to-lead.md`
    entry headed *"2026-10-05 13:05:42 BST — RULING (the maintainer, by delegation): G2's "in Phase 1b's form" = a scripted HTTP journey plus a served page; WK-675 is OFF G2's critical path"*)
    changes no step here: the scripted journey stays with `PL-1371` §3.8 item 7, and DP-6 (b) stands.
@@ -594,5 +596,5 @@ build on either defect.
    served path (§"Where the time goes"); Task 0 Step 5 confirms it with a counter.
 3. **Placeholders.** The statement and checkout bounds in Task 2 are fixed by DP-1's ruling, stated as
    such; no other value is left open.
-4. **Ids.** Every `FR-`/`NFR-` cited is defined in `03`, `00` or `07`; FD-1411 is minted; PL 9776, OQ 9777 and
+4. **Ids.** Every `FR-`/`NFR-` cited is defined in `03`, `00` or `07`; FD-1411 is minted; PL 9776, OQ-1453 and
    this plan's own ids are written as working ids, never hyphenated.

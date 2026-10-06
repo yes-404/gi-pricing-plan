@@ -1,9 +1,9 @@
 ---
-id: RL-9642
+id: RL-1446
 family: ruling
-title: WK-673 — FD 9707's fix activated, a lookup reads the row in force as at a strict calendar date (PL 9688 DP-1 to DP-4, the order and the severity, and FR-221's text)
+title: WK-673 — FD-1420's fix activated, a lookup reads the row in force as at a strict calendar date (PL-1447 DP-1 to DP-4, the order and the severity, and FR-221's text)
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
-created: 2026-10-05              # the mint date (check 31); ruled 2026-10-05
+created: 2026-10-06            # original date 2026-10-05, set at the draft; minted 2026-10-06
 owner: decision-maker
 tree: 99afcde215c0817c5ac4db55332ab7a69e4752a0
 phase: P2
@@ -11,21 +11,23 @@ work: WK-673
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [FR-221, FR-69, FR-71, FR-255, FR-213, FR-227, FD-1374, RL-1263]   # at the mint, add FD 9707's, PL 9688's and SL 9685's minted ids
+relates: [FR-221, FR-69, FR-71, FR-255, FR-213, FR-227, FD-1374, RL-1263]   # at the mint, add FD-1420's, PL-1447's and SL-1448's minted ids
 ---
 
-# RL 9642 (working id) — WK-673: FD 9707's fix activated, PL 9688 DP-1 to DP-4 and FR-221's text
+# RL-1446 — WK-673: FD-1420's fix activated, PL-1447 DP-1 to DP-4 and FR-221's text
+
+*(Minted 2026-10-06 as RL-1446 from working id 9642, in the B1 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
 
 ## How this was ruled
 
-- **Filed under a working id the lead allocates after `SL-1409`'s gate.** `RL 9642` in this
-  draft, and `RL-9642` in the texts below, stand for this ruling's minted id. Nothing else is
-  a placeholder except `<SL 9685 date>` (T1).
+- **Filed under a working id the lead allocates after `SL-1409`'s gate.** `RL-1446` in this
+  draft, and `RL-1446` in the texts below, stand for this ruling's minted id. Nothing else is
+  a placeholder except `<SL-1448 date>` (T1).
 - **The decisions are not this record's.** They are the maintainer's, by delegation, in `~/gi-pricing-plan.local/channel/to-lead.md`, cited below by entry header and
   quoted verbatim. This record carries them as a dated artifact (`CLAUDE.md` §12) and makes
-  PL 9688's activation need 2 true. It decides nothing beyond them.
-- **Inputs, read at the heads named:** FD 9707, draft #1132, branch `fd-9707` @`473b27e4`;
-  PL 9688, draft #1145, branch `pl-9688-fd9707-asat-fix` @`2f3269c8` (planned at
+  PL-1447's activation need 2 true. It decides nothing beyond them.
+- **Inputs, read at the heads named:** FD-1420, draft #1132, branch `fd-9707` @`473b27e4`;
+  PL-1447, draft #1145, branch `pl-9688-fd9707-asat-fix` @`2f3269c8` (planned at
   `caa4e411`). Every spec and code locator below was re-read at `origin/main`
   `99afcde2` on 2026-10-05, and again at `origin/main`
   `809a3794af6d3a6ba688663b0d9b59f951190680` at 2026-10-05 15:08 BST: every locator is at the
@@ -55,22 +57,22 @@ relates: [FR-221, FR-69, FR-71, FR-255, FR-213, FR-227, FD-1374, RL-1263]   # at
 ## Ruled
 
 1. **DP-1, as decided (option (a)).** Entry "2026-10-05 13:15:53 BST — DECISIONS 17–21
-   (PL 9689 DP-S3-2/3/6; FD 9707 DP-1; RL 9695 follow-ups)", item 20:
-   "FD 9707 DP-1: OPTION (a). `as_at` may name only `effective_date` or a declared `date`
+   (PL-1452 DP-S3-2/3/6; FD-1420 DP-1; RL-1428 follow-ups)", item 20:
+   "FD-1420 DP-1: OPTION (a). `as_at` may name only `effective_date` or a declared `date`
    input. It is checked at compile (the named input's type is date, else refused naming it)
    AND at run time (the value is a strict ISO calendar date YYYY-MM-DD; an offset or
    datetime string, or a malformed one, is refused, never silently missed). Red first: the
    offset-string and malformed cases are tests."
 2. **DP-2, as decided (option (a)).** Entry "2026-10-05 13:20:26 BST — DECISIONS 22–27;
    severity signals for the four gap findings", item 22:
-   "PL 9688 DP-2 (FD 9707's window): OPTION (a), in-graph per-rule `date($) >= date(from)
+   "PL-1447 DP-2 (FD-1420's window): OPTION (a), in-graph per-rule `date($) >= date(from)
    and date($) < date(to)` (spiked on zen 0.53.0). Conditions: an open-ended window (no
    `to`) is handled and tested; overlapping windows for one key are REFUSED at table save or
    bundle compile (else "first match wins" returns by another door), with a named code and a
    test; boundary tests at `from` and at `to` (half-open), red first."
    The overlap condition is met by the refusal at table save that is already on main,
-   `REFERENCE_INTERVAL_OVERLAP` (locators), and pinned by a test (PL 9688 Acceptance 6).
-3. **DP-3, as decided (option (a)).** Entry "2026-10-05 13:20:52 BST — DECISION 28 (PL 9688
+   `REFERENCE_INTERVAL_OVERLAP` (locators), and pinned by a test (PL-1447 Acceptance 6).
+3. **DP-3, as decided (option (a)).** Entry "2026-10-05 13:20:52 BST — DECISION 28 (PL-1447
    DP-3): OPTION (a), with a pinning test":
    "OPTION (a): DP-1's strict run-time check applies to `date` inputs named by `as_at`;
    QuoteContext.effective_date is NOT changed (no model-schema or contract change).
@@ -80,32 +82,32 @@ relates: [FR-221, FR-69, FR-71, FR-255, FR-213, FR-227, FD-1374, RL-1263]   # at
    refused 422. If any of those does not behave as the lead describes, stop and bring it
    back: then (b) is reopened."
 4. **DP-4, as recommended by the plan and confirmed.** Entry "2026-10-05 13:39:37 BST —
-   PL 9688 / SL 9685 (the FD 9707 fix, #1145 @2f3269c8): noted; FD 9707 goes before PL 9776;
+   PL-1447 / SL-1448 (the FD-1420 fix, #1145 @2f3269c8): noted; FD-1420 goes before PL 9776;
    DP-4 OK; start the RL's DM now", item 3:
    "DP-4 (RATING_TYPE_MISMATCH and RATING_GRAPH_UNRESOLVED_REF checked at save and at
    compile): OK, with a red-first test at each point."
-   That is PL 9688's option (i)+(p): the check is appended to `ALGORITHM_CHECKS`, so it runs
+   That is PL-1447's option (i)+(p): the check is appended to `ALGORITHM_CHECKS`, so it runs
    at save and again at compile (locators). No new error code.
 5. **The order.** Same entry, item 1: "Serialisation with PL 9776 (#1051, the WK-1178 F35
-   remedy for NFR-490 trace overhead, draft): the FD 9707 fix (HIGH, a mispricing) goes
+   remedy for NFR-490 trace overhead, draft): the FD-1420 fix (HIGH, a mispricing) goes
    FIRST; PL 9776's slice waits and rebases onto it. Name this in both dispatch records. The
    03 sharing with SL-1391 and S2 is in distinct sections, named at dispatch with hunks
    listed (my 13:00:09 conditions)."
 6. **The severity.** Same entry, item 2: "Exposure (0 lookup algorithms in 93 local DBs; no
    golden or seed lookups, so no price moves): noted. It does NOT lower the severity.
-   FD 9707 stays HIGH as ruled 13:11:05: latent in our data, live for any table with
+   FD-1420 stays HIGH as ruled 13:11:05: latent in our data, live for any table with
    effective windows. The ledger records the 0 and the predicate that counted it."
-   FD 9707 at `473b27e4` already states HIGH, owner WK-673, deadline before the P2 exit
-   demo (§Finding). The owner discrepancy PL 9688 raised against `9e51cbe8` is not present
+   FD-1420 at `473b27e4` already states HIGH, owner WK-673, deadline before the P2 exit
+   demo (§Finding). The owner discrepancy PL-1447 raised against `9e51cbe8` is not present
    at that head.
 
 ## The spec texts
 
-One text. Placement was read at `origin/main` `99afcde2`. It is applied by SL 9685 (PL 9688
-Task 5), in one commit with the code (`CLAUDE.md` §2), and `<SL 9685 date>` is that commit's
+One text. Placement was read at `origin/main` `99afcde2`. It is applied by SL-1448 (PL-1447
+Task 5), in one commit with the code (`CLAUDE.md` §2), and `<SL-1448 date>` is that commit's
 date.
 
-**T1 — `03` FR-221, the date source and the window (DP-1 to DP-4).** Proposed by PL 9688
+**T1 — `03` FR-221, the date source and the window (DP-1 to DP-4).** Proposed by PL-1447
 §"Spec text T1" and **adopted with three amendments**, each listed after the text.
 
 Placement: the FR-221 row (`docs/specs/03-rating-engine.md:107`). The text is **appended**
@@ -123,16 +125,16 @@ never "now" (`01` FR-71). The date source is explicit in the step. |
 Append
 
 ```text
-*(Amended <SL 9685 date>, `RL-9642`, FD 9707.)* **`as_at` names `effective_date` — the quote's stamped date — or a declared `date` input, and nothing else.** Anything else is refused when the algorithm is saved, and again when its bundle is compiled: a declared input of another type with `RATING_TYPE_MISMATCH`, and an undeclared name with `RATING_GRAPH_UNRESOLVED_REF`. **The value read is a calendar date, `YYYY-MM-DD`.** A datetime, an offset, or a malformed value is refused per quote with `INPUT_CONTRACT_VIOLATION`, never treated as a miss. **A row is in force when `effective_from ≤ as_at < effective_to`**: `01` FR-69's half-open interval, where an absent `effective_to` is open-ended. A key with no row in force is a reference miss (FR-255), resolved by the step's `on_miss`. Overlapping rows cannot reach a bundle: FR-69 refuses them when the version is loaded (`REFERENCE_INTERVAL_OVERLAP`).
+*(Amended <SL-1448 date>, `RL-1446`, FD-1420.)* **`as_at` names `effective_date` — the quote's stamped date — or a declared `date` input, and nothing else.** Anything else is refused when the algorithm is saved, and again when its bundle is compiled: a declared input of another type with `RATING_TYPE_MISMATCH`, and an undeclared name with `RATING_GRAPH_UNRESOLVED_REF`. **The value read is a calendar date, `YYYY-MM-DD`.** A datetime, an offset, or a malformed value is refused per quote with `INPUT_CONTRACT_VIOLATION`, never treated as a miss. **A row is in force when `effective_from ≤ as_at < effective_to`**: `01` FR-69's half-open interval, where an absent `effective_to` is open-ended. A key with no row in force is a reference miss (FR-255), resolved by the step's `on_miss`. Overlapping rows cannot reach a bundle: FR-69 refuses them when the version is loaded (`REFERENCE_INTERVAL_OVERLAP`).
 ```
 
 *The amendments to the proposal:*
 
 1. "*(Amended 2026-10-05, FD 9707; DP-1 to DP-3 decided by [the maintainer (by delegation)].)*" → [Elision: the word our records bar for the maintainer's delegate stood in this quoted text and is elided, per the records rule.]
-   "*(Amended <SL 9685 date>, `RL-9642`, FD 9707.)*". A spec amendment cites the governed
-   record that rules it, as RL 9710's (working id, #1128) texts do; the maintainer's (by delegation) entries live in a local
+   "*(Amended <SL-1448 date>, `RL-1446`, FD-1420.)*". A spec amendment cites the governed
+   record that rules it, as RL-1418's (#1128) texts do; the maintainer's (by delegation) entries live in a local
    channel file a spec reader cannot open, and this record quotes them. The date is the
-   applying commit's, as in RL 9710 (working id). It also now covers DP-4, which the proposal's marker
+   applying commit's, as in RL-1418. It also now covers DP-4, which the proposal's marker
    omitted.
 2. "refused when the algorithm is validated" → "refused when the algorithm is saved, and
    again when its bundle is compiled". DP-4 as confirmed (Ruled 4): "checked at save and at
@@ -145,30 +147,30 @@ No other byte of the proposal changed.
 ## What it obliges
 
 - **This commit:** this record only. No spec, plan or code file is edited here.
-- **PL 9688's activation need 2 is met** by this record once minted. Need 1 (FD 9707 minted,
+- **PL-1447's activation need 2 is met** by this record once minted. Need 1 (FD-1420 minted,
   #1132) and need 3 (the activation PR's dated line) are not this record's.
-- **SL 9685 (PL 9688, the planner's file, not edited here)** applies T1 in Task 5, verbatim
+- **SL-1448 (PL-1447, the planner's file, not edited here)** applies T1 in Task 5, verbatim
   from this record; where this record and the plan's §"Spec text T1" differ, this record
   wins and the dispatch record names the three amendments above.
-- **DP-3's stop condition binds the executor**: if any pin of PL 9688 Acceptance 7 fails at
+- **DP-3's stop condition binds the executor**: if any pin of PL-1447 Acceptance 7 fails at
   the slice's base, the slice stops and reports to the lead; DP-3 (b) is then reopened and
   this record does not cover it.
-- **Both dispatch records** (SL 9685's and PL 9776's, #1051) name the order of Ruled 5: the
-  FD 9707 fix first, PL 9776's slice rebased onto it. They never run concurrently (shared
-  `_decision_table_node`, the `runtime.py` docstring and `ALGORITHM_CHECKS`, per PL 9688
+- **Both dispatch records** (SL-1448's and PL 9776's, #1051) name the order of Ruled 5: the
+  FD-1420 fix first, PL 9776's slice rebased onto it. They never run concurrently (shared
+  `_decision_table_node`, the `runtime.py` docstring and `ALGORITHM_CHECKS`, per PL-1447
   §"Write set", `RL-1263`).
-- **The ledger** records the exposure 0 with the predicate that counted it (Ruled 6; PL 9688
+- **The ledger** records the exposure 0 with the predicate that counted it (Ruled 6; PL-1447
   Task 0's script, run at dispatch).
 - **FD-1374's question** (whether an input may carry a stamped name at all) stays with its
   owner, PL 9776. This record does not decide it; T1 refuses only the shadowed value a
   lookup reads.
-- **FD 9707** is closed by SL 9685's merge when the acceptance below is met. The verdict is
+- **FD-1420** is closed by SL-1448's merge when the acceptance below is met. The verdict is
   the lead's.
 
 ## Acceptance — the violation that must become detectable
 
 The violation: **a lookup that prices a quote on a row not in force at its `as_at`, or
-reads an `as_at` that is not a calendar date without refusing it.** PL 9688's Acceptance
+reads an `as_at` that is not a calendar date without refusing it.** PL-1447's Acceptance
 Standard items 1 to 11 are the tests; each red is seen at the slice's base for its stated
 cause. In particular:
 
