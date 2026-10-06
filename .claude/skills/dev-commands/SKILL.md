@@ -418,6 +418,7 @@ python3 /abs/path/to/scripts/audit-docs.py   # or any batch of checks
 - **The refusal exits**, so the check after it cannot run. Printing and carrying on is the
   defect.
 - **Never `cd` inside the wrapper**: pass absolute paths or `--directory` to the checks.
+- **Check scratch (`TMPDIR`, `--verify` dirs) goes under `/home` or the job dir, never `/tmp`**: `/tmp` is a 16 GB tmpfs, i.e. RAM. It hit 99% on 2026-10-06, and a full `/tmp` shows up as odd `mypy` or `pytest` internal errors.
 
 **Residual, named:** a gate can take a slot between the probe and the check. The pattern
 bounds the overlap; it does not remove it. For a long check, re-probe between stages.
