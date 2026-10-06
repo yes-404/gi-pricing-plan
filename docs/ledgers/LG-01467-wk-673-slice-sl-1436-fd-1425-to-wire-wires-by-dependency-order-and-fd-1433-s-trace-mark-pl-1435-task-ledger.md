@@ -525,3 +525,21 @@ The audit's findings, by id, quoted from its proposed-findings list:
 - **F-B** — "Acceptance 11 is not met as written (LOW, documentary)." The replay script is inline above with its sha256 `b43d213cdd4bae7c3b6d100933ba85875421ae15925a5eccde56832ecf71cfea`; the 450 differing lines are accepted by the 23:51:14 ruling (A); the three-file test's totals are the 49 passed above.
 - **F-C** — "the LOW finding the ruling asks an auditor to file" (the zen custom-node return path cuts floats to 15 significant digits) became **FD 9480, PR #1229**.
 - **F-D** — "Ledger front matter `tree:` is the base 23af6997, not the head" (informational); and "the ledger itself says the executor did not compare the 13 failures with a known set": **compared by the lead — identical, by test name, to the known check-31 set recorded at LG-1444 :289-293.**
+
+## The minted-head gate (2026-10-06, head `b0aca122c7903cb24081c84cad98cdebb8888543`)
+
+**Why it ran.** The mint-head gate waiver's condition (a) failed: `e0e2ff20..b0aca122` brings 22 non-docs paths (S7's code, #1121's `uv.lock`, #1232) through `origin/main`, so the earlier gate at `e0e2ff20` does not cover this head. The lead's "GATE SLOT GRANTED gate-1" for this head was given first (S-13). Before the run: `uv sync --all-packages`; the worktree's test database `gipricing_sl-1436_d9698591` dropped and recreated from the template, then `alembic upgrade head` (S-14).
+
+**Run.** The verbatim gate body of `.claude/skills/dev-commands`, run in the foreground under its slot wrapper (the lead granted gate-1; the wrapper takes the first free slot and I did not record which it took), `timeout 3600`, scratch and `TMPDIR` under `/home`. Started 2026-10-06T02:27:17Z, ended 02:56:48Z (UTC); wrapper exit 0.
+
+| stage | result |
+|---|---|
+| ruff | pass (exit 0) |
+| mypy | pass (exit 0) |
+| import_linter | pass (exit 0) |
+| audit_docs | pass (exit 0); the 13 earlier check-31 reds are gone |
+| req_coverage | pass (exit 0) |
+| contracts | pass (exit 0) |
+| pytest | pass (exit 0): `5064 passed, 4 skipped, 87 warnings in 1750.18s (0:29:10)` |
+
+Frontend half: `pnpm --dir frontend` install `--frozen-lockfile`, `generate:api`, lint, type-check, test and build, each rc 0 (the build prints only the chunk-size warning). The worktree was clean after the run. The earlier run's 13 failures were the known check-31 set; this run has none.
