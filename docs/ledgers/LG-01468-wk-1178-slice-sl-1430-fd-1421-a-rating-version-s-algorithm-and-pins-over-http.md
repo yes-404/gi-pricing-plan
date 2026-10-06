@@ -239,7 +239,9 @@ sentence; it remains only inside the verbatim gate outputs of the gate section (
 moved to `c6886bda9ce1c200a921d490530a79cbfb3ca820` (#1230, the B1 mint: docs-only, `git diff --name-status a9ef6777..c6886bda` lists only
 `docs/` paths), which the mint merged into the branch (merge-tree rc 1, the one conflict `docs/INDEX.md`, regenerated). It moved again to `f871ee8dad8d670e3576b626546ecf40e37d8569` (the chain mint, with a dependency bump and a skill update,
 `uv.lock` and `.claude/skills/` among its paths), which the mint merged the same way on the lead's ruling (merge-tree rc 1, the one conflict `docs/INDEX.md`, regenerated).
-The `docs/`-only reading of condition (a) therefore applies to this branch's own delta, `343ef9bb` to the merge of `c6886bda`; the two later merges of `main` bring non-docs paths that are `main`'s own. The register is unchanged by this mint: `FD-1421`'s row
+The `docs/`-only reading of condition (a) held for this branch's own delta, `343ef9bb` to the merge of `c6886bda`; the later merge of `main` (f871ee8d) brings non-docs paths that are `main`'s own,
+among them a `fastapi` 0.142.2 bump under this slice's new route. The maintainer (by delegation) therefore ruled a FULL gate for SL-1430 after that merge, which supersedes the waiver for this slice;
+a full two-half gate runs on the merged head after the lead's gate-slot grant, and its result is recorded in a later entry, not here. The register is unchanged by this mint: `FD-1421`'s row
 names its own event, "the WK-1178 slice merges … and `03:908` and `RatingVersionCreate` agree", after which the auditor sets it
 closed; `FD-1437` stays with WK-675 S3's leaf, since this slice applied only RL-1438's create-time refusal (item 2), not the
 compile-site code or the sweep of bare `ValueError` raises.
