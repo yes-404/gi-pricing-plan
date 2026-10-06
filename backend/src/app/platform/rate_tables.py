@@ -12,7 +12,9 @@ mapped onto the module's API error codes (03 §5.2): the four validation codes b
 from __future__ import annotations
 
 import io
+import json
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Literal, cast
 from uuid import UUID
@@ -22,23 +24,37 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
+from app.api.pagination import COUNT_CAP, MAX_LIMIT, decode_int_cursor, encode_cursor
 from app.config import Settings
 from app.db.models import (
+    BlobRow,
+    DatasetVersionRow,
+    JobRow,
     RateTableCellRow,
     RateTableRow,
     RateTableVersionRow,
 )
 from app.db.session import Database
 from app.errors import PlatformError
+from app.platform import datasets, transformations
+from app.platform import jobs as job_service
 from app.platform import settings as settings_svc
-from app.platform.blobs import BlobStore
-from app.platform.diff_cache import DiffCache, version_content_hash
-from app.platform.modelling import load_factors, load_model, to_model
+from app.platform.blobs import BlobStore, to_ref
+from app.platform.diff_cache import DiffCache, cells_key, definition_hash, version_content_hash
+from app.platform.modelling import (
+    load_factor_by_ref,
+    load_factors,
+    load_model,
+    to_model,
+)
+from model_schema import Banding, DatasetStatus, Factor, Grouping, JobKind, JobStatus
+from model_schema.jobs import Job
 from model_schema.rating import (
     FloorAndCapParameters,
     ImportPreview,
     RateTable,
     RateTableDiff,
+    RateTableDiffCell,
     RateTableKey,
     RateTableStorageMode,
     RateTableVersion,
@@ -48,9 +64,12 @@ from model_schema.rating import (
     UpliftTableParameters,
 )
 from model_schema.refs import ArtifactRef, BlobRef
+from pricing_core.modelling import FactorResolutionError
 from pricing_core.rate_tables.operations import (
     check_model_approved,
     decide_storage_mode,
+    diff_cells,
+    diff_summary,
     diff_vs_previous,
     diff_vs_seed,
     export_to_csv,
@@ -68,6 +87,12 @@ from pricing_core.rate_tables.operations import (
 from pricing_core.rate_tables.operations import (
     seed_from_model as seed_from_model_op,
 )
+from pricing_core.rate_tables.weights import (
+    PortfolioWeights,
+    WeightJoinError,
+    exposure_weights,
+)
+from pricing_core.rating.analysis import PortfolioFrameError, read_portfolio
 
 #: The plan's four named validation codes → 03 §5.2 module codes (RATE_TABLE_INCOMPLETE,
 #: RATE_TABLE_KEY_DUPLICATE). NULL_VALUE and OUT_OF_BOUNDS are completeness failures.
@@ -259,12 +284,127 @@ async def _load_table(
     return table_row
 
 
+async def check_portfolio(
+    session: Any, *, workspace_id: UUID, version_id: UUID
+) -> DatasetVersionRow:
+    """May this caller's workspace weight a diff by that portfolio? (`RL-1361` item 7.)
+
+    The version's scope first: another workspace's version, and a version that does not
+    exist, answer the same `404`, so the existence of a foreign id is not disclosed. Then its
+    status: only a `validated` version is a portfolio (`01` §1.3), `409`
+    `DATASET_NOT_VALIDATED` for a `draft` or `archived` one. Neither check takes a row lock.
+    """
+    row = await datasets.read_version(session, workspace_id=workspace_id, version_id=version_id)
+    if DatasetStatus(row.status) is not DatasetStatus.VALIDATED:
+        raise PlatformError(
+            "DATASET_NOT_VALIDATED",
+            "Dataset version is not validated",
+            409,
+            f"The portfolio has status {row.status!r}; a rate-table diff weighted by a "
+            "portfolio requires 'validated' (03 FR-231). There is no override.",
+        )
+    return row
+
+
+async def _portfolio_frame(
+    session: Any, blob_store: BlobStore, version_row: DatasetVersionRow
+) -> pl.LazyFrame:
+    """The portfolio's table, checked against §4.8's frame (DP-D: `tables[0]`, as fitting does)."""
+    if not version_row.tables:
+        raise PlatformError(
+            "VALIDATION_FAILED", "The portfolio has no table", 422,
+            f"Dataset version {version_row.id} holds no table.",
+        )
+    entry = version_row.tables[0]
+    blob = await session.get(BlobRow, entry["blob"]["sha256"])
+    if blob is None:
+        raise PlatformError(
+            "NOT_FOUND", "A table's blob is missing", 404,
+            f"Version {version_row.id} names a blob that is not in the store.",
+        )
+    frame = pl.read_parquet(io.BytesIO(await blob_store.read(to_ref(blob)))).lazy()
+    return read_portfolio(frame)
+
+
+async def _key_artifacts(
+    session: Any, workspace_id: UUID, keys: Sequence[RateTableKey]
+) -> tuple[dict[str, list[Factor]], dict[UUID, Banding], dict[UUID, Grouping]]:
+    """Everything the keys pin, loaded by ref: each Factor with its operands, each Banding,
+    and the Bandings and Groupings those Factors pin by id. A ref that resolves to nothing is
+    a `404` naming the key and the ref."""
+    factors: dict[str, list[Factor]] = {}
+    bandings: dict[UUID, Banding] = {}
+    for key in keys:
+        try:
+            if key.factor_ref is not None:
+                factors[str(key.factor_ref)] = await load_factor_by_ref(
+                    session, workspace_id=workspace_id, ref=key.factor_ref
+                )
+            elif key.banding_ref is not None:
+                banding = await transformations.load_banding_by_ref(
+                    session, workspace_id=workspace_id, ref=key.banding_ref
+                )
+                bandings[banding.id] = banding
+        except PlatformError as exc:
+            if exc.code != "NOT_FOUND":
+                raise
+            raise PlatformError(
+                "NOT_FOUND", exc.title, 404, f"Key {key.name!r}: {exc.detail}"
+            ) from exc
+    pinned = [factor for chain in factors.values() for factor in chain]
+    banding_ids = list(
+        dict.fromkeys(
+            f.banding_id for f in pinned if f.banding_id and f.banding_id not in bandings
+        )
+    )
+    grouping_ids = list(dict.fromkeys(f.grouping_id for f in pinned if f.grouping_id))
+    bandings.update(
+        await transformations.load_bandings(session, workspace_id=workspace_id, ids=banding_ids)
+    )
+    groupings = await transformations.load_groupings(
+        session, workspace_id=workspace_id, ids=grouping_ids
+    )
+    return factors, bandings, groupings
+
+
+async def _portfolio_weights(
+    session: Any,
+    blob_store: BlobStore,
+    *,
+    workspace_id: UUID,
+    version_id: UUID,
+    table: RateTable,
+    current_cells: Sequence[dict[str, str]],
+) -> PortfolioWeights:
+    """Σ exposure per cell of the current version, or the `422` that refuses the portfolio.
+
+    One path for the 200 diff, the cells route and both Jobs, so the aggregate mean and the
+    per-cell weights come from one map (`RL-1418`). The pure join raises `WeightJoinError`
+    (and `FactorResolutionError`, re-wrapped), the frame check `PortfolioFrameError`: each is
+    `VALIDATION_FAILED` on the wire (`03` §5.1, the diff row).
+    """
+    version_row = await check_portfolio(session, workspace_id=workspace_id, version_id=version_id)
+    factors, bandings, groupings = await _key_artifacts(session, workspace_id, table.keys)
+    try:
+        frame = await _portfolio_frame(session, blob_store, version_row)
+        return exposure_weights(
+            frame, table.keys, current_cells,
+            factors=factors, bandings=bandings, groupings=groupings,
+        )
+    except (PortfolioFrameError, WeightJoinError, FactorResolutionError) as exc:
+        raise PlatformError(
+            "VALIDATION_FAILED", "The portfolio cannot weight this rate table", 422, str(exc)
+        ) from exc
+
+
 async def diff_needs_job(
     database: Database,
     workspace_id: UUID,
     slug: str,
     version: int,
     against: str | int,
+    *,
+    portfolio_dataset_version_id: UUID | None = None,
 ) -> bool:
     """Whether the diff must answer 202 with a Job (03 §5.1, FR-232).
 
@@ -273,6 +413,9 @@ async def diff_needs_job(
     `diff` (a missing table or version, a baseless baseline) so the two forms cannot
     disagree about what exists. Versions are immutable, so a later resolution inside
     the worker arrives at the same baseline and the same cells.
+
+    A named portfolio is checked here too (`check_portfolio`), so a refused portfolio is
+    answered before any Job exists (`RL-1361` item 8).
     """
     async with database.unit_of_work() as session:
         table_row = await _load_table(session, workspace_id, slug)
@@ -283,6 +426,10 @@ async def diff_needs_job(
         baseline_row = await _load_version(
             session, table_row.id, baseline_number, slug
         )
+        if portfolio_dataset_version_id is not None:
+            await check_portfolio(
+                session, workspace_id=workspace_id, version_id=portfolio_dataset_version_id
+            )
         return (
             version_row.storage == "parquet" or baseline_row.storage == "parquet"
         )
@@ -304,8 +451,13 @@ async def diff(
     `against` names the baseline: `previous` (the prior version), `seed` (the version
     that seeded the table — the technical-rate origin, FR-230), or an explicit
     version number. Diffed on read (DP3: compute on read, nothing materialised at
-    version creation). Exposure weights are supplied by the caller at fetch time
-    (DP1); this slice passes none — the portfolio-dataset join is not yet built.
+    version creation). With `portfolio_dataset_version_id` the cells are weighted by that
+    `validated` portfolio's exposure (`exposure_weights`) and the two coverage figures are
+    set; without it the diff says so by leaving them `None` (FR-231, `RL-1361`).
+
+    The portfolio is checked first (scope, then status, `check_portfolio`), before any cell
+    is read and before the cache is consulted, so a cached entry can never answer for a
+    portfolio the caller may not name.
 
     One compute path for both storages (FR-232): a `parquet` version's cells are
     materialised from its blob the way every bounded table transform does; storage
@@ -314,8 +466,8 @@ async def diff(
 
     With `cache` (DP3 (b)) the read path is compute-on-read: a miss computes and
     stores, a hit serves the stored artifact. The key covers both versions' content
-    hashes and the portfolio identity, never a wall-clock date — an immutable pair
-    can only ever name one entry (`diff_cache`).
+    hashes, the current definition and the portfolio identity within its workspace, never
+    a wall-clock date — an immutable pair can only ever name one entry (`diff_cache`).
     """
     async with database.unit_of_work() as session:
         table_row = await _load_table(session, workspace_id, slug)
@@ -326,6 +478,10 @@ async def diff(
         baseline_row = await _load_version(
             session, table_row.id, baseline_number, slug
         )
+        if portfolio_dataset_version_id is not None:
+            await check_portfolio(
+                session, workspace_id=workspace_id, version_id=portfolio_dataset_version_id
+            )
 
         table = RateTable.model_validate(version_row.definition)
         current_cells = await _load_cells_of(
@@ -339,19 +495,333 @@ async def diff(
             key = cache.key(
                 version_content_hash(current_cells),
                 version_content_hash(baseline_cells),
+                definition_hash(table),
                 portfolio_dataset_version_id,
+                workspace_id,
             )
             cached = await cache.get(key)
             if cached is not None:
                 return cached
+        weighted: PortfolioWeights | None = None
+        if portfolio_dataset_version_id is not None:
+            weighted = await _portfolio_weights(
+                session, blob_store, workspace_id=workspace_id,
+                version_id=portfolio_dataset_version_id, table=table,
+                current_cells=current_cells,
+            )
+        weights = weighted.weights if weighted is not None else None
         if against == "seed":
-            diff = diff_vs_seed(baseline_cells, current_cells, table.keys, table.value)
+            diff = diff_vs_seed(
+                baseline_cells, current_cells, table.keys, table.value, weights=weights
+            )
         else:
-            diff = diff_vs_previous(baseline_cells, current_cells, table.keys, table.value)
+            diff = diff_vs_previous(
+                baseline_cells, current_cells, table.keys, table.value, weights=weights
+            )
+        if weighted is not None:
+            diff = diff.model_copy(
+                update={
+                    "portfolio_exposure": weighted.portfolio_exposure,
+                    "matched_exposure": weighted.matched_exposure,
+                }
+            )
         if key is not None:
             assert cache is not None
             await cache.set(key, diff)
         return diff
+
+
+#: Cells per chunk blob of a stored cells artifact. At least the route's `MAX_LIMIT`, so a page of
+#: any legal limit touches at most two chunks (the cells-page latency NFR, R1): a page costs
+#: O(page), never O(table).
+CELLS_CHUNK = 1000
+assert CELLS_CHUNK >= MAX_LIMIT
+
+
+@dataclass(frozen=True, slots=True)
+class DiffCellsPage:
+    """One page of a diff's changed cells, and where the next one starts (`None` on the last)."""
+
+    items: list[RateTableDiffCell]
+    total_estimate: int
+    next_cursor: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class DiffCellsJobNeeded:
+    """No stored artifact for this query. `in_flight` is the queued or running
+    `rate_table.diff_cells` Job for the same key, if any: the route answers 202 with THAT Job
+    rather than starting a second. Otherwise it submits one carrying `key`, which names the
+    artifact the Job writes (a failed Job is not cached: the next request starts a new one)."""
+
+    key: str
+    in_flight: Job | None = None
+
+
+async def _all_cells(
+    session: Any,
+    blob_store: BlobStore,
+    *,
+    workspace_id: UUID,
+    version_row: RateTableVersionRow,
+    baseline_row: RateTableVersionRow,
+    table: RateTable,
+    portfolio_dataset_version_id: UUID | None,
+) -> tuple[list[RateTableDiffCell], PortfolioWeights | None]:
+    """Every changed cell, in `03` §4.2's order, weighted by the portfolio when one is named,
+    and the portfolio's coverage.
+
+    The weights come from `_portfolio_weights`, the map the summary uses, so the cells and the
+    aggregate mean cannot disagree (`RL-1418`).
+    """
+    current_cells = await _load_cells_of(session, version_row, table, blob_store)
+    baseline_cells = await _load_cells_of(session, baseline_row, table, blob_store)
+    weighted: PortfolioWeights | None = None
+    if portfolio_dataset_version_id is not None:
+        weighted = await _portfolio_weights(
+            session, blob_store, workspace_id=workspace_id,
+            version_id=portfolio_dataset_version_id, table=table, current_cells=current_cells,
+        )
+    cells = diff_cells(
+        baseline_cells, current_cells, table.keys, table.value,
+        weights=weighted.weights if weighted is not None else None,
+    )
+    return cells, weighted
+
+
+async def _find_artifact(
+    session: Any, blob_store: BlobStore, *, workspace_id: UUID, key: str
+) -> tuple[dict[str, Any] | None, Job | None]:
+    """The manifest a succeeded `rate_table.diff_cells` Job stored for exactly this key, else the
+    Job in flight for it. A Job whose manifest blob is gone does not count: the query is built
+    again, never answered from another query's artifact."""
+    rows = await session.execute(
+        select(JobRow)
+        .where(
+            JobRow.workspace_id == workspace_id,
+            JobRow.kind == JobKind.RATE_TABLE_DIFF_CELLS,
+            JobRow.parameters["key"].astext == key,
+        )
+        .order_by(JobRow.queued_at.desc())
+    )
+    in_flight: Job | None = None
+    for job in rows.scalars():
+        if job.status in (JobStatus.QUEUED, JobStatus.RUNNING):
+            in_flight = in_flight or job_service.to_schema(job)
+        elif job.status is JobStatus.SUCCEEDED:
+            ref = (job.result or {}).get("ref")
+            blob = await session.get(BlobRow, ref) if ref else None
+            if blob is None:
+                continue
+            try:
+                manifest: dict[str, Any] = json.loads(await blob_store.read(to_ref(blob)))
+            except PlatformError:
+                continue
+            return manifest, None
+    return None, in_flight
+
+
+def _bad_cursor() -> PlatformError:
+    return PlatformError(
+        "VALIDATION_FAILED",
+        "Malformed cursor",
+        400,
+        "The cursor is not one this API issued. Omit it to start from the beginning.",
+    )
+
+
+async def _read_cells(
+    session: Any, blob_store: BlobStore, manifest: dict[str, Any], start: int, stop: int
+) -> list[RateTableDiffCell] | None:
+    """Cells `start` to `stop` of the artifact, reading only the chunks they lie in. `None` if
+    a chunk is gone, which makes the artifact absent."""
+    size: int = manifest["chunk_size"]
+    items: list[RateTableDiffCell] = []
+    for index in range(start // size, (stop - 1) // size + 1):
+        blob = await session.get(BlobRow, manifest["chunks"][index])
+        if blob is None:
+            return None
+        try:
+            lines = (await blob_store.read(to_ref(blob))).splitlines()
+        except PlatformError:
+            return None
+        low = max(start - index * size, 0)
+        high = min(stop - index * size, len(lines))
+        items.extend(RateTableDiffCell.model_validate_json(line) for line in lines[low:high])
+    return items
+
+
+async def _cells_key_for(
+    session: Any,
+    workspace_id: UUID,
+    slug: str,
+    version: int,
+    against: str | int,
+    portfolio_dataset_version_id: UUID | None,
+) -> tuple[str, RateTableVersionRow]:
+    """Resolve the versions and check the portfolio, before any Job, and name the query's
+    artifact by identity (`cells_key`): nothing is read from a cell. Also returns the
+    current version's row, for `_refuse_dangling_refs`."""
+    table_row = await _load_table(session, workspace_id, slug)
+    version_row = await _load_version(session, table_row.id, version, slug)
+    baseline_number = await _resolve_baseline(session, table_row.id, version, against)
+    await _load_version(session, table_row.id, baseline_number, slug)  # a 404 if it is gone
+    if portfolio_dataset_version_id is not None:
+        await check_portfolio(
+            session, workspace_id=workspace_id, version_id=portfolio_dataset_version_id
+        )
+    key = cells_key(
+        slug, version_row.version_number, baseline_number, portfolio_dataset_version_id
+    )
+    return key, version_row
+
+
+async def _refuse_dangling_refs(
+    session: Any, workspace_id: UUID, version_row: RateTableVersionRow, portfolio: UUID | None
+) -> None:
+    """A `factor_ref` or `banding_ref` that resolves to nothing is a `404` naming the key and the
+    ref, synchronously and before any Job, on both routes and both storages (the maintainer's
+    ruling; `RL-1361`'s "the Job fails with NOT_FOUND" for a parquet pair is superseded). Only a
+    portfolio-weighted query reads the refs; a query that finds its artifact never reaches this."""
+    if portfolio is None:
+        return
+    table = RateTable.model_validate(version_row.definition)
+    await _key_artifacts(session, workspace_id, table.keys)
+
+
+async def diff_cells_page(
+    database: Database,
+    workspace_id: UUID,
+    slug: str,
+    version: int,
+    against: str | int,
+    *,
+    blob_store: BlobStore,
+    portfolio_dataset_version_id: UUID | None = None,
+    limit: int,
+    cursor: str | None = None,
+) -> DiffCellsPage | DiffCellsJobNeeded:
+    """One cursor page of the diff's changed cells (FR-231, `RL-1418` T1 as amended).
+
+    The `against` resolution and the portfolio checks (scope, then status) run first, before
+    any Job. Every pair, whatever its storage, is answered from the artifact a
+    `rate_table.diff_cells` Job stored for this exact query, found by version identity without
+    loading a cell, or this reports that the Job is needed. So the first request for a
+    (versions, portfolio) key is a 202 and a later page reads the manifest and the one or two
+    chunks it lies in (R1, `07` §1.3: an operation that can exceed 2 s returns 202 with a Job).
+    """
+    async with database.unit_of_work() as session:
+        key, version_row = await _cells_key_for(
+            session, workspace_id, slug, version, against, portfolio_dataset_version_id
+        )
+        manifest, in_flight = await _find_artifact(
+            session, blob_store, workspace_id=workspace_id, key=key
+        )
+        if manifest is None:
+            if in_flight is None:
+                await _refuse_dangling_refs(
+                    session, workspace_id, version_row, portfolio_dataset_version_id
+                )
+            return DiffCellsJobNeeded(key=key, in_flight=in_flight)
+        total: int = manifest["total"]
+        start = decode_int_cursor(cursor) if cursor is not None else 0
+        assert start is not None
+        if cursor is not None and not 0 < start < total:
+            raise _bad_cursor()
+        stop = min(start + limit, total)
+        items = await _read_cells(session, blob_store, manifest, start, stop) if total else []
+        if items is None:
+            return DiffCellsJobNeeded(key=key)
+        return DiffCellsPage(
+            items=items,
+            total_estimate=min(total, COUNT_CAP),
+            next_cursor=encode_cursor(stop) if stop < total else None,
+        )
+
+
+async def diff_from_artifact(
+    database: Database,
+    workspace_id: UUID,
+    slug: str,
+    version: int,
+    against: str | int,
+    *,
+    blob_store: BlobStore,
+    portfolio_dataset_version_id: UUID | None = None,
+) -> RateTableDiff | DiffCellsJobNeeded:
+    """The diff summary (FR-231), read from the manifest of the same artifact the cells route
+    serves: the first request for a key is the Job (rows pairs too), later ones are 200 with
+    the summary and the coverage figures the artifact carries and no cell read (R1)."""
+    async with database.unit_of_work() as session:
+        key, version_row = await _cells_key_for(
+            session, workspace_id, slug, version, against, portfolio_dataset_version_id
+        )
+        manifest, in_flight = await _find_artifact(
+            session, blob_store, workspace_id=workspace_id, key=key
+        )
+        if manifest is None:
+            if in_flight is None:
+                await _refuse_dangling_refs(
+                    session, workspace_id, version_row, portfolio_dataset_version_id
+                )
+            return DiffCellsJobNeeded(key=key, in_flight=in_flight)
+        return RateTableDiff.model_validate(manifest["summary"])
+
+
+async def build_cells_artifact(
+    database: Database,
+    workspace_id: UUID,
+    slug: str,
+    version: int,
+    against: str | int,
+    *,
+    blob_store: BlobStore,
+    portfolio_dataset_version_id: UUID | None = None,
+) -> str:
+    """Compute every changed cell and store the artifact; returns the manifest's sha256 (FR-232).
+
+    The cells are written in order as chunk blobs of `CELLS_CHUNK` cells, one JSON object per
+    line, and a small manifest names them and carries the diff's summary and coverage figures.
+    The checks run again under the Job's workspace, because the portfolio can lose its standing
+    between submit and run (`RL-1361` item 8).
+    """
+    async with database.unit_of_work() as session:
+        table_row = await _load_table(session, workspace_id, slug)
+        version_row = await _load_version(session, table_row.id, version, slug)
+        baseline_number = await _resolve_baseline(session, table_row.id, version, against)
+        baseline_row = await _load_version(session, table_row.id, baseline_number, slug)
+        if portfolio_dataset_version_id is not None:
+            await check_portfolio(
+                session, workspace_id=workspace_id, version_id=portfolio_dataset_version_id
+            )
+        table = RateTable.model_validate(version_row.definition)
+        cells, weighted = await _all_cells(
+            session, blob_store, workspace_id=workspace_id, version_row=version_row,
+            baseline_row=baseline_row, table=table,
+            portfolio_dataset_version_id=portfolio_dataset_version_id,
+        )
+        summary = diff_summary(cells)
+        if weighted is not None:
+            summary = summary.model_copy(
+                update={
+                    "portfolio_exposure": weighted.portfolio_exposure,
+                    "matched_exposure": weighted.matched_exposure,
+                }
+            )
+        chunks: list[str] = []
+        for start in range(0, len(cells), CELLS_CHUNK):
+            payload = b"".join(
+                cell.model_dump_json().encode() + b"\n" for cell in cells[start:start + CELLS_CHUNK]
+            )
+            chunks.append((await blob_store.put(session, payload, "application/x-ndjson")).sha256)
+        manifest = {
+            "chunk_size": CELLS_CHUNK,
+            "total": len(cells),
+            "chunks": chunks,
+            "summary": json.loads(summary.model_dump_json()),
+        }
+        ref = await blob_store.put(session, json.dumps(manifest).encode(), "application/json")
+        return ref.sha256
 
 
 async def export_csv(
