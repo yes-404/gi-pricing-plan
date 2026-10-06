@@ -3,7 +3,7 @@ id: LG-1468
 family: ledger
 title: WK-1178 slice SL-1430 — FD-1421, a Rating Version's algorithm and pins over HTTP (PL-1429), task ledger
 status: closed
-created: 2026-10-05
+created: 2026-10-06            # original date 2026-10-05, set at the draft; minted 2026-10-06
 owner: executor
 tree: 52c153cd1dcf7eb8a716559216a30b245dd6a7e2
 phase: P2
@@ -231,8 +231,9 @@ merged: `merge-tree origin/main(a9ef6777) HEAD` before the merge, rc 1, tree `0e
 This ledger is closed under the executor charter's mint-step clause (`.claude/roles/executor.md`, "As the mint step…", added
 2026-10-04) and `docs/process/document-ids.md` §1.6's 2026-10-04 amendment to the SL and LG close cells: on 2026-10-06 the executor
 performed the closing acts in the mint commit on the auditor's behalf, after the slice audit — the front matter `status: closed`,
-the roadmap `SL-1430` row `status: closed` with its dated line, `docs/INDEX.md` regenerated, `audit-docs` run. `created:` and `tree:`
-stay as filed. The working id this record carried before the mint is replaced by `LG-1468` in the record's `id:` and its provenance
+the roadmap `SL-1430` row `status: closed` with its dated line, `docs/INDEX.md` regenerated, `audit-docs` run. `tree:` stays as filed; `created:` is the mint date, the
+original 2026-10-05 kept in the comment, because check 31 requires `created` non-decreasing with the number and the ids 1445 to 1455 (the B1 mint, #1230)
+are dated 2026-10-06. The working id this record carried before the mint is replaced by `LG-1468` in the record's `id:` and its provenance
 sentence; it remains only inside the verbatim gate outputs of the gate section (`between 1444 and 9483`, `the unminted working id 9483`,
 `[(1444, 9483)]`), which are quotations of tool output. `origin/main` was `a9ef677747a98a156c1d4e8b8ae9d2b43c4e3ee5`, the merge-base of the audited head, when the mint began; it then
 moved to `c6886bda9ce1c200a921d490530a79cbfb3ca820` (#1230, the B1 mint: docs-only, `git diff --name-status a9ef6777..c6886bda` lists only
