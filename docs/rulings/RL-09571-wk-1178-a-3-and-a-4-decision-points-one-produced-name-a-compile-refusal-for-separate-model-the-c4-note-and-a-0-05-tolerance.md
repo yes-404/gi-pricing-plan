@@ -176,6 +176,29 @@ FR-249 carry text for RL 9571 / OQ 9570: ACCEPTED (owner WK-1178 now, re-decided
      `CATEGORICAL_FACTORS`).
    - **Large loss: uncapped**, labelled in the plan and the script as a simplification (no
      large-loss loading).
+10. **DP-A3-7: (a), the union.** *(Added before the mint, 2026-10-06, on the lead's
+    decision that this record carries DP-A3-7's union half.)*
+    - **The question** (PL 9595, #1174 @`2404ac86`, delta 1 item 4): one
+      `feature_map` feeds every component of a Peril Structure, but A-2's check compares a
+      map with one Model. Which set is a value checked against: (a) the union, or (b) every
+      component?
+    - **The decision is the maintainer's (by delegation)**, in the entry "2026-10-05
+      18:44:45 BST — DP-A3-7 = (a) the UNION, with a per-component COMPLETENESS limb; A-1's
+      needs put lane C on the G2 path" (`channel/to-lead.md`), item 1. Its union sentence,
+      verbatim:
+
+```text
+DP-A3-7: (a). For the "this key is not a feature" test, a feature_map entry passes if AT LEAST ONE component model accepts it (one map feeds every component; the frequency GLM's exposure_years OFFSET, RL 9571 P3, is not a severity feature, and (b) would refuse A-4's ruled demo path).
+```
+
+    - **Option taken: (a).** For the "this key is not a feature" test, a `feature_map` entry
+      passes if at least one component model accepts it. An entry no component accepts is
+      refused.
+    - **The reason, as the entry gives it:** one map feeds every component. The frequency
+      GLM's `exposure_years` offset (P3 below) is not a severity feature, so (b) would
+      refuse A-4's ruled demo path.
+    - The per-component completeness limb of the same entry is recorded in RL 9491 (working
+      id, #1214), not here.
 
 **Settled outside this record.** The `model_call` result-type mechanism is A-2's (#1178), as
 ruled at 17:12:40, option (B). Item 7 depends on it and restates nothing beyond it.
