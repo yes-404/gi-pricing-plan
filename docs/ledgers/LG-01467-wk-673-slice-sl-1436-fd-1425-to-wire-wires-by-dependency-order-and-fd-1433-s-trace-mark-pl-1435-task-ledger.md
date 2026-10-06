@@ -3,7 +3,7 @@ id: LG-1467
 family: ledger
 title: WK-673 slice SL-1436 — FD-1425's wiring limb, to_wire wires by dependency order, and FD-1433's trace mark (PL-1435), task ledger
 status: closed
-created: 2026-10-05
+created: 2026-10-06            # original date 2026-10-05, set at the working id; minted 2026-10-06
 owner: executor
 tree: 23af6997161789887d26f2868a6022a0738e44e6
 phase: P2
