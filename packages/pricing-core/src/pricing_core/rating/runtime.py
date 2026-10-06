@@ -36,6 +36,7 @@ named here rather than shipped silently; see the PR description for the recommen
 
 from __future__ import annotations
 
+import heapq
 import json
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -44,6 +45,7 @@ from typing import Any
 import polars as pl
 import zen
 
+from model_schema.graph_errors import GraphCycleError
 from model_schema.modelling import GbmFitResult
 from model_schema.rating import RatingAlgorithm, RatingModelCallStep
 from pricing_core.modelling.gbm import load_gbm_booster, predict_gbm
@@ -91,7 +93,9 @@ _ENGINE_NODE_TYPE: Mapping[str, str] = {
 _QUOTED_KEY_TYPES = frozenset({"string", "date"})
 
 
-def _model_call_failure(step: RatingModelCallStep, message: str) -> dict[str, Any]:
+def _model_call_failure(
+    step: RatingModelCallStep, message: str, context: Mapping[str, Any]
+) -> dict[str, Any]:
     """Resolves the Task 1.3 finding: report a `model_call` failure through data flow, not
     an exception.
 
@@ -129,7 +133,7 @@ def _model_call_failure(step: RatingModelCallStep, message: str) -> dict[str, An
     `MODEL_CALL_ERROR_KEY` before trusting any computed value, so the zero is never read as
     a real prediction.
     """
-    output: dict[str, Any] = {str(name): 0 for name in _as_list(step.produces)}
+    output: dict[str, Any] = {**context, **{str(name): 0 for name in _as_list(step.produces)}}
     output[MODEL_CALL_ERROR_KEY] = f"MODEL_CALL_FAILED: {message}"
     return {"output": output}
 
@@ -409,6 +413,48 @@ def _model_call_node(step_id: str) -> dict[str, Any]:
     }
 
 
+def _dependency_order(graph: JdmGraph, interior_ids: Sequence[str]) -> list[str]:
+    """The interior steps in a stable topological order (FR-212, FD-1425).
+
+    A Rating Algorithm is a DAG, so the order its steps are listed in carries no meaning and
+    must never decide wiring. The dependency rule is `RatingAlgorithm._graph_invariants`'s: a
+    step depends on every other producer of each name it consumes, never on itself (the clamp
+    that consumes and re-produces a name). Kahn's algorithm, always taking the ready step
+    listed first: an already-ordered list comes back unchanged, so its wire is unchanged.
+    """
+    position = {step_id: i for i, step_id in enumerate(interior_ids)}
+    producers: dict[str, list[str]] = {}
+    for step_id in interior_ids:
+        for name in _as_list(graph.nodes[step_id]["produces"]):
+            producers.setdefault(str(name), []).append(step_id)
+    dependents: dict[str, list[str]] = {step_id: [] for step_id in interior_ids}
+    pending: dict[str, int] = {}
+    for step_id in interior_ids:
+        needs = {
+            producer
+            for name in _as_list(graph.nodes[step_id]["consumes"])
+            for producer in producers.get(str(name), ())
+            if producer != step_id
+        }
+        pending[step_id] = len(needs)
+        for producer in needs:
+            dependents[producer].append(step_id)
+    ready = [position[step_id] for step_id in interior_ids if pending[step_id] == 0]
+    heapq.heapify(ready)
+    order: list[str] = []
+    while ready:
+        step_id = interior_ids[heapq.heappop(ready)]
+        order.append(step_id)
+        for other in dependents[step_id]:
+            pending[other] -= 1
+            if pending[other] == 0:
+                heapq.heappush(ready, position[other])
+    if len(order) != len(interior_ids):
+        # Unreachable for a saved algorithm: `_graph_invariants` refused the cycle at save.
+        raise GraphCycleError("the rating DAG contains a cycle (FR-212)")
+    return order
+
+
 def to_wire(graph: JdmGraph, payloads: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Translate pricing-core's `JdmGraph` into the JDM shape zen's binding consumes.
 
@@ -421,18 +467,16 @@ def to_wire(graph: JdmGraph, payloads: Mapping[str, Any] | None = None) -> dict[
 
     `input`/`output`-typed steps are **not** translated 1:1 — the engine wants exactly one
     `inputNode` and one `outputNode` (Step 3, rule 2), so every input step collapses into
-    the single `inputNode` and every output step's declared name is reached by wiring its
-    producer directly to the single `outputNode`. Concretely: any name an interior step
-    consumes that no *other interior step* produces is sourced from `inputNode` — which
-    covers a name produced by an `input` step and, just as correctly, a name that is simply
-    a raw context key nothing computes (`inputNode` relays the whole evaluate() context
-    verbatim; verified live — an unreferenced context key still appears in the terminal
-    result). Any interior step whose produced names are consumed by no other interior step
-    is wired directly to `outputNode`; every other interior step's produced values still
-    reach the result, because `passThrough` (rule 3) carries a node's entire received
-    context forward along whatever path it is on and edges carry the whole merged dict, not
-    one named value (verified live — a diamond of two independent producers converging on a
-    third both survive into the final result with no direct edge to the sink).
+    the single `inputNode` and every output step's declared name is reached through the
+    single `outputNode`. The interior steps form **one path** from `inputNode` to the sink,
+    in `_dependency_order`'s stable topological order, never the list order (FD-1425): each
+    node has exactly one incoming edge, so no merge happens anywhere and a name's final
+    producer writes it after every earlier copy. A name an interior step consumes that no
+    other interior step produces is read off `inputNode`, which relays the whole evaluate()
+    context verbatim (verified live — an unreferenced context key still appears in the
+    terminal result). Every node carries its entire received context forward
+    (`passThrough`, rule 3), so each produced value reaches the result along the path; a
+    linear algorithm (`[in, A, B, out]`) wires exactly as the per-name edges did.
 
     `payloads` (`Bundle.resolved_payloads`) hydrates `table`/`lookup` steps with real row
     data; omitted, those steps produce a structurally valid but empty decision table.
@@ -448,36 +492,22 @@ def to_wire(graph: JdmGraph, payloads: Mapping[str, Any] | None = None) -> dict[
     if unsupported:
         raise NotImplementedError(f"to_wire has no wire translation for step(s) {unsupported}.")
 
-    interior_ids = [
-        step_id for step_id, node in graph.nodes.items() if node["type"] in _ENGINE_NODE_TYPE
-    ]
+    interior_ids = _dependency_order(
+        graph,
+        [step_id for step_id, node in graph.nodes.items() if node["type"] in _ENGINE_NODE_TYPE],
+    )
 
-    consumed_by_someone: set[str] = set()
     wire_nodes: list[dict[str, Any]] = [
         {"id": _INPUT_ID, "type": "inputNode", "name": "Request", "position": {"x": 0, "y": 0}}
     ]
     edges: list[dict[str, Any]] = []
 
-    # `produced_by` is built **incrementally**, not as a full pre-pass, so that a step
-    # consuming a name it also produces (the "clamp in place" re-production chain
-    # `RatingAlgorithm._graph_invariants` already names and permits — `rating.py`'s own
-    # comment: "a step never depends on itself, even when it re-produces a name it
-    # consumed") resolves its *incoming* edge to whichever step produced that name
-    # *before* this one runs, never to itself. A full pre-pass (Task 1.3's original
-    # shape) would have every re-producer's own name already pointing at itself by the
-    # time its consumed-edge is computed, wiring a self-loop the engine refuses at
-    # decision-creation time (`cyclicGraph`) — verified live, not assumed. Every existing
-    # (non-reproducing) step type is unaffected: a name produced exactly once resolves
-    # identically whether `produced_by` is built all at once or incrementally.
-    produced_by: dict[str, str] = {}
+    previous = _INPUT_ID
     for step_id in interior_ids:
         node = graph.nodes[step_id]
         kind = node["type"]
-
-        for name in _as_list(node["consumes"]):
-            name = str(name)
-            consumed_by_someone.add(name)
-            edges.append(_edge(produced_by.get(name, _INPUT_ID), step_id))
+        edges.append(_edge(previous, step_id))
+        previous = step_id
 
         if kind == "expression":
             wire_nodes.append(_expression_node(step_id, node))
@@ -488,20 +518,13 @@ def to_wire(graph: JdmGraph, payloads: Mapping[str, Any] | None = None) -> dict[
         else:
             wire_nodes.append(_model_call_node(step_id))
 
-        for name in _as_list(node["produces"]):
-            produced_by[str(name)] = step_id
-
     exact_names = exact_read_names(graph)
-    sink_id = _EXACT_ID if exact_names else _OUTPUT_ID
-    for step_id in interior_ids:
-        produced_names = {str(n) for n in _as_list(graph.nodes[step_id]["produces"])}
-        if not produced_names & consumed_by_someone:
-            edges.append(_edge(step_id, sink_id))
     if exact_names:
-        if not interior_ids:
-            edges.append(_edge(_INPUT_ID, _EXACT_ID))
         wire_nodes.append(_exact_read_node(exact_names))
+        edges.append(_edge(previous, _EXACT_ID))
         edges.append(_edge(_EXACT_ID, _OUTPUT_ID))
+    elif interior_ids:
+        edges.append(_edge(previous, _OUTPUT_ID))
 
     wire_nodes.append(
         {"id": _OUTPUT_ID, "type": "outputNode", "name": "Response", "position": {"x": 0, "y": 0}}
@@ -532,13 +555,15 @@ def _model_call_handler(
 
     def handler(request: Any) -> dict[str, Any]:
         step = steps_by_id[request.node["id"]]
+        context = {k: v for k, v in request.input.items() if k != "$nodes"}
         ref = step.model_ref if step.model_ref is not None else step.peril_structure_ref
         if ref is None:  # pragma: no cover — schema-refused (FR-222)
-            return _model_call_failure(step, f"model_call step {step.step_id!r} pins nothing.")
+            return _model_call_failure(
+                step, f"model_call step {step.step_id!r} pins nothing.", context
+            )
         ref_str = str(ref)
         payload = payloads[ref_str]
         fit_result = dict(payload["fit_result"])
-        context = {k: v for k, v in request.input.items() if k != "$nodes"}
         feature_row = {
             feature_slug: context[graph_name]
             for graph_name, feature_slug in step.feature_map.items()
@@ -576,9 +601,13 @@ def _model_call_handler(
                 "unresolved). Scoring a GBM works because predict_gbm has a documented "
                 "fallback for factors=() that reads each feature off the frame directly; "
                 "predict_glm has no such fallback.",
+                context,
             )
 
-        return {"output": {str(name): value for name in _as_list(step.produces)}}
+        # The one success return: the context passes through (FD-1425), because on the
+        # ordered chain a node that drops it drops it for every later step. A branch added
+        # for another model type returns through this expression, or `_model_call_failure`.
+        return {"output": {**context, **{str(name): value for name in _as_list(step.produces)}}}
 
     return handler
 

@@ -270,3 +270,33 @@ roadmap, the ledger, and the minted record files); (b) CI at the mint head is FU
 from the job log (not just the step status), showing 0 failed; (c) the slice's own full local gate ran at the gated head with only the
 known check-31 set failing, as recorded in its ledger." The gated head is `343ef9bb3bee01b67a2c1de827a1b1e18fd0b34b`; condition (a)'s
 name-status is in the PR body, and (b) is the lead's to read at the merge ACK.
+
+## The full gate after the merge of main (2026-10-06)
+
+The maintainer (by delegation) ruled a full gate for SL-1430 after main's merge (see the closing note). Run by the executor on the lead's
+"GATE SLOT GRANTED gate-1 (lead, 03:58:17 BST …) for 78ca39af3efe4079e754265187a759d45da4a087": the verbatim `dev-commands` gate body,
+slot `gate-1`, 02:59–03:30 UTC on the box clock; the test database recreated from the template and `alembic upgrade head` (exit 0) first;
+scratch under `/home`. Head `78ca39af3efe4079e754265187a759d45da4a087`.
+
+| stage | exit |
+|---|---|
+| ruff | 0 |
+| mypy | 0 |
+| lint-imports | 0 |
+| audit-docs | 1 (one FAILED line: `check 31: gap in the full allocation between 1466 and 1468`) |
+| req-coverage | 0 |
+| generate-contracts --check | 0 |
+| pytest | 1 — `13 failed, 5052 passed, 3 skipped, 92 warnings in 1781.25s (0:29:41)` |
+| frontend install / generate:api / lint / type-check / test / build | 0 / 0 / 0 / 0 / 0 / 0 — vitest `97 passed` files, `615 passed` tests |
+
+**The 13 pytest failures**, by file: `test_audit_docs_finding_citations` ×1, `test_audit_docs_ids` ×2, `test_audit_docs_process_core_digest` ×2,
+`test_audit_docs_w37_11_ceiling` ×1, `test_doc_index` ×1, `test_register_lint` ×3, `test_register_owed` ×1, `test_repository_invariants` ×2.
+Twelve read `requirement numbering: 0 module-scoped id(s)…`; the thirteenth, `test_audit_docs_ids::test_doc_id_check_exits_0_on_the_real_tree`,
+reads `[noncontiguous] docs/INDEX.md has a gap be…`. All are the unminted allocation gap (`LG-1467` was not on `main` at that head), the same
+eight files and counts as the gate at `343ef9bb`; matched by file and message, not by node id. No failure outside that set, so the route
+passes under `fastapi` 0.142.2.
+
+### The post-gate merge of main, option (A)
+
+The maintainer (by delegation) ruled, "2026-10-06 04:28:45 BST — SL-1430 after its gate: option (A), merge main without a second full gate, ON CONDITIONS, including the frontend half" (`to-lead.md`). Main had moved past `f871ee8d` by #1228 (SL-1436) and #1234 (`uv.lock`), to `8bc01ae85599de47f2efe94bb7001ddade458fc1`, which the executor merged (merge-tree rc 1, the one conflict `docs/INDEX.md`, regenerated; `docs/contracts/openapi/generated.json` auto-merged, then `generate-contracts.py` printed `46 contracts up to date` and `--check` exited 0 with `46 generated contracts match the models`). Local, behind the slot probe, `nice`, `OMP_NUM_THREADS=1`:
+`backend/tests/test_contracts.py`, `test_rating_version_create_pins.py`, `test_demo_rating_evidence.py`, `test_rating_versions.py`, `test_rating_version_compile.py` and `test_traces_api.py`: `240 passed, 2 skipped, 6 warnings in 68.33s (0:01:08)`; frontend `generate:api` 0, `type-check` 0, `build` 0. The CI at the merged head is the lead's to read.

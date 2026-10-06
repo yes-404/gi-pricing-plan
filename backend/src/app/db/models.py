@@ -2284,7 +2284,9 @@ class ScoringTraceRow(Base):
         PgUUID(as_uuid=True), ForeignKey("deployments.id")
     )
     #: The blob body's digest — `app.platform.blobs.blob_key`/`BlobStore.read` resolve it.
-    #: Null while `status == "pending"`; every other status requires it (Task 4B).
+    #: Null while `status == "pending"`, and on a `mismatch` row whose pinned bundle no longer
+    #: resolved (no body was written); every `complete` row, and every `mismatch` row that
+    #: re-scored, has it (Task 4B).
     blob_sha256: Mapped[str | None] = mapped_column(String(64))
     #: `pending` (awaiting off-path re-score), `complete` (reproduced and blobbed),
     #: `mismatch` (the re-score ran but did not reproduce the served result, or the
