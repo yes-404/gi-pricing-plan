@@ -1,8 +1,8 @@
 ---
-id: LG-9520
+id: LG-1444
 family: ledger
 title: WK-673 slice SL-1391 — FR-231's exposure weights through the portfolio frame and the paged diff cells route (PL-1419), task ledger
-status: active
+status: closed
 created: 2026-10-05
 owner: executor
 tree: 5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a
@@ -18,8 +18,7 @@ relates: [RL-1418, RL-1361, RL-1263, FD-1358, WK-673]
 
 Executed from `PL-1419` by `executor-s7`. The model is Sonnet 5.5 (`claude-sonnet-5-5`). Branch
 `sl-1391-fr-231-exposure-weights-portfolio-frame`, worktree `.claude/worktrees/sl-1391`, from `origin/main`
-`5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a` (#1190, the activation). This record is under working id LG 9520 and mints
-later. The dispatch record is the lead's local file `gi-pricing-plan.local/handover/DISPATCH-WK-673-SL1391-2026-10-05.md`;
+`5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a` (#1190, the activation). This record carried a working id and was minted as LG-1444 on 2026-10-06. The dispatch record is the lead's local file `gi-pricing-plan.local/handover/DISPATCH-WK-673-SL1391-2026-10-05.md`;
 it is not in the repository.
 
 ## Tasks
@@ -455,7 +454,7 @@ re-gate COUNTS; the missing machine-state stamps are a ledgered omission, not a 
 > it is UNPROVEN, but it is IMMATERIAL to the result: the frontend checks depend only on frontend/ and the generated client,
 > which no docs or ledger commit touches, and the mint head's CI re-proves both halves anyway.
 > The missing uptime/free stamps (the python END and the frontend START) are a CHECKLIST OMISSION: no assertion in either half
-> is timing-bound, and contention can only cause spurious failures, not a false pass. So the gate COUNTS. LG 9520 records the
+> is timing-bound, and contention can only cause spurious failures, not a false pass. So the gate COUNTS. [LG-1444] records the
 > omission in those words, with the 19:32:26 script-bug release.
 > BACKSTOP, unchanged: S7's merge ACK requires FULL green CI at the mint head (check 31 and the 13 cleared by the LG mint).
 
@@ -698,3 +697,62 @@ The delta proof's conditions (the maintainer's): `git diff --name-status 21096c3
 
 #1206, a draft, `SL-1391: Slice 7: FR-231's exposure weights through the portfolio frame (F-W10-2)`, head branch
 `sl-1391-fr-231-exposure-weights-portfolio-frame`.
+
+## Closing note (2026-10-06)
+
+This ledger is closed under the executor charter's mint-step clause (`.claude/roles/executor.md`, "As the mint step…", added
+2026-10-04) and `docs/process/document-ids.md` §1.6's 2026-10-04 amendment to the SL and LG close cells: on 2026-10-06 the executor
+performed the closing acts in the mint commit on the auditor's behalf, after the slice audit — the front matter `status: closed`,
+the roadmap `SL-1391` row `status: closed` with its dated line, `docs/INDEX.md` regenerated, `audit-docs` green. `created:` and `tree:`
+stay as filed, per the `LG-1412` precedent. The working id this record carried before the mint is replaced by `LG-1444` on every
+changed file; `doc-id.py next` printed 1443 before the mint, as the allocation (`NFR-1443` is on this branch only) expected.
+
+### The audits, quoted (local, not in the repository: `handover/audit-s7delta-2026-10-06.md`, the lead's byte-for-byte copies of the auditor's messages)
+
+**The delta audit of `386f4d54..21096c36`** (the auditor's message of 2026-10-05T23:21:04Z, with its corrections of 23:21:51Z).
+Verdict line, verbatim: "S7 (SL-1391) DELTA AUDIT, 386f4d54..21096c36 — read-only; no blocker for the mint. 5 findings (2 MED, 3 LOW),
+1 gate wording correction." The correction message withdrew F5 ("F5 WITHDRAWN"); its list then reads, verbatim: "Findings list now: F1
+MED, F2 MED, F3 LOW, F4 LOW, plus the migration docstring (trivial)." The findings, verbatim openings:
+- "F1 MED — failed-Job→new-Job on the SAME key unproven."
+- "F2 MED — content refusals partly untested through the Job: non-numeric banded column and null exposure have no Job-failure test".
+- "F3 LOW — T:1396's diff-route bound is `len(reads) <= 4` after a 3-read page" (no action by ruling).
+- "F4 LOW — T:1031 asserts `"1" in message` and `"5" in message`" and the stale `test_error_sinks.py` citations.
+- "(Also noted, trivial: the new migration's docstring still says the 202 is "where either version is storage: parquet" — superseded by
+  RL-1442; no behaviour.)"
+
+**The scoped re-audit of `21096c36..89fcb092811e3964d9e2af8d262019a396c21994`** (the auditor's message of 2026-10-05T23:55:29Z).
+Verdict line, verbatim: "SCOPED RE-AUDIT 21096c36..89fcb092811e3964d9e2af8d262019a396c21994 — all four findings CLOSED; no new
+finding." Its production check, verbatim: "`git diff --name-only 21096c36 89fcb092 -- backend/src packages frontend` = 0 lines." Its
+caveat, verbatim: "Not verified by me (no pytest, slot held): the ledger's "70 passed in 75.69 s", "4 passed", ruff/mypy clean, and the three
+mutation runs themselves; I verified targets, assert-to-failure mapping and hashes only." The mint's own re-run below answers it for the
+test files, ruff and mypy.
+
+### The delta proof (the maintainer's conditions (a) to (c), the entry "2026-10-06 00:21:53 BST — S7 delta audit: (i) FIX NOW, but a DELTA PROOF instead of a full re-gate", accepted by "2026-10-06 00:55:10 BST — S7 delta proof ACCEPTED"), with outputs at the mint tree
+
+(a) `git diff --name-status 21096c36..89fcb092` (the head the delta audit ran on, before the mint commit):
+
+```text
+M	backend/migrations/versions/f3a7c1d9e2b4_rate_table_diff_cells_job_kind.py
+M	backend/tests/test_error_sinks.py
+M	backend/tests/test_rate_table_diff_portfolio.py
+M	docs/ledgers/LG-09520-wk-673-slice-sl-1391-fr-231-exposure-weights-through-the-portfolio-frame.md
+```
+
+Only tests, the one migration, and this ledger (under its pre-mint file name). The mint commit then adds the rename, the roadmap and
+register rows and the regenerated index, nothing under `backend/src` or `packages`.
+
+(b) `git diff -U0 21096c36..89fcb092 -- backend/migrations/versions/f3a7c1d9e2b4_rate_table_diff_cells_job_kind.py`: one hunk, `@@ -4,2 +4,2 @@`,
+docstring lines only (the old "where either version is `storage: parquet`" wording replaced by "where the query's cell artifact is not yet
+stored, for either storage").
+
+(c) Run by the mint executor on 2026-10-06 outside any held slot (`gate-1` and `gate-2` free before each command), `nice -n 10`,
+`OMP_NUM_THREADS=1`, the changed test files only:
+
+| Command | Exit | Last line |
+|---|---|---|
+| `pytest -q backend/tests/test_rate_table_diff_portfolio.py backend/tests/test_error_sinks.py` | 0 | `74 passed, 2 warnings in 116.53s (0:01:56)` (70 + 4: the totals the delta entry recorded) |
+| `ruff check backend` | 0 | `All checks passed!` |
+| `mypy` | 0 | `Success: no issues found in 227 source files` |
+| `python3 scripts/audit-docs.py` (at the mint tree, after the rename) | 0 | `All checks passed.` |
+
+No full gate was run at the mint head: per the 00:21:53 entry, CI at the mint head is the backstop.
