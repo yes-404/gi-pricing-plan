@@ -3,7 +3,7 @@ id: PL-1476
 family: plan
 kind: leaf
 title: WK-675 Slice 2 — Designer I, canvas, inspector, load and save (FR-212, FR-213, FR-214, FR-215, FR-220, FR-221, FR-222, FR-223, FR-225, FR-226, FR-244): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-06            # original date 2026-10-05, set at the draft; minted 2026-10-06
 owner: planner
 tree: 88d114fc44b9a77a57f29ca30bc3ee5d693085f8
