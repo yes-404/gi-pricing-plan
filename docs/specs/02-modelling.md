@@ -49,6 +49,8 @@ to be referenced by a Rating Version":
 > **R4 — A Model using a Custom Objective can only reach `approved` if that objective is
 > itself `approved`** (FR-20).
 >
+> *(Amended 2026-10-08, `RL-1470`, FD-1469.)* R4 is enforced at the approval transition by a computed flag, `custom_objective_not_approved`: a model whose GBM `spec.objective` names a custom objective that is not `approved` carries it, and `06` FR-359 refuses `approved` with `ARTIFACT_FLAGGED` (409). Compilation re-checks the objective (`03` FR-240), so an objective deprecated after the model's approval is caught there. An Admin override of the flag (FR-359) never reaches compilation: FR-240's refusal is independent of approval state.
+>
 > **R5 — Every estimate carries uncertainty.** Coefficients carry standard errors;
 > predictions carry an interval or an explicit statement of why one is unavailable
 > (`CLAUDE.md` §7).
