@@ -40,6 +40,8 @@ must say which order relieves today's conflicts soonest without a transfer."*
 re-checked at this RFC's tree, or is marked as cited. Where this RFC disagrees with the memo,
 §8 lists it.
 
+**Status after the maintainer's review** (`to-lead.md` "## 2026-10-08 11:49:11 BST — RFC 9479 draft (#1240 @298004b620650c62f6e8429faad8632369ceee0a) REVIEWED: 1E and 5f IN FORCE NOW as interim rules; the full ruling HELD for the user's lean-P2 decision"): **1E and 5f are IN FORCE (interim)**, by delegation, until the ruling. **HELD, not refused:** 2D, 3B, the P5 write-up into `lead.md` and `delivery-process.md`, 5g and the sequence, because the user is deciding a lean-P2 cut to docs volume that overlaps them (P6).
+
 **Every executor-day figure is an ESTIMATE**, not a measurement. Each states its basis. An
 "executor-day" is one executor session-day of build, test and broken-input proof, excluding
 review, ACK and CI wait.
@@ -59,7 +61,7 @@ state was read at **2026-10-08 11:35:54 BST** (`TZ=Europe/London date`), and mov
 | M3 | **73 open PRs, 72 of them drafts.** 8 were opened before 2026-10-01. By creation date: 09-29 1, 09-30 7, 10-01 3, 10-05 60, 10-08 2. | `gh pr list -R yes-404/gi-pricing-plan --state open --limit 200 --json number,isDraft,createdAt,files > /tmp/rfc9479-prs.json`, then `jq 'length'`, `jq '[.[]\|select(.isDraft)]\|length'`, `jq '[.[]\|select(.createdAt<"2026-10-01")]\|length'`, `jq -r '[.[]\|.createdAt[0:10]]\|group_by(.)\|map("\(.[0]) \(length)")\|.[]'` on that file |
 | M4 | Of the 73: **72 touch `docs/INDEX.md`** (all but #1159), 25 touch `docs/findings/register.md`, 20 touch `docs/roadmap.md`, 5 touch `docs/open-questions.md`, **0 touch `docs/contracts/openapi/generated.json`**. **71 touch only paths under `docs/`** (all but #1236 and #1159). No PR is at the 100-file cap of the `files` list, so these counts are exact, not floors. | on the same file: `jq --arg p <path> '[.[]\|select([.files[].path]\|index($p))]\|length'` per path; `jq '[.[]\|select([.files[].path\|startswith("docs/")]\|all)]\|length'`; `jq '[.[]\|select((.files\|length)>=100)]\|length'` → 0 |
 | M5 | Merge queue eligibility: **unavailable on this repository as owned today.** The user's own observation (authority entry 11:30:48): "Require merge queue" is not offered in the ruleset editor. This agrees with M1 (`mergeQueue` null) and with GitHub's GA changelog, which limits the queue to organisation-owned public repositories and Enterprise Cloud. | https://github.blog/changelog/2023-07-12-pull-request-merge-queue-is-now-generally-available/ (cited from the memo, not re-fetched) |
-| M6 | `history-policy.yml` triggers on `push` to main and on `pull_request` **with no `paths:`** (:39–42), deliberately: its header (:9–14) says a filtered version "would pass by not running". `docs.yml`, `python.yml` and `frontend.yml` are path-filtered, and **`python.yml`'s filter includes `docs/**`** (:31 for push, :69 for pull_request), so every docs PR runs the full pytest suite. No workflow has a `merge_group:` trigger. | `git grep -n -E '^on:\|paths:\|- .docs/\*\*\|merge_group' -- .github/workflows/` |
+| M6 | `history-policy.yml` triggers on `push` to main and on `pull_request` **with no `paths:`** (:39–42), deliberately: its header (:9–14) says a filtered version "would pass by not running". `docs.yml`, `python.yml` and `frontend.yml` are path-filtered, and **`python.yml`'s filter includes `docs/**`** (:31 for push, :69 for pull_request), so every docs PR runs the full pytest suite. No workflow has a `merge_group:` trigger. #1235's python run took 1411.70 s, about 24 min (cited from the memo's M6, from the lead's log of 10:42:55; not re-measured here). | `git grep -n -E '^on:\|paths:\|- .docs/\*\*\|merge_group' -- .github/workflows/` |
 | M7 | **Check 31 reads contiguity from `docs/INDEX.md`**: `fail(f"check 31: gap in the full allocation between {lower} and {upper}")` (`scripts/audit-docs.py:1829`), when `migrated_tree()` (:134) is true. The sentinel is the existence of `docs/INDEX.md` and `docs/REDIRECTS.csv`; `docs.yml` :122 uses the same sentinel to choose `doc-id migrate --verify`'s `--ref`. | `grep -n 'check 31: gap\|def migrated_tree' scripts/audit-docs.py` ; `grep -n 'REDIRECTS' .github/workflows/docs.yml` |
 | M8 | `document-ids.md` §1.7 (:179), verbatim: *"`python3 scripts/doc-id.py next` fetches `origin/main`, reads the maximum across every header, every spec bold-id, every roadmap row and `INDEX.md`, prints max + 1. The number is taken by the commit that adds it; a collision at rebase is fixed by renumbering the unmerged item. `doc-id.py check` fails the gate on any duplicate or header/filename mismatch. Switching to GitHub-issue-number allocation later is a policy change inside `doc-id.py`, not a renumbering."* | `sed -n '179p' docs/process/document-ids.md` |
 | M9 | **The working-id and mint-at-readiness convention is written in no governed document except one sentence.** The only hits are `lead.md:167` (the post-mint sweep) and two dated amendment notes in `delivery-process.md` :55 and :57 that only *label* an id "(working id)". The rule itself is a channel entry: `to-lead.md` line 7442, headed `## 2026-09-28 11:23:26 BST · [the maintainer's (by delegation)] · ids are MINTED AT MERGE-READINESS, not reserved: first ready, first merged. …` *[elided: the header names the delegate by the word our records bar; quoted here with that word replaced]*. Its reason, verbatim: *"Check 31's contiguity would hold A1, and everything after it, up to 90 minutes behind D's ruling. Any fixed order makes one queue wait on the other."* A reservation table was tried and withdrawn that morning because of check 31. | `git grep -n -iE "working id" HEAD -- docs/process .claude/roles .claude/skills` → 3 hits |
@@ -113,7 +115,7 @@ Rule 4 already allows that (M10). P1's option 1E writes it down.
 
 ## Proposal
 
-Five parts, each with its options, trade-offs, cost (an ESTIMATE with its basis), the files it
+Six parts (P6 an empty slot until the user rules), each with its options, trade-offs, cost (an ESTIMATE with its basis), the files it
 changes, what it would have changed today, and a recommendation. A recommendation is a proposal
 for the maintainer's ruling, never a decision; P5 alone records rules already in force.
 
@@ -127,7 +129,7 @@ for the maintainer's ruling, never a decision; P5 alone records rules already in
 | **1B** | **Transfer the repository to a free GitHub organisation, then enable the queue.** | **The user's decision and action.** After the transfer, the prerequisites come **first**, in this order: **(i)** a `merge_group:` trigger on all four workflows; **(ii)** one always-reporting aggregator job per path-filtered workflow, because `paths:` does not apply to `merge_group` and a required check that never reports stalls the queue (a `git diff --name-only` step, not a third-party action, which `docs.yml`'s header refuses); `history-policy` gets a `merge_group` range (`merge_group.base_sha..merge_group.head_sha`), or it scans only the tip; **(iii)** only then the ruleset's required-checks rule and "Require merge queue" with squash. | **Moves with the transfer:** history (every SHA and PR number unchanged, so every ledger, ACK and citation stays valid), issues, PRs, rulesets, secrets, webhooks, deploy keys. **Changes:** the URL (GitHub redirects it, including git remotes, until someone recreates `yes-404/gi-pricing-plan`; update the remotes anyway); **the fine-grained PAT must be re-issued with the organisation as resource owner** (until then every `gh` call fails, a hard stop for the merge procedure, so the transfer needs a quiet window); Actions and Dependabot settings re-checked at organisation level. 54 lines in 20 files mention `yes-404` (`git grep -c yes-404 HEAD -- . ':!docs/INDEX.md'`); `lead.md:41–44`'s `author.login` rule still holds, since a transfer does not change PR authorship. **Once on:** the REST merge cannot enqueue, so the merge becomes `gh pr merge --auto` or GraphQL `enqueuePullRequest`; the ACK keeps the head SHA but cannot name the expected tree (GitHub builds it from main plus the PRs ahead); the read-back compares the new main's tree with the tree the `merge_group` run tested; an ejection is the new re-request. **Worthless before P2:** the queue's build is a plain merge, so an INDEX conflict ejects the PR (72 of 73 open PRs, M4). | **2.0** — basis: (i)+(ii) 1.0 (four workflow files, an aggregator each, a broken-input proof that a filtered-out workflow still reports); ruleset, `lead.md` rule 4 and `git-hygiene` 0.5; a dry run on three docs PRs 0.5. The user's transfer, PAT and settings work comes on top. | `.github/workflows/{docs,python,frontend,history-policy}.yml`; the ruleset (a setting); `.claude/roles/lead.md` rule 4; `.claude/skills/git-hygiene`; CLAUDE.md §2's CI sentence (the maintainer's) |
 | **1C** | Required status checks with "require branches to be up to date", on the personal repository (no queue). | A ruleset edit and the aggregators of 1B (ii). | Enforces CI on a head that contains current main: what the lead does by hand now. It **adds** re-CI rather than removing it. No parallelism. | 1.0 — basis: 1B (ii) alone | as 1B (i)–(ii); the ruleset |
 | **1D** | A hand-built merge train: N PRs into one integration branch, one CI run, then ordered squashes. | A new script and procedure. | Each squash still moves main under the next PR, so the per-PR ACK tree must be recomputed for the train. More procedure and more ways to fail than a queue. | 1.5–2.0 — basis: a new script plus its tests, plus `lead.md` | `lead.md` rule 4, a new script |
-| **1E** | **No transfer: an ACK carries over a main move when the merge is mechanically clean.** When main moves, the lead recomputes `git merge-tree` of the ACKed head on the new main. If it exits 0 **and** the commits that moved main touch **none of the PR's paths**, the lead runs the docs checks (audit-docs, `doc-index.py --check`, `register-lint.py`) on that recomputed tree and re-ACKs naming it, **without merging main into the branch and without a new branch CI run**. Full CI then runs on main's push as the backstop; a red main is fixed forward before any other merge. | A `lead.md` rule 4 amendment (the maintainer's) and nothing else. | **Removes the per-move re-CI, the largest cost in I1**, with no transfer. It moves pytest detection from before the merge to after it: `python.yml` triggers on `docs/**` because tests assert on docs content, so a docs PR that breaks one reaches main red. **Bounds:** only PRs whose paths are all under `docs/` (71 of 73 today, M4); never while main is red. It is already practice once: #1238 (Problem). | **0.25** — basis: one rule paragraph in `lead.md` and its read-back line | `.claude/roles/lead.md` rule 4 |
+| **1E** | **In force (interim) per "## 2026-10-08 11:49:11 BST — RFC 9479 draft (#1240 @298004b620650c62f6e8429faad8632369ceee0a) REVIEWED: 1E and 5f IN FORCE NOW as interim rules; the full ruling HELD for the user's lean-P2 decision".** **No transfer: an ACK carries over a main move when the merge is mechanically clean.** When main moves, the lead recomputes `git merge-tree` of the ACKed head on the new main. If it exits 0 **and** the commits that moved main touch **none of the PR's paths**, the lead runs the docs checks (audit-docs, `doc-index.py --check`, `register-lint.py`) on that recomputed tree and re-ACKs naming it, **without merging main into the branch and without a new branch CI run**. Full CI then runs on main's push as the backstop; a red main is fixed forward before any other merge. | A `lead.md` rule 4 amendment (the maintainer's) and nothing else. | **Removes the per-move re-CI, the largest cost in I1**, with no transfer. It moves pytest detection from before the merge to after it: `python.yml` triggers on `docs/**` because tests assert on docs content, so a docs PR that breaks one reaches main red. **Bounds:** only PRs whose paths are all under `docs/` (71 of 73 today, M4); never while main is red. It is already practice once: #1238 (Problem). | **0.25** — basis: one rule paragraph in `lead.md` and its read-back line | `.claude/roles/lead.md` rule 4 |
 
 **What it would have changed today.**
 - **1E:** #1233's 96bcdb0e (← c0aab813, a lockfile-only move, disjoint paths) would not exist,
@@ -137,7 +139,7 @@ for the maintainer's ruling, never a decision; P5 alone records rules already in
 - **1B:** #1235, #1237, #1233 and #1238 would have been four queue entries with no re-ACK
   between them; without P2, each docs entry would have been ejected at its INDEX hunk.
 
-**Recommendation: 1A + 1E now.** Put 1B to the user **only after P2 has landed and 1E has run
+**Recommendation: 1A + 1E now** (1E in force, interim, since 11:49:11). Put 1B to the user **only after P2 has landed and 1E has run
 for 14 days**, with that period's serial-wait cost as the case for or against a transfer. The
 recommendation holds in both cases: without a transfer, 1E plus P2–P5 carry the relief; with a
 transfer later, 1E retires, and nothing in P2–P5 is wasted, since the queue needs P2 and the
@@ -302,7 +304,7 @@ part records them and does not re-propose them** (the maintainer's ask (a), `to-
 "## 2026-10-08 11:35:05 BST — The RFC 9479 options memo noted (sent seconds before this entry);
 two asks for the RFC"). They live in the channel only; no governed document carries them (M13).
 Writing them into `lead.md` and `delivery-process.md` §8 is the ruling's to order, and each
-charter line it touches is the maintainer's, behind an `FD-` first (`document-ids.md` :168:
+charter line it touches is the maintainer's, behind **one `FD-`** covering every charter line P5 and 1E touch (`document-ids.md` :168:
 *"a role file that proves insufficient" → `FD-` → maintainer amends*).
 
 | | Rule in force | Source (`to-lead.md` entry header, verbatim) |
@@ -325,7 +327,7 @@ charter line it touches is the maintainer's, behind an `FD-` first (`document-id
   of one per record (73 at 11:35:54, M3, 72 of them drafts). Pairwise conflicts scale with the
   square of the open count, so the I2 and I3 conflicts between *drafts* stop at the source; what
   remains is batch against batch and batch against slice, which P1–P4 address.
-- **The role-file lines it changes later** (the maintainer's, via an `FD-` first). No role file
+- **The role-file lines it changes later** (the maintainer's, via the one `FD-`). No role file
   says "open a draft PR" (`git grep -n -iE 'draft PR|--draft' -- .claude docs/process` → 0 hits
   at this tree); the lines that assume **one PR per record** are:
   `.claude/roles/decision-maker.md:40–42` (*"every ruling and every spec change lands as a PR
@@ -336,11 +338,14 @@ charter line it touches is the maintainer's, behind an `FD-` first (`document-id
   also cover the `draft/` branches). Predicate: `git grep -n -iE '\bPR\b' -- .claude/roles`,
   read for per-record wording.
 
-**Proposed, not in force** (for the ruling):
+**In force (interim) per "## 2026-10-08 11:49:11 BST — RFC 9479 draft (#1240 @298004b620650c62f6e8429faad8632369ceee0a) REVIEWED: 1E and 5f IN FORCE NOW as interim rules; the full ruling HELD for the user's lean-P2 decision":**
 - **5f — a 7-day draft age limit:** a draft (PR or `draft/` branch) older than 7 days is closed
-  or deleted (its reservation `abandoned` under 3B) or carried by the lead with a dated reason;
-  the lead's progress line carries the count. Basis: 8 open PRs predate 2026-10-01 (M3).
+  (or its branch deleted with the tip sha recorded; its reservation `abandoned` under 3B) or
+  carried by the lead with a dated reason in `eta.md`; the lead applies it in the next sweep and
+  reports the count. Basis: 8 open PRs predate 2026-10-01 (M3).
   ESTIMATE 0.25 (one `lead.md` paragraph).
+
+**Proposed, not in force** (held with the ruling):
 - **5g — merge main daily into a branch with code; into a docs-only branch at its merge turn
   only.** A daily merge keeps code conflicts small but costs a CI run and voids the ACK tree;
   docs-only conflicts are the generated and table hunks P2–P4 address, and 1E carries a clean
@@ -353,8 +358,18 @@ PRs opened before 1 Oct would be closed or carried with reasons. 5g with 1E: #12
 merges of main collapse to the ones its merge turn needed.
 
 **Recommendation: record 5a–5e and 5h in `lead.md` and `delivery-process.md` §8 as written (the ruling
-orders it, an `FD-` first for each charter line); adopt 5f and 5g.** About 1.0 executor-day in
-total (ESTIMATE: five recorded rules and two new ones, a paragraph each, plus the `FD-`).
+orders it, behind ONE `FD-` for every charter line); 5f is in force; adopt 5g.** About 1.0
+executor-day in total (ESTIMATE: six recorded rules and one new one, a paragraph each, 0.75; the
+single `FD-` covering `lead.md` rule 4 (:159–171, 1E and the mint queue), `decision-maker.md:40–42`,
+`executor.md:25` and `:144` and `auditor.md:15–18`, 0.25 — one finding, one auditor session,
+instead of one per file).
+
+### P6 — lean P2: record volume
+
+**Empty until the user rules.** The user is choosing among lean-P2 options to cut docs volume
+(the maintainer's review entry, "## 2026-10-08 11:49:11 BST — RFC 9479 draft (#1240 @298004b620650c62f6e8429faad8632369ceee0a) REVIEWED: 1E and 5f IN FORCE NOW as interim rules; the full ruling HELD for the user's lean-P2 decision": *"fewer records per slice, ids at creation, a generated
+INDEX"*), which overlap P2 and P3. The decision folds in here, and P2, P3 and P5 are re-read
+against it, so it needs no new RFC.
 
 ---
 
@@ -377,19 +392,49 @@ that relieves today's conflicts soonest, with no transfer:
    after 2D has landed and 1E has run 14 days.
 4. **Measured, not scheduled: P4** after 14 days at the new rate; 4B before 4C.
 
+**HELD:** this sequence, 2D, 3B, the P5 write-up and 5g wait for the user's lean-P2 decision (P6)
+and then the ruling; only 1E and 5f run now.
+
+**What the 2D and 3B builds displace before the 4 Nov code freeze** (the maintainer's ask (c);
+ESTIMATE throughout). Sources: the code freeze, *"Code freeze: Wed 2026-11-04. G1: the seven P2
+Works delivered"* (`docs/roadmap.md:584`, the P2 milestone section; the roadmap's own §6 is the
+Phase 1 split, so the date is read from the P2 section); the rate, *"1 day per build slice per lane
+as likely"* (`PL-1371` §4); and the fit, `eta.md:64`: *"Code-freeze fit (Wed 4 Nov) under Option A
+(PL-1371 §6 figures of 3 Oct, not re-run): 3 lanes every day → fits on paper with ~2 days left (an
+upper bound); 3 lanes 5 days in 7 → does NOT fit; 2 lanes → does NOT fit."*
+- **Size:** 2D 2.0 + 3B 2.5 = **4.5 executor-days**. Both are script builds with tests and
+  broken-input proofs, so each runs as a build slice: a lane seat and **one full gate each** (the
+  single-gate rule, RL-1445).
+- **The lanes today** (`eta.md:7–9`): lane A WK-673, SL-1448 active, then PL-1471 / SL-1472
+  (the FR-240 fix); lane B WK-673 Slice 3, SL-1387 active; lane C free, WK-675 S2 (PL-1476 /
+  SL-1477) recommended next, with WK-675's remaining slices behind it (`PL-1371` §3.3).
+- **Displaced, if run in lane C** (the natural lane: lane C is free, and WK-1178 work has run
+  there): **about 4.5 build slices of WK-675**, starting with S2 (SL-1477) and the 3 or 4 slices
+  after it, at 1 day each. Two gates added to the one-gate queue also delay lanes A and B's gates
+  by about half a day each when they collide (ESTIMATE: CI's python stage alone took about 24 min on
+  #1235, a docs path, M6; a code slice's local full gate is longer).
+- **Against the fit:** spread over 3 lanes, 4.5 lane-days is **about 1.5 calendar days of the
+  "~2 days left"**, which `eta.md:64` calls an upper bound; in one lane it is 4.5 days of that
+  lane. On 5 days in 7, or on 2 lanes, the plan already does not fit, so either build moves the
+  last P2 slice later still.
+- **Reading it:** before 4 Nov, 2D and 3B are bought with product slices. P5's rules and 1E cost
+  no lane, which is why they are the only parts recommended before the freeze; 2D and 3B fit after
+  the code freeze (5 to 12 Nov holds the docs freeze and the exit demo, `docs/roadmap.md:585–586`),
+  or before it only if the user's lean-P2 decision (P6) frees lane-days elsewhere.
+
 Total if everything recommended is taken: **about 8 executor-days** (ESTIMATE: 1E 0.25 + 2E 0.1
 + P5 1.0 + 2D 2.0 + 3B 2.5 + 1B 2.0 = 7.85), plus P4 only if the measurement calls for it.
 
 ## For the maintainer's ruling (then the user's, for P1)
 
-1. **P1:** 1A + 1E now, 1B deferred to the user (recommended) — or 1B now, or 1C / 1D.
+1. **P1:** 1A + 1E (1E in force, interim, since 11:49:11), 1B deferred to the user (recommended) — or 1B now, or 1C / 1D.
 2. **P2:** 2D as the build, 2E inside 5d (recommended) — or 2B, 2C, or 2A. Contracts unchanged.
 3. **P3:** 3B (recommended) or 3C or 3D or 3A; plus who reserves (the lead alone, recommended) and
    the abandonment age (7 days, recommended, shared with 5f).
 4. **P4:** defer and re-measure in 14 days (recommended), or 4B now.
-5. **P5:** order 5a–5e and 5h written into `lead.md` and `delivery-process.md` §8, an `FD-` first for each
-   charter line (they are in force already; the ruling only orders the record); adopt 5f and 5g,
-   or not.
+5. **P5:** order 5a–5e and 5h written into `lead.md` and `delivery-process.md` §8, behind ONE `FD-`
+   for every charter line (they are in force already; the ruling only orders the record); 5f in force (interim); adopt 5g, or not.
+7. **P6:** whatever the user's lean-P2 decision puts there.
 6. **The sequence** in the Sequence section.
 
 **After the ruling, P1 is the user's decision**: whether to transfer `yes-404/gi-pricing-plan`
@@ -417,7 +462,7 @@ code.
 11:40:59 BST — USER INSTRUCTION: RFC 9479 is kept current with every new rule until it merges"):
 every rule the maintainer logs on PR creation, batching, merging, ids, generated files or cleanup
 is folded in the same day and listed here. **Every `to-lead.md` entry from 10:38:11 BST on 8 Oct
-is listed**, carried or left out with a reason, plus the earlier entries the RFC rests on.
+to 11:49:11 BST is listed**, carried or left out with a reason, plus the earlier entries the RFC rests on.
 Headers are verbatim, except the one elided where marked.
 
 | `to-lead.md` entry header (verbatim) | Carried in | Or left out, because |
@@ -449,6 +494,7 @@ Headers are verbatim, except the one elided where marked.
 | ## 2026-10-08 11:35:05 BST — The RFC 9479 options memo noted (sent seconds before this entry); two asks for the RFC | P5 (records, not proposes); P2 (the 2D replacement table) | — |
 | ## 2026-10-08 11:37:20 BST — USER-APPROVED, EFFECTIVE NOW: a new governed-record draft gets NO PR; PRs are opened only as mint BATCHES (and for slices, activations and urgent fixes) | P5 5d; P2 2E | — |
 | ## 2026-10-08 11:40:59 BST — USER INSTRUCTION: RFC 9479 is kept current with every new rule until it merges | Sources; P2 and P3 (open to extension) | — |
+| ## 2026-10-08 11:49:11 BST — RFC 9479 draft (#1240 @298004b620650c62f6e8429faad8632369ceee0a) REVIEWED: 1E and 5f IN FORCE NOW as interim rules; the full ruling HELD for the user's lean-P2 decision | the status paragraph; P1 1E and P5 5f (in force, interim); P5 (one `FD-`); P6 (the empty slot); Sequence (HELD; the displacement before 4 Nov) | — |
 
 ## Deliverable
 
@@ -456,7 +502,7 @@ The `deliverable:` and `lands_in:` fields in prose: **a ruled choice for each of
 sequence**, by the maintainer's `RL-`, and then the user's decision on P1. Nothing ships in this
 RFC's PR. Each part the ruling takes is cut into its own Work or Slice under WK-1178 by the
 planner (§1.6, *"planner cuts an active RFC into a Work"*): rule text in `lead.md` rule 4 and
-`delivery-process.md` §8 (1E, P5, behind an `FD-` for each charter line), the 2D and 3B builds in
+`delivery-process.md` §8 (1E, P5, behind one `FD-` for every charter line), the 2D and 3B builds in
 `scripts/` with their broken-input proofs, and, if the user transfers the repository, 1B's
 workflow prerequisites and ruleset.
 
