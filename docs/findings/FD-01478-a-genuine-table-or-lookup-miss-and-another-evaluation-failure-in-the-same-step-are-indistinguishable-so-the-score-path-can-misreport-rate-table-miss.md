@@ -1,21 +1,23 @@
 ---
-id: FD-9888
+id: FD-1478
 family: finding
 title: A genuine table or lookup miss and another evaluation failure in the same step are indistinguishable, so the score path can misreport RATE_TABLE_MISS
 status: active
-created: 2026-09-30
+created: 2026-10-08            # original date 2026-09-30, set at the draft; minted 2026-10-08
 owner: auditor
 tree: 47d770e8fcbd2410fa101019ed8cf3aae69a1baa
 corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD 9888 — A genuine table or lookup miss and another evaluation failure in the same step are indistinguishable, so the score path can misreport RATE_TABLE_MISS
+# FD-1478 — A genuine table or lookup miss and another evaluation failure in the same step are indistinguishable, so the score path can misreport RATE_TABLE_MISS
+
+*Disclosure: drafted under working id 9888; minted as FD-1478 on 2026-10-08, in the T1 batch mint PR.*
 
 ## Finding
 
 **Severity: low.** When `async_evaluate()` fails, `_reraise_engine_failure`
-(`packages/pricing-core/src/pricing_core/rating/score.py:481`, found by symbol at `origin/main` `47d770e8`) cannot tell **why**. The engine
+(`packages/pricing-core/src/pricing_core/rating/score.py:503`, found by symbol at `origin/main` `0ee8f414`) cannot tell **why**. The engine
 reports a genuine `on_miss='error'` table or lookup miss and any other failure in the same step
 (for example a null division) as the **same** `NodeError` shape, so the function infers the cause.
 **This record is the residual only.** #968 (FD working id 9885) and #970 (RL working id 9982) are
@@ -24,7 +26,7 @@ step that consumes no such output whenever the algorithm has any `on_miss='error
 #970's DP-G4 fix the every-step scan is removed (RL-1313 DP-G4; landed as RL-1313 in mint batch #994, `fa9a73c2`; #968-#970 closed unmerged). What remains is the case where the
 failing step **itself directly consumes an `on_miss='error'` output**: a genuine miss and another
 evaluation failure in that step are indistinguishable, and the failure is **reported as a miss**
-(`RATE_TABLE_MISS` or `REFERENCE_LOOKUP_MISS`). The docstring says so itself (the paragraph headed "The stated limit", `score.py:481-`): *"A failing step that itself directly consumes such an output, and fails for another reason,
+(`RATE_TABLE_MISS` or `REFERENCE_LOOKUP_MISS`). The docstring says so itself (the paragraph headed "The stated limit", `score.py:519-`): *"A failing step that itself directly consumes such an output, and fails for another reason,
 still reports the miss code: the engine's error has the same shape in both cases."* The residual is pinned by
 `test_the_stated_residual_still_reports_the_miss_code` (`packages/pricing-core/tests/test_rating_score.py:832`).
 
@@ -76,7 +78,7 @@ never a silent price), and record it as a LOW FD with an owner, not a backlog no
 not directly consume an `on_miss='error'` output; this record is the residual that narrowing
 leaves.
 
-**Fix path:** the wire-level change named in the `_reraise_engine_failure` docstring (`score.py:481-`), making the wire
+**Fix path:** the wire-level change named in the `_reraise_engine_failure` docstring (`score.py:504-525`), making the wire
 translation itself fail gracefully so the failing step and its cause are known, not inferred.
 Event that discharges it: that change merges, proven on this table: case 2 must not raise
 `RATE_TABLE_MISS`, and case 1 must still raise it.
@@ -94,3 +96,5 @@ the miss code. `test_the_stated_residual_still_reports_the_miss_code` is at
 `47d770e8`'s read of this tree, and does not touch that function. `RL-1313` DP-G4 is present at
 main (`docs/rulings/RL-01313-…`, "DP-G4 — (a)+(i), with a stated limit"); `PL-1314` still cites
 this finding by working id 9888 (its lines 105, 336, 487).
+
+Re-anchored 2026-10-08 at main `0ee8f414`, at the mint: `score.py` last changed at `b6dd96fd` (SL-1427, #1219), which moved the function. By symbol, `_reraise_engine_failure` is at `score.py:503` (docstring `:504-525`, "The stated limit" paragraph at `:519`), and its step lookup picks the miss code from `consumed & produces` only (`:526-547`); the residual still reproduces by code reading, and `test_the_stated_residual_still_reports_the_miss_code` is still at `test_rating_score.py:832`. The lines 18, 27 and 79 above carry these re-pointed cites; the 2026-10-05 notes above keep the cites they were written with.

@@ -1,16 +1,18 @@
 ---
-id: FD-9480
+id: FD-1481
 family: finding
 title: A float input echoed through the model_call handler loses precision past 15 significant digits
 status: active
-created: 2026-10-06
+created: 2026-10-08            # original date 2026-10-06, set at the draft; minted 2026-10-08
 owner: auditor
 tree: 23af6997161789887d26f2868a6022a0738e44e6
 corrected_by: []
-relates: [WK-673, SL-1436, FD-1425, RL-1423, LG-9482]
+relates: [WK-673, SL-1436, FD-1425, RL-1423, LG-1467]
 ---
 
 # A float input echoed through the model_call handler loses precision past 15 significant digits
+
+*Disclosure: drafted under working id 9480; minted as FD-1481 on 2026-10-08, in the T1 batch mint PR.*
 
 **Filed** by the auditor on the lead's brief of 2026-10-06, from the maintainer's (by delegation) entry headed
 "2026-10-05 23:51:14 BST — RL-1423 Condition B STOP (SL-1436 replay): (A) ACCEPTED ON CONDITIONS (the cause PROVEN first); a LOW FD; the
@@ -21,7 +23,7 @@ proven mechanism and proposes a cheap guard if one exists; the guard is not deci
 
 ## Finding
 
-**Source of the proof.** The ledger LG-9482 on `origin/sl-1436-fd-1425-to-wire-dependency-order` at `a67f46ce465f9a17b4fea1f224714058ec0f3373`
+**Source of the proof.** The ledger LG-1467 on `origin/sl-1436-fd-1425-to-wire-dependency-order` at `a67f46ce465f9a17b4fea1f224714058ec0f3373`
 (the entry added at `d6cca8e9`), under "The two conditions on ruling (A)", item (1). One single-file experiment (`echo_experiment.py`, a
 scratch file that is not committed), one process, `OMP_NUM_THREADS=1 nice -n 19`: the same float, bench-rating-gbm context 0's `f0`, through
 (i) an expression node only and (ii) a `customNode` whose handler returns `request.input` unchanged. Echoed verbatim by the ledger:

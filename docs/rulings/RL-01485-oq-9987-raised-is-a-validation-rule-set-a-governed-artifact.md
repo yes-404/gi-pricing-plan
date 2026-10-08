@@ -1,9 +1,9 @@
 ---
-id: RL-9989
+id: RL-1485
 family: ruling
-title: OQ-9987 raised — is a Validation Rule Set a Governed Artifact?
+title: OQ-1486 raised — is a Validation Rule Set a Governed Artifact?
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-09-30
+created: 2026-10-08            # original date 2026-09-30, set at the draft; minted 2026-10-08
 owner: decision-maker
 tree: 65b334792e65704206d2c21015690d7c613092cc
 phase: P2
@@ -12,10 +12,12 @@ supersedes: []
 superseded_by: ~
 corrected_by: []
 corrects: ~
-relates: [OQ-9987]
+relates: [OQ-1486]
 ---
 
-# RL-9989 — OQ-9987 raised: is a Validation Rule Set a Governed Artifact?
+# RL-1485 — OQ-1486 raised: is a Validation Rule Set a Governed Artifact?
+
+*Disclosure: drafted under working id 9989; minted as RL-1485 on 2026-10-08, in the T1 batch mint PR.*
 
 ## How this was ruled
 
@@ -54,7 +56,7 @@ auditor-928 for the validation-rule finding.
 
 ## Ruled
 
-**Nothing is decided.** `OQ-9987` is raised with four options and a recommendation, (a).
+**Nothing is decided.** `OQ-1486` is raised with four options and a recommendation, (a).
 Its text lives in its two mirror rows, which are this record's disposition:
 - `docs/open-questions.md`, the GOV section: full options, trade-offs and recommendation;
 - `06` §10: the open row, which mirrors it.
@@ -65,17 +67,17 @@ defect (HIGH), whose fix slice is WK-1178's too. The two are not folded together
 ## What it obliges
 
 - **This commit:** the two mirror rows, and this record.
-- **The lead (roadmap §10 is the lead's file):** place `OQ-9987` on a decision-gate row.
+- **The lead (roadmap §10 is the lead's file):** place `OQ-1486` on a decision-gate row.
   `.claude/skills/spec-change` says a new OQ goes onto the gate table in the same commit, but
   that table is not this role's file, so this record hands it to the lead. The suggestion is
   a gate before the WK-1178 validation-rule fix slice's leaf plan, since option (a) or (c)
   changes that slice's write set.
-- **The resolver:** a ruling on `OQ-9987`. Under (a) or (c) that adds a `06` §2 entry, a §3.3
+- **The resolver:** a ruling on `OQ-1486`. Under (a) or (c) that adds a `06` §2 entry, a §3.3
   row and an evidence-floor key, spec first.
 
 ## Acceptance — the violation that must become detectable
 
-None yet. The acceptance belongs to the ruling that decides `OQ-9987`. Under (a), for
+None yet. The acceptance belongs to the ruling that decides `OQ-1486`. Under (a), for
 example: a new Rule Set version that removes a member is not run by validation until an
 approval request for it is approved.
 
@@ -106,13 +108,13 @@ cites are true there; this section carries their locations at `47d770e8`.*
     calls it at `backend/src/app/worker/data_handlers.py:247` and passes it on at `:272`
     (both unchanged).
 - **J2: a related ruling has landed since this was raised, and decides nothing here.**
-  `RL-1407` (merged by `c08a48e5`, #1109) rules FD 9748 (working id)'s remedy: **a rule set
+  `RL-1407` (merged by `c08a48e5`, #1109) rules FD-1414's remedy: **a rule set
   runs only approved, existing members**, delivered by `SL-1409` (PL-1408). That check is
   ruled, but it is **not yet in the code** at `47d770e8`: `rule_set_for` has no status
   filter. It closes a different gap from this question. It stops an unapproved member from
   running; it does not review a change of composition (a removed member, a re-pointed
   Reference Dataset Version). Whether it changes the weight of option (b) or (c) is for the
-  ruling that decides `OQ-9987`. It is not re-weighed here.
+  ruling that decides `OQ-1486`. It is not re-weighed here.
 - **J3: who depends on this.** `PL-1408` names this question at `:508`, `:610`, `:703` and
   `:1212`; its `replace_rule_set` allowance is temporary "pending OQ 9987 (working id)"
   (`:703`).

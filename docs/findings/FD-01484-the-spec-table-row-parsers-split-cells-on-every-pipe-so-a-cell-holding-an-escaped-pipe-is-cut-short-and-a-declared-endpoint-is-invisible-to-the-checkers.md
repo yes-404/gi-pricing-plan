@@ -1,20 +1,22 @@
 ---
-id: FD-9894
+id: FD-1484
 family: finding
 title: The spec table-row parsers split cells on every pipe, so a cell holding an escaped pipe is cut short and a declared endpoint is invisible to the checkers
 status: active
-created: 2026-09-30
+created: 2026-10-08            # original date 2026-09-30, set at the draft; minted 2026-10-08
 owner: auditor
 tree: daa7f5f8d6f0ff80dee7dfccf8ca18309d626816
 corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD 9894 — The spec table-row parsers split cells on every pipe, so a cell holding an escaped pipe is cut short and a declared endpoint is invisible to the checkers
+# FD-1484 — The spec table-row parsers split cells on every pipe, so a cell holding an escaped pipe is cut short and a declared endpoint is invisible to the checkers
+
+*Disclosure: drafted under working id 9894; minted as FD-1484 on 2026-10-08, in the T1 batch mint PR.*
 
 ## Amendment before mint (2026-10-05)
 
-Amended 2026-10-05 before mint, re-measured at `47d770e8` (`origin/main`): **the finding holds, undone.** The three `([^|]+)` parsers are unchanged (`_ENDPOINT` in `scripts/scope-audit.py:68`, `_ENDPOINT_ROW` in `scripts/audit-docs.py:299`, `_SPEC_ENDPOINT` in `backend/src/app/demo/guide.py:64`); no `table_rows.py` exists. The spec cites below moved: `06:539` is now `docs/specs/06-governance.md:583` (`/api/v1/dossiers/{id}?format=html\|pdf\|bundle`) and `06:543` is now `:587` (`/api/v1/artifacts/{ref}/dependencies?direction=up\|down`); `01:873` is unchanged; the purpose-cell rows are `01:866` and `02-modelling.md:1840` (formerly `02:1784`). The register now holds three rows with an escaped pipe, not two (`docs/findings/register.md:197`, `:213`, `:222`), and `python3 scripts/doc-index.py --phase P2` still raises `parsed 208 of 211 data row(s)`. The test lookbehind splits cited as `tests/test_audit_docs_ids.py:2413` and `:2462` are now the `re.split(r"(?<!\\)\|", line)` uses at `:2427` and `:2476`. The fix is the `table_rows.py` slice of RL 9907 (working id, unminted), owner the WK-1178 slice that carries it; PL-1276's sweep (#986) owns the earlier unowned recommendation `CR-823` item (c). Every other cite below is to tree `2e427bd1bf6535b6b1fda356527b342e99b2f4bd`'s merge base `daa7f5f8` and is read by symbol.
+Amended 2026-10-05 before mint, re-measured at `47d770e8` (`origin/main`): **the finding holds, undone.** The three `([^|]+)` parsers are unchanged (`_ENDPOINT` in `scripts/scope-audit.py:68`, `_ENDPOINT_ROW` in `scripts/audit-docs.py:299`, `_SPEC_ENDPOINT` in `backend/src/app/demo/guide.py:64`); no `table_rows.py` exists. The spec cites below moved: `06:539` is now `docs/specs/06-governance.md:583` (`/api/v1/dossiers/{id}?format=html\|pdf\|bundle`) and `06:543` is now `:587` (`/api/v1/artifacts/{ref}/dependencies?direction=up\|down`); `01:873` is unchanged; the purpose-cell rows are `01:866` and `02-modelling.md:1840` (formerly `02:1784`). The register now holds three rows with an escaped pipe, not two (`docs/findings/register.md:197`, `:213`, `:222`), and `python3 scripts/doc-index.py --phase P2` still raises `parsed 208 of 211 data row(s)`. The test lookbehind splits cited as `tests/test_audit_docs_ids.py:2413` and `:2462` are now the `re.split(r"(?<!\\)\|", line)` uses at `:2427` and `:2476`. The fix is the `table_rows.py` slice of RL-1483 (working id, unminted), owner the WK-1178 slice that carries it; PL-1276's sweep (#986) owns the earlier unowned recommendation `CR-823` item (c). Every other cite below is to tree `2e427bd1bf6535b6b1fda356527b342e99b2f4bd`'s merge base `daa7f5f8` and is read by symbol.
 
 ## Finding
 
@@ -353,4 +355,4 @@ is now `:598` (the dependencies row); the lineage route in
 with an escaped pipe are still `docs/findings/register.md:197`, `:213` and `:222` at `main`;
 `python3 scripts/doc-index.py --phase P2` still raises `parsed 211 of 214 data row(s)` in this
 tree, which carries this record's own row; `tests/test_audit_docs_ids.py:2427` and `:2476` are
-unchanged. `RL 9907` is still a working id (unminted), so it stays unhyphenated here.
+unchanged. `RL-1483` is minted in the same batch (T1) as this record.

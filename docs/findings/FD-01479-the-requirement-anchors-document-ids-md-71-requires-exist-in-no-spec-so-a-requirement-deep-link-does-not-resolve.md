@@ -1,16 +1,18 @@
 ---
-id: FD-9641
+id: FD-1479
 family: finding
 title: The requirement anchors document-ids.md §1.4 line 71 requires exist in no spec, so a requirement deep link does not resolve
 status: active
-created: 2026-10-05            # working id; the mint date will replace this (check 31)
+created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
 owner: auditor
 tree: 83ea509023d6d705d6f78fe74b7124fdf1375739
 corrected_by: []
 relates: [WK-1178, RFC-937, FR-451]
 ---
 
-# FD-9641 — `document-ids.md` line 71 requires `<a id="fr-<n>">` anchors that no spec carries
+# FD-1479 — `document-ids.md` line 71 requires `<a id="fr-<n>">` anchors that no spec carries
+
+*Disclosure: drafted under working id 9641; minted as FD-1479 on 2026-10-08, in the T1 batch mint PR.*
 
 **Filed under working id 9641.** Raised by the maintainer (by delegation)'s ID AUDIT of 2026-10-05 14:15:12 BST
 (`~/gi-pricing-plan.local/channel/to-lead.md`, local, not in the repo, entry headed "2026-10-05 14:15:12 BST — ID AUDIT …"). The `tree:` is

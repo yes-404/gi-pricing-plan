@@ -1,20 +1,22 @@
 ---
-id: FD-9988
+id: FD-1482
 family: finding
 title: The static authorisation sweep checks no routes, and no test pins which permission a route requires (FR-343)
 status: active
-created: 2026-09-30
+created: 2026-10-08            # original date 2026-09-30, set at the draft; minted 2026-10-08
 owner: auditor
 tree: 9f63d0feee524815e7e0c68c99a53ac3f80e6c37
 corrected_by: []
 relates: [WK-674, SL-1256, FR-343, FR-396, FR-397]
 ---
 
-# FD 9988 — The static authorisation sweep checks no routes, and no test pins which permission a route requires
+# FD-1482 — The static authorisation sweep checks no routes, and no test pins which permission a route requires
+
+*Disclosure: drafted under working id 9988; minted as FD-1482 on 2026-10-08, in the T1 batch mint PR.*
 
 ## Amendment before mint (2026-10-05)
 
-Amended 2026-10-05 before mint, re-measured at `47d770e8` (`origin/main`): **limbs 1 and 3 are fixed; limb 2 is the open claim.** **Limbs 1 and 3 — fixed by `dfddfad8` (#1104, SL-1256).** `_flattened_operations` descends `original_router` (`backend/tests/test_api_authorisation_sweep.py:108-128`), `test_every_operation_is_accounted_for_by_exactly_one_class` and `test_the_static_sweep_iterates_every_published_operation` (`:496`, `:538`) iterate every operation, and the behavioural no-roles sweep sends a valid body and accepts exactly 403 (`:388-392`), so a 422 is no longer counted as refused. **Limb 2 still holds.** `test_every_operation_declares_the_permission_it_enforces` (`:441`) asks only that a permission is declared (`_unguarded_operations`, `:140`), not which one; the new `tests/test_permission_parity.py` (SL-1360, #1049) compares `06` §4.1 with `model_schema.Permission` and the existence of a check site per permission name, not which route requires which; no §5.1 table has a `Permission` column (all seven `Method | Path | Purpose` tables, `01` to `07`) and `x-permission` appears in `docs/contracts/openapi/generated.json` 0 times. **Owner: the WK-1178 slice that carries RL 9907 (working id, unminted)**, which creates the declaration and pins each route against it, red first on the `AUDIT_READ` to `JOB_READ` swap. Event that discharges the open claim: that slice merges. **Mint after RL 9907**, so the event named exists. The cites in the sections below are to tree `9f63d0fe`; read them by symbol: `test_every_operation_declares_the_permission_it_enforces` (now `:441`), `_unguarded_operations` (now `:140`), `switch_workspace`'s membership check (`backend/src/app/api/me.py:248-251`, `WORKSPACE_SCOPE_DENIED`), `create_rule`'s permission checks (`backend/src/app/platform/validation_rules.py:204`, `:211`), and the audit routes' §5.1 table in `docs/specs/06-governance.md` (the `/api/v1/audit` rows are now `:578-579`). FR-343 is `docs/specs/06-governance.md:79`, unchanged.
+Amended 2026-10-05 before mint, re-measured at `47d770e8` (`origin/main`): **limbs 1 and 3 are fixed; limb 2 is the open claim.** **Limbs 1 and 3 — fixed by `dfddfad8` (#1104, SL-1256).** `_flattened_operations` descends `original_router` (`backend/tests/test_api_authorisation_sweep.py:108-128`), `test_every_operation_is_accounted_for_by_exactly_one_class` and `test_the_static_sweep_iterates_every_published_operation` (`:496`, `:538`) iterate every operation, and the behavioural no-roles sweep sends a valid body and accepts exactly 403 (`:388-392`), so a 422 is no longer counted as refused. **Limb 2 still holds.** `test_every_operation_declares_the_permission_it_enforces` (`:441`) asks only that a permission is declared (`_unguarded_operations`, `:140`), not which one; the new `tests/test_permission_parity.py` (SL-1360, #1049) compares `06` §4.1 with `model_schema.Permission` and the existence of a check site per permission name, not which route requires which; no §5.1 table has a `Permission` column (all seven `Method | Path | Purpose` tables, `01` to `07`) and `x-permission` appears in `docs/contracts/openapi/generated.json` 0 times. **Owner: the WK-1178 slice that carries RL-1483 (working id, unminted)**, which creates the declaration and pins each route against it, red first on the `AUDIT_READ` to `JOB_READ` swap. Event that discharges the open claim: that slice merges. **Mint after RL-1483**, so the event named exists. The cites in the sections below are to tree `9f63d0fe`; read them by symbol: `test_every_operation_declares_the_permission_it_enforces` (now `:441`), `_unguarded_operations` (now `:140`), `switch_workspace`'s membership check (`backend/src/app/api/me.py:248-251`, `WORKSPACE_SCOPE_DENIED`), `create_rule`'s permission checks (`backend/src/app/platform/validation_rules.py:204`, `:211`), and the audit routes' §5.1 table in `docs/specs/06-governance.md` (the `/api/v1/audit` rows are now `:578-579`). FR-343 is `docs/specs/06-governance.md:79`, unchanged.
 
 ## Finding
 
@@ -315,5 +317,5 @@ rows of `06` §5.1 are now `docs/specs/06-governance.md:589-592` (four rows, the
 anchor and export routes; read `:578-579` as the first two). Unchanged: FR-343 at
 `docs/specs/06-governance.md:79`; `switch_workspace`'s `WORKSPACE_SCOPE_DENIED` membership check
 (`backend/src/app/api/me.py:248-251`); `create_rule`'s permission checks
-(`backend/src/app/platform/validation_rules.py:204`, `:211`). `RL 9907` is still a working id
-(unminted), so it stays unhyphenated here; `PL-1408` (line 510) cites this finding by working id 9988.
+(`backend/src/app/platform/validation_rules.py:204`, `:211`). `RL-1483` is minted in the same batch (T1) as this record; `PL-1408` (line 510) cites this finding by its working id 9988
+(a filed plan, frozen, not edited here).

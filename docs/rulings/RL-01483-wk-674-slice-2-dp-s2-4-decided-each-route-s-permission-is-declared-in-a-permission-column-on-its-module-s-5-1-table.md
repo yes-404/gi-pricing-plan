@@ -1,9 +1,9 @@
 ---
-id: RL-9907
+id: RL-1483
 family: ruling
 title: WK-674 Slice 2 DP-S2-4 decided — each route's permission is declared in a Permission column on its module's §5.1 table
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-09-30
+created: 2026-10-08            # original date 2026-09-30, set at the draft; minted 2026-10-08
 owner: decision-maker
 tree: 65b334792e65704206d2c21015690d7c613092cc
 phase: P2
@@ -15,7 +15,9 @@ corrects: ~
 relates: [PL-1237, RL-1296, FR-343]
 ---
 
-# RL-9907 — WK-674 Slice 2 DP-S2-4 decided: each route's permission is declared in a Permission column on its module's §5.1 table
+# RL-1483 — WK-674 Slice 2 DP-S2-4 decided: each route's permission is declared in a Permission column on its module's §5.1 table
+
+*Disclosure: drafted under working id 9907; minted as RL-1483 on 2026-10-08, in the T1 batch mint PR.*
 
 ## How this was ruled
 
@@ -241,7 +243,7 @@ entry headed "maintainer order: re-spawn the decision-maker at high effort").
      settled by copying the code.
    - **Serialisation (`RL-1263`), stated in full on the maintainer's entry "11:28:39 BST —
      #977 (DP-S2-4 → a) and the #971 delta: accepted in substance, pending audits".** The
-     slice edits **every existing row** of the seven §5.1 tables: `01-data-management.md` §5.1 (`:845`), `02-modelling.md` §5.1 (`:1813`), `03-rating-engine.md` §5.1 (`:891`), `04-optimisation.md` §5.1 (`:302`, table header `:304`), `05-monitoring.md` §5.1 (`:276`, header `:278`), `06-governance.md` §5.1 (`:547`) and `07-platform.md` §5.1 (`:303`), headings at origin/main `072c56e1`. *(Restated 2026-10-05 before mint, on the Q1 clarification below and the entry headed "2026-10-05 10:11:16 BST — #977 (RL 9907) item 4: RESTATE …".)* So it
+     slice edits **every existing row** of the seven §5.1 tables: `01-data-management.md` §5.1 (`:845`), `02-modelling.md` §5.1 (`:1813`), `03-rating-engine.md` §5.1 (`:891`), `04-optimisation.md` §5.1 (`:302`, table header `:304`), `05-monitoring.md` §5.1 (`:276`, header `:278`), `06-governance.md` §5.1 (`:547`) and `07-platform.md` §5.1 (`:303`), headings at origin/main `072c56e1`. *(Restated 2026-10-05 before mint, on the Q1 clarification below and the entry headed "2026-10-05 10:11:16 BST — #977 (RL-1483) item 4: RESTATE …".)* So it
      serialises against **every slice holding any of those sections open**, and at this tree
      those are four:
      - **WK-674 Slice 2** (`03` and `07` §5.1);
@@ -402,7 +404,7 @@ counted. Results at origin/main `1dd5e264`:
 - `06`'s blockquoted `| Route | Requires |` table is now at `06:551`.
 - These counts agree with the lead's relay.
 
-**An overlap to resolve before mint (not ruled here).** RL 9766 (working id; #1055, PL-1286
+**An overlap to resolve before mint (not ruled here).** RL-1473 (#1055, PL-1286
 DP-5) also adds a §5.1 row for the existing `GET /api/v1/rating-versions/{id}`, the same route
 as item 4's added read `GET /api/v1/rating-versions/{rating_version_id}`. Whichever of the two
 lands second must not add a second row for it. The lead orders the two, and the
@@ -414,18 +416,18 @@ decision-maker amends the second record's text to match.
 2026-10-01 10:27 BST after auditor-1055's scoped re-check of #1055. This **resolves the
 10:18 BST amendment's "overlap to resolve before mint"**. Nothing ruled above is changed.*
 
-- **F-2: the by-id read of item 3 is satisfied by RL 9766 (working id) T2's by-id row,
+- **F-2: the by-id read of item 3 is satisfied by RL-1473 T2's by-id row,
   verbatim.** This record describes the two added reads under item 3 and gives no row text.
-  RL 9766's T2 carries the one exact text for `GET /api/v1/rating-versions/{id}`, the live
+  RL-1473's T2 carries the one exact text for `GET /api/v1/rating-versions/{id}`, the live
   `/rating-versions/{rating_version_id}`, in a three-cell and a four-cell form. This slice
   applies the four-cell form, because it lands the `Permission` column. Whichever of
   WK-675 Slice 2 and this record's WK-1178 slice applies first adds the row, and the other
   adds nothing. The list read, `GET /api/v1/rating-versions`, is unaffected: it is still
   described here and owned by WK-675 Slice 10.
 - **F-3: WK-675 Slices 2 and 3 join item 4's serialisation and contention list.** Slice 2
-  adds RL 9766 (working id)'s rows, and Slice 3 adds RL 9767 (working id)'s validate row,
+  adds RL-1473's rows, and Slice 3 adds RL-1474's validate row,
   both to `03` §5.1. If this record's slice lands second, it fills the `Permission` cell
-  of any row already added: `rating:read` for RL 9766's rows and `rating:write` for RL
+  of any row already added: `rating:read` for RL-1473's rows and `rating:write` for RL
   9767's row, as those records' four-cell forms give them. If it lands first, those slices
   apply their four-cell forms.
 
@@ -435,11 +437,11 @@ decision-maker amends the second record's text to match.
 side-by-side re-check, as the lead relayed it at 10:35 BST. Nothing ruled above is changed.*
 
 - **G1: the phrase is exact.** Item 3's note, "records an existing route, 2026-09-30", is
-  matched exactly: lower case, with the fixed date 2026-09-30. RL 9766 (working id) T2's
+  matched exactly: lower case, with the fixed date 2026-09-30. RL-1473 T2's
   by-id row now carries it byte for byte ("…; records an existing route, 2026-09-30;
   declared <date> …"). So the acceptance check that passes the reads "through their
   'records an existing route' rows" needs no case-insensitive or any-date matching.
-- **G2: the mint stop.** RL 9766's row cites `RL-<this>`, RL 9766's own minted id. Either
+- **G2: the mint stop.** RL-1473's row cites `RL-<this>`, RL-1473's own minted id. Either
   applier needs that record minted, and an unminted record is a stop. This binds this
   record's WK-1178 slice exactly as it binds WK-675 Slice 2.
 - **G3: the list is extended.** Item 4's list of known §5.1 holders (`:251`, `:283-284`:

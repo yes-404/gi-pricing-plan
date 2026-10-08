@@ -1,16 +1,18 @@
 ---
-id: FD-9489
+id: FD-1480
 family: finding
 title: INDEX.md lists every OQ id twice, against document-ids.md's one row per number
 status: active
-created: 2026-10-05            # working id; the mint date will replace this (check 31)
+created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
 owner: auditor
 tree: a5657fa4520739f182cbea79e0057afeed991ac1
 corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9489 — `build_corpus` keeps both the `open-questions.md` row and the spec §10 row of every OQ, so `docs/INDEX.md` has two rows for each of 136 ids
+# FD-1480 — `build_corpus` keeps both the `open-questions.md` row and the spec §10 row of every OQ, so `docs/INDEX.md` has two rows for each of 136 ids
+
+*Disclosure: drafted under working id 9489; minted as FD-1480 on 2026-10-08, in the T1 batch mint PR.*
 
 **Filed** by auditor-indexdup on the lead's brief of 2026-10-05, working id 9489 (reserved in the lead's `eta.md`),
 from the maintainer's (by delegation) follow-up in `to-lead.md`, entry headed "2026-10-05 19:56:53 BST — MERGE-ACK #1133
