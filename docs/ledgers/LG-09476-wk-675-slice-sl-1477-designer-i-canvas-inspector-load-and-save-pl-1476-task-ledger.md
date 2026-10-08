@@ -161,7 +161,8 @@ The lead's ruling, `to-lead.md`, header: "## 2026-10-08 12:30:31 BST — S2 (SL-
 
 `frontend/src/api/ratingAlgorithms.ts`, `getRatingVersionByRef` in `ratingVersions.ts`, `components/dag/graph.ts`,
 `__tests__/fixtures.ts` (the server fixture `valid_algorithm()`, dumped to JSON by the real function and typed
-`RatingAlgorithmDraft`; it has **11** steps, the plan says twelve) and `__tests__/graph.test.ts` (7 tests: edges, no edge for
+`RatingAlgorithmDraft`; it has **11** steps. The plan's "twelve" does not reproduce: `PRE_EDIT_VALID_ALGORITHM` has 9, and no step
+is missing from the 11 that the plan's own `s_*` references name) and `__tests__/graph.test.ts` (7 tests: edges, no edge for
 an unresolved name or a self-edge, graph order, a cycle terminating, layout columns and determinism, the pinned cycle depth,
 `parseRef`).
 
@@ -170,6 +171,18 @@ an unresolved name or a self-edge, graph order, a cycle terminating, layout colu
 - **Run scope slip, ledgered:** `pnpm --dir frontend test -- graph` ran the whole frontend suite (the filter did not apply
   through pnpm): 622 passed, both gate slots free at the probe. Later runs use `pnpm exec vitest run <path>`.
 - `pnpm generate:api`, `type-check` and `lint` clean.
+
+### Task 8 — `StepNode.vue`, `StepInspector.vue`, `problems.ts`
+
+Plan delta: the required-field gaps are a pure `stepProblems(step)` in `components/dag/problems.ts`, not an exposed ref of the
+inspector, because `DagDesigner` needs them for every step, not only the selected one; the inspector lists them for its step.
+`as_at` is a select over the declared `date` inputs (FR-221 as it stands at the dispatch tree; SL-1448 #1236 not merged — the
+test is revisited after it lands). 9 tests in `StepInspector.test.ts`, one per FR (213, 215, 220, 221, 222/223, 223 new-step,
+225, 226, 244). **Red:** before any component, the file failed at import: `Error: Failed to resolve import "../problems" from
+"src/components/dag/__tests__/StepInspector.test.ts"`. **Green:** `pnpm exec vitest run src/components/dag`: 16 passed (7 graph +
+9 inspector). `type-check` and `lint` clean. One test-side correction after the first green run: the `as_at` option list holds a
+disabled placeholder, so the assertion filters the empty value. `StepNode.vue` imports `Handle` from `@vue-flow/core`; the mount
+test for it (condition 2) comes with Task 9's `DagDesigner`.
 
 ## PRs
 

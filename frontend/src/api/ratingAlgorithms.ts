@@ -22,3 +22,8 @@ export function saveRatingAlgorithm(
     idempotencyKey,
   });
 }
+
+export type InputContractField = RatingAlgorithmDraft["input_contract"][number];
+export type RatingInputType = InputContractField["type"];
+export type RoundMode = Extract<RatingStep, { type: "output" }>["rounding"]["mode"];
+export type ModelReferenceMode = Extract<RatingStep, { type: "model_call" }>["mode"];
