@@ -28,12 +28,23 @@ watch(
     if (id !== null) active.value = id;
   },
 );
-watch(order, (ids) => {
-  if (active.value === null || !ids.includes(active.value)) active.value = ids[0] ?? null;
+watch(order, (ids, before) => {
+  if (active.value !== null && ids.includes(active.value)) return;
+  // The removed step's neighbour, not the first step (4.1.3 / 2.4.3).
+  const was = before.indexOf(active.value ?? "");
+  active.value = ids[Math.min(Math.max(was, 0), ids.length - 1)] ?? null;
+});
+
+// Keep the active option in view inside the scrolling list (2.4.7, 2.4.11).
+watch(active, async (id) => {
+  if (id === null) return;
+  await nextTick();
+  document.getElementById(`nav-${id}`)?.scrollIntoView?.({ block: "nearest" });
 });
 
 const list = ref<HTMLElement | null>(null);
 const confirming = ref<string | null>(null);
+const removed = ref("");
 const cancel = ref<HTMLButtonElement | null>(null);
 
 let buffer = "";
@@ -70,7 +81,10 @@ async function close(): Promise<void> {
 }
 
 function confirmRemove(): void {
-  if (confirming.value !== null) emit("remove", confirming.value);
+  if (confirming.value !== null) {
+    removed.value = `Removed step ${confirming.value}`;
+    emit("remove", confirming.value);
+  }
   void close();
 }
 
@@ -108,13 +122,19 @@ function onKeydown(event: KeyboardEvent): void {
 
 <template>
   <div>
+    <p
+      role="status"
+      class="sr-only"
+    >
+      {{ removed }}
+    </p>
     <ul
       ref="list"
       role="listbox"
       aria-label="Steps in graph order"
       tabindex="0"
       :aria-activedescendant="active === null ? undefined : `nav-${active}`"
-      class="max-h-64 overflow-auto rounded-md border border-slate-300 bg-white p-1 text-sm focus:border-sky-600 focus:outline-none"
+      class="max-h-64 overflow-auto rounded-md border border-slate-300 bg-white p-1 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
       @keydown="onKeydown"
     >
       <li
@@ -123,8 +143,11 @@ function onKeydown(event: KeyboardEvent): void {
         :key="step.step_id"
         role="option"
         :aria-selected="step.step_id === selected"
-        class="cursor-pointer rounded px-2 py-1"
-        :class="step.step_id === active ? 'bg-sky-100 text-sky-900' : ''"
+        class="cursor-pointer rounded border-l-4 px-2 py-1"
+        :class="[
+          step.step_id === active ? 'bg-sky-100 text-sky-900 outline outline-2 outline-sky-700' : '',
+          step.step_id === selected ? 'border-sky-700 font-semibold' : 'border-transparent',
+        ]"
         @click="active = step.step_id; emit('select', step.step_id)"
       >
         <span class="font-mono text-xs">{{ step.step_id }}</span>
@@ -134,8 +157,8 @@ function onKeydown(event: KeyboardEvent): void {
     <div
       v-if="confirming !== null"
       role="alertdialog"
-      aria-modal="true"
       aria-labelledby="nav-confirm-title"
+      aria-describedby="nav-confirm-title"
       class="mt-2 rounded-md border border-red-200 bg-red-50 p-3"
       @keydown.esc="close"
     >

@@ -128,14 +128,20 @@ describe("the rating design view", () => {
     getRatingAlgorithm.mockResolvedValue(broken);
     render(RatingDesignView, { props, ...mounted });
     await screen.findByLabelText("Algorithm version");
-    expect(screen.getByRole("button", { name: "Save as new version" })).toBeDisabled();
+    const save = screen.getByRole("button", { name: "Save as new version" });
+    expect(save).toHaveAttribute("aria-disabled", "true");
+    expect(save).toHaveAttribute("aria-describedby", "rd-problems");
+    await userEvent.click(save);
+    expect(saveRatingAlgorithm).not.toHaveBeenCalled();
     expect(screen.getByText(/s_minprem: reason_code is required \(FR-225\)/)).toBeInTheDocument();
   });
 
   it("DP-S2-3 (a): a version that pins no algorithm shows that, an empty canvas, and saves <slug>@1", async () => {
     getRatingVersionByRef.mockResolvedValue({ ...RATING, algorithm_ref: null });
     render(RatingDesignView, { props, ...mounted });
-    expect(await screen.findByRole("status")).toHaveTextContent(
+    expect(
+      await screen.findByText(/This Rating Version pins no algorithm yet/),
+    ).toHaveTextContent(
       "This Rating Version pins no algorithm yet. Saving creates fremtpl2-demo@1; pinning it to the version is not part of this view.",
     );
     expect(getRatingAlgorithm).not.toHaveBeenCalled();

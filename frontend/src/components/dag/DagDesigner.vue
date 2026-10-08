@@ -131,7 +131,8 @@ function replaceContract(contract: RatingAlgorithmDraft["input_contract"]): void
     <div>
       <div
         class="h-[28rem] rounded-md border border-slate-300 bg-slate-50"
-        aria-label="Rating algorithm canvas"
+        role="group"
+        aria-label="Graph drawing of the steps; use the step list to move through them"
       >
         <VueFlow
           :nodes="nodes"

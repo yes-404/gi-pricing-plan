@@ -41,9 +41,12 @@ const ON_MISS = ["error", "default"] as const;
 const ON_VIOLATION = ["clamp", "decline", "error"] as const;
 
 const control =
-  "w-full rounded-md border border-slate-300 px-2 py-1 text-sm focus:border-sky-600 focus:outline-none";
+  "w-full rounded-md border border-slate-300 px-2 py-1 text-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sky-700";
 
 const problems = computed(() => stepProblems(props.step));
+/** `aria-invalid` for the field a problem names (3.3.1): problems start with the field name. */
+const invalid = (field: string): true | undefined =>
+  problems.value.some((p) => p.startsWith(field)) ? true : undefined;
 
 function patch(fields: Record<string, unknown>): void {
   const mode =
@@ -105,6 +108,7 @@ function featureMap(text: string): Record<string, string> {
     <FormField
       field-id="si-step-id"
       label="Step id"
+      v-bind="isNew ? {} : { help: 'Fixed once the step exists (FR-215).' }"
     >
       <input
         id="si-step-id"
@@ -301,6 +305,8 @@ function featureMap(text: string): Record<string, string> {
         <select
           id="si-as-at"
           :class="control"
+          :aria-invalid="invalid('as_at')"
+          aria-describedby="si-problems"
           :value="step.as_at"
           @change="patch({ as_at: value($event) })"
         >
@@ -355,6 +361,8 @@ function featureMap(text: string): Record<string, string> {
         <select
           id="si-rate-table"
           :class="control"
+          :aria-invalid="invalid('rate_table_ref')"
+          aria-describedby="si-problems"
           :value="step.rate_table_ref"
           @change="patch({ rate_table_ref: value($event) })"
         >
@@ -539,6 +547,8 @@ function featureMap(text: string): Record<string, string> {
         <input
           id="si-reason"
           :class="control"
+          :aria-invalid="invalid('reason_code')"
+          aria-describedby="si-problems"
           :value="step.reason_code"
           @input="patch({ reason_code: value($event) })"
         >
@@ -565,6 +575,8 @@ function featureMap(text: string): Record<string, string> {
         <select
           id="si-round-mode"
           :class="control"
+          :aria-invalid="invalid('rounding mode')"
+          aria-describedby="si-problems"
           :value="step.rounding.mode"
           @change="patch({ rounding: { ...step.rounding, mode: value($event) } })"
         >
@@ -584,6 +596,8 @@ function featureMap(text: string): Record<string, string> {
       >
         <input
           id="si-round-dp"
+          :aria-invalid="invalid('rounding dp')"
+          aria-describedby="si-problems"
           type="number"
           min="0"
           step="1"
@@ -596,6 +610,7 @@ function featureMap(text: string): Record<string, string> {
 
     <ul
       v-if="problems.length > 0"
+      id="si-problems"
       aria-label="Problems"
       class="mt-4 list-disc pl-5 text-sm text-red-700"
     >

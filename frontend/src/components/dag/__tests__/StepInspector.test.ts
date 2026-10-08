@@ -143,4 +143,13 @@ describe("the step inspector, one section per step type", () => {
       "risk_premium_minor * expense_factor+1",
     );
   });
+
+  it("3.3.1: a field with a required-field problem is marked invalid and points at the problem list", () => {
+    const constraint = { ...byId("s_minprem"), reason_code: "" } as RatingStep;
+    render(StepInspector, { props: { ...base, step: constraint } });
+    const field = screen.getByLabelText("Reason code");
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAttribute("aria-describedby", "si-problems");
+    expect(screen.getByLabelText("Condition")).not.toHaveAttribute("aria-invalid");
+  });
 });

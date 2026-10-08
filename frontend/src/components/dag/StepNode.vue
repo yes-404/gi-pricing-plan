@@ -13,6 +13,7 @@ const step = computed(() => props.data.step);
 
 <template>
   <div
+    role="group"
     class="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm"
     :aria-label="`${step.type} step ${step.label} (${step.step_id})`"
   >

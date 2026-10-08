@@ -110,6 +110,7 @@ async function save(): Promise<void> {
 
     <p
       v-if="loading"
+      role="status"
       class="mt-6 text-sm text-slate-500"
     >
       Loading…
@@ -159,8 +160,9 @@ async function save(): Promise<void> {
         </div>
         <button
           type="button"
-          class="rounded-md bg-sky-700 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-          :disabled="!canSave"
+          class="rounded-md bg-sky-700 px-4 py-1.5 text-sm font-medium text-white aria-disabled:opacity-50"
+          :aria-disabled="!canSave"
+          :aria-describedby="problems.length > 0 ? 'rd-problems' : undefined"
           @click="save"
         >
           Save as new version
@@ -169,6 +171,7 @@ async function save(): Promise<void> {
 
       <ul
         v-if="problems.length > 0"
+        id="rd-problems"
         aria-label="Fields to fill before saving"
         class="mt-3 list-disc pl-5 text-sm text-red-700"
       >
@@ -180,7 +183,6 @@ async function save(): Promise<void> {
         </li>
       </ul>
       <p
-        v-if="saved"
         role="status"
         class="mt-3 text-sm text-green-800"
       >

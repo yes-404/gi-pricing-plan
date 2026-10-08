@@ -70,4 +70,21 @@ describe("the keyboard node navigator (RS-1269 F2 condition 2)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Remove step" }));
     expect(emitted()["remove"]).toEqual([["s_in_eff"]]);
   });
+
+  it("4.1.3: a removal is announced, and the active option moves to the neighbour", async () => {
+    const { list, emitted, rerender } = mount();
+    await userEvent.click(list);
+    await userEvent.keyboard("{ArrowDown}{Delete}");
+    await userEvent.click(screen.getByRole("button", { name: "Remove step" }));
+    expect(emitted()["remove"]).toEqual([["s_in_eff"]]);
+    expect(screen.getByRole("status")).toHaveTextContent("Removed step s_in_eff");
+    await rerender({ steps: valid.steps.filter((s) => s.step_id !== "s_in_eff"), selected: null });
+    expect(active(list)).toBe("nav-s_in_channel");
+  });
+
+  it("1.4.1: the selected option carries a non-colour marker", () => {
+    mount("s_area");
+    expect(document.getElementById("nav-s_area")).toHaveClass("font-semibold", "border-sky-700");
+    expect(document.getElementById("nav-s_in_age")).not.toHaveClass("font-semibold");
+  });
 });

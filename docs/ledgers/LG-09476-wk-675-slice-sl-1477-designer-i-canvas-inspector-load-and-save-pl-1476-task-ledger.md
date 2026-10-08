@@ -217,6 +217,57 @@ test for it (condition 2) comes with Task 9's `DagDesigner`.
   with no whitelist change. `vitest run` over the view, router and `components/dag` files: 60 passed. `type-check` and `lint`
   clean (one test-side type fix: `ProblemDetail` requires `errors`).
 
+### Task 11 Step 1 — the bundle delta (Acceptance 13)
+
+Method: `git worktree add --detach` of `origin/main` `60e9254c` under `/home/puzhenhao1989/.cache` (removed after), `pnpm install
+--frozen-lockfile`, `pnpm generate:api`; then `pnpm --dir frontend build` there and in this worktree at `207de8f0`; both with the gate
+slots free at the probe and load 3. Gzip is zlib level 9 over each `dist/assets/*.js`. `grep -l 'vue-flow' dist/assets/index-*.js`
+prints nothing (rc 1): no `@vue-flow` module is in the entry chunk.
+
+| chunk | before raw / gzip | after raw / gzip |
+|---|---|---|
+| `index-*.js` (the shared entry, always shown) | 18,637 / 6,734 | 17,672 / 6,241 |
+| `vueflow-*.js` (new) | — | 150,421 / 48,038 |
+| `DagDesigner-*.js` (new) | — | 18,598 / 5,785 |
+| `RatingDesignView-*.js` (new) | — | 4,734 / 2,141 |
+| `problems-*.js`, `preload-helper-*.js` (new, shared helpers) | — | 1,775 / 848 and 1,383 / 751 |
+| `RatingVersionView-*.js` | 2,146 / 1,018 | 2,327 / 1,085 |
+| `ratingVersions-*.js` | 173 / 146 | 255 / 164 |
+| `runtime-dom.esm-bundler-*.js` | 9,603 / 4,224 | 9,886 / 4,341 |
+| `echarts-*.js` | 714,256 / 240,778 | 716,948 / 241,732 |
+
+44 other chunks differ by at most 19 gzip bytes each (re-ordered shared helpers; no source change). The designer is
+`vueflow` + `DagDesigner` is 53,823 B gzip; RS-1269's figure for the designer chunk was 49,445 B gzip: this build's `vueflow` is
+48,038 B gzip, 1,407 B less, reported as a difference, not a verdict. The `echarts` chunk moves by 2,692 raw bytes with no
+`echarts` source change in the slice (a shared-module placement difference), noted here rather than explained.
+
+### Task 11 Step 3 — the accessibility check (Acceptance 10)
+
+`accessibility-tester`, read-only, run on `207de8f0`; it read source and ran the dag/view vitest files (33 passed); **no browser,
+screen reader or axe was run** (axe/Playwright are not installed), so nothing is browser-confirmed. Its findings and their
+dispositions:
+
+| # | finding | disposition |
+|---|---|---|
+| 1 | on-node errors absent (§5.3 "error on the node"; problems shown only in the inspector and the view list) | **FD candidate to the lead**: on-node live validation is S3's (RL-1474; `00` FR-24's designer exception stays undischarged until S3) — not fixed here |
+| 2 | selected option unmarked; active option by background colour only | **fixed**: selected = left border + bold, active = outline (test `1.4.1`) |
+| 3 | weak focus indicator (listbox and `control` class) | **fixed**: `focus-visible` outline on both |
+| 4 | `aria-modal` without a trap | **fixed**: `aria-modal` dropped (inline confirmation), `aria-describedby` added |
+| 5 | removal not announced; active reset to first | **fixed**: persistent `role="status"` "Removed step …", active moves to the neighbour (test `4.1.3`) |
+| 6 | active option can scroll out of view | **fixed**: `scrollIntoView({ block: "nearest" })` on change (no jsdom assertion; needs a browser) |
+| 7 | `aria-label` on role-less `div`s | **fixed**: `role="group"` on the canvas wrapper (names the navigator as the way through) and on the node |
+| 8 | status/alert announcements inconsistent; disabled Save unreachable | **fixed**: "Loading…" `role="status"`, a persistent saved-status region, Save uses `aria-disabled` + `aria-describedby` the problems list (test) |
+| 9 | mode-mismatch `role="status"` conditionally rendered | **carried, low**: text carries the meaning (1.4.1 met); announcement needs a browser |
+| 10 | problems not tied to fields | **fixed** for the five required fields: `aria-invalid` + `aria-describedby` (test `3.3.1`) |
+| 11 | read-only `step_id` unexplained | **fixed**: help text |
+| 12 | link outside `dd`; colour-only link | **fixed**: link in a `dd`, underlined |
+| 13, 14 | checkbox target size; slate-500 contrast | **carried, low**: needs a browser/contrast tool |
+| 15 | typeahead matches `step_id` only | **informational** |
+
+Needs a browser or assistive technology (carried to the lead for the exit-demo check, not waived): option-change announcements
+from `aria-activedescendant`, `alertdialog` reading, Vue Flow's own DOM roles, 320 px / 400 % reflow, measured contrast and
+target sizes.
+
 ## PRs
 
 The slice PR is a draft, opened by the executor; the executor does not merge it.
