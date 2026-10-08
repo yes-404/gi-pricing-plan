@@ -109,6 +109,29 @@ cyclic and unresolved bodies index `valid_algorithm()` steps 6 and 7 (`s_office`
   exits 1 with that error and writes the same placeholder file; so CI's fresh install would fail without a committed decision.
   The file is not in PL-1476's write set (:378-409). It is held uncommitted until the lead rules.
 
+### Task 3 — the algorithm read (code and tests; the `03` rows and `req` markers wait for the FR id form)
+
+Five tests appended to `backend/tests/test_rating_algorithms.py` (read-back, unknown version, another workspace, 403 without
+`rating:read`, the contract `$ref`). Own database, slots probed free. **Red** (before the route): all five failed — the router's
+404 for an unrouted path (`assert 404 == 200`; `assert 404 == 403`) and `KeyError: '/api/v1/rating-algorithms/{slug}@{version}'`.
+The app answers an unrouted path with code `NOT_FOUND` as well, so the two 404 tests also pin the handler's own detail
+(`No rating algorithm motor-gb@99 in this workspace.`) and failed with `assert 'Not Found' == 'No rating al…is workspace.'`.
+**Green:** `pytest backend/tests/test_rating_algorithms.py -q`: 18 passed. **Broken input** (handler returns
+`RatingAlgorithmDraft`): `assert {'$ref': '#/c…Draft-Output'} == {'$ref': '#/c…ingAlgorithm'}`, reverted. Contract
+regenerated, `--check` rc 0; Acceptance 5's `python3 -c` now prints `[True, True, True]`. `ruff`, `mypy` clean.
+
+### Task 4 — the Rating Version read by pair (code and tests; `03` rows and markers wait)
+
+Four tests in `backend/tests/test_rating_versions.py`. Delta from the plan: SL-1430 (`5351f116`) added `algorithm_ref` to
+`create_rating_version`, so the plan's `_set_algorithm_ref` helper is not needed; `_draft_with_algorithm` passes it directly
+(version 5 against the Rating Version's 1). **Red:** `assert 422 == 200` (pair) and `assert 422 == 404` (isolation), and the
+`KeyError` for the contract test — the by-id handler's `uuid_parsing` 422, the stated cause. The 403 test passes on the base
+(permission is checked before path parsing), so it is a regression net, not a red. **Green:** 8 passed
+(`-k "own_slug_at_version or another_workspaces_rating or pair_read_needs or read_publishes_rating_version or over_http"`).
+**Broken input:** the new route registered after the by-id read — `assert 422 == 200` and `assert 422 == 404`; the version
+matched against the algorithm's number — `assert 404 == 200` on the pair read (the "algorithm's number answers 404" assertion
+is not reached, it fails at the first); both reverted (`git status` shows only the route and the tests).
+
 ## PRs
 
 The slice PR is a draft, opened by the executor; the executor does not merge it.
