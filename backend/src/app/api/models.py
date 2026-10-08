@@ -1129,6 +1129,31 @@ async def list_rating_versions(
 
 
 @router.get(
+    "/rating-versions/{slug}@{version}",
+    summary="Get a rating version by its slug@version",
+    responses=problems(401, 403, 404, 422),
+)
+async def get_rating_version_by_ref(
+    slug: str,
+    version: int,
+    caller: Annotated[Caller, Depends(requires(Perm.RATING_READ))],
+    database: DatabaseDep,
+) -> RatingVersion:
+    """**200** with the version its own `slug@version` names (03 §5.1, RL-1473).
+
+    Registered before the by-id read: `{rating_version_id}` matches any one segment,
+    `fremtpl2-demo@1` included, and would answer 422.
+    """
+    async with database.session() as session:
+        row = await rating_versions_service.resolve_rating_version_ref(
+            session,
+            workspace_id=caller.workspace_id,
+            ref=ArtifactRef(type="rating_version", slug=slug, version=version),
+        )
+        return rating_versions_service.to_schema(row)
+
+
+@router.get(
     "/rating-versions/{rating_version_id}",
     summary="Get a rating version",
     responses=problems(401, 403, 404),

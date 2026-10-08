@@ -252,6 +252,85 @@ def test_an_unknown_rating_version_id_is_a_404_over_http(
     assert response.json()["code"] == "NOT_FOUND"
 
 
+def _read_headers(principal: Principal, workspace_id: UUID) -> dict[str, str]:
+    from app.api.deps import DEV_PRINCIPAL_HEADER
+
+    return {DEV_PRINCIPAL_HEADER: str(principal.id), "Workspace-Id": str(workspace_id)}
+
+
+async def _draft_with_algorithm(
+    database: Database, workspace_id: UUID, actor: Principal, version: int
+) -> UUID:
+    """A `fremtpl2-demo@1` whose algorithm is `fremtpl2-demo@<version>` (the numbers differ)."""
+    async with database.unit_of_work() as session:
+        row = await rating_service.create_rating_version(
+            session, workspace_id=workspace_id, actor=actor,
+            slug="fremtpl2-demo", dataset_version_id=new_uuid7(),
+            model_ref=ArtifactRef(type="model", slug="fremtpl2-glm", version=1),
+            algorithm_ref=ArtifactRef(
+                type="rating_algorithm", slug="fremtpl2-demo", version=version
+            ),
+        )
+        return row.id
+
+
+@pytest.mark.req("FR-1531")
+async def test_a_rating_version_reads_by_its_own_slug_at_version(
+    api_client, workspace_id, principal, grant, database
+) -> None:
+    await grant("analyst")
+    headers = _read_headers(principal, workspace_id)
+    rating_id = await _draft_with_algorithm(database, workspace_id, principal, 5)
+
+    by_pair = api_client.get("/api/v1/rating-versions/fremtpl2-demo@1", headers=headers)
+    assert by_pair.status_code == 200, by_pair.text
+    assert by_pair.json()["id"] == str(rating_id)
+
+    by_id = api_client.get(f"/api/v1/rating-versions/{rating_id}", headers=headers)
+    assert by_id.status_code == 200, by_id.text
+
+    by_algorithm_number = api_client.get("/api/v1/rating-versions/fremtpl2-demo@5", headers=headers)
+    assert by_algorithm_number.status_code == 404, by_algorithm_number.text
+    assert by_algorithm_number.json()["code"] == "NOT_FOUND"
+    assert by_algorithm_number.json()["detail"] == (
+        "No rating version rating_version:fremtpl2-demo@5."
+    )
+
+
+@pytest.mark.req("FR-1531")
+async def test_another_workspaces_rating_version_pair_is_not_found(
+    api_client, workspace_id, principal, grant, database
+) -> None:
+    await grant("analyst")
+    other = new_uuid7()
+    owner = await _principal(database, other, "analyst")
+    await _draft(database, other, owner, ArtifactRef(type="model", slug="fremtpl2-glm", version=1))
+    response = api_client.get(
+        "/api/v1/rating-versions/fremtpl2-demo@1", headers=_read_headers(principal, workspace_id)
+    )
+    assert response.status_code == 404, response.text
+    assert response.json()["code"] == "NOT_FOUND"
+    assert response.json()["detail"] == "No rating version rating_version:fremtpl2-demo@1."
+
+
+@pytest.mark.req("FR-1531")
+async def test_the_rating_version_pair_read_needs_rating_read(
+    api_client, workspace_id, principal, membership
+) -> None:
+    await membership()
+    response = api_client.get(
+        "/api/v1/rating-versions/fremtpl2-demo@1", headers=_read_headers(principal, workspace_id)
+    )
+    assert response.status_code == 403, response.text
+
+
+@pytest.mark.req("FR-1531")
+def test_the_rating_version_read_publishes_rating_version(app) -> None:
+    operation = app.openapi()["paths"]["/api/v1/rating-versions/{slug}@{version}"]["get"]
+    schema = operation["responses"]["200"]["content"]["application/json"]["schema"]
+    assert schema == {"$ref": "#/components/schemas/RatingVersion"}
+
+
 def test_create_rating_version_over_http(
     api_client, workspace_id, principal, grant, database
 ) -> None:
