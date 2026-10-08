@@ -2,7 +2,7 @@
 id: FD-9890
 family: finding
 title: The approval withdraw route takes artifact_is_live from the request body, so the client asserts a fact the server must derive
-status: active
+status: closed
 created: 2026-09-30
 owner: auditor
 tree: 65b334792e65704206d2c21015690d7c613092cc
@@ -15,6 +15,8 @@ relates: [WK-674]
 ## Amendment before mint (2026-10-05)
 
 Amended 2026-10-05 before mint, at `47d770e8`: **the main defect is fixed** by `dfddfad8` (#1104, SL-1256, PL-1392 Task 6; ledgered in `LG-1405`). `withdraw_request` derives liveness server-side through `_is_deployed` (`backend/src/app/api/approvals.py:257`, called at `:299`); `artifact_is_live` is no longer a request-body field and remains only as the service's keyword argument (`backend/src/app/platform/approvals.py:500`); `backend/tests/test_api_approvals.py:565-576` shows a body carrying it refused 422. **Still open, owner WK-1178:** the class-sweep table below (the only enumerated record of client-asserted fields) and the LOW service-account residual — `ALLOWED_PERMISSIONS` (`backend/src/app/api/service_accounts.py:44`) and `_check_permissions` (`:141`) are unchanged at main, so a custom role with `admin:manage_service_accounts` and without `admin:manage_roles` can still mint a scoring service account. Every `file:line` cite in the sections below is to tree `65b334792e65`, before #1104 moved them; read them by symbol (`Withdraw`, `withdraw_request`, `platform.approvals.withdraw`), not line.
+
+**Closed 2026-10-08, re-measured at `origin/main` `d10420df`** (`git merge-base --is-ancestor dfddfad8 origin/main` exits 0; `dfddfad8` = #1104, merged 2026-10-04 15:48:09Z). Cites at that tree: `_is_deployed` `backend/src/app/api/approvals.py:274`, called at `:316` and passed at `:323`; the body model is `ApprovalWithdrawal` (`packages/model-schema/src/model_schema/approvals.py:380`, reason only); the service keyword is `backend/src/app/platform/approvals.py:500`; the refusal test is `backend/tests/test_api_approvals.py:565` (`test_a_client_can_no_longer_assert_that_the_artifact_is_not_live`). The earlier cites in this essay (`:257`, `:299`) were read at `caa4e411` and have since moved. **The LOW service-account residual is not closed by this**: it stays open in the register row, owner WK-1178 (`ALLOWED_PERMISSIONS` `backend/src/app/api/service_accounts.py:44`, `_check_permissions` `:141`, unchanged at `d10420df`).
 
 ## Finding
 
