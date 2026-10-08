@@ -55,13 +55,13 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 describe("the rating design view", () => {
-  it("FR 9473: resolves the version by the slug and version of the URL", async () => {
+  it("FR 1531: resolves the version by the slug and version of the URL", async () => {
     render(RatingDesignView, { props, ...mounted });
     await screen.findByLabelText("Algorithm version");
     expect(getRatingVersionByRef).toHaveBeenCalledWith("fremtpl2-demo", 1);
   });
 
-  it("FR 9474: loads the algorithm the version pins, and draws one node per step", async () => {
+  it("FR 1530: loads the algorithm the version pins, and draws one node per step", async () => {
     render(RatingDesignView, { props, ...mounted });
     for (const step of valid.steps) {
       expect(

@@ -345,7 +345,7 @@ def test_the_save_answers_the_typed_201(api_client, workspace_id, principal, gra
 # --- the algorithm read by slug@version (RL-1475 T1/T2; Acceptance 3) ------------------------
 
 
-@pytest.mark.req("FR-9474")
+@pytest.mark.req("FR-1530")
 async def test_a_saved_algorithm_reads_back_by_slug_at_version(
     api_client, workspace_id, principal, grant
 ) -> None:
@@ -367,7 +367,7 @@ async def test_a_saved_algorithm_reads_back_by_slug_at_version(
     )
 
 
-@pytest.mark.req("FR-9474")
+@pytest.mark.req("FR-1530")
 async def test_an_unknown_algorithm_version_is_not_found(
     api_client, workspace_id, principal, grant
 ) -> None:
@@ -381,7 +381,7 @@ async def test_an_unknown_algorithm_version_is_not_found(
     assert read.json()["detail"] == "No rating algorithm motor-gb@99 in this workspace."
 
 
-@pytest.mark.req("FR-9474")
+@pytest.mark.req("FR-1530")
 async def test_another_workspaces_algorithm_is_not_found(
     api_client, workspace_id, principal, grant, database
 ) -> None:
@@ -398,7 +398,7 @@ async def test_another_workspaces_algorithm_is_not_found(
     assert read.json()["detail"] == "No rating algorithm motor-gb@1 in this workspace."
 
 
-@pytest.mark.req("FR-9474")
+@pytest.mark.req("FR-1530")
 async def test_the_algorithm_read_needs_rating_read(
     api_client, workspace_id, principal, membership
 ) -> None:
@@ -409,7 +409,7 @@ async def test_the_algorithm_read_needs_rating_read(
     assert read.status_code == 403, read.text
 
 
-@pytest.mark.req("FR-9474")
+@pytest.mark.req("FR-1530")
 def test_the_algorithm_read_publishes_rating_algorithm(app) -> None:
     operation = app.openapi()["paths"]["/api/v1/rating-algorithms/{slug}@{version}"]["get"]
     schema = operation["responses"]["200"]["content"]["application/json"]["schema"]

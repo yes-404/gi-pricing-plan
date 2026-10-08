@@ -1,5 +1,5 @@
 ---
-id: LG-9476
+id: LG-1532
 family: ledger
 title: WK-675 slice SL-1477 — Designer I, canvas, inspector, load and save (PL-1476), task ledger
 status: active
@@ -148,10 +148,10 @@ The lead's ruling, `to-lead.md`, header: "## 2026-10-08 12:30:31 BST — S2 (SL-
 
 - RL-1475 T1 and T2 and RL-1473 T1 and T2 (three-cell forms; header has no `Permission` column) applied to `03` from the minted
   rulings' code blocks, byte for byte, with only `<date>` = 2026-10-08, `RL-<this>` = RL-1475 / RL-1473 and the FR ids filled; the
-  by-id row too (its grep was 0). The ruled FORM: the hyphen form (`FR 9474` and `FR 9473` with the space replaced by a hyphen) only in the FR row's bold id cell and in
-  `@pytest.mark.req`; the space form (`FR 9474`, `FR 9473`) elsewhere. `FR 9474` is the algorithm read, `FR 9473` the Rating
-  Version address (the lead's working ids). The hyphen form is NOT 0 at the merge head: it stands in the FR bold id cells, `@pytest.mark.req`, the generated `docs/INDEX.md` rows, and this ledger (corrected at audit F5). At the MINT the minter re-points every site so a `git grep -nE` for the two working ids in the hyphen form (the pattern: FR, hyphen, 947, then 3 or 4) = 0.
-  `req-coverage` lists both ids with test files. `audit-docs`: only check 31 (two gaps between the working ids and 1477/9476),
+  by-id row too (its grep was 0). The ruled FORM at the merge head: the FR ids in the hyphen form only in the FR row's bold id cell and in
+  `@pytest.mark.req`; the space form elsewhere. The mint renamed the two working ids to `FR-1530` and `FR-1531`. `FR-1530` is the algorithm read, `FR-1531` the Rating
+  Version address (the lead's working ids). Minted: every site re-pointed (see the mint section).
+  `req-coverage` lists both ids with test files. `audit-docs`: only check 31 (two gaps between the working ids and 1477, before the mint),
   expected until the mint.
 - **Dropped step (not a write-set change):** PL-1476 Task 4 Step 2's `_set_algorithm_ref` helper. `create_rating_version` takes
   `algorithm_ref` since SL-1430 (`5351f116`, #1227): `platform/rating_versions.py`, the `algorithm_ref: ArtifactRef | None = None`
@@ -205,7 +205,7 @@ test for it (condition 2) comes with Task 9's `DagDesigner`.
   parsed `algorithm_ref` and one node per step, on the **real** `@vue-flow/core`; save with the version pre-filled to loaded + 1;
   a refused save shown with its `code` and `detail`; a 409 shown the same way; save disabled and the gap listed while a step's
   required field is empty; DP-S2-3 (a): the "pins no algorithm" `role="status"` text, no algorithm read, a save body with the
-  version's slug and version 1). Test names carry the working ids in the space form (`FR 9473`, `FR 9474`). **Red:** import
+  version's slug and version 1). Test names carry the working ids in the space form (`FR 1531`, `FR 1530`). **Red:** import
   failure, `Failed to resolve import "../RatingDesignView.vue"`. **Green:** 7 passed.
 - **Delta:** the view derives the save-blocking gaps itself from `stepProblems` over the draft, so `DagDesigner`'s `defineExpose({
   problems })` (Task 9) was removed rather than left as an unused surface. `RatingDesignView` mounts `DagDesigner` through
@@ -367,3 +367,12 @@ One pid was stopped in the slot incident: 1166743 (the `pnpm … vite --port 539
 The slice PR is a draft, opened by the executor; the executor does not merge it.
 
 - Audit fixes (lead's verdicts): F1 self-edge case now has a step first-producing a name it consumes (`c`: consumes y, produces y); mutation (guard `|| source === step.step_id` removed) RED 1 failed | 6 passed, restored GREEN 7/7. F2 "twelve-step" -> "eleven-step" (fixtures.ts:1, graph.test.ts:37). F3 and F4 accepted as they are (the lead's verdicts). F5 hyphen claim corrected above. F6 skills-map.md:121 separator added before "**Adopted:**".
+
+## Mint (2026-10-08, L1 (a'), RFC-1506)
+
+- Minted ids: `FR-1530` (the Rating Algorithm read by `slug@version`), `FR-1531` (the Rating Version address by `slug@version`), `LG-1532` (this ledger). Check 31 shows a gap 1512 to 1530 until B4 (#1248) and G2-a (#1249) merge; expected.
+- Audits: `handover/audit-sl1477-2026-10-08.md` PASS; `handover/audit-sl1477-delta-2026-10-08.md` PASS; the lead adopted both.
+- Re-gate at `0c14d85b`, 15:18:29 to 16:02:44 BST: 13 failed (the check-31 set), 5114 passed.
+- **Pan fps, both figures (ruling of 2026-10-08 15:18:14 BST, item 2).** Measured WITH the gap: 31.8 to 35.8 fps. About 48 to 58 fps WITHOUT it. The gap is an unexplained harness/drag-action stall: deterministic (5.25 to 5.29 s in all 5 pan runs; DrawFrame 487 each), independent of load, pan-drag only. WK-675 S3's browser pass keeps the trace for one pan run and prints the largest gap's offset.
+- Harness counter bug: `wheelEvents` accumulates across runs; fps is unaffected. The harness is private, so no FD.
+- cd slip: executor-s2b ran one `cd /tmp` (charter no-cd rule) before any git write. The shell reset on the next call, and no worktree was affected.
