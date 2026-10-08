@@ -202,7 +202,8 @@ Insufficient in this file, corrected by procedure rather than brief (CLAUDE.md �
    with `doc-index.py`, never hand-merged; (b) the delta from its CI-green head is `main`'s files
    plus INDEX only, shown by name-status; (c) at the new head audit-docs (rc 0, or only a
    working-id check-31 row named in the request), `doc-index.py --check` 0 and `register-lint.py`
-   0 pass, plus the local docs-reading pytest subset of (iii') below; (d) `git merge-tree` onto
+   0 pass, plus the local docs-reading pytest subset of (iii') below, its DB-backed modules
+   skipped or run as (iii') says; (d) `git merge-tree` onto
    `main` exits 0, the tree named in the re-ACK request. No branch CI wait; `main`'s push CI is
    the backstop. If the subset takes over 10 minutes, the lead reports it. (The maintainer's
    entry "2026-10-08 12:12:08 BST — MERGE-ACK #1241 (lane C S2 activation, PL-1476 / SL-1477) @3550bcbd86f2e972ca43df58bfca20010e6551ae, expected tree adfa6e7671d98aadf41536714b2da41b1e00c1ae; 1E EXTENDED to an INDEX-only overlap; order: #1241 now, then T1" in `to-lead.md`.)
@@ -220,7 +221,13 @@ Insufficient in this file, corrected by procedure rather than brief (CLAUDE.md �
    at the new head audit-docs, `doc-index.py --check` and `register-lint.py` each exit 0, plus a
    local pytest, all passing with rc and totals reported, of the modules holding those check-31
    tests and of every module `git grep -l '"docs/' -- '*test*.py'` lists at the new head — light,
-   no gate slot, never during a full gate someone else holds; (iv) `git merge-tree` of the new
+   no gate slot, never during a full gate someone else holds. **The subset's DB-backed modules
+   (the same subset for 1E and E2 (c)):** a module that needs `GIP_TEST_DATABASE_URL` is
+   SKIPPED when the PR's paths include nothing under `docs/contracts/` or `docs/specs/`, other
+   than an OQ mirror row in a spec's open-questions section; otherwise it runs against a
+   per-worktree DB. Reason: the DB-backed modules read contracts and specs, not records; a
+   record-only change that breaks one is caught by `main`'s push CI. (The maintainer's entry
+   "2026-10-08 12:40:38 BST — MERGE-ACK #1242 (T1: FD[-]1478 … OQ[-]1486) @e1103d81e0ac3919fb8015ba7b65c365f644373b, expected tree e39db2194b97c04308414def5bc2cdf0eb316689; the 8 siblings close under R2 after the read-back; the E2 (c) pytest subset REFINED *[elided: the two ids' hyphens bracketed — minted on `main` by #1242 after this branch's last merge of `main`, so not yet in this tree's INDEX, and check 32 would read them as unresolved citations]*" in `to-lead.md`.); (iv) `git merge-tree` of the new
    head on current `main` exits 0, and the ACK request names the tree. CI on the new head and on
    `main`'s push are the backstop; a red result is fixed forward before any other merge.
    (The maintainer's entry "2026-10-08 11:57:55 BST — RULED: a code PR's ACK may carry across a

@@ -288,12 +288,16 @@ section the rules). The merge procedure itself is `.claude/roles/lead.md` rule 4
   shared path is `docs/INDEX.md`, regenerated with `doc-index.py`; and a code PR whose delta is
   only a docs-only merge of `main`. Each needs merge-tree rc 0 with the tree named, the docs
   checks green at the new head, and a local docs-reading pytest subset (every module
-  `git grep -l '"docs/' -- '*test*.py'` lists). **Precondition for all three:** the CI-green
+  `git grep -l '"docs/' -- '*test*.py'` lists); a module of that subset that needs
+  `GIP_TEST_DATABASE_URL` is skipped when the PR touches nothing under `docs/contracts/` or
+  `docs/specs/` (an OQ mirror row in a spec's open-questions section excepted), and otherwise
+  runs against a per-worktree DB. **Precondition for all three:** the CI-green
   head's runs COMPLETED with success, read per workflow (a cancelled run is not green), and
   nothing was pushed to the branch while a run the ACK relies on was in flight. `main`'s push CI
   is the backstop; a red `main` is fixed forward before any other merge. *(From the
   maintainer's entries "2026-10-08 11:49:11 BST" (1E), "2026-10-08 11:57:55 BST" (code PRs),
-  "2026-10-08 12:12:08 BST" (E2) and "2026-10-08 12:15:49 BST" (the precondition) in
+  "2026-10-08 12:12:08 BST" (E2), "2026-10-08 12:15:49 BST" (the precondition) and
+  "2026-10-08 12:40:38 BST" (the DB-backed modules of the subset) in
   `to-lead.md`, full headers in RFC-1506's Sources.)*
 
 ## 9. Global findings register
