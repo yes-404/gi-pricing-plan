@@ -148,9 +148,9 @@ The lead's ruling, `to-lead.md`, header: "## 2026-10-08 12:30:31 BST — S2 (SL-
 
 - RL-1475 T1 and T2 and RL-1473 T1 and T2 (three-cell forms; header has no `Permission` column) applied to `03` from the minted
   rulings' code blocks, byte for byte, with only `<date>` = 2026-10-08, `RL-<this>` = RL-1475 / RL-1473 and the FR ids filled; the
-  by-id row too (its grep was 0). The ruled FORM: the hyphen form (`FR-9474`, `FR-9473`) only in the FR row's bold id cell and in
+  by-id row too (its grep was 0). The ruled FORM: the hyphen form (`FR 9474` and `FR 9473` with the space replaced by a hyphen) only in the FR row's bold id cell and in
   `@pytest.mark.req`; the space form (`FR 9474`, `FR 9473`) elsewhere. `FR 9474` is the algorithm read, `FR 9473` the Rating
-  Version address (the lead's working ids; the minter re-points every site, and `git grep -nE` for the two working ids (hyphen form) is 0 at the merge head).
+  Version address (the lead's working ids). The hyphen form is NOT 0 at the merge head: it stands in the FR bold id cells, `@pytest.mark.req`, the generated `docs/INDEX.md` rows, and this ledger (corrected at audit F5). At the MINT the minter re-points every site so a `git grep -nE` for the two working ids in the hyphen form (the pattern: FR, hyphen, 947, then 3 or 4) = 0.
   `req-coverage` lists both ids with test files. `audit-docs`: only check 31 (two gaps between the working ids and 1477/9476),
   expected until the mint.
 - **Dropped step (not a write-set change):** PL-1476 Task 4 Step 2's `_set_algorithm_ref` helper. `create_rating_version` takes
@@ -365,3 +365,5 @@ One pid was stopped in the slot incident: 1166743 (the `pnpm … vite --port 539
 ## PRs
 
 The slice PR is a draft, opened by the executor; the executor does not merge it.
+
+- Audit fixes (lead's verdicts): F1 self-edge case now has a step first-producing a name it consumes (`c`: consumes y, produces y); mutation (guard `|| source === step.step_id` removed) RED 1 failed | 6 passed, restored GREEN 7/7. F2 "twelve-step" -> "eleven-step" (fixtures.ts:1, graph.test.ts:37). F3 and F4 accepted as they are (the lead's verdicts). F5 hyphen claim corrected above. F6 skills-map.md:121 separator added before "**Adopted:**".

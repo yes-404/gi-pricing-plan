@@ -1,4 +1,4 @@
-// The twelve-step `valid_algorithm()` of backend/tests/test_rating_algorithms.py (the server-side fixture), typed.
+// The eleven-step `valid_algorithm()` of backend/tests/test_rating_algorithms.py (the server-side fixture), typed.
 import type { RatingAlgorithmDraft } from "@/api/ratingAlgorithms";
 
 export const valid: RatingAlgorithmDraft = {

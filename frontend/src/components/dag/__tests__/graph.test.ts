@@ -28,13 +28,14 @@ describe("graph derivation", () => {
     const dangling = [
       { step_id: "a", type: "expression", consumes: ["ghost"], produces: "x" },
       { step_id: "b", type: "expression", consumes: ["x"], produces: "x" },
+      { step_id: "c", type: "expression", consumes: ["y"], produces: "y" },
     ] as unknown as RatingStep[];
     expect(edgesOf(dangling)).toEqual([
       { id: "a->b:x", source: "a", target: "b", label: "x" },
     ]);
   });
 
-  it("orders the topological twelve-step fixture as declared", () => {
+  it("orders the topological eleven-step fixture as declared", () => {
     expect(graphOrder(steps)).toEqual([
       "s_in_age",
       "s_in_eff",
