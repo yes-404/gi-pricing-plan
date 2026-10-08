@@ -69,10 +69,9 @@ and 9478`, the working ledger id), as the plan expects before the mint.
   failed with `AttributeError` (no `input_contract_deltas` on `AlgorithmDiff`); the other ten passed.
 - `uv run pytest backend/tests/test_rating_algorithms.py -k typed` → `test_algorithm_diff_route_is_typed_and_keeps_its_keys` failed on
   the `$ref` assertion: the 200 schema was the untyped `{'type': 'object', 'additionalProperties': True, ...}`.
-- The contract-side reds (`test_attribution_ratio_with_zero_denominator_validates_against_the_contract` on `mean_change_pct`,
-  `test_delta_kinds_equal_the_contract_enum` on the two missing kinds) were hidden behind the collection error and not run separately
-  on the base: they are covered by the same file's red and by the hand edit's diff (`:88-89` were `number`, `:101` had five kinds);
-  the auditor can re-verify on the base tree by `git stash`-free checkout of `8b0256fd` plus the test file only.
+- The contract-side reds, run with the base contract restored (`git checkout 8b0256fd -- docs/contracts/schemas/dislocation-run.schema.json`,
+  then back to HEAD) and the new code in place: `test_attribution_ratio_with_zero_denominator_validates_against_the_contract` failed
+  `AssertionError: mean_change_pct`; `test_delta_kinds_equal_the_contract_enum` failed on the two missing kinds; `2 failed, 11 passed`.
 
 **Greens.** `test_dislocation.py` and `test_rating_algorithm.py` → `24 passed`; `backend/tests/test_rating_algorithms.py` → `11 passed`
 (own database `gipricing_sl-1387_29cf62e3`, made from the template and migrated). `ruff check backend packages/model-schema` clean.
