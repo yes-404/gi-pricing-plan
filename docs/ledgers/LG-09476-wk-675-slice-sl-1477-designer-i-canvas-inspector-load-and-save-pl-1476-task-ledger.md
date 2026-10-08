@@ -184,6 +184,21 @@ test is revisited after it lands). 9 tests in `StepInspector.test.ts`, one per F
 disabled placeholder, so the assertion filters the empty value. `StepNode.vue` imports `Handle` from `@vue-flow/core`; the mount
 test for it (condition 2) comes with Task 9's `DagDesigner`.
 
+### Task 9 — `NodeNavigator.vue` and `DagDesigner.vue`
+
+- **Navigator:** 6 tests in `NodeNavigator.test.ts` (options in graph order; arrows; Home/End; typed `step_id` prefix; Enter emits
+  `select`; Delete opens `role="alertdialog"` and `remove` is emitted only after "Remove step", not after Cancel). **Red:** import
+  failure, `Failed to resolve import "../NodeNavigator.vue"`. **Green** after the component. The plan's typeahead example `s_o`
+  does not select `s_out` on the real fixture (`s_out_office` precedes it in graph order); the test types `s_pay` → `s_payable`.
+- **Designer:** 4 tests in `DagDesigner.test.ts`. **Red:** import failure for `../DagDesigner.vue`. **Green:** 26 passed over
+  `src/components/dag` (`pnpm exec vitest run src/components/dag`).
+- **Condition 2 — the `@vue-flow/core` mount test:** `DagDesigner.test.ts` mounts `DagDesigner` with the **real** `VueFlow` (no
+  stub of `@vue-flow/core`; `StepNode` renders its `Handle` through it) in happy-dom, and finds one node per step by its
+  `aria-label`. The only shim is a no-op `ResizeObserver` class, a browser API happy-dom lacks (not the library). The canvas's pan
+  and zoom are measured in Task 11. `type-check` and `lint` clean.
+- Plan deltas: `DagDesigner` exposes `problems` as `"<step_id>: <message>"` over every step (from `stepProblems`); the canvas
+  nodes are not draggable and not selectable (selection is by the navigator).
+
 ## PRs
 
 The slice PR is a draft, opened by the executor; the executor does not merge it.
