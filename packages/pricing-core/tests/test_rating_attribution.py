@@ -371,17 +371,19 @@ def test_subset_contract_carries_the_field_its_own_change_adds(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """RL-1449 violation 1 (DP-1 (c)): the subset holding the group declares `ncd`."""
+    cand = _ncd_candidate()
+    _e_instalment(cand)  # a third change, outside the group: the subsets are not all-or-nothing
     spy = _Spy(monkeypatch)
     result = _run(
-        _ncd_candidate(),
+        cand,
         book=_book(ncd=[100 + i for i in range(12)]),
-        groups=[("ncd", ["c1", "c2"])],
+        groups=[("ncd", ["c1", "c3"]), ("instalment", ["c2"])],
     )
-    assert [c.kind for c in result.derived_changes] == ["step_added", "step_changed"]
-    with_ncd = [f for f in spy.frames if "ncd" in f.columns]
-    without = [f for f in spy.frames if "ncd" not in f.columns]
-    assert len(with_ncd) == 1  # the full subset
-    assert len(without) == 1  # the empty one
+    assert [c.kind for c in result.derived_changes] == ["step_added", "step_changed", "step_changed"]
+    assert result.derived_changes[0].description.startswith("s_in_ncd")
+    # four subsets: {} and {instalment} lack `ncd`; {ncd group} and the full one declare it
+    assert sum("ncd" in f.columns for f in spy.frames) == 2
+    assert sum("ncd" not in f.columns for f in spy.frames) == 2
 
 
 @pytest.mark.req("FR-1399")
