@@ -267,7 +267,9 @@ async def _draft_with_algorithm(
             session, workspace_id=workspace_id, actor=actor,
             slug="fremtpl2-demo", dataset_version_id=new_uuid7(),
             model_ref=ArtifactRef(type="model", slug="fremtpl2-glm", version=1),
-            algorithm_ref=ArtifactRef(type="rating_algorithm", slug="fremtpl2-demo", version=version),
+            algorithm_ref=ArtifactRef(
+                type="rating_algorithm", slug="fremtpl2-demo", version=version
+            ),
         )
         return row.id
 
