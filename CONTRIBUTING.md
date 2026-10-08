@@ -79,7 +79,7 @@ team B starts.
   commit: the ids re-pointed and `docs/INDEX.md` regenerated with `scripts/doc-index.py`. Then
   team B posts "mint pushed @<sha>". Our token cannot push to a fork, so team B is the writer.
   The first team's lead checks that commit (an id grep, `doc-index.py --check`, `audit-docs.py`)
-  before the maintainer's approval. **Collaborator phase (later, the maintainer's call):** team
+  before the maintainer's approval. **Collaborator phase (later, the repository owner's call):** team
   B pushes branches to this repository, and the first team's finisher pushes the one mint
   commit. **In both phases, from the merge-turn comment on, team B pushes nothing more to the
   branch** (in the fork phase, after "mint pushed") until it merges or the lead hands it back:
@@ -118,7 +118,7 @@ team B starts.
   maintainers" on**; we recommend it but do not rely on it, because our token cannot push to a
   fork. Your fork's PR therefore uses the fork phase of T2. The maintainer approves the first
   run of the Actions workflows. Collaborator access, and with it the collaborator phase of T2,
-  is the maintainer's call after the trial.
+  is the repository owner's call after the trial.
 
 ## What a slice PR contains
 
