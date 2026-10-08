@@ -3,7 +3,7 @@ id: PL-1452
 family: plan
 kind: leaf
 title: WK-673 Slice 3 — attribution, exact Shapley, largest remainder, the broken-input proof, the cost: leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-06            # original date 2026-10-05, set at the draft; minted 2026-10-06
 owner: planner
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc

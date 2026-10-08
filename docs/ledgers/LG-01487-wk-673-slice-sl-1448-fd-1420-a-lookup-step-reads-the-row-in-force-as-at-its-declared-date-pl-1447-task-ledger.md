@@ -1,8 +1,8 @@
 ---
-id: LG-9481
+id: LG-1487
 family: ledger
 title: WK-673 slice SL-1448 — FD-1420, a lookup step reads the row in force as at its declared date (PL-1447), task ledger
-status: active
+status: closed
 created: 2026-10-08
 owner: executor
 tree: 0ee8f41452901bd2511379776f26075a6993dd13
@@ -175,3 +175,16 @@ at the base; the two added hits are this slice's own new fixtures, `"type": "loo
 ## PRs
 
 #1236, a draft. The branch `sl-1448-fd-1420-lookup-reads-row-in-force-as-at` is pushed; the PR is not merged by the executor.
+
+## Close — the mint (2026-10-08)
+
+Appended by the executor at the mint; no earlier entry is rewritten. The slice audit is `handover/audit-sl1448-2026-10-08.md` (local, not in the repository), by auditor-sl1448, against
+`origin/main...57a8464f8cac347f15fb5a100b8a93feab491eb8`. Its verdict summary, verbatim: *"No blocking finding. Two LOW findings (F1, F2), one note (N1). Proposed overall: **clean audit, accept; F1/F2 fix-or-accept at the lead's choice.**"* The lead's verdicts: **F1 accepted**, **F2 accepted as a listed follow-up**, N1 recorded below.
+
+- **Mint.** This ledger's working id (9481, family prefix LG) is minted as LG-1487, the lead's allocation (after the 1478 to 1486 block, before 1488 to 1496). `origin/main` (8b0256fd) was merged into the branch; the only conflict was the generated `docs/INDEX.md`, regenerated with `scripts/doc-index.py`. The merge brought no non-docs change into the branch. The Task 6 table and its prose above quote the check-31 text as it printed at the gate, `between 1468 and 9481`; they are left as the gate's verbatim output.
+- **F1 (LOW), accepted.** The ledger lacked the trial merge-tree the dispatch's GO condition 4 asks for. The audit's item 9 supplies it: the branch head onto `origin/main` at 8b0256fd gives rc 1, with a conflict only in `docs/INDEX.md`. That is the record.
+- **F2 (LOW), accepted as a listed follow-up.** `packages/pricing-core/src/pricing_core/rating/runtime.py:33` cites the pre-mint working id ("PL 9688 DP-1") for PL-1447. It is a comment. It is not fixed here: a code change would void the docs-only waiver of the minted-head gate. It stays a follow-up for the next change that touches that file.
+- **N1 (note), correction dated 2026-10-08.** Task 3 above reports the sentinel test's red as `REFERENCE_LOOKUP_MISS`. That is the result of the second experiment only (the fix present, the `_check_as_at_values` calls replaced by `pass`). At the base the two sentinel tests fail with `DID NOT RAISE CodedError`, which the auditor reproduced (audit §4(a)).
+- **The minted-head gate is waived** for a docs-only mint delta under the maintainer's ruling "2026-10-06 02:28:42 BST — The minted-head gate (executor.md :42, the SL-1377 order): WAIVED for a DOCS-ONLY mint delta, on conditions" in `to-lead.md` (local). Condition (a): every path in `git diff --name-status e021d6f174e2d2ed2c34f3329a76e074d30b4cb7..<mint head>` is under `docs/`; the list is in the PR body. The gated head is `e021d6f1`.
+- **Register.** This slice discharges FD-1420 (PL-1447, "FD-1420's register row is discharged by the merge"). The finding's essay status line and register row are the auditor's act after the merge; this commit does not edit them.
+- The roadmap row SL-1448 is `closed` with its dated line.
