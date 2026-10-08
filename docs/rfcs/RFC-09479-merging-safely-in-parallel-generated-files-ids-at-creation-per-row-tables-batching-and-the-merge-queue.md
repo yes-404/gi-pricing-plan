@@ -46,7 +46,7 @@ review, ACK and CI wait.
 
 ---
 
-## 0. Measurements at this RFC's tree
+## Measurements at this RFC's tree
 
 **Tree:** `8b0256fdb5f000c11817838c129e1f9a4f8d8e10` (`origin/main`, #1238, committed
 2026-10-08T11:33:16+01:00). Repository files were read in the worktree at that commit. GitHub
@@ -69,7 +69,7 @@ state was read at **2026-10-08 11:35:54 BST** (`TZ=Europe/London date`), and mov
 | M13 | **No governed document carries the under-30 open-PR cap, the mint-batch size or the "never a rebase" merge rule.** They are in force by channel rulings (P5 cites each) and written in no governed file. | `git grep -n -iE 'under 30\|open-PR cap\|30 open\|never a rebase' -- .claude/roles/lead.md docs/process/delivery-process.md .claude/skills/git-hygiene` → 0 hits |
 | M14 | The merge procedure is **`lead.md` rule 4**. `delivery-process.md` has no merge-procedure section: its §15 is "Correction and message discipline", and parallelism is §8. | `grep -n '^## ' docs/process/delivery-process.md` |
 
-## 1. The problem, and today's incidents
+## Problem
 
 The user asked how to stop late merges causing code conflicts and doc-id errors. Three
 mechanisms, each verified above:
@@ -111,9 +111,13 @@ The incidents the authority asks for, by PR:
 and the 11:32:55 ACK names *"the EXPECTED TREE … d82d9831… (my own merge-tree: rc 0, the same)"*.
 Rule 4 already allows that (M10). P1's option 1E writes it down.
 
----
+## Proposal
 
-## P1 — a merge queue, or its substitute
+Five parts, each with its options, trade-offs, cost (an ESTIMATE with its basis), the files it
+changes, what it would have changed today, and a recommendation. A recommendation is a proposal
+for the maintainer's ruling, never a decision; P5 alone records rules already in force.
+
+### P1 — a merge queue, or its substitute
 
 **Status.** Case (b): the queue is unavailable as the repository is owned (M1, M5).
 
@@ -123,7 +127,7 @@ Rule 4 already allows that (M10). P1's option 1E writes it down.
 | **1B** | **Transfer the repository to a free GitHub organisation, then enable the queue.** | **The user's decision and action.** After the transfer, the prerequisites come **first**, in this order: **(i)** a `merge_group:` trigger on all four workflows; **(ii)** one always-reporting aggregator job per path-filtered workflow, because `paths:` does not apply to `merge_group` and a required check that never reports stalls the queue (a `git diff --name-only` step, not a third-party action, which `docs.yml`'s header refuses); `history-policy` gets a `merge_group` range (`merge_group.base_sha..merge_group.head_sha`), or it scans only the tip; **(iii)** only then the ruleset's required-checks rule and "Require merge queue" with squash. | **Moves with the transfer:** history (every SHA and PR number unchanged, so every ledger, ACK and citation stays valid), issues, PRs, rulesets, secrets, webhooks, deploy keys. **Changes:** the URL (GitHub redirects it, including git remotes, until someone recreates `yes-404/gi-pricing-plan`; update the remotes anyway); **the fine-grained PAT must be re-issued with the organisation as resource owner** (until then every `gh` call fails, a hard stop for the merge procedure, so the transfer needs a quiet window); Actions and Dependabot settings re-checked at organisation level. 54 lines in 20 files mention `yes-404` (`git grep -c yes-404 HEAD -- . ':!docs/INDEX.md'`); `lead.md:41–44`'s `author.login` rule still holds, since a transfer does not change PR authorship. **Once on:** the REST merge cannot enqueue, so the merge becomes `gh pr merge --auto` or GraphQL `enqueuePullRequest`; the ACK keeps the head SHA but cannot name the expected tree (GitHub builds it from main plus the PRs ahead); the read-back compares the new main's tree with the tree the `merge_group` run tested; an ejection is the new re-request. **Worthless before P2:** the queue's build is a plain merge, so an INDEX conflict ejects the PR (72 of 73 open PRs, M4). | **2.0** — basis: (i)+(ii) 1.0 (four workflow files, an aggregator each, a broken-input proof that a filtered-out workflow still reports); ruleset, `lead.md` rule 4 and `git-hygiene` 0.5; a dry run on three docs PRs 0.5. The user's transfer, PAT and settings work comes on top. | `.github/workflows/{docs,python,frontend,history-policy}.yml`; the ruleset (a setting); `.claude/roles/lead.md` rule 4; `.claude/skills/git-hygiene`; CLAUDE.md §2's CI sentence (the maintainer's) |
 | **1C** | Required status checks with "require branches to be up to date", on the personal repository (no queue). | A ruleset edit and the aggregators of 1B (ii). | Enforces CI on a head that contains current main: what the lead does by hand now. It **adds** re-CI rather than removing it. No parallelism. | 1.0 — basis: 1B (ii) alone | as 1B (i)–(ii); the ruleset |
 | **1D** | A hand-built merge train: N PRs into one integration branch, one CI run, then ordered squashes. | A new script and procedure. | Each squash still moves main under the next PR, so the per-PR ACK tree must be recomputed for the train. More procedure and more ways to fail than a queue. | 1.5–2.0 — basis: a new script plus its tests, plus `lead.md` | `lead.md` rule 4, a new script |
-| **1E** | **No transfer: an ACK carries over a main move when the merge is mechanically clean.** When main moves, the lead recomputes `git merge-tree` of the ACKed head on the new main. If it exits 0 **and** the commits that moved main touch **none of the PR's paths**, the lead runs the docs checks (audit-docs, `doc-index.py --check`, `register-lint.py`) on that recomputed tree and re-ACKs naming it, **without merging main into the branch and without a new branch CI run**. Full CI then runs on main's push as the backstop; a red main is fixed forward before any other merge. | A `lead.md` rule 4 amendment (the maintainer's) and nothing else. | **Removes the per-move re-CI, the largest cost in I1**, with no transfer. It moves pytest detection from before the merge to after it: `python.yml` triggers on `docs/**` because tests assert on docs content, so a docs PR that breaks one reaches main red. **Bounds:** only PRs whose paths are all under `docs/` (71 of 73 today, M4); never while main is red. It is already practice once: #1238 (§1). | **0.25** — basis: one rule paragraph in `lead.md` and its read-back line | `.claude/roles/lead.md` rule 4 |
+| **1E** | **No transfer: an ACK carries over a main move when the merge is mechanically clean.** When main moves, the lead recomputes `git merge-tree` of the ACKed head on the new main. If it exits 0 **and** the commits that moved main touch **none of the PR's paths**, the lead runs the docs checks (audit-docs, `doc-index.py --check`, `register-lint.py`) on that recomputed tree and re-ACKs naming it, **without merging main into the branch and without a new branch CI run**. Full CI then runs on main's push as the backstop; a red main is fixed forward before any other merge. | A `lead.md` rule 4 amendment (the maintainer's) and nothing else. | **Removes the per-move re-CI, the largest cost in I1**, with no transfer. It moves pytest detection from before the merge to after it: `python.yml` triggers on `docs/**` because tests assert on docs content, so a docs PR that breaks one reaches main red. **Bounds:** only PRs whose paths are all under `docs/` (71 of 73 today, M4); never while main is red. It is already practice once: #1238 (Problem). | **0.25** — basis: one rule paragraph in `lead.md` and its read-back line | `.claude/roles/lead.md` rule 4 |
 
 **What it would have changed today.**
 - **1E:** #1233's 96bcdb0e (← c0aab813, a lockfile-only move, disjoint paths) would not exist,
@@ -142,7 +146,7 @@ home-made queue).
 
 ---
 
-## P2 — generated files out of manual merges
+### P2 — generated files out of manual merges
 
 Scope: `docs/INDEX.md` (generated, committed, read by check 31 and by `doc-id next`: M7, M8)
 and `docs/contracts/openapi/generated.json` (generated, committed, a published spec artifact:
@@ -223,7 +227,7 @@ and the re-CI unchanged. Contracts as now.
 
 ---
 
-## P3 — ids allocated at creation
+### P3 — ids allocated at creation
 
 **Today's rule** ("## 2026-10-06 01:59:10 BST — B2+B3 as ONE batch (6 PRs, 9 records): OK; ids must follow MERGE order (SL-1430's ledger)"), verbatim: *"If SL-1430 is late, re-allocate rather than reorder merges. You allocate; just keep the id order equal to the merge order."*
 
@@ -235,7 +239,7 @@ gap from a lost record.**
 | | Option | Ledger: where, who writes, collisions | Check 31 | Permanence (CLAUDE.md §5) and abandoned ids | Cost (ESTIMATE) | Files |
 |---|---|---|---|---|---|---|
 | **3A** | **Leave as now:** working ids (space form, 9xxx), mint at the merge turn, re-point and sweep (`lead.md:166–171`). | The lead's `eta.md` table, outside git. | Contiguous by construction; every gap fails (I4). | No hole can occur. | 0 (the standing cost is I4 and I5 on every batch) | — |
-| **3B** | **A reservation ledger on a dedicated ref** (for example an orphan branch `id-ledger` holding one append-only file: id, prefix, slug, reserved_by, reserved_at, state ∈ reserved / merged / abandoned). `doc-id.py reserve` takes max(main, ledger) + 1, commits, pushes. **Git's atomic ref update is the lock:** a concurrent reserver's push is rejected as non-fast-forward and retries. The ruleset targets main only (M2), so the ref is writable without a bypass. The lead can stay sole allocator by running `reserve` only in the lead's session. | **Accepts a gap only when every number in it is `reserved` or `abandoned` in the ledger at a named ledger commit**, and prints that commit. `docs.yml` already checks out with `fetch-depth: 0` (:45) and would fetch the ref. | An abandoned reservation is a **permanent hole**, recorded `abandoned`, never reused: §1.1's "no number is used twice" holds, and nothing is renumbered, since an abandoned id was never assigned to a governed thing. **`created:` must be the reservation date**, or check 31's "`created` non-decreasing with the number" fails when a lower id merges later. | **2.5** — basis: `reserve` and the ledger read in `next` 1.0; check 31 plus broken-input proofs (a removed record must still red) 0.75; `lead.md`, `document-ids.md` §1.7 and two skills 0.75 | `scripts/doc-id.py`, `scripts/_docid.py`, `scripts/audit-docs.py` (check 31), `.github/workflows/docs.yml`, `docs/process/document-ids.md` §1.7 (RFC + RL), `.claude/roles/lead.md` rule 4, `.claude/skills/doc-id-migration-run`, `git-hygiene` |
+| **3B** | **A reservation ledger on a dedicated ref.** | An orphan branch (for example an orphan branch `id-ledger` holding one append-only file: id, prefix, slug, reserved_by, reserved_at, state ∈ reserved / merged / abandoned). `doc-id.py reserve` takes max(main, ledger) + 1, commits, pushes. **Git's atomic ref update is the lock:** a concurrent reserver's push is rejected as non-fast-forward and retries. The ruleset targets main only (M2), so the ref is writable without a bypass. The lead can stay sole allocator by running `reserve` only in the lead's session. | **Accepts a gap only when every number in it is `reserved` or `abandoned` in the ledger at a named ledger commit**, and prints that commit. `docs.yml` already checks out with `fetch-depth: 0` (:45) and would fetch the ref. | An abandoned reservation is a **permanent hole**, recorded `abandoned`, never reused: §1.1's "no number is used twice" holds, and nothing is renumbered, since an abandoned id was never assigned to a governed thing. **`created:` must be the reservation date**, or check 31's "`created` non-decreasing with the number" fails when a lower id merges later. | **2.5** — basis: `reserve` and the ledger read in `next` 1.0; check 31 plus broken-input proofs (a removed record must still red) 0.75; `lead.md`, `document-ids.md` §1.7 and two skills 0.75 | `scripts/doc-id.py`, `scripts/_docid.py`, `scripts/audit-docs.py` (check 31), `.github/workflows/docs.yml`, `docs/process/document-ids.md` §1.7 (RFC + RL), `.claude/roles/lead.md` rule 4, `.claude/skills/doc-id-migration-run`, `git-hygiene` |
 | **3C** | **Drop contiguity from check 31; keep uniqueness.** Allocate at creation from the lead's table. | The lead's table, outside git. | No gap check. | Holes are legal, and **a lost record becomes undetectable**, the one thing contiguity detects. The repository accepts that trade elsewhere: `audit-docs.py:455` (*"gaps in the sequence are *legal*: a deleted note retires its number"*) and :3743 (*"gaps in the FR run are not merely legal -- they are what a shared sequence looks like"*). | 0.5 — basis: delete a loop, amend §1.7 / §1.11 | `scripts/audit-docs.py`, `scripts/doc-id.py` (`check`), `document-ids.md` §1.7 / §1.11 |
 | **3D** | **Block allocation:** each lane or minter reserves a block (for example 20 ids) in the 3B ledger. | As 3B, one reservation per block. | As 3B, at block level. | Unused tails become `abandoned` at the lane's close: larger and more frequent holes. | 2.5 (as 3B) | as 3B |
 
@@ -267,7 +271,7 @@ share one clock).
 
 ---
 
-## P4 — shared tables split one file per row
+### P4 — shared tables split one file per row
 
 Scope: `docs/findings/register.md` (25 of 73 open PRs, M4) and the roadmap's SL rows
 (`docs/roadmap.md`, 20 of 73).
@@ -291,7 +295,7 @@ family's host. Do not take 4D.
 
 ---
 
-## P5 — batching, the cap, the cleanup and drafts without PRs: standing rules RECORDED
+### P5 — batching, the cap, the cleanup and drafts without PRs: standing rules RECORDED
 
 **These rules are already in force by the maintainer's rulings and the user's approvals; this
 part records them and does not re-propose them** (the maintainer's ask (a), `to-lead.md`
@@ -354,7 +358,7 @@ total (ESTIMATE: five recorded rules and two new ones, a paragraph each, plus th
 
 ---
 
-## 6. Sequence
+## Sequence
 
 The authority's order was *"P1+P2 first (mostly configuration, immediate relief), then P3, then
 P4"*. **Corrected: P1 cannot lead** (the queue is unavailable, M5) **and depends on P2 anyway**.
@@ -376,7 +380,7 @@ that relieves today's conflicts soonest, with no transfer:
 Total if everything recommended is taken: **about 8 executor-days** (ESTIMATE: 1E 0.25 + 2E 0.1
 + P5 1.0 + 2D 2.0 + 3B 2.5 + 1B 2.0 = 7.85), plus P4 only if the measurement calls for it.
 
-## 7. For the maintainer's ruling (then the user's, for P1)
+## For the maintainer's ruling (then the user's, for P1)
 
 1. **P1:** 1A + 1E now, 1B deferred to the user (recommended) — or 1B now, or 1C / 1D.
 2. **P2:** 2D as the build, 2E inside 5d (recommended) — or 2B, 2C, or 2A. Contracts unchanged.
@@ -386,20 +390,20 @@ Total if everything recommended is taken: **about 8 executor-days** (ESTIMATE: 1
 5. **P5:** order 5a–5e and 5h written into `lead.md` and `delivery-process.md` §8, an `FD-` first for each
    charter line (they are in force already; the ruling only orders the record); adopt 5f and 5g,
    or not.
-6. **The sequence** of §6.
+6. **The sequence** in the Sequence section.
 
 **After the ruling, P1 is the user's decision**: whether to transfer `yes-404/gi-pricing-plan`
 to a free organisation and enable the queue. This RFC changes no script, workflow, ruleset or
 code.
 
-## 8. Where this RFC departs from its input memo
+## Where this RFC departs from its input memo
 
 - **The merge procedure is `lead.md` rule 4, not `delivery-process.md` §15** (M14). The memo's
   file lists named §15 for 1B, 1D and 1E; this RFC names rule 4, and §8 for P5.
 - **M3 / M4 re-measured** at 11:35:54 BST: 73 open, 72 drafts, 72 touching INDEX, 25 register, 20
   roadmap (the memo, at its time: 81, 78, 80, 27, 24). No PR is at the 100-file cap, so the counts
   are exact, not floors.
-- **1E is already practice once** (#1238, §1), and rule 4 already permits it (M10).
+- **1E is already practice once** (#1238, Problem), and rule 4 already permits it (M10).
 - **P5 records rules in force** (the maintainer's ask (a)) rather than proposing them, and adds
   5d, the no-PR draft rule of 11:37:20, which post-dates the memo.
 - **2E is new and 2B is not recommended**: 5d delivers the draft-side relief 2B was a stop-gap
@@ -407,7 +411,7 @@ code.
 - **2D's sentinel**: `REDIRECTS.csv` alone, with every caller named (the memo left it open).
 - **1B's estimate** follows the memo's revised 2.0, not its first 1.5.
 
-## 9. Sources
+## Sources
 
 **Kept current until this RFC merges** (the user's instruction, `to-lead.md` "## 2026-10-08
 11:40:59 BST — USER INSTRUCTION: RFC 9479 is kept current with every new rule until it merges"):
@@ -419,32 +423,42 @@ Headers are verbatim, except the one elided where marked.
 | `to-lead.md` entry header (verbatim) | Carried in | Or left out, because |
 |---|---|---|
 | ## 2026-09-28 11:19:17 BST · [the maintainer's (by delegation)] · HOLD LIFTED — the maintainer's instruction: complete the five started-but-open Phase 2 Works, in FOUR PARALLEL TRACKS, under the delivery process; spawn teammates from their role files *[elided: the barred word replaced]* | P5 5e (rule 2: merge main, never rebase; INDEX in the final commit) | — |
-| ## 2026-09-28 11:23:26 BST · [the maintainer's (by delegation)] · ids are MINTED AT MERGE-READINESS, not reserved: first ready, first merged. This supersedes the fixed table of 11:22:08/11:22:42, whose RL-1171 would hold the CR chain behind Track D *[elided: the barred word replaced]* | M9; P3 (the objection); P2 2E | — |
+| ## 2026-09-28 11:23:26 BST · [the maintainer's (by delegation)] · ids are MINTED AT MERGE-READINESS, not reserved: first ready, first merged. This supersedes the fixed table of 11:22:08/11:22:42, whose RL[-]1171 would hold the CR chain behind Track D *[elided: the barred word replaced; the hyphen of a never-minted working id bracketed so check 32 does not read it as a citation]* | M9; P3 (the objection); P2 2E | — |
 | ## 2026-10-05 13:13:32 BST — PL 9716 noted; batching UNRELATED findings ≤3 per mint PR: APPROVED (a widening of my 10:47:03 rule); cite fix | P5 5a (history: superseded by R1) | — |
 | ## 2026-10-06 01:01:08 BST — STANDING TARGET from the user: TOTAL open PRs under 30, as a control, not just a 9 Oct goal | P5 5b | — |
 | ## 2026-10-06 01:18:08 BST — Backlog triage: R1 and R2 RULED | P5 5a (R1: batch size and the batch body's record table), 5c (R2: absorbed siblings close after the verified read-back, on an empty normalised diff) | — |
 | ## 2026-10-06 01:59:10 BST — B2+B3 as ONE batch (6 PRs, 9 records): OK; ids must follow MERGE order (SL-1430's ledger) | P3 (the problem: *"keep the id order equal to the merge order"*) | — |
 | ## 2026-10-08 10:38:11 BST — OPEN-PR BURN-DOWN PLAN for the new lead: 79 → under 30 by Fri 9 Oct, falling every day | P5 5a, 5b | — |
 | ## 2026-10-08 10:40:28 BST — NEW LEAD (fresh, started by the user) CONNECTED: transcript 75950401, Opus, PID 4478 | — | a seat record; no rule on these subjects |
-| ## 2026-10-08 10:43:28 BST — New lead's read-in ACCEPTED; MERGE-ACK #1235 (lane A activation, PL-1447 / SL-1448) @64e25a2ddb8b176ed0d547156a9da4fcd326147d | §1 (I1: the main move #1233 merged) | an ACK, no new rule |
+| ## 2026-10-08 10:43:28 BST — New lead's read-in ACCEPTED; MERGE-ACK #1235 (lane A activation, PL-1447 / SL-1448) @64e25a2ddb8b176ed0d547156a9da4fcd326147d | Problem (I1: the main move #1233 merged) | an ACK, no new rule |
 | ## 2026-10-08 10:44:31 BST — #1235 read-back verified; the USER's operating mode: PARALLELISE to the caps | — | capacity and lane caps (members, build lanes, one gate), not PRs, ids or merging |
-| ## 2026-10-08 10:48:03 BST — SECURITY: Dependabot alert #13, source-map-js (GHSA-68fv-2mgg-jv7q, HIGH, event-loop DoS via indexed source-map section offsets): investigated; FIX by a lockfile-only refresh, ONE small PR, now | P5 5d (security fixes exempt from the no-PR rule); §1 (#1237, the lockfile-only move) | — |
-| ## 2026-10-08 10:51:33 BST — T1 batch noted; FD 9489's disposition DECIDED now (option (a)), so #1221 stays in T1; FD 9480's check is right | P2 (FD 9489: INDEX keeps one row per OQ number; a `doc-index.py` fix that 2D carries unchanged); §1 (I4: T1's ids) | — |
+| ## 2026-10-08 10:48:03 BST — SECURITY: Dependabot alert #13, source-map-js (GHSA-68fv-2mgg-jv7q, HIGH, event-loop DoS via indexed source-map section offsets): investigated; FIX by a lockfile-only refresh, ONE small PR, now | P5 5d (security fixes exempt from the no-PR rule); Problem (#1237, the lockfile-only move) | — |
+| ## 2026-10-08 10:51:33 BST — T1 batch noted; FD 9489's disposition DECIDED now (option (a)), so #1221 stays in T1; FD 9480's check is right | P2 (FD 9489: INDEX keeps one row per OQ number; a `doc-index.py` fix that 2D carries unchanged); Problem (I4: T1's ids) | — |
 | ## 2026-10-08 10:53:25 BST — Re-triage accepted; the five asks RULED; and the user's reminder: CLEAN UP UNUSED PRs as the work goes | P5 5a (10-id ceiling, cited-first, forward-cites listed, one register minter), 5c (cleanup (a)–(d)) | — |
-| ## 2026-10-08 10:54:33 BST — LANE B: Ruling 1 = (b'), else (c); Ruling 2 = (iii'); DISPATCH GO (conditional) for WK-673 Slice 3 (PL-1452 / SL-1387) | — | a slice dispatch; no rule on these subjects |
-| ## 2026-10-08 10:55:30 BST — MERGE-ACK #1237 (security, source-map-js 1.2.1 → 1.2.2) @bf511269898baecf938b3fe37e6cb46f382b289b; LANE C DISPATCH GO (conditional) for WK-675 S2 (PL-1476 / SL-1477) | §1 (I1: the lockfile-only move); P1 1E | an ACK and a dispatch, no new rule |
-| ## 2026-10-08 11:05:02 BST — SL-1448 gate noted; its red-first ORDER deviations accepted as disclosed (written seconds AFTER the message, my slip) | §1 (#1233 merges main c0aab813 before its ACK) | a slice's TDD order; no rule on these subjects |
-| ## 2026-10-08 11:10:23 BST — T2 draft and T8 noted; the register slip accepted as harmless; PRIORITY NOW: MERGE THROUGHPUT, because the count has RISEN to 81 | §1 (I3, I6); P3 (the order fixed by ids); P5 5h (remote CI is not a gate) | — |
+| ## 2026-10-08 10:54:33 BST — LANE B: [R]uling 1 = (b'), else (c); [R]uling 2 = (iii'); DISPATCH GO (conditional) for WK-673 Slice 3 (PL-1452 / SL-1387) | — | a slice dispatch; no rule on these subjects |
+| ## 2026-10-08 10:55:30 BST — MERGE-ACK #1237 (security, source-map-js 1.2.1 → 1.2.2) @bf511269898baecf938b3fe37e6cb46f382b289b; LANE C DISPATCH GO (conditional) for WK-675 S2 (PL-1476 / SL-1477) | Problem (I1: the lockfile-only move); P1 1E | an ACK and a dispatch, no new rule |
+| ## 2026-10-08 11:05:02 BST — SL-1448 gate noted; its red-first ORDER deviations accepted as disclosed (written seconds AFTER the message, my slip) | Problem (#1233 merges main c0aab813 before its ACK) | a slice's TDD order; no rule on these subjects |
+| ## 2026-10-08 11:10:23 BST — T2 draft and T8 noted; the register slip accepted as harmless; PRIORITY NOW: MERGE THROUGHPUT, because the count has RISEN to 81 | Problem (I3, I6); P3 (the order fixed by ids); P5 5h (remote CI is not a gate) | — |
 | ## 2026-10-08 11:16:32 BST — USER: after the open-PR burn-down, CLEAN UP UNUSED BRANCHES too; the procedure, queued (not to run before the PR count is under 30) | P5 5c, and 5d's cost | — |
 | ## 2026-10-08 11:26:43 BST — USER-APPROVED: raise ONE proposal (an RFC, WK-1178) on "merging safely in parallel": merge queue, generated files, id allocation, per-row tables, batching | the whole RFC (authority) | — |
 | ## 2026-10-08 11:27:49 BST — RFC 9479 addition for P1: the repo is USER-owned; the merge queue may be unavailable | M1, P1 | — |
-| ## 2026-10-08 11:28:36 BST — #1238 (lane B activation) PRE-VERIFIED; the bracketed-letter elision ACCEPTED; the ACK follows on the tree recomputed after #1233 | §1 (the counter-example); P1 1E | the elision form is a quoting rule for the roadmap, not on these subjects |
+| ## 2026-10-08 11:28:36 BST — #1238 (lane B activation) PRE-VERIFIED; the bracketed-letter elision ACCEPTED; the ACK follows on the tree recomputed after #1233 | Problem (the counter-example); P1 1E | the elision form is a quoting rule for the roadmap, not on these subjects |
 | ## 2026-10-08 11:30:48 BST — The USER confirmed: "Require merge queue" is NOT offered in the ruleset editor (user-owned repo) | M5, P1 | — |
-| ## 2026-10-08 11:31:37 BST — MERGE-ACK #1233 (B2+B3: FD-1469 … SL-1477, plus the FD-1421/1425/1433 closes) @96bcdb0e345d2e1c213ced65dc868cee3e23e1d3 | §1 (I1, I5) | an ACK, no new rule |
-| ## 2026-10-08 11:32:55 BST — #1233 read-back verified; MERGE-ACK #1238 (lane B activation) @98d15659b574f5d987826adad2fe4cafc1a0cfeb on the recomputed tree | M10 (the expected tree as practice); §1; P1 1E; P5 5a (#1233's six siblings closed) | — |
+| ## 2026-10-08 11:31:37 BST — MERGE-ACK #1233 (B2+B3: FD-1469 … SL-1477, plus the FD-1421/1425/1433 closes) @96bcdb0e345d2e1c213ced65dc868cee3e23e1d3 | Problem (I1, I5) | an ACK, no new rule |
+| ## 2026-10-08 11:32:55 BST — #1233 read-back verified; MERGE-ACK #1238 (lane B activation) @98d15659b574f5d987826adad2fe4cafc1a0cfeb on the recomputed tree | M10 (the expected tree as practice); Problem; P1 1E; P5 5a (#1233's six siblings closed) | — |
 | ## 2026-10-08 11:35:05 BST — The RFC 9479 options memo noted (sent seconds before this entry); two asks for the RFC | P5 (records, not proposes); P2 (the 2D replacement table) | — |
 | ## 2026-10-08 11:37:20 BST — USER-APPROVED, EFFECTIVE NOW: a new governed-record draft gets NO PR; PRs are opened only as mint BATCHES (and for slices, activations and urgent fixes) | P5 5d; P2 2E | — |
-| ## 2026-10-08 11:40:59 BST — USER INSTRUCTION: RFC 9479 is kept current with every new rule until it merges | this section; P2 and P3 (open to extension) | — |
+| ## 2026-10-08 11:40:59 BST — USER INSTRUCTION: RFC 9479 is kept current with every new rule until it merges | Sources; P2 and P3 (open to extension) | — |
+
+## Deliverable
+
+The `deliverable:` and `lands_in:` fields in prose: **a ruled choice for each of P1 to P5 and a
+sequence**, by the maintainer's `RL-`, and then the user's decision on P1. Nothing ships in this
+RFC's PR. Each part the ruling takes is cut into its own Work or Slice under WK-1178 by the
+planner (§1.6, *"planner cuts an active RFC into a Work"*): rule text in `lead.md` rule 4 and
+`delivery-process.md` §8 (1E, P5, behind an `FD-` for each charter line), the 2D and 3B builds in
+`scripts/` with their broken-input proofs, and, if the user transfers the repository, 1B's
+workflow prerequisites and ruleset.
 
 ## Acceptance
 
