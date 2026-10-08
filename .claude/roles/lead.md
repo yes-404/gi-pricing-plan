@@ -227,7 +227,7 @@ Insufficient in this file, corrected by procedure rather than brief (CLAUDE.md �
    than an OQ mirror row in a spec's open-questions section; otherwise it runs against a
    per-worktree DB. Reason: the DB-backed modules read contracts and specs, not records; a
    record-only change that breaks one is caught by `main`'s push CI. (The maintainer's entry
-   "2026-10-08 12:40:38 BST — MERGE-ACK #1242 (T1: FD[-]1478 … OQ[-]1486) @e1103d81e0ac3919fb8015ba7b65c365f644373b, expected tree e39db2194b97c04308414def5bc2cdf0eb316689; the 8 siblings close under R2 after the read-back; the E2 (c) pytest subset REFINED *[elided: the two ids' hyphens bracketed — minted on `main` by #1242 after this branch's last merge of `main`, so not yet in this tree's INDEX, and check 32 would read them as unresolved citations]*" in `to-lead.md`.); (iv) `git merge-tree` of the new
+   "2026-10-08 12:40:38 BST — MERGE-ACK #1242 (T1: FD-1478 … OQ-1486) @e1103d81e0ac3919fb8015ba7b65c365f644373b, expected tree e39db2194b97c04308414def5bc2cdf0eb316689; the 8 siblings close under R2 after the read-back; the E2 (c) pytest subset REFINED" in `to-lead.md`.); (iv) `git merge-tree` of the new
    head on current `main` exits 0, and the ACK request names the tree. CI on the new head and on
    `main`'s push are the backstop; a red result is fixed forward before any other merge.
    (The maintainer's entry "2026-10-08 11:57:55 BST — RULED: a code PR's ACK may carry across a
