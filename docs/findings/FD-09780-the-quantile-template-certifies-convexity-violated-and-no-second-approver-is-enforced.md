@@ -2,7 +2,7 @@
 id: FD-9780
 family: finding
 title: The quantile template certifies convexity violated, and no second Approver is enforced
-status: active
+status: closed
 created: 2026-10-01
 owner: auditor
 tree: a978dc2297bc8bfcc1c4da09ded37cefdcf92156
@@ -81,3 +81,5 @@ Re-anchored 2026-10-05 at main `caa4e411`. **The defect is fixed by SL-1273** (W
 **Cites above are the defect-state and are not re-read.** Evidence 1–3 describe `101e32dc` and `ef5dc6e7`, before SL-1273. At `caa4e411` the claim "no backend code reads a convexity status" no longer holds: `git grep -n "convexity\|CheckStatus.VIOLATED" -- backend/src` now also hits `platform/objectives.py:745` and `:761`. Cites that moved at `caa4e411`, by symbol: `_quantile_hess` `objectives.py:408` (unmoved); `_convexity_check` `:1278` → `:1323`; `CertificateResult.outcome_of` `model_schema/objectives.py:724` → `:788`; `FITTABLE_OBJECTIVE_STATUSES` `:177` → `:179`; `approvals.decide` `:345` → `:354`; `_resolve_status` `:596` → `:605`; `_require_evidence` (objectives) `:830` → `:1012`; `approvals.submit` `:240` (unmoved). Left for the open follow-up: `LG-1412` records `pseudo_huber` at delta 100, 1000 and 100000 certifying `failed`, not `violated`; that is not this finding's and is unfiled.
 
 **What the mint sets:** `status: closed` in this file's header (the form `FD-1200` uses), and the register row's Decision cell in the closed form this section's date and citation give.
+
+**Re-measured 2026-10-08 at `origin/main` `d10420df`; closed.** `git merge-base --is-ancestor 36a9f483 origin/main` exits 0. `backend/src/app/platform/objectives.py`: the `# FR-152 / RL-1362 DP-S3-4` comment at `:745`, the `CheckStatus.VIOLATED` read at `:761`, `additional_approvers=1 if non_convex else 0` at `:772`. `backend/src/app/platform/approvals.py`: `additional_approvers: int = 0` at `:249`, `approvers_required = entry.approvers_required + additional_approvers` at `:301`. Tests at `backend/tests/test_objective_submission.py`: `test_a_violated_objective_needs_two_approvers_at_policy_one` `:348` and `test_each_template_certified_violated_needs_the_extra_approver` `:387`. The `:745`, `:761` and `:772` cites above were read at `caa4e411` and are unchanged at `d10420df`.
