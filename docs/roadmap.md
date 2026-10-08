@@ -771,7 +771,7 @@ corrected_by: []
 relates: [PL-1267, RL-1236]
 ```
 
-The `dislocation.run` handler owning the Job identity, output location and resumability; `POST /api/v1/dislocation-runs` (202 plus a Job) and `GET /api/v1/dislocation-runs/{id}` with RBAC and RFC 9457 errors; the artifact persisted as a citable row with content-addressed blobs (FR-265); `DislocationRun` registered for generation, `docs/contracts/` regenerated and the slug moved to `COMPARED_SLUGS`. Route permissions picked from `RL-1236`'s catalogue, citing FD-1197. `PL-1267` Slice 4. Starts after Slice 3 closes.
+The `dislocation.run` handler owning the Job identity, output location and resumability; `POST /api/v1/dislocation-runs` (202 plus a Job) and `GET /api/v1/dislocation-runs/{id}` with RBAC and RFC 9457 errors; the artifact persisted as a citable row with content-addressed blobs (FR-265); `DislocationRun` registered for generation, `docs/contracts/` regenerated and the slug moved to `COMPARED_SLUGS`. Route permissions picked from `RL-1236`'s catalogue, citing FD-1197. `PL-1267` Slice 4. Starts after Slice 3 closes. Leaf plan PL-1500 (`draft`; filed 2026-10-05). **Activation needs:** the plan made `active` by a dated line; `SL-1387` closed; a ruling on its DP-S4-1, DP-S4-2, DP-S4-3 and DP-S4-5 merged and minted; the lane free under `RL-1263` as amended, with the same-Work conditions in the dispatch record (its `_Resolver` move serialises with PL-1471, PL 9610 and A-1 to A-3); the maintainer's dispatch GO and the lead's go in a separate activation PR. *(Plan cite added 2026-10-05 by the planner; working id 9591 reserved by the lead.)*
 
 #### SL-1389 — Slice 5: the approval gate, part one — structural_diff, FR-257 limb (2), FR-224
 
@@ -789,7 +789,7 @@ corrected_by: []
 relates: [PL-1267, RL-1264]
 ```
 
-`06` FR-364's `structural_diff` persisted at submission with a verifier registered; FR-257 limb (2) on `submit_for_review` (refused with `EVIDENCE_INCOMPLETE` without a Dislocation Run on the current bundle hash against the current live version); FR-224's exact-mode comparison for an `approximation`-mode version, its threshold a new `ApprovalPolicyEntry` field and never read from Settings. `PL-1267` Slice 5. Starts after Slice 4 closes and after WK-674 Slice 2 (`SL-1256`) has merged; serialised against `SL-1256` on `approvals.py` and `06` §4.2.
+`06` FR-364's `structural_diff` persisted at submission with a verifier registered; FR-257 limb (2) on `submit_for_review` (refused with `EVIDENCE_INCOMPLETE` without a Dislocation Run on the current bundle hash against the current live version); FR-224's exact-mode comparison for an `approximation`-mode version, its threshold a new `ApprovalPolicyEntry` field and never read from Settings. `PL-1267` Slice 5. Starts after Slice 4 closes and after WK-674 Slice 2 (`SL-1256`) has merged; serialised against `SL-1256` on `approvals.py` and `06` §4.2. Leaf plan PL-1499 (`draft`; filed 2026-10-05). **Activation needs:** the plan made `active` by a dated line; `SL-1388` closed; `SL-1256` closed (met); a ruling on its DP-S5-1 to DP-S5-5 merged and minted; RL 9614 minted (FR-257's gate stays at the submit route); the lane free under `RL-1263` as amended, with the same-Work conditions in the dispatch record (its FR-224 edit in `03` §3.2 serialises with PL-1447, PL-1429 and A-3); the maintainer's dispatch GO and the lead's go in a separate activation PR. *(Plan cite added 2026-10-05 by the planner; working id 9590 reserved by the lead.)*
 
 #### SL-1390 — Slice 6: the approval gate, part two — the floor wiring
 
@@ -807,7 +807,7 @@ corrected_by: []
 relates: [PL-1267]
 ```
 
-`submit_for_review` checks `policy.effective_evidence("rating_version")` against a verifiable map (`structural_diff`, `regression_run`, `dislocation_run`), replacing the direct limb checks, limb (1)'s `_regression_run_gate` call included; a workspace policy naming a kind nothing can verify is refused by name (`06` FR-364). `PL-1267` Slice 6. Starts after Slice 5 closes, and so transitively after `SL-1256`.
+`submit_for_review` checks `policy.effective_evidence("rating_version")` against a verifiable map (`structural_diff`, `regression_run`, `dislocation_run`), replacing the direct limb checks, limb (1)'s `_regression_run_gate` call included; a workspace policy naming a kind nothing can verify is refused by name (`06` FR-364). `PL-1267` Slice 6. Starts after Slice 5 closes, and so transitively after `SL-1256`. Leaf plan PL-1498 (`draft`; filed 2026-10-05). **Activation needs:** the plan made `active` by a dated line; `SL-1389` closed; a ruling on its DP-S6-1 (the `06` §4.2 kinds `rate_table_diffs`, `gipp_check_if_enabled` and `change_summary`, which the shipped `DEFAULT_POLICY` omits) merged and minted; the lane free under `RL-1263` as amended, with the same-Work conditions in the dispatch record; the maintainer's dispatch GO and the lead's go in a separate activation PR. *(Plan cite added 2026-10-05 by the planner; working id 9589 reserved by the lead.)*
 
 #### SL-1391 — Slice 7: FR-231's exposure weights through the portfolio frame (F-W10-2)
 
@@ -869,6 +869,26 @@ relates: [FD-1374, RL-1313, RL-1263, SL-1409]
 The fix for ~~FD 9707 (working id;~~ FD-1420 (HIGH, confirmed by the maintainer (by delegation) on 2026-10-05). A `lookup` step's `to_wire` translation matches the key only, under `hitPolicy: first`. `rows_as_at` orders rows by key and then `effective_from`, so every key with more than one row is priced on its oldest row. That is a mispricing on `/score`, `/score/compare` and the batch path. The fix adds a half-open `[effective_from, effective_to)` window per rule, inside the graph (DP-2 (a)). `as_at` may name only `effective_date` or a declared `date` input. That is checked at compile, and at run time the value must be a strict `YYYY-MM-DD` date (DP-1 (a)). `QuoteContext.effective_date` is unchanged, and tests pin how it parses (DP-3 (a)). Each path is red first, by its cause: the superseded row's rate is returned. No golden quote, freMTPL2 seed, or local `gipricing*` database (93 measured) holds a lookup step, so no recorded price moves. Leaf plan PL-1447 (`draft`). **Activation needs:** FD-1420 minted; a ruling record carrying DP-1 to DP-3 and the FR-221 text; the plan made `active` by a dated line; lane B after `SL-1409` merges, ahead of PL-1454 if this plan is active first, or else the next free build lane (the maintainer (by delegation), 2026-10-05 13:11:05 BST); never concurrent with PL 9776 (#1051), which edits the same `_decision_table_node` and `ALGORITHM_CHECKS` (RL-1263); the dispatch GO. *(Filed 2026-10-05 under working ids 9685 (this row) and 9688 (the plan), reserved by the lead.)*
 
 (Activated 2026-10-06 as the FD-1420 fix slice, in lane A, on the maintainer's (by delegation) GO, "2026-10-06 01:53:50 BST — DISPATCH GO (CONDITIONAL): the FD 9707 fix (PL-1447 / SL-1448) on LANE A; B2 AGREED; and the idle-lane question", its conditions met per "2026-10-06 04:57:57 BST — #1227 read-back verified; ALL THREE LANES FREE: lane A activation now (conditional GO conditions met), and GO requests for lanes B and C asked (sent seconds before this entry)"; every other activation need met at 5351f116: FD-1420 and RL-1446 minted in #1230 (c6886bda), SL-1436 merged first in #1228 (2b83e089), SL-1430 merged in #1227 (5351f116); the lane is the GO's, lane A, where PL-1447 activation need 4 named lane B.)
+
+#### SL-1502 — WF-699 E1: FR-242's drafted change summary, over HTTP
+
+```yaml
+id: SL-1502
+family: slice
+title: WF-699 E1 — FR-242's drafted change summary, over HTTP
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6
+phase: P2
+work: WK-673
+corrected_by: []
+relates: [PL-1267, SL-1389, SL-1391, CR-838]
+```
+
+`03` FR-242's drafting limb (WF-699 E1): `GET /api/v1/rating-versions/{id}/change-summary-draft` drafts a change summary from the structural diff (`diff_algorithms`) and each re-pinned rate table's diff against `_baseline`'s most recently approved version, for the actuary to edit and submit; it writes nothing. Cut on the maintainer's (by delegation) entry "2026-10-05 17:14:54 BST — FD 9572 placement accepted; WK-673 S4/S5/S6, A-1, A-2 and CR-838 DECISIONS (1–8)", item 4: "E1 OWNER: its OWN small WK-673 slice beside S5 (it needs only diff_algorithms, the rate-table diff and _baseline, all on main; off the critical path). ACCEPTED; the planner cuts the row and leaf." The owner RL-1504 cites for `CR-838`'s FR-242 correction (same entry, item 8). Leaf plan PL-1501 (`draft`; ~~five decision points open~~ *(pre-mint note, 2026-10-05, below)* its decision points ruled, RL-1497). It may run beside `SL-1389` under RL-1445 condition 2 if the dispatch record names both; its `03` §5.1 row serialises with `SL-1391`, WK-675 S2 and PL-1429 unless the maintainer dates an option.
+
+*(Pre-mint note, 2026-10-05, written 18:41:17 BST (`TZ=Europe/London date`), by the planner, on the lead's order (capacity fill, Part D item 3); the row's text above is kept, one phrase struck.)* **FR-242 in WK-673.** This slice delivers `03` FR-242's drafting limb (`03-rating-engine.md:139`: "It is generated as a draft from the structural and rate-table diffs and edited by the actuary"), and FR-242's required-field limb is written by `SL-1389`, whose `submit_for_review` writes the version's `change_summary` (DP-E1-6 (a)). Both are ruled in RL-1497 (#1199 @`82d801c6`), on the maintainer's (by delegation) entry headed "## 2026-10-05 17:34:57 BST — E1 DPs (dm-e1 memo handover/dp-memo-e1-2026-10-05.md): all six ADOPTED as recommended; S1 yes; S2 yes; PL 9578 noted", whose lines PL-1501 quotes: "DP-E1-6 (a): S5's submit_for_review WRITES row.change_summary, with a red test" and "S1: YES. DP-E1-6 (a) goes into PL-1499's scope (#1181 …)". The schema's requirement on a `draft` row is F27's (`FD-934`), not WK-673's (RL-1497 item 7). WK-673's "From Workstreams" line (`### WK-673`, above) does not name FR-242. Adding it is a Work-scope amendment, which the lead makes, as at the 2026-09-30 amendment of that line; this row is the planner's and records the scope only. RL-1497 also records, as already ruled at "2026-10-05 17:28:27 BST", that this slice's `03` §5.1 row is applied after `SL-1391`, WK-675 S2 (RL-1473) and PL-1429 (RL-1428) have merged, and that it may run beside `SL-1389` when both dispatch records name each other.
 
 
 ### WK-674 — Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires**
