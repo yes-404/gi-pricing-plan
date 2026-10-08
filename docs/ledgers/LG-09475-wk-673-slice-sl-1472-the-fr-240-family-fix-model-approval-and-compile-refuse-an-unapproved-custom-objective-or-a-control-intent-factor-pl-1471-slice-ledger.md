@@ -45,7 +45,7 @@ and "2026-10-08 11:53:19 BST — L5 transition RULED: per-slice plans drafted be
 
 **Out of scope** (PL-1471 §Scope, quoted): "FR-240's other clauses (register row `FR-240 (F-W9-3)`, clauses (1)-(4)); FR-359's Admin override, which is built for no flag today …; a peril structure's models, a known gap named in T1 with FD-1456 (#980) as its owner …; custom evaluation metrics, which do not reach a price …; and neutralising a `control` factor in a priced GBM … This slice only refuses (DP-7)."
 
-**RL-1470 versus the plan, each difference named at its site.** RL-1470 wins over PL-1471 §Spec texts (RL-1470 "What it obliges"). Differences: (1) the marker is "*(Amended 2026-10-08, `RL-1470`, FD …)*", dated by this slice's commit, not "2026-10-05"; (2) T5 is folded into T1 (RL-1470 Ruled 8), so there is no separate T5 application, and T1's marker carries `FD 9639`; (3) T2's seed-route text is RL-1470's, the plan names it and gives none; (4) T4 is extended for the `model_call` case; (5) layout: each text is one physical line, table cells hold no `|`. Ruled 7's lane is superseded by D1 (c) as re-ruled by Ruling 2 (iii').
+**RL-1470 versus the plan, each difference named at its site.** RL-1470 wins over PL-1471 §Spec texts (RL-1470 "What it obliges"). Differences: (1) the marker is "*(Amended 2026-10-08, `RL-1470`, FD …)*", dated by this slice's commit, not "2026-10-05"; (2) T5 is folded into T1 (RL-1470 Ruled 8), so there is no separate T5 application, and T1's marker carries `FD 9639`; (3) T2's seed-route text is RL-1470's, the plan names it and gives none; (4) T4 is extended for the `model_call` case; (5) layout: each text is one physical line, table cells hold no `|`. Ruled 7's lane is superseded by D1 (c) as re-ruled by the 2026-10-08 10:54:33 BST entry's (iii').
 
 **Lane and serialisation.** Lane A after SL-1448 (#1236) on `compile.py` (J5); never beside a slice editing `compile_bundle`'s body. The base is the main that includes #1236, named in the front matter's `tree`.
 
@@ -60,11 +60,11 @@ and "2026-10-08 11:53:19 BST — L5 transition RULED: per-slice plans drafted be
 - [x] Task 0 — preconditions and exposure
 - [x] Task 1 — (a) approval reds (Acceptance 1, 2) — red committed `b0024fea`; green in Task 4
 - [x] Task 2 — (b)(d) compile reds, transitive check (Acceptance 3, 4, 8)
-- [ ] Task 3 — (c) control intent at compile and seed (Acceptance 5, 6, 7; the `rateable: false` case)
-- [ ] Task 3b — (e) `model_call` over a `control` GBM (Acceptance 13; DP-7)
-- [ ] Task 4 — (a) the flag (Acceptance 1, 2, 9)
-- [ ] Task 5 — frontend half
-- [ ] Task 6 — T1 to T4 verbatim from RL-1470
+- [x] Task 3 — (c) control intent at compile and seed (Acceptance 5, 6, 7; the `rateable: false` case)
+- [x] Task 3b — (e) `model_call` over a `control` GBM (Acceptance 13; DP-7)
+- [x] Task 4 — (a) the flag (Acceptance 1, 2, 9)
+- [ ] Task 5 — frontend half (runs in the gate; see the build log)
+- [x] Task 6 — T1 to T4 verbatim from RL-1470
 - [ ] Task 7 — gate and this ledger; SL-1472 row status; INDEX regenerated
 
 ### 3. Gate
@@ -97,6 +97,20 @@ Not yet run. The auditor writes the result; scope is derived from the spec ids i
 - Reds at base: `packages/pricing-core/tests/test_rating_compile_fr240.py::test_an_unapproved_objective_reached_through_a_pinned_model_is_refused[certified]`, `[review]`, `[deprecated]` each `Failed: DID NOT RAISE ValueError`; `backend/tests/test_fr240_governance.py::test_an_overridden_flag_never_reaches_compile`: `AssertionError: assert <JobStatus.SUCCEEDED: 'succeeded'> is <JobStatus.FAILED: 'failed'>`. Green at base, as planned: the approved case, the builtin case, and `test_a_version_pinning_an_unapproved_custom_objective_fails_to_compile[certified|review]`.
 - Green: `_check_reachable_objectives` in `compile.py`, called after the pin loop. `test_rating_compile_fr240.py` and `test_rating_compile_bundle.py`: 15 passed; the backend compile tests: 3 passed.
 - **Acceptance 8, broken-input proof.** With `*version.pins.custom_objectives,` deleted from `all_refs` in a scratch edit, `test_a_version_pinning_an_unapproved_custom_objective_fails_to_compile[certified]` and `[review]` both failed: `AssertionError: assert <JobStatus.SUCCEEDED: 'succeeded'> is <JobStatus.FAILED: 'failed'>` (`test_fr240_governance.py:197`). The line was restored from a saved copy and is not in the commit. The override test's `mark_approved` stands in for FR-359's unbuilt override, as its docstring says.
+
+**Task 3 and 3b (red `0528b79b` for Task 3; Task 3b's reds were run in the tree with Task 3's code and before 3b's; both greens in `9f13825c`).**
+- Reds at base for Task 3 (red commit `0528b79b`): `test_seeding_from_a_control_factor_is_refused` `Failed: DID NOT RAISE ValueError`; `test_a_pinned_table_keyed_on_a_control_factor_is_refused[True]` and `[False]` each `Failed: DID NOT RAISE ValueError` (`[False]` is the DP-4 `rateable: false` case, red by the same cause); `test_the_seed_route_refuses_a_control_factor_with_its_code` `assert 201 == 422`; `test_a_compile_over_a_control_keyed_table_fails_with_its_code` `assert <JobStatus.SUCCEEDED> is <JobStatus.FAILED>`. Green at base: `test_a_table_keyed_on_a_risk_factor_compiles`.
+- Reds for Task 3b, seen before its code was written (Task 3's code was in the tree): `test_a_model_call_over_a_gbm_fitted_on_a_control_factor_is_refused` `Failed: DID NOT RAISE ValueError`; `test_a_compile_over_a_gbm_fitted_on_a_control_factor_fails_with_its_code` `assert <JobStatus.SUCCEEDED> is <JobStatus.FAILED>`. Control `test_a_model_call_over_risk_factors_compiles` green. These two were not committed red apart from the Task 3 code; the commit `9f13825c` carries 3b's tests and code together.
+- Green: `CONTROL_FACTOR_IN_RATEABLE_PATH` in `RATING_ERROR_CODES`; the seed refusal after `bound = pinned[0]`; `_Resolver.resolve` has a `factor` branch and the `model` branch carries the model's Factors; `ResolvedArtifact.factors`; `_check_control_factor_keys`; `_check_control_factor_model_calls`. `SL-1391`'s `load_factor_by_ref` is not on main, so the inline select is used. Runs: pricing-core `test_rating_compile_fr240.py` + `test_rating_compile_bundle.py` 21 passed; backend `test_fr240_governance.py` + `test_model_lifecycle.py` + `test_rating_version_compile.py` 46 passed.
+- One test-code correction after the red was seen: Task 1's `refused.value.status` is `status_code` on `PlatformError`; the red for that test was `DID NOT RAISE` first, and after Task 4 it reaches the corrected assert.
+
+**Task 4 (`d84a5f96`).** `ModelFlag.CUSTOM_OBJECTIVE_NOT_APPROVED`, `flags_for` (dataset flag first, then the objective flag via `resolve_ref`), the `ARTIFACT_FLAGGED` detail names each flag with its own reason, `model.schema.json` `flags` enum and note, regenerated contracts, all in one commit (DP-1). `generate-contracts.py --check`: "46 generated contracts match the models"; `backend/tests/test_contracts.py`: 152 passed, 2 skipped. Task 1's three tests are green; `test_model_lifecycle.py` passes unchanged.
+
+**Task 5.** `git grep -n dataset_invalidated -- frontend/src` finds no file outside `frontend/src/api/generated`, which is not tracked, so no exhaustive switch exists to break. The frontend half runs in the gate.
+
+**Task 6 (`a3fb6237`).** T1 to T4 applied by script from the fenced blocks of RL-1470 §"The spec texts" with `<SL-1472 date>` = 2026-10-08, T5 folded into T1; each find string counted 1 before, and the result is one physical line per text. `python3 scripts/audit-docs.py`: only check 31's expected working-id gap (1487 to 9475).
+
+**Pre-gate local checks (2026-10-08):** `ruff check .` clean, `mypy` "no issues found in 227 source files", `lint-imports` 4 kept, 0 broken. The full gate has not run.
 
 ## PRs
 

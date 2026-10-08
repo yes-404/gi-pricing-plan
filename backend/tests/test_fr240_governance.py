@@ -13,11 +13,7 @@ from typing import Any
 from uuid import UUID
 
 import pytest
-from backend.tests.test_expression_objective_fit import _expression_objective, _fit
-from backend.tests.test_glm_approximation_model import _transparency_job
-from backend.tests.test_model_jobs import _actuary
 from backend.tests.approved_rows import mark_approved
-from backend.tests.test_custom_objectives_api import _advance, _create
 from backend.tests.test_api_rate_tables import (
     _LEVELS,
     _run_with_database,
@@ -25,6 +21,10 @@ from backend.tests.test_api_rate_tables import (
     _seed_body,
     _table_slug,
 )
+from backend.tests.test_custom_objectives_api import _advance, _create
+from backend.tests.test_expression_objective_fit import _expression_objective, _fit
+from backend.tests.test_glm_approximation_model import _transparency_job
+from backend.tests.test_model_jobs import _actuary
 from backend.tests.test_model_jobs_gbm import _fitted_gbm
 from backend.tests.test_model_lifecycle import _principal_with
 from backend.tests.test_rate_tables_service import _seed as _seed_rate_table
