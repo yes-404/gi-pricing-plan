@@ -74,10 +74,15 @@ team B starts.
   slice's write set; the first team checks it against its own in-flight write sets. The
   slice's `LG-` quotes the GO.
 - **T2. One merger, one id allocator: the first team's lead.** Team B never merges and never
-  picks a minted id. At the merge turn, the lead posts "merge turn" on the PR, and the first
-  team's finisher pushes **one** commit to your branch (the minted ids re-pointed and
-  `docs/INDEX.md` regenerated, through "Allow edits by maintainers"). **From that comment
-  on, team B pushes nothing more to the branch** until it merges or the lead hands it back:
+  picks a minted id. At the merge turn, the lead posts "merge turn" on the PR. **Fork phase (now):**
+  the lead also posts the minted ids (old to new) on the PR, and team B pushes **exactly one**
+  commit: the ids re-pointed and `docs/INDEX.md` regenerated with `scripts/doc-index.py`. Then
+  team B posts "mint pushed @<sha>". Our token cannot push to a fork, so team B is the writer.
+  The first team's lead checks that commit (an id grep, `doc-index.py --check`, `audit-docs.py`)
+  before the maintainer's approval. **Collaborator phase (later, the maintainer's call):** team
+  B pushes branches to this repository, and the first team's finisher pushes the one mint
+  commit. **In both phases, from the merge-turn comment on, team B pushes nothing more to the
+  branch** (in the fork phase, after "mint pushed") until it merges or the lead hands it back:
   two writers on one branch are how a CI run was cancelled. The maintainer approves; the lead
   merges. Before the merge turn, team B writes **working ids from the block 7000 to 7999 only**, in the space
   form (`FD 7012`, not `FD-7012`). **The hyphen form is allowed only where a tool must read
@@ -109,10 +114,11 @@ team B starts.
   [`docs/process/process-backlog.md`](docs/process/process-backlog.md), not an `FD-`. The
   exception: it lets a wrong merge, a wrong number or data loss through, or it blocks work
   today.
-- **T6. Start from a fork.** Push to your fork and open PRs from it with **"Allow edits by
-  maintainers" on**, so the first team's finisher can push the mint commit to your branch.
-  The maintainer approves the first run of the Actions workflows. Collaborator access is
-  reconsidered after a trial.
+- **T6. Start from a fork.** Push to your fork and open PRs from it. Turn **"Allow edits by
+  maintainers" on**; we recommend it but do not rely on it, because our token cannot push to a
+  fork. Your fork's PR therefore uses the fork phase of T2. The maintainer approves the first
+  run of the Actions workflows. Collaborator access, and with it the collaborator phase of T2,
+  is the maintainer's call after the trial.
 
 ## What a slice PR contains
 
@@ -122,8 +128,8 @@ change in its `SL-` row of `docs/roadmap.md`, plus one ledger file, an `LG-` und
 `docs/ledgers/` (template: `docs/_templates/LG.md`). A capability the spec does not yet cover
 needs a spec change first: follow `.claude/skills/spec-change`. Commits use
 [Conventional Commits](https://www.conventionalcommits.org/); a PR title names its slice
-(`SL-<n>: <title>`). The first team mints your ids and regenerates `docs/INDEX.md` in
-its one mint commit at the merge turn (T2). The PR template asks for evidence: name the command, its totals and the tree
+(`SL-<n>: <title>`). The first team mints your ids; the one mint commit at the merge turn re-points them and
+regenerates `docs/INDEX.md` (T2: team B pushes it in the fork phase). The PR template asks for evidence: name the command, its totals and the tree
 it ran against, never "tests pass".
 
 ## Never edit by hand
