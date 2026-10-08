@@ -132,6 +132,31 @@ Four tests in `backend/tests/test_rating_versions.py`. Delta from the plan: SL-1
 matched against the algorithm's number — `assert 404 == 200` on the pair read (the "algorithm's number answers 404" assertion
 is not reached, it fails at the first); both reverted (`git status` shows only the route and the tests).
 
+### Task 6 addendum — the STOP ruled (option A)
+
+The lead's ruling, `to-lead.md`, header: "## 2026-10-08 12:30:31 BST — S2 (SL-1477, #1245) STOP RULED: (A) frontend/pnpm-workspace.yaml with allowBuilds vue-demi false joins the write set; FR working ids in the hyphen form at the two mechanical sites ALLOWED". `frontend/pnpm-workspace.yaml` (`allowBuilds:` / `vue-demi: false`) **joins the write set by name** (PR body too); options B and C refused.
+
+- **Condition 1:** a fresh scratch copy of the committed `frontend/` plus the yaml, `pnpm --dir <scratch>/frontend install --frozen-lockfile`:
+  rc 0 (`pnpm --version` 11.21.0). Without the yaml the same fresh install exits 1 (`ERR_PNPM_IGNORED_BUILDS`).
+- **Condition 3:** the lockfile diff against `d10420df` is 141 insertions, 0 deletions, and only `@vue-flow/core` 1.48.2 and its
+  closure: 15 `packages:` entries (`@types/web-bluetooth`, `@vue-flow/core`, `@vueuse/core|metadata|shared` 10.11.1, `vue-demi`
+  0.14.10, and `d3-color|dispatch|drag|ease|interpolate|selection|timer|transition|zoom`) and 8 `snapshots:` entries. The `03`
+  §8 and `skills-map` rows ride this PR (commit `86518b18`).
+- **Condition 2** (lint, type-check, test, build green; a test that mounts a component importing `@vue-flow/core`): pending, Tasks 7–11.
+
+### Tasks 3 and 4 addendum — spec rows, markers, and one dropped step
+
+- RL-1475 T1 and T2 and RL-1473 T1 and T2 (three-cell forms; header has no `Permission` column) applied to `03` from the minted
+  rulings' code blocks, byte for byte, with only `<date>` = 2026-10-08, `RL-<this>` = RL-1475 / RL-1473 and the FR ids filled; the
+  by-id row too (its grep was 0). The ruled FORM: the hyphen form (`FR-9474`, `FR-9473`) only in the FR row's bold id cell and in
+  `@pytest.mark.req`; the space form (`FR 9474`, `FR 9473`) elsewhere. `FR 9474` is the algorithm read, `FR 9473` the Rating
+  Version address (the lead's working ids; the minter re-points every site, and `git grep -nE 'FR-947[34]\b'` is 0 at the merge head).
+  `req-coverage` lists both ids with test files. `audit-docs`: only check 31 (two gaps between the working ids and 1477/9476),
+  expected until the mint.
+- **Dropped step (not a write-set change):** PL-1476 Task 4 Step 2's `_set_algorithm_ref` helper. `create_rating_version` takes
+  `algorithm_ref` since SL-1430 (`5351f116`, #1227): `platform/rating_versions.py`, the `algorithm_ref: ArtifactRef | None = None`
+  parameter of `create_rating_version`; `_draft_with_algorithm` in `test_rating_versions.py` passes it directly.
+
 ## PRs
 
 The slice PR is a draft, opened by the executor; the executor does not merge it.

@@ -274,6 +274,7 @@ async def _draft_with_algorithm(
         return row.id
 
 
+@pytest.mark.req("FR-9473")
 async def test_a_rating_version_reads_by_its_own_slug_at_version(
     api_client, workspace_id, principal, grant, database
 ) -> None:
@@ -296,6 +297,7 @@ async def test_a_rating_version_reads_by_its_own_slug_at_version(
     )
 
 
+@pytest.mark.req("FR-9473")
 async def test_another_workspaces_rating_version_pair_is_not_found(
     api_client, workspace_id, principal, grant, database
 ) -> None:
@@ -311,6 +313,7 @@ async def test_another_workspaces_rating_version_pair_is_not_found(
     assert response.json()["detail"] == "No rating version rating_version:fremtpl2-demo@1."
 
 
+@pytest.mark.req("FR-9473")
 async def test_the_rating_version_pair_read_needs_rating_read(
     api_client, workspace_id, principal, membership
 ) -> None:
@@ -321,6 +324,7 @@ async def test_the_rating_version_pair_read_needs_rating_read(
     assert response.status_code == 403, response.text
 
 
+@pytest.mark.req("FR-9473")
 def test_the_rating_version_read_publishes_rating_version(app) -> None:
     operation = app.openapi()["paths"]["/api/v1/rating-versions/{slug}@{version}"]["get"]
     schema = operation["responses"]["200"]["content"]["application/json"]["schema"]
