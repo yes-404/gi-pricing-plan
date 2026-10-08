@@ -15,7 +15,12 @@ from app.api.authz import requires
 from app.api.deps import Caller, DatabaseDep
 from app.api.responses import problems
 from app.platform import rating_algorithms as service
-from model_schema import Permission
+from model_schema import (
+    Permission,
+    RatingAlgorithm,
+    RatingAlgorithmDraft,
+    RatingAlgorithmSaved,
+)
 
 __all__ = ["router"]
 
@@ -32,22 +37,26 @@ RatingReadDep = Annotated[Caller, Depends(requires(Permission.RATING_READ))]
     responses=problems(401, 403, 422, 409),
 )
 async def create_rating_algorithm(
-    body: dict[str, Any],
+    body: RatingAlgorithmDraft,
     caller: RatingWriteDep,
     database: DatabaseDep,
-) -> dict[str, Any]:
-    """**201** with the saved slug and version, once save-time validation passes.
+) -> RatingAlgorithmSaved:
+    """**201** with the saved id, slug and version, once save-time validation passes.
 
-    The body is the raw `RatingAlgorithm` JSON (03 §4.1). Save-time validation runs
-    before the row is written: the shape's graph invariants (FR-212) and the deeper
-    checks in `pricing-core` (FR-216/227/273/274/275/276) — an invalid graph or a broken
-    boundary guard is refused with its named code.
+    The body is a `RatingAlgorithmDraft` (03 §4.1): the field set without the graph
+    invariants, so a cyclic or unresolved graph reaches save-time validation and is refused
+    with its named code (FR-212), not with a generic request-validation 422. Save-time
+    validation runs before the row is written: the shape's graph invariants (FR-212) and
+    the deeper checks in `pricing-core` (FR-216/227/273/274/275/276).
     """
     assert caller.principal.id is not None
     row = await service.create_algorithm(
-        database, caller.workspace_id, caller.principal.id, body
+        database,
+        caller.workspace_id,
+        caller.principal.id,
+        body.model_dump(mode="json", exclude_unset=True),
     )
-    return {"id": str(row.id), "slug": row.slug, "version": row.version}
+    return RatingAlgorithmSaved(id=row.id, slug=row.slug, version=row.version)
 
 
 @router.get(
@@ -67,3 +76,15 @@ async def algorithm_diff(
     return await service.diff_between(
         database, caller.workspace_id, slug, version, against
     )
+
+
+@router.get(
+    "/rating-algorithms/{slug}@{version}",
+    summary="Read one Rating Algorithm version",
+    responses=problems(401, 403, 404, 422),
+)
+async def get_rating_algorithm(
+    slug: str, version: int, caller: RatingReadDep, database: DatabaseDep
+) -> RatingAlgorithm:
+    """**200** with the saved algorithm; another workspace's version is a **404**."""
+    return await service.get_algorithm(database, caller.workspace_id, slug, version)

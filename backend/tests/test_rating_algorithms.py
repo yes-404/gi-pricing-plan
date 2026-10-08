@@ -300,3 +300,117 @@ def test_the_pre_edit_valid_algorithm_is_refused_at_save_time(
     )
     assert response.status_code == 422, response.text
     assert response.json()["code"] == "LADDER_CLAMP_UNPLACEABLE"
+
+
+@pytest.mark.req("FR-212")
+def test_the_save_route_publishes_typed_bodies(app) -> None:
+    operation = app.openapi()["paths"]["/api/v1/rating-algorithms"]["post"]
+    body = operation["requestBody"]["content"]["application/json"]["schema"]
+    created = operation["responses"]["201"]["content"]["application/json"]["schema"]
+    assert body == {"$ref": "#/components/schemas/RatingAlgorithmDraft"}
+    assert created == {"$ref": "#/components/schemas/RatingAlgorithmSaved"}
+
+
+@pytest.mark.req("FR-212")
+def test_the_typed_save_body_keeps_the_graph_codes(
+    api_client, workspace_id, principal, grant
+) -> None:
+    """DP-S2-1 condition 2: the codes, never the status alone."""
+    cyclic = valid_algorithm()
+    cyclic["steps"][6]["consumes"] = ["risk_premium_minor", "expense_factor", "cycle_val"]
+    cyclic["steps"][7] = {
+        "step_id": "s_minprem", "type": "constraint", "label": "Cycle",
+        "condition": "true", "on_violation": "clamp", "reason_code": "CYCLE",
+        "consumes": ["office_premium_minor"], "produces": "cycle_val",
+    }
+    unresolved = valid_algorithm()
+    unresolved["steps"][6]["consumes"] = [
+        "risk_premium_minor", "expense_factor", "commission_factor",
+    ]
+    assert _post(api_client, workspace_id, principal, grant, cyclic).json()["code"] == (
+        "RATING_GRAPH_CYCLIC"
+    )
+    assert _post(api_client, workspace_id, principal, grant, unresolved).json()["code"] == (
+        "RATING_GRAPH_UNRESOLVED_REF"
+    )
+
+
+@pytest.mark.req("FR-212")
+def test_the_save_answers_the_typed_201(api_client, workspace_id, principal, grant) -> None:
+    response = _post(api_client, workspace_id, principal, grant, valid_algorithm())
+    assert response.status_code == 201, response.text
+    assert set(response.json()) == {"id", "slug", "version"}
+
+
+# --- the algorithm read by slug@version (RL-1475 T1/T2; Acceptance 3) ------------------------
+
+
+@pytest.mark.req("FR-1530")
+async def test_a_saved_algorithm_reads_back_by_slug_at_version(
+    api_client, workspace_id, principal, grant
+) -> None:
+    from model_schema import RatingAlgorithm
+
+    await grant("analyst")
+    saved = api_client.post(
+        "/api/v1/rating-algorithms",
+        json=valid_algorithm(),
+        headers=_headers(principal, workspace_id),
+    )
+    assert saved.status_code == 201, saved.text
+    read = api_client.get(
+        "/api/v1/rating-algorithms/motor-gb@1", headers=_headers(principal, workspace_id)
+    )
+    assert read.status_code == 200, read.text
+    assert RatingAlgorithm.model_validate(read.json()) == RatingAlgorithm.model_validate(
+        valid_algorithm()
+    )
+
+
+@pytest.mark.req("FR-1530")
+async def test_an_unknown_algorithm_version_is_not_found(
+    api_client, workspace_id, principal, grant
+) -> None:
+    await grant("analyst")
+    read = api_client.get(
+        "/api/v1/rating-algorithms/motor-gb@99", headers=_headers(principal, workspace_id)
+    )
+    assert read.status_code == 404, read.text
+    assert read.json()["code"] == "NOT_FOUND"
+    # The handler's own refusal, not the router's: an unrouted path also answers NOT_FOUND.
+    assert read.json()["detail"] == "No rating algorithm motor-gb@99 in this workspace."
+
+
+@pytest.mark.req("FR-1530")
+async def test_another_workspaces_algorithm_is_not_found(
+    api_client, workspace_id, principal, grant, database
+) -> None:
+    from app.platform import rating_algorithms as service
+    from model_schema import new_uuid7
+
+    await grant("analyst")
+    await service.create_algorithm(database, new_uuid7(), principal.id, valid_algorithm())
+    read = api_client.get(
+        "/api/v1/rating-algorithms/motor-gb@1", headers=_headers(principal, workspace_id)
+    )
+    assert read.status_code == 404, read.text
+    assert read.json()["code"] == "NOT_FOUND"
+    assert read.json()["detail"] == "No rating algorithm motor-gb@1 in this workspace."
+
+
+@pytest.mark.req("FR-1530")
+async def test_the_algorithm_read_needs_rating_read(
+    api_client, workspace_id, principal, membership
+) -> None:
+    await membership()
+    read = api_client.get(
+        "/api/v1/rating-algorithms/motor-gb@1", headers=_headers(principal, workspace_id)
+    )
+    assert read.status_code == 403, read.text
+
+
+@pytest.mark.req("FR-1530")
+def test_the_algorithm_read_publishes_rating_algorithm(app) -> None:
+    operation = app.openapi()["paths"]["/api/v1/rating-algorithms/{slug}@{version}"]["get"]
+    schema = operation["responses"]["200"]["content"]["application/json"]["schema"]
+    assert schema == {"$ref": "#/components/schemas/RatingAlgorithm"}
