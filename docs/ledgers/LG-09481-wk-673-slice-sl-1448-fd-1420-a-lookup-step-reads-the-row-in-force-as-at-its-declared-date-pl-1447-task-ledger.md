@@ -91,3 +91,31 @@ Run: `pytest packages/pricing-core/tests/test_rating_lookup_as_at.py -k "prices 
 **Expected red from this task, Task 3 Step 4's:** `test_rating_runtime.py::test_lookup_step_wire_translation_matches_by_key`
 (`KeyError: 'area_code'`) — its fixture names `as_at: "postcode"`, a non-date value; Task 3 Step 4 fixes the fixture.
 `ruff format` of `runtime.py` also rewrites four unrelated pre-existing hunks in `_model_call_handler`; those were not committed.
+
+*Task 2 note:* the `runtime.py` diff is five `-U0` hunks (docstring, import, `_as_at_window`, two in the `lookup` branch), which git's default context merges into four; the four `_model_call_handler` hunks `ruff format` offered were not committed.
+
+### Task 3 — DP-1 at compile and run time, the registry, the fixtures (`eada5511`)
+
+**Shadowing re-read first (the lead's condition).** `score.py::_check_no_shadowed_produced_names` (SL-1430, #1227) refuses an
+undeclared quote input whose name is a value a step *produces* (`(produced - declared) & inputs`). `effective_date` is stamped by
+`score_one`, not produced by a step, so an input named `effective_date` is not caught by it; no Task 3 step is redundant or
+contradicted, and `test_an_input_shadowing_effective_date_is_checked` stays red-then-green on `_check_as_at_values` alone. No STOP.
+
+Changes: `compile.py` `_check_lookup_as_at` (+ `STAMPED_DATE`, `RatingInputType` import) appended to `ALGORITHM_CHECKS`;
+`score.py` `_check_as_at_values`, called after `context = {…}` in `score_one` and `_score_context_sync`; `authored.py` the `as_at`
+entry moved to `EXPRESSION_FIELDS`; `_INPUT_FREE` gains `_check_as_at_values`; the four fixtures name `effective_date`
+(runtime test also gets row windows' `effective_date` in both `evaluate` contexts and a corrected comment; the score test's row gets
+`effective_from`/`effective_to`); Step 3a's sentinel test added.
+
+Run (6 files: lookup_as_at, runtime, score, pin_membership, authored_fields, quote_input_raise_sites): `155 passed`. Red→green:
+the 11 `DID NOT RAISE` reds of Task 1 (three compile refusals, six malformed values, shadowing, plus the Task 1 miss test already
+green in Task 2). `ruff check packages/pricing-core` clean; `mypy packages/pricing-core/src` clean.
+
+**Sentinel test (Step 3a), red-after, disclosed.** I wrote it after the implementation; I then made it red by replacing the
+`_check_as_at_values` calls in `score.py` with `pass` (restored byte-for-byte): it failed, but not with the plan's `DID NOT RAISE` —
+the sentinel reached the engine and the miss path raised `REFERENCE_LOOKUP_MISS` naming `s_expr`, so the `'s_area'` assertion failed.
+The batch half works: `_ctx_to_row` carries `inception` (the test passes both halves).
+
+**Slip, disclosed.** Step 5's `pytest packages/pricing-core` (the whole package) was started by me, ran past the tool's 120 s timeout
+into the background, and I stopped it by pid (cwd-checked); it produced no result. The brief bars a full suite outside the gate;
+none was run to completion, and nothing was held (both slots were free).
