@@ -88,10 +88,11 @@ tree.
    exits 0, collects at least 2 tests, and the `LG-` quotes each one's red line.
 5. **Slice 5:** `PL-1237` Acceptance items 5 and 6 hold in the host-fallback form, and the `LG-`
    records, each with the tree and the load at start: the F1 test (≥ 3 runs per n ∈ {2, 4, 8});
-   NFR-489 **untraced** (OQ-1453 (a)); NFR-502; NFR-490 (FAIL with figures if red, carried per
-   L4 of the 2026-10-08 move lines); NFR-493's linearity limb; NFR-494; and LG-1363's O4
-   multi-rung ladder bench. `git grep -nE 'NFR-489|NFR-490|NFR-493|NFR-494|NFR-502' -- <the LG>`
-   prints a line for each id.
+   NFR-489 **untraced** (OQ-1453 (a)), under both "per replica" readings (R5.3a); NFR-502; NFR-490 (FAIL with figures if red, carried per
+   L4 of the 2026-10-08 move lines); NFR-493's linearity limb; NFR-494; NFR-501 (R5.10); and
+   LG-1363's O4 multi-rung ladder bench.
+   `git grep -nE 'NFR-489|NFR-490|NFR-493|NFR-494|NFR-501|NFR-502' -- <the LG>` prints a line for
+   each id.
 6. **Slice 6:** `uv run pytest -q backend/tests -k "routing or shadow"` exits 0, and the
    Environment-only flag refusal (RL-1311 item 3) and the routing-change-without-Audit-Event red
    proof are each quoted in the `LG-` by their printed line.
@@ -129,11 +130,35 @@ likely figure. Lane is `PL-1371` §3.1's (lane B); the lead assigns the live lan
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Depends on | Lane | Size |
 |---|---|---|---|---|---|---|
 | 1 | `SL-1258` — Slice 4: the deployment path | `PL-1237` Task 4 unchanged, plus R4.1 to R4.3 below | `07` §3.6: FR-434, FR-435, FR-437 (reference deployment); `07` §3.2: FR-412 (memory half), FR-415 (worker service); `07` §3.9: FR-452 (management-API limb, R4.1); `07` §9: NFR-531, NFR-534; register FD-1211 | `SL-1257` closed | B | 1 |
-| 2 | `SL-1259` — Slice 5: switchover, rollback and the measurements | `PL-1237` Task 5, as changed by R5.1 to R5.9 below | `03` §3.10: FR-268, FR-269, FR-272 (rollback audit limb); `03` §9: NFR-489, NFR-490, NFR-493 (linearity limb), NFR-494, NFR-497 (mechanism), NFR-498 (rollback limb), NFR-502; register F-W9-1, F38, F41, FD-1411 (measurement half), F35 (measurement half) | `SL-1258` closed; `SL-1256` (closed, met) | B, **solo window** | 1 + solo window |
+| 2 | `SL-1259` — Slice 5: switchover, rollback and the measurements | `PL-1237` Task 5, as changed by R5.1 to R5.10 below (with R5.3a) | `03` §3.10: FR-268, FR-269, FR-272 (rollback audit limb); `03` §9: NFR-489, NFR-490, NFR-493 (linearity limb), NFR-494, NFR-497 (mechanism), NFR-498 (rollback limb), NFR-501 (R5.10), NFR-502; register F-W9-1, F38, F41, FD-1411 (measurement half), F35 (measurement half) | `SL-1258` closed; `SL-1256` (closed, met) | B, **solo window** | 1 + solo window |
 | 3 | `SL-1260` — Slice 6: date routing and shadow | `PL-1237` Task 6, as changed by R6.1 to R6.3 below | `03` §3.10: FR-270, FR-271, FR-272 (routing and shadow audit limb); `03` §9: NFR-498 (routing limb) | `SL-1259` closed | B | 1 |
 
 Strictly in order, one at a time within the Work (`PL-1237` Sequencing). Under `RL-1263` a slice
 of another Work may run beside S4 or S6; nothing heavy runs beside S5's measurement.
+
+### Write sets and shared paths (the 2026-10-08 deltas audit, F3)
+
+The expected write set of each row, at the path level, read against `origin/main` and the in-flight
+PRs (#1243 `5da13384`, #1245 `ee858902`, #1247 `7e1f44d3`, by
+`git diff --name-only origin/main...<sha>`). The executor states the actual set in its `LG-`.
+
+| Slice | Expected write set |
+|---|---|
+| S4 `SL-1258` | `deploy/docker-compose.yml` (the `api` and `worker` services); Slice 3's rate-limit code under `backend/src/app/` (R4.1's management key); `backend/tests/` (the FR-452 and Task 4 tests); `docs/specs/07-platform.md` if a contract is clarified |
+| S5 `SL-1259` | `backend/src/app/api/deployments.py`, `backend/src/app/platform/deployments.py` (switch and rollback); `backend/src/app/errors.py` if a code is added; `docs/specs/03-rating-engine.md` (§3.10, §9 verdict text); `docs/contracts/openapi/generated.json`; `backend/tests/` |
+| S6 `SL-1260` | `backend/src/app/api/deployments.py`, `backend/src/app/api/environments.py`, `backend/src/app/platform/` (routing, shadow); `backend/src/app/errors.py` (the routing codes); `docs/specs/03-rating-engine.md` §3.4 (the FR-241 cross-reference, `PL-1237:976`), §4 (the routing and shadow contracts) and §5.1 (the routing route); `docs/contracts/openapi/generated.json`; a migration under `backend/migrations/versions/` if the routing rule is persisted |
+
+**Shared paths, rebase-serialised:**
+- **`backend/src/app/errors.py`** — S5 and S6 add codes; `SL-1472` (#1247) and SL 9469 (`PL 9470`)
+  also edit it. One registry line each; the later PR rebases onto the earlier.
+- **`03` §3.4 (Rating versions)** — S6 corrects FR-241's cross-reference there; WK-675 S10 adds its
+  new FR there. `PL-1286:398` records it: "S10 (its new FR) | `03` §3.4 (Rating versions) | WK-674
+  Slice 6 (the FR-241 cross-reference in §3.4, `PL-1237`:976) | **serialise**". The two never
+  run in parallel on that section; the later rebases onto the earlier.
+- **`docs/specs/03-rating-engine.md` and `docs/contracts/openapi/generated.json`** as files — touched
+  by #1243, #1245 and #1247 and by every route-adding slice: ordinary rebase serialisation.
+
+Nothing here edits `SL-1472`'s code paths (`compile.py`, `modelling.py`, `rating_versions.py`).
 
 ### Slice 4 (`SL-1258`) — changes since `PL-1237`
 
@@ -150,6 +175,9 @@ of another Work may run beside S4 or S6; nothing heavy runs beside S5's measurem
   `SL-1257`'s roadmap line when this delta mints** (the roadmap sentence's own instruction).
   Why S4: it is the slice that stands up the `api` service and its harness, so the limit is proven
   on the path it ships on; S6 would place it after the measurements it does not affect.
+  **Accepted by the maintainer**, the entry "2026-10-08 14:32:33 BST — DELTAS AUDIT (handover/audit-deltas-2026-10-08.md) noted; fixes proceed; DP A, B (c), C confirmed, D AMENDED (build in reverse ladder order)", item A: "ACCEPTED: FR-452's management-API
+  limb goes in WK-674 S4 (roadmap :989 left the slice to a planner). S4 is not a ladder rung; its
+  write set is named per F3."
 - **R4.2 — FD-1211's event, stated whole.** The design states whether `worker` and `api`
   **finalize the interpreter on stop or recycle** (`FD-1211`, register `:196`), and the test that
   repeats the extension-loading exit states its count (already in `PL-1237` Task 4's gate).
@@ -157,7 +185,7 @@ of another Work may run beside S4 or S6; nothing heavy runs beside S5's measurem
   defines "per replica" for NFR-489, and `PL-1454` is carried to Phase 3 with `SL-1455` (move line
   L4, 2026-10-08). The harness this slice builds therefore records, for every run, the replica
   count, the worker count and the load-balancing topology, so Slice 5's NFR-489 figure can be read
-  under either reading. It does not choose the reading (DP-1 below).
+  under either reading. It does not choose the reading (DP-1 below, ruled (c)).
 
 ### Slice 5 (`SL-1259`) — changes since `PL-1237`
 
@@ -174,6 +202,12 @@ of another Work may run beside S4 or S6; nothing heavy runs beside S5's measurem
   now has its remedy in Phase 3; Slice 5 records NFR-489's verdict as measured, diagnostic (host
   fallback) and names FD-1411's remedy as carried. The register cell's dated line is the register
   minter's (see **Hand-off**).
+- **R5.3a — NFR-489 is recorded under both "per replica" readings** (DP-1, ruled (c) by the
+  entry "2026-10-08 14:32:33 BST — DELTAS AUDIT (handover/audit-deltas-2026-10-08.md) noted; fixes proceed; DP A, B (c), C confirmed, D AMENDED (build in reverse ladder order)", item B: "NFR-489 'per replica' records BOTH readings. The interpretation is
+  ruled in P3's first plan, owner WK-1178, since the remedy is carried to P3 and NFR-489 stays
+  diagnostic under G4. No P2 work depends on the choice."). Slice 5's `LG-` gives the figure per
+  `api` process and per container behind the load balancer, from R4.3's recorded topology, and
+  names the interpretation as carried: owner WK-1178, event P3's first plan.
 - **R5.3 — NFR-489 is measured untraced.** `OQ-1453`, decided (a) 2026-10-05
   (`open-questions.md:144`; `03:1424`): NFR-489 "governs UNTRACED real-time requests"; a traced
   request is bounded by NFR-490.
@@ -196,6 +230,12 @@ of another Work may run beside S4 or S6; nothing heavy runs beside S5's measurem
 - **R5.9 — the trigger does not apply.** The F-4 (b) contingency trigger (A-3 by Tue 27 Oct) is
   G2's; Slice 5 is not on G2 (`PL-1371` DP-6 (a)). If exit demo (b)'s plan finds a call to an S4–S6
   route, it adds that slice as a dependency (`PL-1371:366`); none is expected (`PL-1371:522`).
+- **R5.10 — NFR-501 is placed here** (the 2026-10-08 deltas audit, F1). `PL-1237` Acceptance item
+  7 (`:193`) places register row F-W9-1 as "NFR-502 and NFR-501, Slice 5"; NFR-501 (`03` §9,
+  `03-rating-engine.md:1393`: GBM `model_call` steps execute with `nthread=1` per request) is
+  not in `PL-1237`'s Scope table, which is why the first statement of this row missed it. Slice 5
+  verifies on its deployment path that a GBM `model_call` step runs with `nthread=1`, and the
+  `LG-` records the verdict beside NFR-502's under F-W9-1.
 
 ### Slice 6 (`SL-1260`) — changes since `PL-1237`
 
@@ -207,8 +247,11 @@ of another Work may run beside S4 or S6; nothing heavy runs beside S5's measurem
   `deployment.shadow_configured`, each `entity_ref` naming the Deployment or Environment it
   changes; nothing is appended to the catalogue (`03:908`; `PL-1392:1015-1016`).
 - **R6.3 — nothing waits on it in P2.** WK-675 S12 (the Deployments view, which waited on
-  `SL-1260`) moved to Phase 3 on 2026-10-03 (`docs/roadmap.md`, the WK-675 move line). **Slice 6 is a
-  cut-ladder candidate** (non-G2, non-money); whether it is cut is the maintainer's, by the ladder.
+  `SL-1260`) moved to Phase 3 on 2026-10-03 (`docs/roadmap.md`, the WK-675 move line). **Slice 6 is
+  rung 5 of the ruled cut ladder**, the maintainer's entry "2026-10-08 13:21:00 BST — CUT LADDER
+  (handover/cut-ladder-2026-10-08.md) RULED: rungs 1–7 adopted in that order (7 conditional); rung 8
+  VOID; rung 9 OFF the automatic ladder; mid-week application limited", item (1): "WK-674 S6" is the
+  fifth rung. It is cut only when that rung applies, by a dated move line quoting the header above.
 
 ### Carried rows that no WK-674 slice takes
 
@@ -219,8 +262,8 @@ of another Work may run beside S4 or S6; nothing heavy runs beside S5's measurem
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-1 | What does NFR-489's "per replica" mean for Slice 5's verdict? (`PL-1454` DP-3, carried to P3 unruled) | (a) per `api` process; (b) per container behind the load balancer; (c) record both, verdict carried | **(c)** until a decision-maker rules: Slice 4's harness records replicas, workers and topology (R4.3), and the host fallback already carries the near-bound verdict | spec interpretation | no — default (c) applies; Slice 5's `LG-` states the reading used | decision-maker, if raised |
-| DP-2 | Is WK-674 Slice 6 kept in P2? | (a) keep; (b) cut to P3 by a dated move line | none from this plan: it is a rung on the cut ladder (`handover/cut-ladder-2026-10-08.md`), ruled by the maintainer | scope | no | the maintainer's ladder ruling |
+| DP-1 | What does NFR-489's "per replica" mean for Slice 5's verdict? (`PL-1454` DP-3, carried to P3 unruled) | (a) per `api` process; (b) per container behind the load balancer; (c) record both, verdict carried | (c) | spec interpretation | no | **ruled (c)** by the maintainer, 2026-10-08 14:32:33 BST, item B (R5.3a): both readings recorded; the interpretation is ruled in P3's first plan, owner WK-1178 |
+| DP-2 | Is WK-674 Slice 6 kept in P2? | (a) keep; (b) cut to P3 by a dated move line | none from this plan: it is **rung 5** of the cut ladder the maintainer ruled at 2026-10-08 13:21:00 BST (R6.3), applied only by a dated move line | scope | no | ruled: the ladder, rung 5 |
 
 ## Hand-off (not this plan's writes)
 
@@ -237,7 +280,8 @@ of another Work may run beside S4 or S6; nothing heavy runs beside S5's measurem
 - **Spec coverage.** Every id in `PL-1237` Scope assigned to Slices 4–6 appears in a row: FR-268,
   FR-269, FR-270, FR-271, FR-272, FR-412, FR-415, FR-434, FR-435, FR-437, NFR-489, NFR-490, NFR-493,
   NFR-494, NFR-497, NFR-498, NFR-502, NFR-531, NFR-534; plus FR-452's management limb, which was
-  unassigned. FR-267, FR-428, FR-429 (Slice 2), FR-430, FR-431 and NFR-496 (Slice 3), FR-18 and FR-436
+  unassigned, and NFR-501 (R5.10), which `PL-1237` places by Acceptance item 7 and not by its Scope
+  table (added 2026-10-08 on the deltas audit's F1). FR-267, FR-428, FR-429 (Slice 2), FR-430, FR-431 and NFR-496 (Slice 3), FR-18 and FR-436
   (Slice 1) are not this delta's.
 - **Placeholders.** None: each change cites its source by path and line at `60e9254c`.
 - **Consistency.** R5.1 and register `:77` now agree; R5.2 changes FD-1411's event, routed to the
