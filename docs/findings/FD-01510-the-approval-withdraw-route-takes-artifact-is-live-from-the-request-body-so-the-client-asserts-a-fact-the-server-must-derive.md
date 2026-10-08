@@ -1,5 +1,5 @@
 ---
-id: FD-1509
+id: FD-1510
 family: finding
 title: The approval withdraw route takes artifact_is_live from the request body, so the client asserts a fact the server must derive
 status: closed
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-674]
 ---
 
-# FD-1509 — The approval withdraw route takes artifact_is_live from the request body, so the client asserts a fact the server must derive
+# FD-1510 — The approval withdraw route takes artifact_is_live from the request body, so the client asserts a fact the server must derive
 
 ## Amendment before mint (2026-10-05)
 

@@ -1,5 +1,5 @@
 ---
-id: FD-1510
+id: FD-1511
 family: finding
 title: The quantile template certifies convexity violated, and no second Approver is enforced
 status: closed
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-690, FR-152, FR-163, FR-354]
 ---
 
-# FD-1510 — The quantile template certifies convexity violated, and no second Approver is enforced
+# FD-1511 — The quantile template certifies convexity violated, and no second Approver is enforced
 
 **Working id 9780**, allocated by the lead and ordered by the maintainer on 2026-10-01: "the quantile template certifies convexity 'violated' (objectives.py:408-412, needing a second Approver) and nothing enforces it." Found by the decision-maker while ruling the DP-S3-4 question of PL 9789; its ruling, `RL-1362` (working id 9782 when this was filed; the draft PR #1040 was closed unmerged, and the record reached main separately), is on main. The header `tree:` is `origin/main^{tree}` at `ef5dc6e7` (re-pinned 2026-10-05, see the amendment below); the evidence below was measured at `101e32dc` (tree `934e9a44b99705466e9e612eb245761dc8e33884`) unless it says otherwise.
 
@@ -68,7 +68,7 @@ and S3's evidence wait for S3's merged ledger and are a mint-time item.
 
 ## Resolution (2026-10-05)
 
-Re-anchored 2026-10-05 at main `caa4e411`. **The defect is fixed by SL-1273** (WK-690 Slice 3, #1122, squash `36a9f483`; `git merge-base --is-ancestor 36a9f483 origin/main` exits 0; ledgered in `LG-1412`; the ruling is `RL-1362` DP-S3-4). The decision to mint this record closed is the maintainer's, by delegation, in the lead's channel file (`to-lead.md`), the entry headed *"2026-10-05 12:58:22 BST — DECISIONS (the maintainer, by delegation): FD-1510; DP-A; OQ 9739; RL 9715 DP-2; PL 9716 DP-B; the OQ 9739 row"*: **mint closed, fixed by SL-1273, MEDIUM; no widening.** Severity stays MEDIUM.
+Re-anchored 2026-10-05 at main `caa4e411`. **The defect is fixed by SL-1273** (WK-690 Slice 3, #1122, squash `36a9f483`; `git merge-base --is-ancestor 36a9f483 origin/main` exits 0; ledgered in `LG-1412`; the ruling is `RL-1362` DP-S3-4). The decision to mint this record closed is the maintainer's, by delegation, in the lead's channel file (`to-lead.md`), the entry headed *"2026-10-05 12:58:22 BST — DECISIONS (the maintainer, by delegation): FD-1511; DP-A; OQ 9739; RL 9715 DP-2; PL 9716 DP-B; the OQ 9739 row"*: **mint closed, fixed by SL-1273, MEDIUM; no widening.** Severity stays MEDIUM.
 
 **What main does now**, read at `caa4e411`:
 - `backend/src/app/platform/objectives.py` `submit_for_review` loads the latest `ObjectiveCertificateRow` for the objective, sets `non_convex` when any check of `to_certificate(latest).result.checks` has `name == "convexity"` and `status is CheckStatus.VIOLATED`, and passes `additional_approvers=1 if non_convex else 0` to `approvals.submit`. (The convexity read starts at the `# FR-152 / RL-1362 DP-S3-4` comment, `:745`; the `additional_approvers` argument is at `:772`.)

@@ -1,5 +1,5 @@
 ---
-id: FD-1506
+id: FD-1507
 family: finding
 title: The NFR-499 error-sink census identifies an exception by its variable name, so a handler bound to an unlisted name passes it
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178, NFR-499, RL-917]
 ---
 
-# FD-1506 — the NFR-499 census finds an exception's text by the variable's name
+# FD-1507 — the NFR-499 census finds an exception's text by the variable's name
 
 **Filed** by auditor-fdc1 on 2026-10-05, from the maintainer's (by delegation) entry "2026-10-04 17:20:57 BST — Lane B gate
 red …" in `to-lead.md`. `tree:` is `origin/main` = `47d770e8fcbd2410fa101019ed8cf3aae69a1baa`, the tree every

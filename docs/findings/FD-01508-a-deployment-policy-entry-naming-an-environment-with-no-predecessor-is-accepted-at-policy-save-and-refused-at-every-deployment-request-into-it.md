@@ -1,5 +1,5 @@
 ---
-id: FD-1507
+id: FD-1508
 family: finding
 title: A deployment policy entry naming an Environment with no predecessor is accepted at policy save and refused at every Deployment Request into it
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-674, FR-429, FR-364, RL-1301, RL-1401, RL-1404]
 ---
 
-# FD-1507 — a gated entry with no predecessor is refused late
+# FD-1508 — a gated entry with no predecessor is refused late
 
 **Filed** by auditor-fdc2 on 2026-10-05, from the lead's routing R1 (`~/gi-pricing-plan.local/channel/from-lead-2026-10-04.md`,
 line 87: "(R1) refusing a gated policy entry with no predecessor at policy save (instead of at every request): to the
@@ -116,7 +116,7 @@ Environment (the field is immutable) and the only discovery point is a user tryi
 predecessor Environment, accepted at policy save (from-lead-2026-10-04.md:87), NOT a retired Environment. Severity LOW
 re-confirmed", and gives the **Corrected reason**: "each deployment request to such a target is already refused 422
 EVIDENCE_INCOMPLETE, with a detail naming the remedy (RL-1404 D2). So the misconfiguration fails closed at use; refusing it
-at save time is an earlier-feedback improvement. FD-1507 carries this reason." Severity is therefore LOW, confirmed, not
+at save time is an earlier-feedback improvement. FD-1508 carries this reason." Severity is therefore LOW, confirmed, not
 provisional. That is the same reason as the paragraph above: the target is not live-deployable by mistake, because the
 refusal is already in force at every request.
 

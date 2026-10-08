@@ -1,5 +1,5 @@
 ---
-id: FD-1511
+id: FD-1512
 family: finding
 title: The pseudo_huber template certifies `failed` on the platform default grid at delta 100 and above, because its loss cancels catastrophically and the derivative check's noise floor does not model that
 status: active
@@ -10,12 +10,12 @@ corrected_by: []
 relates: [WK-690, LG-1412, FR-143, FR-146, FR-149, FR-151]
 ---
 
-# FD-1511 — pseudo_huber certifies `failed` at large delta (WK-690)
+# FD-1512 — pseudo_huber certifies `failed` at large delta (WK-690)
 
 ## Finding
 
 **Severity MEDIUM, owner WK-690, no deadline ruled.** The maintainer's (by delegation) entry "2026-10-05 13:10:43 BST — Early
-severity signals for FD 9708 and FD-1511 (final at mint)" (`channel/to-lead.md`, local) says: "FD-1511 (#1129,
+severity signals for FD 9708 and FD-1512 (final at mint)" (`channel/to-lead.md`, local) says: "FD-1512 (#1129,
 pseudo_huber certifies `failed` at δ ≥ 100 on the default grid): MEDIUM, owner WK-690, as proposed. A false
 `failed` blocks a valid objective but misprices nothing. The draft states the δ at which it first fails,
 measured, and the reproduce command." The entry is an early signal, final at the mint. The template catalogue is
@@ -30,7 +30,7 @@ samples. Reproduce command: Evidence 3.
 
 `LG-1412`'s note flags the symptom and names no check and no cause. Quoted from
 `docs/ledgers/LG-01412-wk-690-slice-3-the-expression-kind-through-the-platform-behind-the-flag.md`,
-§"FD-1510 — (f) the six templates that certify `violated`": *"Note: `pseudo_huber` with `delta`
+§"FD-1511 — (f) the six templates that certify `violated`": *"Note: `pseudo_huber` with `delta`
 100, 1000 and 100000 certified `failed` on the default grid (a draft, not `violated`), so
 `delta=1` is used; a point for the FD batch."*
 

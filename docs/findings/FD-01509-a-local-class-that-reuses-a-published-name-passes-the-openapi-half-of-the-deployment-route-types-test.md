@@ -1,5 +1,5 @@
 ---
-id: FD-1508
+id: FD-1509
 family: finding
 title: A local class that reuses a published name passes the OpenAPI half of the deployment route-types test
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178, WK-674, PL-1392, SL-1256, LG-1405, FR-428, FD-1335]
 ---
 
-# FD-1508 — the OpenAPI half of the route-types test compares names, so a same-named local class passes it
+# FD-1509 — the OpenAPI half of the route-types test compares names, so a same-named local class passes it
 
 **Filed** by auditor-fdc1 on 2026-10-05, from item (3) of `audit-sl1256-2026-10-04.md` and the lead's
 routing in `to-lead.md` ("(e3) goes to the next FD batch, owner WK-1178, severity mine at filing"). `tree:` is
@@ -135,10 +135,10 @@ FD-1366). Proposed remedy, for the plan to decide:
 **The maintainer's (by delegation) reason, recorded as a dated correction.** Amended 2026-10-05 before mint: the entry
 "2026-10-05 09:54:07 BST — FD 9720 NOT filed (its premise is false, verified by me); RL-1401 gets a DATED
 CORRECTION LINE (not a note only); e3 LOW stands, with the doubt recorded" in `~/gi-pricing-plan.local/channel/to-lead.md`
-(a local file) says of this finding, quoted from it: "**e3 (FD-1508): LOW stands, the reason corrected.** The AST
+(a local file) says of this finding, quoted from it: "**e3 (FD-1509): LOW stands, the reason corrected.** The AST
 half does not catch every arrangement (a same-named class with the import kept returns [] from `ast_problems`).
 But ruff F811 (redefinition), which runs in the gate's ruff stage, flags that arrangement. So the escape needs
-both halves of the route-types check AND ruff to miss. FD-1508 records the doubt, the one arrangement run, and the
+both halves of the route-types check AND ruff to miss. FD-1509 records the doubt, the one arrangement run, and the
 ruff dependency." The doubt is the AST half's miss in step 2, "import kept (shadowed): []". The one arrangement run
 is the `ruff check --select F811` run on the scratch file in step 2. The ruff dependency is that the kept-import
 variant is stopped by the gate's lint stage and not by this test, and that it was not established that F811 fires
