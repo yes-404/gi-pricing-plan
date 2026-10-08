@@ -157,33 +157,41 @@ G2 pin a Peril Structure?".
 
 ## Status
 
-`draft`. **DP-6 is ruled (a), WK-674 S2 only** (D3, above). **Four decision points are open**
+`draft`. **DP-6 is ruled (a), WK-674 S2 only** (D3, above). ~~**Four decision points are open**
 (DP-b1 to DP-b4), and every activation need
-except needs 8 (WK-674 S2) and 9 (`SL-1409`), both met, is unmet, most of them other slices. The plan moves to `active` only through a
+except needs 8 (WK-674 S2) and 9 (`SL-1409`), both met, is unmet, most of them other slices.~~
+*(Amendment 1, 2026-10-08.)* **Every decision point is ruled**: DP-b1 (a) by the lead, DP-b2
+(a), DP-b3 (a′+F) and DP-b4 (a) widened by the maintainer (by delegation), quoted in
+§"Amendment 1". At `origin/main` `680fb9ac`, needs 7, 8, 9, 10, 11 and 16 are met, and needs
+1, 2, 3, 4, 5, 6, 12, 13, 14, 15, 17 and the new need 18 are open (the column added below);
+need 15 is met since, by T2's merge (`545f0b63`). The plan moves to `active` only through a
 separate activation PR, after every need below holds. That PR carries the `SL-` row's status
 flip and this plan's.
 
-### Activation needs, in order, each with its state at `cdaaa573` (2026-10-05 15:38 BST)
+### Activation needs, in order, each with its state at `cdaaa573` (2026-10-05 15:38 BST) and at `680fb9ac` (2026-10-08 13:06 BST)
 
-| # | Need | Why (the step it serves) | State now |
-|---|---|---|---|
-| 1 | RL 9623 minted | the form of G2 this plan builds | draft #1160 @`295a483a`, unminted |
-| 2 | Exit-demo slice (a) merged (SL 9626, PL 9624, working ids) | A1–A2's tables, B's algorithm | draft #1161, plan `draft` (DP-a0 to DP-a3 ruled 2026-10-05 15:28:26 BST, item D2; its activation need 3 ruled at its ACK) |
-| 3 | WK-673 S3 `SL-1387` merged (attribution) | D7, D8 | `draft`; leaf PL 9689 (working id), draft #1138 |
-| 4 | WK-673 S4 `SL-1388` merged (`POST /dislocation-runs` and its Job) | D6, E4 | `draft`; no route and no `DISLOCATION_RUN` worker on `main` |
-| 5 | ~~WK-673 S5 `SL-1389` merged (change summary from diffs; the evidence gate)~~ *(Pre-mint note 3, 2026-10-05.)* **SL 9565** (working id; PL 9564, #1194) merged, for E1: FR-242's drafted change summary, `GET /api/v1/rating-versions/{id}/change-summary-draft`. WK-673 S5 `SL-1389` merged, for E3: the evidence gate | E1 (SL 9565), E3 (`SL-1389`) | SL 9565: plan draft #1194 @`c25d1c88`; `SL-1389`: `draft` |
-| 6 | WK-673 S6 `SL-1390` merged (the floor wiring at approval) | E3, E9 | `draft` |
-| 7 | WK-673 S7 `SL-1391` merged (exposure weight per cell) | A3 | `draft`; leaf PL 9716 (working id), draft #1127 |
-| 8 | WK-674 S2 `SL-1256` closed | deploy `dev → uat → prod` (FR-429) | **met**: `closed` |
-| 9 | The FD-1356 fix `SL-1409` merged; its Task 0 query prints 0 | the demo DB's end state | merged: `closed`, `cdaaa573` (#1157); the Task 0 query is re-run at dispatch (Task 0 Step 3) |
-| 10 | The FD 9708 fix (PL 9683, working id, #1140) merged | C1: `POST /rating-versions` with the algorithm and pins | plan draft; `RatingVersionCreate` is `slug`, `dataset_version_id`, `model_ref`, `extra="forbid"` (`backend/src/app/api/models.py:271-276`) |
-| 11 | The FD 9707 fix (PL 9688, working id, #1145) merged | B3: `lookup` as at the effective date | plan draft; `runtime.py:27-33`: *"exact key match only"* |
-| 12 | The FR-240 family fix (PL 9649, working id, #1152) merged | C3: compile validates everything at once | plan draft |
-| 13 | `FD-1416` fixed (FD 9752; one ApprovalRequest shape; WK-1178, deadline before the P2 exit demo) | E5, E6, E8: the script reads approval responses | planned as **PL 9616** (working id, the leaf plan) and **SL 9615** (working id, its row), reserved 2026-10-05 15:29:48 BST for planner-1416 on D3's order; no PR at 15:35 BST |
-| 14 | `FD-1244` and `FD-1245` ruled (§10 gate "Before the P2 exit demo", `docs/roadmap.md:1927` at `cdaaa573`, "2 (2 open)") | D4; E2 | both `active`; their ruling is **RL 9614** (working id), reserved 2026-10-05 15:29:48 BST for dm-1244 on D3's order; no PR at 15:35 BST |
-| 15 | FD 9717 (working id, #1125) minted, and DP-b4 ruled | the seed record's pre-flight | draft #1125 @`51335e75` |
-| 16 | DP-6 and DP-b1 to DP-b4 ruled | — | DP-6 **met** (D3); DP-b1 to DP-b4 open |
-| 17 | The lead's go | — | — |
+*(Amendment 1, 2026-10-08.)* The last column is new: each need re-checked at `origin/main` `680fb9ac`, MET or OPEN, with the evidence. The "State now" column is kept as written at `cdaaa573`.
+
+| # | Need | Why (the step it serves) | State now | At `680fb9ac` |
+|---|---|---|---|---|
+| 1 | RL 9623 minted | the form of G2 this plan builds | draft #1160 @`295a483a`, unminted | **OPEN**: #1160 open, draft; no record on `main` discloses working id 9623 |
+| 2 | Exit-demo slice (a) merged (SL 9626, PL 9624, working ids) | A1–A2's tables, B's algorithm | draft #1161, plan `draft` (DP-a0 to DP-a3 ruled 2026-10-05 15:28:26 BST, item D2; its activation need 3 ruled at its ACK) | **OPEN**: #1161 open, draft (head `6714cc79`); no `SL 9625`/`SL 9626` row on `main` |
+| 3 | WK-673 S3 `SL-1387` merged (attribution) | D7, D8 | `draft`; leaf PL 9689 (working id), draft #1138 | **OPEN**: `SL-1387` `status: active` (`docs/roadmap.md:743-758`, activated 2026-10-08 in lane B), not merged |
+| 4 | WK-673 S4 `SL-1388` merged (`POST /dislocation-runs` and its Job) | D6, E4 | `draft`; no route and no `DISLOCATION_RUN` worker on `main` | **OPEN**: `SL-1388` `status: draft` (`docs/roadmap.md:763`); its rulings, `RL-1504` (S4 to S6) and `RL-1498` (E1), were open in mint batch T8 #1244 at `680fb9ac` and are minted since (`d85cf854`, 2026-10-08 14:00 BST) |
+| 5 | ~~WK-673 S5 `SL-1389` merged (change summary from diffs; the evidence gate)~~ *(Pre-mint note 3, 2026-10-05.)* **SL 9565** (working id; PL 9564, #1194) merged, for E1: FR-242's drafted change summary, `GET /api/v1/rating-versions/{id}/change-summary-draft`. WK-673 S5 `SL-1389` merged, for E3: the evidence gate | E1 (SL 9565), E3 (`SL-1389`) | SL 9565: plan draft #1194 @`c25d1c88`; `SL-1389`: `draft` | **OPEN**: SL 9565: PL 9564 #1194 open, draft; `SL-1389` `status: draft` (`docs/roadmap.md:781`) |
+| 6 | WK-673 S6 `SL-1390` merged (the floor wiring at approval) | E3, E9 | `draft` | **OPEN**: `SL-1390` `status: draft` (`docs/roadmap.md:799`) |
+| 7 | WK-673 S7 `SL-1391` merged (exposure weight per cell) | A3 | `draft`; leaf PL 9716 (working id), draft #1127 | **MET**: `SL-1391` `status: closed` (`docs/roadmap.md:817`); merged `a9ef6777` (#1206) |
+| 8 | WK-674 S2 `SL-1256` closed | deploy `dev → uat → prod` (FR-429) | **met**: `closed` | **MET**: `SL-1256` `status: closed` (`docs/roadmap.md:951`) |
+| 9 | The FD-1356 fix `SL-1409` merged; its Task 0 query prints 0 | the demo DB's end state | merged: `closed`, `cdaaa573` (#1157); the Task 0 query is re-run at dispatch (Task 0 Step 3) | **MET**: `SL-1409` `status: closed` (`docs/roadmap.md:1546`); the Task 0 query is still re-run at dispatch |
+| 10 | The FD 9708 fix (PL 9683, working id, #1140) merged | C1: `POST /rating-versions` with the algorithm and pins | plan draft; `RatingVersionCreate` is `slug`, `dataset_version_id`, `model_ref`, `extra="forbid"` (`backend/src/app/api/models.py:271-276`) | **MET**: PL 9683 minted as `PL-1429`, its slice `SL-1430` `status: closed` (`docs/roadmap.md:1586`); merged `5351f116` (#1227) |
+| 11 | The FD 9707 fix (PL 9688, working id, #1145) merged | B3: `lookup` as at the effective date | plan draft; `runtime.py:27-33`: *"exact key match only"* | **MET**: PL 9688 minted as `PL-1447`, its slice `SL-1448` `status: closed` (`docs/roadmap.md:858`); merged `680fb9ac` (#1236); FD 9707 is `FD-1420` |
+| 12 | The FR-240 family fix (PL 9649, working id, #1152) merged | C3: compile validates everything at once | plan draft | **OPEN**: PL 9649 minted as `PL-1471`; its slice `SL-1472` `status: draft` |
+| 13 | `FD-1416` fixed (FD 9752; one ApprovalRequest shape; WK-1178, deadline before the P2 exit demo) | E5, E6, E8: the script reads approval responses | planned as **PL 9616** (working id, the leaf plan) and **SL 9615** (working id, its row), reserved 2026-10-05 15:29:48 BST for planner-1416 on D3's order; no PR at 15:35 BST | **OPEN**: PL 9616 #1168 and RL 9607 #1171 open, draft; `FD-1416` not fixed on `main` |
+| 14 | `FD-1244` and `FD-1245` ruled (§10 gate "Before the P2 exit demo", `docs/roadmap.md:1927` at `cdaaa573`, "2 (2 open)") | D4; E2 | both `active`; their ruling is **RL 9614** (working id), reserved 2026-10-05 15:29:48 BST for dm-1244 on D3's order; no PR at 15:35 BST | **OPEN**: RL 9614 #1167 open, draft |
+| 15 | FD 9717 (working id, #1125) minted, and DP-b4 ruled | the seed record's pre-flight | draft #1125 @`51335e75` | **OPEN** at `680fb9ac`: FD 9717 is `FD-1494` in mint batch T2 (#1239 @`b8b24822`, then open). **MET since**: T2 merged as `545f0b63` (2026-10-08 13:32 BST), `FD-1494` is on `main`. DP-b4 is **ruled** (13:08:01 BST entry) |
+| 16 | DP-6 and DP-b1 to DP-b4 ruled | — | DP-6 **met** (D3); DP-b1 to DP-b4 open | **MET**: DP-6 (D3), DP-b1 (a) (the lead), DP-b2 to DP-b4 (13:08:01 BST entry); all quoted in §"Amendment 1" |
+| 17 | The lead's go | — | — | **OPEN** |
+| 18 | *(Amendment 1, 2026-10-08, DP-b3 (a′+F).)* WK-1250 S2 `SL-1340` merged (PL 9610, working id, #1170), **or** its contingency fired: not merged by Wed 4 Nov (the code freeze), so B7 prints `SKIPPED B7` naming `SL-1340` | B7 | — | **OPEN**: `SL-1340` `status: draft` (`docs/roadmap.md:1724`); PL 9610 #1170 and RL 9586 #1180 open, draft |
 
 PL 9728 (working id, #1113, NFR-489's remedy) is **not** an activation need: the 09:59:49
 ruling routes the `/score` journey step here and keeps NFR-489's measurement with PL 9728 and
@@ -207,6 +215,11 @@ failure line as printed.
 2. **Every in-scope step is walked over HTTP, in order** (§"The steps"). The test asserts each
    step's status code and its one named post-condition (the "Check" column). A step that is
    skipped under DP-b2 is asserted as skipped, with its reason string. It is never absent.
+   *(Amendment 1, DP-b2 (a).)* The skip and known-gap lines are exactly these, each asserted by
+   the test: `SKIPPED D9`, `SKIPPED E5 inline review`, `SKIPPED E7 Commentary Block` (each
+   naming its phase and owner Work), `KNOWN GAP A6: FD-1491`, `KNOWN GAP B9: FD-1490`,
+   `SKIPPED C1′` (naming `FD-1456` and SL 9594, removed by SL 9594), and `SKIPPED B7: SL-1340`
+   only if need 18's contingency fired. No line names `FD-1456` as a `KNOWN GAP`.
 3. **The deliberate failures are shown, by their codes:** B6 `RATING_GRAPH_UNRESOLVED_REF`; C4
    `PIN_NOT_APPROVED`; D4's property failure, then a pass (as FD-1244's ruling shapes it); E3
    `EVIDENCE_INCOMPLETE`; E6's `changes_requested` returning the version to `draft` (FR-355);
@@ -233,12 +246,59 @@ failure line as printed.
    or analyst is absent from the database. It exits 1 with a message naming the workspace id
    and "re-run the seed without --skip-seed". Red first on a database whose workspace row was
    deleted (Task 5 Step 1).
+   *(Amendment 1, DP-b4 (a) widened: this is `FD-1494`'s limb 1, FD 9717's minted id, its
+   §"Disposition" at `:136-142` in mint batch T2, #1239 @`b8b24822`.)* The check is named and
+   separate from the rule-set count, and covers **both** the workspace row and the analyst's
+   membership of it. It runs **before** `scripts/check-rule-sets-runnable.py`, not after it:
+   for an absent workspace that script takes its zero branch and prints *"the seed did not
+   finish"* (`FD-1494` §3), so a check placed after it is never reached on the path it
+   exists for. Its message names the record (`examples/fremtpl2/data/last-seed.json`). Red
+   first twice, on a scratch database: (i) the record's workspace absent, (ii) the workspace
+   present and the analyst not a member. On the base tree each run prints the rule-set
+   script's message, or for (ii) reaches the API; each red line is recorded.
 8. **The rehearsal record.** The §"Rehearsal checklist" is run once in full on the slice head,
    and each line's command and output (or its tree and time) is recorded in the ledger.
 9. **The gate.** Both halves green on the slice head, through the gate-runner holding a slot
    (`RL-1263`). `generate-contracts.py --check` rc 0. `audit-docs.py` red only on check 31
    before the mint and clean after. `req-coverage.py` lists the `WF-699` test.
 10. **Scope held.** `git diff --stat origin/main...HEAD` touches only §"Write set"'s paths.
+11. *(Amendment 1, DP-b4 (a) widened; `FD-1494` limb 2.)* **An HTTP refusal in the
+    post-condition check is a refusal, not a traceback.** `_verify_journey_postconditions`
+    turns `urllib.error.HTTPError` into `DemoRefusedError` whose message names the status,
+    the record's workspace id and the record's path. `test_postcondition_http_error_is_a_refusal`
+    in `backend/tests/test_demo_command.py` makes the `/api/v1/models` call answer 403 and
+    asserts `DemoRefusedError` with that text, and `main()` returns 1. Red first: on the base
+    tree the test fails with `urllib.error.HTTPError: HTTP Error 403` escaping
+    (`main` catches only `DemoRefusedError` and `KeyboardInterrupt`, `scripts/demo.py:356-359`
+    at `680fb9ac`).
+12. *(Amendment 1, DP-b4 (a) widened; `FD-1494` limb 3, `ensure_member`, its option (a).)*
+    **An id mismatch is refused where it arises.** `ensure_member`
+    (`backend/src/app/platform/workspaces.py:48` at `680fb9ac`) looks the user up by
+    `(issuer, subject)`, and when the row it finds has an id other than `user_id` it raises
+    `PlatformError` with the **existing** generic code `VALIDATION_FAILED` (422;
+    `_GENERIC_ERROR_CODES`, `backend/src/app/errors.py:402-404` at `680fb9ac`), its detail
+    naming both ids and the `(issuer, subject)` pair. No new code is added (the 13:12:28 BST
+    entry, item (2): *"a declared code in the existing error catalogue"*). The platform codes
+    were read and refused: `CONFLICT_STALE_WRITE` is `00` §5.4's optimistic concurrency,
+    `IDEMPOTENCY_KEY_CONFLICT` is FR-414's Job key, `UNAUTHENTICATED` is a token failure;
+    none names a caller passing an id that contradicts a stored identity. Its docstring's
+    idempotence sentence (`:74-76`) is corrected to match. A test in
+    `backend/tests/test_workspace_members.py` calls it twice with the same `(issuer, subject)`
+    and two `user_id`s and asserts `PlatformError` with `code == "VALIDATION_FAILED"`. Red
+    first: on the base tree the second call fails at flush with an `IntegrityError` on
+    `uq_users_issuer_subject`, not the `PlatformError`. The seed's call (`examples/fremtpl2/seed.py:378`, after SL-1409 Task 7c's
+    lookup at `:316`) is unaffected: it passes the id that lookup found, so the found row's id
+    equals `user_id`. The journey test's seeding (Task 1 Step 1) runs that call. **Why option (a):**
+    the ruling asks for each limb *"red-first"*, and option (b), a docstring correction, has no
+    failing case, so only (a) can be seen red. `FD-1494` `:142` offered both with *"no pick"*;
+    the 13:12:28 BST entry, item (2), rules (a).
+    No route calls `ensure_member` (`git grep -n ensure_member` at `680fb9ac`: `workspaces.py`,
+    `test_workspace_members.py`, `seed.py` only).
+13. *(Amendment 1.)* **No skip without an owner.** `test_an_unowned_skip_fails_the_journey`:
+    a skip or known-gap entry that names neither an owned finding nor a later-phase Work makes
+    the journey raise `JourneyStepFailed` for that step. The journey's skip lines come from one
+    table in `examples/fremtpl2/journey.py`, each entry carrying its owner. Red first: the test
+    adds an entry with an empty owner and sees the journey pass, before the check exists.
 
 ## Global Constraints
 
@@ -280,16 +340,16 @@ at `cdaaa573`).
 | A3 | export, edit one cell, `POST /rate-tables/{slug}/import`; `GET /rate-tables/{slug}@{v}/diff?against=previous` and `?against=seed` with the portfolio's exposure weights | both diffs non-empty; a weight per changed cell | 7 |
 | A4 | `POST /rate-tables/{slug}@{v}/bulk-operation` (+2 %) | 201; the version records the operation | |
 | A5 | an import with a duplicate key | 422 `RATE_TABLE_KEY_DUPLICATE` | |
-| A6 | every save is a new version with a change note | seed and import notes present; bulk has none (unowned gap U1, DP-b2) | DP-b2 |
+| A6 | every save is a new version with a change note | seed and import notes present; bulk has none (unowned gap U1, DP-b2). *(Amendment 1: corrected by `FD-1491`, which found a bulk operation writes a machine-generated note.)* The journey asserts **today's** behaviour, the bulk version's `change_note` is the service-built one, and prints `KNOWN GAP A6: FD-1491` | DP-b2 (a) |
 | B1–B2 | `POST /rating-algorithms` with slice (a)'s algorithm built over the A-phase table versions | 201 | 2 |
 | B3 | the algorithm's `lookup` on a reference table (`/reference-tables`, `api/reference_tables.py:48`) as at `effective_date` | the row in force on the quote's date is used | 11 |
 | B4–B5 | the algorithm's `table`, `expression` and `output` steps (slice (a)) | saved | 2 |
 | B6 | one save with a dangling input | 422 `RATING_GRAPH_UNRESOLVED_REF` | |
-| B7 | mount `sub_graph:ncd-ladder@4` | inlined at compile | DP-b3 |
+| B7 | mount `sub_graph:ncd-ladder@4` | inlined at compile. *(Amendment 1, DP-b3 (a′+F).)* The ladder keys on `bonus_malus`, the eighth input slice (a)'s contract declares (PL 9624, Pre-mint note 4; non-modelled, from the same Dataset Version); this slice consumes it and does not declare it. If need 18 holds by its merge: mounted and inlined. If `SL-1340` is not merged by Wed 4 Nov: `SKIPPED B7: SL-1340` | 18 |
 | B8 | `output` rounding `half_even`, 0 dp | (in the saved algorithm) | |
-| B9 | money × float refused | `MONETARY_FLOAT_REFUSED` is registered (`errors.py:314` at `cdaaa573`) and raised nowhere (unowned gap U2, DP-b2) | DP-b2 |
+| B9 | money × float refused | `MONETARY_FLOAT_REFUSED` is registered (`errors.py:314` at `cdaaa573`) and raised nowhere (unowned gap U2, DP-b2). *(Amendment 1.)* The journey asserts **today's** refusal, 422 `VALIDATION_FAILED` for an algorithm whose output type is `float` (`FD-1490`, its evidence: `outputs.0.type`, "a rating result type is never float (FR-227)"), and prints `KNOWN GAP B9: FD-1490` | DP-b2 (a) |
 | C1 | `POST /rating-versions` declaring the algorithm and every pin | 201; `pins` echo the request | 10 |
-| C1′ | a Peril Structure pin | **on G2's journey under Option A, built by SL 9594 (A-4), not this slice** (§"Does G2 pin a Peril Structure?"). This slice's algorithm has no `model_call`. The gap is FD 9995 (working id, #980; HIGH, a G2 blocker; U3, DP-b2). The script prints `SKIPPED C1′` naming FD 9995 and SL 9594, and SL 9594 removes that line | DP-b2 |
+| C1′ | a Peril Structure pin | **on G2's journey under Option A, built by SL 9594 (A-4), not this slice** (§"Does G2 pin a Peril Structure?"). This slice's algorithm has no `model_call`. The gap is FD 9995 (working id, #980; HIGH, a G2 blocker; U3, DP-b2). The script prints `SKIPPED C1′` naming FD 9995 and SL 9594, and SL 9594 removes that line. *(Amendment 1.)* FD 9995 is `FD-1456` (HIGH). It is **never** a `KNOWN GAP`: on G2's journey, after SL 9594, C1′ asserts the fixed behaviour (DP-b2 (a)) | DP-b2 (a) |
 | C2 | `POST /rating-versions/{id}/compile` → 202 + `rating.compile` Job | Job `succeeded` | |
 | C3 | compile validates the whole structure | — | 12 |
 | C4 | the version also pins the seed's GBM, which the journey submits but has not approved | Job `failed`, `PIN_NOT_APPROVED` | |
@@ -301,14 +361,14 @@ at `cdaaa573`).
 | D5 | the fix | (A-phase routes) | |
 | D6 | `POST /dislocation-runs` | 202; run persisted | 4 |
 | D7–D8 | the run's segments, movers and attribution | attribution persisted and cited by id | 3, 4 |
-| D9 | the GIPP check "where enabled" | **skipped**: `04` FR-294 is WK-685, Phase 4; the demo runs with GIPP not enabled and says so | DP-b2 |
+| D9 | the GIPP check "where enabled" | **skipped**: `04` FR-294 is WK-685, Phase 4; the demo runs with GIPP not enabled and says so. *(Amendment 1.)* `SKIPPED D9: GIPP check; Phase 4; WK-685` | DP-b2 (a) |
 | E1 | change summary drafted from the structural and rate diffs | non-blank; drafted | 5 |
 | E2 | submit | as FD-1245's ruling names the route (`POST /rating-versions/{id}/submit` works on `main`; `POST /approval-requests` does not for a Rating Version) | 14 |
 | E3 | the first submission is refused: the dislocation run is stale | 422 `EVIDENCE_INCOMPLETE` | 5, 6 |
 | E4 | re-run dislocation, resubmit | 202, then accepted | 4 |
-| E5 | Approver #1 approves | decision recorded; inline review **skipped** (WK-678, Phase 3) | 13, DP-b2 |
+| E5 | Approver #1 approves | decision recorded; inline review **skipped** (WK-678, Phase 3). *(Amendment 1.)* `SKIPPED E5 inline review: Phase 3; WK-678`; the approval itself runs | 13, DP-b2 (a) |
 | E6 | Approver #2 requests changes | the version returns to `draft` (FR-355) | 13 |
-| E7 | resubmit (a new request, a fresh quorum of 2) | Commentary Block **skipped** (WK-680, Phase 3) | DP-b2 |
+| E7 | resubmit (a new request, a fresh quorum of 2) | Commentary Block **skipped** (WK-680, Phase 3). *(Amendment 1.)* `SKIPPED E7 Commentary Block: Phase 3; WK-680`; the resubmission itself runs | DP-b2 (a) |
 | E8 | the submitter, then the author, try to approve; then two valid approvals | 403 `SUBMITTER_CANNOT_APPROVE`, 403 `AUTHOR_CANNOT_APPROVE`; then `approved` | 13 |
 | E9 | `approved`, evidence pinned, audit events | status `approved`; the evidence ids on the decision | 6 |
 | Deploy | `POST /environments/{env}/deployments` for `dev`, then `uat`; `POST /environments/prod/deployment-requests`, decided; then `prod` | 201s; `GET …/deployments` lists the version in each | 8 (met), 13 |
@@ -383,10 +443,14 @@ FR, because it proves the journey and not each requirement (`python-test`).
 | `backend/tests/test_wf699_journey.py` | added | none | none |
 | `scripts/demo.py` | edited: `main` (`:346-355` at `cdaaa573`, the `--journey` flag), `demo` (`:203-`, the journey call after `_verify_journey_postconditions` at `:274`, and the served-page check after the frontend starts); added: the seed-record pre-flight *(DP-b4 a)* | **SL-1409** added a checked step after `read_seed_record()` (`PL-1408` Acceptance, condition 2), merged as `cdaaa573` (#1157); **PL 9728** (working id, #1113) edits it | **serial**: SL-1409 first (activation need 9, merged); with PL 9728, whichever merges second re-reads `demo` |
 | `backend/tests/test_demo_command.py` | edited: the `--journey` wiring assertion, and the pre-flight test *(DP-b4 a)* | **SL-1409** and **PL 9728** edit it | serial, as above |
+| `scripts/check-seed-record.py` | *(Amendment 1, `FD-1494` limb 1)* added: read-only, `<workspace_id> <analyst_id>`, exits 1 naming the record when the workspace row or the analyst's membership is absent; the pattern of `scripts/check-rule-sets-runnable.py` | none (open PRs read at `680fb9ac`, 2026-10-08) | none |
+| `backend/src/app/platform/workspaces.py` | *(Amendment 1, `FD-1494` limb 3)* edited: `ensure_member` (`:48`), its `(issuer, subject)` lookup, the `VALIDATION_FAILED` refusal and the docstring (`:74-76`) | no writer on `main` for 14 days (`git log --since='14 days ago' origin/main -- <path>` at `680fb9ac`: none; last `71f5a220`, 2026-09-17); no open PR lists it; **re-checked at the GO** | none |
+| `backend/tests/test_workspace_members.py` | *(Amendment 1)* edited: Acceptance 12's test | as the row above | none |
 | `examples/fremtpl2/README.md` | edited: the one command and what it shows | slice (a) edits another paragraph | different paragraphs |
 | the slice's ledger `docs/ledgers/LG-<n>`; `docs/INDEX.md` | added; regenerated | every PR | registry |
 
-**Not written:** `backend/src/` (any route the journey needs is another slice's), `packages/`,
+**Not written:** `backend/src/` (any route the journey needs is another slice's), *(Amendment 1)*
+except `backend/src/app/platform/workspaces.py`'s `ensure_member` (Acceptance 12), `packages/`,
 `frontend/`, `docs/specs/`, `examples/fremtpl2/model.py`, `seed.py` and `algorithm.py` (slice
 (a)'s).
 
@@ -416,8 +480,10 @@ two-half gate (a gate slot under `RL-1263`). No NFR is measured here; NFR-489 is
 
 **Ruled:** **DP-6 (a), WK-674 S2 only** (the maintainer (by delegation), 2026-10-05 15:28:26
 BST, D3: *"DP-6: WK-674 S2 only, as the evidence supports. AGREED."*). DP-b2's U3 is not a new
-gap for the auditor: it is FD 9995 (working id, #980), per D3's C1′ line. DP-b1 to DP-b4 stay
-open. The table above is kept as written.
+gap for the auditor: it is FD 9995 (working id, #980), per D3's C1′ line. ~~DP-b1 to DP-b4 stay
+open.~~ The table above is kept as written. *(Amendment 1, 2026-10-08.)* **DP-b1 (a)** (the
+lead), **DP-b2 (a)**, **DP-b3 (a′+F)** and **DP-b4 (a) widened** (the maintainer (by
+delegation)), quoted in §"Amendment 1".
 
 ## Tasks
 
@@ -452,7 +518,9 @@ open. The table above is kept as written.
   fixtures, as slice (a) extends them), build an `httpx.Client` over `ASGITransport(app)`
   authenticated as the seed's principals, run `run_wf699_journey`, and assert each step's
   status in §"The steps" order, the codes of Acceptance 3, and Acceptance 4's premium and
-  hash. `test_a_journey_failure_names_its_step` (Acceptance 6).
+  hash. `test_a_journey_failure_names_its_step` (Acceptance 6). *(Amendment 1.)*
+  `test_an_unowned_skip_fails_the_journey` (Acceptance 13), and the exact skip and known-gap
+  lines of Acceptance 2.
 - [ ] **Step 2: Run them, and see each fail by its cause** (`ModuleNotFoundError:
   examples.fremtpl2.journey`). Record the line.
 - [ ] **Step 3: Commit** `test(examples): the WF-699 journey test, red (exit-demo (b), WK-1178)`.
@@ -497,16 +565,30 @@ open. The table above is kept as written.
 - [ ] **Step 3:** Run the Task 1 test green end to end, then commit
   `feat(examples): WF-699 journey phase E, deploy and the served quote`.
 
-### Task 5: The one command, the pre-flight and the served page (Acceptance 5, 7; DP-b1, DP-b4)
+### Task 5: The one command, the pre-flight and the served page (Acceptance 5, 7, 11, 12; DP-b1, DP-b4)
 
-**Files:** modify `scripts/demo.py`, `backend/tests/test_demo_command.py`.
+**Files:** modify `scripts/demo.py`, `backend/tests/test_demo_command.py`; *(Amendment 1)* create
+`scripts/check-seed-record.py`; modify `backend/src/app/platform/workspaces.py`,
+`backend/tests/test_workspace_members.py`.
 
 - [ ] **Step 1 (DP-b4 (a)): Write the failing pre-flight test.** On a database where the
   record's workspace row is absent, `scripts/demo.py --skip-seed` exits 1 with the message of
   Acceptance 7. Run it red. On the base tree the script starts the API and fails later, inside
-  `_verify_journey_postconditions`, which is FD 9717's own reading.
-- [ ] **Step 2:** Add the pre-flight after `read_seed_record()`, after SL-1409's checked step
-  (activation need 9), so that the two run in that order.
+  `_verify_journey_postconditions`, which is FD 9717's own reading. *(Amendment 1: since
+  `SL-1409` merged, the base tree refuses first in `check-rule-sets-runnable.py` with "the
+  seed did not finish" (`FD-1494` §3); that line is the red to record. Add Acceptance 7's
+  case (ii), the analyst not a member.)*
+- [ ] **Step 2:** ~~Add the pre-flight after `read_seed_record()`, after SL-1409's checked step
+  (activation need 9), so that the two run in that order.~~ *(Amendment 1.)* Add
+  `scripts/check-seed-record.py` and run it from `demo` right after `read_seed_record()`
+  and **before** SL-1409's checked step (Acceptance 7 says why).
+- [ ] **Step 2a (`FD-1494` limb 2):** write Acceptance 11's test, run it red (the escaping
+  `HTTPError`), then catch `urllib.error.HTTPError` in `_verify_journey_postconditions` and
+  raise `DemoRefusedError`. Run it green.
+- [ ] **Step 2b (`FD-1494` limb 3):** write Acceptance 12's test, run it red (the
+  `IntegrityError`), then change `ensure_member` and its docstring. Run it and
+  `backend/tests/test_workspace_members.py` green. Commit
+  `fix(platform): ensure_member refuses an id mismatch for one OIDC identity (FD-1494)`.
 - [ ] **Step 3:** Add `--journey {wf-699}` to `main`. In `demo`, after
   `_verify_journey_postconditions(record, env)`, run the journey against
   `http://localhost:{API_PORT}`, print one line per step, and exit non-zero on
@@ -561,7 +643,9 @@ then into the `CR- kind: phase`, by command and tree, never pasted from memory.
    plan review (CLAUDE.md §14)"*. It is not this slice's scope.
 4. **For the lead, from DP-b2 (c) and DP-b3:** U1 and U2 to the auditor for findings with
    owners. U3 needs none: it is FD 9995 (working id, #980), per D3. WK-1250 S2/S3 go into `PL-1371`'s G2 list at the next re-baseline if DP-b3 (a) is
-   taken.
+   taken. *(Amendment 1: done or narrowed.)* U1 is `FD-1491` and U2 is `FD-1490` (both LOW,
+   owner WK-673; mint batch T2, #1239); U3 is `FD-1456`. DP-b3 is (a′+F), so **`SL-1340` (S2)
+   only** goes into `PL-1371`'s G2 list at the next re-baseline, not S3.
 5. When this slice merges, `FD-1209`'s `WF-699` half is discharged, and with slice (a) the
    whole finding. The auditor closes it.
 6. **G2 is not met by this slice alone** (Option A, the maintainer's entry of 2026-10-05
@@ -645,3 +729,69 @@ It keeps `SL-1389` for E3, the evidence gate, which PL 9564 does not take. The E
 acceptance item, write set, owner or decision point changed. `origin/main` `116a0da6` merged
 in; between `137bc817` and `116a0da6`, the only file main changed that this plan cites by line is
 `docs/roadmap.md`, and both of those cites (`:1927`, `:2209`) name `cdaaa573`, so none moved.
+
+## Amendment 1, 2026-10-08 — DP-b1 to DP-b4 ruled; FD-1494 widened into Task 5; needs re-checked
+
+*Dated 2026-10-08 (`TZ=Europe/London date`: 2026-10-08 13:15:37 BST), before the mint of PL
+9629 (working id).* Edited in place on the unmerged draft #1164, on the lead's order (the brief
+of 2026-10-08 for planner-pl9629). A plan is frozen from its first merge; this one has not
+merged. Verified at `origin/main` `680fb9ac` (2026-10-08T13:06:03+01:00). `FD-1490`,
+`FD-1491` and `FD-1494` were read at mint batch T2, #1239 @`b8b24822`, and are cited by the ids
+that batch minted (T2 merged as `545f0b63`, 2026-10-08 13:32 BST, after this re-check's tree;
+their working ids were FD 9699, FD 9700 and FD 9717, #1135, #1134, #1125). The three files are
+unchanged between `b8b24822` and `d85cf854`.
+
+**DP-b1, ruled (a) by the lead**, entry headed *"2026-10-08 13:07:22 BST — DP-b1..b4 memo DONE
+(dm-dpb stopped; handover/dpb-options-2026-10-08.md); DP-b1 RULED (a) by the lead
+(scripts/demo.py --journey wf-699); b2–b4 to the maintainer. …"* (`channel/from-lead-2026-10-08.md`,
+local).
+
+**DP-b2, DP-b3 and DP-b4, ruled by the maintainer (by delegation)**, the entry headed *"2026-10-08
+13:08:01 BST — PL 9629 (exit demo (b)) DP-b2 (a), DP-b3 (a'+F) with the bonus_malus input
+DECLARED, DP-b4 (a) widened: RULED"* (`channel/to-lead.md`, local; RFC-777, so quoted),
+verbatim from its first line to its last:
+
+> Read by me: handover/dpb-options-2026-10-08.md :13–30 (summary), :72–110 (b2). DP-b1 (a) is the lead's, noted.
+> DP-b2 (a): the script prints "SKIPPED <step>: <reason, phase, owner Work>" for D9 and for E5's and E7's Phase 3 halves, and runs each step's P2 half. A6 and B9 assert TODAY's behaviour and print "KNOWN GAP" naming FD-1491 and FD-1490 (both LOW, as already ruled). FD-1456 (HIGH) is NOT a known gap: A-1 and A-4 fix it, and the journey asserts the fixed behaviour. A SKIPPED or KNOWN GAP line is allowed only where it names an owned finding or a later-phase capability; anything else fails the journey.
+> DP-b3 (a′+F): SL-1340 (S2) only, queued in compile.py after A-3. CONTINGENCY declared now: if SL-1340 is not merged by Wed 4 Nov (the code freeze), B7 prints SKIPPED naming SL-1340 (admitted under b2's rule as an owned P2 skip). The FLAG is RULED: B7's ncd-ladder keys on bonus_malus (freMTPL2's BonusMalus), which is not in the 7-factor GLM. Slice (a)'s rating-algorithm contract DECLARES it as an 8th input, marked non-modelled (a rating-table input, not a model feature), sourced from the same Dataset Version. No new G2 work beyond that declaration, which goes in the PL 9629 widening below.
+> DP-b4 (a): this slice fixes FD-1494, WIDENED before PL 9629 mints. One planner pass on #1164 adds acceptance items for FD-1494's three remedy limbs (:136–142): the pre-flight (already acceptance 7), HTTPError → DemoRefusedError, and ensure_member, each red-first. The same pass adds the bonus_malus declaration and re-checks activation needs 1–17 at current main (7 and 10 have merged), reporting each MET or OPEN. The plan then mints in the G2-first batch order.
+> Cost: one planner pass. Risk: an exit demo that hides a defect. Closed by allowing SKIPPED/KNOWN GAP only with a named owner, and by never letting the HIGH one through.
+
+**What each ruling changes in this plan**, every change marked *(Amendment 1)* where it sits:
+
+1. **DP-b1 (a).** Nothing: Task 5 already builds `scripts/demo.py --journey wf-699`.
+2. **DP-b2 (a).** The rows D9, E5, E7 print `SKIPPED` with reason, phase and owner Work; A6
+   and B9 assert today's behaviour and print `KNOWN GAP` naming `FD-1491` and `FD-1490`. A6's
+   old Check (*"bulk has none"*) is corrected by `FD-1491`: a bulk operation writes a
+   machine-generated note. B9's today is 422 `VALIDATION_FAILED` (`FD-1490`). `FD-1456`
+   (FD 9995) is never a `KNOWN GAP`. This slice still prints `SKIPPED C1′` naming
+   `FD-1456` and SL 9594, an owned finding, which the rule admits; SL 9594 (A-4) removes it
+   and asserts the fixed behaviour, so G2's journey carries no `FD-1456` line (Hand-off 6).
+   Acceptance 2 lists the lines exactly; the new Acceptance 13 fails the journey on a line
+   with no owner.
+3. **DP-b3 (a′+F).** B7 needs `SL-1340` (WK-1250 S2) only, not S3: the new activation need 18,
+   which holds either when `SL-1340` merges or when its 4 Nov contingency fires (B7 then
+   prints `SKIPPED B7: SL-1340`). Hand-off 4 now names S2 only. **The `bonus_malus`
+   declaration is PL 9624's, not this plan's**: the 13:08:01 text placed it *"in the PL 9629
+   widening"*, and the entry headed *"2026-10-08 13:12:28 BST — PL 9629 STOP RULED: (1) R1,
+   the BonusMalus declaration lives in PL 9624 (my 13:08:01 wording CORRECTED); (2) FD-1494
+   limb 3 = (a) a typed error, with the write set widened"* (`channel/to-lead.md`, local),
+   item (1), corrects it: *"the 8th input is declared where the contract is built, in PL 9624
+   … PL 9629 only REFERENCES the declaration (B7 keys on it) and keeps slice (a)'s files under
+   "Not written"."* PL 9624 carries it in its Pre-mint note 4 (#1161). The B7 row references
+   it; §"Write set" is unchanged for slice (a)'s files.
+4. **DP-b4 (a) widened.** `FD-1494`'s three limbs are Acceptance 7 (widened: both the
+   workspace and the analyst's membership, and placed **before** the rule-set check), 11
+   (`HTTPError` → `DemoRefusedError`) and 12 (`ensure_member`, its option (a), because only (a)
+   can be seen red; ruled (a) by the 13:12:28 BST entry, item (2), which also asks for a
+   declared code from the existing catalogue: `VALIDATION_FAILED`). Task 5 and §"Write set"
+   carry the files. Task 5 Step 2's old order
+   (*"after SL-1409's checked step"*) is struck: it would leave the absent-workspace path to
+   that check's *"the seed did not finish"* message, the defect `FD-1494` §3 records.
+5. **Needs re-checked** at `680fb9ac`: the new column of §"Activation needs". MET: 7, 8, 9,
+   10, 11, 16. OPEN: 1, 2, 3, 4, 5, 6, 12, 13, 14, 15, 17, 18. Need 15 has been met since, by
+   T2's merge (`545f0b63`).
+
+No other task, acceptance item, owner or decision point changed. The decision-point table is
+kept as written; the **Ruled** line after it records the outcome. `origin/main` was not merged
+into this branch; `docs/INDEX.md` was checked, not regenerated.
