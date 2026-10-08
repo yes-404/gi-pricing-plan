@@ -184,9 +184,7 @@ class _CompileSpy:
 
 
 def _derive(cand: dict[str, Any], **kw: Any) -> list[Any]:
-    return asyncio.run(
-        derive_changes(_version(), _candidate_version(**kw), _resolver(cand))
-    )
+    return asyncio.run(derive_changes(_version(), _candidate_version(**kw), _resolver(cand)))
 
 
 @pytest.mark.req("FR-1399")
@@ -194,9 +192,15 @@ def test_derive_changes_one_change_per_step_id_sorted() -> None:
     def edit(alg: dict[str, Any]) -> None:
         alg["steps"] = [s for s in alg["steps"] if s["step_id"] != "s_decl_floor"]
         alg["steps"].append(
-            {"step_id": "s_a_extra", "type": "constraint", "label": "Extra decline",
-             "condition": "office_premium_minor >= 0", "on_violation": "decline",
-             "reason_code": "EXTRA", "consumes": ["office_premium_minor"]}
+            {
+                "step_id": "s_a_extra",
+                "type": "constraint",
+                "label": "Extra decline",
+                "condition": "office_premium_minor >= 0",
+                "on_violation": "decline",
+                "reason_code": "EXTRA",
+                "consumes": ["office_premium_minor"],
+            }
         )
         step = _step(alg, "s_instalment")
         step["expr"] = "office_premium_minor * 1.10"
@@ -209,7 +213,9 @@ def test_derive_changes_one_change_per_step_id_sorted() -> None:
         ("c3", "step_changed"),
     ]
     assert [c.description.split(":")[0] for c in changes] == [
-        "s_a_extra", "s_decl_floor", "s_instalment",
+        "s_a_extra",
+        "s_decl_floor",
+        "s_instalment",
     ]
     assert "expr" in changes[2].description
     assert "label" in changes[2].description
@@ -224,9 +230,7 @@ def test_derive_changes_table_repoint_is_one_change() -> None:
 
 @pytest.mark.req("FR-1399")
 def test_derive_changes_unaccounted_pin_is_its_own_change_after_the_steps() -> None:
-    changes = _derive(
-        _candidate_payload(_e_table), table=True, extra_pins=("rate_table:unused@1",)
-    )
+    changes = _derive(_candidate_payload(_e_table), table=True, extra_pins=("rate_table:unused@1",))
     assert [(c.id, c.kind) for c in changes] == [("c1", "table_repointed"), ("c2", "pin")]
     assert "rate_table:unused@1" in changes[1].description
 
@@ -256,16 +260,40 @@ def _vehicle_age_base() -> dict[str, Any]:
     alg = copy.deepcopy(_algorithm_payload())
     alg["input_contract"].append({"name": "vehicle_age", "type": "int", "nullable": False})
     alg["steps"] += [
-        {"step_id": "in_vage", "type": "input", "label": "Vehicle age",
-         "input_name": "vehicle_age", "on_missing": "error", "produces": "vage"},
-        {"step_id": "in_vage_band", "type": "input", "label": "Vehicle age (band)",
-         "input_name": "vehicle_age", "on_missing": "error", "produces": "vage_band"},
-        {"step_id": "s_vage_x", "type": "expression", "label": "Vehicle age mix",
-         "expr": "vage + vage_band", "result_type": "money_minor",
-         "consumes": ["vage", "vage_band"], "produces": "vage_x"},
-        {"step_id": "s_vage_c", "type": "constraint", "label": "Vehicle age bound",
-         "condition": "vage_x >= 0", "on_violation": "decline", "reason_code": "VAGE",
-         "consumes": ["vage_x"]},
+        {
+            "step_id": "in_vage",
+            "type": "input",
+            "label": "Vehicle age",
+            "input_name": "vehicle_age",
+            "on_missing": "error",
+            "produces": "vage",
+        },
+        {
+            "step_id": "in_vage_band",
+            "type": "input",
+            "label": "Vehicle age (band)",
+            "input_name": "vehicle_age",
+            "on_missing": "error",
+            "produces": "vage_band",
+        },
+        {
+            "step_id": "s_vage_x",
+            "type": "expression",
+            "label": "Vehicle age mix",
+            "expr": "vage + vage_band",
+            "result_type": "money_minor",
+            "consumes": ["vage", "vage_band"],
+            "produces": "vage_x",
+        },
+        {
+            "step_id": "s_vage_c",
+            "type": "constraint",
+            "label": "Vehicle age bound",
+            "condition": "vage_x >= 0",
+            "on_violation": "decline",
+            "reason_code": "VAGE",
+            "consumes": ["vage_x"],
+        },
     ]
     return alg
 
@@ -357,8 +385,14 @@ def _ncd_candidate() -> dict[str, Any]:
     cand = _candidate_payload()
     cand["input_contract"].append({"name": "ncd", "type": "int", "nullable": False})
     cand["steps"].append(
-        {"step_id": "s_in_ncd", "type": "input", "label": "No claims discount",
-         "input_name": "ncd", "on_missing": "error", "produces": "ncd"}
+        {
+            "step_id": "s_in_ncd",
+            "type": "input",
+            "label": "No claims discount",
+            "input_name": "ncd",
+            "on_missing": "error",
+            "produces": "ncd",
+        }
     )
     office = _step(cand, "s_office")
     office["expr"] = "risk_premium_minor * expense_factor + ncd"
@@ -379,7 +413,11 @@ def test_subset_contract_carries_the_field_its_own_change_adds(
         book=_book(ncd=[100 + i for i in range(12)]),
         groups=[("ncd", ["c1", "c3"]), ("instalment", ["c2"])],
     )
-    assert [c.kind for c in result.derived_changes] == ["step_added", "step_changed", "step_changed"]
+    assert [c.kind for c in result.derived_changes] == [
+        "step_added",
+        "step_changed",
+        "step_changed",
+    ]
     assert result.derived_changes[0].description.startswith("s_in_ncd")
     # four subsets: {} and {instalment} lack `ncd`; {ncd group} and the full one declare it
     assert sum("ncd" in f.columns for f in spy.frames) == 2
@@ -407,9 +445,7 @@ def test_empty_and_full_subsets_hash_equal_baseline_and_candidate() -> None:
     result = _run(_candidate_payload(*_THREE), table=True)
     resolver = _resolver(_candidate_payload(*_THREE))
     base_hash = asyncio.run(compile_bundle(_version(), resolver)).content_hash
-    cand_hash = asyncio.run(
-        compile_bundle(_candidate_version(table=True), resolver)
-    ).content_hash
+    cand_hash = asyncio.run(compile_bundle(_candidate_version(table=True), resolver)).content_hash
     hashes = result.attribution_summary.subset_bundle_hashes
     assert base_hash in hashes
     assert cand_hash in hashes
@@ -421,8 +457,16 @@ def test_empty_and_full_subsets_hash_equal_baseline_and_candidate() -> None:
 # Task 5: Shapley, allocation, reconciliation (FR-266, FR-1397).
 # ---------------------------------------------------------------------------
 
-_V3 = {0b000: 1000, 0b001: 1100, 0b010: 1050, 0b100: 1000,
-       0b011: 1180, 0b101: 1130, 0b110: 1070, 0b111: 1200}
+_V3 = {
+    0b000: 1000,
+    0b001: 1100,
+    0b010: 1050,
+    0b100: 1000,
+    0b011: 1180,
+    0b101: 1130,
+    0b110: 1070,
+    0b111: 1200,
+}
 
 
 def _shapley_by_formula(v: dict[int, int], k: int) -> list[int]:
@@ -539,6 +583,8 @@ def test_isolated_and_cumulative_views_and_residual_line() -> None:
     total = sum(v[7][q] - v[0][q] for q in quotes)
     items = {i.group: i for i in result.attribution}
     assert list(items) == ["c1", "c2", "c3"]
+    assert result.change_groups == []  # FR-1399 (clarified): the analyst's groups only; none given
+    assert [c.id for c in result.derived_changes] == ["c1", "c2", "c3"]
     for g in range(3):
         item = items[f"c{g + 1}"]
         assert item.isolated_minor == sum(v[1 << g][q] - v[0][q] for q in quotes)
@@ -590,9 +636,15 @@ def _seven_chain(constant: str) -> dict[str, Any]:
     steps = []
     for i in range(1, 8):
         steps.append(
-            {"step_id": f"s_x{i}", "type": "expression", "label": f"x{i}",
-             "expr": f"{prev} * {constant}", "result_type": "decimal",
-             "consumes": [prev], "produces": f"x{i}"}
+            {
+                "step_id": f"s_x{i}",
+                "type": "expression",
+                "label": f"x{i}",
+                "expr": f"{prev} * {constant}",
+                "result_type": "decimal",
+                "consumes": [prev],
+                "produces": f"x{i}",
+            }
         )
         prev = f"x{i}"
     office = _step(alg, "s_office")
@@ -625,6 +677,8 @@ def test_above_six_ungrouped_is_order_dependent_with_r_and_s_bound(
     result = _seven_run()
     summary = result.attribution_summary
     assert [c.kind for c in result.derived_changes] == ["step_changed"] * 7
+    assert result.change_groups == []  # not one group per change: the bound is 6
+    assert [i.group for i in result.attribution] == [c.id for c in result.derived_changes]
     assert summary.method == "order_dependent"
     assert summary.orders_sampled == 2
     assert all(i.shapley_minor is None for i in result.attribution)
@@ -677,9 +731,7 @@ def test_attribute_undeclared_column_never_reaches_the_engine(
     resolver = _resolver(cand, base=base)
 
     def go(book: pl.LazyFrame) -> Any:
-        return asyncio.run(
-            attribute(_version(), _candidate_version(), book, _spec(), resolver)
-        )
+        return asyncio.run(attribute(_version(), _candidate_version(), book, _spec(), resolver))
 
     with_col = go(_book(secret_loading=[500 + 10 * i for i in range(12)]))
     without = go(_book())
@@ -749,4 +801,3 @@ def test_attribute_is_byte_identical_across_processes() -> None:
     first, second = _child("1"), _child("2")
     assert first == second
     assert '"attribution_summary"' in first
-

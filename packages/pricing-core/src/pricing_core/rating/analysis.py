@@ -694,9 +694,7 @@ _Group = tuple[str, tuple[_Change, ...]]
 _APPLIED: Final = {"step_added": "added", "step_removed": "removed"}  # else "changed"
 
 
-def _check_groups(
-    changes: Sequence[_Change], groups: Sequence[ChangeGroup] | None
-) -> list[_Group]:
+def _check_groups(changes: Sequence[_Change], groups: Sequence[ChangeGroup] | None) -> list[_Group]:
     """No groups: one group per change, named by its id. Else a partition of the derived list."""
     by_id = {c.id: c for c in changes}
     if groups is None:
@@ -993,6 +991,9 @@ async def attribute(
     assert baseline.algorithm_ref is not None  # _derive resolved it
     assert baseline.pins is not None
     assert candidate.pins is not None
+    # The baseline's status only, not DP-S3-8 (a)'s "lower of the two": `rating_algorithm` is
+    # exempt from the maturity floor (RL-859), so the status cannot reach a check. If
+    # `test_rating_algorithm_row_has_no_status_column` fires, DP-S3-8 is live again: revisit here.
     status = (await resolver.resolve(baseline.algorithm_ref)).status
 
     # Compile every subset before rating any: a subset that does not compile fails the run.
@@ -1009,9 +1010,7 @@ async def attribute(
             slug=f"{baseline.algorithm_ref.slug}-subset-{mask:0{k}b}",
             version=1,
         )
-        subset_resolver = _SubsetResolver(
-            resolver, ref, algorithm.model_dump(mode="json"), status
-        )
+        subset_resolver = _SubsetResolver(resolver, ref, algorithm.model_dump(mode="json"), status)
         try:
             bundle = await compile_bundle(_subset_version(baseline, ref, pins), subset_resolver)
         except ValueError as exc:  # `CodedError` and a model validation error are both ValueErrors

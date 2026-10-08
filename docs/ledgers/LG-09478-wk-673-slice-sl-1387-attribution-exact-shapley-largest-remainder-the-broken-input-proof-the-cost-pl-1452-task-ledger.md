@@ -124,6 +124,19 @@ existed (the empty and full subsets are the baseline and candidate by constructi
 yet. Task 7, and with it Acceptance 18's replay test, 19, 20 and the `examples/fremtpl2/rating/` fixture, waits for the [R]uling 1
 confirmation. The full gate (Task 8) waits for the lead's slot grant.
 
+### Task 6b — choice 3 clarified in FR-1399; the choice-1 comment (2026-10-08, executor-s3b)
+
+**Authority.** The maintainer (by delegation), "2026-10-08 12:16:26 BST — S3 (SL-1387, #1243) choice 3, change_groups: RULED (a)"; no OQ, no RL.
+**Spec.** One dated sentence group appended to FR-1399's row end in `03` ("Clarified 2026-10-08"; `grep -cF` of its anchor = 1): `change_groups` holds
+the analyst's groups only and is `[]` when none are given; the implicit groups are the derived changes in derived order, one item each.
+**Tests (no new test; the rule is pinned by existing ones, extended).** `test_isolated_and_cumulative_views_and_residual_line` (K = 3, no groups:
+`shapley`, items `c1, c2, c3` in derived order, sums equal the total) gains `change_groups == []` and the derived-id order;
+`test_above_six_ungrouped_is_order_dependent_with_r_and_s_bound` (K = 7: `order_dependent`) gains `change_groups == []` and items in derived order.
+Both were green before the extension (the code already did this), so a red is by mutation: `analysis.py`'s `attribute` writing the implicit groups
+(`groups[:6]`) to `change_groups` → both tests red on `assert result.change_groups == []`; restored with `git checkout`.
+**Choice 1 comment.** `analysis.py` before `status = (await resolver.resolve(baseline.algorithm_ref)).status` names DP-S3-8 (a), RL-859 and the tripwire test.
+**Also.** `ruff format` on `analysis.py` and `test_rating_attribution.py` (an E501 at the earlier `step_added` assertion); `ruff check packages/pricing-core` clean.
+
 ## PRs
 
 #1243, a draft. The branch `sl-1387-attribution-exact-shapley-largest-remainder` is pushed; the PR is not merged by the executor.
