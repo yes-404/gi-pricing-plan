@@ -60,6 +60,19 @@ found once each at `d10420df`. No conflict with S2's `03` hunks.
 
 **SL-1448 (#1236).** Not merged at the dispatch tree: FR-221 still reads unamended. The inspector's `as_at` tests are
 written after it lands, to its narrowed FR-221.
+### Task 1 — `RatingAlgorithmDraft` and `RatingAlgorithmSaved` (model-schema)
+
+Test module `packages/model-schema/tests/test_rating_algorithm_draft.py` as PL-1476 gives it; the fixture's literals checked
+against `rating.py` (`decimal`, `money_minor` and the step fields are accepted). Slots free before each run.
+
+- **Red** (before any code): `uv run pytest packages/model-schema/tests/test_rating_algorithm_draft.py -q` — collection error:
+  `ImportError: cannot import name 'RatingAlgorithmDraft' from 'model_schema'`. The stated cause.
+- **Green:** the field set moved to `RatingAlgorithmDraft`; `RatingAlgorithm(RatingAlgorithmDraft)` keeps its validator and
+  helpers; `RatingAlgorithmSaved` added; both appended to `__init__.py` and `__all__`.
+  `test_the_draft_accepts_a_graph_the_algorithm_refuses`, `test_the_field_set_is_written_once`,
+  `test_the_draft_still_refuses_an_unknown_field`, `test_the_saved_shape_is_the_201_wire` pass.
+  `pytest packages/model-schema -q`: 514 passed. `test_sub_graphs_api.py` + `test_sub_graphs_service.py` + the new module:
+  45 passed. `ruff check packages/model-schema` and `mypy` clean.
 
 ## PRs
 
