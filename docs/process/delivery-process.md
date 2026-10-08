@@ -271,7 +271,7 @@ section the rules). The merge procedure itself is `.claude/roles/lead.md` rule 4
   `draft/<family>-<wid> @ <full sha>`; the lead keeps a draft register in `eta.md`; at mint the
   minter builds one batch PR from current `main`. A draft branch commits no `docs/INDEX.md`
   hunk; the batch regenerates INDEX once. Exempt: slice PRs, security and dependency fixes, and
-  RFC-9479's own PR. (Activation PRs end with L1 above.)
+  RFC-9479's own PR. (Activation PRs end for slices dispatched after 2026-10-08 11:51:58 BST, under L1.)
 - **(5e) Merge `main`, never rebase.** A branch behind `main` takes it by `git merge
   origin/main`, then regenerates INDEX in a new commit; a rebase voids every SHA a record cites.
 - **(5f) A 7-day draft age.** A draft (PR or `draft/` branch) older than 7 days is closed, or
@@ -282,6 +282,19 @@ section the rules). The merge procedure itself is `.claude/roles/lead.md` rule 4
   lean-P2 decision".)*
 - **(5h) Remote CI is not a gate.** A minter pushes and runs CI while a gate slot is held; only
   its local checks wait for the slot.
+- **(1E, E2) An ACK carries over a move of `main` without a new branch CI run** when the
+  conditions in `.claude/roles/lead.md` rule 4 hold (the procedure is there, not restated here):
+  1E, a docs-only PR whose paths `main`'s new commits do not touch; E2, a docs-only PR whose only
+  shared path is `docs/INDEX.md`, regenerated with `doc-index.py`; and a code PR whose delta is
+  only a docs-only merge of `main`. Each needs merge-tree rc 0 with the tree named, the docs
+  checks green at the new head, and a local docs-reading pytest subset (every module
+  `git grep -l '"docs/' -- '*test*.py'` lists). **Precondition for all three:** the CI-green
+  head's runs COMPLETED with success, read per workflow (a cancelled run is not green), and
+  nothing was pushed to the branch while a run the ACK relies on was in flight. `main`'s push CI
+  is the backstop; a red `main` is fixed forward before any other merge. *(From the
+  maintainer's entries "2026-10-08 11:49:11 BST" (1E), "2026-10-08 11:57:55 BST" (code PRs),
+  "2026-10-08 12:12:08 BST" (E2) and "2026-10-08 12:15:49 BST" (the precondition) in
+  `to-lead.md`, full headers in RFC-9479's Sources.)*
 
 ## 9. Global findings register
 

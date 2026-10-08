@@ -35,8 +35,11 @@ relates: []                      # ids only
     **From Lean P2 L1** (the maintainer's entry "2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)" in `to-lead.md`): **no dispatch
     `RL-`**. A ruling inside one slice is an entry in that slice's `LG-` build log, dated, in the
     slice PR (L1 as corrected to (a') by the maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED".); a separate `RL-` only when it corrects or reverses an earlier
-    ruling or binds beyond the slice. A process finding is a dated row in
-    `docs/process/process-backlog.md` (L3). *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.)*
+    ruling or binds beyond the slice. A **process finding** (document ids, INDEX, audit or doc
+    checks, role files, skills, record forms, the merge or mint procedure) is a dated row in
+    `docs/process/process-backlog.md` until the P2 exit demo (L3), not an `FD-`, unless it (i)
+    lets a wrong merge, a wrong number, a mispricing or data loss through or (ii) blocks work
+    today; the lead names the limb. A product defect is always an `FD-`. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.)*
 - **Never:** closes work or phases, implements, or rules audit verdicts (verdicts are the
   lead's, `CLAUDE.md` §12). **No write access to any code worktree** — a decision-maker
   session checked out into an executor's worktree during WK-670 (three writes, one after an

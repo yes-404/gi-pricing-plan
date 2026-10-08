@@ -194,8 +194,23 @@ Insufficient in this file, corrected by procedure rather than brief (CLAUDE.md �
    branch and without a branch CI run when ALL hold: every path of the PR is under `docs/`;
    `main` is green; `git merge-tree` of the ACKed head on the new `main` exits 0; the commits
    that moved `main` touch none of the PR's paths; and audit-docs, `doc-index.py --check` and
-   `register-lint.py` pass on that recomputed tree. The re-request names the recomputed tree;
-   `main`'s push CI is the backstop, and a red `main` is fixed forward before any other merge.
+   `register-lint.py` pass on that recomputed tree, plus the local docs-reading pytest subset of
+   the code-PR rule below, (iii'). The re-request names the recomputed tree; `main`'s push CI is
+   the backstop, and a red `main` is fixed forward before any other merge.
+   **E2, a docs-only PR whose only path shared with the commits `main` gained is
+   `docs/INDEX.md` (standing, in force):** (a) the branch merges `main` and REGENERATES INDEX
+   with `doc-index.py`, never hand-merged; (b) the delta from its CI-green head is `main`'s files
+   plus INDEX only, shown by name-status; (c) at the new head audit-docs (rc 0, or only a
+   working-id check-31 row named in the request), `doc-index.py --check` 0 and `register-lint.py`
+   0 pass, plus the local docs-reading pytest subset of (iii') below; (d) `git merge-tree` onto
+   `main` exits 0, the tree named in the re-ACK request. No branch CI wait; `main`'s push CI is
+   the backstop. If the subset takes over 10 minutes, the lead reports it. (The maintainer's
+   entry "2026-10-08 12:12:08 BST — MERGE-ACK #1241 (lane C S2 activation, PL-1476 / SL-1477) @3550bcbd86f2e972ca43df58bfca20010e6551ae, expected tree adfa6e7671d98aadf41536714b2da41b1e00c1ae; 1E EXTENDED to an INDEX-only overlap; order: #1241 now, then T1" in `to-lead.md`.)
+   **Precondition for 1E, E2 and the code-PR rule:** the CI-green head's runs
+   COMPLETED with success, read per workflow (a cancelled run is not green), and nothing was
+   pushed to the branch while a run the ACK relies on was in flight. (The maintainer's entry
+   "2026-10-08 12:15:49 BST — T1 CI-cancel slip ACCEPTED as handled (full CI at e1103d81 before
+   the ACK); fix 10 added to #1240" in `to-lead.md`.)
    **A code PR's ACK across a docs-only merge of `main` (standing, in force).** A code PR (a
    slice) whose delta from its last fully checked head is ONLY a merge of `main` plus the
    regenerated INDEX is re-ACKed without a new CI wait when ALL hold: (i) the new head minus the

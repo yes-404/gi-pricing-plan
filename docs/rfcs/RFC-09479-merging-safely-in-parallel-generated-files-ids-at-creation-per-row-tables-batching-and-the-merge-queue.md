@@ -8,7 +8,7 @@ created: 2026-10-08
 owner: maintainer
 tree: 8b0256fdb5f000c11817838c129e1f9a4f8d8e10
 deliverable: a ruled choice per part (P1 to P6) and a sequence; P5's write-up and P6 (Lean P2 L1, L3, L5) land in this RFC's PR, every other part taken as its own Work or Slice
-lands_in: CLAUDE.md §12 §13, .claude/roles (lead, planner, executor, auditor, decision-maker), .claude/skills (close-workstream, writing-plans, subagent-driven-development, README), docs/_templates/LG.md, docs/process/process-backlog.md, docs/process/delivery-process.core.json, .claude/roles/lead.md rule 4, docs/process/delivery-process.md §8, docs/process/document-ids.md §1.4 §1.7 §1.11, scripts/doc-id.py, scripts/doc-index.py, scripts/audit-docs.py, .github/workflows, the repository ruleset (a setting the user owns)
+lands_in: CLAUDE.md §12 §13, .claude/roles (lead, planner, executor, auditor, decision-maker), .claude/skills (close-workstream, writing-plans, subagent-driven-development, README), docs/_templates/LG.md, docs/process/process-backlog.md, docs/process/delivery-process.core.json, .claude/roles/lead.md rule 4, docs/process/delivery-process.md §8, docs/process/document-ids.md §1.2 §1.6 §1.7 §1.11 (§1.7: the L5 rollup carve-out; §1.4 and §1.7 again for 2D and 3B, deferred), scripts/doc-id.py, scripts/doc-index.py, scripts/audit-docs.py, .github/workflows, the repository ruleset (a setting the user owns)
 trigger: the user's question of 2026-10-08, how to stop late merges causing conflicts and doc-id errors
 supersedes: []
 superseded_by: ~
@@ -134,6 +134,12 @@ for the maintainer's ruling, never a decision; P5 alone records rules already in
 | **1E** | **In force (interim) per "## 2026-10-08 11:49:11 BST — RFC 9479 draft (#1240 @298004b620650c62f6e8429faad8632369ceee0a) REVIEWED: 1E and 5f IN FORCE NOW as interim rules; the full ruling HELD for the user's lean-P2 decision".** **No transfer: an ACK carries over a main move when the merge is mechanically clean.** When main moves, the lead recomputes `git merge-tree` of the ACKed head on the new main. If it exits 0 **and** the commits that moved main touch **none of the PR's paths**, the lead runs the docs checks (audit-docs, `doc-index.py --check`, `register-lint.py`) on that recomputed tree and re-ACKs naming it, **without merging main into the branch and without a new branch CI run**. Full CI then runs on main's push as the backstop; a red main is fixed forward before any other merge. | A `lead.md` rule 4 amendment (the maintainer's) and nothing else. | **Removes the per-move re-CI, the largest cost in I1**, with no transfer. It moves pytest detection from before the merge to after it: `python.yml` triggers on `docs/**` because tests assert on docs content, so a docs PR that breaks one reaches main red. **Bounds:** only PRs whose paths are all under `docs/` (71 of 73 today, M4); never while main is red. It is already practice once: #1238 (Problem). | **0.25** — basis: one rule paragraph in `lead.md` and its read-back line | `.claude/roles/lead.md` rule 4 |
 
 **1E for code PRs: an ACK across a docs-only merge of `main` (in force, standing)**, per "## 2026-10-08 11:57:55 BST — RULED: a code PR's ACK may carry across a DOCS-ONLY main merge without a new CI wait (the 02:28:42 waiver extended), with the check-31 tests re-run locally". It extends 1E to a code PR (a slice) whose delta from its last fully checked head is only a merge of `main` plus the regenerated INDEX, with four conditions: **(i)** that delta and nothing else (name-status shown), and the commits `main` gained touch only `docs/`; **(ii')** CI at the checked head ran every job, every job but pytest green, and pytest's failures, read from the log by name, exactly the known check-31 set; **(iii')** at the new head audit-docs, `doc-index.py --check` and `register-lint.py` each exit 0, plus a local pytest of the modules holding those check-31 tests and of every module `git grep -l '"docs/' -- '*test*.py'` lists, all passing, rc and totals reported (light, no gate slot, never beside a full gate someone else holds); **(iv)** `git merge-tree` of the new head on current `main` exits 0, the tree named in the ACK request. CI on the new head and on `main`'s push are the backstop. Cost, from the entry: a minutes-long local run, saving about 25 min of CI wait per slice queued behind a batch. Risk, from the entry: a docs-only change could break a code test that reads docs in a way the grep predicate misses, bounded by the backstop. Written into `lead.md` rule 4 beside 1E (P6's table).
+
+**E2, 1E extended to an INDEX-only overlap (in force, standing)**, per "## 2026-10-08 12:12:08 BST — MERGE-ACK #1241 (lane C S2 activation, PL-1476 / SL-1477) @3550bcbd86f2e972ca43df58bfca20010e6551ae, expected tree adfa6e7671d98aadf41536714b2da41b1e00c1ae; 1E EXTENDED to an INDEX-only overlap; order: #1241 now, then T1": a docs-only PR whose only path shared with the commits `main` gained is `docs/INDEX.md` merges `main` and **regenerates** INDEX with `doc-index.py` (never hand-merged); the delta from its CI-green head is `main`'s files plus INDEX only (name-status); at the new head audit-docs (rc 0, or only a working-id check-31 row named), `doc-index.py --check` 0 and `register-lint.py` 0 pass, plus the local docs-reading pytest subset of the code-PR rule's (iii'), which **1E now also requires**; merge-tree onto `main` rc 0, the tree named. No branch CI wait. Cost, from the entry: a few minutes of local tests instead of about 22 min of CI per docs PR in a train. Risk: a docs interaction the subset misses turns `main` red and the train stops to fix forward; over 10 minutes of subset is reported.
+
+**Precondition for 1E, E2 and the code-PR rule (in force)**, per "## 2026-10-08 12:15:49 BST — T1 CI-cancel slip ACCEPTED as handled (full CI at e1103d81 before the ACK); fix 10 added to #1240": the CI-green head's runs **completed with success**, read per workflow (a cancelled run is not green), and nothing was pushed to the branch while a run the ACK relies on was in flight. The case behind it: T1's python run was cancelled by a push into the same concurrency group, so no T1 head had a green python run and the no-wait path did not apply.
+
+All three are written into `lead.md` rule 4 and summarised in `delivery-process.md` §8 (P6's table).
 
 **What it would have changed today.**
 - **1E:** #1233's 96bcdb0e (← c0aab813, a lockfile-only move, disjoint paths) would not exist,
@@ -308,8 +314,8 @@ part records them and does not re-propose them** (the maintainer's ask (a), `to-
 "## 2026-10-08 11:35:05 BST — The RFC 9479 options memo noted (sent seconds before this entry);
 two asks for the RFC"). They live in the channel only; no governed document carries them (M13).
 Writing them into `lead.md` and `delivery-process.md` §8 is the ruling's to order, and each
-charter line it touches is the maintainer's, behind **one `FD-`** covering every charter line P5 and 1E touch (`document-ids.md` :168:
-*"a role file that proves insufficient" → `FD-` → maintainer amends*).
+charter line it touches is the maintainer's, amended with no `FD-` (the maintainer's own decision, 11:51:58 item 2); `document-ids.md` :168's route
+(*"a role file that proves insufficient" → `FD-` → maintainer amends*) is for a finding.
 
 | | Rule in force | Source (`to-lead.md` entry header, verbatim) |
 |---|---|---|
@@ -331,7 +337,7 @@ charter line it touches is the maintainer's, behind **one `FD-`** covering every
   of one per record (73 at 11:35:54, M3, 72 of them drafts). Pairwise conflicts scale with the
   square of the open count, so the I2 and I3 conflicts between *drafts* stop at the source; what
   remains is batch against batch and batch against slice, which P1–P4 address.
-- **The role-file lines it changes later** (the maintainer's, via the one `FD-`). No role file
+- **The role-file lines it changes later** (the maintainer's, with no `FD-` (the maintainer's own decision, 11:51:58 item 2)). No role file
   says "open a draft PR" (`git grep -n -iE 'draft PR|--draft' -- .claude docs/process` → 0 hits
   at this tree); the lines that assume **one PR per record** are:
   `.claude/roles/decision-maker.md:40–42` (*"every ruling and every spec change lands as a PR
@@ -362,11 +368,8 @@ PRs opened before 1 Oct would be closed or carried with reasons. 5g with 1E: #12
 merges of main collapse to the ones its merge turn needed.
 
 **Recommendation: record 5a–5e and 5h in `lead.md` and `delivery-process.md` §8 as written (the ruling
-orders it, behind ONE `FD-` for every charter line); 5f is in force; adopt 5g.** About 1.0
-executor-day in total (ESTIMATE: six recorded rules and one new one, a paragraph each, 0.75; the
-single `FD-` covering `lead.md` rule 4 (:159–171, 1E and the mint queue), `decision-maker.md:40–42`,
-`executor.md:25` and `:144` and `auditor.md:15–18`, 0.25 — one finding, one auditor session,
-instead of one per file).
+orders it, with no `FD-` (the maintainer's own decision, 11:51:58 item 2)); 5f is in force; 5g NOT adopted.** About 0.75
+executor-day in total (ESTIMATE: six recorded rules, a paragraph each).
 
 ### P6 — lean P2: record volume
 
@@ -427,7 +430,7 @@ filed):
   (T8, B6, B9); a per-slice plan **begun after** it is folded into its Work's single delta before
   it is committed, the lead's draft register showing each plan's first-commit time
   (`git log --format=%aI`); a slice whose plan minted as-is still follows L1 at a GO after
-  11:51:58 (no activation PR, no `LG-`; its `SL-` quotes that minted plan as its Work-plan row,
+  11:51:58 (no activation PR, no `LG-`; its `LG-` quotes that minted plan as its Work-plan row,
   as WK-673 S4–S6 will); and nothing already ruled is re-opened by L1, L3 or L5.
 
 **L3's first rows** (per "## 2026-10-08 11:56:02 BST — L3 LIST (handover/l3-list-2026-10-08.md) RULED: six PRs leave (#909 #1163 #982 #1147 #1146 to backlog rows; #1159 folded into #1240); #1153 STAYS and mints, being already ruled"). `docs/process/process-backlog.md` carries five dated rows,
@@ -438,7 +441,8 @@ rows), #982 @ `e029de9a883f` (SL 9836, the reservation ledger; FD-1338 is the mi
 P2, frozen bodies enforced at ACK by `-U0`) and #1146 @ `162e4a9ae886` (PL 9662 + SL 9655).
 Predicate: `grep -c '#<n> @' docs/process/process-backlog.md` → 1 for each of the five. The six
 PRs (these five and #1159) are closed by the lead after this PR's read-back. #1153 stays out of
-this PR and mints in B10.
+this PR and mints in B10, but its T3 lint (item 3(a)) is a backlog row too: not built in P2, and
+RL 9634's warn-to-fatal date starts only when a slice builds it (#1153 @ `17236d99a882`).
 
 **#1159 folded** (@ `c1d6631becbb`, five role files, 48 added lines). **Every one of its changes is
 carried verbatim**; none is changed or dropped, because none conflicts with L1, L3 or L5:
@@ -474,22 +478,22 @@ the string is new.
 | `CLAUDE.md` §13 | *"a slice ledger is an `LG-` under `docs/ledgers/`"* → the `LG-` is, from Lean P2, the slice's one paperwork file with five sections, carried in the slice's one PR with the `SL-` row's one-line status change; one `PL-` per Work, slices as rows, dated deltas that `relates:` it; no per-slice `PL-`, dispatch `RL-` or activation PR; process findings to `process-backlog.md` with the two-limb `FD-` valve | dated line: 2 (§12, §13); `one paperwork file`: 1; `process-backlog.md`: 1 |
 | `CLAUDE.md` §12 | *"a ruling record, an audit record, a plan —"* → adds *"or the slice ledger that quotes the GO and MERGE-ACK headers verbatim"* | `quotes the GO and MERGE-ACK headers`: 1 |
 | `docs/process/delivery-process.md` §6 | step 1's slice plan and step 7's commit → the L1 (a') paragraph: one PR (code, tests, spec change, the `SL-` row's one-line status, one `LG-` with five sections), no per-slice PL / dispatch RL / activation PR, when a separate record is written | dated line: 4 in the file (§6, §8, §9, §10); `12:02:08`: 1 |
-| `docs/process/delivery-process.md` §8 | (none) → "PRs, batches and merging — the standing rules (RFC-9479 P5)": 5a–5e, 5f (in force, interim), 5h; 5d carries 2E (a draft branch commits no INDEX hunk) | `(5h) Remote CI is not a gate`: 1 |
+| `docs/process/delivery-process.md` §8 | (none) → "PRs, batches and merging — the standing rules (RFC-9479 P5)": 5a–5e, 5f (in force, interim), 5h; 5d carries 2E (a draft branch commits no INDEX hunk); a (1E, E2) bullet: the three carry-over cases and the precondition, the procedure in `lead.md` | `(5h) Remote CI is not a gate`: 1; `COMPLETED with success`: 1 |
 | `docs/process/delivery-process.md` §9 | (none) → the L3 paragraph | `process-backlog.md`: 2 lines |
 | `docs/process/delivery-process.md` §10 | *"a slice breakdown per work item, and a plan per slice … existing, unchanged"* → one plan per Work, slices as rows; a delta `relates:` it, a true replan `supersedes:`, the Work's roadmap row lists every delta; plus a process-backlog bullet | `one plan per Work`: 1 |
-| `docs/process/delivery-process.core.json` | new keys only: `slice_plan.record`, `commit.constraints` (+3), `applies_from`, `corrected`, `artifacts.process_backlog` / `plan_granularity` / `process_findings`, `guards.pr_and_merge_rules`; `meta.derived_from_digest` → the amended spec's sha256; `verified_against_tree` unchanged (the migration base) | `RFC-9479 P6`: 4; check 27 green |
-| `docs/process/document-ids.md` §1.2, §1.6, §1.11 | §1.2: the SL row (status in one line in the slice PR) and the LG row (the slice's one paperwork file, five sections); §1.6: the SL, PL map/leaf (delta `relates:`, replan `supersedes:`), LG and FD rows and the charters row; §1.11: check 39's ledger clause | dated line: 6; `L1 (a')`: 4 |
-| `.claude/roles/lead.md` | the SL dispatch clause (GO quoted in the `LG-`, no activation PR); rule 4 gains 1E (in force), 1E for code PRs (11:57:55, in force), the 5a–5e, 5f and 5h pointer, and the `draft/` sweep; a Lean P2 bullet (L1 (a'), L3 with the limb, L5 with the lead listing deltas on the `WK-` row); #1159's PATCH bullet | dated line: 3; `11:57:55`: 1; `12:02:08`: 1 |
+| `docs/process/delivery-process.core.json` | new keys only: `slice_plan.record`, `commit.constraints` (+3), `applies_from`, `corrected`, `guards.pr_and_merge_rules.ack_carry_over`, `artifacts.process_backlog` / `plan_granularity` / `process_findings`, `guards.pr_and_merge_rules`; `meta.derived_from_digest` → the amended spec's sha256; `verified_against_tree` unchanged (the migration base) | `RFC-9479 P6`: 4; check 27 green |
+| `docs/process/document-ids.md` §1.2, §1.6, §1.11 | §1.2: the SL row (status in one line in the slice PR) and the LG row (the slice's one paperwork file, five sections); §1.6: the SL, PL map/leaf (delta `relates:`, replan `supersedes:`), LG and FD rows and the charters row (L3: a role-file problem is a backlog row unless the valve applies); §1.7: the leaf-plan rollup's L5 carve-out (a Work under L5 rolls up from its slice rows); §1.11: check 39's ledger clause | dated line: 7; `L1 (a')`: 4 |
+| `.claude/roles/lead.md` | the SL dispatch clause (GO quoted in the `LG-`, no activation PR); rule 4 gains 1E (in force), 1E for code PRs (11:57:55, in force), the 5a–5e, 5f and 5h pointer, and the `draft/` sweep; a Lean P2 bullet (L1 (a'), L3 with the limb, L5 with the lead listing deltas on the `WK-` row); #1159's PATCH bullet | dated line: 3; `11:57:55`: 1; `12:02:08`: 1; `12:12:08`: 1; `COMPLETED with success`: 1 |
 | `.claude/roles/planner.md` | a Lean P2 bullet: one plan per Work, slices as rows, no leaf plan, one dated delta that `relates:` (a replan `supersedes:`), its row quoted in the slice's `LG-`; #1159's PATCH bullet | dated line: 1; `12:02:08`: 1 |
 | `.claude/roles/executor.md` | "Works from a `PL-` leaf" and "Appends its `LG-`" → the slice's row in the Work plan; one PR; writes the `LG-`'s scope, tasks, gate and build log; no activation PR; #1159's PATCH bullet | dated line: 1; `12:02:08`: 1 |
 | `.claude/roles/auditor.md` | "a slice's `LG-` … sets it `closed`" → writes the `LG-`'s Audit section, sets the `LG-` and the `SL-` row `closed`; process findings to the backlog with the two limbs; #1159's PATCH bullet and single-threaded measurements | dated line: 1; `12:02:08`: 1; `OMP_NUM_THREADS=1 nice`: 2 lines |
-| `.claude/roles/decision-maker.md` | no dispatch `RL-`; an in-slice ruling is a dated entry in the slice `LG-`'s build log; *"every ruling … lands as a PR"* → inside the slice PR or the next batch PR; #1159's PATCH bullet and §10 gate-row line | dated line: 1; `12:02:08`: 1; `decision-gate row`: 1 |
+| `.claude/roles/decision-maker.md` | no dispatch `RL-`; an in-slice ruling is a dated entry in the slice `LG-`'s build log; *"every ruling … lands as a PR"* → inside the slice PR or the next batch PR; #1159's PATCH bullet and §10 gate-row line | dated line: 1; `12:02:08`: 1; `decision-gate row`: 1; `blocks work`: 1 |
 | `.claude/skills/close-workstream/SKILL.md` | a paragraph: a slice's evidence is its one `LG-`'s five sections; process findings; a Verified line | dated line: 1; `12:02:08`: 1 |
 | `.claude/skills/writing-plans/SKILL.md` | a bullet: one plan per Work, deltas `relates:`, replans `supersedes:`, the `LG-` quotes the row | dated line: 1 |
 | `.claude/skills/subagent-driven-development/SKILL.md` | the ledger box gains: after L1 the `LG-` is the slice's one paperwork file with five sections; "ledger the ruling" is a dated Build log entry | dated line: 1; `12:02:08`: 1 |
 | `.claude/skills/README.md` | the seventh deviation recorded (`subagent-driven-development`, `writing-plans`), the sixth kept and extended | dated line: 1; `12:02:08`: 1 |
 | `docs/_templates/LG.md` | the comment gains L1 (a'); the body gains GO and MERGE-ACK lines and the five sections Scope, Task list, Gate, Audit, Build log as **`###` under `## Tasks`**; `## Tasks` and `## PRs` stay the only `##` headings, because check 37 requires every template `##` heading of every existing ledger (as `##` they red 30 ledgers; a backlog row records it) | dated line: 1; `### Build log`: 1; `^## ` headings: 2 |
-| `docs/process/process-backlog.md` (new) | — → the L3 file: rules, the valve, the drafts rule, five dated rows (11:56:02) and a sixth (check 37 cannot version a template) | dated line: 1; `#909 @`, `#1163 @`, `#982 @`, `#1147 @`, `#1146 @`: 1 each |
+| `docs/process/process-backlog.md` (new) | — → the L3 file: rules, the valve, the drafts rule, six dated rows from 11:56:02 (the five PRs and #1153's T3 lint) and one more (check 37 cannot version a template) | dated line: 1; `#909 @`, `#1163 @`, `#982 @`, `#1147 @`, `#1146 @`, `#1153 @`: 1 each |
 | `docs/ledgers/README.md`, `docs/plans/README.md` | a paragraph each: the `LG-` as the slice's one paperwork file after L1 (a'); one plan per Work after L5 | dated line: 1 each |
 
 **Reverted to `main` by the 12:02:08 correction:** `docs/_templates/SL.md` (the five labelled
@@ -575,11 +579,11 @@ Total if everything recommended is taken: **about 8 executor-days** (ESTIMATE: 1
 3. **P3:** 3B (recommended) or 3C or 3D or 3A; plus who reserves (the lead alone, recommended) and
    the abandonment age (7 days, recommended, shared with 5f).
 4. **P4:** defer and re-measure in 14 days (recommended), or 4B now.
-5. **P5:** (intended: written in, in this PR) order 5a–5e and 5h written into `lead.md` and `delivery-process.md` §8, behind ONE `FD-`
-   for every charter line (they are in force already; the ruling only orders the record); 5f in force (interim); adopt 5g, or not.
-7. **P6:** decided by the user (11:51:58) and implemented in this PR; the maintainer reviews the change list and the two readings in P6.
-8. **Intended dispositions** (11:51:58, item 4): 1E and 5f stay; 2D and 3B deferred past P2; 5g not adopted; P4 re-measured after P2.
-6. **The sequence** in the Sequence section.
+5. **P5:** (intended: written in, in this PR) order 5a–5e and 5h written into `lead.md` and `delivery-process.md` §8, with no `FD-` (the maintainer's own decision, 11:51:58 item 2)
+   (they are in force already; the ruling only orders the record); 5f in force (interim); 5g NOT adopted.
+6. **P6:** decided by the user (11:51:58) and implemented in this PR; the maintainer reviews the change list and the two readings in P6.
+7. **Intended dispositions** (11:51:58, item 4): 1E and 5f stay; 2D and 3B deferred past P2; 5g not adopted; P4 re-measured after P2.
+8. **The sequence** in the Sequence section.
 
 **Who decides** (the maintainer's entry "## 2026-10-08 11:56:44 BST — USER: the delegation is confirmed and widened; the maintainer (by delegation) decides to keep P2 moving and reduce errors"): the maintainer decides the rest of this RFC at #1240's review; only what only the user can do goes back to the user, which here is P1's transfer (repository ownership and its settings).
 
@@ -608,7 +612,7 @@ code.
 11:40:59 BST — USER INSTRUCTION: RFC 9479 is kept current with every new rule until it merges"):
 every rule the maintainer logs on PR creation, batching, merging, ids, generated files or cleanup
 is folded in the same day and listed here. **Every `to-lead.md` entry from 10:38:11 BST on 8 Oct
-to 12:02:08 BST is listed**, carried or left out with a reason, plus the earlier entries the RFC rests on.
+to 12:15:49 BST is listed**, carried or left out with a reason, plus the earlier entries the RFC rests on.
 Headers are verbatim, except the one elided where marked.
 
 | `to-lead.md` entry header (verbatim) | Carried in | Or left out, because |
@@ -640,13 +644,16 @@ Headers are verbatim, except the one elided where marked.
 | ## 2026-10-08 11:35:05 BST — The RFC 9479 options memo noted (sent seconds before this entry); two asks for the RFC | P5 (records, not proposes); P2 (the 2D replacement table) | — |
 | ## 2026-10-08 11:37:20 BST — USER-APPROVED, EFFECTIVE NOW: a new governed-record draft gets NO PR; PRs are opened only as mint BATCHES (and for slices, activations and urgent fixes) | P5 5d; P2 2E | — |
 | ## 2026-10-08 11:40:59 BST — USER INSTRUCTION: RFC 9479 is kept current with every new rule until it merges | Sources; P2 and P3 (open to extension) | — |
-| ## 2026-10-08 11:49:11 BST — RFC 9479 draft (#1240 @298004b620650c62f6e8429faad8632369ceee0a) REVIEWED: 1E and 5f IN FORCE NOW as interim rules; the full ruling HELD for the user's lean-P2 decision | the status paragraph; P1 1E and P5 5f (in force, interim); P5 (one `FD-`); P6 (the empty slot); Sequence (HELD; the displacement before 4 Nov) | — |
+| ## 2026-10-08 11:49:11 BST — RFC 9479 draft (#1240 @298004b620650c62f6e8429faad8632369ceee0a) REVIEWED: 1E and 5f IN FORCE NOW as interim rules; the full ruling HELD for the user's lean-P2 decision | the status paragraph; P1 1E and P5 5f (in force, interim); P5 (one `FD-`, since replaced by no `FD-`, 11:51:58 item 2); P6 (the empty slot); Sequence (HELD; the displacement before 4 Nov) | — |
 | ## 2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation) | P6 (L1, L3, L5, the change list, the two readings, the dispositions); the status paragraph; Sequence; the ruling list; every file in P6's table | — |
 | ## 2026-10-08 11:53:19 BST — L5 transition RULED: per-slice plans drafted before 11:51:58 MINT AS-IS (T8, B6, B9); their slices still follow L1 at GO | P6, L5 (the transition) | — |
-| ## 2026-10-08 11:56:02 BST — L3 LIST (handover/l3-list-2026-10-08.md) RULED: six PRs leave (#909 #1163 #982 #1147 #1146 to backlog rows; #1159 folded into #1240); #1153 STAYS and mints, being already ruled | P6 (L3's first rows; the #1159 fold); `docs/process/process-backlog.md` (five rows); the five role files (#1159) | #1153's T3-lint and mint-order checks (its item 3) are the lead's and the minter's, at B10 |
+| ## 2026-10-08 11:56:02 BST — L3 LIST (handover/l3-list-2026-10-08.md) RULED: six PRs leave (#909 #1163 #982 #1147 #1146 to backlog rows; #1159 folded into #1240); #1153 STAYS and mints, being already ruled | P6 (L3's first rows; the #1159 fold); `docs/process/process-backlog.md` (five rows, and a sixth for #1153's T3 lint); the five role files (#1159) | item 3(a), #1153's T3 lint: a backlog row (#1153 @ `17236d99a882`); item 3(b), the mint-order check, is the lead's and the minter's at B10 |
 | ## 2026-10-08 11:56:44 BST — USER: the delegation is confirmed and widened; the maintainer (by delegation) decides to keep P2 moving and reduce errors | the ruling list (the rest of this RFC is the maintainer's to decide at review; P1's transfer stays the user's, as repository ownership) | — |
 | ## 2026-10-08 11:57:55 BST — RULED: a code PR's ACK may carry across a DOCS-ONLY main merge without a new CI wait (the 02:28:42 waiver extended), with the check-31 tests re-run locally | P1 (1E for code PRs, in force); `lead.md` rule 4 | the "02:28:42 waiver" it extends is cited by that entry, not re-read here |
 | ## 2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED | P6 (L1 (a'), the two readings ruled, the change list); every file in P6's table; the SL template and `repo-architecture` reverted | — |
+| ## 2026-10-08 12:12:08 BST — MERGE-ACK #1241 (lane C S2 activation, PL-1476 / SL-1477) @3550bcbd86f2e972ca43df58bfca20010e6551ae, expected tree adfa6e7671d98aadf41536714b2da41b1e00c1ae; 1E EXTENDED to an INDEX-only overlap; order: #1241 now, then T1 | P1 (E2, in force); `lead.md` rule 4; `delivery-process.md` §8; core extract `ack_carry_over` | the MERGE-ACK of #1241 and the merge order are the lead's, not this RFC's |
+| ## 2026-10-08 12:15:35 BST — #1240 @75abe1682adaa6fa7451c2c77b9eef4c23d4bca3 REVIEWED: RETURNED for 9 text fixes (no re-design); the RFC ruling follows on the fixed head | fixes 1–9 across the RFC, `decision-maker.md`, `document-ids.md`, `ledgers/README.md`, `delivery-process.md`, `lead.md` and `process-backlog.md` | — |
+| ## 2026-10-08 12:15:49 BST — T1 CI-cancel slip ACCEPTED as handled (full CI at e1103d81 before the ACK); fix 10 added to #1240 | fix 10: the precondition in P1, `lead.md` rule 4 and `delivery-process.md` §8 | the T1 ACK itself is the lead's |
 
 ## Deliverable
 
@@ -656,7 +663,7 @@ The `deliverable:` and `lands_in:` fields in prose: **a ruled choice for each of
 sequence**, by the maintainer's `RL-`, and then the user's decision on P1. P5's write-up and P6
 ship in this RFC's PR (see above); nothing else does. Each part the ruling takes is cut into its own Work or Slice under WK-1178 by the
 planner (§1.6, *"planner cuts an active RFC into a Work"*): rule text in `lead.md` rule 4 and
-`delivery-process.md` §8 (1E, P5, behind one `FD-` for every charter line), the 2D and 3B builds in
+`delivery-process.md` §8 (1E, P5, with no `FD-` (the maintainer's own decision, 11:51:58 item 2)), the 2D and 3B builds in
 `scripts/` with their broken-input proofs, and, if the user transfers the repository, 1B's
 workflow prerequisites and ruleset.
 
