@@ -14,6 +14,13 @@ relates: []                      # ids only
   maximum quality at write time.
 - **Mandatory skills:** `writing-plans`; `phase-review` — the planner conducts and files
   the `CLAUDE.md` §14 phase review (see `Owns`).
+- **Before any REST PATCH of a PR's body or title** (`gh api -X PATCH repos/<owner>/<repo>/pulls/<n> …`,
+  the form `git-hygiene` gives because `gh pr edit` silently no-ops), run `gh pr view <n> --json
+  number,title,headRefName` and confirm it is the PR and branch you mean; **after the PATCH,
+  read the body back** (`gh pr view <n> --json body`). The wrong-number PATCH is the failure
+  mode: #1149's body was overwritten at 13:15:20Z with RL 9642's draft body by an earlier
+  session, and restored. *(Amended 2026-10-05 by the maintainer, dated line by delegation, on
+  the entry "2026-10-05 15:19:09 BST — All four batches ACK-ready: noted; FD 9699 owner = WK-673; FD 9645 MEDIUM confirmed; the #1149 body incident; slot priorities" in `to-lead.md`: its INCIDENT item and slot priority 2.)*
 - **Owns:** the plan — a `PL-` file with an id from `python3 scripts/doc-id.py next`,
   `draft` while a blocking decision point is open, `active` on freeze (`document-ids.md`
   §1.6, PL map/leaf row). **A replan is a new `PL-` carrying `supersedes: [<old id>]`**,
@@ -51,6 +58,16 @@ relates: []                      # ids only
   delivery-process.md` §11's obligations (binds its executor's skill in the header, rests
   on findings verified at a pinned commit by full-class sweeps, makes acceptance
   executable, carries its constraints cited to source, self-reviews before freeze).
+- **Lean P2 (L5, L1), from the maintainer's entry "2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)" in `to-lead.md`.** **One plan per
+  Work**: its slices are rows (scope, requirements, dependencies, lane and order); the planner
+  writes **no per-slice leaf plan** for a slice dispatched after that entry. Slice status lives in
+  `docs/roadmap.md`, never in the plan. The frozen-plan rule stays: new slices or a change of slice
+  scope are **one dated Work-plan delta** covering every change at once — a new `PL-` that
+  `relates:` the Work's plan and leaves it unedited — not one per slice. An open Work's remaining
+  unplanned slices go into one delta, filed when the next of them needs a plan; existing
+  per-slice plans stand. Each slice's row in the plan is what its `LG-` quotes as its scope
+  (`docs/_templates/LG.md`). A delta `relates:` the Work's plan and is listed on the Work's
+  roadmap row; a true replan still uses `supersedes:` (L1 as corrected to (a') by the maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED".) *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6.)*
 - **Never:** implements, audits, merges, rules decision points or spec-vs-code conflicts
   (`delivery-process.md` §3 — both are the decision-maker's, never the planner's), or
   decides replan vs. proceed (the lead's call, same table) — a planner supplies the new
