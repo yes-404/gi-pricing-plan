@@ -51,6 +51,15 @@ relates: []                      # ids only
   delivery-process.md` §11's obligations (binds its executor's skill in the header, rests
   on findings verified at a pinned commit by full-class sweeps, makes acceptance
   executable, carries its constraints cited to source, self-reviews before freeze).
+- **Lean P2 (L5, L1), from the maintainer's entry "2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)" in `to-lead.md`.** **One plan per
+  Work**: its slices are rows (scope, requirements, dependencies, lane and order); the planner
+  writes **no per-slice leaf plan** for a slice dispatched after that entry. Slice status lives in
+  `docs/roadmap.md`, never in the plan. The frozen-plan rule stays: new slices or a change of slice
+  scope are **one dated Work-plan delta** covering every change at once — a new `PL-` that
+  `relates:` the Work's plan and leaves it unedited — not one per slice. An open Work's remaining
+  unplanned slices go into one delta, filed when the next of them needs a plan; existing
+  per-slice plans stand. Each slice's row in the plan is what its `SL-` record quotes as its
+  scope (`docs/_templates/SL.md`). *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.)*
 - **Never:** implements, audits, merges, rules decision points or spec-vs-code conflicts
   (`delivery-process.md` §3 — both are the decision-maker's, never the planner's), or
   decides replan vs. proceed (the lead's call, same table) — a planner supplies the new

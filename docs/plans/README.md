@@ -14,6 +14,12 @@ The implementation plans this project has worked from, and the ledgers recording
 happened when they were executed. They are committed, so the record outlives the session
 that wrote it.
 
+**One plan per Work from Lean P2 L5** (the maintainer's entry "2026-10-08 11:51:58 BST — USER
+DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through
+RFC 9479 P6 (the maintainer's amendment, by delegation)" in `to-lead.md`): its slices are rows,
+no per-slice leaf plan is filed after that entry, and a change is one dated Work-plan delta.
+The plans already here stand. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.)*
+
 They live under `docs/` rather than in an untracked scratch directory for the reason
 `.gitignore` already gave for keeping them out of one: a plan is *"a second account of what
 the project is doing"*, and the objection was never to the second account — it was to an

@@ -35,6 +35,12 @@ ledger and the tool results carry the record.
 > The ledger is the slice's execution record. The **plan** says what was intended, the
 > **ledger** says what happened, and a closure record says what it added up to — three
 > documents, three families, never one file doing two jobs.
+>
+> **From Lean P2 L1** (the maintainer's entry "2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)" in `to-lead.md`), for a slice
+> dispatched after that entry, **the ledger is the "Audit and ledger" section of the slice's
+> `SL-` row** in `docs/roadmap.md` (`docs/_templates/SL.md`), not an `LG-` file, and the plan
+> is the slice's row in its Work's one plan. The rule above is unchanged in substance: append
+> only, each entry dated and naming its commit, in the slice's one PR. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.)*
 
 **Continuous execution:** Do not pause to check in with your human partner between tasks. Execute all tasks from the plan without stopping. The only reasons to stop are the four named below, or all tasks complete. "Should I continue?" prompts and progress summaries waste their time — they asked you to execute the plan, so execute it.
 

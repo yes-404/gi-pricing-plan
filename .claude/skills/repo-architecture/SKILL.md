@@ -40,7 +40,7 @@ there: it belongs to `docs/roadmap.md` §6 and only there**
 │   ├── research/           RS- spike findings, with what each one changed
 │   ├── rfcs/               RFC- working notes — a note decides nothing
 │   ├── plans/              PL- filed implementation plans
-│   ├── ledgers/            LG- one slice's execution record, appended to, never rewritten
+│   ├── ledgers/            LG- one slice's execution record (slices before Lean P2 L1; after, a section of the SL- row)
 │   ├── rulings/            RL- dated decisions
 │   ├── findings/           register.md and the FD- essays
 │   ├── closures/           CR- work, slice, phase and review records
@@ -218,6 +218,9 @@ omit when adding a path to the config; ruff runs at line length 100 over everyth
 the vendored files.
 
 ## Verified
+
+2026-10-08 — the `ledgers/` line qualified for Lean P2 L1 (RFC-9479 P6) at `8b0256fd`;
+nothing else re-verified.
 
 2026-09-19 — **the annotated `docs/` tree replaced by `RFC-937` §1.4's.** W37-7 Task 5,
 `PL-1070`; §5.4's `repo-architecture` row. The old subtree was pre-migration throughout: a

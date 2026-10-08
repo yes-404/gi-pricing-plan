@@ -35,8 +35,17 @@ relates: []                      # ids only
   push (both halves — a Python-only gate has been green here while the frontend was red);
   opens PRs. Concretely, per `document-ids.md` §1.6:
   - **Works from a `PL-` leaf for its `SL-`** — the executor does not write the plan, it
-    executes it (§1.6 PL `map`/`leaf` row: *"executor works from it"*).
-  - **Appends its `LG-` per task and per PR**, setting it `active` — the slice ledger is
+    executes it (§1.6 PL `map`/`leaf` row: *"executor works from it"*). **From Lean P2 L1 and
+    L5** (the maintainer's entry "2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)" in `to-lead.md`), for a slice dispatched after that
+    entry: it works from the slice's row in its **Work's one plan**, and the slice is **one PR**
+    carrying the code, the tests, any spec change it needs and the slice's **one `SL-` record**,
+    whose tasks, gate (the full local gate's rc table) and ledger sections the executor writes
+    and appends in that PR (`docs/_templates/SL.md`). It writes **no `LG-`** and opens **no
+    activation PR**. A process finding it hits is a dated row in
+    `docs/process/process-backlog.md`, riding the same PR, unless it lets a wrong merge, number,
+    mispricing or data loss through or blocks work today, when the lead files an `FD-`. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.)*
+  - **Appends its `LG-` per task and per PR** (a slice dispatched before Lean P2 L1 only; after
+    it, the ledger section of the `SL-` record), setting it `active` — the slice ledger is
     grown, never rewritten in place (§1.6 LG row: *"executor, appends per task and per PR
     (`active`)"*).
   - **As the mint step, when the lead's brief makes it one after the slice audit** (the SL-1377 order: slice audit → mint → minted-head gate), the executor performs §1.6's closing acts on the auditor's behalf in the mint commit: the `LG-` front matter `status: closed`, the roadmap `SL-` row `status: closed` with its dated line, then `docs/INDEX.md` regenerated and `audit-docs` green. *(Added 2026-10-04, on the maintainer's (by delegation) direction, after LG-1400 and WK-674 Slice 2's ledger (not yet merged when this was written, so not cited by id) were each minted `active`.)*
