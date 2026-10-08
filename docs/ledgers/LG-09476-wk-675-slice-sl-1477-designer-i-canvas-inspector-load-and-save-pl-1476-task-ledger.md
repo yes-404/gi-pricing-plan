@@ -157,6 +157,20 @@ The lead's ruling, `to-lead.md`, header: "## 2026-10-08 12:30:31 BST — S2 (SL-
   `algorithm_ref` since SL-1430 (`5351f116`, #1227): `platform/rating_versions.py`, the `algorithm_ref: ArtifactRef | None = None`
   parameter of `create_rating_version`; `_draft_with_algorithm` in `test_rating_versions.py` passes it directly.
 
+### Task 7 — API modules and `graph.ts`
+
+`frontend/src/api/ratingAlgorithms.ts`, `getRatingVersionByRef` in `ratingVersions.ts`, `components/dag/graph.ts`,
+`__tests__/fixtures.ts` (the server fixture `valid_algorithm()`, dumped to JSON by the real function and typed
+`RatingAlgorithmDraft`; it has **11** steps, the plan says twelve) and `__tests__/graph.test.ts` (7 tests: edges, no edge for
+an unresolved name or a self-edge, graph order, a cycle terminating, layout columns and determinism, the pinned cycle depth,
+`parseRef`).
+
+- **Order slip, ledgered:** I wrote `graph.ts` before its test. The test is proven red on the base by removing the module:
+  `Error: Failed to resolve import "../graph" from "src/components/dag/__tests__/graph.test.ts"`; restored, green.
+- **Run scope slip, ledgered:** `pnpm --dir frontend test -- graph` ran the whole frontend suite (the filter did not apply
+  through pnpm): 622 passed, both gate slots free at the probe. Later runs use `pnpm exec vitest run <path>`.
+- `pnpm generate:api`, `type-check` and `lint` clean.
+
 ## PRs
 
 The slice PR is a draft, opened by the executor; the executor does not merge it.
