@@ -337,6 +337,16 @@ and the upstream `# Task N` H1 form — the control whose failure falsified this
 original "both additive" claim — was re-run and exits `0`. A comment edit that could not
 plausibly change parsing was still checked against the case that has broken here before.
 
+**Seventh deviation, 2026-10-08: `subagent-driven-development` and `writing-plans` gained one
+paragraph each for Lean P2** (Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6, on the
+user's decision in `to-lead.md` "2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)"). `subagent-driven-development`'s ledger box says
+that, for a slice dispatched after that entry, the `LG-` is the slice's one paperwork file with
+five sections (Scope, Task list, Gate, Audit, Build log); `writing-plans` says a Work has one plan
+with its slices as rows, changed by dated deltas that `relates:` it. (L1 as corrected to (a') by the maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED".) Upstream has no slice records and no plan families, so both are
+additions, not corrections. The sixth deviation's `LG-` routing is **kept** and extended, not
+replaced — a recorded deviation is not removed while landing a new one. `close-workstream` is
+this repository's own skill and carries its paragraph without a deviation note.
+
 **Not installed: the SessionStart hook.** Upstream's plugin injects `using-superpowers`
 into every session through `hooks/hooks.json`. That is plugin configuration rather than a
 skill, it would run a command at the start of every session for anyone who clones this
