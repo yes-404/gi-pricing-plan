@@ -100,6 +100,10 @@ Each item is checked by a command run from the repository root on the slice's me
 - **One PR per slice** (L1 (a')): code, tests, the `03` text, `SL 9469`'s status line and one `LG-`.
 - **The `compile.py` serial set** (`PL-1371` §5 rule 4): never concurrent with another
   `compile.py` / `compile_bundle` editor.
+- **`backend/src/app/errors.py` is a shared path** (the 2026-10-08 deltas audit, LOW): `SL-1472`
+  (#1247, `7e1f44d3`, by `git diff --name-only origin/main...7e1f44d3`) also edits it, and WK-674
+  Slices 5 and 6 add codes to it (PL 9472, working id). This slice's one registry line is
+  rebase-serialised: whichever merges second rebases onto the first.
 
 ## Tasks
 
@@ -125,7 +129,8 @@ FD-1374)", PL 9776 (working id) at `c7621ca2`), Steps 1–8, as ruled by RL 9771
   (`758336a1`), the slice stops and reports.
 
 **Sequencing.** The slice edits `compile.py` (`_check_declared_reads`, one `ALGORITHM_CHECKS`
-entry) and so is in the `compile.py` / `_Resolver` serial set with G2's chain (`SL-1472`, `SL-1387`,
+entry) and its one `errors.py` registry line, and so is in the `compile.py` / `_Resolver` serial
+set, which for this slice includes `errors.py`, with G2's chain (`SL-1472`, `SL-1387`,
 SL 9495, `SL-1462`, `SL-1463`, `SL-1466`) and WK-1250's `SL-1340` / `SL-1341` and WK-675 S3. By the
 priority rule (the entry "2026-10-08 12:59:36 BST — USER: VM days follow the weekly allowance (about
 4–5 project days after each reset). RE-BASELINE: plan on 4-in-7; a ranked CUT LADDER; pause-proof
