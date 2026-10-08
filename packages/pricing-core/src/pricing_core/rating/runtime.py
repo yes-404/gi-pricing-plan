@@ -24,14 +24,14 @@ than assumed from any binding's docstring
 Task 1.3's own scope cut, resolved by Task 1.4 (`_constraint_node`, below) — the DAG-wide
 disposition (decline vs. clamp vs. error, collecting reason codes) is `score_one`'s, read
 from the `{step_id}__violated` flags this module computes, never decided inside the graph
-itself. A `lookup` step's `as_at` effective-dating window is
-translated as an **exact key match only**: ZEN's comparison operators refuse non-numeric
-operands (verified live — `'b' > 'a'` raises `vmError: Opcode Compare: Unsupported type`),
-so an ISO date string cannot be range-compared inside a decision table rule without first
-converting it to a numeric ordinal, which no step in this algorithm shape does today. A
-lookup with more than one effective-dated row sharing a key returns whichever row's rule
-comes first, not the one whose window contains the quote's `as_at` value. Both gaps are
-named here rather than shipped silently; see the PR description for the recommended owner.
+itself. A `lookup` step's `as_at` window is translated per rule as a ZEN unary test,
+`date($) >= date(from) and date($) < date(to)` (`_as_at_window`; the half-open interval of
+`01` FR-69, open-ended when `to` is absent). ZEN's comparison operators refuse two strings
+(verified live — `'b' > 'a'` raises `vmError: Opcode Compare: Unsupported type`), so both
+sides go through `date()`. That function reads an offset as UTC, so the value it receives
+must be a bare `YYYY-MM-DD`: `score.py`'s `_check_as_at_values` refuses anything else before
+the engine runs (FR-221; PL 9688 DP-1). FD-1420 recorded the exact-key translation this
+replaces.
 """
 
 from __future__ import annotations
@@ -40,6 +40,7 @@ import heapq
 import json
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
 import polars as pl
@@ -204,6 +205,22 @@ def _reference_rows(payload: Mapping[str, Any] | None) -> list[dict[str, Any]]:
     return list(payload.get("rows") or [])
 
 
+def _as_at_window(row: Mapping[str, Any]) -> str:
+    """One reference row's validity as a ZEN unary test on the step's `as_at` value.
+
+    `01` FR-69's half-open `[effective_from, effective_to)`; an absent `effective_to` is
+    open-ended. ZEN refuses `<` between strings, so both sides go through `date()` (verified
+    on zen-engine 0.53.0, PL-1447 Task 0 run 1). The bounds are re-rendered through
+    `date.fromisoformat`, so a malformed row raises here, at load, never inside the graph.
+    """
+    lower = date.fromisoformat(str(row["effective_from"])).isoformat()
+    window = f"date($) >= date('{lower}')"
+    if row.get("effective_to") is not None:
+        upper = date.fromisoformat(str(row["effective_to"])).isoformat()
+        window += f" and date($) < date('{upper}')"
+    return window
+
+
 def _decision_table_node(
     step_id: str, node: dict[str, Any], payloads: Mapping[str, Any]
 ) -> dict[str, Any]:
@@ -250,11 +267,17 @@ def _decision_table_node(
     else:  # "lookup"
         ref = str(node["reference_table_ref"])
         rows = _reference_rows(payloads.get(ref))
-        inputs = [{"id": "i0", "name": "key", "field": key_exprs[0] if key_exprs else "key"}]
+        inputs = [
+            {"id": "i0", "name": "key", "field": key_exprs[0] if key_exprs else "key"},
+            {"id": "i1", "name": "as_at", "field": str(node["as_at"])},
+        ]
         rules = [
-            {"_id": f"r{i}", "i0": _quote(str(row["key"]), "string"), "o0": json.dumps(
-                str(row.get("payload", {}).get(output_name, ""))
-            )}
+            {
+                "_id": f"r{i}",
+                "i0": _quote(str(row["key"]), "string"),
+                "i1": _as_at_window(row),
+                "o0": json.dumps(str(row.get("payload", {}).get(output_name, ""))),
+            }
             for i, row in enumerate(rows)
             if output_name in (row.get("payload") or {})
         ]
