@@ -30,7 +30,7 @@ relates: []                      # ids only
   [CLEAN/UNSTABLE] instead, and read per-workflow state via `gh run list` first, since an
   in-flight run also reports as UNSTABLE), **dispatches every `SL-`** (`document-ids.md`
   §1.6 SL row: *"lead dispatches (`active`)"*; from Lean P2 L1, by the maintainer's GO quoted
-  verbatim in the `SL-` row, with no activation PR, no dispatch `RL-` and no per-slice plan,
+  verbatim in the slice's `LG-`, with no activation PR, no dispatch `RL-` and no per-slice plan,
   the roadmap status change riding the slice PR and in-flight status kept in `eta.md`), maintains the milestone sections and the
   `WK-` rows, **owns every `CR-` of kind `review`** — filing the §14 phase-review record
   itself is the planner's, but the family belongs to the lead where the auditor's `work`/
@@ -97,15 +97,16 @@ relates: []                      # ids only
 - **Never:** implements or audits itself; pushes or rebases `main`; never declares a
   workstream or phase closed — closure acceptance is the user's alone.
 - **Lean P2 (L1, L3, L5), from the maintainer's entry "2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)" in `to-lead.md`.**
-  A slice whose GO follows that entry is **one PR carrying one `SL-` record** (scope quoting its
-  Work-plan row, decisions, tasks, gate, audit, ledger; `docs/_templates/SL.md`); the lead
-  quotes the GO and MERGE-ACK headers into it, and asks for a separate record only for a spec
+  A slice whose GO follows that entry is **one PR carrying its one-line `SL-` row status change
+  and one `LG-`** with five sections (scope quoting its Work-plan row, tasks, gate, audit, build
+  log; `docs/_templates/LG.md`) (L1 as corrected to (a') by the maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED".) The lead quotes the GO and MERGE-ACK headers into it, and asks for a separate record only for a spec
   change, a ruling that corrects, reverses or binds beyond the slice, a product `FD-`, or an
   open `OQ-`. A **process finding** goes to `docs/process/process-backlog.md` as a dated row
   until the P2 exit demo; the lead files an `FD-` instead only for limb (i), a wrong merge,
   number, mispricing or data loss let through, or limb (ii), work blocked today, and names the
   limb in it. A Work has **one plan**; new slices or a scope change are one dated Work-plan
-  delta. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.)*
+  delta, a new `PL-` that `relates:` the plan, and the lead lists each delta's id on the Work's
+  roadmap row (it maintains the `WK-` rows). *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.)*
 - **Mandatory skills:** `using-git-worktrees` — the lead dispatches every member into its
   own worktree. Carry this rule into every dispatch: never `git checkout`/`git switch`
   outside your own worktree; check `pwd` and `git branch --show-current` before every git

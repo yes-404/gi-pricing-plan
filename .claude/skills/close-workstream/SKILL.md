@@ -22,10 +22,10 @@ progress the repository does not have — which is worse than no roadmap, becaus
 workstream is planned against it.
 
 **Lean P2: where a slice's evidence now lives** (L1, L3 and L5, from the maintainer's entry
-"2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)" in `to-lead.md`). For a slice dispatched after that entry there is no leaf plan and no
-`LG-`: its scope (quoting its row in the Work's one plan), decisions, tasks, gate rc table, audit
-and ledger are sections of its `SL-` row in `docs/roadmap.md` (`docs/_templates/SL.md`). Read
-them there; an older slice keeps its leaf plan and `LG-`. The audit itself is unchanged: scope
+"2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)" in `to-lead.md`). For a slice dispatched after that entry there is no leaf plan: its one
+`LG-` holds five sections — scope (quoting its row in the Work's one plan), tasks, gate rc table,
+audit and build log — and quotes the GO and MERGE-ACK headers (`docs/_templates/LG.md`). Read
+them there; an older slice keeps its leaf plan beside its `LG-`. (L1 as corrected to (a') by the maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED".) The audit itself is unchanged: scope
 from the spec, four verdicts, NFRs measured, broken-input proofs. **A process finding** raised
 at a close is a dated row in `docs/process/process-backlog.md` until the P2 exit demo, not an
 `FD-`, unless it lets a wrong merge, a wrong number, a mispricing or data loss through or blocks

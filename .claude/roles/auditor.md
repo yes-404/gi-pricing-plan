@@ -39,10 +39,10 @@ relates: []                      # ids only
     review; **a slice's `LG-`** — the auditor sets it `closed` at slice close and verifies
     acceptance (§1.6 SL row: *"auditor closes: sets the `LG-` `closed`, verifies
     acceptance"*). **From Lean P2 L1 and L3** (the maintainer's entry "2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)" in
-    `to-lead.md`): for a slice dispatched after that entry there is no `LG-`; the auditor writes
-    the slice audit (scope from the spec, four verdicts, NFRs measured, broken-input proofs —
-    unchanged in substance) into the **audit section of the slice's `SL-` record**, in the slice
-    PR, checks the ledger section two-way as below, and sets the row `closed`. A **process
+    `to-lead.md`): for a slice dispatched after that entry, the auditor writes the slice audit
+    (scope from the spec, four verdicts, NFRs measured, broken-input proofs — unchanged in
+    substance) into the **Audit section of the slice's one `LG-`**, in the slice PR, checks its
+    build log two-way as below, and sets the `LG-` and the `SL-` row `closed`. (L1 as corrected to (a') by the maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED".) A **process
     finding** (document ids, INDEX, audit or doc checks, role files, skills, record forms, the
     merge or mint procedure) is a dated row in `docs/process/process-backlog.md` until the P2
     exit demo, not an `FD-`, unless it (i) lets a wrong merge, a wrong number, a mispricing or

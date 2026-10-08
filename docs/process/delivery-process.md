@@ -139,12 +139,15 @@ under §8's conditions; RL-1445.)*
 
 **Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6** (Lean P2 item L1, in force from the maintainer's entry
 "2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)" in `to-lead.md`). For every slice whose GO is given after that entry:
-**the slice is one PR** — the code, the tests, any spec change it needs, and **one `SL-` record**
-holding the scope (quoting its row in the Work's plan, step 1), the decisions (the GO and
-MERGE-ACK headers quoted verbatim, and any §8 dispatch record), the tasks, the gate's rc table,
-the audit result and the ledger (the SL template, `docs/_templates/SL.md`). **There is no
-per-slice `PL-`, no `LG-`, no dispatch `RL-` and no activation PR**; the roadmap row's status
-change rides the slice PR, and in-flight status lives in `eta.md`. A separate governed record
+**the slice is one PR** — the code, the tests, any spec change it needs, its one-line `SL-`
+roadmap row status change, and **one ledger file**, an `LG-` under `docs/ledgers/`, with five
+sections: scope (quoting its row in the Work's plan, step 1, and any §8 dispatch record), tasks,
+gate rc table, audit result and build log (the LG template, `docs/_templates/LG.md`). The `LG-`
+quotes the GO and MERGE-ACK headers verbatim. **There is no per-slice `PL-`, no dispatch `RL-`
+and no activation PR**; in-flight status lives in `eta.md`. (L1 as corrected to (a') by the
+maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED,
+and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the
+roadmap row); (2) ACCEPTED".) A separate governed record
 is written only for a spec change or a new or amended requirement; a ruling that corrects or
 reverses an earlier ruling, or binds beyond the slice; a product defect (`FD-`); or a design
 question left open (`OQ-`). The audit is unchanged in substance (`CLAUDE.md` §13); only where it
@@ -312,7 +315,8 @@ blocks work today; the lead names the limb. The P2 phase review keeps, files or 
   rule stays: a change of slice scope, or new slices, is **one dated Work-plan delta** covering
   every change at once; slice status lives in `docs/roadmap.md`, never in the plan. An open
   Work's remaining unplanned slices go into one delta, filed when the next of them needs a
-  plan; existing per-slice plans stand. **Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6** (Lean P2 item L5;
+  plan; existing per-slice plans stand. A delta is a new `PL-` that `relates:` the Work's plan; a
+  true replan still uses `supersedes:`; the Work's roadmap row lists every delta's id. **Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6** (Lean P2 item L5;
   it read "a slice breakdown per work item, and a plan per slice … existing, unchanged").
 - The **process backlog** (`docs/process/process-backlog.md`): process findings held until
   the P2 phase review (§9's amendment).

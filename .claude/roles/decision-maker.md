@@ -33,8 +33,8 @@ relates: []                      # ids only
   - **Rules a plan's decision points as an `RL-` and never edits the plan** (§1.6 PL
     map/leaf row: *"decision-maker rules decision points as `RL-`, never edits the plan"*).
     **From Lean P2 L1** (the maintainer's entry "2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)" in `to-lead.md`): **no dispatch
-    `RL-`**. A ruling inside one slice is written into that slice's `SL-` record (its decisions
-    section), in the slice PR; a separate `RL-` only when it corrects or reverses an earlier
+    `RL-`**. A ruling inside one slice is an entry in that slice's `LG-` build log, dated, in the
+    slice PR (L1 as corrected to (a') by the maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED".); a separate `RL-` only when it corrects or reverses an earlier
     ruling or binds beyond the slice. A process finding is a dated row in
     `docs/process/process-backlog.md` (L3). *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.)*
 - **Never:** closes work or phases, implements, or rules audit verdicts (verdicts are the

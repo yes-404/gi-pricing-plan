@@ -3,7 +3,7 @@
     "id": "delivery-process-core",
     "version": "1.0.0",
     "derived_from": "docs/process/delivery-process.md",
-    "derived_from_digest": "sha256:f5deabf9b3ac4a3b202b6bef8aadfa6fedd1a357efdfce8de95ef5ede362d956",
+    "derived_from_digest": "sha256:d6746be99f15fb9bfca257e8c739845e88decfe4d29bf00274810a978b8d2313",
     "verified_against_tree": "0651c1e265648cbd3918adfc729ad965b83b1e0b",
     "authoritative": false,
     "note": "The markdown spec is authoritative. This file is the mechanical extract: state machine, guards, vocabularies, and runtime-state schema for hooks/watcher scripts. Regenerate or diff-check against the md on every spec change (RFC-895 script C4). Each block is the mechanically-checkable subset of the section it cites, not an exhaustive rendering -- a section may state more than its block records, and a block's silence is not the section's silence.",
@@ -281,7 +281,7 @@
             "scope",
             "acceptance_standard"
           ],
-          "record": "the_slices_row_in_its_works_one_plan_quoted_in_its_sl_record",
+          "record": "the_slices_row_in_its_works_one_plan_quoted_in_its_lg_scope_section",
           "amended": "2026-10-08, RFC-9479 P6 (Lean P2 L1, L3, L5) and P5, by the maintainer's amendment (dated line by delegation) (§6, §10)"
         },
         {
@@ -337,12 +337,13 @@
             "small_working_commit",
             "pr_opened",
             "never_self_merged",
-            "one_pr_per_slice_code_tests_spec_change_and_one_sl_record",
-            "sl_record_sections_scope_decisions_tasks_gate_audit_ledger",
-            "no_per_slice_pl_no_lg_no_dispatch_rl_no_activation_pr"
+            "one_pr_per_slice_code_tests_spec_change_sl_row_status_and_one_lg",
+            "lg_sections_scope_tasks_gate_audit_build_log",
+            "no_per_slice_pl_no_dispatch_rl_no_activation_pr"
           ],
           "applies_from": "slices_whose_go_follows_to_lead_2026_10_08_11_51_58",
-          "amended": "2026-10-08, RFC-9479 P6 (Lean P2 L1, L3, L5) and P5, by the maintainer's amendment (dated line by delegation) (§6)"
+          "amended": "2026-10-08, RFC-9479 P6 (Lean P2 L1, L3, L5) and P5, by the maintainer's amendment (dated line by delegation) (§6)",
+          "corrected": "2026-10-08 12:02:08 BST, L1 (a'): the slice's one file is its LG-, not text under the roadmap row"
         },
         {
           "id": "return_to_work",
@@ -556,7 +557,7 @@
     "runtime_state_location": "handover_ops_area_outside_repo",
     "source": "§9, §10, §13",
     "process_backlog": "docs/process/process-backlog.md",
-    "plan_granularity": "one_plan_per_work_slices_as_rows_one_dated_work_plan_delta_per_change",
+    "plan_granularity": "one_plan_per_work_slices_as_rows_deltas_relate_replans_supersede_work_row_lists_deltas",
     "process_findings": {
       "default": "dated_row_in_process_backlog_until_p2_exit_demo",
       "fd_when": [

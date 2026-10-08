@@ -8,7 +8,7 @@ created: 2026-10-08
 owner: maintainer
 tree: 8b0256fdb5f000c11817838c129e1f9a4f8d8e10
 deliverable: a ruled choice per part (P1 to P6) and a sequence; P5's write-up and P6 (Lean P2 L1, L3, L5) land in this RFC's PR, every other part taken as its own Work or Slice
-lands_in: CLAUDE.md §12 §13, .claude/roles (lead, planner, executor, auditor, decision-maker), .claude/skills (close-workstream, writing-plans, subagent-driven-development, repo-architecture, README), docs/_templates/SL.md, docs/process/process-backlog.md, docs/process/delivery-process.core.json, .claude/roles/lead.md rule 4, docs/process/delivery-process.md §8, docs/process/document-ids.md §1.4 §1.7 §1.11, scripts/doc-id.py, scripts/doc-index.py, scripts/audit-docs.py, .github/workflows, the repository ruleset (a setting the user owns)
+lands_in: CLAUDE.md §12 §13, .claude/roles (lead, planner, executor, auditor, decision-maker), .claude/skills (close-workstream, writing-plans, subagent-driven-development, README), docs/_templates/LG.md, docs/process/process-backlog.md, docs/process/delivery-process.core.json, .claude/roles/lead.md rule 4, docs/process/delivery-process.md §8, docs/process/document-ids.md §1.4 §1.7 §1.11, scripts/doc-id.py, scripts/doc-index.py, scripts/audit-docs.py, .github/workflows, the repository ruleset (a setting the user owns)
 trigger: the user's question of 2026-10-08, how to stop late merges causing conflicts and doc-id errors
 supersedes: []
 superseded_by: ~
@@ -387,14 +387,15 @@ route is for a finding.
 **L1 — one PR per slice, carrying its own paperwork.** For every slice whose GO is given after
 the entry (SL-1448, WK-673 Slice 3 and WK-675 S2 finish in the old form; #1241 may merge as
 filed):
-- **(a)** The slice is one PR: the code, the tests, any spec change it needs, and **one `SL-`
-  record**. That record holds the scope (quoting its row in the Work's plan), the tasks, the
-  gate's rc table, the audit result and the ledger. The ledger is a section of the `SL-`, not a
-  separate `LG-`.
-- **(b)** There is no per-slice `PL-`, no `LG-`, no dispatch `RL-` and no activation PR. The GO
-  and MERGE-ACK stay in `to-lead.md`, and the `SL-` quotes their headers verbatim, so the
-  decision is in the repository at merge (`CLAUDE.md` §12). The roadmap row's status change
-  rides the slice PR. In-flight status lives in `eta.md`.
+- **(a'), as corrected** by "## 2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED" (the 11:51:58 wording, *"ONE slice record (SL-) … The
+  ledger is a section of the SL, not a separate LG-"*, rested on an `SL-` being a file; it is a
+  row in `docs/roadmap.md`): the slice is one PR — the code, the tests, any spec change, its
+  **one-line `SL-` roadmap row status change**, and **one ledger file, an `LG-` under
+  `docs/ledgers/`**, with five sections: scope (quoting its Work-plan row), tasks, gate rc
+  table, audit result and build log (`docs/_templates/LG.md`).
+- **(b)** There is no per-slice `PL-`, no dispatch `RL-` and no activation PR. The GO and
+  MERGE-ACK stay in `to-lead.md`, and the `LG-` quotes their headers verbatim, so the decision
+  is in the repository at merge (`CLAUDE.md` §12). In-flight status lives in `eta.md`.
 - **(c)** A separate governed record is written **only** for: a spec change or a new or amended
   requirement; a ruling that corrects or reverses an earlier ruling, or binds beyond the slice;
   a **product** defect (`FD-`); or a design question left open (`OQ-`).
@@ -453,19 +454,14 @@ is present verbatim in its file at this head: 48 of 48, by a line-membership scr
 working tree before commit. The only edit needed was context: two hunks (auditor, lead) applied
 with conflicts against bullets `main` gained after #1159's base, resolved by keeping both sides.
 
-**Two readings this PR applies, for the maintainer's review (not silent picks):**
-1. **Where the `SL-` record's sections live.** An `SL-` is a row family hosted in
-   `docs/roadmap.md` (`document-ids.md` §1.2). The sections are therefore **labelled paragraphs
-   under the row's fenced header block**, not sub-headings. Headings would add anchors and
-   heading-level semantics that `doc-index.py`'s row parser and check 33 read; labels add none
-   (`docs/_templates/SL.md`). **The cost:** the roadmap grows by one slice record per slice,
-   which feeds P4's 4C (roadmap rows one file each) at the post-P2 re-measure. **The
-   alternative**, the `SL-` as a document family under its own directory, is §1.12's new-family
-   lever (RFC + RL) and is not taken here.
-2. **What a "Work-plan delta" is.** It is a new `PL-` that `relates:` the Work's plan and
-   leaves it unedited, rather than a replan (`supersedes:`). The plan stays the Work's one plan,
-   and the delta adds to it. If the maintainer reads "delta" as a replan, the planner charter
-   line changes from `relates:` to `supersedes:`; nothing else does.
+**The two readings flagged for review, RULED** by "## 2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED":
+1. **The `SL-` record's sections as labelled paragraphs under the roadmap row: REJECTED.** The
+   ruling's cost line: it grows the repository's largest, most-conflicted shared file by one
+   ledger per slice, the very conflict P4 measures. Replaced by L1 (a') above: the slice's one
+   file is its `LG-`. This PR's files follow (a'), and the SL template is back as on `main`.
+2. **A Work-plan delta is a new `PL-` that `relates:` the Work's plan: ACCEPTED.** A delta adds
+   slices or changes scope and does not replace the plan; a true replan keeps `supersedes:`.
+   The Work's roadmap row lists every delta's id (the lead maintains the `WK-` rows).
 
 **Every file this PR changes for P5 and P6, with old → new and a predicate.** Tree:
 `origin/main...rfc-9479-merging-in-parallel`. The dated-line predicate is the fixed string
@@ -475,27 +471,30 @@ the string is new.
 
 | File | Old → new | Predicate (`grep -cF`) at this head |
 |---|---|---|
-| `CLAUDE.md` §13 | *"a slice ledger is an `LG-` under `docs/ledgers/`"* → a slice's scope, decisions, tasks, gate, audit and ledger are sections of its one `SL-`; one `PL-` per Work, slices as rows; `LG-`, leaf plan, dispatch `RL-` and activation PR only for older slices; process findings to `process-backlog.md`, with the two-limb `FD-` valve | dated line: 2 (§12, §13); `process-backlog.md`: 1 |
-| `CLAUDE.md` §12 | *"a ruling record, an audit record, a plan —"* → adds *"or the slice record that quotes the GO and MERGE-ACK headers verbatim"* | `quotes the GO and MERGE-ACK headers`: 1 |
-| `docs/process/delivery-process.md` §6 | step 1's slice plan and step 7's commit → the L1 paragraph (one PR, one `SL-`, no per-slice PL/LG/dispatch RL/activation PR; when a separate record is written) | dated line: 4 in the file (§6, §8, §9, §10) |
+| `CLAUDE.md` §13 | *"a slice ledger is an `LG-` under `docs/ledgers/`"* → the `LG-` is, from Lean P2, the slice's one paperwork file with five sections, carried in the slice's one PR with the `SL-` row's one-line status change; one `PL-` per Work, slices as rows, dated deltas that `relates:` it; no per-slice `PL-`, dispatch `RL-` or activation PR; process findings to `process-backlog.md` with the two-limb `FD-` valve | dated line: 2 (§12, §13); `one paperwork file`: 1; `process-backlog.md`: 1 |
+| `CLAUDE.md` §12 | *"a ruling record, an audit record, a plan —"* → adds *"or the slice ledger that quotes the GO and MERGE-ACK headers verbatim"* | `quotes the GO and MERGE-ACK headers`: 1 |
+| `docs/process/delivery-process.md` §6 | step 1's slice plan and step 7's commit → the L1 (a') paragraph: one PR (code, tests, spec change, the `SL-` row's one-line status, one `LG-` with five sections), no per-slice PL / dispatch RL / activation PR, when a separate record is written | dated line: 4 in the file (§6, §8, §9, §10); `12:02:08`: 1 |
 | `docs/process/delivery-process.md` §8 | (none) → "PRs, batches and merging — the standing rules (RFC-9479 P5)": 5a–5e, 5f (in force, interim), 5h; 5d carries 2E (a draft branch commits no INDEX hunk) | `(5h) Remote CI is not a gate`: 1 |
-| `docs/process/delivery-process.md` §9 | (none) → the L3 paragraph | `process-backlog.md`: 2 lines in the file (`grep -c` counts lines) |
-| `docs/process/delivery-process.md` §10 | *"a slice breakdown per work item, and a plan per slice … existing, unchanged"* → one plan per Work, slices as rows, one dated Work-plan delta; plus a process-backlog bullet | `one plan per Work`: 1 |
-| `docs/process/delivery-process.core.json` | new keys only: `slice_plan.record`, `commit.constraints` (+3) and `applies_from`, `artifacts.process_backlog` / `plan_granularity` / `process_findings`, `guards.pr_and_merge_rules`; `meta.derived_from_digest` → the amended spec's sha256; `verified_against_tree` unchanged (the migration base) | `RFC-9479 P6`: 4; check 27 green (audit-docs) |
-| `docs/process/document-ids.md` §1.2, §1.6, §1.11 | the SL and LG rows (§1.2); the SL, PL map/leaf, LG and FD rows and the charters row (§1.6); check 39's ledger clause (§1.11) | dated line: 6; `RFC-9479 P6, 2026-10-08`: 2 |
-| `.claude/roles/lead.md` | the SL dispatch clause (GO quoted, no activation PR); rule 4 gains 1E (in force), 1E for code PRs (11:57:55, in force), the 5a–5e, 5f and 5h pointer, and the `draft/` sweep; a new Lean P2 bullet (L1, L3 with the limb, L5); #1159's PATCH bullet | dated line: 3; `11:57:55`: 1 |
-| `.claude/roles/planner.md` | a new Lean P2 bullet: one plan per Work, slices as rows, no leaf plan, one dated delta; #1159's PATCH bullet | dated line: 1 |
-| `.claude/roles/executor.md` | "Works from a `PL-` leaf" and "Appends its `LG-`" → the slice's row in the Work plan; one PR; writes the SL's tasks, gate and ledger sections; no `LG-` | dated line: 1 |
-| `.claude/roles/auditor.md` | "a slice's `LG-` … sets it `closed`" → the SL's audit section, the row `closed`; process findings to the backlog with the two limbs | dated line: 1 |
-| `.claude/roles/decision-maker.md` | rules a plan's decision points → no dispatch `RL-`, an in-slice ruling in the SL's decisions section; *"every ruling … lands as a PR"* → inside the slice PR or the next batch PR | dated line: 1 |
-| `.claude/skills/close-workstream/SKILL.md` | a new paragraph: where a slice's evidence lives; process findings; Verified line | dated line: 1 |
-| `.claude/skills/writing-plans/SKILL.md` | a new bullet: one plan per Work, the delta | dated line: 1 |
-| `.claude/skills/subagent-driven-development/SKILL.md` | the ledger box gains: after L1, the ledger is the SL row's section | dated line: 1 |
-| `.claude/skills/repo-architecture/SKILL.md` | the `ledgers/` tree line qualified; Verified line | dated line: 1 |
-| `.claude/skills/README.md` | the seventh deviation recorded (`subagent-driven-development`, `writing-plans`) | dated line: 1 |
-| `docs/_templates/SL.md` | the comment gains the L1 rule; the row gains five labelled paragraphs: Scope, Decisions, Tasks, Gate, Audit and ledger | dated line: 1; `**Audit and ledger.**`: 1 |
-| `docs/process/process-backlog.md` (new) | — → the L3 file: rules, the valve, the drafts rule, and five dated rows (11:56:02) | dated line: 1; `#909 @`, `#1163 @`, `#982 @`, `#1147 @`, `#1146 @`: 1 each |
-| `docs/ledgers/README.md`, `docs/plans/README.md` | a paragraph each: no new `LG-` after L1; one plan per Work after L5 | dated line: 1 each |
+| `docs/process/delivery-process.md` §9 | (none) → the L3 paragraph | `process-backlog.md`: 2 lines |
+| `docs/process/delivery-process.md` §10 | *"a slice breakdown per work item, and a plan per slice … existing, unchanged"* → one plan per Work, slices as rows; a delta `relates:` it, a true replan `supersedes:`, the Work's roadmap row lists every delta; plus a process-backlog bullet | `one plan per Work`: 1 |
+| `docs/process/delivery-process.core.json` | new keys only: `slice_plan.record`, `commit.constraints` (+3), `applies_from`, `corrected`, `artifacts.process_backlog` / `plan_granularity` / `process_findings`, `guards.pr_and_merge_rules`; `meta.derived_from_digest` → the amended spec's sha256; `verified_against_tree` unchanged (the migration base) | `RFC-9479 P6`: 4; check 27 green |
+| `docs/process/document-ids.md` §1.2, §1.6, §1.11 | §1.2: the SL row (status in one line in the slice PR) and the LG row (the slice's one paperwork file, five sections); §1.6: the SL, PL map/leaf (delta `relates:`, replan `supersedes:`), LG and FD rows and the charters row; §1.11: check 39's ledger clause | dated line: 6; `L1 (a')`: 4 |
+| `.claude/roles/lead.md` | the SL dispatch clause (GO quoted in the `LG-`, no activation PR); rule 4 gains 1E (in force), 1E for code PRs (11:57:55, in force), the 5a–5e, 5f and 5h pointer, and the `draft/` sweep; a Lean P2 bullet (L1 (a'), L3 with the limb, L5 with the lead listing deltas on the `WK-` row); #1159's PATCH bullet | dated line: 3; `11:57:55`: 1; `12:02:08`: 1 |
+| `.claude/roles/planner.md` | a Lean P2 bullet: one plan per Work, slices as rows, no leaf plan, one dated delta that `relates:` (a replan `supersedes:`), its row quoted in the slice's `LG-`; #1159's PATCH bullet | dated line: 1; `12:02:08`: 1 |
+| `.claude/roles/executor.md` | "Works from a `PL-` leaf" and "Appends its `LG-`" → the slice's row in the Work plan; one PR; writes the `LG-`'s scope, tasks, gate and build log; no activation PR; #1159's PATCH bullet | dated line: 1; `12:02:08`: 1 |
+| `.claude/roles/auditor.md` | "a slice's `LG-` … sets it `closed`" → writes the `LG-`'s Audit section, sets the `LG-` and the `SL-` row `closed`; process findings to the backlog with the two limbs; #1159's PATCH bullet and single-threaded measurements | dated line: 1; `12:02:08`: 1; `OMP_NUM_THREADS=1 nice`: 2 lines |
+| `.claude/roles/decision-maker.md` | no dispatch `RL-`; an in-slice ruling is a dated entry in the slice `LG-`'s build log; *"every ruling … lands as a PR"* → inside the slice PR or the next batch PR; #1159's PATCH bullet and §10 gate-row line | dated line: 1; `12:02:08`: 1; `decision-gate row`: 1 |
+| `.claude/skills/close-workstream/SKILL.md` | a paragraph: a slice's evidence is its one `LG-`'s five sections; process findings; a Verified line | dated line: 1; `12:02:08`: 1 |
+| `.claude/skills/writing-plans/SKILL.md` | a bullet: one plan per Work, deltas `relates:`, replans `supersedes:`, the `LG-` quotes the row | dated line: 1 |
+| `.claude/skills/subagent-driven-development/SKILL.md` | the ledger box gains: after L1 the `LG-` is the slice's one paperwork file with five sections; "ledger the ruling" is a dated Build log entry | dated line: 1; `12:02:08`: 1 |
+| `.claude/skills/README.md` | the seventh deviation recorded (`subagent-driven-development`, `writing-plans`), the sixth kept and extended | dated line: 1; `12:02:08`: 1 |
+| `docs/_templates/LG.md` | the comment gains L1 (a'); the body gains GO and MERGE-ACK lines and the five sections Scope, Task list, Gate, Audit, Build log as **`###` under `## Tasks`**; `## Tasks` and `## PRs` stay the only `##` headings, because check 37 requires every template `##` heading of every existing ledger (as `##` they red 30 ledgers; a backlog row records it) | dated line: 1; `### Build log`: 1; `^## ` headings: 2 |
+| `docs/process/process-backlog.md` (new) | — → the L3 file: rules, the valve, the drafts rule, five dated rows (11:56:02) and a sixth (check 37 cannot version a template) | dated line: 1; `#909 @`, `#1163 @`, `#982 @`, `#1147 @`, `#1146 @`: 1 each |
+| `docs/ledgers/README.md`, `docs/plans/README.md` | a paragraph each: the `LG-` as the slice's one paperwork file after L1 (a'); one plan per Work after L5 | dated line: 1 each |
+
+**Reverted to `main` by the 12:02:08 correction:** `docs/_templates/SL.md` (the five labelled
+paragraphs, reading (1), rejected) and `.claude/skills/repo-architecture/SKILL.md` (its `ledgers/`
+line is true again as written). Predicate: `git diff --stat origin/main...HEAD -- docs/_templates/SL.md .claude/skills/repo-architecture/SKILL.md` prints nothing.
 
 **Checked and left unchanged**, with the reason. `docs/process/checklists/*.md`: no ledger,
 leaf or activation text (`grep -n -iE 'ledger|LG-|leaf|slice plan|activation'` → 0).
@@ -609,7 +608,7 @@ code.
 11:40:59 BST — USER INSTRUCTION: RFC 9479 is kept current with every new rule until it merges"):
 every rule the maintainer logs on PR creation, batching, merging, ids, generated files or cleanup
 is folded in the same day and listed here. **Every `to-lead.md` entry from 10:38:11 BST on 8 Oct
-to 11:57:55 BST is listed**, carried or left out with a reason, plus the earlier entries the RFC rests on.
+to 12:02:08 BST is listed**, carried or left out with a reason, plus the earlier entries the RFC rests on.
 Headers are verbatim, except the one elided where marked.
 
 | `to-lead.md` entry header (verbatim) | Carried in | Or left out, because |
@@ -647,6 +646,7 @@ Headers are verbatim, except the one elided where marked.
 | ## 2026-10-08 11:56:02 BST — L3 LIST (handover/l3-list-2026-10-08.md) RULED: six PRs leave (#909 #1163 #982 #1147 #1146 to backlog rows; #1159 folded into #1240); #1153 STAYS and mints, being already ruled | P6 (L3's first rows; the #1159 fold); `docs/process/process-backlog.md` (five rows); the five role files (#1159) | #1153's T3-lint and mint-order checks (its item 3) are the lead's and the minter's, at B10 |
 | ## 2026-10-08 11:56:44 BST — USER: the delegation is confirmed and widened; the maintainer (by delegation) decides to keep P2 moving and reduce errors | the ruling list (the rest of this RFC is the maintainer's to decide at review; P1's transfer stays the user's, as repository ownership) | — |
 | ## 2026-10-08 11:57:55 BST — RULED: a code PR's ACK may carry across a DOCS-ONLY main merge without a new CI wait (the 02:28:42 waiver extended), with the check-31 tests re-run locally | P1 (1E for code PRs, in force); `lead.md` rule 4 | the "02:28:42 waiver" it extends is cited by that entry, not re-read here |
+| ## 2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED | P6 (L1 (a'), the two readings ruled, the change list); every file in P6's table; the SL template and `repo-architecture` reverted | — |
 
 ## Deliverable
 
