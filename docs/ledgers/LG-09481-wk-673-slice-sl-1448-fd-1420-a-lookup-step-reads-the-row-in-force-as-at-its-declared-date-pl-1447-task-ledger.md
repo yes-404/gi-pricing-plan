@@ -63,3 +63,21 @@ called in `score_one` at `:922` and in `_score_context_sync` at `:1088`. The `_c
 beside them. That check refuses an input that shadows a name a step *produces*; the stamped `effective_date` is not a
 produced name, so the plan's run-time value check is not obviously redundant. Task 3 re-reads the function; if any plan
 step is redundant or contradicted by it, that is a STOP to the lead, not a silent drop.
+
+### Task 1 — the pricing-core reds, at base `0ee8f414` (tests only)
+
+The module `packages/pricing-core/tests/test_rating_lookup_as_at.py` is the code of Task 1 Steps 1 and 2, extracted from
+the plan by script (the one import line moved to the import block, as Step 2 says) and `ruff format`ted. Run
+2026-10-08, `OMP_NUM_THREADS=1 nice uv run pytest -q -rf packages/pricing-core/tests/test_rating_lookup_as_at.py`, both gate
+slots free: `16 failed, 2 passed in 13.77s`, matching the plan's Run 7 (`16 failed, 2 passed`).
+
+- **Failed `AssertionError: the superseded row's rate returned`** (5): `test_score_one_prices_on_the_row_in_force`
+  `[2026-01-01-at-from]`, `[2026-06-01]`, `[2099-01-01-open-ended]`; `test_score_batch_prices_on_the_row_in_force`;
+  `test_a_date_input_named_by_as_at_selects_the_row`.
+- **Failed `DID NOT RAISE`** (11): `test_score_one_misses_before_every_row`; the three compile refusals
+  (`test_as_at_naming_a_non_date_input_is_refused_at_compile`, `test_as_at_naming_an_undeclared_value_is_refused_at_compile`,
+  `test_a_declared_effective_date_must_be_date_typed`); the six `test_a_malformed_as_at_value_is_refused_not_missed`
+  values; `test_an_input_shadowing_effective_date_is_checked`.
+- **Passed (the controls)** (2): `[2020-01-01-at-from]`, `[2025-12-31-before-to]`.
+
+Every red has the cause the plan predicts; no unexpected pass.
