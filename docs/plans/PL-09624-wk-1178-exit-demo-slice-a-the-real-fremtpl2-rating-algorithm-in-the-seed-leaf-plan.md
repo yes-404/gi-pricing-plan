@@ -407,7 +407,7 @@ failure line as printed.
 | `03` | FR-230 | Each rateable Factor's table is seeded from the approved GLM, `seeded_from` recorded | `req("FR-230")` on Acceptance 1 |
 | `03` | FR-237 | The Rating Version pins the algorithm version and every seeded table version | `req("FR-237")` on Acceptance 2 |
 | `03` | FR-212 | The algorithm is a valid DAG and compiles | existing compile tests; Acceptance 2 |
-| `03` | FR-213 | The input contract declares each of the seven raw rating inputs with type and domain | `req("FR-213")` on the builder test |
+| `03` | FR-213 | The input contract declares each of the ~~seven~~ eight raw rating inputs with type and domain: the seven modelled columns and `bonus_malus` (Pre-mint note 4) | `req("FR-213")` on the builder test |
 | `03` | FR-226 | One `output` step, `half_even`, 0 dp, in minor units | `req("FR-226")` on Acceptance 3 |
 | `03` | FR-240 | The bundle compiles with every pin resolved and approved | Acceptance 2 (regression only) |
 | `03` | FR-246 | Every step's reads ⊆ its consumes (the interim guard) | `req("FR-246")` on Acceptance 4 |
@@ -557,9 +557,12 @@ between stay readable.
   banded Factor slug to its Banding (empty under DP-a1 (c)).
 
 The algorithm's steps, in order:
-1. One `input` step per raw column (seven), `on_missing: "error"`. The input contract
+1. One `input` step per raw column (~~seven~~ eight), `on_missing: "error"`. The input contract
    declares the continuous ones `int` with `min`/`max` from the Banding's boundaries, and the
-   categorical ones `string` with `domain` = the seeded levels.
+   categorical ones `string` with `domain` = the seeded levels. *(Pre-mint note 4.)* The eighth
+   is `bonus_malus` (freMTPL2's `BonusMalus`), declared `int` and marked **non-modelled**: a
+   rating-table input, not a model feature, sourced from the same Dataset Version. No step of
+   this slice consumes it; PL 9629's B7 (the `ncd-ladder` sub-graph) keys on it.
 2. One `expression` step per banded factor, `expr = band_expression(...)`, `result_type:
    "string"`, `consumes: [<column>]`, `produces: <factor slug>`.
 3. One `expression` step, `base`, `expr = "<base_minor>"`, `result_type: "money_minor"`,
@@ -778,3 +781,13 @@ the mint: fine"). No scope, task, acceptance item, write set, owner or decision 
 `origin/main` `137bc817` merged in. Between `cdaaa573` and `137bc817`, main changed only
 `docs/INDEX.md`, `RL-1361` (its `corrected_by` field) and the new `RL-1418`, so no line cite
 in this plan moved.
+
+## Pre-mint note 4, 2026-10-08
+
+*Dated 2026-10-08 (`TZ=Europe/London date`: 2026-10-08 13:18:24 BST), before the mint of PL 9624 (working id).*
+Edited in place on the unmerged draft #1161 by planner-pl9629, on the lead's order, to record
+the maintainer's (by delegation) entry headed *"2026-10-08 13:12:28 BST — PL 9629 STOP RULED:
+(1) R1, the BonusMalus declaration lives in PL 9624 (my 13:08:01 wording CORRECTED); (2)
+FD-1494 limb 3 = (a) a typed error, with the write set widened"* (`channel/to-lead.md`,
+local), item (1), and nothing else: the input contract declares eight inputs, `bonus_malus`
+the eighth (§"The algorithm's steps" item 1; the FR-213 coverage row).
