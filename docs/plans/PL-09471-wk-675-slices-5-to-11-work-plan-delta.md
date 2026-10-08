@@ -55,6 +55,16 @@ read at `origin/main` `60e9254c` (#1242, 2026-10-08T12:40:57+01:00), by a full-c
   4–5 project days after each reset). RE-BASELINE: plan on 4-in-7; a ranked CUT LADDER; pause-proof
   scheduling", item 1: S9, then S10/S11, are its first rungs. **This delta does not pre-cut them**;
   it marks them, and a dated move line applies a rung when the maintainer's ladder says so.
+- **The ladder as ruled**, "2026-10-08 13:21:00 BST — CUT LADDER (handover/cut-ladder-2026-10-08.md)
+  RULED: rungs 1–7 adopted in that order (7 conditional); rung 8 VOID; rung 9 OFF the automatic
+  ladder; mid-week application limited", item (1): this Work's rungs are S9 (rung 1), S10+S11
+  (rung 2) and S8 (rung 7, "void if PL 9629's served page is that view; the #1164 pass decides
+  it"); "Rung 9 (WK-675 S7+S7b) is REMOVED from the automatic ladder … If rungs 1–7 are spent and
+  the line is still missed, it comes to me as a decision."
+- **The build order**, "2026-10-08 14:32:33 BST — DELTAS AUDIT (handover/audit-deltas-2026-10-08.md)
+  noted; fixes proceed; DP A, B (c), C confirmed, D AMENDED (build in reverse ladder order)", item D:
+  "build WK-675 in REVERSE LADDER ORDER where no dependency forbids it: S5 → S6 → S7b → S7 → S8 → S10
+  → S11 → S9."
 - `kind: map`, because the PL template admits `map | leaf | review | handover` only (the lead's
   decision (b), 2026-10-08).
 
@@ -123,18 +133,23 @@ executor. Columns follow L5 (a): scope, requirements, dependencies, lane and ord
 PROPOSED to move to a second contributor team (to-lead "2026-10-08 13:07:20 BST — USER: the new
 contributor runs HER OWN Claude team (team B). The two-team protocol; CONTRIBUTING.md re-scoped to
 it; WK-675 is the proposed team-B Work", T1, in effect when team B starts); the lane or team is
-fixed at each slice's GO. Order is `PL-1286:370` with S12, S13 and S14 removed; a slice may move up when its
-dependencies are met (`PL-1286:372-387`).
+fixed at each slice's GO. **Order is reverse ladder order** (item D of the 14:32:33 entry), which
+amends `PL-1286:370` (S12, S13 and S14 removed) by moving S8 ahead of S10 and S11: the least likely to
+be cut are built first, so a cut never discards finished work. **No S8 dependency on S10 or S11
+exists** (checked, item D's condition): S8 needs S1 and `SL-1388` only (`PL-1286:363` and
+`:381-382`), and `PL-1286:377-380` calls S10/S11-before-S8 "a preference, not a dependency". A slice
+whose dependency is unmet waits; the next ready slice in this order takes its turn (`PL-1286:372-387`).
+If exit demo (b)'s served page is S8's view (the #1164 pass), S8 is a demo need and moves earlier still.
 
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Depends on | Lane | Size | Ladder |
 |---|---|---|---|---|---|---|---|
 | 1 | SL 9468 — S5: Editor II: diff shading, bulk, import, export | `PL-1286` S5 row, plus R5.1–R5.3 | `03` §3.3: FR-230, FR-231, FR-232, FR-233, FR-235; `00`: FR-25; NFR-463; register F-W10-1, F-W10-2 (view limb) | S4 closed; **OQ-1223 decided** (DP-3); `SL-1391` (closed, met); the FD-1366 bulk-operation typing slice (WK-1178) merged | at GO | 1 | no |
 | 2 | SL 9467 — S6: Sandbox: form, waterfall, trace | `PL-1286` S6 row, plus R6.1–R6.2 | `03` §3.1: FR-213; §3.6: FR-247, FR-248, FR-249 (shown absent, R6.1); §3.7: FR-251, FR-252, FR-255, FR-256; §3.8: FR-258; FR-25; NFR-463 | S1 (closed, met); **`SL-1367` merged** (FD-1335 hold) | at GO | 1 | no |
-| 3 | SL 9466 — S7b: Compare backend | `PL-1286` S7b row, plus R7b.1 | `03` §4.10 `StepChange.own_change`; §3.8: FR-262 (backend limb) | `RL-1261` (met); **`SL-1367` merged first** (both edit `score_compare`) | at GO | 1 | no |
-| 4 | SL 9465 — S7: Sandbox compare | `PL-1286` S7 row | `03` §3.8: FR-262 (view limb); §4.10's `own_change` rendering rule | S6, S7b closed; `SL-1367` merged | at GO | 1 | no |
-| 5 | SL 9462 — S10: Rating version list | `PL-1286` S10 row, as changed by R10.1 | `03` §3.4: one new FR (spec first, R10.1); FR-25; `FD-1283` option A | S6 (order); DP-5 (`RL-1473`, met); `SL-1256` (closed, met) | at GO | 1 | **candidate, rung 2** (with S11) |
-| 6 | SL 9461 — S11: Regression suite view | `PL-1286` S11 row | `03` §3.8: FR-260, FR-261, FR-1221; `FD-1283` option A; a run-list read route under DP-4 (a) only if the version's evidence gives no run id | S10 (order); DP-5 (met) | at GO | 1 | **candidate, rung 2** (with S10) |
-| 7 | SL 9464 — S8: Dislocation views | `PL-1286` S8 row, plus R8.1 | `03` §3.9: FR-263, FR-264, FR-265, FR-266; NFR-463 | S1 (met); **`SL-1388`** (WK-673 S4) closed | at GO | 1 | no |
+| 3 | SL 9466 — S7b: Compare backend | `PL-1286` S7b row, plus R7b.1 | `03` §4.10 `StepChange.own_change`; §3.8: FR-262 (backend limb) | `RL-1261` (met); **`SL-1367` merged first** (both edit `score_compare`) | at GO | 1 | not on the automatic ladder (rung 9 is OFF; to the maintainer if rungs 1–7 are spent) |
+| 4 | SL 9465 — S7: Sandbox compare | `PL-1286` S7 row | `03` §3.8: FR-262 (view limb); §4.10's `own_change` rendering rule | S6, S7b closed; `SL-1367` merged | at GO | 1 | not on the automatic ladder (rung 9 is OFF; to the maintainer if rungs 1–7 are spent) |
+| 5 | SL 9464 — S8: Dislocation views | `PL-1286` S8 row, plus R8.1 | `03` §3.9: FR-263, FR-264, FR-265, FR-266; NFR-463 | S1 (met); **`SL-1388`** (WK-673 S4) closed | at GO | 1 | **rung 7 (conditional on #1164's served page)**: void if exit demo (b)'s served page is this view |
+| 6 | SL 9462 — S10: Rating version list | `PL-1286` S10 row, as changed by R10.1 | `03` §3.4: one new FR (spec first, R10.1); FR-25; `FD-1283` option A | S8 (order, item D); DP-5 (`RL-1473`, met); `SL-1256` (closed, met); **`03` §3.4 serialised with WK-674 S6** (`SL-1260`, R10.2) | at GO | 1 | **candidate, rung 2** (with S11) |
+| 7 | SL 9461 — S11: Regression suite view | `PL-1286` S11 row | `03` §3.8: FR-260, FR-261, FR-1221; `FD-1283` option A; a run-list read route under DP-4 (a) only if the version's evidence gives no run id | S10 (order); DP-5 (met) | at GO | 1 | **candidate, rung 2** (with S10) |
 | 8 | SL 9463 — S9: Designer III: sub-graph mounting | `PL-1286` S9 row | `03` §3.1: FR-217 (the mount), FR-218 (authoring view) | S3 closed; **`SL-1341`** (WK-1250 S3) closed | at GO | 1 | **candidate, rung 1** |
 
 ### Changes since `PL-1286`, per slice
@@ -170,17 +185,26 @@ dependencies are met (`PL-1286:372-387`).
   (`git grep -n 'GET.*/rating-versions' -- docs/specs/03-rating-engine.md`), S10 stops and reports:
   adding it is `RL-1483`'s slice's, not S10's. Whether `RatingVersionView` stays is S10's question
   (`RL-1473:124-126`), answered in its `LG-`.
+- **R10.2 — `03` §3.4 is serialised with WK-674 S6.** `PL-1286:398`: "S10 (its new FR) | `03` §3.4
+  (Rating versions) | WK-674 Slice 6 (the FR-241 cross-reference in §3.4, `PL-1237`:976) |
+  **serialise**". S10's spec-first change and `SL-1260`'s FR-241 correction never edit §3.4 in
+  parallel; whichever merges second rebases onto the first. PL 9472 (working id) states the same
+  from WK-674's side.
 - **R8.1 — the slug route form.** `RL-1473:200`: "Slices 3–8, 10 and 11 use the same resolution.
   None of them adds a second lookup." Applies to S8, S10 and S11.
 
 ### The cut-ladder rows (marked, not cut)
 
-**S9** (rung 1) and **S10 with S11** (rung 2) are the maintainer's first ladder candidates (the
-12:59:36 entry, item 1; `handover/cut-ladder-2026-10-08.md`). Cutting S9 leaves FR-217's and
+**S9** (rung 1), **S10 with S11** (rung 2) and **S8** (rung 7, conditional on #1164's served page)
+are this Work's rungs on the ladder the maintainer ruled at 13:21:00 (see Authority). **S7 and S7b
+are not on the automatic ladder**: rung 9 is OFF, and if rungs 1–7 are spent they go to the
+maintainer as a decision. Cutting S9 leaves FR-217's and
 FR-218's authoring limbs for Phase 3 and breaks nothing in P2 (nothing depends on S9). Cutting S10
 and S11 leaves `FD-1283`'s two views unbuilt, keeps the interim FR-25 path through
-`RatingVersionView`, and avoids R10.1's spec change. Until a dated move line applies a rung, these
-rows stand and are scheduled last among WK-675's slices.
+`RatingVersionView`, and avoids R10.1's spec change. Cutting S8 leaves FR-263, FR-264, FR-265 and
+FR-266's view limbs for Phase 3; the rung is void if exit demo (b)'s served page is S8's view. Until
+a dated move line applies a rung, these rows stand, and the reverse ladder order schedules them
+last.
 
 ## Decision points
 
@@ -207,8 +231,9 @@ rows stand and are scheduled last among WK-675's slices.
   FR-258, FR-260, FR-261, FR-262, FR-263, FR-264, FR-265, FR-266, FR-1221, FR-25, NFR-463, and
   register F-W10-1, F-W10-2. FR-249's view limb is carried (R6.1), not dropped.
 - **Placeholders.** None; the `SL-` ids are the lead's reservation of 2026-10-08.
-- **Consistency.** The order puts S10/S11 before S8/S9, as `PL-1286:370`; `PL-1371:304` lists S5 after
-  S10, which is a calendar, not a dependency — the lead orders at GO within the dependencies above.
+- **Consistency.** The order is reverse ladder order (item D, 14:32:33), S8 before S10/S11, which
+  amends `PL-1286:370`'s preference; no dependency forbids it (Tasks). `PL-1371:304` lists S5 after
+  S10, which is a calendar, not a dependency.
 - **Rulings since the sweep.** `gh pr list --state open` at 2026-10-08 13:11 BST (`date`), titles
   matched with `grep -iE 'WK-675|OQ-1223|S7b'`: #1198 (RL 9543, S3/S4/S13 DPs), #1185, #1186, #1187,
   #1189 (S13, S3, S4, S14 leaf plans) and #1160 (RL 9623). None rules on S5–S11. **#1187 also cuts
