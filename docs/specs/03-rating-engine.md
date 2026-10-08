@@ -1362,7 +1362,7 @@ OPT → RATE and DEP-1 is respected.
 | **FastAPI** | The scoring endpoint on the latency path | Async request handling, response model overhead, avoiding Pydantic re-validation on the hot path |
 | **XGBoost / LightGBM** | `model_call` in `exact` mode | Booster load time, single-row prediction latency, thread pinning to avoid contention at 200 rps |
 | **hypothesis** | Property assertion generation (FR-261) | Strategies derived from an input contract; shrinking counterexamples an actuary can read. **A `pricing-core` runtime dependency, pinned `==6.165.7`** *(2026-09-28, WK-672 Slice 3, `RS-1176` condition 1)*: an exact pin, because shrink-limit detection reads `hypothesis.statistics.collector`, which is internal API |
-| **Vue Flow (frontend)** | The DAG designer | Custom node types per step type, edge validation, layout, undo/redo, mapping canvas state to the `RatingAlgorithm` contract |
+| **Vue Flow (frontend)**: `@vue-flow/core` 1.48.2, MIT (adopted 2026-09-28, `RS-1269` F2; added in WK-675 Slice 2) | The DAG designer | Custom node types per step type, edge validation, layout, undo/redo, mapping canvas state to the `RatingAlgorithm` contract |
 | **openpyxl** | CSV/XLSX import/export with strict round-trip (FR-235) | XLSX read + write in one library; CSV is stdlib; round-trip keeps decimal strings — never float through the file |
 | **TanStack Table (frontend)** | Rate table editor | Virtualised editable grids, decimal-safe cell input, diff shading |
 | **ECharts (frontend)** | Ladder waterfall, dislocation histogram, attribution waterfall | Waterfall chart construction; large-histogram rendering |

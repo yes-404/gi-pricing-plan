@@ -49,8 +49,8 @@ Rows 0.1–0.11 re-run at `d10420df`; every row matches, with these line moves (
   the by-id row as well as the `slug@version` row.
 - **`pnpm-lock.yaml`** differs from goC's tree `0ee8f414` (#1237); the branch is cut after it, and `pnpm add` writes the lock.
 
-**Step 2 — the minted rulings against the cited heads.** RL-1473 against `39bd865b` (`RL-09766-…`), RL-1474 against
-`39bd865b` (`RL-09767-…`), RL-1475 against `96fa35bf` (`RL-09753-…`), by `git diff` of the two blobs after the id
+**Step 2 — the minted rulings against the cited heads.** RL-1473 against `39bd865b`, RL-1474 against
+`39bd865b`, RL-1475 against `96fa35bf`, by `git diff` of the two blobs after the id
 substitution. Differences, and only these: the `created:` line, the mint note, working-id citations re-pointed to minted ids,
 and dated amendments of 2026-10-05 (citation re-reads at `809a3794`; RL-1475's T4 re-anchor, which is S4's). The T-texts S2
 applies — RL-1473 T1 and T2, RL-1475 T1 and T2 — are unchanged. RL-1474's ruled item 1 is unchanged.
@@ -97,6 +97,17 @@ cyclic and unresolved bodies index `valid_algorithm()` steps 6 and 7 (`s_office`
 - **Contract:** `generate-contracts.py` wrote `generated.json`; `--check` rc 0 (46 up to date); `pnpm --dir frontend generate:api` rc 0.
   The Acceptance 5 `python3 -c` prints `[False, True, True]`: `RatingAlgorithm` joins `components.schemas` only with Task 3's
   `GET` (its 200), so the `[True, True, True]` reading is Task 3's. `test_contracts.py`: 152 passed, 2 skipped. `ruff`, `mypy` clean.
+
+### Task 6 — the dependency, the chunk and the records
+
+- `pnpm --dir frontend add @vue-flow/core@1.48.2` (exact pin in `package.json`; lock written by pnpm). `vite.config.ts`: a
+  `vueflow` branch first in the `manualChunks` function. `03` §8 Vue Flow row's first cell and `docs/skills-map.md:121`'s notes
+  cell carry package, version and licence. `audit-docs`: only check 31 (working id) fails.
+- **STOP raised to the lead — a path outside the write set.** `pnpm add` stops with `ERR_PNPM_IGNORED_BUILDS` (`vue-demi@0.14.10`,
+  a dependency of `@vue-flow/core`) and creates `frontend/pnpm-workspace.yaml` holding `allowBuilds: vue-demi: set this to true or
+  false`. Measured: with `package.json` and `pnpm-lock.yaml` copied to a scratch dir, a fresh `pnpm install --frozen-lockfile`
+  exits 1 with that error and writes the same placeholder file; so CI's fresh install would fail without a committed decision.
+  The file is not in PL-1476's write set (:378-409). It is held uncommitted until the lead rules.
 
 ## PRs
 
