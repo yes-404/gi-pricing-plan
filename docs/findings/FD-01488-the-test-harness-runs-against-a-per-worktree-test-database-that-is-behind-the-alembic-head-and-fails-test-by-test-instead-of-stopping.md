@@ -1,5 +1,5 @@
 ---
-id: FD-1487
+id: FD-1488
 family: finding
 title: The test harness runs against a per-worktree test database that is behind the alembic head, and fails test by test instead of stopping
 status: active
@@ -10,9 +10,9 @@ corrected_by: []
 relates: [WK-1178, SL-1409]
 ---
 
-# FD-1487 — the test harness runs on a database behind the alembic head and fails test by test
+# FD-1488 — the test harness runs on a database behind the alembic head and fails test by test
 
-*Disclosure: drafted under working id 9645; minted as FD-1487 on 2026-10-08, in the T2 batch mint PR.*
+*Disclosure: drafted under working id 9645; minted as FD-1488 on 2026-10-08, in the T2 batch mint PR.*
 
 Every locator below was read at `origin/main`
 `83ea5090`, except the gate log, which is a run artefact (`~/.claude/jobs/6cad77f9/tmp/gatelogs/p.txt`, a local file, so cited by path).

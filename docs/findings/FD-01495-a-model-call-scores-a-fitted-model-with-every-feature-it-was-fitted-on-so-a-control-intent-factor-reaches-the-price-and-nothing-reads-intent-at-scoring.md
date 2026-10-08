@@ -1,5 +1,5 @@
 ---
-id: FD-1494
+id: FD-1495
 family: finding
 title: A model_call scores a fitted model with every feature it was fitted on, so a control-intent factor reaches the price and nothing reads intent at scoring
 status: active
@@ -10,9 +10,9 @@ corrected_by: []
 relates: [WK-673, WK-1178, FR-88, FR-240, FR-230]
 ---
 
-# FD-1494 — a `model_call` applies a model's `control` factor
+# FD-1495 — a `model_call` applies a model's `control` factor
 
-*Disclosure: drafted under working id 9639; minted as FD-1494 on 2026-10-08, in the T2 batch mint PR. Note: in the quoted channel entries, FD 9639, PL 9649 and FD 9641 stand as the channel wrote them (minted FD-1494, PL-1471 and FD-1479).*
+*Disclosure: drafted under working id 9639; minted as FD-1495 on 2026-10-08, in the T2 batch mint PR. Note: in the quoted channel entries, FD 9639, PL 9649 and FD 9641 stand as the channel wrote them (minted FD-1495, PL-1471 and FD-1479).*
 
 ## Finding
 

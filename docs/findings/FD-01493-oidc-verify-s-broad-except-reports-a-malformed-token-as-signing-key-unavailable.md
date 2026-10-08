@@ -1,5 +1,5 @@
 ---
-id: FD-1492
+id: FD-1493
 family: finding
 title: oidc verify's broad except reports a malformed token as "signing key unavailable"
 status: active
@@ -10,9 +10,9 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-1492 — `OidcVerifier.verify`'s broad `except` reports a malformed token as "signing key unavailable"
+# FD-1493 — `OidcVerifier.verify`'s broad `except` reports a malformed token as "signing key unavailable"
 
-*Disclosure: drafted under working id 9652; minted as FD-1492 on 2026-10-08, in the T2 batch mint PR. Note: in the quoted channel entry, RL 9663 stands as the channel wrote it (minted RL-1451).*
+*Disclosure: drafted under working id 9652; minted as FD-1493 on 2026-10-08, in the T2 batch mint PR. Note: in the quoted channel entry, RL 9663 stands as the channel wrote it (minted RL-1451).*
 
 **Severity: LOW; owner WK-1178.**
 Ruled by the maintainer (by delegation), decision 2 in the entry headed *"2026-10-05 13:32:27 BST — #1123 check

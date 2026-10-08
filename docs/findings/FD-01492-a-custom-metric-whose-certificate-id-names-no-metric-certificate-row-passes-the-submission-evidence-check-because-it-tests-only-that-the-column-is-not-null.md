@@ -1,5 +1,5 @@
 ---
-id: FD-1491
+id: FD-1492
 family: finding
 title: A custom metric whose certificate_id names no metric_certificate row passes the submission evidence check, because the check tests only that the column is not null
 status: active
@@ -10,9 +10,9 @@ corrected_by: []
 relates: [WK-690, FR-157, FR-364]
 ---
 
-# FD-1491 — a custom metric's `certificate_id` is never resolved before submission
+# FD-1492 — a custom metric's `certificate_id` is never resolved before submission
 
-*Disclosure: drafted under working id 9722; minted as FD-1491 on 2026-10-08, in the T2 batch mint PR.*
+*Disclosure: drafted under working id 9722; minted as FD-1492 on 2026-10-08, in the T2 batch mint PR.*
 
 **Filed** by auditor-fdc2 on 2026-10-05, from the S3 slice audit's item A1
 (`~/gi-pricing-plan.local/handover/audit-sl1273-2026-10-04.md`, section "A1") and the S3 dispatch record's

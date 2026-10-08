@@ -1,5 +1,5 @@
 ---
-id: FD-1488
+id: FD-1489
 family: finding
 title: braces 3.0.3 carries GHSA-vfj7-8cjw-p6xm (HIGH) through the frontend lint chain and no patched version exists; accepted as dev-only
 status: active
@@ -10,9 +10,9 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-1488 — `braces` 3.0.3 (GHSA-vfj7-8cjw-p6xm), dev-only, accepted until a patched version publishes
+# FD-1489 — `braces` 3.0.3 (GHSA-vfj7-8cjw-p6xm), dev-only, accepted until a patched version publishes
 
-*Disclosure: drafted under working id 9644; minted as FD-1488 on 2026-10-08, in the T2 batch mint PR.*
+*Disclosure: drafted under working id 9644; minted as FD-1489 on 2026-10-08, in the T2 batch mint PR.*
 
 Ordered by the maintainer's (by delegation) entry headed
 "2026-10-05 13:36:07 BST — braces: no patched release exists; OPTION (C), accepted dev-only risk; Dependabot itself is the watch"

@@ -1,5 +1,5 @@
 ---
-id: FD-1490
+id: FD-1491
 family: finding
 title: A bulk operation takes no change note and writes a machine-generated one, so FR-229's required change note is not the author's
 status: active
@@ -10,9 +10,9 @@ corrected_by: []
 relates: [WK-673, FR-229, FR-233, FR-1186]
 ---
 
-# FD-1490 — the bulk-operation route has no place for a change note
+# FD-1491 — the bulk-operation route has no place for a change note
 
-*Disclosure: drafted under working id 9700; minted as FD-1490 on 2026-10-08, in the T2 batch mint PR. Note: in the quoted channel entry, the working ids FD 9700 and FD 9699 stand as the channel wrote them (minted FD-1490 and FD-1489).*
+*Disclosure: drafted under working id 9700; minted as FD-1491 on 2026-10-08, in the T2 batch mint PR. Note: in the quoted channel entry, the working ids FD 9700 and FD 9699 stand as the channel wrote them (minted FD-1491 and FD-1490).*
 
 **Filed** by auditor-gaps on the lead's order of 2026-10-05, from the exit-demo draft's gap row A6. `tree:` is `origin/main` at filing, and the reproduction ran at that tree.
 

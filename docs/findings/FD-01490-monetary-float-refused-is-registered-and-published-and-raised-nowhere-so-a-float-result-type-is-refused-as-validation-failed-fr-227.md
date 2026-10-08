@@ -1,5 +1,5 @@
 ---
-id: FD-1489
+id: FD-1490
 family: finding
 title: MONETARY_FLOAT_REFUSED is registered and published and raised nowhere, so a float result type is refused as VALIDATION_FAILED (FR-227, FR-245)
 status: active
@@ -10,9 +10,9 @@ corrected_by: []
 relates: [WK-673, FR-227, FR-245, FR-212]
 ---
 
-# FD-1489 — the code `03` §5.1 publishes for a float is never produced
+# FD-1490 — the code `03` §5.1 publishes for a float is never produced
 
-*Disclosure: drafted under working id 9699; minted as FD-1489 on 2026-10-08, in the T2 batch mint PR. Note: in the quoted channel entry headed "2026-10-05 15:19:09 BST", the working ids FD 9699 and FD 9645 stand as the channel wrote them (minted FD-1489 and FD-1487).*
+*Disclosure: drafted under working id 9699; minted as FD-1490 on 2026-10-08, in the T2 batch mint PR. Note: in the quoted channel entry headed "2026-10-05 15:19:09 BST", the working ids FD 9699 and FD 9645 stand as the channel wrote them (minted FD-1490 and FD-1488).*
 
 **Filed** by auditor-gaps on the lead's order of 2026-10-05, from the exit-demo draft's gap row B9. `tree:` is `origin/main` at filing, and the reproduction ran at that tree.
 

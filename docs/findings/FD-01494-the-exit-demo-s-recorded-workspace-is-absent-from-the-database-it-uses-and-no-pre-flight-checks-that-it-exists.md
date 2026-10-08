@@ -1,5 +1,5 @@
 ---
-id: FD-1493
+id: FD-1494
 family: finding
 title: The exit demo's recorded workspace is absent from the database the demo uses, and no check on main verifies that the recorded workspace exists
 status: active
@@ -10,9 +10,9 @@ corrected_by: []
 relates: [WK-1178, SL-1409, PL-1408, RL-1407, FD-1356]
 ---
 
-# FD-1493 — the demo's `last-seed.json` names a workspace that `gipricing` does not hold
+# FD-1494 — the demo's `last-seed.json` names a workspace that `gipricing` does not hold
 
-*Disclosure: drafted under working id 9717; minted as FD-1493 on 2026-10-08, in the T2 batch mint PR.*
+*Disclosure: drafted under working id 9717; minted as FD-1494 on 2026-10-08, in the T2 batch mint PR.*
 
 **Filed** by auditor-fd9717 on the lead's order of 2026-10-05, severity set by the maintainer (by delegation) (2026-10-05 11:57:33 BST,
 `to-lead.md`). `tree:` is `origin/main` at filing.
