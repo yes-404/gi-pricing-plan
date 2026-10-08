@@ -206,6 +206,14 @@ not CLAUDE.md §2.
 - **2B:** the same local resolutions become mechanical, but GitHub still shows the PR
   conflicting until the local merge, so no re-CI is saved.
 
+**Open to extension.** A reduction of the docs burden is being weighed separately (the 11:40:59
+entry, item 4); this part is not widened for it, and any option it produces for generated files
+joins this part rather than a new one.
+
+**FD 9489, already decided** ("## 2026-10-08 10:51:33 BST — …", item (i)): INDEX keeps one row
+per OQ number, the spec §10 row. It is a `doc-index.py` fix; 2D carries it unchanged, because the
+generator is what every consumer then calls.
+
 **Recommendation: 2D as the build; 2E as a clarification inside 5d.** With 5d in force, drafts no
 longer conflict as PRs, and 2E only says what a draft branch commits. What remains is the INDEX
 hunk on every batch, slice and activation PR, and only 2D removes it; it also makes a queue
@@ -216,6 +224,8 @@ and the re-CI unchanged. Contracts as now.
 ---
 
 ## P3 — ids allocated at creation
+
+**Today's rule** ("## 2026-10-06 01:59:10 BST — B2+B3 as ONE batch (6 PRs, 9 records): OK; ids must follow MERGE order (SL-1430's ledger)"), verbatim: *"If SL-1430 is late, re-allocate rather than reorder merges. You allocate; just keep the id order equal to the merge order."*
 
 **The objection P3 must answer (M9).** A reservation table was tried on 28 Sep and withdrawn the
 same morning: under check 31's contiguity, whichever record holds the lower id holds every higher
@@ -244,6 +254,9 @@ last batch's minted id.
   back-cites would cite final ids, not space-form working ids.
 - **T1, T2 and T8** could merge in readiness order. Today the order "#1233 → T1 → T2 → T8" is
   fixed by id order (authority 11:10:23).
+
+**Open to extension.** As P2: the separate docs-burden decision (11:40:59, item 4) may add an
+allocation option here; this part is not widened for it now.
 
 **Recommendation: 3B.** It keeps contiguity's one real benefit (detecting a lost record) and
 removes the merge-order coupling, which answers the 28 Sep objection directly. 3C is the cheap
@@ -290,11 +303,12 @@ charter line it touches is the maintainer's, behind an `FD-` first (`document-id
 
 | | Rule in force | Source (`to-lead.md` entry header, verbatim) |
 |---|---|---|
-| **5a** | **Batching.** Mint PRs carry batches, at most 10 ids (above 10 needs the maintainer's prior OK), ordered by dependency layer (cited before citing); a back-cite into a later batch stays a space-form working id and is listed in the PR body. Only ONE register-touching minter runs at a time, paired with a roadmap-only batch. | "## 2026-10-08 10:38:11 BST — OPEN-PR BURN-DOWN PLAN for the new lead: 79 → under 30 by Fri 9 Oct, falling every day" (method 2–3); "## 2026-10-08 10:53:25 BST — Re-triage accepted; the five asks RULED; and the user's reminder: CLEAN UP UNUSED PRs as the work goes" (items 1, 2 and the register risk); earlier, "## 2026-10-05 13:13:32 BST — PL 9716 noted; batching UNRELATED findings ≤3 per mint PR: APPROVED (a widening of my 10:47:03 rule); cite fix", since widened by the 10-id ceiling |
+| **5a** | **Batching.** Mint PRs carry batches (R1: the batch body lists every record, working id → minted id, its source PR and its normalised-diff result), at most 10 ids (above 10 needs the maintainer's prior OK), ordered by dependency layer (cited before citing); a back-cite into a later batch stays a space-form working id and is listed in the PR body. Only ONE register-touching minter runs at a time, paired with a roadmap-only batch. | "## 2026-10-08 10:38:11 BST — OPEN-PR BURN-DOWN PLAN for the new lead: 79 → under 30 by Fri 9 Oct, falling every day" (method 2–3); "## 2026-10-08 10:53:25 BST — Re-triage accepted; the five asks RULED; and the user's reminder: CLEAN UP UNUSED PRs as the work goes" (items 1, 2 and the register risk); "## 2026-10-06 01:18:08 BST — Backlog triage: R1 and R2 RULED" (R1); earlier, "## 2026-10-05 13:13:32 BST — PL 9716 noted; batching UNRELATED findings ≤3 per mint PR: APPROVED (a widening of my 10:47:03 rule); cite fix", since widened by the 10-id ceiling |
 | **5b** | **The under-30 cap on ALL open PRs**, a standing control, not a dated goal. While at or over 30, a new governed record rides a same-subject PR or the next batch; slice and activation PRs are exempt. Targets: at most 55 by the end of 8 Oct, under 30 by the end of 9 Oct, falling every day. | "## 2026-10-06 01:01:08 BST — STANDING TARGET from the user: TOTAL open PRs under 30, as a control, not just a 9 Oct goal"; "## 2026-10-08 10:38:11 BST — OPEN-PR BURN-DOWN PLAN …" (targets) |
-| **5c** | **Cleanup during the work:** a batch's absorbed siblings close at once after its verified read-back; a draft found superseded, absorbed or obsolete closes at once, naming its carrier; merged branches and worktrees go; every status carries the open count and the closes since the last. **Branch cleanup** follows once open PRs are under 30, by one auditor, dry-run table first, every deleted tip recorded and pinned under `refs/salvage/`. | "## 2026-10-08 10:53:25 BST — Re-triage accepted; … CLEAN UP UNUSED PRs as the work goes" ((a)–(d)); "## 2026-10-08 11:16:32 BST — USER: after the open-PR burn-down, CLEAN UP UNUSED BRANCHES too; the procedure, queued (not to run before the PR count is under 30)" |
+| **5c** | **Cleanup during the work:** a batch's absorbed siblings close at once after its verified read-back, without a separate OK each, when each sibling's normalised diff against the batch copy is empty apart from id re-points and the INDEX and register regeneration (R2); a draft found superseded, absorbed or obsolete closes at once, naming its carrier; merged branches and worktrees go; every status carries the open count and the closes since the last. **Branch cleanup** follows once open PRs are under 30, by one auditor, dry-run table first, every deleted tip recorded and pinned under `refs/salvage/`. | "## 2026-10-06 01:18:08 BST — Backlog triage: R1 and R2 RULED" (R2); "## 2026-10-08 10:53:25 BST — Re-triage accepted; … CLEAN UP UNUSED PRs as the work goes" ((a)–(d)); "## 2026-10-08 11:16:32 BST — USER: after the open-PR burn-down, CLEAN UP UNUSED BRANCHES too; the procedure, queued (not to run before the PR count is under 30)" |
 | **5d** | **A new governed-record draft gets NO PR** (FD, RL, PL, OQ, RFC, CR). It is committed on its own branch `draft/<family>-<working id>` from current main and pushed; reviews cite `draft/<family>-<wid> @ <full sha>`; the lead keeps a draft register in `eta.md`; at mint the minter builds ONE batch PR from current main. Exempt: slice PRs, activation PRs, security and dependency fixes, and this RFC's PR. Existing draft PRs are not converted. | "## 2026-10-08 11:37:20 BST — USER-APPROVED, EFFECTIVE NOW: a new governed-record draft gets NO PR; PRs are opened only as mint BATCHES (and for slices, activations and urgent fixes)" |
 | **5e** | **Merge main, never rebase**, into a branch behind main, then regenerate INDEX in a new commit; each PR regenerates INDEX in its final commit only. | "## 2026-09-28 11:19:17 BST · [the maintainer's (by delegation)] · HOLD LIFTED — the maintainer's instruction: complete the five started-but-open Phase 2 Works, in FOUR PARALLEL TRACKS, under the delivery process; spawn teammates from their role files" *[elided: the header names the delegate by the word our records bar; quoted with that word replaced]*, rule 2 |
+| **5h** | **Remote CI is not a gate.** Minters push and run CI while gate-1 is held; only their local batch checks wait for the slot. | "## 2026-10-08 11:10:23 BST — T2 draft and T8 noted; the register slip accepted as harmless; PRIORITY NOW: MERGE THROUGHPUT, because the count has RISEN to 81" |
 
 **5d's cost and effect** (the user's approval asks for both):
 - **Cost: more branches.** One `draft/<family>-<wid>` branch per record, pushed for durability,
@@ -334,7 +348,7 @@ draft PRs opened on 5 Oct (M3) would have been 60 branches and a handful of batc
 PRs opened before 1 Oct would be closed or carried with reasons. 5g with 1E: #1233's five 6 Oct
 merges of main collapse to the ones its merge turn needed.
 
-**Recommendation: record 5a–5e in `lead.md` and `delivery-process.md` §8 as written (the ruling
+**Recommendation: record 5a–5e and 5h in `lead.md` and `delivery-process.md` §8 as written (the ruling
 orders it, an `FD-` first for each charter line); adopt 5f and 5g.** About 1.0 executor-day in
 total (ESTIMATE: five recorded rules and two new ones, a paragraph each, plus the `FD-`).
 
@@ -369,7 +383,7 @@ Total if everything recommended is taken: **about 8 executor-days** (ESTIMATE: 1
 3. **P3:** 3B (recommended) or 3C or 3D or 3A; plus who reserves (the lead alone, recommended) and
    the abandonment age (7 days, recommended, shared with 5f).
 4. **P4:** defer and re-measure in 14 days (recommended), or 4B now.
-5. **P5:** order 5a–5e written into `lead.md` and `delivery-process.md` §8, an `FD-` first for each
+5. **P5:** order 5a–5e and 5h written into `lead.md` and `delivery-process.md` §8, an `FD-` first for each
    charter line (they are in force already; the ruling only orders the record); adopt 5f and 5g,
    or not.
 6. **The sequence** of §6.
@@ -392,6 +406,45 @@ code.
   for.
 - **2D's sentinel**: `REDIRECTS.csv` alone, with every caller named (the memo left it open).
 - **1B's estimate** follows the memo's revised 2.0, not its first 1.5.
+
+## 9. Sources
+
+**Kept current until this RFC merges** (the user's instruction, `to-lead.md` "## 2026-10-08
+11:40:59 BST — USER INSTRUCTION: RFC 9479 is kept current with every new rule until it merges"):
+every rule the maintainer logs on PR creation, batching, merging, ids, generated files or cleanup
+is folded in the same day and listed here. **Every `to-lead.md` entry from 10:38:11 BST on 8 Oct
+is listed**, carried or left out with a reason, plus the earlier entries the RFC rests on.
+Headers are verbatim, except the one elided where marked.
+
+| `to-lead.md` entry header (verbatim) | Carried in | Or left out, because |
+|---|---|---|
+| ## 2026-09-28 11:19:17 BST · [the maintainer's (by delegation)] · HOLD LIFTED — the maintainer's instruction: complete the five started-but-open Phase 2 Works, in FOUR PARALLEL TRACKS, under the delivery process; spawn teammates from their role files *[elided: the barred word replaced]* | P5 5e (rule 2: merge main, never rebase; INDEX in the final commit) | — |
+| ## 2026-09-28 11:23:26 BST · [the maintainer's (by delegation)] · ids are MINTED AT MERGE-READINESS, not reserved: first ready, first merged. This supersedes the fixed table of 11:22:08/11:22:42, whose RL-1171 would hold the CR chain behind Track D *[elided: the barred word replaced]* | M9; P3 (the objection); P2 2E | — |
+| ## 2026-10-05 13:13:32 BST — PL 9716 noted; batching UNRELATED findings ≤3 per mint PR: APPROVED (a widening of my 10:47:03 rule); cite fix | P5 5a (history: superseded by R1) | — |
+| ## 2026-10-06 01:01:08 BST — STANDING TARGET from the user: TOTAL open PRs under 30, as a control, not just a 9 Oct goal | P5 5b | — |
+| ## 2026-10-06 01:18:08 BST — Backlog triage: R1 and R2 RULED | P5 5a (R1: batch size and the batch body's record table), 5c (R2: absorbed siblings close after the verified read-back, on an empty normalised diff) | — |
+| ## 2026-10-06 01:59:10 BST — B2+B3 as ONE batch (6 PRs, 9 records): OK; ids must follow MERGE order (SL-1430's ledger) | P3 (the problem: *"keep the id order equal to the merge order"*) | — |
+| ## 2026-10-08 10:38:11 BST — OPEN-PR BURN-DOWN PLAN for the new lead: 79 → under 30 by Fri 9 Oct, falling every day | P5 5a, 5b | — |
+| ## 2026-10-08 10:40:28 BST — NEW LEAD (fresh, started by the user) CONNECTED: transcript 75950401, Opus, PID 4478 | — | a seat record; no rule on these subjects |
+| ## 2026-10-08 10:43:28 BST — New lead's read-in ACCEPTED; MERGE-ACK #1235 (lane A activation, PL-1447 / SL-1448) @64e25a2ddb8b176ed0d547156a9da4fcd326147d | §1 (I1: the main move #1233 merged) | an ACK, no new rule |
+| ## 2026-10-08 10:44:31 BST — #1235 read-back verified; the USER's operating mode: PARALLELISE to the caps | — | capacity and lane caps (members, build lanes, one gate), not PRs, ids or merging |
+| ## 2026-10-08 10:48:03 BST — SECURITY: Dependabot alert #13, source-map-js (GHSA-68fv-2mgg-jv7q, HIGH, event-loop DoS via indexed source-map section offsets): investigated; FIX by a lockfile-only refresh, ONE small PR, now | P5 5d (security fixes exempt from the no-PR rule); §1 (#1237, the lockfile-only move) | — |
+| ## 2026-10-08 10:51:33 BST — T1 batch noted; FD 9489's disposition DECIDED now (option (a)), so #1221 stays in T1; FD 9480's check is right | P2 (FD 9489: INDEX keeps one row per OQ number; a `doc-index.py` fix that 2D carries unchanged); §1 (I4: T1's ids) | — |
+| ## 2026-10-08 10:53:25 BST — Re-triage accepted; the five asks RULED; and the user's reminder: CLEAN UP UNUSED PRs as the work goes | P5 5a (10-id ceiling, cited-first, forward-cites listed, one register minter), 5c (cleanup (a)–(d)) | — |
+| ## 2026-10-08 10:54:33 BST — LANE B: Ruling 1 = (b'), else (c); Ruling 2 = (iii'); DISPATCH GO (conditional) for WK-673 Slice 3 (PL-1452 / SL-1387) | — | a slice dispatch; no rule on these subjects |
+| ## 2026-10-08 10:55:30 BST — MERGE-ACK #1237 (security, source-map-js 1.2.1 → 1.2.2) @bf511269898baecf938b3fe37e6cb46f382b289b; LANE C DISPATCH GO (conditional) for WK-675 S2 (PL-1476 / SL-1477) | §1 (I1: the lockfile-only move); P1 1E | an ACK and a dispatch, no new rule |
+| ## 2026-10-08 11:05:02 BST — SL-1448 gate noted; its red-first ORDER deviations accepted as disclosed (written seconds AFTER the message, my slip) | §1 (#1233 merges main c0aab813 before its ACK) | a slice's TDD order; no rule on these subjects |
+| ## 2026-10-08 11:10:23 BST — T2 draft and T8 noted; the register slip accepted as harmless; PRIORITY NOW: MERGE THROUGHPUT, because the count has RISEN to 81 | §1 (I3, I6); P3 (the order fixed by ids); P5 5h (remote CI is not a gate) | — |
+| ## 2026-10-08 11:16:32 BST — USER: after the open-PR burn-down, CLEAN UP UNUSED BRANCHES too; the procedure, queued (not to run before the PR count is under 30) | P5 5c, and 5d's cost | — |
+| ## 2026-10-08 11:26:43 BST — USER-APPROVED: raise ONE proposal (an RFC, WK-1178) on "merging safely in parallel": merge queue, generated files, id allocation, per-row tables, batching | the whole RFC (authority) | — |
+| ## 2026-10-08 11:27:49 BST — RFC 9479 addition for P1: the repo is USER-owned; the merge queue may be unavailable | M1, P1 | — |
+| ## 2026-10-08 11:28:36 BST — #1238 (lane B activation) PRE-VERIFIED; the bracketed-letter elision ACCEPTED; the ACK follows on the tree recomputed after #1233 | §1 (the counter-example); P1 1E | the elision form is a quoting rule for the roadmap, not on these subjects |
+| ## 2026-10-08 11:30:48 BST — The USER confirmed: "Require merge queue" is NOT offered in the ruleset editor (user-owned repo) | M5, P1 | — |
+| ## 2026-10-08 11:31:37 BST — MERGE-ACK #1233 (B2+B3: FD-1469 … SL-1477, plus the FD-1421/1425/1433 closes) @96bcdb0e345d2e1c213ced65dc868cee3e23e1d3 | §1 (I1, I5) | an ACK, no new rule |
+| ## 2026-10-08 11:32:55 BST — #1233 read-back verified; MERGE-ACK #1238 (lane B activation) @98d15659b574f5d987826adad2fe4cafc1a0cfeb on the recomputed tree | M10 (the expected tree as practice); §1; P1 1E; P5 5a (#1233's six siblings closed) | — |
+| ## 2026-10-08 11:35:05 BST — The RFC 9479 options memo noted (sent seconds before this entry); two asks for the RFC | P5 (records, not proposes); P2 (the 2D replacement table) | — |
+| ## 2026-10-08 11:37:20 BST — USER-APPROVED, EFFECTIVE NOW: a new governed-record draft gets NO PR; PRs are opened only as mint BATCHES (and for slices, activations and urgent fixes) | P5 5d; P2 2E | — |
+| ## 2026-10-08 11:40:59 BST — USER INSTRUCTION: RFC 9479 is kept current with every new rule until it merges | this section; P2 and P3 (open to extension) | — |
 
 ## Acceptance
 
