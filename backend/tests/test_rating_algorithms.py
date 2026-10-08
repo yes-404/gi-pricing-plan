@@ -340,3 +340,72 @@ def test_the_save_answers_the_typed_201(api_client, workspace_id, principal, gra
     response = _post(api_client, workspace_id, principal, grant, valid_algorithm())
     assert response.status_code == 201, response.text
     assert set(response.json()) == {"id", "slug", "version"}
+
+
+# --- the algorithm read by slug@version (RL-1475 T1/T2; Acceptance 3) ------------------------
+
+
+async def test_a_saved_algorithm_reads_back_by_slug_at_version(
+    api_client, workspace_id, principal, grant
+) -> None:
+    from model_schema import RatingAlgorithm
+
+    await grant("analyst")
+    saved = api_client.post(
+        "/api/v1/rating-algorithms",
+        json=valid_algorithm(),
+        headers=_headers(principal, workspace_id),
+    )
+    assert saved.status_code == 201, saved.text
+    read = api_client.get(
+        "/api/v1/rating-algorithms/motor-gb@1", headers=_headers(principal, workspace_id)
+    )
+    assert read.status_code == 200, read.text
+    assert RatingAlgorithm.model_validate(read.json()) == RatingAlgorithm.model_validate(
+        valid_algorithm()
+    )
+
+
+async def test_an_unknown_algorithm_version_is_not_found(
+    api_client, workspace_id, principal, grant
+) -> None:
+    await grant("analyst")
+    read = api_client.get(
+        "/api/v1/rating-algorithms/motor-gb@99", headers=_headers(principal, workspace_id)
+    )
+    assert read.status_code == 404, read.text
+    assert read.json()["code"] == "NOT_FOUND"
+    # The handler's own refusal, not the router's: an unrouted path also answers NOT_FOUND.
+    assert read.json()["detail"] == "No rating algorithm motor-gb@99 in this workspace."
+
+
+async def test_another_workspaces_algorithm_is_not_found(
+    api_client, workspace_id, principal, grant, database
+) -> None:
+    from app.platform import rating_algorithms as service
+    from model_schema import new_uuid7
+
+    await grant("analyst")
+    await service.create_algorithm(database, new_uuid7(), principal.id, valid_algorithm())
+    read = api_client.get(
+        "/api/v1/rating-algorithms/motor-gb@1", headers=_headers(principal, workspace_id)
+    )
+    assert read.status_code == 404, read.text
+    assert read.json()["code"] == "NOT_FOUND"
+    assert read.json()["detail"] == "No rating algorithm motor-gb@1 in this workspace."
+
+
+async def test_the_algorithm_read_needs_rating_read(
+    api_client, workspace_id, principal, membership
+) -> None:
+    await membership()
+    read = api_client.get(
+        "/api/v1/rating-algorithms/motor-gb@1", headers=_headers(principal, workspace_id)
+    )
+    assert read.status_code == 403, read.text
+
+
+def test_the_algorithm_read_publishes_rating_algorithm(app) -> None:
+    operation = app.openapi()["paths"]["/api/v1/rating-algorithms/{slug}@{version}"]["get"]
+    schema = operation["responses"]["200"]["content"]["application/json"]["schema"]
+    assert schema == {"$ref": "#/components/schemas/RatingAlgorithm"}

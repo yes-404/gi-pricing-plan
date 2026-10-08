@@ -15,7 +15,12 @@ from app.api.authz import requires
 from app.api.deps import Caller, DatabaseDep
 from app.api.responses import problems
 from app.platform import rating_algorithms as service
-from model_schema import Permission, RatingAlgorithmDraft, RatingAlgorithmSaved
+from model_schema import (
+    Permission,
+    RatingAlgorithm,
+    RatingAlgorithmDraft,
+    RatingAlgorithmSaved,
+)
 
 __all__ = ["router"]
 
@@ -71,3 +76,15 @@ async def algorithm_diff(
     return await service.diff_between(
         database, caller.workspace_id, slug, version, against
     )
+
+
+@router.get(
+    "/rating-algorithms/{slug}@{version}",
+    summary="Read one Rating Algorithm version",
+    responses=problems(401, 403, 404, 422),
+)
+async def get_rating_algorithm(
+    slug: str, version: int, caller: RatingReadDep, database: DatabaseDep
+) -> RatingAlgorithm:
+    """**200** with the saved algorithm; another workspace's version is a **404**."""
+    return await service.get_algorithm(database, caller.workspace_id, slug, version)

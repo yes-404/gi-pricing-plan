@@ -6876,7 +6876,7 @@
         "title": "ImportVerdict",
         "type": "object"
       },
-      "InputContractField": {
+      "InputContractField-Input": {
         "additionalProperties": false,
         "description": "One Rating Input (FR-213): name, type, nullability, range or domain, description.",
         "properties": {
@@ -6928,6 +6928,96 @@
               {
                 "type": "number"
               },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "nullable": {
+            "default": false,
+            "title": "Nullable",
+            "type": "boolean"
+          },
+          "pattern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pattern"
+          },
+          "type": {
+            "$ref": "#/components/schemas/RatingInputType"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "InputContractField",
+        "type": "object"
+      },
+      "InputContractField-Output": {
+        "additionalProperties": false,
+        "description": "One Rating Input (FR-213): name, type, nullability, range or domain, description.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "min": {
+            "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
@@ -11073,13 +11163,100 @@
         "title": "RateTableVersion",
         "type": "object"
       },
+      "RatingAlgorithm": {
+        "additionalProperties": false,
+        "description": "A Rating Algorithm: the declarative DAG of rating steps (03 §4.1).\n\nInvariants (spec §4.1): the DAG is acyclic; every `consumes` name is produced by\nexactly one upstream step; every declared output has an `output` step; no step is\nunreachable from an `input` and unreferenced by an `output` (FR-212). Enforced\nhere at the shape level; the strict save-time validation (types, determinism) is\nW9-2.",
+        "properties": {
+          "input_contract": {
+            "items": {
+              "$ref": "#/components/schemas/InputContractField-Output"
+            },
+            "title": "Input Contract",
+            "type": "array"
+          },
+          "outputs": {
+            "items": {
+              "$ref": "#/components/schemas/AlgorithmOutput"
+            },
+            "title": "Outputs",
+            "type": "array"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "constraint": "#/components/schemas/RatingConstraintStep",
+                  "expression": "#/components/schemas/RatingExpressionStep",
+                  "input": "#/components/schemas/RatingInputStep",
+                  "lookup": "#/components/schemas/RatingLookupStep",
+                  "model_call": "#/components/schemas/RatingModelCallStep",
+                  "output": "#/components/schemas/RatingOutputStep",
+                  "table": "#/components/schemas/RatingTableStep"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/RatingInputStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RatingLookupStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RatingTableStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RatingExpressionStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RatingModelCallStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RatingConstraintStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RatingOutputStep"
+                }
+              ]
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "sub_graphs": {
+            "items": {
+              "$ref": "#/components/schemas/SubGraphRef"
+            },
+            "title": "Sub Graphs",
+            "type": "array"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "slug",
+          "version",
+          "input_contract",
+          "outputs",
+          "steps"
+        ],
+        "title": "RatingAlgorithm",
+        "type": "object"
+      },
       "RatingAlgorithmDraft": {
         "additionalProperties": false,
         "description": "A Rating Algorithm's field set, without its graph invariants (03 §4.1; RL-1474 item 1).\n\nThe body of `POST /rating-algorithms` (WK-675 S2) and of S3's validate route: a graph\nthat breaks an invariant reaches the handler, which validates it into `RatingAlgorithm`\nand refuses with the invariant's own code, not a generic request-validation 422.",
         "properties": {
           "input_contract": {
             "items": {
-              "$ref": "#/components/schemas/InputContractField"
+              "$ref": "#/components/schemas/InputContractField-Input"
             },
             "title": "Input Contract",
             "type": "array"
@@ -28982,6 +29159,126 @@
           }
         },
         "summary": "Create or version a Rating Algorithm",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/v1/rating-algorithms/{slug}@{version}": {
+      "get": {
+        "description": "**200** with the saved algorithm; another workspace's version is a **404**.",
+        "operationId": "get_rating_algorithm_api_v1_rating_algorithms__slug___version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatingAlgorithm"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Read one Rating Algorithm version",
         "tags": [
           "rating"
         ]
