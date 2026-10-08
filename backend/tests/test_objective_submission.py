@@ -1,5 +1,5 @@
 """Submission of a Custom Objective: `OBJECTIVE_NOT_CERTIFIED` and the extra Approver
-(`02` FR-152, FR-163; `RL-1362` DP-S3-3 and DP-S3-4; WK-690 S3 Task 7; FD 9780).
+(`02` FR-152, FR-163; `RL-1362` DP-S3-3 and DP-S3-4; WK-690 S3 Task 7; FD-1510).
 
 Two rules, both read from the objective's certificate at submission:
 
@@ -10,7 +10,7 @@ Two rules, both read from the objective's certificate at submission:
   request row and in the submission's audit `after`.
 
 Each `violated` objective is certified through the real Job: the quantile template (the live
-instance FD 9780 found) and `02` §4.6's example expression (which certifies `violated` too).
+instance FD-1510 found) and `02` §4.6's example expression (which certifies `violated` too).
 """
 
 from __future__ import annotations
@@ -371,7 +371,7 @@ async def test_a_violated_objective_needs_three_approvers_at_policy_two(
     assert await _approve(database, workspace_id, request_id, 1) == ObjectiveStatus.APPROVED.value
 
 
-# FD 9780 (working id): six of the twelve templates certify `convexity: violated`.
+# FD-1510: six of the twelve templates certify `convexity: violated`.
 _VIOLATED_TEMPLATES: dict[ObjectiveTemplate, dict[str, float]] = {
     ObjectiveTemplate.ASYMMETRIC_SQUARED: {},
     ObjectiveTemplate.HUBER: {"delta": 1000},
@@ -387,7 +387,7 @@ _VIOLATED_TEMPLATES: dict[ObjectiveTemplate, dict[str, float]] = {
 async def test_each_template_certified_violated_needs_the_extra_approver(
     template: ObjectiveTemplate, database: Database, blob_store, workspace_id
 ) -> None:
-    """FD 9780 (working id): each of the six, certified through the real Job on its own
+    """FD-1510: each of the six, certified through the real Job on its own
     `default_sampling` grid, reaches `convexity: violated`, and one approval leaves it in
     `review` (two Approvers under the default policy)."""
     actor = await _actuary(database, workspace_id)
