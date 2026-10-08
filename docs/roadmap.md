@@ -743,7 +743,7 @@ relates: [PL-1267, PL-1403]
 id: SL-1387
 family: slice
 title: Slice 3: attribution — exact Shapley, largest remainder, the broken-input proof, the cost
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-03
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: d672f991bdc59008e09cf3f464cd7cffe5699553
@@ -754,6 +754,8 @@ relates: [PL-1267, RL-1264]
 ```
 
 `attribute` per Slice 1's signature: declared changes derived and grouped per DP-2; the 2^K subset bundles built per DP-1 and rated on ZEN; exact Shapley per policy, largest-remainder allocation to minor units, the isolated and cumulative views, the residual line, the labelled above-six fallback; `BundleDelta` and `Attribution` in `model-schema`. Reconciliation asserted on every run and proven on broken input; the feasibility rule (measured `score_batch` rate, ladder replay proven equal to a true re-rate, the estimated rating count shown before launch); the F3 carried items. `PL-1267` Slice 3. Starts after Slice 7 closes, in the plan's one-slice-at-a-time order 1 → 2 → 7 → 3 → 4 → 5 → 6 (its data dependency is Slice 2); serialised against any WK-1250 slice that edits `compile_bundle` or the trace. Leaf plan PL-1452 (`draft`; filed 2026-10-05). **Activation needs:** the plan made `active` by a dated line; RL-1449 (deciding OQ-1450) merged and minted, its T1 to T3 applied by this slice; RL-1451 (dm-s3, draft PR #1141) merged and minted, adopting the plan's texts P1 to P6, its ten decision points having been decided by the maintainer (by delegation) on 2026-10-05 (13:12:56, 13:15:53 and 13:20:26 BST); `SL-1391` closed; no WK-1250 slice editing `compile_bundle` or the trace in flight; lane C (WK-675 S2) may run beside it under the maintainer's (by delegation) option (b), extended to this slice at 13:25:23 BST; the `03` owned-codes tail serialises with the FD 9708 fix; the maintainer's dispatch GO and the lead's go in a separate activation PR. *(Plan cite added 2026-10-05 by the planner; working id 9689 reserved by the lead.)*
+
+(Activated 2026-10-08 as WK-673 Slice 3, in lane B, on the maintainer's (by delegation) GO, "2026-10-08 10:54:33 BST — LANE B: [R]uling 1 = (b'), else (c); [R]uling 2 = (iii'); DISPATCH GO (conditional) for WK-673 Slice 3 (PL-1452 / SL-1387)" (the two bracketed letters are added: the header's unbracketed ruling word followed by a number is a legacy form that `audit-docs.py` check 36 reds, `_docid.LEGACY_FORM_PATTERNS` "ruling reference"); the dispatch record carries both rulings and the GO's conditions. The first: Task 7's fixture as relativity tables with no `model_call` if the decision-maker confirms in writing, in the dispatch record and before Task 7, that set member 0's model swap is expressible as rate-table changes, else the smallest faithful algorithm with the carried items owned elsewhere. The second: this slice builds now, writes its P1 owned-codes hunk only after the FR-240 fix plan merges, and gates after that plan's gate. Activation needs 2 to 5 met at c0aab813: RL-1449 and RL-1451 `active`, `SL-1391` closed, `SL-1340` and `SL-1341` `draft`; need 6 is re-checked at dispatch.)
 
 #### SL-1388 — Slice 4: backend — the Job, the routes, the persisted artifact, the generated contract
 
