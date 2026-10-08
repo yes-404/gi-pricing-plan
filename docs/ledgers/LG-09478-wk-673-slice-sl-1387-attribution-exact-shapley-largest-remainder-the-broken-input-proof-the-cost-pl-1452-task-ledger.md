@@ -142,6 +142,52 @@ reflow only except the two assertion additions (new-file lines 586-587 and 680-6
 **INDEX.** `docs/INDEX.md` regenerated with `scripts/doc-index.py` (check 39 was stale after the ledger edit); `audit-docs.py` then FAILED (1): check 31 only.
 **Also.** `ruff format` on `analysis.py` and `test_rating_attribution.py` (an E501 at the earlier `step_added` assertion); `ruff check packages/pricing-core` clean.
 
+### Task 7 preparation — fixture, harness, replay test (2026-10-08, executor-s3b; NO measurement run)
+
+**Authority.** [R]uling 1 (b'), confirmed with five conditions by dm-s3 (dispatch record §(2), 12:14:08 BST). The measurement is not started; it
+runs alone overnight 9 to 10 Oct on the lead's slot grant.
+
+**The fit (condition (i)).** `uv run python scripts/measure-attribution-cost.py fit` (rc 0, 18 s). Data: `examples/fremtpl2/data/freMTPL2freq.arff`,
+sha256 `a45363e056e2ea56408b38eeb9d4d04d7f6c6982eb7a14ed5e807c7c71807cdd` (the pin in `fetch.py`; the file was copied from the root checkout's gitignored `data/` and its digest checked),
+678013 rows, 36102 claims. `glum` 3.4.1, `polars` 1.44.2. Poisson, log link, `alpha=0`, y = ClaimNb / Exposure
+weighted by Exposure (exposure clipped at 1). Base frequency exp(b0): freq_v1 `0.019369349543`, freq_v2 `0.025586326426`. Both coefficient
+vectors are in `examples/fremtpl2/rating/fremtpl2-fit-record.json` (53 and 59 coefficients). Table values are written to
+8 decimal places, the base frequency to 12.
+
+**Condition (ii), the feature list (the fixture defines it).** freq_v1: area (6 levels), veh_power (int 4..12, clipped at 12), age_band (8), veh_brand,
+region, bonus_malus (int key, every value 50..150, exp(b*x)), density (int key, every one of 1607 distinct values in the file,
+exp(b*log d); `on_miss: error`). freq_v2 adds veh_gas and veh_age_band (VehAge clipped at 15, floor-divided by 3: int 0..5). One field per term, no
+interactions, no `interpolation`. This is RS-1201's `prep` list (`spike/run.py` at `46ecb632`, lines 29-37); the dispatch record's remark that the spike
+does not record it is not right for `run.py`. Reference level of a categorical is its first sorted level, relativity 1.0.
+
+**Condition (iii), disjoint steps.** Member 0: the seven frequency tables (repointed v1 to v2), `s_freq` (new base and two more relativities), the new inputs
+`s_in_veh_gas`, `s_in_veh_age_band` and the new tables `s_t_veh_gas`, `s_t_veh_age_band` (with the two contract fields): one group. Member 1: `s_age` only.
+Member 2: `s_risk` only (severity). Member 3: `s_load`. Member 4: `s_floor`. Member 5: `s_cap`. No step belongs to two members.
+**Condition (iv)**: `fremtpl2-rate.changes.json` carries the members' steps and the six sets; `groups_for` builds one `ChangeGroup` per member.
+**Condition (v)**: no GLM artifact, no `model_call`, no `pins.models`; every file under `examples/fremtpl2/rating/` starts `fremtpl2-`.
+
+**Two departures from RS-1201's `rate()`, forced by the engine, disclosed.** (1) The engine allows one `clamp` per ladder rung (two clamps on one name are a
+DAG cycle; a clamp elsewhere is `LADDER_CLAMP_UNPLACEABLE`). The minimum premium is the clamp (`s_floor`). The cap is an expression `min([pre_cap, current_premium * f])`
+ahead of the loading rung (`s_cap`), present in the baseline with f = 1000 (it cannot bind) and edited to 1.25 by member 5; it caps the premium before the
+age adjustment, not after the floor as RS-1201 did. (2) The age relativity is its own rung (`profit_loading`) after the expense loading, so it is a
+separate ladder operation. The input `current_premium_minor` is the baseline's own payable premium (`portfolio_for`), as RS-1201's cap was relative to the baseline premium.
+
+**Tests (all written after the files they test, so each red is shown against the base).**
+- `packages/pricing-core/tests/test_fremtpl2_rate_fixture.py::test_every_fixture_file_loads_and_compiles`: red with `examples/fremtpl2/rating/` moved away
+  (`2 failed`, FileNotFoundError); green with it (`2 passed`).
+  `::test_member_zero_is_one_group_and_the_catalogue_partitions_the_derived_changes`: the six groups partition the derived changes exactly, member 0 holds 7 `table_repointed`.
+- `packages/pricing-core/tests/test_rating_attribution.py::test_replay_that_differs_from_a_true_rerate_is_detected_and_recorded` (Acceptance 18, first test): red with
+  `scripts/measure-attribution-cost.py` moved away; red with `replay_subset`'s multiply broken (`value *= factor + 1`); green with the script. It first
+  returned a vacuous pass: the book's int keys were strings and every policy was `INPUT_CONTRACT_VIOLATION`; it now asserts all 30 policies are quoted.
+  Finding in the data: replay equals every true re-rate on the linear subsets and on the whole set (1, 2, 4), and differs on subsets holding the minimum premium
+  without the age change ((4,): Q000 off by minor units): the candidate ladder records no clamp where the full set lifts the policy above the floor.
+- Suite: `test_fremtpl2_rate_fixture.py` and `test_rating_attribution.py` together `30 passed in 53s`; `ruff check packages/pricing-core scripts/measure-attribution-cost.py` clean;
+  `mypy` 227 files clean; `lint-imports` 4 kept, 0 broken.
+
+**Smoke runs (tiny; they prove the harness runs, they are NOT the measurement and are not timings to cite).** `sets --policies 300`: all six sets run end to end, K = 3
+to 6 `method: shapley`, 6 to 46 s (compile-dominated at this size). `replay --policies 60`: sets 0,1,4,5 and 1,2,4 are step-aligned (replay 3 to 7 ms, re-rates 2.4 to 5 s, 0 mismatches
+on that book), the other four are not (members 0 and 2 feed one rung).
+
 ## PRs
 
 #1243, a draft. The branch `sl-1387-attribution-exact-shapley-largest-remainder` is pushed; the PR is not merged by the executor.

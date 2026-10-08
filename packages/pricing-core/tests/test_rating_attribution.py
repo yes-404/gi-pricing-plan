@@ -771,6 +771,68 @@ def test_attribute_records_rerate_and_no_fallback() -> None:
     assert summary.replay_fell_back is False
 
 
+def _harness() -> Any:
+    """The measurement harness (`scripts/measure-attribution-cost.py`), loaded by path."""
+    import importlib.util
+
+    path = Path(__file__).resolve().parents[3] / "scripts" / "measure-attribution-cost.py"
+    spec = importlib.util.spec_from_file_location("measure_attribution_cost", path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.mark.req("FR-1398")
+def test_replay_that_differs_from_a_true_rerate_is_detected_and_recorded() -> None:
+    """DP-S3-3 (b), Acceptance 18: replay is measured in the harness, never a production path.
+    On a step-aligned set the replay equals every true re-rate; a replay with one operand off
+    is reported as a mismatch naming the policy and the minor-unit difference."""
+    h = _harness()
+    fx = h.load_fixture()
+    members = (1, 2, 4)  # age relativity, severity, minimum premium: three rungs
+    assert h.step_aligned(fx, members)
+    assert not h.step_aligned(fx, (0, 2))  # the model swap and severity feed one rung
+    keys = {
+        f: [
+            int(r[f]) if f in h.INT_FACTORS else r[f]
+            for r in fx.tables[f"rate_table:fremtpl2-rel-{f.replace('_', '-')}@1"]["rows"]
+        ]
+        for f in h.FACTORS_V1
+    }
+    rows = [
+        {"quote_id": f"Q{i:03d}", "exposure_years": 1.0, "current_premium_minor": 10_000 + 3_000 * i}  # noqa: E501
+        | {f: ks[(i * 7) % len(ks)] for f, ks in keys.items()}
+        | {"veh_gas": "Regular", "veh_age_band": i % 6}
+        for i in range(30)
+    ]  # fmt: skip
+    book = pl.DataFrame(rows, strict=False).lazy()
+    columns = book.collect_schema().names()
+    base, cand = h._pass(fx, members, book, columns)
+    assert sum(v["minor"] is not None for v in base.values()) == 30  # every policy is quoted
+    truth = {}
+    for sub in ((), (1,), (2,), (4,), (1, 2), (1, 4), (2, 4), (1, 2, 4)):
+        _b, rerated = h._pass(fx, sub, book, columns)
+        truth[sub] = {q: v["minor"] for q, v in rerated.items()}
+    # Linear subsets (no clamp member) and the whole set replay exactly.
+    for sub in ((), (1,), (2,), (1, 2), (1, 2, 4)):
+        assert h.compare_replay(h.replay_values(fx, sub, base, cand), truth[sub]) == []
+    # A clamp whose binding depends on the mixed value is not replayed: the candidate ladder
+    # records no clamp for a policy the full set lifts above the floor. The harness names the
+    # policy and the minor-unit difference; this is the measured finding, not a failure of the run.
+    diffs = h.compare_replay(h.replay_values(fx, (4,), base, cand), truth[(4,)])
+    assert diffs, "the fixture book must include a policy the floor binds on in a mixed subset"
+    assert all(q.startswith("Q") and d != 0 for q, d in diffs)
+    quote, diff = diffs[0]
+    assert truth[(4,)][quote] + diff == h.replay_values(fx, (4,), base, cand)[quote]
+    # One operand off by one minor unit on one policy: named, with its difference.
+    off = dict(h.replay_values(fx, (1, 2, 4), base, cand))
+    off["Q007"] += 1
+    assert h.compare_replay(off, truth[(1, 2, 4)]) == [("Q007", 1)]
+
+
 _CHILD = textwrap.dedent(
     """
     import sys
