@@ -25,6 +25,7 @@ from typing import Any, NoReturn, Protocol
 import zen
 from pydantic import BaseModel, ConfigDict
 
+from model_schema.modelling import Factor, FactorIntent
 from model_schema.rating import (
     AlgorithmOutput,
     Pins,
@@ -478,6 +479,9 @@ class ResolvedArtifact(BaseModel):
 
     status: str
     payload: dict[str, Any]
+    #: A pinned model's Factors, read at compile and not carried into the Bundle (`PL-1471`
+    #: DP-7); a resolver that has none leaves the default.
+    factors: tuple[Factor, ...] = ()
 
 
 class ArtifactResolver(Protocol):
@@ -610,13 +614,91 @@ def check_step_refs_pinned(algorithm: RatingAlgorithm, pins: Pins) -> None:
         )
 
 
+async def _refuse_unapproved_objectives(
+    version: RatingVersion, payloads: dict[str, Any], resolver: ArtifactResolver
+) -> None:
+    """FR-240's "transitively reachable": a pinned model's own custom objective (`PL-1471`).
+
+    One hop: a GBM's `spec.objective` with `kind: custom` is resolved and held to the same
+    floor as a direct pin, `deprecated` included (`02` OQ-609, DP-5). A payload with no
+    `spec` names no objective. The objective is checked and not embedded, so `bundle_hash`
+    is unchanged (FR-239).
+    """
+    assert version.pins is not None
+    for model_ref in version.pins.models:
+        spec = payloads[str(model_ref)].get("spec")
+        objective = spec.get("objective") if isinstance(spec, dict) else None
+        if not isinstance(objective, dict) or objective.get("kind") != "custom":
+            continue
+        objective_ref = ArtifactRef.model_validate(objective["ref"])
+        status = (await resolver.resolve(objective_ref)).status
+        if status not in _APPROVED_OR_BETTER:
+            _raise_named(
+                "PIN_NOT_APPROVED",
+                f"{model_ref} uses {objective_ref}, which is {status!r}, not approved or "
+                "better (FR-240, FR-20)",
+            )
+
+
+async def _refuse_control_factor_keys(
+    version: RatingVersion, payloads: dict[str, Any], resolver: ArtifactResolver
+) -> None:
+    """FR-88 / FR-240: no pinned rate table has a key bound to a `control`-intent Factor.
+
+    Every pinned table's `factor_ref` keys, whatever its `rateable` flag (DP-4: the flag is
+    declarative, so the check does not trust it). A payload with no `keys` binds no factor.
+    """
+    assert version.pins is not None
+    for table_ref in version.pins.rate_tables:
+        for key in payloads[str(table_ref)].get("keys", ()):
+            factor_ref = key.get("factor_ref") if isinstance(key, dict) else None
+            if factor_ref is None:
+                continue
+            factor = (await resolver.resolve(ArtifactRef.model_validate(factor_ref))).payload
+            if factor.get("intent") == FactorIntent.CONTROL.value:
+                _raise_named(
+                    "CONTROL_FACTOR_IN_RATEABLE_PATH",
+                    f"{table_ref} key {key.get('name')!r} is bound to {factor_ref}, a "
+                    "`control`-intent Factor, which cannot be rated on (FR-88, FR-240)",
+                )
+
+
+def _refuse_control_factor_model_calls(
+    algorithm: RatingAlgorithm, resolved_pins: dict[str, ResolvedArtifact]
+) -> None:
+    """FD 9639 (DP-7): a `model_call` over a model fitted on a `control`-intent Factor.
+
+    Scoring applies every fitted feature's effect and `02` FR-88 lets Rating Versions use
+    only `risk` factors, so a pinned model whose `feature_order` holds a `control` Factor's
+    slug is refused. A payload with no `fit_result` or `feature_order` binds no factor. A
+    `peril_structure_ref` step is FD-1456's known gap (FR-240).
+    """
+    for step in algorithm.steps:
+        if not isinstance(step, RatingModelCallStep) or step.model_ref is None:
+            continue
+        pin = resolved_pins[str(step.model_ref)]
+        fit_result = pin.payload.get("fit_result")
+        features = fit_result.get("feature_order", ()) if isinstance(fit_result, dict) else ()
+        by_slug = {factor.slug: factor for factor in pin.factors}
+        for feature in features:
+            factor = by_slug.get(feature)
+            if factor is not None and factor.intent is FactorIntent.CONTROL:
+                _raise_named(
+                    "CONTROL_FACTOR_IN_RATEABLE_PATH",
+                    f"{step.model_ref} was fitted on feature {feature!r}, the "
+                    f"`control`-intent Factor {factor.slug}@{factor.version}, which cannot be "
+                    "rated on (FR-88, FR-240)",
+                )
+
+
 async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle:
     """Compile a pinned `RatingVersion` to a self-contained Bundle (FR-239/240).
 
     Validates the whole structure: the algorithm's DAG, references, types, constraints
     and boundary guards (re-checked via `validate_algorithm`), the pins resolve to
     `approved` or better (FR-20), every `model_call` mode equals the version's
-    `model_reference_mode` (FR-223), and no pinned custom objective is unapproved.
+    `model_reference_mode` (FR-223), and no custom objective is unapproved, pinned or
+    reached through a pinned model (FR-240).
     Every `table`, `lookup` and `model_call` step's ref is pinned at its exact version
     (FR-237, `check_step_refs_pinned`).
     Raises `ValueError` named with the first failure's code.
@@ -661,6 +743,7 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
         *version.pins.reference_tables,
         *version.pins.custom_objectives,
     ]
+    resolved_pins: dict[str, ResolvedArtifact] = {}
     for ref in all_refs:
         resolved = await resolver.resolve(ref)
         exempt = ref.type in _MATURITY_CHECK_EXEMPT
@@ -670,6 +753,10 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
                 f"{ref} is {resolved.status!r}, not approved or better (FR-20)",
             )
         payloads[str(ref)] = resolved.payload
+        resolved_pins[str(ref)] = resolved
+    await _refuse_unapproved_objectives(version, payloads, resolver)
+    await _refuse_control_factor_keys(version, payloads, resolver)
+    _refuse_control_factor_model_calls(algorithm, resolved_pins)
 
     graph = to_jdm(algorithm)
     pins = version.pins
