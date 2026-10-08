@@ -1123,7 +1123,7 @@ Drafted as working id 9768; minted 2026-10-01 as SL-1369 (its leaf plan, drafted
 id: SL-1477
 family: slice
 title: Slice 2: Designer I — canvas, inspector, load and save; RatingAlgorithm in the generated contract; the typed save route (FD-1366 rule (ii))
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-06            # original date 2026-10-05, set at the draft; minted 2026-10-06
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 88d114fc44b9a77a57f29ca30bc3ee5d693085f8
@@ -1173,6 +1173,8 @@ the third build lane's candidate.
 - the maintainer's agreement and the lead's go.
 
 *(Filed 2026-10-05 under working ids 9711 (this row) and 9713 (the plan), reserved by the lead.)*
+
+(Activated 2026-10-08 as WK-675 Slice 2, in lane C, on the maintainer's (by delegation) GO, "2026-10-08 10:55:30 BST — MERGE-ACK #1237 (security, source-map-js 1.2.1 → 1.2.2) @bf511269898baecf938b3fe37e6cb46f382b289b; LANE C DISPATCH GO (conditional) for WK-675 S2 (PL-1476 / SL-1477)"; its conditions: #1233 merged with a verified read-back (c896d6c3; RL-1473, RL-1474, RL-1475, PL-1476 and SL-1477 on main); this activation PR quotes the GO header; the lane A dispatch record (SL-1448) carries a dated Delta naming this slice's `03` hunks; Task 0 at dispatch confirms the preview and lists the line moves.)
 
 
 
