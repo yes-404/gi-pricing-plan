@@ -27,6 +27,13 @@ relates: []                      # ids only
   --delete-branch` exiting `1` or `0` with neither meaning "the merge landed", and the
   stranded-push race. **Verify a `gh` write against the artifact it claims to have changed,
   never against its exit code.**
+- **Before any REST PATCH of a PR's body or title** (`gh api -X PATCH repos/<owner>/<repo>/pulls/<n> …`,
+  the form `git-hygiene` gives because `gh pr edit` silently no-ops), run `gh pr view <n> --json
+  number,title,headRefName` and confirm it is the PR and branch you mean; **after the PATCH,
+  read the body back** (`gh pr view <n> --json body`). The wrong-number PATCH is the failure
+  mode: #1149's body was overwritten at 13:15:20Z with RL 9642's draft body by an earlier
+  session, and restored. *(Amended 2026-10-05 by the maintainer, dated line by delegation, on
+  the entry "2026-10-05 15:19:09 BST — All four batches ACK-ready: noted; FD 9699 owner = WK-673; FD 9645 MEDIUM confirmed; the #1149 body incident; slot priorities" in `to-lead.md`: its INCIDENT item and slot priority 2.)*
 - **S-8** (ruled 02:29:40 BST): a reproduction already filed as a dated record with its run
   id discharges the reproduce step of any debugging skill.
 - **Owns:** one slice at a time from the frozen plan, in its own worktree (what a slice is,

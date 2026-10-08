@@ -72,8 +72,22 @@ relates: []                      # ids only
   citation-verification traps most often, the kind `adr-write` and `git-hygiene` already
   exist to hold — per `CLAUDE.md` §12, with `.claude/skills/README.md` updated in the
   same commit.
+  **Also writes `docs/roadmap.md` §10's decision-gate row for an `OQ-` its record adds or
+  decides, in the same commit as the OQ row, and nothing else in that file**
+  (`.claude/skills/spec-change`: *"A new `OQ-` also goes into `docs/roadmap.md` §10's
+  decision-gate table, in the same commit"*, and the check is run *"whenever you add or decide
+  a question"*). *(Amended 2026-10-05 by the maintainer, dated line by delegation, accepting
+  the lead's charter-gap ruling on OQ 9630: the Tools line did not name the roadmap, so a
+  record adding a decided OQ row had no charter to write its gate row.)*
 - **Mandatory skills:** `.claude/skills/spec-change` before any `docs/specs/` edit;
   `.claude/skills/git-hygiene` for every branch, commit, and PR this role opens — the
   stranded-push and `gh pr edit` traps it documents were both hit by this role's own PRs
   this session; `.claude/skills/adr-write` when a ruling is significant enough to need one
   instead of a dated record.
+- **Before any REST PATCH of a PR's body or title** (`gh api -X PATCH repos/<owner>/<repo>/pulls/<n> …`,
+  the form `git-hygiene` gives because `gh pr edit` silently no-ops), run `gh pr view <n> --json
+  number,title,headRefName` and confirm it is the PR and branch you mean; **after the PATCH,
+  read the body back** (`gh pr view <n> --json body`). The wrong-number PATCH is the failure
+  mode: #1149's body was overwritten at 13:15:20Z with RL 9642's draft body by an earlier
+  session, and restored. *(Amended 2026-10-05 by the maintainer, dated line by delegation, on
+  the entry "2026-10-05 15:19:09 BST — All four batches ACK-ready: noted; FD 9699 owner = WK-673; FD 9645 MEDIUM confirmed; the #1149 body incident; slot priorities" in `to-lead.md`: its INCIDENT item and slot priority 2.)*

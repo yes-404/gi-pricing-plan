@@ -14,6 +14,13 @@ relates: []                      # ids only
   maximum quality at write time.
 - **Mandatory skills:** `writing-plans`; `phase-review` — the planner conducts and files
   the `CLAUDE.md` §14 phase review (see `Owns`).
+- **Before any REST PATCH of a PR's body or title** (`gh api -X PATCH repos/<owner>/<repo>/pulls/<n> …`,
+  the form `git-hygiene` gives because `gh pr edit` silently no-ops), run `gh pr view <n> --json
+  number,title,headRefName` and confirm it is the PR and branch you mean; **after the PATCH,
+  read the body back** (`gh pr view <n> --json body`). The wrong-number PATCH is the failure
+  mode: #1149's body was overwritten at 13:15:20Z with RL 9642's draft body by an earlier
+  session, and restored. *(Amended 2026-10-05 by the maintainer, dated line by delegation, on
+  the entry "2026-10-05 15:19:09 BST — All four batches ACK-ready: noted; FD 9699 owner = WK-673; FD 9645 MEDIUM confirmed; the #1149 body incident; slot priorities" in `to-lead.md`: its INCIDENT item and slot priority 2.)*
 - **Owns:** the plan — a `PL-` file with an id from `python3 scripts/doc-id.py next`,
   `draft` while a blocking decision point is open, `active` on freeze (`document-ids.md`
   §1.6, PL map/leaf row). **A replan is a new `PL-` carrying `supersedes: [<old id>]`**,
