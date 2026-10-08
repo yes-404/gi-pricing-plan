@@ -1990,6 +1990,8 @@ class ModelFlag(enum.StrEnum):
     """
 
     DATASET_INVALIDATED = "dataset_invalidated"
+    #: `02` R4, `06` FR-359: the model's custom objective is not `approved`.
+    CUSTOM_OBJECTIVE_NOT_APPROVED = "custom_objective_not_approved"
 
 
 #: FR-202's lifecycle, as data rather than as conditionals spread over a service.
