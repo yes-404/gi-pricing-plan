@@ -3,7 +3,7 @@
 Approval refuses a model over an unapproved custom objective (`02` R4, `06` FR-359); the
 compile Job refuses what approval could not catch (`03` FR-240); a `control`-intent Factor
 never reaches a rateable path (`02` FR-88). Each test names the cause it is red by at the
-slice's base in the ledger (`LG-9475`, build log).
+slice's base in the ledger (`LG-1533`, build log).
 """
 
 from __future__ import annotations

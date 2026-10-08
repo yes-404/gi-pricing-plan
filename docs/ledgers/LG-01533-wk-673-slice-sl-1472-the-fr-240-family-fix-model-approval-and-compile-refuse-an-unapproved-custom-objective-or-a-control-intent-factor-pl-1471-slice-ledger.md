@@ -1,5 +1,5 @@
 ---
-id: LG-9475
+id: LG-1533
 family: ledger
 title: WK-673 slice SL-1472 — the FR-240 family fix, model approval and compile refuse an unapproved custom objective or a control-intent factor (PL-1471), slice ledger
 status: active
@@ -14,7 +14,7 @@ corrected_by: []
 relates: [RL-1470, RL-1445, RL-1263, FD-1422, FD-1469, FR-240, WK-673]
 ---
 
-# LG-9475 — SL-1472: the FR-240 family fix
+# LG-1533 — SL-1472: the FR-240 family fix
 
 Executed from `PL-1471` by `executor-sl1472` (sonnet). Branch `sl-1472-fr-240-family-fix`, worktree
 `.claude/worktrees/sl-1472`, from `origin/main` `680fb9acd4538de2a74b7a49687aad4fa76e02d3` (#1236, SL-1448 merged; its
@@ -63,9 +63,9 @@ and "2026-10-08 11:53:19 BST — L5 transition RULED: per-slice plans drafted be
 - [x] Task 3 — (c) control intent at compile and seed (Acceptance 5, 6, 7; the `rateable: false` case)
 - [x] Task 3b — (e) `model_call` over a `control` GBM (Acceptance 13; DP-7)
 - [x] Task 4 — (a) the flag (Acceptance 1, 2, 9)
-- [ ] Task 5 — frontend half (runs in the gate; see the build log)
+- [x] Task 5 — frontend half: no exhaustive `dataset_invalidated` switch exists outside the untracked generated client (build log, Task 5); the frontend half ran in gate 1 and gate 2, install, generate:api, lint, type-check, test, build all rc 0 (section 3)
 - [x] Task 6 — T1 to T4 verbatim from RL-1470
-- [ ] Task 7 — gate and this ledger; SL-1472 row status; INDEX regenerated
+- [x] Task 7 — gate and this ledger; SL-1472 row status; INDEX regenerated (gate 2 at `d06b9d1e`, section 3; minted as LG-1533 in the mint commit)
 
 ### 3. Gate
 
@@ -92,7 +92,25 @@ and "2026-10-08 11:53:19 BST — L5 transition RULED: per-slice plans drafted be
 
 ### 4. Audit
 
-Not yet run. The auditor writes the result; scope is derived from the spec ids in section 1.
+**Gate 2 (slot `gate-1`, tree `d06b9d1e`, 2026-10-08 15:03:58Z to 15:49:13Z).** Rc table in section 3: ruff, mypy, lint-imports, req-coverage, generate-contracts --check rc 0; audit-docs rc 1 (check 31, the gap between 1487 and 9475 only); pytest -q rc 1 with 13 failed, 5118 passed, 4 skipped, the 13 being the check-31 working-id set; frontend six stages rc 0.
+
+**Audit and verdicts.** Slice audit by `auditor-sl1472`: `handover/audit-sl1472-2026-10-08.md` (local, not in the repository), at head `39178d0c9a77e132a2494d7e52b32a0d2bd673a2`, range `origin/main...39178d0c9a77e132a2494d7e52b32a0d2bd673a2`. Result: **PASS**, adopted by the lead in the entry headed "2026-10-08 16:59:56 BST — SL-1472 (#1247) SLICE AUDIT (auditor-sl1472, handover/audit-sl1472-2026-10-08.md) at 39178d0c — LEAD VERDICTS" (`~/gi-pricing-plan.local/channel/from-lead-2026-10-08.md`, local), subject to F1 and F2 at the mint.
+
+The maintainer-duty items of the 15:19:09 BST ruling (item 2), verified by the lead from the code:
+- (a) The `_refuse_*` helpers are defined at `packages/pricing-core/src/pricing_core/rating/compile.py:617`, `:643` and `:666`; their callers are only `:757`, `:758` and `:759` in `compile_bundle` (the other hits are three string keys at `packages/pricing-core/tests/test_quote_input_raise_sites.py:86`, `:88` and `:90`). None reads authored step text (`EXPRESSION_FIELDS`, `authored.py:44-51`, is untouched; the `_field_reads` guard is green). The rename stands; no registration.
+- (b) The exempted raise sites `:636`, `:659` and `:686` carry pinned-artifact refs only; `compile_bundle` has no `QuoteContext` or scoring input. The exemptions stand; no sentinel.
+
+Findings and the lead's verdicts:
+| # | Sev | Finding | Verdict |
+|---|---|---|---|
+| F1 | MED | Merge conflict in `docs/INDEX.md` and `docs/roadmap.md` (the activation note against main's SL-1503 block) | FIX at the finisher's main merge: INDEX regenerated, the note kept under SL-1472, SL-1503 after it. Done in the merge commit. |
+| F2 | LOW | This ledger's stale lines: Tasks 5 and 7 unchecked, section 4 "Not yet run", no PR number | FIX in the mint commit. Done here. |
+| F3 | LOW | Task 3b's reds not committed separately (disclosed; the auditor re-verified at base) | ACCEPT |
+| F4 | LOW | Task 0 exposure counts are vacuous (disclosed) | ACCEPT |
+| F5 | LOW | `flags_for` calls `resolve_ref`, which can 404 on a dangling objective ref, and adds one query per read | ACCEPT. Evidence, verbatim: "custom_objectives.py on main has 8 routes, GET/POST only (lines 170/233/293/308/340/387/406/434), no DELETE — a dangling ref is unreachable through the API". |
+| F6 | INFO | The gate-2 log has no tree stamp (the tree claim rests on the ledger-only diff, verified) | ACCEPT |
+
+Also verified by the lead: red-first at the merge-base source (`test_rating_compile_fr240` 7 failed, 4 controls pass; `test_fr240_governance` 6 failed, 3 by-design passes; 79 passed at head); PL-1471 acceptance 13 of 13 (item 10 vacuous, disclosed); write set 18 files; spec texts equal RL-1470 byte for byte; contracts 46 match.
 
 ### 5. Build log
 
@@ -137,8 +155,7 @@ Not yet run. The auditor writes the result; scope is derived from the spec ids i
 - Helpers do not inspect step text. `_refuse_unapproved_objectives` (def `:617`, sole caller `compile_bundle` `:757`) reads each pinned model payload's `spec.objective`. `_refuse_control_factor_keys` (def `:643`, sole caller `:758`) reads each pinned rate table payload's `keys[].factor_ref`. `_refuse_control_factor_model_calls` (def `:666`, sole caller `:759`) reads only `RatingModelCallStep.model_ref` and the resolved pin's `fit_result.feature_order`; no `expr`, `key_expr` or other authored string is read.
 - Exempted raise sites carry no quote value. `:636` `_raise_named("PIN_NOT_APPROVED", f"{model_ref} uses {objective_ref}, which is {status!r}, ...")`: two artifact refs and a maturity status. `:659` `_raise_named("CONTROL_FACTOR_IN_RATEABLE_PATH", f"{table_ref} key {key.get('name')!r} is bound to {factor_ref}, ...")`: a table ref, the table's declared key name and a Factor ref. `:686` `_raise_named("CONTROL_FACTOR_IN_RATEABLE_PATH", f"{step.model_ref} was fitted on feature {feature!r}, the ... Factor {factor.slug}@{factor.version}, ...")`: a model ref, a fitted feature name from the model's `fit_result` and the Factor's slug and version. All three read pinned artifacts at compile time; none reads a `QuoteContext` or a scoring input.
 - Entries: `test_quote_input_raise_sites.py` `_INPUT_FREE`, three lines, each commented with its arguments.
-**Fixed head and the full re-gate** are recorded below when run.
 
 ## PRs
 
-SL-1472: the FR-240 family fix — the PR number is added at its opening.
+SL-1472: the FR-240 family fix — #1247.
