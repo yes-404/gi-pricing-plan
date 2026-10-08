@@ -1672,6 +1672,24 @@ relates: [PL-1371, CR-1212, RL-1263]
 The third of Option A's four serial slices (the maintainer, "2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record", item 1). A `model_call` step naming a Peril Structure compiles and scores: `compile_bundle` resolves each component model of the pinned structure, refuses one below `approved` with `PIN_NOT_APPROVED` (FR-20, FR-240) and embeds its payload, so the Bundle stays self-contained (NFR-491); the handler predicts each component and calls `assemble_risk_premium` (FR-188, FR-189), replacing today's custom-node failure on `payload["fit_result"]`. Six decision points for a ruling (the outputs rule and FR-249, `separate_model`, PL-1471's peril gap, WF-699 C4's reachability, the component unit, a recorded latency). Leaf plan PL-1465. It follows PL-1429, PL-1471, A-1 (SL-1462) and A-2 (SL-1463); it serialises with PL 9610 and PL 9609 on `compile_bundle`; A-4 (the exit-demo scope) follows it.
 
 
+#### SL-9469 — WK-1178 fix slice — FD-1374: a rating step reads only the names it declares (FR-246 enforced)
+
+```yaml
+id: SL-9469
+family: slice
+title: WK-1178 fix slice — FD-1374, a rating step reads only the names it declares (FR-246 enforced)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-08
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1374, PL-1371]
+```
+
+`FD-1374`'s fix (MEDIUM, a silent mispricing path), split out of the F35 plan and kept in P2 by the maintainer's entry "2026-10-08 13:00:11 BST — FD-1374 (silent mispricing) STAYS IN P2: DP-F35-1 split out as a P2 WK-1178 slice; F35's performance remainder carries; and fewer, consolidated status messages". FR-246 enforced at save and compile on every evaluating field (`as_at` included), `consumes` mandatory, an undeclared read refused with `RATING_STEP_UNDECLARED_READ` (422), compiled bundles grandfathered at reload; `03`'s FR-246 row and corrected §4.1 example applied verbatim from the ruling; the four under-declaring fixtures fixed. Its row and tasks are PL 9470 (working id; the single-row WK-1178 Work plan), which quotes PL 9776 (working id, minting in batch B4) Task 1A as ruled by RL 9771 (working id, minting in batch B4). Money and contract group, never on the cut ladder. **Activation needs:** RL 9771 and PL 9776 (working ids) minted (batch B4); the `compile.py` serial set free, a ready G2 compile-set slice taking it first; the maintainer's GO under L1 (a'). *(Cut 2026-10-08 by the planner under working id 9469, reserved by the lead.)*
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
