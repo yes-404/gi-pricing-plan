@@ -396,7 +396,7 @@ async def test_a_reference_lookup_miss_is_refused() -> None:
              "on_missing": "error", "produces": "postcode"},
             {"step_id": "s_area", "type": "lookup", "label": "Area",
              "reference_table_ref": "reference_table:ons@1", "key_expr": ["postcode"],
-             "as_at": "postcode", "on_miss": "error", "consumes": ["postcode"],
+             "as_at": "effective_date", "on_miss": "error", "consumes": ["postcode"],
              "produces": "area_code"},
             {"step_id": "s_out", "type": "output", "label": "Area out",
              "output_name": "area_out", "rounding": {"mode": "half_even", "dp": 0},
@@ -407,7 +407,16 @@ async def test_a_reference_lookup_miss_is_refused() -> None:
     algo = RatingAlgorithm.model_validate(algo_payload)
     graph = to_jdm(algo)
     payloads = {
-        "reference_table:ons@1": {"rows": [{"key": "SW1A", "payload": {"area_code": "LDN"}}]}
+        "reference_table:ons@1": {
+            "rows": [
+                {
+                    "key": "SW1A",
+                    "payload": {"area_code": "LDN"},
+                    "effective_from": "2020-01-01",
+                    "effective_to": None,
+                }
+            ]
+        }
     }
     from pricing_core.rating.score import _check_lookup_misses
 
@@ -416,11 +425,11 @@ async def test_a_reference_lookup_miss_is_refused() -> None:
 
     decision = zen.ZenEngine().create_decision(json.dumps(wire))
     decision.validate()
-    result = decision.evaluate({"postcode": "UNKNOWN"})["result"]
+    result = decision.evaluate({"postcode": "UNKNOWN", "effective_date": "2026-06-01"})["result"]
     with pytest.raises(ValueError, match="REFERENCE_LOOKUP_MISS"):
         _check_lookup_misses(algo, result)
     # Positive control: a key the table does carry does not raise.
-    matched = decision.evaluate({"postcode": "SW1A"})["result"]
+    matched = decision.evaluate({"postcode": "SW1A", "effective_date": "2026-06-01"})["result"]
     _check_lookup_misses(algo, matched)  # must not raise
 
 

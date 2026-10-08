@@ -32,6 +32,7 @@ from model_schema.rating import (
     RatingConstraintStep,
     RatingExpressionStep,
     RatingInputStep,
+    RatingInputType,
     RatingLookupStep,
     RatingModelCallStep,
     RatingOutputStep,
@@ -346,6 +347,44 @@ def _check_input_bound_scale(algo: RatingAlgorithm) -> list[ValidationIssue]:
     return issues
 
 
+#: The date `score_one` and `score_batch` stamp into every engine context (`score.py`).
+STAMPED_DATE = "effective_date"
+
+
+def _check_lookup_as_at(algo: RatingAlgorithm) -> list[ValidationIssue]:
+    """FR-221 (PL-1447 DP-1): a lookup's `as_at` names `effective_date` or a declared `date`
+    input. A declared `effective_date` must itself be date-typed, because a declared input
+    replaces the stamped date in the engine context. Read through the enumerator (FR-274)."""
+    declared = {field.name: field.type for field in algo.input_contract}
+    issues: list[ValidationIssue] = []
+    for authored in authored_expression_fields(algo):
+        if authored.field != "as_at":
+            continue
+        name = authored.text
+        if name not in declared:
+            if name == STAMPED_DATE:
+                continue
+            code = "RATING_GRAPH_UNRESOLVED_REF"
+            why = "is neither effective_date nor a declared input"
+        elif declared[name] == RatingInputType.DATE:
+            continue
+        else:
+            code = "RATING_TYPE_MISMATCH"
+            why = f"is a declared {declared[name].value!s} input, not a date"
+        issues.append(
+            ValidationIssue(
+                code=code,
+                message=(
+                    f"as_at of lookup step {authored.step_id!r} names {name!r}, "
+                    f"which {why} (FR-221)"
+                ),
+                step_id=authored.step_id,
+                field="as_at",
+            )
+        )
+    return issues
+
+
 #: Each check is a function of ONE string, so it cannot choose which fields it reads
 #: (FD-1317). `validate_algorithm` applies every one of these to every authored string.
 STRING_CHECKS: tuple[Callable[[str], tuple[str, str] | None], ...] = (
@@ -360,6 +399,7 @@ ALGORITHM_CHECKS: tuple[Callable[[RatingAlgorithm], list[ValidationIssue]], ...]
     _check_result_types,
     _check_input_bound_scale,
     _check_clamp_placement,
+    _check_lookup_as_at,
 )
 
 
