@@ -84,6 +84,46 @@ file. The `test_contracts.py:98` hand-authored marker stays. `docs/contracts/ope
 **One test edit forced by the new fields.** `test_run_refuses_an_unknown_field` used `attribution=[]` as its unknown field; the field now
 exists, so it uses `unknown_field=[]`.
 
+### Tasks 3 to 6 — `derive_changes`, subsets, Shapley, `attribute` (2026-10-08)
+
+**Red first.** `uv run pytest packages/pricing-core/tests/test_rating_attribution.py` before any production code →
+`ImportError: cannot import name 'AttributionError' from 'pricing_core.rating.analysis'` (collection error, cause: the names do not
+exist; the plan's Step 2 expectation). 27 tests, Acceptance 1-15 and 18's second test (`test_attribute_records_rerate_and_no_fallback`).
+Acceptance 18's replay-harness test belongs to Task 7 (the harness is the measurement script) and is not written.
+
+**Green.** `test_rating_attribution.py` 27 passed. With `test_rating_dislocation.py`, `test_quote_input_raise_sites.py` and all of
+`packages/model-schema`: `600 passed in 35.54s`. `uv run mypy` → `Success: no issues found in 227 source files`. `ruff check` clean.
+`scripts/req-coverage.py`: FR-266 (7 test files), FR-1397 (4), FR-1398 (6), FR-1399 (11).
+
+**Broken-input proof of the tests that cannot be red by absence** (each mutation applied to `analysis.py`, one test run, restored with
+`git checkout`):
+- the subset's `input_contract` taken from the baseline → `test_subset_contract_carries_the_field_its_own_change_adds` red;
+- a subset that fails to compile skipped (`continue`) → `test_attribute_fails_the_run_naming_a_subset_that_does_not_compile` red (`KeyError: 2`);
+- a policy not quoted in a subset skipped → `test_attribute_fails_naming_a_policy_not_quoted_in_some_subset` red (`TypeError` on `int(None)`);
+- a contract delta attached to the first reader when two read it → `test_delta_with_two_readers_is_its_own_change_and_refused_ungrouped` red.
+The reconciliation tests break the allocator, the residual and the Shapley part through seams (`_allocate`, `_residual`) and each
+raises `ATTRIBUTION_RECONCILIATION_FAILED` naming `Q000`. The first version of violation 1's test used one group, so no mixed subset
+existed (the empty and full subsets are the baseline and candidate by construction); it now has a third change and two groups.
+
+**Choices the plan or ruling left to the executor** (the lead and auditor can reverse any):
+- `_Change` is not the plan's field list: it carries `old_step`, `new_step`, `pin`, `fields`, `outputs`. The pins of a subset are
+  derived from the subset's steps (a pin the candidate dropped is removed once no subset step names it), so two steps sharing a ref
+  cannot leave one pinless.
+- The subset algorithm for no changes is the baseline object and for every change the candidate object, so RL-1449 violation 2 holds
+  by content hash; a mixed subset is the baseline's order with substitutions and additions appended.
+- The synthetic algorithm ref is served with the baseline algorithm's resolved status: `rating_algorithm` is exempt from the maturity
+  floor (`compile._MATURITY_CHECK_EXEMPT`, RL-859) and no maturity order exists to take "the lower of the two" by.
+- `cumulative_minor` is the declared-order marginal, `v(prefix i) - v(prefix i-1)`, because §4.6's example sums to the total.
+- `Attribution.change_groups` carries the analyst's groups as given (empty when none were), because above 6 changes a one-per-change
+  list would break the `maxItems` 6 bound of the model and the contract.
+- Every subset is compiled before any is rated, so a compile failure rates nothing. A compile failure is any `ValueError`
+  (`CodedError` and a model validation error both are), so `analysis.py` imports no `CodedError` and calls no `_raise_named`.
+- `estimate_attribution_ratings(..., grouped=True)` with k above 6 raises `ValueError`: groups are at most 6.
+
+**Not done, by name.** P3 (§4.6, its placeholders are Task 7's figures) and P1 (owned-codes tail, waits for PL-1471) are not in the spec
+yet. Task 7, and with it Acceptance 18's replay test, 19, 20 and the `examples/fremtpl2/rating/` fixture, waits for the Ruling 1
+confirmation. The full gate (Task 8) waits for the lead's slot grant.
+
 ## PRs
 
 #1243, a draft. The branch `sl-1387-attribution-exact-shapley-largest-remainder` is pushed; the PR is not merged by the executor.
