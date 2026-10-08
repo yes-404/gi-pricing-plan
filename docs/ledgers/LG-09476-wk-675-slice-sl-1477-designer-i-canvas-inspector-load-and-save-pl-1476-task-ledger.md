@@ -303,7 +303,7 @@ frontend `type-check` and `lint` clean; `vitest` over `src/components/dag` and t
 
 Slot `/tmp/slots/gate-1`, one `flock` over both parts (`env -C <worktree> bash gate.sh`, `timeout 3600`), harness and script under
 `/home/puzhenhao1989/.cache/fps-harness` (outside the repository). **Slot incident, mine:** a debug run of the harness an hour
-earlier left its `pnpm … vite` wrapper alive (the wrapper inherited the lock's file descriptor), which held `gate-1` and made the
+earlier left its `pnpm … vite` wrapper alive (the wrapper inherited the lock's file descriptor), which held `gate-1` for about 17 minutes (the debug run ended 12:17 UTC; found 12:34 UTC) and made the
 first granted attempt time out (`flock -w 900`, rc 98, nothing run). Found by `fuser`, the process (pid 1166743, command line naming
 this worktree, started by my debug run) stopped by pid; `run.sh` now stops its server by the pid it started. No other session's
 process was touched.
@@ -354,7 +354,13 @@ test_rating_committed_strings.py::test_every_committed_string_is_accepted_or_a_d
 has no attribute 'lower'`: that test greps every tracked file for `expr`/`condition`/`key_expr` followed by a quoted string, and an
 **empty** literal (`expr: ""`, `condition: ""` in `DagDesigner.vue`'s `blank()`) yields `None` (`group(2) or group(3)`) and crashes it;
 the designer now uses a named empty constant, the test passes (4 passed). The test's own `or` on an empty match is a defect in a
-test outside this slice's write set: **FD candidate to the lead.**
+test outside this slice's write set: **FD candidate, routed by the lead to the maintainer (not touched here; found, not fixed).**
+
+### After the first gate (the lead's decision)
+
+A **full re-gate at `ee858902`** is required (Acceptance 16: every command rc 0 on the merge tree, in a held gate slot; the two reds
+were in the slice's own code and ledger, so named re-runs do not discharge it). It is queued after SL-1472 (lane A, G2 priority).
+One pid was stopped in the slot incident: 1166743 (the `pnpm … vite --port 5391` wrapper of my own debug run), held for ~17 minutes.
 
 ## PRs
 
