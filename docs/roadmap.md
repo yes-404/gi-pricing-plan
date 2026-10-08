@@ -880,7 +880,7 @@ The fix for ~~FD 9707 (working id;~~ FD-1420 (HIGH, confirmed by the maintainer 
 id: SL-1472
 family: slice
 title: WK-673 fix slice — the FR-240 family: model approval and compile refuse an unapproved custom objective or a control-intent factor
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-06            # original date 2026-10-05, set at the draft; minted 2026-10-06
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 83ea509023d6d705d6f78fe74b7124fdf1375739
@@ -1146,7 +1146,7 @@ Drafted as working id 9768; minted 2026-10-01 as SL-1369 (its leaf plan, drafted
 id: SL-1477
 family: slice
 title: Slice 2: Designer I — canvas, inspector, load and save; RatingAlgorithm in the generated contract; the typed save route (FD-1366 rule (ii))
-status: active                 # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-06            # original date 2026-10-05, set at the draft; minted 2026-10-06
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 88d114fc44b9a77a57f29ca30bc3ee5d693085f8
