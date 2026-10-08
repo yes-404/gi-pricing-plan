@@ -268,6 +268,22 @@ Needs a browser or assistive technology (carried to the lead for the exit-demo c
 from `aria-activedescendant`, `alertdialog` reading, Vue Flow's own DOM roles, 320 px / 400 % reflow, measured contrast and
 target sizes.
 
+### Task 11 — the lead's ruling on Steps 1 and 3 (to-lead.md, "… S2 (#1245 @1d3ab0c0) Task 11 …")
+
+- **No FD for finding 1.** On-node validation is WK-675 S3's, per `RL-1474` :36–46 (the question, and the §5.3 "error on the node"
+  obligation, which `00` FR-24's designer exception keeps binding until S3 discharges it); it stays in P2. Carried, not waived.
+- **The `echarts` chunk +2,692 B raw — cause (diffing the base and head chunk text, base rebuilt at `60e9254c`):** the head chunk
+  carries Vue runtime code the base lacks — `customRef` (via `@vueuse/core` under `@vue-flow/core`) and the async-component and
+  hydration helpers `defineAsyncComponent` needs (`loadingComponent`, `__asyncHydrate`, `isUnmounted`, `setTimeout`/`clearTimeout`
+  paths) — which Rollup places in the shared vendor chunk that also holds `echarts`; the `manualChunks` arm did not move the
+  `echarts` boundary. The rest of the chunk's text differs only by minifier renames.
+- **Browser-only accessibility items, each carried with the owner WK-675 S3's audit (a browser pass, axe/Playwright, on the
+  designer); none is claimed browser-confirmed:** (a) option-change announcements from `aria-activedescendant` on the listbox;
+  (b) the `alertdialog` read on open and Escape/Tab order around it; (c) Vue Flow's own DOM roles and any focusable element it adds;
+  (d) 320 px / 400 % reflow of the two-column layout; (e) measured contrast (`bg-sky-100` active option, slate-500 on slate-50, the
+  focus outline); (f) target sizes (nullable checkbox, Save); (g) the mode-mismatch `role="status"` announcement; (h) the
+  `scrollIntoView` behaviour of the active option.
+
 ## PRs
 
 The slice PR is a draft, opened by the executor; the executor does not merge it.
