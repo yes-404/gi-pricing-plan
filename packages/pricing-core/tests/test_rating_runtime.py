@@ -427,8 +427,8 @@ def test_to_wire_refuses_table_interpolation() -> None:
 # ---------------------------------------------------------------------------
 # A focused, to_wire-only test for the `lookup` (reference table) translation — not
 # routed through compile_bundle, since a reference table's resolver shape is Task 1.2's
-# and this is purely about to_wire's own decisionTableNode construction (exact key match,
-# no as_at windowing — see the module docstring).
+# and this is purely about to_wire's own decisionTableNode construction (key match inside
+# the row's effective_from/effective_to window — see the module docstring).
 # ---------------------------------------------------------------------------
 
 
@@ -442,7 +442,7 @@ def test_lookup_step_wire_translation_matches_by_key() -> None:
              "input_name": "postcode", "on_missing": "error", "produces": "postcode"},
             {"step_id": "s_area", "type": "lookup", "label": "Area",
              "reference_table_ref": "reference_table:ons@1", "key_expr": ["postcode"],
-             "as_at": "postcode", "on_miss": "error",
+             "as_at": "effective_date", "on_miss": "error",
              "consumes": ["postcode"], "produces": "area_code"},
             {"step_id": "s_out", "type": "output", "label": "Area out",
              "output_name": "rating_area", "rounding": {"mode": "half_even", "dp": 0},
@@ -471,5 +471,9 @@ def test_lookup_step_wire_translation_matches_by_key() -> None:
 
     decision = zen.ZenEngine().create_decision(json.dumps(wire))
     decision.validate()
-    assert decision.evaluate({"postcode": "SW1A"})["result"]["area_code"] == "LDN"
-    assert decision.evaluate({"postcode": "M1"})["result"]["area_code"] == "MAN"
+    assert decision.evaluate({"postcode": "SW1A", "effective_date": "2026-06-01"})["result"][
+        "area_code"
+    ] == "LDN"
+    assert decision.evaluate({"postcode": "M1", "effective_date": "2026-06-01"})["result"][
+        "area_code"
+    ] == "MAN"
