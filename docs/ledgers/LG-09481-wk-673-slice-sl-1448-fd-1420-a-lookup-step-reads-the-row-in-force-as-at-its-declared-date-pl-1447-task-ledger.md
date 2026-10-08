@@ -81,3 +81,13 @@ slots free: `16 failed, 2 passed in 13.77s`, matching the plan's Run 7 (`16 fail
 - **Passed (the controls)** (2): `[2020-01-01-at-from]`, `[2025-12-31-before-to]`.
 
 Every red has the cause the plan predicts; no unexpected pass.
+
+### Task 2 — the window, in the graph (`7b4ba43f`)
+
+`runtime.py`: `_as_at_window` added after `_reference_rows`; the `lookup` branch of `_decision_table_node` gains an `as_at`
+input and a per-rule window; the module docstring paragraph rewritten (`from datetime import date` joins the imports).
+Run: `pytest packages/pricing-core/tests/test_rating_lookup_as_at.py -k "prices or misses"` → `7 passed` (red→green: the five
+`prices` reds, the batch test and the miss test; both controls stay green). The DP-1 refusal tests stay red until Task 3.
+**Expected red from this task, Task 3 Step 4's:** `test_rating_runtime.py::test_lookup_step_wire_translation_matches_by_key`
+(`KeyError: 'area_code'`) — its fixture names `as_at: "postcode"`, a non-date value; Task 3 Step 4 fixes the fixture.
+`ruff format` of `runtime.py` also rewrites four unrelated pre-existing hunks in `_model_call_handler`; those were not committed.
