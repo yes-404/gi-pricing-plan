@@ -300,3 +300,44 @@ def test_the_pre_edit_valid_algorithm_is_refused_at_save_time(
     )
     assert response.status_code == 422, response.text
     assert response.json()["code"] == "LADDER_CLAMP_UNPLACEABLE"
+
+
+# --- WK-673 Slice 3 (SL-1387): the FR-219 diff route is typed, and keeps its keys ---
+
+
+@pytest.mark.req("FR-219")
+def test_algorithm_diff_route_is_typed_and_keeps_its_keys(
+    api_client, workspace_id, principal, grant
+) -> None:
+    schema = api_client.app.openapi()
+    ok = schema["paths"]["/api/v1/rating-algorithms/{slug}@{version}/diff"]["get"]["responses"][
+        "200"
+    ]["content"]["application/json"]["schema"]
+    assert ok == {"$ref": "#/components/schemas/AlgorithmDiff"}
+
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    for version in (1, 2):
+        body = valid_algorithm()
+        body["version"] = version
+        created = api_client.post(
+            "/api/v1/rating-algorithms", json=body, headers=_headers(principal, workspace_id)
+        )
+        assert created.status_code == 201, created.text
+    diff = api_client.get(
+        "/api/v1/rating-algorithms/motor-gb@2/diff",
+        params={"against": 1},
+        headers=_headers(principal, workspace_id),
+    )
+    assert diff.status_code == 200, diff.text
+    assert set(diff.json()) == {
+        # the six keys that exist before SL-1387, pinned by literal
+        "added_steps",
+        "removed_steps",
+        "changed_steps",
+        "repointed_tables",
+        "input_contract_changed",
+        "outputs_changed",
+        # the two it adds
+        "input_contract_deltas",
+        "output_deltas",
+    }

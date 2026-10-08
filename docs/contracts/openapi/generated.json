@@ -132,6 +132,66 @@
         "title": "AeCell",
         "type": "object"
       },
+      "AlgorithmDiff": {
+        "additionalProperties": false,
+        "description": "The structural diff between two algorithm versions (FR-219).",
+        "properties": {
+          "added_steps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Added Steps",
+            "type": "array"
+          },
+          "changed_steps": {
+            "items": {
+              "$ref": "#/components/schemas/AlgorithmStepChange"
+            },
+            "title": "Changed Steps",
+            "type": "array"
+          },
+          "input_contract_changed": {
+            "default": false,
+            "title": "Input Contract Changed",
+            "type": "boolean"
+          },
+          "input_contract_deltas": {
+            "items": {
+              "$ref": "#/components/schemas/InterfaceDelta"
+            },
+            "title": "Input Contract Deltas",
+            "type": "array"
+          },
+          "output_deltas": {
+            "items": {
+              "$ref": "#/components/schemas/InterfaceDelta"
+            },
+            "title": "Output Deltas",
+            "type": "array"
+          },
+          "outputs_changed": {
+            "default": false,
+            "title": "Outputs Changed",
+            "type": "boolean"
+          },
+          "removed_steps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Removed Steps",
+            "type": "array"
+          },
+          "repointed_tables": {
+            "items": {
+              "$ref": "#/components/schemas/AlgorithmTableRepoint"
+            },
+            "title": "Repointed Tables",
+            "type": "array"
+          }
+        },
+        "title": "AlgorithmDiff",
+        "type": "object"
+      },
       "AlgorithmOutput": {
         "additionalProperties": false,
         "description": "A declared output (FR-214): name, type, required flag.",
@@ -155,6 +215,60 @@
           "type"
         ],
         "title": "AlgorithmOutput",
+        "type": "object"
+      },
+      "AlgorithmStepChange": {
+        "additionalProperties": false,
+        "description": "One changed field on a step that exists in both versions (FR-219).",
+        "properties": {
+          "after": {
+            "title": "After"
+          },
+          "before": {
+            "title": "Before"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "step_id": {
+            "title": "Step Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "field"
+        ],
+        "title": "AlgorithmStepChange",
+        "type": "object"
+      },
+      "AlgorithmTableRepoint": {
+        "additionalProperties": false,
+        "description": "A `table` or `lookup` step whose artifact reference changed (FR-219).",
+        "properties": {
+          "after": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "before": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "step_id": {
+            "title": "Step Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "field",
+          "before",
+          "after"
+        ],
+        "title": "AlgorithmTableRepoint",
         "type": "object"
       },
       "Applicability": {
@@ -6874,6 +6988,31 @@
           "applied_to"
         ],
         "title": "ImportVerdict",
+        "type": "object"
+      },
+      "InterfaceDelta": {
+        "additionalProperties": false,
+        "description": "One input-contract field or output that differs between two versions (FR-1399).",
+        "properties": {
+          "change": {
+            "enum": [
+              "added",
+              "removed",
+              "changed"
+            ],
+            "title": "Change",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "change"
+        ],
+        "title": "InterfaceDelta",
         "type": "object"
       },
       "IntervalFor": {
@@ -28806,9 +28945,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Algorithm Diff Api V1 Rating Algorithms  Slug   Version  Diff Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AlgorithmDiff"
                 }
               }
             },
