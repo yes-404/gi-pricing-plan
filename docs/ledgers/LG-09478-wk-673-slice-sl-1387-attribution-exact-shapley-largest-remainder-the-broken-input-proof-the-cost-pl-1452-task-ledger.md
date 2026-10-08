@@ -135,6 +135,11 @@ the analyst's groups only and is `[]` when none are given; the implicit groups a
 Both were green before the extension (the code already did this), so a red is by mutation: `analysis.py`'s `attribute` writing the implicit groups
 (`groups[:6]`) to `change_groups` → both tests red on `assert result.change_groups == []`; restored with `git checkout`.
 **Choice 1 comment.** `analysis.py` before `status = (await resolver.resolve(baseline.algorithm_ref)).status` names DP-S3-8 (a), RL-859 and the tripwire test.
+**Node ids.** `packages/pricing-core/tests/test_rating_attribution.py::test_isolated_and_cumulative_views_and_residual_line` and
+`packages/pricing-core/tests/test_rating_attribution.py::test_above_six_ungrouped_is_order_dependent_with_r_and_s_bound` (the ruling's item 2).
+**Reflow.** `ruff format` reflowed existing lines in `test_rating_attribution.py` (commit 1d91cdfd, `git diff 1d91cdfd~1 1d91cdfd -U0`): every hunk is
+reflow only except the two assertion additions (new-file lines 586-587 and 680-681). `analysis.py`: reflow plus the comment.
+**INDEX.** `docs/INDEX.md` regenerated with `scripts/doc-index.py` (check 39 was stale after the ledger edit); `audit-docs.py` then FAILED (1): check 31 only.
 **Also.** `ruff format` on `analysis.py` and `test_rating_attribution.py` (an E501 at the earlier `step_added` assertion); `ruff check packages/pricing-core` clean.
 
 ## PRs
