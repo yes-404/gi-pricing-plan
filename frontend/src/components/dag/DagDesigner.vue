@@ -85,6 +85,9 @@ function remove(id: string): void {
   if (selected.value === id) selected.value = null;
 }
 
+// A new step starts with its text fields empty (the required-field gaps then block a save).
+const EMPTY = "";
+
 function blank(type: (typeof STEP_TYPES)[number], step_id: string): RatingStep {
   const common = { step_id, label: `New ${type} step` };
   switch (type) {
@@ -101,11 +104,11 @@ function blank(type: (typeof STEP_TYPES)[number], step_id: string): RatingStep {
         on_miss: "error",
       };
     case "expression":
-      return { ...common, type, expr: "", result_type: "decimal" };
+      return { ...common, type, expr: EMPTY, result_type: "decimal" };
     case "model_call":
       return { ...common, type, mode: props.versionMode, feature_map: {} };
     case "constraint":
-      return { ...common, type, condition: "", on_violation: "error", reason_code: "" };
+      return { ...common, type, condition: EMPTY, on_violation: "error", reason_code: "" };
     case "output":
       return { ...common, type, output_name: "", rounding: { mode: "half_even", dp: 0 } };
   }

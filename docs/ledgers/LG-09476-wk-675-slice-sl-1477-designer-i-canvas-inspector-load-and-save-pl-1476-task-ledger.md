@@ -288,7 +288,7 @@ target sizes.
 
 `git merge origin/main` (never a rebase): the only conflict was `docs/INDEX.md` (generated; taken from main's side and regenerated
 with `scripts/doc-index.py`, no markers left); `03` merged clean. `audit-docs` after the merge: only check 31's two working-id gaps
-(an earlier run also named `FR-947` from a regex fragment in this ledger, which the check parsed as a requirement id; reworded).
+(an earlier run also failed check 2 on a truncated working id written as a regex in this ledger, which the check parsed as a requirement id; reworded).
 FR-221 at main now reads (amended 2026-10-08, RL-1446): **`as_at` names `effective_date` — the quote's stamped date — or a declared
 `date` input, and nothing else.** The inspector's `as_at` control now offers `effective_date` plus the declared `date` inputs
 (`StepInspector.vue`, `asAtOptions`); it repeats no server check. Tests (2, in `StepInspector.test.ts`): a lookup over an
@@ -298,6 +298,63 @@ restored): `AssertionError: expected [] to deeply equal [ 'effective_date' ]`; r
 modules behind the slot probe, own database: `test_rating_algorithms.py`, `test_rating_versions.py`,
 `test_rating_algorithm_draft.py`, `test_contracts.py` — 221 passed, 2 skipped; `generate-contracts.py --check` rc 0; `ruff`, `mypy`,
 frontend `type-check` and `lint` clean; `vitest` over `src/components/dag` and the view and router files green.
+
+### Task 11 Step 2 and Task 12 — the held slot (GATE-1 granted for head `c788de9b`)
+
+Slot `/tmp/slots/gate-1`, one `flock` over both parts (`env -C <worktree> bash gate.sh`, `timeout 3600`), harness and script under
+`/home/puzhenhao1989/.cache/fps-harness` (outside the repository). **Slot incident, mine:** a debug run of the harness an hour
+earlier left its `pnpm … vite` wrapper alive (the wrapper inherited the lock's file descriptor), which held `gate-1` and made the
+first granted attempt time out (`flock -w 900`, rc 98, nothing run). Found by `fuser`, the process (pid 1166743, command line naming
+this worktree, started by my debug run) stopped by pid; `run.sh` now stops its server by the pid it started. No other session's
+process was touched.
+
+**fps (Acceptance 15), the Vite DEV build** (`vite --port 5391`), the real `/rating/fps-demo/v/1/design` view, 200 steps in RS-1269's
+mix (30 input, 10 lookup, 70 table, 5 model_call, 60 expression, 20 constraint, 5 output), chrome-headless-shell 153.0.8010.12
+(Playwright 1.63.0 from the lockfile of `a3862e01`'s `pw/`), SwiftShader software renderer, 1600×900, instrument = RS-1269's
+`DrawFrame` trace count. **Deviations, stated:** (a) the 200-step algorithm passed the platform's own save-time path
+(`_parse_algorithm` + `_issues_to_error`, the first two statements of `create_algorithm`) but was **not persisted to a database**;
+the browser's `/api/v1` reads were served by the harness (route interception) with the algorithm JSON, and the auth guard's
+`isSignedIn` was served as true (a route-rewritten copy of `src/auth/session.ts`); Vue Flow, the designer and the dev build are the
+repository's. (b) Load: 1.4 → 3.6 (limit 12); `uptime` before `1.40`, after `3.18`; the run ran alone in the held slot
+(12:34:23–12:38:18 UTC, 13:34:23–13:38:18 BST). Per-run starts/ends and load are in the harness output (kept with the harness).
+
+| form (N=5) | presented-frame fps per run | notes |
+|---|---|---|
+| pan-drag (400 moves out, 400 back) | 31.8, 34.5, 35.6, 35.8, 34.7 | 401 distinct viewport transforms each; DrawFrame 487 each; every run has one 5.25 s frame gap (unexplained; included in the span) |
+| programmatic zoom (`setViewport`, 3 s) | 58.5, 59.8, 59.8, 59.7, 60.1 | 173–178 frames, 176–181 distinct transforms |
+| wheel zoom, back-to-back (240 events) | not measurable by this instrument | the trace holds 1 `DrawFrame` while 31 distinct viewport transforms were applied |
+| wheel zoom, paced 8 ms (240 events) | not measurable by this instrument | the trace holds 2 `DrawFrame`; paced fps figures printed (57–137) are two-frame spans and are not reported as fps |
+
+**The second form cannot be driven faster than one event per ~33 ms here:** Playwright's `page.mouse.wheel` awaits each event, 240
+events took 8.0–8.1 s back-to-back (33.5 ms per event) and 12.0 s with an 8 ms wait (50 ms per event), so the harness cannot send the
+wheel faster than the one event per ~30 ms RS-1269's amendment names; wheel-zoom fps is therefore not claimed.
+
+**Task 12, the full two-half gate (GATE START 13:38:18 BST, END 14:21:50 BST; alembic current = heads = `f3a7c1d9e2b4`):**
+
+| stage | rc |
+|---|---|
+| ruff | 0 |
+| mypy | 0 |
+| lint-imports | 0 |
+| audit-docs | **1** — then: the check-31 working-id gaps, and a truncated working id in my own ledger text (below) |
+| req-coverage | 0 |
+| generate-contracts --check | 0 |
+| pytest | **1** — 14 failed, 5113 passed, 4 skipped (2506 s) |
+| frontend install --frozen-lockfile / generate:api / lint / type-check | 0 / 0 / 0 / 0 |
+| frontend test | 0 — 102 files, 653 tests passed |
+| frontend build | 0 |
+
+The 14 pytest failures: **12** fail only because `audit-docs` fails on the real tree (they assert it passes: `test_audit_docs_ids`,
+`test_audit_docs_finding_citations`, `test_audit_docs_process_core_digest` ×2, `test_audit_docs_w37_11_ceiling`, `test_register_lint`
+×3, `test_register_owed`, `test_repository_invariants` ×2) and `test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity`
+(the working-id allocation is not contiguous): the check-31 working-id set, expected until the mint. **Two were mine**, found by this
+gate and fixed after it (new head, so a re-run needs a new grant): (i) the ledger carried a `git grep` regex of the working ids
+(a character class cut the id short) that `audit-docs` check 2 parsed as a different, undefined requirement id; reworded. (ii) `packages/pricing-core/tests/
+test_rating_committed_strings.py::test_every_committed_string_is_accepted_or_a_declared_negative` — `AttributeError: 'NoneType' object
+has no attribute 'lower'`: that test greps every tracked file for `expr`/`condition`/`key_expr` followed by a quoted string, and an
+**empty** literal (`expr: ""`, `condition: ""` in `DagDesigner.vue`'s `blank()`) yields `None` (`group(2) or group(3)`) and crashes it;
+the designer now uses a named empty constant, the test passes (4 passed). The test's own `or` on an empty match is a defect in a
+test outside this slice's write set: **FD candidate to the lead.**
 
 ## PRs
 
