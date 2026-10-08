@@ -74,6 +74,30 @@ against `rating.py` (`decimal`, `money_minor` and the step fields are accepted).
   `pytest packages/model-schema -q`: 514 passed. `test_sub_graphs_api.py` + `test_sub_graphs_service.py` + the new module:
   45 passed. `ruff check packages/model-schema` and `mypy` clean.
 
+**Correction to Task 1's evidence:** the 514-passed run was a whole-package run (`pytest packages/model-schema -q`), made with both
+gate slots free; outside a granted gate only named modules run (the lead's ruling, 2026-10-08).
+
+### Tasks 2 and 5 — the typed save route and the contract
+
+Tests appended to `backend/tests/test_rating_algorithms.py` (own database `GIP_TEST_DATABASE_URL`, slots probed free). The plan's
+cyclic and unresolved bodies index `valid_algorithm()` steps 6 and 7 (`s_office`, `s_minprem`) and match the file's fixture.
+
+- **Red** (`-k "typed or publishes"`): 1 failed, 2 passed. `test_the_save_route_publishes_typed_bodies`:
+  `AssertionError: assert {'type': 'obj…tle': 'Body'} == {'$ref': '#/c…gorithmDraft'}` — the open object
+  `{'additionalProperties': True, 'title': 'Body', 'type': 'object'}`. The other two pass on the base (the regression net).
+- **Green:** body `RatingAlgorithmDraft`, 201 `RatingAlgorithmSaved`, handler passes `body.model_dump(mode="json",
+  exclude_unset=True)`. `pytest backend/tests/test_rating_algorithms.py -q`: 13 passed.
+- **Broken input** (annotation temporarily `body: RatingAlgorithm`, then restored): the failure lines as printed —
+  `assert 'VALIDATION_FAILED' == 'RATING_GRAPH_CYCLIC'` (twice: `test_a_cyclic_algorithm_is_refused_at_save_time` and
+  `test_the_typed_save_body_keeps_the_graph_codes`), `assert 'VALIDATION_FAILED' == 'RATING_GRAPH_UNRESOLVED_REF'`,
+  `assert 'Request validation failed' == 'Rating algorithm is invalid'` (`test_another_shape_refusal_is_validation_failed`,
+  `test_a_declared_output_without_an_output_step_is_validation_failed`), and the `$ref` to `RatingAlgorithm` against
+  `RatingAlgorithmDraft` in `test_the_save_route_publishes_typed_bodies`.
+- **Guard entry:** `UNTYPED_REQUEST_PENDING` does not exist on this tree (SL-1367 not landed): nothing to remove.
+- **Contract:** `generate-contracts.py` wrote `generated.json`; `--check` rc 0 (46 up to date); `pnpm --dir frontend generate:api` rc 0.
+  The Acceptance 5 `python3 -c` prints `[False, True, True]`: `RatingAlgorithm` joins `components.schemas` only with Task 3's
+  `GET` (its 200), so the `[True, True, True]` reading is Task 3's. `test_contracts.py`: 152 passed, 2 skipped. `ruff`, `mypy` clean.
+
 ## PRs
 
 The slice PR is a draft, opened by the executor; the executor does not merge it.

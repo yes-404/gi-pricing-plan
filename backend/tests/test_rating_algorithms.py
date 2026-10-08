@@ -300,3 +300,43 @@ def test_the_pre_edit_valid_algorithm_is_refused_at_save_time(
     )
     assert response.status_code == 422, response.text
     assert response.json()["code"] == "LADDER_CLAMP_UNPLACEABLE"
+
+
+@pytest.mark.req("FR-212")
+def test_the_save_route_publishes_typed_bodies(app) -> None:
+    operation = app.openapi()["paths"]["/api/v1/rating-algorithms"]["post"]
+    body = operation["requestBody"]["content"]["application/json"]["schema"]
+    created = operation["responses"]["201"]["content"]["application/json"]["schema"]
+    assert body == {"$ref": "#/components/schemas/RatingAlgorithmDraft"}
+    assert created == {"$ref": "#/components/schemas/RatingAlgorithmSaved"}
+
+
+@pytest.mark.req("FR-212")
+def test_the_typed_save_body_keeps_the_graph_codes(
+    api_client, workspace_id, principal, grant
+) -> None:
+    """DP-S2-1 condition 2: the codes, never the status alone."""
+    cyclic = valid_algorithm()
+    cyclic["steps"][6]["consumes"] = ["risk_premium_minor", "expense_factor", "cycle_val"]
+    cyclic["steps"][7] = {
+        "step_id": "s_minprem", "type": "constraint", "label": "Cycle",
+        "condition": "true", "on_violation": "clamp", "reason_code": "CYCLE",
+        "consumes": ["office_premium_minor"], "produces": "cycle_val",
+    }
+    unresolved = valid_algorithm()
+    unresolved["steps"][6]["consumes"] = [
+        "risk_premium_minor", "expense_factor", "commission_factor",
+    ]
+    assert _post(api_client, workspace_id, principal, grant, cyclic).json()["code"] == (
+        "RATING_GRAPH_CYCLIC"
+    )
+    assert _post(api_client, workspace_id, principal, grant, unresolved).json()["code"] == (
+        "RATING_GRAPH_UNRESOLVED_REF"
+    )
+
+
+@pytest.mark.req("FR-212")
+def test_the_save_answers_the_typed_201(api_client, workspace_id, principal, grant) -> None:
+    response = _post(api_client, workspace_id, principal, grant, valid_algorithm())
+    assert response.status_code == 201, response.text
+    assert set(response.json()) == {"id", "slug", "version"}
