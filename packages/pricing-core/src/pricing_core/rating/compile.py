@@ -614,7 +614,7 @@ def check_step_refs_pinned(algorithm: RatingAlgorithm, pins: Pins) -> None:
         )
 
 
-async def _check_reachable_objectives(
+async def _refuse_unapproved_objectives(
     version: RatingVersion, payloads: dict[str, Any], resolver: ArtifactResolver
 ) -> None:
     """FR-240's "transitively reachable": a pinned model's own custom objective (`PL-1471`).
@@ -640,7 +640,7 @@ async def _check_reachable_objectives(
             )
 
 
-async def _check_control_factor_keys(
+async def _refuse_control_factor_keys(
     version: RatingVersion, payloads: dict[str, Any], resolver: ArtifactResolver
 ) -> None:
     """FR-88 / FR-240: no pinned rate table has a key bound to a `control`-intent Factor.
@@ -663,7 +663,7 @@ async def _check_control_factor_keys(
                 )
 
 
-def _check_control_factor_model_calls(
+def _refuse_control_factor_model_calls(
     algorithm: RatingAlgorithm, resolved_pins: dict[str, ResolvedArtifact]
 ) -> None:
     """FD 9639 (DP-7): a `model_call` over a model fitted on a `control`-intent Factor.
@@ -754,9 +754,9 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
             )
         payloads[str(ref)] = resolved.payload
         resolved_pins[str(ref)] = resolved
-    await _check_reachable_objectives(version, payloads, resolver)
-    await _check_control_factor_keys(version, payloads, resolver)
-    _check_control_factor_model_calls(algorithm, resolved_pins)
+    await _refuse_unapproved_objectives(version, payloads, resolver)
+    await _refuse_control_factor_keys(version, payloads, resolver)
+    _refuse_control_factor_model_calls(algorithm, resolved_pins)
 
     graph = to_jdm(algorithm)
     pins = version.pins
