@@ -1,5 +1,5 @@
 ---
-id: RL-1503
+id: RL-1504
 family: ruling
 title: WK-673 Slices 4 to 6 — the dislocation run is one Job guarded at 4 h, the movers blob holds no portfolio column, FR-224's default threshold is 10 % at the 99th percentile, and rate_table_diffs fails closed
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
@@ -15,20 +15,20 @@ corrects: ~
 relates: [PL-1267, RL-1264, RL-917, CR-927, WK-1178, FR-263, FR-224, FR-257, FR-242, NFR-499, NFR-493]
 ---
 
-# RL-1503 — WK-673 Slices 4 to 6: the decision points of PL-1500, PL-1499 and PL-1498
+# RL-1504 — WK-673 Slices 4 to 6: the decision points of PL-1501, PL-1500 and PL-1499
 
-*(Minted 2026-10-08 as RL-1503 from working id 9566, in the T8 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
+*(Minted 2026-10-08 as RL-1504 from working id 9566, in the T8 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
 
 ## How this was ruled
 
-- **Filed under working id 9566, reserved by the lead** (`handover/eta.md`, row "RL-1503",
+- **Filed under working id 9566, reserved by the lead** (`handover/eta.md`, row "RL-1504",
   5 Oct 17:16:13). In the texts below, `RL-<n>` is this ruling's minted id.
 - **Two kinds of decision are recorded here, and each says whose it is.**
   - **The maintainer's, by delegation:** DP-S4-1, DP-S4-3, DP-S5-2's default figures,
     DP-S6-1 and the E1 owner. They are in `~/gi-pricing-plan.local/channel/to-lead.md`, the
     entry headed *"2026-10-05 17:14:54 BST — FD 9572 placement accepted; WK-673 S4/S5/S6,
     A-1, A-2 and CR-838 DECISIONS (1–8)"*, items 1, 2, 3, 4 and 7. Item 8 is folded into
-    RL-1504, not this record. Items 5 and 6 and the FD-1425 paragraph are other slices'.
+    RL-1505, not this record. Items 5 and 6 and the FD-1425 paragraph are other slices'.
     T7's three choices are the maintainer's too, on the 18:54:06 BST entry (amended
     2026-10-05, pre-mint; quoted under T7).
   - **The decision-maker's (this role's charter: technical decision points):** DP-S4-2,
@@ -41,8 +41,8 @@ relates: [PL-1267, RL-1264, RL-917, CR-927, WK-1178, FR-263, FR-224, FR-257, FR-
   `~/gi-pricing-plan.local/handover/dp-memo-wk673-s4-s5-2026-10-05.md` (2026-10-05,
   17:11:04 BST), read at `137bc817`. Every cite it carries that this record uses was re-read
   at the tree above (`4d3be141`); none had moved.
-- **The plans are read at their PR heads:** PL-1500 (#1176, `ac8221eca47df4f4af7d3c8cfde2be54187620b1`),
-  PL-1499 (#1181, `7db4d646ab13d04e4ef985b7d6d710f894576ebb`), PL-1498 (#1184,
+- **The plans are read at their PR heads:** PL-1501 (#1176, `ac8221eca47df4f4af7d3c8cfde2be54187620b1`),
+  PL-1500 (#1181, `7db4d646ab13d04e4ef985b7d6d710f894576ebb`), PL-1499 (#1184,
   `a34248f6c476dc5dd19c85d52c2e3e7fd8aa5e80`). This record edits none of them.
 - **T7 was added before the mint** on the maintainer's (by delegation) entry headed
   *"2026-10-05 18:49:06 BST — PL 9595: no completeness limb accepted (none invented); the
@@ -122,7 +122,7 @@ Fenced so that its ids are read as quotation; `audit-docs.py` check 32 skips fen
    Analyst, whose role cannot hold `score:batch` (FR-347). (c) lets a read-only role spend
    worker-hours.
 4. **DP-S4-5 (the decision-maker's): (a).** `POST /api/v1/dislocation-runs/estimate`, 200
-   with a `DislocationEstimate`, no Job. Its fields are PL-1500's (`derived_changes`,
+   with a `DislocationEstimate`, no Job. Its fields are PL-1501's (`derived_changes`,
    `policies`, `estimated_ratings`, `method`) plus `estimated_worker_hours`, the figure item
    1's guard compares. `POST /api/v1/dislocation-runs` computes the same estimate in the same
    code path, so the two cannot disagree.
@@ -131,9 +131,9 @@ Fenced so that its ids are read as quotation; `audit-docs.py` check 32 skips fen
    /api/v1/dislocation-runs/{id}/movers` joins the portfolio columns at read, on `quote_id`,
    from the run's portfolio Dataset Version, and requires `rating:read` and `dataset:read`
    on that Dataset Version. The blob is not a quote-input store: it is **not** added to
-   `QUOTE_INPUT_BLOB_COLUMNS`, and NFR-499 gains no carve-out. This replaces PL-1500's
+   `QUOTE_INPUT_BLOB_COLUMNS`, and NFR-499 gains no carve-out. This replaces PL-1501's
    options (a) and (b), which both registered the blob.
-6. **DP-S5-1 (the decision-maker's): (a).** As PL-1499 states it. Premise h is corrected
+6. **DP-S5-1 (the decision-maker's): (a).** As PL-1500 states it. Premise h is corrected
    (text C1); the conclusion, no production marker on an Environment, stands.
 7. **DP-S5-2: the shape is (a), amended; the default figures are the maintainer's, option
    D.** `approximation_deviation: {quantile, max_abs_change_pct}` on the `rating_version`
@@ -141,11 +141,11 @@ Fenced so that its ids are read as quotation; `audit-docs.py` check 32 skips fen
    0.99, max_abs_change_pct: 10}`.** Option A (1 % at the 99th percentile) is refused: under
    the assumptions below it needs R² > 0.9998, a de facto ban on the mode FR-223 made
    legal.
-   - **Amendment to PL-1499's (a), on the entry's condition (iii):** "the default only
+   - **Amendment to PL-1500's (a), on the entry's condition (iii):** "the default only
      governs when unset". An entry that leaves the field unset (null) is governed by the
      default, **not** refused. A workspace that wants a stricter or looser gate sets its own
      value in its policy (`PUT /api/v1/approval-policy`, FR-354). Nothing can switch the gate
-     off: there is no value that disables it, and omission gives the default. PL-1499's
+     off: there is no value that disables it, and omission gives the default. PL-1500's
      "`None` fails closed" exists so that omission cannot opt out, and that still holds.
    - **It is the workspace's ApprovalPolicy, not a Setting.** `RL-1264` DP-3 (b) holds: no
      environment-variable override, and `07` FR-446 does not reach it. "Per-workspace policy
@@ -179,7 +179,7 @@ Fenced so that its ids are read as quotation; `audit-docs.py` check 32 skips fen
     reason naming the missing evidence kind, never silently. **Owner: WK-673** (the
     rate-table diff is Slice 7's domain), named in Slice 6's dispatch record.
 12. **The E1 owner (the maintainer's).** WF-699 E1, `03` FR-242's drafted change summary, is
-    its own small WK-673 slice beside Slice 5: SL-1502 and PL-1501, cut by a
+    its own small WK-673 slice beside Slice 5: SL-1503 and PL-1502, cut by a
     planner. It needs only `diff_algorithms`, the rate-table diff and `_baseline`, all on
     main. PL 9629's need 5 then cites that slice, not Slice 5.
 
@@ -192,7 +192,7 @@ Fenced so that its ids are read as quotation; `audit-docs.py` check 32 skips fen
   citing this record. At the CR-927 rate the bound admits about 20.4 M ratings: K ≤ 4 by
   re-rate on 678,013 policies (10.8 M), and any K by replay (1.36 M).
 - **The guard's code is `VALIDATION_FAILED`**, the code the same route already uses for a bad
-  partition (PL-1500 P1). No new code.
+  partition (PL-1501 P1). No new code.
 - **6 h for `visibility_timeout`.** It bounds how long a message for a dead worker host waits
   before redelivery, for every task kind. A worker process that dies while its host lives is
   still requeued at once by `task_reject_on_worker_lost=True` (`celery_app.py`, the line
@@ -211,9 +211,9 @@ are `RL-<n>` (this ruling's minted id) and `<Slice N date>` (the date of the com
 applies the text). Nothing else is a placeholder. Each is applied by its slice in one commit
 with the code (`CLAUDE.md` §2).
 
-### PL-1500 (Slice 4)
+### PL-1501 (Slice 4)
 
-**T1 — `03` §5.1, the dislocation rows (PL-1500 P1, adopted with DP-S4-1's guard and DP-S4-3
+**T1 — `03` §5.1, the dislocation rows (PL-1501 P1, adopted with DP-S4-1's guard and DP-S4-3
 (d)).** Find each of the two lines below (each occurs once) and replace the pair with the
 four rows that follow.
 
@@ -250,9 +250,9 @@ Slice 4's dispatch record, never in `PL-1267`:
 PL-1267 Slice 4, "the subset re-rates fanned out across workers" (:525-526), is narrowed by RL-<n> item 1: Slice 4 runs the attribution in one dislocation.run Job, refusing a run estimated over 4 hours on one worker. Fan-out across workers is carried to WK-1178, activated by that trigger and re-decided at the maintainer's Friday checkpoint.
 ```
 
-### PL-1499 (Slice 5)
+### PL-1500 (Slice 5)
 
-**T3 — `03` FR-257 (`:174`), appended at the row's end (DP-S5-1 (a); PL-1499 P1, adopted
+**T3 — `03` FR-257 (`:174`), appended at the row's end (DP-S5-1 (a); PL-1500 P1, adopted
 unchanged).** Find (once): ``is refused with `EVIDENCE_INCOMPLETE`. It applies forward, at
 submit. |``. Insert before its final ` |`:
 
@@ -260,7 +260,7 @@ submit. |``. Insert before its final ` |`:
  *(Clarified <Slice 5 date>, WK-673 Slice 5, RL-<n>.)* "The current live version" is the Rating Version live in the Environment the `rating_version` approval policy entry names in `dislocation_baseline_environment` (default `prod`, `06` §4.2). With nothing live there, the baseline is the most recently approved other version of the same algorithm; with neither, the version is the algorithm's first, limb (2) records `first_version` on the evidence, and no run is required. The run must name this version at its current bundle hash as its candidate and the baseline as its baseline; a run on an earlier bundle hash is stale and refused with `EVIDENCE_INCOMPLETE`.
 ```
 
-**T4 — `03` FR-224 (`:110`), appended at the row's end (DP-S5-2 to DP-S5-5; PL-1499 P2,
+**T4 — `03` FR-224 (`:110`), appended at the row's end (DP-S5-2 to DP-S5-5; PL-1500 P2,
 amended for the default and the unset rule).** Find (once): `a plainly poor surrogate is
 refused before a portfolio run is spent on it. |`. Insert before its final ` |`:
 
@@ -269,7 +269,7 @@ refused before a portfolio run is spent on it. |`. Insert before its final ` |`:
 ```
 
 **T5 — `06` §4.2, a dated note after the `skippable_predecessors` note (DP-S5-1, DP-S5-2;
-PL-1499 P3, amended).** Find (once) the note's opening, ``> **`skippable_predecessors`,
+PL-1500 P3, amended).** Find (once) the note's opening, ``> **`skippable_predecessors`,
 dated 2026-10-03 (WK-674 Slice 2; `RL-1296`).**``; the new note goes after that note's last
 line, separated by one blank line:
 
@@ -278,7 +278,7 @@ line, separated by one blank line:
 ```
 
 **T7 — `03` §4.6, inside the "Bands and movers" paragraph (`:572`) (DP-S5-3 (a), DP-S5-4
-(a); PL-1499's write set and Task 1, the dated §4.6 note).** Counted at `ecbd1954`, not
+(a); PL-1500's write set and Task 1, the dated §4.6 note).** Counted at `ecbd1954`, not
 `4d3be141`. Find (once): ``an empty band has `policies` 0. A **mover** is``. Replace it
 with:
 
@@ -319,7 +319,7 @@ without attribution — stays the decision-maker's (DP-S5-3, DP-S5-4). **T7's te
 unchanged.** Its trial apply was re-run on `03` at `ecbd1954` after this amendment: the find
 string counts 1 before and 0 after, at `:572`; the marker counts 0 before and 1 after.
 
-**C1 — PL-1499 premise h, a correction for the planner to apply at the plan's next pre-mint
+**C1 — PL-1500 premise h, a correction for the planner to apply at the plan's next pre-mint
 edit (a citation fix, no scope).** The "At `137bc817`" cell reads "`slug`, `name`,
 `predecessor`, `retired_at`". At `4d3be141` (`deployments.py:55`) it should read:
 
@@ -330,9 +330,9 @@ edit (a citation fix, no scope).** The "At `137bc817`" cell reads "`slug`, `name
 and DP-S5-1 option (c), "the last Environment in the predecessor chain", reads "the
 Environment with the highest `promotion_order`". The conclusion is unchanged.
 
-### PL-1498 (Slice 6)
+### PL-1499 (Slice 6)
 
-**T6 — `06` FR-364 (`:145`), appended at the row's end (DP-S6-1 (c); PL-1498 P1, amended
+**T6 — `06` FR-364 (`:145`), appended at the row's end (DP-S6-1 (c); PL-1499 P1, amended
 for the owner).** Find (once): ``which this requirement's 2026-08-29 invariant permits. |``.
 Insert before its final ` |`:
 
@@ -343,10 +343,10 @@ Insert before its final ` |`:
 ## What it obliges
 
 - **This commit:** this record only. No spec, plan or code file is edited here.
-- **Slice 4 (PL-1500)** applies T1 and T2 with the code, writes D1 into its dispatch record,
+- **Slice 4 (PL-1501)** applies T1 and T2 with the code, writes D1 into its dispatch record,
   sets `visibility_timeout` (item 2) and does not register the movers column in
   `QUOTE_INPUT_BLOB_COLUMNS`.
-- **Slice 5 (PL-1499)** applies T3 to T5 and T7, and writes the observed quantiles of its first
+- **Slice 5 (PL-1500)** applies T3 to T5 and T7, and writes the observed quantiles of its first
   freMTPL2 run into its ledger (item 7). The planner applies C1 before the mint.
   *(Amended 2026-10-05, pre-mint, on the 18:54:06 BST entry quoted under T7.)* Slice 5 also
   shows three reds, one per maintainer's choice in T7, each failing on the broken form named:
@@ -360,11 +360,11 @@ Insert before its final ` |`:
   3. **An empty banded set is refused.** With n = 0 every one of the six values is `null`,
      and FR-224's gate refuses the run; with a gate that passes a run with no figure, the test
      fails.
-- **Slice 6 (PL-1498)** applies T6 and names the `rate_table_diffs` owner slice in its
+- **Slice 6 (PL-1499)** applies T6 and names the `rate_table_diffs` owner slice in its
   dispatch record.
 - **WK-1178** gains the fan-out follow-up (item 1), to be cut when the trigger fires or the
   Friday checkpoint rules.
-- **A planner** cuts SL-1502 and PL-1501 (item 12).
+- **A planner** cuts SL-1503 and PL-1502 (item 12).
 
 ## Acceptance — the violation that must become detectable
 

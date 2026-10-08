@@ -1,5 +1,5 @@
 ---
-id: PL-1500
+id: PL-1501
 family: plan
 kind: leaf
 title: WK-673 Slice 4 — backend, the Job, the routes, the persisted artifact, the generated contract: leaf plan
@@ -16,9 +16,9 @@ corrected_by: []
 relates: [SL-1388, PL-1267, PL-1371, LG-1400, RL-1236, RL-1263, RL-1264, RL-1394, RL-1402, SL-1386, SL-1387, SL-1389, SL-1391]
 ---
 
-# PL-1500 — WK-673 Slice 4: backend — the Job, the routes, the persisted artifact, the generated contract: leaf plan
+# PL-1501 — WK-673 Slice 4: backend — the Job, the routes, the persisted artifact, the generated contract: leaf plan
 
-*(Minted 2026-10-08 as PL-1500 from working id 9591, in the T8 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
+*(Minted 2026-10-08 as PL-1501 from working id 9591, in the T8 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
 > or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`)
@@ -44,19 +44,19 @@ head `ca407ed9`), PL 9629 (the exit-demo plan, #1164, head `68dd997c`), RL-1445 
 amendment, #1162, head `381254c3`), RL 9614 (FD-1244 and FD-1245, #1167, head `b71f0da2`),
 and the A-1 to A-3 plans (PL-1461 #1177 head `5d5e5b8e`, PL-1464 #1178 head `477265e4`, PL-1465 #1174 head `7b3df510`; not pushed at 16:54 BST, read before 17:08:50 BST).
 
-### Pre-mint edit, 2026-10-05: RL-1503
+### Pre-mint edit, 2026-10-05: RL-1504
 
 Edited 2026-10-05 from 18:40:26 BST (`TZ=Europe/London date`), before this plan's mint, by the
 planner, on the lead's brief `~/gi-pricing-plan.local/handover/brief-capacity-fill-2026-10-05.md`
-Part B. The authority is **RL-1503** (then a working id, #1191, head
+Part B. The authority is **RL-1504** (then a working id, #1191, head
 `7bbdd9c076e6e69f9824770a7dddf299bf65caa6`, filed, unminted). It rules this plan's DP-S4-1,
 DP-S4-2, DP-S4-3 and DP-S4-5 (its §"Ruled", items 1 to 5, lines 90–119 at that head, with
 §"Details taken from main or chosen here", lines 170–188). It states what this slice owes
-(§"What it obliges", lines 285–297, the "Slice 4 (PL-1500)" bullet). RL-1503 has **no text
+(§"What it obliges", lines 285–297, the "Slice 4 (PL-1501)" bullet). RL-1504 has **no text
 addressed to this plan**. Its texts **T1** and **T2** (lines 200–228) are the slice's to apply
 with the code. T1 adopts this plan's P1 with DP-S4-1's guard and DP-S4-3 (d). T2 is new.
 **D1** (lines 230–235) goes in the dispatch record, never in `PL-1267`. Nothing is re-decided
-here. Each edit below carries the RL-1503 item it applies and is marked in place.
+here. Each edit below carries the RL-1504 item it applies and is marked in place.
 
 1. **The four decision points are ruled.** DP-S4-1 is (a), amended (items 1 and 2): one Job,
    **guarded**. A run estimated over 4 hours on one worker is refused with 422
@@ -71,7 +71,7 @@ here. Each edit below carries the RL-1503 item it applies and is marked in place
 2. **What DP-S4-3 (d) contradicts here, corrected in place:** Global Constraints' NFR-499
    bullet, Acceptance 2, Task 2's Files, Step 2 and Step 4, Task 5's movers route, and the
    `blobs.py` rows in §"Write set" and §"Contention".
-3. **Added from RL-1503's own "Acceptance" text:** Acceptance 2 (rewritten: the stored blob
+3. **Added from RL-1504's own "Acceptance" text:** Acceptance 2 (rewritten: the stored blob
    has no portfolio column, and `/blobs` answers 404), 14 (the guard), 15 (the redelivery fix)
    and 16 (the `/movers` join and its 403). Acceptance 7 gains `estimated_worker_hours`.
 4. **The write set gains one path and one region.** `backend/src/app/worker/celery_app.py`,
@@ -113,7 +113,7 @@ strings are not repeated here, so the count stays true.
 | Task 2 Step 2 | 1 → 0 | 0 → 1 |
 | Task 2 Step 4 | 1 → 0 | 0 → 1 |
 | Task 4 Step 1 | 1 → 0 | 0 → 1 |
-| Task 4 RL-1503 additions (new) | 1 → 1 | 0 → 1 |
+| Task 4 RL-1504 additions (new) | 1 → 1 | 0 → 1 |
 | Task 5 POST | 1 → 0 | 0 → 1 |
 | Task 5 movers | 1 → 0 | 0 → 1 |
 | Task 5 estimate | 1 → 0 | 0 → 1 |
@@ -156,8 +156,8 @@ rows (`:919-920`) and the owned-codes list (`:924-…`), §5.2 (`:1049-1062`, `:
 
 ## Status
 
-`draft`. **DP-S4-1, DP-S4-2, DP-S4-3 and DP-S4-5 are ruled by RL-1503** (then a working id, #1191,
-unminted; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503"); until its mint they still block (activation need 3). The plan moves to `active` only through a
+`draft`. **DP-S4-1, DP-S4-2, DP-S4-3 and DP-S4-5 are ruled by RL-1504** (then a working id, #1191,
+unminted; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504"); until its mint they still block (activation need 3). The plan moves to `active` only through a
 separate activation PR, after every need below holds.
 
 ### Activation needs, in order
@@ -170,8 +170,8 @@ separate activation PR, after every need below holds.
    Task 2, Tasks 3–6). Where Slice 3's merged signatures differ from what this plan quotes,
    the merged code governs and the dispatch record names each difference.
 3. **A ruling on DP-S4-1, DP-S4-2, DP-S4-3 and DP-S4-5** is merged and minted, adopting or
-   amending the texts in §"Appendix". An unminted ruling is a stop. *(That ruling is RL-1503,
-   #1191: it adopts P1, amended, as its T1 and adds T2; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503".)*
+   amending the texts in §"Appendix". An unminted ruling is a stop. *(That ruling is RL-1504,
+   #1191: it adopts P1, amended, as its T1 and adds T2; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504".)*
 4. **The lane is free under `RL-1263`** as RL-1445 amends it (if minted by then), with the
    same-Work conditions written into the dispatch record (§"Write set, and its contention").
 5. **The maintainer's dispatch GO**, and the lead's go in a separate activation PR.
@@ -193,13 +193,13 @@ convention 2). `B` is `backend/tests/test_dislocation_runs.py`.
    `movers_blob_sha256` equals `run["largest_movers_blob"]`'s digest. The Job's result is
    `JobResult(kind="artifact", ref="dislocation_run:<row id>")`.
 2. **The movers blob holds no portfolio column and is never served by the generic blob route**
-   (NFR-499; RL-1503 item 5 and its "Acceptance" bullet; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503").
+   (NFR-499; RL-1504 item 5 and its "Acceptance" bullet; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504").
    `B::test_the_stored_movers_hold_no_portfolio_column`: after a run on a portfolio with extra
    columns, the stored `largest_movers_blob`'s columns are exactly `dislocation_frame`'s own,
    `quote_id` through `origin_rung`; shown red with the handler writing `select_movers`' frame
    unchanged. `B::test_the_generic_blob_route_refuses_a_movers_blob`: `GET /api/v1/blobs/{sha256}`
    on the movers digest answers 404 `NOT_FOUND`, the same answer as an unknown digest, because no
-   Dataset Version table and no `JobResult(kind="blob")` references it (RL-1503 "Details");
+   Dataset Version table and no `JobResult(kind="blob")` references it (RL-1504 "Details");
    shown red on a handler that records the digest as the Job's `JobResult(kind="blob")`,
    scratch-reverted. The column is **not** added to `QUOTE_INPUT_BLOB_COLUMNS`.
 3. **A subset bundle never becomes a Rating Version** (`RL-1264`; `LG-1400` Task 7, row 1).
@@ -227,7 +227,7 @@ convention 2). `B` is `backend/tests/test_dislocation_runs.py`.
    answers 200 with `derived_changes`, `policies` and `estimated_ratings` equal to
    `estimate_attribution_ratings(k, policies, grouped=…)`, and writes no Job. It also carries
    `estimated_worker_hours`, `estimated_ratings` ÷ `DISLOCATION_RATINGS_PER_WORKER_HOUR`
-   (RL-1503 item 4 and "Details"; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503").
+   (RL-1504 item 4 and "Details"; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504").
 8. **Identical inputs give a byte-identical artifact** (NFR-495 as `PL-1267` applies it).
    `B::test_two_runs_of_the_same_spec_are_byte_identical`: two Jobs over the same spec persist
    `run` values equal after removing `job_id`, and the same movers digest.
@@ -245,19 +245,19 @@ convention 2). `B` is `backend/tests/test_dislocation_runs.py`.
     their rc and summary lines quoted.
 13. **The slice closes on the maintainer's MERGE-ACK and a clean audit** (`PL-1267`
     Acceptance 8): no maintainer acceptance line is required for a slice.
-14. **A run estimated over the bound is refused before any Job** (RL-1503 item 1 and its
-    "Acceptance" bullet "The guard"; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503").
+14. **A run estimated over the bound is refused before any Job** (RL-1504 item 1 and its
+    "Acceptance" bullet "The guard"; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504").
     `B::test_a_run_estimated_over_the_single_job_bound_is_refused_before_any_job`: a spec whose
     estimate exceeds `DISLOCATION_SINGLE_JOB_MAX_HOURS` answers 422 `VALIDATION_FAILED` naming K,
     the policy count and the estimate, and writes no Job row; the same spec at `/estimate`
     answers 200 with that estimate. Shown red with the guard removed, scratch-reverted.
-15. **The redelivery fix** (RL-1503 item 2 and its "Acceptance" bullet "The redelivery fix").
+15. **The redelivery fix** (RL-1504 item 2 and its "Acceptance" bullet "The redelivery fix").
     `B::test_the_celery_visibility_timeout_exceeds_the_single_job_bound`:
     `build_celery().conf.broker_transport_options["visibility_timeout"]` exceeds
     `DISLOCATION_SINGLE_JOB_MAX_HOURS × 3600`; red at origin/main (the key is absent).
     `B::test_a_second_delivery_for_a_running_dislocation_job_does_nothing`: a second delivery of
     a `dislocation.run` message for a `running` Job changes no row.
-16. **`/movers` joins the portfolio at read** (RL-1503 item 5 and its "Acceptance" bullet).
+16. **`/movers` joins the portfolio at read** (RL-1504 item 5 and its "Acceptance" bullet).
     `B::test_movers_route_joins_the_portfolio_columns_at_read`: `GET
     /api/v1/dislocation-runs/{id}/movers` returns the stored rows joined on `quote_id` to the
     portfolio columns, equal to `select_movers` on the full frame; a caller without
@@ -282,7 +282,7 @@ convention 2). `B` is `backend/tests/test_dislocation_runs.py`.
   convenient.
 - **NFR-499: no Quote Context in a log line, error message or audit payload.** Under DP-S4-3 (d)
   the stored movers hold `dislocation_frame`'s own columns only, never a portfolio column, so
-  the blob is not a quote-input store (RL-1503 item 5; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503").
+  the blob is not a quote-input store (RL-1504 item 5; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504").
 - **Permissions come from `RL-1236`'s catalogue**; no new permission (a new name is a scope
   change, `PL-1267` Slice 4). FD-1197 is cited.
 
@@ -348,19 +348,19 @@ these rules and (b) no plan dependency, neither consuming the other's output, na
 
 | Path | Symbol or region | Change |
 |---|---|---|
-| `docs/specs/03-rating-engine.md` | §5.1 rows `:919-920`; the owned-codes list (`ATTRIBUTION_RECONCILIATION_FAILED` is Slice 3's P1, not re-added); ~~a new §5.1 row if DP-S4-3 (b) or DP-S4-5 (a)~~ two new §5.1 rows (RL-1503 T1); `:1124` in §5.2 (T2) | the ruled texts (RL-1503 T1, T2; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503") |
+| `docs/specs/03-rating-engine.md` | §5.1 rows `:919-920`; the owned-codes list (`ATTRIBUTION_RECONCILIATION_FAILED` is Slice 3's P1, not re-added); ~~a new §5.1 row if DP-S4-3 (b) or DP-S4-5 (a)~~ two new §5.1 rows (RL-1504 T1); `:1124` in §5.2 (T2) | the ruled texts (RL-1504 T1, T2; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504") |
 | `backend/src/app/db/models.py` | new `DislocationRunRow`, appended | exempt (new class) |
 | `backend/migrations/versions/<rev>_dislocation_runs.py` | new revision | exempt (new revision) |
 | `backend/src/app/platform/dislocation_runs.py` | new: `persist_run`, `fetch_run` | new file |
-| `backend/src/app/platform/blobs.py` | `QUOTE_INPUT_BLOB_COLUMNS` (`:496-499`) | **not written**: RL-1503 item 5 does not register the movers column (pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503") |
+| `backend/src/app/platform/blobs.py` | `QUOTE_INPUT_BLOB_COLUMNS` (`:496-499`) | **not written**: RL-1504 item 5 does not register the movers column (pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504") |
 | `backend/src/app/platform/rating_versions.py` | `_Resolver` (`:445-555`) moved to module level as `WorkspaceResolver`; `compile_rating_version` (`:423`) instantiates it | pure move (DP-S4-4) |
 | `backend/src/app/worker/dislocation_handlers.py` | new: `_dislocation_run`, `register_dislocation_handlers` | new file |
 | `backend/src/app/worker/entrypoint.py` | `:70-74` | one `register_dislocation_handlers()` call appended |
-| `backend/src/app/worker/celery_app.py` | `build_celery` (`:30`; `:46` at `116a0da6`) | `broker_transport_options={"visibility_timeout": 21600}` (RL-1503 item 2; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503") |
+| `backend/src/app/worker/celery_app.py` | `build_celery` (`:30`; `:46` at `116a0da6`) | `broker_transport_options={"visibility_timeout": 21600}` (RL-1504 item 2; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504") |
 | `backend/src/app/api/dislocation_runs.py` | new router | new file |
 | `backend/src/app/main.py` | `:128-153` | one `include_router` line (exempt) |
 | `backend/src/app/errors.py` | `RATING_ERROR_CODES` (`:309`) | `ATTRIBUTION_RECONCILIATION_FAILED` appended |
-| `packages/model-schema/src/model_schema/dislocation.py` | new `DislocationEstimate` (DP-S4-5 (a) only), with `estimated_worker_hours` (RL-1503 item 4; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503") | added after Slice 3's types |
+| `packages/model-schema/src/model_schema/dislocation.py` | new `DislocationEstimate` (DP-S4-5 (a) only), with `estimated_worker_hours` (RL-1504 item 4; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504") | added after Slice 3's types |
 | `packages/model-schema/src/model_schema/__init__.py` | `__all__` | `DislocationEstimate` appended (name-disjoint exempt) |
 | `scripts/generate-contracts.py` | `GENERATED_SHAPES` (`:38`) | `"dislocation-run": "DislocationRun"` appended |
 | `backend/tests/test_contracts.py` | `COMPARED_SLUGS` (`:38-59`); `ONE_SIDED_SLUGS["dislocation-run"]` (`:98`) | slug added; key removed (key-disjoint exempt) |
@@ -385,7 +385,7 @@ VCS-ignored); `06`; `approvals.py` (either); `docs/roadmap.md` (except the activ
 | `backend/migrations/versions/` | one new revision | **PL-1342** (WK-674 S3, `SL-1257`): one new revision | no existing file | exempt; the second re-points `down_revision` to the one head |
 | `backend/src/app/db/models.py` | new class appended | **PL-1342**: `EnvironmentSettingRow` appended | no | exempt |
 | `backend/src/app/main.py` | one `include_router` | **PL-1454** (WK-1178): a `gc.freeze()` lifespan hook (DP-4 (a) only); **PL-1342**: a router include | no | exempt |
-| `backend/src/app/platform/blobs.py` `QUOTE_INPUT_BLOB_COLUMNS` | **not written** (RL-1503 item 5; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503") | — | — | none |
+| `backend/src/app/platform/blobs.py` `QUOTE_INPUT_BLOB_COLUMNS` | **not written** (RL-1504 item 5; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504") | — | — | none |
 | `backend/src/app/worker/entrypoint.py` | one call appended | **PL-1419** registers in `register_rate_table_handlers`, not here | no | none |
 | `docs/contracts/openapi/generated.json`, `docs/INDEX.md` | regenerated | every slice that changes a shape | — | exempt (generated) |
 
@@ -424,11 +424,11 @@ slice may not move `draft → active` while any blocking row is open.
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-S4-1 | **Is the attribution fanned out across workers?** `PL-1267` Slice 4 says "the subset re-rates fanned out across workers"; `SL-1388`'s row does not. `attribute` (Slice 3) rates all 2^K subsets inside one call, so a fan-out needs it split into per-subset rating and assembly, an `03` §5.2 change to Slice 3's interface | (a) **one Job**: the handler calls `attribute` once; no fan-out in this slice; the fan-out becomes an owned follow-up only if Slice 3's measured figure for K = 6 on the full portfolio (derived, PL-1452 DP-S3-10 (b)) exceeds a Job duration the decision-maker names. (b) **child Jobs per subset**: a new `JobKind`, `attribute` split into `rate_subset` and `assemble_attribution`, an `03` §5.2 amendment and a Slice 3 interface change. (c) a process pool inside one worker (not "across workers") | **(a).** It keeps `pricing-core` unedited, uses Slice 3's surface as merged, and decides the fan-out on a measured figure rather than in advance. (b) reopens Slice 3's interface and adds a Job kind for a cost not yet measured. (a) narrows `PL-1267` Slice 4's text, so the ruling also routes that delta to the maintainer, as a dispatch-record delta against frozen `PL-1267` | decision point | yes — Task 4 | **ruled (a), amended**, RL-1503 items 1 and 2: one Job, refused when estimated over 4 h on one worker; fan-out carried to WK-1178; `visibility_timeout` 21600 s; D1 in the dispatch record (pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503") |
-| DP-S4-2 | **Which permission starts a run?** `PL-1267` names `score:batch` as the likely pick. No built-in human role holds it (premise i), and WF-699 D6's actor is the Analyst | (a) `score:batch` (a batch re-rate; a Service Account may hold it). (b) `rating:compile`, as `start_regression_run` (`models.py:1276`), the other run started against a Rating Version; `analyst` and `pricing_actuary` hold it. (c) `rating:read` | **(b)** for `POST`, plus `dataset:read` on the portfolio Dataset Version; **`rating:read`** for `GET`. (a) refuses D6's actor, and fixing that grants a role a new capability (a scope change). (c) lets a read-only principal spend worker-hours. FD-1197 is cited; this slice adds no name and does not settle FD-1197's name disagreement | decision point | yes — Task 5 | **ruled (b)**, RL-1503 item 3 (pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503") |
-| DP-S4-3 | **How are the movers read?** A movers row carries every portfolio column (`03:1124`), so the blob is a quote-input store (NFR-499); FR-263 asks for "drill-down to individual quotes" | (a) register `dislocation_runs.movers_blob_sha256` in `QUOTE_INPUT_BLOB_COLUMNS`; no route reads the blob in this slice; the read route is owned by WK-675 Slice 8, the view that needs it. (b) as (a), plus `GET /api/v1/dislocation-runs/{id}/movers` (`rating:read`), the regression case-log precedent (`03` §5.1 `…/regression-runs/{run_id}/cases`, FR-1221), with a new `03` §5.1 row. (c) leave it on the generic blob route | **(b).** A blob nothing can read is not a drill-down, and the precedent is exact; the route is small. (b) adds a route `SL-1388`'s row does not name, so the ruling records it as within FR-263. (c) breaks NFR-499 | decision point | yes — Tasks 2, 5 | **ruled (d)**, the maintainer's, RL-1503 item 5: the blob holds the frame's own columns only; `/movers` joins the portfolio columns at read (`rating:read`, `dataset:read`); not registered in `QUOTE_INPUT_BLOB_COLUMNS` (pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503") |
+| DP-S4-1 | **Is the attribution fanned out across workers?** `PL-1267` Slice 4 says "the subset re-rates fanned out across workers"; `SL-1388`'s row does not. `attribute` (Slice 3) rates all 2^K subsets inside one call, so a fan-out needs it split into per-subset rating and assembly, an `03` §5.2 change to Slice 3's interface | (a) **one Job**: the handler calls `attribute` once; no fan-out in this slice; the fan-out becomes an owned follow-up only if Slice 3's measured figure for K = 6 on the full portfolio (derived, PL-1452 DP-S3-10 (b)) exceeds a Job duration the decision-maker names. (b) **child Jobs per subset**: a new `JobKind`, `attribute` split into `rate_subset` and `assemble_attribution`, an `03` §5.2 amendment and a Slice 3 interface change. (c) a process pool inside one worker (not "across workers") | **(a).** It keeps `pricing-core` unedited, uses Slice 3's surface as merged, and decides the fan-out on a measured figure rather than in advance. (b) reopens Slice 3's interface and adds a Job kind for a cost not yet measured. (a) narrows `PL-1267` Slice 4's text, so the ruling also routes that delta to the maintainer, as a dispatch-record delta against frozen `PL-1267` | decision point | yes — Task 4 | **ruled (a), amended**, RL-1504 items 1 and 2: one Job, refused when estimated over 4 h on one worker; fan-out carried to WK-1178; `visibility_timeout` 21600 s; D1 in the dispatch record (pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504") |
+| DP-S4-2 | **Which permission starts a run?** `PL-1267` names `score:batch` as the likely pick. No built-in human role holds it (premise i), and WF-699 D6's actor is the Analyst | (a) `score:batch` (a batch re-rate; a Service Account may hold it). (b) `rating:compile`, as `start_regression_run` (`models.py:1276`), the other run started against a Rating Version; `analyst` and `pricing_actuary` hold it. (c) `rating:read` | **(b)** for `POST`, plus `dataset:read` on the portfolio Dataset Version; **`rating:read`** for `GET`. (a) refuses D6's actor, and fixing that grants a role a new capability (a scope change). (c) lets a read-only principal spend worker-hours. FD-1197 is cited; this slice adds no name and does not settle FD-1197's name disagreement | decision point | yes — Task 5 | **ruled (b)**, RL-1504 item 3 (pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504") |
+| DP-S4-3 | **How are the movers read?** A movers row carries every portfolio column (`03:1124`), so the blob is a quote-input store (NFR-499); FR-263 asks for "drill-down to individual quotes" | (a) register `dislocation_runs.movers_blob_sha256` in `QUOTE_INPUT_BLOB_COLUMNS`; no route reads the blob in this slice; the read route is owned by WK-675 Slice 8, the view that needs it. (b) as (a), plus `GET /api/v1/dislocation-runs/{id}/movers` (`rating:read`), the regression case-log precedent (`03` §5.1 `…/regression-runs/{run_id}/cases`, FR-1221), with a new `03` §5.1 row. (c) leave it on the generic blob route | **(b).** A blob nothing can read is not a drill-down, and the precedent is exact; the route is small. (b) adds a route `SL-1388`'s row does not name, so the ruling records it as within FR-263. (c) breaks NFR-499 | decision point | yes — Tasks 2, 5 | **ruled (d)**, the maintainer's, RL-1504 item 5: the blob holds the frame's own columns only; `/movers` joins the portfolio columns at read (`rating:read`, `dataset:read`); not registered in `QUOTE_INPUT_BLOB_COLUMNS` (pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504") |
 | DP-S4-4 | **How does a worker get an `ArtifactResolver`?** `_Resolver` is nested in `compile_rating_version` (premise f) | (a) move it to module level as `WorkspaceResolver(session, workspace_id)`, unchanged in body; `compile_rating_version` instantiates it. (b) a second resolver in the handler, duplicating the branches | **(a)**: one resolver, so a subset resolves exactly as a real compile does (FR-1398). (b) would let the two drift, the mispricing `CLAUDE.md` §2 warns of | slice design (planner) | no | **decided (a)** here; sequencing in §"Contention" |
-| DP-S4-5 | **How is the estimated rating count shown before launch?** `RL-1264` item 3; PL-1452's P4: "so a caller can show it before launch" | (a) `POST /api/v1/dislocation-runs/estimate` takes a `DislocationSpec`, answers 200 with a new `DislocationEstimate` (`derived_changes`, `policies`, `estimated_ratings`, `method`), writes no Job; a new `03` §5.1 row. (b) the 202 body carries the estimate (after launch, not before). (c) a `dry_run` field on `DislocationSpec` (a shape change on the spec every run carries) | **(a).** Only (a) answers before launch without changing the run's own shape. The partition check runs in the same code path, so a bad grouping is refused at the estimate too | decision point | yes — Task 5 | **ruled (a)**, RL-1503 item 4, plus `estimated_worker_hours` (pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503") |
+| DP-S4-5 | **How is the estimated rating count shown before launch?** `RL-1264` item 3; PL-1452's P4: "so a caller can show it before launch" | (a) `POST /api/v1/dislocation-runs/estimate` takes a `DislocationSpec`, answers 200 with a new `DislocationEstimate` (`derived_changes`, `policies`, `estimated_ratings`, `method`), writes no Job; a new `03` §5.1 row. (b) the 202 body carries the estimate (after launch, not before). (c) a `dry_run` field on `DislocationSpec` (a shape change on the spec every run carries) | **(a).** Only (a) answers before launch without changing the run's own shape. The partition check runs in the same code path, so a bad grouping is refused at the estimate too | decision point | yes — Task 5 | **ruled (a)**, RL-1504 item 4, plus `estimated_worker_hours` (pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504") |
 
 ## Tasks
 
@@ -490,8 +490,8 @@ Mirror the `req` marker import and the module's fixtures from
 - [ ] **Step 2:** Run `uv run pytest backend/tests/test_dislocation_runs.py -q`. Expected:
   FAIL on the `assert`, the name absent from the set. An `ImportError` is a plan defect.
 - [ ] **Step 3:** Append `"ATTRIBUTION_RECONCILIATION_FAILED",` to `RATING_ERROR_CODES` and
-  apply RL-1503's T1 (§5.1) and T2 (`03:1124`) verbatim (the ledger copy;
-  pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503").
+  apply RL-1504's T1 (§5.1) and T2 (`03:1124`) verbatim (the ledger copy;
+  pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504").
 - [ ] **Step 4:** Run the test (PASS) and `python3 scripts/audit-docs.py` (only check 31 may
   fail while ids are working ids; any other failure is a stop).
 - [ ] **Step 5: Commit** `feat(rating): register ATTRIBUTION_RECONCILIATION_FAILED; 03 §5.1 dislocation rows (SL-1388)`.
@@ -502,7 +502,7 @@ Mirror the `req` marker import and the module's fixtures from
 - Modify: `backend/src/app/db/models.py` (append `DislocationRunRow` after the last class)
 - Create: `backend/migrations/versions/<rev>_dislocation_runs.py`
 - Create: `backend/src/app/platform/dislocation_runs.py`
-- Not modified: `backend/src/app/platform/blobs.py` (RL-1503 item 5; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503")
+- Not modified: `backend/src/app/platform/blobs.py` (RL-1504 item 5; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504")
 - Test: `backend/tests/test_dislocation_runs.py`
 
 **Interfaces:**
@@ -529,11 +529,11 @@ reason; do not reinvent them.
   a stored blob, then `GET /api/v1/blobs/{sha256}` as the run's own workspace: 404).
 - [ ] **Step 2:** Run them. Expected: FAIL at import (`DislocationRunRow` undefined) for the
   first two. After Step 3 the third answers 404, because no Dataset Version table and no
-  `JobResult(kind="blob")` references the digest (`blob_readable_by`, `blobs.py:508-530`; RL-1503
-  "Details"). Its red is Step 4's broken input (pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503").
+  `JobResult(kind="blob")` references the digest (`blob_readable_by`, `blobs.py:508-530`; RL-1504
+  "Details"). Its red is Step 4's broken input (pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504").
 - [ ] **Step 3:** Write the class, the migration (`down_revision` = the Task 0 head) and the
   service. Run `uv run alembic upgrade head` against the dev DSN.
-- [ ] **Step 4:** Do **not** register the column (RL-1503 item 5; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503"). Prove Acceptance 2's 404
+- [ ] **Step 4:** Do **not** register the column (RL-1504 item 5; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504"). Prove Acceptance 2's 404
   on broken input: record the movers digest as a Job's `JobResult(kind="blob")` in the test; the
   route then answers 200 and the test fails; revert; quote both in the ledger.
 - [ ] **Step 5:** Run the three tests (PASS) and `uv run pytest backend/tests/test_regression_runs.py -q` (unchanged).
@@ -592,7 +592,7 @@ The handler, in order:
 4. `persist()` in one unit of work: the movers frame written as Parquet to the blob store,
    `largest_movers_blob` and `job_id` set, `persist_run` called.
 
-**RL-1503 additions** (items 1, 2 and 5, and "Details"; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503"): (i) the movers frame is written
+**RL-1504 additions** (items 1, 2 and 5, and "Details"; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504"): (i) the movers frame is written
 restricted to `dislocation_frame`'s own columns, `quote_id` through `origin_rung`; (ii) the handler
 module defines `DISLOCATION_RATINGS_PER_WORKER_HOUR = 5_093_947`, citing CR-927 `:355` (or, when
 Slice 3's ledger records a measured dislocation-path rate, that figure, citing the ledger) and
@@ -604,7 +604,7 @@ Resumability: no partial row is ever written (step 4 is one transaction); a re-s
 recomputes, and Acceptance 8 shows the result is byte-identical; blob writes are
 content-addressed, so a repeated `put` is idempotent.
 
-- [ ] **Step 1: Write the failing tests** — Acceptance 1, 2's column test, 3, 5, 8 and 15 (RL-1503; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503"),
+- [ ] **Step 1: Write the failing tests** — Acceptance 1, 2's column test, 3, 5, 8 and 15 (RL-1504; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504"),
   using the Slice 3
   fixture `examples/fremtpl2/rating/` (PL-1452 DP-S3-6 (a)) or the smaller score fixture
   Slice 3's tests use, whichever its ledger names as fast.
@@ -631,17 +631,17 @@ content-addressed, so a repeated `put` is idempotent.
   check before submitting (422 `VALIDATION_FAILED`, naming each change left out or placed
   twice), then the guard: 422 `VALIDATION_FAILED` when the estimate exceeds
   `DISLOCATION_SINGLE_JOB_MAX_HOURS`, naming K, the policy count and the estimate, with no Job
-  (Acceptance 14; RL-1503 item 1; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503"); 202, `Location: /api/v1/jobs/{job.id}`, body the `Job`.
+  (Acceptance 14; RL-1504 item 1; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504"); 202, `Location: /api/v1/jobs/{job.id}`, body the `Job`.
 - `GET /api/v1/dislocation-runs/{id}`: `rating:read`; 200 `DislocationRun`; 404 `NOT_FOUND`.
-- Under DP-S4-3 (d) (RL-1503 item 5; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503"): `GET /api/v1/dislocation-runs/{id}/movers`, `rating:read`
+- Under DP-S4-3 (d) (RL-1504 item 5; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504"): `GET /api/v1/dislocation-runs/{id}/movers`, `rating:read`
   and `dataset:read` on the run's portfolio Dataset Version; the stored rows joined at read on
   `quote_id` to that Dataset Version's portfolio columns, as JSON, mirroring
   `get_regression_run_cases` (`models.py:1337`) for the paging form.
 - Under DP-S4-5 (a): `POST /api/v1/dislocation-runs/estimate`, the same permissions and
   checks as `POST`, 200 `DislocationEstimate` (with `estimated_worker_hours`), no Job; `POST`
-  computes its guard's estimate in the same code path (RL-1503 item 4; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503").
+  computes its guard's estimate in the same code path (RL-1504 item 4; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504").
 
-- [ ] **Step 1: Write the failing tests** — Acceptance 4, 6, 7, 14 and 16 (RL-1503; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503").
+- [ ] **Step 1: Write the failing tests** — Acceptance 4, 6, 7, 14 and 16 (RL-1504; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504").
 - [ ] **Step 2:** Run them. Expected: 404 from the router (the path is unregistered). A 405 or
   422 is a plan defect.
 - [ ] **Step 3:** Write the router, mirroring `start_regression_run` and `get_regression_run`
@@ -674,18 +674,18 @@ content-addressed, so a repeated `put` is idempotent.
   --check`; the four docs checks; `req-coverage.py`. Quote every rc and summary line with the
   tree.
 - [ ] **Step 2:** The ledger: Task 0's records, every red quoted by its cause, Acceptance
-  1–13 and 14–16 (RL-1503; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503") each with its evidence, and `LG-1400` Task 7 rows 1 and 3 discharged by name.
+  1–13 and 14–16 (RL-1504; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504") each with its evidence, and `LG-1400` Task 7 rows 1 and 3 discharged by name.
 
 ## Hand-off
 
 The executor works in its own worktree on a branch from origin/main after `SL-1387` merges,
 spawned from `.claude/roles/executor.md` with this plan and the dispatch record. The dispatch
-record carries RL-1503's D1 verbatim (RL-1503 lines 230–235), the delta against frozen `PL-1267`
-`:525-526` (pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503"). The slice
+record carries RL-1504's D1 verbatim (RL-1504 lines 230–235), the delta against frozen `PL-1267`
+`:525-526` (pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504"). The slice
 closes on a clean audit and the lead's merge. **Slice 5 (`SL-1389`) inherits:**
 `DislocationRunRow` and `fetch_run`, the (`workspace_id`, `candidate_ref`,
 `candidate_bundle_hash`) index for its limb (2) lookup, and `RatingVersionEvidence.dislocation_run_id`
-(`model_schema/rating.py:125`) to fill. **WK-675 Slice 8 inherits:** the four routes of RL-1503's T1 (pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503").
+(`model_schema/rating.py:125`) to fill. **WK-675 Slice 8 inherits:** the four routes of RL-1504's T1 (pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504").
 **From Slice 3, received:** the backend registration of `ATTRIBUTION_RECONCILIATION_FAILED`
 (Task 1), `test_dislocation_subset_bundles_never_become_rating_versions` (Task 4), the route's
 422 for a bad partition (Task 5), the contract's generation (Task 6), and the measured cost
@@ -693,8 +693,8 @@ closes on a clean audit and the lead's merge. **Slice 5 (`SL-1389`) inherits:**
 
 ## Appendix — proposed texts (for the ruling to adopt, amend or reject)
 
-*(Ruled by RL-1503: P1 adopted, amended for DP-S4-1's guard and DP-S4-3 (d), as its T1; its T2 is
-new. Task 1 applies T1 and T2 from RL-1503, never the text below; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1503".)*
+*(Ruled by RL-1504: P1 adopted, amended for DP-S4-1's guard and DP-S4-3 (d), as its T1; its T2 is
+new. Task 1 applies T1 and T2 from RL-1504, never the text below; pre-mint 2026-10-05; §"Pre-mint edit, 2026-10-05: RL-1504".)*
 
 ### P1 — `03` §5.1, the two rows at `:919-920` (DP-S4-2 (b), DP-S4-3 (b), DP-S4-5 (a))
 
@@ -732,7 +732,7 @@ row is dropped.
 5. **Found, outside this slice, for the lead.** PL 9629's need 5 attributes WF-699 E1
    ("change summary drafted from the structural and rate diffs", `03` FR-242's draft) to
    Slice 5; `SL-1389` and `PL-1267` Slice 5 do not scope it. Reported, not changed here.
-6. **Pre-mint edit, 2026-10-05 (RL-1503).** The four decision points carry their rulings.
+6. **Pre-mint edit, 2026-10-05 (RL-1504).** The four decision points carry their rulings.
    DP-S4-3 (d) reverses this plan's movers deny: `blobs.py` leaves the write set, and Acceptance 2
-   is rewritten. Acceptance 14 to 16 come from RL-1503's own text. `celery_app.py` joins the write
-   set with no contention found. RL-1503 is cited by working id and kept out of `relates:` (check 32).
+   is rewritten. Acceptance 14 to 16 come from RL-1504's own text. `celery_app.py` joins the write
+   set with no contention found. RL-1504 is cited by working id and kept out of `relates:` (check 32).

@@ -1,5 +1,5 @@
 ---
-id: RL-1496
+id: RL-1497
 family: ruling
 title: RL-1401 corrected — the "never compiled" premise was false at its own tree; submission already refuses a version without a passing Regression Run for its compiled bundle, so no finding is filed and the ruling's decisions are unaffected
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
@@ -15,9 +15,9 @@ corrects: RL-1401
 relates: [RL-1401, RL-1379, FR-257, WK-673]
 ---
 
-# RL-1496 — RL-1401 corrected: the "never compiled" premise was false at its own tree
+# RL-1497 — RL-1401 corrected: the "never compiled" premise was false at its own tree
 
-*(Minted 2026-10-08 as RL-1496 from working id 9718, in the T8 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
+*(Minted 2026-10-08 as RL-1497 from working id 9718, in the T8 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
 
 ## How this was ruled
 
@@ -26,14 +26,14 @@ relates: [RL-1401, RL-1379, FR-257, WK-673]
   (`echo $CLAUDE_EFFORT` printed `medium`) drafted the record around it and re-verified its
   two sites.
 - **The source.** `~/gi-pricing-plan.local/channel/to-lead.md`, the entry headed
-  "2026-10-05 10:02:28 BST — CORRECTION (mine) to my RL-1401 correction text (in "… FD 9720 NOT filed …"): the lead's two precision points ACCEPTED; #1119 (RL-1496) carries the AMENDED text below instead". Its blockquote, the maintainer's amended text, is the text in **Ruled**. It
+  "2026-10-05 10:02:28 BST — CORRECTION (mine) to my RL-1401 correction text (in "… FD 9720 NOT filed …"): the lead's two precision points ACCEPTED; #1119 (RL-1497) carries the AMENDED text below instead". Its blockquote, the maintainer's amended text, is the text in **Ruled**. It
   replaces the text first given in the entry headed "2026-10-05 09:54:07 BST — FD 9720 NOT filed (its premise is false, verified by me); RL-1401 gets a DATED CORRECTION LINE (not a note only); e3 LOW stands, with the doubt recorded", on the lead's two precision
   points, which that entry accepts: the false premise row is RL-1401's "An `approved` Rating
   Version can have no compiled bundle", not the adjacent row, and the gate refuses the
   submission, not the approval.
 - **The form.** The 09:54:07 entry asked for the text to be appended to RL-1401. The entry headed
   "2026-10-05 09:57:58 BST — CORRECTION (mine), superseding the "append verbatim at the end of
-  RL-1401" instruction in "… FD 9720 NOT filed …": option (a), a correcting record RL-1496
+  RL-1401" instruction in "… FD 9720 NOT filed …": option (a), a correcting record RL-1497
   with `corrects: RL-1401`; RL-1401 gains only `corrected_by: [RL-<minted>]`" replaced that
   with this record. Its reason: `docs/process/document-ids.md` §1.5 (the header block, the
   `superseded_by:` and `corrected_by:` comments) allows only `status:`, `superseded_by:` and

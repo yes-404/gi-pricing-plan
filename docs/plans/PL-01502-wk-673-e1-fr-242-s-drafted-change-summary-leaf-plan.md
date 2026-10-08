@@ -1,5 +1,5 @@
 ---
-id: PL-1501
+id: PL-1502
 family: plan
 kind: leaf
 title: WK-673 — WF-699 E1, FR-242's drafted change summary (the drafting limb), over HTTP: leaf plan
@@ -15,9 +15,9 @@ corrected_by: []
 relates: [PL-1267, SL-1389, SL-1391, PL-1419, CR-838, PL-818, RL-1263]
 ---
 
-# PL-1501 — WK-673: WF-699 E1, FR-242's drafted change summary, leaf plan
+# PL-1502 — WK-673: WF-699 E1, FR-242's drafted change summary, leaf plan
 
-*(Minted 2026-10-08 as PL-1501 from working id 9564, in the T8 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
+*(Minted 2026-10-08 as PL-1502 from working id 9564, in the T8 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
 
 Filed under working id 9564 (this plan) and slice working id 9565 (its `SL-` row under
 `### WK-673` in [`../roadmap.md`](../roadmap.md), `draft`), both reserved by the lead in
@@ -43,7 +43,7 @@ The same entry's item 8 makes this slice the owner of a correction, verbatim:
 > one CR is the wrong shape). A pre-mint edit adds the FR-242 limb with its evidence and cites
 > E1's new slice as the owner of the fix."
 
-**So this slice (SL-1502, then a working id) is the owner RL-1504 cites for CR-838's
+**So this slice (SL-1503, then a working id) is the owner RL-1505 cites for CR-838's
 FR-242 correction.** The evidence is dm-s45's memo
 `~/gi-pricing-plan.local/handover/dp-memo-wk673-s4-s5-2026-10-05.md` §"E1 — the owner gap",
 re-verified here at `4d3be141` (§"Premises").
@@ -54,7 +54,7 @@ Edited 2026-10-05 from 17:36:55 BST (`TZ=Europe/London date`), before this plan'
 planner, on the ruling of the maintainer (by delegation) in
 `~/gi-pricing-plan.local/channel/to-lead.md`, entry "## 2026-10-05 17:34:57 BST — E1 DPs (dm-e1
 memo handover/dp-memo-e1-2026-10-05.md): all six ADOPTED as recommended; S1 yes; S2 yes; PL 9578
-noted". Its record is RL-1497 (then a working id, filed by dm-e1). Its lines that bear on this plan,
+noted". Its record is RL-1498 (then a working id, filed by dm-e1). Its lines that bear on this plan,
 verbatim:
 
 > DP-E1-1 (a): the GET …/change-summary-draft route, read-only, plus T2, one clause on RATING_VERSION_UNPINNED's meaning note (03:967-970). Checked at origin/main: it is raised only in pricing_core (compile.py:547-591, runtime.py:611/659) and has no synchronous route.
@@ -87,7 +87,7 @@ marked in place with a dated note and with the text it replaces struck through, 
    status_code=409, …)` this slice raises (`PlatformError.__init__`, `errors.py:425-432`). No
    existing mapping supplies it: today the code is raised only inside pricing-core, in the
    compile Job.
-5. **P6 is now owned.** DP-E1-6 (a) is in PL-1499's scope (#1181, `SL-1389`): its
+5. **P6 is now owned.** DP-E1-6 (a) is in PL-1500's scope (#1181, `SL-1389`): its
    `submit_for_review` writes `row.change_summary`. This slice still neither reads nor writes
    that field, and Acceptance 14 is unchanged. **The F27 draft residue is F27's, not E1's:**
    the hand-authored `rating-version.schema.json` requires `change_summary` (`:8`, `:36`) on
@@ -142,7 +142,7 @@ The drafting is a pure function in a new backend module, `app/platform/change_su
 `draft`. ~~Five decision points are open (§"Decision points"); each has a recommendation. A
 decision-maker rules them in an RL, which carries the exact `03` §5.1 row text (Appendix P1).~~
 *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* The five decision points are ruled, each as recommended, at 17:34:57 BST; the
-RL that records them is RL-1497, carrying T1 (Appendix P1) and T2 (Appendix P2).
+RL that records them is RL-1498, carrying T1 (Appendix P1) and T2 (Appendix P2).
 The plan moves to `active` only through a separate activation PR, after every activation need
 below holds.
 
@@ -150,7 +150,7 @@ below holds.
 
 1. **This plan is merged, minted, and made `active` by a dated line.**
 2. **The DP ruling is merged and minted**, carrying DP-E1-1..5 and the §5.1 row's exact text
-   (RL-1497, then a working id; its texts are T1 and T2, Appendices P1 and P2 *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)*).
+   (RL-1498, then a working id; its texts are T1 and T2, Appendices P1 and P2 *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)*).
    Where the minted text differs from Appendix P1, the minted text governs, and the dispatch
    record names each difference. An unminted ruling is a stop.
 3. **The lane is free** under `RL-1263` as amended by RL-1445 (then a working id; #1162, unmerged at
@@ -221,9 +221,9 @@ database); `H` is `backend/tests/test_rating_version_change_summary_route.py` (n
     is typed, not an open object.
 17. `grep -c 'change-summary-draft' docs/specs/03-rating-engine.md` prints ~~`1`~~ `2` (the T1
     row and the T2 clause), and the row is the ruling's text byte for byte (Appendix P1 as
-    ruled). *(Pre-mint edit 2026-10-05, 17:42 BST, on RL-1497 (draft #1199 @`82d801c6`), which governs its T1 and T2 over this appendix's proposals.)* It also gains T2's check:
+    ruled). *(Pre-mint edit 2026-10-05, 17:42 BST, on RL-1498 (draft #1199 @`82d801c6`), which governs its T1 and T2 over this appendix's proposals.)* It also gains T2's check:
     `grep -cF 'refuses with **409** and this code when the version has no' docs/specs/03-rating-engine.md`
-    prints `1`, and the clause is RL-1497's T2 byte for byte (Appendix P2 as ruled).
+    prints `1`, and the clause is RL-1498's T2 byte for byte (Appendix P2 as ruled).
 18. `python3 scripts/audit-docs.py` and `uv run python scripts/req-coverage.py` pass; FR-242 is
     marker-evidenced by at least items 1, 10 and 14.
 19. The two-half gate (`dev-commands`) passes once, in a held gate slot.
@@ -235,7 +235,7 @@ database); `H` is `backend/tests/test_rating_version_change_summary_route.py` (n
     ArtifactRef | None`) yields `structural_diff: null`, the baseline still named in
     `baseline`, and a `text` that says the baseline has no algorithm (DP-E1-5 as ruled). Red:
     `ModuleNotFoundError` for `app.platform.change_summary`, as item 1.
-21. *(Pre-mint edit 2026-10-05, 17:42 BST, on RL-1497 (draft #1199 @`82d801c6`), which governs its T1 and T2 over this appendix's proposals.)* Folded into item 17, as RL-1497 places it; kept here, not renumbered:
+21. *(Pre-mint edit 2026-10-05, 17:42 BST, on RL-1498 (draft #1199 @`82d801c6`), which governs its T1 and T2 over this appendix's proposals.)* Folded into item 17, as RL-1498 places it; kept here, not renumbered:
     ~~`grep -cF 'refuses with **409** and this code when the version has no' docs/specs/03-rating-engine.md`
     prints `1`, and the clause is the ruling's T2 byte for byte (Appendix P2 as ruled), in the
     `RATING_VERSION_UNPINNED` meaning note.~~
@@ -252,7 +252,7 @@ database); `H` is `backend/tests/test_rating_version_change_summary_route.py` (n
   (`fastapi-service`).
 - **The submit route and `submit_for_review` are not touched.** They are `SL-1389`'s write set
   (§"Contention"). *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* DP-E1-6 (a) puts the `row.change_summary` write there, in
-  PL-1499; this slice does not depend on it.
+  PL-1500; this slice does not depend on it.
 
 ## Scope
 
@@ -269,7 +269,7 @@ Not in scope: the frontend editing view (`03` §5.3; G2 is a scripted HTTP journ
 working id, #1160); the expected-impact figure (it comes from a Dislocation Run, `SL-1388`'s
 artifact, which is a plan dependency DP-E1-3 (b) would create); `RatingVersion.change_summary`
 being written at submit (see §"Premises" P6, ~~raised to the lead, not taken~~). *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)*
-It is ruled into PL-1499's scope (DP-E1-6 (a), S1). The residue that a `draft` row carries null
+It is ruled into PL-1500's scope (DP-E1-6 (a), S1). The residue that a `draft` row carries null
 while `rating-version.schema.json` requires the field is F27's, not this slice's.
 
 ### Premises read at `4d3be141`
@@ -296,8 +296,8 @@ while `rating-version.schema.json` requires the field is F27's, not this slice's
   `create_rating_version` (`:254-262`) does not set it. `submit_for_review` passes the summary to
   `approvals.submit` only (`:327-333`). FR-242's "Rating Versions carry a required change
   summary" therefore lives on the Approval Request, not the version. Writing it at submit would
-  edit `submit_for_review`, `SL-1389`'s function. Reported to the lead as evidence for RL-1504's
-  FR-242 limb; not in this scope. *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* Ruled: DP-E1-6 (a), in PL-1499.
+  edit `submit_for_review`, `SL-1389`'s function. Reported to the lead as evidence for RL-1505's
+  FR-242 limb; not in this scope. *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* Ruled: DP-E1-6 (a), in PL-1500.
 - **P7.** Over HTTP no route yet sets a version's algorithm or pins (FD-1421, working id; its
   fix is PL-1429, #1140). This slice's tests seed them through the service, as
   `backend/tests/test_rating_version_compile.py` does. G2's journey needs PL-1429 as well; that
@@ -345,14 +345,14 @@ the frontend.
 
 | Path | This slice | Other slice | Shared existing definition? | Class |
 |---|---|---|---|---|
-| `platform/rating_versions.py` | adds one function | **SL-1389** (PL-1499 #1181, **WK-673**): `submit_for_review` and new private gates; PL-1429 (WK-1178): `create_rating_version`; PL-1471, PL 9610: `_Resolver` | no | **ALLOWED one-sided**, named in the dispatch record with `git diff -U0 origin/main...<branch> -- backend/src/app/platform/rating_versions.py` |
+| `platform/rating_versions.py` | adds one function | **SL-1389** (PL-1500 #1181, **WK-673**): `submit_for_review` and new private gates; PL-1429 (WK-1178): `create_rating_version`; PL-1471, PL 9610: `_Resolver` | no | **ALLOWED one-sided**, named in the dispatch record with `git diff -U0 origin/main...<branch> -- backend/src/app/platform/rating_versions.py` |
 | `model_schema/rating.py` | adds two classes after `RateTableDiff` | **SL-1391** (PL-1419): edits `RateTableDiff` (`:735-747`) and adds `RateTableDiffCell`; SL-1389: `RatingVersionEvidence`; PL-1429, PL 9610, PL-1476 (other classes) | no; **adjacent to SL-1391's edit** | **ALLOWED one-sided**; the second to merge merges main, re-reads `git merge-tree`'s exit code, and re-gates. If SL-1391 merges first, `RateTableChange.diff` carries its two new optional fields with no change here |
 | `api/models.py` | adds one handler | PL-1429: the create handler; WK-675 S2 (PL-1476 #1131): `GET /rating-versions/{slug}@{version}` (RL-1473 T2, working id) | no | **ALLOWED one-sided**, named with the same `git diff -U0` check |
 | `03` §5.1 | one row after `:910`; T2 after `:970` (pre-mint 2026-10-05: the same section, so no new pair) | **SL-1391**: T10 replaces `:904`, RL-1418 T1 inserts after it; **WK-675 S2**: RL-1473 T2 inserts after `:908`; **PL-1429**: RL-1428 T1 replaces `:908` | yes: one section; nearest hunk two rows away (`:908`) | **SERIALISES** with each by the file rule (`forbidden`: the same spec section). The lanes A/C option (b) of "2026-10-05 13:00:09 BST" names SL-1391 and WK-675 S2 only. **Either** this slice applies its row after those merge, **or** the maintainer dates an option for it. Not this plan's call: raised to the lead |
 | `generated.json`, `docs/INDEX.md` | regenerated | every shape-changing slice | — | exempt (generated) |
 
 **Same-Work pairs, RL-1445 condition 2, both ways.**
-- **With SL-1389 (S5, PL-1499), which runs beside it:** (a) every shared path is one-sided
+- **With SL-1389 (S5, PL-1500), which runs beside it:** (a) every shared path is one-sided
   (`rating_versions.py`, `rating.py`: different definitions) or exempt; S5 does not write
   `03` §5.1 (its `03` hunks are FR-224 `:110`, FR-257 `:174` and §4.6). (b) This slice does not
   consume S5's output: it reads `_baseline` and the diffs on main, not S5's `structural_diff`
@@ -373,7 +373,7 @@ row, two test modules and one gate.
 ## Decision points
 
 For the decision-maker to rule; the planner recommends, it does not pick. *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)*
-**Ruled at 17:34:57 BST, all as recommended** (RL-1497, then a working id); each DP below carries
+**Ruled at 17:34:57 BST, all as recommended** (RL-1498, then a working id); each DP below carries
 its ruled option, and DP-E1-1 and DP-E1-5 carry the ruling's additions.
 
 - **DP-E1-1: the HTTP shape of the draft.**
@@ -487,7 +487,7 @@ its ruled option, and DP-E1-1 and DP-E1-5 carry the ruling's additions.
 The ledger names: the dispatch tree; each DP as ruled and each difference from this plan; each
 red with its printed line; the gate result with its tree; and, for the lead, P6 (the version's
 `change_summary` is never written) if no record has taken it by then. *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* P6 is
-taken: DP-E1-6 (a), in PL-1499. The ledger does not report it; the F27 draft residue is F27's.
+taken: DP-E1-6 (a), in PL-1500. The ledger does not report it; the F27 draft residue is F27's.
 
 ## Appendix — proposed text (for the ruling to adopt, amend or reject)
 
@@ -496,24 +496,24 @@ taken: DP-E1-6 (a), in PL-1499. The ledger does not report it; the F27 draft res
 Three-cell form (if RL-1483's, working id, `Permission` column has not landed):
 
 ```
-| `GET` | `/api/v1/rating-versions/{id}/change-summary-draft` | The drafted change summary (FR-242; WF-699 E1): the structural diff (FR-219) and each re-pinned rate table's diff (FR-231, unweighted) against the most recently approved other version of the same algorithm, and a `text` stating what changed, for the actuary to edit and submit. Writes nothing; a pair with a `storage: parquet` side is named `pending`, not computed. **404** `NOT_FOUND`; **409** `RATING_VERSION_UNPINNED` without an algorithm or pins. **Added <apply date>** (PL-1501, then a working id) |
+| `GET` | `/api/v1/rating-versions/{id}/change-summary-draft` | The drafted change summary (FR-242; WF-699 E1): the structural diff (FR-219) and each re-pinned rate table's diff (FR-231, unweighted) against the most recently approved other version of the same algorithm, and a `text` stating what changed, for the actuary to edit and submit. Writes nothing; a pair with a `storage: parquet` side is named `pending`, not computed. **404** `NOT_FOUND`; **409** `RATING_VERSION_UNPINNED` without an algorithm or pins. **Added <apply date>** (PL-1502, then a working id) |
 ```
 
 Four-cell form: the same, with `rating:read` as the fourth cell.
 
-**As ruled: RL-1497 T1, which governs** *(Pre-mint edit 2026-10-05, 17:42 BST, on RL-1497 (draft #1199 @`82d801c6`), which governs its T1 and T2 over this appendix's proposals.)* The proposal above is superseded by it; the
+**As ruled: RL-1498 T1, which governs** *(Pre-mint edit 2026-10-05, 17:42 BST, on RL-1498 (draft #1199 @`82d801c6`), which governs its T1 and T2 over this appendix's proposals.)* The proposal above is superseded by it; the
 ruled text differs in the third cell (`Why:` and `Expected impact:` named, "Requires
 `rating:read`." added per `03:899`, "and no Job is created" added) and in its tail. Placement:
 immediately after the line that starts `` | `POST` | `/api/v1/rating-versions/{id}/submit` | Submit for approval; ``
 (`grep -cF` = 1 at `4d3be141`; the bare path matches 2). Three-cell form:
 
 ```
-| `GET` | `/api/v1/rating-versions/{id}/change-summary-draft` | The drafted change summary (FR-242; WF-699 E1): the structural diff (FR-219) and each re-pinned rate table's diff (FR-231, unweighted) against the most recently approved other version of the same algorithm, and a `text` stating what changed, with `Why:` and `Expected impact:` left for the actuary to edit before submitting. Requires `rating:read`. Writes nothing; a pair with a `storage: parquet` side is named `pending`, not computed, and no Job is created. **404** `NOT_FOUND`; **409** `RATING_VERSION_UNPINNED` without an algorithm or pins. (**added <E1 date>, RL-1497, FR-242**) |
+| `GET` | `/api/v1/rating-versions/{id}/change-summary-draft` | The drafted change summary (FR-242; WF-699 E1): the structural diff (FR-219) and each re-pinned rate table's diff (FR-231, unweighted) against the most recently approved other version of the same algorithm, and a `text` stating what changed, with `Why:` and `Expected impact:` left for the actuary to edit before submitting. Requires `rating:read`. Writes nothing; a pair with a `storage: parquet` side is named `pending`, not computed, and no Job is created. **404** `NOT_FOUND`; **409** `RATING_VERSION_UNPINNED` without an algorithm or pins. (**added <E1 date>, RL-1498, FR-242**) |
 ```
 
 If a `Permission` column has landed in §5.1 when T1 is applied, use the same row with
 "Requires `rating:read`. " taken out of the third cell and `rating:read` added as the fourth
-cell (RL-1497).
+cell (RL-1498).
 
 ### P2 — `03` §5.1, T2: one clause after `RATING_VERSION_UNPINNED`'s meaning note (`:967-970`)
 
@@ -522,15 +522,15 @@ after `` > matching pin list (`rate_tables`, `reference_tables`, `models`) at th
 (`grep -cF` = `1` at `4d3be141`):
 
 ```
-> *(Use added <apply date>, PL-1501, then a working id, FR-242):* `GET /api/v1/rating-versions/{id}/change-summary-draft` refuses with **409** and this code when the version has no `algorithm_ref` or no `pins`, because there is nothing to diff.
+> *(Use added <apply date>, PL-1502, then a working id, FR-242):* `GET /api/v1/rating-versions/{id}/change-summary-draft` refuses with **409** and this code when the version has no `algorithm_ref` or no `pins`, because there is nothing to diff.
 ```
 
-**As ruled: RL-1497 T2, which governs** *(Pre-mint edit 2026-10-05, 17:42 BST, on RL-1497 (draft #1199 @`82d801c6`), which governs its T1 and T2 over this appendix's proposals.)* The proposal above is superseded by it; the
-ruled text differs only in its tag (`<E1 date>, RL-1497`, not `<apply date>, PL-1501, working
+**As ruled: RL-1498 T2, which governs** *(Pre-mint edit 2026-10-05, 17:42 BST, on RL-1498 (draft #1199 @`82d801c6`), which governs its T1 and T2 over this appendix's proposals.)* The proposal above is superseded by it; the
+ruled text differs only in its tag (`<E1 date>, RL-1498`, not `<apply date>, PL-1502, working
 id`). Placement as above, inside the same blockquote:
 
 ```
-> *(Use added <E1 date>, RL-1497, FR-242):* `GET /api/v1/rating-versions/{id}/change-summary-draft` refuses with **409** and this code when the version has no `algorithm_ref` or no `pins`, because there is nothing to diff.
+> *(Use added <E1 date>, RL-1498, FR-242):* `GET /api/v1/rating-versions/{id}/change-summary-draft` refuses with **409** and this code when the version has no `algorithm_ref` or no `pins`, because there is nothing to diff.
 ```
 
 ## Self-review
@@ -540,11 +540,11 @@ id`). Placement as above, inside the same blockquote:
 - Every cite was read at `4d3be141`; cites into unmerged drafts name their PR and branch.
 - No ruling, severity, owner or scope is changed here: the owner is item 4's; the §5.1
   contention and P6 are raised to the lead, not decided.
-- Nothing is minted: SL-1502 and PL-1501 are working ids.
+- Nothing is minted: SL-1503 and PL-1502 are working ids.
 - *(Pre-mint edit 2026-10-05, on the 17:34:57 BST ruling; see §"Pre-mint edit, 2026-10-05".)* Every ruled change is marked in place; no text was deleted. The ruling's
   locators were re-read at `4d3be141` (`rate_tables.py:291-300`, `api/models.py:1203`,
-  `errors.py:321` and `:425-432`, `03:967-970`); RL-1497 is cited by working id and kept out
+  `errors.py:321` and `:425-432`, `03:967-970`); RL-1498 is cited by working id and kept out
   of `relates:`.
-- *(Pre-mint edit 2026-10-05, 17:42 BST, on RL-1497 (draft #1199 @`82d801c6`), which governs its T1 and T2 over this appendix's proposals.)* Appendix P1 and P2 now carry RL-1497's T1 and T2 verbatim, and Acceptance 17
+- *(Pre-mint edit 2026-10-05, 17:42 BST, on RL-1498 (draft #1199 @`82d801c6`), which governs its T1 and T2 over this appendix's proposals.)* Appendix P1 and P2 now carry RL-1498's T1 and T2 verbatim, and Acceptance 17
   carries both checks (`2` for the bare grep; T2's `grep -cF` = 1). Where this plan's
   proposals differ from them, the RL's text wins.

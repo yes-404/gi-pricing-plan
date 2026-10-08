@@ -1,5 +1,5 @@
 ---
-id: RL-1504
+id: RL-1505
 family: ruling
 title: CR-838 corrected — FR-237 was delivered for the pinned shape and for compile, not for declaring the pins when a Rating Version is created, which is owed to the FD-1421 fix in WK-1178; and FR-242 was not delivered for drafting the change summary, which is owed to a WK-673 slice
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
@@ -15,9 +15,9 @@ corrects: CR-838
 relates: [CR-838, WK-669, WK-1178, FR-237, FR-242, WK-673]
 ---
 
-# RL-1504 — CR-838 corrected: FR-237 was not delivered for the create route, nor FR-242 for the drafted summary
+# RL-1505 — CR-838 corrected: FR-237 was not delivered for the create route, nor FR-242 for the drafted summary
 
-*(Minted 2026-10-08 as RL-1504 from working id 9668, in the T8 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
+*(Minted 2026-10-08 as RL-1505 from working id 9668, in the T8 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
 
 ## How this was ruled
 
@@ -38,10 +38,10 @@ relates: [CR-838, WK-669, WK-1178, FR-237, FR-242, WK-673]
   close"*), and no correction path (`—`). So the RL family is this role's to write, but what
   it corrects is a maintainer-accepted close. Per the same item 21(ii), **the maintainer (by delegation) accepts
   this record at its ACK**; it binds nothing before then.
-- **The form** follows RL-1496 (#1119, `corrects: RL-1401`): a correcting record whose
+- **The form** follows RL-1497 (#1119, `corrects: RL-1401`): a correcting record whose
   `corrects:` names the frozen file, and the frozen file's body is never edited.
   `document-ids.md:136` gives `corrects:` as a scalar, *"the frozen id it corrects"*, and
-  RL-1496 writes it that way. This record does too, `corrects: CR-838`, where the lead's brief
+  RL-1497 writes it that way. This record does too, `corrects: CR-838`, where the lead's brief
   wrote the list form.
 
 ## The false verdict
@@ -93,7 +93,7 @@ owner WK-1178, the FD-1421 fix slice, deadline before the P2 exit demo (the main
   *"2026-10-05 17:14:54 BST — FD 9572 placement accepted; WK-673 S4/S5/S6, A-1, A-2 and
   CR-838 DECISIONS (1–8)"*, item 8, verbatim:
   *"CR-838:40 records FR-242 "delivered" on marker evidence while its DRAFTING limb is
-  unbuilt (AlgorithmDiff.summary never drafts): YES, record it, but FOLD it into RL-1504
+  unbuilt (AlgorithmDiff.summary never drafts): YES, record it, but FOLD it into RL-1505
   (#1137, unmerged, already `corrects: CR-838`, and `corrects:` is scalar, so a second
   correcting RL for one CR is the wrong shape). A pre-mint edit adds the FR-242 limb with its
   evidence and cites E1's new slice as the owner of the fix."*
@@ -142,7 +142,7 @@ owner WK-673, the E1 slice; needed for G2 (WF-699 E1 in the P2 exit demo, the en
   minted id>]`. That append is CR-838's only edit, in the same PR. **Owed at the mint.**
 - **The FD-1421 fix slice (WK-1178):** its ledger names this record as discharged when the
   create route accepts the pins, so the "deferred with an owner" verdict above closes.
-- **The E1 slice (WK-673, SL-1502; added 2026-10-05 before the mint):** its ledger names this
+- **The E1 slice (WK-673, SL-1503; added 2026-10-05 before the mint):** its ledger names this
   record as discharged for FR-242 when a Rating Version's change summary is drafted from the
   structural and rate-table diffs, so the FR-242 verdict above closes.
 
@@ -166,7 +166,7 @@ owner WK-673, the E1 slice; needed for G2 (WF-699 E1 in the P2 exit demo, the en
 ## Observed, not ruled (for the lead)
 
 CR-838 already carries a body edit: a blockquote headed *"Dated correction, 2026-09-29 (the
-auditor), on the maintainer's decision"* at `:46`, about FR-217. It predates the RL-1496 form
+auditor), on the maintainer's decision"* at `:46`, about FR-217. It predates the RL-1497 form
 and is not touched here. Whether it needs a correcting record of its own is not this
 record's question.
 

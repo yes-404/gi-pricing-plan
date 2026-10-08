@@ -1,5 +1,5 @@
 ---
-id: RL-1497
+id: RL-1498
 family: ruling
 title: WK-673 E1 decision points, as adopted — the change-summary draft is a read-only GET with one added clause on the RATING_VERSION_UNPINNED note, and Slice 5's submit writes the Rating Version's change summary; the draft-row residue is F27's
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,15 +15,15 @@ corrects: ~
 relates: [FR-242, FR-219, FR-231, FR-232, FR-237, FD-934, RL-1418, WK-673]
 ---
 
-# RL-1497 — WK-673 E1: the decision points of PL-1501, as adopted
+# RL-1498 — WK-673 E1: the decision points of PL-1502, as adopted
 
-*(Minted 2026-10-08 as RL-1497 from working id 9541, in the T8 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
+*(Minted 2026-10-08 as RL-1498 from working id 9541, in the T8 batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
 
 ## How this was ruled
 
 - **Filed under working id 9541.** The lead reserved it in `handover/eta.md` (the row
-  "RL-1497 | RL | dm-e1 (opus)", 2026-10-05 17:35:16). Every working id in this record (RL-1497,
-  PL-1501, SL-1502, PL-1499, RL-1445, RL-1504, RL-1473, RL-1428) becomes its minted id at the mint.
+  "RL-1498 | RL | dm-e1 (opus)", 2026-10-05 17:35:16). Every working id in this record (RL-1498,
+  PL-1502, SL-1503, PL-1500, RL-1445, RL-1505, RL-1473, RL-1428) becomes its minted id at the mint.
 - **The decisions are not this record's.** The maintainer made them, by delegation, in the
   entry below (`~/gi-pricing-plan.local/channel/to-lead.md`, `:18237-18248` when it was
   read at 2026-10-05 17:37:48 BST). It is quoted here verbatim:
@@ -43,7 +43,7 @@ relates: [FR-242, FR-219, FR-231, FR-232, FR-237, FD-934, RL-1418, WK-673]
 
 - **The options and the evidence** are the decision-maker's memo
   `~/gi-pricing-plan.local/handover/dp-memo-e1-2026-10-05.md` (dm-e1, 2026-10-05, finished
-  17:31:07 BST). The memo read origin/main `4d3be141` and PL-1501 at #1194 @ `b9e19cdb`. The
+  17:31:07 BST). The memo read origin/main `4d3be141` and PL-1502 at #1194 @ `b9e19cdb`. The
   memo is a local file, so its facts that the rulings rest on are restated under "Locators".
 - **This record drafts the texts for those decisions and decides nothing beyond them.** A
   detail the entry does not name is taken from main and listed under "Details taken from
@@ -130,7 +130,7 @@ relates: [FR-242, FR-219, FR-231, FR-232, FR-237, FD-934, RL-1418, WK-673]
    - Slice 5's `submit_for_review` writes `row.change_summary` from the submitted summary,
      with a red test. A submission after a return to `draft` overwrites it, as the evidence
      write at `:322-326` does.
-   - **S1:** this goes into PL-1499's scope (#1181) as a pre-mint edit, and PL-1499's
+   - **S1:** this goes into PL-1500's scope (#1181) as a pre-mint edit, and PL-1500's
      dispatch record names it. `submit_for_review` is already in that plan's write set, so
      no contention changes.
    - No spec text is needed: FR-242, `03` §4.3 and the hand-authored contract already say
@@ -143,11 +143,11 @@ relates: [FR-242, FR-219, FR-231, FR-232, FR-237, FD-934, RL-1418, WK-673]
      `rating-version` contract that nothing compares. It is carried by F27's owner, as the
      register row's third column names it.
    - It widens neither E1 nor Slice 5.
-8. **S2.** RL-1504 (#1137) is corrected pre-mint in one sentence: the "field" of FR-242's
+8. **S2.** RL-1505 (#1137) is corrected pre-mint in one sentence: the "field" of FR-242's
    required limb is only declared; nothing writes it; the requirement is enforced on the
    Approval Request (`approvals.py:272-275`). The correction is a dated pre-mint note in
    that record (#1137, head `542762d784019fd5f823322bff9de69e192c3f98`), not in this one.
-9. **PL-1501's missing `blob_store`.** The planner fixes it before the mint. The service
+9. **PL-1502's missing `blob_store`.** The planner fixes it before the mint. The service
    passes a `blob_store` to `rate_tables.diff`, and the route supplies it as
    `submit_rating_version` does (`api/models.py:1203`).
 
@@ -155,7 +155,7 @@ relates: [FR-242, FR-219, FR-231, FR-232, FR-237, FD-934, RL-1418, WK-673]
 BST", `channel/to-lead.md`):
 - E1's §5.1 row **serialises**. It is applied after SL-1391, WK-675 S2 (RL-1473) and PL-1429
   (RL-1428) have merged.
-- With Slice 5 (PL-1499), RL-1445 condition 2 holds both ways, so the two slices may run
+- With Slice 5 (PL-1500), RL-1445 condition 2 holds both ways, so the two slices may run
   at the same time if both dispatch records name each other.
 
 ## The spec texts
@@ -165,10 +165,10 @@ at `origin/main` `4d3be141`.
 
 The placeholders are:
 - `<E1 date>`, the date of the E1 slice's commit that applies the item;
-- `RL-1497`, this ruling's working id, which the mint replaces with the minted id.
+- `RL-1498`, this ruling's working id, which the mint replaces with the minted id.
 
-Nothing else in a text is a placeholder. Both texts are applied by the E1 slice (SL-1502,
-leaf plan PL-1501), in one commit with the code (`CLAUDE.md` §2). Before applying each text,
+Nothing else in a text is a placeholder. Both texts are applied by the E1 slice (SL-1503,
+leaf plan PL-1502), in one commit with the code (`CLAUDE.md` §2). Before applying each text,
 re-run its `grep -cF`. If the result is not 1, STOP and report it: do not choose another
 anchor.
 
@@ -185,7 +185,7 @@ Placement: a new row **inserted immediately after** the line that starts
 Insert, in the three-cell form of `4d3be141`:
 
 ```text
-| `GET` | `/api/v1/rating-versions/{id}/change-summary-draft` | The drafted change summary (FR-242; WF-699 E1): the structural diff (FR-219) and each re-pinned rate table's diff (FR-231, unweighted) against the most recently approved other version of the same algorithm, and a `text` stating what changed, with `Why:` and `Expected impact:` left for the actuary to edit before submitting. Requires `rating:read`. Writes nothing; a pair with a `storage: parquet` side is named `pending`, not computed, and no Job is created. **404** `NOT_FOUND`; **409** `RATING_VERSION_UNPINNED` without an algorithm or pins. (**added <E1 date>, RL-1497, FR-242**) |
+| `GET` | `/api/v1/rating-versions/{id}/change-summary-draft` | The drafted change summary (FR-242; WF-699 E1): the structural diff (FR-219) and each re-pinned rate table's diff (FR-231, unweighted) against the most recently approved other version of the same algorithm, and a `text` stating what changed, with `Why:` and `Expected impact:` left for the actuary to edit before submitting. Requires `rating:read`. Writes nothing; a pair with a `storage: parquet` side is named `pending`, not computed, and no Job is created. **404** `NOT_FOUND`; **409** `RATING_VERSION_UNPINNED` without an algorithm or pins. (**added <E1 date>, RL-1498, FR-242**) |
 ```
 
 If a `Permission` column has landed in §5.1 by the time T1 is applied, use the same row with
@@ -203,22 +203,22 @@ Placement: **inserted immediately after** the line
 (`grep -cF` = 1 at `4d3be141`), inside the same blockquote. Insert
 
 ```text
-> *(Use added <E1 date>, RL-1497, FR-242):* `GET /api/v1/rating-versions/{id}/change-summary-draft` refuses with **409** and this code when the version has no `algorithm_ref` or no `pins`, because there is nothing to diff.
+> *(Use added <E1 date>, RL-1498, FR-242):* `GET /api/v1/rating-versions/{id}/change-summary-draft` refuses with **409** and this code when the version has no `algorithm_ref` or no `pins`, because there is nothing to diff.
 ```
 
 ## What it obliges
 
 - **This commit:** this record and the regenerated `docs/INDEX.md` only. No spec, plan,
   `model-schema` or code file is edited here.
-- **PL-1501 (#1194; the planner's file, not edited here), before the mint:**
+- **PL-1502 (#1194; the planner's file, not edited here), before the mint:**
   - adopt T1 and T2 as ruled, with the row's tail as above;
   - Acceptance 17 gains a `grep -cF` check for T2;
   - add the acceptance case for a baseline with no `algorithm_ref` (item 5);
   - add the `blob_store` fix (item 9);
-  - §"Scope" points DP-E1-6 at PL-1499 (item 6).
-- **PL-1499 (#1181; the planner's file, not edited here), before the mint:** add the write
+  - §"Scope" points DP-E1-6 at PL-1500 (item 6).
+- **PL-1500 (#1181; the planner's file, not edited here), before the mint:** add the write
   and its red test (item 6).
-- **RL-1504 (#1137):** the S2 note, already pushed (item 8).
+- **RL-1505 (#1137):** the S2 note, already pushed (item 8).
 - **F27's owner:** this record names the draft-row residue (item 7). This record does not
   edit the register row.
 - **At the mint:** the working ids above become minted ids. Nothing else is owed.
