@@ -199,6 +199,24 @@ test for it (condition 2) comes with Task 9's `DagDesigner`.
 - Plan deltas: `DagDesigner` exposes `problems` as `"<step_id>: <message>"` over every step (from `stepProblems`); the canvas
   nodes are not draggable and not selectable (selection is by the navigator).
 
+### Task 10 — `RatingDesignView.vue`, the route and the FR-25 link
+
+- **View:** 7 tests in `src/views/__tests__/RatingDesignView.test.ts` (the pair resolved from the URL; the algorithm read through the
+  parsed `algorithm_ref` and one node per step, on the **real** `@vue-flow/core`; save with the version pre-filled to loaded + 1;
+  a refused save shown with its `code` and `detail`; a 409 shown the same way; save disabled and the gap listed while a step's
+  required field is empty; DP-S2-3 (a): the "pins no algorithm" `role="status"` text, no algorithm read, a save body with the
+  version's slug and version 1). Test names carry the working ids in the space form (`FR 9473`, `FR 9474`). **Red:** import
+  failure, `Failed to resolve import "../RatingDesignView.vue"`. **Green:** 7 passed.
+- **Delta:** the view derives the save-blocking gaps itself from `stepProblems` over the draft, so `DagDesigner`'s `defineExpose({
+  problems })` (Task 9) was removed rather than left as an unused surface. `RatingDesignView` mounts `DagDesigner` through
+  `defineAsyncComponent(() => import(…))`, so `@vue-flow` stays in the lazy chunk.
+- **Route and link:** route `rating-design` after `rating-version` in `router/index.ts`; `RatingVersionView.vue` links
+  "Open in the designer" to `/rating/<slug>/v/<version>/design`; its test's `RouterLink` stub passes `to` through as `href`.
+  **Broken input** (the view reverted to HEAD, link absent): `reachability.test.ts` — `expected [ '/rating/:slug/v/:version/design' ]
+  to deeply equal []`, and the link test — `Unable to find role="link" and name "Open in the designer"`; restored, both green,
+  with no whitelist change. `vitest run` over the view, router and `components/dag` files: 60 passed. `type-check` and `lint`
+  clean (one test-side type fix: `ProblemDetail` requires `errors`).
+
 ## PRs
 
 The slice PR is a draft, opened by the executor; the executor does not merge it.

@@ -19,7 +19,6 @@ import type {
 
 import { edgesOf, layout } from "./graph";
 import NodeNavigator from "./NodeNavigator.vue";
-import { stepProblems } from "./problems";
 import StepInspector from "./StepInspector.vue";
 import StepNode from "./StepNode.vue";
 
@@ -59,14 +58,6 @@ const nodes = computed(() => {
   }));
 });
 const edges = computed(() => edgesOf(steps.value));
-
-/** The required-field gaps over every step, for the view to block a save on. */
-const problems = computed(() =>
-  steps.value.flatMap((step) =>
-    stepProblems(step).map((problem) => `${step.step_id}: ${problem}`),
-  ),
-);
-defineExpose({ problems });
 
 const { fitView } = useVueFlow();
 

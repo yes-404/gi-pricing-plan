@@ -24,7 +24,9 @@ const RATING = {
 
 const props = { id: RATING.id };
 const mounted = {
-  global: { stubs: { RouterLink: { template: "<a><slot /></a>" } } },
+  global: {
+    stubs: { RouterLink: { props: ["to"], template: "<a :href=\"to\"><slot /></a>" } },
+  },
 };
 
 afterEach(() => vi.unstubAllGlobals());
@@ -38,6 +40,14 @@ describe("the rating version view", () => {
     expect(screen.getByText("approved")).toBeInTheDocument();
     expect(screen.getByText(/model:fremtpl2-glm-7edfde@1/)).toBeInTheDocument();
     expect(screen.getByText(RATING.dataset_version_id)).toBeInTheDocument();
+  });
+
+  it("FR-25: links to the designer by the rating version's own slug and version", async () => {
+    getRatingVersion.mockResolvedValue(RATING);
+    render(RatingVersionView, { props, ...mounted });
+
+    const link = await screen.findByRole("link", { name: "Open in the designer" });
+    expect(link).toHaveAttribute("href", "/rating/fremtpl2-demo/v/1/design");
   });
 
   it("shows the loading state while the read is in flight", () => {
