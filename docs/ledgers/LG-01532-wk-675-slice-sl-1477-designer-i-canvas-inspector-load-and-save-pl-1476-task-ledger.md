@@ -205,7 +205,7 @@ test for it (condition 2) comes with Task 9's `DagDesigner`.
   parsed `algorithm_ref` and one node per step, on the **real** `@vue-flow/core`; save with the version pre-filled to loaded + 1;
   a refused save shown with its `code` and `detail`; a 409 shown the same way; save disabled and the gap listed while a step's
   required field is empty; DP-S2-3 (a): the "pins no algorithm" `role="status"` text, no algorithm read, a save body with the
-  version's slug and version 1). Test names carry the working ids in the space form (`FR 1531`, `FR 1530`). **Red:** import
+  version's slug and version 1). Test names carry the FR ids (`FR-1531`, `FR-1530`; written in the working-id space form until the mint). **Red:** import
   failure, `Failed to resolve import "../RatingDesignView.vue"`. **Green:** 7 passed.
 - **Delta:** the view derives the save-blocking gaps itself from `stepProblems` over the draft, so `DagDesigner`'s `defineExpose({
   problems })` (Task 9) was removed rather than left as an unused surface. `RatingDesignView` mounts `DagDesigner` through
@@ -376,3 +376,4 @@ The slice PR is a draft, opened by the executor; the executor does not merge it.
 - **Pan fps, both figures (ruling of 2026-10-08 15:18:14 BST, item 2).** Measured WITH the gap: 31.8 to 35.8 fps. About 48 to 58 fps WITHOUT it. The gap is an unexplained harness/drag-action stall: deterministic (5.25 to 5.29 s in all 5 pan runs; DrawFrame 487 each), independent of load, pan-drag only. WK-675 S3's browser pass keeps the trace for one pan run and prints the largest gap's offset.
 - Harness counter bug: `wheelEvents` accumulates across runs; fps is unaffected. The harness is private, so no FD.
 - cd slip: executor-s2b ran one `cd /tmp` (charter no-cd rule) before any git write. The shell reset on the next call, and no worktree was affected.
+- Mint correction: a minted id is written in the hyphen form everywhere (as main writes `FR-266`); the space form is the working-id convention only. The first mint push used the space form at 03 §5.1 (two rows) and two test names; one fix commit changed them to `FR-1530` and `FR-1531`.
