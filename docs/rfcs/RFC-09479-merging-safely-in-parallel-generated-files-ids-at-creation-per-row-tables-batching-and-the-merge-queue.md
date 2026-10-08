@@ -7,8 +7,8 @@ status: draft                  # working id; the mint date will replace `created
 created: 2026-10-08
 owner: maintainer
 tree: 8b0256fdb5f000c11817838c129e1f9a4f8d8e10
-deliverable: a ruled choice per part (P1 to P5) and a sequence; each part taken lands as its own Work or Slice, never in this RFC's PR
-lands_in: .claude/roles/lead.md rule 4, docs/process/delivery-process.md §8, docs/process/document-ids.md §1.4 §1.7 §1.11, scripts/doc-id.py, scripts/doc-index.py, scripts/audit-docs.py, .github/workflows, the repository ruleset (a setting the user owns)
+deliverable: a ruled choice per part (P1 to P6) and a sequence; P5's write-up and P6 (Lean P2 L1, L3, L5) land in this RFC's PR, every other part taken as its own Work or Slice
+lands_in: CLAUDE.md §12 §13, .claude/roles (lead, planner, executor, auditor, decision-maker), .claude/skills (close-workstream, writing-plans, subagent-driven-development, repo-architecture, README), docs/_templates/SL.md, docs/process/process-backlog.md, docs/process/delivery-process.core.json, .claude/roles/lead.md rule 4, docs/process/delivery-process.md §8, docs/process/document-ids.md §1.4 §1.7 §1.11, scripts/doc-id.py, scripts/doc-index.py, scripts/audit-docs.py, .github/workflows, the repository ruleset (a setting the user owns)
 trigger: the user's question of 2026-10-08, how to stop late merges causing conflicts and doc-id errors
 supersedes: []
 superseded_by: ~
@@ -41,6 +41,8 @@ re-checked at this RFC's tree, or is marked as cited. Where this RFC disagrees w
 §8 lists it.
 
 **Status after the maintainer's review** (`to-lead.md` "## 2026-10-08 11:49:11 BST — RFC 9479 draft (#1240 @298004b620650c62f6e8429faad8632369ceee0a) REVIEWED: 1E and 5f IN FORCE NOW as interim rules; the full ruling HELD for the user's lean-P2 decision"): **1E and 5f are IN FORCE (interim)**, by delegation, until the ruling. **HELD, not refused:** 2D, 3B, the P5 write-up into `lead.md` and `delivery-process.md`, 5g and the sequence, because the user is deciding a lean-P2 cut to docs volume that overlaps them (P6).
+
+**Status after the user's decision** (`to-lead.md` "## 2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)"): **P6 is decided and implemented in this PR** (L1, L3, L5), together with the P5 write-up. The intended dispositions, for the maintainer's ruling after review: 1E and 5f stay in force; 5a–5e and 5h are written in; **2D and 3B are deferred past P2**; **5g is not adopted**; P4 is re-measured after P2. This PR is **one PR carrying the RFC and every file change** (`CLAUDE.md` §2).
 
 **Every executor-day figure is an ESTIMATE**, not a measurement. Each states its basis. An
 "executor-day" is one executor session-day of build, test and broken-input proof, excluding
@@ -366,10 +368,118 @@ instead of one per file).
 
 ### P6 — lean P2: record volume
 
-**Empty until the user rules.** The user is choosing among lean-P2 options to cut docs volume
-(the maintainer's review entry, "## 2026-10-08 11:49:11 BST — RFC 9479 draft (#1240 @298004b620650c62f6e8429faad8632369ceee0a) REVIEWED: 1E and 5f IN FORCE NOW as interim rules; the full ruling HELD for the user's lean-P2 decision": *"fewer records per slice, ids at creation, a generated
-INDEX"*), which overlap P2 and P3. The decision folds in here, and P2, P3 and P5 are re-read
-against it, so it needs no new RFC.
+**Decided by the user, and in practice now.** The decision is in `to-lead.md`, headed
+"## 2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)".
+The user, verbatim: *"for Recommendation: point 1, 3 and 5 approved. As the project is running
+by the lead, I would like to avoid direct modify the files. I authorised you to help me to
+implement the changes, by instruction lead for current practice and change the CLAUDE.md and
+other files if necessary."* Basis, from the same entry (cited, not re-measured here): over 21
+days on main, 209 docs commits against about 40 feat/fix commits, and about 200k docs lines
+against 65k code lines changed. **Not approved:** item 2 (fewer RL records as such), item 4 (ids
+at creation and INDEX as a build output, this RFC's 3B and 2D), and item 6 (a weekly ratio
+check). **This part implements the decision; it does not propose it.** The user edits no file,
+and the maintainer amends each one through this PR (by delegation). No separate `FD-` is filed
+for the role files: this is the maintainer's own decision, and `document-ids.md` :168's `FD-`
+route is for a finding.
+
+**L1 — one PR per slice, carrying its own paperwork.** For every slice whose GO is given after
+the entry (SL-1448, WK-673 Slice 3 and WK-675 S2 finish in the old form; #1241 may merge as
+filed):
+- **(a)** The slice is one PR: the code, the tests, any spec change it needs, and **one `SL-`
+  record**. That record holds the scope (quoting its row in the Work's plan), the tasks, the
+  gate's rc table, the audit result and the ledger. The ledger is a section of the `SL-`, not a
+  separate `LG-`.
+- **(b)** There is no per-slice `PL-`, no `LG-`, no dispatch `RL-` and no activation PR. The GO
+  and MERGE-ACK stay in `to-lead.md`, and the `SL-` quotes their headers verbatim, so the
+  decision is in the repository at merge (`CLAUDE.md` §12). The roadmap row's status change
+  rides the slice PR. In-flight status lives in `eta.md`.
+- **(c)** A separate governed record is written **only** for: a spec change or a new or amended
+  requirement; a ruling that corrects or reverses an earlier ruling, or binds beyond the slice;
+  a **product** defect (`FD-`); or a design question left open (`OQ-`).
+- **(d)** The audit (`CLAUDE.md` §13) is unchanged in substance: scope from the spec, four
+  verdicts, NFRs measured, broken-input proofs. Only where it is written down changes.
+
+**L3 — process findings frozen until the 12 Nov exit demo.**
+- **(a)** A finding about the process itself (document ids, INDEX, audit or doc checks, role
+  files, skills, record forms, the merge or mint procedure) is **not** an `FD-`. It is a dated
+  row (date, what, evidence, who) in **`docs/process/process-backlog.md`**, riding the next batch
+  or slice PR, never its own PR.
+- **(b) The safety valve:** it **is** an `FD-` when the process defect **(i)** lets a wrong
+  merge, a wrong number, a mispricing or data loss through, or **(ii)** blocks work today. The
+  lead names the limb in the `FD-`.
+- **(c)** The P2 phase review (`CLAUDE.md` §14) keeps, files or drops each row.
+- **(d)** An open process-finding draft that is not ruled and not in a minting batch moves to
+  the backlog, and its PR closes naming the backlog. The lead lists both sets by PR number, and
+  the maintainer approves the list, before anything closes.
+
+**L5 — one plan per Work.**
+- **(a)** A Work has one `PL-` whose slices are rows: scope, requirements, dependencies, lane and
+  order. There is no per-slice `PL-`.
+- **(b)** The frozen-plan rule stays (`CLAUDE.md` §2). Slice status lives in `docs/roadmap.md`,
+  not in the plan. New slices or a change of slice scope are **one dated Work-plan delta**
+  covering every change at once.
+- **(c)** For the open Works, the remaining unplanned slices go into one delta each, filed when
+  the next of their slices needs a plan. Existing per-slice plans stand.
+
+**Two readings this PR applies, for the maintainer's review (not silent picks):**
+1. **Where the `SL-` record's sections live.** An `SL-` is a row family hosted in
+   `docs/roadmap.md` (`document-ids.md` §1.2). The sections are therefore **labelled paragraphs
+   under the row's fenced header block**, not sub-headings. Headings would add anchors and
+   heading-level semantics that `doc-index.py`'s row parser and check 33 read; labels add none
+   (`docs/_templates/SL.md`). **The cost:** the roadmap grows by one slice record per slice,
+   which feeds P4's 4C (roadmap rows one file each) at the post-P2 re-measure. **The
+   alternative**, the `SL-` as a document family under its own directory, is §1.12's new-family
+   lever (RFC + RL) and is not taken here.
+2. **What a "Work-plan delta" is.** It is a new `PL-` that `relates:` the Work's plan and
+   leaves it unedited, rather than a replan (`supersedes:`). The plan stays the Work's one plan,
+   and the delta adds to it. If the maintainer reads "delta" as a replan, the planner charter
+   line changes from `relates:` to `supersedes:`; nothing else does.
+
+**Every file this PR changes for P5 and P6, with old → new and a predicate.** Tree:
+`origin/main...rfc-9479-merging-in-parallel`. The dated-line predicate is the fixed string
+`mended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6`, counted with
+`grep -cF '<that string>' <file>`. The count reads 0 for every file at `origin/main`, because
+the string is new.
+
+| File | Old → new | Predicate (`grep -cF`) at this head |
+|---|---|---|
+| `CLAUDE.md` §13 | *"a slice ledger is an `LG-` under `docs/ledgers/`"* → a slice's scope, decisions, tasks, gate, audit and ledger are sections of its one `SL-`; one `PL-` per Work, slices as rows; `LG-`, leaf plan, dispatch `RL-` and activation PR only for older slices; process findings to `process-backlog.md`, with the two-limb `FD-` valve | dated line: 2 (§12, §13); `process-backlog.md`: 1 |
+| `CLAUDE.md` §12 | *"a ruling record, an audit record, a plan —"* → adds *"or the slice record that quotes the GO and MERGE-ACK headers verbatim"* | `quotes the GO and MERGE-ACK headers`: 1 |
+| `docs/process/delivery-process.md` §6 | step 1's slice plan and step 7's commit → the L1 paragraph (one PR, one `SL-`, no per-slice PL/LG/dispatch RL/activation PR; when a separate record is written) | dated line: 4 in the file (§6, §8, §9, §10) |
+| `docs/process/delivery-process.md` §8 | (none) → "PRs, batches and merging — the standing rules (RFC-9479 P5)": 5a–5e, 5f (in force, interim), 5h; 5d carries 2E (a draft branch commits no INDEX hunk) | `(5h) Remote CI is not a gate`: 1 |
+| `docs/process/delivery-process.md` §9 | (none) → the L3 paragraph | `process-backlog.md`: 2 lines in the file (`grep -c` counts lines) |
+| `docs/process/delivery-process.md` §10 | *"a slice breakdown per work item, and a plan per slice … existing, unchanged"* → one plan per Work, slices as rows, one dated Work-plan delta; plus a process-backlog bullet | `one plan per Work`: 1 |
+| `docs/process/delivery-process.core.json` | new keys only: `slice_plan.record`, `commit.constraints` (+3) and `applies_from`, `artifacts.process_backlog` / `plan_granularity` / `process_findings`, `guards.pr_and_merge_rules`; `meta.derived_from_digest` → the amended spec's sha256; `verified_against_tree` unchanged (the migration base) | `RFC-9479 P6`: 4; check 27 green (audit-docs) |
+| `docs/process/document-ids.md` §1.2, §1.6, §1.11 | the SL and LG rows (§1.2); the SL, PL map/leaf, LG and FD rows and the charters row (§1.6); check 39's ledger clause (§1.11) | dated line: 6; `RFC-9479 P6, 2026-10-08`: 2 |
+| `.claude/roles/lead.md` | the SL dispatch clause (GO quoted, no activation PR); rule 4 gains 1E (in force), the 5a–5e, 5f and 5h pointer, and the `draft/` sweep; a new Lean P2 bullet (L1, L3 with the limb, L5) | dated line: 2 |
+| `.claude/roles/planner.md` | a new Lean P2 bullet: one plan per Work, slices as rows, no leaf plan, one dated delta | dated line: 1 |
+| `.claude/roles/executor.md` | "Works from a `PL-` leaf" and "Appends its `LG-`" → the slice's row in the Work plan; one PR; writes the SL's tasks, gate and ledger sections; no `LG-` | dated line: 1 |
+| `.claude/roles/auditor.md` | "a slice's `LG-` … sets it `closed`" → the SL's audit section, the row `closed`; process findings to the backlog with the two limbs | dated line: 1 |
+| `.claude/roles/decision-maker.md` | rules a plan's decision points → no dispatch `RL-`, an in-slice ruling in the SL's decisions section; *"every ruling … lands as a PR"* → inside the slice PR or the next batch PR | dated line: 1 |
+| `.claude/skills/close-workstream/SKILL.md` | a new paragraph: where a slice's evidence lives; process findings; Verified line | dated line: 1 |
+| `.claude/skills/writing-plans/SKILL.md` | a new bullet: one plan per Work, the delta | dated line: 1 |
+| `.claude/skills/subagent-driven-development/SKILL.md` | the ledger box gains: after L1, the ledger is the SL row's section | dated line: 1 |
+| `.claude/skills/repo-architecture/SKILL.md` | the `ledgers/` tree line qualified; Verified line | dated line: 1 |
+| `.claude/skills/README.md` | the seventh deviation recorded (`subagent-driven-development`, `writing-plans`) | dated line: 1 |
+| `docs/_templates/SL.md` | the comment gains the L1 rule; the row gains five labelled paragraphs: Scope, Decisions, Tasks, Gate, Audit and ledger | dated line: 1; `**Audit and ledger.**`: 1 |
+| `docs/process/process-backlog.md` (new) | — → the L3 file: rules, the valve, the drafts rule, an empty dated table | dated line: 1 |
+| `docs/ledgers/README.md`, `docs/plans/README.md` | a paragraph each: no new `LG-` after L1; one plan per Work after L5 | dated line: 1 each |
+
+**Checked and left unchanged**, with the reason. `docs/process/checklists/*.md`: no ledger,
+leaf or activation text (`grep -n -iE 'ledger|LG-|leaf|slice plan|activation'` → 0).
+`.claude/skills/docs-audit` (:240, :602) and `writing-plans` :124: they describe the `LG-`
+family for check 28's scope, which stays true for the ledgers that exist. `planning-with-files`
+and the superpowers plugin's own skills: their "ledger" is a session scratch file, not the
+`LG-` family. **No script and no test changes**, so the full gate is not needed (the
+11:51:58 entry, item 3). No audit check requires an `LG-` or a leaf plan per slice:
+`grep -n -i 'ledger\|"LG"\|leaf' scripts/audit-docs.py` finds the freeze check's append rule
+for existing ledgers, check 39's unimplemented ledger clause, and the family maps.
+
+**Dispositions the maintainer intends to rule** (the 11:51:58 entry, item 4): **1E and 5f stay
+in force**; **5a–5e and 5h are written into `lead.md` and `delivery-process.md` §8 in this PR**
+(done, in the table above); **2D and 3B are DEFERRED past P2**, recorded as later options, not
+builds; **5g is NOT adopted**, since a daily merge of `main` costs CI runs; **P4 is re-measured
+after P2.**
 
 ---
 
@@ -392,8 +502,10 @@ that relieves today's conflicts soonest, with no transfer:
    after 2D has landed and 1E has run 14 days.
 4. **Measured, not scheduled: P4** after 14 days at the new rate; 4B before 4C.
 
-**HELD:** this sequence, 2D, 3B, the P5 write-up and 5g wait for the user's lean-P2 decision (P6)
-and then the ruling; only 1E and 5f run now.
+**Superseded by the dispositions of 11:51:58 (P6), kept as the analysis it was:** 1E, 5f, the
+P5 write-up and P6 are in this PR; **2D and 3B are deferred past P2**, so the displacement below
+is the reason for the deferral rather than a cost to schedule; **5g is not adopted**; P4 is
+re-measured after P2; 1B stays the user's decision.
 
 **What the 2D and 3B builds displace before the 4 Nov code freeze** (the maintainer's ask (c);
 ESTIMATE throughout). Sources: the code freeze, *"Code freeze: Wed 2026-11-04. G1: the seven P2
@@ -432,9 +544,10 @@ Total if everything recommended is taken: **about 8 executor-days** (ESTIMATE: 1
 3. **P3:** 3B (recommended) or 3C or 3D or 3A; plus who reserves (the lead alone, recommended) and
    the abandonment age (7 days, recommended, shared with 5f).
 4. **P4:** defer and re-measure in 14 days (recommended), or 4B now.
-5. **P5:** order 5a–5e and 5h written into `lead.md` and `delivery-process.md` §8, behind ONE `FD-`
+5. **P5:** (intended: written in, in this PR) order 5a–5e and 5h written into `lead.md` and `delivery-process.md` §8, behind ONE `FD-`
    for every charter line (they are in force already; the ruling only orders the record); 5f in force (interim); adopt 5g, or not.
-7. **P6:** whatever the user's lean-P2 decision puts there.
+7. **P6:** decided by the user (11:51:58) and implemented in this PR; the maintainer reviews the change list and the two readings in P6.
+8. **Intended dispositions** (11:51:58, item 4): 1E and 5f stay; 2D and 3B deferred past P2; 5g not adopted; P4 re-measured after P2.
 6. **The sequence** in the Sequence section.
 
 **After the ruling, P1 is the user's decision**: whether to transfer `yes-404/gi-pricing-plan`
@@ -462,7 +575,7 @@ code.
 11:40:59 BST — USER INSTRUCTION: RFC 9479 is kept current with every new rule until it merges"):
 every rule the maintainer logs on PR creation, batching, merging, ids, generated files or cleanup
 is folded in the same day and listed here. **Every `to-lead.md` entry from 10:38:11 BST on 8 Oct
-to 11:49:11 BST is listed**, carried or left out with a reason, plus the earlier entries the RFC rests on.
+to 11:51:58 BST is listed**, carried or left out with a reason, plus the earlier entries the RFC rests on.
 Headers are verbatim, except the one elided where marked.
 
 | `to-lead.md` entry header (verbatim) | Carried in | Or left out, because |
@@ -495,12 +608,15 @@ Headers are verbatim, except the one elided where marked.
 | ## 2026-10-08 11:37:20 BST — USER-APPROVED, EFFECTIVE NOW: a new governed-record draft gets NO PR; PRs are opened only as mint BATCHES (and for slices, activations and urgent fixes) | P5 5d; P2 2E | — |
 | ## 2026-10-08 11:40:59 BST — USER INSTRUCTION: RFC 9479 is kept current with every new rule until it merges | Sources; P2 and P3 (open to extension) | — |
 | ## 2026-10-08 11:49:11 BST — RFC 9479 draft (#1240 @298004b620650c62f6e8429faad8632369ceee0a) REVIEWED: 1E and 5f IN FORCE NOW as interim rules; the full ruling HELD for the user's lean-P2 decision | the status paragraph; P1 1E and P5 5f (in force, interim); P5 (one `FD-`); P6 (the empty slot); Sequence (HELD; the displacement before 4 Nov) | — |
+| ## 2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation) | P6 (L1, L3, L5, the change list, the two readings, the dispositions); the status paragraph; Sequence; the ruling list; every file in P6's table | — |
 
 ## Deliverable
 
+**Changed by the user's decision of 11:51:58:** P5's write-up and P6 ship **in this RFC's PR**, every file listed in P6's table; the rest stays as below.
+
 The `deliverable:` and `lands_in:` fields in prose: **a ruled choice for each of P1 to P5 and a
-sequence**, by the maintainer's `RL-`, and then the user's decision on P1. Nothing ships in this
-RFC's PR. Each part the ruling takes is cut into its own Work or Slice under WK-1178 by the
+sequence**, by the maintainer's `RL-`, and then the user's decision on P1. P5's write-up and P6
+ship in this RFC's PR (see above); nothing else does. Each part the ruling takes is cut into its own Work or Slice under WK-1178 by the
 planner (§1.6, *"planner cuts an active RFC into a Work"*): rule text in `lead.md` rule 4 and
 `delivery-process.md` §8 (1E, P5, behind one `FD-` for every charter line), the 2D and 3B builds in
 `scripts/` with their broken-input proofs, and, if the user transfers the repository, 1B's

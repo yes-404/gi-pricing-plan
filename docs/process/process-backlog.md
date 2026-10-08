@@ -15,7 +15,7 @@ relates: []                      # ids only
 maintainer's entry in `~/gi-pricing-plan.local/channel/to-lead.md` headed
 "2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW;
 the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)".
-It is written into the process by RFC 9479 P6 (working id). Until the P2 exit demo
+It is written into the process by RFC 9479 P6 (working id): amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6. Until the P2 exit demo
 (Thu 2026-11-12), a finding **about the process itself** is not filed as an `FD-`. It is
 appended here as one dated row.
 

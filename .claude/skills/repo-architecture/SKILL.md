@@ -219,7 +219,7 @@ the vendored files.
 
 ## Verified
 
-2026-10-08 — the `ledgers/` line qualified for Lean P2 L1 (RFC-9479 P6) at `8b0256fd`;
+2026-10-08 — the `ledgers/` line qualified for Lean P2 L1 at `8b0256fd` (Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6);
 nothing else re-verified.
 
 2026-09-19 — **the annotated `docs/` tree replaced by `RFC-937` §1.4's.** W37-7 Task 5,

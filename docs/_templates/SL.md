@@ -13,8 +13,7 @@ never superseded; a re-cut retires it and the planner cuts a new one.
 An `SL-` may not move `draft → active` while any row of its plan's `Decision points`
 table is open (§1.7) — **not** an executor-writable condition on this block itself, but
 what the lead checks before dispatching it.
-**Lean P2, L1 (amended 2026-10-08 by the maintainer (dated line by delegation), on
-RFC-9479 P6).** For every slice whose GO is given after the maintainer's entry
+**Lean P2, L1** (amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6). For every slice whose GO is given after the maintainer's entry
 "2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW;
 the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)", this
 row is the slice's ONE record. There is no per-slice `PL-`, no `LG-`, no dispatch `RL-` and no

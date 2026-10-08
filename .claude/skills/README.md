@@ -338,7 +338,7 @@ original "both additive" claim — was re-run and exits `0`. A comment edit that
 plausibly change parsing was still checked against the case that has broken here before.
 
 **Seventh deviation, 2026-10-08: `subagent-driven-development` and `writing-plans` gained one
-paragraph each for Lean P2** (RFC-9479 P6, the maintainer's amendment by delegation, on the
+paragraph each for Lean P2** (Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6, on the
 user's decision in `to-lead.md` "2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)"). `subagent-driven-development`'s ledger box says
 that, for a slice dispatched after that entry, the ledger is a section of the slice's `SL-` row,
 not an `LG-` file; `writing-plans` says a Work has one plan with its slices as rows, changed by
