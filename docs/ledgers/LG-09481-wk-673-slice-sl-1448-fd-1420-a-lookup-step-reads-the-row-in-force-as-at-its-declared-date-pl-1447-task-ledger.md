@@ -119,3 +119,19 @@ The batch half works: `_ctx_to_row` carries `inception` (the test passes both ha
 **Slip, disclosed.** Step 5's `pytest packages/pricing-core` (the whole package) was started by me, ran past the tool's 120 s timeout
 into the background, and I stopped it by pid (cwd-checked); it produced no result. The brief bars a full suite outside the gate;
 none was run to completion, and nothing was held (both slots were free).
+
+### Task 4 — the three HTTP paths and DP-3's pins (`8ba19a78`)
+
+`backend/tests/test_score_as_at.py` (new): `test_score_prices_on_the_row_in_force`, `test_score_compare_prices_both_sides_on_the_row_in_force`,
+`test_score_batch_job_prices_on_the_row_in_force`, `test_effective_date_parsing_is_pinned` (four cases), `test_overlapping_windows_are_refused_at_table_save_with_their_code`.
+Fixtures mirror the neighbours (`test_api_reference.py::_table`, `test_rating_version_compile.py::_insert_version`, `test_scoring_handlers.py`'s
+compile and dataset-version helpers); a published reference table holds Task 1's `ROWS`. Worktree database `gipricing_sl-1448_72c627d5`
+(`createdb -T gipricing`, `alembic upgrade head`; `alembic current` = `alembic heads` = `f3a7c1d9e2b4`); both gate slots free at each run.
+
+**Order disclosure.** The plan wants this module red *at the base*, before Tasks 2–3; I wrote it after them. I then restored the four
+pricing-core files (`runtime.py`, `compile.py`, `score.py`, `authored.py`) to `0ee8f414` with `git checkout 0ee8f414 -- …`, ran the module, and
+restored them from `HEAD` (`git status` showed only the new test file after). At the base: **5 failed, 3 passed** — the five fail with
+`AssertionError: the superseded row's rate returned` (`/score`, `/score/compare`, the batch Job, and the `plain-date` and
+`offset-midnight-local-date` parsing cases); the three passes are the pins that are green at the base (the two `422 VALIDATION_FAILED` cases and the
+`409 REFERENCE_INTERVAL_OVERLAP`). DP-3's condition holds: no pin failed at the base. The plan listed only the midnight case among the
+parsing reds; `plain-date` is red too, for the same cause (it lands in the NEW window). At `HEAD`: **8 passed**.
