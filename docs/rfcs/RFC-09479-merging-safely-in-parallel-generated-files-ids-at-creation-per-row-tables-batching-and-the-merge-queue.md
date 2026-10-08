@@ -28,7 +28,7 @@ decides nothing. It ends with the options for the maintainer's ruling (an `RL-`)
 its header), the entry headed exactly:
 `## 2026-10-08 11:26:43 BST — USER-APPROVED: raise ONE proposal (an RFC, WK-1178) on "merging safely in parallel": merge queue, generated files, id allocation, per-row tables, batching`,
 and the two later entries on P1: `## 2026-10-08 11:27:49 BST — RFC 9479 addition for P1: the repo is USER-owned; the merge queue may be unavailable`
-and `## 2026-10-08 11:30:48 BST — The USER confirmed: "Require merge queue" is NOT offered in the ruleset editor (user-owned repo)`.
+and `## 2026-10-08 11:30:48 BST — The USER confirmed: "Require merge queue" is NOT offered in the ruleset editor (user-owned repo)`; and, for P2 and P5, `## 2026-10-08 11:35:05 BST — The RFC 9479 options memo noted (sent seconds before this entry); two asks for the RFC` and `## 2026-10-08 11:37:20 BST — USER-APPROVED, EFFECTIVE NOW: a new governed-record draft gets NO PR; PRs are opened only as mint BATCHES (and for slices, activations and urgent fixes)`.
 The last one, verbatim: *"case (b) applies. The merge queue is UNAVAILABLE on yes-404/gi-pricing-plan
 as owned today. P1 presents: transfer the repo to a free organisation (the cost, the risks and
 what moves) versus skipping P1. The other parts (P2 generated files, P3 ids at creation, P4
@@ -66,7 +66,7 @@ state was read at **2026-10-08 11:35:54 BST** (`TZ=Europe/London date`), and mov
 | M10 | `lead.md` rule 4 (:159–171) requires the ACK to name the PR and its **full head SHA**, merging with `gh pr merge --squash --match-head-commit <that SHA>`, and: *"If `main` moves after the ACK, re-request: an ACK is valid only against the main it names."* **The rule does not say "expected tree" and does not require a merge of main or a re-CI after a move**; the expected tree is current practice (for example the 11:32:55 ACK of #1238: *"the EXPECTED TREE is d82d9831…"*). | `sed -n '159,171p' .claude/roles/lead.md` |
 | M11 | `scripts/doc-index.py` imports no `subprocess` and runs no `git`: INDEX is a pure function of the tree, so any merge result can regenerate it deterministically. | `grep -n 'import subprocess' scripts/doc-index.py` → no hit |
 | M12 | CLAUDE.md §2 binds `docs/contracts/` as *"committed, a published spec artifact rather than a build output, CI failing on drift (FR-451)"*. INDEX is not under that sentence; its committed status comes from RFC-937 (`document-ids.md` §1.11, check 39: *"docs/INDEX.md byte-stable against a fresh regeneration"*, `audit-docs.py:105`). | `grep -n '39\. docs/INDEX.md' scripts/audit-docs.py` |
-| M13 | **No governed document carries the under-30 open-PR cap, the mint-batch size or the "never a rebase" merge rule.** They live in the channel and in memory only. | `git grep -n -iE 'under 30\|open-PR cap\|30 open\|never a rebase' -- .claude/roles/lead.md docs/process/delivery-process.md .claude/skills/git-hygiene` → 0 hits |
+| M13 | **No governed document carries the under-30 open-PR cap, the mint-batch size or the "never a rebase" merge rule.** They are in force by channel rulings (P5 cites each) and written in no governed file. | `git grep -n -iE 'under 30\|open-PR cap\|30 open\|never a rebase' -- .claude/roles/lead.md docs/process/delivery-process.md .claude/skills/git-hygiene` → 0 hits |
 | M14 | The merge procedure is **`lead.md` rule 4**. `delivery-process.md` has no merge-procedure section: its §15 is "Correction and message discipline", and parallelism is §8. | `grep -n '^## ' docs/process/delivery-process.md` |
 
 ## 1. The problem, and today's incidents
@@ -154,7 +154,40 @@ M12).
 | **2B** | **A local git merge driver** (`.gitattributes`: `docs/INDEX.md merge=…`) that keeps one side, followed by a regeneration. | **GitHub's server-side mergeability, its merge and any queue never run custom drivers**, so the PR still shows conflicting until someone merges main locally. A driver sees one file, not the merged tree, so it cannot regenerate INDEX by itself (M11). Its command lives in each clone's `git config`. | unchanged | 0.25 — basis: a driver script and a skill line | `.gitattributes` (new), a driver under `scripts/`, `git-hygiene` |
 | **2C** | **PRs stop committing INDEX; a post-merge CI job regenerates and commits it to main.** | **Blocked by the ruleset** (M2: no bypass actors): a bot cannot push to main without a bypass and `contents: write`, which reverses every workflow's least privilege. Between merge and bot commit, main's INDEX is stale, and `doc-id next` and check 31 read a stale allocation. | `--check` on main flickers red then green after each merge. | 1.5, plus a ruleset change by the user — basis: a workflow job, a GitHub App bypass, the stale-window handling | `docs.yml`, the ruleset, `doc-id.py`, `audit-docs.py` |
 | **2D** | **INDEX becomes a build output.** Not committed; every consumer (`doc-id next`, check 31, check 32) calls the `doc-index` generator in memory; CI publishes INDEX as an artifact. `migrated_tree()` gets a sentinel that does not need INDEX (`docs/REDIRECTS.csv` alone, or a constant now the migration is done); check 39 retires. | **Removes the most frequent conflict entirely**, with or without a queue, and makes 1B viable. Costs an amendment to the id standard (INDEX is RFC-937's one-row-per-id artifact and check 39's subject; `document-ids.md`'s owner line: *"amendments arrive as an RFC- + RL- pair"*). Readers on GitHub lose a rendered INDEX unless CI publishes one. **The sentinel also selects `docs.yml`'s `--ref` (M7): that line is the risky one**, and needs its broken-input proof. | The freshness check disappears, which §13 supports: *"a generated artifact matching its source proves neither correct"*. Correctness stays with `doc-index.py`'s own tests. | **2.0** — basis: the readers in `doc-id.py` and `audit-docs.py` 1.0; sentinel, `docs.yml` and the broken-input proofs 0.5; the standard's amendment and two skills 0.5 | `scripts/doc-id.py`, `scripts/audit-docs.py` (checks 31, 32, 39, `migrated_tree`), `scripts/doc-index.py`, `.github/workflows/docs.yml`, `.gitignore`, `docs/process/document-ids.md` §1.4 / §1.11 (RFC + RL), CLAUDE.md §4's pointer, `.claude/skills/docs-audit`, `.claude/skills/doc-id-migration-run` |
-| **2E** | **No code: INDEX is regenerated only at the merge turn.** A draft PR carries no INDEX hunk; the regeneration is part of the mint commit, which already regenerates INDEX (M9's 28 Sep rule, step 2: *"file name, front matter, internal references, INDEX regenerated"*). | Drafts stop conflicting with each other and with main on INDEX; only the PR at its merge turn touches it, so there is one INDEX hunk open at a time. A draft then shows `doc-index.py --check` red (check 39), **the same class of expected red as check 31's working-id row**, which drafts already carry (I4). **Check 32 resolves every prose citation in INDEX** (`audit-docs.py:1946`), so a draft also reds check 32 on each citation of its own new ids; a writer checks locally on a regenerated, uncommitted INDEX. The draft's docs CI stays red until its merge turn, as check 31 already makes it. | unchanged at the merge turn, where the check runs | **0.25** — basis: one rule in `lead.md` rule 4 and `delivery-process.md` §8, and a list of expected draft reds | `.claude/roles/lead.md` rule 4, `docs/process/delivery-process.md` §8 |
+| **2E** | **No code: a draft commits no INDEX hunk; INDEX is regenerated only at the merge turn**, by the mint commit, which already regenerates it (M9's 28 Sep rule, step 2: *"file name, front matter, internal references, INDEX regenerated"*). | **Largely delivered already by 5d** (drafts are `draft/` branches, not PRs, since 11:37:20), so 2E is a one-line clarification of 5d: a draft branch carries no INDEX hunk, and the batch PR regenerates INDEX once. Without the hunk, a draft's check 31 goes **green** (its contiguity reads the committed INDEX, `audit-docs.py:1826`, which then lacks the working id: DP-8's own design, `doc-id.py:436–446`), while check 39 reds (INDEX stale) and **check 32 reds on each citation of the draft's own new ids** (it resolves prose citations in INDEX, `audit-docs.py:1946`). A writer checks locally on a regenerated, uncommitted INDEX. **It does nothing for the INDEX conflicts that remain between batch, slice and activation PRs** (#1233, #1235, #1238 all carried INDEX hunks); only 2D removes those. | unchanged at the merge turn, where the check runs | **0.1** — basis: one sentence in 5d's written form | `.claude/roles/lead.md` rule 4, `docs/process/delivery-process.md` §8 |
+
+**What replaces INDEX under 2D** (the maintainer's ask (b), entry 11:35:05). INDEX today plays
+four roles. Each one's replacement, and every reader, at this RFC's tree:
+
+| Role / reader today | Where (this tree) | Under 2D |
+|---|---|---|
+| **A reader on GitHub** browses one table of every id, its family, title, status and owner, and a plan's derived `execution` column (`document-ids.md` :181) | `docs/INDEX.md`, rendered by GitHub | A docs CI job on every push to main runs `doc-index.py` and publishes the result as a workflow artifact, and `doc-index.py --show <ID>` serves one record locally. **The honest loss: GitHub no longer renders INDEX in the repository browser**; a reader follows a link to the latest artifact, or reads the per-family directories, whose filenames already carry id and slug (§1.4). A GitHub Pages copy would restore a rendered page, at the cost of a `pages: write` workflow, which is a further option, not part of 2D. |
+| **The migration sentinel** `migrated_tree()`: INDEX plus `REDIRECTS.csv` exist | `scripts/audit-docs.py:134–150`; `scripts/_docid.py:324–330`; `.github/workflows/docs.yml:122` (selects `doc-id migrate --verify`'s `--ref`) | The sentinel becomes `docs/REDIRECTS.csv` alone, which only the migration creates and which stays committed. Its callers are unchanged: the requirement- and OQ-id grammar (`audit-docs.py:210–211`), `check_notes` (:467), check 28 `check_plan_acceptance_standard` (:1107), `_id_scope_roots` (:1288), check 31 (:1823), check 38 `check_loop_signal` (:3466). Broken-input proof: delete `REDIRECTS.csv` in a scratch tree and every one of them must flip, as it flips today on deleting INDEX. |
+| **Check 31's contiguity** (the full allocation) | `audit-docs.py:1823–1829` reads `ROOT / "INDEX.md"` | Reads `_doc_index.build_corpus(ROOT)` in memory, the corpus check 39 already builds (:3528), over the checked-out tree. The checked-out tree of a PR is what its committed INDEX represents today, since every PR regenerates INDEX in its final commit, so the predicate is unchanged. |
+| **Check 32's citation resolution** | `audit-docs.py:1946–2007` (`index_ids` from `ROOT / "INDEX.md"`, :1962–1974) | The same in-memory corpus's id set. |
+| **Check 38's "cited by nothing outside INDEX.md"** | `audit-docs.py:3458` | Unchanged in meaning; the exemption for INDEX becomes moot, since INDEX is no longer in the tree. |
+| **Check 39: INDEX byte-stable against a fresh regeneration** | `audit-docs.py:3497–3572`; also `doc-index.py --check` in `docs.yml` (the `doc-index --check` stage) | **Retired**, both the audit check and the CI stage. Its other two clauses (a merged PR's title names its `SL-`; the slice's ledger records the PR, `document-ids.md` :235) stay. |
+| **`doc-id.py next`, source 4 of 4, and `doc-id.py check` row (b) contiguity**, both over `origin/main`'s committed INDEX, never the working tree (DP-8: an unmerged draft must not manufacture a phantom gap or be counted) | `scripts/doc-id.py:400–416` (`scan_index_ids`), :436–446, :510–520 (`find_noncontiguous_gaps`); `materialize_ref` :108–118 | `next` already materialises `origin/main` into a throwaway directory (:108–118); it runs the generator over that tree instead of reading its INDEX. DP-8 holds unchanged, because the input is still the merged tree, never the working tree. |
+
+**The lines that change, quoted.**
+- `CLAUDE.md` :107–108 (§4, a pointer the maintainer edits): *"`docs/INDEX.md` is the generated
+  index of every governed document in the suite"* → it names the published artifact and
+  `doc-index.py --show`.
+- `document-ids.md` :94 (§1.4 tree): *"├── INDEX.md               generated — one row per id, rows
+  and documents alike"* → not committed; generated by CI and on demand.
+- `document-ids.md` :179 (§1.7): *"reads the maximum across every header, every spec bold-id,
+  every roadmap row and `INDEX.md`"* → "and the generated index of that tree".
+- `document-ids.md` :199 (§1.8): *"regenerates `INDEX.md` … Trigger: `INDEX.md` passes 90 000."*
+  → the trigger is the generated index's row count.
+- `document-ids.md` :228 (§1.11, check 32): *"Every `<PREFIX>-<n>` in prose resolves in
+  `INDEX.md`"* → "in the generated index".
+- `document-ids.md` :234 (check 38): *"cited by nothing outside `INDEX.md`"* → "cited by nothing".
+- `document-ids.md` :235 (check 39): *"`INDEX.md` byte-stable against a fresh run"* → struck,
+  the other two clauses kept.
+- `document-ids.md` :239 (§1.12): *"`INDEX.md` gains rows"* → "the generated index gains rows".
+- `document-ids.md`'s owner line: *"amendments arrive as an RFC- + RL- pair (§1.6)"*: this RFC
+  plus the ruling's `RL-` satisfy it.
+- `CLAUDE.md` §2's *"committed, a published spec artifact"* sentence does **not** change (M12).
 
 **`generated.json`, separately: leave it as now.** 0 of 73 open PRs touch it (M4); the one
 recorded conflict auto-merged to the generator's output (I2, SL-1430's mint); CLAUDE.md §2 binds
@@ -167,16 +200,18 @@ drift together; that is the one place a queue adds safety a merge-time check can
 not CLAUDE.md §2.
 
 **What it would have changed today.**
-- **2D or 2E:** 72 of 73 open PRs lose their INDEX hunk. #1233's merges of main on 6 Oct would
+- **2D:** 72 of 73 open PRs lose their INDEX hunk. #1233's merges of main on 6 Oct would
   each have had one conflict fewer (841485a3 vs f871ee8d; ← 2b83e089); SL-1430's mint ← 8bc01ae8
   would have had none. #1235 and #1238 would each have had no INDEX change to carry across a move.
 - **2B:** the same local resolutions become mechanical, but GitHub still shows the PR
   conflicting until the local merge, so no re-CI is saved.
 
-**Recommendation: 2E now, 2D as the build.** 2E is a rule, gives most of 2D's relief to drafts at
-once, and needs no amendment of the id standard; 2D then removes the last INDEX hunk (the merge
-turn's) and makes a queue possible. Take 2B only if neither is ruled; it removes manual work and
-none of the re-CI. Contracts as now.
+**Recommendation: 2D as the build; 2E as a clarification inside 5d.** With 5d in force, drafts no
+longer conflict as PRs, and 2E only says what a draft branch commits. What remains is the INDEX
+hunk on every batch, slice and activation PR, and only 2D removes it; it also makes a queue
+possible. **2B is not recommended**, against the memo's no-transfer order, which used it as a
+stop-gap: 5d already removes the draft-to-draft conflicts, and 2B leaves GitHub's mergeability
+and the re-CI unchanged. Contracts as now.
 
 ---
 
@@ -214,7 +249,7 @@ last batch's minted id.
 removes the merge-order coupling, which answers the 28 Sep objection directly. 3C is the cheap
 fallback if the maintainer judges review catches a lost record well enough. **For the ruling to
 state:** whether reservation stays with the lead alone (recommended, as today); and the age after
-which a `reserved` id is marked `abandoned` (recommended: P5's 7-day draft age, so the two rules
+which a `reserved` id is marked `abandoned` (recommended: 5f's 7-day draft age, so the two rules
 share one clock).
 
 ---
@@ -243,25 +278,65 @@ family's host. Do not take 4D.
 
 ---
 
-## P5 — batching and age limits as standing rules
+## P5 — batching, the cap, the cleanup and drafts without PRs: standing rules RECORDED
 
-None of these is written in a governed document today (M13). Each is a rule, not machinery.
+**These rules are already in force by the maintainer's rulings and the user's approvals; this
+part records them and does not re-propose them** (the maintainer's ask (a), `to-lead.md`
+"## 2026-10-08 11:35:05 BST — The RFC 9479 options memo noted (sent seconds before this entry);
+two asks for the RFC"). They live in the channel only; no governed document carries them (M13).
+Writing them into `lead.md` and `delivery-process.md` §8 is the ruling's to order, and each
+charter line it touches is the maintainer's, behind an `FD-` first (`document-ids.md` :168:
+*"a role file that proves insufficient" → `FD-` → maintainer amends*).
 
-| | Rule | Today's basis | Trade-off | Cost (ESTIMATE) | Files |
-|---|---|---|---|---|---|
-| **5a** | **Records batched by subject or by day**: one PR per mint batch, or per day per writer. **Two open PRs that write the same shared file (register, roadmap, open-questions) are never both open for merge at once**; the second waits. | Practice (T1, T2, T8; #1233 closed six source PRs at its merge, authority 11:32:55). | Bigger PRs, fewer pairs: conflicts scale with pairs of open PRs. | 0.25 | `delivery-process.md` §8, `lead.md` rule 4 |
-| **5b** | **The under-30 open-PR cap** (the user, 6 Oct), with the cap-exempt classes named: activation, security, process proposal. | 73 open (M3); in memory and channel only. | Reaching it needs the backlog drain; under 3A each batch waits on id order, under 3B batches drain in parallel. | 0.25 | `lead.md`, `delivery-process.md` §8 |
-| **5c** | **A 7-day draft age limit**: a draft older than 7 days is closed (its reservation `abandoned` under 3B) or carried by the lead with a dated reason. The lead's progress line carries the count. | 8 open PRs predate 2026-10-01 (M3). | An age rule without an owner is noise; the lead owns it. | 0.25 | `lead.md`, `delivery-process.md` §8 |
-| **5d** | **Merge main, never rebase, into a long-lived branch: daily for branches with code; at the merge turn only for docs-only PRs.** | "never a rebase; it voids ledger SHAs" (28 Sep, channel only, M13). | A daily merge keeps code conflicts small, but each costs a CI run and voids the ACK tree; docs-only conflicts are the generated and table hunks P2–P4 address, and 1E carries a clean ACK over a move. | 0.25 | `git-hygiene`, `delivery-process.md` §8 |
+| | Rule in force | Source (`to-lead.md` entry header, verbatim) |
+|---|---|---|
+| **5a** | **Batching.** Mint PRs carry batches, at most 10 ids (above 10 needs the maintainer's prior OK), ordered by dependency layer (cited before citing); a back-cite into a later batch stays a space-form working id and is listed in the PR body. Only ONE register-touching minter runs at a time, paired with a roadmap-only batch. | "## 2026-10-08 10:38:11 BST — OPEN-PR BURN-DOWN PLAN for the new lead: 79 → under 30 by Fri 9 Oct, falling every day" (method 2–3); "## 2026-10-08 10:53:25 BST — Re-triage accepted; the five asks RULED; and the user's reminder: CLEAN UP UNUSED PRs as the work goes" (items 1, 2 and the register risk); earlier, "## 2026-10-05 13:13:32 BST — PL 9716 noted; batching UNRELATED findings ≤3 per mint PR: APPROVED (a widening of my 10:47:03 rule); cite fix", since widened by the 10-id ceiling |
+| **5b** | **The under-30 cap on ALL open PRs**, a standing control, not a dated goal. While at or over 30, a new governed record rides a same-subject PR or the next batch; slice and activation PRs are exempt. Targets: at most 55 by the end of 8 Oct, under 30 by the end of 9 Oct, falling every day. | "## 2026-10-06 01:01:08 BST — STANDING TARGET from the user: TOTAL open PRs under 30, as a control, not just a 9 Oct goal"; "## 2026-10-08 10:38:11 BST — OPEN-PR BURN-DOWN PLAN …" (targets) |
+| **5c** | **Cleanup during the work:** a batch's absorbed siblings close at once after its verified read-back; a draft found superseded, absorbed or obsolete closes at once, naming its carrier; merged branches and worktrees go; every status carries the open count and the closes since the last. **Branch cleanup** follows once open PRs are under 30, by one auditor, dry-run table first, every deleted tip recorded and pinned under `refs/salvage/`. | "## 2026-10-08 10:53:25 BST — Re-triage accepted; … CLEAN UP UNUSED PRs as the work goes" ((a)–(d)); "## 2026-10-08 11:16:32 BST — USER: after the open-PR burn-down, CLEAN UP UNUSED BRANCHES too; the procedure, queued (not to run before the PR count is under 30)" |
+| **5d** | **A new governed-record draft gets NO PR** (FD, RL, PL, OQ, RFC, CR). It is committed on its own branch `draft/<family>-<working id>` from current main and pushed; reviews cite `draft/<family>-<wid> @ <full sha>`; the lead keeps a draft register in `eta.md`; at mint the minter builds ONE batch PR from current main. Exempt: slice PRs, activation PRs, security and dependency fixes, and this RFC's PR. Existing draft PRs are not converted. | "## 2026-10-08 11:37:20 BST — USER-APPROVED, EFFECTIVE NOW: a new governed-record draft gets NO PR; PRs are opened only as mint BATCHES (and for slices, activations and urgent fixes)" |
+| **5e** | **Merge main, never rebase**, into a branch behind main, then regenerate INDEX in a new commit; each PR regenerates INDEX in its final commit only. | "## 2026-09-28 11:19:17 BST · [the maintainer's (by delegation)] · HOLD LIFTED — the maintainer's instruction: complete the five started-but-open Phase 2 Works, in FOUR PARALLEL TRACKS, under the delivery process; spawn teammates from their role files" *[elided: the header names the delegate by the word our records bar; quoted with that word replaced]*, rule 2 |
 
-**What it would have changed today.** 5a: T1 and #1239 both open on `register.md` would have
-been ruled out, so no early register push. 5c: the 8 PRs opened before 1 Oct would already be
-closed or carried with reasons. 5d with 1E: #1233's five 6 Oct merges of main collapse to the
-ones its merge turn needed.
+**5d's cost and effect** (the user's approval asks for both):
+- **Cost: more branches.** One `draft/<family>-<wid>` branch per record, pushed for durability,
+  instead of one PR. They are deleted after their batch's verified read-back, tip shas recorded
+  (the 11:37:20 entry, item 3), and the stragglers fall to 5c's branch cleanup. The baseline that cleanup starts
+  from: 111 remote heads, 660 local branches and 60 `refs/salvage` refs (the 11:16:32 entry,
+  counted by the lead). Reviews lose GitHub's PR view of a draft; the review anchor becomes the
+  branch and sha.
+- **Effect: open PRs ≈ active slices + their activations + open batches**, about 5 to 15, instead
+  of one per record (73 at 11:35:54, M3, 72 of them drafts). Pairwise conflicts scale with the
+  square of the open count, so the I2 and I3 conflicts between *drafts* stop at the source; what
+  remains is batch against batch and batch against slice, which P1–P4 address.
+- **The role-file lines it changes later** (the maintainer's, via an `FD-` first). No role file
+  says "open a draft PR" (`git grep -n -iE 'draft PR|--draft' -- .claude docs/process` → 0 hits
+  at this tree); the lines that assume **one PR per record** are:
+  `.claude/roles/decision-maker.md:40–42` (*"every ruling and every spec change lands as a PR
+  reported by number and left for the lead to merge"*); `.claude/roles/executor.md:25` and
+  `:144` (*"pushes and opens every PR"*); `.claude/roles/auditor.md:15–18` (*"every correction
+  PR this role opens … every PR opened this session"*); and `.claude/roles/lead.md:166–170` (the
+  mint queue: *"a PR mints at its turn"*, and the post-mint sweep over *"open PRs"*, which must
+  also cover the `draft/` branches). Predicate: `git grep -n -iE '\bPR\b' -- .claude/roles`,
+  read for per-record wording.
 
-**Recommendation: adopt 5a–5d now**, as one process amendment to `delivery-process.md` §8 and
-`lead.md` rule 4. They are the maintainer's process documents, so they need the ruling's `RL-`.
-About one executor-day in total (ESTIMATE: four rule paragraphs and their read-back lines).
+**Proposed, not in force** (for the ruling):
+- **5f — a 7-day draft age limit:** a draft (PR or `draft/` branch) older than 7 days is closed
+  or deleted (its reservation `abandoned` under 3B) or carried by the lead with a dated reason;
+  the lead's progress line carries the count. Basis: 8 open PRs predate 2026-10-01 (M3).
+  ESTIMATE 0.25 (one `lead.md` paragraph).
+- **5g — merge main daily into a branch with code; into a docs-only branch at its merge turn
+  only.** A daily merge keeps code conflicts small but costs a CI run and voids the ACK tree;
+  docs-only conflicts are the generated and table hunks P2–P4 address, and 1E carries a clean
+  ACK across a move. ESTIMATE 0.25 (`git-hygiene`, `delivery-process.md` §8).
+
+**What it would have changed today.** 5a's one-register-minter rule, had it been in force
+earlier, rules out T1 and #1239 both open on `register.md`, so no early register push. 5d: the 60
+draft PRs opened on 5 Oct (M3) would have been 60 branches and a handful of batch PRs. 5f: the 8
+PRs opened before 1 Oct would be closed or carried with reasons. 5g with 1E: #1233's five 6 Oct
+merges of main collapse to the ones its merge turn needed.
+
+**Recommendation: record 5a–5e in `lead.md` and `delivery-process.md` §8 as written (the ruling
+orders it, an `FD-` first for each charter line); adopt 5f and 5g.** About 1.0 executor-day in
+total (ESTIMATE: five recorded rules and two new ones, a paragraph each, plus the `FD-`).
 
 ---
 
@@ -269,30 +344,34 @@ About one executor-day in total (ESTIMATE: four rule paragraphs and their read-b
 
 The authority's order was *"P1+P2 first (mostly configuration, immediate relief), then P3, then
 P4"*. **Corrected: P1 cannot lead** (the queue is unavailable, M5) **and depends on P2 anyway**.
-The order that relieves today's conflicts soonest, with no transfer:
+The memo's no-transfer order was P5 + 1E, then 2B as a stop-gap, then 2D, 3B, P4 after
+measurement and 1B last; this RFC keeps it **except 2B** (see P2's recommendation). The order
+that relieves today's conflicts soonest, with no transfer:
 
-1. **Now, rules only (about 1.5 executor-days, ESTIMATE):** **1E** (no re-CI for a clean,
-   path-disjoint main move), **2E** (no INDEX hunk in drafts), **5a–5d**. All are `lead.md` and
-   `delivery-process.md` text; no script changes. Together they remove the I1 re-CI for
-   disjoint moves and the I2 conflict from 72 of 73 drafts.
+1. **Now, rules only (about 1.4 executor-days, ESTIMATE):** **1E** (no re-CI for a clean,
+   path-disjoint main move), **5a–5e recorded** in `lead.md` and `delivery-process.md` §8 (with
+   **2E** as one sentence of 5d), and **5f, 5g** adopted. No script changes. 5d already removes
+   the draft-to-draft conflicts at the source; 1E removes the I1 re-CI for disjoint moves.
 2. **First build: 2D (about 2.0), then 3B (about 2.5).** Each with its §13 broken-input proof: a
-   stale `migrated_tree()` sentinel must red under 2D; a deliberately removed record must still
-   red check 31 under 3B.
+   deleted `REDIRECTS.csv` must flip every sentinel caller under 2D; a deliberately removed record
+   must still red check 31 under 3B.
 3. **The user's decision: 1B** (transfer plus queue, about 2.0 plus the user's own work), offered
    after 2D has landed and 1E has run 14 days.
 4. **Measured, not scheduled: P4** after 14 days at the new rate; 4B before 4C.
 
-Total if everything recommended is taken: **about 8 executor-days** (ESTIMATE: 1E 0.25 + 2E 0.25
-+ 5a–5d 1.0 + 2D 2.0 + 3B 2.5 + 1B 2.0), plus P4 only if the measurement calls for it.
+Total if everything recommended is taken: **about 8 executor-days** (ESTIMATE: 1E 0.25 + 2E 0.1
++ P5 1.0 + 2D 2.0 + 3B 2.5 + 1B 2.0 = 7.85), plus P4 only if the measurement calls for it.
 
 ## 7. For the maintainer's ruling (then the user's, for P1)
 
 1. **P1:** 1A + 1E now, 1B deferred to the user (recommended) — or 1B now, or 1C / 1D.
-2. **P2:** 2E now and 2D as the build (recommended) — or 2D only, 2B, 2C, or 2A. Contracts unchanged.
+2. **P2:** 2D as the build, 2E inside 5d (recommended) — or 2B, 2C, or 2A. Contracts unchanged.
 3. **P3:** 3B (recommended) or 3C or 3D or 3A; plus who reserves (the lead alone, recommended) and
-   the abandonment age (7 days, recommended).
+   the abandonment age (7 days, recommended, shared with 5f).
 4. **P4:** defer and re-measure in 14 days (recommended), or 4B now.
-5. **P5:** 5a–5d as one amendment (recommended), or a subset.
+5. **P5:** order 5a–5e written into `lead.md` and `delivery-process.md` §8, an `FD-` first for each
+   charter line (they are in force already; the ruling only orders the record); adopt 5f and 5g,
+   or not.
 6. **The sequence** of §6.
 
 **After the ruling, P1 is the user's decision**: whether to transfer `yes-404/gi-pricing-plan`
@@ -307,7 +386,11 @@ code.
   roadmap (the memo, at its time: 81, 78, 80, 27, 24). No PR is at the 100-file cap, so the counts
   are exact, not floors.
 - **1E is already practice once** (#1238, §1), and rule 4 already permits it (M10).
-- **2E is new**: a no-code stop-gap that, unlike 2B, also clears GitHub's mergeability for drafts.
+- **P5 records rules in force** (the maintainer's ask (a)) rather than proposing them, and adds
+  5d, the no-PR draft rule of 11:37:20, which post-dates the memo.
+- **2E is new and 2B is not recommended**: 5d delivers the draft-side relief 2B was a stop-gap
+  for.
+- **2D's sentinel**: `REDIRECTS.csv` alone, with every caller named (the memo left it open).
 - **1B's estimate** follows the memo's revised 2.0, not its first 1.5.
 
 ## Acceptance
