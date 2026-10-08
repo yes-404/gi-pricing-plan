@@ -36,7 +36,7 @@ read at `origin/main` `60e9254c` (#1242, 2026-10-08T12:40:57+01:00), by a full-c
 file under `docs/` naming `SL-1258`, `SL-1259`, `SL-1260` or WK-674 Slice 4, 5 or 6 (predicate:
 `git grep -nE 'SL-1258|SL-1259|SL-1260|WK-674 [Ss]lices? [456]|later WK-674 slice' origin/main -- docs`),
 plus the register's Decision cells (Python `re` over each row's last cell for
-`WK-674 Slice|SL-125[89]|SL-1260|WK-674 S[456]`).
+`WK-674 Slice|SL-1258|SL-1259|SL-1260|WK-674 S[456]`).
 
 ## Authority
 
@@ -164,7 +164,7 @@ of another Work may run beside S4 or S6; nothing heavy runs beside S5's measurem
 - **R5.1 — F35's remedy is carried to Phase 3; Slice 5 no longer waits on it.** `CR-1247:306`
   ("F35's remedy is a WK-1178 slice before WK-674 Slice 5") and `FD-1246`'s "the WK-1178 trace
   slice sequenced before WK-674 Slice 5" are overtaken by F-3 (b) as corrected at 13:00:11:
-  `PL-1520` (working id 9776) less its DP-F35-1 limb carries, owner the maintainer, event P3's first
+  PL 9776 (working id) less its DP-F35-1 limb carries, owner the maintainer, event P3's first
   plan. **NFR-490 is measured on Slice 5's tree and, if red, recorded FAIL with the figure, the tree
   and the log** (`PL-1237` Task 5, unchanged), and the residual is stated with that owner — which is
   also register `:77`'s form ("states the residual with an owner"), so the two now agree.
@@ -243,5 +243,5 @@ of another Work may run beside S4 or S6; nothing heavy runs beside S5's measurem
 - **Consistency.** R5.1 and register `:77` now agree; R5.2 changes FD-1411's event, routed to the
   register minter, not edited here.
 - **Rulings since the sweep.** `gh pr list --state open` at 2026-10-08 13:06 BST (`date`), titles matched
-  with `grep -iE 'WK-674|SL-125[89]|SL-1260|deployment|switchover'`: #1116 (FD 9721) and #976
+  with `grep -iE 'WK-674|SL-1258|SL-1259|SL-1260|deployment|switchover'`: #1116 (FD 9721) and #976
   (FD 9890), both Slice 2 findings in batch B3, neither ruling on Slices 4–6. Re-run at mint.
