@@ -455,6 +455,31 @@ def _check_no_shadowed_produced_names(
         )
 
 
+_ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+def _check_as_at_values(algorithm: RatingAlgorithm, context: Mapping[str, Any]) -> None:
+    """FR-221 (PL-1447 DP-1, DP-3): the value each lookup's `as_at` reads, in the context the
+    engine is about to receive, is a strict `YYYY-MM-DD` calendar date. ZEN's `date()` reads an
+    offset as UTC and turns a malformed value into a miss, so neither may reach it. Reading
+    the merged context also covers an input that shadows the stamped `effective_date`."""
+    for step in algorithm.steps:
+        if not isinstance(step, RatingLookupStep):
+            continue
+        value = context.get(step.as_at)
+        if isinstance(value, str) and _ISO_DATE.fullmatch(value):
+            try:
+                date.fromisoformat(value)
+                continue
+            except ValueError:
+                pass
+        _raise_named(
+            "INPUT_CONTRACT_VIOLATION",
+            f"as_at of lookup step {step.step_id!r} reads {step.as_at!r}, which is not a "
+            "YYYY-MM-DD calendar date (FR-221)",
+        )
+
+
 # ---------------------------------------------------------------------------
 # FR-255 categories 2/3/5, and RL-875's decline representation.
 # ---------------------------------------------------------------------------
@@ -933,6 +958,7 @@ async def score_one(
     context = {
         "effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **ctx.inputs
     }
+    _check_as_at_values(algorithm, context)
 
     t_eval = time.perf_counter()
     try:
@@ -1090,6 +1116,7 @@ def _score_context_sync(
     context = {
         "effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **ctx.inputs
     }
+    _check_as_at_values(algorithm, context)
     try:
         out = bundle.decision.evaluate(context, {"trace": trace}) if trace else (
             bundle.decision.evaluate(context)
