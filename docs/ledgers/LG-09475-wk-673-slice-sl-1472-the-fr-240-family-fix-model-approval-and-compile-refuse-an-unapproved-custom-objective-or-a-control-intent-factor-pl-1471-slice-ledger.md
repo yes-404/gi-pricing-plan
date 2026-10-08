@@ -58,8 +58,8 @@ and "2026-10-08 11:53:19 BST — L5 transition RULED: per-slice plans drafted be
 ### 2. Task list
 
 - [x] Task 0 — preconditions and exposure
-- [ ] Task 1 — (a) approval reds (Acceptance 1, 2)
-- [ ] Task 2 — (b)(d) compile reds, transitive check (Acceptance 3, 4, 8)
+- [x] Task 1 — (a) approval reds (Acceptance 1, 2) — red committed `b0024fea`; green in Task 4
+- [x] Task 2 — (b)(d) compile reds, transitive check (Acceptance 3, 4, 8)
 - [ ] Task 3 — (c) control intent at compile and seed (Acceptance 5, 6, 7; the `rateable: false` case)
 - [ ] Task 3b — (e) `model_call` over a `control` GBM (Acceptance 13; DP-7)
 - [ ] Task 4 — (a) the flag (Acceptance 1, 2, 9)
@@ -92,6 +92,11 @@ Not yet run. The auditor writes the result; scope is derived from the spec ids i
 - `test_flags_for_names_an_unapproved_objective`: `AttributeError: type object 'ModelFlag' has no attribute 'CUSTOM_OBJECTIVE_NOT_APPROVED'`.
 - `test_an_approved_objective_can_be_approved` (control): passes at the base.
 - Fixture note: the objective is set `approved` only through `mark_approved` (the `06` FR-351 trigger refuses `UPDATE … status='approved'` from raw SQL); the `review` state is a SQL update from the `certified` the real certify Job leaves.
+
+**Task 2 (red `8de52c7b`, green below).**
+- Reds at base: `packages/pricing-core/tests/test_rating_compile_fr240.py::test_an_unapproved_objective_reached_through_a_pinned_model_is_refused[certified]`, `[review]`, `[deprecated]` each `Failed: DID NOT RAISE ValueError`; `backend/tests/test_fr240_governance.py::test_an_overridden_flag_never_reaches_compile`: `AssertionError: assert <JobStatus.SUCCEEDED: 'succeeded'> is <JobStatus.FAILED: 'failed'>`. Green at base, as planned: the approved case, the builtin case, and `test_a_version_pinning_an_unapproved_custom_objective_fails_to_compile[certified|review]`.
+- Green: `_check_reachable_objectives` in `compile.py`, called after the pin loop. `test_rating_compile_fr240.py` and `test_rating_compile_bundle.py`: 15 passed; the backend compile tests: 3 passed.
+- **Acceptance 8, broken-input proof.** With `*version.pins.custom_objectives,` deleted from `all_refs` in a scratch edit, `test_a_version_pinning_an_unapproved_custom_objective_fails_to_compile[certified]` and `[review]` both failed: `AssertionError: assert <JobStatus.SUCCEEDED: 'succeeded'> is <JobStatus.FAILED: 'failed'>` (`test_fr240_governance.py:197`). The line was restored from a saved copy and is not in the commit. The override test's `mark_approved` stands in for FR-359's unbuilt override, as its docstring says.
 
 ## PRs
 

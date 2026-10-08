@@ -610,13 +610,40 @@ def check_step_refs_pinned(algorithm: RatingAlgorithm, pins: Pins) -> None:
         )
 
 
+async def _check_reachable_objectives(
+    version: RatingVersion, payloads: dict[str, Any], resolver: ArtifactResolver
+) -> None:
+    """FR-240's "transitively reachable": a pinned model's own custom objective (`PL-1471`).
+
+    One hop: a GBM's `spec.objective` with `kind: custom` is resolved and held to the same
+    floor as a direct pin, `deprecated` included (`02` OQ-609, DP-5). A payload with no
+    `spec` names no objective. The objective is checked and not embedded, so `bundle_hash`
+    is unchanged (FR-239).
+    """
+    assert version.pins is not None
+    for model_ref in version.pins.models:
+        spec = payloads[str(model_ref)].get("spec")
+        objective = spec.get("objective") if isinstance(spec, dict) else None
+        if not isinstance(objective, dict) or objective.get("kind") != "custom":
+            continue
+        objective_ref = ArtifactRef.model_validate(objective["ref"])
+        status = (await resolver.resolve(objective_ref)).status
+        if status not in _APPROVED_OR_BETTER:
+            _raise_named(
+                "PIN_NOT_APPROVED",
+                f"{model_ref} uses {objective_ref}, which is {status!r}, not approved or "
+                "better (FR-240, FR-20)",
+            )
+
+
 async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle:
     """Compile a pinned `RatingVersion` to a self-contained Bundle (FR-239/240).
 
     Validates the whole structure: the algorithm's DAG, references, types, constraints
     and boundary guards (re-checked via `validate_algorithm`), the pins resolve to
     `approved` or better (FR-20), every `model_call` mode equals the version's
-    `model_reference_mode` (FR-223), and no pinned custom objective is unapproved.
+    `model_reference_mode` (FR-223), and no custom objective is unapproved, pinned or
+    reached through a pinned model (FR-240).
     Every `table`, `lookup` and `model_call` step's ref is pinned at its exact version
     (FR-237, `check_step_refs_pinned`).
     Raises `ValueError` named with the first failure's code.
@@ -670,6 +697,7 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
                 f"{ref} is {resolved.status!r}, not approved or better (FR-20)",
             )
         payloads[str(ref)] = resolved.payload
+    await _check_reachable_objectives(version, payloads, resolver)
 
     graph = to_jdm(algorithm)
     pins = version.pins
