@@ -791,7 +791,7 @@ corrected_by: []
 relates: [PL-1267, RL-1264]
 ```
 
-`06` FR-364's `structural_diff` persisted at submission with a verifier registered; FR-257 limb (2) on `submit_for_review` (refused with `EVIDENCE_INCOMPLETE` without a Dislocation Run on the current bundle hash against the current live version); FR-224's exact-mode comparison for an `approximation`-mode version, its threshold a new `ApprovalPolicyEntry` field and never read from Settings. `PL-1267` Slice 5. Starts after Slice 4 closes and after WK-674 Slice 2 (`SL-1256`) has merged; serialised against `SL-1256` on `approvals.py` and `06` §4.2. Leaf plan PL-1500 (`draft`; filed 2026-10-05). **Activation needs:** the plan made `active` by a dated line; `SL-1388` closed; `SL-1256` closed (met); a ruling on its DP-S5-1 to DP-S5-5 merged and minted; RL 9614 minted (FR-257's gate stays at the submit route); the lane free under `RL-1263` as amended, with the same-Work conditions in the dispatch record (its FR-224 edit in `03` §3.2 serialises with PL-1447, PL-1429 and A-3); the maintainer's dispatch GO and the lead's go in a separate activation PR. *(Plan cite added 2026-10-05 by the planner; working id 9590 reserved by the lead.)*
+`06` FR-364's `structural_diff` persisted at submission with a verifier registered; FR-257 limb (2) on `submit_for_review` (refused with `EVIDENCE_INCOMPLETE` without a Dislocation Run on the current bundle hash against the current live version); FR-224's exact-mode comparison for an `approximation`-mode version, its threshold a new `ApprovalPolicyEntry` field and never read from Settings. `PL-1267` Slice 5. Starts after Slice 4 closes and after WK-674 Slice 2 (`SL-1256`) has merged; serialised against `SL-1256` on `approvals.py` and `06` §4.2. Leaf plan PL-1500 (`draft`; filed 2026-10-05). **Activation needs:** the plan made `active` by a dated line; `SL-1388` closed; `SL-1256` closed (met); a ruling on its DP-S5-1 to DP-S5-5 merged and minted; RL-1524 minted (FR-257's gate stays at the submit route); the lane free under `RL-1263` as amended, with the same-Work conditions in the dispatch record (its FR-224 edit in `03` §3.2 serialises with PL-1447, PL-1429 and A-3); the maintainer's dispatch GO and the lead's go in a separate activation PR. *(Plan cite added 2026-10-05 by the planner; working id 9590 reserved by the lead.)*
 
 #### SL-1390 — Slice 6: the approval gate, part two — the floor wiring
 
@@ -1693,6 +1693,61 @@ relates: [PL-1371, CR-1212, RL-1263]
 ```
 
 The third of Option A's four serial slices (the maintainer, "2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record", item 1). A `model_call` step naming a Peril Structure compiles and scores: `compile_bundle` resolves each component model of the pinned structure, refuses one below `approved` with `PIN_NOT_APPROVED` (FR-20, FR-240) and embeds its payload, so the Bundle stays self-contained (NFR-491); the handler predicts each component and calls `assemble_risk_premium` (FR-188, FR-189), replacing today's custom-node failure on `payload["fit_result"]`. Six decision points for a ruling (the outputs rule and FR-249, `separate_model`, PL-1471's peril gap, WF-699 C4's reachability, the component unit, a recorded latency). Leaf plan PL-1465. It follows PL-1429, PL-1471, A-1 (SL-1462) and A-2 (SL-1463); it serialises with PL 9610 and PL 9609 on `compile_bundle`; A-4 (the exit-demo scope) follows it.
+
+
+#### SL-1526 — WK-1178 exit-demo slice (a) — the real freMTPL2 rating algorithm in the seed
+
+```yaml
+id: SL-1526
+family: slice
+title: WK-1178 exit-demo slice (a) — the real freMTPL2 rating algorithm in the seed
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 809a3794af6d3a6ba688663b0d9b59f951190680
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1371, FD-1209, FD-1357, SL-1377, FD-1374, RL-1343, RL-1361]
+```
+
+The Exit demo row's first scope item, "the real freMTPL2 rating algorithm in the seed": the seed's Rating Version is priced from the approved freMTPL2 GLM through its seeded rate tables, replacing the `demo-fixture-motor` algorithm (`payable = premium_in * 2`, `examples/fremtpl2/model.py:_demo_algorithm`). One algorithm definition serves the seed and exit-demo slice (b). Every declared output is `money_minor` (no decimal output until the `RL-1343` fix merges). Acceptance includes "every step's reads ⊆ its declared consumes" (FD-1374's interim guard) and the re-run of PL-1520's Spike S1 harness on the algorithm. It discharges FD-1209's algorithm half. PL-1371 §3.8 row 6 and §7; WK-1178 by `PL-1371` DP-1 (a). Leaf plan PL-1525 (working id), `draft`: three decision points are open (how the three continuous factors are rated, the base rate, and how the reads check is instrumented). **Activation needs:** the FD-1357 fix (`SL-1377`) closed, which it is; PL-1525's decision points ruled; PL-1520's Spike S1 filed; the lead's go. *(Cut 2026-10-05 by the planner under `PL-1371` Task 3, on the lead's order, under working id 9626, reserved by the lead.)*
+
+#### SL-1527 — WK-1178 exit-demo slice (b) — the scripted `WF-699` journey over HTTP, ending in a served page
+
+```yaml
+id: SL-1527
+family: slice
+title: WK-1178 exit-demo slice (b) — the scripted WF-699 journey over HTTP, ending in a served page
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 809a3794af6d3a6ba688663b0d9b59f951190680
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1371, FD-1209, FD-1244, FD-1245, FD-1356, FD-1411, FD-1416, SL-1256, SL-1390, SL-1409]
+```
+
+The Exit demo row's journey: ONE command runs `WF-699` Phases A to E and its deploy step over HTTP on the freMTPL2 seed, with A1–A2 (seed-from-model) on every rateable factor of the 7-factor GLM, and ends with the frontend serving a 200 page, plus the journey test that cites `WF-699` by id. The form of G2 is the maintainer's ruling, by delegation, recorded as RL-1521 (working id), which mints before this slice's plan. PL-1371 §3.8 row 7 and §7; WK-1178 by `PL-1371` DP-1 (a). Leaf plan PL 9629 (working id), `draft`. **Activation needs:** exit-demo slice (a) (SL-1526, working id) merged; WK-673 S3–S6 (`SL-1387`–`SL-1390`) and S7 (`SL-1391`) merged; WK-674 S2 (`SL-1256`) closed, which it is; the FD-1356 fix (`SL-1409`) merged; the FD-1421 fix (PL-1429), the FD-1420 fix (PL-1447) and the FR-240 family fix (PL-1471) merged; FD-1416 fixed; FD-1494 (working id, #1125) minted with an owner for the seed record's pre-flight; FD-1244 and FD-1245 ruled; PL 9629's DP-6 ruled; the lead's go. The journey's `/score` step is the one PL-1454's acceptance covers (FD-1411). *(Cut 2026-10-05 by the planner under `PL-1371` Task 3, on the lead's order, under working id 9625, reserved by the lead.)*
+
+#### SL-1529 — WK-1178 fix slice — FD-1416: one ApprovalRequest shape, generated and typed on every approval route
+
+```yaml
+id: SL-1529
+family: slice
+title: WK-1178 fix slice — FD-1416, one ApprovalRequest shape, generated and typed on every approval route
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: cdaaa57345cb765f96034ce1ec2733c338f1c3cd
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1416, FD-1335, SL-1409, PL-1408, SL-1367, PL-1371]
+```
+
+`FD-1416`'s fix (MEDIUM, deadline before the P2 exit demo): the `model-schema` `ApprovalRequest` becomes the one definition. A decision-maker rules each disagreeing field first, the decision enum first, which lifts `FD-1416`'s HOLD. The four `to_dict` routes (`GET …/{request_id}`, `POST /approval-requests`, `…/decide`, `…/withdraw`) return it as a typed 2xx, published by `$ref`, and leave `FD-1335` Part B's open-object list. The hand-authored `approval-request.schema.json` is retired ("generated wins"), and `06` §4.3's example is amended verbatim from the ruling. A guard fails when an authored-only `ONE_SIDED_SLUGS` slug has an uncompared `model-schema` class, proven on broken input. Leaf plan PL-1528 (working id). It follows `SL-1409` (`approvals.py`; merged at `cdaaa573`); it serialises with PL-1429 (`GENERATED_SHAPES`), and PL 9629's journey (its activation need 13) waits for it.
 
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half

@@ -1,0 +1,274 @@
+---
+id: RL-1523
+family: ruling
+title: Compile refuses a model_call whose feature_map misses the pinned Model's required inputs, per component for a peril structure, with MODEL_CALL_FEATURE_MAP_INVALID; FR-240 takes the T-text
+status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
+created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
+owner: decision-maker
+tree: ecbd1954d90b1faf0bd197174d720d90ad8f6c6d
+phase: P2
+work: WK-1178
+supersedes: []
+superseded_by: ~
+corrected_by: []
+relates: [FR-240, FR-222, FR-87, FR-255]
+---
+
+# RL-1523 — Compile refuses a model_call whose feature_map misses the pinned Model's required inputs (FR-240)
+
+*(Minted 2026-10-08 as RL-1523 from working id 9491, in the G2-a batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
+
+## How this was ruled
+
+- **Filed under working id 9491, reserved by the lead (team-lead) on 2026-10-05.** At the
+  mint, `RL-1523` is re-pointed to its minted id. The other working ids named here (PL 9494,
+  SL 9495, PL-1464) are re-pointed the same way at their own mints.
+- **The decision is not this record's.** It is the maintainer's, by delegation, in the entry
+  headed `2026-10-05 18:51:33 BST — Save-time completeness: DECIDED NOW as (b), completeness
+  at COMPILE; no OQ; an RL with the FR-240 T-text; A-2's code reused` in
+  `~/gi-pricing-plan.local/channel/to-lead.md`, quoted verbatim below. That entry orders this
+  record ("ONE RL (a DM when a seat frees) with the FR-240 T-text"). This record carries the
+  decision, drafts the T-text the entry describes, and records the serialisation.
+- **Why there was a decision to make.** A read-only audit (auditor-complete, reported to the
+  lead at 18:51:22 BST in `handover/mint-queue-2026-10-05.md`) found that no requirement asks
+  for a `model_call`'s inputs to be complete before scoring. `03` FR-240's "all references
+  resolvable" reads as artifact references; `02` FR-87 is fit-time. A `feature_map` that
+  misses a Factor of its Model saves, compiles, and fails only per quote at score time, as
+  `MODEL_CALL_FAILED`. The auditor reported liveness as none: no committed algorithm maps
+  fewer than all of its Models' Factors. This record did not re-run that search. So this is
+  a new requirement, and the spec comes first.
+
+## The maintainer's entry, verbatim
+
+> ## 2026-10-05 18:51:33 BST — Save-time completeness: DECIDED NOW as (b), completeness at COMPILE; no OQ; an RL with the FR-240 T-text; A-2's code reused
+>
+> Decided now rather than opened as an OQ: the trade-off is clear and G2's peril path (A-3/A-4, the exit demo) is exactly where a short-mapped GBM would fail per quote after deploy.
+> (b): compile_bundle refuses a model_call step whose feature_map does not cover the PINNED model's required Factors (or its feature_order where it has none), using the existing resolver, before approval or deploy. Per component for a peril_structure_ref (17:44 DP-A3-7's per-component limb now has its home, at compile, not at save).
+> CODE: REUSE MODEL_CALL_FEATURE_MAP_INVALID (A-2's code, once A-2 owns it in 03), naming the step and the missing features, not a new code: one fault, one code, at save (membership) and at compile (completeness). If A-2's code is not yet in 03's owned list when this RL is drafted, the RL cites A-2's T-text as the code's home and serialises after A-2.
+> RECORDS: ONE RL (a DM when a seat frees) with the FR-240 T-text (a dated amendment: "all references resolvable" extended to a model_call's feature coverage of its pinned model), plus a note in PL-1464 (A-2) that its membership check is explicitly NOT a completeness check. The build is a small WK-1178 slice after A-2 (the same function family) and before A-4's demo path. Reserve the ids. (a), (c) and (d) are recorded as not taken.
+> FD 9497's reservation released: correct (no requirement was broken; this is a new requirement, so it is spec first).
+
+## Locators — read at `ecbd1954` (origin/main at filing) unless a PR head is named
+
+| What | Where | What it says |
+|---|---|---|
+| FR-240 | `docs/specs/03-rating-engine.md:137` | "all references resolvable and at a sufficient maturity (FR-20)"; one dated amendment (2026-09-30, `RL-1329`, `LADDER_CLAMP_UNPLACEABLE`). Nothing on a `model_call`'s inputs. |
+| FR-87 | `docs/specs/02-modelling.md:88` | Factors "are *resolved* against a specific version at fit time" — fit-time, not compile-time. |
+| The owned-codes list | `docs/specs/03-rating-engine.md:929` onward | `MODEL_CALL_FEATURE_MAP_INVALID` is **not** in it (`grep -c MODEL_CALL_FEATURE_MAP_INVALID docs/specs/03-rating-engine.md` prints `0`). |
+| `compile_bundle` | `packages/pricing-core/src/pricing_core/rating/compile.py:573` | The compile entry point. `:546`–`:556`: a `model_call`'s `model_ref` or `peril_structure_ref` is checked against `pins.models` (FR-237); its `feature_map` is not checked. |
+| The score-time failure | `packages/pricing-core/src/pricing_core/rating/runtime.py:541`–`:545` | `feature_row` keeps only the `feature_map` entries whose graph name is in the context. A missing entry is silently absent, and the model then fails as `MODEL_CALL_FAILED` (`:133`). |
+| A-2's code and its home | PL-1464 (its one file under `docs/plans/`, which is not on main), at #1178's head `176a6a756f863376515f3dd5ec0a4c29afbc14a7` (branch `pl-9597-a2-glm-model-call`; `ls-remote` read at filing) | Task 6's T3 (`:825`–`:832`) appends `MODEL_CALL_FEATURE_MAP_INVALID` to the owned-codes list (422 at the three save endpoints). T1 (`:807`–`:820`) amends FR-222 with the save-time **membership** check. Items 13 (`:354`) and 18 (`:499`) are that check's reds; item 18 makes it one function, called from every save path. |
+
+## Ruled
+
+1. **(b), completeness at compile.** `compile_bundle` refuses a `model_call` step whose
+   `feature_map` does not cover every Factor of the **pinned** Model, or every entry of the
+   Model's `feature_order` when the Model has no Factors. The pinned Model is resolved with
+   the resolver compilation already uses, so the refusal comes before approval and
+   deployment. A `feature_map` maps graph names to feature slugs (`runtime.py:541`–`:545`), so
+   "covers" means: every required slug is a value of the map.
+2. **Per component for a peril structure.** For a `peril_structure_ref`, each component
+   Model is checked, and the one `feature_map` must cover every component's required inputs.
+   This is the home of the per-component limb of DP-A3-7 (the 18:44:45 BST entry, item 1).
+   That limb is at compile, not at save.
+3. **One fault, one code.** The refusal reuses `MODEL_CALL_FEATURE_MAP_INVALID`, A-2's code,
+   and its message names the step and the missing features, and for a peril structure the
+   component. No new code is minted. Save checks membership (A-2, FR-222 as T1 amends it);
+   compile checks completeness (this record, FR-240).
+4. **The offset is not a required input under this check.** An offset column is not a
+   Factor. A GLM's offset already reaches the model through `feature_map` (DP-A3-5 (a), the
+   17:08:35 BST entry, item 7), and its absence stays `MODEL_OFFSET_MISSING`'s. This follows
+   from item 1's "required Factors"; it is stated so that the applier's red (v) has a source.
+5. **Options (a), (c) and (d) are not taken** (the entry: "(a), (c) and (d) are recorded as
+   not taken"). The entry gives one reason for (b), and it is the reason the others lose:
+   "the trade-off is clear and G2's peril path (A-3/A-4, the exit demo) is exactly where a
+   short-mapped GBM would fail per quote after deploy". It also says where the check does
+   **not** go: "at compile, not at save". The options, verbatim from
+   auditor-complete's OQ proposal to the lead, 2026-10-05, preserved at
+   `~/gi-pricing-plan.local/handover/oq-proposal-model-call-completeness-2026-10-05.md`
+   (local handover; the maintainer decided on it), line 8:
+
+   > Options: (a) leave as is: membership at algorithm save; incomplete map surfaces at score as MODEL_CALL_FAILED (cheapest; failure arrives at the worst time: after deploy, per quote). (b) completeness at compile (FR-240 amendment: refuse with a named code, e.g. a 422 naming step + missing features); no new save-time resolution, uses the existing resolver; fails before approval/deploy. (c) completeness at Rating Version save/pin: earliest with pins in hand, but ties save of a draft to model resolution and may block iterative drafting. (d) (b) plus a warning at algorithm save.
+
+   Why each is not taken:
+   - **(a)** is the failure the entry decides against: a short map "would fail per quote
+     after deploy" (the entry); the proposal itself says (a)'s failure "arrives at the worst
+     time".
+   - **(c)** puts the check at a save, and the entry places it "at compile, not at save".
+     The proposal's own cost for (c) is that it "ties save of a draft to model resolution and
+     may block iterative drafting".
+   - **(d)** is (b) with an added save-time warning. The entry takes (b) alone and gives no
+     reason of its own for leaving out the warning; this record does not supply one.
+6. **No OQ is opened** (the entry: "no OQ"). FD 9497's reservation is released (the entry).
+
+## The spec text
+
+**T-text, appended to FR-240's row (`docs/specs/03-rating-engine.md:137`).** The anchor is
+the end of the row's existing `RL-1329` amendment:
+
+- Anchor: `The message names the step and the rung.)* |`
+- `grep -cF 'The message names the step and the rung.)* |' docs/specs/03-rating-engine.md`
+  at `ecbd1954` prints **`1`**.
+- Apply: replace the anchor with `The message names the step and the rung.)*`, then the
+  T-text below (it begins with one space), then ` |`.
+- Trial apply, run at filing on a copy of `03` at `ecbd1954`: the anchor's count went
+  **1 → 0**, and the T-text's count went **0 → 1**.
+
+**Replaced pre-mint, 2026-10-05: apply the amended T-text in "Amendment 2026-10-05 (pre-mint)" below, not the one in this section.** The T-text, byte for byte (one line in the file). `<SL 9495 date>` is the date of the
+commit that applies it, and `RL-1523` is re-pointed to the minted id at this record's mint
+(the convention RL-1470, #1155, sets out in its "Amendments common to all four", item 1: a
+spec amendment cites the governed record that rules it, because a spec reader cannot open
+the channel file):
+
+```
+ *(Amended <SL 9495 date>, `RL-1523`: "all references resolvable" also covers a `model_call` step's inputs. Compiling a bundle refuses, with `MODEL_CALL_FEATURE_MAP_INVALID`, a `model_call` step whose `feature_map` does not map every Factor of its pinned Model, or every entry of the Model's `feature_order` when the Model has no Factors. The pinned Model is resolved with the resolver that compilation already uses, so the refusal comes before approval and deployment. For a `peril_structure_ref`, the check applies to each component Model, and the one `feature_map` must map the required inputs of every component. The message names the step and the missing features, and for a peril structure the component. A save checks only that each mapped name is one the Model accepts (FR-222); this compile check is the completeness check. An offset column is not a Factor, and this check does not require it.)*
+```
+
+**Serialisation 1 — after A-2.** At `ecbd1954`, `MODEL_CALL_FEATURE_MAP_INVALID` is not in
+`03`'s owned-codes list, and FR-222 does not yet carry the membership check the T-text's
+"(FR-222)" cites. Both come from A-2's T-texts (PL-1464 Task 6, T1 `:807` and T3 `:825`, at
+`176a6a75`). So this T-text is applied **only after A-2's slice has applied T1 and T3 to `03`
+on main**. Until then, the code's home is A-2's T3. A-2's T-texts do not touch FR-240's row
+(T1 is FR-222's row, T2 FR-227's, T3 the owned-codes tail).
+
+**Serialisation 2 — the same anchor as RL-1470's T1; the rule ACCEPTED.** RL-1470 (#1155,
+branch `dm-9633-fr240` @`95590c87`, unminted) appends its T1 to FR-240's row with the
+**same** find string, `The message names the step and the rung.)* |`, applied by SL-1472
+(PL-1471, #1152). Whichever applies second finds a count of `0`. **SL 9495 and SL-1472 are
+therefore serialised on the FR-240 row.** The rule below was proposed in this record's first
+draft (#1214 @`b900e008`) and accepted by the maintainer (by delegation) in the entry headed
+`2026-10-05 18:58:28 BST — S7 gate 1: (a) _SINKS entries ADOPTED; the re-gate plan
+CONFIRMED, with an explicit allowed-failure set; the measurement re-run in the slot`, item 4,
+verbatim:
+
+> 4. RL-1523 #1214 @b900e008 and the FR-240 anchor collision with RL-1470 T1: the rule (append after the last amendment then present, re-counted at its own base, ≠1 is a STOP to me) is ACCEPTED, and it is named in BOTH RL-1523 and PL-1471's contention.
+
+**The rule, for whichever of SL 9495 and SL-1472 applies second (and for the first, too):**
+
+1. The T-text is appended at the **end of FR-240's second cell**, after the last dated
+   amendment then present and before the closing ` |`.
+2. The find string is that last amendment's closing sentence followed by ` |`. If RL-1470's
+   T1 is already on main, that is the last sentence of RL-1470's T1; if not, it is the anchor
+   above.
+3. The applier re-counts the find string at its own base with `grep -cF`. **Any count other
+   than `1` is a STOP to the maintainer (by delegation).**
+
+The two texts are independent: neither strikes or depends on the other's words.
+
+## What it obliges
+
+- **The applier is PL 9494 / SL 9495** (working ids; a small WK-1178 leaf plan and its
+  slice). It applies the T-text byte for byte, in the same commit as the code
+  (`CLAUDE.md` §2), and builds the refusal in `compile_bundle`, reusing A-2's check function
+  where it can.
+- **Order:** SL 9495 starts after A-2's slice (PL-1464) has merged, and lands before A-4's
+  demo path (PL 9593, #1175).
+- **PL-1464 gains a dated pre-mint note** that its `feature_map` check is membership only and
+  is not a completeness check. That note is the planner's, not this record's.
+
+## Acceptance — the violation that must become detectable
+
+At `ecbd1954`, each of these compiles, and fails only per quote at score time. After
+SL 9495, each is refused at compile with `MODEL_CALL_FEATURE_MAP_INVALID`:
+
+1. A GLM `model_call` whose `feature_map` omits one Factor of its pinned Model. The message
+   names the step and the Factor.
+2. A GBM `model_call` whose `feature_map` omits one entry of its `feature_order`. The message
+   names the step and the feature.
+3. A `peril_structure_ref` `model_call` whose one `feature_map` covers every component but
+   one. The message names the step, the component and the missing feature.
+
+And these compile:
+
+4. The complete control: the same algorithms with every required input mapped.
+5. A GLM whose offset column is mapped but is not a Factor; and one whose offset is not
+   mapped at all (that is `MODEL_OFFSET_MISSING`'s at score, not this check's).
+
+Each red is red first, at the base, before the code is written.
+
+## What this record does not decide
+
+- **The HTTP status at compile.** A compile refusal surfaces through the compile path
+  (`CodedError`, `compile.py:539`; FR-240's `POST …/compile`, `03:909`). This record does not
+  set a status for it; A-2's 422 is the code's status at save.
+- **Whether a save also checks completeness.** It does not, under this ruling (item 1: "at
+  compile, not at save"). A save-time completeness check would be a new decision.
+- **The check function's shape**, and how much of A-2's function it reuses: the plan's.
+- **What happens to a committed algorithm that is already short-mapped.** The auditor
+  reported none (liveness: none; not re-run here). If one is found, it is a finding, not this record's.
+- **Whether `MODEL_CALL_FAILED` stays reachable for a short map at score.** After this
+  ruling, a compiled bundle cannot carry one; the runtime path is not changed by this record.
+
+## Amendment 2026-10-05 (pre-mint) — DP-1, R-a and the order
+
+Made by the decision-maker on 2026-10-05, before mint, on the maintainer's (by delegation)
+entry below in `~/gi-pricing-plan.local/channel/to-lead.md`, which rules PL 9494's (#1216)
+decision point DP-1 and reading R-a, and the slice order. The entry, verbatim:
+
+> ## 2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2
+>
+> 1. ORDER: A-2 → A-3 → SL 9495 → A-4, ACCEPTED (the per-component limb needs A-3's _resolve_peril_components; it still satisfies after A-2 and before A-4). The need "PL-1471 merged" (ResolvedArtifact.factors): accepted.
+> 2. A-4 (PL 9593 #1175) gains the need "SL 9495 merged": YES, a pre-mint planner edit.
+> 3. DP-1: ONE public pricing-core helper defines "a model's required inputs" (its Factors, or fit_result.feature_order when it has none). It is BORN IN A-2, which merges first: A-2's plan (PL-1464, unminted) gains a pre-mint task that creates the helper in pricing-core and has its own save check call it. SL 9495 then REUSES it with no second definition. If A-2 has already merged without it when SL 9495 starts, SL 9495 extracts it from A-2's function as a no-behaviour-change refactor commit before its reds. Either way, one definition, and a test proves both call sites use it (one helper, two callers, by grep in the test or an import assertion).
+> 4. R-a: ACCEPTED. An empty map is never complete for a model with inputs. The GBM empty-map fallback (runtime.py:553-555) becomes unreachable through compile and is NOT removed in this slice; the plan names it as dead-through-compile, for a later cleanup decision.
+> 5. Reds (i)–(vi) plus the end-to-end resolver red: accepted. The contention table is accepted as stated.
+> 6. PL-1464 @c8d88382's membership-only note: noted. PL-1500 @d60dea9e's serial S3 → S4 → S5 on the two test files: noted.
+> 7. S7's re-gate on 75928847, on your START after PAUSED is confirmed: noted.
+
+It changes this record in four places. Where it and the body above disagree, this amendment
+holds.
+
+1. **DP-1 — one helper for "a model's required inputs"** (entry, item 3). One public
+   `pricing-core` helper returns a model's required inputs: the slugs of its Factors, or its
+   `fit_result.feature_order` when it has no Factors. It is **born in A-2**: PL-1464 (#1178)
+   gains a pre-mint task that creates it, and A-2's own save check calls it. SL 9495's compile
+   check **reuses** it; there is no second definition. **Fallback:** if A-2 has already merged
+   without the helper when SL 9495 starts, SL 9495 extracts it from A-2's function as a
+   no-behaviour-change refactor commit, before its reds. The helper's name and its file are
+   PL-1464's to state (the planner's edit); this record does not fix them. This replaces the
+   limb of "What this record does not decide" that left "how much of A-2's function it reuses"
+   to the plan, and the obligation's "reusing A-2's check function where it can": the reuse is
+   now required.
+2. **R-a — an empty map is refused at compile** (entry, item 4: "An empty map is never
+   complete for a model with inputs"). Compile refuses a `model_call` whose `feature_map` is
+   `{}` when the pinned Model (or, for a peril structure, any component) has a required
+   input. The GBM empty-map fallback in `packages/pricing-core/src/pricing_core/rating/runtime.py`
+   (`:553`–`:555` at `ecbd1954`: `frame = pl.DataFrame([feature_row]) if feature_row else
+   pl.DataFrame({slug: [context.get(slug)] for slug in gbm_result.feature_order})`) becomes
+   **dead-through-compile**: unreachable through `compile_bundle`, and **not removed** in
+   SL 9495. Its removal is a later cleanup decision, not this record's. This replaces the last
+   bullet of "What this record does not decide" for the empty map: the runtime path is still
+   not changed, and the fallback is named as dead-through-compile.
+3. **The order: A-2 → A-3 → SL 9495 → A-4** (entry, item 1). SL 9495 starts after A-3 has
+   merged as well as A-2, because its per-component limb needs A-3's
+   `_resolve_peril_components` (entry, item 1). This replaces "What it obliges"'s order line,
+   which named A-2 only. A-4 (PL 9593, #1175) gains the activation need "SL 9495 merged"
+   (entry, item 2); that edit is the planner's.
+4. **The T-text states the empty-map refusal.** The T-text in "The spec text" said "does not
+   map every Factor"; with the runtime fallback a reader could take `{}` as an identity map.
+   The amended T-text adds one sentence after "when the Model has no Factors.": "An empty
+   `feature_map` maps none of them, so it is refused whenever the Model has a required input."
+   Nothing else in it changes. The anchor and the serialisation rules above are unchanged.
+   - Trial apply, run 2026-10-05 on a copy of `docs/specs/03-rating-engine.md` at
+     `ecbd1954` (origin/main at this amendment): the anchor
+     `The message names the step and the rung.)* |` went **1 → 0**, and the amended T-text
+     went **0 → 1** (`grep -cF` both).
+
+The amended T-text, byte for byte (one line in the file):
+
+```
+ *(Amended <SL 9495 date>, `RL-1523`: "all references resolvable" also covers a `model_call` step's inputs. Compiling a bundle refuses, with `MODEL_CALL_FEATURE_MAP_INVALID`, a `model_call` step whose `feature_map` does not map every Factor of its pinned Model, or every entry of the Model's `feature_order` when the Model has no Factors. An empty `feature_map` maps none of them, so it is refused whenever the Model has a required input. The pinned Model is resolved with the resolver that compilation already uses, so the refusal comes before approval and deployment. For a `peril_structure_ref`, the check applies to each component Model, and the one `feature_map` must map the required inputs of every component. The message names the step and the missing features, and for a peril structure the component. A save checks only that each mapped name is one the Model accepts (FR-222); this compile check is the completeness check. An offset column is not a Factor, and this check does not require it.)*
+```
+
+**Acceptance, added.** These join "Acceptance — the violation that must become detectable":
+
+6. **The empty-map red.** A GBM `model_call` with `feature_map == {}` whose pinned Model has
+   a `feature_order` is refused at compile with `MODEL_CALL_FEATURE_MAP_INVALID`, the message
+   naming the step and every missing feature. At `ecbd1954` it compiles (red first:
+   `DID NOT RAISE`).
+7. **The both-callers test.** A test proves that A-2's save check and SL 9495's compile check
+   both use the one helper of item 1, and that no second definition exists: by a grep in the
+   test or an import assertion (entry, item 3: "one helper, two callers").
+
+The entry's item 5 (reds (i)–(vi), the end-to-end resolver red, and PL 9494's contention
+table) is accepted there and is PL 9494's; this record adds nothing to it.
