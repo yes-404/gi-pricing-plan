@@ -218,3 +218,23 @@ async def test_an_input_shadowing_effective_date_is_checked() -> None:
     ctx = _quote(date(2026, 6, 1), extra_inputs={"effective_date": "2026-01-01T00:30:00+01:00"})
     with pytest.raises(CodedError, match=r"^INPUT_CONTRACT_VIOLATION:.*s_area"):
         await score_one(await _compiled(), ctx)
+
+
+_SENTINEL = "SENTINEL-quote-input-as-at-5e1f"
+
+
+@pytest.mark.req("NFR-499")
+@pytest.mark.req("FR-221")
+async def test_the_as_at_refusal_never_carries_the_value() -> None:
+    algo = _algo(as_at="inception", contract=[*_CONTRACT, _DATE_INPUT])
+    compiled = await _compiled(algo)
+    ctx = _quote(date(2026, 6, 1), extra_inputs={"inception": _SENTINEL})
+    with pytest.raises(CodedError) as caught:
+        await score_one(compiled, ctx)
+    assert _SENTINEL not in str(caught.value)
+    assert "'s_area'" in str(caught.value)
+    assert "'inception'" in str(caught.value)
+    frame = pl.DataFrame([_ctx_to_row(ctx)])
+    out = score_batch(compiled, frame.lazy()).collect()
+    assert out["error_code"].to_list() == ["INPUT_CONTRACT_VIOLATION"]
+    assert _SENTINEL not in (out["error_message"][0] or "")
