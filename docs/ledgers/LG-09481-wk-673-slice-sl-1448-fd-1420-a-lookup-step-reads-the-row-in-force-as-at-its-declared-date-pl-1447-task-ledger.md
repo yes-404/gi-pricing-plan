@@ -167,6 +167,11 @@ reads the same `docs/INDEX.md` for gaps (its text was not matched by the string 
 verified by its own failure body). They clear when the mint closes the allocation. No other failure. The worktree database
 `gipricing_sl-1448_72c627d5` was dropped after the gate.
 
+**Task 6 Step 2 — Task 0 Steps 1 and 2 re-run** (2026-10-08, after the gate, on `e7d14426`'s tree, slots free): the exposure query's last
+line `DATABASES=7 TOTAL lookup_algorithms=0 multi_row_keys=0` (unchanged); the three greps print `0`, `0` and `12`. The third was `10`
+at the base; the two added hits are this slice's own new fixtures, `"type": "lookup"` in `packages/pricing-core/tests/test_rating_lookup_as_at.py` and
+`backend/tests/test_score_as_at.py`. No golden quote and no seed holds a lookup step.
+
 ## PRs
 
 #1236, a draft. The branch `sl-1448-fd-1420-lookup-reads-row-in-force-as-at` is pushed; the PR is not merged by the executor.
