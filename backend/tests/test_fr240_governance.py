@@ -25,6 +25,7 @@ from backend.tests.test_api_rate_tables import (
     _seed_body,
     _table_slug,
 )
+from backend.tests.test_model_jobs_gbm import _fitted_gbm
 from backend.tests.test_model_lifecycle import _principal_with
 from backend.tests.test_rate_tables_service import _seed as _seed_rate_table
 from backend.tests.test_rate_tables_service import _table_slug as _compile_table_slug
@@ -123,7 +124,7 @@ async def test_a_model_whose_custom_objective_is_in_review_cannot_be_approved(
                 session, workspace_id=workspace_id, actor=approver, request=decided
             )
     assert refused.value.code == "ARTIFACT_FLAGGED"
-    assert refused.value.status == 409
+    assert refused.value.status_code == 409
     assert "custom_objective_not_approved" in str(refused.value.detail)
     assert ref in str(refused.value.detail)
     assert await _status_of(database, model_id) == ModelStatus.REVIEW.value
@@ -302,5 +303,64 @@ def test_a_compile_over_a_control_keyed_table_fails_with_its_code(
         api_client, principal, workspace_id, database, blob_store,
         rate_tables=[f"rate_table:{seeded.slug}@{seeded.version}"],
     )
+    assert job_row.status is JobStatus.FAILED
+    assert job_row.error["code"] == "CONTROL_FACTOR_IN_RATEABLE_PATH"
+
+
+def _model_call_algorithm(model_ref: str) -> dict[str, Any]:
+    """Input -> a `model_call` over `model_ref` -> output."""
+    return {
+        "slug": "mc-control",
+        "version": 1,
+        "input_contract": [{"name": "area", "type": "string", "nullable": False}],
+        "outputs": [{"name": "payable_premium_minor", "type": "money_minor", "required": True}],
+        "steps": [
+            {"step_id": "s_in", "type": "input", "label": "Area", "input_name": "area",
+             "on_missing": "error", "produces": "area"},
+            {"step_id": "s_mc", "type": "model_call", "label": "Risk premium",
+             "model_ref": model_ref, "mode": "exact", "feature_map": {"area": "area"},
+             "consumes": ["area"], "produces": ["risk_premium_minor", "peril_risk_premium"]},
+            {"step_id": "s_out", "type": "output", "label": "Out",
+             "output_name": "payable_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
+             "consumes": ["risk_premium_minor"]},
+        ],
+        "sub_graphs": [],
+    }
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+def test_a_compile_over_a_gbm_fitted_on_a_control_factor_fails_with_its_code(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """FD 9639 (DP-7): the GBM is fitted on `area`, which is then a `control` Factor; the
+    approved model is pinned by a `model_call` and the Job refuses it."""
+    _run(grant("analyst"))
+
+    async def _arrange() -> str:
+        model_id, fit_status = await _fitted_gbm(database, blob_store, workspace_id)
+        assert fit_status is JobStatus.SUCCEEDED
+        async with database.unit_of_work() as session:
+            await _make_control(session, workspace_id, "area")
+            row = await session.get(ModelRow, model_id)
+            assert row is not None
+            await mark_approved(session, row)
+            return f"model:{row.model_family_slug}@{row.version}"
+
+    model_ref = _run(_arrange())
+    headers = _headers(principal, workspace_id)
+    created = api_client.post(
+        "/api/v1/rating-algorithms", json=_model_call_algorithm(model_ref), headers=headers
+    )
+    assert created.status_code == 201, created.text
+    row = _run(
+        _insert_version(
+            database, workspace_id, principal.id,
+            algorithm_ref="rating_algorithm:mc-control@1",
+            pins={"rate_tables": [], "models": [model_ref], "reference_tables": [],
+                  "custom_objectives": []},
+        )
+    )
+    job_row = _run_compile_job(api_client, headers, database, blob_store, row.id)
     assert job_row.status is JobStatus.FAILED
     assert job_row.error["code"] == "CONTROL_FACTOR_IN_RATEABLE_PATH"

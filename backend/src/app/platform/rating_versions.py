@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import (
     ApprovalRequestRow,
     AuditEventRow,
+    FactorRow,
     ModelRow,
     RatingAlgorithmRow,
     RatingVersionRow,
@@ -34,7 +35,7 @@ from app.platform import reference as reference_service
 from app.platform import regression_runs as regression_runs_service
 from app.platform import regression_suites as regression_suites_service
 from app.platform.blobs import BlobStore
-from app.platform.modelling import to_model
+from app.platform.modelling import load_factors, to_factor, to_model
 from model_schema import (
     ApprovalStatus,
     ArtifactRef,
@@ -523,7 +524,12 @@ async def compile_rating_version(
                     # booster itself, never the reference (RL-873).
                     booster_bytes = await blob_store.read(model_obj.fit_result.booster_blob)
                     payload["fit_result"]["booster_content"] = booster_bytes.decode("utf-8")
-                return ResolvedArtifact(status=model.status, payload=payload)
+                factors = await load_factors(
+                    session, workspace_id=workspace_id, factor_ids=list(model_obj.spec.factors)
+                )
+                return ResolvedArtifact(
+                    status=model.status, payload=payload, factors=tuple(factors)
+                )
             if ref.type == "rate_table":
                 # `rate_tables.py`'s own materialiser: a version's cells are either row-
                 # or parquet-stored, and `_to_version` always returns them inline as
@@ -587,6 +593,22 @@ async def compile_rating_version(
                 return ResolvedArtifact(
                     status=objective.status.value,
                     payload=objective.model_dump(mode="json"),
+                )
+            if ref.type == "factor":
+                factor = await session.scalar(
+                    select(FactorRow).where(
+                        FactorRow.workspace_id == workspace_id,
+                        FactorRow.slug == ref.slug,
+                        FactorRow.version == ref.version,
+                    )
+                )
+                if factor is None:
+                    raise PlatformError("NOT_FOUND", "Factor not found", 404)
+                # A Factor has no approval lifecycle (RL-856's sentinel); it is read to check
+                # its intent (FR-88) and is never a pin, so no maturity floor reads it.
+                return ResolvedArtifact(
+                    status="no_maturity_concept",
+                    payload=to_factor(factor).model_dump(mode="json"),
                 )
             raise PlatformError(
                 "NOT_FOUND",

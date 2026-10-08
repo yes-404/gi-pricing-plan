@@ -23,7 +23,7 @@ from model_schema.rating import (
 )
 from model_schema.refs import ArtifactRef
 from pricing_core.rate_tables.operations import seed_from_model
-from pricing_core.rating.compile import compile_bundle
+from pricing_core.rating.compile import ResolvedArtifact, compile_bundle
 
 OBJ = "custom_objective:asym-loss@1"
 MODEL = "model:motor-ad-frequency@7"
@@ -145,3 +145,49 @@ async def test_a_pinned_table_keyed_on_a_control_factor_is_refused(rateable: boo
 @pytest.mark.req("FR-240")
 async def test_a_table_keyed_on_a_risk_factor_compiles() -> None:
     await compile_bundle(_version(), _with_keyed_table(_factor("driver_age_band"), rateable=True))
+
+
+# -- A control-intent Factor through a `model_call` (FD 9639, DP-7) ------------------------
+
+
+class _FactorsResolver(FakeResolver):
+    """A `FakeResolver` that also hands a pinned model its Factors, as the platform does."""
+
+    def __init__(self, base: FakeResolver, factors: dict[str, tuple[Factor, ...]]) -> None:
+        super().__init__(base._payloads, base._statuses)
+        self._factors = factors
+
+    async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+        resolved = await super().resolve(ref)
+        return ResolvedArtifact(
+            status=resolved.status,
+            payload=resolved.payload,
+            factors=self._factors.get(str(ref), ()),
+        )
+
+
+def _model_fitted_on(year_intent: FactorIntent) -> _FactorsResolver:
+    res = _resolver()
+    res._payloads[MODEL]["fit_result"] = {
+        "model_type": "xgboost",
+        "feature_order": ["driver_age", "year_of_account"],
+    }
+    year = _factor("year_of_account").model_copy(update={"intent": year_intent})
+    return _FactorsResolver(res, {MODEL: (_factor("driver_age"), year)})
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+async def test_a_model_call_over_a_gbm_fitted_on_a_control_factor_is_refused() -> None:
+    with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH") as refused:
+        await compile_bundle(_version(), _model_fitted_on(FactorIntent.CONTROL))
+    message = str(refused.value)
+    assert MODEL in message
+    assert "year_of_account" in message
+    assert "year_of_account@1" in message
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+async def test_a_model_call_over_risk_factors_compiles() -> None:
+    await compile_bundle(_version(), _model_fitted_on(FactorIntent.RISK))

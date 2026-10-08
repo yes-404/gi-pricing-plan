@@ -28,7 +28,7 @@ from zipfile import BadZipFile
 from openpyxl import Workbook, load_workbook  # type: ignore[import-untyped]
 from openpyxl.utils.exceptions import InvalidFileException  # type: ignore[import-untyped]
 
-from model_schema.modelling import Factor, GlmFitResult, Model, RelativityLevel
+from model_schema.modelling import Factor, FactorIntent, GlmFitResult, Model, RelativityLevel
 from model_schema.rating import (
     BulkOperation,
     BulkOperationResult,
@@ -209,6 +209,11 @@ def seed_from_model(
             "binds to exactly one"
         )
     bound = pinned[0]
+    if bound.intent is FactorIntent.CONTROL:
+        raise ValueError(
+            f"CONTROL_FACTOR_IN_RATEABLE_PATH: Factor {bound.slug}@{bound.version} has intent "
+            "'control' and cannot be rated on (FR-88)"
+        )
     if not slug_is_admitted("factor", bound.slug):
         # `Factor.slug` is an unconstrained `str` (FD-1384); a reference to it could not be
         # re-read, so refuse by name here rather than 500 on a later read (RL-1383 item 3).
