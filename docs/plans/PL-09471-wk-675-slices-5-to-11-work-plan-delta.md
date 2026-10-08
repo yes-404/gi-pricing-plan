@@ -119,20 +119,23 @@ the same PR. Added since:
 
 Under L5 a Work plan's tasks are its slice rows; each slice's steps are written in its `LG-` by its
 executor. Columns follow L5 (a): scope, requirements, dependencies, lane and order. Size is
-`PL-1286`'s likely figure (worst 2). Lane is `PL-1371` §3.3's (lane A); the lead assigns the live
-lane at GO. Order is `PL-1286:370` with S12, S13 and S14 removed; a slice may move up when its
+`PL-1286`'s likely figure (worst 2). **Lane: assigned at GO** for every row. WK-675 from S3 on is
+PROPOSED to move to a second contributor team (to-lead "2026-10-08 13:07:20 BST — USER: the new
+contributor runs HER OWN Claude team (team B). The two-team protocol; CONTRIBUTING.md re-scoped to
+it; WK-675 is the proposed team-B Work", T1, in effect when team B starts); the lane or team is
+fixed at each slice's GO. Order is `PL-1286:370` with S12, S13 and S14 removed; a slice may move up when its
 dependencies are met (`PL-1286:372-387`).
 
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Depends on | Lane | Size | Ladder |
 |---|---|---|---|---|---|---|---|
-| 1 | S5 — Editor II: diff shading, bulk, import, export | `PL-1286` S5 row, plus R5.1–R5.3 | `03` §3.3: FR-230, FR-231, FR-232, FR-233, FR-235; `00`: FR-25; NFR-463; register F-W10-1, F-W10-2 (view limb) | S4 closed; **OQ-1223 decided** (DP-3); `SL-1391` (closed, met); the FD-1366 bulk-operation typing slice (WK-1178) merged | A | 1 | no |
-| 2 | S6 — Sandbox: form, waterfall, trace | `PL-1286` S6 row, plus R6.1–R6.2 | `03` §3.1: FR-213; §3.6: FR-247, FR-248, FR-249 (shown absent, R6.1); §3.7: FR-251, FR-252, FR-255, FR-256; §3.8: FR-258; FR-25; NFR-463 | S1 (closed, met); **`SL-1367` merged** (FD-1335 hold) | A | 1 | no |
-| 3 | S7b — Compare backend | `PL-1286` S7b row, plus R7b.1 | `03` §4.10 `StepChange.own_change`; §3.8: FR-262 (backend limb) | `RL-1261` (met); **`SL-1367` merged first** (both edit `score_compare`) | A | 1 | no |
-| 4 | S7 — Sandbox compare | `PL-1286` S7 row | `03` §3.8: FR-262 (view limb); §4.10's `own_change` rendering rule | S6, S7b closed; `SL-1367` merged | A | 1 | no |
-| 5 | S10 — Rating version list | `PL-1286` S10 row, as changed by R10.1 | `03` §3.4: one new FR (spec first, R10.1); FR-25; `FD-1283` option A | S6 (order); DP-5 (`RL-1473`, met); `SL-1256` (closed, met) | A | 1 | **candidate, rung 2** (with S11) |
-| 6 | S11 — Regression suite view | `PL-1286` S11 row | `03` §3.8: FR-260, FR-261, FR-1221; `FD-1283` option A; a run-list read route under DP-4 (a) only if the version's evidence gives no run id | S10 (order); DP-5 (met) | A | 1 | **candidate, rung 2** (with S10) |
-| 7 | S8 — Dislocation views | `PL-1286` S8 row, plus R8.1 | `03` §3.9: FR-263, FR-264, FR-265, FR-266; NFR-463 | S1 (met); **`SL-1388`** (WK-673 S4) closed | A | 1 | no |
-| 8 | S9 — Designer III: sub-graph mounting | `PL-1286` S9 row | `03` §3.1: FR-217 (the mount), FR-218 (authoring view) | S3 closed; **`SL-1341`** (WK-1250 S3) closed | A | 1 | **candidate, rung 1** |
+| 1 | SL 9468 — S5: Editor II: diff shading, bulk, import, export | `PL-1286` S5 row, plus R5.1–R5.3 | `03` §3.3: FR-230, FR-231, FR-232, FR-233, FR-235; `00`: FR-25; NFR-463; register F-W10-1, F-W10-2 (view limb) | S4 closed; **OQ-1223 decided** (DP-3); `SL-1391` (closed, met); the FD-1366 bulk-operation typing slice (WK-1178) merged | at GO | 1 | no |
+| 2 | SL 9467 — S6: Sandbox: form, waterfall, trace | `PL-1286` S6 row, plus R6.1–R6.2 | `03` §3.1: FR-213; §3.6: FR-247, FR-248, FR-249 (shown absent, R6.1); §3.7: FR-251, FR-252, FR-255, FR-256; §3.8: FR-258; FR-25; NFR-463 | S1 (closed, met); **`SL-1367` merged** (FD-1335 hold) | at GO | 1 | no |
+| 3 | SL 9466 — S7b: Compare backend | `PL-1286` S7b row, plus R7b.1 | `03` §4.10 `StepChange.own_change`; §3.8: FR-262 (backend limb) | `RL-1261` (met); **`SL-1367` merged first** (both edit `score_compare`) | at GO | 1 | no |
+| 4 | SL 9465 — S7: Sandbox compare | `PL-1286` S7 row | `03` §3.8: FR-262 (view limb); §4.10's `own_change` rendering rule | S6, S7b closed; `SL-1367` merged | at GO | 1 | no |
+| 5 | SL 9462 — S10: Rating version list | `PL-1286` S10 row, as changed by R10.1 | `03` §3.4: one new FR (spec first, R10.1); FR-25; `FD-1283` option A | S6 (order); DP-5 (`RL-1473`, met); `SL-1256` (closed, met) | at GO | 1 | **candidate, rung 2** (with S11) |
+| 6 | SL 9461 — S11: Regression suite view | `PL-1286` S11 row | `03` §3.8: FR-260, FR-261, FR-1221; `FD-1283` option A; a run-list read route under DP-4 (a) only if the version's evidence gives no run id | S10 (order); DP-5 (met) | at GO | 1 | **candidate, rung 2** (with S10) |
+| 7 | SL 9464 — S8: Dislocation views | `PL-1286` S8 row, plus R8.1 | `03` §3.9: FR-263, FR-264, FR-265, FR-266; NFR-463 | S1 (met); **`SL-1388`** (WK-673 S4) closed | at GO | 1 | no |
+| 8 | SL 9463 — S9: Designer III: sub-graph mounting | `PL-1286` S9 row | `03` §3.1: FR-217 (the mount), FR-218 (authoring view) | S3 closed; **`SL-1341`** (WK-1250 S3) closed | at GO | 1 | **candidate, rung 1** |
 
 ### Changes since `PL-1286`, per slice
 
@@ -189,9 +192,9 @@ rows stand and are scheduled last among WK-675's slices.
 
 - The lead lists this delta on WK-675's roadmap row (L5) and sets `PL-1286` `active` by its status
   line in the mint batch (F-2 (b)).
-- **SL rows.** S5, S6, S7b, S7, S10, S11, S8 and S9 have no `SL-` rows on main (`PL-1371:550`). Their
-  ids and rows are the lead's reservation and this branch's or the slice PR's write, as the lead
-  rules; when reserved, the rows name this delta.
+- **SL rows.** S5, S6, S7b, S7, S10, S11, S8 and S9 had no `SL-` rows on main (`PL-1371:550`). The lead
+  reserved SL 9468 (S5), SL 9467 (S6), SL 9466 (S7b), SL 9465 (S7), SL 9464 (S8), SL 9463 (S9), SL 9462 (S10)
+  and SL 9461 (S11); their planner-cut `draft` rows are in `docs/roadmap.md` under WK-675, on this branch.
 - `PL-1286` Acceptance item 2 counts "nine views' routes"; with S12, S13 and S14 in Phase 3 the
   closing auditor reads it against the views still in P2, and records the three as moved, not missing.
 - `PL-1286`'s locator for `03` §5.3 (`03:1041-1058`) has drifted to `03:1277-1286` at this tree; a
@@ -203,7 +206,7 @@ rows stand and are scheduled last among WK-675's slices.
   FR-230, FR-231, FR-232, FR-233, FR-235, FR-247, FR-248, FR-249, FR-251, FR-252, FR-255, FR-256,
   FR-258, FR-260, FR-261, FR-262, FR-263, FR-264, FR-265, FR-266, FR-1221, FR-25, NFR-463, and
   register F-W10-1, F-W10-2. FR-249's view limb is carried (R6.1), not dropped.
-- **Placeholders.** One deliberate gap: the `SL-` ids, which are the lead's to reserve (Hand-off).
+- **Placeholders.** None; the `SL-` ids are the lead's reservation of 2026-10-08.
 - **Consistency.** The order puts S10/S11 before S8/S9, as `PL-1286:370`; `PL-1371:304` lists S5 after
   S10, which is a calendar, not a dependency — the lead orders at GO within the dependencies above.
 - **Rulings since the sweep.** `gh pr list --state open` at 2026-10-08 13:11 BST (`date`), titles
