@@ -3,7 +3,7 @@
     "id": "delivery-process-core",
     "version": "1.0.0",
     "derived_from": "docs/process/delivery-process.md",
-    "derived_from_digest": "sha256:f2bed552524ac3736c921f803e42f1d7daf92948b85dd4a7bb57090f92bb5b47",
+    "derived_from_digest": "sha256:55fbdd8498679eb5aa85332cda58c517cab2dbb62445fadfa989522676133d2e",
     "verified_against_tree": "0651c1e265648cbd3918adfc729ad965b83b1e0b",
     "authoritative": false,
     "note": "The markdown spec is authoritative. This file is the mechanical extract: state machine, guards, vocabularies, and runtime-state schema for hooks/watcher scripts. Regenerate or diff-check against the md on every spec change (RFC-895 script C4). Each block is the mechanically-checkable subset of the section it cites, not an exhaustive rendering -- a section may state more than its block records, and a block's silence is not the section's silence.",
@@ -280,7 +280,9 @@
           "required_fields": [
             "scope",
             "acceptance_standard"
-          ]
+          ],
+          "record": "the_slices_row_in_its_works_one_plan_quoted_in_its_lg_scope_section",
+          "amended": "2026-10-08, RFC-1506 P6 (Lean P2 L1, L3, L5) and P5, by the maintainer's amendment (dated line by delegation) (§6, §10)"
         },
         {
           "id": "write_test_red",
@@ -334,8 +336,14 @@
           "constraints": [
             "small_working_commit",
             "pr_opened",
-            "never_self_merged"
-          ]
+            "never_self_merged",
+            "one_pr_per_slice_code_tests_spec_change_sl_row_status_and_one_lg",
+            "lg_sections_scope_tasks_gate_audit_build_log",
+            "no_per_slice_pl_no_dispatch_rl_no_activation_pr"
+          ],
+          "applies_from": "slices_whose_go_follows_to_lead_2026_10_08_11_51_58",
+          "amended": "2026-10-08, RFC-1506 P6 (Lean P2 L1, L3, L5) and P5, by the maintainer's amendment (dated line by delegation) (§6)",
+          "corrected": "2026-10-08 12:02:08 BST, L1 (a'): the slice's one file is its LG-, not text under the roadmap row"
         },
         {
           "id": "return_to_work",
@@ -499,6 +507,36 @@
       "resolution_rule": "route_by_precedent_read_out_of_the_migrated_snapshots_own_REDIRECTS_csv_never_by_choosing_a_home",
       "finding": "F102",
       "added": "2026-09-03"
+    },
+    "pr_and_merge_rules": {
+      "source": "§8",
+      "batch_max_ids": 10,
+      "batch_over_10_needs": "maintainer_prior_ok",
+      "batch_order": "cited_first_by_dependency_layer",
+      "register_touching_minters_at_once": 1,
+      "open_pr_cap": 30,
+      "new_record_draft": "own_draft_branch_no_pr_batch_pr_at_mint",
+      "draft_branch_commits_index": false,
+      "behind_main": "merge_origin_main_never_rebase",
+      "draft_age_limit_days": 7,
+      "remote_ci_waits_for_gate_slot": false,
+      "amended": "2026-10-08, RFC-1506 P6 (Lean P2 L1, L3, L5) and P5, by the maintainer's amendment (dated line by delegation) (§8)",
+      "ack_carry_over": {
+        "cases": [
+          "1E_docs_only_pr_paths_disjoint_from_mains_new_commits",
+          "E2_docs_only_pr_only_shared_path_index_regenerated",
+          "code_pr_delta_only_a_docs_only_merge_of_main"
+        ],
+        "requires": [
+          "merge_tree_rc_0_tree_named",
+          "docs_checks_green_at_new_head",
+          "local_docs_reading_pytest_subset"
+        ],
+        "precondition": "ci_green_head_runs_completed_with_success_per_workflow_cancelled_is_not_green_no_push_while_a_relied_on_run_in_flight",
+        "pytest_subset_db_backed_modules": "skipped_unless_pr_touches_docs_contracts_or_docs_specs_oq_mirror_row_excepted_else_per_worktree_db",
+        "procedure_in": ".claude/roles/lead.md rule 4",
+        "backstop": "main_push_ci_red_main_fixed_forward_first"
+      }
     }
   },
   "monitoring": {
@@ -533,7 +571,18 @@
     "agent_settings": "docs/process/agent-settings.md",
     "roles_dir": ".claude/roles/",
     "runtime_state_location": "handover_ops_area_outside_repo",
-    "source": "§9, §10, §13"
+    "source": "§9, §10, §13",
+    "process_backlog": "docs/process/process-backlog.md",
+    "plan_granularity": "one_plan_per_work_slices_as_rows_deltas_relate_replans_supersede_work_row_lists_deltas",
+    "process_findings": {
+      "default": "dated_row_in_process_backlog_until_p2_exit_demo",
+      "fd_when": [
+        "lets_wrong_merge_wrong_number_mispricing_or_data_loss_through",
+        "blocks_work_today"
+      ],
+      "fd_names_the_limb": true
+    },
+    "amended": "2026-10-08, RFC-1506 P6 (Lean P2 L1, L3, L5) and P5, by the maintainer's amendment (dated line by delegation) (§9, §10)"
   },
   "hooks": {
     "C2_retry_cap": {

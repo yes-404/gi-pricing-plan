@@ -21,6 +21,16 @@ The failure this guards against is not "we forgot a task". It is a roadmap that 
 progress the repository does not have — which is worse than no roadmap, because the next
 workstream is planned against it.
 
+**Lean P2: where a slice's evidence now lives** (L1, L3 and L5, from the maintainer's entry
+"2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)" in `to-lead.md`). For a slice dispatched after that entry there is no leaf plan: its one
+`LG-` holds five sections — scope (quoting its row in the Work's one plan), tasks, gate rc table,
+audit and build log — and quotes the GO and MERGE-ACK headers (`docs/_templates/LG.md`). Read
+them there; an older slice keeps its leaf plan beside its `LG-`. (L1 as corrected to (a') by the maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED".) The audit itself is unchanged: scope
+from the spec, four verdicts, NFRs measured, broken-input proofs. **A process finding** raised
+at a close is a dated row in `docs/process/process-backlog.md` until the P2 exit demo, not an
+`FD-`, unless it lets a wrong merge, a wrong number, a mispricing or data loss through or blocks
+work today. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6.)*
+
 ## 0. Derive the scope from the specs first — then go looking for evidence
 
 Do this **before** opening any source file or recalling anything you built. The order is
@@ -707,6 +717,9 @@ looking.
 ```
 
 ## Verified
+
+2026-10-08 — **the Lean P2 paragraph added** (RFC-1506 P6) at `8b0256fd`; nothing else
+re-verified. Not yet exercised at a real close.
 
 2026-09-29 — **the §14 paragraph and the template's Replan check added by `RFC-1248`**
 (option C, adopted by the maintainer 2026-09-29, confirmed by the user). A Work close no
