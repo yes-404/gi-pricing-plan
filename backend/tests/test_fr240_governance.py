@@ -18,7 +18,16 @@ from backend.tests.test_glm_approximation_model import _transparency_job
 from backend.tests.test_model_jobs import _actuary
 from backend.tests.approved_rows import mark_approved
 from backend.tests.test_custom_objectives_api import _advance, _create
+from backend.tests.test_api_rate_tables import (
+    _LEVELS,
+    _run_with_database,
+    _seed_approved_model,
+    _seed_body,
+    _table_slug,
+)
 from backend.tests.test_model_lifecycle import _principal_with
+from backend.tests.test_rate_tables_service import _seed as _seed_rate_table
+from backend.tests.test_rate_tables_service import _table_slug as _compile_table_slug
 from backend.tests.test_rating_version_compile import (
     _headers,
     _insert_version,
@@ -26,6 +35,7 @@ from backend.tests.test_rating_version_compile import (
     _run_compile_job,
 )
 from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import ModelRow
 from app.db.session import Database
@@ -34,7 +44,7 @@ from app.platform import approvals as approval_service
 from app.platform import modelling as service
 from app.platform.blobs import BlobStore
 from app.worker.rating_handlers import register_rating_handlers
-from model_schema import DecisionKind, JobStatus, ModelFlag, ModelStatus, ObjectiveStatus
+from model_schema import DecisionKind, JobStatus, ModelFlag, ModelStatus, ObjectiveStatus, new_uuid7
 
 
 @pytest.fixture(autouse=True)
@@ -160,7 +170,8 @@ def _run(coro: Any) -> Any:
 
 
 def _compile_with_pins(
-    api_client, principal, workspace_id, database, blob_store, *, models=(), objectives=()
+    api_client, principal, workspace_id, database, blob_store, *, models=(), objectives=(),
+    rate_tables=(),
 ) -> Any:
     headers = _headers(principal, workspace_id)
     created = api_client.post(
@@ -172,7 +183,7 @@ def _compile_with_pins(
             database, workspace_id, principal.id,
             algorithm_ref="rating_algorithm:minimal@1",
             pins={
-                "rate_tables": [], "models": list(models), "reference_tables": [],
+                "rate_tables": list(rate_tables), "models": list(models), "reference_tables": [],
                 "custom_objectives": list(objectives),
             },
         )
@@ -228,3 +239,68 @@ def test_an_overridden_flag_never_reaches_compile(
     )
     assert job_row.status is JobStatus.FAILED
     assert job_row.error["code"] == "PIN_NOT_APPROVED"
+
+
+# -- A control-intent Factor: the seed route and the compile Job (FR-88, DP-3, DP-4) -------
+
+
+async def _make_control(session: AsyncSession, workspace_id: Any, slug: str) -> None:
+    """Flip the workspace's Factor `slug` to `intent: control`, the way a later edit would."""
+    await session.execute(
+        text(
+            "UPDATE factors SET body = jsonb_set(body, '{intent}', '\"control\"') "
+            "WHERE workspace_id = :w AND slug = :slug"
+        ),
+        {"w": workspace_id, "slug": slug},
+    )
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-230")
+@pytest.mark.req("FR-240")
+def test_the_seed_route_refuses_a_control_factor_with_its_code(
+    api_client, workspace_id, principal, grant
+) -> None:
+    _run(grant("pricing_actuary"))
+    family = f"mf-{new_uuid7().hex[-8:]}"
+    _seed_approved_model(workspace_id, family, _LEVELS)
+
+    async def _flip(session: AsyncSession) -> None:
+        await _make_control(session, workspace_id, "driver_age_band")
+
+    _run_with_database(_flip)
+    response = api_client.post(
+        f"/api/v1/rate-tables/{_table_slug()}/seed-from-model",
+        json=_seed_body(family),
+        headers=_headers(principal, workspace_id),
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "CONTROL_FACTOR_IN_RATEABLE_PATH"
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+def test_a_compile_over_a_control_keyed_table_fails_with_its_code(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """The table is seeded while its Factor is `risk`; the Factor is then `control`, so the
+    pinned table's key is bound to a control Factor and compile is the backstop (DP-3)."""
+    _run(grant("analyst"))
+    family = f"mf-{new_uuid7().hex[-8:]}"
+    seeded = _run(
+        _seed_rate_table(
+            database, workspace_id, principal, family, _compile_table_slug(), blob_store
+        )
+    )
+
+    async def _flip() -> None:
+        async with database.unit_of_work() as session:
+            await _make_control(session, workspace_id, "driver_age_band")
+
+    _run(_flip())
+    job_row = _compile_with_pins(
+        api_client, principal, workspace_id, database, blob_store,
+        rate_tables=[f"rate_table:{seeded.slug}@{seeded.version}"],
+    )
+    assert job_row.status is JobStatus.FAILED
+    assert job_row.error["code"] == "CONTROL_FACTOR_IN_RATEABLE_PATH"
