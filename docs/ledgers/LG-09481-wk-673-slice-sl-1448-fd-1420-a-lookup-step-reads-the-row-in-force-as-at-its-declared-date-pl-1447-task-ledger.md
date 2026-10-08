@@ -142,6 +142,31 @@ parsing reds; `plain-date` is red too, for the same cause (it lands in the NEW w
 text with its amendments, not the plan's §"Spec text T1"); the marker date is the applying commit's, 2026-10-08. The find string
 `never "now" (`01` FR-71). The date source is explicit in the step. |` occurred once before the edit.
 
+### Task 6 — the gate
+
+Slot `/tmp/slots/gate-1`, granted by the lead for head `e021d6f174e2d2ed2c34f3329a76e074d30b4cb7` (tree = that commit's, a clean
+working tree), both halves under one held `flock`, `timeout 3600 nice`. The stages ran as the `dev-commands` gate body, with
+`uv run --directory`, `env -C` and `pnpm --dir` in place of a `cd`. **GATE START 2026-10-08 11:05:08 BST, GATE END 11:44:20 BST.**
+`alembic current` = `alembic heads` = `f3a7c1d9e2b4` before and after. Logs: `/home/puzhenhao1989/.cache/tmp.jswRSYQcGf` (local).
+
+| stage | rc |
+|---|---|
+| `ruff check .` | 0 |
+| `mypy` | 0 |
+| `lint-imports` | 0 |
+| `audit-docs.py` | **1** — the single expected row `check 31: gap in the full allocation between 1468 and 9481` (this ledger's working id) |
+| `req-coverage.py` | 0 |
+| `generate-contracts.py --check` | 0 |
+| `pytest -q` | **1** — `13 failed, 5098 passed, 4 skipped` in 2251.98 s |
+| frontend `install --frozen-lockfile`, `generate:api`, `lint`, `type-check`, `test`, `build` | 0, 0, 0, 0, 0, 0 |
+
+The 13 pytest failures are all docs-audit tests that run `audit-docs.py` / `doc-id.py check` against the real tree and read the same
+working-id gap: 11 carry the string `gap in the full allocation between 1468 and 9481` in their failure text; `test_doc_id_check_exits_0_on_the_real_tree`
+reports `docs/INDEX.md has a gap between 1468 and 9481` from `doc-id.py`; `test_an_index_skipping_a_reserved_block_breaks_contiguity`
+reads the same `docs/INDEX.md` for gaps (its text was not matched by the string search; read from the INDEX gap itself, not
+verified by its own failure body). They clear when the mint closes the allocation. No other failure. The worktree database
+`gipricing_sl-1448_72c627d5` was dropped after the gate.
+
 ## PRs
 
 #1236, a draft. The branch `sl-1448-fd-1420-lookup-reads-row-in-force-as-at` is pushed; the PR is not merged by the executor.
