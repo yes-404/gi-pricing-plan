@@ -2,7 +2,7 @@
 id: FD-1433
 family: finding
 title: The trace read route lists a mismatch trace as the quote's trace
-status: active
+status: closed
 created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: auditor
 tree: 5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a

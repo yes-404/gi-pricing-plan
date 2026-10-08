@@ -2,7 +2,7 @@
 id: FD-1421
 family: finding
 title: No HTTP route sets a Rating Version's algorithm or pins, so 03 §5.1's "Create a draft Rating Version with pins" describes a route that takes neither
-status: active
+status: closed
 created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: auditor
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc

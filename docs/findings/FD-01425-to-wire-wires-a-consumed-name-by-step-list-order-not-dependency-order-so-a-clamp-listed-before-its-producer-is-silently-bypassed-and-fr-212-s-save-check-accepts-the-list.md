@@ -2,7 +2,7 @@
 id: FD-1425
 family: finding
 title: `to_wire` wires a consumed name by step-list order, not dependency order: a clamp listed before its producer is silently bypassed, and FR-212's save check accepts the list
-status: active
+status: closed
 created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: auditor
 tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8
