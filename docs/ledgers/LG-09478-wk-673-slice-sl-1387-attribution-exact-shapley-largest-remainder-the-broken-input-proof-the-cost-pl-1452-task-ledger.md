@@ -121,7 +121,7 @@ existed (the empty and full subsets are the baseline and candidate by constructi
 - `estimate_attribution_ratings(..., grouped=True)` with k above 6 raises `ValueError`: groups are at most 6.
 
 **Not done, by name.** P3 (§4.6, its placeholders are Task 7's figures) and P1 (owned-codes tail, waits for PL-1471) are not in the spec
-yet. Task 7, and with it Acceptance 18's replay test, 19, 20 and the `examples/fremtpl2/rating/` fixture, waits for the Ruling 1
+yet. Task 7, and with it Acceptance 18's replay test, 19, 20 and the `examples/fremtpl2/rating/` fixture, waits for the [R]uling 1
 confirmation. The full gate (Task 8) waits for the lead's slot grant.
 
 ## PRs
