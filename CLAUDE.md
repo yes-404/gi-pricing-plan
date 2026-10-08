@@ -256,8 +256,9 @@ Four things are never a role's:
 - **An amendment to what this file requires** — the maintainer's. Editing this file to
   *point at* something already ruled is not an amendment.
 
-**Every decision lands as a dated artifact** — a ruling record, an audit record, a plan —
-never in chat.
+**Every decision lands as a dated artifact** — a ruling record, an audit record, a plan, or
+the slice record that quotes the GO and MERGE-ACK headers verbatim — never in chat.
+**Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6** (Lean P2 item L1).
 
 **Precedence — superpowers first.** When a superpowers skill and any other both apply,
 follow the superpowers one. Read `using-superpowers` when a task starts;
@@ -273,7 +274,14 @@ repository does not have, which the next workstream is then planned against. **R
 destinations, per `document-ids.md` §1.4:** a closure record or a plan review is a `CR-`
 under `docs/closures/`; a finding is an `FD-` under `docs/findings/`, with a row in
 `docs/findings/register.md`; a decision already made is an `RL-` under `docs/rulings/`; a
-slice ledger is an `LG-` under `docs/ledgers/`. Three rules bind wherever anything here is
+slice's scope, decisions, tasks, gate, audit and ledger are sections of its one `SL-` record,
+carried in the slice's one PR, and a Work has one `PL-` whose slices are rows (an `LG-` under
+`docs/ledgers/`, a leaf plan, a dispatch `RL-` and an activation PR only for a slice dispatched
+before the change); a process finding is a dated row in `docs/process/process-backlog.md`
+until the P2 exit demo, and an `FD-` only when it lets a wrong merge, a wrong number, a
+mispricing or data loss through, or blocks work today.
+**Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6** (Lean P2 items L1, L3 and L5; it read "a slice
+ledger is an `LG-` under `docs/ledgers/`"). Three rules bind wherever anything here is
 audited, not only at a close:
 
 - **Scope is derived from the specification first, then evidenced** — never from
