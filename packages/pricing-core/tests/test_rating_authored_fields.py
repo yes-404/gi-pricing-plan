@@ -107,6 +107,7 @@ def test_the_enumerator_yields_every_authored_string_with_its_field() -> None:
     ]
     assert found == [
         ("s_area", "key_expr[0]", "channel"),
+        ("s_area", "as_at", "effective_date"),
         ("s_expense", "key_expr[0]", "channel"),
         ("s_office", "expr", "risk_premium_minor * expense_factor"),
         ("s_minprem", "condition", "office_premium_minor >= 100"),
@@ -186,7 +187,8 @@ def test_a_new_string_field_is_reported_unclassified() -> None:
 @pytest.mark.req("FR-274")
 def test_every_non_expression_field_carries_a_reason() -> None:
     assert all(reason.strip() for reason in NON_EXPRESSION_FIELDS.values())
-    assert (rating_schema.RatingLookupStep, "as_at") in NON_EXPRESSION_FIELDS
+    assert (rating_schema.RatingLookupStep, "as_at") in EXPRESSION_FIELDS
+    assert (rating_schema.RatingLookupStep, "as_at") not in NON_EXPRESSION_FIELDS
 
 
 # ---------------------------------------------------------------------------

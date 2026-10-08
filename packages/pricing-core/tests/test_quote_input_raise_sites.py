@@ -64,6 +64,9 @@ _INPUT_FREE = {
     ("rating/score.py", "_check_billing_surface"): 1,  # names the constant billing-surface keys
     # FR-213's refusal: names the declared step outputs the inputs collide with, never a value
     ("rating/score.py", "_check_no_shadowed_produced_names"): 1,
+    # FR-221 as_at refusal: step id and field name only, never the value
+    # (test_rating_lookup_as_at.py drives it with a sentinel)
+    ("rating/score.py", "_check_as_at_values"): 1,
     ("rating/score.py", "_check_lookup_misses"): 2,  # step ids only
     ("rating/score.py", "_reraise_engine_failure"): 1,  # engine error is reduced to its type name
     # RL-1346's refusal: clause, rung names and minor-unit differences from `ladder_violations`
