@@ -150,7 +150,7 @@ The lead's ruling, `to-lead.md`, header: "## 2026-10-08 12:30:31 BST — S2 (SL-
   rulings' code blocks, byte for byte, with only `<date>` = 2026-10-08, `RL-<this>` = RL-1475 / RL-1473 and the FR ids filled; the
   by-id row too (its grep was 0). The ruled FORM: the hyphen form (`FR-9474`, `FR-9473`) only in the FR row's bold id cell and in
   `@pytest.mark.req`; the space form (`FR 9474`, `FR 9473`) elsewhere. `FR 9474` is the algorithm read, `FR 9473` the Rating
-  Version address (the lead's working ids; the minter re-points every site, and `git grep -nE 'FR-947[34]\b'` is 0 at the merge head).
+  Version address (the lead's working ids; the minter re-points every site, and `git grep -nE` for the two working ids (hyphen form) is 0 at the merge head).
   `req-coverage` lists both ids with test files. `audit-docs`: only check 31 (two gaps between the working ids and 1477/9476),
   expected until the mint.
 - **Dropped step (not a write-set change):** PL-1476 Task 4 Step 2's `_set_algorithm_ref` helper. `create_rating_version` takes
@@ -283,6 +283,21 @@ target sizes.
   (d) 320 px / 400 % reflow of the two-column layout; (e) measured contrast (`bg-sky-100` active option, slate-500 on slate-50, the
   focus outline); (f) target sizes (nullable checkbox, Save); (g) the mode-mismatch `role="status"` announcement; (h) the
   `scrollIntoView` behaviour of the active option.
+
+### Merge of main (SL-1448, #1236 at `680fb9ac`) and the `as_at` test redone
+
+`git merge origin/main` (never a rebase): the only conflict was `docs/INDEX.md` (generated; taken from main's side and regenerated
+with `scripts/doc-index.py`, no markers left); `03` merged clean. `audit-docs` after the merge: only check 31's two working-id gaps
+(an earlier run also named `FR-947` from a regex fragment in this ledger, which the check parsed as a requirement id; reworded).
+FR-221 at main now reads (amended 2026-10-08, RL-1446): **`as_at` names `effective_date` — the quote's stamped date — or a declared
+`date` input, and nothing else.** The inspector's `as_at` control now offers `effective_date` plus the declared `date` inputs
+(`StepInspector.vue`, `asAtOptions`); it repeats no server check. Tests (2, in `StepInspector.test.ts`): a lookup over an
+algorithm with an extra `date` input and a `string` input offers exactly `effective_date` and the extra `date` input; a **new**
+lookup (`as_at` empty) on an algorithm that does not declare `effective_date` still offers it. **Red** (the pre-merge component
+restored): `AssertionError: expected [] to deeply equal [ 'effective_date' ]`; restored, 11 passed. Re-run after the merge, named
+modules behind the slot probe, own database: `test_rating_algorithms.py`, `test_rating_versions.py`,
+`test_rating_algorithm_draft.py`, `test_contracts.py` — 221 passed, 2 skipped; `generate-contracts.py --check` rc 0; `ruff`, `mypy`,
+frontend `type-check` and `lint` clean; `vitest` over `src/components/dag` and the view and router files green.
 
 ## PRs
 

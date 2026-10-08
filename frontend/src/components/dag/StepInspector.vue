@@ -77,9 +77,13 @@ function patchEntry(fields: Partial<InputContractField>): void {
   );
 }
 
-const dateInputs = computed(() =>
-  props.inputContract.filter((field) => field.type === "date").map((field) => field.name),
-);
+/** FR-221 (as amended 2026-10-08, RL-1446): `as_at` names `effective_date` or a declared `date` input. */
+const asAtOptions = computed(() => [
+  ...new Set([
+    "effective_date",
+    ...props.inputContract.filter((field) => field.type === "date").map((field) => field.name),
+  ]),
+]);
 
 const featureMapText = computed(() =>
   props.step.type === "model_call"
@@ -300,7 +304,7 @@ function featureMap(text: string): Record<string, string> {
       <FormField
         field-id="si-as-at"
         label="As at (date input)"
-        help="Required (FR-221): a declared date input, never 'now'."
+        help="Required (FR-221): effective_date or a declared date input, never 'now'."
       >
         <select
           id="si-as-at"
@@ -311,7 +315,7 @@ function featureMap(text: string): Record<string, string> {
           @change="patch({ as_at: value($event) })"
         >
           <option
-            v-if="step.as_at !== '' && !dateInputs.includes(step.as_at)"
+            v-if="step.as_at !== '' && !asAtOptions.includes(step.as_at)"
             :value="step.as_at"
           >
             {{ step.as_at }}
@@ -323,7 +327,7 @@ function featureMap(text: string): Record<string, string> {
             Choose a date input
           </option>
           <option
-            v-for="option in dateInputs"
+            v-for="option in asAtOptions"
             :key="option"
             :value="option"
           >

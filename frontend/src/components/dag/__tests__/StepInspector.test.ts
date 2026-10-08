@@ -59,20 +59,40 @@ describe("the step inspector, one section per step type", () => {
     expect(screen.getByLabelText("Key expressions")).toBeInTheDocument();
   });
 
-  it("FR-221: a lookup step's as_at is a required, explicit field over the declared date inputs", async () => {
+  it("FR-221: a lookup step's as_at is a required, explicit field over effective_date and the declared date inputs", () => {
     const lookup = byId("s_area");
-    const { emitted } = render(StepInspector, { props: { ...base, step: lookup } });
+    const withExtra = [
+      ...base.inputContract,
+      { name: "inception_date", type: "date" as const },
+      { name: "driver_age_band", type: "string" as const },
+    ];
+    render(StepInspector, {
+      props: { ...base, inputContract: withExtra, step: lookup },
+    });
     const select = screen.getByLabelText("As at (date input)");
     expect(select).toHaveValue("effective_date");
     const options = Array.from(select.querySelectorAll("option"))
       .map((o) => o.value)
       .filter((v) => v !== "");
-    expect(options).toEqual(["effective_date"]);
-    expect(options).not.toContain("now");
-    expect(emitted()["update:step"]).toBeUndefined();
+    // effective_date once (it is declared too), the other declared date input, no string input, no "now".
+    expect(options).toEqual(["effective_date", "inception_date"]);
     expect(stepProblems({ ...lookup, as_at: "" } as RatingStep)).toContain(
       "as_at is required (FR-221)",
     );
+  });
+
+  it("FR-221: a new lookup offers effective_date even when the algorithm does not declare it as an input", () => {
+    render(StepInspector, {
+      props: {
+        ...base,
+        inputContract: base.inputContract.filter((f) => f.name !== "effective_date"),
+        step: { ...byId("s_area"), as_at: "" } as RatingStep,
+      },
+    });
+    const options = Array.from(screen.getByLabelText("As at (date input)").querySelectorAll("option"))
+      .map((o) => o.value)
+      .filter((v) => v !== "");
+    expect(options).toEqual(["effective_date"]);
   });
 
   it("FR-222 and FR-223: a model_call shows the version's mode read-only and flags a step that differs", () => {
