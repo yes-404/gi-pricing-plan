@@ -71,7 +71,24 @@ and "2026-10-08 11:53:19 BST — L5 transition RULED: per-slice plans drafted be
 
 | # | Command | rc | tree | slot / time |
 |---|---|---|---|---|
-| (the two halves, `CLAUDE.md` §11, each rc read directly) | not yet run | | | |
+| 1 | ruff check . | 0 | `7e1f44d3` | gate-1, 13:32 to 14:16Z |
+| 1 | mypy | 0 | `7e1f44d3` | same run |
+| 1 | lint-imports | 0 | `7e1f44d3` | same run |
+| 1 | audit-docs | 1 (check 31 only) | `7e1f44d3` | same run |
+| 1 | req-coverage | 0 | `7e1f44d3` | same run |
+| 1 | generate-contracts --check | 0 | `7e1f44d3` | same run |
+| 1 | pytest -q | 1: 15 failed, 5116 passed, 4 skipped (42m35s) | `7e1f44d3` | 13 check-31, 2 this slice's (fixed) |
+| 1 | frontend: install, generate:api, lint, type-check, test, build | 0, 0, 0, 0, 0, 0 | `7e1f44d3` | same run |
+| 2 | ruff check . | 0 | `d06b9d1e` | gate-1, 2026-10-08 15:03:58Z to 15:49:13Z; stages run serially in the body; flock rc 0 |
+| 2 | mypy | 0 | `d06b9d1e` | same run |
+| 2 | lint-imports | 0 | `d06b9d1e` | same run |
+| 2 | audit-docs | 1 (check 31: gap between 1487 and 9475 only) | `d06b9d1e` | same run |
+| 2 | req-coverage | 0 | `d06b9d1e` | same run |
+| 2 | generate-contracts --check | 0 | `d06b9d1e` | same run |
+| 2 | pytest -q | 1: 13 failed, 5118 passed, 4 skipped (42m30s) | `d06b9d1e` | the 13 are the check-31 working-id set; py half ended 15:47:31Z |
+| 2 | frontend: install --frozen-lockfile, generate:api, lint, type-check, test, build | 0, 0, 0, 0, 0, 0 | `d06b9d1e` | frontend ended 15:49:13Z |
+
+`fuser /tmp/slots/gate-1` inside the slot, before release: `1775649 1775650` (the `flock` process and its `bash` child); after release: no output, rc 1. The 13 check-31 tests fail only on the unminted working id `9475` (the gap 1487 to 9475); they pass once the ids are minted. A later commit changes only this ledger and `docs/INDEX.md`.
 
 ### 4. Audit
 
