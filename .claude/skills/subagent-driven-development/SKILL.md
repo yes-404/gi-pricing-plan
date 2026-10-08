@@ -41,7 +41,7 @@ ledger and the tool results carry the record.
 > now with five sections — Scope, Task list, Gate, Audit, Build log (`docs/_templates/LG.md`) — in
 > the slice's one PR, and the plan is the slice's row in its Work's one plan, quoted in Scope.
 > "Ledger the ruling" means a dated Build log entry. The rule above is unchanged: append only.
-> (L1 as corrected to (a') by the maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED".) *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.)*
+> (L1 as corrected to (a') by the maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED".) *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6.)*
 
 **Continuous execution:** Do not pause to check in with your human partner between tasks. Execute all tasks from the plan without stopping. The only reasons to stop are the four named below, or all tasks complete. "Should I continue?" prompts and progress summaries waste their time — they asked you to execute the plan, so execute it.
 

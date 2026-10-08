@@ -50,7 +50,7 @@ relates: []                      # ids only
     build log sections the executor writes and appends in that PR (`docs/_templates/LG.md`). It
     opens **no activation PR** and works from **no per-slice plan**. (L1 as corrected to (a') by the maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED".) A process finding it hits is a dated row in
     `docs/process/process-backlog.md`, riding the same PR, unless it lets a wrong merge, number,
-    mispricing or data loss through or blocks work today, when the lead files an `FD-`. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.)*
+    mispricing or data loss through or blocks work today, when the lead files an `FD-`. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6.)*
   - **Appends its `LG-` per task and per PR** (from Lean P2 L1 (a'), in the slice's one PR, in
     its Build log section), setting it `active` — the slice ledger is
     grown, never rewritten in place (§1.6 LG row: *"executor, appends per task and per PR

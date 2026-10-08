@@ -14,7 +14,7 @@ extra: no template declares it, so it is not permitted (RL-981,
 `docs/rulings/INDEX.md#2026-09-02-w37-field-set-and-rollup-rulingsmd`). A ledger's PR list lives in
 the `## PRs` body section below, which is what §1.9's PR-title lint reads.
 
-**Lean P2, L1 (a')** (amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6),
+**Lean P2, L1 (a')** (amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6),
 for every slice whose GO follows the maintainer's entry "2026-10-08 11:51:58 BST — USER
 DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through
 RFC 9479 P6 (the maintainer's amendment, by delegation)", as corrected by "2026-10-08 12:02:08

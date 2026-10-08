@@ -1,9 +1,9 @@
 ---
-id: RFC-9479
+id: RFC-1506
 family: proposal
 kind: process
 title: Merging safely in parallel — generated files, ids at creation, per-row tables, batching, and the merge queue
-status: draft                  # working id; the mint date will replace `created` (check 31)
+status: active                 # accepted as amended, 2026-10-08 12:20:54 BST (§1.6 RFC row: maintainer, draft → active)
 created: 2026-10-08
 owner: maintainer
 tree: 8b0256fdb5f000c11817838c129e1f9a4f8d8e10
@@ -17,12 +17,12 @@ corrects: ~
 relates: [WK-1178, RFC-937]
 ---
 
-# RFC-9479 — Merging safely in parallel: generated files, ids at creation, per-row tables, batching, and the merge queue
+# RFC-1506 — Merging safely in parallel: generated files, ids at creation, per-row tables, batching, and the merge queue
 
-**Working id RFC 9479**, not minted. **Drafted by planner-rfc9479; owned by the maintainer**
-(`document-ids.md` §1.6, RFC row). **`status: draft`**, the §1.2a word for "proposed": this RFC
-decides nothing. It ends with the options for the maintainer's ruling (an `RL-`), and P1 is then
-**the user's decision**, because it is a repository setting and possibly an ownership transfer.
+**Minted as `RFC-1506`** at #1240's merge turn, 2026-10-08 (working id 9479 before the mint). **Drafted by planner-rfc9479; owned by the maintainer**
+(`document-ids.md` §1.6, RFC row). **`status: active`**: accepted as amended on 2026-10-08 (see *Acceptance*).
+The draft's own framing, kept as written below, was that it decided nothing and ended with the options for the
+maintainer's ruling.
 
 **Authority.** `~/gi-pricing-plan.local/channel/to-lead.md` (a local channel file, so cited by
 its header), the entry headed exactly:
@@ -430,7 +430,7 @@ filed):
   (T8, B6, B9); a per-slice plan **begun after** it is folded into its Work's single delta before
   it is committed, the lead's draft register showing each plan's first-commit time
   (`git log --format=%aI`); a slice whose plan minted as-is still follows L1 at a GO after
-  11:51:58 (no activation PR, no `LG-`; its `LG-` quotes that minted plan as its Work-plan row,
+  11:51:58 (no activation PR; its `LG-` quotes that minted plan as its Work-plan row,
   as WK-673 S4–S6 will); and nothing already ruled is re-opened by L1, L3 or L5.
 
 **L3's first rows** (per "## 2026-10-08 11:56:02 BST — L3 LIST (handover/l3-list-2026-10-08.md) RULED: six PRs leave (#909 #1163 #982 #1147 #1146 to backlog rows; #1159 folded into #1240); #1153 STAYS and mints, being already ruled"). `docs/process/process-backlog.md` carries five dated rows,
@@ -469,7 +469,7 @@ with conflicts against bullets `main` gained after #1159's base, resolved by kee
 
 **Every file this PR changes for P5 and P6, with old → new and a predicate.** Tree:
 `origin/main...rfc-9479-merging-in-parallel`. The dated-line predicate is the fixed string
-`mended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6`, counted with
+`mended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6`, counted with
 `grep -cF '<that string>' <file>`. The count reads 0 for every file at `origin/main`, because
 the string is new.
 
@@ -478,10 +478,10 @@ the string is new.
 | `CLAUDE.md` §13 | *"a slice ledger is an `LG-` under `docs/ledgers/`"* → the `LG-` is, from Lean P2, the slice's one paperwork file with five sections, carried in the slice's one PR with the `SL-` row's one-line status change; one `PL-` per Work, slices as rows, dated deltas that `relates:` it; no per-slice `PL-`, dispatch `RL-` or activation PR; process findings to `process-backlog.md` with the two-limb `FD-` valve | dated line: 2 (§12, §13); `one paperwork file`: 1; `process-backlog.md`: 1 |
 | `CLAUDE.md` §12 | *"a ruling record, an audit record, a plan —"* → adds *"or the slice ledger that quotes the GO and MERGE-ACK headers verbatim"* | `quotes the GO and MERGE-ACK headers`: 1 |
 | `docs/process/delivery-process.md` §6 | step 1's slice plan and step 7's commit → the L1 (a') paragraph: one PR (code, tests, spec change, the `SL-` row's one-line status, one `LG-` with five sections), no per-slice PL / dispatch RL / activation PR, when a separate record is written | dated line: 4 in the file (§6, §8, §9, §10); `12:02:08`: 1 |
-| `docs/process/delivery-process.md` §8 | (none) → "PRs, batches and merging — the standing rules (RFC-9479 P5)": 5a–5e, 5f (in force, interim), 5h; 5d carries 2E (a draft branch commits no INDEX hunk); a (1E, E2) bullet: the three carry-over cases and the precondition, the procedure in `lead.md` | `(5h) Remote CI is not a gate`: 1; `COMPLETED with success`: 1 |
+| `docs/process/delivery-process.md` §8 | (none) → "PRs, batches and merging — the standing rules (RFC-1506 P5)": 5a–5e, 5f (in force, interim), 5h; 5d carries 2E (a draft branch commits no INDEX hunk); a (1E, E2) bullet: the three carry-over cases and the precondition, the procedure in `lead.md` | `(5h) Remote CI is not a gate`: 1; `COMPLETED with success`: 1 |
 | `docs/process/delivery-process.md` §9 | (none) → the L3 paragraph | `process-backlog.md`: 2 lines |
 | `docs/process/delivery-process.md` §10 | *"a slice breakdown per work item, and a plan per slice … existing, unchanged"* → one plan per Work, slices as rows; a delta `relates:` it, a true replan `supersedes:`, the Work's roadmap row lists every delta; plus a process-backlog bullet | `one plan per Work`: 1 |
-| `docs/process/delivery-process.core.json` | new keys only: `slice_plan.record`, `commit.constraints` (+3), `applies_from`, `corrected`, `guards.pr_and_merge_rules.ack_carry_over`, `artifacts.process_backlog` / `plan_granularity` / `process_findings`, `guards.pr_and_merge_rules`; `meta.derived_from_digest` → the amended spec's sha256; `verified_against_tree` unchanged (the migration base) | `RFC-9479 P6`: 4; check 27 green |
+| `docs/process/delivery-process.core.json` | new keys only: `slice_plan.record`, `commit.constraints` (+3), `applies_from`, `corrected`, `guards.pr_and_merge_rules.ack_carry_over`, `artifacts.process_backlog` / `plan_granularity` / `process_findings`, `guards.pr_and_merge_rules`; `meta.derived_from_digest` → the amended spec's sha256; `verified_against_tree` unchanged (the migration base) | `RFC-1506 P6`: 4; check 27 green |
 | `docs/process/document-ids.md` §1.2, §1.6, §1.11 | §1.2: the SL row (status in one line in the slice PR) and the LG row (the slice's one paperwork file, five sections); §1.6: the SL, PL map/leaf (delta `relates:`, replan `supersedes:`), LG and FD rows and the charters row (L3: a role-file problem is a backlog row unless the valve applies); §1.7: the leaf-plan rollup's L5 carve-out (a Work under L5 rolls up from its slice rows); §1.11: check 39's ledger clause | dated line: 7; `L1 (a')`: 4 |
 | `.claude/roles/lead.md` | the SL dispatch clause (GO quoted in the `LG-`, no activation PR); rule 4 gains 1E (in force), 1E for code PRs (11:57:55, in force), the 5a–5e, 5f and 5h pointer, and the `draft/` sweep; a Lean P2 bullet (L1 (a'), L3 with the limb, L5 with the lead listing deltas on the `WK-` row); #1159's PATCH bullet | dated line: 3; `11:57:55`: 1; `12:02:08`: 1; `12:12:08`: 1; `COMPLETED with success`: 1 |
 | `.claude/roles/planner.md` | a Lean P2 bullet: one plan per Work, slices as rows, no leaf plan, one dated delta that `relates:` (a replan `supersedes:`), its row quoted in the slice's `LG-`; #1159's PATCH bullet | dated line: 1; `12:02:08`: 1 |
@@ -669,5 +669,26 @@ workflow prerequisites and ruleset.
 
 ## Acceptance
 
-None in this file. The maintainer rules by an `RL-` that cites this RFC by its minted id, and the
-user decides P1 after it. Until then nothing here binds.
+**Accepted as amended, 2026-10-08**, by the maintainer (by delegation), under the user's
+decision of 11:51:58 and the widened delegation of 11:56:44. The ruling is the entry in
+`~/gi-pricing-plan.local/channel/to-lead.md` headed, verbatim:
+
+"## 2026-10-08 12:20:54 BST — RFC 9479 RULED (accepted as amended) on #1240 @29a0d7b550ba2edcf9c11423ab5258d3ac60785d; ONE last word fix (RFC:433); then full CI and the MERGE-ACK"
+
+Its items 1–7, verbatim:
+
+1. P1: 1A + 1E IN FORCE, with E2, the code-PR carry-over and the precondition (lead.md rule 4). 1B (a transfer + the merge queue) is the USER's; it is not offered in P2 and is revisited at the P2 phase review, with the serial-wait cost measured under 1E/E2. 1C and 1D are rejected.
+2. P2: 2E adopted inside 5d. 2D DEFERRED past P2 (the user did not approve lean item 4; per the RFC's own displacement estimate it costs about 2 lane-days before the 4 Nov freeze). 2A, 2B and 2C are rejected.
+3. P3: DEFERRED past P2. Ids stay minted at merge, with the lead the sole allocator. 3B is the preferred option when it is taken up.
+4. P4: re-measured after P2; no build in P2.
+5. P5: 5a–5e, 5f and 5h are recorded as in force in lead.md and delivery-process §8 (this PR); 5g is not adopted.
+6. P6: L1 (a'), L3 and L5 adopted as implemented in this PR; the two readings as ruled at 12:02:08.
+7. Sequence: P2 takes only the rules-now step. The builds (2D, 3B, P4, 1B) are re-planned at the P2 phase review (CLAUDE.md §14), not before.
+
+The entry's cost and risk lines, verbatim: *"Cost: one word fix plus a dated acceptance line; one
+CI run. Risk: deferring 2D/3B keeps INDEX and id-order conflicts in P2. They are mitigated by E2,
+the batch train and 5d, and re-measured at the phase review."*
+
+**Status: `active`**, the RFC family's accepted value (`document-ids.md` §1.6, RFC row:
+*"maintainer: `draft → active`"*). It becomes `closed` when `close-workstream` finds its
+deliverable shipped; the builds deferred above are re-planned at the P2 phase review.

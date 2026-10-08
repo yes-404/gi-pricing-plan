@@ -3,7 +3,7 @@
     "id": "delivery-process-core",
     "version": "1.0.0",
     "derived_from": "docs/process/delivery-process.md",
-    "derived_from_digest": "sha256:b3a804f77ede1fccaba66234c0d628f5eda67a85354b0bffb8f48aaf0d6b26ab",
+    "derived_from_digest": "sha256:93c4504ccd25935f791113707195dd8e770fa8234dee3da7bcd899a8f9e0aeec",
     "verified_against_tree": "0651c1e265648cbd3918adfc729ad965b83b1e0b",
     "authoritative": false,
     "note": "The markdown spec is authoritative. This file is the mechanical extract: state machine, guards, vocabularies, and runtime-state schema for hooks/watcher scripts. Regenerate or diff-check against the md on every spec change (RFC-895 script C4). Each block is the mechanically-checkable subset of the section it cites, not an exhaustive rendering -- a section may state more than its block records, and a block's silence is not the section's silence.",
@@ -282,7 +282,7 @@
             "acceptance_standard"
           ],
           "record": "the_slices_row_in_its_works_one_plan_quoted_in_its_lg_scope_section",
-          "amended": "2026-10-08, RFC-9479 P6 (Lean P2 L1, L3, L5) and P5, by the maintainer's amendment (dated line by delegation) (§6, §10)"
+          "amended": "2026-10-08, RFC-1506 P6 (Lean P2 L1, L3, L5) and P5, by the maintainer's amendment (dated line by delegation) (§6, §10)"
         },
         {
           "id": "write_test_red",
@@ -342,7 +342,7 @@
             "no_per_slice_pl_no_dispatch_rl_no_activation_pr"
           ],
           "applies_from": "slices_whose_go_follows_to_lead_2026_10_08_11_51_58",
-          "amended": "2026-10-08, RFC-9479 P6 (Lean P2 L1, L3, L5) and P5, by the maintainer's amendment (dated line by delegation) (§6)",
+          "amended": "2026-10-08, RFC-1506 P6 (Lean P2 L1, L3, L5) and P5, by the maintainer's amendment (dated line by delegation) (§6)",
           "corrected": "2026-10-08 12:02:08 BST, L1 (a'): the slice's one file is its LG-, not text under the roadmap row"
         },
         {
@@ -520,7 +520,7 @@
       "behind_main": "merge_origin_main_never_rebase",
       "draft_age_limit_days": 7,
       "remote_ci_waits_for_gate_slot": false,
-      "amended": "2026-10-08, RFC-9479 P6 (Lean P2 L1, L3, L5) and P5, by the maintainer's amendment (dated line by delegation) (§8)",
+      "amended": "2026-10-08, RFC-1506 P6 (Lean P2 L1, L3, L5) and P5, by the maintainer's amendment (dated line by delegation) (§8)",
       "ack_carry_over": {
         "cases": [
           "1E_docs_only_pr_paths_disjoint_from_mains_new_commits",
@@ -581,7 +581,7 @@
       ],
       "fd_names_the_limb": true
     },
-    "amended": "2026-10-08, RFC-9479 P6 (Lean P2 L1, L3, L5) and P5, by the maintainer's amendment (dated line by delegation) (§9, §10)"
+    "amended": "2026-10-08, RFC-1506 P6 (Lean P2 L1, L3, L5) and P5, by the maintainer's amendment (dated line by delegation) (§9, §10)"
   },
   "hooks": {
     "C2_retry_cap": {

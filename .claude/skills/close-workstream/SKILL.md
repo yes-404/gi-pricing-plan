@@ -29,7 +29,7 @@ them there; an older slice keeps its leaf plan beside its `LG-`. (L1 as correcte
 from the spec, four verdicts, NFRs measured, broken-input proofs. **A process finding** raised
 at a close is a dated row in `docs/process/process-backlog.md` until the P2 exit demo, not an
 `FD-`, unless it lets a wrong merge, a wrong number, a mispricing or data loss through or blocks
-work today. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.)*
+work today. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6.)*
 
 ## 0. Derive the scope from the specs first — then go looking for evidence
 
@@ -718,7 +718,7 @@ looking.
 
 ## Verified
 
-2026-10-08 — **the Lean P2 paragraph added** (RFC-9479 P6) at `8b0256fd`; nothing else
+2026-10-08 — **the Lean P2 paragraph added** (RFC-1506 P6) at `8b0256fd`; nothing else
 re-verified. Not yet exercised at a real close.
 
 2026-09-29 — **the §14 paragraph and the template's Replan check added by `RFC-1248`**

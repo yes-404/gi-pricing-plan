@@ -106,7 +106,7 @@ relates: []                      # ids only
   number, mispricing or data loss let through, or limb (ii), work blocked today, and names the
   limb in it. A Work has **one plan**; new slices or a scope change are one dated Work-plan
   delta, a new `PL-` that `relates:` the plan, and the lead lists each delta's id on the Work's
-  roadmap row (it maintains the `WK-` rows). *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.)*
+  roadmap row (it maintains the `WK-` rows). *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6.)*
 - **Mandatory skills:** `using-git-worktrees` — the lead dispatches every member into its
   own worktree. Carry this rule into every dispatch: never `git checkout`/`git switch`
   outside your own worktree; check `pwd` and `git branch --show-current` before every git
@@ -225,12 +225,12 @@ Insufficient in this file, corrected by procedure rather than brief (CLAUDE.md �
    `main`'s push are the backstop; a red result is fixed forward before any other merge.
    (The maintainer's entry "2026-10-08 11:57:55 BST — RULED: a code PR's ACK may carry across a
    DOCS-ONLY main merge without a new CI wait (the 02:28:42 waiver extended), with the check-31
-   tests re-run locally" in `to-lead.md`; *Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.*)
+   tests re-run locally" in `to-lead.md`; *Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6.*)
    **PRs, batches and drafts** follow `delivery-process.md` §8's standing rules 5a–5e, 5f and 5h
    (batches of at most 10 ids, the open-PR cap of 30, cleanup during the work, drafts on
    `draft/` branches with no PR, merge never rebase, the 7-day draft age, remote CI not a gate);
    the lead keeps the draft register and the over-7-day count in `eta.md` and applies 5f in
-   each sweep. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6, and P5; 1E and 5f in force from the maintainer's entry "2026-10-08 11:49:11 BST — RFC 9479 draft (#1240 @298004b620650c62f6e8429faad8632369ceee0a) REVIEWED: 1E and 5f IN FORCE NOW as interim rules; the full ruling HELD for the user's lean-P2 decision".)*
+   each sweep. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6, and P5; 1E and 5f in force from the maintainer's entry "2026-10-08 11:49:11 BST — RFC 9479 draft (#1240 @298004b620650c62f6e8429faad8632369ceee0a) REVIEWED: 1E and 5f IN FORCE NOW as interim rules; the full ruling HELD for the user's lean-P2 decision".)*
 
 5. **20-minute progress line with three counters.** A progress line without concrete state 
    — "executors are working" vs. "E501 remaining = N, tests failing = M, audit-docs FAILED 

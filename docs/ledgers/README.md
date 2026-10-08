@@ -20,7 +20,7 @@ APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the mainta
 by delegation)" in `to-lead.md`, its ledger here has five sections — Scope (quoting its Work-plan
 row), Task list, Gate, Audit, Build log — quotes the GO and MERGE-ACK headers, and lands in the
 slice's one PR with no per-slice plan (`docs/_templates/LG.md`). (L1 as corrected to (a') by the maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED".) The ledgers already here
-stay as written. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.)*
+stay as written. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6.)*
 
 **A ledger is the counterpart to a plan, not a summary of it.** The plan
 ([`../plans/`](../plans/README.md)) says what was intended; the ledger says what happened,

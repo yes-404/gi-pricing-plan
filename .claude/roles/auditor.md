@@ -47,7 +47,7 @@ relates: []                      # ids only
     merge or mint procedure) is a dated row in `docs/process/process-backlog.md` until the P2
     exit demo, not an `FD-`, unless it (i) lets a wrong merge, a wrong number, a mispricing or
     data loss through or (ii) blocks work today; the lead names the limb. A product defect is
-    always an `FD-`. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.)* All of the above checked against
+    always an `FD-`. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6.)* All of the above checked against
     `docs/process/checklists/work-item-close.md` and `phase-close.md`.
   - **A slice audit's ledger check is a two-way match, and a matched pair is not evidence
     until it is reachable.** Pairing every scope row against a ledger row is necessary and

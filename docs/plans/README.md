@@ -18,7 +18,7 @@ that wrote it.
 DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through
 RFC 9479 P6 (the maintainer's amendment, by delegation)" in `to-lead.md`): its slices are rows,
 no per-slice leaf plan is filed after that entry, and a change is one dated Work-plan delta.
-The plans already here stand. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.)*
+The plans already here stand. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6.)*
 
 They live under `docs/` rather than in an untracked scratch directory for the reason
 `.gitignore` already gave for keeping them out of one: a plan is *"a second account of what

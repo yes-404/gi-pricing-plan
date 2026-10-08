@@ -258,7 +258,7 @@ Four things are never a role's:
 
 **Every decision lands as a dated artifact** — a ruling record, an audit record, a plan, or
 the slice ledger that quotes the GO and MERGE-ACK headers verbatim — never in chat.
-**Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6** (Lean P2 item L1).
+**Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6** (Lean P2 item L1).
 
 **Precedence — superpowers first.** When a superpowers skill and any other both apply,
 follow the superpowers one. Read `using-superpowers` when a task starts;
@@ -281,7 +281,7 @@ whose slices are rows, changed by dated deltas that `relates:` it; no per-slice 
 `RL-` or activation PR for a slice dispatched after the change; a process finding is a dated row in `docs/process/process-backlog.md`
 until the P2 exit demo, and an `FD-` only when it lets a wrong merge, a wrong number, a
 mispricing or data loss through, or blocks work today.
-**Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6** (Lean P2 items L1, L3 and L5, L1 as corrected to (a') on 2026-10-08 12:02:08 BST; it read "a slice
+**Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6** (Lean P2 items L1, L3 and L5, L1 as corrected to (a') on 2026-10-08 12:02:08 BST; it read "a slice
 ledger is an `LG-` under `docs/ledgers/`"). Three rules bind wherever anything here is
 audited, not only at a close:
 

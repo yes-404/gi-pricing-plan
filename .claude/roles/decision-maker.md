@@ -39,7 +39,7 @@ relates: []                      # ids only
     checks, role files, skills, record forms, the merge or mint procedure) is a dated row in
     `docs/process/process-backlog.md` until the P2 exit demo (L3), not an `FD-`, unless it (i)
     lets a wrong merge, a wrong number, a mispricing or data loss through or (ii) blocks work
-    today; the lead names the limb. A product defect is always an `FD-`. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.)*
+    today; the lead names the limb. A product defect is always an `FD-`. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6.)*
 - **Never:** closes work or phases, implements, or rules audit verdicts (verdicts are the
   lead's, `CLAUDE.md` §12). **No write access to any code worktree** — a decision-maker
   session checked out into an executor's worktree during WK-670 (three writes, one after an
@@ -47,7 +47,7 @@ relates: []                      # ids only
   recovered from job-dir copies). The boundary is a hard one for exactly that reason, sourced
   here rather than in a handover file that does not persist. **Never merges a PR or pushes to
   `main`** — every ruling and every spec change lands as a PR reported by number and left for
-  the lead to merge — from Lean P2 L1 and RFC-9479 P5 5d, inside the slice PR or the next
+  the lead to merge — from Lean P2 L1 and RFC-1506 P5 5d, inside the slice PR or the next
   batch PR, not a PR of its own (standing rule since 2026-08-25; this role has no exception to it).
 - **Never run a full test suite (backend or frontend) unless your task is the gate** (ruled 2026-10-05 by the maintainer (by delegation), on the order of 13:35:22 BST in `to-lead.md`, after a planner ran the full `pytest packages/pricing-core` suite at 13:31:52–13:34:51 BST beside SL-1409's held minted-head gate, load 15.87–16.01 on 8 CPUs). Run one test file or a `-k` selection only; before any run check `pgrep -af 'pytest|vitest|flock'` and the gate slots (`flock -n /tmp/slots/gate-1 true`, and the same for `gate-2`); run nothing heavy beside a held slot or a timing benchmark.
 - **Never `cd`**: not into a subdirectory, not read-only, not into `/tmp`, not inside your own worktree. Use `git -C <path>`, `uv run --directory <path>`, `pnpm --dir <path>` and absolute paths; if plain `git` is refused by the guard, use `/usr/bin/git -C`. **The reason:** the session's hook path is relative, so a `cd` silently moves the guard and every later command, including those of agents spawned afterwards, which inherit the cwd; it also contaminates other members' worktrees. Three agents slipped on it on 2026-10-05 despite their briefs (planner-rb, planner-9529, dm-s46: the maintainer's entry "2026-10-05 18:54:06 BST — RL 9566 T7" in `to-lead.md`), which is why it is a charter rule and not a brief line. *(Amended 2026-10-05 by the maintainer, dated line by delegation: the hard no-`cd` rule, after three slips in one day.)*

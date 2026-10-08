@@ -137,7 +137,7 @@ under §8's conditions; RL-1445.)*
 7. **Commit** — small, working commit; PR opened, never self-merged (§3, Lead).
 8. **Return to Work layer** — signals this slice is complete.
 
-**Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6** (Lean P2 item L1, in force from the maintainer's entry
+**Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6** (Lean P2 item L1, in force from the maintainer's entry
 "2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)" in `to-lead.md`). For every slice whose GO is given after that entry:
 **the slice is one PR** — the code, the tests, any spec change it needs, its one-line `SL-`
 roadmap row status change, and **one ledger file**, an `LG-` under `docs/ledgers/`, with five
@@ -249,9 +249,9 @@ inside an hour before the announcement half was added.)*
 full gate and runs on clean hardware. A reviewer re-running the suite locally buys nothing CI
 does not buy better, and risks the borrowed-environment traps `dev-commands` documents.
 
-**PRs, batches and merging — the standing rules (RFC-9479 P5).** **Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6**,
+**PRs, batches and merging — the standing rules (RFC-1506 P5).** **Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6**,
 recording rules already in force by the maintainer's rulings, each cited by its `to-lead.md`
-entry header in RFC-9479 P5 (not restated there and here: the RFC carries the citations, this
+entry header in RFC-1506 P5 (not restated there and here: the RFC carries the citations, this
 section the rules). The merge procedure itself is `.claude/roles/lead.md` rule 4.
 - **(5a) Batching.** Records reach `main` in mint-batch PRs of at most 10 ids (more needs the
   maintainer's prior OK), ordered cited-first by dependency layer; the batch body lists every
@@ -271,7 +271,7 @@ section the rules). The merge procedure itself is `.claude/roles/lead.md` rule 4
   `draft/<family>-<wid> @ <full sha>`; the lead keeps a draft register in `eta.md`; at mint the
   minter builds one batch PR from current `main`. A draft branch commits no `docs/INDEX.md`
   hunk; the batch regenerates INDEX once. Exempt: slice PRs, security and dependency fixes, and
-  RFC-9479's own PR. (Activation PRs end for slices dispatched after 2026-10-08 11:51:58 BST, under L1.)
+  RFC-1506's own PR. (Activation PRs end for slices dispatched after 2026-10-08 11:51:58 BST, under L1.)
 - **(5e) Merge `main`, never rebase.** A branch behind `main` takes it by `git merge
   origin/main`, then regenerates INDEX in a new commit; a rebase voids every SHA a record cites.
 - **(5f) A 7-day draft age.** A draft (PR or `draft/` branch) older than 7 days is closed, or
@@ -294,7 +294,7 @@ section the rules). The merge procedure itself is `.claude/roles/lead.md` rule 4
   is the backstop; a red `main` is fixed forward before any other merge. *(From the
   maintainer's entries "2026-10-08 11:49:11 BST" (1E), "2026-10-08 11:57:55 BST" (code PRs),
   "2026-10-08 12:12:08 BST" (E2) and "2026-10-08 12:15:49 BST" (the precondition) in
-  `to-lead.md`, full headers in RFC-9479's Sources.)*
+  `to-lead.md`, full headers in RFC-1506's Sources.)*
 
 ## 9. Global findings register
 
@@ -307,7 +307,7 @@ owner or trigger). Resolution is durable and artifact-linked: appended as a date
 citing the merging PR, never rewritten. Every map-plan and slice-plan stage reads the
 rows relevant to it before finalizing (§11 obligation 7).
 
-**Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6** (Lean P2 item L3). Until the P2 exit demo (2026-11-12), a finding about the process
+**Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6** (Lean P2 item L3). Until the P2 exit demo (2026-11-12), a finding about the process
 itself (document ids, INDEX, audit or doc checks, role files, skills, record forms, the merge
 or mint procedure) is not an `FD-` and gets no register row: it is a dated row in
 `docs/process/process-backlog.md`, riding the next batch or slice PR. It is still an `FD-`
@@ -329,7 +329,7 @@ blocks work today; the lead names the limb. The P2 phase review keeps, files or 
   every change at once; slice status lives in `docs/roadmap.md`, never in the plan. An open
   Work's remaining unplanned slices go into one delta, filed when the next of them needs a
   plan; existing per-slice plans stand. A delta is a new `PL-` that `relates:` the Work's plan; a
-  true replan still uses `supersedes:`; the Work's roadmap row lists every delta's id. **Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6** (Lean P2 item L5;
+  true replan still uses `supersedes:`; the Work's roadmap row lists every delta's id. **Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6** (Lean P2 item L5;
   it read "a slice breakdown per work item, and a plan per slice … existing, unchanged").
 - The **process backlog** (`docs/process/process-backlog.md`): process findings held until
   the P2 phase review (§9's amendment).

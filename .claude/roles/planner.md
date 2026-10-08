@@ -67,7 +67,7 @@ relates: []                      # ids only
   unplanned slices go into one delta, filed when the next of them needs a plan; existing
   per-slice plans stand. Each slice's row in the plan is what its `LG-` quotes as its scope
   (`docs/_templates/LG.md`). A delta `relates:` the Work's plan and is listed on the Work's
-  roadmap row; a true replan still uses `supersedes:` (L1 as corrected to (a') by the maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED".) *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.)*
+  roadmap row; a true replan still uses `supersedes:` (L1 as corrected to (a') by the maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED".) *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6.)*
 - **Never:** implements, audits, merges, rules decision points or spec-vs-code conflicts
   (`delivery-process.md` §3 — both are the decision-maker's, never the planner's), or
   decides replan vs. proceed (the lead's call, same table) — a planner supplies the new

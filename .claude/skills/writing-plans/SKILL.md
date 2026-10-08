@@ -34,7 +34,7 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
   date: new slices or a change of slice scope are **one dated Work-plan delta** covering every
   change at once, a new `PL-` that `relates:` the Work's plan (a true replan still uses
   `supersedes:`), listed on the Work's roadmap row. Each slice's `LG-` quotes its row as its
-  scope (`docs/_templates/LG.md`). *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-9479 P6.)*
+  scope (`docs/_templates/LG.md`). *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6.)*
 
 ## Scope Check
 
