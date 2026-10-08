@@ -1,31 +1,24 @@
 # Contributing
 
-Thank you for looking. This file is for a person who wants to change the project. It says
-how to set up, what must pass before you push, what you must never edit by hand, and who
-decides what merges.
+This file is for a second team that works on the project beside the first: its contributor
+and the Claude session that leads her team ("team B"). It also holds the rules for anyone
+who opens an issue. **Read [`CLAUDE.md`](CLAUDE.md) first, all of it.** It is the binding
+contract; this file points to it and does not restate it.
 
 ## What the project is
 
 An open-source general insurance pricing platform for the UK/EU market: data preparation,
 risk modelling (GLM and machine learning), rating algorithm design, scoring, monitoring and
-governance. It is a Python and TypeScript monorepo, and the specifications in `docs/` are
-the contract the code is written against. Start at [`README.md`](README.md), then
-[`docs/README.md`](docs/README.md) (the map of the specification suite). Read the spec for
-the area you change before you write code.
+governance. It is a Python and TypeScript monorepo. The specifications in `docs/` are the
+contract the code is written against: read the spec for the area you change before you write
+code. Start at [`README.md`](README.md), then [`docs/README.md`](docs/README.md).
 
-## Issues and pull requests
+## Issues
 
-- **Issues are welcome.** Bug reports, questions and suggestions: use a template in
-  `.github/ISSUE_TEMPLATE/`, or a blank issue.
-- **Open an issue before a pull request.** If the change is wanted, the maintainer invites a
-  PR, or the team picks it up. Unsolicited PRs may sit unmerged.
-- **Every merge needs the maintainer's approval.** The team's agents never merge a
-  contributor's PR without it.
-- **Ask questions** in a GitHub issue, or as a comment on your PR.
-- A substantiated issue is triaged by the team into the findings register
-  ([`docs/findings/register.md`](docs/findings/register.md)), an open question or a task.
-  After that the issue is a pointer to the internal record, so expect a link, not a running
-  commentary.
+Bug reports, questions and suggestions are welcome: use a template in
+`.github/ISSUE_TEMPLATE/`. The team triages a substantiated issue into the findings register
+([`docs/findings/register.md`](docs/findings/register.md)), an open question or a task. After
+that the issue points to the record that owns the work.
 
 ## Set up
 
@@ -37,27 +30,27 @@ pnpm --dir frontend install --frozen-lockfile
 docker compose -f deploy/docker-compose.yml up -d    # postgres, redis, minio
 ```
 
-**`--all-packages` is not optional.** The root project depends on no workspace package, so a
-plain `uv sync` installs only the dev tools. `mypy` and `pytest` then fail with
-`No module named 'pydantic'` in an environment that looks fine.
+**`--all-packages` is not optional.** A plain `uv sync` installs only the dev tools, and
+`mypy` and `pytest` then fail with `No module named 'pydantic'`.
 
-**Backend tests need a database.** Without `GIP_TEST_DATABASE_URL`, the tests look for a
-database named after your checkout and stop with an error that prints its name if it does
-not exist. Either set the variable to a database you made for tests:
+**Backend tests need a database.** Set `GIP_TEST_DATABASE_URL` to a database made for tests
+(compose credentials are `gipricing`/`gipricing`):
 
 ```bash
 export GIP_TEST_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/<your_test_db>
 ```
 
-or create the per-checkout database once (`createdb` runs inside the container; the compose
-credentials are `gipricing`/`gipricing`). The name logic is `_worktree_database_name()` in
-`backend/tests/conftest_db.py`; the exact commands are in
-[`.claude/skills/dev-commands/SKILL.md`](.claude/skills/dev-commands/SKILL.md). Do not run
-tests against a database another checkout also uses: the test teardown empties it.
+Without it, the tests look for a database named after your checkout and stop with an error
+that prints its name. Each checkout needs its own test database, because the test teardown
+empties it. The commands to create it (`createdb` runs inside the container) are in
+[`.claude/skills/dev-commands/SKILL.md`](.claude/skills/dev-commands/SKILL.md), which also
+lists the other setup traps.
 
 ## The gate
 
 Run both halves before you push. A Python-only run has been green while the frontend was red.
+Check each command's own exit code: `cmd | tail -1 && echo ok` reports the exit code of
+`tail`, not of `cmd`.
 
 ```bash
 uv run ruff check . && uv run mypy && uv run lint-imports && uv run pytest -q
@@ -68,53 +61,79 @@ pnpm --dir frontend lint && pnpm --dir frontend type-check
 pnpm --dir frontend test && pnpm --dir frontend build
 ```
 
-Check each command's own exit code. For example, `cmd | tail -1 && echo ok` reports the
-exit code of `tail`, not of `cmd`. `dev-commands` explains the other traps.
+## How the two teams work together
+
+These rules (T1 to T6) are the maintainer's decision of 2026-10-08. They take effect when
+team B starts.
+
+- **T1. Team B owns whole Works, not shared slices.** A team-B Work is one whose code is
+  disjoint from the first team's hot files. The proposed first Work is `WK-675` (the
+  frontend), from slice S3 onward, after the first team's S2 merges. A question above team
+  B's lead (a decision point, a scope move, a STOP) goes to the maintainer.
+- **T2. One merger, one id allocator: the first team's lead.** Team B never merges and never
+  picks a minted id. Before a merge, the lead posts the minted ids as a comment on the PR;
+  team B re-points its references and pushes; the maintainer approves; the lead merges.
+  Until then, team B writes **working ids from the block 7000 to 7999 only**, in the space
+  form (`FD 7012`, not `FD-7012`). The first team's working ids stay at 9000 or above, so the
+  two never collide.
+- **T3. Every team-B PR needs the maintainer's approval (a MERGE-ACK), with the same evidence
+  as the first team's.** Put it in the PR, or a comment on it:
+  1. the full head SHA;
+  2. the `git merge-tree` result and its tree, against `origin/main`;
+  3. `git diff --name-status origin/main...<branch>`;
+  4. the gate's exit-code table, with the pytest totals;
+  5. CI for each workflow, read from its log, not only the green check;
+  6. a count of zero for the one word the repository bars in added text (the charter files
+     in `.claude/roles/` name it).
+
+  The rule is `.claude/roles/lead.md` rule 4: no merge without the approval, and an approval
+  is valid only against the `main` it names. If `main` moves, ask again.
+- **T4. The channel is GitHub only.** Use the one pinned coordination issue for questions and
+  STOPs. Put an approval request as a comment on the PR itself. The first team's watcher
+  polls GitHub and relays; the lead reads each PR before asking for an approval. Never put a
+  Claude session link in GitHub.
+- **T5. Shared limits.** The open-PR cap counts both teams' PRs. A new governed-record draft
+  is a pushed branch with **no PR**; a PR is opened for a slice, an activation or an urgent
+  fix, or as a batch the first team's lead asks for. Run **one full gate at a time per
+  machine**: do not start a second gate, or a heavy check, beside a running one.
+- **T6. Start from a fork.** Push to your fork and open PRs from it with **"Allow edits by
+  maintainers" on**, so the first team's finisher can push the mint commit to your branch.
+  The maintainer approves the first run of the Actions workflows. Collaborator access is
+  reconsidered after a trial.
 
 ## What a slice PR contains
 
-One PR delivers one slice of work. It holds:
-
-- the code;
-- the tests, written first and seen to fail before the code makes them pass (red, then
-  green);
-- any spec change the code needs. A capability the spec does not yet describe gets a spec
-  change first. See `.claude/skills/spec-change` for the procedure.
-
-The team adds the rest: the slice's ledger record (`LG-`), document ids and the generated
-`docs/INDEX.md`. A change with no slice yet gets one at triage. Branches and PR titles name
-the slice: `sl-<n>-<slug>` and `SL-<n>: <title>`. Commits use
-[Conventional Commits](https://www.conventionalcommits.org/). The PR template asks for
-evidence: name the command, its totals and the tree it ran against, not "tests pass".
+One PR is one slice. It holds the code; the tests, written first and seen to fail (red) before
+the code makes them pass (green); any spec change the code needs; and the slice's one status
+change in its `SL-` row of `docs/roadmap.md`, plus one ledger file, an `LG-` under
+`docs/ledgers/` (template: `docs/_templates/LG.md`). A capability the spec does not yet cover
+needs a spec change first: follow `.claude/skills/spec-change`. Commits use
+[Conventional Commits](https://www.conventionalcommits.org/); a PR title names its slice
+(`SL-<n>: <title>`). The first team mints your ids and regenerates `docs/INDEX.md` at the
+merge turn (T2). The PR template asks for evidence: name the command, its totals and the tree
+it ran against, never "tests pass".
 
 ## Never edit by hand
 
 | Path or thing | Why |
 |---|---|
-| `docs/contracts/` | Generated from the `model-schema` package. Regenerate with `uv run python scripts/generate-contracts.py`; CI fails on drift. |
-| `docs/INDEX.md` | Generated index of every governed document. |
+| `docs/contracts/` | Generated from the `model-schema` package. Run `uv run python scripts/generate-contracts.py`; CI fails on drift. |
+| `docs/INDEX.md` | Generated index of every governed document. The first team regenerates it at the merge turn. |
 | `frontend/src/api/generated` | Generated from the OpenAPI contract by `pnpm --dir frontend generate:api`; not committed. |
-| Any minted id (`FD-`, `RL-`, `SL-`, `LG-`, requirement ids) | Ids are permanent and come from one sequence (`python3 scripts/doc-id.py next`). Never renumber or reuse one. |
+| A minted id (`FD-`, `RL-`, `SL-`, `LG-`, a requirement id) | Ids are permanent and come from one sequence, held by the first team's lead (T2). Never renumber or reuse one. |
 
 A filed plan under `docs/plans/` is frozen at its date. Do not edit it.
 
 ## Rules that bind every change
 
-These are in [`CLAUDE.md`](CLAUDE.md); read it. In short, and by pointer only:
+These are in `CLAUDE.md`, by pointer only:
 
-- **Spec first.** A capability the spec does not cover needs a spec change before code
-  (`CLAUDE.md` §0). Where code and spec disagree, stop and ask; do not make either match
-  the other silently.
-- **Money is never a float.** Integer pence or cents, or `Decimal` in the rating path
-  (§7).
-- **Vue 3 Composition API with `<script setup lang="ts">` only.** No Options API, no JSX
-  (§3).
+- **Spec first** (§0). Where code and spec disagree, stop and ask.
+- **Money is never a float** (§7): integer pence or cents, or `Decimal` in the rating path.
+- **Vue 3 Composition API with `<script setup lang="ts">` only** (§3).
 - **No pandas in new code**, except at an unavoidable library boundary (§3).
-- **Do not hand-write an API type or a shape that already exists in `model-schema`** (§2,
-  §3).
+- **Never hand-write a shape that exists in `model-schema`**, or an API type (§2, §3).
+- **A Work, Phase or Project close is accepted by the maintainer** (§13).
 
-## Where to read next
-
-[`docs/specs/00-overview.md`](docs/specs/00-overview.md) defines every term. The repository
-layout and its reasons are in `.claude/skills/repo-architecture`, and the delivery process
-the team follows is [`docs/process/delivery-process.md`](docs/process/delivery-process.md).
+The delivery process is [`docs/process/delivery-process.md`](docs/process/delivery-process.md);
+the term definitions are in [`docs/specs/00-overview.md`](docs/specs/00-overview.md).
