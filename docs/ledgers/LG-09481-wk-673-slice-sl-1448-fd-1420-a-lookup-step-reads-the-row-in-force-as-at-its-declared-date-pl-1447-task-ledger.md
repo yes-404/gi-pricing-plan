@@ -33,8 +33,8 @@ multi-row keys; the test-leftover databases have since been dropped. The expecte
 first. *Disclosure:* the commands differ, the counts agree: `0`, `0`, `10` (plan: `0`, `0`, `10`).
 
 **Step 3, the open PRs** (`gh pr list --state open`, read at 2026-10-08): none edits a file under `packages/`. The ones that
-bear on this write set are #1233 (head `3413b79a`, B2+B3 docs, carries RL-1474 and PL-1471/SL-1472), #1055 (head
-`07d9d230`, the RL-1474 ruling), #1051 (head `c7621ca2`, PL 9776's plan). RL-1474's code move has not landed:
+bear on this write set are #1233 (head `3413b79a`, B2+B3 docs, carries the ValidationIssue-move ruling and the FR-240 fix plan and slice), #1055 (head
+`07d9d230`, the ValidationIssue-move ruling), #1051 (head `c7621ca2`, PL 9776's plan). the ValidationIssue-move ruling's code move has not landed:
 `class ValidationIssue` is still at `packages/pricing-core/src/pricing_core/rating/compile.py:60`, so Task 3 Step 1 imports
 it from there.
 
@@ -135,3 +135,13 @@ restored them from `HEAD` (`git status` showed only the new test file after). At
 `offset-midnight-local-date` parsing cases); the three passes are the pins that are green at the base (the two `422 VALIDATION_FAILED` cases and the
 `409 REFERENCE_INTERVAL_OVERLAP`). DP-3's condition holds: no pin failed at the base. The plan listed only the midnight case among the
 parsing reds; `plain-date` is red too, for the same cause (it lands in the NEW window). At `HEAD`: **8 passed**.
+
+### Task 5 — the spec text
+
+`docs/specs/03-rating-engine.md`, the FR-221 row (`:107`) only: RL-1446's T1 appended verbatim to the end of the second cell (the ruling's
+text with its amendments, not the plan's §"Spec text T1"); the marker date is the applying commit's, 2026-10-08. The find string
+`never "now" (`01` FR-71). The date source is explicit in the step. |` occurred once before the edit.
+
+## PRs
+
+#1236, a draft. The branch `sl-1448-fd-1420-lookup-reads-row-in-force-as-at` is pushed; the PR is not merged by the executor.
