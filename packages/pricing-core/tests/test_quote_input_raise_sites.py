@@ -81,6 +81,13 @@ _INPUT_FREE = {
     ("rating/runtime.py", "handler"): 2,  # `_model_call_failure`: step id and the pinned model_type
     ("rating/compile.py", "check_step_refs_pinned"): 1,  # step id and ref string, no quote
     ("rating/compile.py", "compile_bundle"): 5,  # artifact-level (compile time), no quote
+    # PL-1471 (SL-1472), each at compile time over pinned artifacts, never a quote:
+    # model ref, objective ref and its status
+    ("rating/compile.py", "_refuse_unapproved_objectives"): 1,
+    # rate table ref, key name and Factor ref
+    ("rating/compile.py", "_refuse_control_factor_keys"): 1,
+    # model ref, a fitted feature name and the Factor's slug@version
+    ("rating/compile.py", "_refuse_control_factor_model_calls"): 1,
     ("rating/compile.py", "_raise_named"): 1,  # the constructor helper itself (`from None`)
 }
 #: The functions holding the quote-input sites, whose count must equal the cases.
