@@ -138,7 +138,8 @@ Which evidence each case needs is lead.md rule 4 (1E, E2 (a)–(d), the code-PR 
   (`git-hygiene` "`gh pr edit --body-file` silently leaves the old body in place").
 - **Report** the head (40 chars), name-status of the delta, merge-tree rc + tree, each check
   with its rc, pytest rc + totals + wall time, barred-word counts (added lines, messages,
-  body), and 0 `claude.ai/code` links.
+  body), and 0 `claude.ai/code` links; for a SLICE PR also the `-U0` of its `LG-` and `SL-`
+  row `status: closed` lines (§5).
 
 ## 5. Closing acts
 
@@ -156,6 +157,11 @@ Which evidence each case needs is lead.md rule 4 (1E, E2 (a)–(d), the code-PR 
   head>..<mint head>` is docs/ only; (b) full green CI at the mint head, totals from the log;
   (c) the gated head's local gate with only the known check-31 set. Which FD the slice
   discharges is stated in the PR body; the FD close is the auditor's, after the merge.
+- **The slice PR sets its `LG-` and its `SL-` row `closed`** (auditor.md :37–45, RFC-1506 L1
+  (a')); **the ACK request shows both `-U0` lines.** Why: #1247 (SL-1472) and #1245 (SL-1477)
+  merged on 2026-10-08 with both still `active`; the closes rode a later batch
+  (draft/close-sl1472-sl1477), and the maintainer's ACKs check it from then on
+  (to-lead.md "2026-10-08 … The missed slice closing acts …").
 
 ## 6. Never
 
