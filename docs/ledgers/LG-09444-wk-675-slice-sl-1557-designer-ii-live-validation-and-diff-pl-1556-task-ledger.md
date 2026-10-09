@@ -43,7 +43,7 @@ FR-240, FR-244, FR-403, NFR-463, and the FR that RL-1474 T1 creates. FR-246 is n
 | 1 | `graph_invariant_issues` and types in model-schema | Acceptance 2, 4 | done, commit 3 |
 | 2 | mode mismatch named at compile | Acceptance 16, 17, 19 (18 already on main) | pure level done, commit 4; HTTP test authored, unrun (DB) |
 | 3 | bare-`ValueError` sweep | Acceptance 20 | done, commit 5 (no code change) |
-| 4 | validate route and spec texts | Acceptance 1, 3, 5–11 | open |
+| 4 | validate route and spec texts | Acceptance 1, 3, 5–11 | authored, commit 6; DB tests unrun; FR id pending |
 | 6 | live validation in the designer | Acceptance 12–15, 23 | open |
 | 7 | diff overlay | Acceptance 22 | open |
 | 8 | accessibility check | NFR-463 | open |
@@ -130,6 +130,14 @@ Predicate, verbatim, run at tree `893d8161` (`git -C <wt> grep -n -E 'raise (Val
 | 8 | `to_jdm`, `bundle_hash` | no `raise` in `compile.py` | none | none |
 
 Count: **4** sites keep `BUNDLE_COMPILE_FAILED` with a reason (rows 1–4), **1** is now named (row 5). A site that should carry a named code and has none in `03` §5.1: rows 1–3 are recorded for the auditor as a finding candidate (no spec code for "a pinned artifact's stored payload is malformed"). Nothing mapped to an existing owned code, so no code change (plan Task 3 Step 3).
+
+#### 2026-10-09 16:50 BST — Task 4 (commit 6): spec texts, route, tests
+
+- **FR id:** RL-1474 T1 needs `FR-<new>`; no working id was reserved for this seat, so every occurrence is the greppable token `FR-WKNEW` (spec `03` §3.1, §4.1, §5.1 rows, `00` FR-24, route docstrings, test markers) until the lead names one. `grep -rn FR-WKNEW` finds them all. **Open: asked the lead.**
+- Spec: T1 applied after the `| **FR-219** |` row (the anchor occurs once; S2's `FR-1530` row now follows it, as the plan predicted), T2 in its three-cell form (§5.1 header still `| Method | Path | Purpose |`), T3 before `### 4.2`, T4 appended to FR-24's second cell. Taken programmatically from RL-1474's code blocks (T1 to T4), then the placeholders `RL-<this>` → `RL-1474`, `<date>` → `2026-10-09`, `FR-<new>` → `FR-WKNEW`. Every anchor found exactly once.
+- Code: `platform/rating_algorithms.py` `validate_draft`; `api/rating_algorithms.py` `validate_rating_algorithm` (registered before the `{slug}@{version}` routes; no `DatabaseDep`, so nothing persists). `generate-contracts` then `--check` rc 0; Acceptance 11's command prints two `$ref`s, `RatingAlgorithmDraft` and `AlgorithmValidationReport`.
+- Tests (`backend/tests/test_rating_algorithm_validate.py`, 14 cases incl. the 7-way parity parametrisation): authored; collection and `test_the_route_publishes_typed_bodies` run green; the rest need Postgres fixtures and are **UNRUN, so no red-on-404 was observed** (owed in the heavy phase: run each at `origin/main`'s router to show 404/422 red, then green here). A DB-free probe (`validate_draft` called directly on the save fixtures) printed: valid → `[]`; division → `EXPRESSION_UNGUARDED_DIVISION` on `s_office`; pre-edit → `LADDER_CLAMP_UNPLACEABLE` on `s_minprem`; cycle → `RATING_GRAPH_CYCLIC` on `s_office` and `s_minprem`.
+- Plan deltas: the type-mismatch fixture's issue is on `s_name_out`, not `s_clamp` (Acceptance 5 names `s_clamp`; the fixture in `test_rating_compile.py::test_an_algorithm_type_mismatch_reports_the_output_step` is the one the plan's pointer reaches). Load1 read 4.67 on the last small run, over the 4.0 cap: it should have waited.
 
 ## PRs
 

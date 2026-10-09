@@ -257,6 +257,24 @@
         "title": "AlgorithmTableRepoint",
         "type": "object"
       },
+      "AlgorithmValidationReport": {
+        "additionalProperties": false,
+        "description": "The 200 of `POST /rating-algorithms/validate`: every issue, located (RL-1474 item 4).",
+        "properties": {
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationIssue"
+            },
+            "title": "Issues",
+            "type": "array"
+          }
+        },
+        "required": [
+          "issues"
+        ],
+        "title": "AlgorithmValidationReport",
+        "type": "object"
+      },
       "Applicability": {
         "additionalProperties": false,
         "description": "Where an objective may be used (FR-153).\n\nA Model Spec pairing an objective with a response outside `responses`, a backend outside\n`backends`, or no offset where one is required, is refused **at spec validation** —\nbefore any compute is spent, and with a `SpecProblem` naming which of the three it was.",
@@ -15658,6 +15676,47 @@
         "title": "ValidateRequest",
         "type": "object"
       },
+      "ValidationIssue": {
+        "description": "One named problem found in a Rating Algorithm.\n\n`code` is the stable machine code the API maps to a problem response; `step_id` and\n`field` locate the offending part of the algorithm.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "step_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Id"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ValidationIssue",
+        "type": "object"
+      },
       "ValidationLayer": {
         "description": "The four layers of FR-45, all of which a Rule Set must cover.",
         "enum": [
@@ -29260,6 +29319,103 @@
           }
         },
         "summary": "Create or version a Rating Algorithm",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/v1/rating-algorithms/validate": {
+      "post": {
+        "description": "**200** with every located issue (FR-WKNEW); nothing is persisted or audited.",
+        "operationId": "validate_rating_algorithm_api_v1_rating_algorithms_validate_post",
+        "parameters": [
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RatingAlgorithmDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlgorithmValidationReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Validate an unsaved Rating Algorithm without saving it",
         "tags": [
           "rating"
         ]
