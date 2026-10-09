@@ -1253,7 +1253,7 @@ agreement and the lead's go.
 id: SL-1557
 family: slice
 title: Slice 3: Designer II — live validation through the validate route (DP-6), and the structural diff overlay
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 9489405370a1ce06c2b985ad88c7d471438febb1

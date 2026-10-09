@@ -3,7 +3,7 @@ id: PL-1556
 family: plan
 kind: leaf
 title: WK-675 Slice 3 — Designer II, live validation and diff (FR-212, FR-214, FR-215, FR-219, FR-223, FR-227, FR-244, FR-246, FR-24): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
 owner: planner
 tree: 9489405370a1ce06c2b985ad88c7d471438febb1
