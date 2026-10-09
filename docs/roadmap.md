@@ -930,7 +930,7 @@ phase: P2
 
 From “Workstreams” (line 384): Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires** | FR-267, FR-268, FR-269, FR-270, FR-271, FR-272; `07` FR-428, FR-429, FR-430, FR-431, and added 2026-08-15 by OQ-540's decision: **FR-436** (a deployment refuses to start against another tenant's database) and **FR-18** (a Job records the platform build, because version skew between tenants is now permanent). Any earlier `Job` migration should carry FR-18's column rather than wait for this *(Corrected 2026-09-29 by the lead, per `PL-1237`'s Scope note, amended by the maintainer's answer Q843-2: "The roadmap WK-674 row edit is the lead's, after the map is accepted." Added: `07` **FR-437** (the reference identity provider, `07:153`), **FR-412**'s memory half (`07:101`) and **FR-415**'s worker service (`07:104`); and `CR-1212`'s **FR-434**, **FR-435**, **NFR-531**, **NFR-534**, **NFR-489**, **NFR-490**, **NFR-502**, **NFR-493**'s linearity limb and **NFR-496**'s prod-sampling limb. **The F1 obligation:** the Work is done only when the switchover meets the F1 acceptance test on the deployment path this Work builds, not on a loopback mirror (`PL-1237` Goal).)*
 
-**2026-10-09 — the Work-plan delta for Slices 4 to 6 is PL 9472** (working id; draft), the Lean P2 L5 delta written after the 2026-10-08 re-plan: it sets Slices 4, 5 and 6 as rows with their write sets, FR-452's management-API limb in Slice 4, NFR-501 placed in Slice 5 and Slice 6 named rung 5. Recorded in the docs batch D1.
+**2026-10-09 — the Work-plan delta for Slices 4 to 6 is PL-1537** (draft), the Lean P2 L5 delta written after the 2026-10-08 re-plan: it sets Slices 4, 5 and 6 as rows with their write sets, FR-452's management-API limb in Slice 4, NFR-501 placed in Slice 5 and Slice 6 named rung 5. Recorded in the docs batch D1.
 
 #### SL-1255 — Slice 1: tenancy and provenance (FR-436, FR-18)
 
@@ -1015,7 +1015,7 @@ Per-environment keys, rate limits and monitoring configuration, and environment 
 
 *Dated 2026-10-01, mint batch 13a: **FR-452 (the `/score` limb, `RL-1347`)** is this slice's, with DP-S3-2 resolved by `RL-1347` (assigned here by `PL-1348`). FR-452's **management-API limb** is owned by WK-674 (the maintainer's entry "2026-09-30 23:48:24 BST — OWNER DECISION: FR-452 → WK-674, not WK-1178") and is carried to a later WK-674 slice, which a planner names in a dispatch record before WK-674 closes; that slice's row is annotated when named. DP-S3-1 is resolved by `RL-1346` and belongs to `SL-1345`.*
 
-*Annotated 2026-10-09, in the docs batch D1: FR-452's management-API limb is placed in WK-674 Slice 4 (`SL-1258`), as R4.1 of PL 9472, on the maintainer's (by delegation) entry "2026-10-08 14:32:33 BST — DELTAS AUDIT (handover/audit-deltas-2026-10-08.md) noted; fixes proceed; DP A, B (c), C confirmed, D AMENDED (build in reverse ladder order)", item A. That is the annotation this paragraph promised "when named".*
+*Annotated 2026-10-09, in the docs batch D1: FR-452's management-API limb is placed in WK-674 Slice 4 (`SL-1258`), as R4.1 of PL-1537, on the maintainer's (by delegation) entry "2026-10-08 14:32:33 BST — DELTAS AUDIT (handover/audit-deltas-2026-10-08.md) noted; fixes proceed; DP A, B (c), C confirmed, D AMENDED (build in reverse ladder order)", item A. That is the annotation this paragraph promised "when named".*
 
 #### SL-1345 — Slice 3L: the premium ladder — exact unrounded rungs, true operations, one rounding (FR-247, FR-248, NFR-496, FD-1336, FD-1330; RL-1329)
 
@@ -1780,10 +1780,10 @@ relates: [FD-1416, FD-1335, SL-1409, PL-1408, SL-1367, PL-1371]
 `FD-1416`'s fix (MEDIUM, deadline before the P2 exit demo): the `model-schema` `ApprovalRequest` becomes the one definition. A decision-maker rules each disagreeing field first, the decision enum first, which lifts `FD-1416`'s HOLD. The four `to_dict` routes (`GET …/{request_id}`, `POST /approval-requests`, `…/decide`, `…/withdraw`) return it as a typed 2xx, published by `$ref`, and leave `FD-1335` Part B's open-object list. The hand-authored `approval-request.schema.json` is retired ("generated wins"), and `06` §4.3's example is amended verbatim from the ruling. A guard fails when an authored-only `ONE_SIDED_SLUGS` slug has an uncompared `model-schema` class, proven on broken input. Leaf plan PL-1528 (working id). It follows `SL-1409` (`approvals.py`; merged at `cdaaa573`); it serialises with PL-1429 (`GENERATED_SHAPES`), and PL 9629's journey (its activation need 13) waits for it.
 
 
-#### SL-9469 — WK-1178 fix slice — FD-1374: a rating step reads only the names it declares (FR-246 enforced)
+#### SL-1536 — WK-1178 fix slice — FD-1374: a rating step reads only the names it declares (FR-246 enforced)
 
 ```yaml
-id: SL-9469
+id: SL-1536
 family: slice
 title: WK-1178 fix slice — FD-1374, a rating step reads only the names it declares (FR-246 enforced)
 status: draft                  # draft → active → closed | retired (§1.2a)
@@ -1796,7 +1796,7 @@ corrected_by: []
 relates: [FD-1374, PL-1371]
 ```
 
-`FD-1374`'s fix (MEDIUM, a silent mispricing path), split out of the F35 plan and kept in P2 by the maintainer's entry "2026-10-08 13:00:11 BST — FD-1374 (silent mispricing) STAYS IN P2: DP-F35-1 split out as a P2 WK-1178 slice; F35's performance remainder carries; and fewer, consolidated status messages". FR-246 enforced at save and compile on every evaluating field (`as_at` included), `consumes` mandatory, an undeclared read refused with `RATING_STEP_UNDECLARED_READ` (422), compiled bundles grandfathered at reload; `03`'s FR-246 row and corrected §4.1 example applied verbatim from the ruling; the four under-declaring fixtures fixed. Its row and tasks are PL 9470 (working id; the single-row WK-1178 Work plan), which quotes PL 9776 (working id, minting in batch B4) Task 1A as ruled by RL 9771 (working id, minting in batch B4). Money and contract group, never on the cut ladder. **Activation needs:** RL 9771 and PL 9776 (working ids) minted (batch B4); the `compile.py` serial set free, a ready G2 compile-set slice taking it first; the maintainer's GO under L1 (a'). *(Cut 2026-10-08 by the planner under working id 9469, reserved by the lead.)*
+`FD-1374`'s fix (MEDIUM, a silent mispricing path), split out of the F35 plan and kept in P2 by the maintainer's entry "2026-10-08 13:00:11 BST — FD-1374 (silent mispricing) STAYS IN P2: DP-F35-1 split out as a P2 WK-1178 slice; F35's performance remainder carries; and fewer, consolidated status messages". FR-246 enforced at save and compile on every evaluating field (`as_at` included), `consumes` mandatory, an undeclared read refused with `RATING_STEP_UNDECLARED_READ` (422), compiled bundles grandfathered at reload; `03`'s FR-246 row and corrected §4.1 example applied verbatim from the ruling; the four under-declaring fixtures fixed. Its row and tasks are PL-1535 (the single-row WK-1178 Work plan), which quotes PL-1520 Task 1A as ruled by RL-1519. Money and contract group, never on the cut ladder. **Activation needs:** RL-1519 and PL-1520 minted (done, batch B4); the `compile.py` serial set free, a ready G2 compile-set slice taking it first; the maintainer's GO under L1 (a'). *(Cut 2026-10-08 by the planner under working id 9469, reserved by the lead; minted 2026-10-09 as SL-1536, in the docs batch D1.)*
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 

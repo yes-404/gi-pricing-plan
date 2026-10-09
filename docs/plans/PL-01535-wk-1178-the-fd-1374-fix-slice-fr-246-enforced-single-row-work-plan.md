@@ -1,10 +1,10 @@
 ---
-id: PL-9470
+id: PL-1535
 family: plan
 kind: map
 title: WK-1178 — the FD-1374 fix slice, FR-246 enforced (DP-F35-1's limb split out of the F35 plan and kept in P2): single-row Work plan
 status: draft                   # draft → active → superseded | retired (§1.2a)
-created: 2026-10-08
+created: 2026-10-09  # original date 2026-10-08, set at the draft; minted 2026-10-09
 owner: planner
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
 phase: P2
@@ -15,11 +15,11 @@ corrected_by: []
 relates: [FD-1374, PL-1371]
 ---
 
-# PL 9470 (working id) — WK-1178: the FD-1374 fix slice, single-row Work plan
+# PL-1535 — WK-1178: the FD-1374 fix slice, single-row Work plan
 
 > **For agentic workers:** this is WK-1178's **single-row Work plan** under Lean P2 L5. WK-1178,
 > the standing maintenance Work, has no map plan, so this is not a delta of one: it is one row,
-> the slice `SL 9469` (working id), cut in this file's branch. The slice's task steps are an
+> the slice `SL-1536`, cut in this file's branch. The slice's task steps are an
 > existing, audited plan's Task 1A, quoted by reference below, so no step is restated here; its
 > `LG-` quotes this row as its scope and Task 1A as its tasks. REQUIRED SUB-SKILL for the
 > executor: subagent-driven-development (recommended) or executing-plans. The executor also
@@ -28,16 +28,16 @@ relates: [FD-1374, PL-1371]
 > gate) and `git-hygiene`; reads [`README.md`](README.md)'s five unchecked conventions; and is
 > spawned from `.claude/roles/executor.md`.
 
-Filed under working id 9470; the slice row is working id 9469; both reserved by the lead
-(2026-10-08). Written by the planner (planner-replan). Evidence read at `origin/main` `60e9254c`
+Filed under working id 9470; the slice row was working id 9469; both reserved by the lead
+(2026-10-08). Minted 2026-10-09 as PL-1535 and SL-1536, in the docs batch D1. Written by the planner (planner-replan). Evidence read at `origin/main` `60e9254c`
 (#1242, 2026-10-08T12:40:57+01:00) and on the F35 plan's branch `wk1178-f35-leaf-plan` at
-`c7621ca2` (PR #1051, PL 9776, working id, minting in batch B4).
+`c7621ca2` (PR #1051, PL-1520, minted in batch B4).
 
 ## Authority
 
 - **The split**: the maintainer's entry "2026-10-08 13:00:11 BST — FD-1374 (silent mispricing)
   STAYS IN P2: DP-F35-1 split out as a P2 WK-1178 slice; F35's performance remainder carries; and
-  fewer, consolidated status messages": "PL 9776's DP-F35-1 limb (the FD-1374 remedy) becomes a P2
+  fewer, consolidated status messages": "PL-1520's DP-F35-1 limb (the FD-1374 remedy) becomes a P2
   WK-1178 slice in the money/contract group; it is never on a cut-ladder rung."
 - **The carry it corrects**: "2026-10-08 12:55:22 BST — P2 RE-PLAN RULED on the inventory
   (handover/p2-inventory-2026-10-09.md, at 60e9254c): F-1 (a), F-2 (b), F-3 (b), F-4 (a)+(b), F-5
@@ -54,7 +54,7 @@ Close `FD-1374` (MEDIUM, "a SILENT mispricing path in shipped code"; register ro
 rating step reads only names it declares. FR-246 is enforced at save and at compile on every
 evaluating step type, an undeclared read is refused with its own code, already-compiled bundles
 keep loading, `03`'s FR-246 row and its §4.1 example are corrected verbatim from the ruling, and
-the four under-declaring fixtures are fixed. Done when `SL 9469` closes on its `LG-` and register
+the four under-declaring fixtures are fixed. Done when `SL-1536` closes on its `LG-` and register
 row FD-1374 carries the fix's merge sha.
 
 ## Acceptance Standard
@@ -77,7 +77,7 @@ Each item is checked by a command run from the repository root on the slice's me
 3. **FD-1374's predicate prints 0 undeclared reads** over the merge tree (Task 1A Step 8; the
    sweep's tokenizer, `references.py`).
 4. **The `03` text is the ruling's, byte for byte**: the `LG-` records `git diff` of
-   `docs/specs/03-rating-engine.md` beside RL 9771's (working id 9771) text for FR-246's row, the
+   `docs/specs/03-rating-engine.md` beside RL-1519's text for FR-246's row, the
    corrected §4.1 example and its Invariants note, and the `RATING_STEP_UNDECLARED_READ` owned-codes
    row; `grep -n 'RATING_STEP_UNDECLARED_READ' backend/src/app/errors.py` prints one line.
 5. **The release note** (Task 1A, "A compile-time refusal only") is in the squash-commit body and
@@ -93,29 +93,29 @@ Each item is checked by a command run from the repository root on the slice's me
   results do not change", though each fixture's bundle hash does).
 - **`pricing-core` stays importable standalone** (`CLAUDE.md` §2; `.importlinter`):
   `references.py` and the check live in `pricing_core.rating`; the only backend file is the one
-  `errors.py` registry line (RL 9771 (iii-a) (b)).
+  `errors.py` registry line (RL-1519 (iii-a) (b)).
 - **Spec and code in one commit** (`CLAUDE.md` §2): the ruled `03` text lands in Task 1A's commit,
   the maintainer's executor carve-out of 2026-10-01; the executor writes nothing of its own into
   `03`.
-- **One PR per slice** (L1 (a')): code, tests, the `03` text, `SL 9469`'s status line and one `LG-`.
+- **One PR per slice** (L1 (a')): code, tests, the `03` text, `SL-1536`'s status line and one `LG-`.
 - **The `compile.py` serial set** (`PL-1371` §5 rule 4): never concurrent with another
   `compile.py` / `compile_bundle` editor.
 - **`backend/src/app/errors.py` is a shared path** (the 2026-10-08 deltas audit, LOW): `SL-1472`
   (#1247, `7e1f44d3`, by `git diff --name-only origin/main...7e1f44d3`) also edits it, and WK-674
-  Slices 5 and 6 add codes to it (PL 9472, working id). This slice's one registry line is
+  Slices 5 and 6 add codes to it (PL-1537). This slice's one registry line is
   rebase-serialised: whichever merges second rebases onto the first.
 
 ## Tasks
 
 Under L5 a Work plan's tasks are its slice rows. This row's steps are the F35 plan's **Task 1A
 only** ("FR-246 enforced, red first; the four under-declaring fixtures fixed (DP-F35-1 (ii),
-FD-1374)", PL 9776 (working id) at `c7621ca2`), Steps 1–8, as ruled by RL 9771.
+FD-1374)", PL-1520 at `c7621ca2`), Steps 1–8, as ruled by RL-1519.
 
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Depends on | Lane | Size |
 |---|---|---|---|---|---|---|
-| 1 | `SL 9469` — WK-1178 fix slice — FD-1374: a rating step reads only the names it declares (FR-246 enforced) | PL 9776 (working id) Task 1A, Steps 1–8, as ruled by RL 9771 (working id) DP-F35-1 (ii) mechanism (a) refuse, scope (a) every evaluated field with `as_at` named, `consumes` mandatory (a); (iii-a) (b) `RATING_STEP_UNDECLARED_READ`, 422; (iii-b) (b) saved versions refused at next compile, compiled bundles grandfathered at reload. **Out of scope:** everything else in PL 9776 (Tasks 0–7 other than 1A, Spike S1, DP-F35-1 (b) / (i) / (iv), DP-F35-2 to -8), which carries to Phase 3 | `03` §3.5: FR-246; `03` §3.1: FR-212 (fixtures gain the producers FR-212 requires); register FD-1374 | RL 9771 and PL 9776 (working ids) minted (batch B4); the `compile.py` serial set free (below) | the lead's at GO | 1 |
+| 1 | `SL-1536` — WK-1178 fix slice — FD-1374: a rating step reads only the names it declares (FR-246 enforced) | PL-1520 Task 1A, Steps 1–8, as ruled by RL-1519 DP-F35-1 (ii) mechanism (a) refuse, scope (a) every evaluated field with `as_at` named, `consumes` mandatory (a); (iii-a) (b) `RATING_STEP_UNDECLARED_READ`, 422; (iii-b) (b) saved versions refused at next compile, compiled bundles grandfathered at reload. **Out of scope:** everything else in PL-1520 (Tasks 0–7 other than 1A, Spike S1, DP-F35-1 (b) / (i) / (iv), DP-F35-2 to -8), which carries to Phase 3 | `03` §3.5: FR-246; `03` §3.1: FR-212 (fixtures gain the producers FR-212 requires); register FD-1374 | RL-1519 and PL-1520 (working ids) minted (batch B4); the `compile.py` serial set free (below) | the lead's at GO | 1 |
 
-**Three deviations from Task 1A as written**, each because the rest of PL 9776 carries:
+**Three deviations from Task 1A as written**, each because the rest of PL-1520 carries:
 
 - **D1 — no Spike S1.** Task 1A Step 3 says "Use the form Spike S1 verified against the engine. If
   S1 found a binding call …, use that instead of the tokenizer below". S1 is not run in P2, so the
@@ -123,9 +123,9 @@ FD-1374)", PL 9776 (working id) at `c7621ca2`), Steps 1–8, as ruled by RL 9771
   records that choice.
 - **D2 — no Task 1 Step 6.** Task 1A Step 8 ends "Then commit … and run Task 1 Step 6" (freeze the
   base corpus for the NFR-490 measurement). That belongs to the carried remainder; it is not run.
-- **D3 — the plan's "Written for the recommended answers" branch is the ruled one.** RL 9771
+- **D3 — the plan's "Written for the recommended answers" branch is the ruled one.** RL-1519
   decided DP-F35-1 (ii) (a)/(a)/(a), (iii-a) (b) and (iii-b) (b), which are Task 1A's recommended
-  branches; no dated delta to Task 1A is needed. If RL 9771 as minted differs from #1060's head
+  branches; no dated delta to Task 1A is needed. If RL-1519 as minted differs from #1060's head
   (`758336a1`), the slice stops and reports.
 
 **Sequencing.** The slice edits `compile.py` (`_check_declared_reads`, one `ALGORITHM_CHECKS`
@@ -141,7 +141,7 @@ the first gap when none is ready, ahead of every non-G2 slice** (money and contr
 
 ## Decision points
 
-None open. Every branch point Task 1A names is ruled by RL 9771 (working id, #1060); the
+None open. Every branch point Task 1A names is ruled by RL-1519 (#1060); the
 form of this plan is the lead's decision (b).
 
 ## Hand-off (not this plan's writes)
@@ -156,5 +156,5 @@ form of this plan is the lead's decision (b).
   fixture fix must satisfy) are the only ids; NFR-490, NFR-500, FR-258 belong to the carried
   remainder and are deliberately absent.
 - **Placeholders.** None; the task source is named by plan, task and sha.
-- **Rulings since the sweep.** #1060 (RL 9770, RL 9771) is the only open record ruling on this
+- **Rulings since the sweep.** #1060 (RL 9770, RL-1519) is the only open record ruling on this
   subject (lead, 2026-10-08: both in batch B4). Re-check at mint.

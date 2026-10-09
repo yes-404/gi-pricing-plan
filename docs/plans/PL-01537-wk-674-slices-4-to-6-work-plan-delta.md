@@ -1,10 +1,10 @@
 ---
-id: PL-9472
+id: PL-1537
 family: plan
 kind: map
 title: WK-674 — Slices 4 to 6 (deployment path, switchover and measurements, routing and shadow) as rows, after the 2026-10-08 re-plan: Work-plan delta
 status: draft                   # draft → active → superseded | retired (§1.2a)
-created: 2026-10-08
+created: 2026-10-09  # original date 2026-10-08, set at the draft; minted 2026-10-09
 owner: planner
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
 phase: P2
@@ -15,7 +15,7 @@ corrected_by: []
 relates: [PL-1237, PL-1371, PL-1392, PL-1454, RL-1232, RL-1263, RL-1311, RL-1365, OQ-1453, FD-1211, FD-1246, FD-1411, CR-1247, LG-1363, LG-1405, SL-1258, SL-1259, SL-1260]
 ---
 
-# PL 9472 (working id) — WK-674 Slices 4 to 6 as rows: Work-plan delta
+# PL-1537 — WK-674 Slices 4 to 6 as rows: Work-plan delta
 
 > **For agentic workers:** this is a **Work-plan delta** under Lean P2 L5. It does not replace
 > [`PL-1237`](PL-01237-wk-674-deployment-environments-switchover-tenancy-map-plan.md) (WK-674's
@@ -30,7 +30,7 @@ relates: [PL-1237, PL-1371, PL-1392, PL-1454, RL-1232, RL-1263, RL-1311, RL-1365
 > `git-hygiene`, reads [`README.md`](README.md)'s five unchecked conventions, and is spawned from
 > `.claude/roles/executor.md`.
 
-Filed under working id 9472, reserved by the lead. Written 2026-10-08 by the planner
+Filed under working id 9472, reserved by the lead. Minted 2026-10-09 as PL-1537, in the docs batch D1. Written 2026-10-08 by the planner
 (planner-replan) on the lead's brief `brief-planner-replan-2026-10-08.md`, deliverable 2. Evidence
 read at `origin/main` `60e9254c` (#1242, 2026-10-08T12:40:57+01:00), by a full-class sweep: every
 file under `docs/` naming `SL-1258`, `SL-1259`, `SL-1260` or WK-674 Slice 4, 5 or 6 (predicate:
@@ -73,7 +73,7 @@ tree.
 
 1. **This delta passes the docs checks on its own branch.** `python3 scripts/audit-docs.py`,
    `python3 scripts/doc-index.py --check` and `python3 scripts/register-lint.py` each exit 0 at the
-   branch head, except check 31's line naming this file's working id, which clears at the mint.
+   branch head, except check 31's line naming this file's working id, which cleared at the mint.
 2. **Every requirement id this delta cites is defined in a spec.** `audit-docs.py` (item 1) refuses
    an undefined `FR-`/`NFR-` id; the Self-review lists every id individually, and no row uses a
    numeric range: `grep -nE '(N?FR)-[0-9]+ *(-|to|–) *(N?FR-)?[0-9]+' <this file>` prints only the
@@ -149,7 +149,7 @@ PRs (#1243 `5da13384`, #1245 `ee858902`, #1247 `7e1f44d3`, by
 | S6 `SL-1260` | `backend/src/app/api/deployments.py`, `backend/src/app/api/environments.py`, `backend/src/app/platform/` (routing, shadow); `backend/src/app/errors.py` (the routing codes); `docs/specs/03-rating-engine.md` §3.4 (the FR-241 cross-reference, `PL-1237:976`), §4 (the routing and shadow contracts) and §5.1 (the routing route); `docs/contracts/openapi/generated.json`; a migration under `backend/migrations/versions/` if the routing rule is persisted |
 
 **Shared paths, rebase-serialised:**
-- **`backend/src/app/errors.py`** — S5 and S6 add codes; `SL-1472` (#1247) and SL 9469 (`PL 9470`)
+- **`backend/src/app/errors.py`** — S5 and S6 add codes; `SL-1472` (#1247) and SL-1536 (`PL-1535`)
   also edit it. One registry line each; the later PR rebases onto the earlier.
 - **`03` §3.4 (Rating versions)** — S6 corrects FR-241's cross-reference there; WK-675 S10 adds its
   new FR there. `PL-1286:398` records it: "S10 (its new FR) | `03` §3.4 (Rating versions) | WK-674
@@ -192,7 +192,7 @@ Nothing here edits `SL-1472`'s code paths (`compile.py`, `modelling.py`, `rating
 - **R5.1 — F35's remedy is carried to Phase 3; Slice 5 no longer waits on it.** `CR-1247:306`
   ("F35's remedy is a WK-1178 slice before WK-674 Slice 5") and `FD-1246`'s "the WK-1178 trace
   slice sequenced before WK-674 Slice 5" are overtaken by F-3 (b) as corrected at 13:00:11:
-  PL 9776 (working id) less its DP-F35-1 limb carries, owner the maintainer, event P3's first
+  PL-1520 less its DP-F35-1 limb carries, owner the maintainer, event P3's first
   plan. **NFR-490 is measured on Slice 5's tree and, if red, recorded FAIL with the figure, the tree
   and the log** (`PL-1237` Task 5, unchanged), and the residual is stated with that owner — which is
   also register `:77`'s form ("states the residual with an owner"), so the two now agree.

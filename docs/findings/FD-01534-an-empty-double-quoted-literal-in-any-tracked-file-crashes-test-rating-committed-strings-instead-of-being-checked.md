@@ -1,16 +1,18 @@
 ---
-id: FD-9460
+id: FD-1534
 family: finding
 title: An empty double-quoted literal in any tracked file crashes test_rating_committed_strings instead of being checked (group(2) or group(3) turns "" into None)
 status: active
-created: 2026-10-08
+created: 2026-10-09  # original date 2026-10-08, set at the draft; minted 2026-10-09
 owner: auditor
 tree: d85cf85455fcb7ddc6d9c207ee5e5002ed667719
 corrected_by: []
-relates: [WK-1178, FR-244, LG-9476]
+relates: [WK-1178, FR-244, LG-1532]
 ---
 
-# FD-9460 — An empty double-quoted literal crashes test_rating_committed_strings
+# FD-1534 — An empty double-quoted literal crashes test_rating_committed_strings
+
+*Disclosure: drafted under working id 9460; minted as FD-1534 on 2026-10-09, in the docs batch D1. Its `LG-` citation of the SL-1477 ledger (working id 9476) is re-pointed to LG-1532.*
 
 ## Finding
 
@@ -37,7 +39,7 @@ form, not "any empty literal".
 
 **Who it blocked.** SL-1477 (S2, #1245): `DagDesigner.vue`'s `blank()` wrote `expr: ""` and
 `condition: ""`; the S2 first gate failed on this test; the slice worked around it with a
-named empty constant (LG-9476, "After the first gate" section's gate list, item (ii), which
+named empty constant (LG-1532, "After the first gate" section's gate list, item (ii), which
 calls it an "FD candidate"). The test is outside that slice's write set.
 
 **Why it is an FD and not a backlog row.** The entry headed "2026-10-08 14:29:15 BST — S2
@@ -76,7 +78,7 @@ What the engine says of the empty string, so the follow-on in the Disposition is
 `('EXPRESSION_INVALID_VOCABULARY', '… parserError … Unexpected end of unary expression at (0, 0)')`.
 
 Not reproduced from the S2 gate log: `~/.cache/fps-harness/gate-out.txt` is the fps run's
-output and holds no pytest text; the gate failure is as LG-9476 records it, not independently
+output and holds no pytest text; the gate failure is as LG-1532 records it, not independently
 re-read here.
 
 ## Disposition
