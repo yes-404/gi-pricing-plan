@@ -32,7 +32,7 @@ relates: [PL-1286, PL-1371, PL-1364, PL-1267, PL-1254, PL-1419, RL-1261, RL-1263
 > `accessibility-tester` verify it. Each reads [`README.md`](README.md)'s five unchecked
 > conventions and is spawned from `.claude/roles/executor.md`.
 
-Drafted under working id 9471, reserved by the lead; minted 2026-10-09 as PL-1546, with its eight SL rows (SL-1547 … SL-1554), in the D2 batch mint (re-minted +1 on 2026-10-09 by the minting rewrite, on the lead's 13:09:28 BST ruling (1): first minted as PL-1545 and SL-1546 … SL-1553, before D1's PL-1535 and PL-1537 took their ids). Written 2026-10-08 by the planner
+Drafted under working id 9471, reserved by the lead; minted 2026-10-09 as PL-1546, with its eight SL rows (SL-1547 … SL-1554), in the D2 batch mint (re-minted +1 on 2026-10-09 by the minting rewrite, on the lead's 13:09:28 BST ruling (1): first minted as PL 1545 and SL 1546 … SL 1553, space form so the old ids are not live citations, before D1's PL-1535 and PL-1537 took their ids). Written 2026-10-08 by the planner
 (planner-replan) on the lead's brief `brief-planner-replan-2026-10-08.md`, deliverable 2. Evidence
 read at `origin/main` `60e9254c` (#1242, 2026-10-08T12:40:57+01:00), by a full-class sweep over
 `docs/` for every later statement on these slices (predicates, verbatim:
