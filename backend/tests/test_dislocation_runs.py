@@ -24,8 +24,11 @@ from app.db.session import Database
 from app.errors import RATING_ERROR_CODES, PlatformError
 from app.main import create_app
 from app.platform import dislocation_runs as service
-from model_schema import new_uuid7
+from app.platform.rating_versions import WorkspaceResolver
+from app.worker.dislocation_handlers import PreloadedResolver, _Recorder
+from model_schema import ArtifactRef, new_uuid7
 from model_schema.dislocation import DislocationRun
+from pricing_core.rating.compile import ResolvedArtifact
 
 _BASELINE = "rating_version:motor-gb@26"
 _CANDIDATE = "rating_version:motor-gb@27"
@@ -185,3 +188,52 @@ async def test_the_movers_digest_would_download_if_a_job_blob_result_named_it(
     await _persist(database, workspace_id, _run(movers=sha256))
     await job_result_owner(database, workspace_id, sha256)
     assert _blob_get(client, reader_headers, sha256).status_code == 307
+
+
+# ---- Task 3: the workspace resolver, moved (DP-S4-4) --------------------------------
+
+
+class _Fixed:
+    """A resolver serving a fixed map, counting its calls."""
+
+    def __init__(self, artifacts: dict[ArtifactRef, ResolvedArtifact]) -> None:
+        self.artifacts, self.calls = artifacts, 0
+
+    async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+        self.calls += 1
+        return self.artifacts[ref]
+
+
+@pytest.mark.req("FR-1398")
+async def test_the_preloaded_resolver_serves_exactly_what_both_versions_resolved() -> None:
+    """A subset resolves what a real compile resolved, with no I/O; a ref neither version
+    resolved raises the `NOT_FOUND:` form `compile_bundle`'s callers read as a code."""
+    algorithm = ArtifactRef.model_validate("rating_algorithm:motor-gb@3")
+    table = ArtifactRef.model_validate("rate_table:motor-age@2")
+    unpinned = ArtifactRef.model_validate("rate_table:motor-other@1")
+    base = _Fixed({
+        algorithm: ResolvedArtifact(status="no_maturity_concept", payload={"a": 1}),
+        table: ResolvedArtifact(status="no_maturity_concept", payload={"t": 2}),
+    })
+    recorder = _Recorder(base)
+    for ref in (algorithm, table):
+        await recorder.resolve(ref)
+    preloaded = PreloadedResolver(recorder.seen)
+    calls = base.calls
+    assert await preloaded.resolve(algorithm) == base.artifacts[algorithm]
+    assert await preloaded.resolve(table) == base.artifacts[table]
+    assert base.calls == calls  # no I/O once preloaded
+    with pytest.raises(ValueError, match=r"^NOT_FOUND: .*motor-other@1"):
+        await preloaded.resolve(unpinned)
+
+
+@pytest.mark.req("FR-1398")
+def test_the_compile_resolver_is_a_module_level_class_with_the_nested_ones_arguments() -> None:
+    """The lift (Task 3): `compile_rating_version` no longer nests its resolver, and the
+    class takes the three closure variables the nested one read."""
+    import inspect
+
+    assert list(inspect.signature(WorkspaceResolver).parameters) == [
+        "session", "workspace_id", "blob_store",
+    ]
+    assert inspect.iscoroutinefunction(WorkspaceResolver.resolve)
