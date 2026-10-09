@@ -55,6 +55,7 @@ from pricing_core.rating.compile import ArtifactResolver, ResolvedArtifact, comp
 from pricing_core.rating.ladder import RUNG_ORDER
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
 from pricing_core.rating.score import score_batch
+from pricing_core.safe_error import safe_error_text
 
 __all__ = [
     "AttributionError",
@@ -1017,7 +1018,7 @@ async def attribute(
             ids = ", ".join(c.id for c in members) or "no changes"
             raise AttributionError(
                 "BUNDLE_COMPILE_FAILED",
-                f"the subset bundle for changes [{ids}] did not compile: {exc}",
+                f"the subset bundle for changes [{ids}] did not compile: {safe_error_text(exc)}",
             ) from exc
         mask_hash[mask] = bundle.content_hash
         if bundle.content_hash not in compiled:
