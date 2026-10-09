@@ -1,9 +1,9 @@
 ---
-id: RL-1563
+id: RL-9512
 family: ruling
 title: The money_minor type-check fix decided — money_minor is closed both ways at save, other numeric pairs widen only, a sub-graph port carries money as decimal, and money_minor on an expression is a fractional unit until an output step rounds it; FR-227 takes T1 to T4
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
+created: 2026-10-05            # working id; the mint date is set at the mint (check 31)
 owner: decision-maker
 tree: 5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a
 phase: P2
@@ -15,27 +15,25 @@ corrects: ~
 relates: [FR-227, FR-226, FR-248, FR-214, RL-1329, RL-1309]
 ---
 
-# The FD-1424 fix: money_minor closed both ways at save; ports carry decimal; FR-227 texts
-
-*(Minted 2026-10-09 as RL-1563 from working id 9512, in the D4 batch mint; citations of the ids minted in this batch, and of ids already minted on main, are re-pointed outside quoted text, quoted channel entries and code blocks, which stay as quoted; SL 9511 are working ids not minted by any batch and stay working ids.)*
+# The FD 9549 fix: money_minor closed both ways at save; ports carry decimal; FR-227 texts
 
 ## How this was ruled
 
 - **Filed under working id 9512, reserved by the lead.** The mint sweep (`PL-1419` D4's
-  practice) replaces every `RL-1563`, `FD-1424`, `OQ-1560`, `PL-1562`, `PL-1464`, `FD-1561`, `SL 9511` and `PL-1566` below with
+  practice) replaces every `RL 9512`, `FD 9549`, `OQ 9556`, `PL 9521`, `PL 9597`, `FD 9513`, `SL 9511` and `PL 9509` below with
   its minted id.
 - **The decisions are not this record's.** They are the maintainer's, by delegation, in nine
   entries in `~/gi-pricing-plan.local/channel/to-lead.md`, quoted verbatim under "The
   maintainer's entries" below. The 17:47:06 BST entry's item 3 orders this record: "ONE RL
-  for the FD-1424 fix (DP-1, FR-227's dated T-text with money_minor closed both ways at
-  save, A1, B3), before PL-1562 mints: YES. Reserve the id; a DM drafts it after the
+  for the FD 9549 fix (DP-1, FR-227's dated T-text with money_minor closed both ways at
+  save, A1, B3), before PL 9521 mints: YES. Reserve the id; a DM drafts it after the
   mechanism check in item 2."
 - **This record states those decisions as FR-227 text and decides nothing beyond them.** Where
   the T-texts need a word the entries do not give, the word is FR-227's, FR-226's or FR-248's
   at the tree above.
-- **The finding** is FD-1424 (#1197, head `68a98d6a` when read). **The applying plan** is
-  PL-1562 (#1202, head `148892d6` when read): its Task 5 applies this record's FR-227 text
-  byte for byte. **The control change** is in PL-1464, A-2 (#1178, head `04f99c1f` when
+- **The finding** is FD 9549 (#1197, head `68a98d6a` when read). **The applying plan** is
+  PL 9521 (#1202, head `148892d6` when read): its Task 5 applies this record's FR-227 text
+  byte for byte. **The control change** is in PL 9597, A-2 (#1178, head `04f99c1f` when
   read). These heads moved during the drafting and may move again; the mint heads govern.
 - **Brief:** `brief-dm-9549fix-2026-10-05.md` (the lead, 2026-10-05).
 
@@ -53,7 +51,7 @@ Each read at `5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a` (origin/main at drafting
 | `RL-1329`'s note on that example | 03:483 | "24_150 × 1.15 is 27_772.5 …"; every rung carries `unrounded_minor`, an exact decimal string in minor units. |
 | The FR-227 anchor for the T-texts | 03:113 | `grep -cF` of the anchor in §"The spec texts" = **1** at this tree. |
 | `RATING_TYPE_MISMATCH` | 03:929; 03:845 | Listed in the owned-code list at :929; :845 refuses an output port's incompatible result type with it at create (FR-227; `RL-1309`). |
-| The 28-site count | PL-1562 at `148892d6`, DP-2 row | See §"(p) and (q), recorded with their costs". |
+| The 28-site count | PL 9521 at `148892d6`, DP-2 row | See §"(p) and (q), recorded with their costs". |
 
 ## The maintainer's entries, quoted verbatim
 
@@ -69,7 +67,7 @@ disposition (a) narrowed, with money_minor CLOSED both ways; batch 2 agreed"**, 
 >    - int→money_minor and the non-money pairs among themselves (relativity/percentage/count/int/decimal) go to ONE OQ, owner WK-1178, decided before the fix slice's plan mints.
 >    The fix slice's FIRST task is red-first: one red per refused direction, plus a sweep showing no committed algorithm or fixture newly fails. If one does, STOP and report; do not loosen the rule.
 
-**:18290 — the OQ-1560 entry, 17:42:06 BST.** The time is the one its body gives; its header
+**:18290 — the OQ 9556 entry, 17:42:06 BST.** The time is the one its body gives; its header
 line carries no time and is not quoted here. Body, :18294-18300:
 
 > OQ 9556 DECIDED, by the maintainer (by delegation), before PL 9521 mints:
@@ -140,16 +138,16 @@ DEFINITION; my 17:50:43 "gap" is narrowed accordingly"** (the ruling after 17:53
 
 All by the maintainer (by delegation), in the entries above. This record states them.
 
-1. **FD-1424's disposition is (a), narrowed: `money_minor` is closed both ways at save**
+1. **FD 9549's disposition is (a), narrowed: `money_minor` is closed both ways at save**
    (17:36:28, item 2). Out of `money_minor`: only into `money_minor`, for every producer.
    Into `money_minor`: from `money_minor`, or from `decimal` at an output step only (FR-226).
    `relativity`, `percentage` and `count` into `money_minor` are refused. → **T1.**
-2. **OQ-1560 is A1 + B3** (17:42:06). A1: `int` → `money_minor` is refused at save; a pence
+2. **OQ 9556 is A1 + B3** (17:42:06). A1: `int` → `money_minor` is refused at save; a pence
    integer is declared money by an explicit `money_minor`-typed expression step. B3: widening
    only — `int`, `count`, `relativity` and `percentage` → `decimal`, and `count` → `int`; every
    other non-money pair is refused. The sweep runs before the reds, and a hit is a STOP, not an
    automatic A3. The real-time `/score` coercion is read first. → **T2.**
-3. **PL-1562 DP-1 is (ii)** (17:47:06 item 2, as answered at 17:50:43 item 1). A sub-graph
+3. **PL 9521 DP-1 is (ii)** (17:47:06 item 2, as answered at 17:50:43 item 1). A sub-graph
    port carries money as `decimal`; only an output step makes `money_minor`. (a)'s refusal at
    the port stands, `test_rating_compile.py:389` flips, and the 17:47:06 mechanism condition
    is discharged by (ii). **(iii) is refused** — a second rounding point is what FR-226
@@ -160,19 +158,19 @@ All by the maintainer (by delegation), in the entries above. This record states 
    itself. → **T3.**
 4. **A-2's control is changed pre-mint** (17:49:25 item 1). #1178 item 15's control becomes a
    `decimal` `model_call` into a **`decimal`** output, legal under B3. This supersedes the
-   second-merger flip of 17:47:06 item 4 for that control; PL-1562 names the change and carries
-   no flip line for it. The `/score` vs batch comparison is PL-1562's read-only Task 1 Step 1a,
+   second-merger flip of 17:47:06 item 4 for that control; PL 9521 names the change and carries
+   no flip line for it. The `/score` vs batch comparison is PL 9521's read-only Task 1 Step 1a,
    with the entry's three branches (differ → a separate finding (b); agree and no stored
-   refused pair → (c), a residue in FD-1424; a stored refused pair → STOP). **The first branch
-   applies**: the 17:52:50 auditor confirmed a divergence, filed as FD-1561 (#1204), which the
+   refused pair → (c), a residue in FD 9549; a stored refused pair → STOP). **The first branch
+   applies**: the 17:52:50 auditor confirmed a divergence, filed as FD 9513 (#1204), which the
    maintainer (by delegation) accepted at 17:58:45 as its own finding with its own fix slice.
-   So PL-1562's Step 1a **cites FD-1561** instead of discovering the divergence (17:52:50:
+   So PL 9521's Step 1a **cites FD 9513** instead of discovering the divergence (17:52:50:
    "PL 9521 Step 1a then CITES the FD instead of discovering it"), and the `score.py` fix is
-   FD-1561's slice's — SL 9511 (a working id) / PL-1566 (the lead's reservation) — not
-   PL-1562's.
-5. **The `money_minor`-declared expression DP (PL-1562 DP-2) is (r), closed by definition**
+   FD 9513's slice's — SL 9511 / PL 9509 (working ids, the lead's reservation) — not
+   PL 9521's.
+5. **The `money_minor`-declared expression DP (PL 9521 DP-2) is (r), closed by definition**
    (17:54:12). No OQ. The served half — a `money_minor` expression into a non-money output —
-   is closed by item 1's OUT rule, with PL-1562's red D1. The unserved half — a fractional
+   is closed by item 1's OUT rule, with PL 9521's red D1. The unserved half — a fractional
    value under a `money_minor` declaration on an expression — is by design (FR-248,
    `RL-1329`, 03:155, 03:483; 03:272-274). → **T4.**
 6. **The form is Form A** (18:00:07 item 1): one dated FR-227 amendment carrying T1 to T4 in
@@ -185,7 +183,7 @@ All by the maintainer (by delegation), in the entries above. This record states 
 
 ## (p) and (q), recorded with their costs
 
-The count is PL-1562's, DP-2 row, at #1202 head `148892d6`, taken at `5fe56b87`. Its
+The count is PL 9521's, DP-2 row, at #1202 head `148892d6`, taken at `5fe56b87`. Its
 predicate, verbatim from the plan's source:
 
 ```
@@ -218,13 +216,13 @@ holds under that reading.
 The texts go **inside that row, after "(R2)." and before the closing ` |`**, in the order
 given. **Form A is the text, chosen by the maintainer (by delegation) at 18:00:07 BST**: one
 dated amendment, FR-227's first, carrying T1 to T4 in order. Form B is kept below, marked not
-taken, as the alternative that was offered. At application, `RL-1563` reads as the minted id,
+taken, as the alternative that was offered. At application, `RL 9512` reads as the minted id,
 and the date is that of the applying commit.
 
 ### Form A — one dated amendment (TAKEN, 18:00:07 BST)
 
 ```
- *(Amended 2026-10-05, `RL-1563` (FD-1424, OQ-1560): **`money_minor` is closed both ways at save.** A `money_minor` value flows only into a `money_minor` slot, whatever step produces it; into `decimal`, `relativity`, `percentage`, `count` or `int` it is refused with `RATING_TYPE_MISMATCH`. A `money_minor` slot accepts `money_minor`, or `decimal` at an `output` step only, where the step's declared rounding (FR-226) makes the integer; `int`, `relativity`, `percentage` and `count` into `money_minor` are refused with `RATING_TYPE_MISMATCH`. A pence integer is declared money by an explicit `expression` step whose `result_type` is `money_minor`. **Among the other numeric types, only widening is admitted:** `int`, `count`, `relativity` and `percentage` into `decimal`, and `count` into `int`. Every other pair is refused with `RATING_TYPE_MISMATCH`, including `relativity` to `percentage` either way and `decimal` into `int`, `count`, `relativity` or `percentage`. **Sub-graphs:** a sub-graph port carries money as decimal; money_minor is produced only at an output step. A `decimal` producer into a `money_minor` output port is refused with `RATING_TYPE_MISMATCH`, and the mounting algorithm's output step rounds the value once. **Expressions:** money_minor on an expression step is a unit (minor units) carrying an exact decimal that may be fractional; only an output step's rounding makes it an integer (FR-226, FR-248).)*
+ *(Amended 2026-10-05, `RL 9512` (FD 9549, OQ 9556): **`money_minor` is closed both ways at save.** A `money_minor` value flows only into a `money_minor` slot, whatever step produces it; into `decimal`, `relativity`, `percentage`, `count` or `int` it is refused with `RATING_TYPE_MISMATCH`. A `money_minor` slot accepts `money_minor`, or `decimal` at an `output` step only, where the step's declared rounding (FR-226) makes the integer; `int`, `relativity`, `percentage` and `count` into `money_minor` are refused with `RATING_TYPE_MISMATCH`. A pence integer is declared money by an explicit `expression` step whose `result_type` is `money_minor`. **Among the other numeric types, only widening is admitted:** `int`, `count`, `relativity` and `percentage` into `decimal`, and `count` into `int`. Every other pair is refused with `RATING_TYPE_MISMATCH`, including `relativity` to `percentage` either way and `decimal` into `int`, `count`, `relativity` or `percentage`. **Sub-graphs:** a sub-graph port carries money as decimal; money_minor is produced only at an output step. A `decimal` producer into a `money_minor` output port is refused with `RATING_TYPE_MISMATCH`, and the mounting algorithm's output step rounds the value once. **Expressions:** money_minor on an expression step is a unit (minor units) carrying an exact decimal that may be fractional; only an output step's rounding makes it an integer (FR-226, FR-248).)*
 ```
 
 **Measured** on `git show 5fe56b87:docs/specs/03-rating-engine.md` with Form A applied in a
@@ -239,25 +237,25 @@ Kept as offered; it carries no error code and is not applied. Inserted in this o
 **T1** — `money_minor` closed both ways at save, with the output-step exception:
 
 ```
- *(Amended 2026-10-05, `RL-1563` (FD-1424), T1: **`money_minor` is closed both ways at save.** A `money_minor` value flows only into a `money_minor` slot, whatever step produces it; into `decimal`, `relativity`, `percentage`, `count` or `int` it is refused. A `money_minor` slot accepts `money_minor`, or `decimal` at an `output` step only, where the step's declared rounding (FR-226) makes the integer; `relativity`, `percentage` and `count` into `money_minor` are refused.)*
+ *(Amended 2026-10-05, `RL 9512` (FD 9549), T1: **`money_minor` is closed both ways at save.** A `money_minor` value flows only into a `money_minor` slot, whatever step produces it; into `decimal`, `relativity`, `percentage`, `count` or `int` it is refused. A `money_minor` slot accepts `money_minor`, or `decimal` at an `output` step only, where the step's declared rounding (FR-226) makes the integer; `relativity`, `percentage` and `count` into `money_minor` are refused.)*
 ```
 
 **T2** — the numeric widening rule (A1 + B3):
 
 ```
- *(Amended 2026-10-05, `RL-1563` (OQ-1560), T2: `int` into `money_minor` is refused; a pence integer is declared money by an explicit `expression` step whose `result_type` is `money_minor`. **Among the other numeric types, only widening is admitted:** `int`, `count`, `relativity` and `percentage` into `decimal`, and `count` into `int`. Every other pair is refused, including `relativity` to `percentage` either way and `decimal` into `int`, `count`, `relativity` or `percentage`.)*
+ *(Amended 2026-10-05, `RL 9512` (OQ 9556), T2: `int` into `money_minor` is refused; a pence integer is declared money by an explicit `expression` step whose `result_type` is `money_minor`. **Among the other numeric types, only widening is admitted:** `int`, `count`, `relativity` and `percentage` into `decimal`, and `count` into `int`. Every other pair is refused, including `relativity` to `percentage` either way and `decimal` into `int`, `count`, `relativity` or `percentage`.)*
 ```
 
 **T3** — sub-graph ports (DP-1 (ii)):
 
 ```
- *(Amended 2026-10-05, `RL-1563` (FD-1424), T3: a sub-graph port carries money as decimal; money_minor is produced only at an output step. A `decimal` producer into a `money_minor` output port is refused, and the mounting algorithm's output step rounds the value once.)*
+ *(Amended 2026-10-05, `RL 9512` (FD 9549), T3: a sub-graph port carries money as decimal; money_minor is produced only at an output step. A `decimal` producer into a `money_minor` output port is refused, and the mounting algorithm's output step rounds the value once.)*
 ```
 
 **T4** — the (r) definition, verbatim as ruled at 17:54:12:
 
 ```
- *(Amended 2026-10-05, `RL-1563` (FD-1424), T4: money_minor on an expression step is a unit (minor units) carrying an exact decimal that may be fractional; only an output step's rounding makes it an integer (FR-226, FR-248).)*
+ *(Amended 2026-10-05, `RL 9512` (FD 9549), T4: money_minor on an expression step is a unit (minor units) carrying an exact decimal that may be fractional; only an output step's rounding makes it an integer (FR-226, FR-248).)*
 ```
 
 The quoted sentences of T3 and T4 are the entries' words, byte for byte, without code marks,
@@ -265,36 +263,36 @@ so that a `grep -F` of the entry's quotation finds them in 03 after application.
 
 ## What it obliges
 
-- **PL-1562 (#1202), Task 5**, applies Form A byte for byte under `spec-change` and
+- **PL 9521 (#1202), Task 5**, applies Form A byte for byte under `spec-change` and
   runs `python3 scripts/audit-docs.py`. Its activation need for this record (need 5) holds at
   this record's mint.
-- **PL-1562's reds** include one per refused direction of T1 and T2, D1 (a `money_minor`
+- **PL 9521's reds** include one per refused direction of T1 and T2, D1 (a `money_minor`
   expression into a non-money output, refused at save), the new port red with `:389` flipped
   and `:388` kept in a renamed test (T3), and the A-control: a `decimal` port into the parent's
   `money_minor` output step saves and rounds once.
-- **PL-1562's sweep runs before its reds**; a committed algorithm, fixture or seed that uses a
+- **PL 9521's sweep runs before its reds**; a committed algorithm, fixture or seed that uses a
   refused pair is a STOP to the maintainer (by delegation) with its `file:line`, never a
   loosened rule.
-- **PL-1464 (A-2, #1178)** carries item 15's control as a `decimal` `model_call` into a
+- **PL 9597 (A-2, #1178)** carries item 15's control as a `decimal` `model_call` into a
   `decimal` output, changed before its mint.
-- **FD-1424 (#1197)**'s amendment states the served half as closed by the fix and the
+- **FD 9549 (#1197)**'s amendment states the served half as closed by the fix and the
   unserved half as by design under T4's definition.
-- **PL-1562's Task 1 Step 1a** cites FD-1561 (#1204, head `0303d0bf` when read) for the
+- **PL 9521's Task 1 Step 1a** cites FD 9513 (#1204, head `0303d0bf` when read) for the
   `/score` vs batch divergence, and carries no `score.py` edit and no
-  `test_score_and_batch_serve_a_pre_fix_pair_alike` red; both belong to FD-1561's slice.
+  `test_score_and_batch_serve_a_pre_fix_pair_alike` red; both belong to FD 9513's slice.
 
 ## What this record does not decide
 
-- **FD-1561's fix.** Its severity, reds and type DP are the 17:58:45 entry's and its own
-  plan's (PL-1566); this record only names the hand-off (Ruled, item 4).
+- **FD 9513's fix.** Its severity, reds and type DP are the 17:58:45 entry's and its own
+  plan's (PL 9509); this record only names the hand-off (Ruled, item 4).
 - **A new input type** (A4) and any run-time integrality check: neither is taken.
-- **The mint order** of this record against FD-1424 and PL-1562: the lead's.
+- **The mint order** of this record against FD 9549 and PL 9521: the lead's.
 
 ## Acceptance — the violation that must become detectable
 
 The violation: **a value changes its unit — into or out of minor-unit money, or between two
 non-money numeric units — by a declaration alone, with no output step's rounding.** Each test
-is shown failing on deliberately broken input, in PL-1562.
+is shown failing on deliberately broken input, in PL 9521.
 
 Every refusal below is `RATING_TYPE_MISMATCH` (owned at 03:929; used for create-time result
 types at 03:845), asserted by code, not only by status.

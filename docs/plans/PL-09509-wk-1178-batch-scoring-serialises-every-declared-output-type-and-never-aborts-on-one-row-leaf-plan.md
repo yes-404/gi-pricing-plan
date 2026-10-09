@@ -1,10 +1,10 @@
 ---
-id: PL-1566
+id: PL-9509
 family: plan
 kind: leaf
 title: WK-1178 — batch scoring serialises every declared output type and never aborts on one row (FR-254, FR-255): leaf plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
+created: 2026-10-05            # working id; the mint date will replace this (check 31)
 owner: planner
 tree: 5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a
 phase: P2
@@ -17,12 +17,10 @@ relates: [FD-1333, RL-1343, RL-923, RL-1263, PL-1371, PL-1364]
 
 # WK-1178 — batch scoring serialises every declared output type and never aborts on one row, leaf plan
 
-*(Minted 2026-10-09 as PL-1566 from working id 9509, in the D4 batch mint; citations of the ids minted in this batch, and of ids already minted on main, are re-pointed outside quoted text, quoted channel entries and code blocks, which stay as quoted; PL-1544 (the G2-b batch) are forward cites into batches not yet merged; PL 9574, PL 9593, PL 9609, SL 9500, SL 9511, SL 9522 are working ids not minted by any batch and stay working ids.)*
-
 Filed under working id 9509 (this plan) and slice working id 9511 (its `SL-` row under WK-1178
 in [`../roadmap.md`](../roadmap.md), `draft`). The lead reserved both in
 `~/gi-pricing-plan.local/handover/eta.md` (row "SL 9511 / PL 9509", 5 Oct 17:58:59). The finding
-it fixes is FD-1561 (draft #1204, branch `fd-9513-score-batch-serialisation`, read in
+it fixes is FD 9513 (working id; draft #1204, branch `fd-9513-score-batch-serialisation`, read in
 full at `0303d0bf4e102bafa241d643615635b0ab52b9c1`). Nothing here is minted. Every line number was
 read at `origin/main` `5fe56b87`, the `tree:` above, unless another commit is named.
 
@@ -49,7 +47,7 @@ the `return` after it: `_ladder_json(scored.premium_ladder)` (`:1122`) and
 The commonest way to reach it is a declared output type. `_coerce_output_value` (`:950`) raises
 for any type outside `_KNOWN_OUTPUT_TYPES = {money_minor, decimal, bool, string, date}` (`:947`,
 `:964-965`). `int`, `count`, `relativity` and `percentage` save, compile and are served on
-`POST /api/v1/score` (FD-1561's probe), and batch refuses them. FR-254 says batch uses "the
+`POST /api/v1/score` (FD 9513's probe), and batch refuses them. FR-254 says batch uses "the
 identical compiled bundle and code path as real-time scoring — never a separate 'batch
 implementation' that could diverge".
 
@@ -73,7 +71,7 @@ appended Job-level test.
 **Spec:** [`../specs/03-rating-engine.md`](../specs/03-rating-engine.md) FR-214 (`:83`), FR-227
 (`:113`), FR-254 (`:166`), FR-255 (`:167`), and the `outputs_json` row of the batch output table
 (`:692`). The rulings are `RL-923` §5(i) (`docs/rulings/RL-00923-…md:116-132`) and `RL-1343`
-(rules 3–5, `:171-252`). The finding is FD-1561; its decimal half is `FD-1333`, decided by
+(rules 3–5, `:171-252`). The finding is FD 9513; its decimal half is `FD-1333`, decided by
 `RL-1343`.
 
 ## The maintainer's decision this plan rests on, quoted
@@ -83,7 +81,7 @@ channel file, so cited by its header), the entry headed
 "2026-10-05 17:58:45 BST — FD 9513 (#1204 @0303d0bf): your decision ACCEPTED (MEDIUM, LATENT, WK-1178, its own fix slice after SL 9561); the row escape is the first red",
 verbatim:
 
-> Verified at origin/main (packages/pricing-core/src/pricing_core/rating/score.py): _score_batch_row's try is :1096-1103 (except NotImplementedError; except ValueError or RuntimeError), and "outputs_json": _outputs_json(algorithm, scored.outputs) is at :1123, OUTSIDE it. One bad row can abort the batch, against FR-255. The PR body has 0 session URLs and 0 "[the maintainer's (by delegation)]" [barred-word elision: the quoted entry names the word it greps for] (re-read after the PATCH).
+> Verified at origin/main (packages/pricing-core/src/pricing_core/rating/score.py): _score_batch_row's try is :1096-1103 (except NotImplementedError; except ValueError or RuntimeError), and "outputs_json": _outputs_json(algorithm, scored.outputs) is at :1123, OUTSIDE it. One bad row can abort the batch, against FR-255. The PR body has 0 session URLs and 0 "deputy" (re-read after the PATCH).
 > 1. ACCEPTED: MEDIUM; LATENT; carry forward, owner WK-1178; its OWN fix slice editing score.py AFTER SL 9561. Reserve the SL/PL ids; a planner drafts when a seat frees.
 > 2. The fix plan's reds, in order: (1) the ROW ESCAPE first. ANY exception from _outputs_json (or anything else after the try) becomes that row's error row, and the run continues (FR-255). This does not depend on the type question, so it lands even if the type DP is still open. (2) the four types, with the JSON form of count, relativity and percentage as a DP for me in that plan (FR-254's "batch never diverges" is the reading; the plan proposes).
 > 3. The decimal half stays with FD-1333 / OQ-1334 / RL-1343, not re-filed. The new fact (a whole-valued decimal reaches /score as a JSON INTEGER, a fractional one as a float; FD-1333/RL-1343 say only "float") goes into FD 9513's text as a related observation, cited to FD-1333. Whichever plan discharges RL-1343's clause must cover BOTH forms; FD 9513's fix plan checks whether that plan exists and names it.
@@ -109,12 +107,12 @@ The lead relayed it. Verbatim:
 - **DP table:** DP-1, DP-2 and DP-3 read RULED. The options and the reasons are kept as the
   record of what was weighed.
 - **Status and activation need 3:** no decision point is open. Task 1 is still placed after
-  SL-1427 (activation need 2), whether or not it goes before the other tasks.
+  SL 9561 (activation need 2), whether or not it goes before the other tasks.
 - **Items 5–8:** confirmed as written for (b) and (ii). The note "if the ruling differs" no
   longer applies. Item 6 is DP-1's "a non-integral value … becomes that ROW's error". Item 7 is
   batch only, which is DP-2 (ii).
 - **DP-3 (a):** items 1, 4 and 6 already assert the class name.
-- **The RL-1343 plan is PL-1568 and its slice SL 9500 is a working id** (reserved by the lead; planner-1343
+- **The RL-1343 plan now has working ids, PL 9499 / SL 9500** (reserved by the lead; planner-1343
   is drafting it, per the lead's relay of 2026-10-05). §"RL-1343's discharge" and Hand-off 3
   name it. It serialises with this slice on `_coerce_output_value`, in both directions:
   whichever slice merges second merges `main` and rebases its branch onto the other's.
@@ -130,7 +128,7 @@ The lead relayed it. Verbatim:
   JSON string"), and then says "refusing, not stringifying, anything else". After this slice,
   batch writes four more types. Two of them (`relativity` and `percentage`) are written as
   strings. A reader of the row cannot learn that, and "not stringifying" reads against it.
-  FD-1561 records the gap: "The text does not say how the four types must be written".
+  FD 9513 records the gap: "The text does not say how the four types must be written".
 - **FR-214** (`03:83`) has a dated clause from `RL-1343` that fixes `decimal` "on every scoring
   path". No requirement says how an `int`, `count`, `relativity` or `percentage` output is
   served. DP-1 (b) decides that for both paths, so the requirement needs a clause that says it.
@@ -151,14 +149,14 @@ none):
   on every path. The clause states the carriers:
   - batch is delivered by SL 9511;
   - `/score` and `/score/compare` are delivered by SL 9500 (DP-2 (ii)). Until then `/score`
-    serves the engine's number for those two types (`FD-1333`'s divergence, named in FD-1561).
+    serves the engine's number for those two types (`FD-1333`'s divergence, named in FD 9513).
 
   **T2 is applied once, by whichever of SL 9511 and SL 9500 merges first.** The two serialise
   on `_coerce_output_value`. The second slice applies nothing, and its dispatch record says so.
 
-## Pre-mint delta 2 (2026-10-05): integrality, and `RL-1567` as the activation-need-4 `RL-`
+## Pre-mint delta 2 (2026-10-05): integrality, and `RL 9498` as the activation-need-4 `RL-`
 
-The maintainer (by delegation) ruled `RL-1567`'s (#1212) second open question in
+The maintainer (by delegation) ruled `RL 9498`'s (working id; #1212) second open question in
 `~/gi-pricing-plan.local/channel/to-lead.md`, in the entry headed
 "2026-10-05 18:20:06 BST — RL 9498 (#1212 @7e71b040): both open questions RULED as recommended, with one precision each".
 The lead relayed it. Its item (2), verbatim:
@@ -171,11 +169,11 @@ The lead relayed it. Its item (2), verbatim:
 - **The `int`/`count` branch sketch** (Task 2 Step 3) refused every non-`int`, so a whole-valued
   `3.0` would be an error row. It now admits a `float` equal to its integer part and writes that
   integer. Step 3b states the replacement.
-- **Activation need 4's `RL-` is `RL-1567`** (#1212, read at `c2c70690`). It carries T1 (`03:692`)
-  and T2 (FR-214), and also T3 (`03:929`), which is SL 9500's (PL-1568), not this slice's. This
+- **Activation need 4's `RL-` is `RL 9498`** (#1212, read at `c2c70690`). It carries T1 (`03:692`)
+  and T2 (FR-214), and also T3 (`03:929`), which is SL 9500's (PL 9499), not this slice's. This
   slice applies T1 and, unless SL 9500 merged first, T2, byte for byte from the minted record.
-- **A note, not a change, for the batch code of a non-integral value.** `RL-1567` item 8 keeps
-  the exception class name in batch. PL-1568 (#1213) raises DP-4 against that clause: SL 9500's
+- **A note, not a change, for the batch code of a non-integral value.** `RL 9498` item 8 keeps
+  the exception class name in batch. PL 9499 (#1213) raises DP-4 against that clause: SL 9500's
   producer refuses a non-integral `int`/`count` value with the coded `RATING_TYPE_MISMATCH` inside
   `_build_outputs`, which batch reaches inside the row `try` (`score.py:1096-1100`), and
   `_batch_error_code` (`:1006-1018`) returns the code. So once SL 9500 merges, the row's
@@ -201,19 +199,19 @@ The entry headed "2026-10-05 18:27:10 BST — RL 9498 STOP: (a) ADOPTED; my 18:2
 
 **What this delta changes, at every site it reaches** ([`README.md`](README.md) rule 5):
 - **Item 6 and Task 2 Step 5** (marked in place): the `int`/`count` check is
-  `value == int(value)` with no tolerance, and the integer is written (`RL-1567`, #1212 @`c2c70690`,
+  `value == int(value)` with no tolerance, and the integer is written (`RL 9498`, #1212 @`c2c70690`,
   T1/T2). Item 6's break removes **that** check. A second break is added, the one the 18:26:46
   entry asks for: reverting the check to `isinstance(value, int)` turns item 12 (`3.0` → `3`) red,
   which proves the exact-equality code is what runs.
 - **The Task 2 Step 3 sketch** is marked superseded in place by Step 3b's branch, written out.
-- **Items 6 and 13's code is time-bounded** (the 18:27:10 entry, DP-4 (a) of PL-1568):
+- **Items 6 and 13's code is time-bounded** (the 18:27:10 entry, DP-4 (a) of PL 9499):
   `error_code == "ValueError"` **until SL 9500 merges**; after it, `RATING_TYPE_MISMATCH`, from the
-  single producer. SL 9500 (PL-1568, #1213, its item 28) re-expects both; this slice asserts
+  single producer. SL 9500 (PL 9499, #1213, its item 28) re-expects both; this slice asserts
   `ValueError`, and if SL 9500 merged first, the dispatch record restates both items with
   `RATING_TYPE_MISMATCH`.
-- **T1 states the code** (the 18:26:46 entry): `RL-1567`'s T1 names `ValueError`, time-bounded
+- **T1 states the code** (the 18:26:46 entry): `RL 9498`'s T1 names `ValueError`, time-bounded
   as the 18:27:10 entry words it, rather than leaving the class to SL 9511. This slice applies T1
-  as minted. (`RL-1567` @`c2c70690` item 8 said T1 "leaves the exact class to SL 9511"; the
+  as minted. (`RL 9498` @`c2c70690` item 8 said T1 "leaves the exact class to SL 9511"; the
   18:26:46 entry replaces that, and the decision-maker amends the record pre-mint.)
 
 ## Status
@@ -226,21 +224,21 @@ below holds.
 
 ### Activation needs, in order
 
-1. **FD-1561 minted** (#1204).
-2. **SL-1427 merged** (the emergency slice, PL-1426, #1196). It edits `score_one` and
+1. **FD 9513 minted** (#1204).
+2. **SL 9561 merged** (the emergency slice, PL 9560, #1196). It edits `score_one` and
    `_score_context_sync` in `score.py` (its write set, read at `68b2f860`). The ruling's item 1
    places this slice after it.
 3. **DP-1 ruled** (and DP-2, DP-3 with it). **Task 1 may be dispatched before this**, as its
    own commit, if the lead cuts it so (the ruling's item 2: "it lands even if the type DP is
    still open"). Tasks 2–3 wait for DP-1. *(Pre-mint delta 1: **held**, all three ruled at
-   18:10:57 BST. Task 1 is still placed **after SL-1427** (need 2), because it edits
+   18:10:57 BST. Task 1 is still placed **after SL 9561** (need 2), because it edits
    `score.py`. The ruling says so in its own words.)*
 4. **The `RL-` carrying T1 (the `03:692` row) and T2 (FR-214's dated clause) is minted**
    (§"The spec text DP-1 (b) owes"). This plan drafts no spec text. *(Pre-mint delta 1: this
    need was conditional, "If DP-1 changes a spec text". DP-1 (b) does, so the need is now
-   unconditional and is kept.)* *(Pre-mint delta 2: that `RL-` is `RL-1567`, #1212.)*
+   unconditional and is kept.)* *(Pre-mint delta 2: that `RL-` is `RL 9498`, #1212.)*
 5. **The maintainer's dispatch GO, and this plan made `active` by a dated line** in a separate
-   activation PR. The dispatch record writes `RL-1445`'s (#1162) same-Work lines for
+   activation PR. The dispatch record writes `RL 9620`'s (working id, #1162) same-Work lines for
    every WK-1178 slice in flight beside this one (§"Write set").
 
 ## Acceptance Standard
@@ -304,10 +302,10 @@ restatement is needed.)*
    first only by the **break** below; record it. ~~**Break:** an `int` branch that returns the
    value without the `isinstance(value, int)` check writes `19.8`, and the item fails.~~
    *(Pre-mint delta 3: the check is exact equality, `value == int(value)`, no tolerance, writing
-   the integer (`RL-1567` T1/T2). **Break:** removing **that** check writes `19.8`, and the item
+   the integer (`RL 9498` T1/T2). **Break:** removing **that** check writes `19.8`, and the item
    fails. **Second break:** reverting the check to `isinstance(value, int)` refuses `3.0`, and
    item 12 fails. The code is `"ValueError"` **until SL 9500 merges**, then
-   `RATING_TYPE_MISMATCH` (the 18:27:10 entry).)* (FD-1561
+   `RATING_TYPE_MISMATCH` (the 18:27:10 entry).)* (FD 9513
    recorded `/score` serving this value as a JSON float. That is the divergence `RL-1343` rule 4
    closes on `/score`. See §"RL-1343's discharge".)
 7. `test_a_fractional_declared_output_is_a_decimal_string_in_batch`, parametrised over
@@ -321,7 +319,7 @@ restatement is needed.)*
 8. `test_the_known_output_types_name_every_numeric_family_member`. `_KNOWN_OUTPUT_TYPES` is a
    superset of `compile._NUMERIC` (`compile.py:57`) plus `bool`, `string` and `date`. **Red:**
    the set difference `{"int", "count", "relativity", "percentage"}` is printed. This item keeps
-   the save-time vocabulary and the batch serialiser on one list, which is FD-1561's third
+   the save-time vocabulary and the batch serialiser on one list, which is FD 9513's third
    fix need.
 
 **Integrality, one red each way (pre-mint delta 2; `uv run pytest packages/pricing-core/tests/test_rating_score_batch_outputs.py -q -k integral`)**
@@ -335,7 +333,7 @@ restatement is needed.)*
     int)` refusal of `3.0`).
 13. `test_a_near_integer_under_an_integral_type_is_an_error_row`, parametrised over `int` and
     `count`. The expression gives `2.9999999999`. That row is an `"error"` row with `error_code`
-    equal to the exception class name (`"ValueError"`, DP-3; `RL-1567` item 8; *until SL 9500
+    equal to the exception class name (`"ValueError"`, DP-3; `RL 9498` item 8; *until SL 9500
     merges, then `RATING_TYPE_MISMATCH`, pre-mint delta 3*), the batch
     completes, and no float or string is written. **Red:** none against Task 2 Step 3 as first
     sketched (it already refuses a float); so this item is red first only by the **break**: a
@@ -379,18 +377,18 @@ restatement is needed.)*
 | `03` | FR-255 | The structural half: a row's serialisation failure is that row's typed `"error"` row, and the run continues | `req("FR-255")` on items 1–4, 6 |
 | `03` | FR-254 | Batch writes the value `/score` serves for `int` and `count`, and the vocabulary is one list (DP-1) | `req("FR-254")` on items 5, 8 |
 | `03` | FR-214 | Read. A declared output of type `relativity` or `percentage` is written by batch (DP-1, DP-2) | `req("FR-214")` on item 7 |
-| `03` | FR-227 | Read only. The save-time vocabulary is `compile._NUMERIC`; PL-1562 (#1202) edits its rule | none new |
+| `03` | FR-227 | Read only. The save-time vocabulary is `compile._NUMERIC`; PL 9521 (#1202) edits its rule | none new |
 | `03` | NFR-499 | An error row from serialisation carries no input value | `req("NFR-499")` on item 2 |
 
-**Findings.** FD-1561 (MEDIUM, LATENT, owner WK-1178) is discharged on merge, by its
+**Findings.** FD 9513 (working id; MEDIUM, LATENT, owner WK-1178) is discharged on merge, by its
 own event: "a merged change to `_coerce_output_value` and `_score_batch_row`". The auditor closes
-it. Under DP-2 (ii), FD-1561's `/score` half for `relativity` and `percentage` is carried to the
+it. Under DP-2 (ii), FD 9513's `/score` half for `relativity` and `percentage` is carried to the
 `RL-1343` slice, and the closure names that.
 
 **Not in scope.**
 - `RL-1343` rules 3 and 4 (the exact decimal string on `/score`, `ScoringResult` refusing a float):
   the `RL-1343` slice, unless DP-2 is ruled (i).
-- The save-time type rule: PL-1562 (#1202).
+- The save-time type rule: PL 9521 (#1202).
 - What the Job's generic failure path stores: `FD-1217`.
 
 ### Task 0 at planning time (read, not run)
@@ -417,14 +415,14 @@ Read at `5fe56b87`. Nothing was executed.
   Python, `issubclass` → `False`). That is one real way a non-`ValueError` could come out of the
   `decimal` branch's `Decimal(repr(value))` (`:973`).
 
-### Write set, and its contention (`RL-1263`, `RL-1445`)
+### Write set, and its contention (`RL-1263`, `RL 9620`)
 
 | Path | Change |
 |---|---|
 | `packages/pricing-core/src/pricing_core/rating/score.py` | edited: `_score_batch_row` (`:1081-1127`), a second `try` around `_ladder_json` and `_outputs_json`; `_KNOWN_OUTPUT_TYPES` (`:947`) and its comment (`:943-946`); `_coerce_output_value` (`:950-988`), its docstring and one branch per DP-1; `_outputs_json`'s docstring (`:992-995`). Under DP-2 (i) only, also `_build_outputs` (`:729-758`) |
 | `packages/pricing-core/tests/test_rating_score_batch_outputs.py` | added: items 1–3, 5–8 |
 | `backend/tests/test_scoring_handlers.py` | appended: item 4 |
-| `docs/specs/03-rating-engine.md` the `outputs_json` row (`:692`); the FR-214 row (`:83`) | ~~only if an `RL-` carries text (activation need 4)~~ *(pre-mint delta 1)* T1 on the `:692` row; T2 on the FR-214 row unless SL 9500 merged first (activation need 4, Task 3). Each is a different row from SL-1427's FR-213 (`:82`) |
+| `docs/specs/03-rating-engine.md` the `outputs_json` row (`:692`); the FR-214 row (`:83`) | ~~only if an `RL-` carries text (activation need 4)~~ *(pre-mint delta 1)* T1 on the `:692` row; T2 on the FR-214 row unless SL 9500 merged first (activation need 4, Task 3). Each is a different row from SL 9561's FR-213 (`:82`) |
 | the slice's ledger `docs/ledgers/LG-<n>`; `docs/INDEX.md`; `docs/roadmap.md` (this slice's row) | added; regenerated; activation and closing lines |
 
 **Contention.** **Snapshot:** every open PR at `origin/main` `5fe56b87`, read 2026-10-05 between
@@ -435,17 +433,17 @@ files; the ones that write or read either are below. The classes are those of `n
 
 | Other slice (Work; source read) | Shared path | Them | Us | Class → consequence |
 |---|---|---|---|---|
-| **SL-1427**, PL-1426, the emergency slice (#1196 @`68b2f860`; WK-1178) | `score.py`; `test_scoring_handlers.py` | adds `_check_no_shadowed_produced_names`; edits `score_one` and `_score_context_sync` (one call each); appends its batch red to `test_scoring_handlers.py` | `_score_batch_row`, `_coerce_output_value`, `_KNOWN_OUTPUT_TYPES`; appends item 4 | different definitions; append-only on the test file → **ordered first** by the ruling (activation need 2). Not concurrent |
-| **PL-1435 / SL-1436**, the FD-1425 fix (#1193 @`67137918`; WK-673) | `test_scoring_handlers.py` | appends a test. Its delta withdraws its `score.py` edit ("this plan no longer edits `score.py` at all"); its write-set table still lists one | appends item 4 | append-only → **allowed one-sided**; the dispatch record names the path. If its `score.py` row is reinstated, re-check: it named `score_one`/`_score_context_sync`, not ours |
-| **PL-1562 / SL 9522**, money_minor closed at save (#1202 @`6e2d05cc`; WK-1178) | none written by both; it **reads** `score.py` (`:729`, `:947`, `:950`, `:991-1002`) in Task 0 Step 3 and Step 1a | edits `compile.py` `_compatible` and callers | reads `compile._NUMERIC` (item 8) | **no shared write → concurrent allowed** (`RL-1445` (a), (b)). Its OQ-1560 decision (A1 + B3) narrows which producers reach an `int`/`count` output; it does not change `_NUMERIC`. Its Step 1a (an `int`/`count` → `decimal` comparison) does **not** cite FD-1561 at `6e2d05cc`: `grep -c 9513` prints 0 |
-| **PL-1447**, the FD-1420 fix (#1145; WK-673) | `score.py` | adds `_check_as_at_values`; edits `score_one`, `_score_context_sync` (one call each) | `_score_batch_row`, `_coerce_output_value`, `_KNOWN_OUTPUT_TYPES` | different definitions, one file → **allowed one-sided**, the dispatch record naming each definition |
+| **SL 9561**, PL 9560, the emergency slice (#1196 @`68b2f860`; WK-1178) | `score.py`; `test_scoring_handlers.py` | adds `_check_no_shadowed_produced_names`; edits `score_one` and `_score_context_sync` (one call each); appends its batch red to `test_scoring_handlers.py` | `_score_batch_row`, `_coerce_output_value`, `_KNOWN_OUTPUT_TYPES`; appends item 4 | different definitions; append-only on the test file → **ordered first** by the ruling (activation need 2). Not concurrent |
+| **PL 9567 / SL 9568**, the FD 9572 fix (#1193 @`67137918`; WK-673) | `test_scoring_handlers.py` | appends a test. Its delta withdraws its `score.py` edit ("this plan no longer edits `score.py` at all"); its write-set table still lists one | appends item 4 | append-only → **allowed one-sided**; the dispatch record names the path. If its `score.py` row is reinstated, re-check: it named `score_one`/`_score_context_sync`, not ours |
+| **PL 9521 / SL 9522**, money_minor closed at save (#1202 @`6e2d05cc`; WK-1178) | none written by both; it **reads** `score.py` (`:729`, `:947`, `:950`, `:991-1002`) in Task 0 Step 3 and Step 1a | edits `compile.py` `_compatible` and callers | reads `compile._NUMERIC` (item 8) | **no shared write → concurrent allowed** (`RL 9620` (a), (b)). Its OQ 9556 decision (A1 + B3) narrows which producers reach an `int`/`count` output; it does not change `_NUMERIC`. Its Step 1a (an `int`/`count` → `decimal` comparison) does **not** cite FD 9513 at `6e2d05cc`: `grep -c 9513` prints 0 |
+| **PL 9688**, the FD 9707 fix (#1145; WK-673) | `score.py` | adds `_check_as_at_values`; edits `score_one`, `_score_context_sync` (one call each) | `_score_batch_row`, `_coerce_output_value`, `_KNOWN_OUTPUT_TYPES` | different definitions, one file → **allowed one-sided**, the dispatch record naming each definition |
 | **PL 9609**, WK-1250 S3 (#1173; WK-1250) | `score.py` | rewrites `_check_purpose_mount` (`:395-422`) and its two calls (`:898`, `:1063`) | as above | different definitions → **allowed one-sided** |
-| **PL-1520**, the F35 remedy (#1051; WK-1178) | `score.py` | adds `reproduce_traced`; edits `_build_trace` and `build_scoring_result` | as above; `_build_outputs` only under DP-2 (i) | different definitions → **allowed one-sided**. Under DP-2 (i), `build_scoring_result` calls `_build_outputs`: re-check at dispatch |
-| **A-2**, PL-1464 (#1178 @`176a6a75`; WK-1178) | `score.py` | the module docstring's item 2 (`:33-41`) only | not the docstring | different text → **allowed one-sided** |
+| **PL 9776**, the F35 remedy (#1051; WK-1178) | `score.py` | adds `reproduce_traced`; edits `_build_trace` and `build_scoring_result` | as above; `_build_outputs` only under DP-2 (i) | different definitions → **allowed one-sided**. Under DP-2 (i), `build_scoring_result` calls `_build_outputs`: re-check at dispatch |
+| **A-2**, PL 9597 (#1178 @`176a6a75`; WK-1178) | `score.py` | the module docstring's item 2 (`:33-41`) only | not the docstring | different text → **allowed one-sided** |
 | **S7**, `SL-1391` / `PL-1419` (`active`; WK-673) | none | rate tables and `worker/rate_table_handlers.py` | — | none |
 
-Every other open plan names neither file, or reads it only (PL-1501, PL-1544, PL-1452 read
-`score.py` or `scoring_handlers.py`; PL-1564, PL-1465, PL 9574, PL-1454 do not touch them). No
+Every other open plan names neither file, or reads it only (PL 9591, PL 9629, PL 9689 read
+`score.py` or `scoring_handlers.py`; PL 9610, PL 9595, PL 9574, PL 9728 do not touch them). No
 open plan edits `_score_batch_row`, `_outputs_json`, `_coerce_output_value`,
 `_KNOWN_OUTPUT_TYPES`, `_build_outputs` or `scoring_handlers.py:222-245`. **The `RL-1343` slice
 has no plan** (§"RL-1343's discharge"); when it is planned it edits `_build_outputs` and
@@ -462,18 +460,18 @@ measured, so the slice need not run exclusive.
 
 **No plan discharges `RL-1343` at this tree, and none is open.** Evidence:
 - `PL-1371` (`:251`): "RL-1343 decimal-output fix … **no leaf plan yet**".
-- `PL-1364` (`:766`): "The `RL-1343` rule-4 slice (WK-1178, not yet planned)". PL-1520 (#1051)
+- `PL-1364` (`:766`): "The `RL-1343` rule-4 slice (WK-1178, not yet planned)". PL 9776 (#1051)
   says the same.
 - The `SL-1409` row (`docs/roadmap.md:1435`) orders lane B "… → this slice → the `RL-1343`
   decimal fix → FD-1335 Part A". `SL-1409` is closed; no `RL-1343` row exists under WK-1178.
 - Its gate is met: `RL-1343` §5 puts it "after WK-674 Slice 3 merges", and `SL-1345` is
   `closed` (`docs/roadmap.md:935`).
 - No open PR adds a plan for it: every plan file in an open PR was grepped for `RL-1343`; the
-  hits cite it as a guard or a later slice (PL 9593, PL-1525, PL-1520), never as their scope.
+  hits cite it as a guard or a later slice (PL 9593, PL 9624, PL 9776), never as their scope.
 
 **What that plan must cover, when it is written** (the ruling's item 3):
 1. **Both forms of a `decimal` output.** A whole-valued `decimal` reaches `/score` today as a
-   JSON **integer** (FD-1561's probe: `driver_age * 1.5` at age 18 → `27`, JSON type `int`),
+   JSON **integer** (FD 9513's probe: `driver_age * 1.5` at age 18 → `27`, JSON type `int`),
    and a fractional one as a JSON **float** (`driver_age * 1.1` → `19.8`). `FD-1333` and
    `RL-1343` say only "float". Batch writes `"27"` and `"19.8"` (`Decimal(repr(value))`,
    `:973`), neither of which is `RL-1343` rule 3's form (exactly `dp` digits: `"27.00"`,
@@ -486,7 +484,7 @@ measured, so the slice need not run exclusive.
 
 The lead names that plan's working id when it is reserved. Until then this section is the carrier
 of the obligation, and Hand-off 3 repeats it. *(Pre-mint delta 1, 2026-10-05: reserved. That plan
-is **PL-1568 / SL 9500** (SL 9500 a working id; planner-1343 is drafting it). The ruling of 18:10:57 BST
+is **PL 9499 / SL 9500** (working ids; planner-1343 is drafting it). The ruling of 18:10:57 BST
 sets its scope: both decimal forms with their own red (27 → "27.00" at dp 2), `relativity` and
 `percentage` on `/score`, `NFR-502`'s re-measure in the gate's own mode, and the frontend half
 of the gate. It **serialises** with SL 9511 on `_coerce_output_value`.)*
@@ -495,8 +493,8 @@ of the gate. It **serialises** with SL 9511 on `_coerce_output_value`.)*
 
 | DP | Question | Options | Recommendation | Owner | Blocks |
 |---|---|---|---|---|---|
-| **DP-1** | **The JSON form of `int`, `count`, `relativity` and `percentage` outputs**, on batch and `/score`. Today `/score` serves each as the engine's raw value (`_build_outputs` `:756-757`; FD-1561's probe: a JSON integer for a whole value), and batch refuses all four (`:964-965`). FR-254 (`03:166`) says the paths never diverge; `03:692` says `outputs_json` is "total over every `AlgorithmOutput.type` this path can produce"; `RL-923` §5(i) rules "total over the value types the rating path can produce" and a loud failure on an unnamed type. No text says how these four are written | **(a)** A JSON number on both paths, as `/score` serves today: batch writes the value unchanged. **(b)** `int` and `count` as a JSON integer on both paths (a non-integral value is that row's error); `relativity` and `percentage` as a decimal string, the `decimal` form, on both paths. **(c)** Close the vocabulary at save: a top-level `AlgorithmOutput` may not declare the four (a sub-graph output port still may: `test_sub_graph.py:25`), and batch keeps refusing them. **(d)** All four as strings on both paths | **(b).** (a) puts a float in `outputs_json`, which `03:692` exists to prevent ("an exact `Decimal` and a lossy `float` cannot be confused"), and `RL-1343` rule 4 already rules that `ScoringResult` refuses a float anywhere in `outputs`: a `relativity` of 1.15 served as a number would then be refused on `/score`. So a fractional type cannot be a JSON number, and (a) fails for two of the four. (c) is a contract change for algorithm authors that FR-214 ("may include additional named outputs") does not ask for, and it overlaps OQ-1560 (#1200), decided as A1 + B3, which allows these types and decides only which producers reach them. (d) writes an integer as a string, unlike `money_minor` (a JSON number, `03:692`), for no reason. (b) follows the two precedents: integral values are JSON integers as `money_minor` is (`RL-1329` §4), and fractional values are strings as `decimal` is (`RL-1343`). Liveness is none (FD-1561 §"Liveness"), so no committed consumer changes | **RULED (b)** by the maintainer (by delegation), 2026-10-05 18:10:57 BST (§"Pre-mint delta 1"); (c) not taken because OQ-1560 owns the type vocabulary at save, and (d) not taken | Task 2, item 5–8 |
-| **DP-2** | **Only under DP-1 (b): who carries the `/score` half for `relativity` and `percentage`.** `/score` serves them as numbers today; (b) makes them strings there, which is `RL-1343` rule 3's producer | **(i)** This slice: `_build_outputs` writes the exact string for `decimal`, `relativity` and `percentage`, which discharges `RL-1343` rule 3 here. **(ii)** The `RL-1343` slice: this slice writes them in batch with the `decimal` branch's form, and that slice gives all three one producer on both paths | **(ii).** One producer, one breaking served-type change, one release note, one `NFR-502` re-measure (`RL-1343` §5), in one slice. (i) widens this slice into `_build_outputs` and `RL-1343` rules 3 and 4 (`model_schema/scoring.py`, `docs/contracts/`, `test_contracts.py`), which the ruling's item 3 keeps with `FD-1333`. The cost of (ii): `relativity` and `percentage` keep FD-1333's divergence (string in batch, number on `/score`) until that slice merges. Liveness is none, so nothing reads it | **RULED (ii)** by the maintainer (by delegation), 2026-10-05 18:10:57 BST. The `RL-1343` slice is SL 9500 (a working id) / PL-1568 | Task 2, item 7 |
+| **DP-1** | **The JSON form of `int`, `count`, `relativity` and `percentage` outputs**, on batch and `/score`. Today `/score` serves each as the engine's raw value (`_build_outputs` `:756-757`; FD 9513's probe: a JSON integer for a whole value), and batch refuses all four (`:964-965`). FR-254 (`03:166`) says the paths never diverge; `03:692` says `outputs_json` is "total over every `AlgorithmOutput.type` this path can produce"; `RL-923` §5(i) rules "total over the value types the rating path can produce" and a loud failure on an unnamed type. No text says how these four are written | **(a)** A JSON number on both paths, as `/score` serves today: batch writes the value unchanged. **(b)** `int` and `count` as a JSON integer on both paths (a non-integral value is that row's error); `relativity` and `percentage` as a decimal string, the `decimal` form, on both paths. **(c)** Close the vocabulary at save: a top-level `AlgorithmOutput` may not declare the four (a sub-graph output port still may: `test_sub_graph.py:25`), and batch keeps refusing them. **(d)** All four as strings on both paths | **(b).** (a) puts a float in `outputs_json`, which `03:692` exists to prevent ("an exact `Decimal` and a lossy `float` cannot be confused"), and `RL-1343` rule 4 already rules that `ScoringResult` refuses a float anywhere in `outputs`: a `relativity` of 1.15 served as a number would then be refused on `/score`. So a fractional type cannot be a JSON number, and (a) fails for two of the four. (c) is a contract change for algorithm authors that FR-214 ("may include additional named outputs") does not ask for, and it overlaps OQ 9556 (#1200), decided as A1 + B3, which allows these types and decides only which producers reach them. (d) writes an integer as a string, unlike `money_minor` (a JSON number, `03:692`), for no reason. (b) follows the two precedents: integral values are JSON integers as `money_minor` is (`RL-1329` §4), and fractional values are strings as `decimal` is (`RL-1343`). Liveness is none (FD 9513 §"Liveness"), so no committed consumer changes | **RULED (b)** by the maintainer (by delegation), 2026-10-05 18:10:57 BST (§"Pre-mint delta 1"); (c) not taken because OQ 9556 owns the type vocabulary at save, and (d) not taken | Task 2, item 5–8 |
+| **DP-2** | **Only under DP-1 (b): who carries the `/score` half for `relativity` and `percentage`.** `/score` serves them as numbers today; (b) makes them strings there, which is `RL-1343` rule 3's producer | **(i)** This slice: `_build_outputs` writes the exact string for `decimal`, `relativity` and `percentage`, which discharges `RL-1343` rule 3 here. **(ii)** The `RL-1343` slice: this slice writes them in batch with the `decimal` branch's form, and that slice gives all three one producer on both paths | **(ii).** One producer, one breaking served-type change, one release note, one `NFR-502` re-measure (`RL-1343` §5), in one slice. (i) widens this slice into `_build_outputs` and `RL-1343` rules 3 and 4 (`model_schema/scoring.py`, `docs/contracts/`, `test_contracts.py`), which the ruling's item 3 keeps with `FD-1333`. The cost of (ii): `relativity` and `percentage` keep FD-1333's divergence (string in batch, number on `/score`) until that slice merges. Liveness is none, so nothing reads it | **RULED (ii)** by the maintainer (by delegation), 2026-10-05 18:10:57 BST. The `RL-1343` slice is SL 9500 / PL 9499 (working ids) | Task 2, item 7 |
 | DP-3 *(not blocking)* | **The `error_code` of a row whose serialisation fails.** FR-255 lists typed errors: contract violation, reference miss, table miss, constraint decline, model failure. A serialisation failure is none of them | **(a)** The exception's class name, as `_batch_error_code` gives any uncoded error today (`:1018`). **(b)** A new registered code, for example `OUTPUT_NOT_SERIALISABLE`, with a dated FR-255 clause and an `03` error-code row | **(a).** After Task 2 the only remaining cause is an engine value that does not match its declared type (item 6), which is a defect to see in `error_counts`, and the class name already shows it. (b) needs a ruled spec text for a case that should not occur | **RULED (a)**, "the exception class name, as today", by the maintainer (by delegation), 2026-10-05 18:10:57 BST | none (items 1, 4, 6 assert (a); under (b) the dispatch record restates them) |
 
 ## Tasks
@@ -505,7 +503,7 @@ of the gate. It **serialises** with SL 9511 on `_coerce_output_value`.)*
 
 - [ ] **Step 1:** Confirm each activation need. Quote DP-1's (and DP-2's, DP-3's) ruling (held, 18:10:57 BST) into the
   ledger. If Task 1 is dispatched before DP-1, record that, and stop after Task 1.
-- [ ] **Step 2:** Re-read §"Task 0 at planning time" at the dispatch tree (SL-1427 will have
+- [ ] **Step 2:** Re-read §"Task 0 at planning time" at the dispatch tree (SL 9561 will have
   moved the line numbers of `score.py`). Record the new numbers.
 - [ ] **Step 3:** Re-run the contention check: for each open PR, grep its plan files for
   `score.py` and `scoring_handlers`, and read each hit for write or read. A new plan editing
@@ -864,7 +862,7 @@ def test_the_known_output_types_name_every_numeric_family_member() -> None:
   strings are what the `decimal` branch gives for the engine's `int` 27 and `float` 19.8 today
   (`str(Decimal(repr(value)))`); they are batch's interim form under DP-2 (ii), not
   `RL-1343` rule 3's form. Whether the engine accepts `result_type` `count`, `relativity` and
-  `percentage` on an `expression` step is read from FD-1561's probe (it did), and re-checked by
+  `percentage` on an `expression` step is read from FD 9513's probe (it did), and re-checked by
   Step 2's output.
 
 - [ ] **Step 2: Run them and see each fail by its cause.**
@@ -875,7 +873,7 @@ def test_the_known_output_types_name_every_numeric_family_member() -> None:
   error, from the type refusal). Record each line.
 
 - [ ] **Step 3: The minimal change.** `_KNOWN_OUTPUT_TYPES` gains the four types (comment updated
-  to cite FD-1561 and DP-1). `_coerce_output_value` gains two branches, before the
+  to cite FD 9513 and DP-1). `_coerce_output_value` gains two branches, before the
   `unreachable` assertion:
 
 ```python
@@ -956,12 +954,12 @@ git commit -m "fix(rating): batch writes int, count, relativity and percentage o
 
 ## Hand-off
 
-1. The lead mints PL-1566 and SL 9511 after FD-1561, and dispatches only after §"Activation
+1. The lead mints PL 9509 and SL 9511 after FD 9513, and dispatches only after §"Activation
    needs" hold, in a separate activation PR.
-2. On merge, FD-1561's event is discharged ("a merged change to `_coerce_output_value` and
+2. On merge, FD 9513's event is discharged ("a merged change to `_coerce_output_value` and
    `_score_batch_row`"). The auditor closes it, naming under DP-2 (ii) that the `/score` half
    for `relativity` and `percentage` is carried by the `RL-1343` slice.
-3. **To the planner of the `RL-1343` slice, PL-1568 / SL 9500** (SL 9500 a working id, planner-1343;
+3. **To the planner of the `RL-1343` slice, PL 9499 / SL 9500** (working ids, planner-1343;
    *pre-mint delta 1*; §"RL-1343's discharge"): cover a
    whole-valued `decimal` (a JSON integer on `/score` today) and a fractional one (a float);
    rule 4's float refusal does not catch the first. Under DP-2 (ii), give `relativity` and
@@ -970,8 +968,8 @@ git commit -m "fix(rating): batch writes int, count, relativity and percentage o
    merges `main` first, and keeps the other's branches (this slice's `int`/`count` branch, or
    that slice's producer for `decimal`, `relativity` and `percentage`). FR-214's T2 is applied
    once, by whichever merges first (§"The spec text DP-1 (b) owes").
-4. **To PL-1562's executor (#1202):** its Step 1a compares an `int`/`count` → `decimal` output
-   on `/score` and batch. That is FD-1333's divergence, now also FD-1561's record; a
+4. **To PL 9521's executor (#1202):** its Step 1a compares an `int`/`count` → `decimal` output
+   on `/score` and batch. That is FD-1333's divergence, now also FD 9513's record; a
    difference found there is already filed, so it is cited, not re-filed.
 
 ## Self-review
@@ -989,9 +987,9 @@ git commit -m "fix(rating): batch writes int, count, relativity and percentage o
      argues from FR-254, `03:692`, `RL-923` §5(i) and `RL-1343`.
 2. **Coverage of item 3:** §"RL-1343's discharge": no plan exists; what it must cover (both
    forms; rule 4's blind spot for a whole value); Hand-off 3.
-3. **Coverage of item 1:** "AFTER SL-1427": activation need 2 and the contention table.
+3. **Coverage of item 1:** "AFTER SL 9561": activation need 2 and the contention table.
 4. **Repository literals read at `5fe56b87`:** every line in §"Task 0 at planning time" and
-   §"Write set"; FD-1561 at `0303d0bf`; each other plan on its branch at the head named in the
+   §"Write set"; FD 9513 at `0303d0bf`; each other plan on its branch at the head named in the
    contention table. The brief's anchors were checked: the `try` is `:1096-1103` counting its
    handlers (`:1096-1100` the body), and `:1123` is `_outputs_json`; `:1122` (`_ladder_json`)
    is also outside it.
@@ -1002,7 +1000,7 @@ git commit -m "fix(rating): batch writes int, count, relativity and percentage o
 6. **Type consistency:** `_batch_error_row` is defined in Task 1 Step 4 and used at both
    `except`s; `_probe_payload`, `_ProbeResolver` and `_probe_bundle` are defined and used in
    Task 2; `_coerce_output_value`'s signature is unchanged.
-7. **Pre-mint delta 2 coverage:** the ruling's "each slice has one red for 3.0 → 3 and one for a near-integer refused": items 12 and 13 (Task 2 Step 3b); "T1 and T2 state it": `RL-1567`'s texts, applied by Task 3; activation need 4 names `RL-1567`.
+7. **Pre-mint delta 2 coverage:** the ruling's "each slice has one red for 3.0 → 3 and one for a near-integer refused": items 12 and 13 (Task 2 Step 3b); "T1 and T2 state it": `RL 9498`'s texts, applied by Task 3; activation need 4 names `RL 9498`.
 8. **Pre-mint delta 3 coverage:** the 18:26:46 entry: T1 states `ValueError` (delta 3, last
    bullet); the `isinstance` break replaced and turned into a red for `3.0` → `3` (item 6's second
    break, Step 5). The 18:27:10 entry: items 6 and 13 marked "until SL 9500".

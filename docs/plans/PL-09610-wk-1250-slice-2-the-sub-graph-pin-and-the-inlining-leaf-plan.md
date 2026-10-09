@@ -1,10 +1,10 @@
 ---
-id: PL-1564
+id: PL-9610
 family: plan
 kind: leaf
 title: WK-1250 Slice 2 — the sub-graph pin and the inlining (FR-217's pin and inlining limbs; FR-258's inlined steps): leaf plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
+created: 2026-10-05            # working id; the mint date will replace this (check 31)
 owner: planner
 tree: cdaaa57345cb765f96034ce1ec2733c338f1c3cd
 phase: P2
@@ -16,13 +16,11 @@ corrected_by: []
 relates: [PL-1254, PL-1325, RL-1309, RL-1344, FD-1241, FD-1246, RL-1242, RL-1263, FD-1297, PL-1371, LG-1355]
 ---
 
-# PL-1564 — WK-1250 Slice 2: the sub-graph pin and the inlining, leaf plan
-
-*(Minted 2026-10-09 as PL-1564 from working id 9610, in the D4 batch mint; citations of the ids minted in this batch, and of ids already minted on main, are re-pointed outside quoted text, quoted channel entries and code blocks, which stay as quoted; PL-1544 (the G2-b batch) are forward cites into batches not yet merged; PL 9609 are working ids not minted by any batch and stay working ids.)*
+# PL 9610 (working id) — WK-1250 Slice 2: the sub-graph pin and the inlining, leaf plan
 
 Filed under working id 9610. It is the leaf plan for `SL-1340` (`draft`, minted 2026-09-30, in
 [`../roadmap.md`](../roadmap.md) under `### WK-1250`), which is `PL-1254` Task 2. The lead
-re-issued the id (`~/gi-pricing-plan.local/handover/eta.md`, row "PL-1564", "RE-ISSUED: WK-1250
+re-issued the id (`~/gi-pricing-plan.local/handover/eta.md`, row "PL 9610", "RE-ISSUED: WK-1250
 S2 leaf plan on SL-1340", 5 Oct 15:34:40). The row is not edited here; its "leaf plan" note is
 added at the mint. Everything below was read at `origin/main`
 `cdaaa57345cb765f96034ce1ec2733c338f1c3cd` on 2026-10-05, unless a line names a branch. **No test
@@ -58,10 +56,10 @@ This slice adds **no** `purposes` field. Every mount it inlines is unconditional
 interim refusal of MTA and cancellation quotes stays in force (`RL-1344` §4). FR-218's purpose
 mount and the real check are Slice 3's (`SL-1341`, PL 9609, working id).
 
-**What it unblocks for G2.** In PL-1544 (#1164, branch `pl-9629-p2-exit-demo` at
+**What it unblocks for G2.** In PL 9629 (working id, #1164, branch `pl-9629-p2-exit-demo` at
 `c5f60f7b`), this slice is what step **B7** waits on: "mount `sub_graph:ncd-ladder@4` | inlined at
-compile | DP-b3". B7 is a row of that plan's Task 2 ("Phases A and B over HTTP"). No other PL-1544
-step needs WK-1250. Slice 3 serves no PL-1544 step.
+compile | DP-b3". B7 is a row of that plan's Task 2 ("Phases A and B over HTTP"). No other PL 9629
+step needs WK-1250. Slice 3 serves no PL 9629 step.
 
 **The consequence `RL-1344` §4 says this plan must state.** Between this slice's merge and Slice 3,
 an author who mounts a refund fragment without a selector mounts it for **every** purpose. No
@@ -82,13 +80,13 @@ recorded in the dispatch record and quoted in the ledger's Task 0, never added h
 1. **`SL-1339` closed.** **Met:** `closed` 2026-10-01 (`LG-1355`).
 2. **DP-S2-1 and DP-S2-2 ruled by an `RL-`.** Open.
 3. **The `TraceStep` ruling (FD-1246) minted.** `PL-1254:176` and `:301`, and `PL-1371:217`,
-   make "the FD-1246 trace ruling" a dependency of this slice. **It exists, unminted:** RL-1519
+   make "the FD-1246 trace ruling" a dependency of this slice. **It exists, unminted:** RL 9771
    (working id, #1060, branch `dm-f35-rulings` at `758336a1`, `status: draft`), DP-F35-2, *"Ruled
    (b): yes"*, input and output steps are traced. It says: *"`SL-1340`'s inlined ports are then
    traceable without a second ruling … `FD-1246`'s disposition, the decision-maker's ruling, is
-   this paragraph. Its delivery is PL-1520 Task 3."* Nothing rules on FD-1246 on `main`
+   this paragraph. Its delivery is PL 9776 Task 3."* Nothing rules on FD-1246 on `main`
    (`git grep -n 'FD-1246' cdaaa573 -- docs/rulings` prints only `RL-1263`'s line, which states
-   the dependency). **Open until RL-1519 mints.** The order against PL-1520, which delivers it,
+   the dependency). **Open until RL 9771 mints.** The order against PL 9776, which delivers it,
    is **Sequencing for the lead** below.
 4. **`RL-1309` DP-1 item 3's condition** (`RL-1309:309-310`): *"Before Slice 2 is dispatched, both
    WK-673's plan and PL-1254 Task 2 carry this limb."* The maintainer then ruled that **a local
@@ -98,19 +96,19 @@ recorded in the dispatch record and quoted in the ledger's Task 0, never added h
    RL-1309:309-311's gate: NO, a local delta file doesn't satisfy it; an IN-REPO carrier is
    needed", as quoted at `PL-1325:861-866`. **Unmet at `cdaaa573`:** no WK-673 plan or ledger
    cites `RL-1309` (`git grep -l 'RL-1309' cdaaa573 -- docs/plans docs/ledgers` prints only
-   `PL-1325` and `LG-1355`). None of the four open WK-673 leaf plans cites it either: PL-1452
-   (#1138), PL-1419, PL-1403 and PL-1395, read at their branch heads `e810b785`, `33ea0052`,
+   `PL-1325` and `LG-1355`). None of the four open WK-673 leaf plans cites it either: PL 9689
+   (#1138), PL 9716, PL 9735 and PL 9741, read at their branch heads `e810b785`, `33ea0052`,
    `d2d3244c` and `3359f585`. `PL-1254` is frozen, so for `PL-1254` Task 2 **this leaf plan
    carries the limb** (Task 4 and acceptance 7). Routing the WK-673 carrier is the lead's
    (`RL-1309:310`).
 5. **The `compile_bundle` writers ahead of it have merged, one at a time.** `PL-1371:291-294`
    serialises WK-673 S3, WK-1250 S2, WK-1250 S3 and WK-675 S3 outright, on `compile.py` and
-   `compile_bundle`. The lane-B fixes also edit `compile_bundle`'s body: PL-1471 (#1152, the FR-240
-   family fix) and the FD-1420 fix (PL-1447, #1145). Each of them "never runs concurrently with a
-   slice that edits `compile_bundle`'s body" (PL-1471's *Lane* item 4, at `2b5bf12d`). **PL-1471
+   `compile_bundle`. The lane-B fixes also edit `compile_bundle`'s body: PL 9649 (#1152, the FR-240
+   family fix) and the FD 9707 fix (PL 9688, #1145). Each of them "never runs concurrently with a
+   slice that edits `compile_bundle`'s body" (PL 9649's *Lane* item 4, at `2b5bf12d`). **PL 9649
    should merge first** (Task 0 and **Dependencies**).
 6. **A free build slot and the single gate**, under the dispatch rule in force: `RL-1263`, as
-   amended by RL-1445 (#1162, branch `dm-9620-rl1263-amend`, not merged), *"Build
+   amended by RL 9620 (working id, #1162, branch `dm-9620-rl1263-amend`, not merged), *"Build
    slices: at most 3 at once. At most ONE full gate runs at a time on this VM."*
 7. **The lead's dispatch record**, carrying the write-set check (**File contention**) and
    `RL-1344`'s §4 bullet for Slice 2 verbatim: *"The inliner must not foreclose §3's per-purpose
@@ -125,17 +123,17 @@ recorded in the dispatch record and quoted in the ledger's Task 0, never added h
     wired into compile (Slice 2)");
   - `fragment_output_type_issues` (`compile.py:173-199`);
   - the `sub_graph_versions` table (`SubGraphVersionRow`, `backend/src/app/db/models.py:2384`).
-- **On PL-1471 (the FR-240 family fix, #1152, `draft` at `2b5bf12d`).** PL-1471 builds the
+- **On PL 9649 (the FR-240 family fix, #1152, `draft` at `2b5bf12d`).** PL 9649 builds the
   transitive model → custom-objective compile check, `_check_reachable_objectives(version,
-  payloads, resolver)` (PL-1471 Task 2, Step 4). `RL-1309` G1 (`:350-361`) says:
+  payloads, resolver)` (PL 9649 Task 2, Step 4). `RL-1309` G1 (`:350-361`) says:
   - *"Whichever Work lands the transitive model → objective compile check first builds it"*;
   - *"One implementation, never a copy. The second Work calls the first Work's function"*.
-  `RL-1309` expected WK-1250 Slice 2 to be first. At this tree, PL-1471 is ordered ahead of it in
-  lane B: FD-1420 fix → PL-1471 → PL-1454 (`to-lead.md` entry headed "2026-10-05 15:33:14 BST").
-  `PL-1371:305` places this slice in the week of 24–30 Oct. **So this slice calls PL-1471's
-  function, and never builds a second one.** If PL-1471 has not merged at dispatch, Task 0 stops and
+  `RL-1309` expected WK-1250 Slice 2 to be first. At this tree, PL 9649 is ordered ahead of it in
+  lane B: FD 9707 fix → PL 9649 → PL 9728 (`to-lead.md` entry headed "2026-10-05 15:33:14 BST").
+  `PL-1371:305` places this slice in the week of 24–30 Oct. **So this slice calls PL 9649's
+  function, and never builds a second one.** If PL 9649 has not merged at dispatch, Task 0 stops and
   reports, and the lead orders the two. This plan does not choose the builder.
-- **On the FD-1421 fix (PL-1429, #1140, at `f18549bb`).** PL-1429 gives `POST
+- **On the FD 9708 fix (PL 9683, #1140, at `f18549bb`).** PL 9683 gives `POST
   /api/v1/rating-versions` an `algorithm_ref` and `pins` (its *Architecture*,
   `RatingVersionCreate` in `model_schema/rating.py`). That is the first pin write path in
   `backend/src`. G2 (Task 6) is proved over **every** pin write path at the dispatch tree,
@@ -146,29 +144,29 @@ recorded in the dispatch record and quoted in the ledger's Task 0, never added h
 - **No WK-674 dependency.** `RL-1263` item 5 lifts "after WK-674" as bare sequencing (roadmap
   `### WK-1250`, the 2026-09-30 amendment).
 
-### File contention (`RL-1263` option (c), as amended by RL-1445)
+### File contention (`RL-1263` option (c), as amended by RL 9620)
 
 `RL-1263:89`: *"Two concurrent build slices may not both change the same **existing** function,
 class, method, spec section, or policy table."* The registry-exempt paths are `RL-1263:90-100` and
-the corrections at `:108-115`. Hand-authored contracts **are not** exempt (`:113`). RL-1445 adds,
+the corrections at `:108-115`. Hand-authored contracts **are not** exempt (`:113`). RL 9620 adds,
 for two slices of one Work: *"(b) No plan dependency, either way … Otherwise the two slices
-serialise"* (RL-1445 `:130-142` on its branch). Slice 3 depends on this slice, so **the two never
+serialise"* (RL 9620 `:130-142` on its branch). Slice 3 depends on this slice, so **the two never
 run together**.
 
 | This slice's path | What it does there | Also changed by (in flight at `cdaaa573`) | Under option (c) |
 |---|---|---|---|
-| `packages/pricing-core/src/pricing_core/rating/compile.py` | `compile_bundle` (`:573-643`): G1, mount resolution, the inlined validation, `all_refs`; `_MATURITY_CHECK_EXEMPT` (`:431`) | PL-1471 (#1152; `compile_bundle` and `ResolvedArtifact` `:434`); the FD-1420 fix (PL-1447, #1145); WK-673 S3 (PL-1452, #1138: called, not edited, at its `:386-387`); WK-675 S3 (no leaf plan); **PL-1520** (#1051) appends `_check_declared_reads` to `ALGORITHM_CHECKS` and its import block (its `:534`) | **Serialised outright** (`PL-1371:291-294`); PL-1520's append is in a different definition, and the dispatch record names it |
+| `packages/pricing-core/src/pricing_core/rating/compile.py` | `compile_bundle` (`:573-643`): G1, mount resolution, the inlined validation, `all_refs`; `_MATURITY_CHECK_EXEMPT` (`:431`) | PL 9649 (#1152; `compile_bundle` and `ResolvedArtifact` `:434`); the FD 9707 fix (PL 9688, #1145); WK-673 S3 (PL 9689, #1138: called, not edited, at its `:386-387`); WK-675 S3 (no leaf plan); **PL 9776** (#1051) appends `_check_declared_reads` to `ALGORITHM_CHECKS` and its import block (its `:534`) | **Serialised outright** (`PL-1371:291-294`); PL 9776's append is in a different definition, and the dispatch record names it |
 | `packages/pricing-core/src/pricing_core/rating/inline.py` | **new**: the pure inliner (Task 3) | none | Not shared |
-| `packages/pricing-core/src/pricing_core/rating/runtime.py` | `load_bundle` (`:646`): it inlines with the same function (DP-S2-1) | **PL-1520** (#1051) edits `load_bundle` and `CompiledBundle`; the FD-1420 fix (PL-1447) edits `_decision_table_node`; PL-1452 calls it and does not edit it | **Serialises with PL-1520**: the same function. With PL-1447 it is a different definition, so the dispatch record names it |
-| `packages/model-schema/src/model_schema/rating.py` | `Pins` (`:65-78`) gains `sub_graphs`; `SubGraphRef` (`:342-352`) gains the port map; `RatingAlgorithm._graph_invariants` (`:394`) sees a mount as a node; `AlgorithmDiff` (`:541`) and `diff_algorithms` (`:571`) gain the sub-graph limb | **PL-1452** edits `AlgorithmDiff` and `diff_algorithms` (its DP-S3-2 (a)). **PL-1476** (WK-675 S2, #1131) moves `RatingAlgorithm`'s fields to a new `RatingAlgorithmDraft` (its write-set row for `rating.py:375`). PL-1429 adds `RatingVersionCreate` | **Serialises** with PL-1452 and PL-1476: the same existing classes. The second to merge re-derives these edits on the first's names (Task 0) |
+| `packages/pricing-core/src/pricing_core/rating/runtime.py` | `load_bundle` (`:646`): it inlines with the same function (DP-S2-1) | **PL 9776** (#1051) edits `load_bundle` and `CompiledBundle`; the FD 9707 fix (PL 9688) edits `_decision_table_node`; PL 9689 calls it and does not edit it | **Serialises with PL 9776**: the same function. With PL 9688 it is a different definition, so the dispatch record names it |
+| `packages/model-schema/src/model_schema/rating.py` | `Pins` (`:65-78`) gains `sub_graphs`; `SubGraphRef` (`:342-352`) gains the port map; `RatingAlgorithm._graph_invariants` (`:394`) sees a mount as a node; `AlgorithmDiff` (`:541`) and `diff_algorithms` (`:571`) gain the sub-graph limb | **PL 9689** edits `AlgorithmDiff` and `diff_algorithms` (its DP-S3-2 (a)). **PL 9713** (WK-675 S2, #1131) moves `RatingAlgorithm`'s fields to a new `RatingAlgorithmDraft` (its write-set row for `rating.py:375`). PL 9683 adds `RatingVersionCreate` | **Serialises** with PL 9689 and PL 9713: the same existing classes. The second to merge re-derives these edits on the first's names (Task 0) |
 | `docs/specs/03-rating-engine.md` §4.1, §4.3, §4.11 and §5.2 | Task 1 | any slice editing those sections | **Serialises** (`RL-1263:89`), unless the dispatch record names the path with the check that no definition is edited by both |
-| `docs/contracts/schemas/rating-version.schema.json`, `rating-algorithm.schema.json` | hand-authored; `pins.sub_graphs` and the mount's port map (Task 2) | PL-1429 (`rating-version`), PL-1476 (`rating-algorithm`) if they edit them | **Not exempt** (`RL-1263:113`); serialises |
-| `backend/src/app/platform/rating_versions.py` | `_Resolver` (`:445`) gains a `sub_graph` branch before the `NOT_FOUND` fall-through (`:550-555`) | PL-1429 (the create path), PL-1471 | An existing-class edit. The dispatch record names it |
+| `docs/contracts/schemas/rating-version.schema.json`, `rating-algorithm.schema.json` | hand-authored; `pins.sub_graphs` and the mount's port map (Task 2) | PL 9683 (`rating-version`), PL 9713 (`rating-algorithm`) if they edit them | **Not exempt** (`RL-1263:113`); serialises |
+| `backend/src/app/platform/rating_versions.py` | `_Resolver` (`:445`) gains a `sub_graph` branch before the `NOT_FOUND` fall-through (`:550-555`) | PL 9683 (the create path), PL 9649 | An existing-class edit. The dispatch record names it |
 | `backend/tests/test_rating_version_compile.py`, `packages/pricing-core/tests/test_rating_compile_bundle.py`, `test_rating_runtime.py`, `test_rating_score.py`, `packages/model-schema/tests/test_rating_algorithm.py` | appended tests only | any slice adding tests there | Appended only; no existing test is edited (acceptance 10) |
 | `docs/INDEX.md`, `docs/contracts/schemas/generated/`, `docs/contracts/openapi/generated.json` | regenerated | any | **Exempt**, never hand-merged |
 
 **Not in this slice's set:** `score.py` (Slice 3 edits `_check_purpose_mount`), `TraceStep` and
-`model_schema/scoring.py` (RL-1519's, delivered by PL-1520), the sub-graph routes (`backend/src/app/api/sub_graphs.py`),
+`model_schema/scoring.py` (RL 9771's, delivered by PL 9776), the sub-graph routes (`backend/src/app/api/sub_graphs.py`),
 any `approvals.py`, `errors.py` (no new code: DP-S2-2), `conftest*.py`, `pyproject.toml` and
 `uv.lock`.
 
@@ -248,7 +246,7 @@ reason, is a plan defect. The executor reports it and does not work around it. E
    merged at this tree**, a second test asserts the limb in the **persisted** `structural_diff`
    evidence of a Rating Version whose only change is a sub-graph re-point (`RL-1309:651-653`).
    The ledger records which case held.
-8. **The trace (FR-258)**, in the order the lead sets with PL-1520 (**Sequencing for the lead**). Red first, in `test_rating_score.py`. A traced
+8. **The trace (FR-258)**, in the order the lead sets with PL 9776 (**Sequencing for the lead**). Red first, in `test_rating_score.py`. A traced
    `score_one` on a version that mounts a fragment returns one `TraceStep` per inlined step. Each
    one's `step_id` is the namespaced id (`<mount_point>` + separator + fragment `step_id`), so it
    is attributable to its mount. Real-time and batch carry the same structure (FR-258's last
@@ -256,7 +254,7 @@ reason, is a plan defect. The executor reports it and does not work around it. E
 9. **The guards** (`RL-1309` DP-1 items 5 and 6), red first on broken input:
    - **G1, the objective clause:** an unapproved custom objective planted inside a pinned
      sub-graph, reached through that fragment's `model_call`, is refused at compile. The refusal
-     comes from **PL-1471's** `_check_reachable_objectives` (or its name at the dispatch tree),
+     comes from **PL 9649's** `_check_reachable_objectives` (or its name at the dispatch tree),
      **called, not copied**: `git grep -c 'def _check_reachable_objectives'` over
      `packages/pricing-core/src` prints exactly 1. With the call removed locally, the planted
      objective compiles and the test fails. That edit is never committed;
@@ -277,7 +275,7 @@ reason, is a plan defect. The executor reports it and does not work around it. E
     `compile_bundle`'s own raise count changes, and the ledger says why.
 11. **Through the backend:** `POST /api/v1/rating-versions/{id}/compile` on a version that mounts a
     stored sub-graph returns 202, and the `rating.compile` Job succeeds. The same request with the
-    pin missing makes the Job fail with `RATING_VERSION_UNPINNED`. This needs the FD-1421 fix's
+    pin missing makes the Job fail with `RATING_VERSION_UNPINNED`. This needs the FD 9708 fix's
     pin write path, or a test row built directly, as the existing compile tests do. The executor
     mirrors `backend/tests/test_rating_version_compile.py`'s fixtures and does not invent new ones.
 12. **Coverage and verdicts.** `uv run python scripts/req-coverage.py` lists the new tests against
@@ -286,7 +284,7 @@ reason, is a plan defect. The executor reports it and does not work around it. E
     slice's close** (`PL-1254:312`). Whoever ends up building the transitive objective check
     records its symbol and file in the ledger (`RL-1309:360`).
 13. **The gate.** The full two-half gate (`CLAUDE.md` §11) exits 0 on the committed tree, under the
-    single gate (RL-1445). The ledger quotes every rc, the `N passed` line and `HEAD`, and compares
+    single gate (RL 9620). The ledger quotes every rc, the `N passed` line and `HEAD`, and compares
     `N passed` with `origin/main`'s.
 14. **MERGE-ACK.** Before the lead merges, the maintainer's MERGE-ACK naming the PR's full head SHA
     is recorded in `~/gi-pricing-plan.local/channel/to-lead.md`. It is never posted on the PR. The
@@ -354,11 +352,11 @@ stops if one has moved.
 | j | Slice 1's resolver exists, unwired | `backend/src/app/platform/sub_graphs.py:202-213` |
 | k | A `step_id` has no pattern | `RatingStepBase.step_id: str = Field(min_length=1)` (`rating.py:264`). So no separator is reserved today (DP-S2-2) |
 | l | The diff covers steps, tables, the input contract and outputs, not mounts | `AlgorithmDiff` `rating.py:541-569`; `diff_algorithms` `:571`; tests at `packages/model-schema/tests/test_rating_algorithm.py:257`, `:285` |
-| m | No backend path writes a Rating Version's pins at `cdaaa573` | `RatingVersionCreate` (`backend/src/app/api/models.py:271`) has no `pins`; `pins` is only read (`rating_versions.py:113`). The FD-1421 fix (PL-1429) adds the first writer |
+| m | No backend path writes a Rating Version's pins at `cdaaa573` | `RatingVersionCreate` (`backend/src/app/api/models.py:271`) has no `pins`; `pins` is only read (`rating_versions.py:113`). The FD 9708 fix (PL 9683) adds the first writer |
 | n | The `03` sites Task 1 edits | §4.1's mount example `03:283` and invariants `:286-288`; §4.3's `pins` example `:377-382` and invariants `:423-428`; §4.11's Slice note `:822`; §5.2's `compile_bundle` line `:1028` |
 
 The executor re-reads each premise at its own tree. **It stops on any premise that no longer holds**
-([`README.md`](README.md) convention 4), and it maps a, b and l to PL-1452's and PL-1476's names if
+([`README.md`](README.md) convention 4), and it maps a, b and l to PL 9689's and PL 9713's names if
 either has merged.
 
 ### Decision points
@@ -375,19 +373,19 @@ where it acts. `RL-1344` §4 rules what this slice does and does not carry for p
 | **DP-S2-2** | The port map's shape, the namespace separator, and the codes for the new refusals | **Shape:** (a) `inputs: dict[str, str]` (port → parent value) and `outputs: dict[str, str]` (port → parent name) on `SubGraphRef`, both `extra="forbid"`; (b) a list of `{port, name}` pairs. **Completeness:** every input port mapped exactly once; output ports mapped as a subset, at least one. **Separator:** `/`, with a compile refusal on any collision between a namespaced name and a parent name (premise k: no separator is reserved). **Codes:** an unmapped or undeclared port → `RATING_GRAPH_UNRESOLVED_REF`; an incompatible input type → `RATING_TYPE_MISMATCH`; a sub-graph not pinned → `RATING_VERSION_UNPINNED`; a nested mount → `VALIDATION_FAILED`; a `mount_point` clash or a namespacing collision → `VALIDATION_FAILED` | **Shape (a)**, since a dict cannot map one port twice. **Separator `/`** and **the codes as listed**: each reuses a code that `backend/src/app/errors.py:309-355` already registers, so `errors.py` is not edited. A new code would add a second meaning for one defect. An unmapped output port is legal: the parent does not consume it, and acceptance 3 refuses a consumer | Tasks 1–4 |
 
 
-**Sequencing for the lead, with PL-1520 (not a decision point).** PL-1520 (#1051, branch
-`wk1178-f35-leaf-plan` at `ecbb82ab`, `draft`) delivers RL-1519. It edits `_build_trace`,
+**Sequencing for the lead, with PL 9776 (not a decision point).** PL 9776 (working id, #1051, branch
+`wk1178-f35-leaf-plan` at `ecbb82ab`, `draft`) delivers RL 9771. It edits `_build_trace`,
 `CompiledBundle` and `load_bundle` (its write-set rows for `score.py` and `runtime.py`), and
 `compile.py`'s `ALGORITHM_CHECKS` (its `:534`). Its contention row for `SL-1340` (its `:541`)
 says: *"**serialise.** Recommended order: this slice first, so `SL-1340` builds on the ruled
 content. The lead decides."*
-- **(a) PL-1520 first** (its recommendation). Task 7 then asserts the inlined steps in RL-1519's
+- **(a) PL 9776 first** (its recommendation). Task 7 then asserts the inlined steps in RL 9771's
   ruled trace content.
 - **(b) This slice first.** The inlined steps reach the trace under today's `TraceStep` with no
   change to it: `_build_trace` (`score.py:781-819`) emits one entry per algorithm step, and under
   DP-S2-1 (a) the inlined steps are algorithm steps whose namespaced `step_id` names the mount.
-  PL-1520 then traces them under its ruling (RL-1519: *"traceable without a second ruling"*).
-- **This plan recommends (a)**, unless G2's date needs PL-1544's B7 before PL-1520 can merge. In
+  PL 9776 then traces them under its ruling (RL 9771: *"traceable without a second ruling"*).
+- **This plan recommends (a)**, unless G2's date needs PL 9629's B7 before PL 9776 can merge. In
   that case, (b). A port here is a **rename**, never a node: a fragment has no `input` or `output`
   steps (`03` §4.11). So the map's reason for the wait (*"DP-3 (a)'s ports make inlined input and
   output nodes likely"*, `PL-1254:171-177`) does not arise, and either order is safe. **The order is
@@ -407,9 +405,9 @@ content. The lead decides."*
   `Pins`, `diff_algorithms`, `03` §4 or §5.2, `compile.py`, `runtime.py` or `TraceStep`
   ([`README.md`](README.md) convention 4). Name the SHA read.
 - [ ] Confirm the resolutions **by record id**: `RL-1309` for its items; the `RL-` for DP-S2-1 to
-  DP-S2-2; RL-1519 for FD-1246, once minted. Stop if any differs from **Decision points**.
-- [ ] **PL-1520.** Record whether it has merged. That decides which branch of Task 7 runs.
-- [ ] **PL-1471.** Confirm it has merged, and record the symbol and file of the transitive
+  DP-S2-2; RL 9771 for FD-1246, once minted. Stop if any differs from **Decision points**.
+- [ ] **PL 9776.** Record whether it has merged. That decides which branch of Task 7 runs.
+- [ ] **PL 9649.** Confirm it has merged, and record the symbol and file of the transitive
   objective check (`_check_reachable_objectives` in its plan). If it has not merged, stop and
   report. The lead orders the two, and this slice does not build a copy.
 - [ ] **WK-673's persistence.** Record whether `structural_diff` persistence has merged. That
@@ -590,7 +588,7 @@ term is used (grep first; `spec-change`).
      instead of fetching twice (the same reason as the comment at `:598-602`);
   4. `sub_graph` joins `_MATURITY_CHECK_EXEMPT`, with a comment citing `RL-1309` DP-1 item 5, in
      the form of the comment block above `:431`;
-  5. PL-1471's transitive objective check runs over the pins as it does at the dispatch tree. The
+  5. PL 9649's transitive objective check runs over the pins as it does at the dispatch tree. The
      fragment's `model_call` is pinned in `pins.models` (G1), so the check sees it. G1's
      objective-clause test (acceptance 9) proves it;
   6. `to_jdm(inlined)`.
@@ -615,7 +613,7 @@ term is used (grep first; `spec-change`).
 - [ ] **Step 1: Write the failing tests:**
   - acceptance 11, through the compile route and the Job;
   - **G1's objective clause** (acceptance 9): a sub-graph whose `model_call` names a model whose
-    custom objective is not approved. Mirror PL-1471's own objective test at the dispatch tree;
+    custom objective is not approved. Mirror PL 9649's own objective test at the dispatch tree;
   - **G2** over each enumerated pin write path;
   - **G4 (c)**, the status-column tripwire on `SubGraphVersionRow`, in the form of
     `test_rate_table_version_row_has_no_status_column` (`:248`).
@@ -629,16 +627,16 @@ term is used (grep first; `spec-change`).
 - [ ] **Step 4: Run** `uv run pytest backend/tests/test_rating_version_compile.py -q`; it passes.
 - [ ] **Step 5: Commit:** `feat(backend): the compile resolver resolves sub-graph pins; G2 and G4 (c) (RL-1309)`.
 
-### Task 7: The trace (FR-258) — in the lead's order with PL-1520
+### Task 7: The trace (FR-258) — in the lead's order with PL 9776
 
-- [ ] **If PL-1520 has not merged (order (b)):** add tests only, in `packages/pricing-core/tests/test_rating_score.py`
+- [ ] **If PL 9776 has not merged (order (b)):** add tests only, in `packages/pricing-core/tests/test_rating_score.py`
   (appended), using `_compiled` (`:137`) and `_ctx` (`:143`). A traced `score_one` on a mounted
   version carries each inlined step with its namespaced `step_id`; a batch trace mirrors it. Red
   first: they fail before Task 5's `load_bundle` step, because `_build_trace` skips the inlined
   nodes (premise h). Quote that red in the ledger, from a checkout of Task 4's commit.
-- [ ] **If PL-1520 has merged (order (a)):** the same tests, asserting the inlined steps in RL
+- [ ] **If PL 9776 has merged (order (a)):** the same tests, asserting the inlined steps in RL
   9771's ruled content: what each step reads and declares, under its namespaced `step_id`. Mirror
-  PL-1520's own trace tests at the dispatch tree. **In either order, `TraceStep` and `_build_trace`
+  PL 9776's own trace tests at the dispatch tree. **In either order, `TraceStep` and `_build_trace`
   are not edited here.**
 - [ ] Commit: `test(pricing-core): inlined steps in the trace (FR-258)`.
 
@@ -677,7 +675,7 @@ Slice 3 (`SL-1341`, PL 9609, working id) starts after this slice closes. It cons
 `RL-1344` §3 leaves Slice 3 a decision point of its own: how a purpose mount's outputs reach the
 ladder and the payable, and how the inlined nodes are gated by `purpose` at evaluation.
 
-**Owed to PL-1562 (#1202, the FD-1424 fix, WK-1178): the mounted red, and
+**Owed to PL 9521 (working id; #1202, the FD 9549 fix, WK-1178): the mounted red, and
 `_compatible`.** *(Dated note, 2026-10-05, written 18:00:25 BST, pre-mint, by planner-a12fold
 on the lead's order. From the maintainer's (by delegation) entry headed "2026-10-05 17:58:03 BST — PL 9521 @148892d6 and A-2 @176a6a75 noted; the mounted-case dependency (item 12 (c)) ACCEPTED, named in both plans",
 verbatim:)*
@@ -692,15 +690,15 @@ verbatim:)*
   with `rounding {"mode": "half_even", "dp": 0}`. With `1234.4 × 1.1 = 1357.84`, the served
   value is **1358**: one rounding, at the output step. Rounding first would give
   `1234 × 1.1 = 1357.4 → 1357`, and the test asserts that the two differ before it asserts
-  `1358`. It is PL-1562's item 12 (c). **Whichever of this slice and PL-1562 merges second
+  `1358`. It is PL 9521's item 12 (c). **Whichever of this slice and PL 9521 merges second
   builds it.** Neither closes its slice without either building it or citing the other's
   merged test.
-- **`_compatible`.** PL-1562 changes `_compatible` (`compile.py:124`) to a closed numeric
+- **`_compatible`.** PL 9521 changes `_compatible` (`compile.py:124`) to a closed numeric
   rule, with a required keyword-only `at_output_step`. This slice's mount-port check calls
-  `_compatible` (Task 5 Step 3, this plan's `:581-583`). The two **serialise** (PL-1562's contention
+  `_compatible` (Task 5 Step 3, this plan's `:581-583`). The two **serialise** (PL 9521's contention
   table). Whichever lands second updates the other's call. A mount port is not an output
   step, so it passes `at_output_step=False`. A `decimal` value into a `money_minor` port is
-  then refused (PL-1562 D9; "a sub-graph port carries money as decimal", the maintainer's
+  then refused (PL 9521 D9; "a sub-graph port carries money as decimal", the maintainer's
   entry of 17:50:43 BST).
 
 ## Self-review
@@ -729,8 +727,8 @@ verbatim:)*
 5. **Literals.** Every file:line in the premises, Status and Tasks was read at `cdaaa573`. The
    names the executor adds are proposals, each named once: `Pins.sub_graphs`,
    `SubGraphRef.inputs` and `.outputs`, `inline_mounts`, `inline.py`, `AlgorithmSubGraphChange`
-   and `sub_graph_mounts`. PL-1471's `_check_reachable_objectives` is that plan's name at
+   and `sub_graph_mounts`. PL 9649's `_check_reachable_objectives` is that plan's name at
    `2b5bf12d`, and is re-read at dispatch.
 6. **Placeholders.** None. The open DP cells are the §1.7 form for open rows.
-7. **Open:** DP-S2-1 and DP-S2-2 for the decision-maker. Activation need 3 (RL-1519's mint), need
-   4 (the WK-673 carrier) and the order against PL-1520 for the lead.
+7. **Open:** DP-S2-1 and DP-S2-2 for the decision-maker. Activation need 3 (RL 9771's mint), need
+   4 (the WK-673 carrier) and the order against PL 9776 for the lead.
