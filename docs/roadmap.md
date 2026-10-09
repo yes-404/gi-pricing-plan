@@ -1787,6 +1787,24 @@ relates: [FD-1416, FD-1335, SL-1409, PL-1408, SL-1367, PL-1371]
 
 `FD-1416`'s fix (MEDIUM, deadline before the P2 exit demo): the `model-schema` `ApprovalRequest` becomes the one definition. A decision-maker rules each disagreeing field first, the decision enum first, which lifts `FD-1416`'s HOLD. The four `to_dict` routes (`GET …/{request_id}`, `POST /approval-requests`, `…/decide`, `…/withdraw`) return it as a typed 2xx, published by `$ref`, and leave `FD-1335` Part B's open-object list. The hand-authored `approval-request.schema.json` is retired ("generated wins"), and `06` §4.3's example is amended verbatim from the ruling. A guard fails when an authored-only `ONE_SIDED_SLUGS` slug has an uncompared `model-schema` class, proven on broken input. Leaf plan PL-1528 (working id). It follows `SL-1409` (`approvals.py`; merged at `cdaaa573`); it serialises with PL-1429 (`GENERATED_SHAPES`), and PL 9629's journey (its activation need 13) waits for it.
 
+#### WK-1178 fix slice — batch scoring serialises every declared output type and never aborts on one row
+
+```yaml
+id: SL-9511
+family: slice
+title: WK-1178 fix slice — batch scoring serialises every declared output type and never aborts on one row
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1333, RL-1343, RL-923, RL-1263]
+```
+
+The FD 9513 fix (working id; MEDIUM, LATENT; owner WK-1178), on the maintainer's (by delegation) entry "2026-10-05 17:58:45 BST — FD 9513 (#1204 @0303d0bf): your decision ACCEPTED (MEDIUM, LATENT, WK-1178, its own fix slice after SL 9561); the row escape is the first red". Two reds, in order. **(1) The row escape first:** `_score_batch_row` (`score.py:1081`) runs `_ladder_json` (`:1122`) and `_outputs_json` (`:1123`) after its `try` (`:1096-1103`), so anything they raise ends the whole batch run and the Job (FR-255). Any exception there becomes that row's `"error"` row and the run continues; this does not wait for the type DP. **(2) The four declared types:** `_coerce_output_value` refuses `int`, `count`, `relativity` and `percentage` (`:947`, `:964-965`), which `/score` serves (FR-254). Their JSON form is DP-1, **ruled (b)** by the maintainer (by delegation), 2026-10-05 18:10:57 BST: `int`/`count` a JSON integer on both paths, with a non-integral value made that row's error, and `relativity`/`percentage` the `decimal` string form. DP-2 is **ruled (ii)**: the `/score` half belongs to the `RL-1343` slice, SL 9500 / PL 9499 (working ids), which must cover a whole-valued `decimal` (a JSON integer on `/score` today) as well as a fractional one, and which serialises with this slice on `_coerce_output_value`. DP-3 is **ruled**: the error code is the exception class name. An `RL-` owes T1 (the `03:692` row) and T2 (FR-214's dated clause). Leaf plan PL 9509 (working id, `draft`). **Activation needs:** FD 9513 minted; SL 9561 (the emergency slice) merged; the `RL-` carrying T1/T2 minted; Task 1 is dispatchable before the rest, but still after SL 9561; the maintainer's GO; active by a dated line in a separate activation PR. *(Filed 2026-10-05 under working ids 9511 (this row) and 9509 (the plan), reserved by the lead.)*
+
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
