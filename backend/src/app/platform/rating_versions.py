@@ -32,10 +32,10 @@ from app.platform import approvals, audit, rbac
 from app.platform import objectives as objectives_service
 from app.platform import perils as perils_service
 from app.platform import rate_tables as rate_tables_service
-from app.platform import transformations as transform_service
 from app.platform import reference as reference_service
 from app.platform import regression_runs as regression_runs_service
 from app.platform import regression_suites as regression_suites_service
+from app.platform import transformations as transform_service
 from app.platform.blobs import BlobStore
 from app.platform.modelling import load_factors, resolve_offset_model, to_factor, to_model
 from model_schema import (

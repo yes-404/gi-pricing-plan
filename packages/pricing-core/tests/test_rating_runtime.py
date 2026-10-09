@@ -19,13 +19,13 @@ from uuid import uuid4
 import pytest
 import xgboost as xgb
 from pydantic import BaseModel
+from test_rating_glm_model_call import age_glm
 
 from model_schema.rating import RatingVersion
 from model_schema.refs import ArtifactRef
 from pricing_core.modelling.gbm import load_gbm_booster
 from pricing_core.rating.compile import ArtifactResolver, ResolvedArtifact, compile_bundle
 from pricing_core.rating.runtime import CompiledBundle, load_bundle, to_wire
-from test_rating_glm_model_call import age_glm
 
 
 def _train_tiny_booster() -> bytes:

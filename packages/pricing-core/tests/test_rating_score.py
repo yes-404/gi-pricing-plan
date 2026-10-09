@@ -452,7 +452,7 @@ async def test_a_model_call_failure_is_refused_with_the_real_message() -> None:
     compiled = await _compiled(
         glm=True, glm_offset=OffsetSpec(kind="log_column", column="exposure_years")
     )
-    with pytest.raises(ValueError, match="MODEL_CALL_FAILED.*MODEL_OFFSET_MISSING"):
+    with pytest.raises(ValueError, match=r"MODEL_CALL_FAILED.*MODEL_OFFSET_MISSING"):
         await score_one(compiled, _ctx())
 
 

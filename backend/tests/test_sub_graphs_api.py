@@ -307,3 +307,81 @@ async def test_another_workspaces_sub_graph_is_404_and_absent_from_its_list(
     mine = api_client.post("/api/v1/sub-graphs", json=create(), headers=headers)
     assert mine.status_code == 201
     assert api_client.get("/api/v1/sub-graphs/ncd-ladder@1", headers=headers).status_code == 200
+
+
+# -- FD-1458 (PL-1464) items 18 and 19: the same feature_map save check ---------------------
+#
+# **Authored ahead of a database run** (a fitted GLM is needed); red-by-cause owed (LG-9449).
+
+
+def _model_call_body(model_ref: str, feature_map: dict[str, str]) -> dict[str, Any]:
+    return {
+        "inputs": [{"name": "area", "type": "string"}],
+        "outputs": [{"name": "risk", "type": "decimal", "required": True}],
+        "steps": [
+            {"step_id": "s_risk", "type": "model_call", "label": "Risk", "model_ref": model_ref,
+             "mode": "exact", "feature_map": feature_map, "consumes": "area",
+             "produces": ["risk"]}
+        ],
+        "change_note": "first",
+    }
+
+
+async def test_a_sub_graph_whose_model_call_names_a_raw_column_is_refused(
+    api_client: TestClient, headers, database, blob_store, workspace_id: UUID
+) -> None:
+    from backend.tests.test_rating_algorithms import (
+        FACTOR_SLUG,
+        SOURCE_COLUMN,
+        fitted_glm_with_distinct_slug,
+    )
+
+    ref = await fitted_glm_with_distinct_slug(database, blob_store, workspace_id)
+    refused = api_client.post(
+        "/api/v1/sub-graphs",
+        json={"slug": "risk-call", **_model_call_body(ref, {"area": SOURCE_COLUMN})},
+        headers=headers,
+    )
+    assert refused.status_code == 422, refused.text
+    assert refused.json()["code"] == "MODEL_CALL_FEATURE_MAP_INVALID"
+    for named in ("s_risk", ref):
+        assert named in refused.json()["detail"]
+    assert api_client.get("/api/v1/sub-graphs/risk-call@1", headers=headers).status_code == 404
+
+    saved = api_client.post(
+        "/api/v1/sub-graphs",
+        json={"slug": "risk-call", **_model_call_body(ref, {"area": FACTOR_SLUG})},
+        headers=headers,
+    )
+    assert saved.status_code == 201, saved.text
+
+
+async def test_a_sub_graph_version_whose_model_call_names_a_raw_column_is_refused(
+    api_client: TestClient, headers, database, blob_store, workspace_id: UUID
+) -> None:
+    from backend.tests.test_rating_algorithms import (
+        FACTOR_SLUG,
+        SOURCE_COLUMN,
+        fitted_glm_with_distinct_slug,
+    )
+
+    ref = await fitted_glm_with_distinct_slug(database, blob_store, workspace_id)
+    assert api_client.post(
+        "/api/v1/sub-graphs",
+        json={"slug": "risk-call", **_model_call_body(ref, {"area": FACTOR_SLUG})},
+        headers=headers,
+    ).status_code == 201
+    refused = api_client.post(
+        "/api/v1/sub-graphs/risk-call/versions",
+        json=_model_call_body(ref, {"area": SOURCE_COLUMN}), headers=headers,
+    )
+    assert refused.status_code == 422, refused.text
+    assert refused.json()["code"] == "MODEL_CALL_FEATURE_MAP_INVALID"
+    assert api_client.get("/api/v1/sub-graphs/risk-call@2", headers=headers).status_code == 404
+
+    saved = api_client.post(
+        "/api/v1/sub-graphs/risk-call/versions",
+        json=_model_call_body(ref, {"area": FACTOR_SLUG}), headers=headers,
+    )
+    assert saved.status_code == 201, saved.text
+    assert saved.json()["version"] == 2

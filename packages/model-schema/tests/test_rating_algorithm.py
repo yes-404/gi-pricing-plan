@@ -352,5 +352,5 @@ def test_a_model_call_accepts_decimal_or_money_minor(declared: str) -> None:
 def test_a_model_call_refuses_any_other_result_type(declared: str) -> None:
     data = valid_algorithm()
     data["steps"][4] = {**data["steps"][4], "result_type": declared}
-    with pytest.raises(ValidationError, match="decimal or money_minor.*FR-227"):
+    with pytest.raises(ValidationError, match=r"decimal or money_minor.*FR-227"):
         RatingAlgorithm.model_validate(data)
