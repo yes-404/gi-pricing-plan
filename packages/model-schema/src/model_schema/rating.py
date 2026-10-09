@@ -8,13 +8,13 @@ version can be approved against and the demo can display.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 from itertools import pairwise
-from typing import Annotated, Any, Final, Literal
+from typing import Annotated, Any, Final, Literal, Protocol
 from uuid import UUID
 
 from pydantic import (
@@ -654,6 +654,23 @@ class AlgorithmTableRepoint(BaseModel):
     after: ArtifactRef
 
 
+class AlgorithmSubGraphChange(BaseModel):
+    """One sub-graph mount that differs between two versions (FR-219; `RL-1309` DP-1 item 3).
+
+    `before` / `after` are the mounted versions (`None` where the mount is absent on that side),
+    `ports_changed` says the port map differs, and `steps` is the inner step diff of the two
+    pinned fragments, present only when the caller supplied both and the version moved.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    mount_point: str
+    before: ArtifactRef | None = None
+    after: ArtifactRef | None = None
+    ports_changed: bool = False
+    steps: AlgorithmDiff | None = None
+
+
 class AlgorithmDiff(BaseModel):
     """The structural diff between two algorithm versions (FR-219)."""
 
@@ -665,6 +682,8 @@ class AlgorithmDiff(BaseModel):
     repointed_tables: list[AlgorithmTableRepoint] = Field(default_factory=list)
     input_contract_changed: bool = False
     outputs_changed: bool = False
+    # WK-1250 Slice 2 (RL-1309 DP-1 item 3): a sub-graph mount re-pointed, added or removed.
+    sub_graph_mounts: list[AlgorithmSubGraphChange] = Field(default_factory=list)
 
     @property
     def summary(self) -> str:
@@ -677,6 +696,8 @@ class AlgorithmDiff(BaseModel):
             parts.append(f"{len(self.changed_steps)} field change(s)")
         if self.repointed_tables:
             parts.append(f"{len(self.repointed_tables)} table(s) re-pointed")
+        if self.sub_graph_mounts:
+            parts.append(f"{len(self.sub_graph_mounts)} sub-graph mount(s) changed")
         if self.input_contract_changed:
             parts.append("input contract changed")
         if self.outputs_changed:
@@ -684,15 +705,24 @@ class AlgorithmDiff(BaseModel):
         return ", ".join(parts) if parts else "no structural change"
 
 
-def diff_algorithms(old: RatingAlgorithm, new: RatingAlgorithm) -> AlgorithmDiff:
-    """The structural diff between two algorithm versions (FR-219).
+class _FragmentLike(Protocol):
+    """What the diff reads of a stored sub-graph (`model_schema.sub_graphs.SubGraph`, which
+    imports this module, so it cannot be named here)."""
 
-    Names steps added, removed, or changed field-by-field, and tables re-pointed
-    (a `table`/`lookup` step's artifact reference changed). The diff is attached to
-    the approval request by the API slice (W9-2/W9-3); this function computes it.
-    """
-    old_by_id = {s.step_id: s for s in old.steps}
-    new_by_id = {s.step_id: s for s in new.steps}
+    @property
+    def inputs(self) -> Sequence[Any]: ...
+    @property
+    def outputs(self) -> list[AlgorithmOutput]: ...
+    @property
+    def steps(self) -> list[RatingStep]: ...
+
+
+def _diff_steps(
+    old_steps: Sequence[RatingStep], new_steps: Sequence[RatingStep]
+) -> tuple[list[str], list[str], list[AlgorithmStepChange], list[AlgorithmTableRepoint]]:
+    """Steps added, removed and changed field-by-field, and tables re-pointed (FR-219)."""
+    old_by_id = {s.step_id: s for s in old_steps}
+    new_by_id = {s.step_id: s for s in new_steps}
 
     added = sorted(set(new_by_id) - set(old_by_id))
     removed = sorted(set(old_by_id) - set(new_by_id))
@@ -724,7 +754,69 @@ def diff_algorithms(old: RatingAlgorithm, new: RatingAlgorithm) -> AlgorithmDiff
                         step_id=sid, field=key, before=o_dump.get(key), after=n_dump.get(key)
                     )
                 )
+    return added, removed, changes, repoints
 
+
+def _diff_mounts(
+    old: RatingAlgorithm,
+    new: RatingAlgorithm,
+    fragments: Mapping[str, _FragmentLike] | None,
+) -> list[AlgorithmSubGraphChange]:
+    old_by_point = {m.mount_point: m for m in old.sub_graphs}
+    new_by_point = {m.mount_point: m for m in new.sub_graphs}
+    found: list[AlgorithmSubGraphChange] = []
+    for point in sorted(set(old_by_point) | set(new_by_point)):
+        o, n = old_by_point.get(point), new_by_point.get(point)
+        before, after = (o.ref if o else None), (n.ref if n else None)
+        ports_changed = (o.inputs, o.outputs) != (n.inputs, n.outputs) if o and n else False
+        if before == after and not ports_changed:
+            continue
+        inner: AlgorithmDiff | None = None
+        if before is not None and after is not None and before != after and fragments:
+            old_fragment = fragments.get(str(before))
+            new_fragment = fragments.get(str(after))
+            if old_fragment is not None and new_fragment is not None:
+                added, removed, changes, repoints = _diff_steps(
+                    old_fragment.steps, new_fragment.steps
+                )
+                inner = AlgorithmDiff(
+                    added_steps=added,
+                    removed_steps=removed,
+                    changed_steps=changes,
+                    repointed_tables=repoints,
+                    input_contract_changed=old_fragment.inputs != new_fragment.inputs,
+                    outputs_changed=old_fragment.outputs != new_fragment.outputs,
+                )
+        found.append(
+            AlgorithmSubGraphChange(
+                mount_point=point,
+                before=before,
+                after=after,
+                ports_changed=ports_changed,
+                steps=inner,
+            )
+        )
+    return found
+
+
+def diff_algorithms(
+    old: RatingAlgorithm,
+    new: RatingAlgorithm,
+    *,
+    fragments: Mapping[str, _FragmentLike] | None = None,
+) -> AlgorithmDiff:
+    """The structural diff between two algorithm versions (FR-219).
+
+    Names steps added, removed, or changed field-by-field, and tables re-pointed
+    (a `table`/`lookup` step's artifact reference changed). The diff is attached to
+    the approval request by the API slice (W9-2/W9-3); this function computes it.
+
+    A sub-graph mount that was added, removed, re-pointed or re-mapped is named in
+    `sub_graph_mounts` (`RL-1309` DP-1 item 3). `fragments`, keyed by `str(ArtifactRef)`, supplies
+    the pinned fragments of both versions so a re-point also carries the inner step changes; with
+    none, the re-point is still named.
+    """
+    added, removed, changes, repoints = _diff_steps(old.steps, new.steps)
     return AlgorithmDiff(
         added_steps=added,
         removed_steps=removed,
@@ -732,6 +824,7 @@ def diff_algorithms(old: RatingAlgorithm, new: RatingAlgorithm) -> AlgorithmDiff
         repointed_tables=repoints,
         input_contract_changed=old.input_contract != new.input_contract,
         outputs_changed=old.outputs != new.outputs,
+        sub_graph_mounts=_diff_mounts(old, new, fragments),
     )
 
 

@@ -83,7 +83,7 @@ inliner's order.
 - [x] Task 1 — spec: `03` §4.1, §4.3, §4.11, §5.2 (T1, T2 verbatim from RL 9586)
 - [x] Task 2 — `model-schema`: `Pins.sub_graphs`, the port map, the mount as a node, the two contracts
 - [x] Task 3 — `pricing-core/rating/inline.py` and the `vocabulary.py` token helper
-- [ ] Task 4 — the diff limb (`diff_algorithms`)
+- [x] Task 4 — the diff limb (`diff_algorithms`)
 - [ ] Task 5 — `compile_bundle` and `load_bundle` inline (C1)
 - [ ] Task 6 — backend: the resolver `sub_graph` branch, G1 objective clause, G2, G4 (c)
 - [ ] Task 7 — the trace (FR-258), order (b)
@@ -120,6 +120,12 @@ lines listed in Scope.
 - **Raise-site register**: `test_quote_input_raise_sites.py` went red ("a `_raise_named` site is not accounted for", the five `inline.py` sites) until `_INPUT_FREE` gained five `rating/inline.py` rows with their input-free reasons; then 19 passed. Plan acceptance 10 allows this only for `compile_bundle`'s own count; this is the new-file case, named here.
 - **Deviations from PL 9610 Task 3 (read at `202d6777`)**: (1) the separator is `__` and renaming is by token (RL 9586), not `/`; (2) steps are in RL 9586 P5's Kahn order, not "parent then mounts"; (3) `as_at` is renamed as well as RL 9586's seven fields, because `authored.py` `EXPRESSION_FIELDS` lists it as an evaluated string (additive, no unruled choice); (4) the plan's "nested mount: refused" case is not an inliner case, since `fragments` is already `SubGraph`s; it is Task 5's (the payload is validated into `SubGraph`, whose `extra="forbid"` refuses `sub_graphs`).
 - **OPEN DP (reported to the lead, not picked)**: a fragment that re-produces one of its own input ports (the in-place clamp that Slice 1's `SubGraphBody` allows) cannot be inlined faithfully, since the port IS the parent's value and the write would reach the parent. `inline_mounts` refuses it with `VALIDATION_FAILED` (test `test_a_fragment_that_re_produces_its_input_port_is_refused`). No ruling covers it; the refusal is the conservative, reversible default.
+
+**2026-10-09, Task 4 (diff limb).**
+- **Red** (`test_rating_algorithm.py -k diff_names`, load1 4.20 at launch; from here a `/proc/loadavg` wait loop holds each run to load1 <= 4.0): `TypeError: diff_algorithms() got an unexpected keyword argument 'fragments'` and `AttributeError: 'AlgorithmDiff' object has no attribute 'sub_graph_mounts'` (3 failed, by the predicted cause).
+- **Green**: `AlgorithmSubGraphChange` (`mount_point`, `before`, `after`, `ports_changed`, `steps`) and `AlgorithmDiff.sub_graph_mounts`; `diff_algorithms(old, new, *, fragments=None)`. The step walk was extracted unchanged into `_diff_steps` and the inner fragment diff calls the same helper (no second walk); the fragment is read through a `_FragmentLike` protocol because `sub_graphs.py` imports `rating.py`. One test fixed after a red of its own (the base fixture already mounts `ncd-ladder@4`). `test_rating_algorithm.py`: 24 passed (existing diff tests unmodified). `generate-contracts.py --check`: 46 match (the diff shape is not a generated contract). `ruff check packages`: clean.
+- **Broken-input proof** (local edit, restored from a saved copy, never committed): `sub_graph_mounts=[]` in `diff_algorithms` made the limb tests fail (`assert 0 == 1`, `assert [] == ['sub_graph:ncd-ladder@5']`).
+- **Acceptance 7's second test** (the persisted `structural_diff`): not run, WK-673's persistence has not merged at `61e2a8d9` (`grep -rln structural_diff backend/src` prints nothing). The limb is therefore carried in this slice by the unit tests; WK-673 owns the re-point case.
 
 ## PRs
 

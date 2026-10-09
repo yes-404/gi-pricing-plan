@@ -395,3 +395,75 @@ def test_pins_default_has_no_sub_graphs_and_a_stored_four_list_dict_validates() 
     assert Pins.model_validate(stored).sub_graphs == []
     pinned = Pins.model_validate({"sub_graphs": ["sub_graph:ncd-ladder@4"]})
     assert str(pinned.sub_graphs[0]) == "sub_graph:ncd-ladder@4"
+
+
+# --- the diff limb (RL-1309 DP-1 item 3; FR-219) -------------------------------------------------
+
+
+def _ladder(version: int, expr: str):
+    from model_schema.sub_graphs import SubGraph
+
+    return SubGraph.model_validate({
+        "slug": "ncd-ladder", "version": version,
+        "inputs": [{"name": "ncd_years", "type": "int"}],
+        "outputs": [{"name": "ncd_factor", "type": "decimal", "required": True}],
+        "steps": [
+            {"step_id": "s_ncd", "type": "expression", "label": "NCD", "expr": expr,
+             "result_type": "decimal", "consumes": ["ncd_years"], "produces": "ncd_factor"},
+        ],
+        "change_note": f"v{version}",
+    })
+
+
+def _repointed(version: int) -> RatingAlgorithm:
+    data = _mounted()
+    data["sub_graphs"][0]["ref"] = f"sub_graph:ncd-ladder@{version}"
+    return RatingAlgorithm.model_validate(data)
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-219")
+def test_the_diff_names_a_repointed_sub_graph_and_its_inner_step_changes() -> None:
+    """Two algorithms that differ ONLY in a mount's version: the re-point and the inner change."""
+    old, new = _repointed(4), _repointed(5)
+    fragments = {
+        "sub_graph:ncd-ladder@4": _ladder(4, "ncd_years * 10"),
+        "sub_graph:ncd-ladder@5": _ladder(5, "ncd_years * 12"),
+    }
+    diff = diff_algorithms(old, new, fragments=fragments)
+    assert diff.added_steps == diff.removed_steps == []
+    assert len(diff.sub_graph_mounts) == 1
+    change = diff.sub_graph_mounts[0]
+    assert change.mount_point == "s_ncd"
+    assert str(change.before) == "sub_graph:ncd-ladder@4"
+    assert str(change.after) == "sub_graph:ncd-ladder@5"
+    assert change.steps is not None
+    inner = {(c.step_id, c.field): (c.before, c.after) for c in change.steps.changed_steps}
+    assert inner[("s_ncd", "expr")] == ("ncd_years * 10", "ncd_years * 12")
+    assert "sub-graph" in diff.summary
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-219")
+def test_the_diff_names_the_repoint_without_fragments_and_nothing_when_unchanged() -> None:
+    diff = diff_algorithms(_repointed(4), _repointed(5))
+    assert [str(c.after) for c in diff.sub_graph_mounts] == ["sub_graph:ncd-ladder@5"]
+    assert diff.sub_graph_mounts[0].steps is None
+    same = diff_algorithms(_repointed(4), _repointed(4))
+    assert same.sub_graph_mounts == []
+    assert same.summary == "no structural change"
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-219")
+def test_the_diff_names_an_added_or_removed_mount_and_a_changed_port_map() -> None:
+    bare = valid_algorithm()
+    bare["sub_graphs"] = []
+    added = diff_algorithms(RatingAlgorithm.model_validate(bare), _repointed(4))
+    assert [(c.before, str(c.after)) for c in added.sub_graph_mounts] == [
+        (None, "sub_graph:ncd-ladder@4")
+    ]
+    data = _mounted()
+    data["sub_graphs"][0]["inputs"] = {"ncd_years": "driver_age"}
+    remapped = diff_algorithms(_repointed(4), RatingAlgorithm.model_validate(data))
+    assert [c.ports_changed for c in remapped.sub_graph_mounts] == [True]
