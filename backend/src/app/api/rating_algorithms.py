@@ -7,7 +7,7 @@ the structural diff between two versions (FR-219).
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
 
@@ -16,6 +16,7 @@ from app.api.deps import Caller, DatabaseDep
 from app.api.responses import problems
 from app.platform import rating_algorithms as service
 from model_schema import (
+    AlgorithmDiff,
     Permission,
     RatingAlgorithm,
     RatingAlgorithmDraft,
@@ -70,7 +71,7 @@ async def algorithm_diff(
     caller: RatingReadDep,
     database: DatabaseDep,
     against: int = Query(..., description="The version to diff against"),
-) -> dict[str, Any]:
+) -> AlgorithmDiff:
     """**200** with the structural diff (FR-219): steps added, removed, or changed,
     and tables re-pointed."""
     return await service.diff_between(
